@@ -3,167 +3,164 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <lib/zx/timer.h>
 #include <stdio.h>
 #include <threads.h>
-
-#include <lib/zx/timer.h>
-
-
 #include <unistd.h>
 #include <unittest/unittest.h>
 
 static bool deadline_after() {
-    BEGIN_TEST;
-    auto then = zx_clock_get_monotonic();
-    // The day we manage to boot and run this test in less than 1uS we need to fix this.
-    ASSERT_GT(then, 1000u);
+  BEGIN_TEST;
+  auto then = zx_clock_get_monotonic();
+  // The day we manage to boot and run this test in less than 1uS we need to fix this.
+  ASSERT_GT(then, 1000u);
 
-    auto one_hour_later = zx_deadline_after(ZX_HOUR(1));
-    EXPECT_LT(then, one_hour_later);
+  auto one_hour_later = zx_deadline_after(ZX_HOUR(1));
+  EXPECT_LT(then, one_hour_later);
 
-    zx_duration_t too_big = INT64_MAX - 100;
-    auto clamped = zx_deadline_after(too_big);
-    EXPECT_EQ(clamped, ZX_TIME_INFINITE);
+  zx_duration_t too_big = INT64_MAX - 100;
+  auto clamped = zx_deadline_after(too_big);
+  EXPECT_EQ(clamped, ZX_TIME_INFINITE);
 
-    EXPECT_LT(0, zx_deadline_after(10 * 365 * ZX_HOUR(24)));
-    EXPECT_LT(zx_deadline_after(ZX_TIME_INFINITE_PAST), 0);
-    END_TEST;
+  EXPECT_LT(0, zx_deadline_after(10 * 365 * ZX_HOUR(24)));
+  EXPECT_LT(zx_deadline_after(ZX_TIME_INFINITE_PAST), 0);
+  END_TEST;
 }
 
 static bool timer_set_negative_deadline() {
-    BEGIN_TEST;
-    zx::timer timer;
-    ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
-    zx::duration slack;
-    ASSERT_EQ(timer.set(zx::time(-1), slack), ZX_OK);
-    zx_signals_t pending;
-    ASSERT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, zx::time::infinite(), &pending), ZX_OK);
-    ASSERT_EQ(pending, ZX_TIMER_SIGNALED);
-    END_TEST;
+  BEGIN_TEST;
+  zx::timer timer;
+  ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
+  zx::duration slack;
+  ASSERT_EQ(timer.set(zx::time(-1), slack), ZX_OK);
+  zx_signals_t pending;
+  ASSERT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, zx::time::infinite(), &pending), ZX_OK);
+  ASSERT_EQ(pending, ZX_TIMER_SIGNALED);
+  END_TEST;
 }
 
 static bool timer_set_negative_deadline_max() {
-    BEGIN_TEST;
-    zx::timer timer;
-    ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
-    zx::duration slack;
-    ASSERT_EQ(timer.set(zx::time(ZX_TIME_INFINITE_PAST), slack), ZX_OK);
-    zx_signals_t pending;
-    ASSERT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, zx::time::infinite(), &pending), ZX_OK);
-    ASSERT_EQ(pending, ZX_TIMER_SIGNALED);
-    END_TEST;
+  BEGIN_TEST;
+  zx::timer timer;
+  ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
+  zx::duration slack;
+  ASSERT_EQ(timer.set(zx::time(ZX_TIME_INFINITE_PAST), slack), ZX_OK);
+  zx_signals_t pending;
+  ASSERT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, zx::time::infinite(), &pending), ZX_OK);
+  ASSERT_EQ(pending, ZX_TIMER_SIGNALED);
+  END_TEST;
 }
 
 static bool timer_set_negative_slack() {
-    BEGIN_TEST;
-    zx::timer timer;
-    ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
-    ASSERT_EQ(timer.set(zx::time(), zx::duration(-1)), ZX_ERR_OUT_OF_RANGE);
-    END_TEST;
+  BEGIN_TEST;
+  zx::timer timer;
+  ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
+  ASSERT_EQ(timer.set(zx::time(), zx::duration(-1)), ZX_ERR_OUT_OF_RANGE);
+  END_TEST;
 }
 
 static bool basic_test() {
-    BEGIN_TEST;
-    zx::timer timer;
-    ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
+  BEGIN_TEST;
+  zx::timer timer;
+  ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
 
-    zx_signals_t pending;
-    EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, zx::time(), &pending), ZX_ERR_TIMED_OUT);
-    EXPECT_EQ(pending, 0u);
+  zx_signals_t pending;
+  EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, zx::time(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_EQ(pending, 0u);
 
-    for (int ix = 0; ix != 10; ++ix) {
-        const auto deadline_timer = zx::deadline_after(zx::msec(50));
-        const auto deadline_wait = zx::deadline_after(zx::sec(1));
-        // Timer should fire faster than the wait timeout.
-        ASSERT_EQ(timer.set(deadline_timer, zx::nsec(0)), ZX_OK);
+  for (int ix = 0; ix != 10; ++ix) {
+    const auto deadline_timer = zx::deadline_after(zx::msec(50));
+    const auto deadline_wait = zx::deadline_after(zx::sec(1));
+    // Timer should fire faster than the wait timeout.
+    ASSERT_EQ(timer.set(deadline_timer, zx::nsec(0)), ZX_OK);
 
-        EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, deadline_wait, &pending), ZX_OK);
-        EXPECT_EQ(pending, ZX_TIMER_SIGNALED);
-    }
-    END_TEST;
+    EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, deadline_wait, &pending), ZX_OK);
+    EXPECT_EQ(pending, ZX_TIMER_SIGNALED);
+  }
+  END_TEST;
 }
 
 static bool restart_test() {
-    BEGIN_TEST;
-    zx::timer timer;
-    ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
+  BEGIN_TEST;
+  zx::timer timer;
+  ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
 
-    zx_signals_t pending;
-    for (int ix = 0; ix != 10; ++ix) {
-        const auto deadline_timer = zx::deadline_after(zx::msec(500));
-        const auto deadline_wait = zx::deadline_after(zx::msec(1));
-        // Setting a timer already running is equivalent to a cancel + set.
-        ASSERT_EQ(timer.set(deadline_timer, zx::nsec(0)), ZX_OK);
+  zx_signals_t pending;
+  for (int ix = 0; ix != 10; ++ix) {
+    const auto deadline_timer = zx::deadline_after(zx::msec(500));
+    const auto deadline_wait = zx::deadline_after(zx::msec(1));
+    // Setting a timer already running is equivalent to a cancel + set.
+    ASSERT_EQ(timer.set(deadline_timer, zx::nsec(0)), ZX_OK);
 
-        EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, deadline_wait, &pending), ZX_ERR_TIMED_OUT);
-        EXPECT_EQ(pending, 0u);
-    }
-    END_TEST;
+    EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, deadline_wait, &pending), ZX_ERR_TIMED_OUT);
+    EXPECT_EQ(pending, 0u);
+  }
+  END_TEST;
 }
 
 static bool invalid_calls() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    zx::timer timer;
-    ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_UTC, &timer), ZX_ERR_INVALID_ARGS);
-    ASSERT_EQ(zx::timer::create(ZX_TIMER_SLACK_LATE + 1, ZX_CLOCK_UTC, &timer), ZX_ERR_INVALID_ARGS);
+  zx::timer timer;
+  ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_UTC, &timer), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(zx::timer::create(ZX_TIMER_SLACK_LATE + 1, ZX_CLOCK_UTC, &timer), ZX_ERR_INVALID_ARGS);
 
-    END_TEST;
+  END_TEST;
 }
 
 static bool edge_cases() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    zx::timer timer;
-    ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
-    ASSERT_EQ(timer.set(zx::time(), zx::nsec(0)), ZX_OK);
+  zx::timer timer;
+  ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
+  ASSERT_EQ(timer.set(zx::time(), zx::nsec(0)), ZX_OK);
 
-    END_TEST;
+  END_TEST;
 }
 
 // furiously spin resetting the timer, trying to race with it going off to look for
 // race conditions.
 static bool restart_race() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    const zx_time_t kTestDuration = ZX_SEC(5);
-    auto start = zx_clock_get_monotonic();
+  const zx_time_t kTestDuration = ZX_SEC(5);
+  auto start = zx_clock_get_monotonic();
 
-    zx::timer timer;
-    ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
-    while (zx_clock_get_monotonic() - start < kTestDuration) {
-        ASSERT_EQ(timer.set(zx::deadline_after(zx::usec(100)), zx::nsec(0)), ZX_OK);
-    }
+  zx::timer timer;
+  ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
+  while (zx_clock_get_monotonic() - start < kTestDuration) {
+    ASSERT_EQ(timer.set(zx::deadline_after(zx::usec(100)), zx::nsec(0)), ZX_OK);
+  }
 
-    EXPECT_EQ(timer.cancel(), ZX_OK);
+  EXPECT_EQ(timer.cancel(), ZX_OK);
 
-    END_TEST;
+  END_TEST;
 }
 
 // If the timer is already due at the moment it is started then the signal should be
 // asserted immediately.  Likewise canceling the timer should immediately deassert
 // the signal.
 static bool signals_asserted_immediately() {
-    BEGIN_TEST;
-    zx::timer timer;
-    ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
+  BEGIN_TEST;
+  zx::timer timer;
+  ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
 
-    for (int i = 0; i < 100; i++) {
-        zx::time now = zx::clock::get_monotonic();
+  for (int i = 0; i < 100; i++) {
+    zx::time now = zx::clock::get_monotonic();
 
-        EXPECT_EQ(timer.set(now, zx::nsec(0)), ZX_OK);
+    EXPECT_EQ(timer.set(now, zx::nsec(0)), ZX_OK);
 
-        zx_signals_t pending;
-        EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, zx::time(), &pending), ZX_OK);
-        EXPECT_EQ(pending, ZX_TIMER_SIGNALED);
+    zx_signals_t pending;
+    EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, zx::time(), &pending), ZX_OK);
+    EXPECT_EQ(pending, ZX_TIMER_SIGNALED);
 
-        EXPECT_EQ(timer.cancel(), ZX_OK);
+    EXPECT_EQ(timer.cancel(), ZX_OK);
 
-        EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, zx::time(), &pending), ZX_ERR_TIMED_OUT);
-        EXPECT_EQ(pending, 0u);
-    }
+    EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, zx::time(), &pending), ZX_ERR_TIMED_OUT);
+    EXPECT_EQ(pending, 0u);
+  }
 
-    END_TEST;
+  END_TEST;
 }
 
 // This test is disabled because is flaky. The system might have a timer
@@ -174,50 +171,46 @@ static bool signals_asserted_immediately() {
 // See ZX-1087 for the current owner.
 
 static bool coalesce_test(uint32_t mode) {
-    BEGIN_TEST;
-    // The second timer will coalesce to the first one for ZX_TIMER_SLACK_LATE
-    // but not for  ZX_TIMER_SLACK_EARLY. This test is not precise because the
-    // system might have other timers that interfere with it. Precise tests are
-    // avaliable as kernel tests.
+  BEGIN_TEST;
+  // The second timer will coalesce to the first one for ZX_TIMER_SLACK_LATE
+  // but not for  ZX_TIMER_SLACK_EARLY. This test is not precise because the
+  // system might have other timers that interfere with it. Precise tests are
+  // avaliable as kernel tests.
 
-    zx::timer timer_1;
-    ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer_1), ZX_OK);
-    zx::timer timer_2;
-    ASSERT_EQ(zx::timer::create(mode, ZX_CLOCK_MONOTONIC, &timer_2), ZX_OK);
+  zx::timer timer_1;
+  ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer_1), ZX_OK);
+  zx::timer timer_2;
+  ASSERT_EQ(zx::timer::create(mode, ZX_CLOCK_MONOTONIC, &timer_2), ZX_OK);
 
-    zx_time_t start = zx_clock_get_monotonic();
+  zx_time_t start = zx_clock_get_monotonic();
 
-    const auto deadline_1 = zx::time(start + ZX_MSEC(350));
-    const auto deadline_2 = zx::time(start + ZX_MSEC(250));
+  const auto deadline_1 = zx::time(start + ZX_MSEC(350));
+  const auto deadline_2 = zx::time(start + ZX_MSEC(250));
 
-    ASSERT_EQ(timer_1.set(deadline_1, zx::nsec(0)), ZX_OK);
-    ASSERT_EQ(timer_2.set(deadline_2, zx::msec(110)), ZX_OK);
+  ASSERT_EQ(timer_1.set(deadline_1, zx::nsec(0)), ZX_OK);
+  ASSERT_EQ(timer_2.set(deadline_2, zx::msec(110)), ZX_OK);
 
-    zx_signals_t pending;
-    EXPECT_EQ(timer_2.wait_one(ZX_TIMER_SIGNALED, zx::time::infinite(), &pending), ZX_OK);
-    EXPECT_EQ(pending, ZX_TIMER_SIGNALED);
+  zx_signals_t pending;
+  EXPECT_EQ(timer_2.wait_one(ZX_TIMER_SIGNALED, zx::time::infinite(), &pending), ZX_OK);
+  EXPECT_EQ(pending, ZX_TIMER_SIGNALED);
 
-    auto duration = zx_clock_get_monotonic() - start;
+  auto duration = zx_clock_get_monotonic() - start;
 
-    if (mode == ZX_TIMER_SLACK_LATE) {
-        EXPECT_GE(duration, ZX_MSEC(350));
-    } else if (mode == ZX_TIMER_SLACK_EARLY) {
-        EXPECT_LE(duration, ZX_MSEC(345));
-    } else {
-        assert(false);
-    }
-    END_TEST;
+  if (mode == ZX_TIMER_SLACK_LATE) {
+    EXPECT_GE(duration, ZX_MSEC(350));
+  } else if (mode == ZX_TIMER_SLACK_EARLY) {
+    EXPECT_LE(duration, ZX_MSEC(345));
+  } else {
+    assert(false);
+  }
+  END_TEST;
 }
 
 // Test is disabled, see coalesce_test().
-static bool coalesce_test_early() {
-    return coalesce_test(ZX_TIMER_SLACK_EARLY);
-}
+static bool coalesce_test_early() { return coalesce_test(ZX_TIMER_SLACK_EARLY); }
 
 // Test is disabled, see coalesce_test().
-static bool coalesce_test_late() {
-    return coalesce_test(ZX_TIMER_SLACK_LATE);
-}
+static bool coalesce_test_late() { return coalesce_test(ZX_TIMER_SLACK_LATE); }
 
 BEGIN_TEST_CASE(timers_test)
 RUN_TEST(deadline_after)
