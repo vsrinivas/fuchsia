@@ -25,7 +25,8 @@
 namespace modular::testing {
 namespace {
 
-constexpr char kBasemgrUrl[] = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";
+constexpr char kBasemgrUrl[] =
+    "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";
 
 // Defaut shell URLs which are used if not specified.
 constexpr char kBaseShellDefaultUrl[] =
@@ -58,7 +59,8 @@ class TestHarnessImpl::InterceptedComponentImpl
   using RemoveHandler = fit::function<void()>;
   InterceptedComponentImpl(
       std::unique_ptr<sys::testing::InterceptedComponent> impl,
-      fidl::InterfaceRequest<fuchsia::modular::testing::InterceptedComponent> request)
+      fidl::InterfaceRequest<fuchsia::modular::testing::InterceptedComponent>
+          request)
       : impl_(std::move(impl)), binding_(this, std::move(request)) {
     impl_->set_on_kill([this] {
       binding_.events().OnKill();
@@ -90,10 +92,13 @@ class TestHarnessImpl::InterceptedSessionAgent final {
   InterceptedSessionAgent(::modular::AgentHost* host) {}
 
   // Called by AgentDriver.
-  void Connect(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services) {}
+  void Connect(
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services) {
+  }
 
   // Called by AgentDriver.
-  void RunTask(const fidl::StringPtr& task_id, const fit::function<void()>& done) {
+  void RunTask(const fidl::StringPtr& task_id,
+               const fit::function<void()>& done) {
     FXL_DLOG(WARNING) << "This session agent does not run tasks";
     done();
   }
@@ -109,13 +114,17 @@ TestHarnessImpl::TestHarnessImpl(
     : parent_env_(parent_env),
       binding_(this, std::move(request)),
       on_disconnected_(std::move(on_disconnected)),
-      interceptor_(sys::testing::ComponentInterceptor::CreateWithEnvironmentLoader(parent_env_)) {
-  binding_.set_error_handler([this](zx_status_t status) { CloseBindingIfError(status); });
+      interceptor_(
+          sys::testing::ComponentInterceptor::CreateWithEnvironmentLoader(
+              parent_env_)) {
+  binding_.set_error_handler(
+      [this](zx_status_t status) { CloseBindingIfError(status); });
 }
 
 TestHarnessImpl::~TestHarnessImpl() = default;
 
-void TestHarnessImpl::ConnectToModularService(fuchsia::modular::testing::ModularService service) {
+void TestHarnessImpl::ConnectToModularService(
+    fuchsia::modular::testing::ModularService service) {
   switch (service.Which()) {
     case fuchsia::modular::testing::ModularService::Tag::kPuppetMaster: {
       BufferSessionAgentService(std::move(service.puppet_master()));
@@ -137,13 +146,15 @@ void TestHarnessImpl::ConnectToModularService(fuchsia::modular::testing::Modular
   }
 }
 
-void TestHarnessImpl::ConnectToEnvironmentService(std::string service_name, zx::channel request) {
+void TestHarnessImpl::ConnectToEnvironmentService(std::string service_name,
+                                                  zx::channel request) {
   enclosing_env_->ConnectToService(service_name, std::move(request));
 }
 
 bool TestHarnessImpl::CloseBindingIfError(zx_status_t status) {
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Destroying TestHarness because of error: " << zx_status_get_string(status);
+    FXL_LOG(ERROR) << "Destroying TestHarness because of error: "
+                   << zx_status_get_string(status);
     binding_.Close(status);
     // destory |enclosing_env_| should kill all processes.
     enclosing_env_.reset();
@@ -153,22 +164,17 @@ bool TestHarnessImpl::CloseBindingIfError(zx_status_t status) {
   return false;
 }
 
-std::string MakeTestHarnessEnvironmentName(std::string user_env_suffix) {
+std::string MakeTestHarnessEnvironmentName() {
   // Apply a random suffix to the environment name so that multiple hermetic
   // test harness environments may coexist under the same parent env.
-  // If user_env_suffix is provided, the suffix is concatenated to 22 chars
-  // such that "mth_#####_{user_env_suffix}" is 32 chars or less.
   uint32_t random_env_suffix = 0;
-  // Limit suffix to 5 digits because of 32 char max on the entire name.
-  zx_cprng_draw(&random_env_suffix, 5);
-  std::string env_name = fxl::Substitute("mth_$0", std::to_string(random_env_suffix));
-  if (!user_env_suffix.empty()) {
-    env_name.append("_" + user_env_suffix);
-  }
-  return env_name;
+  zx_cprng_draw(&random_env_suffix, sizeof random_env_suffix);
+  return fxl::Substitute("modular_test_harness_$0",
+                         std::to_string(random_env_suffix));
 }
 
-zx_status_t TestHarnessImpl::PopulateEnvServices(sys::testing::EnvironmentServices* env_services) {
+zx_status_t TestHarnessImpl::PopulateEnvServices(
+    sys::testing::EnvironmentServices* env_services) {
   // The default set of component-provided services are all basemgr's hard
   // dependencies. A map of service name => component URL providing the service.
   std::map<std::string, std::string> default_svcs = {
@@ -189,12 +195,14 @@ zx_status_t TestHarnessImpl::PopulateEnvServices(sys::testing::EnvironmentServic
   }
 
   // 2. Inject component-provided services.
-  if (auto retval = PopulateEnvServicesWithComponents(env_services, &added_svcs) != ZX_OK) {
+  if (auto retval = PopulateEnvServicesWithComponents(env_services,
+                                                      &added_svcs) != ZX_OK) {
     return retval;
   }
 
   // 3. Inject service_dir services.
-  if (auto retval = PopulateEnvServicesWithServiceDir(env_services, &added_svcs) != ZX_OK) {
+  if (auto retval = PopulateEnvServicesWithServiceDir(env_services,
+                                                      &added_svcs) != ZX_OK) {
     return retval;
   }
 
@@ -205,17 +213,20 @@ zx_status_t TestHarnessImpl::PopulateEnvServices(sys::testing::EnvironmentServic
     }
     fuchsia::sys::LaunchInfo info;
     info.url = svc_component.second;
-    env_services->AddServiceWithLaunchInfo(std::move(info), svc_component.first);
+    env_services->AddServiceWithLaunchInfo(std::move(info),
+                                           svc_component.first);
   }
 
   return ZX_OK;
 }
 
 zx_status_t TestHarnessImpl::PopulateEnvServicesWithComponents(
-    sys::testing::EnvironmentServices* env_services, std::set<std::string>* added_svcs) {
+    sys::testing::EnvironmentServices* env_services,
+    std::set<std::string>* added_svcs) {
   // Wire up client-specified injected services, and remove them from the
   // default injected services.
-  if (!spec_.has_env_services() || !spec_.env_services().has_services_from_components()) {
+  if (!spec_.has_env_services() ||
+      !spec_.env_services().has_services_from_components()) {
     return ZX_OK;
   }
   for (const auto& svc : spec_.env_services().services_from_components()) {
@@ -241,7 +252,9 @@ std::vector<std::string> GetDirListing(fuchsia::io::Directory* dir) {
   dir->Clone(fuchsia::io::OPEN_RIGHT_READABLE, dir_copy.NewRequest());
 
   std::vector<std::string> svcs;
-  DIR* fd = fdopendir(fsl::OpenChannelAsFileDescriptor(dir_copy.Unbind().TakeChannel()).release());
+  DIR* fd = fdopendir(
+      fsl::OpenChannelAsFileDescriptor(dir_copy.Unbind().TakeChannel())
+          .release());
   FXL_CHECK(fd != nullptr);
 
   struct dirent* dp = nullptr;
@@ -256,7 +269,8 @@ std::vector<std::string> GetDirListing(fuchsia::io::Directory* dir) {
 }
 
 zx_status_t TestHarnessImpl::PopulateEnvServicesWithServiceDir(
-    sys::testing::EnvironmentServices* env_services, std::set<std::string>* added_svcs) {
+    sys::testing::EnvironmentServices* env_services,
+    std::set<std::string>* added_svcs) {
   if (!spec_.has_env_services() || !spec_.env_services().has_service_dir() ||
       !spec_.env_services().service_dir()) {
     return ZX_OK;
@@ -266,19 +280,24 @@ zx_status_t TestHarnessImpl::PopulateEnvServicesWithServiceDir(
   dir.Bind(std::move(*spec_.mutable_env_services()->mutable_service_dir()));
   for (auto& svc_name : GetDirListing(dir.get())) {
     if (added_svcs->find(svc_name) != added_svcs->end()) {
-      FXL_LOG(ERROR) << svc_name << " is already injected into the environment, cannot add twice.";
+      FXL_LOG(ERROR)
+          << svc_name
+          << " is already injected into the environment, cannot add twice.";
       return ZX_ERR_ALREADY_EXISTS;
     }
     env_services->AddService(
-        std::make_unique<vfs::Service>(
-            [this, svc_name](zx::channel request, async_dispatcher_t* dispatcher) {
-              FXL_CHECK(env_service_dir_->Connect(svc_name, std::move(request)) == ZX_OK);
-            }),
+        std::make_unique<vfs::Service>([this, svc_name](
+                                           zx::channel request,
+                                           async_dispatcher_t* dispatcher) {
+          FXL_CHECK(env_service_dir_->Connect(svc_name, std::move(request)) ==
+                    ZX_OK);
+        }),
         svc_name);
     added_svcs->insert(svc_name);
   }
 
-  env_service_dir_ = std::make_unique<sys::ServiceDirectory>(dir.Unbind().TakeChannel());
+  env_service_dir_ =
+      std::make_unique<sys::ServiceDirectory>(dir.Unbind().TakeChannel());
 
   return ZX_OK;
 }
@@ -286,7 +305,8 @@ zx_status_t TestHarnessImpl::PopulateEnvServicesWithServiceDir(
 void TestHarnessImpl::ParseConfig(std::string config, std::string config_path,
                                   ParseConfigCallback callback) {
   auto config_reader = modular::ModularConfigReader(config, config_path);
-  callback(config_reader.GetBasemgrConfig(), config_reader.GetSessionmgrConfig());
+  callback(config_reader.GetBasemgrConfig(),
+           config_reader.GetSessionmgrConfig());
 }
 
 void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
@@ -315,31 +335,29 @@ void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
   // Ledger configuration for tests by default:
   // * use a memory-backed FS for ledger.
   // * doesn't sync with a cloudprovider.
-  auto* sessionmgr_config = spec_.mutable_sessionmgr_config();  // auto initialize.
+  auto* sessionmgr_config =
+      spec_.mutable_sessionmgr_config();  // auto initialize.
   if (!sessionmgr_config->has_use_memfs_for_ledger()) {
     sessionmgr_config->set_use_memfs_for_ledger(true);
   }
   if (!sessionmgr_config->has_cloud_provider()) {
-    sessionmgr_config->set_cloud_provider(fuchsia::modular::session::CloudProvider::NONE);
+    sessionmgr_config->set_cloud_provider(
+        fuchsia::modular::session::CloudProvider::NONE);
   }
 
   fuchsia::sys::EnvironmentOptions env_options;
   env_options.delete_storage_on_death = true;
 
-  std::string user_env_suffix = "";
-  if (spec_.has_environment_suffix()) {
-    user_env_suffix = spec_.environment_suffix();
-  }
-
-  enclosing_env_ =
-      sys::testing::EnclosingEnvironment::Create(MakeTestHarnessEnvironmentName(user_env_suffix),
-                                                 parent_env_, std::move(env_services), env_options);
+  enclosing_env_ = sys::testing::EnclosingEnvironment::Create(
+      MakeTestHarnessEnvironmentName(), parent_env_, std::move(env_services),
+      env_options);
 
   zx::channel client;
   zx::channel request;
   FXL_CHECK(zx::channel::create(0u, &client, &request) == ZX_OK);
   basemgr_config_dir_ = MakeBasemgrConfigDir(spec_);
-  basemgr_config_dir_->Serve(fuchsia::io::OPEN_RIGHT_READABLE, std::move(request));
+  basemgr_config_dir_->Serve(fuchsia::io::OPEN_RIGHT_READABLE,
+                             std::move(request));
 
   fuchsia::sys::LaunchInfo info;
   info.url = kBasemgrUrl;
@@ -350,7 +368,8 @@ void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
   basemgr_ctrl_ = enclosing_env_->CreateComponent(std::move(info));
 }
 
-zx::channel TakeSvcFromFlatNamespace(fuchsia::sys::FlatNamespace* flat_namespace) {
+zx::channel TakeSvcFromFlatNamespace(
+    fuchsia::sys::FlatNamespace* flat_namespace) {
   for (size_t i = 0; i < flat_namespace->paths.size(); i++) {
     if (flat_namespace->paths[i] == "/svc") {
       return std::move(flat_namespace->directories[i]);
@@ -364,15 +383,19 @@ zx_status_t TestHarnessImpl::SetupFakeSessionAgent() {
   auto interception_retval = interceptor_.InterceptURL(
       kSessionAgentFakeInterceptionUrl, kSessionAgentFakeInterceptionCmx,
       [this](fuchsia::sys::StartupInfo startup_info,
-             std::unique_ptr<sys::testing::InterceptedComponent> intercepted_component) {
-        intercepted_session_agent_info_.component_context = std::make_unique<sys::ComponentContext>(
-            std::make_shared<sys::ServiceDirectory>(
-                TakeSvcFromFlatNamespace(&startup_info.flat_namespace)),
-            std::move(startup_info.launch_info.directory_request));
+             std::unique_ptr<sys::testing::InterceptedComponent>
+                 intercepted_component) {
+        intercepted_session_agent_info_.component_context =
+            std::make_unique<sys::ComponentContext>(
+                std::make_shared<sys::ServiceDirectory>(
+                    TakeSvcFromFlatNamespace(&startup_info.flat_namespace)),
+                std::move(startup_info.launch_info.directory_request));
         intercepted_session_agent_info_.agent_driver.reset(
             new ::modular::AgentDriver<InterceptedSessionAgent>(
-                intercepted_session_agent_info_.component_context.get(), [] {}));
-        intercepted_session_agent_info_.intercepted_component = std::move(intercepted_component);
+                intercepted_session_agent_info_.component_context.get(),
+                [] {}));
+        intercepted_session_agent_info_.intercepted_component =
+            std::move(intercepted_component);
 
         FlushBufferedSessionAgentServices();
       });
@@ -389,7 +412,8 @@ fuchsia::modular::session::AppConfig MakeAppConfigWithUrl(std::string url) {
   return app_config;
 }
 
-fuchsia::modular::session::SessionShellMapEntry MakeDefaultSessionShellMapEntry() {
+fuchsia::modular::session::SessionShellMapEntry
+MakeDefaultSessionShellMapEntry() {
   fuchsia::modular::session::SessionShellConfig config;
   config.mutable_app_config()->set_url(kSessionShellDefaultUrl);
 
@@ -420,11 +444,14 @@ std::unique_ptr<vfs::PseudoDir> TestHarnessImpl::MakeBasemgrConfigDir(
   }
 
   // 1.1. Give session shell a default if not specified.
-  if (!basemgr_config->has_session_shell_map() || basemgr_config->session_shell_map().size() == 0) {
-    basemgr_config->mutable_session_shell_map()->push_back(MakeDefaultSessionShellMapEntry());
+  if (!basemgr_config->has_session_shell_map() ||
+      basemgr_config->session_shell_map().size() == 0) {
+    basemgr_config->mutable_session_shell_map()->push_back(
+        MakeDefaultSessionShellMapEntry());
   }
 
-  auto* first_session_shell_entry = &basemgr_config->mutable_session_shell_map()->at(0);
+  auto* first_session_shell_entry =
+      &basemgr_config->mutable_session_shell_map()->at(0);
   if (!first_session_shell_entry->has_config() ||
       !first_session_shell_entry->config().has_app_config() ||
       !first_session_shell_entry->config().app_config().has_url()) {
@@ -434,8 +461,10 @@ std::unique_ptr<vfs::PseudoDir> TestHarnessImpl::MakeBasemgrConfigDir(
 
   // 2. Configure a session agent and intercept/mock it for its capabilities.
   std::vector<std::string> sessionmgr_args;
-  auto* sessionmgr_config = spec.mutable_sessionmgr_config();          // initialize if empty.
-  auto* session_agents = sessionmgr_config->mutable_session_agents();  // initialize if empty.
+  auto* sessionmgr_config =
+      spec.mutable_sessionmgr_config();  // initialize if empty.
+  auto* session_agents =
+      sessionmgr_config->mutable_session_agents();  // initialize if empty.
   session_agents->push_back(kSessionAgentFakeInterceptionUrl);
 
   // 3. Write sessionmgr and basemgr configs into a single modular config
@@ -453,25 +482,29 @@ std::unique_ptr<vfs::PseudoDir> TestHarnessImpl::MakeBasemgrConfigDir(
                       modular_config::kBasemgrConfigName, basemgr_json,
                       modular_config::kSessionmgrConfigName, sessionmgr_json);
 
-  return MakeFilePathWithContents(modular_config::kStartupConfigFilePath, modular_config_json);
+  return MakeFilePathWithContents(modular_config::kStartupConfigFilePath,
+                                  modular_config_json);
 }
 
-fuchsia::modular::testing::InterceptedComponentPtr TestHarnessImpl::AddInterceptedComponentBinding(
+fuchsia::modular::testing::InterceptedComponentPtr
+TestHarnessImpl::AddInterceptedComponentBinding(
     std::unique_ptr<sys::testing::InterceptedComponent> intercepted_component) {
   fuchsia::modular::testing::InterceptedComponentPtr ptr;
-  auto impl = std::make_unique<InterceptedComponentImpl>(std::move(intercepted_component),
-                                                         ptr.NewRequest());
+  auto impl = std::make_unique<InterceptedComponentImpl>(
+      std::move(intercepted_component), ptr.NewRequest());
 
   // Hold on to |impl|.
   // Automatically remove/destroy |impl| if its associated binding closes.
   auto key = impl.get();
-  impl->set_remove_handler([this, key] { intercepted_component_impls_.erase(key); });
+  impl->set_remove_handler(
+      [this, key] { intercepted_component_impls_.erase(key); });
   intercepted_component_impls_[key] = std::move(impl);
 
   return ptr;
 }
 
-std::string GetCmxAsString(const fuchsia::modular::testing::InterceptSpec& intercept_spec) {
+std::string GetCmxAsString(
+    const fuchsia::modular::testing::InterceptSpec& intercept_spec) {
   std::string cmx_str = "";
   if (intercept_spec.has_extra_cmx_contents()) {
     if (!fsl::StringFromVmo(intercept_spec.extra_cmx_contents(), &cmx_str)) {
@@ -492,10 +525,12 @@ zx_status_t TestHarnessImpl::SetupComponentInterception() {
     if (!interceptor_.InterceptURL(
             intercept_spec.component_url(), GetCmxAsString(intercept_spec),
             [this](fuchsia::sys::StartupInfo startup_info,
-                   std::unique_ptr<sys::testing::InterceptedComponent> intercepted_component) {
+                   std::unique_ptr<sys::testing::InterceptedComponent>
+                       intercepted_component) {
               binding_.events().OnNewComponent(
                   std::move(startup_info),
-                  AddInterceptedComponentBinding(std::move(intercepted_component)));
+                  AddInterceptedComponentBinding(
+                      std::move(intercepted_component)));
             })) {
       return ZX_ERR_INVALID_ARGS;
     }
