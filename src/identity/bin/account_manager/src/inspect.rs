@@ -22,8 +22,7 @@ pub struct Accounts {
 // TODO(jsankey): Write a procedural macro and trait to auto generate this implementation once it's
 // stable.
 impl Accounts {
-    /// Creates a new Accounts as a child of the supplied node, or returns an Error if that
-    /// was not possible.
+    /// Creates a new Accounts as a child of the supplied node.
     pub fn new(parent: &Node) -> Self {
         let node = parent.create_child("accounts");
         let total = (&node).create_uint("total", 0);
@@ -45,8 +44,7 @@ pub struct Listeners {
 // TODO(jsankey): Write a procedural macro and trait to auto generate this implementation once it's
 // stable.
 impl Listeners {
-    /// Creates a new Listeners as a child of the supplied node, or returns an Error if that
-    /// was not possible.
+    /// Creates a new Listeners as a child of the supplied node.
     pub fn new(parent: &Node) -> Self {
         let node = parent.create_child("listeners");
         let active = (&node).create_uint("active", 0);
@@ -66,8 +64,7 @@ pub struct AuthProviders {
 // TODO(jsankey): Write a procedural macro and trait to auto generate this implementation once it's
 // stable.
 impl AuthProviders {
-    /// Creates a new AuthProviders as a child of the supplied node, or returns an Error if that
-    /// was not possible.
+    /// Creates a new AuthProviders as a child of the supplied node.
     pub fn new(parent: &Node) -> Self {
         let node = parent.create_child("auth_providers");
         let types = (&node).create_string("types", "");

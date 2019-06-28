@@ -107,7 +107,7 @@ impl AccountEventEmitter {
         let all_futures = join_all(futures);
         std::mem::drop(clients_lock);
         await!(all_futures);
-        let _ = self.inspect.events.add(1);
+        self.inspect.events.add(1);
     }
 
     /// Add a new listener to the collection.
@@ -128,7 +128,7 @@ impl AccountEventEmitter {
             FutureObj::new(Box::pin(ok(())))
         };
         clients_lock.push(Client::new(listener, options));
-        let _ = self.inspect.active.set(clients_lock.len() as u64);
+        self.inspect.active.set(clients_lock.len() as u64);
         std::mem::drop(clients_lock);
         await!(future)
     }

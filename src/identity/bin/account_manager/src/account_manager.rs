@@ -102,9 +102,9 @@ impl AccountManager {
         let auth_providers_inspect = inspect::AuthProviders::new(inspector.root());
         let auth_provider_types: Vec<String> =
             auth_provider_config.iter().map(|apc| apc.auth_provider_type.clone()).collect();
-        let _ = auth_providers_inspect.types.set(&auth_provider_types.join(","));
+        auth_providers_inspect.types.set(&auth_provider_types.join(","));
         let accounts_inspect = inspect::Accounts::new(inspector.root());
-        let _ = accounts_inspect.total.set(ids_to_handlers.len() as u64);
+        accounts_inspect.total.set(ids_to_handlers.len() as u64);
         let event_emitter = AccountEventEmitter::new(inspector.root());
 
         Ok(Self {
@@ -185,7 +185,7 @@ impl AccountManager {
             Arc::clone(&self.context)
         ))?);
         ids_to_handlers.insert(account_id.clone(), Some(Arc::clone(&new_handler)));
-        let _ = self.accounts_inspect.active.set(count_populated(ids_to_handlers) as u64);
+        self.accounts_inspect.active.set(count_populated(ids_to_handlers) as u64);
         Ok(new_handler)
     }
 
@@ -290,8 +290,8 @@ impl AccountManager {
         let event = AccountEvent::AccountRemoved(account_id.clone());
         await!(self.event_emitter.publish(&event));
         ids_to_handlers.remove(&account_id);
-        let _ = self.accounts_inspect.total.set(ids_to_handlers.len() as u64);
-        let _ = self.accounts_inspect.active.set(count_populated(&ids_to_handlers) as u64);
+        self.accounts_inspect.total.set(ids_to_handlers.len() as u64);
+        self.accounts_inspect.active.set(count_populated(&ids_to_handlers) as u64);
         Status::Ok
     }
 
@@ -453,8 +453,8 @@ impl AccountManager {
         ids_to_handlers.insert(account_id.clone(), Some(account_handler));
         let event = AccountEvent::AccountAdded(account_id.clone());
         await!(self.event_emitter.publish(&event));
-        let _ = self.accounts_inspect.total.set(ids_to_handlers.len() as u64);
-        let _ = self.accounts_inspect.active.set(count_populated(&ids_to_handlers) as u64);
+        self.accounts_inspect.total.set(ids_to_handlers.len() as u64);
+        self.accounts_inspect.active.set(count_populated(&ids_to_handlers) as u64);
         Ok(())
     }
 
