@@ -26,6 +26,7 @@ constexpr char kSystemServices[] = "system-services";
 
 const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::net::Connectivity::Name_,
+    fuchsia::net::NameLookup::Name_,
     fuchsia::net::SocketProvider::Name_,
     fuchsia::net::stack::Stack::Name_,
     fuchsia::netstack::Netstack::Name_,
