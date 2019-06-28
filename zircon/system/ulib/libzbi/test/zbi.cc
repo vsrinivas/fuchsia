@@ -15,6 +15,12 @@
 #include <zircon/boot/image.h>
 #include <zircon/compiler.h>
 
+#ifdef __Fuchsia__
+#include <libzbi/zbi-zx.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#endif
+
 const char kTestCmdline[] = "0123";
 constexpr size_t kCmdlinePayloadLen =
     ZBI_ALIGN(static_cast<uint32_t>(sizeof(kTestCmdline)));
@@ -509,6 +515,63 @@ static bool ZbiTestNoOverflow(void) {
     END_TEST;
 }
 
+#ifdef __Fuchsia__
+static bool ZbiZxTestOverflowAtPageBoundary() {
+  BEGIN_TEST;
+
+  // Make a VMO, and fill it with a zbi that's "kernel + data".
+  constexpr size_t kInitialAlloc = 16384;
+  zx_handle_t bootdata;
+  ASSERT_EQ(zx_vmo_create(kInitialAlloc, ZX_VMO_RESIZABLE, &bootdata), ZX_OK);
+  uintptr_t buffer;
+  ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, bootdata, 0,
+                        kInitialAlloc, &buffer),
+            ZX_OK);
+  uint8_t* ptr = reinterpret_cast<uint8_t*>(buffer);
+  ASSERT_EQ(zbi_init(ptr, kInitialAlloc), ZBI_RESULT_OK);
+
+  uint8_t kernel_data[4096 - sizeof(zbi_header_t) * 3];
+  memset(kernel_data, 'k', sizeof(kernel_data));
+  ASSERT_EQ(zbi_append_section(ptr, kInitialAlloc, sizeof(kernel_data),
+#ifdef __aarch64__
+                               ZBI_TYPE_KERNEL_ARM64,
+#elif defined(__x86_64__)
+                               ZBI_TYPE_KERNEL_X64,
+#endif
+                               /*extra=*/0, /*flags=*/0, kernel_data),
+            ZBI_RESULT_OK);
+
+  // This is just under the size that would push SplitComplete to allocate the
+  // next page for the data vmo.
+  uint8_t boot_data[4096 - sizeof(zbi_header_t) * 3];
+  memset(boot_data, 'd', sizeof(boot_data));
+  ASSERT_EQ(zbi_append_section(ptr, kInitialAlloc, sizeof(boot_data), ZBI_TYPE_STORAGE_BOOTFS,
+                               /*extra=*/0, /*flags=*/0, boot_data),
+            ZBI_RESULT_OK);
+
+  // Turn the vmo into a ZbiVMO.
+  zbi::ZbiVMO zbi;
+  ASSERT_EQ(zbi.Init(zx::vmo{bootdata}), ZX_OK);
+
+  // Split it into kernel and data.
+  zbi::ZbiVMO kernel, data;
+  ASSERT_EQ(zbi.SplitComplete(&kernel, &data), ZBI_RESULT_OK);
+
+  uint8_t append_data[500];
+  memset(append_data, 'a', sizeof(append_data));
+
+  // Attempt to append, this was previously failing when the underlying vmo
+  // created by SplitComplete was not resizable, if the effective size of data
+  // needed to jump to the next PAGE_SIZE boundary.
+  EXPECT_EQ(kernel.AppendSection(sizeof(append_data), ZBI_TYPE_CMDLINE, 0, 0, append_data),
+            ZBI_RESULT_OK);
+  EXPECT_EQ(data.AppendSection(sizeof(append_data), ZBI_TYPE_CMDLINE, 0, 0, append_data),
+            ZBI_RESULT_OK);
+
+  END_TEST;
+}
+#endif
+
 BEGIN_TEST_CASE(zbi_tests)
 // Basic tests.
 RUN_TEST(ZbiTestBasic)
@@ -527,4 +590,7 @@ RUN_TEST(ZbiTestInitTooSmall)
 // Extend tests.
 RUN_TEST(ZbiTestExtendOkay)
 RUN_TEST(ZbiTestNoOverflow)
+#ifdef __Fuchsia__
+RUN_TEST(ZbiZxTestOverflowAtPageBoundary)
+#endif
 END_TEST_CASE(zbi_tests)

@@ -21,6 +21,9 @@ test("zbi") {
   ]
 
   if (is_fuchsia) {
-    deps += [ "$zx/system/ulib/fdio" ]
+    deps += [
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/zx",
+    ]
   }
 }
