@@ -20,7 +20,7 @@ At a high level these steps are:
 
 ## Constructing a component's namespace
 
-A [_namespace_][namespace] is a set of directories that are offered to a
+A [_namespace_][namespaces] is a set of directories that are offered to a
 component when it is started. Each directory is associated with a file system
 path through which the component may access files and services offered by other
 components.
