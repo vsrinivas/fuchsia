@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/fuchsia_criterion_lib_test"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
+    }
+}

@@ -7,6 +7,7 @@ group("examples") {
   deps = [
     ":tests",
     "cowsay",
+    "criterion_bench",
     "dotmatrix_display",
     "fortune",
     "hello_world",

@@ -11,6 +11,7 @@ group("developer") {
     "crashpad_agent",
     "debug",
     "feedback_agent",
+    "fuchsia-criterion",
     "kernel_crash_checker",
     "tracing",
   ]
@@ -24,6 +25,7 @@ group("tests") {
     "//src/developer/bugreport/tests:bugreport_tests",
     "//src/developer/crashpad_agent/tests:crashpad_agent_tests",
     "//src/developer/feedback_agent/tests:feedback_agent_tests",
+    "//src/developer/fuchsia-criterion:fuchsia-criterion-tests",
     "//src/developer/tracing:tests",
   ]
 }

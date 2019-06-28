@@ -1,0 +1,44 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+
+declare_args() {
+  # Used to enable local benchmarking/fine-tuning when running benchmarks
+  # in `fx shell`. Pass `--args=local_bench='true'` to `fx set` in order to
+  # enable it.
+  local_bench = false
+}
+
+rustc_library("fuchsia-criterion") {
+  name = "fuchsia-criterion"
+  with_unit_tests = true
+  version = "0.1.0"
+  edition = "2018"
+  deps = [
+    "//third_party/rust_crates:criterion",
+    "//third_party/rust_crates:csv",
+    "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:walkdir",
+  ]
+  if (local_bench) {
+    features = [
+      "local_bench",
+    ]
+  }
+}
+
+test_package("fuchsia-criterion-tests") {
+  deps = [
+    ":fuchsia-criterion_test",
+  ]
+  tests = [
+    {
+      name = "fuchsia_criterion_lib_test"
+    },
+  ]
+}

@@ -634,6 +634,7 @@ dependencies = [
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "criterion 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "crossbeam 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "csv 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "ct-logs 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "data-encoding 2.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "derivative 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -24,6 +24,7 @@ library or file a bug against IN to request one.
 [C/C++]: /zircon/system/ulib/perftest
 [Go]: /garnet/go/src/benchmarking
 [Dart]: #
+[Rust]: /src/developer/fuchsia-criterion
 [trace-based benchmark]: trace_based_benchmarking.md
 
 ## JSON Description
@@ -84,5 +85,3 @@ results will appear as two separate series in the performance dashboard:
 
 1. `$label/samples_0_to_0` which tracks the first element in `values`, and
 1. `$label/samples_1_to_N` which tracks the remaining `values`.
-
-
