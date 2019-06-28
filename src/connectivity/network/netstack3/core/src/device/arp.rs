@@ -933,6 +933,7 @@ mod tests {
             remote_ip,
             IpProto::Icmp,
             body,
+            None,
         );
         // this should've triggered an ARP request to come out of local
         assert_eq!(net.context("local").dispatcher.frames_sent().len(), 1);

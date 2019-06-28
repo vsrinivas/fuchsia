@@ -160,7 +160,7 @@ impl_icmp_message!(
     OriginalPacket<B>
 );
 
-#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
+#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned, PartialEq)]
 #[repr(C)]
 pub(crate) struct Icmpv6PacketTooBig {
     mtu: U32,

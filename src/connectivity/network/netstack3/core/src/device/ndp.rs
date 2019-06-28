@@ -642,6 +642,7 @@ mod tests {
             remote_ip(),
             IpProto::Icmpv6,
             body,
+            None,
         );
         // this should've triggered a neighbor solicitation to come out of local
         assert_eq!(net.context("local").dispatcher.frames_sent().len(), 1);
