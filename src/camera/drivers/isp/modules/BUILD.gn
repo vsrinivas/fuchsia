@@ -34,7 +34,7 @@ source_set("isp-blocks") {
 
 source_set("isp-registers") {
   sources = [
-    "gamma-rgb-registers.cpp",
+    "gamma-rgb-registers.cc",
   ]
 
   public_deps = [
@@ -49,8 +49,8 @@ source_set("isp-registers") {
 executable("gamma-rgb-registers") {
   testonly = true
   sources = [
-    "gamma-rgb-registers.cpp",
-    "test/gamma-rgb-registers-test.cpp",
+    "gamma-rgb-registers.cc",
+    "test/gamma-rgb-registers-test.cc",
   ]
 
   public_deps = [
