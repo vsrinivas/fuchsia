@@ -5,6 +5,7 @@
 #pragma once
 
 #include <fbl/intrusive_double_list.h>
+#include <fbl/mutex.h>
 #include <lib/sync/completion.h>
 #include <zircon/thread_annotations.h>
 

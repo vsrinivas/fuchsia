@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace audio {
 namespace intel_hda {
 
