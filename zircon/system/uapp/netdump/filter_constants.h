@@ -4,7 +4,8 @@
 
 // Shared constants between different components of the packet filtering feature.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_UAPP_NETDUMP_FILTER_CONSTANTS_H_
+#define ZIRCON_SYSTEM_UAPP_NETDUMP_FILTER_CONSTANTS_H_
 
 extern "C" {
 #include <inet6/inet6.h>
@@ -19,20 +20,20 @@ namespace netdump {
 // Specifies whether matching should occur on the src or dst fields.
 // TODO(xianglong): Extend to e.g. receiver, transmitter types when there is WLAN support.
 enum AddressFieldType {
-    SRC_ADDR = 0b01,
-    DST_ADDR = 0b10,
-    EITHER_ADDR = SRC_ADDR | DST_ADDR,
+  SRC_ADDR = 0b01,
+  DST_ADDR = 0b10,
+  EITHER_ADDR = SRC_ADDR | DST_ADDR,
 };
 
 enum PortFieldType {
-    SRC_PORT = 0b01,
-    DST_PORT = 0b10,
-    EITHER_PORT = SRC_PORT | DST_PORT,
+  SRC_PORT = 0b01,
+  DST_PORT = 0b10,
+  EITHER_PORT = SRC_PORT | DST_PORT,
 };
 
 enum LengthComparator {
-    LEQ,
-    GEQ,
+  LEQ,
+  GEQ,
 };
 
 constexpr uint16_t ETH_P_IP_NETWORK_BYTE_ORDER = 0x0008;
@@ -41,4 +42,6 @@ constexpr uint16_t ETH_P_IPV6_NETWORK_BYTE_ORDER = 0xDD86;
 // Port ranges are specified as pairs of (begin, end) port numbers.
 using PortRange = std::pair<uint16_t, uint16_t>;
 
-} // namespace netdump
+}  // namespace netdump
+
+#endif  // ZIRCON_SYSTEM_UAPP_NETDUMP_FILTER_CONSTANTS_H_

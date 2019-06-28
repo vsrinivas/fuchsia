@@ -9,17 +9,17 @@
 namespace netdump::test {
 
 // Canonical packet data.
-static constexpr uint16_t frame_length = 2000; // bytes
+static constexpr uint16_t frame_length = 2000;  // bytes
 static constexpr EthFilter::MacAddress src_mac = {0xde, 0xad, 0xbe, 0xef, 0xd0, 0x0d};
 static constexpr EthFilter::MacAddress dst_mac = {0xab, 0xcd, 0xef, 0xab, 0xcd, 0xef};
-static uint16_t ip_pkt_length = htons(1842); // bytes
+static uint16_t ip_pkt_length = htons(1842);  // bytes
 static constexpr uint8_t protocol = 0xab;
 static constexpr uint32_t ip4addr_src = 0xc0a80a04;
 static constexpr uint32_t ip4addr_dst = 0xfffefdfc;
-static constexpr IpFilter::IPv6Address ip6addr_src{0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0, 0,
-                                                   0, 0, 0, 0, 0, 0, 0x88, 0x88};
-static constexpr IpFilter::IPv6Address ip6addr_dst{0x32, 0x11, 0xAB, 0xCD, 0x12, 0xFF, 0, 0,
-                                                   0, 0, 0, 0, 0, 0, 0x12, 0x68};
+static constexpr IpFilter::IPv6Address ip6addr_src{0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0,    0,
+                                                   0,    0,    0,    0,    0,    0,    0x88, 0x88};
+static constexpr IpFilter::IPv6Address ip6addr_dst{0x32, 0x11, 0xAB, 0xCD, 0x12, 0xFF, 0,    0,
+                                                   0,    0,    0,    0,    0,    0,    0x12, 0x68};
 static uint16_t src_port = htons(6587);
 static uint16_t dst_port = htons(1234);
 
@@ -32,304 +32,296 @@ static struct udphdr test_udp;
 
 // Setup functions.
 static Packet SetupEth(uint16_t ethtype) {
-    Packet packet;
-    packet.frame_length = frame_length;
-    test_frame.h_proto = ethtype;
-    std::copy(src_mac.begin(), src_mac.end(), test_frame.h_source);
-    std::copy(dst_mac.begin(), dst_mac.end(), test_frame.h_dest);
-    packet.frame = &test_frame;
-    return packet;
+  Packet packet;
+  packet.frame_length = frame_length;
+  test_frame.h_proto = ethtype;
+  std::copy(src_mac.begin(), src_mac.end(), test_frame.h_source);
+  std::copy(dst_mac.begin(), dst_mac.end(), test_frame.h_dest);
+  packet.frame = &test_frame;
+  return packet;
 }
 
 static void SetupIPv4(Packet* packet) {
-    test_ipv4.version = 4;
-    test_ipv4.tot_len = ip_pkt_length;
-    test_ipv4.protocol = protocol;
-    test_ipv4.saddr = ip4addr_src;
-    test_ipv4.daddr = ip4addr_dst;
-    packet->ipv4 = &test_ipv4;
+  test_ipv4.version = 4;
+  test_ipv4.tot_len = ip_pkt_length;
+  test_ipv4.protocol = protocol;
+  test_ipv4.saddr = ip4addr_src;
+  test_ipv4.daddr = ip4addr_dst;
+  packet->ipv4 = &test_ipv4;
 }
 
 static void SetupIPv6(Packet* packet) {
-    reinterpret_cast<struct iphdr*>(&test_ipv6)->version = 6; // Version is set with iphdr pointer.
-    test_ipv6.length = ip_pkt_length;
-    test_ipv6.next_header = protocol;
-    std::copy(ip6addr_src.begin(), ip6addr_src.end(), test_ipv6.src.u8);
-    std::copy(ip6addr_dst.begin(), ip6addr_dst.end(), test_ipv6.dst.u8);
-    packet->ipv6 = &test_ipv6;
+  reinterpret_cast<struct iphdr*>(&test_ipv6)->version = 6;  // Version is set with iphdr pointer.
+  test_ipv6.length = ip_pkt_length;
+  test_ipv6.next_header = protocol;
+  std::copy(ip6addr_src.begin(), ip6addr_src.end(), test_ipv6.src.u8);
+  std::copy(ip6addr_dst.begin(), ip6addr_dst.end(), test_ipv6.dst.u8);
+  packet->ipv6 = &test_ipv6;
 }
 
 static void SetupTCP(Packet* packet) {
-    test_tcp.source = src_port;
-    test_tcp.dest = dst_port;
-    test_ipv4.protocol = IPPROTO_TCP;
-    test_ipv6.next_header = IPPROTO_TCP;
-    packet->tcp = &test_tcp;
+  test_tcp.source = src_port;
+  test_tcp.dest = dst_port;
+  test_ipv4.protocol = IPPROTO_TCP;
+  test_ipv6.next_header = IPPROTO_TCP;
+  packet->tcp = &test_tcp;
 }
 
 static void SetupUDP(Packet* packet) {
-    test_udp.source = src_port;
-    test_udp.dest = dst_port;
-    test_ipv4.protocol = IPPROTO_UDP;
-    test_ipv6.next_header = IPPROTO_UDP;
-    packet->tcp = &test_tcp;
+  test_udp.source = src_port;
+  test_udp.dest = dst_port;
+  test_ipv4.protocol = IPPROTO_UDP;
+  test_ipv6.next_header = IPPROTO_UDP;
+  packet->tcp = &test_tcp;
 }
 
 // Implementation of the test battery.
 void FrameLengthTest(FrameLengthFn filter_fn) {
-    Packet packet = SetupEth(htons(ETH_P_IP));
-    EXPECT_FALSE(filter_fn(htons(1842), LengthComparator::LEQ)->match(packet));
-    EXPECT_TRUE(filter_fn(htons(1842), LengthComparator::GEQ)->match(packet));
-    EXPECT_TRUE(filter_fn(htons(2000), LengthComparator::LEQ)->match(packet));
-    EXPECT_TRUE(filter_fn(htons(2000), LengthComparator::GEQ)->match(packet));
-    EXPECT_TRUE(filter_fn(htons(5555), LengthComparator::LEQ)->match(packet));
-    EXPECT_FALSE(filter_fn(htons(5555), LengthComparator::GEQ)->match(packet));
+  Packet packet = SetupEth(htons(ETH_P_IP));
+  EXPECT_FALSE(filter_fn(htons(1842), LengthComparator::LEQ)->match(packet));
+  EXPECT_TRUE(filter_fn(htons(1842), LengthComparator::GEQ)->match(packet));
+  EXPECT_TRUE(filter_fn(htons(2000), LengthComparator::LEQ)->match(packet));
+  EXPECT_TRUE(filter_fn(htons(2000), LengthComparator::GEQ)->match(packet));
+  EXPECT_TRUE(filter_fn(htons(5555), LengthComparator::LEQ)->match(packet));
+  EXPECT_FALSE(filter_fn(htons(5555), LengthComparator::GEQ)->match(packet));
 }
 
 void EthtypeTest(EthtypeFn filter_fn) {
-    Packet null_packet = SetupEth(htons(0x1430));
-    null_packet.frame = nullptr;
-    EXPECT_FALSE(filter_fn(htons(0x1430))->match(null_packet));
+  Packet null_packet = SetupEth(htons(0x1430));
+  null_packet.frame = nullptr;
+  EXPECT_FALSE(filter_fn(htons(0x1430))->match(null_packet));
 
-    EXPECT_TRUE(filter_fn(htons(0x1430))->match(SetupEth(htons(0x1430))));
-    EXPECT_FALSE(filter_fn(htons(0x3014))->match(SetupEth(htons(0x1430))));
-    EXPECT_FALSE(filter_fn(htons(0xCDAB))->match(SetupEth(htons(0x1430))));
+  EXPECT_TRUE(filter_fn(htons(0x1430))->match(SetupEth(htons(0x1430))));
+  EXPECT_FALSE(filter_fn(htons(0x3014))->match(SetupEth(htons(0x1430))));
+  EXPECT_FALSE(filter_fn(htons(0xCDAB))->match(SetupEth(htons(0x1430))));
 }
 
 void MacTest(MacFn filter_fn) {
-    Packet packet = SetupEth(htons(0x1430));
-    FilterPtr matched_src = filter_fn(src_mac, SRC_ADDR);
-    FilterPtr matched_dst = filter_fn(dst_mac, DST_ADDR);
+  Packet packet = SetupEth(htons(0x1430));
+  FilterPtr matched_src = filter_fn(src_mac, SRC_ADDR);
+  FilterPtr matched_dst = filter_fn(dst_mac, DST_ADDR);
 
-    EthFilter::MacAddress unmatched_mac1{0x0d, 0xd0, 0xef, 0xbe, 0xad, 0xde};
-    EthFilter::MacAddress unmatched_mac2{0xef, 0xdc, 0xab, 0xef, 0xdc, 0xab};
-    FilterPtr unmatched_src1 = filter_fn(unmatched_mac1, SRC_ADDR);
-    FilterPtr unmatched_src2 = filter_fn(unmatched_mac2, SRC_ADDR);
-    FilterPtr unmatched_dst1 = filter_fn(unmatched_mac1, DST_ADDR);
-    FilterPtr unmatched_dst2 = filter_fn(unmatched_mac2, DST_ADDR);
+  EthFilter::MacAddress unmatched_mac1{0x0d, 0xd0, 0xef, 0xbe, 0xad, 0xde};
+  EthFilter::MacAddress unmatched_mac2{0xef, 0xdc, 0xab, 0xef, 0xdc, 0xab};
+  FilterPtr unmatched_src1 = filter_fn(unmatched_mac1, SRC_ADDR);
+  FilterPtr unmatched_src2 = filter_fn(unmatched_mac2, SRC_ADDR);
+  FilterPtr unmatched_dst1 = filter_fn(unmatched_mac1, DST_ADDR);
+  FilterPtr unmatched_dst2 = filter_fn(unmatched_mac2, DST_ADDR);
 
-    EXPECT_TRUE(matched_src->match(packet));
-    EXPECT_TRUE(matched_dst->match(packet));
-    EXPECT_FALSE(unmatched_src1->match(packet));
-    EXPECT_FALSE(unmatched_src2->match(packet));
-    EXPECT_FALSE(unmatched_dst1->match(packet));
-    EXPECT_FALSE(unmatched_dst2->match(packet));
+  EXPECT_TRUE(matched_src->match(packet));
+  EXPECT_TRUE(matched_dst->match(packet));
+  EXPECT_FALSE(unmatched_src1->match(packet));
+  EXPECT_FALSE(unmatched_src2->match(packet));
+  EXPECT_FALSE(unmatched_dst1->match(packet));
+  EXPECT_FALSE(unmatched_dst2->match(packet));
 }
 
 void VersionTest(VersionFn filter_fn) {
-    FilterPtr ip4filter_fn = filter_fn(4);
-    FilterPtr ip6filter_fn = filter_fn(6);
+  FilterPtr ip4filter_fn = filter_fn(4);
+  FilterPtr ip6filter_fn = filter_fn(6);
 
-    Packet packet = SetupEth(htons(ETH_P_IP));
-    packet.ipv4 = nullptr;
-    EXPECT_FALSE(ip4filter_fn->match(packet));
-    EXPECT_FALSE(ip6filter_fn->match(packet));
+  Packet packet = SetupEth(htons(ETH_P_IP));
+  packet.ipv4 = nullptr;
+  EXPECT_FALSE(ip4filter_fn->match(packet));
+  EXPECT_FALSE(ip6filter_fn->match(packet));
 
-    packet = SetupEth(htons(ETH_P_IP));
-    SetupIPv4(&packet);
-    EXPECT_TRUE(ip4filter_fn->match(packet));
-    EXPECT_FALSE(ip6filter_fn->match(packet));
+  packet = SetupEth(htons(ETH_P_IP));
+  SetupIPv4(&packet);
+  EXPECT_TRUE(ip4filter_fn->match(packet));
+  EXPECT_FALSE(ip6filter_fn->match(packet));
 
-    packet = SetupEth(htons(ETH_P_IPV6));
-    SetupIPv6(&packet);
-    EXPECT_FALSE(ip4filter_fn->match(packet));
-    EXPECT_TRUE(ip6filter_fn->match(packet));
+  packet = SetupEth(htons(ETH_P_IPV6));
+  SetupIPv6(&packet);
+  EXPECT_FALSE(ip4filter_fn->match(packet));
+  EXPECT_TRUE(ip6filter_fn->match(packet));
 }
 
 void IPLengthTest(IPLengthFn filter_fn) {
-    Packet packet = SetupEth(htons(ETH_P_IP));
-    SetupIPv4(&packet);
-    EXPECT_FALSE(filter_fn(4, htons(40), LengthComparator::LEQ)->match(packet));
-    EXPECT_TRUE(filter_fn(4, htons(40), LengthComparator::GEQ)->match(packet));
-    EXPECT_TRUE(filter_fn(4, htons(1842), LengthComparator::LEQ)->match(packet));
-    EXPECT_TRUE(filter_fn(4, htons(1842), LengthComparator::GEQ)->match(packet));
-    EXPECT_TRUE(filter_fn(4, htons(4444), LengthComparator::LEQ)->match(packet));
-    EXPECT_FALSE(filter_fn(4, htons(4444), LengthComparator::GEQ)->match(packet));
+  Packet packet = SetupEth(htons(ETH_P_IP));
+  SetupIPv4(&packet);
+  EXPECT_FALSE(filter_fn(4, htons(40), LengthComparator::LEQ)->match(packet));
+  EXPECT_TRUE(filter_fn(4, htons(40), LengthComparator::GEQ)->match(packet));
+  EXPECT_TRUE(filter_fn(4, htons(1842), LengthComparator::LEQ)->match(packet));
+  EXPECT_TRUE(filter_fn(4, htons(1842), LengthComparator::GEQ)->match(packet));
+  EXPECT_TRUE(filter_fn(4, htons(4444), LengthComparator::LEQ)->match(packet));
+  EXPECT_FALSE(filter_fn(4, htons(4444), LengthComparator::GEQ)->match(packet));
 
-    packet = SetupEth(htons(ETH_P_IPV6));
-    SetupIPv6(&packet);
-    EXPECT_FALSE(filter_fn(6, htons(60), LengthComparator::LEQ)->match(packet));
-    EXPECT_TRUE(filter_fn(6, htons(60), LengthComparator::GEQ)->match(packet));
-    EXPECT_TRUE(filter_fn(6, htons(1842), LengthComparator::LEQ)->match(packet));
-    EXPECT_TRUE(filter_fn(6, htons(1842), LengthComparator::GEQ)->match(packet));
-    EXPECT_TRUE(filter_fn(6, htons(6666), LengthComparator::LEQ)->match(packet));
-    EXPECT_FALSE(filter_fn(6, htons(6666), LengthComparator::GEQ)->match(packet));
+  packet = SetupEth(htons(ETH_P_IPV6));
+  SetupIPv6(&packet);
+  EXPECT_FALSE(filter_fn(6, htons(60), LengthComparator::LEQ)->match(packet));
+  EXPECT_TRUE(filter_fn(6, htons(60), LengthComparator::GEQ)->match(packet));
+  EXPECT_TRUE(filter_fn(6, htons(1842), LengthComparator::LEQ)->match(packet));
+  EXPECT_TRUE(filter_fn(6, htons(1842), LengthComparator::GEQ)->match(packet));
+  EXPECT_TRUE(filter_fn(6, htons(6666), LengthComparator::LEQ)->match(packet));
+  EXPECT_FALSE(filter_fn(6, htons(6666), LengthComparator::GEQ)->match(packet));
 }
 
 void ProtocolTest(ProtocolFn filter_fn) {
-    FilterPtr matched_ip4 = filter_fn(4, 0xab);
-    FilterPtr matched_ip6 = filter_fn(6, 0xab);
-    FilterPtr unmatched_ip4 = filter_fn(4, 0xcd);
-    FilterPtr unmatched_ip6 = filter_fn(6, 0xef);
+  FilterPtr matched_ip4 = filter_fn(4, 0xab);
+  FilterPtr matched_ip6 = filter_fn(6, 0xab);
+  FilterPtr unmatched_ip4 = filter_fn(4, 0xcd);
+  FilterPtr unmatched_ip6 = filter_fn(6, 0xef);
 
-    Packet packet = SetupEth(htons(ETH_P_IP));
-    SetupIPv4(&packet);
-    EXPECT_TRUE(matched_ip4->match(packet));
-    EXPECT_FALSE(unmatched_ip4->match(packet));
+  Packet packet = SetupEth(htons(ETH_P_IP));
+  SetupIPv4(&packet);
+  EXPECT_TRUE(matched_ip4->match(packet));
+  EXPECT_FALSE(unmatched_ip4->match(packet));
 
-    packet = SetupEth(htons(ETH_P_IPV6));
-    SetupIPv6(&packet);
-    EXPECT_TRUE(matched_ip6->match(packet));
-    EXPECT_FALSE(unmatched_ip6->match(packet));
+  packet = SetupEth(htons(ETH_P_IPV6));
+  SetupIPv6(&packet);
+  EXPECT_TRUE(matched_ip6->match(packet));
+  EXPECT_FALSE(unmatched_ip6->match(packet));
 }
 
 void IPv4AddrTest(IPv4AddrFn filter_fn) {
-    Packet packet = SetupEth(htons(ETH_P_IP));
-    SetupIPv4(&packet);
+  Packet packet = SetupEth(htons(ETH_P_IP));
+  SetupIPv4(&packet);
 
-    FilterPtr matched_src = filter_fn(0xc0a80a04, SRC_ADDR);
-    FilterPtr matched_dst = filter_fn(0xfffefdfc, DST_ADDR);
-    FilterPtr either_t = filter_fn(0xc0a80a04, EITHER_ADDR);
-    FilterPtr either_f = filter_fn(0xffffffff, EITHER_ADDR);
-    FilterPtr unmatched_src = filter_fn(0x040aa8c0, SRC_ADDR);
-    FilterPtr unmatched_dst = filter_fn(0xfcfdfeff, DST_ADDR);
+  FilterPtr matched_src = filter_fn(0xc0a80a04, SRC_ADDR);
+  FilterPtr matched_dst = filter_fn(0xfffefdfc, DST_ADDR);
+  FilterPtr either_t = filter_fn(0xc0a80a04, EITHER_ADDR);
+  FilterPtr either_f = filter_fn(0xffffffff, EITHER_ADDR);
+  FilterPtr unmatched_src = filter_fn(0x040aa8c0, SRC_ADDR);
+  FilterPtr unmatched_dst = filter_fn(0xfcfdfeff, DST_ADDR);
 
-    EXPECT_TRUE(matched_src->match(packet));
-    EXPECT_TRUE(matched_dst->match(packet));
-    EXPECT_TRUE(either_t->match(packet));
-    EXPECT_FALSE(either_f->match(packet));
-    EXPECT_FALSE(unmatched_src->match(packet));
-    EXPECT_FALSE(unmatched_dst->match(packet));
+  EXPECT_TRUE(matched_src->match(packet));
+  EXPECT_TRUE(matched_dst->match(packet));
+  EXPECT_TRUE(either_t->match(packet));
+  EXPECT_FALSE(either_f->match(packet));
+  EXPECT_FALSE(unmatched_src->match(packet));
+  EXPECT_FALSE(unmatched_dst->match(packet));
 }
 
 void IPv6AddrTest(IPv6AddrFn filter_fn) {
-    IpFilter::IPv6Address ip6addr_other;
-    ip6addr_other.fill(123);
-    Packet packet = SetupEth(htons(ETH_P_IPV6));
-    SetupIPv6(&packet);
+  IpFilter::IPv6Address ip6addr_other;
+  ip6addr_other.fill(123);
+  Packet packet = SetupEth(htons(ETH_P_IPV6));
+  SetupIPv6(&packet);
 
-    IpFilter::IPv6Address ip6addr_src_copy(ip6addr_src); // Copy construction.
-    IpFilter::IPv6Address ip6addr_dst_copy(ip6addr_dst);
-    FilterPtr matched_src = filter_fn(ip6addr_src_copy, SRC_ADDR);
-    FilterPtr matched_dst = filter_fn(ip6addr_dst_copy, DST_ADDR);
-    FilterPtr wrong_type_src = filter_fn(ip6addr_src, DST_ADDR);
-    FilterPtr wrong_type_dst = filter_fn(ip6addr_dst, SRC_ADDR);
-    FilterPtr either_t = filter_fn(ip6addr_dst, EITHER_ADDR);
-    FilterPtr either_f = filter_fn(ip6addr_other, EITHER_ADDR);
-    FilterPtr unmatched_src = filter_fn(ip6addr_other, SRC_ADDR);
-    FilterPtr unmatched_dst = filter_fn(ip6addr_other, DST_ADDR);
+  IpFilter::IPv6Address ip6addr_src_copy(ip6addr_src);  // Copy construction.
+  IpFilter::IPv6Address ip6addr_dst_copy(ip6addr_dst);
+  FilterPtr matched_src = filter_fn(ip6addr_src_copy, SRC_ADDR);
+  FilterPtr matched_dst = filter_fn(ip6addr_dst_copy, DST_ADDR);
+  FilterPtr wrong_type_src = filter_fn(ip6addr_src, DST_ADDR);
+  FilterPtr wrong_type_dst = filter_fn(ip6addr_dst, SRC_ADDR);
+  FilterPtr either_t = filter_fn(ip6addr_dst, EITHER_ADDR);
+  FilterPtr either_f = filter_fn(ip6addr_other, EITHER_ADDR);
+  FilterPtr unmatched_src = filter_fn(ip6addr_other, SRC_ADDR);
+  FilterPtr unmatched_dst = filter_fn(ip6addr_other, DST_ADDR);
 
-    EXPECT_TRUE(matched_src->match(packet));
-    EXPECT_TRUE(matched_dst->match(packet));
-    EXPECT_FALSE(wrong_type_src->match(packet));
-    EXPECT_FALSE(wrong_type_dst->match(packet));
-    EXPECT_TRUE(either_t->match(packet));
-    EXPECT_FALSE(either_f->match(packet));
-    EXPECT_FALSE(unmatched_src->match(packet));
-    EXPECT_FALSE(unmatched_dst->match(packet));
+  EXPECT_TRUE(matched_src->match(packet));
+  EXPECT_TRUE(matched_dst->match(packet));
+  EXPECT_FALSE(wrong_type_src->match(packet));
+  EXPECT_FALSE(wrong_type_dst->match(packet));
+  EXPECT_TRUE(either_t->match(packet));
+  EXPECT_FALSE(either_f->match(packet));
+  EXPECT_FALSE(unmatched_src->match(packet));
+  EXPECT_FALSE(unmatched_dst->match(packet));
 
-    ip6addr_src_copy.fill(0);
-    ip6addr_dst_copy.fill(0);
-    // If IpFilter did not make a copy of the given IP6 address on construction then
-    // the following will fail.
-    EXPECT_TRUE(matched_src->match(packet));
-    EXPECT_TRUE(matched_dst->match(packet));
+  ip6addr_src_copy.fill(0);
+  ip6addr_dst_copy.fill(0);
+  // If IpFilter did not make a copy of the given IP6 address on construction then
+  // the following will fail.
+  EXPECT_TRUE(matched_src->match(packet));
+  EXPECT_TRUE(matched_dst->match(packet));
 }
 
 static void PortsTest(uint8_t version, PortFn filter_fn) {
-    Packet packet;
-    switch (version) {
+  Packet packet;
+  switch (version) {
     case 4:
-        packet = SetupEth(htons(ETH_P_IP));
-        SetupIPv4(&packet);
-        break;
+      packet = SetupEth(htons(ETH_P_IP));
+      SetupIPv4(&packet);
+      break;
     case 6:
-        packet = SetupEth(htons(ETH_P_IPV6));
-        SetupIPv6(&packet);
-        break;
+      packet = SetupEth(htons(ETH_P_IPV6));
+      SetupIPv6(&packet);
+      break;
     default:
-        ASSERT_TRUE(version == 4 || version == 6); // IP version must be supported.
-    }
-    SetupTCP(&packet);
+      ASSERT_TRUE(version == 4 || version == 6);  // IP version must be supported.
+  }
+  SetupTCP(&packet);
 
-    auto src1 = filter_fn(std::vector<PortRange>{}, SRC_PORT);
-    auto dst1 = filter_fn(std::vector<PortRange>{}, DST_PORT);
-    auto either1 = filter_fn(std::vector<PortRange>{}, EITHER_PORT);
+  auto src1 = filter_fn(std::vector<PortRange>{}, SRC_PORT);
+  auto dst1 = filter_fn(std::vector<PortRange>{}, DST_PORT);
+  auto either1 = filter_fn(std::vector<PortRange>{}, EITHER_PORT);
 
-    EXPECT_FALSE(src1->match(packet));
-    EXPECT_FALSE(dst1->match(packet));
-    EXPECT_FALSE(either1->match(packet));
+  EXPECT_FALSE(src1->match(packet));
+  EXPECT_FALSE(dst1->match(packet));
+  EXPECT_FALSE(either1->match(packet));
 
-    auto src2 = filter_fn(std::vector<PortRange>{PortRange(htons(10000), htons(20000))}, SRC_PORT);
-    auto dst2 = filter_fn(std::vector<PortRange>{PortRange(htons(1), htons(1000))}, DST_PORT);
-    auto either2 = filter_fn(std::vector<PortRange>{PortRange(htons(8888), htons(8888))},
-                             EITHER_PORT);
+  auto src2 = filter_fn(std::vector<PortRange>{PortRange(htons(10000), htons(20000))}, SRC_PORT);
+  auto dst2 = filter_fn(std::vector<PortRange>{PortRange(htons(1), htons(1000))}, DST_PORT);
+  auto either2 =
+      filter_fn(std::vector<PortRange>{PortRange(htons(8888), htons(8888))}, EITHER_PORT);
 
-    EXPECT_FALSE(src2->match(packet));
-    EXPECT_FALSE(dst2->match(packet));
-    EXPECT_FALSE(either2->match(packet));
+  EXPECT_FALSE(src2->match(packet));
+  EXPECT_FALSE(dst2->match(packet));
+  EXPECT_FALSE(either2->match(packet));
 
-    auto src3 = filter_fn(
-        std::vector<PortRange>{PortRange(htons(10000), htons(20000)),
-                               PortRange(htons(6587), htons(6587))},
-        SRC_PORT);
-    auto dst3 = filter_fn(
-        std::vector<PortRange>{PortRange(htons(1), htons(1000)),
-                               PortRange(htons(1234), htons(1234))},
-        DST_PORT);
-    auto either3 = filter_fn(
-        std::vector<PortRange>{PortRange(htons(8888), htons(8888)),
-                               PortRange(htons(1000), htons(2000))},
-        EITHER_PORT);
-    EXPECT_TRUE(src3->match(packet));
-    EXPECT_TRUE(dst3->match(packet));
-    EXPECT_TRUE(either3->match(packet));
+  auto src3 = filter_fn(std::vector<PortRange>{PortRange(htons(10000), htons(20000)),
+                                               PortRange(htons(6587), htons(6587))},
+                        SRC_PORT);
+  auto dst3 = filter_fn(
+      std::vector<PortRange>{PortRange(htons(1), htons(1000)), PortRange(htons(1234), htons(1234))},
+      DST_PORT);
+  auto either3 = filter_fn(std::vector<PortRange>{PortRange(htons(8888), htons(8888)),
+                                                  PortRange(htons(1000), htons(2000))},
+                           EITHER_PORT);
+  EXPECT_TRUE(src3->match(packet));
+  EXPECT_TRUE(dst3->match(packet));
+  EXPECT_TRUE(either3->match(packet));
 
-    SetupUDP(&packet);
-    EXPECT_TRUE(src3->match(packet));
-    EXPECT_TRUE(dst3->match(packet));
-    EXPECT_TRUE(either3->match(packet));
+  SetupUDP(&packet);
+  EXPECT_TRUE(src3->match(packet));
+  EXPECT_TRUE(dst3->match(packet));
+  EXPECT_TRUE(either3->match(packet));
 
-    packet.transport = nullptr;
-    EXPECT_FALSE(src3->match(packet));
-    EXPECT_FALSE(dst3->match(packet));
-    EXPECT_FALSE(either3->match(packet));
+  packet.transport = nullptr;
+  EXPECT_FALSE(src3->match(packet));
+  EXPECT_FALSE(dst3->match(packet));
+  EXPECT_FALSE(either3->match(packet));
 }
 
-void IPv4PortsTest(PortFn filter_fn) {
-    PortsTest(4, std::move(filter_fn));
-}
+void IPv4PortsTest(PortFn filter_fn) { PortsTest(4, std::move(filter_fn)); }
 
-void IPv6PortsTest(PortFn filter_fn) {
-    PortsTest(6, std::move(filter_fn));
-}
+void IPv6PortsTest(PortFn filter_fn) { PortsTest(6, std::move(filter_fn)); }
 
-void UnsupportedIpVersionAssertTest(VersionFn version_fn,
-                                    IPLengthFn length_fn,
+void UnsupportedIpVersionAssertTest(VersionFn version_fn, IPLengthFn length_fn,
                                     ProtocolFn protocol_fn) {
-    ASSERT_DEATH([&version_fn]() { version_fn(3); });
-    ASSERT_DEATH([&length_fn]() { length_fn(5, 16, LengthComparator::LEQ); });
-    ASSERT_DEATH([&protocol_fn]() { protocol_fn(7, IPPROTO_TCP); });
+  ASSERT_DEATH([&version_fn]() { version_fn(3); });
+  ASSERT_DEATH([&length_fn]() { length_fn(5, 16, LengthComparator::LEQ); });
+  ASSERT_DEATH([&protocol_fn]() { protocol_fn(7, IPPROTO_TCP); });
 }
 
 #define NETDUMP_TRUE FilterPtr(new EthFilter(htons(0x1430)))
 #define NETDUMP_FALSE FilterPtr(new EthFilter(htons(0x3014)))
 void CompositionTest(UnaryFn neg_fn, BinaryFn conj_fn, BinaryFn disj_fn) {
-    Packet packet = SetupEth(htons(0x1430));
+  Packet packet = SetupEth(htons(0x1430));
 
-    auto neg_t = neg_fn(NETDUMP_TRUE);
-    auto neg_f = neg_fn(NETDUMP_FALSE);
-    auto conj_tt = conj_fn(NETDUMP_TRUE, NETDUMP_TRUE);
-    auto conj_tf = conj_fn(NETDUMP_TRUE, NETDUMP_FALSE);
-    auto conj_ft = conj_fn(NETDUMP_FALSE, NETDUMP_TRUE);
-    auto conj_ff = conj_fn(NETDUMP_FALSE, NETDUMP_FALSE);
-    auto disj_tt = disj_fn(NETDUMP_TRUE, NETDUMP_TRUE);
-    auto disj_tf = disj_fn(NETDUMP_TRUE, NETDUMP_FALSE);
-    auto disj_ft = disj_fn(NETDUMP_FALSE, NETDUMP_TRUE);
-    auto disj_ff = disj_fn(NETDUMP_FALSE, NETDUMP_FALSE);
+  auto neg_t = neg_fn(NETDUMP_TRUE);
+  auto neg_f = neg_fn(NETDUMP_FALSE);
+  auto conj_tt = conj_fn(NETDUMP_TRUE, NETDUMP_TRUE);
+  auto conj_tf = conj_fn(NETDUMP_TRUE, NETDUMP_FALSE);
+  auto conj_ft = conj_fn(NETDUMP_FALSE, NETDUMP_TRUE);
+  auto conj_ff = conj_fn(NETDUMP_FALSE, NETDUMP_FALSE);
+  auto disj_tt = disj_fn(NETDUMP_TRUE, NETDUMP_TRUE);
+  auto disj_tf = disj_fn(NETDUMP_TRUE, NETDUMP_FALSE);
+  auto disj_ft = disj_fn(NETDUMP_FALSE, NETDUMP_TRUE);
+  auto disj_ff = disj_fn(NETDUMP_FALSE, NETDUMP_FALSE);
 
-    EXPECT_TRUE(NETDUMP_TRUE->match(packet));
-    EXPECT_FALSE(NETDUMP_FALSE->match(packet));
-    EXPECT_FALSE(neg_t->match(packet));
-    EXPECT_TRUE(neg_f->match(packet));
-    EXPECT_TRUE(conj_tt->match(packet));
-    EXPECT_FALSE(conj_tf->match(packet));
-    EXPECT_FALSE(conj_ft->match(packet));
-    EXPECT_FALSE(conj_ff->match(packet));
-    EXPECT_TRUE(disj_tt->match(packet));
-    EXPECT_TRUE(disj_tf->match(packet));
-    EXPECT_TRUE(disj_ft->match(packet));
-    EXPECT_FALSE(disj_ff->match(packet));
+  EXPECT_TRUE(NETDUMP_TRUE->match(packet));
+  EXPECT_FALSE(NETDUMP_FALSE->match(packet));
+  EXPECT_FALSE(neg_t->match(packet));
+  EXPECT_TRUE(neg_f->match(packet));
+  EXPECT_TRUE(conj_tt->match(packet));
+  EXPECT_FALSE(conj_tf->match(packet));
+  EXPECT_FALSE(conj_ft->match(packet));
+  EXPECT_FALSE(conj_ff->match(packet));
+  EXPECT_TRUE(disj_tt->match(packet));
+  EXPECT_TRUE(disj_tf->match(packet));
+  EXPECT_TRUE(disj_ft->match(packet));
+  EXPECT_FALSE(disj_ff->match(packet));
 }
 #undef NETDUMP_TRUE
 #undef NETDUMP_FALSE
@@ -343,35 +335,35 @@ class CallConstructor;
 
 template <>
 class CallConstructor<IpFilter> {
-public:
-    // IpFilter constructors need some help with integer conversions, so forward them explicitly.
-    inline FilterPtr operator()(uint8_t version) { return FilterPtr(new IpFilter(version)); }
-    inline FilterPtr operator()(uint8_t version, uint8_t protocol) {
-        return FilterPtr(new IpFilter(version, protocol));
-    }
-    inline FilterPtr operator()(uint8_t version, uint16_t length, LengthComparator comparator) {
-        return FilterPtr(new IpFilter(version, length, comparator));
-    }
-    inline FilterPtr operator()(uint32_t ipv4_addr, AddressFieldType type) {
-        return FilterPtr(new IpFilter(ipv4_addr, type));
-    }
-    inline FilterPtr operator()(const IpFilter::IPv6Address& ipv6_addr, AddressFieldType type) {
-        return FilterPtr(new IpFilter(ipv6_addr, type));
-    }
+ public:
+  // IpFilter constructors need some help with integer conversions, so forward them explicitly.
+  inline FilterPtr operator()(uint8_t version) { return FilterPtr(new IpFilter(version)); }
+  inline FilterPtr operator()(uint8_t version, uint8_t protocol) {
+    return FilterPtr(new IpFilter(version, protocol));
+  }
+  inline FilterPtr operator()(uint8_t version, uint16_t length, LengthComparator comparator) {
+    return FilterPtr(new IpFilter(version, length, comparator));
+  }
+  inline FilterPtr operator()(uint32_t ipv4_addr, AddressFieldType type) {
+    return FilterPtr(new IpFilter(ipv4_addr, type));
+  }
+  inline FilterPtr operator()(const IpFilter::IPv6Address& ipv6_addr, AddressFieldType type) {
+    return FilterPtr(new IpFilter(ipv6_addr, type));
+  }
 };
 
 // This template handles all the rest.
 template <class Flt>
 class CallConstructor {
-public:
-    template <typename... Args>
-    inline FilterPtr operator()(Args&&... args) {
-        return FilterPtr(new Flt(std::forward<Args>(args)...));
-    }
+ public:
+  template <typename... Args>
+  inline FilterPtr operator()(Args&&... args) {
+    return FilterPtr(new Flt(std::forward<Args>(args)...));
+  }
 };
 
 #define NETDUMP_TEST(test, flt) \
-    TEST(NetdumpFilterTest, test) { test(CallConstructor<flt>()); }
+  TEST(NetdumpFilterTest, test) { test(CallConstructor<flt>()); }
 
 NETDUMP_TEST(FrameLengthTest, FrameLengthFilter)
 NETDUMP_TEST(EthtypeTest, EthFilter)
@@ -387,15 +379,13 @@ NETDUMP_TEST(IPv6PortsTest, PortFilter)
 #undef NETDUMP_TEST
 
 TEST(NetdumpFilterTest, UnsupportedIpVersionAssertTest) {
-    UnsupportedIpVersionAssertTest(CallConstructor<IpFilter>(),
-                                   CallConstructor<IpFilter>(),
-                                   CallConstructor<IpFilter>());
+  UnsupportedIpVersionAssertTest(CallConstructor<IpFilter>(), CallConstructor<IpFilter>(),
+                                 CallConstructor<IpFilter>());
 }
 
 TEST(NetdumpFilterTest, CompositionTest) {
-    CompositionTest(CallConstructor<NegFilter>(),
-                    CallConstructor<ConjFilter>(),
-                    CallConstructor<DisjFilter>());
+  CompositionTest(CallConstructor<NegFilter>(), CallConstructor<ConjFilter>(),
+                  CallConstructor<DisjFilter>());
 }
 
-} // namespace netdump::test
+}  // namespace netdump::test

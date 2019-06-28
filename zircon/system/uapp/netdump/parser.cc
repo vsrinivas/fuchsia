@@ -7,10 +7,10 @@
 namespace netdump::parser {
 
 void parser_syntax(std::ostream* output) {
-    ZX_DEBUG_ASSERT_MSG(output != nullptr, "Output stream for parser syntax was null.");
+  ZX_DEBUG_ASSERT_MSG(output != nullptr, "Output stream for parser syntax was null.");
 #define BOLD(x) ANSI_BOLD << (x) << ANSI_RESET
 #define ENDL std::endl
-    // clang-format off
+  // clang-format off
     (*output)
         << "       expr ::= " << BOLD("(") << " expr " << BOLD(")")                         << ENDL
         << "              | " << BOLD("not") << " expr  |"
@@ -31,9 +31,9 @@ void parser_syntax(std::ostream* output) {
         << "              | [" << BOLD("proto") << "] " << BOLD("tcp") << " [port_expr]"    << ENDL
         << "              | [" << BOLD("proto") << "] " << BOLD("udp") << " [port_expr]"    << ENDL
         << "  port_expr ::= [type] " << BOLD("port") << " <port_lst>"                       << ENDL;
-    // clang-format on
+  // clang-format on
 #undef ENDL
 #undef BOLD
 }
 
-} // namespace netdump::parser
+}  // namespace netdump::parser
