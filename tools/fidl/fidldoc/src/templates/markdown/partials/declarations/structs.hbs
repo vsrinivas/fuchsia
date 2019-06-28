@@ -19,11 +19,7 @@
                 </code>
             </td>
             <td>
-                {{~ #each maybe_attributes ~}}
-                    {{~ #if (eq name "Doc") ~}}
-                        {{~ value ~}}
-                    {{~ /if ~}}
-                {{~ /each ~}}
+                {{~> doc ~}}
             </td>
             <td>
                 {{~ #if maybe_default_value ~}}

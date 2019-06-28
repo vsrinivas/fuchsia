@@ -108,12 +108,24 @@ fn package_link(
 }
 
 fn pl(name: &str, base: &str) -> String {
+    let package_base;
+    let package_name;
+
     lazy_static! {
         static ref RE: Regex = Regex::new(r"(.*)/(.*)").unwrap();
     }
-    let caps = RE.captures(&name).expect("Expecting base/package");
-    let package_base = caps.get(1).unwrap().as_str();
-    let package_name = caps.get(2).unwrap().as_str();
+
+    if RE.is_match(&name) {
+        // e.g. "fuchsia.media/Audio"
+        let caps = RE.captures(&name).expect("Expecting base/package");
+        package_base = caps.get(1).unwrap().as_str();
+        package_name = caps.get(2).unwrap().as_str();
+    } else {
+        // e.g. "Audio"
+        package_base = &base;
+        package_name = &name;
+    }
+
     if package_base == base {
         format!(
             "<a class='link' href='../{b}/index.html#{anchor}'>{anchor}</a>",
@@ -149,6 +161,7 @@ fn dl(docstring: &str, base: &str) -> String {
     }
     RE.replace_all(&docstring, |caps: &Captures| {
         let package = caps.get(1).unwrap().as_str();
+        debug!("dl captured {}", package);
         pl(package, base)
     })
     .to_string()
@@ -244,6 +257,11 @@ mod test {
         let name = "fuchsia.media/Metadata";
         let base = "fuchsia.media.sessions";
         let expected = "<a class='link' href='../fuchsia.media/index.html'>fuchsia.media</a>/<a class='link' href='../fuchsia.media/index.html#Metadata'>Metadata</a>";
+        assert_eq!(pl(name, base), expected.to_string());
+
+        let name = "Audio";
+        let base = "fuchsia.media";
+        let expected = "<a class='link' href='../fuchsia.media/index.html#Audio'>Audio</a>";
         assert_eq!(pl(name, base), expected.to_string());
     }
 
