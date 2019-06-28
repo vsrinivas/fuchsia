@@ -19,6 +19,25 @@ static const std::vector<const char*> kExpectedInstanceExtensions = {
 static const std::vector<const char*> kExpectedDeviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
+TEST(Swapchain, LayerApiVersion) {
+  uint32_t prop_count = 0;
+  EXPECT_EQ(VK_SUCCESS, vkEnumerateInstanceLayerProperties(&prop_count, nullptr));
+  EXPECT_GE(prop_count, kLayers.size());
+
+  std::vector<VkLayerProperties> props(prop_count);
+  EXPECT_EQ(VK_SUCCESS, vkEnumerateInstanceLayerProperties(&prop_count, props.data()));
+  bool layer_found = false;
+  const uint32_t kExpectedVersion = VK_MAKE_VERSION(1, 1, VK_HEADER_VERSION);
+  for (uint32_t i = 0; i < prop_count; i++) {
+    if (strcmp(props[i].layerName, kLayerName) == 0) {
+      EXPECT_GE(kExpectedVersion, props[i].specVersion);
+      layer_found = true;
+      break;
+    }
+  }
+  EXPECT_TRUE(layer_found);
+}
+
 TEST(Swapchain, InstanceExtensions) {
   uint32_t prop_count = 0;
   EXPECT_EQ(VK_SUCCESS, vkEnumerateInstanceExtensionProperties(

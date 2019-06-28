@@ -18,7 +18,7 @@
 #include <thread>
 #include <vector>
 
-#define VK_LAYER_API_VERSION VK_MAKE_VERSION(1, 0, VK_HEADER_VERSION)
+#define VK_LAYER_API_VERSION VK_MAKE_VERSION(1, 1, VK_HEADER_VERSION)
 
 namespace image_pipe_swapchain {
 
