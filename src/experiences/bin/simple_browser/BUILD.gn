@@ -2,12 +2,32 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fidl/fidl.gni")
+import("//topaz/runtime/flutter_runner/flutter_app.gni")
 
-## packages required to run simple_browser
-group("simple_browser") {
-  testonly = true
-  public_deps = [
-    "//topaz/bin/simple_browser",
+flutter_app("simple_browser") {
+  main_dart = "lib/main.dart"
+
+  meta = [
+    {
+      path = rebase_path("meta/simple_browser.cmx")
+      dest = "simple_browser.cmx"
+    },
+  ]
+
+  package_name = "simple_browser"
+
+  manifest = "pubspec.yaml"
+
+  deps = [
+    "//sdk/fidl/fuchsia.web",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/pub/html_unescape",
+    "//third_party/dart-pkg/pub/http",
+    "//topaz/public/dart/fuchsia_logger",
+    "//topaz/public/dart/fuchsia_modular",
+    "//topaz/public/dart/fuchsia_scenic_flutter",
+    "//topaz/public/dart/widgets:lib.widgets",
+    "//topaz/public/lib/webview",
   ]
 }
-

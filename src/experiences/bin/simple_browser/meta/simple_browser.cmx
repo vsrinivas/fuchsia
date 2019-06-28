@@ -1,0 +1,40 @@
+{
+    "facets": {
+        "fuchsia.modular": {
+            "@version": 2,
+            "binary": "simple_browser",
+            "intent_filters": []
+        }
+    },
+    "program": {
+        "data": "data/simple_browser"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.fonts.Provider",
+            "fuchsia.logger.LogSink",
+            "fuchsia.media.Audio",
+            "fuchsia.mediacodec.CodecFactory",
+            "fuchsia.modular.Clipboard",
+            "fuchsia.modular.ContextWriter",
+            "fuchsia.modular.ModuleContext",
+            "fuchsia.net.SocketProvider",
+            "fuchsia.netstack.Netstack",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.input.ImeVisibilityService",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.modular.ComponentContext",
+            "fuchsia.vulkan.loader.Loader",
+            "fuchsia.web.ContextProvider"
+        ],
+        "system": [
+            "data/modules"
+        ]
+    }
+}
