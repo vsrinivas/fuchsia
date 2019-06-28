@@ -368,6 +368,7 @@ auto a = fit::make_promise([] {
 ```
 
 Use `then` to consume the result and change its type:
+
 ```cpp
 auto a = fit::make_promise([] {
   // returns fit::result<int, void>

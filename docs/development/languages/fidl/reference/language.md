@@ -670,6 +670,7 @@ struct Record {
     RealCalculator? r;
 };
 ```
+
 ### Protocol Composition
 
 A protocol can include methods from other protocols.

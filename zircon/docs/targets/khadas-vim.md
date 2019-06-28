@@ -99,6 +99,7 @@ fx set core.vim2 && fx build && fx pave -1
 ### Fuchsia logo
 
 To update the boot splash screen to be the Fuchsia logo, do this in fastboot mode:
+
 ```
 fastboot flash logo kernel/target/arm64/board/vim2/firmware/logo.img
 ```

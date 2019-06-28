@@ -81,6 +81,7 @@ Car({
 
 ## Naming
 If a method will use a cached object, or create it if it doesn’t exist, avoid introducing or into the name.
+
 ```
 class Node {
   //BAD
@@ -138,6 +139,7 @@ Currency getCash() { ... }
 ```
 
 Your API should avoid returning unstructured JSON data but rather transform any JSON into a typed value.
+
 ```
 // BAD
 Map<String, dynamic> getCar() => {

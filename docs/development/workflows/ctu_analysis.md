@@ -25,13 +25,17 @@ We will be patching Clang with Ericsson’s patchset, since the AST merging work
 2. In a separate directory, clone Ericsson’s fork of Clang and switch to the ctu-master branch.
 3. Download [this script](https://gist.github.com/karkhaz/d11efa611a1bde23490c2773dc0da60d) into Ericsson’s fork and run it. It should dump a series of patches into a patches directory. I purposely only dump the commits from the beginning of Ericsson’s changes until 1bb3636, which was the latest revision during my internship.
     * If you want more up-to-date changes from Ericsson, you can experiment with changing 1bb3636 to HEAD in the script. Make sure to skip commits that merge upstream commits into the ctu-master branch by specifying additional ranges in the script. git log --graph can be helpful to determine what the upstream commits vs. Ericsson’s commits are, I use
+
     ```
     git log --graph  --decorate --date=relative --format=format:'%C(green)%h%C(yellow) %s%C(reset)%w(0,6,6)%C(bold green)\n%C(cyan)%G? %C(bold red)%aN%C(reset) %cr%C(reset)%w(0,0,0)\n%-D\n%C(reset)' --all
     ```
+
 4. Apply the generated patches to *upstream* Clang (not the Ericsson fork) one at a time.
+
    ```
    for p in $(ls $PATCH_DIR/*.patch | sort -n); do git am < $p; done
    ```
+
 5. Apply Kareem Khazem’s patches that are listed [below](#zircon-patches) if they haven’t already landed
 6. Re-build upstream Clang & LLVM.
 
@@ -163,12 +167,14 @@ This is a use-after-free. The path is:
 
 * The CSA cannot resolve the implementation of functions that are called through function pointers. This means that it cannot make any assumptions about what the return value of the function might be, nor any effects that the function might have on output parameters.
 * There are several classes of function whose implementations are not accessible to the analyzer. Again, the analyzer cannot know that such functions touch their output arguments, so they will spuriously report that the following code reads from a garbage value:
+
   ```
   struct timeval tv;
   gettimeofday(&tv, NULL);
   printf("%d\n", tv.tv_usec);   // [SPURIOUS REPORT] Access to
                                 // uninitialized variable ‘tv’
   ```
+
 * Some kinds of functions that are vulnerable to this kind of imprecision include:
     * System calls (like `gettimeofday`)
     * Compiler builtins (like `memcpy`)

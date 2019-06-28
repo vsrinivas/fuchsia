@@ -129,6 +129,7 @@ out/<out_dir>/host_x64/zxdb
 
 [zxdb] connect [fe80::5054:4d:fe63:5e7a%br0]:2345
 ```
+
 (Substitute your build directory as-needed).
 
 If you're connecting or running many times, there are command-line switches:
@@ -272,7 +273,9 @@ if you're working on the debugger client.
 ```sh
 fx run-host-tests zxdb_tests
 ```
+
 or directly with
+
 ```sh
 out/x64/host_tests/zxdb_tests
 ```
@@ -314,16 +317,19 @@ fx zxdb --connect [<IPv6 to target>]:5000 --debug-mode
 
 // Now you have two running instances of the debugger!
 ```
+
 NOTE: Only one debugger can be attached to the main job in order to auto-attach
 to new processes. Since you're using it for the first debugger, you won't be
 able to launch components with the second one, only attach to them.
 
 The debug agent tests are in
+
 ```
 /pkgfs/packages/debug_agent_tests/0/test/debug_agent_tests
 ```
 
 To run them:
+
 ```
 fx run-tests debug_agent_tests
 ```

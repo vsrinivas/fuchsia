@@ -131,6 +131,7 @@ zx_status_t create_channel(
   ZX_SYSCALL_PARAM_ATTR(handle_acquire) zx_handle_t* out0,
   ZX_SYSCALL_PARAM_ATTR(handle_acquire) zx_handle_t* out1);
 ```
+
 Another example, we have another function `takeover_handle` that will take care the lifecycle of a handle if it is successfully executed and do nothing if it failed, we can declare this function in header file like this:
 
 ```c

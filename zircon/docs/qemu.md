@@ -119,6 +119,7 @@ Please follow the minfs instructions on how to create a disk image
 [here][minfs-create-image].
 
 After creating the image, you can run zircon in QEMU with the disk image:
+
 ```
 fx run -d [-D <disk_image_path (default: "blk.bin")>]
 ```
@@ -202,6 +203,7 @@ It provides several things:
 - Pretty-printers for zircon objects (alas none at the moment).
 
 - Several zircon specific commands, all with a "zircon" prefix. To see them:
+
 ```
 (gdb) help info zircon
 (gdb) help set zircon

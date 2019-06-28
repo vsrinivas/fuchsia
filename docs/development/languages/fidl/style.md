@@ -464,6 +464,7 @@ Non flow-through comments:
  * implementation details
 
 Both style of comments can be combined:
+
 ```fidl
 /// A widget displaying violins on the screen.
 // TODO -- widgets should use UUIDs instead of sequential ids

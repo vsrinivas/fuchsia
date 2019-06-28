@@ -13,6 +13,7 @@ at: https://fuchsia.googlesource.com/zircon
 
 To clone the repository, assuming you setup the $SRC variable
 in your environment:
+
 ```shell
 git clone https://fuchsia.googlesource.com/zircon $SRC/zircon
 ```
@@ -28,12 +29,14 @@ try -j16 or -j8.
 ### Ubuntu
 
 On Ubuntu this should obtain the necessary pre-reqs:
+
 ```
 sudo apt-get install texinfo libglib2.0-dev autoconf libtool bison libsdl-dev build-essential
 ```
 
 ### macOS
 Install the Xcode Command Line Tools:
+
 ```
 xcode-select --install
 ```
@@ -41,11 +44,13 @@ xcode-select --install
 Install the other pre-reqs:
 
 * Using Homebrew:
+
 ```
 brew install wget pkg-config glib autoconf automake libtool
 ```
 
 * Using MacPorts:
+
 ```
 port install autoconf automake libtool libpixman pkgconfig glib2
 ```

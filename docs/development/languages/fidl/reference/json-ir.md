@@ -96,6 +96,7 @@ numbers have been added for reference; they are not part of the generated code):
 [62]      }
 [63]    }
 ```
+
 Lines `[01]` and `[63]` wrap the entire JSON object.
 
 Line `[02]` is the version number of the JSON IR schema.
@@ -259,6 +260,7 @@ Generally, the form taken is:
   }
 ]
 ```
+
 Where:
 
 Element     | Meaning

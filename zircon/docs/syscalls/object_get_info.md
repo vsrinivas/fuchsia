@@ -96,6 +96,7 @@ typedef struct zx_info_handle_count {
     uint32_t handle_count;
 } zx_info_handle_count_t;
 ```
+
 The *handle_count* should only be used as a debugging aid. Do not use it
 to check that an untrusted processes cannot modify a kernel object. Due to
 asynchronous nature of the system scheduler, there might be a time window

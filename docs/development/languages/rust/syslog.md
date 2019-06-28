@@ -52,6 +52,7 @@ fx_vlog!(tag: "tag", 1, "my msg: {}", 10); // verbose logs
 ```
 
 This can also be used with rust log crate
+
 ```rust
 info!("my msg: {}", 10);
 warn!("my msg: {}", 10);

@@ -60,6 +60,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   return 0;
 }
 ```
+
 Optionally, you can also add an initial [corpus].  Without it, libFuzzer will start from an empty
 fuzzer and will (eventually) learn how to make appropriate inputs [on its own][thin-air].
 
@@ -261,6 +262,7 @@ package.  This typically means adding it to a group of tests, e.g. a `group("tes
 __IMPORTANT__: The Fuchsia build system will build the fuzzers __only__ if it is explicitly told to
 instrument them for fuzzing with an appropriate sanitizer.  The easiest way to achieve this is using
 the `--fuzz-with <sanitizer>` flag with `fx set`, e.g:
+
 ```
 $ fx set core.x64 --fuzz-with asan --with //bundles:tests
 $ fx build

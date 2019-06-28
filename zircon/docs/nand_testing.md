@@ -60,6 +60,7 @@ $ nand-util --device /dev/misc/nand-ctl/ram-nand-0 --check
 $ nand-util --device /dev/sys/platform/05:00:f/aml-raw_nand/nand --info
 $ nand-util --device /dev/sys/platform/05:00:f/aml-raw_nand/nand/fvm --read --block 1 --page 2
 ```
+
 ## Grab an image
 
 *nand-util* can also be used to grab an image of the nand contents:

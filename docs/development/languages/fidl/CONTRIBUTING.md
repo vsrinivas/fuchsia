@@ -194,7 +194,7 @@ To build this test, use:
 
 ```sh
 fx build topaz/bin/fidl_compatibility_test/dart:fidl_compatibility_test_server_dart
-``
+```
 
 To run this test, you first need to have a Fuchsia instance running in an emulator:
 

@@ -177,6 +177,7 @@ in human-readable symbolic form.
   name so that it can be presented distinctively.
 
   Examples:
+
   ```
   {{{symbol:_ZN7Mangled4NameEv}}}
   {{{symbol:foobar}}}
@@ -188,6 +189,7 @@ in human-readable symbolic form.
   It might be presented as a function name and source location.
 
   Examples:
+
   ```
   {{{pc:0x12345678}}}
   {{{pc:0xffffffff9abcdef0}}}
@@ -199,6 +201,7 @@ in human-readable symbolic form.
   It might be presented as the name of a global variable at that location.
 
   Examples:
+
   ```
   {{{data:0x12345678}}}
   {{{data:0xffffffff9abcdef0}}}
@@ -235,6 +238,7 @@ in human-readable symbolic form.
   does no harm.
 
   Examples:
+
   ```
   {{{bt:0:0x12345678}}}
   {{{bt:1:0xffffffff9abcdef0}}}
@@ -266,6 +270,7 @@ in human-readable symbolic form.
   and pop up a presentation of symbolic details when a value is selected.
 
   Example:
+
   ```
   {{{hexdict:
     CS:                   0 RIP:     0x6ee17076fb80 EFL:            0x10246 CR2:                  0
@@ -317,6 +322,7 @@ presented to the user.
   [SanitizerCoverage](https://clang.llvm.org/docs/SanitizerCoverage.html).
 
   Example:
+
   ```
   {{{dumpfile:sancov:sancov.8675}}}
   ```
@@ -382,6 +388,7 @@ raw logging stream, accumulating context and massaging text as it goes.
     the binary from which this module was loaded.
 
   Example:
+
   ```
   {{{module:1:libc.so:elf:83238ab56ba10497}}}
   ```
@@ -412,6 +419,7 @@ raw logging stream, accumulating context and massaging text as it goes.
     rounded down to the active page size, and the size rounded up.
 
   Example:
+
   ```
   {{{mmap:0x7acba69d5000:0x5a000:load:1:rx:0x1000}}}
   ```

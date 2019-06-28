@@ -105,6 +105,7 @@ do
 done
 
 ```
+
 * Netcp all bare-metal gcc files into `/data/gcc-bare-metal`
 
 ```bash

@@ -7,32 +7,38 @@ a modified BNF format.
 
 A nonterminal symbol matches a sequence of other symbols, delimited by
 commas.
+
 ```
 nonterminal = list , of , symbols ;
 ```
 
 Some symbols are terminals, which are either in all caps or are in
 double quotes.
+
 ```
 another-nonterminal = THESE , ARE , TERMINALS , AND , SO , IS , "this" ;
 ```
 
 Alternation is expressed with a pipe.
+
 ```
 choice = this | that | the-other ;
 ```
 
 An option (zero or one) is expressed with parentheses.
+
 ```
 optional = ( maybe , these ) , but , definitely , these ;
 ```
 
 Repetition (zero or more) is expressed with parentheses and a star.
+
 ```
 zero-or-more = ( list-part )* ;
 ```
 
 Repetition (one or more) is expressed with parentheses and a plus.
+
 ```
 one-or-more = ( list-part )+ ;
 
@@ -140,6 +146,7 @@ ordinal = NUMERIC-LITERAL ;
 
 literal = STRING-LITERAL | NUMERIC-LITERAL | "true" | "false" ;
 ```
+
 ----------
 
 ### NOTE 1

@@ -241,6 +241,7 @@ above.
 * If the documentation is very obvious from context, then err on the side of
   brevity.  The Don't Repeat Yourself (DRY) principle applies.  The following is
   not useful, because it repeats the same information twice:
+
 ``` java
  /**
   * Returns an instance of Foo.
@@ -248,6 +249,7 @@ above.
   */
  public Foo getFoo() { ... }
 ```
+
 * Similarly, if the comment is very obvious, avoid making it.  If, for example,
   a property is guaranteed by the type system, you do not need to document it
   separately.  However, bear in mind that your API description should be enough

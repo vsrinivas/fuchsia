@@ -44,6 +44,7 @@ they are processed depends on the `MODE` setting and options.
 
 ## `--recursive`
 > Continue to step down the hierarchy of elements. Mode dependent.
+
 ```
 cat: If false, will print the top level node only. True will output the complete node hierarchy.
 Example:
@@ -91,6 +92,7 @@ b/c#c_val2
 
 ## `--format=<FORMAT>`
 > What format the output should be in.
+
 ```
 Current supported formatters:
 - text: Meant for human inspection. This is the default option.
@@ -99,6 +101,7 @@ Current supported formatters:
 
 ## `--sort`
 > When specified, sort the values for each Node before printing.
+
 ```
 $ iquery root.inspect
 root:
@@ -128,6 +131,7 @@ root:
 
 ## `--full_paths`
 > Rename each node to have its own relative path.
+
 ```
 $ iquery a a/b
 a:
@@ -139,6 +143,7 @@ a/b:
 
 ## `--absolute_paths`
 > Rename each node to have its own absolute path from the root.
+
 ```
 $ cd /hub/c/
 $ iquery a a/b

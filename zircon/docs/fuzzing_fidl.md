@@ -6,9 +6,11 @@ Some notes on fuzzing the `system/host/fidl` parser using
 ## Build afl-fuzz
 
 Download and build it, then:
+
 ```
 export AFL_PATH=~/src/afl-2.41b/
 ```
+
 with whatever path you downloaded and built it with.
 
 ## Patch the parser to not trap on invalid syntax
@@ -27,6 +29,7 @@ rm -fr build-x86
 PATH=$PWD/prebuilt/downloads/clang+llvm-x86_64-linux/bin/:$PATH:$AFL_PATH make \
   build-x86/tools/fidl HOST_TOOLCHAIN_PREFIX=afl-
 ```
+
 adjusting if you're not building on x86 Linux, etc.
 
 ## Run the fuzzer

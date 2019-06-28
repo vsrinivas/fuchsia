@@ -46,6 +46,7 @@ handles to the same kernel object with different rights.
 **Figure 1.** A user process starts the creation of a handle.
 
 <!--- handle-creation1.png
+
 ```dot
 digraph Q {
     node [shape=record];
@@ -64,6 +65,7 @@ digraph Q {
     }
 }
 ```
+
 -->
 
 ![User process creates the kernel object](images/handle-creation2.png)
@@ -72,6 +74,7 @@ digraph Q {
 event) with a system call and holds an integer reference to the object.
 
 <!--- handle-creation2.png
+
 ```dot
 digraph Q {
     node [shape=record];
@@ -96,6 +99,7 @@ digraph Q {
     nd_3->nd_2 [label = "zx_event_create()"];
 }
 ```
+
 -->
 
 ![Handles are created with a set of basic rights](images/handle-creation3.png)
@@ -104,6 +108,7 @@ digraph Q {
 rights applicable to the kernel object type.
 
 <!--- handle-creation3.png
+
 ```dot
 digraph Q {
     node [shape=record];
@@ -127,6 +132,7 @@ digraph Q {
     nd_2->nd_3 [label= "ZX basic rights\n + signalling right"];
 }
 ```
+
 -->
 
 ![Handles can be duplicated](images/handle-creation4.png)
@@ -135,6 +141,7 @@ digraph Q {
 process.
 
 <!--- handle-creation4.png
+
 ```dot
 graph Q {
     node [shape=record];
@@ -161,6 +168,7 @@ graph Q {
     nd_4--nd_2 [label= "ZX wait right only"];
 }
 ```
+
 -->
 
 ## Using Handles

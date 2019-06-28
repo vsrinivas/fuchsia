@@ -124,9 +124,11 @@ This also restarts the Dart analyzer.
 
 #### VS Code
 Add the line
+
 ```json
   "dart.sdkPath": "[YOUR FUCHSIA DIR LOCATION]/third_party/dart/tools/sdks/dart-sdk",
 ```
+
 and (Ctrl+Shift+P) "Reload Window".
 
 #### IntelliJ

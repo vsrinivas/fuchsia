@@ -92,6 +92,7 @@ use fuchsia_component::server::ServiceFs;
 use fuchsia_async as fasync;
 use futures::prelude::*;
 ```
+
 -   `failure` provides conveniences for error handling, including a standard
     dynamically-dispatched `Error` type as well as a extension trait that adds
     the `context` method to `Result` for providing extra information about

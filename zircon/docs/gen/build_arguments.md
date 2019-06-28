@@ -236,6 +236,7 @@ Or it can be a list of scopes containing `cpu`, `os`, and `sysroot`.
 The empty list (or empty string) means don't use `--sysroot` at all.
 
 **Current value (from the default):**
+
 ```
 [{
   cpu = "arm64"
@@ -288,6 +289,7 @@ It exists only to be set via c_toolchain().
 See environment() for more information.
 
 **Current value (from the default):**
+
 ```
 {
   configs = []

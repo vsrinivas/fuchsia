@@ -17,22 +17,29 @@ Provided by libzxcrypt.so are four functions for managing zxcrypt devices.  Each
 * The __zxcrypt_format__ function takes an open block device, and writes the necessary encrypted
   metadata to make it a zxcrypt device.  The zxcrypt key provided does not protect the data on the
   device directly, but is used to protect the data key material.
+
 ```c++
 zx_status_t zxcrypt_format(int fd, const zxcrypt_key_t* key);
 ```
+
 * The __zxcrypt_bind__ function instructs the driver to read the encrypted metadata and extract the
   data key material to use in transparently transforming I/O data.
+
 ```c++
 zx_status_t zxcrypt_bind(int fd, const zxcrypt_key_t *key);
 ```
+
 * The __zxcrypt_rekey__ function uses the old key to first read the encrypted metadata, and the new
   key to write it back.
+
 ```c++
 zx_status_t zxcrypt_rekey(int fd, const zxcrypt_key_t* old_key, const zxcrypt_key_t* new_key);
 ```
+
 * The __zxcrypt_shred__ function first verifies that the caller can access the data by using the key
   provided to read the encrypted metadata.  If this succeeded, it then destroys the encrypted
   metadata containing the data key material.  This prevents any future access to the data.
+
 ```c++
 zx_status_t zxcrypt_shred(int fd, const zxcrypt_key_t* key);
 ```
@@ -60,6 +67,7 @@ if the opcode matches the one it is looking for, it will use its cipher to trans
 request before passing it along.
 
 The overall pipeline is as shown:
+
 ```
 DdkIotxnQueue -+
                 \       Worker 1:        Underlying      Worker 2:        Original
@@ -101,12 +109,14 @@ successfully reads and validates a superblock from one location, it will copy th
 superblock locations to help "self-heal" any corrupted superblock locations.
 
 The superblock format is as follows, with each field described in turn:
+
 ```
 +----------------+----------------+----+-----...-----+----...----+------...------+
 | Type GUID      | Instance GUID  |Vers| Sealed Key  | Reserved  | HMAC          |
 | 16 bytes       | 16 bytes       | 4B | Key size    |    ...    | Digest length |
 +----------------+----------------+----+-----...-----+----...----+------...------+
 ```
+
 * _Type [GUID][guid]_: Identifies this as a zxcrypt device. Compatible with
   [GPT](../system/ulib/gpt/include/gpt/gpt.h).
 * _Instance GUID_: Per-device identifier, used as the KDF salt as explained below.

@@ -275,6 +275,7 @@ prviate:
 ...
 };
 ```
+
 The first use that **InitPci()** makes of the `pci_` member is to get a
 [**BTI** (Bus Transaction Initiator)][bti] object:
 

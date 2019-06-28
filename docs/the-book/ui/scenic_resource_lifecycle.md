@@ -184,6 +184,7 @@ visible.
 Detach(view_holder_id);
 ReleaseResource(view_holder_id);
 ```
+
 ![Image of the scene graph shows just the Scene root in the graph; Client A
 maintains a strong reference to the Scene node. There is no ViewHolder. Client
 B's subtree maintains the strong reference between the ViewNode and its child

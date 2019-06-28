@@ -94,6 +94,7 @@ In Zircon global locks are typically defined either at global/namespace scope or
 within another type as a static member.
 
 example.h:
+
 ```C++
 #include <kernel/mutex.h>
 
@@ -108,6 +109,7 @@ private:
 ```
 
 example.cpp:
+
 ```C++
 #include "example.h"
 
@@ -120,6 +122,7 @@ The instrumentation simplifies declaring locks by declaring singleton types that
 may be used in either scope and handles ODR-use automatically.
 
 example.h:
+
 ```
 #include <kernel/mutex.h>
 

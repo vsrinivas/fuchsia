@@ -125,6 +125,7 @@ is a description of what device a driver can bind to.  The Binding Program is
 defined using macros in [`ddk/binding.h`](../../system/ulib/ddk/include/ddk/binding.h)
 
 An example Binding Program from the Intel Ethernet driver:
+
 ```c
 ZIRCON_DRIVER_BEGIN(intel_ethernet, intel_ethernet_driver_ops, "zircon", "0.1", 9)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),

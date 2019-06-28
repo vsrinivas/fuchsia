@@ -10,6 +10,7 @@ driver does not provide its own implementation.
 
 ## version
 This field must be set to `DEVICE_OPS_VERSION`
+
 ```
 uint64_t version;
 ```
@@ -42,6 +43,7 @@ calls will balance the calls to open.
 that is called is the close hook on the **instance**, not the parent.
 
 The default close implementation returns **ZX_OK**.
+
 ```
 zx_status_t (*close)(void* ctx, uint32_t flags);
 ```
@@ -77,6 +79,7 @@ from that device once this method returns.
 
 The driver must free all memory and release all resources related to this device
 before returning.
+
 ```
 void (*release)(void* ctx);
 ```
@@ -128,6 +131,7 @@ If the device is seekable, the get_size hook should return the size of the devic
 This is the offset at which no more reads or writes are possible.
 
 The default implementation returns 0.
+
 ```
 zx_off_t (*get_size)(void* ctx);
 ```
@@ -141,6 +145,7 @@ On success, **ZX_OK** must be returned and *out_actual* must be set
 to the number of output bytes provided (0 if none).
 
 The default ioctl implementation returns **ZX_ERR_NOT_SUPPORTED**.
+
 ```
 zx_status_t (*ioctl)(void* ctx, uint32_t op,
                      const void* in_buf, size_t in_len,
@@ -160,6 +165,7 @@ being closed and the remote "shadow" losing its connection.
 This method is called with ZX_HANDLE_INVALID for the channel
 when a new client connects -- at which point any state from
 the previous client should be torn down.
+
 ```
 zx_status_t (*rxrpc)(void* ctx, zx_handle_t channel);
 ```
@@ -178,11 +184,13 @@ and used later.
 
 If this method returns anything other than ZX_OK, the underlying
 connection is closed.
+
 ```
 zx_status_t (*message)(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
 ```
 
 #### Device State Bits
+
 ```
 #define DEV_STATE_READABLE ZX_USER_SIGNAL_0
 #define DEV_STATE_WRITABLE ZX_USER_SIGNAL_2
@@ -192,6 +200,7 @@ zx_status_t (*message)(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
 ```
 
 #### device_state_set
+
 ```
 void device_state_set(zx_device_t* dev, zx_signals_t stateflag);
 ```

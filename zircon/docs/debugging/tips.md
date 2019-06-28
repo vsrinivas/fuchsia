@@ -37,6 +37,7 @@ Adding debug info to the boot image is for when you are running debugging
 tools on zircon itself.
 
 Example:
+
 ```
 $ gn gen build-zircon --args='BOOTFS_DEBUG_MODULES=ulib/%,utest/debugger symbol_level = 1'
 ```
@@ -100,7 +101,6 @@ start of symbolized stack:
 #03: start_main at ./third_party/ulib/musl/src/env/__libc_start_main.c:49
 #04: unknown, can't find pc, sp or app/library in line
 end of symbolized stack
-``
 ```
 
 ## Kernel commands

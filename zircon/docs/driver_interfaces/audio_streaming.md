@@ -81,6 +81,7 @@ Generally, the operations conducted over the ring buffer channel include...
 In order to use the C API definitions of the
 [audio](../../system/public/zircon/device/audio.h) protocol, applications and
 drivers simply say
+
 ```C
 #include <device/audio.h>
 ```
@@ -103,6 +104,7 @@ Output | `ZX_PROTOCOL_AUDIO_OUTPUT` | /dev/class/audio-output
 After opening the device node, client applications may obtain a stream channel
 for subsequent communication using the `AUDIO_IOCTL_GET_CHANNEL` ioctl.  For
 example...
+
 ```C
 zx_handle_t OpenStream(const char* dev_node_path) {
     zx_handle_t ret = ZX_HANDLE_INVALID;

@@ -60,6 +60,7 @@ ZIRCON_DRIVER_BEGIN(demo_null_driver, demo_null_driver_ops, "zircon", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
 ZIRCON_DRIVER_END(demo_null_driver)
 ```
+
 <!-- @@@ alainv sez these macros are being deprecated in favour of a Driver Binding Language -->
 
 The C preprocessor macros `ZIRCON_DRIVER_BEGIN` and `ZIRCON_DRIVER_END` delimit

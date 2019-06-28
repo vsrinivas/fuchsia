@@ -74,6 +74,7 @@ Read on to learn how Inspect is meant to be used in C++.
 #### Dynamic Value Support
 
 Certain features, such as LazyProperty, LazyMetric, and ChildrenCallback are deprecated, but a replacement is on the way (CF-761). If you determine that you need one of these data types, you may use the deprecated API by replacing the setup code with the following:
+
 ```
 
 // Legacy work required to expose an inspect hierarchy over FIDL.

@@ -271,6 +271,7 @@ The number of link jobs is dependent on RAM size, for LTO build you will
 need at least 10GB for each job.
 
 To build Clang with Goma, use:
+
 ```bash
 ninja -j${JOBS}
 ```

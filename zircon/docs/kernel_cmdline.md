@@ -511,6 +511,7 @@ This option sets the default boot device to netboot, use a local zircon.bin or t
 ## in Qemu, using fx run
 
 Pass each option using -c, for example:
+
 ```
 fx run -c gfxconsole.font=18x32 -c gfxconsole.early=false
 ```
@@ -518,6 +519,7 @@ fx run -c gfxconsole.font=18x32 -c gfxconsole.early=false
 ## in GigaBoot20x6, when netbooting
 
 Pass the kernel commandline at the end, after a -- separator, for example:
+
 ```
 bootserver zircon.bin bootfs.bin -- gfxconsole.font=18x32 gfxconsole.early=false
 ```

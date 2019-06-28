@@ -172,6 +172,7 @@ Three types of file are handled:
         register in the C ABI.
 
      Thus, the program entry point can be written as a C function:
+
      ```c
      noreturn void _start(zx_handle_t bootstrap_channel, uintptr_t vdso_base);
      ```

@@ -124,4 +124,5 @@ More precise thread states.
     ZX_THREAD_STATE_BLOCKED_INTERRUPT   0x0803
     ZX_THREAD_STATE_BLOCKED_PAGER       0x0903
 ```
+
 See zircon/system/public/zircon/syscalls/object.h for an up to date reference.

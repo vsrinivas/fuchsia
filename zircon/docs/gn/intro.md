@@ -257,6 +257,7 @@ foo = {
   }
 }
 ```
+
 This always defines `foo.x` but only sometimes defines `foo.y`.
 
 ### GN toolchains
