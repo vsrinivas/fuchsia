@@ -35,6 +35,9 @@ constexpr char kSaveToFileDefaultName[] = "/tmp/signal_generator.wav";
 constexpr char kFramesPerPayloadSwitch[] = "frames";
 constexpr char kFramesPerPayloadDefault[] = "480";
 
+constexpr char kNumPayloadBuffersSwitch[] = "nbufs";
+constexpr char kNumPayloadBuffersDefault[] = "1";
+
 constexpr char kUsePtsSwitch[] = "pts";
 constexpr char kPtsContinuityThresholdSwitch[] = "threshold";
 constexpr char kPtsContinuityThresholdDefaultSecs[] = "0.0";
@@ -98,9 +101,13 @@ void usage(const char* prog_name) {
       kSaveToFileSwitch, kSaveToFileDefaultName, kSaveToFileSwitch);
   printf("\t  Subsequent settings (e.g. gain) do not affect .wav file contents\n");
 
-  printf("\n\t  By default, submit data in non-timestamped buffers of %s frames\n",
-         kFramesPerPayloadDefault);
+  printf(
+      "\n\t  By default, submit data in non-timestamped buffers of %s frames "
+      "and %s VMOs.\n",
+      kFramesPerPayloadDefault, kNumPayloadBuffersDefault);
   printf("\t--%s=<FRAMES>\tSet data buffer size in frames \n", kFramesPerPayloadSwitch);
+  printf("\t--%s=<NUM_BUFFERS>\tSet the number of payload buffers to use \n",
+         kNumPayloadBuffersSwitch);
   printf("\t--%s\t\t\tApply presentation timestamps (units: frames)\n", kUsePtsSwitch);
   printf(
       "\t--%s[=<SECS>]\tSet PTS discontinuity threshold, in seconds (%s, if "
@@ -238,6 +245,11 @@ int main(int argc, const char** argv) {
   std::string frames_per_payload_str =
       command_line.GetOptionValueWithDefault(kFramesPerPayloadSwitch, kFramesPerPayloadDefault);
   media_app.set_frames_per_payload(fxl::StringToNumber<uint32_t>(frames_per_payload_str));
+
+  // Set the number of buffers to use.
+  std::string num_payload_buffers_str =
+      command_line.GetOptionValueWithDefault(kNumPayloadBuffersSwitch, kNumPayloadBuffersDefault);
+  media_app.set_num_payload_buffers(fxl::StringToNumber<uint32_t>(num_payload_buffers_str));
 
   // Handle timestamp usage
   media_app.set_use_pts(command_line.HasOption(kUsePtsSwitch));

@@ -15,6 +15,7 @@ protocols.
       [--amp=<AMPL>]
       [--wav[=<FILEPATH>]]
       [--frames=<PACKET_SIZE>]
+      [--nbufs=<NUM_BUFFERS>]
       [--pts]
       [--threshold=<SECS>]
       [--gain[=<STREAM_GAIN_DB>]]
@@ -50,8 +51,9 @@ These optional parameters are interpreted as follows:
     --wav[=<FILEPATH>]      Save to .wav file ('/tmp/signal_generator.wav' if only '--wav' is provided)
       Subsequent settings (e.g. gain) do not affect file contents
 
-      By default, submit data in non-timestamped buffers of 480 frames
+      By default, submit data in non-timestamped buffers of 480 frames using a single VMO.
     --frames=<FRAMES>       Set data buffer size in frames
+    --nbufs=<NUM_BUFFERS>   Set the number of payload buffers to use
     --pts                   Apply presentation timestamps (units: frames)
     --threshold[=<SECS>]    Set PTS discontinuity threshold, in seconds (0.0, if unspecified)
 

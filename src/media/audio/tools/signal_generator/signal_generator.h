@@ -42,6 +42,9 @@ class MediaApp {
   void set_frames_per_payload(uint32_t frames_per_payload) {
     frames_per_payload_ = frames_per_payload;
   }
+  void set_num_payload_buffers(uint32_t num_payload_buffers) {
+    num_payload_buffers_ = num_payload_buffers;
+  }
 
   void set_use_pts(bool use_pts) { use_pts_ = use_pts; }
   void set_pts_continuity_threshold(float pts_continuity_threshold) {
@@ -95,8 +98,12 @@ class MediaApp {
 
   zx_status_t CreateMemoryMapping();
 
-  fuchsia::media::StreamPacket CreateAudioPacket(uint64_t packet_num);
-  void GenerateAudioForPacket(fuchsia::media::StreamPacket packet, uint64_t payload_num);
+  struct AudioPacket {
+    fuchsia::media::StreamPacket stream_packet;
+    fzl::VmoMapper* vmo;
+  };
+  AudioPacket CreateAudioPacket(uint64_t packet_num);
+  void GenerateAudioForPacket(const AudioPacket& packet, uint64_t payload_num);
   template <typename SampleType>
   static void WriteAudioIntoBuffer(SampleType* audio_buffer, uint32_t num_frames,
                                    uint64_t frames_since_start, OutputSignalType signal_type,
@@ -112,7 +119,7 @@ class MediaApp {
   fuchsia::media::AudioRendererPtr audio_renderer_;
   fuchsia::media::audio::GainControlPtr gain_control_;
 
-  fzl::VmoMapper payload_buffer_;
+  std::vector<fzl::VmoMapper> payload_buffers_;
 
   uint32_t num_channels_;
   uint32_t frame_rate_;
@@ -131,14 +138,16 @@ class MediaApp {
 
   double duration_secs_;
   uint32_t frames_per_payload_;
+  uint32_t num_payload_buffers_;
 
   bool use_pts_ = false;
   bool set_continuity_threshold_ = false;
   float pts_continuity_threshold_secs_;
 
-  uint32_t total_mapping_size_;
+  uint32_t payload_mapping_size_;
   uint32_t payload_size_;
-  uint32_t payloads_per_total_mapping_;
+  uint32_t payloads_per_mapping_;
+  uint32_t total_num_mapped_payloads_;
 
   uint64_t total_frames_to_send_;
   uint64_t num_packets_to_send_;
