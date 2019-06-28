@@ -17,7 +17,6 @@ import (
 	"strings"
 	"time"
 
-	"fuchsia.googlesource.com/tools/tarutil"
 	"fuchsia.googlesource.com/tools/botanist/target"
 	"fuchsia.googlesource.com/tools/build"
 	"fuchsia.googlesource.com/tools/command"
@@ -25,6 +24,7 @@ import (
 	"fuchsia.googlesource.com/tools/netutil"
 	"fuchsia.googlesource.com/tools/runner"
 	"fuchsia.googlesource.com/tools/runtests"
+	"fuchsia.googlesource.com/tools/tarutil"
 
 	"github.com/google/subcommands"
 )
@@ -195,7 +195,7 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 		return fmt.Errorf("failed to load target config file %q", cmd.configFile)
 	}
 	opts := target.Options{
-		Netboot:  cmd.netboot,
+		Netboot: cmd.netboot,
 	}
 
 	var devices []*target.DeviceTarget

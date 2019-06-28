@@ -160,7 +160,7 @@ func getEntriesInfo() ([]entryInfo, error) {
 }
 
 func main() {
-	l := logger.NewLogger(level, color.NewColor(colors), os.Stderr, os.Stderr)
+	l := logger.NewLogger(level, color.NewColor(colors), os.Stderr, os.Stderr, "")
 	// Parse flags and check for errors.
 	flag.Parse()
 	if buildIDDir == "" {

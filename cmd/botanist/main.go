@@ -39,7 +39,7 @@ func main() {
 
 	flag.Parse()
 
-	log := logger.NewLogger(level, color.NewColor(colors), os.Stdout, os.Stderr)
+	log := logger.NewLogger(level, color.NewColor(colors), os.Stdout, os.Stderr, "botanist ")
 	ctx := logger.WithLogger(context.Background(), log)
 	ctx = command.CancelOnSignals(ctx, syscall.SIGTERM)
 	os.Exit(int(subcommands.Execute(ctx)))

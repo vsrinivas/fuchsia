@@ -25,6 +25,7 @@ type Logger struct {
 	goLogger      *goLog.Logger
 	goErrorLogger *goLog.Logger
 	color         color.Color
+	prefix        string
 }
 
 type LogLevel int
@@ -79,7 +80,11 @@ func (l *LogLevel) Set(s string) error {
 	return nil
 }
 
-func NewLogger(loggerLevel LogLevel, color color.Color, outWriter, errWriter io.Writer) *Logger {
+// NewLogger creates a new logger instance. The loggerLevel variable sets the log level for the logger.
+// The color variable specifies the visual color of displayed log output.
+// The outWriter and errWriter variables set the destination to which non-error and error data will be written.
+// The prefix appears on the same line directly preceding any log data.
+func NewLogger(loggerLevel LogLevel, color color.Color, outWriter, errWriter io.Writer, prefix string) *Logger {
 	if outWriter == nil {
 		outWriter = os.Stdout
 	}
@@ -91,12 +96,13 @@ func NewLogger(loggerLevel LogLevel, color color.Color, outWriter, errWriter io.
 		goLogger:      goLog.New(outWriter, "", goLog.LstdFlags),
 		goErrorLogger: goLog.New(errWriter, "", goLog.LstdFlags),
 		color:         color,
+		prefix:        prefix,
 	}
 	return l
 }
 
 func (l *Logger) log(prefix, format string, a ...interface{}) {
-	l.goLogger.Printf("%s%s", prefix, fmt.Sprintf(format, a...))
+	l.goLogger.Printf("%s%s%s", l.prefix, prefix, fmt.Sprintf(format, a...))
 }
 
 func (l *Logger) Logf(loglevel LogLevel, format string, a ...interface{}) {
@@ -168,7 +174,7 @@ func Warningf(ctx context.Context, format string, a ...interface{}) {
 
 func (l *Logger) Errorf(format string, a ...interface{}) {
 	if l.LoggerLevel >= ErrorLevel {
-		l.goErrorLogger.Printf("%s%s", l.color.Red("ERROR: "), fmt.Sprintf(format, a...))
+		l.goErrorLogger.Printf("%s%s%s", l.prefix, l.color.Red("ERROR: "), fmt.Sprintf(format, a...))
 	}
 }
 
@@ -178,7 +184,7 @@ func Errorf(ctx context.Context, format string, a ...interface{}) {
 
 func (l *Logger) Fatalf(format string, a ...interface{}) {
 	if l.LoggerLevel >= FatalLevel {
-		l.goErrorLogger.Fatalf("%s%s", l.color.Red("FATAL: "), fmt.Sprintf(format, a...))
+		l.goErrorLogger.Fatalf("%s%s%s", l.prefix, l.color.Red("FATAL: "), fmt.Sprintf(format, a...))
 	}
 }
 

@@ -93,7 +93,7 @@ func main() {
 
 	// Setup logger and context
 	painter := color.NewColor(colors)
-	log := logger.NewLogger(level, painter, os.Stdout, os.Stderr)
+	log := logger.NewLogger(level, painter, os.Stdout, os.Stderr, "")
 	ctx := logger.WithLogger(context.Background(), log)
 
 	// Construct the nodes of the pipeline
