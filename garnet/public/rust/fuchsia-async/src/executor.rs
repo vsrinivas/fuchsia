@@ -52,6 +52,11 @@ where
     );
 }
 
+/// Executor-relative time.
+// TODO(ambre): this is temporarily an alias for zx::Time, and will be
+// changed into an incompatible type.
+pub type Time = zx::Time;
+
 /// A trait for handling the arrival of a packet on a `zx::Port`.
 ///
 /// This trait should be implemented by users who wish to write their own
