@@ -19,71 +19,73 @@ namespace test {
 namespace {
 
 // Meant to make template instantiation more readable.
-constexpr bool kPassSetUp = false;
-constexpr bool kFailsSetUp = true;
-constexpr bool kPassTestBody = false;
+constexpr bool kPassSetUp     = false;
+constexpr bool kFailsSetUp    = true;
+constexpr bool kPassTestBody  = false;
 constexpr bool kFailsTestBody = true;
 
 template <bool FailOnSetUp, bool FailOnTestBody>
 class FakeTest : public zxtest::Test {
-public:
-    void SetUp() final {
-        if (FailOnSetUp) {
-            driver->NotifyFail();
-        }
-        run_setup = true;
+ public:
+  void SetUp() final {
+    if (FailOnSetUp) {
+      driver->NotifyFail();
     }
+    run_setup = true;
+  }
 
-    void TearDown() final { run_teardown = true; }
+  void TearDown() final {
+    run_teardown = true;
+  }
 
-    void TestBody() final {
-        if (FailOnTestBody) {
-            driver->NotifyFail();
-        }
-        run_body = true;
+  void TestBody() final {
+    if (FailOnTestBody) {
+      driver->NotifyFail();
     }
+    run_body = true;
+  }
 
-    // Used for verying that Run behaves properly.
-    bool run_setup = false;
-    bool run_teardown = false;
-    bool run_body = false;
-    TestDriverStub* driver = nullptr;
+  // Used for verying that Run behaves properly.
+  bool run_setup         = false;
+  bool run_teardown      = false;
+  bool run_body          = false;
+  TestDriverStub* driver = nullptr;
 };
 
-} // namespace
+}  // namespace
 
 void TestRun() {
-    TestDriverStub driver;
-    auto test = Test::Create<FakeTest<kPassSetUp, kPassTestBody>>(&driver);
-    test->driver = &driver;
+  TestDriverStub driver;
+  auto test    = Test::Create<FakeTest<kPassSetUp, kPassTestBody>>(&driver);
+  test->driver = &driver;
 
-    test->Run();
-    ZX_ASSERT_MSG(test->run_setup, "Test did not execute SetUp");
-    ZX_ASSERT_MSG(test->run_body, "Test did not execute TestBody");
-    ZX_ASSERT_MSG(test->run_teardown, "Test did not execute TearDown");
+  test->Run();
+  ZX_ASSERT_MSG(test->run_setup, "Test did not execute SetUp");
+  ZX_ASSERT_MSG(test->run_body, "Test did not execute TestBody");
+  ZX_ASSERT_MSG(test->run_teardown, "Test did not execute TearDown");
 }
 
 void TestRunFailure() {
-    TestDriverStub driver;
-    auto test = Test::Create<FakeTest<kPassSetUp, kFailsTestBody>>(&driver);
-    test->driver = &driver;
+  TestDriverStub driver;
+  auto test    = Test::Create<FakeTest<kPassSetUp, kFailsTestBody>>(&driver);
+  test->driver = &driver;
 
-    test->Run();
-    ZX_ASSERT_MSG(test->run_setup, "Test did not execute SetUp");
-    ZX_ASSERT_MSG(test->run_body, "Test did not execute TestBody");
-    ZX_ASSERT_MSG(test->run_teardown, "Test did not execute TearDown");
+  test->Run();
+  ZX_ASSERT_MSG(test->run_setup, "Test did not execute SetUp");
+  ZX_ASSERT_MSG(test->run_body, "Test did not execute TestBody");
+  ZX_ASSERT_MSG(test->run_teardown, "Test did not execute TearDown");
 }
 
 void TestSetUpFailure() {
-    TestDriverStub driver;
-    auto test = Test::Create<FakeTest<kFailsSetUp, kFailsTestBody>>(&driver);
-    test->driver = &driver;
+  TestDriverStub driver;
+  auto test    = Test::Create<FakeTest<kFailsSetUp, kFailsTestBody>>(&driver);
+  test->driver = &driver;
 
-    test->Run();
-    ZX_ASSERT_MSG(test->run_setup, "Test did not execute SetUp");
-    ZX_ASSERT_MSG(!test->run_body, "Test did execute TestBody when its SetUp failed.");
-    ZX_ASSERT_MSG(test->run_teardown, "Test did not execute TearDown");
+  test->Run();
+  ZX_ASSERT_MSG(test->run_setup, "Test did not execute SetUp");
+  ZX_ASSERT_MSG(!test->run_body, "Test did execute TestBody when its SetUp failed.");
+  ZX_ASSERT_MSG(test->run_teardown, "Test did not execute TearDown");
 }
 
-} // namespace test
-} // namespace zxtest
+}  // namespace test
+}  // namespace zxtest

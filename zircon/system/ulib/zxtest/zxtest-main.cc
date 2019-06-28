@@ -8,5 +8,5 @@
 // Provides a default entry point to run all registered tests. If the main program provides its own
 // main, the library's main will be ignored.
 __WEAK int main(int argc, char** argv) {
-    return RUN_ALL_TESTS(argc, argv);
+  return RUN_ALL_TESTS(argc, argv);
 }
