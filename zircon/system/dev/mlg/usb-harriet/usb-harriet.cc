@@ -50,18 +50,18 @@ zx_status_t Harriet::Create(zx_device_t* parent) {
     zxlogf(TRACE, "found intf %u\n", intf_num);
 
     for (auto ep_desc : *intf) {
-        uint8_t ep_type = usb_ep_type(&ep_desc);
+        uint8_t ep_type = usb_ep_type(&ep_desc.descriptor);
         switch(ep_type) {
         case USB_ENDPOINT_BULK:
         case USB_ENDPOINT_INTERRUPT:
             zxlogf(TRACE, "%s %s EP 0x%x\n",
                    ep_type == USB_ENDPOINT_BULK ? "BULK" : "INTERRUPT",
-                   usb_ep_direction(&ep_desc) == USB_ENDPOINT_OUT ? "OUT" : "IN",
-                   ep_desc.bEndpointAddress);
+                   usb_ep_direction(&ep_desc.descriptor) == USB_ENDPOINT_OUT ? "OUT" : "IN",
+                   ep_desc.descriptor.bEndpointAddress);
             break;
         default:
             zxlogf(TRACE, "found additional unexpected EP, type: %u addr 0x%x\n",
-                   ep_type, ep_desc.bEndpointAddress);
+                   ep_type, ep_desc.descriptor.bEndpointAddress);
         }
     }
 

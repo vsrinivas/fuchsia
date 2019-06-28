@@ -145,7 +145,7 @@ zx_status_t UsbMassStorageDevice::Init() {
     size_t bulk_in_max_packet = 0;
     size_t bulk_out_max_packet = 0;
     for (auto endpoint : *interface) {
-        usb_endpoint_descriptor_t* endp = &endpoint;
+        usb_endpoint_descriptor_t* endp = &endpoint.descriptor;
         if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
             if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
                 bulk_out_addr = endp->bEndpointAddress;

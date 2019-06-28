@@ -53,7 +53,9 @@ Interface::iterator Interface::begin() const {
         return end();
     }
     usb_desc_iter_t iter = iter_;
-    const usb_endpoint_descriptor_t* endpoint = usb_desc_iter_next_endpoint(&iter);
+    usb_iter_endpoint_descriptor_t endpoint{};
+    Interface::iterator::ReadEp(&iter, &endpoint);
+
     return iterator(iter, endpoint);
 }
 
@@ -63,11 +65,25 @@ Interface::const_iterator Interface::cbegin() const {
 
 Interface::iterator Interface::end() const {
     usb_desc_iter_t init = {};
-    return iterator(init, nullptr);
+    return iterator(init, usb_iter_endpoint_descriptor_t{});
 }
 
 Interface::const_iterator Interface::cend() const {
-    return static_cast<Interface::const_iterator>(begin());
+    return static_cast<Interface::const_iterator>(end());
+}
+
+void Interface::iterator::ReadEp(usb_desc_iter_t* iter, usb_iter_endpoint_descriptor_t* out) {
+    const usb_endpoint_descriptor_t* ptr = usb_desc_iter_next_endpoint(iter);
+    if (ptr) {
+        out->descriptor = *ptr;
+    }
+
+    // An SuperSpeed companion descriptor may optionally follow.
+    const usb_descriptor_header_t* header = usb_desc_iter_peek(iter);
+    if (header && header->bDescriptorType == USB_DT_SS_EP_COMPANION) {
+        out->ss_companion = *usb_desc_iter_next_ss_ep_comp(iter);
+        out->has_companion = true;
+    }
 }
 
 } // namespace usb

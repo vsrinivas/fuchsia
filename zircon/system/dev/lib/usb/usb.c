@@ -160,3 +160,24 @@ __EXPORT usb_endpoint_descriptor_t* usb_desc_iter_next_endpoint(usb_desc_iter_t*
     // not found
     return NULL;
 }
+
+// returns the next ss-companion descriptor within the current interface.
+// drivers may use usb_desc_iter_peek() to determine if an endpoint or ss_companion descriptor is
+// expected.
+__EXPORT usb_ss_ep_comp_descriptor_t* usb_desc_iter_next_ss_ep_comp(usb_desc_iter_t* iter) {
+    usb_descriptor_header_t* header = usb_desc_iter_peek(iter);
+    while (header) {
+        uint8_t desc_type = header->bDescriptorType;
+        if (desc_type == USB_DT_ENDPOINT || desc_type == USB_DT_INTERFACE) {
+            // we are either at next endpoint or end of previous interface
+            return NULL;
+        }
+        iter->current += header->bLength;
+        if (header->bDescriptorType == USB_DT_SS_EP_COMPANION) {
+            return (usb_ss_ep_comp_descriptor_t*)header;
+        }
+        header = usb_desc_iter_peek(iter);
+    }
+    // not found
+    return NULL;
+}

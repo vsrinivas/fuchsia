@@ -29,26 +29,6 @@ library("usb") {
   ]
 }
 
-test("usb-wrapper-legacy-test") {
-  output_name = "usb-wrapper-legacy-test"
-  sources = [
-    "tests/usb-wrapper-tests.cc",
-  ]
-  deps = [
-    ":usb",
-    "$zx/system/banjo/ddk.protocol.usb",
-    "$zx/system/banjo/ddk.protocol.usb.composite",
-    "$zx/system/dev/lib/fake-bti",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/driver",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zxtest",
-    "$zx/system/ulib/zircon",
-  ]
-}
-
 test("usb-wrapper-test") {
   output_name = "usb-wrapper-test"
   sources = [

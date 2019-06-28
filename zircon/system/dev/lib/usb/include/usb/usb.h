@@ -54,6 +54,9 @@ usb_interface_descriptor_t* usb_desc_iter_next_interface(usb_desc_iter_t* iter, 
 // returns the next endpoint descriptor within the current interface
 usb_endpoint_descriptor_t* usb_desc_iter_next_endpoint(usb_desc_iter_t* iter);
 
+// returns the next ss-companion descriptor within the current interface
+usb_ss_ep_comp_descriptor_t* usb_desc_iter_next_ss_ep_comp(usb_desc_iter_t* iter);
+
 static inline zx_status_t usb_get_descriptor(const usb_protocol_t* usb, uint8_t request_type,
                                              uint16_t type, uint16_t index, void* data,
                                              size_t length, zx_time_t timeout, size_t* out_length) {
@@ -84,6 +87,13 @@ __END_CDECLS
 
 #ifdef __cplusplus
 namespace usb {
+
+typedef struct {
+    usb_endpoint_descriptor_t descriptor;
+    usb_ss_ep_comp_descriptor_t ss_companion;
+    // True if ss_companion is populated.
+    bool has_companion;
+} usb_iter_endpoint_descriptor_t;
 
 class UsbDevice : public ddk::UsbProtocolClient {
 public:
@@ -153,11 +163,18 @@ private:
 
     class iterator_impl {
     public:
-        iterator_impl(const usb_desc_iter_t& iter, const usb_endpoint_descriptor_t* endpoint)
+        friend class Interface;
+
+        iterator_impl(const usb_desc_iter_t& iter, const usb_iter_endpoint_descriptor_t& endpoint)
             : iter_(iter),
               endpoint_(endpoint) {}
 
-        bool operator==(const iterator_impl& other) const { return endpoint_ == other.endpoint_; }
+        bool operator==(const iterator_impl& other) const {
+            const usb_endpoint_descriptor_t* a = &endpoint_.descriptor;
+            const usb_endpoint_descriptor_t* b = &other.endpoint_.descriptor;
+            // Note that within a configuration, endpoint addresses are unique.
+            return (a->bEndpointAddress == b->bEndpointAddress);
+        }
         bool operator!=(const iterator_impl& other) const { return !(*this == other); }
 
         iterator_impl operator++(int) {
@@ -167,17 +184,21 @@ private:
         }
 
         iterator_impl& operator++() {
-            endpoint_ = usb_desc_iter_next_endpoint(&iter_);
+            endpoint_ = {};
+            ReadEp(&iter_, &endpoint_);
             return *this;
         }
 
-        const usb_endpoint_descriptor_t* endpoint() const { return endpoint_; }
-        const usb_endpoint_descriptor_t& operator*() const { return *endpoint_; }
-        const usb_endpoint_descriptor_t* operator->() const { return endpoint_; }
+        const usb_iter_endpoint_descriptor_t* endpoint() const { return &endpoint_; }
+        const usb_iter_endpoint_descriptor_t& operator*() const { return endpoint_; }
+        const usb_iter_endpoint_descriptor_t* operator->() const { return &endpoint_; }
 
     private:
+        // Using the given iter, read the next endpoint descriptor(s).
+        static void ReadEp(usb_desc_iter_t* iter, usb_iter_endpoint_descriptor_t* out);
+
         usb_desc_iter_t iter_;
-        const usb_endpoint_descriptor_t* endpoint_;
+        usb_iter_endpoint_descriptor_t endpoint_;
     };
 
     // Advances iter_ to the next usb_interface_descriptor_t.

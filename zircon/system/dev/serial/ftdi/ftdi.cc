@@ -394,13 +394,13 @@ zx_status_t FtdiDevice::Bind() {
     uint8_t bulk_out_addr = 0;
 
     for (auto endp : *usb_interface) {
-        if (usb_ep_direction(&endp) == USB_ENDPOINT_OUT) {
-            if (usb_ep_type(&endp) == USB_ENDPOINT_BULK) {
-                bulk_out_addr = endp.bEndpointAddress;
+        if (usb_ep_direction(&endp.descriptor) == USB_ENDPOINT_OUT) {
+            if (usb_ep_type(&endp.descriptor) == USB_ENDPOINT_BULK) {
+                bulk_out_addr = endp.descriptor.bEndpointAddress;
             }
         } else {
-            if (usb_ep_type(&endp) == USB_ENDPOINT_BULK) {
-                bulk_in_addr = endp.bEndpointAddress;
+            if (usb_ep_type(&endp.descriptor) == USB_ENDPOINT_BULK) {
+                bulk_in_addr = endp.descriptor.bEndpointAddress;
             }
         }
     }
