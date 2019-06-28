@@ -16,7 +16,7 @@ the overall tree among Device Hosts is based on system policy for isolating
 drivers for security or stability reasons and colocating drivers for performance
 reasons.
 
-NOTE: The current policy is simple (each device representing a physical bus-master
+Note: The current policy is simple (each device representing a physical bus-master
 capable hardware device and its children are placed into a separate devhost).  It
 will evolve to provide finer-grained partitioning.
 
@@ -112,7 +112,7 @@ as an alias under `/dev/class/CLASSNAME/...`.  The `intel-ethernet` driver imple
 the Ethermac interface, so it also shows up at `/dev/class/ethermac/000`.  The names
 within class directories are unique but not meaningful, and are assigned on demand.
 
-NOTE: Currently names in class directories are 3 digit decimal numbers, but they
+Note: Currently names in class directories are 3 digit decimal numbers, but they
 are likely to change form in the future.  Clients should not assume there is any
 specific meaning to a class alias name.
 

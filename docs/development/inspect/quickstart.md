@@ -27,7 +27,7 @@ See below for the quick start guide in your language of choice.
 ## C++
 
 ### Setup
-> NOTE: If you need to support dynamic values, see [Dynamic Value Support](#dynamic-value-support). If you are unsure, keep reading.
+Note: If you need to support dynamic values, see [Dynamic Value Support](#dynamic-value-support). If you are unsure, keep reading.
 
 This section assumes you are writing an asynchronous component and that some part of your component (typically `main.cc`) looks like this:
 
@@ -52,7 +52,7 @@ inspect::Node& root_node = inspector->root_tree()->GetRoot();
 loop.Run();
 ```
 
-> Note: You will need to `#include <lib/inspect/component.h>`
+Note: You will need to `#include <lib/inspect/component.h>`
 
 You are now using Inspect! To add some data and see it in action, try adding the following:
 
@@ -311,8 +311,8 @@ $ iquery --find /hub | grep my_component.cmx
 
 Your component's endpoint will be listed as `<path>/my_component.cmx/<id>/out/objects/root.inspect`.
 
-> Note: If you followed [Dynamic Value Support](#dynamic-value-support) above,
-> "root.inspect" will be missing.
+Note: If you followed [Dynamic Value Support](#dynamic-value-support) above,
+"root.inspect" will be missing.
 
 ## Read your Inspect data
 

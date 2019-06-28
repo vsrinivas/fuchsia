@@ -246,7 +246,7 @@ available in the kernel.
 2. [kernel/lib/fbl](../kernel/lib/fbl) which is usable only from
     the kernel.
 
-**NOTE:** Some FBL interfaces below that overlap with standard C++ library
+Note: Some FBL interfaces below that overlap with standard C++ library
 interfaces will probably be either removed entirely or made kernel-only (and
 perhaps renamed inside the kernel) once userspace code has migrated to using
 standard C++ library facilities where appropriate.

@@ -11,7 +11,7 @@ integrated with other editors through [ycmd](https://github.com/Valloric/ycmd).
 See the [installation
 guide](https://github.com/Valloric/YouCompleteMe#installation).
 
-**Note**: Installing YCM on MacOS with Homebrew is not recommended because of
+Note: Installing YCM on MacOS with Homebrew is not recommended because of
 library compatibility errors. Use the official installation guide instead.
 
 #### gLinux (Googlers only)

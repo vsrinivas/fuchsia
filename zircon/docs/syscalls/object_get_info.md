@@ -541,7 +541,7 @@ Additional errors:
 The `zx_info_vmos_t` array is list of all VMOs pointed to by the target process.
 Some VMOs are mapped, some are pointed to by handles, and some are both.
 
-**Note**: The same VMO may appear multiple times due to multiple
+Note: The same VMO may appear multiple times due to multiple
 mappings/handles. Also, because VMOs can change as the target process runs,
 the same VMO may have different values each time it appears. It is the
 caller's job to resolve any duplicates.

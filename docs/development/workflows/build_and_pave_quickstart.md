@@ -61,7 +61,7 @@ The workflow for re-building and re-deploying using `fx` is slightly different:
 1.  `fx ota`
     Pushes updated packages to the device.
 
-NOTE: If desired, the device can be re-paved using Zedboot USB as per steps 4-5
+Note: If desired, the device can be re-paved using Zedboot USB as per steps 4-5
 in the previous section. This is slower, but may be necessary in some cases
 where the system handles the OTA less than gracefully.
 

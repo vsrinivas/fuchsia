@@ -234,7 +234,7 @@ it needs to call API on the parent device).
 bottom half. There is no common wire protocol for this channel. For an
 example, refer to the [PCI driver](../../system/dev/bus/pci).
 
-NOTE: This is a mechanism used by various bus devices and not something
+Note: This is a mechanism used by various bus devices and not something
 general drivers should have to worry about. (please ping swetland if you think
 you need to use this)
 

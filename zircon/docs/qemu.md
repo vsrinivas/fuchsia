@@ -102,16 +102,18 @@ fx run -N
 sudo ifconfig tap0 inet6 fc00::/7 up
 ```
 
-**NOTE**: One caveat with tuntaposx is that the network interface will
+<aside class="note">
+One caveat with tuntaposx is that the network interface will
 automatically go down when QEMU exits and closes the network device. So the
 network interface needs to be brought back up each time QEMU is restarted. To
 automate this, you can use the -u flag to run a script on qemu startup. An
 example startup script containing the above command is located in
 scripts/qemu-ifup-macos, so QEMU can be started with:
 
-```
+<pre>
 fx run -Nu ./scripts/qemu-ifup-macos
-```
+</pre>
+</aside>
 
 ## Using Emulated Disk under QEMU
 

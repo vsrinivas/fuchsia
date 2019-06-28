@@ -68,9 +68,7 @@ In settings, add:
 "clangd.path": "<absolute path to fuchsia root directory>/buildtools/linux-x64/clang/bin/clangd",
 ```
 
-*** note
-Note that the path to clangd does need to be absolute.
-***
+Note: the path to clangd does need to be absolute.
 
 Finally, follow the **Compilation Database** instructions below to
 generate the `compile_commands.json` in the fuchsia root directory. Then
@@ -126,7 +124,7 @@ can be generated using `fx compdb`. This will create/update the file
 delete, or rename source files the command needs to be rerun to update
 the `compile_commands.json` file.
 
-NOTE: If using goma (currently only Googlers), you should run the
+Note: If using goma (currently only Googlers), you should run the
 following instead of fx compdb. It will remove the gomacc
 entries that confuse CLion. See
 <https://youtrack.jetbrains.com/issue/CPP-15475> for background.
@@ -135,6 +133,6 @@ entries that confuse CLion. See
 fx compdb && perl -pi -e 's|/[/\w]+/gomacc ||' compile_commands.json
 ```
 
-NOTE: There is an ongoing issue where CLion shows compiler errors for a few
+Note: There is an ongoing issue where CLion shows compiler errors for a few
 hundred files in the Fuchsia source code. Other files should work
 fine in CLion.

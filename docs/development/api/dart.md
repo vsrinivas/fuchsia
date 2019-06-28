@@ -166,7 +166,7 @@ Non-Error exception classes are for runtime errors. If your API implementation t
 
 Except in a few special circumstances, idiomatic Dart should throw Errors, but never catch them. They exist specifically to not be caught so that they take down the app and alert the programmer to the location of the bug.
 
-**Note**: often times people refer to Error when they mean Exception and vice versa. Especially developers that are coming from a different language. Apply your knowledge of their difference when developing your Dart API. 
+Note: often times people refer to Error when they mean Exception and vice versa. Especially developers that are coming from a different language. Apply your knowledge of their difference when developing your Dart API.
 
 Your public API should throw well defined and typed exceptions so that users can catch them and react appropriately. If you are not in control of all the code that is being called by your package, maybe because you are using a third party library, you may not be able to know exactly which exceptions may be thrown. If this is the case, you can either attempt to catch the exception and wrap it in a type that you create or clearly document that an exception of unknown type may be thrown.
 

@@ -70,7 +70,7 @@ the results files of other benchmarks.
 
 Please see the [Performance Dashboard User Guide]
 
-NOTE: We do not yet have a User guide for the [Performance Dashboard Version 2].
+Note: We do not yet have a User guide for the [Performance Dashboard Version 2].
 
 [benchmark results schema]: results_schema.md
 [Fuchsia Build overview]: /docs/development/build/overview.md

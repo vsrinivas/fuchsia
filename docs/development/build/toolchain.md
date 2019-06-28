@@ -128,12 +128,10 @@ shared location, you can just refer to its build directory explicitly as
 `${LLVM_OBJDIR}/tools/clang/stage2-bins/bin/` (where `LLVM_OBJDIR` is
 your LLVM build directory).
 
-*** note
-**Note:** the second stage build uses LTO (Link Time Optimization) to
+Note: the second stage build uses LTO (Link Time Optimization) to
 achieve better runtime performance of the final compiler. LTO often
 requires a large amount of memory and is very slow. Therefore it may not
 be very practical for day-to-day development.
-***
 
 ## Developing Clang
 
@@ -189,14 +187,15 @@ checkout (on Linux):
 CLANG_TOOLCHAIN_PREFIX=${FUCHSIA}/buildtools/linux-x64/clang/bin/
 ```
 
-Note: Fuchsia Clang installation only contains static libc++
+<aside class="note">
+Fuchsia Clang installation only contains static libc++
 host library (on Linux), so you will need the following two flags to
 avoid linker errors:
-
-```bash
+<pre>
   -DCMAKE_EXE_LINKER_FLAGS="-ldl -lpthread" \
   -DCMAKE_SHARED_LINKER_FLAGS="-ldl -lpthread"
-```
+</pre>
+</aside>
 
 ### Sanitizers
 
@@ -279,11 +278,9 @@ ninja -j${JOBS}
 Use `-j100` for Goma on macOS and `-j1000` for Goma on Linux. You may
 need to tune the job count to suit your particular machine and workload.
 
-*** note
-**Note:** that in order to use Goma, you need a host compiler that is
+Note: that in order to use Goma, you need a host compiler that is
 supported by Goma such as the Fuchsia Clang installation. See above on
 how to configure your LLVM buile to use a different host compiler.
-***
 
 To verify your compiler is available on Goma, you can set
 `GOMA_USE_LOCAL=0 GOMA_FALLBACK=0` environment variables. If the
@@ -364,9 +361,7 @@ gn gen build-zircon --args='variants = [ "clang" ] clang_tool_dir = ${CLANG_DIR}
 `${CLANG_DIR}` is the path to the `bin` directory for your Clang build,
 e.g. `${LLVM_OBJDIR}/bin/`.
 
-*** note
-**Note:** that trailing slash is important.
-***
+Note: that trailing slash is important.
 
 Then run `fx build-zircon` as usual.
 

@@ -61,7 +61,7 @@ a library can be used either in the kernel or in userland, then you must set
 `static = true` explicitly alongside `kernel = true` (unless you set `shared =
 true` and want to prohibit static linking of that library in userland).
 
-**Note:** For kernel modules that do not provide an `include/` subdirectory,
+Note: For kernel modules that do not provide an `include/` subdirectory,
 use [`source_set()`](#source_set) instead of `library()`.
 
 Here’s an exemplar showing all the essential options.  Most actual targets

@@ -21,7 +21,7 @@ zx_status_t zx_task_bind_exception_port(zx_handle_t handle,
 
 ## DESCRIPTION
 
-**Note:** exception ports are being phased out in favor of channels. New code
+Note: exception ports are being phased out in favor of channels. New code
 should use [`zx_task_create_exception_channel()`] instead if possible
 and existing code will be ported over shortly.
 

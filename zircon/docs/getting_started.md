@@ -2,11 +2,9 @@
 
 ## Checking out the Zircon source code
 
-*** note
-NOTE: The Fuchsia source includes Zircon. See Fuchsia's
+Note: The Fuchsia source includes Zircon. See Fuchsia's
 [Getting Started](https://fuchsia.googlesource.com/fuchsia/+/master/docs/getting_started.md)
 doc. Follow this doc to work on only Zircon.
-***
 
 The Zircon Git repository is located
 at: https://fuchsia.googlesource.com/zircon

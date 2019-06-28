@@ -196,7 +196,7 @@ function and an `async::Loop`. The difference is that the client immediately
 kicks off work once everything is initialized. In contrast, the server does no
 work until a connection is accepted.
 
-**Note:** a component can be a client, a server, or both, or many. The
+Note: a component can be a client, a server, or both, or many. The
 distinction in this example between Client and Server is purely for
 demonstration purposes.
 

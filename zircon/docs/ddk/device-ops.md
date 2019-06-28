@@ -39,7 +39,7 @@ zx_status_t (*open)(void* ctx, zx_device_t** dev_out, uint32_t flags);
 The close hook is called when a connection to a device is closed. These
 calls will balance the calls to open.
 
-**Note:** If open returns a **device instance**, the balancing close hook
+Note: If open returns a **device instance**, the balancing close hook
 that is called is the close hook on the **instance**, not the parent.
 
 The default close implementation returns **ZX_OK**.

@@ -3,11 +3,9 @@
 This file contains information about memory and resource management in Zircon,
 and talks about ways to examine process and system memory usage.
 
-*** note
-**TODO**(dbort): Talk about the relationship between address spaces,
+Note: **TODO**(dbort): Talk about the relationship between address spaces,
 [VMARs](objects/vm_address_region.md), [mappings](syscalls/vmar_map.md), and
 [VMOs](objects/vm_object.md)
-***
 
 [TOC]
 
@@ -202,7 +200,7 @@ PSS     =  PRIVATE + (SHARED / #shr)
 
 ### Dump "hidden" (unmapped and kernel) VMOs
 
-> NOTE: This is a kernel command, and will print to the kernel console.
+Note: This is a kernel command, and will print to the kernel console.
 
 ```
 k zx vmos hidden
@@ -287,7 +285,7 @@ Fields:
 
 ### Dump the kernel address space
 
-> NOTE: This is a kernel command, and will print to the kernel console.
+Note: This is a kernel command, and will print to the kernel console.
 
 ```
 k zx asd kernel

@@ -318,7 +318,7 @@ fx zxdb --connect [<IPv6 to target>]:5000 --debug-mode
 // Now you have two running instances of the debugger!
 ```
 
-NOTE: Only one debugger can be attached to the main job in order to auto-attach
+Note: Only one debugger can be attached to the main job in order to auto-attach
 to new processes. Since you're using it for the first debugger, you won't be
 able to launch components with the second one, only attach to them.
 

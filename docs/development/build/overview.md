@@ -143,7 +143,7 @@ $ buildtools/ninja -C out/default -j64 foo/bar/blah:dash
 
 Note that this only works for targets in the default toolchain.
 
-*Note*: Building package targets does not result in an updated package
+Note: Building package targets does not result in an updated package
 repository, because the package repository is updated by the `updates` group
 target. In order for updated package changes to be made available via `fx
 serve`, users must build the `updates` group.

@@ -218,7 +218,7 @@ This pattern is also useful to decompose what could be a long promise into
 smaller readable chunks, such as by having a continuation function return the
 result of `DoImportantThingsInParallel()` from the example above.
 
-> NOTE: See the gotcha "Handlers / continuation functions can return ..." below.
+Note: See the gotcha "Handlers / continuation functions can return ..." below.
 
 ### Declaring and keeping intermediate state alive
 

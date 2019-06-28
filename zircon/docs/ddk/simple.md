@@ -160,9 +160,9 @@ parameter to **null_read()**.
 Similarly, when **null_read()** indicates the number of bytes that it read (0 in our case), this
 appears as the return value from the client's **read()** function.
 
-> **NOTE:
-> The handler is expected to always return immediately.
-> By convention, indicating zero bytes in `*actual` indicates EOF**
+
+Note: The handler is expected to always return immediately.
+By convention, indicating zero bytes in `*actual` indicates EOF
 
 There are, of course, cases when the device doesn't have data immediately available, *AND* it's
 not an EOF situation.
@@ -206,8 +206,7 @@ This tells the client that all of their data was written.
 Of course, since this is the `/dev/misc/demo-null` device, the data doesn't actually *go*
 anywhere.
 
-> **NOTE:
-> Just like in the** **null_read()** **case, the handler must not block.**
+Note: Just like in the **null_read()** case, the handler must not block.
 
 ## What about **open()** and **close()**?
 

@@ -272,7 +272,7 @@ The echo client implementation can be found at:
 
 Our simple client does everything in `main()`.
 
-**Note:** a component can be a client, a service, or both, or many. The
+Note: a component can be a client, a service, or both, or many. The
 distinction in this example between Client and Server is purely for
 demonstration purposes.
 

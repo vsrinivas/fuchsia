@@ -263,7 +263,7 @@ while (1) {
 }
 ```
 
-*Note:* There is both an exception and a signal for thread termination. The
+Note: There is both an exception and a signal for thread termination. The
 `ZX_EXCP_THREAD_EXITING` exception is sent first. When the thread is finally
 terminated the `ZX_THREAD_TERMINATED` signal is set.
 

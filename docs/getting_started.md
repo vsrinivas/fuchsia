@@ -5,15 +5,10 @@ Pink + Purple == Fuchsia (a new Operating System)
 Welcome to Fuchsia! This document has everything you need to get started with
 Fuchsia.
 
-*** note
-NOTE: The Fuchsia source includes
-[Zircon](/zircon/README.md),
-the core platform that underpins Fuchsia.
-The Fuchsia build process will build Zircon as a side-effect;
-to work on Zircon only, read and follow Zircon's
-[Getting Started](/zircon/docs/getting_started.md)
-doc.
-***
+Note: The Fuchsia source includes [Zircon](/zircon/README.md),
+the core platform that underpins Fuchsia. The Fuchsia build process will
+build Zircon as a side-effect; to work on Zircon only, read and follow
+Zircon's [Getting Started](/zircon/docs/getting_started.md) doc.
 
 [TOC]
 
