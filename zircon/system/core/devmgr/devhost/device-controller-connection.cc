@@ -6,6 +6,7 @@
 
 #include <fbl/auto_lock.h>
 #include <fuchsia/device/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zx/vmo.h>
 #include <zircon/status.h>
 
@@ -20,41 +21,82 @@ namespace devmgr {
 
 namespace {
 
+namespace fuchsia = ::llcpp::fuchsia;
+
 // Handles outstanding calls to fuchsia.device.manager.DeviceController/BindDriver
 // and fuchsia.device.Controller/Bind.
-zx_status_t BindReply(const fbl::RefPtr<zx_device_t>& dev, fidl_txn_t* txn, zx_status_t status) {
-  zx_status_t bind_driver_status =
-      fuchsia_device_manager_DeviceControllerBindDriver_reply(txn, status);
-
+zx_status_t BindReply(const fbl::RefPtr<zx_device_t>& dev,
+                      DeviceControllerConnection::BindDriverCompleter::Sync completer,
+                      zx_status_t status) {
   zx_status_t bind_status = ZX_OK;
+  completer.Reply(status);
+
   fs::FidlConnection conn(fidl_txn_t{}, ZX_HANDLE_INVALID, 0);
   if (dev->PopBindConn(&conn)) {
     bind_status = fuchsia_device_ControllerBind_reply(conn.Txn(), status);
   }
 
-  return bind_driver_status != ZX_OK ? bind_driver_status : bind_status;
+  return bind_status;
 }
 
-zx_status_t fidl_BindDriver(void* raw_ctx, const char* driver_path_data, size_t driver_path_size,
-                            zx_handle_t raw_driver_vmo, fidl_txn_t* txn) {
-  auto ctx = static_cast<DevhostRpcReadContext*>(raw_ctx);
-  const auto& dev = ctx->conn->dev();
-  zx::vmo driver_vmo(raw_driver_vmo);
-  fbl::StringPiece driver_path(driver_path_data, driver_path_size);
+}  // namespace
+
+void DeviceControllerConnection::CompleteCompatibilityTests(
+    llcpp::fuchsia::device::manager::CompatibilityTestStatus status,
+    CompleteCompatibilityTestsCompleter::Sync completer) {
+  const auto& dev = this->dev();
+  fs::FidlConnection conn(fidl_txn_t{}, ZX_HANDLE_INVALID, 0);
+  if (dev->PopTestCompatibilityConn(&conn)) {
+    fuchsia_device_ControllerRunCompatibilityTests_reply(conn.Txn(), static_cast<uint32_t>(status));
+  }
+}
+
+void DeviceControllerConnection::Suspend(uint32_t flags, SuspendCompleter::Sync completer) {
+  zx_status_t r;
+  {
+    ApiAutoLock lock;
+    r = devhost_device_suspend(this->dev(), flags);
+  }
+  completer.Reply(r);
+}
+
+void DeviceControllerConnection::ConnectProxy(::zx::channel shadow,
+                                              ConnectProxyCompleter::Sync _completer) {
+  log(RPC_SDW, "devhost connect proxy rpc\n");
+  this->dev()->ops->rxrpc(this->dev()->ctx, ZX_HANDLE_INVALID);
+  // Ignore any errors in the creation for now?
+  // TODO(teisenbe): Investigate if this is the right thing
+  ProxyIostate::Create(this->dev(), std::move(shadow), DevhostAsyncLoop()->dispatcher());
+}
+
+void DeviceControllerConnection::RemoveDevice(RemoveDeviceCompleter::Sync completer) {
+  device_remove(this->dev().get());
+}
+
+void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view, zx::vmo driver,
+                                            BindDriverCompleter::Sync completer) {
+  const auto& dev = this->dev();
+  fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
+
+  // get path
+  char buffer[512];
+  const char* path = mkdevpath(dev, buffer, sizeof(buffer));
 
   // TODO: api lock integration
-  log(RPC_IN, "devhost[%s] bind driver '%.*s'\n", ctx->path, static_cast<int>(driver_path_size),
-      driver_path_data);
+  log(ERROR, "devhost[%s] bind driver '%.*s'\n", path, static_cast<int>(driver_path.size()),
+      driver_path.data());
   fbl::RefPtr<zx_driver_t> drv;
   if (dev->flags & DEV_FLAG_DEAD) {
-    log(ERROR, "devhost[%s] bind to removed device disallowed\n", ctx->path);
-    return BindReply(dev, txn, ZX_ERR_IO_NOT_PRESENT);
+    log(ERROR, "devhost[%s] bind to removed device disallowed\n", path);
+    BindReply(dev, std::move(completer), ZX_ERR_IO_NOT_PRESENT);
+    return;
   }
 
   zx_status_t r;
-  if ((r = dh_find_driver(driver_path, std::move(driver_vmo), &drv)) < 0) {
-    log(ERROR, "devhost[%s] driver load failed: %d\n", ctx->path, r);
-    return BindReply(dev, txn, r);
+  if ((r = dh_find_driver(driver_path, std::move(driver), &drv)) < 0) {
+    log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
+    BindReply(dev, std::move(completer), r);
+    return;
   }
 
   if (drv->has_bind_op()) {
@@ -66,111 +108,30 @@ zx_status_t fidl_BindDriver(void* raw_ctx, const char* driver_path_data, size_t 
 
     if ((r == ZX_OK) && (bind_ctx.child == nullptr)) {
       printf("devhost: WARNING: driver '%.*s' did not add device in bind()\n",
-             static_cast<int>(driver_path_size), driver_path_data);
+             static_cast<int>(driver_path.size()), driver_path.data());
     }
     if (r != ZX_OK) {
-      log(ERROR, "devhost[%s] bind driver '%.*s' failed: %d\n", ctx->path,
-          static_cast<int>(driver_path_size), driver_path_data, r);
+      log(ERROR, "devhost[%s] bind driver '%.*s' failed: %d\n", path,
+          static_cast<int>(driver_path.size()), driver_path.data(), r);
     }
-    return BindReply(dev, txn, r);
+    BindReply(dev, std::move(completer), r);
+    return;
   }
 
   if (!drv->has_create_op()) {
-    log(ERROR, "devhost[%s] neither create nor bind are implemented: '%.*s'\n", ctx->path,
-        static_cast<int>(driver_path_size), driver_path_data);
+    log(ERROR, "devhost[%s] neither create nor bind are implemented: '%.*s'\n", path,
+        static_cast<int>(driver_path.size()), driver_path.data());
   }
-  return BindReply(dev, txn, ZX_ERR_NOT_SUPPORTED);
+  BindReply(dev, std::move(completer), ZX_ERR_NOT_SUPPORTED);
 }
 
-zx_status_t fidl_CompleteCompatibilityTests(void* raw_ctx,
-                                fuchsia_device_manager_CompatibilityTestStatus test_status) {
-    auto ctx = static_cast<DevhostRpcReadContext*>(raw_ctx);
-    const auto& dev = ctx->conn->dev();
-    fs::FidlConnection conn(fidl_txn_t{}, ZX_HANDLE_INVALID, 0);
-    if (dev->PopTestCompatibilityConn(&conn)) {
-        fuchsia_device_ControllerRunCompatibilityTests_reply(conn.Txn(), test_status);
-    }
-
-    return ZX_OK;
+void DeviceControllerConnection::Unbind(UnbindCompleter::Sync completer) {
+  ApiAutoLock lock;
+  devhost_device_unbind(this->dev());
 }
 
-zx_status_t fidl_ConnectProxy(void* raw_ctx, zx_handle_t raw_shadow) {
-  auto ctx = static_cast<DevhostRpcReadContext*>(raw_ctx);
-  zx::channel shadow(raw_shadow);
-
-  log(RPC_SDW, "devhost[%s] connect proxy rpc\n", ctx->path);
-  ctx->conn->dev()->ops->rxrpc(ctx->conn->dev()->ctx, ZX_HANDLE_INVALID);
-  // Ignore any errors in the creation for now?
-  // TODO(teisenbe/kulakowski): Investigate if this is the right thing
-  ProxyIostate::Create(ctx->conn->dev(), std::move(shadow), DevhostAsyncLoop()->dispatcher());
-  return ZX_OK;
-}
-
-zx_status_t fidl_Suspend(void* raw_ctx, uint32_t flags, fidl_txn_t* txn) {
-  auto ctx = static_cast<DevhostRpcReadContext*>(raw_ctx);
-  zx_status_t r;
-  {
-    ApiAutoLock lock;
-    r = devhost_device_suspend(ctx->conn->dev(), flags);
-  }
-  return fuchsia_device_manager_DeviceControllerSuspend_reply(txn, r);
-}
-
-zx_status_t fidl_Unbind(void* raw_ctx) {
-  auto ctx = static_cast<DevhostRpcReadContext*>(raw_ctx);
-  zx_status_t r;
-  {
-    ApiAutoLock lock;
-    r = devhost_device_unbind(ctx->conn->dev());
-  }
-  return r;
-}
-
-zx_status_t fidl_RemoveDevice(void* raw_ctx) {
-  auto ctx = static_cast<DevhostRpcReadContext*>(raw_ctx);
-  device_remove(ctx->conn->dev().get());
-  return ZX_OK;
-}
-
-// Handler for when open() is called on a device
-zx_status_t fidl_DirectoryOpen(void* ctx, uint32_t flags, uint32_t mode, const char* path_data,
-                               size_t path_size, zx_handle_t object) {
-  zx::channel c(object);
-  if (path_size != 1 && path_data[0] != '.') {
-    log(ERROR, "devhost: Tried to open path '%.*s'\n", static_cast<int>(path_size), path_data);
-    return ZX_OK;
-  }
-  auto conn = static_cast<DeviceControllerConnection*>(ctx);
-  devhost_device_connect(conn->dev(), flags, std::move(c));
-  return ZX_OK;
-}
-
-const fuchsia_device_manager_DeviceController_ops_t kDefaultDeviceOps = {
-    .BindDriver = fidl_BindDriver,
-    .ConnectProxy = fidl_ConnectProxy,
-    .Unbind = fidl_Unbind,
-    .RemoveDevice = fidl_RemoveDevice,
-    .Suspend = fidl_Suspend,
-    .CompleteCompatibilityTests = fidl_CompleteCompatibilityTests,
-};
-
-const fuchsia_io_Directory_ops_t kDefaultDirectoryOps = []() {
-  fuchsia_io_Directory_ops_t ops;
-  ops.Open = fidl_DirectoryOpen;
-  return ops;
-}();
-
-zx_status_t dh_null_reply(fidl_txn_t* reply, const fidl_msg_t* msg) { return ZX_OK; }
-
-}  // namespace
-
-DeviceControllerConnection::DeviceControllerConnection(
-    fbl::RefPtr<zx_device> dev, zx::channel rpc,
-    const fuchsia_device_manager_DeviceController_ops_t* device_fidl_ops,
-    const fuchsia_io_Directory_ops_t* directory_fidl_ops)
-    : dev_(std::move(dev)),
-      device_fidl_ops_(device_fidl_ops),
-      directory_fidl_ops_(directory_fidl_ops) {
+DeviceControllerConnection::DeviceControllerConnection(fbl::RefPtr<zx_device> dev, zx::channel rpc)
+    : dev_(std::move(dev)) {
   dev_->rpc = zx::unowned_channel(rpc);
   dev_->conn.store(this);
   set_channel(std::move(rpc));
@@ -186,20 +147,20 @@ DeviceControllerConnection::~DeviceControllerConnection() {
 
 zx_status_t DeviceControllerConnection::Create(fbl::RefPtr<zx_device> dev, zx::channel rpc,
                                                std::unique_ptr<DeviceControllerConnection>* conn) {
-  return Create(std::move(dev), std::move(rpc), &kDefaultDeviceOps, &kDefaultDirectoryOps, conn);
-}
-
-zx_status_t DeviceControllerConnection::Create(
-    fbl::RefPtr<zx_device> dev, zx::channel rpc,
-    const fuchsia_device_manager_DeviceController_ops_t* device_fidl_ops,
-    const fuchsia_io_Directory_ops_t* directory_fidl_ops,
-    std::unique_ptr<DeviceControllerConnection>* conn) {
-  *conn = std::make_unique<DeviceControllerConnection>(std::move(dev), std::move(rpc),
-                                                       device_fidl_ops, directory_fidl_ops);
+  *conn = std::make_unique<DeviceControllerConnection>(std::move(dev), std::move(rpc));
   if (*conn == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
   return ZX_OK;
+}
+
+// Handler for when a io.fidl open() is called on a device
+void DeviceControllerConnection::Open(uint32_t flags, uint32_t mode, ::fidl::StringView path,
+                                      ::zx::channel object, OpenCompleter::Sync completer) {
+  if (path.size() != 1 && path.data()[0] != '.') {
+    log(ERROR, "devhost: Tried to open path '%.*s'\n", static_cast<int>(path.size()), path.data());
+  }
+  devhost_device_connect(this->dev(), flags, std::move(object));
 }
 
 void DeviceControllerConnection::HandleRpc(std::unique_ptr<DeviceControllerConnection> conn,
@@ -212,7 +173,7 @@ void DeviceControllerConnection::HandleRpc(std::unique_ptr<DeviceControllerConne
   if (signal->observed & ZX_CHANNEL_READABLE) {
     zx_status_t r = conn->HandleRead();
     if (r != ZX_OK) {
-      if (conn->dev_->conn.load() == nullptr && r == ZX_ERR_INTERNAL) {
+      if (conn->dev_->conn.load() == nullptr && (r == ZX_ERR_INTERNAL || r == ZX_ERR_PEER_CLOSED)) {
         // Treat this as a PEER_CLOSED below.  It can happen if the
         // devcoordinator sent us a request while we asked the
         // devcoordinator to remove us.  The coordinator then closes the
@@ -272,42 +233,24 @@ zx_status_t DeviceControllerConnection::HandleRead() {
   char buffer[512];
   const char* path = mkdevpath(dev_, buffer, sizeof(buffer));
 
-  // Double-check that Open (the only message we forward) cannot be mistaken for an
-  // internal dev coordinator RPC message.
-  static_assert(
-      fuchsia_device_manager_DevhostControllerCreateDeviceStubOrdinal !=
-          fuchsia_io_DirectoryOpenOrdinal &&
-      fuchsia_device_manager_DevhostControllerCreateDeviceOrdinal !=
-          fuchsia_io_DirectoryOpenOrdinal &&
-      fuchsia_device_manager_DeviceControllerBindDriverOrdinal != fuchsia_io_DirectoryOpenOrdinal &&
-      fuchsia_device_manager_DeviceControllerConnectProxyOrdinal !=
-          fuchsia_io_DirectoryOpenOrdinal &&
-      fuchsia_device_manager_DeviceControllerSuspendOrdinal != fuchsia_io_DirectoryOpenOrdinal &&
-      fuchsia_device_manager_DeviceControllerRemoveDeviceOrdinal !=
-          fuchsia_io_DirectoryOpenOrdinal);
-
   auto hdr = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
   // Depending on the state of the migration, GenOrdinal and Ordinal may be the
   // same value.  See FIDL-524.
   uint64_t ordinal = hdr->ordinal;
   if (ordinal == fuchsia_io_DirectoryOpenOrdinal || ordinal == fuchsia_io_DirectoryOpenGenOrdinal) {
     log(RPC_RIO, "devhost[%s] FIDL OPEN\n", path);
-
-    fidl_txn_t dh_null_txn = {
-        .reply = dh_null_reply,
-    };
-    status = fuchsia_io_Directory_dispatch(this, &dh_null_txn, &fidl_msg, directory_fidl_ops_);
+    zx::unowned_channel conn = channel();
+    DevmgrFidlTxn txn(std::move(conn), hdr->txid);
+    fuchsia::io::Directory::Dispatch(this, &fidl_msg, &txn);
     if (status != ZX_OK) {
-      log(ERROR, "devhost: OPEN failed: %s\n", zx_status_get_string(status));
-      return status;
+      return txn.Status();
     }
-    return ZX_OK;
+    return txn.Status();
   }
 
-  FidlTxn txn(std::move(conn), hdr->txid);
-  DevhostRpcReadContext read_ctx = {path, this};
-  return fuchsia_device_manager_DeviceController_dispatch(&read_ctx, txn.fidl_txn(), &fidl_msg,
-                                                          device_fidl_ops_);
+  DevmgrFidlTxn txn(std::move(conn), hdr->txid);
+  fuchsia::device::manager::DeviceController::Dispatch(this, &fidl_msg, &txn);
+  return txn.Status();
 }
 
 }  // namespace devmgr

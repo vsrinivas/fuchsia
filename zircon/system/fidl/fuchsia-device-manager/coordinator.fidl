@@ -76,7 +76,6 @@ enum CompatibilityTestStatus : uint32 {
 };
 
 /// Protocol for controlling devices in a devhost process from the devcoordinator
-[Layout = "Simple"]
 protocol DeviceController {
     /// Bind the requested driver to this device.  `driver_path` is informational,
     /// but all calls to BindDriver/CreateDevice should use the same `driver_path`
