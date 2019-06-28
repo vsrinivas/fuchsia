@@ -82,6 +82,7 @@ void AudioRendererImpl::Shutdown() {
     audio_renderer_binding_.Unbind();
   }
 
+  wav_writer_.Close();
   gain_control_bindings_.CloseAll();
   payload_buffers_.clear();
 
@@ -147,8 +148,8 @@ void AudioRendererImpl::SetUsage(fuchsia::media::AudioRenderUsage usage) {
   Shutdown();
 }
 
-// IsOperating is true any time we have any packets in flight. Most
-// configuration functions cannot be called any time we are operational.
+// IsOperating is true any time we have any packets in flight. Configuration functions cannot be
+// called any time we are operational.
 bool AudioRendererImpl::IsOperating() {
   if (throttle_output_link_ && !throttle_output_link_->pending_queue_empty()) {
     return true;
@@ -195,6 +196,12 @@ bool AudioRendererImpl::ValidateConfig() {
   // TODO(mpuryear): Precompute anything else needed here. Adding links to other
   // outputs (and selecting resampling filters) might belong here as well.
 
+  // Initialize the WavWriter here.
+  wav_writer_.Initialize(nullptr, format_info()->format().sample_format,
+                         format_info()->format().channels,
+                         format_info()->format().frames_per_second,
+                         (format_info()->bytes_per_frame() * 8) / format_info()->format().channels);
+
   config_validated_ = true;
   return true;
 }
@@ -223,7 +230,7 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format)
 
   // We cannot change the format while we are currently operational
   if (IsOperating()) {
-    FXL_LOG(ERROR) << "Attempted to set format while in the operational mode.";
+    FXL_LOG(ERROR) << "Attempted to set format while in operational mode.";
     return;
   }
 
@@ -302,6 +309,8 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format)
 void AudioRendererImpl::SetStreamType(fuchsia::media::StreamType stream_type) {
   FXL_LOG(ERROR) << "SetStreamType is not currently supported.";
   Shutdown();
+
+  // Note: once supported, this should be restricted to "operating" mode only.
 }
 
 void AudioRendererImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
@@ -309,7 +318,7 @@ void AudioRendererImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
 
   // TODO(MTWN-375): Lift this restriction.
   if (IsOperating()) {
-    FXL_LOG(ERROR) << "Attempted to set payload buffer while in the operational mode.";
+    FXL_LOG(ERROR) << "Attempted to set payload buffer while in operational mode.";
     return;
   }
 
@@ -356,7 +365,7 @@ void AudioRendererImpl::SetPtsUnits(uint32_t tick_per_second_numerator,
   auto cleanup = fit::defer([this]() { Shutdown(); });
 
   if (IsOperating()) {
-    FXL_LOG(ERROR) << "Attempted to set PTS units while in the operational mode.";
+    FXL_LOG(ERROR) << "Attempted to set PTS units while in operational mode.";
     return;
   }
 
@@ -379,7 +388,7 @@ void AudioRendererImpl::SetPtsContinuityThreshold(float threshold_seconds) {
   auto cleanup = fit::defer([this]() { Shutdown(); });
 
   if (IsOperating()) {
-    FXL_LOG(ERROR) << "Attempted to set PTS cont threshold while in the operational mode.";
+    FXL_LOG(ERROR) << "Attempted to set PTS cont threshold while in operational mode.";
     return;
   }
 
@@ -404,7 +413,7 @@ void AudioRendererImpl::SetReferenceClock(zx::handle ref_clock) {
   auto cleanup = fit::defer([this]() { Shutdown(); });
 
   if (IsOperating()) {
-    FXL_LOG(ERROR) << "Attempted to set reference clock while in the operational mode.";
+    FXL_LOG(ERROR) << "Attempted to set reference clock while in operational mode.";
     return;
   }
 
@@ -487,9 +496,14 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
         (delta < pts_continuity_threshold_frac_frame_) ? next_frac_frame_pts_ : packet_ffpts;
   }
 
+  // Regardless of timing, capture this data to file.
+  auto packet_buff = reinterpret_cast<uint8_t*>(payload_buffer->start()) + packet.payload_offset;
+  wav_writer_.Write(packet_buff, packet.payload_size);
+  wav_writer_.UpdateHeader();
+
   // Snap the starting pts to an input frame boundary.
   //
-  // TODO(johngro): Don't do this. If a user wants to write an explicit
+  // TODO(mpuryear): Don't do this. If a user wants to write an explicit
   // timestamp on an input packet which schedules the packet to start at a
   // fractional position on the input time line, we should probably permit this.
   // We need to make sure that the mixer cores are ready to handle this case
@@ -544,6 +558,7 @@ void AudioRendererImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   // plus min_lead_time plus safety factor, then define PTS 0 as that value
   // (because PTS is reset to 0 upon DiscardAllPackets, unless we are Paused).
   pts_to_frac_frames_valid_ = false;
+  // TODO(mpuryear): query the actual reference clock, don't assume CLOCK_MONO
   auto ref_time_for_reset =
       zx_clock_get_monotonic() + min_clock_lead_nsec_ + kPaddingForUnspecifiedRefTime;
   {
@@ -552,8 +567,8 @@ void AudioRendererImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   }
   ComputePtsToFracFrames(0);
 
-  // TODO(mpuryear): Validate Pause, DiscardAll, Play(NO_TIMESTAMP,NO_TIMESTAMP)
-  // specifically that we don't truncate any previously submitted data.
+  // TODO(mpuryear): Validate Pause => DiscardAll => Play(..., NO_TIMESTAMP) --
+  // specifically that we resume at exactly the paused media time.
   pause_time_frac_frames_valid_ = false;
 }
 
@@ -567,45 +582,42 @@ void AudioRendererImpl::Play(int64_t reference_time, int64_t media_time, PlayCal
     return;
   }
 
-  // TODO(johngro): What do we want to do here if we are already playing?
+  // TODO(mpuryear): What do we want to do here if we are already playing?
 
   // Did the user supply a reference time? If not, figure out a safe starting
   // time based on the outputs we are currently linked to.
   //
-  // TODO(johngro): We need to use our reference clock here, and not just assume
-  // clock monotonic is our reference clock.
+  // TODO(mpuryear): We need to use our reference clock here, and not just
+  // assume clock monotonic is our reference clock.
+
   if (reference_time == fuchsia::media::NO_TIMESTAMP) {
-    // TODO(johngro): How much more than the minimum clock lead time do we want
-    // to pad this by? Also, if/when lead time requirements change, do we want
-    // to introduce a discontinuity?
+    // TODO(mpuryear): How much more than the minimum clock lead time do we want to pad this by?
+    // Also, if/when lead time requirements change, do we want to introduce a discontinuity?
     //
-    // Perhaps we should consider an explicit mode (make it the default) where
-    // timing across outputs is considered to be loose. In particular, make no
-    // effort to take external latency into account, and no effort to
-    // synchronize streams across multiple parallel outputs. In a world like
-    // this, we might need to update this lead time beacuse of a change in
-    // internal interconnect requirements, but in general, the impact should
-    // usually be pretty small since internal requirements for lead times tend
-    // to be small, (while external requirements can be huge).
+    // We could consider an explicit mode (make it default) where timing across outputs is treated
+    // as "loose". Specifically, make no effort to account for external latency, nor to synchronize
+    // streams across multiple parallel outputs. In this mode we must update lead time upon changes
+    // in internal interconnect requirements, but impact should be small since internal lead time
+    // factors tend to be small, while external factors can be huge.
+    //
+    // TODO(mpuryear): query the actual reference clock, don't assume CLOCK_MONO
     reference_time =
         zx_clock_get_monotonic() + min_clock_lead_nsec_ + kPaddingForUnspecifiedRefTime;
   }
 
-  // If the user did not specify a media time, use the media time of the first
-  // packet in the pending queue.
+  // If no media time was specified, use the first pending packet's media time.
   //
-  // Note: media times specified by the user are expressed in the PTS units they
-  // specified using SetPtsUnits (or nanosecond units by default). Internally,
-  // we stamp all of our payloads in fractional input frames on a timeline
-  // defined when we transition to our operational mode. We need to remember to
-  // translate back and forth as appropriate.
+  // Note: users specify the units for media time by calling SetPtsUnits(), or nanoseconds if this
+  // is never called. Internally we use fractional input frames, on the timeline defined when
+  // transitioning to operational mode.
   int64_t frac_frame_media_time;
+
   if (media_time == fuchsia::media::NO_TIMESTAMP) {
     // Are we resuming from pause?
     if (pause_time_frac_frames_valid_) {
       frac_frame_media_time = pause_time_frac_frames_;
     } else {
-      // TODO(johngro): peek the first PTS of the pending queue.
+      // TODO(mpuryear): peek the first PTS of the pending queue.
       frac_frame_media_time = 0;
     }
 
@@ -628,8 +640,7 @@ void AudioRendererImpl::Play(int64_t reference_time, int64_t media_time, PlayCal
 
   // Update our transformation.
   //
-  // TODO(johngro): if we need to trigger a remix for our set of outputs, here
-  // is the place to do it.
+  // TODO(mpuryear): if we need to trigger a remix for our outputs, do it here.
   {
     fbl::AutoLock lock(&ref_to_ff_lock_);
     ref_clock_to_frac_frames_ =
@@ -668,8 +679,7 @@ void AudioRendererImpl::Pause(PauseCallback callback) {
   {
     fbl::AutoLock lock(&ref_to_ff_lock_);
 
-    // TODO(johngro): query the actual reference clock, do not assume that
-    // CLOCK_MONO is the reference clock.
+    // TODO(mpuryear): query the actual reference clock, don't assume CLOCK_MONO
     ref_clock_now = zx_clock_get_monotonic();
     pause_time_frac_frames_ = ref_clock_to_frac_frames_.Apply(ref_clock_now);
     pause_time_frac_frames_valid_ = true;

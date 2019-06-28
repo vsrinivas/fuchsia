@@ -18,8 +18,11 @@
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/audio_renderer_format_info.h"
 #include "src/media/audio/audio_core/utils.h"
+#include "src/media/audio/lib/wav_writer/wav_writer.h"
 
 namespace media::audio {
+
+constexpr bool kEnableRendererWavWriters = false;
 
 class AudioCoreImpl;
 
@@ -165,6 +168,8 @@ class AudioRendererImpl : public AudioObject,
   fbl::Mutex ref_to_ff_lock_;
   TimelineFunction ref_clock_to_frac_frames_ FXL_GUARDED_BY(ref_to_ff_lock_);
   GenerationId ref_clock_to_frac_frames_gen_ FXL_GUARDED_BY(ref_to_ff_lock_);
+
+  WavWriter<kEnableRendererWavWriters> wav_writer_;
 };
 
 }  // namespace media::audio

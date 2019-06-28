@@ -18,9 +18,8 @@ static constexpr uint32_t kDefaultFramesPerSec = 48000;
 static constexpr uint32_t kDefaultChannelCount = 2;
 static constexpr fuchsia::media::AudioSampleFormat kDefaultAudioFmt =
     fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
-// TODO(MTWN-269): Revert these to 20/30 instead of 50/60.  The long term
-//                 goal is to be able to get these down into the range of
-//                 5/10.
+// TODO(MTWN-269): Revert these to 20/30 instead of 50/60.
+//                 In the long term, get these into the range of 5/10.
 static constexpr int64_t kDefaultLowWaterNsec = ZX_MSEC(50);
 static constexpr int64_t kDefaultHighWaterNsec = ZX_MSEC(60);
 static constexpr int64_t kDefaultMaxRetentionNsec = ZX_MSEC(60);
@@ -29,6 +28,15 @@ static constexpr zx_duration_t kUnderflowCooldown = ZX_SEC(1);
 
 static std::atomic<zx_txid_t> TXID_GEN(1);
 static thread_local zx_txid_t TXID = TXID_GEN.fetch_add(1);
+
+// Consts used if kEnableFinalMixWavWriter is set:
+//
+// This atomic is only used when the final-mix wave-writer is enabled --
+// specifically to generate unique ids for each final-mix WAV file.
+std::atomic<uint32_t> DriverOutput::final_mix_instance_num_(0u);
+// WAV file location: FilePathName+final_mix_instance_num_+FileExtension
+constexpr const char* kDefaultWavFilePathName = "/tmp/final_mix_";
+constexpr const char* kWavFileExtension = ".wav";
 
 fbl::RefPtr<AudioOutput> DriverOutput::Create(zx::channel stream_channel,
                                               AudioDeviceManager* manager) {
@@ -330,8 +338,13 @@ void DriverOutput::OnDriverInfoFetched() {
     return;
   }
 
-  wav_writer_.Initialize(nullptr, pref_fmt, pref_chan, pref_fps,
-                         driver_->bytes_per_frame() * 8 / pref_chan);
+  if constexpr (kEnableFinalMixWavWriter) {
+    std::string file_name_ = kDefaultWavFilePathName;
+    uint32_t instance_count = final_mix_instance_num_.fetch_add(1);
+    file_name_ += (std::to_string(instance_count) + kWavFileExtension);
+    wav_writer_.Initialize(file_name_.c_str(), pref_fmt, pref_chan, pref_fps,
+                           driver_->bytes_per_frame() * 8 / pref_chan);
+  }
 
   // Tell AudioDeviceManager we are ready to be an active audio device.
   ActivateSelf();

@@ -13,7 +13,7 @@
 
 namespace media::audio {
 
-constexpr bool kWavWriterEnabled = false;
+constexpr bool kEnableFinalMixWavWriter = false;
 
 class DriverOutput : public AudioOutput {
  public:
@@ -67,7 +67,10 @@ class DriverOutput : public AudioOutput {
   zx_time_t underflow_start_time_ = 0;
   zx_time_t underflow_cooldown_deadline_ = 0;
 
-  WavWriter<kWavWriterEnabled> wav_writer_;
+  // This atomic is only used when the final-mix wave-writer is enabled --
+  // specifically to generate unique ids for each final-mix WAV file.
+  static std::atomic<uint32_t> final_mix_instance_num_;
+  WavWriter<kEnableFinalMixWavWriter> wav_writer_;
 };
 
 }  // namespace media::audio
