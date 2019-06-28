@@ -456,6 +456,7 @@ template("package") {
                                "meta",
                                "package_name",
                                "resources",
+                               "system_deprecated_data",
                                "visibility",
                                "tests",
                              ])
@@ -573,6 +574,16 @@ template("package") {
               {
                 schema = "//build/cmx/block_deprecated_shell.json"
                 error_msg = "The 'deprecated-shell' feature is deprecated and guarded by an allowlist."
+              },
+            ]
+          }
+
+          # TODO(jmatt): Remove as part of CF-882
+          if (!defined(pkg.system_deprecated_data)) {
+            extra_schemas += [
+              {
+                schema = "//build/cmx/block_system_deprecated_data.json"
+                error_msg = "Use of 'deprecated-data' in 'system' to access /system/data is protected by an allowlist."
               },
             ]
           }
@@ -941,6 +952,11 @@ template("package") {
         }
         if (defined(pkg.deprecated_shell)) {
           deps += [ "${pkg.deprecated_shell}:deprecated_shell_allowlist" ]
+        }
+        if (defined(pkg.system_deprecated_data)) {
+          deps += [
+            "${pkg.system_deprecated_data}:system_deprecated_data_allowlist",
+          ]
         }
       }
     }

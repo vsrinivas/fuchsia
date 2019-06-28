@@ -136,12 +136,13 @@ template("test_package") {
                              "data_deps",
                              "deprecated_shell",
                              "deps",
-                             "extra",
-                             "public_deps",
-                             "resources",
                              "drivers",
+                             "extra",
                              "loadable_modules",
                              "package_name",
+                             "public_deps",
+                             "resources",
+                             "system_deprecated_data",
                            ])
   }
 }
@@ -274,6 +275,7 @@ template("unittest_package") {
       outputs = [
         test_manifest,
       ]
+
       # TODO(CF-879): As of today, CMX files require the args list to be either
       # absent or of at least one element. There is a case to be made to relax
       # this constraint, and simply allow empty lists as well. Depending on

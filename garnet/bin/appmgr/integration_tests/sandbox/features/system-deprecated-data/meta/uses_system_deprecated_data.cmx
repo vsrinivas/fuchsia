@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "test/uses_system_deprecated_data"
+    },
+    "sandbox": {
+        "system": [ "deprecated-data" ]
+    }
+}

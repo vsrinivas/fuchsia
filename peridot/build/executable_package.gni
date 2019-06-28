@@ -28,11 +28,12 @@ template("executable_package") {
                            [
                              "deps",
                              "deprecated_shell",
-                             "public_deps",
-                             "testonly",
                              "meta",
-                             "tests",
+                             "public_deps",
                              "resources",
+                             "system_deprecated_data",
+                             "testonly",
+                             "tests",
                            ])
     if (defined(deps)) {
       deps += [ ":${binary_rule}" ]

@@ -14,8 +14,8 @@
             "isolated-cache-storage"
         ],
         "services": [
-            "fuchsia.sys.Environment",
             "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
             "fuchsia.sys.test.CacheControl"
         ]
     }
