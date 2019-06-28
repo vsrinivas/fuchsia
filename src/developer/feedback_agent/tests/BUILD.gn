@@ -24,6 +24,9 @@ test_package("feedback_agent_tests") {
       # We need to also test on real devices as we talk to a real Scenic service.
       environments = basic_envs
     },
+    {
+      name = "scenic_ptr_unittest"
+    },
   ]
 
   binaries = [
@@ -84,6 +87,7 @@ test_package("feedback_agent_tests") {
     ":feedback_agent_integration_test",
     ":inspect_exe",
     ":log_listener_ptr_unittest",
+    ":scenic_ptr_unittest",
   ]
 }
 
@@ -111,12 +115,11 @@ executable("data_provider_unittest") {
 
   sources = [
     "data_provider_unittest.cc",
-    "stub_scenic.cc",
-    "stub_scenic.h",
   ]
 
   deps = [
     ":stub_logger",
+    ":stub_scenic",
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fostr/fidl/fuchsia.math",
     "//garnet/public/lib/fostr/fidl/fuchsia.mem",
@@ -124,7 +127,6 @@ executable("data_provider_unittest") {
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
@@ -208,6 +210,27 @@ executable("feedback_agent_integration_test") {
   ]
 }
 
+executable("scenic_ptr_unittest") {
+  testonly = true
+
+  sources = [
+    "scenic_ptr_unittest.cc",
+  ]
+
+  deps = [
+    ":stub_scenic",
+    "//garnet/public/lib/async_promise",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/developer/feedback_agent:src",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 source_set("stub_logger") {
   sources = [
     "stub_logger.cc",
@@ -218,6 +241,24 @@ source_set("stub_logger") {
     "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/fidl/cpp",
     "//zircon/public/fidl/fuchsia-logger",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("stub_scenic") {
+  sources = [
+    "stub_scenic.cc",
+    "stub_scenic.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.images",
     "//zircon/public/lib/zx",
   ]
 }

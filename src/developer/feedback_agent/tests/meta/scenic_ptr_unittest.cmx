@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/scenic_ptr_unittest"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

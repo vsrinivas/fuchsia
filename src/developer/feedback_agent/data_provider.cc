@@ -115,54 +115,41 @@ void DataProviderImpl::GetData(GetDataCallback callback) {
 }
 
 void DataProviderImpl::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) {
-  // We wrap the callback in a shared_ptr to share it between the error handler
-  // of the FIDL connection and the Scenic::TakeScreenshot() callback.
-  std::shared_ptr<GetScreenshotCallback> shared_callback =
-      std::make_shared<GetScreenshotCallback>(std::move(callback));
-
   const uint64_t id = next_scenic_id_++;
-
-  scenics_[id] = services_->Connect<fuchsia::ui::scenic::Scenic>();
-  scenics_[id].set_error_handler([this, id, shared_callback](zx_status_t status) {
-    CloseScenic(id);
-
-    FX_PLOGS(ERROR, status) << "Lost connection to Scenic service";
-    (*shared_callback)(/*screenshot=*/nullptr);
-  });
-  scenics_[id]->TakeScreenshot(
-      // We pass |scenic| to the lambda to keep it alive.
-      [this, id, encoding, shared_callback](fuchsia::ui::scenic::ScreenshotData raw_screenshot,
-                                            bool success) {
-        CloseScenic(id);
-
-        if (!success) {
-          FX_LOGS(ERROR) << "Scenic failed to take screenshot";
-          (*shared_callback)(/*screenshot=*/nullptr);
-          return;
-        }
-
-        std::unique_ptr<Screenshot> screenshot = std::make_unique<Screenshot>();
-        screenshot->dimensions_in_px.height = raw_screenshot.info.height;
-        screenshot->dimensions_in_px.width = raw_screenshot.info.width;
-        switch (encoding) {
-          case ImageEncoding::PNG:
-            if (!RawToPng(raw_screenshot.data, raw_screenshot.info.height,
-                          raw_screenshot.info.width, raw_screenshot.info.stride,
-                          raw_screenshot.info.pixel_format, &screenshot->image)) {
-              FX_LOGS(ERROR) << "Failed to convert raw screenshot to PNG";
-              (*shared_callback)(/*screenshot=*/nullptr);
-              return;
+  scenics_[id] = std::make_unique<Scenic>(services_);
+  auto promise =
+      scenics_[id]
+          ->TakeScreenshot()
+          .and_then([encoding](fuchsia::ui::scenic::ScreenshotData& raw_screenshot)
+                        -> fit::result<Screenshot> {
+            Screenshot screenshot;
+            screenshot.dimensions_in_px.height = raw_screenshot.info.height;
+            screenshot.dimensions_in_px.width = raw_screenshot.info.width;
+            switch (encoding) {
+              case ImageEncoding::PNG:
+                if (!RawToPng(raw_screenshot.data, raw_screenshot.info.height,
+                              raw_screenshot.info.width, raw_screenshot.info.stride,
+                              raw_screenshot.info.pixel_format, &screenshot.image)) {
+                  FX_LOGS(ERROR) << "Failed to convert raw screenshot to PNG";
+                  return fit::error();
+                }
+                break;
             }
-            break;
-        }
-        (*shared_callback)(std::move(screenshot));
-      });
-}
+            return fit::ok(std::move(screenshot));
+          })
+          .then([this, id, callback = std::move(callback)](fit::result<Screenshot>& result) {
+            if (scenics_.erase(id) == 0) {
+              FX_LOGS(ERROR) << "No fuchsia.ui.scenic.Scenic connection to close with id " << id;
+            }
 
-void DataProviderImpl::CloseScenic(const uint64_t id) {
-  if (scenics_.erase(id) == 0) {
-    FX_LOGS(ERROR) << "No fuchsia.ui.scenic.Scenic connection to close with id " << id;
-  }
+            if (!result.is_ok()) {
+              callback(/*screenshot=*/nullptr);
+            } else {
+              callback(std::make_unique<Screenshot>(result.take_value()));
+            }
+          });
+
+  executor_.schedule_task(std::move(promise));
 }
 
 }  // namespace feedback

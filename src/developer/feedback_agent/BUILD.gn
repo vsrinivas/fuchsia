@@ -86,6 +86,8 @@ source_set("src") {
     "inspect_ptr.h",
     "log_listener_ptr.cc",
     "log_listener_ptr.h",
+    "scenic_ptr.cc",
+    "scenic_ptr.h",
   ]
 
   public_deps = [

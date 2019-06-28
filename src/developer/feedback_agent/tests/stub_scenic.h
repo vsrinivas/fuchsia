@@ -73,6 +73,8 @@ class StubScenic : public fuchsia::ui::scenic::Scenic {
     return take_screenshot_responses_;
   }
 
+  void CloseAllConnections() { bindings_.CloseAll(); }
+
  private:
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
   uint64_t total_num_bindings_ = 0;
@@ -80,6 +82,11 @@ class StubScenic : public fuchsia::ui::scenic::Scenic {
 };
 
 class StubScenicAlwaysReturnsFalse : public StubScenic {
+ public:
+  void TakeScreenshot(TakeScreenshotCallback callback) override;
+};
+
+class StubScenicClosesConnection : public StubScenic {
  public:
   void TakeScreenshot(TakeScreenshotCallback callback) override;
 };

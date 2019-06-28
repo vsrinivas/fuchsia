@@ -259,6 +259,6 @@ int main(int argc, char** argv) {
   }
 
   testing::InitGoogleTest(&argc, argv);
-  syslog::InitLogger({"feedback_agent", "test"});
+  syslog::InitLogger({"feedback", "test"});
   return RUN_ALL_TESTS();
 }

@@ -276,8 +276,10 @@ TEST_F(DataProviderImplTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
   EXPECT_TRUE(get_scenic_responses().empty());
 
   ASSERT_NE(feedback_response.screenshot, nullptr);
-  EXPECT_EQ((size_t)feedback_response.screenshot->dimensions_in_px.height, image_dim_in_px);
-  EXPECT_EQ((size_t)feedback_response.screenshot->dimensions_in_px.width, image_dim_in_px);
+  EXPECT_EQ(static_cast<size_t>(feedback_response.screenshot->dimensions_in_px.height),
+            image_dim_in_px);
+  EXPECT_EQ(static_cast<size_t>(feedback_response.screenshot->dimensions_in_px.width),
+            image_dim_in_px);
   EXPECT_TRUE(feedback_response.screenshot->image.vmo.is_valid());
 
   fsl::SizedVmo expected_sized_vmo;
@@ -287,6 +289,14 @@ TEST_F(DataProviderImplTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
   std::vector<uint8_t> actual_pixels;
   ASSERT_TRUE(fsl::VectorFromVmo(feedback_response.screenshot->image, &actual_pixels));
   EXPECT_EQ(actual_pixels, expected_pixels);
+}
+
+TEST_F(DataProviderImplTest, GetScreenshot_FailOnScenicNotAvailable) {
+  ResetScenic(nullptr);
+
+  GetScreenshotResponse feedback_response = GetScreenshot();
+
+  EXPECT_EQ(feedback_response.screenshot, nullptr);
 }
 
 TEST_F(DataProviderImplTest, GetScreenshot_FailOnScenicReturningFailure) {
@@ -566,6 +576,6 @@ int main(int argc, char** argv) {
   }
 
   testing::InitGoogleTest(&argc, argv);
-  syslog::InitLogger({"feedback_agent", "test"});
+  syslog::InitLogger({"feedback", "test"});
   return RUN_ALL_TESTS();
 }
