@@ -358,7 +358,7 @@ zx_handle_t tu_exception_get_thread(zx_handle_t exception) {
     return thread;
 }
 
-void tu_resume_exception(zx_handle_t exception_handle) {
+void tu_resume_from_exception(zx_handle_t exception_handle) {
   uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
   zx_status_t status = zx_object_set_property(exception_handle, ZX_PROP_EXCEPTION_STATE,
                                               &state, sizeof(state));

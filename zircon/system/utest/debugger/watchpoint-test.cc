@@ -126,7 +126,7 @@ bool test_watchpoint_impl(zx_handle_t excp_channel) {
     ASSERT_EQ(status, ZX_OK);
     gWatchpointThreadShouldContinue = false;
 
-    tu_resume_exception(exception.exception);
+    tu_resume_from_exception(exception.exception);
 
     // join the thread.
     int res = -1;
