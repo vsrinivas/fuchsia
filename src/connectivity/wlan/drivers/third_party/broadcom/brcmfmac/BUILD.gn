@@ -87,8 +87,7 @@ brcmf_core_deps = [
   "//zircon/public/lib/ddk",
   "//zircon/public/lib/driver",
   "//zircon/public/lib/sync",
-  "//zircon/public/lib/trace",
-  "//zircon/public/lib/trace-engine",
+  "//zircon/public/lib/trace-driver",
   "//zircon/public/lib/zx",
 ]
 
