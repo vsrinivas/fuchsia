@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "codec-cmd-job.h"
+
 #include "intel-hda-codec.h"
 
 // Instantiate storage for the static allocator.

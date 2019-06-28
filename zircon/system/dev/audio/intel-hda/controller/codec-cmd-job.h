@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_CODEC_CMD_JOB_H_
+#define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_CODEC_CMD_JOB_H_
 
+#include <dispatcher-pool/dispatcher-channel.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
 #include <fbl/unique_ptr.h>
-
-#include <dispatcher-pool/dispatcher-channel.h>
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/intel-hda-proto.h>
 
@@ -27,35 +27,34 @@ using CodecCmdJobAllocator = fbl::SlabAllocator<CodecCmdJobAllocTraits>;
 
 class CodecCmdJob : public fbl::DoublyLinkedListable<fbl::unique_ptr<CodecCmdJob>>,
                     public fbl::SlabAllocated<CodecCmdJobAllocTraits> {
-public:
-    CodecCommand command()   const { return cmd_; }
-    uint8_t      codec_id()  const { return cmd_.codec_id(); }
-    uint16_t     nid()       const { return cmd_.nid(); }
-    CodecVerb    verb()      const { return cmd_.verb(); }
+ public:
+  CodecCommand command() const { return cmd_; }
+  uint8_t codec_id() const { return cmd_.codec_id(); }
+  uint16_t nid() const { return cmd_.nid(); }
+  CodecVerb verb() const { return cmd_.verb(); }
 
-    const fbl::RefPtr<dispatcher::Channel>& response_channel() const { return response_channel_; }
-    zx_txid_t transaction_id() const { return transaction_id_; }
+  const fbl::RefPtr<dispatcher::Channel>& response_channel() const { return response_channel_; }
+  zx_txid_t transaction_id() const { return transaction_id_; }
 
-private:
-    // Only our slab allocators is allowed to construct us, and only the
-    // unique_ptrs it hands out are allowed to destroy us (via their
-    // default_deleters).
-    friend CodecCmdJobAllocator;
-    friend std::default_delete<CodecCmdJob>;
+ private:
+  // Only our slab allocators is allowed to construct us, and only the
+  // unique_ptrs it hands out are allowed to destroy us (via their
+  // default_deleters).
+  friend CodecCmdJobAllocator;
+  friend std::default_delete<CodecCmdJob>;
 
-    CodecCmdJob(CodecCommand cmd) : cmd_(cmd) { }
-    CodecCmdJob(fbl::RefPtr<dispatcher::Channel>&& response_channel,
-                uint32_t transaction_id,
-                CodecCommand cmd)
-        : cmd_(cmd),
-          transaction_id_(transaction_id),
-          response_channel_(std::move(response_channel)) { }
+  CodecCmdJob(CodecCommand cmd) : cmd_(cmd) {}
+  CodecCmdJob(fbl::RefPtr<dispatcher::Channel>&& response_channel, uint32_t transaction_id,
+              CodecCommand cmd)
+      : cmd_(cmd),
+        transaction_id_(transaction_id),
+        response_channel_(std::move(response_channel)) {}
 
-    ~CodecCmdJob() = default;
+  ~CodecCmdJob() = default;
 
-    const CodecCommand cmd_;
-    const zx_txid_t    transaction_id_ = IHDA_INVALID_TRANSACTION_ID;
-    fbl::RefPtr<dispatcher::Channel> response_channel_ = nullptr;
+  const CodecCommand cmd_;
+  const zx_txid_t transaction_id_ = IHDA_INVALID_TRANSACTION_ID;
+  fbl::RefPtr<dispatcher::Channel> response_channel_ = nullptr;
 };
 
 }  // namespace intel_hda
@@ -64,3 +63,5 @@ private:
 // Let users of the slab allocator know that the storage for the allocator is
 // instantiated in a separate translation unit.
 FWD_DECL_STATIC_SLAB_ALLOCATOR(::audio::intel_hda::CodecCmdJobAllocTraits);
+
+#endif  // ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_CODEC_CMD_JOB_H_
