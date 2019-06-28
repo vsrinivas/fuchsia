@@ -8,6 +8,7 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fit/promise.h>
 #include <lib/syslog/cpp/logger.h>
+#include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
@@ -21,6 +22,11 @@ namespace feedback {
 namespace {
 
 const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
+
+// Timeout for a single asynchronous attachment, e.g., syslog collection.
+const zx::duration kAttachmentTimeout = zx::sec(10);
+// Timeout for requesting the screenshot from Scenic.
+const zx::duration kScreenshotTimeout = zx::sec(10);
 
 }  // namespace
 
@@ -41,7 +47,7 @@ std::unique_ptr<DataProviderImpl> DataProviderImpl::TryCreate(
 DataProviderImpl::DataProviderImpl(async_dispatcher_t* dispatcher,
                                    std::shared_ptr<::sys::ServiceDirectory> services,
                                    const Config& config)
-    : executor_(dispatcher), services_(services), config_(config) {}
+    : dispatcher_(dispatcher), executor_(dispatcher), services_(services), config_(config) {}
 
 void DataProviderImpl::GetData(GetDataCallback callback) {
   auto annotations = fit::join_promise_vector(GetAnnotations(config_.annotation_allowlist))
@@ -62,7 +68,8 @@ void DataProviderImpl::GetData(GetDataCallback callback) {
                          });
 
   auto attachments =
-      fit::join_promise_vector(GetAttachments(services_, config_.attachment_allowlist))
+      fit::join_promise_vector(
+          GetAttachments(dispatcher_, services_, config_.attachment_allowlist, kAttachmentTimeout))
           .and_then([](std::vector<fit::result<Attachment>>& attachments)
                         -> fit::result<std::vector<Attachment>> {
             std::vector<Attachment> ok_attachments;
@@ -116,10 +123,10 @@ void DataProviderImpl::GetData(GetDataCallback callback) {
 
 void DataProviderImpl::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) {
   const uint64_t id = next_scenic_id_++;
-  scenics_[id] = std::make_unique<Scenic>(services_);
+  scenics_[id] = std::make_unique<Scenic>(dispatcher_, services_);
   auto promise =
       scenics_[id]
-          ->TakeScreenshot()
+          ->TakeScreenshot(kScreenshotTimeout)
           .and_then([encoding](fuchsia::ui::scenic::ScreenshotData& raw_screenshot)
                         -> fit::result<Screenshot> {
             Screenshot screenshot;

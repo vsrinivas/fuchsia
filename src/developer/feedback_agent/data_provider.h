@@ -37,6 +37,7 @@ class DataProviderImpl : public DataProvider {
   void GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) override;
 
  private:
+  async_dispatcher_t* dispatcher_;
   async::Executor executor_;
   const std::shared_ptr<::sys::ServiceDirectory> services_;
   const Config config_;

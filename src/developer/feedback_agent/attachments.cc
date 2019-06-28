@@ -15,7 +15,6 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/log.h>
-#include <zircon/time.h>
 
 #include <string>
 #include <vector>
@@ -27,9 +26,6 @@
 namespace fuchsia {
 namespace feedback {
 namespace {
-
-// Timeout for a single asynchronous attachment, e.g., syslog collection.
-const zx::duration kAttachmentTimeout = zx::sec(10);
 
 // This is actually synchronous, but we return a fit::promise to match other
 // attachment providers that are asynchronous.
@@ -80,24 +76,27 @@ fit::promise<fuchsia::mem::Buffer> VmoFromFilename(const std::string& filename) 
 }
 
 fit::promise<fuchsia::mem::Buffer> BuildValue(const std::string& key,
-                                              std::shared_ptr<::sys::ServiceDirectory> services) {
+                                              async_dispatcher_t* dispatcher,
+                                              std::shared_ptr<::sys::ServiceDirectory> services,
+                                              const zx::duration timeout) {
   if (key == "build.snapshot.xml") {
     return VmoFromFilename("/config/build-info/snapshot");
   } else if (key == "log.kernel.txt") {
     return GetKernelLog();
   } else if (key == "log.system.txt") {
-    return CollectSystemLog(services, kAttachmentTimeout);
+    return CollectSystemLog(dispatcher, services, timeout);
   } else if (key == "inspect.json") {
-    return CollectInspectData(kAttachmentTimeout);
+    return CollectInspectData(dispatcher, timeout);
   } else {
     FX_LOGS(WARNING) << "Unknown attachment " << key;
     return fit::make_result_promise<fuchsia::mem::Buffer>(fit::error());
   }
 }
 
-fit::promise<Attachment> BuildAttachment(const std::string& key,
-                                         std::shared_ptr<::sys::ServiceDirectory> services) {
-  return BuildValue(key, services)
+fit::promise<Attachment> BuildAttachment(const std::string& key, async_dispatcher_t* dispatcher,
+                                         std::shared_ptr<::sys::ServiceDirectory> services,
+                                         const zx::duration timeout) {
+  return BuildValue(key, dispatcher, services, timeout)
       .and_then([key](fuchsia::mem::Buffer& vmo) -> fit::result<Attachment> {
         Attachment attachment;
         attachment.key = key;
@@ -113,7 +112,8 @@ fit::promise<Attachment> BuildAttachment(const std::string& key,
 }  // namespace
 
 std::vector<fit::promise<Attachment>> GetAttachments(
-    std::shared_ptr<::sys::ServiceDirectory> services, const std::set<std::string>& allowlist) {
+    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
+    const std::set<std::string>& allowlist, const zx::duration timeout) {
   if (allowlist.empty()) {
     FX_LOGS(WARNING) << "Attachment allowlist is empty, nothing to retrieve";
     return {};
@@ -121,7 +121,7 @@ std::vector<fit::promise<Attachment>> GetAttachments(
 
   std::vector<fit::promise<Attachment>> attachments;
   for (const auto& key : allowlist) {
-    attachments.push_back(BuildAttachment(key, services));
+    attachments.push_back(BuildAttachment(key, dispatcher, services, timeout));
   }
   return attachments;
 }

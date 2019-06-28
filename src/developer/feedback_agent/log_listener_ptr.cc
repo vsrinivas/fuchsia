@@ -25,8 +25,9 @@
 namespace fuchsia {
 namespace feedback {
 fit::promise<fuchsia::mem::Buffer> CollectSystemLog(
-    std::shared_ptr<::sys::ServiceDirectory> services, zx::duration timeout) {
-  std::unique_ptr<LogListener> log_listener = std::make_unique<LogListener>(services);
+    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
+    zx::duration timeout) {
+  std::unique_ptr<LogListener> log_listener = std::make_unique<LogListener>(dispatcher, services);
 
   return log_listener->CollectLogs(timeout).then(
       [log_listener = std::move(log_listener)](
@@ -51,8 +52,9 @@ fit::promise<fuchsia::mem::Buffer> CollectSystemLog(
       });
 }
 
-LogListener::LogListener(std::shared_ptr<::sys::ServiceDirectory> services)
-    : services_(services), binding_(this) {}
+LogListener::LogListener(async_dispatcher_t* dispatcher,
+                         std::shared_ptr<::sys::ServiceDirectory> services)
+    : dispatcher_(dispatcher), services_(services), binding_(this) {}
 
 fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
   done_ = std::make_shared<fit::bridge<void, void>>();
@@ -97,7 +99,7 @@ fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
     done->completer.complete_error();
   });
   const zx_status_t post_status = async::PostDelayedTask(
-      async_get_default_dispatcher(), [cb = done_after_timeout_.callback()] { cb(); }, timeout);
+      dispatcher_, [cb = done_after_timeout_.callback()] { cb(); }, timeout);
   if (post_status != ZX_OK) {
     FX_PLOGS(ERROR, post_status) << "Failed to post delayed task, no timeout for log collection";
   }

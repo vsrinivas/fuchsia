@@ -8,6 +8,7 @@
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 #include <inttypes.h>
+#include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
@@ -25,11 +26,13 @@ namespace feedback {
 //
 // fuchsia::logger::Log is expected to be in |services|.
 fit::promise<fuchsia::mem::Buffer> CollectSystemLog(
-    std::shared_ptr<::sys::ServiceDirectory> services, zx::duration timeout);
+    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
+    zx::duration timeout);
 
 class LogListener : public fuchsia::logger::LogListener {
  public:
-  explicit LogListener(std::shared_ptr<::sys::ServiceDirectory> services);
+  explicit LogListener(async_dispatcher_t* dispatcher,
+                       std::shared_ptr<::sys::ServiceDirectory> services);
 
   // Collects the logs and returns a promise to when the collection is done or
   // the timeout over.
@@ -47,6 +50,7 @@ class LogListener : public fuchsia::logger::LogListener {
   // Resets |done_|, |done_after_timeout_| and logger_.
   void Reset();
 
+  async_dispatcher_t* dispatcher_;
   const std::shared_ptr<::sys::ServiceDirectory> services_;
   fidl::Binding<fuchsia::logger::LogListener> binding_;
 

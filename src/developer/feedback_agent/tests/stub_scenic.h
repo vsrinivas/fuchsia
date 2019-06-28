@@ -91,6 +91,11 @@ class StubScenicClosesConnection : public StubScenic {
   void TakeScreenshot(TakeScreenshotCallback callback) override;
 };
 
+class StubScenicNeverReturns : public StubScenic {
+ public:
+  void TakeScreenshot(TakeScreenshotCallback callback) override;
+};
+
 }  // namespace feedback
 }  // namespace fuchsia
 

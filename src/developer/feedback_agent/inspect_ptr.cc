@@ -28,7 +28,8 @@
 namespace fuchsia {
 namespace feedback {
 
-fit::promise<fuchsia::mem::Buffer> CollectInspectData(zx::duration timeout) {
+fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* dispatcher,
+                                                      zx::duration timeout) {
   using Locations = std::vector<::inspect::Location>;
   // First, we discover all the Inspect entrypoints under the realm of the
   // calling component.
@@ -55,8 +56,7 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(zx::duration timeout) {
         }
       });
   const zx_status_t post_status = async::PostDelayedTask(
-      async_get_default_dispatcher(), [cb = discovery_done_after_timeout->callback()] { cb(); },
-      timeout);
+      dispatcher, [cb = discovery_done_after_timeout->callback()] { cb(); }, timeout);
   if (post_status != ZX_OK) {
     FX_PLOGS(ERROR, post_status) << "Failed to post delayed task";
     FX_LOGS(ERROR) << "Skipping Inspect data collection as Inspect discovery "

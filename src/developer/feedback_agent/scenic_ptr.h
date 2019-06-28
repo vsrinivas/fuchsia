@@ -6,12 +6,15 @@
 #define SRC_DEVELOPER_FEEDBACK_AGENT_SCENIC_PTR_H_
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/zx/time.h>
 
 #include <memory>
 
+#include "src/lib/fxl/functional/cancelable_callback.h"
 #include "src/lib/fxl/macros.h"
 
 namespace fuchsia {
@@ -22,15 +25,21 @@ namespace feedback {
 // timeout, etc.
 class Scenic {
  public:
-  Scenic(std::shared_ptr<::sys::ServiceDirectory> services);
+  Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services);
 
-  fit::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot();
+  fit::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot(zx::duration timeout);
 
  private:
+  async_dispatcher_t* dispatcher_;
   const std::shared_ptr<::sys::ServiceDirectory> services_;
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
-  fit::bridge<fuchsia::ui::scenic::ScreenshotData> done_;
+  // We use a shared_ptr to share the bridge between this and the async loop on
+  // which we post the delayed task to timeout.
+  std::shared_ptr<fit::bridge<fuchsia::ui::scenic::ScreenshotData>> done_;
+  // We wrap the delayed task we post on the async loop to timeout in a
+  // CancelableClosure so we can cancel it if we are done another way.
+  fxl::CancelableClosure done_after_timeout_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Scenic);
 };

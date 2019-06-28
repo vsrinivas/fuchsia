@@ -77,8 +77,8 @@ class CollectSystemLogTest : public gtest::RealLoopFixture {
   fit::result<fuchsia::mem::Buffer> CollectSystemLog(zx::duration timeout = zx::sec(1)) {
     fit::result<fuchsia::mem::Buffer> result;
     executor_.schedule_task(
-        fuchsia::feedback::CollectSystemLog(service_directory_provider_.service_directory(),
-                                            timeout)
+        fuchsia::feedback::CollectSystemLog(
+            dispatcher(), service_directory_provider_.service_directory(), timeout)
             .then([&result](fit::result<fuchsia::mem::Buffer>& res) { result = std::move(res); }));
     RunLoopUntil([&result] { return !!result; });
     return result;
@@ -223,7 +223,7 @@ TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
 
   fit::result<void> result;
   std::unique_ptr<LogListener> log_listener =
-      std::make_unique<LogListener>(service_directory_provider_.service_directory());
+      std::make_unique<LogListener>(dispatcher(), service_directory_provider_.service_directory());
   executor_.schedule_task(
       log_listener->CollectLogs(/*timeout=*/zx::sec(1))
           .then([&result](const fit::result<void>& res) { result = std::move(res); }));

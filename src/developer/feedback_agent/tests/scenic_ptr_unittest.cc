@@ -10,6 +10,7 @@
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/syslog/cpp/logger.h>
+#include <lib/zx/time.h>
 #include <zircon/errors.h>
 
 #include <memory>
@@ -39,10 +40,10 @@ class ScenicTest : public gtest::RealLoopFixture {
     }
   }
 
-  fit::result<ScreenshotData> TakeScreenshot() {
-    Scenic scenic(service_directory_provider_.service_directory());
+  fit::result<ScreenshotData> TakeScreenshot(const zx::duration timeout = zx::sec(1)) {
+    Scenic scenic(dispatcher(), service_directory_provider_.service_directory());
     fit::result<ScreenshotData> result;
-    executor_.schedule_task(scenic.TakeScreenshot().then(
+    executor_.schedule_task(scenic.TakeScreenshot(timeout).then(
         [&result](fit::result<ScreenshotData>& res) { result = std::move(res); }));
     RunLoopUntil([&result] { return !!result; });
     return result;
@@ -94,6 +95,14 @@ TEST_F(ScenicTest, Fail_ScenicClosesConnection) {
   ResetScenic(std::make_unique<StubScenicClosesConnection>());
 
   fit::result<ScreenshotData> result = TakeScreenshot();
+
+  ASSERT_TRUE(result.is_error());
+}
+
+TEST_F(ScenicTest, Fail_ScenicNeverReturns) {
+  ResetScenic(std::make_unique<StubScenicNeverReturns>());
+
+  fit::result<ScreenshotData> result = TakeScreenshot(/*timeout=*/zx::msec(10));
 
   ASSERT_TRUE(result.is_error());
 }

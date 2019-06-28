@@ -93,5 +93,7 @@ void StubScenicClosesConnection::TakeScreenshot(TakeScreenshotCallback callback)
   CloseAllConnections();
 }
 
+void StubScenicNeverReturns::TakeScreenshot(TakeScreenshotCallback callback) {}
+
 }  // namespace feedback
 }  // namespace fuchsia

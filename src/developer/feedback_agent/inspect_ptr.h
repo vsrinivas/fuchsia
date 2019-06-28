@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_FEEDBACK_AGENT_INSPECT_PTR_H_
 
 #include <fuchsia/mem/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
 #include <lib/fit/promise.h>
 #include <zircon/time.h>
 
@@ -16,7 +17,8 @@ namespace feedback {
 //
 // Requires "shell" in the features of the calling component's sandbox to access
 // the hub.
-fit::promise<fuchsia::mem::Buffer> CollectInspectData(zx::duration timeout);
+fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* dispatcher,
+                                                      zx::duration timeout);
 
 }  // namespace feedback
 }  // namespace fuchsia
