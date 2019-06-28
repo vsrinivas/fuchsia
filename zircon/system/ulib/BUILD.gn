@@ -42,6 +42,7 @@ group("ulib") {
     "crypto",
     "ddk",
     "ddktl",
+    "debugdata",
     "devmgr-integration-test",
     "devmgr-launcher",
     "digest",

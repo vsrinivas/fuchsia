@@ -1,0 +1,33 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("debugdata") {
+  sources = [
+    "debugdata.cc",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    "$zx/system/fidl/fuchsia-debugdata:llcpp",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+  public_deps = [
+    # <debugdata/debugdata.h has #include <fuchsia/debugdata/llcpp/fidl.h>.
+    "$zx/system/fidl/fuchsia-debugdata:llcpp.headers",
+
+    # <debugdata/debugdata.h> has #include <fbl/unique_fd.h>.
+    "$zx/system/ulib/fbl:headers",
+
+    # <debugdata/debugdata.h> has #include <lib/async/cpp/wait.h>.
+    "$zx/system/ulib/async:async-cpp.headers",
+
+    # <debugdata/debugdata.h> has #include <lib/zircon-internal/fnv1hash.h>.
+    "$zx/system/ulib/zircon-internal:headers",
+  ]
+}
