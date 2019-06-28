@@ -7,7 +7,7 @@ use pretty_assertions::assert_eq;
 use serde_json::json;
 
 #[test]
-pub fn basic_serialization_test() {
+fn basic_serialization_test() {
     let expected = json!({
         "request": {
             "protocol": "3.0",
@@ -59,7 +59,7 @@ pub fn basic_serialization_test() {
 }
 
 #[test]
-pub fn basic_ping_serialization_test() {
+fn basic_ping_serialization_test() {
     let expected = json!({
         "request":{
             "protocol": "3.0",
@@ -114,7 +114,7 @@ pub fn basic_ping_serialization_test() {
 }
 
 #[test]
-pub fn basic_event_serialization_test() {
+fn basic_event_serialization_test() {
     let expected = json!({
         "request": {
             "protocol": "3.0",
@@ -175,7 +175,7 @@ pub fn basic_event_serialization_test() {
 }
 
 #[test]
-pub fn multiple_event_serialization_test() {
+fn multiple_event_serialization_test() {
     let expected = json!({
         "request": {
             "protocol": "3.0",
@@ -258,7 +258,7 @@ pub fn multiple_event_serialization_test() {
 }
 
 #[test]
-pub fn all_fields_serialization_test() {
+fn all_fields_serialization_test() {
     let expected = json!({
         "request": {
             "protocol": "3.0",

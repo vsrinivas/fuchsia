@@ -120,7 +120,7 @@ impl PolicyEngine for FuchsiaPolicyEngine {
 }
 
 #[cfg(test)]
-pub mod tests {
+mod tests {
     use super::*;
     use omaha_client::installer::stub::StubPlan;
     use std::time::SystemTime;

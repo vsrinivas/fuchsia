@@ -53,7 +53,7 @@ mod tests {
     use super::*;
 
     #[test]
-    pub fn test_cohort_new() {
+    fn test_cohort_new() {
         let cohort = Cohort::new("my_cohort");
         assert_eq!(Some("my_cohort".to_string()), cohort.id);
         assert_eq!(None, cohort.hint);

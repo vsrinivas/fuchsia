@@ -167,7 +167,7 @@ impl Storage for Stash {
 }
 
 #[cfg(test)]
-pub mod tests {
+mod tests {
     use super::*;
     use fidl_fuchsia_stash::StoreAccessorRequest;
     use fuchsia_async as fasync;

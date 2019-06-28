@@ -204,7 +204,7 @@ mod tests {
     use super::*;
 
     #[test]
-    pub fn test_version_display() {
+    fn test_version_display() {
         let version = Version::from([1, 2, 3, 4]);
         assert_eq!("1.2.3.4", version.to_string());
 
@@ -213,7 +213,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_version_debug() {
+    fn test_version_debug() {
         let version = Version::from([1, 2, 3, 4]);
         assert_eq!("1.2.3.4", format!("{:?}", version));
 
@@ -222,7 +222,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_version_parse() {
+    fn test_version_parse() {
         let version = Version::from([1, 2, 3, 4]);
         assert_eq!("1.2.3.4".parse::<Version>().unwrap(), version);
 
@@ -234,7 +234,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_version_parse_error() {
+    fn test_version_parse_error() {
         assert!("1.2.3.4.5".parse::<Version>().is_err());
         assert!("1.2.".parse::<Version>().is_err());
         assert!(".1.2".parse::<Version>().is_err());
@@ -246,13 +246,13 @@ mod tests {
     }
 
     #[test]
-    pub fn test_version_compare() {
+    fn test_version_compare() {
         assert!(Version::from([1, 2, 3, 4]) < Version::from([2, 0, 3]));
         assert!(Version::from([1, 2, 3]) < Version::from([1, 2, 3, 4]));
     }
 
     #[test]
-    pub fn test_app_new_version() {
+    fn test_app_new_version() {
         let app = App::new("some_id", [1, 2], Cohort::from_hint("some-channel"));
         assert_eq!(app.id, "some_id");
         assert_eq!(app.version, [1, 2].into());
@@ -264,7 +264,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_app_with_fingerprint() {
+    fn test_app_with_fingerprint() {
         let app = App::with_fingerprint(
             "some_id_2",
             [4, 6],

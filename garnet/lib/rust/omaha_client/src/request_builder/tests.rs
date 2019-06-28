@@ -19,7 +19,7 @@ use serde_json::json;
 /// - All request fields are set properly from the Config
 /// - That the App is translated to a protocol::request:::App
 #[test]
-pub fn test_simple_request() {
+fn test_simple_request() {
     let config = config_generator();
 
     let intermediate = RequestBuilder::new(
@@ -71,7 +71,7 @@ pub fn test_simple_request() {
 ///  - headers
 ///  - request body
 #[test]
-pub fn test_single_request() {
+fn test_single_request() {
     let config = config_generator();
 
     let (parts, body) = RequestBuilder::new(
@@ -132,7 +132,7 @@ pub fn test_single_request() {
 
 /// Test that a ping is correctly added to an App entry.
 #[test]
-pub fn test_simple_ping() {
+fn test_simple_ping() {
     let config = config_generator();
 
     let intermediate = RequestBuilder::new(
@@ -168,7 +168,7 @@ pub fn test_simple_ping() {
 
 /// Test that an event is properly added to an App entry
 #[test]
-pub fn test_simple_event() {
+fn test_simple_event() {
     let config = config_generator();
 
     let request = RequestBuilder::new(
@@ -201,7 +201,7 @@ pub fn test_simple_event() {
 
 /// Test that multiple events are properly added to an App entry
 #[test]
-pub fn test_multiple_events() {
+fn test_multiple_events() {
     let config = config_generator();
 
     // Setup the first app and its cohort
@@ -259,7 +259,7 @@ pub fn test_multiple_events() {
 /// This test ensures that if the matching app entry is the first one in the request, that the
 /// ping is attached to it (and not the last that was added).
 #[test]
-pub fn test_ping_added_to_first_app_update_entry() {
+fn test_ping_added_to_first_app_update_entry() {
     let config = config_generator();
 
     // Setup the first app and its cohort
@@ -305,7 +305,7 @@ pub fn test_ping_added_to_first_app_update_entry() {
 /// This test ensures that if the matching app entry is the second one in the request, that the
 /// ping is attached to it (and not to the first app that was added).
 #[test]
-pub fn test_ping_added_to_second_app_update_entry() {
+fn test_ping_added_to_second_app_update_entry() {
     let config = config_generator();
 
     // Setup the first app and its cohort
@@ -350,7 +350,7 @@ pub fn test_ping_added_to_second_app_update_entry() {
 /// This test ensures that if the matching app entry is the first one in the request, that the
 /// event is attached to it (and not the last that was added).
 #[test]
-pub fn test_event_added_to_first_app_update_entry() {
+fn test_event_added_to_first_app_update_entry() {
     let config = config_generator();
 
     // Setup the first app and its cohort
@@ -403,7 +403,7 @@ pub fn test_event_added_to_first_app_update_entry() {
 /// This test ensures that if the matching app entry is the second one in the request, that the
 /// event is attached to it (and not to the first app that was added).
 #[test]
-pub fn test_event_added_to_second_app_update_entry() {
+fn test_event_added_to_second_app_update_entry() {
     let config = config_generator();
 
     // Setup the first app and its cohort

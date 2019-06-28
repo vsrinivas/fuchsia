@@ -18,12 +18,12 @@ impl Timer for FuchsiaTimer {
 }
 
 #[cfg(test)]
-pub mod tests {
+mod tests {
     use super::*;
     use futures::Poll;
 
     #[test]
-    pub fn test_timer() {
+    fn test_timer() {
         let mut exec = fasync::Executor::new().unwrap();
         let start_time = zx::Time::get(zx::ClockId::Monotonic);
 

@@ -617,7 +617,7 @@ where
 }
 
 #[cfg(test)]
-pub mod tests {
+mod tests {
     use super::update_check::*;
     use super::*;
     use crate::{

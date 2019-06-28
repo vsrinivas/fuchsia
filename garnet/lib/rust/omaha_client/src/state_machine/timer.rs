@@ -70,7 +70,7 @@ mod mock {
     }
 
     #[test]
-    pub fn test_simple() {
+    fn test_simple() {
         let mut timer = MockTimer::new();
         timer.expect(Duration::from_secs(5555));
 
@@ -78,7 +78,7 @@ mod mock {
     }
 
     #[test]
-    pub fn test_wait_twice() {
+    fn test_wait_twice() {
         let mut timer = MockTimer::new();
         timer.expect(Duration::from_secs(5555));
         timer.expect(Duration::from_secs(6666));
@@ -90,7 +90,7 @@ mod mock {
     }
 
     #[test]
-    pub fn test_wait_loop() {
+    fn test_wait_loop() {
         let mut timer = MockTimer::new();
         timer.expect(Duration::from_secs(1));
         timer.expect(Duration::from_secs(2));
@@ -111,7 +111,7 @@ mod mock {
 
     #[test]
     #[should_panic(expected = "5555")]
-    pub fn test_wrong_time() {
+    fn test_wrong_time() {
         let mut timer = MockTimer::new();
         timer.expect(Duration::from_secs(5555));
 
@@ -120,7 +120,7 @@ mod mock {
 
     #[test]
     #[should_panic(expected = "is_empty()")]
-    pub fn test_expect_more_wait() {
+    fn test_expect_more_wait() {
         let mut timer = MockTimer::new();
         timer.expect(Duration::from_secs(5555));
         timer.expect(Duration::from_secs(6666));
