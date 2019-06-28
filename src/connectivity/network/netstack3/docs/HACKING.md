@@ -63,7 +63,13 @@ with the `--no-skip-worktree` flag.
 **NOTE:** At the time of this writing, Netstack3 is not complete enough to allow
 for dynamic package download and install. So make sure that every package that
 you'll need is included in your `fx set` line using the `--with-base` argument,
-which will have those packages be part of the base system.
+which will have those packages be part of the base system.  Like this:
+
+`fx set core.x64
+ --with-base //garnet/packages/prod:net-cli \
+ --with-base //garnet/packages/prod:netstack3 \
+ --with-base //garnet/packages/prod:netcfg \
+ --with-base //garnet/packages/prod:chrealm`
 
 ## Running
 
@@ -74,16 +80,6 @@ however you normally would, then use `net_cli` to set up the interface:
 net_cli if add /dev/class/ethernet/000
 net_cli if addr add 1 192.168.1.39 24
 net_cli fwd add-device 1 192.168.1.0 24
-```
-
-If you want, you can take advantage of the dual-interface qemu setup to run the
-`net_cli` commands automatically. For instance, here's a script that automates
-the build-run-setup loop:
-
-```
-fx build &&
-fx run -kN -- -netdev type=tap,ifname=qemu-extra,script=no,downscript=no,id=net1 -device e1000,netdev=net1,mac=52:54:00:63:5e:7b &&
-$FUCHSIA_OUT_DIR/build-zircon/tools/netruncmd : "net_cli if add /dev/class/ethernet/000 && net_cli if addr add 1 192.168.1.39 24 && net_cli fwd add-device 1 192.168.1.0 24"
 ```
 
 Once you've done this, you can check that Netstack3 is reachable by pinging it
