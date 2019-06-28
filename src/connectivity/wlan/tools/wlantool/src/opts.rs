@@ -112,7 +112,7 @@ pub enum Opt {
     Mesh(MeshCmd),
 }
 
-#[derive(StructOpt, Copy, Clone, Debug)]
+#[derive(StructOpt, Clone, Debug)]
 pub enum PhyCmd {
     #[structopt(name = "list")]
     /// lists phy devices
@@ -123,6 +123,15 @@ pub enum PhyCmd {
         #[structopt(raw(required = "true"))]
         /// id of the phy to query
         phy_id: u16,
+    },
+    #[structopt(name = "set-country")]
+    /// sets the phy's country for WLAN regulatory purpose
+    SetCountry {
+        #[structopt(raw(required = "true"))]
+        /// id of the phy to query
+        phy_id: u16,
+        #[structopt(raw(required = "true"))]
+        country: String,
     },
 }
 

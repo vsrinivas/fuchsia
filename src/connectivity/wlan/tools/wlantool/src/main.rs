@@ -78,8 +78,23 @@ async fn do_phy(cmd: opts::PhyCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
             let response = await!(wlan_svc.query_phy(&mut req)).context("error querying phy")?;
             println!("response: {:?}", response);
         }
+        opts::PhyCmd::SetCountry { phy_id, country } => {
+            if !is_valid_country_str(&country) {
+                bail!("Country string [{}] looks invalid: Should be 2 ASCII characters", country);
+            }
+
+            let mut alpha2 = [0u8; 2];
+            alpha2.copy_from_slice(country.as_bytes());
+            let mut req = wlan_service::SetCountryRequest { phy_id, alpha2 };
+            let response = await!(wlan_svc.set_country(&mut req)).context("error setting country")?;
+            println!("response: {:?}", zx::Status::from_raw(response));
+        }
     }
     Ok(())
+}
+
+fn is_valid_country_str(country: &String) -> bool {
+    country.len() == 2 && country.chars().all(|x| x.is_ascii())
 }
 
 async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
@@ -685,6 +700,47 @@ mod tests {
                 responder,
             }))) => {
                 assert_eq!(req.iface_id, 5);
+                responder
+            }
+            _ => panic!("wlansvc_stream returned unexpected result"),
+        };
+        responder.send(zx::Status::OK.into_raw()).expect("failed to send response");
+    }
+
+    #[test]
+    fn test_country_input() {
+        assert!(is_valid_country_str(&"RS".to_string()));
+        assert!(is_valid_country_str(&"00".to_string()));
+        assert!(is_valid_country_str(&"M1".to_string()));
+        assert!(is_valid_country_str(&"-M".to_string()));
+
+        assert!(!is_valid_country_str(&"ABC".to_string()));
+        assert!(!is_valid_country_str(&"X".to_string()));
+        assert!(!is_valid_country_str(&"❤".to_string()));
+    }
+
+    #[test]
+    fn test_set_country() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (wlansvc_local, wlansvc_remote) =
+            create_proxy::<DeviceServiceMarker>().expect("failed to create DeviceService service");
+        let mut wlansvc_stream = wlansvc_remote.into_stream().expect("failed to create stream");
+        let fut = do_phy(PhyCmd::SetCountry { phy_id: 45, country: "RS".to_string() },
+                         wlansvc_local);
+        pin_mut!(fut);
+
+        match exec.run_until_stalled(&mut fut) {
+            Poll::Pending => (),
+            _ => panic!("expected pending set_country"),
+        };
+
+        let responder = match exec.run_until_stalled(&mut wlansvc_stream.next()) {
+            Poll::Ready(Some(Ok(wlan_service::DeviceServiceRequest::SetCountry {
+                                    req,
+                                    responder,
+                                }))) => {
+                assert_eq!(req.phy_id, 45);
+                assert_eq!(req.alpha2, "RS".as_bytes());
                 responder
             }
             _ => panic!("wlansvc_stream returned unexpected result"),
