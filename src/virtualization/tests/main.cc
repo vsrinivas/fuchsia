@@ -135,6 +135,14 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
+  // Switch to line buffering of stdout/stderr, so that we don't lose
+  // log lines if a test hangs.
+  //
+  // TODO(IN-1446): Solve this globally for everyone, not just for this
+  // test suite.
+  std::setvbuf(stdout, nullptr, _IOLBF, BUFSIZ);
+  std::setvbuf(stderr, nullptr, _IOLBF, BUFSIZ);
+
   LoggerOutputListener listener;
 
   testing::InitGoogleTest(&argc, argv);
