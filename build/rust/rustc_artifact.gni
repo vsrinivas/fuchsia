@@ -116,6 +116,8 @@ template("rustc_third_party_artifact") {
     forward_variables_from(invoker,
                            [
                              "crate_name",
+                             "crate_type",
+                             "package_name",
                              "testonly",
                            ])
 
@@ -123,13 +125,9 @@ template("rustc_third_party_artifact") {
       "${target_out_dir}/${target_name}.json",
     ]
     contents = {
-      # This is a slight lie to the end user-- the crate name that
-      # users provide and that appears in Cargo.toml is the package name,
-      # which may be different than the crate name (the thing given to
-      # --extern). One example of this is the rust-crypto crate,
-      # whose real crate name is crypto, but which is published under
-      # the package name rust-crypto.
-      package_name = crate_name
+      crate_name = crate_name
+      crate_type = crate_type
+      package_name = package_name
       third_party = true
     }
     output_conversion = "json"
@@ -253,6 +251,7 @@ template("rustc_artifact") {
   third_party_deps_data =
       "${root_out_dir}/rust_third_party_crates/deps_data.json"
   first_party_crate_root = "${root_out_dir}/rust_crates"
+  third_party_crate_root = "${root_out_dir}/rust_third_party_crates"
   if (defined(invoker.output_file_override)) {
     output_filename = invoker.output_file_override
   } else {
@@ -428,8 +427,8 @@ template("rustc_artifact") {
     rebase_path(root_out_dir),
     "--first-party-crate-root",
     rebase_path(first_party_crate_root),
-    "--third-party-deps-data",
-    rebase_path(third_party_deps_data),
+    "--third-party-crate-root",
+    rebase_path(third_party_crate_root),
     "--edition",
     edition,
     "--warnings",
@@ -439,6 +438,10 @@ template("rustc_artifact") {
     "--opt-level",
     rust_opt_level,
   ]
+
+  if (host_os == "mac") {
+    rustc_target_args += ["--mac-host"]
+  }
 
   if (defined(invoker.features)) {
     foreach(feature, invoker.features) {

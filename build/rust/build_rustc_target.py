@@ -103,8 +103,8 @@ def main():
     parser.add_argument("--first-party-crate-root",
                         help="Path to directory containing the libs for first-party dependencies",
                         required=True)
-    parser.add_argument("--third-party-deps-data",
-                        help="Path to output of third_party_crates.py",
+    parser.add_argument("--third-party-crate-root",
+                        help="Path to directory containing the libs for third-party dependencies",
                         required=True)
     parser.add_argument("--dep-data",
                         action="append",
@@ -135,6 +135,12 @@ def main():
                         help="Remap source names in output",
                         action="append",
                         required=False)
+    parser.add_argument("--mac-host",
+                        help="Whether or not the host is a Mac",
+                        default=False,
+                        action="store_true",
+                        required=False)
+
 
     parser.add_argument
     args = parser.parse_args()
@@ -213,8 +219,27 @@ def main():
     if args.lto:
         call_args += ["-Clto=%s" % args.lto]
 
-    third_party_json = json.load(open(args.third_party_deps_data))
-    search_paths = third_party_json["deps_folders"] + [ args.first_party_crate_root ]
+    # calculate all the search paths we should look for for deps in cargo's output
+    search_path_suffixes = [
+        os.path.join("debug", "deps"),
+        os.path.join("release", "deps"),
+    ]
+    targets = [
+        "x86_64-fuchsia",
+        "aarch64-fuchsia",
+        "x86_64-unknown-linux-gnu",
+        "x86_64-apple-darwin",
+    ]
+    # add in e.g. x86_64-unknown-linux/release/deps
+    for target in targets:
+        search_path_suffixes += [os.path.join(target, suffix) for suffix in search_path_suffixes]
+
+    search_paths = [
+        args.first_party_crate_root,
+        args.third_party_crate_root,
+    ]
+    search_paths += [os.path.join(args.third_party_crate_root, suffix) for suffix in search_path_suffixes]
+
     for path in search_paths:
         call_args += ["-L", "dependency=%s" % path]
 
@@ -232,18 +257,28 @@ def main():
             dep_data = json.load(open(data_path))
             if dep_data["third_party"]:
                 package_name = dep_data["package_name"]
-                if package_name not in third_party_json["crates"]:
-                    print(TERM_COLOR_RED)
-                    print("Missing Rust target dependency: " + data_path)
-                    print("Package is present in the third_party/ but is absent"
-                          " from dependency data: " + args.third_party_deps_data)
-                    print("Maybe this package is conditionally disabled for the"
-                          " current configuration of '%s'?" % args.crate_name)
-                    print(TERM_COLOR_END)
+                crate = dep_data["crate_name"]
+                crate_type = dep_data["crate_type"]
+                if crate_type == "lib":
+                    ext = ".rlib"
+                elif crate_type == "staticlib":
+                    ext = ".a"
+                elif crate_type == "proc-macro":
+                    if args.mac_host:
+                        ext = ".dylib"
+                    else:
+                        ext = ".so"
+                else:
+                    print "Unrecognized crate type: " + crate_type
                     return -1
-                crate_data = third_party_json["crates"][package_name]
-                crate = crate_data["crate_name"]
-                lib_path = crate_data["lib_path"]
+                filename = "lib" + crate + "-" + package_name + ext
+                lib_path = os.path.join(args.third_party_crate_root, filename)
+                if not os.path.exists(lib_path):
+                    print TERM_COLOR_RED
+                    print "lib not found at path: " + lib_path
+                    print "This is a bug. Please report this to the Fuchsia Toolchain team."
+                    print TERM_COLOR_END
+                    return -1
             else:
                 crate = dep_data["crate_name"]
                 lib_path = dep_data["lib_path"]

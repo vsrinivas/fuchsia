@@ -24,7 +24,12 @@ the following steps:
    [`rust_crates/Cargo.toml`][3p-cargo-toml] as well as their dependencies and
    place them in the `vendor` directory. If on Linux, note that the `pkg-config`
    package must be installed for this to work.
-1. `git add` the `Cargo.toml`, `Cargo.lock` and `vendor` directory.
+1. Do a build that includes the Rust third-party build. `fx set core.x64 && fx build`
+   or similar is more than enough.
+1. Run `fx update-rustc-crate-map --output third_party/rust_crates/crate_map.json`.
+   This will update `crate_map.json` with information about the Rust crates available
+   for each target (Fuchsia and host).
+1. `git add` the `Cargo.toml`, `Cargo.lock`, `crate_map.json` and the `vendor` directory.
 1.  __Do not__  upload this change to gerrit yet.
 1. Get OSRB approval. Make sure to include the requested information for all
    new crates pulled in by your new dependency.
