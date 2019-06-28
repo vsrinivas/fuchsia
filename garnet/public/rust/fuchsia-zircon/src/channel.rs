@@ -398,7 +398,7 @@ mod tests {
         let mut handles_to_send: Vec<Handle> = vec![duplicate_vmo_handle];
         let mut buf = MessageBuf::new();
         assert_eq!(
-            p1.call(ten_ms.after_now(), b"0000call", &mut handles_to_send, &mut buf),
+            p1.call(Time::after(ten_ms), b"0000call", &mut handles_to_send, &mut buf),
             Err(Status::TIMED_OUT)
         );
         // Handle should be removed from vector even though we didn't get a response, as it was
@@ -425,7 +425,7 @@ mod tests {
             let mut buf = MessageBuf::new();
             // if either the read or the write fail, this thread will panic,
             // resulting in tx being dropped, which will be noticed by the rx.
-            p2.wait_handle(Signals::CHANNEL_READABLE, 1.seconds().after_now())
+            p2.wait_handle(Signals::CHANNEL_READABLE, Time::after(1.seconds()))
                 .expect("callee wait error");
             p2.read(&mut buf).expect("callee read error");
 
@@ -449,7 +449,7 @@ mod tests {
         // stalling forever if a developer makes a mistake locally in this
         // crate. Tests of Zircon behavior or virtualization behavior should be
         // covered elsewhere. See ZX-1324.
-        p1.call(30.seconds().after_now(), b"txidcall", &mut vec![], &mut buf)
+        p1.call(Time::after(30.seconds()), b"txidcall", &mut vec![], &mut buf)
             .expect("channel call error");
         assert_eq!(&buf.bytes()[4..], b"response");
         assert_eq!(buf.n_handles(), 0);

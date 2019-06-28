@@ -7,7 +7,7 @@
 use {
     fuchsia_async as fasync,
     fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog},
-    fuchsia_zircon::{self as zx, Duration, Time},
+    fuchsia_zircon::{self as zx, Duration},
     futures::{
         future::FusedFuture,
         ready, select,
@@ -297,7 +297,7 @@ impl Peer {
 
         let mut response = CommandResponse { id: header.label(), inner: Some(self.inner.clone()) };
 
-        let mut timeout = fasync::Timer::new(Time::after(Peer::command_timeout())).fuse();
+        let mut timeout = fasync::Timer::new(fasync::Time::after(Peer::command_timeout())).fuse();
 
         select! {
             _ = timeout => Err(Error::Timeout),

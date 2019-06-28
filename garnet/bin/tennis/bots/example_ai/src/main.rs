@@ -8,7 +8,7 @@
 use failure::{Error, ResultExt};
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_game_tennis::{PaddleRequest, TennisServiceMarker};
-use fuchsia_async as fasync;
+use fuchsia_async::{self as fasync, DurationExt};
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon::DurationNum;
 use futures::TryStreamExt;

@@ -5,7 +5,7 @@
 use {
     failure::{format_err, Error},
     fidl_fuchsia_bluetooth_control::ControlMarker,
-    fuchsia_async::{self as fasync, TimeoutExt},
+    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_zircon::DurationNum,
     futures::FutureExt,
 };

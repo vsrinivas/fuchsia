@@ -77,7 +77,7 @@ use {
     failure::Fail,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io as fio, fidl_fuchsia_ldsvc as fldsvc,
-    fuchsia_async::TimeoutExt,
+    fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, AsHandleRef, DurationNum, HandleBased},
     futures::prelude::*,
@@ -728,7 +728,7 @@ async fn get_dynamic_linker<'a>(
     let load_fut = ldsvc
         .load_object(interp_str)
         .map_err(ProcessBuilderError::LoadDynamicLinker)
-        .on_timeout(zx::Time::after(LDSO_LOAD_TIMEOUT_SEC.seconds()), || {
+        .on_timeout(fasync::Time::after(LDSO_LOAD_TIMEOUT_SEC.seconds()), || {
             Err(ProcessBuilderError::LoadDynamicLinkerTimeout())
         });
     let (status, ld_vmo) = await!(load_fut)?;

@@ -14,10 +14,7 @@ use {
         },
         Error,
     },
-    fuchsia_async::{
-        self as fasync,
-        temp::TempFutureExt,
-    },
+    fuchsia_async::{self as fasync, temp::TempFutureExt},
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{
         future::{self, AndThen, Either, Future, FutureExt, Ready, TryFutureExt},
@@ -614,7 +611,7 @@ mod tests {
     use super::*;
     use {
         failure::{Error, ResultExt},
-        fuchsia_async::TimeoutExt,
+        fuchsia_async::{DurationExt, TimeoutExt},
         fuchsia_zircon::DurationNum,
         futures::{future::join, FutureExt, StreamExt},
         futures_test::task::new_count_waker,
@@ -667,7 +664,7 @@ mod tests {
             // Server
             let mut received = zx::MessageBuf::new();
             server_end
-                .wait_handle(zx::Signals::CHANNEL_READABLE, 5.seconds().after_now())
+                .wait_handle(zx::Signals::CHANNEL_READABLE, zx::Time::after(5.seconds()))
                 .expect("failed to wait for channel readable");
             server_end.read(&mut received).expect("failed to read on server end");
             let (buf, _handles) = received.split_mut();
@@ -680,7 +677,7 @@ mod tests {
             );
         });
         let response_data = client
-            .send_query::<u8, u8>(&mut SEND_DATA, SEND_ORDINAL, 5.seconds().after_now())
+            .send_query::<u8, u8>(&mut SEND_DATA, SEND_ORDINAL, zx::Time::after(5.seconds()))
             .context("sending query")?;
         assert_eq!(SEND_DATA, response_data);
         Ok(())

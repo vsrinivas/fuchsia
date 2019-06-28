@@ -5,7 +5,7 @@
 use {
     crate::util::open_rdwr,
     failure::{format_err, Error},
-    fuchsia_async::TimeoutExt,
+    fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_syslog::fx_log_info,
     fuchsia_vfs_watcher::{WatchEvent, Watcher as VfsWatcher},
     fuchsia_zircon as zx,
@@ -186,7 +186,7 @@ mod tests {
     fn create_test_dev(name: &str) -> Result<DeviceFile, Error> {
         let control = open_rdwr(CONTROL_DEVICE)?;
         let mut root_dev = RootDeviceSynchronousProxy::new(fdio::clone_channel(&control)?);
-        let (status, path) = root_dev.create_device(name, timeout().after_now())?;
+        let (status, path) = root_dev.create_device(name, zx::Time::after(timeout()))?;
         zx::Status::ok(status)?;
 
         let path =

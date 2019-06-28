@@ -4,7 +4,7 @@
 
 use {
     failure::{err_msg, Error, Fail, ResultExt},
-    fuchsia_async::TimeoutExt,
+    fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_bluetooth::{error::Error as BTError, expectation::asynchronous::ExpectableStateExt},
     fuchsia_zircon::{Duration, DurationNum},
     futures::TryFutureExt,

@@ -200,12 +200,6 @@ impl Duration {
     pub fn from_hours(hours: i64) -> Self {
         Duration::from_minutes(hours * 60)
     }
-
-    /// Returns a `Time` which is a `Duration` after the current time.
-    /// `duration.after_now()` is equivalent to `Time::after(duration)`.
-    pub fn after_now(self) -> Time {
-        Time::after(self)
-    }
 }
 
 pub trait DurationNum: Sized {
@@ -411,21 +405,21 @@ mod tests {
 
         // Should not signal yet.
         assert_eq!(
-            timer.wait_handle(Signals::TIMER_SIGNALED, ten_ms.after_now()),
+            timer.wait_handle(Signals::TIMER_SIGNALED, Time::after(ten_ms)),
             Err(Status::TIMED_OUT)
         );
 
         // Set it, and soon it should signal.
-        assert_eq!(timer.set(five_secs.after_now(), slack), Ok(()));
+        assert_eq!(timer.set(Time::after(five_secs), slack), Ok(()));
         assert_eq!(
-            timer.wait_handle(Signals::TIMER_SIGNALED, six_secs.after_now()),
+            timer.wait_handle(Signals::TIMER_SIGNALED, Time::after(six_secs)),
             Ok(Signals::TIMER_SIGNALED)
         );
 
         // Cancel it, and it should stop signalling.
         assert_eq!(timer.cancel(), Ok(()));
         assert_eq!(
-            timer.wait_handle(Signals::TIMER_SIGNALED, ten_ms.after_now()),
+            timer.wait_handle(Signals::TIMER_SIGNALED, Time::after(ten_ms)),
             Err(Status::TIMED_OUT)
         );
     }

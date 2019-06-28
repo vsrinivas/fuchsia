@@ -159,6 +159,7 @@ impl Stream for LoggerStream {
 mod tests {
     use super::*;
 
+    use fuchsia_async::DurationExt;
     use fuchsia_zircon::prelude::*;
     use futures::future::TryFutureExt;
     use futures::stream::TryStreamExt;

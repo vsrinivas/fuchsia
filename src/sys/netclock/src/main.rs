@@ -8,7 +8,7 @@ use {
     chrono::{DateTime, Utc},
     failure::{Error, ResultExt},
     fidl_fuchsia_net as fnet, fidl_fuchsia_time as ftime, fidl_fuchsia_timezone as ftz,
-    fuchsia_async as fasync,
+    fuchsia_async::{self as fasync, DurationExt},
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
     futures::{StreamExt, TryStreamExt},

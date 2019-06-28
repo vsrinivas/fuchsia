@@ -4,7 +4,7 @@
 
 use {
     fidl_fuchsia_wlan_tap as wlantap,
-    fuchsia_async::{self as fasync, temp::TempStreamExt, TimeoutExt},
+    fuchsia_async::{self as fasync, temp::TempStreamExt, DurationExt, TimeoutExt},
     fuchsia_zircon::{self as zx, prelude::*},
     futures::{channel::mpsc, ready, task::Context, Future, FutureExt, Poll, StreamExt},
     std::{marker::Unpin, pin::Pin, sync::Arc},
@@ -134,17 +134,17 @@ pub struct RetryWithBackoff {
 impl RetryWithBackoff {
     pub fn new(timeout: zx::Duration) -> Self {
         RetryWithBackoff {
-            deadline: timeout.after_now(),
+            deadline: zx::Time::after(timeout),
             prev_delay: 0.millis(),
             delay: 1.millis(),
         }
     }
 
     pub fn sleep_unless_timed_out(&mut self) -> bool {
-        if 0.millis().after_now() > self.deadline {
+        if zx::Time::after(0.millis()) > self.deadline {
             false
         } else {
-            ::std::cmp::min(self.delay.after_now(), self.deadline).sleep();
+            ::std::cmp::min(zx::Time::after(self.delay), self.deadline).sleep();
             let new_delay = self.prev_delay + self.delay;
             self.prev_delay = self.delay;
             self.delay = new_delay;

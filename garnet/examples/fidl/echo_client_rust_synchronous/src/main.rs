@@ -36,7 +36,7 @@ fn main() -> Result<(), Error> {
        .context("Failed to connect to echo service")?;
 
     let mut proxy = EchoSynchronousProxy::new(client_end);
-    let res = proxy.echo_string(Some("hello world!"), 1.second().after_now())?;
+    let res = proxy.echo_string(Some("hello world!"), zx::Time::after(1.second()))?;
     println!("response: {:?}", res);
     Ok(())
 }

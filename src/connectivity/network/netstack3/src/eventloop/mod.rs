@@ -78,7 +78,7 @@ mod integration_tests;
 mod util;
 
 use ethernet as eth;
-use fuchsia_async as fasync;
+use fuchsia_async::{self as fasync, DurationExt};
 use fuchsia_zircon as zx;
 
 use std::convert::TryFrom;
@@ -738,7 +738,7 @@ impl EventDispatcher for EventLoopInner {
 
         let mut timer_send = self.event_send.clone();
         let timeout = async move {
-            await!(fasync::Timer::new(time.0));
+            await!(fasync::Timer::new(fasync::Time::from_zx(time.0)));
             timer_send.send(Event::TimerEvent(id));
             // The timer's cancel function is called by the receiver, so that
             // this async block does not need to have a reference to the

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use fuchsia_async as fasync;
-use fuchsia_zircon as zx;
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use omaha_client::state_machine::Timer;
@@ -13,7 +12,7 @@ pub struct FuchsiaTimer;
 
 impl Timer for FuchsiaTimer {
     fn wait(&mut self, delay: Duration) -> BoxFuture<'static, ()> {
-        fasync::Timer::new(zx::Time::after(delay.into())).boxed()
+        fasync::Timer::new(fasync::Time::after(delay.into())).boxed()
     }
 }
 
@@ -25,7 +24,7 @@ mod tests {
     #[test]
     fn test_timer() {
         let mut exec = fasync::Executor::new().unwrap();
-        let start_time = zx::Time::get(zx::ClockId::Monotonic);
+        let start_time = fasync::Time::now();
 
         let mut timer = FuchsiaTimer;
         let mut future = timer.wait(Duration::from_secs(1234));

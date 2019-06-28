@@ -11,6 +11,7 @@ use failure::{bail, format_err};
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_sme as fidl_sme;
+use fuchsia_async::DurationExt;
 use fuchsia_zircon::prelude::*;
 use futures::{
     channel::{mpsc, oneshot},

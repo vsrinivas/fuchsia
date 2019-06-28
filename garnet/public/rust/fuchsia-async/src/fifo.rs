@@ -255,10 +255,10 @@ impl<'a, F: FifoReadable<R>, R: FifoEntry> Future for ReadEntry<'a, F, R> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Executor, TimeoutExt, Timer};
+    use crate::{DurationExt, Executor, TimeoutExt, Timer};
     use fuchsia_zircon::prelude::*;
-    use futures::prelude::*;
     use futures::future::try_join;
+    use futures::prelude::*;
 
     #[derive(Clone, Debug, PartialEq, Eq)]
     #[repr(C)]

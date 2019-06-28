@@ -503,7 +503,7 @@ mod tests {
     use super::*;
     use crate::{
         temp::{TempAsyncReadExt, TempAsyncWriteExt},
-        Executor, TimeoutExt, Timer,
+        Executor, Time, TimeoutExt, Timer,
     };
     use fuchsia_zircon::prelude::*;
     use futures::future::{try_join, FutureExt, TryFutureExt};
@@ -522,11 +522,11 @@ mod tests {
         });
 
         // add a timeout to receiver so if test is broken it doesn't take forever
-        let receiver = receive_future.on_timeout(300.millis().after_now(), || panic!("timeout"));
+        let receiver = receive_future.on_timeout(Time::after(300.millis()), || panic!("timeout"));
 
         // Sends a message after the timeout has passed
         let sender =
-            Timer::new(100.millis().after_now()).then(|()| tx.write_all(bytes)).map_ok(|_tx| ());
+            Timer::new(Time::after(100.millis())).then(|()| tx.write_all(bytes)).map_ok(|_tx| ());
 
         let done = try_join(receiver, sender);
         exec.run_singlethreaded(done).unwrap();

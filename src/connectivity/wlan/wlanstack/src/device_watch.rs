@@ -101,7 +101,7 @@ mod tests {
     use fidl_fuchsia_wlan_common as fidl_common;
     use fidl_fuchsia_wlan_device::{self as fidl_wlan_dev, SupportedPhy};
     use fidl_fuchsia_wlan_tap as fidl_wlantap;
-    use fuchsia_async::{self as fasync, TimeoutExt};
+    use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
     use fuchsia_zircon::prelude::*;
     use wlantap_client;
 

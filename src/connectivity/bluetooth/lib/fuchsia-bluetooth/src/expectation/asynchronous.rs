@@ -29,7 +29,7 @@
 
 use {
     failure::{format_err, Error},
-    fuchsia_async::TimeoutExt,
+    fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_zircon as zx,
     futures::{future::FutureObj, task, Future, FutureExt, Poll},
     parking_lot::{MappedRwLockWriteGuard, RwLock, RwLockWriteGuard},

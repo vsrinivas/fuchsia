@@ -5,8 +5,8 @@
 #![deny(warnings)]
 
 use {
-    fuchsia_async::{self as fasync, TimeoutExt},
-    fuchsia_zircon::{Duration, Signals, Status, Time},
+    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
+    fuchsia_zircon::{DurationNum, Signals, Status},
     futures::{stream::Stream, task::Context, Poll},
     parking_lot::Mutex,
     std::{pin::Pin, sync::Arc, sync::Weak},
@@ -207,7 +207,7 @@ impl StreamEndpoint {
         self.state = StreamState::Closing;
         responder.send()?;
         if let Some(sock) = &self.transport {
-            let timeout = Time::after(Duration::from_seconds(3));
+            let timeout = 3.seconds().after_now();
 
             let close_signals = Signals::SOCKET_PEER_CLOSED;
             let close_wait = fasync::OnSignals::new(sock.as_ref(), close_signals);

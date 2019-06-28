@@ -17,7 +17,7 @@ use {
     fidl_fuchsia_bluetooth_gatt::Server_Marker,
     fidl_fuchsia_bluetooth_host::HostProxy,
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
-    fuchsia_async::{self as fasync, TimeoutExt},
+    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
         self as bt,
         util::{clone_bonding_data, clone_host_data, clone_host_info, clone_remote_device},

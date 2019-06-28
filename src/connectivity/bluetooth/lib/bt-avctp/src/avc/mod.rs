@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_async::TimeoutExt,
+    fuchsia_async::{Time, TimeoutExt},
     fuchsia_syslog::{fx_log_info, fx_vlog},
-    fuchsia_zircon::{self as zx, Duration, Time},
+    fuchsia_zircon::{self as zx, Duration},
     futures::{future, future::Ready, stream::FilterMap, Stream, StreamExt},
     std::{convert::TryFrom, result},
 };

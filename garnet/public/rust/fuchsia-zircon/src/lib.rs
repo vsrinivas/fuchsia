@@ -416,24 +416,24 @@ mod tests {
         let ten_ms = 10.millis();
 
         // Waiting on it without setting any signal should time out.
-        assert_eq!(event.wait_handle(Signals::USER_0, ten_ms.after_now()), Err(Status::TIMED_OUT));
+        assert_eq!(event.wait_handle(Signals::USER_0, Time::after(ten_ms)), Err(Status::TIMED_OUT));
 
         // If we set a signal, we should be able to wait for it.
         assert!(event.signal_handle(Signals::NONE, Signals::USER_0).is_ok());
         assert_eq!(
-            event.wait_handle(Signals::USER_0, ten_ms.after_now()).unwrap(),
+            event.wait_handle(Signals::USER_0, Time::after(ten_ms)).unwrap(),
             Signals::USER_0
         );
 
         // Should still work, signals aren't automatically cleared.
         assert_eq!(
-            event.wait_handle(Signals::USER_0, ten_ms.after_now()).unwrap(),
+            event.wait_handle(Signals::USER_0, Time::after(ten_ms)).unwrap(),
             Signals::USER_0
         );
 
         // Now clear it, and waiting should time out again.
         assert!(event.signal_handle(Signals::USER_0, Signals::NONE).is_ok());
-        assert_eq!(event.wait_handle(Signals::USER_0, ten_ms.after_now()), Err(Status::TIMED_OUT));
+        assert_eq!(event.wait_handle(Signals::USER_0, Time::after(ten_ms)), Err(Status::TIMED_OUT));
     }
 
     #[test]
@@ -455,26 +455,26 @@ mod tests {
                 pending: Signals::NONE,
             },
         ];
-        assert_eq!(object_wait_many(&mut items, ten_ms.after_now()), Err(Status::TIMED_OUT));
+        assert_eq!(object_wait_many(&mut items, Time::after(ten_ms)), Err(Status::TIMED_OUT));
         assert_eq!(items[0].pending, Signals::NONE);
         assert_eq!(items[1].pending, Signals::NONE);
 
         // Signal one object and it should return success.
         assert!(e1.signal_handle(Signals::NONE, Signals::USER_0).is_ok());
-        assert!(object_wait_many(&mut items, ten_ms.after_now()).is_ok());
+        assert!(object_wait_many(&mut items, Time::after(ten_ms)).is_ok());
         assert_eq!(items[0].pending, Signals::USER_0);
         assert_eq!(items[1].pending, Signals::NONE);
 
         // Signal the other and it should return both.
         assert!(e2.signal_handle(Signals::NONE, Signals::USER_1).is_ok());
-        assert!(object_wait_many(&mut items, ten_ms.after_now()).is_ok());
+        assert!(object_wait_many(&mut items, Time::after(ten_ms)).is_ok());
         assert_eq!(items[0].pending, Signals::USER_0);
         assert_eq!(items[1].pending, Signals::USER_1);
 
         // Clear signals on both; now it should time out again.
         assert!(e1.signal_handle(Signals::USER_0, Signals::NONE).is_ok());
         assert!(e2.signal_handle(Signals::USER_1, Signals::NONE).is_ok());
-        assert_eq!(object_wait_many(&mut items, ten_ms.after_now()), Err(Status::TIMED_OUT));
+        assert_eq!(object_wait_many(&mut items, Time::after(ten_ms)), Err(Status::TIMED_OUT));
         assert_eq!(items[0].pending, Signals::NONE);
         assert_eq!(items[1].pending, Signals::NONE);
     }

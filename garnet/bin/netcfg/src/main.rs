@@ -13,7 +13,7 @@ use std::path;
 use std::sync::Arc;
 
 use failure::{self, ResultExt};
-use fuchsia_async as fasync;
+use fuchsia_async::{self as fasync, DurationExt};
 use fuchsia_component::client::connect_to_service;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::{fx_log_err, fx_log_info};

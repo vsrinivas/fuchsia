@@ -412,6 +412,7 @@ mod tests {
         LogFilterOptions, LogListenerMarker, LogListenerRequest, LogListenerRequestStream,
         LogMarker, LogProxy, LogSinkMarker, LogSinkProxy,
     };
+    use fuchsia_async::DurationExt;
     use fuchsia_zircon::prelude::*;
 
     mod memory_bounded_buffer {

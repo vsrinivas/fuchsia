@@ -8,7 +8,7 @@ use fidl_fuchsia_bluetooth_control::{
     ControlMarker, ControlProxy, PairingDelegateMarker, PairingDelegateRequest,
     PairingDelegateRequestStream, PairingMethod,
 };
-use fuchsia_async::{self as fasync, TimeoutExt};
+use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
 use fuchsia_bluetooth::error::Error as BTError;
 use fuchsia_component as component;
 use fuchsia_syslog::macros::*;

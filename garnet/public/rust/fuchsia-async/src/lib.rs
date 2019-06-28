@@ -25,7 +25,7 @@ mod timer;
 pub use self::timer::{Interval, OnTimeout, TimeoutExt, Timer};
 mod executor;
 pub use self::executor::{
-    spawn, spawn_local, EHandle, Executor, PacketReceiver, ReceiverRegistration, Time,
+    spawn, spawn_local, DurationExt, EHandle, Executor, PacketReceiver, ReceiverRegistration, Time,
 };
 mod fifo;
 pub use self::fifo::{Fifo, FifoEntry, FifoReadable, FifoWritable, ReadEntry, WriteEntry};

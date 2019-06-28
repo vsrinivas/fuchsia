@@ -81,7 +81,9 @@ fn make_timer_stream<E>(
     time_stream: impl Stream<Item = TimeEntry<E>>,
 ) -> impl Stream<Item = TimedEvent<E>> {
     time_stream
-        .map(|(deadline, timed_event)| fasync::Timer::new(deadline).map(|_| timed_event))
+        .map(|(deadline, timed_event)| {
+            fasync::Timer::new(fasync::Time::from_zx(deadline)).map(|_| timed_event)
+        })
         .buffer_unordered(usize::max_value())
 }
 
@@ -145,7 +147,7 @@ where
 mod tests {
     use super::*;
     use {
-        fuchsia_zircon::{self as zx, prelude::DurationNum},
+        fuchsia_zircon::{self as zx, DurationNum},
         futures::channel::mpsc::{self, UnboundedSender},
         futures::Poll,
         pin_utils::pin_mut,

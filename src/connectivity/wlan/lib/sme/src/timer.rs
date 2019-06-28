@@ -51,7 +51,7 @@ impl<E> Timer<E> {
     where
         E: TimeoutDuration,
     {
-        self.schedule_at(event.timeout_duration().after_now(), event)
+        self.schedule_at(zx::Time::after(event.timeout_duration()), event)
     }
 }
 
@@ -81,8 +81,8 @@ mod tests {
     #[test]
     fn test_timer_schedule_at() {
         let (mut timer, mut time_stream) = create_timer::<Event>();
-        let timeout1 = 5.seconds().after_now();
-        let timeout2 = 10.seconds().after_now();
+        let timeout1 = zx::Time::after(5.seconds());
+        let timeout2 = zx::Time::after(10.seconds());
         assert_eq!(timer.schedule_at(timeout1, 7), 0);
         assert_eq!(timer.schedule_at(timeout2, 9), 1);
 
@@ -105,7 +105,7 @@ mod tests {
     #[test]
     fn test_timer_schedule() {
         let (mut timer, mut time_stream) = create_timer::<Event>();
-        let start = 0.millis().after_now();
+        let start = zx::Time::after(0.millis());
 
         assert_eq!(timer.schedule(5u32), 0);
 

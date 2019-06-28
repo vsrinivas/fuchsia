@@ -513,7 +513,7 @@ async fn acquire_dhcp() -> Result {
             // the race here and only starts after the first request from the DHCP client, which
             // results in a 3 second toll. This test typically takes ~4.5 seconds; we apply a large
             // multiple to be safe.
-            fuchsia_zircon::Time::after(fuchsia_zircon::Duration::from_seconds(60)),
+            fuchsia_async::Time::after(fuchsia_zircon::Duration::from_seconds(60)),
             || None,
         );
         let (addr, netmask) = await!(address_change)

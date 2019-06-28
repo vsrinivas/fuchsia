@@ -12,15 +12,15 @@ use crate::tests::*;
 use failure::{Error, ResultExt};
 use fidl_fuchsia_ui_text as txt;
 use fidl_fuchsia_ui_text_testing as txt_testing;
-use fuchsia_async as fasync;
+use fuchsia_async::{self as fasync, DurationExt};
 use fuchsia_component::server::ServiceFs;
-use fuchsia_zircon::{DurationNum, Time};
+use fuchsia_zircon::DurationNum;
 use futures::future::FutureObj;
 use futures::prelude::*;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref TEST_TIMEOUT: Time = 10.seconds().after_now();
+    pub static ref TEST_TIMEOUT: fasync::Time = 10.seconds().after_now();
 }
 
 macro_rules! text_field_tests {

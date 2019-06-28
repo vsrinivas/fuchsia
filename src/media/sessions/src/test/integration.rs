@@ -782,7 +782,7 @@ async fn service_stops_sending_sessions_change_events_to_inactive_clients() {
             panic!("Received event even though we didn't ack: {:?}, sessions registered: {:?}",
                    e, expected_sessions);
         }
-        _ = fasync::Timer::new(zx::Time::after(zx::Duration::from_millis(2))).fuse() => {
+        _ = fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(2))).fuse() => {
             return;
         }
     }
@@ -838,7 +838,7 @@ async fn service_stops_sending_active_session_change_events_to_inactive_clients(
         _ = test_service.registry_events.select_next_some() => {
             panic!("Received event from service even though we didn't ack");
         }
-        _ = fasync::Timer::new(zx::Time::after(zx::Duration::from_millis(2))).fuse() => {
+        _ = fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(2))).fuse() => {
             return;
         }
     }

@@ -363,14 +363,14 @@ mod tests {
         let port = Port::create().unwrap();
 
         // Waiting now should time out.
-        assert_eq!(port.wait(ten_ms.after_now()), Err(Status::TIMED_OUT));
+        assert_eq!(port.wait(Time::after(ten_ms)), Err(Status::TIMED_OUT));
 
         // Send a valid packet.
         let packet = Packet::from_user_packet(42, 123, UserPacket::from_u8_array([13; 32]));
         assert!(port.queue(&packet).is_ok());
 
         // Waiting should succeed this time. We should get back the packet we sent.
-        let read_packet = port.wait(ten_ms.after_now()).unwrap();
+        let read_packet = port.wait(Time::after(ten_ms)).unwrap();
         assert_eq!(read_packet, packet);
     }
 
@@ -387,11 +387,11 @@ mod tests {
             .is_ok());
 
         // Waiting without setting any signal should time out.
-        assert_eq!(port.wait(ten_ms.after_now()), Err(Status::TIMED_OUT));
+        assert_eq!(port.wait(Time::after(ten_ms)), Err(Status::TIMED_OUT));
 
         // If we set a signal, we should be able to wait for it.
         assert!(event.signal_handle(Signals::NONE, Signals::USER_0).is_ok());
-        let read_packet = port.wait(ten_ms.after_now()).unwrap();
+        let read_packet = port.wait(Time::after(ten_ms)).unwrap();
         assert_eq!(read_packet.key(), key);
         assert_eq!(read_packet.status(), 0);
         match read_packet.contents() {
@@ -404,11 +404,11 @@ mod tests {
         }
 
         // Shouldn't get any more packets.
-        assert_eq!(port.wait(ten_ms.after_now()), Err(Status::TIMED_OUT));
+        assert_eq!(port.wait(Time::after(ten_ms)), Err(Status::TIMED_OUT));
 
         // Calling wait_async again should result in another packet.
         assert!(event.wait_async_handle(&port, key, Signals::USER_0, WaitAsyncOpts::Once).is_ok());
-        let read_packet = port.wait(ten_ms.after_now()).unwrap();
+        let read_packet = port.wait(Time::after(ten_ms)).unwrap();
         assert_eq!(read_packet.key(), key);
         assert_eq!(read_packet.status(), 0);
         match read_packet.contents() {
@@ -424,13 +424,13 @@ mod tests {
         // remove it from  the queue.
         assert!(event.wait_async_handle(&port, key, Signals::USER_0, WaitAsyncOpts::Once).is_ok());
         assert!(port.cancel(&event, key).is_ok());
-        assert_eq!(port.wait(ten_ms.after_now()), Err(Status::TIMED_OUT));
+        assert_eq!(port.wait(Time::after(ten_ms)), Err(Status::TIMED_OUT));
 
         // If the event is signalled after the cancel, we also shouldn't get a packet.
         assert!(event.signal_handle(Signals::USER_0, Signals::NONE).is_ok()); // clear signal
         assert!(event.wait_async_handle(&port, key, Signals::USER_0, WaitAsyncOpts::Once).is_ok());
         assert!(port.cancel(&event, key).is_ok());
         assert!(event.signal_handle(Signals::NONE, Signals::USER_0).is_ok());
-        assert_eq!(port.wait(ten_ms.after_now()), Err(Status::TIMED_OUT));
+        assert_eq!(port.wait(Time::after(ten_ms)), Err(Status::TIMED_OUT));
     }
 }

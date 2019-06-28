@@ -13,7 +13,7 @@ fn main() {}
 mod tests {
     use failure::Error;
     use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage};
-    use fuchsia_async as fasync;
+    use fuchsia_async::{self as fasync, DurationExt};
     use fuchsia_syslog::{self as syslog, fx_log_info};
     use fuchsia_syslog_listener::{self as syslog_listener, LogProcessor};
     use fuchsia_zircon::{self as zx, DurationNum};

@@ -181,7 +181,7 @@ impl QmiClient {
 mod tests {
     use super::*;
     use {
-        fuchsia_async::{self as fasync, TimeoutExt},
+        fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
         fuchsia_zircon::{self as zx, DurationNum},
         futures::lock::Mutex,
         futures::{

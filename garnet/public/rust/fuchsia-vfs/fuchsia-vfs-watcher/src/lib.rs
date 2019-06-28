@@ -182,7 +182,7 @@ impl<'a> VfsWatchMsg<'a> {
 mod tests {
     use super::*;
 
-    use fuchsia_async::{self as fasync, TimeoutExt};
+    use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
     use fuchsia_zircon::prelude::*;
     use futures::prelude::*;
     use pin_utils::pin_mut;

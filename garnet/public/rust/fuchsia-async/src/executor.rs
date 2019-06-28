@@ -17,10 +17,10 @@ use std::cell::RefCell;
 use std::collections::BinaryHeap;
 use std::marker::Unpin;
 use std::ops::Deref;
-use std::sync::atomic::{AtomicBool, AtomicUsize, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU32, AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
 use std::task::{Context, Waker};
-use std::{cmp, fmt, mem, thread, u64, usize};
+use std::{cmp, fmt, mem, ops, thread, u64, usize};
 
 const EMPTY_WAKEUP_ID: u64 = u64::MAX;
 const TASK_READY_WAKEUP_ID: u64 = u64::MAX - 1;
@@ -46,16 +46,127 @@ pub fn spawn_local<F>(future: F)
 where
     F: Future<Output = ()> + 'static,
 {
-    Inner::spawn_local(
-        &EHandle::local().inner,
-        LocalFutureObj::new(Box::new(future)),
-    );
+    Inner::spawn_local(&EHandle::local().inner, LocalFutureObj::new(Box::new(future)));
 }
 
-/// Executor-relative time.
-// TODO(ambre): this is temporarily an alias for zx::Time, and will be
-// changed into an incompatible type.
-pub type Time = zx::Time;
+/// A time relative to the executor's clock.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(transparent)]
+pub struct Time(zx::Time);
+
+impl Time {
+    /// Return the current time according to the global executor.
+    ///
+    /// This function requires that an executor has been set up.
+    pub fn now() -> Self {
+        EHandle::local().inner.now()
+    }
+
+    /// Compute a deadline for the time in the future that is the
+    /// given `Duration` away. Similarly to `zx::Time::after`,
+    /// saturates on overflow instead of wrapping around.
+    ///
+    /// This function requires that an executor has been set up.
+    pub fn after(duration: zx::Duration) -> Self {
+        Self(zx::Time::from_nanos(Self::now().0.into_nanos().saturating_add(duration.into_nanos())))
+    }
+
+    /// Convert from `zx::Time`. This only makes sense if the time is
+    /// taken from the same source (for the real clock, this is
+    /// `zx::ClockId::Monotonic`).
+    pub fn from_zx(t: zx::Time) -> Self {
+        Time(t)
+    }
+
+    /// Convert into `zx::Time`. For the real clock, this will be a
+    /// monotonic time.
+    pub fn into_zx(self) -> zx::Time {
+        self.0
+    }
+
+    /// Convert from nanoseconds.
+    pub fn from_nanos(nanos: i64) -> Self {
+        Self::from_zx(zx::Time::from_nanos(nanos))
+    }
+
+    /// Convert to nanoseconds.
+    pub fn into_nanos(self) -> i64 {
+        self.0.into_nanos()
+    }
+
+    /// The maximum time.
+    pub const INFINITE: Time = Time(zx::Time::INFINITE);
+
+    /// The minimum time.
+    pub const INFINITE_PAST: Time = Time(zx::Time::INFINITE_PAST);
+}
+
+impl From<zx::Time> for Time {
+    fn from(t: zx::Time) -> Time {
+        Time(t)
+    }
+}
+
+impl From<Time> for zx::Time {
+    fn from(t: Time) -> zx::Time {
+        t.0
+    }
+}
+
+impl ops::Add<zx::Duration> for Time {
+    type Output = Time;
+    fn add(self, d: zx::Duration) -> Time {
+        Time(self.0 + d)
+    }
+}
+
+impl ops::Add<Time> for zx::Duration {
+    type Output = Time;
+    fn add(self, t: Time) -> Time {
+        Time(self + t.0)
+    }
+}
+
+impl ops::Sub<zx::Duration> for Time {
+    type Output = Time;
+    fn sub(self, d: zx::Duration) -> Time {
+        Time(self.0 - d)
+    }
+}
+
+impl ops::Sub<Time> for Time {
+    type Output = zx::Duration;
+    fn sub(self, t: Time) -> zx::Duration {
+        self.0 - t.0
+    }
+}
+
+impl ops::AddAssign<zx::Duration> for Time {
+    fn add_assign(&mut self, d: zx::Duration) {
+        self.0.add_assign(d)
+    }
+}
+
+impl ops::SubAssign<zx::Duration> for Time {
+    fn sub_assign(&mut self, d: zx::Duration) {
+        self.0.sub_assign(d)
+    }
+}
+
+/// An extension trait to provide `after_now` on `zx::Duration`.
+pub trait DurationExt {
+    /// Return a `Time` which is a `Duration` after the current time.
+    /// `duration.after_now()` is equivalent to `Time::after(duration)`.
+    ///
+    /// This method requires that an executor has been set up.
+    fn after_now(self) -> Time;
+}
+
+impl DurationExt for zx::Duration {
+    fn after_now(self) -> Time {
+        Time::after(self)
+    }
+}
 
 /// A trait for handling the arrival of a packet on a `zx::Port`.
 ///
@@ -200,8 +311,7 @@ where
 }
 
 impl Executor {
-    /// Creates a new executor.
-    pub fn new() -> Result<Self, zx::Status> {
+    fn new_with_time(time: ExecutorTime) -> Result<Self, zx::Status> {
         let executor = Executor {
             inner: Arc::new(Inner {
                 port: zx::Port::create()?,
@@ -210,6 +320,7 @@ impl Executor {
                 threads: Mutex::new(Vec::new()),
                 receivers: Mutex::new(Slab::new()),
                 ready_tasks: SegQueue::new(),
+                time: time,
             }),
         };
 
@@ -218,7 +329,29 @@ impl Executor {
         Ok(executor)
     }
 
-    /// Returns a handle to the executor.
+    /// Create a new executor running with actual time.
+    pub fn new() -> Result<Self, zx::Status> {
+        Self::new_with_time(ExecutorTime::RealTime)
+    }
+
+    /// Create a new executor running with fake time.
+    pub fn new_with_fake_time() -> Result<Self, zx::Status> {
+        Self::new_with_time(ExecutorTime::FakeTime(AtomicI64::new(
+            Time::INFINITE_PAST.into_nanos(),
+        )))
+    }
+
+    /// Return the current time according to the executor.
+    pub fn now(&self) -> Time {
+        self.inner.now()
+    }
+
+    /// Set the fake time to a given value.
+    pub fn set_fake_time(&self, t: Time) {
+        self.inner.set_fake_time(t)
+    }
+
+    /// Return a handle to the executor.
     pub fn ehandle(&self) -> EHandle {
         EHandle {
             inner: self.inner.clone(),
@@ -235,6 +368,10 @@ impl Executor {
     where
         F: Future,
     {
+        self.inner
+            .require_real_time()
+            .expect("Error: called `run_singlethreaded` on an executor using fake time");
+
         pin_mut!(main_future);
         let waker = self.singlethreaded_main_task_wake();
         let main_cx = &mut Context::from_waker(&waker);
@@ -248,8 +385,9 @@ impl Executor {
             let packet = with_local_timer_heap(|timer_heap| {
                 let deadline = next_deadline(timer_heap)
                     .map(|t| t.time)
-                    .unwrap_or(zx::Time::INFINITE);
-                match self.inner.port.wait(deadline) {
+                    .unwrap_or(Time::INFINITE);
+                // into_zx: we are using real time, so the time is a monotonic time.
+                match self.inner.port.wait(deadline.into_zx()) {
                     Ok(packet) => Some(packet),
                     Err(zx::Status::TIMED_OUT) => {
                         let time_waker = timer_heap.pop().unwrap();
@@ -318,6 +456,22 @@ impl Executor {
         }
     }
 
+    /// Wake all tasks waiting for expired timers, and return `true` if any task was woken.
+    ///
+    /// This is intended for use in test code in conjunction with fake time.
+    pub fn wake_expired_timers(&mut self) -> bool {
+        let now = self.now();
+        with_local_timer_heap(|timer_heap| {
+            let mut ret = false;
+            while let Some(waker) = next_deadline(timer_heap).filter(|waker| waker.time <= now) {
+                waker.wake();
+                timer_heap.pop();
+                ret = true;
+            }
+            ret
+        })
+    }
+
     /// Wake up the next task waiting for a timer, if any, and return the time for which the
     /// timer was scheduled.
     ///
@@ -330,7 +484,7 @@ impl Executor {
     ///     assert_eq!(Poll::Pending, exec.run_until_stalled(&mut future));
     ///     assert_eq!(Some(deadline), exec.wake_next_timer());
     ///     assert_eq!(Poll::Ready(()), exec.run_until_stalled(&mut future));
-    pub fn wake_next_timer(&mut self) -> Option<zx::Time> {
+    pub fn wake_next_timer(&mut self) -> Option<Time> {
         with_local_timer_heap(|timer_heap| {
             let deadline = next_deadline(timer_heap).map(|waker| {
                 waker.wake();
@@ -350,6 +504,7 @@ impl Executor {
         F: Future + Send + 'static,
         F::Output: Send + 'static,
     {
+        self.inner.require_real_time().expect("Error: called `run` on an executor using fake time");
         self.inner.threadiness.require_multithreaded().expect(
             "Error: called `run` on executor after using `spawn_local`. \
              Use `run_singlethreaded` instead.",
@@ -434,8 +589,9 @@ impl Executor {
             let packet = with_local_timer_heap(|timer_heap| {
                 let deadline = next_deadline(timer_heap)
                     .map(|t| t.time)
-                    .unwrap_or(zx::Time::INFINITE);
-                match inner.port.wait(deadline) {
+                    .unwrap_or(Time::INFINITE);
+                // into_zx: we are using real time, so the time is a monotonic time.
+                match inner.port.wait(deadline.into_zx()) {
                     Ok(packet) => Some(packet),
                     Err(zx::Status::TIMED_OUT) => {
                         let time_waker = timer_heap.pop().unwrap();
@@ -592,7 +748,7 @@ impl EHandle {
     }
 
     pub(crate) fn register_timer(
-        &self, time: zx::Time, waker_and_bool: &Arc<(AtomicWaker, AtomicBool)>,
+        &self, time: Time, waker_and_bool: &Arc<(AtomicWaker, AtomicBool)>,
     ) {
         with_local_timer_heap(|timer_heap| {
             let waker_and_bool = Arc::downgrade(waker_and_bool);
@@ -650,6 +806,11 @@ impl Threadiness {
     }
 }
 
+enum ExecutorTime {
+    RealTime,
+    FakeTime(AtomicI64),
+}
+
 struct Inner {
     port: zx::Port,
     done: AtomicBool,
@@ -657,10 +818,11 @@ struct Inner {
     threads: Mutex<Vec<thread::JoinHandle<()>>>,
     receivers: Mutex<Slab<Arc<PacketReceiver>>>,
     ready_tasks: SegQueue<Arc<Task>>,
+    time: ExecutorTime,
 }
 
 struct TimeWaker {
-    time: zx::Time,
+    time: Time,
     waker_and_bool: Weak<(AtomicWaker, AtomicBool)>,
 }
 
@@ -757,6 +919,29 @@ impl Inner {
         };
         receiver.receive_packet(packet);
     }
+
+    fn now(&self) -> Time {
+        match &self.time {
+            ExecutorTime::RealTime => Time::from_zx(zx::Time::get(zx::ClockId::Monotonic)),
+            ExecutorTime::FakeTime(t) => Time::from_nanos(t.load(Ordering::Relaxed)),
+        }
+    }
+
+    fn set_fake_time(&self, new: Time) {
+        match &self.time {
+            ExecutorTime::RealTime => {
+                panic!("Error: called `advance_fake_time` on an executor using actual time.")
+            }
+            ExecutorTime::FakeTime(t) => t.store(new.into_nanos(), Ordering::Relaxed),
+        }
+    }
+
+    fn require_real_time(&self) -> Result<(), ()> {
+        match self.time {
+            ExecutorTime::RealTime => Ok(()),
+            ExecutorTime::FakeTime(_) => Err(()),
+        }
+    }
 }
 
 struct Task {
@@ -768,5 +953,76 @@ impl ArcWake for Task {
     fn wake_by_ref(arc_self: &Arc<Self>) {
         arc_self.executor.ready_tasks.push(arc_self.clone());
         arc_self.executor.notify_task_ready();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fuchsia_zircon::{self as zx, DurationNum};
+
+    fn time_operations_param(zxt1: zx::Time, zxt2: zx::Time, d: zx::Duration) {
+        let t1 = Time::from_zx(zxt1);
+        let t2 = Time::from_zx(zxt2);
+        assert_eq!(t1.into_zx(), zxt1);
+
+        assert_eq!(Time::from_zx(zx::Time::INFINITE), Time::INFINITE);
+        assert_eq!(Time::from_zx(zx::Time::INFINITE_PAST), Time::INFINITE_PAST);
+        assert_eq!(zxt1 - zxt2, t1 - t2);
+        assert_eq!(zxt1 + d, (t1 + d).into_zx());
+        assert_eq!(d + zxt1, (d + t1).into_zx());
+        assert_eq!(zxt1 - d, (t1 - d).into_zx());
+
+        let mut zxt = zxt1;
+        let mut t = t1;
+        t += d;
+        zxt += d;
+        assert_eq!(zxt, t.into_zx());
+        t -= d;
+        zxt -= d;
+        assert_eq!(zxt, t.into_zx());
+    }
+
+    #[test]
+    fn time_operations() {
+        time_operations_param(zx::Time::from_nanos(0), zx::Time::from_nanos(1000), 12.seconds());
+        time_operations_param(
+            zx::Time::from_nanos(-100000),
+            zx::Time::from_nanos(65324),
+            (-785).hours(),
+        );
+    }
+
+    #[test]
+    fn time_now_real_time() {
+        let _executor = Executor::new().unwrap();
+        let t1 = zx::Time::after(0.seconds());
+        let t2 = Time::now().into_zx();
+        let t3 = zx::Time::after(0.seconds());
+        assert!(t1 <= t2);
+        assert!(t2 <= t3);
+    }
+
+    #[test]
+    fn time_now_fake_time() {
+        let executor = Executor::new_with_fake_time().unwrap();
+        let t1 = Time::from_zx(zx::Time::from_nanos(0));
+        executor.set_fake_time(t1);
+        assert_eq!(Time::now(), t1);
+
+        let t2 = Time::from_zx(zx::Time::from_nanos(1000));
+        executor.set_fake_time(t2);
+        assert_eq!(Time::now(), t2);
+    }
+
+    #[test]
+    fn time_after_overflow() {
+        let executor = Executor::new_with_fake_time().unwrap();
+
+        executor.set_fake_time(Time::INFINITE - 100.nanos());
+        assert_eq!(Time::after(200.seconds()), Time::INFINITE);
+
+        executor.set_fake_time(Time::INFINITE_PAST + 100.nanos());
+        assert_eq!(Time::after((-200).seconds()), Time::INFINITE_PAST);
     }
 }

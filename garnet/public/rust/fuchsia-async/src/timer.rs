@@ -8,7 +8,7 @@
 //! at a particular point in the future.
 
 use {
-    crate::executor::EHandle,
+    crate::executor::{EHandle, Time},
     fuchsia_zircon as zx,
     futures::{
         task::{AtomicWaker, Context},
@@ -30,7 +30,7 @@ use {
 pub trait TimeoutExt: Future + Sized {
     /// Wraps the future in a timeout, calling `on_timeout` to produce a result
     /// when the timeout occurs.
-    fn on_timeout<OT>(self, time: zx::Time, on_timeout: OT) -> OnTimeout<Self, OT>
+    fn on_timeout<OT>(self, time: Time, on_timeout: OT) -> OnTimeout<Self, OT>
     where
         OT: FnOnce() -> Self::Output,
     {
@@ -96,7 +96,7 @@ impl Unpin for Timer {}
 
 impl Timer {
     /// Create a new timer scheduled to fire at `time`.
-    pub fn new(time: zx::Time) -> Self {
+    pub fn new(time: Time) -> Self {
         let waker_and_bool = Arc::new((AtomicWaker::new(), AtomicBool::new(false)));
         EHandle::local().register_timer(time, &waker_and_bool);
         Timer { waker_and_bool }
@@ -104,7 +104,7 @@ impl Timer {
 
     /// Reset the `Timer` to a fire at a new time.
     /// The `Timer` must have already fired since last being reset.
-    pub fn reset(&mut self, time: zx::Time) {
+    pub fn reset(&mut self, time: Time) {
         assert!(self.did_fire());
         self.waker_and_bool.1.store(false, Ordering::SeqCst);
         EHandle::local().register_timer(time, &self.waker_and_bool)
@@ -137,14 +137,14 @@ impl Future for Timer {
 #[must_use = "streams do nothing unless polled"]
 pub struct Interval {
     timer: Timer,
-    next: zx::Time,
+    next: Time,
     duration: zx::Duration,
 }
 
 impl Interval {
     /// Create a new `Interval` which yields every `duration`.
     pub fn new(duration: zx::Duration) -> Self {
-        let next = duration.after_now();
+        let next = Time::after(duration);
         Interval {
             timer: Timer::new(next),
             next,
@@ -194,8 +194,8 @@ mod test {
     #[test]
     fn shorter_fires_first() {
         let mut exec = Executor::new().unwrap();
-        let shorter = Timer::new(100.millis().after_now());
-        let longer = Timer::new(1.second().after_now());
+        let shorter = Timer::new(Time::after(100.millis()));
+        let longer = Timer::new(Time::after(1.second()));
         match exec.run_singlethreaded(shorter.select(longer)) {
             Either::Left(()) => {}
             Either::Right(()) => panic!("wrong timer fired"),
@@ -205,8 +205,8 @@ mod test {
     #[test]
     fn shorter_fires_first_multithreaded() {
         let mut exec = Executor::new().unwrap();
-        let shorter = Timer::new(100.millis().after_now());
-        let longer = Timer::new(1.second().after_now());
+        let shorter = Timer::new(Time::after(100.millis()));
+        let longer = Timer::new(Time::after(1.second()));
         match exec.run(shorter.select(longer), 4) {
             Either::Left(()) => {}
             Either::Right(()) => panic!("wrong timer fired"),
@@ -216,7 +216,7 @@ mod test {
     #[test]
     fn fires_after_timeout() {
         let mut exec = Executor::new().unwrap();
-        let deadline = 5.seconds().after_now();
+        let deadline = Time::after(5.seconds());
         let mut future = Timer::new(deadline);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut future));
         assert_eq!(Some(deadline), exec.wake_next_timer());
@@ -226,7 +226,7 @@ mod test {
     #[test]
     fn interval() {
         let mut exec = Executor::new().unwrap();
-        let start = 0.seconds().after_now();
+        let start = Time::now();
 
         let counter = Arc::new(::std::sync::atomic::AtomicUsize::new(0));
         let mut future = {
@@ -264,4 +264,17 @@ mod test {
         assert_eq!(second_deadline, first_deadline + 5.seconds());
     }
 
+    #[test]
+    fn timer_fake_time() {
+        let mut exec = Executor::new_with_fake_time().unwrap();
+        exec.set_fake_time(Time::from_nanos(0));
+
+        let mut timer = Timer::new(Time::after(1.seconds()));
+        assert_eq!(exec.wake_expired_timers(), false);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut timer));
+
+        exec.set_fake_time(Time::after(1.seconds()));
+        assert_eq!(exec.wake_expired_timers(), true);
+        assert_eq!(Poll::Ready(()), exec.run_until_stalled(&mut timer));
+    }
 }
