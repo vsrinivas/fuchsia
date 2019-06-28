@@ -73,10 +73,11 @@ test_package("test_harness_fixture_test") {
   deprecated_shell = "//build"
 
   tests = [
-    {
-      name = "test_harness_fixture_test_bin"
-      environments = basic_envs
-    },
+    # TODO(FLK-410): deflake and reenable this test.
+    # {
+    #   name = "test_harness_fixture_test_bin"
+    #   environments = basic_envs
+    # },
   ]
 
   deps = [
