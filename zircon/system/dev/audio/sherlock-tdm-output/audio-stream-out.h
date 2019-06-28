@@ -25,7 +25,6 @@
 #include <zircon/thread_annotations.h>
 
 #include "tas5720.h"
-#include "tas5760.h"
 
 namespace audio {
 namespace sherlock {

@@ -64,24 +64,7 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
         return status;
     }
 
-    if (codecs_types_ == metadata::Codec::Tas5760_Tas5720) {
-        zxlogf(INFO, "audio: using Tas5760 and Tas5720 codecs\n");
-        fbl::AllocChecker ac;
-        codecs_ = fbl::Array(new (&ac) fbl::unique_ptr<Codec>[2], 2);
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-        codecs_[0] = Tas5760::Create(components[COMPONENT_I2C_0]);
-        if (!codecs_[0]) {
-            zxlogf(ERROR, "%s could not get tas5760\n", __func__);
-            return ZX_ERR_NO_RESOURCES;
-        }
-        codecs_[1] = Tas5720::Create(components[COMPONENT_I2C_1]);
-        if (!codecs_[1]) {
-            zxlogf(ERROR, "%s could not get tas5720\n", __func__);
-            return ZX_ERR_NO_RESOURCES;
-        }
-    } else if (codecs_types_ == metadata::Codec::Tas5720x3) {
+    if (codecs_types_ == metadata::Codec::Tas5720x3) {
         zxlogf(INFO, "audio: using 3 Tas5720 codecs\n");
         fbl::AllocChecker ac;
         codecs_ = fbl::Array(new (&ac) fbl::unique_ptr<Codec>[3], 3);
@@ -142,14 +125,9 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
 
     audio_en_.Write(1); // SOC_AUDIO_EN.
 
-    if (codecs_types_ == metadata::Codec::Tas5760_Tas5720) {
-        codecs_[0]->Init(std::nullopt); // No slot setting, always uses L+R.
-        codecs_[1]->Init(0);  // Use TDM slot 0.
-    } else {
-        codecs_[0]->Init(0); // Use TDM slot 0.
-        codecs_[1]->Init(1); // Use TDM slot 1.
-        codecs_[2]->Init(0); // Use TDM slot 0.
-    }
+    codecs_[0]->Init(0); // Use TDM slot 0.
+    codecs_[1]->Init(1); // Use TDM slot 1.
+    codecs_[2]->Init(0); // Use TDM slot 0.
 
     InitBuffer(kRingBufferSize);
 
