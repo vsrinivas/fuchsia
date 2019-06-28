@@ -4,6 +4,7 @@
 
 import("$zx/public/gn/build_api_module.gni")
 import("$zx/public/gn/config/standard.gni")
+import("$zx/public/gn/test/zbi_test.gni")
 import("$zx/public/gn/toolchain/c_utils.gni")
 import("$zx/public/gn/toolchain/environment_redirect.gni")
 import("$zx/public/gn/zbi.gni")
@@ -164,6 +165,17 @@ if (current_toolchain == default_toolchain) {
   }
 
   foreach(cpu, standard_fuchsia_cpus) {
+    # TODO(mcgrathr): This target name is used directly by the zircon.py
+    # recipe.  The actual ZBI file is now built via zbi_test() and is deep
+    # down the deps tree from here.  Remove this when the target name is no
+    # longer being used directly.
+    group("core-tests-$cpu") {
+      testonly = true
+      public_deps = [
+        ":legacy-$cpu",
+      ]
+    }
+
     group("legacy-$cpu") {
       testonly = true
       deps = [
@@ -216,10 +228,7 @@ group("all-cpu") {
   testonly = true
   deps = []
   foreach(cpu, standard_fuchsia_cpus) {
-    deps += [
-      ":$cpu",
-      ":core-tests-$cpu",
-    ]
+    deps += [ ":$cpu" ]
   }
 }
 
@@ -232,15 +241,6 @@ group("build-tests") {
 
 foreach(cpu, standard_fuchsia_cpus) {
   if (current_toolchain == default_toolchain) {
-    zbi("core-tests-$cpu") {
-      output_dir = root_build_dir
-      testonly = true
-      cpu = cpu
-      deps = [
-        ":core-tests-$cpu-deps",
-      ]
-    }
-
     zbi(cpu) {
       output_dir = root_build_dir
       testonly = true
@@ -302,22 +302,6 @@ foreach(cpu, standard_fuchsia_cpus) {
         legacy_barrier = []
       }
     }
-  }
-
-  environment_redirect("core-tests-$cpu-deps") {
-    visibility = [ ":*" ]
-    testonly = true
-    cpu = cpu
-    environment_label = "$zx/public/gn/toolchain:user"
-    direct = true
-    deps = [
-      "kernel",
-      "system/utest:core-tests",
-    ]
-    assert_no_deps = [
-      "system/core/*",
-      "system/dev/*",
-    ]
   }
 
   environment_redirect("legacy-deps-$cpu") {
@@ -503,6 +487,16 @@ build_api_module("buildargs") {
 #     This is also the argument to Ninja that ensures this image will be built.
 #     Type: path relative to $root_build_dir
 #
+#   testonly
+#     Optional: This image includes test code/data not meant for production.
+#     Type: bool
+#     Default: false
+#
+#   tags
+#     Optional: Tags associated with the image.  Certain tags may indicate
+#     to the build API consumer what should be done with the image.
+#     Type: list(string)
+#
 #   type
 #     Required: Type of file, e.g. "zbi".  This often corresponds to the
 #     extension used on the image file name, but not always.  For many
@@ -534,6 +528,10 @@ build_api_module("legacy_images") {
   foreach(cpu, standard_fuchsia_cpus) {
     deps += [ ":legacy-$cpu" ]
   }
+}
+
+build_api_module("zbi_test_success_string") {
+  contents = zbi_test_success_string
 }
 
 # Packages defined in the build.
@@ -752,7 +750,6 @@ if (current_toolchain == default_toolchain) {
     ]
     deps = [
       ":$current_cpu($default_toolchain)",
-      ":core-tests-$current_cpu($default_toolchain)",
       ":tools($default_toolchain)",
     ]
     data_keys = [ "elf_link_output" ]

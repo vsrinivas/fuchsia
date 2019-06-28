@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/test/zbi_test.gni")
+
 # Each subdirectory just provides an eponymous source_set().
 core_tests = [
   "bad-syscall",
@@ -53,22 +55,31 @@ unified_only = [
 group("core") {
   testonly = true
 
-  # Note this doesn't include ":core-tests" because the standalone binary
-  # only works when run directly from userboot and so is never useful to
-  # have in a normal boot image full of tests to run.  Instead, it's
-  # included directly in a standalone core-tests ZBI.
-  deps = []
+  # The zbi_test() doesn't go into any other zbi() image.  This just brings
+  # it into the dependency graph for building and test-running metadata.
+  deps = [
+    ":core-tests",  # Together.
+  ]
   foreach(test, core_tests) {
     deps += [ ":$test" ]  # And alone.
   }
 }
 
-# First, build all of those into the standalone core-tests binary.  This
-# can be run directly from userboot with nothing else on the system.
-# It's not a test() so that it won't be run by `runtests`, since that
-# runs all the individual test() binaries created below.
-executable("core-tests") {
-  testonly = true
+# Build each test as a standalone binary meant to be run by runtests.
+foreach(test_name, core_tests) {
+  test(test_name) {
+    test_group = "core"
+    deps = [
+      test_name,
+    ]
+  }
+}
+
+# Now build all of those (and more) together into the standalone core-tests
+# binary.  This can and must be run directly from userboot because it
+# requires the root resource handle but no system services whatsoever.
+test("standalone") {
+  test_group = "core"
   deps = core_tests + unified_only
   sources = [
     "main.c",
@@ -80,12 +91,23 @@ executable("core-tests") {
   ]
 }
 
-# Next, build each into its own standalone test binary.
-foreach(test_name, core_tests) {
-  test(test_name) {
-    test_group = "core"
-    deps = [
-      test_name,
-    ]
-  }
+# Make that into a bootable ZBI with just the kernel.
+zbi_test("core-tests") {
+  assert(current_cpu != "")
+
+  args = [ "userboot=test/core/standalone-test" ]
+  deps = [
+    ":standalone",
+    "$zx/kernel",
+  ]
+  assert_no_deps = [
+    "$zx/system/core/*",
+    "$zx/system/dev/*",
+  ]
+
+  # TODO(mcgrathr): The zircon.py recipe depends on this exact file name.
+  # Remove this and let it use the defaults when infra is only using the
+  # build API metadata to find the ZBI file.
+  output_dir = root_build_dir
+  output_name = "core-tests-$current_cpu"
 }

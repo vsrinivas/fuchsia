@@ -191,6 +191,11 @@ template("zbi_input") {
 #     Type: string
 #     Default: target_name
 #
+#   tags
+#     Optional: List of tags to associate with the image.
+#     This is reflected in build_api_module("images") metadata.
+#     Type: list(string)
+#
 template("zbi") {
   zbi_target = target_name
   input_target = "_zbi.input.$target_name"
@@ -277,9 +282,15 @@ template("zbi") {
     metadata = {
       images = [
         {
+          cpu = current_cpu
           name = "$zbi_target.bootfs"
           type = "json"
           path = rebase_path(json_file, root_build_dir)
+          forward_variables_from(invoker, [ "tags" ])
+          if (!defined(tags)) {
+            tags = []
+          }
+          tags += [ "manifest" ]
         },
       ]
     }
@@ -353,6 +364,10 @@ template("zbi") {
           type = "zbi"
           cpu = cpu
           compressed = !defined(invoker.compress) || invoker.compress
+          if (defined(testonly) && testonly) {
+            testonly = true
+          }
+          forward_variables_from(invoker, [ "tags" ])
         },
       ]
 

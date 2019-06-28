@@ -441,13 +441,15 @@ found in the BOOTFS will be `pkg/foo/bin/app`, `pkg/foo/lib/ld.so.1`, etc.
 If this option is set, userboot will attempt to reboot the machine after
 waiting 3 seconds when the process it launches exits.
 
-*If running with userboot=bin/core-tests in QEMU, this will cause the system to
-continually run tests and reboot.*
+*If running a "ZBI test" image in QEMU, this will cause the system to
+continually run tests and reboot.*  For QEMU, `userboot.shutdown` is usually
+preferable.
 
 ## userboot.shutdown
 
 If this option is set, userboot will attempt to power off the machine
-when the process it launches exits.
+when the process it launches exits.  Note if `userboot.reboot` is set
+then `userboot.shutdown` will be ignored.
 
 ## vdso.soft_ticks=\<bool>
 

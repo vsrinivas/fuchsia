@@ -41,7 +41,8 @@ static void log_write(const void* data, size_t len) {
 
 static zx_handle_t root_resource;
 
-void __libc_extensions_init(uint32_t count, zx_handle_t handle[], uint32_t info[]) {
+void __libc_extensions_init(uint32_t count,
+                            zx_handle_t handle[], uint32_t info[]) {
     for (unsigned n = 0; n < count; n++) {
         if (info[n] == PA_HND(PA_RESOURCE, 0)) {
             root_resource = handle[n];
@@ -49,6 +50,19 @@ void __libc_extensions_init(uint32_t count, zx_handle_t handle[], uint32_t info[
             info[n] = 0;
             break;
         }
+    }
+    if (root_resource == ZX_HANDLE_INVALID) {
+        static const char kStandaloneMsg[] =
+            "*** Standalone core-tests must run directly from userboot ***\n";
+        zx_debug_write(kStandaloneMsg, sizeof(kStandaloneMsg) - 1);
+        __builtin_trap();
+    } else {
+        if (zx_debuglog_create(root_resource, 0, &log_handle) != ZX_OK) {
+            zx_process_exit(-2);
+        }
+        static const char kStartMsg[] =
+            "*** Running standalone Zircon core tests ***\n";
+        zx_debuglog_write(log_handle, 0, kStartMsg, sizeof(kStartMsg));
     }
 }
 
@@ -87,52 +101,25 @@ ssize_t writev(int fd, const struct iovec* iov, int num) {
     return count;
 }
 
-#define ERROR()                                                                                    \
-    do {                                                                                           \
-        errno = ENOSYS;                                                                            \
-        return -1;                                                                                 \
-    } while (0)
-
 off_t lseek(int fd, off_t offset, int whence) {
-    ERROR();
+    errno = ENOSYS;
+    return -1;
 }
 
 int isatty(int fd) {
     return 1;
 }
 
+// TODO(mcgrathr): When unittest is gone, the zxtest library main will work
+// fine here and this can be removed.
 int main(int argc, char** argv) {
-    // Please do not use get_root_resource() in new code. See ZX-1467.
-    if (get_root_resource() == ZX_HANDLE_INVALID) {
-        // If the root resource isn't available, printf will go nowhere. Put a
-        // message on the stack and crash. This will show up in the standard
-        // backtrace that's logged after aborting.
-        __UNUSED volatile const char kErrorMsg[] =
-            "Cannot access root resource, refusing to run tests.\n"
-            "core-tests must be invoked by userboot (e.g. userboot=bin/core-tests)\n";
-        abort();
+    const bool ut_ok = unittest_run_all_tests(argc, argv);
+    int zxtest_return_code = RUN_ALL_TESTS(argc, argv);
+    if (ut_ok && zxtest_return_code == 0) {
+        // TODO(mcgrathr): The zircon.py recipe embeds this magic string.  When
+        // that's no longer used this can be removed.  It's now redundant with
+        // the success message from userboot after we return.
+        puts("core-tests succeeded RZMm59f7zOSs6aZUIXZR");
     }
-
-    // Please do not use get_root_resource() in new code. See ZX-1467.
-    if (zx_debuglog_create(get_root_resource(), 0, &log_handle) < 0) {
-        return -2;
-    }
-    zx_debuglog_write(log_handle, 0, "TEST", 4);
-
-    const bool success = unittest_run_all_tests(argc, argv);
-    if (!success) {
-        return EXIT_FAILURE;
-    }
-
-    const bool zxtest_success = RUN_ALL_TESTS(argc, argv) == 0;
-    if (!zxtest_success) {
-        return EXIT_FAILURE;
-    }
-
-    // The continuous integration infrastructure looks for this string in the output. This exact
-    // string is matched in the recipe code. They need to be kept in sync. This random value was
-    // chosen because it's unlikely to be produced by other code paths.
-    fprintf(stderr, "core-tests succeeded RZMm59f7zOSs6aZUIXZR\n");
-
-    return EXIT_SUCCESS;
+    return ut_ok ? zxtest_return_code : EXIT_FAILURE;
 }

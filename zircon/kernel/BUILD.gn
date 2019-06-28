@@ -408,6 +408,7 @@ if (current_toolchain == default_toolchain) {
         {
           label = get_label_info(":$target_name", "label_with_toolchain")
           name = "kernel"
+          tags = [ "incomplete" ]
           type = "zbi"
           path = output_path
           cpu = current_cpu

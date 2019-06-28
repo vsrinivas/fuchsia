@@ -347,10 +347,23 @@ zx_handle_t reserve_low_address_space(zx_handle_t log, zx_handle_t root_vmar) {
         status = proc.wait_one(
             ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
         check(log.get(), status, "zx_object_wait_one on process failed");
-        if (o.value[OPTION_SHUTDOWN]) {
-            do_powerctl(log.get(), root_resource.get(), ZX_SYSTEM_POWERCTL_SHUTDOWN);
-        } else if (o.value[OPTION_REBOOT]) {
-            do_powerctl(log.get(), root_resource.get(), ZX_SYSTEM_POWERCTL_REBOOT);
+        zx_info_process_t info;
+        status = proc.get_info(ZX_INFO_PROCESS, &info, sizeof(info),
+                               nullptr, nullptr);
+        check(log.get(), status, "zx_object_get_info on process failed");
+        printl(log.get(), "*** Exit status %zd ***\n", info.return_code);
+        if (info.return_code == 0) {
+            // The test runners match this exact string on the console log
+            // to determine that the test succeeded since shutting the
+            // machine down doesn't return a value to anyone for us.
+            printl(log.get(), "%s\n", ZBI_TEST_SUCCESS_STRING);
+        }
+        if (o.value[OPTION_REBOOT]) {
+            do_powerctl(log.get(), root_resource.get(),
+                        ZX_SYSTEM_POWERCTL_REBOOT);
+        } else if (o.value[OPTION_SHUTDOWN]) {
+            do_powerctl(log.get(), root_resource.get(),
+                        ZX_SYSTEM_POWERCTL_SHUTDOWN);
         }
     }
 

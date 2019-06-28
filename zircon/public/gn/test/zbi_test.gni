@@ -1,0 +1,107 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/zbi.gni")
+
+# The test runners have no better way to determine that a ZBI test succeeded
+# than to look for an exact string in the console log output.  zbi_test()
+# targets produce metadata to drive the test runners, which tells them to
+# match this particular string.  When booted in standalone mode, userboot
+# prints this message after the initial process exits iff its return_code was
+# zero, but shutting down.  This string includes some random data that
+# shouldn't appear elsewhere, to avoid false-positive matches.
+zbi_test_success_string =
+    "*** ZBI test successful! MDd7/O65SuVZ23yGAaQG4CedYQGH9E1/58r73pSAVK0= ***"
+
+# Build a ZBI file to be run as a standalone ZBI test.
+#
+# What we call a "ZBI test" is a test that consists of booting a ZBI and
+# capturing its console log.  The test is considered successful if the
+# $zbi_test_success_string is seen in the console log.  That string is emitted
+# by userboot when given the userboot.shutdown kernel command line argument
+# and the program it launched exits with a zero return code.
+#
+# zbi_test() is like a zbi() target, but specifically meant for ZBI tests.
+# The ZBI always embeds kernel command line arguments to instruct userboot.
+# Its metadata identifies this image as a ZBI test so it will be run, and
+# prevents deps on a zbi_test() target from other zbi() targets from folding
+# the ZBIs together (so a zbi_test() target can be thrown together with
+# individual test() targets populating a full system image).
+#
+# Parameters
+#
+#   * args
+#     - Required: List of kernel command line arguments,
+#     e.g. `[ "userboot=bin/my-standalone-test" ]`.
+#     "userboot.shutdown" is always appended to the list; this tells
+#     userboot to wait for the launched process to exit and to log its
+#     exit status and (if that's zero) $zbi_test_success_string before
+#     shutting down.  Note "userboot.reboot" can still be added at boot
+#     time to cause the machine to reboot instead of powering off.
+#     - Type: list(string)
+#
+# See zbi() for other parameters.
+template("zbi_test") {
+  test_target = target_name
+  cmdline_target = "_zbi_test.$target_name.cmdline"
+  zbi_target = "_zbi_test.$target_name.zbi"
+
+  zbi_input(cmdline_target) {
+    visibility = [ ":*" ]
+    testonly = true
+    type = "cmdline"
+    args = []
+    foreach(arg, invoker.args + [ "userboot.shutdown" ]) {
+      args += [ "--entry=$arg" ]
+    }
+  }
+
+  zbi(zbi_target) {
+    visibility = [ ":$test_target" ]
+    testonly = true
+    forward_variables_from(invoker,
+                           [
+                             "cpu",
+                             "compress",
+                             "output_dir",
+                             "output_extension",
+                             "output_name",
+                             "tags",
+                           ])
+    if (!defined(output_name)) {
+      output_name = test_target
+    }
+    deps = invoker.deps + [ ":$cmdline_target" ]
+
+    # TODO(BLD-353): The legacy build matches the "zbi-test" tag to drive the
+    # test runners.
+    if (!defined(tags)) {
+      tags = []
+    }
+    tags += [ "zbi-test" ]
+  }
+
+  # The main target is a group that provides a metadata.zbi_barrier
+  # blocking collection of the zbi() target's metadata.zbi_input_args.
+  group(test_target) {
+    forward_variables_from(invoker,
+                           [
+                             "assert_no_deps",
+                             "visibility",
+                           ])
+    testonly = true
+    deps = [
+      ":$zbi_target",
+    ]
+    metadata = {
+      # The test_zbi() target will not affect the contents of any zbi()
+      # targets that depend on it (directly or indirectly).
+      zbi_barrier = []
+
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+    }
+  }
+}
