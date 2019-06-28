@@ -283,7 +283,10 @@ mod simulation_tests {
         let mut ok = true;
         // client tests
         ok = run_test("verify_ethernet", test_verify_ethernet) && ok;
-        ok = run_test("set_country", test_set_country) && ok;
+        // TODO(FLK-416): Disabled temporarily
+        if false {
+            ok = run_test("set_country", test_set_country) && ok;
+        }
         ok = run_test("simulate_scan", test_simulate_scan) && ok;
         ok = run_test("connecting_to_ap", test_connecting_to_ap) && ok;
         ok = run_test("ethernet_tx_rx", test_ethernet_tx_rx) && ok;
@@ -342,24 +345,26 @@ mod simulation_tests {
         let set_country_fut = set_country_helper(&mut receiver, &svc, &mut req);
         pin_mut!(set_country_fut);
 
-        let _result = helper.run(
-            &mut exec,
-            1.seconds(),
-            "wlanstack_dev_svc set_country",
-            |event| {
-                match event {
-                    wlantap::WlantapPhyEvent::SetCountry { args } => {
-                        //  Confirm what was sent down was what was received.
-                        assert_eq!(args.alpha2, alpha2);
-                        sender
-                            .try_send(())
-                            .expect("test_set_country confirmed matching alpha2 string");
+        let _result = helper
+            .run(
+                &mut exec,
+                1.seconds(),
+                "wlanstack_dev_svc set_country",
+                |event| {
+                    match event {
+                        wlantap::WlantapPhyEvent::SetCountry { args } => {
+                            //  Confirm what was sent down was what was received.
+                            assert_eq!(args.alpha2, alpha2);
+                            sender
+                                .try_send(())
+                                .expect("test_set_country confirmed matching alpha2 string");
+                        }
+                        _ => {}
                     }
-                    _ => {}
-                }
-            },
-            set_country_fut,
-        ).expect("set_country() failed");
+                },
+                set_country_fut,
+            )
+            .expect("set_country() failed");
     }
 
     async fn set_country_helper<'a>(
