@@ -81,7 +81,7 @@ pub trait IoPacket: IoPacketClone {
     fn timestamp_stage_end(&mut self, stage: PipelineStages);
 
     /// Returns time in nanos spent by this packet in the /stage/
-    fn stage_duration(&self, stage: PipelineStages) -> u128;
+    fn stage_timestamps(&self) -> &[TimeInterval; PipelineStages::stage_count()];
 
     /// Returns time (in nanos) internal relative to an arbitrary Instant.
     fn interval_to_u64(&self, stage: PipelineStages) -> (u64, u64);

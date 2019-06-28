@@ -104,7 +104,7 @@ pub fn run_verifier(mut args: VerifierArgs) -> Result<(), Error> {
                 stage,
                 start,
                 end,
-                cmd.stage_duration(*stage),
+                cmd.stage_timestamps()[stage.stage_number()].duration(),
                 r.start,
                 r.end
             );
@@ -140,7 +140,7 @@ pub fn run_verifier(mut args: VerifierArgs) -> Result<(), Error> {
         // Update stats
         {
             let mut stats = args.stats.lock().unwrap();
-            stats.log_stat(&cmd);
+            stats.log(cmd.operation_type(), cmd.io_size(), cmd.stage_timestamps());
         }
 
         // For graceful exit or abort

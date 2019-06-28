@@ -93,8 +93,8 @@ impl IoPacket for FileIoPacket {
         self.io_sequence_number
     }
 
-    fn stage_duration(&self, stage: PipelineStages) -> u128 {
-        self.stage_timestamps[stage.stage_number()].duration()
+    fn stage_timestamps(&self) -> &[TimeInterval; PipelineStages::stage_count()] {
+        &self.stage_timestamps
     }
 
     fn interval_to_u64(&self, stage: PipelineStages) -> (u64, u64) {
