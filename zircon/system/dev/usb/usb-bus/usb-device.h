@@ -6,6 +6,7 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/usb.h>
+#include <ddktl/protocol/usb/bus.h>
 #include <ddktl/protocol/usb/hci.h>
 #include <ddktl/protocol/usb/hub.h>
 #include <fbl/array.h>
@@ -32,7 +33,12 @@ class UsbDevice : public UsbDeviceType,
   public:
     UsbDevice(zx_device_t* parent, const ddk::UsbHciProtocolClient& hci, uint32_t device_id,
               uint32_t hub_id, usb_speed_t speed)
-        : UsbDeviceType(parent), device_id_(device_id), hub_id_(hub_id), speed_(speed), hci_(hci) {}
+        : UsbDeviceType(parent),
+          device_id_(device_id),
+          hub_id_(hub_id),
+          speed_(speed),
+          hci_(hci),
+          bus_(parent) {}
 
     static zx_status_t Create(zx_device_t* parent, const ddk::UsbHciProtocolClient& hci,
                               uint32_t device_id, uint32_t hub_id, usb_speed_t speed,
@@ -148,6 +154,9 @@ private:
 
     // Parent's HCI protocol.
     ddk::UsbHciProtocolClient hci_;
+
+    // Protocol of parent (USB BUS).
+    ddk::UsbBusProtocolClient bus_;
 
     // Hub interface, for devices that are hubs.
     ddk::UsbHubInterfaceProtocolClient hub_intf_;

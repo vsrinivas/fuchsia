@@ -215,14 +215,28 @@ const usb_configuration_descriptor_t* UsbDevice::GetConfigDesc(uint8_t config) {
 }
 
 zx_status_t UsbDevice::DdkGetProtocol(uint32_t proto_id, void* protocol) {
-    if (proto_id == ZX_PROTOCOL_USB) {
+    zx_status_t status;
+
+    switch (proto_id) {
+    case ZX_PROTOCOL_USB: {
         auto* usb_proto = static_cast<usb_protocol_t*>(protocol);
         usb_proto->ctx = this;
         usb_proto->ops = &usb_protocol_ops_;
-        return ZX_OK;
-    } else {
-        return ZX_ERR_NOT_SUPPORTED;
+        status = ZX_OK;
+        break;
     }
+    case ZX_PROTOCOL_USB_BUS: {
+        auto* bus_proto = static_cast<usb_bus_protocol_t*>(protocol);
+        bus_.GetProto(bus_proto);
+        status = ZX_OK;
+        break;
+    }
+    default:
+        status = ZX_ERR_NOT_SUPPORTED;
+        break;
+    }
+
+    return status;
 }
 
 void UsbDevice::DdkUnbind() {

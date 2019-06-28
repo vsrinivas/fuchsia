@@ -32,7 +32,6 @@ typedef struct usb_hub {
     zx_device_t* usb_device;
     usb_protocol_t usb;
 
-    zx_device_t* bus_device;
     usb_bus_protocol_t bus;
 
     usb_speed_t hub_speed;
@@ -456,18 +455,11 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
         return status;
     }
 
-    // search for the bus device
-    zx_device_t* bus_device = device_get_parent(device);
-    usb_bus_protocol_t bus = { NULL, NULL };
-    while (bus_device != NULL && bus.ops == NULL) {
-        if (device_get_protocol(bus_device, ZX_PROTOCOL_USB_BUS, &bus) == ZX_OK) {
-            break;
-        }
-        bus_device = device_get_parent(bus_device);
-    }
-    if (!bus_device || !bus.ops) {
+    usb_bus_protocol_t bus;
+    status = device_get_protocol(device, ZX_PROTOCOL_USB_BUS, &bus);
+    if (status != ZX_OK) {
         zxlogf(ERROR, "usb_hub_bind could not find bus device\n");
-        return ZX_ERR_NOT_SUPPORTED;
+        return status;
     }
 
     usb_desc_iter_t iter;
@@ -507,7 +499,6 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
 
     hub->usb_device = device;
     hub->hub_speed = usb_get_speed(&usb);
-    hub->bus_device = bus_device;
     memcpy(&hub->usb, &usb, sizeof(usb_protocol_t));
     memcpy(&hub->bus, &bus, sizeof(usb_bus_protocol_t));
 
