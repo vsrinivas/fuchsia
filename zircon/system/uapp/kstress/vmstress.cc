@@ -10,6 +10,8 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/exception.h>
 #include <lib/zx/pager.h>
 #include <lib/zx/port.h>
 #include <lib/zx/thread.h>
@@ -21,6 +23,7 @@
 #include <zircon/syscalls/exception.h>
 #include <zircon/threads.h>
 
+#include <array>
 #include <assert.h>
 #include <atomic>
 #include <errno.h>
@@ -394,17 +397,17 @@ zx_status_t SingleVmoTestInstance::Start() {
 zx_status_t SingleVmoTestInstance::Stop() {
     zx::port port;
     zx::port::create(0, &port);
+    std::array<zx::channel, kNumVmoThreads> channels;
 
     if (use_pager_) {
         // We need to handle potential crashes in the vmo threads when the pager is torn down. Since
         // not all threads will actually crash, we can't stop handling crashes until all threads
-        // have terminated. Since the runtime closes a thrd's handle if the thread exits cleanly,
-        // we need to wait on a duplicate to properly recieve the termination signal.
+        // have terminated.
         for (unsigned i = 0; i < kNumVmoThreads; i++) {
-            zx_status_t status = thread_handles_[i].bind_exception_port(port, i, 0);
+            zx_status_t status = thread_handles_[i].create_exception_channel(0, &channels[i]);
             ZX_ASSERT(status == ZX_OK);
-            status = thread_handles_[i].wait_async(port, 0,
-                                                   ZX_THREAD_TERMINATED, ZX_WAIT_ASYNC_ONCE);
+            status = channels[i].wait_async(port, i, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                            ZX_WAIT_ASYNC_ONCE);
             ZX_ASSERT(status == ZX_OK);
         }
     }
@@ -417,7 +420,14 @@ zx_status_t SingleVmoTestInstance::Stop() {
             zx_port_packet_t packet;
             ZX_ASSERT(port.wait(zx::time::infinite(), &packet) == ZX_OK);
 
-            if (ZX_PKT_IS_EXCEPTION(packet.type)) {
+            if (packet.signal.observed & ZX_CHANNEL_READABLE) {
+                const zx::channel& channel = channels[packet.key];
+
+                zx_exception_info_t exception_info;
+                zx::exception exception;
+                ZX_ASSERT(channel.read(0, &exception_info, exception.reset_and_get_address(),
+                                       sizeof(exception_info), 1, nullptr, nullptr) == ZX_OK);
+
                 zx::thread& thrd = thread_handles_[packet.key];
 
                 zx_exception_report_t report;
@@ -437,7 +447,13 @@ zx_status_t SingleVmoTestInstance::Stop() {
                 ZX_ASSERT(thrd.write_state(ZX_THREAD_STATE_GENERAL_REGS,
                                            &regs, sizeof(regs)) == ZX_OK);
 
-                ZX_ASSERT(thrd.resume_from_exception(port, 0) == ZX_OK);
+                uint32_t exception_state = ZX_EXCEPTION_STATE_HANDLED;
+                ZX_ASSERT(exception.set_property(ZX_PROP_EXCEPTION_STATE, &exception_state,
+                                                 sizeof(exception_state)) == ZX_OK);
+
+                ZX_ASSERT(channel.wait_async(port, packet.key,
+                                             ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                             ZX_WAIT_ASYNC_ONCE) == ZX_OK);
             } else {
                 running_count--;
             }
