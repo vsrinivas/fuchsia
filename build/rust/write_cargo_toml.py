@@ -150,7 +150,7 @@ def main():
             data = add_dep(third_party_json, data_path)
             if data is None:
                 return -1
-            deps[data[0]] = data[1]
+            test_only_deps[data[0]] = data[1]
 
     features = args.features or []
 
