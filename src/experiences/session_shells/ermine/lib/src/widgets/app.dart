@@ -142,15 +142,14 @@ class App extends StatelessWidget {
                   // Status.
                   Positioned(
                     top: 0,
-                    height: 315,
+                    height: 432,
                     right: 0,
-                    width: 400,
+                    width: 377,
                     child: AnimatedBuilder(
                       animation: model.statusVisibility,
                       builder: (context, _) => model.statusVisibility.value
                           ? GetBounds(
                               child: Status(model: model.status),
-                              onBounds: model.injectTap,
                             )
                           : Offstage(),
                     ),

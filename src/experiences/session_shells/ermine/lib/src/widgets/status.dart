@@ -8,22 +8,28 @@ import 'package:flutter/material.dart';
 
 import '../models/status_model.dart';
 import '../utils/elevations.dart';
-import '../widgets/status_tick_bar_visualizer.dart';
+import '../widgets/status_graph_visualizer.dart';
+import '../widgets/status_progress_bar_visualizer.dart';
 
-const _listItemHeight = 35.0;
-const _leadingStyle = TextStyle(
+const _listItemHeight = 28.0;
+const _statusTextStyle = TextStyle(
   color: Colors.white,
-  fontSize: 14,
-  fontFamily: 'RobotoMono',
-  fontWeight: FontWeight.w700,
-);
-const _titleStyle = TextStyle(
-  color: Colors.white,
-  fontSize: 14,
-  wordSpacing: 1,
+  fontSize: 11,
+  letterSpacing: 0,
   fontFamily: 'RobotoMono',
   fontWeight: FontWeight.w400,
 );
+const _statusTextStyleBlack = TextStyle(
+  color: Colors.black,
+  fontSize: 11,
+  letterSpacing: 0,
+  fontFamily: 'RobotoMono',
+  fontWeight: FontWeight.w400,
+);
+Paint _fillPaint = Paint()
+  ..strokeWidth = 0.5
+  ..color = Colors.white
+  ..style = PaintingStyle.fill;
 
 /// Builds the display for the Status menu.
 class Status extends StatelessWidget {
@@ -34,134 +40,376 @@ class Status extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: Colors.grey,
       elevation: elevations.systemOverlayElevation,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(1.0),
         child: Container(
           color: Colors.black,
           child: ListView(
             physics: const NeverScrollableScrollPhysics(),
-            children: <Widget>[
-              // Date
-              SizedBox(
-                height: _listItemHeight * 1.4,
-                child: ListTile(
-                  dense: true,
-                  leading: Text(
-                    model.getDate(),
-                    textAlign: TextAlign.left,
-                    style: _titleStyle,
-                  ),
+            children: [
+              // Buttons
+              Container(
+                height: 43,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: <Widget>[
+                    SizedBox(
+                      width: 15,
+                    ),
+                    Container(
+                      height: 14,
+                      width: 37,
+                      color: Colors.white,
+                      child: FlatButton(
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        padding: EdgeInsets.all(0),
+                        child: Text(
+                          'SLEEP',
+                          style: _statusTextStyleBlack,
+                          textAlign: TextAlign.left,
+                        ),
+                        onPressed: null,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 20,
+                    ),
+                    Container(
+                      height: 14,
+                      width: 50,
+                      color: Colors.white,
+                      child: FlatButton(
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        padding: EdgeInsets.all(0),
+                        child: Text(
+                          'RESTART',
+                          style: _statusTextStyleBlack,
+                          textAlign: TextAlign.left,
+                        ),
+                        onPressed: null,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 20,
+                    ),
+                    Container(
+                      height: 14,
+                      width: 63,
+                      color: Colors.white,
+                      child: FlatButton(
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        padding: EdgeInsets.all(0),
+                        child: Text(
+                          'POWER OFF',
+                          style: _statusTextStyleBlack,
+                          textAlign: TextAlign.left,
+                        ),
+                        onPressed: null,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 90,
+                    ),
+                    Container(
+                      height: 14,
+                      width: 64,
+                      color: Colors.white,
+                      child: FlatButton(
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        padding: EdgeInsets.all(0),
+                        child: Text(
+                          'USER-NAME',
+                          style: _statusTextStyleBlack,
+                          textAlign: TextAlign.left,
+                        ),
+                        onPressed: null,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              // Wifi
-              SizedBox(
+              // Volume
+              _RowItem(
                 height: _listItemHeight,
-                child: ListTile(
-                  dense: true,
-                  leading: Text(
-                    'Wifi',
-                    style: _leadingStyle,
-                  ),
-                  title: Text(
-                    model.getWireless(),
-                    textAlign: TextAlign.right,
-                    style: _titleStyle,
-                  ),
+                rowTitle: _packageTitleText('VOLUME'),
+                rowContent: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: <Widget>[
+                    Container(
+                      width: 150,
+                      child: StatusProgressBarVisualizer(
+                        model: model.dummyVolumeModel,
+                        textAlignment: TextAlign.center,
+                        textStyle: _statusTextStyle,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 10,
+                    ),
+                    Container(
+                      height: 14,
+                      width: 24,
+                      color: Colors.white,
+                      child: FlatButton(
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        padding: EdgeInsets.all(0),
+                        child: Text(
+                          'MIN',
+                          style: _statusTextStyleBlack,
+                          textAlign: TextAlign.left,
+                        ),
+                        onPressed: null,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 10,
+                    ),
+                    Container(
+                      height: 14,
+                      width: 24,
+                      color: Colors.white,
+                      child: FlatButton(
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        padding: EdgeInsets.all(0),
+                        child: Text(
+                          'MAX',
+                          style: _statusTextStyleBlack,
+                          textAlign: TextAlign.left,
+                        ),
+                        onPressed: null,
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              // Brightness
+              _RowItem(
+                height: _listItemHeight,
+                rowTitle: _packageTitleText('BRIGHTNESS'),
+                rowContent: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: <Widget>[
+                    Container(
+                      width: 150,
+                      child: StatusProgressBarVisualizer(
+                        model: model.dummyBrightnessModel,
+                        textAlignment: TextAlign.center,
+                        textStyle: _statusTextStyle,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 10,
+                    ),
+                    Container(
+                      height: 14,
+                      width: 24,
+                      color: Colors.white,
+                      child: FlatButton(
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        padding: EdgeInsets.all(0),
+                        child: Text(
+                          'MIN',
+                          style: _statusTextStyleBlack,
+                          textAlign: TextAlign.left,
+                        ),
+                        onPressed: null,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 10,
+                    ),
+                    Container(
+                      height: 14,
+                      width: 24,
+                      color: Colors.white,
+                      child: FlatButton(
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        padding: EdgeInsets.all(0),
+                        child: Text(
+                          'MAX',
+                          style: _statusTextStyleBlack,
+                          textAlign: TextAlign.left,
+                        ),
+                        onPressed: null,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Music Player
+              _RowItem(
+                height: _listItemHeight,
+                rowTitle: _packageTitleText('MUSIC'),
+                rowContent: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: <Widget>[
+                      Container(
+                        height: 14,
+                        width: 31,
+                        color: Colors.white,
+                        child: FlatButton(
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          padding: EdgeInsets.all(0),
+                          child: Text(
+                            'BACK',
+                            style: _statusTextStyleBlack,
+                            textAlign: TextAlign.left,
+                          ),
+                          onPressed: null,
+                        ),
+                      ),
+                      SizedBox(
+                        width: 10,
+                      ),
+                      Container(
+                        height: 14,
+                        width: 38,
+                        color: Colors.white,
+                        child: FlatButton(
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          padding: EdgeInsets.all(0),
+                          child: Text(
+                            'PAUSE',
+                            style: _statusTextStyleBlack,
+                            textAlign: TextAlign.left,
+                          ),
+                          onPressed: null,
+                        ),
+                      ),
+                      SizedBox(
+                        width: 10,
+                      ),
+                      Container(
+                        height: 14,
+                        width: 31,
+                        color: Colors.white,
+                        child: FlatButton(
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          padding: EdgeInsets.all(0),
+                          child: Text(
+                            'SKIP',
+                            style: _statusTextStyleBlack,
+                            textAlign: TextAlign.left,
+                          ),
+                          onPressed: null,
+                        ),
+                      ),
+                    ]),
+              ),
+              // Processes
+              _RowItem(
+                height: _listItemHeight,
+                rowTitle: _packageTitleText('TOP PROCESSES'),
+                rowContent: _packageContentText(''),
+              ),
+              // TODO: Add grid visualizer.
+              Container(
+                height: 84 - _listItemHeight,
+                child: Row(
+                  children: <Widget>[
+                    SizedBox(
+                      width: 17,
+                    ),
+                    _packageTitleText('Name\n  IDE\n  Chrome\n  Music'),
+                    SizedBox(
+                      width: 148,
+                    ),
+                    _packageTitleText('PID\n6007\n9646\n5782'),
+                    SizedBox(
+                      width: 30,
+                    ),
+                    _packageTitleText('CPU%\n2.49\n1.00\n0.50'),
+                    SizedBox(
+                      width: 30,
+                    ),
+                    _packageTitleText('MEM%\n1.56\n3.08\n0.46'),
+                  ],
+                ),
+              ),
+              // Memory
+              _RowItem(
+                  height: _listItemHeight,
+                  rowTitle: _packageTitleText('MEMORY'),
+                  rowContent: StatusProgressBarVisualizer(
+                    model: model.memoryModel,
+                    textAlignment: TextAlign.right,
+                    textStyle: _statusTextStyle,
+                  )),
               // CPU Usage
-              SizedBox(
+              _RowItem(
                 height: _listItemHeight,
-                child: ListTile(
-                  dense: true,
-                  leading: Text(
-                    'CPU Usage',
-                    style: _leadingStyle,
-                  ),
-                  title: StatusTickBarVisualizer(
-                    barValue: model.getCpu(),
-                    barFill: model.getCpuFill(),
-                    barMax: model.getCpuMax(),
-                    tickMax: 25,
-                    textStyle: _titleStyle,
-                    textAlignment: TextAlign.left,
-                    barFirst: true,
-                  ),
-                ),
-              ),
-              // Memory Usage
-              SizedBox(
-                height: _listItemHeight,
-                child: ListTile(
-                  dense: true,
-                  leading: Text(
-                    'Mem Usage',
-                    style: _leadingStyle,
-                  ),
-                  title: StatusTickBarVisualizer(
-                    barValue: model.getMem(),
-                    barFill: model.getMemFill(),
-                    barMax: model.getMemMax(),
-                    tickMax: 25,
-                    textStyle: _titleStyle,
-                    textAlignment: TextAlign.left,
-                    barFirst: true,
-                  ),
+                rowTitle: _packageTitleText('CPU'),
+                rowContent: StatusGraphVisualizer(
+                  textStyle: _statusTextStyle,
+                  drawStyle: _fillPaint,
+                  axisAlignment: MainAxisAlignment.spaceBetween,
+                  model: model.dummyCpuModel,
                 ),
               ),
               // Tasks
-              SizedBox(
+              _RowItem(
                 height: _listItemHeight,
-                child: ListTile(
-                  dense: true,
-                  leading: Text(
-                    'Tasks',
-                    style: _leadingStyle,
-                  ),
-                  title: Text(
-                    model.getTasks(),
-                    textAlign: TextAlign.right,
-                    style: _titleStyle,
-                  ),
-                ),
+                rowTitle: _packageTitleText('TASKS'),
+                rowContent: _packageContentText(model.getTasks()),
               ),
               // Weather
-              SizedBox(
+              _RowItem(
                 height: _listItemHeight,
-                child: ListTile(
-                  dense: true,
-                  leading: Text(
-                    'Weather',
-                    style: _leadingStyle,
-                  ),
-                  title: Text(
-                    model.getWeather(),
-                    textAlign: TextAlign.right,
-                    style: _titleStyle,
-                  ),
-                ),
+                rowTitle: _packageTitleText('WEATHER'),
+                rowContent: _packageContentText(model.getWeather()),
               ),
-              // Battery
-              SizedBox(
+              // Date
+              _RowItem(
                 height: _listItemHeight,
-                child: ListTile(
-                  dense: true,
-                  leading: Text(
-                    'Battery',
-                    style: _leadingStyle,
-                  ),
-                  title: Text(
-                    model.getBattery(),
-                    textAlign: TextAlign.right,
-                    style: _titleStyle,
-                  ),
-                ),
+                rowTitle: _packageTitleText('DATE'),
+                rowContent: _packageContentText(model.getDate()),
+              ),
+              // Network
+              _RowItem(
+                height: _listItemHeight,
+                rowTitle: _packageTitleText('NETWORK'),
+                rowContent: _packageContentText(model.getNetwork()),
+              ),
+              // FPS
+              _RowItem(
+                height: _listItemHeight,
+                rowTitle: _packageTitleText('FPS'),
+                rowContent: _packageContentText(model.getFps()),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _packageTitleText(String title) =>
+      Text(title, style: _statusTextStyle);
+
+  Widget _packageContentText(String title) =>
+      Text(title, style: _statusTextStyle, textAlign: TextAlign.right);
+}
+
+class _RowItem extends StatelessWidget {
+  final double height;
+  final Widget rowTitle;
+  final Widget rowContent;
+
+  const _RowItem({this.height, this.rowTitle, this.rowContent});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: height,
+      child: ListTile(
+        dense: true,
+        leading: rowTitle,
+        title: rowContent,
       ),
     );
   }

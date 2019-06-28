@@ -8,61 +8,48 @@ import 'package:flutter/material.dart';
 
 // Builds bar visualization given a value, fill amount, and maximum amount.
 class StatusTickBarVisualizer extends StatelessWidget {
-  // Descriptive text displayed to the right of bar visualization.
-  final String _barValue;
-  // Amount the bar visualization will be filled.
-  final double _barFill;
-  // Maximum amount the bar visualization can be filled.
-  final double _barMax;
-  // Maximum amount of tick marks allowed to be in row.
-  final int _tickMax;
   // Determines style of text in visualiation.
-  final TextStyle _textStyle;
+  final TextStyle textStyle;
   // Determines alignment of text on the side of the bar visualization.
-  final TextAlign _textAlignment;
-  // Determines if bar visualization is first in order in row.
-  final bool _barFirst;
+  final TextAlign textAlignment;
+  // Model to manage data for StatusTickBarVisualizerModel.
+  final StatusTickBarVisualizerModel model;
 
-  const StatusTickBarVisualizer(
-      {@required String barValue,
-      @required double barFill,
-      @required double barMax,
-      @required int tickMax,
-      @required TextStyle textStyle,
-      @required TextAlign textAlignment,
-      @required bool barFirst})
-      : _barValue = barValue,
-        _barFill = barFill,
-        _barMax = barMax,
-        _tickMax = tickMax,
-        _textStyle = textStyle,
-        _textAlignment = textAlignment,
-        _barFirst = barFirst;
+  const StatusTickBarVisualizer({
+    @required this.model,
+    @required this.textStyle,
+    @required this.textAlignment,
+  });
 
   @override
   Widget build(BuildContext context) {
-    if (_barFirst)
-      return _buildBarLeft(context);
-    return _buildBarRight(context);
+    if (model.barFirst)
+      return AnimatedBuilder(
+          animation: model,
+          builder: (BuildContext context, Widget child) {
+            return _buildBarLeft(context);
+          });
+    return AnimatedBuilder(
+        animation: model,
+        builder: (BuildContext context, Widget child) {
+          return _buildBarRight(context);
+        });
   }
 
   Widget _buildBarLeft(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: <Widget>[
-        Text(
-          _drawTicks(_activeTicks()),
-          style: _setTickStyle(true)
-        ),
+        Text(_drawTicks(_activeTicks()), style: _setTickStyle(true)),
         Text(
           _drawTicks(_inactiveTicks()),
           style: _setTickStyle(false),
         ),
         SizedBox(width: _barSpace()),
         Text(
-          _barValue,
-          textAlign: _textAlignment,
-          style: _textStyle,
+          model.barValue,
+          textAlign: textAlignment,
+          style: textStyle,
         ),
       ],
     );
@@ -73,19 +60,16 @@ class StatusTickBarVisualizer extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.end,
       children: <Widget>[
         Text(
-          _barValue,
-          textAlign: _textAlignment,
-          style: _textStyle,
+          model.barValue,
+          textAlign: textAlignment,
+          style: textStyle,
         ),
         SizedBox(width: _barSpace()),
         Text(
           _drawTicks(_activeTicks()),
           style: _setTickStyle(true),
         ),
-        Text(
-          _drawTicks(_inactiveTicks()),
-          style: _setTickStyle(false)
-        ),
+        Text(_drawTicks(_inactiveTicks()), style: _setTickStyle(false)),
       ],
     );
   }
@@ -110,17 +94,73 @@ class StatusTickBarVisualizer extends StatelessWidget {
   }
 
   // Determines how many active ticks to be drawn.
-  int _activeTicks() => ((_barFill / _barMax) * _maxTicks()).toInt();
+  int _activeTicks() {
+    return ((model.barFill / model.barMax) * _maxTicks()).toInt();
+  }
 
   // Determines how many inactive ticks to be drawn.
   int _inactiveTicks() => (_maxTicks() - _activeTicks());
 
   // Determines how many ticks can fit in row.
-  int _maxTicks() => _tickMax - _barValue.length;
+  int _maxTicks() => model.tickMax - model.barValue.length;
 
   // Builds string of ticks.
-  String _drawTicks(int numTicks) => List.filled(numTicks + 1, '').join('| ');
+  String _drawTicks(int numTicks) {
+    if (numTicks < 0 || numTicks == null)
+      return List.filled(1, '').join('| ');
+    return List.filled(numTicks + 1, '').join('| ');
+  }
 
   // Adds space to align bar visualizations.
-  double _barSpace() => _barValue.length % 2 == 0 ? 9 : 6;
+  double _barSpace() => model.barValue.length % 2 == 0 ? 9 : 6;
+}
+
+class StatusTickBarVisualizerModel extends ChangeNotifier {
+  // Descriptive text displayed to the right of bar visualization.
+  String _barValue;
+  // Amount the bar visualization will be filled.
+  double _barFill;
+  // Maximum amount the bar visualization can be filled.
+  double _barMax;
+  // Maximum amount of tick marks allowed to be in row.
+  int _tickMax;
+  // Determines if bar visualization is first in order in row.
+  bool _barFirst;
+
+  set barFill(double updatedBarFill) {
+    _barFill = updatedBarFill;
+    notifyListeners();
+  }
+
+  set barMax(double updatedBarMax) {
+    _barMax = updatedBarMax;
+    notifyListeners();
+  }
+
+  set barValue(String updatedBarValue) {
+    _barValue = updatedBarValue;
+    notifyListeners();
+  }
+
+  String get barValue => _barValue;
+
+  double get barFill => _barFill;
+
+  double get barMax => _barMax;
+
+  int get tickMax => _tickMax;
+
+  bool get barFirst => _barFirst;
+
+  StatusTickBarVisualizerModel({
+    String barValue = 'loading...',
+    double barFill = 1,
+    double barMax = 2,
+    int tickMax = 25,
+    bool barFirst = true,
+  })  : _barValue = barValue,
+        _barFill = barFill,
+        _barMax = barMax,
+        _tickMax = tickMax,
+        _barFirst = barFirst;
 }

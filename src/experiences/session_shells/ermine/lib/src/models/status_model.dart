@@ -2,42 +2,88 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
 import 'dart:math';
 
 import 'package:fidl_fuchsia_memory/fidl_async.dart' as mem;
 import 'package:flutter/foundation.dart';
 import 'package:fuchsia_services/services.dart';
 
-/// Model that manages the Status menu state of this session shell.
+import '../widgets/status_graph_visualizer.dart';
+import '../widgets/status_progress_bar_visualizer.dart';
+
+// Model that manages the Status menu state of this session shell.
 class StatusModel extends ChangeNotifier {
   // TODO(FL-272): Mock data for visualization.
-  final String _wirelessValue = 'wireless';
-  final String _wirelessDescriptor = 'strong signal';
+  // Data values
+  final String _networkValue = 'WIRELESS';
+  final String _networkDescriptor = 'STRONG SIGNAL';
   final String _cpuValue = '35%';
-  final double _cpuFill = 35;
   final double _cpuMax = 100;
   String _memValue;
   double _memFill;
   double _memMax;
-  final String _tasksValue = '13, 1 thr';
-  final String _tasksDescriptor = '1 running';
+  final String _tasksValue = '13, 1 THR';
+  final String _tasksDescriptor = '1 RUNNING';
   final String _weatherValue = '16°';
-  final String _weatherDescriptor = 'Sunny';
+  final String _weatherDescriptor = 'SUNNY';
   final String _batteryValue = '99%';
-  final String _batteryDescriptor = '3:15 left';
+  final String _batteryDescriptor = '3:15 LEFT';
+  final int _fpsValue = 120;
+  // Service values
   StartupContext startupContext;
   final mem.MonitorProxy statusMemoryService;
   final _memoryServiceBinding = mem.WatcherBinding();
+  static const Duration _systemInformationUpdatePeriod =
+      Duration(milliseconds: 500);
+  // Visualizer models
+  StatusProgressBarVisualizerModel memoryModel;
+  StatusProgressBarVisualizerModel dummyVolumeModel;
+  StatusProgressBarVisualizerModel dummyBrightnessModel;
+  StatusGraphVisualizerModel dummyCpuModel;
 
   StatusModel({this.statusMemoryService}) {
-    statusMemoryService.watch(_memoryServiceBinding.wrap(_MonitorWatcherImpl(this)));
+    statusMemoryService
+        .watch(_memoryServiceBinding.wrap(_MonitorWatcherImpl(this)));
+    memoryModel = StatusProgressBarVisualizerModel(
+      barFirst: true,
+      barHeight: 14,
+      barSize: .5,
+      offset: 0,
+    );
+    dummyVolumeModel = StatusProgressBarVisualizerModel(
+        barFill: 3,
+        barFirst: false,
+        barHeight: 14,
+        barMax: 10,
+        barSize: .7,
+        barValue: '03',
+        offset: 0);
+    dummyBrightnessModel = StatusProgressBarVisualizerModel(
+        barFill: 11,
+        barFirst: false,
+        barHeight: 14,
+        barMax: 15,
+        barSize: .7,
+        barValue: '11',
+        offset: 0);
+    dummyCpuModel = StatusGraphVisualizerModel(
+      graphHeight: 14,
+      graphMax: getCpuMax(),
+      graphMin: getCpuFill(),
+      graphWidth: 143.3,
+      borderActive: true,
+      fillActive: true,
+      graphFirst: true,
+    );
+    Timer.periodic(_systemInformationUpdatePeriod, (_) {
+      _updateCPU();
+    });
   }
 
   factory StatusModel.fromStartupContext(StartupContext startupContext) {
     final statusMemoryService = mem.MonitorProxy();
-    startupContext
-          .incoming
-          .connectToService(statusMemoryService);
+    startupContext.incoming.connectToService(statusMemoryService);
     return StatusModel(statusMemoryService: statusMemoryService);
   }
 
@@ -50,19 +96,16 @@ class StatusModel extends ChangeNotifier {
     return constructedDate.toString();
   }
 
-  // Wireless
-  String getWireless() => '$_wirelessValue / $_wirelessDescriptor';
+  // Network
+  String getNetwork() => '$_networkValue / $_networkDescriptor';
 
   // CPU Usage
   String getCpu() => '$_cpuValue';
-  double getCpuFill() => _cpuFill;
+  double getCpuFill() => 0;
   double getCpuMax() => _cpuMax;
+  double getCpuData() => Random().nextDouble() * 100;
 
   // Memory Usage
-  String getMem() => '$_memValue';
-  double getMemFill() => _memFill;
-  double getMemMax() => _memMax;
-
   @override
   void dispose() {
     statusMemoryService.ctrl.close();
@@ -78,23 +121,26 @@ class StatusModel extends ChangeNotifier {
   // Battery
   String getBattery() => '$_batteryValue - $_batteryDescriptor';
 
-  // Helpers
+  // FPS
+  String getFps() => _fpsValue.toString();
+
+  // Helpers & Services
   String _currentDay(int day) {
     switch (day) {
       case 1:
-        return 'Monday';
+        return 'MONDAY';
       case 2:
-        return 'Tuesday';
+        return 'TUESDAY';
       case 3:
-        return 'Wednesday';
+        return 'WEDNESDAY';
       case 4:
-        return 'Thursday';
+        return 'THURSDAY';
       case 5:
-        return 'Friday';
+        return 'FRIDAY';
       case 6:
-        return 'Saturday';
+        return 'SATURDAY';
       case 7:
-        return 'Sunday';
+        return 'SUNDAY';
     }
     return '';
   }
@@ -102,41 +148,51 @@ class StatusModel extends ChangeNotifier {
   String _currentMonth(int month) {
     switch (month) {
       case 1:
-        return 'January';
+        return 'JANUARY';
       case 2:
-        return 'February';
+        return 'FEBRUARY';
       case 3:
-        return 'March';
+        return 'MARCH';
       case 4:
-        return 'April';
+        return 'APRIL';
       case 5:
-        return 'May';
+        return 'MAY';
       case 6:
-        return 'June';
+        return 'JUNE';
       case 7:
-        return 'July';
+        return 'JULY';
       case 8:
-        return 'August';
+        return 'AUGUST';
       case 9:
-        return 'September';
+        return 'SEPTEMBER';
       case 10:
-        return 'October';
+        return 'OCTOBER';
       case 11:
-        return 'November';
+        return 'NOVEMBER';
       case 12:
-        return 'December';
+        return 'DECEMBER';
     }
     return '';
   }
 
-  void _onChange(mem.Stats stats) {
+  void _updateMem(mem.Stats stats) {
     int memTotal = (stats.totalBytes);
     int memUsed = (memTotal - stats.freeBytes);
     String memGBTotal = _bytesToGB(memTotal);
     String memGBUsed = _bytesToGB(memUsed);
-    _memValue = '$memGBUsed / $memGBTotal GB';
+    _memValue = '${memGBUsed}GB / ${memGBTotal}GB';
+    memoryModel.barValue = _memValue;
     _memFill = memUsed.toDouble();
+    memoryModel.barFill = _memFill;
     _memMax = memTotal.toDouble();
+    memoryModel.barMax = _memMax;
+  }
+
+  void _updateCPU() {
+    double newGraphData = getCpuData();
+    dummyCpuModel.graphData = newGraphData;
+    String dummyCpuValue = newGraphData.toInt().toString();
+    dummyCpuModel.graphValue = '$dummyCpuValue%';
   }
 
   String _bytesToGB(int bytes) {
@@ -150,6 +206,6 @@ class _MonitorWatcherImpl extends mem.Watcher {
 
   @override
   Future<void> onChange(mem.Stats stats) async {
-    status._onChange(stats);
+    status._updateMem(stats);
   }
 }
