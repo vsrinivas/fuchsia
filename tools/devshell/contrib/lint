@@ -182,8 +182,11 @@ declare CLANG_TIDY_CMD=(
   "${RUN_CLANG_TIDY}"
   -clang-tidy-binary "${CLANG_TIDY}"
   -clang-apply-replacements-binary "${CLANG_APPLY_REPLACEMENTS}"
-  "${FIX_OPTION}"
 )
+if [[ -z "${FIX_OPTION}" ]]; then
+  CLANG_TIDY_CMD+=( ${FIX_OPTION} )
+fi
+
 declare FIDL_LINT_CMD=( "${FIDL_LINT}" )
 # TODO(fxb/TC-559): add command and args for Dart linter
 declare DART_LINT_CMD=() # "${FUCHSIA_DIR}/topaz/tools/prebuilt-dart-sdk/${HOST_PLATFORM}/bin/dart<cmd?> <options?>"

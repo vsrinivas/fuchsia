@@ -19,7 +19,6 @@ Checks: >
   -readability-isolate-declaration,
   -readability-uppercase-literal-suffix,
 WarningsAsErrors: false
-HeaderFilterRegex: '\.\./.*/([^t].*|t[^h].*|th[^i].*)'
 AnalyzeTemporaryDtors: false
 FormatStyle:     file
 CheckOptions:
