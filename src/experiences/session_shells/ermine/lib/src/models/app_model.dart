@@ -17,6 +17,7 @@ import 'package:fidl_fuchsia_sys/fidl_async.dart'
         ServiceList,
         ServiceProviderBinding;
 import 'package:fidl_fuchsia_ui_app/fidl_async.dart' show ViewProviderProxy;
+import 'package:fidl_fuchsia_ui_input/fidl_async.dart' as input;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart'
     show ViewToken, ViewHolderToken;
 import 'package:flutter/material.dart';
@@ -255,6 +256,45 @@ class AppModel {
       ..context.logout()
       ..stop();
   }
+
+  void injectTap(Rect bounds) {
+    final offset = bounds.topLeft;
+
+    sessionShell.presentation.injectPointerEventHack(_createPointerEvent(
+      phase: input.PointerEventPhase.add,
+      offset: offset,
+    ));
+
+    sessionShell.presentation.injectPointerEventHack(_createPointerEvent(
+      phase: input.PointerEventPhase.down,
+      offset: offset,
+    ));
+
+    sessionShell.presentation.injectPointerEventHack(_createPointerEvent(
+      phase: input.PointerEventPhase.up,
+      offset: offset,
+    ));
+
+    sessionShell.presentation.injectPointerEventHack(_createPointerEvent(
+      phase: input.PointerEventPhase.remove,
+      offset: offset,
+    ));
+  }
+
+  input.PointerEvent _createPointerEvent({
+    input.PointerEventPhase phase,
+    Offset offset,
+  }) =>
+      input.PointerEvent(
+        eventTime: 0,
+        deviceId: 0,
+        pointerId: 0,
+        type: input.PointerEventType.touch,
+        phase: phase,
+        x: offset.dx,
+        y: offset.dy,
+        buttons: 0,
+      );
 
   bool _useInProcessStoryShell() {
     File file = File('/pkg/data/modular_config.json');

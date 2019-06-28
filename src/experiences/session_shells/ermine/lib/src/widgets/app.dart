@@ -11,6 +11,7 @@ import '../widgets/status.dart';
 
 import 'clusters.dart';
 import 'fullscreen_story.dart';
+import 'get_bounds.dart';
 
 /// Builds the main display of this session shell.
 class App extends StatelessWidget {
@@ -147,7 +148,10 @@ class App extends StatelessWidget {
                     child: AnimatedBuilder(
                       animation: model.statusVisibility,
                       builder: (context, _) => model.statusVisibility.value
-                          ? Status(model: model.status)
+                          ? GetBounds(
+                              child: Status(model: model.status),
+                              onBounds: model.injectTap,
+                            )
                           : Offstage(),
                     ),
                   ),
