@@ -28,6 +28,7 @@ class FullscreenStory extends StatelessWidget {
             ? AnimatedBuilder(
                 animation: Listenable.merge([
                   showFullscreenTitle,
+                  story.nameNotifier,
                   story.editStateNotifier,
                 ]),
                 builder: (context, _) {
@@ -40,7 +41,7 @@ class FullscreenStory extends StatelessWidget {
                       }
                     },
                     child: TileChrome(
-                      name: story.id,
+                      name: story.name,
                       focused: story.focused,
                       showTitle: showFullscreenTitle.value,
                       editing: story.editStateNotifier.value &&
