@@ -19,16 +19,21 @@
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
 #include "src/developer/debug/zxdb/common/err.h"
-#include "tools/fidlcat/lib/zx_channel_params.h"
+
+// TODO: Look into this.  Removing the hack that led to this (in
+// debug_ipc/helper/message_loop.h) seems to work, except it breaks SDK builds
+// on CQ in a way I can't repro locally.
+#undef __TA_REQUIRES
+
+#include "tools/fidlcat/lib/syscall_decoder_dispatcher.h"
 
 namespace fidlcat {
 
 class InterceptionWorkflow;
+class SyscallDecoderDispatcher;
+class SyscallDecoder;
 
-namespace internal {
-
-class InterceptingThreadObserver : public zxdb::ThreadObserver,
-                                   public BreakpointRegisterer {
+class InterceptingThreadObserver : public zxdb::ThreadObserver {
  public:
   explicit InterceptingThreadObserver(InterceptionWorkflow* workflow)
       : workflow_(workflow) {}
@@ -44,14 +49,13 @@ class InterceptingThreadObserver : public zxdb::ThreadObserver,
 
   virtual ~InterceptingThreadObserver() {}
 
-  virtual void Register(int64_t koid,
-                        std::function<void(zxdb::Thread*)>&& cb) override;
+  void Register(int64_t koid, SyscallDecoder* decoder);
 
-  virtual void CreateNewBreakpoint(zxdb::BreakpointSettings& settings) override;
+  void CreateNewBreakpoint(zxdb::BreakpointSettings& settings);
 
  private:
   InterceptionWorkflow* workflow_;
-  std::map<int64_t, std::function<void(zxdb::Thread*)>> breakpoint_map_;
+  std::map<int64_t, SyscallDecoder*> breakpoint_map_;
 };
 
 class InterceptingProcessObserver : public zxdb::ProcessObserver {
@@ -100,8 +104,6 @@ class InterceptingTargetObserver : public zxdb::TargetObserver {
   InterceptionWorkflow* workflow_;
 };
 
-}  // namespace internal
-
 using SimpleErrorFunction = std::function<void(const zxdb::Err&)>;
 
 // Controls the interactions with the debug agent.
@@ -114,7 +116,7 @@ using SimpleErrorFunction = std::function<void(const zxdb::Err&)>;
 // executed by the other thread.
 class InterceptionWorkflow {
  public:
-  friend class internal::InterceptingThreadObserver;
+  friend class InterceptingThreadObserver;
   friend class DataForZxChannelTest;
   friend class ProcessController;
 
@@ -128,7 +130,9 @@ class InterceptionWorkflow {
   // Some initialization steps:
   // - Set the paths for the zxdb client to look for symbols.
   // - Make sure that the data are routed from the client to the session
-  void Initialize(const std::vector<std::string>& symbol_paths);
+  void Initialize(
+      const std::vector<std::string>& symbol_paths,
+      std::unique_ptr<SyscallDecoderDispatcher> syscall_decoder_dispatcher);
 
   // Connect the workflow to the host/port pair given.  |and_then| is posted to
   // the loop on completion.
@@ -162,16 +166,6 @@ class InterceptionWorkflow {
   // for the process with given |process_koid|.
   void SetBreakpoints(uint64_t process_koid);
 
-  // Sets the user-callback to be run when we intercept a zx_channel_write call.
-  void SetZxChannelWriteCallback(ZxChannelCallback&& callback) {
-    zx_channel_write_callback_ = std::move(callback);
-  }
-
-  // Sets the user-callback to be run when we intercept a zx_channel_read call.
-  void SetZxChannelReadCallback(ZxChannelCallback&& callback) {
-    zx_channel_read_callback_ = std::move(callback);
-  }
-
   // Starts running the loop.  Returns when loop is (asynchronously) terminated.
   void Go();
 
@@ -182,15 +176,15 @@ class InterceptionWorkflow {
   }
 
   zxdb::Session* session() const { return session_; }
+  SyscallDecoderDispatcher* syscall_decoder_dispatcher() const {
+    return syscall_decoder_dispatcher_.get();
+  }
 
   InterceptionWorkflow(const InterceptionWorkflow&) = delete;
   InterceptionWorkflow& operator=(const InterceptionWorkflow&) = delete;
 
  private:
   zxdb::Target* GetTarget(uint64_t process_koid = ULLONG_MAX);
-
-  template <class T>
-  void OnZxChannelAction(zxdb::Thread* thread);
 
   void AddObserver(zxdb::Target* target);
 
@@ -202,12 +196,9 @@ class InterceptionWorkflow {
   // -1 means "we already shut down".
   int target_count_;
 
-  internal::InterceptingTargetObserver observer_;
-  ZxChannelCallback zx_channel_write_callback_;
-  ZxChannelCallback zx_channel_read_callback_;
+  std::unique_ptr<SyscallDecoderDispatcher> syscall_decoder_dispatcher_;
 
-  static const char kZxChannelWriteName[];
-  static const char kZxChannelReadName[];
+  InterceptingTargetObserver observer_;
 };
 
 }  // namespace fidlcat

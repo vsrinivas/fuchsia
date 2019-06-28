@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include <fstream>
+#include <iostream>
 #include <optional>
 #include <string>
 #include <thread>
@@ -23,7 +24,7 @@
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "tools/fidlcat/lib/library_loader.h"
 #include "tools/fidlcat/lib/message_decoder.h"
-#include "tools/fidlcat/lib/zx_channel_params.h"
+#include "tools/fidlcat/lib/syscall_decoder_dispatcher.h"
 
 namespace fidlcat {
 
@@ -58,7 +59,6 @@ void CatchSigterm() {
 
 // Add the startup actions to the loop: connect, attach to pid, set breakpoints.
 void EnqueueStartup(InterceptionWorkflow& workflow,
-                    MessageDecoderDispatcher* message_decoder_dispatcher,
                     const CommandLineOptions& options,
                     std::vector<std::string>& params) {
   uint64_t process_koid = ULLONG_MAX;
@@ -72,35 +72,6 @@ void EnqueueStartup(InterceptionWorkflow& workflow,
       exit(1);
     }
   }
-
-  // Currently, we only display messages for one process. process_koid is
-  // correctly set when we attach to a process but is ULLONG_MAX when we create
-  // the process.
-  workflow.SetZxChannelWriteCallback(
-      [message_decoder_dispatcher, process_koid](
-          const zxdb::Err& err, const ZxChannelParams& params) {
-        if (!err.ok()) {
-          FXL_LOG(INFO) << "Unable to decode zx_channel_write params: "
-                        << err.msg();
-          return;
-        }
-        message_decoder_dispatcher->DecodeMessage(
-            process_koid, params.GetHandle(), params.GetBytes().get(),
-            params.GetNumBytes(), params.GetHandles().get(),
-            params.GetNumHandles(), /*read=*/false, std::cout);
-      });
-  workflow.SetZxChannelReadCallback([message_decoder_dispatcher, process_koid](
-                                        const zxdb::Err& err,
-                                        const ZxChannelParams& params) {
-    if (!err.ok()) {
-      FXL_LOG(INFO) << "Unable to decode zx_channel_read params: " << err.msg();
-      return;
-    }
-    message_decoder_dispatcher->DecodeMessage(
-        process_koid, params.GetHandle(), params.GetBytes().get(),
-        params.GetNumBytes(), params.GetHandles().get(), params.GetNumHandles(),
-        /*read=*/true, std::cout);
-  });
 
   std::string host;
   uint16_t port;
@@ -148,9 +119,6 @@ int ConsoleMain(int argc, const char* argv[]) {
     return 1;
   }
 
-  InterceptionWorkflow workflow;
-  workflow.Initialize(options.symbol_paths);
-
   std::vector<std::unique_ptr<std::istream>> paths;
   std::vector<std::string> bad_paths;
   ExpandFidlPathsFromOptions(options.fidl_ir_paths, paths, bad_paths);
@@ -174,9 +142,12 @@ int ConsoleMain(int argc, const char* argv[]) {
     return 1;
   }
 
-  MessageDecoderDispatcher message_decoder_dispatcher(&loader, display_options);
+  InterceptionWorkflow workflow;
+  workflow.Initialize(options.symbol_paths,
+                      std::make_unique<SyscallDisplayDispatcher>(
+                          &loader, display_options, std::cout));
 
-  EnqueueStartup(workflow, &message_decoder_dispatcher, options, params);
+  EnqueueStartup(workflow, options, params);
 
   // TODO: When the attached koid terminates normally, we should exit and call
   // QuitNow() on the MessageLoop.

@@ -15,12 +15,14 @@
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 
+// TODO: Look into this.  Removing the hack that led to this (in
+// debug_ipc/helper/message_loop.h) seems to work, except it breaks SDK builds
+// on CQ in a way I can't repro locally.
+#undef __TA_REQUIRES
+
+#include "tools/fidlcat/lib/syscall_decoder_dispatcher.h"
+
 namespace fidlcat {
-
-const char InterceptionWorkflow::kZxChannelWriteName[] = "zx_channel_write@plt";
-const char InterceptionWorkflow::kZxChannelReadName[] = "zx_channel_read@plt";
-
-namespace internal {
 
 void InterceptingThreadObserver::OnThreadStopped(
     zxdb::Thread* thread, debug_ipc::NotifyException::Type type,
@@ -40,7 +42,7 @@ void InterceptingThreadObserver::OnThreadStopped(
   // handled here.
   auto entry = breakpoint_map_.find(thread->GetKoid());
   if (entry != breakpoint_map_.end()) {
-    entry->second(thread);
+    entry->second->LoadSyscallReturnValue();
     // Erasing under the assumption that the next step will put it back, if
     // necessary.
     breakpoint_map_.erase(thread->GetKoid());
@@ -54,18 +56,20 @@ void InterceptingThreadObserver::OnThreadStopped(
     zxdb::BreakpointSettings settings = bp_ptr->GetSettings();
     if (settings.location.type == zxdb::InputLocation::Type::kSymbol &&
         settings.location.symbol.components().size() == 1u) {
-      if (settings.location.symbol.components()[0].name() ==
-          InterceptionWorkflow::kZxChannelWriteName) {
-        workflow_->OnZxChannelAction<ZxChannelWriteParamsBuilder>(thread);
-        return;
-      } else if (settings.location.symbol.components()[0].name() ==
-                 InterceptionWorkflow::kZxChannelReadName) {
-        workflow_->OnZxChannelAction<ZxChannelReadParamsBuilder>(thread);
-        return;
-      } else {
-        thread->Continue();
-        return;
+      for (auto& syscall :
+           workflow_->syscall_decoder_dispatcher()->syscalls()) {
+        if (settings.location.symbol.components()[0].name() ==
+            syscall->breakpoint_name()) {
+          workflow_->syscall_decoder_dispatcher()->DecodeSyscall(this, thread,
+                                                                 syscall.get());
+          return;
+        }
       }
+      FXL_LOG(INFO) << "Internal error: breakpoint "
+                    << settings.location.symbol.components()[0].name()
+                    << " not managed";
+      thread->Continue();
+      return;
     }
   }
   FXL_LOG(INFO)
@@ -73,9 +77,9 @@ void InterceptingThreadObserver::OnThreadStopped(
   thread->Continue();
 }
 
-void InterceptingThreadObserver::Register(
-    int64_t koid, std::function<void(zxdb::Thread*)>&& cb) {
-  breakpoint_map_[koid] = std::move(cb);
+void InterceptingThreadObserver::Register(int64_t koid,
+                                          SyscallDecoder* decoder) {
+  breakpoint_map_[koid] = decoder;
 }
 
 void InterceptingThreadObserver::CreateNewBreakpoint(
@@ -104,21 +108,13 @@ void InterceptingTargetObserver::WillDestroyProcess(zxdb::Target* target,
   workflow_->Detach();
 }
 
-}  // namespace internal
-
 InterceptionWorkflow::InterceptionWorkflow()
     : session_(new zxdb::Session()),
       delete_session_(true),
       loop_(new debug_ipc::PlatformMessageLoop()),
       delete_loop_(true),
       target_count_(0),
-      observer_(this),
-      zx_channel_write_callback_([](const zxdb::Err&, const ZxChannelParams&) {
-        FXL_DCHECK(false) << "Did not specify zx_channel_write callback";
-      }),
-      zx_channel_read_callback_([](const zxdb::Err&, const ZxChannelParams&) {
-        FXL_DCHECK(false) << "Did not specify zx_channel_read callback";
-      }) {}
+      observer_(this) {}
 
 InterceptionWorkflow::InterceptionWorkflow(zxdb::Session* session,
                                            debug_ipc::PlatformMessageLoop* loop)
@@ -139,7 +135,9 @@ InterceptionWorkflow::~InterceptionWorkflow() {
 }
 
 void InterceptionWorkflow::Initialize(
-    const std::vector<std::string>& symbol_paths) {
+    const std::vector<std::string>& symbol_paths,
+    std::unique_ptr<SyscallDecoderDispatcher> syscall_decoder_dispatcher) {
+  syscall_decoder_dispatcher_ = std::move(syscall_decoder_dispatcher);
   // 1) Set up symbol index.
 
   // Stolen from console/console_main.cc
@@ -319,33 +317,24 @@ void InterceptionWorkflow::Launch(const std::vector<std::string>& command,
 }
 
 void InterceptionWorkflow::SetBreakpoints(zxdb::Target* target) {
-  // Set the breakpoint
-  zxdb::BreakpointSettings settings;
-  settings.enabled = true;
-  settings.stop_mode = zxdb::BreakpointSettings::StopMode::kThread;
-  settings.type = debug_ipc::BreakpointType::kSoftware;
-  settings.location.symbol = zxdb::Identifier(kZxChannelWriteName);
-  settings.location.type = zxdb::InputLocation::Type::kSymbol;
-  settings.scope = zxdb::BreakpointSettings::Scope::kTarget;
-  settings.scope_target = target;
+  for (auto& syscall : syscall_decoder_dispatcher()->syscalls()) {
+    zxdb::BreakpointSettings settings;
+    settings.enabled = true;
+    settings.stop_mode = zxdb::BreakpointSettings::StopMode::kThread;
+    settings.type = debug_ipc::BreakpointType::kSoftware;
+    settings.location.symbol = zxdb::Identifier(syscall->breakpoint_name());
+    settings.location.type = zxdb::InputLocation::Type::kSymbol;
+    settings.scope = zxdb::BreakpointSettings::Scope::kTarget;
+    settings.scope_target = target;
 
-  zxdb::Breakpoint* breakpoint = session_->system().CreateNewBreakpoint();
+    zxdb::Breakpoint* breakpoint = session_->system().CreateNewBreakpoint();
 
-  breakpoint->SetSettings(settings, [](const zxdb::Err& err) {
-    if (!err.ok()) {
-      FXL_LOG(INFO) << "Error in setting breakpoints: " << err.msg();
-    }
-  });
-
-  settings.location.symbol = zxdb::Identifier(kZxChannelReadName);
-
-  breakpoint = session_->system().CreateNewBreakpoint();
-
-  breakpoint->SetSettings(settings, [](const zxdb::Err& err) {
-    if (!err.ok()) {
-      FXL_LOG(INFO) << "Error in setting breakpoints: " << err.msg();
-    }
-  });
+    breakpoint->SetSettings(settings, [](const zxdb::Err& err) {
+      if (!err.ok()) {
+        FXL_LOG(INFO) << "Error in setting breakpoints: " << err.msg();
+      }
+    });
+  }
 }
 
 void InterceptionWorkflow::SetBreakpoints(uint64_t process_koid) {
@@ -377,30 +366,5 @@ class AlwaysContinue {
 };
 
 }  // namespace
-
-// The workflow for zx_channel syscalls.
-template <class T>
-void InterceptionWorkflow::OnZxChannelAction(zxdb::Thread* thread) {
-  ZxChannelCallback& callback = (std::is_same_v<T, ZxChannelWriteParamsBuilder>)
-                                    ? zx_channel_write_callback_
-                                    : zx_channel_read_callback_;
-  FXL_DCHECK(callback != nullptr) << "Callback not set for zx channels param";
-
-  // It might be considered more readable to use a shared_ptr here.  However,
-  // the callback passed to BuildZxChannelParamsAndContinue is stored in the
-  // builder object.  If we use a shared_ptr, we will have a cycle between the
-  // shared_ptr, the builder, and the callback, and the shared_ptr will never
-  // get collected.
-  T* builder = new T();
-  builder->BuildZxChannelParamsAndContinue(
-      thread->GetWeakPtr(), observer_.process_observer().thread_observer(),
-      [thread_weak = thread->GetWeakPtr(), &callback, builder](
-          const zxdb::Err& err, const ZxChannelParams& params) {
-        // To ensure the builder gets deleted.
-        std::unique_ptr<T> ptr(builder);
-        AlwaysContinue ac(thread_weak.get());
-        callback(err, params);
-      });
-}
 
 }  // namespace fidlcat

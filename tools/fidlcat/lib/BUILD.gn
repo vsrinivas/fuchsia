@@ -37,21 +37,24 @@ if (current_toolchain == host_toolchain) {
     public = [
       "interception_workflow.h",
       "syscall_decoder.h",
-      "zx_channel_params.h",
+      "syscall_decoder_dispatcher.h",
     ]
 
     sources = [
       "interception_workflow.cc",
       "syscall_decoder.cc",
-      "zx_channel_params.cc",
+      "syscall_decoder_dispatcher.cc",
     ]
 
     deps = [
+      ":lib",
       "//src/developer/debug/ipc:client",
       "//src/developer/debug/zxdb/client",
       "//src/developer/debug/zxdb/common",
       "//src/developer/debug/zxdb/console",
       "//src/lib/fxl",
+      "//third_party/rapidjson",
+      "//zircon/public/lib/fidl_base",
       "//zircon/public/lib/fit",
     ]
   }
@@ -68,6 +71,8 @@ if (current_toolchain == host_toolchain) {
       "//src/developer/debug/ipc:client",
       "//src/developer/debug/zxdb/client:test_support",
       "//third_party/googletest:gtest",
+      "//third_party/rapidjson",
+      "//zircon/public/lib/fidl_base",
       "//zircon/system/public",
     ]
   }

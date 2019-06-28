@@ -7,7 +7,9 @@
 #include <algorithm>
 #include <cstdint>
 #include <memory>
+#include <sstream>
 #include <thread>
+#include <utility>
 #include <vector>
 #undef __TA_REQUIRES
 #include <zircon/fidl.h>
@@ -20,6 +22,11 @@
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
 
 namespace fidlcat {
+
+class ProcessController;
+class SyscallDecoderDispatcherTest;
+
+constexpr uint32_t kHandle = 0xcefa1db0;
 
 class SystemCallTest {
  public:
@@ -102,7 +109,6 @@ class DataForSyscallTest {
     header_.ordinal = kOrdinal;
 
     sp_ = stack_ + kMaxStackSizeInWords;
-    current_symbol_address_ = 0x0;
   }
 
   const SystemCallTest* syscall() const { return syscall_.get(); }
@@ -137,10 +143,6 @@ class DataForSyscallTest {
   const zx_handle_t* handles() const { return handles_; }
 
   size_t num_handles() const { return sizeof(handles_) / sizeof(handles_[0]); }
-
-  void SetCurrentAddress(uint64_t address) {
-    current_symbol_address_ = address;
-  }
 
   fxl::RefPtr<zxdb::SystemSymbols::ModuleRef> GetModuleRef(
       zxdb::Session* session) {
@@ -223,42 +225,8 @@ class DataForSyscallTest {
   }
 
   void Step() {
-    // Increment the stack pointer to make it look as if we've stepped out of
-    // the zx_channel function.
     sp_ = stack_ + kMaxStackSizeInWords;
     first_register_read_ = false;
-  }
-
-  void CheckResult(const zxdb::Err& err, const ZxChannelParams& params) {
-    if (syscall()->result() != ZX_OK) {
-      ASSERT_EQ(zxdb::ErrType::kGeneral, err.type()) << "error expected";
-      std::string message = "aborted " + syscall()->name() + " (" +
-                            syscall()->result_name() + ")";
-      ASSERT_EQ(err.msg(), message);
-      return;
-    }
-    ASSERT_EQ(zxdb::ErrType::kNone, err.type()) << err.msg();
-
-    if (check_bytes_) {
-      ASSERT_EQ(params.GetNumBytes(), num_bytes());
-      if (memcmp(params.GetBytes().get(), bytes(), num_bytes()) != 0) {
-        std::string result = "bytes not equivalent:\n";
-        AppendElements<uint8_t>(result, num_bytes(), params.GetBytes().get(),
-                                bytes());
-        FAIL() << result;
-      }
-    }
-
-    if (check_handles_) {
-      ASSERT_EQ(params.GetNumHandles(), num_handles());
-      if (memcmp(params.GetHandles().get(), handles(),
-                 num_handles() * sizeof(zx_handle_t)) != 0) {
-        std::string result = "handles not equivalent:\n";
-        AppendElements<zx_handle_t>(result, num_handles(),
-                                    params.GetHandles().get(), handles());
-        FAIL() << result;
-      }
-    }
   }
 
   template <typename T>
@@ -279,7 +247,7 @@ class DataForSyscallTest {
   static constexpr uint64_t kMaxStackSizeInWords = 0x100;
   static constexpr zx_txid_t kTxId = 0xaaaaaaaa;
   static constexpr uint32_t kReserved = 0x0;
-  static constexpr uint64_t kOrdinal = 2011483371lu << 32;
+  static constexpr uint64_t kOrdinal = 8639255294892834816lu;
   static constexpr char kElfSymbolBuildID[] = "123412341234";
 
  private:
@@ -288,7 +256,6 @@ class DataForSyscallTest {
   std::unique_ptr<SystemCallTest> syscall_;
   uint64_t stack_[kMaxStackSizeInWords];
   uint64_t* sp_;
-  uint64_t current_symbol_address_;
   bool check_bytes_ = false;
   bool check_handles_ = false;
   fidl_message_header_t header_;
@@ -367,7 +334,6 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
       if (address == breakpoint.second.locations[0].address) {
         notification.hit_breakpoints.emplace_back();
         notification.hit_breakpoints.back().id = breakpoint.first;
-        data_.SetCurrentAddress(address);
       }
     }
   }
@@ -379,7 +345,11 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
 
 class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
  public:
-  explicit InterceptionWorkflowTest(debug_ipc::Arch arch) : data_(arch) {}
+  explicit InterceptionWorkflowTest(debug_ipc::Arch arch) : data_(arch) {
+    display_options_.pretty_print = true;
+    display_options_.columns = 132;
+    display_options_.needs_colors = true;
+  }
   ~InterceptionWorkflowTest() override = default;
 
   InterceptionRemoteAPI& mock_remote_api() { return *mock_remote_api_; }
@@ -392,11 +362,20 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
 
   DataForSyscallTest& data() { return data_; }
 
-  void PerformTest(std::unique_ptr<SystemCallTest> syscall);
+  void PerformCheckTest(std::unique_ptr<SystemCallTest> syscall);
+
+  void PerformDisplayTest(std::unique_ptr<SystemCallTest> syscall,
+                          const char* expected);
+
+  void PerformTest(std::unique_ptr<SystemCallTest> syscall,
+                   ProcessController* controller,
+                   std::unique_ptr<SyscallDecoderDispatcher> dispatcher);
 
  private:
   DataForSyscallTest data_;
   InterceptionRemoteAPI* mock_remote_api_;  // Owned by the session.
+  DisplayOptions display_options_;
+  std::stringstream result_;
 };
 
 class InterceptionWorkflowTestX64 : public InterceptionWorkflowTest {
@@ -428,18 +407,22 @@ class ProcessController {
                     debug_ipc::PlatformMessageLoop& loop);
   ~ProcessController();
 
-  void Detach();
-
+  InterceptionWorkflowTest* remote_api() const { return remote_api_; }
   InterceptionWorkflow& workflow() { return workflow_; }
+
+  void Initialize(zxdb::Session& session,
+                  std::unique_ptr<SyscallDecoderDispatcher> dispatcher);
+  void Detach();
 
   static constexpr uint64_t kProcessKoid = 1234;
   static constexpr uint64_t kThreadKoid = 5678;
 
  private:
+  InterceptionWorkflowTest* remote_api_;
   InterceptionWorkflow workflow_;
 
-  zxdb::Process* process_;
-  zxdb::Target* target_;
+  zxdb::Process* process_ = nullptr;
+  zxdb::Target* target_ = nullptr;
 };
 
 class AlwaysQuit {
@@ -451,17 +434,115 @@ class AlwaysQuit {
   ProcessController* controller_;
 };
 
+template <typename T>
+void AppendElements(std::string& result, const T* a, const T* b, size_t num) {
+  std::ostringstream os;
+  os << "actual      expected\n";
+  for (size_t i = 0; i < num; i++) {
+    os << std::left << std::setw(11) << static_cast<uint32_t>(a[i]);
+    os << " ";
+    os << std::left << std::setw(11) << static_cast<uint32_t>(b[i]);
+    os << std::endl;
+  }
+  result.append(os.str());
+}
+
+class SyscallCheck : public SyscallUse {
+ public:
+  explicit SyscallCheck(ProcessController* controller)
+      : controller_(controller) {}
+
+  void SyscallDecoded(SyscallDecoder* syscall) override {
+    DataForSyscallTest& data = controller_->remote_api()->data();
+    FXL_DCHECK(syscall->Value(0) == kHandle);  // handle
+    FXL_DCHECK(syscall->Value(1) == 0);        // options
+    FXL_DCHECK(syscall->Loaded(2, data.num_bytes()));
+    uint8_t* bytes = syscall->Content(2);
+    if (memcmp(bytes, data.bytes(), data.num_bytes()) != 0) {
+      std::string result = "bytes not equivalent\n";
+      AppendElements(result, bytes, data.bytes(), data.num_bytes());
+      syscall->Destroy();
+      FAIL() << result;
+    }
+    FXL_DCHECK(syscall->Value(3) == data.num_bytes());  // num_bytes
+    FXL_DCHECK(syscall->Loaded(4, data.num_handles() * sizeof(zx_handle_t)));
+    zx_handle_t* handles = reinterpret_cast<zx_handle_t*>(syscall->Content(4));
+    if (memcmp(handles, data.handles(), data.num_handles()) != 0) {
+      std::string result = "handles not equivalent";
+      AppendElements(result, handles, data.handles(), data.num_handles());
+      syscall->Destroy();
+      FAIL() << result;
+    }
+    FXL_DCHECK(syscall->Value(5) == data.num_handles());  // num_handles
+    syscall->Destroy();
+  }
+
+  void SyscallDecodingError(const SyscallDecoderError& error,
+                            SyscallDecoder* syscall) override {
+    SyscallUse::SyscallDecodingError(error, syscall);
+    FAIL();
+  }
+
+ private:
+  ProcessController* controller_;
+};
+
+class SyscallDecoderDispatcherTest : public SyscallDecoderDispatcher {
+ public:
+  SyscallDecoderDispatcherTest(ProcessController* controller)
+      : controller_(controller) {}
+
+  std::unique_ptr<SyscallDecoder> CreateDecoder(
+      InterceptingThreadObserver* thread_observer, zxdb::Thread* thread,
+      uint64_t thread_id, const Syscall* syscall) override {
+    return std::make_unique<SyscallDecoder>(
+        this, thread_observer, thread, thread_id, syscall,
+        std::make_unique<SyscallCheck>(controller_));
+  }
+
+  void DeleteDecoder(SyscallDecoder* decoder) override {
+    SyscallDecoderDispatcher::DeleteDecoder(decoder);
+    AlwaysQuit aq(controller_);
+  }
+
+ private:
+  ProcessController* controller_;
+};
+
+class SyscallDisplayDispatcherTest : public SyscallDisplayDispatcher {
+ public:
+  SyscallDisplayDispatcherTest(LibraryLoader* loader,
+                               const DisplayOptions& display_options,
+                               std::ostream& os, ProcessController* controller)
+      : SyscallDisplayDispatcher(loader, display_options, os),
+        controller_(controller) {}
+
+  ProcessController* controller() const { return controller_; }
+
+  void DeleteDecoder(SyscallDecoder* decoder) override {
+    SyscallDisplayDispatcher::DeleteDecoder(decoder);
+    AlwaysQuit aq(controller_);
+  }
+
+ private:
+  ProcessController* controller_;
+};
+
 ProcessController::ProcessController(InterceptionWorkflowTest* remote_api,
                                      zxdb::Session& session,
                                      debug_ipc::PlatformMessageLoop& loop)
-    : workflow_(&session, &loop) {
+    : remote_api_(remote_api), workflow_(&session, &loop) {}
+
+void ProcessController::Initialize(
+    zxdb::Session& session,
+    std::unique_ptr<SyscallDecoderDispatcher> dispatcher) {
   std::vector<std::string> blank;
-  workflow_.Initialize(blank);
+  workflow_.Initialize(blank, std::move(dispatcher));
 
   // Create a fake process and thread.
-  process_ = remote_api->InjectProcess(kProcessKoid);
+  process_ = remote_api_->InjectProcess(kProcessKoid);
   zxdb::Thread* the_thread =
-      remote_api->InjectThread(kProcessKoid, kThreadKoid);
+      remote_api_->InjectThread(kProcessKoid, kThreadKoid);
 
   // Observe thread.  This is usually done in workflow_::Attach, but
   // RemoteAPITest has its own ideas about attaching, so that method only
@@ -473,6 +554,7 @@ ProcessController::ProcessController(InterceptionWorkflowTest* remote_api,
   workflow_.observer_.process_observer().DidCreateThread(process_, the_thread);
 
   // Attach to process.
+  zxdb::Err err;
   debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [this]() {
     workflow_.Attach(kProcessKoid, [](const zxdb::Err& err) {
       // Because we are already attached, we don't get here.
@@ -485,7 +567,7 @@ ProcessController::ProcessController(InterceptionWorkflowTest* remote_api,
   // Load modules into program (including the one with the zx_channel_write
   // and zx_channel_read symbols)
   fxl::RefPtr<zxdb::SystemSymbols::ModuleRef> module_ref =
-      remote_api->data().GetModuleRef(&session);
+      remote_api_->data().GetModuleRef(&session);
 
   for (zxdb::Target* target : session.system().GetTargets()) {
     zxdb::Err err;
@@ -507,29 +589,31 @@ ProcessController::~ProcessController() {
 
 void ProcessController::Detach() { workflow_.Detach(); }
 
-void InterceptionWorkflowTest::PerformTest(
+void InterceptionWorkflowTest::PerformCheckTest(
     std::unique_ptr<SystemCallTest> syscall) {
-  data_.set_syscall(std::move(syscall));
-
   ProcessController controller(this, session(), loop());
-  bool hit_breakpoint = false;
-  // This will be executed when the zx_channel_write breakpoint is triggered.
-  controller.workflow().SetZxChannelWriteCallback(
-      [this, &controller, &hit_breakpoint](const zxdb::Err& err,
-                                           const ZxChannelParams& params) {
-        AlwaysQuit aq(&controller);
-        hit_breakpoint = true;
-        data_.CheckResult(err, params);
-      });
 
-  // This will be executed when the zx_channel_read breakpoint is triggered.
-  controller.workflow().SetZxChannelReadCallback(
-      [this, &controller, &hit_breakpoint](const zxdb::Err& err,
-                                           const ZxChannelParams& params) {
-        AlwaysQuit aq(&controller);
-        hit_breakpoint = true;
-        data_.CheckResult(err, params);
-      });
+  PerformTest(std::move(syscall), &controller,
+              std::make_unique<SyscallDecoderDispatcherTest>(&controller));
+}
+
+void InterceptionWorkflowTest::PerformDisplayTest(
+    std::unique_ptr<SystemCallTest> syscall, const char* expected) {
+  ProcessController controller(this, session(), loop());
+
+  PerformTest(std::move(syscall), &controller,
+              std::make_unique<SyscallDisplayDispatcherTest>(
+                  nullptr, display_options_, result_, &controller));
+
+  // Check that the syscall generated the data we expect.
+  ASSERT_EQ(result_.str(), expected);
+}
+
+void InterceptionWorkflowTest::PerformTest(
+    std::unique_ptr<SystemCallTest> syscall, ProcessController* controller,
+    std::unique_ptr<SyscallDecoderDispatcher> dispatcher) {
+  data_.set_syscall(std::move(syscall));
+  controller->Initialize(session(), std::move(dispatcher));
 
   {
     // Trigger breakpoint.
@@ -551,8 +635,8 @@ void InterceptionWorkflowTest::PerformTest(
 
   debug_ipc::MessageLoop::Current()->Run();
 
-  if (data_.syscall()->name() == "zx_channel_read") {
-    // Trigger next breakpoint, when zx_channel_read has completed.
+  {
+    // Trigger next breakpoint, when the syscall has completed.
     debug_ipc::NotifyException notification;
     notification.type = debug_ipc::NotifyException::Type::kGeneral;
     notification.thread.process_koid = ProcessController::kProcessKoid;
@@ -565,60 +649,141 @@ void InterceptionWorkflowTest::PerformTest(
     data_.PopulateRegisters(&frame.regs);
     notification.thread.frames.push_back(frame);
     InjectException(notification);
-
-    debug_ipc::MessageLoop::Current()->Run();
   }
 
-  // At this point, the callback should have been executed.
-  ASSERT_TRUE(hit_breakpoint);
+  debug_ipc::MessageLoop::Current()->Run();
 
   // Making sure shutdown works.
   debug_ipc::MessageLoop::Current()->Run();
 }
 
-#define WRITE_TEST_CONTENT(errno, errno_name)                               \
-  data().set_check_bytes();                                                 \
-  data().set_check_handles();                                               \
-  PerformTest(SystemCallTest::ZxChannelWrite(                               \
-      errno, errno_name, 0xcefa1db0, 0, data().bytes(), data().num_bytes(), \
+#define WRITE_TEST_CONTENT(errno)                                    \
+  data().set_check_bytes();                                          \
+  data().set_check_handles();                                        \
+  PerformCheckTest(SystemCallTest::ZxChannelWrite(                   \
+      errno, #errno, kHandle, 0, data().bytes(), data().num_bytes(), \
       data().handles(), data().num_handles()))
 
-#define WRITE_TEST(name, errno)               \
-  TEST_F(InterceptionWorkflowTestX64, name) { \
-    WRITE_TEST_CONTENT(errno, #errno);        \
-  }                                           \
-  TEST_F(InterceptionWorkflowTestArm, name) { \
-    WRITE_TEST_CONTENT(errno, #errno);        \
+#define WRITE_TEST(name, errno)                                            \
+  TEST_F(InterceptionWorkflowTestX64, name) { WRITE_TEST_CONTENT(errno); } \
+  TEST_F(InterceptionWorkflowTestArm, name) { WRITE_TEST_CONTENT(errno); }
+
+WRITE_TEST(ZxChannelWriteCheck, ZX_OK);
+
+#define WRITE_DISPLAY_TEST_CONTENT(errno, expected)                           \
+  data().set_check_bytes();                                                   \
+  data().set_check_handles();                                                 \
+  PerformDisplayTest(                                                         \
+      SystemCallTest::ZxChannelWrite(errno, #errno, kHandle, 0,               \
+                                     data().bytes(), data().num_bytes(),      \
+                                     data().handles(), data().num_handles()), \
+      expected)
+
+#define WRITE_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {     \
+    WRITE_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                               \
+  TEST_F(InterceptionWorkflowTestArm, name) {     \
+    WRITE_DISPLAY_TEST_CONTENT(errno, expected);  \
   }
 
-WRITE_TEST(ZxChannelWrite, ZX_OK);
+WRITE_DISPLAY_TEST(
+    ZxChannelWrite, ZX_OK,
+    "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_write("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
+    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
+    "  \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=2 "
+    "ordinal=8639255294892834816\n"
+    "  -> \x1B[32mZX_OK\x1B[0m\n"
+    "\n");
 
-#define READ_TEST_CONTENT(errno, errno_name, check_bytes, check_handles)       \
+WRITE_DISPLAY_TEST(
+    ZxChannelWritePeerClosed, ZX_ERR_PEER_CLOSED,
+    "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_write("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
+    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
+    "  \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=2 "
+    "ordinal=8639255294892834816\n"
+    "  -> \x1B[31mZX_ERR_PEER_CLOSED\x1B[0m\n"
+    "\n");
+
+#define READ_DISPLAY_TEST_CONTENT(errno, check_bytes, check_handles, expected) \
   if (check_bytes)                                                             \
     data().set_check_bytes();                                                  \
   if (check_handles)                                                           \
     data().set_check_handles();                                                \
   uint32_t actual_bytes = data().num_bytes();                                  \
   uint32_t actual_handles = data().num_handles();                              \
-  PerformTest(SystemCallTest::ZxChannelRead(                                   \
-      errno, errno_name, 0xcefa1db0, 0, data().bytes(), data().handles(), 100, \
-      64, check_bytes ? &actual_bytes : nullptr,                               \
-      check_handles ? &actual_handles : nullptr));
+  PerformDisplayTest(                                                          \
+      SystemCallTest::ZxChannelRead(                                           \
+          errno, #errno, kHandle, 0, data().bytes(), data().handles(), 100,    \
+          64, check_bytes ? &actual_bytes : nullptr,                           \
+          check_handles ? &actual_handles : nullptr),                          \
+      expected);
 
-#define READ_TEST(name, errno, check_bytes, check_handles)        \
-  TEST_F(InterceptionWorkflowTestX64, name) {                     \
-    READ_TEST_CONTENT(errno, #errno, check_bytes, check_handles); \
-  }                                                               \
-  TEST_F(InterceptionWorkflowTestArm, name) {                     \
-    READ_TEST_CONTENT(errno, #errno, check_bytes, check_handles); \
+#define READ_DISPLAY_TEST(name, errno, check_bytes, check_handles, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                                \
+    READ_DISPLAY_TEST_CONTENT(errno, check_bytes, check_handles, expected);  \
+  }                                                                          \
+  TEST_F(InterceptionWorkflowTestArm, name) {                                \
+    READ_DISPLAY_TEST_CONTENT(errno, check_bytes, check_handles, expected);  \
   }
 
-READ_TEST(ZxChannelRead, ZX_OK, true, true);
+READ_DISPLAY_TEST(
+    ZxChannelRead, ZX_OK, true, true,
+    "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
+    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
+    "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
+    "num_handles:\x1B[32muint32\x1B[0m: \x1B[34m64\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m\n"
+    "  \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=2 "
+    "ordinal=8639255294892834816\n"
+    "\n");
 
-READ_TEST(ZxChannelReadBufferTooSmall, ZX_ERR_BUFFER_TOO_SMALL, true, true);
+READ_DISPLAY_TEST(
+    ZxChannelReadShouldWait, ZX_ERR_SHOULD_WAIT, true, true,
+    "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
+    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
+    "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
+    "num_handles:\x1B[32muint32\x1B[0m: \x1B[34m64\x1B[0m)\n"
+    "  -> \x1B[31mZX_ERR_SHOULD_WAIT\x1B[0m\n"
+    "\n");
 
-READ_TEST(ZxChannelReadNoBytes, ZX_OK, false, true);
+READ_DISPLAY_TEST(
+    ZxChannelReadTooSmall, ZX_ERR_BUFFER_TOO_SMALL, true, true,
+    "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
+    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
+    "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
+    "num_handles:\x1B[32muint32\x1B[0m: \x1B[34m64\x1B[0m)\n"
+    "  -> \x1B[31mZX_ERR_BUFFER_TOO_SMALL\x1B[0m ("
+    "actual_bytes:\x1B[32muint32\x1B[0m: \x1B[34m16\x1B[0m, "
+    "actual_handles:\x1B[32muint32\x1B[0m: \x1B[34m2\x1B[0m)\n"
+    "\n");
 
-READ_TEST(ZxChannelReadNoHandles, ZX_OK, true, false);
+READ_DISPLAY_TEST(
+    ZxChannelReadNoBytes, ZX_OK, false, true,
+    "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
+    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
+    "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
+    "num_handles:\x1B[32muint32\x1B[0m: \x1B[34m64\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m\n"
+    "  \x1B[31mCan't decode message\x1B[0m num_bytes=0 num_handles=2\n"
+    "\n");
+
+READ_DISPLAY_TEST(
+    ZxChannelReadNoHandles, ZX_OK, true, false,
+    "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
+    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
+    "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
+    "num_handles:\x1B[32muint32\x1B[0m: \x1B[34m64\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m\n"
+    "  \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=0 "
+    "ordinal=8639255294892834816\n"
+    "\n");
 
 }  // namespace fidlcat
