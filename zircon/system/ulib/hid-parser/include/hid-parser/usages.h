@@ -444,11 +444,23 @@ inline bool operator==(uint16_t e, hid::usage::Page up) {
     return (static_cast<uint16_t>(up) == e);
 }
 
+inline bool operator==(hid::usage::Page up, uint16_t e) {
+    return (static_cast<uint16_t>(up) == e);
+}
+
 inline bool operator==(uint32_t e, hid::usage::GenericDesktop gd) {
     return (static_cast<uint32_t>(gd) == e);
 }
 
+inline bool operator==(hid::usage::GenericDesktop gd, uint32_t e) {
+    return (static_cast<uint32_t>(gd) == e);
+}
+
 inline bool operator==(uint32_t e, hid::usage::Digitizer d) {
+    return (static_cast<uint32_t>(d) == e);
+}
+
+inline bool operator==(hid::usage::Digitizer d, uint32_t e) {
     return (static_cast<uint32_t>(d) == e);
 }
 
@@ -457,6 +469,10 @@ inline bool operator==(uint32_t e, hid::usage::LEDs gd) {
 }
 
 inline bool operator==(uint32_t e, hid::usage::Consumer gd) {
+    return (static_cast<uint32_t>(gd) == e);
+}
+
+inline bool operator==(hid::usage::Consumer gd, uint32_t e) {
     return (static_cast<uint32_t>(gd) == e);
 }
 

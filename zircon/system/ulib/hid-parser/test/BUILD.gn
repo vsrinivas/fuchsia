@@ -20,7 +20,7 @@ test("hid-parser") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/hid-parser",
-    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zxtest",
   ]
 }
 # TODO(BLD-356): hid-parser-fuzzer

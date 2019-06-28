@@ -10,17 +10,15 @@
 #include <hid-parser/report.h>
 #include <hid-parser/units.h>
 #include <hid-parser/usages.h>
+#include <zxtest/zxtest.h>
 
 #include <unistd.h>
-#include <unittest/unittest.h>
 
 // See hid-utest-data.cpp for the definitions of the test data
 extern "C" const uint8_t push_pop_test[62];
 extern "C" const uint8_t minmax_signed_test[68];
 
-bool parse_empty_data() {
-    BEGIN_TEST;
-
+TEST(HidParserHelperTest, ParseEmptyData) {
     hid::DeviceDescriptor* dev = nullptr;
     uint8_t data[] = { 0 };
     auto res = hid::ParseReportDescriptor(data, sizeof(data), &dev);
@@ -31,16 +29,12 @@ bool parse_empty_data() {
 
     res = hid::ParseReportDescriptor(data, 0, &dev);
     ASSERT_EQ(res, hid::ParseResult::kParseMoreNeeded);
-
-    END_TEST;
 }
 
 // Tests that the max values of the MinMax are parsed as unsigned
 // data when the min values are >= 0. Also tests that the max values
 // are parsed as signed data when the min values are < 0.
-bool parse_minmax_signed() {
-    BEGIN_TEST;
-
+TEST(HidParserHelperTest, ParseMinmaxSigned) {
     hid::DeviceDescriptor* dev = nullptr;
     auto res = hid::ParseReportDescriptor(minmax_signed_test, sizeof(minmax_signed_test), &dev);
     ASSERT_EQ(res, hid::ParseResult::kParseOk);
@@ -56,15 +50,12 @@ bool parse_minmax_signed() {
     EXPECT_EQ(fields[1].attr.logc_mm.max, -1);
     EXPECT_EQ(fields[1].attr.phys_mm.min, -5);
     EXPECT_EQ(fields[1].attr.phys_mm.max, -1);
-
-    END_TEST;
 }
 
 // Test that the push and pop operations complete successfully.
 // Pushing saves all of the GLOBAL items.
 // Popping restores the previously saved GLOBAL items
-bool parse_push_pop() {
-    BEGIN_TEST;
+TEST(HidParserHelperTest, ParsePushPop) {
     hid::DeviceDescriptor* dev = nullptr;
     auto res = hid::ParseReportDescriptor(push_pop_test, sizeof(push_pop_test), &dev);
     ASSERT_EQ(res, hid::ParseResult::kParseOk);
@@ -155,31 +146,24 @@ bool parse_push_pop() {
         EXPECT_EQ(fields[ix].attr.logc_mm.max, 1);
         EXPECT_EQ(expected_flags & fields[ix].flags, expected_flags);
     }
-
-    END_TEST;
 }
 
-bool usage_helper() {
-    BEGIN_TEST;
+TEST(HidParserHelperTest, UsageHelper) {
     auto usage = hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID);
     EXPECT_EQ(usage.page, static_cast<uint16_t>(hid::usage::Page::kDigitizer));
     EXPECT_EQ(usage.usage, static_cast<uint32_t>(hid::usage::Digitizer::kContactID));
-    END_TEST;
 }
 
-bool minmax_operators() {
-    BEGIN_TEST;
+TEST(HidParserHelperTest, MinMaxOperators) {
     EXPECT_TRUE((hid::MinMax{-1, 1} == hid::MinMax{-1, 1}));
     EXPECT_FALSE((hid::MinMax{0, 1} == hid::MinMax{-1, 1}));
     EXPECT_FALSE((hid::MinMax{-1, 1} == hid::MinMax{0, 1}));
     EXPECT_FALSE((hid::MinMax{-1, 2} == hid::MinMax{-1, 1}));
     EXPECT_FALSE((hid::MinMax{-1, 1} == hid::MinMax{-1, 2}));
     EXPECT_FALSE((hid::MinMax{0, 2} == hid::MinMax{-1, 1}));
-    END_TEST;
 }
 
-bool usage_operators() {
-    BEGIN_TEST;
+TEST(HidParserHelperTest, UsageOperators) {
     EXPECT_TRUE(
         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID) ==
         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID));
@@ -189,11 +173,9 @@ bool usage_operators() {
     EXPECT_FALSE(
         hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kX) ==
         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID));
-    END_TEST;
 }
 
-bool extract_tests() {
-    BEGIN_TEST;
+TEST(HidParserHelperTest, ExtractTests) {
     uint8_t report[] = {0x0F, 0x0F, 0x0F, 0x0F, 0x0F};
     size_t report_len = sizeof(report);
     hid::Attributes attr;
@@ -262,12 +244,9 @@ bool extract_tests() {
     attr.bit_sz = 16;
     ret = ExtractUint(report, report_len, attr, &int16);
     EXPECT_FALSE(ret);
-
-    END_TEST;
 }
 
-bool extract_as_unit_tests() {
-    BEGIN_TEST;
+TEST(HidParserHelperTest, ExtractAsUnitTests) {
 
     uint8_t report[] = {0x0F, 10, 0x0F, 0x0F, 0x0F};
     size_t report_len = sizeof(report);
@@ -380,12 +359,9 @@ bool extract_as_unit_tests() {
     ret = ExtractWithUnit(report, report_len, attr, unit_out, &val_out);
     EXPECT_TRUE(ret);
     EXPECT_EQ(static_cast<int32_t>(val_out), 250);
-
-    END_TEST;
 }
 
-bool unit_tests() {
-    BEGIN_TEST;
+TEST(HidParserHelperTest, UnitTests) {
     hid::Unit unit_in;
     hid::Unit unit_out;
     bool ret;
@@ -654,12 +630,9 @@ bool unit_tests() {
 
     ret = hid::unit::ConvertUnits(unit_in, 1, unit_out, &val_out);
     EXPECT_FALSE(ret);
-
-    END_TEST;
 }
 
-bool insert_tests() {
-    BEGIN_TEST;
+TEST(HidParserHelperTest, InsertTests) {
     uint8_t report[8] = {};
     size_t report_len = sizeof(report);
     hid::Attributes attr = {};
@@ -774,19 +747,4 @@ bool insert_tests() {
     ASSERT_TRUE(InsertWithUnit(report, report_len, attr, unit_out, 20));
     ASSERT_TRUE(ExtractWithUnit(report, report_len,  attr, unit_out, &double_out));
     EXPECT_EQ(static_cast<int>(double_out), 20);
-
-    END_TEST;
 }
-
-BEGIN_TEST_CASE(hidparser_helper_tests)
-RUN_TEST(parse_empty_data)
-RUN_TEST(parse_minmax_signed)
-RUN_TEST(parse_push_pop)
-RUN_TEST(usage_helper)
-RUN_TEST(minmax_operators)
-RUN_TEST(usage_operators)
-RUN_TEST(extract_tests)
-RUN_TEST(extract_as_unit_tests)
-RUN_TEST(unit_tests)
-RUN_TEST(insert_tests)
-END_TEST_CASE(hidparser_helper_tests)
