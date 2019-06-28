@@ -100,16 +100,16 @@ zx_status_t RealtekCodec::SetupCommon() {
         // Converters.  Place all converters into D3HOT and mute/attenuate their outputs.
         // Output converters.
         {  2u, SET_POWER_STATE(HDA_PS_D3HOT) },
-        {  2u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true, 0), },
+        {  2u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true, 0) },
         {  3u, SET_POWER_STATE(HDA_PS_D3HOT) },
-        {  3u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true, 0), },
+        {  3u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true, 0) },
         {  6u, SET_POWER_STATE(HDA_PS_D3HOT) },
 
         // Input converters.
         {  8u, SET_POWER_STATE(HDA_PS_D3HOT) },
-        {  8u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true, 0), },
+        {  8u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true, 0) },
         {  9u, SET_POWER_STATE(HDA_PS_D3HOT) },
-        {  9u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true, 0), },
+        {  9u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true, 0) },
 
         // Pin complexes.  Place all complexes into powered down states.  Disable all
         // inputs/outputs/external amps, etc...
@@ -120,34 +120,34 @@ zx_status_t RealtekCodec::SetupCommon() {
 
         // Class-D Power Amp output
         { 20u, SET_POWER_STATE(HDA_PS_D3HOT) },
-        { 20u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true, 0), },
+        { 20u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true, 0) },
         { 20u, SET_ANALOG_PIN_WIDGET_CTRL(false, false, false) },
         { 20u, SET_EAPD_BTL_ENABLE(0) },
 
         // Mono output
         { 23u, SET_POWER_STATE(HDA_PS_D3HOT) },
-        { 23u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true, 0), },
+        { 23u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true, 0) },
         { 23u, SET_ANALOG_PIN_WIDGET_CTRL(false, false, false) },
 
         // Undocumented input...
         { 24u, SET_POWER_STATE(HDA_PS_D3HOT) },
-        { 24u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0), },
+        { 24u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0) },
         { 24u, SET_ANALOG_PIN_WIDGET_CTRL(false, false, false) },
 
         // MIC2 input
         { 25u, SET_POWER_STATE(HDA_PS_D3HOT) },
-        { 25u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0), },
+        { 25u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0) },
         { 25u, SET_ANALOG_PIN_WIDGET_CTRL(false, false, false) },
 
         // LINE1 input
         { 26u, SET_POWER_STATE(HDA_PS_D3HOT) },
-        { 26u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0), },
+        { 26u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0) },
         { 26u, SET_ANALOG_PIN_WIDGET_CTRL(false, false, false) },
 
         // LINE2 in/out
         { 27u, SET_POWER_STATE(HDA_PS_D3HOT) },
-        { 27u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0), },
-        { 27u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true, 0), },
+        { 27u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0) },
+        { 27u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true, 0) },
         { 27u, SET_ANALOG_PIN_WIDGET_CTRL(false, false, false) },
         { 27u, SET_EAPD_BTL_ENABLE(0) },
 
@@ -161,7 +161,7 @@ zx_status_t RealtekCodec::SetupCommon() {
 
         // Headphone out
         { 33u, SET_POWER_STATE(HDA_PS_D3HOT) },
-        { 33u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true, 0), },
+        { 33u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true, 0) },
         { 33u, SET_ANALOG_PIN_WIDGET_CTRL(false, false, false) },
         { 33u, SET_EAPD_BTL_ENABLE(0) },
     };
@@ -185,22 +185,22 @@ zx_status_t RealtekCodec::SetupAcer12() {
 
     static const CommandListEntry START_CMDS[] = {
         // Set up the routing that we will use for the headphone output.
-        { 13u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(false, 0, 0), },  // Mix NID 13, In-0 (nid 3) un-muted
-        { 13u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true,  1, 0), },  // Mix NID 13, In-1 (nid 11) muted
+        { 13u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(false, 0, 0) },   // Mix NID 13, In-0 (nid 3) un-muted
+        { 13u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true,  1, 0) },   // Mix NID 13, In-1 (nid 11) muted
         { 33u, SET_CONNECTION_SELECT_CONTROL(1u) },             // HP Pin source from ndx 0 (nid 13)
 
         // Set up the routing that we will use for the speaker output.
-        { 12u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(false, 0, 0), },  // Mix NID 12, In-0 (nid 2) un-muted
-        { 12u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true,  1, 0), },  // Mix NID 12, In-1 (nid 11) muted
+        { 12u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(false, 0, 0) },  // Mix NID 12, In-0 (nid 2) un-muted
+        { 12u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true,  1, 0) },  // Mix NID 12, In-1 (nid 11) muted
 
         // Set up the routing that we will use for the builtin mic
-        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 0), },  // Mix NID 35, In-0 (nid 24) mute
-        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 1), },  // Mix NID 35, In-1 (nid 25) mute
-        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 2), },  // Mix NID 35, In-2 (nid 26) mute
-        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 3), },  // Mix NID 35, In-3 (nid 27) mute
-        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 4), },  // Mix NID 35, In-4 (nid 29) mute
-        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 5), },  // Mix NID 35, In-5 (nid 11) mute
-        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0, 6), },  // Mix NID 35, In-6 (nid 18) unmute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 0) },   // Mix NID 35, In-0 (nid 24) mute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 1) },   // Mix NID 35, In-1 (nid 25) mute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 2) },   // Mix NID 35, In-2 (nid 26) mute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 3) },   // Mix NID 35, In-3 (nid 27) mute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 4) },   // Mix NID 35, In-4 (nid 29) mute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 5) },   // Mix NID 35, In-5 (nid 11) mute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0, 6) },   // Mix NID 35, In-6 (nid 18) unmute
 
         // Enable MIC2's input.  Failure to keep this enabled causes the positive half of
         // the headphone output to be destroyed.
@@ -280,17 +280,17 @@ zx_status_t RealtekCodec::SetupIntelNUC() {
 
     static const CommandListEntry START_CMDS[] = {
         // Set up the routing that we will use for the headphone output.
-        { 12u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0, 0), },  // Mix NID 12, In-0 (nid 2) unmute
-        { 12u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 1), },  // Mix NID 12, In-1 (nid 11) mute
+        { 12u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0, 0) },   // Mix NID 12, In-0 (nid 2) unmute
+        { 12u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 1) },   // Mix NID 12, In-1 (nid 11) mute
         { 33u, SET_CONNECTION_SELECT_CONTROL(0u) },            // HP Pin source from ndx 0 (nid 12)
 
         // Set up the routing that we will use for the headset input.
-        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 0), },  // Mix NID 35, In-0 (nid 24) mute
-        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0, 1), },  // Mix NID 35, In-1 (nid 25) unmute
-        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 2), },  // Mix NID 35, In-2 (nid 26) mute
-        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 3), },  // Mix NID 35, In-3 (nid 27) mute
-        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 4), },  // Mix NID 35, In-4 (nid 29) mute
-        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 5), },  // Mix NID 35, In-5 (nid 11) mute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 0) },   // Mix NID 35, In-0 (nid 24) mute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0, 1) },   // Mix NID 35, In-1 (nid 25) unmute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 2) },   // Mix NID 35, In-2 (nid 26) mute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 3) },   // Mix NID 35, In-3 (nid 27) mute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 4) },   // Mix NID 35, In-4 (nid 29) mute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 5) },   // Mix NID 35, In-5 (nid 11) mute
 
         // Enable MIC2's input.  Failure to keep this enabled causes the positive half of
         // the headphone output to be destroyed.
