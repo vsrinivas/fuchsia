@@ -182,8 +182,6 @@ zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
     return ZX_OK;
 }
 
-int trace_not_ready = 0;
-
 void ktrace_init(unsigned level) {
     ktrace_state_t* ks = &KTRACE_STATE;
 
@@ -302,4 +300,5 @@ void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, 
     }
 }
 
-LK_INIT_HOOK(ktrace, ktrace_init, LK_INIT_LEVEL_USER)
+// Finish initialization before starting userspace (i.e. before debug syscalls can occur).
+LK_INIT_HOOK(ktrace, ktrace_init, LK_INIT_LEVEL_USER - 1)
