@@ -10,13 +10,13 @@
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 
-#include <fbl/intrusive_hash_table.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <trace-engine/fields.h>
 #include <trace-engine/handler.h>
 
 #include "context_impl.h"
+#include "hash_table.h"
 
 namespace trace {
 namespace {
@@ -72,7 +72,7 @@ void GetObjectName(zx_handle_t handle, char* name_buf, size_t name_buf_size,
 }
 
 // A string table entry.
-struct StringEntry : public fbl::SinglyLinkedListable<StringEntry*> {
+struct StringEntry : public internal::SinglyLinkedListable<StringEntry> {
     // Attempted to assign an index.
     static constexpr uint32_t kAllocIndexAttempted = 1u << 0;
     // Successfully assigned an index.
@@ -97,7 +97,7 @@ struct StringEntry : public fbl::SinglyLinkedListable<StringEntry*> {
 };
 
 // A thread table entry.
-struct ThreadEntry : public fbl::SinglyLinkedListable<ThreadEntry*> {
+struct ThreadEntry : public internal::SinglyLinkedListable<ThreadEntry> {
     // The thread koid itself.
     zx_koid_t thread_koid;
 
@@ -132,7 +132,7 @@ struct ContextCache {
     // String table.
     // Provides a limited amount of storage for rapidly looking up string literals
     // registered by this thread.
-    fbl::HashTable<const char*, StringEntry*> string_table;
+    internal::HashTable<const char*, StringEntry> string_table;
 
     // Storage for the string entries.
     StringEntry string_entries[kMaxStringEntries];
@@ -143,7 +143,7 @@ struct ContextCache {
     // External thread table.
     // Provides a limited amount of storage for rapidly looking up external threads
     // registered by this thread.
-    fbl::HashTable<zx_koid_t, ThreadEntry*> thread_table;
+    internal::HashTable<zx_koid_t, ThreadEntry> thread_table;
 
     // Storage for the external thread entries.
     ThreadEntry thread_entries[kMaxThreadEntries];
@@ -174,9 +174,10 @@ StringEntry* CacheStringEntry(uint32_t generation,
     if (unlikely(!cache))
         return nullptr;
 
-    auto it = cache->string_table.find(string_literal);
-    if (likely(it.IsValid()))
-        return it.CopyPointer();
+    auto ptr = cache->string_table.lookup(string_literal);
+    if (likely(ptr != nullptr)) {
+        return ptr;
+    }
 
     size_t count = cache->string_table.size();
     if (unlikely(count == ContextCache::kMaxStringEntries))
@@ -195,9 +196,10 @@ ThreadEntry* CacheThreadEntry(uint32_t generation, zx_koid_t thread_koid) {
     if (unlikely(!cache))
         return nullptr;
 
-    auto it = cache->thread_table.find(thread_koid);
-    if (likely(it.IsValid()))
-        return it.CopyPointer();
+    auto ptr = cache->thread_table.lookup(thread_koid);
+    if (likely(ptr != nullptr)) {
+        return ptr;
+    }
 
     size_t count = cache->thread_table.size();
     if (unlikely(count == ContextCache::kMaxThreadEntries))
