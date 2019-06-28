@@ -15,6 +15,7 @@ executable("unittests") {
   testonly = true
   output_name = "input_unittests"
   sources = [
+    "accessibility_pointer_events_test.cc",
     "coordinate_transform_test.cc",
     "focus_avoidance_test.cc",
     "hard_keyboard_delivery_test.cc",
@@ -30,6 +31,7 @@ executable("unittests") {
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/inspect",
     "//garnet/public/lib/ui/input/cpp",
+    "//sdk/fidl/fuchsia.ui.policy.accessibility",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",

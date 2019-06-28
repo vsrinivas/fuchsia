@@ -5,7 +5,9 @@
 #ifndef GARNET_LIB_UI_INPUT_INPUT_SYSTEM_H_
 #define GARNET_LIB_UI_INPUT_INPUT_SYSTEM_H_
 
+#include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <fuchsia/ui/policy/accessibility/cpp/fidl.h>
 
 #include <memory>
 #include <unordered_map>
@@ -25,7 +27,7 @@ namespace input {
 //
 // The general flow of events is:
 // DispatchCommand --[decide what/where]--> EnqueueEvent
-class InputSystem : public System {
+class InputSystem : public System, public fuchsia::ui::policy::accessibility::PointerEventRegistry {
  public:
   static constexpr TypeId kTypeId = kInput;
   static const char* kName;
@@ -38,7 +40,22 @@ class InputSystem : public System {
 
   fuchsia::ui::input::ImeServicePtr& text_sync_service() { return text_sync_service_; }
 
+  fuchsia::ui::input::accessibility::PointerEventListenerPtr&
+  accessibility_pointer_event_listener() {
+    return accessibility_pointer_event_listener_;
+  }
+
+  bool IsAccessibilityPointerEventForwardingEnabled() const {
+    return accessibility_pointer_event_listener_ &&
+           accessibility_pointer_event_listener_.is_bound();
+  }
+
   std::unordered_set<SessionId>& hard_keyboard_requested() { return hard_keyboard_requested_; }
+
+  // |fuchsia.ui.policy.accessibility.PointerEventRegistry|
+  void Register(fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener>
+                    pointer_event_listener,
+                RegisterCallback callback) override;
 
  private:
   gfx::GfxSystem* const gfx_system_;
@@ -53,6 +70,12 @@ class InputSystem : public System {
   // this set remembers which sessions have opted in.  We need this map because
   // each InputCommandDispatcher works independently.
   std::unordered_set<SessionId> hard_keyboard_requested_;
+
+  fidl::BindingSet<fuchsia::ui::policy::accessibility::PointerEventRegistry>
+      accessibility_pointer_event_registry_;
+  // We honor the first accessibility listener to register. A call to Register()
+  // above will fail if there is already a registered listener.
+  fuchsia::ui::input::accessibility::PointerEventListenerPtr accessibility_pointer_event_listener_;
 };
 
 // Per-session treatment of input commands.
@@ -66,6 +89,107 @@ class InputCommandDispatcher : public CommandDispatcher {
   void DispatchCommand(const fuchsia::ui::scenic::Command command) override;
 
  private:
+  // A buffer to store pointer events.
+  //
+  // This buffer is used only when an accessibility listener is intercepting
+  // pointer events. This buffer stores incoming pointer events per stream, and
+  // sends them either to the views or the accessibility listener.
+  //
+  // It holds to pointer events until the accessibility listener decides to
+  // consume / reject them.
+  class PointerEventBuffer {
+   public:
+    // Represents a parallel dispatch of pointer events. Position 0 of this
+    // vector holds the top-most view.
+    using DeferredPerViewPointerEvents =
+        std::vector<std::pair<ViewStack::Entry, fuchsia::ui::input::PointerEvent>>;
+    // Possible states of a stream.
+    enum PointerIdStreamStatus {
+      WAITING_RESPONSE = 0,  // accessibility listener hasn't responded yet.
+      CONSUMED = 1,
+      REJECTED = 2,
+    };
+    // Represents a stream of pointer events, where a stream is a sequence of
+    // ADD -> * -> REMOVE pointer event phases.
+    struct PointerIdStream {
+      // The pointer events of this stream. Please note that each element
+      // of this vector is another vector itself. The reason is because one
+      // pointer event may turn into multiple touch events when there are
+      // several views receiving in parallel the same event.
+      std::vector<DeferredPerViewPointerEvents> events;
+      // Cache the focusability of the top-most View for this stream;
+      // the ViewStack's focus_change only tracks the current stream. This field
+      // is set when the stream is added (new ADD event coming).
+      bool focus_change = true;
+    };
+
+    PointerEventBuffer(InputCommandDispatcher* dispatcher);
+    ~PointerEventBuffer();
+
+    // Adds a parallel dispatch event list |views_and_events| to the latest
+    // stream associated with |pointer_id|. It also takes
+    // |accessibility_pointer_event|, which is sent to the listener depending on
+    // the current stream status.
+    void AddEvents(uint32_t pointer_id, DeferredPerViewPointerEvents views_and_events,
+                   fuchsia::ui::input::accessibility::PointerEvent accessibility_pointer_event);
+
+    // Adds a new stream associated with |pointer_id|. |focus_change|
+    // defines whether the top most view is focusable or not.
+    void AddStream(uint32_t pointer_id, bool focus_change);
+
+    // Updates the oldest stream associated with |pointer_id|, triggering an
+    // appropriate action depending on |handled|.
+    // If |handled| == CONSUMED, continues sending events to the listener.
+    // If |handled| == REJECTED, dispatches buffered pointer events to views.
+    void UpdateStream(uint32_t pointer_id,
+                      fuchsia::ui::input::accessibility::EventHandling handled);
+
+    // Sets the status and focusability of view of the active stream for a
+    // pointer ID.
+    void SetActiveStreamInfo(uint32_t pointer_id, PointerIdStreamStatus status, bool focus_change) {
+      active_stream_info_[pointer_id] = {status, focus_change};
+    }
+
+   private:
+    // Dispatches a parallel set of events to views.
+    void DispatchEvents(DeferredPerViewPointerEvents views_and_events);
+
+    // Helper function to dispatch a focus event when a deferred parallel
+    // dispatch of pointer events corresponds to a DOWN event and the top-most
+    // view is focusable.
+    void MaybeDispatchFocusEvent(
+        const InputCommandDispatcher::PointerEventBuffer::DeferredPerViewPointerEvents&
+            views_and_events,
+        bool focus_change);
+
+    InputCommandDispatcher* const dispatcher_;
+    // NOTE: We assume there is one touch screen, and hence unique pointer IDs.
+    // key = pointer ID, value = a list of pointer streams. Every new stream is
+    // added to the end of the list, where a consume / reject response from the
+    // listener always removes the first element.
+    std::unordered_map<uint32_t, std::deque<PointerIdStream>> buffer_;
+    // Key = pointer ID, value = the status and focusability of the current
+    // active stream.
+    //
+    // This is kept separate from the map above because this must outlive
+    // the stream itself. When the accessibility listener responds, the first
+    // non-processed stream is consumed / rejected and gets removed from the
+    // buffer. It may not be finished (we haven't seen a pointer event with
+    // phase == REMOVE), so it is necessary to still keep track of where the
+    // incoming pointer events should go, although they don't need to be
+    // buffered anymore.
+    // In addition, focusability of the top-most view for the stream is also
+    // tracked here to deal with the case:
+    // 1. Send ADD event. 2. a11y listener rejects the stream. 3. We remove the
+    // buffered  stream, dispatching events. 4. An incoming down event must be
+    // dispatched, but it needs the focusability information as well as the
+    // status of the stream (rejected).
+    // Whenever a pointer ID is added, its default value is WAITING_RESPONSE.
+    std::unordered_map</*pointer ID*/ uint32_t,
+                       std::pair<PointerIdStreamStatus, /*focusable*/ bool>>
+        active_stream_info_;
+  };
+
   // Per-command dispatch logic.
   void DispatchCommand(const fuchsia::ui::input::SendPointerInputCmd command);
   void DispatchCommand(const fuchsia::ui::input::SendKeyboardInputCmd command);
@@ -80,13 +204,33 @@ class InputCommandDispatcher : public CommandDispatcher {
   void EnqueueEventToView(GlobalId view_id, fuchsia::ui::input::FocusEvent focus);
 
   // Enqueue the pointer event into the view's SessionListener.
-  void EnqueueEventToView(GlobalId view_id, fuchsia::ui::input::PointerEvent pointer);
+  void EnqueueEventToView(const ViewStack::Entry& view_info,
+                          fuchsia::ui::input::PointerEvent pointer);
 
   // Enqueue the keyboard event into the view's SessionListener.
   void EnqueueEventToView(GlobalId view_id, fuchsia::ui::input::KeyboardEvent keyboard);
 
   // Enqueue the keyboard event to the Text Sync service.
   void EnqueueEventToTextSync(GlobalId view_id, fuchsia::ui::input::KeyboardEvent keyboard);
+
+  // Maybe fires a focus event to a view.
+  //
+  //  The new focus can be either the old focus (either
+  // deliberately, or by the no-focus property), or another view.
+  // |focus_change| defines whether the top most view is focusable or not.
+  // |view_info| is the top most view of a hit stack.
+  void MaybeChangeFocus(bool focus_change, const ViewStack::Entry& view_info);
+
+  // Checks if an accessibility listener is intercepting pointer events. If the
+  // listener is on, initializes the buffer if it hasn't been created.
+  // Important:
+  // When the buffer is initialized, it can be the case that there are active
+  // pointer event streams that haven't finished yet. They are sent to clients,
+  // and *not* to the a11y listener. When the stream is done and a new stream
+  // arrives, these will be sent to the a11y listener who will just continue its
+  // normal flow. In a disconnection, if there are active pointer event streams,
+  // its assume that the listener rejected them so they are sent to clients.
+  bool ShouldForwardAccessibilityPointerEvents();
 
   // FIELDS
 
@@ -116,6 +260,11 @@ class InputCommandDispatcher : public CommandDispatcher {
 
   // TODO(SCN-1047): Remove when gesture disambiguation is the default.
   bool parallel_dispatch_ = true;
+
+  // When accessibility pointer event forwarding is enabled, this buffer stores
+  // pointer events until an accessibility listener decides how to handle them.
+  // It is always null otherwise.
+  std::unique_ptr<PointerEventBuffer> pointer_event_buffer_;
 };
 
 }  // namespace input

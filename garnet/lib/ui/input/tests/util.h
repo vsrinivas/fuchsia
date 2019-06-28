@@ -49,6 +49,15 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   // Debugging function.
   std::string DumpScenes() { return gfx_->engine()->DumpScenes(); }
 
+  // Offers a way to call
+  // |fuchsia.ui.policy.accessibility.PointerEventRegistry| for testing.
+  void RegisterAccessibilityListener(
+      fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener>
+          pointer_event_listener,
+      scenic_impl::input::InputSystem::RegisterCallback callback) {
+    return input_->Register(std::move(pointer_event_listener), std::move(callback));
+  }
+
  protected:
   // Each test fixture defines its own test display parameters.  It's needed
   // both here (to define the display), and in the client (to define the size of
