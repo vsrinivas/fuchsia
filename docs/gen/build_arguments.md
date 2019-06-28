@@ -1018,7 +1018,6 @@ Each element of the list is one variant, which is a scope defining:
 
 
 **Current value (from the default):**
-
 ```
 [{
   configs = ["//build/config/lto"]
@@ -1530,7 +1529,6 @@ is a scope where `.name` is the short name and `.select_variant` is a
 a list that can be spliced into [`select_variant`](#select_variant).
 
 **Current value (from the default):**
-
 ```
 [{
   name = "host_asan"
@@ -2119,7 +2117,6 @@ The other fields are the variant's effects as defined in
 [`known_variants`](#known_variants).
 
 **Current value (from the default):**
-
 ```
 {
   base = "//build/toolchain/fuchsia:arm64"
@@ -2131,7 +2128,6 @@ From //build/config/BUILDCONFIG.gn:78
 ### universal_variants
 
 **Current value (from the default):**
-
 ```
 [{
   configs = []
@@ -2379,7 +2375,6 @@ Any individual Zircon build argument set in `zircon_extra_args` will
 silently clobber the default value shown here.
 
 **Current value (from the default):**
-
 ```
 {
   default_deps = [":legacy-arm64"]

@@ -64,7 +64,7 @@ Defines the `//:default` target: what `ninja` with no arguments does.
 
 **Current value (from the default):** `[":build-tests", ":ids", ":images", ":tools"]`
 
-From //BUILD.gn:19
+From //BUILD.gn:20
 
 ### detailed_scheduler_tracing
 Enable detailed scheduler traces.
@@ -236,7 +236,6 @@ Or it can be a list of scopes containing `cpu`, `os`, and `sysroot`.
 The empty list (or empty string) means don't use `--sysroot` at all.
 
 **Current value (from the default):**
-
 ```
 [{
   cpu = "arm64"
@@ -267,7 +266,7 @@ to be pared down.
 
 **Current value (from the default):** `true`
 
-From //BUILD.gn:16
+From //BUILD.gn:17
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -289,7 +288,6 @@ It exists only to be set via c_toolchain().
 See environment() for more information.
 
 **Current value (from the default):**
-
 ```
 {
   configs = []
