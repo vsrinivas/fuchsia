@@ -21,18 +21,28 @@ using fuchsia.sysmem;
 //   * OnInputConstraints() - sent unsolicited by stream processor shortly after
 //     stream processor creation.
 // 3. Provide input buffers
-//   * SetInputBufferSettings() / AddInputBuffer()
+//   * SetInputBufferPartialSettings() (current way)
+//   * SetInputBufferSettings() / AddInputBuffer() (old deprecated way)
 // 4. Deliver input data
 //   * QueueInputPacket() + OnFreeInputPacket(), for as long as it takes,
 //     possibly working through all input packets repeatedly before...
 // 5. Get output constraints and format
-//   * OnOutputConstraints() - may be delivered as early as before
-//     OnInputConstraints() by some stream processors, but a client must
-//     tolerate as late as after substantial input data has been delivered
-//     including lots of input packet recycling via OnFreeInputPacket().
+//   * OnOutputConstraints()
+//   * This is not sent until after at least one QueueInput* message is sent by
+//     the client, even if the underlying processor behind the StreamProcessor
+//     doesn't fundamentally need any input data to determine its output
+//     constraints.  This server behavior prevents clients taking an incorrect
+//     dependency on the output constraints showing up before input is
+//     delivered.
+//   * A client must tolerate this arriving as late as after substantial input
+//     data has been delivered, including lots of input packet recycling via
+//     OnFreeInputPacket().
 //   * This message can arrive more than once before the first output data.
 // 6. Provide output buffers
+//   * SetOutputBufferPartialSettings() / CompleteOutputBufferPartialSettings()
+//     (current way)
 //   * SetOutputBufferSettings() / AddOutputBuffer()
+//     (old deprecated way)
 // 7. Data flows, with optional EndOfStream
 //   * OnOutputPacket() / RecycleOutputPacket() / QueueInputPacket() /
 //     OnFreeInputPacket() / QueueInputEndOfStream() / OnOutputEndOfStream()
@@ -271,8 +281,8 @@ table StreamBufferConstraints {
 // settings the client might specify for output of an encoder.
 table StreamOutputConstraints {
     // A client which always immediately re-configures output buffers on
-    // receipt of OnOutputConstraints() with buffer_constraints_action_required true
-    // can safely ignore this field.
+    // receipt of OnOutputConstraints() with buffer_constraints_action_required
+    // true can safely ignore this field.
 
     // A client is permitted to ignore an OnOutputConstraints() message even with
     // buffer_constraints_action_required true if the client knows the server
@@ -1079,17 +1089,6 @@ protocol StreamProcessor {
     // This message is guaranteed to be sent unsolicited to the StreamProcessor
     // client during or shortly after StreamProcessor creation.  Clients should
     // not depend on this being the very first message to arrive at the client.
-    // OnOutputConstraints() may be sent first by some stream processors that
-    // already know their initial output config without any input data, to
-    // encourage (but not strictly require) the client to configure output
-    // buffers before feeding the first input, to avoid a wasteful
-    // OnOutputConstraints() being generated for that first stream if the client has
-    // started configuring output but isn't done configuring output before the
-    // client sends the first input data for the first stream. A client is free
-    // to ignore OnOutputConstraints() with a stale stream_lifetime_ordinal, but
-    // handling OnOutputConstraints() with stream_lifetime_ordinal 0 (if any are
-    // sent) can help reduce latency to first output.  See OnOutputConstraints() for
-    // more details.
     //
     // The "min" and "max" input constraints are guaranteed not to change for a
     // given StreamProcessor instance.  The "recommended" values may
@@ -1104,13 +1103,15 @@ protocol StreamProcessor {
     // the recommendations from the constraints.
     -> OnInputConstraints(StreamBufferConstraints input_constraints);
 
-    // SetInputBufferSettings() and AddInputBuffer()
+    // SetInputBufferSettings() and AddInputBuffer() (deprecated)
     //
-    // Configuring input buffers consists of calling SetInputBufferSettings()
-    // followed by a number of calls to AddInputBuffer() equal to the number of
-    // buffers set via SetInputBufferSettings().  In buffer-per-packet mode,
-    // this is the same as the number of packets.  In single-buffer mode, this
-    // is 1.
+    // Clients should use SetInputBufferPartialSettings() instead.
+    //
+    // Configuring input buffers (the old way) consists of calling
+    // SetInputBufferSettings() followed by a number of calls to
+    // AddInputBuffer() equal to the number of buffers set via
+    // SetInputBufferSettings().  In buffer-per-packet mode, this is the same as
+    // the number of packets.  In single-buffer mode, this is 1.
     //
     // After OnInputConstraints(), the client uses these two methods to set up
     // input buffers and packets.
@@ -1145,6 +1146,8 @@ protocol StreamProcessor {
     AddInputBuffer(StreamBuffer buffer);
 
     // SetInputBufferPartialSettings()
+    //
+    // This is the replacement for SetInputBufferSettings().
     //
     // When the client is using sysmem to allocate buffers, this message is
     // used instead of SetInputBufferSettings()+AddInputBuffer().  Instead, a
@@ -1229,8 +1232,8 @@ protocol StreamProcessor {
     // any OnOutputPacket() for this stream until after the client has
     // configured/re-configured output buffers.
     //
-    // A client that gives up on processing on any mid-stream
-    // OnOutputConstraints() or mid-stream OnOuptutFormat() should completely
+    // A client that gives up on processing a stream on any mid-stream
+    // OnOutputConstraints() or mid-stream OnOutputFormat() should completely
     // ignore any OnOutputConstraints() with buffer_constraints_action_required
     // false.  Otherwise the client may needlessly fail processing, or server
     // implementations might not be able to use
@@ -1246,7 +1249,7 @@ protocol StreamProcessor {
     // This message is ordered with respect to output packets, and with respect
     // to OnOutputFormat().
     //
-    // For more on OnOutputConstraints(), see cocec.md.
+    // For more on OnOutputConstraints(), see stream_processor.md.
     -> OnOutputConstraints(StreamOutputConstraints output_config);
 
     // OnOutputFormat()
@@ -1267,9 +1270,9 @@ protocol StreamProcessor {
     // subsequent OnOutputFormat() before any OnOutputPacket().
     //
     // If the server sets buffer_constraints_action_required true in
-    // OnOutputConstraints(), the server won't send OnOutputFormat() (and therefore
-    // also won't send OnOutputPacket()) until the client has re-configured
-    // output buffers.
+    // OnOutputConstraints(), the server won't send OnOutputFormat() (and
+    // therefore also won't send OnOutputPacket()) until the client has
+    // re-configured output buffers.
     //
     // The server is allowed to send an OnOutputFormat() mid-stream between two
     // output packets.
@@ -1283,7 +1286,7 @@ protocol StreamProcessor {
     // changes should either ensure that no stream processed by the client
     // ever has any mid-stream format change, or the client should ensure that
     // any retry of processing starts the new attempt at a point logically at or
-    // after the ponit where the old format has ended and the new format starts,
+    // after the point where the old format has ended and the new format starts,
     // else the client could just hit the same mid-stream format change again.
     //
     // An example of this message being sent mid-stream is mid-stream change
@@ -1292,19 +1295,21 @@ protocol StreamProcessor {
     // Not all servers will support seamless handling of format change.  Those
     // that do support seamless handling of format change may require that the
     // format change not also require output buffer re-config, in order for the
-    // handling to be seamless.  See the comment block for OnOutputConstraints() for
-    // more discussion of how servers and clients should behave - in particular
-    // when they don't seamlessly handle output constraint change and/or output
-    // format change.
+    // handling to be seamless.  See the comment block for OnOutputConstraints()
+    // for more discussion of how servers and clients should behave - in
+    // particular when they don't seamlessly handle output constraint change
+    // and/or output format change.
     //
     // If this message isn't being sent by the server when expected at the
-    // start of a stream, the most common reason is that a previous
-    // OnOutputConstraints() with buffer_constraints_action_required true hasn't
-    // been processed by the client (by configuring output buffers using
+    // start of a stream, the most common reason is that a OnOutputConstraints()
+    // with buffer_constraints_action_required true hasn't been processed by the
+    // client (by configuring output buffers using
     // SetOutputBufferPartialSettings() etc).
     -> OnOutputFormat(StreamOutputFormat output_format);
 
-    // SetOutputBufferSettings() and AddOutputBuffer()
+    // SetOutputBufferSettings() and AddOutputBuffer() (deprecated)
+    //
+    // Client code should use SetOutputBufferPartialSettings() instead.
     //
     // These are not permitted until after the first OnOutputConstraints().
     //
@@ -1329,6 +1334,8 @@ protocol StreamProcessor {
     AddOutputBuffer(StreamBuffer buffer);
 
     // SetOutputBufferPartialSettings()
+    //
+    // This is the replacement for SetOutputBufferSettings().
     //
     // When the client is using sysmem to allocate buffers, this message is
     // used instead of SetOutputBufferSettings()+AddOutputBuffer(). Instead, a
@@ -1549,8 +1556,8 @@ protocol StreamProcessor {
     // the only ways that an OnOutputEndOfStream() won't happen after
     // QueueInputEndOfStream().
     //
-    // There will be no more OnOutputPacket() or OnOutputConstraints() messages for
-    // this stream_lifetime_ordinal after this message - if a server doesn't
+    // There will be no more OnOutputPacket() or OnOutputConstraints() messages
+    // for this stream_lifetime_ordinal after this message - if a server doesn't
     // follow this rule, a client should close the StreamProcessor channel.
     //
     // The error_detected_before bool has the same semantics as the
@@ -1573,6 +1580,9 @@ protocol StreamProcessor {
     // to be sent.
     //
     // If the stream doesn't exist yet, this message creates the stream.
+    //
+    // The server won't send OnOutputConstraints() until after the client has
+    // sent at least one QueueInput* message.
     //
     // All servers must permit QueueInputFormatDetails() at the start of a
     // stream without failing, as long as the new format is supported by the
@@ -1603,9 +1613,8 @@ protocol StreamProcessor {
     //
     // If the stream doesn't exist yet, this message creates the new stream.
     //
-    // The client is required to be willing to send QueueInputPacket() prior to
-    // the server's first OnOutputConstraints(), and is permitted to start a new
-    // stream without output buffers configured yet.
+    // The server won't send OnOutputConstraints() until after the client has
+    // sent at least one QueueInput* message.
     //
     // The client must continue to deliver input data via this message even if
     // the stream processor has not yet generated the first OnOutputConstraints(),

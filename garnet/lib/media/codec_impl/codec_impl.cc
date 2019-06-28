@@ -343,9 +343,6 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
         std::make_unique<fuchsia::media::StreamBufferConstraints>(
             std::move(buffer_constraints));
 
-    // If/when this sends OnOutputConstraints(), it posts to do so.
-    onInputConstraintsReady();
-
     sent_buffer_constraints_version_ordinal_[kInputPort] =
         kInputBufferConstraintsVersionOrdinal;
     PostToSharedFidl([this] {
@@ -1221,16 +1218,6 @@ bool CodecImpl::CheckWaitEnsureInputConfigured(
     return false;
   }
   return true;
-}
-
-void CodecImpl::onInputConstraintsReady() {
-  ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
-  if (!IsCoreCodecRequiringOutputConfigForFormatDetection()) {
-    return;
-  }
-  std::unique_lock<std::mutex> lock(lock_);
-  StartIgnoringClientOldOutputConfig(lock);
-  GenerateAndSendNewOutputConstraints(lock, true);
 }
 
 void CodecImpl::UnbindLocked() {
@@ -2710,12 +2697,6 @@ void CodecImpl::GenerateAndSendNewOutputConstraints(
       !buffer_constraints_action_required ||
       (last_required_buffer_constraints_version_ordinal_[kOutputPort] ==
        new_output_buffer_constraints_version_ordinal));
-
-  // printf("GenerateAndSendNewOutputConstraints
-  // new_output_buffer_constraints_version_ordinal: %lu
-  // buffer_constraints_action_required: %d\n",
-  // new_output_buffer_constraints_version_ordinal,
-  // buffer_constraints_action_required);
 
   std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
       output_constraints;

@@ -412,10 +412,6 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // Setup/teardown aspects.
   //
 
-  // Will send an initial Codec.OnOutputConstraints() if the codec can't
-  // tolerate null output config during format detection.
-  void onInputConstraintsReady();
-
   // This starts unbinding.  When unbinding is done and CodecImpl is ready to
   // be destructed, client_error_handler_ is called.
   //

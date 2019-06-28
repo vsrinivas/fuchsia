@@ -54,8 +54,8 @@ class CodecAdapter {
   // to do in the wrapper methods.
   //
 
-  // During format detection, a codec may be ok with null output config (true),
-  // or may require an output config (false).
+  // During format detection, a codec may be ok with null output config (false),
+  // or may require an output config (true).
   virtual bool IsCoreCodecRequiringOutputConfigForFormatDetection() = 0;
 
   // If true, the codec requires that the buffer VMOs be mappable for direct
