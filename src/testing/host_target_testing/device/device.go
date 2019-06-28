@@ -165,6 +165,24 @@ func (c *Client) TriggerSystemOTA(t *testing.T) {
 	log.Printf("device rebooted")
 }
 
+// ValidateStaticPackages checks that all static packages have no missing blobs.
+func (c *Client) ValidateStaticPackages(t *testing.T) {
+	log.Printf("validating static packages")
+
+	path := "/pkgfs/validation/missing"
+	f, err := c.ReadRemotePath(path)
+	if err != nil {
+		t.Fatalf("error reading %q: %s", path, err)
+	}
+
+	merkles := strings.TrimSpace(string(f))
+	if merkles != "" {
+		t.Fatalf("static packages are missing the following blobs:\n%s", merkles)
+	}
+
+	log.Printf("all static package blobs are accounted for")
+}
+
 // ReadRemotePath read a file off the remote device.
 func (c *Client) ReadRemotePath(path string) ([]byte, error) {
 	var stdout bytes.Buffer

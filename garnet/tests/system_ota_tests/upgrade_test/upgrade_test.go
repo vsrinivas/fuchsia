@@ -84,6 +84,9 @@ func doSystemOTA(t *testing.T, repo *packages.Repository) {
 		t.Fatal(err)
 	}
 
+	// Make sure the device doesn't have any broken static packages.
+	device.ValidateStaticPackages(t)
+
 	// Tell the device to connect to our repository.
 	localHostname, err := device.GetSshConnection()
 	if err != nil {
@@ -117,6 +120,9 @@ func doSystemOTA(t *testing.T, repo *packages.Repository) {
 	if expectedSystemImageMerkle != remoteSystemImageMerkle {
 		t.Fatalf("system version expected to be:\n\n%q\n\nbut instead got:\n\n%q", expectedSystemImageMerkle, remoteSystemImageMerkle)
 	}
+
+	// Make sure the device doesn't have any broken static packages.
+	device.ValidateStaticPackages(t)
 
 	log.Printf("system OTA successful")
 }
