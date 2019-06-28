@@ -21,9 +21,6 @@ trace_engine_headers = [
 ]
 
 trace_engine_header_deps = [
-  # <trace-engine/instrumentation.h> has #include <fbl/macros.h>.
-  "$zx/system/ulib/fbl:headers",
-
   # <trace-engine/handler.h> has #include <lib/async/dispatcher.h>.
   "$zx/system/ulib/async:headers",
 ]
@@ -37,8 +34,8 @@ template("trace_engine_library") {
       configs += extra_configs
     }
 
-    # TODO(DX-1043): We can't set sdk_headers until we remove fbl dependencies.
-    sdk_headers = []
+    sdk_headers = trace_engine_headers
+    public_deps = trace_engine_header_deps
 
     sources = [
       "context.cc",

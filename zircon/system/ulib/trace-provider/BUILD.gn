@@ -32,9 +32,6 @@ template("trace_provider_library") {
       public_deps = []
     }
     public_deps += [
-      # <trace-provider/provider.h> has #include <fbl/unique_ptr.h>.
-      "$zx/system/ulib/fbl:headers",
-
       # <trace-provider/provider.h> has #include <lib/async/dispatcher.h>.
       "$zx/system/ulib/async:headers",
 
@@ -46,6 +43,7 @@ template("trace_provider_library") {
       sources = []
     }
     sources += [
+      "fnv1hash.h",
       "handler.cc",
       "provider_impl.cc",
       "provider_impl.h",
@@ -62,9 +60,7 @@ template("trace_provider_library") {
     deps += [
       "$zx/system/fidl/fuchsia-tracing-provider:c",
       "$zx/system/ulib/async:async-cpp",
-      "$zx/system/ulib/fbl",
       "$zx/system/ulib/fidl",
-      "$zx/system/ulib/zircon-internal",
       "$zx/system/ulib/zx",
     ]
   }
@@ -140,7 +136,7 @@ trace_provider_library("trace-provider-driver") {
 library("trace-handler") {
   sdk = "static"
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
-  sdk_headers = [ "lib/trace-provider/handler.h", ]
+  sdk_headers = [ "lib/trace-provider/handler.h" ]
   public_deps = [
     # It is up to the client to choose which engine (shared, static),
     # just reference the headers here.

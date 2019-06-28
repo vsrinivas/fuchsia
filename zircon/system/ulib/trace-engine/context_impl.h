@@ -6,10 +6,10 @@
 #define ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_CONTEXT_IMPL_H_
 
 #include <atomic>
+#include <mutex>
 
 #include <zircon/assert.h>
 
-#include <fbl/mutex.h>
 #include <lib/trace-engine/buffer_internal.h>
 #include <lib/trace-engine/context.h>
 #include <lib/trace-engine/handler.h>
@@ -339,7 +339,7 @@ private:
     // This is used when switching rolling buffers.
     // It's a relatively rare operation, and this simplifies reasoning about
     // correctness.
-    mutable fbl::Mutex buffer_switch_mutex_; // TODO(dje): more guards?
+    mutable std::mutex buffer_switch_mutex_; // TODO(dje): more guards?
 
     // Handler associated with the trace session.
     trace_handler_t* const handler_;

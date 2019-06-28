@@ -134,10 +134,6 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
-// TODO(PT-63): Remove fbl/unique_ptr.h when all clients have migrated to
-// explicit fdio version. They may still be using fbl::unique_ptr and only
-// get it through us. Fortunately, fbl::unique_ptr == std::unique_ptr.
-#include <fbl/unique_ptr.h>
 #include <lib/zx/channel.h>
 #include <memory>
 

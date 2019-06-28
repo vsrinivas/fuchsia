@@ -89,8 +89,7 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
-// TODO(DX-1043): Remove use of fbl.
-#include <fbl/string_traits.h>
+#include <lib/trace/internal/string_traits.h>
 #include <type_traits>
 
 namespace trace {
@@ -208,11 +207,11 @@ struct ArgumentValueMaker<const char*> {
 // std::string, and std::string_view.
 template <typename T>
 struct ArgumentValueMaker<T,
-                          typename std::enable_if<fbl::is_string_like<T>::value>::type> {
+                          typename std::enable_if<::trace::internal::is_string_like<T>::value>::type> {
     static trace_arg_value_t Make(const T& value) {
         return trace_make_string_arg_value(
-            trace_make_inline_string_ref(fbl::GetStringData(value),
-                                         fbl::GetStringLength(value)));
+            trace_make_inline_string_ref(::trace::internal::GetStringData(value),
+                                         ::trace::internal::GetStringLength(value)));
     }
 };
 

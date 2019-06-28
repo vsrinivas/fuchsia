@@ -10,8 +10,6 @@
 
 #include <zircon/assert.h>
 
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/trace-engine/handler.h>
@@ -28,7 +26,7 @@ constexpr zx::duration kSynchronousShutdownTimeout = zx::msec(1000);
 
 // Trace engine lock.
 // See rules below for how this is used.
-fbl::Mutex g_engine_mutex;
+std::mutex g_engine_mutex;
 
 // Trace instrumentation state.
 // Rules:
@@ -356,7 +354,7 @@ EXPORT_NO_DDK zx_status_t trace_engine_initialize(
         return ZX_ERR_INVALID_ARGS;
     }
 
-    fbl::AutoLock lock(&g_engine_mutex);
+    std::lock_guard<std::mutex> lock(g_engine_mutex);
 
     // We must have fully terminated a prior tracing session before starting a new one.
     if (g_handler) {
@@ -391,7 +389,7 @@ EXPORT_NO_DDK zx_status_t trace_engine_initialize(
 
 // thread-safe
 EXPORT_NO_DDK zx_status_t trace_engine_start(trace_start_mode_t start_mode) {
-    fbl::AutoLock lock(&g_engine_mutex);
+    std::lock_guard<std::mutex> lock(g_engine_mutex);
 
     switch (start_mode) {
     case TRACE_START_CLEAR_ENTIRE_BUFFER:
@@ -533,7 +531,7 @@ void trace_engine_terminate_locked() __TA_REQUIRES(g_engine_mutex) {
 
 // thread-safe
 EXPORT_NO_DDK void trace_engine_stop(zx_status_t disposition) {
-    fbl::AutoLock lock(&g_engine_mutex);
+    std::lock_guard<std::mutex> lock(g_engine_mutex);
     trace_engine_stop_locked(disposition);
 }
 
@@ -542,7 +540,7 @@ EXPORT_NO_DDK void trace_engine_terminate() {
     trace_handler_t* handler = nullptr;
 
     {
-        fbl::AutoLock lock(&g_engine_mutex);
+        std::lock_guard<std::mutex> lock(g_engine_mutex);
 
         // If trace is still running, stop it.
         // We must have an active trace in order to stop it.
@@ -636,7 +634,7 @@ void handle_context_released() {
     bool trace_terminated = false;
 
     {
-        fbl::AutoLock lock(&g_engine_mutex);
+        std::lock_guard<std::mutex> lock(g_engine_mutex);
 
         ZX_DEBUG_ASSERT(g_state.load(std::memory_order_relaxed) == TRACE_STOPPING);
         ZX_DEBUG_ASSERT(g_context_refs.load(std::memory_order_relaxed) == 0u);
@@ -861,7 +859,7 @@ EXPORT trace_context_t* trace_acquire_context_for_category_cached(
 
 // thread-safe
 EXPORT zx_status_t trace_engine_flush_category_cache(void) {
-    fbl::AutoLock lock(&g_engine_mutex);
+    std::lock_guard<std::mutex> lock(g_engine_mutex);
 
     if (g_state.load(std::memory_order_relaxed) != TRACE_STOPPED)
         return ZX_ERR_BAD_STATE;
@@ -934,7 +932,7 @@ EXPORT_NO_DDK void trace_release_prolonged_context(trace_prolonged_context_t* co
 /*** Asynchronous observers ***/
 
 EXPORT zx_status_t trace_register_observer(zx_handle_t event) {
-    fbl::AutoLock lock(&g_engine_mutex);
+    std::lock_guard<std::mutex> lock(g_engine_mutex);
 
     for (const auto& item : g_observers) {
         if (item.event == event)
@@ -946,7 +944,7 @@ EXPORT zx_status_t trace_register_observer(zx_handle_t event) {
 }
 
 EXPORT zx_status_t trace_unregister_observer(zx_handle_t event) {
-    fbl::AutoLock lock(&g_engine_mutex);
+    std::lock_guard<std::mutex> lock(g_engine_mutex);
 
     for (auto it = g_observers.begin(); it != g_observers.end(); ++it) {
         if (it->event == event) {
@@ -962,7 +960,7 @@ EXPORT zx_status_t trace_unregister_observer(zx_handle_t event) {
 }
 
 EXPORT void trace_notify_observer_updated(zx_handle_t event) {
-    fbl::AutoLock lock(&g_engine_mutex);
+    std::lock_guard<std::mutex> lock(g_engine_mutex);
 
     for (auto& item : g_observers) {
         if (item.event == event) {

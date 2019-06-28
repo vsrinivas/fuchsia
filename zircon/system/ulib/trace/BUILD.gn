@@ -13,6 +13,7 @@ template("trace_library") {
       "lib/trace/internal/event_common.h",
       "lib/trace/internal/event_internal.h",
       "lib/trace/internal/pairs_internal.h",
+      "lib/trace/internal/string_traits.h",
       "lib/trace/event.h",
       "lib/trace/event_args.h",
       "lib/trace/observer.h",
@@ -23,9 +24,6 @@ template("trace_library") {
     public_deps += [
       # <trace/internal/event_internal.h> has #include <zircon/syscalls.h>.
       "$zx/system/ulib/zircon:headers",
-
-      # <trace/internal/event_args.h> has #include <fbl/string_traits.h>.
-      "$zx/system/ulib/fbl:headers",
 
       # <trace/observer.h> has #include <trace-engine/instrumentation.h> (already
       # covered, <lib/async/cpp/wait.h>, <fit/function.h>, and <lib/zx/event.h>.
@@ -43,7 +41,6 @@ template("trace_library") {
     deps += [
       "$zx/system/ulib/async",
       "$zx/system/ulib/async:async-cpp",
-      "$zx/system/ulib/fbl",
       "$zx/system/ulib/fit",
       "$zx/system/ulib/zircon",
       "$zx/system/ulib/zx",

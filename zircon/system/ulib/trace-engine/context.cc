@@ -77,11 +77,11 @@
 #include <assert.h>
 #include <inttypes.h>
 
-#include <fbl/auto_lock.h>
 #include <lib/trace-engine/fields.h>
 #include <lib/trace-engine/handler.h>
 
 #include <atomic>
+#include <mutex>
 
 namespace trace {
 namespace {
@@ -202,7 +202,7 @@ void trace_context::StreamingBufferFullCheck(uint32_t wrapped_count,
     // to the end of the buffer. We grab the lock so that the
     // buffer can't change while we're doing this.
     if (unlikely(buffer_offset > MaxUsableBufferOffset())) {
-        fbl::AutoLock lock(&buffer_switch_mutex_);
+        std::lock_guard<std::mutex> lock(buffer_switch_mutex_);
         uint32_t current_wrapped_count = CurrentWrappedCount();
         if (GetBufferNumber(current_wrapped_count) ==
             GetBufferNumber(wrapped_count)) {
@@ -218,7 +218,7 @@ bool trace_context::SwitchRollingBuffer(uint32_t wrapped_count,
     // While atomic variables are used to track things, we switch
     // buffers under the lock due to multiple pieces of state being
     // changed.
-    fbl::AutoLock lock(&buffer_switch_mutex_);
+    std::lock_guard<std::mutex> lock(buffer_switch_mutex_);
 
     // If the durable buffer happened to fill while we were waiting for
     // the lock we're done.
@@ -450,7 +450,7 @@ size_t trace_context::RollingBytesAllocated() const {
     case TRACE_BUFFERING_MODE_STREAMING: {
         // Obtain the lock so that the buffers aren't switched on us while
         // we're trying to compute the total.
-        fbl::AutoLock lock(&buffer_switch_mutex_);
+        std::lock_guard<std::mutex> lock(buffer_switch_mutex_);
         uint64_t offset_plus_counter =
             rolling_buffer_current_.load(std::memory_order_relaxed);
         uint32_t wrapped_count = GetWrappedCount(offset_plus_counter);
@@ -555,7 +555,7 @@ void trace_context::SwitchRollingBufferLocked(uint32_t prev_wrapped_count,
 void trace_context::MarkTracingArtificiallyStopped() {
     // Grab the lock in part so that we don't switch buffers between
     // |CurrentWrappedCount()| and |SnapToEnd()|.
-    fbl::AutoLock lock(&buffer_switch_mutex_);
+    std::lock_guard<std::mutex> lock(buffer_switch_mutex_);
 
     // Disable tracing by making it look like the current rolling
     // buffer is full. AllocRecord, on seeing the buffer is full, will
@@ -594,7 +594,7 @@ void trace_context::HandleSaveRollingBufferRequest(uint32_t wrapped_count,
 
 void trace_context::MarkRollingBufferSaved(uint32_t wrapped_count,
                                            uint64_t durable_data_end) {
-    fbl::AutoLock lock(&buffer_switch_mutex_);
+    std::lock_guard<std::mutex> lock(buffer_switch_mutex_);
 
     int buffer_number = GetBufferNumber(wrapped_count);
     {

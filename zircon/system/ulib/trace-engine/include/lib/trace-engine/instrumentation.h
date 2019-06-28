@@ -260,8 +260,6 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
-#include <fbl/macros.h>
-
 namespace trace {
 
 // Holds and retains ownership of a trace context.
@@ -320,7 +318,8 @@ public:
 private:
     trace_context_t* context_;
 
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(TraceContext);
+    TraceContext(const TraceContext&) = delete;
+    TraceContext& operator=(const TraceContext&) = delete;
 };
 
 // Holds and retains ownership of a prolonged trace context.
@@ -371,7 +370,8 @@ public:
 private:
     trace_prolonged_context_t* context_;
 
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(TraceProlongedContext);
+    TraceProlongedContext(const TraceProlongedContext&) = delete;
+    TraceProlongedContext& operator=(const TraceProlongedContext&) = delete;
 };
 
 } // namespace trace

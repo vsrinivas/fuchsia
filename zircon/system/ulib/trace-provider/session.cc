@@ -32,8 +32,7 @@ Session::Session(void* buffer, size_t buffer_num_bytes,
       categories_(std::move(categories)) {
     // Build a quick lookup table for IsCategoryEnabled().
     for (const auto& cat : categories_) {
-        auto entry = std::make_unique<StringSetEntry>(cat.c_str());
-        enabled_category_set_.insert_or_find(std::move(entry));
+        enabled_category_set_.emplace(StringSetEntry(cat.c_str()));
     }
 }
 
@@ -243,7 +242,7 @@ bool Session::IsCategoryEnabled(const char* category) {
       // If none are specified, enable all categories.
       return true;
     }
-    return enabled_category_set_.find(category) != enabled_category_set_.end();
+    return enabled_category_set_.find(StringSetEntry(category)) != enabled_category_set_.end();
 }
 
 void Session::SendFifoPacket(const trace_provider_packet_t* packet) {

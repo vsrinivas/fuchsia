@@ -5,8 +5,12 @@
 #ifndef ZIRCON_SYSTEM_ULIB_TRACE_PROVIDER_SESSION_H_
 #define ZIRCON_SYSTEM_ULIB_TRACE_PROVIDER_SESSION_H_
 
+#include <string.h>
+
+#include <functional>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include <lib/async/cpp/wait.h>
@@ -15,14 +19,7 @@
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
 
-// clang-format off
-// TODO(DX-1043): These are for the is-category-enabled lookup.
-// Replace with std::foo.
-#include <fbl/intrusive_hash_table.h>
-#include <fbl/string.h>
-#include <fbl/unique_ptr.h>
-#include <lib/zircon-internal/fnv1hash.h>
-// clang-format on
+#include "fnv1hash.h"
 
 namespace trace {
 namespace internal {
@@ -72,36 +69,23 @@ private:
     using CString = const char*;
 
     // For faster implementation of IsCategoryEnabled().
-    struct StringSetEntry : public fbl::SinglyLinkedListable<
-            fbl::unique_ptr<StringSetEntry>> {
-        StringSetEntry(const CString& string)
+    struct StringSetEntry {
+        StringSetEntry() : string(nullptr) {}
+        explicit StringSetEntry(const CString& string)
             : string(string) {}
 
         const CString string;
 
-        // Used by the hash table.
-        static size_t GetHash(CString key) {
-            return fnv1a64str(key);
+        std::size_t operator()(const StringSetEntry& key) const noexcept {
+            return fnv1a64str(key.string);
+        }
+
+        bool operator()(const StringSetEntry &lhs, const StringSetEntry &rhs) const {
+            return strcmp(lhs.string, rhs.string) == 0;
         }
     };
 
-    // We want to work with C strings here, but the default implementation
-    // would just compare pointers.
-    struct CategoryStringKeyTraits {
-        static CString GetKey(const StringSetEntry& obj) {
-            return obj.string;
-        }
-        static bool EqualTo(const CString& key1, const CString& key2) {
-            return strcmp(key1, key2) == 0;
-        }
-    };
-
-    using StringSet = fbl::HashTable<const char*,
-        fbl::unique_ptr<StringSetEntry>,
-        fbl::SinglyLinkedList<fbl::unique_ptr<StringSetEntry>>, // default
-        size_t, // default
-        37, // default
-        CategoryStringKeyTraits>;
+    using StringSet = std::unordered_set<StringSetEntry, StringSetEntry, StringSetEntry>;
     StringSet enabled_category_set_;
 
     Session(const Session&) = delete;
