@@ -43,13 +43,13 @@ std::string ReadStringFromFile(const std::string& filepath) {
 }  // namespace
 
 std::map<std::string, std::string> MakeDefaultAnnotations(
-    const fuchsia::feedback::Data& feedback_data, const std::string& package_name) {
+    const fuchsia::feedback::Data& feedback_data, const std::string& program_name) {
   std::map<std::string, std::string> annotations = {
       {"product", "Fuchsia"},
       {"version", ReadStringFromFile("/config/build-info/version")},
       // We use ptype to benefit from Chrome's "Process type" handling in
       // the crash server UI.
-      {"ptype", package_name},
+      {"ptype", program_name},
   };
 
   if (feedback_data.has_annotations()) {

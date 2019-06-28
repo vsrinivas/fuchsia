@@ -352,7 +352,7 @@ fit::promise<void> CrashpadAgent::OnKernelPanicCrashLog(fuchsia::mem::Buffer cra
         }
         const std::map<std::string, std::string> annotations =
             MakeDefaultAnnotations(feedback_data,
-                                   /*package_name=*/"kernel");
+                                   /*program_name=*/"kernel");
         AddKernelPanicAttachments(report.get(), feedback_data, std::move(crash_log));
 
         // Finish new local crash report.

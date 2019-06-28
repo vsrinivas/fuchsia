@@ -21,10 +21,10 @@ namespace crash {
 //
 // Most annotations are shared between userspace and kernel crashes.
 // Add additional arguments to this function for values that differ between the
-// two, e.g., the package name can be extracted from the crashing process in
+// two, e.g., the program name can be extracted from the crashing process in
 // userspace, but it's just "kernel" in kernel space.
 std::map<std::string, std::string> MakeDefaultAnnotations(
-    const fuchsia::feedback::Data& feedback_data, const std::string& package_name);
+    const fuchsia::feedback::Data& feedback_data, const std::string& program_name);
 
 // Returns the annotations we want in a crash report for managed runtime
 // exceptions.
