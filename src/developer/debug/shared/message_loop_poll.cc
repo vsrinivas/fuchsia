@@ -99,8 +99,7 @@ void MessageLoopPoll::Cleanup() {
   MessageLoop::Cleanup();
 }
 
-MessageLoop::WatchHandle MessageLoopPoll::WatchFD(WatchMode mode, int fd,
-                                                  FDWatcher* watcher) {
+MessageLoop::WatchHandle MessageLoopPoll::WatchFD(WatchMode mode, int fd, FDWatcher* watcher) {
   // The dispatch code for watch callbacks requires this be called on the
   // same thread as the message loop is.
   FXL_DCHECK(Current() == static_cast<MessageLoop*>(this));
@@ -149,10 +148,8 @@ void MessageLoopPoll::RunImpl() {
       poll_timeout = static_cast<int>(delay);
     }
 
-    int res = poll(&poll_vect[0], static_cast<nfds_t>(poll_vect.size()),
-                   poll_timeout);
-    FXL_DCHECK(res >= 0 || errno == EINTR)
-        << "poll() failed: " << strerror(errno);
+    int res = poll(&poll_vect[0], static_cast<nfds_t>(poll_vect.size()), poll_timeout);
+    FXL_DCHECK(res >= 0 || errno == EINTR) << "poll() failed: " << strerror(errno);
 
     for (size_t i = 0; i < poll_vect.size(); i++) {
       if (poll_vect[i].revents)
@@ -205,8 +202,8 @@ void MessageLoopPoll::SetHasTasks() {
   FXL_DCHECK(written == 1 || errno == EAGAIN);
 }
 
-void MessageLoopPoll::ConstructFDMapping(
-    std::vector<pollfd>* poll_vect, std::vector<size_t>* map_indices) const {
+void MessageLoopPoll::ConstructFDMapping(std::vector<pollfd>* poll_vect,
+                                         std::vector<size_t>* map_indices) const {
   // The watches_ vector is not threadsafe.
   FXL_DCHECK(Current() == this);
 
@@ -219,11 +216,9 @@ void MessageLoopPoll::ConstructFDMapping(
     pfd.fd = pair.second.fd;
 
     pfd.events = 0;
-    if (pair.second.mode == WatchMode::kRead ||
-        pair.second.mode == WatchMode::kReadWrite)
+    if (pair.second.mode == WatchMode::kRead || pair.second.mode == WatchMode::kReadWrite)
       pfd.events |= POLLIN;
-    if (pair.second.mode == WatchMode::kWrite ||
-        pair.second.mode == WatchMode::kReadWrite)
+    if (pair.second.mode == WatchMode::kWrite || pair.second.mode == WatchMode::kReadWrite)
       pfd.events |= POLLOUT;
 
     pfd.revents = 0;

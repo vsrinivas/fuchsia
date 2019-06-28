@@ -13,22 +13,20 @@
 
 namespace debug_ipc {
 
-// BlockTimer ------------------------------------------------------------------
+// BlockTimer --------------------------------------------------------------------------------------
 
-// Simple RAII-esque timer that prints the duration of a block if running on
-// debug mode.
+// Simple RAII-esque timer that prints the duration of a block if running on debug mode.
 //
-// Normally you would use it from the TIME_BLOCK macro (defined below), that
-// will easily add the current calling site, but you can add your own locations
-// in order to proxy calls (see message_loop.cc for an example).
+// Normally you would use it from the TIME_BLOCK macro (defined below), that will easily add the
+// current calling site, but you can add your own locations in order to proxy calls (see
+// message_loop.cc for an example).
 class BlockTimer {
  public:
   BlockTimer(FileLineFunction origin);
   ~BlockTimer();  // Will log on destruction.
 
-  // This is what get called on destruction. You can call it before destruction
-  // to trigger the timer before that. Will not trigger again.
-  // Returns the timing (in milliseconds).
+  // This is what get called on destruction. You can call it before destruction to trigger the timer
+  // before that. Will not trigger again. Returns the timing (in milliseconds).
   double EndTimer();
 
   // BlockTimers should only measure the block they're in. No weird stuff.
@@ -56,8 +54,7 @@ class BlockTimer {
 //  <REST OF FUNCTION>
 //  ...
 // }  <-- Logs the timing on the destructor.
-#define TIME_BLOCK() \
-  TIME_BLOCK_WITH_NAME(TIME_BLOCK_TOKEN2(__timer__, __LINE__))
+#define TIME_BLOCK() TIME_BLOCK_WITH_NAME(TIME_BLOCK_TOKEN2(__timer__, __LINE__))
 
 // Useful for calling timing on code that is not easily "scopable":
 //

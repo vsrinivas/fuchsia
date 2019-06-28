@@ -105,8 +105,7 @@ TEST(MessageLoop, WatchPipeFD) {
     ASSERT_TRUE(watch_handle.watching());
 
     // Enqueue a task that should cause pipefd[1] to become readable.
-    loop.PostTask(FROM_HERE,
-                  [write_fd = pipefd[1]]() { write(write_fd, "Hello", 5); });
+    loop.PostTask(FROM_HERE, [write_fd = pipefd[1]]() { write(write_fd, "Hello", 5); });
 
     // This will quit on success because the OnFDReady callback called QuitNow,
     // or hang forever on failure.
@@ -128,9 +127,7 @@ TEST(MessageLoop, ZirconSocket) {
   class ReadableWatcher : public SocketWatcher {
    public:
     explicit ReadableWatcher(MessageLoop* loop) : loop_(loop) {}
-    void OnSocketReadable(zx_handle_t socket_handle) override {
-      loop_->QuitNow();
-    }
+    void OnSocketReadable(zx_handle_t socket_handle) override { loop_->QuitNow(); }
 
    private:
     MessageLoop* loop_;
@@ -143,13 +140,12 @@ TEST(MessageLoop, ZirconSocket) {
   {
     ReadableWatcher watcher(&loop);
 
-    MessageLoop::WatchHandle watch_handle = loop.WatchSocket(
-        MessageLoop::WatchMode::kRead, receiver.get(), &watcher);
+    MessageLoop::WatchHandle watch_handle =
+        loop.WatchSocket(MessageLoop::WatchMode::kRead, receiver.get(), &watcher);
     ASSERT_TRUE(watch_handle.watching());
 
     // Enqueue a task that should cause receiver to become readable.
-    loop.PostTask(FROM_HERE,
-                  [&sender]() { sender.write(0, "Hello", 5, nullptr); });
+    loop.PostTask(FROM_HERE, [&sender]() { sender.write(0, "Hello", 5, nullptr); });
 
     // This will quit on success because the OnSocketReadable callback called
     // QuitNow, or hang forever on failure.

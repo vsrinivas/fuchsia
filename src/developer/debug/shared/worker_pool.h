@@ -18,21 +18,18 @@ namespace debug_ipc {
 
 // Multi-threaded arbitrary task queue.
 //
-// This queue is meant for tasks that are independent of each other (ie. they
-// don't need ordering between each other). The queue will spawn up workers as
-// needed and will shut them down upon destruction.
+// This queue is meant for tasks that are independent of each other (ie. they don't need ordering
+// between each other). The queue will spawn up workers as needed and will shut them down upon
+// destruction.
 //
-// NOTE: When shutting down, the pool will wait for all workers to be done.
-//       Before that, it will prevent any new work being started but any tasks
-//       that are being run at that moment will finish and block, either upon
-//       calling Shutdown or on the destructor.
+// NOTE: When shutting down, the pool will wait for all workers to be done. Before that, it will
+//       prevent any new work being started but any tasks that are being run at that moment will
+//       finish and block, either upon calling Shutdown or on the destructor.
 //
-// NOTE2: The thread annotations are (mostly) commented out because the C++
-//        condition variables requires a taken std::unique_lock<std::mutex> to
-//        work, but clang's thread annotation analysis does not recognize them
-//        as valid, as opposing std::lock_guard<std::mutex>. This means that
-//        this queue won't compile if the actual thread annotations were set in
-//        place.
+// NOTE2: The thread annotations are (mostly) commented out because the C++ condition variables
+//        requires a taken std::unique_lock<std::mutex> to work, but clang's thread annotation
+//        analysis does not recognize them as valid, as opposing std::lock_guard<std::mutex>. This
+//        means that this queue won't compile if the actual thread annotations were set in place.
 class WorkerPool {
  public:
   using Task = std::function<void()>;
@@ -69,8 +66,8 @@ class WorkerPool {
 
   bool ShouldCreateWorker();  // REQUIRES(mutex_)
 
-  // This requires |lock| to be taken, but will unlock it for the actual worker
-  // thread creation, and retake it after that work is done.
+  // This requires |lock| to be taken, but will unlock it for the actual worker thread creation, and
+  // retake it after that work is done.
   void CreateWorker(std::unique_lock<std::mutex>* lock);  // REQUIRES(mutex_)
 
   void SignalWork() FXL_LOCKS_EXCLUDED(mutex_);

@@ -15,9 +15,7 @@ Regex::~Regex() {
     regfree(&handle_.value());
 }
 
-Regex::Regex(Regex&& other) : handle_(std::move(other.handle_)) {
-  other.handle_.reset();
-}
+Regex::Regex(Regex&& other) : handle_(std::move(other.handle_)) { other.handle_.reset(); }
 
 Regex& Regex::operator=(Regex&& other) {
   if (this == &other)

@@ -41,8 +41,7 @@ void MessageLoop::Run() {
   RunImpl();
 }
 
-void MessageLoop::PostTask(FileLineFunction file_line,
-                           std::function<void()> fn) {
+void MessageLoop::PostTask(FileLineFunction file_line, std::function<void()> fn) {
   bool needs_awaken;
   {
     std::lock_guard<std::mutex> guard(mutex_);
@@ -142,8 +141,7 @@ void MessageLoop::WatchHandle::StopWatching() {
   id_ = 0;
 }
 
-MessageLoop::WatchHandle& MessageLoop::WatchHandle::operator=(
-    WatchHandle&& other) {
+MessageLoop::WatchHandle& MessageLoop::WatchHandle::operator=(WatchHandle&& other) {
   // Should never get into a self-assignment situation since this is not
   // copyable and every ID should be unique. Do allow self-assignment of
   // null ones though.

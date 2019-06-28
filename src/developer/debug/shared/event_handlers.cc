@@ -6,8 +6,8 @@
 
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
-#include <lib/zx/exception.h>
 #include <lib/fit/defer.h>
+#include <lib/zx/exception.h>
 
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_target.h"
@@ -20,9 +20,8 @@ namespace debug_ipc {
 namespace {
 
 // |signals| are the signals we're going to observe.
-std::unique_ptr<async_wait_t>
-CreateSignalHandle(zx_handle_t object, zx_signals_t signals,
-                   SignalHandlerFunc handler_func) {
+std::unique_ptr<async_wait_t> CreateSignalHandle(zx_handle_t object, zx_signals_t signals,
+                                                 SignalHandlerFunc handler_func) {
   auto handle = std::make_unique<async_wait_t>();
   *handle = {};  // Need to zero it out.
   handle->handler = handler_func;
@@ -54,8 +53,7 @@ SignalHandler::~SignalHandler() {
 SignalHandler::SignalHandler(SignalHandler&&) = default;
 SignalHandler& SignalHandler::operator=(SignalHandler&&) = default;
 
-zx_status_t SignalHandler::Init(int id, zx_handle_t object,
-                                zx_signals_t signals) {
+zx_status_t SignalHandler::Init(int id, zx_handle_t object, zx_signals_t signals) {
   handle_ = CreateSignalHandle(object, signals, Handler);
   watch_info_id_ = id;
 
@@ -64,12 +62,10 @@ zx_status_t SignalHandler::Init(int id, zx_handle_t object,
 }
 
 // static
-void SignalHandler::Handler(async_dispatcher_t*, async_wait_t* wait,
-                            zx_status_t status,
+void SignalHandler::Handler(async_dispatcher_t*, async_wait_t* wait, zx_status_t status,
                             const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    FXL_LOG(WARNING) << "Got error on receiving exception: "
-                     << ZxStatusToString(status);
+    FXL_LOG(WARNING) << "Got error on receiving exception: " << ZxStatusToString(status);
     FXL_NOTREACHED();
     return;
   }
@@ -122,17 +118,13 @@ ChannelExceptionHandler::~ChannelExceptionHandler() {
   FXL_DCHECK(status == ZX_OK) << "Got: " << ZxStatusToString(status);
 }
 
-ChannelExceptionHandler::ChannelExceptionHandler(ChannelExceptionHandler&&) =
-    default;
+ChannelExceptionHandler::ChannelExceptionHandler(ChannelExceptionHandler&&) = default;
 
-ChannelExceptionHandler& ChannelExceptionHandler::operator=(
-    ChannelExceptionHandler&&) = default;
+ChannelExceptionHandler& ChannelExceptionHandler::operator=(ChannelExceptionHandler&&) = default;
 
-zx_status_t ChannelExceptionHandler::Init(int id, zx_handle_t object,
-                                          uint32_t options) {
-  zx_status_t status = zx_task_create_exception_channel(
-      object, options,
-      exception_channel_.reset_and_get_address());
+zx_status_t ChannelExceptionHandler::Init(int id, zx_handle_t object, uint32_t options) {
+  zx_status_t status =
+      zx_task_create_exception_channel(object, options, exception_channel_.reset_and_get_address());
   if (status != ZX_OK)
     return status;
 
@@ -143,12 +135,10 @@ zx_status_t ChannelExceptionHandler::Init(int id, zx_handle_t object,
 }
 
 // static
-void ChannelExceptionHandler::Handler(async_dispatcher_t* dispatcher,
-                                      async_wait_t* wait, zx_status_t status,
-                                      const zx_packet_signal_t* signal) {
+void ChannelExceptionHandler::Handler(async_dispatcher_t* dispatcher, async_wait_t* wait,
+                                      zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    FXL_LOG(WARNING) << "Got error on receiving exception: "
-                     << ZxStatusToString(status);
+    FXL_LOG(WARNING) << "Got error on receiving exception: " << ZxStatusToString(status);
     FXL_NOTREACHED();
     return;
   }
@@ -189,10 +179,8 @@ void ChannelExceptionHandler::Handler(async_dispatcher_t* dispatcher,
   // We obtain the exception from the channel.
   zx::exception exception;
   zx_exception_info_t exception_info;
-  status = handler.exception_channel_.read(0, &exception_info,
-                                           exception.reset_and_get_address(),
-                                           sizeof(exception_info), 1,
-                                           nullptr, nullptr);
+  status = handler.exception_channel_.read(0, &exception_info, exception.reset_and_get_address(),
+                                           sizeof(exception_info), 1, nullptr, nullptr);
   if (status != ZX_OK) {
     FXL_LOG(WARNING) << "Got error when reading from exception channel: "
                      << ZxStatusToString(status);

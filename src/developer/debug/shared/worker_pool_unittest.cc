@@ -86,8 +86,7 @@ TEST(WorkerPool, PostTasks) {
     bool posted = task_queue.PostTask([i, &tasks_called, &observer]() {
       std::lock_guard<std::mutex> guard(observer.mutex());
       tasks_called[i] = true;
-      DEBUG_LOG(Test) << std::this_thread::get_id() << " First round: Task "
-                      << i << " executed.";
+      DEBUG_LOG(Test) << std::this_thread::get_id() << " First round: Task " << i << " executed.";
     });
     ASSERT_TRUE(posted) << "First round: while posting task " << i;
   }
@@ -121,8 +120,7 @@ TEST(WorkerPool, PostTasks) {
     bool posted = task_queue.PostTask([i, &tasks_called, &observer]() {
       std::lock_guard<std::mutex> lock(observer.mutex());
       tasks_called[i] = true;
-      DEBUG_LOG(Test) << std::this_thread::get_id() << " Second round: Task "
-                      << i << " executed.";
+      DEBUG_LOG(Test) << std::this_thread::get_id() << " Second round: Task " << i << " executed.";
     });
     ASSERT_TRUE(posted) << "Second round: while posting task " << i;
   }
@@ -133,8 +131,7 @@ TEST(WorkerPool, PostTasks) {
 
   // Should've run all the tasks.
   for (int i = 0; i < kWorkerCount; i++) {
-    EXPECT_TRUE(tasks_called[i])
-        << "Second Round: Task " << i << " not called.";
+    EXPECT_TRUE(tasks_called[i]) << "Second Round: Task " << i << " not called.";
   }
 
   // No workers should've exited.
@@ -160,8 +157,7 @@ void TestWorkerPoolObserver::OnWorkerExiting() { workers_exited_++; }
 void TestWorkerPoolObserver::OnExecutingTask() {
   std::lock_guard<std::mutex> lock(*mutex_);
   tasks_executed_++;
-  DEBUG_LOG(Test) << std::this_thread::get_id()
-                  << " executed task count: " << tasks_executed_;
+  DEBUG_LOG(Test) << std::this_thread::get_id() << " executed task count: " << tasks_executed_;
   if (tasks_executed_ == kWorkerCount) {
     DEBUG_LOG(Test) << "All tasks are done!";
     all_tasks_done_ = true;

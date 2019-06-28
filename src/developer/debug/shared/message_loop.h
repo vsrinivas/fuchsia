@@ -40,12 +40,11 @@ class MessageLoop {
 
   // There can be only one active MessageLoop in scope per thread at a time.
   //
-  // A message loop is active between Init() and Cleanup(). During this
-  // period, Current() will return the message loop.
+  // A message loop is active between Init() and Cleanup(). During this period, Current() will
+  // return the message loop.
   //
-  // Init() / Cleanup() is a separate phase so a message loop can be created
-  // and managed on one thread and sent to another thread to actually run (to
-  // help with cross-thread task posting).
+  // Init() / Cleanup() is a separate phase so a message loop can be created and managed on one
+  // thread and sent to another thread to actually run (to help with cross-thread task posting).
   MessageLoop();
   virtual ~MessageLoop();
 
@@ -53,8 +52,8 @@ class MessageLoop {
   virtual void Init();
   virtual void Cleanup();
 
-  // Exits the message loop immediately, not running pending functions. This
-  // must be called only on the MessageLoop thread.
+  // Exits the message loop immediately, not running pending functions. This must be called only on
+  // the MessageLoop thread.
   virtual void QuitNow();
 
   // Returns the current message loop or null if there isn't one.
@@ -65,24 +64,21 @@ class MessageLoop {
 
   void PostTask(FileLineFunction file_line, std::function<void()> fn);
 
-  // Set a task to run after a certain number of miliseconds have elapsed.
-  // Granularity is hard to guarantee but the timer shouldn't fire earlier than
-  // expected.
-  void PostTimer(FileLineFunction file_line, uint64_t delta_ms,
-                 std::function<void()> fn);
+  // Set a task to run after a certain number of miliseconds have elapsed. Granularity is hard to
+  // guarantee but the timer shouldn't fire earlier than expected.
+  void PostTimer(FileLineFunction file_line, uint64_t delta_ms, std::function<void()> fn);
 
-  // Starts watching the given file descriptor in the given mode. Returns
-  // a WatchHandle that scopes the watch operation (when the handle is
-  // destroyed the watcher is unregistered).
+  // Starts watching the given file descriptor in the given mode. Returns a WatchHandle that scopes
+  // the watch operation (when the handle is destroyed the watcher is unregistered).
   //
   // This function must only be called on the message loop thread.
   //
-  // The watcher pointer must outlive the returned WatchHandle. Typically
-  // the class implementing the FDWatcher would keep the WatchHandle as a
-  // member. Must only be called on the message loop thread.
+  // The watcher pointer must outlive the returned WatchHandle. Typically the class implementing the
+  // FDWatcher would keep the WatchHandle as a member. Must only be called on the message loop
+  // thread.
   //
-  // You can only watch a handle once. Note that stdin/stdout/stderr can be
-  // the same underlying OS handle, so the caller can only watch one of them.
+  // You can only watch a handle once. Note that stdin/stdout/stderr can be the same underlying OS
+  // handle, so the caller can only watch one of them.
   virtual WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher* watcher) = 0;
 
  protected:
@@ -93,29 +89,28 @@ class MessageLoop {
   // Get the value of a monotonic clock in nanoseconds.
   virtual uint64_t GetMonotonicNowNS() const = 0;
 
-  // Used by WatchHandle to unregister a watch. Can be called from any thread
-  // without the lock held.
+  // Used by WatchHandle to unregister a watch. Can be called from any thread without the lock held.
   virtual void StopWatching(int id) = 0;
 
-  // Indicates there are tasks to process. Can be called from any thread
-  // and will be called without the lock held.
+  // Indicates there are tasks to process. Can be called from any thread and will be called without
+  // the lock held.
   virtual void SetHasTasks() = 0;
 
-  // Processes one pending task, returning true if there was work to do, or
-  // false if there was nothing. The mutex_ must be held during the call. It
-  // will be unlocked during task processing, so the platform implementation
-  // that calls it must not assume state did not change across the call.
+  // Processes one pending task, returning true if there was work to do, or false if there was
+  // nothing. The mutex_ must be held during the call. It will be unlocked during task processing,
+  // so the platform implementation that calls it must not assume state did not change across the
+  // call.
   bool ProcessPendingTask() __TA_REQUIRES(mutex_);
 
-  // The platform implementation should check should_quit() after every
-  // task execution and exit if true.
+  // The platform implementation should check should_quit() after every task execution and exit if
+  // true.
   bool should_quit() const { return should_quit_; }
 
   // How much time we should wait before waking up again to process timers.
   uint64_t DelayNS() const;
 
-  // Style guide says this should be private and we should have a protected
-  // getter, but that makes the thread annotations much more complicated.
+  // Style guide says this should be private and we should have a protected getter, but that makes
+  // the thread annotations much more complicated.
   std::mutex mutex_;
 
  private:
@@ -137,12 +132,10 @@ class MessageLoop {
   };
   std::vector<Timer> timers_;
 
-  static bool CompareTimers(const Timer& a, const Timer& b) {
-    return a.expiry >= b.expiry;
-  }
+  static bool CompareTimers(const Timer& a, const Timer& b) { return a.expiry >= b.expiry; }
 
-  // Expiration time of the timer which will expire soonest. Returns an upper
-  // bound if there are no timers set.
+  // Expiration time of the timer which will expire soonest. Returns an upper bound if there are no
+  // timers set.
   uint64_t NextExpiryNS() const;
 
   bool should_quit_ = false;
@@ -150,9 +143,8 @@ class MessageLoop {
   FXL_DISALLOW_COPY_AND_ASSIGN(MessageLoop);
 };
 
-// Scopes watching a file handle. When the WatchHandle is destroyed, the
-// MessageLoop will stop watching the handle. Must only be destroyed on the
-// thread where the MessageLoop is.
+// Scopes watching a file handle. When the WatchHandle is destroyed, the MessageLoop will stop
+// watching the handle. Must only be destroyed on the thread where the MessageLoop is.
 //
 // Invalid watch handles will have watching() return false.
 class MessageLoop::WatchHandle {

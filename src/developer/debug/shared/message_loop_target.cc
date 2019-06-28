@@ -30,8 +30,7 @@ thread_local MessageLoopTarget* current_message_loop = nullptr;
 
 // MessageLoopTarget -----------------------------------------------------------
 
-MessageLoopTarget::MessageLoopTarget()
-    : loop_(&kAsyncLoopConfigAttachToThread) {}
+MessageLoopTarget::MessageLoopTarget() : loop_(&kAsyncLoopConfigAttachToThread) {}
 
 MessageLoopTarget::~MessageLoopTarget() {
   FXL_DCHECK(Current() != this);  // Cleanup should have been called.
@@ -49,8 +48,7 @@ zx_status_t MessageLoopTarget::InitTarget() {
 
   WatchInfo info;
   info.type = WatchType::kTask;
-  zx_status_t status =
-      AddSignalHandler(kTaskSignalKey, task_event_.get(), kTaskSignal, &info);
+  zx_status_t status = AddSignalHandler(kTaskSignalKey, task_event_.get(), kTaskSignal, &info);
 
   if (status != ZX_OK)
     return status;
@@ -74,16 +72,14 @@ void MessageLoopTarget::Cleanup() {
 // static
 MessageLoopTarget* MessageLoopTarget::Current() { return current_message_loop; }
 
-const MessageLoopTarget::WatchInfo* MessageLoopTarget::FindWatchInfo(
-    int id) const {
+const MessageLoopTarget::WatchInfo* MessageLoopTarget::FindWatchInfo(int id) const {
   auto it = watches_.find(id);
   if (it == watches_.end())
     return nullptr;
   return &it->second;
 }
 
-zx_status_t MessageLoopTarget::AddSignalHandler(int id, zx_handle_t object,
-                                                zx_signals_t signals,
+zx_status_t MessageLoopTarget::AddSignalHandler(int id, zx_handle_t object, zx_signals_t signals,
                                                 WatchInfo* associated_info) {
   SignalHandler handler;
   zx_status_t status = handler.Init(id, object, signals);
@@ -99,10 +95,8 @@ zx_status_t MessageLoopTarget::AddSignalHandler(int id, zx_handle_t object,
   return ZX_OK;
 }
 
-zx_status_t MessageLoopTarget::AddChannelExceptionHandler(int id,
-                                                          zx_handle_t object,
-                                                          uint32_t options,
-                                                          WatchInfo* info) {
+zx_status_t MessageLoopTarget::AddChannelExceptionHandler(int id, zx_handle_t object,
+                                                          uint32_t options, WatchInfo* info) {
   ChannelExceptionHandler handler;
   zx_status_t status = handler.Init(id, object, options);
   if (status != ZX_OK)
@@ -118,8 +112,7 @@ zx_status_t MessageLoopTarget::AddChannelExceptionHandler(int id,
   return ZX_OK;
 }
 
-MessageLoop::WatchHandle MessageLoopTarget::WatchFD(WatchMode mode, int fd,
-                                                    FDWatcher* watcher) {
+MessageLoop::WatchHandle MessageLoopTarget::WatchFD(WatchMode mode, int fd, FDWatcher* watcher) {
   WatchInfo info;
   info.type = WatchType::kFdio;
   info.fd_watcher = watcher;
@@ -154,8 +147,7 @@ MessageLoop::WatchHandle MessageLoopTarget::WatchFD(WatchMode mode, int fd,
     next_watch_id_++;
   }
 
-  zx_status_t status =
-      AddSignalHandler(watch_id, info.fd_handle, signals, &info);
+  zx_status_t status = AddSignalHandler(watch_id, info.fd_handle, signals, &info);
   if (status != ZX_OK)
     return WatchHandle();
 
@@ -163,10 +155,8 @@ MessageLoop::WatchHandle MessageLoopTarget::WatchFD(WatchMode mode, int fd,
   return WatchHandle(this, watch_id);
 }
 
-zx_status_t MessageLoopTarget::WatchSocket(WatchMode mode,
-                                           zx_handle_t socket_handle,
-                                           SocketWatcher* watcher,
-                                           MessageLoop::WatchHandle* out) {
+zx_status_t MessageLoopTarget::WatchSocket(WatchMode mode, zx_handle_t socket_handle,
+                                           SocketWatcher* watcher, MessageLoop::WatchHandle* out) {
   WatchInfo info;
   info.type = WatchType::kSocket;
   info.socket_watcher = watcher;
@@ -187,8 +177,7 @@ zx_status_t MessageLoopTarget::WatchSocket(WatchMode mode,
   if (mode == WatchMode::kWrite || mode == WatchMode::kReadWrite)
     signals |= ZX_SOCKET_WRITABLE;
 
-  zx_status_t status =
-      AddSignalHandler(watch_id, socket_handle, ZX_SOCKET_WRITABLE, &info);
+  zx_status_t status = AddSignalHandler(watch_id, socket_handle, ZX_SOCKET_WRITABLE, &info);
   if (status != ZX_OK)
     return status;
 
@@ -197,8 +186,8 @@ zx_status_t MessageLoopTarget::WatchSocket(WatchMode mode,
   return ZX_OK;
 }
 
-zx_status_t MessageLoopTarget::WatchProcessExceptions(
-    WatchProcessConfig config, MessageLoop::WatchHandle* out) {
+zx_status_t MessageLoopTarget::WatchProcessExceptions(WatchProcessConfig config,
+                                                      MessageLoop::WatchHandle* out) {
   WatchInfo info;
   info.resource_name = config.process_name;
   info.type = WatchType::kProcessExceptions;
@@ -222,8 +211,7 @@ zx_status_t MessageLoopTarget::WatchProcessExceptions(
     return status;
 
   // Watch for the process terminated signal.
-  status = AddSignalHandler(watch_id, config.process_handle,
-                            ZX_PROCESS_TERMINATED, &info);
+  status = AddSignalHandler(watch_id, config.process_handle, ZX_PROCESS_TERMINATED, &info);
   if (status != ZX_OK)
     return status;
 
@@ -234,8 +222,8 @@ zx_status_t MessageLoopTarget::WatchProcessExceptions(
   return ZX_OK;
 }
 
-zx_status_t MessageLoopTarget::WatchJobExceptions(
-    WatchJobConfig config, MessageLoop::WatchHandle* out) {
+zx_status_t MessageLoopTarget::WatchJobExceptions(WatchJobConfig config,
+                                                  MessageLoop::WatchHandle* out) {
   WatchInfo info;
   info.resource_name = config.job_name;
   info.type = WatchType::kJobExceptions;
@@ -252,8 +240,8 @@ zx_status_t MessageLoopTarget::WatchJobExceptions(
   }
 
   // Create and track the exception handle.
-  zx_status_t status = AddChannelExceptionHandler(
-      watch_id, config.job_handle, ZX_EXCEPTION_CHANNEL_DEBUGGER, &info);
+  zx_status_t status =
+      AddChannelExceptionHandler(watch_id, config.job_handle, ZX_EXCEPTION_CHANNEL_DEBUGGER, &info);
   if (status != ZX_OK)
     return status;
 
@@ -274,9 +262,9 @@ bool MessageLoopTarget::CheckAndProcessPendingTasks() {
   return false;
 }
 
-void MessageLoopTarget::HandleChannelException(
-    const ChannelExceptionHandler& handler, zx::exception exception,
-    zx_exception_info_t exception_info) {
+void MessageLoopTarget::HandleChannelException(const ChannelExceptionHandler& handler,
+                                               zx::exception exception,
+                                               zx_exception_info_t exception_info) {
   WatchInfo* watch_info = nullptr;
   {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -348,8 +336,7 @@ void MessageLoopTarget::RunImpl() {
     status = loop_.ResetQuit();
     FXL_DCHECK(status != ZX_ERR_BAD_STATE);
     status = loop_.Run(time);
-    FXL_DCHECK(status == ZX_OK || status == ZX_ERR_CANCELED ||
-               status == ZX_ERR_TIMED_OUT)
+    FXL_DCHECK(status == ZX_OK || status == ZX_ERR_CANCELED || status == ZX_ERR_TIMED_OUT)
         << "Expected ZX_OK || ZX_ERR_CANCELED || ZX_ERR_TIMED_OUT, got "
         << ZxStatusToString(status);
 
@@ -382,8 +369,8 @@ void MessageLoopTarget::StopWatching(int id) {
   // BufferedFD constantly creates and destroys FD handles, flooding the log
   // with non-helpful logging statements.
   if (info.type != WatchType::kFdio) {
-    DEBUG_LOG(MessageLoop) << "Stop watching " << WatchTypeToString(info.type)
-                           << " " << info.resource_name;
+    DEBUG_LOG(MessageLoop) << "Stop watching " << WatchTypeToString(info.type) << " "
+                           << info.resource_name;
   }
 
   switch (info.type) {
@@ -407,13 +394,11 @@ void MessageLoopTarget::StopWatching(int id) {
 
 void MessageLoopTarget::SetHasTasks() { task_event_.signal(0, kTaskSignal); }
 
-void MessageLoopTarget::OnFdioSignal(int watch_id, const WatchInfo& info,
-                                     zx_signals_t observed) {
+void MessageLoopTarget::OnFdioSignal(int watch_id, const WatchInfo& info, zx_signals_t observed) {
   uint32_t events = 0;
   fdio_unsafe_wait_end(info.fdio, observed, &events);
 
-  if ((events & POLLERR) || (events & POLLHUP) || (events & POLLNVAL) ||
-      (events & POLLRDHUP)) {
+  if ((events & POLLERR) || (events & POLLHUP) || (events & POLLNVAL) || (events & POLLRDHUP)) {
     info.fd_watcher->OnFDReady(info.fd, false, false, true);
 
     // Don't dispatch any other notifications when there's an error. Zircon
@@ -447,17 +432,14 @@ void MessageLoopTarget::RemoveChannelExceptionHandler(WatchInfo* info) {
   info->exception_channel_handler_key = nullptr;
 }
 
-void MessageLoopTarget::OnProcessException(const WatchInfo& info,
-                                           zx::exception exception,
+void MessageLoopTarget::OnProcessException(const WatchInfo& info, zx::exception exception,
                                            zx_exception_info_t exception_info) {
   switch (exception_info.type) {
     case ZX_EXCP_THREAD_STARTING:
-      info.exception_watcher->OnThreadStarting(std::move(exception),
-                                               exception_info);
+      info.exception_watcher->OnThreadStarting(std::move(exception), exception_info);
       break;
     case ZX_EXCP_THREAD_EXITING:
-      info.exception_watcher->OnThreadExiting(std::move(exception),
-                                              exception_info);
+      info.exception_watcher->OnThreadExiting(std::move(exception), exception_info);
       break;
     case ZX_EXCP_GENERAL:
     case ZX_EXCP_FATAL_PAGE_FAULT:
@@ -473,14 +455,12 @@ void MessageLoopTarget::OnProcessException(const WatchInfo& info,
   }
 }
 
-void MessageLoopTarget::OnProcessTerminated(const WatchInfo& info,
-                                            zx_signals_t observed) {
+void MessageLoopTarget::OnProcessTerminated(const WatchInfo& info, zx_signals_t observed) {
   FXL_DCHECK(observed & ZX_PROCESS_TERMINATED);
   info.exception_watcher->OnProcessTerminated(info.task_koid);
 }
 
-void MessageLoopTarget::OnJobException(const WatchInfo& info,
-                                       zx::exception exception,
+void MessageLoopTarget::OnJobException(const WatchInfo& info, zx::exception exception,
                                        zx_exception_info_t exception_info) {
   // Currently job exceptions only track process starting exceptions.
   // TODO(ZX-4391): Debugger job exception ports should receive all exceptions.
@@ -489,12 +469,10 @@ void MessageLoopTarget::OnJobException(const WatchInfo& info,
     return;
   }
 
-  info.exception_watcher->OnProcessStarting(std::move(exception),
-                                            exception_info);
+  info.exception_watcher->OnProcessStarting(std::move(exception), exception_info);
 }
 
-void MessageLoopTarget::OnSocketSignal(int watch_id, const WatchInfo& info,
-                                       zx_signals_t observed) {
+void MessageLoopTarget::OnSocketSignal(int watch_id, const WatchInfo& info, zx_signals_t observed) {
   // Dispatch readable signal.
   if (observed & ZX_SOCKET_READABLE)
     info.socket_watcher->OnSocketReadable(info.socket_handle);

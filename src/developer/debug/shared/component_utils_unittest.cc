@@ -14,8 +14,7 @@ namespace {
 #define COMPONENT "some-component"
 
 const char kAlmostUrl[] = "fuchsia-pkg://fuchsia.com/asfsad/meta/asda.cmx";
-const char kActualUrl[] =
-    "fuchsia-pkg://fuchsia.com/" PACKAGE "#meta/" COMPONENT ".cmx";
+const char kActualUrl[] = "fuchsia-pkg://fuchsia.com/" PACKAGE "#meta/" COMPONENT ".cmx";
 
 }  // namespace
 

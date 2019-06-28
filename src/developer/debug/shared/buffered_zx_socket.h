@@ -24,15 +24,13 @@ class BufferedZxSocket : public SocketWatcher, public StreamBuffer::Writer {
   BufferedZxSocket();
   ~BufferedZxSocket();
 
-  // This won't start listening on the socket (some users might want to delay
-  // doing that).
+  // This won't start listening on the socket (some users might want to delay doing that).
   //
   // If successful, it will leave the object in a valid state.
   zx_status_t Init(zx::socket socket);
 
-  // A MessageLoopZircon must be already set up on the current thread.
-  // Start can be called as long as valid() is true. ZX_ERR_BAD_STATE will be
-  // returned otherwise.
+  // A MessageLoopZircon must be already set up on the current thread. Start can be called as long
+  // as valid() is true. ZX_ERR_BAD_STATE will be returned otherwise.
   zx_status_t Start();
   zx_status_t Stop();
   // Stops and leaves the buffer in an invalid state.

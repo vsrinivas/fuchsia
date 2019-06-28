@@ -31,8 +31,7 @@ zx_status_t BufferedZxSocket::Start() {
   // Register for socket updates from the message loop.
   MessageLoopTarget* loop = MessageLoopTarget::Current();
   FXL_DCHECK(loop);
-  return loop->WatchSocket(MessageLoop::WatchMode::kReadWrite, socket_.get(),
-                           this, &watch_handle_);
+  return loop->WatchSocket(MessageLoop::WatchMode::kReadWrite, socket_.get(), this, &watch_handle_);
 }
 
 zx_status_t BufferedZxSocket::Stop() {

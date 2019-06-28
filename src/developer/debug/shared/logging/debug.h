@@ -13,15 +13,14 @@
 
 namespace debug_ipc {
 
-// This API controls and queries the debug functionality of the debug tools
-// within the debug ipc.
+// This API controls and queries the debug functionality of the debug tools within the debug ipc.
 
 // Activate this flag to activate debug output.
 // False by default.
 void SetDebugMode(bool);
 bool IsDebugModeActive();
 
-// Log Categories --------------------------------------------------------------
+// Log Categories ----------------------------------------------------------------------------------
 
 enum class LogCategory {
   // Associated with general Debug Agent events.
@@ -73,8 +72,7 @@ enum class LogCategory {
   kWorkerPool,
 
   // All the previous categories are enabled.
-  // Log statements in this category will always be outputting if debug logging
-  // is enabled.
+  // Log statements in this category will always be outputting if debug logging is enabled.
   kAll,
 };
 const char* LogCategoryToString(LogCategory);
@@ -87,7 +85,7 @@ bool IsLogCategoryActive(LogCategory);
 // Creates a preamble with padding that all logging statements should use:
 std::string LogPreamble(LogCategory, const FileLineFunction& origin);
 
-// Timing ----------------------------------------------------------------------
+// Timing ------------------------------------------------------------------------------------------
 
 // Returns how many seconds have passed since the program started.
 double SecondsSinceStart();

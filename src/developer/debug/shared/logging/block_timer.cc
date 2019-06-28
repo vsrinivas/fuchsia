@@ -32,8 +32,8 @@ double BlockTimer::EndTimer() {
   // We see if seconds makes more sense.
   if (time > 1000) {
     time /= 1000;
-    // We write the full word to make more evident that this is 1000 times
-    // bigger that the normal numbers you normally see.
+    // We write the full word to make more evident that this is 1000 times bigger that the normal
+    // numbers you normally see.
     unit = "seconds";
   }
 

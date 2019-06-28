@@ -33,8 +33,7 @@ void BufferedFD::OnFDReady(int fd, bool readable, bool writable, bool err) {
     // read/write update. Go back to only readable watching, if the write buffer
     // is full this will be re-evaluated when the write fails.
     watch_handle_ = MessageLoop::WatchHandle();
-    watch_handle_ = MessageLoop::Current()->WatchFD(
-        MessageLoop::WatchMode::kRead, fd_.get(), this);
+    watch_handle_ = MessageLoop::Current()->WatchFD(MessageLoop::WatchMode::kRead, fd_.get(), this);
     stream_.SetWritable();
   }
 
@@ -123,8 +122,8 @@ size_t BufferedFD::ConsumeStreamBufferData(const char* data, size_t len) {
   if (written < static_cast<ssize_t>(len)) {
     // Partial write, register for updates.
     watch_handle_ = MessageLoop::WatchHandle();
-    watch_handle_ = MessageLoop::Current()->WatchFD(
-        MessageLoop::WatchMode::kReadWrite, fd_.get(), this);
+    watch_handle_ =
+        MessageLoop::Current()->WatchFD(MessageLoop::WatchMode::kReadWrite, fd_.get(), this);
   }
   return written;
 }

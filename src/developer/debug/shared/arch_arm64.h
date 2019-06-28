@@ -11,23 +11,20 @@ namespace debug_ipc {
 
 constexpr uint64_t kMaxArm64HWBreakpoints = 16;
 
-// Overall functionality for interpreting arm64 specific information.
-// This is defined in debug_ipc because both the client and the debug agent
-// need to access this information.
+// Overall functionality for interpreting arm64 specific information. This is defined in debug_ipc
+// because both the client and the debug agent need to access this information.
 
 // Macros for obtaining the mask of an arm64 flag.
 // Usage:
 //    FLAG_MASK(Cpsr, EL)
 #define _ARM64_FLAG_MASK(shift, mask) ((uint64_t)((mask) << (shift)))
-#define ARM64_FLAG_MASK(reg, flag)                         \
-  _ARM64_FLAG_MASK(::debug_ipc::k##reg##_##flag##_##Shift, \
-                   ::debug_ipc::k##reg##_##flag##_##Mask)
+#define ARM64_FLAG_MASK(reg, flag) \
+  _ARM64_FLAG_MASK(::debug_ipc::k##reg##_##flag##_##Shift, ::debug_ipc::k##reg##_##flag##_##Mask)
 
 // Macros for obtaining the value of an arm64 flag.
 // Usage:
 //    FLAG_VALUE(value, CpsrV)
-#define _ARM64_FLAG_VALUE(value, shift, mask) \
-  ((uint8_t)((value >> shift) & mask))
+#define _ARM64_FLAG_VALUE(value, shift, mask) ((uint8_t)((value >> shift) & mask))
 #define ARM64_FLAG_VALUE(value, reg, flag)                         \
   _ARM64_FLAG_VALUE(value, ::debug_ipc::k##reg##_##flag##_##Shift, \
                     ::debug_ipc::k##reg##_##flag##_##Mask)
@@ -70,8 +67,8 @@ constexpr uint64_t kDBGBCR_E_Mask = 0b1;
 // PMC, HMC, SSC define the environment where the breakpoint will trigger.
 constexpr uint64_t kDBGBCR_PMC_Shift = 1;
 constexpr uint64_t kDBGBCR_PMC_Mask = 0b11;
-// Byte Address Select. Defines which half-words triggers the breakpoint.
-// In AArch64 implementations (which zircon targets), is res1.
+// Byte Address Select. Defines which half-words triggers the breakpoint. In AArch64 implementations
+// (which zircon targets), is res1.
 constexpr uint64_t kDBGBCR_BAS_Shift = 5;
 constexpr uint64_t kDBGBCR_BAS_Mask = 0b1111;
 // PMC, HMC, SSC define the environment where the breakpoint will trigger.

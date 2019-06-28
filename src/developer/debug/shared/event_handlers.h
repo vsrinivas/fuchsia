@@ -13,8 +13,7 @@
 
 #include "src/lib/fxl/macros.h"
 
-// Group of classes dedicated at handling async events associated with zircon's
-// message loop.
+// Group of classes dedicated at handling async events associated with zircon's message loop.
 
 namespace debug_ipc {
 
@@ -26,15 +25,13 @@ constexpr uint32_t kTaskSignal = ZX_USER_SIGNAL_0;
 // 0 is an invalid ID for watchers, so is safe to use here.
 constexpr uint64_t kTaskSignalKey = 0;
 
-
 // Function called when a SignalHandler gets a signal it's waiting for.
-using SignalHandlerFunc = void (*)(async_dispatcher_t*, async_wait_t*,
-                                   zx_status_t, const zx_packet_signal_t*);
+using SignalHandlerFunc = void (*)(async_dispatcher_t*, async_wait_t*, zx_status_t,
+                                   const zx_packet_signal_t*);
 
 class SignalHandler {
  public:
-  static void Handler(async_dispatcher_t*, async_wait_t*, zx_status_t,
-                      const zx_packet_signal_t*);
+  static void Handler(async_dispatcher_t*, async_wait_t*, zx_status_t, const zx_packet_signal_t*);
 
   SignalHandler();
   ~SignalHandler();
@@ -53,12 +50,11 @@ class SignalHandler {
   std::unique_ptr<async_wait_t> handle_;
 };
 
-// This is the exception handler that uses exception token instead of the
-// deprecated exception ports.
+// This is the exception handler that uses exception token instead of the deprecated exception
+// ports.
 class ChannelExceptionHandler {
  public:
-  static void Handler(async_dispatcher_t*, async_wait_t*, zx_status_t,
-                      const zx_packet_signal_t*);
+  static void Handler(async_dispatcher_t*, async_wait_t*, zx_status_t, const zx_packet_signal_t*);
 
   ChannelExceptionHandler();
   ~ChannelExceptionHandler();

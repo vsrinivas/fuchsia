@@ -12,8 +12,8 @@
 
 namespace debug_ipc {
 
-// An implementation of StreamBuffer that provides the simplest-possible
-// buffering to memory for test purposes.
+// An implementation of StreamBuffer that provides the simplest-possible buffering to memory for
+// test purposes.
 //
 // The stream buffer is bidirectional and has a buffer going both ways:
 //
@@ -30,8 +30,8 @@ class TestStreamBuffer : public StreamBuffer::Writer {
   StreamBuffer& stream() { return stream_; }
   const StreamBuffer& stream() const { return stream_; }
 
-  // Where data that is written to the stream buffer ends up. This emulates
-  // what would normally be the system-specific destination (file, etc.).
+  // Where data that is written to the stream buffer ends up. This emulates what would normally be
+  // the system-specific destination (file, etc.).
   const std::deque<char>& write_sink() const { return write_sink_; }
   std::deque<char>& write_sink() { return write_sink_; }
 

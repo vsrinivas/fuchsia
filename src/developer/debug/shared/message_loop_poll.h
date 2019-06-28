@@ -39,11 +39,10 @@ class MessageLoopPoll : public MessageLoop, public FDWatcher {
   // FDWatcher implementation (for waking up for posted tasks).
   void OnFDReady(int fd, bool read, bool write, bool err) override;
 
-  // Prepares the pollfd vector with all the handles we will be watching for
-  // poll(). The map_indices vector will be of the same length and will contain
-  // the key into watches_ of each item in the pollfd vector.
-  void ConstructFDMapping(std::vector<pollfd>* poll_vect,
-                          std::vector<size_t>* map_indices) const;
+  // Prepares the pollfd vector with all the handles we will be watching for poll(). The map_indices
+  // vector will be of the same length and will contain the key into watches_ of each item in the
+  // pollfd vector.
+  void ConstructFDMapping(std::vector<pollfd>* poll_vect, std::vector<size_t>* map_indices) const;
 
   // Called when poll detects an event. The poll event mask is in |events|.
   void OnHandleSignaled(int fd, short events, int watch_id);
@@ -51,8 +50,8 @@ class MessageLoopPoll : public MessageLoop, public FDWatcher {
   // Whether the loop is watching a particular id.
   bool HasWatch(int watch_id);
 
-  // This must only be accessed on the same thread as the message loop, so is
-  // not protected by the lock.
+  // This must only be accessed on the same thread as the message loop, so is not protected by the
+  // lock.
   using WatchMap = std::map<int, WatchInfo>;
   WatchMap watches_;
 

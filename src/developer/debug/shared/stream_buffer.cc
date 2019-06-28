@@ -13,9 +13,7 @@ namespace debug_ipc {
 StreamBuffer::StreamBuffer() = default;
 StreamBuffer::~StreamBuffer() = default;
 
-void StreamBuffer::AddReadData(std::vector<char> data) {
-  read_buffer_.push_back(std::move(data));
-}
+void StreamBuffer::AddReadData(std::vector<char> data) { read_buffer_.push_back(std::move(data)); }
 
 void StreamBuffer::SetWritable() {
   can_write_ = true;
@@ -51,8 +49,7 @@ void StreamBuffer::Write(std::vector<char> data) {
     FlushWriteBuffer();
 }
 
-size_t StreamBuffer::ReadOrPeek(char* buffer, size_t buffer_len,
-                                bool erase_consumed) {
+size_t StreamBuffer::ReadOrPeek(char* buffer, size_t buffer_len, bool erase_consumed) {
   size_t buffer_pos = 0;
 
   auto cur = read_buffer_.begin();
@@ -83,9 +80,8 @@ size_t StreamBuffer::ReadOrPeek(char* buffer, size_t buffer_len,
 void StreamBuffer::FlushWriteBuffer() {
   while (!write_buffer_.empty()) {
     const std::vector<char>& cur = write_buffer_.front();
-    int32_t written = writer_->ConsumeStreamBufferData(
-        &cur[first_write_buffer_offset_],
-        cur.size() - first_write_buffer_offset_);
+    int32_t written = writer_->ConsumeStreamBufferData(&cur[first_write_buffer_offset_],
+                                                       cur.size() - first_write_buffer_offset_);
     first_write_buffer_offset_ += written;
 
     if (first_write_buffer_offset_ < cur.size()) {

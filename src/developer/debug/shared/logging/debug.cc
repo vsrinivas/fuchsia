@@ -31,13 +31,9 @@ bool IsDebugModeActive() { return kDebugMode; }
 
 void SetDebugMode(bool activate) { kDebugMode = activate; }
 
-double SecondsSinceStart() {
-  return (fxl::TimePoint::Now() - kStartTime).ToSecondsF();
-}
+double SecondsSinceStart() { return (fxl::TimePoint::Now() - kStartTime).ToSecondsF(); }
 
-const std::set<LogCategory>& GetActiveLogCategories() {
-  return GetLogCategories();
-}
+const std::set<LogCategory>& GetActiveLogCategories() { return GetLogCategories(); }
 
 void SetLogCategories(std::initializer_list<LogCategory> categories) {
   auto& active_categories = GetLogCategories();
@@ -63,9 +59,8 @@ bool IsLogCategoryActive(LogCategory category) {
 std::string LogPreamble(LogCategory category, const FileLineFunction& origin) {
   auto basename = files::GetBaseName(origin.file());
   return fxl::StringPrintf("[%.3fs][%10s][%s][%s:%d]", SecondsSinceStart(),
-                           LogCategoryToString(category),
-                           origin.function().c_str(), basename.c_str(),
-                           origin.line());
+                           LogCategoryToString(category), origin.function().c_str(),
+                           basename.c_str(), origin.line());
 }
 
 const char* LogCategoryToString(LogCategory category) {

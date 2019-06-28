@@ -13,8 +13,7 @@ const char kUrlComponentPreamble[] = "#meta/";
 
 }  // namespace
 
-bool ExtractComponentFromPackageUrl(const std::string& url,
-                                    ComponentDescription* out) {
+bool ExtractComponentFromPackageUrl(const std::string& url, ComponentDescription* out) {
   // We check if we're matching a pkg url
   // Pattern:
   //
@@ -24,8 +23,7 @@ bool ExtractComponentFromPackageUrl(const std::string& url,
     return false;
 
   // Account for last \0.
-  size_t package_start =
-      package_preamble_start + sizeof(kUrlPackagePreamble) - 1;
+  size_t package_start = package_preamble_start + sizeof(kUrlPackagePreamble) - 1;
   size_t package_end = url.find(kUrlComponentPreamble, package_start);
   if (package_end == std::string::npos)
     return false;
@@ -37,8 +35,7 @@ bool ExtractComponentFromPackageUrl(const std::string& url,
     return false;
 
   out->package_name = url.substr(package_start, package_end - package_start);
-  out->component_name =
-      url.substr(component_start, component_end - component_start);
+  out->component_name = url.substr(component_start, component_end - component_start);
   return true;
 }
 

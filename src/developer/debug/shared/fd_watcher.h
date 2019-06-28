@@ -7,8 +7,8 @@
 
 namespace debug_ipc {
 
-// Simple observer class for readable/writable state changes on some
-// communication or storage channel.
+// Simple observer class for readable/writable state changes on some communication or storage
+// channel.
 class FDWatcher {
  public:
   virtual void OnFDReady(int fd, bool read, bool write, bool err) {}
