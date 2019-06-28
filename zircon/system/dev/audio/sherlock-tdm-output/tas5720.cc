@@ -39,6 +39,16 @@ zx_status_t Tas5720::Reset() {
     return ZX_OK;
 }
 
+zx_status_t Tas5720::Mute(bool mute) {
+    uint8_t val = 0;
+    auto status = ReadReg(kRegDigitalControl2, &val);
+    if (status != ZX_OK) {
+        return status;
+    }
+    return WriteReg(kRegDigitalControl2,
+                    static_cast<uint8_t>(mute ? (val | 0x10) : (val & ~0x10)));
+}
+
 zx_status_t Tas5720::SetGain(float gain) {
     gain = fbl::clamp(gain, kMinGain, kMaxGain);
     // Datasheet: "DVC [Hex Value] = 0xCF + (DVC [dB] / 0.5 [dB] )".
@@ -62,10 +72,10 @@ zx_status_t Tas5720::Init(std::optional<uint8_t> slot) {
     if (!slot.has_value() || slot.value() >= 8) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    WriteReg(kRegDigitalControl2, slot.value());
-    WriteReg(kRegAnalogControl, 0x55);          // PWM rate 16 x lrclk, gain 20.7 dBV.
-    WriteReg(kRegDigitalClipper2, 0xFF);        // Disabled.
-    WriteReg(kRegDigitalClipper1, 0xFC);        // Disabled.
+    WriteReg(kRegDigitalControl2, slot.value() | 0x10); // Muted.
+    WriteReg(kRegAnalogControl, 0x55);                  // PWM rate 16 x lrclk, gain 20.7 dBV.
+    WriteReg(kRegDigitalClipper2, 0xFF);                // Disabled.
+    WriteReg(kRegDigitalClipper1, 0xFC);                // Disabled.
     ExitStandby();
     uint8_t val = 0;
     ReadReg(kRegFaultCfgErrorStatus, &val);

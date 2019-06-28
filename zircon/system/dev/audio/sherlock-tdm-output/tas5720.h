@@ -29,6 +29,7 @@ public:
     float GetMinGain() const override { return kMinGain; }
     float GetMaxGain() const override { return kMaxGain; }
     float GetGainStep() const override { return kGainStep; }
+    zx_status_t Mute(bool mute) override;
 
 private:
     static constexpr float kMaxGain = 24.0;

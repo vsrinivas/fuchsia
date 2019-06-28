@@ -312,10 +312,22 @@ zx_status_t SherlockAudioStreamOut::Start(uint64_t* out_start_time) {
     } else {
         us_per_notification_ = 0;
     }
+    for (size_t i = 0; i < codecs_.size(); ++i) {
+        auto status = codecs_[i]->Mute(false);
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
     return ZX_OK;
 }
 
 zx_status_t SherlockAudioStreamOut::Stop() {
+    for (size_t i = 0; i < codecs_.size(); ++i) {
+        auto status = codecs_[i]->Mute(true);
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
     notify_timer_->Cancel();
     us_per_notification_ = 0;
     aml_audio_->Stop();

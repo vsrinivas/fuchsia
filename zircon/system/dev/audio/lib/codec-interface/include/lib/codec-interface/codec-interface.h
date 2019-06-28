@@ -25,6 +25,7 @@ public:
     virtual float GetMinGain() const = 0;
     virtual float GetMaxGain() const = 0;
     virtual float GetGainStep() const = 0;
+    virtual zx_status_t Mute(bool mute) = 0;
 };
 
 }  // namespace audio
