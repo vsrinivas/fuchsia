@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fbl/algorithm.h>
+#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
@@ -41,10 +42,10 @@ void CreateNamespaceHelper(fdio_ns_t** out) {
   fdio_ns_t* ns;
   ASSERT_OK(fdio_ns_create(&ns));
   for (unsigned n = 0; n < fbl::count_of(NS); n++) {
-    int fd = open(NS[n].remote, O_RDONLY | O_DIRECTORY);
-    ASSERT_GT(fd, 0);
-    ASSERT_OK(fdio_ns_bind_fd(ns, NS[n].local, fd));
-    ASSERT_EQ(close(fd), 0);
+    fbl::unique_fd fd(open(NS[n].remote, O_RDONLY | O_DIRECTORY));
+    ASSERT_GT(fd.get(), 0);
+    ASSERT_OK(fdio_ns_bind_fd(ns, NS[n].local, fd.get()));
+    ASSERT_EQ(close(fd.release()), 0);
   }
   *out = ns;
 }
@@ -62,20 +63,20 @@ TEST(NamespaceTest, DestroyWhileInUse) {
   fdio_ns_t* ns;
   ASSERT_NO_FATAL_FAILURES(CreateNamespaceHelper(&ns));
 
-  int fd = fdio_ns_opendir(ns);
-  ASSERT_GE(fd, 0, "Couldn't open root");
+  fbl::unique_fd fd(fdio_ns_opendir(ns));
+  ASSERT_GE(fd.get(), 0, "Couldn't open root");
   ASSERT_OK(fdio_ns_destroy(ns));
-  ASSERT_EQ(close(fd), 0);
+  ASSERT_EQ(close(fd.release()), 0);
 }
 
 // Tests that remote connections may be bound to the root of the namespace.
 TEST(NamespaceTest, BindRoot) {
   fdio_ns_t* ns;
   ASSERT_OK(fdio_ns_create(&ns));
-  int fd = open("/boot/bin", O_RDONLY | O_DIRECTORY);
-  ASSERT_GT(fd, 0);
-  ASSERT_OK(fdio_ns_bind_fd(ns, "/", fd));
-  ASSERT_EQ(close(fd), 0);
+  fbl::unique_fd fd(open("/boot/bin", O_RDONLY | O_DIRECTORY));
+  ASSERT_GT(fd.get(), 0);
+  ASSERT_OK(fdio_ns_bind_fd(ns, "/", fd.get()));
+  ASSERT_EQ(close(fd.release()), 0);
   ASSERT_OK(fdio_ns_destroy(ns));
 }
 
@@ -93,13 +94,13 @@ TEST(NamespaceTest, BindRootHandle) {
 TEST(NamespaceTest, ShadowRoot) {
   fdio_ns_t* ns;
   ASSERT_OK(fdio_ns_create(&ns));
-  int fd = open("/boot/bin", O_RDONLY | O_DIRECTORY);
-  ASSERT_GT(fd, 0);
-  ASSERT_OK(fdio_ns_bind_fd(ns, "/", fd));
-  ASSERT_EQ(fdio_ns_bind_fd(ns, "/", fd), ZX_ERR_ALREADY_EXISTS, "Rebind disallowed");
-  ASSERT_EQ(fdio_ns_bind_fd(ns, "/a", fd), ZX_ERR_NOT_SUPPORTED);
-  ASSERT_EQ(fdio_ns_bind_fd(ns, "/a/b", fd), ZX_ERR_NOT_SUPPORTED);
-  ASSERT_EQ(close(fd), 0);
+  fbl::unique_fd fd(open("/boot/bin", O_RDONLY | O_DIRECTORY));
+  ASSERT_GT(fd.get(), 0);
+  ASSERT_OK(fdio_ns_bind_fd(ns, "/", fd.get()));
+  ASSERT_EQ(fdio_ns_bind_fd(ns, "/", fd.get()), ZX_ERR_ALREADY_EXISTS, "Rebind disallowed");
+  ASSERT_EQ(fdio_ns_bind_fd(ns, "/a", fd.get()), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(fdio_ns_bind_fd(ns, "/a/b", fd.get()), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(close(fd.release()), 0);
   ASSERT_OK(fdio_ns_destroy(ns));
 }
 
@@ -107,21 +108,21 @@ TEST(NamespaceTest, ShadowRoot) {
 TEST(NamespaceTest, ShadowNonRoot) {
   fdio_ns_t* ns;
   ASSERT_OK(fdio_ns_create(&ns));
-  int fd = open("/boot/bin", O_RDONLY | O_DIRECTORY);
-  ASSERT_GT(fd, 0);
+  fbl::unique_fd fd(open("/boot/bin", O_RDONLY | O_DIRECTORY));
+  ASSERT_GT(fd.get(), 0);
 
-  ASSERT_OK(fdio_ns_bind_fd(ns, "/foo", fd));
-  ASSERT_EQ(fdio_ns_bind_fd(ns, "/foo", fd), ZX_ERR_ALREADY_EXISTS);
-  ASSERT_EQ(fdio_ns_bind_fd(ns, "/foo/b", fd), ZX_ERR_NOT_SUPPORTED);
-  ASSERT_EQ(fdio_ns_bind_fd(ns, "/foo/b/c", fd), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_OK(fdio_ns_bind_fd(ns, "/foo", fd.get()));
+  ASSERT_EQ(fdio_ns_bind_fd(ns, "/foo", fd.get()), ZX_ERR_ALREADY_EXISTS);
+  ASSERT_EQ(fdio_ns_bind_fd(ns, "/foo/b", fd.get()), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(fdio_ns_bind_fd(ns, "/foo/b/c", fd.get()), ZX_ERR_NOT_SUPPORTED);
 
-  ASSERT_OK(fdio_ns_bind_fd(ns, "/bar/foo", fd));
-  ASSERT_EQ(fdio_ns_bind_fd(ns, "/bar", fd), ZX_ERR_ALREADY_EXISTS);
-  ASSERT_EQ(fdio_ns_bind_fd(ns, "/bar/foo", fd), ZX_ERR_ALREADY_EXISTS);
-  ASSERT_EQ(fdio_ns_bind_fd(ns, "/bar/foo/b", fd), ZX_ERR_NOT_SUPPORTED);
-  ASSERT_EQ(fdio_ns_bind_fd(ns, "/bar/foo/b/c", fd), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_OK(fdio_ns_bind_fd(ns, "/bar/foo", fd.get()));
+  ASSERT_EQ(fdio_ns_bind_fd(ns, "/bar", fd.get()), ZX_ERR_ALREADY_EXISTS);
+  ASSERT_EQ(fdio_ns_bind_fd(ns, "/bar/foo", fd.get()), ZX_ERR_ALREADY_EXISTS);
+  ASSERT_EQ(fdio_ns_bind_fd(ns, "/bar/foo/b", fd.get()), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(fdio_ns_bind_fd(ns, "/bar/foo/b/c", fd.get()), ZX_ERR_NOT_SUPPORTED);
 
-  ASSERT_EQ(close(fd), 0);
+  ASSERT_EQ(close(fd.release()), 0);
   ASSERT_OK(fdio_ns_destroy(ns));
 }
 
@@ -142,10 +143,10 @@ TEST(NamespaceTest, ExportRoot) {
   fdio_ns_t* ns;
   ASSERT_OK(fdio_ns_create(&ns));
 
-  int fd = open("/boot/bin", O_RDONLY | O_DIRECTORY);
-  ASSERT_GT(fd, 0);
-  ASSERT_OK(fdio_ns_bind_fd(ns, "/", fd));
-  ASSERT_EQ(close(fd), 0);
+  fbl::unique_fd fd(open("/boot/bin", O_RDONLY | O_DIRECTORY));
+  ASSERT_GT(fd.get(), 0);
+  ASSERT_OK(fdio_ns_bind_fd(ns, "/", fd.get()));
+  ASSERT_EQ(close(fd.release()), 0);
 
   fdio_flat_namespace_t* flat = nullptr;
   ASSERT_OK(fdio_ns_export(ns, &flat));
@@ -210,10 +211,10 @@ TEST(NamespaceTest, Chdir) {
   ASSERT_EQ(closedir(dir), 0);
 
   // Try doing some basic file ops within the namespace
-  int fd = open("fake/tmp/newfile", O_CREAT | O_RDWR | O_EXCL);
-  ASSERT_GT(fd, 0);
-  ASSERT_GT(write(fd, "hello", strlen("hello")), 0);
-  ASSERT_EQ(close(fd), 0);
+  fbl::unique_fd fd(open("fake/tmp/newfile", O_CREAT | O_RDWR | O_EXCL));
+  ASSERT_GT(fd.get(), 0);
+  ASSERT_GT(write(fd.get(), "hello", strlen("hello")), 0);
+  ASSERT_EQ(close(fd.release()), 0);
   ASSERT_EQ(unlink("fake/tmp/newfile"), 0);
   ASSERT_EQ(mkdir("fake/tmp/newdir", 0666), 0);
   ASSERT_EQ(rename("fake/tmp/newdir", "fake/tmp/olddir"), 0);
@@ -231,12 +232,12 @@ TEST(NamespaceTest, UnbindNonRoot) {
   // Create a namespace with a single entry.
   fdio_ns_t* ns;
   ASSERT_OK(fdio_ns_create(&ns));
-  int fd = open("/boot/bin", O_RDONLY | O_DIRECTORY);
-  ASSERT_GT(fd, 0);
-  ASSERT_OK(fdio_ns_bind_fd(ns, "/my/local/path", fd));
-  ASSERT_OK(fdio_ns_bind_fd(ns, "/top", fd));
-  ASSERT_OK(fdio_ns_bind_fd(ns, "/another_top", fd));
-  ASSERT_EQ(close(fd), 0);
+  fbl::unique_fd fd(open("/boot/bin", O_RDONLY | O_DIRECTORY));
+  ASSERT_GT(fd.get(), 0);
+  ASSERT_OK(fdio_ns_bind_fd(ns, "/my/local/path", fd.get()));
+  ASSERT_OK(fdio_ns_bind_fd(ns, "/top", fd.get()));
+  ASSERT_OK(fdio_ns_bind_fd(ns, "/another_top", fd.get()));
+  ASSERT_EQ(close(fd.release()), 0);
   ASSERT_OK(fdio_ns_chdir(ns));
 
   struct stat st;
@@ -269,10 +270,10 @@ TEST(NamespaceTest, UnbindRoot) {
   // Create a namespace with a single entry.
   fdio_ns_t* ns;
   ASSERT_OK(fdio_ns_create(&ns));
-  int fd = open("/boot/bin", O_RDONLY | O_DIRECTORY);
-  ASSERT_GT(fd, 0);
-  ASSERT_OK(fdio_ns_bind_fd(ns, "/", fd));
-  ASSERT_EQ(close(fd), 0);
+  fbl::unique_fd fd(open("/boot/bin", O_RDONLY | O_DIRECTORY));
+  ASSERT_GT(fd.get(), 0);
+  ASSERT_OK(fdio_ns_bind_fd(ns, "/", fd.get()));
+  ASSERT_EQ(close(fd.release()), 0);
   ASSERT_OK(fdio_ns_chdir(ns));
 
   struct stat st;
@@ -295,11 +296,11 @@ TEST(NamespaceTest, UnbindAncestor) {
   // Create a namespace with a single entry.
   fdio_ns_t* ns;
   ASSERT_OK(fdio_ns_create(&ns));
-  int fd = open("/boot/bin", O_RDONLY | O_DIRECTORY);
-  ASSERT_GT(fd, 0);
-  ASSERT_OK(fdio_ns_bind_fd(ns, "/my/local/path", fd));
-  ASSERT_OK(fdio_ns_bind_fd(ns, "/my/other/path", fd));
-  ASSERT_EQ(close(fd), 0);
+  fbl::unique_fd fd(open("/boot/bin", O_RDONLY | O_DIRECTORY));
+  ASSERT_GT(fd.get(), 0);
+  ASSERT_OK(fdio_ns_bind_fd(ns, "/my/local/path", fd.get()));
+  ASSERT_OK(fdio_ns_bind_fd(ns, "/my/other/path", fd.get()));
+  ASSERT_EQ(close(fd.release()), 0);
   ASSERT_OK(fdio_ns_chdir(ns));
 
   struct stat st;
