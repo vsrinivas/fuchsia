@@ -26,9 +26,6 @@ magma_status_t magma_sysmem_allocate_buffer(magma_sysmem_connection_t connection
 void magma_buffer_format_description_release(magma_buffer_format_description_t description);
 
 // |image_planes_out| must be an array with MAGMA_MAX_IMAGE_PLANES elements.
-magma_status_t magma_get_buffer_format_plane_info(magma_buffer_format_description_t description,
-                                                  magma_image_plane_t* image_planes_out);
-
 magma_status_t
 magma_get_buffer_format_plane_info_with_size(magma_buffer_format_description_t description,
                                              uint32_t width, uint32_t height,

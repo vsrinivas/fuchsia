@@ -513,20 +513,6 @@ void magma_buffer_format_description_release(magma_buffer_format_description_t d
 }
 
 // |image_planes_out| must be an array with MAGMA_MAX_IMAGE_PLANES elements.
-magma_status_t magma_get_buffer_format_plane_info(magma_buffer_format_description_t description,
-                                                  magma_image_plane_t* image_planes_out)
-{
-    if (!description) {
-        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Null description");
-    }
-    auto buffer_description =
-        reinterpret_cast<magma_sysmem::PlatformBufferDescription*>(description);
-    if (!buffer_description->GetPlanes(0u, 0u, image_planes_out)) {
-        return DRET(MAGMA_STATUS_INVALID_ARGS);
-    }
-    return MAGMA_STATUS_OK;
-}
-
 magma_status_t
 magma_get_buffer_format_plane_info_with_size(magma_buffer_format_description_t description,
                                              uint32_t width, uint32_t height,

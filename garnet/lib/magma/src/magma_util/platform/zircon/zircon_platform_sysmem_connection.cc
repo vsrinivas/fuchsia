@@ -158,11 +158,9 @@ public:
         // normally.
         constraints = fuchsia::sysmem::ImageFormatConstraints();
         constraints.color_spaces_count = 1;
-        // TODO(MA-638): Set min_coded_width=min_coded_height=0 when
-        // magma_get_buffer_format_plane_info is removed.
-        constraints.min_coded_width = format_constraints->width;
+        constraints.min_coded_width = 0u;
         constraints.max_coded_width = 16384;
-        constraints.min_coded_height = format_constraints->height;
+        constraints.min_coded_height = 0u;
         constraints.max_coded_height = 16384;
         constraints.min_bytes_per_row = format_constraints->min_bytes_per_row;
         constraints.required_max_coded_width = format_constraints->width;

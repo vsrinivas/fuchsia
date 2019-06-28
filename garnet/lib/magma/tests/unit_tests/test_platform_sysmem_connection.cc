@@ -68,7 +68,7 @@ public:
         EXPECT_EQ(1u, description->count());
         magma_image_plane_t planes[MAGMA_MAX_IMAGE_PLANES] = {};
         EXPECT_TRUE(description->GetPlanes(128, 128, planes));
-        EXPECT_EQ(512u * 4, planes[0].bytes_per_row);
+        EXPECT_EQ(128u * 4, planes[0].bytes_per_row);
 
         uint32_t handle;
         uint32_t offset;
