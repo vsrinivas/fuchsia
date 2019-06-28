@@ -4,7 +4,8 @@
 
 #pragma once
 
-#include <map>
+#include <vector>
+#include <utility>
 
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
@@ -36,12 +37,22 @@ struct Args {
     // If valid, the FD to give to devmgr as stdin/stdout/stderr.  Otherwise
     // inherits from the caller of Launch().
     fbl::unique_fd stdio;
+    // A list of path prefixes and channels to add to the isolated devmgr's namespace. Note that
+    // /boot is always forwarded from the parent namespace, and /svc will be forwarded if
+    // |use_system_svchost| is true. This argument may be used to allow the isolated devmgr access
+    // to drivers from /system/drivers.
+    std::vector<std::pair<const char*, zx::channel>> flat_namespace;
     // Select whether to use the system svchost or to launch a new one.
     bool use_system_svchost = false;
     // If true, the block watcher will be disabled and will not start.
     bool disable_block_watcher = false;
     // If true, the netsvc will be disabled and will not start.
     bool disable_netsvc = false;
+
+    // The following arguments are for devmgr_integration_test::IsolatedDevmgr only.
+    // TODO(ZX-4590): Clean this up, devmgr-launcher shouldn't define arguments that are consumed by
+    // a different library higher up the stack.
+
     // Function to handle requests for boot items.
     GetBootItemFunction get_boot_item;
     // Function to handle requests for boot arguments.
@@ -52,7 +63,6 @@ struct Args {
 //
 // Returns its containing job and a channel to the root of its devfs.
 // To destroy the devmgr, issue |devmgr_job->kill()|.
-zx_status_t Launch(Args args, zx::channel bootsvc_client, zx::job* devmgr_job,
-                   zx::channel* devfs_root);
+zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root);
 
 } // namespace devmgr_launcher

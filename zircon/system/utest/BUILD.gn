@@ -99,6 +99,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/crypto/test",
       "$zx/system/ulib/ddk:ddk-unittest",
       "$zx/system/ulib/debugdata/test",
+      "$zx/system/ulib/devmgr-integration-test/test",
       "$zx/system/ulib/digest/test",
       "$zx/system/ulib/disk-inspector/test",
       "$zx/system/ulib/driver-integration-test/test",

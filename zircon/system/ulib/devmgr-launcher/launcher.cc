@@ -31,8 +31,7 @@ constexpr const char* kDevmgrPath = "/boot/bin/devcoordinator";
 
 namespace devmgr_launcher {
 
-zx_status_t Launch(Args args, zx::channel bootsvc_client, zx::job* devmgr_job,
-                   zx::channel* devfs_root) {
+zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root) {
     // Create containing job (and copy to send to devmgr)
     zx::job job, job_copy;
     zx_status_t status = zx::job::create(*zx::job::default_job(), 0, &job);
@@ -53,12 +52,7 @@ zx_status_t Launch(Args args, zx::channel bootsvc_client, zx::job* devmgr_job,
             return status;
         }
 
-        fdio_ns_t* ns;
-        status = fdio_ns_get_installed(&ns);
-        if (status != ZX_OK) {
-            return status;
-        }
-        status = fdio_ns_connect(ns, "/boot", ZX_FS_RIGHT_READABLE, bootfs_server.release());
+        status = fdio_open("/boot", ZX_FS_RIGHT_READABLE, bootfs_server.release());
         if (status != ZX_OK) {
             return status;
         }
@@ -73,13 +67,8 @@ zx_status_t Launch(Args args, zx::channel bootsvc_client, zx::job* devmgr_job,
             return status;
         }
 
-        fdio_ns_t* ns;
-        status = fdio_ns_get_installed(&ns);
-        if (status != ZX_OK) {
-            return status;
-        }
-        status = fdio_ns_connect(ns, "/svc", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
-                                 svc_server.release());
+        status = fdio_open("/svc", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
+                           svc_server.release());
         if (status != ZX_OK) {
             return status;
         }
@@ -132,20 +121,26 @@ zx_status_t Launch(Args args, zx::channel bootsvc_client, zx::job* devmgr_job,
         .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
         .h = {.id = DEVMGR_LAUNCHER_DEVFS_ROOT_HND, .handle = devfs_server.release()},
     });
+
+    for (auto& ns : args.flat_namespace) {
+        actions.push_back(fdio_spawn_action_t{
+            .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+            .ns = {.prefix = ns.first, .handle = ns.second.release()},
+        });
+    }
+
     actions.push_back(fdio_spawn_action_t{
         .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
         .ns = {.prefix = "/boot", .handle = bootfs_client.release()},
     });
-    actions.push_back(fdio_spawn_action_t{
-        .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-        .ns = {.prefix = "/bootsvc", .handle = bootsvc_client.release()},
-    });
+
     if (args.use_system_svchost) {
         actions.push_back(fdio_spawn_action_t{
             .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
             .ns = {.prefix = "/svc", .handle = svc_client.release()},
         });
     }
+
     if (!clone_stdio) {
         actions.push_back(fdio_spawn_action_t{
             .action = FDIO_SPAWN_ACTION_TRANSFER_FD,

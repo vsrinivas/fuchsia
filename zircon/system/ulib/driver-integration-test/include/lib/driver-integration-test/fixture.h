@@ -22,6 +22,11 @@ public:
         // drivers from.  This differs from |driver_search_paths| in that it
         // specifies specific drivers rather than entire directories.
         fbl::Vector<const char*> load_drivers;
+        // A list of path prefixes and channels to add to the isolated devmgr's namespace. Note that
+        // /boot is always forwarded from the parent namespace, and /svc will be forwarded if
+        // |use_system_svchost| is true. This argument may be used to allow the isolated devmgr
+        // access to drivers from /system/drivers.
+        std::vector<std::pair<const char*, zx::channel>> flat_namespace;
         // A list of vid/pid/did triplets to spawn in their own devhosts.
         fbl::Vector<board_test::DeviceEntry> device_list;
         // A list of kernel cmdline arguments to pass to the devmgr process.

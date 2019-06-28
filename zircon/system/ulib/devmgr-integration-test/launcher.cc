@@ -91,6 +91,7 @@ zx_status_t bootsvc_main(zx::channel bootsvc_server, GetBootItemFunction get_boo
     async::Wait wait(bootsvc_server.get(), ZX_CHANNEL_PEER_CLOSED, [&loop](...) {
         loop.Quit();
     });
+    wait.Begin(loop.dispatcher());
 
     // Setup VFS.
     fs::SynchronousVfs vfs(loop.dispatcher());
@@ -145,13 +146,14 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* o
     if (status != ZX_OK) {
         return status;
     }
+    args.flat_namespace.push_back(std::make_pair("/bootsvc", std::move(bootsvc_client)));
 
     GetBootItemFunction get_boot_item = std::move(args.get_boot_item);
     GetArgumentsFunction get_arguments = std::move(args.get_arguments);
+
     IsolatedDevmgr devmgr;
     zx::channel devfs;
-    status = devmgr_launcher::Launch(std::move(args), std::move(bootsvc_client), &devmgr.job_,
-                                     &devfs);
+    status = devmgr_launcher::Launch(std::move(args), &devmgr.job_, &devfs);
     if (status != ZX_OK) {
         return status;
     }
