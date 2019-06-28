@@ -4,6 +4,7 @@
 #![deny(warnings)]
 
 mod args;
+mod common_operations;
 mod file_target;
 mod generator;
 mod io_packet;
@@ -71,7 +72,7 @@ fn output_config(generator_args_vec: &Vec<GeneratorArgs>, output_config_file: &S
 }
 
 fn main() -> Result<(), Error> {
-    let args = args::parse();
+    let args = args::parse()?;
 
     let start_instant: Instant = Instant::now();
     log_init()?;
@@ -93,7 +94,7 @@ fn main() -> Result<(), Error> {
     let mut stats_array = Vec::with_capacity(args.thread_count);
 
     for i in 0..args.thread_count {
-        let args = GeneratorArgs::new(
+        let generator_args = GeneratorArgs::new(
             MAGIC_NUMBER,
             process::id() as u64,
             i as u64, // generator id
@@ -104,11 +105,12 @@ fn main() -> Result<(), Error> {
             args.target.clone(),
             offset_start..(offset_start + range_size),
             args.target_type,
+            args.operations.clone(),
             args.queue_depth,
             args.max_io_count,
             args.sequential,
         );
-        generator_args_vec.push(args.clone());
+        generator_args_vec.push(generator_args.clone());
 
         let stats = {
             let mut stats = Stats::new();
@@ -116,7 +118,7 @@ fn main() -> Result<(), Error> {
             Arc::new(Mutex::new(stats))
         };
         stats_array.push(stats.clone());
-        thread_handles.push(spawn(move || run_load(args, start_instant, stats)));
+        thread_handles.push(spawn(move || run_load(generator_args, start_instant, stats)));
         offset_start += range_size;
     }
 

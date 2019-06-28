@@ -3,8 +3,12 @@
 // found in the LICENSE file.
 
 use {
+    crate::common_operations::allowed_ops,
+    crate::operations::TargetOps,
     crate::target::AvailableTargets,
     clap::{App, Arg},
+    log::error,
+    std::io::{Error, ErrorKind},
     std::ops::RangeInclusive,
 };
 
@@ -49,6 +53,11 @@ pub struct ParseArgs {
     /// completely different restrictions on issuing IOs.
     pub target_type: AvailableTargets,
 
+    /// These are the set of operations for which generator will generate
+    /// io packets. These operation performance is what user is interested
+    /// in.
+    pub operations: TargetOps,
+
     /// When true, the `target` access (read/write) are sequential with respect
     /// to offsets within the `target`.
     pub sequential: bool,
@@ -88,6 +97,8 @@ const TARGET_SIZE_DEFAULT: u64 = 20 * MIB;
 
 const THREAD_COUNT_RANGE: RangeInclusive<usize> = 1..=16;
 const THREAD_COUNT_DEFAULT: usize = 3;
+
+const TARGET_OPERATIONS_DEFAULT: &str = "write";
 
 const TARGET_TYPE_DEFAULT: AvailableTargets = AvailableTargets::FileTarget;
 
@@ -134,7 +145,37 @@ fn thread_count_validator(val: String) -> Result<(), String> {
     validate_range("thread_count", val, THREAD_COUNT_RANGE)
 }
 
-pub fn parse() -> ParseArgs {
+fn target_operations_validator(
+    target_type: AvailableTargets,
+    operations: &Vec<&str>,
+) -> Result<TargetOps, Error> {
+    // Get the operations allowed by the target and see if the operations requested
+    // is subset of the operations allowed.
+    let allowed_ops = allowed_ops(target_type);
+
+    let mut ops = TargetOps { write: false, open: false };
+    for value in operations {
+        if !allowed_ops.enabled(value) {
+            error!(
+                "{:?} is not allowed for target: {}",
+                value,
+                AvailableTargets::value_to_friendly_name(target_type)
+            );
+            error!(
+                "For target: {}, suported operations are {:?}",
+                AvailableTargets::value_to_friendly_name(target_type),
+                allowed_ops.enabled_operation_names()
+            );
+            return Err(Error::new(ErrorKind::InvalidInput, "Operation not allowed"));
+        } else {
+            ops.enable(value, true).unwrap();
+        }
+    }
+
+    return Ok(ops);
+}
+
+pub fn parse() -> Result<ParseArgs, Error> {
     let queue_depth_default_str = &format!("{}", QUEUE_DEPTH_DEFAULT);
     let block_size_default_str = &format!("{}", BLOCK_SIZE_DEFAULT);
     let max_io_size_default_str = &format!("{}", MAX_IO_SIZE_DEFAULT);
@@ -142,6 +183,7 @@ pub fn parse() -> ParseArgs {
     let max_io_count_default_str = &format!("{}", MAX_IO_COUNT_DEFAULT);
     let target_size_default_str = &format!("{}", TARGET_SIZE_DEFAULT);
     let thread_count_default_str = &format!("{}", THREAD_COUNT_DEFAULT);
+    let target_operations_default_str = &format!("{}", TARGET_OPERATIONS_DEFAULT);
     let target_type_default_str =
         &format!("{}", AvailableTargets::value_to_friendly_name(TARGET_TYPE_DEFAULT));
     let sequential_default_str = &format!("{}", SEQUENTIAL_DEFAULT);
@@ -221,6 +263,20 @@ pub fn parse() -> ParseArgs {
                 .takes_value(true),
         )
         .arg(
+            Arg::with_name("operations")
+                .short("n")
+                .long("operations")
+                .possible_values(&TargetOps::friendly_names())
+                .default_value(&target_operations_default_str)
+                .help(
+                    "Types of operations to generate load for. Not all operations \
+                     are allowed for all targets",
+                )
+                .takes_value(true)
+                .use_delimiter(true)
+                .multiple(true),
+        )
+        .arg(
             Arg::with_name("target_type")
                 .short("p")
                 .long("target_type")
@@ -258,7 +314,7 @@ pub fn parse() -> ParseArgs {
         )
         .get_matches();
 
-    let args = ParseArgs {
+    let mut args = ParseArgs {
         queue_depth: matches.value_of("queue_depth").unwrap().parse::<usize>().unwrap(),
         block_size: matches.value_of("block_size").unwrap().parse::<u64>().unwrap(),
         max_io_size: matches.value_of("max_io_size").unwrap().parse::<u64>().unwrap(),
@@ -270,17 +326,23 @@ pub fn parse() -> ParseArgs {
             matches.value_of("target_type").unwrap(),
         )
         .unwrap(),
+        operations: Default::default(),
         sequential: matches.value_of("sequential").unwrap().parse::<bool>().unwrap(),
         output_config_file: matches.value_of("output_config_file").unwrap().to_string(),
         target: matches.value_of("target").unwrap().to_string(),
     };
 
-    args
+    args.operations = target_operations_validator(
+        args.target_type,
+        &matches.values_of("operations").unwrap().collect::<Vec<_>>(),
+    )?;
+
+    Ok(args)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::args;
+    use {crate::args, crate::common_operations::allowed_ops, crate::target::AvailableTargets};
 
     #[test]
     fn queue_depth_validator_test_default() {
@@ -337,6 +399,38 @@ mod tests {
     fn thread_count_validator_test_out_of_range() {
         assert!(
             args::thread_count_validator((args::THREAD_COUNT_RANGE.end() + 1).to_string()).is_err()
+        );
+    }
+
+    #[test]
+    fn target_operations_validator_test_valid_inputs() {
+        let allowed_ops = allowed_ops(AvailableTargets::FileTarget);
+
+        // We know that "write" is allowed for files. Input "write" to the
+        // function and expect success.
+        assert_eq!(allowed_ops.enabled("write"), true);
+
+        assert!(
+            args::target_operations_validator(AvailableTargets::FileTarget, &vec!["write"]).is_ok()
+        );
+    }
+
+    #[test]
+    fn target_operations_validator_test_invalid_input_nonexistant_operation() {
+        assert!(args::target_operations_validator(AvailableTargets::FileTarget, &vec!["hello"])
+            .is_err());
+    }
+
+    #[test]
+    fn target_operations_validator_test_invalid_input_disallowed_operation() {
+        let allowed_ops = allowed_ops(AvailableTargets::FileTarget);
+
+        // We know that "open" is not *yet* allowed for files. Input "open" to the
+        // function and expect success.
+        assert_eq!(allowed_ops.enabled("open"), false);
+
+        assert!(
+            args::target_operations_validator(AvailableTargets::FileTarget, &vec!["open"]).is_err()
         );
     }
 

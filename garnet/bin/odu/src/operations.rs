@@ -47,6 +47,23 @@ pub enum OperationType {
     //
 }
 
+/// These functions makes better indexing and walking stages a bit better.
+impl OperationType {
+    pub const fn operations_count() -> usize {
+        4 // number of entries in OperationType.
+    }
+
+    pub fn operation_number(self) -> usize {
+        self as usize
+    }
+
+    pub fn iterator() -> Iter<'static, OperationType> {
+        static OPERATIONS: [OperationType; OperationType::operations_count()] =
+            [OperationType::Write, OperationType::Open, OperationType::Exit, OperationType::Abort];
+        OPERATIONS.into_iter()
+    }
+}
+
 /// IoPackets go through different stages in pipeline. These stages help track
 // the IO and also are indicative of how loaded different parts of the app is.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
@@ -108,8 +125,33 @@ pub trait Target {
     fn id(&self) -> u64;
 
     /// Returns a reference to a struct which contains all the valid operations
-    /// for the instance of the target.
-    fn supported_ops(&self) -> &TargetOps;
+    /// for the instance of the target. See allowed_ops.
+    fn supported_ops() -> &'static TargetOps
+    where
+        Self: Sized;
+
+    /// allowed_ops() is a set of operations that the user is allowed to
+    /// request to be measured against this particular kind of target,
+    /// while supported_ops() is a set of operations that the generator is
+    /// allowed to generate for this target.
+    ///
+    /// allowed_ops() must be a non-strict subset of supported_ops().
+    ///
+    /// The reason a generator is allowed to generate operations that are not
+    /// allowed for explicit user selection, is because for certain targets
+    /// generators may need to follow particular patterns when generating
+    /// operations. And we still want to see individual times for those
+    /// operations.
+    ///
+    /// Currently one example is the "truncate" operation on blobfs. "truncate"
+    /// can and must only be used on a newly created blobs before any data is
+    /// written in the blob. The generator will need to issue "open",
+    /// followed by "truncate", when creating a new blob and we want to see
+    /// individual times for both operations. At the same time, allowing the
+    /// users to request "truncate" based loads is meaningless.
+    fn allowed_ops() -> &'static TargetOps
+    where
+        Self: Sized;
 
     /// issues an IO
     fn do_io(&self, io_packet: &mut IoPacket);
@@ -133,7 +175,7 @@ pub trait Target {
 /// for block device where as readdir is meaningless for posix files. When a
 /// structure implements a Target trait, this structure helps to programmatically
 /// know what are valid operations for a given Target.
-#[derive(Clone)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct TargetOps {
     pub write: bool,
     pub open: bool,
@@ -153,4 +195,82 @@ pub struct TargetOps {
     //
     //    pub mount: bool,
     //    pub unmount: bool,
+}
+
+impl TargetOps {
+    pub fn friendly_names() -> Vec<&'static str> {
+        vec!["write", "open"]
+    }
+
+    pub fn enabled(&self, name: &str) -> bool {
+        match name {
+            "write" => return self.write,
+            "open" => return self.open,
+            _ => false,
+        }
+    }
+
+    pub fn enabled_operation_names(&self) -> Vec<&'static str> {
+        TargetOps::friendly_names().iter().filter(|name| self.enabled(name)).map(|&x| x).collect()
+    }
+
+    pub fn enable(&mut self, name: &str, enabled: bool) -> std::result::Result<(), &'static str> {
+        match name {
+            "write" => self.write = enabled,
+            "open" => self.open = enabled,
+            _ => return Err("Invalid input"),
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::operations::{OperationType, TargetOps};
+
+    #[test]
+    fn enabled_all_enabled() {
+        let x: TargetOps = TargetOps { write: true, open: true };
+        assert!(x.enabled("write"));
+        assert!(x.enabled("open"));
+    }
+
+    #[test]
+    fn enabled_none_enabled() {
+        let x: TargetOps = TargetOps { write: false, open: false };
+        assert!(!x.enabled("write"));
+        assert!(!x.enabled("open"));
+    }
+
+    #[test]
+    fn enable_toggle_one() {
+        let mut x: TargetOps = TargetOps { write: false, open: false };
+        assert!(!x.enabled("write"));
+        assert!(!x.enabled("open"));
+
+        x.enable("open", true).unwrap();
+        assert!(!x.enabled("write"));
+        assert!(x.enabled("open"));
+
+        x.enable("open", false).unwrap();
+        assert!(!x.enabled("write"));
+        assert!(!x.enabled("open"));
+    }
+
+    #[test]
+    fn operation_count_test() {
+        assert_eq!(OperationType::operations_count(), 4);
+    }
+
+    #[test]
+    fn operation_iterator_count_test() {
+        assert_eq!(OperationType::operations_count(), OperationType::iterator().count());
+    }
+
+    #[test]
+    fn operation_iterator_uniqueness() {
+        for (i, operation) in OperationType::iterator().enumerate() {
+            assert!(i == operation.operation_number());
+        }
+    }
 }

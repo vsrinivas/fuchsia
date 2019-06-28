@@ -6,11 +6,11 @@
 //!
 //! Generator thread accept a set of serializable arguments.
 use {
-    crate::file_target::FileBlockingTarget,
+    crate::common_operations::create_target,
     crate::io_packet::IoPacketType,
     crate::issuer::{run_issuer, IssuerArgs},
     crate::log::Stats,
-    crate::operations::{OperationType, PipelineStages, Target},
+    crate::operations::{OperationType, PipelineStages, TargetOps},
     crate::sequential_io_generator::SequentialIoGenerator,
     crate::target::AvailableTargets,
     crate::verifier::{run_verifier, VerifierArgs},
@@ -181,6 +181,9 @@ pub struct GeneratorArgs {
     /// will help us search and load the right target operations.
     target_type: AvailableTargets,
 
+    /// Types of the operations to perform on the target.
+    operations: TargetOps,
+
     /// The maximum allowed number of outstanding IOs that are generated and
     /// are in Issuer queue. This number does not limit IOs that belong to verify
     /// operation.
@@ -208,6 +211,7 @@ impl GeneratorArgs {
         target_name: String,
         target_range: Range<u64>,
         target_type: AvailableTargets,
+        operations: TargetOps,
         issuer_queue_depth: usize,
         max_io_count: u64,
         sequential: bool,
@@ -222,6 +226,7 @@ impl GeneratorArgs {
             target_name,
             target_range,
             target_type,
+            operations,
             issuer_queue_depth,
             magic_number,
             process_id,
@@ -233,8 +238,14 @@ impl GeneratorArgs {
 
 /// Based on the input args this returns a set of allowed operations that
 /// generator is allowed to issue. For now we only allow writes.
-fn pick_operation_type(_args: &GeneratorArgs) -> Vec<OperationType> {
-    vec![OperationType::Write]
+fn pick_operation_type(args: &GeneratorArgs) -> Vec<OperationType> {
+    let mut operations: Vec<OperationType> = vec![];
+    if args.operations.write {
+        operations.push(OperationType::Write);
+    } else {
+        assert!(false);
+    }
+    return operations;
 }
 
 /// Based on the input args this returns a generator that can generate requested
@@ -256,24 +267,6 @@ fn pick_generator_type(args: &GeneratorArgs, target_id: u64) -> Box<Generator> {
     ))
 }
 
-/// Based on the input args, create_target searches available Targets and
-/// creates an appropriate Target trait.
-fn create_target(
-    target_type: AvailableTargets,
-    target_id: u64,
-    target_name: String,
-    offset_range: Range<u64>,
-    start_instant: Instant,
-) -> Arc<Box<Target + Send + Sync>> {
-    // Manually check what is passed is what is supported.
-
-    match target_type {
-        AvailableTargets::FileTarget => {
-            FileBlockingTarget::new(target_name, target_id, offset_range, start_instant)
-        }
-    }
-}
-
 fn run_generator(
     args: &GeneratorArgs,
     to_issuer: &SyncSender<IoPacketType>,
@@ -283,10 +276,6 @@ fn run_generator(
 ) -> Result<(), Error> {
     // Generator specific target unique id.
     let target_id = 0;
-
-    // An array of allowed operations that helps generator to pick an operation
-    // based on generated random number.
-    let allowed_operations = pick_operation_type(args);
 
     // IO sequence number. Order of IOs issued need not be same as order they arrive at
     // verifier and get logged. While replaying, this number helps us determine order
@@ -305,6 +294,10 @@ fn run_generator(
         args.target_range.clone(),
         start_instant,
     );
+
+    // An array of allowed operations that helps generator to pick an operation
+    // based on generated random number.
+    let allowed_operations = pick_operation_type(&args);
 
     for io_sequence_number in 1..(args.max_io_count + 1) {
         if active_commands.count() == 0 {

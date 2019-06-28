@@ -6,10 +6,10 @@
 //! implementation limits itself to blocking calls.
 
 use {
+    crate::common_operations::pwrite,
     crate::io_packet::{IoPacket, IoPacketType, TimeInterval},
     crate::operations::TargetType,
     crate::operations::{OperationType, PipelineStages, Target, TargetOps},
-    libc::{c_void, pwrite},
     log::debug,
     log::error,
     std::{
@@ -150,9 +150,6 @@ pub struct FileBlockingTarget {
     #[allow(unused)]
     name: String,
 
-    /// Set of [supported] operations
-    ops: TargetOps,
-
     /// Open file descriptor
     file: File,
 
@@ -175,12 +172,10 @@ impl FileBlockingTarget {
         offset_range: Range<u64>,
         start_instant: Instant,
     ) -> TargetType {
-        let ops = TargetOps { write: true, open: true };
         let file = OpenOptions::new().write(true).append(false).open(&name).unwrap();
         Arc::new(Box::new(FileBlockingTarget {
             name,
             file,
-            ops,
             target_unique_id,
             offset_range,
             start_instant,
@@ -200,16 +195,9 @@ impl FileBlockingTarget {
         let raw_fd = self.file.as_raw_fd().clone();
         let b = io_packet.buffer_mut();
 
-        let ret = unsafe {
-            pwrite(raw_fd, b.as_ptr() as *const c_void, b.len(), offset_range.start as i64)
-        };
-        debug!("do_write: {:?} {}", offset_range, ret);
-        if ret < 0 {
-            io_packet.set_error(Error::last_os_error());
-        } else if ret < b.len() as isize {
-            // TODO(auradkar): Define a set of error codes to be used throughout the app.
-            io_packet
-                .set_error(Error::new(ErrorKind::Other, "pwrite wrote less bytes than requested!"));
+        let ret = pwrite(raw_fd, b, offset_range.start as i64);
+        if let Err(err) = ret {
+            return io_packet.set_error(err);
         }
     }
 
@@ -243,8 +231,20 @@ impl Target for FileBlockingTarget {
         self.target_unique_id
     }
 
-    fn supported_ops(&self) -> &TargetOps {
-        &self.ops
+    fn supported_ops() -> &'static TargetOps
+    where
+        Self: Sized,
+    {
+        // For now only writes are supported.
+        &TargetOps { write: true, open: false }
+    }
+
+    fn allowed_ops() -> &'static TargetOps
+    where
+        Self: Sized,
+    {
+        // For now only writes are allowed.
+        &TargetOps { write: true, open: false }
     }
 
     fn do_io(&self, io_packet: &mut IoPacket) {
