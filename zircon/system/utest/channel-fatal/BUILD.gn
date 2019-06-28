@@ -6,7 +6,7 @@ import("$zx/public/gn/toolchain/environment_redirect.gni")
 
 test("channel-fatal") {
   sources = [
-    "channel-fatal-test.c",
+    "channel-fatal-test.cc",
   ]
   deps = [
     ":vdso-code-header",

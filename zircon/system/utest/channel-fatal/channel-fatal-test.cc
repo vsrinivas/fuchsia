@@ -10,6 +10,12 @@
 #include <unistd.h>
 
 #include <launchpad/launchpad.h>
+#include <lib/zx/event.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/process.h>
+#include <lib/zx/suspend_token.h>
+#include <lib/zx/thread.h>
+#include <lib/zx/time.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
@@ -17,7 +23,9 @@
 #include <zircon/syscalls/port.h>
 #include <zxtest/zxtest.h>
 
-static const char* process_bin;
+namespace {
+
+const char* process_bin;
 
 // SYSCALL_zx_channel_call_noretry is an internal system call used in the
 // vDSO's implementation of zx_channel_call.  It's not part of the ABI and
@@ -31,12 +39,12 @@ static const char* process_bin;
 // but this is the simplest), and then add the offset of the internal
 // SYSCALL_zx_channel_call_noretry function we want to call.
 #include "vdso-code.h"
-static zx_status_t zx_channel_call_noretry(zx_handle_t handle,
-                                           uint32_t options,
-                                           zx_time_t deadline,
-                                           const zx_channel_call_args_t* args,
-                                           uint32_t* actual_bytes,
-                                           uint32_t* actual_handles) {
+zx_status_t zx_channel_call_noretry(zx_handle_t handle,
+                                    uint32_t options,
+                                    zx_time_t deadline,
+                                    const zx_channel_call_args_t* args,
+                                    uint32_t* actual_bytes,
+                                    uint32_t* actual_handles) {
     uintptr_t vdso_base =
         (uintptr_t)&zx_handle_close - VDSO_SYSCALL_zx_handle_close;
     uintptr_t fnptr = vdso_base + VDSO_SYSCALL_zx_channel_call_noretry;
@@ -47,16 +55,16 @@ static zx_status_t zx_channel_call_noretry(zx_handle_t handle,
 // This runs in a separate process, since the expected outcome of running this
 // function is that the process is shot by the kernel.  It is launched by the
 // bad_channel_call_contract_violation test.
-static void bad_channel_call(void) {
+void bad_channel_call() {
     char msg[8] = { 0, };
 
     zx_channel_call_args_t args = {
         .wr_bytes = msg,
-        .wr_handles = NULL,
+        .wr_handles = nullptr,
+        .rd_bytes = nullptr,
+        .rd_handles = nullptr,
         .wr_num_bytes = sizeof(msg),
         .wr_num_handles = 0,
-        .rd_bytes = NULL,
-        .rd_handles = NULL,
         .rd_num_bytes = 0,
         .rd_num_handles = 0,
     };
@@ -64,47 +72,49 @@ static void bad_channel_call(void) {
     uint32_t act_bytes = UINT32_MAX;
     uint32_t act_handles = UINT32_MAX;
 
-    zx_handle_t chan = zx_take_startup_handle(PA_HND(PA_USER0, 0));
-    zx_handle_t event = zx_take_startup_handle(PA_HND(PA_USER0, 1));
+    zx::channel chan{zx_take_startup_handle(PA_HND(PA_USER0, 0))};
+    zx::event event{zx_take_startup_handle(PA_HND(PA_USER0, 1))};
 
     // Send a copy of the thread handle to the parent, so the parent can suspend
     // this thread.
-    zx_handle_t thread;
-    zx_status_t status = zx_handle_duplicate(zx_thread_self(), ZX_RIGHT_SAME_RIGHTS, &thread);
+    zx::thread thread;
+    zx_status_t status = zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &thread);
     if (status != ZX_OK) {
-        zx_object_signal(event, 0, ZX_USER_SIGNAL_0);
+        event.signal(0, ZX_USER_SIGNAL_0);
         __builtin_trap();
     }
-    status = zx_channel_write(chan, 0, NULL, 0, &thread, 1);
+    zx_handle_t handles[] = {thread.release()};
+    status = chan.write(0, nullptr, 0, handles, 1);
     if (status != ZX_OK) {
-        zx_object_signal(event, 0, ZX_USER_SIGNAL_0);
+        event.signal(0, ZX_USER_SIGNAL_0);
         __builtin_trap();
     }
 
-    status = zx_channel_call_noretry(chan, 0, ZX_TIME_INFINITE, &args,
+    status = zx_channel_call_noretry(chan.get(), 0, ZX_TIME_INFINITE, &args,
                                      &act_bytes, &act_handles);
     if (status != ZX_ERR_INTERNAL_INTR_RETRY) {
-        zx_object_signal(event, 0, ZX_USER_SIGNAL_0);
+        event.signal(0, ZX_USER_SIGNAL_0);
         __builtin_trap();
     }
 
-    zx_object_signal(event, 0, ZX_USER_SIGNAL_1);
+    event.signal(0, ZX_USER_SIGNAL_1);
 
     // Doing another channel call at this point violates the VDSO contract,
     // since we haven't called SYSCALL_zx_channel_call_finish().
-    zx_channel_call_noretry(chan, 0, ZX_TIME_INFINITE, &args,
+    zx_channel_call_noretry(chan.get(), 0, ZX_TIME_INFINITE, &args,
                             &act_bytes, &act_handles);
-    zx_object_signal(event, 0, ZX_USER_SIGNAL_0);
+    event.signal(0, ZX_USER_SIGNAL_0);
     __builtin_trap();
 }
 
 // Verify that if an interrupted channel call does not retry and instead a new
 // channel call happens, the process dies.
 TEST(ChannelFatalTestCase, BadChannelCallContractViolation) {
-    zx_handle_t chan, remote, event, event_copy;
-    ASSERT_OK(zx_channel_create(0, &chan, &remote));
-    ASSERT_OK(zx_event_create(0, &event));
-    ASSERT_OK(zx_handle_duplicate(event, ZX_RIGHT_SAME_RIGHTS, &event_copy));
+    zx::channel chan, remote;
+    zx::event event, event_copy;
+    ASSERT_OK(zx::channel::create(0, &chan, &remote));
+    ASSERT_OK(zx::event::create(0, &event));
+    ASSERT_OK(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_copy));
 
     launchpad_t* lp;
     launchpad_create(0, process_bin, &lp);
@@ -114,20 +124,21 @@ TEST(ChannelFatalTestCase, BadChannelCallContractViolation) {
         "child",
     };
     launchpad_set_args(lp, countof(args), args);
-    launchpad_add_handle(lp, remote, PA_HND(PA_USER0, 0));
-    launchpad_add_handle(lp, event_copy, PA_HND(PA_USER0, 1));
+    launchpad_add_handle(lp, remote.release(), PA_HND(PA_USER0, 0));
+    launchpad_add_handle(lp, event_copy.release(), PA_HND(PA_USER0, 1));
     launchpad_load_from_file(lp, process_bin);
     const char* errmsg;
-    zx_handle_t proc;
-    ASSERT_OK(launchpad_go(lp, &proc, &errmsg));
+    zx::process proc;
+    ASSERT_OK(launchpad_go(lp, proc.reset_and_get_address(), &errmsg));
 
     uint32_t act_bytes = UINT32_MAX;
     uint32_t act_handles = UINT32_MAX;
-    zx_handle_t thread;
+    zx::thread thread;
 
     // Get the thread handle from our child
-    ASSERT_OK(zx_object_wait_one(chan, ZX_CHANNEL_READABLE, ZX_TIME_INFINITE, NULL));
-    ASSERT_OK(zx_channel_read(chan, 0, NULL, &thread, 0, 1, &act_bytes, &act_handles));
+    ASSERT_OK(chan.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr));
+    ASSERT_OK(chan.read(0, nullptr, thread.reset_and_get_address(), 0, 1, &act_bytes,
+                        &act_handles));
     ASSERT_EQ(act_handles, 1u);
 
     // Wait for the channel call and pull its message out of the pipe.  This
@@ -136,37 +147,35 @@ TEST(ChannelFatalTestCase, BadChannelCallContractViolation) {
     // until it reaches the wait.  So if we see the message written to the
     // channel, we know the other thread is in the call, and so when we see
     // it has suspended, it will have attempted the wait first.
-    EXPECT_OK(zx_object_wait_one(chan, ZX_CHANNEL_READABLE, ZX_TIME_INFINITE, NULL));
+    EXPECT_OK(chan.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr));
     char msg[8] = { 0 };
-    ASSERT_OK(zx_channel_read(chan, 0, msg, NULL, sizeof(msg), 0, &act_bytes, &act_handles));
+    ASSERT_OK(chan.read(0, msg, nullptr, sizeof(msg), 0, &act_bytes, &act_handles));
 
-    zx_handle_t suspend_token = ZX_HANDLE_INVALID;
-    ASSERT_OK(zx_task_suspend_token(thread, &suspend_token));
+    {
+        zx::suspend_token suspend_token;
+        ASSERT_OK(thread.suspend(&suspend_token));
 
-    // Wait for the thread to suspend
-    zx_signals_t observed = 0u;
-    ASSERT_OK(zx_object_wait_one(thread, ZX_THREAD_SUSPENDED, ZX_TIME_INFINITE, &observed));
+        // Wait for the thread to suspend
+        zx_signals_t observed = 0u;
+        ASSERT_OK(thread.wait_one(ZX_THREAD_SUSPENDED, zx::time::infinite(), &observed));
 
-    // Resume the thread
-    ASSERT_OK(zx_handle_close(suspend_token));
+        // Resume the thread
+    }
 
     // Wait for signal 0 or 1, meaning either it's going to try its second call,
     // or something unexpected happened.
-    ASSERT_OK(zx_object_wait_one(event, ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1,
-                                 ZX_TIME_INFINITE, &observed));
+    zx_signals_t observed = 0u;
+    ASSERT_OK(event.wait_one(ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1, zx::time::infinite(), &observed));
     ASSERT_TRUE(observed & ZX_USER_SIGNAL_1);
     ASSERT_FALSE(observed & ZX_USER_SIGNAL_0);
 
     // Process should have been shot
-    ASSERT_OK(zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, NULL));
+    ASSERT_OK(proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr));
     // Make sure we don't see the "unexpected thing happened" signal.
-    ASSERT_EQ(zx_object_wait_one(event, ZX_USER_SIGNAL_0, 0, &observed), ZX_ERR_TIMED_OUT);
-
-    ASSERT_OK(zx_handle_close(event));
-    ASSERT_OK(zx_handle_close(chan));
-    ASSERT_OK(zx_handle_close(thread));
-    ASSERT_OK(zx_handle_close(proc));
+    ASSERT_EQ(event.wait_one(ZX_USER_SIGNAL_0, zx::time(), &observed), ZX_ERR_TIMED_OUT);
 }
+
+} // namespace
 
 int main(int argc, char** argv) {
     process_bin = argv[0];
