@@ -9,6 +9,7 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/protocol/serial.h>
+#include <ddk/protocol/serialimpl.h>
 #include <fuchsia/hardware/serial/c/fidl.h>
 #include <hw/inout.h>
 #include <zircon/syscalls.h>
@@ -200,12 +201,12 @@ size_t Uart16550::FifoDepth() const {
 }
 
 bool Uart16550::Enabled() {
-    std::lock_guard<std::mutex> lock(callback_mutex_);
+    std::lock_guard<std::mutex> lock(device_mutex_);
     return enabled_;
 }
 
 bool Uart16550::NotifyCallbackSet() {
-    std::lock_guard<std::mutex> lock(callback_mutex_);
+    std::lock_guard<std::mutex> lock(device_mutex_);
     return notify_cb_.callback != nullptr;
 }
 
@@ -425,9 +426,10 @@ zx_status_t Uart16550::SerialImplConfig(uint32_t baud_rate, uint32_t flags) {
 }
 
 zx_status_t Uart16550::SerialImplEnable(bool enable) {
-    if (Enabled()) {
+    std::lock_guard<std::mutex> lock(device_mutex_);
+    if (enabled_) {
         if (!enable) {
-            std::lock_guard<std::mutex> lock(device_mutex_);
+            // The device is enabled, and will be disabled.
             InterruptEnableRegister::Get()
                 .FromValue(0)
                 .set_rx_available(false)
@@ -438,7 +440,7 @@ zx_status_t Uart16550::SerialImplEnable(bool enable) {
         }
     } else {
         if (enable) {
-            std::lock_guard<std::mutex> lock(device_mutex_);
+            // The device is disabled, and will be enabled.
             ResetFifosLocked();
             InterruptEnableRegister::Get()
                 .FromValue(0)
@@ -449,32 +451,45 @@ zx_status_t Uart16550::SerialImplEnable(bool enable) {
                 .WriteTo(&port_io_);
         }
     }
-    std::lock_guard<std::mutex> lock(callback_mutex_);
     enabled_ = enable;
     return ZX_OK;
 }
 
 zx_status_t Uart16550::SerialImplRead(void* buf, size_t size, size_t* actual) {
+    std::lock_guard<std::mutex> lock(device_mutex_);
     *actual = 0;
 
-    if (!Enabled()) {
+    if (!enabled_) {
         zxlogf(ERROR, "%s: attempted to read when disabled\n", __func__);
         return ZX_ERR_BAD_STATE;
     }
 
     uint8_t* p = static_cast<uint8_t*>(buf);
 
-    std::lock_guard<std::mutex> lock(device_mutex_);
-
     auto lcr = LineStatusRegister::Get();
 
-    if (!lcr.ReadFrom(&port_io_).data_ready()) {
+    auto data_ready_and_notify = [&]() __TA_REQUIRES(device_mutex_) {
+        auto ready = lcr.ReadFrom(&port_io_).data_ready();
+        auto state = state_;
+        if (!ready) {
+            state &= ~SERIAL_STATE_READABLE;
+        } else {
+            state |= SERIAL_STATE_READABLE;
+        }
+        if (state_ != state) {
+            state_ = state;
+            NotifyLocked();
+        }
+        return ready;
+    };
+
+    if (!data_ready_and_notify()) {
         return ZX_ERR_SHOULD_WAIT;
     }
 
     auto rbr = RxBufferRegister::Get();
 
-    while (lcr.ReadFrom(&port_io_).data_ready() && size != 0) {
+    while (data_ready_and_notify() && size != 0) {
         *p++ = rbr.ReadFrom(&port_io_).data();
         *actual += 1;
         --size;
@@ -484,17 +499,16 @@ zx_status_t Uart16550::SerialImplRead(void* buf, size_t size, size_t* actual) {
 }
 
 zx_status_t Uart16550::SerialImplWrite(const void* buf, size_t size, size_t* actual) {
+    std::lock_guard<std::mutex> lock(device_mutex_);
     *actual = 0;
 
-    if (!Enabled()) {
+    if (!enabled_) {
         zxlogf(ERROR, "%s: attempted to write when disabled\n", __func__);
         return ZX_ERR_BAD_STATE;
     }
 
     const uint8_t* p = static_cast<const uint8_t*>(buf);
     size_t writable = std::min(size, uart_fifo_len_);
-
-    std::lock_guard<std::mutex> lock(device_mutex_);
 
     auto lsr = LineStatusRegister::Get();
     auto ier = InterruptEnableRegister::Get();
@@ -522,11 +536,20 @@ zx_status_t Uart16550::SerialImplWrite(const void* buf, size_t size, size_t* act
             .WriteTo(&port_io_);
     }
 
+    if (*actual != 0) {
+        auto state = state_;
+        state &= ~SERIAL_STATE_WRITABLE;
+        if (state_ != state) {
+            state_ = state;
+            NotifyLocked();
+        }
+    }
+
     return ZX_OK;
 }
 
 zx_status_t Uart16550::SerialImplSetNotifyCallback(const serial_notify_t* cb) {
-    std::lock_guard<std::mutex> lock(callback_mutex_);
+    std::lock_guard<std::mutex> lock(device_mutex_);
     if (enabled_) {
         zxlogf(ERROR, "%s: attempted to set notify callback when enabled\n", __func__);
         return ZX_ERR_BAD_STATE;
@@ -594,15 +617,10 @@ void Uart16550::InitFifosLocked() {
     }
 }
 
-void Uart16550::NotifyLocked(serial_state_t state) {
+void Uart16550::NotifyLocked() {
     if (notify_cb_.callback && enabled_) {
-        notify_cb_.callback(notify_cb_.ctx, state);
+        notify_cb_.callback(notify_cb_.ctx, state_);
     }
-}
-
-void Uart16550::Notify(serial_state_t state) {
-    std::lock_guard<std::mutex> lock(callback_mutex_);
-    NotifyLocked(state);
 }
 
 // Loop and wait on the interrupt handle. When an interrupt is detected, read the interrupt
@@ -612,26 +630,23 @@ void Uart16550::Notify(serial_state_t state) {
 void Uart16550::HandleInterrupts() {
     // Ignore the timestamp.
     while (interrupt_.wait(nullptr) == ZX_OK) {
-        if (!Enabled()) {
+        std::lock_guard<std::mutex> lock(device_mutex_);
+
+        if (!enabled_) {
             // Interrupts should be disabled now and we shouldn't respond to them.
             continue;
         }
-        const auto identifier = [&] {
-            std::lock_guard<std::mutex> lock(device_mutex_);
-            return InterruptIdentRegister::Get()
-                .ReadFrom(&port_io_)
-                .interrupt_id();
-        }();
+
+        const auto identifier = InterruptIdentRegister::Get()
+                                    .ReadFrom(&port_io_)
+                                    .interrupt_id();
 
         switch (static_cast<InterruptType>(identifier)) {
         case InterruptType::kNone:
             break;
         case InterruptType::kRxLineStatus: {
             // Clear the interrupt.
-            const auto lsr = [&] {
-                std::lock_guard<std::mutex> lock(device_mutex_);
-                return LineStatusRegister::Get().ReadFrom(&port_io_);
-            }();
+            const auto lsr = LineStatusRegister::Get().ReadFrom(&port_io_);
             if (lsr.overrun_error()) {
                 zxlogf(ERROR, "%s: overrun error (OE) detected\n", __func__);
             }
@@ -650,26 +665,31 @@ void Uart16550::HandleInterrupts() {
             break;
         }
         case InterruptType::kRxDataAvailable: // In both cases, there is data ready in the rx fifo.
-        case InterruptType::kCharTimeout:
-            Notify(SERIAL_STATE_READABLE);
-            break;
-        case InterruptType::kTxEmpty: {
-            {
-                std::lock_guard<std::mutex> lock(device_mutex_);
-                InterruptEnableRegister::Get()
-                    .ReadFrom(&port_io_)
-                    .set_tx_empty(false)
-                    .WriteTo(&port_io_);
+        case InterruptType::kCharTimeout: {
+            auto state = state_;
+            state |= SERIAL_STATE_READABLE;
+            if (state_ != state) {
+                state_ = state;
+                NotifyLocked();
             }
-            Notify(SERIAL_STATE_WRITABLE);
+            break;
+        }
+        case InterruptType::kTxEmpty: {
+            InterruptEnableRegister::Get()
+                .ReadFrom(&port_io_)
+                .set_tx_empty(false)
+                .WriteTo(&port_io_);
+            auto state = state_;
+            state |= SERIAL_STATE_WRITABLE;
+            if (state_ != state) {
+                state_ = state;
+                NotifyLocked();
+            }
             break;
         }
         case InterruptType::kModemStatus: {
             // Clear the interrupt.
-            const auto msr = [&] {
-                std::lock_guard<std::mutex> lock(device_mutex_);
-                return ModemStatusRegister::Get().ReadFrom(&port_io_);
-            }();
+            const auto msr = ModemStatusRegister::Get().ReadFrom(&port_io_);
             if (msr.clear_to_send()) {
                 zxlogf(INFO, "%s: clear to send (CTS) detected\n", __func__);
             }

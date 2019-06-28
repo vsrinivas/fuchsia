@@ -5,6 +5,7 @@
 #include "uart16550.h"
 
 #include <ddk/protocol/serial.h>
+#include <ddk/protocol/serialimpl.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-function/mock-function.h>
 #include <lib/zx/event.h>
@@ -220,8 +221,9 @@ TEST_F(Uart16550Harness, SerialImplSetNotifyCallback) {
 TEST_F(Uart16550Harness, SerialImplRead) {
     auto readable = [](void* ctx, serial_state_t state) {
         auto* harness = static_cast<Uart16550Harness*>(ctx);
-        ASSERT_TRUE(state & SERIAL_STATE_READABLE);
-        harness->SignalCallbackFinished();
+        if (state & SERIAL_STATE_READABLE) {
+            harness->SignalCallbackFinished();
+        }
     };
 
     serial_notify_t notify = {
@@ -281,8 +283,9 @@ TEST_F(Uart16550Harness, SerialImplRead) {
 TEST_F(Uart16550Harness, SerialImplWrite) {
     auto writable = [](void* ctx, serial_state_t state) {
         auto* harness = static_cast<Uart16550Harness*>(ctx);
-        ASSERT_TRUE(state & SERIAL_STATE_WRITABLE);
-        harness->SignalCallbackFinished();
+        if (state & SERIAL_STATE_WRITABLE) {
+            harness->SignalCallbackFinished();
+        }
     };
 
     serial_notify_t notify = {

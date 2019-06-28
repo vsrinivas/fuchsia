@@ -105,25 +105,23 @@ private:
 
     void InitFifosLocked() __TA_REQUIRES(device_mutex_);
 
-    void NotifyLocked(serial_state_t state) __TA_REQUIRES(callback_mutex_);
-
-    void Notify(serial_state_t state);
+    void NotifyLocked() __TA_REQUIRES(device_mutex_);
 
     void HandleInterrupts();
 
     ddk::AcpiProtocolClient acpi_;
     std::mutex device_mutex_;
-    std::mutex callback_mutex_;
 
     std::thread interrupt_thread_;
     zx::interrupt interrupt_;
 
-    serial_notify_t notify_cb_ __TA_GUARDED(callback_mutex_) = {};
+    serial_notify_t notify_cb_ __TA_GUARDED(device_mutex_) = {};
     PortIo port_io_ __TA_GUARDED(device_mutex_);
 
     size_t uart_fifo_len_ = 1;
 
-    bool enabled_ __TA_GUARDED(callback_mutex_) = false;
+    bool enabled_ __TA_GUARDED(device_mutex_) = false;
+    serial_state_t state_ __TA_GUARDED(device_mutex_) = 0;
 }; // namespace uart16550
 
 } // namespace uart16550
