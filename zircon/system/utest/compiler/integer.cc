@@ -2,65 +2,45 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
-#include <unittest/unittest.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <limits.h>
+#include <limits>
 
-bool normal_math_test(void) {
-    BEGIN_TEST;
+#include <zxtest/zxtest.h>
 
-    int a = 5;
-    int b = atoi("6"); // avoid compiler optimizations
-    int c = a+b;
-    EXPECT_EQ(11, c, "The world is broken");
+namespace {
 
-    END_TEST;
+// Global to prevent "unused variable" compiler error, volatile to make sure
+// the compiler doesn't optimize out any operations.
+volatile int c = 0;
+
+TEST(IntegerTest, NormalMath) {
+    volatile int a = 5;
+    volatile int b = 6;
+    c = a + b;
+    EXPECT_EQ(11, c);
 }
 
-bool signed_overflow_test(void) {
-    BEGIN_TEST;
-
-    ASSERT_DEATH([](void*) {
-        int a = INT_MAX;
-        int b = atoi("6"); // avoid compiler optimizations
-        int c = a+b;       // crash occurs here
-        printf("%d\n", c); // should not be reached.
-    }, 0, "overflow should have caused a crash");
-
-    END_TEST;
+TEST(IntegerTest, SignedOverflow) {
+    ASSERT_DEATH([] {
+        volatile int a = std::numeric_limits<int>::max();
+        volatile int b = 6;
+        c = a + b;  // crash occurs here
+    });
 }
 
-bool signed_underflow_test(void) {
-    BEGIN_TEST;
-
-    ASSERT_DEATH([](void*) {
-        int a = INT_MIN;
-        int b = atoi("-6"); // avoid compiler optimizations
-        int c = a+b;       // crash occurs here
-        printf("%d\n", c); // should not be reached.
-    }, 0, "underflow should have caused a crash");
-
-    END_TEST;
+TEST(IntegerTest, SignedUnderflow) {
+    ASSERT_DEATH([] {
+        volatile int a = std::numeric_limits<int>::min();
+        volatile int b = -6;
+        c = a + b;  // crash occurs here
+    });
 }
 
-bool divide_by_zero_test(void) {
-    BEGIN_TEST;
-
-    ASSERT_DEATH([](void*) {
-        int a = 5;
-        int b = atoi("0"); // avoid compiler optimizations
-        int c = a/b;       // crash occurs here
-        printf("%d\n", c); // should not be reached.
-    }, 0, "divide by zero should have caused a crash");
-
-    END_TEST;
+TEST(IntegerTest, DivideByZero) {
+    ASSERT_DEATH([] {
+        volatile int a = 5;
+        volatile int b = 0;
+        c = a / b;  // crash occurs here
+    });
 }
 
-BEGIN_TEST_CASE(integer_tests)
-RUN_TEST(normal_math_test)
-RUN_TEST(signed_overflow_test)
-RUN_TEST(signed_underflow_test)
-RUN_TEST(divide_by_zero_test)
-END_TEST_CASE(integer_tests)
+}  // namespace
