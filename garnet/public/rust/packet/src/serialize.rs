@@ -896,6 +896,20 @@ impl<B: Debug, F> Debug for FnSerializer<B, F> {
     }
 }
 
+/// The direction a buffer's body should be truncated from to force
+/// it to fit within a MTU.
+#[derive(Copy, Clone)]
+pub enum TruncateDirection {
+    /// If a buffer cannot fit within an MTU, discard bytes from the
+    /// front of the body.
+    DiscardFront,
+    /// If a buffer cannot fit within an MTU, discard bytes from the
+    /// end of the body.
+    DiscardBack,
+    /// Do not attempt to truncate a buffer to make it fit within an MTU.
+    NoTruncating,
+}
+
 /// A [`Serializer`] which returns a packet already serialized into an existing
 /// buffer.
 ///
@@ -916,20 +930,36 @@ impl<B: Debug, F> Debug for FnSerializer<B, F> {
 pub struct BufferSerializer<B, F> {
     buf: B,
     get_buf: F,
+    direction: TruncateDirection,
 }
 
 impl<B, F> BufferSerializer<B, F> {
     /// Constructs a new `BufferSerializer`.
     ///
-    /// `new` accepts a buffer and a `get_buf` function, which produces a
-    /// buffer. When `serialize` is called, if the existing buffer satisfies the
-    /// constraints, it is returned. Otherwise, `get_buf` is used to produce a
-    /// buffer which satisfies the constraints, and the body is copied from the
-    /// original buffer into the new one before it is returned.
+    /// `new` is equivalent to `new_truncate` with
+    /// `TruncateDirection::NoTruncating` given as the `direction` argument.
+    pub fn new(buffer: B, get_buf: F) -> BufferSerializer<B, F> {
+        BufferSerializer { buf: buffer, get_buf, direction: TruncateDirection::NoTruncating }
+    }
+
+    /// Constructs a new `BufferSerializer` that may truncate a buffer.
+    ///
+    /// `new_truncate` accepts a buffer and a `get_buf` function, which produces
+    /// a buffer. When `serialize` is called, if the existing buffer satisfies
+    /// the constraints, it is returned. Otherwise, `get_buf` is used to
+    /// produce a buffer which satisfies the constraints, and the body is
+    /// copied from the original buffer into the new one before it is
+    /// returned. `direction` configures the `BufferSerializer`'s buffer
+    /// truncating options when it will not fit within an MTU when serializing
+    /// (see [`BufferSerializer::serialize_mtu`]).
     ///
     /// `get_buf` accepts a `usize`, and produces a buffer of that length.
-    pub fn new(buffer: B, get_buf: F) -> BufferSerializer<B, F> {
-        BufferSerializer { buf: buffer, get_buf }
+    pub fn new_truncate(
+        buffer: B,
+        get_buf: F,
+        direction: TruncateDirection,
+    ) -> BufferSerializer<B, F> {
+        BufferSerializer { buf: buffer, get_buf, direction }
     }
 
     /// Consume this `BufferSerializer` and return the encapsulated buffer.
@@ -944,12 +974,25 @@ impl<B> BufferSerializer<B, ()> {
     /// Constructs a new `BufferSerializer` which allocates a new `Vec` in the
     /// fallback path.
     ///
-    /// `new_vec` is like `new`, except that its `get_buf` function is
-    /// automatically set to allocate a new `Vec` on the heap.
+    /// `new_vec` is like `new_vec_truncate` with
+    /// `TruncateDirection::NoTruncating` given as the `direction` argument.
     pub fn new_vec(
         buffer: B,
     ) -> BufferSerializer<B, impl FnOnce(usize) -> Buf<Vec<u8>> + Copy + Clone> {
         BufferSerializer::new(buffer, |n| Buf::new(vec![0; n], ..))
+    }
+
+    /// Constructs a new `BufferSerializer` which allocates a new `Vec` in the
+    /// fallback path and may truncate a buffer.
+    ///
+    /// `new_vec_truncate` is like [`BufferSerializer::new_truncate`] except that
+    /// its `get_buf` function is automatically set to allocate a new `Vec`
+    /// on the heap.
+    pub fn new_vec_truncate(
+        buffer: B,
+        direction: TruncateDirection,
+    ) -> BufferSerializer<B, impl FnOnce(usize) -> Buf<Vec<u8>> + Copy + Clone> {
+        BufferSerializer::new_truncate(buffer, |n| Buf::new(vec![0; n], ..), direction)
     }
 }
 
@@ -992,24 +1035,52 @@ impl<B: BufferMut, O: BufferMut, F: FnOnce(usize) -> O> Serializer for BufferSer
     type Error = Never;
     type InnerError = Never;
 
+    /// Attempt to serialize a buffer within some MTU constraint, `mtu`. If the buffer as
+    /// is will not fit within the `mtu`, the buffer may be truncated from either the
+    /// front, the back, or not at all, depending on the value of `BufferSerializer`'s
+    /// `direction` value.
     fn serialize_mtu(
         self,
         mtu: usize,
         c: SerializeConstraints,
     ) -> Result<Self::Buffer, (MtuError<Never>, Self)> {
-        let BufferSerializer { buf, get_buf } = self;
+        // Make sure that `mtu` is big enough to fit the minimum
+        // body len provided by `c.min_body_len`.
+        if c.min_body_len > mtu {
+            return Err((MtuError::Mtu, self));
+        }
+
+        let BufferSerializer { mut buf, get_buf, direction } = self;
+
+        // Check if `buf` wont fit in the MTU.
+        if let Some(excess_bytes) = buf.len().checked_sub(usize::from(mtu)) {
+            if excess_bytes > 0 {
+                // Body does not fit in MTU.
+                //
+                // Attempt to truncate if configured to do so.
+                match direction {
+                    TruncateDirection::NoTruncating => {
+                        return Err((MtuError::Mtu, BufferSerializer { buf, get_buf, direction }))
+                    }
+                    TruncateDirection::DiscardFront => buf.shrink_front(excess_bytes),
+                    TruncateDirection::DiscardBack => buf.shrink_back(excess_bytes),
+                };
+            }
+        }
+
         let body_and_padding = cmp::max(c.min_body_len, buf.len());
+
+        // At this point, the body and padding MUST fit within
+        // `mtu`.
+        assert!(body_and_padding <= mtu);
+
         let total_len = c.prefix_len + body_and_padding + c.suffix_len;
 
-        if body_and_padding <= mtu {
-            Ok(Self::serialize_inner(buf, get_buf, c, body_and_padding, total_len))
-        } else {
-            Err((MtuError::Mtu, BufferSerializer { buf, get_buf }))
-        }
+        Ok(Self::serialize_inner(buf, get_buf, c, body_and_padding, total_len))
     }
 
     fn serialize(self, c: SerializeConstraints) -> Result<Either<B, O>, (Never, Self)> {
-        let BufferSerializer { buf, get_buf } = self;
+        let BufferSerializer { buf, get_buf, direction: _ } = self;
         let body_and_padding = cmp::max(c.min_body_len, buf.len());
         let total_len = c.prefix_len + body_and_padding + c.suffix_len;
         Ok(Self::serialize_inner(buf, get_buf, c, body_and_padding, total_len))
@@ -1170,6 +1241,38 @@ impl<B: PacketBuilder, S: Serializer> Serializer for EncapsulatingSerializer<B, 
 mod tests {
     use super::*;
 
+    // DummyPacketBuilder:
+    // - Implements PacketBuilder, consuming a 1-byte header and a 1-byte
+    //   footer with no minimum or maximum body length requirements
+    // - Implements InnerPacketBuilder, producing a 1-byte packet
+    #[derive(Clone)]
+    struct DummyPacketBuilder;
+
+    impl PacketBuilder for DummyPacketBuilder {
+        fn header_len(&self) -> usize {
+            1
+        }
+        fn footer_len(&self) -> usize {
+            1
+        }
+        fn min_body_len(&self) -> usize {
+            0
+        }
+        fn max_body_len(&self) -> usize {
+            std::usize::MAX
+        }
+
+        fn serialize(self, _buffer: SerializeBuffer) {}
+    }
+
+    impl InnerPacketBuilder for DummyPacketBuilder {
+        fn bytes_len(&self) -> usize {
+            1
+        }
+
+        fn serialize(self, _buffer: &mut [u8]) {}
+    }
+
     #[test]
     fn test_buffer_serializer_and_inner_serializer() {
         fn verify_buffer_serializer<B: BufferMut + Debug>(
@@ -1253,38 +1356,6 @@ mod tests {
 
     #[test]
     fn test_mtu() {
-        // DummyPacketBuilder:
-        // - Implements PacketBuilder, consuming a 1-byte header and a 1-byte
-        //   footer with no minimum or maximum body length requirements
-        // - Implements InnerPacketBuilder, producing a 1-byte packet
-        #[derive(Clone)]
-        struct DummyPacketBuilder;
-
-        impl PacketBuilder for DummyPacketBuilder {
-            fn header_len(&self) -> usize {
-                1
-            }
-            fn footer_len(&self) -> usize {
-                1
-            }
-            fn min_body_len(&self) -> usize {
-                0
-            }
-            fn max_body_len(&self) -> usize {
-                std::usize::MAX
-            }
-
-            fn serialize(self, _buffer: SerializeBuffer) {}
-        }
-
-        impl InnerPacketBuilder for DummyPacketBuilder {
-            fn bytes_len(&self) -> usize {
-                1
-            }
-
-            fn serialize(self, _buffer: &mut [u8]) {}
-        }
-
         // ser is a Serializer that will consume 1 byte of buffer space
         fn test<S: Serializer + Clone>(ser: S) {
             // Each of these tests encapsulates ser in a DummyPacketBuilder.
@@ -1322,5 +1393,45 @@ mod tests {
         test(InnerSerializer::new_vec(DummyPacketBuilder, Buf::new(vec![], ..)));
         test(FnSerializer::new_vec(DummyPacketBuilder));
         test(BufferSerializer::new_vec(Buf::new(vec![0], ..)));
+    }
+
+    #[test]
+    fn test_truncating_buffer_serializer() {
+        //
+        // Test truncate front.
+        //
+
+        let body = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let ser = BufferSerializer::new_vec_truncate(
+            Buf::new(body.clone(), ..),
+            TruncateDirection::DiscardFront,
+        );
+        let buf = ser.serialize_mtu_outer(4).unwrap();
+        let buf: &[u8] = buf.as_ref();
+        assert_eq!(buf, &[6, 7, 8, 9][..]);
+
+        //
+        // Test truncate back.
+        //
+
+        let ser = BufferSerializer::new_vec_truncate(
+            Buf::new(body.clone(), ..),
+            TruncateDirection::DiscardBack,
+        );
+        let buf = ser.serialize_mtu_outer(7).unwrap();
+        let buf: &[u8] = buf.as_ref();
+        assert_eq!(buf, &[0, 1, 2, 3, 4, 5, 6][..]);
+
+        //
+        // Test no truncating (default/original case).
+        //
+
+        let ser = BufferSerializer::new_vec_truncate(
+            Buf::new(body.clone(), ..),
+            TruncateDirection::NoTruncating,
+        );
+        assert!(ser.serialize_mtu_outer(5).is_err());
+        let ser = BufferSerializer::new_vec(Buf::new(body.clone(), ..));
+        assert!(ser.serialize_mtu_outer(5).is_err());
     }
 }
