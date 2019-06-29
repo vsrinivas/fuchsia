@@ -12,7 +12,8 @@ function HELP {
     echo "-a arg=value        : Extra GN build argument"
     echo "-f                  : Exit on first failure"
     echo "-r                  : Also build release mode builds"
-    echo "-c                  : Also build with clang"
+    echo "-C                  : Also build with Clang"
+    echo "-U                  : Also build with GCC"
     echo "-A                  : Also build with ASan"
     echo "-q                  : Build quietly"
     echo "-j N                : Passed through to Ninja"
@@ -27,11 +28,12 @@ FAIL_FAST=0
 DO_RELEASE=0
 QUIET=0
 
-while getopts Aa:fhj:rcq FLAG; do
+while getopts Aa:CGfhj:rq FLAG; do
     case $FLAG in
         a) BUILD_ARGS+=("$OPTARG") ;;
         A) EXTRA_BUILDS+=(-A) ;;
-        c) EXTRA_BUILDS+=(-C) ;;
+        C) EXTRA_BUILDS+=(-C) ;;
+        G) EXTRA_BUILDS+=(-G) ;;
         f) FAIL_FAST=1;;
         h) HELP;;
         r) DO_RELEASE=1;;
