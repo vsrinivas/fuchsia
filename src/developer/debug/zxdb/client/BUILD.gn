@@ -202,6 +202,16 @@ copy("copy_fake_home") {
   }
 }
 
+copy("copy_sample_core") {
+  sources = [
+    "//prebuilt/test_data/debug/sample_core",
+  ]
+
+  outputs = [
+    "$root_out_dir/test_data/zxdb/sample_core",
+  ]
+}
+
 source_set("tests") {
   testonly = true
   sources = [
@@ -237,12 +247,14 @@ source_set("tests") {
 
   data_deps = [
     ":copy_fake_home",
+    ":copy_sample_core",
     ":copy_test_data",
   ]
 
   metadata = {
     test_runtime_deps = get_target_outputs(":copy_test_data") +
-                        get_target_outputs(":copy_fake_home")
+                        get_target_outputs(":copy_fake_home") +
+                        get_target_outputs(":copy_sample_core")
   }
 
   deps = [

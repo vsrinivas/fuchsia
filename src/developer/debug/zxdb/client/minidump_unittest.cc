@@ -9,6 +9,7 @@
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/common/host_util.h"
 
 namespace zxdb {
@@ -500,6 +501,30 @@ TEST_F(MinidumpTest, SysInfo) {
   EXPECT_EQ(0u, reply.memory_mb);
   EXPECT_EQ(0u, reply.hw_breakpoint_count);
   EXPECT_EQ(0u, reply.hw_watchpoint_count);
+}
+
+TEST_F(MinidumpTest, Backtrace) {
+  const uint64_t kProcessKOID = 10363;
+  const uint64_t kThreadKOID = 65232;
+  auto core_dir = std::filesystem::path(GetSelfPath()).parent_path() / "test_data" / "zxdb" /
+                  "sample_core" / "core";
+  session().system().settings().SetList(ClientSettings::System::kSymbolPaths, {core_dir});
+
+  ASSERT_ZXDB_SUCCESS(TryOpen(core_dir / "core.dmp"));
+
+  Err err;
+  debug_ipc::ThreadStatusRequest request;
+  debug_ipc::ThreadStatusReply reply;
+
+  request.process_koid = kProcessKOID;
+  request.thread_koid = kThreadKOID;
+  DoRequest(request, reply, err, &RemoteAPI::ThreadStatus);
+  ASSERT_ZXDB_SUCCESS(err);
+
+  ASSERT_EQ(3u, reply.record.frames.size());
+  EXPECT_EQ(0x6df7cb8a10a3u, reply.record.frames[0].ip);
+  EXPECT_EQ(0x6df7cb8a1062u, reply.record.frames[1].ip);
+  EXPECT_EQ(0x575953094967u, reply.record.frames[2].ip);
 }
 
 }  // namespace zxdb
