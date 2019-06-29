@@ -79,7 +79,10 @@ struct PendingImageInfo {
 class ImagePipeSwapchain {
  public:
   ImagePipeSwapchain(ImagePipeSurface* surface)
-      : surface_(surface), image_pipe_closed_(false), device_(VK_NULL_HANDLE) {}
+      : surface_(surface),
+        image_pipe_closed_(false),
+        is_protected_(false),
+        device_(VK_NULL_HANDLE) {}
 
   VkResult Initialize(VkDevice device,
                       const VkSwapchainCreateInfoKHR* pCreateInfo,
@@ -103,6 +106,7 @@ class ImagePipeSwapchain {
   std::vector<uint32_t> acquired_ids_;
   std::vector<PendingImageInfo> pending_images_;
   bool image_pipe_closed_;
+  bool is_protected_;
   VkDevice device_;
 };
 
@@ -111,6 +115,7 @@ class ImagePipeSwapchain {
 VkResult ImagePipeSwapchain::Initialize(
     VkDevice device, const VkSwapchainCreateInfoKHR* pCreateInfo,
     const VkAllocationCallbacks* pAllocator) {
+  is_protected_ = pCreateInfo->flags & VK_SWAPCHAIN_CREATE_PROTECTED_BIT_KHR;
   VkResult result;
   VkLayerDispatchTable* pDisp =
       GetLayerDataPtr(get_dispatch_key(device), layer_data_map)
@@ -367,12 +372,19 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index,
 
   std::vector<VkPipelineStageFlags> flag_bits(
       waitSemaphoreCount, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
-  VkSubmitInfo submit_info = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-                              .waitSemaphoreCount = waitSemaphoreCount,
-                              .pWaitSemaphores = pWaitSemaphores,
-                              .pWaitDstStageMask = flag_bits.data(),
-                              .signalSemaphoreCount = 1,
-                              .pSignalSemaphores = &semaphores_[index]};
+  VkProtectedSubmitInfo protected_submit_info = {
+      .sType = VK_STRUCTURE_TYPE_PROTECTED_SUBMIT_INFO,
+      .pNext = nullptr,
+      .protectedSubmit = VK_TRUE,
+  };
+  VkSubmitInfo submit_info = {
+      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+      .pNext = is_protected_ ? &protected_submit_info : nullptr,
+      .waitSemaphoreCount = waitSemaphoreCount,
+      .pWaitSemaphores = pWaitSemaphores,
+      .pWaitDstStageMask = flag_bits.data(),
+      .signalSemaphoreCount = 1,
+      .pSignalSemaphores = &semaphores_[index]};
   result = pDisp->QueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
   if (result != VK_SUCCESS) {
     fprintf(stderr, "vkQueueSubmit failed with result %d", result);

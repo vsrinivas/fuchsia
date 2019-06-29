@@ -23,16 +23,25 @@ class TestSwapchain {
     *proc = reinterpret_cast<T>(get_device_proc_addr(vk_device_, name));
   }
 
-  TestSwapchain() {
+  TestSwapchain(bool protected_memory) : protected_memory_(protected_memory) {
     std::vector<const char*> instance_layers{"VK_LAYER_FUCHSIA_imagepipe_swapchain"};
     std::vector<const char*> instance_ext{VK_KHR_SURFACE_EXTENSION_NAME,
                                           VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME};
     std::vector<const char*> device_ext{VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
+    const VkApplicationInfo app_info = {
+        .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+        .pNext = nullptr,
+        .pApplicationName = "test",
+        .applicationVersion = 0,
+        .pEngineName = "test",
+        .engineVersion = 0,
+        .apiVersion = VK_MAKE_VERSION(1, 1, 0),
+    };
     VkInstanceCreateInfo inst_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pNext = nullptr,
-        .pApplicationInfo = nullptr,
+        .pApplicationInfo = &app_info,
         .enabledLayerCount = static_cast<uint32_t>(instance_layers.size()),
         .ppEnabledLayerNames = instance_layers.data(),
         .enabledExtensionCount = static_cast<uint32_t>(instance_ext.size()),
@@ -54,6 +63,30 @@ class TestSwapchain {
       return;
     }
 
+    VkPhysicalDeviceProtectedMemoryFeatures protected_memory_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROTECTED_MEMORY_FEATURES,
+        .pNext = nullptr,
+        .protectedMemory = VK_FALSE,
+    };
+    if (protected_memory_) {
+      PFN_vkGetPhysicalDeviceFeatures2 get_physical_device_features_2_ =
+          reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2>(
+              vkGetInstanceProcAddr(vk_instance_, "vkGetPhysicalDeviceFeatures2"));
+      if (!get_physical_device_features_2_) {
+        fprintf(stderr, "Failed to find vkGetPhysicalDeviceFeatures2\n");
+        return;
+      }
+      VkPhysicalDeviceFeatures2 physical_device_features = {
+          .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+          .pNext = &protected_memory_features};
+      get_physical_device_features_2_(physical_devices[0], &physical_device_features);
+      protected_memory_is_supported_ = protected_memory_features.protectedMemory;
+      if (!protected_memory_is_supported_) {
+        fprintf(stderr, "Protected memory is not supported\n");
+        return;
+      }
+    }
+
     float queue_priorities[1] = {0.0};
     VkDeviceQueueCreateInfo queue_create_info = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -65,7 +98,7 @@ class TestSwapchain {
 
     VkDeviceCreateInfo device_create_info = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pNext = nullptr,
+        .pNext = protected_memory_ ? &protected_memory_features : nullptr,
         .queueCreateInfoCount = 1,
         .pQueueCreateInfos = &queue_create_info,
         .enabledLayerCount = 0,
@@ -100,7 +133,8 @@ class TestSwapchain {
     VkSwapchainCreateInfoKHR create_info = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .pNext = nullptr,
-        .flags = 0,
+        .flags = protected_memory_ ? VK_SWAPCHAIN_CREATE_PROTECTED_BIT_KHR
+                                   : static_cast<VkSwapchainCreateFlagsKHR>(0),
         .surface = surface,
         .minImageCount = 3,
         .imageFormat = VK_FORMAT_B8G8R8A8_UNORM,
@@ -168,12 +202,34 @@ class TestSwapchain {
   PFN_vkAcquireNextImageKHR acquire_next_image_khr_;
   PFN_vkQueuePresentKHR queue_present_khr_;
 
+  const bool protected_memory_ = false;
   bool init_ = false;
+  bool protected_memory_is_supported_ = false;
 };
 
-TEST(Swapchain, Surface) { TestSwapchain().Surface(); }
+class SwapchainTest : public ::testing::TestWithParam<bool /* protected_memory */> {};
 
-TEST(Swapchain, Create) { TestSwapchain().CreateSwapchain(); }
+TEST_P(SwapchainTest, Surface) {
+  const bool protected_memory = GetParam();
+  TestSwapchain test(protected_memory);
+  if (protected_memory && !test.protected_memory_is_supported_)
+    return;
+  ASSERT_TRUE(test.init_);
+
+  test.Surface();
+}
+
+TEST_P(SwapchainTest, Create) {
+  const bool protected_memory = GetParam();
+  TestSwapchain test(protected_memory);
+  if (protected_memory && !test.protected_memory_is_supported_)
+    return;
+  ASSERT_TRUE(test.init_);
+
+  test.CreateSwapchain();
+}
+
+INSTANTIATE_TEST_SUITE_P(SwapchainTestSuite, SwapchainTest, ::testing::Bool());
 
 namespace {
 
@@ -250,8 +306,13 @@ class FakeImagePipe : public fuchsia::images::testing::ImagePipe_TestBase {
 
 }  // namespace
 
-TEST(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
-  TestSwapchain test;
+class SwapchainFidlTest : public ::testing::TestWithParam<bool /* protected_memory */> {};
+
+TEST_P(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
+  const bool protected_memory = GetParam();
+  TestSwapchain test(protected_memory);
+  if (protected_memory && !test.protected_memory_is_supported_)
+    return;
   ASSERT_TRUE(test.init_);
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
@@ -325,3 +386,5 @@ TEST(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
   EXPECT_EQ(kFrameCount, imagepipe_->presented_count());
   EXPECT_EQ(kFrameCount, imagepipe_->acquire_fences_count());
 }
+
+INSTANTIATE_TEST_SUITE_P(SwapchainFidlTestSuite, SwapchainFidlTest, ::testing::Bool());
