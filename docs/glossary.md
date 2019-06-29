@@ -549,6 +549,23 @@ In [components v2](#components-v2), a realm is a subtree of component instances
 in the [component instance tree](#component-instance-tree). It acts as a
 container for component instances and capabilities in the subtree.
 
+#### **Runner**
+
+A [component](#component) that provides a runtime environment for other components,
+e.g. the ELF runner, the Dart AOT runner, the Chromium web runner.
+
+Every component needs a runner in order to launch. Components express their
+dependency on a runner in the component's [declaration](#component-declaration).
+
+When the [component framework](#component-framework) starts a component, it first
+determines the capabilities that the component should receive, then asks the
+component's runner to launch the component. The runner is responsible for creating
+any necessary processes, loading executable code, initializing language runtimes,
+handing control to the component's entry points, and terminating the component when
+requested by the component framework.
+
+-   [ELF runner](/docs/the-book/components/elf_runner.md)
+
 #### **Scenic**
 
 The system compositor. Includes views, input, compositor, and GPU services.
