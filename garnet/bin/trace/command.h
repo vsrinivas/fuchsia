@@ -8,14 +8,13 @@
 #include <fuchsia/tracing/controller/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/macros.h>
 
 #include <iosfwd>
 #include <map>
 #include <memory>
 #include <string>
-
-#include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/macros.h"
 
 namespace tracing {
 

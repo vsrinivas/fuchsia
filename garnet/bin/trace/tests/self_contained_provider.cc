@@ -6,19 +6,16 @@
 // That is libtrace-engine.so is contained within our library using
 // libtrace-engine-static.a.
 
+#include "garnet/bin/trace/tests/self_contained_provider.h"
+
 #include <assert.h>
-#ifndef _ALL_SOURCE
-#define _ALL_SOURCE  // Enables thrd_create_with_name in <threads.h>.
-#endif
-#include <threads.h>
 
 #include <lib/async-loop/cpp/loop.h>
 #include <src/lib/fxl/logging.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 
-#include "integration_test_utils.h"
-#include "self_contained_provider.h"
+#include "garnet/bin/trace/tests/integration_test_utils.h"
 
 static const char kName[] = "self-contained-provider";
 

@@ -7,17 +7,17 @@
 
 #include <fuchsia/tracing/controller/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/interface_ptr_set.h>
+#include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/component_context.h>
+#include <src/lib/fxl/macros.h>
 
 #include <list>
 
 #include "garnet/bin/trace_manager/config.h"
 #include "garnet/bin/trace_manager/trace_provider_bundle.h"
 #include "garnet/bin/trace_manager/trace_session.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fidl/cpp/interface_ptr_set.h"
-#include "lib/fidl/cpp/interface_request.h"
-#include "src/lib/fxl/macros.h"
 
 namespace tracing {
 

@@ -7,9 +7,8 @@
 
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/debuglog.h>
+#include <src/lib/fxl/macros.h>
 #include <trace-engine/types.h>
-
-#include "src/lib/fxl/macros.h"
 
 namespace ktrace_provider {
 

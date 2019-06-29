@@ -5,14 +5,15 @@
 #ifndef GARNET_BIN_TRACE_COMMANDS_RECORD_H_
 #define GARNET_BIN_TRACE_COMMANDS_RECORD_H_
 
-#include <fuchsia/sys/cpp/fidl.h>
-
 #include <memory>
 #include <string>
 #include <vector>
 
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/process.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/time/time_delta.h>
 
 #include "garnet/bin/trace/command.h"
 #include "garnet/bin/trace/spec.h"
@@ -22,8 +23,6 @@
 #include "garnet/lib/measure/measurements.h"
 #include "garnet/lib/measure/time_between.h"
 #include "garnet/lib/trace_converters/chromium_exporter.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/lib/fxl/time/time_delta.h"
 
 namespace tracing {
 

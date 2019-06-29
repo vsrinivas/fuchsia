@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <gtest/gtest.h>
+
 #include "garnet/bin/trace/tests/run_test.h"
-#include "gtest/gtest.h"
 
 const char kTracePath[] = "/bin/trace";
 const char kChildPath[] = "/pkg/bin/return_1234";

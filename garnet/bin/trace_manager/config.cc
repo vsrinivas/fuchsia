@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/trace_manager/config.h"
+
 #include <fstream>
 
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
-
-#include "garnet/bin/trace_manager/config.h"
-#include "src/lib/fxl/logging.h"
+#include <src/lib/fxl/logging.h>
 
 namespace tracing {
 namespace {

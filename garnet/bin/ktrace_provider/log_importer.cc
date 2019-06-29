@@ -5,11 +5,10 @@
 #include "garnet/bin/ktrace_provider/log_importer.h"
 
 #include <lib/async/default.h>
+#include <src/lib/fxl/logging.h>
 #include <trace-engine/instrumentation.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace ktrace_provider {
 

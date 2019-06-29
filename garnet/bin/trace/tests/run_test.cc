@@ -11,6 +11,7 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
+#include <src/lib/files/file.h>
 #include <src/lib/fxl/log_settings.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/join_strings.h>
@@ -23,7 +24,6 @@
 #include <vector>
 
 #include "garnet/bin/trace/spec.h"
-#include "src/lib/files/file.h"
 
 // The "path" of the trace program from outside the trace package.
 const char kTraceProgramUrl[] =

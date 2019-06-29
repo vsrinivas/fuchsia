@@ -9,8 +9,9 @@
 #include <memory>
 #include <string>
 
+#include <src/lib/fxl/macros.h>
+
 #include "garnet/bin/trace/command.h"
-#include "src/lib/fxl/macros.h"
 
 namespace tracing {
 

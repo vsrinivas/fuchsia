@@ -14,8 +14,8 @@
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 
-#include "integration_test_utils.h"
-#include "self_contained_provider.h"
+#include "garnet/bin/trace/tests/integration_test_utils.h"
+#include "garnet/bin/trace/tests/self_contained_provider.h"
 
 #define TEST_NAME "two-providers-two-engines"
 

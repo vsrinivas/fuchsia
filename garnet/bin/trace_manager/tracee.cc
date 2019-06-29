@@ -6,12 +6,12 @@
 
 #include <fbl/algorithm.h>
 #include <lib/async/default.h>
+#include <src/lib/fxl/logging.h>
 #include <trace-engine/fields.h>
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/trace_manager/trace_session.h"
 #include "garnet/bin/trace_manager/util.h"
-#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 

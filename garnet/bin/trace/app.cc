@@ -4,10 +4,11 @@
 
 #include "garnet/bin/trace/app.h"
 
+#include <src/lib/fxl/logging.h>
+
 #include "garnet/bin/trace/commands/list_categories.h"
 #include "garnet/bin/trace/commands/record.h"
 #include "garnet/bin/trace/commands/time.h"
-#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 

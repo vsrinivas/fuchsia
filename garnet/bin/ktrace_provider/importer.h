@@ -15,11 +15,11 @@
 
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
+#include <src/lib/fxl/macros.h>
 #include <trace-engine/context.h>
 
 #include "garnet/bin/ktrace_provider/reader.h"
 #include "garnet/bin/ktrace_provider/tags.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ktrace_provider {
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <src/lib/fxl/logging.h>
 #include <lib/zx/time.h>
+#include <src/lib/fxl/logging.h>
 #include <trace-provider/provider.h>
 #include <zircon/status.h>
 

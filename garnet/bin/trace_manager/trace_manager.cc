@@ -4,13 +4,12 @@
 
 #include "garnet/bin/trace_manager/trace_manager.h"
 
+#include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fidl/cpp/clone.h>
 #include <lib/zx/time.h>
 
 #include <algorithm>
 #include <iostream>
-
-#include "fuchsia/sys/cpp/fidl.h"
-#include "lib/fidl/cpp/clone.h"
 
 namespace tracing {
 namespace {

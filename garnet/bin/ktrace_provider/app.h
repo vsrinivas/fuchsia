@@ -6,12 +6,12 @@
 #define GARNET_BIN_KTRACE_PROVIDER_APP_H_
 
 #include <lib/sys/cpp/component_context.h>
+#include <src/lib/files/unique_fd.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/macros.h>
 #include <trace/observer.h>
 
 #include "garnet/bin/ktrace_provider/log_importer.h"
-#include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ktrace_provider {
 

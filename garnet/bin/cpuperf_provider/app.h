@@ -5,13 +5,12 @@
 #ifndef GARNET_BIN_CPUPERF_PROVIDER_APP_H_
 #define GARNET_BIN_CPUPERF_PROVIDER_APP_H_
 
-#include <trace/observer.h>
-
 #include <memory>
 
+#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/macros.h>
-#include <lib/sys/cpp/component_context.h>
+#include <trace/observer.h>
 
 #include "garnet/bin/cpuperf_provider/categories.h"
 #include "garnet/lib/perfmon/controller.h"

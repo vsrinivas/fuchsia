@@ -6,11 +6,11 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/zx/time.h>
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
+#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 #include <trace/observer.h>
 #include <zircon/status.h>

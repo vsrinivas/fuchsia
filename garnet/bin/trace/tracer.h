@@ -12,10 +12,9 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 #include <lib/zx/socket.h>
+#include <src/lib/fxl/macros.h>
 #include <trace-engine/fields.h>
 #include <trace-reader/reader.h>
-
-#include "src/lib/fxl/macros.h"
 
 namespace tracing {
 

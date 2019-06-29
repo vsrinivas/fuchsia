@@ -6,11 +6,11 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/time/time_point.h>
 #include <zircon/syscalls.h>
 
 #include "garnet/bin/ktrace_provider/reader.h"
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/time/time_point.h"
 
 namespace ktrace_provider {
 namespace {

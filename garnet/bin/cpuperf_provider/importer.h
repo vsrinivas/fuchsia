@@ -10,9 +10,9 @@
 #include <stdint.h>
 #include <unordered_map>
 
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
-#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <trace-engine/context.h>
 
 #include "garnet/bin/cpuperf_provider/categories.h"

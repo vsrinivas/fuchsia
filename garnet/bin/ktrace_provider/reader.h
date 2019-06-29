@@ -7,9 +7,9 @@
 
 #include <iterator>
 
+#include <lib/zircon-internal/ktrace.h>
 #include <src/lib/files/unique_fd.h>
 #include <src/lib/fxl/macros.h>
-#include <lib/zircon-internal/ktrace.h>
 
 namespace ktrace_provider {
 

@@ -6,20 +6,20 @@
 #define GARNET_BIN_TRACE_MANAGER_TRACEE_H_
 
 #include <lib/async/cpp/wait.h>
+#include <lib/fidl/cpp/string.h>
+#include <lib/fidl/cpp/vector.h>
 #include <lib/fit/function.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/vmo.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 #include <trace-reader/reader_internal.h>
 
 #include <iosfwd>
 
 #include "garnet/bin/trace_manager/trace_provider_bundle.h"
 #include "garnet/bin/trace_manager/util.h"
-#include "lib/fidl/cpp/string.h"
-#include "lib/fidl/cpp/vector.h"
-#include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace tracing {
 

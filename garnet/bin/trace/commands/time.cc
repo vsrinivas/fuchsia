@@ -12,12 +12,12 @@
 #include "garnet/bin/trace/commands/time.h"
 
 #include <stdint.h>
+#include <src/lib/fxl/logging.h>
 #include <zircon/syscalls.h>
 
 #include <iomanip>
 #include <iostream>
 
-#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 

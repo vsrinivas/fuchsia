@@ -5,15 +5,15 @@
 #ifndef GARNET_BIN_TRACE_MANAGER_APP_H_
 #define GARNET_BIN_TRACE_MANAGER_APP_H_
 
-#include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/tracing/controller/cpp/fidl.h>
+#include <fuchsia/tracing/provider/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
+#include <src/lib/fxl/macros.h>
 
 #include <memory>
 
 #include "garnet/bin/trace_manager/trace_manager.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "src/lib/fxl/macros.h"
 
 namespace tracing {
 

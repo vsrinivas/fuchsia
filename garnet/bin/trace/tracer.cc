@@ -4,13 +4,13 @@
 
 #include "garnet/bin/trace/tracer.h"
 
-#include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
-#include <trace-engine/fields.h>
-#include <trace-reader/reader.h>
 #include <utility>
 
-#include "src/lib/fxl/logging.h"
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+#include <src/lib/fxl/logging.h>
+#include <trace-engine/fields.h>
+#include <trace-reader/reader.h>
 
 namespace tracing {
 
