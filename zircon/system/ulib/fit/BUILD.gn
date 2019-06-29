@@ -6,6 +6,7 @@ library("fit") {
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [
+    "lib/fit/barrier.h",
     "lib/fit/bridge.h",
     "lib/fit/bridge_internal.h",
     "lib/fit/constructors_internal.h",
@@ -34,6 +35,7 @@ library("fit") {
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_configs = [ "$zx/public/gn/config:no_maybe_uninitialized" ]
   sources = [
+    "barrier.cc",
     "promise.cc",
     "scheduler.cc",
     "scope.cc",

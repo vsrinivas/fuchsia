@@ -1,4 +1,5 @@
 {
+  "pkg/fit/include/lib/fit/barrier.h": "63f033e14e936ba3f1ae610e3eb638e5",
   "pkg/fit/include/lib/fit/bridge.h": "1f70839d51fdde2b9157c0ca2a282a63",
   "pkg/fit/include/lib/fit/bridge_internal.h": "6291b0c8e0b0c430193566c45a817711",
   "pkg/fit/include/lib/fit/constructors_internal.h": "ee100712abe214efc35fb73559f17bb2",

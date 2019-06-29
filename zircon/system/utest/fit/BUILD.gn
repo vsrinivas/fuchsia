@@ -4,6 +4,7 @@
 
 test("fit") {
   sources = [
+    "barrier_tests.cc",
     "bridge_tests.cc",
     "defer_tests.cc",
     "examples/function_example1.cc",
