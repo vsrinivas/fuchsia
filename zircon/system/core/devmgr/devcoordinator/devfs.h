@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVCOORDINATOR_DEVFS_H_
+#define ZIRCON_SYSTEM_CORE_DEVMGR_DEVCOORDINATOR_DEVFS_H_
 
 #include <fbl/ref_ptr.h>
 #include <lib/async/dispatcher.h>
@@ -38,4 +39,6 @@ zx_status_t devfs_connect(const Device* dev, zx::channel client_remote);
 // relative to the devnode.
 zx_status_t devfs_walk(Devnode* dn, const char* path, fbl::RefPtr<Device>* device_out);
 
-} // namespace devmgr
+}  // namespace devmgr
+
+#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_DEVCOORDINATOR_DEVFS_H_

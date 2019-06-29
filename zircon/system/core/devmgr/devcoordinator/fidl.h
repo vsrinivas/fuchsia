@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVCOORDINATOR_FIDL_H_
+#define ZIRCON_SYSTEM_CORE_DEVMGR_DEVCOORDINATOR_FIDL_H_
 
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
@@ -28,4 +29,6 @@ zx_status_t dh_send_create_composite_device(Devhost* dh, const Device* composite
                                             const CompositeDevice& composite,
                                             const uint64_t* component_local_ids, zx::channel rpc);
 
-} // namespace devmgr
+}  // namespace devmgr
+
+#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_DEVCOORDINATOR_FIDL_H_

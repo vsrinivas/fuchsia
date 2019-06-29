@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVCOORDINATOR_DEVICE_H_
+#define ZIRCON_SYSTEM_CORE_DEVMGR_DEVCOORDINATOR_DEVICE_H_
 
 #include <ddk/device.h>
 #include <fbl/array.h>
@@ -15,11 +16,12 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
+
 #include <variant>
 
+#include "../shared/async-loop-ref-counted-rpc-handler.h"
 #include "composite-device.h"
 #include "metadata.h"
-#include "../shared/async-loop-ref-counted-rpc-handler.h"
 
 namespace devmgr {
 
@@ -68,389 +70,380 @@ constexpr zx::duration kDefaultTestTimeout = zx::sec(5);
 // clang-format on
 
 struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHandler<Device> {
-    // Node for entry in device child list
-    struct Node {
-        static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) {
-            return obj.node_;
-        }
-    };
+  // Node for entry in device child list
+  struct Node {
+    static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) { return obj.node_; }
+  };
 
-    struct DevhostNode {
-        static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) {
-            return obj.devhost_node_;
-        }
-    };
+  struct DevhostNode {
+    static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) {
+      return obj.devhost_node_;
+    }
+  };
 
-    struct AllDevicesNode {
-        static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) {
-            return obj.all_devices_node_;
-        }
-    };
+  struct AllDevicesNode {
+    static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) {
+      return obj.all_devices_node_;
+    }
+  };
 
-    // This iterator provides access to a list of devices that does not provide
-    // mechanisms for mutating that list.  With this, a user can get mutable
-    // access to a device in the list.  This is achieved by making the linked
-    // list iterator opaque. It is not safe to modify the underlying list while
-    // this iterator is in use.
-    template <typename IterType, typename DeviceType>
-    class ChildListIterator {
-    public:
-        ChildListIterator() : state_(Done{}) {}
-        explicit ChildListIterator(DeviceType* device)
-                : state_(device->children_.begin()), device_(device) {
-            SkipInvalidStates();
-        }
+  // This iterator provides access to a list of devices that does not provide
+  // mechanisms for mutating that list.  With this, a user can get mutable
+  // access to a device in the list.  This is achieved by making the linked
+  // list iterator opaque. It is not safe to modify the underlying list while
+  // this iterator is in use.
+  template <typename IterType, typename DeviceType>
+  class ChildListIterator {
+   public:
+    ChildListIterator() : state_(Done{}) {}
+    explicit ChildListIterator(DeviceType* device)
+        : state_(device->children_.begin()), device_(device) {
+      SkipInvalidStates();
+    }
 
-        ChildListIterator operator++(int) {
-            auto other = *this;
-            ++*this;
-            return other;
-        }
-        bool operator==(const ChildListIterator& other) const { return state_ == other.state_; }
-        bool operator!=(const ChildListIterator& other) const { return !(state_ == other.state_); }
+    ChildListIterator operator++(int) {
+      auto other = *this;
+      ++*this;
+      return other;
+    }
+    bool operator==(const ChildListIterator& other) const { return state_ == other.state_; }
+    bool operator!=(const ChildListIterator& other) const { return !(state_ == other.state_); }
 
-        // The iterator implementation for the child list.  This is the source of truth
-        // for what devices are children of the device.
-        ChildListIterator& operator++() {
-            std::visit([this](auto&& arg) {
-                using T = std::decay_t<decltype(arg)>;
-                if constexpr (std::is_same_v<T, IterType>) {
-                    ++arg;
-                } else if constexpr (std::is_same_v<T, Composite>) {
-                    state_ = Done{};
-                } else if constexpr (std::is_same_v<T, Done>) {
-                    state_ = Done{};
-                }
-            }, state_);
-            SkipInvalidStates();
-            return *this;
-        }
-
-        DeviceType& operator*() const {
-            return std::visit([this](auto&& arg) -> DeviceType& {
-                using T = std::decay_t<decltype(arg)>;
-                if constexpr (std::is_same_v<T, IterType>) {
-                    return *arg;
-                } else if constexpr (std::is_same_v<T, Composite>) {
-                    return *device_->parent_->component()->composite()->device();
-                } else {
-                    __builtin_trap();
-                }
-            }, state_);
-        }
-    private:
-        // Advance the iterator to the next valid state or reach the done state.
-        // This is used to handle advancement between the different state variants.
-        void SkipInvalidStates() {
-            bool more = true;
-            while (more) {
-                more = std::visit([this](auto&& arg) {
-                    using T = std::decay_t<decltype(arg)>;
-                    if constexpr (std::is_same_v<T, IterType>) {
-                        // Check if there are any more children in the list.  If
-                        // there are, we're in a valid state and can stop.
-                        // Otherwise, advance to the next variant and check if
-                        // it's a valid state.
-                        if (arg != device_->children_.end()) {
-                            return false;
-                        }
-                        state_ = Composite{};
-                        return true;
-                    } else if constexpr (std::is_same_v<T, Composite>) {
-                        // Check if this device is an internal component device
-                        // that bound to a composite component.  If it is, and
-                        // the composite has been constructed, the iterator
-                        // should yield the composite.
-                        CompositeDeviceComponent* component = nullptr;
-                        if (device_->parent_) {
-                            component = device_->parent_->component();
-                        }
-                        if (component != nullptr && component->composite()->device() != nullptr) {
-                            return false;
-                        }
-                        state_ = Done{};
-                        return false;
-                    } else if constexpr (std::is_same_v<T, Done>) {
-                        return false;
-                    }
-                }, state_);
+    // The iterator implementation for the child list.  This is the source of truth
+    // for what devices are children of the device.
+    ChildListIterator& operator++() {
+      std::visit(
+          [this](auto&& arg) {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, IterType>) {
+              ++arg;
+            } else if constexpr (std::is_same_v<T, Composite>) {
+              state_ = Done{};
+            } else if constexpr (std::is_same_v<T, Done>) {
+              state_ = Done{};
             }
-        }
+          },
+          state_);
+      SkipInvalidStates();
+      return *this;
+    }
 
-        struct Composite {
-            bool operator==(Composite) const { return true; }
-        };
-        struct Done {
-            bool operator==(Done) const { return true; }
-        };
-        std::variant<IterType, Composite, Done> state_;
-        DeviceType* device_;
+    DeviceType& operator*() const {
+      return std::visit(
+          [this](auto&& arg) -> DeviceType& {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, IterType>) {
+              return *arg;
+            } else if constexpr (std::is_same_v<T, Composite>) {
+              return *device_->parent_->component()->composite()->device();
+            } else {
+              __builtin_trap();
+            }
+          },
+          state_);
+    }
+
+   private:
+    // Advance the iterator to the next valid state or reach the done state.
+    // This is used to handle advancement between the different state variants.
+    void SkipInvalidStates() {
+      bool more = true;
+      while (more) {
+        more = std::visit(
+            [this](auto&& arg) {
+              using T = std::decay_t<decltype(arg)>;
+              if constexpr (std::is_same_v<T, IterType>) {
+                // Check if there are any more children in the list.  If
+                // there are, we're in a valid state and can stop.
+                // Otherwise, advance to the next variant and check if
+                // it's a valid state.
+                if (arg != device_->children_.end()) {
+                  return false;
+                }
+                state_ = Composite{};
+                return true;
+              } else if constexpr (std::is_same_v<T, Composite>) {
+                // Check if this device is an internal component device
+                // that bound to a composite component.  If it is, and
+                // the composite has been constructed, the iterator
+                // should yield the composite.
+                CompositeDeviceComponent* component = nullptr;
+                if (device_->parent_) {
+                  component = device_->parent_->component();
+                }
+                if (component != nullptr && component->composite()->device() != nullptr) {
+                  return false;
+                }
+                state_ = Done{};
+                return false;
+              } else if constexpr (std::is_same_v<T, Done>) {
+                return false;
+              }
+            },
+            state_);
+      }
+    }
+
+    struct Composite {
+      bool operator==(Composite) const { return true; }
     };
-
-    // This class exists to allow consumers of the Device class to write
-    //   for (auto& child : dev->children())
-    // and get mutable access to the children without getting mutable access to
-    // the list.
-    template <typename DeviceType, typename IterType>
-    class ChildListIteratorFactory {
-    public:
-        explicit ChildListIteratorFactory(DeviceType* device) : device_(device) {}
-
-        IterType begin() const { return IterType(device_); }
-        IterType end() const { return IterType(); }
-
-        bool is_empty() const { return begin() == end(); }
-    private:
-        DeviceType* device_;
+    struct Done {
+      bool operator==(Done) const { return true; }
     };
+    std::variant<IterType, Composite, Done> state_;
+    DeviceType* device_;
+  };
 
-    Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
-           fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::channel client_remote);
-    ~Device();
+  // This class exists to allow consumers of the Device class to write
+  //   for (auto& child : dev->children())
+  // and get mutable access to the children without getting mutable access to
+  // the list.
+  template <typename DeviceType, typename IterType>
+  class ChildListIteratorFactory {
+   public:
+    explicit ChildListIteratorFactory(DeviceType* device) : device_(device) {}
 
-    // Create a new device with the given parameters.  This sets up its
-    // relationship with its parent and devhost and adds its RPC channel to the
-    // coordinator's async loop.  This does not add the device to the
-    // coordinator's devices_ list, or trigger publishing
-    static zx_status_t Create(Coordinator* coordinator, const fbl::RefPtr<Device>& parent,
-                              fbl::String name, fbl::String driver_path, fbl::String args,
-                              uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
-                              zx::channel rpc, bool invisible, zx::channel client_remote,
-                              fbl::RefPtr<Device>* device);
-    static zx_status_t CreateComposite(Coordinator* coordinator, Devhost* devhost,
-                                       const CompositeDevice& composite, zx::channel rpc,
-                                       fbl::RefPtr<Device>* device);
-    zx_status_t CreateProxy();
+    IterType begin() const { return IterType(device_); }
+    IterType end() const { return IterType(); }
 
-    static void HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher,
-                          async::WaitBase* wait, zx_status_t status,
-                          const zx_packet_signal_t* signal);
+    bool is_empty() const { return begin() == end(); }
 
-    // We do not want to expose the list itself for mutation, even if the
-    // children are allowed to be mutated.  We manage this by making the
-    // iterator opaque.
-    using NonConstChildListIterator =
-            ChildListIterator<fbl::DoublyLinkedList<Device*, Node>::iterator, Device>;
-    using ConstChildListIterator =
-            ChildListIterator<fbl::DoublyLinkedList<Device*, Node>::const_iterator, const Device>;
-    using NonConstChildListIteratorFactory =
-            ChildListIteratorFactory<Device, NonConstChildListIterator>;
-    using ConstChildListIteratorFactory =
-            ChildListIteratorFactory<const Device, ConstChildListIterator>;
-    NonConstChildListIteratorFactory children() {
-        return NonConstChildListIteratorFactory(this);
-    }
-    ConstChildListIteratorFactory children() const {
-        return ConstChildListIteratorFactory(this);
-    }
+   private:
+    DeviceType* device_;
+  };
 
-    // Signal that this device is ready for bind to happen.  This should happen
-    // either immediately after the device is created, if it's created visible,
-    // or after it becomes visible.
-    zx_status_t SignalReadyForBind(zx::duration delay = zx::sec(0));
+  Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
+         fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::channel client_remote);
+  ~Device();
 
-    using SuspendCompletion = fit::function<void(zx_status_t)>;
-    // Issue a Suspend request to this device.  When the response comes in, the
-    // given completion will be invoked.
-    zx_status_t SendSuspend(uint32_t flags, SuspendCompletion completion);
+  // Create a new device with the given parameters.  This sets up its
+  // relationship with its parent and devhost and adds its RPC channel to the
+  // coordinator's async loop.  This does not add the device to the
+  // coordinator's devices_ list, or trigger publishing
+  static zx_status_t Create(Coordinator* coordinator, const fbl::RefPtr<Device>& parent,
+                            fbl::String name, fbl::String driver_path, fbl::String args,
+                            uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
+                            zx::channel rpc, bool invisible, zx::channel client_remote,
+                            fbl::RefPtr<Device>* device);
+  static zx_status_t CreateComposite(Coordinator* coordinator, Devhost* devhost,
+                                     const CompositeDevice& composite, zx::channel rpc,
+                                     fbl::RefPtr<Device>* device);
+  zx_status_t CreateProxy();
 
-    // Break the relationship between this device object and its parent
-    void DetachFromParent();
+  static void HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher,
+                        async::WaitBase* wait, zx_status_t status,
+                        const zx_packet_signal_t* signal);
 
-    // Sets the properties of this device.  Returns an error if the properties
-    // array contains more than one property from the BIND_TOPO_* range.
-    zx_status_t SetProps(fbl::Array<const zx_device_prop_t> props);
-    const fbl::Array<const zx_device_prop_t>& props() const { return props_; }
-    const zx_device_prop_t* topo_prop() const { return topo_prop_; }
+  // We do not want to expose the list itself for mutation, even if the
+  // children are allowed to be mutated.  We manage this by making the
+  // iterator opaque.
+  using NonConstChildListIterator =
+      ChildListIterator<fbl::DoublyLinkedList<Device*, Node>::iterator, Device>;
+  using ConstChildListIterator =
+      ChildListIterator<fbl::DoublyLinkedList<Device*, Node>::const_iterator, const Device>;
+  using NonConstChildListIteratorFactory =
+      ChildListIteratorFactory<Device, NonConstChildListIterator>;
+  using ConstChildListIteratorFactory =
+      ChildListIteratorFactory<const Device, ConstChildListIterator>;
+  NonConstChildListIteratorFactory children() { return NonConstChildListIteratorFactory(this); }
+  ConstChildListIteratorFactory children() const { return ConstChildListIteratorFactory(this); }
 
-    const fbl::RefPtr<Device>& parent() { return parent_; }
-    fbl::RefPtr<const Device> parent() const { return parent_; }
+  // Signal that this device is ready for bind to happen.  This should happen
+  // either immediately after the device is created, if it's created visible,
+  // or after it becomes visible.
+  zx_status_t SignalReadyForBind(zx::duration delay = zx::sec(0));
 
-    const fbl::RefPtr<Device>& proxy() { return proxy_; }
-    fbl::RefPtr<const Device> proxy() const { return proxy_; }
+  using SuspendCompletion = fit::function<void(zx_status_t)>;
+  // Issue a Suspend request to this device.  When the response comes in, the
+  // given completion will be invoked.
+  zx_status_t SendSuspend(uint32_t flags, SuspendCompletion completion);
 
-    uint32_t protocol_id() const { return protocol_id_; }
+  // Break the relationship between this device object and its parent
+  void DetachFromParent();
 
-    bool is_bindable() const {
-        return !(flags & (DEV_CTX_BOUND | DEV_CTX_DEAD | DEV_CTX_INVISIBLE));
-    }
+  // Sets the properties of this device.  Returns an error if the properties
+  // array contains more than one property from the BIND_TOPO_* range.
+  zx_status_t SetProps(fbl::Array<const zx_device_prop_t> props);
+  const fbl::Array<const zx_device_prop_t>& props() const { return props_; }
+  const zx_device_prop_t* topo_prop() const { return topo_prop_; }
 
-    // If the device was bound as a component of a composite, this returns the
-    // component's description.
-    CompositeDeviceComponent* component() const {
-        auto val = std::get_if<CompositeDeviceComponent*>(&composite_);
-        return val ? *val : nullptr;
-    }
-    void set_component(CompositeDeviceComponent* component) {
-        ZX_ASSERT(std::holds_alternative<UnassociatedWithComposite>(composite_));
-        composite_ = component;
-    }
+  const fbl::RefPtr<Device>& parent() { return parent_; }
+  fbl::RefPtr<const Device> parent() const { return parent_; }
 
-    // If the device was created as a composite, this returns its description.
-    CompositeDevice* composite() const {
-        auto val = std::get_if<CompositeDevice*>(&composite_);
-        return val ? *val : nullptr;
-    }
-    void set_composite(CompositeDevice* composite) {
-        ZX_ASSERT(std::holds_alternative<UnassociatedWithComposite>(composite_));
-        composite_ = composite;
-    }
-    void disassociate_from_composite() {
-        composite_ = UnassociatedWithComposite{};
-    }
+  const fbl::RefPtr<Device>& proxy() { return proxy_; }
+  fbl::RefPtr<const Device> proxy() const { return proxy_; }
 
-    void set_host(Devhost* host);
-    Devhost* host() const { return host_; }
-    uint64_t local_id() const { return local_id_; }
+  uint32_t protocol_id() const { return protocol_id_; }
 
-    const fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node>& metadata() const {
-        return metadata_;
-    }
-    void AddMetadata(fbl::unique_ptr<Metadata> md) {
-        metadata_.push_front(std::move(md));
-    }
+  bool is_bindable() const { return !(flags & (DEV_CTX_BOUND | DEV_CTX_DEAD | DEV_CTX_INVISIBLE)); }
 
-    // Creates a new suspend task if necessary and returns a reference to it.
-    // If one is already in-progress, a reference to it is returned instead
-    fbl::RefPtr<SuspendTask> RequestSuspendTask(uint32_t suspend_flags);
-    // Run the completion for the outstanding suspend, if any.  This method is
-    // only exposed currently because RemoveDevice is on Coordinator instead of
-    // Device.
-    void CompleteSuspend(zx_status_t status);
+  // If the device was bound as a component of a composite, this returns the
+  // component's description.
+  CompositeDeviceComponent* component() const {
+    auto val = std::get_if<CompositeDeviceComponent*>(&composite_);
+    return val ? *val : nullptr;
+  }
+  void set_component(CompositeDeviceComponent* component) {
+    ZX_ASSERT(std::holds_alternative<UnassociatedWithComposite>(composite_));
+    composite_ = component;
+  }
 
-    zx_status_t DriverCompatibiltyTest();
+  // If the device was created as a composite, this returns its description.
+  CompositeDevice* composite() const {
+    auto val = std::get_if<CompositeDevice*>(&composite_);
+    return val ? *val : nullptr;
+  }
+  void set_composite(CompositeDevice* composite) {
+    ZX_ASSERT(std::holds_alternative<UnassociatedWithComposite>(composite_));
+    composite_ = composite;
+  }
+  void disassociate_from_composite() { composite_ = UnassociatedWithComposite{}; }
 
-    zx::channel take_client_remote() { return std::move(client_remote_); }
+  void set_host(Devhost* host);
+  Devhost* host() const { return host_; }
+  uint64_t local_id() const { return local_id_; }
 
-    const fbl::String& name() const { return name_; }
-    const fbl::String& libname() const { return libname_; }
-    const fbl::String& args() const { return args_; }
+  const fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node>& metadata() const {
+    return metadata_;
+  }
+  void AddMetadata(fbl::unique_ptr<Metadata> md) { metadata_.push_front(std::move(md)); }
 
-    Coordinator* coordinator;
-    uint32_t flags = 0;
+  // Creates a new suspend task if necessary and returns a reference to it.
+  // If one is already in-progress, a reference to it is returned instead
+  fbl::RefPtr<SuspendTask> RequestSuspendTask(uint32_t suspend_flags);
+  // Run the completion for the outstanding suspend, if any.  This method is
+  // only exposed currently because RemoveDevice is on Coordinator instead of
+  // Device.
+  void CompleteSuspend(zx_status_t status);
 
-    // The backoff between each driver retry. This grows exponentially.
-    zx::duration backoff = zx::msec(250);
-    // The number of retries left for the driver.
-    uint32_t retries = 4;
-    Devnode* self = nullptr;
-    Devnode* link = nullptr;
+  zx_status_t DriverCompatibiltyTest();
 
-    // TODO(teisenbe): We probably want more states.  For example, the DEAD flag
-    // should probably move in to here.
-    enum class State {
-        kActive,
-        kSuspended,
-    };
+  zx::channel take_client_remote() { return std::move(client_remote_); }
 
-    State state() const { return state_; }
+  const fbl::String& name() const { return name_; }
+  const fbl::String& libname() const { return libname_; }
+  const fbl::String& args() const { return args_; }
 
-    enum class TestStateMachine {
-        kTestNotStarted = 1,
-        kTestUnbindSent,
-        kTestBindSent,
-        kTestBindDone,
-        kTestSuspendSent,
-        kTestSuspendDone,
-        kTestResumeSent,
-        kTestResumeDone,
-        kTestDone,
-    };
+  Coordinator* coordinator;
+  uint32_t flags = 0;
 
-    TestStateMachine test_state() {
-        fbl::AutoLock<fbl::Mutex> lock(&test_state_lock_);
-        return test_state_;
-    }
+  // The backoff between each driver retry. This grows exponentially.
+  zx::duration backoff = zx::msec(250);
+  // The number of retries left for the driver.
+  uint32_t retries = 4;
+  Devnode* self = nullptr;
+  Devnode* link = nullptr;
 
-    void set_test_state(TestStateMachine new_state) {
-        fbl::AutoLock<fbl::Mutex> lock(&test_state_lock_);
-        test_state_ = new_state;
-    }
-    void set_test_time(zx::duration& test_time) {
-        test_time_ = test_time;
-    }
-    void set_test_reply_required(bool required) {
-        test_reply_required_ = required;
-    }
-    zx::duration& test_time() {
-        return test_time_;
-    }
-    const char* GetTestDriverName();
-    zx::event& test_event() { return test_event_; }
+  // TODO(teisenbe): We probably want more states.  For example, the DEAD flag
+  // should probably move in to here.
+  enum class State {
+    kActive,
+    kSuspended,
+  };
 
-private:
-    zx_status_t HandleRead();
-    int RunCompatibilityTests();
+  State state() const { return state_; }
 
-    const fbl::String name_;
-    const fbl::String libname_;
-    const fbl::String args_;
+  enum class TestStateMachine {
+    kTestNotStarted = 1,
+    kTestUnbindSent,
+    kTestBindSent,
+    kTestBindDone,
+    kTestSuspendSent,
+    kTestSuspendDone,
+    kTestResumeSent,
+    kTestResumeDone,
+    kTestDone,
+  };
 
-    fbl::RefPtr<Device> parent_;
-    const uint32_t protocol_id_;
+  TestStateMachine test_state() {
+    fbl::AutoLock<fbl::Mutex> lock(&test_state_lock_);
+    return test_state_;
+  }
 
-    fbl::RefPtr<Device> proxy_;
+  void set_test_state(TestStateMachine new_state) {
+    fbl::AutoLock<fbl::Mutex> lock(&test_state_lock_);
+    test_state_ = new_state;
+  }
+  void set_test_time(zx::duration& test_time) { test_time_ = test_time; }
+  void set_test_reply_required(bool required) { test_reply_required_ = required; }
+  zx::duration& test_time() { return test_time_; }
+  const char* GetTestDriverName();
+  zx::event& test_event() { return test_event_; }
 
-    fbl::Array<const zx_device_prop_t> props_;
-    // If the device has a topological property in |props|, this points to it.
-    const zx_device_prop_t* topo_prop_ = nullptr;
+ private:
+  zx_status_t HandleRead();
+  int RunCompatibilityTests();
 
-    async::TaskClosure publish_task_;
+  const fbl::String name_;
+  const fbl::String libname_;
+  const fbl::String args_;
 
-    // listnode for this device in its parent's list-of-children
-    fbl::DoublyLinkedListNodeState<Device*> node_;
+  fbl::RefPtr<Device> parent_;
+  const uint32_t protocol_id_;
 
-    // List of all child devices of this device, except for composite devices.
-    // Composite devices are excluded because their multiple-parent nature
-    // precludes using the same intrusive nodes as single-parent devices.
-    fbl::DoublyLinkedList<Device*, Node> children_;
+  fbl::RefPtr<Device> proxy_;
 
-    // Metadata entries associated to this device.
-    fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node> metadata_;
+  fbl::Array<const zx_device_prop_t> props_;
+  // If the device has a topological property in |props|, this points to it.
+  const zx_device_prop_t* topo_prop_ = nullptr;
 
-    // listnode for this device in the all devices list
-    fbl::DoublyLinkedListNodeState<Device*> all_devices_node_;
+  async::TaskClosure publish_task_;
 
-    // listnode for this device in its devhost's list-of-devices
-    fbl::DoublyLinkedListNodeState<Device*> devhost_node_;
+  // listnode for this device in its parent's list-of-children
+  fbl::DoublyLinkedListNodeState<Device*> node_;
 
-    // - If this device is part of a composite device, this is inhabited by
-    //   CompositeDeviceComponent* and it points to the component that matched it.
-    //   Note that this is only set on the device that matched the component, not
-    //   the "component device" added by the component driver.
-    // - If this device is a composite device, this is inhabited by
-    //   CompositeDevice* and it points to the composite that describes it.
-    // - Otherwise, it is inhabited by UnassociatedWithComposite
-    struct UnassociatedWithComposite {};
-    std::variant<UnassociatedWithComposite, CompositeDeviceComponent*, CompositeDevice*>
-            composite_;
+  // List of all child devices of this device, except for composite devices.
+  // Composite devices are excluded because their multiple-parent nature
+  // precludes using the same intrusive nodes as single-parent devices.
+  fbl::DoublyLinkedList<Device*, Node> children_;
 
-    Devhost* host_ = nullptr;
-    // The id of this device from the perspective of the devhost.  This can be
-    // used to communicate with the devhost about this device.
-    uint64_t local_id_ = 0;
+  // Metadata entries associated to this device.
+  fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node> metadata_;
 
-    // The current state of the device
-    State state_ = State::kActive;
+  // listnode for this device in the all devices list
+  fbl::DoublyLinkedListNodeState<Device*> all_devices_node_;
 
-    // If a suspend is in-progress, this task represents it.
-    fbl::RefPtr<SuspendTask> active_suspend_;
-    // If a suspend is in-progress, this completion will be invoked when it is
-    // completed.  It will likely mark |active_suspend_| as completed and clear
-    // it.
-    SuspendCompletion suspend_completion_;
+  // listnode for this device in its devhost's list-of-devices
+  fbl::DoublyLinkedListNodeState<Device*> devhost_node_;
 
-    // For attaching as an open connection to the proxy device,
-    // or once the device becomes visible.
-    zx::channel client_remote_;
+  // - If this device is part of a composite device, this is inhabited by
+  //   CompositeDeviceComponent* and it points to the component that matched it.
+  //   Note that this is only set on the device that matched the component, not
+  //   the "component device" added by the component driver.
+  // - If this device is a composite device, this is inhabited by
+  //   CompositeDevice* and it points to the composite that describes it.
+  // - Otherwise, it is inhabited by UnassociatedWithComposite
+  struct UnassociatedWithComposite {};
+  std::variant<UnassociatedWithComposite, CompositeDeviceComponent*, CompositeDevice*> composite_;
 
-    // For compatibility tests.
-    fbl::Mutex test_state_lock_;
-    TestStateMachine test_state_ __TA_GUARDED(test_state_lock_) = TestStateMachine::kTestNotStarted;
-    zx::event test_event_;
-    zx::duration test_time_;
-    fuchsia_device_manager_CompatibilityTestStatus test_status_;
-    bool test_reply_required_ = false;
+  Devhost* host_ = nullptr;
+  // The id of this device from the perspective of the devhost.  This can be
+  // used to communicate with the devhost about this device.
+  uint64_t local_id_ = 0;
+
+  // The current state of the device
+  State state_ = State::kActive;
+
+  // If a suspend is in-progress, this task represents it.
+  fbl::RefPtr<SuspendTask> active_suspend_;
+  // If a suspend is in-progress, this completion will be invoked when it is
+  // completed.  It will likely mark |active_suspend_| as completed and clear
+  // it.
+  SuspendCompletion suspend_completion_;
+
+  // For attaching as an open connection to the proxy device,
+  // or once the device becomes visible.
+  zx::channel client_remote_;
+
+  // For compatibility tests.
+  fbl::Mutex test_state_lock_;
+  TestStateMachine test_state_ __TA_GUARDED(test_state_lock_) = TestStateMachine::kTestNotStarted;
+  zx::event test_event_;
+  zx::duration test_time_;
+  fuchsia_device_manager_CompatibilityTestStatus test_status_;
+  bool test_reply_required_ = false;
 };
 
-} // namespace devmgr
+}  // namespace devmgr
+
+#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_DEVCOORDINATOR_DEVICE_H_
