@@ -18,7 +18,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
 #include <ddk/protocol/usb/modeswitch.h>
-#include <fuchsia/usb/virtualbus/c/fidl.h>
+#include <fuchsia/hardware/usb/virtual/bus/c/fidl.h>
 
 #include <zircon/device/usb-peripheral.h>
 #include <zircon/hw/usb.h>

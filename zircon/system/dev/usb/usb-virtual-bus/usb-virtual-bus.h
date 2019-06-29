@@ -12,6 +12,7 @@
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
 #include <lib/sync/completion.h>
 #include <usb/request-cpp.h>
 
@@ -28,7 +29,8 @@ class UsbVirtualHost;
 using UsbVirtualBusType = ddk::Device<UsbVirtualBus, ddk::Unbindable, ddk::Messageable>;
 
 // This is the main class for the USB virtual bus.
-class UsbVirtualBus : public UsbVirtualBusType {
+class UsbVirtualBus : public UsbVirtualBusType,
+                      public ::llcpp::fuchsia::hardware::usb::virtual_::bus::Bus::Interface {
 public:
     explicit UsbVirtualBus(zx_device_t* parent)
         : UsbVirtualBusType(parent) {}
@@ -70,10 +72,10 @@ public:
     size_t UsbHciGetRequestSize();
 
     // FIDL messages
-    zx_status_t MsgEnable(fidl_txn_t* txn);
-    zx_status_t MsgDisable(fidl_txn_t* txn);
-    zx_status_t MsgConnect(fidl_txn_t* txn);
-    zx_status_t MsgDisconnect(fidl_txn_t* txn);
+    void Enable(EnableCompleter::Sync completer);
+    void Disable(DisableCompleter::Sync completer);
+    void Connect(ConnectCompleter::Sync completer);
+    void Disconnect(DisconnectCompleter::Sync completer);
 
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(UsbVirtualBus);

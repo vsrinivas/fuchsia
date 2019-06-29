@@ -16,7 +16,6 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fuchsia/usb/virtualbus/c/fidl.h>
 #include <inttypes.h>
 #include <lib/async-loop/loop.h>
 #include <lib/fidl-async/bind.h>

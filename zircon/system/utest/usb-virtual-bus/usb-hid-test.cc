@@ -14,7 +14,7 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/input/c/fidl.h>
 #include <fuchsia/hardware/usb/peripheral/c/fidl.h>
-#include <fuchsia/usb/virtualbus/c/fidl.h>
+#include <fuchsia/hardware/usb/virtual/bus/c/fidl.h>
 #include <hid/boot.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/loop.h>
@@ -43,9 +43,10 @@ public:
     }
 
     void TearDown() override {
-        ASSERT_EQ(ZX_OK,
-                  FidlCall(fuchsia_hardware_usb_peripheral_DeviceClearFunctions, peripheral_->get()));
-        ASSERT_EQ(ZX_OK, FidlCall(fuchsia_usb_virtualbus_BusDisable, virtual_bus_handle_->get()));
+        ASSERT_EQ(ZX_OK, FidlCall(fuchsia_hardware_usb_peripheral_DeviceClearFunctions,
+                                  peripheral_->get()));
+        ASSERT_EQ(ZX_OK, FidlCall(fuchsia_hardware_usb_virtual_bus_BusDisable,
+                                  virtual_bus_handle_->get()));
     }
 
 protected:

@@ -16,7 +16,7 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/usb/peripheral/block/c/fidl.h>
 #include <fuchsia/hardware/usb/peripheral/c/fidl.h>
-#include <fuchsia/usb/virtualbus/c/fidl.h>
+#include <fuchsia/hardware/usb/virtual/bus/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/loop.h>
 #include <lib/fdio/fd.h>
@@ -50,7 +50,7 @@ public:
         if (status != ZX_OK) {
             return status;
         }
-        status = FidlCall(fuchsia_usb_virtualbus_BusDisconnect, bus_->get());
+        status = FidlCall(fuchsia_hardware_usb_virtual_bus_BusDisconnect, bus_->get());
         if (status != ZX_OK) {
             return status;
         }
@@ -112,7 +112,7 @@ public:
         if (status != ZX_OK) {
             return status;
         }
-        status = FidlCall(fuchsia_usb_virtualbus_BusConnect, bus_->get());
+        status = FidlCall(fuchsia_hardware_usb_virtual_bus_BusConnect, bus_->get());
         return ZX_OK;
     }
 
@@ -192,7 +192,7 @@ void UmsTest::SetUp() {
 void UmsTest::TearDown() {
     ASSERT_EQ(ZX_OK,
               FidlCall(fuchsia_hardware_usb_peripheral_DeviceClearFunctions, peripheral_->get()));
-    ASSERT_EQ(ZX_OK, FidlCall(fuchsia_usb_virtualbus_BusDisable, virtual_bus_handle_->get()));
+    ASSERT_EQ(ZX_OK, FidlCall(fuchsia_hardware_usb_virtual_bus_BusDisable, virtual_bus_handle_->get()));
 }
 
 TEST_F(UmsTest, ReconnectTest) {

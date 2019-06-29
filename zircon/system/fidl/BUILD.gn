@@ -60,7 +60,7 @@ group("fidl") {
     "fuchsia-hardware-usb-peripheral",
     "fuchsia-hardware-usb-peripheral-block",
     "fuchsia-hardware-usb-tester",
-    "fuchsia-hardware-usb-virtual-bus:fuchsia.usb.virtualbus",
+    "fuchsia-hardware-usb-virtual-bus",
     "fuchsia-hardware-vsock",
     "fuchsia-hardware-zxcrypt",
     "fuchsia-inspect",

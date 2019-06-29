@@ -15,9 +15,9 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
+#include <ddktl/fidl.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/usb/virtualbus/c/fidl.h>
 
 namespace usb_virtual_bus {
 
@@ -276,25 +276,10 @@ zx_status_t UsbVirtualBus::SetStall(uint8_t ep_address, bool stall) {
     return ZX_OK;
 }
 
-static fuchsia_usb_virtualbus_Bus_ops_t fidl_ops = {
-    .Enable = [](void* ctx,
-                 fidl_txn_t* txn) { return reinterpret_cast<UsbVirtualBus*>(ctx)->MsgEnable(txn); },
-    .Disable =
-        [](void* ctx, fidl_txn_t* txn) {
-            return reinterpret_cast<UsbVirtualBus*>(ctx)->MsgDisable(txn);
-        },
-    .Connect =
-        [](void* ctx, fidl_txn_t* txn) {
-            return reinterpret_cast<UsbVirtualBus*>(ctx)->MsgConnect(txn);
-        },
-    .Disconnect =
-        [](void* ctx, fidl_txn_t* txn) {
-            return reinterpret_cast<UsbVirtualBus*>(ctx)->MsgDisconnect(txn);
-        },
-};
-
 zx_status_t UsbVirtualBus::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_usb_virtualbus_Bus_dispatch(this, txn, msg, &fidl_ops);
+    DdkTransaction transaction(txn);
+    ::llcpp::fuchsia::hardware::usb::virtual_::bus::Bus::Dispatch(this, msg, &transaction);
+    return transaction.Status();
 }
 
 void UsbVirtualBus::DdkUnbind() {
@@ -513,7 +498,7 @@ size_t UsbVirtualBus::UsbHciGetRequestSize() {
     return Request::RequestSize(sizeof(usb_request_t));
 }
 
-zx_status_t UsbVirtualBus::MsgEnable(fidl_txn_t* txn) {
+void UsbVirtualBus::Enable(EnableCompleter::Sync completer) {
     fbl::AutoLock lock(&lock_);
 
     zx_status_t status = ZX_OK;
@@ -525,10 +510,10 @@ zx_status_t UsbVirtualBus::MsgEnable(fidl_txn_t* txn) {
         status = CreateDevice();
     }
 
-    return fuchsia_usb_virtualbus_BusEnable_reply(txn, status);
+    completer.Reply(status);
 }
 
-zx_status_t UsbVirtualBus::MsgDisable(fidl_txn_t* txn) {
+void UsbVirtualBus::Disable(DisableCompleter::Sync completer) {
     SetConnected(false);
     UsbVirtualHost* host;
     UsbVirtualDevice* device;
@@ -545,25 +530,27 @@ zx_status_t UsbVirtualBus::MsgDisable(fidl_txn_t* txn) {
     if (device) {
         device->DdkRemove();
     }
-    return fuchsia_usb_virtualbus_BusDisable_reply(txn, ZX_OK);
+    completer.Reply(ZX_OK);
 }
 
-zx_status_t UsbVirtualBus::MsgConnect(fidl_txn_t* txn) {
+void UsbVirtualBus::Connect(ConnectCompleter::Sync completer) {
     if (host_ == nullptr || device_ == nullptr) {
-        return fuchsia_usb_virtualbus_BusConnect_reply(txn, ZX_ERR_BAD_STATE);
+        completer.Reply(ZX_ERR_BAD_STATE);
+        return;
     }
 
     SetConnected(true);
-    return fuchsia_usb_virtualbus_BusConnect_reply(txn, ZX_OK);
+    completer.Reply(ZX_OK);
 }
 
-zx_status_t UsbVirtualBus::MsgDisconnect(fidl_txn_t* txn) {
+void UsbVirtualBus::Disconnect(DisconnectCompleter::Sync completer) {
     if (host_ == nullptr || device_ == nullptr) {
-        return fuchsia_usb_virtualbus_BusDisconnect_reply(txn, ZX_ERR_BAD_STATE);
+        completer.Reply(ZX_ERR_BAD_STATE);
+        return;
     }
 
     SetConnected(false);
-    return fuchsia_usb_virtualbus_BusDisconnect_reply(txn, ZX_OK);
+    completer.Reply(ZX_OK);
 }
 
 static zx_status_t usb_virtual_bus_bind(void* ctx, zx_device_t* parent) {

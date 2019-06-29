@@ -4,16 +4,7 @@
 
 import("$zx/public/gn/fidl.gni")
 
-# TODO(ZX-3365): rename the dir
-if (current_toolchain != default_toolchain) {
-  group("c") {
-    public_deps = [
-      ":fuchsia.usb.virtualbus.c",
-    ]
-  }
-}
-
-fidl_library("fuchsia.usb.virtualbus") {
+fidl_library("fuchsia-hardware-usb-virtual-bus") {
   sources = [
     "usb-virtual-bus.fidl",
   ]

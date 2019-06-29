@@ -25,7 +25,6 @@ source_set("block") {
     "$zx/system/banjo/ddk.protocol.usb.composite",
     "$zx/system/banjo/ddk.protocol.usb.request",
     "$zx/system/dev/lib/usb",
-    "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:c",
     "$zx/system/ulib/async-loop",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

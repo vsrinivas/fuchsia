@@ -8,7 +8,7 @@
 #include <ddk/platform-defs.h>
 #include <fbl/unique_ptr.h>
 #include <fcntl.h>
-#include <fuchsia/usb/virtualbus/c/fidl.h>
+#include <fuchsia/hardware/usb/virtual/bus/c/fidl.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/namespace.h>
@@ -50,7 +50,8 @@ USBVirtualBus::USBVirtualBus() {
                                              virtual_bus_handle_.reset_and_get_address()));
     fd = fbl::unique_fd(openat(devmgr_.devfs_root().get(), "class", O_RDONLY));
 
-    ASSERT_EQ(ZX_OK, FidlCall(fuchsia_usb_virtualbus_BusEnable, virtual_bus_handle_.get()));
+    ASSERT_EQ(ZX_OK, FidlCall(fuchsia_hardware_usb_virtual_bus_BusEnable,
+                              virtual_bus_handle_.get()));
     while (fdio_watch_directory(fd.get(), WaitForFile, ZX_TIME_INFINITE,
                                 const_cast<char*>("usb-peripheral")) != ZX_ERR_STOP)
         ;
@@ -113,7 +114,8 @@ void USBVirtualBus::InitUMS(fbl::String* devpath) {
     loop.Run();
 
     ASSERT_TRUE(context.state_changed);
-    ASSERT_EQ(ZX_OK, FidlCall(fuchsia_usb_virtualbus_BusConnect, virtual_bus_handle_.get()));
+    ASSERT_EQ(ZX_OK, FidlCall(fuchsia_hardware_usb_virtual_bus_BusConnect,
+                              virtual_bus_handle_.get()));
     fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/block", O_RDONLY));
     while (fdio_watch_directory(fd.get(), WaitForAnyFile, ZX_TIME_INFINITE, devpath) !=
            ZX_ERR_STOP) {
@@ -156,7 +158,8 @@ void USBVirtualBus::InitUsbHid(fbl::String* devpath) {
     loop.Run();
 
     ASSERT_TRUE(context.state_changed);
-    ASSERT_EQ(ZX_OK, FidlCall(fuchsia_usb_virtualbus_BusConnect, virtual_bus_handle_.get()));
+    ASSERT_EQ(ZX_OK, FidlCall(fuchsia_hardware_usb_virtual_bus_BusConnect,
+                              virtual_bus_handle_.get()));
     fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/input", O_RDONLY));
     while (fdio_watch_directory(fd.get(), WaitForAnyFile, ZX_TIME_INFINITE, devpath) !=
            ZX_ERR_STOP) {
@@ -204,7 +207,8 @@ void USBVirtualBus::InitFtdi(fbl::String* devpath) {
     loop.Run();
 
     ASSERT_TRUE(context.state_changed);
-    ASSERT_EQ(ZX_OK, FidlCall(fuchsia_usb_virtualbus_BusConnect, virtual_bus_handle_.get()));
+    ASSERT_EQ(ZX_OK, FidlCall(fuchsia_hardware_usb_virtual_bus_BusConnect,
+                              virtual_bus_handle_.get()));
     fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/serial-impl", O_RDONLY));
     while (fdio_watch_directory(fd.get(), WaitForAnyFile, ZX_TIME_INFINITE, devpath) !=
            ZX_ERR_STOP) {
