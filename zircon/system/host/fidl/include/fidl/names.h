@@ -24,7 +24,6 @@ std::string NameLibrary(const std::vector<std::string_view>& library_name);
 std::string NameLibraryCHeader(const std::vector<std::string_view>& library_name);
 
 std::string NamePrimitiveCType(types::PrimitiveSubtype subtype);
-std::string NamePrimitiveSubtype(types::PrimitiveSubtype subtype);
 std::string NamePrimitiveIntegerCConstantMacro(types::PrimitiveSubtype type);
 std::string NameHandleSubtype(types::HandleSubtype subtype);
 std::string NameHandleZXObjType(types::HandleSubtype subtype);

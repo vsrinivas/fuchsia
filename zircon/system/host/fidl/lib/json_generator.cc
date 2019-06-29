@@ -104,10 +104,6 @@ void JSONGenerator::Generate(types::Nullability value) {
     }
 }
 
-void JSONGenerator::Generate(types::PrimitiveSubtype value) {
-    EmitString(NamePrimitiveSubtype(value));
-}
-
 void JSONGenerator::Generate(const raw::Identifier& value) {
     EmitString(value.location().data());
 }
@@ -209,7 +205,7 @@ void JSONGenerator::Generate(const flat::Type* value) {
         }
         case flat::Type::Kind::kPrimitive: {
             auto type = static_cast<const flat::PrimitiveType*>(value);
-            GenerateObjectMember("subtype", type->subtype);
+            GenerateObjectMember("subtype", type->name);
             break;
         }
         case flat::Type::Kind::kIdentifier: {
@@ -293,7 +289,7 @@ void JSONGenerator::Generate(const flat::Enum& value) {
         GenerateObjectMember("location", NameLocation(value.name));
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
-        GenerateObjectMember("type", value.type->subtype);
+        GenerateObjectMember("type", value.type->name);
         GenerateObjectMember("members", value.members);
     });
 }

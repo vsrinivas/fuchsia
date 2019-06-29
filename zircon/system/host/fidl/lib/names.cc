@@ -77,33 +77,6 @@ std::string NamePrimitiveCType(types::PrimitiveSubtype subtype) {
     }
 }
 
-std::string NamePrimitiveSubtype(types::PrimitiveSubtype subtype) {
-    switch (subtype) {
-    case types::PrimitiveSubtype::kInt8:
-        return "int8";
-    case types::PrimitiveSubtype::kInt16:
-        return "int16";
-    case types::PrimitiveSubtype::kInt32:
-        return "int32";
-    case types::PrimitiveSubtype::kInt64:
-        return "int64";
-    case types::PrimitiveSubtype::kUint8:
-        return "uint8";
-    case types::PrimitiveSubtype::kUint16:
-        return "uint16";
-    case types::PrimitiveSubtype::kUint32:
-        return "uint32";
-    case types::PrimitiveSubtype::kUint64:
-        return "uint64";
-    case types::PrimitiveSubtype::kBool:
-        return "bool";
-    case types::PrimitiveSubtype::kFloat32:
-        return "float32";
-    case types::PrimitiveSubtype::kFloat64:
-        return "float64";
-    }
-}
-
 std::string NamePrimitiveIntegerCConstantMacro(types::PrimitiveSubtype subtype) {
     switch (subtype) {
     case types::PrimitiveSubtype::kInt8:
@@ -316,10 +289,11 @@ std::string NameFlatConstant(const flat::Constant* constant) {
 }
 
 void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
+    buf << NameFlatName(type->name);
     switch (type->kind) {
     case flat::Type::Kind::kArray: {
         auto array_type = static_cast<const flat::ArrayType*>(type);
-        buf << "array<";
+        buf << "<";
         NameFlatTypeHelper(buf, array_type->element_type);
         buf << ">";
         if (*array_type->element_count != flat::Size::Max()) {
@@ -330,7 +304,7 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
     }
     case flat::Type::Kind::kVector: {
         auto vector_type = static_cast<const flat::VectorType*>(type);
-        buf << "vector<";
+        buf << "<";
         NameFlatTypeHelper(buf, vector_type->element_type);
         buf << ">";
         if (*vector_type->element_count != flat::Size::Max()) {
@@ -341,7 +315,6 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
     }
     case flat::Type::Kind::kString: {
         auto string_type = static_cast<const flat::StringType*>(type);
-        buf << "string";
         if (*string_type->max_size != flat::Size::Max()) {
             buf << ":";
             buf << string_type->max_size->value;
@@ -350,7 +323,6 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
     }
     case flat::Type::Kind::kHandle: {
         auto handle_type = static_cast<const flat::HandleType*>(type);
-        buf << "handle";
         if (handle_type->subtype != types::HandleSubtype::kHandle) {
             buf << "<";
             buf << NameHandleSubtype(handle_type->subtype);
@@ -360,21 +332,15 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
     }
     case flat::Type::Kind::kRequestHandle: {
         auto request_handle_type = static_cast<const flat::RequestHandleType*>(type);
-        buf << "request<";
+        buf << "<";
         buf << NameFlatName(request_handle_type->protocol_type->name);
         buf << ">";
         break;
     }
-    case flat::Type::Kind::kPrimitive: {
-        auto primitive_type = static_cast<const flat::PrimitiveType*>(type);
-        buf << NamePrimitiveSubtype(primitive_type->subtype);
+    case flat::Type::Kind::kPrimitive:
+    case flat::Type::Kind::kIdentifier:
+        // Like Stars, they are known by name.
         break;
-    }
-    case flat::Type::Kind::kIdentifier: {
-        auto identifier_type = static_cast<const flat::IdentifierType*>(type);
-        buf << NameFlatName(identifier_type->name);
-        break;
-    }
     } // switch
     if (type->nullability == types::Nullability::kNullable) {
         buf << "?";

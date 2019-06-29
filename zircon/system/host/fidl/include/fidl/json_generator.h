@@ -94,7 +94,6 @@ public:
 
     void Generate(types::HandleSubtype value);
     void Generate(types::Nullability value);
-    void Generate(types::PrimitiveSubtype value);
 
     void Generate(const raw::Identifier& value);
     void Generate(const raw::TypeConstructor& value);

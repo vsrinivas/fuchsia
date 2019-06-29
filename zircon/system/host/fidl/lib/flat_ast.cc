@@ -530,7 +530,7 @@ public:
         if (nullability == types::Nullability::kNullable)
             return CannotBeNullable(maybe_location);
 
-        *out_type = std::make_unique<PrimitiveType>(subtype_);
+        *out_type = std::make_unique<PrimitiveType>(name_, subtype_);
         return true;
     }
 
@@ -541,8 +541,8 @@ private:
 class BytesTypeTemplate : public TypeTemplate {
 public:
     BytesTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-        : TypeTemplate(Name(nullptr, "bytes"), typespace, error_reporter),
-          uint8_type_(types::PrimitiveSubtype::kUint8) {}
+        : TypeTemplate(Name(nullptr, "vector"), typespace, error_reporter),
+          uint8_type_(kUint8Type) {}
 
     bool Create(const SourceLocation* maybe_location,
                 const Type* maybe_arg_type,
@@ -557,11 +557,15 @@ public:
         if (size == nullptr)
             size = &max_size;
 
-        *out_type = std::make_unique<VectorType>(&uint8_type_, size, nullability);
+        *out_type = std::make_unique<VectorType>(name_, &uint8_type_, size, nullability);
         return true;
     }
 
 private:
+    // TODO(FIDL-389): Remove when canonicalizing types.
+    const Name kUint8TypeName = Name(nullptr, "uint8");
+    const PrimitiveType kUint8Type = PrimitiveType(kUint8TypeName, types::PrimitiveSubtype::kUint8);
+
     const PrimitiveType uint8_type_;
     Size max_size = Size::Max();
 };
@@ -586,7 +590,7 @@ public:
         if (nullability == types::Nullability::kNullable)
             return CannotBeNullable(maybe_location);
 
-        *out_type = std::make_unique<ArrayType>(arg_type, size);
+        *out_type = std::make_unique<ArrayType>(name_, arg_type, size);
         return true;
     }
 };
@@ -609,7 +613,7 @@ public:
         if (size == nullptr)
             size = &max_size;
 
-        *out_type = std::make_unique<VectorType>(arg_type, size, nullability);
+        *out_type = std::make_unique<VectorType>(name_, arg_type, size, nullability);
         return true;
     }
 
@@ -635,7 +639,7 @@ public:
         if (size == nullptr)
             size = &max_size;
 
-        *out_type = std::make_unique<StringType>(size, nullability);
+        *out_type = std::make_unique<StringType>(name_, size, nullability);
         return true;
     }
 
@@ -650,7 +654,7 @@ public:
 
     bool Create(const SourceLocation* maybe_location,
                 const Type* maybe_arg_type,
-                const std::optional<types::HandleSubtype>& handle_subtype,
+                const std::optional<types::HandleSubtype>& opt_handle_subtype,
                 const Size* maybe_size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
@@ -659,9 +663,9 @@ public:
         if (maybe_size != nullptr)
             return CannotHaveSize(maybe_location);
 
-        *out_type = std::make_unique<HandleType>(
-            handle_subtype.has_value() ? handle_subtype.value() : types::HandleSubtype::kHandle,
-            nullability);
+        auto handle_subtype = opt_handle_subtype.value_or(types::HandleSubtype::kHandle);
+
+        *out_type = std::make_unique<HandleType>(name_, handle_subtype, nullability);
         return true;
     }
 };
@@ -689,7 +693,7 @@ public:
         if (maybe_size != nullptr)
             return CannotHaveSize(maybe_location);
 
-        *out_type = std::make_unique<RequestHandleType>(protocol_type, nullability);
+        *out_type = std::make_unique<RequestHandleType>(name_, protocol_type, nullability);
         return true;
     }
 
@@ -747,11 +751,7 @@ public:
             break;
         }
 
-        *out_type = std::make_unique<IdentifierType>(
-            // TODO(FIDL-447): We have to create a copy because IdentifierType
-            // has an owned name. Fix this.
-            Name(name()->library(), std::string(name()->name_part())),
-            nullability, type_decl_, typeshape);
+        *out_type = std::make_unique<IdentifierType>(name_, nullability, type_decl_, typeshape);
         return true;
     }
 
@@ -852,9 +852,17 @@ Typespace Typespace::RootTypes(ErrorReporter* error_reporter) {
     add_primitive("float64", types::PrimitiveSubtype::kFloat64);
 
     // TODO(FIDL-483): Remove when there is generalized support.
-    add_primitive("byte", types::PrimitiveSubtype::kUint8);
-    add_template(std::make_unique<BytesTypeTemplate>(
-        &root_typespace, error_reporter));
+    const static auto kByteName = Name(nullptr, "byte");
+    const static auto kBytesName = Name(nullptr, "bytes");
+    root_typespace.templates_.emplace(
+        &kByteName,
+        std::make_unique<PrimitiveTypeTemplate>(
+            &root_typespace, error_reporter, "uint8",
+            types::PrimitiveSubtype::kUint8));
+    root_typespace.templates_.emplace(
+        &kBytesName,
+        std::make_unique<BytesTypeTemplate>(
+            &root_typespace, error_reporter));
 
     add_template(std::make_unique<ArrayTypeTemplate>(
         &root_typespace, error_reporter));

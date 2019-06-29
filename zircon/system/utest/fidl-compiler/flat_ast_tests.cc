@@ -15,6 +15,7 @@ namespace {
 
 using fidl::flat::HandleType;
 using fidl::types::HandleSubtype;
+using fidl::flat::Name;
 using fidl::types::Nullability;
 
 static bool implicit_assumptions() {
@@ -26,10 +27,15 @@ static bool implicit_assumptions() {
 }
 
 static bool compare_handles() {
-    HandleType nonnullable_channel(HandleSubtype::kChannel, Nullability::kNonnullable);
-    HandleType nullable_channel(HandleSubtype::kChannel, Nullability::kNullable);
-    HandleType nonnullable_event(HandleSubtype::kEvent, Nullability::kNonnullable);
-    HandleType nullable_event(HandleSubtype::kEvent, Nullability::kNullable);
+    Name name_not_important(nullptr, "ignore");
+    HandleType nonnullable_channel(
+        name_not_important, HandleSubtype::kChannel, Nullability::kNonnullable);
+    HandleType nullable_channel(
+        name_not_important, HandleSubtype::kChannel, Nullability::kNullable);
+    HandleType nonnullable_event(
+        name_not_important, HandleSubtype::kEvent, Nullability::kNonnullable);
+    HandleType nullable_event(
+        name_not_important, HandleSubtype::kEvent, Nullability::kNullable);
 
     // Comparison is nullability, then type.
     EXPECT_TRUE(nullable_channel < nonnullable_channel);

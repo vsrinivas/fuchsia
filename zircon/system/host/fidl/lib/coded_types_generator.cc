@@ -87,7 +87,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
         auto iter = primitive_type_map_.find(WithContext(context, primitive_type));
         if (iter != primitive_type_map_.end())
             return iter->second;
-        auto name = NamePrimitiveSubtype(primitive_type->subtype);
+        auto name = NameFlatName(primitive_type->name);
         auto coded_primitive_type = std::make_unique<coded::PrimitiveType>(
             std::move(name), primitive_type->subtype,
             flat::PrimitiveType::SubtypeSize(primitive_type->subtype), context);

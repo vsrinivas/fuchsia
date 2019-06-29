@@ -482,9 +482,10 @@ struct Type {
         kIdentifier,
     };
 
-    explicit Type(Kind kind, types::Nullability nullability, TypeShape shape)
-        : kind(kind), nullability(nullability), shape(shape) {}
+    explicit Type(const Name& name, Kind kind, types::Nullability nullability, TypeShape shape)
+        : name(name), kind(kind), nullability(nullability), shape(shape) {}
 
+    const Name& name;
     const Kind kind;
     const types::Nullability nullability;
     TypeShape shape;
@@ -532,11 +533,9 @@ struct Type {
 };
 
 struct ArrayType final : public Type {
-    ArrayType(const Type* element_type, const Size* element_count)
-        : Type(
-              Kind::kArray,
-              types::Nullability::kNonnullable,
-              Shape(element_type->shape, element_count->value)),
+    ArrayType(const Name& name, const Type* element_type, const Size* element_count)
+        : Type(name, Kind::kArray, types::Nullability::kNonnullable,
+               Shape(element_type->shape, element_count->value)),
           element_type(element_type), element_count(element_count) {}
 
     const Type* element_type;
@@ -553,8 +552,8 @@ struct ArrayType final : public Type {
 };
 
 struct VectorType final : public Type {
-    VectorType(const Type* element_type, const Size* element_count, types::Nullability nullability)
-        : Type(Kind::kVector, nullability, Shape(element_type->shape, element_count->value)),
+    VectorType(const Name& name, const Type* element_type, const Size* element_count, types::Nullability nullability)
+        : Type(name, Kind::kVector, nullability, Shape(element_type->shape, element_count->value)),
           element_type(element_type), element_count(element_count) {}
 
     const Type* element_type;
@@ -571,8 +570,9 @@ struct VectorType final : public Type {
 };
 
 struct StringType final : public Type {
-    StringType(const Size* max_size, types::Nullability nullability)
-        : Type(Kind::kString, nullability, Shape(max_size->value)), max_size(max_size) {}
+    StringType(const Name& name, const Size* max_size, types::Nullability nullability)
+        : Type(name, Kind::kString, nullability, Shape(max_size->value)),
+          max_size(max_size) {}
 
     const Size* max_size;
 
@@ -586,8 +586,8 @@ struct StringType final : public Type {
 };
 
 struct HandleType final : public Type {
-    HandleType(types::HandleSubtype subtype, types::Nullability nullability)
-        : Type(Kind::kHandle, nullability, Shape()),
+    HandleType(const Name& name, types::HandleSubtype subtype, types::Nullability nullability)
+        : Type(name, Kind::kHandle, nullability, Shape()),
           subtype(subtype) {}
 
     const types::HandleSubtype subtype;
@@ -603,11 +603,8 @@ struct HandleType final : public Type {
 
 struct PrimitiveType final : public Type {
 
-    explicit PrimitiveType(types::PrimitiveSubtype subtype)
-        : Type(
-              Kind::kPrimitive,
-              types::Nullability::kNonnullable,
-              Shape(subtype)),
+    explicit PrimitiveType(const Name& name, types::PrimitiveSubtype subtype)
+        : Type(name, Kind::kPrimitive, types::Nullability::kNonnullable, Shape(subtype)),
           subtype(subtype) {}
 
     types::PrimitiveSubtype subtype;
@@ -623,11 +620,10 @@ struct PrimitiveType final : public Type {
 };
 
 struct IdentifierType final : public Type {
-    IdentifierType(Name name, types::Nullability nullability, const TypeDecl* type_decl, TypeShape shape)
-        : Type(Kind::kIdentifier, nullability, shape),
-          name(std::move(name)), type_decl(type_decl) {}
+    IdentifierType(const Name& name, types::Nullability nullability, const TypeDecl* type_decl, TypeShape shape)
+        : Type(name, Kind::kIdentifier, nullability, shape),
+          type_decl(type_decl) {}
 
-    Name name;
     const TypeDecl* type_decl;
 
     Comparison Compare(const Type& other) const override {
@@ -638,8 +634,8 @@ struct IdentifierType final : public Type {
 };
 
 struct RequestHandleType final : public Type {
-    RequestHandleType(const IdentifierType* protocol_type, types::Nullability nullability)
-        : Type(Kind::kRequestHandle, nullability, HandleType::Shape()),
+    RequestHandleType(const Name& name, const IdentifierType* protocol_type, types::Nullability nullability)
+        : Type(std::move(name), Kind::kRequestHandle, nullability, HandleType::Shape()),
           protocol_type(protocol_type) {}
 
     const IdentifierType* protocol_type;
@@ -940,8 +936,9 @@ protected:
 
     Typespace* typespace_;
 
-private:
+protected:
     Name name_;
+private:
     ErrorReporter* error_reporter_;
 };
 
@@ -1266,7 +1263,9 @@ public:
     std::vector<Decl*> declaration_order_;
 
 private:
-    const PrimitiveType kSizeType = PrimitiveType(types::PrimitiveSubtype::kUint32);
+    // TODO(FIDL-389): Remove when canonicalizing types.
+    const Name kSizeTypeName = Name(nullptr, "uint32");
+    const PrimitiveType kSizeType = PrimitiveType(kSizeTypeName, types::PrimitiveSubtype::kUint32);
 
     std::unique_ptr<raw::AttributeList> attributes_;
 
