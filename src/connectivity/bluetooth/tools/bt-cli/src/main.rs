@@ -216,16 +216,44 @@ async fn run_listeners(mut stream: ControlEventStream, state: &Mutex<State>) -> 
             }
             ControlEvent::OnDeviceUpdated { device } => {
                 let device = RemoteDevice::from(device);
-                println!("{}", device.summary());
+                print_peer_state_updates(&state.lock(), &device);
                 state.lock().devices.insert(device.0.identifier.clone(), device);
             }
             ControlEvent::OnDeviceRemoved { identifier } => {
-                println!("Device {} removed", identifier);
                 state.lock().devices.remove(&identifier);
             }
         }
     }
     Ok(())
+}
+
+fn print_peer_state_updates(state: &State, device: &RemoteDevice) {
+    if let Some(msg) = peer_state_updates(state, device) {
+        println!("{} {} {}", device.0.identifier, device.0.address, msg)
+    }
+}
+
+fn peer_state_updates(state: &State, device: &RemoteDevice) -> Option<String> {
+    let previous = state.devices.get(&device.0.identifier);
+    let was_connected = previous.map_or(false, |d| d.0.connected);
+    let was_bonded = previous.map_or(false, |d| d.0.bonded);
+
+    let conn_str = match (was_connected, device.0.connected) {
+        (false, true) => Some("[connected]"),
+        (true, false) => Some("[disconnected]"),
+        _ => None,
+    };
+    let bond_str = match (was_bonded, device.0.bonded) {
+        (false, true) => Some("[bonded]"),
+        (true, false) => Some("[unbonded]"),
+        _ => None,
+    };
+    match (conn_str, bond_str) {
+        (Some(a), Some(b)) => Some(format!("{} {}", a, b)),
+        (Some(a), None) => Some(a.to_string()),
+        (None, Some(b)) => Some(b.to_string()),
+        (None, None) => None,
+    }
 }
 
 /// Tracks all state local to the command line tool.
@@ -377,4 +405,77 @@ fn main() -> Result<(), Error> {
     };
     exec.run_singlethreaded(fut);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fidl_fuchsia_bluetooth_control as control;
+
+    fn device(connected: bool, bonded: bool) -> RemoteDevice {
+        RemoteDevice(control::RemoteDevice {
+            identifier: "device".to_string(),
+            address: "00:00:00:00:00:01".to_string(),
+            technology: control::TechnologyType::LowEnergy,
+            name: None,
+            appearance: control::Appearance::Phone,
+            rssi: None,
+            tx_power: None,
+            connected,
+            bonded,
+            service_uuids: vec![],
+        })
+    }
+
+    fn state_with(d: RemoteDevice) -> State {
+        let mut devices = HashMap::new();
+        devices.insert(d.0.identifier.clone(), d);
+        State { devices }
+    }
+
+    #[test]
+    fn test_peer_updates() {
+        // Expected Value Table
+        // each row lists:
+        //   (current device conn/bond state, new device conn/bond state, expected string)
+        let test_cases = vec![
+            // missing
+            (None, (true, false), Some("[connected]")),
+            (None, (true, true), Some("[connected] [bonded]")),
+            (None, (false, true), Some("[bonded]")),
+            (None, (false, false), None),
+            // disconnected, unbonded
+            (Some((false, false)), (true, false), Some("[connected]")),
+            (Some((false, false)), (true, true), Some("[connected] [bonded]")),
+            (Some((false, false)), (false, true), Some("[bonded]")),
+            (Some((false, false)), (false, false), None),
+            // connected, unbonded
+            (Some((true, false)), (true, false), None),
+            (Some((true, false)), (true, true), Some("[bonded]")),
+            (Some((true, false)), (false, true), Some("[disconnected] [bonded]")),
+            (Some((true, false)), (false, false), Some("[disconnected]")),
+            // disconnected, bonded
+            (Some((false, true)), (true, false), Some("[connected] [unbonded]")),
+            (Some((false, true)), (true, true), Some("[connected]")),
+            (Some((false, true)), (false, true), None),
+            (Some((false, true)), (false, false), Some("[unbonded]")),
+            // connected, bonded
+            (Some((true, true)), (true, false), Some("[unbonded]")),
+            (Some((true, true)), (true, true), None),
+            (Some((true, true)), (false, true), Some("[disconnected]")),
+            (Some((true, true)), (false, false), Some("[disconnected] [unbonded]")),
+        ];
+
+        for case in test_cases {
+            let (prev, (connected, bonded), expected) = case;
+            let state = match prev {
+                Some((c, b)) => state_with(device(c, b)),
+                None => State { devices: HashMap::new() },
+            };
+            assert_eq!(
+                peer_state_updates(&state, &device(connected, bonded)),
+                expected.map(|s| s.to_string())
+            );
+        }
+    }
 }
