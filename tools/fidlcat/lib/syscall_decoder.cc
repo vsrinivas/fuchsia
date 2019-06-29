@@ -328,6 +328,8 @@ void SyscallDecoder::DecodeAndDisplay() {
 void SyscallDecoder::Destroy() { dispatcher_->DeleteDecoder(this); }
 
 void SyscallDisplay::SyscallDecoded(SyscallDecoder* syscall) {
+  os_ << '\n';
+
   const Colors& colors = dispatcher_->colors();
   // Displays the header and the inline input arguments.
   os_ << syscall->thread()->GetProcess()->GetName() << ' ' << colors.red
@@ -368,7 +370,6 @@ void SyscallDisplay::SyscallDecoded(SyscallDecoder* syscall) {
       output->DisplayOutline(dispatcher_, syscall, /*tabs=*/2, /*read=*/true, os_);
     }
   }
-  os_ << '\n';
   // Now our job is done, we can destroy the object.
   syscall->Destroy();
 }

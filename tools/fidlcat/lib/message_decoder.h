@@ -7,9 +7,11 @@
 
 #include <src/lib/fxl/logging.h>
 
+#include <cstdint>
 #include <memory>
 #include <ostream>
 #include <string_view>
+#include <unordered_set>
 #include <vector>
 
 #include "lib/fidl/cpp/message.h"
@@ -62,6 +64,12 @@ class MessageDecoderDispatcher {
     return handle_directions_;
   }
 
+  void AddLaunchedProcess(uint64_t process_koid) { launched_processes_.insert(process_koid); }
+
+  bool IsLaunchedProcess(uint64_t process_koid) {
+    return launched_processes_.find(process_koid) != launched_processes_.end();
+  }
+
   bool DecodeMessage(uint64_t process_koid, zx_handle_t handle, const uint8_t* bytes,
                      uint32_t num_bytes, const zx_handle_t* handles, uint32_t num_handles,
                      bool read, std::ostream& os, int tabs = 0);
@@ -70,6 +78,7 @@ class MessageDecoderDispatcher {
   LibraryLoader* const loader_;
   const DisplayOptions& display_options_;
   const Colors& colors_;
+  std::unordered_set<uint64_t> launched_processes_;
   std::map<std::tuple<zx_handle_t, uint64_t>, Direction> handle_directions_;
 };
 

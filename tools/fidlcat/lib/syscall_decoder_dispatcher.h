@@ -408,6 +408,9 @@ class SyscallDecoderDispatcher {
   void DecodeSyscall(InterceptingThreadObserver* thread_observer, zxdb::Thread* thread,
                      Syscall* syscall);
 
+  // Called when we are watching a process we launched.
+  virtual void AddLaunchedProcess(uint64_t process_koid) {}
+
   // Create the object which will decode the syscall.
   virtual std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
                                                         zxdb::Thread* thread, uint64_t thread_id,
@@ -444,6 +447,10 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
 
   MessageDecoderDispatcher& message_decoder_dispatcher() { return message_decoder_dispatcher_; }
   const Colors& colors() const { return message_decoder_dispatcher_.colors(); }
+
+  void AddLaunchedProcess(uint64_t process_koid) override {
+    message_decoder_dispatcher_.AddLaunchedProcess(process_koid);
+  }
 
   std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
                                                 zxdb::Thread* thread, uint64_t thread_id,

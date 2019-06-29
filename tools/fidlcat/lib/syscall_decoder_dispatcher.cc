@@ -10,6 +10,8 @@
 #include <cstdint>
 #include <memory>
 
+#include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/thread.h"
 #include "tools/fidlcat/lib/syscall_decoder.h"
 
 namespace fidlcat {
@@ -22,11 +24,12 @@ void SyscallFidlMessage::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
   uint32_t num_bytes = num_bytes_->Value(decoder);
   const zx_handle_t* handles = handles_->Content(decoder);
   uint32_t num_handles = num_handles_->Value(decoder);
-  if (!dispatcher->message_decoder_dispatcher().DecodeMessage(ULLONG_MAX, handle, bytes, num_bytes,
-                                                              handles, num_handles,
-                                                              /*read=*/read, os, tabs)) {
-    os << "  " << dispatcher->colors().red << "Can't decode message" << dispatcher->colors().reset
-       << " num_bytes=" << num_bytes << " num_handles=" << num_handles;
+  if (!dispatcher->message_decoder_dispatcher().DecodeMessage(
+          decoder->thread()->GetProcess()->GetKoid(), handle, bytes, num_bytes, handles,
+          num_handles, /*read=*/read, os, tabs)) {
+    os << std::string(tabs * kTabSize, ' ') << dispatcher->colors().red << "Can't decode message"
+       << dispatcher->colors().reset << " num_bytes=" << num_bytes
+       << " num_handles=" << num_handles;
     if ((bytes != nullptr) && (num_bytes >= sizeof(fidl_message_header_t))) {
       const fidl_message_header_t* header = reinterpret_cast<const fidl_message_header_t*>(bytes);
       os << " ordinal=" << header->ordinal;

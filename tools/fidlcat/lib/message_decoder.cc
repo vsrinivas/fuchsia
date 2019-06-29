@@ -66,11 +66,9 @@ bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t 
     // If we attached to a running process, we can only determine correctly if
     // we are watching a client or a server if we have only one matched_request
     // or one matched_response.
-    if ((process_koid == ULLONG_MAX) || (matched_request != matched_response)) {
-      // We lanched the process or exactly one of request and response are
+    if (IsLaunchedProcess(process_koid) || (matched_request != matched_response)) {
+      // We launched the process or exactly one of request and response are
       // valid => we can determine the direction.
-      // Currently, a process_koid of ULLONG_MAX means that we launched the
-      // process.
       if (read) {
         handle_directions_[std::make_tuple(handle, process_koid)] =
             (method->request() != nullptr) ? Direction::kServer : Direction::kClient;
@@ -113,7 +111,8 @@ bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t 
   }
 
   if (direction == Direction::kUnknown) {
-    os << colors_.red << "Can't determine request/response." << colors_.reset << " it can be:\n";
+    os << std::string(tabs * kTabSize, ' ') << colors_.red << "Can't determine request/response."
+       << colors_.reset << " it can be:\n";
     ++tabs;
   }
 

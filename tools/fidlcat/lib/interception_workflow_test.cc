@@ -636,22 +636,22 @@ WRITE_TEST(ZxChannelWriteCheck, ZX_OK);
   TEST_F(InterceptionWorkflowTestArm, name) { WRITE_DISPLAY_TEST_CONTENT(errno, expected); }
 
 WRITE_DISPLAY_TEST(ZxChannelWrite, ZX_OK,
+                   "\n"
                    "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_write("
                    "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
                    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
                    "  \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=2 "
                    "ordinal=8639255294892834816\n"
-                   "  -> \x1B[32mZX_OK\x1B[0m\n"
-                   "\n");
+                   "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 WRITE_DISPLAY_TEST(ZxChannelWritePeerClosed, ZX_ERR_PEER_CLOSED,
+                   "\n"
                    "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_write("
                    "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
                    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
                    "  \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=2 "
                    "ordinal=8639255294892834816\n"
-                   "  -> \x1B[31mZX_ERR_PEER_CLOSED\x1B[0m\n"
-                   "\n");
+                   "  -> \x1B[31mZX_ERR_PEER_CLOSED\x1B[0m\n");
 
 #define READ_DISPLAY_TEST_CONTENT(errno, check_bytes, check_handles, expected)                   \
   if (check_bytes)                                                                               \
@@ -675,26 +675,27 @@ WRITE_DISPLAY_TEST(ZxChannelWritePeerClosed, ZX_ERR_PEER_CLOSED,
   }
 
 READ_DISPLAY_TEST(ZxChannelRead, ZX_OK, true, true,
+                  "\n"
                   "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
                   "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                   "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
                   "num_handles:\x1B[32muint32\x1B[0m: \x1B[34m64\x1B[0m)\n"
                   "  -> \x1B[32mZX_OK\x1B[0m\n"
-                  "  \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=2 "
-                  "ordinal=8639255294892834816\n"
-                  "\n");
+                  "    \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=2 "
+                  "ordinal=8639255294892834816\n");
 
 READ_DISPLAY_TEST(ZxChannelReadShouldWait, ZX_ERR_SHOULD_WAIT, true, true,
+                  "\n"
                   "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
                   "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                   "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
                   "num_handles:\x1B[32muint32\x1B[0m: \x1B[34m64\x1B[0m)\n"
-                  "  -> \x1B[31mZX_ERR_SHOULD_WAIT\x1B[0m\n"
-                  "\n");
+                  "  -> \x1B[31mZX_ERR_SHOULD_WAIT\x1B[0m\n");
 
 READ_DISPLAY_TEST(ZxChannelReadTooSmall, ZX_ERR_BUFFER_TOO_SMALL, true, true,
+                  "\n"
                   "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
                   "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
@@ -702,28 +703,27 @@ READ_DISPLAY_TEST(ZxChannelReadTooSmall, ZX_ERR_BUFFER_TOO_SMALL, true, true,
                   "num_handles:\x1B[32muint32\x1B[0m: \x1B[34m64\x1B[0m)\n"
                   "  -> \x1B[31mZX_ERR_BUFFER_TOO_SMALL\x1B[0m ("
                   "actual_bytes:\x1B[32muint32\x1B[0m: \x1B[34m16\x1B[0m, "
-                  "actual_handles:\x1B[32muint32\x1B[0m: \x1B[34m2\x1B[0m)\n"
-                  "\n");
+                  "actual_handles:\x1B[32muint32\x1B[0m: \x1B[34m2\x1B[0m)\n");
 
 READ_DISPLAY_TEST(ZxChannelReadNoBytes, ZX_OK, false, true,
+                  "\n"
                   "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
                   "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                   "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
                   "num_handles:\x1B[32muint32\x1B[0m: \x1B[34m64\x1B[0m)\n"
                   "  -> \x1B[32mZX_OK\x1B[0m\n"
-                  "  \x1B[31mCan't decode message\x1B[0m num_bytes=0 num_handles=2\n"
-                  "\n");
+                  "    \x1B[31mCan't decode message\x1B[0m num_bytes=0 num_handles=2\n");
 
 READ_DISPLAY_TEST(ZxChannelReadNoHandles, ZX_OK, true, false,
+                  "\n"
                   "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
                   "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                   "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
                   "num_handles:\x1B[32muint32\x1B[0m: \x1B[34m64\x1B[0m)\n"
                   "  -> \x1B[32mZX_OK\x1B[0m\n"
-                  "  \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=0 "
-                  "ordinal=8639255294892834816\n"
-                  "\n");
+                  "    \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=0 "
+                  "ordinal=8639255294892834816\n");
 
 }  // namespace fidlcat

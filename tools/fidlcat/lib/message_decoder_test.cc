@@ -40,7 +40,7 @@ class MessageDecoderTest : public ::testing::Test {
   LibraryLoader* loader_;
   std::unique_ptr<MessageDecoderDispatcher> decoder_;
   DisplayOptions display_options_;
-  uint64_t process_koid_ = ULLONG_MAX;
+  uint64_t process_koid_ = 0x1234;
   bool read_ = true;
   std::stringstream result_;
 };
@@ -59,6 +59,7 @@ class MessageDecoderTest : public ::testing::Test {
   } while (0)
 
 TEST_F(MessageDecoderTest, TestStringLaunched) {
+  decoder_->AddLaunchedProcess(process_koid_);
   TEST_DECODE_MESSAGE(FidlcatTestInterface, String,
                       "request test.fidlcat.examples/FidlcatTestInterface.String = {\n"
                       "  s: string = \"Hello World\"\n"
@@ -67,7 +68,6 @@ TEST_F(MessageDecoderTest, TestStringLaunched) {
 }
 
 TEST_F(MessageDecoderTest, TestStringAttached) {
-  process_koid_ = 0x1234;
   TEST_DECODE_MESSAGE(FidlcatTestInterface, String,
                       "request test.fidlcat.examples/FidlcatTestInterface.String = {\n"
                       "  s: string = \"Hello World\"\n"
@@ -76,6 +76,7 @@ TEST_F(MessageDecoderTest, TestStringAttached) {
 }
 
 TEST_F(MessageDecoderTest, TestEchoLaunched) {
+  decoder_->AddLaunchedProcess(process_koid_);
   TEST_DECODE_MESSAGE(Echo, EchoString,
                       "request test.fidlcat.examples/Echo.EchoString = {\n"
                       "  value: string = \"Hello World\"\n"
@@ -84,7 +85,6 @@ TEST_F(MessageDecoderTest, TestEchoLaunched) {
 }
 
 TEST_F(MessageDecoderTest, TestEchoAttached) {
-  process_koid_ = 0x1234;
   TEST_DECODE_MESSAGE(Echo, EchoString,
                       "Can't determine request/response. it can be:\n"
                       "  request test.fidlcat.examples/Echo.EchoString = {\n"

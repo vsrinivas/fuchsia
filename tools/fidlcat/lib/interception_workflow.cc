@@ -88,6 +88,7 @@ void InterceptingThreadObserver::CreateNewBreakpoint(zxdb::BreakpointSettings& s
 void InterceptingTargetObserver::DidCreateProcess(zxdb::Target* target, zxdb::Process* process,
                                                   bool autoattached_to_new_process) {
   process->AddObserver(&dispatcher_);
+  workflow_->syscall_decoder_dispatcher()->AddLaunchedProcess(process->GetKoid());
   workflow_->SetBreakpoints(target);
 }
 
