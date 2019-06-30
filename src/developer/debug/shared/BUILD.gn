@@ -31,6 +31,7 @@ static_library("shared") {
     "//src/developer/debug/shared/logging",
     "//src/lib/containers/cpp",
     "//src/lib/fxl",
+    "//zircon/public/lib/fit",
   ]
 
   if (current_toolchain == host_toolchain) {
