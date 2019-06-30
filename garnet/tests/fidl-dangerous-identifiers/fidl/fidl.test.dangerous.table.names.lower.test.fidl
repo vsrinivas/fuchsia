@@ -188,7 +188,6 @@ table typeid { 1: membertype member; };
 table typename { 1: membertype member; };
 table typeof { 1: membertype member; };
 table uint16 { 1: membertype member; };
-table uint32 { 1: membertype member; };
 table uint64 { 1: membertype member; };
 table uint8 { 1: membertype member; };
 table union { 1: membertype member; };

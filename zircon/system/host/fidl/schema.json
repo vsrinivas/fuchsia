@@ -13,6 +13,7 @@
         "table_declarations",
         "union_declarations",
         "xunion_declarations",
+        "type_alias_declarations",
         "declaration_order",
         "declarations",
         "library_dependencies"
@@ -80,6 +81,13 @@
             "type": "array",
             "items": {
                 "$ref": "#/definitions/xunion"
+            }
+        },
+        "type_alias_declarations": {
+            "description": "List of type aliases",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/type_alias"
             }
         },
         "declaration_order": {
@@ -787,6 +795,63 @@
                 }
             }
         },
+        "type_alias": {
+            "description": "Definition of a type alias",
+            "type": "object",
+            "required": [
+                "name",
+                "location",
+                "partial_type_ctor"
+            ],
+            "properties": {
+                "name": {
+                    "description": "Name of a type alias, i.e. the alias",
+                    "$ref": "#/definitions/compound-identifier"
+                },
+                "location": {
+                    "description": "Source location of the declaration",
+                    "$ref": "#/definitions/location"
+                },
+                "partial_type_ctor": {
+                    "description": "Type constructor being aliased, possibly partial",
+                    "$ref": "#/definitions/type-constructor"
+                }
+            }
+        },
+        "type-constructor": {
+            "description": "Definition of a type constructor",
+            "type": "object",
+            "required": [
+                "name",
+                "args",
+                "nullable"
+            ],
+            "properties": {
+                "name": {
+                    "description": "Name of the type constructor",
+                    "type": "string"
+                },
+                "args": {
+                    "description": "List of arguments",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/type-constructor"
+                    }
+                },
+                "nullable": {
+                    "description": "Flag indicating nullability",
+                    "type": "boolean"
+                },
+                "maybe_size": {
+                    "description": "Optional number of maximum elements",
+                    "$ref": "#/definitions/constant"
+                },
+                "maybe_handle_subtype": {
+                    "description": "Optional handle subtype",
+                    "$ref": "#/definitions/handle-subtype"
+                }
+            }
+        },
         "declarations-map": {
             "description": "Definition of declarations of a library",
             "type": "object",
@@ -801,7 +866,8 @@
                         "struct",
                         "table",
                         "union",
-                        "xunion"
+                        "xunion",
+                        "type_alias"
                     ]
                 }
             }

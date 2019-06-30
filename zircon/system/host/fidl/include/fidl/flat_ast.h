@@ -444,6 +444,7 @@ struct Decl {
         kTable,
         kUnion,
         kXUnion,
+        kTypeAlias,
     };
 
     Decl(Kind kind, std::unique_ptr<raw::AttributeList> attributes, Name name)
@@ -898,6 +899,15 @@ struct Protocol final : public TypeDecl {
     std::vector<const Method*> all_methods;
 };
 
+struct TypeAlias final : public Decl {
+    TypeAlias(std::unique_ptr<raw::AttributeList> attributes, Name name,
+              std::unique_ptr<TypeConstructor> partial_type_ctor)
+        : Decl(Kind::kTypeAlias, std::move(attributes), std::move(name)),
+          partial_type_ctor(std::move(partial_type_ctor)) {}
+
+    const std::unique_ptr<TypeConstructor> partial_type_ctor;
+};
+
 class TypeTemplate {
 public:
     TypeTemplate(Name name, Typespace* typespace, ErrorReporter* error_reporter)
@@ -1134,8 +1144,6 @@ public:
     const std::vector<std::string>& errors() const { return error_reporter_->errors(); }
 
 private:
-    friend class TypeAliasTypeTemplate;
-
     bool Fail(std::string_view message);
     bool Fail(const SourceLocation& location, std::string_view message) {
         return Fail(&location, message);
@@ -1209,6 +1217,7 @@ private:
     bool CompileTable(Table* table_declaration);
     bool CompileUnion(Union* union_declaration);
     bool CompileXUnion(XUnion* xunion_declaration);
+    bool CompileTypeAlias(TypeAlias* type_alias);
 
     // Compiling a type both validates the type, and computes shape
     // information for the type. In particular, we validate that
@@ -1257,6 +1266,7 @@ public:
     std::vector<std::unique_ptr<Table>> table_declarations_;
     std::vector<std::unique_ptr<Union>> union_declarations_;
     std::vector<std::unique_ptr<XUnion>> xunion_declarations_;
+    std::vector<std::unique_ptr<TypeAlias>> type_alias_declarations_;
 
     // All Decl pointers here are non-null and are owned by the
     // various foo_declarations_.

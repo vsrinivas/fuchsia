@@ -188,7 +188,6 @@ struct typeid { membertype member = 1; };
 struct typename { membertype member = 1; };
 struct typeof { membertype member = 1; };
 struct uint16 { membertype member = 1; };
-struct uint32 { membertype member = 1; };
 struct uint64 { membertype member = 1; };
 struct uint8 { membertype member = 1; };
 struct union { membertype member = 1; };

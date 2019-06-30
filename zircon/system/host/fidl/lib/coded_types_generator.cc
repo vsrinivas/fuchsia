@@ -348,9 +348,6 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
                                        bits_decl->mask));
         break;
     }
-    case flat::Decl::Kind::kConst:
-        // Nothing to do for const declarations.
-        break;
     case flat::Decl::Kind::kEnum: {
         auto enum_decl = static_cast<const flat::Enum*>(decl);
         std::string enum_name = NameCodedName(enum_decl->name);
@@ -455,6 +452,10 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
                              xunion_decl->strictness));
         break;
     }
+    case flat::Decl::Kind::kConst:
+    case flat::Decl::Kind::kTypeAlias:
+        // Nothing to do.
+        break;
     }
 }
 

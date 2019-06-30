@@ -188,7 +188,6 @@ union typeid { membertype member; };
 union typename { membertype member; };
 union typeof { membertype member; };
 union uint16 { membertype member; };
-union uint32 { membertype member; };
 union uint64 { membertype member; };
 union uint8 { membertype member; };
 union union { membertype member; };

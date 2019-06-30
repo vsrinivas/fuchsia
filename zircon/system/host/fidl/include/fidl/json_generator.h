@@ -96,7 +96,6 @@ public:
     void Generate(types::Nullability value);
 
     void Generate(const raw::Identifier& value);
-    void Generate(const raw::TypeConstructor& value);
     void Generate(const raw::Attribute& value);
     void Generate(const raw::AttributeList& value);
     void Generate(const raw::Ordinal32& value);
@@ -122,6 +121,8 @@ public:
     void Generate(const flat::Union::Member& value);
     void Generate(const flat::XUnion& value);
     void Generate(const flat::XUnion::Member& value);
+    void Generate(const flat::TypeConstructor& value);
+    void Generate(const flat::TypeAlias& value);
     void Generate(const flat::Library* library);
 
 private:

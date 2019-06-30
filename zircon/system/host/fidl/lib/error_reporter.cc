@@ -69,10 +69,14 @@ std::string Format(std::string qualifier, const SourceLocation* maybe_location,
 }
 
 void ErrorReporter::AddError(std::string formatted_message) {
+    if (mode_ == ReportingMode::kDoNotReport)
+        return;
     errors_.push_back(std::move(formatted_message));
 }
 
 void ErrorReporter::AddWarning(std::string formatted_message) {
+    if (mode_ == ReportingMode::kDoNotReport)
+        return;
     if (warnings_as_errors_) {
         AddError(formatted_message);
     } else {

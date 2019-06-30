@@ -123,6 +123,7 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
     case flat::Type::Kind::kIdentifier:
         switch (member.decl_kind) {
         case flat::Decl::Kind::kConst:
+        case flat::Decl::Kind::kTypeAlias:
             assert(false && "bad decl kind for member");
             break;
         case flat::Decl::Kind::kBits:
@@ -174,6 +175,7 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
     case flat::Type::Kind::kIdentifier:
         switch (member.decl_kind) {
         case flat::Decl::Kind::kConst:
+        case flat::Decl::Kind::kTypeAlias:
             assert(false && "bad decl kind for member");
             break;
         case flat::Decl::Kind::kBits:
@@ -375,6 +377,7 @@ void EmitLinearizeMessage(std::ostream* file,
         case flat::Type::Kind::kIdentifier:
             switch (member.decl_kind) {
             case flat::Decl::Kind::kConst:
+            case flat::Decl::Kind::kTypeAlias:
                 assert(false && "bad decl kind for member");
                 break;
             case flat::Decl::Kind::kBits:
@@ -710,9 +713,7 @@ void CGenerator::GeneratePrimitiveDefine(std::string_view name, types::Primitive
               << "(" << value << ")\n";
         break;
     }
-    default:
-        abort();
-    }
+    } // switch
 }
 
 void CGenerator::GenerateStringDefine(std::string_view name, std::string_view value) {
@@ -1274,6 +1275,7 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
                 case flat::Type::Kind::kIdentifier:
                     switch (member.decl_kind) {
                     case flat::Decl::Kind::kConst:
+                    case flat::Decl::Kind::kTypeAlias:
                         assert(false && "bad decl kind for member");
                         break;
                     case flat::Decl::Kind::kBits:
@@ -1396,6 +1398,7 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
             case flat::Type::Kind::kIdentifier:
                 switch (member.decl_kind) {
                 case flat::Decl::Kind::kConst:
+                case flat::Decl::Kind::kTypeAlias:
                     assert(false && "bad decl kind for member");
                     break;
                 case flat::Decl::Kind::kBits:
@@ -1561,6 +1564,9 @@ std::ostringstream CGenerator::ProduceHeader() {
             }
             break;
         }
+        case flat::Decl::Kind::kTypeAlias:
+            // TODO(FIDL-483): Do more than nothing.
+            break;
         case flat::Decl::Kind::kUnion: {
             auto iter = named_unions.find(decl);
             if (iter != named_unions.end()) {
@@ -1575,9 +1581,7 @@ std::ostringstream CGenerator::ProduceHeader() {
             }
             break;
         }
-        default:
-            abort();
-        }
+        } // switch
     }
 
     file_ << "\n// Extern declarations\n\n";
@@ -1589,6 +1593,7 @@ std::ostringstream CGenerator::ProduceHeader() {
         case flat::Decl::Kind::kEnum:
         case flat::Decl::Kind::kStruct:
         case flat::Decl::Kind::kTable:
+        case flat::Decl::Kind::kTypeAlias:
         case flat::Decl::Kind::kUnion:
         case flat::Decl::Kind::kXUnion:
             // Only messages have extern fidl_type_t declarations.
@@ -1600,9 +1605,7 @@ std::ostringstream CGenerator::ProduceHeader() {
             }
             break;
         }
-        default:
-            abort();
-        }
+        } // switch
     }
 
     file_ << "\n// Declarations\n\n";
@@ -1642,6 +1645,9 @@ std::ostringstream CGenerator::ProduceHeader() {
             // Tables are entirely forward declared, and their body is defined only in
             // implementation files.
             break;
+        case flat::Decl::Kind::kTypeAlias:
+            // TODO(FIDL-483): Do more than nothing.
+            break;
         case flat::Decl::Kind::kUnion: {
             auto iter = named_unions.find(decl);
             if (iter != named_unions.end()) {
@@ -1656,9 +1662,7 @@ std::ostringstream CGenerator::ProduceHeader() {
             }
             break;
         }
-        default:
-            abort();
-        }
+        } // switch
     }
 
     file_ << "\n// Simple bindings \n\n";
@@ -1670,6 +1674,7 @@ std::ostringstream CGenerator::ProduceHeader() {
         case flat::Decl::Kind::kEnum:
         case flat::Decl::Kind::kStruct:
         case flat::Decl::Kind::kTable:
+        case flat::Decl::Kind::kTypeAlias:
         case flat::Decl::Kind::kUnion:
         case flat::Decl::Kind::kXUnion:
             // Only protocols have client declarations.
@@ -1684,9 +1689,7 @@ std::ostringstream CGenerator::ProduceHeader() {
             }
             break;
         }
-        default:
-            abort();
-        }
+        } // switch
     }
 
     GenerateEpilogues();
@@ -1713,6 +1716,7 @@ std::ostringstream CGenerator::ProduceClient() {
         case flat::Decl::Kind::kEnum:
         case flat::Decl::Kind::kStruct:
         case flat::Decl::Kind::kTable:
+        case flat::Decl::Kind::kTypeAlias:
         case flat::Decl::Kind::kUnion:
         case flat::Decl::Kind::kXUnion:
             // Only protocols have client implementations.
@@ -1726,9 +1730,7 @@ std::ostringstream CGenerator::ProduceClient() {
             }
             break;
         }
-        default:
-            abort();
-        }
+        } // switch
     }
 
     return std::move(file_);
@@ -1752,6 +1754,7 @@ std::ostringstream CGenerator::ProduceServer() {
         case flat::Decl::Kind::kEnum:
         case flat::Decl::Kind::kStruct:
         case flat::Decl::Kind::kTable:
+        case flat::Decl::Kind::kTypeAlias:
         case flat::Decl::Kind::kUnion:
         case flat::Decl::Kind::kXUnion:
             // Only protocols have client implementations.
@@ -1765,9 +1768,7 @@ std::ostringstream CGenerator::ProduceServer() {
             }
             break;
         }
-        default:
-            abort();
-        }
+        } // switch
     }
 
     return std::move(file_);

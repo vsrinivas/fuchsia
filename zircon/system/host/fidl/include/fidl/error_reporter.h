@@ -19,6 +19,32 @@ public:
     ErrorReporter(bool warnings_as_errors = false)
         : warnings_as_errors_(warnings_as_errors) {}
 
+    // Enables temporarily muting reporting.
+    enum class ReportingMode {
+        kReport,
+        kDoNotReport,
+    };
+
+    // Controls a scoped override of the reporting mode of the error reporter.
+    // Resets the mode to its previous value on destruction.
+    class ScopedReportingMode {
+    public:
+        ~ScopedReportingMode() {
+            source_ = prev_value_;
+        }
+
+    private:
+        friend class ErrorReporter;
+
+        ScopedReportingMode(ReportingMode& source, ReportingMode value)
+            : prev_value_(source), source_(source) {
+            source_ = value;
+        }
+
+        ReportingMode prev_value_;
+        ReportingMode& source_;
+    };
+
     class Counts {
     public:
         Counts(const ErrorReporter* reporter)
@@ -50,6 +76,9 @@ public:
     void ReportWarning(const SourceLocation* maybe_location, std::string_view message);
     void PrintReports();
     Counts Checkpoint() const { return Counts(this); }
+    ScopedReportingMode OverrideMode(ReportingMode mode_override) {
+        return ScopedReportingMode(mode_, mode_override);
+    }
     const std::vector<std::string>& errors() const { return errors_; }
     const std::vector<std::string>& warnings() const { return warnings_; }
     void set_warnings_as_errors(bool value) { warnings_as_errors_ = value; }
@@ -58,6 +87,7 @@ private:
     void AddError(std::string formatted_message);
     void AddWarning(std::string formatted_message);
 
+    ReportingMode mode_;
     bool warnings_as_errors_;
     std::vector<std::string> errors_;
     std::vector<std::string> warnings_;

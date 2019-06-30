@@ -763,10 +763,8 @@ private:
 class TypeAliasTypeTemplate : public TypeTemplate {
 public:
     TypeAliasTypeTemplate(Name name, Typespace* typespace, ErrorReporter* error_reporter,
-                          Library* library,
-                          std::unique_ptr<TypeConstructor> partial_type_ctor)
-        : TypeTemplate(std::move(name), typespace, error_reporter),
-          library_(library), partial_type_ctor_(std::move(partial_type_ctor)) {}
+                          Library* library, TypeAlias* decl)
+        : TypeTemplate(std::move(name), typespace, error_reporter), decl_(decl) {}
 
     bool Create(const SourceLocation* maybe_location,
                 const Type* maybe_arg_type,
@@ -777,35 +775,27 @@ public:
         assert(!no_handle_subtype);
 
         const Type* arg_type = nullptr;
-        if (partial_type_ctor_->maybe_arg_type_ctor) {
+        if (decl_->partial_type_ctor->maybe_arg_type_ctor) {
             if (maybe_arg_type) {
                 return Fail(maybe_location, "cannot parametrize twice");
             }
-            if (!partial_type_ctor_->maybe_arg_type_ctor->type) {
-                if (!library_->CompileTypeConstructor(
-                        partial_type_ctor_->maybe_arg_type_ctor.get(),
-                        nullptr /* out_typeshape */))
-                    return false;
-            }
-            arg_type = partial_type_ctor_->maybe_arg_type_ctor->type;
+            arg_type = decl_->partial_type_ctor->maybe_arg_type_ctor->type;
         } else {
             arg_type = maybe_arg_type;
         }
 
         const Size* size = nullptr;
-        if (partial_type_ctor_->maybe_size) {
+        if (decl_->partial_type_ctor->maybe_size) {
             if (maybe_size) {
                 return Fail(maybe_location, "cannot bound twice");
             }
-            if (!library_->ResolveConstant(partial_type_ctor_->maybe_size.get(), &library_->kSizeType))
-                return Fail(maybe_location, "unable to parse size bound");
-            size = static_cast<const Size*>(&partial_type_ctor_->maybe_size->Value());
+            size = static_cast<const Size*>(&decl_->partial_type_ctor->maybe_size->Value());
         } else {
             size = maybe_size;
         }
 
         types::Nullability nullability;
-        if (partial_type_ctor_->nullability == types::Nullability::kNullable) {
+        if (decl_->partial_type_ctor->nullability == types::Nullability::kNullable) {
             if (maybe_nullability == types::Nullability::kNullable) {
                 return Fail(maybe_location, "cannot indicate nullability twice");
             }
@@ -814,14 +804,15 @@ public:
             nullability = maybe_nullability;
         }
 
-        return typespace_->CreateNotOwned(partial_type_ctor_->name, arg_type,
+        // TODO(FIDL-483): Track type instantiation back to the type alias in
+        // order to present this to backends.
+        return typespace_->CreateNotOwned(decl_->partial_type_ctor->name, arg_type,
                                           std::optional<types::HandleSubtype>(),
                                           size, nullability, out_type);
     }
 
 private:
-    Library* library_;
-    std::unique_ptr<TypeConstructor> partial_type_ctor_;
+    TypeAlias* decl_;
 };
 
 Typespace Typespace::RootTypes(ErrorReporter* error_reporter) {
@@ -1521,6 +1512,9 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
     case Decl::Kind::kTable:
         StoreDecl(decl_ptr, &table_declarations_);
         break;
+    case Decl::Kind::kTypeAlias:
+        StoreDecl(decl_ptr, &type_alias_declarations_);
+        break;
     case Decl::Kind::kUnion:
         StoreDecl(decl_ptr, &union_declarations_);
         break;
@@ -1556,6 +1550,14 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
         auto const_decl = static_cast<Const*>(decl_ptr);
         const auto name = &const_decl->name;
         constants_.emplace(name, const_decl);
+        break;
+    }
+    case Decl::Kind::kTypeAlias: {
+        auto type_alias_decl = static_cast<TypeAlias*>(decl_ptr);
+        auto type_alias_template = std::make_unique<TypeAliasTypeTemplate>(
+            Name(name->library(), std::string(name->name_part())),
+            typespace_, error_reporter_, this, type_alias_decl);
+        typespace_->AddTemplate(std::move(type_alias_template));
         break;
     }
     } // switch
@@ -1653,9 +1655,10 @@ bool Library::ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive) {
     if (!ConsumeTypeConstructor(std::move(using_directive->maybe_type_ctor), location,
                                 &partial_type_ctor_))
         return false;
-    typespace_->AddTemplate(std::make_unique<TypeAliasTypeTemplate>(
-        std::move(alias_name), typespace_, error_reporter_, this, std::move(partial_type_ctor_)));
-    return true;
+    return RegisterDecl(std::make_unique<TypeAlias>(
+        nullptr /* TODO(FIDL-582): we need to allow attributes */,
+        std::move(alias_name),
+        std::move(partial_type_ctor_)));
 }
 
 bool Library::ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_declaration) {
@@ -2391,10 +2394,11 @@ bool Library::TypeIsConvertibleTo(const Type* from_type, const Type* to_type) {
 }
 
 Decl* Library::LookupConstant(const TypeConstructor* type_ctor, const Name& name) {
+    // TODO(FIDL-486): Improve handling to make it consistent (and spec'ed).
     auto decl = LookupDeclByName(type_ctor->name);
-    if (decl == nullptr) {
+    if (!decl || decl->kind == Decl::Kind::kTypeAlias) {
         // This wasn't a named type. Thus we are looking up a
-        // top-level constant, of string or primitive type.
+        // top-level constant, of string, primitive type, or alias thereof.
         auto iter = constants_.find(&name);
         if (iter == constants_.end()) {
             return nullptr;
@@ -2577,7 +2581,11 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
         }
         break;
     }
+    case Decl::Kind::kTypeAlias: {
+        auto type_alias_decl = static_cast<const TypeAlias*>(decl);
+        maybe_add_decl(type_alias_decl->partial_type_ctor.get());
     }
+    } // switch
     *out_edges = std::move(edges);
     return true;
 }
@@ -2707,6 +2715,12 @@ bool Library::CompileDecl(Decl* decl) {
     case Decl::Kind::kXUnion: {
         auto xunion_decl = static_cast<XUnion*>(decl);
         if (!CompileXUnion(xunion_decl))
+            return false;
+        break;
+    }
+    case Decl::Kind::kTypeAlias: {
+        auto type_alias_decl = static_cast<TypeAlias*>(decl);
+        if (!CompileTypeAlias(type_alias_decl))
             return false;
         break;
     }
@@ -2873,6 +2887,11 @@ bool Library::VerifyDeclAttributes(Decl* decl) {
                 xunion_declaration,
                 xunion_declaration->attributes.get());
         }
+        break;
+    }
+    case Decl::Kind::kTypeAlias: {
+        // TODO(FIDL-582): We do not yet have attributes on type aliasing.
+        break;
     }
     } // switch
     return true;
@@ -3243,6 +3262,41 @@ bool Library::CompileXUnion(XUnion* xunion_declaration) {
     }
     xunion_declaration->typeshape = XUnion::Shape(&fields, max_member_handles);
 
+    return true;
+}
+
+bool Library::CompileTypeAlias(TypeAlias* decl) {
+    // Since type aliases can have partial type constructors, it's not always
+    // possible to compile them based solely on their declaration.
+    //
+    // For instance, we might have
+    //
+    //     using alias = vector:5;
+    //
+    //  which is only valid on use `alias<string>`.
+    //
+    // We temporarily disable error reporting, and attempt to compile the
+    // partial type constructor.
+    bool partial_type_ctor_compiled = false;
+    {
+        auto temporary_mode = error_reporter_->OverrideMode(
+            ErrorReporter::ReportingMode::kDoNotReport);
+        partial_type_ctor_compiled = CompileTypeConstructor(
+            decl->partial_type_ctor.get(), nullptr /* out_typeshape */);
+    }
+    if (decl->partial_type_ctor->maybe_arg_type_ctor &&
+        !partial_type_ctor_compiled) {
+        if (!CompileTypeConstructor(
+            decl->partial_type_ctor->maybe_arg_type_ctor.get(),
+            nullptr /* out_typeshape */))
+            return false;
+    }
+    if (decl->partial_type_ctor->maybe_size) {
+        auto maybe_location = decl->partial_type_ctor->name.maybe_location();
+        if (!ResolveConstant(
+            decl->partial_type_ctor->maybe_size.get(), &kSizeType))
+            return Fail(maybe_location, "unable to parse size bound");
+    }
     return true;
 }
 

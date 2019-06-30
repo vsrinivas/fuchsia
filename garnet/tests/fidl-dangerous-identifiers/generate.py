@@ -56,8 +56,7 @@ def constants(f, idents):
 @use
 def using(f, idents):
   for ident in idents:
-    f.write('using %s = uint32;\n' % ident)
-
+    f.write('using %s = vector;\n' % ident)
 
 # TODO(ianloic): Make this test work. It requires N libraries to import for N
 # identifiers. That doesn't fit well into the model of this test.
@@ -85,6 +84,10 @@ def struct_types(f, idents):
   # structs with every dangerous name
   f.write('using membertype = uint32;\n')
   for ident in idents:
+    # TODO(FIDL-720): Having a declaration with same same name as what is
+    # aliased causes a cycle.
+    if ident == "uint32":
+      continue
     f.write('struct %s { membertype member = 1; };\n' % ident)
 
   # a struct with every dangerous name as the field type
@@ -109,6 +112,10 @@ def union_names(f, idents):
   # unions with every dangerous name
   f.write('using membertype = uint32;\n')
   for ident in idents:
+    # TODO(FIDL-720): Having a declaration with same same name as what is
+    # aliased causes a cycle.
+    if ident == "uint32":
+      continue
     f.write('union %s { membertype member; };\n' % ident)
 
   # a union with every dangerous name as the field type
@@ -133,6 +140,10 @@ def table_names(f, idents):
   # tables with every dangerous name
   f.write('using membertype = uint32;\n')
   for ident in idents:
+    # TODO(FIDL-720): Having a declaration with same same name as what is
+    # aliased causes a cycle.
+    if ident == "uint32":
+      continue
     f.write('table %s { 1: membertype member; };\n' % ident)
   # a table with every dangerous name as the field type
   f.write('table DangerousMembers {\n')
@@ -274,7 +285,7 @@ def generate_cpp(identifiers: List[str], libraries: List[str]) -> None:
   directory = os.path.join(DIR, 'cpp')
   os.makedirs(directory, exist_ok=True)
   # generate C++ test
-  with open(os.path.join(directory, 'test.cpp'), 'w') as f:
+  with open(os.path.join(directory, 'test.cc'), 'w') as f:
     f.write(generated('//'))
     for library_name in libraries:
       f.write('#include <%s/cpp/fidl.h>\n' % (library_name.replace('.', '/')))
@@ -286,7 +297,7 @@ def generate_cpp(identifiers: List[str], libraries: List[str]) -> None:
     build_gn.write(generated('#'))
     build_gn.write("""source_set("cpp") {
     output_name = "cpp_fidl_dangerous_identifiers_test"
-    sources = [ "test.cpp" ]
+    sources = [ "test.cc" ]
     deps = [
 """)
     for library_name in libraries:

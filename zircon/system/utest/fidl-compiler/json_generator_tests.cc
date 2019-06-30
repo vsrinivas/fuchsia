@@ -143,6 +143,7 @@ struct Simple {
   "table_declarations": [],
   "union_declarations": [],
   "xunion_declarations": [],
+  "type_alias_declarations": [],
   "declaration_order": [
     "fidl.test.json/Simple"
   ],
@@ -340,6 +341,7 @@ protocol EmptyProtocol {
   "table_declarations": [],
   "union_declarations": [],
   "xunion_declarations": [],
+  "type_alias_declarations": [],
   "declaration_order": [
     "fidl.test.json/Empty",
     "fidl.test.json/EmptyProtocol"
@@ -442,6 +444,7 @@ table Simple {
   ],
   "union_declarations": [],
   "xunion_declarations": [],
+  "type_alias_declarations": [],
   "declaration_order": [
     "fidl.test.json/Simple"
   ],
@@ -611,6 +614,7 @@ union PizzaOrPasta {
     }
   ],
   "xunion_declarations": [],
+  "type_alias_declarations": [],
   "declaration_order": [
     "fidl.test.json/Pizza",
     "fidl.test.json/Pasta",
@@ -758,6 +762,7 @@ strict xunion StrictFoo {
       "strict": true
     }
   ],
+  "type_alias_declarations": [],
   "declaration_order": [
     "fidl.test.json/StrictFoo",
     "fidl.test.json/FlexibleFoo"
@@ -943,6 +948,7 @@ protocol sub {
   "table_declarations": [],
   "union_declarations": [],
   "xunion_declarations": [],
+  "type_alias_declarations": [],
   "declaration_order": [
     "fidl.test.json/super",
     "fidl.test.json/sub"
@@ -1119,6 +1125,7 @@ protocol Child {
   "table_declarations": [],
   "union_declarations": [],
   "xunion_declarations": [],
+  "type_alias_declarations": [],
   "declaration_order": [
     "fidl.test.json/Parent",
     "fidl.test.json/Child"
@@ -1313,6 +1320,7 @@ protocol Example {
     }
   ],
   "xunion_declarations": [],
+  "type_alias_declarations": [],
   "declaration_order": [
     "fidl.test.json/Example_foo_Response",
     "fidl.test.json/Example_foo_Result",
@@ -1455,6 +1463,7 @@ struct ByteAndBytes {
   "table_declarations": [],
   "union_declarations": [],
   "xunion_declarations": [],
+  "type_alias_declarations": [],
   "declaration_order": [
     "example/ByteAndBytes"
   ],
@@ -1526,6 +1535,7 @@ bits Bits : uint64 {
   "table_declarations": [],
   "union_declarations": [],
   "xunion_declarations": [],
+  "type_alias_declarations": [],
   "declaration_order": [
     "fidl.test.json/Bits"
   ],
@@ -1988,6 +1998,7 @@ struct Struct {
   "table_declarations": [],
   "union_declarations": [],
   "xunion_declarations": [],
+  "type_alias_declarations": [],
   "declaration_order": [
     "values/UINT8",
     "values/UINT64",
@@ -2126,6 +2137,7 @@ struct Baz {
   "table_declarations": [],
   "union_declarations": [],
   "xunion_declarations": [],
+  "type_alias_declarations": [],
   "declaration_order": [
     "top/Baz"
   ],
@@ -2264,6 +2276,7 @@ protocol Top {
   "table_declarations": [],
   "union_declarations": [],
   "xunion_declarations": [],
+  "type_alias_declarations": [],
   "declaration_order": [
     "top/Top"
   ],
@@ -2705,8 +2718,24 @@ xunion ExampleXUnion {
       "strict": false
     }
   ],
+  "type_alias_declarations": [
+    {
+      "name": "example/TypeAlias",
+      "location": {
+        "filename": "example.fidl",
+        "line": 42,
+        "column": 7
+      },
+      "partial_type_ctor": {
+        "name": "uint32",
+        "args": [],
+        "nullable": false
+      }
+    }
+  ],
   "declaration_order": [
     "example/ExampleProtocol",
+    "example/TypeAlias",
     "example/ExampleXUnion",
     "example/ExampleUnion",
     "example/ExampleTable",
@@ -2723,9 +2752,154 @@ xunion ExampleXUnion {
     "example/ExampleStruct": "struct",
     "example/ExampleTable": "table",
     "example/ExampleUnion": "union",
-    "example/ExampleXUnion": "xunion"
+    "example/ExampleXUnion": "xunion",
+    "example/TypeAlias": "type_alias"
   }
 })JSON"));
+    }
+
+    END_TEST;
+}
+
+bool json_generator_type_aliases() {
+    BEGIN_TEST;
+
+    for (int i = 0; i < kRepeatTestCount; i++) {
+        EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+library example;
+
+using u32 = uint32;
+using vec_at_most_five = vector:5;
+using vec_of_strings = vector<string>;
+using vec_of_strings_at_most_5 = vector<string>:5;
+using channel = handle<channel>;
+
+)FIDL",
+                                       R"JSON(
+{
+  "version": "0.0.1",
+  "name": "example",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "type_alias_declarations": [
+    {
+      "name": "example/u32",
+      "location": {
+        "filename": "json.fidl",
+        "line": 4,
+        "column": 7
+      },
+      "partial_type_ctor": {
+        "name": "uint32",
+        "args": [],
+        "nullable": false
+      }
+    },
+    {
+      "name": "example/vec_at_most_five",
+      "location": {
+        "filename": "json.fidl",
+        "line": 5,
+        "column": 7
+      },
+      "partial_type_ctor": {
+        "name": "example/vector",
+        "args": [],
+        "nullable": false,
+        "maybe_size": {
+          "kind": "literal",
+          "literal": {
+            "kind": "numeric",
+            "value": "5",
+            "expression": "5"
+          }
+        }
+      }
+    },
+    {
+      "name": "example/vec_of_strings",
+      "location": {
+        "filename": "json.fidl",
+        "line": 6,
+        "column": 7
+      },
+      "partial_type_ctor": {
+        "name": "vector",
+        "args": [
+          {
+            "name": "string",
+            "args": [],
+            "nullable": false
+          }
+        ],
+        "nullable": false
+      }
+    },
+    {
+      "name": "example/vec_of_strings_at_most_5",
+      "location": {
+        "filename": "json.fidl",
+        "line": 7,
+        "column": 7
+      },
+      "partial_type_ctor": {
+        "name": "vector",
+        "args": [
+          {
+            "name": "string",
+            "args": [],
+            "nullable": false
+          }
+        ],
+        "nullable": false,
+        "maybe_size": {
+          "kind": "literal",
+          "literal": {
+            "kind": "numeric",
+            "value": "5",
+            "expression": "5"
+          }
+        }
+      }
+    },
+    {
+      "name": "example/channel",
+      "location": {
+        "filename": "json.fidl",
+        "line": 8,
+        "column": 7
+      },
+      "partial_type_ctor": {
+        "name": "handle",
+        "args": [],
+        "nullable": false,
+        "maybe_handle_subtype": "channel"
+      }
+    }
+  ],
+  "declaration_order": [
+    "example/vec_of_strings_at_most_5",
+    "example/vec_of_strings",
+    "example/vec_at_most_five",
+    "example/u32",
+    "example/channel"
+  ],
+  "declarations": {
+    "example/u32": "type_alias",
+    "example/vec_at_most_five": "type_alias",
+    "example/vec_of_strings": "type_alias",
+    "example/vec_of_strings_at_most_5": "type_alias",
+    "example/channel": "type_alias"
+  }
+}
+)JSON"));
     }
 
     END_TEST;
@@ -2749,4 +2923,5 @@ RUN_TEST(json_generator_constants)
 RUN_TEST(json_generator_transitive_dependencies)
 RUN_TEST(json_generator_transitive_dependencies_compose)
 RUN_TEST(json_generator_placement_of_attributes)
+RUN_TEST(json_generator_type_aliases)
 END_TEST_CASE(json_generator_tests)

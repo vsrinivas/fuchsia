@@ -395,6 +395,9 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind) {
                 return "fidl_xunion_t";
             case flat::Decl::Kind::kProtocol:
                 return "zx_handle_t";
+            case flat::Decl::Kind::kTypeAlias:
+                assert(false && "no C name for template or type alias");
+                break;
             }
         }
         }

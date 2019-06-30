@@ -471,6 +471,42 @@ void JSONGenerator::Generate(const flat::XUnion::Member& value) {
     });
 }
 
+void JSONGenerator::Generate(const flat::TypeConstructor& value) {
+    GenerateObject([&]() {
+        GenerateObjectMember("name", value.type ? value.type->name : value.name, Position::kFirst);
+        GenerateObjectPunctuation(Position::kSubsequent);
+        EmitObjectKey("args");
+
+        // In preparation of template support, it is better to expose a
+        // heterogenous argument list to backends, rather than the currently
+        // limited internal view.
+        EmitArrayBegin();
+        if (value.maybe_arg_type_ctor) {
+            Indent();
+            EmitNewlineWithIndent();
+            Generate(*value.maybe_arg_type_ctor);
+            Outdent();
+            EmitNewlineWithIndent();
+        }
+        EmitArrayEnd();
+
+        GenerateObjectMember("nullable", value.nullability);
+
+        if (value.maybe_size)
+            GenerateObjectMember("maybe_size", value.maybe_size);
+        if (value.handle_subtype)
+            GenerateObjectMember("maybe_handle_subtype", value.handle_subtype.value());
+    });
+}
+
+void JSONGenerator::Generate(const flat::TypeAlias& value) {
+    GenerateObject([&]() {
+        GenerateObjectMember("name", value.name, Position::kFirst);
+        GenerateObjectMember("location", NameLocation(value.name));
+        GenerateObjectMember("partial_type_ctor", *value.partial_type_ctor);
+    });
+}
+
 void JSONGenerator::Generate(const flat::Library* library) {
     GenerateObject([&]() {
         auto library_name = flat::LibraryName(library, ".");
@@ -523,6 +559,9 @@ void JSONGenerator::GenerateDeclarationsMember(
 
         for (const auto& decl : library->xunion_declarations_)
             GenerateDeclarationsEntry(count++, decl->name, "xunion");
+
+        for (const auto& decl : library->type_alias_declarations_)
+            GenerateDeclarationsEntry(count++, decl->name, "type_alias");
     });
 }
 
@@ -576,6 +615,7 @@ std::ostringstream JSONGenerator::Produce() {
         GenerateObjectMember("table_declarations", library_->table_declarations_);
         GenerateObjectMember("union_declarations", library_->union_declarations_);
         GenerateObjectMember("xunion_declarations", library_->xunion_declarations_);
+        GenerateObjectMember("type_alias_declarations", library_->type_alias_declarations_);
 
         // The library's declaration_order_ contains all the declarations for all
         // transitive dependencies. The backend only needs the declaration order

@@ -23,11 +23,8 @@ namespace manager {
 
 class ExternalController;
 class DebugDumper;
-class DevhostController;
 class Administrator;
-struct DeviceComponentPart;
-struct DeviceComponent;
-class Coordinator;
+class DevhostController;
 enum class CompatibilityTestStatus : uint32_t {
   OK = 1u,
   ERR_BIND_NO_DDKADD = 2u,
@@ -40,6 +37,9 @@ enum class CompatibilityTestStatus : uint32_t {
 
 
 class DeviceController;
+struct DeviceComponentPart;
+struct DeviceComponent;
+class Coordinator;
 
 extern "C" const fidl_type_t fuchsia_device_manager_ExternalControllerPerformMexecRequestTable;
 
@@ -394,6 +394,138 @@ class DebugDumper final {
 
 };
 
+extern "C" const fidl_type_t fuchsia_device_manager_AdministratorSuspendRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_AdministratorSuspendResponseTable;
+
+// Provides administration services for the device manager service and the device tree it controls.
+class Administrator final {
+ public:
+  static constexpr char Name_[] = "fuchsia.device.manager.Administrator";
+
+  struct SuspendResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_AdministratorSuspendResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+  };
+  struct SuspendRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    uint32_t flags;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_AdministratorSuspendRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    using ResponseType = SuspendResponse;
+  };
+
+
+  class SyncClient final {
+   public:
+    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+
+    ~SyncClient() {}
+
+    // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
+    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    zx_status_t Suspend(uint32_t flags, int32_t* out_status);
+
+    // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
+    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<SuspendResponse> Suspend(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_status);
+
+    // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
+    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    // Messages are encoded and decoded in-place.
+    ::fidl::DecodeResult<SuspendResponse> Suspend(::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
+
+   private:
+    ::zx::channel channel_;
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+   public:
+
+    // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
+    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    static zx_status_t Suspend(zx::unowned_channel _client_end, uint32_t flags, int32_t* out_status);
+
+    // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
+    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<SuspendResponse> Suspend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_status);
+
+    // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
+    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<SuspendResponse> Suspend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
+
+  };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = Administrator;
+    using _Base = ::fidl::CompleterBase;
+
+    class SuspendCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::fidl::DecodedMessage<SuspendResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using SuspendCompleter = ::fidl::Completer<SuspendCompleterBase>;
+
+    virtual void Suspend(uint32_t flags, SuspendCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+};
+
+// Check the DDK for all available flags.
+constexpr uint32_t SUSPEND_FLAG_REBOOT = 3705405696u;
+
+constexpr uint32_t SUSPEND_FLAG_POWEROFF = 3705405952u;
+
+// Maximum number of properties that can be attached to a device
+constexpr uint32_t PROPERTIES_MAX = 256u;
+
+// Maximum number of bytes in a metadata payload
+constexpr uint32_t METADATA_MAX = 4096u;
+
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceStubRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateCompositeDeviceRequestTable;
@@ -726,20 +858,76 @@ class DevhostController final {
 
 };
 
-extern "C" const fidl_type_t fuchsia_device_manager_AdministratorSuspendRequestTable;
-extern "C" const fidl_type_t fuchsia_device_manager_AdministratorSuspendResponseTable;
+// Maximum number of bytes in a path
+constexpr uint32_t DEVICE_PATH_MAX = 1024u;
 
-// Provides administration services for the device manager service and the device tree it controls.
-class Administrator final {
+// This definition must match ZX_DEVICE_NAME_MAX and is checked by a static assert.
+constexpr uint32_t DEVICE_NAME_MAX = 31u;
+
+// Maximum instructions in a match program
+constexpr uint32_t DEVICE_COMPONENT_PART_INSTRUCTIONS_MAX = 32u;
+
+// Maximum number of parts that a composite device component can have
+constexpr uint32_t DEVICE_COMPONENT_PARTS_MAX = 16u;
+
+// Maximum number of bytes in a device arguments string.
+constexpr uint32_t DEVICE_ARGS_MAX = 1024u;
+
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerBindDriverRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerBindDriverResponseTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerConnectProxyRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerSuspendRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerSuspendResponseTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsRequestTable;
+
+// Protocol for controlling devices in a devhost process from the devcoordinator
+class DeviceController final {
  public:
-  static constexpr char Name_[] = "fuchsia.device.manager.Administrator";
+
+  struct BindDriverResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerBindDriverResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+  };
+  struct BindDriverRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::fidl::StringView driver_path;
+    ::zx::vmo driver;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerBindDriverRequestTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 1024;
+    using ResponseType = BindDriverResponse;
+  };
+
+  struct ConnectProxyRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::zx::channel shadow;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerConnectProxyRequestTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+  };
+
+  using UnbindRequest = ::fidl::AnyZeroArgMessage;
+
+  using RemoveDeviceRequest = ::fidl::AnyZeroArgMessage;
 
   struct SuspendResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_AdministratorSuspendResponseTable;
+    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerSuspendResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -749,11 +937,22 @@ class Administrator final {
     fidl_message_header_t _hdr;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_AdministratorSuspendRequestTable;
+    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerSuspendRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     using ResponseType = SuspendResponse;
+  };
+
+  struct CompleteCompatibilityTestsRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    CompatibilityTestStatus status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
   };
 
 
@@ -763,20 +962,68 @@ class Administrator final {
 
     ~SyncClient() {}
 
-    // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
-    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    // Bind the requested driver to this device.  `driver_path` is informational,
+    // but all calls to BindDriver/CreateDevice should use the same `driver_path`
+    // each time they use a `driver` VMO with the same contents.
+    zx_status_t BindDriver(::fidl::StringView driver_path, ::zx::vmo driver, int32_t* out_status);
+
+    // Bind the requested driver to this device.  `driver_path` is informational,
+    // but all calls to BindDriver/CreateDevice should use the same `driver_path`
+    // each time they use a `driver` VMO with the same contents.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<BindDriverResponse> BindDriver(::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::zx::vmo driver, ::fidl::BytePart _response_buffer, int32_t* out_status);
+
+    // Bind the requested driver to this device.  `driver_path` is informational,
+    // but all calls to BindDriver/CreateDevice should use the same `driver_path`
+    // each time they use a `driver` VMO with the same contents.
+    // Messages are encoded and decoded in-place.
+    ::fidl::DecodeResult<BindDriverResponse> BindDriver(::fidl::DecodedMessage<BindDriverRequest> params, ::fidl::BytePart response_buffer);
+
+    // Give this device a channel to its shadow in another process.
+    zx_status_t ConnectProxy(::zx::channel shadow);
+
+    // Give this device a channel to its shadow in another process.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    zx_status_t ConnectProxy(::fidl::BytePart _request_buffer, ::zx::channel shadow);
+
+    // Give this device a channel to its shadow in another process.
+    // Messages are encoded and decoded in-place.
+    zx_status_t ConnectProxy(::fidl::DecodedMessage<ConnectProxyRequest> params);
+
+    // Ask devhost to unbind this device. On success, the remote end of this
+    // interface channel will close instead of returning a result.
+    zx_status_t Unbind();
+
+    // Ask the devhost to remove this device.  On success, the remote end of
+    // this interface channel will close instead of returning a result.
+    zx_status_t RemoveDevice();
+
+    // Ask devhost to suspend this device, using the target state indicated by `flags`.
     zx_status_t Suspend(uint32_t flags, int32_t* out_status);
 
-    // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
-    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    // Ask devhost to suspend this device, using the target state indicated by `flags`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SuspendResponse> Suspend(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
-    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    // Ask devhost to suspend this device, using the target state indicated by `flags`.
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<SuspendResponse> Suspend(::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
+
+    // Inform devhost about the compatibility test status when compatibility tests
+    // fail or complete successfully.
+    zx_status_t CompleteCompatibilityTests(CompatibilityTestStatus status);
+
+    // Inform devhost about the compatibility test status when compatibility tests
+    // fail or complete successfully.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    zx_status_t CompleteCompatibilityTests(::fidl::BytePart _request_buffer, CompatibilityTestStatus status);
+
+    // Inform devhost about the compatibility test status when compatibility tests
+    // fail or complete successfully.
+    // Messages are encoded and decoded in-place.
+    zx_status_t CompleteCompatibilityTests(::fidl::DecodedMessage<CompleteCompatibilityTestsRequest> params);
 
    private:
     ::zx::channel channel_;
@@ -786,20 +1033,68 @@ class Administrator final {
   class Call final {
    public:
 
-    // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
-    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    // Bind the requested driver to this device.  `driver_path` is informational,
+    // but all calls to BindDriver/CreateDevice should use the same `driver_path`
+    // each time they use a `driver` VMO with the same contents.
+    static zx_status_t BindDriver(zx::unowned_channel _client_end, ::fidl::StringView driver_path, ::zx::vmo driver, int32_t* out_status);
+
+    // Bind the requested driver to this device.  `driver_path` is informational,
+    // but all calls to BindDriver/CreateDevice should use the same `driver_path`
+    // each time they use a `driver` VMO with the same contents.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<BindDriverResponse> BindDriver(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::zx::vmo driver, ::fidl::BytePart _response_buffer, int32_t* out_status);
+
+    // Bind the requested driver to this device.  `driver_path` is informational,
+    // but all calls to BindDriver/CreateDevice should use the same `driver_path`
+    // each time they use a `driver` VMO with the same contents.
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<BindDriverResponse> BindDriver(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindDriverRequest> params, ::fidl::BytePart response_buffer);
+
+    // Give this device a channel to its shadow in another process.
+    static zx_status_t ConnectProxy(zx::unowned_channel _client_end, ::zx::channel shadow);
+
+    // Give this device a channel to its shadow in another process.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t ConnectProxy(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel shadow);
+
+    // Give this device a channel to its shadow in another process.
+    // Messages are encoded and decoded in-place.
+    static zx_status_t ConnectProxy(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectProxyRequest> params);
+
+    // Ask devhost to unbind this device. On success, the remote end of this
+    // interface channel will close instead of returning a result.
+    static zx_status_t Unbind(zx::unowned_channel _client_end);
+
+    // Ask the devhost to remove this device.  On success, the remote end of
+    // this interface channel will close instead of returning a result.
+    static zx_status_t RemoveDevice(zx::unowned_channel _client_end);
+
+    // Ask devhost to suspend this device, using the target state indicated by `flags`.
     static zx_status_t Suspend(zx::unowned_channel _client_end, uint32_t flags, int32_t* out_status);
 
-    // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
-    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    // Ask devhost to suspend this device, using the target state indicated by `flags`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SuspendResponse> Suspend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
-    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    // Ask devhost to suspend this device, using the target state indicated by `flags`.
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<SuspendResponse> Suspend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
+
+    // Inform devhost about the compatibility test status when compatibility tests
+    // fail or complete successfully.
+    static zx_status_t CompleteCompatibilityTests(zx::unowned_channel _client_end, CompatibilityTestStatus status);
+
+    // Inform devhost about the compatibility test status when compatibility tests
+    // fail or complete successfully.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t CompleteCompatibilityTests(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, CompatibilityTestStatus status);
+
+    // Inform devhost about the compatibility test status when compatibility tests
+    // fail or complete successfully.
+    // Messages are encoded and decoded in-place.
+    static zx_status_t CompleteCompatibilityTests(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CompleteCompatibilityTestsRequest> params);
 
   };
 
@@ -808,8 +1103,34 @@ class Administrator final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = Administrator;
+    using _Outer = DeviceController;
     using _Base = ::fidl::CompleterBase;
+
+    class BindDriverCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::fidl::DecodedMessage<BindDriverResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using BindDriverCompleter = ::fidl::Completer<BindDriverCompleterBase>;
+
+    virtual void BindDriver(::fidl::StringView driver_path, ::zx::vmo driver, BindDriverCompleter::Sync _completer) = 0;
+
+    using ConnectProxyCompleter = ::fidl::Completer<>;
+
+    virtual void ConnectProxy(::zx::channel shadow, ConnectProxyCompleter::Sync _completer) = 0;
+
+    using UnbindCompleter = ::fidl::Completer<>;
+
+    virtual void Unbind(UnbindCompleter::Sync _completer) = 0;
+
+    using RemoveDeviceCompleter = ::fidl::Completer<>;
+
+    virtual void RemoveDevice(RemoveDeviceCompleter::Sync _completer) = 0;
 
     class SuspendCompleterBase : public _Base {
      public:
@@ -824,6 +1145,10 @@ class Administrator final {
     using SuspendCompleter = ::fidl::Completer<SuspendCompleterBase>;
 
     virtual void Suspend(uint32_t flags, SuspendCompleter::Sync _completer) = 0;
+
+    using CompleteCompatibilityTestsCompleter = ::fidl::Completer<>;
+
+    virtual void CompleteCompatibilityTests(CompatibilityTestStatus status, CompleteCompatibilityTestsCompleter::Sync _completer) = 0;
 
   };
 
@@ -847,16 +1172,8 @@ class Administrator final {
 
 };
 
-// Check the DDK for all available flags.
-constexpr uint32_t SUSPEND_FLAG_REBOOT = 3705405696u;
-
-constexpr uint32_t SUSPEND_FLAG_POWEROFF = 3705405952u;
-
-// Maximum number of properties that can be attached to a device
-constexpr uint32_t PROPERTIES_MAX = 256u;
-
-// Maximum number of bytes in a metadata payload
-constexpr uint32_t METADATA_MAX = 4096u;
+// Maximum number of components that a composite device can have
+constexpr uint32_t COMPONENTS_MAX = 8u;
 
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceComponentPartTable;
 
@@ -1995,323 +2312,6 @@ class Coordinator final {
 
 };
 
-// Maximum number of bytes in a path
-constexpr uint32_t DEVICE_PATH_MAX = 1024u;
-
-// This definition must match ZX_DEVICE_NAME_MAX and is checked by a static assert.
-constexpr uint32_t DEVICE_NAME_MAX = 31u;
-
-// Maximum instructions in a match program
-constexpr uint32_t DEVICE_COMPONENT_PART_INSTRUCTIONS_MAX = 32u;
-
-// Maximum number of parts that a composite device component can have
-constexpr uint32_t DEVICE_COMPONENT_PARTS_MAX = 16u;
-
-// Maximum number of bytes in a device arguments string.
-constexpr uint32_t DEVICE_ARGS_MAX = 1024u;
-
-extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerBindDriverRequestTable;
-extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerBindDriverResponseTable;
-extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerConnectProxyRequestTable;
-extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerSuspendRequestTable;
-extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerSuspendResponseTable;
-extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsRequestTable;
-
-// Protocol for controlling devices in a devhost process from the devcoordinator
-class DeviceController final {
- public:
-
-  struct BindDriverResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t status;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerBindDriverResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-  };
-  struct BindDriverRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::fidl::StringView driver_path;
-    ::zx::vmo driver;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerBindDriverRequestTable;
-    static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 1024;
-    using ResponseType = BindDriverResponse;
-  };
-
-  struct ConnectProxyRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::zx::channel shadow;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerConnectProxyRequestTable;
-    static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-  };
-
-  using UnbindRequest = ::fidl::AnyZeroArgMessage;
-
-  using RemoveDeviceRequest = ::fidl::AnyZeroArgMessage;
-
-  struct SuspendResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t status;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerSuspendResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-  };
-  struct SuspendRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    uint32_t flags;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerSuspendRequestTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    using ResponseType = SuspendResponse;
-  };
-
-  struct CompleteCompatibilityTestsRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    CompatibilityTestStatus status;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsRequestTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-  };
-
-
-  class SyncClient final {
-   public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
-    ~SyncClient() {}
-
-    // Bind the requested driver to this device.  `driver_path` is informational,
-    // but all calls to BindDriver/CreateDevice should use the same `driver_path`
-    // each time they use a `driver` VMO with the same contents.
-    zx_status_t BindDriver(::fidl::StringView driver_path, ::zx::vmo driver, int32_t* out_status);
-
-    // Bind the requested driver to this device.  `driver_path` is informational,
-    // but all calls to BindDriver/CreateDevice should use the same `driver_path`
-    // each time they use a `driver` VMO with the same contents.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<BindDriverResponse> BindDriver(::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::zx::vmo driver, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
-    // Bind the requested driver to this device.  `driver_path` is informational,
-    // but all calls to BindDriver/CreateDevice should use the same `driver_path`
-    // each time they use a `driver` VMO with the same contents.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<BindDriverResponse> BindDriver(::fidl::DecodedMessage<BindDriverRequest> params, ::fidl::BytePart response_buffer);
-
-    // Give this device a channel to its shadow in another process.
-    zx_status_t ConnectProxy(::zx::channel shadow);
-
-    // Give this device a channel to its shadow in another process.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t ConnectProxy(::fidl::BytePart _request_buffer, ::zx::channel shadow);
-
-    // Give this device a channel to its shadow in another process.
-    // Messages are encoded and decoded in-place.
-    zx_status_t ConnectProxy(::fidl::DecodedMessage<ConnectProxyRequest> params);
-
-    // Ask devhost to unbind this device. On success, the remote end of this
-    // interface channel will close instead of returning a result.
-    zx_status_t Unbind();
-
-    // Ask the devhost to remove this device.  On success, the remote end of
-    // this interface channel will close instead of returning a result.
-    zx_status_t RemoveDevice();
-
-    // Ask devhost to suspend this device, using the target state indicated by `flags`.
-    zx_status_t Suspend(uint32_t flags, int32_t* out_status);
-
-    // Ask devhost to suspend this device, using the target state indicated by `flags`.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<SuspendResponse> Suspend(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
-    // Ask devhost to suspend this device, using the target state indicated by `flags`.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SuspendResponse> Suspend(::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
-
-    // Inform devhost about the compatibility test status when compatibility tests
-    // fail or complete successfully.
-    zx_status_t CompleteCompatibilityTests(CompatibilityTestStatus status);
-
-    // Inform devhost about the compatibility test status when compatibility tests
-    // fail or complete successfully.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t CompleteCompatibilityTests(::fidl::BytePart _request_buffer, CompatibilityTestStatus status);
-
-    // Inform devhost about the compatibility test status when compatibility tests
-    // fail or complete successfully.
-    // Messages are encoded and decoded in-place.
-    zx_status_t CompleteCompatibilityTests(::fidl::DecodedMessage<CompleteCompatibilityTestsRequest> params);
-
-   private:
-    ::zx::channel channel_;
-  };
-
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
-  class Call final {
-   public:
-
-    // Bind the requested driver to this device.  `driver_path` is informational,
-    // but all calls to BindDriver/CreateDevice should use the same `driver_path`
-    // each time they use a `driver` VMO with the same contents.
-    static zx_status_t BindDriver(zx::unowned_channel _client_end, ::fidl::StringView driver_path, ::zx::vmo driver, int32_t* out_status);
-
-    // Bind the requested driver to this device.  `driver_path` is informational,
-    // but all calls to BindDriver/CreateDevice should use the same `driver_path`
-    // each time they use a `driver` VMO with the same contents.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<BindDriverResponse> BindDriver(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::zx::vmo driver, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
-    // Bind the requested driver to this device.  `driver_path` is informational,
-    // but all calls to BindDriver/CreateDevice should use the same `driver_path`
-    // each time they use a `driver` VMO with the same contents.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<BindDriverResponse> BindDriver(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindDriverRequest> params, ::fidl::BytePart response_buffer);
-
-    // Give this device a channel to its shadow in another process.
-    static zx_status_t ConnectProxy(zx::unowned_channel _client_end, ::zx::channel shadow);
-
-    // Give this device a channel to its shadow in another process.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t ConnectProxy(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel shadow);
-
-    // Give this device a channel to its shadow in another process.
-    // Messages are encoded and decoded in-place.
-    static zx_status_t ConnectProxy(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectProxyRequest> params);
-
-    // Ask devhost to unbind this device. On success, the remote end of this
-    // interface channel will close instead of returning a result.
-    static zx_status_t Unbind(zx::unowned_channel _client_end);
-
-    // Ask the devhost to remove this device.  On success, the remote end of
-    // this interface channel will close instead of returning a result.
-    static zx_status_t RemoveDevice(zx::unowned_channel _client_end);
-
-    // Ask devhost to suspend this device, using the target state indicated by `flags`.
-    static zx_status_t Suspend(zx::unowned_channel _client_end, uint32_t flags, int32_t* out_status);
-
-    // Ask devhost to suspend this device, using the target state indicated by `flags`.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<SuspendResponse> Suspend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
-    // Ask devhost to suspend this device, using the target state indicated by `flags`.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SuspendResponse> Suspend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
-
-    // Inform devhost about the compatibility test status when compatibility tests
-    // fail or complete successfully.
-    static zx_status_t CompleteCompatibilityTests(zx::unowned_channel _client_end, CompatibilityTestStatus status);
-
-    // Inform devhost about the compatibility test status when compatibility tests
-    // fail or complete successfully.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t CompleteCompatibilityTests(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, CompatibilityTestStatus status);
-
-    // Inform devhost about the compatibility test status when compatibility tests
-    // fail or complete successfully.
-    // Messages are encoded and decoded in-place.
-    static zx_status_t CompleteCompatibilityTests(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CompleteCompatibilityTestsRequest> params);
-
-  };
-
-  // Pure-virtual interface to be implemented by a server.
-  class Interface {
-   public:
-    Interface() = default;
-    virtual ~Interface() = default;
-    using _Outer = DeviceController;
-    using _Base = ::fidl::CompleterBase;
-
-    class BindDriverCompleterBase : public _Base {
-     public:
-      void Reply(int32_t status);
-      void Reply(::fidl::BytePart _buffer, int32_t status);
-      void Reply(::fidl::DecodedMessage<BindDriverResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using BindDriverCompleter = ::fidl::Completer<BindDriverCompleterBase>;
-
-    virtual void BindDriver(::fidl::StringView driver_path, ::zx::vmo driver, BindDriverCompleter::Sync _completer) = 0;
-
-    using ConnectProxyCompleter = ::fidl::Completer<>;
-
-    virtual void ConnectProxy(::zx::channel shadow, ConnectProxyCompleter::Sync _completer) = 0;
-
-    using UnbindCompleter = ::fidl::Completer<>;
-
-    virtual void Unbind(UnbindCompleter::Sync _completer) = 0;
-
-    using RemoveDeviceCompleter = ::fidl::Completer<>;
-
-    virtual void RemoveDevice(RemoveDeviceCompleter::Sync _completer) = 0;
-
-    class SuspendCompleterBase : public _Base {
-     public:
-      void Reply(int32_t status);
-      void Reply(::fidl::BytePart _buffer, int32_t status);
-      void Reply(::fidl::DecodedMessage<SuspendResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using SuspendCompleter = ::fidl::Completer<SuspendCompleterBase>;
-
-    virtual void Suspend(uint32_t flags, SuspendCompleter::Sync _completer) = 0;
-
-    using CompleteCompatibilityTestsCompleter = ::fidl::Completer<>;
-
-    virtual void CompleteCompatibilityTests(CompatibilityTestStatus status, CompleteCompatibilityTestsCompleter::Sync _completer) = 0;
-
-  };
-
-  // Attempts to dispatch the incoming message to a handler function in the server implementation.
-  // If there is no matching handler, it returns false, leaving the message and transaction intact.
-  // In all other cases, it consumes the message and returns true.
-  // It is possible to chain multiple TryDispatch functions in this manner.
-  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
-
-  // Dispatches the incoming message to one of the handlers functions in the interface.
-  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
-  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
-  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
-
-  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
-  // to reduce template expansion.
-  // Do not call this method manually. Use |Dispatch| instead.
-  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
-    return Dispatch(static_cast<Interface*>(impl), msg, txn);
-  }
-
-};
-
-// Maximum number of components that a composite device can have
-constexpr uint32_t COMPONENTS_MAX = 8u;
-
 }  // namespace manager
 }  // namespace device
 }  // namespace fuchsia
@@ -2383,6 +2383,22 @@ static_assert(offsetof(::llcpp::fuchsia::device::manager::DebugDumper::DumpBindi
 static_assert(offsetof(::llcpp::fuchsia::device::manager::DebugDumper::DumpBindingPropertiesResponse, available) == 32);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::device::manager::Administrator::SuspendRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::manager::Administrator::SuspendRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::manager::Administrator::SuspendRequest)
+    == ::llcpp::fuchsia::device::manager::Administrator::SuspendRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::Administrator::SuspendRequest, flags) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::manager::Administrator::SuspendResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::manager::Administrator::SuspendResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::manager::Administrator::SuspendResponse)
+    == ::llcpp::fuchsia::device::manager::Administrator::SuspendResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::Administrator::SuspendResponse, status) == 16);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceStubRequest> : public std::true_type {};
 template <>
 struct IsFidlMessage<::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceStubRequest> : public std::true_type {};
@@ -2425,20 +2441,53 @@ static_assert(sizeof(::llcpp::fuchsia::device::manager::DevhostController::Creat
 static_assert(offsetof(::llcpp::fuchsia::device::manager::DevhostController::CreateCompositeDeviceResponse, status) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::device::manager::Administrator::SuspendRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController::BindDriverRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::device::manager::Administrator::SuspendRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::device::manager::Administrator::SuspendRequest)
-    == ::llcpp::fuchsia::device::manager::Administrator::SuspendRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::Administrator::SuspendRequest, flags) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::device::manager::DeviceController::BindDriverRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController::BindDriverRequest)
+    == ::llcpp::fuchsia::device::manager::DeviceController::BindDriverRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::BindDriverRequest, driver_path) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::BindDriverRequest, driver) == 32);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::device::manager::Administrator::SuspendResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController::BindDriverResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::device::manager::Administrator::SuspendResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::device::manager::Administrator::SuspendResponse)
-    == ::llcpp::fuchsia::device::manager::Administrator::SuspendResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::Administrator::SuspendResponse, status) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::device::manager::DeviceController::BindDriverResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController::BindDriverResponse)
+    == ::llcpp::fuchsia::device::manager::DeviceController::BindDriverResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::BindDriverResponse, status) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController::ConnectProxyRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::manager::DeviceController::ConnectProxyRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController::ConnectProxyRequest)
+    == ::llcpp::fuchsia::device::manager::DeviceController::ConnectProxyRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::ConnectProxyRequest, shadow) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController::SuspendRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::manager::DeviceController::SuspendRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController::SuspendRequest)
+    == ::llcpp::fuchsia::device::manager::DeviceController::SuspendRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::SuspendRequest, flags) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController::SuspendResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::manager::DeviceController::SuspendResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController::SuspendResponse)
+    == ::llcpp::fuchsia::device::manager::DeviceController::SuspendResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::SuspendResponse, status) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController::CompleteCompatibilityTestsRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::manager::DeviceController::CompleteCompatibilityTestsRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController::CompleteCompatibilityTestsRequest)
+    == ::llcpp::fuchsia::device::manager::DeviceController::CompleteCompatibilityTestsRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::CompleteCompatibilityTestsRequest, status) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceComponentPart> : public std::true_type {};
@@ -2690,54 +2739,5 @@ struct IsFidlMessage<::llcpp::fuchsia::device::manager::Coordinator::RunCompatib
 static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator::RunCompatibilityTestsResponse)
     == ::llcpp::fuchsia::device::manager::Coordinator::RunCompatibilityTestsResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::RunCompatibilityTestsResponse, status) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController::BindDriverRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::device::manager::DeviceController::BindDriverRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController::BindDriverRequest)
-    == ::llcpp::fuchsia::device::manager::DeviceController::BindDriverRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::BindDriverRequest, driver_path) == 16);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::BindDriverRequest, driver) == 32);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController::BindDriverResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::device::manager::DeviceController::BindDriverResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController::BindDriverResponse)
-    == ::llcpp::fuchsia::device::manager::DeviceController::BindDriverResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::BindDriverResponse, status) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController::ConnectProxyRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::device::manager::DeviceController::ConnectProxyRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController::ConnectProxyRequest)
-    == ::llcpp::fuchsia::device::manager::DeviceController::ConnectProxyRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::ConnectProxyRequest, shadow) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController::SuspendRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::device::manager::DeviceController::SuspendRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController::SuspendRequest)
-    == ::llcpp::fuchsia::device::manager::DeviceController::SuspendRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::SuspendRequest, flags) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController::SuspendResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::device::manager::DeviceController::SuspendResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController::SuspendResponse)
-    == ::llcpp::fuchsia::device::manager::DeviceController::SuspendResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::SuspendResponse, status) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController::CompleteCompatibilityTestsRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::device::manager::DeviceController::CompleteCompatibilityTestsRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController::CompleteCompatibilityTestsRequest)
-    == ::llcpp::fuchsia::device::manager::DeviceController::CompleteCompatibilityTestsRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::CompleteCompatibilityTestsRequest, status) == 16);
 
 }  // namespace fidl

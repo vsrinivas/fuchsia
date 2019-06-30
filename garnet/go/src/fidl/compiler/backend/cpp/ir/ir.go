@@ -1088,11 +1088,11 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 	}
 
 	for _, v := range r.DeclOrder {
-		d := decls[v]
-		if d == nil {
-			log.Fatal("Unknown declaration: ", v)
+		// We process only a subset of declarations mentioned in the declaration
+		// order, ignore those we do not support.
+		if d, known := decls[v]; known {
+			root.Decls = append(root.Decls, d)
 		}
-		root.Decls = append(root.Decls, d)
 	}
 
 	for _, l := range r.Libraries {
