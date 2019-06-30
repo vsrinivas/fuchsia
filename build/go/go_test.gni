@@ -24,6 +24,11 @@ import("//build/testing/test_spec.gni")
 #     environment (as a function of $current_os).
 #     See //build/testing/test_spec.gni for more details.
 #
+#   timeout:
+#     Optional: override default timeout. Values must be valid Go durations,
+#     such as "300ms", "-1.5h" or "2h45m".
+#     See https://golang.org/cmd/go/#hdr-Testing_flags for details on timeout.
+#     See https://golang.org/pkg/time/#ParseDuration for duration format.
 template("go_test") {
   _main_target_name = target_name
   _test_spec_target_name = "${target_name}_spec"
@@ -45,10 +50,18 @@ template("go_test") {
       testonly = true
       name = _main_target_name
       location = _output_path
+      command = [
+        rebase_path(_output_path, root_build_dir),
+      ]
+      timeout = "5m"
+      if (defined(invoker.timeout)) {
+        timeout = invoker.timeout
+      }
+      command += [
+        "--test.timeout",
+        timeout,
+      ]
       if (defined(invoker.args)) {
-        command = [
-          rebase_path(_output_path, root_build_dir),
-        ]
         command += invoker.args
       }
       deps = []
