@@ -283,10 +283,7 @@ mod simulation_tests {
         let mut ok = true;
         // client tests
         ok = run_test("verify_ethernet", test_verify_ethernet) && ok;
-        // TODO(FLK-416): Disabled temporarily
-        if false {
-            ok = run_test("set_country", test_set_country) && ok;
-        }
+        ok = run_test("set_country", test_set_country) && ok;
         ok = run_test("simulate_scan", test_simulate_scan) && ok;
         ok = run_test("connecting_to_ap", test_connecting_to_ap) && ok;
         ok = run_test("ethernet_tx_rx", test_ethernet_tx_rx) && ok;
@@ -305,7 +302,9 @@ mod simulation_tests {
             .expect(&format!("creating ethernet client: {:?}", &HW_MAC_ADDR));
         assert!(client.is_none());
         // Create wlan_tap device which will in turn create ethernet device.
-        let mut helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
+        let _helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
+        loop_until_iface_is_found(&mut exec);
+
         let mut retry = test_utils::RetryWithBackoff::new(5.seconds());
         loop {
             let client = exec
@@ -317,9 +316,6 @@ mod simulation_tests {
             let slept = retry.sleep_unless_timed_out();
             assert!(slept, "No ethernet client with mac_addr {:?} found in time", &HW_MAC_ADDR);
         }
-        let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
-            .expect("connecting to wlan service");
-        loop_until_iface_is_found(&mut exec, &wlan_service, &mut helper);
     }
 
     // Issue service.fidl:SetCountry() protocol to Wlanstack's service with a test country code.
@@ -329,6 +325,8 @@ mod simulation_tests {
     fn test_set_country() {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let mut helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
+        loop_until_iface_is_found(&mut exec);
+
         let (mut sender, mut receiver) = mpsc::channel(1);
         let svc = app::client::connect_to_service::<wlanstack_dev_svc::DeviceServiceMarker>()
             .expect("Failed to connect to wlanstack_dev_svc");
@@ -432,15 +430,15 @@ mod simulation_tests {
     fn test_connecting_to_ap() {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let mut helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
+        loop_until_iface_is_found(&mut exec);
 
         let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
             .expect("Failed to connect to wlan service");
         let proxy = helper.proxy();
-        loop_until_iface_is_found(&mut exec, &wlan_service, &mut helper);
 
         connect(&mut exec, &wlan_service, &proxy, &mut helper, SSID_FOO, &BSS_FOO);
 
-        let status = status(&mut exec, &wlan_service, &mut helper);
+        let status = status(&mut exec, &wlan_service);
         assert_eq!(status.error.code, fidl_wlan_service::ErrCode::Ok);
         assert_eq!(status.state, fidl_wlan_service::State::Associated);
         let ap = status.current_ap.expect("expect to be associated to an AP");
@@ -451,14 +449,12 @@ mod simulation_tests {
         assert!(!ap.is_secure);
     }
 
-    pub fn loop_until_iface_is_found(
-        exec: &mut fasync::Executor,
-        wlan_service: &fidl_wlan_service::WlanProxy,
-        helper: &mut test_utils::TestHelper,
-    ) {
+    pub fn loop_until_iface_is_found(exec: &mut fasync::Executor) {
+        let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
+            .expect("connecting to wlan service");
         let mut retry = test_utils::RetryWithBackoff::new(5.seconds());
         loop {
-            let status = status(exec, wlan_service, helper);
+            let status = status(exec, &wlan_service);
             if status.error.code != fidl_wlan_service::ErrCode::Ok {
                 let slept = retry.sleep_unless_timed_out();
                 assert!(slept, "Wlanstack did not recognize the interface in time");
@@ -471,11 +467,8 @@ mod simulation_tests {
     fn status(
         exec: &mut fasync::Executor,
         wlan_service: &fidl_wlan_service::WlanProxy,
-        helper: &mut test_utils::TestHelper,
     ) -> fidl_wlan_service::WlanStatus {
-        helper
-            .run(exec, 1.seconds(), "status request", |_| {}, wlan_service.status())
-            .expect("expect wlan status")
+        exec.run_singlethreaded(wlan_service.status()).expect("status() should never fail")
     }
 
     fn scan(
@@ -630,10 +623,10 @@ mod simulation_tests {
     fn test_ethernet_tx_rx() {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let mut helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
+        loop_until_iface_is_found(&mut exec);
 
         let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
             .expect("Failed to connect to wlan service");
-        loop_until_iface_is_found(&mut exec, &wlan_service, &mut helper);
 
         let proxy = helper.proxy();
         connect(&mut exec, &wlan_service, &proxy, &mut helper, SSID_ETHERNET, &BSS_ETHNET);

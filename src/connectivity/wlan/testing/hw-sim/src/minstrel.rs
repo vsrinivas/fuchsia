@@ -28,8 +28,7 @@ pub fn test_rate_selection() {
         &mut exec,
         wlantap::WlantapPhyConfig { quiet: true, ..create_wlantap_config() },
     );
-
-    loop_until_iface_is_found(&mut exec, &wlan_service, &mut helper);
+    loop_until_iface_is_found(&mut exec);
 
     let phy = helper.proxy();
     connect(&mut exec, &wlan_service, &phy, &mut helper, SSID_MINSTREL, &BSS_MINSTL);
