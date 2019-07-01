@@ -209,15 +209,15 @@ fn source_link(
 }
 
 fn sl(fidl_json: &Value, location: &Value) -> String {
-    if location["line"].as_str().is_some() {
+    if location.get("line").is_some() {
         // Output source link with line number
         format!(
             "{baseUrl}{tag}/{filename}{linePrefix}{lineNo}",
             baseUrl = fidl_json["config"]["source"]["baseUrl"].as_str().unwrap(),
             tag = fidl_json["tag"].as_str().unwrap(),
-            filename = rpn(location["filename"].as_str().unwrap()),
+            filename = rpf(location["filename"].as_str().unwrap()),
             linePrefix = fidl_json["config"]["source"]["line"].as_str().unwrap(),
-            lineNo = location["line"].as_str().unwrap()
+            lineNo = location["line"]
         )
     } else {
         // Output general source link, without line number
@@ -225,7 +225,7 @@ fn sl(fidl_json: &Value, location: &Value) -> String {
             "{baseUrl}{tag}/{filename}",
             baseUrl = fidl_json["config"]["source"]["baseUrl"].as_str().unwrap(),
             tag = fidl_json["tag"].as_str().unwrap(),
-            filename = rpn(location["filename"].as_str().unwrap())
+            filename = rpf(location["filename"].as_str().unwrap())
         )
     }
 }
@@ -304,7 +304,7 @@ mod test {
 
         let location_line = json!({
             "filename": "sample.fidl",
-            "line": "42"
+            "line": 42
         });
 
         assert_eq!(sl(&fidl_json, &location_line), "https://example.com/master/sample.fidl#42");
@@ -314,5 +314,24 @@ mod test {
         });
 
         assert_eq!(sl(&fidl_json, &location_no_line), "https://example.com/master/foobar.fidl");
+
+        let location_with_folders = json!({
+            "filename": "../../sdk/fidl/fuchsia.bluetooth/address.fidl"
+        });
+
+        assert_eq!(
+            sl(&fidl_json, &location_with_folders),
+            "https://example.com/master/sdk/fidl/fuchsia.bluetooth/address.fidl"
+        );
+
+        let location_with_folders_and_line = json!({
+            "filename": "../../sdk/fidl/fuchsia.bluetooth/address.fidl",
+            "line": 9
+        });
+
+        assert_eq!(
+            sl(&fidl_json, &location_with_folders_and_line),
+            "https://example.com/master/sdk/fidl/fuchsia.bluetooth/address.fidl#9"
+        );
     }
 }
