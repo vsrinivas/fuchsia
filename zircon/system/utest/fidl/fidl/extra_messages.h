@@ -50,88 +50,85 @@ namespace fidl {
 
 using SimpleTable = fidl::VectorView<fidl_envelope_t>;
 struct SimpleTableEnvelopes {
-    alignas(FIDL_ALIGNMENT)
-    fidl_envelope_t x;
-    fidl_envelope_t reserved1;
-    fidl_envelope_t reserved2;
-    fidl_envelope_t reserved3;
-    fidl_envelope_t y;
+  alignas(FIDL_ALIGNMENT) fidl_envelope_t x;
+  fidl_envelope_t reserved1;
+  fidl_envelope_t reserved2;
+  fidl_envelope_t reserved3;
+  fidl_envelope_t y;
 };
 struct IntStruct {
-    alignas(FIDL_ALIGNMENT)
-    int64_t v;
+  alignas(FIDL_ALIGNMENT) int64_t v;
 };
 
 using TableOfStruct = fidl::VectorView<fidl_envelope_t>;
 struct TableOfStructEnvelopes {
-    alignas(FIDL_ALIGNMENT)
-    fidl_envelope_t a;
-    fidl_envelope_t b;
+  alignas(FIDL_ALIGNMENT) fidl_envelope_t a;
+  fidl_envelope_t b;
 };
 struct OrdinalOneStructWithHandle {
-    alignas(FIDL_ALIGNMENT)
-    zx_handle_t h;
-    int32_t foo;
+  alignas(FIDL_ALIGNMENT) zx_handle_t h;
+  int32_t foo;
 };
 struct OrdinalTwoStructWithManyHandles {
-    alignas(FIDL_ALIGNMENT)
-    zx_handle_t h1;
-    zx_handle_t h2;
-    fidl::VectorView<zx_handle_t> hs;
+  alignas(FIDL_ALIGNMENT) zx_handle_t h1;
+  zx_handle_t h2;
+  fidl::VectorView<zx_handle_t> hs;
 };
 struct TableOfStructLayout {
-    TableOfStruct envelope_vector;
-    TableOfStructEnvelopes envelopes;
-    OrdinalOneStructWithHandle a;
-    OrdinalTwoStructWithManyHandles b;
+  TableOfStruct envelope_vector;
+  TableOfStructEnvelopes envelopes;
+  OrdinalOneStructWithHandle a;
+  OrdinalTwoStructWithManyHandles b;
 };
 
 using SmallerTableOfStruct = fidl::VectorView<fidl_envelope_t>;
 struct SmallerTableOfStructEnvelopes {
-    alignas(FIDL_ALIGNMENT)
-    fidl_envelope_t b;
+  alignas(FIDL_ALIGNMENT) fidl_envelope_t b;
 };
 
 struct SampleXUnion {
+  FIDL_ALIGNDECL
+  fidl_xunion_t header;
+
+  // Representing out-of-line part
+  union {
     FIDL_ALIGNDECL
-    fidl_xunion_t header;
+    IntStruct i;
 
-    // Representing out-of-line part
-    union {
-        FIDL_ALIGNDECL
-        IntStruct i;
+    FIDL_ALIGNDECL
+    SimpleTable st;
 
-        FIDL_ALIGNDECL
-        SimpleTable st;
-
-        FIDL_ALIGNDECL
-        int32_t raw_int;
-    };
+    FIDL_ALIGNDECL
+    int32_t raw_int;
+  };
 };
 constexpr uint32_t kSampleXUnionIntStructOrdinal = 376675050;
 constexpr uint32_t kSampleXUnionRawIntOrdinal = 319709411;
 
 struct SampleXUnionStruct {
-    FIDL_ALIGNDECL
-    SampleXUnion xu;
+  FIDL_ALIGNDECL
+  SampleXUnion xu;
 };
 
 struct SampleNullableXUnionStruct {
-    FIDL_ALIGNDECL
-    SampleXUnion opt_xu;
+  FIDL_ALIGNDECL
+  SampleXUnion opt_xu;
 };
 
 struct Int16Bits {
-    FIDL_ALIGNDECL
-    uint16_t bits;
+  FIDL_ALIGNDECL
+  uint16_t bits;
 };
 
 struct Int32Bits {
-    FIDL_ALIGNDECL
-    uint32_t bits;
+  FIDL_ALIGNDECL
+  uint32_t bits;
 };
 
-#define TEST_ENUM_DEF(name, t) struct name##Enum { FIDL_ALIGNDECL t e; };
+#define TEST_ENUM_DEF(name, t) \
+  struct name##Enum {          \
+    FIDL_ALIGNDECL t e;        \
+  };
 TEST_ENUM_DEF(Int8, int8_t)
 TEST_ENUM_DEF(Int16, int16_t)
 TEST_ENUM_DEF(Int32, int32_t)
@@ -141,4 +138,4 @@ TEST_ENUM_DEF(Uint16, uint16_t)
 TEST_ENUM_DEF(Uint32, uint32_t)
 TEST_ENUM_DEF(Uint64, uint64_t)
 
-} // namespace fidl
+}  // namespace fidl

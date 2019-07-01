@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_UTEST_FIDL_FIDL_CODED_TYPES_H_
+#define ZIRCON_SYSTEM_UTEST_FIDL_FIDL_CODED_TYPES_H_
 
 #include <lib/fidl/coding.h>
 
@@ -96,3 +97,5 @@ extern const fidl_type_t recursion_message_type;
 #if defined(__cplusplus)
 }
 #endif
+
+#endif  // ZIRCON_SYSTEM_UTEST_FIDL_FIDL_CODED_TYPES_H_

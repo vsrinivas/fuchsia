@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <type_traits>
-
 #include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
+
+#include <type_traits>
 
 namespace fidl {
 namespace {
@@ -22,5 +22,5 @@ static_assert(std::is_standard_layout<FidlCodedVector>::value, "");
 static_assert(std::is_standard_layout<FidlCodedString>::value, "");
 static_assert(std::is_standard_layout<FidlCodedHandle>::value, "");
 
-} // namespace
-} // namespace fidl
+}  // namespace
+}  // namespace fidl
