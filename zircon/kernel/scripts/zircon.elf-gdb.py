@@ -779,7 +779,7 @@ def _offset_symbols_and_breakpoints(kernel_relocated_base=None):
 
   if auto_loading_enabled:
     gdb.execute("set auto-load python-scripts on", to_string=True)
-  
+
   if confirm_was_enabled:
     gdb.execute("set confirm on", to_string=True)
 
@@ -994,9 +994,18 @@ def _KASLR_stop_event(event):
 
 def _install():
   current_objfile = gdb.current_objfile()
+  # gdb.current_objfile() is only set when autoloading;
+  # otherwise we can try to assume the first loaded objfile is the kernel.
+  if not current_objfile and gdb.objfiles():
+    current_objfile = gdb.objfiles()[0]
+  if not current_objfile:
+    print("Warning: no object file set")
+    return
+
   register_zircon_pretty_printers(current_objfile)
   if current_objfile is not None and _is_x86_64():
     gdb.unwinder.register_unwinder(current_objfile, _Amd64KernelExceptionUnwinder(), True)
+    print("Zircon extensions installed for {}".format(current_objfile.filename))
 
   if not _is_x86_64() and not _is_arm64():
     print("Warning: Unsupported architecture, KASLR support will be experimental")

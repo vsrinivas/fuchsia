@@ -360,6 +360,7 @@ if (current_toolchain == default_toolchain) {
     ]
     deps = [
       ":fixups",
+      ":gdb_extension",
       ":kernel_image.h",
       ":raw",
       ":zircon",
@@ -378,6 +379,17 @@ if (current_toolchain == default_toolchain) {
     inputs = [
       "image.ld",
       zircon_elf_rspfile,
+    ]
+  }
+
+  # Copy gdb extension script file needed for kernel debugging.
+  copy("gdb_extension") {
+    visibility = [ ":*" ]
+    sources = [
+      "scripts/zircon.elf-gdb.py",
+    ]
+    outputs = [
+      "$target_out_dir/{{source_file_part}}",
     ]
   }
 
