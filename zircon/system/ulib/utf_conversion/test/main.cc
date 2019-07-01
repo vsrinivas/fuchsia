@@ -4,8 +4,8 @@
 
 #include <endian.h>
 #include <stdio.h>
-#include <unittest/unittest.h>
 #include <utf_conversion/utf_conversion.h>
+#include <zxtest/zxtest.h>
 
 #include <fbl/algorithm.h>
 
@@ -19,14 +19,12 @@ static constexpr uint32_t INVERT_ENDIAN_FLAG = UTF_CONVERT_FLAG_FORCE_BIG_ENDIAN
 
 #define ASSERT_UTF8_EQ(expected, expected_len, actual, actual_bytes, enc_len, msg)  \
     do {                                                                            \
-        ASSERT_GE(actual_bytes, expected_len, msg);                                 \
-        ASSERT_EQ(expected_len, enc_len, msg);                                      \
-        ASSERT_BYTES_EQ(expected, actual, expected_len, msg);                       \
+        ASSERT_GE(actual_bytes, expected_len, "%s", msg);                           \
+        ASSERT_EQ(expected_len, enc_len, "%s", msg);                                \
+        ASSERT_BYTES_EQ(expected, actual, expected_len, "%s", msg);                 \
     } while(false)
 
-static bool utf16to8_bad_args(void) {
-    BEGIN_TEST;
-
+TEST(UTF16To8TestCase, BadArgs) {
     uint16_t src;
     uint8_t dst = 0xFE;
     size_t dst_len;
@@ -55,15 +53,11 @@ static bool utf16to8_bad_args(void) {
     dst_len = 0;
     src = 0xAB;
     res = utf16_to_utf8(&src, 1, nullptr, &dst_len);
-    ASSERT_EQ(ZX_OK, res, "null dst with zero dst_len should succeed");
+    ASSERT_OK(res, "null dst with zero dst_len should succeed");
     ASSERT_EQ(2, dst_len, "encoded size of 0xAB should be 2!");
-
-    END_TEST;
 }
 
-static bool utf16to8_empty_source(void) {
-    BEGIN_TEST;
-
+TEST(UTF16To8TestCase, EmptySource) {
     uint16_t src;
     static const uint8_t expected[] = { 0xA1, 0xB2, 0xC3, 0xD4 };
     uint8_t actual[sizeof(expected)];
@@ -75,24 +69,20 @@ static bool utf16to8_empty_source(void) {
     memcpy(actual, expected, sizeof(actual));
     dst_len = sizeof(actual);
     res = utf16_to_utf8(&src, 0,actual, &dst_len);
-    ASSERT_EQ(ZX_OK, res, "zero length string conversion failed");
+    ASSERT_OK(res, "zero length string conversion failed");
     ASSERT_EQ(0, dst_len, "dst_len should be zero after zero length string conversion");
     ASSERT_BYTES_EQ(expected, actual, sizeof(actual),
                     "dst buffer modified after zero length string conversion");
 
     dst_len = sizeof(actual);
     res = utf16_to_utf8(nullptr, 1,actual, &dst_len);
-    ASSERT_EQ(ZX_OK, res, "null source string conversion failed");
+    ASSERT_OK(res, "null source string conversion failed");
     ASSERT_EQ(0, dst_len, "dst_len should be zero after null source string conversion");
     ASSERT_BYTES_EQ(expected, actual, sizeof(actual),
                     "dst buffer modified after null source string conversion");
-
-    END_TEST;
 }
 
-static bool utf16to8_simple_codepoints(void) {
-    BEGIN_TEST;
-
+TEST(UTF16To8TestCase, SimpleCodepoints) {
     static const struct {
         uint16_t src;
         uint8_t expected[3];
@@ -130,19 +120,15 @@ static bool utf16to8_simple_codepoints(void) {
         ::memset(actual, 0xAB, sizeof(actual));
 
         res = utf16_to_utf8(&v.src, 1, actual, &encoded_len);
-        ASSERT_EQ(ZX_OK, res, case_id);
-        ASSERT_LE(v.expected_len, sizeof(v.expected), case_id);
+        ASSERT_OK(res, "%s", case_id);
+        ASSERT_LE(v.expected_len, sizeof(v.expected), "%s", case_id);
         ASSERT_UTF8_EQ(v.expected, v.expected_len,
                        actual, sizeof(actual),
                        encoded_len, case_id);
     }
-
-    END_TEST;
 }
 
-static bool utf16to8_paired_surrogates(void) {
-    BEGIN_TEST;
-
+TEST(UTF16To8TestCase, PairedSurrogates) {
     // All paired surrogate encodings are going to be 4 byte UTF-8 codepoints (U+010000, U+10FFFF)
     static const struct {
         uint16_t src[2];
@@ -167,18 +153,14 @@ static bool utf16to8_paired_surrogates(void) {
         ::memset(actual, 0xAB, sizeof(actual));
 
         res = utf16_to_utf8(v.src, fbl::count_of(v.src), actual, &encoded_len);
-        ASSERT_EQ(ZX_OK, res, case_id);
+        ASSERT_OK(res, "%s", case_id);
         ASSERT_UTF8_EQ(v.expected, sizeof(v.expected),
                        actual, sizeof(actual),
                        encoded_len, case_id);
     }
-
-    END_TEST;
 }
 
-static bool utf16to8_unpaired_surrogates(void) {
-    BEGIN_TEST;
-
+TEST(UTF16To8TestCase, UnpairedSurrogates) {
     static const struct {
         uint16_t src;
         uint8_t expected[3];
@@ -212,7 +194,7 @@ static bool utf16to8_unpaired_surrogates(void) {
 
         encoded_len = sizeof(actual);
         res = utf16_to_utf8(&v.src, 1, actual, &encoded_len);
-        ASSERT_EQ(ZX_OK, res, case_id);
+        ASSERT_OK(res, "%s", case_id);
         ASSERT_UTF8_EQ(replace, sizeof(replace), actual, sizeof(actual),
                        encoded_len, case_id);
 
@@ -224,17 +206,13 @@ static bool utf16to8_unpaired_surrogates(void) {
         encoded_len = sizeof(actual);
         res = utf16_to_utf8(&v.src, 1, actual, &encoded_len,
                             UTF_CONVERT_FLAG_PRESERVE_UNPAIRED_SURROGATES);
-        ASSERT_EQ(ZX_OK, res, case_id);
+        ASSERT_OK(res, "%s", case_id);
         ASSERT_UTF8_EQ(v.expected, sizeof(v.expected), actual, sizeof(actual),
                        encoded_len, case_id);
     }
-
-    END_TEST;
 }
 
-static bool utf16to8_dst_buffer_lengths(void) {
-    BEGIN_TEST;
-
+TEST(UTF16To8TestCase, BufferLengths) {
     const uint16_t src[] = { 'T', 'e', 's', 't' };
     const uint8_t expected[] = { 'T', 'e', 's', 't' };
     uint8_t actual[16];
@@ -254,28 +232,24 @@ static bool utf16to8_dst_buffer_lengths(void) {
                  sizeof(expected), d);
         ::memset(actual, 0xAB, sizeof(actual));
 
-        ASSERT_LE(encoded_len, sizeof(actual), case_id);
+        ASSERT_LE(encoded_len, sizeof(actual), "%s", case_id);
         res = utf16_to_utf8(src, fbl::count_of(src), actual, &encoded_len);
 
-        ASSERT_EQ(ZX_OK, res, case_id);
-        ASSERT_EQ(sizeof(expected), encoded_len, case_id);
+        ASSERT_OK(res, "%s", case_id);
+        ASSERT_EQ(sizeof(expected), encoded_len, "%s", case_id);
         static_assert(sizeof(expected) <= sizeof(actual),
                       "'actual' buffer must be large enough to hold 'expected' result");
-        ASSERT_BYTES_EQ(expected, actual, d < encoded_len ? d : encoded_len, case_id);
+        ASSERT_BYTES_EQ(expected, actual, d < encoded_len ? d : encoded_len, "%s", case_id);
 
         if (d < sizeof(actual)) {
             uint8_t pattern[sizeof(actual)];
             ::memset(pattern, 0xAB, sizeof(pattern));
-            ASSERT_BYTES_EQ(actual + d, pattern, sizeof(actual) - d, case_id);
+            ASSERT_BYTES_EQ(actual + d, pattern, sizeof(actual) - d, "%s", case_id);
         }
     }
-
-    END_TEST;
 }
 
-static bool utf16to8_endianness_and_bom(void) {
-    BEGIN_TEST;
-
+TEST(UTF16To8TestCase, EndiannessAndBom) {
     static const struct {
         uint16_t src[5];
         bool host_order;
@@ -340,7 +314,7 @@ static bool utf16to8_endianness_and_bom(void) {
                      (e.flags & INVERT_ENDIAN_FLAG) ? "invert" : "detect");
 
             res = utf16_to_utf8(s.src, fbl::count_of(s.src), actual, &enc_len, e.flags);
-            ASSERT_EQ(ZX_OK, res, case_id);
+            ASSERT_OK(res, "%s", case_id);
 
             if (s.host_order) {
                 ASSERT_UTF8_EQ(e.host.exp, e.host.len, actual, sizeof(actual), enc_len, case_id);
@@ -349,16 +323,4 @@ static bool utf16to8_endianness_and_bom(void) {
             }
         }
     }
-
-    END_TEST;
 }
-
-BEGIN_TEST_CASE(utf_conversion_tests)
-RUN_TEST(utf16to8_bad_args);
-RUN_TEST(utf16to8_empty_source);
-RUN_TEST(utf16to8_simple_codepoints);
-RUN_TEST(utf16to8_paired_surrogates);
-RUN_TEST(utf16to8_unpaired_surrogates);
-RUN_TEST(utf16to8_dst_buffer_lengths);
-RUN_TEST(utf16to8_endianness_and_bom);
-END_TEST_CASE(utf_conversion_tests)

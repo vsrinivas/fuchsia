@@ -17,8 +17,8 @@ test("utf_conversion") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/pretty",
-    "$zx/system/ulib/unittest",
     "$zx/system/ulib/utf_conversion",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
   ]
 }
