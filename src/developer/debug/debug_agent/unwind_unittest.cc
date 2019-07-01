@@ -34,11 +34,11 @@ struct ThreadData {
 
 void __attribute__((noinline)) ThreadFunc2(ThreadData* data) {
   // Tell the main thread we're ready for backtrace computation.
+  std::unique_lock<std::mutex> lock(data->mutex);
   data->thread_ready = true;
   data->thread_ready_cv.notify_one();
 
   // Block until the backtrace is done being completed.
-  std::unique_lock<std::mutex> lock(data->mutex);
   if (!data->backtrace_done) {
     data->backtrace_done_cv.wait(lock,
                                  [data]() { return data->backtrace_done; });
