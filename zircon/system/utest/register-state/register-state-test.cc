@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <pthread.h>
-#include <unittest/unittest.h>
 #include <zircon/syscalls.h>
+#include <zxtest/zxtest.h>
 
 #if defined(__x86_64__)
 
@@ -48,9 +48,7 @@ __attribute__((target("fsgsbase"))) static void* gs_base_test_thread(void* threa
 // We do this by launching multiple threads that set gs_base to different
 // values.  After all the threads have set gs_base, the threads wake up and
 // check that gs_base was preserved.
-bool TestContextSwitchOfGsBase() {
-  BEGIN_TEST;
-
+TEST(RegisterStateTest, ContextSwitchOfGsBase) {
   // We run the rest of the test even if the fsgsbase instructions aren't
   // available, so that at least the test's threading logic gets
   // exercised.
@@ -74,8 +72,6 @@ bool TestContextSwitchOfGsBase() {
     ASSERT_EQ(pthread_join(tids[i], nullptr), 0);
   }
   ASSERT_EQ(pthread_barrier_destroy(&g_barrier), 0);
-
-  END_TEST;
 }
 
 #define DEFINE_REGISTER_ACCESSOR(REG)                     \
@@ -101,12 +97,12 @@ DEFINE_REGISTER_ACCESSOR(gs)
 // IRET instruction has the side effect of resetting these registers when
 // returning from the kernel to userland (but not when returning to kernel
 // code).
-bool TestSegmentSelectorsZeroedOnInterrupt() {
-  BEGIN_TEST;
-
+TEST(RegisterStateTest, SegmentSelectorsZeroedOnInterrupt) {
   // Disable this test because some versions of non-KVM QEMU don't
   // implement the part of IRET described above.
-  return true;
+  //
+  // TODO(ZX-4594): Replace this return statement with ZXTEST_SKIP.
+  return;
 
   // We skip setting %fs because that breaks libc's TLS.
   set_ds(1);
@@ -123,16 +119,12 @@ bool TestSegmentSelectorsZeroedOnInterrupt() {
   EXPECT_EQ(get_ds(), 0);
   EXPECT_EQ(get_es(), 0);
   EXPECT_EQ(get_gs(), 0);
-
-  END_TEST;
 }
 
 // Test that the kernel also resets the segment selector registers on a
 // context switch, to avoid leaking their values and to match what happens
 // on an interrupt.
-bool TestSegmentSelectorsZeroedOnContextSwitch() {
-  BEGIN_TEST;
-
+TEST(RegisterStateTest, SegmentSelectorsZeroedOnContextSwitch) {
   set_ds(1);
   set_es(1);
   set_gs(1);
@@ -152,21 +144,13 @@ bool TestSegmentSelectorsZeroedOnContextSwitch() {
   // the chance of that happening.
   zx_duration_t duration = ZX_MSEC(1);
   while (get_gs() == 1 && duration < ZX_SEC(10)) {
-    EXPECT_EQ(zx_nanosleep(zx_deadline_after(duration)), ZX_OK);
+    EXPECT_OK(zx_nanosleep(zx_deadline_after(duration)));
     duration *= 2;
   }
 
   EXPECT_EQ(get_ds(), 0);
   EXPECT_EQ(get_es(), 0);
   EXPECT_EQ(get_gs(), 0);
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(register_state_tests)
-RUN_TEST(TestContextSwitchOfGsBase)
-RUN_TEST(TestSegmentSelectorsZeroedOnInterrupt)
-RUN_TEST(TestSegmentSelectorsZeroedOnContextSwitch)
-END_TEST_CASE(register_state_tests)
 
 #endif
