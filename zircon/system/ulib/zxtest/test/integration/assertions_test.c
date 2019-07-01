@@ -700,6 +700,39 @@ TEST(ZxTestCAssertionTest, AddFatalFailure) {
     TEST_CHECKPOINT();
 }
 
+static void AssertFail(void) {
+    ASSERT_TRUE(false);
+    return;
+}
+
+TEST(ZxTestCAssertionTest, CurrentTestHasFailuresDetectsNonFatalFailures) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to detect failure");
+    EXPECT_TRUE(false);
+    ASSERT_TRUE(CURRENT_TEST_HAS_FAILURES());
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestCAssertionTest, CurrentTestHasFailuresDetectsFatalFailures) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to detect failure");
+    AssertFail();
+    ASSERT_TRUE(CURRENT_TEST_HAS_FAILURES());
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestCAssertionTest, CurrentTestHasFatalFailuresIgnoresNonFatalFailures) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to detect failure");
+    EXPECT_TRUE(false);
+    ASSERT_FALSE(CURRENT_TEST_HAS_FATAL_FAILURES());
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestCAssertionTest, CurrentTestHasFatalFailuresDetectsFatalFailures) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to detect failure");
+    AssertFail();
+    ASSERT_TRUE(CURRENT_TEST_HAS_FATAL_FAILURES());
+    TEST_CHECKPOINT();
+}
+
 #ifdef __Fuchsia__
 static void Crash(void) {
     ZX_ASSERT(false);

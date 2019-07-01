@@ -610,13 +610,15 @@ private:
 
 class ConverToBoolNotCopyable : public ConverToBool {
 public:
-    ConverToBoolNotCopyable(bool value) : ConverToBool(value) {}
+    ConverToBoolNotCopyable(bool value)
+        : ConverToBool(value) {}
     ConverToBoolNotCopyable(const ConverToBoolNotCopyable&) = delete;
 };
 
 class ConverToBoolNotMoveable : public ConverToBool {
 public:
-    ConverToBoolNotMoveable(bool value) : ConverToBool(value) {}
+    ConverToBoolNotMoveable(bool value)
+        : ConverToBool(value) {}
     ConverToBoolNotMoveable(const ConverToBoolNotMoveable&) = delete;
     ConverToBoolNotMoveable(ConverToBoolNotMoveable&&) = delete;
 };
@@ -732,13 +734,15 @@ private:
 
 class ConverToBoolExplicitNotCopyable : public ConverToBoolExplicit {
 public:
-    ConverToBoolExplicitNotCopyable(bool value) : ConverToBoolExplicit(value) {}
+    ConverToBoolExplicitNotCopyable(bool value)
+        : ConverToBoolExplicit(value) {}
     ConverToBoolExplicitNotCopyable(const ConverToBoolExplicitNotCopyable&) = delete;
 };
 
 class ConverToBoolExplicitNotMoveable : public ConverToBoolExplicit {
 public:
-    ConverToBoolExplicitNotMoveable(bool value) : ConverToBoolExplicit(value) {}
+    ConverToBoolExplicitNotMoveable(bool value)
+        : ConverToBoolExplicit(value) {}
     ConverToBoolExplicitNotMoveable(const ConverToBoolExplicitNotMoveable&) = delete;
     ConverToBoolExplicitNotMoveable(ConverToBoolExplicitNotMoveable&&) = delete;
 };
@@ -861,6 +865,39 @@ TEST(ZxTestAssertionTest, AddFatalFailure) {
     TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failed to detect fatal failure");
     ADD_FATAL_FAILURE("Something went wrong.");
     ASSERT_NO_FATAL_FAILURES();
+    TEST_CHECKPOINT();
+}
+
+void AssertFail() {
+    ASSERT_TRUE(false);
+    return;
+}
+
+TEST(ZxTestAssertionTest, CurrentTestHasFailuresDetectsNonFatalFailures) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to detect failure");
+    EXPECT_TRUE(false);
+    ASSERT_TRUE(CURRENT_TEST_HAS_FAILURES());
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, CurrentTestHasFailuresDetectsFatalFailures) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to detect failure");
+    AssertFail();
+    ASSERT_TRUE(CURRENT_TEST_HAS_FAILURES());
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, CurrentTestHasFatalFailuresIgnoresNonFatalFailures) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to detect failure");
+    EXPECT_TRUE(false);
+    ASSERT_FALSE(CURRENT_TEST_HAS_FATAL_FAILURES());
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, CurrentTestHasFatalFailuresDetectsFatalFailures) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to detect failure");
+    AssertFail();
+    ASSERT_TRUE(CURRENT_TEST_HAS_FATAL_FAILURES());
     TEST_CHECKPOINT();
 }
 
