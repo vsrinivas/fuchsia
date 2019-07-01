@@ -18,9 +18,9 @@ using internal::TestDriver;
 namespace test {
 namespace {
 
-constexpr SourceLocation kSourceLocation = {.filename    = "myfilepath.cpp",
+constexpr SourceLocation kSourceLocation = {.filename = "myfilepath.cpp",
                                             .line_number = 4815162342};
-constexpr char kTestName[]               = "TestInfoTest";
+constexpr char kTestName[] = "TestInfoTest";
 
 class FakeTest : public zxtest::Test {
  public:
@@ -46,7 +46,7 @@ void TestInfoInstantiate() {
   TestDriverStub test_driver;
   bool called = false;
   TestInfo info(kTestName, kSourceLocation, [&called](TestDriver* driver) {
-    auto test     = zxtest::Test::Create<FakeTest>(driver);
+    auto test = zxtest::Test::Create<FakeTest>(driver);
     test->called_ = &called;
     return test;
   });

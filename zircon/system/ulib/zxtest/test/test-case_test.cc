@@ -78,7 +78,7 @@ class FakeLifecycleObserver : public LifecycleObserver {
 
  private:
   size_t test_case_ = 0;
-  size_t test_      = 0;
+  size_t test_ = 0;
 };
 
 }  // namespace
@@ -95,7 +95,7 @@ void TestCaseDefault() {
 void TestCaseRegisterTest() {
   TestCase test_case(kTestCaseName, &Stub, &Stub);
   const SourceLocation kLocation = {.filename = "test.cpp", .line_number = 1};
-  const fbl::String kTestName    = "TestName";
+  const fbl::String kTestName = "TestName";
 
   ZX_ASSERT_MSG(test_case.RegisterTest(kTestName, kLocation, &Test::Create<FakeTest>),
                 "TestCase failed to register a test.");
@@ -119,11 +119,11 @@ void TestCaseRun() {
       kTestCaseName, [&order, &set_up]() { set_up = order++; },
       [&order, &tear_down]() { tear_down = order++; });
   const SourceLocation kLocation = {.filename = "test.cpp", .line_number = 1};
-  const fbl::String kTestName    = "TestName";
+  const fbl::String kTestName = "TestName";
 
   ZX_ASSERT_MSG(test_case.RegisterTest(kTestName, kLocation,
                                        [&order, &test](TestDriver* driver) {
-                                         auto test_ptr  = Test::Create<FakeTest>(driver);
+                                         auto test_ptr = Test::Create<FakeTest>(driver);
                                          test_ptr->body = [&order, &test]() { test = order++; };
                                          return test_ptr;
                                        }),
@@ -138,7 +138,7 @@ void TestCaseRun() {
 void TestCaseRegisterDuplicatedTestFails() {
   TestCase test_case(kTestCaseName, &Stub, &Stub);
   const SourceLocation kLocation = {.filename = "test.cpp", .line_number = 1};
-  const fbl::String kTestName    = "TestName";
+  const fbl::String kTestName = "TestName";
 
   ZX_ASSERT_MSG(test_case.RegisterTest(kTestName, kLocation, &Test::Create<FakeTest>),
                 "TestCase failed to register a test.");
@@ -154,7 +154,7 @@ void TestCaseRegisterDuplicatedTestFails() {
 void TestCaseFilter() {
   TestCase test_case(kTestCaseName, &Stub, &Stub);
   const SourceLocation kLocation = {.filename = "test.cpp", .line_number = 1};
-  const fbl::String kTestName    = "TestName";
+  const fbl::String kTestName = "TestName";
 
   ZX_ASSERT_MSG(test_case.RegisterTest(kTestName, kLocation, &Test::Create<FakeTest>),
                 "TestCase failed to register a test.");
@@ -174,7 +174,7 @@ void TestCaseFilter() {
 void TestCaseFilterNoMatches() {
   TestCase test_case(kTestCaseName, &Stub, &Stub);
   const SourceLocation kLocation = {.filename = "test.cpp", .line_number = 1};
-  const fbl::String kTestName    = "TestName";
+  const fbl::String kTestName = "TestName";
 
   ZX_ASSERT_MSG(
       test_case.RegisterTest(kTestName, kLocation,
@@ -191,7 +191,7 @@ void TestCaseFilterNoMatches() {
 void TestCaseFilterAllMatching() {
   TestCase test_case(kTestCaseName, &Stub, &Stub);
   const SourceLocation kLocation = {.filename = "test.cpp", .line_number = 1};
-  const fbl::String kTestName    = "TestName";
+  const fbl::String kTestName = "TestName";
 
   ZX_ASSERT_MSG(test_case.RegisterTest(kTestName, kLocation, &Test::Create<FakeTest>),
                 "TestCase failed to register a test.");
@@ -209,7 +209,7 @@ void TestCaseFilterAllMatching() {
 void TestCaseFilterNullMatchesAll() {
   TestCase test_case(kTestCaseName, &Stub, &Stub);
   const SourceLocation kLocation = {.filename = "test.cpp", .line_number = 1};
-  const fbl::String kTestName    = "TestName";
+  const fbl::String kTestName = "TestName";
 
   ZX_ASSERT_MSG(test_case.RegisterTest(kTestName, kLocation, &Test::Create<FakeTest>),
                 "TestCase failed to register a test.");
@@ -227,7 +227,7 @@ void TestCaseFilterNullMatchesAll() {
 void TestCaseFilterDoNotAccumulate() {
   TestCase test_case(kTestCaseName, &Stub, &Stub);
   const SourceLocation kLocation = {.filename = "test.cpp", .line_number = 1};
-  const fbl::String kTestName    = "TestName";
+  const fbl::String kTestName = "TestName";
 
   ZX_ASSERT_MSG(test_case.RegisterTest(kTestName, kLocation, &Test::Create<FakeTest>),
                 "TestCase failed to register a test.");
@@ -244,12 +244,12 @@ void TestCaseShuffle() {
   TestDriverStub driver;
   TestCase test_case(kTestCaseName, &Stub, &Stub);
   const SourceLocation kLocation = {.filename = "test.cpp", .line_number = 1};
-  const fbl::String kTestName    = "TestName";
+  const fbl::String kTestName = "TestName";
   fbl::Vector<int> run_order;
 
   ZX_ASSERT_MSG(test_case.RegisterTest(kTestName, kLocation,
                                        [&run_order](TestDriver* driver) {
-                                         auto test  = Test::Create<FakeTest>(driver);
+                                         auto test = Test::Create<FakeTest>(driver);
                                          test->body = [&run_order]() { run_order.push_back(1); };
                                          return test;
                                        }),
@@ -257,7 +257,7 @@ void TestCaseShuffle() {
 
   ZX_ASSERT_MSG(test_case.RegisterTest("TestName2", kLocation,
                                        [&run_order](TestDriver* driver) {
-                                         auto test  = Test::Create<FakeTest>(driver);
+                                         auto test = Test::Create<FakeTest>(driver);
                                          test->body = [&run_order]() { run_order.push_back(2); };
                                          return test;
                                        }),
@@ -265,7 +265,7 @@ void TestCaseShuffle() {
 
   ZX_ASSERT_MSG(test_case.RegisterTest("TestName3", kLocation,
                                        [&run_order](TestDriver* driver) {
-                                         auto test  = Test::Create<FakeTest>(driver);
+                                         auto test = Test::Create<FakeTest>(driver);
                                          test->body = [&run_order]() { run_order.push_back(3); };
                                          return test;
                                        }),
@@ -301,12 +301,12 @@ void TestCaseUnShuffle() {
   TestDriverStub driver;
   TestCase test_case(kTestCaseName, &Stub, &Stub);
   const SourceLocation kLocation = {.filename = "test.cpp", .line_number = 1};
-  const fbl::String kTestName    = "TestName";
+  const fbl::String kTestName = "TestName";
   fbl::Vector<int> run_order;
 
   ZX_ASSERT_MSG(test_case.RegisterTest(kTestName, kLocation,
                                        [&run_order](TestDriver* driver) {
-                                         auto test  = Test::Create<FakeTest>(driver);
+                                         auto test = Test::Create<FakeTest>(driver);
                                          test->body = [&run_order]() { run_order.push_back(1); };
                                          return test;
                                        }),
@@ -314,7 +314,7 @@ void TestCaseUnShuffle() {
 
   ZX_ASSERT_MSG(test_case.RegisterTest("TestName2", kLocation,
                                        [&run_order](TestDriver* driver) {
-                                         auto test  = Test::Create<FakeTest>(driver);
+                                         auto test = Test::Create<FakeTest>(driver);
                                          test->body = [&run_order]() { run_order.push_back(2); };
                                          return test;
                                        }),
@@ -322,7 +322,7 @@ void TestCaseUnShuffle() {
 
   ZX_ASSERT_MSG(test_case.RegisterTest("TestName3", kLocation,
                                        [&run_order](TestDriver* driver) {
-                                         auto test  = Test::Create<FakeTest>(driver);
+                                         auto test = Test::Create<FakeTest>(driver);
                                          test->body = [&run_order]() { run_order.push_back(3); };
                                          return test;
                                        }),
@@ -342,12 +342,12 @@ void TestCaseRunUntilFailure() {
   TestDriverStub stub_driver;
   TestCase test_case(kTestCaseName, &Stub, &Stub);
   const SourceLocation kLocation = {.filename = "test.cpp", .line_number = 1};
-  const fbl::String kTestName    = "TestName";
-  bool third_test_executed       = false;
+  const fbl::String kTestName = "TestName";
+  bool third_test_executed = false;
 
   ZX_ASSERT_MSG(test_case.RegisterTest(kTestName, kLocation,
                                        [](TestDriver* driver) {
-                                         auto test  = Test::Create<FakeTest>(driver);
+                                         auto test = Test::Create<FakeTest>(driver);
                                          test->body = []() {};
                                          return test;
                                        }),
@@ -355,7 +355,7 @@ void TestCaseRunUntilFailure() {
 
   ZX_ASSERT_MSG(test_case.RegisterTest("TestName2", kLocation,
                                        [&stub_driver](TestDriver* driver) {
-                                         auto test  = Test::Create<FakeTest>(driver);
+                                         auto test = Test::Create<FakeTest>(driver);
                                          test->body = [&stub_driver]() {
                                            stub_driver.NotifyFail();
                                          };
@@ -365,7 +365,7 @@ void TestCaseRunUntilFailure() {
 
   ZX_ASSERT_MSG(test_case.RegisterTest("TestName3", kLocation,
                                        [&third_test_executed](TestDriver* driver) {
-                                         auto test  = Test::Create<FakeTest>(driver);
+                                         auto test = Test::Create<FakeTest>(driver);
                                          test->body = [&third_test_executed]() {
                                            third_test_executed = true;
                                          };

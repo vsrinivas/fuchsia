@@ -70,7 +70,7 @@ void Options::Usage(char* bin, FILE* stream) {
 
 Options Options::FromArgs(int argc, char** argv, fbl::Vector<fbl::String>* errors) {
   // Reset index of parsed arguments.
-  optind                            = 0;
+  optind = 0;
   static const struct option opts[] = {
       {"help", optional_argument, nullptr, 'h'},
       {"gtest_filter", optional_argument, nullptr, 'f'},
@@ -85,9 +85,9 @@ Options Options::FromArgs(int argc, char** argv, fbl::Vector<fbl::String>* error
 
   auto reset = fbl::MakeAutoCall([]() { optind = 0; });
 
-  int c            = -1;
+  int c = -1;
   int option_index = -1;
-  char* val        = nullptr;
+  char* val = nullptr;
 
   // Pick a random seed by default. Overwrite it if a value was explicitly set.
   options.seed = static_cast<int>(time(nullptr));

@@ -12,7 +12,7 @@ const Runner::Options Runner::kDefaultOptions;
 
 namespace internal {
 
-TestDriverImpl::TestDriverImpl()  = default;
+TestDriverImpl::TestDriverImpl() = default;
 TestDriverImpl::~TestDriverImpl() = default;
 
 void TestDriverImpl::Skip() {
@@ -40,16 +40,16 @@ void TestDriverImpl::OnTestFailure(const TestCase& test_case, const TestInfo& te
 }
 
 void TestDriverImpl::OnAssertion(const Assertion& assertion) {
-  status_                          = TestStatus::kFailed;
-  current_test_has_any_failures_   = true;
+  status_ = TestStatus::kFailed;
+  current_test_has_any_failures_ = true;
   current_test_has_fatal_failures_ = assertion.is_fatal();
-  had_any_failures_                = true;
+  had_any_failures_ = true;
 }
 
 void TestDriverImpl::Reset() {
   current_test_has_fatal_failures_ = false;
-  current_test_has_any_failures_   = false;
-  status_                          = TestStatus::kPassed;
+  current_test_has_any_failures_ = false;
+  status_ = TestStatus::kPassed;
 }
 
 }  // namespace internal
@@ -95,8 +95,8 @@ TestRef Runner::RegisterTest(const fbl::String& test_case_name, const fbl::Strin
 }
 
 int Runner::Run(const Runner::Options& options) {
-  options_                  = &options;
-  auto reset_options        = fbl::MakeAutoCall([this]() { options_ = nullptr; });
+  options_ = &options;
+  auto reset_options = fbl::MakeAutoCall([this]() { options_ = nullptr; });
   summary_.total_iterations = options.repeat;
   EnforceOptions(options);
 
@@ -143,8 +143,8 @@ int Runner::Run(const Runner::Options& options) {
 }
 
 void Runner::List(const Runner::Options& options) {
-  options_                  = &options;
-  auto reset_options        = fbl::MakeAutoCall([this]() { options_ = nullptr; });
+  options_ = &options;
+  auto reset_options = fbl::MakeAutoCall([this]() { options_ = nullptr; });
   summary_.total_iterations = options.repeat;
   EnforceOptions(options);
   FILE* output = reporter_.stream();
@@ -166,9 +166,9 @@ void Runner::List(const Runner::Options& options) {
 }
 
 void Runner::EnforceOptions(const Runner::Options& options) {
-  summary_.active_test_count      = 0;
+  summary_.active_test_count = 0;
   summary_.active_test_case_count = 0;
-  const FilterOp filter_op        = {.pattern = options.filter};
+  const FilterOp filter_op = {.pattern = options.filter};
   for (auto& test_case : test_cases_) {
     // TODO(gevalentino): replace with filter function.
     test_case.Filter(filter_op);
@@ -237,14 +237,14 @@ bool MatchPatterns(fbl::StringPiece pattern, fbl::StringPiece str) {
     return advance(pattern, str, advance);
   };
 
-  bool has_next            = true;
+  bool has_next = true;
   const char* curr_pattern = pattern.data();
   while (has_next) {
     if (match_pattern(curr_pattern, str.data())) {
       return true;
     }
     curr_pattern = strchr(curr_pattern, ':');
-    has_next     = (curr_pattern != nullptr);
+    has_next = (curr_pattern != nullptr);
     // Skip ':'
     curr_pattern++;
   }
@@ -266,8 +266,8 @@ bool FilterOp::operator()(const fbl::String& test_case, const fbl::String& test)
     positive = fbl::StringPiece(p, pattern.size());
   } else {
     size_t delta = d - p;
-    positive     = fbl::StringPiece(p, delta);
-    negative     = fbl::StringPiece(d + 1, pattern.size() - delta - 1);
+    positive = fbl::StringPiece(p, delta);
+    negative = fbl::StringPiece(d + 1, pattern.size() - delta - 1);
   }
   return (positive.empty() || MatchPatterns(positive, full_test_name)) &&
          (negative.empty() || !MatchPatterns(negative, full_test_name));

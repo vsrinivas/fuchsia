@@ -25,12 +25,12 @@ using internal::TestDriverImpl;
 namespace test {
 namespace {
 
-constexpr char kTestName[]      = "TestName";
-constexpr char kTestName2[]     = "TestName2";
-constexpr char kTestCaseName[]  = "TestCase";
+constexpr char kTestName[] = "TestName";
+constexpr char kTestName2[] = "TestName2";
+constexpr char kTestCaseName[] = "TestCase";
 constexpr char kTestCaseName2[] = "TestCase2";
-constexpr char kFileName[]      = "filename.cc";
-constexpr int kLineNumber       = 20;
+constexpr char kFileName[] = "filename.cc";
+constexpr int kLineNumber = 20;
 
 // Test fixture that runs a given closure.
 class FakeTest : public zxtest::Test {
@@ -38,7 +38,7 @@ class FakeTest : public zxtest::Test {
   static fbl::Function<std::unique_ptr<Test>(TestDriver*)> MakeFactory(int* counter) {
     return [counter](TestDriver* driver) {
       std::unique_ptr<FakeTest> test = zxtest::Test::Create<FakeTest>(driver);
-      test->counter_                 = counter;
+      test->counter_ = counter;
       return test;
     };
   }
@@ -56,7 +56,7 @@ class FailingTest : public zxtest::Test {
   static fbl::Function<std::unique_ptr<Test>(TestDriver*)> MakeFactory(Runner* runner) {
     return [runner](TestDriver* driver) {
       std::unique_ptr<FailingTest> test = zxtest::Test::Create<FailingTest>(driver);
-      test->runner_                     = runner;
+      test->runner_ = runner;
       return test;
     };
   }
@@ -117,7 +117,7 @@ void RunnerRegisterTestWithCustomFactory() {
 
 void RunnerRunAllTests() {
   Runner runner(Reporter(/*stream*/ nullptr));
-  int test_counter   = 0;
+  int test_counter = 0;
   int test_2_counter = 0;
 
   TestRef ref = runner.RegisterTest<Test, FakeTest>(
@@ -155,8 +155,8 @@ class FakeRepeatingTest : public zxtest::Test {
                                                                        int* counter) {
     return [counter, runner](TestDriver* driver) {
       std::unique_ptr<FakeRepeatingTest> test = zxtest::Test::Create<FakeRepeatingTest>(driver);
-      test->counter_                          = counter;
-      test->runner_                           = runner;
+      test->counter_ = counter;
+      test->runner_ = runner;
       return test;
     };
   }
@@ -177,7 +177,7 @@ class FakeRepeatingTest : public zxtest::Test {
 
 void RunnerRunAllTestsUntilFailure() {
   Runner runner(Reporter(/*stream*/ nullptr));
-  int test_counter                    = 0;
+  int test_counter = 0;
   constexpr int kAttemptsUntilFailure = 10;
 
   runner.RegisterTest<Test, FakeRepeatingTest<kAttemptsUntilFailure>>(
@@ -190,9 +190,9 @@ void RunnerRunAllTestsUntilFailure() {
   ZX_ASSERT_MSG(runner.summary().registered_test_case_count == 1,
                 "TestCase failed to register correctly.\n");
 
-  Runner::Options options  = Runner::kDefaultOptions;
+  Runner::Options options = Runner::kDefaultOptions;
   options.break_on_failure = true;
-  options.repeat           = -1;
+  options.repeat = -1;
   ZX_ASSERT_MSG(runner.Run(options) != 0, "Test Execution Should Fail.\n");
 
   // Check that the active count reflects a filter matching all.
@@ -206,7 +206,7 @@ void RunnerRunAllTestsUntilFailure() {
 class FakeEnv : public zxtest::Environment {
  public:
   FakeEnv(int* curr_setup, int* curr_tear_down) {
-    this->curr_setup_     = curr_setup;
+    this->curr_setup_ = curr_setup;
     this->curr_tear_down_ = curr_tear_down;
   }
   ~FakeEnv() final {
@@ -230,21 +230,21 @@ class FakeEnv : public zxtest::Environment {
   }
 
  private:
-  int set_up_order_    = 0;
+  int set_up_order_ = 0;
   int tear_down_order_ = 0;
-  int* curr_setup_     = nullptr;
+  int* curr_setup_ = nullptr;
   int* curr_tear_down_ = nullptr;
 };
 
 void RunnerSetUpAndTearDownEnvironmentsTests() {
   Runner runner(Reporter(/*stream*/ nullptr));
-  int test_counter                = 0;
-  int tear_down_counter           = 1;
-  int set_up_counter              = 1;
-  std::unique_ptr<FakeEnv> first  = std::make_unique<FakeEnv>(&set_up_counter, &tear_down_counter);
+  int test_counter = 0;
+  int tear_down_counter = 1;
+  int set_up_counter = 1;
+  std::unique_ptr<FakeEnv> first = std::make_unique<FakeEnv>(&set_up_counter, &tear_down_counter);
   std::unique_ptr<FakeEnv> second = std::make_unique<FakeEnv>(&set_up_counter, &tear_down_counter);
-  FakeEnv* first_ptr              = first.get();
-  FakeEnv* second_ptr             = second.get();
+  FakeEnv* first_ptr = first.get();
+  FakeEnv* second_ptr = second.get();
 
   [[maybe_unused]] TestRef ref = runner.RegisterTest<Test, FakeTest>(
       kTestCaseName, kTestName, kFileName, kLineNumber, FakeTest::MakeFactory(&test_counter));
@@ -262,10 +262,10 @@ void RunnerSetUpAndTearDownEnvironmentsTests() {
 
 void RunnerRunOnlyFilteredTests() {
   Runner runner(Reporter(/*stream*/ nullptr));
-  int test_counter        = 0;
-  int test_2_counter      = 0;
+  int test_counter = 0;
+  int test_2_counter = 0;
   Runner::Options options = Runner::kDefaultOptions;
-  options.filter          = "TestCase.*";
+  options.filter = "TestCase.*";
 
   TestRef ref = runner.RegisterTest<Test, FakeTest>(
       kTestCaseName, kTestName, kFileName, kLineNumber, FakeTest::MakeFactory(&test_counter));
@@ -292,10 +292,10 @@ void RunnerRunOnlyFilteredTests() {
   ZX_ASSERT_MSG(test_2_counter == 0, "test_2 was not filtered.\n");
 }
 
-#define OBSERVER_EVENT_HANDLER(Event, Params...) \
-  void On##Event(Params) final {                 \
-    Event##Cnt++;                                \
-  }                                              \
+#define OBSERVER_EVENT_HANDLER(Event, Params...)                                                   \
+  void On##Event(Params) final {                                                                   \
+    Event##Cnt++;                                                                                  \
+  }                                                                                                \
   int Event##Cnt = 0
 
 class FakeObserver1 : public LifecycleObserver {
@@ -336,7 +336,7 @@ void RunnerLifecycleObserversRegisteredAndNotified() {
                                       FakeTest::MakeFactory(&test_counter));
 
   Runner::Options options = Runner::kDefaultOptions;
-  options.repeat          = 2;  // Iterate twice
+  options.repeat = 2;  // Iterate twice
 
   // For each type of notification ensure that it only notified the appropriate
   // LifecycleObserver the correct number of times.
@@ -359,7 +359,7 @@ void RunnerLifecycleObserversRegisteredAndNotified() {
 
 void RunnerRunAllTestsSameTestCase() {
   Runner runner(Reporter(/*stream*/ nullptr));
-  int test_counter   = 0;
+  int test_counter = 0;
   int test_2_counter = 0;
 
   TestRef ref = runner.RegisterTest<Test, FakeTest>(
@@ -486,7 +486,7 @@ void TestDriverImplResetOnTestCompletion() {
     void (TestDriverImpl::*complete)(const TestCase&, const TestInfo&);
   };
 // Helper macro to generate appropiate error for each function.
-#define CFN(fn) \
+#define CFN(fn)                                                                                    \
   { .name = #fn, .complete = &fn, }
   static constexpr CompleteFn complete_fns[] = {CFN(TestDriverImpl::OnTestSuccess),
                                                 CFN(TestDriverImpl::OnTestFailure),
@@ -511,19 +511,19 @@ void TestDriverImplResetOnTestCompletion() {
 
 void RunnerOptionsParseFromCmdLineShort() {
   const char* kArgs[13] = {};
-  kArgs[0]              = "mybin";
-  kArgs[1]              = "-f";
-  kArgs[2]              = "+*:-ZxTest";
-  kArgs[3]              = "-i";
-  kArgs[4]              = "100";
-  kArgs[5]              = "-s";
-  kArgs[6]              = "-r";
-  kArgs[7]              = "10";
-  kArgs[8]              = "-l";
-  kArgs[9]              = "false";
-  kArgs[10]             = "-b";
-  kArgs[11]             = "-h";
-  kArgs[12]             = "true";
+  kArgs[0] = "mybin";
+  kArgs[1] = "-f";
+  kArgs[2] = "+*:-ZxTest";
+  kArgs[3] = "-i";
+  kArgs[4] = "100";
+  kArgs[5] = "-s";
+  kArgs[6] = "-r";
+  kArgs[7] = "10";
+  kArgs[8] = "-l";
+  kArgs[9] = "false";
+  kArgs[10] = "-b";
+  kArgs[11] = "-h";
+  kArgs[12] = "true";
 
   fbl::Vector<fbl::String> errors;
   Runner::Options options =
@@ -547,19 +547,19 @@ void RunnerOptionsParseFromCmdLineShort() {
 
 void RunnerOptionsParseFromCmdLineLong() {
   const char* kArgs[13] = {};
-  kArgs[0]              = "mybin";
-  kArgs[1]              = "--gtest_filter";
-  kArgs[2]              = "+*:-ZxTest";
-  kArgs[3]              = "--gtest_repeat";
-  kArgs[4]              = "100";
-  kArgs[5]              = "--gtest_shuffle";
-  kArgs[6]              = "--gtest_random_seed";
-  kArgs[7]              = "10";
-  kArgs[8]              = "--gtest_list_tests";
-  kArgs[9]              = "false";
-  kArgs[10]             = "--gtest_break_on_failure";
-  kArgs[11]             = "--help";
-  kArgs[12]             = "true";
+  kArgs[0] = "mybin";
+  kArgs[1] = "--gtest_filter";
+  kArgs[2] = "+*:-ZxTest";
+  kArgs[3] = "--gtest_repeat";
+  kArgs[4] = "100";
+  kArgs[5] = "--gtest_shuffle";
+  kArgs[6] = "--gtest_random_seed";
+  kArgs[7] = "10";
+  kArgs[8] = "--gtest_list_tests";
+  kArgs[9] = "false";
+  kArgs[10] = "--gtest_break_on_failure";
+  kArgs[11] = "--help";
+  kArgs[12] = "true";
 
   fbl::Vector<fbl::String> errors;
   Runner::Options options =
@@ -583,9 +583,9 @@ void RunnerOptionsParseFromCmdLineLong() {
 
 void RunnerOptionsParseFromCmdLineErrors() {
   const char* kArgs[3] = {};
-  kArgs[0]             = "mybin";
-  kArgs[1]             = "--gtest_repeat";
-  kArgs[2]             = "-2";
+  kArgs[0] = "mybin";
+  kArgs[1] = "--gtest_repeat";
+  kArgs[2] = "-2";
 
   fbl::Vector<fbl::String> errors;
   Runner::Options options =

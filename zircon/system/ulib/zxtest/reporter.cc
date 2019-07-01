@@ -53,8 +53,8 @@ int64_t Timer::GetElapsedTime() const {
 }
 
 void IterationSummary::Reset() {
-  failed  = 0;
-  passed  = 0;
+  failed = 0;
+  passed = 0;
   skipped = 0;
   failed_tests.reset();
 }

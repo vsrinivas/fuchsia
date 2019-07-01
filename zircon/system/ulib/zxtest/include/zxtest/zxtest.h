@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZXTEST_ZXTEST_H_
+#define ZXTEST_ZXTEST_H_
 
 // Select the right implementation.
 #ifdef __cplusplus
@@ -25,6 +26,8 @@
 //    ASSERT/EXPECT_BYTES_NE
 //    ASSERT/EXPECT_STR_EQ
 //    ASSERT/EXPECT_STR_NE
+//    CURRENT_TEST_HAS_FAILURES
+//    CURRENT_TEST_HAS_FATAL_FAILURES
 //  * There are no matchers allowed in this library.
 //  * All assertions must happen in the main thread, unless the user provides synchronization
 //    for accessing the library.
@@ -226,3 +229,5 @@
 
 // Evaluates to true if the current test has ASSERT failures only.
 #define CURRENT_TEST_HAS_FATAL_FAILURES() _ZXTEST_ABORT_IF_ERROR
+
+#endif  // ZXTEST_ZXTEST_H_

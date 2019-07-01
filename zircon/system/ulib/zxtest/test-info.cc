@@ -16,7 +16,7 @@ TestInfo::TestInfo(const fbl::String& name, const SourceLocation& location,
     : factory_(std::move(factory)), name_(name), location_(location) {
 }
 TestInfo::TestInfo(TestInfo&& rhs) = default;
-TestInfo::~TestInfo()              = default;
+TestInfo::~TestInfo() = default;
 
 std::unique_ptr<Test> TestInfo::Instantiate(internal::TestDriver* driver) const {
   return factory_(driver);

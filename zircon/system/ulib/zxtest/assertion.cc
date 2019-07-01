@@ -30,7 +30,7 @@ Assertion::Assertion(const fbl::String& desc, const SourceLocation& location, bo
 }
 
 Assertion::Assertion(Assertion&& other) = default;
-Assertion::~Assertion()                 = default;
+Assertion::~Assertion() = default;
 
 namespace internal {
 fbl::String ToHex(const void* ptr, size_t size) {

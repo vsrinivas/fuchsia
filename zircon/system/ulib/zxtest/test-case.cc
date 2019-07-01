@@ -28,7 +28,7 @@ TestCase::TestCase(const fbl::String& name, SetUpTestCaseFn set_up, TearDownTest
   ZX_ASSERT_MSG(tear_down_, "Invalid TearDownTestCaseFn");
 }
 TestCase::TestCase(TestCase&& other) = default;
-TestCase::~TestCase()                = default;
+TestCase::~TestCase() = default;
 
 size_t TestCase::TestCount() const {
   return test_infos_.size();
@@ -97,7 +97,7 @@ void TestCase::Run(LifecycleObserver* event_broadcaster, TestDriver* driver) {
   }
 
   for (unsigned long i = 0; i < selected_indexes_.size(); ++i) {
-    const auto& test_info      = test_infos_[selected_indexes_[i]];
+    const auto& test_info = test_infos_[selected_indexes_[i]];
     std::unique_ptr<Test> test = test_info.Instantiate(driver);
     event_broadcaster->OnTestStart(*this, test_info);
     test->Run();

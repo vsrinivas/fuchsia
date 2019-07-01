@@ -18,14 +18,14 @@ namespace zxtest {
 
 namespace test {
 
-constexpr char kDescription[]      = "desc";
-constexpr char kExpectedSymbol[]   = "ESymbol";
-constexpr char kExpectedValue[]    = "EValue";
-constexpr char kActualSymbol[]     = "ASymbol";
-constexpr char kActualValue[]      = "AValue";
-constexpr char kFile[]             = "File";
-constexpr int kLine                = 120;
-constexpr bool kIsFatal            = false;
+constexpr char kDescription[] = "desc";
+constexpr char kExpectedSymbol[] = "ESymbol";
+constexpr char kExpectedValue[] = "EValue";
+constexpr char kActualSymbol[] = "ASymbol";
+constexpr char kActualValue[] = "AValue";
+constexpr char kFile[] = "File";
+constexpr int kLine = 120;
+constexpr bool kIsFatal = false;
 constexpr SourceLocation kLocation = {.filename = kFile, .line_number = kLine};
 
 void AssertionHasValues() {

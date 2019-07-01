@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZXTEST_BASE_DEATH_STATEMENT_H_
+#define ZXTEST_BASE_DEATH_STATEMENT_H_
 
 #include <memory>
 #include <string>
@@ -24,54 +25,60 @@ namespace internal {
 //
 // The statement being executed is allowed to use ASSERT_/EXPECT_ mechanisms.
 class DeathStatement {
-public:
-    // Possible results of executing this statement.
-    enum class State {
-        // Statement was never executed.
-        kUnknown,
-        // Statement execution started.
-        kStarted,
-        // Part of the setup required to execute the death statement might have failed.
-        kInternalError,
-        // Statement executed without exceptions.
-        kSuccess,
-        // Statement executed with exceptions, but handled gracefully.
-        kException,
-        // Statement executed with exceptions, but was not handled properly (leaked resources).
-        kBadState,
-    };
+ public:
+  // Possible results of executing this statement.
+  enum class State {
+    // Statement was never executed.
+    kUnknown,
+    // Statement execution started.
+    kStarted,
+    // Part of the setup required to execute the death statement might have failed.
+    kInternalError,
+    // Statement executed without exceptions.
+    kSuccess,
+    // Statement executed with exceptions, but handled gracefully.
+    kException,
+    // Statement executed with exceptions, but was not handled properly (leaked resources).
+    kBadState,
+  };
 
-    DeathStatement() = delete;
-    // Take ownership of the closure, explicit move semantics.
-    explicit DeathStatement(fit::function<void()> statement);
-    DeathStatement(const DeathStatement&) = delete;
-    DeathStatement(DeathStatement&&) = default;
-    DeathStatement& operator=(const DeathStatement&) = delete;
-    DeathStatement& operator=(DeathStatement&&) = delete;
-    ~DeathStatement() = default;
+  DeathStatement() = delete;
+  // Take ownership of the closure, explicit move semantics.
+  explicit DeathStatement(fit::function<void()> statement);
+  DeathStatement(const DeathStatement&) = delete;
+  DeathStatement(DeathStatement&&) = default;
+  DeathStatement& operator=(const DeathStatement&) = delete;
+  DeathStatement& operator=(DeathStatement&&) = delete;
+  ~DeathStatement() = default;
 
-    // Executes the statement in separate thread.
-    void Execute();
+  // Executes the statement in separate thread.
+  void Execute();
 
-    // Returns the current state of the statement.
-    State state() const { return state_; }
+  // Returns the current state of the statement.
+  State state() const {
+    return state_;
+  }
 
-    const std::string_view error_message() const { return error_message_; }
+  const std::string_view error_message() const {
+    return error_message_;
+  }
 
-private:
-    fit::function<void()> statement_;
+ private:
+  fit::function<void()> statement_;
 
-    // Blocks the main thread until |event_port| receives a packet notifying that the
-    // exception_channel has become readable.
-    void Listen(const zx::port& event_port, const zx::channel& exception_channel);
+  // Blocks the main thread until |event_port| receives a packet notifying that the
+  // exception_channel has become readable.
+  void Listen(const zx::port& event_port, const zx::channel& exception_channel);
 
-    // Returns true if the exception was handled and false if it was ignored.
-    bool HandleException(const zx::channel& exception_channel);
+  // Returns true if the exception was handled and false if it was ignored.
+  bool HandleException(const zx::channel& exception_channel);
 
-    // Internal error description.
-    std::string error_message_;
-    State state_ = State::kUnknown;
+  // Internal error description.
+  std::string error_message_;
+  State state_ = State::kUnknown;
 };
-} // namespace internal
+}  // namespace internal
 
-} // namespace zxtest
+}  // namespace zxtest
+
+#endif  // ZXTEST_BASE_DEATH_STATEMENT_H_

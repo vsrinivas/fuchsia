@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZXTEST_BASE_TYPES_H_
+#define ZXTEST_BASE_TYPES_H_
 
 #include <cstdint>
 #include <memory>
@@ -17,8 +18,8 @@ class Test;
 // Describes a location within a source file. Useful for assertions, and
 // error reporting.
 struct SourceLocation {
-    const char* filename = nullptr;
-    int64_t line_number = -1;
+  const char* filename = nullptr;
+  int64_t line_number = -1;
 };
 
 namespace internal {
@@ -34,5 +35,7 @@ using SetUpTestCaseFn = fbl::Function<void()>;
 // Function that definest a TearDown for a TestCase.
 using TearDownTestCaseFn = fbl::Function<void()>;
 
-} // namespace internal
-} // namespace zxtest
+}  // namespace internal
+}  // namespace zxtest
+
+#endif  // ZXTEST_BASE_TYPES_H_

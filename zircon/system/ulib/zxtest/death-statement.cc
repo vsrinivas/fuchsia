@@ -26,29 +26,29 @@ namespace internal {
 namespace {
 
 #define STRING(x) #x
-#define MAKE_MESSAGE(reason, line) \
+#define MAKE_MESSAGE(reason, line)                                                                 \
   "Death Test Internal Error at " __FILE__ ":" STRING(line) " " reason
 
-#define SET_ERROR(var, msg)            \
-  do {                                 \
-    var = MAKE_MESSAGE(msg, __LINE__); \
+#define SET_ERROR(var, msg)                                                                        \
+  do {                                                                                             \
+    var = MAKE_MESSAGE(msg, __LINE__);                                                             \
   } while (0)
 
 // Keys used to filter exception ports.
 enum class PortKeys : uint64_t {
   // Exception raised and handled.
-  kException         = 1,
+  kException = 1,
   kThreadTermination = 2,
-  kThreadCompletion  = 3,
-  kThreadError       = 4,
+  kThreadCompletion = 3,
+  kThreadError = 4,
 };
 
 // It is only safe to transmit within the same process.
 struct ErrorInfo {
   zx_port_packet_t ToPacket() {
     zx_port_packet_t packet;
-    packet.key         = static_cast<uint64_t>(PortKeys::kThreadError);
-    packet.type        = ZX_PKT_TYPE_USER;
+    packet.key = static_cast<uint64_t>(PortKeys::kThreadError);
+    packet.type = ZX_PKT_TYPE_USER;
     packet.user.u64[0] = reinterpret_cast<uint64_t>(this);
     return packet;
   }
@@ -69,9 +69,9 @@ struct RoutineArgs {
 
 void SendError(const zx::port& port, const char* message) {
   std::unique_ptr<ErrorInfo> info = std::make_unique<ErrorInfo>();
-  info->error_msg                 = message;
-  zx_port_packet_t packet         = info->ToPacket();
-  zx_status_t result              = port.queue(&packet);
+  info->error_msg = message;
+  zx_port_packet_t packet = info->ToPacket();
+  zx_status_t result = port.queue(&packet);
   if (result != ZX_OK) {
     fprintf(stderr, "%s.\nDeath Test Fatal Error: zx::port::queue failed with status %s.\n",
             info->error_msg.c_str(), zx_status_get_string(result));
@@ -84,12 +84,12 @@ void SendError(const zx::port& port, const char* message) {
 }
 
 // Try to exit cleanly, if not just kill the entire process.
-#define SEND_ERROR_AND_RETURN(port, message) \
-  do {                                       \
-    const char* error_message;               \
-    SET_ERROR(error_message, message);       \
-    SendError(port, error_message);          \
-    return -1;                               \
+#define SEND_ERROR_AND_RETURN(port, message)                                                       \
+  do {                                                                                             \
+    const char* error_message;                                                                     \
+    SET_ERROR(error_message, message);                                                             \
+    SendError(port, error_message);                                                                \
+    return -1;                                                                                     \
   } while (0)
 
 // Even though it is a separate thread, it is stalling the main thread, until it completes,
@@ -101,7 +101,7 @@ int RoutineThread(void* args) {
   auto signal_completion = fbl::MakeAutoCall([&routine_args]() {
     zx_port_packet_t packet;
     packet.type = ZX_PKT_TYPE_USER;
-    packet.key  = static_cast<uint64_t>(PortKeys::kThreadCompletion);
+    packet.key = static_cast<uint64_t>(PortKeys::kThreadCompletion);
     if (routine_args->event_port.queue(&packet) != ZX_OK) {
       fprintf(stderr, "Death Test Fatal Error: zx::port::queue failed.\n");
       fflush(stderr);
@@ -142,14 +142,14 @@ int RoutineThread(void* args) {
 }  // namespace
 
 DeathStatement::DeathStatement(fit::function<void()> statement) : statement_(std::move(statement)) {
-  state_         = State::kUnknown;
+  state_ = State::kUnknown;
   error_message_ = "";
 }
 
 void DeathStatement::Execute() {
   RoutineArgs routine_args;
   routine_args.statement = std::move(statement_);
-  state_                 = State::kStarted;
+  state_ = State::kStarted;
 
   if (zx::port::create(0u, &routine_args.event_port) != ZX_OK) {
     SET_ERROR(error_message_, "Failed to created event_port");
@@ -185,8 +185,8 @@ void DeathStatement::Listen(const zx::port& event_port, const zx::channel& excep
         return;
       case PortKeys::kThreadError: {
         ErrorInfo* info = reinterpret_cast<ErrorInfo*>(packet.user.u64[0]);
-        state_          = State::kInternalError;
-        error_message_  = std::move(info->error_msg);
+        state_ = State::kInternalError;
+        error_message_ = std::move(info->error_msg);
         delete info;
       } break;
       default:
@@ -203,7 +203,7 @@ bool DeathStatement::HandleException(const zx::channel& exception_channel) {
   zx_exception_info_t exception_info;
   zx::exception exception;
   uint32_t num_handles = 1;
-  uint32_t num_bytes   = sizeof(zx_exception_info_t);
+  uint32_t num_bytes = sizeof(zx_exception_info_t);
 
   auto set_internal_error = fbl::MakeAutoCall([this]() { state_ = State::kInternalError; });
 

@@ -11,39 +11,39 @@ namespace test {
 namespace {
 
 fbl::Vector<void (*)()>* GetCheckFns() {
-    static fbl::Vector<void (*)()> check_fns;
-    return &check_fns;
+  static fbl::Vector<void (*)()> check_fns;
+  return &check_fns;
 }
 
-} // namespace
+}  // namespace
 
 void AddCheckFunction(void (*check)()) {
-    GetCheckFns()->push_back(check);
+  GetCheckFns()->push_back(check);
 }
 
 void CheckAll() {
-    for (auto* fn : *GetCheckFns()) {
-        fn();
-    }
+  for (auto* fn : *GetCheckFns()) {
+    fn();
+  }
 }
 
-} // namespace test
-} // namespace zxtest
+}  // namespace test
+}  // namespace zxtest
 
 void zxtest_add_check_function(void (*check)(void)) {
-    zxtest::test::AddCheckFunction(check);
+  zxtest::test::AddCheckFunction(check);
 }
 
 void verify_expectation(test_expectation_t* expectation) {
-    if (expectation->expect_errors) {
-        CHECK_ERROR();
-    } else {
-        CHECK_NO_ERROR();
-    }
-    if (expectation->checkpoint_reached != expectation->checkpoint_reached_expected) {
-        fprintf(stdout, "[%s:%zu]: Failed due to %s\n", expectation->filename, expectation->line,
-                expectation->reason);
-        ZX_ASSERT_MSG(expectation->checkpoint_reached_expected == expectation->checkpoint_reached,
-                      "Checkpoint expectation failed. See error above.");
-    }
+  if (expectation->expect_errors) {
+    CHECK_ERROR();
+  } else {
+    CHECK_NO_ERROR();
+  }
+  if (expectation->checkpoint_reached != expectation->checkpoint_reached_expected) {
+    fprintf(stdout, "[%s:%zu]: Failed due to %s\n", expectation->filename, expectation->line,
+            expectation->reason);
+    ZX_ASSERT_MSG(expectation->checkpoint_reached_expected == expectation->checkpoint_reached,
+                  "Checkpoint expectation failed. See error above.");
+  }
 }

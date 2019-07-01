@@ -147,14 +147,14 @@ void DeathStatementInternalError();
 #endif
 
 struct RegisteredTest {
-  const char* name  = nullptr;
+  const char* name = nullptr;
   void (*test_fn)() = nullptr;
 };
 
 // Just so we capture the function name.
-#define RUN_TEST(test_function)                       \
-  RegisteredTest {                                    \
-    .name = #test_function, .test_fn = &test_function \
+#define RUN_TEST(test_function)                                                                    \
+  RegisteredTest {                                                                                 \
+    .name = #test_function, .test_fn = &test_function                                              \
   }
 
 // List of tests to run.

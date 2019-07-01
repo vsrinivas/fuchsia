@@ -21,9 +21,9 @@ void Broadcast(ObserverList* observers, Args&&... args) {
 
 }  // namespace
 
-EventBroadcaster::EventBroadcaster()                   = default;
+EventBroadcaster::EventBroadcaster() = default;
 EventBroadcaster::EventBroadcaster(EventBroadcaster&&) = default;
-EventBroadcaster::~EventBroadcaster()                  = default;
+EventBroadcaster::~EventBroadcaster() = default;
 
 // Reports before any test is executed.
 void EventBroadcaster::OnProgramStart(const Runner& runner) {
