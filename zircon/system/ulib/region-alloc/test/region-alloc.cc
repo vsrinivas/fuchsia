@@ -4,8 +4,8 @@
 
 #include <region-alloc/region-alloc.h>
 #include <stdio.h>
-#include <unittest/unittest.h>
 #include <inttypes.h>
+#include <zxtest/zxtest.h>
 
 #include <fbl/algorithm.h>
 
@@ -15,9 +15,7 @@
 
 namespace {
 
-static bool ralloc_region_pools_test() {
-    BEGIN_TEST;
-
+TEST(RegionAllocCppApiTestCase, RegionPools) {
     // Create a default constructed allocator on the stack.
     RegionAllocator alloc;
 
@@ -28,35 +26,35 @@ static bool ralloc_region_pools_test() {
         EXPECT_EQ(ZX_ERR_BAD_STATE, alloc.AddRegion({ 0u, 1u }));
         EXPECT_EQ(ZX_ERR_BAD_STATE, alloc.GetRegion(1, tmp));
         EXPECT_EQ(ZX_ERR_BAD_STATE, alloc.GetRegion({ 0u, 1u }, tmp));
-        EXPECT_NULL(alloc.GetRegion(1));
-        EXPECT_NULL(alloc.GetRegion({ 0u, 1u }));
+        EXPECT_NULL(alloc.GetRegion(1).get());
+        EXPECT_NULL(alloc.GetRegion({ 0u, 1u }).get());
     }
 
     // Make a region pool to manage bookkeeping allocations.
     auto pool = RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE);
-    ASSERT_NONNULL(pool);
+    ASSERT_NOT_NULL(pool.get());
 
     // Assign our pool to our allocator, but hold onto the pool for now.
-    ASSERT_EQ(ZX_OK, alloc.SetRegionPool(pool));
-    EXPECT_NONNULL(pool);
+    ASSERT_OK(alloc.SetRegionPool(pool));
+    EXPECT_NOT_NULL(pool.get());
 
     // Create another allocator and transfer ownership of our region pool
     // reference to it.  Then let the allocator go out of scope.
     {
         RegionAllocator alloc2(std::move(pool));
-        EXPECT_NULL(pool);
+        EXPECT_NULL(pool.get());
     }
-    EXPECT_NULL(pool);
+    EXPECT_NULL(pool.get());
 
     // Add some regions to our allocator.
     for (size_t i = 0; i < fbl::count_of(GOOD_REGIONS); ++i)
-        EXPECT_EQ(ZX_OK, alloc.AddRegion(GOOD_REGIONS[i]));
+        EXPECT_OK(alloc.AddRegion(GOOD_REGIONS[i]));
 
     // Make a new pool and try to assign it to the allocator.  This should fail
     // because the allocator is currently using resources from its currently
     // assigned pool.
     auto pool2 = RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE);
-    ASSERT_NONNULL(pool2);
+    ASSERT_NOT_NULL(pool2.get());
     EXPECT_EQ(ZX_ERR_BAD_STATE, alloc.SetRegionPool(pool2));
 
     // Add a bunch of adjacent regions to our pool.  Try to add so many
@@ -67,7 +65,7 @@ static bool ralloc_region_pools_test() {
         ralloc_region_t tmp = { .base = GOOD_MERGE_REGION_BASE,
                                 .size = GOOD_MERGE_REGION_SIZE };
         for (size_t i = 0; i < OOM_RANGE_LIMIT; ++i) {
-            ASSERT_EQ(ZX_OK, alloc.AddRegion(tmp));
+            ASSERT_OK(alloc.AddRegion(tmp));
             tmp.base += tmp.size;
         }
     }
@@ -106,20 +104,16 @@ static bool ralloc_region_pools_test() {
 
     // Now assign pool2 to the allocator.  Now that it is no longer using any
     // resources, this should succeed.
-    EXPECT_EQ(ZX_OK, alloc.SetRegionPool(std::move(pool2)));
-    EXPECT_NULL(pool2);
-
-    END_TEST;
+    EXPECT_OK(alloc.SetRegionPool(std::move(pool2)));
+    EXPECT_NULL(pool2.get());
 }
 
-static bool ralloc_by_size_test() {
-    BEGIN_TEST;
-
+TEST(RegionAllocCppApiTestCase, AllocBySize) {
     // Make a pool and attach it to an allocator.  Then add the test regions to it.
     RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE));
 
     for (size_t i = 0; i < fbl::count_of(ALLOC_BY_SIZE_REGIONS); ++i)
-        ASSERT_EQ(ZX_OK, alloc.AddRegion(ALLOC_BY_SIZE_REGIONS[i]));
+        ASSERT_OK(alloc.AddRegion(ALLOC_BY_SIZE_REGIONS[i]));
 
     // Run the alloc by size tests.  Hold onto the regions it allocates so they
     // don't automatically get returned to the pool.
@@ -136,9 +130,9 @@ static bool ralloc_by_size_test() {
         // back a non-null region.  Otherwise, we should have gotten a
         // null region back.
         if (res == ZX_OK) {
-            ASSERT_NONNULL(regions[i]);
+            ASSERT_NOT_NULL(regions[i].get());
         } else {
-            EXPECT_NULL(regions[i]);
+            EXPECT_NULL(regions[i].get());
         }
 
         // If the allocation succeeded, and we expected it to succeed,
@@ -156,18 +150,14 @@ static bool ralloc_by_size_test() {
     // No need for any explicit cleanup.  Our region references will go out of
     // scope first and be returned to the allocator.  Then the allocator will
     // clean up, and release its bookkeeping pool reference in the process.
-
-    END_TEST;
 }
 
-static bool ralloc_specific_test() {
-    BEGIN_TEST;
-
+TEST(RegionAllocCppApiTestCase, AllocSpecific) {
     // Make a pool and attach it to an allocator.  Then add the test regions to it.
     RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE));
 
     for (size_t i = 0; i < fbl::count_of(ALLOC_SPECIFIC_REGIONS); ++i)
-        ASSERT_EQ(ZX_OK, alloc.AddRegion(ALLOC_SPECIFIC_REGIONS[i]));
+        ASSERT_OK(alloc.AddRegion(ALLOC_SPECIFIC_REGIONS[i]));
 
     // Run the alloc specific tests.  Hold onto the regions it allocates so they
     // don't automatically get returned to the pool.
@@ -183,24 +173,20 @@ static bool ralloc_specific_test() {
         // If the allocation claimed to succeed, we should have gotten back a
         // non-null region which exactly matches our requested region.
         if (res == ZX_OK) {
-            ASSERT_NONNULL(regions[i]);
+            ASSERT_NOT_NULL(regions[i].get());
             EXPECT_EQ(TEST->req.base, regions[i]->base);
             EXPECT_EQ(TEST->req.size, regions[i]->size);
         } else {
-            EXPECT_NULL(regions[i]);
+            EXPECT_NULL(regions[i].get());
         }
     }
 
     // No need for any explicit cleanup.  Our region references will go out of
     // scope first and be returned to the allocator.  Then the allocator will
     // clean up, and release its bookkeeping pool reference in the process.
-
-    END_TEST;
 }
 
-static bool ralloc_add_overlap_test() {
-    BEGIN_TEST;
-
+TEST(RegionAllocCppApiTestCase, AddOverlap) {
     // Make a pool and attach it to an allocator.  Then add the test regions to it.
     RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE));
 
@@ -213,13 +199,9 @@ static bool ralloc_add_overlap_test() {
         EXPECT_EQ(TEST->res, res);
         EXPECT_EQ(TEST->cnt, alloc.AvailableRegionCount());
     }
-
-    END_TEST;
 }
 
-static bool ralloc_subtract_test() {
-    BEGIN_TEST;
-
+TEST(RegionAllocCppApiTestCase, Subtract) {
     // Make a pool and attach it to an allocator.  Then add the test regions to it.
     RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE));
 
@@ -236,13 +218,9 @@ static bool ralloc_subtract_test() {
         EXPECT_EQ(TEST->res ? ZX_OK : ZX_ERR_INVALID_ARGS, res);
         EXPECT_EQ(TEST->cnt, alloc.AvailableRegionCount());
     }
-
-    END_TEST;
 }
 
-static bool ralloc_alloc_walk_test() {
-    BEGIN_TEST;
-
+TEST(RegionAllocCppApiTestCase, AllocatedWalk) {
     const ralloc_region_t test_regions[] = {
         { .base = 0x00000000, .size = 1 << 20 },
         { .base = 0x10000000, .size = 1 << 20 },
@@ -258,28 +236,33 @@ static bool ralloc_alloc_walk_test() {
     constexpr size_t r_cnt = fbl::count_of(test_regions);
 
     RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE));
-    EXPECT_EQ(ZX_OK, alloc.AddRegion({ .base = 0, .size = UINT64_MAX}));
+    EXPECT_OK(alloc.AddRegion({ .base = 0, .size = UINT64_MAX}));
 
     // Pull each region defined above out of the allocator and stash their UPtrs
     // for the time being.  Then the lambda can walk the allocated regions and
     // verify that they are in-order and match the expected values.
     RegionAllocator::Region::UPtr r[r_cnt];
     for (unsigned i = 0; i < r_cnt; i++) {
-        EXPECT_EQ(ZX_OK, alloc.GetRegion(test_regions[i], r[i]));
+        EXPECT_OK(alloc.GetRegion(test_regions[i], r[i]));
     }
 
     uint8_t pos = 0;
     uint64_t end = 0;
     auto f = [&](const ralloc_region_t* r) -> bool {
-        ASSERT_EQ(r->base, test_regions[pos].base);
-        ASSERT_EQ(r->size, test_regions[pos].size);
+        // Make sure the region matches what we expect.  If not, tell the
+        // callback to exit the walk operation early.
+        check_region_match(r, &test_regions[pos]);
+        if (CURRENT_TEST_HAS_FATAL_FAILURES()) {
+            return false;
+        }
+
         pos++;
 
         // attempt to exit early if end is set to a value > 0
         return (end) ? (pos != end) : true;
     };
 
-    alloc.WalkAllocatedRegions(f);
+    ASSERT_NO_FATAL_FAILURES(alloc.WalkAllocatedRegions(f));
     ASSERT_EQ(r_cnt, pos);
 
     // Test that exiting early works, no matter where we are in the region list.
@@ -292,17 +275,6 @@ static bool ralloc_alloc_walk_test() {
         alloc.WalkAllocatedRegions(f);
         ASSERT_EQ(pos, end);
     }
-
-    END_TEST;
 }
 
-} //namespace
-
-BEGIN_TEST_CASE(ralloc_tests)
-RUN_NAMED_TEST("Region Pools",   ralloc_region_pools_test)
-RUN_NAMED_TEST("Alloc by size",  ralloc_by_size_test)
-RUN_NAMED_TEST("Alloc specific", ralloc_specific_test)
-RUN_NAMED_TEST("Add/Overlap",    ralloc_add_overlap_test)
-RUN_NAMED_TEST("Subtract",       ralloc_subtract_test)
-RUN_NAMED_TEST("Allocated Walk", ralloc_alloc_walk_test)
-END_TEST_CASE(ralloc_tests)
+}  // namespace

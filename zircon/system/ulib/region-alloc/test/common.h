@@ -6,6 +6,7 @@
 
 #include <region-alloc/region-alloc.h>
 #include <stddef.h>
+#include <zxtest/zxtest.h>
 
 // Constants and common tables used by both the C and C++ API tests.
 #ifdef __cplusplus
@@ -437,3 +438,12 @@ typedef struct ralloc_walk_test_ctx {
     const ralloc_region_t* regions;
 } ralloc_walk_test_ctx_t;
 
+
+// A helper funciton to be used from within the scope of a walk callback.
+void check_region_match(const ralloc_region_t* test,
+                        const ralloc_region_t* expected) {
+    ASSERT_NOT_NULL(test);
+    ASSERT_NOT_NULL(expected);
+    ASSERT_EQ(test->base, expected->base);
+    ASSERT_EQ(test->size, expected->size);
+}
