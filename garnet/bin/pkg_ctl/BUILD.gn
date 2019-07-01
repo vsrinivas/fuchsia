@@ -25,7 +25,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:structopt",
     "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }

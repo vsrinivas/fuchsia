@@ -6,11 +6,12 @@
 #![deny(warnings)]
 
 use {
-    failure::{Error, Fail, ResultExt},
+    crate::args::{Command, RepoCommand, RuleCommand, RuleConfigInputType},
+    failure::{self, Fail, ResultExt},
     fidl_fuchsia_pkg::{
         PackageCacheMarker, PackageResolverMarker, RepositoryManagerMarker, UpdatePolicy,
     },
-    fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig},
+    fidl_fuchsia_pkg_ext::RepositoryConfig,
     fidl_fuchsia_pkg_rewrite::{EditTransactionProxy, EngineMarker, EngineProxy},
     files_async, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
@@ -20,105 +21,27 @@ use {
     serde_json,
     std::{
         convert::{TryFrom, TryInto},
+        env,
         fs::File,
-        path::PathBuf,
+        process,
     },
-    structopt::StructOpt,
 };
 
-#[derive(StructOpt)]
-#[structopt(name = "pkgctl")]
-struct Options {
-    #[structopt(subcommand)]
-    cmd: Command,
-}
+mod args;
+mod error;
 
-#[derive(StructOpt)]
-enum Command {
-    #[structopt(name = "resolve", about = "resolve a package")]
-    Resolve {
-        #[structopt(help = "URL of package to cache")]
-        pkg_url: String,
+fn main() -> Result<(), failure::Error> {
+    // Ignore the first argument.
+    let args = env::args().skip(1).collect::<Vec<_>>();
+    let cmd = match args::parse_args(args.iter().map(|s| &**s)) {
+        Ok(cmd) => cmd,
+        Err(err) => {
+            eprintln!("{}", err);
+            process::exit(1);
+        }
+    };
 
-        #[structopt(help = "Package selectors")]
-        selectors: Vec<String>,
-    },
-
-    #[structopt(name = "open", about = "open a package by merkle root")]
-    Open {
-        #[structopt(help = "Merkle root of package's meta.far to cache")]
-        meta_far_blob_id: BlobId,
-
-        #[structopt(help = "Package selectors")]
-        selectors: Vec<String>,
-    },
-
-    #[structopt(name = "repo", about = "repo subcommands")]
-    Repo(RepoCommand),
-
-    #[structopt(name = "rule", about = "manage URL rewrite rules")]
-    Rule(RuleCommand),
-}
-
-#[derive(StructOpt)]
-enum RepoCommand {
-    #[structopt(name = "add", about = "add a repository")]
-    Add {
-        #[structopt(short = "f", long = "file", help = "path to a repository config file")]
-        file: PathBuf,
-    },
-
-    #[structopt(name = "remove", about = "remove a repository")]
-    Remove {
-        #[structopt(long = "repo-url", help = "the repository url to remove")]
-        repo_url: String,
-    },
-
-    #[structopt(name = "list", about = "list repositories")]
-    List,
-}
-
-#[derive(StructOpt)]
-enum RuleCommand {
-    #[structopt(name = "list", about = "list all rules")]
-    List,
-
-    #[structopt(name = "clear", about = "clear all rules")]
-    Clear,
-
-    #[structopt(name = "replace", about = "replace all dynamic rules with the provided rules")]
-    Replace {
-        #[structopt(subcommand)]
-        input_type: RuleConfigInputType,
-    },
-}
-
-#[derive(StructOpt)]
-enum RuleConfigInputType {
-    #[structopt(name = "file")]
-    File {
-        #[structopt(help = "path to rewrite rule config file")]
-        path: PathBuf,
-    },
-
-    #[structopt(name = "json")]
-    Json {
-        #[structopt(
-            help = "JSON encoded rewrite rule config",
-            parse(try_from_str = "parse_rule_config")
-        )]
-        config: RuleConfig,
-    },
-}
-
-fn parse_rule_config(s: &str) -> Result<RuleConfig, serde_json::error::Error> {
-    serde_json::from_str(s)
-}
-
-fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
-
-    let Options { cmd } = Options::from_args();
 
     let fut = async {
         match cmd {
