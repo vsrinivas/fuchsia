@@ -239,7 +239,7 @@ void Coordinator::DumpDeviceProps(VmoWriter* vmo, const Device* dev) const {
                 dev->flags & DEV_CTX_MUST_ISOLATE ? " Isolate" : "",
                 dev->flags & DEV_CTX_MULTI_BIND ? " MultiBind" : "",
                 dev->flags & DEV_CTX_BOUND ? " Bound" : "",
-                dev->flags & DEV_CTX_DEAD ? " Dead" : "",
+                (dev->state() == Device::State::kDead) ? " Dead" : "",
                 dev->flags & DEV_CTX_PROXY ? " Proxy" : "");
 
     char a = (char)((dev->protocol_id() >> 24) & 0xFF);
@@ -595,7 +595,7 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
 }
 
 zx_status_t Coordinator::MakeVisible(const fbl::RefPtr<Device>& dev) {
-  if (dev->flags & DEV_CTX_DEAD) {
+  if (dev->state() == Device::State::kDead) {
     return ZX_ERR_BAD_STATE;
   }
   if (dev->flags & DEV_CTX_INVISIBLE) {
@@ -614,7 +614,7 @@ zx_status_t Coordinator::MakeVisible(const fbl::RefPtr<Device>& dev) {
 // or process exit, which means we should remove all other
 // devices that share the devhost at the same time
 zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool forced) {
-  if (dev->flags & DEV_CTX_DEAD) {
+  if (dev->state() == Device::State::kDead) {
     // This should not happen
     log(ERROR, "devcoordinator: cannot remove dev %p name='%s' twice!\n", dev.get(),
         dev->name().data());
@@ -629,7 +629,7 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
 
   log(DEVLC, "devcoordinator: remove %p name='%s' parent=%p\n", dev.get(), dev->name().data(),
       dev->parent().get());
-  dev->flags |= DEV_CTX_DEAD;
+  dev->set_state(Device::State::kDead);
 
   // remove from devfs, preventing further OPEN attempts
   devfs_unpublish(dev.get());
@@ -727,7 +727,7 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
         // AND our parent is a BUSDEV
         // AND our parent's devhost is not dying
         // THEN we will want to rebind our parent
-        if (!(parent->flags & DEV_CTX_DEAD) && (parent->flags & DEV_CTX_MUST_ISOLATE) &&
+        if ((parent->state() != Device::State::kDead) && (parent->flags & DEV_CTX_MUST_ISOLATE) &&
             ((parent->host() == nullptr) || !(parent->host()->flags() & Devhost::Flags::kDying))) {
           log(DEVLC, "devcoordinator: bus device %p name='%s' is unbound\n", parent.get(),
               parent->name().data());

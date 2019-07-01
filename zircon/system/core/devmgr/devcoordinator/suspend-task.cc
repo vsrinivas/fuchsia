@@ -26,6 +26,8 @@ void SuspendTask::Run() {
     // Use a switch statement here so that this gets reconsidered if we add
     // more states.
     switch (child.state()) {
+      // If the device is dead, any existing suspend task would have been forcibly completed.
+      case Device::State::kDead:
       case Device::State::kSuspended:
         continue;
       case Device::State::kSuspending:
@@ -44,6 +46,7 @@ void SuspendTask::Run() {
   // depend on it.
   if (device_->proxy() != nullptr) {
     switch (device_->proxy()->state()) {
+      case Device::State::kDead:
       case Device::State::kSuspended:
         break;
       case Device::State::kSuspending:
@@ -55,7 +58,8 @@ void SuspendTask::Run() {
   }
 
   // Check if this device is not in a devhost.  This happens for the
-  // top-level devices like /sys provided by devcoordinator
+  // top-level devices like /sys provided by devcoordinator,
+  // or the device is already dead.
   if (device_->host() == nullptr) {
     return Complete(ZX_OK);
   }

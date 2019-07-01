@@ -640,6 +640,19 @@ void MultipleDeviceTestCase::DoSuspend(uint32_t flags) {
   DoSuspend(flags, [this](uint32_t flags) { coordinator()->Suspend(flags); });
 }
 
+TEST_F(MultipleDeviceTestCase, RemoveDeadDevice) {
+  size_t index;
+  ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "",
+                                     &index));
+
+  auto& state = devices_[index];
+  ASSERT_OK(coordinator_.RemoveDevice(state.device, false));
+
+  ASSERT_FALSE(state.device->is_bindable());
+
+  ASSERT_NOT_OK(coordinator_.RemoveDevice(state.device, false), "device should already be dead");
+}
+
 class SuspendTestCase : public MultipleDeviceTestCase {
  public:
   void SuspendTest(uint32_t flags);

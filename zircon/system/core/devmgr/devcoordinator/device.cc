@@ -233,7 +233,11 @@ zx_status_t Device::SendSuspend(uint32_t flags, SuspendCompletion completion) {
 
 void Device::CompleteSuspend(zx_status_t status) {
   if (status == ZX_OK) {
-    state_ = Device::State::kSuspended;
+    // If a device is being removed, any existing suspend task will be forcibly completed,
+    // in which case we should not update the state.
+    if (state_ != Device::State::kDead) {
+      state_ = Device::State::kSuspended;
+    }
   } else {
     state_ = Device::State::kActive;
   }
@@ -263,7 +267,7 @@ void Device::HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher
       }
       // If this device isn't already dead (removed), remove it. RemoveDevice() may
       // have been called by the RPC handler, in particular for the RemoveDevice RPC.
-      if ((dev->flags & DEV_CTX_DEAD) == 0) {
+      if (dev->state() != Device::State::kDead) {
         dev->coordinator->RemoveDevice(dev, true);
       }
       // Do not start waiting again on this device's channel again
@@ -340,7 +344,7 @@ zx_status_t Device::HandleRead() {
   uint32_t msize = sizeof(msg);
   uint32_t hcount = fbl::count_of(hin);
 
-  if (this->flags & DEV_CTX_DEAD) {
+  if (state_ == Device::State::kDead) {
     log(ERROR, "devcoordinator: dev %p already dead (in read)\n", this);
     return ZX_ERR_INTERNAL;
   }

@@ -47,9 +47,6 @@ class SuspendTask;
 // again until unbound.  Not allowed on MULTI_BIND ctx.
 #define DEV_CTX_BOUND         0x08
 
-// Device has been remove()'d
-#define DEV_CTX_DEAD          0x10
-
 // Device is a proxy -- its "parent" is the device it's
 // a proxy to.
 #define DEV_CTX_PROXY         0x40
@@ -275,7 +272,9 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
 
   uint32_t protocol_id() const { return protocol_id_; }
 
-  bool is_bindable() const { return !(flags & (DEV_CTX_BOUND | DEV_CTX_DEAD | DEV_CTX_INVISIBLE)); }
+  bool is_bindable() const {
+    return !(flags & (DEV_CTX_BOUND | DEV_CTX_INVISIBLE)) && (state_ != Device::State::kDead);
+  }
 
   // If the device was bound as a component of a composite, this returns the
   // component's description.
@@ -334,14 +333,15 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
   Devnode* self = nullptr;
   Devnode* link = nullptr;
 
-  // TODO(teisenbe): We probably want more states.  For example, the DEAD flag
-  // should probably move in to here.
+  // TODO(teisenbe): We probably want more states.
   enum class State {
     kActive,
     kSuspending,  // The devhost is in the process of suspending the device.
     kSuspended,
+    kDead,        // The device has been remove()'d
   };
 
+  void set_state(Device::State state) { state_ = state; }
   State state() const { return state_; }
 
   enum class TestStateMachine {
