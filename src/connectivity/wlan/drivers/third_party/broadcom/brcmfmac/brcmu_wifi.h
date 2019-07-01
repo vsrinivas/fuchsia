@@ -17,8 +17,6 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_INCLUDE_BRCMU_WIFI_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_INCLUDE_BRCMU_WIFI_H_
 
-#include "linuxisms.h"
-
 /*
  * A chanspec (uint16_t) holds the channel number, band, bandwidth and control
  * sideband

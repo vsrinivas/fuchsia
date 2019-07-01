@@ -25,9 +25,6 @@
 #include <atomic>
 
 #include <ddk/driver.h>
-#include <lib/device-protocol/pci.h>
-#include <ddk/protocol/pci.h>
-#include <ddk/protocol/usb.h>
 #include <lib/async-loop/loop.h> // to start the worker thread
 #include <lib/async/default.h>  // for async_get_default_dispatcher()
 #include <lib/async/task.h>     // for async_post_task()
@@ -36,9 +33,6 @@
 #include <wlan/protocol/if-impl.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
-
-#include "debug.h"
-#include "usb.h"
 
 #define BACKPLANE_ID_HIGH_REVCODE_HIGH 0x7000
 #define BACKPLANE_ID_HIGH_REVCODE_HIGH_SHIFT 8
@@ -129,44 +123,6 @@ static inline struct brcmf_bus* dev_to_bus(struct brcmf_device* dev) {
     return dev->bus;
 }
 
-struct brcmf_usb_interface_descriptor {
-    int bInterfaceClass;
-    int bInterfaceSubClass;
-    int bInterfaceProtocol;
-    int bInterfaceNumber;
-    int bNumEndpoints;
-};
-
-struct brcmf_usb_device {
-    usb_speed_t speed;
-    struct brcmf_device dev;
-    struct {
-        int bNumConfigurations;
-        int bDeviceClass;
-    } descriptor;
-    size_t parent_req_size;
-};
-
-struct brcmf_endpoint_container {
-    usb_endpoint_descriptor_t desc;
-};
-
-struct brcmf_usb_altsetting {
-    struct brcmf_usb_interface_descriptor desc;
-    struct brcmf_endpoint_container* endpoint;
-};
-
-struct brcmf_usb_interface {
-    struct brcmf_usb_altsetting* altsetting;
-    struct brcmf_usb_device* usb_device;
-    void* intfdata;
-};
-
-struct brcmf_usb_device_id {
-    int idVendor;
-    int idProduct;
-};
-
 struct brcmf_firmware {
     size_t size;
     void* data;
@@ -217,10 +173,6 @@ struct net_device* brcmf_allocate_net_device(size_t priv_size, const char* name)
 void brcmf_free_net_device(struct net_device* dev);
 
 void brcmf_enable_tx(struct net_device* dev);
-
-static inline struct brcmf_usb_device* intf_to_usbdev(const struct brcmf_usb_interface* intf) {
-    return intf->usb_device;
-}
 
 // TODO(cphoenix): Fix this hack
 #define ieee80211_frequency_to_channel(freq) (freq)

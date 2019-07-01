@@ -23,6 +23,7 @@
 extern const uint8_t ALLFFMAC[ETH_ALEN];
 
 #define BRCMF_FW_ALTPATH_LEN 256
+#define BRCMF_FW_NAME_LEN 320
 
 /* Definitions for the module global and device specific settings are defined
  * here. Two structs are used for them. brcmf_mp_global_t and brcmf_mp_device.

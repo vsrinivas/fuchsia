@@ -32,7 +32,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
-#include <wlan/protocol/info.h>
 #include <zircon/assert.h>
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
@@ -51,13 +50,13 @@ typedef uint64_t __be64;
 #define GENMASK1(val) ((1UL << (val)) - 1)
 #define GENMASK(start, end) ((GENMASK1((start) + 1) & ~GENMASK1(end)))
 
-#define WARN(cond, msg)                                                                 \
-    ({  bool ret_cond = cond;                                                           \
-        if (ret_cond) {                                                                 \
-            BRCMF_LOGF(WARN, "brcmfmac: unexpected condition %s warns %s at %s:%d\n",   \
-                       #cond, msg, __FILE__, __LINE__);                                 \
-        }                                                                               \
-        ret_cond;                                                                       \
+#define WARN(cond, msg)                                                           \
+    ({  bool ret_cond = cond;                                                     \
+        if (ret_cond) {                                                           \
+            BRCMF_WARN("brcmfmac: unexpected condition %s warns %s at %s:%d\n",   \
+                       #cond, msg, __FILE__, __LINE__);                           \
+        }                                                                         \
+        ret_cond;                                                                 \
     })
 
 // TODO(cphoenix): Looks like these evaluate cond multiple times. And maybe should
@@ -407,10 +406,6 @@ struct notifier_block {
 
 struct in6_addr {
     int foo;
-};
-
-struct seq_file {
-    void* private_data;
 };
 
 typedef uint64_t dma_addr_t;

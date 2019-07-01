@@ -28,7 +28,6 @@
 #include "core.h"
 #include "debug.h"
 #include "device.h"
-#include "firmware.h"
 #include "fwil.h"
 #include "fwil_types.h"
 #include "linuxisms.h"
@@ -502,9 +501,6 @@ void brcmf_release_module_param(struct brcmf_mp_device* module_param) {
 zx_status_t brcmfmac_module_init(zx_device_t* device) {
     zx_status_t err;
 
-    /* Initialize debug system first */
-    brcmf_debugfs_init();
-
     async_loop_t* async_loop;
     async_loop_config_t async_config;
     memset(&async_config, 0, sizeof(async_config));
@@ -527,7 +523,6 @@ zx_status_t brcmfmac_module_init(zx_device_t* device) {
     /* Continue the initialization by registering the different busses */
     err = brcmf_core_init(device);
     if (err != ZX_OK) {
-        brcmf_debugfs_exit();
         BRCMF_ERR("Returning err %d %s", err, zx_status_get_string(err));
     }
 
@@ -539,5 +534,4 @@ zx_status_t brcmfmac_module_init(zx_device_t* device) {
     if (default_dispatcher != NULL) {
         async_loop_destroy(async_loop_from_dispatcher(default_dispatcher));
     }
-    brcmf_debugfs_exit();
 }

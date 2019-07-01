@@ -17,6 +17,7 @@
 #ifndef BRCMFMAC_SDIO_H
 #define BRCMFMAC_SDIO_H
 
+#include <ddk/device.h>
 #include <ddk/protocol/sdio.h>
 #include <ddk/protocol/gpio.h>
 

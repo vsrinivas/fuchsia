@@ -19,6 +19,7 @@
 #include <threads.h>
 #include <atomic>
 
+#include <ddk/device.h>
 #include <ddk/protocol/usb.h>
 #include <usb/usb.h>
 #include <usb/usb-request.h>
@@ -284,6 +285,10 @@ static void brcmf_usb_rx_refill(struct brcmf_usbdev_info* devinfo, struct brcmf_
 static struct brcmf_usbdev* brcmf_usb_get_buspub(struct brcmf_device* dev) {
     struct brcmf_bus* bus_if = dev_to_bus(dev);
     return bus_if->bus_priv.usb;
+}
+
+static inline struct brcmf_usb_device* intf_to_usbdev(const struct brcmf_usb_interface* intf) {
+    return intf->usb_device;
 }
 
 static struct brcmf_usbdev_info* brcmf_usb_get_businfo(struct brcmf_device* dev) {
@@ -913,10 +918,7 @@ static bool brcmf_usb_dlneeded(struct brcmf_usbdev_info* devinfo) {
 
     /* Check if firmware downloaded already by querying runtime ID */
     id.chip = 0xDEAD;
-#if !defined(NDEBUG)
-    zx_status_t result =
-#endif  // !defined(NDEBUG)
-        brcmf_usb_dl_cmd(devinfo, DL_GETVER, &id, sizeof(id));
+    zx_status_t result = brcmf_usb_dl_cmd(devinfo, DL_GETVER, &id, sizeof(id));
     BRCMF_DBG(TEMP, "result from dl_cmd %d", result);
 
     chipid = id.chip;
@@ -1710,12 +1712,19 @@ void brcmf_usb_exit(void) {
     usb_deregister(&brcmf_usbdrvr);*/
 }
 
-zx_status_t brcmf_usb_register(zx_device_t* zxdev, usb_protocol_t* usb_proto) {
+zx_status_t brcmf_usb_register(zx_device_t* zxdev) {
     BRCMF_DBG(USB, "Enter\n");
+
     usb_device_descriptor_t descriptor;
     zx_status_t result;
 
-    usb_get_device_descriptor(usb_proto, &descriptor);
+    usb_protocol_t usb_proto = {};
+    result = device_get_protocol(zxdev, ZX_PROTOCOL_USB, &usb_proto);
+    if (result != ZX_OK) {
+      return result;
+    }
+
+    usb_get_device_descriptor(&usb_proto, &descriptor);
     BRCMF_DBG(USB, "Probing 0x%04x:0x%04x\n", descriptor.idVendor, descriptor.idProduct);
 
     struct brcmf_usb_device* usb_device =
@@ -1723,7 +1732,7 @@ zx_status_t brcmf_usb_register(zx_device_t* zxdev, usb_protocol_t* usb_proto) {
     if (usb_device == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
-    usb_device->speed = usb_get_speed(usb_proto);
+    usb_device->speed = usb_get_speed(&usb_proto);
     usb_device->dev.zxdev = zxdev;
     usb_device->descriptor.bNumConfigurations = descriptor.bNumConfigurations;
     usb_device->descriptor.bDeviceClass = descriptor.bDeviceClass;
@@ -1735,9 +1744,9 @@ zx_status_t brcmf_usb_register(zx_device_t* zxdev, usb_protocol_t* usb_proto) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    usb_device->parent_req_size = usb_get_request_size(usb_proto);
+    usb_device->parent_req_size = usb_get_request_size(&usb_proto);
     usb_desc_iter_t iter;
-    result = usb_desc_iter_init(usb_proto, &iter);
+    result = usb_desc_iter_init(&usb_proto, &iter);
     if (result != ZX_OK) {
         free(usb_device);
         free(altsetting);
@@ -1795,7 +1804,7 @@ zx_status_t brcmf_usb_register(zx_device_t* zxdev, usb_protocol_t* usb_proto) {
     intf->usb_device = usb_device;
     intf->altsetting = altsetting;
 
-    result = brcmf_usb_probe(intf, usb_proto);
+    result = brcmf_usb_probe(intf, &usb_proto);
     if (result != ZX_OK) {
         free(usb_device);
         free(altsetting->endpoint);

@@ -19,7 +19,6 @@
 
 #include <zircon/compiler.h>
 
-#include "linuxisms.h"
 #include "netbuf.h"
 
 /*

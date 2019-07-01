@@ -22,9 +22,6 @@
 #include <threads.h>
 #include <atomic>
 
-#include <ddk/protocol/pci.h>
-#include <ddk/protocol/sdio.h>
-#include <ddk/protocol/usb.h>
 #include <ddk/protocol/wlanphyimpl.h>
 #include <netinet/if_ether.h>
 #include <wlan/common/phy.h>
@@ -777,22 +774,6 @@ void brcmf_remove_interface(struct brcmf_if* ifp, bool rtnl_locked) {
     brcmf_del_if(ifp->drvr, ifp->bsscfgidx, rtnl_locked);
 }
 
-static zx_status_t brcmf_psm_watchdog_notify(struct brcmf_if* ifp,
-                                             const struct brcmf_event_msg* evtmsg, void* data) {
-    zx_status_t err;
-
-    BRCMF_DBG(TRACE, "enter: bsscfgidx=%d\n", ifp->bsscfgidx);
-
-    BRCMF_ERR("PSM's watchdog has fired!\n");
-
-    err = brcmf_debug_create_memdump(ifp->drvr->bus_if, data, evtmsg->datalen);
-    if (err != ZX_OK) {
-        BRCMF_ERR("Failed to get memory dump, %d\n", err);
-    }
-
-    return err;
-}
-
 zx_status_t brcmf_attach(struct brcmf_device* dev, struct brcmf_mp_device* settings) {
     struct brcmf_pub* drvr = NULL;
     zx_status_t ret = ZX_OK;
@@ -818,18 +799,12 @@ zx_status_t brcmf_attach(struct brcmf_device* dev, struct brcmf_mp_device* setti
     drvr->bus_if->drvr = drvr;
     drvr->settings = settings;
 
-    /* attach debug facilities */
-    brcmf_debug_attach(drvr);
-
     /* Attach and link in the protocol */
     ret = brcmf_proto_attach(drvr);
     if (ret != ZX_OK) {
         BRCMF_ERR("brcmf_prot_attach failed\n");
         goto fail;
     }
-
-    /* Attach to events important for core code */
-    brcmf_fweh_register(drvr, BRCMF_E_PSM_WATCHDOG, brcmf_psm_watchdog_notify);
 
     /* attach firmware event handler */
     brcmf_fweh_attach(drvr);
@@ -840,35 +815,6 @@ fail:
     brcmf_detach(dev);
 
     return ret;
-}
-
-static zx_status_t brcmf_revinfo_read(struct seq_file* s, void* data) {
-    struct brcmf_bus* bus_if = dev_to_bus(static_cast<brcmf_device*>(s->private_data));
-    struct brcmf_rev_info* ri = &bus_if->drvr->revinfo;
-    char drev[BRCMU_DOTREV_LEN];
-    char brev[BRCMU_BOARDREV_LEN];
-
-    seq_printf(s, "vendorid: 0x%04x\n", ri->vendorid);
-    seq_printf(s, "deviceid: 0x%04x\n", ri->deviceid);
-    seq_printf(s, "radiorev: %s\n", brcmu_dotrev_str(ri->radiorev, drev));
-    seq_printf(s, "chipnum: %u (%x)\n", ri->chipnum, ri->chipnum);
-    seq_printf(s, "chiprev: %u\n", ri->chiprev);
-    seq_printf(s, "chippkg: %u\n", ri->chippkg);
-    seq_printf(s, "corerev: %u\n", ri->corerev);
-    seq_printf(s, "boardid: 0x%04x\n", ri->boardid);
-    seq_printf(s, "boardvendor: 0x%04x\n", ri->boardvendor);
-    seq_printf(s, "boardrev: %s\n", brcmu_boardrev_str(ri->boardrev, brev));
-    seq_printf(s, "driverrev: %s\n", brcmu_dotrev_str(ri->driverrev, drev));
-    seq_printf(s, "ucoderev: %u\n", ri->ucoderev);
-    seq_printf(s, "bus: %u\n", ri->bus);
-    seq_printf(s, "phytype: %u\n", ri->phytype);
-    seq_printf(s, "phyrev: %u\n", ri->phyrev);
-    seq_printf(s, "anarev: %u\n", ri->anarev);
-    seq_printf(s, "nvramrev: %08x\n", ri->nvramrev);
-
-    seq_printf(s, "clmver: %s\n", bus_if->drvr->clmver);
-
-    return ZX_OK;
 }
 
 zx_status_t brcmf_bus_started(struct brcmf_device* dev) {
@@ -896,8 +842,6 @@ zx_status_t brcmf_bus_started(struct brcmf_device* dev) {
     if (ret != ZX_OK) {
         goto fail;
     }
-
-    brcmf_debugfs_add_entry(drvr, "revinfo", brcmf_revinfo_read);
 
     /* assure we have chipid before feature attach */
     if (!bus_if->chip) {
@@ -1004,7 +948,6 @@ void brcmf_detach(struct brcmf_device* dev) {
 
     brcmf_proto_detach(drvr);
 
-    brcmf_debug_detach(drvr);
     bus_if->drvr = NULL;
     free(drvr);
 }
@@ -1065,50 +1008,13 @@ zx_status_t brcmf_core_init(zx_device_t* device) {
     pthread_mutexattr_settype(&pmutex_attributes, PTHREAD_MUTEX_NORMAL | PTHREAD_MUTEX_RECURSIVE);
     pthread_mutex_init(&irq_callback_lock, &pmutex_attributes);
 
-#if CONFIG_BRCMFMAC_SIM
-    result = brcmf_sim_register(device);
+    result = brcmf_bus_register(device);
     if (result != ZX_OK) {
-        BRCMF_ERR("Simulator driver registration failed: %s\n", zx_status_get_string(result));
+      BRCMF_ERR("Bus registration failed: %s\n", zx_status_get_string(result));
     }
     return result;
-#endif // CONFIG_BRCMFMAC_SIM
-
-#if CONFIG_BRCMFMAC_USB
-    usb_protocol_t udev;
-    result = device_get_protocol(device, ZX_PROTOCOL_USB, &udev);
-    if (result == ZX_OK) {
-        result = brcmf_usb_register(device, &udev);
-        if (result != ZX_OK) {
-            BRCMF_ERR("USB driver registration failed, err=%d\n", result);
-        }
-        return result;
-    }
-#endif // CONFIG_BRCMFMAC_USB
-
-#if CONFIG_BRCMFMAC_SDIO
-    composite_protocol_t composite;
-    result = device_get_protocol(device, ZX_PROTOCOL_COMPOSITE, &composite);
-    if (result == ZX_OK) {
-        result = brcmf_sdio_register(device, &composite);
-        if (result != ZX_OK) {
-            BRCMF_ERR("SDIO driver registration failed, err=%d\n", result);
-        }
-        return result;
-    }
-#endif // CONFIG_BRCMFMAC_SDIO
-
-    return ZX_ERR_INTERNAL;
 }
 
 void brcmf_core_exit(void) {
-
-#if CONFIG_BRCMFMAC_SDIO
-    brcmf_sdio_exit();
-#endif
-#if CONFIG_BRCMFMAC_USB
-    brcmf_usb_exit();
-#endif
-#if CONFIG_BRCMFMAC_SIM
-    brcmf_sim_exit();
-#endif
+  brcmf_bus_exit();
 }

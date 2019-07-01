@@ -16,6 +16,7 @@
 
 #include "brcm_hw_ids.h"
 #include "common.h"
+#include "debug.h"
 
 #include <ddk/binding.h>
 #include <ddk/device.h>

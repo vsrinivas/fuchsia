@@ -20,6 +20,7 @@
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 
+#include "device.h"
 #include "linuxisms.h"
 #include "netbuf.h"
 
@@ -30,6 +31,44 @@
 // TODO(cphoenix): When/if the USB driver gets more sophisticated, rework this for greater
 //  efficiency.
 #define USB_MAX_TRANSFER_SIZE (4096)
+
+struct brcmf_usb_interface_descriptor {
+    int bInterfaceClass;
+    int bInterfaceSubClass;
+    int bInterfaceProtocol;
+    int bInterfaceNumber;
+    int bNumEndpoints;
+};
+
+struct brcmf_usb_device {
+    usb_speed_t speed;
+    struct brcmf_device dev;
+    struct {
+        int bNumConfigurations;
+        int bDeviceClass;
+    } descriptor;
+    size_t parent_req_size;
+};
+
+struct brcmf_endpoint_container {
+    usb_endpoint_descriptor_t desc;
+};
+
+struct brcmf_usb_altsetting {
+    struct brcmf_usb_interface_descriptor desc;
+    struct brcmf_endpoint_container* endpoint;
+};
+
+struct brcmf_usb_interface {
+    struct brcmf_usb_altsetting* altsetting;
+    struct brcmf_usb_device* usb_device;
+    void* intfdata;
+};
+
+struct brcmf_usb_device_id {
+    int idVendor;
+    int idProduct;
+};
 
 enum brcmf_usb_state {
     BRCMFMAC_USB_STATE_DOWN,

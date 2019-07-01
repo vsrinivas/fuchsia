@@ -19,10 +19,7 @@
 #include <algorithm>
 #include <atomic>
 
-#if (CONFIG_BRCMFMAC_USB || CONFIG_BRCMFMAC_SDIO || CONFIG_BRCMFMAC_PCIE)
 #include <ddk/device.h>
-#endif
-
 #include <ddk/trace/event.h>
 #include <lib/sync/completion.h>
 #include <zircon/status.h>
@@ -39,15 +36,13 @@
 #include "chip.h"
 #include "common.h"
 #include "core.h"
+#include "debug.h"
 #include "defs.h"
 #include "device.h"
 #include "firmware.h"
 #include "linuxisms.h"
 #include "netbuf.h"
 #include "soc.h"
-#if CONFIG_BRCMFMAC_SIM
-#include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
-#endif
 #include "workqueue.h"
 
 #define DCMD_RESP_TIMEOUT_MSEC (2500)
@@ -833,9 +828,7 @@ static zx_status_t brcmf_sdio_sdclk(struct brcmf_sdio* bus, bool on) {
 
 /* Transition SD and backplane clock readiness */
 static zx_status_t brcmf_sdio_clkctl(struct brcmf_sdio* bus, uint target, bool pendok) {
-#if !defined(NDEBUG)
     uint oldstate = bus->clkstate;
-#endif /* !defined(NDEBUG) */
 
     BRCMF_DBG(SDIO, "Enter\n");
 
@@ -878,9 +871,7 @@ static zx_status_t brcmf_sdio_clkctl(struct brcmf_sdio* bus, uint target, bool p
         brcmf_sdio_sdclk(bus, false);
         break;
     }
-#if !defined(NDEBUG)
     BRCMF_DBG(SDIO, "%d -> %d\n", oldstate, bus->clkstate);
-#endif /* !defined(NDEBUG) */
 
     return ZX_OK;
 }
@@ -2696,129 +2687,6 @@ static zx_status_t brcmf_sdio_bus_txctl(struct brcmf_device* dev, unsigned char*
 }
 
 #if !defined(NDEBUG)
-static zx_status_t brcmf_sdio_dump_console(struct seq_file* seq, struct brcmf_sdio* bus,
-                                           struct sdpcm_shared* sh) {
-    uint32_t addr, console_ptr, console_size, console_index;
-    char* conbuf = NULL;
-    uint32_t sh_val;
-    zx_status_t rv;
-
-    /* obtain console information from device memory */
-    addr = sh->console_addr + offsetof(struct rte_console, log_le);
-    rv = brcmf_sdiod_ramrw(bus->sdiodev, false, addr, (uint8_t*)&sh_val, sizeof(uint32_t));
-    if (rv != ZX_OK) {
-        return rv;
-    }
-    console_ptr = sh_val;
-
-    addr = sh->console_addr + offsetof(struct rte_console, log_le.buf_size);
-    rv = brcmf_sdiod_ramrw(bus->sdiodev, false, addr, (uint8_t*)&sh_val, sizeof(uint32_t));
-    if (rv != ZX_OK) {
-        return rv;
-    }
-    console_size = sh_val;
-
-    addr = sh->console_addr + offsetof(struct rte_console, log_le.idx);
-    rv = brcmf_sdiod_ramrw(bus->sdiodev, false, addr, (uint8_t*)&sh_val, sizeof(uint32_t));
-    if (rv != ZX_OK) {
-        return rv;
-    }
-    console_index = sh_val;
-
-    /* allocate buffer for console data */
-    if (console_size <= CONSOLE_BUFFER_MAX) {
-        conbuf = static_cast<decltype(conbuf)>(calloc(1, console_size + 1));
-    }
-
-    if (!conbuf) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    /* obtain the console data from device */
-    conbuf[console_size] = '\0';
-    rv = brcmf_sdiod_ramrw(bus->sdiodev, false, console_ptr, (uint8_t*)conbuf, console_size);
-    if (rv != ZX_OK) {
-        goto done;
-    }
-
-    rv = seq_write(seq, conbuf + console_index, console_size - console_index);
-    if (rv != ZX_OK) {
-        goto done;
-    }
-
-    if (console_index > 0) {
-        rv = seq_write(seq, conbuf, console_index - 1);
-    }
-
-done:
-    free(conbuf);
-    return rv;
-}
-
-static zx_status_t brcmf_sdio_trap_info(struct seq_file* seq, struct brcmf_sdio* bus,
-                                        struct sdpcm_shared* sh) {
-    zx_status_t error;
-    struct brcmf_trap_info tr;
-
-    if ((sh->flags & SDPCM_SHARED_TRAP) == 0) {
-        BRCMF_DBG(INFO, "no trap in firmware\n");
-        return ZX_OK;
-    }
-
-    error = brcmf_sdiod_ramrw(bus->sdiodev, false, sh->trap_addr, (uint8_t*)&tr,
-                              sizeof(struct brcmf_trap_info));
-    if (error != ZX_OK) {
-        return error;
-    }
-
-    seq_printf(seq,
-               "dongle trap info: type 0x%x @ epc 0x%08x\n"
-               "  cpsr 0x%08x spsr 0x%08x sp 0x%08x\n"
-               "  lr   0x%08x pc   0x%08x offset 0x%x\n"
-               "  r0   0x%08x r1   0x%08x r2 0x%08x r3 0x%08x\n"
-               "  r4   0x%08x r5   0x%08x r6 0x%08x r7 0x%08x\n",
-               tr.type, tr.epc, tr.cpsr,
-               tr.spsr, tr.r13, tr.r14, tr.pc,
-               sh->trap_addr, tr.r0, tr.r1, tr.r2,
-               tr.r3, tr.r4, tr.r5, tr.r6,
-               tr.r7);
-
-    return ZX_OK;
-}
-
-static zx_status_t brcmf_sdio_assert_info(struct seq_file* seq, struct brcmf_sdio* bus,
-                                          struct sdpcm_shared* sh) {
-    zx_status_t error = ZX_OK;
-    char file[80] = "?";
-    char expr[80] = "<??""?>";
-
-    if ((sh->flags & SDPCM_SHARED_ASSERT_BUILT) == 0) {
-        BRCMF_DBG(INFO, "firmware not built with -assert\n");
-        return ZX_OK;
-    } else if ((sh->flags & SDPCM_SHARED_ASSERT) == 0) {
-        BRCMF_DBG(INFO, "no assert in dongle\n");
-        return ZX_OK;
-    }
-
-    sdio_claim_host(bus->sdiodev->func1);
-    if (sh->assert_file_addr != 0) {
-        error = brcmf_sdiod_ramrw(bus->sdiodev, false, sh->assert_file_addr, (uint8_t*)file, 80);
-        if (error != ZX_OK) {
-            return error;
-        }
-    }
-    if (sh->assert_exp_addr != 0) {
-        error = brcmf_sdiod_ramrw(bus->sdiodev, false, sh->assert_exp_addr, (uint8_t*)expr, 80);
-        if (error != ZX_OK) {
-            return error;
-        }
-    }
-    sdio_release_host(bus->sdiodev->func1);
-
-    seq_printf(seq, "dongle assert: %s:%d: assert(%s)\n", file, sh->assert_line, expr);
-    return ZX_OK;
-}
-
 static zx_status_t brcmf_sdio_checkdied(struct brcmf_sdio* bus) {
     zx_status_t error;
     struct sdpcm_shared sh;
@@ -2842,89 +2710,29 @@ static zx_status_t brcmf_sdio_checkdied(struct brcmf_sdio* bus) {
     return ZX_OK;
 }
 
-static zx_status_t brcmf_sdio_died_dump(struct seq_file* seq, struct brcmf_sdio* bus) {
-    zx_status_t error = ZX_OK;
+#else /* !defined(NDEBUG) */
+static zx_status_t brcmf_sdio_checkdied(struct brcmf_sdio* bus) {
+    zx_status_t error;
     struct sdpcm_shared sh;
 
     error = brcmf_sdio_readshared(bus, &sh);
+
     if (error != ZX_OK) {
-        goto done;
+        return error;
     }
 
-    error = brcmf_sdio_assert_info(seq, bus, &sh);
-    if (error != ZX_OK) {
-        goto done;
+    if ((sh.flags & SDPCM_SHARED_ASSERT_BUILT) == 0) {
+        BRCMF_DBG(INFO, "firmware not built with -assert\n");
+    } else if (sh.flags & SDPCM_SHARED_ASSERT) {
+        BRCMF_ERR("assertion in dongle\n");
     }
 
-    error = brcmf_sdio_trap_info(seq, bus, &sh);
-    if (error != ZX_OK) {
-        goto done;
+    if (sh.flags & SDPCM_SHARED_TRAP) {
+        BRCMF_ERR("firmware trap in dongle\n");
     }
-
-    error = brcmf_sdio_dump_console(seq, bus, &sh);
-
-done:
-    return error;
-}
-
-static zx_status_t brcmf_sdio_forensic_read(struct seq_file* seq, void* data) {
-    struct brcmf_bus* bus_if = dev_to_bus(static_cast<brcmf_device*>(seq->private_data));
-    struct brcmf_sdio* bus = bus_if->bus_priv.sdio->bus;
-
-    return brcmf_sdio_died_dump(seq, bus);
-}
-
-static zx_status_t brcmf_debugfs_sdio_count_read(struct seq_file* seq, void* data) {
-    struct brcmf_bus* bus_if = dev_to_bus(static_cast<brcmf_device*>(seq->private_data));
-    struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
-    struct brcmf_sdio_count* sdcnt = &sdiodev->bus->sdcnt;
-
-    seq_printf(seq,
-               "intrcount:    %u\nlastintrs:    %u\n"
-               "pollcnt:      %u\nregfails:     %u\n"
-               "tx_sderrs:    %u\nfcqueued:     %u\n"
-               "rxrtx:        %u\nrx_toolong:   %u\n"
-               "rxc_errors:   %u\nrx_hdrfail:   %u\n"
-               "rx_badhdr:    %u\nrx_badseq:    %u\n"
-               "fc_rcvd:      %u\nfc_xoff:      %u\n"
-               "fc_xon:       %u\nrxglomfail:   %u\n"
-               "rxglomframes: %u\nrxglompkts:   %u\n"
-               "f2rxhdrs:     %u\nf2rxdata:     %u\n"
-               "f2txdata:     %u\nf1regdata:    %u\n"
-               "tickcnt:      %u\ntx_ctlerrs:   %lu\n"
-               "tx_ctlpkts:   %lu\nrx_ctlerrs:   %lu\n"
-               "rx_ctlpkts:   %lu\nrx_readahead: %lu\n",
-               sdcnt->intrcount, sdcnt->lastintrs, sdcnt->pollcnt, sdcnt->regfails,
-               sdcnt->tx_sderrs, sdcnt->fcqueued, sdcnt->rxrtx, sdcnt->rx_toolong,
-               sdcnt->rxc_errors, sdcnt->rx_hdrfail, sdcnt->rx_badhdr, sdcnt->rx_badseq,
-               sdcnt->fc_rcvd, sdcnt->fc_xoff, sdcnt->fc_xon, sdcnt->rxglomfail,
-               sdcnt->rxglomframes, sdcnt->rxglompkts, sdcnt->f2rxhdrs, sdcnt->f2rxdata,
-               sdcnt->f2txdata, sdcnt->f1regdata, sdcnt->tickcnt, sdcnt->tx_ctlerrs,
-               sdcnt->tx_ctlpkts, sdcnt->rx_ctlerrs, sdcnt->rx_ctlpkts, sdcnt->rx_readahead_cnt);
 
     return ZX_OK;
 }
-
-static void brcmf_sdio_debugfs_create(struct brcmf_sdio* bus) {
-    struct brcmf_pub* drvr = bus->sdiodev->bus_if->drvr;
-    zx_handle_t dentry = brcmf_debugfs_get_devdir(drvr);
-
-    if (dentry == ZX_HANDLE_INVALID) {
-        return;
-    }
-
-    bus->console_interval = BRCMF_CONSOLE;
-
-    brcmf_debugfs_add_entry(drvr, "forensics", brcmf_sdio_forensic_read);
-    brcmf_debugfs_add_entry(drvr, "counters", brcmf_debugfs_sdio_count_read);
-    brcmf_debugfs_create_u32_file("console_interval", 0644, dentry, &bus->console_interval);
-}
-#else /* !defined(NDEBUG) */
-static zx_status_t brcmf_sdio_checkdied(struct brcmf_sdio* bus) {
-    return ZX_OK;
-}
-
-static void brcmf_sdio_debugfs_create(struct brcmf_sdio* bus) {}
 #endif /* !defined(NDEBUG) */
 
 static zx_status_t brcmf_sdio_bus_rxctl(struct brcmf_device* dev, unsigned char* msg, uint msglen,
@@ -4092,7 +3900,6 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     /* SR state */
     bus->sr_enabled = false;
 
-    brcmf_sdio_debugfs_create(bus);
     BRCMF_DBG(INFO, "completed!!\n");
 
     ret = brcmf_fw_map_chip_to_name(bus->ci->chip, bus->ci->chiprev, brcmf_sdio_fwnames,

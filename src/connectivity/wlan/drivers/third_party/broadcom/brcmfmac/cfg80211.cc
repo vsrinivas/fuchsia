@@ -1423,8 +1423,8 @@ static void brcmf_iedump(uint8_t* ies, size_t total_len) {
             break;
         }
         if (elem_type == 0) {
-            BRCMF_DBG(ALL, "IE 0 (name), len %d:", elem_len);
-            BRCMF_DBG_STRING_DUMP(ies + offset, elem_len);
+            BRCMF_DBG_STRING_DUMP(true, ies + offset, elem_len,
+                                  "IE 0 (name), len %d:", elem_len);
         } else {
             BRCMF_DBG_HEX_DUMP(true, ies + offset, elem_len,
                                "IE %d, len %d:\n", elem_type, elem_len);
@@ -2729,12 +2729,10 @@ void brcmf_hook_start_scan(void* ctx, wlanif_scan_req_t* req) {
 void brcmf_hook_join_req(void* ctx, wlanif_join_req_t* req) {
     struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
     struct brcmf_if* ifp = ndev_to_if(ndev);
-#if !defined(NDEBUG)
     const uint8_t* bssid = req->selected_bss.bssid;
 
     BRCMF_DBG(WLANIF, "Join request from SME. ssid: %.*s, bssid: " MAC_FMT_STR "\n",
               req->selected_bss.ssid.len, req->selected_bss.ssid.data, MAC_FMT_ARGS(bssid));
-#endif  // !defined(NDEBUG)
 
     memcpy(&ifp->bss, &req->selected_bss, sizeof(ifp->bss));
 
@@ -2820,11 +2818,9 @@ void brcmf_hook_auth_resp(void* ctx, wlanif_auth_resp_t* ind) {
     }
 
     if (ind->result_code == WLAN_AUTH_RESULT_SUCCESS) {
-#if !defined(NDEBUG)
         const uint8_t* mac = ind->peer_sta_address;
         BRCMF_DBG(CONN, "Successfully authenticated client %02x:%02x:%02x:%02x:%02x:%02x\n",
                   mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-#endif  // !defined(NDEBUG)
         return;
     }
 
@@ -2901,11 +2897,9 @@ void brcmf_hook_assoc_resp(void* ctx, wlanif_assoc_resp_t* ind) {
     }
 
     if (ind->result_code == WLAN_ASSOC_RESULT_SUCCESS) {
-#if !defined(NDEBUG)
         const uint8_t* mac = ind->peer_sta_address;
         BRCMF_DBG(CONN, "Successfully associated client %02x:%02x:%02x:%02x:%02x:%02x\n",
                   mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-#endif  // !defined(NDEBUG)
         return;
     }
 
@@ -3246,8 +3240,8 @@ static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlanif_band_capabilities_
 }
 
 static void brcmf_dump_ht_caps(ieee80211_ht_capabilities_t* caps) {
-    BRCMF_LOGF(INFO, "brcmfmac:     ht_capability_info: %#x\n", caps->ht_capability_info);
-    BRCMF_LOGF(INFO, "brcmfmac:     ampdu_params: %#x\n", caps->ampdu_params);
+    BRCMF_INFO("brcmfmac:     ht_capability_info: %#x\n", caps->ht_capability_info);
+    BRCMF_INFO("brcmfmac:     ampdu_params: %#x\n", caps->ampdu_params);
 
     char mcs_set_str[countof(caps->supported_mcs_set.bytes) * 5 + 1];
     char* str = mcs_set_str;
@@ -3255,14 +3249,14 @@ static void brcmf_dump_ht_caps(ieee80211_ht_capabilities_t* caps) {
         str += sprintf(str, "%s0x%02hhx", i > 0 ? " " : "", caps->supported_mcs_set.bytes[i]);
     }
 
-    BRCMF_LOGF(INFO, "brcmfmac:     mcs_set: %s\n", mcs_set_str);
-    BRCMF_LOGF(INFO, "brcmfmac:     ht_ext_capabilities: %#x\n", caps->ht_ext_capabilities);
-    BRCMF_LOGF(INFO, "brcmfmac:     asel_capabilities: %#x\n", caps->asel_capabilities);
+    BRCMF_INFO("brcmfmac:     mcs_set: %s\n", mcs_set_str);
+    BRCMF_INFO("brcmfmac:     ht_ext_capabilities: %#x\n", caps->ht_ext_capabilities);
+    BRCMF_INFO("brcmfmac:     asel_capabilities: %#x\n", caps->asel_capabilities);
 }
 
 static void brcmf_dump_vht_caps(ieee80211_vht_capabilities_t* caps) {
-    BRCMF_LOGF(INFO, "brcmfmac:     vht_capability_info: %#x\n", caps->vht_capability_info);
-    BRCMF_LOGF(INFO, "brcmfmac:     supported_vht_mcs_and_nss_set: %#" PRIx64 "\n",
+    BRCMF_INFO("brcmfmac:     vht_capability_info: %#x\n", caps->vht_capability_info);
+    BRCMF_INFO("brcmfmac:     supported_vht_mcs_and_nss_set: %#" PRIx64 "\n",
                caps->supported_vht_mcs_and_nss_set);
 }
 
@@ -3279,7 +3273,7 @@ static void brcmf_dump_band_caps(wlanif_band_capabilities_t* band) {
         sprintf(band_id_str, "unknown (%d)", band->band_id);
         break;
     }
-    BRCMF_LOGF(INFO, "brcmfmac:   band_id: %s\n", band_id_str);
+    BRCMF_INFO("brcmfmac:   band_id: %s\n", band_id_str);
 
     ZX_ASSERT(band->num_basic_rates <= WLAN_INFO_BAND_INFO_MAX_BASIC_RATES);
     char basic_rates_str[WLAN_INFO_BAND_INFO_MAX_BASIC_RATES * 6 + 1];
@@ -3287,9 +3281,9 @@ static void brcmf_dump_band_caps(wlanif_band_capabilities_t* band) {
     for (unsigned i = 0; i < band->num_basic_rates; i++) {
         str += sprintf(str, "%s%d", i > 0 ? " " : "", band->basic_rates[i]);
     }
-    BRCMF_LOGF(INFO, "brcmfmac:     basic_rates: %s\n", basic_rates_str);
+    BRCMF_INFO("brcmfmac:     basic_rates: %s\n", basic_rates_str);
 
-    BRCMF_LOGF(INFO, "brcmfmac:     base_frequency: %d\n", band->base_frequency);
+    BRCMF_INFO("brcmfmac:     base_frequency: %d\n", band->base_frequency);
 
     ZX_ASSERT(band->num_channels <= WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
     char channels_str[WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS * 4 + 1];
@@ -3297,29 +3291,29 @@ static void brcmf_dump_band_caps(wlanif_band_capabilities_t* band) {
     for (unsigned i = 0; i < band->num_channels; i++) {
         str += sprintf(str, "%s%d", i > 0 ? " " : "", band->channels[i]);
     }
-    BRCMF_LOGF(INFO, "brcmfmac:     channels: %s\n", channels_str);
+    BRCMF_INFO("brcmfmac:     channels: %s\n", channels_str);
 
-    BRCMF_LOGF(INFO, "brcmfmac:     ht_supported: %s\n", band->ht_supported ? "true" : "false");
+    BRCMF_INFO("brcmfmac:     ht_supported: %s\n", band->ht_supported ? "true" : "false");
     if (band->ht_supported) {
         brcmf_dump_ht_caps(&band->ht_caps);
     }
 
-    BRCMF_LOGF(INFO, "brcmfmac:     vht_supported: %s\n", band->vht_supported ? "true" : "false");
+    BRCMF_INFO("brcmfmac:     vht_supported: %s\n", band->vht_supported ? "true" : "false");
     if (band->vht_supported) {
         brcmf_dump_vht_caps(&band->vht_caps);
     }
 }
 
 static void brcmf_dump_query_info(wlanif_query_info_t* info) {
-    BRCMF_LOGF(INFO, "brcmfmac: Device capabilities as reported to wlanif:\n");
-    BRCMF_LOGF(INFO, "brcmfmac:   mac_addr: %02x:%02x:%02x:%02x:%02x:%02x\n",
+    BRCMF_INFO("brcmfmac: Device capabilities as reported to wlanif:\n");
+    BRCMF_INFO("brcmfmac:   mac_addr: %02x:%02x:%02x:%02x:%02x:%02x\n",
                info->mac_addr[0], info->mac_addr[1], info->mac_addr[2],
                info->mac_addr[3], info->mac_addr[4], info->mac_addr[5]);
-    BRCMF_LOGF(INFO, "brcmfmac:   role(s): %s%s%s\n",
+    BRCMF_INFO("brcmfmac:   role(s): %s%s%s\n",
                info->role & WLAN_INFO_MAC_ROLE_CLIENT ? "client " : "",
                info->role & WLAN_INFO_MAC_ROLE_AP ? "ap " : "",
                info->role & WLAN_INFO_MAC_ROLE_MESH ? "mesh " : "");
-    BRCMF_LOGF(INFO, "brcmfmac:   feature(s): %s%s\n",
+    BRCMF_INFO("brcmfmac:   feature(s): %s%s\n",
                info->features & WLANIF_FEATURE_DMA ? "DMA " : "",
                info->features & WLANIF_FEATURE_SYNTH ? "SYNTH " : "");
     for (unsigned i = 0; i < info->num_bands; i++) {

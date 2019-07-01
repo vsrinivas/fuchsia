@@ -19,10 +19,8 @@
 #include <atomic>
 #include <pthread.h>
 
-// TODO(cphoenix): Do we need sdio, completion, status, stdatomic, threads?
-#if (CONFIG_BRCMFMAC_USB || CONFIG_BRCMFMAC_SDIO || CONFIG_BRCMFMAC_PCIE)
 #include <ddk/device.h>
-#endif
+#include <ddk/protocol/composite.h>
 #include <ddk/protocol/sdio.h>
 #include <ddk/metadata.h>
 #include <ddk/trace/event.h>
@@ -43,7 +41,6 @@
 #include "chip.h"
 #include "chipcommon.h"
 #include "common.h"
-#include "core.h"
 #include "debug.h"
 #include "defs.h"
 #include "device.h"
@@ -51,9 +48,6 @@
 #include "netbuf.h"
 #include "sdio.h"
 #include "soc.h"
-#if CONFIG_BRCMFMAC_SIM
-#include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
-#endif
 
 #define SDIOH_API_ACCESS_RETRY_LIMIT 2
 
@@ -786,7 +780,7 @@ static const struct sdio_device_id brcmf_sdmmc_ids[] = {
 };
 #endif // TODO_ADD_SDIO_IDS
 
-zx_status_t brcmf_sdio_register(zx_device_t* zxdev, composite_protocol_t* composite_proto) {
+zx_status_t brcmf_sdio_register(zx_device_t* zxdev) {
     zx_status_t err;
     struct brcmf_device* dev;
     zx_status_t status;
@@ -798,7 +792,14 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, composite_protocol_t* compos
 
     BRCMF_DBG(SDIO, "Enter\n");
 
-    uint32_t component_count = composite_get_component_count(composite_proto);
+    composite_protocol_t composite_proto = {};
+    status =
+        device_get_protocol(zxdev, ZX_PROTOCOL_COMPOSITE, &composite_proto);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    uint32_t component_count = composite_get_component_count(&composite_proto);
     if (component_count < 2) {
         BRCMF_ERR("Not enough components (need atleast 2, have %u)", component_count);
         return ZX_ERR_INTERNAL;
@@ -806,7 +807,7 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, composite_protocol_t* compos
     // One for SDIO, one or two GPIOs.
     zx_device_t* components[COMPONENT_COUNT];
     size_t actual;
-    composite_get_components(composite_proto, components, countof(components), &actual);
+    composite_get_components(&composite_proto, components, countof(components), &actual);
     if (actual < 2) {
         BRCMF_ERR("Not enough components (need atleast 2, have %zu)", actual);
         return ZX_ERR_INTERNAL;

@@ -121,6 +121,10 @@ static const char* brcmf_fws_get_tlv_name(enum brcmf_fws_tlv_type id) {
 
     return "INVALID";
 }
+#else /* !defined(NDEBUG) */
+static const char* brcmf_fws_get_tlv_name(enum brcmf_fws_tlv_type id) {
+    return "NODEBUG";
+}
 #endif /* !defined(NDEBUG) */
 
 /*
@@ -2201,55 +2205,6 @@ static void brcmf_fws_dequeue_worker(struct work_struct* worker) {
     brcmf_fws_unlock(fws);
 }
 
-#if !defined(NDEBUG)
-static zx_status_t brcmf_debugfs_fws_stats_read(struct seq_file* seq, void* data) {
-    struct brcmf_bus* bus_if = dev_to_bus(static_cast<brcmf_device*>(seq->private_data));
-    struct brcmf_fws_stats* fwstats = &(drvr_to_fws(bus_if->drvr)->stats);
-
-    seq_printf(seq,
-               "header_pulls:      %u\n"
-               "header_only_pkt:   %u\n"
-               "tlv_parse_failed:  %u\n"
-               "tlv_invalid_type:  %u\n"
-               "mac_update_fails:  %u\n"
-               "ps_update_fails:   %u\n"
-               "if_update_fails:   %u\n"
-               "pkt2bus:           %u\n"
-               "generic_error:     %u\n"
-               "rollback_success:  %u\n"
-               "rollback_failed:   %u\n"
-               "delayq_full:       %u\n"
-               "supprq_full:       %u\n"
-               "txs_indicate:      %u\n"
-               "txs_discard:       %u\n"
-               "txs_suppr_core:    %u\n"
-               "txs_suppr_ps:      %u\n"
-               "txs_tossed:        %u\n"
-               "txs_host_tossed:   %u\n"
-               "bus_flow_block:    %u\n"
-               "fws_flow_block:    %u\n"
-               "send_pkts:         BK:%u BE:%u VO:%u VI:%u BCMC:%u\n"
-               "requested_sent:    BK:%u BE:%u VO:%u VI:%u BCMC:%u\n",
-               fwstats->header_pulls, fwstats->header_only_pkt, fwstats->tlv_parse_failed,
-               fwstats->tlv_invalid_type, fwstats->mac_update_failed, fwstats->mac_ps_update_failed,
-               fwstats->if_update_failed, fwstats->pkt2bus, fwstats->generic_error,
-               fwstats->rollback_success, fwstats->rollback_failed, fwstats->delayq_full_error,
-               fwstats->supprq_full_error, fwstats->txs_indicate, fwstats->txs_discard,
-               fwstats->txs_supp_core, fwstats->txs_supp_ps, fwstats->txs_tossed,
-               fwstats->txs_host_tossed, fwstats->bus_flow_block, fwstats->fws_flow_block,
-               fwstats->send_pkts[0], fwstats->send_pkts[1], fwstats->send_pkts[2],
-               fwstats->send_pkts[3], fwstats->send_pkts[4], fwstats->requested_sent[0],
-               fwstats->requested_sent[1], fwstats->requested_sent[2], fwstats->requested_sent[3],
-               fwstats->requested_sent[4]);
-
-    return ZX_OK;
-}
-#else  // !defined(NDEBUG)
-static zx_status_t brcmf_debugfs_fws_stats_read(struct seq_file* seq, void* data) {
-    return ZX_OK;
-}
-#endif  // !defined(NDEBUG)
-
 zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws_out) {
     struct brcmf_fws_info* fws;
     struct brcmf_if* ifp;
@@ -2340,9 +2295,6 @@ zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws
     brcmf_fws_macdesc_set_name(fws, &fws->desc.other);
     BRCMF_DBG(INFO, "added %s\n", fws->desc.other.name);
     brcmu_pktq_init(&fws->desc.other.psq, BRCMF_FWS_PSQ_PREC_COUNT, BRCMF_FWS_PSQ_LEN);
-
-    /* create debugfs file for statistics */
-    brcmf_debugfs_add_entry(drvr, "fws_stats", brcmf_debugfs_fws_stats_read);
 
     BRCMF_DBG(INFO, "%s bdcv2 tlv signaling [%x]\n", fws->fw_signals ? "enabled" : "disabled", tlv);
     if (fws_out) {

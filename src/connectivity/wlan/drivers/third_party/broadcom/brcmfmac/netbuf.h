@@ -18,11 +18,7 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_INCLUDE_NETBUF_H_
 
 #include <sys/types.h>
-#ifdef ZX_DEBUG_ASSERT // Allow redefining this for tests, since ZX has no death-test
-extern bool error_happened;
-#else
 #include <zircon/assert.h>
-#endif
 #include <zircon/errors.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>

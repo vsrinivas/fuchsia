@@ -61,19 +61,16 @@ class Netbuf : public testing::Test {
 };
 
 Netbuf::Netbuf() {
-    brcm_dbg_clear_err();
     buf = brcmf_netbuf_allocate(BIG_SIZE);
     EXPECT_NE(buf, nullptr);
 }
 
 Netbuf::~Netbuf() {
     brcmf_netbuf_free(buf);
-    EXPECT_FALSE(brcm_dbg_has_err());
 }
 
 TEST_F(Netbuf, CanAllocate) {
     EXPECT_NE(buf, nullptr);
-    EXPECT_FALSE(brcm_dbg_has_err());
 }
 
 TEST_F(Netbuf, HasRightSize) {
@@ -206,7 +203,6 @@ void NetbufList::ExpectOrder(int32_t* tags) {
 }
 
 NetbufList::NetbufList() {
-    brcm_dbg_clear_err();
     brcmf_netbuf_list_init(&list);
 }
 
@@ -215,7 +211,6 @@ NetbufList::~NetbufList() {
     struct brcmf_netbuf* temp;
     EXPECT_EQ(list.qlen, list_length(&list.listnode));
     brcmf_netbuf_list_for_every_safe(&list, buf, temp) { brcmf_netbuf_free(buf); }
-    EXPECT_FALSE(brcm_dbg_has_err());
 }
 
 // It's hard to test length without adding, so I combined the tests.

@@ -16,6 +16,7 @@
 #ifndef BRCMFMAC_FIRMWARE_H
 #define BRCMFMAC_FIRMWARE_H
 
+#include "common.h"
 #include "device.h"
 #include "linuxisms.h"
 
@@ -27,8 +28,6 @@
 #define BRCMF_FW_REQ_NV_OPTIONAL 0x0010
 
 // clang-format on
-
-#define BRCMF_FW_NAME_LEN 320
 
 #define BRCMF_FW_DEFAULT_PATH ""
 

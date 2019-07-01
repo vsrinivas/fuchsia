@@ -21,6 +21,7 @@
 
 #include "bus.h"
 #include "chip.h"
+#include "debug.h"
 #include "device.h"
 
 // Get device-specific information

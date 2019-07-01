@@ -14,14 +14,19 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <tuple>
+
+#include <ddk/device.h>
+#include <ddk/protocol/gpio.h>
+#include <ddk/protocol/sdio.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <mock/ddktl/protocol/gpio.h>
 #include <mock/ddktl/protocol/sdio.h>
 #include <wifi/wifi-config.h>
+#include <zircon/types.h>
 #include <zxtest/zxtest.h>
 
 #include "../bus.h"
-#include "../common.h"
 #include "../sdio.h"
 
 // This is required to use ddk::MockSdio.
@@ -31,6 +36,14 @@ bool operator==(const sdio_rw_txn_t& lhs, const sdio_rw_txn_t& rhs) {
             lhs.incr == rhs.incr &&
             lhs.write == rhs.write &&
             lhs.buf_offset == rhs.buf_offset);
+}
+
+// Stub out the firmware loading from the devhost API.
+zx_status_t load_firmware(zx_device_t* dev, const char* path, zx_handle_t* fw,
+                          size_t* size) {
+  *fw = ZX_HANDLE_INVALID;
+  *size = 0;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 namespace {

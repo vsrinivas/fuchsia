@@ -29,14 +29,12 @@
 #include "fwil_types.h"
 #include "linuxisms.h"
 
-#if !defined(NDEBUG)
 /*
  * expand feature list to array of feature strings.
  */
 #define BRCMF_FEAT_DEF(_f) #_f,
 static const char* brcmf_feat_names[] = {BRCMF_FEAT_LIST};
 #undef BRCMF_FEAT_DEF
-#endif  // !defined(NDEBUG)
 
 struct brcmf_feat_fwcap {
     enum brcmf_feat_id feature;
@@ -48,44 +46,6 @@ static const struct brcmf_feat_fwcap brcmf_fwcap_map[] = {
     {BRCMF_FEAT_MCHAN, "mchan"},
     {BRCMF_FEAT_P2P, "p2p"},
 };
-
-#if !defined(NDEBUG)
-/*
- * expand quirk list to array of quirk strings.
- */
-#define BRCMF_QUIRK_DEF(_q) #_q,
-static const char* const brcmf_quirk_names[] = {BRCMF_QUIRK_LIST};
-#undef BRCMF_QUIRK_DEF
-
-/**
- * brcmf_feat_debugfs_read() - expose feature info to debugfs.
- *
- * @seq: sequence for debugfs entry.
- * @data: raw data pointer.
- */
-static zx_status_t brcmf_feat_debugfs_read(struct seq_file* seq, void* data) {
-    struct brcmf_bus* bus_if = dev_to_bus(static_cast<brcmf_device*>(seq->private_data));
-    uint32_t feats = bus_if->drvr->feat_flags;
-    uint32_t quirks = bus_if->drvr->chip_quirks;
-    int id;
-
-    seq_printf(seq, "Features: %08x\n", feats);
-    for (id = 0; id < BRCMF_FEAT_LAST; id++)
-        if (feats & BIT(id)) {
-            seq_printf(seq, "\t%s\n", brcmf_feat_names[id]);
-        }
-    seq_printf(seq, "\nQuirks:   %08x\n", quirks);
-    for (id = 0; id < BRCMF_FEAT_QUIRK_LAST; id++)
-        if (quirks & BIT(id)) {
-            seq_printf(seq, "\t%s\n", brcmf_quirk_names[id]);
-        }
-    return ZX_OK;
-}
-#else /* !defined(NDEBUG) */
-static zx_status_t brcmf_feat_debugfs_read(struct seq_file* seq, void* data) {
-    return ZX_OK;
-}
-#endif /* !defined(NDEBUG) */
 
 /**
  * brcmf_feat_iovar_int_get() - determine feature through iovar query.
@@ -222,8 +182,6 @@ void brcmf_feat_attach(struct brcmf_pub* drvr) {
         /* no quirks */
         break;
     }
-
-    brcmf_debugfs_add_entry(drvr, "features", brcmf_feat_debugfs_read);
 }
 
 bool brcmf_feat_is_enabled(struct brcmf_if* ifp, enum brcmf_feat_id id) {

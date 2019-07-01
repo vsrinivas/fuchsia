@@ -16,28 +16,17 @@ import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-group("test") {
-  testonly = true
-  deps = [
-    ":brcmfmac_test",
-  ]
-}
-
 executable("lifecycle_test") {
   output_name = "lifecycle_test"
   testonly = true
-  defines = [ "CONFIG_BRCMFMAC_SIM=1" ]
   sources = [
     "lifecycle_test.cc",
   ]
   deps = [
-    "//garnet/lib/wlan/protocol",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:brcmfmac_test_srcs",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:driver_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/async-loop",
-    "//zircon/public/lib/ddk",
-    "//zircon/public/lib/device-protocol-pci",
-    "//zircon/public/lib/sync",
+    "//zircon/public/lib/fake_ddk",
   ]
 }
 
@@ -48,11 +37,10 @@ executable("netbuf_test") {
     "netbuf_test.cc",
   ]
   deps = [
-    "//garnet/lib/wlan/protocol",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:brcmfmac_test_srcs",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:linuxisms",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/ddk",
-    "//zircon/public/lib/device-protocol-pci",
+    "//zircon/public/lib/fake_ddk",
   ]
 }
 
@@ -63,30 +51,32 @@ executable("sdio_test") {
     "sdio_test.cc",
   ]
   deps = [
-    "//garnet/lib/wlan/protocol",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:brcmfmac_test_srcs",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:driver_test",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:sdio",
+    "//zircon/public/banjo/ddk.protocol.gpio",
     "//zircon/public/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
+    "//zircon/public/banjo/ddk.protocol.sdio",
     "//zircon/public/banjo/ddk.protocol.sdio:ddk.protocol.sdio_mock",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/broadcom",
-    "//zircon/public/lib/device-protocol-pci",
+    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fake_ddk",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/public",
   ]
 }
 
 executable("workqueue_test") {
   output_name = "workqueue_test"
   testonly = true
-
   sources = [
     "workqueue_test.cc",
   ]
-
   deps = [
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:brcmfmac_test_srcs",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:linuxisms",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/sync",
   ]
 }

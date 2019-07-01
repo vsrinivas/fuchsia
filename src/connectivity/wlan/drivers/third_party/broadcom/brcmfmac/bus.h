@@ -20,10 +20,7 @@
 #include <atomic>
 
 #include <ddk/device.h>
-#include <ddk/protocol/composite.h>
-#include <ddk/protocol/usb.h>
 
-#include "debug.h"
 #include "netbuf.h"
 
 /* The level of bus communication with the dongle */
@@ -232,17 +229,8 @@ zx_status_t brcmf_iovar_data_set(struct brcmf_device* dev, const char* name, voi
                                  uint32_t len, int32_t* fwerr_ptr);
 void brcmf_bus_add_txhdrlen(struct brcmf_device* dev, uint len);
 
-#if CONFIG_BRCMFMAC_SDIO
-void brcmf_sdio_exit(void);
-zx_status_t brcmf_sdio_register(zx_device_t* zxdev, composite_protocol_t* composite_proto);
-#endif
-#if CONFIG_BRCMFMAC_USB
-void brcmf_usb_exit(void);
-zx_status_t brcmf_usb_register(zx_device_t* device, usb_protocol_t* usb_proto);
-#endif
-#if CONFIG_BRCMFMAC_SIM
-void brcmf_sim_exit(void);
-zx_status_t brcmf_sim_register(zx_device_t* device);
-#endif
+// Interface to the system bus.
+zx_status_t brcmf_bus_register(zx_device_t* zxdev);
+void brcmf_bus_exit(void);
 
 #endif /* BRCMFMAC_BUS_H */
