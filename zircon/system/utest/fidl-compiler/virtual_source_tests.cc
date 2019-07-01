@@ -10,39 +10,39 @@
 namespace {
 
 bool AddLine() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    fidl::VirtualSourceFile file("imaginary-test-file");
+  fidl::VirtualSourceFile file("imaginary-test-file");
 
-    fidl::SourceLocation one = file.AddLine("one");
-    fidl::SourceLocation two = file.AddLine("two");
-    fidl::SourceLocation three = file.AddLine("three");
+  fidl::SourceLocation one = file.AddLine("one");
+  fidl::SourceLocation two = file.AddLine("two");
+  fidl::SourceLocation three = file.AddLine("three");
 
-    EXPECT_STR_EQ(std::string(one.data()).c_str(), "one");
-    EXPECT_STR_EQ(std::string(two.data()).c_str(), "two");
-    EXPECT_STR_EQ(std::string(three.data()).c_str(), "three");
+  EXPECT_STR_EQ(std::string(one.data()).c_str(), "one");
+  EXPECT_STR_EQ(std::string(two.data()).c_str(), "two");
+  EXPECT_STR_EQ(std::string(three.data()).c_str(), "three");
 
-    END_TEST;
+  END_TEST;
 }
 
 bool LineContaining() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    fidl::VirtualSourceFile file("imaginary-test-file");
+  fidl::VirtualSourceFile file("imaginary-test-file");
 
-    file.AddLine("one");
-    fidl::SourceLocation two = file.AddLine("two");
-    file.AddLine("three");
+  file.AddLine("one");
+  fidl::SourceLocation two = file.AddLine("two");
+  file.AddLine("three");
 
-    fidl::SourceFile::Position pos{};
-    file.LineContaining(two.data(), &pos);
-    EXPECT_EQ(pos.line, 2);
-    EXPECT_EQ(pos.column, 1);
+  fidl::SourceFile::Position pos{};
+  file.LineContaining(two.data(), &pos);
+  EXPECT_EQ(pos.line, 2);
+  EXPECT_EQ(pos.column, 1);
 
-    END_TEST;
+  END_TEST;
 }
 
-} // namespace
+}  // namespace
 
 BEGIN_TEST_CASE(virtual_source_tests)
 

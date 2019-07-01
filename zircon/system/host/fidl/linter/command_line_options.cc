@@ -4,9 +4,9 @@
 
 #include "command_line_options.h"
 
-#include <iostream>
-
 #include <cmdline/args_parser.h>
+
+#include <iostream>
 
 namespace fidl {
 namespace linter {
@@ -35,70 +35,62 @@ const char kFormat[] = R"(  --format=[text|json]
 const char kHelp[] = R"(  --help
    -h Print this help message.)";
 
-} // namespace help
+}  // namespace help
 
 std::string Usage(std::string argv0) {
-    return argv0 + " " + help::kArgSpec +
-           "\n(--help for more details))";
+  return argv0 + " " + help::kArgSpec + "\n(--help for more details))";
 }
 
 cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
                                  std::vector<std::string>* params) {
+  std::stringstream suggestion;
+  suggestion << "Try: " << argv[0] << " --help";
+  if (argc == 1) {
+    return cmdline::Status::Error(suggestion.str());
+  }
 
-    std::stringstream suggestion;
-    suggestion << "Try: " << argv[0] << " --help";
-    if (argc == 1) {
-        return cmdline::Status::Error(suggestion.str());
+  cmdline::ArgsParser<CommandLineOptions> parser;
+
+  parser.AddSwitch("include-check", 'i', help::kIncludeCheck, &CommandLineOptions::included_checks);
+  parser.AddSwitch("exclude-check", 'e', help::kExcludeCheck, &CommandLineOptions::excluded_checks);
+  parser.AddSwitch("format", 'f', help::kFormat, &CommandLineOptions::format,
+                   [](const std::string& format) -> cmdline::Status {
+                     if (format == "text" || format == "json") {
+                       return cmdline::Status::Ok();
+                     }
+                     return cmdline::Status::Error("Invalid value for --format: " + format);
+                   });
+
+  // Special --help switch which doesn't exist in the options structure.
+  bool requested_help = false;
+  parser.AddGeneralSwitch("help", 'h', help::kHelp, [&requested_help]() { requested_help = true; });
+
+  cmdline::Status status = parser.Parse(argc, argv, options, params);
+  if (status.has_error()) {
+    return status;
+  }
+
+  // Handle --help switch since we're the one that knows about the switches.
+  if (requested_help) {
+    return cmdline::Status::Error(Usage(argv[0]) + "\n" + help::kIntro + parser.GetHelp());
+  }
+
+  if (params->size() > 0) {
+    if ((*params)[0] == "printcurrentoptions") {
+      std::stringstream current_options;
+      for (auto check : options->included_checks) {
+        current_options << "include-check: " << check << std::endl;
+      }
+      for (auto check : options->excluded_checks) {
+        current_options << "exclude-check: " << check << std::endl;
+      }
+      current_options << "format: " << options->format << std::endl;
+      return cmdline::Status::Error(current_options.str());
     }
+  }
 
-    cmdline::ArgsParser<CommandLineOptions> parser;
-
-    parser.AddSwitch("include-check", 'i', help::kIncludeCheck,
-                     &CommandLineOptions::included_checks);
-    parser.AddSwitch("exclude-check", 'e', help::kExcludeCheck,
-                     &CommandLineOptions::excluded_checks);
-    parser.AddSwitch(
-        "format", 'f', help::kFormat, &CommandLineOptions::format,
-        [](const std::string& format) -> cmdline::Status {
-            if (format == "text" || format == "json") {
-                return cmdline::Status::Ok();
-            }
-            return cmdline::Status::Error("Invalid value for --format: " + format);
-        });
-
-    // Special --help switch which doesn't exist in the options structure.
-    bool requested_help = false;
-    parser.AddGeneralSwitch("help", 'h', help::kHelp,
-                            [&requested_help]() { requested_help = true; });
-
-    cmdline::Status status = parser.Parse(argc, argv, options, params);
-    if (status.has_error()) {
-        return status;
-    }
-
-    // Handle --help switch since we're the one that knows about the switches.
-    if (requested_help) {
-        return cmdline::Status::Error(
-            Usage(argv[0]) + "\n" + help::kIntro + parser.GetHelp());
-    }
-
-    if (params->size() > 0) {
-        if ((*params)[0] == "printcurrentoptions") {
-            std::stringstream current_options;
-            for (auto check : options->included_checks) {
-                current_options << "include-check: " << check << std::endl;
-            }
-            for (auto check : options->excluded_checks) {
-                current_options << "exclude-check: " << check << std::endl;
-            }
-            current_options
-                << "format: " << options->format << std::endl;
-            return cmdline::Status::Error(current_options.str());
-        }
-    }
-
-    return cmdline::Status::Ok();
+  return cmdline::Status::Ok();
 }
 
-} // namespace linter
-} // namespace fidl
+}  // namespace linter
+}  // namespace fidl

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "fidl/library_zx.h"
+
 #include <sstream>
 // TODO(FIDL-478): make fidlc not depend on zircon
 #include <zircon/types.h>
@@ -14,13 +15,13 @@ const std::string kFilename = "zx.fidl";
 
 namespace {
 std::string GenerateData() {
-    std::ostringstream out;
+  std::ostringstream out;
 
-    // Please be sure to update the documentation about this library at the
-    // location //docs/development/languages/fidl/reference/library-zx.md
+  // Please be sure to update the documentation about this library at the
+  // location //docs/development/languages/fidl/reference/library-zx.md
 
-    out <<
-        R"FIDL(
+  out <<
+      R"FIDL(
 [Internal]
 library zx;
 
@@ -36,14 +37,14 @@ using off = uint64;
 using procarg = uint32;
 )FIDL";
 
-    out << "const uint64 CHANNEL_MAX_MSG_BYTES = " << ZX_CHANNEL_MAX_MSG_BYTES << ";\n";
-    out << "const uint64 CHANNEL_MAX_MSG_HANDLES = " << ZX_CHANNEL_MAX_MSG_HANDLES << ";\n";
+  out << "const uint64 CHANNEL_MAX_MSG_BYTES = " << ZX_CHANNEL_MAX_MSG_BYTES << ";\n";
+  out << "const uint64 CHANNEL_MAX_MSG_HANDLES = " << ZX_CHANNEL_MAX_MSG_HANDLES << ";\n";
 
-    return out.str();
+  return out.str();
 }
-} // namespace
+}  // namespace
 
 const std::string kData = GenerateData();
 
-} // namespace LibraryZX
-} // namespace fidl
+}  // namespace LibraryZX
+}  // namespace fidl

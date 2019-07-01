@@ -9,9 +9,9 @@
 namespace {
 
 bool GoodEnumTestSimple() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 enum Fruit : uint64 {
@@ -20,15 +20,15 @@ enum Fruit : uint64 {
     BANANA = 3;
 };
 )FIDL");
-    ASSERT_TRUE(library.Compile());
+  ASSERT_TRUE(library.Compile());
 
-    END_TEST;
+  END_TEST;
 }
 
 bool BadEnumTestWithNonUniqueValues() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 enum Fruit : uint64 {
@@ -36,19 +36,20 @@ enum Fruit : uint64 {
     APPLE = 1;
 };
 )FIDL");
-    ASSERT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "value of member APPLE conflicts with previously declared "
-                                      "member ORANGE in the enum Fruit");
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(),
+                 "value of member APPLE conflicts with previously declared "
+                 "member ORANGE in the enum Fruit");
 
-    END_TEST;
+  END_TEST;
 }
 
 bool BadEnumTestWithNonUniqueValuesOutOfLine() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 enum Fruit {
@@ -59,19 +60,20 @@ enum Fruit {
 const uint32 FOUR = 4;
 const uint32 TWO_SQUARED = 4;
 )FIDL");
-    ASSERT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "value of member APPLE conflicts with previously declared "
-                                      "member ORANGE in the enum Fruit");
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(),
+                 "value of member APPLE conflicts with previously declared "
+                 "member ORANGE in the enum Fruit");
 
-    END_TEST;
+  END_TEST;
 }
 
 bool BadEnumTestUnsignedWithNegativeMember() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 enum Fruit : uint64 {
@@ -79,18 +81,18 @@ enum Fruit : uint64 {
     APPLE = -2;
 };
 )FIDL");
-    ASSERT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_GE(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "-2 cannot be interpreted as type uint64");
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_GE(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "-2 cannot be interpreted as type uint64");
 
-    END_TEST;
+  END_TEST;
 }
 
 bool BadEnumTestInferredUnsignedWithNegativeMember() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 enum Fruit {
@@ -98,18 +100,18 @@ enum Fruit {
     APPLE = -2;
 };
 )FIDL");
-    ASSERT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_GE(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "-2 cannot be interpreted as type uint32");
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_GE(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "-2 cannot be interpreted as type uint32");
 
-    END_TEST;
+  END_TEST;
 }
 
 bool BadEnumTestMemberOverflow() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 enum Fruit : uint8 {
@@ -117,18 +119,18 @@ enum Fruit : uint8 {
     APPLE = 256;
 };
 )FIDL");
-    ASSERT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_GE(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "256 cannot be interpreted as type uint8");
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_GE(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "256 cannot be interpreted as type uint8");
 
-    END_TEST;
+  END_TEST;
 }
 
 bool BadEnumTestDuplicateMember() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 enum Fruit : uint64 {
@@ -137,19 +139,20 @@ enum Fruit : uint64 {
     ORANGE = 3;
 };
 )FIDL");
-    ASSERT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_GE(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "name of member ORANGE conflicts with previously declared "
-                                      "member in the enum Fruit");
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_GE(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(),
+                 "name of member ORANGE conflicts with previously declared "
+                 "member in the enum Fruit");
 
-    END_TEST;
+  END_TEST;
 }
 
 bool GoodEnumTestKeywordNames() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 enum Fruit : uint64 {
@@ -158,15 +161,15 @@ enum Fruit : uint64 {
     uint64 = 3;
 };
 )FIDL");
-    ASSERT_TRUE(library.Compile());
+  ASSERT_TRUE(library.Compile());
 
-    END_TEST;
+  END_TEST;
 }
 
 bool BadEnumShantBeNullable() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 enum NotNullable {
@@ -177,15 +180,15 @@ struct Struct {
     NotNullable? not_nullable;
 };
 )FIDL");
-    ASSERT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_GE(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "example/NotNullable cannot be nullable");
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_GE(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "example/NotNullable cannot be nullable");
 
-    END_TEST;
+  END_TEST;
 }
 
-} // namespace
+}  // namespace
 
 BEGIN_TEST_CASE(enums_tests)
 

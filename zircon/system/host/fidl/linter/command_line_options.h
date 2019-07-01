@@ -6,6 +6,7 @@
 #define ZIRCON_SYSTEM_HOST_FIDL_LINTER_COMMAND_LINE_OPTIONS_H_
 
 #include <cmdline/status.h>
+
 #include <string>
 #include <vector>
 
@@ -13,9 +14,9 @@ namespace fidl {
 namespace linter {
 
 struct CommandLineOptions {
-    std::vector<std::string> included_checks;
-    std::vector<std::string> excluded_checks;
-    std::string format = "text";
+  std::vector<std::string> included_checks;
+  std::vector<std::string> excluded_checks;
+  std::string format = "text";
 };
 
 // Parses the given command line into options and params.
@@ -28,7 +29,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
 // Returns the fidl-lint usage string.
 std::string Usage(std::string argv0);
 
-} // namespace linter
-} // namespace fidl
+}  // namespace linter
+}  // namespace fidl
 
-#endif // ZIRCON_SYSTEM_HOST_FIDL_LINTER_COMMAND_LINE_OPTIONS_H_
+#endif  // ZIRCON_SYSTEM_HOST_FIDL_LINTER_COMMAND_LINE_OPTIONS_H_

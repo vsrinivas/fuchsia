@@ -14,17 +14,17 @@
 namespace fidl {
 
 class SourceManager {
-public:
-    // Returns whether the filename was successfully read.
-    bool CreateSource(std::string_view filename);
-    void AddSourceFile(std::unique_ptr<SourceFile> file);
+ public:
+  // Returns whether the filename was successfully read.
+  bool CreateSource(std::string_view filename);
+  void AddSourceFile(std::unique_ptr<SourceFile> file);
 
-    const std::vector<std::unique_ptr<SourceFile>>& sources() const { return sources_; }
+  const std::vector<std::unique_ptr<SourceFile>>& sources() const { return sources_; }
 
-private:
-    std::vector<std::unique_ptr<SourceFile>> sources_;
+ private:
+  std::vector<std::unique_ptr<SourceFile>> sources_;
 };
 
-} // namespace fidl
+}  // namespace fidl
 
-#endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_SOURCE_MANAGER_H_
+#endif  // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_SOURCE_MANAGER_H_

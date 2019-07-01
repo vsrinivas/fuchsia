@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LINT_TEMPLATE_STRING_H_
-#define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LINT_TEMPLATE_STRING_H_
+#ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_TEMPLATE_STRING_H_
+#define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_TEMPLATE_STRING_H_
 
 #include <map>
 #include <string>
@@ -25,43 +25,38 @@ using Substitutions = std::map<std::string, std::string>;
 //       {"REPLACEMENT", replacement},
 //   });
 class TemplateString {
-public:
-    TemplateString(std::string str)
-        : str_(str) {}
+ public:
+  TemplateString(std::string str)
+      : str_(str) {}
 
-    // Constructs an empty template.
-    TemplateString()
-        : TemplateString("") {}
+  // Constructs an empty template.
+  TemplateString()
+      : TemplateString("") {}
 
-    // Returns true if the template string is not empty.
-    explicit operator bool() const {
-        return str_.size() > 0;
-    }
+  // Returns true if the template string is not empty.
+  explicit operator bool() const { return str_.size() > 0; }
 
-    // Returns the string value after replacing all matched variables in the
-    // template string with the values for the matching keys.
-    // If |remove_unmatched| is true, variables without matching keys are
-    // removed from the string.
-    std::string Substitute(Substitutions substitutions,
-                           bool remove_unmatched) const;
+  // Returns the string value after replacing all matched variables in the
+  // template string with the values for the matching keys.
+  // If |remove_unmatched| is true, variables without matching keys are
+  // removed from the string.
+  std::string Substitute(Substitutions substitutions, bool remove_unmatched) const;
 
-    // Returns the string value after replacing all matched variables in the
-    // template string with the values for the matching keys.
-    // Variables without matching keys are left in place.
-    std::string Substitute(Substitutions substitutions) const {
-        return Substitute(substitutions, false);
-    }
+  // Returns the string value after replacing all matched variables in the
+  // template string with the values for the matching keys.
+  // Variables without matching keys are left in place.
+  std::string Substitute(Substitutions substitutions) const {
+    return Substitute(substitutions, false);
+  }
 
-    // Returns the template string with unreplaced variables (as given at
-    // construction).
-    inline const std::string& str() const {
-        return str_;
-    }
+  // Returns the template string with unreplaced variables (as given at
+  // construction).
+  inline const std::string& str() const { return str_; }
 
-private:
-    std::string str_;
+ private:
+  std::string str_;
 };
 
-} // namespace fidl
+}  // namespace fidl
 
-#endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LINT_TEMPLATE_STRING_H_
+#endif  // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_TEMPLATE_STRING_H_

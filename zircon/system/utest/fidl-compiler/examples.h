@@ -13,11 +13,11 @@
 #define ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_EXAMPLES_H
 
 class Examples {
-public:
-    static std::map<std::string, std::string>& map() { return map_; }
+ public:
+  static std::map<std::string, std::string>& map() { return map_; }
 
-private:
-    static std::map<std::string, std::string> map_;
+ private:
+  static std::map<std::string, std::string> map_;
 };
 
-#endif // ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_EXAMPLES_H
+#endif  // ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_EXAMPLES_H

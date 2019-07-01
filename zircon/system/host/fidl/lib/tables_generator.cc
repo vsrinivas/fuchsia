@@ -11,626 +11,613 @@ namespace fidl {
 namespace {
 
 std::string PrimitiveSubtypeToString(fidl::types::PrimitiveSubtype subtype) {
-    using fidl::types::PrimitiveSubtype;
-    switch (subtype) {
+  using fidl::types::PrimitiveSubtype;
+  switch (subtype) {
     case PrimitiveSubtype::kBool:
-        return "Bool";
+      return "Bool";
     case PrimitiveSubtype::kInt8:
-        return "Int8";
+      return "Int8";
     case PrimitiveSubtype::kInt16:
-        return "Int16";
+      return "Int16";
     case PrimitiveSubtype::kInt32:
-        return "Int32";
+      return "Int32";
     case PrimitiveSubtype::kInt64:
-        return "Int64";
+      return "Int64";
     case PrimitiveSubtype::kUint8:
-        return "Uint8";
+      return "Uint8";
     case PrimitiveSubtype::kUint16:
-        return "Uint16";
+      return "Uint16";
     case PrimitiveSubtype::kUint32:
-        return "Uint32";
+      return "Uint32";
     case PrimitiveSubtype::kUint64:
-        return "Uint64";
+      return "Uint64";
     case PrimitiveSubtype::kFloat32:
-        return "Float32";
+      return "Float32";
     case PrimitiveSubtype::kFloat64:
-        return "Float64";
-    }
+      return "Float64";
+  }
 }
 
 // When generating coding tables for containers employing envelopes (xunions & tables),
 // we need to reference coding tables for primitives, in addition to types that need coding.
 // This function handles naming coding tables for both cases.
 std::string CodedNameForEnvelope(const fidl::coded::Type* type) {
-    switch (type->kind) {
+  switch (type->kind) {
     case coded::Type::Kind::kPrimitive: {
-        using fidl::types::PrimitiveSubtype;
-        // To save space, all primitive types of the same underlying subtype
-        // share the same table.
-        std::string suffix =
-            PrimitiveSubtypeToString(static_cast<const coded::PrimitiveType*>(type)->subtype);
-        return "::fidl::internal::k" + suffix;
+      using fidl::types::PrimitiveSubtype;
+      // To save space, all primitive types of the same underlying subtype
+      // share the same table.
+      std::string suffix =
+          PrimitiveSubtypeToString(static_cast<const coded::PrimitiveType*>(type)->subtype);
+      return "::fidl::internal::k" + suffix;
     }
     default:
-        return type->coded_name;
-    }
+      return type->coded_name;
+  }
 }
 
 constexpr auto kIndent = "    ";
 
-void Emit(std::ostream* file, std::string_view data) {
-    *file << data;
-}
+void Emit(std::ostream* file, std::string_view data) { *file << data; }
 
 void EmitNewlineAndIndent(std::ostream* file, size_t indent_level) {
-    *file << "\n";
-    while (indent_level--)
-        *file << kIndent;
+  *file << "\n";
+  while (indent_level--)
+    *file << kIndent;
 }
 
-void EmitArrayBegin(std::ostream* file) {
-    *file << "{";
-}
+void EmitArrayBegin(std::ostream* file) { *file << "{"; }
 
 void EmitArraySeparator(std::ostream* file, size_t indent_level) {
-    *file << ",";
-    EmitNewlineAndIndent(file, indent_level);
+  *file << ",";
+  EmitNewlineAndIndent(file, indent_level);
 }
 
-void EmitArrayEnd(std::ostream* file) {
-    *file << "}";
-}
+void EmitArrayEnd(std::ostream* file) { *file << "}"; }
 
-void Emit(std::ostream* file, uint32_t value) {
-    *file << value << "u";
-}
+void Emit(std::ostream* file, uint32_t value) { *file << value << "u"; }
 
-void Emit(std::ostream* file, uint64_t value) {
-    *file << value << "ul";
-}
+void Emit(std::ostream* file, uint64_t value) { *file << value << "ul"; }
 
 void Emit(std::ostream* file, types::HandleSubtype handle_subtype) {
-    Emit(file, NameHandleZXObjType(handle_subtype));
+  Emit(file, NameHandleZXObjType(handle_subtype));
 }
 
 void Emit(std::ostream* file, types::Nullability nullability) {
-    switch (nullability) {
+  switch (nullability) {
     case types::Nullability::kNullable:
-        Emit(file, "::fidl::kNullable");
-        break;
+      Emit(file, "::fidl::kNullable");
+      break;
     case types::Nullability::kNonnullable:
-        Emit(file, "::fidl::kNonnullable");
-        break;
-    }
+      Emit(file, "::fidl::kNonnullable");
+      break;
+  }
 }
 
 void Emit(std::ostream* file, types::Strictness strictness) {
-    switch (strictness) {
+  switch (strictness) {
     case types::Strictness::kFlexible:
-        Emit(file, "::fidl::kFlexible");
-        break;
+      Emit(file, "::fidl::kFlexible");
+      break;
     case types::Strictness::kStrict:
-        Emit(file, "::fidl::kStrict");
-        break;
-    }
+      Emit(file, "::fidl::kStrict");
+      break;
+  }
 }
 
-} // namespace
+}  // namespace
 
 void TablesGenerator::GenerateInclude(std::string_view filename) {
-    Emit(&tables_file_, "#include ");
-    Emit(&tables_file_, filename);
-    Emit(&tables_file_, "\n");
+  Emit(&tables_file_, "#include ");
+  Emit(&tables_file_, filename);
+  Emit(&tables_file_, "\n");
 }
 
 void TablesGenerator::GenerateFilePreamble() {
-    Emit(&tables_file_, "// WARNING: This file is machine generated by fidlc.\n\n");
-    GenerateInclude("<lib/fidl/internal.h>");
-    Emit(&tables_file_, "\nextern \"C\" {\n");
-    Emit(&tables_file_, "\n");
+  Emit(&tables_file_, "// WARNING: This file is machine generated by fidlc.\n\n");
+  GenerateInclude("<lib/fidl/internal.h>");
+  Emit(&tables_file_, "\nextern \"C\" {\n");
+  Emit(&tables_file_, "\n");
 }
 
-void TablesGenerator::GenerateFilePostamble() {
-    Emit(&tables_file_, "} // extern \"C\"\n");
-}
+void TablesGenerator::GenerateFilePostamble() { Emit(&tables_file_, "} // extern \"C\"\n"); }
 
 template <typename Collection>
 void TablesGenerator::GenerateArray(const Collection& collection) {
-    EmitArrayBegin(&tables_file_);
+  EmitArrayBegin(&tables_file_);
 
-    if (!collection.empty())
-        EmitNewlineAndIndent(&tables_file_, ++indent_level_);
+  if (!collection.empty())
+    EmitNewlineAndIndent(&tables_file_, ++indent_level_);
 
-    for (size_t i = 0; i < collection.size(); ++i) {
-        if (i)
-            EmitArraySeparator(&tables_file_, indent_level_);
-        Generate(collection[i]);
-    }
+  for (size_t i = 0; i < collection.size(); ++i) {
+    if (i)
+      EmitArraySeparator(&tables_file_, indent_level_);
+    Generate(collection[i]);
+  }
 
-    if (!collection.empty())
-        EmitNewlineAndIndent(&tables_file_, --indent_level_);
+  if (!collection.empty())
+    EmitNewlineAndIndent(&tables_file_, --indent_level_);
 
-    EmitArrayEnd(&tables_file_);
+  EmitArrayEnd(&tables_file_);
 }
 
 void TablesGenerator::Generate(const coded::EnumType& enum_type) {
-    std::string validator_func = std::string("EnumValidatorFor_") +
-                                 std::string(enum_type.coded_name);
-    Emit(&tables_file_, "static constexpr bool ");
-    Emit(&tables_file_, validator_func);
-    Emit(&tables_file_, "(uint64_t v) { return ");
-    for (const auto& member : enum_type.members) {
-        Emit(&tables_file_, "(v == ");
-        Emit(&tables_file_, member);
-        Emit(&tables_file_, ") || ");
-    }
-    Emit(&tables_file_, "false; }\n");
+  std::string validator_func = std::string("EnumValidatorFor_") + std::string(enum_type.coded_name);
+  Emit(&tables_file_, "static constexpr bool ");
+  Emit(&tables_file_, validator_func);
+  Emit(&tables_file_, "(uint64_t v) { return ");
+  for (const auto& member : enum_type.members) {
+    Emit(&tables_file_, "(v == ");
+    Emit(&tables_file_, member);
+    Emit(&tables_file_, ") || ");
+  }
+  Emit(&tables_file_, "false; }\n");
 
-    Emit(&tables_file_, "const fidl_type_t ");
-    Emit(&tables_file_, NameTable(enum_type.coded_name));
-    Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedEnum(");
-    Emit(&tables_file_, "::fidl::FidlCodedPrimitive::k");
-    Emit(&tables_file_, PrimitiveSubtypeToString(enum_type.subtype));
-    Emit(&tables_file_, ", &" + validator_func);
-    Emit(&tables_file_, "));\n\n");
+  Emit(&tables_file_, "const fidl_type_t ");
+  Emit(&tables_file_, NameTable(enum_type.coded_name));
+  Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedEnum(");
+  Emit(&tables_file_, "::fidl::FidlCodedPrimitive::k");
+  Emit(&tables_file_, PrimitiveSubtypeToString(enum_type.subtype));
+  Emit(&tables_file_, ", &" + validator_func);
+  Emit(&tables_file_, "));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::BitsType& bits_type) {
-    Emit(&tables_file_, "const fidl_type_t ");
-    Emit(&tables_file_, NameTable(bits_type.coded_name));
-    Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedBits(");
-    Emit(&tables_file_, "::fidl::FidlCodedPrimitive::k");
-    Emit(&tables_file_, PrimitiveSubtypeToString(bits_type.subtype));
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, bits_type.mask);
-    Emit(&tables_file_, "));\n\n");
+  Emit(&tables_file_, "const fidl_type_t ");
+  Emit(&tables_file_, NameTable(bits_type.coded_name));
+  Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedBits(");
+  Emit(&tables_file_, "::fidl::FidlCodedPrimitive::k");
+  Emit(&tables_file_, PrimitiveSubtypeToString(bits_type.subtype));
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, bits_type.mask);
+  Emit(&tables_file_, "));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::StructType& struct_type) {
-    Emit(&tables_file_, "static const ::fidl::FidlStructField ");
-    Emit(&tables_file_, NameFields(struct_type.coded_name));
-    Emit(&tables_file_, "[] = ");
-    GenerateArray(struct_type.fields);
-    Emit(&tables_file_, ";\n");
+  Emit(&tables_file_, "static const ::fidl::FidlStructField ");
+  Emit(&tables_file_, NameFields(struct_type.coded_name));
+  Emit(&tables_file_, "[] = ");
+  GenerateArray(struct_type.fields);
+  Emit(&tables_file_, ";\n");
 
-    Emit(&tables_file_, "const fidl_type_t ");
-    Emit(&tables_file_, NameTable(struct_type.coded_name));
-    Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedStruct(");
-    Emit(&tables_file_, NameFields(struct_type.coded_name));
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, static_cast<uint32_t>(struct_type.fields.size()));
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, struct_type.size);
-    Emit(&tables_file_, ", \"");
-    Emit(&tables_file_, struct_type.qname);
-    Emit(&tables_file_, "\"));\n\n");
+  Emit(&tables_file_, "const fidl_type_t ");
+  Emit(&tables_file_, NameTable(struct_type.coded_name));
+  Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedStruct(");
+  Emit(&tables_file_, NameFields(struct_type.coded_name));
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, static_cast<uint32_t>(struct_type.fields.size()));
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, struct_type.size);
+  Emit(&tables_file_, ", \"");
+  Emit(&tables_file_, struct_type.qname);
+  Emit(&tables_file_, "\"));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::TableType& table_type) {
-    Emit(&tables_file_, "static const ::fidl::FidlTableField ");
-    Emit(&tables_file_, NameFields(table_type.coded_name));
-    Emit(&tables_file_, "[] = ");
-    GenerateArray(table_type.fields);
-    Emit(&tables_file_, ";\n");
+  Emit(&tables_file_, "static const ::fidl::FidlTableField ");
+  Emit(&tables_file_, NameFields(table_type.coded_name));
+  Emit(&tables_file_, "[] = ");
+  GenerateArray(table_type.fields);
+  Emit(&tables_file_, ";\n");
 
-    Emit(&tables_file_, "const fidl_type_t ");
-    Emit(&tables_file_, NameTable(table_type.coded_name));
-    Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedTable(");
-    Emit(&tables_file_, NameFields(table_type.coded_name));
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, static_cast<uint32_t>(table_type.fields.size()));
-    Emit(&tables_file_, ", \"");
-    Emit(&tables_file_, table_type.qname);
-    Emit(&tables_file_, "\"));\n\n");
+  Emit(&tables_file_, "const fidl_type_t ");
+  Emit(&tables_file_, NameTable(table_type.coded_name));
+  Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedTable(");
+  Emit(&tables_file_, NameFields(table_type.coded_name));
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, static_cast<uint32_t>(table_type.fields.size()));
+  Emit(&tables_file_, ", \"");
+  Emit(&tables_file_, table_type.qname);
+  Emit(&tables_file_, "\"));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::UnionType& union_type) {
-    Emit(&tables_file_, "static const ::fidl::FidlUnionField ");
-    Emit(&tables_file_, NameFields(union_type.coded_name));
-    Emit(&tables_file_, "[] = ");
-    GenerateArray(union_type.members);
-    Emit(&tables_file_, ";\n");
+  Emit(&tables_file_, "static const ::fidl::FidlUnionField ");
+  Emit(&tables_file_, NameFields(union_type.coded_name));
+  Emit(&tables_file_, "[] = ");
+  GenerateArray(union_type.members);
+  Emit(&tables_file_, ";\n");
 
-    Emit(&tables_file_, "const fidl_type_t ");
-    Emit(&tables_file_, NameTable(union_type.coded_name));
-    Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedUnion(");
-    Emit(&tables_file_, NameFields(union_type.coded_name));
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, static_cast<uint32_t>(union_type.members.size()));
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, union_type.data_offset);
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, union_type.size);
-    Emit(&tables_file_, ", \"");
-    Emit(&tables_file_, union_type.qname);
-    Emit(&tables_file_, "\"));\n\n");
+  Emit(&tables_file_, "const fidl_type_t ");
+  Emit(&tables_file_, NameTable(union_type.coded_name));
+  Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedUnion(");
+  Emit(&tables_file_, NameFields(union_type.coded_name));
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, static_cast<uint32_t>(union_type.members.size()));
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, union_type.data_offset);
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, union_type.size);
+  Emit(&tables_file_, ", \"");
+  Emit(&tables_file_, union_type.qname);
+  Emit(&tables_file_, "\"));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::XUnionType& xunion_type) {
-    Emit(&tables_file_, "static const ::fidl::FidlXUnionField ");
-    Emit(&tables_file_, NameFields(xunion_type.coded_name));
-    Emit(&tables_file_, "[] = ");
-    GenerateArray(xunion_type.fields);
-    Emit(&tables_file_, ";\n");
+  Emit(&tables_file_, "static const ::fidl::FidlXUnionField ");
+  Emit(&tables_file_, NameFields(xunion_type.coded_name));
+  Emit(&tables_file_, "[] = ");
+  GenerateArray(xunion_type.fields);
+  Emit(&tables_file_, ";\n");
 
-    Emit(&tables_file_, "const fidl_type_t ");
-    Emit(&tables_file_, NameTable(xunion_type.coded_name));
-    Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedXUnion(");
-    Emit(&tables_file_, static_cast<uint32_t>(xunion_type.fields.size()));
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, NameFields(xunion_type.coded_name));
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, xunion_type.nullability);
-    Emit(&tables_file_, ", \"");
-    Emit(&tables_file_, xunion_type.qname);
-    Emit(&tables_file_, "\", ");
-    Emit(&tables_file_, xunion_type.strictness);
-    Emit(&tables_file_, "));\n\n");
+  Emit(&tables_file_, "const fidl_type_t ");
+  Emit(&tables_file_, NameTable(xunion_type.coded_name));
+  Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedXUnion(");
+  Emit(&tables_file_, static_cast<uint32_t>(xunion_type.fields.size()));
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, NameFields(xunion_type.coded_name));
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, xunion_type.nullability);
+  Emit(&tables_file_, ", \"");
+  Emit(&tables_file_, xunion_type.qname);
+  Emit(&tables_file_, "\", ");
+  Emit(&tables_file_, xunion_type.strictness);
+  Emit(&tables_file_, "));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::PointerType& pointer) {
-    switch (pointer.element_type->kind) {
+  switch (pointer.element_type->kind) {
     case coded::Type::Kind::kStruct:
-        Emit(&tables_file_, "static const fidl_type_t ");
-        Emit(&tables_file_, NameTable(pointer.coded_name));
-        Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedStructPointer(");
-        Generate(pointer.element_type);
-        Emit(&tables_file_, ".coded_struct));\n");
-        break;
+      Emit(&tables_file_, "static const fidl_type_t ");
+      Emit(&tables_file_, NameTable(pointer.coded_name));
+      Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedStructPointer(");
+      Generate(pointer.element_type);
+      Emit(&tables_file_, ".coded_struct));\n");
+      break;
     case coded::Type::Kind::kUnion:
-        Emit(&tables_file_, "static const fidl_type_t ");
-        Emit(&tables_file_, NameTable(pointer.coded_name));
-        Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedUnionPointer(");
-        Generate(pointer.element_type);
-        Emit(&tables_file_, ".coded_union));\n");
-        break;
+      Emit(&tables_file_, "static const fidl_type_t ");
+      Emit(&tables_file_, NameTable(pointer.coded_name));
+      Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedUnionPointer(");
+      Generate(pointer.element_type);
+      Emit(&tables_file_, ".coded_union));\n");
+      break;
     default:
-        assert(false && "Invalid pointer element type.");
-        break;
-    }
+      assert(false && "Invalid pointer element type.");
+      break;
+  }
 }
 
 void TablesGenerator::Generate(const coded::MessageType& message_type) {
-    Emit(&tables_file_, "extern const fidl_type_t ");
-    Emit(&tables_file_, NameTable(message_type.coded_name));
-    Emit(&tables_file_, ";\n");
+  Emit(&tables_file_, "extern const fidl_type_t ");
+  Emit(&tables_file_, NameTable(message_type.coded_name));
+  Emit(&tables_file_, ";\n");
 
-    Emit(&tables_file_, "static const ::fidl::FidlStructField ");
-    Emit(&tables_file_, NameFields(message_type.coded_name));
-    Emit(&tables_file_, "[] = ");
-    GenerateArray(message_type.fields);
-    Emit(&tables_file_, ";\n");
+  Emit(&tables_file_, "static const ::fidl::FidlStructField ");
+  Emit(&tables_file_, NameFields(message_type.coded_name));
+  Emit(&tables_file_, "[] = ");
+  GenerateArray(message_type.fields);
+  Emit(&tables_file_, ";\n");
 
-    Emit(&tables_file_, "const fidl_type_t ");
-    Emit(&tables_file_, NameTable(message_type.coded_name));
-    Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedStruct(");
-    Emit(&tables_file_, NameFields(message_type.coded_name));
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, static_cast<uint32_t>(message_type.fields.size()));
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, message_type.size);
-    Emit(&tables_file_, ", \"");
-    Emit(&tables_file_, message_type.qname);
-    Emit(&tables_file_, "\"));\n\n");
+  Emit(&tables_file_, "const fidl_type_t ");
+  Emit(&tables_file_, NameTable(message_type.coded_name));
+  Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedStruct(");
+  Emit(&tables_file_, NameFields(message_type.coded_name));
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, static_cast<uint32_t>(message_type.fields.size()));
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, message_type.size);
+  Emit(&tables_file_, ", \"");
+  Emit(&tables_file_, message_type.qname);
+  Emit(&tables_file_, "\"));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::HandleType& handle_type) {
-    Emit(&tables_file_, "static const fidl_type_t ");
-    Emit(&tables_file_, NameTable(handle_type.coded_name));
-    Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedHandle(");
-    Emit(&tables_file_, handle_type.subtype);
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, handle_type.nullability);
-    Emit(&tables_file_, "));\n\n");
+  Emit(&tables_file_, "static const fidl_type_t ");
+  Emit(&tables_file_, NameTable(handle_type.coded_name));
+  Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedHandle(");
+  Emit(&tables_file_, handle_type.subtype);
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, handle_type.nullability);
+  Emit(&tables_file_, "));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::RequestHandleType& request_type) {
-    Emit(&tables_file_, "static const fidl_type_t ");
-    Emit(&tables_file_, NameTable(request_type.coded_name));
-    Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedHandle(");
-    Emit(&tables_file_, types::HandleSubtype::kChannel);
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, request_type.nullability);
-    Emit(&tables_file_, "));\n\n");
+  Emit(&tables_file_, "static const fidl_type_t ");
+  Emit(&tables_file_, NameTable(request_type.coded_name));
+  Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedHandle(");
+  Emit(&tables_file_, types::HandleSubtype::kChannel);
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, request_type.nullability);
+  Emit(&tables_file_, "));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::ProtocolHandleType& protocol_type) {
-    Emit(&tables_file_, "static const fidl_type_t ");
-    Emit(&tables_file_, NameTable(protocol_type.coded_name));
-    Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedHandle(");
-    Emit(&tables_file_, types::HandleSubtype::kChannel);
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, protocol_type.nullability);
-    Emit(&tables_file_, "));\n\n");
+  Emit(&tables_file_, "static const fidl_type_t ");
+  Emit(&tables_file_, NameTable(protocol_type.coded_name));
+  Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedHandle(");
+  Emit(&tables_file_, types::HandleSubtype::kChannel);
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, protocol_type.nullability);
+  Emit(&tables_file_, "));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::ArrayType& array_type) {
-    Emit(&tables_file_, "static const fidl_type_t ");
-    Emit(&tables_file_, NameTable(array_type.coded_name));
-    Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedArray(");
-    Generate(array_type.element_type);
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, array_type.size);
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, array_type.element_size);
-    Emit(&tables_file_, "));\n\n");
+  Emit(&tables_file_, "static const fidl_type_t ");
+  Emit(&tables_file_, NameTable(array_type.coded_name));
+  Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedArray(");
+  Generate(array_type.element_type);
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, array_type.size);
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, array_type.element_size);
+  Emit(&tables_file_, "));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::StringType& string_type) {
-    Emit(&tables_file_, "static const fidl_type_t ");
-    Emit(&tables_file_, NameTable(string_type.coded_name));
-    Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedString(");
-    Emit(&tables_file_, string_type.max_size);
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, string_type.nullability);
-    Emit(&tables_file_, "));\n\n");
+  Emit(&tables_file_, "static const fidl_type_t ");
+  Emit(&tables_file_, NameTable(string_type.coded_name));
+  Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedString(");
+  Emit(&tables_file_, string_type.max_size);
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, string_type.nullability);
+  Emit(&tables_file_, "));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::VectorType& vector_type) {
-    Emit(&tables_file_, "static const fidl_type_t ");
-    Emit(&tables_file_, NameTable(vector_type.coded_name));
-    Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedVector(");
-    Generate(vector_type.element_type);
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, vector_type.max_count);
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, vector_type.element_size);
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, vector_type.nullability);
-    Emit(&tables_file_, "));\n\n");
+  Emit(&tables_file_, "static const fidl_type_t ");
+  Emit(&tables_file_, NameTable(vector_type.coded_name));
+  Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedVector(");
+  Generate(vector_type.element_type);
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, vector_type.max_count);
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, vector_type.element_size);
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, vector_type.nullability);
+  Emit(&tables_file_, "));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::Type* type) {
-    if (type && type->coding_needed == coded::CodingNeeded::kAlways) {
-        Emit(&tables_file_, "&");
-        Emit(&tables_file_, NameTable(CodedNameForEnvelope(type)));
-    } else {
-        Emit(&tables_file_, "nullptr");
-    }
+  if (type && type->coding_needed == coded::CodingNeeded::kAlways) {
+    Emit(&tables_file_, "&");
+    Emit(&tables_file_, NameTable(CodedNameForEnvelope(type)));
+  } else {
+    Emit(&tables_file_, "nullptr");
+  }
 }
 
 void TablesGenerator::Generate(const coded::StructField& field) {
-    Emit(&tables_file_, "::fidl::FidlStructField(");
-    Generate(field.type);
-    Emit(&tables_file_, ", ");
-    if (field.type) {
-        Emit(&tables_file_, field.offset);
-    } else {
-        Emit(&tables_file_, field.offset + field.size);
-    }
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, field.padding);
-    Emit(&tables_file_, ")");
+  Emit(&tables_file_, "::fidl::FidlStructField(");
+  Generate(field.type);
+  Emit(&tables_file_, ", ");
+  if (field.type) {
+    Emit(&tables_file_, field.offset);
+  } else {
+    Emit(&tables_file_, field.offset + field.size);
+  }
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, field.padding);
+  Emit(&tables_file_, ")");
 }
 
 void TablesGenerator::Generate(const coded::UnionField& field) {
-    Emit(&tables_file_, "::fidl::FidlUnionField(");
-    Generate(field.type);
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, field.padding);
-    Emit(&tables_file_, ")");
+  Emit(&tables_file_, "::fidl::FidlUnionField(");
+  Generate(field.type);
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, field.padding);
+  Emit(&tables_file_, ")");
 }
 
 void TablesGenerator::Generate(const coded::TableField& field) {
-    Emit(&tables_file_, "::fidl::FidlTableField(");
-    Generate(field.type);
-    Emit(&tables_file_, ",");
-    Emit(&tables_file_, field.ordinal);
-    Emit(&tables_file_, ")");
+  Emit(&tables_file_, "::fidl::FidlTableField(");
+  Generate(field.type);
+  Emit(&tables_file_, ",");
+  Emit(&tables_file_, field.ordinal);
+  Emit(&tables_file_, ")");
 }
 
 void TablesGenerator::Generate(const coded::XUnionField& field) {
-    Emit(&tables_file_, "::fidl::FidlXUnionField(");
-    Generate(field.type);
-    Emit(&tables_file_, ",");
-    Emit(&tables_file_, field.ordinal);
-    Emit(&tables_file_, ")");
+  Emit(&tables_file_, "::fidl::FidlXUnionField(");
+  Generate(field.type);
+  Emit(&tables_file_, ",");
+  Emit(&tables_file_, field.ordinal);
+  Emit(&tables_file_, ")");
 }
 
 void TablesGenerator::GenerateForward(const coded::EnumType& enum_type) {
-    Emit(&tables_file_, "extern const fidl_type_t ");
-    Emit(&tables_file_, NameTable(enum_type.coded_name));
-    Emit(&tables_file_, ";\n");
+  Emit(&tables_file_, "extern const fidl_type_t ");
+  Emit(&tables_file_, NameTable(enum_type.coded_name));
+  Emit(&tables_file_, ";\n");
 }
 
 void TablesGenerator::GenerateForward(const coded::BitsType& bits_type) {
-    Emit(&tables_file_, "extern const fidl_type_t ");
-    Emit(&tables_file_, NameTable(bits_type.coded_name));
-    Emit(&tables_file_, ";\n");
+  Emit(&tables_file_, "extern const fidl_type_t ");
+  Emit(&tables_file_, NameTable(bits_type.coded_name));
+  Emit(&tables_file_, ";\n");
 }
 
 void TablesGenerator::GenerateForward(const coded::StructType& struct_type) {
-    Emit(&tables_file_, "extern const fidl_type_t ");
-    Emit(&tables_file_, NameTable(struct_type.coded_name));
-    Emit(&tables_file_, ";\n");
+  Emit(&tables_file_, "extern const fidl_type_t ");
+  Emit(&tables_file_, NameTable(struct_type.coded_name));
+  Emit(&tables_file_, ";\n");
 }
 
 void TablesGenerator::GenerateForward(const coded::TableType& table_type) {
-    Emit(&tables_file_, "extern const fidl_type_t ");
-    Emit(&tables_file_, NameTable(table_type.coded_name));
-    Emit(&tables_file_, ";\n");
+  Emit(&tables_file_, "extern const fidl_type_t ");
+  Emit(&tables_file_, NameTable(table_type.coded_name));
+  Emit(&tables_file_, ";\n");
 }
 
 void TablesGenerator::GenerateForward(const coded::UnionType& union_type) {
-    Emit(&tables_file_, "extern const fidl_type_t ");
-    Emit(&tables_file_, NameTable(union_type.coded_name));
-    Emit(&tables_file_, ";\n");
+  Emit(&tables_file_, "extern const fidl_type_t ");
+  Emit(&tables_file_, NameTable(union_type.coded_name));
+  Emit(&tables_file_, ";\n");
 }
 
 void TablesGenerator::GenerateForward(const coded::XUnionType& xunion_type) {
-    Emit(&tables_file_, "extern const fidl_type_t ");
-    Emit(&tables_file_, NameTable(xunion_type.coded_name));
-    Emit(&tables_file_, ";\n");
+  Emit(&tables_file_, "extern const fidl_type_t ");
+  Emit(&tables_file_, NameTable(xunion_type.coded_name));
+  Emit(&tables_file_, ";\n");
 }
 
 std::ostringstream TablesGenerator::Produce() {
-    coded_types_generator_.CompileCodedTypes();
+  coded_types_generator_.CompileCodedTypes();
 
-    GenerateFilePreamble();
+  GenerateFilePreamble();
 
-    // Generate forward declarations of coding tables for named declarations.
-    for (const auto& decl : coded_types_generator_.library()->declaration_order_) {
-        auto coded_type = coded_types_generator_.CodedTypeFor(&decl->name);
-        if (!coded_type)
-            continue;
-        switch (coded_type->kind) {
-        case coded::Type::Kind::kEnum:
-            GenerateForward(*static_cast<const coded::EnumType*>(coded_type));
-            break;
-        case coded::Type::Kind::kBits:
-            GenerateForward(*static_cast<const coded::BitsType*>(coded_type));
-            break;
-        case coded::Type::Kind::kStruct:
-            GenerateForward(*static_cast<const coded::StructType*>(coded_type));
-            break;
-        case coded::Type::Kind::kTable:
-            GenerateForward(*static_cast<const coded::TableType*>(coded_type));
-            break;
-        case coded::Type::Kind::kUnion:
-            GenerateForward(*static_cast<const coded::UnionType*>(coded_type));
-            break;
-        case coded::Type::Kind::kXUnion:
-            GenerateForward(*static_cast<const coded::XUnionType*>(coded_type));
-            break;
-        default:
-            break;
-        }
+  // Generate forward declarations of coding tables for named declarations.
+  for (const auto& decl : coded_types_generator_.library()->declaration_order_) {
+    auto coded_type = coded_types_generator_.CodedTypeFor(&decl->name);
+    if (!coded_type)
+      continue;
+    switch (coded_type->kind) {
+      case coded::Type::Kind::kEnum:
+        GenerateForward(*static_cast<const coded::EnumType*>(coded_type));
+        break;
+      case coded::Type::Kind::kBits:
+        GenerateForward(*static_cast<const coded::BitsType*>(coded_type));
+        break;
+      case coded::Type::Kind::kStruct:
+        GenerateForward(*static_cast<const coded::StructType*>(coded_type));
+        break;
+      case coded::Type::Kind::kTable:
+        GenerateForward(*static_cast<const coded::TableType*>(coded_type));
+        break;
+      case coded::Type::Kind::kUnion:
+        GenerateForward(*static_cast<const coded::UnionType*>(coded_type));
+        break;
+      case coded::Type::Kind::kXUnion:
+        GenerateForward(*static_cast<const coded::XUnionType*>(coded_type));
+        break;
+      default:
+        break;
     }
+  }
 
-    Emit(&tables_file_, "\n");
+  Emit(&tables_file_, "\n");
 
-    // Generate pointer coding tables necessary for nullable types.
-    for (const auto& decl : coded_types_generator_.library()->declaration_order_) {
-        auto coded_type = coded_types_generator_.CodedTypeFor(&decl->name);
-        if (!coded_type)
-            continue;
-        switch (coded_type->kind) {
-        case coded::Type::Kind::kStruct: {
-            const auto& struct_type = *static_cast<const coded::StructType*>(coded_type);
-            if (auto pointer_type = struct_type.maybe_reference_type; pointer_type) {
-                Generate(*pointer_type);
-            }
-            break;
+  // Generate pointer coding tables necessary for nullable types.
+  for (const auto& decl : coded_types_generator_.library()->declaration_order_) {
+    auto coded_type = coded_types_generator_.CodedTypeFor(&decl->name);
+    if (!coded_type)
+      continue;
+    switch (coded_type->kind) {
+      case coded::Type::Kind::kStruct: {
+        const auto& struct_type = *static_cast<const coded::StructType*>(coded_type);
+        if (auto pointer_type = struct_type.maybe_reference_type; pointer_type) {
+          Generate(*pointer_type);
         }
-        case coded::Type::Kind::kUnion: {
-            const auto& union_type = *static_cast<const coded::UnionType*>(coded_type);
-            if (auto pointer_type = union_type.maybe_reference_type; pointer_type) {
-                Generate(*pointer_type);
-            }
-            break;
+        break;
+      }
+      case coded::Type::Kind::kUnion: {
+        const auto& union_type = *static_cast<const coded::UnionType*>(coded_type);
+        if (auto pointer_type = union_type.maybe_reference_type; pointer_type) {
+          Generate(*pointer_type);
         }
-        case coded::Type::Kind::kXUnion: {
-            // Nullable xunions have the same wire representation as non-nullable ones,
-            // hence have the same fields and dependencies in their coding tables.
-            // As such, we will generate them in the next phase, to maintain the correct
-            // declaration order.
-            break;
-        }
-        default:
-            break;
-        }
+        break;
+      }
+      case coded::Type::Kind::kXUnion: {
+        // Nullable xunions have the same wire representation as non-nullable ones,
+        // hence have the same fields and dependencies in their coding tables.
+        // As such, we will generate them in the next phase, to maintain the correct
+        // declaration order.
+        break;
+      }
+      default:
+        break;
     }
+  }
 
-    Emit(&tables_file_, "\n");
+  Emit(&tables_file_, "\n");
 
-    // Generate coding table definitions for unnamed declarations.
-    // These are composed in an ad-hoc way in FIDL source, hence we generate "static" coding tables
-    // local to the translation unit.
-    for (const auto& coded_type : coded_types_generator_.coded_types()) {
-        if (coded_type->coding_needed == coded::CodingNeeded::kEnvelopeOnly)
-            continue;
+  // Generate coding table definitions for unnamed declarations.
+  // These are composed in an ad-hoc way in FIDL source, hence we generate "static" coding tables
+  // local to the translation unit.
+  for (const auto& coded_type : coded_types_generator_.coded_types()) {
+    if (coded_type->coding_needed == coded::CodingNeeded::kEnvelopeOnly)
+      continue;
 
-        switch (coded_type->kind) {
-        case coded::Type::Kind::kEnum:
-        case coded::Type::Kind::kBits:
-        case coded::Type::Kind::kStruct:
-        case coded::Type::Kind::kTable:
-        case coded::Type::Kind::kUnion:
-        case coded::Type::Kind::kPointer:
-            // These are generated in the next phase.
-            break;
-        case coded::Type::Kind::kXUnion: {
-            auto xunion_type = *static_cast<const coded::XUnionType*>(coded_type.get());
-            if (xunion_type.nullability != types::Nullability::kNullable) {
-                break; // Non-nullable xunions are generated in the next phase.
-            }
-            Generate(xunion_type);
-            break;
+    switch (coded_type->kind) {
+      case coded::Type::Kind::kEnum:
+      case coded::Type::Kind::kBits:
+      case coded::Type::Kind::kStruct:
+      case coded::Type::Kind::kTable:
+      case coded::Type::Kind::kUnion:
+      case coded::Type::Kind::kPointer:
+        // These are generated in the next phase.
+        break;
+      case coded::Type::Kind::kXUnion: {
+        auto xunion_type = *static_cast<const coded::XUnionType*>(coded_type.get());
+        if (xunion_type.nullability != types::Nullability::kNullable) {
+          break;  // Non-nullable xunions are generated in the next phase.
         }
-        case coded::Type::Kind::kProtocol:
-            // Nothing to generate for protocols. We've already moved the
-            // messages from the protocol into coded_types_ directly.
-            break;
-        case coded::Type::Kind::kMessage:
-            Generate(*static_cast<const coded::MessageType*>(coded_type.get()));
-            break;
-        case coded::Type::Kind::kHandle:
-            Generate(*static_cast<const coded::HandleType*>(coded_type.get()));
-            break;
-        case coded::Type::Kind::kProtocolHandle:
-            Generate(*static_cast<const coded::ProtocolHandleType*>(coded_type.get()));
-            break;
-        case coded::Type::Kind::kRequestHandle:
-            Generate(*static_cast<const coded::RequestHandleType*>(coded_type.get()));
-            break;
-        case coded::Type::Kind::kArray:
-            Generate(*static_cast<const coded::ArrayType*>(coded_type.get()));
-            break;
-        case coded::Type::Kind::kString:
-            Generate(*static_cast<const coded::StringType*>(coded_type.get()));
-            break;
-        case coded::Type::Kind::kVector:
-            Generate(*static_cast<const coded::VectorType*>(coded_type.get()));
-            break;
-        case coded::Type::Kind::kPrimitive:
-            // Nothing to generate for primitives. We intern all primitive
-            // coding tables, and therefore directly reference them.
-            break;
-        }
+        Generate(xunion_type);
+        break;
+      }
+      case coded::Type::Kind::kProtocol:
+        // Nothing to generate for protocols. We've already moved the
+        // messages from the protocol into coded_types_ directly.
+        break;
+      case coded::Type::Kind::kMessage:
+        Generate(*static_cast<const coded::MessageType*>(coded_type.get()));
+        break;
+      case coded::Type::Kind::kHandle:
+        Generate(*static_cast<const coded::HandleType*>(coded_type.get()));
+        break;
+      case coded::Type::Kind::kProtocolHandle:
+        Generate(*static_cast<const coded::ProtocolHandleType*>(coded_type.get()));
+        break;
+      case coded::Type::Kind::kRequestHandle:
+        Generate(*static_cast<const coded::RequestHandleType*>(coded_type.get()));
+        break;
+      case coded::Type::Kind::kArray:
+        Generate(*static_cast<const coded::ArrayType*>(coded_type.get()));
+        break;
+      case coded::Type::Kind::kString:
+        Generate(*static_cast<const coded::StringType*>(coded_type.get()));
+        break;
+      case coded::Type::Kind::kVector:
+        Generate(*static_cast<const coded::VectorType*>(coded_type.get()));
+        break;
+      case coded::Type::Kind::kPrimitive:
+        // Nothing to generate for primitives. We intern all primitive
+        // coding tables, and therefore directly reference them.
+        break;
     }
+  }
 
-    Emit(&tables_file_, "\n");
+  Emit(&tables_file_, "\n");
 
-    // Generate coding table definitions for named declarations.
-    for (const auto& decl : coded_types_generator_.library()->declaration_order_) {
-        // Definition will be generated elsewhere.
-        if (decl->name.library() != coded_types_generator_.library())
-            continue;
+  // Generate coding table definitions for named declarations.
+  for (const auto& decl : coded_types_generator_.library()->declaration_order_) {
+    // Definition will be generated elsewhere.
+    if (decl->name.library() != coded_types_generator_.library())
+      continue;
 
-        auto coded_type = coded_types_generator_.CodedTypeFor(&decl->name);
-        if (!coded_type)
-            continue;
-        switch (coded_type->kind) {
-        case coded::Type::Kind::kEnum:
-            Generate(*static_cast<const coded::EnumType*>(coded_type));
-            break;
-        case coded::Type::Kind::kBits:
-            Generate(*static_cast<const coded::BitsType*>(coded_type));
-            break;
-        case coded::Type::Kind::kStruct:
-            Generate(*static_cast<const coded::StructType*>(coded_type));
-            break;
-        case coded::Type::Kind::kTable:
-            Generate(*static_cast<const coded::TableType*>(coded_type));
-            break;
-        case coded::Type::Kind::kUnion:
-            Generate(*static_cast<const coded::UnionType*>(coded_type));
-            break;
-        case coded::Type::Kind::kXUnion: {
-            auto xunion_type = *static_cast<const coded::XUnionType*>(coded_type);
-            if (xunion_type.nullability == types::Nullability::kNonnullable) {
-                Generate(xunion_type);
-            }
-            break;
+    auto coded_type = coded_types_generator_.CodedTypeFor(&decl->name);
+    if (!coded_type)
+      continue;
+    switch (coded_type->kind) {
+      case coded::Type::Kind::kEnum:
+        Generate(*static_cast<const coded::EnumType*>(coded_type));
+        break;
+      case coded::Type::Kind::kBits:
+        Generate(*static_cast<const coded::BitsType*>(coded_type));
+        break;
+      case coded::Type::Kind::kStruct:
+        Generate(*static_cast<const coded::StructType*>(coded_type));
+        break;
+      case coded::Type::Kind::kTable:
+        Generate(*static_cast<const coded::TableType*>(coded_type));
+        break;
+      case coded::Type::Kind::kUnion:
+        Generate(*static_cast<const coded::UnionType*>(coded_type));
+        break;
+      case coded::Type::Kind::kXUnion: {
+        auto xunion_type = *static_cast<const coded::XUnionType*>(coded_type);
+        if (xunion_type.nullability == types::Nullability::kNonnullable) {
+          Generate(xunion_type);
         }
-        default:
-            break;
-        }
+        break;
+      }
+      default:
+        break;
     }
+  }
 
-    GenerateFilePostamble();
+  GenerateFilePostamble();
 
-    return std::move(tables_file_);
+  return std::move(tables_file_);
 }
 
-} // namespace fidl
+}  // namespace fidl

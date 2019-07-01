@@ -6,10 +6,9 @@
 
 #define BORINGSSL_NO_CXX
 #include <openssl/sha.h>
+#include <unittest/unittest.h>
 
 #include <regex>
-
-#include <unittest/unittest.h>
 
 namespace {
 
@@ -63,9 +62,9 @@ namespace {
 // }
 
 bool ordinal_cannot_be_zero() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library a;
 
 // The first 32 bits of the SHA256 hash of a.b/fcuvhse are 0.
@@ -74,17 +73,17 @@ protocol b {
 };
 
 )FIDL");
-    ASSERT_FALSE(library.Compile());
-    const auto& errors = library.errors();
-    ASSERT_EQ(1, errors.size(), "Ordinal value 0 should be disallowed");
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(1, errors.size(), "Ordinal value 0 should be disallowed");
 
-    END_TEST;
+  END_TEST;
 }
 
 bool clashing_ordinal_values() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library a;
 
 // The first 32 bits of the SHA256 hash of a.b/ljz and a.b/clgn are
@@ -95,23 +94,23 @@ protocol b {
 };
 
 )FIDL");
-    ASSERT_FALSE(library.Compile());
-    const auto& errors = library.errors();
-    ASSERT_EQ(1, errors.size());
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(1, errors.size());
 
-    // The FTP requires the error message as follows
-    const std::regex pattern(R"REGEX(\[\s*Selector\s*=\s*"(ljz|clgn)_"\s*\])REGEX");
-    std::smatch sm;
-    ASSERT_TRUE(std::regex_search(errors[0], sm, pattern),
-                ("Selector pattern not found in error: " + errors[0]).c_str());
+  // The FTP requires the error message as follows
+  const std::regex pattern(R"REGEX(\[\s*Selector\s*=\s*"(ljz|clgn)_"\s*\])REGEX");
+  std::smatch sm;
+  ASSERT_TRUE(std::regex_search(errors[0], sm, pattern),
+              ("Selector pattern not found in error: " + errors[0]).c_str());
 
-    END_TEST;
+  END_TEST;
 }
 
 bool clashing_ordinal_values_with_attribute() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library a;
 
 // The first 32 bits of the SHA256 hash of a.b/ljz and a.b/clgn are
@@ -124,23 +123,23 @@ protocol b {
 };
 
 )FIDL");
-    ASSERT_FALSE(library.Compile());
-    const auto& errors = library.errors();
-    ASSERT_EQ(1, errors.size());
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(1, errors.size());
 
-    // The FTP requires the error message as follows
-    const std::regex pattern(R"REGEX(\[\s*Selector\s*=\s*"(ljz|clgn)_"\s*\])REGEX");
-    std::smatch sm;
-    ASSERT_TRUE(std::regex_search(errors[0], sm, pattern),
-                ("Selector pattern not found in error: " + errors[0]).c_str());
+  // The FTP requires the error message as follows
+  const std::regex pattern(R"REGEX(\[\s*Selector\s*=\s*"(ljz|clgn)_"\s*\])REGEX");
+  std::smatch sm;
+  ASSERT_TRUE(std::regex_search(errors[0], sm, pattern),
+              ("Selector pattern not found in error: " + errors[0]).c_str());
 
-    END_TEST;
+  END_TEST;
 }
 
 bool attribute_resolves_clashes() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library a;
 
 // The first 32 bits of the SHA256 hash of a.b/ljz and a.b/clgn are
@@ -152,41 +151,41 @@ protocol b {
 };
 
 )FIDL");
-    ASSERT_TRUE(library.Compile());
+  ASSERT_TRUE(library.Compile());
 
-    END_TEST;
+  END_TEST;
 }
 
 bool ordinal_value_is_sha256() {
-    BEGIN_TEST;
-    TestLibrary library(R"FIDL(
+  BEGIN_TEST;
+  TestLibrary library(R"FIDL(
 library a.b.c;
 
 protocol protocol {
     selector(string s, bool b) -> (int32 i);
 };
 )FIDL");
-    ASSERT_TRUE(library.Compile());
+  ASSERT_TRUE(library.Compile());
 
-    const char hash_name32[] = "a.b.c.protocol/selector";
-    uint8_t digest32[SHA256_DIGEST_LENGTH];
-    SHA256(reinterpret_cast<const uint8_t*>(hash_name32), strlen(hash_name32), digest32);
-    uint64_t expected_hash32 = *(reinterpret_cast<uint64_t*>(digest32)) & 0x7fffffff;
+  const char hash_name32[] = "a.b.c.protocol/selector";
+  uint8_t digest32[SHA256_DIGEST_LENGTH];
+  SHA256(reinterpret_cast<const uint8_t*>(hash_name32), strlen(hash_name32), digest32);
+  uint64_t expected_hash32 = *(reinterpret_cast<uint64_t*>(digest32)) & 0x7fffffff;
 
-    const char hash_name64[] = "a.b.c/protocol.selector";
-    uint8_t digest64[SHA256_DIGEST_LENGTH];
-    SHA256(reinterpret_cast<const uint8_t*>(hash_name64), strlen(hash_name64), digest64);
-    uint64_t expected_hash64 = *(reinterpret_cast<uint64_t*>(digest64)) & 0x7fffffffffffffff;
+  const char hash_name64[] = "a.b.c/protocol.selector";
+  uint8_t digest64[SHA256_DIGEST_LENGTH];
+  SHA256(reinterpret_cast<const uint8_t*>(hash_name64), strlen(hash_name64), digest64);
+  uint64_t expected_hash64 = *(reinterpret_cast<uint64_t*>(digest64)) & 0x7fffffffffffffff;
 
-    const fidl::flat::Protocol* iface = library.LookupProtocol("protocol");
-    uint64_t actual_hash32 = iface->methods[0].generated_ordinal32->value;
-    ASSERT_EQ(actual_hash32, expected_hash32, "Expected 32bits hash is not correct");
-    uint64_t actual_hash64 = iface->methods[0].generated_ordinal64->value;
-    ASSERT_EQ(actual_hash64, expected_hash64, "Expected 64bits hash is not correct");
-    END_TEST;
+  const fidl::flat::Protocol* iface = library.LookupProtocol("protocol");
+  uint64_t actual_hash32 = iface->methods[0].generated_ordinal32->value;
+  ASSERT_EQ(actual_hash32, expected_hash32, "Expected 32bits hash is not correct");
+  uint64_t actual_hash64 = iface->methods[0].generated_ordinal64->value;
+  ASSERT_EQ(actual_hash64, expected_hash64, "Expected 64bits hash is not correct");
+  END_TEST;
 }
 
-} // namespace
+}  // namespace
 
 BEGIN_TEST_CASE(ordinals_test)
 RUN_TEST(ordinal_cannot_be_zero)

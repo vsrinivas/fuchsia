@@ -2,35 +2,35 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unittest/unittest.h>
-
 #include <fidl/flat_ast.h>
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
+#include <unittest/unittest.h>
 
 #include "test_library.h"
 
 namespace {
 
-static bool Compiles(const std::string& source_code, std::vector<std::string>* out_errors = nullptr) {
-    auto library = TestLibrary("test.fidl", source_code);
-    const bool success = library.Compile();
+static bool Compiles(const std::string& source_code,
+                     std::vector<std::string>* out_errors = nullptr) {
+  auto library = TestLibrary("test.fidl", source_code);
+  const bool success = library.Compile();
 
-    if (out_errors) {
-        *out_errors = library.errors();
-    }
+  if (out_errors) {
+    *out_errors = library.errors();
+  }
 
-    return success;
+  return success;
 }
 
 static bool compiling(void) {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    std::vector<std::string> errors;
+  std::vector<std::string> errors;
 
-    // Populated fields.
-    EXPECT_TRUE(Compiles(R"FIDL(
+  // Populated fields.
+  EXPECT_TRUE(Compiles(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -38,8 +38,8 @@ table Foo {
 };
 )FIDL"));
 
-    // Reserved fields.
-    EXPECT_TRUE(Compiles(R"FIDL(
+  // Reserved fields.
+  EXPECT_TRUE(Compiles(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -47,8 +47,8 @@ table Foo {
 };
 )FIDL"));
 
-    // Reserved and populated fields.
-    EXPECT_TRUE(Compiles(R"FIDL(
+  // Reserved and populated fields.
+  EXPECT_TRUE(Compiles(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -57,7 +57,7 @@ table Foo {
 };
 )FIDL"));
 
-    EXPECT_TRUE(Compiles(R"FIDL(
+  EXPECT_TRUE(Compiles(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -66,8 +66,8 @@ table Foo {
 };
 )FIDL"));
 
-    // Many reserved fields.
-    EXPECT_TRUE(Compiles(R"FIDL(
+  // Many reserved fields.
+  EXPECT_TRUE(Compiles(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -77,8 +77,8 @@ table Foo {
 };
 )FIDL"));
 
-    // Out of order fields.
-    EXPECT_TRUE(Compiles(R"FIDL(
+  // Out of order fields.
+  EXPECT_TRUE(Compiles(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -88,8 +88,8 @@ table Foo {
 };
 )FIDL"));
 
-    // Duplicate ordinals.
-    EXPECT_FALSE(Compiles(R"FIDL(
+  // Duplicate ordinals.
+  EXPECT_FALSE(Compiles(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -98,8 +98,8 @@ table Foo {
 };
 )FIDL"));
 
-    // Missing ordinals.
-    EXPECT_FALSE(Compiles(R"FIDL(
+  // Missing ordinals.
+  EXPECT_FALSE(Compiles(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -108,28 +108,29 @@ table Foo {
 };
 )FIDL"));
 
-    // Empty tables are allowed.
-    EXPECT_TRUE(Compiles(R"FIDL(
+  // Empty tables are allowed.
+  EXPECT_TRUE(Compiles(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
 };
 )FIDL"));
 
-    // Ordinals required.
-    EXPECT_FALSE(Compiles(R"FIDL(
+  // Ordinals required.
+  EXPECT_FALSE(Compiles(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
     int64 x;
 };
-)FIDL", &errors));
+)FIDL",
+                        &errors));
 
-    EXPECT_EQ(errors.size(), 1u);
-    ASSERT_STR_STR(errors.at(0).c_str(), "Expected one of ordinal or '}'");
+  EXPECT_EQ(errors.size(), 1u);
+  ASSERT_STR_STR(errors.at(0).c_str(), "Expected one of ordinal or '}'");
 
-    // Attributes on fields.
-    EXPECT_TRUE(Compiles(R"FIDL(
+  // Attributes on fields.
+  EXPECT_TRUE(Compiles(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -140,8 +141,8 @@ table Foo {
 };
 )FIDL"));
 
-    // Attributes on tables.
-    EXPECT_TRUE(Compiles(R"FIDL(
+  // Attributes on tables.
+  EXPECT_TRUE(Compiles(R"FIDL(
 library fidl.test.tables;
 
 [FooAttr="bar"]
@@ -151,8 +152,8 @@ table Foo {
 };
 )FIDL"));
 
-    // Attributes on reserved.
-    EXPECT_FALSE(Compiles(R"FIDL(
+  // Attributes on reserved.
+  EXPECT_FALSE(Compiles(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -161,8 +162,8 @@ table Foo {
 };
 )FIDL"));
 
-    // Keywords as field names.
-    EXPECT_TRUE(Compiles(R"FIDL(
+  // Keywords as field names.
+  EXPECT_TRUE(Compiles(R"FIDL(
 library fidl.test.tables;
 
 struct struct {
@@ -177,8 +178,8 @@ table Foo {
 };
 )FIDL"));
 
-    // Optional tables in structs are invalid.
-    EXPECT_FALSE(Compiles(R"FIDL(
+  // Optional tables in structs are invalid.
+  EXPECT_FALSE(Compiles(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -189,12 +190,13 @@ struct OptionalTableContainer {
     Foo? foo;
 };
 
-)FIDL", &errors));
-    EXPECT_EQ(errors.size(), 1u);
-    ASSERT_STR_STR(errors.at(0).c_str(), "cannot be nullable");
+)FIDL",
+                        &errors));
+  EXPECT_EQ(errors.size(), 1u);
+  ASSERT_STR_STR(errors.at(0).c_str(), "cannot be nullable");
 
-    // Optional tables in (static) unions are invalid.
-    EXPECT_FALSE(Compiles(R"FIDL(
+  // Optional tables in (static) unions are invalid.
+  EXPECT_FALSE(Compiles(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -205,12 +207,13 @@ union OptionalTableContainer {
     Foo? foo;
 };
 
-)FIDL", &errors));
-    EXPECT_EQ(errors.size(), 1u);
-    ASSERT_STR_STR(errors.at(0).c_str(), "cannot be nullable");
+)FIDL",
+                        &errors));
+  EXPECT_EQ(errors.size(), 1u);
+  ASSERT_STR_STR(errors.at(0).c_str(), "cannot be nullable");
 
-    // Tables in tables are valid.
-    EXPECT_TRUE(Compiles(R"FIDL(
+  // Tables in tables are valid.
+  EXPECT_TRUE(Compiles(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -223,8 +226,8 @@ table Bar {
 
 )FIDL"));
 
-    // Tables in xunions are valid.
-    EXPECT_TRUE(Compiles(R"FIDL(
+  // Tables in xunions are valid.
+  EXPECT_TRUE(Compiles(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -237,28 +240,29 @@ xunion OptionalTableContainer {
 
 )FIDL"));
 
-    END_TEST;
+  END_TEST;
 }
 
 bool default_not_allowed() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    std::vector<std::string> errors;
-    EXPECT_FALSE(Compiles(R"FIDL(
+  std::vector<std::string> errors;
+  EXPECT_FALSE(Compiles(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
     1: int64 t = 1;
 };
 
-)FIDL", &errors));
-    ASSERT_EQ(errors.size(), 1u);
-    ASSERT_STR_STR(errors.at(0).c_str(), "Defaults on tables are not yet supported.");
+)FIDL",
+                        &errors));
+  ASSERT_EQ(errors.size(), 1u);
+  ASSERT_STR_STR(errors.at(0).c_str(), "Defaults on tables are not yet supported.");
 
-    END_TEST;
+  END_TEST;
 }
 
-} // namespace
+}  // namespace
 
 BEGIN_TEST_CASE(table_tests)
 RUN_TEST(compiling)

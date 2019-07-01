@@ -13,7 +13,7 @@ namespace LibraryZX {
 extern const std::string kFilename;
 extern const std::string kData;
 
-} // namespace LibraryZX
-} // namespace fidl
+}  // namespace LibraryZX
+}  // namespace fidl
 
-#endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LIBRARY_ZX_H_
+#endif  // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LIBRARY_ZX_H_

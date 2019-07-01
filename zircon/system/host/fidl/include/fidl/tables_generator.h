@@ -30,56 +30,56 @@ namespace fidl {
 // directly.
 
 class TablesGenerator {
-public:
-    explicit TablesGenerator(const flat::Library* library)
-        : coded_types_generator_(library) {}
+ public:
+  explicit TablesGenerator(const flat::Library* library)
+      : coded_types_generator_(library) {}
 
-    ~TablesGenerator() = default;
+  ~TablesGenerator() = default;
 
-    std::ostringstream Produce();
+  std::ostringstream Produce();
 
-private:
-    void GenerateInclude(std::string_view filename);
-    void GenerateFilePreamble();
-    void GenerateFilePostamble();
+ private:
+  void GenerateInclude(std::string_view filename);
+  void GenerateFilePreamble();
+  void GenerateFilePostamble();
 
-    template <typename Collection>
-    void GenerateArray(const Collection& collection);
+  template <typename Collection>
+  void GenerateArray(const Collection& collection);
 
-    void Generate(const coded::EnumType& struct_type);
-    void Generate(const coded::BitsType& struct_type);
-    void Generate(const coded::StructType& struct_type);
-    void Generate(const coded::TableType& table_type);
-    void Generate(const coded::UnionType& union_type);
-    void Generate(const coded::XUnionType& xunion_type);
-    void Generate(const coded::PointerType& pointer);
-    void Generate(const coded::MessageType& message_type);
-    void Generate(const coded::HandleType& handle_type);
-    void Generate(const coded::ProtocolHandleType& protocol_type);
-    void Generate(const coded::RequestHandleType& request_type);
-    void Generate(const coded::ArrayType& array_type);
-    void Generate(const coded::StringType& string_type);
-    void Generate(const coded::VectorType& vector_type);
+  void Generate(const coded::EnumType& struct_type);
+  void Generate(const coded::BitsType& struct_type);
+  void Generate(const coded::StructType& struct_type);
+  void Generate(const coded::TableType& table_type);
+  void Generate(const coded::UnionType& union_type);
+  void Generate(const coded::XUnionType& xunion_type);
+  void Generate(const coded::PointerType& pointer);
+  void Generate(const coded::MessageType& message_type);
+  void Generate(const coded::HandleType& handle_type);
+  void Generate(const coded::ProtocolHandleType& protocol_type);
+  void Generate(const coded::RequestHandleType& request_type);
+  void Generate(const coded::ArrayType& array_type);
+  void Generate(const coded::StringType& string_type);
+  void Generate(const coded::VectorType& vector_type);
 
-    void Generate(const coded::Type* type);
-    void Generate(const coded::StructField& field);
-    void Generate(const coded::UnionField& field);
-    void Generate(const coded::TableField& field);
-    void Generate(const coded::XUnionField& field);
+  void Generate(const coded::Type* type);
+  void Generate(const coded::StructField& field);
+  void Generate(const coded::UnionField& field);
+  void Generate(const coded::TableField& field);
+  void Generate(const coded::XUnionField& field);
 
-    void GenerateForward(const coded::EnumType& enum_type);
-    void GenerateForward(const coded::BitsType& bits_type);
-    void GenerateForward(const coded::StructType& struct_type);
-    void GenerateForward(const coded::TableType& table_type);
-    void GenerateForward(const coded::UnionType& union_type);
-    void GenerateForward(const coded::XUnionType& xunion_type);
+  void GenerateForward(const coded::EnumType& enum_type);
+  void GenerateForward(const coded::BitsType& bits_type);
+  void GenerateForward(const coded::StructType& struct_type);
+  void GenerateForward(const coded::TableType& table_type);
+  void GenerateForward(const coded::UnionType& union_type);
+  void GenerateForward(const coded::XUnionType& xunion_type);
 
-    CodedTypesGenerator coded_types_generator_;
+  CodedTypesGenerator coded_types_generator_;
 
-    std::ostringstream tables_file_;
-    size_t indent_level_ = 0u;
+  std::ostringstream tables_file_;
+  size_t indent_level_ = 0u;
 };
 
-} // namespace fidl
+}  // namespace fidl
 
-#endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_TABLES_GENERATOR_H_
+#endif  // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_TABLES_GENERATOR_H_

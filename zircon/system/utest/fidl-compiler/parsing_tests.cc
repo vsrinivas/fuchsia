@@ -2,14 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unittest/unittest.h>
-
-#include <locale.h>
-
 #include <fidl/flat_ast.h>
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
+#include <locale.h>
+#include <unittest/unittest.h>
 
 #include "test_library.h"
 
@@ -18,27 +16,27 @@ namespace {
 // Test that an invalid compound identifier fails parsing. Regression
 // test for FIDL-263.
 bool bad_compound_identifier_test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    // The leading 0 in the library name causes parsing an Identifier
-    // to fail, and then parsing a CompoundIdentifier to fail.
-    TestLibrary library(R"FIDL(
+  // The leading 0 in the library name causes parsing an Identifier
+  // to fail, and then parsing a CompoundIdentifier to fail.
+  TestLibrary library(R"FIDL(
 library 0fidl.test.badcompoundidentifier;
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "unexpected token");
+  EXPECT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "unexpected token");
 
-    END_TEST;
+  END_TEST;
 }
 
 // Test that otherwise reserved words can be appropriarely parsed when context
 // is clear.
 bool parsing_reserved_words_in_struct_test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 struct struct {
@@ -76,15 +74,15 @@ struct InStruct {
     bool reserved;
 };
 )FIDL");
-    EXPECT_TRUE(library.Compile());
+  EXPECT_TRUE(library.Compile());
 
-    END_TEST;
+  END_TEST;
 }
 
 bool parsing_handles_in_struct_test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 struct Handles {
@@ -111,17 +109,17 @@ struct Handles {
 };
 )FIDL");
 
-    EXPECT_TRUE(library.Compile());
+  EXPECT_TRUE(library.Compile());
 
-    END_TEST;
+  END_TEST;
 }
 
 // Test that otherwise reserved words can be appropriarely parsed when context
 // is clear.
 bool parsing_reserved_words_in_union_test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 struct struct {
@@ -159,17 +157,17 @@ union InUnion {
     bool reserved;
 };
 )FIDL");
-    EXPECT_TRUE(library.Compile());
+  EXPECT_TRUE(library.Compile());
 
-    END_TEST;
+  END_TEST;
 }
 
 // Test that otherwise reserved words can be appropriarely parsed when context
 // is clear.
 bool parsing_reserved_words_in_protocol_test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 struct struct {
@@ -207,83 +205,79 @@ protocol InProtocol {
     foo(struct arg, int32 arg2, struct arg3);
 };
 )FIDL");
-    EXPECT_TRUE(library.Compile());
+  EXPECT_TRUE(library.Compile());
 
-    END_TEST;
+  END_TEST;
 }
 
 bool bad_char_at_sign_test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library test;
 
 struct Test {
     uint8 @uint8;
 };
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "invalid character '@'");
+  EXPECT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "invalid character '@'");
 
-    END_TEST;
+  END_TEST;
 }
 
 bool bad_char_slash_test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library test;
 
 struct Test / {
     uint8 uint8;
 };
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "invalid character '/'");
+  EXPECT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "invalid character '/'");
 
-    END_TEST;
+  END_TEST;
 }
 
 bool bad_identifier_test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library test;
 
 struct test_ {
     uint8 uint8;
 };
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "invalid identifier 'test_'");
+  EXPECT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "invalid identifier 'test_'");
 
-    END_TEST;
+  END_TEST;
 }
 
 class LocaleSwapper {
-public:
-    explicit LocaleSwapper(const char* new_locale) {
-        old_locale_ = setlocale(LC_ALL, new_locale);
-    }
-    ~LocaleSwapper() {
-        setlocale(LC_ALL, old_locale_);
-    }
+ public:
+  explicit LocaleSwapper(const char* new_locale) { old_locale_ = setlocale(LC_ALL, new_locale); }
+  ~LocaleSwapper() { setlocale(LC_ALL, old_locale_); }
 
-private:
-    const char* old_locale_;
+ private:
+  const char* old_locale_;
 };
 
 static bool invalid_character_test(void) {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    LocaleSwapper swapper("de_DE.iso88591");
-    TestLibrary test_library("invalid.character.fidl", R"FIDL(
+  LocaleSwapper swapper("de_DE.iso88591");
+  TestLibrary test_library("invalid.character.fidl", R"FIDL(
 library fidl.test.maxbytes;
 
 // This is all alphanumeric in the appropriate locale, but not a valid
@@ -293,42 +287,43 @@ struct ß {
 };
 
 )FIDL");
-    ASSERT_FALSE(test_library.Compile());
+  ASSERT_FALSE(test_library.Compile());
 
-    const auto& errors = test_library.errors();
-    EXPECT_NE(errors.size(), 0);
-    ASSERT_STR_STR(errors[0].data(), "invalid character");
+  const auto& errors = test_library.errors();
+  EXPECT_NE(errors.size(), 0);
+  ASSERT_STR_STR(errors[0].data(), "invalid character");
 
-    END_TEST;
+  END_TEST;
 }
 
 bool empty_struct_test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library("empty_struct.fidl", R"FIDL(
+  TestLibrary library("empty_struct.fidl", R"FIDL(
 library fidl.test.emptystruct;
 
 struct Empty {
 };
 
 )FIDL");
-    EXPECT_TRUE(library.Compile());
+  EXPECT_TRUE(library.Compile());
 
-    END_TEST;
+  END_TEST;
 }
 
 bool warn_on_type_alias_before_imports() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    SharedAmongstLibraries shared;
-    TestLibrary dependency("dependent.fidl", R"FIDL(
+  SharedAmongstLibraries shared;
+  TestLibrary dependency("dependent.fidl", R"FIDL(
 library dependent;
 
 struct Something {};
-)FIDL", &shared);
-    ASSERT_TRUE(dependency.Compile());
+)FIDL",
+                         &shared);
+  ASSERT_TRUE(dependency.Compile());
 
-    TestLibrary library("example.fidl", R"FIDL(
+  TestLibrary library("example.fidl", R"FIDL(
 library example;
 
 using foo = int16;
@@ -337,18 +332,19 @@ using dependent;
 struct UseDependent {
     dependent.Something field;
 };
-)FIDL", &shared);
-    ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-    ASSERT_TRUE(library.Compile());
+)FIDL",
+                      &shared);
+  ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
+  ASSERT_TRUE(library.Compile());
 
-    const auto& warnings = library.warnings();
-    ASSERT_EQ(warnings.size(), 1);
-    ASSERT_STR_STR(warnings[0].data(), "library imports must be grouped at top-of-file");
+  const auto& warnings = library.warnings();
+  ASSERT_EQ(warnings.size(), 1);
+  ASSERT_STR_STR(warnings[0].data(), "library imports must be grouped at top-of-file");
 
-    END_TEST;
+  END_TEST;
 }
 
-} // namespace
+}  // namespace
 
 BEGIN_TEST_CASE(parsing_tests)
 RUN_TEST(bad_compound_identifier_test)

@@ -14,42 +14,41 @@
 namespace fidl {
 
 class AttributesBuilder {
-public:
-    AttributesBuilder(ErrorReporter* error_reporter)
-        : error_reporter_(error_reporter) {}
+ public:
+  AttributesBuilder(ErrorReporter* error_reporter)
+      : error_reporter_(error_reporter) {}
 
-    AttributesBuilder(ErrorReporter* error_reporter,
-                      std::vector<raw::Attribute> attributes)
-        : error_reporter_(error_reporter), attributes_(std::move(attributes)) {
-        for (auto& attribute : attributes_) {
-            names_.emplace(attribute.name);
-        }
+  AttributesBuilder(ErrorReporter* error_reporter, std::vector<raw::Attribute> attributes)
+      : error_reporter_(error_reporter), attributes_(std::move(attributes)) {
+    for (auto& attribute : attributes_) {
+      names_.emplace(attribute.name);
     }
+  }
 
-    bool Insert(raw::Attribute attribute);
-    std::vector<raw::Attribute> Done();
+  bool Insert(raw::Attribute attribute);
+  std::vector<raw::Attribute> Done();
 
-private:
-    struct InsertResult {
-        enum Kind {
-            kOk,
-            kDuplicate,
-        };
-
-        InsertResult(Kind kind, std::string message_fragment)
-            : kind(kind), message_fragment(message_fragment) {}
-
-        Kind kind;
-        std::string message_fragment;
+ private:
+  struct InsertResult {
+    enum Kind {
+      kOk,
+      kDuplicate,
     };
 
-    InsertResult InsertHelper(raw::Attribute attribute);
+    InsertResult(Kind kind, std::string message_fragment)
+        : kind(kind), message_fragment(message_fragment) {}
 
-    ErrorReporter* error_reporter_;
-    std::vector<raw::Attribute> attributes_;
-    std::set<std::string> names_;
+    Kind kind;
+    std::string message_fragment;
+  };
+
+  InsertResult InsertHelper(raw::Attribute attribute);
+
+  ErrorReporter* error_reporter_;
+  std::vector<raw::Attribute> attributes_;
+  std::set<std::string> names_;
 };
 
-} // namespace fidl
+}  // namespace fidl
 
-#endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_ATTRIBUTES_H_
+#endif  // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_ATTRIBUTES_H_

@@ -20,42 +20,42 @@ namespace fidl {
 // |JsonWriter| requires the derived type as a template parameter so it can
 // match methods declared with parameter overrides in the derived class.
 class FindingsJson : public utils::JsonWriter<FindingsJson> {
-public:
-    // "using" is required for overridden methods, so the implementations in
-    // both the base class and in this derived class are visible when matching
-    // parameter types
-    using utils::JsonWriter<FindingsJson>::Generate;
-    using utils::JsonWriter<FindingsJson>::GenerateArray;
+ public:
+  // "using" is required for overridden methods, so the implementations in
+  // both the base class and in this derived class are visible when matching
+  // parameter types
+  using utils::JsonWriter<FindingsJson>::Generate;
+  using utils::JsonWriter<FindingsJson>::GenerateArray;
 
-    // Suggested replacement string and location, per the JSON schema used by
-    // Tricium for a findings/diagnostics
-    struct Replacement {
-        const SourceLocation& location; // From the Finding
-        std::string replacement;
-    };
+  // Suggested replacement string and location, per the JSON schema used by
+  // Tricium for a findings/diagnostics
+  struct Replacement {
+    const SourceLocation& location;  // From the Finding
+    std::string replacement;
+  };
 
-    struct SuggestionWithReplacementLocation {
-        const SourceLocation& location; // From the Finding
-        Suggestion suggestion;
-    };
+  struct SuggestionWithReplacementLocation {
+    const SourceLocation& location;  // From the Finding
+    Suggestion suggestion;
+  };
 
-    explicit FindingsJson(const Findings& findings)
-        : JsonWriter(json_file_), findings_(findings) {}
+  explicit FindingsJson(const Findings& findings)
+      : JsonWriter(json_file_), findings_(findings) {}
 
-    ~FindingsJson() = default;
+  ~FindingsJson() = default;
 
-    std::ostringstream Produce();
+  std::ostringstream Produce();
 
-    void Generate(const Finding& value);
-    void Generate(const SuggestionWithReplacementLocation& value);
-    void Generate(const Replacement& value);
-    void Generate(const SourceLocation& value);
+  void Generate(const Finding& value);
+  void Generate(const SuggestionWithReplacementLocation& value);
+  void Generate(const Replacement& value);
+  void Generate(const SourceLocation& value);
 
-private:
-    const Findings& findings_;
-    std::ostringstream json_file_;
+ private:
+  const Findings& findings_;
+  std::ostringstream json_file_;
 };
 
-} // namespace fidl
+}  // namespace fidl
 
-#endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_FINDINGS_JSON_H_
+#endif  // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_FINDINGS_JSON_H_

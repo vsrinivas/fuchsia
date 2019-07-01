@@ -2,30 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unittest/unittest.h>
-
 #include <fidl/flat_ast.h>
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
+#include <unittest/unittest.h>
 
 #include "test_library.h"
 
 namespace {
 
 bool placement_of_attributes() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    SharedAmongstLibraries shared;
-    TestLibrary dependency("exampleusing.fidl", R"FIDL(
+  SharedAmongstLibraries shared;
+  TestLibrary dependency("exampleusing.fidl", R"FIDL(
 library exampleusing;
 
 struct Empty {};
 
-)FIDL", &shared);
-    ASSERT_TRUE(dependency.Compile());
+)FIDL",
+                         &shared);
+  ASSERT_TRUE(dependency.Compile());
 
-    TestLibrary library("example.fidl", R"FIDL(
+  TestLibrary library("example.fidl", R"FIDL(
 [OnLibrary]
 library example;
 
@@ -79,62 +79,63 @@ xunion ExampleXUnion {
     uint32 variant;
 };
 
-)FIDL", &shared);
-    ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-    ASSERT_TRUE(library.Compile());
+)FIDL",
+                      &shared);
+  ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
+  ASSERT_TRUE(library.Compile());
 
-    EXPECT_TRUE(library.library()->HasAttribute("OnLibrary"));
+  EXPECT_TRUE(library.library()->HasAttribute("OnLibrary"));
 
-    auto example_bits = library.LookupBits("ExampleBits");
-    ASSERT_NONNULL(example_bits);
-    EXPECT_TRUE(example_bits->attributes->HasAttribute("OnBits"));
-    EXPECT_TRUE(example_bits->members.front().attributes->HasAttribute("OnBitsMember"));
+  auto example_bits = library.LookupBits("ExampleBits");
+  ASSERT_NONNULL(example_bits);
+  EXPECT_TRUE(example_bits->attributes->HasAttribute("OnBits"));
+  EXPECT_TRUE(example_bits->members.front().attributes->HasAttribute("OnBitsMember"));
 
-    auto example_const = library.LookupConstant("EXAMPLE_CONST");
-    ASSERT_NONNULL(example_const);
-    EXPECT_TRUE(example_const->attributes->HasAttribute("OnConst"));
+  auto example_const = library.LookupConstant("EXAMPLE_CONST");
+  ASSERT_NONNULL(example_const);
+  EXPECT_TRUE(example_const->attributes->HasAttribute("OnConst"));
 
-    auto example_enum = library.LookupEnum("ExampleEnum");
-    ASSERT_NONNULL(example_enum);
-    EXPECT_TRUE(example_enum->attributes->HasAttribute("OnEnum"));
-    EXPECT_TRUE(example_enum->members.front().attributes->HasAttribute("OnEnumMember"));
+  auto example_enum = library.LookupEnum("ExampleEnum");
+  ASSERT_NONNULL(example_enum);
+  EXPECT_TRUE(example_enum->attributes->HasAttribute("OnEnum"));
+  EXPECT_TRUE(example_enum->members.front().attributes->HasAttribute("OnEnumMember"));
 
-    auto example_protocol = library.LookupProtocol("ExampleProtocol");
-    ASSERT_NONNULL(example_protocol);
-    EXPECT_TRUE(example_protocol->attributes->HasAttribute("OnProtocol"));
-    EXPECT_TRUE(example_protocol->methods.front().attributes->HasAttribute("OnMethod"));
+  auto example_protocol = library.LookupProtocol("ExampleProtocol");
+  ASSERT_NONNULL(example_protocol);
+  EXPECT_TRUE(example_protocol->attributes->HasAttribute("OnProtocol"));
+  EXPECT_TRUE(example_protocol->methods.front().attributes->HasAttribute("OnMethod"));
 
-    auto example_struct = library.LookupStruct("ExampleStruct");
-    ASSERT_NONNULL(example_struct);
-    EXPECT_TRUE(example_struct->attributes->HasAttribute("OnStruct"));
-    EXPECT_TRUE(example_struct->members.front().attributes->HasAttribute("OnStructMember"));
+  auto example_struct = library.LookupStruct("ExampleStruct");
+  ASSERT_NONNULL(example_struct);
+  EXPECT_TRUE(example_struct->attributes->HasAttribute("OnStruct"));
+  EXPECT_TRUE(example_struct->members.front().attributes->HasAttribute("OnStructMember"));
 
-    auto example_table = library.LookupTable("ExampleTable");
-    ASSERT_NONNULL(example_table);
-    EXPECT_TRUE(example_table->attributes->HasAttribute("OnTable"));
-    EXPECT_TRUE(example_table->members.front().maybe_used->attributes->HasAttribute("OnTableMember"));
+  auto example_table = library.LookupTable("ExampleTable");
+  ASSERT_NONNULL(example_table);
+  EXPECT_TRUE(example_table->attributes->HasAttribute("OnTable"));
+  EXPECT_TRUE(example_table->members.front().maybe_used->attributes->HasAttribute("OnTableMember"));
 
-    auto example_type_alias = library.LookupTypeAlias("ExampleTypeAlias");
-    ASSERT_NONNULL(example_type_alias);
-    EXPECT_TRUE(example_type_alias->attributes->HasAttribute("OnTypeAlias"));
+  auto example_type_alias = library.LookupTypeAlias("ExampleTypeAlias");
+  ASSERT_NONNULL(example_type_alias);
+  EXPECT_TRUE(example_type_alias->attributes->HasAttribute("OnTypeAlias"));
 
-    auto example_union = library.LookupUnion("ExampleUnion");
-    ASSERT_NONNULL(example_union);
-    EXPECT_TRUE(example_union->attributes->HasAttribute("OnUnion"));
-    EXPECT_TRUE(example_union->members.front().attributes->HasAttribute("OnUnionMember"));
+  auto example_union = library.LookupUnion("ExampleUnion");
+  ASSERT_NONNULL(example_union);
+  EXPECT_TRUE(example_union->attributes->HasAttribute("OnUnion"));
+  EXPECT_TRUE(example_union->members.front().attributes->HasAttribute("OnUnionMember"));
 
-    auto example_xunion = library.LookupXUnion("ExampleXUnion");
-    ASSERT_NONNULL(example_xunion);
-    EXPECT_TRUE(example_xunion->attributes->HasAttribute("OnXUnion"));
-    EXPECT_TRUE(example_xunion->members.front().attributes->HasAttribute("OnXUnionMember"));
+  auto example_xunion = library.LookupXUnion("ExampleXUnion");
+  ASSERT_NONNULL(example_xunion);
+  EXPECT_TRUE(example_xunion->attributes->HasAttribute("OnXUnion"));
+  EXPECT_TRUE(example_xunion->members.front().attributes->HasAttribute("OnXUnionMember"));
 
-    END_TEST;
+  END_TEST;
 }
 
 bool no_attribute_on_using_not_event_doc() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 /// nope
@@ -142,19 +143,21 @@ library example;
 using we.should.not.care;
 
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "no attributes allowed on library import, found: Doc, NoAttributeOnUsing, EvenDoc");
+  EXPECT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(
+      errors[0].c_str(),
+      "no attributes allowed on library import, found: Doc, NoAttributeOnUsing, EvenDoc");
 
-    END_TEST;
+  END_TEST;
 }
 
 // Test that a duplicate attribute is caught, and nicely reported.
 bool no_two_same_attribute_test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library("dup_attributes.fidl", R"FIDL(
+  TestLibrary library("dup_attributes.fidl", R"FIDL(
 library fidl.test.dupattributes;
 
 [dup = "first", dup = "second"]
@@ -163,19 +166,19 @@ protocol A {
 };
 
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "duplicate attribute with name 'dup'");
+  EXPECT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "duplicate attribute with name 'dup'");
 
-    END_TEST;
+  END_TEST;
 }
 
 // Test that doc comments and doc attributes clash are properly checked.
 bool no_two_same_doc_attribute_test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library("dup_attributes.fidl", R"FIDL(
+  TestLibrary library("dup_attributes.fidl", R"FIDL(
 library fidl.test.dupattributes;
 
 /// first
@@ -185,42 +188,42 @@ protocol A {
 };
 
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "duplicate attribute with name 'Doc'");
+  EXPECT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "duplicate attribute with name 'Doc'");
 
-    END_TEST;
+  END_TEST;
 }
 
 // Test that TODO
 bool no_two_same_attribute_on_library_test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library;
-    library.AddSource("dup_attributes.fidl", R"FIDL(
+  TestLibrary library;
+  library.AddSource("dup_attributes.fidl", R"FIDL(
 [dup = "first"]
 library fidl.test.dupattributes;
 
 )FIDL");
-    library.AddSource("dup_attributes_second.fidl", R"FIDL(
+  library.AddSource("dup_attributes_second.fidl", R"FIDL(
 [dup = "second"]
 library fidl.test.dupattributes;
 
 )FIDL");
-    ASSERT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "duplicate attribute with name 'dup'");
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "duplicate attribute with name 'dup'");
 
-    END_TEST;
+  END_TEST;
 }
 
 // Test that a close attribute is caught.
 bool warn_on_close_attribute_test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library("dup_attributes.fidl", R"FIDL(
+  TestLibrary library("dup_attributes.fidl", R"FIDL(
 library fidl.test.dupattributes;
 
 [Duc = "should be Doc"]
@@ -229,20 +232,20 @@ protocol A {
 };
 
 )FIDL");
-    EXPECT_TRUE(library.Compile());
-    auto warnings = library.warnings();
-    ASSERT_EQ(warnings.size(), 1);
-    ASSERT_STR_STR(warnings[0].c_str(), "suspect attribute with name 'Duc'; did you mean 'Doc'?");
+  EXPECT_TRUE(library.Compile());
+  auto warnings = library.warnings();
+  ASSERT_EQ(warnings.size(), 1);
+  ASSERT_STR_STR(warnings[0].c_str(), "suspect attribute with name 'Duc'; did you mean 'Doc'?");
 
-    END_TEST;
+  END_TEST;
 }
 
 // This tests our ability to treat warnings as errors.  It is here because this
 // is the most convenient warning.
 bool warnings_as_errors_test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library("dup_attributes.fidl", R"FIDL(
+  TestLibrary library("dup_attributes.fidl", R"FIDL(
 library fidl.test.dupattributes;
 
 [Duc = "should be Doc"]
@@ -251,21 +254,21 @@ protocol A {
 };
 
 )FIDL");
-    library.set_warnings_as_errors(true);
-    EXPECT_FALSE(library.Compile());
-    auto warnings = library.warnings();
-    ASSERT_EQ(warnings.size(), 0);
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "suspect attribute with name 'Duc'; did you mean 'Doc'?");
+  library.set_warnings_as_errors(true);
+  EXPECT_FALSE(library.Compile());
+  auto warnings = library.warnings();
+  ASSERT_EQ(warnings.size(), 0);
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "suspect attribute with name 'Duc'; did you mean 'Doc'?");
 
-    END_TEST;
+  END_TEST;
 }
 
 bool empty_transport() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library("transport_attribuets.fidl", R"FIDL(
+  TestLibrary library("transport_attribuets.fidl", R"FIDL(
 library fidl.test.transportattributes;
 
 [Transport]
@@ -274,18 +277,18 @@ protocol A {
 };
 
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "invalid transport");
+  EXPECT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "invalid transport");
 
-    END_TEST;
+  END_TEST;
 }
 
 bool bogus_transport() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library("transport_attribuets.fidl", R"FIDL(
+  TestLibrary library("transport_attribuets.fidl", R"FIDL(
 library fidl.test.transportattributes;
 
 [Transport = "Bogus"]
@@ -294,18 +297,18 @@ protocol A {
 };
 
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "invalid transport");
+  EXPECT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "invalid transport");
 
-    END_TEST;
+  END_TEST;
 }
 
 bool channel_transport() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library("transport_attribuets.fidl", R"FIDL(
+  TestLibrary library("transport_attribuets.fidl", R"FIDL(
 library fidl.test.transportattributes;
 
 [Transport = "Channel"]
@@ -314,17 +317,17 @@ protocol A {
 };
 
 )FIDL");
-    EXPECT_TRUE(library.Compile());
-    ASSERT_EQ(library.errors().size(), 0);
-    ASSERT_EQ(library.warnings().size(), 0);
+  EXPECT_TRUE(library.Compile());
+  ASSERT_EQ(library.errors().size(), 0);
+  ASSERT_EQ(library.warnings().size(), 0);
 
-    END_TEST;
+  END_TEST;
 }
 
 bool socket_control_transport() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library("transport_attribuets.fidl", R"FIDL(
+  TestLibrary library("transport_attribuets.fidl", R"FIDL(
 library fidl.test.transportattributes;
 
 [Transport = "SocketControl"]
@@ -333,17 +336,17 @@ protocol A {
 };
 
 )FIDL");
-    EXPECT_TRUE(library.Compile());
-    ASSERT_EQ(library.errors().size(), 0);
-    ASSERT_EQ(library.warnings().size(), 0);
+  EXPECT_TRUE(library.Compile());
+  ASSERT_EQ(library.errors().size(), 0);
+  ASSERT_EQ(library.warnings().size(), 0);
 
-    END_TEST;
+  END_TEST;
 }
 
 bool multiple_transports() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library("transport_attribuets.fidl", R"FIDL(
+  TestLibrary library("transport_attribuets.fidl", R"FIDL(
 library fidl.test.transportattributes;
 
 [Transport = "SocketControl, OvernetInternal"]
@@ -352,17 +355,17 @@ protocol A {
 };
 
 )FIDL");
-    EXPECT_TRUE(library.Compile());
-    ASSERT_EQ(library.errors().size(), 0);
-    ASSERT_EQ(library.warnings().size(), 0);
+  EXPECT_TRUE(library.Compile());
+  ASSERT_EQ(library.errors().size(), 0);
+  ASSERT_EQ(library.warnings().size(), 0);
 
-    END_TEST;
+  END_TEST;
 }
 
 bool multiple_transports_with_bogus() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library("transport_attribuets.fidl", R"FIDL(
+  TestLibrary library("transport_attribuets.fidl", R"FIDL(
 library fidl.test.transportattributes;
 
 [Transport = "SocketControl,Bogus, OvernetInternal"]
@@ -371,18 +374,18 @@ protocol A {
 };
 
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "invalid transport");
+  EXPECT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "invalid transport");
 
-    END_TEST;
+  END_TEST;
 }
 
 bool incorrect_placement_layout() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 [Layout = "Simple"]
 library fidl.test;
 
@@ -420,31 +423,30 @@ protocol MyProtocol {
 };
 
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 11);
-    ASSERT_STR_STR(errors[0].c_str(), "placement of attribute 'Layout' disallowed here");
+  EXPECT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 11);
+  ASSERT_STR_STR(errors[0].c_str(), "placement of attribute 'Layout' disallowed here");
 
-    END_TEST;
+  END_TEST;
 }
 
 bool MustHaveThreeMembers(fidl::ErrorReporter* error_reporter,
-                          const fidl::raw::Attribute& attribute,
-                          const fidl::flat::Decl* decl) {
-    switch (decl->kind) {
+                          const fidl::raw::Attribute& attribute, const fidl::flat::Decl* decl) {
+  switch (decl->kind) {
     case fidl::flat::Decl::Kind::kStruct: {
-        auto struct_decl = static_cast<const fidl::flat::Struct*>(decl);
-        return struct_decl->members.size() == 3;
+      auto struct_decl = static_cast<const fidl::flat::Struct*>(decl);
+      return struct_decl->members.size() == 3;
     }
     default:
-        return false;
-    }
+      return false;
+  }
 }
 
 bool constraint_only_three_members_on_struct() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library fidl.test;
 
 [MustHaveThreeMembers]
@@ -456,26 +458,29 @@ struct MyStruct {
 };
 
 )FIDL");
-    library.AddAttributeSchema("MustHaveThreeMembers", fidl::flat::AttributeSchema({
-                                                                                       fidl::flat::AttributeSchema::Placement::kStructDecl,
-                                                                                   },
-                                                                                   {
-                                                                                       "",
-                                                                                   },
-                                                                                   MustHaveThreeMembers));
-    EXPECT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(),
-                   "declaration did not satisfy constraint of attribute 'MustHaveThreeMembers' with value ''");
+  library.AddAttributeSchema("MustHaveThreeMembers",
+                             fidl::flat::AttributeSchema(
+                                 {
+                                     fidl::flat::AttributeSchema::Placement::kStructDecl,
+                                 },
+                                 {
+                                     "",
+                                 },
+                                 MustHaveThreeMembers));
+  EXPECT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(
+      errors[0].c_str(),
+      "declaration did not satisfy constraint of attribute 'MustHaveThreeMembers' with value ''");
 
-    END_TEST;
+  END_TEST;
 }
 
 bool constraint_only_three_members_on_method() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library fidl.test;
 
 protocol MyProtocol {
@@ -483,26 +488,29 @@ protocol MyProtocol {
 };
 
 )FIDL");
-    library.AddAttributeSchema("MustHaveThreeMembers", fidl::flat::AttributeSchema({
-                                                                                       fidl::flat::AttributeSchema::Placement::kMethod,
-                                                                                   },
-                                                                                   {
-                                                                                       "",
-                                                                                   },
-                                                                                   MustHaveThreeMembers));
-    EXPECT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(),
-                   "declaration did not satisfy constraint of attribute 'MustHaveThreeMembers' with value ''");
+  library.AddAttributeSchema("MustHaveThreeMembers",
+                             fidl::flat::AttributeSchema(
+                                 {
+                                     fidl::flat::AttributeSchema::Placement::kMethod,
+                                 },
+                                 {
+                                     "",
+                                 },
+                                 MustHaveThreeMembers));
+  EXPECT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(
+      errors[0].c_str(),
+      "declaration did not satisfy constraint of attribute 'MustHaveThreeMembers' with value ''");
 
-    END_TEST;
+  END_TEST;
 }
 
 bool constraint_only_three_members_on_protocol() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library fidl.test;
 
 [MustHaveThreeMembers]
@@ -512,26 +520,29 @@ protocol MyProtocol {
 };
 
 )FIDL");
-    library.AddAttributeSchema("MustHaveThreeMembers", fidl::flat::AttributeSchema({
-                                                                                       fidl::flat::AttributeSchema::Placement::kProtocolDecl,
-                                                                                   },
-                                                                                   {
-                                                                                       "",
-                                                                                   },
-                                                                                   MustHaveThreeMembers));
-    EXPECT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 2); // 2 because there are two methods
-    ASSERT_STR_STR(errors[0].c_str(),
-                   "declaration did not satisfy constraint of attribute 'MustHaveThreeMembers' with value ''");
+  library.AddAttributeSchema("MustHaveThreeMembers",
+                             fidl::flat::AttributeSchema(
+                                 {
+                                     fidl::flat::AttributeSchema::Placement::kProtocolDecl,
+                                 },
+                                 {
+                                     "",
+                                 },
+                                 MustHaveThreeMembers));
+  EXPECT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 2);  // 2 because there are two methods
+  ASSERT_STR_STR(
+      errors[0].c_str(),
+      "declaration did not satisfy constraint of attribute 'MustHaveThreeMembers' with value ''");
 
-    END_TEST;
+  END_TEST;
 }
 
 bool max_bytes() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library fidl.test;
 
 [MaxBytes = "27"]
@@ -540,19 +551,18 @@ table MyTable {
 };
 
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(),
-                   "too large: only 27 bytes allowed, but 40 bytes found");
+  EXPECT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "too large: only 27 bytes allowed, but 40 bytes found");
 
-    END_TEST;
+  END_TEST;
 }
 
 bool max_handles() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library fidl.test;
 
 [MaxHandles = "2"]
@@ -563,19 +573,18 @@ union MyUnion {
 };
 
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(),
-                   "too many handles: only 2 allowed, but 6 found");
+  EXPECT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "too many handles: only 2 allowed, but 6 found");
 
-    END_TEST;
+  END_TEST;
 }
 
 bool selector_incorrect_placement() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library fidl.test;
 
 [Selector = "Nonsense"]
@@ -584,18 +593,16 @@ union MyUnion {
 };
 
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(),
-                   "placement of attribute");
-    ASSERT_STR_STR(errors[0].c_str(),
-                   "disallowed here");
+  EXPECT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "placement of attribute");
+  ASSERT_STR_STR(errors[0].c_str(), "disallowed here");
 
-    END_TEST;
+  END_TEST;
 }
 
-} // namespace
+}  // namespace
 
 BEGIN_TEST_CASE(attributes_tests)
 RUN_TEST(placement_of_attributes)

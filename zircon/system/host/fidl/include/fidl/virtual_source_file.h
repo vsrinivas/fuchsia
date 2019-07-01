@@ -17,18 +17,20 @@
 namespace fidl {
 
 class VirtualSourceFile : public SourceFile {
-public:
-    VirtualSourceFile(std::string filename) : SourceFile(filename, "") {}
-    virtual ~VirtualSourceFile() = default;
+ public:
+  VirtualSourceFile(std::string filename)
+      : SourceFile(filename, "") {}
 
-    virtual std::string_view LineContaining(std::string_view view, Position* position_out) const;
+  virtual ~VirtualSourceFile() = default;
 
-    SourceLocation AddLine(const std::string& line);
+  virtual std::string_view LineContaining(std::string_view view, Position* position_out) const;
 
-private:
-    std::vector<std::unique_ptr<std::string>> virtual_lines_;
+  SourceLocation AddLine(const std::string& line);
+
+ private:
+  std::vector<std::unique_ptr<std::string>> virtual_lines_;
 };
 
 }  // namespace fidl
 
-#endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_VIRTUAL_SOURCE_FILE_H_
+#endif  // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_VIRTUAL_SOURCE_FILE_H_

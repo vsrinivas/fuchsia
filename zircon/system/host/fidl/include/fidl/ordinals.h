@@ -12,8 +12,7 @@ namespace ordinals {
 
 // Returns the Selector. If the Selector attribute is present, the
 // function returns its value; otherwise, it returns the name parameter.
-std::string GetSelector(const raw::AttributeList* attributes,
-                        SourceLocation name);
+std::string GetSelector(const raw::AttributeList* attributes, SourceLocation name);
 
 // Computes the 32bits ordinal for this |method|.
 //
@@ -54,7 +53,7 @@ raw::Ordinal64 GetGeneratedOrdinal64(const std::vector<std::string_view>& librar
                                      const std::string_view& protocol_name,
                                      const raw::ProtocolMethod& method);
 
-} // namespace ordinals
-} // namespace fidl
+}  // namespace ordinals
+}  // namespace fidl
 
-#endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_ORDINALS_H_
+#endif  // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_ORDINALS_H_

@@ -59,6 +59,6 @@ std::string NameCodedVector(std::string_view element_name, uint64_t max_size,
                             types::Nullability nullability);
 std::string NameCodedString(uint64_t max_size, types::Nullability nullability);
 
-} // namespace fidl
+}  // namespace fidl
 
-#endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_NAMES_H_
+#endif  // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_NAMES_H_

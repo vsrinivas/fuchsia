@@ -12,11 +12,11 @@
 #include <string>
 
 class JsonSchema {
-public:
-    static std::string& schema() { return schema_; }
+ public:
+  static std::string& schema() { return schema_; }
 
-private:
-    static std::string schema_;
+ private:
+  static std::string schema_;
 };
 
-#endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_JSON_SCHEMA_H_
+#endif  // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_JSON_SCHEMA_H_

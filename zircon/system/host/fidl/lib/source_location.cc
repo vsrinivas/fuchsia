@@ -7,24 +7,24 @@
 namespace fidl {
 
 std::string_view SourceLocation::SourceLine(SourceFile::Position* position_out) const {
-    return source_file_->LineContaining(data(), position_out);
+  return source_file_->LineContaining(data(), position_out);
 }
 
 SourceFile::Position SourceLocation::position() const {
-    SourceFile::Position pos;
-    SourceLine(&pos);
-    return pos;
+  SourceFile::Position pos;
+  SourceLine(&pos);
+  return pos;
 }
 
 std::string SourceLocation::position_str() const {
-    std::string position(source_file_->filename());
-    SourceFile::Position pos;
-    SourceLine(&pos);
-    position.push_back(':');
-    position.append(std::to_string(pos.line));
-    position.push_back(':');
-    position.append(std::to_string(pos.column));
-    return position;
+  std::string position(source_file_->filename());
+  SourceFile::Position pos;
+  SourceLine(&pos);
+  position.push_back(':');
+  position.append(std::to_string(pos.line));
+  position.push_back(':');
+  position.append(std::to_string(pos.column));
+  return position;
 }
 
-} // namespace fidl
+}  // namespace fidl

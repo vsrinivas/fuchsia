@@ -9,9 +9,9 @@
 namespace {
 
 bool GoodError() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 protocol Example {
@@ -20,41 +20,42 @@ protocol Example {
 
 )FIDL");
 
-    ASSERT_TRUE(library.Compile());
+  ASSERT_TRUE(library.Compile());
 
-    auto methods = &library.LookupProtocol("Example")->methods;
-    ASSERT_EQ(methods->size(), 1);
-    auto method = &methods->at(0);
-    auto response = method->maybe_response;
-    ASSERT_NOT_NULL(response);
-    ASSERT_EQ(response->members.size(), 1);
-    auto response_member = &response->members.at(0);
-    ASSERT_EQ(response_member->type_ctor->type->kind, fidl::flat::Type::Kind::kIdentifier);
-    auto result_identifier = static_cast<const fidl::flat::IdentifierType*>(response_member->type_ctor->type);
-    const fidl::flat::Union* result_union = library.LookupUnion(
-        std::string(result_identifier->name.name_part()));
-    ASSERT_NOT_NULL(result_union);
-    ASSERT_NOT_NULL(result_union->attributes);
-    ASSERT_TRUE(result_union->attributes->HasAttribute("Result"));
-    ASSERT_EQ(result_union->members.size(), 2);
+  auto methods = &library.LookupProtocol("Example")->methods;
+  ASSERT_EQ(methods->size(), 1);
+  auto method = &methods->at(0);
+  auto response = method->maybe_response;
+  ASSERT_NOT_NULL(response);
+  ASSERT_EQ(response->members.size(), 1);
+  auto response_member = &response->members.at(0);
+  ASSERT_EQ(response_member->type_ctor->type->kind, fidl::flat::Type::Kind::kIdentifier);
+  auto result_identifier =
+      static_cast<const fidl::flat::IdentifierType*>(response_member->type_ctor->type);
+  const fidl::flat::Union* result_union =
+      library.LookupUnion(std::string(result_identifier->name.name_part()));
+  ASSERT_NOT_NULL(result_union);
+  ASSERT_NOT_NULL(result_union->attributes);
+  ASSERT_TRUE(result_union->attributes->HasAttribute("Result"));
+  ASSERT_EQ(result_union->members.size(), 2);
 
-    ASSERT_STR_EQ("response", std::string(result_union->members.at(0).name.data()).c_str());
+  ASSERT_STR_EQ("response", std::string(result_union->members.at(0).name.data()).c_str());
 
-    const fidl::flat::Union::Member& error = result_union->members.at(1);
-    ASSERT_STR_EQ("err", std::string(error.name.data()).c_str());
+  const fidl::flat::Union::Member& error = result_union->members.at(1);
+  ASSERT_STR_EQ("err", std::string(error.name.data()).c_str());
 
-    ASSERT_NOT_NULL(error.type_ctor->type);
-    ASSERT_EQ(error.type_ctor->type->kind, fidl::flat::Type::Kind::kPrimitive);
-    auto primitive_type = static_cast<const fidl::flat::PrimitiveType*>(error.type_ctor->type);
-    ASSERT_EQ(primitive_type->subtype, fidl::types::PrimitiveSubtype::kInt32);
+  ASSERT_NOT_NULL(error.type_ctor->type);
+  ASSERT_EQ(error.type_ctor->type->kind, fidl::flat::Type::Kind::kPrimitive);
+  auto primitive_type = static_cast<const fidl::flat::PrimitiveType*>(error.type_ctor->type);
+  ASSERT_EQ(primitive_type->subtype, fidl::types::PrimitiveSubtype::kInt32);
 
-    END_TEST;
+  END_TEST;
 }
 
 bool GoodErrorUnsigned() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 protocol Example {
@@ -63,14 +64,14 @@ protocol Example {
 
 )FIDL");
 
-    ASSERT_TRUE(library.Compile());
-    END_TEST;
+  ASSERT_TRUE(library.Compile());
+  END_TEST;
 }
 
 bool GoodErrorEnum() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 enum ErrorType : int32 {
@@ -85,14 +86,14 @@ protocol Example {
 
 )FIDL");
 
-    ASSERT_TRUE(library.Compile());
-    END_TEST;
+  ASSERT_TRUE(library.Compile());
+  END_TEST;
 }
 
 bool GoodErrorEnumAfter() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 protocol Example {
@@ -107,14 +108,14 @@ enum ErrorType : int32 {
 
 )FIDL");
 
-    ASSERT_TRUE(library.Compile());
-    END_TEST;
+  ASSERT_TRUE(library.Compile());
+  END_TEST;
 }
 
 bool BadErrorUnknownIdentifier() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 protocol Example {
@@ -122,17 +123,17 @@ protocol Example {
 };
 )FIDL");
 
-    ASSERT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "error: unknown type ErrorType");
-    END_TEST;
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "error: unknown type ErrorType");
+  END_TEST;
 }
 
 bool BadErrorWrongPrimitive() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 protocol Example {
@@ -140,87 +141,88 @@ protocol Example {
 };
 )FIDL");
 
-    ASSERT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "error: invalid error type: must be int32, uint32 or an enum therof");
-    END_TEST;
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(),
+                 "error: invalid error type: must be int32, uint32 or an enum therof");
+  END_TEST;
 }
 
 bool BadErrorMissingType() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 protocol Example {
     Method() -> (int32 flub) error;
 };
 )FIDL");
-    ASSERT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "error: unexpected token");
-    END_TEST;
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "error: unexpected token");
+  END_TEST;
 }
 
 bool BadErrorNotAType() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 protocol Example {
     Method() -> (int32 flub) error "hello";
 };
 )FIDL");
-    ASSERT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "error: unexpected token");
-    END_TEST;
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "error: unexpected token");
+  END_TEST;
 }
 
 bool BadErrorNoResponse() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 protocol Example {
     Method() -> error int32;
 };
 )FIDL");
-    ASSERT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "error: unexpected token \"error\"");
-    END_TEST;
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "error: unexpected token \"error\"");
+  END_TEST;
 }
 
 bool BadErrorUnexpectedEndOfFile() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 table ForgotTheSemicolon {}
 )FIDL");
 
-    ASSERT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_GE(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "error: unexpected token EndOfFile, was expecting Semicolon");
-    END_TEST;
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_GE(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "error: unexpected token EndOfFile, was expecting Semicolon");
+  END_TEST;
 }
 
 bool BadErrorEmptyFile() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    TestLibrary library("");
+  TestLibrary library("");
 
-    ASSERT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_GE(errors.size(), 1);
-    END_TEST;
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_GE(errors.size(), 1);
+  END_TEST;
 }
-} // namespace
+}  // namespace
 
 BEGIN_TEST_CASE(errors_tests)
 
