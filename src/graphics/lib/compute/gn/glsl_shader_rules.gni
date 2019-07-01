@@ -109,7 +109,7 @@ template("graphics_compute_compile_glsl_shader_foreach") {
                                "sources",
                              ])
       outputs = [
-        "${_output_dir}/debug/{{source_name_part}}.spv",
+        "${_output_dir}/debug/{{source_name_part}}.glsl",
       ]
     }
   } else {
