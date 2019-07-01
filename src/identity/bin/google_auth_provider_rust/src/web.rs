@@ -12,7 +12,7 @@ use fidl_fuchsia_ui_views::ViewToken;
 use fidl_fuchsia_web::{
     ContextProxy, FrameProxy, LoadUrlParams, NavigationControllerMarker,
     NavigationEventListenerMarker, NavigationEventListenerRequest,
-    NavigationEventListenerRequestStream,
+    NavigationEventListenerRequestStream, PageType,
 };
 use futures::prelude::*;
 use log::warn;
@@ -69,29 +69,36 @@ impl StandaloneWebFrame {
         self.frame
             .create_view(&mut view_token)
             .auth_provider_status(AuthProviderStatus::UnknownError)?;
-        // TODO(satsukiu): This method currently returns immediately after
-        // requesting to load a URL, before anything is loaded.  It should
-        // verify that the page is loaded before returning, possibly by
-        // listening for loading events.
-        Ok(())
+
+        let navigation_event_stream = self.get_navigation_event_stream()?;
+        await!(Self::poll_until_loaded(navigation_event_stream))
     }
 
     /// Waits until the frame redirects to a URL matching the scheme,
     /// domain, and path of |redirect_target|. Returns the matching URL,
     /// including any query parameters.
     pub async fn wait_for_redirect(&mut self, redirect_target: Url) -> AuthProviderResult<Url> {
-        let (navigation_event_client, navigation_event_stream) =
-            create_request_stream::<NavigationEventListenerMarker>()
-                .auth_provider_status(AuthProviderStatus::UnknownError)?;
-        self.frame
-            .set_navigation_event_listener(Some(navigation_event_client))
-            .auth_provider_status(AuthProviderStatus::UnknownError)?;
+        let navigation_event_stream = self.get_navigation_event_stream()?;
 
         // pull redirect URL out from events.
         await!(Self::poll_for_url_navigation_event(navigation_event_stream, |url| {
             (url.scheme(), url.domain(), url.path())
                 == (redirect_target.scheme(), redirect_target.domain(), redirect_target.path())
         }))
+    }
+
+    /// Registers a navigation listener with the Chrome frame and returns the created event
+    /// stream.
+    fn get_navigation_event_stream(
+        &self,
+    ) -> AuthProviderResult<NavigationEventListenerRequestStream> {
+        let (navigation_event_client, navigation_event_stream) =
+            create_request_stream::<NavigationEventListenerMarker>()
+                .auth_provider_status(AuthProviderStatus::UnknownError)?;
+        self.frame
+            .set_navigation_event_listener(Some(navigation_event_client))
+            .auth_provider_status(AuthProviderStatus::UnknownError)?;
+        Ok(navigation_event_stream)
     }
 
     /// Polls for events on the given request stream until a event with a
@@ -124,6 +131,44 @@ impl StandaloneWebFrame {
                     );
                 }
                 None => (),
+            }
+        }
+        Err(AuthProviderError::new(AuthProviderStatus::UnknownError))
+    }
+
+    /// Completes when the frame has finished loading or some error has occurred.
+    async fn poll_until_loaded(
+        mut request_stream: NavigationEventListenerRequestStream,
+    ) -> AuthProviderResult<()> {
+        // Verify that the page has loaded and is not an error page.  Since
+        // this information may be delivered through two different events,
+        // we need to keep track of the known state and search through events
+        // until both points are found.
+        let mut known_page_type: Option<PageType> = None;
+        let mut main_document_loaded = false;
+        while let Some(request) = await!(request_stream.try_next())
+            .auth_provider_status(AuthProviderStatus::UnknownError)?
+        {
+            // update known state.
+            let NavigationEventListenerRequest::OnNavigationStateChanged { change, responder } =
+                request;
+            responder.send().auth_provider_status(AuthProviderStatus::UnknownError)?;
+
+            if let Some(is_main_document_loaded) = change.is_main_document_loaded {
+                main_document_loaded = is_main_document_loaded;
+            }
+            if let Some(page_type) = change.page_type {
+                known_page_type.replace(page_type);
+            }
+
+            // check if state is terminal
+            match (known_page_type, main_document_loaded) {
+                (Some(PageType::Normal), true) => return Ok(()),
+                (Some(PageType::Normal), false) => (),
+                (Some(PageType::Error), _) => {
+                    return Err(AuthProviderError::new(AuthProviderStatus::NetworkError))
+                }
+                (None, _) => (),
             }
         }
         Err(AuthProviderError::new(AuthProviderStatus::UnknownError))
@@ -180,7 +225,7 @@ mod test {
         Ok(())
     }
 
-    fn create_navigation_state(url: Option<&str>) -> NavigationState {
+    fn create_navigate_to_url_event(url: Option<&str>) -> NavigationState {
         let parsed_url = url.map(|url| String::from(url));
         NavigationState {
             url: parsed_url,
@@ -192,14 +237,28 @@ mod test {
         }
     }
 
+    fn create_navigate_to_page_event(
+        page_type: Option<PageType>,
+        is_main_document_loaded: Option<bool>,
+    ) -> NavigationState {
+        NavigationState {
+            url: None,
+            title: None,
+            page_type,
+            can_go_forward: None,
+            can_go_back: None,
+            is_main_document_loaded,
+        }
+    }
+
     #[fasync::run_until_stalled(test)]
     async fn test_wait_for_redirect() -> Result<(), Error> {
         let events = vec![
-            create_navigation_state(None),
-            create_navigation_state(None),
-            create_navigation_state(Some("http://test/path/")),
-            create_navigation_state(Some("http://test/?key=val")),
-            create_navigation_state(None),
+            create_navigate_to_url_event(None),
+            create_navigate_to_url_event(None),
+            create_navigate_to_url_event(Some("http://test/path/")),
+            create_navigate_to_url_event(Some("http://test/?key=val")),
+            create_navigate_to_url_event(None),
         ];
 
         let mut web_frame = create_frame_with_events(events)?;
@@ -210,14 +269,74 @@ mod test {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn test_no_matching_found() -> Result<(), Error> {
-        let events =
-            vec![create_navigation_state(None), create_navigation_state(Some("http://domain/"))];
+    async fn test_no_matching_redirect_found() -> Result<(), Error> {
+        let events = vec![
+            create_navigate_to_url_event(None),
+            create_navigate_to_url_event(Some("http://domain/")),
+        ];
 
         let mut web_frame = create_frame_with_events(events)?;
         let target_url = Url::parse("http://test/")?;
         let result = await!(web_frame.wait_for_redirect(target_url));
         assert!(result.is_err());
+        Ok(())
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_poll_until_loaded() -> Result<(), Error> {
+        let events = vec![
+            create_navigate_to_page_event(None, None),
+            create_navigate_to_page_event(Some(PageType::Normal), Some(true)),
+        ];
+
+        let web_frame = create_frame_with_events(events)?;
+        let stream = web_frame.get_navigation_event_stream()?;
+        assert!(await!(StandaloneWebFrame::poll_until_loaded(stream)).is_ok());
+
+        // Verify functionality when pagetype and document_loaded events sent
+        // separately
+        let events = vec![
+            create_navigate_to_page_event(None, None),
+            create_navigate_to_page_event(Some(PageType::Normal), None),
+            create_navigate_to_page_event(None, Some(true)),
+        ];
+
+        let web_frame = create_frame_with_events(events)?;
+        let stream = web_frame.get_navigation_event_stream()?;
+        assert!(await!(StandaloneWebFrame::poll_until_loaded(stream)).is_ok());
+        Ok(())
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_poll_until_loaded_network_error() -> Result<(), Error> {
+        let events = vec![
+            create_navigate_to_page_event(None, None),
+            create_navigate_to_page_event(None, Some(true)),
+            create_navigate_to_page_event(Some(PageType::Error), None),
+        ];
+
+        let web_frame = create_frame_with_events(events)?;
+        let stream = web_frame.get_navigation_event_stream()?;
+        assert_eq!(
+            await!(StandaloneWebFrame::poll_until_loaded(stream)).unwrap_err().status,
+            AuthProviderStatus::NetworkError
+        );
+        Ok(())
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_poll_until_loaded_stream_closed() -> Result<(), Error> {
+        let events = vec![
+            create_navigate_to_page_event(None, None),
+            create_navigate_to_page_event(Some(PageType::Normal), None),
+        ];
+
+        let web_frame = create_frame_with_events(events)?;
+        let stream = web_frame.get_navigation_event_stream()?;
+        assert_eq!(
+            await!(StandaloneWebFrame::poll_until_loaded(stream)).unwrap_err().status,
+            AuthProviderStatus::UnknownError
+        );
         Ok(())
     }
 }
