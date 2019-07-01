@@ -185,6 +185,7 @@ class Walker final {
           xunion_state.field_count = fidl_type->coded_xunion.field_count;
           xunion_state.inside_envelope = false;
           xunion_state.nullable = fidl_type->coded_xunion.nullable;
+          xunion_state.strictness = fidl_type->coded_xunion.strictness;
           break;
         case fidl::kFidlTypeArray:
           state = kStateArray;
@@ -217,7 +218,7 @@ class Walker final {
     }
 
     Frame(const fidl::FidlCodedStruct* coded_struct, Position position)
-       : position(position) {
+        : position(position) {
       state = kStateStruct;
       struct_state.fields = coded_struct->fields;
       struct_state.field_count = coded_struct->field_count;
@@ -251,6 +252,8 @@ class Walker final {
       xunion_state.fields = coded_xunion->fields;
       xunion_state.field_count = coded_xunion->field_count;
       xunion_state.inside_envelope = false;
+      xunion_state.nullable = coded_xunion->nullable;
+      xunion_state.strictness = coded_xunion->strictness;
     }
 
     Frame(const fidl_type_t* element, uint32_t array_size, uint32_t element_size, Position position)
@@ -263,7 +266,7 @@ class Walker final {
     }
 
     // The default constructor does nothing when initializing the stack of frames.
-    Frame() {}
+    Frame() = default;
 
     static Frame DoneSentinel() {
       Frame frame;
@@ -366,7 +369,8 @@ class Walker final {
         // When true, the walker is currently working within an envelope, or equivalently,
         // |EnterEnvelope| was successful.
         bool inside_envelope;
-        bool nullable;
+        fidl::FidlNullability nullable;
+        fidl::FidlStrictness strictness;
       } xunion_state;
       struct {
         const fidl_type_t* element;
@@ -723,6 +727,12 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
             break;
           }
         }
+
+        if (!known_field && frame->xunion_state.strictness == fidl::FidlStrictness::kStrict) {
+          visitor.OnError("strict xunion has unknown ordinal");
+          FIDL_STATUS_GUARD(Status::kConstraintViolationError);
+        }
+
         // Make sure we don't process a malformed envelope
         const fidl_type_t* payload_type = known_field ? known_field->type : nullptr;
         status = visitor.EnterEnvelope(envelope_pos, envelope_ptr, payload_type);

@@ -1699,6 +1699,51 @@ bool validate_nonempty_nullable_xunion_zero_ordinal() {
   END_TEST;
 }
 
+bool validate_strict_xunion_unknown_ordinal() {
+  BEGIN_TEST;
+
+  uint8_t bytes[] = {
+      0xf0, 0x05, 0xc1, 0x0a,                          // invalid ordinal
+      0x00, 0x00, 0x00, 0x00,                          // padding
+      0x08, 0x00, 0x00, 0x00,                          // envelope: # of bytes
+      0x00, 0x00, 0x00, 0x00,                          // envelope: # of handles
+      0xff, 0xff, 0xff, 0xff,                          // envelope: data is present
+      0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00,  // fake out-of-line data
+      0x00, 0x00, 0x00, 0x00,
+  };
+
+  const char* error = nullptr;
+  auto status = fidl_validate(&fidl_test_coding_SampleStrictXUnionStructTable, bytes, sizeof(bytes),
+                              0, &error);
+  EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+  EXPECT_NONNULL(error);
+  EXPECT_STR_EQ(error, "strict xunion has unknown ordinal");
+
+  END_TEST;
+}
+
+bool validate_flexible_xunion_unknown_ordinal() {
+  BEGIN_TEST;
+
+  uint8_t bytes[] = {
+      0xf0, 0x05, 0xc1, 0x0a,                          // invalid ordinal
+      0x00, 0x00, 0x00, 0x00,                          // padding
+      0x08, 0x00, 0x00, 0x00,                          // envelope: # of bytes
+      0x00, 0x00, 0x00, 0x00,                          // envelope: # of handles
+      0xff, 0xff, 0xff, 0xff,                          // envelope: data is present
+      0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00,  // fake out-of-line data
+      0x00, 0x00, 0x00, 0x00,
+  };
+
+  const char* error = nullptr;
+  auto status =
+      fidl_validate(&fidl_test_coding_SampleXUnionStructTable, bytes, sizeof(bytes), 0, &error);
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_NULL(error);
+
+  END_TEST;
+}
+
 bool validate_zero_16bit_bits() {
   BEGIN_TEST;
 
@@ -1968,6 +2013,8 @@ RUN_TEST(validate_valid_empty_nullable_xunion)
 RUN_TEST(validate_empty_nonnullable_xunion)
 RUN_TEST(validate_empty_nullable_xunion_nonzero_ordinal)
 RUN_TEST(validate_nonempty_xunion_zero_ordinal)
+RUN_TEST(validate_strict_xunion_unknown_ordinal)
+RUN_TEST(validate_flexible_xunion_unknown_ordinal)
 RUN_TEST(validate_nonempty_nullable_xunion_zero_ordinal)
 END_TEST_CASE(xunions)
 

@@ -19,10 +19,11 @@ extern const fidl_type_t fidl_test_coding_TableOfStructWithHandleTable;
 extern const fidl_type_t fidl_test_coding_OlderSimpleTableTable;
 extern const fidl_type_t fidl_test_coding_NewerSimpleTableTable;
 extern const fidl_type_t fidl_test_coding_SimpleTableTable;
-extern const fidl_type_t fidl_test_coding_TableOfStructWithHandleTable;
 extern const fidl_type_t fidl_test_coding_SmallerTableOfStructWithHandleTable;
 extern const fidl_type_t fidl_test_coding_SampleXUnionTable;
+extern const fidl_type_t fidl_test_coding_SampleStrictXUnionTable;
 extern const fidl_type_t fidl_test_coding_SampleXUnionStructTable;
+extern const fidl_type_t fidl_test_coding_SampleStrictXUnionStructTable;
 extern const fidl_type_t fidl_test_coding_SampleNullableXUnionStructTable;
 
 extern const fidl_type_t fidl_test_coding_Int32BitsTable;
@@ -103,11 +104,37 @@ struct SampleXUnion {
   };
 };
 constexpr uint32_t kSampleXUnionIntStructOrdinal = 376675050;
+constexpr uint32_t kSampleXUnionSimpleTableOrdinal = 586453270;
 constexpr uint32_t kSampleXUnionRawIntOrdinal = 319709411;
+
+struct SampleStrictXUnion {
+  FIDL_ALIGNDECL
+  fidl_xunion_t header;
+
+  // Representing out-of-line part
+  union {
+    FIDL_ALIGNDECL
+    IntStruct i;
+
+    FIDL_ALIGNDECL
+    SimpleTable st;
+
+    FIDL_ALIGNDECL
+    int32_t raw_int;
+  };
+};
+constexpr uint32_t kSampleStrictXUnionIntStructOrdinal = 1928460319;
+constexpr uint32_t kSampleStrictXUnionSimpleTableOrdinal = 915108668;
+constexpr uint32_t kSampleStrictXUnionRawIntOrdinal = 419938224;
 
 struct SampleXUnionStruct {
   FIDL_ALIGNDECL
   SampleXUnion xu;
+};
+
+struct SampleStrictXUnionStruct {
+  FIDL_ALIGNDECL
+  SampleStrictXUnion xu;
 };
 
 struct SampleNullableXUnionStruct {

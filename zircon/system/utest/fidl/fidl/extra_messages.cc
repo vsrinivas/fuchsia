@@ -21,6 +21,8 @@ extern const fidl_type_t fidl_test_coding_SimpleTableTable;
 extern const fidl_type_t fidl_test_coding_SampleXUnionTable;
 extern const fidl_type_t fidl_test_coding_SampleXUnionStructTable;
 extern const fidl_type_t fidl_test_coding_SampleNullableXUnionStructTable;
+extern const fidl_type_t fidl_test_coding_SampleStrictXUnionTable;
+extern const fidl_type_t fidl_test_coding_SampleStrictXUnionStructTable;
 extern const fidl_type_t fidl_test_coding_OlderSimpleTableTable;
 extern const fidl_type_t fidl_test_coding_NewerSimpleTableTable;
 extern const fidl_type_t fidl_test_coding_Int8EnumTable;
@@ -173,6 +175,20 @@ static const ::fidl::FidlStructField fidl_test_coding_SampleNullableXUnionStruct
 const fidl_type_t fidl_test_coding_SampleNullableXUnionStructTable =
     fidl_type_t(::fidl::FidlCodedStruct(fidl_test_coding_SampleNullableXUnionStructFields, 1u, 24u,
                                         "fidl.test.coding/SampleNullableXUnionStruct"));
+
+static const ::fidl::FidlXUnionField fidl_test_coding_SampleStrictXUnionFields[] = {
+    ::fidl::FidlXUnionField(&::fidl::internal::kInt32Table, 419938224u),
+    ::fidl::FidlXUnionField(&fidl_test_coding_SimpleTableTable, 915108668u),
+    ::fidl::FidlXUnionField(&fidl_test_coding_IntStructTable, 1928460319u)};
+const fidl_type_t fidl_test_coding_SampleStrictXUnionTable = fidl_type_t(
+    ::fidl::FidlCodedXUnion(3u, fidl_test_coding_SampleStrictXUnionFields, ::fidl::kNonnullable,
+                            "fidl.test.coding/SampleStrictXUnion", ::fidl::kStrict));
+
+static const ::fidl::FidlStructField fidl_test_coding_SampleStrictXUnionStructFields[] = {
+    ::fidl::FidlStructField(&fidl_test_coding_SampleStrictXUnionTable, 0u, 0u)};
+const fidl_type_t fidl_test_coding_SampleStrictXUnionStructTable =
+    fidl_type_t(::fidl::FidlCodedStruct(fidl_test_coding_SampleStrictXUnionStructFields, 1u, 24u,
+                                        "fidl.test.coding/SampleStrictXUnionStruct"));
 
 static const ::fidl::FidlTableField fidl_test_coding_OlderSimpleTableFields[] = {
     ::fidl::FidlTableField(&fidl_test_coding_IntStructTable, 1u)};

@@ -68,6 +68,16 @@ xunion SampleXUnion {
     int32 raw_int;
 };
 
+strict xunion SampleStrictXUnion {
+    IntStruct i;
+    SimpleTable st;
+    int32 raw_int;
+};
+
+struct SampleStrictXUnionStruct {
+    SampleStrictXUnion xu;
+};
+
 struct SampleXUnionStruct {
     SampleXUnion xu;
 };

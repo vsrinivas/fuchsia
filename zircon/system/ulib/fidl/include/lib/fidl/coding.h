@@ -35,7 +35,7 @@ zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_msg_t* msg, const char
 //
 // The |bytes| are not modified.
 zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t num_bytes,
-                          uint32_t num_handles, const char** error_msg_out);
+                          uint32_t num_handles, const char** out_error_msg);
 zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_msg_t* msg,
                               const char** out_error_msg);
 

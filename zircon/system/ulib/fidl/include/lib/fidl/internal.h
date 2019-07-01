@@ -41,7 +41,7 @@ constexpr inline uint64_t FidlAlign(uint32_t offset) {
 }
 
 // Determine if the pointer is aligned to |FIDL_ALIGNMENT|.
-inline bool IsAligned(uint8_t* ptr) {
+inline bool IsAligned(const uint8_t* ptr) {
   auto uintptr = reinterpret_cast<std::uintptr_t>(ptr);
   constexpr uintptr_t kAlignment = FIDL_ALIGNMENT;
   return uintptr % kAlignment == 0;
