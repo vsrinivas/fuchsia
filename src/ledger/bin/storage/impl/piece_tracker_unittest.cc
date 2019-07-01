@@ -18,6 +18,8 @@ using ::testing::UnorderedElementsAre;
 
 using PieceTokenTest = ledger::TestWithEnvironment;
 
+ObjectIdentifier CreateObjectIdentifier(ObjectDigest digest) { return {1u, 2u, std::move(digest)}; }
+
 TEST_F(PieceTokenTest, PieceTracker) {
   const ObjectIdentifier identifier = RandomObjectIdentifier(environment_.random());
   const ObjectIdentifier another_identifier = RandomObjectIdentifier(environment_.random());
@@ -54,6 +56,15 @@ TEST_F(PieceTokenTest, PieceTracker) {
   EXPECT_EQ(tracker.count(identifier), 0);
   EXPECT_EQ(tracker.count(another_identifier), 0);
   EXPECT_EQ(tracker.size(), 0);
+}
+
+TEST_F(PieceTokenTest, DiscardableToken) {
+  std::string data = RandomString(environment_.random(), 12);
+  ObjectIdentifier identifier =
+      CreateObjectIdentifier(ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
+
+  const DiscardableToken token(identifier);
+  EXPECT_EQ(token.GetIdentifier(), identifier);
 }
 
 }  // namespace

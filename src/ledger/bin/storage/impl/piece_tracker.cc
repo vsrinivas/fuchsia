@@ -61,4 +61,11 @@ int PieceTracker::count(const ObjectIdentifier& identifier) const {
 
 int PieceTracker::size() const { return token_counts_.size(); }
 
+DiscardableToken::DiscardableToken(ObjectIdentifier identifier)
+    : identifier_(std::move(identifier)) {
+  FXL_VLOG(1) << "DiscardableToken " << identifier_;
+}
+
+const ObjectIdentifier& DiscardableToken::GetIdentifier() const { return identifier_; }
+
 }  // namespace storage

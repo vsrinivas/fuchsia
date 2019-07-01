@@ -63,6 +63,19 @@ source_set("object_identifier_lib") {
   configs += [ "//src/ledger:ledger_config" ]
 }
 
+source_set("piece_tracker") {
+  sources = [
+    "piece_tracker.cc",
+    "piece_tracker.h",
+  ]
+
+  public_deps = [
+    "//src/ledger/bin/storage/public",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
 source_set("lib") {
   sources = [
     "commit_impl.cc",
@@ -91,8 +104,6 @@ source_set("lib") {
     "page_db_impl.h",
     "page_storage_impl.cc",
     "page_storage_impl.h",
-    "piece_tracker.cc",
-    "piece_tracker.h",
     "split.cc",
     "split.h",
   ]
@@ -120,6 +131,7 @@ source_set("lib") {
 
   public_deps = [
     ":object_identifier_lib",
+    ":piece_tracker",
     "//peridot/lib/convert",
     "//src/ledger/lib/coroutine",
     "//src/ledger/third_party/bup",
