@@ -12,7 +12,7 @@
 #include <lib/log-writer-textfile/log-writer-textfile.h>
 #include <lib/log/log.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 const char* tmp_file_path = "/tmp/log_test_buffer";
 const int file_size = 1024;
@@ -31,12 +31,11 @@ static void check_file_contents(FILE* f, char* expected) {
     memset(buf, 0, file_size);
     fseek(f, 0, SEEK_SET);
     fread(buf, file_size, 1, f);
-    EXPECT_STR_EQ(buf, expected, "file doesn't match expected value");
+    EXPECT_STR_EQ((const char *)(buf), expected,
+            "file doesn't match expected value");
 }
 
-static bool log_to_file_with_severity_test(void) {
-    BEGIN_TEST;
-
+TEST(LogTestCase, LogToFileWithSeverity) {
     for (int i = 0; i < 5; i++) {
         FILE* log_destination = open_tmp_file();
         ASSERT_NE(log_destination, NULL, "open_tmp_file failed");
@@ -73,13 +72,9 @@ static bool log_to_file_with_severity_test(void) {
         close_and_remove_tmp_file(log_destination);
         log_destroy_textfile_writer(log_writer);
     }
-
-    END_TEST;
 }
 
-static bool log_to_file_with_verbosity_test(void) {
-    BEGIN_TEST;
-
+TEST(LogTestCase, LogToFileWithVerbosity) {
     for (int i = 0; i < 5; i++) {
         FILE* log_destination = open_tmp_file();
         ASSERT_NE(log_destination, NULL, "open_tmp_file failed");
@@ -116,13 +111,9 @@ static bool log_to_file_with_verbosity_test(void) {
         close_and_remove_tmp_file(log_destination);
         log_destroy_textfile_writer(log_writer);
     }
-
-    END_TEST;
 }
 
-static bool set_min_level_test(void) {
-    BEGIN_TEST;
-
+TEST(LogTestCase, SetMinLevel) {
     FILE* log_destination = open_tmp_file();
     ASSERT_NE(log_destination, NULL, "open_tmp_file failed");
     log_writer_t* log_writer = log_create_textfile_writer(log_destination);
@@ -141,13 +132,9 @@ static bool set_min_level_test(void) {
     check_file_contents(log_destination, expected);
     close_and_remove_tmp_file(log_destination);
     log_destroy_textfile_writer(log_writer);
-
-    END_TEST;
 }
 
-static bool set_max_verbosity_test(void) {
-    BEGIN_TEST;
-
+TEST(LogTestCase, SetMaxVerbosity) {
     FILE* log_destination = open_tmp_file();
     ASSERT_NE(log_destination, NULL, "open_tmp_file failed");
     log_writer_t* log_writer = log_create_textfile_writer(log_destination);
@@ -166,13 +153,9 @@ static bool set_max_verbosity_test(void) {
     check_file_contents(log_destination, expected);
     close_and_remove_tmp_file(log_destination);
     log_destroy_textfile_writer(log_writer);
-
-    END_TEST;
 }
 
-static bool log_to_file_varying_numbers_of_static_tags_test(void) {
-    BEGIN_TEST;
-
+TEST(LogTestCase, LogToFileVaryingNumbersOfStaticTags) {
     for (int i = 0; i < 6; i++) {
         FILE* log_destination = open_tmp_file();
         ASSERT_NE(log_destination, NULL, "open_tmp_file failed");
@@ -223,13 +206,9 @@ static bool log_to_file_varying_numbers_of_static_tags_test(void) {
         close_and_remove_tmp_file(log_destination);
         log_destroy_textfile_writer(log_writer);
     }
-
-    END_TEST;
 }
 
-static bool log_to_logger_with_severity_test(void) {
-    BEGIN_TEST;
-
+TEST(LogTestCase, LogToLoggerWithSeverity) {
     for (int i = 0; i < 5; i++) {
         log_writer_t* log_writer = log_create_logger_writer();
 
@@ -329,20 +308,9 @@ static bool log_to_logger_with_severity_test(void) {
         }
         EXPECT_EQ(0, *data_ptr, "more tags than expected");
         data_ptr++;
-        EXPECT_STR_EQ(expected_msg, data_ptr,
+        EXPECT_STR_EQ((const char *)expected_msg, data_ptr,
                       "received message doesn't match expected value");
 
         log_destroy_logger_writer(log_writer);
     }
-
-    END_TEST;
 }
-
-BEGIN_TEST_CASE(log_tests)
-RUN_TEST(log_to_file_with_severity_test);
-RUN_TEST(log_to_file_with_verbosity_test);
-RUN_TEST(set_min_level_test);
-RUN_TEST(set_max_verbosity_test);
-RUN_TEST(log_to_file_varying_numbers_of_static_tags_test);
-RUN_TEST(log_to_logger_with_severity_test);
-END_TEST_CASE(log_tests)
