@@ -12,7 +12,8 @@
 
 class ContiguousPooledSystemRamMemoryAllocator : public MemoryAllocator {
 public:
-    ContiguousPooledSystemRamMemoryAllocator(Owner* parent_device, uint64_t size);
+    ContiguousPooledSystemRamMemoryAllocator(Owner* parent_device, const char* allocation_name,
+                                             uint64_t size);
 
     // Default to page alignment.
     zx_status_t Init(uint32_t alignment_log2 = 12);
@@ -26,9 +27,12 @@ public:
         return ZX_OK;
     }
 
+    const zx::vmo& GetPoolVmoForTest() { return contiguous_vmo_; }
+
 private:
     void DumpPoolStats();
     Owner* const parent_device_;
+    const char* const allocation_name_;
     zx::vmo contiguous_vmo_;
     struct Region {
         RegionAllocator::Region::UPtr region;

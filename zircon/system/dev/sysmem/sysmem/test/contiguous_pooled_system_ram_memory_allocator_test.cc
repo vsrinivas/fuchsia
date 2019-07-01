@@ -37,9 +37,14 @@ TEST(ContiguousPooled, Full) {
     FakeOwner owner;
     constexpr uint32_t kVmoSize = 4096;
     constexpr uint32_t kVmoCount = 1024;
-    ContiguousPooledSystemRamMemoryAllocator allocator(&owner, kVmoSize * kVmoCount);
+    const char* kVmoName = "test-pool";
+    ContiguousPooledSystemRamMemoryAllocator allocator(&owner, kVmoName, kVmoSize * kVmoCount);
 
     EXPECT_OK(allocator.Init());
+
+    char name[ZX_MAX_NAME_LEN] = {};
+    EXPECT_OK(allocator.GetPoolVmoForTest().get_property(ZX_PROP_NAME, name, sizeof(name)));
+    EXPECT_EQ(0u, strcmp(kVmoName, name));
 
     std::vector<zx::vmo> vmos;
     for (uint32_t i = 0; i < kVmoCount; ++i) {

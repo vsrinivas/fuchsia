@@ -6,8 +6,9 @@
 
 #include "macros.h"
 
-ContiguousPooledSystemRamMemoryAllocator::ContiguousPooledSystemRamMemoryAllocator(Owner* parent_device, uint64_t size)
-    : parent_device_(parent_device),
+ContiguousPooledSystemRamMemoryAllocator::ContiguousPooledSystemRamMemoryAllocator(
+    Owner* parent_device, const char* allocation_name, uint64_t size)
+    : parent_device_(parent_device), allocation_name_(allocation_name),
       region_allocator_(RegionAllocator::RegionPool::Create(std::numeric_limits<size_t>::max())),
       size_(size) {}
 
@@ -17,6 +18,7 @@ zx_status_t ContiguousPooledSystemRamMemoryAllocator::Init(uint32_t alignment_lo
         DRIVER_ERROR("Could allocate contiguous memory, status %d\n", status);
         return status;
     }
+    contiguous_vmo_.set_property(ZX_PROP_NAME, allocation_name_, strlen(allocation_name_));
 
     zx_paddr_t addrs;
     zx::pmt pmt;
