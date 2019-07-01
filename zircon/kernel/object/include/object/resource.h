@@ -18,7 +18,9 @@
 // Used to provide access to privileged syscalls.
 zx_status_t validate_resource(zx_handle_t handle, uint32_t kind);
 
-// Validates a resource based on type and low/high range;
+// Validates a resource based on type and low/high range.
+zx_status_t validate_ranged_resource(fbl::RefPtr<ResourceDispatcher> resource, uint32_t kind,
+                                     uint64_t base, size_t len);
 zx_status_t validate_ranged_resource(zx_handle_t handle, uint32_t kind, uint64_t base, size_t len);
 
 #if ARCH_X86

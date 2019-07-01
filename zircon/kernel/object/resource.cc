@@ -38,26 +38,10 @@ zx_status_t validate_resource(zx_handle_t handle, uint32_t kind) {
     return ZX_ERR_WRONG_TYPE;
 }
 
-// Check if the resource referenced by |handle| is of kind |kind|, or ZX_RSRC_KIND_ROOT. If
-// |kind| matches the resource's kind, then range validation between |base| and |size| will
-// be made against the resource's backing address space allocation.
-//
-// Possible errors:
-// ++ ZX_ERR_ACCESS_DENIED: |handle| is not a valid handle.
-// ++ ZX_ERR_WRONG_TYPE: |handle| is not a valid Resource handle, or does not match |kind|.
-// ++ ZX_ERR_OUT_OF_RANGE: The range specified by |base| and |Len| is not granted by this
-// resource.
-zx_status_t validate_ranged_resource(zx_handle_t handle,
+zx_status_t validate_ranged_resource(fbl::RefPtr<ResourceDispatcher> resource,
                                      uint32_t kind,
                                      uintptr_t base,
                                      size_t size) {
-    auto up = ProcessDispatcher::GetCurrent();
-    fbl::RefPtr<ResourceDispatcher> resource;
-    auto status = up->GetDispatcher(handle, &resource);
-    if (status != ZX_OK) {
-        return status;
-    }
-
     // Root gets access to everything and has no region to match against
     if (resource->get_kind() == ZX_RSRC_KIND_ROOT) {
         return ZX_OK;
@@ -67,10 +51,10 @@ zx_status_t validate_ranged_resource(zx_handle_t handle,
         return ZX_ERR_WRONG_TYPE;
     }
 
-    // TODO(cja): when more ranged types are added we will need to move this sort of adjustment to
-    // specific validation methods.
     uint64_t rbase = resource->get_base();
     size_t rsize = resource->get_size();
+    // In the specific case of MMIO, everything is rounded to PAGE_SIZE units
+    // because it's the smallest unit we can operate at with the MMU.
     if (resource->get_kind() == ZX_RSRC_KIND_MMIO) {
         const uint64_t aligned_rbase = ROUNDDOWN(rbase, PAGE_SIZE);
         rsize = PAGE_ALIGN((rbase - aligned_rbase) + rsize);
@@ -90,3 +74,26 @@ zx_status_t validate_ranged_resource(zx_handle_t handle,
 
     return ZX_OK;
 }
+
+// Check if the resource referenced by |handle| is of kind |kind|, or ZX_RSRC_KIND_ROOT. If
+// |kind| matches the resource's kind, then range validation between |base| and |size| will
+// be made against the resource's backing address space allocation.
+//
+// Possible errors:
+// ++ ZX_ERR_ACCESS_DENIED: |handle| is not a valid handle.
+// ++ ZX_ERR_WRONG_TYPE: |handle| is not a valid resource handle, or |kind| is invalid for
+//                       the request.
+// ++ ZX_ERR_OUT_OF_RANGE: The range specified by |base| and |Len| is not granted by this
+// resource.
+zx_status_t validate_ranged_resource(zx_handle_t handle, uint32_t kind, uintptr_t base,
+                                     size_t size) {
+    auto up = ProcessDispatcher::GetCurrent();
+    fbl::RefPtr<ResourceDispatcher> resource;
+    auto status = up->GetDispatcher(handle, &resource);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    return validate_ranged_resource(resource, kind, base, size);
+}
+

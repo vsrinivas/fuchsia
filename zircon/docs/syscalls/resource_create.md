@@ -32,7 +32,9 @@ including *base* + *size*. Two special values for *kind* exist:
 **ZX_RSRC_KIND_ROOT** and **ZX_RSRC_KIND_HYPERVISOR**. These resources have no
 range associated with them and are used as a privilege check.
 
-*parent_rsrc* must be a handle to a resource of *kind* **ZX_RSRC_KIND_ROOT**.
+*parent_rsrc* must be a handle to a resource of *kind* **ZX_RSRC_KIND_ROOT**, or
+a resource that matches the requested *kind* and contains [*base*, *base*+size*]
+in its range.
 
 *options* must specify which kind of resource to create and may contain optional
 flags. Valid kinds of resources are **ZX_RSRC_KIND_MMIO**, **ZX_RSRC_KIND_IRQ**,
@@ -72,15 +74,15 @@ to be duplicated), **ZX_RIGHT_INSPECT** (to allow inspection of the object with
 
 ## ERRORS
 
-**ZX_ERR_BAD_HANDLE** the *src_obj* handle is invalid.
+**ZX_ERR_BAD_HANDLE** the *parent_rsrc* handle is invalid.
 
-**ZX_ERR_WRONG_TYPE** the *src_obj* handle is not a resource handle.
+**ZX_ERR_WRONG_TYPE** the *parent_rsrc* handle is not a resource handle.
 
-**ZX_ERR_ACCESS_DENIED** The *src_obj* handle is not a resource of *kind*
-**ZX_RSRC_KIND_ROOT**.
+**ZX_ERR_ACCESS_DENIED** The *parent_rsrc* handle is not a resource of either
+*kind* or **ZX_RSRC_KIND_ROOT**.
 
 **ZX_ERR_INVALID_ARGS** *options* contains an invalid kind or flag combination,
-*name* is an invalid pointer, or the kind specified is one of
+*name* is an invalid pointer, or the *kind* specified is one of
 **ZX_RSRC_KIND_ROOT** or **ZX_RSRC_KIND_HYPERVISOR** but *base* and *size* are
 not 0.
 

@@ -10,6 +10,7 @@
 #include <fbl/ref_ptr.h>
 #include <object/channel_dispatcher.h>
 #include <object/handle.h>
+#include <object/resource.h>
 #include <object/process_dispatcher.h>
 #include <object/resource_dispatcher.h>
 
@@ -24,9 +25,9 @@
 // The range low:high is inclusive on both ends, high must be
 // greater than or equal low.
 //
-// |parent_rsrc| must be a resource of kind ZX_RSRC_KIND_ROOT. |base|
-// and detail an inclusive range from |base| to |base| + |size| for
-// the child resource.
+// |parent_rsrc| must be a resource of the same kind as |kind|, or
+// ZX_RSRC_KIND_ROOT. |base| and |size| represent an inclusive range
+// from |base| to |base| + |size| for the child resource.
 // zx_status_t zx_resource_create
 zx_status_t sys_resource_create(zx_handle_t parent_rsrc,
                                 uint32_t options,
@@ -46,14 +47,25 @@ zx_status_t sys_resource_create(zx_handle_t parent_rsrc,
         return status;
     }
 
-    // Only holders of the root resource are permitted to create resources using this syscall.
-    if (parent->get_kind() != ZX_RSRC_KIND_ROOT) {
-        return ZX_ERR_ACCESS_DENIED;
-    }
-
     uint32_t kind = ZX_RSRC_EXTRACT_KIND(options);
     uint32_t flags = ZX_RSRC_EXTRACT_FLAGS(options);
     if ((kind >= ZX_RSRC_KIND_COUNT) || (flags & ~ZX_RSRC_FLAGS_MASK)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Validate the parent resource the same way we would validate any
+    // resource usage in another syscall.
+    if (validate_ranged_resource(parent, kind, base, size) != ZX_OK) {
+        return ZX_ERR_ACCESS_DENIED;
+    }
+
+    // If the resource is a slice of a larger resource then neither
+    // the new resource nor its parent are permitted to be exclusive
+    // resources. In this case, its |kind| will be something other
+    // than ROOT.
+    if (parent->get_kind() != ZX_RSRC_KIND_ROOT &&
+            (parent->get_flags() & ZX_RSRC_FLAG_EXCLUSIVE ||
+             flags & ZX_RSRC_FLAG_EXCLUSIVE)) {
         return ZX_ERR_INVALID_ARGS;
     }
 
