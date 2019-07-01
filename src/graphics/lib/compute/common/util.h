@@ -25,12 +25,12 @@ extern "C" {
 //
 
 // Return true iff |n| is a power of 2.
-// REQUIRES: |n > 0|.
 bool
 is_pow2_u32(uint32_t n);
 
 // Return |n| rounded-up to the nearest power of 2.
-// REQUIRES: |n > 0 && n <= 0x80000000|.
+// If |n| is zero then return 0.
+// REQUIRES: |n <= 0x80000000|.
 uint32_t
 pow2_ru_u32(uint32_t n);
 

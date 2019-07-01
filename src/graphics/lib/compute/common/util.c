@@ -23,8 +23,7 @@
 bool
 is_pow2_u32(uint32_t n)
 {
-  assert(n > 0);
-  return (n & (n - 1)) == 0;
+  return n && !(n & (n - 1));
 }
 
 //
@@ -34,8 +33,8 @@ is_pow2_u32(uint32_t n)
 uint32_t
 pow2_ru_u32(uint32_t n)
 {
-  assert(n > 0);
   assert(n <= 0x80000000U);
+
   n--;
   n |= n >> 1;
   n |= n >> 2;
@@ -55,6 +54,7 @@ uint32_t
 pow2_rd_u32(uint32_t n)
 {
   assert(n > 0);
+
   return 1u << msb_idx_u32(n);
 }
 
