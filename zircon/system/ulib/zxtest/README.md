@@ -19,6 +19,8 @@ A fatal failure is triggered by macros starting with ``ASSERT_*`` and non fatal 
 
 * Limited set of dependencies.
 * All assertions on main thread.
+* ``ASSERT/EXPECT_STATUS`` custom macro.
+* ``ASSERT/EXPECT_NOT_STATUS`` custom macro.
 * ``ASSERT/EXPECT_OK`` custom macro.
 * ``ASSERT/EXPECT_NOT_OK`` custom macro.
 * ``CURRENT_TEST_HAS_(FATAL_)FAILURES`` custom macro.

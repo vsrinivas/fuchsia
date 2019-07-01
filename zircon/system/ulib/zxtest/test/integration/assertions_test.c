@@ -775,3 +775,67 @@ TEST(ZxTestCAssertionTest, AssertBytesEqVla) {
   ASSERT_BYTES_EQ(a, b, len);
   TEST_CHECKPOINT();
 }
+
+TEST(ZxTestCAssertionsTest, AssertStatusSuccess) {
+  TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "ASSERT/EXPECT_STATUS aborted test on success.");
+  zx_status_t a = ZX_ERR_BAD_STATE;
+  zx_status_t b = ZX_ERR_BAD_STATE;
+
+  // Happy cases.
+  EXPECT_STATUS(a, ZX_ERR_BAD_STATE, "EXPECT_STATUS identity failed.");
+  EXPECT_STATUS(ZX_ERR_BAD_STATE, a, "EXPECT_STATUS identity failed.");
+  ASSERT_STATUS(ZX_OK, ZX_OK, "ASSERT_STATUS identity failed.");
+  EXPECT_STATUS(a, a, "EXPECT_STATUS identity failed.");
+  ASSERT_STATUS(b, b, "ASSERT_STATUS identity failed.");
+  ASSERT_STATUS(a, b, "ASSERT_STATUS identity failed.");
+  // No failures
+  TEST_CHECKPOINT();
+}
+
+TEST(ZxTestCAssertionsTest, AssertStatusFailure) {
+  TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT_STATUS aborted execution.");
+  zx_status_t a = ZX_ERR_INVALID_ARGS;
+  zx_status_t b = ZX_ERR_BAD_STATE;
+
+  EXPECT_STATUS(ZX_OK, ZX_ERR_INVALID_ARGS, "EXPECT_STATUS inequality detection succeeded.");
+  EXPECT_STATUS(a, b, "EXPECT_STATUS inequality detection succeeded.");
+  TEST_CHECKPOINT();
+}
+
+TEST(ZxTestCAssertionsTest, AssertStatusFailureFatal) {
+  TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
+                   "ASSERT_STATUS did not abort test execution.");
+  ASSERT_STATUS(ZX_OK, ZX_ERR_BAD_STATE, "ASSERT_STATUS inequality detection succeeded.");
+  TEST_CHECKPOINT();
+}
+
+TEST(ZxTestCAssertionsTest, AssertNotStatusSuccess) {
+  TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "EXPECT_NOT_STATUS aborted test execution.");
+  zx_status_t a = ZX_ERR_BAD_STATE;
+  zx_status_t b = ZX_ERR_INVALID_ARGS;
+
+  // Happy cases.
+  EXPECT_NOT_STATUS(ZX_OK, ZX_ERR_BAD_STATE, "EXPECT_NOT_STATUS inequality detection succeeded.");
+  EXPECT_NOT_STATUS(a, b, "EXPECT_NOT_STATUS inequality detection succeeded.");
+  TEST_CHECKPOINT();
+}
+
+TEST(ZxTestCAssertionsTest, AssertNotStatusFailure) {
+  TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT_NOT_STATUS aborted test execution.");
+  zx_status_t a = ZX_OK;
+
+  EXPECT_NOT_STATUS(ZX_ERR_BAD_STATE, ZX_ERR_BAD_STATE,
+                    "EXPECT_NOT_STATUS equality detection suceeded.");
+  EXPECT_NOT_STATUS(a, a, "EXPECT_NOT_STATUS equality detection suceeded.");
+  TEST_CHECKPOINT();
+}
+
+TEST(ZxTestCAssertionsTest, AssertNotStatusFailureFatal) {
+  TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
+                   "ASSERT_NOT_STATUS  did not abort test execution.");
+  zx_status_t a = ZX_OK;
+  zx_status_t b = ZX_OK;
+
+  ASSERT_NOT_STATUS(a, b, "ASSERT_NOT_STATUS equality detection succeeded.");
+  TEST_CHECKPOINT();
+}

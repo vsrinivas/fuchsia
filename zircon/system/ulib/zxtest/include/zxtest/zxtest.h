@@ -18,6 +18,8 @@
 //    ASSERT_EQ(a, b, "a + b is %d", a + b);
 //    Where the first argument is a printf format string and must be a string literal.
 //  * Additional QoL macros for commom use case in Fuchsia platform:
+//    ASSERT/EXPECT_STATUS
+//    ASSERT/EXPECT_NOT_STATUS
 //    ASSERT/EXPECT_OK
 //    ASSERT/EXPECT_NOT_OK
 //    ASSERT/EXPECT_NULL
@@ -122,6 +124,22 @@
 #define EXPECT_NOT_NULL(val1, ...)                                                                 \
   _ASSERT_PTR_DELEGATE(_NE, _ZXTEST_NULLPTR, val1, false, __FILE__, __LINE__,                      \
                        "Expected " #val1 " non null pointer.", ##__VA_ARGS__)
+
+#define ASSERT_STATUS(val1, val2, ...)                                                             \
+  _ASSERT_VAR_STATUS(_EQ, val2, val1, true, __FILE__, __LINE__,                                    \
+                     "Expected " #val1 " is " #val2 ".", ##__VA_ARGS__)
+
+#define ASSERT_NOT_STATUS(val1, val2, ...)                                                         \
+  _ASSERT_VAR_STATUS(_NE, val2, val1, true, __FILE__, __LINE__,                                    \
+                     "Expected " #val1 " is " #val2 ".", ##__VA_ARGS__)
+
+#define EXPECT_STATUS(val1, val2, ...)                                                             \
+  _ASSERT_VAR_STATUS(_EQ, val2, val1, false, __FILE__, __LINE__,                                   \
+                     "Expected " #val1 " is " #val2 ".", ##__VA_ARGS__)
+
+#define EXPECT_NOT_STATUS(val1, val2, ...)                                                         \
+  _ASSERT_VAR_STATUS(_NE, val2, val1, false, __FILE__, __LINE__,                                   \
+                     "Expected " #val1 " is " #val2 ".", ##__VA_ARGS__)
 
 #define ASSERT_OK(val1, ...)                                                                       \
   _ASSERT_VAR_STATUS(_EQ, ZX_OK, val1, true, __FILE__, __LINE__, "Expected " #val1 " is ZX_OK.",   \
