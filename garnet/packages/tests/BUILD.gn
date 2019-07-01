@@ -1121,7 +1121,7 @@ group("device_settings") {
 group("terminal") {
   testonly = true
   public_deps = [
-    "//garnet/bin/terminal:terminal_tests",
+    "//garnet/bin/terminal:tests",
   ]
 }
 

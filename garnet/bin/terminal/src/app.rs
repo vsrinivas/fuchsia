@@ -65,3 +65,14 @@ impl App {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[fasync::run_singlethreaded(test)]
+    async fn can_create_app() -> Result<(), Error> {
+        App::new()?;
+        Ok(())
+    }
+}

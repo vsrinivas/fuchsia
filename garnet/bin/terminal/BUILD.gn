@@ -8,9 +8,18 @@ import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":term_model_tests",
+    ":terminal_tests",
+  ]
+}
+
 rustc_binary("bin") {
   name = "terminal"
   edition = "2018"
+  with_unit_tests = true
 
   with_lto = "fat"
 
@@ -60,6 +69,18 @@ config_data("tiles_with_terminal_config") {
 }
 
 test_package("terminal_tests") {
+  deps = [
+    ":bin_test",
+  ]
+  tests = [
+    {
+      name = "terminal_bin_test"
+      environments = basic_envs
+    },
+  ]
+}
+
+test_package("term_model_tests") {
   deps = [
     "third_party/term-model:term-model_test",
   ]

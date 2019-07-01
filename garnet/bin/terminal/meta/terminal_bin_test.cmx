@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/terminal_bin_test"
+    }
+}
