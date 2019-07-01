@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/gpio.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
+#include <fbl/algorithm.h>
 
 #include <soc/aml-s905x/s905x-gpio.h>
 #include <soc/aml-s912/s912-gpio.h>
@@ -93,6 +95,8 @@ static const gpio_pin_t gpio_pins[] = {
     { GPIO_ETH_MAC_INTR },
     // For display.
     { GPIO_DISPLAY_HPD },
+    // For gpio-light
+    { GPIO_SYS_LED, },
 };
 
 static const pbus_metadata_t gpio_metadata[] = {
@@ -111,11 +115,11 @@ zx_status_t Vim::GpioInit() {
     gpio_dev.pid = PDEV_PID_AMLOGIC_S912;
     gpio_dev.did = PDEV_DID_AMLOGIC_GPIO;
     gpio_dev.mmio_list = gpio_mmios;
-    gpio_dev.mmio_count = countof(gpio_mmios);
+    gpio_dev.mmio_count = fbl::count_of(gpio_mmios);
     gpio_dev.irq_list = gpio_irqs;
-    gpio_dev.irq_count = countof(gpio_irqs);
+    gpio_dev.irq_count = fbl::count_of(gpio_irqs);
     gpio_dev.metadata_list = gpio_metadata;
-    gpio_dev.metadata_count = countof(gpio_metadata);
+    gpio_dev.metadata_count = fbl::count_of(gpio_metadata);
 
     zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
     if (status != ZX_OK) {
@@ -128,39 +132,6 @@ zx_status_t Vim::GpioInit() {
         zxlogf(ERROR, "%s: device_get_protocol failed\n", __func__);
         return ZX_ERR_INTERNAL;
     }
-
-#if USE_GPIO_TEST
-    const pbus_gpio_t gpio_test_gpios[] = {
-        {
-            // SYS_LED
-            .gpio = S912_GPIOAO(9),
-        },
-        {
-            // GPIO PIN
-            .gpio = S912_GPIOAO(2),
-        },
-    };
-
-    pbus_dev_t gpio_test_dev = {};
-    gpio_test_dev.name = "vim-gpio-test";
-    gpio_test_dev.vid = PDEV_VID_GENERIC;
-    gpio_test_dev.pid = PDEV_PID_GENERIC;
-    gpio_test_dev.did = PDEV_DID_GPIO_TEST;
-    gpio_test_dev.gpio_list = gpio_test_gpios;
-    gpio_test_dev.gpio_count = countof(gpio_test_gpios);
-
-    status = pbus_.DeviceAdd(&gpio_test_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "GpioInit could not add gpio_test_dev: %d\n", status);
-        return status;
-    }
-#else
-    const pbus_gpio_t light_gpios[] = {
-        {
-            // SYS_LED
-            .gpio = S912_GPIOAO(9),
-        },
-    };
 
     using light_name = char[ZX_MAX_NAME_LEN];
     static const light_name light_names[] = {
@@ -175,22 +146,35 @@ zx_status_t Vim::GpioInit() {
         },
     };
 
+    const zx_bind_inst_t root_match[] = {
+        BI_MATCH(),
+    };
+    const zx_bind_inst_t gpio_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+        BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SYS_LED),
+    };
+    const device_component_part_t gpio_component[] = {
+        { fbl::count_of(root_match), root_match },
+        { fbl::count_of(gpio_match), gpio_match },
+    };
+    const device_component_t components[] = {
+        { fbl::count_of(gpio_component), gpio_component },
+    };
+
     pbus_dev_t light_dev = {};
     light_dev.name = "gpio-light";
     light_dev.vid = PDEV_VID_GENERIC;
     light_dev.pid = PDEV_PID_GENERIC;
     light_dev.did = PDEV_DID_GPIO_LIGHT;
-    light_dev.gpio_list = light_gpios;
-    light_dev.gpio_count = countof(light_gpios);
     light_dev.metadata_list = light_metadata;
-    light_dev.metadata_count = countof(light_metadata);
+    light_dev.metadata_count = fbl::count_of(light_metadata);
 
-    status = pbus_.DeviceAdd(&light_dev);
+    status = pbus_.CompositeDeviceAdd(&light_dev, components, fbl::count_of(components),
+                                      UINT32_MAX);
     if (status != ZX_OK) {
         zxlogf(ERROR, "GpioInit could not add gpio_light_dev: %d\n", status);
         return status;
     }
-#endif
 
     return ZX_OK;
 }

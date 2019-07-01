@@ -18,7 +18,7 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/protocol/platform/device.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 
 #include <zircon/process.h>
@@ -131,16 +131,18 @@ zx_status_t GpioLight::Create(void* ctx, zx_device_t* parent) {
 }
 
 zx_status_t GpioLight::Init() {
-    ddk::PDevProtocolClient pdev(parent());
-    if (!pdev.is_valid()) {
+    ddk::CompositeProtocolClient composite(parent_);
+    if (!composite.is_valid()) {
+        zxlogf(ERROR, "GpioLight: Could not get composite protocol\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    pdev_device_info_t  info;
-    if (pdev.GetDeviceInfo(&info) != ZX_OK) {
-        return ZX_ERR_NOT_SUPPORTED;
+    auto component_count = composite.GetComponentCount();
+    if (component_count <= 0) {
+        return ZX_ERR_INTERNAL;
     }
-    gpio_count_ = info.gpio_count;
+    // component 0 is platform device, only used for passing metadata.
+    gpio_count_ = component_count - 1;
 
     size_t metadata_size;
     size_t expected = gpio_count_ * kNameLength;
@@ -166,17 +168,23 @@ zx_status_t GpioLight::Init() {
         }
     }
 
+    zx_device_t* components[component_count];
+    size_t actual;
+    composite.GetComponents(components, component_count, &actual);
+    if (actual != component_count) {
+        return ZX_ERR_INTERNAL;
+    }
+
     fbl::AllocChecker ac;
-    auto* gpios = new (&ac) ddk::GpioProtocolClient[info.gpio_count];
+    auto* gpios = new (&ac) ddk::GpioProtocolClient[gpio_count_];
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-    gpios_.reset(gpios, info.gpio_count);
+    gpios_.reset(gpios, gpio_count_);
 
-    for (uint32_t i = 0; i < info.gpio_count; i++) {
+    for (uint32_t i = 0; i < gpio_count_; i++) {
         auto* gpio = &gpios_[i];
-        size_t actual;
-        auto status = pdev.GetProtocol(ZX_PROTOCOL_GPIO, i, gpio, sizeof(*gpio), &actual);
+        auto status = device_get_protocol(components[i + 1], ZX_PROTOCOL_GPIO, gpio);
         if (status != ZX_OK) {
             return status;
         }
@@ -200,7 +208,7 @@ static constexpr zx_driver_ops_t driver_ops = [](){
 } // namespace gpio_light
 
 ZIRCON_DRIVER_BEGIN(gpio_light, gpio_light::driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_GPIO_LIGHT),

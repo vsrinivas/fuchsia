@@ -100,9 +100,6 @@ TEST_F(DeviceEnumerationTest, Vim2Test) {
         "sys/platform/vim",
         "sys/platform/00:00:1b/sysmem",
         "sys/platform/05:02:1/aml-gxl-gpio",
-#if USE_GPIO_TEST
-        "sys/platform/00:00:8/gpio-test",
-#endif
         "sys/platform/05:00:2/aml-i2c",
         "sys/platform/05:02:4/clocks",
         "sys/platform/05:00:10/aml-canvas",
@@ -117,7 +114,8 @@ TEST_F(DeviceEnumerationTest, Vim2Test) {
         "dwmac/Designware MAC/ethernet",
         "display/vim2-display/display-controller",
         "vim-thermal/vim-thermal",
-        "wifi",
+        "gpio-light/gpio-light",
+        "wifi/broadcom-wlanphy",
     };
 
     ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
