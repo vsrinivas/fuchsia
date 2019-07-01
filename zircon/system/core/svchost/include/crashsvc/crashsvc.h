@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <threads.h>
-#include <zircon/types.h>
+#ifndef ZIRCON_SYSTEM_CORE_SVCHOST_INCLUDE_CRASHSVC_CRASHSVC_H_
+#define ZIRCON_SYSTEM_CORE_SVCHOST_INCLUDE_CRASHSVC_CRASHSVC_H_
 
 #include <lib/zx/job.h>
+#include <threads.h>
+#include <zircon/types.h>
 
 // Initialize the crash service, this supersedes the standalone service with
 // the same name that lived in zircon/system/core/crashsvc/crashsvc.cpp
@@ -28,3 +28,5 @@
 // On success, returns ZX_OK and fills |thread| with the crash service thread.
 // The caller is responsible for either detaching or joining the thread.
 zx_status_t start_crashsvc(zx::job root_job, zx_handle_t analyzer_svc, thrd_t* thread);
+
+#endif  // ZIRCON_SYSTEM_CORE_SVCHOST_INCLUDE_CRASHSVC_CRASHSVC_H_
