@@ -7,6 +7,7 @@
 #include <zircon/system/public/zircon/types.h>
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <vector>
@@ -126,28 +127,24 @@ void SyscallUse::SyscallDecodingError(const SyscallDecoderError& error, SyscallD
   syscall->Destroy();
 }
 
-bool SyscallDecoder::LoadArgument(int argument_index, size_t size) {
-  if (decoded_arguments_[argument_index].loading()) {
-    return true;
-  }
-  decoded_arguments_[argument_index].set_loading();
-  if (Value(argument_index) == 0) {
+void SyscallDecoder::LoadMemory(uint64_t address, size_t size, std::vector<uint8_t>* destination) {
+  if (address == 0) {
     // Null pointer => don't load anything.
-    return true;
+    return;
   }
   ++pending_request_count_;
   thread_->GetProcess()->ReadMemory(
-      Value(argument_index), size,
-      [this, argument_index, size](const zxdb::Err& err, zxdb::MemoryDump dump) {
+      address, size,
+      [this, address, size, destination](const zxdb::Err& err, zxdb::MemoryDump dump) {
         --pending_request_count_;
         if (!err.ok()) {
           Error(SyscallDecoderError::Type::kCantReadMemory)
-              << "Can't load memory for argument " << argument_index << ": " << err.msg();
+              << "Can't load memory at " << address << ": " << err.msg();
         } else if ((dump.size() != size) || !dump.AllValid()) {
           Error(SyscallDecoderError::Type::kCantReadMemory)
-              << "Can't load memory for argument " << argument_index << ": not enough data";
+              << "Can't load memory at " << address << ": not enough data";
         } else {
-          MemoryDumpToVector(dump, &decoded_arguments_[argument_index].loaded_values());
+          MemoryDumpToVector(dump, destination);
         }
         if (input_arguments_loaded_) {
           LoadOutputs();
@@ -155,7 +152,14 @@ bool SyscallDecoder::LoadArgument(int argument_index, size_t size) {
           LoadInputs();
         }
       });
-  return true;
+}
+
+void SyscallDecoder::LoadArgument(int argument_index, size_t size) {
+  if (decoded_arguments_[argument_index].loading()) {
+    return;
+  }
+  decoded_arguments_[argument_index].set_loading();
+  LoadMemory(Value(argument_index), size, &decoded_arguments_[argument_index].loaded_values());
 }
 
 void SyscallDecoder::Decode() {
@@ -342,7 +346,7 @@ void SyscallDisplay::SyscallDecoded(SyscallDecoder* syscall) {
   os_ << ")\n";
   // Displays the outline input arguments.
   for (const auto& input : syscall->syscall()->inputs()) {
-    input->DisplayOutline(dispatcher_, syscall, /*tabs=*/1, /*read=*/false, os_);
+    input->DisplayOutline(dispatcher_, syscall, /*tabs=*/1, os_);
   }
   // Displays the returned value.
   os_ << "  -> ";
@@ -367,7 +371,7 @@ void SyscallDisplay::SyscallDecoded(SyscallDecoder* syscall) {
   // Displays the outline output arguments.
   for (const auto& output : syscall->syscall()->outputs()) {
     if (output->error_code() == static_cast<zx_status_t>(syscall->syscall_return_value())) {
-      output->DisplayOutline(dispatcher_, syscall, /*tabs=*/2, /*read=*/true, os_);
+      output->DisplayOutline(dispatcher_, syscall, /*tabs=*/2, os_);
     }
   }
   // Now our job is done, we can destroy the object.

@@ -49,6 +49,13 @@ struct Colors {
 extern const Colors WithoutColors;
 extern const Colors WithColors;
 
+enum class SyscallFidlType {
+  kOutputMessage,  // A message (request or response which is written).
+  kInputMessage,   // A message (request or response which is read).
+  kOutputRequest,  // A request which is written (case of zx_channel_call).
+  kInputResponse   // A response which is read (case of zx_channel_call).
+};
+
 // Class which is able to decode all the messages received/sent.
 class MessageDecoderDispatcher {
  public:
@@ -72,7 +79,7 @@ class MessageDecoderDispatcher {
 
   bool DecodeMessage(uint64_t process_koid, zx_handle_t handle, const uint8_t* bytes,
                      uint32_t num_bytes, const zx_handle_t* handles, uint32_t num_handles,
-                     bool read, std::ostream& os, int tabs = 0);
+                     SyscallFidlType type, std::ostream& os, int tabs = 0);
 
  private:
   LibraryLoader* const loader_;

@@ -30,11 +30,7 @@ class SyscallDecoderDispatcher;
 class SyscallDisplayDispatcher;
 
 // Types for syscall arguments.
-enum class SyscallType {
-  kUint8,
-  kUint32,
-  kHandle,
-};
+enum class SyscallType { kUint8, kUint32, kHandle, kTime, kStruct };
 
 class SyscallDecoderError {
  public:
@@ -123,8 +119,11 @@ class SyscallDecoder {
 
   std::stringstream& Error(SyscallDecoderError::Type type) { return error_.Set(type); }
 
+  // Load the value for a buffer or a struct (field or argument).
+  void LoadMemory(uint64_t address, size_t size, std::vector<uint8_t>* destination);
+
   // Loads the value for a buffer, a struct or an output argument.
-  bool LoadArgument(int argument_index, size_t size);
+  void LoadArgument(int argument_index, size_t size);
 
   // True if the argument is loaded correctly.
   bool Loaded(int argument_index, size_t size) const {

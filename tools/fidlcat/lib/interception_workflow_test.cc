@@ -59,6 +59,22 @@ class SystemCallTest {
     return value;
   }
 
+  static std::unique_ptr<SystemCallTest> ZxChannelCall(int64_t result, std::string_view result_name,
+                                                       zx_handle_t handle, uint32_t options,
+                                                       zx_time_t deadline,
+                                                       const zx_channel_call_args_t* args,
+                                                       uint32_t* actual_bytes,
+                                                       uint32_t* actual_handles) {
+    auto value = std::make_unique<SystemCallTest>("zx_channel_call", result, result_name);
+    value->inputs_.push_back(handle);
+    value->inputs_.push_back(options);
+    value->inputs_.push_back(deadline);
+    value->inputs_.push_back(reinterpret_cast<uint64_t>(args));
+    value->inputs_.push_back(reinterpret_cast<uint64_t>(actual_bytes));
+    value->inputs_.push_back(reinterpret_cast<uint64_t>(actual_handles));
+    return value;
+  }
+
   SystemCallTest(const char* name, int64_t result, std::string_view result_name)
       : name_(name), result_(result), result_name_(result_name) {}
 
@@ -128,11 +144,11 @@ class DataForSyscallTest {
   void set_check_bytes() { check_bytes_ = true; }
   void set_check_handles() { check_handles_ = true; }
 
-  const uint8_t* bytes() const { return reinterpret_cast<const uint8_t*>(&header_); }
+  uint8_t* bytes() { return reinterpret_cast<uint8_t*>(&header_); }
 
   size_t num_bytes() const { return sizeof(header_); }
 
-  const zx_handle_t* handles() const { return handles_; }
+  zx_handle_t* handles() { return handles_; }
 
   size_t num_handles() const { return sizeof(handles_) / sizeof(handles_[0]); }
 
@@ -654,10 +670,12 @@ WRITE_DISPLAY_TEST(ZxChannelWritePeerClosed, ZX_ERR_PEER_CLOSED,
                    "  -> \x1B[31mZX_ERR_PEER_CLOSED\x1B[0m\n");
 
 #define READ_DISPLAY_TEST_CONTENT(errno, check_bytes, check_handles, expected)                   \
-  if (check_bytes)                                                                               \
+  if (check_bytes) {                                                                             \
     data().set_check_bytes();                                                                    \
-  if (check_handles)                                                                             \
+  }                                                                                              \
+  if (check_handles) {                                                                           \
     data().set_check_handles();                                                                  \
+  }                                                                                              \
   uint32_t actual_bytes = data().num_bytes();                                                    \
   uint32_t actual_handles = data().num_handles();                                                \
   PerformDisplayTest(                                                                            \
@@ -725,5 +743,50 @@ READ_DISPLAY_TEST(ZxChannelReadNoHandles, ZX_OK, true, false,
                   "  -> \x1B[32mZX_OK\x1B[0m\n"
                   "    \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=0 "
                   "ordinal=8639255294892834816\n");
+
+#define CALL_TEST_CONTENT(errno, check_bytes, check_handles, expected)                             \
+  if (check_bytes) {                                                                               \
+    data().set_check_bytes();                                                                      \
+  }                                                                                                \
+  if (check_handles) {                                                                             \
+    data().set_check_handles();                                                                    \
+  }                                                                                                \
+  zx_channel_call_args_t args;                                                                     \
+  args.wr_bytes = data().bytes();                                                                  \
+  args.wr_handles = data().handles();                                                              \
+  args.rd_bytes = data().bytes();                                                                  \
+  args.rd_handles = data().handles();                                                              \
+  args.wr_num_bytes = data().num_bytes();                                                          \
+  args.wr_num_handles = data().num_handles();                                                      \
+  args.rd_num_bytes = 100;                                                                         \
+  args.rd_num_handles = 64;                                                                        \
+  uint32_t actual_bytes = data().num_bytes();                                                      \
+  uint32_t actual_handles = data().num_handles();                                                  \
+  PerformDisplayTest(SystemCallTest::ZxChannelCall(errno, #errno, 0xcefa1db0, 0, ZX_TIME_INFINITE, \
+                                                   &args, check_bytes ? &actual_bytes : nullptr,   \
+                                                   check_handles ? &actual_handles : nullptr),     \
+                     expected);
+
+#define CALL_TEST(name, errno, check_bytes, check_handles, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                        \
+    CALL_TEST_CONTENT(errno, check_bytes, check_handles, expected);  \
+  }                                                                  \
+  TEST_F(InterceptionWorkflowTestArm, name) {                        \
+    CALL_TEST_CONTENT(errno, check_bytes, check_handles, expected);  \
+  }
+
+CALL_TEST(ZxChannelCall, ZX_OK, true, true,
+          "\n"
+          "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_call("
+          "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
+          "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
+          "deadline:\x1B[32mtime\x1B[0m: \x1B[34mZX_TIME_INFINITE\x1B[0m, "
+          "rd_num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
+          "rd_num_handles:\x1B[32muint32\x1B[0m: \x1B[34m64\x1B[0m)\n"
+          "  \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=2 "
+          "ordinal=8639255294892834816\n"
+          "  -> \x1B[32mZX_OK\x1B[0m\n"
+          "    \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=2 "
+          "ordinal=8639255294892834816\n");
 
 }  // namespace fidlcat

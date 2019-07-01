@@ -27,7 +27,7 @@ std::string DocumentToString(rapidjson::Document& document) {
 bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t handle,
                                              const uint8_t* bytes, uint32_t num_bytes,
                                              const zx_handle_t* handles, uint32_t num_handles,
-                                             bool read, std::ostream& os, int tabs) {
+                                             SyscallFidlType type, std::ostream& os, int tabs) {
   if (loader_ == nullptr) {
     return false;
   }
@@ -69,19 +69,39 @@ bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t 
     if (IsLaunchedProcess(process_koid) || (matched_request != matched_response)) {
       // We launched the process or exactly one of request and response are
       // valid => we can determine the direction.
-      if (read) {
-        handle_directions_[std::make_tuple(handle, process_koid)] =
-            (method->request() != nullptr) ? Direction::kServer : Direction::kClient;
-      } else {
-        handle_directions_[std::make_tuple(handle, process_koid)] =
-            (method->request() != nullptr) ? Direction::kClient : Direction::kServer;
+      switch (type) {
+        case SyscallFidlType::kOutputMessage:
+          handle_directions_[std::make_tuple(handle, process_koid)] =
+              (method->request() != nullptr) ? Direction::kClient : Direction::kServer;
+          break;
+        case SyscallFidlType::kInputMessage:
+          handle_directions_[std::make_tuple(handle, process_koid)] =
+              (method->request() != nullptr) ? Direction::kServer : Direction::kClient;
+          break;
+        case SyscallFidlType::kOutputRequest:
+        case SyscallFidlType::kInputResponse:
+          handle_directions_[std::make_tuple(handle, process_koid)] = Direction::kClient;
       }
       direction = handle_directions_[std::make_tuple(handle, process_koid)];
     }
   }
   bool is_request = false;
-  if (read == (direction == Direction::kServer)) {
-    is_request = true;
+  switch (type) {
+    case SyscallFidlType::kOutputMessage:
+      if (direction == Direction::kClient) {
+        is_request = true;
+      }
+      break;
+    case SyscallFidlType::kInputMessage:
+      if (direction == Direction::kServer) {
+        is_request = true;
+      }
+      break;
+    case SyscallFidlType::kOutputRequest:
+      is_request = true;
+      break;
+    case SyscallFidlType::kInputResponse:
+      break;
   }
   if (direction != Direction::kUnknown) {
     if ((is_request && !matched_request) || (!is_request && !matched_response)) {

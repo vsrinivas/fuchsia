@@ -41,7 +41,6 @@ class MessageDecoderTest : public ::testing::Test {
   std::unique_ptr<MessageDecoderDispatcher> decoder_;
   DisplayOptions display_options_;
   uint64_t process_koid_ = 0x1234;
-  bool read_ = true;
   std::stringstream result_;
 };
 
@@ -53,7 +52,8 @@ class MessageDecoderTest : public ::testing::Test {
     InterceptRequest<_interface>(                                                                  \
         message, [&](fidl::InterfacePtr<_interface>& ptr) { ptr->_iface(__VA_ARGS__); });          \
     decoder_->DecodeMessage(process_koid_, handle, message.bytes().data(), message.bytes().size(), \
-                            message.handles().data(), message.handles().size(), read_, result_);   \
+                            message.handles().data(), message.handles().size(),                    \
+                            SyscallFidlType::kOutputMessage, result_);                             \
     ASSERT_EQ(result_.str(), _expected)                                                            \
         << "expected = " << _expected << " actual = " << result_.str();                            \
   } while (0)
