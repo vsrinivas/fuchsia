@@ -159,7 +159,7 @@ class ScenicPixelTest : public sys::testing::TestWithEnvironment {
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
 };
 
-TEST_F(ScenicPixelTest, SolidColor) {
+TEST_F(ScenicPixelTest, DISABLED_SolidColor) {
   scenic::BackgroundView view(CreatePresentationContext());
   RunUntilPresent(&view);
 
@@ -240,7 +240,7 @@ TEST_F(ScenicPixelTest, NV12Texture) {
   EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
 }
 
-TEST_F(ScenicPixelTest, ViewCoordinates) {
+TEST_F(ScenicPixelTest, DISABLED_ViewCoordinates) {
   // Synchronously get display dimensions
   float display_width;
   float display_height;
@@ -286,7 +286,7 @@ TEST_F(ScenicPixelTest, ViewCoordinates) {
 // |      BLUE      |     MAGENTA    |
 // |________________|________________|
 //
-TEST_F(ScenicPixelTest, GlobalCoordinates) {
+TEST_F(ScenicPixelTest, DISABLED_GlobalCoordinates) {
   // Synchronously get display dimensions
   float display_width;
   float display_height;
