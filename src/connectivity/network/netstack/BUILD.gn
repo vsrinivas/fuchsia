@@ -124,6 +124,7 @@ go_library("netstack_lib") {
     "//zircon/public/fidl/fuchsia-inspect($go_toolchain)",
     "//zircon/public/fidl/fuchsia-net($go_toolchain)",
     "//zircon/public/fidl/fuchsia-net-stack($go_toolchain)",
+    "//zircon/public/fidl/fuchsia-posix-socket($go_toolchain)",
   ]
 }
 

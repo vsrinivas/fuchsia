@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"syscall/zx"
 	"syscall/zx/fidl"
@@ -20,7 +21,9 @@ import (
 	"netstack/fidlconv"
 	"syslog"
 
+	"fidl/fuchsia/io"
 	"fidl/fuchsia/net"
+	"fidl/fuchsia/posix/socket"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/header"
@@ -42,6 +45,8 @@ import "C"
 
 const localSignalClosing = zx.SignalUser5
 
+var _ net.SocketControl = (*iostate)(nil)
+
 type iostate struct {
 	wq *waiter.Queue
 	ep tcpip.Endpoint
@@ -52,6 +57,9 @@ type iostate struct {
 		sync.Mutex
 		sockOptTimestamp bool
 	}
+
+	// The number of live `socketImpl`s that reference this iostate.
+	clones int64
 
 	netProto   tcpip.NetworkProtocolNumber   // IPv4 or IPv6
 	transProto tcpip.TransportProtocolNumber // TCP or UDP
@@ -487,7 +495,7 @@ func (ios *iostate) loopControl() error {
 	}
 }
 
-func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, isAccept bool) zx.Socket {
+func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, isAccept bool) (*iostate, zx.Socket) {
 	var t uint32 = zx.SocketDatagram
 	if transProto == tcp.ProtocolNumber {
 		t = zx.SocketStream
@@ -556,7 +564,7 @@ func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto t
 
 	syslog.VLogTf(syslog.DebugVerbosity, "socket", "%p", ios)
 
-	return peerS
+	return ios, peerS
 }
 
 func (ios *iostate) buildIfInfos() *C.netc_get_if_info_t {
@@ -615,8 +623,6 @@ var (
 // We remember the interface list from the last time ioctlNetcGetNumIfs was called. This avoids
 // a race condition if the interface list changes between calls to ioctlNetcGetIfInfoAt.
 var lastIfInfo *C.netc_get_if_info_t
-
-var _ net.SocketControl = (*iostate)(nil)
 
 func tcpipErrorToCode(err *tcpip.Error) int16 {
 	if err != tcpip.ErrConnectStarted {
@@ -707,6 +713,112 @@ func tcpipErrorToCode(err *tcpip.Error) int16 {
 	}
 }
 
+var _ socket.Control = (*socketImpl)(nil)
+
+type socketImpl struct {
+	*iostate
+
+	peer           zx.Socket
+	controlService *socket.ControlService
+	bindingKey     fidl.BindingKey
+}
+
+func (s *socketImpl) Clone(flags uint32, object io.NodeInterfaceRequest) error {
+	clones := atomic.AddInt64(&s.iostate.clones, 1)
+	{
+		sCopy := *s
+		s := &sCopy
+		bindingKey, err := s.controlService.Add(s, object.Channel, func(error) { s.close() })
+		sCopy.bindingKey = bindingKey
+
+		syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b err=%v", s.iostate, clones, flags, err)
+
+		return err
+	}
+}
+
+func (s *socketImpl) close() {
+	clones := atomic.AddInt64(&s.iostate.clones, -1)
+
+	if clones == -1 {
+		s.iostate.close()
+	}
+
+	removed := s.controlService.Remove(s.bindingKey)
+
+	syslog.VLogTf(syslog.DebugVerbosity, "close", "%p: clones=%d removed=%t", s.iostate, clones, removed)
+}
+
+func (s *socketImpl) Close() (int32, error) {
+	s.close()
+	return int32(zx.ErrOk), nil
+}
+
+func (s *socketImpl) Describe() (io.NodeInfo, error) {
+	var info io.NodeInfo
+	h, err := s.peer.Handle().Duplicate(zx.RightSameRights)
+	syslog.VLogTf(syslog.DebugVerbosity, "Describe", "%p: err=%v", s.iostate, err)
+	if err != nil {
+		return info, err
+	}
+	info.SetSocket(io.Socket{Socket: zx.Socket(h)})
+	return info, nil
+}
+
+func (s *socketImpl) Sync() (int32, error) {
+	syslog.VLogTf(syslog.DebugVerbosity, "Sync", "%p", s.iostate)
+
+	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: "fuchsia.posix.socket.Control"}
+}
+func (s *socketImpl) GetAttr() (int32, io.NodeAttributes, error) {
+	syslog.VLogTf(syslog.DebugVerbosity, "GetAttr", "%p", s.iostate)
+
+	return 0, io.NodeAttributes{}, &zx.Error{Status: zx.ErrNotSupported, Text: "fuchsia.posix.socket.Control"}
+}
+func (s *socketImpl) SetAttr(flags uint32, attributes io.NodeAttributes) (int32, error) {
+	syslog.VLogTf(syslog.DebugVerbosity, "SetAttr", "%p", s.iostate)
+
+	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: "fuchsia.posix.socket.Control"}
+}
+func (s *socketImpl) Ioctl(opcode uint32, maxOut uint64, handles []zx.Handle, in []uint8) (int32, []zx.Handle, []uint8, error) {
+	syslog.VLogTf(syslog.DebugVerbosity, "Ioctl", "%p", s.iostate)
+
+	return 0, nil, nil, &zx.Error{Status: zx.ErrNotSupported, Text: "fuchsia.posix.socket.Control"}
+}
+
+func (s *socketImpl) IoctlPosix(req int16, in []uint8) (int16, []uint8, error) {
+	syslog.VLogTf(syslog.DebugVerbosity, "IoctlPosix", "%p", s.iostate)
+
+	return s.iostate.Ioctl(req, in)
+}
+
+func (s *socketImpl) Accept(flags int16) (int16, socket.ControlInterface, error) {
+	code, peer, ios, err := s.iostate.accept(flags)
+	if err != nil {
+		return 0, socket.ControlInterface{}, err
+	}
+	if code != 0 {
+		return code, socket.ControlInterface{}, nil
+	}
+	{
+		h0, h1, err := zx.NewChannel(0)
+		if err != nil {
+			return 0, socket.ControlInterface{}, err
+		}
+		s := &socketImpl{
+			iostate:        ios,
+			peer:           peer,
+			controlService: s.controlService,
+		}
+		bindingKey, err := s.controlService.Add(s, h0, func(error) { s.close() })
+		if err != nil {
+			return 0, socket.ControlInterface{}, err
+		}
+		s.bindingKey = bindingKey
+		return 0, socket.ControlInterface{Channel: h1}, nil
+	}
+}
+
 func (ios *iostate) Connect(sockaddr []uint8) (int16, error) {
 	addr, err := decodeAddr(sockaddr)
 	if err != nil {
@@ -767,6 +879,16 @@ func (ios *iostate) Listen(backlog int16) (int16, error) {
 }
 
 func (ios *iostate) Accept(flags int16) (int16, error) {
+	code, socket, _, err := ios.accept(flags)
+	if code == 0 && err == nil {
+		if err := ios.dataHandle.Share(zx.Handle(socket)); err != nil {
+			panic(err)
+		}
+	}
+	return code, err
+}
+
+func (ios *iostate) accept(flags int16) (int16, zx.Socket, *iostate, error) {
 	ep, wq, err := ios.ep.Accept()
 	// NB: we need to do this before checking the error, or the incoming signal
 	// will never be cleared.
@@ -781,10 +903,7 @@ func (ios *iostate) Accept(flags int16) (int16, error) {
 	}
 	ios.incomingAssertedMu.Unlock()
 	if err != nil {
-		return tcpipErrorToCode(err), nil
-	}
-	if err := ios.dataHandle.Share(zx.Handle(newIostate(ios.ns, ios.netProto, ios.transProto, wq, ep, true))); err != nil {
-		panic(err)
+		return tcpipErrorToCode(err), zx.Socket(zx.HandleInvalid), nil, nil
 	}
 
 	localAddr, err := ep.GetLocalAddress()
@@ -797,7 +916,9 @@ func (ios *iostate) Accept(flags int16) (int16, error) {
 	}
 	syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: local=%+v, remote=%+v", ios, localAddr, remoteAddr)
 
-	return 0, nil
+	ios, socket := newIostate(ios.ns, ios.netProto, ios.transProto, wq, ep, true)
+
+	return 0, socket, ios, nil
 }
 
 func (ios *iostate) GetSockOpt(level, optName int16) (int16, []uint8, error) {
@@ -905,27 +1026,33 @@ func decodeAddr(addr []uint8) (tcpip.FullAddress, error) {
 }
 
 func (ios *iostate) Close() (int16, error) {
+	ios.close()
+	return 0, nil
+}
+
+func (ios *iostate) close() {
 	select {
 	case <-ios.closing:
 		// Don't double close the channel.
 	default:
+		close(ios.closing)
+
 		// Signal that we're about to close. This tells the various message loops to finish
 		// processing, and let us know when they're done.
 		if err := ios.dataHandle.Handle().Signal(0, localSignalClosing); err != nil {
 			panic(err)
 		}
 
-		close(ios.closing)
-
-		if ios.loopWriteDone != nil {
-			<-ios.loopWriteDone
-		}
-
-		ios.ep.Close()
+		// This has to happen after loopWrite exits because ios.ep is used there.
+		defer ios.ep.Close()
 
 		// NB: we can't wait for loopRead to finish here because the dataHandle
 		// may be full, and loopRead will never exit.
 	}
 
-	return 0, nil
+	if ch := ios.loopWriteDone; ch != nil {
+		<-ch
+	}
+
+	syslog.VLogTf(syslog.DebugVerbosity, "close", "%p", ios)
 }

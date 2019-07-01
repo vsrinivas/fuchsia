@@ -25,6 +25,7 @@ import (
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
+	"fidl/fuchsia/posix/socket"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/arp"
@@ -173,11 +174,19 @@ func Main() {
 		return err
 	})
 
-	var socketProvider net.SocketProviderService
+	netSocketProvider := &socketProviderImpl{ns: ns}
+	var netSocketProviderService net.SocketProviderService
 	ctx.OutgoingService.AddService(net.SocketProviderName, func(c zx.Channel) error {
-		_, err := socketProvider.Add(&socketProviderImpl{ns: ns}, c, nil)
+		_, err := netSocketProviderService.Add(netSocketProvider, c, nil)
 		return err
 	})
+	posixSocketProvider := &providerImpl{socketProviderImpl: netSocketProvider}
+	var posixSocketProviderService socket.ProviderService
+	ctx.OutgoingService.AddService(socket.ProviderName, func(c zx.Channel) error {
+		_, err := posixSocketProviderService.Add(posixSocketProvider, c, nil)
+		return err
+	})
+
 	if err := connectivity.AddOutgoingService(ctx); err != nil {
 		syslog.Fatalf("%v", err)
 	}
