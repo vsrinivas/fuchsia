@@ -21,23 +21,3 @@ test("hid") {
     "$zx/system/ulib/zxtest",
   ]
 }
-
-test("hid-parse-size") {
-  sources = [
-    "$zx/system/dev/input/hid/hid-parser-lib.cc",
-    "$zx/system/utest/hid-parser/hid-report-data.cc",
-    "hid-parse-test.cc",
-  ]
-  deps = [
-    "$zx/system/banjo/ddk.protocol.hidbus",
-    "$zx/system/fidl/fuchsia-hardware-input:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/driver",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/hid-parser",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
-  ]
-}
