@@ -17,6 +17,7 @@
 #include <string>
 
 #include "src/virtualization/tests/logger.h"
+#include "src/virtualization/tests/periodic_logger.h"
 
 static constexpr char kGuestManagerUrl[] =
     "fuchsia-pkg://fuchsia.com/guest_manager#meta/guest_manager.cmx";
@@ -29,47 +30,6 @@ static constexpr zx::duration kLoopTimeout = zx::sec(300);
 static constexpr zx::duration kLoopConditionStep = zx::msec(10);
 static constexpr size_t kNumRetries = 40;
 static constexpr zx::duration kRetryStep = zx::msec(200);
-
-// Print a log message every |logging_interval| units of time.
-//
-// Users should periodically call |LogIfRequired|. Once |logging_interval|
-// has passed since class creation, a log message will be printed. Log
-// messages will then continue to be printed every |logging_interval|.
-class PeriodicLogger {
- public:
-  PeriodicLogger(std::string operation, zx::duration logging_interval)
-      : start_time_(zx::clock::get_monotonic()),
-        operation_(std::move(operation)),
-        logging_interval_(logging_interval),
-        last_log_time_(start_time_) {}
-
-  ~PeriodicLogger() {
-    // Only print a final message if we already printed a progress message.
-    if (message_printed_) {
-      FXL_LOG(INFO) << operation_ << ": Finished after "
-                    << (zx::clock::get_monotonic() - start_time_).to_secs() << "s.";
-    }
-  }
-
-  // Print a log message about the current operation if enough time has passed
-  // since the operation started / since the last log message.
-  void LogIfRequired() {
-    const zx::time now = zx::clock::get_monotonic();
-    if (now - last_log_time_ >= logging_interval_) {
-      FXL_LOG(INFO) << operation_ << ": Still waiting... (" << (now - start_time_).to_secs()
-                    << "s passed)";
-      last_log_time_ = now;
-      message_printed_ = true;
-    }
-  }
-
- private:
-  const zx::time start_time_;
-  const std::string operation_;
-  const zx::duration logging_interval_;
-  bool message_printed_ = false;
-  zx::time last_log_time_;
-};
 
 static bool RunLoopUntil(async::Loop* loop, fit::function<bool()> condition,
                          std::optional<PeriodicLogger> logger = std::nullopt) {

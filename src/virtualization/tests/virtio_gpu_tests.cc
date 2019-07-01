@@ -15,6 +15,7 @@
 #include "src/virtualization/tests/enclosed_guest.h"
 #include "src/virtualization/tests/fake_scenic.h"
 #include "src/virtualization/tests/guest_test.h"
+#include "src/virtualization/tests/periodic_logger.h"
 
 namespace {
 
@@ -149,9 +150,11 @@ TYPED_TEST(VirtioGpuTest, TextInputChangesConsole) {
   Screenshot screenshot2;
   zx::time test_start = zx::clock::get_monotonic();
   zx::duration wait_time = zx::msec(1);
+  PeriodicLogger logger("Waiting for change in console", zx::sec(2));
   do {
+    logger.LogIfRequired();
     zx::nanosleep(zx::deadline_after(wait_time));
-    wait_time *= 2;
+    wait_time = std::max(wait_time * 2, zx::sec(1));
     status = this->GetEnclosedGuest()->GetScenic()->CaptureScreenshot(&screenshot2);
     ASSERT_EQ(status, ZX_OK) << "Error capturing screenshot.";
   } while (ScreenshotsSame(screenshot1, screenshot2) &&

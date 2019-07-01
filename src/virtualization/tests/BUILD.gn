@@ -83,6 +83,8 @@ executable("bin") {
     "main.cc",
     "mock_netstack.cc",
     "mock_netstack.h",
+    "periodic_logger.cc",
+    "periodic_logger.h",
     "virtio_block_tests.cc",
     "virtio_gpu_tests.cc",
     "virtio_net_tests.cc",
