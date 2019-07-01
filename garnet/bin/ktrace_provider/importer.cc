@@ -133,7 +133,7 @@ bool Importer::Import(Reader& reader) {
   while (true) {
     if (auto record = reader.ReadNextRecord()) {
       if (!ImportRecord(record, KTRACE_LEN(record->tag))) {
-        FXL_VLOG(2) << "Skipped ktrace record, tag=0x" << std::hex
+        FXL_VLOG(5) << "Skipped ktrace record, tag=0x" << std::hex
                     << record->tag;
       }
     } else {
@@ -194,7 +194,7 @@ bool Importer::ImportRecord(const ktrace_header_t* record, size_t record_size) {
 
 bool Importer::ImportBasicRecord(const ktrace_header_t* record,
                                  const TagInfo& tag_info) {
-  FXL_VLOG(2) << "BASIC: tag=0x" << std::hex << record->tag << " ("
+  FXL_VLOG(5) << "BASIC: tag=0x" << std::hex << record->tag << " ("
               << tag_info.name << "), tid=" << std::dec << record->tid
               << ", timestamp=" << record->ts;
 
@@ -216,7 +216,7 @@ bool Importer::ImportBasicRecord(const ktrace_header_t* record,
 
 bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record,
                                 const TagInfo& tag_info) {
-  FXL_VLOG(2) << "QUAD: tag=0x" << std::hex << record->tag << " ("
+  FXL_VLOG(5) << "QUAD: tag=0x" << std::hex << record->tag << " ("
               << tag_info.name << "), tid=" << std::dec << record->tid
               << ", timestamp=" << record->ts << ", a=0x" << std::hex
               << record->a << ", b=0x" << record->b << ", c=0x" << record->c
@@ -385,7 +385,7 @@ bool Importer::ImportNameRecord(const ktrace_rec_name_t* record,
                                 const TagInfo& tag_info) {
   fbl::StringPiece name(record->name,
                         strnlen(record->name, ZX_MAX_NAME_LEN - 1));
-  FXL_VLOG(2) << "NAME: tag=0x" << std::hex << record->tag << " ("
+  FXL_VLOG(5) << "NAME: tag=0x" << std::hex << record->tag << " ("
               << tag_info.name << "), id=0x" << record->id << ", arg=0x"
               << record->arg << ", name='" << fbl::String(name).c_str() << "'";
 
@@ -423,7 +423,7 @@ bool Importer::ImportProbeRecord(const ktrace_header_t* record,
   if (record_size == 24) {
     const auto arg0 = reinterpret_cast<const uint32_t*>(record + 1)[0];
     const auto arg1 = reinterpret_cast<const uint32_t*>(record + 1)[1];
-    FXL_VLOG(2) << "PROBE: tag=0x" << std::hex << record->tag
+    FXL_VLOG(5) << "PROBE: tag=0x" << std::hex << record->tag
                 << ", event_name_id=0x" << event_name_id << ", tid=" << std::dec
                 << record->tid << ", ts=" << record->ts << ", arg0=0x"
                 << std::hex << arg0 << ", arg1=0x" << arg1;
@@ -432,7 +432,7 @@ bool Importer::ImportProbeRecord(const ktrace_header_t* record,
   } else if (record_size == 32) {
     const auto arg0 = reinterpret_cast<const uint64_t*>(record + 1)[0];
     const auto arg1 = reinterpret_cast<const uint64_t*>(record + 1)[1];
-    FXL_VLOG(2) << "PROBE: tag=0x" << std::hex << record->tag
+    FXL_VLOG(5) << "PROBE: tag=0x" << std::hex << record->tag
                 << ", event_name_id=0x" << event_name_id << ", tid=" << std::dec
                 << record->tid << ", ts=" << record->ts << ", arg0=0x"
                 << std::hex << arg0 << ", arg1=0x" << arg1;
@@ -440,7 +440,7 @@ bool Importer::ImportProbeRecord(const ktrace_header_t* record,
                        arg1);
   }
 
-  FXL_VLOG(2) << "PROBE: tag=0x" << std::hex << record->tag
+  FXL_VLOG(5) << "PROBE: tag=0x" << std::hex << record->tag
               << ", event_name_id=0x" << event_name_id << ", tid=" << std::dec
               << record->tid << ", ts=" << record->ts;
   return HandleProbe(record->ts, record->tid, event_name_id, cpu_trace);
@@ -513,7 +513,7 @@ bool Importer::ImportFlowRecord(const ktrace_header_t* record,
 
 bool Importer::ImportUnknownRecord(const ktrace_header_t* record,
                                    size_t record_size) {
-  FXL_VLOG(2) << "UNKNOWN: tag=0x" << std::hex << record->tag
+  FXL_VLOG(5) << "UNKNOWN: tag=0x" << std::hex << record->tag
               << ", size=" << std::dec << record_size;
   return false;
 }
