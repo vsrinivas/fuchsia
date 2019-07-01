@@ -135,6 +135,32 @@ inline zx_status_t ValidateFutexPointer(user_in_ptr<const zx_futex_t> value_ptr)
     return ZX_OK;
 }
 
+// Get a reference to the thread that the user is asserting is the new owner of the futex.
+// The thread must belong to the same process as the caller as futexes may not be owned
+// by threads from another process.
+inline zx_status_t ValidateNewFutexOwner(zx_handle_t new_owner_handle,
+                                         fbl::RefPtr<ThreadDispatcher>* new_owner_thread_out) {
+    DEBUG_ASSERT(new_owner_thread_out != nullptr);
+    DEBUG_ASSERT(*new_owner_thread_out == nullptr);
+
+    if (new_owner_handle == ZX_HANDLE_INVALID) {
+        return ZX_OK;
+    }
+
+    auto up = ProcessDispatcher::GetCurrent();
+    zx_status_t status = up->GetDispatcherWithRights(new_owner_handle, 0, new_owner_thread_out);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    if ((*new_owner_thread_out)->process() != up) {
+        new_owner_thread_out->reset();
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    return ZX_OK;
+}
+
 }  // anon namespace
 
 template <OwnedWaitQueue::Hook::Action action>
@@ -191,7 +217,7 @@ void FutexContext::ShrinkFutexStatePool() {
 // same |value_ptr| futex.
 zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr,
                                     zx_futex_t current_value,
-                                    fbl::RefPtr<ThreadDispatcher> futex_owner_thread,
+                                    zx_handle_t new_futex_owner,
                                     const Deadline& deadline) {
     LTRACE_ENTRY;
     zx_status_t result;
@@ -200,12 +226,6 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr,
     result = ValidateFutexPointer(value_ptr);
     if (result != ZX_OK) {
         return result;
-    }
-
-    // When attempting to wait, the new owner of the futex (if any) may not be
-    // the thread which is attempting to wait.
-    if (futex_owner_thread.get() == ThreadDispatcher::GetCurrent()) {
-        return ZX_ERR_INVALID_ARGS;
     }
 
     auto current_thread = ThreadDispatcher::GetCurrent();
@@ -230,6 +250,20 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr,
         }
         if (value != current_value) {
             return ZX_ERR_BAD_STATE;
+        }
+
+        // Now that we have validated the futex state, validate the proposed new owner.
+        fbl::RefPtr<ThreadDispatcher> futex_owner_thread;
+        result = ValidateNewFutexOwner(new_futex_owner, &futex_owner_thread);
+
+        if (result != ZX_OK) {
+            return result;
+        }
+
+        // When attempting to wait, the new owner of the futex (if any) may not be
+        // the thread which is attempting to wait.
+        if (futex_owner_thread.get() == ThreadDispatcher::GetCurrent()) {
+            return ZX_ERR_INVALID_ARGS;
         }
 
         // Find the FutexState for this futex.  If there is no FutexState
@@ -453,7 +487,7 @@ zx_status_t FutexContext::FutexRequeue(user_in_ptr<const zx_futex_t> wake_ptr,
                                        OwnerAction owner_action,
                                        user_in_ptr<const zx_futex_t> requeue_ptr,
                                        uint32_t requeue_count,
-                                       fbl::RefPtr<ThreadDispatcher> requeue_owner_thread) {
+                                       zx_handle_t new_requeue_owner_handle) {
     LTRACE_ENTRY;
     zx_status_t result;
     KTracer tracer;
@@ -478,8 +512,20 @@ zx_status_t FutexContext::FutexRequeue(user_in_ptr<const zx_futex_t> wake_ptr,
 
     int value;
     result = wake_ptr.copy_from_user(&value);
-    if (result != ZX_OK) return result;
-    if (value != current_value) return ZX_ERR_BAD_STATE;
+    if (result != ZX_OK) {
+        return result;
+    }
+
+    if (value != current_value) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    // Now that we have validated the futex state, validate the proposed new owner.
+    fbl::RefPtr<ThreadDispatcher> requeue_owner_thread;
+    result = ValidateNewFutexOwner(new_requeue_owner_handle, &requeue_owner_thread);
+    if (result != ZX_OK) {
+        return result;
+    }
 
     // Find the FutexState for the wake and requeue futexes.
     uintptr_t wake_id = reinterpret_cast<uintptr_t>(wake_ptr.get());

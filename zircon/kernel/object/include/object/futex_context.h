@@ -70,13 +70,19 @@ public:
     zx_status_t GrowFutexStatePool();
     void ShrinkFutexStatePool();
 
-    // FutexWait first verifies that the integer pointed to by |value_ptr|
-    // still equals |current_value|. If the test fails, FutexWait returns FAILED_PRECONDITION.
-    // Otherwise it will block the current thread until the |deadline| passes, or until the thread
-    // is woken by a FutexWake or FutexRequeue operation on the same |value_ptr| futex.
+    // FutexWait first verifies that the integer pointed to by |value_ptr| still equals
+    // |current_value|. If the test fails, FutexWait returns BAD_STATE.  Otherwise it will block the
+    // current thread until the |deadline| passes, or until the thread is woken by a FutexWake or
+    // FutexRequeue operation on the same |value_ptr| futex.
+    //
+    // Note that this method and FutexRequeue both take a user mode handle instead of having the
+    // syscall dispatch layer resolve the handle into a thread before proceeding.  This is because
+    // we need to perform the current_value == *value_ptr check before attempting to validate the
+    // thread handle, and this check needs to happen inside of the futex context lock.  To do
+    // otherwise leaves the potential to hit a race condition where we end up appearing to violate
+    // the "bad handle" policy when actually we didn't.  See ZX-4607 for details.
     zx_status_t FutexWait(user_in_ptr<const zx_futex_t> value_ptr, zx_futex_t current_value,
-                          fbl::RefPtr<ThreadDispatcher> futex_owner_thread,
-                          const Deadline& deadline);
+                          zx_handle_t new_futex_owner, const Deadline& deadline);
 
     // FutexWake will wake up to |wake_count| number of threads blocked on the |value_ptr| futex.
     //
@@ -87,12 +93,11 @@ public:
     zx_status_t FutexWake(user_in_ptr<const zx_futex_t> value_ptr, uint32_t wake_count,
                           OwnerAction owner_action);
 
-    // FutexWait first verifies that the integer pointed to by |wake_ptr|
-    // still equals |current_value|. If the test fails, FutexWait returns FAILED_PRECONDITION.
-    // Otherwise it will wake up to |wake_count| number of threads blocked on the |wake_ptr| futex.
-    // If any other threads remain blocked on on the |wake_ptr| futex, up to |requeue_count|
-    // of them will then be requeued to the tail of the list of threads
-    // blocked on the |requeue_ptr| futex.
+    // FutexRequeue first verifies that the integer pointed to by |wake_ptr| still equals
+    // |current_value|. If the test fails, FutexRequeue returns BAD_STATE.  Otherwise it will wake
+    // up to |wake_count| number of threads blocked on the |wake_ptr| futex.  If any other threads
+    // remain blocked on on the |wake_ptr| futex, up to |requeue_count| of them will then be
+    // requeued to the tail of the list of threads blocked on the |requeue_ptr| futex.
     //
     // If owner_action is set to RELEASE, then the futex's owner will be set to nullptr in the
     // process.  If the owner_action is set to ASSIGN_WOKEN, then the wake_count *must* be 1, and
@@ -104,7 +109,7 @@ public:
                              OwnerAction owner_action,
                              user_in_ptr<const zx_futex_t> requeue_ptr,
                              uint32_t requeue_count,
-                             fbl::RefPtr<ThreadDispatcher> requeue_owner_thread);
+                             zx_handle_t new_requeue_owner_handle);
 
     // Get the KOID of the current owner of the specified futex, if any, or ZX_KOID_INVALID if there
     // is no known owner.

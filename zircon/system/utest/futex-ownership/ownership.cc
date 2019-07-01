@@ -15,6 +15,19 @@
 
 namespace {
 
+// A constant which is guaranteed to be an invalid handle, but not equal to the
+// special value ZX_HANDLE_INVALID.  We use the INVALID sentinel to mean other
+// things is certain contexts (like passing nullptr to a function), and for some
+// of these tests, we just want a handle which is guaranteed to be simply bad.
+//
+// The FIXED_BITS_MASK specifies a pair of bits which are guaranteed to be 1 in
+// any valid user-mode representation of a handle.  We can generate a
+// guaranteed-to-be-bad handle by simply inverting this mask.
+constexpr zx_handle_t ZX_HANDLE_BAD_BUT_NOT_INVALID =
+    static_cast<zx_handle_t>(~ZX_HANDLE_FIXED_BITS_MASK);
+static_assert(ZX_HANDLE_BAD_BUT_NOT_INVALID != ZX_HANDLE_INVALID,
+             "ZX_HANDLE_BAD_BUT_NOT_INVALID must not match ZX_HANDLE_INVALID");
+
 // Templated operation adapters which allow us to test the wake operation using
 // the same code for zx_wake and zx_requeue
 enum class OpType {
@@ -247,17 +260,50 @@ TEST(FutexOwnershipTestCase, Wait) {
         // Stop waiting if we fail to fetch the owner, or if the koid matches what we expect.
         return ((res != ZX_OK) || (koid == test_thread_koid));
     }));
-    ASSERT_OK(res);
-    ASSERT_EQ(koid, test_thread_koid);
 
     res = zx_futex_get_owner(&the_futex, &koid);
     ASSERT_OK(res);
     ASSERT_EQ(koid, test_thread_koid);
 
+    // Start a thread and have it attempt to set the futex owner to a value
+    // which is just a bad handle (but not ZX_HANDLE_INVALID).  Attempting to
+    // wait like this should result in an error of ZX_ERR_BAD_HANDLE
+    t2_res.store(ZX_ERR_INTERNAL);
+    ASSERT_NO_FATAL_FAILURES(thread2.Start("thread_2.7", [&]() -> int {
+        t2_res.store(zx_futex_wait(&the_futex, 0, ZX_HANDLE_BAD_BUT_NOT_INVALID, ZX_TIME_INFINITE));
+        return 0;
+    }));
+    ASSERT_OK(thread2.Stop());
+
+    // The futex owner should not have changed, the error should be bad handle.
+    res = zx_futex_get_owner(&the_futex, &koid);
+    ASSERT_OK(res);
+    ASSERT_EQ(koid, test_thread_koid);
+    ASSERT_EQ(t2_res.load(), ZX_ERR_BAD_HANDLE);
+
+    // Do the same test, but this time, pass a bad state value.  The state needs
+    // to be checked and return BAD_STATE before the proposed owner handle is
+    // validated.  Failure to do this in the proper order can lead to a race
+    // which can cause a job policy exception to fire in mutex code which
+    // implements priority inheritance; see ZX-4607.
+    t2_res.store(ZX_ERR_INTERNAL);
+    ASSERT_NO_FATAL_FAILURES(thread2.Start("thread_2.8", [&]() -> int {
+        zx_handle_t bad_handle = test_thread_handle & ~ZX_HANDLE_FIXED_BITS_MASK;
+        t2_res.store(zx_futex_wait(&the_futex, 1, bad_handle, ZX_TIME_INFINITE));
+        return 0;
+    }));
+    ASSERT_OK(thread2.Stop());
+
+    // The futex owner should not have changed, the error should be bad state.
+    res = zx_futex_get_owner(&the_futex, &koid);
+    ASSERT_OK(res);
+    ASSERT_EQ(koid, test_thread_koid);
+    ASSERT_EQ(t2_res.load(), ZX_ERR_BAD_STATE);
+
     // Finally, start second thread and have it succeed in waiting, setting
     // the owner of the futex to nothing in the process.
     t2_res.store(ZX_ERR_INTERNAL);
-    ASSERT_NO_FATAL_FAILURES(thread2.Start("thread_2.7", [&]() -> int {
+    ASSERT_NO_FATAL_FAILURES(thread2.Start("thread_2.9", [&]() -> int {
         t2_res.store(zx_futex_wait(&the_futex, 0, ZX_HANDLE_INVALID, ZX_TIME_INFINITE));
         return 0;
     }));
@@ -754,7 +800,7 @@ TEST(FutexOwnershipTestCase, Requeue) {
     // which is not ZX_HANDLE_INVALID
     //
     res = zx_futex_requeue(&wake_futex, 1u, 0,
-                           &requeue_futex, 1, static_cast<zx_handle_t>(1));
+                           &requeue_futex, 1, ZX_HANDLE_BAD_BUT_NOT_INVALID);
     ASSERT_EQ(res, ZX_ERR_BAD_HANDLE);
     ASSERT_NO_FATAL_FAILURES(VerifyState(woken_thread_koid, test_thread_koid));
 
@@ -795,6 +841,18 @@ TEST(FutexOwnershipTestCase, Requeue) {
     //
     res = zx_futex_requeue(&wake_futex, 1u, 1,
                            &requeue_futex, 1, ZX_HANDLE_INVALID);
+    ASSERT_EQ(res, ZX_ERR_BAD_STATE);
+    ASSERT_NO_FATAL_FAILURES(VerifyState(woken_thread_koid, test_thread_koid));
+
+    // Failure Test #9:
+    // If we pass a bad/invalid handle as the new requeue owner, _and_ we pass a
+    // value which does not equal the current futex state by the time we make it
+    // into the futex context lock in the kernel, then the operation should fail
+    // and error code we get back should be BAD_STATE, not BAD_HANDLE.  The
+    // state needs to be validated _before_ we concern ourselves with the
+    // validating the potential new owner.
+    res = zx_futex_requeue(&wake_futex, 1u, 1,
+                           &requeue_futex, 1, ZX_HANDLE_BAD_BUT_NOT_INVALID);
     ASSERT_EQ(res, ZX_ERR_BAD_STATE);
     ASSERT_NO_FATAL_FAILURES(VerifyState(woken_thread_koid, test_thread_koid));
 

@@ -117,7 +117,10 @@ the futex should be, or **ZX_HANDLE_INVALID** if there should be no owner.
   **ZX_HANDLE_INVALID** is passed.
 + In particular, if the wait/requeue operation fails because of a mismatch
   between the expected futex value and the actual futex value, the owner of the
-  futex will remain unchanged.
+  futex will remain unchanged and the status code for the operation will be
+  ZX_ERR_BAD_STATE. This error code will be returned regardless of the value
+  passed for handle indicating ownership, even if the value passed would have
+  resulted in a status of ZX_ERR_BAD_HANDLE being returned.
 
 #### Transferring Ownership
 
