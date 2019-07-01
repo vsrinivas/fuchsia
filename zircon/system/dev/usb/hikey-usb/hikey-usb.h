@@ -34,6 +34,14 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(HikeyUsb);
 
     enum {
+        COMPONENT_PDEV,
+        COMPONENT_GPIO_GPIO_HUB_VDD33_EN,
+        COMPONENT_GPIO_VBUS_TYPEC,
+        COMPONENT_GPIO_USBSW_SW_SEL,
+        COMPONENT_COUNT,
+    };
+
+    enum {
         HUB_VDD33_EN,
         VBUS_TYPEC,
         USBSW_SW_SEL,

@@ -16,7 +16,7 @@
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio.h>
-#include <ddk/protocol/platform/device.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
 
@@ -40,16 +40,23 @@ zx_status_t HikeyUsb::Create(zx_device_t* parent) {
 }
 
 zx_status_t HikeyUsb::Init() {
-    pdev_protocol_t pdev;
-
-    auto status = device_get_protocol(parent(), ZX_PROTOCOL_PDEV, &pdev);
-    if (status != ZX_OK) {
-        return status;
+    ddk::CompositeProtocolClient composite(parent_);
+    if (!composite.is_valid()) {
+        zxlogf(ERROR, "HikeyUsb::Could not get composite protocol\n");
+        return ZX_ERR_NOT_SUPPORTED;
     }
+
+    zx_device_t* components[COMPONENT_COUNT];
+    size_t actual;
+    composite.GetComponents(components, fbl::count_of(components), &actual);
+    if (actual != fbl::count_of(components)) {
+        zxlogf(ERROR, "HikeyUsb::Could not get components\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
     for (uint32_t i = 0; i < countof(gpios_); i++) {
-        size_t actual;
-        status = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, i, &gpios_[i], sizeof(gpios_[i]),
-                                   &actual);
+        // components[0] is platform device, which is only used for providing metadata.
+        auto status = device_get_protocol(components[i + 1], ZX_PROTOCOL_GPIO, &gpios_[i]);
         if (status != ZX_OK) {
             return status;
         }
@@ -104,7 +111,7 @@ static constexpr zx_driver_ops_t driver_ops = [](){
 } // namespace hikey_usb
 
 ZIRCON_DRIVER_BEGIN(hikey_usb, hikey_usb::driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_96BOARDS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_HIKEY960),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_HIKEY960_USB),

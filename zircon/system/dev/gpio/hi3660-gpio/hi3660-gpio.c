@@ -203,6 +203,8 @@ static zx_status_t hi3660_gpio_bind(void* ctx, zx_device_t* parent) {
         .name = "hi3660-gpio",
         .ctx = gpio,
         .ops = &gpio_device_proto,
+        .proto_id = ZX_PROTOCOL_GPIO_IMPL,
+        .proto_ops = &gpio_ops,
     };
 
     status = device_add(parent, &args, &gpio->zxdev);

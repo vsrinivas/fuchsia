@@ -96,17 +96,10 @@ static const pbus_bti_t dwc3_btis[] = {
     },
 };
 
-static usb_mode_t dwc3_mode = USB_MODE_HOST;
-
 static pbus_metadata_t dwc3_metadata[] = {
     {
         .type = DEVICE_METADATA_USB_CONFIG,
         // data_buffer and data_size filled in below
-    },
-    {
-        .type = DEVICE_METADATA_USB_MODE,
-        .data_buffer = &dwc3_mode,
-        .data_size = sizeof(dwc3_mode),
     },
 };
 
@@ -125,15 +118,13 @@ static const pbus_dev_t dwc3_dev = {
     .metadata_count = countof(dwc3_metadata),
 };
 
-static const pbus_gpio_t hikey_usb_gpios[] = {
+static usb_mode_t hikey_usb_mode = USB_MODE_HOST;
+
+static pbus_metadata_t hikey_usb_metadata[] = {
     {
-        .gpio = GPIO_HUB_VDD33_EN,
-    },
-    {
-        .gpio = GPIO_VBUS_TYPEC,
-    },
-    {
-        .gpio = GPIO_USBSW_SW_SEL,
+        .type = DEVICE_METADATA_USB_MODE,
+        .data_buffer = &hikey_usb_mode,
+        .data_size = sizeof(hikey_usb_mode),
     },
 };
 
@@ -142,14 +133,45 @@ const pbus_dev_t hikey_usb_dev = {
     .vid = PDEV_VID_96BOARDS,
     .pid = PDEV_PID_HIKEY960,
     .did = PDEV_DID_HIKEY960_USB,
-    .gpio_list = hikey_usb_gpios,
-    .gpio_count = countof(hikey_usb_gpios),
+    .metadata_list = hikey_usb_metadata,
+    .metadata_count = countof(hikey_usb_metadata),
 };
 
-// Composite binding rules for USB driver.
+// Composite binding rules for the USB drivers.
 static const zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
+
+static const zx_bind_inst_t gpio1_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_HUB_VDD33_EN),
+};
+static const device_component_part_t gpio1_component[] = {
+    { countof(root_match), root_match },
+    { countof(gpio1_match), gpio1_match },
+};
+static const zx_bind_inst_t gpio2_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_VBUS_TYPEC),
+};
+static const device_component_part_t gpio2_component[] = {
+    { countof(root_match), root_match },
+    { countof(gpio2_match), gpio2_match },
+};
+static const zx_bind_inst_t gpio3_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_USBSW_SW_SEL),
+};
+static const device_component_part_t gpio3_component[] = {
+    { countof(root_match), root_match },
+    { countof(gpio3_match), gpio3_match },
+};
+static const device_component_t hikey_usb_components[] = {
+    { countof(gpio1_component), gpio1_component },
+    { countof(gpio2_component), gpio2_component },
+    { countof(gpio3_component), gpio3_component },
+};
+
 static const zx_bind_inst_t ums_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_MODE_SWITCH),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
@@ -160,7 +182,7 @@ static const device_component_part_t ums_component[] = {
     { countof(root_match), root_match },
     { countof(ums_match), ums_match },
 };
-static const device_component_t components[] = {
+static const device_component_t dwc3_components[] = {
     { countof(ums_component), ums_component },
 };
 
@@ -170,7 +192,9 @@ zx_status_t hikey960_usb_init(hikey960_t* hikey) {
         return status;
     }
 
-    if ((status = pbus_device_add(&hikey->pbus, &hikey_usb_dev)) != ZX_OK) {
+    status = pbus_composite_device_add(&hikey->pbus, &hikey_usb_dev, hikey_usb_components,
+                                       countof(hikey_usb_components), UINT32_MAX);
+    if (status != ZX_OK) {
         zxlogf(ERROR, "hikey960_add_devices could not add hikey_usb_dev: %d\n", status);
         return status;
     }
@@ -189,7 +213,8 @@ zx_status_t hikey960_usb_init(hikey960_t* hikey) {
     dwc3_metadata[0].data_size = sizeof(struct UsbConfig) + sizeof(FunctionDescriptor);
     dwc3_metadata[0].data_buffer = config;
 
-    status = pbus_composite_device_add(&hikey->pbus, &dwc3_dev, components, countof(components), 1);
+    status = pbus_composite_device_add(&hikey->pbus, &dwc3_dev, dwc3_components,
+                                       countof(dwc3_components), 1);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pbus_composite_device_add failed: %d\n", __FUNCTION__, status);
         return status;

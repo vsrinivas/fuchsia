@@ -4,6 +4,8 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
+#include <ddk/metadata/gpio.h>
 #include <ddk/platform-defs.h>
 #include <hw/reg.h>
 #include <soc/hi3660/hi3660-hw.h>
@@ -13,6 +15,7 @@
 #include <limits.h>
 
 #include "hikey960.h"
+#include "hikey960-hw.h"
 
 static const pbus_mmio_t gpio_mmios[] = {
     {
@@ -152,6 +155,22 @@ static const pbus_irq_t gpio_irqs[] = {
     },
 };
 
+// GPIOs to expose from generic GPIO driver.
+static const gpio_pin_t gpio_pins[] = {
+    // For USB.
+    { GPIO_HUB_VDD33_EN },
+    { GPIO_VBUS_TYPEC },
+    { GPIO_USBSW_SW_SEL },
+};
+
+static const pbus_metadata_t gpio_metadata[] = {
+    {
+        .type = DEVICE_METADATA_GPIO_PINS,
+        .data_buffer = &gpio_pins,
+        .data_size = sizeof(gpio_pins),
+    }
+};
+
 static const pbus_dev_t hikey960_gpio_dev = {
     .name = "hi3660-gpio",
     .vid = PDEV_VID_96BOARDS,
@@ -160,6 +179,8 @@ static const pbus_dev_t hikey960_gpio_dev = {
     .mmio_count = countof(gpio_mmios),
     .irq_list = gpio_irqs,
     .irq_count = countof(gpio_irqs),
+    .metadata_list = gpio_metadata,
+    .metadata_count = countof(gpio_metadata),
 };
 
 zx_status_t hikey960_gpio_init(hikey960_t* hikey) {
