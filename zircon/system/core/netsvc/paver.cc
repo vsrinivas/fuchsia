@@ -119,8 +119,7 @@ int Paver::StreamBuffer() {
     loop.StartThread("payload-streamer");
 
     // Blocks untils paving is complete.
-    auto io_status = fuchsia_paver_PaverWriteVolumes(paver_svc_.get(), client.release(),
-                                                     &status);
+    auto io_status = paver_svc_->WriteVolumes(std::move(client), &status);
     status = io_status == ZX_OK ? status : io_status;
     exit_code_.store(status);
 
@@ -167,8 +166,8 @@ int Paver::MonitorBuffer() {
         return 0;
     }
 
-    fuchsia_mem_Buffer buffer = {
-        .vmo = dup.release(),
+    ::llcpp::fuchsia::mem::Buffer buffer = {
+        .vmo = std::move(dup),
         .size = buffer_mapper_.size(),
     };
 
@@ -176,15 +175,14 @@ int Paver::MonitorBuffer() {
     // Blocks untils paving is complete.
     switch (command_) {
     case Command::kDataFile:
-        io_status = fuchsia_paver_PaverWriteDataFile(paver_svc_.get(), path_, strlen(path_),
-                                                     &buffer, &status);
+        io_status = paver_svc_->WriteDataFile(fidl::StringView(strlen(path_), path_),
+                                              std::move(buffer), &status);
         break;
     case Command::kBootloader:
-        io_status = fuchsia_paver_PaverWriteBootloader(paver_svc_.get(), &buffer, &status);
+        io_status = paver_svc_->WriteBootloader(std::move(buffer), &status);
         break;
     case Command::kAsset:
-        io_status = fuchsia_paver_PaverWriteAsset(paver_svc_.get(), configuration_, asset_, &buffer,
-                                                  &status);
+        io_status = paver_svc_->WriteAsset(configuration_, asset_, std::move(buffer), &status);
         break;
     default:
         io_status = ZX_OK;
@@ -209,33 +207,33 @@ tftp_status Paver::OpenWrite(const char* filename, size_t size) {
     } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN(), NB_ZIRCONA_HOST_FILENAME)) {
         printf("netsvc: Running ZIRCON-A Paver\n");
         command_ = Command::kAsset;
-        configuration_ = fuchsia_paver_Configuration_A;
-        asset_ = fuchsia_paver_Asset_KERNEL;
+        configuration_ = ::llcpp::fuchsia::paver::Configuration::A;
+        asset_ = ::llcpp::fuchsia::paver::Asset::KERNEL;
     } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN(), NB_ZIRCONB_HOST_FILENAME)) {
         printf("netsvc: Running ZIRCON-B Paver\n");
         command_ = Command::kAsset;
-        configuration_ = fuchsia_paver_Configuration_B;
-        asset_ = fuchsia_paver_Asset_KERNEL;
+        configuration_ = ::llcpp::fuchsia::paver::Configuration::B;
+        asset_ = ::llcpp::fuchsia::paver::Asset::KERNEL;
     } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN(), NB_ZIRCONR_HOST_FILENAME)) {
         printf("netsvc: Running ZIRCON-R Paver\n");
         command_ = Command::kAsset;
-        configuration_ = fuchsia_paver_Configuration_RECOVERY;
-        asset_ = fuchsia_paver_Asset_KERNEL;
+        configuration_ = ::llcpp::fuchsia::paver::Configuration::RECOVERY;
+        asset_ = ::llcpp::fuchsia::paver::Asset::KERNEL;
     } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN(), NB_VBMETAA_HOST_FILENAME)) {
         printf("netsvc: Running VBMETA-A Paver\n");
         command_ = Command::kAsset;
-        configuration_ = fuchsia_paver_Configuration_A;
-        asset_ = fuchsia_paver_Asset_VERIFIED_BOOT_METADATA;
+        configuration_ = ::llcpp::fuchsia::paver::Configuration::A;
+        asset_ = ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA;
     } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN(), NB_VBMETAB_HOST_FILENAME)) {
         printf("netsvc: Running VBMETA-B Paver\n");
         command_ = Command::kAsset;
-        configuration_ = fuchsia_paver_Configuration_B;
-        asset_ = fuchsia_paver_Asset_VERIFIED_BOOT_METADATA;
+        configuration_ = ::llcpp::fuchsia::paver::Configuration::B;
+        asset_ = ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA;
     } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN(), NB_VBMETAR_HOST_FILENAME)) {
         printf("netsvc: Running VBMETA-R Paver\n");
         command_ = Command::kAsset;
-        configuration_ = fuchsia_paver_Configuration_RECOVERY;
-        asset_ = fuchsia_paver_Asset_VERIFIED_BOOT_METADATA;
+        configuration_ = ::llcpp::fuchsia::paver::Configuration::RECOVERY;
+        asset_ = ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA;
     } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN(), NB_SSHAUTH_HOST_FILENAME)) {
         printf("netsvc: Installing SSH authorized_keys\n");
         command_ = Command::kDataFile;
@@ -258,14 +256,14 @@ tftp_status Paver::OpenWrite(const char* filename, size_t size) {
         fprintf(stderr, "netsvc: Unable to create channel pair.\n");
         return TFTP_ERR_IO;
     }
-    status = fdio_service_connect_at(svc_root_.get(), fuchsia_paver_Paver_Name,
+    status = fdio_service_connect_at(svc_root_.get(), ::llcpp::fuchsia::paver::Paver::Name_,
                                      paver_remote.release());
     if (status != ZX_OK) {
-        fprintf(stderr, "netsvc: Unable to open /svc/%s.\n", fuchsia_paver_Paver_Name);
+        fprintf(stderr, "netsvc: Unable to open /svc/%s.\n", ::llcpp::fuchsia::paver::Paver::Name_);
         return TFTP_ERR_IO;
     }
 
-    paver_svc_ = std::move(paver_local);
+    paver_svc_.emplace(std::move(paver_local));
     fbl::AutoCall svc_cleanup([&]() { paver_svc_.reset(); });
 
     size_ = size;

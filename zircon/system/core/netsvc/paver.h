@@ -5,11 +5,12 @@
 #pragma once
 
 #include <atomic>
+#include <optional>
 #include <threads.h>
 
 #include <limits.h>
 
-#include <fuchsia/paver/c/fidl.h>
+#include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
@@ -84,14 +85,13 @@ private:
     // Channel to svc.
     zx::channel svc_root_;
 
-    // Channel to paver service.
-    zx::channel paver_svc_;
+    std::optional<::llcpp::fuchsia::paver::Paver::SyncClient> paver_svc_;
 
     union {
         // Only valid when command == Command::kAsset.
         struct {
-            fuchsia_paver_Configuration configuration_;
-            fuchsia_paver_Asset asset_;
+            ::llcpp::fuchsia::paver::Configuration configuration_;
+            ::llcpp::fuchsia::paver::Asset asset_;
         };
         // Only valid when command == Command::kDataFile.
         char path_[PATH_MAX];

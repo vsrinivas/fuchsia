@@ -44,22 +44,22 @@ source_set("netsvc_common") {
     "zbi.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-device-manager:c",
-    "$zx/system/fidl/fuchsia-hardware-block:c",
+    "$zx/system/fidl/fuchsia-hardware-block:llcpp",
     "$zx/system/fidl/fuchsia-kernel:c",
-    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/fidl/fuchsia-sysinfo:llcpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/chromeos-disk-setup",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/libzbi",
     "$zx/system/ulib/zircon",
   ]
   public_deps = [
-    "$zx/system/fidl/fuchsia-paver:c",
+    "$zx/system/fidl/fuchsia-paver:llcpp",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fidl-utils",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/inet6",
     "$zx/system/ulib/sync",
@@ -79,9 +79,9 @@ test("netsvc-test") {
   include_dirs = [ "." ]
   deps = [
     ":netsvc_common",
-    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/fidl/fuchsia-sysinfo:llcpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/fs",
     "$zx/system/ulib/zxtest",
   ]

@@ -6,8 +6,7 @@
 
 #include <fbl/function.h>
 #include <fbl/unique_fd.h>
-#include <fuchsia/paver/c/fidl.h>
-#include <lib/fidl-utils/bind.h>
+#include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
@@ -19,7 +18,7 @@ namespace netsvc {
 using ReadCallback = fbl::Function<zx_status_t(void* /*buf*/, size_t /*offset*/, size_t /*size*/,
                                                size_t* /*actual*/)>;
 
-class PayloadStreamer {
+class PayloadStreamer : public ::llcpp::fuchsia::paver::PayloadStream::Interface  {
 public:
     PayloadStreamer(zx::channel chan, ReadCallback callback);
 
@@ -28,18 +27,11 @@ public:
     PayloadStreamer(PayloadStreamer&&) = delete;
     PayloadStreamer& operator=(PayloadStreamer&&) = delete;
 
-    zx_status_t RegisterVmo(zx_handle_t vmo_handle, fidl_txn_t* txn);
+    void RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync completer);
 
-    zx_status_t ReadData(fidl_txn_t* txn);
+    void ReadData(ReadDataCompleter::Sync completer);
 
 private:
-    using Binder = fidl::Binder<PayloadStreamer>;
-
-    static constexpr fuchsia_paver_PayloadStream_ops_t ops_ = {
-        .RegisterVmo = Binder::BindMember<&PayloadStreamer::RegisterVmo>,
-        .ReadData = Binder::BindMember<&PayloadStreamer::ReadData>,
-    };
-
     ReadCallback read_;
     zx::vmo vmo_;
     fzl::VmoMapper mapper_;

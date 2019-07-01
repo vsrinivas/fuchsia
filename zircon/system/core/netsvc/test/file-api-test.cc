@@ -8,9 +8,9 @@
 
 #include <fcntl.h>
 
-#include <fuchsia/sysinfo/c/fidl.h>
+#include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fidl-utils/bind.h>
+#include <lib/fidl-async/cpp/bind.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -70,37 +70,32 @@ public:
     void AbortWrite() override {}
 };
 
-class FakeSysinfo {
+class FakeSysinfo : public ::llcpp::fuchsia::sysinfo::Device::Interface {
 public:
     FakeSysinfo(async_dispatcher_t* dispatcher) {
         zx::channel remote;
         ASSERT_OK(zx::channel::create(0, &remote, &svc_chan_));
-        fidl_bind(dispatcher, remote.release(),
-                  reinterpret_cast<fidl_dispatch_t*>(fuchsia_sysinfo_Device_dispatch),
-                  this, &ops_);
+        fidl::Bind(dispatcher, std::move(remote), this);
     }
 
-    zx_status_t GetRootJob(fidl_txn_t* txn) {
-        return fuchsia_sysinfo_DeviceGetRootJob_reply(txn, ZX_ERR_NOT_SUPPORTED, ZX_HANDLE_INVALID);
+    void GetRootJob(GetRootJobCompleter::Sync completer) {
+        completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::job());
     }
 
-    zx_status_t GetRootResource(fidl_txn_t* txn) {
-        return fuchsia_sysinfo_DeviceGetRootResource_reply(txn, ZX_ERR_NOT_SUPPORTED,
-                                                           ZX_HANDLE_INVALID);
+    void GetRootResource(GetRootResourceCompleter::Sync completer) {
+        completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::resource());
     }
 
-    zx_status_t GetHypervisorResource(fidl_txn_t* txn) {
-        return fuchsia_sysinfo_DeviceGetHypervisorResource_reply(txn, ZX_ERR_NOT_SUPPORTED,
-                                                                 ZX_HANDLE_INVALID);
+    void GetHypervisorResource(GetHypervisorResourceCompleter::Sync completer) {
+        completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::resource());
     }
 
-    zx_status_t GetBoardName(fidl_txn_t* txn) {
-        return fuchsia_sysinfo_DeviceGetBoardName_reply(txn, ZX_OK, board_, 32);
+    void GetBoardName(GetBoardNameCompleter::Sync completer) {
+        completer.Reply(ZX_OK, fidl::StringView(32, board_));
     }
 
-    zx_status_t GetInterruptControllerInfo(fidl_txn_t* txn) {
-        return fuchsia_sysinfo_DeviceGetInterruptControllerInfo_reply(txn, ZX_ERR_NOT_SUPPORTED,
-                                                                      nullptr);
+    void GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync completer) {
+        completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
     }
 
     zx::channel& svc_chan() { return svc_chan_; }
@@ -110,19 +105,9 @@ public:
     }
 
 private:
-    using Binder = fidl::Binder<FakeSysinfo>;
-
     zx::channel svc_chan_;
 
     char board_[32] = {};
-
-    static constexpr fuchsia_sysinfo_Device_ops_t ops_ = {
-        .GetRootJob = Binder::BindMember<&FakeSysinfo::GetRootJob>,
-        .GetRootResource = Binder::BindMember<&FakeSysinfo::GetRootResource>,
-        .GetHypervisorResource = Binder::BindMember<&FakeSysinfo::GetHypervisorResource>,
-        .GetBoardName = Binder::BindMember<&FakeSysinfo::GetBoardName>,
-        .GetInterruptControllerInfo = Binder::BindMember<&FakeSysinfo::GetInterruptControllerInfo>,
-    };
 };
 
 } // namespace
@@ -252,4 +237,3 @@ TEST_F(FileApiTest, AbortNetCopyWrite) {
     ASSERT_EQ(len, sizeof(kFakeData));
     file_api_.Abort();
 }
-

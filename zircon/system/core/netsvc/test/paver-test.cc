@@ -9,9 +9,9 @@
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
-#include <fuchsia/paver/c/fidl.h>
+#include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fidl-utils/bind.h>
+#include <lib/fidl-async/cpp/bind.h>
 #include <lib/zx/channel.h>
 #include <zircon/boot/netboot.h>
 #include <zxtest/zxtest.h>
@@ -55,79 +55,76 @@ enum class Command {
     kWipeVolumes,
 };
 
-class FakePaver {
+class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
 public:
     zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
-        return fidl_bind(dispatcher, request.release(),
-                         reinterpret_cast<fidl_dispatch_t*>(fuchsia_paver_Paver_dispatch),
-                         this, &ops_);
+        return fidl::Bind(dispatcher, std::move(request), this);
     }
 
-    zx_status_t QueryActiveConfiguration(fidl_txn_t* txn) {
+    void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) {
         last_command_ = Command::kQueryActiveConfiguration;
-        fuchsia_paver_Paver_QueryActiveConfiguration_Result result;
-        result.tag = fuchsia_paver_Paver_QueryActiveConfiguration_ResultTag_err;
-        result.err = ZX_ERR_NOT_SUPPORTED;
-        return fuchsia_paver_PaverQueryActiveConfiguration_reply(txn, &result);
+        ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result;
+        result.set_err(ZX_ERR_NOT_SUPPORTED);
+        completer.Reply(std::move(result));
     }
 
-    zx_status_t SetActiveConfiguration(fuchsia_paver_Configuration configuration,
-                                       fidl_txn_t* txn) {
+    void SetActiveConfiguration(::llcpp::fuchsia::paver::Configuration configuration,
+                                SetActiveConfigurationCompleter::Sync completer) {
         last_command_ = Command::kSetActiveConfiguration;
-        return fuchsia_paver_PaverSetActiveConfiguration_reply(txn, ZX_ERR_NOT_SUPPORTED);
+        completer.Reply(ZX_ERR_NOT_SUPPORTED);
     }
 
-    zx_status_t MarkActiveConfigurationSuccessful(fidl_txn_t* txn) {
+    void MarkActiveConfigurationSuccessful(
+        MarkActiveConfigurationSuccessfulCompleter::Sync completer) {
         last_command_ = Command::kMarkActiveConfigurationSuccessful;
-        return fuchsia_paver_PaverMarkActiveConfigurationSuccessful_reply(txn,
-                                                                          ZX_ERR_NOT_SUPPORTED);
+        completer.Reply(ZX_ERR_NOT_SUPPORTED);
     }
 
-    zx_status_t ForceRecoveryConfiguration(fidl_txn_t* txn) {
+    void ForceRecoveryConfiguration(ForceRecoveryConfigurationCompleter::Sync completer) {
         last_command_ = Command::kForceRecoveryConfiguration;
-        return fuchsia_paver_PaverForceRecoveryConfiguration_reply(txn, ZX_ERR_NOT_SUPPORTED);
+        completer.Reply(ZX_ERR_NOT_SUPPORTED);
     }
 
-    zx_status_t WriteAsset(fuchsia_paver_Configuration configuration,
-                           fuchsia_paver_Asset asset, const fuchsia_mem_Buffer* payload,
-                           fidl_txn_t* txn) {
+    void WriteAsset(::llcpp::fuchsia::paver::Configuration configuration,
+                    ::llcpp::fuchsia::paver::Asset asset,
+                    ::llcpp::fuchsia::mem::Buffer payload, WriteAssetCompleter::Sync completer) {
         last_command_ = Command::kWriteAsset;
-        zx_handle_close(payload->vmo);
-        auto status = payload->size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
-        return fuchsia_paver_PaverWriteAsset_reply(txn, status);
+        auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
+        completer.Reply(status);
     }
 
-    zx_status_t WriteVolumes(zx_handle_t payload_stream, fidl_txn_t* txn) {
+    void WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync completer) {
         last_command_ = Command::kWriteVolumes;
-        zx::channel stream(payload_stream);
         // Register VMO.
         zx::vmo vmo;
         auto status = zx::vmo::create(1024, 0, &vmo);
         if (status != ZX_OK) {
-            return fuchsia_paver_PaverWriteVolumes_reply(txn, status);
+            completer.Reply(status);
+            return;
         }
-        auto io_status = fuchsia_paver_PayloadStreamRegisterVmo(stream.get(), vmo.release(),
-                                                                &status);
+        ::llcpp::fuchsia::paver::PayloadStream::SyncClient stream(std::move(payload_stream));
+        auto io_status = stream.RegisterVmo(std::move(vmo), &status);
         status = io_status == ZX_OK ? status : io_status;
         if (status != ZX_OK) {
-            return fuchsia_paver_PaverWriteVolumes_reply(txn, status);
+            completer.Reply(status);
+            return;
         }
         // Stream until EOF.
         status = [&]() {
             size_t data_transferred = 0;
             for (;;) {
-                fuchsia_paver_ReadResult result;
-                auto io_status = fuchsia_paver_PayloadStreamReadData(stream.get(), &result);
+                ::llcpp::fuchsia::paver::ReadResult result;
+                auto io_status = stream.ReadData(&result);
                 if (io_status != ZX_OK) {
                     return io_status;
                 }
-                switch (result.tag) {
-                case fuchsia_paver_ReadResultTag_err:
-                    return result.err;
-                case fuchsia_paver_ReadResultTag_eof:
+                switch (result.which()) {
+                case ::llcpp::fuchsia::paver::ReadResult::Tag::kErr:
+                    return result.err();
+                case ::llcpp::fuchsia::paver::ReadResult::Tag::kEof:
                     return data_transferred == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
-                case fuchsia_paver_ReadResultTag_info:
-                    data_transferred += result.info.size;
+                case ::llcpp::fuchsia::paver::ReadResult::Tag::kInfo:
+                    data_transferred += result.info().size;
                     continue;
                 default:
                     return ZX_ERR_INTERNAL;
@@ -135,51 +132,35 @@ public:
             }
         }();
 
-        return fuchsia_paver_PaverWriteVolumes_reply(txn, status);
+        completer.Reply(status);
     }
 
-    zx_status_t WriteBootloader(const fuchsia_mem_Buffer* payload, fidl_txn_t* txn) {
+    void WriteBootloader(::llcpp::fuchsia::mem::Buffer payload,
+                         WriteBootloaderCompleter::Sync completer) {
         last_command_ = Command::kWriteBootloader;
-        zx_handle_close(payload->vmo);
-        auto status = payload->size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
-        return fuchsia_paver_PaverWriteBootloader_reply(txn, status);
+        auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
+        completer.Reply(status);
     }
 
-    zx_status_t WriteDataFile(const char* filename, size_t filename_len,
-                              const fuchsia_mem_Buffer* payload, fidl_txn_t* txn) {
+    void WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload,
+                       WriteDataFileCompleter::Sync completer) {
         last_command_ = Command::kWriteDataFile;
-        zx_handle_close(payload->vmo);
-        auto status = payload->size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
-        return fuchsia_paver_PaverWriteDataFile_reply(txn, status);
+        auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
+        completer.Reply(status);
     }
 
-    zx_status_t WipeVolumes(fidl_txn_t* txn) {
+    void WipeVolumes(WipeVolumesCompleter::Sync completer) {
         last_command_ = Command::kWipeVolumes;
         auto status = ZX_OK;
-        return fuchsia_paver_PaverWipeVolumes_reply(txn, status);
+        completer.Reply(status);
     }
 
     Command last_command() { return last_command_; }
     void set_expected_payload_size(size_t size) { expected_payload_size_ = size; }
 
 private:
-    using Binder = fidl::Binder<FakePaver>;
-
     Command last_command_ = Command::kUnknown;
     size_t expected_payload_size_ = 0;
-
-    static constexpr fuchsia_paver_Paver_ops_t ops_ = {
-        .QueryActiveConfiguration = Binder::BindMember<&FakePaver::QueryActiveConfiguration>,
-        .SetActiveConfiguration = Binder::BindMember<&FakePaver::SetActiveConfiguration>,
-        .MarkActiveConfigurationSuccessful =
-            Binder::BindMember<&FakePaver::MarkActiveConfigurationSuccessful>,
-        .ForceRecoveryConfiguration = Binder::BindMember<&FakePaver::ForceRecoveryConfiguration>,
-        .WriteAsset = Binder::BindMember<&FakePaver::WriteAsset>,
-        .WriteVolumes = Binder::BindMember<&FakePaver::WriteVolumes>,
-        .WriteBootloader = Binder::BindMember<&FakePaver::WriteBootloader>,
-        .WriteDataFile = Binder::BindMember<&FakePaver::WriteDataFile>,
-        .WipeVolumes = Binder::BindMember<&FakePaver::WipeVolumes>,
-    };
 };
 
 class FakeSvc {
@@ -187,7 +168,7 @@ public:
     explicit FakeSvc(async_dispatcher_t* dispatcher)
         : dispatcher_(dispatcher), vfs_(dispatcher) {
         auto root_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-        root_dir->AddEntry(fuchsia_paver_Paver_Name,
+        root_dir->AddEntry(::llcpp::fuchsia::paver::Paver::Name_,
                            fbl::MakeRefCounted<fs::Service>([this](zx::channel request) {
                                return fake_paver_.Connect(dispatcher_, std::move(request));
                            }));
