@@ -6,19 +6,19 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/mmio-buffer.h>
-#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/usb-peripheral-config.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
+#include <stdlib.h>
+#include <string.h>
 #include <usb/dwc2/metadata.h>
 #include <zircon/device/usb-peripheral.h>
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb/cdc.h>
 
-#include <stdlib.h>
-#include <string.h>
-
 #include "astro.h"
+
+namespace astro {
 
 static const pbus_mmio_t dwc2_mmios[] = {
     {
@@ -59,6 +59,8 @@ static const dwc2_metadata_t dwc2_metadata = {
     },
 };
 
+using FunctionDescriptor = fuchsia_hardware_usb_peripheral_FunctionDescriptor;
+
 static pbus_metadata_t usb_metadata[] = {
     {
         .type = DEVICE_METADATA_USB_CONFIG,
@@ -80,22 +82,24 @@ static const pbus_boot_metadata_t usb_boot_metadata[] = {
     },
 };
 
-static const pbus_dev_t dwc2_dev = {
-    .name = "dwc2",
-    .vid = PDEV_VID_GENERIC,
-    .pid = PDEV_PID_GENERIC,
-    .did = PDEV_DID_USB_DWC2,
-    .mmio_list = dwc2_mmios,
-    .mmio_count = countof(dwc2_mmios),
-    .irq_list = dwc2_irqs,
-    .irq_count = countof(dwc2_irqs),
-    .bti_list = dwc2_btis,
-    .bti_count = countof(dwc2_btis),
-    .metadata_list = usb_metadata,
-    .metadata_count = countof(usb_metadata),
-    .boot_metadata_list = usb_boot_metadata,
-    .boot_metadata_count = countof(usb_boot_metadata),
-};
+static const pbus_dev_t dwc2_dev = []() {
+    pbus_dev_t dev;
+    dev.name = "dwc2";
+    dev.vid = PDEV_VID_GENERIC;
+    dev.pid = PDEV_PID_GENERIC;
+    dev.did = PDEV_DID_USB_DWC2;
+    dev.mmio_list = dwc2_mmios;
+    dev.mmio_count = countof(dwc2_mmios);
+    dev.irq_list = dwc2_irqs;
+    dev.irq_count = countof(dwc2_irqs);
+    dev.bti_list = dwc2_btis;
+    dev.bti_count = countof(dwc2_btis);
+    dev.metadata_list = usb_metadata;
+    dev.metadata_count = countof(usb_metadata);
+    dev.boot_metadata_list = usb_boot_metadata;
+    dev.boot_metadata_count = countof(usb_boot_metadata);
+    return dev;
+}();
 
 static const pbus_mmio_t xhci_mmios[] = {
     {
@@ -118,18 +122,20 @@ static const pbus_bti_t usb_btis[] = {
     },
 };
 
-static const pbus_dev_t xhci_dev = {
-    .name = "xhci",
-    .vid = PDEV_VID_GENERIC,
-    .pid = PDEV_PID_GENERIC,
-    .did = PDEV_DID_USB_XHCI_COMPOSITE,
-    .mmio_list = xhci_mmios,
-    .mmio_count = countof(xhci_mmios),
-    .irq_list = xhci_irqs,
-    .irq_count = countof(xhci_irqs),
-    .bti_list = usb_btis,
-    .bti_count = countof(usb_btis),
-};
+static const pbus_dev_t xhci_dev = []() {
+    pbus_dev_t dev;
+    dev.name = "xhci";
+    dev.vid = PDEV_VID_GENERIC;
+    dev.pid = PDEV_PID_GENERIC;
+    dev.did = PDEV_DID_USB_XHCI_COMPOSITE;
+    dev.mmio_list = xhci_mmios;
+    dev.mmio_count = countof(xhci_mmios);
+    dev.irq_list = xhci_irqs;
+    dev.irq_count = countof(xhci_irqs);
+    dev.bti_list = usb_btis;
+    dev.bti_count = countof(usb_btis);
+    return dev;
+}();
 
 static const pbus_mmio_t usb_phy_mmios[] = {
     {
@@ -177,19 +183,21 @@ static const pbus_metadata_t usb_phy_metadata[] = {
     },
 };
 
-static const pbus_dev_t usb_phy_dev = {
-    .name = "aml-usb-phy-v2",
-    .vid = PDEV_VID_AMLOGIC,
-    .did = PDEV_DID_AML_USB_PHY_V2,
-    .mmio_list = usb_phy_mmios,
-    .mmio_count = countof(usb_phy_mmios),
-    .irq_list = usb_phy_irqs,
-    .irq_count = countof(usb_phy_irqs),
-    .bti_list = usb_btis,
-    .bti_count = countof(usb_btis),
-    .metadata_list = usb_phy_metadata,
-    .metadata_count = countof(usb_phy_metadata),
-};
+static const pbus_dev_t usb_phy_dev = []() {
+    pbus_dev_t dev;
+    dev.name = "aml-usb-phy-v2";
+    dev.vid = PDEV_VID_AMLOGIC;
+    dev.did = PDEV_DID_AML_USB_PHY_V2;
+    dev.mmio_list = usb_phy_mmios;
+    dev.mmio_count = countof(usb_phy_mmios);
+    dev.irq_list = usb_phy_irqs;
+    dev.irq_count = countof(usb_phy_irqs);
+    dev.bti_list = usb_btis;
+    dev.bti_count = countof(usb_btis);
+    dev.metadata_list = usb_phy_metadata;
+    dev.metadata_count = countof(usb_phy_metadata);
+    return dev;
+}();
 
 static const zx_bind_inst_t root_match[] = {
     BI_MATCH(),
@@ -221,27 +229,32 @@ static const device_component_t dwc2_components[] = {
     { countof(dwc2_phy_component), dwc2_phy_component },
 };
 
-zx_status_t aml_usb_init(aml_bus_t* bus) {
-    zx_status_t status = pbus_device_add(&bus->pbus, &usb_phy_dev);
+zx_status_t Astro::UsbInit() {
+    zx_status_t status = pbus_.DeviceAdd(&usb_phy_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pbus_device_add failed %d\n", __func__, status);
+        zxlogf(ERROR, "%s: DeviceAdd(usb_phy) failed %d\n", __func__, status);
         return status;
     }
 
     // Add XHCI and DWC2 to the same devhost as the aml-usb-phy.
-    status = pbus_composite_device_add(&bus->pbus, &xhci_dev, xhci_components,
-                                       countof(xhci_components), 1);
+    status = pbus_.CompositeDeviceAdd(&xhci_dev, xhci_components,
+                                      countof(xhci_components), 1);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pbus_composite_device_add failed %d\n", __func__, status);
+        zxlogf(ERROR, "%s: CompositeDeviceAdd(xhci) failed %d\n",
+               __func__, status);
         return status;
     }
 
-    const size_t config_size = sizeof(struct UsbConfig) +
-            2 * sizeof(fuchsia_hardware_usb_peripheral_FunctionDescriptor);
-    struct UsbConfig* config = (struct UsbConfig*)calloc(1, config_size);
+    constexpr size_t alignment = alignof(UsbConfig) > __STDCPP_DEFAULT_NEW_ALIGNMENT__
+                                     ? alignof(UsbConfig)
+                                     : __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+    constexpr size_t config_size = sizeof(UsbConfig) + 2 * sizeof(FunctionDescriptor);
+    UsbConfig* config = reinterpret_cast<UsbConfig*>(
+        aligned_alloc(alignment, ROUNDUP(config_size, alignment)));
     if (!config) {
         return ZX_ERR_NO_MEMORY;
     }
+
     config->vid = GOOGLE_USB_VID;
     config->pid = GOOGLE_USB_CDC_AND_FUNCTION_TEST_PID;
     strcpy(config->manufacturer, kManufacturer);
@@ -256,13 +269,16 @@ zx_status_t aml_usb_init(aml_bus_t* bus) {
     usb_metadata[0].data_size = config_size;
     usb_metadata[0].data_buffer = config;
 
-    status = pbus_composite_device_add(&bus->pbus, &dwc2_dev, dwc2_components,
-                                     countof(dwc2_components), 1);
-    free(config);
+    status = pbus_.CompositeDeviceAdd(&dwc2_dev, dwc2_components,
+                                      countof(dwc2_components), 1);
+    delete config;
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pbus_composite_device_add failed %d\n", __func__, status);
+        zxlogf(ERROR, "%s: CompositeDeviceAdd(dwc2) failed %d\n",
+               __func__, status);
         return status;
     }
 
     return ZX_OK;
 }
+
+} // namespace astro
