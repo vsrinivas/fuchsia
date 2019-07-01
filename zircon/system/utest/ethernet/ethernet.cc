@@ -601,7 +601,7 @@ static bool EthernetCleanupHelper(EthertapClient* tap,
     return true;
 }
 
-static bool EthernetStartTest() {
+static bool EthernetImplStartTest() {
     BEGIN_TEST;
 
     EthertapClient tap;
@@ -692,7 +692,7 @@ static bool EthernetSetPromiscMultiClientTest() {
 
     ASSERT_EQ(ZX_OK, clientA.SetPromisc(true));
 
-    EXPECT_TRUE(tap.ExpectSetParam(ETHMAC_SETPARAM_PROMISC, 1, 0, nullptr, "Promisc on (1)"));
+    EXPECT_TRUE(tap.ExpectSetParam(ETHERNET_SETPARAM_PROMISC, 1, 0, nullptr, "Promisc on (1)"));
 
     // None of these should cause a change in promisc commands to ethermac.
     ASSERT_EQ(ZX_OK, clientA.SetPromisc(true)); // It was already requested by A.
@@ -702,7 +702,7 @@ static bool EthernetSetPromiscMultiClientTest() {
 
     // After the next line, no one wants promisc, so I should get a command to turn it off.
     ASSERT_EQ(ZX_OK, clientB.SetPromisc(false));
-    EXPECT_TRUE(tap.ExpectSetParam(ETHMAC_SETPARAM_PROMISC,
+    EXPECT_TRUE(tap.ExpectSetParam(ETHERNET_SETPARAM_PROMISC,
                                    0,
                                    0,
                                    nullptr,
@@ -722,14 +722,14 @@ static bool EthernetSetPromiscClearOnCloseTest() {
 
     ASSERT_EQ(ZX_OK, client.SetPromisc(true));
 
-    EXPECT_TRUE(tap.ExpectSetParam(ETHMAC_SETPARAM_PROMISC, 1, 0, nullptr, "Promisc on (1)"));
+    EXPECT_TRUE(tap.ExpectSetParam(ETHERNET_SETPARAM_PROMISC, 1, 0, nullptr, "Promisc on (1)"));
 
     // Shutdown the ethernet client.
     EXPECT_EQ(ZX_OK, client.Stop());
     client.Cleanup(); // This will free devfd
 
     // That should have caused promisc to turn off.
-    EXPECT_TRUE(tap.ExpectSetParam(ETHMAC_SETPARAM_PROMISC,
+    EXPECT_TRUE(tap.ExpectSetParam(ETHERNET_SETPARAM_PROMISC,
                                    0,
                                    0,
                                    nullptr,
@@ -775,13 +775,13 @@ static bool EthernetMulticastSetsAddresses() {
     uint8_t data[] = {6, 12};
     ASSERT_EQ(ZX_OK, clientA.MulticastAddressAdd(macA));
 
-    EXPECT_TRUE(tap.ExpectSetParam(ETHMAC_SETPARAM_MULTICAST_FILTER,
+    EXPECT_TRUE(tap.ExpectSetParam(ETHERNET_SETPARAM_MULTICAST_FILTER,
                                    1,
                                    1,
                                    data,
                                    "first addr"));
     ASSERT_EQ(ZX_OK, clientB.MulticastAddressAdd(macB));
-    EXPECT_TRUE(tap.ExpectSetParam(ETHMAC_SETPARAM_MULTICAST_FILTER,
+    EXPECT_TRUE(tap.ExpectSetParam(ETHERNET_SETPARAM_MULTICAST_FILTER,
                                    2,
                                    2,
                                    data,
@@ -814,31 +814,31 @@ static bool EthernetMulticastPromiscOnOverflow() {
         mac[5] = next_val;
         data[n_data++] = next_val++;
         ASSERT_EQ(ZX_OK, clientA.MulticastAddressAdd(mac));
-        ASSERT_TRUE(tap.ExpectSetParam(ETHMAC_SETPARAM_MULTICAST_FILTER,
+        ASSERT_TRUE(tap.ExpectSetParam(ETHERNET_SETPARAM_MULTICAST_FILTER,
                                        n_data, n_data, data, "loading filter"));
     }
     ASSERT_EQ(n_data, MULTICAST_LIST_LIMIT - 1); // There should be 1 space left
     mac[5] = next_val;
     data[n_data++] = next_val++;
     ASSERT_EQ(ZX_OK, clientB.MulticastAddressAdd(mac));
-    ASSERT_TRUE(tap.ExpectSetParam(ETHMAC_SETPARAM_MULTICAST_FILTER, n_data, n_data, data,
+    ASSERT_TRUE(tap.ExpectSetParam(ETHERNET_SETPARAM_MULTICAST_FILTER, n_data, n_data, data,
                                    "b - filter should be full"));
     mac[5] = next_val++;
     ASSERT_EQ(ZX_OK, clientB.MulticastAddressAdd(mac));
-    ASSERT_TRUE(tap.ExpectSetParam(ETHMAC_SETPARAM_MULTICAST_FILTER, -1, 0, nullptr,
+    ASSERT_TRUE(tap.ExpectSetParam(ETHERNET_SETPARAM_MULTICAST_FILTER, -1, 0, nullptr,
                                    "overloaded B"));
     ASSERT_EQ(ZX_OK, clientB.Stop());
     n_data--;
-    ASSERT_TRUE(tap.ExpectSetParam(ETHMAC_SETPARAM_MULTICAST_FILTER, n_data, n_data, data,
+    ASSERT_TRUE(tap.ExpectSetParam(ETHERNET_SETPARAM_MULTICAST_FILTER, n_data, n_data, data,
                                    "deleted B - filter should have 31"));
     mac[5] = next_val;
     data[n_data++] = next_val++;
     ASSERT_EQ(ZX_OK, clientA.MulticastAddressAdd(mac));
-    ASSERT_TRUE(tap.ExpectSetParam(ETHMAC_SETPARAM_MULTICAST_FILTER, n_data, n_data, data,
+    ASSERT_TRUE(tap.ExpectSetParam(ETHERNET_SETPARAM_MULTICAST_FILTER, n_data, n_data, data,
                                    "a - filter should be full"));
     mac[5] = next_val++;
     ASSERT_EQ(ZX_OK, clientA.MulticastAddressAdd(mac));
-    ASSERT_TRUE(tap.ExpectSetParam(ETHMAC_SETPARAM_MULTICAST_FILTER, -1, 0, nullptr,
+    ASSERT_TRUE(tap.ExpectSetParam(ETHERNET_SETPARAM_MULTICAST_FILTER, -1, 0, nullptr,
                                    "overloaded A"));
     ASSERT_TRUE(EthernetCleanupHelper(&tap, &clientA));
     END_TEST;
@@ -857,7 +857,7 @@ static bool EthernetSetMulticastPromiscMultiClientTest() {
     ASSERT_TRUE(AddClientHelper(&tap, &clientB, info));
 
     clientA.SetMulticastPromisc(true);
-    EXPECT_TRUE(tap.ExpectSetParam(ETHMAC_SETPARAM_MULTICAST_PROMISC,
+    EXPECT_TRUE(tap.ExpectSetParam(ETHERNET_SETPARAM_MULTICAST_PROMISC,
                                    1,
                                    0,
                                    nullptr,
@@ -872,7 +872,7 @@ static bool EthernetSetMulticastPromiscMultiClientTest() {
     // After the next line, no one wants promisc, so I should get a command to turn it off.
     clientB.SetMulticastPromisc(false);
     // That should have caused promisc to turn off.
-    EXPECT_TRUE(tap.ExpectSetParam(ETHMAC_SETPARAM_MULTICAST_PROMISC, 0, 0, nullptr,
+    EXPECT_TRUE(tap.ExpectSetParam(ETHERNET_SETPARAM_MULTICAST_PROMISC, 0, 0, nullptr,
                                    "Closed: promisc off (2)"));
 
     ASSERT_TRUE(EthernetCleanupHelper(&tap, &clientA, &clientB));
@@ -890,14 +890,14 @@ static bool EthernetSetMulticastPromiscClearOnCloseTest() {
 
     ASSERT_EQ(ZX_OK, client.SetPromisc(true));
 
-    EXPECT_TRUE(tap.ExpectSetParam(ETHMAC_SETPARAM_PROMISC, 1, 0, nullptr, "Promisc on (1)"));
+    EXPECT_TRUE(tap.ExpectSetParam(ETHERNET_SETPARAM_PROMISC, 1, 0, nullptr, "Promisc on (1)"));
 
     // Shutdown the ethernet client.
     EXPECT_EQ(ZX_OK, client.Stop());
     client.Cleanup(); // This will free devfd
 
     // That should have caused promisc to turn off.
-    EXPECT_TRUE(tap.ExpectSetParam(ETHMAC_SETPARAM_PROMISC,
+    EXPECT_TRUE(tap.ExpectSetParam(ETHERNET_SETPARAM_PROMISC,
                                    0,
                                    0,
                                    nullptr,
@@ -1003,7 +1003,7 @@ static bool EthernetDataTest_Recv() {
 #endif
 
 BEGIN_TEST_CASE(EthernetSetupTests)
-RUN_TEST_MEDIUM(EthernetStartTest)
+RUN_TEST_MEDIUM(EthernetImplStartTest)
 RUN_TEST_MEDIUM(EthernetLinkStatusTest)
 END_TEST_CASE(EthernetSetupTests)
 

@@ -47,18 +47,18 @@ typedef struct {
     list_node_t bulk_out_reqs = {};    // list of usb_request_t
     list_node_t bulk_in_reqs = {};     // list of usb_request_t
     list_node_t intr_reqs = {};        // list of usb_request_t
-    list_node_t tx_pending_infos = {}; // list of ethmac_netbuf_t
+    list_node_t tx_pending_infos = {}; // list of ethernet_netbuf_t
     bool unbound = false;              // set to true when device is going away. Guarded by tx_mutex
 
     // Device attributes
     uint8_t mac_addr[ETH_MAC_SIZE] = {};
-    // Ethmac lock -- must be acquired after tx_mutex
+    // Ethernet lock -- must be acquired after tx_mutex
     // when both locks are held.
-    mtx_t ethmac_mutex = {};
-    ethmac_ifc_protocol_t ethmac_ifc = {};
+    mtx_t ethernet_mutex = {};
+    ethernet_ifc_protocol_t ethernet_ifc = {};
     bool online = false;
     usb_speed_t speed = 0;
-    // TX lock -- Must be acquired before ethmac_mutex
+    // TX lock -- Must be acquired before ethernet_mutex
     // when both locks are held.
     mtx_t tx_mutex = {};
     mtx_t rx_mutex = {};
@@ -77,7 +77,7 @@ typedef struct {
 } usb_cdc_t;
 
 typedef struct txn_info {
-    ethmac_netbuf_t netbuf;
+    ethernet_netbuf_t netbuf;
     list_node_t node;
 } txn_info_t;
 
@@ -233,13 +233,13 @@ static zx_status_t cdc_generate_mac_address(zx_device_t* parent, usb_cdc_t* cdc)
     return usb_function_alloc_string_desc(&cdc->function, buffer, &descriptors.cdc_eth.iMACAddress);
 }
 
-static zx_status_t cdc_ethmac_query(void* ctx, uint32_t options, ethmac_info_t* info) {
+static zx_status_t cdc_ethernet_impl_query(void* ctx, uint32_t options, ethernet_info_t* info) {
     zxlogf(TRACE, "%s:\n", __func__);
     auto* cdc = static_cast<usb_cdc_t*>(ctx);
 
     // No options are supported
     if (options) {
-        zxlogf(ERROR, "%s: unexpected options (0x%" PRIx32 ") to ethmac_query\n", __func__,
+        zxlogf(ERROR, "%s: unexpected options (0x%" PRIx32 ") to ethernet_impl_query\n", __func__,
                 options);
         return ZX_ERR_INVALID_ARGS;
     }
@@ -252,37 +252,37 @@ static zx_status_t cdc_ethmac_query(void* ctx, uint32_t options, ethmac_info_t* 
     return ZX_OK;
 }
 
-static void cdc_ethmac_stop(void* cookie) {
+static void cdc_ethernet_impl_stop(void* cookie) {
     zxlogf(TRACE, "%s:\n", __func__);
     auto* cdc = static_cast<usb_cdc_t*>(cookie);
     mtx_lock(&cdc->tx_mutex);
-    mtx_lock(&cdc->ethmac_mutex);
-    cdc->ethmac_ifc.ops = NULL;
-    mtx_unlock(&cdc->ethmac_mutex);
+    mtx_lock(&cdc->ethernet_mutex);
+    cdc->ethernet_ifc.ops = NULL;
+    mtx_unlock(&cdc->ethernet_mutex);
     mtx_unlock(&cdc->tx_mutex);
 }
 
-static zx_status_t cdc_ethmac_start(void* ctx_cookie, const ethmac_ifc_protocol_t* ifc) {
+static zx_status_t cdc_ethernet_impl_start(void* ctx_cookie, const ethernet_ifc_protocol_t* ifc) {
     zxlogf(TRACE, "%s:\n", __func__);
     auto* cdc = static_cast<usb_cdc_t*>(ctx_cookie);
     zx_status_t status = ZX_OK;
     if (cdc->unbound) {
         return ZX_ERR_BAD_STATE;
     }
-    mtx_lock(&cdc->ethmac_mutex);
-    if (cdc->ethmac_ifc.ops) {
+    mtx_lock(&cdc->ethernet_mutex);
+    if (cdc->ethernet_ifc.ops) {
         status = ZX_ERR_ALREADY_BOUND;
     } else {
-        cdc->ethmac_ifc = *ifc;
-        ethmac_ifc_status(&cdc->ethmac_ifc, cdc->online ? ETHMAC_STATUS_ONLINE : 0);
+        cdc->ethernet_ifc = *ifc;
+        ethernet_ifc_status(&cdc->ethernet_ifc, cdc->online ? ETHERNET_STATUS_ONLINE : 0);
     }
-    mtx_unlock(&cdc->ethmac_mutex);
+    mtx_unlock(&cdc->ethernet_mutex);
 
     return status;
 }
 
-static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethmac_netbuf_t* netbuf) {
-    if (!cdc->ethmac_ifc.ops) {
+static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethernet_netbuf_t* netbuf) {
+    if (!cdc->ethernet_ifc.ops) {
         return ZX_ERR_BAD_STATE;
     }
     const auto* byte_data = static_cast<const uint8_t*>(netbuf->data_buffer);
@@ -316,7 +316,8 @@ static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethmac_netbuf_t* netbuf) {
     return ZX_OK;
 }
 
-static zx_status_t cdc_ethmac_queue_tx(void* cookie, uint32_t options, ethmac_netbuf_t* netbuf) {
+static zx_status_t cdc_ethernet_impl_queue_tx(void* cookie, uint32_t options,
+                                              ethernet_netbuf_t* netbuf) {
     auto* cdc = static_cast<usb_cdc_t*>(cookie);
     size_t length = netbuf->data_size;
     zx_status_t status;
@@ -343,18 +344,18 @@ static zx_status_t cdc_ethmac_queue_tx(void* cookie, uint32_t options, ethmac_ne
     return status;
 }
 
-static zx_status_t cdc_ethmac_set_param(void *cookie, uint32_t param, int32_t value,
-                                        const void* data, size_t data_size) {
+static zx_status_t cdc_ethernet_impl_set_param(void *cookie, uint32_t param, int32_t value,
+                                               const void* data, size_t data_size) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static ethmac_protocol_ops_t ethmac_ops = [](){
-    ethmac_protocol_ops_t ops = {};
-    ops.query = cdc_ethmac_query;
-    ops.stop = cdc_ethmac_stop;
-    ops.start = cdc_ethmac_start;
-    ops.queue_tx = cdc_ethmac_queue_tx;
-    ops.set_param = cdc_ethmac_set_param;
+static ethernet_impl_protocol_ops_t ethernet_impl_ops = [](){
+    ethernet_impl_protocol_ops_t ops = {};
+    ops.query = cdc_ethernet_impl_query;
+    ops.stop = cdc_ethernet_impl_stop;
+    ops.start = cdc_ethernet_impl_start;
+    ops.queue_tx = cdc_ethernet_impl_queue_tx;
+    ops.set_param = cdc_ethernet_impl_set_param;
     return ops;
 }();
 
@@ -453,13 +454,13 @@ static void cdc_rx_complete(void* ctx, usb_request_t* req) {
     }
 
     if (req->response.status == ZX_OK) {
-        mtx_lock(&cdc->ethmac_mutex);
-        if (cdc->ethmac_ifc.ops) {
+        mtx_lock(&cdc->ethernet_mutex);
+        if (cdc->ethernet_ifc.ops) {
             void* data = NULL;
             usb_request_mmap(req, &data);
-            ethmac_ifc_recv(&cdc->ethmac_ifc, data, req->response.actual, 0);
+            ethernet_ifc_recv(&cdc->ethernet_ifc, data, req->response.actual, 0);
         }
-        mtx_unlock(&cdc->ethmac_mutex);
+        mtx_unlock(&cdc->ethernet_mutex);
     }
 
     usb_request_complete_t complete = {
@@ -492,11 +493,11 @@ static void cdc_tx_complete(void* ctx, usb_request_t* req) {
     mtx_unlock(&cdc->tx_mutex);
 
     if (additional_tx_queued) {
-        mtx_lock(&cdc->ethmac_mutex);
-        if (cdc->ethmac_ifc.ops) {
-            ethmac_ifc_complete_tx(&cdc->ethmac_ifc, &txn->netbuf, send_status);
+        mtx_lock(&cdc->ethernet_mutex);
+        if (cdc->ethernet_ifc.ops) {
+            ethernet_ifc_complete_tx(&cdc->ethernet_ifc, &txn->netbuf, send_status);
         }
-        mtx_unlock(&cdc->ethmac_mutex);
+        mtx_unlock(&cdc->ethernet_mutex);
     }
 }
 
@@ -533,12 +534,12 @@ static zx_status_t cdc_set_configured(void* ctx, bool configured, usb_speed_t sp
     auto* cdc = static_cast<usb_cdc_t*>(ctx);
     zx_status_t status;
 
-    mtx_lock(&cdc->ethmac_mutex);
+    mtx_lock(&cdc->ethernet_mutex);
     cdc->online = false;
-    if (cdc->ethmac_ifc.ops) {
-        ethmac_ifc_status(&cdc->ethmac_ifc, 0);
+    if (cdc->ethernet_ifc.ops) {
+        ethernet_ifc_status(&cdc->ethernet_ifc, 0);
     }
-    mtx_unlock(&cdc->ethmac_mutex);
+    mtx_unlock(&cdc->ethernet_mutex);
 
     if (configured) {
         if ((status = usb_function_config_ep(&cdc->function, &descriptors.intr_ep, NULL)) != ZX_OK) {
@@ -600,12 +601,12 @@ static zx_status_t cdc_set_interface(void* ctx, uint8_t interface, uint8_t alt_s
         mtx_unlock(&cdc->rx_mutex);
     }
 
-    mtx_lock(&cdc->ethmac_mutex);
+    mtx_lock(&cdc->ethernet_mutex);
     cdc->online = online;
-    if (cdc->ethmac_ifc.ops) {
-        ethmac_ifc_status(&cdc->ethmac_ifc, online ? ETHMAC_STATUS_ONLINE : 0);
+    if (cdc->ethernet_ifc.ops) {
+        ethernet_ifc_status(&cdc->ethernet_ifc, online ? ETHERNET_STATUS_ONLINE : 0);
     }
-    mtx_unlock(&cdc->ethmac_mutex);
+    mtx_unlock(&cdc->ethernet_mutex);
 
     // send status notifications on interrupt endpoint
     cdc_send_notifications(cdc);
@@ -636,11 +637,11 @@ static void usb_cdc_unbind(void* ctx) {
     }
     {
         fbl::AutoLock l(&cdc->tx_mutex);
-        if (cdc->ethmac_ifc.ops) {
+        if (cdc->ethernet_ifc.ops) {
             txn_info_t* txn;
             while ((txn = list_remove_head_type(&cdc->tx_pending_infos, txn_info_t, node)) !=
                    NULL) {
-                ethmac_ifc_complete_tx(&cdc->ethmac_ifc, &txn->netbuf, ZX_ERR_PEER_CLOSED);
+                ethernet_ifc_complete_tx(&cdc->ethernet_ifc, &txn->netbuf, ZX_ERR_PEER_CLOSED);
             }
         }
     }
@@ -661,7 +662,7 @@ static void usb_cdc_release(void* ctx) {
     while ((req = usb_req_list_remove_head(&cdc->intr_reqs, cdc->parent_req_size)) != NULL) {
         usb_request_release(req);
     }
-    mtx_destroy(&cdc->ethmac_mutex);
+    mtx_destroy(&cdc->ethernet_mutex);
     mtx_destroy(&cdc->tx_mutex);
     mtx_destroy(&cdc->rx_mutex);
     mtx_destroy(&cdc->intr_mutex);
@@ -694,7 +695,7 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
     list_initialize(&cdc->bulk_in_reqs);
     list_initialize(&cdc->intr_reqs);
     list_initialize(&cdc->tx_pending_infos);
-    mtx_init(&cdc->ethmac_mutex, mtx_plain);
+    mtx_init(&cdc->ethernet_mutex, mtx_plain);
     mtx_init(&cdc->tx_mutex, mtx_plain);
     mtx_init(&cdc->rx_mutex, mtx_plain);
     mtx_init(&cdc->intr_mutex, mtx_plain);
@@ -783,8 +784,8 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
     args.name = "cdc-eth-function";
     args.ctx = cdc.get();
     args.ops = &usb_cdc_proto;
-    args.proto_id = ZX_PROTOCOL_ETHMAC;
-    args.proto_ops = &ethmac_ops;
+    args.proto_id = ZX_PROTOCOL_ETHERNET_IMPL;
+    args.proto_ops = &ethernet_impl_ops;
 
     status = device_add(parent, &args, &cdc->zxdev);
     if (status != ZX_OK) {

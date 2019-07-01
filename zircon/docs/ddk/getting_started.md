@@ -115,7 +115,7 @@ A protocol is a strict interface definition.
 
 The ethernet driver published an interface that conforms to `ZX_PROTOCOL_ETHERNET_IMPL`.
 This means that it must provide a set of functions defined in a data structure
-(in this case, `ethmac_protocol_ops_t`).
+(in this case, `ethernet_impl_protocol_ops_t`).
 
 These functions are common to all devices implementing the protocol &mdash; for example,
 all ethernet devices must provide a function that queries the MAC address of the

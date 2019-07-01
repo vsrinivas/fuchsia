@@ -83,16 +83,16 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
     void StatsQueryResp(wlanif_stats_query_response_t* resp);
     void RelayCapturedFrame(wlanif_captured_frame_result* result);
 
-    // wlanif_protocol_t (ethmac_protocol -> wlanif_impl_protocol)
-    zx_status_t EthStart(const ethmac_ifc_protocol_t* ifc);
+    // wlanif_protocol_t (ethernet_impl_protocol -> wlanif_impl_protocol)
+    zx_status_t EthStart(const ethernet_ifc_protocol_t* ifc);
     void EthStop();
-    zx_status_t EthQuery(uint32_t options, ethmac_info_t* info);
-    zx_status_t EthQueueTx(uint32_t options, ethmac_netbuf_t* netbuf);
+    zx_status_t EthQuery(uint32_t options, ethernet_info_t* info);
+    zx_status_t EthQueueTx(uint32_t options, ethernet_netbuf_t* netbuf);
     zx_status_t EthSetParam(uint32_t param, int32_t value, const void* data, size_t data_size);
 
-    // wlanif_impl_ifc (wlanif-impl -> ethmac_ifc_t)
+    // wlanif_impl_ifc (wlanif-impl -> ethernet_ifc_t)
     void EthRecv(void* data, size_t length, uint32_t flags);
-    void EthCompleteTx(ethmac_netbuf_t* netbuf, zx_status_t status);
+    void EthCompleteTx(ethernet_netbuf_t* netbuf, zx_status_t status);
 
    private:
     // Stops the message loop from accepting incoming FIDL requests and removes the given device.
@@ -108,13 +108,13 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
 
     wlanif_impl_protocol_t wlanif_impl_;
 
-    void SetEthmacStatusLocked(bool online) __TA_REQUIRES(lock_);
-    void SetEthmacStatusUnlocked(bool online);
+    void SetEthernetStatusLocked(bool online) __TA_REQUIRES(lock_);
+    void SetEthernetStatusUnlocked(bool online);
 
     bool protected_bss_ __TA_GUARDED(lock_) = false;
 
     bool eth_started_ __TA_GUARDED(lock_) = false;
-    ethmac_ifc_protocol_t ethmac_ifc_ __TA_GUARDED(lock_);
+    ethernet_ifc_protocol_t ethernet_ifc_ __TA_GUARDED(lock_);
 
     wlanif_query_info query_info_;
 

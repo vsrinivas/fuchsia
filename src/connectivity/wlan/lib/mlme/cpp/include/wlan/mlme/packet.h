@@ -21,7 +21,7 @@
 #include <string>
 #include <type_traits>
 
-typedef struct ethmac_netbuf ethmac_netbuf_t;
+typedef struct ethernet_netbuf ethernet_netbuf_t;
 
 namespace wlan {
 
@@ -272,12 +272,12 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
   wlan_tx_packet_t AsWlanTxPacket();
 
   bool has_ext_data() const { return ext_data_ != nullptr; }
-  void set_ext_data(ethmac_netbuf_t* netbuf, uint16_t offset) {
+  void set_ext_data(ethernet_netbuf_t* netbuf, uint16_t offset) {
     ZX_DEBUG_ASSERT(!has_ext_data());
     ext_data_ = netbuf;
     ext_offset_ = offset;
   }
-  ethmac_netbuf_t* ext_data() const { return ext_data_; }
+  ethernet_netbuf_t* ext_data() const { return ext_data_; }
   uint16_t ext_offset() const { return ext_offset_; }
 
  private:
@@ -285,7 +285,7 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
   size_t len_ = 0;
   size_t ctrl_len_ = 0;
   Peer peer_ = Peer::kUnknown;
-  ethmac_netbuf_t* ext_data_ = nullptr;
+  ethernet_netbuf_t* ext_data_ = nullptr;
   uint16_t ext_offset_ = 0;
 };
 

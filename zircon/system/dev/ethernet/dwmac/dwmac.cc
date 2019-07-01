@@ -112,8 +112,8 @@ void DWMacDevice::UpdateLinkStatus() {
     bool temp = dwmac_regs_->rgmiistatus & GMAC_RGMII_STATUS_LNKSTS;
     if (temp != online_) {
         online_ = temp;
-        if (ethmac_client_.is_valid()) {
-            ethmac_client_.Status(online_ ? ETHMAC_STATUS_ONLINE : 0u);
+        if (ethernet_client_.is_valid()) {
+            ethernet_client_.Status(online_ ? ETHERNET_STATUS_ONLINE : 0u);
         } else {
             zxlogf(ERROR, "dwmac: System not ready\n");
         }
@@ -333,7 +333,7 @@ zx_status_t DWMacDevice::InitBuffers() {
     return ZX_OK;
 }
 
-void DWMacDevice::EthmacGetBti(zx::bti* bti) {
+void DWMacDevice::EthernetImplGetBti(zx::bti* bti) {
     bti_.duplicate(ZX_RIGHT_SAME_RIGHTS, bti);
 }
 
@@ -399,12 +399,12 @@ void DWMacDevice::ReleaseBuffers() {
 }
 
 void DWMacDevice::DdkRelease() {
-    zxlogf(INFO, "Ethmac release...\n");
+    zxlogf(INFO, "Ethernet release...\n");
     delete this;
 }
 
 void DWMacDevice::DdkUnbind() {
-    zxlogf(INFO, "Ethmac DdkUnbind\n");
+    zxlogf(INFO, "Ethernet DdkUnbind\n");
     ShutDown();
     DdkRemove();
 }
@@ -417,7 +417,7 @@ zx_status_t DWMacDevice::ShutDown() {
     }
     fbl::AutoLock lock(&lock_);
     online_ = false;
-    ethmac_client_.clear();
+    ethernet_client_.clear();
     DeInitDevice();
     ReleaseBuffers();
     return ZX_OK;
@@ -451,29 +451,29 @@ zx_status_t DWMacDevice::GetMAC(zx_device_t* dev) {
     return ZX_OK;
 }
 
-zx_status_t DWMacDevice::EthmacQuery(uint32_t options, ethmac_info_t* info) {
+zx_status_t DWMacDevice::EthernetImplQuery(uint32_t options, ethernet_info_t* info) {
     memset(info, 0, sizeof(*info));
-    info->features = ETHMAC_FEATURE_DMA;
+    info->features = ETHERNET_FEATURE_DMA;
     info->mtu = 1500;
     memcpy(info->mac, mac_, sizeof info->mac);
-    info->netbuf_size = sizeof(ethmac_netbuf_t);
+    info->netbuf_size = sizeof(ethernet_netbuf_t);
     return ZX_OK;
 }
 
-void DWMacDevice::EthmacStop() {
+void DWMacDevice::EthernetImplStop() {
     zxlogf(INFO, "Stopping Ethermac\n");
     fbl::AutoLock lock(&lock_);
-    ethmac_client_.clear();
+    ethernet_client_.clear();
 }
 
-zx_status_t DWMacDevice::EthmacStart(const ethmac_ifc_protocol_t* ifc) {
+zx_status_t DWMacDevice::EthernetImplStart(const ethernet_ifc_protocol_t* ifc) {
     fbl::AutoLock lock(&lock_);
 
-    if (ethmac_client_.is_valid()) {
+    if (ethernet_client_.is_valid()) {
         zxlogf(ERROR, "dwmac:  Already bound!!!");
         return ZX_ERR_ALREADY_BOUND;
     } else {
-        ethmac_client_ = ddk::EthmacIfcProtocolClient(ifc);
+        ethernet_client_ = ddk::EthernetIfcProtocolClient(ifc);
         UpdateLinkStatus();
         zxlogf(INFO, "dwmac: Started\n");
     }
@@ -557,9 +557,9 @@ void DWMacDevice::ProcRxBuffer(uint32_t int_status) {
 
         { // limit scope of autolock
             fbl::AutoLock lock(&lock_);
-            if ((ethmac_client_.is_valid())) {
+            if ((ethernet_client_.is_valid())) {
 
-                ethmac_client_.Recv(temptr, fr_len, 0);
+                ethernet_client_.Recv(temptr, fr_len, 0);
 
             } else {
                 zxlogf(ERROR, "Dropping bad packet\n");
@@ -577,7 +577,7 @@ void DWMacDevice::ProcRxBuffer(uint32_t int_status) {
     }
 }
 
-zx_status_t DWMacDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
+zx_status_t DWMacDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf) {
 
     { //Check to make sure we are ready to accept packets
         fbl::AutoLock lock(&lock_);
@@ -618,7 +618,7 @@ zx_status_t DWMacDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf
     return ZX_OK;
 }
 
-zx_status_t DWMacDevice::EthmacSetParam(uint32_t param, int32_t value, const void* data,
+zx_status_t DWMacDevice::EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
                                         size_t data_size) {
     zxlogf(INFO, "dwmac: SetParam called  %x  %x\n", param, value);
     return ZX_OK;

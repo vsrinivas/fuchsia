@@ -122,7 +122,7 @@ TapDevice::TapDevice(zx_device_t* device,
                      zx::channel server)
     : ddk::Device<TapDevice, ddk::Unbindable>(device),
       options_(config->options),
-      features_(config->features | ETHMAC_FEATURE_SYNTH),
+      features_(config->features | ETHERNET_FEATURE_SYNTH),
       mtu_(config->mtu),
       online_((config->options & ETHERTAP_OPT_ONLINE) != 0),
       channel_(std::move(server)) {
@@ -149,34 +149,34 @@ void TapDevice::DdkUnbind() {
     // When the thread exits after the channel is closed, it will call DdkRemove.
 }
 
-zx_status_t TapDevice::EthmacQuery(uint32_t options, ethmac_info_t* info) {
+zx_status_t TapDevice::EthernetImplQuery(uint32_t options, ethernet_info_t* info) {
     memset(info, 0, sizeof(*info));
     info->features = features_;
     info->mtu = mtu_;
     memcpy(info->mac, mac_, 6);
-    info->netbuf_size = sizeof(ethmac_netbuf_t);
+    info->netbuf_size = sizeof(ethernet_netbuf_t);
     return ZX_OK;
 }
 
-void TapDevice::EthmacStop() {
-    ethertap_trace("EthmacStop\n");
+void TapDevice::EthernetImplStop() {
+    ethertap_trace("EthernetImplStop\n");
     fbl::AutoLock lock(&lock_);
-    ethmac_client_.clear();
+    ethernet_client_.clear();
 }
 
-zx_status_t TapDevice::EthmacStart(const ethmac_ifc_protocol_t* ifc) {
-    ethertap_trace("EthmacStart\n");
+zx_status_t TapDevice::EthernetImplStart(const ethernet_ifc_protocol_t* ifc) {
+    ethertap_trace("EthernetImplStart\n");
     fbl::AutoLock lock(&lock_);
-    if (ethmac_client_.is_valid()) {
+    if (ethernet_client_.is_valid()) {
         return ZX_ERR_ALREADY_BOUND;
     } else {
-        ethmac_client_ = ddk::EthmacIfcProtocolClient(ifc);
-        ethmac_client_.Status(online_ ? ETHMAC_STATUS_ONLINE : 0u);
+        ethernet_client_ = ddk::EthernetIfcProtocolClient(ifc);
+        ethernet_client_.Status(online_ ? ETHERNET_STATUS_ONLINE : 0u);
     }
     return ZX_OK;
 }
 
-zx_status_t TapDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
+zx_status_t TapDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf) {
     fbl::AutoLock lock(&lock_);
     if (dead_) {
         return ZX_ERR_PEER_CLOSED;
@@ -202,7 +202,7 @@ zx_status_t TapDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) 
     fidl::Message msg(builder.Finalize(), fidl::HandlePart());
     auto status = msg.Encode(&fuchsia_hardware_ethertap_TapDeviceOnFrameEventTable, &err);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "ethertap: EthmacQueueTx error encoding: %d %s\n", status, err);
+        zxlogf(ERROR, "ethertap: EthernetImplQueueTx error encoding: %d %s\n", status, err);
     } else {
         if (unlikely(options_ & ETHERTAP_OPT_TRACE_PACKETS)) {
             ethertap_trace("sending %zu bytes\n", length);
@@ -212,14 +212,14 @@ zx_status_t TapDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) 
         status = msg.Write(channel_.get(), 0);
 
         if (status != ZX_OK) {
-            zxlogf(ERROR, "ethertap: EthmacQueueTx error writing: %d\n", status);
+            zxlogf(ERROR, "ethertap: EthernetImplQueueTx error writing: %d\n", status);
         }
     }
     // returning ZX_ERR_SHOULD_WAIT indicates that we will call complete_tx(), which we will not
     return status == ZX_ERR_SHOULD_WAIT ? ZX_ERR_UNAVAILABLE : status;
 }
 
-zx_status_t TapDevice::EthmacSetParam(uint32_t param, int32_t value, const void* data,
+zx_status_t TapDevice::EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
                                       size_t data_size) {
     fbl::AutoLock lock(&lock_);
     if (!(options_ & ETHERTAP_OPT_REPORT_PARAM) || dead_) {
@@ -238,8 +238,8 @@ zx_status_t TapDevice::EthmacSetParam(uint32_t param, int32_t value, const void*
     event->data.count = 0;
 
     switch (param) {
-    case ETHMAC_SETPARAM_MULTICAST_FILTER:
-        if (value == ETHMAC_MULTICAST_FILTER_OVERFLOW) {
+    case ETHERNET_SETPARAM_MULTICAST_FILTER:
+        if (value == ETHERNET_MULTICAST_FILTER_OVERFLOW) {
             break;
         } else {
             // Send the final byte of each address, sorted lowest-to-highest.
@@ -273,19 +273,19 @@ zx_status_t TapDevice::EthmacSetParam(uint32_t param, int32_t value, const void*
     fidl::Message msg(builder.Finalize(), fidl::HandlePart());
     auto status = msg.Encode(&fuchsia_hardware_ethertap_TapDeviceOnReportParamsEventTable, &err);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "ethertap: EthmacSetParam error encoding: %d %s\n", status, err);
+        zxlogf(ERROR, "ethertap: EthernetImplSetParam error encoding: %d %s\n", status, err);
     } else {
         status = msg.Write(channel_.get(), 0);
 
         if (status != ZX_OK) {
-            zxlogf(ERROR, "ethertap: EthmacSetParam error writing: %d\n", status);
+            zxlogf(ERROR, "ethertap: EthernetImplSetParam error writing: %d\n", status);
         }
     }
 
     return ZX_OK;
 }
 
-void TapDevice::EthmacGetBti(zx::bti* bti) {
+void TapDevice::EthernetImplGetBti(zx::bti* bti) {
     bti->reset();
 }
 
@@ -302,8 +302,8 @@ void TapDevice::UpdateLinkStatus(bool online) {
 
     if (was_online != online_) {
         fbl::AutoLock lock(&lock_);
-        if (ethmac_client_.is_valid()) {
-            ethmac_client_.Status(online_ ? ETHMAC_STATUS_ONLINE : 0u);
+        if (ethernet_client_.is_valid()) {
+            ethernet_client_.Status(online_ ? ETHERNET_STATUS_ONLINE : 0u);
         }
         ethertap_trace("device '%s' is now %s\n", name(), online_ ? "online" : "offline");
     }
@@ -322,8 +322,8 @@ zx_status_t TapDevice::Recv(const uint8_t* buffer, uint32_t length) {
         hexdump8_ex(buffer, length, 0);
     }
 
-    if (ethmac_client_.is_valid()) {
-        ethmac_client_.Recv(buffer, length, 0u);
+    if (ethernet_client_.is_valid()) {
+        ethernet_client_.Recv(buffer, length, 0u);
     }
     return ZX_OK;
 }

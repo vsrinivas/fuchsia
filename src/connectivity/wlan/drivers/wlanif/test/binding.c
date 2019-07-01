@@ -166,7 +166,7 @@ void wlanif_query(void* ctx, wlanif_query_info_t* info) {
     memcpy(info->bands[0].channels, channels, sizeof(channels));
 }
 
-zx_status_t wlanif_data_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
+zx_status_t wlanif_data_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf) {
     printf("***** data_queue_tx\n");
     return ZX_OK;
 }

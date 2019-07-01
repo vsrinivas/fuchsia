@@ -228,6 +228,6 @@ void brcmf_netif_rx(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf);
 void brcmf_net_setcarrier(struct brcmf_if* ifp, bool on);
 zx_status_t brcmf_core_init(zx_device_t* dev);
 void brcmf_core_exit(void);
-void brcmf_netdev_start_xmit(struct net_device* ndev, ethmac_netbuf_t* netbuf);
+void brcmf_netdev_start_xmit(struct net_device* ndev, ethernet_netbuf_t* netbuf);
 
 #endif /* BRCMFMAC_CORE_H */

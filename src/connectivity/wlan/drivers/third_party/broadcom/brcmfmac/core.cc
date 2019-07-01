@@ -221,7 +221,7 @@ void brcmf_netdev_set_multicast_list(struct net_device* ndev) {
     workqueue_schedule_default(&ifp->multicast_work);
 }
 
-void brcmf_netdev_start_xmit(struct net_device* ndev, ethmac_netbuf_t* ethmac_netbuf) {
+void brcmf_netdev_start_xmit(struct net_device* ndev, ethernet_netbuf_t* ethernet_netbuf) {
     zx_status_t ret;
     struct brcmf_if* ifp = ndev_to_if(ndev);
     struct brcmf_pub* drvr = ifp->drvr;
@@ -239,10 +239,10 @@ void brcmf_netdev_start_xmit(struct net_device* ndev, ethmac_netbuf_t* ethmac_ne
         goto done;
     }
 
-    netbuf = brcmf_netbuf_allocate(ethmac_netbuf->data_size + drvr->hdrlen);
-    brcmf_netbuf_grow_tail(netbuf, ethmac_netbuf->data_size + drvr->hdrlen);
+    netbuf = brcmf_netbuf_allocate(ethernet_netbuf->data_size + drvr->hdrlen);
+    brcmf_netbuf_grow_tail(netbuf, ethernet_netbuf->data_size + drvr->hdrlen);
     brcmf_netbuf_shrink_head(netbuf, drvr->hdrlen);
-    memcpy(netbuf->data, ethmac_netbuf->data_buffer, ethmac_netbuf->data_size);
+    memcpy(netbuf->data, ethernet_netbuf->data_buffer, ethernet_netbuf->data_size);
 
     /* Make sure there's enough writeable headroom */
     if (brcmf_netbuf_head_space(netbuf) < drvr->hdrlen) {

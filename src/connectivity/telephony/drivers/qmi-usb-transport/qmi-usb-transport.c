@@ -31,17 +31,17 @@
 #define MAX_TX_BUF_SZ 32768
 #define MAX_RX_BUF_SZ 32768
 
-#define ETHMAC_MAX_TRANSMIT_DELAY 100
-#define ETHMAC_MAX_RECV_DELAY 100
-#define ETHMAC_TRANSMIT_DELAY 10
-#define ETHMAC_RECV_DELAY 10
-#define ETHMAC_INITIAL_TRANSMIT_DELAY 0
-#define ETHMAC_INITIAL_RECV_DELAY 0
+#define ETHERNET_MAX_TRANSMIT_DELAY 100
+#define ETHERNET_MAX_RECV_DELAY 100
+#define ETHERNET_TRANSMIT_DELAY 10
+#define ETHERNET_RECV_DELAY 10
+#define ETHERNET_INITIAL_TRANSMIT_DELAY 0
+#define ETHERNET_INITIAL_RECV_DELAY 0
 
 #define ETHERNET_FRAME_OFFSET 14
 
 typedef struct txn_info {
-  ethmac_netbuf_t netbuf;
+  ethernet_netbuf_t netbuf;
   list_node_t node;
 } txn_info_t;
 
@@ -70,8 +70,8 @@ typedef struct qmi_ctx {
   // Ethernet
   zx_device_t* eth_zxdev;
 
-  mtx_t ethmac_mutex;
-  ethmac_ifc_protocol_t ethmac_ifc;
+  mtx_t ethernet_mutex;
+  ethernet_ifc_protocol_t ethernet_ifc;
 
   // Device attributes
   uint8_t mac_addr[ETH_MAC_SIZE];
@@ -155,11 +155,11 @@ static zx_status_t queue_request(qmi_ctx_t* ctx, const uint8_t* data,
     };
 
     zx_nanosleep(zx_deadline_after(ZX_USEC(ctx->tx_endpoint_delay)));
-    mtx_lock(&ctx->ethmac_mutex);
-    if (ctx->ethmac_ifc.ops) {
-      ethmac_ifc_recv(&ctx->ethmac_ifc, read_data, sizeof(read_data), 0);
+    mtx_lock(&ctx->ethernet_mutex);
+    if (ctx->ethernet_ifc.ops) {
+      ethernet_ifc_recv(&ctx->ethernet_ifc, read_data, sizeof(read_data), 0);
     }
-    mtx_unlock(&ctx->ethmac_mutex);
+    mtx_unlock(&ctx->ethernet_mutex);
     return ZX_OK;
   }
 
@@ -188,7 +188,7 @@ static zx_status_t queue_request(qmi_ctx_t* ctx, const uint8_t* data,
   return ZX_OK;
 }
 
-static zx_status_t send_locked(qmi_ctx_t* ctx, ethmac_netbuf_t* netbuf) {
+static zx_status_t send_locked(qmi_ctx_t* ctx, ethernet_netbuf_t* netbuf) {
   const uint8_t* byte_data = netbuf->data_buffer;
   size_t length = netbuf->data_size;
 
@@ -212,7 +212,7 @@ static zx_status_t send_locked(qmi_ctx_t* ctx, ethmac_netbuf_t* netbuf) {
 }
 
 static void qmi_update_online_status(qmi_ctx_t* ctx, bool is_online) {
-  mtx_lock(&ctx->ethmac_mutex);
+  mtx_lock(&ctx->ethernet_mutex);
   if ((is_online && ctx->online) || (!is_online && !ctx->online)) {
     goto done;
   }
@@ -220,22 +220,22 @@ static void qmi_update_online_status(qmi_ctx_t* ctx, bool is_online) {
   if (is_online) {
     zxlogf(INFO, "qmi-usb-transport: connected to network\n");
     ctx->online = true;
-    if (ctx->ethmac_ifc.ops) {
-      ethmac_ifc_status(&ctx->ethmac_ifc,
-                        ctx->online ? ETHMAC_STATUS_ONLINE : 0);
+    if (ctx->ethernet_ifc.ops) {
+      ethernet_ifc_status(&ctx->ethernet_ifc,
+                        ctx->online ? ETHERNET_STATUS_ONLINE : 0);
     } else {
       zxlogf(ERROR, "qmi-usb-transport: not connected to ethermac interface\n");
     }
   } else {
     zxlogf(INFO, "qmi-usb-transport: no connection to network\n");
     ctx->online = false;
-    if (ctx->ethmac_ifc.ops) {
-      ethmac_ifc_status(&ctx->ethmac_ifc, 0);
+    if (ctx->ethernet_ifc.ops) {
+      ethernet_ifc_status(&ctx->ethernet_ifc, 0);
     }
   }
 
 done:
-  mtx_unlock(&ctx->ethmac_mutex);
+  mtx_unlock(&ctx->ethernet_mutex);
 }
 
 static inline zx_status_t set_async_wait(qmi_ctx_t* ctx) {
@@ -369,15 +369,15 @@ static void qmi_unbind(void* ctx) {
   }
 }
 
-static zx_status_t qmi_ethmac_query(void* ctx, uint32_t options,
-                                    ethmac_info_t* info) {
+static zx_status_t qmi_ethernet_impl_query(void* ctx, uint32_t options,
+                                    ethernet_info_t* info) {
   qmi_ctx_t* eth = ctx;
 
   zxlogf(INFO, "qmi-usb-transport: %s called\n", __FUNCTION__);
 
   // No options are supported
   if (options) {
-    zxlogf(ERROR, "qmi-usb-transport: unexpected options to ethmac_query\n");
+    zxlogf(ERROR, "qmi-usb-transport: unexpected options to ethernet_impl_query\n");
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -389,40 +389,40 @@ static zx_status_t qmi_ethmac_query(void* ctx, uint32_t options,
   return ZX_OK;
 }
 
-static zx_status_t qmi_ethmac_start(void* ctx_cookie,
-                                    const ethmac_ifc_protocol_t* ifc) {
+static zx_status_t qmi_ethernet_impl_start(void* ctx_cookie,
+                                    const ethernet_ifc_protocol_t* ifc) {
   zxlogf(INFO, "qmi-usb-transport: %s called\n", __FUNCTION__);
   qmi_ctx_t* ctx = ctx_cookie;
   zx_status_t status = ZX_OK;
 
-  mtx_lock(&ctx->ethmac_mutex);
-  if (ctx->ethmac_ifc.ops) {
+  mtx_lock(&ctx->ethernet_mutex);
+  if (ctx->ethernet_ifc.ops) {
     status = ZX_ERR_ALREADY_BOUND;
   } else {
-    ctx->ethmac_ifc = *ifc;
-    ethmac_ifc_status(&ctx->ethmac_ifc, ctx->online ? ETHMAC_STATUS_ONLINE : 0);
+    ctx->ethernet_ifc = *ifc;
+    ethernet_ifc_status(&ctx->ethernet_ifc, ctx->online ? ETHERNET_STATUS_ONLINE : 0);
   }
 
-  mtx_unlock(&ctx->ethmac_mutex);
+  mtx_unlock(&ctx->ethernet_mutex);
   return status;
 }
 
-static zx_status_t qmi_ethmac_set_param(void* cookie, uint32_t param,
+static zx_status_t qmi_ethernet_impl_set_param(void* cookie, uint32_t param,
                                         int32_t value, const void* data,
                                         size_t data_size) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static void qmi_ethmac_stop(void* cookie) {
+static void qmi_ethernet_impl_stop(void* cookie) {
   zxlogf(INFO, "qmi-usb-transport: %s called\n", __FUNCTION__);
   qmi_ctx_t* ctx = cookie;
-  mtx_lock(&ctx->ethmac_mutex);
-  ctx->ethmac_ifc.ops = NULL;
-  mtx_unlock(&ctx->ethmac_mutex);
+  mtx_lock(&ctx->ethernet_mutex);
+  ctx->ethernet_ifc.ops = NULL;
+  mtx_unlock(&ctx->ethernet_mutex);
 }
 
-static zx_status_t qmi_ethmac_queue_tx(void* cookie, uint32_t options,
-                                       ethmac_netbuf_t* netbuf) {
+static zx_status_t qmi_ethernet_impl_queue_tx(void* cookie, uint32_t options,
+                                       ethernet_netbuf_t* netbuf) {
   qmi_ctx_t* ctx = cookie;
   size_t length = netbuf->data_size;
   zx_status_t status;
@@ -448,12 +448,12 @@ static zx_status_t qmi_ethmac_queue_tx(void* cookie, uint32_t options,
   return status;
 }
 
-static ethmac_protocol_ops_t ethmac_ops = {
-    .query = qmi_ethmac_query,
-    .stop = qmi_ethmac_stop,
-    .start = qmi_ethmac_start,
-    .queue_tx = qmi_ethmac_queue_tx,
-    .set_param = qmi_ethmac_set_param,
+static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
+    .query = qmi_ethernet_impl_query,
+    .stop = qmi_ethernet_impl_stop,
+    .start = qmi_ethernet_impl_start,
+    .queue_tx = qmi_ethernet_impl_queue_tx,
+    .set_param = qmi_ethernet_impl_set_param,
 };
 
 static zx_protocol_device_t qmi_ops = {
@@ -666,12 +666,12 @@ static void usb_recv(qmi_ctx_t* ctx, usb_request_t* request) {
   send_data[13] = 0x00;
 
   memcpy(&send_data[ETHERNET_FRAME_OFFSET], read_data, len);
-  mtx_lock(&ctx->ethmac_mutex);
-  if (ctx->ethmac_ifc.ops) {
-    ethmac_ifc_recv(&ctx->ethmac_ifc, send_data, len + ETHERNET_FRAME_OFFSET,
+  mtx_lock(&ctx->ethernet_mutex);
+  if (ctx->ethernet_ifc.ops) {
+    ethernet_ifc_recv(&ctx->ethernet_ifc, send_data, len + ETHERNET_FRAME_OFFSET,
                     0);
   }
-  mtx_unlock(&ctx->ethmac_mutex);
+  mtx_unlock(&ctx->ethernet_mutex);
 }
 
 static void usb_read_complete(void* context, usb_request_t* request) {
@@ -692,13 +692,13 @@ static void usb_read_complete(void* context, usb_request_t* request) {
     zxlogf(ERROR, "qmi-usb-transport: resetting receive endpoint\n");
     usb_reset_endpoint(&ctx->usb, ctx->rx_endpoint_addr);
   } else if (request->response.status == ZX_ERR_IO_INVALID) {
-    if (ctx->rx_endpoint_delay < ETHMAC_MAX_RECV_DELAY) {
-      ctx->rx_endpoint_delay += ETHMAC_RECV_DELAY;
+    if (ctx->rx_endpoint_delay < ETHERNET_MAX_RECV_DELAY) {
+      ctx->rx_endpoint_delay += ETHERNET_RECV_DELAY;
     }
     zxlogf(ERROR,
            "qmi-usb-transport: slowing down the requests by %d usec."
            "Resetting the recv endpoint\n",
-           ETHMAC_RECV_DELAY);
+           ETHERNET_RECV_DELAY);
     usb_reset_endpoint(&ctx->usb, ctx->rx_endpoint_addr);
   } else if (request->response.status == ZX_OK) {
     usb_recv(ctx, request);
@@ -737,9 +737,9 @@ static void usb_write_complete(void* context, usb_request_t* request) {
     zxlogf(ERROR,
            "qmi-usb-transport: slowing down the requests by %d usec."
            "Resetting the transmit endpoint\n",
-           ETHMAC_TRANSMIT_DELAY);
-    if (ctx->tx_endpoint_delay < ETHMAC_MAX_TRANSMIT_DELAY) {
-      ctx->tx_endpoint_delay += ETHMAC_TRANSMIT_DELAY;
+           ETHERNET_TRANSMIT_DELAY);
+    if (ctx->tx_endpoint_delay < ETHERNET_MAX_TRANSMIT_DELAY) {
+      ctx->tx_endpoint_delay += ETHERNET_TRANSMIT_DELAY;
     }
     usb_reset_endpoint(&ctx->usb, ctx->tx_endpoint_addr);
   }
@@ -757,11 +757,11 @@ static void usb_write_complete(void* context, usb_request_t* request) {
 
   mtx_unlock(&ctx->tx_mutex);
 
-  mtx_lock(&ctx->ethmac_mutex);
-  if (additional_tx_queued && ctx->ethmac_ifc.ops) {
-    ethmac_ifc_complete_tx(&ctx->ethmac_ifc, &txn->netbuf, send_status);
+  mtx_lock(&ctx->ethernet_mutex);
+  if (additional_tx_queued && ctx->ethernet_ifc.ops) {
+    ethernet_ifc_complete_tx(&ctx->ethernet_ifc, &txn->netbuf, send_status);
   }
-  mtx_unlock(&ctx->ethmac_mutex);
+  mtx_unlock(&ctx->ethernet_mutex);
 
   // When the interface is offline, the transaction will complete with status
   // set to ZX_ERR_IO_NOT_PRESENT. There's not much we can do except ignore it.
@@ -789,7 +789,7 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
   memcpy(&qmi_ctx->usb, &usb, sizeof(qmi_ctx->usb));
   list_initialize(&qmi_ctx->tx_txn_bufs);
   list_initialize(&qmi_ctx->tx_pending_infos);
-  mtx_init(&qmi_ctx->ethmac_mutex, mtx_plain);
+  mtx_init(&qmi_ctx->ethernet_mutex, mtx_plain);
   mtx_init(&qmi_ctx->tx_mutex, mtx_plain);
 
   qmi_ctx->parent_req_size = usb_get_request_size(&qmi_ctx->usb);
@@ -861,8 +861,8 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
     goto fail;
   }
 
-  qmi_ctx->rx_endpoint_delay = ETHMAC_INITIAL_RECV_DELAY;
-  qmi_ctx->tx_endpoint_delay = ETHMAC_INITIAL_TRANSMIT_DELAY;
+  qmi_ctx->rx_endpoint_delay = ETHERNET_INITIAL_RECV_DELAY;
+  qmi_ctx->tx_endpoint_delay = ETHERNET_INITIAL_TRANSMIT_DELAY;
   // Reset by selecting default interface followed by data interface. We can't
   // start queueing transactions until this is complete.
   usb_set_interface(&usb, 8, 0);
@@ -957,8 +957,8 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
       .ctx = qmi_ctx,
       // sibling of qmi transport. Cleanup happens when qmi device unbinds
       .ops = &eth_qmi_ops,
-      .proto_id = ZX_PROTOCOL_ETHMAC,
-      .proto_ops = &ethmac_ops,
+      .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
+      .proto_ops = &ethernet_impl_ops,
   };
   result = device_add(device, &eth_args, &qmi_ctx->eth_zxdev);
   if (result < 0) {

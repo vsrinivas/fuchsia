@@ -87,7 +87,7 @@ void InfraBss::Start(const MlmeMsg<wlan_mlme::StartRequest>& req) {
   started_at_ = zx_clock_get_monotonic();
   bcn_sender_->Start(this, ps_cfg_, req);
 
-  device_->SetStatus(ETHMAC_STATUS_ONLINE);
+  device_->SetStatus(ETHERNET_STATUS_ONLINE);
 }
 
 void InfraBss::Stop() {

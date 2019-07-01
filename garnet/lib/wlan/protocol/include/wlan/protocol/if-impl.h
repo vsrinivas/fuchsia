@@ -522,7 +522,7 @@ typedef struct wlanif_impl_ifc {
 
     // Data operations
     void (*data_recv)(void* cookie, void* data, size_t length, uint32_t flags);
-    void (*data_complete_tx)(void* cookie, ethmac_netbuf_t* netbuf, zx_status_t status);
+    void (*data_complete_tx)(void* cookie, ethernet_netbuf_t* netbuf, zx_status_t status);
 } wlanif_impl_ifc_t;
 
 typedef struct wlanif_impl_protocol_ops {
@@ -560,7 +560,7 @@ typedef struct wlanif_impl_protocol_ops {
     zx_status_t (*set_multicast_promisc)(void* ctx, bool enable);
 
     // Data operations
-    zx_status_t (*data_queue_tx)(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf);
+    zx_status_t (*data_queue_tx)(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf);
 
 } wlanif_impl_protocol_ops_t;
 

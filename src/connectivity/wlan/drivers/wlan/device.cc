@@ -95,18 +95,18 @@ static wlanmac_ifc_t wlanmac_ifc_ops = {
         },
 };
 
-static ethmac_protocol_ops_t ethmac_ops = {
-    .query = [](void* ctx, uint32_t options, ethmac_info_t* info)
-        -> zx_status_t { return DEV(ctx)->EthmacQuery(options, info); },
-    .stop = [](void* ctx) { DEV(ctx)->EthmacStop(); },
-    .start = [](void* ctx, const ethmac_ifc_protocol_t* ifc) -> zx_status_t {
-      return DEV(ctx)->EthmacStart(ifc);
+static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
+    .query = [](void* ctx, uint32_t options, ethernet_info_t* info)
+        -> zx_status_t { return DEV(ctx)->EthernetImplQuery(options, info); },
+    .stop = [](void* ctx) { DEV(ctx)->EthernetImplStop(); },
+    .start = [](void* ctx, const ethernet_ifc_protocol_t* ifc) -> zx_status_t {
+      return DEV(ctx)->EthernetImplStart(ifc);
     },
-    .queue_tx = [](void* ctx, uint32_t options, ethmac_netbuf_t* netbuf)
-        -> zx_status_t { return DEV(ctx)->EthmacQueueTx(options, netbuf); },
+    .queue_tx = [](void* ctx, uint32_t options, ethernet_netbuf_t* netbuf)
+        -> zx_status_t { return DEV(ctx)->EthernetImplQueueTx(options, netbuf); },
     .set_param = [](void* ctx, uint32_t param, int32_t value, const void* data,
                     size_t data_size) -> zx_status_t {
-      return DEV(ctx)->EthmacSetParam(param, value, data, data_size);
+      return DEV(ctx)->EthernetImplSetParam(param, value, data, data_size);
     },
 };
 #undef DEV
@@ -260,8 +260,8 @@ zx_status_t Device::AddEthDevice(zx_device* parent) {
   args.name = "wlan-ethernet";
   args.ctx = this;
   args.ops = &eth_device_ops;
-  args.proto_id = ZX_PROTOCOL_ETHMAC;
-  args.proto_ops = &ethmac_ops;
+  args.proto_id = ZX_PROTOCOL_ETHERNET_IMPL;
+  args.proto_ops = &ethernet_impl_ops;
   return device_add(parent, &args, &ethdev_);
 }
 
@@ -359,7 +359,7 @@ zx_status_t Device::WlanIoctl(uint32_t op, const void* in_buf, size_t in_len,
   return ZX_OK;
 }
 
-// ddk ethmac_protocol_ops methods
+// ddk ethernet_impl_protocol_ops methods
 
 void Device::EthUnbind() {
   debugfn();
@@ -377,40 +377,40 @@ void Device::EthRelease() {
   }
 }
 
-zx_status_t Device::EthmacQuery(uint32_t options, ethmac_info_t* info) {
+zx_status_t Device::EthernetImplQuery(uint32_t options, ethernet_info_t* info) {
   debugfn();
   if (info == nullptr)
     return ZX_ERR_INVALID_ARGS;
 
   memset(info, 0, sizeof(*info));
   memcpy(info->mac, wlanmac_info_.ifc_info.mac_addr, ETH_MAC_SIZE);
-  info->features = ETHMAC_FEATURE_WLAN;
+  info->features = ETHERNET_FEATURE_WLAN;
   if (wlanmac_info_.ifc_info.driver_features & WLAN_INFO_DRIVER_FEATURE_SYNTH) {
-    info->features |= ETHMAC_FEATURE_SYNTH;
+    info->features |= ETHERNET_FEATURE_SYNTH;
   }
   info->mtu = 1500;
-  info->netbuf_size = sizeof(ethmac_netbuf_t);
+  info->netbuf_size = sizeof(ethernet_netbuf_t);
 
   return ZX_OK;
 }
 
-zx_status_t Device::EthmacStart(const ethmac_ifc_protocol_t* ifc) {
+zx_status_t Device::EthernetImplStart(const ethernet_ifc_protocol_t* ifc) {
   debugfn();
   ZX_DEBUG_ASSERT(ifc != nullptr);
 
   std::lock_guard<std::mutex> lock(lock_);
-  if (ethmac_proxy_ != nullptr) {
+  if (ethernet_proxy_ != nullptr) {
     return ZX_ERR_ALREADY_BOUND;
   }
-  ethmac_proxy_.reset(new ddk::EthmacIfcProtocolClient(ifc));
+  ethernet_proxy_.reset(new ddk::EthernetIfcProtocolClient(ifc));
   return ZX_OK;
 }
 
-void Device::EthmacStop() {
+void Device::EthernetImplStop() {
   debugfn();
 
   std::lock_guard<std::mutex> lock(lock_);
-  if (ethmac_proxy_ == nullptr) {
+  if (ethernet_proxy_ == nullptr) {
     warnf("ethmac not started\n");
   }
   std::lock_guard<std::mutex> guard(packet_queue_lock_);
@@ -420,9 +420,9 @@ void Device::EthmacStop() {
     if (packet->peer() == Packet::Peer::kEthernet) {
       auto netbuf = packet->ext_data();
       ZX_DEBUG_ASSERT(netbuf != nullptr);
-      ZX_DEBUG_ASSERT(ethmac_proxy_ != nullptr);
-      if (netbuf != nullptr && ethmac_proxy_ != nullptr) {
-        ethmac_proxy_->CompleteTx(netbuf, ZX_ERR_CANCELED);
+      ZX_DEBUG_ASSERT(ethernet_proxy_ != nullptr);
+      if (netbuf != nullptr && ethernet_proxy_ != nullptr) {
+        ethernet_proxy_->CompleteTx(netbuf, ZX_ERR_CANCELED);
       }
       // Outgoing ethernet frames are dropped.
     } else {
@@ -430,10 +430,10 @@ void Device::EthmacStop() {
       packet_queue_.Enqueue(std::move(packet));
     }
   }
-  ethmac_proxy_.reset();
+  ethernet_proxy_.reset();
 }
 
-zx_status_t Device::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
+zx_status_t Device::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf) {
   // no debugfn() because it's too noisy
   auto packet = PreparePacket(netbuf->data_buffer, netbuf->data_size,
                               Packet::Peer::kEthernet);
@@ -453,14 +453,14 @@ zx_status_t Device::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
   return ZX_ERR_SHOULD_WAIT;
 }
 
-zx_status_t Device::EthmacSetParam(uint32_t param, int32_t value,
+zx_status_t Device::EthernetImplSetParam(uint32_t param, int32_t value,
                                    const void* data, size_t data_size) {
   debugfn();
 
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
 
   switch (param) {
-    case ETHMAC_SETPARAM_PROMISC:
+    case ETHERNET_SETPARAM_PROMISC:
       // See NET-1808: In short, the bridge mode doesn't require WLAN
       // promiscuous mode enabled.
       //               So we give a warning and return OK here to continue the
@@ -554,8 +554,8 @@ zx_status_t Device::DeliverEthernet(fbl::Span<const uint8_t> eth_frame) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (ethmac_proxy_ != nullptr) {
-    ethmac_proxy_->Recv(eth_frame.data(), eth_frame.size(), 0u);
+  if (ethernet_proxy_ != nullptr) {
+    ethernet_proxy_->Recv(eth_frame.data(), eth_frame.size(), 0u);
   }
   return ZX_OK;
 }
@@ -691,9 +691,9 @@ zx_status_t Device::SetStatus(uint32_t status) {
 }
 
 void Device::SetStatusLocked(uint32_t status) {
-  state_->set_online(status == ETHMAC_STATUS_ONLINE);
-  if (ethmac_proxy_ != nullptr) {
-    ethmac_proxy_->Status(status);
+  state_->set_online(status == ETHERNET_STATUS_ONLINE);
+  if (ethernet_proxy_ != nullptr) {
+    ethernet_proxy_->Status(status);
   }
 }
 
@@ -815,13 +815,13 @@ void Device::MainLoop() {
             while (!queued_packets.is_empty()) {
               auto packet = queued_packets.Dequeue();
               ZX_DEBUG_ASSERT(packet != nullptr);
-              ethmac_netbuf_t* netbuf = nullptr;
+              ethernet_netbuf_t* netbuf = nullptr;
               auto peer = packet->peer();
               if (peer == Packet::Peer::kEthernet) {
                 // ethernet driver somehow decided to send frame after itself is
                 // stopped, drop them as we cannot return the netbuf via
                 // CompleteTx.
-                if (ethmac_proxy_ == nullptr) {
+                if (ethernet_proxy_ == nullptr) {
                   continue;
                 }
                 netbuf = packet->ext_data();
@@ -829,7 +829,7 @@ void Device::MainLoop() {
               }
               zx_status_t status = dispatcher_->HandlePacket(std::move(packet));
               if (peer == Packet::Peer::kEthernet) {
-                ethmac_proxy_->CompleteTx(netbuf, status);
+                ethernet_proxy_->CompleteTx(netbuf, status);
               }
             }
             break;

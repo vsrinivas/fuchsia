@@ -176,7 +176,7 @@ wlan_mlme::StartResultCodes MeshMlme::Start(
     return wlan_mlme::StartResultCodes::INTERNAL_ERROR;
   }
 
-  device_->SetStatus(ETHMAC_STATUS_ONLINE);
+  device_->SetStatus(ETHERNET_STATUS_ONLINE);
   state_.emplace(std::move(timer));
   return wlan_mlme::StartResultCodes::SUCCESS;
 }

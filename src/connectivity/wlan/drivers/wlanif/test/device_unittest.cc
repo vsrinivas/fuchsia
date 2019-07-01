@@ -28,22 +28,22 @@ TEST(MulticastPromiscMode, OnOff) {
     multicast_promisc_enabled = false;
 
     // Disable => Enable
-    status = device.EthSetParam(ETHMAC_SETPARAM_MULTICAST_PROMISC, 1, nullptr, 0);
+    status = device.EthSetParam(ETHERNET_SETPARAM_MULTICAST_PROMISC, 1, nullptr, 0);
     EXPECT_EQ(status, ZX_OK);
     EXPECT_EQ(multicast_promisc_enabled, true);
 
     // Enable => Enable
-    status = device.EthSetParam(ETHMAC_SETPARAM_MULTICAST_PROMISC, 1, nullptr, 0);
+    status = device.EthSetParam(ETHERNET_SETPARAM_MULTICAST_PROMISC, 1, nullptr, 0);
     EXPECT_EQ(status, ZX_OK);
     EXPECT_EQ(multicast_promisc_enabled, true);
 
     // Enable => Enable (any non-zero value should be treated as "true")
-    status = device.EthSetParam(ETHMAC_SETPARAM_MULTICAST_PROMISC, 0x80, nullptr, 0);
+    status = device.EthSetParam(ETHERNET_SETPARAM_MULTICAST_PROMISC, 0x80, nullptr, 0);
     EXPECT_EQ(status, ZX_OK);
     EXPECT_EQ(multicast_promisc_enabled, true);
 
     // Enable => Disable
-    status = device.EthSetParam(ETHMAC_SETPARAM_MULTICAST_PROMISC, 0, nullptr, 0);
+    status = device.EthSetParam(ETHERNET_SETPARAM_MULTICAST_PROMISC, 0, nullptr, 0);
     EXPECT_EQ(status, ZX_OK);
     EXPECT_EQ(multicast_promisc_enabled, false);
 }
@@ -60,7 +60,7 @@ TEST(MulticastPromiscMode, Unimplemented) {
 
     multicast_promisc_enabled = false;
 
-    status = device.EthSetParam(ETHMAC_SETPARAM_MULTICAST_PROMISC, 1, nullptr, 0);
+    status = device.EthSetParam(ETHERNET_SETPARAM_MULTICAST_PROMISC, 1, nullptr, 0);
     EXPECT_EQ(status, ZX_ERR_NOT_SUPPORTED);
     EXPECT_EQ(multicast_promisc_enabled, false);
 }

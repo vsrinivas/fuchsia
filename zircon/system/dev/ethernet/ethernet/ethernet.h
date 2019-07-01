@@ -72,20 +72,20 @@ public:
     zx_status_t AddDevice();
     void SetStatus(uint32_t status);
     void Recv(const void* data, size_t len, uint32_t flags);
-    void CompleteTx(ethmac_netbuf_t* netbuf, zx_status_t status);
+    void CompleteTx(ethernet_netbuf_t* netbuf, zx_status_t status);
 
 private:
     friend class EthDev;
 
     // Buffer typecasting functions.
-    TransmitInfo* NetbufToTransmitInfo(ethmac_netbuf_t* netbuf);
-    ethmac_netbuf_t* TransmitInfoToNetbuf(TransmitInfo* tx_info);
+    TransmitInfo* NetbufToTransmitInfo(ethernet_netbuf_t* netbuf);
+    ethernet_netbuf_t* TransmitInfoToNetbuf(TransmitInfo* tx_info);
     // Resend transmitted packets for loopback.
     void TransmitEcho(const void* data, size_t len);
     void DestroyAllEthDev();
 
-    ddk::EthmacProtocolClient mac_;
-    ethmac_info_t info_ = {};
+    ddk::EthernetImplProtocolClient mac_;
+    ethernet_info_t info_ = {};
     uint32_t status_ = 0;
 
     int32_t promisc_requesters_ = 0;
@@ -255,8 +255,8 @@ private:
 
     uint32_t fail_receive_read_ = 0;
     uint32_t fail_receive_write_ = 0;
-    uint32_t ethmac_request_count_ = 0;
-    uint32_t ethmac_response_count_ = 0;
+    uint32_t ethernet_request_count_ = 0;
+    uint32_t ethernet_response_count_ = 0;
     // sync_completion_t* completion_ = nullptr;
 };
 

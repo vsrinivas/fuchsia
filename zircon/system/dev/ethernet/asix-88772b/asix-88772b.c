@@ -31,12 +31,12 @@
 #define ETH_HEADER_SIZE 4
 #define ETH_MTU 1500
 
-#define ETHMAC_MAX_TRANSMIT_DELAY 100
-#define ETHMAC_MAX_RECV_DELAY 100
-#define ETHMAC_TRANSMIT_DELAY 10
-#define ETHMAC_RECV_DELAY 10
-#define ETHMAC_INITIAL_TRANSMIT_DELAY 0
-#define ETHMAC_INITIAL_RECV_DELAY 0
+#define ETHERNET_MAX_TRANSMIT_DELAY 100
+#define ETHERNET_MAX_RECV_DELAY 100
+#define ETHERNET_TRANSMIT_DELAY 10
+#define ETHERNET_RECV_DELAY 10
+#define ETHERNET_INITIAL_TRANSMIT_DELAY 0
+#define ETHERNET_INITIAL_RECV_DELAY 0
 
 
 typedef struct {
@@ -65,7 +65,7 @@ typedef struct {
     uint64_t tx_endpoint_delay;    // wait time between 2 transmit requests
 
     // callback interface to attached ethernet layer
-    ethmac_ifc_protocol_t ifc;
+    ethernet_ifc_protocol_t ifc;
 
     size_t parent_req_size;
 
@@ -73,7 +73,7 @@ typedef struct {
 } ax88772b_t;
 
 typedef struct txn_info {
-    ethmac_netbuf_t netbuf;
+    ethernet_netbuf_t netbuf;
     list_node_t node;
 } txn_info_t;
 
@@ -189,7 +189,7 @@ static void ax88772b_recv(ax88772b_t* eth, usb_request_t* request) {
             return;
         }
 
-        ethmac_ifc_recv(&eth->ifc, pkt, length1, 0);
+        ethernet_ifc_recv(&eth->ifc, pkt, length1, 0);
         pkt += length1;
         len -= length1;
 
@@ -205,7 +205,8 @@ static void ax88772b_recv(ax88772b_t* eth, usb_request_t* request) {
 }
 
 // Send a netbuf to the USB interface using the provided request
-static zx_status_t ax88772b_send(ax88772b_t* eth, usb_request_t* request, ethmac_netbuf_t* netbuf) {
+static zx_status_t ax88772b_send(ax88772b_t* eth, usb_request_t* request,
+                                 ethernet_netbuf_t* netbuf) {
     size_t length = netbuf->data_size;
 
     if (length + ETH_HEADER_SIZE > USB_BUF_OUT_SIZE) {
@@ -249,9 +250,9 @@ static void ax88772b_read_complete(void* ctx, usb_request_t* request) {
         usb_reset_endpoint(&eth->usb, eth->bulk_in_addr);
     } else if (request->response.status == ZX_ERR_IO_INVALID) {
         zxlogf(TRACE, "ax88772b_read_complete Slowing down the requests by %d usec"
-               " and resetting the recv endpoint\n", ETHMAC_RECV_DELAY);
-        if (eth->rx_endpoint_delay < ETHMAC_MAX_RECV_DELAY) {
-            eth->rx_endpoint_delay += ETHMAC_RECV_DELAY;
+               " and resetting the recv endpoint\n", ETHERNET_RECV_DELAY);
+        if (eth->rx_endpoint_delay < ETHERNET_MAX_RECV_DELAY) {
+            eth->rx_endpoint_delay += ETHERNET_RECV_DELAY;
         }
         usb_reset_endpoint(&eth->usb, eth->bulk_in_addr);
     } else if ((request->response.status == ZX_OK) && eth->ifc.ops) {
@@ -287,7 +288,7 @@ static void ax88772b_write_complete(void* ctx, usb_request_t* request) {
         txn_info_t* txn = list_remove_head_type(&eth->pending_netbufs, txn_info_t, node);
         zx_status_t send_result = ax88772b_send(eth, request, &txn->netbuf);
         if (eth->ifc.ops) {
-            ethmac_ifc_complete_tx(&eth->ifc, &txn->netbuf, send_result);
+            ethernet_ifc_complete_tx(&eth->ifc, &txn->netbuf, send_result);
         }
     } else {
         zx_status_t status = usb_req_list_add_tail(&eth->free_write_reqs, request,
@@ -300,9 +301,9 @@ static void ax88772b_write_complete(void* ctx, usb_request_t* request) {
         usb_reset_endpoint(&eth->usb, eth->bulk_out_addr);
     } else if (request->response.status == ZX_ERR_IO_INVALID) {
         zxlogf(TRACE, "ax88772b_write_complete Slowing down the requests by %d usec"
-               " and resetting the transmit endpoint\n", ETHMAC_TRANSMIT_DELAY);
-        if (eth->tx_endpoint_delay < ETHMAC_MAX_TRANSMIT_DELAY) {
-            eth->tx_endpoint_delay += ETHMAC_TRANSMIT_DELAY;
+               " and resetting the transmit endpoint\n", ETHERNET_TRANSMIT_DELAY);
+        if (eth->tx_endpoint_delay < ETHERNET_MAX_TRANSMIT_DELAY) {
+            eth->tx_endpoint_delay += ETHERNET_TRANSMIT_DELAY;
         }
         usb_reset_endpoint(&eth->usb, eth->bulk_out_addr);
     }
@@ -334,7 +335,7 @@ static void ax88772b_interrupt_complete(void* ctx, usb_request_t* request) {
             eth->online = online;
             if (online && !was_online) {
                 if (eth->ifc.ops) {
-                    ethmac_ifc_status(&eth->ifc, ETHMAC_STATUS_ONLINE);
+                    ethernet_ifc_status(&eth->ifc, ETHERNET_STATUS_ONLINE);
                 }
 
                 // Now that we are online, queue all our read requests
@@ -353,7 +354,7 @@ static void ax88772b_interrupt_complete(void* ctx, usb_request_t* request) {
                 }
             } else if (!online && was_online) {
                 if (eth->ifc.ops) {
-                    ethmac_ifc_status(&eth->ifc, 0);
+                    ethernet_ifc_status(&eth->ifc, 0);
                 }
             }
         }
@@ -367,7 +368,7 @@ static void ax88772b_interrupt_complete(void* ctx, usb_request_t* request) {
     mtx_unlock(&eth->mutex);
 }
 
-static zx_status_t ax88772b_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
+static zx_status_t ax88772b_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf) {
     ax88772b_t* eth = ctx;
 
     if (eth->dead) {
@@ -431,7 +432,7 @@ static zx_protocol_device_t ax88772b_device_proto = {
     .release = ax88772b_release,
 };
 
-static zx_status_t ax88772b_query(void* ctx, uint32_t options, ethmac_info_t* info) {
+static zx_status_t ax88772b_query(void* ctx, uint32_t options, ethernet_info_t* info) {
     ax88772b_t* eth = ctx;
 
     if (options) {
@@ -454,7 +455,7 @@ static void ax88772b_stop(void* ctx) {
     mtx_unlock(&eth->mutex);
 }
 
-static zx_status_t ax88772b_start(void* ctx, const ethmac_ifc_protocol_t* ifc) {
+static zx_status_t ax88772b_start(void* ctx, const ethernet_ifc_protocol_t* ifc) {
     ax88772b_t* eth = ctx;
     zx_status_t status = ZX_OK;
 
@@ -463,7 +464,7 @@ static zx_status_t ax88772b_start(void* ctx, const ethmac_ifc_protocol_t* ifc) {
         status = ZX_ERR_BAD_STATE;
     } else {
         eth->ifc = *ifc;
-        ethmac_ifc_status(&eth->ifc, eth->online ? ETHMAC_STATUS_ONLINE : 0);
+        ethernet_ifc_status(&eth->ifc, eth->online ? ETHERNET_STATUS_ONLINE : 0);
     }
     mtx_unlock(&eth->mutex);
 
@@ -498,7 +499,7 @@ static zx_status_t ax88772b_set_param(void *ctx, uint32_t param, int32_t value, 
     mtx_lock(&eth->mutex);
 
     switch (param) {
-    case ETHMAC_SETPARAM_PROMISC:
+    case ETHERNET_SETPARAM_PROMISC:
         status = ax88772b_set_promisc(eth, (bool)value);
         break;
     default:
@@ -509,7 +510,7 @@ static zx_status_t ax88772b_set_param(void *ctx, uint32_t param, int32_t value, 
     return status;
 }
 
-static ethmac_protocol_ops_t ethmac_ops = {
+static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
     .query = ax88772b_query,
     .stop = ax88772b_stop,
     .start = ax88772b_start,
@@ -610,8 +611,8 @@ static int ax88772b_start_thread(void* arg) {
         .name = "ax88772b",
         .ctx = eth,
         .ops = &ax88772b_device_proto,
-        .proto_id = ZX_PROTOCOL_ETHMAC,
-        .proto_ops = &ethmac_ops,
+        .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
+        .proto_ops = &ethernet_impl_ops,
     };
 
     status = device_add(eth->usb_device, &args, &eth->device);
@@ -694,8 +695,8 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
     eth->bulk_in_addr = bulk_in_addr;
     eth->bulk_out_addr = bulk_out_addr;
 
-    eth->rx_endpoint_delay = ETHMAC_INITIAL_RECV_DELAY;
-    eth->tx_endpoint_delay = ETHMAC_INITIAL_TRANSMIT_DELAY;
+    eth->rx_endpoint_delay = ETHERNET_INITIAL_RECV_DELAY;
+    eth->tx_endpoint_delay = ETHERNET_INITIAL_TRANSMIT_DELAY;
     zx_status_t status = ZX_OK;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         usb_request_t* req;

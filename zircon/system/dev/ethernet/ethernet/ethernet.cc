@@ -7,14 +7,14 @@
 
 namespace eth {
 
-TransmitInfo* EthDev0::NetbufToTransmitInfo(ethmac_netbuf_t* netbuf) {
+TransmitInfo* EthDev0::NetbufToTransmitInfo(ethernet_netbuf_t* netbuf) {
     // NOTE: Alignment is guaranteed by the static_asserts for alignment and padding of the
     // TransmitInfo structure, combined with the value of transmit_buffer_size_.
     return reinterpret_cast<TransmitInfo*>(reinterpret_cast<uintptr_t>(netbuf) + info_.netbuf_size);
 }
 
-ethmac_netbuf_t* EthDev0::TransmitInfoToNetbuf(TransmitInfo* transmit_info) {
-    return reinterpret_cast<ethmac_netbuf_t*>(reinterpret_cast<uintptr_t>(transmit_info) -
+ethernet_netbuf_t* EthDev0::TransmitInfoToNetbuf(TransmitInfo* transmit_info) {
+    return reinterpret_cast<ethernet_netbuf_t*>(reinterpret_cast<uintptr_t>(transmit_info) -
                                               info_.netbuf_size);
 }
 
@@ -54,13 +54,13 @@ zx_status_t EthDev::PromiscHelperLogicLocked(bool req_on, uint32_t state_bit,
 
 zx_status_t EthDev::SetPromiscLocked(bool req_on) {
     return PromiscHelperLogicLocked(req_on, kStatePromiscuous,
-                                    ETHMAC_SETPARAM_PROMISC,
+                                    ETHERNET_SETPARAM_PROMISC,
                                     &edev0_->promisc_requesters_);
 }
 
 zx_status_t EthDev::SetMulticastPromiscLocked(bool req_on) {
     return PromiscHelperLogicLocked(req_on, kStateMulticastPromiscuous,
-                                    ETHMAC_SETPARAM_MULTICAST_PROMISC,
+                                    ETHERNET_SETPARAM_MULTICAST_PROMISC,
                                     &edev0_->multicast_promisc_requesters_);
 }
 
@@ -71,14 +71,14 @@ zx_status_t EthDev::RebuildMulticastFilterLocked() {
     for (auto& edev_i : edev0_->list_active_) {
         for (uint32_t i = 0; i < edev_i.num_multicast_; i++) {
             if (n_multicast == kMulticastListLimit) {
-                return edev0_->mac_.SetParam(ETHMAC_SETPARAM_MULTICAST_FILTER,
-                                             ETHMAC_MULTICAST_FILTER_OVERFLOW, nullptr, 0);
+                return edev0_->mac_.SetParam(ETHERNET_SETPARAM_MULTICAST_FILTER,
+                                             ETHERNET_MULTICAST_FILTER_OVERFLOW, nullptr, 0);
             }
             memcpy(multicast[n_multicast], edev_i.multicast_[i], ETH_MAC_SIZE);
             n_multicast++;
         }
     }
-    return edev0_->mac_.SetParam(ETHMAC_SETPARAM_MULTICAST_FILTER, n_multicast, multicast,
+    return edev0_->mac_.SetParam(ETHERNET_SETPARAM_MULTICAST_FILTER, n_multicast, multicast,
                                  n_multicast * ETH_MAC_SIZE);
 }
 
@@ -103,8 +103,8 @@ zx_status_t EthDev::AddMulticastAddressLocked(const uint8_t* mac) {
         num_multicast_++;
         return RebuildMulticastFilterLocked();
     } else {
-        return edev0_->mac_.SetParam(ETHMAC_SETPARAM_MULTICAST_FILTER,
-                                     ETHMAC_MULTICAST_FILTER_OVERFLOW, nullptr, 0);
+        return edev0_->mac_.SetParam(ETHERNET_SETPARAM_MULTICAST_FILTER,
+                                     ETHERNET_MULTICAST_FILTER_OVERFLOW, nullptr, 0);
     }
     return ZX_OK;
 }
@@ -234,7 +234,7 @@ void EthDev0::SetStatus(uint32_t status) {
     zxlogf(TRACE, "eth: status() %08x\n", status);
 
     fbl::AutoLock lock(&ethdev_lock_);
-    static_assert(ETHMAC_STATUS_ONLINE == fuchsia_hardware_ethernet_DEVICE_STATUS_ONLINE, "");
+    static_assert(ETHERNET_STATUS_ONLINE == fuchsia_hardware_ethernet_DEVICE_STATUS_ONLINE, "");
     status_ = status;
 
     static_assert(fuchsia_hardware_ethernet_SIGNAL_STATUS == ZX_USER_SIGNAL_0, "");
@@ -257,7 +257,7 @@ void EthDev0::Recv(const void* data, size_t len, uint32_t flags) TA_NO_THREAD_SA
     }
 }
 
-void EthDev0::CompleteTx(ethmac_netbuf_t* netbuf, zx_status_t status) {
+void EthDev0::CompleteTx(ethernet_netbuf_t* netbuf, zx_status_t status) {
     if (!netbuf) {
         return;
     }
@@ -276,10 +276,10 @@ void EthDev0::CompleteTx(ethmac_netbuf_t* netbuf, zx_status_t status) {
 
     // Send the entry back to the client.
     edev->TransmitFifoWrite(&entry, 1);
-    edev->ethmac_response_count_++;
+    edev->ethernet_response_count_++;
 }
 
-ethmac_ifc_protocol_ops_t ethmac_ifc = {
+ethernet_ifc_protocol_ops_t ethernet_ifc = {
     .status =
         [](void* cookie, uint32_t status) {
             reinterpret_cast<EthDev0*>(cookie)->SetStatus(status);
@@ -289,7 +289,7 @@ ethmac_ifc_protocol_ops_t ethmac_ifc = {
             reinterpret_cast<EthDev0*>(cookie)->Recv(data, len, flags);
         },
     .complete_tx =
-        [](void* cookie, ethmac_netbuf_t* netbuf, zx_status_t status) {
+        [](void* cookie, ethernet_netbuf_t* netbuf, zx_status_t status) {
             reinterpret_cast<EthDev0*>(cookie)->CompleteTx(netbuf, status);
         },
 };
@@ -354,13 +354,13 @@ int EthDev::Send(eth_fifo_entry_t* entries, size_t count) {
                     return -1;
                 }
             }
-            uint32_t opts = count > 1 ? ETHMAC_TX_OPT_MORE : 0u;
+            uint32_t opts = count > 1 ? ETHERNET_TX_OPT_MORE : 0u;
             if (opts) {
                 zxlogf(SPEW, "setting OPT_MORE (%lu packets to go)\n", count);
             }
-            ethmac_netbuf_t* netbuf = edev0_->TransmitInfoToNetbuf(transmit_info);
+            ethernet_netbuf_t* netbuf = edev0_->TransmitInfoToNetbuf(transmit_info);
             netbuf->data_buffer = reinterpret_cast<char*>(io_buffer_.start()) + e->offset;
-            if (edev0_->info_.features & ETHMAC_FEATURE_DMA) {
+            if (edev0_->info_.features & ETHERNET_FEATURE_DMA) {
                 netbuf->phys = paddr_map_[e->offset / PAGE_SIZE] +
                                (e->offset & kPageMask);
             }
@@ -381,7 +381,7 @@ int EthDev::Send(eth_fifo_entry_t* entries, size_t count) {
                 // The ownership of the TX buffer is transferred to mac_.QueueTx().
                 // We can't reuse it, so clear the pointer.
                 transmit_info = nullptr;
-                ethmac_request_count_++;
+                ethernet_request_count_++;
             }
         }
         count--;
@@ -485,7 +485,7 @@ zx_status_t EthDev::SetIObufLocked(zx_handle_t vmo) {
 
     // If the driver indicates that it will be doing DMA to/from the vmo,
     // We pin the memory and cache the physical address list.
-    if (edev0_->info_.features & ETHMAC_FEATURE_DMA) {
+    if (edev0_->info_.features & ETHERNET_FEATURE_DMA) {
         fbl::AllocChecker ac;
         size_t pages = ROUNDUP(size, PAGE_SIZE) / PAGE_SIZE;
         paddr_map = fbl::unique_ptr<zx_paddr_t[]>(new (&ac) zx_paddr_t[pages]);
@@ -497,7 +497,7 @@ zx_status_t EthDev::SetIObufLocked(zx_handle_t vmo) {
         edev0_->mac_.GetBti(&bti);
         if (!bti.is_valid()) {
             status = ZX_ERR_INTERNAL;
-            zxlogf(ERROR, "eth [%s]: ethmac_get_bti return invalid handle\n", name_);
+            zxlogf(ERROR, "eth [%s]: ethernet_impl_get_bti return invalid handle\n", name_);
             return status;
         }
         if ((status = bti.pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE,
@@ -548,7 +548,7 @@ zx_status_t EthDev::StartLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
         // Release the lock to allow other device operations in callback routine.
         // Re-acquire lock afterwards.
         edev0_->ethdev_lock_.Release();
-        status = edev0_->mac_.Start(edev0_, &ethmac_ifc);
+        status = edev0_->mac_.Start(edev0_, &ethernet_ifc);
         edev0_->ethdev_lock_.Acquire();
         // Check whether unbind was called while we were unlocked.
         if (state_ & kStateDead) {
@@ -630,10 +630,10 @@ zx_status_t EthDev::GetStatusLocked(void* out_buf, size_t out_len,
 zx_status_t EthDev::MsgGetInfoLocked(fidl_txn_t* txn) {
     fuchsia_hardware_ethernet_Info info = {};
     memcpy(info.mac.octets, edev0_->info_.mac, ETH_MAC_SIZE);
-    if (edev0_->info_.features & ETHMAC_FEATURE_WLAN) {
+    if (edev0_->info_.features & ETHERNET_FEATURE_WLAN) {
         info.features |= fuchsia_hardware_ethernet_INFO_FEATURE_WLAN;
     }
-    if (edev0_->info_.features & ETHMAC_FEATURE_SYNTH) {
+    if (edev0_->info_.features & ETHERNET_FEATURE_SYNTH) {
         info.features |= fuchsia_hardware_ethernet_INFO_FEATURE_SYNTH;
     }
     info.mtu = edev0_->info_.mtu;
@@ -715,7 +715,7 @@ zx_status_t EthDev::MsgConfigMulticastTestFilterLocked(fidl_txn_t* txn) {
 }
 
 zx_status_t EthDev::MsgDumpRegistersLocked(fidl_txn_t* txn) {
-    zx_status_t status = edev0_->mac_.SetParam(ETHMAC_SETPARAM_DUMP_REGS, 0, nullptr, 0);
+    zx_status_t status = edev0_->mac_.SetParam(ETHERNET_SETPARAM_DUMP_REGS, 0, nullptr, 0);
     return REPLY(DumpRegisters)(txn, status);
 }
 
@@ -776,7 +776,7 @@ void EthDev::KillLocked() {
     }
 
     //Ensure that all requests to ethmac were completed.
-    ZX_DEBUG_ASSERT(ethmac_request_count_ == ethmac_response_count_);
+    ZX_DEBUG_ASSERT(ethernet_request_count_ == ethernet_response_count_);
 
     zxlogf(TRACE, "eth [%s]: kill: tearing down%s\n",
            name_, (state_ & kStateTransmitThreadCreated) ? " tx thread" : "");
@@ -914,7 +914,7 @@ zx_status_t EthDev::AddDevice(zx_device_t** out) {
     // and that sufficient padding exists between elements in the struct to guarantee safe
     // accesses of this array.
     static_assert(std::alignment_of_v<TransmitInfo> <= __STDCPP_DEFAULT_NEW_ALIGNMENT__);
-    static_assert(std::alignment_of_v<TransmitInfo> <= sizeof(ethmac_netbuf_t));
+    static_assert(std::alignment_of_v<TransmitInfo> <= sizeof(ethernet_netbuf_t));
     fbl::AllocChecker ac;
     fbl::unique_ptr<uint8_t[]> all_transmit_buffers =
         fbl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[kFifoDepth * transmit_buffer_size_]());
@@ -924,7 +924,7 @@ zx_status_t EthDev::AddDevice(zx_device_t** out) {
 
     list_initialize(&free_transmit_buffers_);
     for (size_t ndx = 0; ndx < kFifoDepth; ndx++) {
-        ethmac_netbuf_t* netbuf = (ethmac_netbuf_t*)((uintptr_t)all_transmit_buffers.get() +
+        ethernet_netbuf_t* netbuf = (ethernet_netbuf_t*)((uintptr_t)all_transmit_buffers.get() +
                                                      (transmit_buffer_size_ * ndx));
         TransmitInfo* transmit_info = edev0_->NetbufToTransmitInfo(netbuf);
         list_add_tail(&free_transmit_buffers_, &transmit_info->node);
@@ -1006,8 +1006,8 @@ void EthDev0::DdkRelease() {
 
 zx_status_t EthDev0::AddDevice() {
     zx_status_t status;
-    ethmac_protocol_ops_t* ops;
-    ethmac_protocol_t proto;
+    ethernet_impl_protocol_ops_t* ops;
+    ethernet_impl_protocol_t proto;
 
     if (!mac_.is_valid()) {
         zxlogf(ERROR, "eth: bind: no ethermac protocol\n");
@@ -1028,14 +1028,14 @@ zx_status_t EthDev0::AddDevice() {
         return status;
     }
 
-    if ((info_.features & ETHMAC_FEATURE_DMA) &&
+    if ((info_.features & ETHERNET_FEATURE_DMA) &&
         (ops->get_bti == nullptr)) {
         zxlogf(ERROR, "eth: bind: device '%s': does not implement ops->get_bti()\n",
                device_get_name(parent_));
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    if (info_.netbuf_size < sizeof(ethmac_netbuf_t)) {
+    if (info_.netbuf_size < sizeof(ethernet_netbuf_t)) {
         zxlogf(ERROR, "eth: bind: device '%s': invalid buffer size %ld\n",
                device_get_name(parent_), info_.netbuf_size);
         return ZX_ERR_NOT_SUPPORTED;
@@ -1090,6 +1090,6 @@ static constexpr zx_driver_ops_t eth_driver_ops = []() {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(ethernet, eth_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_ETHMAC)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_ETHERNET_IMPL)
 ZIRCON_DRIVER_END(ethernet)
 // clang-format on

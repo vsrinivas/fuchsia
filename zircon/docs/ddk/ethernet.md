@@ -348,7 +348,7 @@ The **eth_setup_buffers()** and **eth_init_hw()** functions are defined in the `
 The next part binds the device name ("`intel-ethernet`"), context block (`edev`,
 allocated above), device operations (`device_ops`, which supports suspend, resume, and release),
 and the additional optional protocol ops for ethernet (identified as `ZX_PROTOCOL_ETHERNET_IMPL`
-and contained in `ethmac_ops`):
+and contained in `ethernet_impl_ops`):
 
 ```c
     device_add_args_t args = {
@@ -357,7 +357,7 @@ and contained in `ethmac_ops`):
         .ctx = edev,
         .ops = &device_ops,
         .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
-        .proto_ops = &ethmac_ops,
+        .proto_ops = &ethernet_impl_ops,
     };
 
     if (device_add(dev, &args, &edev->zxdev)) {
@@ -424,7 +424,7 @@ typedef struct ethernet_device {
     bool            online;
 
     // callback interface to attached ethernet layer
-    ethmac_ifc_t*   ifc;
+    ethernet_ifc_t*   ifc;
     void*           cookie;
 } ethernet_device_t;
 ```
@@ -437,13 +437,13 @@ It holds all of the context for the ethernet devices.
 
 Recall from the discussion around the binding function
 **eth_bind()**
-that we bound an `ethmac_protocol_ops_t` structure called
-`ethmac_ops` to the driver.
+that we bound an `ethernet_impl_protocol_ops_t` structure called
+`ethernet_impl_ops` to the driver.
 This structure provides the following "bottom-half" ethernet driver protocol operations
 for the Intel driver:
 
 ```c
-static ethmac_protocol_ops_t ethmac_ops = {
+static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
     .query = eth_query,
     .stop = eth_stop,
     .start = eth_start,
@@ -459,19 +459,19 @@ We examine each in turn below.
 
 The **query()** function takes three parameters:
 a context block, an options specifier, and a pointer to
-an `ethmac_info_t` where the information should be stored.
+an `ethernet_info_t` where the information should be stored.
 
 > Note that at the present time, there are no options defined; therefore, the driver
 > should return `ZX_ERR_INVALID_ARGS` in case of a non-zero value.
 
-The `ethmac_info_t` structure is defined as follows (reserved fields omitted for clarity):
+The `ethernet_info_t` structure is defined as follows (reserved fields omitted for clarity):
 
 ```c
-typedef struct ethmac_info {
+typedef struct ethernet_info {
     uint32_t    features;
     uint32_t    mtu;
     uint8_t     mac[ETH_MAC_SIZE];
-} ethmac_info_t;
+} ethernet_info_t;
 ```
 
 The `mtu` field contains the Maximum Transmission Unit (**MTU**) size that the driver
@@ -486,14 +486,14 @@ Finally, the `features` field contains a bitmap of available features:
 
 Feature                 | Meaning
 ------------------------|--------------------------------------------
-`ETHMAC_FEATURE_WLAN`   | Device is a wireless network device
-`ETHMAC_FEATURE_SYNTH`  | Device is a synthetic network device
-`ETHMAC_FEATURE_DMA`    | Driver will be doing DMA to/from the VMO
+`ETHERNET_FEATURE_WLAN`   | Device is a wireless network device
+`ETHERNET_FEATURE_SYNTH`  | Device is a synthetic network device
+`ETHERNET_FEATURE_DMA`    | Driver will be doing DMA to/from the VMO
 
 The Intel driver's **eth_query()** is representative:
 
 ```c
-static zx_status_t eth_query(void* ctx, uint32_t options, ethmac_info_t* info) {
+static zx_status_t eth_query(void* ctx, uint32_t options, ethernet_info_t* info) {
     ethernet_device_t* edev = ctx;
 
     if (options) {
@@ -514,11 +514,11 @@ and otherwise fills the `mtu` and `mac` members.
 
 ### Ethernet protocol: **queue_tx()**
 
-The **queue_tx()** function is responsible for taking the `ethmac_netbuf_t` network
+The **queue_tx()** function is responsible for taking the `ethernet_netbuf_t` network
 buffer and transmitting it.
 
 ```c
-static zx_status_t eth_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
+static zx_status_t eth_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf) {
     ethernet_device_t* edev = ctx;
     if (edev->state != ETH_RUNNING) {
         return ZX_ERR_BAD_STATE;
@@ -601,7 +601,7 @@ static zx_status_t eth_set_param(void *ctx, uint32_t param, int32_t value, void*
     mtx_lock(&edev->lock);
 
     switch (param) {
-    case ETHMAC_SETPARAM_PROMISC:
+    case ETHERNET_SETPARAM_PROMISC:
         if ((bool)value) {
             eth_start_promisc(&edev->eth);
         } else {
@@ -622,10 +622,10 @@ The following parameters are available:
 
 Parameter                           | Meaning (additional data)
 ------------------------------------|-------------------------------------------------------------
-`ETHMAC_SETPARAM_PROMISC`           | Controls promiscuous mode (bool)
-`ETHMAC_SETPARAM_MULTICAST_PROMISC` | Controls multicast promiscuous mode (bool)
-`ETHMAC_SETPARAM_MULTICAST_FILTER`  | Sets multicast filtering addresses (count + array)
-`ETHMAC_SETPARAM_DUMP_REGS`         | Used for debug, dumps the registers (no additional data)
+`ETHERNET_SETPARAM_PROMISC`           | Controls promiscuous mode (bool)
+`ETHERNET_SETPARAM_MULTICAST_PROMISC` | Controls multicast promiscuous mode (bool)
+`ETHERNET_SETPARAM_MULTICAST_FILTER`  | Sets multicast filtering addresses (count + array)
+`ETHERNET_SETPARAM_DUMP_REGS`         | Used for debug, dumps the registers (no additional data)
 
 For multicast filtering, the `value` argument indicates the count of MAC addresses sequentially
 presented via the `data` argument. For example, if `value` was `2`, then `data`
@@ -646,7 +646,7 @@ static void eth_stop(void* ctx) {
     mtx_unlock(&edev->lock);
 }
 
-static zx_status_t eth_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
+static zx_status_t eth_start(void* ctx, ethernet_ifc_t* ifc, void* cookie) {
     ethernet_device_t* edev = ctx;
     zx_status_t status = ZX_OK;
 
@@ -656,7 +656,7 @@ static zx_status_t eth_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     } else {
         edev->ifc = ifc;
         edev->cookie = cookie;
-        edev->ifc->status(edev->cookie, edev->online ? ETHMAC_STATUS_ONLINE : 0);
+        edev->ifc->status(edev->cookie, edev->online ? ETHERNET_STATUS_ONLINE : 0);
     }
     mtx_unlock(&edev->lock);
 
@@ -673,7 +673,7 @@ it points to a valid interface block.
 The Intel ethernet driver doesn't support the optional **get_bti()** callout.
 
 This callout is used to return a handle to the [BTI](../objects/bus_transaction_initiator.md).
-In case the device doesn't support it, it can either leave it out of the `ethmac_protocol_ops_t`
+In case the device doesn't support it, it can either leave it out of the `ethernet_impl_protocol_ops_t`
 structure (like the Intel ethernet driver does), or it can return `ZX_HANDLE_INVALID`.
 
 If supported, the handle is returned from the function.
@@ -718,7 +718,7 @@ static int irq_thread(void* arg) {
             if (online != was_online) {
                 edev->online = online;
                 if (edev->ifc) {
-                    edev->ifc->status(edev->cookie, online ? ETHMAC_STATUS_ONLINE : 0);
+                    edev->ifc->status(edev->cookie, online ? ETHERNET_STATUS_ONLINE : 0);
                 }
             }
         }

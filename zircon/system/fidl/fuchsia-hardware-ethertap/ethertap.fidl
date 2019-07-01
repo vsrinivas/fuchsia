@@ -11,8 +11,9 @@ using fuchsia.hardware.ethernet;
 const uint32 OPT_TRACE = 0x00000001;
 /// Enables tracing of individual packets.
 const uint32 OPT_TRACE_PACKETS = 0x00000002;
-/// Report EthmacSetParam() over EthertapController, and return success from EthmacSetParam().
-/// If this option is not set, EthmacSetParam() will return ZX_ERR_NOT_SUPPORTED.
+/// Report EthernetImplSetParam() over EthertapController, and return success from
+/// EthernetImplSetParam().  If this option is not set, EthernetImplSetParam() will return
+/// ZX_ERR_NOT_SUPPORTED.
 const uint32 OPT_REPORT_PARAM = 0x00000004;
 /// Starts ethertap device with link online.
 const uint32 OPT_ONLINE = 0x00000008;
@@ -30,8 +31,8 @@ struct Config {
     uint32 options;
     /// Features that will be reported to Ethernet protocol.
     uint32 features;
-    /// Ethertap device mtu. If a value greater than MAX_MTU is provided, creating an ethertap device
-    /// will fail.
+    /// Ethertap device mtu. If a value greater than MAX_MTU is provided, creating an ethertap
+    /// device will fail.
     uint32 mtu;
     /// MAC address to report.
     fuchsia.hardware.ethernet.MacAddress mac;
@@ -49,8 +50,8 @@ protocol TapDevice {
     -> OnFrame(vector<uint8>:MAX_MTU data);
     /// Sets online status of ethertap device.
     SetOnline(bool online);
-    /// If `OPT_REPORT_PARAM` is set on `options`, calls to EthmacSetParam will be routed to this
-    /// event, containing the set parameters request arguments.
+    /// If `OPT_REPORT_PARAM` is set on `options`, calls to EthernetImplcSetParam will be routed to
+    /// this event, containing the set parameters request arguments.
     -> OnReportParams(uint32 param, int32 value, vector<uint8>:MAX_PARAM_DATA? data);
 };
 

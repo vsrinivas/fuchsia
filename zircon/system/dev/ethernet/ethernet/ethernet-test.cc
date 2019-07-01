@@ -11,44 +11,46 @@
 #include <thread>
 #include <zxtest/zxtest.h>
 
-class FakeEthmacProtocol : public ddk::Device<FakeEthmacProtocol, ddk::GetProtocolable>,
-                           public ddk::EthmacProtocol<FakeEthmacProtocol, ddk::base_protocol> {
+class FakeEthernetImplProtocol : public ddk::Device<FakeEthernetImplProtocol, ddk::GetProtocolable>,
+                                 public ddk::EthernetImplProtocol<FakeEthernetImplProtocol,
+                                                                  ddk::base_protocol> {
 public:
-    FakeEthmacProtocol()
-        : ddk::Device<FakeEthmacProtocol, ddk::GetProtocolable>(fake_ddk::kFakeDevice),
-          proto_({&ethmac_protocol_ops_, this}) {
+    FakeEthernetImplProtocol()
+        : ddk::Device<FakeEthernetImplProtocol, ddk::GetProtocolable>(fake_ddk::kFakeDevice),
+          proto_({&ethernet_impl_protocol_ops_, this}) {
     }
 
-    const ethmac_protocol_t* proto() const { return &proto_; }
+    const ethernet_impl_protocol_t* proto() const { return &proto_; }
 
     void DdkRelease() {}
 
-    zx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info) {
-        info->netbuf_size = sizeof(ethmac_netbuf_t);
+    zx_status_t EthernetImplQuery(uint32_t options, ethernet_info_t* info) {
+        info->netbuf_size = sizeof(ethernet_netbuf_t);
         info->mtu = 1500;
         memcpy(info->mac, mac_, sizeof(info->mac));
         return ZX_OK;
     }
 
-    void EthmacStop() {}
+    void EthernetImplStop() {}
 
-    zx_status_t EthmacStart(const ethmac_ifc_protocol_t* ifc) {
-        client_ = std::make_unique<ddk::EthmacIfcProtocolClient>(ifc);
+    zx_status_t EthernetImplStart(const ethernet_ifc_protocol_t* ifc) {
+        client_ = std::make_unique<ddk::EthernetIfcProtocolClient>(ifc);
         return ZX_OK;
     }
 
-    zx_status_t EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
+    zx_status_t EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf) {
         queue_tx_called_ = true;
         return ZX_OK;
     }
 
-    zx_status_t EthmacSetParam(uint32_t param, int32_t value, const void* data, size_t data_size) {
-        if (param == ETHMAC_SETPARAM_DUMP_REGS) {
+    zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
+                                     size_t data_size) {
+        if (param == ETHERNET_SETPARAM_DUMP_REGS) {
             dump_called_ = true;
         }
         return ZX_OK;
     }
-    void EthmacGetBti(zx::bti* bti) { bti->reset(); }
+    void EthernetImplGetBti(zx::bti* bti) { bti->reset(); }
 
     bool TestInfo(fuchsia_hardware_ethernet_Info* info) {
         if (memcmp(mac_, info->mac.octets, ETH_MAC_SIZE) || (info->mtu != 1500)) {
@@ -90,9 +92,9 @@ public:
     }
 
 private:
-    ethmac_protocol_t proto_;
+    ethernet_impl_protocol_t proto_;
     const uint8_t mac_[ETH_MAC_SIZE] = {0xA, 0xB, 0xC, 0xD, 0xE, 0xF};
-    fbl::unique_ptr<ddk::EthmacIfcProtocolClient> client_;
+    fbl::unique_ptr<ddk::EthernetIfcProtocolClient> client_;
 
     bool dump_called_ = false;
     bool queue_tx_called_ = false;
@@ -102,17 +104,17 @@ class EthernetTester {
 public:
     EthernetTester() {
         fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
-        protocols[0] = {ZX_PROTOCOL_ETHMAC,
-                        *reinterpret_cast<const fake_ddk::Protocol*>(ethmac_.proto())};
+        protocols[0] = {ZX_PROTOCOL_ETHERNET_IMPL,
+                        *reinterpret_cast<const fake_ddk::Protocol*>(ethernet_.proto())};
         ddk_.SetProtocols(std::move(protocols));
     }
 
     fake_ddk::Bind& ddk() { return ddk_; }
-    FakeEthmacProtocol& ethmac() { return ethmac_; }
+    FakeEthernetImplProtocol& ethmac() { return ethernet_; }
 
 private:
     fake_ddk::Bind ddk_;
-    FakeEthmacProtocol ethmac_;
+    FakeEthernetImplProtocol ethernet_;
 };
 
 TEST(EthernetTest, BindTest) {
@@ -162,7 +164,7 @@ public:
         rx_fifo_depth_ = fifos.rx_depth;
         tx_fifo_depth_ = fifos.tx_depth;
         EXPECT_TRUE(rx_fifo_.is_valid());
-        ASSERT_OK(zx::vmo::create(2 * sizeof(ethmac_netbuf_t), 0, &buf_));
+        ASSERT_OK(zx::vmo::create(2 * sizeof(ethernet_netbuf_t), 0, &buf_));
         ASSERT_OK(fuchsia_hardware_ethernet_DeviceSetIOBuffer(FidlChannel(),
                                                               buf_.get(), &out_status));
         ASSERT_OK(out_status);
@@ -303,7 +305,7 @@ TEST(EthernetTest, SetIOBufferTest) {
                                                             &out_status) != ZX_OK);
     EXPECT_TRUE(out_status != ZX_OK);
     zx::vmo buf;
-    ASSERT_OK(zx::vmo::create(2 * sizeof(ethmac_netbuf_t), 0, &buf));
+    ASSERT_OK(zx::vmo::create(2 * sizeof(ethernet_netbuf_t), 0, &buf));
     ASSERT_OK(fuchsia_hardware_ethernet_DeviceSetIOBuffer(test.FidlChannel(),
                                                           buf.get(), &out_status));
     ASSERT_OK(out_status);

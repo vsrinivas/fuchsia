@@ -540,7 +540,7 @@ zx_status_t Station::HandleAssociationResponse(
   if (join_ctx_->bss()->rsn.is_null()) {
     debugjoin("802.1X controlled port is now open\n");
     controlled_port_ = eapol::PortState::kOpen;
-    device_->SetStatus(ETHMAC_STATUS_ONLINE);
+    device_->SetStatus(ETHERNET_STATUS_ONLINE);
   }
 
   infof("NIC %s associated with \"%s\"(%s) in channel %s, %s, %s\n",
@@ -998,7 +998,7 @@ void Station::UpdateControlledPort(wlan_mlme::ControlledPortState state) {
 
   if (state == wlan_mlme::ControlledPortState::OPEN) {
     controlled_port_ = eapol::PortState::kOpen;
-    device_->SetStatus(ETHMAC_STATUS_ONLINE);
+    device_->SetStatus(ETHERNET_STATUS_ONLINE);
   } else {
     controlled_port_ = eapol::PortState::kBlocked;
     device_->SetStatus(0);

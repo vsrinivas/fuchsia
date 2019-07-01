@@ -44,7 +44,7 @@ typedef struct ethernet_device {
     bool online;
 
     // callback interface to attached ethernet layer
-    ethmac_ifc_protocol_t ifc;
+    ethernet_ifc_protocol_t ifc;
 } ethernet_device_t;
 
 static int irq_thread(void* arg) {
@@ -64,7 +64,7 @@ static int irq_thread(void* arg) {
 
             while (eth_rx(&edev->eth, &data, &len) == ZX_OK) {
                 if (edev->ifc.ops && (edev->state == ETH_RUNNING)) {
-                    ethmac_ifc_recv(&edev->ifc, data, len, 0);
+                    ethernet_ifc_recv(&edev->ifc, data, len, 0);
                 }
                 eth_rx_ack(&edev->eth);
             }
@@ -76,7 +76,7 @@ static int irq_thread(void* arg) {
             if (online != was_online) {
                 edev->online = online;
                 if (edev->ifc.ops) {
-                    ethmac_ifc_status(&edev->ifc, online ? ETHMAC_STATUS_ONLINE : 0);
+                    ethernet_ifc_status(&edev->ifc, online ? ETHERNET_STATUS_ONLINE : 0);
                 }
             }
         }
@@ -85,7 +85,7 @@ static int irq_thread(void* arg) {
     return 0;
 }
 
-static zx_status_t eth_query(void* ctx, uint32_t options, ethmac_info_t* info) {
+static zx_status_t eth_query(void* ctx, uint32_t options, ethernet_info_t* info) {
     ethernet_device_t* edev = ctx;
 
     if (options) {
@@ -96,7 +96,7 @@ static zx_status_t eth_query(void* ctx, uint32_t options, ethmac_info_t* info) {
     ZX_DEBUG_ASSERT(ETH_TXBUF_SIZE >= ETH_MTU);
     info->mtu = ETH_MTU;
     memcpy(info->mac, edev->eth.mac, sizeof(edev->eth.mac));
-    info->netbuf_size = sizeof(ethmac_netbuf_t);
+    info->netbuf_size = sizeof(ethernet_netbuf_t);
 
     return ZX_OK;
 }
@@ -108,7 +108,7 @@ static void eth_stop(void* ctx) {
     mtx_unlock(&edev->lock);
 }
 
-static zx_status_t eth_start(void* ctx, const ethmac_ifc_protocol_t* ifc) {
+static zx_status_t eth_start(void* ctx, const ethernet_ifc_protocol_t* ifc) {
     ethernet_device_t* edev = ctx;
     zx_status_t status = ZX_OK;
 
@@ -117,14 +117,14 @@ static zx_status_t eth_start(void* ctx, const ethmac_ifc_protocol_t* ifc) {
         status = ZX_ERR_BAD_STATE;
     } else {
         edev->ifc = *ifc;
-        ethmac_ifc_status(&edev->ifc, edev->online ? ETHMAC_STATUS_ONLINE : 0);
+        ethernet_ifc_status(&edev->ifc, edev->online ? ETHERNET_STATUS_ONLINE : 0);
     }
     mtx_unlock(&edev->lock);
 
     return status;
 }
 
-static zx_status_t eth_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
+static zx_status_t eth_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf) {
     ethernet_device_t* edev = ctx;
     if (edev->state != ETH_RUNNING) {
         return ZX_ERR_BAD_STATE;
@@ -141,7 +141,7 @@ static zx_status_t eth_set_param(void *ctx, uint32_t param, int32_t value, const
     mtx_lock(&edev->lock);
 
     switch (param) {
-    case ETHMAC_SETPARAM_PROMISC:
+    case ETHERNET_SETPARAM_PROMISC:
         if ((bool)value) {
             eth_start_promisc(&edev->eth);
         } else {
@@ -157,7 +157,7 @@ static zx_status_t eth_set_param(void *ctx, uint32_t param, int32_t value, const
     return status;
 }
 
-static ethmac_protocol_ops_t ethmac_ops = {
+static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
     .query = eth_query,
     .stop = eth_stop,
     .start = eth_start,
@@ -305,8 +305,8 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
         .name = "intel-ethernet",
         .ctx = edev,
         .ops = &device_ops,
-        .proto_id = ZX_PROTOCOL_ETHMAC,
-        .proto_ops = &ethmac_ops,
+        .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
+        .proto_ops = &ethernet_impl_ops,
     };
 
     if (device_add(dev, &args, &edev->zxdev)) {

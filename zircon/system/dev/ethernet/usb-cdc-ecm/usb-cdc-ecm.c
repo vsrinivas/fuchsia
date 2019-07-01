@@ -26,12 +26,12 @@
 #define MAX_TX_BUF_SZ 32768
 #define MAX_RX_BUF_SZ 1500 * 2048
 
-#define ETHMAC_MAX_TRANSMIT_DELAY 100
-#define ETHMAC_MAX_RECV_DELAY 100
-#define ETHMAC_TRANSMIT_DELAY 10
-#define ETHMAC_RECV_DELAY 10
-#define ETHMAC_INITIAL_TRANSMIT_DELAY 0
-#define ETHMAC_INITIAL_RECV_DELAY 0
+#define ETHERNET_MAX_TRANSMIT_DELAY 100
+#define ETHERNET_MAX_RECV_DELAY 100
+#define ETHERNET_TRANSMIT_DELAY 10
+#define ETHERNET_RECV_DELAY 10
+#define ETHERNET_INITIAL_TRANSMIT_DELAY 0
+#define ETHERNET_INITIAL_RECV_DELAY 0
 
 const char* module_name = "usb-cdc-ecm";
 
@@ -44,10 +44,10 @@ typedef struct {
     zx_device_t* zxdev;
     zx_device_t* usb_device;
     usb_protocol_t usb;
-    // Ethmac lock -- must be acquired after tx_mutex
+    // Ethernet lock -- must be acquired after tx_mutex
     // when both locks are held.
-    mtx_t ethmac_mutex;
-    ethmac_ifc_protocol_t ethmac_ifc;
+    mtx_t ethernet_mutex;
+    ethernet_ifc_protocol_t ethernet_ifc;
 
     // Device attributes
     uint8_t mac_addr[ETH_MAC_SIZE];
@@ -65,7 +65,7 @@ typedef struct {
     thrd_t int_thread;
 
     // Send context
-    // TX lock -- Must be acquired before ethmac_mutex
+    // TX lock -- Must be acquired before ethernet_mutex
     // when both locks are held.
     mtx_t tx_mutex;
     ecm_endpoint_t tx_endpoint;
@@ -82,7 +82,7 @@ typedef struct {
 } ecm_ctx_t;
 
 typedef struct txn_info {
-    ethmac_netbuf_t netbuf;
+    ethernet_netbuf_t netbuf;
     list_node_t node;
 } txn_info_t;
 
@@ -94,11 +94,11 @@ static void ecm_unbind(void* cookie) {
 
     mtx_lock(&ctx->tx_mutex);
     ctx->unbound = true;
-    if (ctx->ethmac_ifc.ops) {
+    if (ctx->ethernet_ifc.ops) {
         txn_info_t* txn;
         while ((txn = list_remove_head_type(&ctx->tx_pending_infos, txn_info_t, node)) !=
                NULL) {
-            ethmac_ifc_complete_tx(&ctx->ethmac_ifc, &txn->netbuf, ZX_ERR_PEER_CLOSED);
+            ethernet_ifc_complete_tx(&ctx->ethernet_ifc, &txn->netbuf, ZX_ERR_PEER_CLOSED);
         }
     }
     mtx_unlock(&ctx->tx_mutex);
@@ -118,7 +118,7 @@ static void ecm_free(ecm_ctx_t* ctx) {
     if (ctx->int_txn_buf) {
         usb_request_release(ctx->int_txn_buf);
     }
-    mtx_destroy(&ctx->ethmac_mutex);
+    mtx_destroy(&ctx->ethernet_mutex);
     mtx_destroy(&ctx->tx_mutex);
     free(ctx);
 }
@@ -135,7 +135,7 @@ static zx_protocol_device_t ecm_device_proto = {
 };
 
 static void ecm_update_online_status(ecm_ctx_t* ctx, bool is_online) {
-    mtx_lock(&ctx->ethmac_mutex);
+    mtx_lock(&ctx->ethernet_mutex);
     if ((is_online && ctx->online) || (!is_online && !ctx->online)) {
         goto done;
     }
@@ -143,32 +143,32 @@ static void ecm_update_online_status(ecm_ctx_t* ctx, bool is_online) {
     if (is_online) {
         zxlogf(INFO, "%s: connected to network\n", module_name);
         ctx->online = true;
-        if (ctx->ethmac_ifc.ops) {
-            ethmac_ifc_status(&ctx->ethmac_ifc, ETHMAC_STATUS_ONLINE);
+        if (ctx->ethernet_ifc.ops) {
+            ethernet_ifc_status(&ctx->ethernet_ifc, ETHERNET_STATUS_ONLINE);
         } else {
             zxlogf(ERROR, "%s: not connected to ethermac interface\n", module_name);
         }
     } else {
         zxlogf(INFO, "%s: no connection to network\n", module_name);
         ctx->online = false;
-        if (ctx->ethmac_ifc.ops) {
-            ethmac_ifc_status(&ctx->ethmac_ifc, 0);
+        if (ctx->ethernet_ifc.ops) {
+            ethernet_ifc_status(&ctx->ethernet_ifc, 0);
         }
     }
 
 done:
-    mtx_unlock(&ctx->ethmac_mutex);
+    mtx_unlock(&ctx->ethernet_mutex);
 }
 
-static zx_status_t ecm_ethmac_query(void* ctx, uint32_t options, ethmac_info_t* info) {
+static zx_status_t ecm_ethernet_impl_query(void* ctx, uint32_t options, ethernet_info_t* info) {
     ecm_ctx_t* eth = ctx;
 
     zxlogf(TRACE, "%s: %s called\n", module_name, __FUNCTION__);
 
     // No options are supported
     if (options) {
-        zxlogf(ERROR, "%s: unexpected options (0x%"PRIx32") to ecm_ethmac_query\n", module_name,
-               options);
+        zxlogf(ERROR, "%s: unexpected options (0x%"PRIx32") to ecm_ethernet_impl_query\n",
+               module_name, options);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -180,29 +180,29 @@ static zx_status_t ecm_ethmac_query(void* ctx, uint32_t options, ethmac_info_t* 
     return ZX_OK;
 }
 
-static void ecm_ethmac_stop(void* cookie) {
+static void ecm_ethernet_impl_stop(void* cookie) {
     zxlogf(TRACE, "%s: %s called\n", module_name, __FUNCTION__);
     ecm_ctx_t* ctx = cookie;
     mtx_lock(&ctx->tx_mutex);
-    mtx_lock(&ctx->ethmac_mutex);
-    ctx->ethmac_ifc.ops = NULL;
-    mtx_unlock(&ctx->ethmac_mutex);
+    mtx_lock(&ctx->ethernet_mutex);
+    ctx->ethernet_ifc.ops = NULL;
+    mtx_unlock(&ctx->ethernet_mutex);
     mtx_unlock(&ctx->tx_mutex);
 }
 
-static zx_status_t ecm_ethmac_start(void* ctx_cookie, const ethmac_ifc_protocol_t* ifc) {
+static zx_status_t ecm_ethernet_impl_start(void* ctx_cookie, const ethernet_ifc_protocol_t* ifc) {
     zxlogf(TRACE, "%s: %s called\n", module_name, __FUNCTION__);
     ecm_ctx_t* ctx = ctx_cookie;
     zx_status_t status = ZX_OK;
 
-    mtx_lock(&ctx->ethmac_mutex);
-    if (ctx->ethmac_ifc.ops) {
+    mtx_lock(&ctx->ethernet_mutex);
+    if (ctx->ethernet_ifc.ops) {
         status = ZX_ERR_ALREADY_BOUND;
     } else {
-        ctx->ethmac_ifc = *ifc;
-        ethmac_ifc_status(&ctx->ethmac_ifc, ctx->online ? ETHMAC_STATUS_ONLINE : 0);
+        ctx->ethernet_ifc = *ifc;
+        ethernet_ifc_status(&ctx->ethernet_ifc, ctx->online ? ETHERNET_STATUS_ONLINE : 0);
     }
-    mtx_unlock(&ctx->ethmac_mutex);
+    mtx_unlock(&ctx->ethernet_mutex);
 
     return status;
 }
@@ -210,7 +210,7 @@ static zx_status_t ecm_ethmac_start(void* ctx_cookie, const ethmac_ifc_protocol_
 static zx_status_t queue_request(ecm_ctx_t* ctx, const uint8_t* data, size_t length,
                                  usb_request_t* req) {
     req->header.length = length;
-    if (!ctx->ethmac_ifc.ops) {
+    if (!ctx->ethernet_ifc.ops) {
         return ZX_ERR_BAD_STATE;
     }
     ssize_t bytes_copied = usb_request_copy_to(req, data, length, 0);
@@ -227,7 +227,7 @@ static zx_status_t queue_request(ecm_ctx_t* ctx, const uint8_t* data, size_t len
     return ZX_OK;
 }
 
-static zx_status_t send_locked(ecm_ctx_t* ctx, ethmac_netbuf_t* netbuf) {
+static zx_status_t send_locked(ecm_ctx_t* ctx, ethernet_netbuf_t* netbuf) {
     const uint8_t* byte_data = netbuf->data_buffer;
     size_t length = netbuf->data_size;
 
@@ -289,9 +289,9 @@ static void usb_write_complete(void* cookie,
             zxlogf(TRACE,
                    "%s: slowing down the requests by %d usec."
                    "Resetting the transmit endpoint\n",
-                   module_name, ETHMAC_TRANSMIT_DELAY);
-            if (ctx->tx_endpoint_delay < ETHMAC_MAX_TRANSMIT_DELAY) {
-                ctx->tx_endpoint_delay += ETHMAC_TRANSMIT_DELAY;
+                   module_name, ETHERNET_TRANSMIT_DELAY);
+            if (ctx->tx_endpoint_delay < ETHERNET_MAX_TRANSMIT_DELAY) {
+                ctx->tx_endpoint_delay += ETHERNET_TRANSMIT_DELAY;
             }
             request->reset = true;
             request->reset_address = ctx->tx_endpoint.addr;
@@ -318,11 +318,11 @@ static void usb_write_complete(void* cookie,
 
     mtx_unlock(&ctx->tx_mutex);
 
-    mtx_lock(&ctx->ethmac_mutex);
-    if (additional_tx_queued && ctx->ethmac_ifc.ops) {
-        ethmac_ifc_complete_tx(&ctx->ethmac_ifc, &txn->netbuf, send_status);
+    mtx_lock(&ctx->ethernet_mutex);
+    if (additional_tx_queued && ctx->ethernet_ifc.ops) {
+        ethernet_ifc_complete_tx(&ctx->ethernet_ifc, &txn->netbuf, send_status);
     }
-    mtx_unlock(&ctx->ethmac_mutex);
+    mtx_unlock(&ctx->ethernet_mutex);
 
     // When the interface is offline, the transaction will complete with status set to
     // ZX_ERR_IO_NOT_PRESENT. There's not much we can do except ignore it.
@@ -341,11 +341,11 @@ static void usb_recv(ecm_ctx_t* ctx, usb_request_t* request) {
         return;
     }
 
-    mtx_lock(&ctx->ethmac_mutex);
-    if (ctx->ethmac_ifc.ops) {
-        ethmac_ifc_recv(&ctx->ethmac_ifc, read_data, len, 0);
+    mtx_lock(&ctx->ethernet_mutex);
+    if (ctx->ethernet_ifc.ops) {
+        ethernet_ifc_recv(&ctx->ethernet_ifc, read_data, len, 0);
     }
-    mtx_unlock(&ctx->ethmac_mutex);
+    mtx_unlock(&ctx->ethernet_mutex);
 }
 
 static void usb_read_complete(void* cookie, usb_request_t* request) __TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -371,13 +371,13 @@ static void usb_read_complete(void* cookie, usb_request_t* request) __TA_NO_THRE
         usb_request_queue(&ctx->usb, request, &complete);
         return;
     } else if (request->response.status == ZX_ERR_IO_INVALID) {
-        if (ctx->rx_endpoint_delay < ETHMAC_MAX_RECV_DELAY) {
-            ctx->rx_endpoint_delay += ETHMAC_RECV_DELAY;
+        if (ctx->rx_endpoint_delay < ETHERNET_MAX_RECV_DELAY) {
+            ctx->rx_endpoint_delay += ETHERNET_RECV_DELAY;
         }
         zxlogf(TRACE,
                "%s: slowing down the requests by %d usec."
                "Resetting the recv endpoint\n",
-               module_name, ETHMAC_RECV_DELAY);
+               module_name, ETHERNET_RECV_DELAY);
         request->reset = true;
         request->reset_address = ctx->rx_endpoint.addr;
         usb_request_complete_t complete = {
@@ -400,7 +400,8 @@ static void usb_read_complete(void* cookie, usb_request_t* request) __TA_NO_THRE
     usb_request_queue(&ctx->usb, request, &complete);
 }
 
-static zx_status_t ecm_ethmac_queue_tx(void* cookie, uint32_t options, ethmac_netbuf_t* netbuf) {
+static zx_status_t ecm_ethernet_impl_queue_tx(void* cookie, uint32_t options,
+                                              ethernet_netbuf_t* netbuf) {
     ecm_ctx_t* ctx = cookie;
     size_t length = netbuf->data_size;
     zx_status_t status;
@@ -428,17 +429,17 @@ static zx_status_t ecm_ethmac_queue_tx(void* cookie, uint32_t options, ethmac_ne
     return status;
 }
 
-static zx_status_t ecm_ethmac_set_param(void *cookie, uint32_t param, int32_t value,
+static zx_status_t ecm_ethernet_impl_set_param(void *cookie, uint32_t param, int32_t value,
                                         const void* data, size_t data_size) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static ethmac_protocol_ops_t ethmac_ops = {
-    .query = ecm_ethmac_query,
-    .stop = ecm_ethmac_stop,
-    .start = ecm_ethmac_start,
-    .queue_tx = ecm_ethmac_queue_tx,
-    .set_param = ecm_ethmac_set_param,
+static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
+    .query = ecm_ethernet_impl_query,
+    .stop = ecm_ethernet_impl_stop,
+    .start = ecm_ethernet_impl_start,
+    .queue_tx = ecm_ethernet_impl_queue_tx,
+    .set_param = ecm_ethernet_impl_set_param,
 };
 
 static void ecm_interrupt_complete(void* cookie, usb_request_t* request) {
@@ -619,7 +620,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
     memcpy(&ecm_ctx->usb, &usb, sizeof(ecm_ctx->usb));
     list_initialize(&ecm_ctx->tx_txn_bufs);
     list_initialize(&ecm_ctx->tx_pending_infos);
-    mtx_init(&ecm_ctx->ethmac_mutex, mtx_plain);
+    mtx_init(&ecm_ctx->ethernet_mutex, mtx_plain);
     mtx_init(&ecm_ctx->tx_mutex, mtx_plain);
 
     ecm_ctx->parent_req_size = usb_get_request_size(&ecm_ctx->usb);
@@ -734,8 +735,8 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
     copy_endpoint_info(&ecm_ctx->tx_endpoint, tx_ep);
     copy_endpoint_info(&ecm_ctx->rx_endpoint, rx_ep);
 
-    ecm_ctx->rx_endpoint_delay = ETHMAC_INITIAL_RECV_DELAY;
-    ecm_ctx->tx_endpoint_delay = ETHMAC_INITIAL_TRANSMIT_DELAY;
+    ecm_ctx->rx_endpoint_delay = ETHERNET_INITIAL_RECV_DELAY;
+    ecm_ctx->tx_endpoint_delay = ETHERNET_INITIAL_TRANSMIT_DELAY;
     // Reset by selecting default interface followed by data interface. We can't start
     // queueing transactions until this is complete.
     usb_set_interface(&usb, default_ifc->bInterfaceNumber, default_ifc->bAlternateSetting);
@@ -826,8 +827,8 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
         .name = "usb-cdc-ecm",
         .ctx = ecm_ctx,
         .ops = &ecm_device_proto,
-        .proto_id = ZX_PROTOCOL_ETHMAC,
-        .proto_ops = &ethmac_ops,
+        .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
+        .proto_ops = &ethernet_impl_ops,
     };
     result = device_add(ecm_ctx->usb_device, &args, &ecm_ctx->zxdev);
     if (result < 0) {

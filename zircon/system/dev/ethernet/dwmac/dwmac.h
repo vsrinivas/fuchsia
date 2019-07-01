@@ -99,7 +99,7 @@ typedef volatile struct dw_dmadescr {
 namespace eth {
 
 class DWMacDevice : public ddk::Device<DWMacDevice, ddk::Unbindable>,
-                    public ddk::EthmacProtocol<DWMacDevice, ddk::base_protocol>,
+                    public ddk::EthernetImplProtocol<DWMacDevice, ddk::base_protocol>,
                     public ddk::EthMacProtocol<DWMacDevice> {
 public:
     DWMacDevice(zx_device_t* device, pdev_protocol_t* pdev, eth_board_protocol_t* eth_board);
@@ -109,13 +109,15 @@ public:
     void DdkRelease();
     void DdkUnbind();
 
-    // ZX_PROTOCOL_ETHMAC ops.
-    zx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info);
-    void EthmacStop() __TA_EXCLUDES(lock_);
-    zx_status_t EthmacStart(const ethmac_ifc_protocol_t* ifc) __TA_EXCLUDES(lock_);
-    zx_status_t EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) __TA_EXCLUDES(lock_);
-    zx_status_t EthmacSetParam(uint32_t param, int32_t value, const void* data, size_t data_size);
-    void EthmacGetBti(zx::bti* bti);
+    // ZX_PROTOCOL_ETHERNET_IMPL ops.
+    zx_status_t EthernetImplQuery(uint32_t options, ethernet_info_t* info);
+    void EthernetImplStop() __TA_EXCLUDES(lock_);
+    zx_status_t EthernetImplStart(const ethernet_ifc_protocol_t* ifc) __TA_EXCLUDES(lock_);
+    zx_status_t EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf)
+        __TA_EXCLUDES(lock_);
+    zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
+                                     size_t data_size);
+    void EthernetImplGetBti(zx::bti* bti);
 
     // ZX_PROTOCOL_ETH_MAC ops.
     zx_status_t EthMacMdioWrite(uint32_t reg, uint32_t val);
@@ -181,7 +183,7 @@ private:
     volatile uint32_t* dwmac_mmc_regs_ = nullptr;
 
     fbl::Mutex lock_;
-    ddk::EthmacIfcProtocolClient ethmac_client_ __TA_GUARDED(lock_);
+    ddk::EthernetIfcProtocolClient ethernet_client_ __TA_GUARDED(lock_);
 
     // Only accessed from Thread, so not locked.
     bool online_ = false;

@@ -359,7 +359,7 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
     zx_status_t call_status = ZX_OK;
     status = fuchsia_hardware_ethernet_DeviceStart(netsvc, &call_status);
     if (status != ZX_OK || call_status != ZX_OK) {
-        printf("netifc: ethernet_start(): %d, %d\n", status, call_status);
+        printf("netifc: ethernet_impl_start(): %d, %d\n", status, call_status);
         goto fail_destroy_client;
     }
 

@@ -25,12 +25,12 @@
 #define WRITE_REQ_COUNT 4
 #define ETH_HEADER_SIZE 4
 
-#define ETHMAC_MAX_TRANSMIT_DELAY 100
-#define ETHMAC_MAX_RECV_DELAY 100
-#define ETHMAC_TRANSMIT_DELAY 10
-#define ETHMAC_RECV_DELAY 10
-#define ETHMAC_INITIAL_TRANSMIT_DELAY 0
-#define ETHMAC_INITIAL_RECV_DELAY 0
+#define ETHERNET_MAX_TRANSMIT_DELAY 100
+#define ETHERNET_MAX_RECV_DELAY 100
+#define ETHERNET_TRANSMIT_DELAY 10
+#define ETHERNET_RECV_DELAY 10
+#define ETHERNET_INITIAL_TRANSMIT_DELAY 0
+#define ETHERNET_INITIAL_RECV_DELAY 0
 
 typedef struct {
     zx_device_t* zxdev;
@@ -52,7 +52,7 @@ typedef struct {
     uint64_t tx_endpoint_delay; // wait time between 2 transmit requests
 
     // Interface to the ethernet layer.
-    ethmac_ifc_protocol_t ifc;
+    ethernet_ifc_protocol_t ifc;
 
     thrd_t thread;
     bool thread_started;
@@ -145,7 +145,7 @@ static void rndishost_recv(rndishost_t* eth, usb_request_t* request) {
             return;
         }
 
-        ethmac_ifc_recv(&eth->ifc, read_data + data_offset, header->data_length, 0);
+        ethernet_ifc_recv(&eth->ifc, read_data + data_offset, header->data_length, 0);
 
         read_data += header->msg_length;
         len -= header->msg_length;
@@ -167,9 +167,9 @@ static void rndis_read_complete(void* ctx, usb_request_t* request) {
     } else if (request->response.status == ZX_ERR_IO_INVALID) {
         zxlogf(TRACE, "rndis_read_complete Slowing down the requests by %d usec"
                       " and resetting the recv endpoint\n",
-               ETHMAC_RECV_DELAY);
-        if (eth->rx_endpoint_delay < ETHMAC_MAX_RECV_DELAY) {
-            eth->rx_endpoint_delay += ETHMAC_RECV_DELAY;
+               ETHERNET_RECV_DELAY);
+        if (eth->rx_endpoint_delay < ETHERNET_MAX_RECV_DELAY) {
+            eth->rx_endpoint_delay += ETHERNET_RECV_DELAY;
         }
         usb_reset_endpoint(&eth->usb, eth->bulk_in_addr);
     }
@@ -206,9 +206,9 @@ static void rndis_write_complete(void* ctx, usb_request_t* request) {
     } else if (request->response.status == ZX_ERR_IO_INVALID) {
         zxlogf(TRACE, "rndis_write_complete Slowing down the requests by %d usec"
                       " and resetting the transmit endpoint\n",
-               ETHMAC_TRANSMIT_DELAY);
-        if (eth->tx_endpoint_delay < ETHMAC_MAX_TRANSMIT_DELAY) {
-            eth->tx_endpoint_delay += ETHMAC_TRANSMIT_DELAY;
+               ETHERNET_TRANSMIT_DELAY);
+        if (eth->tx_endpoint_delay < ETHERNET_MAX_TRANSMIT_DELAY) {
+            eth->tx_endpoint_delay += ETHERNET_TRANSMIT_DELAY;
         }
         usb_reset_endpoint(&eth->usb, eth->bulk_out_addr);
     }
@@ -230,7 +230,7 @@ static void rndishost_free(rndishost_t* eth) {
     free(eth);
 }
 
-static zx_status_t rndishost_query(void* ctx, uint32_t options, ethmac_info_t* info) {
+static zx_status_t rndishost_query(void* ctx, uint32_t options, ethernet_info_t* info) {
     rndishost_t* eth = (rndishost_t*)ctx;
 
     if (options) {
@@ -240,7 +240,7 @@ static zx_status_t rndishost_query(void* ctx, uint32_t options, ethmac_info_t* i
     memset(info, 0, sizeof(*info));
     info->mtu = eth->mtu;
     memcpy(info->mac, eth->mac_addr, sizeof(eth->mac_addr));
-    info->netbuf_size = sizeof(ethmac_netbuf_t);
+    info->netbuf_size = sizeof(ethernet_netbuf_t);
 
     return ZX_OK;
 }
@@ -252,7 +252,7 @@ static void rndishost_stop(void* ctx) {
     mtx_unlock(&eth->mutex);
 }
 
-static zx_status_t rndishost_start(void* ctx, const ethmac_ifc_protocol_t* ifc) {
+static zx_status_t rndishost_start(void* ctx, const ethernet_ifc_protocol_t* ifc) {
     rndishost_t* eth = (rndishost_t*)ctx;
     zx_status_t status = ZX_OK;
 
@@ -262,14 +262,14 @@ static zx_status_t rndishost_start(void* ctx, const ethmac_ifc_protocol_t* ifc) 
     } else {
         eth->ifc = *ifc;
         // TODO: Check that the device is online before sending ETH_STATUS_ONLINE.
-        ethmac_ifc_status(&eth->ifc, ETHMAC_STATUS_ONLINE);
+        ethernet_ifc_status(&eth->ifc, ETHERNET_STATUS_ONLINE);
     }
     mtx_unlock(&eth->mutex);
 
     return status;
 }
 
-static zx_status_t rndishost_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
+static zx_status_t rndishost_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf) {
     size_t length = netbuf->data_size;
     rndishost_t* eth = (rndishost_t*)ctx;
     const uint8_t* byte_data = netbuf->data_buffer;
@@ -345,7 +345,7 @@ static zx_status_t rndishost_set_param(void *ctx, uint32_t param, int32_t value,
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static ethmac_protocol_ops_t ethmac_ops = {
+static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
     .query = rndishost_query,
     .stop = rndishost_stop,
     .start = rndishost_start,
@@ -601,8 +601,8 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* device) {
         .name = "rndishost",
         .ctx = eth,
         .ops = &rndishost_device_proto,
-        .proto_id = ZX_PROTOCOL_ETHMAC,
-        .proto_ops = &ethmac_ops,
+        .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
+        .proto_ops = &ethernet_impl_ops,
         .flags = DEVICE_ADD_INVISIBLE,
     };
 

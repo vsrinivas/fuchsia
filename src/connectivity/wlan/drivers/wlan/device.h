@@ -59,13 +59,13 @@ class Device : public DeviceInterface {
   void WlanmacReportTxStatus(const wlan_tx_status_t* tx_status);
   void WlanmacHwScanComplete(const wlan_hw_scan_result_t* result);
 
-  // ddk ethmac_protocol_ops methods
-  zx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info);
-  zx_status_t EthmacStart(const ethmac_ifc_protocol_t* ifc)
+  // ddk ethernet_impl_protocol_ops methods
+  zx_status_t EthernetImplQuery(uint32_t options, ethernet_info_t* info);
+  zx_status_t EthernetImplStart(const ethernet_ifc_protocol_t* ifc)
       __TA_EXCLUDES(lock_);
-  void EthmacStop() __TA_EXCLUDES(lock_);
-  zx_status_t EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf);
-  zx_status_t EthmacSetParam(uint32_t param, int32_t value, const void* data,
+  void EthernetImplStop() __TA_EXCLUDES(lock_);
+  zx_status_t EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf);
+  zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
                              size_t data_size);
 
   // DeviceInterface methods
@@ -154,7 +154,7 @@ class Device : public DeviceInterface {
   zx_device_t* ethdev_ = nullptr;
 
   WlanmacProxy wlanmac_proxy_;
-  fbl::unique_ptr<ddk::EthmacIfcProtocolClient> ethmac_proxy_;
+  fbl::unique_ptr<ddk::EthernetIfcProtocolClient> ethernet_proxy_;
 
   wlanmac_info_t wlanmac_info_ = {};
   fbl::RefPtr<DeviceState> state_;

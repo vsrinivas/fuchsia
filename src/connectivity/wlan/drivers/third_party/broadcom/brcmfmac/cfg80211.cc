@@ -3028,7 +3028,7 @@ void brcmf_hook_eapol_req(void* ctx, wlanif_eapol_req_t* req) {
         memcpy(packet + ETH_ALEN, req->src_addr, ETH_ALEN);
         *(uint16_t*)(packet + 2 * ETH_ALEN) = EAPOL_ETHERNET_TYPE_UINT16;
         memcpy(packet + 2 * ETH_ALEN + sizeof(uint16_t), req->data, req->data_len);
-        ethmac_netbuf_t netbuf;
+        ethernet_netbuf_t netbuf;
         netbuf.data_buffer = packet;
         netbuf.data_size = packet_length;
         brcmf_netdev_start_xmit(ndev, &netbuf);
@@ -3588,7 +3588,7 @@ void brcmf_hook_stats_query_req(void* ctx) {
     ndev->if_callbacks->stats_query_resp(ndev->if_callback_cookie, &response);
 }
 
-zx_status_t brcmf_hook_data_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
+zx_status_t brcmf_hook_data_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf) {
     struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
     brcmf_netdev_start_xmit(ndev, netbuf);
     return ZX_OK;

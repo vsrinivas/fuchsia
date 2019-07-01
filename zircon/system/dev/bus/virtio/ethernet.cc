@@ -88,7 +88,7 @@ zx_protocol_device_t kDeviceOps = {
 };
 
 // Protocol bridge helpers
-zx_status_t virtio_net_query(void* ctx, uint32_t options, ethmac_info_t* info) {
+zx_status_t virtio_net_query(void* ctx, uint32_t options, ethernet_info_t* info) {
     virtio::EthernetDevice* eth = static_cast<virtio::EthernetDevice*>(ctx);
     return eth->Query(options, info);
 }
@@ -98,12 +98,12 @@ void virtio_net_stop(void* ctx) {
     eth->Stop();
 }
 
-zx_status_t virtio_net_start(void* ctx, const ethmac_ifc_protocol_t* ifc) {
+zx_status_t virtio_net_start(void* ctx, const ethernet_ifc_protocol_t* ifc) {
     virtio::EthernetDevice* eth = static_cast<virtio::EthernetDevice*>(ctx);
     return eth->Start(ifc);
 }
 
-zx_status_t virtio_net_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
+zx_status_t virtio_net_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf) {
     virtio::EthernetDevice* eth = static_cast<virtio::EthernetDevice*>(ctx);
     return eth->QueueTx(options, netbuf);
 }
@@ -113,7 +113,7 @@ static zx_status_t virtio_set_param(void* ctx, uint32_t param, int32_t value, co
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-ethmac_protocol_ops_t kProtoOps = {
+ethernet_impl_protocol_ops_t kProtoOps = {
     virtio_net_query,
     virtio_net_stop,
     virtio_net_start,
@@ -277,7 +277,7 @@ zx_status_t EthernetDevice::Init() {
     args.name = "virtio-net";
     args.ctx = this;
     args.ops = &kDeviceOps;
-    args.proto_id = ZX_PROTOCOL_ETHMAC;
+    args.proto_id = ZX_PROTOCOL_ETHERNET_IMPL;
     args.proto_ops = &kProtoOps;
     if ((rc = device_add(bus_device_, &args, &device_)) != ZX_OK) {
         zxlogf(ERROR, "failed to add device: %s\n", zx_status_get_string(rc));
@@ -338,7 +338,7 @@ void EthernetDevice::IrqRingUpdate() {
             LTRACE_DO(hexdump8_ex(data, len, 0));
 
             // Pass the data up the stack to the generic Ethernet driver
-            ethmac_ifc_recv(&ifc_, data, len, 0);
+            ethernet_ifc_recv(&ifc_, data, len, 0);
             LTRACE_DO(virtio_dump_desc(desc));
             rx_.FreeDesc(id);
         });
@@ -370,10 +370,11 @@ void EthernetDevice::IrqConfigChange() {
 
     // Re-read our configuration
     CopyDeviceConfig(&config_, sizeof(config_));
-    ethmac_ifc_status(&ifc_, (config_.status & VIRTIO_NET_S_LINK_UP) ? ETHMAC_STATUS_ONLINE : 0);
+    ethernet_ifc_status(&ifc_,
+                        (config_.status & VIRTIO_NET_S_LINK_UP) ? ETHERNET_STATUS_ONLINE : 0);
 }
 
-zx_status_t EthernetDevice::Query(uint32_t options, ethmac_info_t* info) {
+zx_status_t EthernetDevice::Query(uint32_t options, ethernet_info_t* info) {
     LTRACE_ENTRY;
     if (options) {
         return ZX_ERR_INVALID_ARGS;
@@ -382,7 +383,7 @@ zx_status_t EthernetDevice::Query(uint32_t options, ethmac_info_t* info) {
     if (info) {
         // TODO(aarongreen): Add info->features = GetFeatures();
         info->mtu = kVirtioMtu;
-        info->netbuf_size = sizeof(ethmac_netbuf_t);
+        info->netbuf_size = sizeof(ethernet_netbuf_t);
         memcpy(info->mac, config_.mac, sizeof(info->mac));
     }
     return ZX_OK;
@@ -394,7 +395,7 @@ void EthernetDevice::Stop() {
     ifc_.ops = nullptr;
 }
 
-zx_status_t EthernetDevice::Start(const ethmac_ifc_protocol_t* ifc) {
+zx_status_t EthernetDevice::Start(const ethernet_ifc_protocol_t* ifc) {
     LTRACE_ENTRY;
     if (!ifc) {
         return ZX_ERR_INVALID_ARGS;
@@ -404,11 +405,12 @@ zx_status_t EthernetDevice::Start(const ethmac_ifc_protocol_t* ifc) {
         return ZX_ERR_BAD_STATE;
     }
     ifc_ = *ifc;
-    ethmac_ifc_status(&ifc_, (config_.status & VIRTIO_NET_S_LINK_UP) ? ETHMAC_STATUS_ONLINE : 0);
+    ethernet_ifc_status(&ifc_,
+                        (config_.status & VIRTIO_NET_S_LINK_UP) ? ETHERNET_STATUS_ONLINE : 0);
     return ZX_OK;
 }
 
-zx_status_t EthernetDevice::QueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
+zx_status_t EthernetDevice::QueueTx(uint32_t options, ethernet_netbuf_t* netbuf) {
     LTRACE_ENTRY;
     const void* data = netbuf->data_buffer;
     size_t length = netbuf->data_size;
@@ -475,7 +477,7 @@ zx_status_t EthernetDevice::QueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
     LTRACE_DO(hexdump8_ex(tx_buf, length, 0));
     tx_.SubmitChain(id);
     ++unkicked_;
-    if ((options & ETHMAC_TX_OPT_MORE) == 0 || unkicked_ > kBacklog / 2) {
+    if ((options & ETHERNET_TX_OPT_MORE) == 0 || unkicked_ > kBacklog / 2) {
         tx_.Kick();
         unkicked_ = 0;
     }

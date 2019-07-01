@@ -32,7 +32,7 @@ public:
 };
 
 class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
-                  public ddk::EthmacProtocol<TapDevice, ddk::base_protocol> {
+                  public ddk::EthernetImplProtocol<TapDevice, ddk::base_protocol> {
 public:
     TapDevice(zx_device_t* device,
               const fuchsia_hardware_ethertap_Config* config,
@@ -41,14 +41,14 @@ public:
     void DdkRelease();
     void DdkUnbind();
 
-    zx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info);
-    void EthmacStop();
-    zx_status_t EthmacStart(const ethmac_ifc_protocol_t* ifc);
-    zx_status_t EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf);
-    zx_status_t EthmacSetParam(uint32_t param, int32_t value, const void* data,
+    zx_status_t EthernetImplQuery(uint32_t options, ethernet_info_t* info);
+    void EthernetImplStop();
+    zx_status_t EthernetImplStart(const ethernet_ifc_protocol_t* ifc);
+    zx_status_t EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf);
+    zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
                                size_t data_size);
     // No DMA capability, so return invalid handle for get_bti
-    void EthmacGetBti(zx::bti* bti);
+    void EthernetImplGetBti(zx::bti* bti);
     int Thread();
     zx_status_t Reply(zx_txid_t, const fidl_msg_t* msg);
 
@@ -66,7 +66,7 @@ private:
 
     fbl::Mutex lock_;
     bool dead_ = false;
-    ddk::EthmacIfcProtocolClient ethmac_client_ __TA_GUARDED(lock_);
+    ddk::EthernetIfcProtocolClient ethernet_client_ __TA_GUARDED(lock_);
 
     // Only accessed from Thread, so not locked.
     bool online_ = false;
