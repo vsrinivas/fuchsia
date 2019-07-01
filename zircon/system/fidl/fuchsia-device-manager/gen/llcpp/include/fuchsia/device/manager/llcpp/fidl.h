@@ -21,7 +21,6 @@ namespace fuchsia {
 namespace device {
 namespace manager {
 
-class ExternalController;
 class DebugDumper;
 class Administrator;
 class DevhostController;
@@ -40,104 +39,6 @@ class DeviceController;
 struct DeviceComponentPart;
 struct DeviceComponent;
 class Coordinator;
-
-extern "C" const fidl_type_t fuchsia_device_manager_ExternalControllerPerformMexecRequestTable;
-
-// Interface for requesting devmgr perform miscellaneous actions.
-// These methods are all work-arounds that should go away eventually.
-class ExternalController final {
- public:
-
-  struct PerformMexecRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::zx::vmo kernel;
-    ::zx::vmo bootdata;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_ExternalControllerPerformMexecRequestTable;
-    static constexpr uint32_t MaxNumHandles = 2;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-  };
-
-
-  class SyncClient final {
-   public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
-    ~SyncClient() {}
-
-    // Perform an mexec with the given kernel and bootdata.
-    // See ZX-2069 for the thoughts on deprecating mexec.
-    zx_status_t PerformMexec(::zx::vmo kernel, ::zx::vmo bootdata);
-
-    // Perform an mexec with the given kernel and bootdata.
-    // See ZX-2069 for the thoughts on deprecating mexec.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t PerformMexec(::fidl::BytePart _request_buffer, ::zx::vmo kernel, ::zx::vmo bootdata);
-
-    // Perform an mexec with the given kernel and bootdata.
-    // See ZX-2069 for the thoughts on deprecating mexec.
-    // Messages are encoded and decoded in-place.
-    zx_status_t PerformMexec(::fidl::DecodedMessage<PerformMexecRequest> params);
-
-   private:
-    ::zx::channel channel_;
-  };
-
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
-  class Call final {
-   public:
-
-    // Perform an mexec with the given kernel and bootdata.
-    // See ZX-2069 for the thoughts on deprecating mexec.
-    static zx_status_t PerformMexec(zx::unowned_channel _client_end, ::zx::vmo kernel, ::zx::vmo bootdata);
-
-    // Perform an mexec with the given kernel and bootdata.
-    // See ZX-2069 for the thoughts on deprecating mexec.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t PerformMexec(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo kernel, ::zx::vmo bootdata);
-
-    // Perform an mexec with the given kernel and bootdata.
-    // See ZX-2069 for the thoughts on deprecating mexec.
-    // Messages are encoded and decoded in-place.
-    static zx_status_t PerformMexec(zx::unowned_channel _client_end, ::fidl::DecodedMessage<PerformMexecRequest> params);
-
-  };
-
-  // Pure-virtual interface to be implemented by a server.
-  class Interface {
-   public:
-    Interface() = default;
-    virtual ~Interface() = default;
-    using _Outer = ExternalController;
-    using _Base = ::fidl::CompleterBase;
-
-    using PerformMexecCompleter = ::fidl::Completer<>;
-
-    virtual void PerformMexec(::zx::vmo kernel, ::zx::vmo bootdata, PerformMexecCompleter::Sync _completer) = 0;
-
-  };
-
-  // Attempts to dispatch the incoming message to a handler function in the server implementation.
-  // If there is no matching handler, it returns false, leaving the message and transaction intact.
-  // In all other cases, it consumes the message and returns true.
-  // It is possible to chain multiple TryDispatch functions in this manner.
-  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
-
-  // Dispatches the incoming message to one of the handlers functions in the interface.
-  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
-  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
-  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
-
-  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
-  // to reduce template expansion.
-  // Do not call this method manually. Use |Dispatch| instead.
-  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
-    return Dispatch(static_cast<Interface*>(impl), msg, txn);
-  }
-
-};
 
 extern "C" const fidl_type_t fuchsia_device_manager_DebugDumperDumpTreeRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DebugDumperDumpTreeResponseTable;
@@ -1226,7 +1127,6 @@ extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorPublishMetadataRe
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorPublishMetadataResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddCompositeDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddCompositeDeviceResponseTable;
-extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorDmMexecRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorDirectoryWatchRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorDirectoryWatchResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRunCompatibilityTestsResponseTable;
@@ -1495,18 +1395,6 @@ class Coordinator final {
     using ResponseType = AddCompositeDeviceResponse;
   };
 
-  struct DmMexecRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::zx::vmo kernel;
-    ::zx::vmo bootdata;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorDmMexecRequestTable;
-    static constexpr uint32_t MaxNumHandles = 2;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-  };
-
   struct DirectoryWatchResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
@@ -1760,20 +1648,6 @@ class Coordinator final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<AddCompositeDeviceResponse> AddCompositeDevice(::fidl::DecodedMessage<AddCompositeDeviceRequest> params, ::fidl::BytePart response_buffer);
 
-    // Perform an mexec with the given kernel and bootdata.
-    // See ZX-2069 for the thoughts on deprecating mexec.
-    zx_status_t DmMexec(::zx::vmo kernel, ::zx::vmo bootdata);
-
-    // Perform an mexec with the given kernel and bootdata.
-    // See ZX-2069 for the thoughts on deprecating mexec.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t DmMexec(::fidl::BytePart _request_buffer, ::zx::vmo kernel, ::zx::vmo bootdata);
-
-    // Perform an mexec with the given kernel and bootdata.
-    // See ZX-2069 for the thoughts on deprecating mexec.
-    // Messages are encoded and decoded in-place.
-    zx_status_t DmMexec(::fidl::DecodedMessage<DmMexecRequest> params);
-
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
     // See fuchsia.io.Directory for more information.
@@ -2024,20 +1898,6 @@ class Coordinator final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<AddCompositeDeviceResponse> AddCompositeDevice(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddCompositeDeviceRequest> params, ::fidl::BytePart response_buffer);
 
-    // Perform an mexec with the given kernel and bootdata.
-    // See ZX-2069 for the thoughts on deprecating mexec.
-    static zx_status_t DmMexec(zx::unowned_channel _client_end, ::zx::vmo kernel, ::zx::vmo bootdata);
-
-    // Perform an mexec with the given kernel and bootdata.
-    // See ZX-2069 for the thoughts on deprecating mexec.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t DmMexec(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo kernel, ::zx::vmo bootdata);
-
-    // Perform an mexec with the given kernel and bootdata.
-    // See ZX-2069 for the thoughts on deprecating mexec.
-    // Messages are encoded and decoded in-place.
-    static zx_status_t DmMexec(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DmMexecRequest> params);
-
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
     // See fuchsia.io.Directory for more information.
@@ -2258,10 +2118,6 @@ class Coordinator final {
 
     virtual void AddCompositeDevice(::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::Array<DeviceComponent, 8> components, uint32_t components_count, uint32_t coresident_device_index, AddCompositeDeviceCompleter::Sync _completer) = 0;
 
-    using DmMexecCompleter = ::fidl::Completer<>;
-
-    virtual void DmMexec(::zx::vmo kernel, ::zx::vmo bootdata, DmMexecCompleter::Sync _completer) = 0;
-
     class DirectoryWatchCompleterBase : public _Base {
      public:
       void Reply(int32_t s);
@@ -2318,15 +2174,6 @@ class Coordinator final {
 }  // namespace llcpp
 
 namespace fidl {
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::device::manager::ExternalController::PerformMexecRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::device::manager::ExternalController::PerformMexecRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::device::manager::ExternalController::PerformMexecRequest)
-    == ::llcpp::fuchsia::device::manager::ExternalController::PerformMexecRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::ExternalController::PerformMexecRequest, kernel) == 16);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::ExternalController::PerformMexecRequest, bootdata) == 20);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::DebugDumper::DumpTreeRequest> : public std::true_type {};
@@ -2696,15 +2543,6 @@ struct IsFidlMessage<::llcpp::fuchsia::device::manager::Coordinator::AddComposit
 static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator::AddCompositeDeviceResponse)
     == ::llcpp::fuchsia::device::manager::Coordinator::AddCompositeDeviceResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddCompositeDeviceResponse, status) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator::DmMexecRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::device::manager::Coordinator::DmMexecRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator::DmMexecRequest)
-    == ::llcpp::fuchsia::device::manager::Coordinator::DmMexecRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::DmMexecRequest, kernel) == 16);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::DmMexecRequest, bootdata) == 20);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator::DirectoryWatchRequest> : public std::true_type {};

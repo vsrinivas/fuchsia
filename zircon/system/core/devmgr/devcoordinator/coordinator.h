@@ -11,7 +11,6 @@
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <fuchsia/device/manager/c/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/svc/outgoing.h>
 #include <lib/zx/channel.h>
@@ -44,12 +43,9 @@ class SuspendContext {
 
   SuspendContext() = default;
 
-  SuspendContext(Flags flags, uint32_t sflags, zx::vmo kernel = zx::vmo(),
-                 zx::vmo bootdata = zx::vmo())
+  SuspendContext(Flags flags, uint32_t sflags)
       : flags_(flags),
-        sflags_(sflags),
-        kernel_(std::move(kernel)),
-        bootdata_(std::move(bootdata)) {}
+        sflags_(sflags) {}
 
   ~SuspendContext() {}
 
@@ -62,9 +58,6 @@ class SuspendContext {
   void set_flags(Flags flags) { flags_ = flags; }
   uint32_t sflags() const { return sflags_; }
 
-  const zx::vmo& kernel() const { return kernel_; }
-  const zx::vmo& bootdata() const { return bootdata_; }
-
  private:
   fbl::RefPtr<SuspendTask> task_;
 
@@ -72,10 +65,6 @@ class SuspendContext {
 
   // suspend flags
   uint32_t sflags_ = 0u;
-
-  // mexec arguments
-  zx::vmo kernel_;
-  zx::vmo bootdata_;
 };
 
 // Values parsed out of argv.  All paths described below are absolute paths.
@@ -322,7 +311,6 @@ bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,
 // Path to driver that should be bound to components of composite devices
 extern const char* kComponentDriverPath;
 
-zx_status_t fidl_DmMexec(void* ctx, zx_handle_t raw_kernel, zx_handle_t raw_bootdata);
 zx_status_t fidl_DirectoryWatch(void* ctx, uint32_t mask, uint32_t options, zx_handle_t raw_watcher,
                                 fidl_txn_t* txn);
 

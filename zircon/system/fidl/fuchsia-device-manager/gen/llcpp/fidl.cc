@@ -12,105 +12,6 @@ namespace manager {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kExternalController_PerformMexec_Ordinal = 699259450lu << 32;
-extern "C" const fidl_type_t fuchsia_device_manager_ExternalControllerPerformMexecRequestTable;
-
-}  // namespace
-
-zx_status_t ExternalController::SyncClient::PerformMexec(::zx::vmo kernel, ::zx::vmo bootdata) {
-  return ExternalController::Call::PerformMexec(zx::unowned_channel(this->channel_), std::move(kernel), std::move(bootdata));
-}
-
-zx_status_t ExternalController::Call::PerformMexec(zx::unowned_channel _client_end, ::zx::vmo kernel, ::zx::vmo bootdata) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<PerformMexecRequest>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _request = *reinterpret_cast<PerformMexecRequest*>(_write_bytes);
-  _request._hdr.ordinal = kExternalController_PerformMexec_Ordinal;
-  _request.kernel = std::move(kernel);
-  _request.bootdata = std::move(bootdata);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(PerformMexecRequest));
-  ::fidl::DecodedMessage<PerformMexecRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
-  }
-  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
-}
-
-zx_status_t ExternalController::SyncClient::PerformMexec(::fidl::BytePart _request_buffer, ::zx::vmo kernel, ::zx::vmo bootdata) {
-  return ExternalController::Call::PerformMexec(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(kernel), std::move(bootdata));
-}
-
-zx_status_t ExternalController::Call::PerformMexec(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo kernel, ::zx::vmo bootdata) {
-  if (_request_buffer.capacity() < PerformMexecRequest::PrimarySize) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  auto& _request = *reinterpret_cast<PerformMexecRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kExternalController_PerformMexec_Ordinal;
-  _request.kernel = std::move(kernel);
-  _request.bootdata = std::move(bootdata);
-  _request_buffer.set_actual(sizeof(PerformMexecRequest));
-  ::fidl::DecodedMessage<PerformMexecRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
-  }
-  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
-}
-
-zx_status_t ExternalController::SyncClient::PerformMexec(::fidl::DecodedMessage<PerformMexecRequest> params) {
-  return ExternalController::Call::PerformMexec(zx::unowned_channel(this->channel_), std::move(params));
-}
-
-zx_status_t ExternalController::Call::PerformMexec(zx::unowned_channel _client_end, ::fidl::DecodedMessage<PerformMexecRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kExternalController_PerformMexec_Ordinal;
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
-  }
-  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
-}
-
-
-bool ExternalController::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
-  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
-    zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->Close(ZX_ERR_INVALID_ARGS);
-    return true;
-  }
-  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    case kExternalController_PerformMexec_Ordinal: {
-      auto result = ::fidl::DecodeAs<PerformMexecRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->PerformMexec(std::move(message->kernel), std::move(message->bootdata),
-        Interface::PerformMexecCompleter::Sync(txn));
-      return true;
-    }
-    default: {
-      return false;
-    }
-  }
-}
-
-bool ExternalController::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
-  bool found = TryDispatch(impl, msg, txn);
-  if (!found) {
-    zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->Close(ZX_ERR_NOT_SUPPORTED);
-  }
-  return found;
-}
-
-
-namespace {
-
-[[maybe_unused]]
 constexpr uint64_t kDebugDumper_DumpTree_Ordinal = 939808908lu << 32;
 extern "C" const fidl_type_t fuchsia_device_manager_DebugDumperDumpTreeRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DebugDumperDumpTreeResponseTable;
@@ -1613,9 +1514,6 @@ constexpr uint64_t kCoordinator_AddCompositeDevice_Ordinal = 1211683670lu << 32;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddCompositeDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddCompositeDeviceResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kCoordinator_DmMexec_Ordinal = 2881505lu << 32;
-extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorDmMexecRequestTable;
-[[maybe_unused]]
 constexpr uint64_t kCoordinator_DirectoryWatch_Ordinal = 708253076lu << 32;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorDirectoryWatchRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorDirectoryWatchResponseTable;
@@ -2749,62 +2647,6 @@ zx_status_t Coordinator::Call::AddCompositeDevice(zx::unowned_channel _client_en
 }
 
 
-zx_status_t Coordinator::SyncClient::DmMexec(::zx::vmo kernel, ::zx::vmo bootdata) {
-  return Coordinator::Call::DmMexec(zx::unowned_channel(this->channel_), std::move(kernel), std::move(bootdata));
-}
-
-zx_status_t Coordinator::Call::DmMexec(zx::unowned_channel _client_end, ::zx::vmo kernel, ::zx::vmo bootdata) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DmMexecRequest>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _request = *reinterpret_cast<DmMexecRequest*>(_write_bytes);
-  _request._hdr.ordinal = kCoordinator_DmMexec_Ordinal;
-  _request.kernel = std::move(kernel);
-  _request.bootdata = std::move(bootdata);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(DmMexecRequest));
-  ::fidl::DecodedMessage<DmMexecRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
-  }
-  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
-}
-
-zx_status_t Coordinator::SyncClient::DmMexec(::fidl::BytePart _request_buffer, ::zx::vmo kernel, ::zx::vmo bootdata) {
-  return Coordinator::Call::DmMexec(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(kernel), std::move(bootdata));
-}
-
-zx_status_t Coordinator::Call::DmMexec(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo kernel, ::zx::vmo bootdata) {
-  if (_request_buffer.capacity() < DmMexecRequest::PrimarySize) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  auto& _request = *reinterpret_cast<DmMexecRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kCoordinator_DmMexec_Ordinal;
-  _request.kernel = std::move(kernel);
-  _request.bootdata = std::move(bootdata);
-  _request_buffer.set_actual(sizeof(DmMexecRequest));
-  ::fidl::DecodedMessage<DmMexecRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
-  }
-  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
-}
-
-zx_status_t Coordinator::SyncClient::DmMexec(::fidl::DecodedMessage<DmMexecRequest> params) {
-  return Coordinator::Call::DmMexec(zx::unowned_channel(this->channel_), std::move(params));
-}
-
-zx_status_t Coordinator::Call::DmMexec(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DmMexecRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kCoordinator_DmMexec_Ordinal;
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
-  }
-  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
-}
-
-
 zx_status_t Coordinator::SyncClient::DirectoryWatch(uint32_t mask, uint32_t options, ::zx::channel watcher, int32_t* out_s) {
   return Coordinator::Call::DirectoryWatch(zx::unowned_channel(this->channel_), std::move(mask), std::move(options), std::move(watcher), out_s);
 }
@@ -3124,17 +2966,6 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
       auto message = result.message.message();
       impl->AddCompositeDevice(std::move(message->name), std::move(message->props), std::move(message->components), std::move(message->components_count), std::move(message->coresident_device_index),
         Interface::AddCompositeDeviceCompleter::Sync(txn));
-      return true;
-    }
-    case kCoordinator_DmMexec_Ordinal: {
-      auto result = ::fidl::DecodeAs<DmMexecRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->DmMexec(std::move(message->kernel), std::move(message->bootdata),
-        Interface::DmMexecCompleter::Sync(txn));
       return true;
     }
     case kCoordinator_DirectoryWatch_Ordinal: {

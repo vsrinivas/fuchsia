@@ -223,13 +223,6 @@ protocol Coordinator {
                        array<DeviceComponent>:COMPONENTS_MAX components, uint32 components_count,
                        uint32 coresident_device_index) -> (zx.status status);
 
-    // Special commands for implementing the dmctl device.
-    // TODO(teisenbe): We should revisit how these are carried over.
-
-    /// Perform an mexec with the given kernel and bootdata.
-    /// See ZX-2069 for the thoughts on deprecating mexec.
-    DmMexec(handle<vmo> kernel, handle<vmo> bootdata);
-
     /// Watches a directory, receiving events of added messages on the
     /// watcher request channel.
     /// See fuchsia.io.Directory for more information.
