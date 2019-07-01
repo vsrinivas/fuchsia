@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_REMOTE_API_IMPL_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_REMOTE_API_IMPL_H_
 
+#include "lib/fit/promise.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 
 namespace zxdb {
@@ -70,14 +71,18 @@ class RemoteAPIImpl : public RemoteAPI {
  private:
   // Sends a message with an asynchronous reply.
   //
-  // The callback will be issued with an Err struct. If the Err object
-  // indicates an error, the request has failed and the reply data will not be
-  // set (it will contain the default-constructed data).
+  // The callback will be issued with an Err struct. If the Err object indicates an error, the
+  // request has failed and the reply data will not be set (it will contain the default-constructed
+  // data).
   //
-  // The callback will always be issued asynchronously (not from withing the
-  // Send() function itself).
+  // The callback will always be issued asynchronously (not from withing the Send() function
+  // itself).
   template <typename SendMsgType, typename RecvMsgType>
   void Send(const SendMsgType& send_msg, std::function<void(const Err&, RecvMsgType)> callback);
+
+  // Sends a message with the reply in a promise.
+  template <typename SendMsgType, typename RecvMsgType>
+  fit::promise<RecvMsgType, Err> Send(const SendMsgType& send_msg);
 
   Session* session_;
 

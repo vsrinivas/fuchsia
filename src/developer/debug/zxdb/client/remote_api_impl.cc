@@ -4,12 +4,14 @@
 
 #include "src/developer/debug/zxdb/client/remote_api_impl.h"
 
+#include "lib/fit/bridge.h"
 #include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/stream_buffer.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/common/async_util.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -133,20 +135,14 @@ void RemoteAPIImpl::WriteMemory(const debug_ipc::WriteMemoryRequest& request,
 }
 
 template <typename SendMsgType, typename RecvMsgType>
-void RemoteAPIImpl::Send(const SendMsgType& send_msg,
-                         std::function<void(const Err&, RecvMsgType)> callback) {
+fit::promise<RecvMsgType, Err> RemoteAPIImpl::Send(const SendMsgType& send_msg) {
+  if (!session_->stream_) {
+    return MakeErrPromise<RecvMsgType>(
+        Err(ErrType::kNoConnection, "No connection to debugged system."));
+  }
+
   uint32_t transaction_id = session_->next_transaction_id_;
   session_->next_transaction_id_++;
-
-  if (!session_->stream_) {
-    // No connection, asynchronously issue the error.
-    if (callback) {
-      debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [callback]() {
-        callback(Err(ErrType::kNoConnection, "No connection to debugged system."), RecvMsgType());
-      });
-    }
-    return;
-  }
 
   debug_ipc::MessageWriter writer(sizeof(SendMsgType));
   debug_ipc::WriteRequest(send_msg, transaction_id, &writer);
@@ -154,35 +150,52 @@ void RemoteAPIImpl::Send(const SendMsgType& send_msg,
   std::vector<char> serialized = writer.MessageComplete();
   session_->stream_->Write(std::move(serialized));
 
-  // This is the reply callback that unpacks the data in a vector, converts it
-  // to the requested RecvMsgType struct, and issues the callback.
-  Session::Callback dispatch_callback = [callback = std::move(callback)](const Err& err,
-                                                                         std::vector<char> data) {
-    RecvMsgType reply;
+  // Connects the callback to our returned promise.
+  fit::bridge<RecvMsgType, Err> bridge;
+
+  // The reply callback that unpacks the data in a vector, converts it to the requested RecvMsgType
+  // struct, and issues the callback.
+  Session::Callback dispatch_callback = [completer = std::move(bridge.completer)](
+                                            const Err& err, std::vector<char> data) mutable {
     if (err.has_error()) {
-      // Forward the error and ignore all data.
-      if (callback)
-        callback(err, std::move(reply));
-      return;
+      // Error from message transport layer.
+      completer.complete_error(err);
+    } else {
+      // Decode the message bytes.
+      debug_ipc::MessageReader reader(std::move(data));
+
+      uint32_t transaction_id = 0;
+      RecvMsgType reply;
+      if (debug_ipc::ReadReply(&reader, &reply, &transaction_id)) {
+        // Success.
+        completer.complete_ok(std::move(reply));
+      } else {
+        // Deserialization error.
+        completer.complete_error(
+            Err(ErrType::kCorruptMessage,
+                fxl::StringPrintf("Corrupt reply message for transaction %u.", transaction_id)));
+      }
     }
-
-    debug_ipc::MessageReader reader(std::move(data));
-
-    uint32_t transaction_id = 0;
-    Err deserialization_err;
-    if (!debug_ipc::ReadReply(&reader, &reply, &transaction_id)) {
-      reply = RecvMsgType();  // Could be in a half-read state.
-      deserialization_err =
-          Err(ErrType::kCorruptMessage,
-              fxl::StringPrintf("Corrupt reply message for transaction %u.", transaction_id));
-    }
-
-    if (callback)
-      callback(deserialization_err, std::move(reply));
   };
 
+  // Register this ID with the session.
   session_->pending_.emplace(std::piecewise_construct, std::forward_as_tuple(transaction_id),
                              std::forward_as_tuple(std::move(dispatch_callback)));
+
+  return bridge.consumer.promise_or(fit::error(Err("Request abandoned. Please file a bug.")));
+}
+
+template <typename SendMsgType, typename RecvMsgType>
+void RemoteAPIImpl::Send(const SendMsgType& send_msg,
+                         std::function<void(const Err&, RecvMsgType)> callback) {
+  auto promise = Send<SendMsgType, RecvMsgType>(send_msg).then(
+      [callback = std::move(callback)](fit::result<RecvMsgType, Err>& result) {
+        if (result.is_error())
+          callback(result.error(), RecvMsgType());
+        else
+          callback(Err(), result.take_value());
+      });
+  debug_ipc::MessageLoop::Current()->RunTask(FROM_HERE, std::move(promise));
 }
 
 }  // namespace zxdb

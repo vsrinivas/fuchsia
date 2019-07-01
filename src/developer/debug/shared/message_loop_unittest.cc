@@ -125,12 +125,10 @@ TEST(MessageLoop, SuspendPromise) {
   loop.Run();
   EXPECT_EQ(1, run_count);
 
-  // Mark the task as runnable again. It should run once but still report pending.
+  // Mark the task as runnable again. It should run once but still report pending. Note that we
+  // run the task synchronously from the resume_task() message as explained in
+  // MessageLoop::resolve_ticket().
   suspended.resume_task();
-  suspended = fit::suspended_task();
-  EXPECT_FALSE(suspended);
-  loop.PostTask(FROM_HERE, [&loop]() { loop.QuitNow(); });
-  loop.Run();
   EXPECT_EQ(2, run_count);
   EXPECT_TRUE(suspended);
   EXPECT_FALSE(lambda_destructed);  // Lambda should not be deleted.
@@ -180,12 +178,10 @@ TEST(MessageLoop, DuplicateSuspendedPromise) {
   EXPECT_EQ(1, run_count);
   EXPECT_TRUE(suspended);
 
-  // Duplicate the suspended task handle. Resuming either should run the task.
+  // Duplicate the suspended task handle.
   fit::suspended_task suspended2 = suspended;
   should_complete = true;
-  suspended.resume_task();
-  loop.PostTask(FROM_HERE, [&loop]() { loop.QuitNow(); });
-  loop.Run();
+  suspended.resume_task();  // Should run synchronously.
   EXPECT_EQ(2, run_count);
 
   // Resuming the other one does nothing. This suspend was already marked resolved from the other

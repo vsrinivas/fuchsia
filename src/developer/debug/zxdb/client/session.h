@@ -11,6 +11,7 @@
 #include <set>
 #include <vector>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/client/session_observer.h"
 #include "src/developer/debug/zxdb/client/system_impl.h"
 #include "src/developer/debug/zxdb/common/err.h"
@@ -152,7 +153,7 @@ class Session : public SettingStoreObserver {
   // the type-specific parameter pre-bound). The uint32_t is the transaction
   // ID. If the error is set, the data will be invalid and the callback should
   // be issued with the error instead of trying to deserialize.
-  using Callback = std::function<void(const Err&, std::vector<char>)>;
+  using Callback = fit::function<void(const Err&, std::vector<char>)>;
 
   // Set the arch_ and arch_info_ fields.
   Err SetArch(debug_ipc::Arch arch);

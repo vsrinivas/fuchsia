@@ -93,9 +93,29 @@ fit::suspended_task::ticket MessageLoop::duplicate_ticket(fit::suspended_task::t
 }
 
 void MessageLoop::resolve_ticket(fit::suspended_task::ticket ticket, bool resume_task) {
-  bool needs_awaken = false;
+  // Implementation note: The fit single_thread_executor has the behavior that resolving the ticket
+  // moves the promise to the run queue, and then it's executed in order from there.
+  //
+  // However, this has the side effect of reordering the promise execution with respect to
+  // non-promise-related tasks that are also executing on the message loop.
+  //
+  // As an example, consider attaching to a process which involves resolving a promise in the attach
+  // reply message handler. There are non-promise-related messages in the message loop such as push
+  // notifications about thread events from the remote debug agent. Requiring the resolution of the
+  // promise be pushed to the back of the message queue will make it run after the processing of the
+  // new thread messages and the replies would be executed in an order that doesn't make any sense.
+  //
+  // As a result, we run resolved promises synchronously when they're resolved.
+  //
+  // This has the disadvantage of potentially generating very deep stacks and one can construct
+  // reentrant situations where this behavior might be surprising. But given the amount of
+  // non-promise-related tasks our message loop currently runs and how most promises are only
+  // resolved in response to IPC messages, the alternative is more surprising. If everything was a
+  // promise, we could post it to the back of the task_queue_ with no problem (other than a slight
+  // performance pentalty by going through the loop again).
 
-  fit::pending_task abandoned_task;  // To free the lambda otuside the lock when necessary.
+  Task task;  // The task (to run or delete outside of the lock).
+  bool should_run = false;  // Whether to run the above task (otherwise just delete it).
 
   {
     std::lock_guard<std::mutex> guard(mutex_);
@@ -108,23 +128,30 @@ void MessageLoop::resolve_ticket(fit::suspended_task::ticket ticket, bool resume
     found->second.ref_count--;
 
     if (resume_task && !found->second.was_resumed) {
-      // Task should be moved to the run queue (if was_resumed was already set, it was already moved
-      // to the run queue so we don't have to do it again).
-      found->second.was_resumed = true;
+      // Task should be run (if was_resumed was already set, it was already moved to the run queue
+      // so we don't have to do it again).
+      should_run = true;
 
-      needs_awaken = task_queue_.empty();
-      task_queue_.emplace_back(std::move(found->second.file_line), std::move(found->second.task));
+      // Mark as run. If the refcount isn't 0 yet this struct will still be around and we don't want
+      // to run it again.
+      found->second.was_resumed = true;
+      task = Task(found->second.file_line, std::move(found->second.task));
     }
 
     if (found->second.ref_count == 0) {
-      // Tickets are all closed. It it was resumed, the task will now be on the run queue, and if it
-      // wasn't the task will be dropped with this operation.
-      abandoned_task = std::move(found->second.task);  // Free user data outside the lock.
+      // Tickets are all closed. It it was resumed, the task will now be run queue, and if it wasn't
+      // the task will be dropped with this operation.
+
+      // Task could have already been moved out above.
+      if (found->second.task) {
+        // Free task outside lock, keep should_run false to avoid running.
+        task = Task(FileLineFunction(), std::move(found->second.task));
+      }
       tickets_.erase(found);
     }
   }
-  if (needs_awaken)
-    SetHasTasks();
+  if (should_run)
+    RunOneTask(task);
 }
 
 uint64_t MessageLoop::DelayNS() const {
