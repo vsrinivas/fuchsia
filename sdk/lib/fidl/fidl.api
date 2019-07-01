@@ -1,4 +1,4 @@
 {
-  "pkg/fidl/include/lib/fidl/epitaph.h": "bb472900b35708d5565247d704018a97",
-  "pkg/fidl/include/lib/fidl/transport.h": "67c3248f60ffe87eeebf033fc2d9c6b9"
+  "pkg/fidl/include/lib/fidl/epitaph.h": "d8cb29aab42d461900a0109e649f88a3",
+  "pkg/fidl/include/lib/fidl/transport.h": "d89f67574a294c208f6e2d7e0c9845c0"
 }

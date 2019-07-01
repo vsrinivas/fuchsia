@@ -39,41 +39,36 @@ struct callable_traits<ReturnType (FunctorType::*)(ArgTypes...)>
 template <typename FunctorType, typename ReturnType, typename... ArgTypes>
 struct callable_traits<ReturnType (FunctorType::*)(ArgTypes...) const>
     : public callable_traits<ReturnType (*)(ArgTypes...)> {
-
-    using type = FunctorType;
+  using type = FunctorType;
 };
 
 // Function pointer specialization.
 template <typename ReturnType, typename... ArgTypes>
 struct callable_traits<ReturnType (*)(ArgTypes...)>
     : public callable_traits<ReturnType(ArgTypes...)> {
-
-    using type = ReturnType (*)(ArgTypes...);
+  using type = ReturnType (*)(ArgTypes...);
 };
 
 // Base specialization.
 template <typename ReturnType, typename... ArgTypes>
 struct callable_traits<ReturnType(ArgTypes...)> {
-    using signature = ReturnType(ArgTypes...);
-    using return_type = ReturnType;
-    using args = std::tuple<ArgTypes...>;
+  using signature = ReturnType(ArgTypes...);
+  using return_type = ReturnType;
+  using args = std::tuple<ArgTypes...>;
 
-    callable_traits() = delete;
+  callable_traits() = delete;
 };
 
 template <typename FuncA, typename FuncB>
 struct SameInterfaceImpl {
-    static constexpr bool args_equal =
-        std::is_same<
-            typename callable_traits<FuncA>::args,
-            typename callable_traits<FuncB>::args>::value;
+  static constexpr bool args_equal = std::is_same<typename callable_traits<FuncA>::args,
+                                                  typename callable_traits<FuncB>::args>::value;
 
-    static constexpr bool return_equal =
-        std::is_same<
-            typename callable_traits<FuncA>::return_type,
-            typename callable_traits<FuncB>::return_type>::value;
+  static constexpr bool return_equal =
+      std::is_same<typename callable_traits<FuncA>::return_type,
+                   typename callable_traits<FuncB>::return_type>::value;
 
-    static constexpr bool value = args_equal && return_equal;
+  static constexpr bool value = args_equal && return_equal;
 };
 
 template <typename FuncA, typename FuncB>
@@ -82,8 +77,8 @@ constexpr bool SameInterface = SameInterfaceImpl<FuncA, FuncB>::value;
 template <typename FuncA, typename FuncB>
 constexpr bool SameArguments = SameInterfaceImpl<FuncA, FuncB>::args_equal;
 
-} // namespace internal
+}  // namespace internal
 
-} // namespace fidl
+}  // namespace fidl
 
-#endif // LIB_FIDL_INTERNAL_CALLABLE_TRAITS_H_
+#endif  // LIB_FIDL_INTERNAL_CALLABLE_TRAITS_H_

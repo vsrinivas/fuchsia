@@ -15,31 +15,31 @@ namespace fidl {
 // When adding new functionalities to this struct, the data layout should not be changed.
 template <typename T, size_t N>
 struct Array final {
-    static constexpr size_t size() { return N; }
+  static constexpr size_t size() { return N; }
 
-    const T* data() const { return data_; }
-    T* data() { return data_; }
+  const T* data() const { return data_; }
+  T* data() { return data_; }
 
-    const T& at(size_t offset) const { return data()[offset]; }
-    T& at(size_t offset) { return data()[offset]; }
+  const T& at(size_t offset) const { return data()[offset]; }
+  T& at(size_t offset) { return data()[offset]; }
 
-    const T& operator[](size_t offset) const { return at(offset); }
-    T& operator[](size_t offset) { return at(offset); }
+  const T& operator[](size_t offset) const { return at(offset); }
+  T& operator[](size_t offset) { return at(offset); }
 
-    T* begin() { return data(); }
-    const T* begin() const { return data(); }
-    const T* cbegin() const { return data(); }
+  T* begin() { return data(); }
+  const T* begin() const { return data(); }
+  const T* cbegin() const { return data(); }
 
-    T* end() { return data() + size(); }
-    const T* end() const { return data() + size(); }
-    const T* cend() const { return data() + size(); }
+  T* end() { return data() + size(); }
+  const T* end() const { return data() + size(); }
+  const T* cend() const { return data() + size(); }
 
-    // Keeping data_ public such that an aggregate initializer can be used.
-    T data_[N];
+  // Keeping data_ public such that an aggregate initializer can be used.
+  T data_[N];
 
-    static_assert(N > 0, "fidl::Array cannot have zero elements.");
+  static_assert(N > 0, "fidl::Array cannot have zero elements.");
 };
 
-} // namespace fidl
+}  // namespace fidl
 
-#endif // LIB_FIDL_LLCPP_ARRAY_H_
+#endif  // LIB_FIDL_LLCPP_ARRAY_H_

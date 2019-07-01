@@ -67,84 +67,84 @@ namespace fidl {
 // to implement a variety of dispatching behaviors by relying on them.
 //
 class Transaction {
-public:
-    Transaction() = default;
+ public:
+  Transaction() = default;
 
-    // Move the contents of this transaction to heap, for an asynchronous reply.
-    // Called exactly once when a sync completer is converted to an async completer.
-    // Implementation may pause message dispatching here, in which case there will be
-    // at most one in-flight transaction.
-    // |Complete| and |Close| are never called on a transaction that has lost its ownership.
-    virtual std::unique_ptr<Transaction> TakeOwnership() = 0;
+  // Move the contents of this transaction to heap, for an asynchronous reply.
+  // Called exactly once when a sync completer is converted to an async completer.
+  // Implementation may pause message dispatching here, in which case there will be
+  // at most one in-flight transaction.
+  // |Complete| and |Close| are never called on a transaction that has lost its ownership.
+  virtual std::unique_ptr<Transaction> TakeOwnership() = 0;
 
-    // Called exactly once for a two-way FIDL method, to reply to a two-way call.
-    // Never called in case of a one-way call.
-    // Implementation must fill in the correct transaction ID.
-    virtual void Reply(fidl::Message message) = 0;
+  // Called exactly once for a two-way FIDL method, to reply to a two-way call.
+  // Never called in case of a one-way call.
+  // Implementation must fill in the correct transaction ID.
+  virtual void Reply(fidl::Message message) = 0;
 
-    // Should send an epitaph and then close the underlying transport e.g. channel.
-    virtual void Close(zx_status_t epitaph) = 0;
+  // Should send an epitaph and then close the underlying transport e.g. channel.
+  virtual void Close(zx_status_t epitaph) = 0;
 
-    // A transaction will only be destroyed after one of three actions happens to it:
-    // replied, closed, or ownership taken from.
-    // An async transaction is destroyed immediately after the request has been replied or closed.
-    // A synchronous transaction lives on the stack, and may provide status/errors to the binding
-    // dispatch loop.
-    // If the implementation paused message dispatching above, it may resume dispatching here.
-    virtual ~Transaction() = default;
+  // A transaction will only be destroyed after one of three actions happens to it:
+  // replied, closed, or ownership taken from.
+  // An async transaction is destroyed immediately after the request has been replied or closed.
+  // A synchronous transaction lives on the stack, and may provide status/errors to the binding
+  // dispatch loop.
+  // If the implementation paused message dispatching above, it may resume dispatching here.
+  virtual ~Transaction() = default;
 };
 
 // Manages the lifetime of a transaction and serves as the base class of FIDL method-specific
 // completers. It ensures that no transaction will be silently dropped without replying or closing.
 class CompleterBase {
-public:
-    CompleterBase(const CompleterBase&) = delete;
-    CompleterBase& operator=(const CompleterBase&) = delete;
+ public:
+  CompleterBase(const CompleterBase&) = delete;
+  CompleterBase& operator=(const CompleterBase&) = delete;
 
-    // Instructs the transaction to send an epitaph and then close the underlying transport.
-    // |status| may be an error status, or |ZX_OK|, which indicates normal (expected) closure.
-    void Close(zx_status_t status);
+  // Instructs the transaction to send an epitaph and then close the underlying transport.
+  // |status| may be an error status, or |ZX_OK|, which indicates normal (expected) closure.
+  void Close(zx_status_t status);
 
-protected:
-    explicit CompleterBase(Transaction* transaction, bool owned, bool method_expects_reply)
-        : transaction_(transaction), owned_(owned), method_expects_reply_(method_expects_reply) {}
+ protected:
+  explicit CompleterBase(Transaction* transaction, bool owned, bool method_expects_reply)
+      : transaction_(transaction), owned_(owned), method_expects_reply_(method_expects_reply) {}
 
-    CompleterBase(CompleterBase&& other) noexcept;
-    CompleterBase& operator=(CompleterBase&& other) noexcept;
+  CompleterBase(CompleterBase&& other) noexcept;
+  CompleterBase& operator=(CompleterBase&& other) noexcept;
 
-    ~CompleterBase();
+  ~CompleterBase();
 
-    // Returns true if this instance holds a pending transaction.
-    bool pending() const { return transaction_; }
+  // Returns true if this instance holds a pending transaction.
+  bool pending() const { return transaction_; }
 
-    // Returns true if this instance backs a two-way FIDL method.
-    bool method_expects_reply() const { return method_expects_reply_; }
+  // Returns true if this instance backs a two-way FIDL method.
+  bool method_expects_reply() const { return method_expects_reply_; }
 
-    // Encode and write |decoded_msg| as the reply.
-    template <typename FidlType>
-    void SendReply(DecodedMessage<FidlType> decoded_msg) {
-        static_assert(IsFidlMessage<FidlType>::value, "FIDL transactional message type required");
-        EncodeResult<FidlType> encode_result = fidl::Encode(std::move(decoded_msg));
-        if (encode_result.status != ZX_OK) {
-            Close(ZX_ERR_INTERNAL);
-            return;
-        }
-        SendReply(std::move(encode_result.message.ToAnyMessage()));
+  // Encode and write |decoded_msg| as the reply.
+  template <typename FidlType>
+  void SendReply(DecodedMessage<FidlType> decoded_msg) {
+    static_assert(IsFidlMessage<FidlType>::value, "FIDL transactional message type required");
+    EncodeResult<FidlType> encode_result = fidl::Encode(std::move(decoded_msg));
+    if (encode_result.status != ZX_OK) {
+      Close(ZX_ERR_INTERNAL);
+      return;
     }
+    SendReply(std::move(encode_result.message.ToAnyMessage()));
+  }
 
-    // Move the contents of |transaction_| to heap and return it.
-    std::unique_ptr<Transaction> TakeOwnership();
+  // Move the contents of |transaction_| to heap and return it.
+  std::unique_ptr<Transaction> TakeOwnership();
 
-private:
-    void SendReply(Message msg);
+ private:
+  void SendReply(Message msg);
 
-    void EnsureHasTransaction();
+  void EnsureHasTransaction();
 
-    void DropTransaction();
+  void DropTransaction();
 
-    Transaction* transaction_;
-    bool owned_;
-    bool method_expects_reply_;
+  Transaction* transaction_;
+  bool owned_;
+  bool method_expects_reply_;
 };
 
 // Completers of a FIDL method call.
@@ -154,48 +154,44 @@ private:
 // For one-way FIDL methods, |Base| is |CompleterBase| itself.
 template <typename Base = CompleterBase>
 struct Completer final {
+  static constexpr bool kExpectingReply = !std::is_same<Base, CompleterBase>::value;
 
-    static constexpr bool kExpectingReply = !std::is_same<Base, CompleterBase>::value;
+  // An asynchronous responder owns the underlying transaction.
+  // It may be stored in the server implementation for delayed reply. It is okay for the handler
+  // to return without replying when the Completer::Sync is converted to Completer::Async, e.g.
+  //
+  //     virtual void MyMethod(Foo foo, Bar bar, MyMethodCompleter::Sync completer) {
+  //         PerformLongOperation(foo, bar).then([completer = completer.ToAsync()] () {
+  //             // Here the type of |completer| is |MyMethodCompleter::Async|.
+  //             completer.Reply(...);
+  //         });
+  //     }
+  //
+  class Async final : public Base {
+   public:
+    Async()
+        : Base() {}
 
-    // An asynchronous responder owns the underlying transaction.
-    // It may be stored in the server implementation for delayed reply. It is okay for the handler
-    // to return without replying when the Completer::Sync is converted to Completer::Async, e.g.
-    //
-    //     virtual void MyMethod(Foo foo, Bar bar, MyMethodCompleter::Sync completer) {
-    //         PerformLongOperation(foo, bar).then([completer = completer.ToAsync()] () {
-    //             // Here the type of |completer| is |MyMethodCompleter::Async|.
-    //             completer.Reply(...);
-    //         });
-    //     }
-    //
-    class Async final : public Base {
-    public:
-        Async()
-            : Base() {}
+    explicit Async(std::unique_ptr<Transaction> owned_transaction)
+        : Base(owned_transaction.release(), true /*owned*/, kExpectingReply) {}
+  };
 
-        explicit Async(std::unique_ptr<Transaction> owned_transaction)
-            : Base(owned_transaction.release(), true /*owned*/, kExpectingReply) {}
-    };
+  // The server handler function will be given FooCompleter::Sync, an object tailor made for
+  // the specific method call. It only exposes methods to send the corresponding reply type
+  // given the request. The completer wraps a |fidl::Transaction|. The handler must interact
+  // with the sync responder in one way or another. If the handler forgets to e.g. reply the
+  // request, it will result in a run-time assert.
+  class Sync final : public Base {
+   public:
+    explicit Sync(Transaction* borrowed_transaction)
+        : Base(borrowed_transaction, false /*owned*/, kExpectingReply) {}
 
-    // The server handler function will be given FooCompleter::Sync, an object tailor made for
-    // the specific method call. It only exposes methods to send the corresponding reply type
-    // given the request. The completer wraps a |fidl::Transaction|. The handler must interact
-    // with the sync responder in one way or another. If the handler forgets to e.g. reply the
-    // request, it will result in a run-time assert.
-    class Sync final : public Base {
-    public:
-        explicit Sync(Transaction* borrowed_transaction)
-            : Base(borrowed_transaction, false /*owned*/, kExpectingReply) {}
-
-        // Move a sync responder to its async counterpart, such that the reply could be
-        // issued asynchronously. This causes the transaction to be moved to heap.
-        Async ToAsync() {
-            return Async(Base::TakeOwnership());
-        }
-    };
-
+    // Move a sync responder to its async counterpart, such that the reply could be
+    // issued asynchronously. This causes the transaction to be moved to heap.
+    Async ToAsync() { return Async(Base::TakeOwnership()); }
+  };
 };
 
-}
+}  // namespace fidl
 
-#endif // LIB_FIDL_LLCPP_TRANSACTION_H_
+#endif  // LIB_FIDL_LLCPP_TRANSACTION_H_

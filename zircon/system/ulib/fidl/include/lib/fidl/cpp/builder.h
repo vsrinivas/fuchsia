@@ -5,14 +5,14 @@
 #ifndef LIB_FIDL_CPP_BUILDER_H_
 #define LIB_FIDL_CPP_BUILDER_H_
 
-#include <new>  // For placement new.
+#include <lib/fidl/cpp/message_part.h>
 #include <stdalign.h>
 #include <stdint.h>
-
-#include <lib/fidl/cpp/message_part.h>
 #include <zircon/compiler.h>
 #include <zircon/fidl.h>
 #include <zircon/types.h>
+
+#include <new>  // For placement new.
 
 namespace fidl {
 
@@ -22,83 +22,83 @@ namespace fidl {
 // for in-place encoding. The client is responsible for ordering the objects in
 // the buffer appropriately.
 class Builder {
-public:
-    // Creates a buffer without any storage.
-    Builder();
+ public:
+  // Creates a buffer without any storage.
+  Builder();
 
-    // Creates a buffer that stores objects in the given memory.
-    //
-    // The constructed |Builder| object does not take ownership of the given
-    // storage.
-    Builder(void* buffer, uint32_t capacity);
-    ~Builder();
+  // Creates a buffer that stores objects in the given memory.
+  //
+  // The constructed |Builder| object does not take ownership of the given
+  // storage.
+  Builder(void* buffer, uint32_t capacity);
+  ~Builder();
 
-    Builder(const Builder& other) = delete;
-    Builder& operator=(const Builder& other) = delete;
+  Builder(const Builder& other) = delete;
+  Builder& operator=(const Builder& other) = delete;
 
-    Builder(Builder&& other);
-    Builder& operator=(Builder&& other);
+  Builder(Builder&& other);
+  Builder& operator=(Builder&& other);
 
-    // Allocates storage in the buffer of sufficient size to store an object of
-    // type |T|. The object must have alignment constraints that are compatible
-    // with FIDL messages.
-    //
-    // If there is insufficient storage in the builder's buffer, this method
-    // returns nullptr.
-    template <typename T>
-    T* New() {
-        static_assert(alignof(T) <= FIDL_ALIGNMENT, "");
-        static_assert(sizeof(T) <= ZX_CHANNEL_MAX_MSG_BYTES, "");
-        if (void* ptr = Allocate(sizeof(T)))
-            return new (ptr) T;
-        return nullptr;
-    }
+  // Allocates storage in the buffer of sufficient size to store an object of
+  // type |T|. The object must have alignment constraints that are compatible
+  // with FIDL messages.
+  //
+  // If there is insufficient storage in the builder's buffer, this method
+  // returns nullptr.
+  template <typename T>
+  T* New() {
+    static_assert(alignof(T) <= FIDL_ALIGNMENT, "");
+    static_assert(sizeof(T) <= ZX_CHANNEL_MAX_MSG_BYTES, "");
+    if (void* ptr = Allocate(sizeof(T)))
+      return new (ptr) T;
+    return nullptr;
+  }
 
-    // Allocates storage in the buffer of sufficient size to store |count|
-    // objects of type |T|. The object must have alignment constraints that are
-    // compatible with FIDL messages.
-    //
-    // If there is insufficient storage in the builder's buffer, this method
-    // returns nullptr.
-    template <typename T>
-    T* NewArray(uint32_t count) {
-        static_assert(alignof(T) <= FIDL_ALIGNMENT, "");
-        static_assert(sizeof(T) <= ZX_CHANNEL_MAX_MSG_BYTES, "");
-        if (sizeof(T) * static_cast<uint64_t>(count) > UINT32_MAX)
-            return nullptr;
-        if (void* ptr = Allocate(static_cast<uint32_t>(sizeof(T) * count)))
-            return new (ptr) T[count];
-        return nullptr;
-    }
+  // Allocates storage in the buffer of sufficient size to store |count|
+  // objects of type |T|. The object must have alignment constraints that are
+  // compatible with FIDL messages.
+  //
+  // If there is insufficient storage in the builder's buffer, this method
+  // returns nullptr.
+  template <typename T>
+  T* NewArray(uint32_t count) {
+    static_assert(alignof(T) <= FIDL_ALIGNMENT, "");
+    static_assert(sizeof(T) <= ZX_CHANNEL_MAX_MSG_BYTES, "");
+    if (sizeof(T) * static_cast<uint64_t>(count) > UINT32_MAX)
+      return nullptr;
+    if (void* ptr = Allocate(static_cast<uint32_t>(sizeof(T) * count)))
+      return new (ptr) T[count];
+    return nullptr;
+  }
 
-    // Completes the building and returns a |MesssagePart| containing the
-    // allocated objects.
-    //
-    // The allocated objects are placed in the returned buffer in the order in
-    // which they were allocated, with appropriate alignment for a FIDL message.
-    // The returned buffer's capacity corresponds to the capacity originally
-    // provided to this builder in its constructor.
-    BytePart Finalize();
+  // Completes the building and returns a |MesssagePart| containing the
+  // allocated objects.
+  //
+  // The allocated objects are placed in the returned buffer in the order in
+  // which they were allocated, with appropriate alignment for a FIDL message.
+  // The returned buffer's capacity corresponds to the capacity originally
+  // provided to this builder in its constructor.
+  BytePart Finalize();
 
-    // Attaches the given storage to the |Builder|.
-    //
-    // The |Builder| object does not take ownership of the given storage. The
-    // next object will be allocated at the start of the buffer.
-    void Reset(void* buffer, uint32_t capacity);
+  // Attaches the given storage to the |Builder|.
+  //
+  // The |Builder| object does not take ownership of the given storage. The
+  // next object will be allocated at the start of the buffer.
+  void Reset(void* buffer, uint32_t capacity);
 
-protected:
-    uint8_t* buffer() const { return buffer_; }
-    uint32_t capacity() const { return capacity_; }
+ protected:
+  uint8_t* buffer() const { return buffer_; }
+  uint32_t capacity() const { return capacity_; }
 
-private:
-    // Returns |size| bytes of zeroed memory aligned to at least FIDL_ALIGNMENT
-    void* Allocate(uint32_t size);
+ private:
+  // Returns |size| bytes of zeroed memory aligned to at least FIDL_ALIGNMENT
+  void* Allocate(uint32_t size);
 
-    uint32_t capacity_;
-    uint32_t at_;
-    uint8_t* buffer_;
+  uint32_t capacity_;
+  uint32_t at_;
+  uint8_t* buffer_;
 };
 
-} // namespace fidl
+}  // namespace fidl
 
-#endif //  LIB_FIDL_CPP_BUILDER_H_
+#endif  //  LIB_FIDL_CPP_BUILDER_H_

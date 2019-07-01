@@ -39,6 +39,29 @@ JavaScipt | [chromium:build/fuchsia/fidlgen_fs][be-js]             | [chromium:b
 
 **TBD: linter, formatter, gidl, difl, regen scripts, etc.**
 
+### C++ Style Guide
+
+We follow the [Fuchsia C++ Style Guide][cpp-style], with additional rules to
+further remove ambiguity around the application or interpretation of guidelines.
+
+#### Constructors
+
+Always place the initializer list on a line below the constructor.
+
+```cpp
+// Don't do this.
+SomeClass::SomeClass() : field_(1), another_field_(2) {}
+
+// Correct.
+SomeClass::SomeClass()
+    : field_(1), another_field_(2) {}
+```
+
+#### Comments
+
+Comments must respect 80 columns line size limit, unlike code which can extend
+to 100 lines size limit.
+
 ## General Setup
 
 ### Fuchsia Setup
@@ -265,6 +288,7 @@ fidl fmt --library my_library.fidl -i
 ```
 
 <!-- xrefs -->
+[cpp-style]: /docs/development/languages/c-cpp/cpp-style.md
 [be-c]: /zircon/system/host/fidl/lib/c_generator.cpp
 [be-cpp]: /garnet/go/src/fidl/compiler/backend/cpp/
 [be-dart]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidlgen_dart/

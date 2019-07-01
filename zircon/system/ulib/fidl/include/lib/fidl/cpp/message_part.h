@@ -7,7 +7,6 @@
 
 #include <stdint.h>
 #include <string.h>
-
 #include <zircon/types.h>
 
 namespace fidl {
@@ -21,97 +20,96 @@ namespace fidl {
 // for that part of the message, a capacity for that buffer, and the actual
 // amount of data stored in the buffer, which might be less that the capacity if
 // the buffer is not completely full.
-template<typename T>
+template <typename T>
 class MessagePart {
-public:
-    using value_type = T;
-    using const_iterator = const T*;
+ public:
+  using value_type = T;
+  using const_iterator = const T*;
 
-    // A message part with no storage.
-    MessagePart() : data_(nullptr), capacity_(0u), actual_(0u) {}
+  // A message part with no storage.
+  MessagePart()
+     : data_(nullptr), capacity_(0u), actual_(0u) {}
 
-    // A message part that uses the given storage.
-    //
-    // The constructed |MessagePart| object does not take ownership of the given
-    // storage.
-    MessagePart(T* data, uint32_t capacity, uint32_t actual = 0u)
-        : data_(data), capacity_(capacity), actual_(actual) {}
+  // A message part that uses the given storage.
+  //
+  // The constructed |MessagePart| object does not take ownership of the given
+  // storage.
+  MessagePart(T* data, uint32_t capacity, uint32_t actual = 0u)
+      : data_(data), capacity_(capacity), actual_(actual) {}
 
-    MessagePart(const MessagePart& other) = delete;
-    MessagePart& operator=(const MessagePart& other) = delete;
+  MessagePart(const MessagePart& other) = delete;
+  MessagePart& operator=(const MessagePart& other) = delete;
 
-    MessagePart(MessagePart&& other)
-        : data_(other.data_),
-          capacity_(other.capacity_),
-          actual_(other.actual_) {
-        other.data_ = nullptr;
-        other.capacity_ = 0u;
-        other.actual_ = 0u;
-    }
+  MessagePart(MessagePart&& other)
+      : data_(other.data_), capacity_(other.capacity_), actual_(other.actual_) {
+    other.data_ = nullptr;
+    other.capacity_ = 0u;
+    other.actual_ = 0u;
+  }
 
-    MessagePart& operator=(MessagePart&& other) {
-        if (this == &other)
-            return *this;
-        data_ = other.data_;
-        capacity_ = other.capacity_;
-        actual_ = other.actual_;
-        other.data_ = nullptr;
-        other.capacity_ = 0u;
-        other.actual_ = 0u;
-        return *this;
-    }
+  MessagePart& operator=(MessagePart&& other) {
+    if (this == &other)
+      return *this;
+    data_ = other.data_;
+    capacity_ = other.capacity_;
+    actual_ = other.actual_;
+    other.data_ = nullptr;
+    other.capacity_ = 0u;
+    other.actual_ = 0u;
+    return *this;
+  }
 
-    // Constructs a full |MessagePart| wrapping an array.
-    // The array is assumed to be initialized with data, such that |actual()|
-    // will match exactly the length of the array.
-    template <size_t N>
-    static MessagePart WrapFull(T (&array)[N]) {
-        return MessagePart(array, N, N);
-    }
+  // Constructs a full |MessagePart| wrapping an array.
+  // The array is assumed to be initialized with data, such that |actual()|
+  // will match exactly the length of the array.
+  template <size_t N>
+  static MessagePart WrapFull(T (&array)[N]) {
+    return MessagePart(array, N, N);
+  }
 
-    // Constructs an empty |MessagePart| wrapping an array.
-    // The array is assumed to be uninitialized, hence |actual()| is set to 0.
-    template <size_t N>
-    static MessagePart WrapEmpty(T (&array)[N]) {
-        return MessagePart(array, N, 0);
-    }
+  // Constructs an empty |MessagePart| wrapping an array.
+  // The array is assumed to be uninitialized, hence |actual()| is set to 0.
+  template <size_t N>
+  static MessagePart WrapEmpty(T (&array)[N]) {
+    return MessagePart(array, N, 0);
+  }
 
-    // The data stored in this part of the message.
-    T* data() const { return data_; }
+  // The data stored in this part of the message.
+  T* data() const { return data_; }
 
-    // The total amount of storage available for this part of the message.
-    //
-    // This part of the message might not actually use all of this storage. To
-    // determine how much storage is actually being used, see |actual()|.
-    uint32_t capacity() const { return capacity_; }
+  // The total amount of storage available for this part of the message.
+  //
+  // This part of the message might not actually use all of this storage. To
+  // determine how much storage is actually being used, see |actual()|.
+  uint32_t capacity() const { return capacity_; }
 
-    // The amount of storage that is actually being used for this part of the
-    // message.
-    //
-    // There might be more storage available than is actually being used. To
-    // determine how much storage is available, see |capacity()|.
-    uint32_t actual() const { return actual_; }
-    void set_actual(uint32_t actual) { actual_ = actual; }
+  // The amount of storage that is actually being used for this part of the
+  // message.
+  //
+  // There might be more storage available than is actually being used. To
+  // determine how much storage is available, see |capacity()|.
+  uint32_t actual() const { return actual_; }
+  void set_actual(uint32_t actual) { actual_ = actual; }
 
-    T* begin() { return data_; }
-    const T* begin() const { return data_; }
-    const T* cbegin() const { return data_; }
+  T* begin() { return data_; }
+  const T* begin() const { return data_; }
+  const T* cbegin() const { return data_; }
 
-    T* end() { return data_ + actual_; }
-    const T* end() const { return data_ + actual_; }
-    const T* cend() const { return data_ + actual_; }
+  T* end() { return data_ + actual_; }
+  const T* end() const { return data_ + actual_; }
+  const T* cend() const { return data_ + actual_; }
 
-    size_t size() const { return actual_; }
+  size_t size() const { return actual_; }
 
-private:
-    T* data_;
-    uint32_t capacity_;
-    uint32_t actual_;
+ private:
+  T* data_;
+  uint32_t capacity_;
+  uint32_t actual_;
 };
 
 using BytePart = MessagePart<uint8_t>;
 using HandlePart = MessagePart<zx_handle_t>;
 
-} // namespace fidl
+}  // namespace fidl
 
-#endif // LIB_FIDL_CPP_MESSAGE_PART_H_
+#endif  // LIB_FIDL_CPP_MESSAGE_PART_H_

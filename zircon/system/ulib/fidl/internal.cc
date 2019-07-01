@@ -21,6 +21,6 @@ const fidl_type kUint64Table(FidlCodedPrimitive::kUint64);
 const fidl_type kFloat32Table(FidlCodedPrimitive::kFloat32);
 const fidl_type kFloat64Table(FidlCodedPrimitive::kFloat64);
 
-} // namespace internal
+}  // namespace internal
 
-} // namespace fidl
+}  // namespace fidl

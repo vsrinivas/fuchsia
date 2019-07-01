@@ -13,8 +13,7 @@ __BEGIN_CDECLS
 // Writes |capacity| bytes from |buffer| to the control channel of |socket|.
 //
 // Blocks until |socket| is able to accept a control plane message.
-zx_status_t fidl_socket_write_control(zx_handle_t socket, const void* buffer,
-                                      size_t capacity);
+zx_status_t fidl_socket_write_control(zx_handle_t socket, const void* buffer, size_t capacity);
 
 // Reads |capacity| bytes from the control channel of |socket| to |buffer|.
 //
@@ -22,8 +21,8 @@ zx_status_t fidl_socket_write_control(zx_handle_t socket, const void* buffer,
 //
 // The actual number of bytes reads from the control plan is returned in
 // |out_actual|.
-zx_status_t fidl_socket_read_control(zx_handle_t socket, void* buffer,
-                                     size_t capacity, size_t* out_actual);
+zx_status_t fidl_socket_read_control(zx_handle_t socket, void* buffer, size_t capacity,
+                                     size_t* out_actual);
 
 // Issues a transaction on the control channel of |socket|.
 //
@@ -37,10 +36,9 @@ zx_status_t fidl_socket_read_control(zx_handle_t socket, void* buffer,
 //
 // The actual number of bytes reads from the control plan is returned in
 // |out_actual|.
-zx_status_t fidl_socket_call_control(zx_handle_t socket, const void* buffer,
-                                     size_t capacity, void* out_buffer,
-                                     size_t out_capacity, size_t* out_actual);
+zx_status_t fidl_socket_call_control(zx_handle_t socket, const void* buffer, size_t capacity,
+                                     void* out_buffer, size_t out_capacity, size_t* out_actual);
 
 __END_CDECLS
 
-#endif // LIB_FIDL_TRANSPORT_H_
+#endif  // LIB_FIDL_TRANSPORT_H_
