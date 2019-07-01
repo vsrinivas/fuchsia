@@ -32,7 +32,7 @@ func TestSources(t *testing.T) {
 	}
 	defer os.RemoveAll(store)
 
-	d, err := NewDaemon(store, "", "", "", nil)
+	d, err := NewDaemon(store, source.PkgFsDir{""}, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -153,6 +153,16 @@ func makeBlob(dir, content string) (string, error) {
 	return merkleroot, ioutil.WriteFile(path, []byte(content), 0644)
 }
 
+func tempPkgFs() source.PkgFsDir {
+	pkgfspath, err := ioutil.TempDir("", "amber-test-pkgfs")
+	panicerr(err)
+	pkgFs := source.PkgFsDir{pkgfspath}
+	os.MkdirAll(pkgFs.PkgInstallDir(), 0700)
+	os.MkdirAll(pkgFs.BlobInstallDir(), 0700)
+	os.MkdirAll(pkgFs.PkgNeedsDir(), 0700)
+	return pkgFs
+}
+
 func TestDaemon(t *testing.T) {
 	store, err := ioutil.TempDir("", "amber-test-store")
 	panicerr(err)
@@ -206,17 +216,13 @@ func TestDaemon(t *testing.T) {
 	panicerr(err)
 	defer os.RemoveAll(store)
 
-	pkgsDir, err := ioutil.TempDir("", "amber-test-pkgs")
-	panicerr(err)
-	defer os.RemoveAll(pkgsDir)
-	blobsDir, err := ioutil.TempDir("", "amber-test-blobs")
-	panicerr(err)
-	defer os.RemoveAll(blobsDir)
-	pkgNeedsDir, err := ioutil.TempDir("", "amber-test-pkgneeds")
-	panicerr(err)
-	defer os.RemoveAll(pkgNeedsDir)
+	pkgFs := tempPkgFs()
+	defer os.RemoveAll(pkgFs.RootDir)
+	pkgsDir := pkgFs.PkgInstallDir()
+	blobsDir := pkgFs.BlobInstallDir()
+	pkgNeedsDir := pkgFs.PkgNeedsDir()
 
-	d, err := NewDaemon(store, pkgsDir, blobsDir, pkgNeedsDir, nil)
+	d, err := NewDaemon(store, pkgFs, nil)
 	panicerr(err)
 
 	err = d.AddSource(&amber.SourceConfig{
@@ -315,15 +321,11 @@ func TestOpenRepository(t *testing.T) {
 	// // so that the httptest server can close:
 	// defer http.DefaultTransport.(*http.Transport).CloseIdleConnections()
 
-	pkgsDir, err := ioutil.TempDir("", "amber-test-pkgs")
-	panicerr(err)
-	defer os.RemoveAll(pkgsDir)
-	blobsDir, err := ioutil.TempDir("", "amber-test-blobs")
-	panicerr(err)
-	defer os.RemoveAll(blobsDir)
-	pkgNeedsDir, err := ioutil.TempDir("", "amber-test-pkgneeds")
-	panicerr(err)
-	defer os.RemoveAll(pkgNeedsDir)
+	pkgFs := tempPkgFs()
+	defer os.RemoveAll(pkgFs.RootDir)
+	pkgsDir := pkgFs.PkgInstallDir()
+	blobsDir := pkgFs.BlobInstallDir()
+	pkgNeedsDir := pkgFs.PkgNeedsDir()
 
 	keyConfig := &pkg.RepositoryKeyConfig{}
 	keyConfig.SetEd25519Key(([]byte)(rootKey.Value.Public))
@@ -341,7 +343,7 @@ func TestOpenRepository(t *testing.T) {
 		// TODO(raggi): fix keyconfig
 		RootKeys:        []pkg.RepositoryKeyConfig{*keyConfig},
 		RootKeysPresent: true,
-	}, pkgsDir, blobsDir, pkgNeedsDir)
+	}, pkgFs)
 	panicerr(err)
 
 	err = r.Update()
@@ -442,17 +444,13 @@ func TestDaemonWithEncryption(t *testing.T) {
 	panicerr(err)
 	defer os.RemoveAll(store)
 
-	pkgsDir, err := ioutil.TempDir("", "amber-test-pkgs")
-	panicerr(err)
-	defer os.RemoveAll(pkgsDir)
-	blobsDir, err := ioutil.TempDir("", "amber-test-blobs")
-	panicerr(err)
-	defer os.RemoveAll(blobsDir)
-	pkgNeedsDir, err := ioutil.TempDir("", "amber-test-pkgneeds")
-	panicerr(err)
-	defer os.RemoveAll(pkgNeedsDir)
+	pkgFs := tempPkgFs()
+	defer os.RemoveAll(pkgFs.RootDir)
+	pkgsDir := pkgFs.PkgInstallDir()
+	blobsDir := pkgFs.BlobInstallDir()
+	pkgNeedsDir := pkgFs.PkgNeedsDir()
 
-	d, err := NewDaemon(store, pkgsDir, blobsDir, pkgNeedsDir, nil)
+	d, err := NewDaemon(store, pkgFs, nil)
 	panicerr(err)
 
 	err = d.AddSource(&amber.SourceConfig{

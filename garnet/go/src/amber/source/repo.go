@@ -19,7 +19,7 @@ type Repository struct {
 	installer *packageInstaller
 }
 
-func OpenRepository(config *pkg.RepositoryConfig, pkgInstallDir string, blobInstallDir string, pkgNeedsDir string) (Repository, error) {
+func OpenRepository(config *pkg.RepositoryConfig, pkgFs PkgFsDir) (Repository, error) {
 	result := Repository{source: nil}
 	if len(config.Mirrors) == 0 {
 		return result, errors.New("There must be at least one mirror")
@@ -68,10 +68,8 @@ func OpenRepository(config *pkg.RepositoryConfig, pkgInstallDir string, blobInst
 		return result, err
 	}
 	result.installer = &packageInstaller{
-		pkgInstallDir:  pkgInstallDir,
-		pkgNeedsDir:    pkgNeedsDir,
-		blobInstallDir: blobInstallDir,
-		fetcher:        &result,
+		pkgFs:   pkgFs,
+		fetcher: &result,
 	}
 	return result, nil
 }
@@ -121,14 +119,12 @@ type blobFetcher interface {
 }
 
 type packageInstaller struct {
-	pkgInstallDir  string
-	pkgNeedsDir    string
-	blobInstallDir string
-	fetcher        blobFetcher
+	pkgFs   PkgFsDir
+	fetcher blobFetcher
 }
 
 func (i packageInstaller) GetPkg(merkle string, length int64) error {
-	err := i.fetcher.fetchInto(merkle, length, i.pkgInstallDir)
+	err := i.fetcher.fetchInto(merkle, length, i.pkgFs.PkgInstallDir())
 	if os.IsExist(err) {
 		return nil
 	}
@@ -142,7 +138,7 @@ func (i packageInstaller) GetPkg(merkle string, length int64) error {
 
 		// If the needs dir now exists, ignore a failure to write the meta FAR
 		// and move on to processing the package's needs.
-		if _, e := os.Stat(filepath.Join(i.pkgNeedsDir, merkle)); e == nil {
+		if _, e := os.Stat(filepath.Join(i.pkgFs.PkgNeedsDir(), merkle)); e == nil {
 			err = nil
 		}
 	}
@@ -151,7 +147,7 @@ func (i packageInstaller) GetPkg(merkle string, length int64) error {
 		return err
 	}
 
-	needsDir, err := os.Open(filepath.Join(i.pkgNeedsDir, merkle))
+	needsDir, err := os.Open(filepath.Join(i.pkgFs.PkgNeedsDir(), merkle))
 	if os.IsNotExist(err) {
 		// Package is fully installed already
 		return nil
@@ -165,7 +161,7 @@ func (i packageInstaller) GetPkg(merkle string, length int64) error {
 	for len(neededBlobs) > 0 {
 		for _, blob := range neededBlobs {
 			// TODO(raggi): switch to using the needs paths for install
-			err := i.fetcher.fetchInto(blob, -1, i.blobInstallDir)
+			err := i.fetcher.fetchInto(blob, -1, i.pkgFs.BlobInstallDir())
 			if err != nil {
 				return err
 			}

@@ -95,7 +95,7 @@ func TestSourceRecoverFromInterruptedInstall(t *testing.T) {
 	}
 	defer os.RemoveAll(store)
 
-	d, err := daemon.NewDaemon(store, "", "", "", nil)
+	d, err := daemon.NewDaemon(store, source.PkgFsDir{"/pkgfs"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +214,7 @@ func TestRepoRecoverFromInterruptedInstall(t *testing.T) {
 		MirrorsPresent:  true,
 		RootKeys:        rootKeys,
 		RootKeysPresent: true,
-	}, daemon.DefaultPkgInstallDir, daemon.DefaultBlobInstallDir, daemon.DefaultPkgNeedsDir)
+	}, source.PkgFsDir{"/pkgfs"})
 
 	if err != nil {
 		t.Fatal(err)
