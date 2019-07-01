@@ -8,6 +8,7 @@ mod forwarding;
 pub mod icmp;
 mod igmp;
 mod ipv6;
+pub(crate) mod path_mtu;
 pub(crate) mod reassembly;
 mod types;
 
@@ -31,6 +32,7 @@ use crate::error::{IpParseError, NotFoundError};
 use crate::ip::forwarding::{Destination, ForwardingTable};
 use crate::ip::icmp::IcmpState;
 use crate::ip::ipv6::Ipv6PacketAction;
+use crate::ip::path_mtu::IpLayerPathMtuCache;
 use crate::ip::reassembly::{
     handle_reassembly_timeout, process_fragment, reassemble_packet, FragmentCacheKeyEither,
     FragmentProcessingState, IpLayerFragmentCache,
@@ -83,11 +85,13 @@ impl IpStateBuilder {
                 forward: self.forward_v4,
                 table: ForwardingTable::default(),
                 fragment_cache: IpLayerFragmentCache::new(),
+                path_mtu: IpLayerPathMtuCache::new(),
             },
             v6: IpLayerStateInner {
                 forward: self.forward_v6,
                 table: ForwardingTable::default(),
                 fragment_cache: IpLayerFragmentCache::new(),
+                path_mtu: IpLayerPathMtuCache::new(),
             },
             icmp: self.icmp.build(),
         }
@@ -105,6 +109,7 @@ struct IpLayerStateInner<I: Ip> {
     forward: bool,
     table: ForwardingTable<I>,
     fragment_cache: IpLayerFragmentCache<I>,
+    path_mtu: IpLayerPathMtuCache<I>,
 }
 
 /// An event dispatcher for the IP layer.
@@ -1022,11 +1027,12 @@ mod tests {
     use rand::Rng;
 
     use crate::device::FrameDestination;
+    use crate::ip::path_mtu::{get_pmtu, update_pmtu};
     use crate::testutil::*;
     use crate::wire::ethernet::EthernetFrame;
     use crate::wire::icmp::{
-        IcmpIpExt, IcmpParseArgs, IcmpUnusedCode, Icmpv6Packet, Icmpv6PacketTooBig,
-        Icmpv6ParameterProblemCode, MessageBody,
+        IcmpIpExt, IcmpPacketBuilder, IcmpParseArgs, IcmpUnusedCode, Icmpv6Packet,
+        Icmpv6PacketTooBig, Icmpv6ParameterProblemCode, MessageBody,
     };
     use crate::wire::ipv4::Ipv4PacketBuilder;
     use crate::wire::ipv6::ext_hdrs::ExtensionHeaderOptionAction;
@@ -1723,5 +1729,100 @@ mod tests {
         assert_eq!(code, IcmpUnusedCode);
         // MTU should match the mtu for the link.
         assert_eq!(message, Icmpv6PacketTooBig::new(1280));
+    }
+
+    /// Create an ICMPv6 Packet Too Big packet.
+    fn create_packet_too_big_buf(src_ip: Ipv6Addr, dst_ip: Ipv6Addr, mtu: u32) -> Buf<Vec<u8>> {
+        BufferSerializer::new_vec(Buf::new(Vec::new(), ..))
+            .encapsulate(IcmpPacketBuilder::<Ipv6, &mut [u8], Icmpv6PacketTooBig>::new(
+                dst_ip,
+                src_ip,
+                IcmpUnusedCode,
+                Icmpv6PacketTooBig::new(mtu),
+            ))
+            .encapsulate(Ipv6PacketBuilder::new(src_ip, dst_ip, 64, IpProto::Icmpv6))
+            .serialize_outer()
+            .unwrap()
+            .into_inner()
+    }
+
+    #[test]
+    fn test_ipv6_update_pmtu() {
+        //
+        // Test receiving an IPv6 Packet Too Big Error which should update the PMTU
+        //
+
+        let dummy_config = get_dummy_config::<Ipv6Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::from_config(dummy_config.clone())
+            .build::<DummyEventDispatcher>();
+        let device = DeviceId::new_ethernet(1);
+        let frame_dst = FrameDestination::Unicast;
+
+        // Create IPv6 ICMPv6 packet too big packet.
+        let mut ipv6_packet_buf =
+            create_packet_too_big_buf(dummy_config.remote_ip, dummy_config.local_ip, 2000);
+
+        // Receive the IP packet.
+        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, ipv6_packet_buf.clone());
+
+        // Should have dispatched the packet.
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+
+        assert_eq!(
+            get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
+            2000
+        );
+    }
+
+    #[test]
+    fn test_ipv6_update_pmtu_if_less_than() {
+        //
+        // Test receiving an IPv6 Packet Too Big Error which should update the PMTU
+        //
+
+        let dummy_config = get_dummy_config::<Ipv6Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::from_config(dummy_config.clone())
+            .build::<DummyEventDispatcher>();
+        let device = DeviceId::new_ethernet(1);
+        let frame_dst = FrameDestination::Unicast;
+
+        // Update the PMTU to some value lower than what the ICMP packet will report.
+        update_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip, 2000);
+        assert_eq!(
+            get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
+            2000
+        );
+
+        // Create IPv6 ICMPv6 packet too big packet with MTU larger than current PMTU.
+        let mut ipv6_packet_buf =
+            create_packet_too_big_buf(dummy_config.remote_ip, dummy_config.local_ip, 3000);
+
+        // Receive the IP packet.
+        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, ipv6_packet_buf.clone());
+
+        // Should have dispatched the packet.
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+
+        // The PMTU should not have updated to 2000.
+        assert_eq!(
+            get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
+            2000
+        );
+
+        // Create IPv6 ICMPv6 packet too big packet with MTU smaller than current PMTU.
+        let mut ipv6_packet_buf =
+            create_packet_too_big_buf(dummy_config.remote_ip, dummy_config.local_ip, 1900);
+
+        // Receive the IP packet.
+        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, ipv6_packet_buf.clone());
+
+        // Should have dispatched the packet.
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 2);
+
+        // The PMTU should have updated to 1900.
+        assert_eq!(
+            get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
+            1900
+        );
     }
 }

@@ -26,6 +26,18 @@ pub enum Either<A, B> {
     B(B),
 }
 
+impl<A> Either<A, A> {
+    /// Return the inner value held by this `Either` when both
+    /// possible values `Either::A` and `Either::B` have the
+    /// same inner types.
+    pub fn into_inner(self) -> A {
+        match self {
+            Either::A(x) => x,
+            Either::B(x) => x,
+        }
+    }
+}
+
 macro_rules! call_method_on_either {
     ($val:expr, $method:ident, $($args:expr),*) => {
         match $val {
@@ -1271,6 +1283,20 @@ mod tests {
         }
 
         fn serialize(self, _buffer: &mut [u8]) {}
+    }
+
+    #[test]
+    fn test_either_into_inner() {
+        fn ret_either(a: u32, b: u32, c: bool) -> Either<u32, u32> {
+            if c {
+                Either::A(a)
+            } else {
+                Either::B(b)
+            }
+        }
+
+        assert_eq!(ret_either(1, 2, true).into_inner(), 1);
+        assert_eq!(ret_either(1, 2, false).into_inner(), 2);
     }
 
     #[test]

@@ -13,6 +13,7 @@ use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
 use crate::device::{ndp, DeviceId, FrameDestination};
 use crate::error;
+use crate::ip::path_mtu::update_pmtu_if_less;
 use crate::ip::{
     send_icmp_response, send_ip_packet, Ip, IpAddress, IpProto, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
     IPV6_MIN_MTU,
@@ -200,6 +201,17 @@ pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
             | Icmpv6Packet::NeighborAdvertisment(_)
             | Icmpv6Packet::Redirect(_) => {
                 ndp::receive_ndp_packet(ctx, device, src_ip, dst_ip, packet);
+            }
+            Icmpv6Packet::PacketTooBig(packet_too_big) => {
+                trace!("receive_icmp_packet: Received a Packet Too Big message");
+                // We are updating the path MTU from the destination address of this `packet`
+                // (which is an IP address on this node) to some remote (identified by the
+                // source address of this `packet`).
+
+                // `update_pmtu_if_less` may return an error, but it will only happen if
+                // the Packet Too Big message's mtu field had a value that was less than
+                // the IPv6 minimum mtu (which as per IPv6 RFC 8200, must not happen).
+                update_pmtu_if_less(ctx, dst_ip, src_ip, packet_too_big.message().mtu());
             }
             _ => log_unimplemented!(
                 (),

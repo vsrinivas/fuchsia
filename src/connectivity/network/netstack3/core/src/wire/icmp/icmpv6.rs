@@ -170,6 +170,11 @@ impl Icmpv6PacketTooBig {
     pub(crate) fn new(mtu: u32) -> Icmpv6PacketTooBig {
         Icmpv6PacketTooBig { mtu: U32::new(mtu) }
     }
+
+    /// Get the mtu value.
+    pub(crate) fn mtu(&self) -> u32 {
+        self.mtu.get()
+    }
 }
 
 impl_icmp_message!(Ipv6, Icmpv6PacketTooBig, PacketTooBig, IcmpUnusedCode, OriginalPacket<B>);
