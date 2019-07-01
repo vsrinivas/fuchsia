@@ -30,16 +30,53 @@ use crate::wire::icmp::{
 use crate::{Context, EventDispatcher, StackState};
 use zerocopy::ByteSlice;
 
-/// The state associated with the ICMP layer.
-pub struct IcmpState<D: EventDispatcher> {
-    v4_conns: ConnAddrMap<D::IcmpConn, IcmpAddr<Ipv4Addr>>,
-    v6_conns: ConnAddrMap<D::IcmpConn, IcmpAddr<Ipv6Addr>>,
+/// A builder for ICMP state.
+pub struct IcmpStateBuilder {
+    icmpv4_send_timestamp_reply: bool,
 }
 
-impl<D: EventDispatcher> Default for IcmpState<D> {
-    fn default() -> IcmpState<D> {
-        IcmpState { v4_conns: ConnAddrMap::default(), v6_conns: ConnAddrMap::default() }
+impl Default for IcmpStateBuilder {
+    fn default() -> IcmpStateBuilder {
+        IcmpStateBuilder { icmpv4_send_timestamp_reply: false }
     }
+}
+
+impl IcmpStateBuilder {
+    /// Enable or disable replying to ICMPv4 Timestamp Request messages with
+    /// Timestamp Reply messages (default: disabled).
+    ///
+    /// Enabling this can introduce a very minor vulnerability in which an
+    /// attacker can learn the system clock's time, which in turn can aid in
+    /// attacks against time-based authentication systems.
+    pub fn icmpv4_send_timestamp_reply(&mut self, send_timestamp_reply: bool) -> &mut Self {
+        self.icmpv4_send_timestamp_reply = send_timestamp_reply;
+        self
+    }
+
+    pub(crate) fn build<D: EventDispatcher>(self) -> IcmpState<D> {
+        IcmpState {
+            v4: Icmpv4State {
+                conns: ConnAddrMap::default(),
+                send_timestamp_reply: self.icmpv4_send_timestamp_reply,
+            },
+            v6: Icmpv6State { conns: ConnAddrMap::default() },
+        }
+    }
+}
+
+/// The state associated with the ICMP layer.
+pub(crate) struct IcmpState<D: EventDispatcher> {
+    v4: Icmpv4State<D>,
+    v6: Icmpv6State<D>,
+}
+
+struct Icmpv4State<D: EventDispatcher> {
+    conns: ConnAddrMap<D::IcmpConn, IcmpAddr<Ipv4Addr>>,
+    send_timestamp_reply: bool,
+}
+
+struct Icmpv6State<D: EventDispatcher> {
+    conns: ConnAddrMap<D::IcmpConn, IcmpAddr<Ipv6Addr>>,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
@@ -116,6 +153,13 @@ pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
                 increment_counter!(ctx, "receive_icmp_packet::echo_reply");
                 trace!("receive_icmp_packet: Received an EchoReply message");
                 receive_icmp_echo_reply(ctx, src_ip, dst_ip, echo_reply);
+            }
+            Icmpv4Packet::TimestampRequest(_timestamp_request) => {
+                if ctx.state().ip.icmp.v4.send_timestamp_reply {
+                    log_unimplemented!((), "ip::icmp::receive_icmp_packet: Not implemented for sending Timestamp Reply");
+                } else {
+                    trace!("receive_icmp_packet: Silently ignoring Timestamp message");
+                }
             }
             _ => log_unimplemented!(
                 (),
@@ -843,9 +887,9 @@ fn get_conns<D: EventDispatcher, A: IpAddress>(
     state: &mut StackState<D>,
 ) -> &mut ConnAddrMap<D::IcmpConn, IcmpAddr<A>> {
     #[ipv4addr]
-    return &mut state.ip.icmp.v4_conns;
+    return &mut state.ip.icmp.v4.conns;
     #[ipv6addr]
-    return &mut state.ip.icmp.v6_conns;
+    return &mut state.ip.icmp.v6.conns;
 }
 
 #[cfg(test)]

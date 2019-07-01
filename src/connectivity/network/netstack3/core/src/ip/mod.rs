@@ -39,7 +39,7 @@ use crate::wire::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
 use crate::{Context, EventDispatcher, TimerId, TimerIdInner};
 use icmp::{
     send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, should_send_icmpv4_error,
-    should_send_icmpv6_error, IcmpEventDispatcher,
+    should_send_icmpv6_error, IcmpEventDispatcher, IcmpStateBuilder,
 };
 
 // default IPv4 TTL or IPv6 hops
@@ -49,10 +49,16 @@ const DEFAULT_TTL: u8 = 64;
 pub(crate) const IPV6_MIN_MTU: u32 = 1280;
 
 /// A builder for IP layer state.
-#[derive(Default)]
 pub struct IpStateBuilder {
     forward_v4: bool,
     forward_v6: bool,
+    icmp: IcmpStateBuilder,
+}
+
+impl Default for IpStateBuilder {
+    fn default() -> IpStateBuilder {
+        IpStateBuilder { forward_v4: false, forward_v6: false, icmp: IcmpStateBuilder::default() }
+    }
 }
 
 impl IpStateBuilder {
@@ -60,9 +66,15 @@ impl IpStateBuilder {
     ///
     /// If `forward` is true, then an incoming IP packet whose destination
     /// address identifies a remote host will be forwarded to that host.
-    pub fn forward(&mut self, forward: bool) {
+    pub fn forward(&mut self, forward: bool) -> &mut Self {
         self.forward_v4 = forward;
         self.forward_v6 = forward;
+        self
+    }
+
+    /// Get the builder for the ICMP state.
+    pub fn icmp_builder(&mut self) -> &mut IcmpStateBuilder {
+        &mut self.icmp
     }
 
     pub(crate) fn build<D: EventDispatcher>(self) -> IpLayerState<D> {
@@ -77,7 +89,7 @@ impl IpStateBuilder {
                 table: ForwardingTable::default(),
                 fragment_cache: IpLayerFragmentCache::new(),
             },
-            icmp: IcmpState::default(),
+            icmp: self.icmp.build(),
         }
     }
 }
