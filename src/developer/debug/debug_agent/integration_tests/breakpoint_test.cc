@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <gtest/gtest.h>
+#include <zircon/status.h>
 
 #include "src/developer/debug/debug_agent/integration_tests/message_loop_wrapper.h"
 #include "src/developer/debug/debug_agent/integration_tests/mock_stream_backend.h"
@@ -44,6 +45,7 @@ namespace {
 
 // The exported symbol we're going to put the breakpoint on.
 const char* kExportedFunctionName = "InsertBreakpointFunction";
+const char* kExportedFunctionName2 = "InsertBreakpointFunction2";
 
 // The test .so we load in order to search the offset of the exported symbol
 // within it.
@@ -61,11 +63,15 @@ class BreakpointStreamBackend : public MockStreamBackend {
   BreakpointStreamBackend(debug_ipc::MessageLoop* loop) : loop_(loop) {}
 
   uint64_t so_test_base_addr() const { return so_test_base_addr_; }
-  const debug_ipc::NotifyException& exception() const { return exception_; }
-  const debug_ipc::NotifyThread& thread_notification() const {
-    return thread_notification_;
-  }
-  void clear_thread_notification() { thread_notification_ = {}; }
+
+  bool thread_started() const { return thread_started_; }
+  bool thread_exited() const { return thread_exited_; }
+
+  zx_koid_t process_koid() const { return process_koid_; }
+  zx_koid_t thread_koid() const { return thread_koid_; }
+
+  const std::vector<debug_ipc::NotifyException>& exceptions() const { return exceptions_; }
+
 
   // The messages we're interested in handling ---------------------------------
 
@@ -81,31 +87,35 @@ class BreakpointStreamBackend : public MockStreamBackend {
   }
 
   void HandleNotifyThreadStarting(debug_ipc::NotifyThread thread) override {
-    thread_notification_ = std::move(thread);
+    ASSERT_FALSE(thread_started_);
+    thread_started_ = true;
     loop_->QuitNow();
   }
 
   // Records the exception given from the debug agent.
   void HandleNotifyException(debug_ipc::NotifyException exception) override {
-    exception_ = std::move(exception);
-    ASSERT_FALSE(exception_hit_);
-    exception_hit_ = true;
+    exceptions_.push_back(std::move(exception));
     loop_->QuitNow();
   }
 
   void HandleNotifyThreadExiting(debug_ipc::NotifyThread thread) override {
-    thread_notification_ = std::move(thread);
-    ASSERT_TRUE(exception_hit_);
+    ASSERT_FALSE(thread_exited_);
+    thread_exited_ = true;
+
     loop_->QuitNow();
   }
 
  private:
   debug_ipc::MessageLoop* loop_;
   uint64_t so_test_base_addr_ = 0;
-  debug_ipc::NotifyException exception_ = {};
-  debug_ipc::NotifyThread thread_notification_ = {};
 
-  bool exception_hit_ = false;
+  bool thread_started_ = false;
+  bool thread_exited_ = false;
+
+  zx_koid_t process_koid_ = 0;
+  zx_koid_t thread_koid_ = 0;
+
+  std::vector<debug_ipc::NotifyException> exceptions_;
 };
 
 }  // namespace
@@ -118,9 +128,11 @@ TEST(BreakpointIntegration, SWBreakpoint) {
   SoWrapper so_wrapper;
   ASSERT_TRUE(so_wrapper.Init(kTestSo)) << "Could not load so " << kTestSo;
 
-  uint64_t symbol_offset =
-      so_wrapper.GetSymbolOffset(kTestSo, kExportedFunctionName);
-  ASSERT_NE(symbol_offset, 0u);
+  // Obtain the offsets into the .so of the symbols we want.
+  uint64_t symbol_offset1 = so_wrapper.GetSymbolOffset(kTestSo, kExportedFunctionName);
+  ASSERT_NE(symbol_offset1, 0u);
+  uint64_t symbol_offset2 = so_wrapper.GetSymbolOffset(kTestSo, kExportedFunctionName2);
+  ASSERT_NE(symbol_offset2, 0u);
 
   MessageLoopWrapper loop_wrapper;
   {
@@ -136,25 +148,24 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     launch_request.inferior_type = debug_ipc::InferiorType::kBinary;
     debug_ipc::LaunchReply launch_reply;
     remote_api->OnLaunch(launch_request, &launch_reply);
-    ASSERT_EQ(launch_reply.status, ZX_OK)
-        << "Expected ZX_OK, Got: "
-        << debug_ipc::ZxStatusToString(launch_reply.status);
+    ASSERT_EQ(launch_reply.status, ZX_OK) << "Got: " << zx_status_get_string(launch_reply.status);
 
     // We run the loop which will stop at the new thread notification.
     loop->Run();
-    auto thread_notification = mock_stream_backend.thread_notification();
-    ASSERT_EQ(thread_notification.record.process_koid, launch_reply.process_id);
-    mock_stream_backend.clear_thread_notification();
+
+    // We should have only received a thread started notification.
+    ASSERT_TRUE(mock_stream_backend.thread_started());
+    ASSERT_TRUE(mock_stream_backend.exceptions().empty());
+    ASSERT_FALSE(mock_stream_backend.thread_exited());
 
     // We resume the thread because the new thread will be stopped.
     debug_ipc::ResumeRequest resume_request;
-    resume_request.process_koid = thread_notification.record.process_koid;
+    resume_request.process_koid = mock_stream_backend.process_koid();
     debug_ipc::ResumeReply resume_reply;
     remote_api->OnResume(resume_request, &resume_reply);
 
     // We run the loop to get the notifications sent by the agent.
-    // The stream backend will stop the loop once it has received the modules
-    // notification.
+    // The stream backend will stop the loop once it has received the modules notification.
     loop->Run();
 
     // We should have found the correct module by now.
@@ -164,33 +175,36 @@ TEST(BreakpointIntegration, SWBreakpoint) {
 
     // We get the offset of the loaded function within the process space.
     uint64_t module_base = mock_stream_backend.so_test_base_addr();
-    uint64_t module_function = module_base + symbol_offset;
+    uint64_t module_function1 = module_base + symbol_offset1;
+    uint64_t module_function2 = module_base + symbol_offset2;
 
-    // We add a breakpoint in that address.
+    // We add a breakpoint in the functions.
     constexpr uint32_t kBreakpointId = 1234u;
-    debug_ipc::ProcessBreakpointSettings location = {};
-    location.process_koid = launch_reply.process_id;
-    location.address = module_function;
-
     debug_ipc::AddOrChangeBreakpointRequest breakpoint_request = {};
     breakpoint_request.breakpoint.id = kBreakpointId;
-    breakpoint_request.breakpoint.one_shot = true;
-    breakpoint_request.breakpoint.locations.push_back(location);
+    breakpoint_request.breakpoint.one_shot = false;
+
+    debug_ipc::ProcessBreakpointSettings location1 = {};
+    location1.process_koid = launch_reply.process_id;
+    location1.address = module_function1;
+    breakpoint_request.breakpoint.locations.push_back(location1);
+    debug_ipc::ProcessBreakpointSettings location2 = {};
+    location2.process_koid = launch_reply.process_id;
+    location2.address = module_function2;
+    breakpoint_request.breakpoint.locations.push_back(location2);
+
     debug_ipc::AddOrChangeBreakpointReply breakpoint_reply;
     remote_api->OnAddOrChangeBreakpoint(breakpoint_request, &breakpoint_reply);
     ASSERT_EQ(breakpoint_reply.status, ZX_OK);
 
-    DEBUG_LOG(Test) << "Resuming thread.";
-
     // Resume the process now that the breakpoint is installed.
+    DEBUG_LOG(Test) << "Resuming thread.";
     remote_api->OnResume(resume_request, &resume_reply);
-
-    // The loop will run until the stream backend receives an exception
-    // notification.
     loop->Run();
 
-    // We should have received an exception now.
-    debug_ipc::NotifyException exception = mock_stream_backend.exception();
+    // We should have received a breakpoint exception by now.
+    ASSERT_EQ(mock_stream_backend.exceptions().size(), 1u);
+    debug_ipc::NotifyException exception = mock_stream_backend.exceptions()[0];
     EXPECT_EQ(exception.thread.process_koid, launch_reply.process_id);
     EXPECT_EQ(exception.type, debug_ipc::NotifyException::Type::kSoftware);
     ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
@@ -199,7 +213,33 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     auto& breakpoint = exception.hit_breakpoints[0];
     EXPECT_EQ(breakpoint.id, kBreakpointId);
     EXPECT_EQ(breakpoint.hit_count, 1u);
-    EXPECT_TRUE(breakpoint.should_delete);
+    EXPECT_FALSE(breakpoint.should_delete);
+
+    // Resuming the thread.
+    DEBUG_LOG(Test) << "First breakpoint found, resuming thread.";
+    remote_api->OnResume(resume_request, &resume_reply);
+    loop->Run();
+
+    // We should've received a second breakpoint exception.
+    ASSERT_EQ(mock_stream_backend.exceptions().size(), 2u);
+    exception = mock_stream_backend.exceptions()[1];
+    EXPECT_EQ(exception.thread.process_koid, launch_reply.process_id);
+    EXPECT_EQ(exception.type, debug_ipc::NotifyException::Type::kSoftware);
+    ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
+
+    // Verify that the correct breakpoint was hit.
+    breakpoint = exception.hit_breakpoints[0];
+    EXPECT_EQ(breakpoint.id, kBreakpointId);
+    EXPECT_EQ(breakpoint.hit_count, 2u);
+    EXPECT_FALSE(breakpoint.should_delete);
+
+    // Resuming the thread.
+    DEBUG_LOG(Test) << "Second breakpoint found, resuming thread.";
+    remote_api->OnResume(resume_request, &resume_reply);
+    loop->Run();
+
+    // We should've received a thread exited notification.
+    ASSERT_TRUE(mock_stream_backend.thread_exited());
   }
 }
 
@@ -237,25 +277,24 @@ TEST(BreakpointIntegration, HWBreakpoint) {
     launch_request.argv.push_back(kTestExecutablePath);
     debug_ipc::LaunchReply launch_reply;
     remote_api->OnLaunch(launch_request, &launch_reply);
-    ASSERT_EQ(launch_reply.status, ZX_OK)
-        << "Expected ZX_OK, Got: "
-        << debug_ipc::ZxStatusToString(launch_reply.status);
+    ASSERT_EQ(launch_reply.status, ZX_OK) << "Got: " << zx_status_get_string(launch_reply.status);
 
     // We run the loop which will stop at the new thread notification.
     loop->Run();
-    auto thread_notification = mock_stream_backend.thread_notification();
-    ASSERT_EQ(thread_notification.record.process_koid, launch_reply.process_id);
-    mock_stream_backend.clear_thread_notification();
+
+    // We should have only received a thread started notification.
+    ASSERT_TRUE(mock_stream_backend.thread_started());
+    ASSERT_TRUE(mock_stream_backend.exceptions().empty());
+    ASSERT_FALSE(mock_stream_backend.thread_exited());
 
     // We resume the thread because the new thread will be stopped.
     debug_ipc::ResumeRequest resume_request;
-    resume_request.process_koid = thread_notification.record.process_koid;
+    resume_request.process_koid = mock_stream_backend.process_koid();
     debug_ipc::ResumeReply resume_reply;
     remote_api->OnResume(resume_request, &resume_reply);
 
     // We run the loop to get the notifications sent by the agent.
-    // The stream backend will stop the loop once it has received the modules
-    // notification.
+    // The stream backend will stop the loop once it has received the modules notification.
     loop->Run();
 
     // We should have found the correct module by now.
@@ -294,7 +333,8 @@ TEST(BreakpointIntegration, HWBreakpoint) {
     DEBUG_LOG(Test) << "Hit breakpoint.";
 
     // We should have received an exception now.
-    debug_ipc::NotifyException exception = mock_stream_backend.exception();
+    ASSERT_EQ(mock_stream_backend.exceptions().size(), 1u);
+    debug_ipc::NotifyException exception = mock_stream_backend.exceptions()[0];
     EXPECT_EQ(exception.thread.process_koid, launch_reply.process_id);
     EXPECT_EQ(exception.type, debug_ipc::NotifyException::Type::kHardware)
         << "Got: " << debug_ipc::NotifyException::TypeToString(exception.type);
@@ -313,11 +353,7 @@ TEST(BreakpointIntegration, HWBreakpoint) {
     DEBUG_LOG(Test) << "Verifyint thread exited correctly.";
 
     // We verify that the thread exited.
-    thread_notification = mock_stream_backend.thread_notification();
-    ASSERT_EQ(thread_notification.record.process_koid, launch_reply.process_id);
-    auto& record = thread_notification.record;
-    ASSERT_EQ(record.state, debug_ipc::ThreadRecord::State::kDead)
-        << "Got: " << debug_ipc::ThreadRecord::StateToString(record.state);
+    ASSERT_TRUE(mock_stream_backend.thread_exited());
   }
 }
 

@@ -31,7 +31,7 @@ launch_debug_agent() {
 # We branch out on whether the user used the verbose-agent flag. If so, we
 # redirect the debug agent output to /dev/null.
   echo -e "Attempting to start the Debug Agent."
-  fx-command-run "ssh" "${target}" "run ${debug_agent_pkg} --port=${port} ${unwind_flag}" > "${agent_out}" 2>&1 &
+  fx-command-run "ssh" "${target}" "run ${debug_agent_pkg} --port=${port} ${debug_mode} ${unwind_flag}" > "${agent_out}" 2>&1 &
   fx_ssh_pid="$!"
 
 # We wait until the debug agent is listening on the given port. We use NC to

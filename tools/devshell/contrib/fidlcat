@@ -17,16 +17,17 @@
 ##
 ## - Remember to use "fx set-device" when working with multiple devices.
 ## - This scripts by default will mute the SSH connection stdout/stderr, so any
-##   errors triggered by it won't appear. Use the --verbose-agent flag to see
-##   the output.
+##   errors triggered by it won't appear. Use the --debug-mode flag to see
+##   the debug log's from the debug agent and fidlcat.
 ## - This scripts uses the tool "nc" for testing TCP connections. Check that it
 ##   is in $PATH and that it works.
 ##
-## Usage: fx fidlcat [(--port|-p) <PORT>] [--remote-pid <pid>|--remote-name <names>|run <component URL>]
+## Usage: fx fidlcat [--debug-mode] [(--port|-p) <PORT>]
+##                   [--remote-pid <pid>|--remote-name <names>|run <component URL>]
 ##
 ##    --port            Port the debug agent will be listening on. Will use 2345
 ##                      by default.
-##    --verbose-agent   Whether the debug agent's stdout/stderr should be shown.
+##    --debug-mode      Whether the debug agent's debug logs should be shown.
 ##    --remote-pid      The koid of the remote process to trace
 ##    --remote-name     A set of comma-separated regexes.  When a process
 ##                      whose name matches one of the regexes starts, fidlcat
@@ -50,6 +51,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/va
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../contrib/lib/debug.sh || exit $?
 
 agent_out="/dev/null"
+debug_mode=
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -61,8 +63,9 @@ while [[ $# -gt 0 ]]; do
       shift
       port="$1"
       ;;
-    --verbose-agent|-va)
+    --debug-mode)
       agent_out="/dev/stdout"
+      debug_mode="--debug-mode"
       ;;
     --remote-pid)
       break # Remaining flags are passed to fidlcat

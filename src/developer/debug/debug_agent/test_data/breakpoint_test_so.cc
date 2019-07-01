@@ -16,6 +16,12 @@ int InsertBreakpointFunction(int c) {
   return 10 * c;
 }
 
+int InsertBreakpointFunction2(int c) {
+  printf("Should also receive a breakpoint!\n");
+  fflush(stdout);
+  return 9000 * c * c;
+}
+
 void AnotherFunctionForKicks() {}
 
 void MultithreadedFunctionToBreakOn() {

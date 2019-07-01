@@ -22,7 +22,11 @@ namespace debug_agent {
 
 namespace {
 
-void LogThreadsSteppingOver(const std::set<zx_koid_t>& thread_koids) {
+std::string Preamble(ProcessBreakpoint* b) {
+  return fxl::StringPrintf("[Breakpoint 0x%zx] ", b->address());
+}
+
+void LogThreadsSteppingOver(ProcessBreakpoint* b, const std::set<zx_koid_t>& thread_koids) {
   if (!debug_ipc::IsDebugModeActive())
     return;
 
@@ -35,23 +39,23 @@ void LogThreadsSteppingOver(const std::set<zx_koid_t>& thread_koids) {
     ss << thread_koid;
   }
 
-  DEBUG_LOG(Breakpoint) << ss.str();
+  DEBUG_LOG(Breakpoint) << Preamble(b) << ss.str();
 }
 
-void SuspendAllOtherNonSteppingOverThreads(DebuggedProcess* process,
+void SuspendAllOtherNonSteppingOverThreads(ProcessBreakpoint* b, DebuggedProcess* process,
                                            zx_koid_t thread_koid) {
   std::vector<DebuggedThread*> suspended_threads;
   for (DebuggedThread* thread : process->GetThreads()) {
     if (thread->stepping_over_breakpoint()) {
-      DEBUG_LOG(Breakpoint)
-          << "Thread " << thread->koid() << " is currently stepping over.";
+      DEBUG_LOG(Breakpoint) << Preamble(b) << "Thread " << thread->koid()
+                            << " is currently stepping over.";
       continue;
     }
 
     // We async suspend all the threads and then wait for all of them to signal.
     if (thread->IsSuspended()) {
-      DEBUG_LOG(Breakpoint)
-          << "Thread " << thread->koid() << " is already suspended.";
+      DEBUG_LOG(Breakpoint) << Preamble(b) << "Thread " << thread->koid()
+                            << " is already suspended.";
       continue;
     }
 
@@ -136,14 +140,14 @@ void ProcessBreakpoint::BeginStepOver(zx_koid_t thread_koid) {
   FXL_DCHECK(!thread->stepping_over_breakpoint());
   thread->set_stepping_over_breakpoint(true);
 
-  DEBUG_LOG(Breakpoint) << "Thread " << thread_koid << " is stepping over.";
+  DEBUG_LOG(Breakpoint) << Preamble(this) << "Thread " << thread_koid << " is stepping over.";
 
   auto [_, inserted] = threads_stepping_over_.insert(thread_koid);
   FXL_DCHECK(inserted);
 
-  LogThreadsSteppingOver(threads_stepping_over_);
+  LogThreadsSteppingOver(this, threads_stepping_over_);
 
-  SuspendAllOtherNonSteppingOverThreads(process_, thread_koid);
+  SuspendAllOtherNonSteppingOverThreads(this, process_, thread_koid);
 
   // If this is the first thread attempting to step over, we uninstall it.
   if (threads_stepping_over_.size() == 1u)
@@ -163,14 +167,14 @@ void ProcessBreakpoint::EndStepOver(zx_koid_t thread_koid) {
 
   threads_stepping_over_.erase(thread_koid);
 
-  DEBUG_LOG(Breakpoint) << "Thread " << thread_koid << "ending step over.";
-  LogThreadsSteppingOver(threads_stepping_over_);
+  DEBUG_LOG(Breakpoint) << Preamble(this) << "Thread " << thread_koid << " ending step over.";
+  LogThreadsSteppingOver(this, threads_stepping_over_);
 
 
   // If all the threads have stepped over, we reinstall the breakpoint and
   // resume all threads.
   if (!CurrentlySteppingOver()) {
-    DEBUG_LOG(Breakpoint) << "No more threads left. Resuming.";
+    DEBUG_LOG(Breakpoint) << Preamble(this) << "No more threads left. Resuming.";
     Update();
     for (DebuggedThread* thread : process_->GetThreads()) {
       thread->ResumeForRunMode();

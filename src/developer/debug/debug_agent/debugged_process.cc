@@ -56,6 +56,18 @@ std::string LogPreamble(const DebuggedProcess* process) {
                            process->name().c_str());
 }
 
+void LogRegisterBreakpoint(DebuggedProcess* process, Breakpoint* bp, uint64_t address) {
+  if (!debug_ipc::IsDebugModeActive())
+    return;
+
+  std::stringstream ss;
+  ss << LogPreamble(process) << "Setting breakpoint on 0x" << std::hex << address;
+  if (bp->settings().one_shot)
+    ss << " (one shot)";
+
+  DEBUG_LOG(Process) << ss.str();
+}
+
 }  // namespace
 
 DebuggedProcessCreateInfo::DebuggedProcessCreateInfo() = default;
@@ -332,8 +344,8 @@ ProcessWatchpoint* DebuggedProcess::FindWatchpointByAddress(uint64_t address) {
 
 zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp,
                                                 uint64_t address) {
-  DEBUG_LOG(Process) << LogPreamble(this)
-                     << "Setting breakpoint on 0x" << std::hex << address;
+  LogRegisterBreakpoint(this, bp, address);
+
   auto found = breakpoints_.find(address);
   if (found == breakpoints_.end()) {
     auto process_breakpoint =

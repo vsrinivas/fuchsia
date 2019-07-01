@@ -138,6 +138,8 @@ void DebuggedThread::OnException(zx::exception exception_token,
 void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
                                       zx_thread_state_general_regs* regs) {
   if (current_breakpoint_) {
+    DEBUG_LOG(Thread) << ThreadPreamble(this) << "Single step over 0x" << std::hex
+                      << current_breakpoint_->address();
     // Getting here means that the thread is done stepping over a breakpoint.
     // Depending on whether others threads are stepping over the breakpoints, this thread might be
     // suspended (waiting for other threads to step over).
@@ -147,9 +149,13 @@ void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
     // We can, though, resume from the exception, as effectivelly we already handled the single-step
     // exception, so there is no more need to keep the thread in an excepted state. The suspend
     // handle will take care of keeping the thread stopped.
+    //
+    // NOTE: It's important to resume the exception *before* telling the breakpoint we are done
+    //       going over it, as it may call ResumeForRunMode, which could then again attempt to step
+    //       over it.
+    ResumeException();
     current_breakpoint_->EndStepOver(koid_);
     current_breakpoint_ = nullptr;
-    ResumeException();
     return;
   }
 
@@ -182,7 +188,6 @@ void DebuggedThread::HandleGeneralException(
 
 void DebuggedThread::HandleSoftwareBreakpoint(
     debug_ipc::NotifyException* exception, zx_thread_state_general_regs* regs) {
-  DEBUG_LOG(Thread) << ThreadPreamble(this) << "Hit SW breakpoint";
 
   auto on_stop = UpdateForSoftwareBreakpoint(regs, &exception->hit_breakpoints);
   switch (on_stop) {
@@ -247,7 +252,6 @@ void DebuggedThread::Resume(const debug_ipc::ResumeRequest& request) {
 void DebuggedThread::ResumeException() {
   // We need to mark that this token is correctly handled before closing it.
   if (exception_token_.is_valid()) {
-    DEBUG_LOG(Thread) << "Resuming from exception.";
     uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
     zx_status_t status = exception_token_.set_property(ZX_PROP_EXCEPTION_STATE,
                                                        &state, sizeof(state));
@@ -473,6 +477,9 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
           .BreakpointInstructionForSoftwareExceptionAddress(
               *arch::ArchProvider::Get().IPInRegs(regs));
 
+  DEBUG_LOG(Thread) << ThreadPreamble(this) << "Hit SW breakpoint on 0x" << std::hex
+                    << breakpoint_address;
+
   ProcessBreakpoint* found_bp =
       process_->FindProcessBreakpointForAddr(breakpoint_address);
   if (found_bp) {
@@ -658,7 +665,8 @@ void DebuggedThread::ResumeForRunMode() {
   // handling, as going over a breakpoint is always a single-step opearation.
   // After that we can continue according to the set run-mode.
   if (IsInException() && current_breakpoint_) {
-    DEBUG_LOG(Thread) << ThreadPreamble(this) << "Stepping over thread.";
+    DEBUG_LOG(Thread) << ThreadPreamble(this) << "Stepping over breakpoint: 0x" << std::hex
+                      << current_breakpoint_->address();
     SetSingleStep(true);
     current_breakpoint_->BeginStepOver(koid_);
 
