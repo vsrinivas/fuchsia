@@ -13,7 +13,7 @@ import 'package:fidl_fuchsia_modular/fidl_async.dart'
         StoryState,
         StoryVisibilityState;
 import 'package:fuchsia_modular_flutter/session_shell.dart'
-    show SessionShell, StoryTransitional;
+    show SessionShell, Story;
 import 'package:fuchsia_modular_flutter/story_shell.dart'
     show StoryShell, Surface;
 import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
@@ -22,7 +22,7 @@ import 'package:story_shell_labs_lib/layout/deja_layout.dart';
 import 'cluster_model.dart';
 
 /// Defines a concrete implementation for [Story] for Ermine.
-class ErmineStory implements StoryTransitional, StoryShell {
+class ErmineStory implements Story, StoryShell {
   @override
   final StoryInfo info;
 
