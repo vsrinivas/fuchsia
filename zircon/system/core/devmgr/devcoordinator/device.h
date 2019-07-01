@@ -338,6 +338,7 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
   // should probably move in to here.
   enum class State {
     kActive,
+    kSuspending,  // The devhost is in the process of suspending the device.
     kSuspended,
   };
 

@@ -226,6 +226,7 @@ zx_status_t Device::SendSuspend(uint32_t flags, SuspendCompletion completion) {
   if (status != ZX_OK) {
     return status;
   }
+  state_ = Device::State::kSuspending;
   suspend_completion_ = std::move(completion);
   return ZX_OK;
 }
@@ -233,6 +234,8 @@ zx_status_t Device::SendSuspend(uint32_t flags, SuspendCompletion completion) {
 void Device::CompleteSuspend(zx_status_t status) {
   if (status == ZX_OK) {
     state_ = Device::State::kSuspended;
+  } else {
+    state_ = Device::State::kActive;
   }
 
   active_suspend_ = nullptr;
@@ -665,8 +668,8 @@ static zx_status_t fidl_AddDeviceInvisible(void* ctx, zx_handle_t raw_rpc,
 
 static zx_status_t fidl_RemoveDevice(void* ctx, fidl_txn_t* txn) {
   auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
-  if (dev->coordinator->InSuspend()) {
-    log(ERROR, "devcoordinator: rpc: remove-device '%s' forbidden in suspend\n",
+  if (dev->state() == Device::State::kSuspending) {
+    log(ERROR, "devcoordinator: rpc: remove-device '%s' forbidden when device is suspending\n",
         dev->name().data());
     return fuchsia_device_manager_CoordinatorRemoveDevice_reply(txn, ZX_ERR_BAD_STATE);
   }

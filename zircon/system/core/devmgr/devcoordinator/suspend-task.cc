@@ -28,6 +28,7 @@ void SuspendTask::Run() {
     switch (child.state()) {
       case Device::State::kSuspended:
         continue;
+      case Device::State::kSuspending:
       case Device::State::kActive:
         break;
     }
@@ -45,6 +46,7 @@ void SuspendTask::Run() {
     switch (device_->proxy()->state()) {
       case Device::State::kSuspended:
         break;
+      case Device::State::kSuspending:
       case Device::State::kActive: {
         AddDependency(device_->proxy()->RequestSuspendTask(flags_));
         return;

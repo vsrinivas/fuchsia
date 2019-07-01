@@ -330,10 +330,9 @@ void CheckCreateDeviceReceived(const zx::channel& remote, const char* expected_d
                   "");
 }
 
-// Reads a Suspend request from remote, checks that it is for the expected
-// flags, and then sends the given response.
-void CheckSuspendReceived(const zx::channel& remote, uint32_t expected_flags,
-                          zx_status_t return_status) {
+// Reads a Suspend request from remote and checks that it is for the expected
+// flags, without sending a response. |SendSuspendReply| can be used to send the desired response.
+void CheckSuspendReceived(const zx::channel& remote, uint32_t expected_flags) {
   // Read the Suspend request.
   FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
@@ -353,18 +352,35 @@ void CheckSuspendReceived(const zx::channel& remote, uint32_t expected_flags,
   ASSERT_OK(status);
   auto req = reinterpret_cast<fuchsia_device_manager_DeviceControllerSuspendRequest*>(bytes);
   ASSERT_EQ(req->flags, expected_flags);
+}
+
+// Sends a response with the given return_status. This can be used to reply to a
+// request received by |CheckSuspendReceived|.
+void SendSuspendReply(const zx::channel& remote, zx_status_t return_status) {
+  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  uint32_t actual_handles;
 
   // Write the Suspend response.
   memset(bytes, 0, sizeof(bytes));
   auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerSuspendResponse*>(bytes);
   resp->hdr.ordinal = fuchsia_device_manager_DeviceControllerSuspendOrdinal;
   resp->status = return_status;
-  status = fidl_encode(&fuchsia_device_manager_DeviceControllerSuspendResponseTable, bytes,
-                       sizeof(*resp), handles, fbl::count_of(handles), &actual_handles, nullptr);
+  zx_status_t status = fidl_encode(&fuchsia_device_manager_DeviceControllerSuspendResponseTable,
+                                   bytes, sizeof(*resp), handles, fbl::count_of(handles),
+                                   &actual_handles, nullptr);
   ASSERT_OK(status);
   ASSERT_EQ(0, actual_handles);
   status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);
   ASSERT_OK(status);
+}
+
+// Reads a Suspend request from remote, checks that it is for the expected
+// flags, and then sends the given response.
+void CheckSuspendReceived(const zx::channel& remote, uint32_t expected_flags,
+                          zx_status_t return_status) {
+  CheckSuspendReceived(remote, expected_flags);
+  SendSuspendReply(remote, return_status);
 }
 
 // Reads a CreateCompositeDevice from remote, checks expectations, and sends
@@ -627,6 +643,7 @@ void MultipleDeviceTestCase::DoSuspend(uint32_t flags) {
 class SuspendTestCase : public MultipleDeviceTestCase {
  public:
   void SuspendTest(uint32_t flags);
+  void StateTest(zx_status_t suspend_status, devmgr::Device::State want_device_state);
 };
 
 TEST_F(SuspendTestCase, Poweroff) {
@@ -715,6 +732,35 @@ void SuspendTestCase::SuspendTest(uint32_t flags) {
   }
 
   ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(platform_bus_remote(), flags, ZX_OK));
+}
+
+TEST_F(SuspendTestCase, SuspendSuccess) {
+  ASSERT_NO_FATAL_FAILURES(StateTest(ZX_OK, devmgr::Device::State::kSuspended));
+}
+
+TEST_F(SuspendTestCase, SuspendFail) {
+  ASSERT_NO_FATAL_FAILURES(StateTest(ZX_ERR_BAD_STATE, devmgr::Device::State::kActive));
+}
+
+// Verify the device transitions in and out of the suspending state.
+void SuspendTestCase::StateTest(zx_status_t suspend_status,
+                                devmgr::Device::State want_device_state) {
+  size_t index;
+  ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "",
+                                     &index));
+
+  const uint32_t flags = DEVICE_SUSPEND_FLAG_POWEROFF;
+  ASSERT_NO_FATAL_FAILURES(DoSuspend(flags));
+
+  // Check for the suspend message without replying.
+  ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(device(index)->remote, flags));
+
+  ASSERT_EQ(device(index)->device->state(), devmgr::Device::State::kSuspending);
+
+  ASSERT_NO_FATAL_FAILURES(SendSuspendReply(device(index)->remote, suspend_status));
+  loop()->RunUntilIdle();
+
+  ASSERT_EQ(device(index)->device->state(), want_device_state);
 }
 
 class CompositeTestCase : public MultipleDeviceTestCase {
