@@ -27,6 +27,7 @@
 #include "core.h"
 #include "debug.h"
 #include "device.h"
+#include "fwil.h"
 #include "fwsignal.h"
 #include "linuxisms.h"
 #include "netbuf.h"
@@ -120,7 +121,18 @@ static zx_status_t brcmf_proto_bcdc_msg(struct brcmf_pub* drvr, int ifidx, uint 
     struct brcmf_proto_bcdc_dcmd* msg = &bcdc->msg;
     uint32_t flags;
 
-    BRCMF_DBG(BCDC, "Enter\n");
+    if (cmd == BRCMF_C_GET_VAR) {
+        // buf starts with a NULL-terminated string
+        BRCMF_DBG(BCDC, "Getting iovar '%.*s'\n", len, buf);
+    } else if (cmd == BRCMF_C_SET_VAR) {
+        // buf starts with a NULL-terminated string
+        BRCMF_DBG(BCDC, "Setting iovar '%.*s'\n", len, buf);
+    } else {
+        BRCMF_DBG(BCDC, "Enter\n");
+    }
+
+    BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BCDC) && BRCMF_IS_ON(BYTES), buf, len,
+                       "Sending BCDC Message (%u bytes)\n", len);
 
     memset(msg, 0, sizeof(struct brcmf_proto_bcdc_dcmd));
 
@@ -159,6 +171,10 @@ static zx_status_t brcmf_proto_bcdc_cmplt(struct brcmf_pub* drvr, uint32_t id, u
             break;
         }
     } while (BCDC_DCMD_ID(bcdc->msg.flags) != id);
+
+    uint32_t actual_len = bcdc->msg.len;
+    BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BCDC) && BRCMF_IS_ON(BYTES), bcdc->buf, actual_len,
+                       "Received BCDC Message (%u bytes)\n", actual_len);
 
     return ret;
 }
