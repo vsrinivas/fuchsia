@@ -5,7 +5,7 @@
 #![feature(async_await, await_macro)]
 #![cfg(test)]
 use failure::{Error, ResultExt};
-use fidl_fuchsia_ui_input as ui_input;
+use fidl_fuchsia_ui_input2 as ui_input;
 use fidl_fuchsia_ui_policy as ui_policy;
 use fidl_fuchsia_ui_scenic as ui_scenic;
 use fidl_fuchsia_ui_shortcut as ui_shortcut;

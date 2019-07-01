@@ -35,6 +35,7 @@ executable("root_presenter") {
     "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.input2",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.shortcut",
     "//sdk/fidl/fuchsia.ui.views",
@@ -61,6 +62,7 @@ source_set("key_util") {
 
   deps = [
     "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.input2",
     "//zircon/public/lib/hid",
   ]
 }

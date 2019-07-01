@@ -4,16 +4,12 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.ui.shortcut") {
+fidl("fuchsia.ui.input2") {
   sdk_category = "partner"
 
   sources = [
-    "manager.fidl",
-    "registry.fidl",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.ui.input2",
-    "//sdk/fidl/fuchsia.ui.views",
+    "events.fidl",
+    "keys.fidl",
+    "modifiers.fidl",
   ]
 }

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use failure::Error;
-use fidl_fuchsia_ui_input as ui_input;
+use fidl_fuchsia_ui_input2 as ui_input;
 use fidl_fuchsia_ui_shortcut as ui_shortcut;
 use fidl_fuchsia_ui_views as ui_views;
 use fuchsia_syslog::fx_log_err;

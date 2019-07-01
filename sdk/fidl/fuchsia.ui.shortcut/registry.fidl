@@ -4,7 +4,7 @@
 
 library fuchsia.ui.shortcut;
 
-using fuchsia.ui.input;
+using fuchsia.ui.input2;
 using fuchsia.ui.views;
 
 /// Service to receive and handle shortcut activations.
@@ -26,11 +26,11 @@ table Shortcut {
     1: uint32 id;
 
     /// Keys or locks to be activated for triggering the shortcut.
-    2: fuchsia.ui.input.Modifiers modifiers;
+    2: fuchsia.ui.input2.Modifiers modifiers;
 
     /// Optional: Key to be pressed to trigger the shortcut.
     /// Omit for modifier-only shortcuts.
-    3: fuchsia.ui.input.Key key;
+    3: fuchsia.ui.input2.Key key;
 
     /// When this flag is set to true, the parent's shortcuts take priority
     /// and are matched before those of its children.

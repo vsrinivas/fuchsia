@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.ui.input;
+library fuchsia.ui.input2;
 
 /// Modifiers are special keys that modify the purpose or the function
 /// of other keys when used in combination with them.

@@ -28,6 +28,8 @@ executable("root_presenter_tests") {
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.recovery",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.input2",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",

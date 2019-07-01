@@ -14,20 +14,20 @@ TEST(InputUtil, IntoKeyEvent) {
   kbd.hid_usage = HID_USAGE_KEY_A;
   kbd.modifiers = fuchsia::ui::input::kModifierLeftShift;
 
-  std::optional<fuchsia::ui::input::KeyEvent> key = into_key_event(kbd);
+  std::optional<fuchsia::ui::input2::KeyEvent> key = into_key_event(kbd);
 
   EXPECT_TRUE(key);
-  EXPECT_EQ(key->phase(), fuchsia::ui::input::KeyEventPhase::PRESSED);
-  EXPECT_EQ(key->key(), fuchsia::ui::input::Key::A);
+  EXPECT_EQ(key->phase(), fuchsia::ui::input2::KeyEventPhase::PRESSED);
+  EXPECT_EQ(key->key(), fuchsia::ui::input2::Key::A);
   EXPECT_EQ(key->modifiers(),
-            fuchsia::ui::input::Modifiers::SHIFT | fuchsia::ui::input::Modifiers::LEFT_SHIFT);
+            fuchsia::ui::input2::Modifiers::SHIFT | fuchsia::ui::input2::Modifiers::LEFT_SHIFT);
 }
 
 TEST(InputUtil, IntoKeyEventUnknown) {
   fuchsia::ui::input::KeyboardEvent kbd = {};
   kbd.hid_usage = HID_USAGE_KEY_ERROR_ROLLOVER;
 
-  std::optional<fuchsia::ui::input::KeyEvent> key = into_key_event(kbd);
+  std::optional<fuchsia::ui::input2::KeyEvent> key = into_key_event(kbd);
 
   EXPECT_FALSE(key);
 }

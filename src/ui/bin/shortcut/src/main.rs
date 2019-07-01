@@ -109,7 +109,7 @@ async fn manager_server(
 mod test {
 
     use failure::{Error, ResultExt};
-    use fidl_fuchsia_ui_input as ui_input;
+    use fidl_fuchsia_ui_input2 as ui_input;
     use fidl_fuchsia_ui_shortcut as ui_shortcut;
     use fidl_fuchsia_ui_views as ui_views;
     use fuchsia_async;

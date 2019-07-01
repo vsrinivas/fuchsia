@@ -18,5 +18,6 @@ fostr_fidl("fuchsia.ui.input") {
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.math",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input2",
   ]
 }

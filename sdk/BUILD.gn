@@ -194,6 +194,7 @@ sdk("core") {
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_sdk($fidl_toolchain)",
