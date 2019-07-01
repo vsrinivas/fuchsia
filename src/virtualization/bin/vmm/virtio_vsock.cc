@@ -325,7 +325,6 @@ zx_status_t VirtioVsock::SocketConnection::Write(VirtioQueue* queue, virtio_vsoc
       // should not be possible to receive a ZX_ERR_SHOULD_WAIT here if
       // the guest is honoring our credit messages that describe socket
       // buffer space.
-      FXL_LOG(ERROR) << "Failed to write to socket " << status;
       UpdateOp(VIRTIO_VSOCK_OP_RST);
       return ZX_OK;
     }
