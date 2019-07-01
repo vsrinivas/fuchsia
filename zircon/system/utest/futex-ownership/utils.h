@@ -74,7 +74,7 @@ class Thread {
     State state() const { return state_.load(); }
 
   private:
-    static constexpr zx_duration_t THREAD_TIMEOUT = ZX_MSEC(1000);
+    static constexpr zx_duration_t THREAD_TIMEOUT = ZX_SEC(15);
     static constexpr zx_duration_t THREAD_POLL_INTERVAL = ZX_MSEC(1);
 
     void SetState(State state) {

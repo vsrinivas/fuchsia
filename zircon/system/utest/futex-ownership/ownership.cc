@@ -82,9 +82,8 @@ TEST(FutexOwnershipTestCase, Wait) {
     fbl::futex_t the_futex(0);
     ExternalThread external;
     Thread thread1, thread2, thread3;
-    Event wake_thread3;
     zx_status_t res;
-    std::atomic<zx_status_t> t1_res, t2_res, t3_res;
+    std::atomic<zx_status_t> t1_res, t2_res;
 
     zx_handle_t test_thread_handle = zx_thread_self();
     zx_koid_t test_thread_koid = CurrentThreadKoid();
@@ -95,7 +94,6 @@ TEST(FutexOwnershipTestCase, Wait) {
     // from under them.
     auto cleanup = fbl::MakeAutoCall([&]() {
         zx_futex_wake(&the_futex, std::numeric_limits<uint32_t>::max());
-        wake_thread3.Signal();
         external.Stop();
         thread1.Stop();
         thread2.Stop();
@@ -207,20 +205,20 @@ TEST(FutexOwnershipTestCase, Wait) {
     // up thread2 and have it declare thread3 to be the new owner of the futex,
     // and finally timeout.  Verify that the ownership changes properly, and
     // that it does not change when thread2 times out.
-    t3_res.store(ZX_ERR_INTERNAL);
     ASSERT_NO_FATAL_FAILURES(thread3.Start("thread_3", [&]() -> int {
-        t3_res.store(wake_thread3.Wait(ZX_SEC(5)));
         return 0;
     }));
 
     t2_res.store(ZX_ERR_INTERNAL);
     ASSERT_NO_FATAL_FAILURES(thread2.Start("thread_2.5", [&]() -> int {
         t2_res.store(zx_futex_wait(&the_futex, 0, thread3.handle().get(),
-                                   zx_deadline_after(ZX_MSEC(10))));
+                                   zx_deadline_after(ZX_MSEC(50))));
         return 0;
     }));
+    ASSERT_OK(thread2.Stop());
+    ASSERT_EQ(t2_res.load(), ZX_ERR_TIMED_OUT);
 
-    ASSERT_TRUE(WaitFor(ZX_MSEC(1000), [&]() -> bool {
+    ASSERT_TRUE(WaitFor(ZX_SEC(15), [&]() -> bool {
         res = zx_futex_get_owner(&the_futex, &koid);
         // Stop waiting if we fail to fetch the owner, or if the koid matches what we expect.
         return ((res != ZX_OK) || (koid == thread3.koid()));
@@ -228,20 +226,42 @@ TEST(FutexOwnershipTestCase, Wait) {
     ASSERT_OK(res);
     ASSERT_EQ(koid, thread3.koid());
 
-    ASSERT_OK(thread2.Stop());
     res = zx_futex_get_owner(&the_futex, &koid);
     ASSERT_OK(res);
     ASSERT_EQ(koid, thread3.koid());
+
+    // Start thread2 again and have it reset ownership back to the main test
+    // thread.  This time, do so with a timeout which has already expired.
+    // Ownership should be changed even if we wait with a timeout which has
+    // already expired.
+    t2_res.store(ZX_ERR_INTERNAL);
+    ASSERT_NO_FATAL_FAILURES(thread2.Start("thread_2.6", [&]() -> int {
+        t2_res.store(zx_futex_wait(&the_futex, 0, test_thread_handle, 0));
+        return 0;
+    }));
+    ASSERT_OK(thread2.Stop());
     ASSERT_EQ(t2_res.load(), ZX_ERR_TIMED_OUT);
+
+    ASSERT_TRUE(WaitFor(ZX_SEC(15), [&]() -> bool {
+        res = zx_futex_get_owner(&the_futex, &koid);
+        // Stop waiting if we fail to fetch the owner, or if the koid matches what we expect.
+        return ((res != ZX_OK) || (koid == test_thread_koid));
+    }));
+    ASSERT_OK(res);
+    ASSERT_EQ(koid, test_thread_koid);
+
+    res = zx_futex_get_owner(&the_futex, &koid);
+    ASSERT_OK(res);
+    ASSERT_EQ(koid, test_thread_koid);
 
     // Finally, start second thread and have it succeed in waiting, setting
     // the owner of the futex to nothing in the process.
     t2_res.store(ZX_ERR_INTERNAL);
-    ASSERT_NO_FATAL_FAILURES(thread2.Start("thread_2.6", [&]() -> int {
+    ASSERT_NO_FATAL_FAILURES(thread2.Start("thread_2.7", [&]() -> int {
         t2_res.store(zx_futex_wait(&the_futex, 0, ZX_HANDLE_INVALID, ZX_TIME_INFINITE));
         return 0;
     }));
-    ASSERT_TRUE(WaitFor(ZX_MSEC(1000), [&]() -> bool {
+    ASSERT_TRUE(WaitFor(ZX_SEC(15), [&]() -> bool {
         res = zx_futex_get_owner(&the_futex, &koid);
         // Stop waiting if we fail to fetch the owner, or if the koid matches what we expect.
         return ((res != ZX_OK) || (koid == ZX_KOID_INVALID));
@@ -251,14 +271,12 @@ TEST(FutexOwnershipTestCase, Wait) {
 
     // Wakeup all of the threads and join
     res = zx_futex_wake(&the_futex, std::numeric_limits<uint32_t>::max());
-    wake_thread3.Signal();
     ASSERT_OK(res);
     ASSERT_OK(thread1.Stop());
     ASSERT_OK(thread2.Stop());
     ASSERT_OK(thread3.Stop());
     ASSERT_OK(t1_res.load());
     ASSERT_OK(t2_res.load());
-    ASSERT_OK(t3_res.load());
 
     cleanup.cancel();
 }

@@ -548,6 +548,23 @@ zx_status_t OwnedWaitQueue::BlockAndAssignOwner(const Deadline& deadline,
     // now.
     zx_status_t res = internal::wait_queue_block_etc_pre(this, deadline, 0u, resource_ownership);
     if (res != ZX_OK) {
+        // There are only three reasons why the pre-wait operation should ever fail.
+        //
+        // 1) ZX_ERR_TIMED_OUT            : The timeout has already expired.
+        // 2) ZX_ERR_INTERNAL_INTR_KILLED : The thread has been signaled for death.
+        // 3) ZX_ERR_INTERNAL_INTR_RETRY  : The thread has been signaled for suspend.
+        //
+        // No matter what, we are not actually going to block in the wait queue.
+        // Even so, however, we still need to assign the owner to what was
+        // requested by the thread.  Just because we didn't manage to block does
+        // not mean that ownership assignment gets skipped.
+        ZX_DEBUG_ASSERT((res == ZX_ERR_TIMED_OUT) ||
+                        (res == ZX_ERR_INTERNAL_INTR_KILLED) ||
+                        (res == ZX_ERR_INTERNAL_INTR_RETRY));
+        if (AssignOwner(new_owner)) {
+            sched_reschedule();
+        }
+
         return res;
     }
 

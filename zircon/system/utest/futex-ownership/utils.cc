@@ -17,7 +17,7 @@ const char* ExternalThread::helper_flag_ = "futex-owner-helper";
 bool WaitFor(zx_duration_t timeout, WaitFn wait_fn) {
     constexpr zx_duration_t WAIT_POLL_INTERVAL = ZX_MSEC(1);
 
-    ZX_ASSERT((timeout >= 0) && (timeout <= ZX_SEC(10)));
+    ZX_ASSERT((timeout >= 0) && (timeout <= ZX_SEC(30)));
     zx_time_t deadline = zx_deadline_after(timeout);
 
     while (!wait_fn()) {
