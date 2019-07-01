@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <map>
-#include <string_view>
+#ifndef ZIRCON_SYSTEM_CORE_BOOTSVC_UTIL_H_
+#define ZIRCON_SYSTEM_CORE_BOOTSVC_UTIL_H_
 
 #include <fbl/string.h>
 #include <fbl/vector.h>
@@ -13,29 +11,32 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 
+#include <map>
+#include <string_view>
+
 namespace bootsvc {
 
 // Identifier of a boot item.
 struct ItemKey {
-    uint32_t type;
-    uint32_t extra;
+  uint32_t type;
+  uint32_t extra;
 
-    bool operator<(const ItemKey& ik) const {
-        uint64_t a = (static_cast<uint64_t>(type) << 32) | extra;
-        uint64_t b = (static_cast<uint64_t>(ik.type) << 32) | ik.extra;
-        return a < b;
-    }
+  bool operator<(const ItemKey& ik) const {
+    uint64_t a = (static_cast<uint64_t>(type) << 32) | extra;
+    uint64_t b = (static_cast<uint64_t>(ik.type) << 32) | ik.extra;
+    return a < b;
+  }
 };
 
 // Location of a boot item within a boot image.
 struct ItemValue {
-    uint32_t offset;
-    uint32_t length;
+  uint32_t offset;
+  uint32_t length;
 };
 
 struct FactoryItemValue {
-    zx::vmo vmo;
-    uint32_t length;
+  zx::vmo vmo;
+  uint32_t length;
 };
 
 // Map for boot items.
@@ -58,4 +59,6 @@ extern const char* const kLastPanicFilePath;
 
 fbl::Vector<fbl::String> SplitString(fbl::String input, char delimiter);
 
-} // namespace bootsvc
+}  // namespace bootsvc
+
+#endif  // ZIRCON_SYSTEM_CORE_BOOTSVC_UTIL_H_

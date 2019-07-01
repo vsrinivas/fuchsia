@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_CORE_BOOTSVC_SVCFS_SERVICE_H_
+#define ZIRCON_SYSTEM_CORE_BOOTSVC_SVCFS_SERVICE_H_
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -19,27 +20,27 @@ namespace bootsvc {
 
 // A VFS used to provide services to the next process in the boot sequence.
 class SvcfsService : public fbl::RefCounted<SvcfsService> {
-public:
-    // Create a SvcfsService using the given |dispatcher|.
-    static fbl::RefPtr<SvcfsService> Create(async_dispatcher_t* dispatcher);
+ public:
+  // Create a SvcfsService using the given |dispatcher|.
+  static fbl::RefPtr<SvcfsService> Create(async_dispatcher_t* dispatcher);
 
-    // Add a |service| named |service_name| to the VFS.
-    void AddService(const char* service_name, fbl::RefPtr<fs::Service> service);
+  // Add a |service| named |service_name| to the VFS.
+  void AddService(const char* service_name, fbl::RefPtr<fs::Service> service);
 
-    // Create a connection to the root of the VFS.
-    zx_status_t CreateRootConnection(zx::channel* out);
+  // Create a connection to the root of the VFS.
+  zx_status_t CreateRootConnection(zx::channel* out);
 
-private:
-    explicit SvcfsService(async_dispatcher_t* dispatcher);
+ private:
+  explicit SvcfsService(async_dispatcher_t* dispatcher);
 
-    SvcfsService(const SvcfsService&) = delete;
-    SvcfsService(SvcfsService&&) = delete;
-    SvcfsService& operator=(const SvcfsService&) = delete;
-    SvcfsService& operator=(SvcfsService&&) = delete;
+  SvcfsService(const SvcfsService&) = delete;
+  SvcfsService(SvcfsService&&) = delete;
+  SvcfsService& operator=(const SvcfsService&) = delete;
+  SvcfsService& operator=(SvcfsService&&) = delete;
 
-    fs::SynchronousVfs vfs_;
-    // Root node for |vfs_|.
-    fbl::RefPtr<fs::PseudoDir> root_;
+  fs::SynchronousVfs vfs_;
+  // Root node for |vfs_|.
+  fbl::RefPtr<fs::PseudoDir> root_;
 };
 
 // Create a service to retrieve boot arguments.
@@ -63,4 +64,6 @@ fbl::RefPtr<fs::Service> CreateRootJobService(async_dispatcher_t* dispatcher);
 // Create a service to provide the root resource.
 fbl::RefPtr<fs::Service> CreateRootResourceService(async_dispatcher_t* dispatcher);
 
-} // namespace bootsvc
+}  // namespace bootsvc
+
+#endif  // ZIRCON_SYSTEM_CORE_BOOTSVC_SVCFS_SERVICE_H_
