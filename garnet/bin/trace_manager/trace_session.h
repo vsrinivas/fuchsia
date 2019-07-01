@@ -26,6 +26,8 @@
 
 namespace tracing {
 
+namespace provider = ::fuchsia::tracing::provider;
+
 // TraceSession keeps track of all TraceProvider instances that
 // are active for a tracing session.
 class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
@@ -40,8 +42,7 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   explicit TraceSession(zx::socket destination,
                         std::vector<std::string> categories,
                         size_t trace_buffer_size_megabytes,
-                        fuchsia::tracing::provider::BufferingMode
-                            buffering_mode,
+                        provider::BufferingMode buffering_mode,
                         TraceProviderSpecMap&& provider_specs,
                         fit::closure abort_handler);
   // Frees all allocated resources and closes the outgoing
@@ -93,7 +94,7 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   zx::socket destination_;
   fidl::VectorPtr<std::string> categories_;
   size_t trace_buffer_size_megabytes_;
-  fuchsia::tracing::provider::BufferingMode buffering_mode_;
+  provider::BufferingMode buffering_mode_;
   TraceProviderSpecMap provider_specs_;
   std::list<std::unique_ptr<Tracee>> tracees_;
   async::TaskMethod<TraceSession, &TraceSession::SessionStartTimeout>

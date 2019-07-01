@@ -18,8 +18,7 @@ namespace tracing {
 TraceSession::TraceSession(zx::socket destination,
                            std::vector<std::string> categories,
                            size_t trace_buffer_size_megabytes,
-                           fuchsia::tracing::provider::BufferingMode
-                               buffering_mode,
+                           provider::BufferingMode buffering_mode,
                            TraceProviderSpecMap&& provider_specs,
                            fit::closure abort_handler)
     : destination_(std::move(destination)),

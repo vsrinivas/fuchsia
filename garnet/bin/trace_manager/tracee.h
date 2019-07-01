@@ -22,6 +22,8 @@
 
 namespace tracing {
 
+namespace provider = ::fuchsia::tracing::provider;
+
 class TraceSession;
 
 class Tracee {
@@ -48,7 +50,7 @@ class Tracee {
 
   bool operator==(TraceProviderBundle* bundle) const;
   bool Start(fidl::VectorPtr<std::string> categories, size_t buffer_size,
-             fuchsia::tracing::provider::BufferingMode buffering_mode,
+             provider::BufferingMode buffering_mode,
              fit::closure started_callback, fit::closure stopped_callback);
   void Stop();
 
@@ -80,7 +82,7 @@ class Tracee {
   }
 
   // TODO(dje): Until fidl prints names.
-  static const char* ModeName(fuchsia::tracing::provider::BufferingMode mode);
+  static const char* ModeName(provider::BufferingMode mode);
 
   void TransitionToState(State new_state);
   void OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
@@ -131,7 +133,7 @@ class Tracee {
   const TraceSession* const session_;
   const TraceProviderBundle* const bundle_;
   State state_ = State::kReady;
-  fuchsia::tracing::provider::BufferingMode buffering_mode_;
+  provider::BufferingMode buffering_mode_;
   zx::vmo buffer_vmo_;
   size_t buffer_vmo_size_ = 0u;
   zx::fifo fifo_;
