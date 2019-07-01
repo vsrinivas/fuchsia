@@ -24,7 +24,7 @@ namespace sys {
 // The outgoing directory contains several subdirectories with well-known
 // names:
 //
-//  * public. This directory contains the services offered by this component to
+//  * svc. This directory contains the services offered by this component to
 //    other components.
 //  * debug. This directory contains arbitrary debugging output offered by this
 //    component.
