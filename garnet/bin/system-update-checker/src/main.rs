@@ -212,7 +212,7 @@ async fn pkgfs_gc(service_connector: &impl ServiceConnector) -> Result<(), Error
         fidl::endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>()
             .context(ErrorKind::PkgfsGc)?;
     service_connector
-        .service_connect("/pkgfs", dir_server_end.into_channel())
+        .service_connect("/pkgfs/ctl", dir_server_end.into_channel())
         .context(ErrorKind::PkgfsGc)?;
     let dir_proxy = fidl_fuchsia_io::DirectoryProxy::new(
         fasync::Channel::from_channel(dir_end.into_channel()).context(ErrorKind::PkgfsGc)?,
@@ -337,13 +337,14 @@ mod test_check_for_and_apply_system_update_impl {
             let service_connector = Self::new();
             let pkgfs = service_connector.temp_dir.path().join("pkgfs");
             fs::create_dir(&pkgfs).expect("create pkgfs dir");
-            fs::File::create(pkgfs.join("garbage")).expect("create garbage file");
+            fs::create_dir(pkgfs.join("ctl")).expect("create pkgfs dir");
+            fs::File::create(pkgfs.join("ctl/garbage")).expect("create garbage file");
             service_connector
         }
     }
     impl TempDirServiceConnector {
         fn has_garbage_file(&self) -> bool {
-            self.temp_dir.path().join("pkgfs/garbage").exists()
+            self.temp_dir.path().join("pkgfs/ctl/garbage").exists()
         }
     }
     impl ServiceConnector for TempDirServiceConnector {

@@ -80,7 +80,6 @@ group("deprecated_shell_allowlist") {
     "//garnet/bin/sshd-host:sshd-host",
     "//garnet/bin/system_monitor/harvester:system_monitor_harvester",
     "//garnet/bin/system_monitor/harvester:system_monitor_harvester_tests",
-    "//garnet/bin/system-update-checker:system-update-checker",
     "//garnet/bin/trace:trace",
     "//garnet/bin/trace/tests:trace_tests",
     "//garnet/go/src/amber:amber",

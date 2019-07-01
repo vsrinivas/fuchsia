@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	PackageGarbageDir = "/pkgfs/garbage"
+	PackageGarbageDir = "/pkgfs/ctl/garbage"
 )
 
 type Daemon struct {

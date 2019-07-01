@@ -3,8 +3,8 @@
         "binary": "bin/system-update-checker"
     },
     "sandbox": {
-        "features": [
-            "deprecated-shell"
+        "pkgfs": [
+            "ctl"
         ],
         "services": [
             "fuchsia.logger.LogSink",
