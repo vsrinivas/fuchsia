@@ -29,8 +29,8 @@ void main() {
       expect(file.path, startsWith(dumpDir.path));
       expect(
           file.path,
-          matches(RegExp(
-              r'.*\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{6}-write-as-bytes.tmp$')));
+          matches(RegExp(r'.*\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{1,6}'
+              r'-write-as-bytes.tmp$')));
       expect(FileStat.statSync(file.path).size, greaterThan(0));
       expect(file.readAsStringSync(), 'hello');
     });
@@ -51,8 +51,8 @@ void main() {
       expect(file.path, startsWith(dumpDir.path));
       expect(
           file.path,
-          matches(RegExp(
-              r'.*\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{6}-open-for-write.tmp$')));
+          matches(RegExp(r'.*\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{1,6}'
+              r'-open-for-write.tmp$')));
       expect(FileStat.statSync(file.path).size, greaterThan(0));
       expect(file.readAsStringSync(), 'hello');
     });
