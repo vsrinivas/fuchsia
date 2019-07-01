@@ -371,9 +371,9 @@ int compile(fidl::ErrorReporter* error_reporter, fidl::flat::Typespace* typespac
       return 1;
     }
     final_library = library.get();
+    auto library_name = fidl::NameLibrary(library->name()).data();
     if (!all_libraries.Insert(std::move(library))) {
-      const auto& name = library->name();
-      Fail("Multiple libraries with the same name: '%s'\n", fidl::NameLibrary(name).data());
+      Fail("Multiple libraries with the same name: '%s'\n", library_name);
     }
   }
   if (!final_library) {
