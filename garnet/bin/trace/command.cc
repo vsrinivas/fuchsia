@@ -44,22 +44,11 @@ void Command::Done(int32_t return_code) {
 
 CommandWithController::CommandWithController(sys::ComponentContext* context)
     : Command(context),
-      trace_controller_(
-          context->svc()->Connect<fuchsia::tracing::controller::Controller>()) {
-  trace_controller_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "Trace controller disconnected unexpectedly";
+      controller_(context->svc()->Connect<controller::Controller>()) {
+  controller_.set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "Trace controller(controller) disconnected unexpectedly";
     Done(1);
   });
-}
-
-fuchsia::tracing::controller::ControllerPtr&
-CommandWithController::trace_controller() {
-  return trace_controller_;
-}
-
-const fuchsia::tracing::controller::ControllerPtr&
-CommandWithController::trace_controller() const {
-  return trace_controller_;
 }
 
 }  // namespace tracing

@@ -13,9 +13,9 @@
 namespace tracing {
 
 App::App(sys::ComponentContext* context) : Command(context) {
-  RegisterCommand(ListCategories::Describe());
-  RegisterCommand(Record::Describe());
-  RegisterCommand(Time::Describe());
+  RegisterCommand(ListCategoriesCommand::Describe());
+  RegisterCommand(RecordCommand::Describe());
+  RegisterCommand(TimeCommand::Describe());
 }
 
 App::~App() {}

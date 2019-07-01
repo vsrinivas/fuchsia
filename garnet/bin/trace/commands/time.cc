@@ -21,23 +21,23 @@
 
 namespace tracing {
 
-Command::Info Time::Describe() {
+Command::Info TimeCommand::Describe() {
   return Command::Info{[](sys::ComponentContext* context) {
-                         return std::make_unique<Time>(context);
+                         return std::make_unique<TimeCommand>(context);
                        },
                        "time",
                        "interactively print timestamps",
                        {}};
 }
 
-Time::Time(sys::ComponentContext* context) : Command(context) {}
+TimeCommand::TimeCommand(sys::ComponentContext* context) : Command(context) {}
 
-void Time::Start(const fxl::CommandLine& command_line) {
+void TimeCommand::Start(const fxl::CommandLine& command_line) {
   if (!(command_line.options().empty() &&
         command_line.positional_args().empty())) {
     FXL_LOG(ERROR) << "We encountered unknown options, please check your "
                    << "command invocation";
-    Done(1);
+    Done(EXIT_FAILURE);
     return;
   }
 
@@ -50,7 +50,7 @@ void Time::Start(const fxl::CommandLine& command_line) {
     in().get(c);
     switch (c) {
       case 'q':
-        Done(0);
+        Done(EXIT_SUCCESS);
         return;
       case 't': {
         double timestamp = static_cast<double>(zx_ticks_get()) * tick_scale;

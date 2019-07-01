@@ -26,7 +26,7 @@
 
 namespace tracing {
 
-class Record : public CommandWithController {
+class RecordCommand : public CommandWithController {
  public:
   struct Options {
     bool Setup(const fxl::CommandLine&);
@@ -43,8 +43,8 @@ class Record : public CommandWithController {
     std::optional<std::string> environment_name;
     uint32_t buffer_size_megabytes = 4;
     std::vector<ProviderSpec> provider_specs;
-    fuchsia::tracing::controller::BufferingMode buffering_mode =
-        fuchsia::tracing::controller::BufferingMode::ONESHOT;
+    controller::BufferingMode buffering_mode =
+        controller::BufferingMode::ONESHOT;
     bool binary = false;
     bool compress = false;
     std::string output_file_name = "/data/trace.json";
@@ -56,7 +56,7 @@ class Record : public CommandWithController {
 
   static Info Describe();
 
-  explicit Record(sys::ComponentContext* context);
+  explicit RecordCommand(sys::ComponentContext* context);
 
  protected:
   void Start(const fxl::CommandLine& command_line) override;
@@ -76,7 +76,8 @@ class Record : public CommandWithController {
   fuchsia::sys::ComponentControllerPtr component_controller_;
   fuchsia::sys::EnvironmentControllerPtr environment_controller_;
   zx::process spawned_app_;
-  async::WaitMethod<Record, &Record::OnSpawnedAppExit> wait_spawned_app_;
+  async::WaitMethod<RecordCommand, &RecordCommand::OnSpawnedAppExit>
+      wait_spawned_app_;
   std::unique_ptr<std::ostream> binary_out_;
   // TODO(PT-113): Remove |exporter_|.
   std::unique_ptr<ChromiumExporter> exporter_;
@@ -95,7 +96,7 @@ class Record : public CommandWithController {
   int32_t return_code_ = 0;
   Options options_;
 
-  fxl::WeakPtrFactory<Record> weak_ptr_factory_;
+  fxl::WeakPtrFactory<RecordCommand> weak_ptr_factory_;
 };
 
 }  // namespace tracing

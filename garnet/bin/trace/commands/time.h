@@ -9,11 +9,13 @@
 
 namespace tracing {
 
-class Time : public Command {
+class TimeCommand : public Command {
  public:
   static Info Describe();
 
-  explicit Time(sys::ComponentContext* context);
+  explicit TimeCommand(sys::ComponentContext* context);
+
+ protected:
   void Start(const fxl::CommandLine& command_line) override;
 };
 

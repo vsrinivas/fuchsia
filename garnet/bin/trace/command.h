@@ -17,6 +17,8 @@
 
 namespace tracing {
 
+namespace controller = ::fuchsia::tracing::controller;
+
 class Command {
  public:
   // OnDoneCallback is the callback type invoked when a command finished
@@ -65,12 +67,12 @@ class CommandWithController : public Command {
  protected:
   explicit CommandWithController(sys::ComponentContext* context);
 
-  fuchsia::tracing::controller::ControllerPtr& trace_controller();
-  const fuchsia::tracing::controller::ControllerPtr& trace_controller() const;
+  controller::ControllerPtr& controller() { return controller_; }
+  const controller::ControllerPtr& controller() const { return controller_; }
 
  private:
   std::unique_ptr<sys::ComponentContext> context_;
-  fuchsia::tracing::controller::ControllerPtr trace_controller_;
+  controller::ControllerPtr controller_;
 
   CommandWithController(const CommandWithController&) = delete;
   CommandWithController(CommandWithController&&) = delete;

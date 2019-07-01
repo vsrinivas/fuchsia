@@ -67,11 +67,11 @@ const char kTcpPrefix[] = "tcp:";
 
 const struct {
   const char* name;
-  fuchsia::tracing::controller::BufferingMode mode;
+  controller::BufferingMode mode;
 } kBufferingModes[] = {
-    {"oneshot", fuchsia::tracing::controller::BufferingMode::ONESHOT},
-    {"circular", fuchsia::tracing::controller::BufferingMode::CIRCULAR},
-    {"streaming", fuchsia::tracing::controller::BufferingMode::STREAMING},
+    {"oneshot", controller::BufferingMode::ONESHOT},
+    {"circular", controller::BufferingMode::CIRCULAR},
+    {"streaming", controller::BufferingMode::STREAMING},
 };
 
 static bool BeginsWith(fxl::StringView str, fxl::StringView prefix,
@@ -99,9 +99,8 @@ zx_status_t Spawn(const std::vector<std::string>& args,
                     raw_args.data(), subprocess->reset_and_get_address());
 }
 
-bool LookupBufferingMode(
-    const std::string& mode_name,
-    fuchsia::tracing::controller::BufferingMode* out_mode) {
+bool LookupBufferingMode(const std::string& mode_name,
+                         controller::BufferingMode* out_mode) {
   for (const auto& mode : kBufferingModes) {
     if (mode_name == mode.name) {
       *out_mode = mode.mode;
@@ -158,7 +157,7 @@ bool CheckBufferSize(uint32_t megabytes) {
 
 }  // namespace
 
-bool Record::Options::Setup(const fxl::CommandLine& command_line) {
+bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
   const std::unordered_set<std::string> known_options = {
       kSpecFile,
       kCategories,
@@ -418,10 +417,10 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
   return true;
 }
 
-Command::Info Record::Describe() {
+Command::Info RecordCommand::Describe() {
   return Command::Info{
       [](sys::ComponentContext* context) {
-        return std::make_unique<Record>(context);
+        return std::make_unique<RecordCommand>(context);
       },
       "record",
       "starts tracing and records data",
@@ -471,7 +470,7 @@ Command::Info Record::Describe() {
         "tracing ends unless --detach is specified"}}};
 }
 
-Record::Record(sys::ComponentContext* context)
+RecordCommand::RecordCommand(sys::ComponentContext* context)
     : CommandWithController(context),
       dispatcher_(async_get_default_dispatcher()),
       wait_spawned_app_(this),
@@ -568,7 +567,7 @@ static std::unique_ptr<std::ostream> OpenOutputStream(
   return out_stream;
 }
 
-void Record::Start(const fxl::CommandLine& command_line) {
+void RecordCommand::Start(const fxl::CommandLine& command_line) {
   if (!options_.Setup(command_line)) {
     FXL_LOG(ERROR) << "Error parsing options from command line - aborting";
     Done(1);
@@ -609,7 +608,7 @@ void Record::Start(const fxl::CommandLine& command_line) {
     error_handler = [](fbl::String error) { FXL_LOG(ERROR) << error.c_str(); };
   }
 
-  tracer_.reset(new Tracer(trace_controller().get()));
+  tracer_.reset(new Tracer(controller().get()));
 
   if (!options_.measurements.duration.empty()) {
     aggregate_events_ = true;
@@ -629,7 +628,7 @@ void Record::Start(const fxl::CommandLine& command_line) {
 
   tracing_ = true;
 
-  fuchsia::tracing::controller::TraceOptions trace_options;
+  controller::TraceOptions trace_options;
   trace_options.set_categories(options_.categories);
   trace_options.set_buffer_size_megabytes_hint(options_.buffer_size_megabytes);
   // TODO(dje): start_timeout_milliseconds
@@ -640,10 +639,9 @@ void Record::Start(const fxl::CommandLine& command_line) {
   for (const auto& it : options_.provider_specs) {
     provider_specs[it.name] = it.buffer_size_in_mb;
   }
-  std::vector<fuchsia::tracing::controller::ProviderSpec>
-      uniquified_provider_specs;
+  std::vector<controller::ProviderSpec> uniquified_provider_specs;
   for (const auto& it : provider_specs) {
-    fuchsia::tracing::controller::ProviderSpec spec;
+    controller::ProviderSpec spec;
     spec.set_name(it.first);
     spec.set_buffer_size_megabytes_hint(it.second);
     uniquified_provider_specs.push_back(std::move(spec));
@@ -661,7 +659,7 @@ void Record::Start(const fxl::CommandLine& command_line) {
       [this] { DoneTrace(); });
 }
 
-void Record::StopTrace(int32_t return_code) {
+void RecordCommand::StopTrace(int32_t return_code) {
   if (tracing_) {
     out() << "Stopping trace..." << std::endl;
     tracing_ = false;
@@ -673,7 +671,7 @@ void Record::StopTrace(int32_t return_code) {
   }
 }
 
-void Record::ProcessMeasurements() {
+void RecordCommand::ProcessMeasurements() {
   if (!events_.empty()) {
     std::sort(std::begin(events_), std::end(events_),
               [](const trace::Record& e1, const trace::Record& e2) {
@@ -746,7 +744,7 @@ void Record::ProcessMeasurements() {
   Done(return_code_);
 }
 
-void Record::DoneTrace() {
+void RecordCommand::DoneTrace() {
   tracer_.reset();
   exporter_.reset();
 
@@ -783,7 +781,7 @@ static std::string JoinArgsForLogging(const std::vector<std::string>& args) {
   return result;
 }
 
-void Record::LaunchComponentApp() {
+void RecordCommand::LaunchComponentApp() {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = fidl::StringPtr(options_.app);
   launch_info.arguments = fidl::To<fidl::VectorPtr<std::string>>(options_.args);
@@ -839,7 +837,7 @@ void Record::LaunchComponentApp() {
   }
 }
 
-void Record::LaunchSpawnedApp() {
+void RecordCommand::LaunchSpawnedApp() {
   std::vector<std::string> all_args = {options_.app};
   all_args.insert(all_args.end(), options_.args.begin(), options_.args.end());
 
@@ -863,9 +861,9 @@ void Record::LaunchSpawnedApp() {
   FXL_CHECK(status == ZX_OK) << "Failed to add handler: status=" << status;
 }
 
-void Record::OnSpawnedAppExit(async_dispatcher_t* dispatcher,
-                              async::WaitBase* wait, zx_status_t status,
-                              const zx_packet_signal_t* signal) {
+void RecordCommand::OnSpawnedAppExit(async_dispatcher_t* dispatcher,
+                                     async::WaitBase* wait, zx_status_t status,
+                                     const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to wait for spawned app: status=" << status;
     StopTrace(-1);
@@ -892,7 +890,7 @@ void Record::OnSpawnedAppExit(async_dispatcher_t* dispatcher,
   }
 }
 
-void Record::KillSpawnedApp() {
+void RecordCommand::KillSpawnedApp() {
   FXL_DCHECK(spawned_app_);
 
   // If already dead this is a no-op.
@@ -903,7 +901,7 @@ void Record::KillSpawnedApp() {
   wait_spawned_app_.set_object(ZX_HANDLE_INVALID);
 }
 
-void Record::StartTimer() {
+void RecordCommand::StartTimer() {
   async::PostDelayedTask(
       dispatcher_,
       [weak = weak_ptr_factory_.GetWeakPtr()] {

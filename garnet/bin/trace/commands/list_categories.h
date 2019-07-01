@@ -9,11 +9,13 @@
 
 namespace tracing {
 
-class ListCategories : public CommandWithController {
+class ListCategoriesCommand : public CommandWithController {
  public:
   static Info Describe();
 
-  explicit ListCategories(sys::ComponentContext* context);
+  explicit ListCategoriesCommand(sys::ComponentContext* context);
+
+ protected:
   void Start(const fxl::CommandLine& command_line) override;
 };
 
