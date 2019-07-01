@@ -80,6 +80,14 @@ or, to ensure there's no breakage with lots of bindings etc.:
 fx set terminal.x64 --with //bundles:kitchen_sink --with //vendor/google/bundles:buildbot
 ```
 
+### symbolizer
+
+To symbolize backtraces, you'll need a symbolizer in scope:
+
+```sh
+export ASAN_SYMBOLIZER_PATH="$FUCHSIA_DIR/zircon/prebuilt/downloads/clang/bin/llvm-symbolizer"
+```
+
 ## Compiling, and Running Tests
 
 We provide mostly one-liners to run tests for the various parts.
