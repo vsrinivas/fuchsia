@@ -25,7 +25,7 @@ In enclosing process mode, `netemul_sandbox` receives a component as a fuchsia p
 command-line argument and proceeds to create a hermetic environment and then launch the provided
 component within it. The exit code of the `netemul_sandbox` process will mimic the component's. When
 using enclosing process, clients will typically setup a layout for the test using the netemul
-(facet)[#facet] in the component-under-test's cmx manifest.
+[facet](#facet) in the component-under-test's cmx manifest.
 
 In service provider mode, `netemul_sandbox` will expose the
 [fuchsia.netemul.sandbox.Sandbox](lib/fidl/sandbox.fidl) protocol that allows
