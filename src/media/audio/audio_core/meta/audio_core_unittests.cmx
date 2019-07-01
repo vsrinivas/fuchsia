@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "test/audio_core_unittests"
+    },
+    "sandbox": {
+        "services": []
+    }
+}

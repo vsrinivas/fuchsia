@@ -5,22 +5,21 @@
 #include "src/media/audio/audio_core/audio_packet_ref.h"
 
 #include "src/lib/fxl/logging.h"
-#include "src/media/audio/audio_core/audio_core_impl.h"
 
 namespace media::audio {
 
 AudioPacketRef::AudioPacketRef(fbl::RefPtr<RefCountedVmoMapper> vmo_ref,
                                fuchsia::media::AudioRenderer::SendPacketCallback callback,
-                               fuchsia::media::StreamPacket packet, AudioCoreImpl* service,
+                               fuchsia::media::StreamPacket packet, ReleaseHandler release_handler,
                                uint32_t frac_frame_len, int64_t start_pts)
     : vmo_ref_(std::move(vmo_ref)),
       callback_(std::move(callback)),
       packet_(packet),
-      service_(service),
       frac_frame_len_(frac_frame_len),
       start_pts_(start_pts),
-      end_pts_(start_pts + frac_frame_len) {
-  FXL_DCHECK(service_);
+      end_pts_(start_pts + frac_frame_len),
+      release_handler_(std::move(release_handler)) {
+  FXL_DCHECK(release_handler_);
   FXL_DCHECK(vmo_ref_ != nullptr);
 }
 
@@ -31,8 +30,8 @@ void AudioPacketRef::fbl_recycle() {
   if (!was_recycled_) {
     was_recycled_ = true;
     if (NeedsCleanup()) {
-      FXL_DCHECK(service_);
-      service_->SchedulePacketCleanup(std::unique_ptr<AudioPacketRef>(this));
+      FXL_DCHECK(release_handler_);
+      release_handler_(std::unique_ptr<AudioPacketRef>(this));
       return;
     }
   }

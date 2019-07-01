@@ -24,8 +24,9 @@ AudioLinkPacketSource::~AudioLinkPacketSource() {
 }
 
 // static
-fbl::RefPtr<AudioLinkPacketSource> AudioLinkPacketSource::Create(fbl::RefPtr<AudioObject> source,
-                                                                 fbl::RefPtr<AudioObject> dest) {
+fbl::RefPtr<AudioLinkPacketSource> AudioLinkPacketSource::Create(
+    fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest,
+    fbl::RefPtr<AudioRendererFormatInfo> format) {
   FXL_DCHECK(source);
   FXL_DCHECK(dest);
 
@@ -36,11 +37,8 @@ fbl::RefPtr<AudioLinkPacketSource> AudioLinkPacketSource::Create(fbl::RefPtr<Aud
     return nullptr;
   }
 
-  auto& audio_renderer = *fbl::RefPtr<AudioRendererImpl>::Downcast(source);
-
-  FXL_DCHECK(audio_renderer.format_info_valid());
   return fbl::AdoptRef(
-      new AudioLinkPacketSource(std::move(source), std::move(dest), audio_renderer.format_info()));
+      new AudioLinkPacketSource(std::move(source), std::move(dest), std::move(format)));
 }
 
 void AudioLinkPacketSource::PushToPendingQueue(const fbl::RefPtr<AudioPacketRef>& packet) {
