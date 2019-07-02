@@ -107,7 +107,7 @@ also provides core drivers and Fuchsia's libc implementation.
 [ledger]: /src/ledger/docs/README.md
 [bluetooth]: /garnet/bin/bluetooth/README.md
 [telephony]: /src/connectivity/telephony/
-[magma]: /garnet/lib/magma/
+[magma]: magma/README.md
 [escher]: /src/ui/lib/escher/README.md
 [scenic]: ui/scenic.md
 [input-manager]: ui/input.md
