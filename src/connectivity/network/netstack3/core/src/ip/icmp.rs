@@ -183,6 +183,15 @@ pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
                         // the source node of the ICMP message does not implement RFC 1191 and
                         // therefore does not actually use the Next-Hop MTU field and still
                         // considers it as an unused field.
+                        //
+                        // TODO(ghanan): Handle the case here where our PMTU estimate needs to be
+                        //               updated since at this point we know our current PMTU
+                        //               estimate is too high. We need to act on 0 information
+                        //               from the node with the link with the MTU size that is
+                        //               smaller than our PMTU estimate. We can simply reduce
+                        //               our PMTU estimate by a constant factor (0.75) but this
+                        //               may not result in the most optimal PMTU value. It would
+                        //               work as a temporary solution though.
                         trace!("receive_icmp_packet: Next-Hop MTU is 0 so ignoring");
                     }
                 } else {

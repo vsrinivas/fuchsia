@@ -117,7 +117,7 @@ pub(crate) fn trigger_next_timer(ctx: &mut Context<DummyEventDispatcher>) -> boo
 ///
 /// Returns the number of timer events triggered.
 pub(crate) fn run_for(ctx: &mut Context<DummyEventDispatcher>, duration: Duration) -> usize {
-    let end_time = ctx.dispatcher.current_time + duration;
+    let end_time = ctx.dispatcher.now() + duration;
     let mut timers_fired = 0;
 
     while let Some(tmr) = ctx.dispatcher.timer_events.peek() {
@@ -129,7 +129,7 @@ pub(crate) fn run_for(ctx: &mut Context<DummyEventDispatcher>, duration: Duratio
         timers_fired += 1;
     }
 
-    assert!(ctx.dispatcher.current_time <= end_time);
+    assert!(ctx.dispatcher.now() <= end_time);
     ctx.dispatcher.current_time = end_time;
 
     timers_fired

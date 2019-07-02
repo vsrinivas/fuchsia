@@ -32,7 +32,7 @@ use crate::error::{IpParseError, NotFoundError};
 use crate::ip::forwarding::{Destination, ForwardingTable};
 use crate::ip::icmp::IcmpState;
 use crate::ip::ipv6::Ipv6PacketAction;
-use crate::ip::path_mtu::IpLayerPathMtuCache;
+use crate::ip::path_mtu::{handle_pmtu_timeout, IpLayerPathMtuCache};
 use crate::ip::reassembly::{
     handle_reassembly_timeout, process_fragment, reassemble_packet, FragmentCacheKeyEither,
     FragmentProcessingState, IpLayerFragmentCache,
@@ -100,16 +100,16 @@ impl IpStateBuilder {
 
 /// The state associated with the IP layer.
 pub(crate) struct IpLayerState<D: EventDispatcher> {
-    v4: IpLayerStateInner<Ipv4>,
-    v6: IpLayerStateInner<Ipv6>,
+    v4: IpLayerStateInner<Ipv4, D>,
+    v6: IpLayerStateInner<Ipv6, D>,
     icmp: IcmpState<D>,
 }
 
-struct IpLayerStateInner<I: Ip> {
+struct IpLayerStateInner<I: Ip, D: EventDispatcher> {
     forward: bool,
     table: ForwardingTable<I>,
-    fragment_cache: IpLayerFragmentCache<I>,
-    path_mtu: IpLayerPathMtuCache<I>,
+    fragment_cache: IpLayerFragmentCache<I, D>,
+    path_mtu: IpLayerPathMtuCache<I, D>,
 }
 
 /// An event dispatcher for the IP layer.
@@ -122,11 +122,16 @@ pub trait IpLayerEventDispatcher: IcmpEventDispatcher {}
 pub(crate) enum IpLayerTimerId {
     /// A timer event for reassembly timeouts.
     ReassemblyTimeout(FragmentCacheKeyEither),
+    PmtuTimeout(IpVersion),
 }
 
 impl IpLayerTimerId {
     fn new_reassembly_timeout_timer_id(key: FragmentCacheKeyEither) -> TimerId {
         TimerId(TimerIdInner::IpLayer(IpLayerTimerId::ReassemblyTimeout(key)))
+    }
+
+    fn new_pmtu_timeout_timer_id(ip: IpVersion) -> TimerId {
+        TimerId(TimerIdInner::IpLayer(IpLayerTimerId::PmtuTimeout(ip)))
     }
 }
 
@@ -134,6 +139,7 @@ impl IpLayerTimerId {
 pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: IpLayerTimerId) {
     match id {
         IpLayerTimerId::ReassemblyTimeout(key) => handle_reassembly_timeout(ctx, key),
+        IpLayerTimerId::PmtuTimeout(ip) => handle_pmtu_timeout(ctx, ip),
     }
 }
 

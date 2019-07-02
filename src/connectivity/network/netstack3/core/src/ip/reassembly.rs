@@ -33,6 +33,7 @@
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, BinaryHeap, HashMap};
 use std::convert::TryFrom;
+use std::marker::PhantomData;
 use std::time::Duration;
 
 use byteorder::{ByteOrder, NetworkEndian};
@@ -303,13 +304,14 @@ type FragmentCache<A> = HashMap<FragmentCacheKey<A>, FragmentCacheData>;
 /// composed of the (remote) source address, (local) destination address and
 /// 32-bit identifier of a packet.
 #[derive(Debug)]
-pub(crate) struct IpLayerFragmentCache<I: Ip> {
+pub(crate) struct IpLayerFragmentCache<I: Ip, D: EventDispatcher> {
     cache: FragmentCache<I::Addr>,
+    _marker: PhantomData<D>,
 }
 
-impl<I: Ip> IpLayerFragmentCache<I> {
+impl<I: Ip, D: EventDispatcher> IpLayerFragmentCache<I, D> {
     pub(crate) fn new() -> Self {
-        IpLayerFragmentCache { cache: FragmentCache::new() }
+        IpLayerFragmentCache { cache: FragmentCache::new(), _marker: PhantomData }
     }
 
     /// Attempts to process a packet fragment.
@@ -317,7 +319,7 @@ impl<I: Ip> IpLayerFragmentCache<I> {
     /// # Panics
     ///
     /// Panics if the packet has no fragment data.
-    fn process_fragment<B: ByteSlice, D: EventDispatcher>(
+    fn process_fragment<B: ByteSlice>(
         &mut self,
         dispatcher: &mut D,
         packet: <I as IpExtByteSlice<B>>::Packet,
@@ -527,7 +529,7 @@ impl<I: Ip> IpLayerFragmentCache<I> {
     /// packet. Also panics if a different `dispatcher` is passed to `reassemble_packet`
     /// from the one passed to `process_fragment` when processing a packet with a given
     /// `key` as `reassemble_packet` will fail to cancel the reassembly timeout.
-    fn reassemble_packet<B: ByteSliceMut, BV: BufferViewMut<B>, D: EventDispatcher>(
+    fn reassemble_packet<B: ByteSliceMut, BV: BufferViewMut<B>>(
         &mut self,
         dispatcher: &mut D,
         key: &FragmentCacheKey<I::Addr>,
@@ -578,7 +580,7 @@ impl<I: Ip> IpLayerFragmentCache<I> {
     /// Gets or creates a new entry in the cache for a given `key`.
     ///
     /// When a new entry is created, a ressembly timeout is scheduled.
-    fn get_or_create<D: EventDispatcher>(
+    fn get_or_create(
         &mut self,
         key: &FragmentCacheKey<I::Addr>,
         dispatcher: &mut D,
