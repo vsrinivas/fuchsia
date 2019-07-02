@@ -32,7 +32,7 @@ public:
           This provides Devmgr with the correct status value.\n");
     }
 
-    void Reply(fidl::Message message) { //const fidl_msg_t* msg) {
+    void Reply(fidl::Message message) {
         ZX_ASSERT_MSG(txid_, "DevmgrFidlTxn must have it's Status() method used.\n");
         const fidl_msg_t msg{
             .bytes = message.bytes().data(),
@@ -44,6 +44,9 @@ public:
         auto hdr = static_cast<fidl_message_header_t*>(msg.bytes);
         hdr->txid = txid_;
         status_ = channel_->write(0, msg.bytes, msg.num_bytes, msg.handles, msg.num_handles);
+
+        // We have now transferred ownership of the message's handles over the channel.
+        message.ClearHandlesUnsafe();
     }
 
     void Close(zx_status_t close_status) final {
