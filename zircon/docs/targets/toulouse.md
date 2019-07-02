@@ -7,6 +7,7 @@ and mini-PCIe ports for adding wireless network adapters.
 ## Toulouse Setup & Configuration
 
 You will need:
+
 - Toulouse hardware
 - Power supply (included with Toulouse)
 - Ethernet cable(s)
@@ -16,10 +17,12 @@ You will need:
   - HDMI + USB keyboard
 
 Tested Wifi/Bluetooth adapters include:
+
 * QCA6174A
 * QCA9880
 
 In your `fx set` commandline, add the following arguments:
+
 * `--board "garnet/boards/toulouse.gni"`
 * `--product "garnet/products/toulouse.gni"`
 * [optional] `--args "always_zedboot=true"`
@@ -56,6 +59,7 @@ your serial cable after this to get it to work.
 In the "Advanced" section, open the "Serial Port Console Redirection" settings. Enable "Console
 Redirection" and ensure the "Console Redirection Settings" look similar to the following. (You may
 tune these to taste, if you know what you're doing.)
+
 * Terminal Type: VT-UTF8
 * Bits per second: 115200
 * Data Bits: 8

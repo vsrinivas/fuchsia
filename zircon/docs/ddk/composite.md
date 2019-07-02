@@ -16,6 +16,7 @@ in which a "device" (from the user's perspective) is implemented by several
 distinct hardware blocks.
 
 Examples include:
+
 * a touch panel composed of an I2C device and a GPIO,
 * an ethernet device composed of a MAC chip and one or more PHYs, or
 * an audio device composed of an audio controller and a set of codecs.
@@ -29,6 +30,7 @@ We'll use the `astro-audio` device for our examples:
 ![Figure: Composite hardware device on I2C bus with GPIOs](composite-audio.png)
 
 This device features:
+
 * an I2C bus interface
 * two sets of GPIOs (one for fault, one for enable)
 * MMIO (memory mapped I/O) for bulk data transfer, and
@@ -117,6 +119,7 @@ At this point, we have three component devices, `i2c_component[]`,
 ### Component device matching rules
 
 The following rules apply:
+
 1. The first element must describe the root of the device tree &mdash; this
    is why we've used the mnemonic `root_match` identifier.
    Note that this requirement is likely to change, since most users provide

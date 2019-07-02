@@ -143,6 +143,7 @@ TRACE_INSTANT("category", "name", TRACE_SCOPE_PROCESS, "message", TA_STRING("Hel
 
 There are 5 arguments to the macro `TRACE_INSTANT()`.
 In order, they are:
+
 1. `"category"` &mdash; this is a nul-terminated string representing the
    category of the trace event.
 2. `"name"` &mdash; a nul-terminated string representing the name of the trace

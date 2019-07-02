@@ -122,6 +122,7 @@ fx run
 ```
 
 There are various flags for `fx run` to control QEMU's configuration:
+
 * `-m` sets QEMU's memory size in MB.
 * `-g` enables graphics (see below).
 * `-N` enables networking (see below).

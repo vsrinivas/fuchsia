@@ -3,6 +3,7 @@
 `bootsvc` is (typically) the first program loaded by usermode (contrast with
 [userboot](userboot.md), which is loaded by the kernel).  `bootsvc` provides
 several system services:
+
 - A filesystem service with the contents of the bootfs (/boot)
 - A loader service that loads from that bootfs
 

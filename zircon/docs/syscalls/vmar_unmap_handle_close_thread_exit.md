@@ -22,6 +22,7 @@ zx_status_t zx_vmar_unmap_handle_close_thread_exit(zx_handle_t vmar_handle,
 ## DESCRIPTION
 
 `zx_vmar_unmap_handle_close_thread_exit()` does a sequence of three operations:
+
 1. `zx_vmar_unmap(vmar_handle, addr, size)`
 2. `zx_handle_close(close_handle)`
 3. `zx_thread_exit()`

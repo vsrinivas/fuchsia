@@ -8,6 +8,7 @@ display.
 ## Main Pieces
 
 There are several pieces of the System Monitor
+
 - GUI or CLI program
 - [Dockyard Library](dockyard/README.md)
 - Transport

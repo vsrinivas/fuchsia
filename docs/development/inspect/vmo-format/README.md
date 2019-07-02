@@ -355,6 +355,7 @@ We can use a global version counter so that readers can detect in-flight
 modifications and modifications between reads.
 
 Readers:
+
 1. spinlock until the version number is even (no concurrent write),
 2. copy the entire VMO buffer, and
 3. check that the version number from step 1 is the same as in the copy.

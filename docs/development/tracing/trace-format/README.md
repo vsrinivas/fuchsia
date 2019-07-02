@@ -226,6 +226,7 @@ together with 48 bits of data whose usage varies by record type.
 ![drawing](record.png)
 
 _header word_
+
 - `[0 .. 3]`: record type
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 63]`: varies by record type (must be zero if unused)
@@ -247,6 +248,7 @@ information.
 ![drawing](metadata.png)
 
 _header word_
+
 - `[0 .. 3]`: record type (0)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 19]`: metadata type
@@ -266,6 +268,7 @@ same provider.
 ![drawing](metadata1.png)
 
 _header word_
+
 - `[0 .. 3]`: record type (0)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 19]`: metadata type (1)
@@ -274,6 +277,7 @@ _header word_
 - `[60 .. 63]`: reserved (must be zero)
 
 _provider name stream_
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 #### Provider Section Metadata (metadata type = 2)
@@ -296,6 +300,7 @@ whenever it encounters a new **Provider Section Metadata** record.
 ![drawing](metadata2.png)
 
 _header word_
+
 - `[0 .. 3]`: record type (0)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 19]`: metadata type (2)
@@ -314,6 +319,7 @@ came before it or what comes after it.
 ![drawing](metadata3.png)
 
 _header word_
+
 - `[0 .. 3]`: record type (0)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 19]`: metadata type (3)
@@ -335,6 +341,7 @@ not associated with a particular provider.
 ##### Format
 
 _header word_
+
 - `[0 .. 3]`: record type (0)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 19]`: metadata type (4)
@@ -362,6 +369,7 @@ endian system, it will be the reverse: 00 16 54 78 46 04 00 10.
 ##### Format
 
 _header word_
+
 - `[0 .. 3]`: record type (0)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes (1)
 - `[16 .. 19]`: metadata type (4)
@@ -379,11 +387,13 @@ of this record, the reader may assume that 1 tick is 1 nanosecond.
 ![drawing](initialization.png)
 
 _header word_
+
 - `[0 .. 3]`: record type (1)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 63]`: reserved (must be zero)
 
 _tick multiplier word_
+
 - `[0 .. 63]`: number of ticks per second
 
 ### String Record (record type = 2)
@@ -403,6 +413,7 @@ pointless since the empty string can simply be encoded as zero in a string ref.
 ![drawing](string.png)
 
 _header word_
+
 - `[0 .. 3]`: record type (2)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 30]`: string index (range 0x0001 to 0x7fff)
@@ -412,6 +423,7 @@ _header word_
 - `[48 .. 63]`: reserved (must be zero)
 
 _string value stream_
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 ### Thread Record (record type = 3)
@@ -430,15 +442,18 @@ must be ignored.
 ![drawing](thread.png)
 
 _header word_
+
 - `[0 .. 3]`: record type (3)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 23]`: thread index (never 0x00)
 - `[24 .. 63]`: reserved (must be zero)
 
 _process id word_
+
 - `[0 .. 63]`: process koid (kernel object id)
 
 _thread id word_
+
 - `[0 .. 63]`: thread koid (kernel object id)
 
 ### Event Record (record type = 4)
@@ -454,6 +469,7 @@ specific data.
 ![drawing](event.png)
 
 _header word_
+
 - `[0 .. 3]`: record type (4)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 19]`: event type
@@ -463,24 +479,31 @@ _header word_
 - `[48 .. 63]`: name (string ref)
 
 _timestamp word_
+
 - `[0 .. 63]`: number of ticks
 
 _process id word_ (omitted unless thread ref denotes inline thread)
+
 - `[0 .. 63]`: process koid (kernel object id)
 
 _thread id word_ (omitted unless thread ref denotes inline thread)
+
 - `[0 .. 63]`: thread koid (kernel object id)
 
 _category stream_ (omitted unless string ref denotes inline string)
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 _name stream_ (omitted unless string ref denotes inline string)
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 _argument data_ (repeats for each argument)
+
 - (see below)
 
 _event-type specific data_
+
 - (see below)
 
 #### Instant Event (event type = 0)
@@ -505,6 +528,7 @@ stacked area chart.
 ![drawing](event1.png)
 
 _counter word_
+
 - `[0 .. 63]`: counter id
 
 #### Duration Begin Event (event type = 2)
@@ -537,6 +561,7 @@ Marks the beginning and end of an operation on a particular thread.
 ![drawing](event4.png)
 
 _end time word_
+
 - `[0 .. 63]`: end time number of ticks
 
 #### Async Begin Event (event type = 5)
@@ -549,6 +574,7 @@ by an **Async End Event** using the same async correlation id.
 ![drawing](event567.png)
 
 _async correlation word_
+
 - `[0 .. 63]`: async correlation id
 
 #### Async Instant Event (event type = 6)
@@ -562,6 +588,7 @@ correlation id.
 ![drawing](event567.png)
 
 _async correlation word_
+
 - `[0 .. 63]`: async correlation id
 
 #### Async End Event (event type = 7)
@@ -573,6 +600,7 @@ Marks the end of an operation which may span threads.
 ![drawing](event567.png)
 
 _async correlation word_
+
 - `[0 .. 63]`: async correlation id
 
 #### Flow Begin Event (event type = 8)
@@ -590,6 +618,7 @@ for this thread; it begins where the enclosing **Duration Event** ends.
 ![drawing](event8910.png)
 
 _flow correlation word_
+
 - `[0 .. 63]`: flow correlation id
 
 #### Flow Step Event (event type = 9)
@@ -605,6 +634,7 @@ at the point where the enclosing **Duration Event** event ends.
 ![drawing](event8910.png)
 
 _flow correlation word_
+
 - `[0 .. 63]`: flow correlation id
 
 #### Flow End Event (event type = 10)
@@ -619,6 +649,7 @@ thread; the flow resumes where the enclosing **Duration Event** begins.
 ![drawing](event8910.png)
 
 _flow correlation word_
+
 - `[0 .. 63]`: flow correlation id
 
 ### Blob Record (record type = 5)
@@ -637,6 +668,7 @@ The blob type indicates the representation of the blob's content.
 ![drawing](blob.png)
 
 _header word_
+
 - `[0 .. 3]`: record type (5)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 31]`: blob name (string ref)
@@ -646,14 +678,17 @@ _header word_
 - `[56 .. 63]`: reserved (must be zero)
 
 _blob name stream_ (omitted unless string ref denotes inline string)
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 _payload stream_ (variable size)
+
 - binary data, padded with zeros to 8 byte alignment
 
 ##### Blob Types
 
 The following blob types are defined:
+
 - `TRACE_BLOB_TYPE_DATA` = `0x01`: Raw untyped data. The consumer is expected to know
   how to consume it, perhaps based on context.
 - `TRACE_BLOB_TYPE_LAST_BRANCH` = `0x02`: Last Branch Record of Intel Performance Monitor.
@@ -675,6 +710,7 @@ description of the referent.
 ![drawing](userspace.png)
 
 _header word_
+
 - `[0 .. 3]`: record type (6)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 23]`: process (thread ref)
@@ -683,15 +719,19 @@ _header word_
 - `[44 .. 63]`: reserved (must be zero)
 
 _pointer word_
+
 - `[0 .. 63]`: pointer value
 
 _process id word_ (omitted unless thread ref denotes inline thread)
+
 - `[0 .. 63]`: process koid (kernel object id)
 
 _name stream_ (omitted unless string ref denotes inline string)
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 _argument data_ (repeats for each argument)
+
 - (see below)
 
 ### Kernel Object Record (record type = 7)
@@ -710,6 +750,7 @@ to find a description of the referent.
 ![drawing](kernel.png)
 
 _header word_
+
 - `[0 .. 3]`: record type (7)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 23]`: kernel object type (one of the ZX_OBJ_TYPE_XXX constants from <zircon/syscalls/object.h>)
@@ -718,12 +759,15 @@ _header word_
 - `[44 .. 63]`: reserved (must be zero)
 
 _kernel object id word_
+
 - `[0 .. 63]`: koid (kernel object id)
 
 _name stream_ (omitted unless string ref denotes inline string)
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 _argument data_ (repeats for each argument)
+
 - (see below)
 
 ##### Argument Conventions
@@ -751,6 +795,7 @@ context switch.  By definition, the new state of the incoming thread is
 ![drawing](context.png)
 
 _header word_
+
 - `[0 .. 3]`: record type (8)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 23]`: cpu number
@@ -762,23 +807,29 @@ _header word_
 - `[60 .. 63]`: reserved
 
 _timestamp word_
+
 - `[0 .. 63]`: number of ticks
 
 _outgoing process id word_ (omitted unless outgoing thread ref denotes inline thread)
+
 - `[0 .. 63]`: process koid (kernel object id)
 
 _outgoing thread id word_ (omitted unless outgoing thread ref denotes inline thread)
+
 - `[0 .. 63]`: thread koid (kernel object id)
 
 _incoming process id word_ (omitted unless incoming thread ref denotes inline thread)
+
 - `[0 .. 63]`: process koid (kernel object id)
 
 _incoming thread id word_ (omitted unless incoming thread ref denotes inline thread)
+
 - `[0 .. 63]`: thread koid (kernel object id)
 
 ##### Thread States
 
 The following thread states are defined:
+
 - `0`: new
 - `1`: running
 - `2`: suspended
@@ -797,6 +848,7 @@ Describes a message written to the log at a particular moment in time.
 ![drawing](log.png)
 
 _header word_
+
 - `[0 .. 3]`: record type (9)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 30]`: log message length in bytes (range 0x0000 to 0x7fff)
@@ -805,15 +857,19 @@ _header word_
 - `[40 .. 63]`: reserved (must be zero)
 
 _timestamp word_
+
 - `[0 .. 63]`: number of ticks
 
 _process id word_ (omitted unless thread ref denotes inline thread)
+
 - `[0 .. 63]`: process koid (kernel object id)
 
 _thread id word_ (omitted unless thread ref denotes inline thread)
+
 - `[0 .. 63]`: thread koid (kernel object id)
 
 _log message stream_
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 ## Argument Types
@@ -837,12 +893,14 @@ argument type.
 ![drawing](argument.png)
 
 _argument header word_
+
 - `[0 .. 3]`: argument type
 - `[4 .. 15]`: argument size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 31]`: argument name (string ref)
 - `[32 .. 63]`: varies (must be zero if not used)
 
 _argument name stream_ (omitted unless string ref denotes inline string)
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 ### Null Argument (argument type = 0)
@@ -854,12 +912,14 @@ Represents an argument which appears in name only without a value.
 ![drawing](argument0.png)
 
 _argument header word_
+
 - `[0 .. 3]`: argument type (0)
 - `[4 .. 15]`: argument size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 31]`: argument name (string ref)
 - `[32 .. 63]`: reserved (must be zero)
 
 _argument name stream_ (omitted unless string ref denotes inline string)
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 ### 32-bit Signed Integer Argument (argument type = 1)
@@ -871,12 +931,14 @@ Represents a 32-bit signed integer.
 ![drawing](argument1.png)
 
 _argument header word_
+
 - `[0 .. 3]`: argument type (1)
 - `[4 .. 15]`: argument size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 31]`: argument name (string ref)
 - `[32 .. 63]`: 32-bit signed integer
 
 _argument name stream_ (omitted unless string ref denotes inline string)
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 ### 32-bit Unsigned Integer Argument (argument type = 2)
@@ -888,12 +950,14 @@ Represents a 32-bit unsigned integer.
 ![drawing](argument2.png)
 
 _argument header word_
+
 - `[0 .. 3]`: argument type (2)
 - `[4 .. 15]`: argument size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 31]`: argument name (string ref)
 - `[32 .. 63]`: 32-bit unsigned integer
 
 _argument name stream_ (omitted unless string ref denotes inline string)
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 ### 64-bit Signed Integer Argument (argument type = 3)
@@ -906,15 +970,18 @@ using the **32-bit Signed Integer Argument** type instead.
 ![drawing](argument3.png)
 
 _argument header word_
+
 - `[0 .. 3]`: argument type (3)
 - `[4 .. 15]`: argument size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 31]`: argument name (string ref)
 - `[32 .. 63]`: reserved (must be zero)
 
 _argument name stream_ (omitted unless string ref denotes inline string)
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 _argument value word_
+
 - `[0 .. 63]`: 64-bit signed integer
 
 ### 64-bit Unsigned Integer Argument (argument type = 4)
@@ -927,15 +994,18 @@ using the **32-bit Unsigned Integer Argument** type instead.
 ![drawing](argument4.png)
 
 _argument header word_
+
 - `[0 .. 3]`: argument type (4)
 - `[4 .. 15]`: argument size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 31]`: argument name (string ref)
 - `[32 .. 63]`: reserved (must be zero)
 
 _argument name stream_ (omitted unless string ref denotes inline string)
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 _argument value word_
+
 - `[0 .. 63]`: 64-bit unsigned integer
 
 ### Double-precision Floating Point Argument (argument type = 5)
@@ -947,15 +1017,18 @@ Represents a double-precision floating point number.
 ![drawing](argument5.png)
 
 _argument header word_
+
 - `[0 .. 3]`: argument type (5)
 - `[4 .. 15]`: argument size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 31]`: argument name (string ref)
 - `[32 .. 63]`: reserved (must be zero)
 
 _argument name stream_ (omitted unless string ref denotes inline string)
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 _argument value word_
+
 - `[0 .. 63]`: double-precision floating point number
 
 ### String Argument (argument type = 6)
@@ -967,6 +1040,7 @@ Represents a string value.
 ![drawing](argument6.png)
 
 _argument header word_
+
 - `[0 .. 3]`: argument type (6)
 - `[4 .. 15]`: argument size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 31]`: argument name (string ref)
@@ -974,9 +1048,11 @@ _argument header word_
 - `[48 .. 63]`: reserved (must be zero)
 
 _argument name stream_ (omitted unless string ref denotes inline string)
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 _argument value stream_ (omitted unless string ref denotes inline string)
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 ### Pointer Argument (argument type = 7)
@@ -989,15 +1065,18 @@ be provided by a **Userspace Object Record** associated with the same pointer.
 ![drawing](argument7.png)
 
 _argument header word_
+
 - `[0 .. 3]`: argument type (7)
 - `[4 .. 15]`: argument size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 31]`: argument name (string ref)
 - `[32 .. 63]`: reserved (must be zero)
 
 _argument name stream_ (omitted unless string ref denotes inline string)
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 _argument value word_
+
 - `[0 .. 63]`: the pointer value
 
 ### Kernel Object Id Argument (argument type = 8)
@@ -1011,15 +1090,18 @@ same koid.
 ![drawing](argument8.png)
 
 _argument header word_
+
 - `[0 .. 3]`: argument type (8)
 - `[4 .. 15]`: argument size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 31]`: argument name (string ref)
 - `[32 .. 63]`: reserved (must be zero)
 
 _argument name stream_ (omitted unless string ref denotes inline string)
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 _argument value word_
+
 - `[0 .. 63]`: the koid (kernel object id)
 
 <!-- xrefs -->

@@ -9,6 +9,7 @@ A **flaky test** is a test that sometimes passes and sometimes fails, when run
 using the exact same revision of the code.
 
 Flaky tests are bad because they:
+
 -  Risk letting real bugs slip past our commit queue (CQ) infrastructure.
 -  Devalue otherwise useful tests.
 -  Increase the failure rate of CQ, increasing latency for modifying code.
@@ -16,6 +17,7 @@ Flaky tests are bad because they:
 This document is specific to *test flakes*, not infrastructure flakes.
 
 ## Requirements: Goals for flaky tests
+
 1. **Flakes should be removed from the critical path of CQ as quickly as
 possible**.
 2. Since flakes present themselves as a failing test, **flakes
@@ -39,10 +41,11 @@ it is their responsibility to act as an observer for the entire codebase, and
 their responsibility to act as a resolver for code they touch.
 
 We recommend the following four-step process for dealing with flakes:
-1) Observer: Identify the flake.
-2) Observer: File a bug under the FLK project.
-3) Resolver: Disable the offending test immediately.
-4) Resolver: Fix the offending test offline, re-enable the test.
+
+1. Observer: Identify the flake.
+2. Observer: File a bug under the FLK project.
+3. Resolver: Disable the offending test immediately.
+4. Resolver: Fix the offending test offline, re-enable the test.
 
 #### Observer: Identify
 Flake can appear in many locations: CQ dry-runs, an actual CQ run, or in the

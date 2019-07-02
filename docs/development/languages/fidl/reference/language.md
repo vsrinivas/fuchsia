@@ -676,6 +676,7 @@ A protocol can include methods from other protocols.
 This is called composition: you compose one protocol from other protocols.
 
 Composition is used in the following cases:
+
 1. you have multiple protocols that all share some common behavior(s)
 2. you have varying levels of functionality you want to expose to different audiences
 

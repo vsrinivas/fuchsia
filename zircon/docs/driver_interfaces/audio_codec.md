@@ -3,6 +3,7 @@
 This document describes the codec interface to be used between controllers and codecs in Zircon.  It is meant to serve as a reference for driver-authors, and to define the interface contract which codec drivers must implement and that controllers can use.  The codec interface is a Banjo protocol exposed by codec drivers.
 
 Notes:
+
 - All indices start from 0.
 - Vectors of n elements are represented as <x0,x1,...,xn-1>, for example a vector with two elements 5 and 6 as <5,6>.
 - Vectors can be nested, i.e. <<5,6>,<7,8>> represents a vector with 2 vectors in it.
@@ -43,6 +44,7 @@ Many Codec protocol operations are fire-and-forget, i.e. they do not expect a re
 A codec can be reset by a controller at any time by issuing the Reset function.
 
 The GetInfo function retrieves information from the codec including:
+
 1. A unique and persistent identifier for the codec unit, e.g. a serial number or connection path.
 1. The manufacturer name.
 1. The product name.
@@ -67,6 +69,7 @@ To find out what formats are supported by a given codec, the controller uses the
 When not all combinations supported by the codec can be described with one DaiSupportedFormats, the codec returns more than one DaiSupportedFormats in the returned vector.  For example, if one DaiSupportedFormats allows for 32 bits samples at 48KHz, and 16 bits samples at 96KHz, but not 32 bits samples at 96KHz, then the codec will reply with 2 DaiSupportedFormats <<32bits>,<48KHz>> and <<16bits>,<96KHz>> (for simplicity in this example we ignore parameters other than rate and bits per sample) as opposed to a case where the codec supports either 16 or 32 bits samples at either 48 or 96KHz in which case the codec would reply with 1 DaiSupportedFormats <<16bits,32bits>,<48KHz,96KHz>>.
 
 It is assumed that bits per sample is always smaller or equal to bits per channel, hence a codec can report <<16bits_per_channel,32bits_per_channel>,<16bits_per_sample,32bits_per_sample>> (for simplicity in this example we ignore parameters other than bits per channel and bits per sample) and this does not imply that it is reporting that 32 bits per sample on 16 bits samples is valid, it specifies only the 3 valid combinations:
+
 1. 16 bits channels with 16 bits samples.
 2. 32 bits channels with 32 bits samples.
 3. and 32 bits channels with 16 bits samples.

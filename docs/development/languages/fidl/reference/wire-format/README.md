@@ -592,6 +592,7 @@ The header has the following form:
         and responses.
 
 There are three kinds of transactional messages:
+
 * method requests,
 * method responses, and
 * event requests.
@@ -732,6 +733,7 @@ alignment.
 ##### Types
 
 Notes:
+
 1. **N** indicates the number of elements, whether stated explicity (as in
    `array<T>:N`, an array with **N** elements of type **T**) or implictly (a `table`
    consisting of 7 elements would have `N=7`).

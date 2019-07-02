@@ -247,6 +247,7 @@ Fuchsia trace format (but it may be nonsensical if trace providers
 deliberately emit garbage data).
 
 These are some important invariants of the transport protocol:
+
 - There are no synchronization points between the trace manager and trace
   providers other than starting or stopping collection.
 - Trace providers (components being traced) only ever write to trace buffers;

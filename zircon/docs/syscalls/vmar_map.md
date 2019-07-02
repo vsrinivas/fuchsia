@@ -29,6 +29,7 @@ retains a reference to the underlying virtual memory object, which means
 closing the VMO handle does not remove the mapping added by this function.
 
 *options* is a bit vector of the following:
+
 - **ZX_VM_SPECIFIC**  Use the *vmar_offset* to place the mapping, invalid if
   *handle* does not have the **ZX_VM_CAN_MAP_SPECIFIC** permission.
   *vmar_offset* is an offset relative to the base address of the given VMAR.
@@ -67,6 +68,7 @@ allocator determined by policy set on the target VMAR).
 *len* must be page-aligned.
 
 In addition one of the following power-of-two alignment flags can added:
+
 - **ZX_VM_ALIGN_1KB** aligns *child_addr* to a power-of-2 at least 1K bytes.
 - **ZX_VM_ALIGN_2KB** aligns *child_addr* to a power-of-2 at least 2K bytes.
 - **ZX_VM_ALIGN_4KB** aligns *child_addr* to a power-of-2 at least 4K bytes.

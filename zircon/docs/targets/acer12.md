@@ -58,6 +58,7 @@ It’s possible to end up in a situation where the machine *really* wants to hel
 It has been observed that USB initialization is racy on a cold boot.  So if you're starting from a cold boot and trying to boot to USB, you may find that you boot to disk instead.
 
 Mitigations:
+
 - It's useful to use a `cmdline` file to set `zircon.nodename=foo` to know during the boot screen whether you're booting from USB or disk.
 - If the Acer is booting from disk and you want to boot from USB, remove and reinsert the USB drive, then reboot with `ctrl-alt-del` (not the power button.)
 - You can tell from the bios whether USB has been initialized because it will name the USB device.

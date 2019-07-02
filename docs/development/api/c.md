@@ -140,6 +140,7 @@ Use #ifndef guards in headers. These look like:
 ```
 
 The exact form of the define is as follows:
+
 - Take the canonical include path to the header
 - Replace all ., /, and - with _
 - Convert all letters to UPPERCASE

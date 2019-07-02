@@ -17,6 +17,7 @@ There are some terms of art that Dart uses which conflict with Fuchsia’s termi
 - [Dart library](https://dart.dev/tools/pub/package-layout#public-libraries): A collection of Dart code (classes, constants, typedefs, etc.) isolated to a single namespace and corresponding to a single entry point, e.g. `import 'package:enchilada/enchilada.dart';` imports the enchilada library. Note that Dart libraries have a privacy boundary, e.g. private implementation details are not visible or accessible outside of the library. A Dart package can contain multiple Dart Libraries.
 
 When writing Dart code it is important to understand the distinction in terminology in order to remain clear when communicating with team members whose primary language might be one of the other supported languages (C++, Rust, etc.). 
+
 - A Fuchsia package can contain components implemented as Dart binaries.
 - A Dart binary is defined within a Dart package, and often has dependencies on other Dart packages.
 - Code shared as a library in Fuchsia’s tree written in Dart is implemented as a Dart package.
@@ -51,16 +52,19 @@ Packages which do take on external dependencies should consider whether they wan
 Code should be formatted using the `dartfmt` tool. This is an opinionated tool that cannot be configured. Formatting all of our code with this tool will ensure consistency. In Fuchsia, you can use `fx format-code` will run `dartfmt` on all staged dart files. 
 
 ## Files
+
 - DO name files after their public class name
 - PREFER placing each class into their own files, even if they’re private. It should be rare for multiple classes to live in the same file. Only private, small, simple and standalone classes can share a file with a public class.
 - AVOID creating utility classes or libraries, these tend to turn into code dumping grounds. Instead, use precise naming that clearly communicates the purpose of the code being created.
 - DON’T use the `part of` directive to avoid tight coupling of classes.
 
 ### Methods
+
 - PREFER using named parameters vs positional parameters for public methods on public classes that have greater than 2 parameters. This aids code refactor and allowed adding extra parameters without breaking the public API contract. 
 - AVOID using functions which can do more than one thing like `void updateAndCommit();` but prefer explicit naming 
 
 ### Constructors
+
 - PREFER using named parameters with Constructors that have more than two parameters.
 - DO use the meta package to indicate which parameters are required.
 - DO assert on required parameters.
@@ -125,6 +129,7 @@ void addOnCloseListener(void Function() listener) { ... }
 
 ## Preferred Types
 Concrete data types should be used instead of lower level primitives. The following types should be used when possible:
+
 - [Duration](https://api.dartlang.org/stable/2.4.0/dart-core/Duration-class.html) when working with a span of time.
 - [DateTime](https://api.dartlang.org/stable/2.4.0/dart-core/DateTime-class.html) when working with dates.
 

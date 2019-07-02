@@ -404,6 +404,7 @@ A *reference* is a string of the form `#<reference-name>`, where
 `a-z`, `0-9`, `_`, `.`, `-`.
 
 A reference may refer to:
+
 - A [static child instance](#child-component-instances) whose name is
   `<reference-name>`.
 - A [collection](#component-collections) whose name is `<reference-name>`.

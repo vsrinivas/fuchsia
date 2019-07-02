@@ -65,6 +65,7 @@ the system.
     Fuchsia checkout:
 
     ```./scripts/fx shell memgraph -vt | ./scripts/memory/treemap.py > mem.html```
+
  2. Open `mem.html` in a browser.
 
 The `memgraph` tool generates a JSON description of system task and memory
@@ -208,6 +209,7 @@ k zx vmos hidden
 
 Similar to `vmos <pid>`, but dumps all VMOs in the system that are not mapped
 into any process:
+
 -   VMOs that userspace has handles to but does not map
 -   VMOs that are mapped only into kernel space
 -   Kernel-only, unmapped VMOs that have no handles

@@ -3,6 +3,7 @@
 
 `unsafe` is a dangerous but sometimes necessary escape hatch in Rust.
 When writing or reviewing `unsafe` code, it's essential that you:
+
 - clearly identify all of the assumptions and invariants required by every
   `unsafe` block;
 - ensure that those assumptions are met;
@@ -17,6 +18,7 @@ provides a safe abstraction to the outside world. FFI calls should usually
 be exposed through a safe function whose only purpose is to provide a safe
 wrapper around the function in question. These functions should contain
 a comment with the following information (if applicable):
+
 - Preconditions (e.g. what are the valid states of the arguments?)
 - Failure handling (e.g. what values should be free'd? forgotten? invalidated?)
 - Success handling (e.g. what values are created or consumed?)

@@ -44,6 +44,7 @@ By default, a piece of code in the Fuchsia tree cannot be added to any SDK:
 participation is a strictly opt-in decision. Additionally, this decision is
 encoded locally within the code's build file. This was done for multiple
 reasons:
+
 1. developers modifying the code need to be aware of the potential impact on
    external customers as early as possible;
 1. publishing that code to an SDK may require extra input from the developers to
@@ -59,6 +60,7 @@ In order to be made available in SDKs, a piece of code must follow a set of
 ## Infrastructure
 
 The SDK creation pipeline consists of two pieces:
+
 1. the backend, which uses the build system to generate a tarball containing
    compiled artifacts, source files, and metadata;
 1. the frontend, which applies transformations to that tarball and turn into
@@ -99,10 +101,12 @@ allows for this kind of processing.
 
 The Core SDK is represented by the `//sdk:core` target.
 That SDK is complemented by multiple SDK add-ons:
+
 - `//sdk:e2e_testing`: an end-to-end testing framework for Fuchsia;
 - `//sdk:modular_testing`: an hermetic testing framework for the app framework;
 - `//sdk:images`: a set of device images suitable for SDK development;
 - `//topaz/public/sdk:fuchsia_dart`: a Dart SDK to build mods and agents.
+
 Internally these targets are all instances of the `sdk` GN template.
 
 

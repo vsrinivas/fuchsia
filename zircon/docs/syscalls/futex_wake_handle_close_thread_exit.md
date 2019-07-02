@@ -23,6 +23,7 @@ Write to futex, wake futex, close handle, exit.
 ## DESCRIPTION
 
 `zx_futex_wake_handle_close_thread_exit()` does a sequence of four operations:
+
 1. `atomic_store_explicit(value_ptr, new_value, memory_order_release);`
 2. `zx_futex_wake(value_ptr, wake_count);`
 3. `zx_handle_close(close_handle);`

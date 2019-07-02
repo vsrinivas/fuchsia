@@ -149,6 +149,7 @@ handles. Fuchsia filesystems use this ability to refer to one Vnode while
 acting on the other.
 
 These multi-path operations do the following:
+
   * Open the parent source vnode (for “/foo/bar”, this means opening “/foo”)
   * Open the target parent vnode (for “baz”, this means opening the current
     working directory) and acquire a vnode token using the operation
@@ -292,6 +293,7 @@ slices for this partition.
 
 The slice allocation table is made up of tightly packed slice entries
 (`slice_entry_t`). Each entry contains
+
  * allocation status
  * if it is allocated,
    * what partition it belongs to and

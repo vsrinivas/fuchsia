@@ -26,6 +26,7 @@ zx_status_t zx_vmar_allocate(zx_handle_t parent_vmar,
 Creates a new VMAR within the one specified by *parent_vmar*.
 
 *options* is a bit vector that contains one more of the following:
+
 - **ZX_VM_COMPACT**  A hint to the kernel that allocations and mappings
   within the newly created subregion should be kept close together.   See the
   NOTES section below for discussion.
@@ -46,11 +47,14 @@ Creates a new VMAR within the one specified by *parent_vmar*.
 *offset* must be 0 if *options* does not have **ZX_VM_SPECIFIC** set.
 
 In addition, the following power-of-two alignment flags can added:
+
 - **ZX_VM_ALIGN_1KB** aligns *child_addr* to a power-of-2 at least 1K bytes.
 - **ZX_VM_ALIGN_2KB** aligns *child_addr* to a power-of-2 at least 2K bytes.
 - **ZX_VM_ALIGN_4KB** aligns *child_addr* to a power-of-2 at least 4K bytes.
 - **ZX_VM_ALIGN_8KB** aligns *child_addr* to a power-of-2 at least 8K bytes.
+
 and continues up to
+
 - **ZX_VM_ALIGN_4GB** aligns *child_addr* to a power-of-2 at least 4G bytes.
 
 TODO(ZX-3978): Currently, alignment flags greater than 4KB cannot be used when

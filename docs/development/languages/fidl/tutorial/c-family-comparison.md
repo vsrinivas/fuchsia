@@ -85,6 +85,7 @@ Category                           | Simple C                          | Low-lev
 **generated code footprint**       | small                             | moderate                                      | large
 
 Notes:
+
 1. Generated types own all handles stored inline. Out-of-line handles e.g. those
    behind a pointer indirection are not closed when the containing object of the
    pointer goes away. In thoses cases, the bindings provide a

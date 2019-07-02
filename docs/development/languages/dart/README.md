@@ -39,6 +39,7 @@ void main(List<String> args) {
 ## Targets
 
 There are five gn targets for building Dart:
+
 - [`dart_library`][target-library] defines a library that can be used by other
 Dart targets;
 - [`dart_app`][target-app] defines a Dart executable for Fuchsia;

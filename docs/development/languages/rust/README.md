@@ -75,6 +75,7 @@ have a couple [custom settings][rustfmt-toml].
 If you're new to Rust, and would like someone to review your changes to
 validate that your usage of Rust is idiomatic, contact one of the following
 (or add them as a reviewer to your change.)
+
 - adamperry@google.com
 - belgum@google.com
 - bwb@google.com

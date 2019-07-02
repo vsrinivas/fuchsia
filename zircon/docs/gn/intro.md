@@ -42,6 +42,7 @@ Ninja is very stupid compared to something like GNU `make`.  It just compares
 times and runs commands and its input files are written by machines, not
 humans.  However, it builds in some useful things that we bend over backward
 to accomplish in `make`:
+
  - Rebuild each file when the command line changes.  Command lines will only
    really change when GN runs again.  But after that, Ninja is smart about
    incremental builds re-doing commands for files that have changed and not
@@ -130,6 +131,7 @@ directory (where commands run).
 
 Predefined variables are used in source path contexts to locate parts of the
 build directory:
+
  - `$root_build_dir` is the build directory itself
  - `$root_out_dir` is the subdirectory for the current toolchain (see below)
    - This is where all "top-level" targets go.  In many GN builds, all
@@ -269,6 +271,7 @@ to understand the mechanism.
 This is what encapsulates the compilers and default compilation switches.  It's
 also the only real way to get the same things compiled twice in different
 ways. In Zircon there will be several toolchains:
+
  - Host
  - Vanilla userland (compiled with default `-fPIE`)
  - Shared libraries in userland (compiled with `-fPIC`)

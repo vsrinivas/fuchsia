@@ -116,6 +116,7 @@ The generated server code is in [//garnet/examples/fidl/echo_server_c/echo_serve
 ### main()
 
 **main()**:
+
 1. creates a startup handle (`[24` .. `28]`),
 2. initializes the asynchronous loop (`[30` .. `37]`),
 3. adds the **connect()** function to handle the echo service (`[49]`),

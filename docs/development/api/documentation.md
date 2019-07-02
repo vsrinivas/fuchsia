@@ -116,6 +116,7 @@ guidance:
 ## API behavior
 
 Document user-facing invariants, as well as pre- and post-conditions.
+
  * As a rule, ensure that there are assertions / tests to enforce these
    conditions.
  * Preconditions and postconditions that require explicit user action should
@@ -186,6 +187,7 @@ Document the concurrency properties of APIs that have internal state.
 ### Ownership
 
 Document ownership and liveness properties.
+
  * For parameters or return values that are stored beyond the life of a
    function, or resources allocated by the function and passed back to the
    caller, or resources with particular ownership constraints that must be
@@ -202,6 +204,7 @@ Document ownership and liveness properties.
 
 All parameters and return values must have their nullness properties defined (if
 they are of a nullable type).
+
  * Even in Dart!
  * Where appropriate, refer to parameters and return values as **nullable** (may
    contain null) or **non-null** (may not contain null).

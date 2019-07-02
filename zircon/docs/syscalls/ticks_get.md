@@ -40,6 +40,7 @@ TODO(ZX-2399)
 ## NOTES
 
 The returned value may be highly variable. Factors that can affect it include:
+
 - Changes in processor frequency
 - Migration between processors
 - Reset of the processor cycle counter
