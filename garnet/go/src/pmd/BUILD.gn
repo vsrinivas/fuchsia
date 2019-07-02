@@ -34,15 +34,26 @@ foreach(testpkg, test_packages) {
       ":pmd",
     ]
     non_go_deps = [
-      "//zircon/public/lib/fs-management",
       "//zircon/public/lib/ramdevice-client",
+      "//zircon/public/lib/fdio",
     ]
   }
 }
 
+zircon_extras_manifest("blobfs.manifest") {
+  visibility = [ ":*" ]
+  manifest = "image"
+  patterns = [ "bin/blobfs" ]
+}
+
+manifest_outputs = get_target_outputs(":blobfs.manifest")
+manifest_file = manifest_outputs[0]
+
 test_package("pmd_tests") {
-  deps = []
+  deps = [":blobfs.manifest"]
   tests = []
+
+  extra = [ manifest_file ]
 
   foreach(testpkg, test_packages) {
     deps += [ ":pmd_${testpkg}_test" ]

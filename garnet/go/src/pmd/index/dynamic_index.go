@@ -77,6 +77,24 @@ func (idx *DynamicIndex) Get(p pkg.Package) (string, bool) {
 
 // Add adds a package to the index
 func (idx *DynamicIndex) Add(p pkg.Package, root string) error {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+	return idx.addLocked(p, root)
+}
+
+func (idx *DynamicIndex) addLocked(p pkg.Package, root string) error {
+	// After being added, a package is not in an installing state.
+	delete(idx.installing, root)
+
+	// Defensive: while we must assume caller-correctness, so these should never
+	// match, if we ever are called, the only safe thing to do is to cleanup state
+	// as best we can, lest external API is littered with leaks from our internal
+	// tracking, which has non-local side effects.
+	delete(idx.waiting, root)
+	for _, needs := range idx.needs {
+		delete(needs, root)
+	}
+
 	if _, found := idx.static.GetRoot(root); found {
 		return os.ErrExist
 	}
@@ -212,7 +230,7 @@ func (idx *DynamicIndex) Fulfill(need string) {
 		if len(waiting) == 0 {
 			delete(idx.waiting, pkgRoot)
 			p := idx.installing[pkgRoot]
-			if err := idx.Add(p, pkgRoot); err != nil {
+			if err := idx.addLocked(p, pkgRoot); err != nil {
 				if os.IsExist(err) {
 					log.Printf("package already exists at fulfillment: %s", err)
 				} else {
@@ -221,7 +239,6 @@ func (idx *DynamicIndex) Fulfill(need string) {
 			} else {
 				log.Printf("package activated %s/%s (%s)", p.Name, p.Version, pkgRoot)
 			}
-			delete(idx.installing, pkgRoot)
 		}
 	}
 }

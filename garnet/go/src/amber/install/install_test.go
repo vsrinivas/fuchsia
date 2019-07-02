@@ -116,8 +116,14 @@ func TestSourceRecoverFromInterruptedInstall(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Install the package's blobs before pkgfs knows about the package
+	for _, blob := range blobs {
+		// Install only those blobs that are missing
+		installBlob(t, blob.SourcePath, blob.Merkle.String(), int64(blob.Size), true)
+	}
+
 	// Write the meta FAR as a blob (so the package installation flow is not triggered)
-	installBlob(t, metaFar.SourcePath, metaFar.Merkle.String(), int64(metaFar.Size))
+	installBlob(t, metaFar.SourcePath, metaFar.Merkle.String(), int64(metaFar.Size), false)
 
 	// Now attempt to install the package
 	if err := d.GetPkg(metaFar.Merkle.String(), int64(metaFar.Size)); err != nil {
@@ -220,8 +226,14 @@ func TestRepoRecoverFromInterruptedInstall(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Install the package's blobs before pkgfs knows about the package
+	for _, blob := range blobs {
+		// Install only those blobs that are missing
+		installBlob(t, blob.SourcePath, blob.Merkle.String(), int64(blob.Size), true)
+	}
+
 	// Write the meta FAR as a blob (so the package installation flow is not triggered)
-	installBlob(t, metaFar.SourcePath, metaFar.Merkle.String(), int64(metaFar.Size))
+	installBlob(t, metaFar.SourcePath, metaFar.Merkle.String(), int64(metaFar.Size), false)
 
 	// Now attempt to install the package
 	noMerklePin := ""
@@ -323,7 +335,7 @@ func readMerkle(t *testing.T, path string) string {
 }
 
 // installBlob writes a blob to pkgfs through the blob install path
-func installBlob(t *testing.T, path string, merkle string, length int64) {
+func installBlob(t *testing.T, path string, merkle string, length int64, allowExists bool) {
 	t.Helper()
 	src, err := os.Open(path)
 	if err != nil {
@@ -333,6 +345,9 @@ func installBlob(t *testing.T, path string, merkle string, length int64) {
 
 	dest, err := os.OpenFile(filepath.Join("/pkgfs/install/blob", merkle), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
+		if allowExists && os.IsExist(err) {
+			return
+		}
 		t.Fatal(err)
 	}
 	defer dest.Close()

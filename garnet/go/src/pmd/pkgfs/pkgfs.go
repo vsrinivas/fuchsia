@@ -17,10 +17,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync"
-	"syscall"
 	"syscall/zx"
-	"syscall/zx/fidl"
-	zxio "syscall/zx/io"
+	"syscall/zx/fdio"
 	"time"
 
 	"thinfs/fs"
@@ -42,7 +40,7 @@ type Filesystem struct {
 }
 
 // New initializes a new pkgfs filesystem server
-func New(indexDir string, blobDir string) (*Filesystem, error) {
+func New(indexDir string, blobDir *fdio.Directory) (*Filesystem, error) {
 	bm, err := blobfs.New(blobDir)
 	if err != nil {
 		return nil, fmt.Errorf("pkgfs: open blobfs: %s", err)
@@ -119,29 +117,6 @@ func loadStaticIndex(static *index.StaticIndex, blobfs *blobfs.Manager, root str
 	return static.LoadFrom(indexFile)
 }
 
-func readBlobfs(blobfs *blobfs.Manager) (map[string]struct{}, error) {
-	dnames, err := readDir(blobfs.Root)
-	if err != nil {
-		log.Printf("pkgfs: error reading(%q): %s", blobfs.Root, err)
-		// Note: translates to zx.ErrBadState
-		return nil, fs.ErrFailedPrecondition
-	}
-	names := make(map[string]struct{})
-	for _, name := range dnames {
-		names[name] = struct{}{}
-	}
-	return names, nil
-}
-
-func readDir(path string) ([]string, error) {
-	d, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer d.Close()
-	return d.Readdirnames(-1)
-}
-
 // SetSystemRoot sets/updates the merkleroot (and static index) that backs the /system partition and static package index.
 func (f *Filesystem) SetSystemRoot(merkleroot string) error {
 	pd, err := newPackageDirFromBlob(merkleroot, f)
@@ -187,7 +162,6 @@ func (f *Filesystem) Size() int64 {
 }
 
 func (f *Filesystem) Close() error {
-	f.Unmount()
 	return nil
 }
 
@@ -224,58 +198,6 @@ func (f *Filesystem) Serve(c zx.Channel) error {
 	return nil
 }
 
-// Mount attaches the filesystem host to the given path. If an error occurs
-// during setup, this method returns that error. If an error occurs after
-// serving has started, the error causes a log.Fatal. If the given path does not
-// exist, it is created before mounting.
-func (f *Filesystem) Mount(path string) error {
-	err := os.MkdirAll(path, os.ModePerm)
-	if err != nil {
-		return err
-	}
-
-	f.mountInfo.parentFd, err = syscall.Open(path, syscall.O_ADMIN|syscall.O_DIRECTORY, 0777)
-	if err != nil {
-		return err
-	}
-
-	var rpcChan, mountChan zx.Channel
-	rpcChan, mountChan, err = zx.NewChannel(0)
-	if err != nil {
-		syscall.Close(f.mountInfo.parentFd)
-		f.mountInfo.parentFd = -1
-		return fmt.Errorf("channel creation: %s", err)
-	}
-
-	remote := zxio.DirectoryInterface(fidl.InterfaceRequest{Channel: mountChan})
-	dirChan := zx.Channel(syscall.FDIOForFD(f.mountInfo.parentFd).Handles()[0])
-	dir := zxio.DirectoryAdminInterface(fidl.InterfaceRequest{Channel: dirChan})
-	if status, err := dir.Mount(remote); err != nil || zx.Status(status) != zx.ErrOk {
-		rpcChan.Close()
-		syscall.Close(f.mountInfo.parentFd)
-		f.mountInfo.parentFd = -1
-		return fmt.Errorf("mount failure: %s", err)
-	}
-
-	return f.Serve(rpcChan)
-}
-
-// Unmount detaches the filesystem from a previously mounted path. If mount was not previously called or successful, this will panic.
-func (f *Filesystem) Unmount() {
-	f.mountInfo.unmountOnce.Do(func() {
-		// parentFd is -1 in the case where f was just Serve()'d instead of Mount()'d
-		if f.mountInfo.parentFd != -1 {
-			dirChan := zx.Channel(syscall.FDIOForFD(f.mountInfo.parentFd).Handles()[0])
-			dir := zxio.DirectoryAdminInterface(fidl.InterfaceRequest{Channel: dirChan})
-			dir.UnmountNode()
-			syscall.Close(f.mountInfo.parentFd)
-			f.mountInfo.parentFd = -1
-		}
-		f.mountInfo.serveChannel.Close()
-		f.mountInfo.serveChannel = 0
-	})
-}
-
 var _ fs.FileSystem = (*Filesystem)(nil)
 
 // clean canonicalizes a path and returns a path that is relative to an assumed root.
@@ -292,27 +214,16 @@ type mountInfo struct {
 }
 
 func goErrToFSErr(err error) error {
-	switch e := err.(type) {
+	switch err {
 	case nil:
 		return nil
-	case *os.PathError:
-		return goErrToFSErr(e.Err)
-	case *zx.Error:
-		switch e.Status {
-		case zx.ErrNotFound:
-			return fs.ErrNotFound
-		case zx.ErrNoSpace:
-			return fs.ErrNoSpace
-		case zx.ErrNotSupported:
-			return fs.ErrNotSupported
-		case zx.ErrInvalidArgs:
-			return fs.ErrInvalidArgs
-		default:
-
-			return err
-		}
-	}
-	switch err {
+	// Explicitly catch and pass through any error coming from the fs package.
+	case fs.ErrInvalidArgs, fs.ErrNotFound, fs.ErrAlreadyExists,
+		fs.ErrPermission, fs.ErrReadOnly, fs.ErrNoSpace, fs.ErrNoSpace,
+		fs.ErrFailedPrecondition, fs.ErrNotEmpty, fs.ErrNotOpen, fs.ErrNotAFile,
+		fs.ErrNotADir, fs.ErrIsActive, fs.ErrUnmounted, fs.ErrEOF,
+		fs.ErrNotSupported:
+		return err
 	case os.ErrInvalid:
 		return fs.ErrInvalidArgs
 	case os.ErrPermission:
@@ -321,14 +232,21 @@ func goErrToFSErr(err error) error {
 		return fs.ErrAlreadyExists
 	case os.ErrNotExist:
 		return fs.ErrNotFound
-	case os.ErrClosed:
+	case os.ErrClosed, io.ErrClosedPipe:
 		return fs.ErrNotOpen
-	case io.EOF:
+	case io.EOF, io.ErrUnexpectedEOF:
 		return fs.ErrEOF
-	default:
-
-		return err
 	}
+
+	switch e := err.(type) {
+	case *os.PathError:
+		return goErrToFSErr(e.Err)
+	case *zx.Error:
+		return e
+	}
+
+	log.Printf("unmapped fs error type: %#v", err)
+	return &zx.Error{Status: zx.ErrInternal, Text: err.Error()}
 }
 
 // GC examines the static and dynamic indexes, collects all the blobs that
@@ -348,9 +266,13 @@ func (fs *Filesystem) GC() error {
 	// read the list of installed blobs first, as there may be installations in
 	// progress, we want to not create orphans later, this list must be equal to or
 	// a subset of the set we intersect.
-	installedBlobs, err := readBlobfs(fs.blobfs)
+	installedBlobNames, err := fs.blobfs.Blobs()
 	if err != nil {
 		return fmt.Errorf("GC: unable to list blobfs: %s", err)
+	}
+	installedBlobs := make(map[string]struct{}, len(installedBlobNames))
+	for _, name := range installedBlobNames {
+		installedBlobs[name] = struct{}{}
 	}
 	log.Printf("GC: %d blobs in blobfs", len(installedBlobs))
 
@@ -408,9 +330,13 @@ func (fs *Filesystem) GC() error {
 // present and those that are missing or any error encountered trying to do the
 // validation.
 func (fs *Filesystem) ValidateStaticIndex() (map[string]struct{}, map[string]struct{}, error) {
-	installedBlobs, err := readBlobfs(fs.blobfs)
+	installedBlobNames, err := fs.blobfs.Blobs()
 	if err != nil {
 		return nil, nil, fmt.Errorf("pmd_validate: unable to list blobfs: %s", err)
+	}
+	installedBlobs := make(map[string]struct{}, len(installedBlobNames))
+	for _, name := range installedBlobNames {
+		installedBlobs[name] = struct{}{}
 	}
 
 	present := make(map[string]struct{})

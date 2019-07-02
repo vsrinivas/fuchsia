@@ -577,6 +577,11 @@ func (f *fileWrapper) GetBuffer(flags uint32) (int32, *mem.Buffer, error) {
 // TODO(smklein): Calibrate thinfs flags with standard C library flags to make conversion smoother
 
 func errorToZx(err error) zx.Status {
+	switch e := err.(type) {
+	case *zx.Error:
+		return e.Status
+	}
+
 	switch err {
 	case nil, fs.ErrEOF:
 		// ErrEOF can be translated directly to ErrOk. For operations which return with an error if

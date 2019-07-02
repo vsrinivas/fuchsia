@@ -382,10 +382,6 @@ func (d *Daemon) GetPkg(merkle string, length int64) error {
 	// "first" source.
 
 	err := d.fetchInto(merkle, length, d.pkgfs.PkgInstallDir())
-	if os.IsExist(err) {
-		return nil
-	}
-
 	if err != nil {
 		// If the package already existed but was missing the meta FAR (or the
 		// meta FAR wasn't indexed), it may now be valid and readable.

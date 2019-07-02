@@ -96,7 +96,7 @@ func (d *rootDirectory) Unlink(path string) error {
 	// unlinked, we trigger garbage collection.
 	if path == "garbage" {
 		if err := d.fs.GC(); err != nil {
-			log.Printf("pkgfs: GC error: %s", err)
+			log.Printf("unlink garbage: %s", err)
 		}
 		return nil
 	}

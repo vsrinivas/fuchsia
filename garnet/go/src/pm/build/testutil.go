@@ -5,16 +5,19 @@
 package build
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 )
 
 // TestFiles is the list of files created by the default factories in this package.
-var TestFiles = []string{"a", "b", "dir/c", "meta/test/t"}
+var TestFiles = []string{"a", "b", "dir/c", "rand1", "rand2", "meta/test/t"}
 
 // TestPackage initializes a set of files into a package directory next to the
 // config manifest
@@ -56,7 +59,12 @@ func TestPackage(cfg *Config) {
 		if err != nil {
 			panic(err)
 		}
-		if _, err := fmt.Fprintf(f, "%s\n", name); err != nil {
+		if strings.HasPrefix(name, "rand") {
+			_, err = io.Copy(f, io.LimitReader(rand.Reader, 100))
+		} else {
+			_, err = fmt.Fprintf(f, "%s\n", name)
+		}
+		if err != nil {
 			panic(err)
 		}
 		err = f.Close()

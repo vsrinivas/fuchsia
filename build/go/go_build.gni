@@ -140,6 +140,13 @@ template("go_build") {
         "--go-root",
         rebase_path("$host_tools_dir/goroot"),
       ]
+      args += [
+        # For garnet/go/src/pmd/ramdisk
+        "--include-dir",
+        rebase_path("//zircon/system/ulib/ramdevice-client/include"),
+        "--lib-dir",
+        rebase_path("gen/zircon/public/lib/ramdevice-client", "", root_build_dir),
+      ]
 
       foreach(target, zircon_legacy_targets) {
         if (target.target_name == "zircon") {

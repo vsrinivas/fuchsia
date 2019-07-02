@@ -7,7 +7,9 @@ package pkgsvr
 import (
 	"flag"
 	"log"
+	"syscall"
 	"syscall/zx"
+	"syscall/zx/fdio"
 
 	"app/context"
 
@@ -27,8 +29,13 @@ func Main() {
 
 	sysPkg := flag.Arg(0)
 
+	blobDir, err := syscall.OpenPath(*blob, syscall.O_RDWR|syscall.O_DIRECTORY, 0777)
+	if err != nil {
+		log.Fatalf("pkgfs: failed to open %q: %s", *blob, err)
+	}
+
 	// TODO(raggi): Reading from the index should be delayed until after verified boot completion
-	fs, err := pkgfs.New(*index, *blob)
+	fs, err := pkgfs.New(*index, blobDir.(*fdio.Directory))
 	if err != nil {
 		log.Fatalf("pkgfs: initialization failed: %s", err)
 	}
