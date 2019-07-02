@@ -26,7 +26,7 @@ library("v2") {
 source_set("test") {
   # TODO: testonly = true
   sources = [
-    "arm_gicv2_test.cpp",
+    "arm_gicv2_test.cc",
   ]
   include_dirs = [ "include" ]
   deps = [
