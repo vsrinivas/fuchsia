@@ -5,12 +5,12 @@
 #ifndef LIB_FIDL_CPP_BINDING_SET_H_
 #define LIB_FIDL_CPP_BINDING_SET_H_
 
+#include <lib/fit/function.h>
+
 #include <algorithm>
 #include <memory>
 #include <utility>
 #include <vector>
-
-#include <lib/fit/function.h>
 
 #include "lib/fidl/cpp/binding.h"
 
@@ -52,14 +52,13 @@ class BindingSet final {
   // |~unique_ptr|, which deletes |impl|.
   void AddBinding(ImplPtr impl, InterfaceRequest<Interface> request,
                   async_dispatcher_t* dispatcher = nullptr) {
-    bindings_.push_back(std::make_unique<Binding>(
-        std::forward<ImplPtr>(impl), std::move(request), dispatcher));
+    bindings_.push_back(
+        std::make_unique<Binding>(std::forward<ImplPtr>(impl), std::move(request), dispatcher));
     auto* binding = bindings_.back().get();
     // Set the connection error handler for the newly added Binding to be a
     // function that will erase it from the vector.
-    binding->set_error_handler([binding, this](zx_status_t status) {
-      this->RemoveOnError(binding);
-    });
+    binding->set_error_handler(
+        [binding, this](zx_status_t status) { this->RemoveOnError(binding); });
   }
 
   // Adds a binding to the set for the given implementation.
@@ -78,8 +77,7 @@ class BindingSet final {
   // |impl|. If |ImplPtr| is a |unique_ptr|, then running |~ImplPtr| when the
   // binding generates an error will delete |impl| because |~ImplPtr| is
   // |~unique_ptr|, which deletes |impl|.
-  InterfaceHandle<Interface> AddBinding(
-      ImplPtr impl, async_dispatcher_t* dispatcher = nullptr) {
+  InterfaceHandle<Interface> AddBinding(ImplPtr impl, async_dispatcher_t* dispatcher = nullptr) {
     InterfaceHandle<Interface> handle;
     InterfaceRequest<Interface> request = handle.NewRequest();
     if (!request)
@@ -90,8 +88,8 @@ class BindingSet final {
 
   // Returns an InterfaceRequestHandler that binds the incoming
   // InterfaceRequests this object.
-  InterfaceRequestHandler<Interface> GetHandler(
-      ImplPtr impl, async_dispatcher_t* dispatcher = nullptr) {
+  InterfaceRequestHandler<Interface> GetHandler(ImplPtr impl,
+                                                async_dispatcher_t* dispatcher = nullptr) {
     return [this, impl, dispatcher](InterfaceRequest<Interface> request) {
       AddBinding(impl, std::move(request), dispatcher);
     };
@@ -129,10 +127,9 @@ class BindingSet final {
  private:
   // Called when a binding has an error to remove the binding from the set.
   void RemoveOnError(Binding* binding) {
-    auto it = std::find_if(bindings_.begin(), bindings_.end(),
-                           [binding](const std::unique_ptr<Binding>& b) {
-                             return b.get() == binding;
-                           });
+    auto it =
+        std::find_if(bindings_.begin(), bindings_.end(),
+                     [binding](const std::unique_ptr<Binding>& b) { return b.get() == binding; });
     ZX_DEBUG_ASSERT(it != bindings_.end());
 
     {

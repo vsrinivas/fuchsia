@@ -43,14 +43,12 @@ class InterfaceHandle final {
   InterfaceHandle() = default;
 
   // Creates an |InterfaceHandle| that wraps the given |channel|.
-  explicit InterfaceHandle(zx::channel channel)
-      : channel_(std::move(channel)) {}
+  explicit InterfaceHandle(zx::channel channel) : channel_(std::move(channel)) {}
 
   InterfaceHandle(const InterfaceHandle& other) = delete;
   InterfaceHandle& operator=(const InterfaceHandle& other) = delete;
 
-  InterfaceHandle(InterfaceHandle&& other)
-      : channel_(std::move(other.channel_)) {}
+  InterfaceHandle(InterfaceHandle&& other) : channel_(std::move(other.channel_)) {}
 
   InterfaceHandle& operator=(InterfaceHandle&& other) {
     channel_ = std::move(other.channel_);
@@ -81,24 +79,20 @@ class InterfaceHandle final {
   template <typename InterfacePtrType = InterfacePtr<Interface>,
             typename std::enable_if_t<
                 std::is_same<InterfacePtr<Interface>,
-                             typename std::remove_reference<
-                                 InterfacePtrType>::type>::value ||
+                             typename std::remove_reference<InterfacePtrType>::type>::value ||
                     std::is_same<SynchronousInterfacePtr<Interface>,
-                                 typename std::remove_reference<
-                                     InterfacePtrType>::type>::value,
+                                 typename std::remove_reference<InterfacePtrType>::type>::value,
                 int>
                 zero_not_used = 0>
   InterfaceHandle(InterfacePtrType&& ptr) {
-    static_assert(
-        std::is_same<InterfacePtr<Interface>&&, decltype(ptr)>::value ||
-            std::is_same<SynchronousInterfacePtr<Interface>&&,
-                         decltype(ptr)>::value,
-        "Implicit conversion from InterfacePtr<> (or "
-        "SynchronousInterfacePtr<>) to InterfaceHandle<> requires an rvalue "
-        "reference. Maybe there's a missing std::move(), or consider "
-        "using/providing an InterfaceHandle<> directly instead (particularly "
-        "if the usage prior to this conversion doesn't need to send or receive "
-        "messages).");
+    static_assert(std::is_same<InterfacePtr<Interface>&&, decltype(ptr)>::value ||
+                      std::is_same<SynchronousInterfacePtr<Interface>&&, decltype(ptr)>::value,
+                  "Implicit conversion from InterfacePtr<> (or "
+                  "SynchronousInterfacePtr<>) to InterfaceHandle<> requires an rvalue "
+                  "reference. Maybe there's a missing std::move(), or consider "
+                  "using/providing an InterfaceHandle<> directly instead (particularly "
+                  "if the usage prior to this conversion doesn't need to send or receive "
+                  "messages).");
     *this = ptr.Unbind();
   }
 
@@ -156,12 +150,9 @@ class InterfaceHandle final {
   const zx::channel& channel() const { return channel_; }
   void set_channel(zx::channel channel) { channel_ = std::move(channel); }
 
-  void Encode(Encoder* encoder, size_t offset) {
-    encoder->EncodeHandle(&channel_, offset);
-  }
+  void Encode(Encoder* encoder, size_t offset) { encoder->EncodeHandle(&channel_, offset); }
 
-  static void Decode(Decoder* decoder, InterfaceHandle<Interface>* value,
-                     size_t offset) {
+  static void Decode(Decoder* decoder, InterfaceHandle<Interface>* value, size_t offset) {
     decoder->DecodeHandle(&value->channel_, offset);
   }
 
@@ -177,14 +168,12 @@ struct Equality<InterfaceHandle<T>> {
   }
 };
 
-
 template <typename T>
 struct CodingTraits<InterfaceHandle<T>>
     : public EncodableCodingTraits<InterfaceHandle<T>, sizeof(zx_handle_t)> {};
 
 template <typename T>
-inline zx_status_t Clone(const InterfaceHandle<T>& value,
-                         InterfaceHandle<T>* result) {
+inline zx_status_t Clone(const InterfaceHandle<T>& value, InterfaceHandle<T>* result) {
   if (!value) {
     *result = InterfaceHandle<T>();
     return ZX_OK;

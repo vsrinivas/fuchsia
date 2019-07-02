@@ -12,9 +12,7 @@ Decoder::Decoder(Message message) : message_(std::move(message)) {}
 
 Decoder::~Decoder() = default;
 
-size_t Decoder::GetOffset(void* ptr) {
-  return GetOffset(reinterpret_cast<uintptr_t>(ptr));
-}
+size_t Decoder::GetOffset(void* ptr) { return GetOffset(reinterpret_cast<uintptr_t>(ptr)); }
 
 size_t Decoder::GetOffset(uintptr_t ptr) {
   // The |ptr| value comes from the message buffer, which we've already
@@ -31,8 +29,6 @@ void Decoder::DecodeHandle(zx::object_base* value, size_t offset) {
 }
 #endif
 
-uint8_t* Decoder::InternalGetPtr(size_t offset) {
-  return message_.bytes().data() + offset;
-}
+uint8_t* Decoder::InternalGetPtr(size_t offset) { return message_.bytes().data() + offset; }
 
 }  // namespace fidl

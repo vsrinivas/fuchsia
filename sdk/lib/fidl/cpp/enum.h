@@ -11,8 +11,7 @@ namespace fidl {
 
 // Converts an enum value to its underlying type.
 template <typename TEnum>
-constexpr auto ToUnderlying(TEnum value) ->
-    typename std::underlying_type<TEnum>::type {
+constexpr auto ToUnderlying(TEnum value) -> typename std::underlying_type<TEnum>::type {
   return static_cast<typename std::underlying_type<TEnum>::type>(value);
 }
 

@@ -8,8 +8,7 @@
 namespace fidl {
 
 template <class T>
-zx_status_t EncodeObject(T* object, std::vector<uint8_t>* output,
-                         const char** error_msg_out) {
+zx_status_t EncodeObject(T* object, std::vector<uint8_t>* output, const char** error_msg_out) {
   Encoder encoder(Encoder::NO_HEADER);
   object->Encode(&encoder, encoder.Alloc(CodingTraits<T>::encoded_size));
   if (encoder.CurrentHandleCount() != 0) {

@@ -12,8 +12,7 @@
 namespace fidl {
 namespace internal {
 
-SynchronousProxy::SynchronousProxy(zx::channel channel)
-    : channel_(std::move(channel)) {}
+SynchronousProxy::SynchronousProxy(zx::channel channel) : channel_(std::move(channel)) {}
 
 SynchronousProxy::~SynchronousProxy() = default;
 
@@ -24,8 +23,8 @@ zx_status_t SynchronousProxy::Send(const fidl_type_t* type, Message message) {
 }
 
 zx_status_t SynchronousProxy::Call(const fidl_type_t* request_type,
-                                   const fidl_type_t* response_type,
-                                   Message request, Message* response) {
+                                   const fidl_type_t* response_type, Message request,
+                                   Message* response) {
   const char* error_msg = nullptr;
   zx_status_t status = request.Validate(request_type, &error_msg);
   if (status != ZX_OK) {

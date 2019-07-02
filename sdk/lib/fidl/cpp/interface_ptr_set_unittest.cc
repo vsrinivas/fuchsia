@@ -22,9 +22,7 @@ class BoundFrobinatorImpl : public test::FrobinatorImpl {
   Binding<fidl::test::frobinator::Frobinator> binding_;
 };
 
-TEST(InterfacePtrSet, Trivial) {
-  InterfacePtrSet<fidl::test::frobinator::Frobinator> ptr_set;
-}
+TEST(InterfacePtrSet, Trivial) { InterfacePtrSet<fidl::test::frobinator::Frobinator> ptr_set; }
 
 TEST(InterfacePtrSet, Control) {
   constexpr size_t kCount = 10;

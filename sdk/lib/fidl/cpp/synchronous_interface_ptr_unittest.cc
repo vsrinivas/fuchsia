@@ -2,23 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fidl/cpp/interface_ptr.h"
-
 #include <lib/fidl/cpp/message_buffer.h>
 
 #include <thread>
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fidl/cpp/test/async_loop_for_test.h"
 #include "lib/fidl/cpp/test/frobinator_impl.h"
 
 namespace fidl {
 namespace {
 
-TEST(SynchronousInterfacePtr, Trivial) {
-  fidl::test::frobinator::FrobinatorSyncPtr ptr;
-}
+TEST(SynchronousInterfacePtr, Trivial) { fidl::test::frobinator::FrobinatorSyncPtr ptr; }
 
 TEST(SynchronousInterfacePtr, Control) {
   fidl::test::frobinator::FrobinatorSyncPtr ptr;

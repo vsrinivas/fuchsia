@@ -27,15 +27,13 @@ template <typename Interface>
 class EventSender final : public fidl::internal::MessageSender {
  public:
   // Constructs an event sender that sends events through |channel|.
-  explicit EventSender(zx::channel channel)
-      : channel_(std::move(channel)), stub_(nullptr) {
+  explicit EventSender(zx::channel channel) : channel_(std::move(channel)), stub_(nullptr) {
     stub_.set_sender(this);
   }
 
   // Constructs an event sender that sends events through the underlying channel
   // in |request|.
-  explicit EventSender(InterfaceRequest<Interface> request)
-      : EventSender(request.TakeChannel()) {}
+  explicit EventSender(InterfaceRequest<Interface> request) : EventSender(request.TakeChannel()) {}
 
   EventSender(const EventSender&) = delete;
   EventSender& operator=(const EventSender&) = delete;

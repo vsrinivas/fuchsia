@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <array>
+
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/builder.h"
 

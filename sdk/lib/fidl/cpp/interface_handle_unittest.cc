@@ -2,20 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "lib/fidl/cpp/interface_handle.h"
+
 #include <fidl/test/frobinator/cpp/fidl.h>
 #include <lib/zx/channel.h>
 
 #include "gtest/gtest.h"
-#include "lib/fidl/cpp/interface_handle.h"
-
 #include "lib/fidl/cpp/test/async_loop_for_test.h"
 
 namespace fidl {
 namespace {
 
-TEST(InterfaceHandle, Trivial) {
-  InterfaceHandle<fidl::test::frobinator::Frobinator> handle;
-}
+TEST(InterfaceHandle, Trivial) { InterfaceHandle<fidl::test::frobinator::Frobinator> handle; }
 
 TEST(InterfaceHandle, InterfacePtrConversion) {
   fidl::test::AsyncLoopForTest loop;

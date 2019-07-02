@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "lib/fidl/cpp/vector.h"
+
 #include "gtest/gtest.h"
 
 namespace fidl {

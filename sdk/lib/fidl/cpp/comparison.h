@@ -9,8 +9,8 @@
 #include <cstdint>
 #include <memory>
 #include <string>
-#include <vector>
 #include <type_traits>
+#include <vector>
 
 #ifdef __Fuchsia__
 #include <lib/zx/object.h>
@@ -25,9 +25,7 @@ struct Equality {};
 
 template <class T>
 struct Equality<T, typename std::enable_if_t<std::is_integral<T>::value>> {
-  static inline bool Equals(const T& lhs, const T& rhs) {
-    return lhs == rhs;
-  }
+  static inline bool Equals(const T& lhs, const T& rhs) { return lhs == rhs; }
 };
 
 template <class T>
@@ -41,9 +39,7 @@ struct Equality<T, typename std::enable_if_t<std::is_floating_point<T>::value>> 
 #ifdef __Fuchsia__
 template <class T>
 struct Equality<T, typename std::enable_if_t<std::is_base_of<zx::object_base, T>::value>> {
-  static inline bool Equals(const T& lhs, const T& rhs) {
-    return lhs.get() == rhs.get();
-  }
+  static inline bool Equals(const T& lhs, const T& rhs) { return lhs.get() == rhs.get(); }
 };
 #endif  // __Fuchsia__
 
@@ -61,15 +57,12 @@ struct Equality<std::array<T, N>> {
 
 template <>
 struct Equality<std::string> {
-  static inline bool Equals(const std::string& lhs, const std::string& rhs) {
-    return lhs == rhs;
-  }
+  static inline bool Equals(const std::string& lhs, const std::string& rhs) { return lhs == rhs; }
 };
 
 template <class T>
 struct Equality<std::vector<T>> {
-  static inline bool Equals(const std::vector<T>& lhs,
-                           const std::vector<T>& rhs) {
+  static inline bool Equals(const std::vector<T>& lhs, const std::vector<T>& rhs) {
     if (lhs.size() != rhs.size()) {
       return false;
     }
@@ -84,8 +77,7 @@ struct Equality<std::vector<T>> {
 
 template <class T>
 struct Equality<std::unique_ptr<T>> {
-  static inline bool Equals(const std::unique_ptr<T>& lhs,
-                     const std::unique_ptr<T>& rhs) {
+  static inline bool Equals(const std::unique_ptr<T>& lhs, const std::unique_ptr<T>& rhs) {
     if (lhs == nullptr || rhs == nullptr) {
       return rhs == lhs;
     }

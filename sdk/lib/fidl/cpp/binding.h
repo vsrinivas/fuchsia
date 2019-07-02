@@ -73,8 +73,7 @@ class Binding final {
   template <class T>
   struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {};
 
-  static_assert(std::is_pointer<ImplPtr>::value ||
-                    is_unique_ptr<ImplPtr>::value ||
+  static_assert(std::is_pointer<ImplPtr>::value || is_unique_ptr<ImplPtr>::value ||
                     is_shared_ptr<ImplPtr>::value,
                 "Binding only supports ImplPtr which are pointers");
 
@@ -83,8 +82,7 @@ class Binding final {
   //
   // The binding may be completed with a subsequent call to the |Bind| method.
   // Does not take ownership of |impl|, which must outlive the binding.
-  explicit Binding(ImplPtr impl)
-      : impl_(std::forward<ImplPtr>(impl)), stub_(&*this->impl()) {
+  explicit Binding(ImplPtr impl) : impl_(std::forward<ImplPtr>(impl)), stub_(&*this->impl()) {
     controller_.set_stub(&stub_);
     stub_.set_sender(&controller_);
   }
@@ -101,8 +99,7 @@ class Binding final {
   // messages from the channel and to monitor the channel for
   // |ZX_CHANNEL_PEER_CLOSED|.  If |dispatcher| is null, the current thread must
   // have a default async_dispatcher_t.
-  Binding(ImplPtr impl, zx::channel channel,
-          async_dispatcher_t* dispatcher = nullptr)
+  Binding(ImplPtr impl, zx::channel channel, async_dispatcher_t* dispatcher = nullptr)
       : Binding(std::forward<ImplPtr>(impl)) {
     Bind(std::move(channel), dispatcher);
   }
@@ -138,8 +135,7 @@ class Binding final {
   // messages from the channel and to monitor the channel for
   // |ZX_CHANNEL_PEER_CLOSED|.  If |dispatcher| is null, the current thread must
   // have a default async_dispatcher_t.
-  InterfaceHandle<Interface> NewBinding(
-      async_dispatcher_t* dispatcher = nullptr) {
+  InterfaceHandle<Interface> NewBinding(async_dispatcher_t* dispatcher = nullptr) {
     InterfaceHandle<Interface> client;
     Bind(client.NewRequest().TakeChannel(), dispatcher);
     return client;
@@ -157,8 +153,7 @@ class Binding final {
   //
   // Returns an error if the binding was not able to be created (e.g., because
   // the |channel| lacks |ZX_RIGHT_WAIT|).
-  zx_status_t Bind(zx::channel channel,
-                   async_dispatcher_t* dispatcher = nullptr) {
+  zx_status_t Bind(zx::channel channel, async_dispatcher_t* dispatcher = nullptr) {
     return controller_.reader().Bind(std::move(channel), dispatcher);
   }
 
@@ -175,8 +170,7 @@ class Binding final {
   //
   // Returns an error if the binding was not able to be created (e.g., because
   // the |channel| lacks |ZX_RIGHT_WAIT|).
-  zx_status_t Bind(InterfaceRequest<Interface> request,
-                   async_dispatcher_t* dispatcher = nullptr) {
+  zx_status_t Bind(InterfaceRequest<Interface> request, async_dispatcher_t* dispatcher = nullptr) {
     return Bind(request.TakeChannel(), dispatcher);
   }
 
@@ -197,9 +191,7 @@ class Binding final {
   // language spec for more information about Epitaphs.
   //
   // The return value can be any of the return values of zx_channel_write.
-  zx_status_t Close(zx_status_t epitaph_value) {
-    return controller_.reader().Close(epitaph_value);
-  }
+  zx_status_t Close(zx_status_t epitaph_value) { return controller_.reader().Close(epitaph_value); }
 
   // Blocks the calling thread until either a message arrives on the previously
   // bound channel or an error occurs.
@@ -212,8 +204,7 @@ class Binding final {
   // This method can be called only if this |Binding| is currently bound to a
   // channel.
   zx_status_t WaitForMessage() {
-    return controller_.reader().WaitAndDispatchOneMessageUntil(
-        zx::time::infinite());
+    return controller_.reader().WaitAndDispatchOneMessageUntil(zx::time::infinite());
   }
 
   // Sets an error handler that will be called if an error causes the underlying
@@ -243,9 +234,7 @@ class Binding final {
   const zx::channel& channel() const { return controller_.reader().channel(); }
 
   // The |async_dispatcher_t| to which this binding is bound, if any.
-  async_dispatcher_t* dispatcher() const {
-    return controller_.reader().dispatcher();
-  }
+  async_dispatcher_t* dispatcher() const { return controller_.reader().dispatcher(); }
 
  private:
   const ImplPtr impl_;

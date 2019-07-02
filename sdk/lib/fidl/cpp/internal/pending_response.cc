@@ -13,8 +13,7 @@ namespace internal {
 
 PendingResponse::PendingResponse() : txid_(0), weak_controller_(nullptr) {}
 
-PendingResponse::PendingResponse(zx_txid_t txid,
-                                 WeakStubController* weak_controller)
+PendingResponse::PendingResponse(zx_txid_t txid, WeakStubController* weak_controller)
     : txid_(txid), weak_controller_(weak_controller) {
   if (weak_controller_)
     weak_controller_->AddRef();
@@ -63,8 +62,7 @@ zx_status_t PendingResponse::Send(const fidl_type_t* type, Message message) {
   if (!controller)
     return ZX_ERR_BAD_STATE;
   message.set_txid(txid_);
-  return fidl::internal::SendMessage(controller->reader().channel(), type,
-                                     std::move(message));
+  return fidl::internal::SendMessage(controller->reader().channel(), type, std::move(message));
 }
 
 }  // namespace internal

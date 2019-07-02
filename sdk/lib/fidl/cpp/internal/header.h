@@ -5,12 +5,12 @@
 #ifndef LIB_FIDL_CPP_INTERNAL_HEADER_H_
 #define LIB_FIDL_CPP_INTERNAL_HEADER_H_
 
+#include <lib/fit/function.h>
+#include <lib/fit/variant.h>
+
 #include <array>
 #include <functional>
 #include <ostream>
-
-#include <lib/fit/function.h>
-#include <lib/fit/variant.h>
 
 #ifdef __Fuchsia__
 #include <lib/zx/bti.h>

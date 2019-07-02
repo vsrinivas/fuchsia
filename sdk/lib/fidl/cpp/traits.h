@@ -6,9 +6,9 @@
 #define LIB_FIDL_CPP_TRAITS_H_
 
 #include <array>
-#include <vector>
 #include <cstdint>
 #include <type_traits>
+#include <vector>
 
 namespace fidl {
 
@@ -40,13 +40,13 @@ template <typename T>
 struct IsStdVector : public std::false_type {};
 
 template <typename V, typename A>
-struct IsStdVector<std::vector<V, A>> : public std::true_type{};
+struct IsStdVector<std::vector<V, A>> : public std::true_type {};
 
 template <typename T>
 struct IsStdString : public std::false_type {};
 
 template <>
-struct IsStdString<std::string> : public std::true_type{};
+struct IsStdString<std::string> : public std::true_type {};
 
 }  // namespace fidl
 

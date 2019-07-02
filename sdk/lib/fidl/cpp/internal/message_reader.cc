@@ -67,14 +67,10 @@ class Canary {
 
 }  // namespace
 
-static_assert(std::is_standard_layout<MessageReader>::value,
-              "We need offsetof to work");
+static_assert(std::is_standard_layout<MessageReader>::value, "We need offsetof to work");
 
 MessageReader::MessageReader(MessageHandler* message_handler)
-    : wait_{{ASYNC_STATE_INIT},
-            &MessageReader::CallHandler,
-            ZX_HANDLE_INVALID,
-            kSignals},
+    : wait_{{ASYNC_STATE_INIT}, &MessageReader::CallHandler, ZX_HANDLE_INVALID, kSignals},
       dispatcher_(nullptr),
       should_stop_(nullptr),
       destroyed_(nullptr),
@@ -91,8 +87,7 @@ MessageReader::~MessageReader() {
     async_cancel_wait(dispatcher_, &wait_);
 }
 
-zx_status_t MessageReader::Bind(zx::channel channel,
-                                async_dispatcher_t* dispatcher) {
+zx_status_t MessageReader::Bind(zx::channel channel, async_dispatcher_t* dispatcher) {
   if (is_bound())
     Unbind();
   if (!channel)
@@ -132,8 +127,7 @@ void MessageReader::Reset() {
   error_handler_ = nullptr;
 }
 
-zx_status_t MessageReader::TakeChannelAndErrorHandlerFrom(
-    MessageReader* other) {
+zx_status_t MessageReader::TakeChannelAndErrorHandlerFrom(MessageReader* other) {
   zx_status_t status = Bind(other->Unbind(), other->dispatcher_);
   if (status != ZX_OK)
     return status;
@@ -163,17 +157,14 @@ zx_status_t MessageReader::WaitAndDispatchOneMessageUntil(zx::time deadline) {
   return ZX_ERR_PEER_CLOSED;
 }
 
-void MessageReader::CallHandler(async_dispatcher_t* dispatcher,
-                                async_wait_t* wait, zx_status_t status,
-                                const zx_packet_signal_t* signal) {
+void MessageReader::CallHandler(async_dispatcher_t* dispatcher, async_wait_t* wait,
+                                zx_status_t status, const zx_packet_signal_t* signal) {
   static_assert(offsetof(MessageReader, wait_) == 0,
                 "The wait must be the first member for this cast to be valid.");
-  reinterpret_cast<MessageReader*>(wait)->OnHandleReady(dispatcher, status,
-                                                        signal);
+  reinterpret_cast<MessageReader*>(wait)->OnHandleReady(dispatcher, status, signal);
 }
 
-void MessageReader::OnHandleReady(async_dispatcher_t* dispatcher,
-                                  zx_status_t status,
+void MessageReader::OnHandleReady(async_dispatcher_t* dispatcher, zx_status_t status,
                                   const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     NotifyError(status);

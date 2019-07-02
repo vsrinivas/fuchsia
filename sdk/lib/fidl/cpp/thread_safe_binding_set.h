@@ -5,14 +5,14 @@
 #ifndef LIB_FIDL_CPP_THREAD_SAFE_BINDING_SET_H_
 #define LIB_FIDL_CPP_THREAD_SAFE_BINDING_SET_H_
 
+#include <lib/async/dispatcher.h>
+#include <zircon/compiler.h>
+
 #include <algorithm>
 #include <memory>
 #include <mutex>
 #include <utility>
 #include <vector>
-
-#include <lib/async/dispatcher.h>
-#include <zircon/compiler.h>
 
 #include "lib/fidl/cpp/binding.h"
 
@@ -62,8 +62,8 @@ class DeprecatedBrokenBindingSet final {
   void AddBinding(ImplPtr impl, InterfaceRequest<Interface> request,
                   async_dispatcher_t* dispatcher) {
     std::lock_guard<std::mutex> guard(lock_);
-    bindings_.push_back(std::make_unique<Binding>(
-        std::forward<ImplPtr>(impl), std::move(request), dispatcher));
+    bindings_.push_back(
+        std::make_unique<Binding>(std::forward<ImplPtr>(impl), std::move(request), dispatcher));
     auto* binding = bindings_.back().get();
     // Set the connection error handler for the newly added Binding to be a
     // function that will erase it from the vector.
@@ -87,8 +87,7 @@ class DeprecatedBrokenBindingSet final {
   // |impl|. If |ImplPtr| is a |unique_ptr|, then running |~ImplPtr| when the
   // binding generates an error will delete |impl| because |~ImplPtr| is
   // |~unique_ptr|, which deletes |impl|.
-  InterfaceHandle<Interface> AddBinding(ImplPtr impl,
-                                        async_dispatcher_t* dispatcher) {
+  InterfaceHandle<Interface> AddBinding(ImplPtr impl, async_dispatcher_t* dispatcher) {
     InterfaceHandle<Interface> handle;
     InterfaceRequest<Interface> request = handle.NewRequest();
     if (!request)
@@ -109,10 +108,9 @@ class DeprecatedBrokenBindingSet final {
   // Called when a binding has an error to remove the binding from the set.
   void RemoveOnError(Binding* binding) {
     std::lock_guard<std::mutex> guard(lock_);
-    auto it = std::find_if(bindings_.begin(), bindings_.end(),
-                           [binding](const std::unique_ptr<Binding>& b) {
-                             return b.get() == binding;
-                           });
+    auto it =
+        std::find_if(bindings_.begin(), bindings_.end(),
+                     [binding](const std::unique_ptr<Binding>& b) { return b.get() == binding; });
     ZX_DEBUG_ASSERT(it != bindings_.end());
     (*it)->set_error_handler(nullptr);
     bindings_.erase(it);

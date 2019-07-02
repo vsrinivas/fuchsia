@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "lib/fidl/cpp/clone.h"
+
 #include "gtest/gtest.h"
 
 #ifdef __Fuchsia__

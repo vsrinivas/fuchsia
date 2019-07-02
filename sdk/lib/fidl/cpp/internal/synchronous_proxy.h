@@ -48,9 +48,8 @@ class SynchronousProxy final : public MessageSender {
   // Blocks until the remote endpoint replied.
   //
   // Returns an error if validation, writing, reading, or decoding fails.
-  zx_status_t Call(const fidl_type_t* request_type,
-                   const fidl_type_t* response_type, Message request,
-                   Message* response);
+  zx_status_t Call(const fidl_type_t* request_type, const fidl_type_t* response_type,
+                   Message request, Message* response);
 
  private:
   zx::channel channel_;

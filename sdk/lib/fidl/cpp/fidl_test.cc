@@ -23,12 +23,10 @@ template <typename A>
     EXPECT_TRUE(fidl::Equals(v[i], fidl::Clone(v[i])));
     for (size_t j = 0; j < v.size(); ++j) {
       if ((i == j) != fidl::Equals(v[i], v[j])) {
-        return ::testing::AssertionFailure()
-               << "fidl::Equals incorrect for " << i << " and " << j;
+        return ::testing::AssertionFailure() << "fidl::Equals incorrect for " << i << " and " << j;
       }
       if ((i != j) != !fidl::Equals(v[i], v[j])) {
-        return ::testing::AssertionFailure()
-               << "fidl::Equals incorrect for " << i << " and " << j;
+        return ::testing::AssertionFailure() << "fidl::Equals incorrect for " << i << " and " << j;
       }
     }
   }
@@ -67,8 +65,8 @@ TEST(FidlTest, StructWithNullComparison) {
   // Create a vector of structs.
   std::vector<HasOptionalFieldStruct> structs;
   for (int32_t i = 0; i < 3; ++i) {
-    structs.push_back(HasOptionalFieldStruct{
-        i == 0 ? nullptr : fidl::MakeOptional(Int64Struct({i}))});
+    structs.push_back(
+        HasOptionalFieldStruct{i == 0 ? nullptr : fidl::MakeOptional(Int64Struct({i}))});
   }
   EXPECT_TRUE(CheckComparison(structs));
 }
@@ -78,9 +76,9 @@ TEST(FidlTest, StructWithMultipleFieldsComparison) {
   std::vector<Has2OptionalFieldStruct> structs;
   for (int32_t i = 0; i < 3; i++) {
     for (int32_t j = 0; j < 3; j++) {
-      structs.push_back(Has2OptionalFieldStruct{
-          i == 0 ? nullptr : fidl::MakeOptional(Int64Struct({i})),
-          j == 0 ? nullptr : fidl::MakeOptional(Int64Struct({j}))});
+      structs.push_back(
+          Has2OptionalFieldStruct{i == 0 ? nullptr : fidl::MakeOptional(Int64Struct({i})),
+                                  j == 0 ? nullptr : fidl::MakeOptional(Int64Struct({j}))});
     }
   }
   EXPECT_TRUE(CheckComparison(structs));
@@ -123,8 +121,8 @@ TEST(FidlTest, UnionAssignment) {
 // Build a vector of fidl::VectorPtr, lexicographically sorted given that
 // generator generates values ordered by the given index.
 template <typename A>
-std::vector<fidl::VectorPtr<A>> BuildSortedVector(
-    size_t size, const fit::function<A(int32_t)>& generator) {
+std::vector<fidl::VectorPtr<A>> BuildSortedVector(size_t size,
+                                                  const fit::function<A(int32_t)>& generator) {
   constexpr int32_t kNbBaseElement = 3;
 
   std::vector<fidl::VectorPtr<A>> result;
@@ -151,12 +149,9 @@ std::vector<fidl::VectorPtr<A>> BuildSortedVector(
 }
 
 TEST(FidlTest, TestBuildSortedVector) {
-  EXPECT_EQ(
-      2u, BuildSortedVector<uint64_t>(0, [](uint64_t i) { return i; }).size());
-  EXPECT_EQ(
-      5u, BuildSortedVector<uint64_t>(1, [](uint64_t i) { return i; }).size());
-  EXPECT_EQ(
-      14u, BuildSortedVector<uint64_t>(2, [](uint64_t i) { return i; }).size());
+  EXPECT_EQ(2u, BuildSortedVector<uint64_t>(0, [](uint64_t i) { return i; }).size());
+  EXPECT_EQ(5u, BuildSortedVector<uint64_t>(1, [](uint64_t i) { return i; }).size());
+  EXPECT_EQ(14u, BuildSortedVector<uint64_t>(2, [](uint64_t i) { return i; }).size());
 }
 
 TEST(FidlTest, VectorOfIntComparison) {
@@ -167,8 +162,7 @@ TEST(FidlTest, VectorOfIntComparison) {
 
 TEST(FidlTest, VectorOfStructComparison) {
   // Create a vector of vectors.
-  auto vectors = BuildSortedVector<Int64Struct>(
-      3, [](int32_t i) { return Int64Struct{i}; });
+  auto vectors = BuildSortedVector<Int64Struct>(3, [](int32_t i) { return Int64Struct{i}; });
   EXPECT_TRUE(CheckComparison(vectors));
 }
 
@@ -206,16 +200,14 @@ TEST(FidlTest, ArrayOfIntComparison) {
 
 TEST(FidlTest, ArrayOfStructComparison) {
   // Create an vector of arrays.
-  auto arrays =
-      BuildArray<Int64Struct>([](int32_t i) { return Int64Struct{i}; });
+  auto arrays = BuildArray<Int64Struct>([](int32_t i) { return Int64Struct{i}; });
   EXPECT_TRUE(CheckComparison(arrays));
 }
 
 TEST(FidlTest, ArrayOfOptionalStructComparison) {
   // Create an vector of arrays.
-  auto arrays = BuildArray<Int64StructPtr>([](int32_t i) {
-    return i == 0 ? Int64StructPtr() : fidl::MakeOptional(Int64Struct({i}));
-  });
+  auto arrays = BuildArray<Int64StructPtr>(
+      [](int32_t i) { return i == 0 ? Int64StructPtr() : fidl::MakeOptional(Int64Struct({i})); });
   EXPECT_TRUE(CheckComparison(arrays));
 }
 

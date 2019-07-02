@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "lib/fidl/cpp/internal/proxy_controller.h"
+
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/fidl/cpp/message_builder.h>
 #include <lib/zx/channel.h>
 
 #include "gtest/gtest.h"
-#include "lib/fidl/cpp/internal/proxy_controller.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fidl/cpp/test/async_loop_for_test.h"
 #include "lib/fidl/cpp/test/fidl_types.h"
@@ -20,22 +21,16 @@ class CallbackMessageHandler : public MessageHandler {
  public:
   fit::function<zx_status_t(Message)> callback;
 
-  zx_status_t OnMessage(Message message) override {
-    return callback(std::move(message));
-  }
+  zx_status_t OnMessage(Message message) override { return callback(std::move(message)); }
 };
 
 class DestructorMessageHandler : public MessageHandler {
  public:
   fit::function<void()> destructor;
 
-  ~DestructorMessageHandler() {
-    destructor();
-  }
+  ~DestructorMessageHandler() { destructor(); }
 
-  zx_status_t OnMessage(Message message) override {
-    return ZX_OK;
-  }
+  zx_status_t OnMessage(Message message) override { return ZX_OK; }
 };
 
 TEST(ProxyController, Trivial) { ProxyController controller; }
@@ -53,8 +48,8 @@ TEST(ProxyController, Send) {
   StringPtr string("hello!");
   string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
 
-  EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type,
-                                   encoder.GetMessage(), nullptr));
+  EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
+                                   nullptr));
 
   MessageBuffer buffer;
   Message message = buffer.CreateEmptyMessage();
@@ -87,8 +82,8 @@ TEST(ProxyController, Callback) {
     return ZX_OK;
   };
 
-  EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type,
-                                   encoder.GetMessage(), std::move(handler)));
+  EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
+                                   std::move(handler)));
 
   EXPECT_EQ(0, callback_count);
   loop.RunUntilIdle();
@@ -105,8 +100,7 @@ TEST(ProxyController, Callback) {
   header.txid = txid;
   header.ordinal = 42u;
 
-  EXPECT_EQ(ZX_OK,
-            h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
 
   EXPECT_EQ(0, callback_count);
   loop.RunUntilIdle();
@@ -126,16 +120,14 @@ TEST(ProxyController, BadSend) {
   // Bad message format.
 
   int error_count = 0;
-  controller.reader().set_error_handler(
-      [&error_count](zx_status_t status) {
-        EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
-        ++error_count;
-      });
+  controller.reader().set_error_handler([&error_count](zx_status_t status) {
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
+    ++error_count;
+  });
 
   EXPECT_EQ(0, error_count);
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
-            controller.Send(&unbounded_nonnullable_string_message_type,
-                            encoder.GetMessage(), nullptr));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, controller.Send(&unbounded_nonnullable_string_message_type,
+                                                 encoder.GetMessage(), nullptr));
   EXPECT_EQ(0, error_count);
   loop.RunUntilIdle();
   EXPECT_EQ(0, error_count);
@@ -148,9 +140,8 @@ TEST(ProxyController, BadSend) {
   string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
 
   EXPECT_EQ(0, error_count);
-  EXPECT_EQ(ZX_ERR_ACCESS_DENIED,
-            controller.Send(&unbounded_nonnullable_string_message_type,
-                            encoder.GetMessage(), nullptr));
+  EXPECT_EQ(ZX_ERR_ACCESS_DENIED, controller.Send(&unbounded_nonnullable_string_message_type,
+                                                  encoder.GetMessage(), nullptr));
   EXPECT_EQ(0, error_count);
 }
 
@@ -165,18 +156,16 @@ TEST(ProxyController, BadReply) {
 
   zx_status_t expected_error = ZX_ERR_NOT_SUPPORTED;
   int error_count = 0;
-  controller.reader().set_error_handler(
-      [&expected_error, &error_count](zx_status_t status) {
-        EXPECT_EQ(expected_error, status);
-        ++error_count;
-      });
+  controller.reader().set_error_handler([&expected_error, &error_count](zx_status_t status) {
+    EXPECT_EQ(expected_error, status);
+    ++error_count;
+  });
 
   fidl_message_header_t header = {};
   header.txid = 0;
   header.ordinal = 42u;
 
-  EXPECT_EQ(ZX_OK,
-            h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
 
   EXPECT_EQ(0, error_count);
   loop.RunUntilIdle();
@@ -188,8 +177,7 @@ TEST(ProxyController, BadReply) {
   header.txid = 42u;
 
   expected_error = ZX_ERR_NOT_FOUND;
-  EXPECT_EQ(ZX_OK,
-            h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
 
   EXPECT_EQ(1, error_count);
   loop.RunUntilIdle();
@@ -207,18 +195,16 @@ TEST(ProxyController, ShortReply) {
 
   int expected_error = ZX_ERR_NOT_SUPPORTED;
   int error_count = 0;
-  controller.reader().set_error_handler(
-      [&expected_error, &error_count](zx_status_t status) {
-        EXPECT_EQ(expected_error, status);
-        ++error_count;
-      });
+  controller.reader().set_error_handler([&expected_error, &error_count](zx_status_t status) {
+    EXPECT_EQ(expected_error, status);
+    ++error_count;
+  });
 
   fidl_message_header_t header = {};
   header.txid = 0;
   header.ordinal = 42u;
 
-  EXPECT_EQ(ZX_OK,
-            h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
 
   EXPECT_EQ(0, error_count);
   loop.RunUntilIdle();
@@ -280,8 +266,7 @@ TEST(ProxyController, Move) {
   header.txid = txid;
   header.ordinal = 42u;
 
-  EXPECT_EQ(ZX_OK,
-            h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
 
   EXPECT_EQ(0, callback_count);
   loop.RunUntilIdle();
@@ -309,8 +294,8 @@ TEST(ProxyController, Reset) {
     return ZX_OK;
   };
 
-  EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type,
-                                   encoder.GetMessage(), std::move(handler)));
+  EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
+                                   std::move(handler)));
 
   EXPECT_EQ(0, callback_count);
   loop.RunUntilIdle();
@@ -330,8 +315,7 @@ TEST(ProxyController, Reset) {
   header.txid = txid;
   header.ordinal = 42u;
 
-  EXPECT_EQ(ZX_ERR_PEER_CLOSED,
-            h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
 
   EXPECT_EQ(0, callback_count);
   loop.RunUntilIdle();
@@ -361,17 +345,16 @@ TEST(ProxyController, ReentrantDestructor) {
     StringPtr string("world!");
     string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
     auto callback_handler = std::make_unique<CallbackMessageHandler>();
-    callback_handler->callback = [](Message message) {
-      return ZX_OK;
-    };
-    zx_status_t status = controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(), std::move(callback_handler));
+    callback_handler->callback = [](Message message) { return ZX_OK; };
+    zx_status_t status = controller.Send(&unbounded_nonnullable_string_message_type,
+                                         encoder.GetMessage(), std::move(callback_handler));
     EXPECT_EQ(ZX_ERR_BAD_HANDLE, status);
 
     controller.Reset();
   };
 
-  EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type,
-                                   encoder.GetMessage(), std::move(handler)));
+  EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
+                                   std::move(handler)));
 
   loop.RunUntilIdle();
 

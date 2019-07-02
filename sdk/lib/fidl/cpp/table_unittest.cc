@@ -26,8 +26,7 @@ TEST(Table, ChainSimpleSetters) {
   EXPECT_EQ(20, simple.y());
 
   // Chaining the setters gives you the same result:
-  EXPECT_TRUE(
-      fidl::Equals(simple, test::misc::SimpleTable().set_x(10).set_y(20)));
+  EXPECT_TRUE(fidl::Equals(simple, test::misc::SimpleTable().set_x(10).set_y(20)));
 }
 
 TEST(Table, ChainComplexSetters) {
@@ -43,11 +42,10 @@ TEST(Table, ChainComplexSetters) {
   table.set_u(std::move(u1));
   table.set_strings({"a", "b"});
 
-  EXPECT_TRUE(fidl::Equals(
-      table, test::misc::ComplexTable()
-                 .set_simple(std::move(test::misc::SimpleTable().set_x(10)))
-                 .set_u(std::move(u2))
-                 .set_strings({"a", "b"})));
+  EXPECT_TRUE(fidl::Equals(table, test::misc::ComplexTable()
+                                      .set_simple(std::move(test::misc::SimpleTable().set_x(10)))
+                                      .set_u(std::move(u2))
+                                      .set_strings({"a", "b"})));
 }
 
 }  // namespace

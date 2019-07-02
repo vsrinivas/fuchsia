@@ -1,7 +1,7 @@
 {
-  "pkg/fidl_cpp_sync/include/lib/fidl/cpp/interface_handle.h": "a13ecab93f4296cc4856ec8c0d5b7266",
-  "pkg/fidl_cpp_sync/include/lib/fidl/cpp/interface_request.h": "d22e729abed1df9844bb7975f5eff517",
-  "pkg/fidl_cpp_sync/include/lib/fidl/cpp/internal/message_sender.h": "b14b7256efe33c10a108b4f2daaff158",
-  "pkg/fidl_cpp_sync/include/lib/fidl/cpp/internal/synchronous_proxy.h": "27d46ea641f7d36cf1e467fae4195d1b",
-  "pkg/fidl_cpp_sync/include/lib/fidl/cpp/synchronous_interface_ptr.h": "59e38b323ec13f9177c036844c355221"
+  "pkg/fidl_cpp_sync/include/lib/fidl/cpp/interface_handle.h": "e6a824a7650a15784570e4ecd2231b69",
+  "pkg/fidl_cpp_sync/include/lib/fidl/cpp/interface_request.h": "466864f21eb7d1b953542e4731bb8054",
+  "pkg/fidl_cpp_sync/include/lib/fidl/cpp/internal/message_sender.h": "e331d4cc1120ee681664a7a9711b9a0f",
+  "pkg/fidl_cpp_sync/include/lib/fidl/cpp/internal/synchronous_proxy.h": "0bd115e50f0860951529cca9de112578",
+  "pkg/fidl_cpp_sync/include/lib/fidl/cpp/synchronous_interface_ptr.h": "f08178f4fe40c45001c6cd10f6a0d2e1"
 }

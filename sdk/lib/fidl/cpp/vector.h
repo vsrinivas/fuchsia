@@ -8,11 +8,10 @@
 #include <lib/fidl/cpp/builder.h>
 #include <lib/fidl/cpp/comparison.h>
 #include <lib/fidl/cpp/vector_view.h>
+#include <zircon/assert.h>
 
 #include <utility>
 #include <vector>
-
-#include <zircon/assert.h>
 
 #include "lib/fidl/cpp/traits.h"
 
@@ -28,10 +27,8 @@ class VectorPtr {
   VectorPtr() : is_null_if_empty_(true) {}
   ~VectorPtr() = default;
   VectorPtr(std::nullptr_t) : is_null_if_empty_(true) {}
-  explicit VectorPtr(size_t size)
-      : vec_(std::vector<T>(size)), is_null_if_empty_(false) {}
-  explicit VectorPtr(std::vector<T> vec)
-      : vec_(std::move(vec)), is_null_if_empty_(false) {}
+  explicit VectorPtr(size_t size) : vec_(std::vector<T>(size)), is_null_if_empty_(false) {}
+  explicit VectorPtr(std::vector<T> vec) : vec_(std::move(vec)), is_null_if_empty_(false) {}
 
   VectorPtr(const VectorPtr&) = delete;
   VectorPtr& operator=(const VectorPtr&) = delete;

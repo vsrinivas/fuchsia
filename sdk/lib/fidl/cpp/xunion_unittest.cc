@@ -19,8 +19,8 @@ TEST(XUnion, SetterReturnsSelf) {
   EXPECT_TRUE(u.is_st());
   EXPECT_EQ(42, u.st().x());
 
-  EXPECT_TRUE(fidl::Equals(u, test::misc::SampleXUnion().set_st(std::move(
-                                  test::misc::SimpleTable().set_x(42)))));
+  EXPECT_TRUE(fidl::Equals(
+      u, test::misc::SampleXUnion().set_st(std::move(test::misc::SimpleTable().set_x(42)))));
 }
 
 }  // namespace

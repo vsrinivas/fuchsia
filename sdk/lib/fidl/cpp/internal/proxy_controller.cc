@@ -21,9 +21,7 @@ ProxyController::ProxyController() : reader_(this), next_txid_(1) {}
 ProxyController::~ProxyController() = default;
 
 ProxyController::ProxyController(ProxyController&& other)
-    : reader_(this),
-      handlers_(std::move(other.handlers_)),
-      next_txid_(other.next_txid_) {
+    : reader_(this), handlers_(std::move(other.handlers_)), next_txid_(other.next_txid_) {
   reader_.TakeChannelAndErrorHandlerFrom(&other.reader());
   other.Reset();
 }
@@ -38,9 +36,8 @@ ProxyController& ProxyController::operator=(ProxyController&& other) {
   return *this;
 }
 
-zx_status_t ProxyController::Send(
-    const fidl_type_t* type, Message message,
-    std::unique_ptr<MessageHandler> response_handler) {
+zx_status_t ProxyController::Send(const fidl_type_t* type, Message message,
+                                  std::unique_ptr<MessageHandler> response_handler) {
   zx_txid_t txid = 0;
   if (response_handler) {
     txid = next_txid_++ & kUserspaceTxidMask;

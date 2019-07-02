@@ -10,8 +10,7 @@ namespace internal {
 
 MessageSender::~MessageSender() = default;
 
-zx_status_t SendMessage(const zx::channel& channel, const fidl_type_t* type,
-                        Message message) {
+zx_status_t SendMessage(const zx::channel& channel, const fidl_type_t* type, Message message) {
   const char* error_msg = nullptr;
   zx_status_t status = message.Validate(type, &error_msg);
   if (status != ZX_OK) {

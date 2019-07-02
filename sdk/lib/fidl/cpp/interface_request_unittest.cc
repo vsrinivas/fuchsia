@@ -15,9 +15,7 @@
 namespace fidl {
 namespace {
 
-TEST(InterfaceRequest, Trivial) {
-  InterfaceRequest<fidl::test::frobinator::Frobinator> request;
-}
+TEST(InterfaceRequest, Trivial) { InterfaceRequest<fidl::test::frobinator::Frobinator> request; }
 
 TEST(InterfaceRequest, Control) {
   zx::channel h1, h2;
@@ -28,8 +26,7 @@ TEST(InterfaceRequest, Control) {
   EXPECT_TRUE(request.is_valid());
   EXPECT_EQ(saved1, request.channel().get());
 
-  InterfaceRequest<fidl::test::frobinator::Frobinator> request2 =
-      std::move(request);
+  InterfaceRequest<fidl::test::frobinator::Frobinator> request2 = std::move(request);
   EXPECT_FALSE(request.is_valid());
   EXPECT_TRUE(request2.is_valid());
   EXPECT_EQ(saved1, request2.channel().get());
@@ -54,11 +51,9 @@ TEST(InterfaceRequest, Close) {
 
   fidl::test::frobinator::FrobinatorPtr ptr;
   zx_status_t error = 0;
-  ptr.set_error_handler(
-      [&error](zx_status_t remote_error) { error = remote_error; });
+  ptr.set_error_handler([&error](zx_status_t remote_error) { error = remote_error; });
 
-  InterfaceRequest<fidl::test::frobinator::Frobinator> request =
-      ptr.NewRequest();
+  InterfaceRequest<fidl::test::frobinator::Frobinator> request = ptr.NewRequest();
   EXPECT_TRUE(request.is_valid());
 
   constexpr zx_status_t kSysError = 0xabDECADE;

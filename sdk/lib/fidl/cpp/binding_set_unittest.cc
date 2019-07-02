@@ -11,9 +11,7 @@
 namespace fidl {
 namespace {
 
-TEST(BindingSet, Trivial) {
-  BindingSet<fidl::test::frobinator::Frobinator> binding_set;
-}
+TEST(BindingSet, Trivial) { BindingSet<fidl::test::frobinator::Frobinator> binding_set; }
 
 TEST(BindingSet, Control) {
   constexpr size_t kCount = 10;
@@ -186,9 +184,7 @@ TEST(BindingSet, EmptyHandlerOnManualClose) {
 TEST(BindingSet, BindingDestroyedAfterRemovalFromSet) {
   fidl::test::AsyncLoopForTest loop;
 
-  BindingSet<fidl::test::frobinator::Frobinator,
-             std::unique_ptr<test::FrobinatorImpl>>
-      binding_set;
+  BindingSet<fidl::test::frobinator::Frobinator, std::unique_ptr<test::FrobinatorImpl>> binding_set;
   auto check_binding_set_empty_on_destroy = [&binding_set] {
     EXPECT_TRUE(binding_set.bindings().empty());
   };
@@ -196,8 +192,7 @@ TEST(BindingSet, BindingDestroyedAfterRemovalFromSet) {
   fidl::test::frobinator::FrobinatorPtr ptr;
 
   // Add the binding.
-  binding_set.AddBinding(std::make_unique<test::FrobinatorImpl>(
-                             check_binding_set_empty_on_destroy),
+  binding_set.AddBinding(std::make_unique<test::FrobinatorImpl>(check_binding_set_empty_on_destroy),
                          ptr.NewRequest());
   EXPECT_EQ(1u, binding_set.size());
 
@@ -210,9 +205,7 @@ TEST(BindingSet, BindingDestroyedAfterRemovalFromSet) {
 TEST(BindingSet, BindingDestroyedAfterCloseAll) {
   fidl::test::AsyncLoopForTest loop;
 
-  BindingSet<fidl::test::frobinator::Frobinator,
-             std::unique_ptr<test::FrobinatorImpl>>
-      binding_set;
+  BindingSet<fidl::test::frobinator::Frobinator, std::unique_ptr<test::FrobinatorImpl>> binding_set;
   auto check_binding_set_empty_on_destroy = [&binding_set] {
     EXPECT_TRUE(binding_set.bindings().empty());
   };
@@ -220,8 +213,7 @@ TEST(BindingSet, BindingDestroyedAfterCloseAll) {
   fidl::test::frobinator::FrobinatorPtr ptr;
 
   // Add the binding.
-  binding_set.AddBinding(std::make_unique<test::FrobinatorImpl>(
-                             check_binding_set_empty_on_destroy),
+  binding_set.AddBinding(std::make_unique<test::FrobinatorImpl>(check_binding_set_empty_on_destroy),
                          ptr.NewRequest());
   EXPECT_EQ(1u, binding_set.size());
 

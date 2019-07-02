@@ -50,8 +50,7 @@ TEST(InterfacePtr, BindToSpecificDispatcher) {
   Binding<fidl::test::frobinator::Frobinator> binding(&impl);
 
   fidl::test::frobinator::FrobinatorPtr ptr;
-  EXPECT_EQ(ZX_OK,
-            binding.Bind(ptr.NewRequest(loop.dispatcher()), loop.dispatcher()));
+  EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest(loop.dispatcher()), loop.dispatcher()));
   EXPECT_TRUE(ptr.is_bound());
 
   ptr->Frob("one");
@@ -254,9 +253,7 @@ TEST(InterfacePtr, MoveIntoMethodCapture) {
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
 
   std::vector<std::string> grobs;
-  ptr->Grob("one", [moved = std::move(ptr), &grobs](StringPtr s) {
-    grobs.push_back(s);
-  });
+  ptr->Grob("one", [moved = std::move(ptr), &grobs](StringPtr s) { grobs.push_back(s); });
   EXPECT_FALSE(ptr.is_bound());
   EXPECT_TRUE(grobs.empty());
 
@@ -299,15 +296,13 @@ TEST(InterfacePtr, InterfaceCanHandleGeneratedOrdinal) {
 
   // Cribbed from generated .cc file.
   constexpr uint64_t kFrobinator_Grob_GenOrdinal = 1499796418lu << 32;
-  fidl_message_header_t *header =
-      reinterpret_cast<fidl_message_header_t *>(buffer.bytes());
+  fidl_message_header_t *header = reinterpret_cast<fidl_message_header_t *>(buffer.bytes());
   header->ordinal = kFrobinator_Grob_GenOrdinal;
 
   test::FrobinatorImpl impl;
   zx::channel h3, server;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h3, &server));
-  Binding<fidl::test::frobinator::Frobinator> binding(&impl, std::move(server),
-                                                      loop.dispatcher());
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl, std::move(server), loop.dispatcher());
   fidl::MessageBuffer response_buffer;
   fidl::Message response = response_buffer.CreateEmptyMessage();
   EXPECT_EQ(ZX_OK, message.Write(h3.get(), 0));

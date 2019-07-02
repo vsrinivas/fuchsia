@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "lib/fidl/cpp/internal/stub_controller.h"
+
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/fidl/cpp/message_builder.h>
 #include <lib/zx/channel.h>
@@ -9,7 +11,6 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/internal/proxy_controller.h"
 #include "lib/fidl/cpp/internal/stub.h"
-#include "lib/fidl/cpp/internal/stub_controller.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fidl/cpp/test/async_loop_for_test.h"
 #include "lib/fidl/cpp/test/fidl_types.h"
@@ -31,9 +32,7 @@ class CallbackMessageHandler : public MessageHandler {
  public:
   fit::function<zx_status_t(Message)> callback;
 
-  zx_status_t OnMessage(Message message) override {
-    return callback(std::move(message));
-  }
+  zx_status_t OnMessage(Message message) override { return callback(std::move(message)); }
 };
 
 TEST(StubController, Trivial) { StubController controller; }
@@ -57,9 +56,8 @@ TEST(StubController, NoResponse) {
     ++callback_count;
     EXPECT_EQ(5u, message.ordinal());
     EXPECT_FALSE(response.needs_response());
-    EXPECT_EQ(
-        ZX_ERR_BAD_STATE,
-        response.Send(&unbounded_nonnullable_string_message_type, Message()));
+    EXPECT_EQ(ZX_ERR_BAD_STATE,
+              response.Send(&unbounded_nonnullable_string_message_type, Message()));
     return ZX_OK;
   };
 
@@ -69,8 +67,8 @@ TEST(StubController, NoResponse) {
   StringPtr string("hello!");
   string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
 
-  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type,
-                                   encoder.GetMessage(), nullptr));
+  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
+                                   nullptr));
   EXPECT_EQ(0, callback_count);
   loop.RunUntilIdle();
   EXPECT_EQ(1, callback_count);
@@ -98,8 +96,8 @@ TEST(StubController, Response) {
     Encoder encoder(42u);
     StringPtr string("welcome!");
     string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
-    EXPECT_EQ(ZX_OK, response.Send(&unbounded_nonnullable_string_message_type,
-                                   encoder.GetMessage()));
+    EXPECT_EQ(ZX_OK,
+              response.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage()));
     return ZX_OK;
   };
 
@@ -117,8 +115,8 @@ TEST(StubController, Response) {
     return ZX_OK;
   };
 
-  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type,
-                                   encoder.GetMessage(), std::move(handler)));
+  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
+                                   std::move(handler)));
   EXPECT_EQ(0, callback_count);
   EXPECT_EQ(0, response_count);
   loop.RunUntilIdle();
@@ -141,8 +139,7 @@ TEST(StubController, ResponseAfterUnbind) {
   CallbackStub stub;
 
   int callback_count = 0;
-  stub.callback = [&callback_count, &stub_ctrl](Message message,
-                                                PendingResponse response) {
+  stub.callback = [&callback_count, &stub_ctrl](Message message, PendingResponse response) {
     ++callback_count;
 
     stub_ctrl.reader().Unbind();
@@ -153,8 +150,7 @@ TEST(StubController, ResponseAfterUnbind) {
     StringPtr string("welcome!");
     string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
     EXPECT_EQ(ZX_ERR_BAD_STATE,
-              response.Send(&unbounded_nonnullable_string_message_type,
-                            encoder.GetMessage()));
+              response.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage()));
     return ZX_OK;
   };
 
@@ -171,8 +167,8 @@ TEST(StubController, ResponseAfterUnbind) {
     return ZX_OK;
   };
 
-  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type,
-                                   encoder.GetMessage(), std::move(handler)));
+  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
+                                   std::move(handler)));
   EXPECT_EQ(0, callback_count);
   EXPECT_EQ(0, response_count);
   loop.RunUntilIdle();
@@ -195,8 +191,7 @@ TEST(StubController, ResponseAfterDestroy) {
   CallbackStub stub;
 
   int callback_count = 0;
-  stub.callback = [&callback_count, &stub_ctrl](Message message,
-                                                PendingResponse response) {
+  stub.callback = [&callback_count, &stub_ctrl](Message message, PendingResponse response) {
     ++callback_count;
 
     stub_ctrl.reset();
@@ -207,8 +202,7 @@ TEST(StubController, ResponseAfterDestroy) {
     StringPtr string("welcome!");
     string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
     EXPECT_EQ(ZX_ERR_BAD_STATE,
-              response.Send(&unbounded_nonnullable_string_message_type,
-                            encoder.GetMessage()));
+              response.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage()));
     return ZX_OK;
   };
 
@@ -225,8 +219,8 @@ TEST(StubController, ResponseAfterDestroy) {
     return ZX_OK;
   };
 
-  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type,
-                                   encoder.GetMessage(), std::move(handler)));
+  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
+                                   std::move(handler)));
   EXPECT_EQ(0, callback_count);
   EXPECT_EQ(0, response_count);
   loop.RunUntilIdle();
@@ -244,11 +238,10 @@ TEST(StubController, BadResponse) {
   EXPECT_EQ(ZX_OK, stub_ctrl.reader().Bind(std::move(h1)));
 
   int error_count = 0;
-  stub_ctrl.reader().set_error_handler(
-      [&error_count](zx_status_t status) {
-        EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
-        ++error_count;
-      });
+  stub_ctrl.reader().set_error_handler([&error_count](zx_status_t status) {
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
+    ++error_count;
+  });
 
   ProxyController proxy_ctrl;
   EXPECT_EQ(ZX_OK, proxy_ctrl.reader().Bind(std::move(h2)));
@@ -263,8 +256,7 @@ TEST(StubController, BadResponse) {
     Encoder encoder(42u);
     // Bad message format.
     EXPECT_EQ(ZX_ERR_INVALID_ARGS,
-              response.Send(&unbounded_nonnullable_string_message_type,
-                            encoder.GetMessage()));
+              response.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage()));
     return ZX_OK;
   };
 
@@ -281,8 +273,8 @@ TEST(StubController, BadResponse) {
     return ZX_OK;
   };
 
-  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type,
-                                   encoder.GetMessage(), std::move(handler)));
+  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
+                                   std::move(handler)));
   EXPECT_EQ(0, callback_count);
   EXPECT_EQ(0, response_count);
   EXPECT_EQ(0, error_count);
@@ -302,11 +294,10 @@ TEST(StubController, BadMessage) {
   EXPECT_EQ(ZX_OK, stub_ctrl.reader().Bind(std::move(h1)));
 
   int error_count = 0;
-  stub_ctrl.reader().set_error_handler(
-      [&error_count](zx_status_t status) {
-        EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
-        ++error_count;
-      });
+  stub_ctrl.reader().set_error_handler([&error_count](zx_status_t status) {
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+    ++error_count;
+  });
 
   CallbackStub stub;
 

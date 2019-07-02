@@ -27,8 +27,7 @@ TEST(DeprecatedBrokenBindingSet, Control) {
 
   for (size_t i = 0; i < kCount; ++i) {
     if (i % 2 == 0) {
-      binding_set.AddBinding(&impls[i], ptrs[i].NewRequest(),
-                             loop.dispatcher());
+      binding_set.AddBinding(&impls[i], ptrs[i].NewRequest(), loop.dispatcher());
     } else {
       ptrs[i] = binding_set.AddBinding(&impls[i], loop.dispatcher()).Bind();
     }

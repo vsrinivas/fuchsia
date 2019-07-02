@@ -70,14 +70,12 @@ class InterfaceRequest final {
   InterfaceRequest() = default;
 
   // Creates an |InterfaceHandle| that wraps the given |channel|.
-  explicit InterfaceRequest(zx::channel channel)
-      : channel_(std::move(channel)) {}
+  explicit InterfaceRequest(zx::channel channel) : channel_(std::move(channel)) {}
 
   InterfaceRequest(const InterfaceRequest& other) = delete;
   InterfaceRequest& operator=(const InterfaceRequest& other) = delete;
 
-  InterfaceRequest(InterfaceRequest&& other)
-      : channel_(std::move(other.channel_)) {}
+  InterfaceRequest(InterfaceRequest&& other) : channel_(std::move(other.channel_)) {}
 
   InterfaceRequest& operator=(InterfaceRequest&& other) {
     channel_ = std::move(other.channel_);
@@ -99,12 +97,9 @@ class InterfaceRequest final {
   const zx::channel& channel() const { return channel_; }
   void set_channel(zx::channel channel) { channel_ = std::move(channel); }
 
-  void Encode(Encoder* encoder, size_t offset) {
-    encoder->EncodeHandle(&channel_, offset);
-  }
+  void Encode(Encoder* encoder, size_t offset) { encoder->EncodeHandle(&channel_, offset); }
 
-  static void Decode(Decoder* decoder, InterfaceRequest<Interface>* value,
-                     size_t offset) {
+  static void Decode(Decoder* decoder, InterfaceRequest<Interface>* value, size_t offset) {
     decoder->DecodeHandle(&value->channel_, offset);
   }
 
@@ -116,8 +111,7 @@ class InterfaceRequest final {
   //
   // The return value can be any of the return values of zx_channel_write.
   zx_status_t Close(zx_status_t epitaph_value) {
-    return is_valid() ? fidl_epitaph_write(TakeChannel().get(), epitaph_value)
-                      : ZX_ERR_BAD_STATE;
+    return is_valid() ? fidl_epitaph_write(TakeChannel().get(), epitaph_value) : ZX_ERR_BAD_STATE;
   }
 
  private:
@@ -130,8 +124,7 @@ class InterfaceRequest final {
 // of") request. Otherwise, it can simply drop |request| (as implied by the
 // interface).
 template <typename Interface>
-using InterfaceRequestHandler =
-    fit::function<void(fidl::InterfaceRequest<Interface> request)>;
+using InterfaceRequestHandler = fit::function<void(fidl::InterfaceRequest<Interface> request)>;
 
 // Equality.
 template <typename T>
@@ -141,14 +134,12 @@ struct Equality<InterfaceRequest<T>> {
   }
 };
 
-
 template <typename T>
 struct CodingTraits<InterfaceRequest<T>>
     : public EncodableCodingTraits<InterfaceRequest<T>, sizeof(zx_handle_t)> {};
 
 template <typename T>
-inline zx_status_t Clone(const InterfaceRequest<T>& value,
-                         InterfaceRequest<T>* result) {
+inline zx_status_t Clone(const InterfaceRequest<T>& value, InterfaceRequest<T>* result) {
   if (!value) {
     *result = InterfaceRequest<T>();
     return ZX_OK;

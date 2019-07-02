@@ -28,8 +28,7 @@ class MessageSender {
 //
 // Returns an error if the message fails to encode properly or if the message
 // cannot be written to the channel.
-zx_status_t SendMessage(const zx::channel& channel, const fidl_type_t* type,
-                        Message message);
+zx_status_t SendMessage(const zx::channel& channel, const fidl_type_t* type, Message message);
 
 }  // namespace internal
 }  // namespace fidl

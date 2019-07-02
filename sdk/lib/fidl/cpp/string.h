@@ -7,12 +7,11 @@
 
 #include <lib/fidl/cpp/builder.h>
 #include <lib/fidl/cpp/string_view.h>
+#include <zircon/assert.h>
 
 #include <iosfwd>
 #include <string>
 #include <utility>
-
-#include <zircon/assert.h>
 
 #include "lib/fidl/cpp/coding_traits.h"
 #include "lib/fidl/cpp/traits.h"
@@ -39,9 +38,7 @@ class StringPtr final {
   StringPtr(const char* str)
       : str_(str ? std::string(str) : std::string()), is_null_if_empty_(!str) {}
   StringPtr(const char* str, size_t length)
-      : str_(str ? std::string(str, length) : std::string()),
-        is_null_if_empty_(!str) {}
-
+      : str_(str ? std::string(str, length) : std::string()), is_null_if_empty_(!str) {}
 
   // Accesses the underlying std::string object.
   const std::string& get() const { return str_; }
@@ -87,8 +84,7 @@ class StringPtr final {
   static void Decode(Decoder* decoder, StringPtr* value, size_t offset);
 
   template <class EncoderImpl>
-  static void EncodeString(EncoderImpl* encoder, const std::string& value,
-                           size_t offset) {
+  static void EncodeString(EncoderImpl* encoder, const std::string& value, size_t offset) {
     fidl_string_t* string = encoder->template GetPtr<fidl_string_t>(offset);
     string->size = value.size();
     string->data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
@@ -98,8 +94,7 @@ class StringPtr final {
   }
 
   template <class DecoderImpl>
-  static void DecodeString(DecoderImpl* decoder, std::string* value,
-                           size_t offset) {
+  static void DecodeString(DecoderImpl* decoder, std::string* value, size_t offset) {
     fidl_string_t* string = decoder->template GetPtr<fidl_string_t>(offset);
     ZX_ASSERT(string->data != nullptr);
     *value = std::string(string->data, string->size);
@@ -110,7 +105,7 @@ class StringPtr final {
   bool is_null_if_empty_ = true;
 };
 
-template<>
+template <>
 struct Equality<StringPtr> {
   static inline bool Equals(const StringPtr& a, const StringPtr& b) {
     if (a.is_null()) {
@@ -141,9 +136,7 @@ inline bool operator==(const StringPtr& a, const char* b) {
   return b != nullptr && a.get() == b;
 }
 
-inline bool operator!=(const StringPtr& a, const StringPtr& b) {
-  return !(a == b);
-}
+inline bool operator!=(const StringPtr& a, const StringPtr& b) { return !(a == b); }
 
 inline bool operator!=(const char* a, const StringPtr& b) { return !(a == b); }
 
@@ -191,17 +184,13 @@ inline bool operator>(const StringPtr& a, const char* b) {
   return *a > b;
 }
 
-inline bool operator<=(const StringPtr& a, const StringPtr& b) {
-  return !(a > b);
-}
+inline bool operator<=(const StringPtr& a, const StringPtr& b) { return !(a > b); }
 
 inline bool operator<=(const char* a, const StringPtr& b) { return !(a > b); }
 
 inline bool operator<=(const StringPtr& a, const char* b) { return !(a > b); }
 
-inline bool operator>=(const StringPtr& a, const StringPtr& b) {
-  return !(a < b);
-}
+inline bool operator>=(const StringPtr& a, const StringPtr& b) { return !(a < b); }
 
 inline bool operator>=(const char* a, const StringPtr& b) { return !(a < b); }
 
@@ -212,8 +201,7 @@ inline std::ostream& operator<<(std::ostream& out, const StringPtr& str) {
 }
 
 template <>
-struct CodingTraits<StringPtr>
-    : public EncodableCodingTraits<StringPtr, sizeof(fidl_string_t)> {};
+struct CodingTraits<StringPtr> : public EncodableCodingTraits<StringPtr, sizeof(fidl_string_t)> {};
 
 template <>
 struct CodingTraits<::std::string> {

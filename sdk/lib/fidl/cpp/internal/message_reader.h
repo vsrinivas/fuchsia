@@ -38,8 +38,7 @@ class MessageReader final {
   // be unbound.
   //
   // If |dispatcher| is null, the current thread must have a default async_t.
-  zx_status_t Bind(zx::channel channel,
-                   async_dispatcher_t* dispatcher = nullptr);
+  zx_status_t Bind(zx::channel channel, async_dispatcher_t* dispatcher = nullptr);
 
   // Unbinds the channel from this |MessageReader|.
   //
@@ -103,9 +102,7 @@ class MessageReader final {
   // |ZX_ERR_SHOULD_WAIT|, the |MessageReader| will continue waiting. Other
   // errors cause the |MessageReader| to unbind from the channel and call the
   // error handler.
-  void set_message_handler(MessageHandler* message_handler) {
-    message_handler_ = message_handler;
-  }
+  void set_message_handler(MessageHandler* message_handler) { message_handler_ = message_handler; }
 
   // The given error handler is called whenever the |MessageReader| encounters
   // an error on the channel.
@@ -128,8 +125,8 @@ class MessageReader final {
   }
 
  private:
-  static void CallHandler(async_dispatcher_t* dispatcher, async_wait_t* wait,
-                          zx_status_t status, const zx_packet_signal_t* signal);
+  static void CallHandler(async_dispatcher_t* dispatcher, async_wait_t* wait, zx_status_t status,
+                          const zx_packet_signal_t* signal);
   void OnHandleReady(async_dispatcher_t* dispatcher, zx_status_t status,
                      const zx_packet_signal_t* signal);
   zx_status_t ReadAndDispatchMessage(MessageBuffer* buffer);
@@ -140,7 +137,7 @@ class MessageReader final {
   zx::channel channel_;
   async_dispatcher_t* dispatcher_;
   bool* should_stop_;  // See |Canary| in message_reader.cc.
-  bool* destroyed_;  // See |Canary| in message_reader.cc.
+  bool* destroyed_;    // See |Canary| in message_reader.cc.
   MessageHandler* message_handler_;
   fit::function<void(zx_status_t)> error_handler_;
 };

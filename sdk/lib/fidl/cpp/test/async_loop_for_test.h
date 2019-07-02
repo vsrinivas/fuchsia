@@ -7,6 +7,7 @@
 
 #include <lib/async/dispatcher.h>
 #include <zircon/types.h>
+
 #include <memory>
 
 // Implement this class in order to run the fidl bindings unit tests on top of

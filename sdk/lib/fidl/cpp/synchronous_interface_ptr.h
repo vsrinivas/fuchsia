@@ -51,8 +51,7 @@ class SynchronousInterfacePtr final {
   SynchronousInterfacePtr(std::nullptr_t) {}
 
   SynchronousInterfacePtr(const SynchronousInterfacePtr& other) = delete;
-  SynchronousInterfacePtr& operator=(const SynchronousInterfacePtr& other) =
-      delete;
+  SynchronousInterfacePtr& operator=(const SynchronousInterfacePtr& other) = delete;
 
   SynchronousInterfacePtr(SynchronousInterfacePtr&& other) = default;
   SynchronousInterfacePtr& operator=(SynchronousInterfacePtr&& other) = default;
@@ -127,9 +126,7 @@ class SynchronousInterfacePtr final {
   // way to have that effect is to call |Unbind|.
   //
   // Does not require the current thread to have a default async_t.
-  void Bind(InterfaceHandle<Interface> handle) {
-    return Bind(handle.TakeChannel());
-  }
+  void Bind(InterfaceHandle<Interface> handle) { return Bind(handle.TakeChannel()); }
 
   // Unbinds the underlying channel from the |SynchronousInterfacePtr|.
   //

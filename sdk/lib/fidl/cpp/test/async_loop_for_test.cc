@@ -20,20 +20,15 @@ class AsyncLoopForTestImpl {
   async::Loop loop_;
 };
 
-AsyncLoopForTest::AsyncLoopForTest()
-    : impl_(std::make_unique<AsyncLoopForTestImpl>()) {}
+AsyncLoopForTest::AsyncLoopForTest() : impl_(std::make_unique<AsyncLoopForTestImpl>()) {}
 
 AsyncLoopForTest::~AsyncLoopForTest() = default;
 
-zx_status_t AsyncLoopForTest::RunUntilIdle() {
-  return impl_->loop()->RunUntilIdle();
-}
+zx_status_t AsyncLoopForTest::RunUntilIdle() { return impl_->loop()->RunUntilIdle(); }
 
 zx_status_t AsyncLoopForTest::Run() { return impl_->loop()->Run(); }
 
-async_dispatcher_t* AsyncLoopForTest::dispatcher() {
-  return impl_->loop()->dispatcher();
-}
+async_dispatcher_t* AsyncLoopForTest::dispatcher() { return impl_->loop()->dispatcher(); }
 
 }  // namespace test
 }  // namespace fidl

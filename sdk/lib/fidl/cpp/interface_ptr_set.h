@@ -6,6 +6,7 @@
 #define LIB_FIDL_CPP_INTERFACE_PTR_SET_H_
 
 #include <zircon/assert.h>
+
 #include <vector>
 
 #include "lib/fidl/cpp/interface_ptr.h"
@@ -77,9 +78,7 @@ class InterfacePtrSet final {
   // Called from the error handler callback for |pointer|.
   void RemoveOnError(Ptr* pointer) {
     auto it = std::find_if(ptrs_.begin(), ptrs_.end(),
-                           [pointer](const std::unique_ptr<Ptr>& p) {
-                             return p.get() == pointer;
-                           });
+                           [pointer](const std::unique_ptr<Ptr>& p) { return p.get() == pointer; });
     ZX_DEBUG_ASSERT(it != ptrs_.end());
     ptrs_.erase(it);
   }

@@ -29,15 +29,12 @@ struct unbounded_nonnullable_string_message_layout {
 };
 
 static const fidl::FidlStructField unbounded_nonnullable_string_fields[] = {
-    fidl::FidlStructField(&unbounded_nonnullable_string,
-                          offsetof(unbounded_nonnullable_string_message_layout,
-                                   inline_struct.string),
-                          0),
+    fidl::FidlStructField(
+        &unbounded_nonnullable_string,
+        offsetof(unbounded_nonnullable_string_message_layout, inline_struct.string), 0),
 
 };
 
-const fidl_type_t unbounded_nonnullable_string_message_type = fidl_type_t(
-    fidl::FidlCodedStruct(unbounded_nonnullable_string_fields,
-                          ArrayCount(unbounded_nonnullable_string_fields),
-                          sizeof(unbounded_nonnullable_string_inline_data),
-                          "unbounded_nonnullable_string_message"));
+const fidl_type_t unbounded_nonnullable_string_message_type = fidl_type_t(fidl::FidlCodedStruct(
+    unbounded_nonnullable_string_fields, ArrayCount(unbounded_nonnullable_string_fields),
+    sizeof(unbounded_nonnullable_string_inline_data), "unbounded_nonnullable_string_message"));

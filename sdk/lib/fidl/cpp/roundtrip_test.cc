@@ -6,7 +6,9 @@
 
 #include <fidl/test/misc/cpp/fidl.h>
 #include <lib/fidl/internal.h>
+
 #include <iostream>
+
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/test/test_util.h"
@@ -37,34 +39,20 @@ TEST(SimpleTable, CheckEmptyTable) {
 }
 
 std::vector<uint8_t> kSimpleTable_X_42_Y_67 = std::vector<uint8_t>{
-    5,   0,   0,   0,
-    0,   0,   0,   0,  // max ordinal
-    255, 255, 255, 255,
-    255, 255, 255, 255,  // alloc present
-    8,   0,   0,   0,
-    0,   0,   0,   0,  // envelope 1: num bytes / num handles
-    255, 255, 255, 255,
-    255, 255, 255, 255,  // alloc present
-    0,   0,   0,   0,
-    0,   0,   0,   0,  // envelope 2: num bytes / num handles
-    0,   0,   0,   0,
-    0,   0,   0,   0,  // no alloc
-    0,   0,   0,   0,
-    0,   0,   0,   0,  // envelope 3: num bytes / num handles
-    0,   0,   0,   0,
-    0,   0,   0,   0,  // no alloc
-    0,   0,   0,   0,
-    0,   0,   0,   0,  // envelope 4: num bytes / num handles
-    0,   0,   0,   0,
-    0,   0,   0,   0,  // no alloc
-    8,   0,   0,   0,
-    0,   0,   0,   0,  // envelope 5: num bytes / num handles
-    255, 255, 255, 255,
-    255, 255, 255, 255,  // alloc present
-    42,  0,   0,   0,
-    0,   0,   0,   0,  // field X
-    67,  0,   0,   0,
-    0,   0,   0,   0,  // field Y
+    5,   0,   0,   0,   0,   0,   0,   0,    // max ordinal
+    255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
+    8,   0,   0,   0,   0,   0,   0,   0,    // envelope 1: num bytes / num handles
+    255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
+    0,   0,   0,   0,   0,   0,   0,   0,    // envelope 2: num bytes / num handles
+    0,   0,   0,   0,   0,   0,   0,   0,    // no alloc
+    0,   0,   0,   0,   0,   0,   0,   0,    // envelope 3: num bytes / num handles
+    0,   0,   0,   0,   0,   0,   0,   0,    // no alloc
+    0,   0,   0,   0,   0,   0,   0,   0,    // envelope 4: num bytes / num handles
+    0,   0,   0,   0,   0,   0,   0,   0,    // no alloc
+    8,   0,   0,   0,   0,   0,   0,   0,    // envelope 5: num bytes / num handles
+    255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
+    42,  0,   0,   0,   0,   0,   0,   0,    // field X
+    67,  0,   0,   0,   0,   0,   0,   0,    // field Y
 };
 
 TEST(SimpleTable, CheckBytesWithXY) {
@@ -109,8 +97,7 @@ TEST(Empty, CheckBytes) {
   Empty input;
 
   auto expected = std::vector<uint8_t>{
-      0,                       // empty struct zero field
-         0, 0, 0, 0, 0, 0, 0,  // 7 bytes of padding
+      0, 0, 0, 0, 0, 0, 0, 0,  // empty struct zero field + padding
   };
   EXPECT_TRUE(ValueToBytes(input, expected));
 }
@@ -129,14 +116,11 @@ TEST(EmptyStructSandwich, CheckBytes) {
   auto expected = std::vector<uint8_t>{
       6,   0,   0,   0,   0,   0,   0,   0,    // length of "before"
       255, 255, 255, 255, 255, 255, 255, 255,  // "before" is present
-      0,                                       // empty struct zero field
-           0,   0,   0,   0,   0,   0,   0,    // 7 bytes of padding
+      0,   0,   0,   0,   0,   0,   0,   0,    // empty struct zero field + padding
       5,   0,   0,   0,   0,   0,   0,   0,    // length of "world"
       255, 255, 255, 255, 255, 255, 255, 255,  // "after" is present
-      'b', 'e', 'f', 'o', 'r', 'e',            // "before" string
-                                    0,   0,    // 2 bytes of padding
-      'a', 'f', 't', 'e', 'r',                 // "after" string
-                               0,   0,   0,    // 3 bytes of padding
+      'b', 'e', 'f', 'o', 'r', 'e', 0,   0,    // "before" string + padding
+      'a', 'f', 't', 'e', 'r', 0,   0,   0,    // "after" string + padding
   };
   EXPECT_TRUE(ValueToBytes(input, expected));
 }
@@ -199,10 +183,9 @@ TEST(XUnion, SimpleTable) {
       0xdd, 0x2c, 0x65, 0x30, 0x00, 0x00, 0x00, 0x00,  // xunion discriminator + padding
       0x70, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // num bytes + num handles
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope data is present
-      // <table data follows>
+                                                       // <table data follows>
   };
-  expected.insert(expected.end(), kSimpleTable_X_42_Y_67.cbegin(),
-                  kSimpleTable_X_42_Y_67.cend());
+  expected.insert(expected.end(), kSimpleTable_X_42_Y_67.cbegin(), kSimpleTable_X_42_Y_67.cend());
 
   EXPECT_TRUE(ValueToBytes(input, expected));
 }
@@ -247,20 +230,15 @@ TEST(InlineXUnionInStruct, VerifyWireFormatXUnionIsPresent) {
   auto expected = std::vector<uint8_t>{
       0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // "before" length
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "before" presence
-
       0xa5, 0x47, 0xdf, 0x29, 0x00, 0x00, 0x00, 0x00,  // xunion discriminator + padding
       0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // num bytes + num handles
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope data is present
-
       0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // "after" length
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "before" presence
-
       // secondary object 1: "before"
       'b',  'e',  'f',  'o',  'r',  'e',  0x00, 0x00,
-
       // secondary object 2: xunion content
       0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00,  // xunion envelope content (0xdeadbeef) + padding
-
       // secondary object 3: "after"
       'a',  'f',  't',  'e',  'r',  0x00, 0x00, 0x00,
   };
@@ -333,7 +311,6 @@ TEST(OptionalXUnionInStruct, SerializeAndDeserializeAbsent) {
   input.after = "after";
 
   OptionalXUnionInStruct output = RoundTrip<OptionalXUnionInStruct>(input);
-
   EXPECT_EQ(output.xu.get(), nullptr);
 }
 
@@ -448,7 +425,6 @@ TEST(XUnionInTable, SerializeAndDeserialize) {
 
   EXPECT_TRUE(fidl::Equals(input, RoundTrip<XUnionInTable>(input)));
 }
-
 
 TEST(PrimitiveArrayInTable, VerifyWireFormatArrayIsPresent) {
   PrimitiveArrayInTable input;
