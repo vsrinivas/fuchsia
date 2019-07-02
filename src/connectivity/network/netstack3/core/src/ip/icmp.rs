@@ -162,6 +162,33 @@ pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
                     trace!("receive_icmp_packet: Silently ignoring Timestamp message");
                 }
             }
+            Icmpv4Packet::DestUnreachable(dest_unreachable) => {
+                increment_counter!(ctx, "receive_icmp_packet::dest_unreachable");
+                trace!("receive_icmp_packet: Received a Destination Unreachable message");
+
+                if dest_unreachable.code() == Icmpv4DestUnreachableCode::FragmentationRequired {
+                    let next_hop_mtu = dest_unreachable.message().next_hop_mtu();
+
+                    if let Some(next_hop_mtu) = dest_unreachable.message().next_hop_mtu() {
+                        // We are updating the path MTU from the destination address of this
+                        // `packet` (which is an IP address on this node) to some remote
+                        // (identified by the source address of this `packet`).
+                        //
+                        // `update_pmtu_if_less` may return an error, but it will only happen if
+                        // the Dest Unreachable message's mtu field had a value that was less than
+                        // the IPv4 minimum mtu (which as per IPv4 RFC 791, must not happen).
+                        update_pmtu_if_less(ctx, dst_ip, src_ip, u32::from(next_hop_mtu.get()));
+                    } else {
+                        // If the Next-Hop MTU from an incoming ICMP message is `0`, then we assume
+                        // the source node of the ICMP message does not implement RFC 1191 and
+                        // therefore does not actually use the Next-Hop MTU field and still
+                        // considers it as an unused field.
+                        trace!("receive_icmp_packet: Next-Hop MTU is 0 so ignoring");
+                    }
+                } else {
+                    log_unimplemented!((), "ip::icmp::receive_icmp_packet: Not implemented for this ICMP destination unreachable code {:?}", dest_unreachable.code());
+                }
+            }
             _ => log_unimplemented!(
                 (),
                 "ip::icmp::receive_icmp_packet: Not implemented for this packet type"
@@ -203,11 +230,12 @@ pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
                 ndp::receive_ndp_packet(ctx, device, src_ip, dst_ip, packet);
             }
             Icmpv6Packet::PacketTooBig(packet_too_big) => {
+                increment_counter!(ctx, "receive_icmp_packet::packet_too_big");
                 trace!("receive_icmp_packet: Received a Packet Too Big message");
-                // We are updating the path MTU from the destination address of this `packet`
-                // (which is an IP address on this node) to some remote (identified by the
-                // source address of this `packet`).
-
+                // We are updating the path MTU from the destination address of this
+                // `packet` (which is an IP address on this node) to some remote
+                // (identified by the source address of this `packet`).
+                //
                 // `update_pmtu_if_less` may return an error, but it will only happen if
                 // the Packet Too Big message's mtu field had a value that was less than
                 // the IPv6 minimum mtu (which as per IPv6 RFC 8200, must not happen).
