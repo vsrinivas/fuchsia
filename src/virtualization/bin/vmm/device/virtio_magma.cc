@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/vmar.h>
 #include <src/lib/fxl/logging.h>
 #include <sys/stat.h>
@@ -112,7 +113,8 @@ zx_status_t VirtioMagma::Handle_create_command_buffer(
   if (status != ZX_OK) {
     return status;
   }
-  magma_status_t magma_status = magma_set_buffer_mapping_address_range(response->buffer_out, vmar.release());
+  magma_status_t magma_status =
+      magma_set_buffer_mapping_address_range(response->buffer_out, vmar.release());
   if (magma_status != MAGMA_STATUS_OK) {
     FXL_LOG(ERROR) << "magma_set_buffer_mapping_address_range failed - " << magma_status;
     return ZX_ERR_INTERNAL;
