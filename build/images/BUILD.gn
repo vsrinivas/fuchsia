@@ -57,7 +57,6 @@ declare_args() {
   # with specific boards, due to driver and hardware challenges.
   additional_bootserver_arguments = ""
 }
-
 assert(
     meta_package_labels != [],
     "Missing meta_package_labels. Are you using a supported product configuration? " + "Check your args.gn file for an import of a product configuration, and consider " + "using one of the products in the `//products` or `//vendor/*/products` directories.")
@@ -283,8 +282,7 @@ if (!bootfs_only) {
   }
 
   # preinstall.manifest is a manifest of files that are a pkgfs "dynamic index"
-  # populated inside /pkgfs/packages that are {name}/{version} containing the
-  # merkleroot of the meta.far of that package.
+  # that maps {name}/{version} to {merkleroot} for each preinstalled package.
   action("preinstall.manifest") {
     visibility = [ ":data.blk" ]
     testonly = true
