@@ -28,7 +28,6 @@ library("zxio") {
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/fidl/fuchsia-io:llcpp",
-    "$zx/system/fidl/fuchsia-net:c",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxs",

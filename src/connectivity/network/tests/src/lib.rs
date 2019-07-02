@@ -76,9 +76,9 @@ fn create_netstack_environment(
             fidl_fuchsia_netemul_environment::EnvironmentOptions {
                 name: Some(name),
                 services:  Some([
-                    <fidl_fuchsia_netstack::NetstackMarker as fidl::endpoints::ServiceMarker>::NAME,
-                    <fidl_fuchsia_net::SocketProviderMarker as fidl::endpoints::ServiceMarker>::NAME,
                     <fidl_fuchsia_net_stack::StackMarker as fidl::endpoints::ServiceMarker>::NAME,
+                    <fidl_fuchsia_netstack::NetstackMarker as fidl::endpoints::ServiceMarker>::NAME,
+                    <fidl_fuchsia_posix_socket::ProviderMarker as fidl::endpoints::ServiceMarker>::NAME,
                 ]
                     // TODO(tamird): use into_iter after
                     // https://github.com/rust-lang/rust/issues/25725.

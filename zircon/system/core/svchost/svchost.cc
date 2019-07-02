@@ -11,6 +11,7 @@
 #include <fuchsia/fshost/c/fidl.h>
 #include <fuchsia/net/llcpp/fidl.h>
 #include <fuchsia/paver/c/fidl.h>
+#include <fuchsia/posix/socket/llcpp/fidl.h>
 #include <fuchsia/virtualconsole/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/directory.h>
@@ -113,8 +114,10 @@ static constexpr const char* deprecated_services[] = {
     "fuchsia.amber.Control", "fuchsia.cobalt.LoggerFactory",
     "fuchsia.devicesettings.DeviceSettingsManager", "fuchsia.logger.Log", "fuchsia.logger.LogSink",
     // Interface to resolve shell commands.
-    "fuchsia.process.Resolver", ::llcpp::fuchsia::net::SocketProvider::Name_,
+    "fuchsia.process.Resolver",
     ::llcpp::fuchsia::net::NameLookup::Name_,
+    ::llcpp::fuchsia::net::SocketProvider::Name_,
+    ::llcpp::fuchsia::posix::socket::Provider::Name_,
     // Legacy interface for netstack, defined in //garnet
     "fuchsia.netstack.Netstack",
     // New interface for netstack (WIP), defined in //zircon
