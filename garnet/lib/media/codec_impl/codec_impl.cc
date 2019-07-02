@@ -199,18 +199,31 @@ CodecImpl::~CodecImpl() {
                   !was_logically_bound_);
 
   // Ensure the CodecAdmission is deleted entirely after ~this, including after
-  // any relevant base class destructors have run.
-  PostSerial(shared_fidl_dispatcher_,
-             [codec_admission = std::move(codec_admission_),
-              codec_to_close = std::move(codec_to_close_)]() mutable {
-               // Ensure codec_to_close is destructed only after the
-               // codec_admission is destructed.  We have to be fairly explicit
-               // about this since the order of lambda members is explicitly
-               // unspecified in C++, so their destruction order is also
-               // unspecified.
-               codec_admission.reset();
+  // any relevant base class destructors have run.  This posted work may only
+  // get deleted, not run, since some environments will Quit() their
+  // async::Loop shortly after ~CodecImpl.  So to avoid depending on the
+  // destruction order of captures of a lambda, we use a fit::defer which will
+  // run it's lambda when deleted.  In this lambda we can force ~CodecAdmission
+  // before ~zx::channel, and we know this lambda will run, whether the lambda
+  // furhter down runs or is just deleted.
+  auto run_when_deleted = fit::defer([
+    codec_admission = std::move(codec_admission_),
+    codec_to_close = std::move(codec_to_close_)]() mutable {
+      // Ensure codec_to_close is destructed only after the
+      // codec_admission is destructed.  We have to be fairly explicit
+      // about this since the order of lambda members is explicitly
+      // unspecified in C++, so their destruction order is also
+      // unspecified.
+      codec_admission.reset();
 
-               // ~codec_to_close (after ~CodecAdmission above).
+      // ~codec_to_close (after ~CodecAdmission above).
+    });
+  PostSerial(shared_fidl_dispatcher_,
+             [run_when_deleted = std::move(run_when_deleted)]{
+               // ~run_when_deleted will run the lambda above, whether run at
+               // the end of this lambda, or when this lambda is deleted without
+               // ever having run during ~async::Loop or
+               // async::Loop::Shutdown().
              });
 }
 
