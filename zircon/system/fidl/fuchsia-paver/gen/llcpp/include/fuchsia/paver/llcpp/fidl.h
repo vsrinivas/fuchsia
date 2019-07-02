@@ -220,7 +220,15 @@ class PayloadStream final {
    public:
     SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
 
+    SyncClient(SyncClient&&) = default;
+
+    SyncClient& operator=(SyncClient&&) = default;
+
     ~SyncClient() {}
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
 
     // Registers a VMO to stream into.
     zx_status_t RegisterVmo(::zx::vmo vmo, int32_t* out_status);
@@ -618,7 +626,15 @@ class Paver final {
    public:
     SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
 
+    SyncClient(SyncClient&&) = default;
+
+    SyncClient& operator=(SyncClient&&) = default;
+
     ~SyncClient() {}
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
 
     // Queries active configuration.
     zx_status_t QueryActiveConfiguration(Paver_QueryActiveConfiguration_Result* out_result);

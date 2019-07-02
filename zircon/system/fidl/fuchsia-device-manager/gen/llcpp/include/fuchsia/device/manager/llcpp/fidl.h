@@ -133,7 +133,15 @@ class DebugDumper final {
    public:
     SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
 
+    SyncClient(SyncClient&&) = default;
+
+    SyncClient& operator=(SyncClient&&) = default;
+
     ~SyncClient() {}
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
 
     // Print device tree into `output`, returns bytes `written` and bytes `available` to write.
     zx_status_t DumpTree(::zx::vmo output, int32_t* out_status, uint64_t* out_written, uint64_t* out_available);
@@ -330,7 +338,15 @@ class Administrator final {
    public:
     SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
 
+    SyncClient(SyncClient&&) = default;
+
+    SyncClient& operator=(SyncClient&&) = default;
+
     ~SyncClient() {}
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
 
     // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
     // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
@@ -495,7 +511,15 @@ class DevhostController final {
    public:
     SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
 
+    SyncClient(SyncClient&&) = default;
+
+    SyncClient& operator=(SyncClient&&) = default;
+
     ~SyncClient() {}
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
 
     // Create a device in the devhost that only implements the device protocol
     // and claims to support the given `protocol_id`.  This device will communicate
@@ -862,7 +886,15 @@ class DeviceController final {
    public:
     SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
 
+    SyncClient(SyncClient&&) = default;
+
+    SyncClient& operator=(SyncClient&&) = default;
+
     ~SyncClient() {}
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
 
     // Bind the requested driver to this device.  `driver_path` is informational,
     // but all calls to BindDriver/CreateDevice should use the same `driver_path`
@@ -1465,7 +1497,15 @@ class Coordinator final {
    public:
     SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
 
+    SyncClient(SyncClient&&) = default;
+
+    SyncClient& operator=(SyncClient&&) = default;
+
     ~SyncClient() {}
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
 
     // Record the addition of a new device that can be communicated with via `rpc`.
     // For binding purposes, it is has properties `props`. `name` and `driver_path`

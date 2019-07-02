@@ -69,7 +69,15 @@ class DebugData final {
    public:
     SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
 
+    SyncClient(SyncClient&&) = default;
+
+    SyncClient& operator=(SyncClient&&) = default;
+
     ~SyncClient() {}
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
 
     // The program runtime sends a string naming a `data_sink` and transfers the sole handle to
     // a VMO containing the `data` it wants published there.  The `data_sink` string identifies

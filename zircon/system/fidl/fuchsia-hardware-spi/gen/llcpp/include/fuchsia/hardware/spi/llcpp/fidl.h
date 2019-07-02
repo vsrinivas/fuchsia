@@ -104,7 +104,15 @@ class Device final {
    public:
     SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
 
+    SyncClient(SyncClient&&) = default;
+
+    SyncClient& operator=(SyncClient&&) = default;
+
     ~SyncClient() {}
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
 
     // Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
     zx_status_t Transmit(::fidl::VectorView<uint8_t> data, int32_t* out_status);
