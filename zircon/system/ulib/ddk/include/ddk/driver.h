@@ -27,24 +27,30 @@ typedef struct zx_driver_binding zx_driver_binding_t;
 typedef struct zx_driver_ops {
     uint64_t version;   // DRIVER_OPS_VERSION
 
-    // Opportunity to do on-load work.
-    // Called ony once, before any other ops are called.
-    // The driver may optionally return a context pointer to be passed
-    // to the other driver ops.
+    // Opportunity to do on-load work. Called ony once, before any other ops are called. The driver
+    // may optionally return a context pointer to be passed to the other driver ops.
     zx_status_t (*init)(void** out_ctx);
 
-    // Requests that the driver bind to the provided device,
-    // initialize it, and publish any children.
+    // Requests that the driver bind to the provided device, initialize it, and publish any
+    // children.
     zx_status_t (*bind)(void* ctx, zx_device_t* device);
 
-    // Only provided by bus manager drivers, create() is invoked to
-    // instantiate a bus device instance in a new device host process
+    // Only provided by bus manager drivers, create() is invoked to instantiate a bus device
+    // instance in a new device host process
     zx_status_t (*create)(void* ctx, zx_device_t* parent,
                           const char* name, const char* args,
                           zx_handle_t rpc_channel);
 
     // Last call before driver is unloaded.
     void (*release)(void* ctx);
+
+    // Allows the driver to run its hardware unit tests. If tests are enabled for the driver, and
+    // run_unit_tests() is implemented, then it will be called after init(). If run_unit_tests()
+    // returns true, indicating that the tests passed, then driver operation continues as normal
+    // and the driver should be prepared to accept calls to bind(). The tests may write output to
+    // |channel| in the form of fuchsia.driver.test.Logger messages. The driver-unit-test library
+    // may be used to assist with the implementation of the tests, including output via |channel|.
+    bool (*run_unit_tests)(void* ctx, zx_device_t* parent, zx_handle_t channel);
 } zx_driver_ops_t;
 
 // echo -n "device_add_args_v0.5" | sha256sum | cut -c1-16

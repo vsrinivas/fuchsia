@@ -10,6 +10,7 @@
 #include <lib/zx/vmo.h>
 #include <zircon/status.h>
 
+#include "../shared/env.h"
 #include "../shared/fidl_txn.h"
 #include "../shared/log.h"
 #include "connection-destroyer.h"
@@ -97,6 +98,21 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
     log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
     BindReply(dev, std::move(completer), r);
     return;
+  }
+
+  // Check for driver test flags.
+  bool tests_default = getenv_bool("driver.tests.enable", false);
+  char tmp[128];
+  snprintf(tmp, sizeof(tmp), "driver.%s.tests.enable", drv->name());
+  if (getenv_bool(tmp, tests_default) && drv->has_run_unit_tests_op()) {
+    bool tests_passed = drv->RunUnitTestsOp(dev);
+    if (!tests_passed) {
+      log(ERROR, "devhost: driver '%s' unit tests failed\n", drv->name());
+      drv->set_status(ZX_ERR_BAD_STATE);
+      BindReply(dev, std::move(completer), ZX_ERR_BAD_STATE);
+      return;
+    }
+    log(INFO, "devhost: driver '%s' unit tests passed\n", drv->name());
   }
 
   if (drv->has_bind_op()) {

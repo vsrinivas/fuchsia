@@ -113,6 +113,23 @@ ZIRCON\_DRIVER\_BEGIN macro. It is not, for example, the name of the device,
 which for some drivers is almost identical, except that the device may be
 named "foo-bar" whereas the driver name must use underscores, e.g., "foo_bar".
 
+## driver.\<name>.tests.enable=\<bool>
+
+Enable the unit tests for an individual driver. The unit tests will run before
+the driver binds any devices. If `driver.tests.enable` is true then this
+defaults to enabled, otherwise the default is disabled.
+
+Note again that the name of the driver is the "Driver" argument to the
+ZIRCON\_DRIVER\_BEGIN macro. It is not, for example, the name of the device,
+which for some drivers is almost identical, except that the device may be
+named "foo-bar" whereas the driver name must use underscores, e.g., "foo_bar".
+
+## driver.tests.enable=\<bool>
+
+Enable the unit tests for all drivers. The unit tests will run before the
+drivers bind any devices. It's also possible to enable tests for an individual
+driver, see `driver.\<name>.enable_tests`. The default is disabled.
+
 ## driver.tracing.enable=\<bool>
 
 Enable or disable support for tracing drivers.

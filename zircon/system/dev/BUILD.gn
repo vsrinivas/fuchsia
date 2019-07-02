@@ -46,6 +46,8 @@ group("dev") {
     "test/isolateddevmgr:isolateddevmgr-test",
     "test/mock-device",
     "test/sysdev",
+    "test/unit-test-test:unit-test-fail",
+    "test/unit-test-test:unit-test-pass",
     "thermal",
     "usb",
     "virtual_camera",

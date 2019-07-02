@@ -86,6 +86,8 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
 
   bool has_create_op() const { return ops_->create != nullptr; }
 
+  bool has_run_unit_tests_op() const { return ops_->run_unit_tests != nullptr; }
+
   zx_status_t InitOp() { return ops_->init(&ctx_); }
 
   zx_status_t BindOp(devmgr::BindContext* bind_context,
@@ -108,6 +110,10 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
   void ReleaseOp() const {
     // TODO(kulakowski/teisenbe) Consider poisoning the ops_ table on release.
     ops_->release(ctx_);
+  }
+
+  bool RunUnitTestsOp(const fbl::RefPtr<zx_device_t>& parent) const {
+    return ops_->run_unit_tests(ctx_, parent.get(), ZX_HANDLE_INVALID);
   }
 
  private:

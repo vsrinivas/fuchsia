@@ -96,10 +96,14 @@ test("devhost-test") {
   sources = [
     "device-api-test.cc",
     "device-controller-connection-test.cc",
+    "device-controller-integration-test.cc",
     "proxy-iostate-test.cc",
   ]
   deps = [
     ":common",
+    "$zx/system/fidl/fuchsia-device-test:c",
+    "$zx/system/ulib/devmgr-integration-test",
+    "$zx/system/ulib/driver-integration-test",
     "$zx/system/ulib/zxtest",
     "../shared:env",
   ]
