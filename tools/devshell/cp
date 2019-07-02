@@ -17,6 +17,8 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
+set -e
+
 to_target=true
 if [[ $# -gt 2 ]]; then
   case "$1" in
