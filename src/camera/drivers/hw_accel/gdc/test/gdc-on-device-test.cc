@@ -24,8 +24,7 @@ void GdcDeviceTester::SetUp() {}
 void GdcDeviceTester::TearDown() {}
 
 TEST(GdcDeviceTester, TestClkAndPower) {
-  EXPECT_EQ(kValidGdcRevisionId,
-            Id::Get().ReadFrom(g_gdc_device->gdc_mmio()).id());
+  EXPECT_EQ(kValidGdcRevisionId, Id::Get().ReadFrom(g_gdc_device->gdc_mmio()).id());
 }
 
 zx_status_t GdcDeviceTester::RunTests(GdcDevice* gdc) {

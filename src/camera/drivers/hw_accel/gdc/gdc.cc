@@ -96,17 +96,17 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
 int GdcDevice::FrameProcessingThread() {
   FX_LOGF(INFO, "", "%s: start \n", __func__);
   for (;;) {
-        fbl::AutoLock al(&lock_);
-        while (processing_queue_.empty() && !shutdown_) {
-            frame_processing_signal_.Wait(&lock_);
-        }
-        if (shutdown_) {
-            break;
-        }
-        auto info = processing_queue_.back();
-        processing_queue_.pop_back();
-        al.release();
-        ProcessTask(info);
+    fbl::AutoLock al(&lock_);
+    while (processing_queue_.empty() && !shutdown_) {
+      frame_processing_signal_.Wait(&lock_);
+    }
+    if (shutdown_) {
+      break;
+    }
+    auto info = processing_queue_.back();
+    processing_queue_.pop_back();
+    al.release();
+    ProcessTask(info);
   }
   return ZX_OK;
 }
@@ -144,9 +144,9 @@ zx_status_t GdcDevice::StartThread() {
 zx_status_t GdcDevice::StopThread() {
   // Signal the worker thread and wait for it to terminate.
   {
-        fbl::AutoLock al(&lock_);
-        shutdown_ = true;
-        frame_processing_signal_.Signal();
+    fbl::AutoLock al(&lock_);
+    shutdown_ = true;
+    frame_processing_signal_.Signal();
   }
   JoinThread();
   return ZX_OK;

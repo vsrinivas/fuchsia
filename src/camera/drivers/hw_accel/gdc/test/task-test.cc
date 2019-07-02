@@ -43,13 +43,11 @@ class TaskTest : public zxtest::Test {
     ASSERT_OK(fake_bti_create(bti_handle_.reset_and_get_address()));
 
     zx_status_t status = camera::CreateContiguousBufferCollectionInfo(
-        &input_buffer_collection_, bti_handle_.get(), kWidth, kHeight,
-        buffer_collection_count);
+        &input_buffer_collection_, bti_handle_.get(), kWidth, kHeight, buffer_collection_count);
     ASSERT_OK(status);
 
     status = camera::CreateContiguousBufferCollectionInfo(
-        &output_buffer_collection_, bti_handle_.get(), kWidth, kHeight,
-        buffer_collection_count);
+        &output_buffer_collection_, bti_handle_.get(), kWidth, kHeight, buffer_collection_count);
     ASSERT_OK(status);
 
     status = zx_vmo_create_contiguous(bti_handle_.get(), kConfigSize, 0,
@@ -60,8 +58,7 @@ class TaskTest : public zxtest::Test {
   void SetupForFrameProcessing() {
     SetUpBufferCollections(kNumberOfBuffers);
     ddk_mock::MockMmioReg fake_reg_array[kNumberOfBuffers];
-    ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t),
-                                          kNumberOfBuffers);
+    ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t), kNumberOfBuffers);
     zx::port port;
     ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
     callback_.frame_ready = [](void* ctx, uint32_t idx) {
@@ -69,14 +66,16 @@ class TaskTest : public zxtest::Test {
     };
     callback_.ctx = this;
 
-    ASSERT_OK(
-        zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq_));
+    ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq_));
     ASSERT_OK(port.duplicate(ZX_RIGHT_SAME_RIGHTS, &port_));
 
-    gdc_device_ = std::make_unique<GdcDevice>(
-        nullptr, ddk::MmioBuffer(fake_regs.GetMmioBuffer()),
-        ddk::MmioBuffer(fake_regs.GetMmioBuffer()), std::move(irq_),
-        std::move(bti_handle_), std::move(port));
+    zx::interrupt irq;
+    ASSERT_OK(irq_.duplicate(ZX_RIGHT_SAME_RIGHTS, &irq));
+
+    gdc_device_ =
+        std::make_unique<GdcDevice>(nullptr, ddk::MmioBuffer(fake_regs.GetMmioBuffer()),
+                                    ddk::MmioBuffer(fake_regs.GetMmioBuffer()), std::move(irq),
+                                    std::move(bti_handle_), std::move(port));
 
     // Start the thread.
     EXPECT_OK(gdc_device_->StartThread());
@@ -102,9 +101,8 @@ class TaskTest : public zxtest::Test {
 TEST_F(TaskTest, BasicCreationTest) {
   SetUpBufferCollections(kNumberOfBuffers);
   std::unique_ptr<Task> task;
-  zx_status_t status =
-      gdc::Task::Create(&input_buffer_collection_, &output_buffer_collection_,
-                        config_vmo_, &callback_, bti_handle_, &task);
+  zx_status_t status = gdc::Task::Create(&input_buffer_collection_, &output_buffer_collection_,
+                                         config_vmo_, &callback_, bti_handle_, &task);
   EXPECT_OK(status);
 }
 
@@ -112,20 +110,17 @@ TEST_F(TaskTest, InvalidFormatTest) {
   SetUpBufferCollections(kNumberOfBuffers);
   std::unique_ptr<Task> task;
 
-  input_buffer_collection_.format.image.pixel_format.type =
-      fuchsia_sysmem_PixelFormatType_YUY2;
-  EXPECT_EQ(
-      ZX_ERR_INVALID_ARGS,
-      gdc::Task::Create(&input_buffer_collection_, &output_buffer_collection_,
-                        config_vmo_, &callback_, bti_handle_, &task));
+  input_buffer_collection_.format.image.pixel_format.type = fuchsia_sysmem_PixelFormatType_YUY2;
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            gdc::Task::Create(&input_buffer_collection_, &output_buffer_collection_, config_vmo_,
+                              &callback_, bti_handle_, &task));
 }
 
 TEST_F(TaskTest, InputBufferTest) {
   SetUpBufferCollections(kNumberOfBuffers);
   std::unique_ptr<Task> task;
-  zx_status_t status =
-      gdc::Task::Create(&input_buffer_collection_, &output_buffer_collection_,
-                        config_vmo_, &callback_, bti_handle_, &task);
+  zx_status_t status = gdc::Task::Create(&input_buffer_collection_, &output_buffer_collection_,
+                                         config_vmo_, &callback_, bti_handle_, &task);
   EXPECT_OK(status);
 
   // Get the input buffers physical addresses
@@ -143,9 +138,8 @@ TEST_F(TaskTest, InvalidVmoTest) {
   SetUpBufferCollections(0);
 
   std::unique_ptr<Task> task;
-  zx_status_t status =
-      gdc::Task::Create(&input_buffer_collection_, &output_buffer_collection_,
-                        config_vmo_, &callback_, bti_handle_, &task);
+  zx_status_t status = gdc::Task::Create(&input_buffer_collection_, &output_buffer_collection_,
+                                         config_vmo_, &callback_, bti_handle_, &task);
   // Expecting Task setup to be returning an error when there are
   // no VMOs in the buffer collection. At the moment VmoPool library
   // doesn't return an error.
@@ -155,14 +149,12 @@ TEST_F(TaskTest, InvalidVmoTest) {
 TEST_F(TaskTest, InitTaskTest) {
   SetUpBufferCollections(kNumberOfBuffers);
   ddk_mock::MockMmioReg fake_reg_array[kNumberOfMmios];
-  ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t),
-                                        kNumberOfMmios);
+  ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t), kNumberOfMmios);
   ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port_));
 
   GdcDevice gdc_device(nullptr, ddk::MmioBuffer(fake_regs.GetMmioBuffer()),
-                       ddk::MmioBuffer(fake_regs.GetMmioBuffer()),
-                       zx::interrupt(), std::move(bti_handle_),
-                       std::move(port_));
+                       ddk::MmioBuffer(fake_regs.GetMmioBuffer()), zx::interrupt(),
+                       std::move(bti_handle_), std::move(port_));
 
   std::vector<uint32_t> received_ids;
   for (uint32_t i = 0; i < kMaxTasks; i++) {
@@ -170,9 +162,9 @@ TEST_F(TaskTest, InitTaskTest) {
     ASSERT_OK(config_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &config_vmo));
 
     uint32_t task_id;
-    zx_status_t status = gdc_device.GdcInitTask(
-        &input_buffer_collection_, &output_buffer_collection_,
-        std::move(config_vmo), &callback_, &task_id);
+    zx_status_t status =
+        gdc_device.GdcInitTask(&input_buffer_collection_, &output_buffer_collection_,
+                               std::move(config_vmo), &callback_, &task_id);
     EXPECT_OK(status);
     // Checking to see if we are getting unique task ids.
     auto entry = find(received_ids.begin(), received_ids.end(), task_id);
@@ -184,28 +176,26 @@ TEST_F(TaskTest, InitTaskTest) {
 TEST_F(TaskTest, RemoveTaskTest) {
   SetUpBufferCollections(kNumberOfBuffers);
   ddk_mock::MockMmioReg fake_reg_array[kNumberOfMmios];
-  ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t),
-                                        kNumberOfMmios);
+  ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t), kNumberOfMmios);
 
   ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port_));
 
-  gdc_device_ = std::make_unique<GdcDevice>(
-      nullptr, ddk::MmioBuffer(fake_regs.GetMmioBuffer()),
-      ddk::MmioBuffer(fake_regs.GetMmioBuffer()), zx::interrupt(),
-      std::move(bti_handle_), std::move(port_));
+  gdc_device_ =
+      std::make_unique<GdcDevice>(nullptr, ddk::MmioBuffer(fake_regs.GetMmioBuffer()),
+                                  ddk::MmioBuffer(fake_regs.GetMmioBuffer()), zx::interrupt(),
+                                  std::move(bti_handle_), std::move(port_));
 
   uint32_t task_id;
-  zx_status_t status = gdc_device_->GdcInitTask(
-      &input_buffer_collection_, &output_buffer_collection_,
-      std::move(config_vmo_), &callback_, &task_id);
+  zx_status_t status =
+      gdc_device_->GdcInitTask(&input_buffer_collection_, &output_buffer_collection_,
+                               std::move(config_vmo_), &callback_, &task_id);
   EXPECT_OK(status);
 
   // Valid id.
   ASSERT_NO_DEATH(([this, task_id]() { gdc_device_->GdcRemoveTask(task_id); }));
 
   // Invalid id.
-  ASSERT_DEATH(
-      ([this, task_id]() { gdc_device_->GdcRemoveTask(task_id + 1); }));
+  ASSERT_DEATH(([this, task_id]() { gdc_device_->GdcRemoveTask(task_id + 1); }));
 }
 
 TEST_F(TaskTest, ProcessInvalidFrameTest) {
@@ -222,9 +212,9 @@ TEST_F(TaskTest, InvalidBufferProcessFrameTest) {
   SetupForFrameProcessing();
 
   uint32_t task_id;
-  zx_status_t status = gdc_device_->GdcInitTask(
-      &input_buffer_collection_, &output_buffer_collection_,
-      std::move(config_vmo_), &callback_, &task_id);
+  zx_status_t status =
+      gdc_device_->GdcInitTask(&input_buffer_collection_, &output_buffer_collection_,
+                               std::move(config_vmo_), &callback_, &task_id);
   EXPECT_OK(status);
 
   // Invalid buffer id.
@@ -238,9 +228,9 @@ TEST_F(TaskTest, ProcessFrameTest) {
   SetupForFrameProcessing();
 
   uint32_t task_id;
-  zx_status_t status = gdc_device_->GdcInitTask(
-      &input_buffer_collection_, &output_buffer_collection_,
-      std::move(config_vmo_), &callback_, &task_id);
+  zx_status_t status =
+      gdc_device_->GdcInitTask(&input_buffer_collection_, &output_buffer_collection_,
+                               std::move(config_vmo_), &callback_, &task_id);
   EXPECT_OK(status);
 
   // Valid buffer & task id.
@@ -262,9 +252,9 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
   SetupForFrameProcessing();
 
   uint32_t task_id;
-  zx_status_t status = gdc_device_->GdcInitTask(
-      &input_buffer_collection_, &output_buffer_collection_,
-      std::move(config_vmo_), &callback_, &task_id);
+  zx_status_t status =
+      gdc_device_->GdcInitTask(&input_buffer_collection_, &output_buffer_collection_,
+                               std::move(config_vmo_), &callback_, &task_id);
 
   // Process few frames, putting them in a queue
   status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1);
@@ -322,21 +312,20 @@ TEST(TaskTest, NonContigVmoTest) {
   buffer_collection_info_t output_buffer_collection;
   ASSERT_OK(fake_bti_create(&bti_handle));
 
-  zx_status_t status = camera::CreateContiguousBufferCollectionInfo(
-      &input_buffer_collection, bti_handle, kWidth, kHeight, 0);
+  zx_status_t status = camera::CreateContiguousBufferCollectionInfo(&input_buffer_collection,
+                                                                    bti_handle, kWidth, kHeight, 0);
   ASSERT_OK(status);
 
-  status = camera::CreateContiguousBufferCollectionInfo(
-      &output_buffer_collection, bti_handle, kWidth, kHeight, 0);
+  status = camera::CreateContiguousBufferCollectionInfo(&output_buffer_collection, bti_handle,
+                                                        kWidth, kHeight, 0);
   ASSERT_OK(status);
 
   status = zx_vmo_create(kConfigSize, 0, &config_vmo);
   ASSERT_OK(status);
 
   std::unique_ptr<Task> task;
-  status = gdc::Task::Create(&input_buffer_collection,
-                             &output_buffer_collection, zx::vmo(config_vmo),
-                             &callback, zx::bti(bti_handle), &task);
+  status = gdc::Task::Create(&input_buffer_collection, &output_buffer_collection,
+                             zx::vmo(config_vmo), &callback, zx::bti(bti_handle), &task);
   // Expecting Task setup to be returning an error when config vmo is not
   // contig.
   EXPECT_NE(ZX_OK, status);
@@ -348,13 +337,12 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
   zx_handle_t config_vmo;
   ASSERT_OK(fake_bti_create(&bti_handle));
 
-  zx_status_t status =
-      zx_vmo_create_contiguous(bti_handle, kConfigSize, 0, &config_vmo);
+  zx_status_t status = zx_vmo_create_contiguous(bti_handle, kConfigSize, 0, &config_vmo);
   ASSERT_OK(status);
 
   std::unique_ptr<Task> task;
-  status = gdc::Task::Create(nullptr, nullptr, zx::vmo(config_vmo), &callback,
-                             zx::bti(bti_handle), &task);
+  status = gdc::Task::Create(nullptr, nullptr, zx::vmo(config_vmo), &callback, zx::bti(bti_handle),
+                             &task);
   EXPECT_NE(ZX_OK, status);
 }
 

@@ -44,13 +44,11 @@ constexpr uint64_t kPortKeyIrqMsg = 0x00;
 class GdcDevice;
 using GdcDeviceType = ddk::Device<GdcDevice, ddk::Unbindable>;
 
-class GdcDevice : public GdcDeviceType,
-                  public ddk::GdcProtocol<GdcDevice, ddk::base_protocol> {
+class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::base_protocol> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(GdcDevice);
-  explicit GdcDevice(zx_device_t* parent, ddk ::MmioBuffer clk_mmio,
-                     ddk ::MmioBuffer gdc_mmio, zx::interrupt gdc_irq,
-                     zx::bti bti, zx::port port)
+  explicit GdcDevice(zx_device_t* parent, ddk ::MmioBuffer clk_mmio, ddk ::MmioBuffer gdc_mmio,
+                     zx::interrupt gdc_irq, zx::bti bti, zx::port port)
       : GdcDeviceType(parent),
         port_(std::move(port)),
         clock_mmio_(std::move(clk_mmio)),
@@ -62,19 +60,17 @@ class GdcDevice : public GdcDeviceType,
 
   // Setup() is used to create an instance of GdcDevice.
   // It sets up the pdev & brings the GDC out of reset.
-  static zx_status_t Setup(void* ctx, zx_device_t* parent,
-                           std::unique_ptr<GdcDevice>* out);
+  static zx_status_t Setup(void* ctx, zx_device_t* parent, std::unique_ptr<GdcDevice>* out);
 
   // Methods required by the ddk.
   void DdkRelease();
   void DdkUnbind();
 
   // ZX_PROTOCOL_GDC (Refer to gdc.banjo for documentation).
-  zx_status_t GdcInitTask(
-      const buffer_collection_info_t* input_buffer_collection,
-      const buffer_collection_info_t* output_buffer_collection,
-      zx::vmo config_vmo, const gdc_callback_t* callback,
-      uint32_t* out_task_index);
+  zx_status_t GdcInitTask(const buffer_collection_info_t* input_buffer_collection,
+                          const buffer_collection_info_t* output_buffer_collection,
+                          zx::vmo config_vmo, const gdc_callback_t* callback,
+                          uint32_t* out_task_index);
   zx_status_t GdcProcessFrame(uint32_t task_index, uint32_t input_buffer_index);
   void GdcRemoveTask(uint32_t task_index);
   void GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index);

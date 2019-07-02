@@ -35,8 +35,7 @@ class GdcClkCntl : public hwreg::RegisterBase<GdcClkCntl, uint32_t> {
 };
 
 // HHI_MEM_PD_REG0
-class GdcMemPowerDomain
-    : public hwreg::RegisterBase<GdcMemPowerDomain, uint32_t> {
+class GdcMemPowerDomain : public hwreg::RegisterBase<GdcMemPowerDomain, uint32_t> {
  public:
   DEF_FIELD(19, 18, gdc_pd);
   static auto Get() { return hwreg::RegisterAddr<GdcMemPowerDomain>(0x100); }
