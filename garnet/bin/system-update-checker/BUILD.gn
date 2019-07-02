@@ -25,6 +25,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:proptest",
+    "//third_party/rust_crates:proptest-derive",
     "//third_party/rust_crates:tempfile",
     "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
