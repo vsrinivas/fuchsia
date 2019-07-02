@@ -169,7 +169,7 @@ func (c *Client) TriggerSystemOTA(t *testing.T) {
 func (c *Client) ValidateStaticPackages(t *testing.T) {
 	log.Printf("validating static packages")
 
-	path := "/pkgfs/validation/missing"
+	path := "/pkgfs/ctl/validation/missing"
 	f, err := c.ReadRemotePath(path)
 	if err != nil {
 		t.Fatalf("error reading %q: %s", path, err)
