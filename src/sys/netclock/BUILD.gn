@@ -64,6 +64,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.timezone:fuchsia.timezone-rustc",
+    "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:lazy_static",
@@ -83,6 +84,13 @@ test_package("netclock_bin_test") {
       name = "netclock_bin_test"
       environments = basic_envs
     },
+  ]
+
+  resources = [
+    {
+      path = "test/latest-commit-date"
+      dest = "latest-commit-date"
+    }
   ]
 }
 

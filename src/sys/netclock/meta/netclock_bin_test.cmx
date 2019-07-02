@@ -6,8 +6,12 @@
         ]
     },
     "sandbox": {
+        "features": [
+            "build-info"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
+            "fuchsia.net.Connectivity",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.net.SocketProvider"

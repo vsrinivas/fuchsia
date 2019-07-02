@@ -5,7 +5,8 @@
 #![feature(async_await, await_macro)]
 
 use {
-    failure::Error,
+    chrono::{DateTime, Utc},
+    failure::{Error, ResultExt},
     fidl_fuchsia_net as fnet, fidl_fuchsia_time as ftime, fidl_fuchsia_timezone as ftz,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -13,13 +14,14 @@ use {
     futures::{StreamExt, TryStreamExt},
     log::{debug, error, info, warn},
     parking_lot::Mutex,
-    std::sync::Arc,
+    std::{path::Path, sync::Arc},
 };
 
 mod diagnostics;
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    assert_backstop_time_correct();
     diagnostics::init();
     let mut fs = ServiceFs::new();
 
@@ -46,6 +48,22 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
+fn backstop_time(path: impl AsRef<Path>) -> Result<DateTime<Utc>, Error> {
+    let file_contents =
+        std::fs::read_to_string(path.as_ref()).context("reading backstop time from disk")?;
+    let build_time_repr = file_contents.trim();
+    let parsed_offset = DateTime::parse_from_rfc3339(build_time_repr)?;
+    let utc = parsed_offset.with_timezone(&Utc);
+    Ok(utc)
+}
+
+fn assert_backstop_time_correct() {
+    assert!(
+        backstop_time("/config/build-info/latest-commit-date").unwrap() <= Utc::now(),
+        "latest guaranteed UTC timestamp must be earlier than current system time"
+    );
+}
+
 /// The top-level control loop for time synchronization.
 ///
 /// Checks for network connectivity before attempting any time updates.
@@ -57,8 +75,6 @@ async fn maintain_utc(
     time_service: ftz::TimeServiceProxy,
     connectivity: fnet::ConnectivityProxy,
 ) {
-    // TODO(CF-838) enforce a backstop time here before we start network_time_service
-
     // wait for the network to come up before we start checking for time
     let mut conn_events = connectivity.take_event_stream();
     loop {
@@ -98,7 +114,7 @@ struct Notifier(Arc<Mutex<NotifyInner>>);
 impl Notifier {
     fn new() -> Self {
         Notifier(Arc::new(Mutex::new(NotifyInner {
-            source: ftime::UtcSource::None,
+            source: ftime::UtcSource::Backstop,
             clients: Vec::new(),
         })))
     }
@@ -173,6 +189,7 @@ mod tests {
     #[allow(unused)]
     use {
         super::*,
+        chrono::{offset::TimeZone, NaiveDate},
         fuchsia_zircon as zx,
         std::{
             future::Future,
@@ -180,6 +197,23 @@ mod tests {
             task::{Context, Poll, Waker},
         },
     };
+
+    #[test]
+    fn fixed_backstop_check() {
+        let test_backstop = backstop_time("/pkg/data/latest-commit-date").unwrap();
+        let before_test_backstop =
+            Utc.from_utc_datetime(&NaiveDate::from_ymd(1999, 1, 1).and_hms(0, 0, 0));
+        let after_test_backstop =
+            Utc.from_utc_datetime(&NaiveDate::from_ymd(2001, 1, 1).and_hms(0, 0, 0));
+
+        assert!(test_backstop > before_test_backstop);
+        assert!(test_backstop < after_test_backstop);
+    }
+
+    #[test]
+    fn current_backstop_check() {
+        assert_backstop_time_correct();
+    }
 
     #[fasync::run_singlethreaded(test)]
     async fn single_client() {
@@ -213,8 +247,8 @@ mod tests {
             }
         });
 
-        info!("checking that the time source has not been initialized yet");
-        assert_eq!(await!(utc.watch_state()).unwrap().source.unwrap(), ftime::UtcSource::None);
+        info!("checking that the time source has not been externally initialized yet");
+        assert_eq!(await!(utc.watch_state()).unwrap().source.unwrap(), ftime::UtcSource::Backstop);
 
         let task_waker = await!(futures::future::poll_fn(|cx| { Poll::Ready(cx.waker().clone()) }));
         let mut cx = Context::from_waker(&task_waker);

@@ -24,8 +24,6 @@ table UtcState {
 
 /// Describes the source from which the current UTC approximation was retrieved.
 enum UtcSource {
-    /// The clock does not yet have a source.
-    NONE = 1;
     /// The clock has been initialized to a known-prior reference time but may be highly inaccurate.
     BACKSTOP = 2;
     /// The clock has been initialized from a suitably accurate external time source. For many
