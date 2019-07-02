@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 // NOTE: This file is unstable and should not be depended on.
-// TODO(seancuff): Convert doc comments to markdown.
 
 library fuchsia.fonts.experimental;
 
@@ -38,7 +37,7 @@ protocol Provider {
     /// the request, or an empty vector if no matches are found.
     ///
     /// Possible errors:
-    /// |INTERNAL| if something bad happens.
+    /// `INTERNAL` if something bad happens.
     ListTypefaces(ListTypefacesRequest request) -> (TypefaceInfoResponse response) error Error;
 
     /// Returns a `TypefaceInfo` for each font in the requested `family`. The
@@ -64,7 +63,7 @@ table ListTypefacesRequest {
     /// collation parameters.
     2: uint32 max_results;
 
-    /// Optional flags to modify matching behavior. Ignored if |query| is not
+    /// Optional flags to modify matching behavior. Ignored if `query` is not
     /// set.
     3: ListTypefacesRequestFlags flags;
 };
@@ -86,13 +85,13 @@ bits ListTypefacesRequestFlags:uint32 {
 /// `font.family.contains(family) && styles.contains(font.style) && ...`
 table ListTypefacesQuery {
     /// The name or alias of a font family. By default, families whose name
-    /// contains |family|. For exact matching, set the request's |EXACT_FAMILY|
+    /// contains `family`. For exact matching, set the request's `EXACT_FAMILY`
     /// flag.
     1: ff.FamilyName family;
 
     /// Styles to match. Note that combining styles will change results.
-    /// For example, [{slant: UPRIGHT}, {weight: WEIGHT_BOLD}] matches fonts
-    /// that are upright *or* bold, but [{slant: UPRIGHT, weight: WEIGHT_BOLD}]
+    /// For example, `[{slant: UPRIGHT}, {weight: WEIGHT_BOLD}]` matches fonts
+    /// that are upright *or* bold but `[{slant: UPRIGHT, weight: WEIGHT_BOLD}]`
     /// only matches fonts that are both upright *and* bold.
     2: vector<ff.Style2>:ff.MAX_FAMILY_STYLES styles;
 
