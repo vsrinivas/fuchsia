@@ -232,6 +232,7 @@
     }
   ],
   "xunion_declarations": [],
+  "type_alias_declarations": [],
   "declaration_order": [
     "test.name/Union",
     "test.name/Table",

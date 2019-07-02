@@ -130,6 +130,7 @@
       "strict": false
     }
   ],
+  "type_alias_declarations": [],
   "declaration_order": [
     "test.name/OlderSimpleUnion",
     "test.name/NewerSimpleUnion"

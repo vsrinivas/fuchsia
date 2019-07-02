@@ -1540,6 +1540,7 @@
     }
   ],
   "xunion_declarations": [],
+  "type_alias_declarations": [],
   "declaration_order": [
     "test.name/WithErrorSyntax_ErrorAsPrimitive_Response",
     "test.name/WithErrorSyntax_ErrorAsPrimitive_Result",
