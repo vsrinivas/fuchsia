@@ -77,7 +77,10 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		shards = testsharder.MultiplyShards(shards, multipliers)
+		shards, err = testsharder.MultiplyShards(shards, multipliers)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	f := os.Stdout
 	if outputFile != "" {

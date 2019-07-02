@@ -75,7 +75,8 @@ func MakeShards(specs []TestSpec, mode Mode, tags []string) []*Shard {
 
 // Appends new shards to shards where each new shard contains one test repeated
 // multiple times according to the specifications in multipliers.
-func MultiplyShards(shards []*Shard, multipliers []TestModifier) []*Shard {
+func MultiplyShards(shards []*Shard, multipliers []TestModifier) ([]*Shard, error) {
+	multipliersFound := make(map[TestModifier]bool)
 	for _, shard := range shards {
 		for _, multiplier := range multipliers {
 			for _, test := range shard.Tests {
@@ -85,11 +86,15 @@ func MultiplyShards(shards []*Shard, multipliers []TestModifier) []*Shard {
 						Tests: multiplyTest(test, multiplier.TotalRuns),
 						Env:   shard.Env,
 					})
+					multipliersFound[multiplier] = true
 				}
 			}
 		}
 	}
-	return shards
+	if len(multipliersFound) != len(multipliers) {
+		return nil, fmt.Errorf("Not all of the multiplier targets were found in the test manifest. Make sure the targets appear in $root_build_dir/tests.json")
+	}
+	return shards, nil
 }
 
 // Removes leading slashes and replaces all other `/` with `_`. This allows the
