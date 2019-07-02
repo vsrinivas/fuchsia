@@ -19,8 +19,7 @@ void MdnsAddresses::SetMulticastAddress(inet::IpAddress address) {
 }
 
 // static
-const inet::IpPort MdnsAddresses::kDefaultMdnsPort =
-    inet::IpPort::From_uint16_t(5353);
+const inet::IpPort MdnsAddresses::kDefaultMdnsPort = inet::IpPort::From_uint16_t(5353);
 
 // static
 const inet::IpAddress MdnsAddresses::kDefaultV4MulticastAddress(224, 0, 0, 251);

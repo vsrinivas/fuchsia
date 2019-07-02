@@ -12,21 +12,17 @@
 
 namespace mdns {
 
-InstanceResponder::InstanceResponder(MdnsAgent::Host* host,
-                                     const std::string& service_name,
-                                     const std::string& instance_name,
-                                     Mdns::Publisher* publisher)
+InstanceResponder::InstanceResponder(MdnsAgent::Host* host, const std::string& service_name,
+                                     const std::string& instance_name, Mdns::Publisher* publisher)
     : MdnsAgent(host),
       service_name_(service_name),
       instance_name_(instance_name),
-      instance_full_name_(
-          MdnsNames::LocalInstanceFullName(instance_name, service_name)),
+      instance_full_name_(MdnsNames::LocalInstanceFullName(instance_name, service_name)),
       publisher_(publisher) {}
 
 InstanceResponder::~InstanceResponder() {}
 
-void InstanceResponder::Start(const std::string& host_full_name,
-                              const MdnsAddresses& addresses) {
+void InstanceResponder::Start(const std::string& host_full_name, const MdnsAddresses& addresses) {
   FXL_DCHECK(!host_full_name.empty());
 
   MdnsAgent::Start(host_full_name, addresses);
@@ -45,8 +41,7 @@ void InstanceResponder::ReceiveQuestion(const DnsQuestion& question,
     case DnsType::kPtr:
       if (MdnsNames::MatchServiceName(name, service_name_, &subtype)) {
         GetAndSendPublication(true, subtype, reply_address);
-      } else if (question.name_.dotted_string_ ==
-                 MdnsNames::kAnyServiceFullName) {
+      } else if (question.name_.dotted_string_ == MdnsNames::kAnyServiceFullName) {
         SendAnyServiceResponse(reply_address);
       }
       break;
@@ -91,8 +86,7 @@ void InstanceResponder::SetSubtypes(std::vector<std::string> subtypes) {
   // were already announcing, the sequence restarts now. The first announcement
   // contains PTR records for the removed subtypes with TTL of zero.
   for (const std::string& subtype : subtypes_) {
-    if (std::find(subtypes.begin(), subtypes.end(), subtype) ==
-        subtypes.end()) {
+    if (std::find(subtypes.begin(), subtypes.end(), subtype) == subtypes.end()) {
       SendSubtypePtrRecord(subtype, 0, addresses().multicast_reply());
     }
   }
@@ -113,61 +107,53 @@ void InstanceResponder::SendAnnouncement() {
   GetAndSendPublication(false, "", addresses().multicast_reply());
 
   for (const std::string& subtype : subtypes_) {
-    SendSubtypePtrRecord(subtype, DnsResource::kShortTimeToLive,
-                         addresses().multicast_reply());
+    SendSubtypePtrRecord(subtype, DnsResource::kShortTimeToLive, addresses().multicast_reply());
   }
 
   if (announcement_interval_ > kMaxAnnouncementInterval) {
     return;
   }
 
-  PostTaskForTime([this]() { SendAnnouncement(); },
-                  fxl::TimePoint::Now() + announcement_interval_);
+  PostTaskForTime([this]() { SendAnnouncement(); }, fxl::TimePoint::Now() + announcement_interval_);
 
   announcement_interval_ = announcement_interval_ * 2;
 }
 
-void InstanceResponder::SendAnyServiceResponse(
-    const ReplyAddress& reply_address) {
-  auto ptr_resource = std::make_shared<DnsResource>(
-      MdnsNames::kAnyServiceFullName, DnsType::kPtr);
-  ptr_resource->ptr_.pointer_domain_name_ =
-      MdnsNames::LocalServiceFullName(service_name_);
+void InstanceResponder::SendAnyServiceResponse(const ReplyAddress& reply_address) {
+  auto ptr_resource = std::make_shared<DnsResource>(MdnsNames::kAnyServiceFullName, DnsType::kPtr);
+  ptr_resource->ptr_.pointer_domain_name_ = MdnsNames::LocalServiceFullName(service_name_);
   SendResource(ptr_resource, MdnsResourceSection::kAnswer, reply_address);
 }
 
-void InstanceResponder::GetAndSendPublication(
-    bool query, const std::string& subtype,
-    const ReplyAddress& reply_address) const {
+void InstanceResponder::GetAndSendPublication(bool query, const std::string& subtype,
+                                              const ReplyAddress& reply_address) const {
   if (publisher_ == nullptr) {
     return;
   }
 
-  publisher_->GetPublication(
-      query, subtype,
-      [this, subtype, reply_address = reply_address](
-          std::unique_ptr<Mdns::Publication> publication) {
-        if (publication) {
-          SendPublication(*publication, subtype, reply_address);
-        }
-      });
+  publisher_->GetPublication(query, subtype,
+                             [this, subtype, reply_address = reply_address](
+                                 std::unique_ptr<Mdns::Publication> publication) {
+                               if (publication) {
+                                 SendPublication(*publication, subtype, reply_address);
+                               }
+                             });
 }
 
-void InstanceResponder::SendPublication(
-    const Mdns::Publication& publication, const std::string& subtype,
-    const ReplyAddress& reply_address) const {
+void InstanceResponder::SendPublication(const Mdns::Publication& publication,
+                                        const std::string& subtype,
+                                        const ReplyAddress& reply_address) const {
   if (!subtype.empty()) {
     SendSubtypePtrRecord(subtype, publication.ptr_ttl_seconds_, reply_address);
   }
 
-  auto ptr_resource = std::make_shared<DnsResource>(
-      MdnsNames::LocalServiceFullName(service_name_), DnsType::kPtr);
+  auto ptr_resource =
+      std::make_shared<DnsResource>(MdnsNames::LocalServiceFullName(service_name_), DnsType::kPtr);
   ptr_resource->time_to_live_ = publication.ptr_ttl_seconds_;
   ptr_resource->ptr_.pointer_domain_name_ = instance_full_name_;
   SendResource(ptr_resource, MdnsResourceSection::kAnswer, reply_address);
 
-  auto srv_resource =
-      std::make_shared<DnsResource>(instance_full_name_, DnsType::kSrv);
+  auto srv_resource = std::make_shared<DnsResource>(instance_full_name_, DnsType::kSrv);
   srv_resource->time_to_live_ = publication.srv_ttl_seconds_;
   srv_resource->srv_.priority_ = publication.srv_priority_;
   srv_resource->srv_.weight_ = publication.srv_weight_;
@@ -175,8 +161,7 @@ void InstanceResponder::SendPublication(
   srv_resource->srv_.target_ = host_full_name_;
   SendResource(srv_resource, MdnsResourceSection::kAdditional, reply_address);
 
-  auto txt_resource =
-      std::make_shared<DnsResource>(instance_full_name_, DnsType::kTxt);
+  auto txt_resource = std::make_shared<DnsResource>(instance_full_name_, DnsType::kTxt);
   txt_resource->time_to_live_ = publication.txt_ttl_seconds_;
   txt_resource->txt_.strings_ = publication.text_;
   SendResource(txt_resource, MdnsResourceSection::kAdditional, reply_address);
@@ -184,14 +169,12 @@ void InstanceResponder::SendPublication(
   SendAddresses(MdnsResourceSection::kAdditional, reply_address);
 }
 
-void InstanceResponder::SendSubtypePtrRecord(
-    const std::string& subtype, uint32_t ttl,
-    const ReplyAddress& reply_address) const {
+void InstanceResponder::SendSubtypePtrRecord(const std::string& subtype, uint32_t ttl,
+                                             const ReplyAddress& reply_address) const {
   FXL_DCHECK(!subtype.empty());
 
   auto ptr_resource = std::make_shared<DnsResource>(
-      MdnsNames::LocalServiceSubtypeFullName(service_name_, subtype),
-      DnsType::kPtr);
+      MdnsNames::LocalServiceSubtypeFullName(service_name_, subtype), DnsType::kPtr);
   ptr_resource->time_to_live_ = ttl;
   ptr_resource->ptr_.pointer_domain_name_ = instance_full_name_;
   SendResource(ptr_resource, MdnsResourceSection::kAnswer, reply_address);

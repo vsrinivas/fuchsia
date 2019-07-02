@@ -72,9 +72,8 @@ PacketWriter& operator<<(PacketWriter& writer, const DnsClassAndFlag& value) {
 }
 
 PacketWriter& operator<<(PacketWriter& writer, const DnsHeader& value) {
-  return writer << value.id_ << value.flags_ << value.question_count_
-                << value.answer_count_ << value.authority_count_
-                << value.additional_count_;
+  return writer << value.id_ << value.flags_ << value.question_count_ << value.answer_count_
+                << value.authority_count_ << value.additional_count_;
 }
 
 PacketWriter& operator<<(PacketWriter& writer, const DnsQuestion& value) {
@@ -92,18 +91,15 @@ PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataNs& value) {
   return writer << value.name_server_domain_name_;
 }
 
-PacketWriter& operator<<(PacketWriter& writer,
-                         const DnsResourceDataCName& value) {
+PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataCName& value) {
   return writer << value.canonical_name_;
 }
 
-PacketWriter& operator<<(PacketWriter& writer,
-                         const DnsResourceDataPtr& value) {
+PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataPtr& value) {
   return writer << value.pointer_domain_name_;
 }
 
-PacketWriter& operator<<(PacketWriter& writer,
-                         const DnsResourceDataTxt& value) {
+PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataTxt& value) {
   for (auto& string : value.strings_) {
     if (string.size() > std::numeric_limits<uint8_t>::max()) {
       continue;
@@ -116,25 +112,20 @@ PacketWriter& operator<<(PacketWriter& writer,
   return writer << static_cast<uint8_t>(0);
 }
 
-PacketWriter& operator<<(PacketWriter& writer,
-                         const DnsResourceDataAaaa& value) {
+PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataAaaa& value) {
   return writer << value.address_;
 }
 
-PacketWriter& operator<<(PacketWriter& writer,
-                         const DnsResourceDataSrv& value) {
-  return writer << value.priority_ << value.weight_ << value.port_.as_uint16_t()
-                << value.target_;
+PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataSrv& value) {
+  return writer << value.priority_ << value.weight_ << value.port_.as_uint16_t() << value.target_;
 }
 
-PacketWriter& operator<<(PacketWriter& writer,
-                         const DnsResourceDataOpt& value) {
+PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataOpt& value) {
   uint16_t length = value.options_.size();
   return writer << length << value.options_;
 }
 
-PacketWriter& operator<<(PacketWriter& writer,
-                         const DnsResourceDataNSec& value) {
+PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataNSec& value) {
   return writer << value.next_domain_ << value.bits_;
 }
 
@@ -180,8 +171,7 @@ PacketWriter& operator<<(PacketWriter& writer, const DnsResource& value) {
       writer << value.nsec_;
       break;
     default:
-      FXL_DCHECK(false) << "Unsupported resource type "
-                        << static_cast<uint16_t>(value.type_);
+      FXL_DCHECK(false) << "Unsupported resource type " << static_cast<uint16_t>(value.type_);
       break;
   }
 

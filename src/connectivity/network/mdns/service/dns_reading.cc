@@ -134,9 +134,8 @@ PacketReader& operator>>(PacketReader& reader, DnsClassAndFlag& value) {
 }
 
 PacketReader& operator>>(PacketReader& reader, DnsHeader& value) {
-  return reader >> value.id_ >> value.flags_ >> value.question_count_ >>
-         value.answer_count_ >> value.authority_count_ >>
-         value.additional_count_;
+  return reader >> value.id_ >> value.flags_ >> value.question_count_ >> value.answer_count_ >>
+         value.authority_count_ >> value.additional_count_;
 }
 
 PacketReader& operator>>(PacketReader& reader, DnsQuestion& value) {
@@ -175,8 +174,7 @@ PacketReader& operator>>(PacketReader& reader, DnsResourceDataTxt& value) {
 
     if (length > reader.bytes_remaining()) {
 #ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-      FXL_DLOG(ERROR) << "Bad string length, offset "
-                      << reader.bytes_consumed();
+      FXL_DLOG(ERROR) << "Bad string length, offset " << reader.bytes_consumed();
 #endif
       reader.MarkUnhealthy();
       return reader;
@@ -243,8 +241,7 @@ PacketReader& operator>>(PacketReader& reader, DnsResourceDataNSec& value) {
 PacketReader& operator>>(PacketReader& reader, DnsResource& value) {
   DnsClassAndFlag class_and_flag;
   uint16_t data_size;
-  reader >> value.name_ >> value.type_ >> class_and_flag >>
-      value.time_to_live_ >> data_size;
+  reader >> value.name_ >> value.type_ >> class_and_flag >> value.time_to_live_ >> data_size;
   value.class_ = class_and_flag.class_;
   value.cache_flush_ = class_and_flag.flag_;
 
@@ -332,8 +329,7 @@ PacketReader& operator>>(PacketReader& reader, DnsResource& value) {
 PacketReader& operator>>(PacketReader& reader, DnsMessage& value) {
   reader >> value.header_;
 
-  if (value.header_.question_count_ > kMaxQuestions ||
-      value.header_.answer_count_ > kMaxAnswers ||
+  if (value.header_.question_count_ > kMaxQuestions || value.header_.answer_count_ > kMaxAnswers ||
       value.header_.authority_count_ > kMaxAuthorities ||
       value.header_.additional_count_ > kMaxAdditionals) {
 #ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION

@@ -28,8 +28,9 @@
 namespace mdns {
 
 // static
-std::unique_ptr<MdnsInterfaceTransceiver> MdnsInterfaceTransceiver::Create(
-    inet::IpAddress address, const std::string& name, uint32_t index) {
+std::unique_ptr<MdnsInterfaceTransceiver> MdnsInterfaceTransceiver::Create(inet::IpAddress address,
+                                                                           const std::string& name,
+                                                                           uint32_t index) {
   if (address.is_v4()) {
     return std::make_unique<MdnsInterfaceTransceiverV4>(address, name, index);
   } else {
@@ -37,8 +38,7 @@ std::unique_ptr<MdnsInterfaceTransceiver> MdnsInterfaceTransceiver::Create(
   }
 }
 
-MdnsInterfaceTransceiver::MdnsInterfaceTransceiver(inet::IpAddress address,
-                                                   const std::string& name,
+MdnsInterfaceTransceiver::MdnsInterfaceTransceiver(inet::IpAddress address, const std::string& name,
                                                    uint32_t index)
     : address_(address),
       name_(name),
@@ -55,8 +55,8 @@ bool MdnsInterfaceTransceiver::Start(const MdnsAddresses& addresses,
 
   addresses_ = &addresses;
 
-  std::cerr << "Starting mDNS on interface " << name_ << " " << address_
-            << " using port " << addresses.port() << "\n";
+  std::cerr << "Starting mDNS on interface " << name_ << " " << address_ << " using port "
+            << addresses.port() << "\n";
 
   socket_fd_ = fxl::UniqueFD(socket(address_.family(), SOCK_DGRAM, 0));
 
@@ -86,8 +86,7 @@ void MdnsInterfaceTransceiver::Stop() {
   socket_fd_.reset();
 }
 
-void MdnsInterfaceTransceiver::SetAlternateAddress(
-    const inet::IpAddress& alternate_address) {
+void MdnsInterfaceTransceiver::SetAlternateAddress(const inet::IpAddress& alternate_address) {
   FXL_DCHECK(alternate_address.family() != address_.family());
 
   alternate_address_ = alternate_address;
@@ -97,8 +96,7 @@ void MdnsInterfaceTransceiver::SendMessage(DnsMessage* message,
                                            const inet::SocketAddress& address) {
   FXL_DCHECK(message);
   FXL_DCHECK(address.is_valid());
-  FXL_DCHECK(address.family() == address_.family() ||
-             address == addresses_->v4_multicast());
+  FXL_DCHECK(address.family() == address_.family() || address == addresses_->v4_multicast());
 
   FixUpAddresses(&message->answers_);
   FixUpAddresses(&message->authorities_);
@@ -128,8 +126,7 @@ void MdnsInterfaceTransceiver::SendAddress(const std::string& host_full_name) {
   SendMessage(&message, addresses_->v4_multicast());
 }
 
-void MdnsInterfaceTransceiver::SendAddressGoodbye(
-    const std::string& host_full_name) {
+void MdnsInterfaceTransceiver::SendAddressGoodbye(const std::string& host_full_name) {
   DnsMessage message;
   // Not using |GetAddressResource| here, because we want to modify the ttl.
   message.answers_.push_back(MakeAddressResource(host_full_name, address_));
@@ -148,46 +145,37 @@ void MdnsInterfaceTransceiver::LogTraffic() {
 
 int MdnsInterfaceTransceiver::SetOptionSharePort() {
   int param = 1;
-  int result = setsockopt(socket_fd_.get(), SOL_SOCKET, SO_REUSEADDR, &param,
-                          sizeof(param));
+  int result = setsockopt(socket_fd_.get(), SOL_SOCKET, SO_REUSEADDR, &param, sizeof(param));
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to set socket option SO_REUSEADDR, "
-                   << strerror(errno);
+    FXL_LOG(ERROR) << "Failed to set socket option SO_REUSEADDR, " << strerror(errno);
     return result;
   }
 
   param = 1;
-  result = setsockopt(socket_fd_.get(), SOL_SOCKET, SO_REUSEPORT, &param,
-                      sizeof(param));
+  result = setsockopt(socket_fd_.get(), SOL_SOCKET, SO_REUSEPORT, &param, sizeof(param));
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to set socket option SO_REUSEPORT, "
-                   << strerror(errno);
+    FXL_LOG(ERROR) << "Failed to set socket option SO_REUSEPORT, " << strerror(errno);
   }
 
   return result;
 }
 
 void MdnsInterfaceTransceiver::WaitForInbound() {
-  fd_waiter_.Wait([this](zx_status_t status,
-                         uint32_t events) { InboundReady(status, events); },
+  fd_waiter_.Wait([this](zx_status_t status, uint32_t events) { InboundReady(status, events); },
                   socket_fd_.get(), POLLIN);
 }
 
-void MdnsInterfaceTransceiver::InboundReady(zx_status_t status,
-                                            uint32_t events) {
+void MdnsInterfaceTransceiver::InboundReady(zx_status_t status, uint32_t events) {
   sockaddr_storage source_address_storage;
-  socklen_t source_address_length =
-      address_.is_v4() ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
+  socklen_t source_address_length = address_.is_v4() ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
   ssize_t result =
-      recvfrom(socket_fd_.get(), inbound_buffer_.data(), inbound_buffer_.size(),
-               0, reinterpret_cast<sockaddr*>(&source_address_storage),
-               &source_address_length);
+      recvfrom(socket_fd_.get(), inbound_buffer_.data(), inbound_buffer_.size(), 0,
+               reinterpret_cast<sockaddr*>(&source_address_storage), &source_address_length);
   if (result < 0) {
     FXL_LOG(ERROR) << "Failed to recvfrom, " << strerror(errno);
     // Wait a bit before trying again to avoid spamming the log.
     async::PostDelayedTask(
-        async_get_default_dispatcher(), [this]() { WaitForInbound(); },
-        zx::sec(10));
+        async_get_default_dispatcher(), [this]() { WaitForInbound(); }, zx::sec(10));
     return;
   }
 
@@ -212,8 +200,8 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status,
     inbound_message_callback_(std::move(message), reply_address);
   } else {
     inbound_buffer_.resize(result);
-    FXL_LOG(ERROR) << "Couldn't parse message from " << reply_address << ", "
-                   << result << " bytes: " << fostr::HexDump(inbound_buffer_);
+    FXL_LOG(ERROR) << "Couldn't parse message from " << reply_address << ", " << result
+                   << " bytes: " << fostr::HexDump(inbound_buffer_);
     inbound_buffer_.resize(kMaxPacketSize);
   }
 
@@ -224,23 +212,20 @@ std::shared_ptr<DnsResource> MdnsInterfaceTransceiver::GetAddressResource(
     const std::string& host_full_name) {
   FXL_DCHECK(address_.is_valid());
 
-  if (!address_resource_ ||
-      address_resource_->name_.dotted_string_ != host_full_name) {
+  if (!address_resource_ || address_resource_->name_.dotted_string_ != host_full_name) {
     address_resource_ = MakeAddressResource(host_full_name, address_);
   }
 
   return address_resource_;
 }
 
-std::shared_ptr<DnsResource>
-MdnsInterfaceTransceiver::GetAlternateAddressResource(
+std::shared_ptr<DnsResource> MdnsInterfaceTransceiver::GetAlternateAddressResource(
     const std::string& host_full_name) {
   FXL_DCHECK(alternate_address_.is_valid());
 
   if (!alternate_address_resource_ ||
       alternate_address_resource_->name_.dotted_string_ != host_full_name) {
-    alternate_address_resource_ =
-        MakeAddressResource(host_full_name, alternate_address_);
+    alternate_address_resource_ = MakeAddressResource(host_full_name, alternate_address_);
   }
 
   return alternate_address_resource_;
@@ -290,17 +275,15 @@ void MdnsInterfaceTransceiver::FixUpAddresses(
   std::string name;
 
   // Move A/AAAA resources to the end of the vector.
-  auto iter =
-      std::remove_if(resources->begin(), resources->end(),
-                     [&name](const std::shared_ptr<DnsResource>& resource) {
-                       if (resource->type_ != DnsType::kA &&
-                           resource->type_ != DnsType::kAaaa) {
-                         return false;
-                       }
+  auto iter = std::remove_if(
+      resources->begin(), resources->end(), [&name](const std::shared_ptr<DnsResource>& resource) {
+        if (resource->type_ != DnsType::kA && resource->type_ != DnsType::kAaaa) {
+          return false;
+        }
 
-                       name = resource->name_.dotted_string_;
-                       return true;
-                     });
+        name = resource->name_.dotted_string_;
+        return true;
+      });
 
   if (iter == resources->end()) {
     // No address resources found/moved.

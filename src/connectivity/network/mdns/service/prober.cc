@@ -13,8 +13,7 @@
 namespace mdns {
 
 // static
-constexpr fxl::TimeDelta Prober::kMaxProbeInterval =
-    fxl::TimeDelta::FromMilliseconds(250);
+constexpr fxl::TimeDelta Prober::kMaxProbeInterval = fxl::TimeDelta::FromMilliseconds(250);
 
 Prober::Prober(MdnsAgent::Host* host, DnsType type, CompletionCallback callback)
     : MdnsAgent(host), type_(type), callback_(std::move(callback)) {
@@ -23,8 +22,7 @@ Prober::Prober(MdnsAgent::Host* host, DnsType type, CompletionCallback callback)
 
 Prober::~Prober() {}
 
-void Prober::Start(const std::string& host_full_name,
-                   const MdnsAddresses& addresses) {
+void Prober::Start(const std::string& host_full_name, const MdnsAddresses& addresses) {
   FXL_DCHECK(!host_full_name.empty());
 
   MdnsAgent::Start(host_full_name, addresses);
@@ -37,14 +35,12 @@ void Prober::Start(const std::string& host_full_name,
   Probe(InitialDelay());
 }
 
-void Prober::ReceiveResource(const DnsResource& resource,
-                             MdnsResourceSection section) {
+void Prober::ReceiveResource(const DnsResource& resource, MdnsResourceSection section) {
   if (resource.name_.dotted_string_ != ResourceName()) {
     return;
   }
 
-  if (resource.type_ == type_ ||
-      (resource.type_ == DnsType::kAaaa && type_ == DnsType::kA)) {
+  if (resource.type_ == type_ || (resource.type_ == DnsType::kAaaa && type_ == DnsType::kA)) {
     // Conflict detected. We defer the call to |RemoveSelf| and the callback
     // so we aren't calling |RemoveSelf| from |ReceiveResource|.
     PostTaskForTime(

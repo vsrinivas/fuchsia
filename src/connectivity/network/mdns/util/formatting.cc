@@ -25,8 +25,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::net::mdns::ServiceInstance& value) {
+std::ostream& operator<<(std::ostream& os, const fuchsia::net::mdns::ServiceInstance& value) {
   os << value.service << " " << value.instance;
   os << fostr::Indent;
 
@@ -41,16 +40,13 @@ std::ostream& operator<<(std::ostream& os,
   return os << fostr::Outdent;
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::net::Ipv4Address& value) {
+std::ostream& operator<<(std::ostream& os, const fuchsia::net::Ipv4Address& value) {
   const uint8_t* bytes = reinterpret_cast<const uint8_t*>(value.addr.data());
-  return os << static_cast<int>(bytes[0]) << '.' << static_cast<int>(bytes[1])
-            << '.' << static_cast<int>(bytes[2]) << '.'
-            << static_cast<int>(bytes[3]);
+  return os << static_cast<int>(bytes[0]) << '.' << static_cast<int>(bytes[1]) << '.'
+            << static_cast<int>(bytes[2]) << '.' << static_cast<int>(bytes[3]);
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::net::Ipv6Address& value) {
+std::ostream& operator<<(std::ostream& os, const fuchsia::net::Ipv6Address& value) {
   // IPV6 text representation per RFC 5952:
   // 1) Suppress leading zeros in hex representation of words.
   // 2) Don't use '::' to shorten a just single zero word.
@@ -106,8 +102,7 @@ std::ostream& operator<<(std::ostream& os,
   return os << std::dec << "]";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::net::IpAddress& value) {
+std::ostream& operator<<(std::ostream& os, const fuchsia::net::IpAddress& value) {
   switch (value.Which()) {
     case fuchsia::net::IpAddress::Tag::Invalid:
       os << "<invalid>";
@@ -123,8 +118,7 @@ std::ostream& operator<<(std::ostream& os,
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::net::Endpoint& value) {
+std::ostream& operator<<(std::ostream& os, const fuchsia::net::Endpoint& value) {
   if (value.addr.Which() == fuchsia::net::IpAddress::Tag::Invalid) {
     return os << "<unspecified>";
   }

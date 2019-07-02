@@ -35,8 +35,7 @@ class Mdns : public MdnsAgent::Host {
   // Describes an initial instance publication or query response.
   struct Publication {
     static std::unique_ptr<Publication> Create(
-        inet::IpPort port,
-        const std::vector<std::string>& text = std::vector<std::string>(),
+        inet::IpPort port, const std::vector<std::string>& text = std::vector<std::string>(),
         uint16_t srv_priority = 0, uint16_t srv_weight = 0);
 
     std::unique_ptr<Publication> Clone();
@@ -60,26 +59,21 @@ class Mdns : public MdnsAgent::Host {
     void Unsubscribe();
 
     // Called when a new instance is discovered.
-    virtual void InstanceDiscovered(const std::string& service,
-                                    const std::string& instance,
+    virtual void InstanceDiscovered(const std::string& service, const std::string& instance,
                                     const inet::SocketAddress& v4_address,
                                     const inet::SocketAddress& v6_address,
-                                    const std::vector<std::string>& text,
-                                    uint16_t srv_priority,
+                                    const std::vector<std::string>& text, uint16_t srv_priority,
                                     uint16_t srv_weight) = 0;
 
     // Called when a previously discovered instance changes addresses or text.
-    virtual void InstanceChanged(const std::string& service,
-                                 const std::string& instance,
+    virtual void InstanceChanged(const std::string& service, const std::string& instance,
                                  const inet::SocketAddress& v4_address,
                                  const inet::SocketAddress& v6_address,
-                                 const std::vector<std::string>& text,
-                                 uint16_t srv_priority,
+                                 const std::vector<std::string>& text, uint16_t srv_priority,
                                  uint16_t srv_weight) = 0;
 
     // Called when an instance is lost.
-    virtual void InstanceLost(const std::string& service,
-                              const std::string& instance) = 0;
+    virtual void InstanceLost(const std::string& service, const std::string& instance) = 0;
 
    protected:
     Subscriber() {}
@@ -121,9 +115,8 @@ class Mdns : public MdnsAgent::Host {
     // a subtype of the service, |subtype| contains the subtype, otherwise it is
     // empty. If the publication provided by the callback is null, no
     // announcement or response is transmitted.
-    virtual void GetPublication(
-        bool query, const std::string& subtype,
-        fit::function<void(std::unique_ptr<Publication>)> callback) = 0;
+    virtual void GetPublication(bool query, const std::string& subtype,
+                                fit::function<void(std::unique_ptr<Publication>)> callback) = 0;
 
    protected:
     Publisher() {}
@@ -136,9 +129,9 @@ class Mdns : public MdnsAgent::Host {
     friend class Mdns;
   };
 
-  using ResolveHostNameCallback = fit::function<void(
-      const std::string& host_name, const inet::IpAddress& v4_address,
-      const inet::IpAddress& v6_address)>;
+  using ResolveHostNameCallback =
+      fit::function<void(const std::string& host_name, const inet::IpAddress& v4_address,
+                         const inet::IpAddress& v6_address)>;
 
   Mdns();
 
@@ -170,15 +163,13 @@ class Mdns : public MdnsAgent::Host {
   // the subscriber is deleted or its |Unsubscribe| method is called.
   // Multiple subscriptions may be created for a given service name. Must not be
   // called before |Start|'s ready callback is called.
-  void SubscribeToService(const std::string& service_name,
-                          Subscriber* subscriber);
+  void SubscribeToService(const std::string& service_name, Subscriber* subscriber);
 
   // Publishes a service instance. Returns false if and only if the instance was
   // already published locally. The instance is unpublished when the publisher
   // is deleted or its |Unpublish| method is called. Must not be called before
   // |Start|'s ready callback is called.
-  bool PublishServiceInstance(const std::string& service_name,
-                              const std::string& instance_name,
+  bool PublishServiceInstance(const std::string& service_name, const std::string& instance_name,
                               bool perform_probe, Publisher* publisher);
 
   // Writes log messages describing lifetime traffic.
@@ -203,24 +194,20 @@ class Mdns : public MdnsAgent::Host {
     mutable fit::closure task_;
     fxl::TimePoint time_;
 
-    bool operator<(const TaskQueueEntry& other) const {
-      return time_ > other.time_;
-    }
+    bool operator<(const TaskQueueEntry& other) const { return time_ > other.time_; }
   };
 
   struct ReplyAddressHash {
     std::size_t operator()(const ReplyAddress& reply_address) const noexcept {
       return std::hash<inet::SocketAddress>{}(reply_address.socket_address()) ^
-             (std::hash<inet::IpAddress>{}(reply_address.interface_address())
-              << 1);
+             (std::hash<inet::IpAddress>{}(reply_address.interface_address()) << 1);
     }
   };
 
   // Starts the address probe or transitions to ready state, depending on
   // |perform_address_probe|. This method is called the first time a transceiver
   // becomes ready.
-  void OnInterfacesStarted(const std::string& host_name,
-                           bool perform_address_probe);
+  void OnInterfacesStarted(const std::string& host_name, bool perform_address_probe);
 
   // Starts a probe for a conflicting host name. If a conflict is detected, a
   // new name is generated and this method is called again. If no conflict is
@@ -241,17 +228,14 @@ class Mdns : public MdnsAgent::Host {
   void OnHostNameConflict();
 
   // MdnsAgent::Host implementation.
-  void PostTaskForTime(MdnsAgent* agent, fit::closure task,
-                       fxl::TimePoint target_time) override;
+  void PostTaskForTime(MdnsAgent* agent, fit::closure task, fxl::TimePoint target_time) override;
 
   void SendQuestion(std::shared_ptr<DnsQuestion> question) override;
 
-  void SendResource(std::shared_ptr<DnsResource> resource,
-                    MdnsResourceSection section,
+  void SendResource(std::shared_ptr<DnsResource> resource, MdnsResourceSection section,
                     const ReplyAddress& reply_address) override;
 
-  void SendAddresses(MdnsResourceSection section,
-                     const ReplyAddress& reply_address) override;
+  void SendAddresses(MdnsResourceSection section, const ReplyAddress& reply_address) override;
 
   void Renew(const DnsResource& resource) override;
 
@@ -262,9 +246,8 @@ class Mdns : public MdnsAgent::Host {
   void AddAgent(std::shared_ptr<MdnsAgent> agent);
 
   // Adds an instance responder after performing optional probe for conflicts.
-  bool AddInstanceResponder(const std::string& service_name,
-                            const std::string& instance_name, inet::IpPort port,
-                            std::shared_ptr<InstanceResponder> agent,
+  bool AddInstanceResponder(const std::string& service_name, const std::string& instance_name,
+                            inet::IpPort port, std::shared_ptr<InstanceResponder> agent,
                             bool perform_probe);
 
   // Sends any messages found in |outbound_messages_by_reply_address_| and
@@ -272,13 +255,11 @@ class Mdns : public MdnsAgent::Host {
   void SendMessages();
 
   // Distributes questions to all the agents except the resource renewer.
-  void ReceiveQuestion(const DnsQuestion& question,
-                       const ReplyAddress& reply_address);
+  void ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& reply_address);
 
   // Distributes resources to all the agents, starting with the resource
   // renewer.
-  void ReceiveResource(const DnsResource& resource,
-                       MdnsResourceSection section);
+  void ReceiveResource(const DnsResource& resource, MdnsResourceSection section);
 
   // Runs tasks in |task_queue_| using |dispatcher_|.
   void PostTask();

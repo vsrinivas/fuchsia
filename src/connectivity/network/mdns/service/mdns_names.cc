@@ -22,8 +22,7 @@ static constexpr size_t kMaxTextStringLength = 255;
 static constexpr size_t kMaxLabelLength = 63;
 
 // Concatenates |strings|.
-std::string Concatenate(
-    const std::initializer_list<const std::string*>& strings) {
+std::string Concatenate(const std::initializer_list<const std::string*>& strings) {
   std::string result;
   size_t result_size = 0;
 
@@ -106,8 +105,7 @@ class Parser {
 }  // namespace
 
 // static
-const std::string MdnsNames::kAnyServiceFullName =
-    "_services._dns-sd._udp.local.";
+const std::string MdnsNames::kAnyServiceFullName = "_services._dns-sd._udp.local.";
 
 // static
 std::string MdnsNames::LocalHostFullName(const std::string& host_name) {
@@ -124,13 +122,12 @@ std::string MdnsNames::LocalServiceFullName(const std::string& service_name) {
 }
 
 // static
-std::string MdnsNames::LocalServiceSubtypeFullName(
-    const std::string& service_name, const std::string& subtype) {
+std::string MdnsNames::LocalServiceSubtypeFullName(const std::string& service_name,
+                                                   const std::string& subtype) {
   FXL_DCHECK(IsValidServiceName(service_name));
   FXL_DCHECK(IsValidSubtypeName(subtype));
 
-  return Concatenate(
-      {&subtype, &kSubtypeSeparator, &service_name, &kLocalDomainName});
+  return Concatenate({&subtype, &kSubtypeSeparator, &service_name, &kLocalDomainName});
 }
 
 // static
@@ -139,14 +136,12 @@ std::string MdnsNames::LocalInstanceFullName(const std::string& instance_name,
   FXL_DCHECK(IsValidInstanceName(instance_name));
   FXL_DCHECK(IsValidServiceName(service_name));
 
-  return Concatenate(
-      {&instance_name, &kLabelSeparator, &service_name, &kLocalDomainName});
+  return Concatenate({&instance_name, &kLabelSeparator, &service_name, &kLocalDomainName});
 }
 
 // static
 bool MdnsNames::ExtractInstanceName(const std::string& instance_full_name,
-                                    const std::string& service_name,
-                                    std::string* instance_name) {
+                                    const std::string& service_name, std::string* instance_name) {
   FXL_DCHECK(IsValidServiceName(service_name));
   FXL_DCHECK(instance_name);
 
@@ -154,13 +149,11 @@ bool MdnsNames::ExtractInstanceName(const std::string& instance_full_name,
 
   Parser parser(instance_full_name);
   return parser.MatchDnsLabel(instance_name) && parser.Match(kLabelSeparator) &&
-         parser.Match(service_name) && parser.Match(kLocalDomainName) &&
-         parser.MatchEnd();
+         parser.Match(service_name) && parser.Match(kLocalDomainName) && parser.MatchEnd();
 }
 
 // static
-bool MdnsNames::MatchServiceName(const std::string& name,
-                                 const std::string& service_name,
+bool MdnsNames::MatchServiceName(const std::string& name, const std::string& service_name,
                                  std::string* subtype_out) {
   FXL_DCHECK(IsValidServiceName(service_name));
   FXL_DCHECK(subtype_out);
@@ -173,8 +166,7 @@ bool MdnsNames::MatchServiceName(const std::string& name,
     parser.Restart();
   }
 
-  return parser.Match(service_name) && parser.Match(kLocalDomainName) &&
-         parser.MatchEnd();
+  return parser.Match(service_name) && parser.Match(kLocalDomainName) && parser.MatchEnd();
 }
 
 // static
@@ -212,24 +204,21 @@ bool MdnsNames::IsValidServiceName(const std::string& service_name) {
   }
 
   Parser parser(service_name);
-  return parser.MatchDnsLabel() &&
-         (parser.Match(kTcpSuffix) || parser.Match(kUdpSuffix)) &&
+  return parser.MatchDnsLabel() && (parser.Match(kTcpSuffix) || parser.Match(kUdpSuffix)) &&
          parser.MatchEnd();
 }
 
 // static
 bool MdnsNames::IsValidInstanceName(const std::string& instance_name) {
   // Instance names consist of a single label.
-  return instance_name.length() > 0 &&
-         instance_name.length() <= kMaxLabelLength &&
+  return instance_name.length() > 0 && instance_name.length() <= kMaxLabelLength &&
          instance_name.find(kLabelSeparator) == std::string::npos;
 }
 
 // static
 bool MdnsNames::IsValidSubtypeName(const std::string& subtype_name) {
   // Subtype names consist of a single label.
-  return subtype_name.length() > 0 &&
-         subtype_name.length() <= kMaxLabelLength &&
+  return subtype_name.length() > 0 && subtype_name.length() <= kMaxLabelLength &&
          subtype_name.find(kLabelSeparator) == std::string::npos;
 }
 

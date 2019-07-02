@@ -32,10 +32,8 @@ class MdnsImpl : public fuchsia::net::mdns::PublicationResponder,
 
   void Subscribe(const std::string& service_name);
 
-  void Respond(const std::string& service_name,
-               const std::string& instance_name, uint16_t port,
-               const std::vector<std::string>& announce,
-               const std::vector<std::string>& text);
+  void Respond(const std::string& service_name, const std::string& instance_name, uint16_t port,
+               const std::vector<std::string>& announce, const std::vector<std::string>& text);
 
   void EnsureResolver();
 
@@ -46,8 +44,7 @@ class MdnsImpl : public fuchsia::net::mdns::PublicationResponder,
   void Quit();
 
   // fuchsia::net::mdns::PublicationResponder implementation.
-  void OnPublication(bool query, fidl::StringPtr subtype,
-                     OnPublicationCallback callback) override;
+  void OnPublication(bool query, fidl::StringPtr subtype, OnPublicationCallback callback) override;
 
   // fuchsia::net::mdns::ServiceSubscriber implementation.
   void OnInstanceDiscovered(fuchsia::net::mdns::ServiceInstance instance,

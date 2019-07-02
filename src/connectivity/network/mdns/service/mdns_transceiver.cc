@@ -19,8 +19,7 @@ MdnsTransceiver::MdnsTransceiver() {}
 
 MdnsTransceiver::~MdnsTransceiver() {}
 
-void MdnsTransceiver::Start(fuchsia::netstack::NetstackPtr netstack,
-                            const MdnsAddresses& addresses,
+void MdnsTransceiver::Start(fuchsia::netstack::NetstackPtr netstack, const MdnsAddresses& addresses,
                             fit::closure link_change_callback,
                             InboundMessageCallback inbound_message_callback) {
   FXL_DCHECK(netstack);
@@ -46,15 +45,12 @@ void MdnsTransceiver::Stop() {
   }
 }
 
-MdnsInterfaceTransceiver* MdnsTransceiver::GetInterfaceTransceiver(
-    const inet::IpAddress& address) {
+MdnsInterfaceTransceiver* MdnsTransceiver::GetInterfaceTransceiver(const inet::IpAddress& address) {
   auto iter = interface_transceivers_by_address_.find(address);
-  return iter == interface_transceivers_by_address_.end() ? nullptr
-                                                          : iter->second.get();
+  return iter == interface_transceivers_by_address_.end() ? nullptr : iter->second.get();
 }
 
-void MdnsTransceiver::SendMessage(DnsMessage* message,
-                                  const ReplyAddress& reply_address) {
+void MdnsTransceiver::SendMessage(DnsMessage* message, const ReplyAddress& reply_address) {
   FXL_DCHECK(message);
 
   if (reply_address.socket_address() == addresses_->v4_multicast()) {
@@ -66,8 +62,7 @@ void MdnsTransceiver::SendMessage(DnsMessage* message,
     return;
   }
 
-  auto interface_transceiver =
-      GetInterfaceTransceiver(reply_address.interface_address());
+  auto interface_transceiver = GetInterfaceTransceiver(reply_address.interface_address());
   if (interface_transceiver != nullptr) {
     interface_transceiver->SendMessage(message, reply_address.socket_address());
   }
@@ -80,20 +75,17 @@ void MdnsTransceiver::LogTraffic() {
   }
 }
 
-void MdnsTransceiver::InterfacesChanged(
-    std::vector<fuchsia::netstack::NetInterface> interfaces) {
+void MdnsTransceiver::InterfacesChanged(std::vector<fuchsia::netstack::NetInterface> interfaces) {
   bool link_change = false;
 
-  std::unordered_map<inet::IpAddress, std::unique_ptr<MdnsInterfaceTransceiver>>
-      prev;
+  std::unordered_map<inet::IpAddress, std::unique_ptr<MdnsInterfaceTransceiver>> prev;
 
   interface_transceivers_by_address_.swap(prev);
 
   for (const auto& if_info : interfaces) {
     inet::IpAddress address = MdnsFidlUtil::IpAddressFrom(&if_info.addr);
 
-    if ((if_info.flags & fuchsia::netstack::NetInterfaceFlagUp) == 0 ||
-        address.is_loopback()) {
+    if ((if_info.flags & fuchsia::netstack::NetInterfaceFlagUp) == 0 || address.is_loopback()) {
       continue;
     }
 
@@ -107,13 +99,12 @@ void MdnsTransceiver::InterfacesChanged(
       inet::IpAddress alternate_address_for_v4;
       if (!if_info.ipv6addrs.empty()) {
         // TODO(dalesat): Is the first V6 address the right one?
-        alternate_address_for_v4 =
-            MdnsFidlUtil::IpAddressFrom(&if_info.ipv6addrs.front().addr);
+        alternate_address_for_v4 = MdnsFidlUtil::IpAddressFrom(&if_info.ipv6addrs.front().addr);
       }
 
       // Ensure that there's an interface transceiver for the V4 address.
-      if (EnsureInterfaceTransceiver(address, alternate_address_for_v4,
-                                     if_info.id, if_info.name, &prev)) {
+      if (EnsureInterfaceTransceiver(address, alternate_address_for_v4, if_info.id, if_info.name,
+                                     &prev)) {
         link_change = true;
       }
     }
@@ -122,8 +113,7 @@ void MdnsTransceiver::InterfacesChanged(
     // TODO(dalesat): What does it mean if there's more than one of these?
     for (auto& subnet : if_info.ipv6addrs) {
       if (EnsureInterfaceTransceiver(MdnsFidlUtil::IpAddressFrom(&subnet.addr),
-                                     alternate_address_for_v6, if_info.id,
-                                     if_info.name, &prev)) {
+                                     alternate_address_for_v6, if_info.id, if_info.name, &prev)) {
         link_change = true;
       }
     }
@@ -142,10 +132,9 @@ void MdnsTransceiver::InterfacesChanged(
 }
 
 bool MdnsTransceiver::EnsureInterfaceTransceiver(
-    const inet::IpAddress& address, const inet::IpAddress& alternate_address,
-    uint32_t id, const std::string& name,
-    std::unordered_map<inet::IpAddress,
-                       std::unique_ptr<MdnsInterfaceTransceiver>>* prev) {
+    const inet::IpAddress& address, const inet::IpAddress& alternate_address, uint32_t id,
+    const std::string& name,
+    std::unordered_map<inet::IpAddress, std::unique_ptr<MdnsInterfaceTransceiver>>* prev) {
   FXL_DCHECK(prev);
 
   if (!address.is_valid()) {
@@ -179,11 +168,9 @@ bool MdnsTransceiver::EnsureInterfaceTransceiver(
     result_on_fail = true;
   }
 
-  auto interface_transceiver =
-      MdnsInterfaceTransceiver::Create(address, name, id);
+  auto interface_transceiver = MdnsInterfaceTransceiver::Create(address, name, id);
 
-  if (!interface_transceiver->Start(*addresses_,
-                                    inbound_message_callback_.share())) {
+  if (!interface_transceiver->Start(*addresses_, inbound_message_callback_.share())) {
     // Couldn't start the transceiver.
     return result_on_fail;
   }
@@ -192,8 +179,7 @@ bool MdnsTransceiver::EnsureInterfaceTransceiver(
     interface_transceiver->SetAlternateAddress(alternate_address);
   }
 
-  interface_transceivers_by_address_.emplace(address,
-                                             std::move(interface_transceiver));
+  interface_transceivers_by_address_.emplace(address, std::move(interface_transceiver));
 
   return true;
 }

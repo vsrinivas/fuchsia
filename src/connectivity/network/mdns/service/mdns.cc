@@ -36,9 +36,9 @@ void Mdns::SetVerbose(bool verbose) {
 #endif  // MDNS_TRACE
 }
 
-void Mdns::Start(fuchsia::netstack::NetstackPtr netstack,
-                 const std::string& host_name, const MdnsAddresses& addresses,
-                 bool perform_address_probe, fit::closure ready_callback) {
+void Mdns::Start(fuchsia::netstack::NetstackPtr netstack, const std::string& host_name,
+                 const MdnsAddresses& addresses, bool perform_address_probe,
+                 fit::closure ready_callback) {
   FXL_DCHECK(!host_name.empty());
   FXL_DCHECK(ready_callback);
   FXL_DCHECK(state_ == State::kNotStarted);
@@ -64,17 +64,14 @@ void Mdns::Start(fuchsia::netstack::NetstackPtr netstack,
         // changes that cause two hosts with the same name to be on the same
         // subnet. To improve matters, we need to be prepared to change a host
         // name we've been using for awhile.
-        if (state_ == State::kWaitingForInterfaces &&
-            transceiver_.has_interfaces()) {
+        if (state_ == State::kWaitingForInterfaces && transceiver_.has_interfaces()) {
           OnInterfacesStarted(original_host_name_, perform_address_probe);
         }
       },
-      [this](std::unique_ptr<DnsMessage> message,
-             const ReplyAddress& reply_address) {
+      [this](std::unique_ptr<DnsMessage> message, const ReplyAddress& reply_address) {
 #ifdef MDNS_TRACE
         if (verbose_) {
-          FXL_LOG(INFO) << "Inbound message from " << reply_address << ":"
-                        << *message;
+          FXL_LOG(INFO) << "Inbound message from " << reply_address << ":" << *message;
         }
 #endif  // MDNS_TRACE
 
@@ -82,8 +79,7 @@ void Mdns::Start(fuchsia::netstack::NetstackPtr netstack,
           // We reply to questions using unicast if specifically requested in
           // the question or if the sender's port isn't 5353.
           ReceiveQuestion(*question, (question->unicast_response_ ||
-                                      reply_address.socket_address().port() !=
-                                          addresses_->port())
+                                      reply_address.socket_address().port() != addresses_->port())
                                          ? reply_address
                                          : addresses_->multicast_reply());
         }
@@ -129,12 +125,10 @@ void Mdns::ResolveHostName(const std::string& host_name, fxl::TimePoint timeout,
   FXL_DCHECK(callback);
   FXL_DCHECK(state_ == State::kActive);
 
-  AddAgent(std::make_shared<HostNameResolver>(this, host_name, timeout,
-                                              std::move(callback)));
+  AddAgent(std::make_shared<HostNameResolver>(this, host_name, timeout, std::move(callback)));
 }
 
-void Mdns::SubscribeToService(const std::string& service_name,
-                              Subscriber* subscriber) {
+void Mdns::SubscribeToService(const std::string& service_name, Subscriber* subscriber) {
   FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
   FXL_DCHECK(subscriber);
   FXL_DCHECK(state_ == State::kActive);
@@ -154,30 +148,26 @@ void Mdns::SubscribeToService(const std::string& service_name,
   agent->AddSubscriber(subscriber);
 }
 
-bool Mdns::PublishServiceInstance(const std::string& service_name,
-                                  const std::string& instance_name,
+bool Mdns::PublishServiceInstance(const std::string& service_name, const std::string& instance_name,
                                   bool perform_probe, Publisher* publisher) {
   FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
   FXL_DCHECK(MdnsNames::IsValidInstanceName(instance_name));
   FXL_DCHECK(publisher);
   FXL_DCHECK(state_ == State::kActive);
 
-  auto agent = std::make_shared<InstanceResponder>(this, service_name,
-                                                   instance_name, publisher);
+  auto agent = std::make_shared<InstanceResponder>(this, service_name, instance_name, publisher);
 
   publisher->Connect(agent);
 
   // We're using a bogus port number here, which is OK, because the 'proposed'
   // resource created from it is only used for collision resolution.
-  return AddInstanceResponder(service_name, instance_name,
-                              inet::IpPort::From_uint16_t(0), agent,
+  return AddInstanceResponder(service_name, instance_name, inet::IpPort::From_uint16_t(0), agent,
                               perform_probe);
 }
 
 void Mdns::LogTraffic() { transceiver_.LogTraffic(); }
 
-void Mdns::OnInterfacesStarted(const std::string& host_name,
-                               bool perform_address_probe) {
+void Mdns::OnInterfacesStarted(const std::string& host_name, bool perform_address_probe) {
   if (perform_address_probe) {
     StartAddressProbe(host_name);
     return;
@@ -191,24 +181,21 @@ void Mdns::StartAddressProbe(const std::string& host_name) {
   state_ = State::kAddressProbeInProgress;
 
   RegisterHostName(host_name);
-  std::cerr << "mDNS: Verifying uniqueness of host name " << host_full_name_
-            << "\n";
+  std::cerr << "mDNS: Verifying uniqueness of host name " << host_full_name_ << "\n";
 
   // Create an address prober to look for host name conflicts. The address
   // prober removes itself immediately before it calls the callback.
-  auto address_prober =
-      std::make_shared<AddressProber>(this, [this](bool successful) {
-        FXL_DCHECK(agents_.empty());
+  auto address_prober = std::make_shared<AddressProber>(this, [this](bool successful) {
+    FXL_DCHECK(agents_.empty());
 
-        if (!successful) {
-          std::cerr << "mDNS: Another host is using name " << host_full_name_
-                    << "\n";
-          OnHostNameConflict();
-          return;
-        }
+    if (!successful) {
+      std::cerr << "mDNS: Another host is using name " << host_full_name_ << "\n";
+      OnHostNameConflict();
+      return;
+    }
 
-        OnReady();
-      });
+    OnReady();
+  });
 
   // We don't use |AddAgent| here, because agents added that way don't
   // actually participate until we're done probing for host name conflicts.
@@ -220,8 +207,7 @@ void Mdns::StartAddressProbe(const std::string& host_name) {
 void Mdns::RegisterHostName(const std::string& host_name) {
   host_name_ = host_name;
   host_full_name_ = MdnsNames::LocalHostFullName(host_name);
-  address_placeholder_ =
-      std::make_shared<DnsResource>(host_full_name_, DnsType::kA);
+  address_placeholder_ = std::make_shared<DnsResource>(host_full_name_, DnsType::kA);
 }
 
 void Mdns::OnReady() {
@@ -255,21 +241,18 @@ void Mdns::OnHostNameConflict() {
   StartAddressProbe(os.str());
 }
 
-void Mdns::PostTaskForTime(MdnsAgent* agent, fit::closure task,
-                           fxl::TimePoint target_time) {
+void Mdns::PostTaskForTime(MdnsAgent* agent, fit::closure task, fxl::TimePoint target_time) {
   task_queue_.emplace(agent, std::move(task), target_time);
   PostTask();
 }
 
 void Mdns::SendQuestion(std::shared_ptr<DnsQuestion> question) {
   FXL_DCHECK(question);
-  DnsMessage& message =
-      outbound_messages_by_reply_address_[addresses_->multicast_reply()];
+  DnsMessage& message = outbound_messages_by_reply_address_[addresses_->multicast_reply()];
   message.questions_.push_back(question);
 }
 
-void Mdns::SendResource(std::shared_ptr<DnsResource> resource,
-                        MdnsResourceSection section,
+void Mdns::SendResource(std::shared_ptr<DnsResource> resource, MdnsResourceSection section,
                         const ReplyAddress& reply_address) {
   FXL_DCHECK(resource);
 
@@ -304,17 +287,13 @@ void Mdns::SendResource(std::shared_ptr<DnsResource> resource,
   }
 }
 
-void Mdns::SendAddresses(MdnsResourceSection section,
-                         const ReplyAddress& reply_address) {
+void Mdns::SendAddresses(MdnsResourceSection section, const ReplyAddress& reply_address) {
   SendResource(address_placeholder_, section, reply_address);
 }
 
-void Mdns::Renew(const DnsResource& resource) {
-  resource_renewer_->Renew(resource);
-}
+void Mdns::Renew(const DnsResource& resource) { resource_renewer_->Renew(resource); }
 
-void Mdns::RemoveAgent(const MdnsAgent* agent,
-                       const std::string& published_instance_full_name) {
+void Mdns::RemoveAgent(const MdnsAgent* agent, const std::string& published_instance_full_name) {
   FXL_DCHECK(agent);
   FXL_DCHECK(!prohibit_agent_removal_);
 
@@ -326,16 +305,14 @@ void Mdns::RemoveAgent(const MdnsAgent* agent,
 
   while (!temp.empty()) {
     if (temp.top().agent_ != agent) {
-      task_queue_.emplace(temp.top().agent_, std::move(temp.top().task_),
-                          temp.top().time_);
+      task_queue_.emplace(temp.top().agent_, std::move(temp.top().task_), temp.top().time_);
     }
 
     temp.pop();
   }
 
   if (!published_instance_full_name.empty()) {
-    instance_publishers_by_instance_full_name_.erase(
-        published_instance_full_name);
+    instance_publishers_by_instance_full_name_.erase(published_instance_full_name);
   }
 
   // In case the agent sent an epitaph.
@@ -353,16 +330,13 @@ void Mdns::AddAgent(std::shared_ptr<MdnsAgent> agent) {
   }
 }
 
-bool Mdns::AddInstanceResponder(const std::string& service_name,
-                                const std::string& instance_name,
-                                inet::IpPort port,
-                                std::shared_ptr<InstanceResponder> agent,
+bool Mdns::AddInstanceResponder(const std::string& service_name, const std::string& instance_name,
+                                inet::IpPort port, std::shared_ptr<InstanceResponder> agent,
                                 bool perform_probe) {
   FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
   FXL_DCHECK(MdnsNames::IsValidInstanceName(instance_name));
 
-  std::string instance_full_name =
-      MdnsNames::LocalInstanceFullName(instance_name, service_name);
+  std::string instance_full_name = MdnsNames::LocalInstanceFullName(instance_name, service_name);
 
   if (instance_publishers_by_instance_full_name_.find(instance_full_name) !=
       instance_publishers_by_instance_full_name_.end()) {
@@ -372,17 +346,17 @@ bool Mdns::AddInstanceResponder(const std::string& service_name,
   instance_publishers_by_instance_full_name_.emplace(instance_full_name, agent);
 
   if (perform_probe) {
-    auto prober = std::make_shared<InstanceProber>(
-        this, service_name, instance_name, port,
-        [this, instance_full_name, agent](bool successful) {
-          if (!successful) {
-            agent->ReportSuccess(false);
-            return;
-          }
+    auto prober =
+        std::make_shared<InstanceProber>(this, service_name, instance_name, port,
+                                         [this, instance_full_name, agent](bool successful) {
+                                           if (!successful) {
+                                             agent->ReportSuccess(false);
+                                             return;
+                                           }
 
-          agent->ReportSuccess(true);
-          AddAgent(agent);
-        });
+                                           agent->ReportSuccess(true);
+                                           AddAgent(agent);
+                                         });
 
     AddAgent(prober);
   } else {
@@ -410,8 +384,7 @@ void Mdns::SendMessages() {
       if (reply_address == addresses_->multicast_reply()) {
         FXL_LOG(INFO) << "Outbound message (multicast): " << message;
       } else {
-        FXL_LOG(INFO) << "Outbound message to " << reply_address << ":"
-                      << message;
+        FXL_LOG(INFO) << "Outbound message to " << reply_address << ":" << message;
       }
     }
 #endif  // MDNS_TRACE
@@ -422,8 +395,7 @@ void Mdns::SendMessages() {
   outbound_messages_by_reply_address_.clear();
 }
 
-void Mdns::ReceiveQuestion(const DnsQuestion& question,
-                           const ReplyAddress& reply_address) {
+void Mdns::ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& reply_address) {
   // Renewer doesn't need questions.
   DPROHIBIT_AGENT_REMOVAL();
   for (auto& pair : agents_) {
@@ -433,8 +405,7 @@ void Mdns::ReceiveQuestion(const DnsQuestion& question,
   DALLOW_AGENT_REMOVAL();
 }
 
-void Mdns::ReceiveResource(const DnsResource& resource,
-                           MdnsResourceSection section) {
+void Mdns::ReceiveResource(const DnsResource& resource, MdnsResourceSection section) {
   // Renewer is always first.
   resource_renewer_->ReceiveResource(resource, section);
   DPROHIBIT_AGENT_REMOVAL();
@@ -481,9 +452,10 @@ void Mdns::PostTask() {
 ///////////////////////////////////////////////////////////////////////////////
 
 // static
-std::unique_ptr<Mdns::Publication> Mdns::Publication::Create(
-    inet::IpPort port, const std::vector<std::string>& text,
-    uint16_t srv_priority, uint16_t srv_weight) {
+std::unique_ptr<Mdns::Publication> Mdns::Publication::Create(inet::IpPort port,
+                                                             const std::vector<std::string>& text,
+                                                             uint16_t srv_priority,
+                                                             uint16_t srv_weight) {
   auto publication = std::make_unique<Publication>();
   publication->port_ = port;
   publication->text_ = text;
@@ -504,8 +476,7 @@ std::unique_ptr<Mdns::Publication> Mdns::Publication::Clone() {
 
 Mdns::Subscriber::~Subscriber() { Unsubscribe(); }
 
-void Mdns::Subscriber::Connect(
-    std::shared_ptr<InstanceRequestor> instance_requestor) {
+void Mdns::Subscriber::Connect(std::shared_ptr<InstanceRequestor> instance_requestor) {
   FXL_DCHECK(instance_requestor);
   instance_subscriber_ = instance_requestor;
 }
@@ -540,8 +511,7 @@ void Mdns::Publisher::Unpublish() {
   }
 }
 
-void Mdns::Publisher::Connect(
-    std::shared_ptr<InstanceResponder> instance_responder) {
+void Mdns::Publisher::Connect(std::shared_ptr<InstanceResponder> instance_responder) {
   FXL_DCHECK(instance_responder);
   instance_responder_ = instance_responder;
 }

@@ -38,15 +38,13 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
     // Sends a resource to the specified address. The default |reply_address|
     // |kV4MulticastReply| sends the resource to the V4 or V6
     // multicast address.
-    virtual void SendResource(std::shared_ptr<DnsResource> resource,
-                              MdnsResourceSection section,
+    virtual void SendResource(std::shared_ptr<DnsResource> resource, MdnsResourceSection section,
                               const ReplyAddress& reply_address) = 0;
 
     // Sends address resources to the specified address. The default
     // |reply_address| |kV4MulticastReply| sends the addresses to the V4 or V6
     // multicast address.
-    virtual void SendAddresses(MdnsResourceSection section,
-                               const ReplyAddress& reply_address) = 0;
+    virtual void SendAddresses(MdnsResourceSection section, const ReplyAddress& reply_address) = 0;
 
     // Registers the resource for renewal. See |MdnsAgent::Renew|.
     virtual void Renew(const DnsResource& resource) = 0;
@@ -54,9 +52,8 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
     // Removes the specified agent. |published_instance_full_name| is used for
     // instance publishers only and indicates the full name of a published
     // instance.
-    virtual void RemoveAgent(
-        const MdnsAgent* agent,
-        const std::string& published_instance_full_name) = 0;
+    virtual void RemoveAgent(const MdnsAgent* agent,
+                             const std::string& published_instance_full_name) = 0;
   };
 
   virtual ~MdnsAgent() {}
@@ -64,20 +61,17 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
   // Starts the agent. This method is never called before a shared pointer to
   // the agent is created, so |shared_from_this| is safe to call.
   // Specializations should call this method first.
-  virtual void Start(const std::string& host_full_name,
-                     const MdnsAddresses& addresses) {
+  virtual void Start(const std::string& host_full_name, const MdnsAddresses& addresses) {
     addresses_ = &addresses;
   }
 
   // Presents a received question. This agent must not call |RemoveSelf| during
   // a call to this method.
-  virtual void ReceiveQuestion(const DnsQuestion& question,
-                               const ReplyAddress& reply_address){};
+  virtual void ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& reply_address){};
 
   // Presents a received resource. This agent must not call |RemoveSelf| during
   // a call to this method.
-  virtual void ReceiveResource(const DnsResource& resource,
-                               MdnsResourceSection section){};
+  virtual void ReceiveResource(const DnsResource& resource, MdnsResourceSection section){};
 
   // Signals the end of a message. This agent must not call |RemoveSelf| during
   // a call to this method.
@@ -104,20 +98,16 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
   }
 
   // Sends a question to the multicast address.
-  void SendQuestion(std::shared_ptr<DnsQuestion> question) const {
-    host_->SendQuestion(question);
-  }
+  void SendQuestion(std::shared_ptr<DnsQuestion> question) const { host_->SendQuestion(question); }
 
   // Sends a resource to the specified address.
-  void SendResource(std::shared_ptr<DnsResource> resource,
-                    MdnsResourceSection section,
+  void SendResource(std::shared_ptr<DnsResource> resource, MdnsResourceSection section,
                     const ReplyAddress& reply_address) const {
     host_->SendResource(resource, section, reply_address);
   }
 
   // Sends address resources to the specified address.
-  void SendAddresses(MdnsResourceSection section,
-                     const ReplyAddress& reply_address) const {
+  void SendAddresses(MdnsResourceSection section, const ReplyAddress& reply_address) const {
     host_->SendAddresses(section, reply_address);
   }
 

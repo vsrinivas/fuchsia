@@ -14,8 +14,7 @@ AddressResponder::AddressResponder(MdnsAgent::Host* host) : MdnsAgent(host) {}
 
 AddressResponder::~AddressResponder() {}
 
-void AddressResponder::Start(const std::string& host_full_name,
-                             const MdnsAddresses& addresses) {
+void AddressResponder::Start(const std::string& host_full_name, const MdnsAddresses& addresses) {
   FXL_DCHECK(!host_full_name.empty());
 
   MdnsAgent::Start(host_full_name, addresses);

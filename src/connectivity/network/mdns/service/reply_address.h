@@ -20,19 +20,15 @@ class ReplyAddress {
  public:
   // Creates a reply address from an |SocketAddress| and an interface
   // |IpAddress|.
-  ReplyAddress(const inet::SocketAddress& socket_address,
-               const inet::IpAddress& interface_address);
+  ReplyAddress(const inet::SocketAddress& socket_address, const inet::IpAddress& interface_address);
 
   // Creates a reply address from an |sockaddr_storage| struct and an interface
   // |IpAddress|.
-  ReplyAddress(const sockaddr_storage& socket_address,
-               const inet::IpAddress& interface_address);
+  ReplyAddress(const sockaddr_storage& socket_address, const inet::IpAddress& interface_address);
 
   const inet::SocketAddress& socket_address() const { return socket_address_; }
 
-  const inet::IpAddress& interface_address() const {
-    return interface_address_;
-  }
+  const inet::IpAddress& interface_address() const { return interface_address_; }
 
   bool operator==(const ReplyAddress& other) const {
     return socket_address_ == other.socket_address() &&

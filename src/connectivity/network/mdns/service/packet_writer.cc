@@ -12,8 +12,7 @@ namespace mdns {
 
 PacketWriter::PacketWriter() {}
 
-PacketWriter::PacketWriter(std::vector<uint8_t> packet)
-    : packet_(std::move(packet)) {}
+PacketWriter::PacketWriter(std::vector<uint8_t> packet) : packet_(std::move(packet)) {}
 
 PacketWriter::~PacketWriter() {}
 

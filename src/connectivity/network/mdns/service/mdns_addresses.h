@@ -23,31 +23,21 @@ class MdnsAddresses {
   inet::IpPort port() const { return port_; }
 
   // Gets the V4 multicast socket address.
-  inet::SocketAddress v4_multicast() const {
-    return inet::SocketAddress(v4_multicast_, port_);
-  }
+  inet::SocketAddress v4_multicast() const { return inet::SocketAddress(v4_multicast_, port_); }
 
   // Gets the V6 multicast socket address.
-  inet::SocketAddress v6_multicast() const {
-    return inet::SocketAddress(v6_multicast_, port_);
-  }
+  inet::SocketAddress v6_multicast() const { return inet::SocketAddress(v6_multicast_, port_); }
 
   // Gets the V4 socket address to bind to.
-  inet::SocketAddress v4_bind() const {
-    return inet::SocketAddress(INADDR_ANY, port_);
-  }
+  inet::SocketAddress v4_bind() const { return inet::SocketAddress(INADDR_ANY, port_); }
 
   // Gets the V6 socket address to bind to.
-  inet::SocketAddress v6_bind() const {
-    return inet::SocketAddress(in6addr_any, port_);
-  }
+  inet::SocketAddress v6_bind() const { return inet::SocketAddress(in6addr_any, port_); }
 
   // Gets the placeholder multicast reply address. This address is used when
   // sending messages and represents the appropriate reply address based on
   // context.
-  ReplyAddress multicast_reply() const {
-    return ReplyAddress(v4_multicast(), inet::IpAddress());
-  }
+  ReplyAddress multicast_reply() const { return ReplyAddress(v4_multicast(), inet::IpAddress()); }
 
  private:
   static const inet::IpPort kDefaultMdnsPort;

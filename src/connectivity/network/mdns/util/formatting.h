@@ -29,14 +29,10 @@ std::ostream& operator<<(std::ostream& os, const fidl::VectorPtr<T>& value) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::net::mdns::ServiceInstance& value);
-std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::net::Ipv4Address& value);
-std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::net::Ipv6Address& value);
-std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::net::IpAddress& value);
+std::ostream& operator<<(std::ostream& os, const fuchsia::net::mdns::ServiceInstance& value);
+std::ostream& operator<<(std::ostream& os, const fuchsia::net::Ipv4Address& value);
+std::ostream& operator<<(std::ostream& os, const fuchsia::net::Ipv6Address& value);
+std::ostream& operator<<(std::ostream& os, const fuchsia::net::IpAddress& value);
 std::ostream& operator<<(std::ostream& os, const fuchsia::net::Endpoint& value);
 
 }  // namespace mdns

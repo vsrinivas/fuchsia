@@ -11,20 +11,16 @@ namespace mdns {
 
 ResourceRenewer::ResourceRenewer(MdnsAgent::Host* host) : MdnsAgent(host) {}
 
-ResourceRenewer::~ResourceRenewer() {
-  FXL_DCHECK(entries_.size() == schedule_.size());
-}
+ResourceRenewer::~ResourceRenewer() { FXL_DCHECK(entries_.size() == schedule_.size()); }
 
 void ResourceRenewer::Renew(const DnsResource& resource) {
   FXL_DCHECK(resource.time_to_live_ != 0);
 
-  auto key =
-      std::make_unique<Entry>(resource.name_.dotted_string_, resource.type_);
+  auto key = std::make_unique<Entry>(resource.name_.dotted_string_, resource.type_);
   auto iter = entries_.find(key);
 
   if (iter == entries_.end()) {
-    auto entry =
-        std::make_unique<Entry>(resource.name_.dotted_string_, resource.type_);
+    auto entry = std::make_unique<Entry>(resource.name_.dotted_string_, resource.type_);
     entry->SetFirstQuery(resource.time_to_live_);
 
     Schedule(entry.get());
@@ -40,12 +36,10 @@ void ResourceRenewer::Renew(const DnsResource& resource) {
   }
 }
 
-void ResourceRenewer::ReceiveResource(const DnsResource& resource,
-                                      MdnsResourceSection section) {
+void ResourceRenewer::ReceiveResource(const DnsResource& resource, MdnsResourceSection section) {
   FXL_DCHECK(section != MdnsResourceSection::kExpired);
 
-  auto key =
-      std::make_unique<Entry>(resource.name_.dotted_string_, resource.type_);
+  auto key = std::make_unique<Entry>(resource.name_.dotted_string_, resource.type_);
   auto iter = entries_.find(key);
   if (iter != entries_.end()) {
     (*iter)->delete_ = true;
@@ -74,8 +68,7 @@ void ResourceRenewer::SendRenewals() {
       std::shared_ptr<DnsResource> resource =
           std::make_shared<DnsResource>(entry->name_, entry->type_);
       resource->time_to_live_ = 0;
-      SendResource(resource, MdnsResourceSection::kExpired,
-                   addresses().multicast_reply());
+      SendResource(resource, MdnsResourceSection::kExpired, addresses().multicast_reply());
       EraseEntry(entry);
     } else {
       // Need to query.
@@ -86,8 +79,7 @@ void ResourceRenewer::SendRenewals() {
   }
 
   if (!schedule_.empty()) {
-    PostTaskForTime([this]() { SendRenewals(); },
-                    schedule_.top()->schedule_time_);
+    PostTaskForTime([this]() { SendRenewals(); }, schedule_.top()->schedule_time_);
   }
 }
 
@@ -105,10 +97,9 @@ void ResourceRenewer::EraseEntry(Entry* entry) {
 }
 
 void ResourceRenewer::Entry::SetFirstQuery(uint32_t time_to_live) {
-  time_ = fxl::TimePoint::Now() + fxl::TimeDelta::FromMilliseconds(
-                                      time_to_live * kFirstQueryPerThousand);
-  interval_ = fxl::TimeDelta::FromMilliseconds(time_to_live *
-                                               kQueryIntervalPerThousand);
+  time_ = fxl::TimePoint::Now() +
+          fxl::TimeDelta::FromMilliseconds(time_to_live * kFirstQueryPerThousand);
+  interval_ = fxl::TimeDelta::FromMilliseconds(time_to_live * kQueryIntervalPerThousand);
   queries_remaining_ = kQueriesToAttempt;
 }
 

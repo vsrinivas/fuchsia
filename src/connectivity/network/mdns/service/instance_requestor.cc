@@ -11,18 +11,15 @@ namespace mdns {
 namespace {
 
 // static
-static constexpr fxl::TimeDelta kMaxQueryInterval =
-    fxl::TimeDelta::FromSeconds(60 * 60);
+static constexpr fxl::TimeDelta kMaxQueryInterval = fxl::TimeDelta::FromSeconds(60 * 60);
 
 }  // namespace
 
-InstanceRequestor::InstanceRequestor(MdnsAgent::Host* host,
-                                     const std::string& service_name)
+InstanceRequestor::InstanceRequestor(MdnsAgent::Host* host, const std::string& service_name)
     : MdnsAgent(host),
       service_name_(service_name),
       service_full_name_(MdnsNames::LocalServiceFullName(service_name)),
-      question_(
-          std::make_shared<DnsQuestion>(service_full_name_, DnsType::kPtr)) {}
+      question_(std::make_shared<DnsQuestion>(service_full_name_, DnsType::kPtr)) {}
 
 InstanceRequestor::~InstanceRequestor() {}
 
@@ -38,14 +35,12 @@ void InstanceRequestor::RemoveSubscriber(Mdns::Subscriber* subscriber) {
   }
 }
 
-void InstanceRequestor::Start(const std::string& host_full_name,
-                              const MdnsAddresses& addresses) {
+void InstanceRequestor::Start(const std::string& host_full_name, const MdnsAddresses& addresses) {
   MdnsAgent::Start(host_full_name, addresses);
   SendQuery();
 }
 
-void InstanceRequestor::ReceiveResource(const DnsResource& resource,
-                                        MdnsResourceSection section) {
+void InstanceRequestor::ReceiveResource(const DnsResource& resource, MdnsResourceSection section) {
   switch (resource.type_) {
     case DnsType::kPtr:
       if (resource.name_.dotted_string_ == service_full_name_) {
@@ -53,29 +48,25 @@ void InstanceRequestor::ReceiveResource(const DnsResource& resource,
       }
       break;
     case DnsType::kSrv: {
-      auto iter =
-          instance_infos_by_full_name_.find(resource.name_.dotted_string_);
+      auto iter = instance_infos_by_full_name_.find(resource.name_.dotted_string_);
       if (iter != instance_infos_by_full_name_.end()) {
         ReceiveSrvResource(resource, section, &iter->second);
       }
     } break;
     case DnsType::kTxt: {
-      auto iter =
-          instance_infos_by_full_name_.find(resource.name_.dotted_string_);
+      auto iter = instance_infos_by_full_name_.find(resource.name_.dotted_string_);
       if (iter != instance_infos_by_full_name_.end()) {
         ReceiveTxtResource(resource, section, &iter->second);
       }
     } break;
     case DnsType::kA: {
-      auto iter =
-          target_infos_by_full_name_.find(resource.name_.dotted_string_);
+      auto iter = target_infos_by_full_name_.find(resource.name_.dotted_string_);
       if (iter != target_infos_by_full_name_.end()) {
         ReceiveAResource(resource, section, &iter->second);
       }
     } break;
     case DnsType::kAaaa: {
-      auto iter =
-          target_infos_by_full_name_.find(resource.name_.dotted_string_);
+      auto iter = target_infos_by_full_name_.find(resource.name_.dotted_string_);
       if (iter != target_infos_by_full_name_.end()) {
         ReceiveAaaaResource(resource, section, &iter->second);
       }
@@ -119,18 +110,16 @@ void InstanceRequestor::EndOfMessage() {
         subscriber->InstanceDiscovered(
             service_name_, instance_info.instance_name_,
             inet::SocketAddress(target_info.v4_address_, instance_info.port_),
-            inet::SocketAddress(target_info.v6_address_, instance_info.port_),
-            instance_info.text_, instance_info.srv_priority_,
-            instance_info.srv_weight_);
+            inet::SocketAddress(target_info.v6_address_, instance_info.port_), instance_info.text_,
+            instance_info.srv_priority_, instance_info.srv_weight_);
       }
     } else {
       for (auto subscriber : subscribers_) {
         subscriber->InstanceChanged(
             service_name_, instance_info.instance_name_,
             inet::SocketAddress(target_info.v4_address_, instance_info.port_),
-            inet::SocketAddress(target_info.v6_address_, instance_info.port_),
-            instance_info.text_, instance_info.srv_priority_,
-            instance_info.srv_weight_);
+            inet::SocketAddress(target_info.v6_address_, instance_info.port_), instance_info.text_,
+            instance_info.srv_priority_, instance_info.srv_weight_);
       }
     }
 
@@ -138,8 +127,7 @@ void InstanceRequestor::EndOfMessage() {
   }
 
   // Clean up |target_infos_by_full_name_|.
-  for (auto iter = target_infos_by_full_name_.begin();
-       iter != target_infos_by_full_name_.end();) {
+  for (auto iter = target_infos_by_full_name_.begin(); iter != target_infos_by_full_name_.end();) {
     if (iter->second.keep_) {
       iter->second.dirty_ = false;
       iter->second.keep_ = false;
@@ -175,9 +163,8 @@ void InstanceRequestor::ReportAllDiscoveries(Mdns::Subscriber* subscriber) {
     subscriber->InstanceDiscovered(
         service_name_, instance_info.instance_name_,
         inet::SocketAddress(target_info.v4_address_, instance_info.port_),
-        inet::SocketAddress(target_info.v6_address_, instance_info.port_),
-        instance_info.text_, instance_info.srv_priority_,
-        instance_info.srv_weight_);
+        inet::SocketAddress(target_info.v6_address_, instance_info.port_), instance_info.text_,
+        instance_info.srv_priority_, instance_info.srv_weight_);
   }
 }
 
@@ -193,18 +180,15 @@ void InstanceRequestor::SendQuery() {
     }
   }
 
-  PostTaskForTime([this]() { SendQuery(); },
-                  fxl::TimePoint::Now() + query_delay_);
+  PostTaskForTime([this]() { SendQuery(); }, fxl::TimePoint::Now() + query_delay_);
 }
 
 void InstanceRequestor::ReceivePtrResource(const DnsResource& resource,
                                            MdnsResourceSection section) {
-  const std::string& instance_full_name =
-      resource.ptr_.pointer_domain_name_.dotted_string_;
+  const std::string& instance_full_name = resource.ptr_.pointer_domain_name_.dotted_string_;
 
   std::string instance_name;
-  if (!MdnsNames::ExtractInstanceName(instance_full_name, service_name_,
-                                      &instance_name)) {
+  if (!MdnsNames::ExtractInstanceName(instance_full_name, service_name_, &instance_name)) {
     return;
   }
 
@@ -213,10 +197,8 @@ void InstanceRequestor::ReceivePtrResource(const DnsResource& resource,
     return;
   }
 
-  if (instance_infos_by_full_name_.find(instance_full_name) ==
-      instance_infos_by_full_name_.end()) {
-    auto pair = instance_infos_by_full_name_.emplace(instance_full_name,
-                                                     InstanceInfo{});
+  if (instance_infos_by_full_name_.find(instance_full_name) == instance_infos_by_full_name_.end()) {
+    auto pair = instance_infos_by_full_name_.emplace(instance_full_name, InstanceInfo{});
     FXL_DCHECK(pair.second);
     pair.first->second.instance_name_ = instance_name;
   }
@@ -224,8 +206,7 @@ void InstanceRequestor::ReceivePtrResource(const DnsResource& resource,
   Renew(resource);
 }
 
-void InstanceRequestor::ReceiveSrvResource(const DnsResource& resource,
-                                           MdnsResourceSection section,
+void InstanceRequestor::ReceiveSrvResource(const DnsResource& resource, MdnsResourceSection section,
                                            InstanceInfo* instance_info) {
   if (resource.time_to_live_ == 0) {
     RemoveInstance(resource.name_.dotted_string_);
@@ -260,8 +241,7 @@ void InstanceRequestor::ReceiveSrvResource(const DnsResource& resource,
   Renew(resource);
 }
 
-void InstanceRequestor::ReceiveTxtResource(const DnsResource& resource,
-                                           MdnsResourceSection section,
+void InstanceRequestor::ReceiveTxtResource(const DnsResource& resource, MdnsResourceSection section,
                                            InstanceInfo* instance_info) {
   if (resource.time_to_live_ == 0) {
     if (!instance_info->text_.empty()) {
@@ -287,8 +267,7 @@ void InstanceRequestor::ReceiveTxtResource(const DnsResource& resource,
   Renew(resource);
 }
 
-void InstanceRequestor::ReceiveAResource(const DnsResource& resource,
-                                         MdnsResourceSection section,
+void InstanceRequestor::ReceiveAResource(const DnsResource& resource, MdnsResourceSection section,
                                          TargetInfo* target_info) {
   if (resource.time_to_live_ == 0) {
     if (target_info->v4_address_) {
@@ -308,8 +287,7 @@ void InstanceRequestor::ReceiveAResource(const DnsResource& resource,
 }
 
 void InstanceRequestor::ReceiveAaaaResource(const DnsResource& resource,
-                                            MdnsResourceSection section,
-                                            TargetInfo* target_info) {
+                                            MdnsResourceSection section, TargetInfo* target_info) {
   if (resource.time_to_live_ == 0) {
     if (target_info->v6_address_) {
       target_info->v6_address_ = inet::IpAddress::kInvalid;

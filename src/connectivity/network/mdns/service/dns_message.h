@@ -156,13 +156,9 @@ struct DnsHeader {
 
   bool response() { return (flags_ & kQueryResponseMask) != 0; }
 
-  DnsOpCode op_code() {
-    return static_cast<DnsOpCode>((flags_ & kOpCodeMask) >> kOpCodeShift);
-  }
+  DnsOpCode op_code() { return static_cast<DnsOpCode>((flags_ & kOpCodeMask) >> kOpCodeShift); }
 
-  bool authoritative_answer() {
-    return (flags_ & kAuthoritativeAnswerMask) != 0;
-  }
+  bool authoritative_answer() { return (flags_ & kAuthoritativeAnswerMask) != 0; }
 
   bool truncated() { return (flags_ & kTruncationMask) != 0; }
 

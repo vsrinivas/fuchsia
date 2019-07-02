@@ -13,8 +13,7 @@
 namespace mdns {
 
 template <typename T>
-PacketWriter& operator<<(PacketWriter& writer,
-                         const std::shared_ptr<T>& value) {
+PacketWriter& operator<<(PacketWriter& writer, const std::shared_ptr<T>& value) {
   return writer << *value;
 }
 
@@ -29,16 +28,13 @@ PacketWriter& operator<<(PacketWriter& writer, const DnsQuestion& value);
 PacketWriter& operator<<(PacketWriter& writer, const DnsResource& value);
 PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataA& value);
 PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataNs& value);
-PacketWriter& operator<<(PacketWriter& writer,
-                         const DnsResourceDataCName& value);
+PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataCName& value);
 PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataPtr& value);
 PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataTxt& value);
-PacketWriter& operator<<(PacketWriter& writer,
-                         const DnsResourceDataAaaa& value);
+PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataAaaa& value);
 PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataSrv& value);
 PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataOpt& value);
-PacketWriter& operator<<(PacketWriter& writer,
-                         const DnsResourceDataNSec& value);
+PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataNSec& value);
 PacketWriter& operator<<(PacketWriter& writer, const DnsMessage& value);
 
 }  // namespace mdns

@@ -29,9 +29,8 @@ class MdnsTransceiver {
   ~MdnsTransceiver();
 
   // Starts the transceiver.
-  void Start(fuchsia::netstack::NetstackPtr netstack,
-             const MdnsAddresses& addresses, fit::closure link_change_callback,
-             InboundMessageCallback inbound_message_callback);
+  void Start(fuchsia::netstack::NetstackPtr netstack, const MdnsAddresses& addresses,
+             fit::closure link_change_callback, InboundMessageCallback inbound_message_callback);
 
   // Stops the transceiver.
   void Stop();
@@ -50,20 +49,17 @@ class MdnsTransceiver {
  private:
   // Returns the interface transceiver with address |address| if it exists,
   // nullptr if not.
-  MdnsInterfaceTransceiver* GetInterfaceTransceiver(
-      const inet::IpAddress& address);
+  MdnsInterfaceTransceiver* GetInterfaceTransceiver(const inet::IpAddress& address);
 
   // Handles |OnInterfaceChanged| events from |Netstack|.
-  void InterfacesChanged(
-      std::vector<fuchsia::netstack::NetInterface> interfaces);
+  void InterfacesChanged(std::vector<fuchsia::netstack::NetInterface> interfaces);
 
   // Ensures that an interface transceiver exists for |address| if |address|
   // is valid. Returns true if a change was made, false otherwise.
   bool EnsureInterfaceTransceiver(
-      const inet::IpAddress& address, const inet::IpAddress& alternate_address,
-      uint32_t id, const std::string& name,
-      std::unordered_map<inet::IpAddress,
-                         std::unique_ptr<MdnsInterfaceTransceiver>>* prev);
+      const inet::IpAddress& address, const inet::IpAddress& alternate_address, uint32_t id,
+      const std::string& name,
+      std::unordered_map<inet::IpAddress, std::unique_ptr<MdnsInterfaceTransceiver>>* prev);
 
   fuchsia::netstack::NetstackPtr netstack_;
   const MdnsAddresses* addresses_;

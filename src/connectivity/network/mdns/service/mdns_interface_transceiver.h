@@ -33,8 +33,8 @@ class MdnsInterfaceTransceiver {
   // Creates the variant of |MdnsInterfaceTransceiver| appropriate for the
   // address family specified in |address|. |name| is the name of the interface,
   // and |index| is its index.
-  static std::unique_ptr<MdnsInterfaceTransceiver> Create(
-      inet::IpAddress address, const std::string& name, uint32_t index);
+  static std::unique_ptr<MdnsInterfaceTransceiver> Create(inet::IpAddress address,
+                                                          const std::string& name, uint32_t index);
 
   virtual ~MdnsInterfaceTransceiver();
 
@@ -74,8 +74,7 @@ class MdnsInterfaceTransceiver {
   static constexpr int kTimeToLive_ = 255;
   static constexpr size_t kMaxPacketSize = 1500;
 
-  MdnsInterfaceTransceiver(inet::IpAddress address, const std::string& name,
-                           uint32_t index);
+  MdnsInterfaceTransceiver(inet::IpAddress address, const std::string& name, uint32_t index);
 
   const fxl::UniqueFD& socket_fd() const { return socket_fd_; }
   const MdnsAddresses& addresses() const {
@@ -90,8 +89,7 @@ class MdnsInterfaceTransceiver {
   virtual int SetOptionMulticastTtl() = 0;
   virtual int SetOptionFamilySpecific() = 0;
   virtual int Bind() = 0;
-  virtual int SendTo(const void* buffer, size_t size,
-                     const inet::SocketAddress& address) = 0;
+  virtual int SendTo(const void* buffer, size_t size, const inet::SocketAddress& address) = 0;
 
  private:
   int SetOptionSharePort();
@@ -102,17 +100,15 @@ class MdnsInterfaceTransceiver {
 
   // Returns an address resource (A/AAAA) record with the given name and the
   // address contained in |alternate_address_|, which must be valid.
-  std::shared_ptr<DnsResource> GetAddressResource(
-      const std::string& host_full_name);
+  std::shared_ptr<DnsResource> GetAddressResource(const std::string& host_full_name);
 
   // Returns an address resource (A/AAAA) record with the given name and the
   // address contained in |address_|, which must be valid.
-  std::shared_ptr<DnsResource> GetAlternateAddressResource(
-      const std::string& host_full_name);
+  std::shared_ptr<DnsResource> GetAlternateAddressResource(const std::string& host_full_name);
 
   // Makes an address resource (A/AAAA) record with the given name and address.
-  std::shared_ptr<DnsResource> MakeAddressResource(
-      const std::string& host_full_name, const inet::IpAddress& address);
+  std::shared_ptr<DnsResource> MakeAddressResource(const std::string& host_full_name,
+                                                   const inet::IpAddress& address);
 
   // Fixes up the address records in the vector. This method expects there to
   // be at most two address records in the vector and, if there are two, that

@@ -12,8 +12,7 @@ namespace mdns {
 // Provides V6-specific behavior for abstract MdnsInterfaceTransceiver.
 class MdnsInterfaceTransceiverV6 : public MdnsInterfaceTransceiver {
  public:
-  MdnsInterfaceTransceiverV6(inet::IpAddress address, const std::string& name,
-                             uint32_t index);
+  MdnsInterfaceTransceiverV6(inet::IpAddress address, const std::string& name, uint32_t index);
 
   virtual ~MdnsInterfaceTransceiverV6() override;
 
@@ -26,8 +25,7 @@ class MdnsInterfaceTransceiverV6 : public MdnsInterfaceTransceiver {
   int SetOptionMulticastTtl() override;
   int SetOptionFamilySpecific() override;
   int Bind() override;
-  int SendTo(const void* buffer, size_t size,
-             const inet::SocketAddress& address) override;
+  int SendTo(const void* buffer, size_t size, const inet::SocketAddress& address) override;
 };
 
 }  // namespace mdns

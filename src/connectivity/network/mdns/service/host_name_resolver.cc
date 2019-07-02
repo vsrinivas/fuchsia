@@ -10,10 +10,8 @@
 
 namespace mdns {
 
-HostNameResolver::HostNameResolver(MdnsAgent::Host* host,
-                                   const std::string& host_name,
-                                   fxl::TimePoint timeout,
-                                   Mdns::ResolveHostNameCallback callback)
+HostNameResolver::HostNameResolver(MdnsAgent::Host* host, const std::string& host_name,
+                                   fxl::TimePoint timeout, Mdns::ResolveHostNameCallback callback)
     : MdnsAgent(host),
       host_name_(host_name),
       host_full_name_(MdnsNames::LocalHostFullName(host_name)),
@@ -24,8 +22,7 @@ HostNameResolver::HostNameResolver(MdnsAgent::Host* host,
 
 HostNameResolver::~HostNameResolver() {}
 
-void HostNameResolver::Start(const std::string& host_full_name,
-                             const MdnsAddresses& addresses) {
+void HostNameResolver::Start(const std::string& host_full_name, const MdnsAddresses& addresses) {
   // Note that |host_full_name_| is the name we're trying to resolve, not the
   // name of the local host, which is the (ignored) parameter to this method.
 
@@ -45,8 +42,7 @@ void HostNameResolver::Start(const std::string& host_full_name,
       timeout_);
 }
 
-void HostNameResolver::ReceiveResource(const DnsResource& resource,
-                                       MdnsResourceSection section) {
+void HostNameResolver::ReceiveResource(const DnsResource& resource, MdnsResourceSection section) {
   if (resource.name_.dotted_string_ != host_full_name_) {
     return;
   }

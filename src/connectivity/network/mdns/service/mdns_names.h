@@ -26,8 +26,8 @@ struct MdnsNames {
   // Constructs a local service name from a simple service name and subtype.
   // For example, produces "_bar._sub_.foo._tcp.local." from "_foo._tcp." and
   // subtype "_bar".
-  static std::string LocalServiceSubtypeFullName(
-      const std::string& service_name, const std::string& subtype);
+  static std::string LocalServiceSubtypeFullName(const std::string& service_name,
+                                                 const std::string& subtype);
 
   // Constructs a local service instance name from a simple instance name and
   // a simple service name. For example, produces "myfoo._foo._tcp.local." from
@@ -40,15 +40,13 @@ struct MdnsNames {
   // name of the service. Returns true and deposits the instance name if
   // successful, return false if not.
   static bool ExtractInstanceName(const std::string& instance_full_name,
-                                  const std::string& service_name,
-                                  std::string* instance_name);
+                                  const std::string& service_name, std::string* instance_name);
 
   // Determines if |name| is a local service name matching |service_name| or
   // a subtype of |service_name|. If |name| does specify a subtype, the
   // subtype is returned via |subtype_out|. Otherwise |*subtype_out| is
   // cleared.
-  static bool MatchServiceName(const std::string& name,
-                               const std::string& service_name,
+  static bool MatchServiceName(const std::string& name, const std::string& service_name,
                                std::string* subtype_out);
 
   // Determines if |host_name| is a valid host name.

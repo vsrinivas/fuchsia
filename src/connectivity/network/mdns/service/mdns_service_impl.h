@@ -34,43 +34,36 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
   // fuchsia::net::mdns::Subscriber implementation.
   void SubscribeToService(
       std::string service,
-      fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber> subscriber)
-      override;
+      fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber> subscriber) override;
 
   // fuchsia::net::mdns::Publisher implementation.
   void PublishServiceInstance(
       std::string service, std::string instance, bool perform_probe,
-      fidl::InterfaceHandle<fuchsia::net::mdns::PublicationResponder>
-          responder_handle,
+      fidl::InterfaceHandle<fuchsia::net::mdns::PublicationResponder> responder_handle,
       PublishServiceInstanceCallback callback) override;
 
  private:
   class Subscriber : public Mdns::Subscriber {
    public:
-    Subscriber(
-        fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber> handle,
-        fit::closure deleter);
+    Subscriber(fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber> handle,
+               fit::closure deleter);
 
     ~Subscriber() override;
 
     // Mdns::Subscriber implementation:
-    void InstanceDiscovered(const std::string& service,
-                            const std::string& instance,
+    void InstanceDiscovered(const std::string& service, const std::string& instance,
                             const inet::SocketAddress& v4_address,
                             const inet::SocketAddress& v6_address,
-                            const std::vector<std::string>& text,
-                            uint16_t srv_priority,
+                            const std::vector<std::string>& text, uint16_t srv_priority,
                             uint16_t srv_weight) override;
 
-    void InstanceChanged(const std::string& service,
-                         const std::string& instance,
+    void InstanceChanged(const std::string& service, const std::string& instance,
                          const inet::SocketAddress& v4_address,
                          const inet::SocketAddress& v6_address,
-                         const std::vector<std::string>& text,
-                         uint16_t srv_priority, uint16_t srv_weight) override;
+                         const std::vector<std::string>& text, uint16_t srv_priority,
+                         uint16_t srv_weight) override;
 
-    void InstanceLost(const std::string& service,
-                      const std::string& instance) override;
+    void InstanceLost(const std::string& service, const std::string& instance) override;
 
    private:
     static constexpr size_t kMaxPipelineDepth = 16;
@@ -115,8 +108,7 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
     void ReportSuccess(bool success) override;
 
     void GetPublication(bool query, const std::string& subtype,
-                        fit::function<void(std::unique_ptr<Mdns::Publication>)>
-                            callback) override;
+                        fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) override;
 
     std::unique_ptr<Mdns::Publication> publication_;
     PublishServiceInstanceCallback callback_;
@@ -132,15 +124,13 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
   class ResponderPublisher : public Mdns::Publisher {
    public:
     ResponderPublisher(fuchsia::net::mdns::PublicationResponderPtr responder,
-                       PublishServiceInstanceCallback callback,
-                       fit::closure deleter);
+                       PublishServiceInstanceCallback callback, fit::closure deleter);
 
     // Mdns::Publisher implementation.
     void ReportSuccess(bool success) override;
 
     void GetPublication(bool query, const std::string& subtype,
-                        fit::function<void(std::unique_ptr<Mdns::Publication>)>
-                            callback) override;
+                        fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) override;
 
     fuchsia::net::mdns::PublicationResponderPtr responder_;
     PublishServiceInstanceCallback callback_;
@@ -156,8 +146,7 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
   template <typename TProtocol>
   class BindingSet {
    public:
-    BindingSet(TProtocol* impl, const std::string& label)
-        : impl_(impl), label_(label) {
+    BindingSet(TProtocol* impl, const std::string& label) : impl_(impl), label_(label) {
       FXL_DCHECK(impl_);
     }
 
@@ -194,10 +183,8 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
   void OnReady();
 
   // Publishes a service instance using |SimplePublisher|.
-  bool PublishServiceInstance(std::string service_name,
-                              std::string instance_name,
-                              std::unique_ptr<Mdns::Publication> publication,
-                              bool perform_probe,
+  bool PublishServiceInstance(std::string service_name, std::string instance_name,
+                              std::unique_ptr<Mdns::Publication> publication, bool perform_probe,
                               PublishServiceInstanceCallback callback);
 
   sys::ComponentContext* component_context_;

@@ -19,18 +19,15 @@ namespace mdns {
 class HostNameResolver : public MdnsAgent {
  public:
   // Creates a |HostNameResolver|.
-  HostNameResolver(MdnsAgent::Host* host, const std::string& host_name,
-                   fxl::TimePoint timeout,
+  HostNameResolver(MdnsAgent::Host* host, const std::string& host_name, fxl::TimePoint timeout,
                    Mdns::ResolveHostNameCallback callback);
 
   ~HostNameResolver() override;
 
   // MdnsAgent overrides.
-  void Start(const std::string& host_full_name,
-             const MdnsAddresses& addresses) override;
+  void Start(const std::string& host_full_name, const MdnsAddresses& addresses) override;
 
-  void ReceiveResource(const DnsResource& resource,
-                       MdnsResourceSection section) override;
+  void ReceiveResource(const DnsResource& resource, MdnsResourceSection section) override;
 
   void EndOfMessage() override;
 

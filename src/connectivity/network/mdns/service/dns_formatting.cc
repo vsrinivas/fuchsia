@@ -75,8 +75,8 @@ std::ostream& operator<<(std::ostream& os, const DnsV6Address& value) {
 std::ostream& operator<<(std::ostream& os, const DnsHeader& value) {
   os << fostr::Indent;
   os << fostr::NewLine << "id: " << value.id_;
-  os << fostr::NewLine << "flags: 0x" << std::hex << std::setw(4)
-     << std::setfill('0') << value.flags_ << std::dec;
+  os << fostr::NewLine << "flags: 0x" << std::hex << std::setw(4) << std::setfill('0')
+     << value.flags_ << std::dec;
   return os << fostr::Outdent;
 }
 
@@ -94,8 +94,7 @@ std::ostream& operator<<(std::ostream& os, const DnsResourceDataA& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsResourceDataNs& value) {
-  return os << fostr::NewLine
-            << "name_server_domain_name: " << value.name_server_domain_name_;
+  return os << fostr::NewLine << "name_server_domain_name: " << value.name_server_domain_name_;
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsResourceDataCName& value) {
@@ -103,8 +102,7 @@ std::ostream& operator<<(std::ostream& os, const DnsResourceDataCName& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsResourceDataPtr& value) {
-  return os << fostr::NewLine
-            << "pointer_domain_name_: " << value.pointer_domain_name_;
+  return os << fostr::NewLine << "pointer_domain_name_: " << value.pointer_domain_name_;
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsResourceDataTxt& value) {

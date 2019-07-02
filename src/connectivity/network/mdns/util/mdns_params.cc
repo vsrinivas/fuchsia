@@ -36,8 +36,7 @@ MdnsParams::MdnsParams(const fxl::CommandLine& command_line) {
        [this](const std::vector<std::string>& args) {
          return ParseServiceName(args[1], &service_name_);
        }},
-      {"respond", CommandVerb::kRespond, 3,
-       [this](const std::vector<std::string>& args) {
+      {"respond", CommandVerb::kRespond, 3, [this](const std::vector<std::string>& args) {
          if (!ParseServiceName(args[1], &service_name_) ||
              !ParseInstanceName(args[2], &instance_name_)) {
            return false;
@@ -67,15 +66,13 @@ MdnsParams::MdnsParams(const fxl::CommandLine& command_line) {
     return;
   }
 
-  if (command_line.GetOptionValue("text", &value_string) &&
-      !Parse(value_string, &text_)) {
+  if (command_line.GetOptionValue("text", &value_string) && !Parse(value_string, &text_)) {
     std::cout << "'" << value_string << "' is not a valid text value\n\n";
     Usage();
     return;
   }
 
-  if (command_line.GetOptionValue("announce", &value_string) &&
-      !Parse(value_string, &announce_)) {
+  if (command_line.GetOptionValue("announce", &value_string) && !Parse(value_string, &announce_)) {
     std::cout << "'" << value_string << "' is not a valid announce value\n\n";
     Usage();
     return;
@@ -124,8 +121,7 @@ void MdnsParams::Usage() {
   std::cout << "    --announce=<subtype,...>  # applies to respond\n";
   std::cout << "options must precede the command\n";
   std::cout << "<host_name> and <instance_name> cannot end in '.'\n";
-  std::cout
-      << "<service_name> must start with '_' and end in '._tcp.' or '._udp.'\n";
+  std::cout << "<service_name> must start with '_' and end in '._tcp.' or '._udp.'\n";
 }
 
 bool MdnsParams::Parse(const std::string& string_value, uint16_t* out) {
@@ -142,16 +138,15 @@ bool MdnsParams::Parse(const std::string& string_value, uint32_t* out) {
   return (istream >> *out) && istream.eof();
 }
 
-bool MdnsParams::Parse(const std::string& string_value,
-                       std::vector<std::string>* out) {
+bool MdnsParams::Parse(const std::string& string_value, std::vector<std::string>* out) {
   FXL_DCHECK(out);
 
   if (string_value.empty()) {
     return false;
   }
 
-  std::vector<std::string> result = fxl::SplitStringCopy(
-      string_value, ",", fxl::kTrimWhitespace, fxl::kSplitWantAll);
+  std::vector<std::string> result =
+      fxl::SplitStringCopy(string_value, ",", fxl::kTrimWhitespace, fxl::kSplitWantAll);
 
   for (std::string& s : result) {
     if (s.empty()) {
@@ -164,8 +159,7 @@ bool MdnsParams::Parse(const std::string& string_value,
   return true;
 }
 
-bool MdnsParams::ParseHostName(const std::string& string_value,
-                               std::string* out) {
+bool MdnsParams::ParseHostName(const std::string& string_value, std::string* out) {
   FXL_DCHECK(out);
 
   if (string_value.empty() || string_value[string_value.size() - 1] == '.') {
@@ -177,16 +171,14 @@ bool MdnsParams::ParseHostName(const std::string& string_value,
   return true;
 }
 
-bool MdnsParams::ParseServiceName(const std::string& string_value,
-                                  std::string* out) {
+bool MdnsParams::ParseServiceName(const std::string& string_value, std::string* out) {
   FXL_DCHECK(out);
 
-  if (string_value.size() <= kTcpSuffix.size() + 1 ||
-      string_value.compare(0, 1, "_") != 0 ||
-      (string_value.compare(string_value.size() - kTcpSuffix.size(),
-                            kTcpSuffix.size(), kTcpSuffix) != 0 &&
-       string_value.compare(string_value.size() - kUdpSuffix.size(),
-                            kUdpSuffix.size(), kUdpSuffix) != 0)) {
+  if (string_value.size() <= kTcpSuffix.size() + 1 || string_value.compare(0, 1, "_") != 0 ||
+      (string_value.compare(string_value.size() - kTcpSuffix.size(), kTcpSuffix.size(),
+                            kTcpSuffix) != 0 &&
+       string_value.compare(string_value.size() - kUdpSuffix.size(), kUdpSuffix.size(),
+                            kUdpSuffix) != 0)) {
     std::cout << "'" << string_value << "' is not a valid service name\n\n";
     return false;
   }
@@ -195,8 +187,7 @@ bool MdnsParams::ParseServiceName(const std::string& string_value,
   return true;
 }
 
-bool MdnsParams::ParseInstanceName(const std::string& string_value,
-                                   std::string* out) {
+bool MdnsParams::ParseInstanceName(const std::string& string_value, std::string* out) {
   FXL_DCHECK(out);
 
   if (string_value.empty() || string_value[string_value.size() - 1] == '.') {

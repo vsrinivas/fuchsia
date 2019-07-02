@@ -33,11 +33,9 @@ class InstanceRequestor : public MdnsAgent {
   void RemoveSubscriber(Mdns::Subscriber* subscriber);
 
   // MdnsAgent overrides.
-  void Start(const std::string& host_full_name,
-             const MdnsAddresses& addresses) override;
+  void Start(const std::string& host_full_name, const MdnsAddresses& addresses) override;
 
-  void ReceiveResource(const DnsResource& resource,
-                       MdnsResourceSection section) override;
+  void ReceiveResource(const DnsResource& resource, MdnsResourceSection section) override;
 
   void EndOfMessage() override;
 
@@ -66,22 +64,18 @@ class InstanceRequestor : public MdnsAgent {
   // Sends a query for instances and schedules the next query, as appropriate.
   void SendQuery();
 
-  void ReceivePtrResource(const DnsResource& resource,
-                          MdnsResourceSection section);
+  void ReceivePtrResource(const DnsResource& resource, MdnsResourceSection section);
 
-  void ReceiveSrvResource(const DnsResource& resource,
-                          MdnsResourceSection section,
+  void ReceiveSrvResource(const DnsResource& resource, MdnsResourceSection section,
                           InstanceInfo* instance_info);
 
-  void ReceiveTxtResource(const DnsResource& resource,
-                          MdnsResourceSection section,
+  void ReceiveTxtResource(const DnsResource& resource, MdnsResourceSection section,
                           InstanceInfo* instance_info);
 
-  void ReceiveAResource(const DnsResource& resource,
-                        MdnsResourceSection section, TargetInfo* target_info);
+  void ReceiveAResource(const DnsResource& resource, MdnsResourceSection section,
+                        TargetInfo* target_info);
 
-  void ReceiveAaaaResource(const DnsResource& resource,
-                           MdnsResourceSection section,
+  void ReceiveAaaaResource(const DnsResource& resource, MdnsResourceSection section,
                            TargetInfo* target_info);
 
   void RemoveInstance(const std::string& instance_full_name);

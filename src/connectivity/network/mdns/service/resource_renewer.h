@@ -46,8 +46,7 @@ class ResourceRenewer : public MdnsAgent {
   void Renew(const DnsResource& resource);
 
   // MdnsAgent overrides.
-  void ReceiveResource(const DnsResource& resource,
-                       MdnsResourceSection section) override;
+  void ReceiveResource(const DnsResource& resource, MdnsResourceSection section) override;
 
   void Quit() override;
 
@@ -91,14 +90,12 @@ class ResourceRenewer : public MdnsAgent {
   struct Hash {
     size_t operator()(const std::unique_ptr<Entry>& m) const {
       FXL_DCHECK(m);
-      return std::hash<std::string>{}(m->name_) ^
-             std::hash<DnsType>{}(m->type_);
+      return std::hash<std::string>{}(m->name_) ^ std::hash<DnsType>{}(m->type_);
     }
   };
 
   struct Equals {
-    size_t operator()(const std::unique_ptr<Entry>& a,
-                      const std::unique_ptr<Entry>& b) const {
+    size_t operator()(const std::unique_ptr<Entry>& a, const std::unique_ptr<Entry>& b) const {
       FXL_DCHECK(a);
       FXL_DCHECK(b);
       return a->name_ == b->name_ && a->type_ == b->type_;

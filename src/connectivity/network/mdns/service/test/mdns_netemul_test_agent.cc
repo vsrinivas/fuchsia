@@ -44,43 +44,36 @@ using QuitCallback = fit::function<void(int)>;
 // resolved to an IP address.
 class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber {
  public:
-  static std::unique_ptr<LocalEnd> Create(
-      sys::ComponentContext* component_context, QuitCallback quit_callback) {
-    return std::make_unique<LocalEnd>(component_context,
-                                      std::move(quit_callback));
+  static std::unique_ptr<LocalEnd> Create(sys::ComponentContext* component_context,
+                                          QuitCallback quit_callback) {
+    return std::make_unique<LocalEnd>(component_context, std::move(quit_callback));
   }
 
   LocalEnd(sys::ComponentContext* component_context, QuitCallback quit_callback)
       : component_context_(component_context),
         quit_callback_(std::move(quit_callback)),
         subscriber_binding_(this) {
-    subscriber_ =
-        component_context_->svc()->Connect<fuchsia::net::mdns::Subscriber>();
+    subscriber_ = component_context_->svc()->Connect<fuchsia::net::mdns::Subscriber>();
 
     subscriber_.set_error_handler([this](zx_status_t status) {
-      std::cerr
-          << "FAILED: Subscriber channel disconnected unexpectedly, status "
-          << status << ".\n";
+      std::cerr << "FAILED: Subscriber channel disconnected unexpectedly, status " << status
+                << ".\n";
       Quit(1);
     });
 
-    resolver_ =
-        component_context_->svc()->Connect<fuchsia::net::mdns::Resolver>();
+    resolver_ = component_context_->svc()->Connect<fuchsia::net::mdns::Resolver>();
 
     resolver_.set_error_handler([this](zx_status_t status) {
-      std::cerr << "FAILED: Resolver channel disconnected unexpectedly, status "
-                << status << ".\n";
+      std::cerr << "FAILED: Resolver channel disconnected unexpectedly, status " << status << ".\n";
       Quit(1);
     });
 
-    fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber>
-        subscriber_handle;
+    fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber> subscriber_handle;
 
     subscriber_binding_.Bind(subscriber_handle.NewRequest());
     subscriber_binding_.set_error_handler([this](zx_status_t status) {
-      std::cerr
-          << "FAILED: Subscriber channel disconnected unexpectedly, status "
-          << status << ".\n";
+      std::cerr << "FAILED: Subscriber channel disconnected unexpectedly, status " << status
+                << ".\n";
       Quit(1);
     });
 
@@ -97,15 +90,14 @@ class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber {
           }
 
           if (!v4_address) {
-            std::cerr
-                << "FAILED: Host name resolution didn't product V4 address.\n";
+            std::cerr << "FAILED: Host name resolution didn't product V4 address.\n";
             Quit(1);
             return;
           }
 
           if (!fidl::Equals(*v4_address, kRemoteAddress)) {
-            std::cerr << "FAILED: Host name resolution produced bad V4 address "
-                      << *v4_address << "\n";
+            std::cerr << "FAILED: Host name resolution produced bad V4 address " << *v4_address
+                      << "\n";
             Quit(1);
             return;
           }
@@ -130,8 +122,7 @@ class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber {
         Quit();
       }
     } else {
-      std::cerr << "FAILED: Discovered instance not compliant." << instance
-                << "\n";
+      std::cerr << "FAILED: Discovered instance not compliant." << instance << "\n";
       Quit(1);
     }
   }
@@ -158,13 +149,11 @@ class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber {
   }
 
   bool VerifyInstance(const fuchsia::net::mdns::ServiceInstance& instance) {
-    return instance.service == kServiceName &&
-           instance.instance == kInstanceName && !instance.endpoints.empty() &&
+    return instance.service == kServiceName && instance.instance == kInstanceName &&
+           !instance.endpoints.empty() &&
            (VerifyRemoteEndpoint(instance.endpoints[0]) ||
-            (instance.endpoints.size() == 2 &&
-             VerifyRemoteEndpoint(instance.endpoints[1]))) &&
-           std::equal(kText.begin(), kText.end(), instance.text.begin(),
-                      instance.text.end()) &&
+            (instance.endpoints.size() == 2 && VerifyRemoteEndpoint(instance.endpoints[1]))) &&
+           std::equal(kText.begin(), kText.end(), instance.text.begin(), instance.text.end()) &&
            instance.srv_priority == kPriority && instance.srv_weight == kWeight;
   }
 
@@ -189,46 +178,38 @@ class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber {
 // to messages from the local end.
 class RemoteEnd : public fuchsia::net::mdns::PublicationResponder {
  public:
-  static std::unique_ptr<RemoteEnd> Create(
-      sys::ComponentContext* component_context, QuitCallback quit_callback) {
-    return std::make_unique<RemoteEnd>(component_context,
-                                       std::move(quit_callback));
+  static std::unique_ptr<RemoteEnd> Create(sys::ComponentContext* component_context,
+                                           QuitCallback quit_callback) {
+    return std::make_unique<RemoteEnd>(component_context, std::move(quit_callback));
   }
 
-  RemoteEnd(sys::ComponentContext* component_context,
-            QuitCallback quit_callback)
+  RemoteEnd(sys::ComponentContext* component_context, QuitCallback quit_callback)
       : component_context_(component_context),
         quit_callback_(std::move(quit_callback)),
         responder_binding_(this) {
-    publisher_ =
-        component_context_->svc()->Connect<fuchsia::net::mdns::Publisher>();
+    publisher_ = component_context_->svc()->Connect<fuchsia::net::mdns::Publisher>();
 
     publisher_.set_error_handler([this](zx_status_t status) {
-      std::cerr
-          << "FAILED: Publisher channel disconnected unexpectedly, status "
-          << status << ".\n";
+      std::cerr << "FAILED: Publisher channel disconnected unexpectedly, status " << status
+                << ".\n";
       Quit(1);
     });
 
-    fidl::InterfaceHandle<fuchsia::net::mdns::PublicationResponder>
-        responder_handle;
+    fidl::InterfaceHandle<fuchsia::net::mdns::PublicationResponder> responder_handle;
 
     responder_binding_.Bind(responder_handle.NewRequest());
     responder_binding_.set_error_handler([this](zx_status_t status) {
-      std::cerr << "Responder channel disconnected unexpectedly, status "
-                << status << ".\n";
+      std::cerr << "Responder channel disconnected unexpectedly, status " << status << ".\n";
       Quit(1);
     });
 
     publisher_->PublishServiceInstance(
         kServiceName, kInstanceName, true, std::move(responder_handle),
-        [this](fuchsia::net::mdns::Publisher_PublishServiceInstance_Result
-                   result) {
+        [this](fuchsia::net::mdns::Publisher_PublishServiceInstance_Result result) {
           if (result.is_response()) {
             std::cout << "Instance successfully published.\n";
           } else {
-            std::cerr << "PublishServiceInstance failed, err " << result.err()
-                      << ".\n";
+            std::cerr << "PublishServiceInstance failed, err " << result.err() << ".\n";
             Quit(1);
           }
         });
@@ -236,8 +217,7 @@ class RemoteEnd : public fuchsia::net::mdns::PublicationResponder {
 
  private:
   // fuchsia::net::mdns::PublicationResponder implementation.
-  void OnPublication(bool query, fidl::StringPtr subtype,
-                     OnPublicationCallback callback) override {
+  void OnPublication(bool query, fidl::StringPtr subtype, OnPublicationCallback callback) override {
     auto publication = fuchsia::net::mdns::Publication::New();
     publication->port = kPort;
     publication->text = fidl::To<fidl::VectorPtr<std::string>>(kText);
@@ -280,29 +260,27 @@ int main(int argc, const char** argv) {
   }
 
   if (local == remote) {
-    std::cout << "options: " << kLocalArgument << " | " << kRemoteArgument
-              << "\n";
+    std::cout << "options: " << kLocalArgument << " | " << kRemoteArgument << "\n";
     return 1;
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  std::unique_ptr<sys::ComponentContext> component_context =
-      sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create();
 
   int result = 0;
 
   if (local) {
-    auto local_end = mdns::test::LocalEnd::Create(
-        component_context.get(), [&loop, &result](int exit_code) {
+    auto local_end =
+        mdns::test::LocalEnd::Create(component_context.get(), [&loop, &result](int exit_code) {
           result = exit_code;
           async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
         });
     loop.Run();
   } else {
     FXL_DCHECK(remote);
-    auto remote_end = mdns::test::RemoteEnd::Create(
-        component_context.get(), [&loop, &result](int exit_code) {
+    auto remote_end =
+        mdns::test::RemoteEnd::Create(component_context.get(), [&loop, &result](int exit_code) {
           result = exit_code;
           async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
         });

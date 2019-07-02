@@ -18,8 +18,7 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  std::unique_ptr<sys::ComponentContext> component_context =
-      sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create();
 
   mdns::MdnsImpl impl(component_context.get(), &params, [&loop]() {
     async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });

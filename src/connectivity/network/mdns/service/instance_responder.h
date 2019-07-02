@@ -22,17 +22,14 @@ class InstanceResponder : public MdnsAgent {
   // Creates an |InstanceResponder|. The publisher is consulted to determine
   // how queries are handled.
   InstanceResponder(MdnsAgent::Host* host, const std::string& service_name,
-                    const std::string& instance_name,
-                    Mdns::Publisher* publisher);
+                    const std::string& instance_name, Mdns::Publisher* publisher);
 
   ~InstanceResponder() override;
 
   // MdnsAgent overrides.
-  void Start(const std::string& host_full_name,
-             const MdnsAddresses& addresses) override;
+  void Start(const std::string& host_full_name, const MdnsAddresses& addresses) override;
 
-  void ReceiveQuestion(const DnsQuestion& question,
-                       const ReplyAddress& reply_address) override;
+  void ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& reply_address) override;
 
   void Quit() override;
 
@@ -48,10 +45,8 @@ class InstanceResponder : public MdnsAgent {
   void Reannounce();
 
  private:
-  static constexpr fxl::TimeDelta kInitialAnnouncementInterval =
-      fxl::TimeDelta::FromSeconds(1);
-  static constexpr fxl::TimeDelta kMaxAnnouncementInterval =
-      fxl::TimeDelta::FromSeconds(4);
+  static constexpr fxl::TimeDelta kInitialAnnouncementInterval = fxl::TimeDelta::FromSeconds(1);
+  static constexpr fxl::TimeDelta kMaxAnnouncementInterval = fxl::TimeDelta::FromSeconds(4);
 
   // Sends an announcement and schedules the next announcement, as appropriate.
   void SendAnnouncement();
@@ -65,8 +60,7 @@ class InstanceResponder : public MdnsAgent {
                              const ReplyAddress& reply_address) const;
 
   // Sends a publication. An empty |subtype| indicates no subtype.
-  void SendPublication(const Mdns::Publication& publication,
-                       const std::string& subtype,
+  void SendPublication(const Mdns::Publication& publication, const std::string& subtype,
                        const ReplyAddress& reply_address) const;
 
   // Sends a subtype PTR record for this instance.

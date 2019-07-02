@@ -18,8 +18,7 @@ class InstanceProber : public Prober {
 
   // Creates a |InstanceProber|.
   InstanceProber(MdnsAgent::Host* host, const std::string& service_name,
-                 const std::string& instance_name, inet::IpPort port,
-                 CompletionCallback callback);
+                 const std::string& instance_name, inet::IpPort port, CompletionCallback callback);
 
   ~InstanceProber() override;
 

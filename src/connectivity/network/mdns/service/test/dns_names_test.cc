@@ -10,18 +10,14 @@ namespace test {
 
 // Tests |LocalHostFullName|.
 TEST(MdnsNamesTest, LocalHostFullName) {
-  EXPECT_EQ("test.host.name.local.",
-            MdnsNames::LocalHostFullName("test.host.name"));
-  EXPECT_EQ("test-host-name.local.",
-            MdnsNames::LocalHostFullName("test-host-name"));
+  EXPECT_EQ("test.host.name.local.", MdnsNames::LocalHostFullName("test.host.name"));
+  EXPECT_EQ("test-host-name.local.", MdnsNames::LocalHostFullName("test-host-name"));
 }
 
 // Tests |LocalServiceFullName|.
 TEST(MdnsNamesTest, LocalServiceFullName) {
-  EXPECT_EQ("_printer._tcp.local.",
-            MdnsNames::LocalServiceFullName("_printer._tcp."));
-  EXPECT_EQ("_fuchsia._udp.local.",
-            MdnsNames::LocalServiceFullName("_fuchsia._udp."));
+  EXPECT_EQ("_printer._tcp.local.", MdnsNames::LocalServiceFullName("_printer._tcp."));
+  EXPECT_EQ("_fuchsia._udp.local.", MdnsNames::LocalServiceFullName("_fuchsia._udp."));
 }
 
 // Tests |LocalServiceSubtypeFullName|.
@@ -34,9 +30,8 @@ TEST(MdnsNamesTest, LocalServiceSubtypeFullName) {
 
 // Tests |LocalInstanceFullName|.
 TEST(MdnsNamesTest, LocalInstanceFullName) {
-  EXPECT_EQ(
-      "Acme Splotchamatic._printer._tcp.local.",
-      MdnsNames::LocalInstanceFullName("Acme Splotchamatic", "_printer._tcp."));
+  EXPECT_EQ("Acme Splotchamatic._printer._tcp.local.",
+            MdnsNames::LocalInstanceFullName("Acme Splotchamatic", "_printer._tcp."));
   EXPECT_EQ("My Egg Timer._fuchsia._udp.local.",
             MdnsNames::LocalInstanceFullName("My Egg Timer", "_fuchsia._udp."));
 }
@@ -45,39 +40,36 @@ TEST(MdnsNamesTest, LocalInstanceFullName) {
 TEST(MdnsNamesTest, ExtractInstanceName) {
   std::string instance_name;
 
-  EXPECT_TRUE(
-      MdnsNames::ExtractInstanceName("Acme Splotchamatic._printer._tcp.local.",
-                                     "_printer._tcp.", &instance_name));
+  EXPECT_TRUE(MdnsNames::ExtractInstanceName("Acme Splotchamatic._printer._tcp.local.",
+                                             "_printer._tcp.", &instance_name));
   EXPECT_EQ("Acme Splotchamatic", instance_name);
 
-  EXPECT_TRUE(MdnsNames::ExtractInstanceName(
-      "My Egg Timer._fuchsia._udp.local.", "_fuchsia._udp.", &instance_name));
+  EXPECT_TRUE(MdnsNames::ExtractInstanceName("My Egg Timer._fuchsia._udp.local.", "_fuchsia._udp.",
+                                             &instance_name));
   EXPECT_EQ("My Egg Timer", instance_name);
 
   // Wrong service type.
-  EXPECT_FALSE(
-      MdnsNames::ExtractInstanceName("Acme Splotchamatic._printer._tcp.local.",
-                                     "_fuchsia._udp.", &instance_name));
+  EXPECT_FALSE(MdnsNames::ExtractInstanceName("Acme Splotchamatic._printer._tcp.local.",
+                                              "_fuchsia._udp.", &instance_name));
 
   // No local suffix.
-  EXPECT_FALSE(MdnsNames::ExtractInstanceName(
-      "Acme Splotchamatic._printer._tcp.", "_printer._tcp.", &instance_name));
+  EXPECT_FALSE(MdnsNames::ExtractInstanceName("Acme Splotchamatic._printer._tcp.", "_printer._tcp.",
+                                              &instance_name));
 
   // Just a service name.
-  EXPECT_FALSE(MdnsNames::ExtractInstanceName(
-      "_printer._tcp.local.", "_printer._tcp.", &instance_name));
+  EXPECT_FALSE(
+      MdnsNames::ExtractInstanceName("_printer._tcp.local.", "_printer._tcp.", &instance_name));
 
   // Zero-length instance name.
-  EXPECT_FALSE(MdnsNames::ExtractInstanceName(
-      "._printer._tcp.local.", "_printer._tcp.", &instance_name));
+  EXPECT_FALSE(
+      MdnsNames::ExtractInstanceName("._printer._tcp.local.", "_printer._tcp.", &instance_name));
 
   // Instance name almost too long.
   EXPECT_TRUE(MdnsNames::ExtractInstanceName(
       "012345678901234567890123456789012345678901234567890123456789012._"
       "printer._tcp.local.",
       "_printer._tcp.", &instance_name));
-  EXPECT_EQ("012345678901234567890123456789012345678901234567890123456789012",
-            instance_name);
+  EXPECT_EQ("012345678901234567890123456789012345678901234567890123456789012", instance_name);
 
   // Instance name too long.
   EXPECT_FALSE(MdnsNames::ExtractInstanceName(
@@ -90,53 +82,48 @@ TEST(MdnsNamesTest, ExtractInstanceName) {
 TEST(MdnsNamesTest, MatchServiceName) {
   std::string subtype;
 
-  EXPECT_TRUE(MdnsNames::MatchServiceName("_printer._tcp.local.",
-                                          "_printer._tcp.", &subtype));
+  EXPECT_TRUE(MdnsNames::MatchServiceName("_printer._tcp.local.", "_printer._tcp.", &subtype));
   EXPECT_EQ("", subtype);
 
-  EXPECT_TRUE(MdnsNames::MatchServiceName("_fuchsia._udp.local.",
-                                          "_fuchsia._udp.", &subtype));
+  EXPECT_TRUE(MdnsNames::MatchServiceName("_fuchsia._udp.local.", "_fuchsia._udp.", &subtype));
   EXPECT_EQ("", subtype);
 
-  EXPECT_TRUE(MdnsNames::MatchServiceName("_color._sub._printer._tcp.local.",
-                                          "_printer._tcp.", &subtype));
+  EXPECT_TRUE(
+      MdnsNames::MatchServiceName("_color._sub._printer._tcp.local.", "_printer._tcp.", &subtype));
   EXPECT_EQ("_color", subtype);
 
-  EXPECT_TRUE(MdnsNames::MatchServiceName("_nuc._sub._fuchsia._udp.local.",
-                                          "_fuchsia._udp.", &subtype));
+  EXPECT_TRUE(
+      MdnsNames::MatchServiceName("_nuc._sub._fuchsia._udp.local.", "_fuchsia._udp.", &subtype));
   EXPECT_EQ("_nuc", subtype);
 
   // Wrong service type.
-  EXPECT_FALSE(MdnsNames::MatchServiceName("_printer._tcp.local.",
-                                           "_fuchsia._udp.", &subtype));
+  EXPECT_FALSE(MdnsNames::MatchServiceName("_printer._tcp.local.", "_fuchsia._udp.", &subtype));
 
   // Wrong service type with subtype.
-  EXPECT_FALSE(MdnsNames::MatchServiceName("_color._sub._printer._tcp.local.",
-                                           "_fuchsia._udp.", &subtype));
+  EXPECT_FALSE(
+      MdnsNames::MatchServiceName("_color._sub._printer._tcp.local.", "_fuchsia._udp.", &subtype));
 
   // No local suffix.
-  EXPECT_FALSE(MdnsNames::MatchServiceName("_printer._tcp.", "_printer._tcp.",
-                                           &subtype));
+  EXPECT_FALSE(MdnsNames::MatchServiceName("_printer._tcp.", "_printer._tcp.", &subtype));
 
   // No local suffix with subtype.
-  EXPECT_FALSE(MdnsNames::MatchServiceName("_color._sub._printer._tcp.",
-                                           "_printer._tcp.", &subtype));
+  EXPECT_FALSE(
+      MdnsNames::MatchServiceName("_color._sub._printer._tcp.", "_printer._tcp.", &subtype));
 
   // Zero-length subtype.
-  EXPECT_FALSE(MdnsNames::MatchServiceName("._sub._printer._tcp.local.",
-                                           "_printer._tcp.", &subtype));
+  EXPECT_FALSE(
+      MdnsNames::MatchServiceName("._sub._printer._tcp.local.", "_printer._tcp.", &subtype));
 
   // Missing _sub.
-  EXPECT_FALSE(MdnsNames::MatchServiceName("_color._printer._tcp.local.",
-                                           "_printer._tcp.", &subtype));
+  EXPECT_FALSE(
+      MdnsNames::MatchServiceName("_color._printer._tcp.local.", "_printer._tcp.", &subtype));
 
   // Subtype almost too long.
   EXPECT_TRUE(MdnsNames::MatchServiceName(
       "012345678901234567890123456789012345678901234567890123456789012._sub._"
       "printer._tcp.local.",
       "_printer._tcp.", &subtype));
-  EXPECT_EQ("012345678901234567890123456789012345678901234567890123456789012",
-            subtype);
+  EXPECT_EQ("012345678901234567890123456789012345678901234567890123456789012", subtype);
 
   // Subtype too long.
   EXPECT_FALSE(MdnsNames::MatchServiceName(
@@ -153,11 +140,11 @@ TEST(MdnsNamesTest, IsValidHostName) {
   EXPECT_TRUE(MdnsNames::IsValidHostName("g.c.a.r"));
   EXPECT_TRUE(MdnsNames::IsValidHostName(
       "012345678901234567890123456789012345678901234567890123456789012"));
-  EXPECT_TRUE(MdnsNames::IsValidHostName(
-      "012345678901234567890123456789012345678901234567890123456789012."
-      "012345678901234567890123456789012345678901234567890123456789012."
-      "012345678901234567890123456789012345678901234567890123456789012."
-      "0123456789012345678901234567890123456789012345678901234"));
+  EXPECT_TRUE(
+      MdnsNames::IsValidHostName("012345678901234567890123456789012345678901234567890123456789012."
+                                 "012345678901234567890123456789012345678901234567890123456789012."
+                                 "012345678901234567890123456789012345678901234567890123456789012."
+                                 "0123456789012345678901234567890123456789012345678901234"));
 
   // Empty.
   EXPECT_FALSE(MdnsNames::IsValidHostName(""));
@@ -175,11 +162,11 @@ TEST(MdnsNamesTest, IsValidHostName) {
   EXPECT_FALSE(MdnsNames::IsValidHostName("gopher..cow"));
 
   // Too long.
-  EXPECT_FALSE(MdnsNames::IsValidHostName(
-      "012345678901234567890123456789012345678901234567890123456789012."
-      "012345678901234567890123456789012345678901234567890123456789012."
-      "012345678901234567890123456789012345678901234567890123456789012."
-      "01234567890123456789012345678901234567890123456789012345"));
+  EXPECT_FALSE(
+      MdnsNames::IsValidHostName("012345678901234567890123456789012345678901234567890123456789012."
+                                 "012345678901234567890123456789012345678901234567890123456789012."
+                                 "012345678901234567890123456789012345678901234567890123456789012."
+                                 "01234567890123456789012345678901234567890123456789012345"));
 
   // Label too long.
   EXPECT_FALSE(MdnsNames::IsValidHostName(

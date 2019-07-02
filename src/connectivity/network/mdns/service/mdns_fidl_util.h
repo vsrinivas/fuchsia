@@ -19,27 +19,21 @@ class MdnsFidlUtil {
 
   static fuchsia::net::mdns::ServiceInstancePtr CreateServiceInstance(
       const std::string& service, const std::string& instance,
-      const inet::SocketAddress& v4_address,
-      const inet::SocketAddress& v6_address,
+      const inet::SocketAddress& v4_address, const inet::SocketAddress& v6_address,
       const std::vector<std::string>& text);
 
-  static void UpdateServiceInstance(
-      const fuchsia::net::mdns::ServiceInstancePtr& service_instance,
-      const inet::SocketAddress& v4_address,
-      const inet::SocketAddress& v6_address,
-      const std::vector<std::string>& text);
+  static void UpdateServiceInstance(const fuchsia::net::mdns::ServiceInstancePtr& service_instance,
+                                    const inet::SocketAddress& v4_address,
+                                    const inet::SocketAddress& v6_address,
+                                    const std::vector<std::string>& text);
 
-  static fuchsia::net::Ipv4Address CreateIpv4Address(
-      const inet::IpAddress& ip_address);
+  static fuchsia::net::Ipv4Address CreateIpv4Address(const inet::IpAddress& ip_address);
 
-  static fuchsia::net::Ipv6Address CreateIpv6Address(
-      const inet::IpAddress& ip_address);
+  static fuchsia::net::Ipv6Address CreateIpv6Address(const inet::IpAddress& ip_address);
 
-  static fuchsia::net::Endpoint CreateEndpointV4(
-      const inet::SocketAddress& socket_address);
+  static fuchsia::net::Endpoint CreateEndpointV4(const inet::SocketAddress& socket_address);
 
-  static fuchsia::net::Endpoint CreateEndpointV6(
-      const inet::SocketAddress& socket_address);
+  static fuchsia::net::Endpoint CreateEndpointV6(const inet::SocketAddress& socket_address);
 
   static inet::IpAddress IpAddressFrom(const fuchsia::net::IpAddress* addr);
 

@@ -21,8 +21,7 @@ std::ostream& operator<<(std::ostream& os, const ReplyAddress& value) {
     return os << "<invalid>";
   }
 
-  return os << value.socket_address() << " interface "
-            << value.interface_address();
+  return os << value.socket_address() << " interface " << value.interface_address();
 }
 
 }  // namespace mdns
