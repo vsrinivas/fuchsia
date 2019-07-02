@@ -737,7 +737,7 @@ spn_pbi_acquire_node(struct spn_path_builder_impl * const impl)
   uint32_t const offset = idx * impl->config.block_dwords;
 
   impl->wip.node = impl->mapped.blocks.u32 + offset;
-  impl->wip.rem  = SPN_PATH_HEAD_DWORDS;
+  impl->wip.rem  = impl->config.block_dwords;
 
   return SPN_SUCCESS;
 }
