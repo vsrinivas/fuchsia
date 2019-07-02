@@ -8,6 +8,8 @@ updated atomically as part of a system update.
 **component** - a unit of execution started by the component franework which
 constructs its sandbox environment.
 
+**[package](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/go/src/pm/README.md#structure-of-a-fuchsia-package)** - a unit of distribution in Fuchsia which is a collection of files
+
 ## Scope
 
 This document describes how to provide product-specific configuration data to
@@ -44,6 +46,11 @@ access based only on string matching since we should have a fair amount of trust
 that the software in Base is designed to work properly together.
 
 ## Using config-data
+
+Files supplied via config-data are made available to all components within a
+package to which the configuration is targeted if those components request
+access to configuration data. It is not possible to restrict access of the
+configuration data to anything finer than a package.
 
 ### Supplying Configuration
 
