@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/paver/device-partitioner.h>
+#include "device-partitioner.h"
 
 #include <dirent.h>
 #include <fcntl.h>
