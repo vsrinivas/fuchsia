@@ -33,7 +33,7 @@ class TestImporter : public ::testing::Test {
   void SetUp() {
     fixture_set_up(kNoAttachToThread, TRACE_BUFFERING_MODE_ONESHOT,
                    kFxtBufferSize);
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
     context_ = trace_acquire_context();
     ASSERT_NE(context_, nullptr);
   }
@@ -43,7 +43,7 @@ class TestImporter : public ::testing::Test {
       trace_release_context(context_);
       context_ = nullptr;
     }
-    fixture_stop_tracing();
+    fixture_stop_and_terminate_tracing();
   }
 
   void TearDown() {

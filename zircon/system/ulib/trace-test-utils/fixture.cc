@@ -45,44 +45,41 @@ public:
     }
 
     ~Fixture() {
-        StopTracing(false);
+        TerminateEngine();
+        WaitEngineStopped();
     }
 
     void ResetEngineState() {
-        // The engine may be started/stopped multiple times between one call
-        // to StartTracing()/StopTracing(). Reset related state tracking vars
-        // each time.
+        // The engine may be started/stopped multiple times.
+        // Reset related state tracking vars each time.
         disposition_ = ZX_ERR_INTERNAL;
         observed_stopped_callback_ = false;
         ResetBufferFullNotification();
     }
 
-    void StartEngine() {
+    void InitializeEngine() {
         ResetEngineState();
+        if (attach_to_thread_ == kNoAttachToThread) {
+            loop_.StartThread("trace test");
+        }
 
         zx_status_t status = trace_engine_initialize(loop_.dispatcher(), this,
                                                      buffering_mode_,
                                                      buffer_.get(), buffer_.size());
         ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
-        status = trace_engine_start(TRACE_START_CLEAR_ENTIRE_BUFFER);
+    }
+
+    void StartEngine() {
+        ResetEngineState();
+        zx_status_t status = trace_engine_start(TRACE_START_CLEAR_ENTIRE_BUFFER);
         ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
     }
 
-    void StartTracing() {
-        if (trace_running_)
-            return;
-
-        trace_running_ = true;
-
-        if (attach_to_thread_ == kNoAttachToThread) {
-            loop_.StartThread("trace test");
-        }
-
-        StartEngine();
+    void StopEngine() {
+        trace_engine_stop(ZX_OK);
     }
 
-    void StopEngine() {
-        ZX_DEBUG_ASSERT(trace_running_);
+    void TerminateEngine() {
         trace_engine_terminate();
     }
 
@@ -110,20 +107,21 @@ public:
         loop_.Shutdown();
 
         ZX_DEBUG_ASSERT(observed_stopped_callback_);
-
-        trace_running_ = false;
     }
 
-    void StopTracing(bool hard_shutdown) {
-        if (!trace_running_)
-            return;
+    void InitializeAndStartTracing() {
+        InitializeEngine();
+        StartEngine();
+    }
 
+    void StopAndTerminateTracing(bool hard_shutdown) {
         // Asynchronously stop the engine.
         // If we're performing a hard shutdown, skip this step and begin immediately
         // tearing down the loop.  The trace engine should stop itself.
         if (!hard_shutdown) {
             StopEngine();
             WaitEngineStopped();
+            TerminateEngine();
         }
 
         Shutdown();
@@ -196,7 +194,6 @@ private:
     async::Loop loop_;
     trace_buffering_mode_t buffering_mode_;
     fbl::Array<uint8_t> buffer_;
-    bool trace_running_ = false;
     zx_status_t disposition_;
     zx::event trace_stopped_;
     zx::event buffer_full_;
@@ -222,19 +219,9 @@ void fixture_tear_down(void) {
     g_fixture = nullptr;
 }
 
-void fixture_start_tracing() {
+void fixture_initialize_engine() {
     ZX_DEBUG_ASSERT(g_fixture);
-    g_fixture->StartTracing();
-}
-
-void fixture_stop_tracing() {
-    ZX_DEBUG_ASSERT(g_fixture);
-    g_fixture->StopTracing(false);
-}
-
-void fixture_stop_tracing_hard() {
-    ZX_DEBUG_ASSERT(g_fixture);
-    g_fixture->StopTracing(true);
+    g_fixture->InitializeEngine();
 }
 
 void fixture_start_engine() {
@@ -247,6 +234,11 @@ void fixture_stop_engine() {
     g_fixture->StopEngine();
 }
 
+void fixture_terminate_engine() {
+    ZX_DEBUG_ASSERT(g_fixture);
+    g_fixture->TerminateEngine();
+}
+
 void fixture_wait_engine_stopped(void) {
     ZX_DEBUG_ASSERT(g_fixture);
     g_fixture->WaitEngineStopped();
@@ -255,6 +247,21 @@ void fixture_wait_engine_stopped(void) {
 void fixture_shutdown() {
     ZX_DEBUG_ASSERT(g_fixture);
     g_fixture->Shutdown();
+}
+
+void fixture_initialize_and_start_tracing() {
+    ZX_DEBUG_ASSERT(g_fixture);
+    g_fixture->InitializeAndStartTracing();
+}
+
+void fixture_stop_and_terminate_tracing() {
+    ZX_DEBUG_ASSERT(g_fixture);
+    g_fixture->StopAndTerminateTracing(false);
+}
+
+void fixture_stop_and_terminate_tracing_hard() {
+    ZX_DEBUG_ASSERT(g_fixture);
+    g_fixture->StopAndTerminateTracing(true);
 }
 
 async_loop_t* fixture_async_loop(void) {
@@ -298,7 +305,7 @@ bool fixture_compare_n_records(size_t max_num_records, const char* expected,
                                size_t* out_leading_to_skip) {
     ZX_DEBUG_ASSERT(g_fixture);
 
-    g_fixture->StopTracing(false);
+    g_fixture->StopAndTerminateTracing(false);
 
     if (!fixture_read_records(out_records)) {
         return false;

@@ -75,14 +75,14 @@ static bool test_enabled(void) {
 
     EXPECT_FALSE(TRACE_ENABLED(), "");
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 #ifndef NTRACE
     EXPECT_TRUE(TRACE_ENABLED(), "");
 #else
     EXPECT_FALSE(TRACE_ENABLED(), "");
 #endif // NTRACE
 
-    fixture_stop_tracing();
+    fixture_stop_and_terminate_tracing();
     EXPECT_FALSE(TRACE_ENABLED(), "");
 
     END_TRACE_TEST;
@@ -95,7 +95,7 @@ static bool test_category_enabled(void) {
     EXPECT_FALSE(TRACE_CATEGORY_ENABLED("-disabled"), "");
     EXPECT_FALSE(TRACE_CATEGORY_ENABLED(""), "");
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 #ifndef NTRACE
     EXPECT_TRUE(TRACE_CATEGORY_ENABLED("+enabled"), "");
     EXPECT_FALSE(TRACE_CATEGORY_ENABLED("-disabled"), "");
@@ -106,7 +106,7 @@ static bool test_category_enabled(void) {
     EXPECT_FALSE(TRACE_CATEGORY_ENABLED(""), "");
 #endif // NTRACE
 
-    fixture_stop_tracing();
+    fixture_stop_and_terminate_tracing();
     EXPECT_FALSE(TRACE_CATEGORY_ENABLED("+enabled"), "");
     EXPECT_FALSE(TRACE_CATEGORY_ENABLED("-disabled"), "");
     EXPECT_FALSE(TRACE_CATEGORY_ENABLED(""), "");
@@ -131,7 +131,7 @@ static bool test_trace_nonce(void) {
 static bool test_instant(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_INSTANT("+enabled", "name", TRACE_SCOPE_GLOBAL);
     TRACE_INSTANT("+enabled", "name", TRACE_SCOPE_PROCESS);
@@ -164,7 +164,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Instant(scope: thr
 static bool test_counter(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_COUNTER("+enabled", "name", 1u, I32_ARGS1);
     TRACE_COUNTER("+enabled", "name", 1u, I32_ARGS4);
@@ -190,7 +190,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Counter(id: 1), {k
 static bool test_duration(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     {
         TRACE_DURATION("+enabled", "name");
@@ -220,7 +220,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationComplete(e
 static bool test_duration_begin(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_DURATION_BEGIN("+enabled", "name");
     TRACE_DURATION_BEGIN("+enabled", "name", STR_ARGS1);
@@ -248,7 +248,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {k1
 static bool test_duration_end(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_DURATION_END("+enabled", "name");
     TRACE_DURATION_END("+enabled", "name", STR_ARGS1);
@@ -276,7 +276,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationEnd, {k1: 
 static bool test_async_begin(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_ASYNC_BEGIN("+enabled", "name", 1u);
     TRACE_ASYNC_BEGIN("+enabled", "name", 1u, STR_ARGS1);
@@ -304,7 +304,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", AsyncBegin(id: 1),
 static bool test_async_instant(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_ASYNC_INSTANT("+enabled", "name", 1u);
     TRACE_ASYNC_INSTANT("+enabled", "name", 1u, STR_ARGS1);
@@ -332,7 +332,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", AsyncInstant(id: 1
 static bool test_async_end(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_ASYNC_END("+enabled", "name", 1u);
     TRACE_ASYNC_END("+enabled", "name", 1u, STR_ARGS1);
@@ -360,7 +360,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", AsyncEnd(id: 1), {
 static bool test_flow_begin(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_FLOW_BEGIN("+enabled", "name", 1u);
     TRACE_FLOW_BEGIN("+enabled", "name", 1u, STR_ARGS1);
@@ -388,7 +388,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", FlowBegin(id: 1), 
 static bool test_flow_step(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_FLOW_STEP("+enabled", "name", 1u);
     TRACE_FLOW_STEP("+enabled", "name", 1u, STR_ARGS1);
@@ -416,7 +416,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", FlowStep(id: 1), {
 static bool test_flow_end(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_FLOW_END("+enabled", "name", 1u);
     TRACE_FLOW_END("+enabled", "name", 1u, STR_ARGS1);
@@ -447,7 +447,7 @@ static bool test_kernel_object(void) {
     zx_handle_t event;
     zx_event_create(0u, &event);
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_KERNEL_OBJECT(event);
     TRACE_KERNEL_OBJECT(event, STR_ARGS1);
@@ -472,7 +472,7 @@ KernelObject(koid: <>, type: event, name: \"\", {k1: string(\"v1\"), k2: string(
 static bool test_null_arguments(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_NULL());
 
@@ -499,7 +499,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
 static bool test_bool_arguments(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_BOOL(true));
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_BOOL(false));
@@ -530,7 +530,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
 static bool test_int32_arguments(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_INT32(INT32_MIN));
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_INT32(0));
@@ -577,7 +577,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
 static bool test_uint32_arguments(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_UINT32(0));
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_UINT32(UINT32_MAX));
@@ -616,7 +616,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
 static bool test_int64_arguments(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_INT64(INT64_MIN));
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_INT64(0));
@@ -651,7 +651,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
 static bool test_uint64_arguments(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_UINT64(0));
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_UINT64(UINT64_MAX));
@@ -716,7 +716,7 @@ static bool test_enum_arguments(void) {
                       kUint64_Max = UINT64_MAX };
 #endif // __cplusplus
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_INT32(kInt32_Min));
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_INT32(kInt32_Zero));
@@ -799,7 +799,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
 static bool test_double_arguments(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_DOUBLE(1.f));
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_DOUBLE(1.));
@@ -832,7 +832,7 @@ static bool test_char_array_arguments(void) {
 
     char kCharArray[] = "char[n]...";
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_CHAR_ARRAY(NULL, 0u));
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_CHAR_ARRAY("", 0u));
@@ -868,7 +868,7 @@ static bool test_string_arguments(void) {
     char string[5] = {'?', '2', '3', '4', '\0'};
     string[0] = '1';
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_STRING(NULL));
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_STRING(""));
@@ -913,7 +913,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
 static bool test_string_literal_arguments(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_STRING(NULL));
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_STRING(""));
@@ -947,7 +947,7 @@ static bool test_pointer_arguments(void) {
     volatile void* kVolatilePtr = &kNull;
     const volatile void* kConstVolatilePtr = &kNull;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_POINTER(kNull));
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_POINTER(kConstNull));
@@ -1006,7 +1006,7 @@ static bool test_koid_arguments(void) {
 #endif
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_KOID(42u));
 
@@ -1027,7 +1027,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
 static bool test_all_argument_counts(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
 #define FN(n) TRACE_DURATION_BEGIN("+enabled", "name", I32_ARGS##n);
     ALL15(FN)
@@ -1080,7 +1080,7 @@ static bool test_declare_args(void) {
     BEGIN_TRACE_TEST;
 
 #ifndef NTRACE
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     trace_thread_ref_t thread_ref;
     trace_string_ref_t category_ref;

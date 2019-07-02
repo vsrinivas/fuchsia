@@ -42,9 +42,10 @@ public:
         return init_status == ZX_OK && start_status == ZX_OK;
     }
 
-    void StopTracing() {
+    bool StopTracing() {
         trace_engine_terminate();
         loop_.RunUntilIdle();
+        return true;
     }
 
     bool CompareBuffer(const char* expected) {
@@ -73,7 +74,7 @@ bool TestVthreadDurationBegin() {
     TRACE_VTHREAD_DURATION_BEGIN("+enabled", "name", "virtual-thread", 1u, zx_ticks_get(), STR_ARGS1);
     TRACE_VTHREAD_DURATION_BEGIN("+enabled", "name", "virtual-thread", 1u, zx_ticks_get(), STR_ARGS4);
 
-    fixture.StopTracing();
+    ASSERT_TRUE(fixture.StopTracing());
 
     ASSERT_TRUE(fixture.CompareBuffer("\
 String(index: 1, \"+enabled\")\n\
@@ -104,7 +105,7 @@ bool TestVthreadDurationEnd() {
     TRACE_VTHREAD_DURATION_END("+enabled", "name", "virtual-thread", 1u, zx_ticks_get(), STR_ARGS1);
     TRACE_VTHREAD_DURATION_END("+enabled", "name", "virtual-thread", 1u, zx_ticks_get(), STR_ARGS4);
 
-    fixture.StopTracing();
+    ASSERT_TRUE(fixture.StopTracing());
 
     ASSERT_TRUE(fixture.CompareBuffer("\
 String(index: 1, \"+enabled\")\n\
@@ -135,7 +136,7 @@ bool TestVthreadFlowBegin() {
     TRACE_VTHREAD_FLOW_BEGIN("+enabled", "name", "virtual-thread", 1u, 2u, zx_ticks_get(), STR_ARGS1);
     TRACE_VTHREAD_FLOW_BEGIN("+enabled", "name", "virtual-thread", 1u, 2u, zx_ticks_get(), STR_ARGS4);
 
-    fixture.StopTracing();
+    ASSERT_TRUE(fixture.StopTracing());
 
     ASSERT_TRUE(fixture.CompareBuffer("\
 String(index: 1, \"+enabled\")\n\
@@ -166,7 +167,7 @@ bool TestVthreadFlowStep() {
     TRACE_VTHREAD_FLOW_STEP("+enabled", "name", "virtual-thread", 1u, 2u, zx_ticks_get(), STR_ARGS1);
     TRACE_VTHREAD_FLOW_STEP("+enabled", "name", "virtual-thread", 1u, 2u, zx_ticks_get(), STR_ARGS4);
 
-    fixture.StopTracing();
+    ASSERT_TRUE(fixture.StopTracing());
 
     ASSERT_TRUE(fixture.CompareBuffer("\
 String(index: 1, \"+enabled\")\n\
@@ -197,7 +198,7 @@ bool TestVthreadFlowEnd() {
     TRACE_VTHREAD_FLOW_END("+enabled", "name", "virtual-thread", 1u, 2u, zx_ticks_get(), STR_ARGS1);
     TRACE_VTHREAD_FLOW_END("+enabled", "name", "virtual-thread", 1u, 2u, zx_ticks_get(), STR_ARGS4);
 
-    fixture.StopTracing();
+    ASSERT_TRUE(fixture.StopTracing());
 
     ASSERT_TRUE(fixture.CompareBuffer("\
 String(index: 1, \"+enabled\")\n\

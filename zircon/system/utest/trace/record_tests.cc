@@ -16,7 +16,7 @@ namespace {
 static bool blob_test(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     const char name[] = "name";
     trace_string_ref_t name_ref = trace_make_inline_c_string_ref(name);
@@ -41,7 +41,7 @@ static bool blob_test(void) {
 static bool blob_macro_test(void) {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     const char name[] = "all-byte-values";
     char blob[256];

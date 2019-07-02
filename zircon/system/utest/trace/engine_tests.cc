@@ -54,8 +54,8 @@ void RunThread(fbl::Closure closure) {
 bool TestNormalShutdown() {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
-    fixture_stop_tracing();
+    fixture_initialize_and_start_tracing();
+    fixture_stop_and_terminate_tracing();
     EXPECT_EQ(ZX_OK, fixture_get_disposition());
 
     END_TRACE_TEST;
@@ -64,8 +64,8 @@ bool TestNormalShutdown() {
 bool TestHardShutdown() {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
-    fixture_stop_tracing_hard();
+    fixture_initialize_and_start_tracing();
+    fixture_stop_and_terminate_tracing_hard();
     EXPECT_EQ(ZX_ERR_CANCELED, fixture_get_disposition());
 
     END_TRACE_TEST;
@@ -76,19 +76,19 @@ bool test_state() {
 
     EXPECT_EQ(TRACE_STOPPED, trace_state());
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
     EXPECT_EQ(TRACE_STARTED, trace_state());
 
-    fixture_stop_tracing();
+    fixture_stop_and_terminate_tracing();
     EXPECT_EQ(TRACE_STOPPED, trace_state());
 
     // Do the test twice so that we test starting again after just having
     // stopped.
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
     EXPECT_EQ(TRACE_STARTED, trace_state());
 
-    fixture_stop_tracing();
+    fixture_stop_and_terminate_tracing();
     EXPECT_EQ(TRACE_STOPPED, trace_state());
 
     END_TRACE_TEST;
@@ -99,10 +99,10 @@ bool TestIsEnabled() {
 
     EXPECT_FALSE(trace_is_enabled());
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
     EXPECT_TRUE(trace_is_enabled());
 
-    fixture_stop_tracing();
+    fixture_stop_and_terminate_tracing();
     EXPECT_FALSE(trace_is_enabled());
 
     END_TRACE_TEST;
@@ -115,12 +115,12 @@ bool TestIsCategoryEnabled() {
     EXPECT_FALSE(trace_is_category_enabled("-disabled"));
     EXPECT_FALSE(trace_is_category_enabled(""));
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
     EXPECT_TRUE(trace_is_category_enabled("+enabled"));
     EXPECT_FALSE(trace_is_category_enabled("-disabled"));
     EXPECT_FALSE(trace_is_category_enabled(""));
 
-    fixture_stop_tracing();
+    fixture_stop_and_terminate_tracing();
     EXPECT_FALSE(trace_is_category_enabled("+enabled"));
     EXPECT_FALSE(trace_is_category_enabled("-disabled"));
     EXPECT_FALSE(trace_is_category_enabled(""));
@@ -139,7 +139,7 @@ bool TestAcquireContextForCategory() {
     context = trace_acquire_context_for_category("-disabled", &category_ref);
     EXPECT_NULL(context);
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
     context = trace_acquire_context_for_category("+enabled", &category_ref);
     EXPECT_NONNULL(context);
     EXPECT_TRUE(trace_is_inline_string_ref(&category_ref) ||
@@ -148,7 +148,7 @@ bool TestAcquireContextForCategory() {
     context = trace_acquire_context_for_category("-disabled", &category_ref);
     EXPECT_NULL(context);
 
-    fixture_stop_tracing();
+    fixture_stop_and_terminate_tracing();
     context = trace_acquire_context_for_category("+enabled", &category_ref);
     EXPECT_NULL(context);
     context = trace_acquire_context_for_category("-disabled", &category_ref);
@@ -181,7 +181,7 @@ bool TestAcquireContextForCategoryCached() {
               kSiteStateDisabled);
     EXPECT_TRUE(get_site_state(disabled_category_state) & ~kSiteStateFlagsMask);
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     context = trace_acquire_context_for_category_cached(
         "+enabled", &enabled_category_state, &category_ref);
@@ -200,8 +200,8 @@ bool TestAcquireContextForCategoryCached() {
               kSiteStateDisabled);
     EXPECT_TRUE(get_site_state(disabled_category_state) & ~kSiteStateFlagsMask);
 
-    // Don't call |fixture_stop_tracing()| here as that shuts down the
-    // async loop.
+    // Don't call |fixture_stop_and_terminate_tracing()| here as that shuts
+    // down the async loop.
     fixture_stop_engine();
     fixture_wait_engine_stopped();
 
@@ -227,7 +227,7 @@ bool TestAcquireContextForCategoryCached() {
     EXPECT_EQ(get_site_state(enabled_category_state), 0);
     EXPECT_EQ(get_site_state(disabled_category_state), 0);
 
-    fixture_stop_tracing();
+    fixture_stop_and_terminate_tracing();
 
     END_TRACE_TEST;
 }
@@ -249,11 +249,11 @@ bool TestFlushCategoryCache() {
     EXPECT_EQ(trace_engine_flush_category_cache(), ZX_OK);
     EXPECT_EQ(get_site_state(disabled_category_state), 0);
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     EXPECT_EQ(trace_engine_flush_category_cache(), ZX_ERR_BAD_STATE);
 
-    fixture_stop_tracing();
+    fixture_stop_and_terminate_tracing();
 
     END_TRACE_TEST;
 }
@@ -286,7 +286,7 @@ bool TestObserver() {
     EXPECT_EQ(ZX_OK, trace_register_observer(event.get()));
     EXPECT_EQ(ZX_ERR_TIMED_OUT, event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr));
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
     EXPECT_EQ(ZX_OK, event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr));
     EXPECT_EQ(TRACE_STARTED, trace_state());
 
@@ -333,7 +333,7 @@ bool TestObserverErrors() {
 bool TestRegisterCurrentThread() {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     trace_thread_ref_t t1, t2;
     {
@@ -359,7 +359,7 @@ Thread(index: 1, <>)
 bool TestRegisterCurrentThreadMultipleThreads() {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     trace_thread_ref_t t1;
     {
@@ -394,7 +394,7 @@ Thread(index: 2, <>)
 bool TestRegisterStringLiteral() {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     trace_string_ref_t empty;
     trace_string_ref_t null;
@@ -447,7 +447,7 @@ String(index: 3, "string3")
 bool TestRegisterStringLiteralMultipleThreads() {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     trace_string_ref_t a1;
     trace_string_ref_t a2;
@@ -493,7 +493,7 @@ String(index: 4, "string2")
 bool TestRegisterStringLiteralTableOverflow() {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     fbl::Vector<fbl::String> strings;
 
@@ -518,7 +518,7 @@ bool TestRegisterStringLiteralTableOverflow() {
 bool TestMaximumRecordLength() {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     {
         auto context = trace::TraceContext::Acquire();
@@ -541,7 +541,7 @@ bool TestMaximumRecordLength() {
 bool TestEventWithInlineEverything() {
     BEGIN_TRACE_TEST;
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     trace_string_ref_t cat = trace_make_inline_c_string_ref("cat");
     trace_string_ref_t name = trace_make_inline_c_string_ref("name");
@@ -571,7 +571,7 @@ bool TestCircularMode() {
     BEGIN_TRACE_TEST_ETC(kNoAttachToThread,
                          TRACE_BUFFERING_MODE_CIRCULAR, kBufferSize);
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     // Fill the buffers with one kind of record, then fill them with another.
     // We should see only the second kind remaining.
@@ -639,7 +639,7 @@ bool TestStreamingMode() {
     BEGIN_TRACE_TEST_ETC(kNoAttachToThread,
                          TRACE_BUFFERING_MODE_STREAMING, kBufferSize);
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     // Fill the buffers with one kind of record.
     // Both buffers should fill since there's no one to save them.
@@ -809,7 +809,7 @@ bool TestShutdownWhenFull() {
     BEGIN_TRACE_TEST_ETC(kAttachToThread,
                          TRACE_BUFFERING_MODE_STREAMING, kBufferSize);
 
-    fixture_start_tracing();
+    fixture_initialize_and_start_tracing();
 
     // Keep writing records until we just fill the buffer.
     // Since the engine loop is on the same loop as us, we can't rely on
@@ -832,7 +832,7 @@ bool TestShutdownWhenFull() {
     // the engine's. Then when remaining tasks in the loop are run the
     // |trace_engine_request_save_buffer()| task will have no context in
     // which to process the request and should gracefully fail.
-    fixture_stop_tracing();
+    fixture_stop_and_terminate_tracing();
 
     END_TRACE_TEST;
 }
