@@ -15,8 +15,8 @@ namespace driver_unit_test {
 
 std::unique_ptr<Logger> Logger::instance_;
 
-zx_status_t Logger::CreateInstance(zx::unowned_channel ch) {
-    if (!ch->is_valid()) {
+zx_status_t Logger::CreateInstance(zx::channel ch) {
+    if (!ch) {
         return ZX_ERR_BAD_HANDLE;
     }
     fbl::AllocChecker ac;
@@ -58,7 +58,7 @@ zx_status_t Logger::SendLogMessage(const char* log_msg) {
     if (status != ZX_OK) {
         return status;
     }
-    return msg.Write(logger->channel_->get(), 0);
+    return msg.Write(logger->channel_.get(), 0);
 }
 
 zx_status_t Logger::SendLogTestCase() {
@@ -91,7 +91,7 @@ zx_status_t Logger::SendLogTestCase() {
     if (status != ZX_OK) {
         return status;
     }
-    return msg.Write(channel_->get(), 0);
+    return msg.Write(channel_.get(), 0);
 }
 
 void Logger::OnTestCaseStart(const zxtest::TestCase& test_case) {

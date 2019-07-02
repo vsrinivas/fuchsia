@@ -20,7 +20,7 @@ namespace driver_unit_test {
 class Logger : public zxtest::LifecycleObserver {
 public:
     // Populates |instance_| with a new logger instance.
-    static zx_status_t CreateInstance(zx::unowned_channel ch);
+    static zx_status_t CreateInstance(zx::channel ch);
     static Logger* GetInstance() { return instance_.get(); }
     static void DeleteInstance() { instance_ = nullptr; }
 
@@ -35,7 +35,7 @@ public:
     void OnTestSkip(const zxtest::TestCase& test_case, const zxtest::TestInfo& test);
 
 private:
-    explicit Logger(zx::unowned_channel ch) : channel_(ch) {}
+    explicit Logger(zx::channel ch) : channel_(std::move(ch)) {}
 
     // Sends the test case result to the channel.
     zx_status_t SendLogTestCase();
@@ -44,7 +44,7 @@ private:
     static std::unique_ptr<Logger> instance_;
 
     // The channel to send FIDL messages to.
-    zx::unowned_channel channel_;
+    zx::channel channel_;
 
     // Current test case information.
     fbl::String test_case_name_;

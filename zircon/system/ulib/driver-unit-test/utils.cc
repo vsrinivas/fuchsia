@@ -22,7 +22,8 @@ zx_device_t* GetParent() {
     return parent_device;
 }
 
-bool RunZxTests(const char* name, zx_device_t* parent, zx_handle_t channel) {
+bool RunZxTests(const char* name, zx_device_t* parent, zx_handle_t handle) {
+    zx::channel channel(handle);
     SetParent(parent);
 
     auto cleanup = fbl::MakeAutoCall([]() {
@@ -30,15 +31,15 @@ bool RunZxTests(const char* name, zx_device_t* parent, zx_handle_t channel) {
         Logger::DeleteInstance();
     });
 
-    if (channel != ZX_HANDLE_INVALID) {
-        zx_status_t status = Logger::CreateInstance(zx::unowned_channel(channel));
+    if (channel) {
+        zx_status_t status = Logger::CreateInstance(std::move(channel));
         if (status == ZX_OK) {
             zxtest::Runner::GetInstance()->AddObserver(driver_unit_test::Logger::GetInstance());
         }
     }
     const int kArgc = 1;
     const char* argv[kArgc] = {name};
-    return RUN_ALL_TESTS(kArgc, const_cast<char**>(argv));
+    return RUN_ALL_TESTS(kArgc, const_cast<char**>(argv)) == 0;
 }
 
 }  // namespace driver_unit_test

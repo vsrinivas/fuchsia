@@ -21,9 +21,10 @@ const zxtest::TestInfo kFakeTestInfo = zxtest::TestInfo("test", zxtest::SourceLo
 class LoggerTest : public zxtest::Test {
 protected:
     void SetUp() override {
-        ASSERT_EQ(ZX_OK, zx::channel::create(0, &local_, &remote_));
+        zx::channel remote;
+        ASSERT_EQ(ZX_OK, zx::channel::create(0, &local_, &remote));
         ASSERT_EQ(ZX_OK,
-                  driver_unit_test::Logger::CreateInstance(zx::unowned_channel(remote_.get())));
+                  driver_unit_test::Logger::CreateInstance(std::move(remote)));
         logger_ = driver_unit_test::Logger::GetInstance();
         ASSERT_NOT_NULL(logger_);
     }
@@ -33,7 +34,7 @@ protected:
         ASSERT_NULL(driver_unit_test::Logger::GetInstance());
     }
 
-    zx::channel local_, remote_;
+    zx::channel local_;
     driver_unit_test::Logger* logger_;
 };
 
@@ -41,7 +42,8 @@ TEST_F(LoggerTest, CreateWithInvalidChannel) {
     driver_unit_test::Logger::DeleteInstance();
     ASSERT_NULL(driver_unit_test::Logger::GetInstance());
 
-    ASSERT_NE(ZX_OK, driver_unit_test::Logger::CreateInstance(zx::unowned_channel()));
+    zx::channel invalid;
+    ASSERT_NE(ZX_OK, driver_unit_test::Logger::CreateInstance(std::move(invalid)));
     ASSERT_NULL(driver_unit_test::Logger::GetInstance());
     ASSERT_NE(ZX_OK, driver_unit_test::Logger::SendLogMessage(kLogMessage));
 }
