@@ -28,7 +28,8 @@ In the case where a port is bound to an interrupt, the interrupt packets are del
 dedicated queue on ports and are higher priority than other non-interrupt packets.
 
 The returned handle will have:
-  * `ZX_RIGHT_TRANSFER`: allowing them to be sent to another process via channel write.
+
+  * `ZX_RIGHT_TRANSFER`: allowing them to be sent to another process through channel write.
   * `ZX_RIGHT_WRITE`: allowing packets to be *queued*.
   * `ZX_RIGHT_READ`: allowing packets to be *read*.
   * `ZX_RIGHT_DUPLICATE`: allowing them to be *duplicated*.
