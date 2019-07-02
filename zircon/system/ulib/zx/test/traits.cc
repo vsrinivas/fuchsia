@@ -26,16 +26,14 @@
 #include <lib/zx/time.h>
 #include <lib/zx/timer.h>
 #include <lib/zx/vmar.h>
-#include <unittest/unittest.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/port.h>
+#include <zxtest/zxtest.h>
 
 template <typename Handle>
-bool duplicating(const Handle& handle) {
-    BEGIN_TEST;
-
+void Duplicating(const Handle& handle) {
     zx_status_t expected_status = ZX_OK;
     if (!zx::object_traits<Handle>::supports_duplication) {
         expected_status = ZX_ERR_ACCESS_DENIED;
@@ -47,15 +45,11 @@ bool duplicating(const Handle& handle) {
         zx_handle_close(copy);
     }
 
-    ASSERT_EQ(status, expected_status);
-
-    END_TEST;
+    ASSERT_STATUS(status, expected_status);
 }
 
 template <typename Handle>
-bool user_signaling(const Handle& handle) {
-    BEGIN_TEST;
-
+void UserSignaling(const Handle& handle) {
     zx_status_t expected_status = ZX_OK;
     if (!zx::object_traits<Handle>::supports_user_signal) {
         expected_status = ZX_ERR_ACCESS_DENIED;
@@ -67,15 +61,11 @@ bool user_signaling(const Handle& handle) {
         zx_handle_close(copy);
     }
 
-    ASSERT_EQ(status, expected_status);
-
-    END_TEST;
+    ASSERT_STATUS(status, expected_status);
 }
 
 template <typename Handle>
-bool waiting(const Handle& handle) {
-    BEGIN_TEST;
-
+void Waiting(const Handle& handle) {
     zx_status_t expected_status = ZX_OK;
     if (!zx::object_traits<Handle>::supports_wait) {
         expected_status = ZX_ERR_ACCESS_DENIED;
@@ -87,15 +77,11 @@ bool waiting(const Handle& handle) {
         zx_handle_close(copy);
     }
 
-    ASSERT_EQ(status, expected_status);
-
-    END_TEST;
+    ASSERT_STATUS(status, expected_status);
 }
 
 template <typename Handle>
-bool peering(const Handle& handle) {
-    BEGIN_TEST;
-
+void Peering(const Handle& handle) {
     zx_status_t expected_status = ZX_OK;
     if (!zx::object_traits<Handle>::has_peer_handle) {
         expected_status = ZX_ERR_ACCESS_DENIED;
@@ -103,9 +89,7 @@ bool peering(const Handle& handle) {
 
     zx_status_t status = zx_object_signal_peer(handle.get(), 0u, ZX_USER_SIGNAL_0);
 
-    ASSERT_EQ(status, expected_status);
-
-    END_TEST;
+    ASSERT_STATUS(status, expected_status);
 }
 
 [[noreturn]] void do_segfault(uintptr_t /*arg1*/, uintptr_t /*arg2*/) {
@@ -114,222 +98,208 @@ bool peering(const Handle& handle) {
     zx_thread_exit();
 }
 
-bool traits_test() {
-    BEGIN_TEST;
-
-    {
-        zx::event event;
-        ASSERT_EQ(zx::event::create(0u, &event), ZX_OK);
-        duplicating(event);
-        user_signaling(event);
-        waiting(event);
-        peering(event);
-    }
-
-    {
-        zx::thread thread;
-        ASSERT_EQ(zx::thread::create(*zx::process::self(), "", 0u, 0u, &thread), ZX_OK);
-        duplicating(thread);
-        user_signaling(thread);
-        waiting(thread);
-        peering(thread);
-    }
-
-    {
-        zx::process process;
-        zx::vmar vmar;
-        ASSERT_EQ(zx::process::create(*zx::job::default_job(), "", 0u, 0u, &process, &vmar), ZX_OK);
-        duplicating(process);
-        user_signaling(process);
-        waiting(process);
-        peering(process);
-    }
-
-    {
-        zx::job job;
-        ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0u, &job), ZX_OK);
-        duplicating(job);
-        user_signaling(job);
-        waiting(job);
-        peering(job);
-    }
-
-    {
-        zx::vmo vmo;
-        ASSERT_EQ(zx::vmo::create(4096u, 0u, &vmo), ZX_OK);
-        duplicating(vmo);
-        user_signaling(vmo);
-        waiting(vmo);
-        peering(vmo);
-    }
-
-    {
-        // Creating a zx::bti is too hard in a generic testing
-        // environment. Instead, we just assert it's got the traits we
-        // want.
-        ASSERT_EQ(zx::object_traits<zx::bti>::supports_duplication, true);
-        ASSERT_EQ(zx::object_traits<zx::bti>::supports_user_signal, true);
-        ASSERT_EQ(zx::object_traits<zx::bti>::supports_wait, true);
-        ASSERT_EQ(zx::object_traits<zx::bti>::has_peer_handle, false);
-    }
-
-    {
-        // Creating a zx::resource is too hard in a generic testing
-        // environment. Instead, we just assert it's got the traits we
-        // want.
-        ASSERT_EQ(zx::object_traits<zx::resource>::supports_duplication, true);
-        ASSERT_EQ(zx::object_traits<zx::resource>::supports_user_signal, true);
-        ASSERT_EQ(zx::object_traits<zx::resource>::supports_wait, true);
-        ASSERT_EQ(zx::object_traits<zx::resource>::has_peer_handle, false);
-    }
-
-    {
-        zx::timer timer;
-        ASSERT_EQ(zx::timer::create(0u, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
-        duplicating(timer);
-        user_signaling(timer);
-        waiting(timer);
-        peering(timer);
-    }
-
-    {
-        zx::channel channel, channel2;
-        ASSERT_EQ(zx::channel::create(0u, &channel, &channel2), ZX_OK);
-        duplicating(channel);
-        user_signaling(channel);
-        waiting(channel);
-        peering(channel);
-    }
-
-    {
-        zx::eventpair eventpair, eventpair2;
-        ASSERT_EQ(zx::eventpair::create(0u, &eventpair, &eventpair2), ZX_OK);
-        duplicating(eventpair);
-        user_signaling(eventpair);
-        waiting(eventpair);
-        peering(eventpair);
-    }
-
-    {
-        zx::fifo fifo, fifo2;
-        ASSERT_EQ(zx::fifo::create(16u, 16u, 0u, &fifo, &fifo2), ZX_OK);
-        duplicating(fifo);
-        user_signaling(fifo);
-        waiting(fifo);
-        peering(fifo);
-    }
-
-    {
-        zx::debuglog debuglog;
-        ASSERT_EQ(zx::debuglog::create(zx::resource(), 0u, &debuglog), ZX_OK);
-        duplicating(debuglog);
-        user_signaling(debuglog);
-        waiting(debuglog);
-        peering(debuglog);
-    }
-
-    {
-        // Creating a zx::pmt is too hard in a generic testing
-        // environment. Instead, we just assert it's got the traits we
-        // want.
-        ASSERT_EQ(zx::object_traits<zx::pmt>::supports_duplication, false);
-        ASSERT_EQ(zx::object_traits<zx::pmt>::supports_user_signal, false);
-        ASSERT_EQ(zx::object_traits<zx::pmt>::supports_wait, false);
-        ASSERT_EQ(zx::object_traits<zx::pmt>::has_peer_handle, false);
-    }
-
-    {
-        zx::socket socket, socket2;
-        ASSERT_EQ(zx::socket::create(0u, &socket, &socket2), ZX_OK);
-        duplicating(socket);
-        user_signaling(socket);
-        waiting(socket);
-        peering(socket);
-    }
-
-    {
-        zx::port port;
-        ASSERT_EQ(zx::port::create(0u, &port), ZX_OK);
-        duplicating(port);
-        user_signaling(port);
-        waiting(port);
-        peering(port);
-    }
-
-    {
-        zx::vmar vmar;
-        uintptr_t addr;
-        ASSERT_EQ(zx::vmar::root_self()->allocate(0u, 4096u, 0u, &vmar, &addr), ZX_OK);
-        duplicating(vmar);
-        user_signaling(vmar);
-        waiting(vmar);
-        peering(vmar);
-    }
-
-    {
-        // Creating a zx::interrupt is too hard in a generic testing
-        // environment. Instead, we just assert it's got the traits we
-        // want.
-        ASSERT_EQ(zx::object_traits<zx::interrupt>::supports_duplication, true);
-        ASSERT_EQ(zx::object_traits<zx::interrupt>::supports_user_signal, false);
-        ASSERT_EQ(zx::object_traits<zx::interrupt>::supports_wait, true);
-        ASSERT_EQ(zx::object_traits<zx::interrupt>::has_peer_handle, false);
-    }
-
-    {
-        // Creating a zx::guest is too hard in a generic testing
-        // environment. Instead, we just assert it's got the traits we
-        // want.
-        ASSERT_EQ(zx::object_traits<zx::guest>::supports_duplication, true);
-        ASSERT_EQ(zx::object_traits<zx::guest>::supports_user_signal, false);
-        ASSERT_EQ(zx::object_traits<zx::guest>::supports_wait, false);
-        ASSERT_EQ(zx::object_traits<zx::guest>::has_peer_handle, false);
-    }
-
-    {
-        // Creating a zx::iommu is too hard in a generic testing
-        // environment. Instead, we just assert it's got the traits we
-        // want.
-        ASSERT_EQ(zx::object_traits<zx::resource>::supports_duplication, true);
-        ASSERT_EQ(zx::object_traits<zx::resource>::supports_user_signal, true);
-        ASSERT_EQ(zx::object_traits<zx::resource>::supports_wait, true);
-        ASSERT_EQ(zx::object_traits<zx::resource>::has_peer_handle, false);
-    }
-
-    {
-        // Create a thread that segfaults so we can catch and analyze the
-        // resulting exception object.
-        alignas(16) static uint8_t thread_stack[1024];
-        zx::thread thread;
-        zx::channel exception_channel;
-        ASSERT_EQ(zx::thread::create(*zx::process::self(), "", 0, 0, &thread), ZX_OK);
-        ASSERT_EQ(thread.create_exception_channel(0, &exception_channel), ZX_OK);
-
-        // Stack grows down, make sure to pass a pointer to the end.
-        ASSERT_EQ(thread.start(&do_segfault, thread_stack + sizeof(thread_stack), 0, 0), ZX_OK);
-
-        zx::exception exception;
-        zx_exception_info_t info;
-        ASSERT_EQ(exception_channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr),
-                  ZX_OK);
-        ASSERT_EQ(exception_channel.read(0, &info, exception.reset_and_get_address(),
-                                         sizeof(info), 1, nullptr, nullptr),
-                  ZX_OK);
-
-        duplicating(exception);
-        user_signaling(exception);
-        waiting(exception);
-        peering(exception);
-
-        ASSERT_EQ(thread.kill(), ZX_OK);
-        ASSERT_EQ(thread.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr), ZX_OK);
-    }
-
-    END_TEST;
+TEST(TraitsTestCase, EventTraits) {
+    zx::event event;
+    ASSERT_OK(zx::event::create(0u, &event));
+    ASSERT_NO_FATAL_FAILURES(Duplicating(event));
+    ASSERT_NO_FATAL_FAILURES(UserSignaling(event));
+    ASSERT_NO_FATAL_FAILURES(Waiting(event));
+    ASSERT_NO_FATAL_FAILURES(Peering(event));
 }
 
-BEGIN_TEST_CASE(libzx_traits_tests)
+TEST(TraitsTestCase, ThreadTraits) {
+    zx::thread thread;
+    ASSERT_OK(zx::thread::create(*zx::process::self(), "", 0u, 0u, &thread));
+    ASSERT_NO_FATAL_FAILURES(Duplicating(thread));
+    ASSERT_NO_FATAL_FAILURES(UserSignaling(thread));
+    ASSERT_NO_FATAL_FAILURES(Waiting(thread));
+    ASSERT_NO_FATAL_FAILURES(Peering(thread));
+}
 
-RUN_TEST(traits_test)
+TEST(TraitsTestCase, ProcessTraits) {
+    zx::process process;
+    zx::vmar vmar;
+    ASSERT_OK(zx::process::create(*zx::job::default_job(), "", 0u, 0u, &process, &vmar));
+    ASSERT_NO_FATAL_FAILURES(Duplicating(process));
+    ASSERT_NO_FATAL_FAILURES(UserSignaling(process));
+    ASSERT_NO_FATAL_FAILURES(Waiting(process));
+    ASSERT_NO_FATAL_FAILURES(Peering(process));
+}
 
-END_TEST_CASE(libzx_traits_tests)
+TEST(TraitsTestCase, JobTraits) {
+    zx::job job;
+    ASSERT_OK(zx::job::create(*zx::job::default_job(), 0u, &job));
+    ASSERT_NO_FATAL_FAILURES(Duplicating(job));
+    ASSERT_NO_FATAL_FAILURES(UserSignaling(job));
+    ASSERT_NO_FATAL_FAILURES(Waiting(job));
+    ASSERT_NO_FATAL_FAILURES(Peering(job));
+}
+
+TEST(TraitsTestCase, VmoTraits) {
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(4096u, 0u, &vmo));
+    ASSERT_NO_FATAL_FAILURES(Duplicating(vmo));
+    ASSERT_NO_FATAL_FAILURES(UserSignaling(vmo));
+    ASSERT_NO_FATAL_FAILURES(Waiting(vmo));
+    ASSERT_NO_FATAL_FAILURES(Peering(vmo));
+}
+
+TEST(TraitsTestCase, BtiTraits) {
+    // Creating a zx::bti is too hard in a generic testing
+    // environment. Instead, we just assert it's got the traits we
+    // want.
+    ASSERT_TRUE(zx::object_traits<zx::bti>::supports_duplication);
+    ASSERT_TRUE(zx::object_traits<zx::bti>::supports_user_signal);
+    ASSERT_TRUE(zx::object_traits<zx::bti>::supports_wait);
+    ASSERT_FALSE(zx::object_traits<zx::bti>::has_peer_handle);
+}
+
+TEST(TraitsTestCase, ResourceTraits) {
+    // Creating a zx::resource is too hard in a generic testing
+    // environment. Instead, we just assert it's got the traits we
+    // want.
+    ASSERT_TRUE(zx::object_traits<zx::resource>::supports_duplication);
+    ASSERT_TRUE(zx::object_traits<zx::resource>::supports_user_signal);
+    ASSERT_TRUE(zx::object_traits<zx::resource>::supports_wait);
+    ASSERT_FALSE(zx::object_traits<zx::resource>::has_peer_handle);
+}
+
+TEST(TraitsTestCase, TimerTraits) {
+    zx::timer timer;
+    ASSERT_OK(zx::timer::create(0u, ZX_CLOCK_MONOTONIC, &timer));
+    ASSERT_NO_FATAL_FAILURES(Duplicating(timer));
+    ASSERT_NO_FATAL_FAILURES(UserSignaling(timer));
+    ASSERT_NO_FATAL_FAILURES(Waiting(timer));
+    ASSERT_NO_FATAL_FAILURES(Peering(timer));
+}
+
+TEST(TraitsTestCase, ChannelTraits) {
+    zx::channel channel, channel2;
+    ASSERT_OK(zx::channel::create(0u, &channel, &channel2));
+    ASSERT_NO_FATAL_FAILURES(Duplicating(channel));
+    ASSERT_NO_FATAL_FAILURES(UserSignaling(channel));
+    ASSERT_NO_FATAL_FAILURES(Waiting(channel));
+    ASSERT_NO_FATAL_FAILURES(Peering(channel));
+}
+
+TEST(TraitsTestCase, EventPairTraits) {
+    zx::eventpair eventpair, eventpair2;
+    ASSERT_OK(zx::eventpair::create(0u, &eventpair, &eventpair2));
+    ASSERT_NO_FATAL_FAILURES(Duplicating(eventpair));
+    ASSERT_NO_FATAL_FAILURES(UserSignaling(eventpair));
+    ASSERT_NO_FATAL_FAILURES(Waiting(eventpair));
+    ASSERT_NO_FATAL_FAILURES(Peering(eventpair));
+}
+
+TEST(TraitsTestCase, FifoTraits) {
+    zx::fifo fifo, fifo2;
+    ASSERT_OK(zx::fifo::create(16u, 16u, 0u, &fifo, &fifo2));
+    ASSERT_NO_FATAL_FAILURES(Duplicating(fifo));
+    ASSERT_NO_FATAL_FAILURES(UserSignaling(fifo));
+    ASSERT_NO_FATAL_FAILURES(Waiting(fifo));
+    ASSERT_NO_FATAL_FAILURES(Peering(fifo));
+}
+
+TEST(TraitsTestCase, DebugLogTraits) {
+    zx::debuglog debuglog;
+    ASSERT_OK(zx::debuglog::create(zx::resource(), 0u, &debuglog));
+    ASSERT_NO_FATAL_FAILURES(Duplicating(debuglog));
+    ASSERT_NO_FATAL_FAILURES(UserSignaling(debuglog));
+    ASSERT_NO_FATAL_FAILURES(Waiting(debuglog));
+    ASSERT_NO_FATAL_FAILURES(Peering(debuglog));
+}
+
+TEST(TraitsTestCase, PmtTraits) {
+    // Creating a zx::pmt is too hard in a generic testing
+    // environment. Instead, we just assert it's got the traits we
+    // want.
+    ASSERT_FALSE(zx::object_traits<zx::pmt>::supports_duplication);
+    ASSERT_FALSE(zx::object_traits<zx::pmt>::supports_user_signal);
+    ASSERT_FALSE(zx::object_traits<zx::pmt>::supports_wait);
+    ASSERT_FALSE(zx::object_traits<zx::pmt>::has_peer_handle);
+}
+
+TEST(TraitsTestCase, SocketTraits) {
+    zx::socket socket, socket2;
+    ASSERT_OK(zx::socket::create(0u, &socket, &socket2));
+    ASSERT_NO_FATAL_FAILURES(Duplicating(socket));
+    ASSERT_NO_FATAL_FAILURES(UserSignaling(socket));
+    ASSERT_NO_FATAL_FAILURES(Waiting(socket));
+    ASSERT_NO_FATAL_FAILURES(Peering(socket));
+}
+
+TEST(TraitsTestCase, PortTraits) {
+    zx::port port;
+    ASSERT_OK(zx::port::create(0u, &port));
+    ASSERT_NO_FATAL_FAILURES(Duplicating(port));
+    ASSERT_NO_FATAL_FAILURES(UserSignaling(port));
+    ASSERT_NO_FATAL_FAILURES(Waiting(port));
+    ASSERT_NO_FATAL_FAILURES(Peering(port));
+}
+
+TEST(TraitsTestCase, VmarTraits) {
+    zx::vmar vmar;
+    uintptr_t addr;
+    ASSERT_OK(zx::vmar::root_self()->allocate(0u, 4096u, 0u, &vmar, &addr));
+    ASSERT_NO_FATAL_FAILURES(Duplicating(vmar));
+    ASSERT_NO_FATAL_FAILURES(UserSignaling(vmar));
+    ASSERT_NO_FATAL_FAILURES(Waiting(vmar));
+    ASSERT_NO_FATAL_FAILURES(Peering(vmar));
+}
+
+TEST(TraitsTestCase, InterruptTraits) {
+    // Creating a zx::interrupt is too hard in a generic testing
+    // environment. Instead, we just assert it's got the traits we
+    // want.
+    ASSERT_TRUE(zx::object_traits<zx::interrupt>::supports_duplication);
+    ASSERT_FALSE(zx::object_traits<zx::interrupt>::supports_user_signal);
+    ASSERT_TRUE(zx::object_traits<zx::interrupt>::supports_wait);
+    ASSERT_FALSE(zx::object_traits<zx::interrupt>::has_peer_handle);
+}
+
+TEST(TraitsTestCase, GuestTraits) {
+    // Creating a zx::guest is too hard in a generic testing
+    // environment. Instead, we just assert it's got the traits we
+    // want.
+    ASSERT_TRUE(zx::object_traits<zx::guest>::supports_duplication);
+    ASSERT_FALSE(zx::object_traits<zx::guest>::supports_user_signal);
+    ASSERT_FALSE(zx::object_traits<zx::guest>::supports_wait);
+    ASSERT_FALSE(zx::object_traits<zx::guest>::has_peer_handle);
+}
+
+TEST(TraitsTestCase, IommuTraits) {
+    // Creating a zx::iommu is too hard in a generic testing
+    // environment. Instead, we just assert it's got the traits we
+    // want.
+    ASSERT_TRUE(zx::object_traits<zx::iommu>::supports_duplication);
+    ASSERT_TRUE(zx::object_traits<zx::iommu>::supports_user_signal);
+    ASSERT_TRUE(zx::object_traits<zx::iommu>::supports_wait);
+    ASSERT_FALSE(zx::object_traits<zx::iommu>::has_peer_handle);
+}
+
+TEST(TraitsTestCase, ExceptionTraits) {
+    // Create a thread that segfaults so we can catch and analyze the
+    // resulting exception object.
+    alignas(16) static uint8_t thread_stack[1024];
+    zx::thread thread;
+    zx::channel exception_channel;
+    ASSERT_OK(zx::thread::create(*zx::process::self(), "", 0, 0, &thread));
+    ASSERT_OK(thread.create_exception_channel(0, &exception_channel));
+
+    // Stack grows down, make sure to pass a pointer to the end.
+    ASSERT_OK(thread.start(&do_segfault, thread_stack + sizeof(thread_stack), 0, 0));
+
+    zx::exception exception;
+    zx_exception_info_t info;
+    ASSERT_OK(exception_channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr));
+    ASSERT_OK(exception_channel.read(0, &info, exception.reset_and_get_address(),
+                                     sizeof(info), 1, nullptr, nullptr));
+
+    ASSERT_NO_FATAL_FAILURES(Duplicating(exception));
+    ASSERT_NO_FATAL_FAILURES(UserSignaling(exception));
+    ASSERT_NO_FATAL_FAILURES(Waiting(exception));
+    ASSERT_NO_FATAL_FAILURES(Peering(exception));
+
+    ASSERT_OK(thread.kill());
+    ASSERT_OK(thread.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
+}

@@ -23,138 +23,117 @@
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
-#include <unittest/unittest.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/port.h>
+#include <zxtest/zxtest.h>
 
 #include <utility>
 
-static zx_status_t validate_handle(zx_handle_t handle) {
+namespace {
+
+zx_status_t validate_handle(zx_handle_t handle) {
     return zx_object_get_info(handle, ZX_INFO_HANDLE_VALID,
                               nullptr, 0, 0u, nullptr);
 }
 
-static bool handle_invalid_test() {
-    BEGIN_TEST;
+TEST(ZxTestCase, HandleInvalid) {
     zx::handle handle;
     // A default constructed handle is invalid.
     ASSERT_EQ(handle.release(), ZX_HANDLE_INVALID);
-    END_TEST;
 }
 
-static bool handle_close_test() {
-    BEGIN_TEST;
+TEST(ZxTestCase, HandleClose) {
     zx_handle_t raw_event;
-    ASSERT_EQ(zx_event_create(0u, &raw_event), ZX_OK);
-    ASSERT_EQ(validate_handle(raw_event), ZX_OK);
+    ASSERT_OK(zx_event_create(0u, &raw_event));
+    ASSERT_OK(validate_handle(raw_event));
     {
         zx::handle handle(raw_event);
     }
     // Make sure the handle was closed.
     ASSERT_EQ(validate_handle(raw_event), ZX_ERR_BAD_HANDLE);
-    END_TEST;
 }
 
-static bool handle_move_test() {
-    BEGIN_TEST;
+TEST(ZxTestCase, HandleMove) {
     zx::event event;
     // Check move semantics.
-    ASSERT_EQ(zx::event::create(0u, &event), ZX_OK);
+    ASSERT_OK(zx::event::create(0u, &event));
     zx::handle handle(std::move(event));
     ASSERT_EQ(event.release(), ZX_HANDLE_INVALID);
-    ASSERT_EQ(validate_handle(handle.get()), ZX_OK);
-    END_TEST;
+    ASSERT_OK(validate_handle(handle.get()));
 }
 
-static bool handle_duplicate_test() {
-    BEGIN_TEST;
+TEST(ZxTestCase, HandleDuplicate) {
     zx_handle_t raw_event;
     zx::handle dup;
-    ASSERT_EQ(zx_event_create(0u, &raw_event), ZX_OK);
+    ASSERT_OK(zx_event_create(0u, &raw_event));
     zx::handle handle(raw_event);
-    ASSERT_EQ(handle.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup), ZX_OK);
+    ASSERT_OK(handle.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
     // The duplicate must be valid as well as the original.
-    ASSERT_EQ(validate_handle(dup.get()), ZX_OK);
-    ASSERT_EQ(validate_handle(raw_event), ZX_OK);
-    END_TEST;
+    ASSERT_OK(validate_handle(dup.get()));
+    ASSERT_OK(validate_handle(raw_event));
 }
 
-static bool handle_replace_test() {
-    BEGIN_TEST;
+TEST(ZxTestCase, HandleReplace) {
     zx_handle_t raw_event;
     zx::handle rep;
-    ASSERT_EQ(zx_event_create(0u, &raw_event), ZX_OK);
+    ASSERT_OK(zx_event_create(0u, &raw_event));
     {
         zx::handle handle(raw_event);
-        ASSERT_EQ(handle.replace(ZX_RIGHT_SAME_RIGHTS, &rep), ZX_OK);
+        ASSERT_OK(handle.replace(ZX_RIGHT_SAME_RIGHTS, &rep));
         ASSERT_EQ(handle.release(), ZX_HANDLE_INVALID);
     }
     // The original shoould be invalid and the replacement should be valid.
     ASSERT_EQ(validate_handle(raw_event), ZX_ERR_BAD_HANDLE);
-    ASSERT_EQ(validate_handle(rep.get()), ZX_OK);
-    END_TEST;
+    ASSERT_OK(validate_handle(rep.get()));
 }
 
-static bool event_test() {
-    BEGIN_TEST;
+TEST(ZxTestCase, Event) {
     zx::event event;
-    ASSERT_EQ(zx::event::create(0u, &event), ZX_OK);
-    ASSERT_EQ(validate_handle(event.get()), ZX_OK);
+    ASSERT_OK(zx::event::create(0u, &event));
+    ASSERT_OK(validate_handle(event.get()));
     // TODO(cpu): test more.
-    END_TEST;
 }
 
-static bool event_duplicate_test() {
-    BEGIN_TEST;
+TEST(ZxTestCase, EventDuplicate) {
     zx::event event;
     zx::event dup;
-    ASSERT_EQ(zx::event::create(0u, &event), ZX_OK);
-    ASSERT_EQ(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup), ZX_OK);
+    ASSERT_OK(zx::event::create(0u, &event));
+    ASSERT_OK(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
     // The duplicate must be valid as well as the original.
-    ASSERT_EQ(validate_handle(dup.get()), ZX_OK);
-    ASSERT_EQ(validate_handle(event.get()), ZX_OK);
-    END_TEST;
+    ASSERT_OK(validate_handle(dup.get()));
+    ASSERT_OK(validate_handle(event.get()));
 }
 
-static bool bti_compilation_test() {
-    BEGIN_TEST;
+TEST(ZxTestCase, BtiCompilation) {
     zx::bti bti;
     // TODO(teisenbe): test more.
-    END_TEST;
 }
 
-static bool pmt_compilation_test() {
-    BEGIN_TEST;
+TEST(ZxTestCase, PmtCompilation) {
     zx::pmt pmt;
     // TODO(teisenbe): test more.
-    END_TEST;
 }
 
-static bool iommu_compilation_test() {
-    BEGIN_TEST;
+TEST(ZxTestCase, IommuCompilation) {
     zx::iommu iommu;
     // TODO(teisenbe): test more.
-    END_TEST;
 }
 
-static bool channel_test() {
-    BEGIN_TEST;
+TEST(ZxTestCase, Channel) {
     zx::channel channel[2];
-    ASSERT_EQ(zx::channel::create(0u, &channel[0], &channel[1]), ZX_OK);
-    ASSERT_EQ(validate_handle(channel[0].get()), ZX_OK);
-    ASSERT_EQ(validate_handle(channel[1].get()), ZX_OK);
+    ASSERT_OK(zx::channel::create(0u, &channel[0], &channel[1]));
+    ASSERT_OK(validate_handle(channel[0].get()));
+    ASSERT_OK(validate_handle(channel[1].get()));
     // TODO(cpu): test more.
-    END_TEST;
 }
 
-static bool channel_rw_test() {
-    BEGIN_TEST;
+TEST(ZxTestCase, ChannelRw) {
     zx::eventpair eventpair[2];
-    ASSERT_EQ(zx::eventpair::create(0u, &eventpair[0], &eventpair[1]), ZX_OK);
+    ASSERT_OK(zx::eventpair::create(0u, &eventpair[0], &eventpair[1]));
 
     zx::channel channel[2];
-    ASSERT_EQ(zx::channel::create(0u, &channel[0], &channel[1]), ZX_OK);
+    ASSERT_OK(zx::channel::create(0u, &channel[0], &channel[1]));
 
     zx_handle_t handles[2] = {
         eventpair[0].release(),
@@ -163,21 +142,19 @@ static bool channel_rw_test() {
 
     zx_handle_t recv[2] = {0};
 
-    ASSERT_EQ(channel[0].write(0u, nullptr, 0u, handles, 2), ZX_OK);
-    ASSERT_EQ(channel[1].read(0u, nullptr, recv, 0u, 2, nullptr, nullptr), ZX_OK);
+    ASSERT_OK(channel[0].write(0u, nullptr, 0u, handles, 2));
+    ASSERT_OK(channel[1].read(0u, nullptr, recv, 0u, 2, nullptr, nullptr));
 
-    ASSERT_EQ(zx_handle_close(recv[0]), ZX_OK);
-    ASSERT_EQ(zx_handle_close(recv[1]), ZX_OK);
-    END_TEST;
+    ASSERT_OK(zx_handle_close(recv[0]));
+    ASSERT_OK(zx_handle_close(recv[1]));
 }
 
-static bool channel_rw_etc_test() {
-    BEGIN_TEST;
+TEST(ZxTestCase, ChannelRwEtc) {
     zx::eventpair eventpair[2];
-    ASSERT_EQ(zx::eventpair::create(0u, &eventpair[0], &eventpair[1]), ZX_OK);
+    ASSERT_OK(zx::eventpair::create(0u, &eventpair[0], &eventpair[1]));
 
     zx::channel channel[2];
-    ASSERT_EQ(zx::channel::create(0u, &channel[0], &channel[1]), ZX_OK);
+    ASSERT_OK(zx::channel::create(0u, &channel[0], &channel[1]));
 
     zx_handle_t handles[2] = {
         eventpair[0].release(),
@@ -187,87 +164,78 @@ static bool channel_rw_etc_test() {
     zx_handle_info_t recv[2] = {{}};
     uint32_t h_count = 0;
 
-    ASSERT_EQ(channel[0].write(0u, nullptr, 0u, handles, 2), ZX_OK);
-    ASSERT_EQ(channel[1].read_etc(0u, nullptr, recv, 0u, 2, nullptr, &h_count), ZX_OK);
+    ASSERT_OK(channel[0].write(0u, nullptr, 0u, handles, 2));
+    ASSERT_OK(channel[1].read_etc(0u, nullptr, recv, 0u, 2, nullptr, &h_count));
 
     ASSERT_EQ(h_count, 2u);
     ASSERT_EQ(recv[0].type, ZX_OBJ_TYPE_EVENTPAIR);
     ASSERT_EQ(recv[1].type, ZX_OBJ_TYPE_EVENTPAIR);
 
-    ASSERT_EQ(zx_handle_close(recv[0].handle), ZX_OK);
-    ASSERT_EQ(zx_handle_close(recv[1].handle), ZX_OK);
-    END_TEST;
+    ASSERT_OK(zx_handle_close(recv[0].handle));
+    ASSERT_OK(zx_handle_close(recv[1].handle));
 }
 
-static bool socket_test() {
-    BEGIN_TEST;
+TEST(ZxTestCase, Socket) {
     zx::socket socket[2];
-    ASSERT_EQ(zx::socket::create(0u, &socket[0], &socket[1]), ZX_OK);
-    ASSERT_EQ(validate_handle(socket[0].get()), ZX_OK);
-    ASSERT_EQ(validate_handle(socket[1].get()), ZX_OK);
+    ASSERT_OK(zx::socket::create(0u, &socket[0], &socket[1]));
+    ASSERT_OK(validate_handle(socket[0].get()));
+    ASSERT_OK(validate_handle(socket[1].get()));
     // TODO(cpu): test more.
-    END_TEST;
 }
 
-static bool eventpair_test() {
-    BEGIN_TEST;
+TEST(ZxTestCase, EventPair) {
     zx::eventpair eventpair[2];
-    ASSERT_EQ(zx::eventpair::create(0u, &eventpair[0], &eventpair[1]), ZX_OK);
-    ASSERT_EQ(validate_handle(eventpair[0].get()), ZX_OK);
-    ASSERT_EQ(validate_handle(eventpair[1].get()), ZX_OK);
+    ASSERT_OK(zx::eventpair::create(0u, &eventpair[0], &eventpair[1]));
+    ASSERT_OK(validate_handle(eventpair[0].get()));
+    ASSERT_OK(validate_handle(eventpair[1].get()));
     // TODO(cpu): test more.
-    END_TEST;
 }
 
-static bool vmar_test() {
-    BEGIN_TEST;
+TEST(ZxTestCase, Vmar) {
     zx::vmar vmar;
     const size_t size = getpagesize();
     uintptr_t addr;
-    ASSERT_EQ(zx::vmar::root_self()->allocate(0u, size, ZX_VM_CAN_MAP_READ, &vmar, &addr),
-              ZX_OK);
-    ASSERT_EQ(validate_handle(vmar.get()), ZX_OK);
-    ASSERT_EQ(vmar.destroy(), ZX_OK);
+    ASSERT_OK(zx::vmar::root_self()->allocate(0u, size, ZX_VM_CAN_MAP_READ, &vmar, &addr));
+    ASSERT_OK(validate_handle(vmar.get()));
+    ASSERT_OK(vmar.destroy());
     // TODO(teisenbe): test more.
-    END_TEST;
 }
 
-static bool port_test() {
-    BEGIN_TEST;
+TEST(ZxTestCase, Port) {
     zx::port port;
-    ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
-    ASSERT_EQ(validate_handle(port.get()), ZX_OK);
+    ASSERT_OK(zx::port::create(0, &port));
+    ASSERT_OK(validate_handle(port.get()));
 
     zx::channel channel[2];
     auto key = 1111ull;
-    ASSERT_EQ(zx::channel::create(0u, &channel[0], &channel[1]), ZX_OK);
-    ASSERT_EQ(channel[0].wait_async(
-        port, key, ZX_CHANNEL_READABLE, ZX_WAIT_ASYNC_ONCE), ZX_OK);
-    ASSERT_EQ(channel[1].write(0u, "12345", 5, nullptr, 0u), ZX_OK);
+    ASSERT_OK(zx::channel::create(0u, &channel[0], &channel[1]));
+    ASSERT_OK(channel[0].wait_async(port, key, ZX_CHANNEL_READABLE, ZX_WAIT_ASYNC_ONCE));
+    ASSERT_OK(channel[1].write(0u, "12345", 5, nullptr, 0u));
 
     zx_port_packet_t packet = {};
-    ASSERT_EQ(port.wait(zx::time(), &packet), ZX_OK);
+    ASSERT_OK(port.wait(zx::time(), &packet));
     ASSERT_EQ(packet.key, key);
     ASSERT_EQ(packet.type, ZX_PKT_TYPE_SIGNAL_ONE);
     ASSERT_EQ(packet.signal.count, 1u);
-    END_TEST;
 }
 
-static bool time_test() {
-    BEGIN_TEST;
-
+TEST(ZxTestCase, TimeConstruction) {
     // time construction
     ASSERT_EQ(zx::time().get(), 0);
     ASSERT_EQ(zx::time::infinite().get(), ZX_TIME_INFINITE);
     ASSERT_EQ(zx::time(-1).get(), -1);
     ASSERT_EQ(zx::time(ZX_TIME_INFINITE_PAST).get(), ZX_TIME_INFINITE_PAST);
+}
 
+TEST(ZxTestCase, DurationConstruction) {
     // duration construction
     ASSERT_EQ(zx::duration().get(), 0);
     ASSERT_EQ(zx::duration::infinite().get(), ZX_TIME_INFINITE);
     ASSERT_EQ(zx::duration(-1).get(), -1);
     ASSERT_EQ(zx::duration(ZX_TIME_INFINITE_PAST).get(), ZX_TIME_INFINITE_PAST);
+}
 
+TEST(ZxTestCase, DurationConversions) {
     // duration to/from nsec, usec, msec, etc.
     ASSERT_EQ(zx::nsec(-10).get(), ZX_NSEC(-10));
     ASSERT_EQ(zx::nsec(-10).to_nsecs(), -10);
@@ -312,24 +280,16 @@ static bool time_test() {
 
     // Just a smoke test
     ASSERT_GE(zx::deadline_after(zx::usec(10)).get(), ZX_USEC(10));
-
-    END_TEST;
 }
 
-static bool time_nanosleep_test() {
-    BEGIN_TEST;
-
-    ASSERT_EQ(zx::nanosleep(zx::time(ZX_TIME_INFINITE_PAST)), ZX_OK);
-    ASSERT_EQ(zx::nanosleep(zx::time(-1)), ZX_OK);
-    ASSERT_EQ(zx::nanosleep(zx::time(0)), ZX_OK);
-    ASSERT_EQ(zx::nanosleep(zx::time(1)), ZX_OK);
-
-    END_TEST;
+TEST(ZxTestCase, TimeNanoSleep) {
+    ASSERT_OK(zx::nanosleep(zx::time(ZX_TIME_INFINITE_PAST)));
+    ASSERT_OK(zx::nanosleep(zx::time(-1)));
+    ASSERT_OK(zx::nanosleep(zx::time(0)));
+    ASSERT_OK(zx::nanosleep(zx::time(1)));
 }
 
-static bool ticks_test() {
-    BEGIN_TEST;
-
+TEST(ZxTestCase, Ticks) {
     ASSERT_EQ(zx::ticks().get(), 0);
 
     zx::ticks before = zx::ticks::now();
@@ -353,154 +313,126 @@ static bool ticks_test() {
     after = zx::ticks::now();
     ASSERT_LE(before.get(), after.get());
     ASSERT_TRUE(before <= after);
-
-    END_TEST;
 }
 
 template <typename T>
-static bool reference_thing(const T& p) {
-    BEGIN_HELPER;
+void IsValidHandle(const T& p) {
     ASSERT_TRUE(static_cast<bool>(p), "invalid handle");
-    END_HELPER;
 }
 
-static bool thread_self_test() {
-    BEGIN_TEST;
-
+TEST(ZxTestCase, ThreadSelf) {
     zx_handle_t raw = zx_thread_self();
-    ASSERT_EQ(validate_handle(raw), ZX_OK);
+    ASSERT_OK(validate_handle(raw));
 
-    EXPECT_TRUE(reference_thing<zx::thread>(*zx::thread::self()));
-    EXPECT_EQ(validate_handle(raw), ZX_OK);
+    ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::thread>(*zx::thread::self()));
+    EXPECT_OK(validate_handle(raw));
 
     // This does not compile:
     //const zx::thread self = zx::thread::self();
-
-    END_TEST;
 }
 
-static void thread_suspend_test_fn(uintptr_t, uintptr_t) {
+void thread_suspend_test_fn(uintptr_t, uintptr_t) {
     zx_nanosleep(zx_deadline_after(ZX_SEC(1000)));
     zx_thread_exit();
 }
 
-static bool thread_suspend_test() {
-    BEGIN_TEST;
-
+TEST(ZxTestCase, ThreadSuspend) {
     zx::thread thread;
-    ASSERT_EQ(zx::thread::create(*zx::process::self(), "test", 4, 0, &thread), ZX_OK);
+    ASSERT_OK(zx::thread::create(*zx::process::self(), "test", 4, 0, &thread));
 
     // Make a little stack and start the thread. Note: stack grows down so pass the high address.
     alignas(16) static uint8_t stack_storage[64];
     uint8_t* stack = stack_storage + sizeof(stack_storage);
-    ASSERT_EQ(thread.start(&thread_suspend_test_fn, stack, 0, 0), ZX_OK);
+    ASSERT_OK(thread.start(&thread_suspend_test_fn, stack, 0, 0));
 
     zx::suspend_token suspend;
-    EXPECT_EQ(thread.suspend(&suspend), ZX_OK);
+    EXPECT_OK(thread.suspend(&suspend));
     EXPECT_TRUE(suspend);
 
     suspend.reset();
-    EXPECT_EQ(thread.kill(), ZX_OK);
-
-    END_TEST;
+    EXPECT_OK(thread.kill());
 }
 
-static bool process_self_test() {
-    BEGIN_TEST;
-
+TEST(ZxTestCase, ProcessSelf) {
     zx_handle_t raw = zx_process_self();
-    ASSERT_EQ(validate_handle(raw), ZX_OK);
+    ASSERT_OK(validate_handle(raw));
 
-    EXPECT_TRUE(reference_thing<zx::process>(*zx::process::self()));
-    EXPECT_EQ(validate_handle(raw), ZX_OK);
+    ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::process>(*zx::process::self()));
+    EXPECT_OK(validate_handle(raw));
 
     // This does not compile:
     //const zx::process self = zx::process::self();
-
-    END_TEST;
 }
 
-static bool vmar_root_self_test() {
-    BEGIN_TEST;
-
+TEST(ZxTestCase, VmarRootSelf) {
     zx_handle_t raw = zx_vmar_root_self();
-    ASSERT_EQ(validate_handle(raw), ZX_OK);
+    ASSERT_OK(validate_handle(raw));
 
-    EXPECT_TRUE(reference_thing<zx::vmar>(*zx::vmar::root_self()));
-    EXPECT_EQ(validate_handle(raw), ZX_OK);
+    ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::vmar>(*zx::vmar::root_self()));
+    EXPECT_OK(validate_handle(raw));
 
     // This does not compile:
     //const zx::vmar root_self = zx::vmar::root_self();
-
-    END_TEST;
 }
 
-static bool job_default_test() {
-    BEGIN_TEST;
-
+TEST(ZxTestCase, JobDefault) {
     zx_handle_t raw = zx_job_default();
-    ASSERT_EQ(validate_handle(raw), ZX_OK);
+    ASSERT_OK(validate_handle(raw));
 
-    EXPECT_TRUE(reference_thing<zx::job>(*zx::job::default_job()));
-    EXPECT_EQ(validate_handle(raw), ZX_OK);
+    ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::job>(*zx::job::default_job()));
+    EXPECT_OK(validate_handle(raw));
 
     // This does not compile:
     //const zx::job default_job = zx::job::default_job();
-
-    END_TEST;
 }
 
-static bool takes_any_handle(const zx::handle& handle) {
+bool takes_any_handle(const zx::handle& handle) {
     return handle.is_valid();
 }
 
-static bool handle_conversion_test() {
-    BEGIN_TEST;
+TEST(ZxTestCase, HandleConversion) {
     EXPECT_TRUE(takes_any_handle(*zx::unowned_handle(zx_thread_self())));
-    ASSERT_EQ(validate_handle(zx_thread_self()), ZX_OK);
-    END_TEST;
+    ASSERT_OK(validate_handle(zx_thread_self()));
 }
 
-static bool unowned_test() {
-    BEGIN_TEST;
-
+TEST(ZxTestCase, Unowned) {
     // Create a handle to test with.
     zx::event handle;
-    ASSERT_EQ(zx::event::create(0, &handle), ZX_OK);
-    ASSERT_EQ(validate_handle(handle.get()), ZX_OK);
+    ASSERT_OK(zx::event::create(0, &handle));
+    ASSERT_OK(validate_handle(handle.get()));
 
     // Verify that unowned<T>(zx_handle_t) doesn't close handle on teardown.
     {
       zx::unowned<zx::event> unowned(handle.get());
       EXPECT_EQ(unowned->get(), handle.get());
-      EXPECT_TRUE(reference_thing<zx::event>(*unowned));
+      ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
     }
-    ASSERT_EQ(validate_handle(handle.get()), ZX_OK);
+    ASSERT_OK(validate_handle(handle.get()));
 
     // Verify that unowned<T>(const T&) doesn't close handle on teardown.
     {
       zx::unowned<zx::event> unowned(handle);
       EXPECT_EQ(unowned->get(), handle.get());
-      EXPECT_TRUE(reference_thing<zx::event>(*unowned));
+      ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
     }
-    ASSERT_EQ(validate_handle(handle.get()), ZX_OK);
+    ASSERT_OK(validate_handle(handle.get()));
 
     // Verify that unowned<T>(const unowned<T>&) doesn't close on teardown.
     {
       zx::unowned<zx::event> unowned(handle);
-      EXPECT_TRUE(reference_thing<zx::event>(*unowned));
+      ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
 
       zx::unowned<zx::event> unowned2(unowned);
       EXPECT_EQ(unowned->get(), unowned2->get());
-      EXPECT_TRUE(reference_thing<zx::event>(*unowned2));
-      EXPECT_TRUE(reference_thing<zx::event>(*unowned));
+      ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned2));
+      ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
     }
-    ASSERT_EQ(validate_handle(handle.get()), ZX_OK);
+    ASSERT_OK(validate_handle(handle.get()));
 
     // Verify copy-assignment from unowned<> to unowned<> doesn't close.
     {
       zx::unowned<zx::event> unowned(handle);
-      EXPECT_TRUE(reference_thing<zx::event>(*unowned));
+      ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
 
       zx::unowned<zx::event> unowned2;
       ASSERT_FALSE(unowned2->is_valid());
@@ -508,28 +440,28 @@ static bool unowned_test() {
       const zx::unowned<zx::event>& assign_ref = unowned2 = unowned;
       EXPECT_EQ(assign_ref->get(), unowned2->get());
       EXPECT_EQ(unowned->get(), unowned2->get());
-      EXPECT_TRUE(reference_thing<zx::event>(*unowned2));
-      EXPECT_TRUE(reference_thing<zx::event>(*unowned));
+      ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned2));
+      ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
     }
-    ASSERT_EQ(validate_handle(handle.get()), ZX_OK);
+    ASSERT_OK(validate_handle(handle.get()));
 
     // Verify move from unowned<> to unowned<> doesn't close on teardown.
     {
       zx::unowned<zx::event> unowned(handle);
-      EXPECT_TRUE(reference_thing<zx::event>(*unowned));
+      ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
 
       zx::unowned<zx::event> unowned2(
           static_cast<zx::unowned<zx::event>&&>(unowned));
       EXPECT_EQ(unowned2->get(), handle.get());
-      EXPECT_TRUE(reference_thing<zx::event>(*unowned2));
+      ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned2));
       EXPECT_FALSE(unowned->is_valid());
     }
-    ASSERT_EQ(validate_handle(handle.get()), ZX_OK);
+    ASSERT_OK(validate_handle(handle.get()));
 
     // Verify move-assignment from unowned<> to unowned<> doesn't close.
     {
       zx::unowned<zx::event> unowned(handle);
-      EXPECT_TRUE(reference_thing<zx::event>(*unowned));
+      ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
 
       zx::unowned<zx::event> unowned2;
       ASSERT_FALSE(unowned2->is_valid());
@@ -537,120 +469,80 @@ static bool unowned_test() {
       const zx::unowned<zx::event>& assign_ref =
           unowned2 = static_cast<zx::unowned<zx::event>&&>(unowned);
       EXPECT_EQ(assign_ref->get(), unowned2->get());
-      EXPECT_TRUE(reference_thing<zx::event>(*unowned2));
+      ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned2));
       EXPECT_FALSE(unowned->is_valid());
     }
-    ASSERT_EQ(validate_handle(handle.get()), ZX_OK);
+    ASSERT_OK(validate_handle(handle.get()));
 
     // Verify move-assignment into non-empty unowned<>  doesn't close.
     {
       zx::unowned<zx::event> unowned(handle);
-      EXPECT_TRUE(reference_thing<zx::event>(*unowned));
+      ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
 
       zx::unowned<zx::event> unowned2(handle);
-      EXPECT_TRUE(reference_thing<zx::event>(*unowned2));
+      ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned2));
 
       unowned2 = static_cast<zx::unowned<zx::event>&&>(unowned);
       EXPECT_EQ(unowned2->get(), handle.get());
-      EXPECT_TRUE(reference_thing<zx::event>(*unowned2));
+      ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned2));
       EXPECT_FALSE(unowned->is_valid());
     }
-    ASSERT_EQ(validate_handle(handle.get()), ZX_OK);
+    ASSERT_OK(validate_handle(handle.get()));
 
     // Explicitly verify dereference operator allows methods to be called.
     {
       zx::unowned<zx::event> unowned(handle);
-      EXPECT_TRUE(reference_thing<zx::event>(*unowned));
+      ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
 
       const zx::event& event_ref = *unowned;
       zx::event duplicate;
-      EXPECT_EQ(event_ref.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate), ZX_OK);
+      EXPECT_OK(event_ref.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate));
     }
-    ASSERT_EQ(validate_handle(handle.get()), ZX_OK);
+    ASSERT_OK(validate_handle(handle.get()));
 
     // Explicitly verify member access operator allows methods to be called.
     {
       zx::unowned<zx::event> unowned(handle);
-      EXPECT_TRUE(reference_thing<zx::event>(*unowned));
+      ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
 
       zx::event duplicate;
-      EXPECT_EQ(unowned->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate), ZX_OK);
+      EXPECT_OK(unowned->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate));
     }
-    ASSERT_EQ(validate_handle(handle.get()), ZX_OK);
-
-    END_TEST;
+    ASSERT_OK(validate_handle(handle.get()));
 }
 
-static bool get_child_test() {
-    BEGIN_TEST;
-
+TEST(ZxTestCase, GetChild) {
     {
         // Verify handle and job overrides of get_child() can find this process
         // by KOID.
         zx_info_handle_basic_t info = {};
-        ASSERT_EQ(zx_object_get_info(zx_process_self(), ZX_INFO_HANDLE_BASIC,
-                                     &info, sizeof(info), nullptr, nullptr),
-              ZX_OK);
+        ASSERT_OK(zx_object_get_info(zx_process_self(), ZX_INFO_HANDLE_BASIC,
+                                     &info, sizeof(info), nullptr, nullptr));
 
         zx::handle as_handle;
-        ASSERT_EQ(zx::job::default_job()->get_child(
-                      info.koid, ZX_RIGHT_SAME_RIGHTS, &as_handle), ZX_OK);
-        ASSERT_EQ(validate_handle(as_handle.get()), ZX_OK);
+        ASSERT_OK(zx::job::default_job()->get_child(info.koid, ZX_RIGHT_SAME_RIGHTS, &as_handle));
+        ASSERT_OK(validate_handle(as_handle.get()));
 
         zx::process as_process;
-        ASSERT_EQ(zx::job::default_job()->get_child(
-                      info.koid, ZX_RIGHT_SAME_RIGHTS, &as_process), ZX_OK);
-        ASSERT_EQ(validate_handle(as_process.get()), ZX_OK);
+        ASSERT_OK(zx::job::default_job()->get_child(info.koid, ZX_RIGHT_SAME_RIGHTS, &as_process));
+        ASSERT_OK(validate_handle(as_process.get()));
     }
 
     {
         // Verify handle and thread overrides of get_child() can find this
         // thread by KOID.
         zx_info_handle_basic_t info = {};
-        ASSERT_EQ(zx_object_get_info(zx_thread_self(), ZX_INFO_HANDLE_BASIC,
-                                     &info, sizeof(info), nullptr, nullptr),
-                  ZX_OK);
+        ASSERT_OK(zx_object_get_info(zx_thread_self(), ZX_INFO_HANDLE_BASIC,
+                                     &info, sizeof(info), nullptr, nullptr));
 
         zx::handle as_handle;
-        ASSERT_EQ(zx::process::self()->get_child(
-                      info.koid, ZX_RIGHT_SAME_RIGHTS, &as_handle), ZX_OK);
-        ASSERT_EQ(validate_handle(as_handle.get()), ZX_OK);
+        ASSERT_OK(zx::process::self()->get_child(info.koid, ZX_RIGHT_SAME_RIGHTS, &as_handle));
+        ASSERT_OK(validate_handle(as_handle.get()));
 
         zx::thread as_thread;
-        ASSERT_EQ(zx::process::self()->get_child(
-                      info.koid, ZX_RIGHT_SAME_RIGHTS, &as_thread), ZX_OK);
-        ASSERT_EQ(validate_handle(as_thread.get()), ZX_OK);
+        ASSERT_OK(zx::process::self()->get_child(info.koid, ZX_RIGHT_SAME_RIGHTS, &as_thread));
+        ASSERT_OK(validate_handle(as_thread.get()));
     }
-
-    END_TEST;
 }
 
-BEGIN_TEST_CASE(libzx_tests)
-RUN_TEST(handle_invalid_test)
-RUN_TEST(handle_close_test)
-RUN_TEST(handle_move_test)
-RUN_TEST(handle_duplicate_test)
-RUN_TEST(handle_replace_test)
-RUN_TEST(event_test)
-RUN_TEST(event_duplicate_test)
-RUN_TEST(bti_compilation_test)
-RUN_TEST(pmt_compilation_test)
-RUN_TEST(iommu_compilation_test)
-RUN_TEST(channel_test)
-RUN_TEST(channel_rw_test)
-RUN_TEST(channel_rw_etc_test)
-RUN_TEST(socket_test)
-RUN_TEST(eventpair_test)
-RUN_TEST(vmar_test)
-RUN_TEST(port_test)
-RUN_TEST(time_test)
-RUN_TEST(time_nanosleep_test)
-RUN_TEST(ticks_test)
-RUN_TEST(thread_self_test)
-RUN_TEST(thread_suspend_test)
-RUN_TEST(process_self_test)
-RUN_TEST(vmar_root_self_test)
-RUN_TEST(job_default_test)
-RUN_TEST(unowned_test)
-RUN_TEST(get_child_test)
-END_TEST_CASE(libzx_tests)
+}  // namespace
