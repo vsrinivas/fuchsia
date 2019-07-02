@@ -18,6 +18,18 @@ group("harvester") {
 source_set("lib") {
   sources = [
     "dockyard_proxy.h",
+    "gather_category.cc",
+    "gather_category.h",
+    "gather_cpu.cc",
+    "gather_cpu.h",
+    "gather_inspectable.cc",
+    "gather_inspectable.h",
+    "gather_introspection.cc",
+    "gather_introspection.h",
+    "gather_memory.cc",
+    "gather_memory.h",
+    "gather_tasks.cc",
+    "gather_tasks.h",
     "harvester.cc",
     "harvester.h",
     "root_resource.cc",
@@ -80,6 +92,12 @@ executable("system_monitor_harvester_test") {
   sources = [
     "dockyard_proxy_fake.cc",
     "dockyard_proxy_fake.h",
+    "gather_cpu_test.cc",
+    "gather_inspectable_test.cc",
+    "gather_introspection_test.cc",
+    "gather_memory_test.cc",
+    "gather_tasks_test.cc",
+    "harvester_fake.h",
     "harvester_test.cc",
     "root_resource_test.cc",
   ]

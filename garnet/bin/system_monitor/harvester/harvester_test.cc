@@ -4,13 +4,9 @@
 
 #include "harvester.h"
 
-#include <fcntl.h>
-#include <fuchsia/sysinfo/c/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/loop.h>
 #include <lib/async-testing/dispatcher_stub.h>
-#include <lib/fdio/fdio.h>
-#include <lib/zx/channel.h>
-#include <zircon/process.h>
-#include <zircon/status.h>
 
 #include "dockyard_proxy_fake.h"
 #include "gtest/gtest.h"
@@ -32,90 +28,51 @@ class AsyncDispatcherFake : public async::DispatcherStub {
 class SystemMonitorHarvesterTest : public ::testing::Test {
  public:
   void SetUp() {
-    // Determine our KOID.
-    zx_info_handle_basic_t info;
-    zx_status_t status = zx_object_get_info(
-        zx_process_self(), ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
-        /*actual=*/nullptr, /*available=*/nullptr);
-    ASSERT_EQ(status, ZX_OK);
-    self_koid_ = std::to_string(info.koid);
-
     // Create a test harvester.
     std::unique_ptr<harvester::DockyardProxyFake> dockyard_proxy =
         std::make_unique<harvester::DockyardProxyFake>();
 
-    zx_handle_t root_resource;
-    zx_status_t ret = harvester::GetRootResource(&root_resource);
-    EXPECT_EQ(ret, ZX_OK);
-
+    EXPECT_EQ(harvester::GetRootResource(&root_resource), ZX_OK);
     test_harvester = std::make_unique<harvester::Harvester>(
-        zx::msec(1), root_resource, &dispatcher, std::move(dockyard_proxy));
+        root_resource, &dispatcher, std::move(dockyard_proxy));
   }
 
-  bool CheckString(const std::string& path, std::string* value) {
-    return static_cast<harvester::DockyardProxyFake*>(
-               test_harvester->dockyard_proxy_.get())
-        ->CheckStringSent(path, value);
+  async_dispatcher_t* GetHarvesterDispatcher() {
+    return test_harvester->dispatcher_;
   }
-
-  bool CheckStringPrefix(const std::string& path, std::string* value) {
-    return static_cast<harvester::DockyardProxyFake*>(
-               test_harvester->dockyard_proxy_.get())
-        ->CheckStringPrefixSent(path, value);
+  zx_handle_t GetHarvesterRootResource() {
+    return test_harvester->root_resource_;
   }
-
-  bool CheckValue(const std::string& path, dockyard::SampleValue* value) {
-    return static_cast<harvester::DockyardProxyFake*>(
-               test_harvester->dockyard_proxy_.get())
-        ->CheckValueSent(path, value);
+  zx::duration GetGatherCpuPeriod() {
+    return test_harvester->gather_cpu_.update_period_;
   }
-
-  // Dump out the state of the fake dockyard proxy.
-  void DebugDump() {
-    std::cout << "DebugDump:" << std::endl;
-    std::cout << "  self_koid_: " << self_koid_ << std::endl;
-    std::cout << *static_cast<harvester::DockyardProxyFake*>(
-        test_harvester->dockyard_proxy_.get());
-    std::cout << std::endl << std::endl << std::flush;
+  zx::duration GetGatherInspectablePeriod() {
+    return test_harvester->gather_inspectable_.update_period_;
   }
-
-  // Get a dockyard path for our koid with the given |suffix| key.
-  std::string KoidPath(const std::string& suffix) {
-    std::ostringstream out;
-    out << "koid:" << self_koid_ << ":" << suffix;
-    return out.str();
+  zx::duration GetGatherIntrospectionPeriod() {
+    return test_harvester->gather_introspection_.update_period_;
+  }
+  zx::duration GetGatherMemoryPeriod() {
+    return test_harvester->gather_memory_.update_period_;
+  }
+  zx::duration GetGatherTasksPeriod() {
+    return test_harvester->gather_tasks_.update_period_;
   }
 
   std::unique_ptr<harvester::Harvester> test_harvester;
-
   AsyncDispatcherFake dispatcher;
-
- private:
-  std::string self_koid_;
+  async::Loop loop{&kAsyncLoopConfigNoAttachToThread};
+  zx_handle_t root_resource;
 };
 
-TEST_F(SystemMonitorHarvesterTest, GatherData) {
-  // Perform a data gathering pass. This will send samples to the
-  // dockyard_proxy.
+TEST_F(SystemMonitorHarvesterTest, CreateHarvester) {
+  EXPECT_EQ(root_resource, GetHarvesterRootResource());
+  EXPECT_EQ(&dispatcher, GetHarvesterDispatcher());
+
   test_harvester->GatherData();
-
-  // Check the results.
-  dockyard::SampleValue test_value;
-  EXPECT_TRUE(CheckValue("cpu:0:busy_time", &test_value));
-  EXPECT_TRUE(CheckValue("memory:device_free_bytes", &test_value));
-
-  std::string test_string;
-  EXPECT_TRUE(CheckString(KoidPath("name"), &test_string));
-  // This is the name of our generated test process. If the testing harness
-  // changes this may need to be updated. The intent is to test for a process
-  // that is running.
-  EXPECT_EQ("system_monitor_harvester_test.c", test_string);
-}
-
-TEST_F(SystemMonitorHarvesterTest, Inspectable) {
-  test_harvester->GatherInspectableComponents();
-  std::string test_string;
-  EXPECT_TRUE(CheckStringPrefix(
-      "inspectable:/hub/c/system_monitor_harvester_test.cmx/", &test_string));
-  EXPECT_EQ("fuchsia.inspect.Inspect", test_string);
+  EXPECT_EQ(zx::msec(100), GetGatherCpuPeriod());
+  EXPECT_EQ(zx::sec(3), GetGatherInspectablePeriod());
+  EXPECT_EQ(zx::sec(10), GetGatherIntrospectionPeriod());
+  EXPECT_EQ(zx::msec(100), GetGatherMemoryPeriod());
+  EXPECT_EQ(zx::sec(2), GetGatherTasksPeriod());
 }

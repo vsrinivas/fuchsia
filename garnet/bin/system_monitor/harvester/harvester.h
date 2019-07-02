@@ -5,46 +5,39 @@
 #ifndef GARNET_BIN_SYSTEM_MONITOR_HARVESTER_HARVESTER_H_
 #define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_HARVESTER_H_
 
-#include <lib/async/default.h>
-#include <lib/zx/time.h>
-#include <zircon/types.h>
-
-#include <iostream>
-#include <string>
-
 #include "dockyard_proxy.h"
 #include "garnet/lib/system_monitor/dockyard/dockyard.h"
+#include "gather_cpu.h"
+#include "gather_inspectable.h"
+#include "gather_introspection.h"
+#include "gather_memory.h"
+#include "gather_tasks.h"
 
 class SystemMonitorHarvesterTest;
 
 namespace harvester {
 
+// The Harvester manages the various gathering code. Separate members gather
+// different types of Dockyard Samples as directed by the Harvester.
 class Harvester {
  public:
-  Harvester(zx::duration cycle_msec_rate, zx_handle_t root_resource,
-            async_dispatcher_t* dispatcher,
+  Harvester(zx_handle_t root_resource, async_dispatcher_t* dispatcher,
             std::unique_ptr<DockyardProxy> dockyard_proxy);
 
   void GatherData();
 
-  // Inspect information for components.
-  void GatherComponentIntrospection();
-
-  // Collect a list of components that have inspect data.
-  void GatherInspectableComponents();
-
  private:
-  zx::duration cycle_period_;
   zx_handle_t root_resource_;
   async_dispatcher_t* dispatcher_;
   std::unique_ptr<harvester::DockyardProxy> dockyard_proxy_;
-  friend class ::SystemMonitorHarvesterTest;
 
-  // Gather Samples for a given subject. These are grouped to make the code more
-  // manageable and enabling/disabling categories in the future.
-  void GatherCpuSamples();
-  void GatherMemorySamples();
-  void GatherThreadSamples();
+  GatherCpu gather_cpu_{root_resource_, *dockyard_proxy_};
+  GatherInspectable gather_inspectable_{root_resource_, *dockyard_proxy_};
+  GatherIntrospection gather_introspection_{root_resource_, *dockyard_proxy_};
+  GatherMemory gather_memory_{root_resource_, *dockyard_proxy_};
+  GatherTasks gather_tasks_{root_resource_, *dockyard_proxy_};
+
+  friend class ::SystemMonitorHarvesterTest;
 };
 
 }  // namespace harvester

@@ -28,13 +28,10 @@ int main(int argc, char** argv) {
   constexpr char VERSION_OUTPUT[] = "System Monitor Harvester - wip 11";
 
   // Command line options.
-  constexpr char COMMAND_INSPECT[] = "inspect";
-  constexpr char COMMAND_UPDATE_PERIOD[] = "msec-update-period";
   constexpr char COMMAND_LOCAL[] = "local";
   constexpr char COMMAND_VERSION[] = "version";
 
   bool use_grpc = true;
-  int cycle_msec_period = 100;
 
   // Parse command line.
   FXL_LOG(INFO) << VERSION_OUTPUT;
@@ -50,20 +47,6 @@ int main(int argc, char** argv) {
     FXL_LOG(INFO) << "Option: local only, not using transport to Dockyard.";
     use_grpc = false;
   }
-  if (command_line.HasOption(COMMAND_INSPECT)) {
-    FXL_LOG(INFO) << "Enabled component framework inspection (wip)";
-    // TODO(smbug.com/43): actually do component framework inspection.
-  }
-  if (command_line.HasOption(COMMAND_UPDATE_PERIOD)) {
-    std::string update_period;
-    command_line.GetOptionValue(COMMAND_UPDATE_PERIOD, &update_period);
-    if (!fxl::StringToNumberWithError(update_period, &cycle_msec_period)) {
-      std::cerr << "Error: Unable to parse `--" << COMMAND_UPDATE_PERIOD
-                << "` value of \"" << update_period << "\"" << std::endl;
-      exit(EXIT_CODE_GENERAL_ERROR);
-    }
-  }
-  FXL_LOG(INFO) << "Gathering data every " << cycle_msec_period << " msec.";
 
   // Set up.
   std::unique_ptr<harvester::DockyardProxy> dockyard_proxy;
@@ -97,9 +80,8 @@ int main(int argc, char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-
-  harvester::Harvester harvester(zx::msec(cycle_msec_period), root_resource,
-                                 loop.dispatcher(), std::move(dockyard_proxy));
+  harvester::Harvester harvester(root_resource, loop.dispatcher(),
+                                 std::move(dockyard_proxy));
   harvester.GatherData();
   loop.Run();
 
