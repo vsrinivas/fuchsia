@@ -555,16 +555,28 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
         LogError("At least one usage bit must be set.");
         return false;
     }
-    if (constraints->has_buffer_memory_constraints) {
-        if (IsCpuUsage(constraints->usage) &&
-            constraints->buffer_memory_constraints.inaccessible_domain_supported) {
-            LogError("IsCpuUsage && inaccessible_domain_supported doesn't make sense.");
-            return false;
-        }
-        if (!CheckSanitizeBufferMemoryConstraints(
-                &constraints->buffer_memory_constraints)) {
-            return false;
-        }
+    if (!constraints->has_buffer_memory_constraints) {
+        // The CheckSanitizeBufferMemoryConstraints() further down will help fill out
+        // the "max" fields, but !has_buffer_memory_constraints implies particular
+        // defaults for some bool fields, so fill those out here.
+        constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{};
+        // The CPU domain is supported by default.
+        constraints->buffer_memory_constraints.cpu_domain_supported = true;
+        // If !usage.cpu, then participant doesn't care what domain, so indicate support
+        // for RAM and inaccessible domains in that case.
+        constraints->buffer_memory_constraints.ram_domain_supported = !constraints->usage.cpu;
+        constraints->buffer_memory_constraints.inaccessible_domain_supported =
+            !constraints->usage.cpu;
+        constraints->has_buffer_memory_constraints = true;
+    }
+    ZX_DEBUG_ASSERT(constraints->has_buffer_memory_constraints);
+    if (IsCpuUsage(constraints->usage) &&
+        constraints->buffer_memory_constraints.inaccessible_domain_supported) {
+        LogError("IsCpuUsage && inaccessible_domain_supported doesn't make sense.");
+        return false;
+    }
+    if (!CheckSanitizeBufferMemoryConstraints(&constraints->buffer_memory_constraints)) {
+        return false;
     }
     for (uint32_t i = 0; i < constraints->image_format_constraints_count; ++i) {
         if (!CheckSanitizeImageFormatConstraints(
@@ -589,6 +601,9 @@ IsHeapPermitted(const fuchsia_sysmem_BufferMemoryConstraints* constraints,
 
 bool LogicalBufferCollection::CheckSanitizeBufferMemoryConstraints(
     fuchsia_sysmem_BufferMemoryConstraints* constraints) {
+    FieldDefaultZero(&constraints->min_size_bytes);
+    FieldDefaultMax(&constraints->max_size_bytes);
+
     if (constraints->min_size_bytes > constraints->max_size_bytes) {
         LogError("min_size_bytes > max_size_bytes");
         return false;
@@ -793,28 +808,18 @@ bool LogicalBufferCollection::AccumulateConstraintBufferCollection(
     acc->max_buffer_count = std::min(
         acc->max_buffer_count, c->max_buffer_count);
 
-    if (!acc->has_buffer_memory_constraints) {
-        if (c->has_buffer_memory_constraints) {
-            // struct copy
-            acc->buffer_memory_constraints = c->buffer_memory_constraints;
-            acc->has_buffer_memory_constraints = true;
-        }
-    } else {
-        ZX_DEBUG_ASSERT(acc->has_buffer_memory_constraints);
-        if (c->has_buffer_memory_constraints) {
-            if (!AccumulateConstraintBufferMemory(
-                    &acc->buffer_memory_constraints,
-                    &c->buffer_memory_constraints)) {
-                return false;
-            }
-        }
+    // CheckSanitizeBufferCollectionConstraints() takes care of setting a default
+    // buffer_collection_constraints, so we can assert that both acc and c "has_" one.
+    ZX_DEBUG_ASSERT(acc->has_buffer_memory_constraints);
+    ZX_DEBUG_ASSERT(c->has_buffer_memory_constraints);
+    if (!AccumulateConstraintBufferMemory(&acc->buffer_memory_constraints,
+                                          &c->buffer_memory_constraints)) {
+        return false;
     }
 
     // Reject secure_required in combination with any CPU usage, since CPU usage
     // isn't possible given secure memory.
-    if (acc->has_buffer_memory_constraints &&
-        acc->buffer_memory_constraints.secure_required &&
-        IsCpuUsage(acc->usage)) {
+    if (acc->buffer_memory_constraints.secure_required && IsCpuUsage(acc->usage)) {
         return false;
     }
 
@@ -1140,12 +1145,7 @@ static bool GetCoherencyDomain(
     const fuchsia_sysmem_BufferCollectionConstraints* constraints,
     MemoryAllocator* memory_allocator,
     fuchsia_sysmem_CoherencyDomain* domain_out) {
-    if (!constraints->has_buffer_memory_constraints) {
-        // CPU domain by default.
-        *domain_out = fuchsia_sysmem_CoherencyDomain_CPU;
-        return true;
-    }
-
+    ZX_DEBUG_ASSERT(constraints->has_buffer_memory_constraints);
     // The heap not being accessible from the CPU can force Inaccessible as the only
     // potential option.
     if (memory_allocator->CoherencyDomainIsInaccessible()) {
