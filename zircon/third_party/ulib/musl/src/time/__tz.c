@@ -6,8 +6,8 @@
 #include <string.h>
 #include <threads.h>
 
-//TODO(kulakowski): remove when timezone lookup works
-#define TEMP_DISABLE_TIMEZONE_LOOKUP
+// TODO(cpu): Only UTC is supported so the code in this file can greatly
+// simplified.
 
 static long __timezone = 0;
 static int __daylight = 0;
@@ -26,13 +26,6 @@ static int dst_off;
 static int r0[5], r1[5];
 
 static const unsigned char *zi, *trans, *idx, *types, *abbrevs, *abbrevs_end;
-#ifndef TEMP_DISABLE_TIMEZONE_LOOKUP
-static size_t map_size;
-
-static char old_tz_buf[32];
-static char* old_tz = old_tz_buf;
-static size_t old_tz_size = sizeof old_tz_buf;
-#endif
 
 static mtx_t lock;
 
@@ -123,124 +116,7 @@ static size_t zi_dotprod(const unsigned char* z, const unsigned char* v, size_t 
 int __munmap(void*, size_t);
 
 static void do_tzset(void) {
-#ifdef TEMP_DISABLE_TIMEZONE_LOOKUP
-    const char* s = NULL;
-#else
-    char buf[NAME_MAX + 25], *pathname = buf + 24;
-    const char* try
-        , *s, *p;
-    const unsigned char* map = 0;
-    size_t i;
-    static const char search[] = "/usr/share/zoneinfo/\0/share/zoneinfo/\0/etc/zoneinfo/\0";
-
-    s = getenv("TZ");
-    if (!s)
-        s = "/etc/localtime";
-    if (!*s)
-        s = __gmt;
-
-    if (old_tz && !strcmp(s, old_tz))
-        return;
-
-    if (zi)
-        __munmap((void*)zi, map_size);
-
-    /* Cache the old value of TZ to check if it has changed. Avoid
-     * free so as not to pull it into static programs. Growth
-     * strategy makes it so free would have minimal benefit anyway. */
-    i = strlen(s);
-    if (i > PATH_MAX + 1)
-        s = __gmt, i = 3;
-    if (i >= old_tz_size) {
-        old_tz_size *= 2;
-        if (i >= old_tz_size)
-            old_tz_size = i + 1;
-        if (old_tz_size > PATH_MAX + 2)
-            old_tz_size = PATH_MAX + 2;
-        old_tz = malloc(old_tz_size);
-    }
-    if (old_tz)
-        memcpy(old_tz, s, i + 1);
-
-    /* We can use an absolute tzfile pathname or a relative
-     * pathame beginning with ".". */
-    if (*s == ':' || ((p = strchr(s, '/')) && !memchr(s, ',', p - s))) {
-        if (*s == ':')
-            s++;
-        if (*s == '/' || *s == '.') {
-            if (!strcmp(s, "/etc/localtime"))
-                map = __map_file(s, &map_size);
-        } else {
-            size_t l = strlen(s);
-            if (l <= NAME_MAX && !strchr(s, '.')) {
-                memcpy(pathname, s, l + 1);
-                pathname[l] = 0;
-                for (try = search; !map && *try; try += l + 1) {
-                    l = strlen(try);
-                    memcpy(pathname - l, try, l);
-                    map = __map_file(pathname - l, &map_size);
-                }
-            }
-        }
-        if (!map)
-            s = __gmt;
-    }
-    if (map && (map_size < 44 || memcmp(map, "TZif", 4))) {
-        __munmap((void*)map, map_size);
-        map = 0;
-        s = __gmt;
-    }
-
-    zi = map;
-    if (map) {
-        int scale = 2;
-        if (sizeof(time_t) > 4 && map[4] == '2') {
-            size_t skip = zi_dotprod(zi + 20, VEC(1, 1, 8, 5, 6, 1), 6);
-            trans = zi + skip + 44 + 44;
-            scale++;
-        } else {
-            trans = zi + 44;
-        }
-        idx = trans + (zi_read32(trans - 12) << scale);
-        types = idx + zi_read32(trans - 12);
-        abbrevs = types + 6 * zi_read32(trans - 8);
-        abbrevs_end = abbrevs + zi_read32(trans - 4);
-        if (zi[map_size - 1] == '\n') {
-            for (s = (const char*)zi + map_size - 2; *s != '\n'; s--)
-                ;
-            s++;
-        } else {
-            const unsigned char* p;
-            __tzname[0] = __tzname[1] = 0;
-            __daylight = __timezone = dst_off = 0;
-            for (i = 0; i < 5; i++)
-                r0[i] = r1[i] = 0;
-            for (p = types; p < abbrevs; p += 6) {
-                if (!p[4] && !__tzname[0]) {
-                    __tzname[0] = (char*)abbrevs + p[5];
-                    __timezone = -zi_read32(p);
-                }
-                if (p[4] && !__tzname[1]) {
-                    __tzname[1] = (char*)abbrevs + p[5];
-                    dst_off = -zi_read32(p);
-                    __daylight = 1;
-                }
-            }
-            if (!__tzname[0])
-                __tzname[0] = __tzname[1];
-            if (!__tzname[0])
-                __tzname[0] = (char*)__gmt;
-            if (!__daylight) {
-                __tzname[1] = __tzname[0];
-                dst_off = __timezone;
-            }
-            return;
-        }
-    }
-
-#endif
-    if (!s)
-        s = __gmt;
+    const char* s =__gmt;
     getname(std_name, &s);
     __tzname[0] = std_name;
     __timezone = getoff(&s);
