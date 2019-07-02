@@ -112,7 +112,7 @@ xunion-declaration = ( attribute-list ) , ( "strict" ) , "xunion" , IDENTIFIER ,
 
 union-field = ( attribute-list ) , type-constructor , IDENTIFIER ;
 
-table-declaration = ( attribute-list ) , "table" , IDENTIFIER , "{" , ( ( attribute-list ) , table-field , ";" )* , "}" ;
+table-declaration = ( attribute-list ) , "table" , IDENTIFIER , "{" , ( table-field , ";" )* , "}" ;
 
 table-field = ( attribute-list ) , table-field-ordinal , table-field-declaration ; [NOTE 5]
 
