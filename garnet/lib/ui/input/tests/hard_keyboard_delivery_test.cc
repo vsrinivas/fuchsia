@@ -101,6 +101,12 @@ TEST_F(HardKeyboardDeliveryTest, Test) {
     // Add local root node to the scene, attach the view holder.
     scene.AddChild(*root_node);
     scenic::ViewHolder view_holder(session, std::move(vh_token), "View Holder");
+    const float bbox_min[3] = {0, 0, 0};
+    const float bbox_max[3] = {5, 5, 1};
+    const float inset_min[3] = {0, 0, 0};
+    const float inset_max[3] = {0, 0, 0};
+    view_holder.SetViewProperties(bbox_min, bbox_max, inset_min, inset_max);
+
     root_node->Attach(view_holder);
 
     RequestToPresent(session);
@@ -157,8 +163,8 @@ TEST_F(HardKeyboardDeliveryTest, Test) {
     {
       EXPECT_TRUE(events[0].is_pointer());
       const PointerEvent& add = events[0].pointer();
-      EXPECT_EQ(add.x, 2);
-      EXPECT_EQ(add.y, 2);
+      EXPECT_EQ(add.x, 2.5);
+      EXPECT_EQ(add.y, 2.5);
     }
 
     // FOCUS
@@ -168,8 +174,8 @@ TEST_F(HardKeyboardDeliveryTest, Test) {
     {
       EXPECT_TRUE(events[2].is_pointer());
       const PointerEvent& down = events[2].pointer();
-      EXPECT_EQ(down.x, 2);
-      EXPECT_EQ(down.y, 2);
+      EXPECT_EQ(down.x, 2.5);
+      EXPECT_EQ(down.y, 2.5);
     }
   });
 

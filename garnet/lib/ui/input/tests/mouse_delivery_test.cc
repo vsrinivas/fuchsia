@@ -47,14 +47,14 @@
 //
 // We have the following correspondence of coordinates:
 //
-// Event   Mark  Device  View-1  View-2
-// Move-1  M     (0,6)   (0, 4)  n/a
-// Move-2  M     (1,5)   (1, 3)  n/a
-// Move-3  M     (2,4)   (2, 2)  n/a
-// Down    D     (3,3)   (3, 1)  n/a
-// Move-4  M     (4,2)   (4, 0)  n/a
-// Up      U     (5,1)   (5,-1)  n/a
-// Move-5  M     (6,0)   n/a     (4,0)
+// Event   Mark  Device  View-1      View-2
+// Move-1  M     (0,6)   (0.5, 4.5)  n/a
+// Move-2  M     (1,5)   (1.5, 3.5)  n/a
+// Move-3  M     (2,4)   (2.5, 2.5)  n/a
+// Down    D     (3,3)   (3.5, 1.5)  n/a
+// Move-4  M     (4,2)   (4.5, 0.5)  n/a
+// Up      U     (5,1)   (5.5,-0.5)  n/a
+// Move-5  M     (6,0)   n/a         (4.5,0.5)
 //
 // NOTE: This test is carefully constructed to avoid Vulkan functionality.
 
@@ -131,6 +131,14 @@ TEST_F(MouseDeliveryTest, StandardTest) {
         scenic::ViewHolder holder_1(session, std::move(vh1_token), "holder_1"),
             holder_2(session, std::move(vh2_token), "holder_2");
 
+        // Create the view bounds.
+        const float bbox_min[3] = {0, 0, 0};
+        const float bbox_max[3] = {5, 5, 1};
+        const float inset_min[3] = {0, 0, 0};
+        const float inset_max[3] = {0, 0, 0};
+        holder_1.SetViewProperties(bbox_min, bbox_max, inset_min, inset_max);
+        holder_2.SetViewProperties(bbox_min, bbox_max, inset_min, inset_max);
+
         root_node->AddChild(translate_1);
         translate_1.SetTranslation(0, 2, -2);
         translate_1.Attach(holder_1);
@@ -196,15 +204,15 @@ TEST_F(MouseDeliveryTest, StandardTest) {
 
     // MOVE
     EXPECT_TRUE(events[0].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 0, 4));
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 0.5, 4.5));
 
     // MOVE
     EXPECT_TRUE(events[1].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[1].pointer(), 1u, PointerEventPhase::MOVE, 1, 3));
+    EXPECT_TRUE(PointerMatches(events[1].pointer(), 1u, PointerEventPhase::MOVE, 1.5, 3.5));
 
     // MOVE
     EXPECT_TRUE(events[2].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE, 2, 2));
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE, 2.5, 2.5));
 
     // FOCUS
     EXPECT_TRUE(events[3].is_focus());
@@ -212,15 +220,15 @@ TEST_F(MouseDeliveryTest, StandardTest) {
 
     // DOWN
     EXPECT_TRUE(events[4].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::DOWN, 3, 1));
+    EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::DOWN, 3.5, 1.5));
 
     // MOVE
     EXPECT_TRUE(events[5].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u, PointerEventPhase::MOVE, 4, 0));
+    EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u, PointerEventPhase::MOVE, 4.5, 0.5));
 
     // UP
     EXPECT_TRUE(events[6].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[6].pointer(), 1u, PointerEventPhase::UP, 5, -1));
+    EXPECT_TRUE(PointerMatches(events[6].pointer(), 1u, PointerEventPhase::UP, 5.5, -0.5));
   });
 
   // Verify client 2's input has one mouse event.
@@ -229,7 +237,7 @@ TEST_F(MouseDeliveryTest, StandardTest) {
 
     // MOVE
     EXPECT_TRUE(events[0].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 4, 0));
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 4.5, 0.5));
   });
 }
 
@@ -271,6 +279,13 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
         scenic::ViewHolder holder_1(session, std::move(vh1_token), "holder_1"),
             holder_2(session, std::move(vh2_token), "holder_2");
 
+        // Define bounds for each view.
+        const float bbox_min[3] = {0, 0, 0};
+        const float bbox_max[3] = {5, 5, 1};
+        const float inset_min[3] = {0, 0, 0};
+        const float inset_max[3] = {0, 0, 0};
+        holder_2.SetViewProperties(bbox_min, bbox_max, inset_min, inset_max);
+
         root_node->AddChild(translate_1);
         translate_1.SetTranslation(0, 2, -2);
         translate_1.Attach(holder_1);
@@ -279,6 +294,9 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
         {
           fuchsia::ui::gfx::ViewProperties properties;
           properties.focus_change = false;
+
+          properties.bounding_box.min = fuchsia::ui::gfx::vec3{.x = 0, .y = 0, .z = 0};
+          properties.bounding_box.max = fuchsia::ui::gfx::vec3{.x = 5, .y = 5, .z = 1};
           holder_1.SetViewProperties(std::move(properties));
         }
 
@@ -343,27 +361,27 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
 
     // MOVE
     EXPECT_TRUE(events[0].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 0, 4));
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 0.5, 4.5));
 
     // MOVE
     EXPECT_TRUE(events[1].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[1].pointer(), 1u, PointerEventPhase::MOVE, 1, 3));
+    EXPECT_TRUE(PointerMatches(events[1].pointer(), 1u, PointerEventPhase::MOVE, 1.5, 3.5));
 
     // MOVE
     EXPECT_TRUE(events[2].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE, 2, 2));
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE, 2.5, 2.5));
 
     // DOWN
     EXPECT_TRUE(events[3].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[3].pointer(), 1u, PointerEventPhase::DOWN, 3, 1));
+    EXPECT_TRUE(PointerMatches(events[3].pointer(), 1u, PointerEventPhase::DOWN, 3.5, 1.5));
 
     // MOVE
     EXPECT_TRUE(events[4].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::MOVE, 4, 0));
+    EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::MOVE, 4.5, 0.5));
 
     // UP
     EXPECT_TRUE(events[5].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u, PointerEventPhase::UP, 5, -1));
+    EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u, PointerEventPhase::UP, 5.5, -0.5));
   });
 
   // Verify client 2's input has one mouse event.
@@ -372,7 +390,7 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
 
     // MOVE
     EXPECT_TRUE(events[0].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 4, 0));
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 4.5, 0.5));
   });
 }
 

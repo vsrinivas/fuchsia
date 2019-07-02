@@ -49,9 +49,9 @@
 // The first hit test occurs at 'x' to ensure View 1 gains focus. The
 // coordinates are:
 //
-// Event  Finger  Mark  Device  View-1  View-2
-// ADD    1       y     (0,0)   (0,0)   n/a
-// DOWN   1       y     (0,0)   (0,0)   n/a
+// Event  Finger  Mark  Device  View-1     View-2
+// ADD    1       y     (0,0)   (0.5,0.5)  n/a
+// DOWN   1       y     (0,0)   (0.5,0.5)  n/a
 //
 // The second hit test occurs at the overlap, at 'y'.  Typically, View 2 would
 // receive a focus event, and View 1 would receive an unfocus event.  Since View
@@ -59,9 +59,9 @@
 // events, but each View should *not* receive a focus or unfocus event.  The
 // coordinates are:
 //
-// Event  Finger  Mark  Device  View-1  View-2
-// ADD    2       y     (4,4)   (4,4)   (0, 0)
-// DOWN   2       y     (4,4)   (4,4)   (0, 0)
+// Event  Finger  Mark  Device  View-1     View-2
+// ADD    2       y     (4,4)   (4.5,4.5)  (0.5, 0.5)
+// DOWN   2       y     (4,4)   (4.5,4.5)  (0.5, 0.5)
 //
 // We use a different finger ID to trigger the second hit test. Each finger's
 // state sequence is thus consistent, albeit incomplete for test brevity.
@@ -117,6 +117,32 @@ TEST_F(FocusAvoidanceTest, ViewHierarchyByScenic) {
     scenic::ViewHolder holder_1(session, std::move(vh_1), "view holder 1"),
         holder_2(session, std::move(vh_2), "view holder 2");
 
+    const fuchsia::ui::gfx::vec3 zero{.x = 0, .y = 0, .z = 0};
+    // View 1's properties
+    {
+      fuchsia::ui::gfx::ViewProperties properties;
+      properties.bounding_box.min = zero;
+      properties.bounding_box.max = fuchsia::ui::gfx::vec3{.x = 5, .y = 5, .z = 1};
+
+      // Set insets to 0.
+      properties.inset_from_min = zero;
+      properties.inset_from_max = zero;
+      holder_1.SetViewProperties(std::move(properties));
+    }
+
+    // View 2's parent (Presenter) sets "no-focus" property for view 2.
+    {
+      fuchsia::ui::gfx::ViewProperties properties;
+      properties.focus_change = false;
+      properties.bounding_box.min = zero;
+      properties.bounding_box.max = fuchsia::ui::gfx::vec3{.x = 5, .y = 5, .z = 1};
+
+      // Set insets to 0.
+      properties.inset_from_min = zero;
+      properties.inset_from_max = zero;
+      holder_2.SetViewProperties(std::move(properties));
+    }
+
     root_node->AddChild(translate_1);
     translate_1.SetTranslation(0, 0, -1);
     translate_1.Attach(holder_1);
@@ -124,13 +150,6 @@ TEST_F(FocusAvoidanceTest, ViewHierarchyByScenic) {
     root_node->AddChild(translate_2);
     translate_2.SetTranslation(4, 4, -2);
     translate_2.Attach(holder_2);
-
-    // View 2's parent (Presenter) sets "no-focus" property for view 2.
-    {
-      fuchsia::ui::gfx::ViewProperties properties;
-      properties.focus_change = false;
-      holder_2.SetViewProperties(std::move(properties));
-    }
 
     RequestToPresent(session);
   });
@@ -201,7 +220,7 @@ TEST_F(FocusAvoidanceTest, ViewHierarchyByScenic) {
 
     // ADD
     EXPECT_TRUE(events[0].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 0, 0));
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 0.5, 0.5));
 
     // FOCUS
     EXPECT_TRUE(events[1].is_focus());
@@ -209,17 +228,17 @@ TEST_F(FocusAvoidanceTest, ViewHierarchyByScenic) {
 
     // DOWN
     EXPECT_TRUE(events[2].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 0, 0));
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 0.5, 0.5));
 
     // ADD
     EXPECT_TRUE(events[3].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[3].pointer(), 2u, PointerEventPhase::ADD, 4, 4));
+    EXPECT_TRUE(PointerMatches(events[3].pointer(), 2u, PointerEventPhase::ADD, 4.5, 4.5));
 
     // No unfocus event here!
 
     // DOWN
     EXPECT_TRUE(events[4].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[4].pointer(), 2u, PointerEventPhase::DOWN, 4, 4));
+    EXPECT_TRUE(PointerMatches(events[4].pointer(), 2u, PointerEventPhase::DOWN, 4.5, 4.5));
   });
 
   client_2.ExamineEvents([](const std::vector<InputEvent>& events) {
@@ -227,13 +246,13 @@ TEST_F(FocusAvoidanceTest, ViewHierarchyByScenic) {
 
     // ADD
     EXPECT_TRUE(events[0].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[0].pointer(), 2u, PointerEventPhase::ADD, 0, 0));
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 2u, PointerEventPhase::ADD, 0.5, 0.5));
 
     // No focus event here!
 
     // DOWN
     EXPECT_TRUE(events[1].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[1].pointer(), 2u, PointerEventPhase::DOWN, 0, 0));
+    EXPECT_TRUE(PointerMatches(events[1].pointer(), 2u, PointerEventPhase::DOWN, 0.5, 0.5));
 
 #if 0
     for (const auto& event : events)

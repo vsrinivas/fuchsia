@@ -432,8 +432,8 @@ TEST_F(AccessibilityPointerEventsTest, RejectsPointerEvents) {
     {
       EXPECT_TRUE(events[0].is_pointer());
       const PointerEvent& add = events[0].pointer();
-      EXPECT_EQ(add.x, 2);
-      EXPECT_EQ(add.y, 2);
+      EXPECT_EQ(add.x, 2.5);
+      EXPECT_EQ(add.y, 2.5);
     }
 
     // FOCUS
@@ -443,8 +443,8 @@ TEST_F(AccessibilityPointerEventsTest, RejectsPointerEvents) {
     {
       EXPECT_TRUE(events[2].is_pointer());
       const PointerEvent& down = events[2].pointer();
-      EXPECT_EQ(down.x, 2);
-      EXPECT_EQ(down.y, 2);
+      EXPECT_EQ(down.x, 2.5);
+      EXPECT_EQ(down.y, 2.5);
     }
     EXPECT_TRUE(client.IsListenerRegistered());
   });
@@ -491,16 +491,16 @@ TEST_F(AccessibilityPointerEventsTest, RejectsPointerEvents) {
     {
       EXPECT_TRUE(events[0].is_pointer());
       const PointerEvent& up = events[0].pointer();
-      EXPECT_EQ(up.x, 2);
-      EXPECT_EQ(up.y, 3);
+      EXPECT_EQ(up.x, 2.5);
+      EXPECT_EQ(up.y, 3.5);
     }
 
     // REMOVE
     {
       EXPECT_TRUE(events[1].is_pointer());
       const PointerEvent& remove = events[1].pointer();
-      EXPECT_EQ(remove.x, 2);
-      EXPECT_EQ(remove.y, 3);
+      EXPECT_EQ(remove.x, 2.5);
+      EXPECT_EQ(remove.y, 3.5);
     }
   });
 
@@ -570,8 +570,8 @@ TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
     {
       EXPECT_TRUE(events[0].is_pointer());
       const PointerEvent& add = events[0].pointer();
-      EXPECT_EQ(add.x, 2);
-      EXPECT_EQ(add.y, 2);
+      EXPECT_EQ(add.x, 2.5);
+      EXPECT_EQ(add.y, 2.5);
     }
 
     // FOCUS
@@ -581,24 +581,24 @@ TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
     {
       EXPECT_TRUE(events[2].is_pointer());
       const PointerEvent& down = events[2].pointer();
-      EXPECT_EQ(down.x, 2);
-      EXPECT_EQ(down.y, 2);
+      EXPECT_EQ(down.x, 2.5);
+      EXPECT_EQ(down.y, 2.5);
     }
 
     // UP
     {
       EXPECT_TRUE(events[3].is_pointer());
       const PointerEvent& up = events[3].pointer();
-      EXPECT_EQ(up.x, 2);
-      EXPECT_EQ(up.y, 2);
+      EXPECT_EQ(up.x, 2.5);
+      EXPECT_EQ(up.y, 2.5);
     }
 
     // REMOVE
     {
       EXPECT_TRUE(events[4].is_pointer());
       const PointerEvent& remove = events[4].pointer();
-      EXPECT_EQ(remove.x, 2);
-      EXPECT_EQ(remove.y, 2);
+      EXPECT_EQ(remove.x, 2.5);
+      EXPECT_EQ(remove.y, 2.5);
     }
     EXPECT_TRUE(client.IsListenerRegistered());
   });
@@ -750,8 +750,8 @@ TEST_F(AccessibilityPointerEventsTest, DiscardActiveStreamOnConnection) {
     {
       EXPECT_TRUE(events[0].is_pointer());
       const PointerEvent& add = events[0].pointer();
-      EXPECT_EQ(add.x, 2);
-      EXPECT_EQ(add.y, 2);
+      EXPECT_EQ(add.x, 2.5);
+      EXPECT_EQ(add.y, 2.5);
     }
 
     // FOCUS
@@ -761,8 +761,8 @@ TEST_F(AccessibilityPointerEventsTest, DiscardActiveStreamOnConnection) {
     {
       EXPECT_TRUE(events[2].is_pointer());
       const PointerEvent& down = events[2].pointer();
-      EXPECT_EQ(down.x, 2);
-      EXPECT_EQ(down.y, 2);
+      EXPECT_EQ(down.x, 2.5);
+      EXPECT_EQ(down.y, 2.5);
     }
     EXPECT_FALSE(client.IsListenerRegistered());
   });
@@ -796,16 +796,16 @@ TEST_F(AccessibilityPointerEventsTest, DiscardActiveStreamOnConnection) {
     {
       EXPECT_TRUE(events[0].is_pointer());
       const PointerEvent& up = events[0].pointer();
-      EXPECT_EQ(up.x, 2);
-      EXPECT_EQ(up.y, 3);
+      EXPECT_EQ(up.x, 2.5);
+      EXPECT_EQ(up.y, 3.5);
     }
 
     // REMOVE
     {
       EXPECT_TRUE(events[1].is_pointer());
       const PointerEvent& remove = events[1].pointer();
-      EXPECT_EQ(remove.x, 2);
-      EXPECT_EQ(remove.y, 3);
+      EXPECT_EQ(remove.x, 2.5);
+      EXPECT_EQ(remove.y, 3.5);
     }
     EXPECT_TRUE(client.IsListenerRegistered());
   });
@@ -905,8 +905,8 @@ TEST_F(AccessibilityPointerEventsTest, DispatchEventsAfterDisconnection) {
     {
       EXPECT_TRUE(events[0].is_pointer());
       const PointerEvent& add = events[0].pointer();
-      EXPECT_EQ(add.x, 2);
-      EXPECT_EQ(add.y, 2);
+      EXPECT_EQ(add.x, 2.5);
+      EXPECT_EQ(add.y, 2.5);
     }
 
     // FOCUS
@@ -916,24 +916,24 @@ TEST_F(AccessibilityPointerEventsTest, DispatchEventsAfterDisconnection) {
     {
       EXPECT_TRUE(events[2].is_pointer());
       const PointerEvent& down = events[2].pointer();
-      EXPECT_EQ(down.x, 2);
-      EXPECT_EQ(down.y, 2);
+      EXPECT_EQ(down.x, 2.5);
+      EXPECT_EQ(down.y, 2.5);
     }
 
     // UP
     {
       EXPECT_TRUE(events[3].is_pointer());
       const PointerEvent& up = events[3].pointer();
-      EXPECT_EQ(up.x, 2);
-      EXPECT_EQ(up.y, 3);
+      EXPECT_EQ(up.x, 2.5);
+      EXPECT_EQ(up.y, 3.5);
     }
 
     // REMOVE
     {
       EXPECT_TRUE(events[4].is_pointer());
       const PointerEvent& remove = events[4].pointer();
-      EXPECT_EQ(remove.x, 2);
-      EXPECT_EQ(remove.y, 3);
+      EXPECT_EQ(remove.x, 2.5);
+      EXPECT_EQ(remove.y, 3.5);
     }
     EXPECT_FALSE(client.IsListenerRegistered());
   });
@@ -990,8 +990,8 @@ TEST_F(AccessibilityPointerEventsTest, FocusGetsSentAfterAddRejecting) {
     {
       EXPECT_TRUE(events[0].is_pointer());
       const PointerEvent& add = events[0].pointer();
-      EXPECT_EQ(add.x, 2);
-      EXPECT_EQ(add.y, 2);
+      EXPECT_EQ(add.x, 2.5);
+      EXPECT_EQ(add.y, 2.5);
     }
 
     // FOCUS
@@ -1001,8 +1001,8 @@ TEST_F(AccessibilityPointerEventsTest, FocusGetsSentAfterAddRejecting) {
     {
       EXPECT_TRUE(events[2].is_pointer());
       const PointerEvent& down = events[2].pointer();
-      EXPECT_EQ(down.x, 2);
-      EXPECT_EQ(down.y, 2);
+      EXPECT_EQ(down.x, 2.5);
+      EXPECT_EQ(down.y, 2.5);
     }
     EXPECT_TRUE(client.IsListenerRegistered());
   });
@@ -1039,16 +1039,16 @@ TEST_F(AccessibilityPointerEventsTest, FocusGetsSentAfterAddRejecting) {
     {
       EXPECT_TRUE(events[0].is_pointer());
       const PointerEvent& up = events[0].pointer();
-      EXPECT_EQ(up.x, 2);
-      EXPECT_EQ(up.y, 3);
+      EXPECT_EQ(up.x, 2.5);
+      EXPECT_EQ(up.y, 3.5);
     }
 
     // REMOVE
     {
       EXPECT_TRUE(events[1].is_pointer());
       const PointerEvent& remove = events[1].pointer();
-      EXPECT_EQ(remove.x, 2);
-      EXPECT_EQ(remove.y, 3);
+      EXPECT_EQ(remove.x, 2.5);
+      EXPECT_EQ(remove.y, 3.5);
     }
   });
 

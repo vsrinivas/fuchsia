@@ -82,8 +82,11 @@ escher::ray4 CreateScreenPerpendicularRay(float x, float y) {
   // correctly with the hit tester.
   //
   // During dispatch, we translate an arbitrary pointer's (x,y) device-space
-  // coordinates to a View's (x', y') model-space coordinates.
-  return {{x, y, 1.f, 1.f},  // Origin as homogeneous point.
+  // coordinates to a View's (x', y') model-space coordinates. We clamp the
+  // (x,y) coordinates to its lower-bound int value, and then jitter the
+  // coordinates by (0.5, 0.5) to make sure the ray always starts off in the
+  // center of the pixel.
+  return {{std::floor(x) + 0.5f, std::floor(y) + 0.5f, 1.f, 1.f},  // Origin as homogeneous point.
           {0.f, 0.f, -1.f, 0.f}};
 }
 

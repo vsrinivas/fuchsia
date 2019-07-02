@@ -14,6 +14,9 @@
 
 namespace lib_ui_input_tests {
 
+// Used to compare whether two values are nearly equal.
+constexpr float kEpsilon = 0.000001f;
+
 using InputCommand = fuchsia::ui::input::Command;
 using ScenicEvent = fuchsia::ui::scenic::Event;
 using escher::impl::CommandBufferSequencer;
@@ -234,11 +237,11 @@ bool PointerMatches(const PointerEvent& event, uint32_t pointer_id, PointerEvent
     FXL_LOG(ERROR) << "  Actual: " << event.phase;
     FXL_LOG(ERROR) << "Expected: " << phase;
     return false;
-  } else if (event.x != x) {
+  } else if (fabs(event.x - x) > kEpsilon) {
     FXL_LOG(ERROR) << "  Actual: " << event.x;
     FXL_LOG(ERROR) << "Expected: " << x;
     return false;
-  } else if (event.y != y) {
+  } else if (fabs(event.y - y) > kEpsilon) {
     FXL_LOG(ERROR) << "  Actual: " << event.y;
     FXL_LOG(ERROR) << "Expected: " << y;
     return false;
