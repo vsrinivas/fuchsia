@@ -49,6 +49,8 @@ source_set("common") {
     "devhost-loader-service.h",
     "device.cc",
     "device.h",
+    "driver-test-reporter.cc",
+    "driver-test-reporter.h",
     "driver.cc",
     "driver.h",
     "fidl.cc",
@@ -60,6 +62,7 @@ source_set("common") {
   public_deps = [
     "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/fidl/fuchsia-device-manager:c",
+    "$zx/system/fidl/fuchsia-driver-test:c",
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/fidl/fuchsia-mem:c",
     "$zx/system/ulib/async-loop:async-loop-cpp",

@@ -112,8 +112,8 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
     ops_->release(ctx_);
   }
 
-  bool RunUnitTestsOp(const fbl::RefPtr<zx_device_t>& parent) const {
-    return ops_->run_unit_tests(ctx_, parent.get(), ZX_HANDLE_INVALID);
+  bool RunUnitTestsOp(const fbl::RefPtr<zx_device_t>& parent, zx::channel test_output) const {
+    return ops_->run_unit_tests(ctx_, parent.get(), test_output.release());
   }
 
  private:

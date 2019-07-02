@@ -9,9 +9,13 @@
 #include <fbl/algorithm.h>
 #include <fbl/vector.h>
 #include <fuchsia/device/manager/c/fidl.h>
+#include <fuchsia/driver/test/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/coding.h>
+#include <lib/fidl/cpp/message.h>
+#include <lib/fidl/cpp/message_builder.h>
+#include <string.h>
 #include <threads.h>
 #include <zircon/fidl.h>
 #include <zxtest/zxtest.h>
@@ -19,6 +23,7 @@
 #include "../shared/fdio.h"
 #include "devfs.h"
 #include "devhost.h"
+#include "driver-test-reporter.h"
 
 namespace devmgr {
 zx::channel fs_clone(const char* path) { return zx::channel(); }
@@ -28,6 +33,9 @@ namespace {
 
 constexpr char kSystemDriverPath[] = "/boot/driver/platform-bus.so";
 constexpr char kDriverPath[] = "/boot/driver/test/mock-device.so";
+
+constexpr char kLogMessage[] = "log message text";
+constexpr char kLogTestCaseName[] = "log test case";
 
 devmgr::CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher) {
   devmgr::CoordinatorConfig config{};
@@ -292,6 +300,199 @@ TEST(CoordinatorTestCase, BindDevices) {
   // Check the BindDriver request.
   ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(remote, kDriverPath));
   loop.RunUntilIdle();
+
+  // Reset the fake devhost connection.
+  dev->set_host(nullptr);
+  remote.reset();
+  loop.RunUntilIdle();
+}
+
+// Reads a BindDriver request from remote, checks that it is for the expected
+// driver, and then sends a ZX_OK response.
+void BindDriverTestOutput(const zx::channel& remote, zx::channel test_output) {
+  // Read the BindDriver request.
+  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  uint32_t actual_bytes;
+  uint32_t actual_handles;
+  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
+                                   &actual_bytes, &actual_handles);
+  ASSERT_OK(status);
+  ASSERT_LT(0, actual_bytes);
+  ASSERT_EQ(1, actual_handles);
+  status = zx_handle_close(handles[0]);
+  ASSERT_OK(status);
+
+  // Validate the BindDriver request.
+  auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
+  ASSERT_EQ(fuchsia_device_manager_DeviceControllerBindDriverOrdinal, hdr->ordinal);
+  status = fidl_decode(&fuchsia_device_manager_DeviceControllerBindDriverRequestTable, bytes,
+                       actual_bytes, handles, actual_handles, nullptr);
+  ASSERT_OK(status);
+
+  // Write the BindDriver response.
+  memset(bytes, 0, sizeof(bytes));
+  auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerBindDriverResponse*>(bytes);
+  resp->hdr.ordinal = fuchsia_device_manager_DeviceControllerBindDriverOrdinal;
+  resp->status = ZX_OK;
+  resp->test_output = test_output.release();
+  status = fidl_encode(&fuchsia_device_manager_DeviceControllerBindDriverResponseTable, bytes,
+                       sizeof(*resp), handles, fbl::count_of(handles), &actual_handles, nullptr);
+  ASSERT_OK(status);
+  ASSERT_EQ(1, actual_handles);
+  status = remote.write(0, bytes, sizeof(*resp), handles, actual_handles);
+  ASSERT_OK(status);
+}
+
+void WriteTestLog(const zx::channel& output) {
+  uint32_t len =
+      sizeof(fuchsia_driver_test_LoggerLogMessageRequest) + FIDL_ALIGN(strlen(kLogMessage));
+  FIDL_ALIGNDECL uint8_t bytes[len];
+  fidl::Builder builder(bytes, len);
+
+  auto* req = builder.New<fuchsia_driver_test_LoggerLogMessageRequest>();
+  req->hdr.ordinal = fuchsia_driver_test_LoggerLogMessageOrdinal;
+  req->hdr.txid = FIDL_TXID_NO_RESPONSE;
+
+  auto* data = builder.NewArray<char>(static_cast<uint32_t>(strlen(kLogMessage)));
+  req->msg.data = data;
+  req->msg.size = strlen(kLogMessage);
+  memcpy(data, kLogMessage, strlen(kLogMessage));
+
+  fidl::Message msg(builder.Finalize(), fidl::HandlePart());
+  const char* err = nullptr;
+  zx_status_t status = msg.Encode(&fuchsia_driver_test_LoggerLogMessageRequestTable, &err);
+  ASSERT_OK(status);
+  status = msg.Write(output.get(), 0);
+  ASSERT_OK(status);
+}
+
+void WriteTestCase(const zx::channel& output) {
+  uint32_t len =
+      sizeof(fuchsia_driver_test_LoggerLogTestCaseRequest) + FIDL_ALIGN(strlen(kLogTestCaseName));
+  FIDL_ALIGNDECL uint8_t bytes[len];
+  fidl::Builder builder(bytes, len);
+
+  auto* req = builder.New<fuchsia_driver_test_LoggerLogTestCaseRequest>();
+  req->hdr.ordinal = fuchsia_driver_test_LoggerLogTestCaseOrdinal;
+  req->hdr.txid = FIDL_TXID_NO_RESPONSE;
+
+  auto* data = builder.NewArray<char>(static_cast<uint32_t>(strlen(kLogTestCaseName)));
+  req->name.data = data;
+  req->name.size = strlen(kLogTestCaseName);
+  memcpy(data, kLogTestCaseName, strlen(kLogTestCaseName));
+
+  req->result.passed = 1;
+  req->result.failed = 2;
+  req->result.skipped = 3;
+
+  fidl::Message msg(builder.Finalize(), fidl::HandlePart());
+  const char* err = nullptr;
+  zx_status_t status = msg.Encode(&fuchsia_driver_test_LoggerLogTestCaseRequestTable, &err);
+  ASSERT_OK(status);
+  status = msg.Write(output.get(), 0);
+  ASSERT_OK(status);
+}
+
+class TestDriverTestReporter : public devmgr::DriverTestReporter {
+ public:
+  explicit TestDriverTestReporter(const fbl::String& driver_name)
+      : devmgr::DriverTestReporter(driver_name) {}
+
+  void LogMessage(const char* msg, size_t size) override {
+    if (size != strlen(kLogMessage)) {
+      return;
+    }
+    if (strncmp(msg, kLogMessage, size)) {
+      return;
+    }
+    log_message_called = true;
+  }
+
+  void LogTestCase(const char* name, size_t name_size,
+                   const fuchsia_driver_test_TestCaseResult* result) override {
+    if (name_size != strlen(kLogTestCaseName)) {
+      return;
+    }
+    if (strncmp(name, kLogTestCaseName, name_size)) {
+      return;
+    }
+    if (result->passed != 1 || result->failed != 2 || result->skipped != 3) {
+      return;
+    }
+    log_test_case_called = true;
+  }
+
+  void TestStart() override { start_called = true; }
+
+  void TestFinished() override { finished_called = true; }
+
+  bool log_message_called = false;
+  bool log_test_case_called = false;
+  bool start_called = false;
+  bool finished_called = false;
+};
+
+TEST(CoordinatorTestCase, TestOutput) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher()));
+
+  ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
+
+  // Add the device.
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  ASSERT_EQ(ZX_OK, status);
+  fbl::RefPtr<devmgr::Device> device;
+  status = coordinator.AddDevice(coordinator.test_device(), std::move(local),
+                                 nullptr /* props_data */, 0 /* props_count */, "mock-device",
+                                 ZX_PROTOCOL_TEST, nullptr /* driver_path */, nullptr /* args */,
+                                 false /* invisible */, zx::channel() /* client_remote */, &device);
+  ASSERT_EQ(ZX_OK, status);
+  ASSERT_EQ(1, coordinator.devices().size_slow());
+
+  fbl::String driver_name;
+  auto test_reporter_ = std::make_unique<TestDriverTestReporter>(driver_name);
+  auto* test_reporter = test_reporter_.get();
+  device->test_reporter = std::move(test_reporter_);
+
+  // Add the driver.
+  devmgr::load_driver(kDriverPath,
+                      fit::bind_member(&coordinator, &devmgr::Coordinator::DriverAdded));
+  loop.RunUntilIdle();
+  ASSERT_FALSE(coordinator.drivers().is_empty());
+
+  // Bind the device to a fake devhost.
+  fbl::RefPtr<devmgr::Device> dev = fbl::WrapRefPtr(&coordinator.devices().front());
+  devmgr::Devhost host;
+  host.AddRef();  // refcount starts at zero, so bump it up to keep us from being cleaned up
+  dev->set_host(&host);
+  status = coordinator.BindDevice(dev, kDriverPath, true /* new device */);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Check the BindDriver request.
+  zx::channel test_device, test_coordinator;
+  zx::channel::create(0, &test_device, &test_coordinator);
+  ASSERT_NO_FATAL_FAILURES(BindDriverTestOutput(remote, std::move(test_coordinator)));
+  loop.RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(WriteTestLog(test_device));
+  ASSERT_NO_FATAL_FAILURES(WriteTestCase(test_device));
+  loop.RunUntilIdle();
+
+  // The test logging handlers should not be called until the test is finished and the channel is
+  // closed.
+  EXPECT_FALSE(test_reporter->start_called);
+  EXPECT_FALSE(test_reporter->log_message_called);
+  EXPECT_FALSE(test_reporter->log_test_case_called);
+  EXPECT_FALSE(test_reporter->finished_called);
+
+  test_device.reset();
+  loop.RunUntilIdle();
+  EXPECT_TRUE(test_reporter->start_called);
+  EXPECT_TRUE(test_reporter->log_message_called);
+  EXPECT_TRUE(test_reporter->log_test_case_called);
+  EXPECT_TRUE(test_reporter->finished_called);
 
   // Reset the fake devhost connection.
   dev->set_host(nullptr);

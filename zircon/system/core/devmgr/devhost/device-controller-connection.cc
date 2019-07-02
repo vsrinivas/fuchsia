@@ -28,9 +28,9 @@ namespace fuchsia = ::llcpp::fuchsia;
 // and fuchsia.device.Controller/Bind.
 zx_status_t BindReply(const fbl::RefPtr<zx_device_t>& dev,
                       DeviceControllerConnection::BindDriverCompleter::Sync completer,
-                      zx_status_t status) {
+                      zx_status_t status, zx::channel test_output = zx::channel()) {
   zx_status_t bind_status = ZX_OK;
-  completer.Reply(status);
+  completer.Reply(status, std::move(test_output));
 
   fs::FidlConnection conn(fidl_txn_t{}, ZX_HANDLE_INVALID, 0);
   if (dev->PopBindConn(&conn)) {
@@ -104,12 +104,15 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
   bool tests_default = getenv_bool("driver.tests.enable", false);
   char tmp[128];
   snprintf(tmp, sizeof(tmp), "driver.%s.tests.enable", drv->name());
+  zx::channel test_output;
   if (getenv_bool(tmp, tests_default) && drv->has_run_unit_tests_op()) {
-    bool tests_passed = drv->RunUnitTestsOp(dev);
+    zx::channel test_input;
+    zx::channel::create(0, &test_input, &test_output);
+    bool tests_passed = drv->RunUnitTestsOp(dev, std::move(test_input));
     if (!tests_passed) {
       log(ERROR, "devhost: driver '%s' unit tests failed\n", drv->name());
       drv->set_status(ZX_ERR_BAD_STATE);
-      BindReply(dev, std::move(completer), ZX_ERR_BAD_STATE);
+      BindReply(dev, std::move(completer), ZX_ERR_BAD_STATE, std::move(test_output));
       return;
     }
     log(INFO, "devhost: driver '%s' unit tests passed\n", drv->name());
@@ -130,7 +133,7 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
       log(ERROR, "devhost[%s] bind driver '%.*s' failed: %d\n", path,
           static_cast<int>(driver_path.size()), driver_path.data(), r);
     }
-    BindReply(dev, std::move(completer), r);
+    BindReply(dev, std::move(completer), r, std::move(test_output));
     return;
   }
 
@@ -138,7 +141,7 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
     log(ERROR, "devhost[%s] neither create nor bind are implemented: '%.*s'\n", path,
         static_cast<int>(driver_path.size()), driver_path.data());
   }
-  BindReply(dev, std::move(completer), ZX_ERR_NOT_SUPPORTED);
+  BindReply(dev, std::move(completer), ZX_ERR_NOT_SUPPORTED, std::move(test_output));
 }
 
 void DeviceControllerConnection::Unbind(UnbindCompleter::Sync completer) {

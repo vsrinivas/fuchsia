@@ -21,6 +21,7 @@
 
 #include "../shared/async-loop-ref-counted-rpc-handler.h"
 #include "composite-device.h"
+#include "driver-test-reporter.h"
 #include "metadata.h"
 
 namespace devmgr {
@@ -371,9 +372,15 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
   const char* GetTestDriverName();
   zx::event& test_event() { return test_event_; }
 
+  // This is public for testing purposes.
+  std::unique_ptr<DriverTestReporter> test_reporter;
+
  private:
   zx_status_t HandleRead();
   int RunCompatibilityTests();
+
+  void HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                        const zx_packet_signal_t* signal);
 
   const fbl::String name_;
   const fbl::String libname_;
@@ -443,6 +450,14 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
   zx::duration test_time_;
   fuchsia_device_manager_CompatibilityTestStatus test_status_;
   bool test_reply_required_ = false;
+
+  // The driver sends output from run_unit_tests over this channel.
+  zx::channel test_output_;
+
+  // Async waiter that drives the consumption of test_output_. It is triggered when the channel is
+  // closed by the driver, signalling the end of the tests. We don't print log messages until the
+  // entire test is finished to avoid interleaving output from multiple drivers.
+  async::WaitMethod<Device, &Device::HandleTestOutput> test_wait_{this};
 };
 
 }  // namespace devmgr

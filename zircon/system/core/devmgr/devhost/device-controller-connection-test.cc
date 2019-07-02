@@ -62,7 +62,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
       auto conn = this->dev()->conn.exchange(nullptr);
       devmgr::ConnectionDestroyer::Get()->QueueDeviceControllerConnection(dispatcher_, conn);
       local_.reset();
-      completer.Reply(ZX_OK);
+      completer.Reply(ZX_OK, zx::channel());
     }
 
    private:
@@ -98,8 +98,10 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
     }
 
     zx_status_t call_status;
+    zx::channel test_output;
     status = ::llcpp::fuchsia::device::manager::DeviceController::Call::BindDriver(
-        std::move(unowned_channel), ::fidl::StringView(1, ""), std::move(vmo), &call_status);
+        std::move(unowned_channel), ::fidl::StringView(1, ""), std::move(vmo), &call_status,
+        &test_output);
 
     if (status != ZX_ERR_CANCELED) {
       thread_status = WRONG_CALL_STATUS;

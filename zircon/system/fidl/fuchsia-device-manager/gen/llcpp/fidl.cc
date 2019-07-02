@@ -984,11 +984,11 @@ extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerCompleteComp
 
 }  // namespace
 
-zx_status_t DeviceController::SyncClient::BindDriver(::fidl::StringView driver_path, ::zx::vmo driver, int32_t* out_status) {
-  return DeviceController::Call::BindDriver(zx::unowned_channel(this->channel_), std::move(driver_path), std::move(driver), out_status);
+zx_status_t DeviceController::SyncClient::BindDriver(::fidl::StringView driver_path, ::zx::vmo driver, int32_t* out_status, ::zx::channel* out_test_output) {
+  return DeviceController::Call::BindDriver(zx::unowned_channel(this->channel_), std::move(driver_path), std::move(driver), out_status, out_test_output);
 }
 
-zx_status_t DeviceController::Call::BindDriver(zx::unowned_channel _client_end, ::fidl::StringView driver_path, ::zx::vmo driver, int32_t* out_status) {
+zx_status_t DeviceController::Call::BindDriver(zx::unowned_channel _client_end, ::fidl::StringView driver_path, ::zx::vmo driver, int32_t* out_status, ::zx::channel* out_test_output) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindDriverRequest>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -1020,14 +1020,15 @@ zx_status_t DeviceController::Call::BindDriver(zx::unowned_channel _client_end, 
   }
   auto& _response = *_decode_result.message.message();
   *out_status = std::move(_response.status);
+  *out_test_output = std::move(_response.test_output);
   return ZX_OK;
 }
 
-::fidl::DecodeResult<DeviceController::BindDriverResponse> DeviceController::SyncClient::BindDriver(::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::zx::vmo driver, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return DeviceController::Call::BindDriver(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(driver_path), std::move(driver), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<DeviceController::BindDriverResponse> DeviceController::SyncClient::BindDriver(::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::zx::vmo driver, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::channel* out_test_output) {
+  return DeviceController::Call::BindDriver(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(driver_path), std::move(driver), std::move(_response_buffer), out_status, out_test_output);
 }
 
-::fidl::DecodeResult<DeviceController::BindDriverResponse> DeviceController::Call::BindDriver(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::zx::vmo driver, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<DeviceController::BindDriverResponse> DeviceController::Call::BindDriver(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::zx::vmo driver, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::channel* out_test_output) {
   if (_request_buffer.capacity() < BindDriverRequest::PrimarySize) {
     return ::fidl::DecodeResult<BindDriverResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -1055,6 +1056,7 @@ zx_status_t DeviceController::Call::BindDriver(zx::unowned_channel _client_end, 
   }
   auto& _response = *_decode_result.message.message();
   *out_status = std::move(_response.status);
+  *out_test_output = std::move(_response.test_output);
   return _decode_result;
 }
 
@@ -1408,17 +1410,18 @@ bool DeviceController::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
 }
 
 
-void DeviceController::Interface::BindDriverCompleterBase::Reply(int32_t status) {
+void DeviceController::Interface::BindDriverCompleterBase::Reply(int32_t status, ::zx::channel test_output) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindDriverResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<BindDriverResponse*>(_write_bytes);
   _response._hdr.ordinal = kDeviceController_BindDriver_Ordinal;
   _response.status = std::move(status);
+  _response.test_output = std::move(test_output);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(BindDriverResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<BindDriverResponse>(std::move(_response_bytes)));
 }
 
-void DeviceController::Interface::BindDriverCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+void DeviceController::Interface::BindDriverCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::zx::channel test_output) {
   if (_buffer.capacity() < BindDriverResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -1426,6 +1429,7 @@ void DeviceController::Interface::BindDriverCompleterBase::Reply(::fidl::BytePar
   auto& _response = *reinterpret_cast<BindDriverResponse*>(_buffer.data());
   _response._hdr.ordinal = kDeviceController_BindDriver_Ordinal;
   _response.status = std::move(status);
+  _response.test_output = std::move(test_output);
   _buffer.set_actual(sizeof(BindDriverResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<BindDriverResponse>(std::move(_buffer)));
 }

@@ -7,6 +7,7 @@
 #include <ddk/driver.h>
 #include <fbl/auto_call.h>
 #include <fuchsia/device/manager/c/fidl.h>
+#include <fuchsia/driver/test/c/fidl.h>
 #include <lib/fidl/coding.h>
 
 #include "../shared/fidl_txn.h"
@@ -27,7 +28,9 @@ Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::S
       parent_(std::move(parent)),
       protocol_id_(protocol_id),
       publish_task_([this] { coordinator->HandleNewDevice(fbl::WrapRefPtr(this)); }),
-      client_remote_(std::move(client_remote)) {}
+      client_remote_(std::move(client_remote)) {
+  test_reporter = std::make_unique<DriverTestReporter>(name_);
+}
 
 Device::~Device() {
   // Ideally we'd assert here that immortal devices are never destroyed, but
@@ -287,6 +290,78 @@ void Device::HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher
   Device::BeginWait(std::move(dev), dispatcher);
 }
 
+static zx_status_t fidl_LogMessage(void* ctx, const char* msg, size_t size) {
+  auto dev = static_cast<Device*>(ctx);
+  dev->test_reporter->LogMessage(msg, size);
+  return ZX_OK;
+}
+
+static zx_status_t fidl_LogTestCase(void* ctx, const char* name, size_t name_size,
+                                    const fuchsia_driver_test_TestCaseResult* result) {
+  auto dev = static_cast<Device*>(ctx);
+  dev->test_reporter->LogTestCase(name, name_size, result);
+  return ZX_OK;
+}
+
+static const fuchsia_driver_test_Logger_ops_t kTestOps = {
+    .LogMessage = fidl_LogMessage,
+    .LogTestCase = fidl_LogTestCase,
+};
+
+void Device::HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                              zx_status_t status, const zx_packet_signal_t* signal) {
+  if (status != ZX_OK) {
+    log(ERROR, "devcoordinator: dev '%s' test output error: %d\n", name_.data(), status);
+    return;
+  }
+  if (!(signal->observed & ZX_CHANNEL_PEER_CLOSED)) {
+    log(ERROR, "devcoordinator: dev '%s' test output unexpected signal: %d\n", name_.data(),
+        signal->observed);
+    return;
+  }
+
+  test_reporter->TestStart();
+
+  // Now that the driver has closed the channel, read all of the messages.
+  // TODO(ZX-4374): Handle the case where the channel fills up before we begin reading.
+  while (true) {
+    uint8_t msg_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+    zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    uint32_t msize = sizeof(msg_bytes);
+    uint32_t hcount = fbl::count_of(handles);
+
+    zx_status_t r = test_output_.read(0, &msg_bytes, handles, msize, hcount, &msize, &hcount);
+    if (r == ZX_ERR_PEER_CLOSED) {
+      test_reporter->TestFinished();
+      break;
+    } else if (r != ZX_OK) {
+      log(ERROR, "devcoordinator: dev '%s' failed to read test output: %d\n", name_.data(), r);
+      break;
+    }
+
+    fidl_msg_t fidl_msg = {
+        .bytes = msg_bytes,
+        .handles = handles,
+        .num_bytes = msize,
+        .num_handles = hcount,
+    };
+
+    if (fidl_msg.num_bytes < sizeof(fidl_message_header_t)) {
+      zx_handle_close_many(fidl_msg.handles, fidl_msg.num_handles);
+      log(ERROR, "devcoordinator: dev '%s' bad test output fidl message header: \n", name_.data());
+      break;
+    }
+
+    auto header = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
+    FidlTxn txn(test_output_, header->txid);
+    r = fuchsia_driver_test_Logger_dispatch(this, txn.fidl_txn(), &fidl_msg, &kTestOps);
+    if (r != ZX_OK) {
+      log(ERROR, "devcoordinator: dev '%s' failed to dispatch test output: %d\n", name_.data(), r);
+      break;
+    }
+  }
+}
+
 static zx_status_t fidl_AddDevice(void* ctx, zx_handle_t raw_rpc, const uint64_t* props_data,
                                   size_t props_count, const char* name_data, size_t name_size,
                                   uint32_t protocol_id, const char* driver_path_data,
@@ -393,6 +468,7 @@ zx_status_t Device::HandleRead() {
     auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerBindDriverResponse*>(
         fidl_msg.bytes);
     if (resp->status != ZX_OK) {
+      // TODO: try next driver, clear BOUND flag
       log(ERROR, "devcoordinator: rpc: bind-driver '%s' status %d\n", name_.data(), resp->status);
     } else {
       Device* real_parent;
@@ -423,7 +499,18 @@ zx_status_t Device::HandleRead() {
         }
       }
     }
-    // TODO: try next driver, clear BOUND flag
+    if (resp->test_output) {
+      log(ERROR, "devcoordinator: rpc: bind-driver '%s' set test channel\n", name_.data());
+      test_output_ = zx::channel(resp->test_output);
+      test_wait_.set_object(test_output_.get());
+      test_wait_.set_trigger(ZX_CHANNEL_PEER_CLOSED);
+      zx_status_t status = test_wait_.Begin(coordinator->dispatcher());
+      if (status != ZX_OK) {
+        log(ERROR, "devcoordinator: rpc: bind-driver '%s' failed to start test output wait: %d\n",
+            name_.data(), status);
+        return status;
+      }
+    }
   } else if (ordinal == fuchsia_device_manager_DeviceControllerSuspendOrdinal ||
              ordinal == fuchsia_device_manager_DeviceControllerSuspendGenOrdinal) {
     const char* err_msg = nullptr;

@@ -789,9 +789,10 @@ class DeviceController final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
+    ::zx::channel test_output;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerBindDriverResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
@@ -865,19 +866,28 @@ class DeviceController final {
 
     // Bind the requested driver to this device.  `driver_path` is informational,
     // but all calls to BindDriver/CreateDevice should use the same `driver_path`
-    // each time they use a `driver` VMO with the same contents.
-    zx_status_t BindDriver(::fidl::StringView driver_path, ::zx::vmo driver, int32_t* out_status);
+    // each time they use a `driver` VMO with the same contents. Returns a `status`
+    // and optionally a channel to the driver's test output. `test_output` will be
+    // not present unless the driver is configured to run its run_unit_tests hook, in
+    // which case the other end of the channel will have been passed to the driver.
+    zx_status_t BindDriver(::fidl::StringView driver_path, ::zx::vmo driver, int32_t* out_status, ::zx::channel* out_test_output);
 
     // Bind the requested driver to this device.  `driver_path` is informational,
     // but all calls to BindDriver/CreateDevice should use the same `driver_path`
-    // each time they use a `driver` VMO with the same contents.
+    // each time they use a `driver` VMO with the same contents. Returns a `status`
+    // and optionally a channel to the driver's test output. `test_output` will be
+    // not present unless the driver is configured to run its run_unit_tests hook, in
+    // which case the other end of the channel will have been passed to the driver.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<BindDriverResponse> BindDriver(::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::zx::vmo driver, ::fidl::BytePart _response_buffer, int32_t* out_status);
+    ::fidl::DecodeResult<BindDriverResponse> BindDriver(::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::zx::vmo driver, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::channel* out_test_output);
 
     // Bind the requested driver to this device.  `driver_path` is informational,
     // but all calls to BindDriver/CreateDevice should use the same `driver_path`
-    // each time they use a `driver` VMO with the same contents.
+    // each time they use a `driver` VMO with the same contents. Returns a `status`
+    // and optionally a channel to the driver's test output. `test_output` will be
+    // not present unless the driver is configured to run its run_unit_tests hook, in
+    // which case the other end of the channel will have been passed to the driver.
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<BindDriverResponse> BindDriver(::fidl::DecodedMessage<BindDriverRequest> params, ::fidl::BytePart response_buffer);
 
@@ -936,19 +946,28 @@ class DeviceController final {
 
     // Bind the requested driver to this device.  `driver_path` is informational,
     // but all calls to BindDriver/CreateDevice should use the same `driver_path`
-    // each time they use a `driver` VMO with the same contents.
-    static zx_status_t BindDriver(zx::unowned_channel _client_end, ::fidl::StringView driver_path, ::zx::vmo driver, int32_t* out_status);
+    // each time they use a `driver` VMO with the same contents. Returns a `status`
+    // and optionally a channel to the driver's test output. `test_output` will be
+    // not present unless the driver is configured to run its run_unit_tests hook, in
+    // which case the other end of the channel will have been passed to the driver.
+    static zx_status_t BindDriver(zx::unowned_channel _client_end, ::fidl::StringView driver_path, ::zx::vmo driver, int32_t* out_status, ::zx::channel* out_test_output);
 
     // Bind the requested driver to this device.  `driver_path` is informational,
     // but all calls to BindDriver/CreateDevice should use the same `driver_path`
-    // each time they use a `driver` VMO with the same contents.
+    // each time they use a `driver` VMO with the same contents. Returns a `status`
+    // and optionally a channel to the driver's test output. `test_output` will be
+    // not present unless the driver is configured to run its run_unit_tests hook, in
+    // which case the other end of the channel will have been passed to the driver.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<BindDriverResponse> BindDriver(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::zx::vmo driver, ::fidl::BytePart _response_buffer, int32_t* out_status);
+    static ::fidl::DecodeResult<BindDriverResponse> BindDriver(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::zx::vmo driver, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::channel* out_test_output);
 
     // Bind the requested driver to this device.  `driver_path` is informational,
     // but all calls to BindDriver/CreateDevice should use the same `driver_path`
-    // each time they use a `driver` VMO with the same contents.
+    // each time they use a `driver` VMO with the same contents. Returns a `status`
+    // and optionally a channel to the driver's test output. `test_output` will be
+    // not present unless the driver is configured to run its run_unit_tests hook, in
+    // which case the other end of the channel will have been passed to the driver.
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<BindDriverResponse> BindDriver(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindDriverRequest> params, ::fidl::BytePart response_buffer);
 
@@ -1009,8 +1028,8 @@ class DeviceController final {
 
     class BindDriverCompleterBase : public _Base {
      public:
-      void Reply(int32_t status);
-      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(int32_t status, ::zx::channel test_output);
+      void Reply(::fidl::BytePart _buffer, int32_t status, ::zx::channel test_output);
       void Reply(::fidl::DecodedMessage<BindDriverResponse> params);
 
      protected:
@@ -2303,6 +2322,7 @@ struct IsFidlMessage<::llcpp::fuchsia::device::manager::DeviceController::BindDr
 static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController::BindDriverResponse)
     == ::llcpp::fuchsia::device::manager::DeviceController::BindDriverResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::BindDriverResponse, status) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::BindDriverResponse, test_output) == 20);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController::ConnectProxyRequest> : public std::true_type {};
