@@ -12,13 +12,13 @@
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
-#include "astro-gpios.h"
+#include <limits.h>
+
 #include "astro.h"
+#include "astro-gpios.h"
 
 // uncomment to disable LED blinky test
-// #define GPIO_TEST
-
-namespace astro {
+// #define GPIO_TEST 1
 
 static const pbus_mmio_t gpio_mmios[] = {
     {
@@ -38,36 +38,38 @@ static const pbus_mmio_t gpio_mmios[] = {
 static const pbus_irq_t gpio_irqs[] = {
     {
         .irq = S905D2_GPIO_IRQ_0,
-        .mode = ZX_INTERRUPT_MODE_DEFAULT,
     },
     {
         .irq = S905D2_GPIO_IRQ_1,
-        .mode = ZX_INTERRUPT_MODE_DEFAULT,
     },
     {
         .irq = S905D2_GPIO_IRQ_2,
-        .mode = ZX_INTERRUPT_MODE_DEFAULT,
     },
     {
         .irq = S905D2_GPIO_IRQ_3,
-        .mode = ZX_INTERRUPT_MODE_DEFAULT,
     },
     {
         .irq = S905D2_GPIO_IRQ_4,
-        .mode = ZX_INTERRUPT_MODE_DEFAULT,
     },
     {
         .irq = S905D2_GPIO_IRQ_5,
-        .mode = ZX_INTERRUPT_MODE_DEFAULT,
     },
     {
         .irq = S905D2_GPIO_IRQ_6,
-        .mode = ZX_INTERRUPT_MODE_DEFAULT,
     },
     {
         .irq = S905D2_GPIO_IRQ_7,
-        .mode = ZX_INTERRUPT_MODE_DEFAULT,
     },
+    /*
+    {
+        .irq = S905D2_A0_GPIO_IRQ_0,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+    {
+        .irq = S905D2_A0_GPIO_IRQ_1,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+    */
 };
 
 // GPIOs to expose from generic GPIO driver.
@@ -92,44 +94,42 @@ static const pbus_metadata_t gpio_metadata[] = {
         .type = DEVICE_METADATA_GPIO_PINS,
         .data_buffer = &gpio_pins,
         .data_size = sizeof(gpio_pins),
-    },
+    }
 };
 
-static pbus_dev_t gpio_dev = []() {
-    pbus_dev_t dev;
-    dev.name = "gpio";
-    dev.vid = PDEV_VID_AMLOGIC;
-    dev.pid = PDEV_PID_AMLOGIC_S905D2;
-    dev.did = PDEV_DID_AMLOGIC_GPIO;
-    dev.mmio_list = gpio_mmios;
-    dev.mmio_count = countof(gpio_mmios);
-    dev.irq_list = gpio_irqs;
-    dev.irq_count = countof(gpio_irqs);
-    dev.metadata_list = gpio_metadata;
-    dev.metadata_count = countof(gpio_metadata);
-    return dev;
-}();
+static pbus_dev_t gpio_dev = {
+    .name = "gpio",
+    .vid = PDEV_VID_AMLOGIC,
+    .pid = PDEV_PID_AMLOGIC_S905D2,
+    .did = PDEV_DID_AMLOGIC_GPIO,
+    .mmio_list = gpio_mmios,
+    .mmio_count = countof(gpio_mmios),
+    .irq_list = gpio_irqs,
+    .irq_count = countof(gpio_irqs),
+    .metadata_list = gpio_metadata,
+    .metadata_count = countof(gpio_metadata),
+};
 
-zx_status_t Astro::GpioInit() {
-    zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
+zx_status_t aml_gpio_init(aml_bus_t* bus) {
+    zx_status_t status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ProtocolDeviceAdd failed: %d\n", __func__, status);
+        zxlogf(ERROR, "aml_gpio_init: pbus_protocol_device_add failed: %d\n", status);
         return status;
     }
 
-    gpio_impl_ = ddk::GpioImplProtocolClient(parent());
-    if (!gpio_impl_.is_valid()) {
-        zxlogf(ERROR, "%s: GpioImplProtocolClient failed %d\n", __func__, status);
-        return ZX_ERR_INTERNAL;
+    status = device_get_protocol(bus->parent, ZX_PROTOCOL_GPIO_IMPL, &bus->gpio);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "aml_gpio_init: device_get_protocol failed: %d\n", status);
+        return status;
     }
 
     // Enable mute LED so it will be controlled by mute switch.
-    status = gpio_impl_.ConfigOut(S905D2_GPIOAO(11), 1);
+    status = gpio_impl_config_out(&bus->gpio, S905D2_GPIOAO(11), 1);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ConfigOut failed: %d\n", __func__, status);
+        zxlogf(ERROR, "aml_gpio_init: gpio_impl_config_out failed: %d\n", status);
     }
 
-#ifdef GPIO_TEST
+#if GPIO_TEST
     const pbus_gpio_t gpio_test_gpios[] = {
         {
             // SYS_LED
@@ -142,7 +142,7 @@ zx_status_t Astro::GpioInit() {
     };
 
     const pbus_dev_t gpio_test_dev = {
-        .name = "astro-gpio-test",
+        .name = "aml-gpio-test",
         .vid = PDEV_VID_GENERIC,
         .pid = PDEV_PID_GENERIC,
         .did = PDEV_DID_GPIO_TEST,
@@ -150,13 +150,11 @@ zx_status_t Astro::GpioInit() {
         .gpio_count = countof(gpio_test_gpios),
     };
 
-    if ((status = pbus_.DeviceAdd(&gpio_test_dev)) != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd gpio_test failed: %d\n", __func__, status);
+    if ((status = pbus_device_add(&bus->pbus, &gpio_test_dev, 0)) != ZX_OK) {
+        zxlogf(ERROR, "aml_gpio_init could not add gpio_test_dev: %d\n", status);
         return status;
     }
 #endif
 
     return ZX_OK;
 }
-
-} // namespace astro
