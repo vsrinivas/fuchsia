@@ -28,6 +28,9 @@ The exact contents of the doc may change over time.
     well tested and at the same time Code-Review-1 if you would not like to see
     the change merged for other reasons.
 *   Apply the standard (this doc) consistently.
+*   For your own changes, it is okay to self Testability-Review+1 provided that
+    the change clearly follows this rubric. If in doubt, seek approval from
+    another testability reviewer.
 *   If the change needs to be amended to meet the standards, provide actionable
     feedback.
 *   Promote Fuchsia testing & testability.
