@@ -89,7 +89,7 @@ const CodecAdapterFactory kCodecFactories[] = {
         },
     },
     {
-        false,  // is_enabled
+        true,  // is_enabled
         fuchsia::mediacodec::CodecDescription{
             .codec_type = fuchsia::mediacodec::CodecType::DECODER,
             // TODO(dustingreen): See TODO comments on this field in

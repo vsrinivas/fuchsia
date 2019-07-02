@@ -17,10 +17,7 @@ static const char kAudioMimeTypeLpcm[] = "audio/raw";
 
 static const char kVideoMimeTypeUncompressed[] = "video/raw";
 static const char kVideoMimeTypeH264[] = "video/h264";
-// TODO(dalesat): (or dustingreen) Enable after amlogic-video VP9 decode
-// is fully working.
-//
-// static const char kVideoMimeTypeVp9[] = "video/vp9";
+static const char kVideoMimeTypeVp9[] = "video/vp9";
 // TODO(dalesat): Add MPEG2.
 
 static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
@@ -336,18 +333,16 @@ TypeConverter<fuchsia::media::FormatDetailsPtr, media_player::StreamType>::Conve
 
   switch (input.medium()) {
     case media_player::StreamType::Medium::kAudio:
-      // TODO(dalesat): Add aac-adts support.
-      // We have an aac-adts decoder, but we don't have an encoding defined in
-      // |media_player::StreamType| for that.
+      // TODO(dalesat): Consider adding aac support.
+      // We'll likely have an aac decoder, but we don't have an encoding defined
+      // in |media_player::StreamType| for that.
       break;
     case media_player::StreamType::Medium::kVideo:
       if (input.encoding() == media_player::StreamType::kVideoEncodingH264) {
         mime_type = kVideoMimeTypeH264;
-      } else if (input.encoding() == media_player::StreamType::kVideoEncodingVp9) {
-        // TODO(dalesat): (or dustingreen) Enable after amlogic-video VP9 decode
-        // is fully working.
-        //
-        // mime_type = kVideoMimeTypeVp9;
+      } else if (input.encoding() ==
+                 media_player::StreamType::kVideoEncodingVp9) {
+        mime_type = kVideoMimeTypeVp9;
       }
       break;
     case media_player::StreamType::Medium::kSubpicture:
