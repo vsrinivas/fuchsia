@@ -147,8 +147,7 @@ __EXPORT inspector_dsoinfo_t* inspector_dso_fetch_list(zx_handle_t h) {
 
  __EXPORT void inspector_print_markup_context(FILE* f, zx_handle_t process) {
     fprintf(f, "{{{reset}}}\n");
-    unsigned int count;
-    ForEachModule(*zx::unowned_process{process}, [&](const ModuleInfo& info) {
+    ForEachModule(*zx::unowned_process{process}, [f, count=0u](const ModuleInfo& info) mutable {
         unsigned int module_id = count++;
         // Print out the module first.
         fprintf(f, "{{{module:%#x:%s:elf:", module_id, info.name.begin());
