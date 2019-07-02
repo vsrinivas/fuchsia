@@ -6,6 +6,7 @@
 
 #include <zircon/assert.h>
 #include <zircon/types.h>
+#include <zxtest/cpp/internal.h>
 #include <zxtest/zxtest.h>
 
 // Sanity check that looks for bugs in C macro implementation of ASSERT_*/EXPECT_*. This forces
@@ -663,7 +664,7 @@ int SomeFn() {
   return 0;
 }
 
-TEST(ZXTestAssertionTest, FunctionPointerNotNull) {
+TEST(ZxTestAssertionTest, FunctionPointerNotNull) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to identify false.");
   int (*some_fn)() = &SomeFn;
   ASSERT_NOT_NULL(some_fn);
@@ -673,7 +674,7 @@ TEST(ZXTestAssertionTest, FunctionPointerNotNull) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZXTestAssertionTest, FunctionPointerNull) {
+TEST(ZxTestAssertionTest, FunctionPointerNull) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to identify nullptr.");
   int (*some_fn)() = nullptr;
   ASSERT_NULL(some_fn);
@@ -683,14 +684,14 @@ TEST(ZXTestAssertionTest, FunctionPointerNull) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZXTestAssertionTest, FunctionPointerNotNullFail) {
+TEST(ZxTestAssertionTest, FunctionPointerNotNullFail) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failed to identify nullptr.");
   int (*some_fn)() = &SomeFn;
   ASSERT_NULL(some_fn);
   TEST_CHECKPOINT();
 }
 
-TEST(ZXTestAssertionTest, FunctionPointerNullFail) {
+TEST(ZxTestAssertionTest, FunctionPointerNullFail) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failed to identify nullptr.");
   int (*some_fn)() = nullptr;
   ASSERT_NOT_NULL(some_fn);
@@ -704,7 +705,7 @@ class MyClassWithMethods {
   }
 };
 
-TEST(ZXTestAssertionTest, MemberMethodFunctionNull) {
+TEST(ZxTestAssertionTest, MemberMethodFunctionNull) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to identify false.");
   int (MyClassWithMethods::*method)() const = &MyClassWithMethods::MyMethod;
   ASSERT_NOT_NULL(method);
@@ -714,7 +715,7 @@ TEST(ZXTestAssertionTest, MemberMethodFunctionNull) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZXTestAssertionTest, MemberMethodFunctionNullFail) {
+TEST(ZxTestAssertionTest, MemberMethodFunctionNullFail) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failed to identify false.");
   int (MyClassWithMethods::*method)() const = nullptr;
   EXPECT_EQ(method, &MyClassWithMethods::MyMethod);
@@ -955,5 +956,17 @@ TEST(ZxTestAssertionTest, AssertNoDeathWithCrashingStatement) {
 }
 
 #endif
+
+TEST(ZxTestAssertionTest, AssertBytesEqVla) {
+  TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to check buffer eq.");
+  volatile int len = 2;
+  char a[len];
+  const char* b = reinterpret_cast<const char*>(a);
+
+  memset(a, 0, len);
+
+  ASSERT_BYTES_EQ(a, b, len);
+  TEST_CHECKPOINT();
+}
 
 }  // namespace

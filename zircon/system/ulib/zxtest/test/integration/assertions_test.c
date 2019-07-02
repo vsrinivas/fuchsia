@@ -592,7 +592,7 @@ static int SomeFn(void) {
   return 0;
 }
 
-TEST(ZXTestCAssertionTest, FunctionPointerNotNull) {
+TEST(ZxTestCAssertionTest, FunctionPointerNotNull) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to identify false.");
   int (*some_fn)(void) = &SomeFn;
   ASSERT_NOT_NULL(some_fn);
@@ -602,7 +602,7 @@ TEST(ZXTestCAssertionTest, FunctionPointerNotNull) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZXTestCAssertionTest, FunctionPointerNull) {
+TEST(ZxTestCAssertionTest, FunctionPointerNull) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to identify nullptr.");
   int (*some_fn)(void) = NULL;
   ASSERT_NULL(some_fn);
@@ -763,3 +763,15 @@ TEST(ZxTestCAssertionTest, AssertNoDeathWithCrashingStatement) {
 }
 
 #endif
+
+TEST(ZxTestCAssertionTest, AssertBytesEqVla) {
+  TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to check buffer eq.");
+  volatile int len = 2;
+  char a[len];
+  const char* b = (const char*)a;
+
+  memset(a, 0, len);
+
+  ASSERT_BYTES_EQ(a, b, len);
+  TEST_CHECKPOINT();
+}
