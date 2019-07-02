@@ -191,8 +191,8 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* comman
     fences_to_release_on_next_update_ = std::move(update.release_fences);
 
     last_applied_update_presentation_time_ = update.presentation_time;
-    // Collect callbacks to be signalled in
-    // |Engine::SignalSuccessfulPresentCallbacks|
+    // Collect callbacks to be returned by |Engine::UpdateSessions()| as part
+    // of the |Session::UpdateResults| struct.
     update_results.callbacks.push(std::move(update.present_callback));
     update_results.needs_render = true;
     scheduled_updates_.pop();
@@ -213,8 +213,8 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* comman
       auto image_pipe_update_results = update.image_pipe->Update(
           session_context_.release_fence_signaller, target_presentation_time);
 
-      // Collect callbacks to be signalled in
-      // |Engine::SignalSuccessfulPresentCallbacks|
+      // Collect callbacks to be returned by |Engine::UpdateSessions()| as part
+      // of the |Session::UpdateResults| struct.
       while (!image_pipe_update_results.callbacks.empty()) {
         update_results.image_pipe_callbacks.push(
             std::move(image_pipe_update_results.callbacks.front()));

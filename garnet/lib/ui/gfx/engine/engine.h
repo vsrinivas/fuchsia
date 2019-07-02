@@ -127,20 +127,10 @@ class Engine : public SessionUpdater, public FrameRenderer {
   // killed. Returns true if a new render is needed, false otherwise.
   SessionUpdater::UpdateResults UpdateSessions(std::unordered_set<SessionId> sessions_to_update,
                                                zx_time_t presentation_time,
-                                               uint64_t trace_id = 0) override;
+                                               uint64_t trace_id) override;
 
   // |SessionUpdater|
-  //
-  // Signals that all present calls prior to this point are included in the
-  // next frame. This must be called before RenderFrame() to be able to signal
-  // the present callbacks that contributed to that next frame.
-  void RatchetPresentCallbacks() override;
-
-  // |SessionUpdater|
-  //
-  // Triggers the corresponding callbacks for each session that had an update
-  // since the last ratchet point.
-  void SignalSuccessfulPresentCallbacks(PresentationInfo) override;
+  void PrepareFrame(zx_time_t presentation_time, uint64_t trace_id) override {}
 
   // |FrameRenderer|
   //
@@ -217,9 +207,6 @@ class Engine : public SessionUpdater, public FrameRenderer {
 
   bool render_continuously_ = false;
   bool has_vulkan_ = false;
-
-  std::queue<OnPresentedCallback> callbacks_this_frame_;
-  std::queue<OnPresentedCallback> pending_callbacks_;
 
   std::optional<CommandContext> command_context_;
 

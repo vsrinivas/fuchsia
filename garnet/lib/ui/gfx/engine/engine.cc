@@ -91,8 +91,8 @@ Engine::Engine(sys::ComponentContext* component_context,
 
 void Engine::InitializeFrameScheduler() {
   auto weak = weak_factory_.GetWeakPtr();
-  frame_scheduler_->SetDelegate(
-      FrameSchedulerDelegate{/* FrameRenderer */ weak, /* SessionUpdater */ weak});
+  frame_scheduler_->SetFrameRenderer(weak);
+  frame_scheduler_->AddSessionUpdater(weak);
 }
 
 void Engine::InitializeInspectObjects() {
@@ -165,21 +165,26 @@ SessionUpdater::UpdateResults Engine::UpdateSessions(
 
     // If update fails, kill the entire client session.
     if (!apply_results.success) {
+      // TODO(SCN-1485): schedule another frame because the session's contents
+      // will be removed from the scene.  We could insert |session_id| into
+      // |update_results.sessions_to_reschedule|, but it's probably cleaner to
+      // handle this uniformly with the case that the client abruptly closes
+      // the channel.
       session_handler->KillSession();
     } else {
       if (!apply_results.all_fences_ready) {
         update_results.sessions_to_reschedule.insert(session_id);
-      }
 
-      //  Collect the callbacks for later.
-      while (!apply_results.callbacks.empty()) {
-        callbacks_this_frame_.push(std::move(apply_results.callbacks.front()));
-        apply_results.callbacks.pop();
+        // NOTE: one might be tempted to CHECK that the callbacks/image_pipe_callbacks are
+        // empty at this point, reasoning that if some fences aren't ready, then no callbacks should
+        // be collected.  However, the session may have had multiple queued updates, some of
+        // which had all fences ready and therefore contributed callbacks.
       }
-      while (!apply_results.image_pipe_callbacks.empty()) {
-        callbacks_this_frame_.push(std::move(apply_results.image_pipe_callbacks.front()));
-        apply_results.image_pipe_callbacks.pop();
-      }
+      //  Collect the callbacks to be passed back in the |UpdateResults|.
+      SessionUpdater::MoveCallbacksFromTo(&apply_results.callbacks,
+                                          &update_results.present_callbacks);
+      SessionUpdater::MoveCallbacksFromTo(&apply_results.image_pipe_callbacks,
+                                          &update_results.present_callbacks);
     }
 
     if (apply_results.needs_render) {
@@ -189,22 +194,6 @@ SessionUpdater::UpdateResults Engine::UpdateSessions(
   }
 
   return update_results;
-}
-
-void Engine::RatchetPresentCallbacks() {
-  while (!callbacks_this_frame_.empty()) {
-    pending_callbacks_.push(std::move(callbacks_this_frame_.front()));
-    callbacks_this_frame_.pop();
-  }
-}
-
-void Engine::SignalSuccessfulPresentCallbacks(fuchsia::images::PresentationInfo presentation_info) {
-  while (!pending_callbacks_.empty()) {
-    // TODO(SCN-1346): Make this unique per session via id().
-    TRACE_FLOW_BEGIN("gfx", "present_callback", presentation_info.presentation_time);
-    pending_callbacks_.front()(presentation_info);
-    pending_callbacks_.pop();
-  }
 }
 
 bool Engine::RenderFrame(const FrameTimingsPtr& timings, zx_time_t presentation_time) {

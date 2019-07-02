@@ -15,9 +15,11 @@ executable("unittests") {
   testonly = true
   output_name = "gfx_util_unittests"
   sources = [
-    "validate_eventpair_test.cc",
+    "collection_utils_unittest.cc",
+    "validate_eventpair_unittest.cc",
   ]
   deps = [
+    "//garnet/lib/ui/gfx:util",
     "//garnet/lib/ui/gfx:validate_eventpair",
     "//sdk/fidl/fuchsia.ui.views",
     "//src/lib/fxl/test:gtest_main",

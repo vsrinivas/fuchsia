@@ -31,8 +31,9 @@ std::unique_ptr<DefaultFrameScheduler> FrameSchedulerTest::CreateDefaultFrameSch
       fake_display_.get(),
       std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
                                        DefaultFrameScheduler::kInitialUpdateDuration));
-  scheduler->SetDelegate({.session_updater = mock_updater_->GetWeakPtr(),
-                          .frame_renderer = mock_renderer_->GetWeakPtr()});
+  scheduler->SetFrameRenderer(mock_renderer_->GetWeakPtr());
+  scheduler->AddSessionUpdater(mock_updater_->GetWeakPtr());
+
   return scheduler;
 }
 

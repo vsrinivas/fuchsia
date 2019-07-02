@@ -30,6 +30,9 @@ class SessionHandler : public TempSessionDelegate {
   SessionHandler(CommandDispatcherContext context, SessionContext session_context,
                  EventReporter* event_reporter, ErrorReporter* error_reporter,
                  inspect::Node inspect_node = inspect::Node());
+  // TODO(SCN-1485): along with ~Session(), this ensures that the contents are
+  // properly removed from the scene-graph.  However, it doens't trigger another
+  // frame to show the updated scene-graph.
   ~SessionHandler() = default;
 
   scenic_impl::gfx::Session* session() const { return session_.get(); }

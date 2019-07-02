@@ -291,6 +291,7 @@ source_set("frame_scheduler") {
   ]
   deps = [
     ":display",
+    ":util",
     "//garnet/public/lib/inspect",
     "//sdk/fidl/fuchsia.images",
     "//src/lib/fxl",
@@ -302,6 +303,7 @@ source_set("frame_scheduler") {
 
 source_set("util") {
   sources = [
+    "util/collection_utils.h",
     "util/event_timestamper.cc",
     "util/event_timestamper.h",
     "util/time.h",
@@ -309,6 +311,10 @@ source_set("util") {
     "util/wrap.h",
   ]
   deps = [
+    # TODO(SCN-1398): Needed by EventTimestamper.  Move to separate source_set?
+    "//sdk/lib/sys/cpp",
+
+    # Placeholder comment so that Tricium doesn't try to group with the above.
     "//src/lib/fxl",
 
     # TODO(SCN-1398): Needed by wrap/unwrap.  Move to separate source_set?
