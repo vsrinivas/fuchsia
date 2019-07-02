@@ -389,7 +389,7 @@ func (d *Daemon) GetPkg(merkle string, length int64) error {
 	if err != nil {
 		// If the package already existed but was missing the meta FAR (or the
 		// meta FAR wasn't indexed), it may now be valid and readable.
-		if _, e := os.Stat(filepath.Join("/pkgfs/versions", merkle)); e == nil {
+		if _, e := os.Stat(filepath.Join(d.pkgFs.VersionsDir(), merkle)); e == nil {
 			return nil
 		}
 
@@ -428,6 +428,17 @@ func (d *Daemon) GetPkg(merkle string, length int64) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	// If the package is now readable, we fulfilled all needs, and life is good
+	if _, e := os.Stat(filepath.Join(d.pkgFs.VersionsDir(), merkle)); e == nil {
+		return nil
+	}
+
+	// XXX(raggi): further triage as to the cause of, and recovery from this condition required:
+	log.Printf("error fetching pkg %q: %v - package was incomplete after all needs fulfilled", merkle, err)
+	if err == nil {
+		err = fmt.Errorf("package install incomplete")
 	}
 	return err
 }

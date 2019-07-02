@@ -172,6 +172,17 @@ func (i packageInstaller) GetPkg(merkle string, length int64) error {
 			return err
 		}
 	}
+
+	// If the package is now readable, we fulfilled all needs, and life is good
+	if _, e := os.Stat(filepath.Join(i.pkgFs.VersionsDir(), merkle)); e == nil {
+		return nil
+	}
+
+	// XXX(raggi): further triage as to the cause of, and recovery from this condition required:
+	log.Printf("error fetching pkg %q: %v - package was incomplete after all needs fulfilled", merkle, err)
+	if err == nil {
+		err = fmt.Errorf("package install incomplete")
+	}
 	return err
 }
 

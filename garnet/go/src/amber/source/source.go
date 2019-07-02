@@ -827,3 +827,6 @@ func (p PkgFsDir) BlobInstallDir() string {
 func (p PkgFsDir) PkgNeedsDir() string {
 	return filepath.Join(p.RootDir, "needs/packages")
 }
+func (p PkgFsDir) VersionsDir() string {
+	return filepath.Join(p.RootDir, "versions")
+}

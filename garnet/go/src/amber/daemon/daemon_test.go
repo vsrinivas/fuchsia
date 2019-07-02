@@ -160,6 +160,7 @@ func tempPkgFs() source.PkgFsDir {
 	os.MkdirAll(pkgFs.PkgInstallDir(), 0700)
 	os.MkdirAll(pkgFs.BlobInstallDir(), 0700)
 	os.MkdirAll(pkgFs.PkgNeedsDir(), 0700)
+	os.MkdirAll(pkgFs.VersionsDir(), 0700)
 	return pkgFs
 }
 
@@ -256,6 +257,7 @@ func TestDaemon(t *testing.T) {
 
 	os.MkdirAll(filepath.Join(pkgNeedsDir, pkgBlob), 0755)
 	panicerr(ioutil.WriteFile(filepath.Join(pkgNeedsDir, pkgBlob, root1), []byte{}, 0644))
+	panicerr(os.MkdirAll(filepath.Join(pkgFs.VersionsDir(), merkle), 0700))
 
 	panicerr(d.GetPkg(pkgBlob, pkgBlobLength))
 
@@ -362,6 +364,7 @@ func TestOpenRepository(t *testing.T) {
 
 	os.MkdirAll(filepath.Join(pkgNeedsDir, pkgBlob), 0755)
 	panicerr(ioutil.WriteFile(filepath.Join(pkgNeedsDir, pkgBlob, root1), []byte{}, 0644))
+	panicerr(os.MkdirAll(filepath.Join(pkgFs.VersionsDir(), merkle), 0700))
 
 	result, _, err := r.GetUpdateComplete("foo", nil, nil)
 	panicerr(err)
@@ -487,6 +490,7 @@ func TestDaemonWithEncryption(t *testing.T) {
 
 	os.MkdirAll(filepath.Join(pkgNeedsDir, pkgBlob), 0755)
 	panicerr(ioutil.WriteFile(filepath.Join(pkgNeedsDir, pkgBlob, root1), []byte{}, 0644))
+	panicerr(os.MkdirAll(filepath.Join(pkgFs.VersionsDir(), merkle), 0700))
 
 	panicerr(d.GetPkg(pkgBlob, pkgBlobLength))
 
