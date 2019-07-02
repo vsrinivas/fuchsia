@@ -15,11 +15,10 @@
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fzl/fdio.h>
+#include <lib/paver/device-partitioner.h>
 #include <lib/zx/vmo.h>
 #include <zircon/boot/image.h>
 #include <zxtest/zxtest.h>
-
-#include "device-partitioner.h"
 
 namespace {
 
