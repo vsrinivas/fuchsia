@@ -17,14 +17,14 @@
 #include <lib/devmgr-launcher/launch.h>
 #include <lib/zx/vmo.h>
 #include <libzbi/zbi-cpp.h>
-#include <unittest/unittest.h>
 #include <zircon/boot/image.h>
 #include <zircon/status.h>
+#include <zxtest/zxtest.h>
+
+namespace {
 
 using devmgr_integration_test::IsolatedDevmgr;
 using devmgr_integration_test::RecursiveWaitForFile;
-
-namespace {
 
 zbi_platform_id_t kPlatformId = [](){
     zbi_platform_id_t plat_id = {};
@@ -51,58 +51,41 @@ zx_status_t GetBootItem(uint32_t type, uint32_t extra, zx::vmo* out, uint32_t* l
     return ZX_OK;
 }
 
-bool enumeration_test() {
-    BEGIN_TEST;
-
+TEST(PbusTest, Enumeration) {
     devmgr_launcher::Args args;
     args.sys_device_driver = "/boot/driver/platform-bus.so";
     args.driver_search_paths.push_back("/boot/driver");
     args.get_boot_item = GetBootItem;
 
     IsolatedDevmgr devmgr;
-    ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr), ZX_OK);
+    ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
 
     fbl::unique_fd fd;
-    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd),
-              ZX_OK);
+    ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
 
-    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/test-board", &fd),
-              ZX_OK);
+    EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/test-board", &fd));
 
-    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1", &fd),
-              ZX_OK);
+    EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1", &fd));
 
-    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1/child-1", &fd),
-              ZX_OK);
+    EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1/child-1", &fd));
 
-    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1/child-1/child-2",
-                                   &fd),
-              ZX_OK);
-    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(),
-                                   "sys/platform/11:01:1/child-1/child-2/child-4", &fd),
-              ZX_OK);
-    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1/child-1/child-3-top",
-                                   &fd),
-              ZX_OK);
-    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(),
-                                   "sys/platform/11:01:1/child-1/child-3-top/child-3", &fd),
-              ZX_OK);
+    EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1/child-1/child-2",
+                                   &fd));
+    EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(),
+                                   "sys/platform/11:01:1/child-1/child-2/child-4", &fd));
+    EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1/child-1/child-3-top",
+                                   &fd));
+    EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(),
+                                   "sys/platform/11:01:1/child-1/child-3-top/child-3", &fd));
 
-    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(),
-                                   "sys/platform/11:01:5/test-gpio/gpio-3/component", &fd),
-              ZX_OK);
-    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(),
-                                   "sys/platform/11:01:7/test-clock/clock-1/component", &fd),
-              ZX_OK);
-    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(),
-                                   "sys/platform/11:01:8/test-i2c/i2c/i2c-1-5/component", &fd),
-              ZX_OK);
-    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(),
-                                   "sys/platform/11:01:6/component", &fd),
-              ZX_OK);
-    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(),
-                                   "composite-dev/composite", &fd),
-              ZX_OK);
+    EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(),
+                                   "sys/platform/11:01:5/test-gpio/gpio-3/component", &fd));
+    EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(),
+                                   "sys/platform/11:01:7/test-clock/clock-1/component", &fd));
+    EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(),
+                                   "sys/platform/11:01:8/test-i2c/i2c/i2c-1-5/component", &fd));
+    EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:6/component", &fd));
+    EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "composite-dev/composite", &fd));
 
     const int dirfd = devmgr.devfs_root().get();
     struct stat st;
@@ -117,12 +100,6 @@ bool enumeration_test() {
     EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:7/test-clock/clock-1/component", &st, 0), 0);
     EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:8/test-i2c/i2c/i2c-1-5/component", &st, 0), 0);
     EXPECT_EQ(fstatat(dirfd, "composite-dev/composite", &st, 0), 0);
-
-    END_TEST;
 }
 
 } // namespace
-
-BEGIN_TEST_CASE(pbus_tests)
-RUN_TEST(enumeration_test)
-END_TEST_CASE(pbus_tests)
