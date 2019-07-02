@@ -126,6 +126,9 @@ void FormatTypeName(StringBuilder* str, const fidl_type_t* type) {
           case fidl::kFidlHandleSubtypeHandle:
             str->Append("handle");
             break;
+          case fidl::kFidlHandleSubtypeException:
+            str->Append("exception");
+            break;
           case fidl::kFidlHandleSubtypeProcess:
             str->Append("process");
             break;

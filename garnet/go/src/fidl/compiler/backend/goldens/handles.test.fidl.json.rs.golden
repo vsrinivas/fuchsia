@@ -29,6 +29,7 @@ pub struct Handles {
   pub debuglog_handle: zx::Log,
   pub event_handle: zx::Event,
   pub eventpair_handle: zx::EventPair,
+  pub exception_handle: zx::Exception,
   pub fifo_handle: zx::Fifo,
   pub guest_handle: zx::Guest,
   pub interrupt_handle: zx::Interrupt,
@@ -71,59 +72,63 @@ fidl_struct! {
       ty: zx::EventPair,
       offset: 20,
     },
+    exception_handle {
+      ty: zx::Exception,
+      offset: 24,
+    },
     fifo_handle {
       ty: zx::Fifo,
-      offset: 24,
+      offset: 28,
     },
     guest_handle {
       ty: zx::Guest,
-      offset: 28,
+      offset: 32,
     },
     interrupt_handle {
       ty: zx::Interrupt,
-      offset: 32,
+      offset: 36,
     },
     job_handle {
       ty: zx::Job,
-      offset: 36,
+      offset: 40,
     },
     process_handle {
       ty: zx::Process,
-      offset: 40,
+      offset: 44,
     },
     profile_handle {
       ty: zx::Profile,
-      offset: 44,
+      offset: 48,
     },
     port_handle {
       ty: zx::Port,
-      offset: 48,
+      offset: 52,
     },
     resource_handle {
       ty: zx::Resource,
-      offset: 52,
+      offset: 56,
     },
     socket_handle {
       ty: zx::Socket,
-      offset: 56,
+      offset: 60,
     },
     thread_handle {
       ty: zx::Thread,
-      offset: 60,
+      offset: 64,
     },
     timer_handle {
       ty: zx::Timer,
-      offset: 64,
+      offset: 68,
     },
     vmar_handle {
       ty: zx::Vmar,
-      offset: 68,
+      offset: 72,
     },
     vmo_handle {
       ty: zx::Vmo,
-      offset: 72,
+      offset: 76,
     },
   ],
-  size: 76,
+  size: 80,
   align: 4,
 }

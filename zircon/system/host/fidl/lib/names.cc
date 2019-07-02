@@ -109,7 +109,9 @@ std::string NamePrimitiveIntegerCConstantMacro(types::PrimitiveSubtype subtype) 
 std::string NameHandleSubtype(types::HandleSubtype subtype) {
   switch (subtype) {
     case types::HandleSubtype::kHandle:
-      return "handle";
+        return "handle";
+    case types::HandleSubtype::kException:
+        return "exception";
     case types::HandleSubtype::kProcess:
       return "process";
     case types::HandleSubtype::kThread:
@@ -223,7 +225,9 @@ std::string NameFlatConstantKind(flat::Constant::Kind kind) {
 std::string NameHandleZXObjType(types::HandleSubtype subtype) {
   switch (subtype) {
     case types::HandleSubtype::kHandle:
-      return "ZX_OBJ_TYPE_NONE";
+        return "ZX_OBJ_TYPE_NONE";
+    case types::HandleSubtype::kException:
+        return "ZX_OBJ_TYPE_EXCEPTION";
     case types::HandleSubtype::kProcess:
       return "ZX_OBJ_TYPE_PROCESS";
     case types::HandleSubtype::kThread:

@@ -133,7 +133,7 @@ type-constructor = compound-identifier ( "<" type-constructor ">" ) , (  type-co
 
 handle-type = "handle" , ( "<" , handle-subtype , ">" ) , ( "?" ) ;
 
-handle-subtype = "bti" | "channel" | "debuglog" | "event" | "eventpair"
+handle-subtype = "bti" | "channel" | "debuglog" | "event" | "eventpair" | "exception"
                | "fifo" | "guest" | "interrupt" | "job" | "port" | "process"
                | "profile" | "resource" | "socket" | "thread" | "timer"
                | "vmar" | "vmo" ;

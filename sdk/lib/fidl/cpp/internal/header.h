@@ -18,6 +18,7 @@
 #include <lib/zx/debuglog.h>
 #include <lib/zx/event.h>
 #include <lib/zx/eventpair.h>
+#include <lib/zx/exception.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/guest.h>
 #include <lib/zx/handle.h>

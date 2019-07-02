@@ -232,6 +232,7 @@ enum FidlHandleSubtype : zx_obj_type_t {
   // special case to indicate subtype is not specified.
   kFidlHandleSubtypeHandle = ZX_OBJ_TYPE_NONE,
 
+  kFidlHandleSubtypeException = ZX_OBJ_TYPE_EXCEPTION,
   kFidlHandleSubtypeProcess = ZX_OBJ_TYPE_PROCESS,
   kFidlHandleSubtypeThread = ZX_OBJ_TYPE_THREAD,
   kFidlHandleSubtypeVmo = ZX_OBJ_TYPE_VMO,

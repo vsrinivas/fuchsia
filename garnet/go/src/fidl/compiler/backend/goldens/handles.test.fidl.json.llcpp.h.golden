@@ -15,6 +15,7 @@
 #include <lib/zx/debuglog.h>
 #include <lib/zx/event.h>
 #include <lib/zx/eventpair.h>
+#include <lib/zx/exception.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/guest.h>
 #include <lib/zx/handle.h>
@@ -42,8 +43,8 @@ extern "C" const fidl_type_t test_name_HandlesTable;
 
 struct Handles {
   static constexpr const fidl_type_t* Type = &test_name_HandlesTable;
-  static constexpr uint32_t MaxNumHandles = 19;
-  static constexpr uint32_t PrimarySize = 76;
+  static constexpr uint32_t MaxNumHandles = 20;
+  static constexpr uint32_t PrimarySize = 80;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
@@ -58,6 +59,8 @@ struct Handles {
   ::zx::event event_handle{};
 
   ::zx::eventpair eventpair_handle{};
+
+  ::zx::exception exception_handle{};
 
   ::zx::fifo fifo_handle{};
 
@@ -101,19 +104,20 @@ static_assert(offsetof(::llcpp::test::name::Handles, channel_handle) == 8);
 static_assert(offsetof(::llcpp::test::name::Handles, debuglog_handle) == 12);
 static_assert(offsetof(::llcpp::test::name::Handles, event_handle) == 16);
 static_assert(offsetof(::llcpp::test::name::Handles, eventpair_handle) == 20);
-static_assert(offsetof(::llcpp::test::name::Handles, fifo_handle) == 24);
-static_assert(offsetof(::llcpp::test::name::Handles, guest_handle) == 28);
-static_assert(offsetof(::llcpp::test::name::Handles, interrupt_handle) == 32);
-static_assert(offsetof(::llcpp::test::name::Handles, job_handle) == 36);
-static_assert(offsetof(::llcpp::test::name::Handles, process_handle) == 40);
-static_assert(offsetof(::llcpp::test::name::Handles, profile_handle) == 44);
-static_assert(offsetof(::llcpp::test::name::Handles, port_handle) == 48);
-static_assert(offsetof(::llcpp::test::name::Handles, resource_handle) == 52);
-static_assert(offsetof(::llcpp::test::name::Handles, socket_handle) == 56);
-static_assert(offsetof(::llcpp::test::name::Handles, thread_handle) == 60);
-static_assert(offsetof(::llcpp::test::name::Handles, timer_handle) == 64);
-static_assert(offsetof(::llcpp::test::name::Handles, vmar_handle) == 68);
-static_assert(offsetof(::llcpp::test::name::Handles, vmo_handle) == 72);
+static_assert(offsetof(::llcpp::test::name::Handles, exception_handle) == 24);
+static_assert(offsetof(::llcpp::test::name::Handles, fifo_handle) == 28);
+static_assert(offsetof(::llcpp::test::name::Handles, guest_handle) == 32);
+static_assert(offsetof(::llcpp::test::name::Handles, interrupt_handle) == 36);
+static_assert(offsetof(::llcpp::test::name::Handles, job_handle) == 40);
+static_assert(offsetof(::llcpp::test::name::Handles, process_handle) == 44);
+static_assert(offsetof(::llcpp::test::name::Handles, profile_handle) == 48);
+static_assert(offsetof(::llcpp::test::name::Handles, port_handle) == 52);
+static_assert(offsetof(::llcpp::test::name::Handles, resource_handle) == 56);
+static_assert(offsetof(::llcpp::test::name::Handles, socket_handle) == 60);
+static_assert(offsetof(::llcpp::test::name::Handles, thread_handle) == 64);
+static_assert(offsetof(::llcpp::test::name::Handles, timer_handle) == 68);
+static_assert(offsetof(::llcpp::test::name::Handles, vmar_handle) == 72);
+static_assert(offsetof(::llcpp::test::name::Handles, vmo_handle) == 76);
 static_assert(sizeof(::llcpp::test::name::Handles) == ::llcpp::test::name::Handles::PrimarySize);
 
 }  // namespace fidl

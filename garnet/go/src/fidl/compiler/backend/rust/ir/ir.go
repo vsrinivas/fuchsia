@@ -369,6 +369,7 @@ var primitiveTypes = map[types.PrimitiveSubtype]string{
 
 var handleSubtypes = map[types.HandleSubtype]string{
 	types.Handle:    "Handle",
+	types.Exception: "Exception",
 	types.Process:   "Process",
 	types.Thread:    "Thread",
 	types.Vmo:       "Vmo",

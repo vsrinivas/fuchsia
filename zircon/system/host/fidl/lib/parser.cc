@@ -46,28 +46,29 @@ enum {
 
 Parser::Parser(Lexer* lexer, ErrorReporter* error_reporter)
     : lexer_(lexer), error_reporter_(error_reporter) {
-  handle_subtype_table_ = {
-      {"process", types::HandleSubtype::kProcess},
-      {"thread", types::HandleSubtype::kThread},
-      {"vmo", types::HandleSubtype::kVmo},
-      {"channel", types::HandleSubtype::kChannel},
-      {"event", types::HandleSubtype::kEvent},
-      {"port", types::HandleSubtype::kPort},
-      {"interrupt", types::HandleSubtype::kInterrupt},
-      {"debuglog", types::HandleSubtype::kLog},
-      {"socket", types::HandleSubtype::kSocket},
-      {"resource", types::HandleSubtype::kResource},
-      {"eventpair", types::HandleSubtype::kEventpair},
-      {"job", types::HandleSubtype::kJob},
-      {"vmar", types::HandleSubtype::kVmar},
-      {"fifo", types::HandleSubtype::kFifo},
-      {"guest", types::HandleSubtype::kGuest},
-      {"timer", types::HandleSubtype::kTimer},
-      {"bti", types::HandleSubtype::kBti},
-      {"profile", types::HandleSubtype::kProfile},
-  };
+    handle_subtype_table_ = {
+        {"exception", types::HandleSubtype::kException},
+        {"process", types::HandleSubtype::kProcess},
+        {"thread", types::HandleSubtype::kThread},
+        {"vmo", types::HandleSubtype::kVmo},
+        {"channel", types::HandleSubtype::kChannel},
+        {"event", types::HandleSubtype::kEvent},
+        {"port", types::HandleSubtype::kPort},
+        {"interrupt", types::HandleSubtype::kInterrupt},
+        {"debuglog", types::HandleSubtype::kLog},
+        {"socket", types::HandleSubtype::kSocket},
+        {"resource", types::HandleSubtype::kResource},
+        {"eventpair", types::HandleSubtype::kEventpair},
+        {"job", types::HandleSubtype::kJob},
+        {"vmar", types::HandleSubtype::kVmar},
+        {"fifo", types::HandleSubtype::kFifo},
+        {"guest", types::HandleSubtype::kGuest},
+        {"timer", types::HandleSubtype::kTimer},
+        {"bti", types::HandleSubtype::kBti},
+        {"profile", types::HandleSubtype::kProfile},
+    };
 
-  last_token_ = Lex();
+    last_token_ = Lex();
 }
 
 bool Parser::LookupHandleSubtype(const raw::Identifier* identifier,

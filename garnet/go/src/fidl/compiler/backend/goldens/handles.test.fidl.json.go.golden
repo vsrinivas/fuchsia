@@ -13,13 +13,14 @@ import (
 
 
 type Handles struct {
-	_ struct{} `fidl2:"s,76,4"`
+	_ struct{} `fidl2:"s,80,4"`
 	PlainHandle _zx.Handle`fidl2:"0"`
 	BtiHandle _zx.Handle`fidl2:"0"`
 	ChannelHandle _zx.Channel`fidl2:"0"`
 	DebuglogHandle _zx.Log`fidl2:"0"`
 	EventHandle _zx.Event`fidl2:"0"`
 	EventpairHandle _zx.Handle`fidl2:"0"`
+	ExceptionHandle _zx.Handle`fidl2:"0"`
 	FifoHandle _zx.Handle`fidl2:"0"`
 	GuestHandle _zx.Handle`fidl2:"0"`
 	InterruptHandle _zx.Handle`fidl2:"0"`

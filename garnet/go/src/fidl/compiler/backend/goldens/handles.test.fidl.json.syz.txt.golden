@@ -11,6 +11,7 @@ test_name_HandlesInLine {
        debuglog_handle flags[fidl_handle_presence, int32]
        event_handle flags[fidl_handle_presence, int32]
        eventpair_handle flags[fidl_handle_presence, int32]
+       exception_handle flags[fidl_handle_presence, int32]
        fifo_handle flags[fidl_handle_presence, int32]
        guest_handle flags[fidl_handle_presence, int32]
        interrupt_handle flags[fidl_handle_presence, int32]
@@ -35,6 +36,7 @@ test_name_HandlesHandles {
        debuglog_handle zx_log
        event_handle zx_event
        eventpair_handle zx_eventpair
+       exception_handle zx_exception
        fifo_handle zx_fifo
        guest_handle zx_guest
        interrupt_handle zx_interrupt

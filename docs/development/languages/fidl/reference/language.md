@@ -443,9 +443,8 @@ Handles are denoted:
 *   **`handle<H>?`** : nullable Zircon handle of
     type _H_
 
-_H_ can be one of: `channel, event, eventpair, fifo, job,
-process, port, resource, socket, thread, vmo`. New types will
-be added to the FIDL language as they are added to Zircon.
+_H_ can be any [object][zircon_objects] supported by Zircon, e.g. `channel`, `thread`, `vmo`.
+Please refer to the [grammar][grammar] for a full list.
 
 ```fidl
 // A record which contains some handles.

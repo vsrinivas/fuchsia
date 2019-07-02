@@ -116,6 +116,7 @@ type HandleSubtype string
 
 const (
 	Handle    HandleSubtype = "handle"
+	Exception               = "exception"
 	Process                 = "process"
 	Thread                  = "thread"
 	Vmo                     = "vmo"
@@ -132,8 +133,8 @@ const (
 	Fifo                    = "fifo"
 	Guest                   = "guest"
 	Time                    = "timer"
-  Bti                     = "bti"
-  Profile                 = "profile"
+	Bti                     = "bti"
+	Profile                 = "profile"
 )
 
 type LiteralKind string

@@ -28,6 +28,8 @@ class Handles  {
   
   ::overnet::ClosedPtr<::overnet::ZxEventpair> eventpair_handle{};
   
+  ::overnet::ClosedPtr<::overnet::ZxException> exception_handle{};
+  
   ::overnet::ClosedPtr<::overnet::ZxFifo> fifo_handle{};
   
   ::overnet::ClosedPtr<::overnet::ZxGuest> guest_handle{};
@@ -75,7 +77,7 @@ namespace fidl {
 
 template <>
 struct CodingTraits<::test::name::embedded::Handles>
-    : public EncodableCodingTraits<::test::name::embedded::Handles, 76> {};
+    : public EncodableCodingTraits<::test::name::embedded::Handles, 80> {};
 
 inline zx_status_t Clone(const ::test::name::embedded::Handles& value,
                          ::test::name::embedded::Handles* result) {
@@ -92,6 +94,7 @@ struct ToEmbeddedTraits<::test::name::Handles> {
       ToEmbedded(_value.debuglog_handle),
       ToEmbedded(_value.event_handle),
       ToEmbedded(_value.eventpair_handle),
+      ToEmbedded(_value.exception_handle),
       ToEmbedded(_value.fifo_handle),
       ToEmbedded(_value.guest_handle),
       ToEmbedded(_value.interrupt_handle),
@@ -128,6 +131,9 @@ struct Equality<::test::name::embedded::Handles> {
       return false;
     }
     if (!::fidl::Equals(_lhs.eventpair_handle, _rhs.eventpair_handle)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.exception_handle, _rhs.exception_handle)) {
       return false;
     }
     if (!::fidl::Equals(_lhs.fifo_handle, _rhs.fifo_handle)) {

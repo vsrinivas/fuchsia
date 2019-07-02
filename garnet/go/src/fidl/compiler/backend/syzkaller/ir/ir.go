@@ -183,6 +183,7 @@ var primitiveTypes = map[types.PrimitiveSubtype]string{
 
 var handleSubtypes = map[types.HandleSubtype]string{
 	types.Handle:    "zx_handle",
+	types.Exception: "zx_exception",
 	types.Process:   "zx_process",
 	types.Thread:    "zx_thread",
 	types.Vmo:       "zx_vmo",

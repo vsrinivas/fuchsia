@@ -25,6 +25,7 @@ enum struct HandleSubtype : zx_obj_type_t {
   // special case to indicate subtype is not specified.
   kHandle = ZX_OBJ_TYPE_NONE,
 
+  kException = ZX_OBJ_TYPE_EXCEPTION,
   kProcess = ZX_OBJ_TYPE_PROCESS,
   kThread = ZX_OBJ_TYPE_THREAD,
   kVmo = ZX_OBJ_TYPE_VMO,

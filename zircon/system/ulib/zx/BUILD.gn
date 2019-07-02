@@ -13,6 +13,7 @@ library("zx") {
     "lib/zx/debuglog.h",
     "lib/zx/event.h",
     "lib/zx/eventpair.h",
+    "lib/zx/exception.h",
     "lib/zx/fifo.h",
     "lib/zx/guest.h",
     "lib/zx/handle.h",

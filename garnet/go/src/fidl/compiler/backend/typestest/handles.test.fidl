@@ -8,6 +8,7 @@ struct Handles {
     handle<debuglog> debuglog_handle;
     handle<event> event_handle;
     handle<eventpair> eventpair_handle;
+    handle<exception> exception_handle;
     handle<fifo> fifo_handle;
     handle<guest> guest_handle;
     handle<interrupt> interrupt_handle;

@@ -1257,6 +1257,7 @@
             "type": "string",
             "enum": [
                 "handle",
+                "exception",
                 "process",
                 "thread",
                 "vmo",

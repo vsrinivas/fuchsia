@@ -26,6 +26,8 @@ class Handles  {
   
   ::zx::eventpair eventpair_handle{};
   
+  ::zx::exception exception_handle{};
+  
   ::zx::fifo fifo_handle{};
   
   ::zx::guest guest_handle{};
@@ -71,7 +73,7 @@ namespace fidl {
 
 template <>
 struct CodingTraits<::test::name::Handles>
-    : public EncodableCodingTraits<::test::name::Handles, 76> {};
+    : public EncodableCodingTraits<::test::name::Handles, 80> {};
 
 inline zx_status_t Clone(const ::test::name::Handles& value,
                          ::test::name::Handles* result) {
@@ -97,6 +99,9 @@ struct Equality<::test::name::Handles> {
       return false;
     }
     if (!::fidl::Equals(_lhs.eventpair_handle, _rhs.eventpair_handle)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.exception_handle, _rhs.exception_handle)) {
       return false;
     }
     if (!::fidl::Equals(_lhs.fifo_handle, _rhs.fifo_handle)) {

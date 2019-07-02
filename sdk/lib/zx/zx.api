@@ -4,6 +4,7 @@
   "pkg/zx/include/lib/zx/debuglog.h": "5ce78d5e19a2bb2e1e06a817fab14835",
   "pkg/zx/include/lib/zx/event.h": "42adc7d6021859ed86e02ad011541958",
   "pkg/zx/include/lib/zx/eventpair.h": "890c89b7c90705ebff6927b7a538e9a4",
+  "pkg/zx/include/lib/zx/exception.h": "fe6414d58a7140d4fdd0de3b203b557b",
   "pkg/zx/include/lib/zx/fifo.h": "e8cd3ed560f41991814729dbef32bd26",
   "pkg/zx/include/lib/zx/guest.h": "5883fb77afb92983adcc497a6c2de3ce",
   "pkg/zx/include/lib/zx/handle.h": "0e4888d82eaa6a8fb183d7eeb620dd86",
