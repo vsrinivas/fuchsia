@@ -37,9 +37,6 @@ sed -i -e 's/std::isfinite(/isfinite(/g' *.h
 sed -i -e 's/namespace base/namespace safemath/g' *.h
 sed -i -e 's/base::/safemath::/g' *.h
 
-# Tag checked_cast as only valid in kernel mode.
-sed -i -e 's/constexpr Dst checked_cast(Src value) {/constexpr Dst checked_cast(Src value) {\n#ifdef _KERNEL\nstatic_assert(false, "checked_cast should not be used in kernel");\n#endif/' safe_conversions.h
-
 # Update .md documentation.
 sed -i -e 's/base\/numerics/safemath/g' *.md
 
@@ -49,6 +46,12 @@ cat <<END
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
+config("safemath_public.config") {
+  if (is_fuchsia && is_kernel) {
+    defines = [ "SAFEMATH_DISABLE_OSTREAM_OPERATORS=1" ]
+  }
+}
 
 library("safemath") {
   sdk = "source"
@@ -69,8 +72,30 @@ library("safemath") {
   ]
   sources = []
   host = true
-  kernel = false
+  kernel = true
   static = true
+
+  # For now, when using safemath in the kernel, limit its usage to indirect
+  # usage via libaffine.
+  #
+  # It is possible for safemath to panic on some code paths.  Making these code
+  # paths impossible to access in the kernel (at compile time) is a bit
+  # complicated.  Right now, we know that libaffine will never access these
+  # paths, and nothing else in the kernel currently uses safemath.  So, for now,
+  # when building safemath for the kernel, restrict its visibility to just
+  # libaffine.  If/when other usage starts to show up in the kernel, we can
+  # revisit this.
+  #
+  # See ZX-4598
+  #
+  if (is_kernel) {
+    visibility = [
+      "$zx/system/ulib/affine/*",
+      ":*",
+    ]
+  }
+
+  public_configs = [ ":safemath_public.config" ]
 }
 END
 ) >BUILD.gn

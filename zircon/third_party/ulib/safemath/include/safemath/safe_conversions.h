@@ -104,9 +104,6 @@ template <typename Dst,
           class CheckHandler = internal::CheckOnFailure,
           typename Src>
 constexpr Dst checked_cast(Src value) {
-#ifdef _KERNEL
-  static_assert(false, "checked_cast should not be used in kernel");
-#endif
   // This throws a compile-time error on evaluating the constexpr if it can be
   // determined at compile-time as failing, otherwise it will CHECK at runtime.
   using SrcType = typename internal::UnderlyingType<Src>::type;
