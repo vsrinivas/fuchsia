@@ -293,6 +293,18 @@ bool VkReadbackTest::InitImage()
         size_t vmo_size;
         zx_vmo_get_size(device_memory_handle_, &vmo_size);
 
+        VkMemoryZirconHandlePropertiesFUCHSIA properties{
+            .sType = VK_STRUCTURE_TYPE_TEMP_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA,
+            .pNext = nullptr,
+        };
+        result = vkGetMemoryZirconHandlePropertiesFUCHSIA_(
+            vk_device_, VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
+            device_memory_handle_, &properties);
+        if (result != VK_SUCCESS)
+            return DRETF(false, "vkGetMemoryZirconHandlePropertiesFUCHSIA returned %d", result);
+        // Find index of lowest set bit.
+        memory_type = __builtin_ctz(properties.memoryTypeBits);
+
         VkImportMemoryZirconHandleInfoFUCHSIA handle_info = {
             .sType = VK_STRUCTURE_TYPE_TEMP_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA,
             .pNext = nullptr,
@@ -302,7 +314,7 @@ bool VkReadbackTest::InitImage()
         VkMemoryAllocateInfo info = {.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
                                      .pNext = &handle_info,
                                      .allocationSize = vmo_size,
-                                     .memoryTypeIndex = 0};
+                                     .memoryTypeIndex = memory_type};
 
         if ((result = vkAllocateMemory(vk_device_, &info, nullptr, &vk_imported_device_memory_)) !=
             VK_SUCCESS)
