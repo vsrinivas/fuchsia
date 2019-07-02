@@ -32,9 +32,7 @@ use {
     fuchsia_async::TimeoutExt,
     fuchsia_zircon as zx,
     futures::{future::FutureObj, task, Future, FutureExt, Poll},
-    parking_lot::{
-        MappedRwLockReadGuard, MappedRwLockWriteGuard, RwLock, RwLockReadGuard, RwLockWriteGuard,
-    },
+    parking_lot::{MappedRwLockWriteGuard, RwLock, RwLockWriteGuard},
     slab::Slab,
     std::{pin::Pin, sync::Arc},
 };
@@ -205,20 +203,22 @@ impl<S: Clone + 'static, A> ExpectableState for ExpectationHarness<S, A> {
     }
 }
 
-impl<S: Default, A> ExpectationHarness<S, A> {
-    pub fn new(aux: A) -> ExpectationHarness<S, A> {
-        ExpectationHarness(Arc::new(RwLock::new(HarnessInner {
-            aux,
-            tasks: Slab::new(),
-            state: S::default(),
-        })))
+impl<S, A> ExpectationHarness<S, A> {
+    pub fn init(aux: A, state: S) -> ExpectationHarness<S, A> {
+        ExpectationHarness(Arc::new(RwLock::new(HarnessInner { aux, tasks: Slab::new(), state })))
     }
 
-    pub fn aux(&self) -> MappedRwLockReadGuard<A> {
-        RwLockReadGuard::map(self.0.read(), |harness| &harness.aux)
+    pub fn aux(&self) -> MappedRwLockWriteGuard<A> {
+        RwLockWriteGuard::map(self.0.write(), |harness| &mut harness.aux)
     }
 
     pub fn write_state(&self) -> MappedRwLockWriteGuard<S> {
         RwLockWriteGuard::map(self.0.write(), |harness| &mut harness.state)
+    }
+}
+
+impl<S: Default, A> ExpectationHarness<S, A> {
+    pub fn new(aux: A) -> ExpectationHarness<S, A> {
+        ExpectationHarness::<S, A>::init(aux, S::default())
     }
 }

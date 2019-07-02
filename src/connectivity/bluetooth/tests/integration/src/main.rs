@@ -15,6 +15,7 @@ use crate::{
         },
         control::set_active_host,
         host_driver::{
+            disconnect_connected_device, disconnect_unconnected_device, disconnect_unknown_device,
             test_bd_addr, test_close, test_connect, test_discoverable, test_discovery, test_forget,
             test_list_devices, test_set_local_name,
         },
@@ -58,6 +59,9 @@ fn main() -> Result<(), Error> {
         run_test!(test_list_devices),
         run_test!(test_connect),
         run_test!(test_forget),
+        run_test!(disconnect_unknown_device),
+        run_test!(disconnect_unconnected_device),
+        run_test!(disconnect_connected_device),
         // Bonding tests
         run_test!(test_add_bonded_devices_success),
         run_test!(test_add_bonded_devices_no_ltk_fails),

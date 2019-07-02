@@ -81,6 +81,13 @@ pub mod peer {
             Some(&format!("name == {}", expected_name)),
         )
     }
+    pub fn identifier(expected_ident: &str) -> Predicate<RemoteDevice> {
+        let identifier = expected_ident.to_string();
+        Predicate::<RemoteDevice>::new(
+            move |peer| peer.identifier == identifier,
+            Some(&format!("identifier == {}", expected_ident)),
+        )
+    }
     pub fn address(expected_address: &str) -> Predicate<RemoteDevice> {
         let address = expected_address.to_string();
         Predicate::<RemoteDevice>::new(
