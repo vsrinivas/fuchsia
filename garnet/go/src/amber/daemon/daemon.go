@@ -29,7 +29,7 @@ const (
 
 type Daemon struct {
 	store string
-	pkgFs source.PkgFsDir
+	pkgfs source.PkgfsDir
 
 	muSrcs sync.Mutex
 	srcs   map[string]*source.Source
@@ -38,10 +38,10 @@ type Daemon struct {
 }
 
 // NewDaemon creates a Daemon
-func NewDaemon(store string, pkgFs source.PkgFsDir, events *amber.EventsService) (*Daemon, error) {
+func NewDaemon(store string, pkgfs source.PkgfsDir, events *amber.EventsService) (*Daemon, error) {
 	d := &Daemon{
 		store:  store,
-		pkgFs:  pkgFs,
+		pkgfs:  pkgfs,
 		srcs:   make(map[string]*source.Source),
 		events: events,
 	}
@@ -381,7 +381,7 @@ func (d *Daemon) GetPkg(merkle string, length int64) error {
 	// the update is sought so as to not unfairly bias fetching from an aribtrarily
 	// "first" source.
 
-	err := d.fetchInto(merkle, length, d.pkgFs.PkgInstallDir())
+	err := d.fetchInto(merkle, length, d.pkgfs.PkgInstallDir())
 	if os.IsExist(err) {
 		return nil
 	}
@@ -389,13 +389,13 @@ func (d *Daemon) GetPkg(merkle string, length int64) error {
 	if err != nil {
 		// If the package already existed but was missing the meta FAR (or the
 		// meta FAR wasn't indexed), it may now be valid and readable.
-		if _, e := os.Stat(filepath.Join(d.pkgFs.VersionsDir(), merkle)); e == nil {
+		if _, e := os.Stat(filepath.Join(d.pkgfs.VersionsDir(), merkle)); e == nil {
 			return nil
 		}
 
 		// If the needs dir now exists, ignore a failure to write the meta FAR
 		// and move on to processing the package's needs.
-		if _, e := os.Stat(filepath.Join(d.pkgFs.PkgNeedsDir(), merkle)); e == nil {
+		if _, e := os.Stat(filepath.Join(d.pkgfs.PkgNeedsDir(), merkle)); e == nil {
 			err = nil
 		}
 	}
@@ -404,7 +404,7 @@ func (d *Daemon) GetPkg(merkle string, length int64) error {
 		return err
 	}
 
-	needsDir, err := os.Open(filepath.Join(d.pkgFs.PkgNeedsDir(), merkle))
+	needsDir, err := os.Open(filepath.Join(d.pkgfs.PkgNeedsDir(), merkle))
 	if os.IsNotExist(err) {
 		// Package is fully installed already
 		return nil
@@ -418,7 +418,7 @@ func (d *Daemon) GetPkg(merkle string, length int64) error {
 	for len(neededBlobs) > 0 {
 		for _, blob := range neededBlobs {
 			// TODO(raggi): switch to using the needs paths for install
-			err := d.fetchInto(blob, -1, d.pkgFs.BlobInstallDir())
+			err := d.fetchInto(blob, -1, d.pkgfs.BlobInstallDir())
 			if err != nil {
 				return err
 			}
@@ -431,7 +431,7 @@ func (d *Daemon) GetPkg(merkle string, length int64) error {
 	}
 
 	// If the package is now readable, we fulfilled all needs, and life is good
-	if _, e := os.Stat(filepath.Join(d.pkgFs.VersionsDir(), merkle)); e == nil {
+	if _, e := os.Stat(filepath.Join(d.pkgfs.VersionsDir(), merkle)); e == nil {
 		return nil
 	}
 
@@ -474,5 +474,5 @@ func (d *Daemon) GC() error {
 }
 
 func (d *Daemon) OpenRepository(config *pkg.RepositoryConfig) (source.Repository, error) {
-	return source.OpenRepository(config, d.pkgFs)
+	return source.OpenRepository(config, d.pkgfs)
 }

@@ -32,7 +32,7 @@ func TestSources(t *testing.T) {
 	}
 	defer os.RemoveAll(store)
 
-	d, err := NewDaemon(store, source.PkgFsDir{""}, nil)
+	d, err := NewDaemon(store, source.PkgfsDir{""}, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -153,15 +153,15 @@ func makeBlob(dir, content string) (string, error) {
 	return merkleroot, ioutil.WriteFile(path, []byte(content), 0644)
 }
 
-func tempPkgFs() source.PkgFsDir {
+func tempPkgFs() source.PkgfsDir {
 	pkgfspath, err := ioutil.TempDir("", "amber-test-pkgfs")
 	panicerr(err)
-	pkgFs := source.PkgFsDir{pkgfspath}
-	os.MkdirAll(pkgFs.PkgInstallDir(), 0700)
-	os.MkdirAll(pkgFs.BlobInstallDir(), 0700)
-	os.MkdirAll(pkgFs.PkgNeedsDir(), 0700)
-	os.MkdirAll(pkgFs.VersionsDir(), 0700)
-	return pkgFs
+	pkgfs := source.PkgfsDir{pkgfspath}
+	os.MkdirAll(pkgfs.PkgInstallDir(), 0700)
+	os.MkdirAll(pkgfs.BlobInstallDir(), 0700)
+	os.MkdirAll(pkgfs.PkgNeedsDir(), 0700)
+	os.MkdirAll(pkgfs.VersionsDir(), 0700)
+	return pkgfs
 }
 
 func TestDaemon(t *testing.T) {
@@ -217,13 +217,13 @@ func TestDaemon(t *testing.T) {
 	panicerr(err)
 	defer os.RemoveAll(store)
 
-	pkgFs := tempPkgFs()
-	defer os.RemoveAll(pkgFs.RootDir)
-	pkgsDir := pkgFs.PkgInstallDir()
-	blobsDir := pkgFs.BlobInstallDir()
-	pkgNeedsDir := pkgFs.PkgNeedsDir()
+	pkgfs := tempPkgFs()
+	defer os.RemoveAll(pkgfs.RootDir)
+	pkgsDir := pkgfs.PkgInstallDir()
+	blobsDir := pkgfs.BlobInstallDir()
+	pkgNeedsDir := pkgfs.PkgNeedsDir()
 
-	d, err := NewDaemon(store, pkgFs, nil)
+	d, err := NewDaemon(store, pkgfs, nil)
 	panicerr(err)
 
 	err = d.AddSource(&amber.SourceConfig{
@@ -257,7 +257,7 @@ func TestDaemon(t *testing.T) {
 
 	os.MkdirAll(filepath.Join(pkgNeedsDir, pkgBlob), 0755)
 	panicerr(ioutil.WriteFile(filepath.Join(pkgNeedsDir, pkgBlob, root1), []byte{}, 0644))
-	panicerr(os.MkdirAll(filepath.Join(pkgFs.VersionsDir(), merkle), 0700))
+	panicerr(os.MkdirAll(filepath.Join(pkgfs.VersionsDir(), merkle), 0700))
 
 	panicerr(d.GetPkg(pkgBlob, pkgBlobLength))
 
@@ -323,11 +323,11 @@ func TestOpenRepository(t *testing.T) {
 	// // so that the httptest server can close:
 	// defer http.DefaultTransport.(*http.Transport).CloseIdleConnections()
 
-	pkgFs := tempPkgFs()
-	defer os.RemoveAll(pkgFs.RootDir)
-	pkgsDir := pkgFs.PkgInstallDir()
-	blobsDir := pkgFs.BlobInstallDir()
-	pkgNeedsDir := pkgFs.PkgNeedsDir()
+	pkgfs := tempPkgFs()
+	defer os.RemoveAll(pkgfs.RootDir)
+	pkgsDir := pkgfs.PkgInstallDir()
+	blobsDir := pkgfs.BlobInstallDir()
+	pkgNeedsDir := pkgfs.PkgNeedsDir()
 
 	keyConfig := &pkg.RepositoryKeyConfig{}
 	keyConfig.SetEd25519Key(([]byte)(rootKey.Value.Public))
@@ -345,7 +345,7 @@ func TestOpenRepository(t *testing.T) {
 		// TODO(raggi): fix keyconfig
 		RootKeys:        []pkg.RepositoryKeyConfig{*keyConfig},
 		RootKeysPresent: true,
-	}, pkgFs)
+	}, pkgfs)
 	panicerr(err)
 
 	err = r.Update()
@@ -364,7 +364,7 @@ func TestOpenRepository(t *testing.T) {
 
 	os.MkdirAll(filepath.Join(pkgNeedsDir, pkgBlob), 0755)
 	panicerr(ioutil.WriteFile(filepath.Join(pkgNeedsDir, pkgBlob, root1), []byte{}, 0644))
-	panicerr(os.MkdirAll(filepath.Join(pkgFs.VersionsDir(), merkle), 0700))
+	panicerr(os.MkdirAll(filepath.Join(pkgfs.VersionsDir(), merkle), 0700))
 
 	result, _, err := r.GetUpdateComplete("foo", nil, nil)
 	panicerr(err)
@@ -447,13 +447,13 @@ func TestDaemonWithEncryption(t *testing.T) {
 	panicerr(err)
 	defer os.RemoveAll(store)
 
-	pkgFs := tempPkgFs()
-	defer os.RemoveAll(pkgFs.RootDir)
-	pkgsDir := pkgFs.PkgInstallDir()
-	blobsDir := pkgFs.BlobInstallDir()
-	pkgNeedsDir := pkgFs.PkgNeedsDir()
+	pkgfs := tempPkgFs()
+	defer os.RemoveAll(pkgfs.RootDir)
+	pkgsDir := pkgfs.PkgInstallDir()
+	blobsDir := pkgfs.BlobInstallDir()
+	pkgNeedsDir := pkgfs.PkgNeedsDir()
 
-	d, err := NewDaemon(store, pkgFs, nil)
+	d, err := NewDaemon(store, pkgfs, nil)
 	panicerr(err)
 
 	err = d.AddSource(&amber.SourceConfig{
@@ -490,7 +490,7 @@ func TestDaemonWithEncryption(t *testing.T) {
 
 	os.MkdirAll(filepath.Join(pkgNeedsDir, pkgBlob), 0755)
 	panicerr(ioutil.WriteFile(filepath.Join(pkgNeedsDir, pkgBlob, root1), []byte{}, 0644))
-	panicerr(os.MkdirAll(filepath.Join(pkgFs.VersionsDir(), merkle), 0700))
+	panicerr(os.MkdirAll(filepath.Join(pkgfs.VersionsDir(), merkle), 0700))
 
 	panicerr(d.GetPkg(pkgBlob, pkgBlobLength))
 

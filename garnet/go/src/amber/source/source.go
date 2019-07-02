@@ -814,19 +814,19 @@ func (f *Source) watch() {
 	}
 }
 
-type PkgFsDir struct {
+type PkgfsDir struct {
 	RootDir string
 }
 
-func (p PkgFsDir) PkgInstallDir() string {
+func (p PkgfsDir) PkgInstallDir() string {
 	return filepath.Join(p.RootDir, "install/pkg")
 }
-func (p PkgFsDir) BlobInstallDir() string {
+func (p PkgfsDir) BlobInstallDir() string {
 	return filepath.Join(p.RootDir, "install/blob")
 }
-func (p PkgFsDir) PkgNeedsDir() string {
+func (p PkgfsDir) PkgNeedsDir() string {
 	return filepath.Join(p.RootDir, "needs/packages")
 }
-func (p PkgFsDir) VersionsDir() string {
+func (p PkgfsDir) VersionsDir() string {
 	return filepath.Join(p.RootDir, "versions")
 }
