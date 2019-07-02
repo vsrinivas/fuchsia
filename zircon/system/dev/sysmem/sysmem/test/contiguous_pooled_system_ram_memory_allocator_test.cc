@@ -38,7 +38,7 @@ TEST(ContiguousPooled, Full) {
     constexpr uint32_t kVmoSize = 4096;
     constexpr uint32_t kVmoCount = 1024;
     const char* kVmoName = "test-pool";
-    ContiguousPooledSystemRamMemoryAllocator allocator(&owner, kVmoName, kVmoSize * kVmoCount);
+    ContiguousPooledSystemRamMemoryAllocator allocator(&owner, kVmoName, kVmoSize * kVmoCount, true);
 
     EXPECT_OK(allocator.Init());
 

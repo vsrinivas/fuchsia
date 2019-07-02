@@ -7,10 +7,11 @@
 #include "macros.h"
 
 ContiguousPooledSystemRamMemoryAllocator::ContiguousPooledSystemRamMemoryAllocator(
-    Owner* parent_device, const char* allocation_name, uint64_t size)
+    Owner* parent_device, const char* allocation_name, uint64_t size, bool is_cpu_accessible)
     : parent_device_(parent_device), allocation_name_(allocation_name),
       region_allocator_(RegionAllocator::RegionPool::Create(std::numeric_limits<size_t>::max())),
-      size_(size) {}
+      size_(size),
+      is_cpu_accessible_(is_cpu_accessible) {}
 
 zx_status_t ContiguousPooledSystemRamMemoryAllocator::Init(uint32_t alignment_log2) {
     zx_status_t status = zx::vmo::create_contiguous(parent_device_->bti(), size_, alignment_log2, &contiguous_vmo_);
@@ -36,6 +37,8 @@ zx_status_t ContiguousPooledSystemRamMemoryAllocator::Init(uint32_t alignment_lo
 }
 
 zx_status_t ContiguousPooledSystemRamMemoryAllocator::Allocate(uint64_t size, zx::vmo* vmo) {
+    zx::vmo result_vmo;
+
     // Try to clean up all unused outstanding regions.
     for (uint32_t i = 0; i < regions_.size();) {
         fbl::unique_ptr<Region>& region = regions_[i];
@@ -60,6 +63,7 @@ zx_status_t ContiguousPooledSystemRamMemoryAllocator::Allocate(uint64_t size, zx
     }
 
     auto region = std::make_unique<Region>();
+
     // TODO: Use a fragmentation-reducing allocator (such as best fit).
     zx_status_t status = region_allocator_.GetRegion(size, ZX_PAGE_SIZE, region->region);
 
@@ -68,21 +72,46 @@ zx_status_t ContiguousPooledSystemRamMemoryAllocator::Allocate(uint64_t size, zx
         DumpPoolStats();
         return status;
     }
+
     // The VMO created here is a sub-region of contiguous_vmo_.
     // TODO: stop handing out physical VMOs when we can hand out non-COW clone VMOs instead.
     // Please do not use get_root_resource() in new code. See ZX-1467.
     status = parent_device_->CreatePhysicalVmo(region->region->base, size,
-                                               vmo);
+                                               &result_vmo);
     if (status != ZX_OK) {
         DRIVER_ERROR("Failed to create physical VMO: %d\n", status);
         return status;
     }
-    status = vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &region->vmo);
+
+    // Regardless of CPU or RAM domain, if we use the CPU to access the RAM we
+    // want to use the CPU cache.  The default for physical VMOs is non-cached
+    // so this is required because we're using zx_vmo_create_physical() above.
+    //
+    // Without this, in addition to presumably being slower, memcpy tends to
+    // fail with non-aligned access faults / syscalls that are trying to copy
+    // directly to the VMO can fail without it being obvious that it's an
+    // underlying non-aligned access fault triggered by memcpy.
+    //
+    // We don't do this for protected memory.  IIUC, it's possible for a cached
+    // mapping to protected memory + speculative execution to cause random
+    // faults, while a non-cached mapping only faults if a non-cached mapping is
+    // actually touched.
+    if (is_cpu_accessible_) {
+      status = result_vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED);
+      if (status != ZX_OK) {
+        DRIVER_ERROR("Failed to set_cache_policy(): %d\n", status);
+        return status;
+      }
+    }
+
+    status = result_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &region->vmo);
     if (status != ZX_OK) {
         DRIVER_ERROR("Failed to create duplicate VMO: %d\n", status);
         return status;
     }
     regions_.push_back(std::move(region));
+
+    *vmo = std::move(result_vmo);
     return ZX_OK;
 }
 

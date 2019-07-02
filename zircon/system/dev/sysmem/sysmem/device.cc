@@ -262,7 +262,7 @@ zx_status_t Device::Bind() {
 
     if (contiguous_memory_size) {
         auto pooled_allocator = std::make_unique<ContiguousPooledSystemRamMemoryAllocator>(
-            this, "SysmemContiguousPool", contiguous_memory_size);
+            this, "SysmemContiguousPool", contiguous_memory_size, true);
         if (pooled_allocator->Init() != ZX_OK) {
             DRIVER_ERROR("Contiguous system ram allocator initialization failed");
             return ZX_ERR_NO_MEMORY;
@@ -276,7 +276,7 @@ zx_status_t Device::Bind() {
     // TODO: Separate protected memory allocator into separate driver or library
     if (pdev_device_info_vid_ == PDEV_VID_AMLOGIC && protected_memory_size > 0) {
         auto amlogic_allocator = std::make_unique<ContiguousPooledSystemRamMemoryAllocator>(
-            this, "SysmemAmlogicProtectedPool", protected_memory_size);
+            this, "SysmemAmlogicProtectedPool", protected_memory_size, false);
         // Request 64kB alignment because the hardware can only modify protections along 64kB boundaries.
         status = amlogic_allocator->Init(16);
         if (status != ZX_OK) {
@@ -393,8 +393,14 @@ const zx::bti& Device::bti() {
 }
 
 zx_status_t Device::CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) {
-    return zx_vmo_create_physical(get_root_resource(), base, size,
-                                  vmo_out->reset_and_get_address());
+    zx::vmo result_vmo;
+    zx_status_t status = zx_vmo_create_physical(get_root_resource(), base, size,
+                                  result_vmo.reset_and_get_address());
+    if (status != ZX_OK) {
+      return status;
+    }
+    *vmo_out = std::move(result_vmo);
+    return ZX_OK;
 }
 
 uint32_t Device::pdev_device_info_vid() {
