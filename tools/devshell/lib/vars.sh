@@ -142,9 +142,8 @@ function fx-config-read {
     exit 1
   fi
 
-  if ! fx-build-config-load; then
-    exit $?
-  fi
+  fx-build-config-load || exit $?
+
   _FX_LOCK_FILE="${FUCHSIA_BUILD_DIR}.build_lock"
 }
 
