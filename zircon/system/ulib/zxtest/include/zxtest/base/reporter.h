@@ -6,9 +6,12 @@
 #define ZXTEST_BASE_REPORTER_H_
 
 #include <cstdio>
+#include <memory>
+#include <utility>
 
 #include <fbl/string.h>
 #include <fbl/vector.h>
+#include <zxtest/base/log-sink.h>
 #include <zxtest/base/observer.h>
 
 namespace zxtest {
@@ -54,7 +57,7 @@ class Reporter : public LifecycleObserver {
  public:
   Reporter() = delete;
   // Prints output to |stream|. If |stream| is |nullptr| it will behave as writing to /dev/null.
-  explicit Reporter(FILE* stream);
+  explicit Reporter(std::unique_ptr<LogSink> log_sink);
   Reporter(const Reporter&) = delete;
   Reporter(Reporter&&) = default;
   ~Reporter() final = default;
@@ -101,14 +104,19 @@ class Reporter : public LifecycleObserver {
   // Reports after all test activity is completed.
   void OnProgramEnd(const Runner& runner) final;
 
-  // Returns the stream where the reporter is writing to.
-  FILE* stream() const {
-    return stream_;
+  // Returns a pointer to the log sink, so arbitrary messages can be logged.
+  LogSink* mutable_log_sink() {
+    return log_sink_.get();
+  }
+
+  // Replaces the current instance of the sink being used to write to.
+  void set_log_sink(std::unique_ptr<LogSink> log_sink) {
+    log_sink_ = std::move(log_sink);
   }
 
  private:
   // Pointer to where report should be written to.
-  FILE* stream_ = nullptr;
+  std::unique_ptr<LogSink> log_sink_ = nullptr;
 
   struct {
     internal::Timer program;

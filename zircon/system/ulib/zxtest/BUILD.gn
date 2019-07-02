@@ -6,7 +6,10 @@ library("zxtest") {
   host = true
   sdk = "source"
   sdk_headers = [
+    "zxtest/base/assertion.h",
+    "zxtest/base/environment.h",
     "zxtest/base/event-broadcaster.h",
+    "zxtest/base/log-sink.h",
     "zxtest/base/observer.h",
     "zxtest/base/test-case.h",
     "zxtest/base/test-driver.h",
@@ -14,11 +17,13 @@ library("zxtest") {
     "zxtest/base/test-internal.h",
     "zxtest/base/test.h",
     "zxtest/base/types.h",
+    "zxtest/base/runner.h",
   ]
   sources = [
     "assertion.cc",
     "c-wrappers.cc",
     "event-broadcaster.cc",
+    "file-log-sink.cc",
     "reporter.cc",
     "runner-options.cc",
     "runner.cc",
@@ -31,9 +36,11 @@ library("zxtest") {
   public_deps = [
     # Needed for <fbl/string.h>, <fbl/vector.h> and <fbl/function.h>.
     "$zx/system/ulib/fbl:headers",
+    "$zx/system/ulib/fit:headers",
   ]
   deps = [
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit",
   ]
   if (is_fuchsia) {
     sources += [ "death-statement.cc" ]
@@ -48,7 +55,6 @@ library("zxtest") {
     ]
 
     deps += [
-      "$zx/system/ulib/fit",
       "$zx/system/ulib/zircon",
       "$zx/system/ulib/zx",
     ]

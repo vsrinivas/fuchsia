@@ -16,6 +16,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <zircon/status.h>
+#include <zxtest/base/log-sink.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -362,10 +363,13 @@ TEST_F(DeviceEnumerationTest, Hikey960Test) {
 int main(int argc, char** argv) {
     fbl::Vector<fbl::String> errors;
     auto options = zxtest::Runner::Options::FromArgs(argc, argv, &errors);
+    zxtest::LogSink* log_sink =
+        zxtest::Runner::GetInstance()->mutable_reporter()->mutable_log_sink();
+
 
     if (!errors.is_empty()) {
         for (const auto& error : errors) {
-            fprintf(stderr, "%s\n", error.c_str());
+            log_sink->Write("%s\n", error.c_str());
         }
         options.help = true;
     }
@@ -374,7 +378,7 @@ int main(int argc, char** argv) {
 
     // Errors will always set help to true.
     if (options.help) {
-        zxtest::Runner::Options::Usage(argv[0], stdout);
+        zxtest::Runner::Options::Usage(argv[0], log_sink);
         return errors.is_empty();
     }
 

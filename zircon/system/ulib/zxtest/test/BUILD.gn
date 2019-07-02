@@ -15,6 +15,7 @@ test("zxtest") {
     "assertion_test.cc",
     "event-broadcaster_test.cc",
     "main.cc",
+    "reporter_test.cc",
     "runner_test.cc",
     "test-case_test.cc",
     "test-info_test.cc",

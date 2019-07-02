@@ -107,6 +107,10 @@ void EventBroadcasterOnEnvironmentTearDown();
 void EventBroadcasterOnIterationEnd();
 void EventBroadcasterOnProgramEnd();
 
+// Verify FileLogSink behavior since it is the default log sink.
+void FileLogSinkWrite();
+void FileLogSinkCallCloserOnDestruction();
+
 // Verify that Runner behaves appropiately with the defined options.
 void RunnerRegisterTest();
 void RunnerRegisterTestWithCustomFactory();
@@ -130,6 +134,10 @@ void TestDriverImplReset();
 void RunnerOptionsParseFromCmdLineShort();
 void RunnerOptionsParseFromCmdLineLong();
 void RunnerOptionsParseFromCmdLineErrors();
+
+// Verify that swapping the reporter actually changes where things are outputted.
+void ReporterWritesToLogSink();
+void ReporterSetLogSink();
 
 // Verify that the current Filter implementation matches gTest expectations.
 void FilterOpFilterEmptyMatchesAll();
@@ -191,6 +199,8 @@ static constexpr RegisteredTest kRegisteredTests[] = {
     RUN_TEST(EventBroadcasterOnEnvironmentTearDown),
     RUN_TEST(EventBroadcasterOnIterationEnd),
     RUN_TEST(EventBroadcasterOnProgramEnd),
+    RUN_TEST(FileLogSinkWrite),
+    RUN_TEST(FileLogSinkCallCloserOnDestruction),
     RUN_TEST(RunnerRegisterTest),
     RUN_TEST(RunnerRegisterTestWithCustomFactory),
     RUN_TEST(RunnerLifecycleObserversRegisteredAndNotified),
@@ -200,6 +210,8 @@ static constexpr RegisteredTest kRegisteredTests[] = {
     RUN_TEST(RunnerSetUpAndTearDownEnvironmentsTests),
     RUN_TEST(RunnerRunOnlyFilteredTests),
     RUN_TEST(RunnerListTests),
+    RUN_TEST(ReporterSetLogSink),
+    RUN_TEST(ReporterWritesToLogSink),
     RUN_TEST(TestDriverImplFatalFailureEndsTest),
     RUN_TEST(TestDriverImplNonFatalFailureDoesNotEndTest),
     RUN_TEST(TestDriverImplReset),

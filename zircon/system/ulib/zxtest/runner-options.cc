@@ -9,6 +9,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/function.h>
 #include <fbl/string_printf.h>
+#include <zxtest/base/log-sink.h>
 #include <zxtest/base/runner.h>
 
 namespace zxtest {
@@ -63,9 +64,9 @@ constexpr char kUsageMsg[] = R"(
 
 }  // namespace
 
-void Options::Usage(char* bin, FILE* stream) {
-  fprintf(stream, "    Usage: %s  [OPTIONS]\n", bin);
-  fprintf(stream, kUsageMsg);
+void Options::Usage(char* bin, LogSink* sink) {
+  sink->Write("    Usage: %s  [OPTIONS]\n", bin);
+  sink->Write(kUsageMsg);
 }
 
 Options Options::FromArgs(int argc, char** argv, fbl::Vector<fbl::String>* errors) {

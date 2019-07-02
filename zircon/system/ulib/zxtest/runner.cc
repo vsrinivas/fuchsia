@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <utility>
+
 #include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
+#include <zxtest/base/log-sink.h>
 #include <zxtest/base/runner.h>
 
 namespace zxtest {
@@ -147,20 +150,16 @@ void Runner::List(const Runner::Options& options) {
   auto reset_options = fbl::MakeAutoCall([this]() { options_ = nullptr; });
   summary_.total_iterations = options.repeat;
   EnforceOptions(options);
-  FILE* output = reporter_.stream();
-
-  if (output == nullptr) {
-    return;
-  }
 
   for (const auto& test_case : test_cases_) {
     if (test_case.MatchingTestCount() == 0) {
       continue;
     }
 
-    fprintf(output, "%s\n", test_case.name().c_str());
+    reporter_.mutable_log_sink()->Write("%s\n", test_case.name().c_str());
     for (size_t i = 0; i < test_case.MatchingTestCount(); ++i) {
-      fprintf(output, "  .%s\n", test_case.GetMatchingTestInfo(i).name().c_str());
+      reporter_.mutable_log_sink()->Write("  .%s\n",
+                                          test_case.GetMatchingTestInfo(i).name().c_str());
     }
   }
 }
@@ -185,12 +184,13 @@ void Runner::NotifyAssertion(const Assertion& assertion) {
 }
 
 Runner* Runner::GetInstance() {
-  static Runner runner = Runner(Reporter(stdout));
+  static Runner runner = Runner(Reporter(std::make_unique<FileLogSink>(stdout)));
   return &runner;
 }
 
 int RunAllTests(int argc, char** argv) {
   fbl::Vector<fbl::String> errors;
+  LogSink* log_sink = Runner::GetInstance()->mutable_reporter()->mutable_log_sink();
   Runner::Options options = Runner::Options::FromArgs(argc, argv, &errors);
 
   if (!errors.is_empty()) {
@@ -202,7 +202,7 @@ int RunAllTests(int argc, char** argv) {
 
   // Errors will always set help to true.
   if (options.help) {
-    Runner::Options::Usage(argv[0], stdout);
+    Runner::Options::Usage(argv[0], log_sink);
     return errors.is_empty();
   }
 

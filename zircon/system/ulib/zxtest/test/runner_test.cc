@@ -32,6 +32,10 @@ constexpr char kTestCaseName2[] = "TestCase2";
 constexpr char kFileName[] = "filename.cc";
 constexpr int kLineNumber = 20;
 
+Reporter MakeSilentReporter() {
+  return Reporter(std::make_unique<FileLogSink>(nullptr));
+}
+
 // Test fixture that runs a given closure.
 class FakeTest : public zxtest::Test {
  public:
@@ -73,7 +77,7 @@ class FailingTest : public zxtest::Test {
 }  // namespace
 
 void RunnerRegisterTest() {
-  Runner runner(Reporter(/*stream*/ nullptr));
+  Runner runner(MakeSilentReporter());
 
   TestRef ref =
       runner.RegisterTest<Test, FakeTest>(kTestCaseName, kTestName, kFileName, kLineNumber);
@@ -94,7 +98,7 @@ void RunnerRegisterTest() {
 }
 
 void RunnerRegisterTestWithCustomFactory() {
-  Runner runner(Reporter(/*stream*/ nullptr));
+  Runner runner(MakeSilentReporter());
   int test_counter = 0;
 
   TestRef ref = runner.RegisterTest<Test, FakeTest>(
@@ -116,7 +120,7 @@ void RunnerRegisterTestWithCustomFactory() {
 }
 
 void RunnerRunAllTests() {
-  Runner runner(Reporter(/*stream*/ nullptr));
+  Runner runner(MakeSilentReporter());
   int test_counter = 0;
   int test_2_counter = 0;
 
@@ -176,7 +180,7 @@ class FakeRepeatingTest : public zxtest::Test {
 };
 
 void RunnerRunAllTestsUntilFailure() {
-  Runner runner(Reporter(/*stream*/ nullptr));
+  Runner runner(MakeSilentReporter());
   int test_counter = 0;
   constexpr int kAttemptsUntilFailure = 10;
 
@@ -237,7 +241,7 @@ class FakeEnv : public zxtest::Environment {
 };
 
 void RunnerSetUpAndTearDownEnvironmentsTests() {
-  Runner runner(Reporter(/*stream*/ nullptr));
+  Runner runner(MakeSilentReporter());
   int test_counter = 0;
   int tear_down_counter = 1;
   int set_up_counter = 1;
@@ -261,7 +265,7 @@ void RunnerSetUpAndTearDownEnvironmentsTests() {
 }
 
 void RunnerRunOnlyFilteredTests() {
-  Runner runner(Reporter(/*stream*/ nullptr));
+  Runner runner(MakeSilentReporter());
   int test_counter = 0;
   int test_2_counter = 0;
   Runner::Options options = Runner::kDefaultOptions;
@@ -323,7 +327,7 @@ void RunnerLifecycleObserversRegisteredAndNotified() {
   FakeObserver1 obs;
   FakeObserver2 obs2;
 
-  Runner runner(Reporter(/*stream*/ nullptr));
+  Runner runner(MakeSilentReporter());
   runner.AddObserver(&obs);
   runner.AddObserver(&obs2);
   runner.RegisterTest<Test, FakeTest>(kTestCaseName, kTestName, kFileName, kLineNumber,
@@ -358,7 +362,7 @@ void RunnerLifecycleObserversRegisteredAndNotified() {
 }
 
 void RunnerRunAllTestsSameTestCase() {
-  Runner runner(Reporter(/*stream*/ nullptr));
+  Runner runner(MakeSilentReporter());
   int test_counter = 0;
   int test_2_counter = 0;
 
@@ -388,7 +392,7 @@ void RunnerRunAllTestsSameTestCase() {
 }
 
 void RunnerRunReturnsNonZeroOnTestFailure() {
-  Runner runner(Reporter(/*stream*/ nullptr));
+  Runner runner(MakeSilentReporter());
   runner.RegisterTest<Test, FailingTest>(kTestCaseName, kTestName, kFileName, kLineNumber,
                                          FailingTest::MakeFactory(&runner));
 
@@ -402,8 +406,9 @@ void RunnerListTests() {
       "TestCase\n  .TestName\n  .TestName2\nTestCase2\n  .TestName\n  .TestName2\n";
   char buffer[100];
   memset(buffer, '\0', 100);
-  FILE* memfile = fmemopen(buffer, 1024, "a");
-  Runner runner((Reporter(/*stream*/ memfile)));
+  FILE* memfile = fmemopen(buffer, 100, "a");
+  Runner runner(
+      Reporter(std::make_unique<FileLogSink>(memfile, [](FILE* memfile) { fclose(memfile); })));
 
   // Register 2 testcases and 2 tests.
   runner.RegisterTest<Test, FakeTest>(kTestCaseName, kTestName, kFileName, kLineNumber);
@@ -414,8 +419,6 @@ void RunnerListTests() {
   runner.List(Runner::kDefaultOptions);
   fflush(memfile);
   ZX_ASSERT_MSG(strcmp(kExpectedOutput, buffer) == 0, "List output mismatch.");
-
-  fclose(memfile);
 }
 
 void TestDriverImplReset() {

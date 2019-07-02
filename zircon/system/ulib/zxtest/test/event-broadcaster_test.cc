@@ -109,6 +109,10 @@ void ValidateAllObserversNotified(const T& observers) {
   }
 }
 
+Reporter MakeSilentReporter() {
+  return Reporter(std::make_unique<FileLogSink>(nullptr));
+}
+
 }  // namespace
 
 void EventBroadcasterOnProgramStart() {
@@ -117,7 +121,7 @@ void EventBroadcasterOnProgramStart() {
   internal::EventBroadcaster event_broadcaster;
   fbl::Vector<FakeObserver> observers;
   observers.reserve(kNumObservers);
-  Runner runner(Reporter(/*stream*/ nullptr));
+  Runner runner(MakeSilentReporter());
 
   REGISTER_OBSERVERS(observers, event_broadcaster, [&runner](const Runner& actual_runner) {
     ZX_ASSERT_MSG(&actual_runner == &runner,
@@ -135,7 +139,7 @@ void EventBroadcasterOnIterationStart() {
   internal::EventBroadcaster event_broadcaster;
   fbl::Vector<FakeObserver> observers;
   observers.reserve(kNumObservers);
-  Runner runner(Reporter(/*stream*/ nullptr));
+  Runner runner(MakeSilentReporter());
 
   REGISTER_OBSERVERS(
       observers, event_broadcaster, [&runner](const Runner& actual_runner, int iteration) {
@@ -156,7 +160,7 @@ void EventBroadcasterOnEnvironmentSetUp() {
   internal::EventBroadcaster event_broadcaster;
   fbl::Vector<FakeObserver> observers;
   observers.reserve(kNumObservers);
-  Runner runner(Reporter(/*stream*/ nullptr));
+  Runner runner(MakeSilentReporter());
 
   REGISTER_OBSERVERS(observers, event_broadcaster, [&runner](const Runner& actual_runner) {
     ZX_ASSERT_MSG(&actual_runner == &runner,
@@ -317,7 +321,7 @@ void EventBroadcasterOnEnvironmentTearDown() {
   internal::EventBroadcaster event_broadcaster;
   fbl::Vector<FakeObserver> observers;
   observers.reserve(kNumObservers);
-  Runner runner(Reporter(/*stream*/ nullptr));
+  Runner runner(MakeSilentReporter());
 
   REGISTER_OBSERVERS(observers, event_broadcaster, [&runner](const Runner& actual_runner) {
     ZX_ASSERT_MSG(&actual_runner == &runner,
@@ -335,7 +339,7 @@ void EventBroadcasterOnIterationEnd() {
   internal::EventBroadcaster event_broadcaster;
   fbl::Vector<FakeObserver> observers;
   observers.reserve(kNumObservers);
-  Runner runner(Reporter(/*stream*/ nullptr));
+  Runner runner(MakeSilentReporter());
 
   REGISTER_OBSERVERS(
       observers, event_broadcaster, [&runner](const Runner& actual_runner, int iteration) {
@@ -357,7 +361,7 @@ void EventBroadcasterOnProgramEnd() {
   internal::EventBroadcaster event_broadcaster;
   fbl::Vector<FakeObserver> observers;
   observers.reserve(kNumObservers);
-  Runner runner(Reporter(/*stream*/ nullptr));
+  Runner runner(MakeSilentReporter());
 
   REGISTER_OBSERVERS(observers, event_broadcaster, [&runner](const Runner& actual_runner) {
     ZX_ASSERT_MSG(&actual_runner == &runner,

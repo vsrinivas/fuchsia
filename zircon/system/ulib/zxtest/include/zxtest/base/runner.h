@@ -12,6 +12,7 @@
 #include <zxtest/base/assertion.h>
 #include <zxtest/base/environment.h>
 #include <zxtest/base/event-broadcaster.h>
+#include <zxtest/base/log-sink.h>
 #include <zxtest/base/observer.h>
 #include <zxtest/base/reporter.h>
 #include <zxtest/base/test-case.h>
@@ -116,7 +117,7 @@ class Runner {
     static Options FromArgs(int argc, char** argv, fbl::Vector<fbl::String>* errors);
 
     // Prints the usage message into the |stream|.
-    static void Usage(char* bin, FILE* stream);
+    static void Usage(char* bin, LogSink* sink);
 
     // Pattern for filtering tests. Empty pattern matches all.
     fbl::String filter;
@@ -226,6 +227,11 @@ class Runner {
   // end test execution.
   void NotifyFatalError() {
     fatal_error_ = true;
+  }
+
+  // Returns a pointer to the |LogSink| where the |reporter_| is running to.
+  Reporter* mutable_reporter() {
+    return &reporter_;
   }
 
  private:
