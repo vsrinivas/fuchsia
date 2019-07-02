@@ -48,7 +48,7 @@ static pbus_bti_t mali_btis[] = {
 };
 
 static pbus_dev_t mali_dev = []() {
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "mali";
     dev.vid = PDEV_VID_AMLOGIC;
     dev.pid = PDEV_PID_AMLOGIC_T931;

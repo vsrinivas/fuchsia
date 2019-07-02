@@ -53,7 +53,7 @@ constexpr pbus_irq_t gdc_irqs[] = {
 
 static pbus_dev_t gdc_dev = []() {
     // GDC
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "gdc";
     dev.vid = PDEV_VID_ARM;
     dev.pid = PDEV_PID_GDC;
@@ -112,7 +112,7 @@ static const pbus_irq_t isp_irqs[] = {
 
 static pbus_dev_t isp_dev = []() {
     // ISP
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "isp";
     dev.vid = PDEV_VID_ARM;
     dev.pid = PDEV_PID_ISP;
@@ -248,7 +248,7 @@ constexpr pbus_irq_t mipi_irqs[] = {
 // Binding rules for MIPI Driver
 static const pbus_dev_t mipi_dev = []() {
     // MIPI CSI PHY ADAPTER
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "mipi-csi2";
     dev.vid = PDEV_VID_AMLOGIC;
     dev.pid = PDEV_PID_AMLOGIC_T931;

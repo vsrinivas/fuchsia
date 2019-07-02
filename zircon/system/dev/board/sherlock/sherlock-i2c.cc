@@ -115,7 +115,7 @@ static const pbus_metadata_t i2c_metadata[] = {
 };
 
 static pbus_dev_t i2c_dev = []() {
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "gpio";
     dev.vid = PDEV_VID_AMLOGIC;
     dev.pid = PDEV_PID_GENERIC;

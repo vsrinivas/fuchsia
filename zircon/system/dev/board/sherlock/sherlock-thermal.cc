@@ -234,7 +234,7 @@ static const pbus_metadata_t thermal_metadata[] = {
 };
 
 static pbus_dev_t thermal_dev = []() {
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "aml-thermal";
     dev.vid = PDEV_VID_AMLOGIC;
     dev.pid = PDEV_PID_AMLOGIC_S905D2;

@@ -83,7 +83,7 @@ constexpr pbus_metadata_t sd_emmc_metadata[] = {
 };
 
 const pbus_dev_t sdio_dev = []() {
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "sherlock-sd-emmc";
     dev.vid = PDEV_VID_AMLOGIC;
     dev.pid = PDEV_PID_GENERIC;

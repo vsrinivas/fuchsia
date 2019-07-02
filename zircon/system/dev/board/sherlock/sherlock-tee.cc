@@ -41,7 +41,7 @@ static const pbus_smc_t sherlock_tee_smcs[] = {
 };
 
 static pbus_dev_t tee_dev = []() {
-    pbus_dev_t tee_dev;
+    pbus_dev_t tee_dev = {};
     tee_dev.name = "tee";
     tee_dev.vid = PDEV_VID_GENERIC;
     tee_dev.pid = PDEV_PID_GENERIC;

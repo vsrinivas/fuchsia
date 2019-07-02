@@ -23,7 +23,7 @@
 namespace sherlock {
 
 static pbus_dev_t rtc_dev = []() {
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "rtc";
     dev.vid = PDEV_VID_GENERIC;
     dev.pid = PDEV_PID_GENERIC;

@@ -83,7 +83,7 @@ static const pbus_metadata_t spi_metadata[] = {
 };
 
 static pbus_dev_t spi_dev = []() {
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "spi";
     dev.vid = PDEV_VID_AMLOGIC;
     dev.pid = PDEV_PID_GENERIC;

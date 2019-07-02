@@ -30,7 +30,7 @@ static const pbus_bti_t sherlock_canvas_btis[] = {
 };
 
 static pbus_dev_t canvas_dev = []() {
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "canvas";
     dev.vid = PDEV_VID_AMLOGIC;
     dev.pid = PDEV_PID_GENERIC;

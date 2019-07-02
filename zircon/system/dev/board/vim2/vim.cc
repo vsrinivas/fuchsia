@@ -36,7 +36,7 @@ namespace vim {
 
 // TODO(rjascani): Remove this when not needed for testing any longer
 const pbus_dev_t tee_dev = []() {
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "tee";
     dev.vid = PDEV_VID_GENERIC;
     dev.pid = PDEV_PID_GENERIC;

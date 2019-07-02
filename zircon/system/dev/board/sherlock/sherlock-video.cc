@@ -75,7 +75,7 @@ static const pbus_smc_t sherlock_video_smcs[] = {
 };
 
 static pbus_dev_t video_dev = []() {
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "aml-video";
     dev.vid = PDEV_VID_AMLOGIC;
     dev.pid = PDEV_PID_AMLOGIC_T931;

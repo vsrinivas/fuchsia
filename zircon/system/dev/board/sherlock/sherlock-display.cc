@@ -91,7 +91,7 @@ constexpr pbus_mmio_t dsi_mmios[] = {
 };
 
 static pbus_dev_t display_dev = []() {
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "display";
     dev.vid = PDEV_VID_AMLOGIC;
     dev.pid = PDEV_PID_AMLOGIC_S905D2;
@@ -106,7 +106,7 @@ static pbus_dev_t display_dev = []() {
 }();
 
 static pbus_dev_t dsi_dev = []() {
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "dw-dsi";
     dev.vid = PDEV_VID_GENERIC;
     dev.pid = PDEV_PID_GENERIC;

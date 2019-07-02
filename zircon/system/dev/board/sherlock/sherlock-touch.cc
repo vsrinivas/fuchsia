@@ -31,7 +31,7 @@ static const pbus_metadata_t ft5726_touch_metadata[] = {
 };
 
 const pbus_dev_t ft5726_touch_dev = []() {
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "ft5726-touch";
     dev.vid = PDEV_VID_GENERIC;
     dev.pid = PDEV_PID_SHERLOCK;

@@ -89,7 +89,7 @@ static const pbus_metadata_t eth_board_metadata[] = {
 };
 
 static pbus_dev_t eth_board_dev = [](){
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "ethernet_mac";
     dev.vid = PDEV_VID_AMLOGIC;
     dev.pid = PDEV_PID_AMLOGIC_S912;
@@ -102,7 +102,7 @@ static pbus_dev_t eth_board_dev = [](){
 }();
 
 static pbus_dev_t dwmac_dev = [](){
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "dwmac";
     dev.vid = PDEV_VID_DESIGNWARE;
     dev.did = PDEV_DID_ETH_MAC;

@@ -185,7 +185,7 @@ static const pbus_metadata_t usb_phy_metadata[] = {
 };
 
 static const pbus_dev_t usb_phy_dev = [](){
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "aml-usb-phy-v2";
     dev.vid = PDEV_VID_AMLOGIC;
     dev.did = PDEV_DID_AML_USB_PHY_V2;

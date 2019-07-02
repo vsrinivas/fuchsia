@@ -72,7 +72,7 @@ static const pbus_metadata_t aml_sd_emmc_metadata[] = {
 };
 
 static const pbus_dev_t aml_sd_emmc_dev = []() {
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
 
     dev.name = "aml-sdio";
     dev.vid = PDEV_VID_AMLOGIC;

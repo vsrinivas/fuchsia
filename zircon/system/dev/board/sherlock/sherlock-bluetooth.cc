@@ -56,7 +56,7 @@ constexpr pbus_boot_metadata_t bt_uart_boot_metadata[] = {
 };
 
 const pbus_dev_t bt_uart_dev = []() {
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "bt-uart";
     dev.vid = PDEV_VID_AMLOGIC;
     dev.pid = PDEV_PID_GENERIC;

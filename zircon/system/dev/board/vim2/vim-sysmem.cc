@@ -31,7 +31,7 @@ static const pbus_metadata_t sysmem_metadata_list[] = {
     }};
 
 static const pbus_dev_t sysmem_dev = []() {
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "sysmem";
     dev.vid = PDEV_VID_GENERIC;
     dev.pid = PDEV_PID_GENERIC;

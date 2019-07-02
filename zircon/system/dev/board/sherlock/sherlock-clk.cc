@@ -42,7 +42,7 @@ static const pbus_metadata_t clock_metadata[] = {
 };
 
 static pbus_dev_t clk_dev = []() {
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "sherlock-clk",
     dev.vid = PDEV_VID_AMLOGIC;
     dev.did = PDEV_DID_AMLOGIC_G12B_CLK;

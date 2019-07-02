@@ -118,7 +118,7 @@ constexpr pbus_mmio_t usb_phy_mmios[] = {
 };
 
 static const pbus_dev_t usb_phy_dev = [](){
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "aml-usb-phy-v2";
     dev.vid = PDEV_VID_SYNAPTICS;
     dev.pid = PDEV_PID_SYNAPTICS_AS370;

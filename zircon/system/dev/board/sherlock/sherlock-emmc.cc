@@ -84,7 +84,7 @@ static const pbus_boot_metadata_t emmc_boot_metadata[] = {
 };
 
 static pbus_dev_t emmc_dev = [](){
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "sherlock-emmc";
     dev.vid = PDEV_VID_AMLOGIC;
     dev.pid = PDEV_PID_GENERIC;

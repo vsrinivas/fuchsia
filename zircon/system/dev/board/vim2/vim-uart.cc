@@ -57,7 +57,7 @@ static const pbus_metadata_t bt_uart_metadata[] = {
 };
 
 static pbus_dev_t bt_uart_dev = [] {
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "bt-uart";
     dev.vid = PDEV_VID_AMLOGIC;
     dev.pid = PDEV_PID_GENERIC;
@@ -103,7 +103,7 @@ static const pbus_metadata_t header_metadata[] = {
 };
 
 static pbus_dev_t header_uart_dev = []() {
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "header-uart";
     dev.vid = PDEV_VID_AMLOGIC;
     dev.pid = PDEV_PID_GENERIC;

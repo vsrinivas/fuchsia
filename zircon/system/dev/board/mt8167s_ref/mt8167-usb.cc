@@ -62,7 +62,7 @@ static pbus_metadata_t usb_metadata[] = {
 };
 
 const pbus_dev_t usb_dci_dev = [](){
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "mt-usb-dci";
     dev.vid = PDEV_VID_MEDIATEK;
     dev.did = PDEV_DID_MUSB_PERIPHERAL;
@@ -97,7 +97,7 @@ constexpr pbus_irq_t usb_hci_irqs[] = {
 };
 
 const pbus_dev_t usb_hci_dev = [](){
-    pbus_dev_t dev;
+    pbus_dev_t dev = {};
     dev.name = "mt-usb-hci";
     dev.vid = PDEV_VID_MEDIATEK;
     dev.did = PDEV_DID_MUSB_HOST;
