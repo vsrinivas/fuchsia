@@ -218,7 +218,12 @@ MdnsServiceImpl::Subscriber::Subscriber(
   });
 }
 
-MdnsServiceImpl::Subscriber::~Subscriber() {}
+MdnsServiceImpl::Subscriber::~Subscriber() {
+  client_.set_error_handler(nullptr);
+  if (client_.is_bound()) {
+    client_.Unbind();
+  }
+}
 
 void MdnsServiceImpl::Subscriber::InstanceDiscovered(const std::string& service,
                                                      const std::string& instance,
@@ -364,6 +369,13 @@ MdnsServiceImpl::ResponderPublisher::ResponderPublisher(
   };
 
   responder_.events().Reannounce = [this]() { Reannounce(); };
+}
+
+MdnsServiceImpl::ResponderPublisher::~ResponderPublisher() {
+  responder_.set_error_handler(nullptr);
+  if (responder_.is_bound()) {
+    responder_.Unbind();
+  }
 }
 
 void MdnsServiceImpl::ResponderPublisher::ReportSuccess(bool success) {

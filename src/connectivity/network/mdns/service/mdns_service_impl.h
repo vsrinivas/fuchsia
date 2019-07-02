@@ -126,6 +126,8 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
     ResponderPublisher(fuchsia::net::mdns::PublicationResponderPtr responder,
                        PublishServiceInstanceCallback callback, fit::closure deleter);
 
+    ~ResponderPublisher() override;
+
     // Mdns::Publisher implementation.
     void ReportSuccess(bool success) override;
 
