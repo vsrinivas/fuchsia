@@ -43,7 +43,7 @@ group("framework_experimental") {
 group("testing") {
   testonly = true
   public_deps = [
-    "//peridot/packages/tests:modular_test_harness",
+    "//peridot/packages/testing:modular_test_harness",
   ]
 }
 
@@ -52,6 +52,7 @@ group("tests") {
   testonly = true
   public_deps = [
     ":testing",
+    "//peridot/packages/tests:modular_test_harness",
     "//src/modular:tests",
   ]
 }

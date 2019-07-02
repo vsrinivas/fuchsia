@@ -11,6 +11,7 @@ group("all") {
     "//peridot/packages/benchmarks:all",
     "//peridot/packages/examples:all",
     "//peridot/packages/prod:all",
+    "//peridot/packages/testing:all",
     "//peridot/packages/tests:all",
     "//peridot/packages/tools:all",
   ]

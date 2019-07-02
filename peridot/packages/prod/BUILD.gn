@@ -79,7 +79,7 @@ group("integration_testing") {
     "//peridot/packages/prod:dev_base_shell",
     "//peridot/packages/prod:discover",
     "//peridot/packages/prod:modular",
-    "//peridot/packages/tests:modular_test_harness",
+    "//peridot/packages/testing:modular_test_harness",
   ]
 }
 

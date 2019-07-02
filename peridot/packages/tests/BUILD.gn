@@ -62,7 +62,7 @@ group("modular_test_harness") {
   testonly = true
   public_deps = [
     "//garnet/packages/testing:environment_delegating_runner",
-    "//peridot/bin/modular_test_harness",
+    "//peridot/bin/modular_test_harness:tests",
     "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture_test",
   ]
 }

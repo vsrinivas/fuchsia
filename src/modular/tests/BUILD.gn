@@ -13,7 +13,7 @@ group("tests") {
     # modular_test_harness is a dep for any test that uses test_harness_fixture
     # (all of the tests below). Add it here so that an fx set --with
     # //src/modular/tests includes it.
-    "//peridot/packages/tests:modular_test_harness",
+    "//peridot/packages/testing:modular_test_harness",
   ]
 }
 
