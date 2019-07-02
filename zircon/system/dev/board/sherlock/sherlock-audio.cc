@@ -147,7 +147,7 @@ zx_status_t Sherlock::AudioInit() {
         },
     };
 
-    pbus_dev_t pdm_dev;
+    pbus_dev_t pdm_dev = {};
     pdm_dev.name = "SherlockAudioIn";
     pdm_dev.vid = PDEV_VID_AMLOGIC;
     pdm_dev.pid = PDEV_PID_AMLOGIC_T931;
