@@ -68,20 +68,17 @@ zx_status_t SpawnBinaryInRealmAsync(
     return ZX_ERR_INVALID_ARGS;
   }
   error->clear();
-  // Get the process's namespace.
-  fdio_ns_t* ns = nullptr;
-  zx_status_t status = fdio_ns_get_installed(&ns);
-  if (status != ZX_OK) {
-    *error = "Could not obtain namespace";
-    return status;
-  }
 
   // Open the provided path, which is the realm's hub directory.
-  zx_handle_t realm_hub_dir = ZX_HANDLE_INVALID;
-  status = fdio_ns_open(ns,
-                        realm_path.c_str(),
-                        ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
-                        &realm_hub_dir);
+  zx::channel realm_hub_dir, realm_hub_server;
+  zx_status_t status = zx::channel::create(0, &realm_hub_dir, &realm_hub_server);
+  if (status != ZX_OK) {
+    *error = "Could not create channel";
+    return status;
+  }
+  status = fdio_open(realm_path.c_str(),
+                     ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
+                     realm_hub_server.release());
   if (status != ZX_OK) {
     *error = fxl::StringPrintf("Could not open hub in realm: %s",
                                realm_path.c_str());
@@ -89,12 +86,16 @@ zx_status_t SpawnBinaryInRealmAsync(
   }
 
   // Open the services dir in the realm's hub directory.
-  zx_handle_t realm_svc_dir = ZX_HANDLE_INVALID;
+  zx::channel realm_svc_dir, realm_svc_server;
+  status = zx::channel::create(0, &realm_svc_dir, &realm_svc_server);
+  if (status != ZX_OK) {
+    *error = "Could not create channel";
+    return status;
+  }
   const std::string svc_path = fxl::Concatenate({realm_path, "/svc"});
-  status = fdio_ns_open(ns,
-                        svc_path.c_str(),
-                        ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
-                        &realm_svc_dir);
+  status = fdio_open(svc_path.c_str(),
+                     ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
+                     realm_svc_server.release());
   if (status != ZX_OK) {
     *error =
         fxl::StringPrintf("Could not open svc in realm: %s", svc_path.c_str());
@@ -106,7 +107,7 @@ zx_status_t SpawnBinaryInRealmAsync(
     // Open the realm's job.
     fuchsia::sys::JobProviderSyncPtr job_provider;
     status = fdio_service_connect_at(
-        realm_hub_dir, "job",
+        realm_hub_dir.get(), "job",
         job_provider.NewRequest().TakeChannel().release());
     if (status != ZX_OK) {
       *error = fxl::StringPrintf("Could not connect to job provider: %s",
@@ -126,7 +127,7 @@ zx_status_t SpawnBinaryInRealmAsync(
 
   // Convert 'ns' to a flat namespace and replace /svc and /hub.
   fdio_flat_namespace_t* flat_ns = nullptr;
-  status = fdio_ns_export(ns, &flat_ns);
+  status = fdio_ns_export_root(&flat_ns);
   if (status != ZX_OK) {
     *error = "Could not flatten namespace";
     return status;
@@ -140,9 +141,9 @@ zx_status_t SpawnBinaryInRealmAsync(
   for (size_t i = 0; i < flat_ns->count; ++i) {
     zx_handle_t handle;
     if (std::string(flat_ns->path[i]) == "/svc") {
-      handle = realm_svc_dir;
+      handle = realm_svc_dir.release();
     } else if (std::string(flat_ns->path[i]) == "/hub") {
-      handle = realm_hub_dir;
+      handle = realm_hub_dir.release();
     } else {
       handle = flat_ns->handle[i];
     }

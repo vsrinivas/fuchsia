@@ -90,14 +90,6 @@ zx_status_t fdio_ns_export_root(fdio_flat_namespace_t** out);
 zx_status_t fdio_ns_connect(fdio_ns_t* ns, const char* path,
                             uint32_t zxflags, zx_handle_t h);
 
-// Attempt a pipelined open through a namespace.
-// Success only indicates that the open was sent.
-// If the remote fails, the returned handle's peer will be closed.
-// The path must be an absolute path starting with / and containing
-// no ".." or "." or empty segments.
-zx_status_t fdio_ns_open(fdio_ns_t* ns, const char* path,
-                         uint32_t zxflags, zx_handle_t* out);
-
 // Frees a flat namespace.
 // Closes all handles contained within |ns|.
 void fdio_ns_free_flat_ns(fdio_flat_namespace_t* ns);

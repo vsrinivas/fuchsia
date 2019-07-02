@@ -30,20 +30,6 @@ zx_status_t fdio_ns_connect(fdio_ns_t* ns, const char* path, uint32_t flags,
 }
 
 __EXPORT
-zx_status_t fdio_ns_open(fdio_ns_t* ns, const char* path, uint32_t flags, zx_handle_t* out) {
-    zx::channel client, server;
-    if (zx::channel::create(0, &client, &server) != ZX_OK) {
-        return ZX_ERR_INTERNAL;
-    }
-    zx_status_t status = fdio_ns_connect(ns, path, flags, server.release());
-    if (status != ZX_OK) {
-        return status;
-    }
-    *out = client.release();
-    return ZX_OK;
-}
-
-__EXPORT
 zx_status_t fdio_ns_create(fdio_ns_t** out) {
     // Create a ref-counted object, and leak the reference that is returned
     // via the C API.
