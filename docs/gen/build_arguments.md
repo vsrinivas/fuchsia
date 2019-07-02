@@ -350,7 +350,7 @@ From //build/config/BUILD.gn:9
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/b19842d25c9ea4f5c6cbf4f368e63422c84df10f/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/1644b7724de52591bfb57fb8ac7b1a985ace9d58/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 TODO(scottmg): https://crbug.com/crashpad/266 fuchsia:DX-690: BoringSSL
@@ -359,7 +359,7 @@ a BoringSSL lib again.
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/b19842d25c9ea4f5c6cbf4f368e63422c84df10f/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/1644b7724de52591bfb57fb8ac7b1a985ace9d58/util/net/tls.gni#21)
 
 ### create_kernel_service_snapshot
 
