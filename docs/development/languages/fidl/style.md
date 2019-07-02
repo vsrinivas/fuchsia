@@ -336,9 +336,11 @@ should always be in code font.
 A documented entity is any FIDL element that has a comment attached. The first
 reference to any documented entity in a comment should be given with its fully
 qualified name, in the form ``[`<library>/<top level declaration>.<member>`]``
-(e.g., ``[`fuchsia.io/Node.clone`]``). Subsequent references to that documented
-entity can use an abbreviated version, as long as that abbreviated version is
-unambiguous (e.g., `clone`).
+(e.g., ``[`fuchsia.io/Node.clone`]``). This form may generate a hyperlink, if
+the tooling supports it.  Subsequent references to that documented entity can
+use an abbreviated version, as long as that abbreviated version is unambiguous
+(e.g., `clone`). The form without brackets does not generate a hyperlink.
+
 
 Request parameters, response parameters, and error types should be documented as
 lists of the form:
