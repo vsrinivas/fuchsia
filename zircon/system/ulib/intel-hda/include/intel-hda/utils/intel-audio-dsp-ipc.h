@@ -198,25 +198,30 @@ struct AudioDataFormat {
 static_assert(sizeof(AudioDataFormat) == 24, "invalid AudioDataFormat size\n");
 
 struct BaseModuleCfg {
-  uint32_t cpc;
-  uint32_t ibs;
-  uint32_t obs;
-  uint32_t is_pages;
-  AudioDataFormat audio_fmt;
+  uint32_t cpc;               // DSP cycles required to process one input frame.
+  uint32_t ibs;               // Size of module's input frame, in bytes.
+  uint32_t obs;               // Size of module's output frame, in bytes.
+  uint32_t is_pages;          // Number of memory pages to be allocated for this module.
+  AudioDataFormat audio_fmt;  // Format of the module's input data.
 } __PACKED;
 
 struct IoPinFormat {
-  uint32_t pin_index;
-  uint32_t ibs_obs;
+  uint32_t pin_index;  // Input/output pin number.
+  uint32_t ibs_obs;    // Input/output frame size (in bytes).
   AudioDataFormat audio_fmt;
 } __PACKED;
 
 struct BaseModuleCfgExt {
-  uint16_t nb_input_pins;
-  uint16_t nb_output_pins;
+  uint16_t nb_input_pins;   // Number of input pins in |input_output_pins|.
+  uint16_t nb_output_pins;  // Number of output pins in |input_output_pins|.
   uint8_t reserved[8];
-  uint32_t priv_param_length;
-  IoPinFormat input_output_pins[];  // array of input pins followed by array of output pins
+  uint32_t priv_param_length;  // Length of module-specific parameters for this module.
+
+  // Array of input pins, followed by array of output pins.
+  //
+  // Input and output pins will not necessarily be contiguous: the
+  // |pin_index| is used, not the index of the entry in this array.
+  IoPinFormat input_output_pins[];
 } __PACKED;
 
 // Pipeline Management
