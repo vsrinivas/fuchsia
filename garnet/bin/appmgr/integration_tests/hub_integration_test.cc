@@ -97,6 +97,7 @@ TEST_F(HubTest, Services) {
         "fuchsia.device.manager.Administrator",
         "fuchsia.device.manager.DebugDumper",
         "fuchsia.kernel.DebugBroker",
+        "fuchsia.paver.Paver",
         "fuchsia.process.Launcher",
         "fuchsia.process.Resolver",
         "fuchsia.scheduler.ProfileProvider",

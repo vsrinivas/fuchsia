@@ -4,6 +4,7 @@
 
 #include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
+#include <fuchsia/paver/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/virtualconsole/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -22,6 +23,7 @@ std::vector<std::string> RootRealmServices() {
       fuchsia::device::manager::Administrator::Name_,
       fuchsia::device::manager::DebugDumper::Name_,
       fuchsia::kernel::DebugBroker::Name_,
+      fuchsia::paver::Paver::Name_,
       fuchsia::scheduler::ProfileProvider::Name_,
       fuchsia::virtualconsole::SessionManager::Name_,
   };
