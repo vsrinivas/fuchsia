@@ -18,6 +18,7 @@
 
 namespace p2p_sync {
 namespace {
+p2p_provider::P2PClientId MakeP2PClientId(uint8_t id) { return p2p_provider::P2PClientId({id}); }
 
 class TestPageStorage : public storage::PageStorageEmptyImpl {
  public:
@@ -35,7 +36,7 @@ class FuzzingP2PProvider : public p2p_provider::P2PProvider {
 
   void Start(Client* client) override { client_ = client; }
 
-  bool SendMessage(fxl::StringView destination, fxl::StringView data) override {
+  bool SendMessage(const p2p_provider::P2PClientId& client_id, fxl::StringView data) override {
     FXL_NOTIMPLEMENTED();
     return false;
   }
@@ -59,8 +60,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size) {
 
   auto page_communicator = ledger_communicator->GetPageCommunicator(&page_storage, &page_storage);
 
-  provider_ptr->client_->OnDeviceChange("device", p2p_provider::DeviceChangeType::NEW);
-  provider_ptr->client_->OnNewMessage("device", bytes);
+  provider_ptr->client_->OnDeviceChange(MakeP2PClientId(0), p2p_provider::DeviceChangeType::NEW);
+  provider_ptr->client_->OnNewMessage(MakeP2PClientId(0), bytes);
 
   return 0;
 }

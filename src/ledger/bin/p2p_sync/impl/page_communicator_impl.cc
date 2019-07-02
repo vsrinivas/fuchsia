@@ -43,10 +43,12 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
   }
 
   // Registers a new pending request to device |destination|.
-  void AddNewPendingRequest(std::string destination) { requests_.emplace(std::move(destination)); }
+  void AddNewPendingRequest(p2p_provider::P2PClientId destination) {
+    requests_.emplace(std::move(destination));
+  }
 
   // Processes the response from device |source|.
-  void Complete(fxl::StringView source, const Object* object) {
+  void Complete(const p2p_provider::P2PClientId& source, const Object* object) {
     auto it = requests_.find(source);
     if (it == requests_.end()) {
       return;
@@ -93,7 +95,7 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
   // Set of devices for which we are waiting an answer.
   // We might be able to get rid of this list and just use a counter (or even
   // nothing at all) once we have a timeout on requests.
-  std::set<std::string, convert::StringViewComparator> requests_;
+  std::set<p2p_provider::P2PClientId> requests_;
   fit::closure on_empty_;
 };
 
@@ -164,7 +166,7 @@ void PageCommunicatorImpl::set_on_delete(fit::closure on_delete) {
   on_delete_ = std::move(on_delete);
 }
 
-void PageCommunicatorImpl::OnDeviceChange(fxl::StringView remote_device,
+void PageCommunicatorImpl::OnDeviceChange(const p2p_provider::P2PClientId& remote_device,
                                           p2p_provider::DeviceChangeType change_type) {
   if (!started_ || in_destructor_) {
     return;
@@ -200,11 +202,12 @@ void PageCommunicatorImpl::OnDeviceChange(fxl::StringView remote_device,
   mesh_->Send(remote_device, buffer);
 }
 
-void PageCommunicatorImpl::OnNewRequest(fxl::StringView source, MessageHolder<Request> message) {
+void PageCommunicatorImpl::OnNewRequest(const p2p_provider::P2PClientId& source,
+                                        MessageHolder<Request> message) {
   FXL_DCHECK(!in_destructor_);
   switch (message->request_type()) {
     case RequestMessage_WatchStartRequest: {
-      MarkSyncedToPeer([this, source = source.ToString()](ledger::Status status) {
+      MarkSyncedToPeer([this, source = source](ledger::Status status) {
         if (status != ledger::Status::OK) {
           // If we fail to mark the page storage as synced to a peer, we
           // might end up in a situation of deleting from disk a partially
@@ -247,7 +250,7 @@ void PageCommunicatorImpl::OnNewRequest(fxl::StringView source, MessageHolder<Re
       break;
     }
     case RequestMessage_CommitRequest:
-      ProcessCommitRequest(source.ToString(),
+      ProcessCommitRequest(source,
                            std::move(message).TakeAndMap<CommitRequest>([](const Request* request) {
                              return static_cast<const CommitRequest*>(request->request());
                            }));
@@ -264,13 +267,14 @@ void PageCommunicatorImpl::OnNewRequest(fxl::StringView source, MessageHolder<Re
   }
 }
 
-void PageCommunicatorImpl::OnNewResponse(fxl::StringView source, MessageHolder<Response> message) {
+void PageCommunicatorImpl::OnNewResponse(const p2p_provider::P2PClientId& source,
+                                         MessageHolder<Response> message) {
   FXL_DCHECK(!in_destructor_);
   if (message->status() != ResponseStatus_OK) {
     // The namespace or page was unknown on the other side. We can probably do
     // something smart with this information (for instance, stop sending
     // requests over), but we just ignore it for now.
-    not_interested_devices_.emplace(source.ToString());
+    not_interested_devices_.emplace(source);
     return;
   }
   switch (message->response_type()) {
@@ -302,9 +306,9 @@ void PageCommunicatorImpl::OnNewResponse(fxl::StringView source, MessageHolder<R
       if (it != pending_commit_batches_.end()) {
         it->second.AddToBatch(std::move(commits));
       } else {
-        auto it_pair = pending_commit_batches_.emplace(
-            std::piecewise_construct, std::forward_as_tuple(source.ToString()),
-            std::forward_as_tuple(source.ToString(), this, storage_));
+        auto it_pair =
+            pending_commit_batches_.emplace(std::piecewise_construct, std::forward_as_tuple(source),
+                                            std::forward_as_tuple(source, this, storage_));
         it_pair.first->second.AddToBatch(std::move(commits));
       }
       break;
@@ -376,7 +380,7 @@ void PageCommunicatorImpl::OnNewCommits(
   commits_to_upload_.clear();
 }
 
-void PageCommunicatorImpl::RequestCommits(fxl::StringView device,
+void PageCommunicatorImpl::RequestCommits(const p2p_provider::P2PClientId& device,
                                           std::vector<storage::CommitId> ids) {
   flatbuffers::FlatBufferBuilder buffer;
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
@@ -494,7 +498,7 @@ void PageCommunicatorImpl::BuildCommitResponseBuffer(
   buffer->Finish(message);
 }
 
-void PageCommunicatorImpl::ProcessCommitRequest(std::string source,
+void PageCommunicatorImpl::ProcessCommitRequest(p2p_provider::P2PClientId source,
                                                 MessageHolder<CommitRequest> request) {
   coroutine_manager_.StartCoroutine(
       [this, source = std::move(source),
@@ -534,11 +538,10 @@ void PageCommunicatorImpl::ProcessCommitRequest(std::string source,
       });
 }
 
-void PageCommunicatorImpl::ProcessObjectRequest(fxl::StringView source,
+void PageCommunicatorImpl::ProcessObjectRequest(p2p_provider::P2PClientId source,
                                                 MessageHolder<ObjectRequest> request) {
-  coroutine_manager_.StartCoroutine([this, source = source.ToString(),
-                                     request =
-                                         std::move(request)](coroutine::CoroutineHandler* handler) {
+  coroutine_manager_.StartCoroutine([this, source, request = std::move(request)](
+                                        coroutine::CoroutineHandler* handler) {
     // We use a std::list so that we can keep a reference to an element
     // while adding new items.
     std::list<ObjectResponseHolder> object_responses;

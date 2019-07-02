@@ -9,13 +9,14 @@
 #include <set>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/ledger/bin/p2p_provider/public/types.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace p2p_sync {
 // DeviceMesh is used by PageCommunicators to communicate with the device mesh.
 class DeviceMesh {
  public:
-  using DeviceSet = std::set<std::string, convert::StringViewComparator>;
+  using DeviceSet = std::set<p2p_provider::P2PClientId>;
 
   DeviceMesh() {}
   virtual ~DeviceMesh() {}
@@ -24,7 +25,8 @@ class DeviceMesh {
   virtual DeviceSet GetDeviceList() = 0;
 
   // Sends the given buffer to a connected device.
-  virtual void Send(fxl::StringView device_name, convert::ExtendedStringView data) = 0;
+  virtual void Send(const p2p_provider::P2PClientId& device_name,
+                    convert::ExtendedStringView data) = 0;
 };
 
 }  // namespace p2p_sync

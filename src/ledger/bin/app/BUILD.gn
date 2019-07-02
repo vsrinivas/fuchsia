@@ -20,7 +20,6 @@ executable("app") {
     "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.net.oldhttp",
-    "//sdk/fidl/fuchsia.netconnector",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/ledger/bin/cobalt",
@@ -143,7 +142,6 @@ source_set("lib") {
     "//garnet/public/lib/inspect",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular.auth",
-    "//sdk/fidl/fuchsia.netconnector",
     "//sdk/lib/sys/cpp",
   ]
 

@@ -31,14 +31,15 @@ class LedgerCommunicatorImpl : public LedgerCommunicator {
   void set_on_delete(fit::closure on_delete);
 
   // OnDeviceChange is called each time a device connects or unconnects.
-  void OnDeviceChange(fxl::StringView remote_device, p2p_provider::DeviceChangeType change_type);
+  void OnDeviceChange(const p2p_provider::P2PClientId& remote_device,
+                      p2p_provider::DeviceChangeType change_type);
 
   // Called when a new request arrived for this ledger from device |source|.
-  void OnNewRequest(fxl::StringView source, fxl::StringView page_id,
+  void OnNewRequest(const p2p_provider::P2PClientId& source, fxl::StringView page_id,
                     MessageHolder<Request> message);
 
   // Called when a new response arrived for this ledger from device |source|.
-  void OnNewResponse(fxl::StringView source, fxl::StringView page_id,
+  void OnNewResponse(const p2p_provider::P2PClientId& source, fxl::StringView page_id,
                      MessageHolder<Response> message);
 
   // LedgerCommunicator:

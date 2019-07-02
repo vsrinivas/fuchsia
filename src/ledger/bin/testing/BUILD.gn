@@ -10,7 +10,7 @@ group("testing") {
     ":lib",
     ":unittests",
     "ledger_test_instance_provider",
-    "netconnector",
+    "overnet",
   ]
 }
 

@@ -8,6 +8,8 @@ visibility = [ "//src/ledger/*" ]
 
 source_set("impl") {
   sources = [
+    "make_client_id.cc",
+    "make_client_id.h",
     "p2p_provider_impl.cc",
     "p2p_provider_impl.h",
     "remote_connection.cc",
@@ -17,11 +19,12 @@ source_set("impl") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/netconnector/cpp",
     "//peridot/lib/convert",
-    "//sdk/fidl/fuchsia.netconnector",
+    "//sdk/fidl/fuchsia.overnet",
+    "//sdk/fidl/fuchsia.overnet.protocol",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/ledger/bin/fidl_helpers:message_relay",
     "//src/ledger/bin/filesystem",
     "//src/ledger/bin/p2p_provider/public",
     "//src/lib/fxl",
@@ -58,7 +61,7 @@ source_set("unittests") {
     "//garnet/public/lib/fsl",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/testing:lib",
-    "//src/ledger/bin/testing/netconnector",
+    "//src/ledger/bin/testing/overnet",
     "//src/lib/fxl",
 
     # gtest matchers are in gmock.

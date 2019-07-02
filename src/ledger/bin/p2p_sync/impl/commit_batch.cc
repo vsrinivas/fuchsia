@@ -8,7 +8,8 @@
 
 namespace p2p_sync {
 
-CommitBatch::CommitBatch(std::string device, Delegate* delegate, storage::PageStorage* storage)
+CommitBatch::CommitBatch(p2p_provider::P2PClientId device, Delegate* delegate,
+                         storage::PageStorage* storage)
     : device_(std::move(device)), delegate_(delegate), storage_(storage), weak_factory_(this) {}
 
 void CommitBatch::set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }

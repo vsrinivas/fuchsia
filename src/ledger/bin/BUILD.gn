@@ -35,6 +35,7 @@ executable("ledger_unittests") {
     "//src/ledger/bin/encryption/primitives:unittests",
     "//src/ledger/bin/environment:unittests",
     "//src/ledger/bin/fidl/syncable:unittests",
+    "//src/ledger/bin/fidl_helpers:unittests",
     "//src/ledger/bin/filesystem:unittests",
     "//src/ledger/bin/inspect:unittests",
     "//src/ledger/bin/lock:unittests",
@@ -49,7 +50,7 @@ executable("ledger_unittests") {
     "//src/ledger/bin/sync_coordinator/impl:unittests",
     "//src/ledger/bin/sync_helper:unittests",
     "//src/ledger/bin/testing:unittests",
-    "//src/ledger/bin/testing/netconnector:unittests",
+    "//src/ledger/bin/testing/overnet:unittests",
     "//src/lib/fxl:printers",
     "//src/lib/fxl/test:gtest_main",
   ]

@@ -42,7 +42,7 @@ executable("integration") {
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/testing:ledger_instance_factory",
     "//src/ledger/bin/testing:lib",
-    "//src/ledger/bin/testing/netconnector",
+    "//src/ledger/bin/testing/overnet",
     "//src/ledger/bin/tests/integration/sync",
     "//src/ledger/cloud_provider_in_memory/lib",
     "//src/ledger/lib/firebase_auth/testing",

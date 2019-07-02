@@ -7,11 +7,11 @@
 
 #include <flatbuffers/flatbuffers.h>
 #include <lib/fit/function.h>
-#include <lib/netconnector/cpp/message_relay.h>
 #include <lib/zx/channel.h>
 
 #include <string>
 
+#include "src/ledger/bin/fidl_helpers/message_relay.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace p2p_provider {
@@ -47,7 +47,7 @@ class RemoteConnection {
 
   bool started_ = false;
 
-  netconnector::MessageRelay message_relay_;
+  ledger::fidl_helpers::MessageRelay message_relay_;
 
   fit::closure on_empty_;
   fit::closure on_close_;

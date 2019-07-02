@@ -9,6 +9,7 @@ visibility = [ "//src/ledger/*" ]
 source_set("public") {
   sources = [
     "p2p_provider.h",
+    "types.cc",
     "types.h",
     "user_id_provider.h",
   ]
@@ -17,5 +18,7 @@ source_set("public") {
     "//src/lib/fxl",
   ]
 
-  deps = []
+  deps = [
+    "//peridot/lib/convert",
+  ]
 }

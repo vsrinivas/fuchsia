@@ -43,7 +43,8 @@ std::unique_ptr<LedgerCommunicator> UserCommunicatorImpl::GetLedgerCommunicator(
   return ledger;
 }
 
-void UserCommunicatorImpl::OnNewMessage(fxl::StringView source, fxl::StringView data) {
+void UserCommunicatorImpl::OnNewMessage(const p2p_provider::P2PClientId& source,
+                                        fxl::StringView data) {
   std::optional<MessageHolder<Message>> message = CreateMessageHolder<Message>(data, &ParseMessage);
   if (!message) {
     // Wrong serialization, abort.
@@ -102,11 +103,11 @@ void UserCommunicatorImpl::OnNewMessage(fxl::StringView source, fxl::StringView 
   }
 }
 
-void UserCommunicatorImpl::OnDeviceChange(fxl::StringView remote_device,
+void UserCommunicatorImpl::OnDeviceChange(const p2p_provider::P2PClientId& remote_device,
                                           p2p_provider::DeviceChangeType change_type) {
   switch (change_type) {
     case p2p_provider::DeviceChangeType::NEW: {
-      devices_.insert(remote_device.ToString());
+      devices_.insert(remote_device);
       break;
     }
     case p2p_provider::DeviceChangeType::DELETED: {
@@ -123,7 +124,8 @@ void UserCommunicatorImpl::OnDeviceChange(fxl::StringView remote_device,
 
 DeviceMesh::DeviceSet UserCommunicatorImpl::GetDeviceList() { return devices_; }
 
-void UserCommunicatorImpl::Send(fxl::StringView device_name, convert::ExtendedStringView data) {
+void UserCommunicatorImpl::Send(const p2p_provider::P2PClientId& device_name,
+                                convert::ExtendedStringView data) {
   p2p_provider_->SendMessage(device_name, data);
 }
 

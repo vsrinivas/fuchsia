@@ -28,7 +28,7 @@
 #include "src/ledger/bin/p2p_sync/public/user_communicator_factory.h"
 #include "src/ledger/bin/testing/ledger_app_instance_factory.h"
 #include "src/ledger/bin/testing/loop_controller_test_loop.h"
-#include "src/ledger/bin/testing/netconnector/netconnector_factory.h"
+#include "src/ledger/bin/testing/overnet/overnet_factory.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
@@ -166,27 +166,27 @@ LedgerAppInstanceImpl::~LedgerAppInstanceImpl() {
 class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
  public:
   FakeUserCommunicatorFactory(async::TestLoop* loop, async_dispatcher_t* services_dispatcher,
-                              rng::Random* random, NetConnectorFactory* netconnector_factory,
-                              std::string host_name)
+                              rng::Random* random, OvernetFactory* overnet_factory,
+                              uint64_t host_id)
       : services_dispatcher_(services_dispatcher),
         environment_(BuildEnvironment(loop, services_dispatcher, services_dispatcher,
                                       component_context_provider_.context(), random)),
-        netconnector_factory_(netconnector_factory),
-        host_name_(std::move(host_name)),
+        overnet_factory_(overnet_factory),
+        host_id_(std::move(host_id)),
         weak_ptr_factory_(this) {}
   ~FakeUserCommunicatorFactory() override {}
 
   std::unique_ptr<p2p_sync::UserCommunicator> GetUserCommunicator(
       std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider) override {
-    fuchsia::netconnector::NetConnectorPtr netconnector;
+    fuchsia::overnet::OvernetPtr overnet;
     async::PostTask(services_dispatcher_,
                     callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
-                                         [this, request = netconnector.NewRequest()]() mutable {
-                                           netconnector_factory_->AddBinding(host_name_,
-                                                                             std::move(request));
+                                         [this, request = overnet.NewRequest()]() mutable {
+                                           overnet_factory_->AddBinding(host_id_,
+                                                                        std::move(request));
                                          }));
     std::unique_ptr<p2p_provider::P2PProvider> provider =
-        std::make_unique<p2p_provider::P2PProviderImpl>(host_name_, std::move(netconnector),
+        std::make_unique<p2p_provider::P2PProviderImpl>(std::move(overnet),
                                                         std::move(user_id_provider));
     return std::make_unique<p2p_sync::UserCommunicatorImpl>(std::move(provider),
                                                             environment_.coroutine_service());
@@ -196,8 +196,8 @@ class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
   async_dispatcher_t* const services_dispatcher_;
   sys::testing::ComponentContextProvider component_context_provider_;
   Environment environment_;
-  NetConnectorFactory* const netconnector_factory_;
-  std::string host_name_;
+  OvernetFactory* const overnet_factory_;
+  uint64_t host_id_;
 
   // This must be the last field of this class.
   fxl::WeakPtrFactory<FakeUserCommunicatorFactory> weak_ptr_factory_;
@@ -232,7 +232,7 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
   std::unique_ptr<SubLoop> services_loop_;
   fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider, FakeCloudProvider> cloud_provider_;
   int app_instance_counter_ = 0;
-  NetConnectorFactory netconnector_factory_;
+  OvernetFactory overnet_factory_;
   const EnableP2PMesh enable_p2p_mesh_;
 };
 
@@ -249,10 +249,9 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
 
   std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory;
   if (enable_p2p_mesh_ == EnableP2PMesh::YES) {
-    std::string host_name = "host_" + std::to_string(app_instance_counter_);
     user_communicator_factory = std::make_unique<FakeUserCommunicatorFactory>(
-        &loop_controller_.test_loop(), services_loop_->dispatcher(), &random_,
-        &netconnector_factory_, std::move(host_name));
+        &loop_controller_.test_loop(), services_loop_->dispatcher(), &random_, &overnet_factory_,
+        app_instance_counter_);
   }
   auto result = std::make_unique<LedgerAppInstanceImpl>(
       &loop_controller_, services_loop_->dispatcher(), &random_,

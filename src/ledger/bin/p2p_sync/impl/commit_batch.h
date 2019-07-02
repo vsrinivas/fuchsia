@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "src/ledger/bin/p2p_provider/public/types.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/fxl/strings/string_view.h"
@@ -25,10 +26,11 @@ class CommitBatch {
    public:
     // Request missing commits from this batch. Commits will be added later
     // through CommitBatch::AddBatch.
-    virtual void RequestCommits(fxl::StringView device, std::vector<storage::CommitId> ids) = 0;
+    virtual void RequestCommits(const p2p_provider::P2PClientId& device,
+                                std::vector<storage::CommitId> ids) = 0;
   };
 
-  CommitBatch(std::string device, Delegate* delegate, storage::PageStorage* storage);
+  CommitBatch(p2p_provider::P2PClientId device, Delegate* delegate, storage::PageStorage* storage);
   CommitBatch(const CommitBatch&) = delete;
   const CommitBatch& operator=(const CommitBatch&) = delete;
 
@@ -43,7 +45,7 @@ class CommitBatch {
   void AddToBatch(std::vector<storage::PageStorage::CommitIdAndBytes> new_commits);
 
  private:
-  std::string const device_;
+  p2p_provider::P2PClientId const device_;
   Delegate* const delegate_;
   storage::PageStorage* const storage_;
   std::list<storage::PageStorage::CommitIdAndBytes> commits_;

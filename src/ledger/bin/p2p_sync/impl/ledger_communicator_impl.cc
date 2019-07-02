@@ -27,15 +27,15 @@ void LedgerCommunicatorImpl::set_on_delete(fit::closure on_delete) {
   on_delete_ = std::move(on_delete);
 }
 
-void LedgerCommunicatorImpl::OnDeviceChange(fxl::StringView remote_device,
+void LedgerCommunicatorImpl::OnDeviceChange(const p2p_provider::P2PClientId& remote_device,
                                             p2p_provider::DeviceChangeType change_type) {
   for (const auto& page : pages_) {
     page.second->OnDeviceChange(remote_device, change_type);
   }
 }
 
-void LedgerCommunicatorImpl::OnNewRequest(fxl::StringView source, fxl::StringView page_id,
-                                          MessageHolder<Request> message) {
+void LedgerCommunicatorImpl::OnNewRequest(const p2p_provider::P2PClientId& source,
+                                          fxl::StringView page_id, MessageHolder<Request> message) {
   const auto& it = pages_.find(page_id);
   if (it == pages_.end()) {
     // Send unknown page response.
@@ -48,7 +48,8 @@ void LedgerCommunicatorImpl::OnNewRequest(fxl::StringView source, fxl::StringVie
   it->second->OnNewRequest(source, std::move(message));
 }
 
-void LedgerCommunicatorImpl::OnNewResponse(fxl::StringView source, fxl::StringView page_id,
+void LedgerCommunicatorImpl::OnNewResponse(const p2p_provider::P2PClientId& source,
+                                           fxl::StringView page_id,
                                            MessageHolder<Response> message) {
   const auto& it = pages_.find(page_id);
   if (it == pages_.end()) {

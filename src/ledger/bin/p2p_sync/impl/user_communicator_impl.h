@@ -5,10 +5,8 @@
 #ifndef SRC_LEDGER_BIN_P2P_SYNC_IMPL_USER_COMMUNICATOR_IMPL_H_
 #define SRC_LEDGER_BIN_P2P_SYNC_IMPL_USER_COMMUNICATOR_IMPL_H_
 
-#include <fuchsia/netconnector/cpp/fidl.h>
 #include <lib/callback/auto_cleanable.h>
 #include <lib/component/cpp/service_provider_impl.h>
-#include <lib/netconnector/cpp/message_relay.h>
 
 #include <memory>
 #include <set>
@@ -41,17 +39,18 @@ class UserCommunicatorImpl : public UserCommunicator,
 
   // DeviceMesh:
   DeviceSet GetDeviceList() override;
-  void Send(fxl::StringView device_name, convert::ExtendedStringView data) override;
+  void Send(const p2p_provider::P2PClientId& device_name,
+            convert::ExtendedStringView data) override;
 
  private:
   // P2PProvider::Client
-  void OnDeviceChange(fxl::StringView remote_device,
+  void OnDeviceChange(const p2p_provider::P2PClientId& remote_device,
                       p2p_provider::DeviceChangeType change_type) override;
-  void OnNewMessage(fxl::StringView source, fxl::StringView data) override;
+  void OnNewMessage(const p2p_provider::P2PClientId& source, fxl::StringView data) override;
 
   // Set of active ledgers.
   std::map<std::string, LedgerCommunicatorImpl*, convert::StringViewComparator> ledgers_;
-  std::set<std::string, convert::StringViewComparator> devices_;
+  std::set<p2p_provider::P2PClientId> devices_;
 
   bool started_ = false;
 

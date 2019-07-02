@@ -1,0 +1,25 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//src/ledger/*" ]
+
+source_set("testing") {
+  testonly = true
+
+  sources = [
+    "make_client_id.cc",
+    "make_client_id.h",
+  ]
+
+  public_deps = [
+    "//src/ledger/bin/p2p_provider/public",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.overnet.protocol",
+    "//src/ledger/bin/p2p_provider/impl",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}

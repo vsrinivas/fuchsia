@@ -34,6 +34,7 @@ using testing::IsEmpty;
 
 namespace p2p_sync {
 namespace {
+p2p_provider::P2PClientId MakeP2PClientId(uint8_t id) { return p2p_provider::P2PClientId({id}); }
 
 // Creates a dummy object identifier.
 // |object_digest| need not be valid (wrt. internal storage constraints) as it
@@ -175,14 +176,15 @@ class FakeDeviceMesh : public DeviceMesh {
   FakeDeviceMesh() {}
   ~FakeDeviceMesh() override {}
 
-  void OnNextSend(std::string device_name, fit::closure callback) {
+  void OnNextSend(p2p_provider::P2PClientId device_name, fit::closure callback) {
     callbacks_[device_name] = std::move(callback);
   }
 
   DeviceSet GetDeviceList() override { return devices_; }
 
-  void Send(fxl::StringView device_name, convert::ExtendedStringView data) override {
-    messages_.emplace_back(std::forward_as_tuple(device_name.ToString(), data.ToString()));
+  void Send(const p2p_provider::P2PClientId& device_name,
+            convert::ExtendedStringView data) override {
+    messages_.emplace_back(std::forward_as_tuple(device_name, data.ToString()));
     auto it = callbacks_.find(device_name);
     if (it != callbacks_.end()) {
       it->second();
@@ -191,8 +193,8 @@ class FakeDeviceMesh : public DeviceMesh {
   }
 
   DeviceSet devices_;
-  std::vector<std::pair<std::string, std::string>> messages_;
-  std::map<std::string, fit::closure, convert::StringViewComparator> callbacks_;
+  std::vector<std::pair<p2p_provider::P2PClientId, std::string>> messages_;
+  std::map<p2p_provider::P2PClientId, fit::closure> callbacks_;
 };
 
 void BuildWatchStartBuffer(flatbuffers::FlatBufferBuilder* buffer, fxl::StringView namespace_id,
@@ -298,7 +300,7 @@ void BuildCommitRequestBuffer(flatbuffers::FlatBufferBuilder* buffer, fxl::Strin
   buffer->Finish(fb_message);
 }
 
-void ConnectToDevice(PageCommunicatorImpl* page_communicator, fxl::StringView device,
+void ConnectToDevice(PageCommunicatorImpl* page_communicator, p2p_provider::P2PClientId device,
                      fxl::StringView ledger, fxl::StringView page) {
   flatbuffers::FlatBufferBuilder buffer;
   BuildWatchStartBuffer(&buffer, ledger, page);
@@ -326,7 +328,7 @@ class PageCommunicatorImplTest : public gtest::TestLoopFixture {
 
 TEST_F(PageCommunicatorImplTest, ConnectToExistingMesh) {
   FakeDeviceMesh mesh;
-  mesh.devices_.emplace("device2");
+  mesh.devices_.emplace(MakeP2PClientId(2u));
   FakePageStorage storage(dispatcher(), "page");
   PageCommunicatorImpl page_communicator(&coroutine_service_, &storage, &storage, "ledger", "page",
                                          &mesh);
@@ -336,7 +338,7 @@ TEST_F(PageCommunicatorImplTest, ConnectToExistingMesh) {
   page_communicator.Start();
 
   ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ("device2", mesh.messages_[0].first);
+  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
 
   flatbuffers::Verifier verifier(
       reinterpret_cast<const unsigned char*>(mesh.messages_[0].second.data()),
@@ -364,11 +366,11 @@ TEST_F(PageCommunicatorImplTest, ConnectToNewMeshParticipant) {
 
   EXPECT_TRUE(mesh.messages_.empty());
 
-  mesh.devices_.emplace("device2");
-  page_communicator.OnDeviceChange("device2", p2p_provider::DeviceChangeType::NEW);
+  mesh.devices_.emplace(MakeP2PClientId(2u));
+  page_communicator.OnDeviceChange(MakeP2PClientId(2u), p2p_provider::DeviceChangeType::NEW);
 
   ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ("device2", mesh.messages_[0].first);
+  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
 
   flatbuffers::Verifier verifier(
       reinterpret_cast<const unsigned char*>(mesh.messages_[0].second.data()),
@@ -394,7 +396,7 @@ TEST_F(PageCommunicatorImplTest, GetObject) {
                                          &mesh);
   page_communicator.Start();
 
-  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
+  ConnectToDevice(&page_communicator, MakeP2PClientId(2u), "ledger", "page");
 
   bool called;
   ledger::Status status;
@@ -408,7 +410,7 @@ TEST_F(PageCommunicatorImplTest, GetObject) {
   EXPECT_FALSE(called);
 
   ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ("device2", mesh.messages_[0].first);
+  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
 
   flatbuffers::Verifier verifier(
       reinterpret_cast<const unsigned char*>(mesh.messages_[0].second.data()),
@@ -440,7 +442,7 @@ TEST_F(PageCommunicatorImplTest, DontGetObjectsIfMarkPageSyncedToPeerFailed) {
   // If storage fails to mark the page as synced to a peer, the mesh should not
   // be updated.
   storage.mark_synced_to_peer_status = ledger::Status::IO_ERROR;
-  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
+  ConnectToDevice(&page_communicator, MakeP2PClientId(2u), "ledger", "page");
 
   bool called;
   ledger::Status status;
@@ -473,7 +475,8 @@ TEST_F(PageCommunicatorImplTest, ObjectRequest) {
   MessageHolder<Message> request_message =
       *CreateMessageHolder<Message>(convert::ToStringView(request_buffer), &ParseMessage);
   page_communicator.OnNewRequest(
-      "device2", std::move(request_message).TakeAndMap<Request>([](const Message* message) {
+      MakeP2PClientId(2u),
+      std::move(request_message).TakeAndMap<Request>([](const Message* message) {
         return static_cast<const Request*>(message->message());
       }));
 
@@ -481,7 +484,7 @@ TEST_F(PageCommunicatorImplTest, ObjectRequest) {
 
   // Verify the response.
   ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ("device2", mesh.messages_[0].first);
+  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
 
   flatbuffers::Verifier verifier(
       reinterpret_cast<const unsigned char*>(mesh.messages_[0].second.data()),
@@ -523,7 +526,8 @@ TEST_F(PageCommunicatorImplTest, ObjectRequestSynced) {
   MessageHolder<Message> request_message =
       *CreateMessageHolder<Message>(convert::ToStringView(request_buffer), &ParseMessage);
   page_communicator.OnNewRequest(
-      "device2", std::move(request_message).TakeAndMap<Request>([](const Message* message) {
+      MakeP2PClientId(2u),
+      std::move(request_message).TakeAndMap<Request>([](const Message* message) {
         return static_cast<const Request*>(message->message());
       }));
 
@@ -531,7 +535,7 @@ TEST_F(PageCommunicatorImplTest, ObjectRequestSynced) {
 
   // Verify the response.
   ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ("device2", mesh.messages_[0].first);
+  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
 
   flatbuffers::Verifier verifier(
       reinterpret_cast<const unsigned char*>(mesh.messages_[0].second.data()),
@@ -561,7 +565,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
                                          &mesh);
   page_communicator.Start();
 
-  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
+  ConnectToDevice(&page_communicator, MakeP2PClientId(2u), "ledger", "page");
 
   bool called;
   ledger::Status status;
@@ -575,7 +579,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
   EXPECT_FALSE(called);
 
   ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ("device2", mesh.messages_[0].first);
+  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
 
   flatbuffers::FlatBufferBuilder response_buffer;
   BuildObjectResponseBuffer(&response_buffer, "ledger", "page",
@@ -584,7 +588,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
   MessageHolder<Message> response_message =
       *CreateMessageHolder<Message>(convert::ToStringView(response_buffer), &ParseMessage);
   page_communicator.OnNewResponse(
-      "device2", std::move(response_message).TakeAndMap<Response>([](const Message* message) {
+      MakeP2PClientId(2u),
+      std::move(response_message).TakeAndMap<Response>([](const Message* message) {
         return static_cast<const Response*>(message->message());
       }));
 
@@ -601,7 +606,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSynced) {
                                          &mesh);
   page_communicator.Start();
 
-  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
+  ConnectToDevice(&page_communicator, MakeP2PClientId(2u), "ledger", "page");
 
   bool called;
   ledger::Status status;
@@ -615,7 +620,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSynced) {
   EXPECT_FALSE(called);
 
   ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ("device2", mesh.messages_[0].first);
+  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
 
   flatbuffers::FlatBufferBuilder response_buffer;
   BuildObjectResponseBuffer(&response_buffer, "ledger", "page",
@@ -623,7 +628,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSynced) {
   MessageHolder<Message> response_message =
       *CreateMessageHolder<Message>(convert::ToStringView(response_buffer), &ParseMessage);
   page_communicator.OnNewResponse(
-      "device2", std::move(response_message).TakeAndMap<Response>([](const Message* message) {
+      MakeP2PClientId(2u),
+      std::move(response_message).TakeAndMap<Response>([](const Message* message) {
         return static_cast<const Response*>(message->message());
       }));
 
@@ -640,7 +646,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
                                          &mesh);
   page_communicator.Start();
 
-  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
+  ConnectToDevice(&page_communicator, MakeP2PClientId(2u), "ledger", "page");
 
   bool called;
   ledger::Status status;
@@ -654,7 +660,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
   EXPECT_FALSE(called);
 
   ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ("device2", mesh.messages_[0].first);
+  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
 
   flatbuffers::FlatBufferBuilder response_buffer;
   BuildObjectResponseBuffer(&response_buffer, "ledger", "page",
@@ -662,7 +668,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
   MessageHolder<Message> response_message =
       *CreateMessageHolder<Message>(convert::ToStringView(response_buffer), &ParseMessage);
   page_communicator.OnNewResponse(
-      "device2", std::move(response_message).TakeAndMap<Response>([](const Message* message) {
+      MakeP2PClientId(2u),
+      std::move(response_message).TakeAndMap<Response>([](const Message* message) {
         return static_cast<const Response*>(message->message());
       }));
 
@@ -678,8 +685,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
                                          &mesh);
   page_communicator.Start();
 
-  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
-  ConnectToDevice(&page_communicator, "device3", "ledger", "page");
+  ConnectToDevice(&page_communicator, MakeP2PClientId(2u), "ledger", "page");
+  ConnectToDevice(&page_communicator, MakeP2PClientId(3u), "ledger", "page");
 
   bool called;
   ledger::Status status;
@@ -699,7 +706,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
   MessageHolder<Message> message_1 =
       *CreateMessageHolder<Message>(convert::ToStringView(response_buffer_1), &ParseMessage);
   page_communicator.OnNewResponse(
-      "device2", std::move(message_1).TakeAndMap<Response>([](const Message* message) {
+      MakeP2PClientId(2u), std::move(message_1).TakeAndMap<Response>([](const Message* message) {
         return static_cast<const Response*>(message->message());
       }));
   EXPECT_FALSE(called);
@@ -710,7 +717,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
   MessageHolder<Message> message_2 =
       *CreateMessageHolder<Message>(convert::ToStringView(response_buffer_2), &ParseMessage);
   page_communicator.OnNewResponse(
-      "device3", std::move(message_2).TakeAndMap<Response>([](const Message* message) {
+      MakeP2PClientId(3u), std::move(message_2).TakeAndMap<Response>([](const Message* message) {
         return static_cast<const Response*>(message->message());
       }));
 
@@ -728,8 +735,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
                                          &mesh);
   page_communicator.Start();
 
-  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
-  ConnectToDevice(&page_communicator, "device3", "ledger", "page");
+  ConnectToDevice(&page_communicator, MakeP2PClientId(2u), "ledger", "page");
+  ConnectToDevice(&page_communicator, MakeP2PClientId(3u), "ledger", "page");
 
   bool called;
   ledger::Status status;
@@ -749,7 +756,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
   MessageHolder<Message> message_1 =
       *CreateMessageHolder<Message>(convert::ToStringView(response_buffer_1), &ParseMessage);
   page_communicator.OnNewResponse(
-      "device2", std::move(message_1).TakeAndMap<Response>([](const Message* message) {
+      MakeP2PClientId(2u), std::move(message_1).TakeAndMap<Response>([](const Message* message) {
         return static_cast<const Response*>(message->message());
       }));
   EXPECT_FALSE(called);
@@ -760,7 +767,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
   MessageHolder<Message> message_2 =
       *CreateMessageHolder<Message>(convert::ToStringView(response_buffer_2), &ParseMessage);
   page_communicator.OnNewResponse(
-      "device3", std::move(message_2).TakeAndMap<Response>([](const Message* message) {
+      MakeP2PClientId(3u), std::move(message_2).TakeAndMap<Response>([](const Message* message) {
         return static_cast<const Response*>(message->message());
       }));
 
@@ -781,7 +788,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectMultipleCalls) {
   MessageHolder<Message> new_device_message =
       *CreateMessageHolder<Message>(convert::ToStringView(buffer), &ParseMessage);
   page_communicator.OnNewRequest(
-      "device2", std::move(new_device_message).TakeAndMap<Request>([](const Message* message) {
+      MakeP2PClientId(2u),
+      std::move(new_device_message).TakeAndMap<Request>([](const Message* message) {
         return static_cast<const Request*>(message->message());
       }));
 
@@ -797,7 +805,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectMultipleCalls) {
   EXPECT_FALSE(called1);
 
   ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ("device2", mesh.messages_[0].first);
+  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
 
   page_communicator.GetObject(MakeObjectIdentifier("foo"),
                               callback::Capture(callback::SetWhenCalled(&called2), &status2,
@@ -811,7 +819,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectMultipleCalls) {
   MessageHolder<Message> response_message =
       *CreateMessageHolder<Message>(convert::ToStringView(response_buffer), &ParseMessage);
   page_communicator.OnNewResponse(
-      "device2", std::move(response_message).TakeAndMap<Response>([](const Message* message) {
+      MakeP2PClientId(2u),
+      std::move(response_message).TakeAndMap<Response>([](const Message* message) {
         return static_cast<const Response*>(message->message());
       }));
 
@@ -832,7 +841,7 @@ TEST_F(PageCommunicatorImplTest, CommitUpdate) {
                                            "page", &mesh);
   page_communicator_1.Start();
 
-  ConnectToDevice(&page_communicator_1, "device2", "ledger", "page");
+  ConnectToDevice(&page_communicator_1, MakeP2PClientId(2u), "ledger", "page");
   RunLoopUntilIdle();
 
   FakePageStorage storage_2(dispatcher(), "page");
@@ -861,7 +870,7 @@ TEST_F(PageCommunicatorImplTest, CommitUpdate) {
 
   // Local commit: a message is sent.
   ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ("device2", mesh.messages_[0].first);
+  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
 
   MessageHolder<Message> reply_message =
       *CreateMessageHolder<Message>(mesh.messages_[0].second, &ParseMessage);
@@ -876,7 +885,7 @@ TEST_F(PageCommunicatorImplTest, CommitUpdate) {
   EXPECT_EQ(ResponseMessage_CommitResponse, response->response_type());
 
   // Send it to the other side.
-  page_communicator_2.OnNewResponse("device1", std::move(response));
+  page_communicator_2.OnNewResponse(MakeP2PClientId(1u), std::move(response));
   RunLoopUntilIdle();
 
   // The other side's storage has the commit.
@@ -899,7 +908,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectDisconnect) {
                                          &mesh);
   page_communicator.Start();
 
-  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
+  ConnectToDevice(&page_communicator, MakeP2PClientId(2u), "ledger", "page");
 
   bool called1, called2, called3, called4;
   ledger::Status status1, status2, status3, status4;
@@ -931,7 +940,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectDisconnect) {
   MessageHolder<Message> watch_stop_message =
       *CreateMessageHolder<Message>(convert::ToStringView(stop_buffer), &ParseMessage);
   page_communicator.OnNewRequest(
-      "device2", std::move(watch_stop_message).TakeAndMap<Request>([](const Message* message) {
+      MakeP2PClientId(2u),
+      std::move(watch_stop_message).TakeAndMap<Request>([](const Message* message) {
         return static_cast<const Request*>(message->message());
       }));
   RunLoopUntilIdle();
@@ -976,7 +986,8 @@ TEST_F(PageCommunicatorImplTest, CommitRequest) {
   MessageHolder<Message> request_message =
       *CreateMessageHolder<Message>(convert::ToStringView(request_buffer), &ParseMessage);
   page_communicator.OnNewRequest(
-      "device2", std::move(request_message).TakeAndMap<Request>([](const Message* message) {
+      MakeP2PClientId(2u),
+      std::move(request_message).TakeAndMap<Request>([](const Message* message) {
         return static_cast<const Request*>(message->message());
       }));
 
@@ -984,7 +995,7 @@ TEST_F(PageCommunicatorImplTest, CommitRequest) {
 
   // Verify the response.
   ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ("device2", mesh.messages_[0].first);
+  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
 
   flatbuffers::Verifier verifier(
       reinterpret_cast<const unsigned char*>(mesh.messages_[0].second.data()),
@@ -1018,7 +1029,7 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
                                            "page", &mesh);
   page_communicator_1.Start();
 
-  ConnectToDevice(&page_communicator_1, "device2", "ledger", "page");
+  ConnectToDevice(&page_communicator_1, MakeP2PClientId(2u), "ledger", "page");
   RunLoopUntilIdle();
 
   FakePageStorage storage_2(dispatcher(), "page");
@@ -1037,7 +1048,7 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
 
   // Local commit: a message is sent.
   ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ("device2", mesh.messages_[0].first);
+  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
 
   {
     MessageHolder<Message> reply_message =
@@ -1053,7 +1064,7 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
     EXPECT_EQ(ResponseMessage_CommitResponse, response->response_type());
 
     // Send it to the other side.
-    page_communicator_2.OnNewResponse("device1", std::move(response));
+    page_communicator_2.OnNewResponse(MakeP2PClientId(1u), std::move(response));
   }
   RunLoopUntilIdle();
 
@@ -1065,7 +1076,7 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
 
   // |page_communicator_2| should ask for the base, "id 0" commit.
   ASSERT_EQ(2u, mesh.messages_.size());
-  EXPECT_EQ("device1", mesh.messages_[1].first);
+  EXPECT_EQ(MakeP2PClientId(1u), mesh.messages_[1].first);
 
   {
     MessageHolder<Message> request_message =
@@ -1081,13 +1092,13 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
     EXPECT_EQ(RequestMessage_CommitRequest, request->request_type());
 
     // Send it to the other side.
-    page_communicator_1.OnNewRequest("device2", std::move(request));
+    page_communicator_1.OnNewRequest(MakeP2PClientId(2u), std::move(request));
   }
   RunLoopUntilIdle();
 
   // |page_communicator_1| sends commit "id 0" to device 2.
   ASSERT_EQ(3u, mesh.messages_.size());
-  EXPECT_EQ("device2", mesh.messages_[2].first);
+  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[2].first);
 
   {
     MessageHolder<Message> reply_message =
@@ -1103,7 +1114,7 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
     EXPECT_EQ(ResponseMessage_CommitResponse, response->response_type());
 
     // Send it to the other side.
-    page_communicator_2.OnNewResponse("device1", std::move(response));
+    page_communicator_2.OnNewResponse(MakeP2PClientId(1u), std::move(response));
   }
   RunLoopUntilIdle();
 
@@ -1129,9 +1140,9 @@ TEST_F(PageCommunicatorImplTest, GetObjectRemoveDevice) {
                                          &mesh);
   page_communicator.Start();
 
-  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
-  ConnectToDevice(&page_communicator, "device3", "ledger", "page");
-  ConnectToDevice(&page_communicator, "device4", "ledger", "page");
+  ConnectToDevice(&page_communicator, MakeP2PClientId(2u), "ledger", "page");
+  ConnectToDevice(&page_communicator, MakeP2PClientId(3u), "ledger", "page");
+  ConnectToDevice(&page_communicator, MakeP2PClientId(4u), "ledger", "page");
 
   bool called;
   storage::Status status;
@@ -1139,8 +1150,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectRemoveDevice) {
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
 
-  mesh.OnNextSend("device3", [&page_communicator]() {
-    page_communicator.OnDeviceChange("device3", p2p_provider::DeviceChangeType::DELETED);
+  mesh.OnNextSend(MakeP2PClientId(3u), [&page_communicator]() {
+    page_communicator.OnDeviceChange(MakeP2PClientId(3u), p2p_provider::DeviceChangeType::DELETED);
   });
 
   page_communicator.GetObject(MakeObjectIdentifier("foo1"),
@@ -1160,12 +1171,12 @@ TEST_F(PageCommunicatorImplTest, OnNewCommitsRemoveDevice) {
                                          &mesh);
   page_communicator.Start();
 
-  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
-  ConnectToDevice(&page_communicator, "device3", "ledger", "page");
-  ConnectToDevice(&page_communicator, "device4", "ledger", "page");
+  ConnectToDevice(&page_communicator, MakeP2PClientId(2u), "ledger", "page");
+  ConnectToDevice(&page_communicator, MakeP2PClientId(3u), "ledger", "page");
+  ConnectToDevice(&page_communicator, MakeP2PClientId(4u), "ledger", "page");
 
-  mesh.OnNextSend("device3", [&page_communicator]() {
-    page_communicator.OnDeviceChange("device3", p2p_provider::DeviceChangeType::DELETED);
+  mesh.OnNextSend(MakeP2PClientId(3u), [&page_communicator]() {
+    page_communicator.OnDeviceChange(MakeP2PClientId(3u), p2p_provider::DeviceChangeType::DELETED);
   });
 
   std::vector<std::unique_ptr<const storage::Commit>> commits;
@@ -1186,12 +1197,12 @@ TEST_F(PageCommunicatorImplTest, DestructionRemoveDevice) {
                                          &mesh);
   page_communicator.Start();
 
-  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
-  ConnectToDevice(&page_communicator, "device3", "ledger", "page");
-  ConnectToDevice(&page_communicator, "device4", "ledger", "page");
+  ConnectToDevice(&page_communicator, MakeP2PClientId(2u), "ledger", "page");
+  ConnectToDevice(&page_communicator, MakeP2PClientId(3u), "ledger", "page");
+  ConnectToDevice(&page_communicator, MakeP2PClientId(4u), "ledger", "page");
 
-  mesh.OnNextSend("device3", [&page_communicator]() {
-    page_communicator.OnDeviceChange("device3", p2p_provider::DeviceChangeType::DELETED);
+  mesh.OnNextSend(MakeP2PClientId(3u), [&page_communicator]() {
+    page_communicator.OnDeviceChange(MakeP2PClientId(3u), p2p_provider::DeviceChangeType::DELETED);
   });
 
   // The destructor of PageCommunicatorImpl sends messages to connected devices.
@@ -1237,7 +1248,7 @@ TEST_F(PageCommunicatorImplTest, GetObject_Disconnect) {
                                          &mesh);
   page_communicator.Start();
 
-  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
+  ConnectToDevice(&page_communicator, MakeP2PClientId(2u), "ledger", "page");
 
   bool called;
   ledger::Status status;
@@ -1250,7 +1261,7 @@ TEST_F(PageCommunicatorImplTest, GetObject_Disconnect) {
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 
-  page_communicator.OnDeviceChange("device2", p2p_provider::DeviceChangeType::DELETED);
+  page_communicator.OnDeviceChange(MakeP2PClientId(2u), p2p_provider::DeviceChangeType::DELETED);
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);

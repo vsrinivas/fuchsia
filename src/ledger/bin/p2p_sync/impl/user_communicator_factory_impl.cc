@@ -5,7 +5,7 @@
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_factory_impl.h"
 
 #include <fuchsia/modular/auth/cpp/fidl.h>
-#include <fuchsia/netconnector/cpp/fidl.h>
+#include <fuchsia/overnet/cpp/fidl.h>
 #include <unistd.h>
 
 #include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
@@ -27,11 +27,11 @@ std::unique_ptr<UserCommunicator> UserCommunicatorFactoryImpl::GetUserCommunicat
     return nullptr;
   }
 
-  fuchsia::netconnector::NetConnectorPtr net_connector =
-      environment_->component_context()->svc()->Connect<fuchsia::netconnector::NetConnector>();
+  fuchsia::overnet::OvernetPtr overnet =
+      environment_->component_context()->svc()->Connect<fuchsia::overnet::Overnet>();
 
   return std::make_unique<p2p_sync::UserCommunicatorImpl>(
-      std::make_unique<p2p_provider::P2PProviderImpl>(host_name_buffer, std::move(net_connector),
+      std::make_unique<p2p_provider::P2PProviderImpl>(std::move(overnet),
                                                       std::move(user_id_provider)),
       environment_->coroutine_service());
 }

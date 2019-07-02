@@ -30,9 +30,9 @@ protocol LedgerRepositoryFactory {
     //     cloud. If `cloud_provider` is disconnected, Ledger shuts down the
     //     repository and disconnects all clients.
     // `user_id` is a unique, not device local, user identifier. It will be
-    //     used to enable Peer to Peer over NetConnector, and will be removed
-    //     once Ledger uses Overnet for Peer to Peer communication. If it is
-    //     empty, Ledger will not synchronize using Peer to Peer communication.
+    //     used to enable Peer to Peer over Overnet, and will be removed
+    //     once Overnet handles user identity. If it is empty, Ledger will not
+    //     synchronize using Peer to Peer communication.
     GetRepository(handle<channel> repository_directory,
                   fuchsia.ledger.cloud.CloudProvider? cloud_provider,
                   string user_id,

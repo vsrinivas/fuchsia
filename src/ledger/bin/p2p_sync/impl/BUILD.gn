@@ -65,10 +65,11 @@ source_set("unittests") {
     "//garnet/public/lib/fsl",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/p2p_provider/impl",
+    "//src/ledger/bin/p2p_provider/testing",
     "//src/ledger/bin/storage/fake:lib",
     "//src/ledger/bin/storage/testing",
     "//src/ledger/bin/testing:lib",
-    "//src/ledger/bin/testing/netconnector",
+    "//src/ledger/bin/testing/overnet",
     "//src/lib/fxl",
 
     # gtest matchers are in gmock.

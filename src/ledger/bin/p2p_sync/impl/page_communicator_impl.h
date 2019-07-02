@@ -42,13 +42,14 @@ class PageCommunicatorImpl : public PageCommunicator,
   void set_on_delete(fit::closure on_delete);
 
   // OnDeviceChange is called each time a device connects or unconnects.
-  void OnDeviceChange(fxl::StringView remote_device, p2p_provider::DeviceChangeType change_type);
+  void OnDeviceChange(const p2p_provider::P2PClientId& remote_device,
+                      p2p_provider::DeviceChangeType change_type);
 
   // Called when a new request arrived for this page from device |source|.
-  void OnNewRequest(fxl::StringView source, MessageHolder<Request> message);
+  void OnNewRequest(const p2p_provider::P2PClientId& source, MessageHolder<Request> message);
 
   // Called when a new response arrived for this page from device |source|.
-  void OnNewResponse(fxl::StringView source, MessageHolder<Response> message);
+  void OnNewResponse(const p2p_provider::P2PClientId& source, MessageHolder<Response> message);
 
   // PageCommunicator:
   void Start() override;
@@ -68,7 +69,8 @@ class PageCommunicatorImpl : public PageCommunicator,
   class PendingObjectRequestHolder;
   struct ObjectResponseHolder;
 
-  void RequestCommits(fxl::StringView device, std::vector<storage::CommitId> ids) override;
+  void RequestCommits(const p2p_provider::P2PClientId& device,
+                      std::vector<storage::CommitId> ids) override;
 
   // These methods build the flatbuffer message corresponding to their name.
   void BuildWatchStartBuffer(flatbuffers::FlatBufferBuilder* buffer);
@@ -81,7 +83,7 @@ class PageCommunicatorImpl : public PageCommunicator,
                                  std::list<ObjectResponseHolder> object_responses);
 
   // Processes an incoming CommitRequest object from device |source|.
-  void ProcessCommitRequest(std::string source, MessageHolder<CommitRequest> request);
+  void ProcessCommitRequest(p2p_provider::P2PClientId source, MessageHolder<CommitRequest> request);
 
   // Builds a CommitResponse buffer in response to an incoming CommitRequest.
   // This is different from |BuildCommitBuffer| which builds CommitResponse for
@@ -94,7 +96,7 @@ class PageCommunicatorImpl : public PageCommunicator,
           commits);
 
   // Processes an incoming ObjectRequest object.
-  void ProcessObjectRequest(fxl::StringView source, MessageHolder<ObjectRequest> request);
+  void ProcessObjectRequest(p2p_provider::P2PClientId source, MessageHolder<ObjectRequest> request);
 
   // Marks the PageStorage as synced to a peer. If successful, on the following
   // call to MarkSyncedToPeer, the given |callback| will be called immediately.
@@ -107,12 +109,11 @@ class PageCommunicatorImpl : public PageCommunicator,
   callback::AutoCleanableMap<storage::ObjectIdentifier, PendingObjectRequestHolder>
       pending_object_requests_;
   // Map of pending commit batch insertions.
-  callback::AutoCleanableMap<std::string, CommitBatch, convert::StringViewComparator>
-      pending_commit_batches_;
+  callback::AutoCleanableMap<p2p_provider::P2PClientId, CommitBatch> pending_commit_batches_;
   // List of devices we know are interested in this page.
-  std::set<std::string, convert::StringViewComparator> interested_devices_;
+  std::set<p2p_provider::P2PClientId> interested_devices_;
   // List of devices we know are not interested in this page.
-  std::set<std::string, convert::StringViewComparator> not_interested_devices_;
+  std::set<p2p_provider::P2PClientId> not_interested_devices_;
   fit::closure on_delete_;
   bool marked_as_synced_to_peer_ = false;
   bool started_ = false;
