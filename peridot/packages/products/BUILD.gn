@@ -8,9 +8,7 @@
 group("framework") {
   testonly = true
   public_deps = [
-    "//garnet/packages/config:netconnector",
     "//garnet/packages/prod:cobalt_client",
-    "//garnet/packages/prod:netconnector",
     "//garnet/packages/prod:overnetstack",
     "//peridot/packages/prod:basemgr_launcher",
     "//peridot/packages/prod:clipboard_agent",

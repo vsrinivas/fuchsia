@@ -251,7 +251,6 @@ group("all") {
     "//garnet/packages/prod:net-cli",
     "//garnet/packages/prod:net_ctl",
     "//garnet/packages/prod:netcfg",
-    "//garnet/packages/prod:netconnector",
     "//garnet/packages/prod:netstack",
     "//garnet/packages/prod:netstack3",
     "//garnet/packages/prod:netstack_tools",
@@ -391,14 +390,6 @@ group("overnetstack") {
     "//src/connectivity/overnet/overnetstack",
     "//src/connectivity/overnet/tools/ascendd",
     "//src/connectivity/overnet/tools/onet",
-  ]
-}
-
-group("netconnector") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/netconnector",
-    "//src/connectivity/network/mdns/bundles:services",
   ]
 }
 

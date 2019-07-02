@@ -17,7 +17,6 @@ base_package_labels += [
   "//garnet/packages/prod:memory_monitor",
   "//garnet/packages/prod:net-cli",
   "//garnet/packages/prod:netcfg",
-  "//garnet/packages/prod:netconnector",
   "//garnet/packages/prod:netstack3",
   "//garnet/packages/prod:network-speed-test",
   "//garnet/packages/prod:overnetstack",

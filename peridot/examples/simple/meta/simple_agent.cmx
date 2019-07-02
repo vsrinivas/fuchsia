@@ -9,7 +9,6 @@
             "fuchsia.modular.ComponentContext",
             "fuchsia.modular.ModuleContext",
             "fuchsia.net.oldhttp.HttpService",
-            "fuchsia.netconnector.NetConnector",
             "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry"
         ]
