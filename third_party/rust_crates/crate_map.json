@@ -181,6 +181,11 @@
             "package_name": "maplit"
         },
         {
+            "crate_name": "matches",
+            "crate_type": "lib",
+            "package_name": "matches"
+        },
+        {
             "crate_name": "memchr",
             "crate_type": "lib",
             "package_name": "memchr"

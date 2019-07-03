@@ -77,6 +77,7 @@ hyper-rustls = { version = "0.16.1", default-features = false }
 itertools = "0.8"
 itoa = "0.4"
 maplit = "1.0"
+matches = "0.1.8"
 memchr = "2.0"
 net2 = "0.2"
 nom = "3.2"
