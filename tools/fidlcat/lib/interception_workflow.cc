@@ -303,7 +303,9 @@ void InterceptionWorkflow::Launch(const std::vector<std::string>& command, KoidF
                           << reply.status;
           }
           target->session()->ExpectComponent(reply.component_id);
-          and_then(err, target->GetProcess()->GetKoid());
+          if (target->GetProcess() != nullptr) {
+            and_then(err, target->GetProcess()->GetKoid());
+          }
         });
     return;
   }
@@ -314,7 +316,9 @@ void InterceptionWorkflow::Launch(const std::vector<std::string>& command, KoidF
     if (!on_err(err)) {
       return;
     }
-    and_then(err, target->GetProcess()->GetKoid());
+    if (target->GetProcess() != nullptr) {
+      and_then(err, target->GetProcess()->GetKoid());
+    }
   });
 }
 
