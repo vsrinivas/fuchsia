@@ -1,6 +1,9 @@
 {
     "facets": {
         "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"
+            },
             "system-services": [
                 "fuchsia.scheduler.ProfileProvider"
             ]
@@ -14,7 +17,9 @@
             "vulkan"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.scheduler.ProfileProvider",
+            "fuchsia.sysmem.Allocator",
             "fuchsia.ui.input.ImeService",
             "fuchsia.vulkan.loader.Loader"
         ]
