@@ -111,6 +111,6 @@ group("modular") {
 group("discover") {
   testonly = true
   public_deps = [
-    "//peridot/bin/discovermgr",
+    "//src/stories/bin/discovermgr",
   ]
 }

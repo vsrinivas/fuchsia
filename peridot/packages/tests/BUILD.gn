@@ -53,8 +53,8 @@ group("maxwell_unittests") {
   testonly = true
   public_deps = [
     "//peridot/bin/context_engine:context_engine_unittests",
-    "//peridot/bin/discovermgr:discovermgr_tests",
     "//peridot/bin/module_resolver:module_resolver_unittests",
+    "//src/stories/bin/discovermgr:discovermgr_tests",
   ]
 }
 
