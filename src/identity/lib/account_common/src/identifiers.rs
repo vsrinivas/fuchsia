@@ -94,6 +94,12 @@ macro_rules! wrapper_type {
             }
         }
 
+        impl From<$name> for $type {
+            fn from(wrapper: $name) -> Self {
+                wrapper.inner.id
+            }
+        }
+
         impl AsRef<$fidl_crate::$name> for $name {
             fn as_ref(&self) -> &$fidl_crate::$name {
                 &self.inner
@@ -146,6 +152,13 @@ impl LocalAccountId {
     }
 }
 
+impl LocalPersonaId {
+    /// A string representing the persona in a canonical way, safe for file/directory names
+    pub fn to_canonical_string(&self) -> String {
+        self.inner.id.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -187,5 +200,11 @@ mod tests {
         let val_1 = LocalAccountId::new(333);
         let val_2 = LocalAccountId::new(444);
         assert!(val_1 < val_2);
+    }
+
+    #[test]
+    fn test_to_primitive() {
+        let value = LocalAccountId::new(333);
+        assert_eq!(u64::from(value), 333u64);
     }
 }

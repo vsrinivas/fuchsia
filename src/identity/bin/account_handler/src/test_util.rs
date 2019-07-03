@@ -28,6 +28,8 @@ lazy_static! {
 
 pub static TEST_APPLICATION_URL: &str = "test_app_url";
 
+pub static TEST_ACCOUNT_ID_UINT: u64 = 111111;
+
 // TODO(jsankey): If fidl calls ever accept non-mutable structs, move this to a lazy_static.
 // Currently FIDL requires mutable access to a type that doesn't support clone, so we just create a
 // fresh instance each time.

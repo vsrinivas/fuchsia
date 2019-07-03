@@ -4,6 +4,7 @@
 
 use crate::account_handler::AccountHandler;
 use crate::common::AccountLifetime;
+use crate::inspect;
 use crate::TokenManager;
 use account_common::{LocalAccountId, LocalPersonaId};
 use failure::Error;
@@ -15,6 +16,7 @@ use fidl_fuchsia_auth::{
 use fidl_fuchsia_auth_account::{
     AuthListenerMarker, Lifetime, PersonaRequest, PersonaRequestStream, Status,
 };
+use fuchsia_inspect::{Node, NumericProperty};
 use futures::prelude::*;
 use identity_common::{cancel_or, TaskGroup, TaskGroupCancel};
 use log::{error, warn};
@@ -52,6 +54,9 @@ pub struct Persona {
 
     /// Collection of tasks that are using this instance.
     task_group: TaskGroup,
+
+    /// Helper for outputting persona information via fuchsia_inspect.
+    inspect: inspect::Persona,
 }
 
 impl Persona {
@@ -67,8 +72,17 @@ impl Persona {
         lifetime: Arc<AccountLifetime>,
         token_manager: Arc<TokenManager>,
         task_group: TaskGroup,
+        inspect_parent: &Node,
     ) -> Persona {
-        Self { id, _account_id: account_id, lifetime, token_manager, task_group }
+        let persona_inspect = inspect::Persona::new(inspect_parent, &id);
+        Self {
+            id,
+            _account_id: account_id,
+            lifetime,
+            token_manager,
+            task_group,
+            inspect: persona_inspect,
+        }
     }
 
     /// Returns the device-local identifier for this persona.
@@ -83,6 +97,8 @@ impl Persona {
         mut stream: PersonaRequestStream,
         cancel: TaskGroupCancel,
     ) -> Result<(), Error> {
+        self.inspect.open_client_channels.add(1);
+        scopeguard::defer!(self.inspect.open_client_channels.subtract(1));
         while let Some(result) = await!(cancel_or(&cancel, stream.try_next())) {
             if let Some(request) = result? {
                 await!(self.handle_request(context, request))?;
@@ -190,6 +206,7 @@ mod tests {
     use fidl_fuchsia_auth_account::{PersonaMarker, PersonaProxy};
     use fidl_fuchsia_auth_account_internal::AccountHandlerContextMarker;
     use fuchsia_async as fasync;
+    use fuchsia_inspect::Inspector;
     use std::path::PathBuf;
 
     /// Type to hold the common state require during construction of test objects and execution
@@ -218,22 +235,26 @@ mod tests {
         }
 
         fn create_persona(&self) -> Persona {
+            let inspector = Inspector::new();
             Persona::new(
                 TEST_PERSONA_ID.clone(),
                 TEST_ACCOUNT_ID.clone(),
                 Arc::new(AccountLifetime::Persistent { account_dir: PathBuf::from("/nowhere") }),
                 Arc::clone(&self.token_manager),
                 TaskGroup::new(),
+                inspector.root(),
             )
         }
 
         fn create_ephemeral_persona(&self) -> Persona {
+            let inspector = Inspector::new();
             Persona::new(
                 TEST_PERSONA_ID.clone(),
                 TEST_ACCOUNT_ID.clone(),
                 Arc::new(AccountLifetime::Ephemeral),
                 Arc::clone(&self.token_manager),
                 TaskGroup::new(),
+                inspector.root(),
             )
         }
 

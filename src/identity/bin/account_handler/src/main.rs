@@ -14,6 +14,7 @@ mod account;
 mod account_handler;
 mod auth_provider_supplier;
 mod common;
+mod inspect;
 mod persona;
 mod stored_account;
 
@@ -25,6 +26,7 @@ use crate::common::AccountLifetime;
 use failure::{Error, ResultExt};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
+use fuchsia_inspect::Inspector;
 use futures::StreamExt;
 use log::{error, info};
 use std::sync::Arc;
@@ -51,9 +53,11 @@ fn main() -> Result<(), Error> {
     info!("Starting account handler");
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
-    let account_handler = Arc::new(AccountHandler::new(lifetime));
-
+    let inspector = Inspector::new();
     let mut fs = ServiceFs::new();
+    inspector.export(&mut fs);
+
+    let account_handler = Arc::new(AccountHandler::new(lifetime, &inspector));
     fs.dir("svc").add_fidl_service(move |stream| {
         let account_handler_clone = Arc::clone(&account_handler);
         fasync::spawn(async move {
