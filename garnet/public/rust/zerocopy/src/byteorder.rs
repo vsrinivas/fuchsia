@@ -116,13 +116,14 @@ stored in `O` byte order.
 two major differences: First, it has no alignment requirement (its alignment is 1).
 Second, the endianness of its memory layout is given by the type parameter `O`.
 
-", stringify!($article), " `", stringify!($name), "` can be constructed using the
-[`new`] method, and its contained value can be obtained as a native
-`",stringify!($native), "` using the [`get`] method. In both cases, if the endianness
-`O` is not the same as the endianness of the current platform, an endianness swap will
-be performed in order to uphold the invariants that a) the layout of
-`", stringify!($name), "` has endianness `O` and that, b) the layout of
-`", stringify!($native), "` has the platform's native endianness.
+", stringify!($article), " `", stringify!($name), "` can be constructed using
+the [`new`] method, and its contained value can be obtained as a native
+`",stringify!($native), "` using the [`get`] method, or updated in place with
+the [`set`] method. In all cases, if the endianness `O` is not the same as the
+endianness of the current platform, an endianness swap will be performed in
+order to uphold the invariants that a) the layout of `", stringify!($name), "`
+has endianness `O` and that, b) the layout of `", stringify!($native), "` has
+the platform's native endianness.
 
 `", stringify!($name), "` implements [`FromBytes`], [`AsBytes`], and [`Unaligned`],
 making it useful for parsing and serialization. See the module documentation for an
@@ -130,6 +131,7 @@ example of how it can be used for parsing UDP packets.
 
 [`new`]: crate::byteorder::", stringify!($name), "::new
 [`get`]: crate::byteorder::", stringify!($name), "::get
+[`set`]: crate::byteorder::", stringify!($name), "::set
 [`FromBytes`]: crate::FromBytes
 [`AsBytes`]: crate::AsBytes
 [`Unaligned`]: crate::Unaligned"),
@@ -174,6 +176,13 @@ example of how it can be used for parsing UDP packets.
             /// endianness of the native platform.
             pub fn get(self) -> $native {
                 O::$read_method(&self.0[..])
+            }
+
+            /// Updates the value in place as a primitive type, possibly
+            /// performing an endianness swap to guarantee that the stored value
+            /// has the endianness `O`.
+            pub fn set(&mut self, n: $native) {
+                O::$write_method(&mut self.0[..], n);
             }
         }
 
@@ -277,6 +286,7 @@ mod tests {
 
         fn new(native: Self::Native) -> Self;
         fn get(self) -> Self::Native;
+        fn set(&mut self, native: Self::Native);
         fn from_bytes(bytes: Self::ByteArray) -> Self;
         fn into_bytes(self) -> Self::ByteArray;
     }
@@ -333,6 +343,10 @@ mod tests {
 
                 fn get(self) -> $native {
                     $name::get(self)
+                }
+
+                fn set(&mut self, native: $native) {
+                    $name::set(self, native)
                 }
 
                 fn from_bytes(bytes: [u8; $bytes]) -> $name<O> {
@@ -411,13 +425,17 @@ mod tests {
                 let native = T::Native::rand();
                 let mut bytes = T::ByteArray::default();
                 bytes.as_bytes_mut().copy_from_slice(native.as_bytes());
-                let from_native = T::new(native);
+                let mut from_native = T::new(native);
                 let from_bytes = T::from_bytes(bytes);
                 assert_eq!(from_native, from_bytes);
                 assert_eq!(from_native.get(), native);
                 assert_eq!(from_bytes.get(), native);
                 assert_eq!(from_native.into_bytes(), bytes);
                 assert_eq!(from_bytes.into_bytes(), bytes);
+
+                let updated = T::Native::rand();
+                from_native.set(updated);
+                assert_eq!(from_native.get(), updated);
             }
         }
 
@@ -432,13 +450,17 @@ mod tests {
                 let mut bytes = T::ByteArray::default();
                 bytes.as_bytes_mut().copy_from_slice(native.as_bytes());
                 bytes = bytes.invert();
-                let from_native = T::new(native);
+                let mut from_native = T::new(native);
                 let from_bytes = T::from_bytes(bytes);
                 assert_eq!(from_native, from_bytes);
                 assert_eq!(from_native.get(), native);
                 assert_eq!(from_bytes.get(), native);
                 assert_eq!(from_native.into_bytes(), bytes);
                 assert_eq!(from_bytes.into_bytes(), bytes);
+
+                let updated = T::Native::rand();
+                from_native.set(updated);
+                assert_eq!(from_native.get(), updated);
             }
         }
 
