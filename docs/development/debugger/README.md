@@ -322,16 +322,10 @@ Note: Only one debugger can be attached to the main job in order to auto-attach
 to new processes. Since you're using it for the first debugger, you won't be
 able to launch components with the second one, only attach to them.
 
-The debug agent tests are in
+To run the debug agent tests:
 
 ```
-/pkgfs/packages/debug_agent_tests/0/test/debug_agent_tests
-```
-
-To run them:
-
-```
-fx run-tests debug_agent_tests
+fx run-test debug_agent_tests
 ```
 
 ## Other Languages

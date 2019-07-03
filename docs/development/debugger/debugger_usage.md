@@ -191,7 +191,7 @@ If you type a noun by itself, it lists the available objects of that type:
     ```
     [zxdb] process
       # State       Koid Name
-    ▶ 1 Not running 3471 /pkgfs/packages/debug_agent_tests/0/test/zxdb_test_app
+    ▶ 1 Not running 3471 debug_agent_unit_tests.cmx
     ```
 
   * List attached jobs
