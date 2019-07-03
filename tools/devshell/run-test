@@ -4,24 +4,33 @@
 # found in the LICENSE file.
 
 ### build a test package and run on target.
-### PKG_TARGET is fully qualified or under fuchsia-pkg://fuchsia.com/
 
 ## usage: fx run-test PKG_TARGET [runtests flags]
-## Builds the specified test package (e.g., appmgr_integration_tests), copies it to the
-## target, and executes it.
 ##
-## If using this command, please run 'fx build' again before paving your device
-## because 'fx build updates' used by this script does not build images so it
-## can leave paver in weird state.
+## Builds the update package group, updates the device as necessary, and then
+## executes the test as specified by [runtests flags] (or all tests in
+## PKG_TARGET if no flags are given).
 ##
 ## Arguments:
-##   All arguments are passed directly to `runtests`, see `fx run-test -h` for all flags.
+##   PKG_TARGET    A package name as appears in `fx list-packages`
+##   All later arguments are passed directly to `runtests`, see `fx run-test -h` for all flags.
+##
+## Known Bugs:
+## PKG-592: After run-test, performing a pave without executing 'fx build'
+## results in "appmgr not started after 20s", as this command only builds new
+## packages, it avoids creating new paver artifacts, as such, a pave without a
+## fresh build produces a system with inconsistent state.
 
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/updates.sh || exit $?
 fx-config-read
+
+# Determine if the given package name ($1) is in the base package list
+function is-in-base {
+  grep "^$1$" "${FUCHSIA_BUILD_DIR}/base_packages.list" > /dev/null
+}
 
 function main {
   if [[ $# -lt 1 ]]; then
@@ -47,13 +56,28 @@ function main {
 
   check-for-amber-server || return -1
 
-  echo -e "Building ..."
+  if is-in-base "${target}"; then
+    fx-warn "As ${target} is in 'base'. An OTA will follow."
+  fi
+
+  echo >&2 "Building ..."
   # build all packages as there is no way to only build one and push it to
   # update repository.
   fx-command-run build updates
-  echo -e "\nPush package to device"
-  fx-command-run push-package "${target}"
 
+  # TODO: once incremental workflow lands, `fx-command-run update` should
+  # instead always execute.
+  if is-in-base "${target}"; then
+    echo >&2 "Package ${target} is in 'base', performing system update..."
+    fx-command-run update
+    echo >&2 "System update complete, waiting for device to return"
+    fx-command-run wait
+  else
+    echo >&2 "Updating ${target} cache on device"
+    fx-command-run push-package "${target}"
+  fi
+
+  # TODO: remove reliance on pkgfs/packages.
   fx-command-run shell runtests "pkgfs/packages/${target}/0/test" "$@"
 }
 
