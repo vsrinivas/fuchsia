@@ -18,6 +18,7 @@
 #include <fbl/vector.h>
 #include <unittest/unittest.h>
 
+#include <algorithm>
 #include <utility>
 
 namespace runtests {
@@ -320,7 +321,7 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
         return EXIT_SUCCESS;
     }
 
-    // TODO(mknyszek): Sort test_paths for deterministic behavior. Should be easy after ZX-1751.
+    std::sort(test_paths.begin(), test_paths.end());
     stopwatch->Start();
     int failed_count = 0;
     fbl::Vector<std::unique_ptr<Result>> results;
