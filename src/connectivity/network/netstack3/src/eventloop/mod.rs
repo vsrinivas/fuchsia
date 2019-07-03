@@ -86,7 +86,7 @@ use std::fs::File;
 use std::marker::PhantomData;
 use std::time::Duration;
 
-use failure::{bail, Error};
+use failure::{bail, format_err, Error};
 use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fuchsia_hardware_ethernet as fidl_ethernet;
 use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetStatus, MacAddress};
@@ -106,21 +106,26 @@ use futures::channel::mpsc;
 use futures::future::{AbortHandle, Abortable};
 use futures::prelude::*;
 use futures::{select, TryFutureExt, TryStreamExt};
-use log::{debug, error, info};
+#[cfg(test)]
+use integration_tests::TestEvent;
+use log::{debug, error, info, trace};
 use std::convert::TryInto;
 use util::{CoreCompatible, FidlCompatible};
 
 use netstack3_core::{
     add_device_route, del_device_route, get_all_routes, get_ip_addr_subnet, handle_timeout,
-    receive_frame, set_ip_addr_subnet, AddrSubnet, AddrSubnetEither, Context, DeviceId,
-    DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, IcmpEventDispatcher,
+    icmp as core_icmp, receive_frame, set_ip_addr_subnet, AddrSubnet, AddrSubnetEither, Context,
+    DeviceId, DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher,
     IpLayerEventDispatcher, Mac, NetstackError, StackState, Subnet, SubnetEither, TimerId,
     TransportLayerEventDispatcher, UdpEventDispatcher,
 };
 
+type IcmpConnectionId = u64;
+
 /// The message that is sent to the main event loop to indicate that an
 /// ethernet device has been set up, and is ready to be added to the event
 /// loop.
+#[derive(Debug)]
 pub struct EthernetDeviceReady {
     // We pass through the topological path for the device, so that it can later be shown to the
     // user, should they request it via FIDL call.
@@ -200,6 +205,7 @@ impl EthernetWorker {
 }
 
 /// The events that can trigger an action in the event loop.
+#[derive(Debug)]
 pub enum Event {
     /// A request from the fuchsia.net.stack.Stack FIDL interface.
     FidlStackEvent(StackRequest),
@@ -236,7 +242,13 @@ impl EventLoop {
         EventLoop {
             ctx: Context::new(
                 StackState::default(),
-                EventLoopInner { devices: vec![], timers: vec![], event_send: event_send.clone() },
+                EventLoopInner {
+                    devices: vec![],
+                    timers: vec![],
+                    event_send: event_send.clone(),
+                    #[cfg(test)]
+                    test_events: None,
+                },
             ),
             event_recv,
         }
@@ -247,6 +259,7 @@ impl EventLoop {
         buf: &'a mut [u8],
         evt: Option<Event>,
     ) -> Result<(), Error> {
+        trace!("Handling Event: {:?}", evt);
         match evt {
             Some(Event::EthSetupEvent(setup)) => {
                 let (mut state, mut disp) = self.ctx.state_and_dispatcher();
@@ -271,18 +284,20 @@ impl EventLoop {
                 await!(self.handle_fidl_socket_control_request(req));
             }
             Some(Event::EthEvent((id, eth::Event::StatusChanged))) => {
-                info!("device {:?} status changed", id.id());
+                info!("device {:?} status changed signal", id);
                 // We need to call get_status even if we don't use the output, since calling it
                 // acks the message, and prevents the device from sending more status changed
                 // messages.
-                // TODO(wesleyac): Error checking on get_device_info - is a race possible?
-                await!(self
-                    .ctx
-                    .dispatcher()
-                    .get_device_client(id.id())
-                    .unwrap()
-                    .client
-                    .get_status());
+                if let Some(device) = self.ctx.dispatcher().get_device_client(id.id()) {
+                    if let Ok(status) = await!(device.client.get_status()) {
+                        info!("device {:?} status changed to: {:?}", id, status);
+                        #[cfg(test)]
+                        self.ctx.dispatcher().send_test_event(TestEvent::DeviceStatusChanged {
+                            id: id.id(),
+                            status,
+                        });
+                    }
+                }
             }
             Some(Event::EthEvent((id, eth::Event::Receive(rx, _flags)))) => {
                 // TODO(wesleyac): Check flags
@@ -303,15 +318,16 @@ impl EventLoop {
         Ok(())
     }
 
-    async fn run_until<'a, V>(
-        &'a mut self,
-        recv: &'a mut futures::channel::mpsc::UnboundedReceiver<V>,
-    ) -> Result<V, Error> {
+    async fn run_until<V>(&mut self, mut fut: impl Future<Output = V> + Unpin) -> Result<V, Error> {
         let mut buf = [0; 2048];
+        let mut fut = Some(fut);
         loop {
-            match await!(futures::future::select(self.event_recv.next(), recv.next())) {
-                future::Either::Left((evt, _)) => await!(self.handle_event(&mut buf, evt))?,
-                future::Either::Right((Some(stop), _)) => break Ok(stop),
+            match await!(futures::future::select(self.event_recv.next(), fut.take().unwrap())) {
+                future::Either::Left((evt, f)) => {
+                    await!(self.handle_event(&mut buf, evt))?;
+                    fut = Some(f);
+                }
+                future::Either::Right((result, _)) => break Ok(result),
                 _ => continue,
             }
         }
@@ -663,11 +679,24 @@ struct EventLoopInner {
     devices: Vec<DeviceInfo>,
     timers: Vec<TimerInfo>,
     event_send: mpsc::UnboundedSender<Event>,
+    #[cfg(test)]
+    test_events: Option<mpsc::UnboundedSender<TestEvent>>,
 }
 
 impl EventLoopInner {
     fn get_device_client(&self, id: u64) -> Option<&DeviceInfo> {
         self.devices.iter().find(|d| d.id.id() == id)
+    }
+
+    /// Sends an event to a special test events listener.
+    ///
+    /// Only available for testing, use this function to expose internal events
+    /// to testing code.
+    #[cfg(test)]
+    fn send_test_event(&mut self, event: TestEvent) {
+        if let Some(evt) = self.test_events.as_mut() {
+            evt.unbounded_send(event).expect("Can't send test event data");
+        }
     }
 }
 
@@ -775,11 +804,18 @@ impl UdpEventDispatcher for EventLoopInner {
 
 impl TransportLayerEventDispatcher for EventLoopInner {}
 
-impl IcmpEventDispatcher for EventLoopInner {
-    type IcmpConn = ();
+impl core_icmp::IcmpEventDispatcher for EventLoopInner {
+    type IcmpConn = IcmpConnectionId;
 
     fn receive_icmp_echo_reply(&mut self, conn: &Self::IcmpConn, seq_num: u16, data: &[u8]) {
-        // TODO(brunodalbo): implement icmp connections.
+        #[cfg(test)]
+        self.send_test_event(TestEvent::IcmpEchoReply {
+            conn: *conn,
+            seq_num,
+            data: data.to_owned(),
+        });
+
+        // TODO(brunodalbo) implement actual handling of icmp echo replies
     }
 }
 

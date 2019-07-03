@@ -83,8 +83,8 @@
 // `pub(crate) use` will prevent items from being accidentally re-exported).
 pub(crate) use self::internal::*;
 pub use self::internal::{
-    AddrSubnet, AddrSubnetEither, EntryDest, EntryEither, IpAddr, Ipv4Addr, Ipv6Addr, Subnet,
-    SubnetEither,
+    AddrSubnet, AddrSubnetEither, EntryDest, EntryEither, IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
+    Subnet, SubnetEither,
 };
 
 mod internal {

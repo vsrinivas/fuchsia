@@ -36,6 +36,7 @@ rustc_binary("bin") {
   test_deps = [
     "//src/connectivity/network/testing/netemul/lib/fidl:sandbox-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
+    "//third_party/rust_crates:pin-utils",
   ]
 }
 
