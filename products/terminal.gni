@@ -5,17 +5,19 @@
 import("//products/core.gni")
 
 base_package_labels += [
-  "//garnet/packages/config:terminal",
-  "//garnet/packages/prod:scenic",
+  "//garnet/bin/terminal:tiles_with_terminal_config",
+  "//garnet/bin/sysmem_connector",
+  "//garnet/bin/ui:root_presenter",
+  "//garnet/bin/ui:scenic",
+  "//garnet/bin/vulkan_loader",
+  "//src/ui/bin/ime:ime_service",
 ]
 
 cache_package_labels += [
-  "//garnet/packages/prod:fonts",
-  "//garnet/packages/prod:terminal",
-  "//garnet/packages/prod:tiles",
+  "//garnet/bin/developer/tiles",
+  "//garnet/bin/fonts",
+  "//garnet/bin/terminal",
 ]
-
-universe_package_labels += [ "//bundles:tools" ]
 
 # End to end (E2E) product test runtime dependencies. Must be added to cache,
 # not universe, so the test can run on bots where there is no package server.
