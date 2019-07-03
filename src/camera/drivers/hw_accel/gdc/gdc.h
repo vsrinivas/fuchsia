@@ -15,6 +15,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/gdc.h>
 #include <fbl/auto_lock.h>
+#include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <hw/reg.h>
@@ -22,7 +23,6 @@
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/mmio/mmio.h>
-#include <lib/sync/completion.h>
 #include <lib/zx/event.h>
 #include <lib/zx/interrupt.h>
 #include <zircon/fidl.h>
@@ -105,7 +105,7 @@ class GdcDevice : public GdcDeviceType,
   zx_status_t WaitForInterrupt(zx_port_packet_t* packet);
 
   // Used to access the processing queue.
-  fbl::Mutex deque_lock_;
+  fbl::Mutex lock_;
 
   // HHI register block has the clock registers
   ddk::MmioBuffer clock_mmio_;
@@ -114,10 +114,10 @@ class GdcDevice : public GdcDeviceType,
   zx::bti bti_;
   uint32_t next_task_index_ = 0;
   std::unordered_map<uint32_t, std::unique_ptr<Task>> task_map_;
-  std::deque<TaskInfo> processing_queue_ __TA_GUARDED(deque_lock_);
+  std::deque<TaskInfo> processing_queue_ __TA_GUARDED(lock_);
   thrd_t processing_thread_;
-  sync_completion_t frame_processing_signal_;
-  std::atomic<bool> running_;
+  fbl::ConditionVariable frame_processing_signal_ __TA_GUARDED(lock_);
+  bool shutdown_ __TA_GUARDED(lock_) = false;
 };
 
 }  // namespace gdc

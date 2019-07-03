@@ -95,32 +95,20 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
 
 int GdcDevice::FrameProcessingThread() {
   FX_LOGF(INFO, "", "%s: start \n", __func__);
-
-  while (running_.load()) {
-    // Waiting for the event when a task is queued.
-    sync_completion_wait(&frame_processing_signal_, ZX_TIME_INFINITE);
-    bool pending_task = false;
-    // Dequeing the entire deque till it drains.
-    do {
-      TaskInfo info;
-      {
-        fbl::AutoLock lock(&deque_lock_);
-        if (!processing_queue_.empty()) {
-          info = processing_queue_.back();
-          processing_queue_.pop_back();
-          pending_task = true;
-        } else {
-          pending_task = false;
+  for (;;) {
+        fbl::AutoLock al(&lock_);
+        while (processing_queue_.empty() && !shutdown_) {
+            frame_processing_signal_.Wait(&lock_);
         }
-      }
-      if (pending_task) {
+        if (shutdown_) {
+            break;
+        }
+        auto info = processing_queue_.back();
+        processing_queue_.pop_back();
+        al.release();
         ProcessTask(info);
-      }
-    } while (pending_task);
-    // Now that the deque is drained we reset the signal.
-    sync_completion_reset(&frame_processing_signal_);
   }
-  return 0;
+  return ZX_OK;
 }
 
 zx_status_t GdcDevice::GdcProcessFrame(uint32_t task_index, uint32_t input_buffer_index) {
@@ -140,14 +128,13 @@ zx_status_t GdcDevice::GdcProcessFrame(uint32_t task_index, uint32_t input_buffe
   info.input_buffer_index = input_buffer_index;
 
   // Put the task on queue.
-  fbl::AutoLock lock(&deque_lock_);
+  fbl::AutoLock lock(&lock_);
   processing_queue_.push_front(std::move(info));
-  sync_completion_signal(&frame_processing_signal_);
+  frame_processing_signal_.Signal();
   return ZX_OK;
 }
 
 zx_status_t GdcDevice::StartThread() {
-  running_.store(true);
   return thrd_status_to_zx_status(thrd_create_with_name(
       &processing_thread_,
       [](void* arg) -> int { return reinterpret_cast<GdcDevice*>(arg)->FrameProcessingThread(); },
@@ -155,10 +142,12 @@ zx_status_t GdcDevice::StartThread() {
 }
 
 zx_status_t GdcDevice::StopThread() {
-  running_.store(false);
-  // Signal the thread waiting on this signal
-  sync_completion_signal(&frame_processing_signal_);
-  gdc_irq_.destroy();
+  // Signal the worker thread and wait for it to terminate.
+  {
+        fbl::AutoLock al(&lock_);
+        shutdown_ = true;
+        frame_processing_signal_.Signal();
+  }
   JoinThread();
   return ZX_OK;
 }
