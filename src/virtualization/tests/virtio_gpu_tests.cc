@@ -36,6 +36,32 @@ using VirtioGpuTest = GuestTest<T>;
 using GuestTypes = ::testing::Types<ZirconEnclosedGuest, DebianEnclosedGuest>;
 TYPED_TEST_SUITE(VirtioGpuTest, GuestTypes);
 
+// Poll |condition| using exponential backoff until it returns true, or
+// a timeout has passed.
+//
+// Returns true iff |condition| returned true before the deadline.
+template <typename C>
+bool PollCondition(C condition, zx::duration timeout, std::optional<PeriodicLogger> logger) {
+  const zx::time deadline = zx::deadline_after(timeout);
+  zx::duration wait_time = zx::usec(1);
+
+  do {
+    // Have we succeeded?
+    if (condition()) {
+      return true;
+    }
+
+    logger->LogIfRequired();
+
+    // Sleep, with exponential backoff.
+    zx::nanosleep(zx::deadline_after(wait_time));
+    wait_time = std::max(wait_time * 2, zx::sec(1));
+  } while (zx::clock::get_monotonic() < deadline);
+
+  // Perform one final check.
+  return condition();
+}
+
 // Save a screenshot to disk, if the constand "kSaveScreeshot" has been
 // compiled in.
 void SaveScreenshot(const std::string& prefix, const Screenshot& screenshot) {
@@ -145,25 +171,19 @@ TYPED_TEST(VirtioGpuTest, TextInputChangesConsole) {
 
   // Take another screenshot.
   //
-  // We try a few times with an exponentially increasing sleep each time, just
-  // to handle any delay in propagating input to output.
-  Screenshot screenshot2;
-  zx::time test_start = zx::clock::get_monotonic();
-  zx::duration wait_time = zx::msec(1);
-  PeriodicLogger logger("Waiting for change in console", zx::sec(2));
-  do {
-    logger.LogIfRequired();
-    zx::nanosleep(zx::deadline_after(wait_time));
-    wait_time = std::max(wait_time * 2, zx::sec(1));
-    status = this->GetEnclosedGuest()->GetScenic()->CaptureScreenshot(&screenshot2);
-    ASSERT_EQ(status, ZX_OK) << "Error capturing screenshot.";
-  } while (ScreenshotsSame(screenshot1, screenshot2) &&
-           zx::clock::get_monotonic() - test_start < kGpuTestTimeout);
-  SaveScreenshot("input-state2", screenshot2);
+  // We keep polling to handle any delay in propagating input to output.
+  bool success = PollCondition(
+      [&screenshot1]() -> bool {
+        // Wait for the screen to change.
+        Screenshot screenshot2;
+        SaveScreenshot("input-state2", screenshot2);
+        return !ScreenshotsSame(screenshot1, screenshot2);
+      },
+      /*timeout=*/kGpuTestTimeout, PeriodicLogger("Waiting for change in console", zx::sec(1)));
 
   // Ensure something changed.
-  EXPECT_FALSE(ScreenshotsSame(screenshot1, screenshot2))
-      << "Expected typed keys to change console output, but nothing changed.";
+  EXPECT_TRUE(success)
+      << "Expected keystroke events to change console output, but nothing changed.";
 }
 
 }  // namespace
