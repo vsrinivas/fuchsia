@@ -7,13 +7,14 @@
 use std::hash::Hash;
 use std::mem;
 
+use byteorder::{ByteOrder, NetworkEndian};
 use log::trace;
 use packet::{BufferMut, BufferSerializer, Serializer, TruncateDirection};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
 use crate::device::{ndp, DeviceId, FrameDestination};
 use crate::error;
-use crate::ip::path_mtu::update_pmtu_if_less;
+use crate::ip::path_mtu::{update_pmtu_if_less, update_pmtu_next_lower};
 use crate::ip::{
     send_icmp_response, send_ip_packet, Ip, IpAddress, IpProto, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
     IPV6_MIN_MTU,
@@ -184,15 +185,33 @@ pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
                         // therefore does not actually use the Next-Hop MTU field and still
                         // considers it as an unused field.
                         //
-                        // TODO(ghanan): Handle the case here where our PMTU estimate needs to be
-                        //               updated since at this point we know our current PMTU
-                        //               estimate is too high. We need to act on 0 information
-                        //               from the node with the link with the MTU size that is
-                        //               smaller than our PMTU estimate. We can simply reduce
-                        //               our PMTU estimate by a constant factor (0.75) but this
-                        //               may not result in the most optimal PMTU value. It would
-                        //               work as a temporary solution though.
-                        trace!("receive_icmp_packet: Next-Hop MTU is 0 so ignoring");
+                        // In this case, the only information we have is the size of the
+                        // original IP packet that was too big (the original packet header
+                        // should be included in the ICMP response). Here we will simply
+                        // reduce our PMTU estimate to a value less than the total length
+                        // of the original packet. See RFC 1191 section 5.
+                        //
+                        // `update_pmtu_next_lower` may return an error, but it will only happen if
+                        // no valid lower value exists from the original packet's length. It is safe
+                        // to silently ignore the error when we have no valid lower PMTU value as
+                        // the node from `src_ip` would not be IP RFC compliant and we expect this
+                        // to be very rare (for IPv4, the lowest MTU value for a link can be 68
+                        // bytes).
+                        let original_packet_buf = dest_unreachable.body().bytes();
+                        if original_packet_buf.len() >= 4 {
+                            // We need the first 4 bytes as the total length field is at bytes 2/3
+                            // of the original packet buffer.
+                            let total_len = NetworkEndian::read_u16(&original_packet_buf[2..4]);
+
+                            trace!("receive_icmp_packet: Next-Hop MTU is 0 so using the next best PMTU value from {}", total_len);
+
+                            update_pmtu_next_lower(ctx, dst_ip, src_ip, u32::from(total_len));
+                        } else {
+                            // Ok to silently ignore as RFC 792 requires nodes to send the original
+                            // IP packet header + 64 bytes of the original IP packet's body so the
+                            // node itself is already violating the RFC.
+                            trace!("receive_icmp_packet: Original packet buf is too small to get original packet len so ignoring");
+                        }
                     }
                 } else {
                     log_unimplemented!((), "ip::icmp::receive_icmp_packet: Not implemented for this ICMP destination unreachable code {:?}", dest_unreachable.code());

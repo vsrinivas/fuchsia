@@ -1036,7 +1036,7 @@ mod tests {
     use rand::Rng;
 
     use crate::device::FrameDestination;
-    use crate::ip::path_mtu::{get_pmtu, min_mtu, update_pmtu};
+    use crate::ip::path_mtu::{get_pmtu, min_mtu};
     use crate::testutil::*;
     use crate::wire::ethernet::EthernetFrame;
     use crate::wire::icmp::{
@@ -1742,21 +1742,35 @@ mod tests {
     }
 
     #[specialize_ip_address]
-    fn create_packet_too_big_buf<A: IpAddress>(src_ip: A, dst_ip: A, mtu: u16) -> Buf<Vec<u8>> {
+    fn create_packet_too_big_buf<A: IpAddress>(
+        src_ip: A,
+        dst_ip: A,
+        mtu: u16,
+        body: Option<Buf<Vec<u8>>>,
+    ) -> Buf<Vec<u8>> {
+        let body = body.unwrap_or_else(|| Buf::new(Vec::new(), ..));
+
         #[ipv4addr]
-        let ret = BufferSerializer::new_vec(Buf::new(Vec::new(), ..))
-            .encapsulate(IcmpPacketBuilder::<Ipv4, &mut [u8], IcmpDestUnreachable>::new(
-                dst_ip,
-                src_ip,
-                Icmpv4DestUnreachableCode::FragmentationRequired,
-                IcmpDestUnreachable::new_for_frag_req(NonZeroU16::new(mtu).unwrap()),
-            ))
-            .encapsulate(Ipv4PacketBuilder::new(src_ip, dst_ip, 64, IpProto::Icmp))
-            .serialize_outer()
-            .unwrap();
+        let ret = {
+            let msg = match NonZeroU16::new(mtu) {
+                Some(mtu) => IcmpDestUnreachable::new_for_frag_req(mtu),
+                None => IcmpDestUnreachable::default(),
+            };
+
+            BufferSerializer::new_vec(body)
+                .encapsulate(IcmpPacketBuilder::<Ipv4, &mut [u8], IcmpDestUnreachable>::new(
+                    dst_ip,
+                    src_ip,
+                    Icmpv4DestUnreachableCode::FragmentationRequired,
+                    msg,
+                ))
+                .encapsulate(Ipv4PacketBuilder::new(src_ip, dst_ip, 64, IpProto::Icmp))
+                .serialize_outer()
+                .unwrap()
+        };
 
         #[ipv6addr]
-        let ret = BufferSerializer::new_vec(Buf::new(Vec::new(), ..))
+        let ret = BufferSerializer::new_vec(body)
             .encapsulate(IcmpPacketBuilder::<Ipv6, &mut [u8], Icmpv6PacketTooBig>::new(
                 dst_ip,
                 src_ip,
@@ -1793,6 +1807,7 @@ mod tests {
             dummy_config.remote_ip,
             dummy_config.local_ip,
             u16::try_from(new_mtu1).unwrap(),
+            None,
         );
 
         // Receive the IP packet.
@@ -1817,6 +1832,7 @@ mod tests {
             dummy_config.remote_ip,
             dummy_config.local_ip,
             u16::try_from(new_mtu2).unwrap(),
+            None,
         );
 
         // Receive the IP packet.
@@ -1842,6 +1858,7 @@ mod tests {
             dummy_config.remote_ip,
             dummy_config.local_ip,
             u16::try_from(new_mtu3).unwrap(),
+            None,
         );
 
         // Receive the IP packet.
@@ -1890,6 +1907,7 @@ mod tests {
             dummy_config.remote_ip,
             dummy_config.local_ip,
             u16::try_from(new_mtu1).unwrap(),
+            None,
         );
 
         // Receive the IP packet.
@@ -1911,6 +1929,16 @@ mod tests {
         test_ip_update_pmtu_too_low::<Ipv6>();
     }
 
+    /// Create buffer to be used as the ICMPv4 message body
+    /// where the original packet's body  length is `body_len`.
+    fn create_orig_packet_buf(src_ip: Ipv4Addr, dst_ip: Ipv4Addr, body_len: usize) -> Buf<Vec<u8>> {
+        BufferSerializer::new_vec(Buf::new(vec![0; body_len], ..))
+            .encapsulate(Ipv4PacketBuilder::new(src_ip, dst_ip, 64, IpProto::Tcp))
+            .serialize_outer()
+            .unwrap()
+            .into_inner()
+    }
+
     #[test]
     fn test_ipv4_remote_no_rfc1191() {
         //
@@ -1924,18 +1952,17 @@ mod tests {
         let device = DeviceId::new_ethernet(1);
         let frame_dst = FrameDestination::Unicast;
 
-        let new_mtu = min_mtu::<Ipv4>();
-        assert!(update_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip, new_mtu)
-            .unwrap()
-            .is_none());
+        //
+        // Update from None
+        //
 
-        let low_mtu = min_mtu::<Ipv4>() - 1;
-
-        // Create ICMP IP buf
+        // Create ICMP IP buf w/ orig packet body len = 500; orig packet len = 520
         let packet_buf = create_packet_too_big_buf(
             dummy_config.remote_ip,
             dummy_config.local_ip,
-            u16::try_from(low_mtu).unwrap(),
+            0, // A 0 value indicates that the source of the
+            // ICMP message does not implement RFC 1191.
+            create_orig_packet_buf(dummy_config.local_ip, dummy_config.remote_ip, 500).into(),
         );
 
         // Receive the IP packet.
@@ -1944,10 +1971,75 @@ mod tests {
         // Should have dispatched the packet.
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
 
-        // Should not have updated PMTU value.
-        assert_eq!(
-            get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
-            new_mtu
+        // Should have decreased PMTU value to the next lower PMTU
+        // plateau from `crate::ip::path_mtu::PMTU_PLATEAUS`.
+        assert_eq!(get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(), 508);
+
+        //
+        // Don't Update when packet size is too small
+        //
+
+        // Create ICMP IP buf w/ orig packet body len = 1; orig packet len = 21
+        let packet_buf = create_packet_too_big_buf(
+            dummy_config.remote_ip,
+            dummy_config.local_ip,
+            0,
+            create_orig_packet_buf(dummy_config.local_ip, dummy_config.remote_ip, 1).into(),
         );
+
+        // Receive the IP packet.
+        receive_ip_packet::<_, _, Ipv4>(&mut ctx, device, frame_dst, packet_buf);
+
+        // Should have dispatched the packet.
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 2);
+
+        // Should not have updated PMTU as there is no other valid
+        // lower PMTU value.
+        assert_eq!(get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(), 508);
+
+        //
+        // Update to lower PMTU estimate based on original packet size.
+        //
+
+        // Create ICMP IP buf w/ orig packet body len = 60; orig packet len = 80
+        let packet_buf = create_packet_too_big_buf(
+            dummy_config.remote_ip,
+            dummy_config.local_ip,
+            0,
+            create_orig_packet_buf(dummy_config.local_ip, dummy_config.remote_ip, 60).into(),
+        );
+
+        // Receive the IP packet.
+        receive_ip_packet::<_, _, Ipv4>(&mut ctx, device, frame_dst, packet_buf);
+
+        // Should have dispatched the packet.
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 3);
+
+        // Should have decreased PMTU value to the next lower PMTU
+        // plateau from `crate::ip::path_mtu::PMTU_PLATEAUS`.
+        assert_eq!(get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(), 68);
+
+        //
+        // Should not update PMTU because the next low PMTU from this original
+        // packet size is higher than current PMTU.
+        //
+
+        // Create ICMP IP buf w/ orig packet body len = 290; orig packet len = 310
+        let packet_buf = create_packet_too_big_buf(
+            dummy_config.remote_ip,
+            dummy_config.local_ip,
+            0, // A 0 value indicates that the source of the
+            // ICMP message does not implement RFC 1191.
+            create_orig_packet_buf(dummy_config.local_ip, dummy_config.remote_ip, 290).into(),
+        );
+
+        // Receive the IP packet.
+        receive_ip_packet::<_, _, Ipv4>(&mut ctx, device, frame_dst, packet_buf);
+
+        // Should have dispatched the packet.
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 4);
+
+        // Should not have updated the PMTU as the current PMTU is lower.
+        assert_eq!(get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(), 68);
     }
 }

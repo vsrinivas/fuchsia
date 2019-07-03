@@ -47,6 +47,26 @@ const MAINTENANCE_PERIOD: Duration = Duration::from_secs(3600);
 // TODO(ghanan): Make this value configurable by runtime options.
 const PMTU_STALE_TIMEOUT: Duration = Duration::from_secs(10800);
 
+/// Common MTU values taken from [RFC 1191 section 7.1].
+///
+/// This list includes lower bounds of groups of common MTU values that
+/// are relatively close to each other, sorted in descending order.
+///
+/// Note, the RFC does not actually include the value 1280 in the list of
+/// plateau values, but we include it here because it is the minimum IPv6
+/// MTU value and is not expected to be an uncommon value for MTUs.
+///
+/// This list MUST be sorted in descending order; methods such as
+/// `next_lower_pmtu_plateau` assume `PMTU_PLATEAUS` has this property.
+///
+/// We use this list when estimating PMTU values when doing PMTU discovery
+/// with IPv4 on paths with nodes that do not implement RFC 1191. This
+/// list is useful as in practice, relatively few MTU values are in use.
+///
+/// [RFC 1191 section 7.1]: https://tools.ietf.org/html/rfc1191#section-7.1
+const PMTU_PLATEAUS: [u32; 12] =
+    [65535, 32000, 17914, 8166, 4352, 2002, 1492, 1280, 1006, 508, 296, 68];
+
 /// Get the minimum MTU size for a specific IP version, identified by `I`.
 #[specialize_ip]
 pub(crate) fn min_mtu<I: Ip>() -> u32 {
@@ -142,6 +162,52 @@ pub(crate) fn update_pmtu_if_less<A: IpAddress, D: EventDispatcher>(
             Ok(prev_mtu)
         }
     }
+}
+
+/// Update the PMTU between `src_ip` and `dst_ip` to the next lower estimate
+/// from `from`.
+///
+/// Returns `Ok((a, b))` on successful update (a lower PMTU value, `b`,
+/// exists that does not violate IP specific minimum MTU requirements and
+/// it is less than the current PMTU estimate, `a`. Returns `Err(a)`
+/// otherwise, where `a` is the same `a` in the success case.
+pub(crate) fn update_pmtu_next_lower<A: IpAddress, D: EventDispatcher>(
+    ctx: &mut Context<D>,
+    src_ip: A,
+    dst_ip: A,
+    from: u32,
+) -> Result<(Option<u32>, u32), Option<u32>> {
+    if let Some(next_pmtu) = next_lower_pmtu_plateau(from) {
+        trace!(
+            "update_pmtu_next_lower: Attempting to update PMTU between src {} and dest {} to {}",
+            src_ip,
+            dst_ip,
+            next_pmtu
+        );
+
+        update_pmtu_if_less(ctx, src_ip, dst_ip, next_pmtu).map(|x| (x, next_pmtu))
+    } else {
+        // TODO(ghanan): Should we make sure the current PMTU value is set to the
+        //               IP specific minimum MTU value?
+        trace!("update_pmtu_next_lower: Not updating PMTU between src {} and dest {} as there is no lower PMTU value from {}", src_ip, dst_ip, from);
+        Err(get_pmtu(ctx, src_ip, dst_ip))
+    }
+}
+
+/// Get next lower PMTU plateau value, if one exists.
+fn next_lower_pmtu_plateau(start_mtu: u32) -> Option<u32> {
+    for i in 0..PMTU_PLATEAUS.len() {
+        let pmtu = PMTU_PLATEAUS[i];
+
+        if pmtu < start_mtu {
+            // Current PMTU is less than `start_mtu` and we know
+            // `PMTU_PLATEAUS` is sorted so this is the next best
+            // PMTU estimate.
+            return Some(pmtu);
+        }
+    }
+
+    None
 }
 
 /// The key used to identify a path.
@@ -362,6 +428,22 @@ mod tests {
         let ret = ctx.state.ip.v6.path_mtu.get_last_updated(src_ip, dst_ip);
 
         ret
+    }
+
+    #[test]
+    fn test_next_lower_pmtu_plateau() {
+        assert_eq!(next_lower_pmtu_plateau(65536).unwrap(), 65535);
+        assert_eq!(next_lower_pmtu_plateau(65535).unwrap(), 32000);
+        assert_eq!(next_lower_pmtu_plateau(65534).unwrap(), 32000);
+        assert_eq!(next_lower_pmtu_plateau(32001).unwrap(), 32000);
+        assert_eq!(next_lower_pmtu_plateau(32000).unwrap(), 17914);
+        assert_eq!(next_lower_pmtu_plateau(31999).unwrap(), 17914);
+        assert_eq!(next_lower_pmtu_plateau(1281).unwrap(), 1280);
+        assert_eq!(next_lower_pmtu_plateau(1280).unwrap(), 1006);
+        assert_eq!(next_lower_pmtu_plateau(69).unwrap(), 68);
+        assert_eq!(next_lower_pmtu_plateau(68), None);
+        assert_eq!(next_lower_pmtu_plateau(67), None);
+        assert_eq!(next_lower_pmtu_plateau(0), None);
     }
 
     fn test_ip_path_mtu_cache_ctx<I: Ip>() {
