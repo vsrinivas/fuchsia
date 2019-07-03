@@ -59,12 +59,32 @@ A short form can be used if it is unambiguous:
 run-test-component my_test.cmx
 ```
 
-## Run external services
+## Ambient Services
 
 All test components are started in a new hermetic environment. By default, this
-environment only contains a few basic services, such as
-`fuchsia.sys.Environment` and `fuchsia.sys.Launcher`. To inject additional
-services, you can add a `injected-services` clause to the manifest file's facets:
+environment only contains a few basic services (ambient):
+
+```text
+"fuchsia.sys.Environment"
+"fuchsia.sys.Launcher"
+"fuchsia.process.Launcher"
+"fuchsia.process.Resolver"
+```
+
+Tests can use these services by mentioning them in their `sandbox > services`.
+
+## Logger Service
+
+Tests and the components launched in a hermetic environment will have access to system's `fuchsia.logger.LogSink` service if it is included in their sandbox. For tests to inject Logger, the tests must use `injected-services` (see below). Then, the injected Logger service takes precedence.
+
+## Run external services
+
+If your test needs to use (i.e. its sandbox includes) any services other than the ambient and logger services above, you must perform either, both or none:
+
+- Inject the services by starting other components that provide those services in the hermetic test environment
+- Request non-hermetic system services be included in the test environment, when a service cannot be faked or mocked, see [Other system services](#Other-system-services).
+
+To inject additional services, you can add a `injected-services` clause to the manifest file's facets:
 
 ```json
 "facets": {
@@ -78,7 +98,8 @@ services, you can add a `injected-services` clause to the manifest file's facets
 ```
 
 `run-test-component` will start `component_url1` and `component_url2` and the
-test will have access to `service_name1` and `service_name2`.
+test will have access to `service_name1` and `service_name2`. Note that this makes the injected services available in the test environment, but the test component still needs to "use" them by including the service in its `sandbox > services`.
+
 
 ### Network access
 
@@ -94,13 +115,27 @@ enable this workaround you need to allow some system services:
       "fuchsia.net.Connectivity",
       "fuchsia.net.SocketProvider",
       "fuchsia.net.stack.Stack",
-      "fuchsia.netstack.Netstack"
+      "fuchsia.netstack.Netstack",
+      "fuchsia.net.NameLookup",
+      "fuchsia.posix.socket.Provider",
     ]
   }
 }
 ```
 
-Depending on your use case you can include one or more of the services above.
-However, we do not allow any other services.
+### Other system services
 
-This option would be deprecated once we fix CP-144.
+There are some services, such as network, that cannot be faked or mocked. However, you can connect to real system versions of these services by mentioning these services in `system-services`. Services that cannot be faked:
+
+```text
+"fuchsia.scheduler.ProfileProvider"
+"fuchsia.sys.test.CacheControl"
+"fuchsia.ui.policy.Presenter"
+"fuchsia.ui.scenic.Scenic"
+```
+
+Depending on your use case you can include one or more of the services above.
+However, services that are not listed here are not supported.
+
+This option would be replaced once we fix CP-144 (in component manager v2).
+
