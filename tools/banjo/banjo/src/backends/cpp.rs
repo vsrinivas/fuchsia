@@ -938,6 +938,26 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
             .map(|x| x.join(""))
     }
 
+    fn codegen_mock_accessors(
+        &self,
+        methods: &Vec<ast::Method>,
+        ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        let text = methods
+            .iter()
+            .map(|m| {
+                Ok(format!(
+                    "    mock_function::MockFunction<{param_types}>& mock_{name}() \
+                     {{ return mock_{name}_; }}",
+                    param_types = get_mock_param_types(&m, ast)?,
+                    name = to_c_name(&m.name).as_str(),
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()
+            .map(|x| x.join("\n"))?;
+        Ok(if text.len() > 0 { "\n".to_string() + &text } else { "".to_string() })
+    }
+
     fn codegen_mock_definitions(
         &self,
         methods: &Vec<ast::Method>,
@@ -962,7 +982,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
         methods: &Vec<ast::Method>,
         ast: &BanjoAst,
     ) -> Result<String, Error> {
-        methods
+        let text = methods
             .iter()
             .map(|m| {
                 Ok(format!(
@@ -975,7 +995,8 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                 ))
             })
             .collect::<Result<Vec<_>, Error>>()
-            .map(|x| x.join("\n"))
+            .map(|x| x.join("\n"))?;
+        Ok(if text.len() > 0 { "\n".to_string() + &text } else { "".to_string() })
     }
 
     fn codegen_mock_verify(&self, methods: &Vec<ast::Method>) -> Result<String, Error> {
@@ -1104,7 +1125,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
         methods: &Vec<ast::Method>,
         ast: &BanjoAst,
     ) -> Result<String, Error> {
-        methods
+        let text = methods
             .iter()
             .map(|m| {
                 let (out_params, return_param) = get_out_params(&m, name, true, ast)?;
@@ -1181,11 +1202,12 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                     accum.push_str(self.codegen_mock_protocol_out_args(&m, ast)?.as_str());
                 }
 
-                accum.push_str("    }\n");
+                accum.push_str("    }");
                 Ok(accum)
             })
             .collect::<Result<Vec<_>, Error>>()
-            .map(|x| x.join("\n"))
+            .map(|x| x.join("\n\n"))?;
+        Ok(if text.len() > 0 { "\n".to_string() + &text } else { "".to_string() })
     }
 
     fn codegen_mock(&self, namespace: &Vec<ast::Decl>, ast: &BanjoAst) -> Result<String, Error> {
@@ -1201,6 +1223,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                     mock_verify = self.codegen_mock_verify(&methods)?,
                     protocol_definitions =
                         self.codegen_mock_protocol_defs(name.name(), &methods, ast)?,
+                    mock_accessors = self.codegen_mock_accessors(&methods, ast)?,
                     mock_definitions = self.codegen_mock_definitions(&methods, ast)?,
                 ))
             })

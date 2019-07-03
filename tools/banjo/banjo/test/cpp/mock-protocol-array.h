@@ -172,6 +172,19 @@ public:
         *out_f64 = std::get<0>(ret);
     }
 
+    mock_function::MockFunction<std::tuple<bool>, bool>& mock_bool() { return mock_bool_; }
+    mock_function::MockFunction<std::tuple<int8_t>, int8_t>& mock_int8() { return mock_int8_; }
+    mock_function::MockFunction<std::tuple<int16_t>, int16_t>& mock_int16() { return mock_int16_; }
+    mock_function::MockFunction<std::tuple<int32_t>, int32_t>& mock_int32() { return mock_int32_; }
+    mock_function::MockFunction<std::tuple<int64_t>, int64_t>& mock_int64() { return mock_int64_; }
+    mock_function::MockFunction<std::tuple<uint8_t>, uint8_t>& mock_uint8() { return mock_uint8_; }
+    mock_function::MockFunction<std::tuple<uint16_t>, uint16_t>& mock_uint16() { return mock_uint16_; }
+    mock_function::MockFunction<std::tuple<uint32_t>, uint32_t>& mock_uint32() { return mock_uint32_; }
+    mock_function::MockFunction<std::tuple<uint64_t>, uint64_t>& mock_uint64() { return mock_uint64_; }
+    mock_function::MockFunction<std::tuple<float>, float>& mock_float32() { return mock_float32_; }
+    mock_function::MockFunction<std::tuple<double>, double>& mock_float64() { return mock_float64_; }
+    mock_function::MockFunction<std::tuple<zx::handle>, zx::handle>& mock_handle() { return mock_handle_; }
+
 protected:
     mock_function::MockFunction<std::tuple<bool>, bool> mock_bool_;
     mock_function::MockFunction<std::tuple<int8_t>, int8_t> mock_int8_;
@@ -348,6 +361,19 @@ public:
         *out_f64 = std::get<0>(ret);
     }
 
+    mock_function::MockFunction<std::tuple<bool>, bool>& mock_bool() { return mock_bool_; }
+    mock_function::MockFunction<std::tuple<int8_t>, int8_t>& mock_int8() { return mock_int8_; }
+    mock_function::MockFunction<std::tuple<int16_t>, int16_t>& mock_int16() { return mock_int16_; }
+    mock_function::MockFunction<std::tuple<int32_t>, int32_t>& mock_int32() { return mock_int32_; }
+    mock_function::MockFunction<std::tuple<int64_t>, int64_t>& mock_int64() { return mock_int64_; }
+    mock_function::MockFunction<std::tuple<uint8_t>, uint8_t>& mock_uint8() { return mock_uint8_; }
+    mock_function::MockFunction<std::tuple<uint16_t>, uint16_t>& mock_uint16() { return mock_uint16_; }
+    mock_function::MockFunction<std::tuple<uint32_t>, uint32_t>& mock_uint32() { return mock_uint32_; }
+    mock_function::MockFunction<std::tuple<uint64_t>, uint64_t>& mock_uint64() { return mock_uint64_; }
+    mock_function::MockFunction<std::tuple<float>, float>& mock_float32() { return mock_float32_; }
+    mock_function::MockFunction<std::tuple<double>, double>& mock_float64() { return mock_float64_; }
+    mock_function::MockFunction<std::tuple<zx::handle>, zx::handle>& mock_handle() { return mock_handle_; }
+
 protected:
     mock_function::MockFunction<std::tuple<bool>, bool> mock_bool_;
     mock_function::MockFunction<std::tuple<int8_t>, int8_t> mock_int8_;
@@ -523,6 +549,19 @@ public:
         std::tuple<zx::handle> ret = mock_handle_.Call(u64);
         *out_f64 = std::get<0>(ret);
     }
+
+    mock_function::MockFunction<std::tuple<bool>, bool>& mock_bool() { return mock_bool_; }
+    mock_function::MockFunction<std::tuple<int8_t>, int8_t>& mock_int8() { return mock_int8_; }
+    mock_function::MockFunction<std::tuple<int16_t>, int16_t>& mock_int16() { return mock_int16_; }
+    mock_function::MockFunction<std::tuple<int32_t>, int32_t>& mock_int32() { return mock_int32_; }
+    mock_function::MockFunction<std::tuple<int64_t>, int64_t>& mock_int64() { return mock_int64_; }
+    mock_function::MockFunction<std::tuple<uint8_t>, uint8_t>& mock_uint8() { return mock_uint8_; }
+    mock_function::MockFunction<std::tuple<uint16_t>, uint16_t>& mock_uint16() { return mock_uint16_; }
+    mock_function::MockFunction<std::tuple<uint32_t>, uint32_t>& mock_uint32() { return mock_uint32_; }
+    mock_function::MockFunction<std::tuple<uint64_t>, uint64_t>& mock_uint64() { return mock_uint64_; }
+    mock_function::MockFunction<std::tuple<float>, float>& mock_float32() { return mock_float32_; }
+    mock_function::MockFunction<std::tuple<double>, double>& mock_float64() { return mock_float64_; }
+    mock_function::MockFunction<std::tuple<zx::handle>, zx::handle>& mock_handle() { return mock_handle_; }
 
 protected:
     mock_function::MockFunction<std::tuple<bool>, bool> mock_bool_;

@@ -109,6 +109,13 @@ public:
         strncpy(out_s, std::get<0>(ret).c_str(), s_capacity));
     }
 
+    mock_function::MockFunction<std::tuple<this_is_astruct_t>, this_is_astruct_t>& mock_struct() { return mock_struct_; }
+    mock_function::MockFunction<std::tuple<this_is_aunion_t>, this_is_aunion_t>& mock_union() { return mock_union_; }
+    mock_function::MockFunction<std::tuple<this_is_an_enum_t>, this_is_an_enum_t>& mock_enum() { return mock_enum_; }
+    mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string() { return mock_string_; }
+    mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string_sized() { return mock_string_sized_; }
+    mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string_sized2() { return mock_string_sized2_; }
+
 protected:
     mock_function::MockFunction<std::tuple<this_is_astruct_t>, this_is_astruct_t> mock_struct_;
     mock_function::MockFunction<std::tuple<this_is_aunion_t>, this_is_aunion_t> mock_union_;
@@ -213,6 +220,13 @@ public:
         callback(cookie, std::get<0>(ret).c_str());
     }
 
+    mock_function::MockFunction<std::tuple<this_is_astruct_t>, this_is_astruct_t>& mock_struct() { return mock_struct_; }
+    mock_function::MockFunction<std::tuple<this_is_aunion_t>, this_is_aunion_t>& mock_union() { return mock_union_; }
+    mock_function::MockFunction<std::tuple<this_is_an_enum_t>, this_is_an_enum_t>& mock_enum() { return mock_enum_; }
+    mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string() { return mock_string_; }
+    mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string_sized() { return mock_string_sized_; }
+    mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string_sized2() { return mock_string_sized2_; }
+
 protected:
     mock_function::MockFunction<std::tuple<this_is_astruct_t>, this_is_astruct_t> mock_struct_;
     mock_function::MockFunction<std::tuple<this_is_aunion_t>, this_is_aunion_t> mock_union_;
@@ -306,6 +320,12 @@ public:
         strncpy(out_s, std::get<0>(ret).c_str(), s_capacity));
     }
 
+    mock_function::MockFunction<std::tuple<this_is_astruct_t>, this_is_astruct_t>& mock_struct() { return mock_struct_; }
+    mock_function::MockFunction<std::tuple<this_is_aunion_t>, this_is_aunion_t>& mock_union() { return mock_union_; }
+    mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string() { return mock_string_; }
+    mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string_sized() { return mock_string_sized_; }
+    mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string_sized2() { return mock_string_sized2_; }
+
 protected:
     mock_function::MockFunction<std::tuple<this_is_astruct_t>, this_is_astruct_t> mock_struct_;
     mock_function::MockFunction<std::tuple<this_is_aunion_t>, this_is_aunion_t> mock_union_;
@@ -398,6 +418,12 @@ public:
         callback(cookie, std::get<0>(ret).c_str());
     }
 
+    mock_function::MockFunction<std::tuple<this_is_astruct_t>, this_is_astruct_t>& mock_struct() { return mock_struct_; }
+    mock_function::MockFunction<std::tuple<this_is_aunion_t>, this_is_aunion_t>& mock_union() { return mock_union_; }
+    mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string() { return mock_string_; }
+    mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string_sized() { return mock_string_sized_; }
+    mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string_sized2() { return mock_string_sized2_; }
+
 protected:
     mock_function::MockFunction<std::tuple<this_is_astruct_t>, this_is_astruct_t> mock_struct_;
     mock_function::MockFunction<std::tuple<this_is_aunion_t>, this_is_aunion_t> mock_union_;
@@ -478,6 +504,11 @@ public:
         std::tuple<other_types_protocol_t> ret = mock_async_refernce_.Call(intf);
         callback(cookie, std::get<0>(ret));
     }
+
+    mock_function::MockFunction<std::tuple<other_types_protocol_t>, other_types_protocol_t>& mock_value() { return mock_value_; }
+    mock_function::MockFunction<std::tuple<other_types_protocol_t>, other_types_protocol_t>& mock_reference() { return mock_reference_; }
+    mock_function::MockFunction<std::tuple<other_types_protocol_t>, other_types_protocol_t>& mock_async() { return mock_async_; }
+    mock_function::MockFunction<std::tuple<other_types_protocol_t>, other_types_protocol_t>& mock_async_refernce() { return mock_async_refernce_; }
 
 protected:
     mock_function::MockFunction<std::tuple<other_types_protocol_t>, other_types_protocol_t> mock_value_;

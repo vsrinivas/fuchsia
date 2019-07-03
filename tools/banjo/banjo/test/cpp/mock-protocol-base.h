@@ -148,6 +148,16 @@ public:
         return std::get<0>(ret);
     }
 
+    mock_function::MockFunction<std::tuple<zx_status_t, zx_status_t>, zx_status_t>& mock_status() { return mock_status_; }
+    mock_function::MockFunction<std::tuple<zx_time_t, zx_time_t>, zx_time_t>& mock_time() { return mock_time_; }
+    mock_function::MockFunction<std::tuple<zx_duration_t, zx_duration_t>, zx_duration_t>& mock_duration() { return mock_duration_; }
+    mock_function::MockFunction<std::tuple<zx_koid_t, zx_koid_t>, zx_koid_t>& mock_koid() { return mock_koid_; }
+    mock_function::MockFunction<std::tuple<zx_vaddr_t, zx_vaddr_t>, zx_vaddr_t>& mock_vaddr() { return mock_vaddr_; }
+    mock_function::MockFunction<std::tuple<zx_paddr_t, zx_paddr_t>, zx_paddr_t>& mock_paddr() { return mock_paddr_; }
+    mock_function::MockFunction<std::tuple<zx_paddr32_t, zx_paddr32_t>, zx_paddr32_t>& mock_paddr32() { return mock_paddr32_; }
+    mock_function::MockFunction<std::tuple<zx_gpaddr_t, zx_gpaddr_t>, zx_gpaddr_t>& mock_gpaddr() { return mock_gpaddr_; }
+    mock_function::MockFunction<std::tuple<zx_off_t, zx_off_t>, zx_off_t>& mock_off() { return mock_off_; }
+
 protected:
     mock_function::MockFunction<std::tuple<zx_status_t, zx_status_t>, zx_status_t> mock_status_;
     mock_function::MockFunction<std::tuple<zx_time_t, zx_time_t>, zx_time_t> mock_time_;
@@ -287,6 +297,16 @@ public:
         std::tuple<zx_off_t, zx_off_t> ret = mock_off_.Call(off);
         callback(cookie, std::get<0>(ret), std::get<1>(ret));
     }
+
+    mock_function::MockFunction<std::tuple<zx_status_t, zx_status_t>, zx_status_t>& mock_status() { return mock_status_; }
+    mock_function::MockFunction<std::tuple<zx_time_t, zx_time_t>, zx_time_t>& mock_time() { return mock_time_; }
+    mock_function::MockFunction<std::tuple<zx_duration_t, zx_duration_t>, zx_duration_t>& mock_duration() { return mock_duration_; }
+    mock_function::MockFunction<std::tuple<zx_koid_t, zx_koid_t>, zx_koid_t>& mock_koid() { return mock_koid_; }
+    mock_function::MockFunction<std::tuple<zx_vaddr_t, zx_vaddr_t>, zx_vaddr_t>& mock_vaddr() { return mock_vaddr_; }
+    mock_function::MockFunction<std::tuple<zx_paddr_t, zx_paddr_t>, zx_paddr_t>& mock_paddr() { return mock_paddr_; }
+    mock_function::MockFunction<std::tuple<zx_paddr32_t, zx_paddr32_t>, zx_paddr32_t>& mock_paddr32() { return mock_paddr32_; }
+    mock_function::MockFunction<std::tuple<zx_gpaddr_t, zx_gpaddr_t>, zx_gpaddr_t>& mock_gpaddr() { return mock_gpaddr_; }
+    mock_function::MockFunction<std::tuple<zx_off_t, zx_off_t>, zx_off_t>& mock_off() { return mock_off_; }
 
 protected:
     mock_function::MockFunction<std::tuple<zx_status_t, zx_status_t>, zx_status_t> mock_status_;

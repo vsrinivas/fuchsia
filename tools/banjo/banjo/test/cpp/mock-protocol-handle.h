@@ -256,6 +256,25 @@ public:
         *out_h2 = std::move(std::get<1>(ret));
     }
 
+    mock_function::MockFunction<std::tuple<zx::handle, zx::handle>, zx::handle>& mock_handle() { return mock_handle_; }
+    mock_function::MockFunction<std::tuple<zx::process, zx::process>, zx::process>& mock_process() { return mock_process_; }
+    mock_function::MockFunction<std::tuple<zx::thread, zx::thread>, zx::thread>& mock_thread() { return mock_thread_; }
+    mock_function::MockFunction<std::tuple<zx::vmo, zx::vmo>, zx::vmo>& mock_vmo() { return mock_vmo_; }
+    mock_function::MockFunction<std::tuple<zx::channel, zx::channel>, zx::channel>& mock_channel() { return mock_channel_; }
+    mock_function::MockFunction<std::tuple<zx::event, zx::event>, zx::event>& mock_event() { return mock_event_; }
+    mock_function::MockFunction<std::tuple<zx::port, zx::port>, zx::port>& mock_port() { return mock_port_; }
+    mock_function::MockFunction<std::tuple<zx::interrupt, zx::interrupt>, zx::interrupt>& mock_interrupt() { return mock_interrupt_; }
+    mock_function::MockFunction<std::tuple<zx::debuglog, zx::debuglog>, zx::debuglog>& mock_debug_log() { return mock_debug_log_; }
+    mock_function::MockFunction<std::tuple<zx::socket, zx::socket>, zx::socket>& mock_socket() { return mock_socket_; }
+    mock_function::MockFunction<std::tuple<zx::resource, zx::resource>, zx::resource>& mock_resource() { return mock_resource_; }
+    mock_function::MockFunction<std::tuple<zx::eventpair, zx::eventpair>, zx::eventpair>& mock_event_pair() { return mock_event_pair_; }
+    mock_function::MockFunction<std::tuple<zx::job, zx::job>, zx::job>& mock_job() { return mock_job_; }
+    mock_function::MockFunction<std::tuple<zx::vmar, zx::vmar>, zx::vmar>& mock_vmar() { return mock_vmar_; }
+    mock_function::MockFunction<std::tuple<zx::fifo, zx::fifo>, zx::fifo>& mock_fifo() { return mock_fifo_; }
+    mock_function::MockFunction<std::tuple<zx::guest, zx::guest>, zx::guest>& mock_guest() { return mock_guest_; }
+    mock_function::MockFunction<std::tuple<zx::timer, zx::timer>, zx::timer>& mock_timer() { return mock_timer_; }
+    mock_function::MockFunction<std::tuple<zx::profile, zx::profile>, zx::profile>& mock_profile() { return mock_profile_; }
+
 protected:
     mock_function::MockFunction<std::tuple<zx::handle, zx::handle>, zx::handle> mock_handle_;
     mock_function::MockFunction<std::tuple<zx::process, zx::process>, zx::process> mock_process_;
@@ -503,6 +522,25 @@ public:
         std::tuple<zx::profile, zx::profile> ret = mock_profile_.Call(std::move(h));
         callback(cookie, std::move(std::get<0>(ret)), std::move(std::get<1>(ret)));
     }
+
+    mock_function::MockFunction<std::tuple<zx::handle, zx::handle>, zx::handle>& mock_handle() { return mock_handle_; }
+    mock_function::MockFunction<std::tuple<zx::process, zx::process>, zx::process>& mock_process() { return mock_process_; }
+    mock_function::MockFunction<std::tuple<zx::thread, zx::thread>, zx::thread>& mock_thread() { return mock_thread_; }
+    mock_function::MockFunction<std::tuple<zx::vmo, zx::vmo>, zx::vmo>& mock_vmo() { return mock_vmo_; }
+    mock_function::MockFunction<std::tuple<zx::channel, zx::channel>, zx::channel>& mock_channel() { return mock_channel_; }
+    mock_function::MockFunction<std::tuple<zx::event, zx::event>, zx::event>& mock_event() { return mock_event_; }
+    mock_function::MockFunction<std::tuple<zx::port, zx::port>, zx::port>& mock_port() { return mock_port_; }
+    mock_function::MockFunction<std::tuple<zx::interrupt, zx::interrupt>, zx::interrupt>& mock_interrupt() { return mock_interrupt_; }
+    mock_function::MockFunction<std::tuple<zx::debuglog, zx::debuglog>, zx::debuglog>& mock_debug_log() { return mock_debug_log_; }
+    mock_function::MockFunction<std::tuple<zx::socket, zx::socket>, zx::socket>& mock_socket() { return mock_socket_; }
+    mock_function::MockFunction<std::tuple<zx::resource, zx::resource>, zx::resource>& mock_resource() { return mock_resource_; }
+    mock_function::MockFunction<std::tuple<zx::eventpair, zx::eventpair>, zx::eventpair>& mock_event_pair() { return mock_event_pair_; }
+    mock_function::MockFunction<std::tuple<zx::job, zx::job>, zx::job>& mock_job() { return mock_job_; }
+    mock_function::MockFunction<std::tuple<zx::vmar, zx::vmar>, zx::vmar>& mock_vmar() { return mock_vmar_; }
+    mock_function::MockFunction<std::tuple<zx::fifo, zx::fifo>, zx::fifo>& mock_fifo() { return mock_fifo_; }
+    mock_function::MockFunction<std::tuple<zx::guest, zx::guest>, zx::guest>& mock_guest() { return mock_guest_; }
+    mock_function::MockFunction<std::tuple<zx::timer, zx::timer>, zx::timer>& mock_timer() { return mock_timer_; }
+    mock_function::MockFunction<std::tuple<zx::profile, zx::profile>, zx::profile>& mock_profile() { return mock_profile_; }
 
 protected:
     mock_function::MockFunction<std::tuple<zx::handle, zx::handle>, zx::handle> mock_handle_;
