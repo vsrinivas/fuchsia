@@ -60,14 +60,10 @@ class TileChrome extends StatelessWidget {
           // Border.
           Positioned.fill(
             child: Container(
-              decoration: showTitle && !fullscreen
-                  ? BoxDecoration(
-                      border: Border.all(
-                        color: focused ? Colors.white : Colors.grey,
-                        width: _kBorderSize,
-                      ),
-                    )
+              padding: showTitle && !fullscreen
+                  ? EdgeInsets.all(_kBorderSize)
                   : null,
+              color: focused ? Colors.white : Colors.grey,
               child: child ?? Container(color: Colors.transparent),
             ),
           ),
