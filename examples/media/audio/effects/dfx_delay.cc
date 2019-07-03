@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sdk/lib/media/audio_dfx/cpp/lib/dfx_delay.h"
+#include "examples/media/audio/effects/dfx_delay.h"
 
 #include <fbl/algorithm.h>
+#include <lib/media/audio_dfx/cpp/audio_device_fx.h>
 
 #include <cmath>
 
-#include "sdk/lib/media/audio_dfx/cpp/audio_device_fx.h"
 #include "src/lib/fxl/logging.h"
 
 namespace media::audio_dfx_test {

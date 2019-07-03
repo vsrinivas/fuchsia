@@ -8,11 +8,11 @@
 #ifndef LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_BASE_H_
 #define LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_BASE_H_
 
+#include <lib/media/audio_dfx/cpp/audio_device_fx.h>
 #include <stdint.h>
 
 #include <memory>
 
-#include "sdk/lib/media/audio_dfx/cpp/audio_device_fx.h"
 
 namespace media::audio_dfx_test {
 

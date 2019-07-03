@@ -8,10 +8,10 @@
 #ifndef LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_RECHANNEL_H_
 #define LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_RECHANNEL_H_
 
+#include <lib/media/audio_dfx/cpp/audio_device_fx.h>
 #include <stdint.h>
 
-#include "sdk/lib/media/audio_dfx/cpp/audio_device_fx.h"
-#include "sdk/lib/media/audio_dfx/cpp/lib/dfx_base.h"
+#include "examples/media/audio/effects/dfx_base.h"
 
 namespace media::audio_dfx_test {
 

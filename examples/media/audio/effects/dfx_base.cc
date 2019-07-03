@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sdk/lib/media/audio_dfx/cpp/lib/dfx_base.h"
+#include "examples/media/audio/effects/dfx_base.h"
 
 #include <fbl/algorithm.h>
 
 #include <cmath>
 
-#include "sdk/lib/media/audio_dfx/cpp/audio_device_fx.h"
-#include "sdk/lib/media/audio_dfx/cpp/lib/dfx_delay.h"
-#include "sdk/lib/media/audio_dfx/cpp/lib/dfx_rechannel.h"
-#include "sdk/lib/media/audio_dfx/cpp/lib/dfx_swap.h"
+#include "examples/media/audio/effects/dfx_delay.h"
+#include "examples/media/audio/effects/dfx_rechannel.h"
+#include "examples/media/audio/effects/dfx_swap.h"
 #include "src/lib/fxl/logging.h"
 
 namespace media::audio_dfx_test {

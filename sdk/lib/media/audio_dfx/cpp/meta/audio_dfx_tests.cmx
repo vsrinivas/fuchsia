@@ -1,8 +1,0 @@
-{
-    "program": {
-        "binary": "test/audio_dfx_tests"
-    },
-    "sandbox": {
-        "services": [ ]
-    }
-}

@@ -180,6 +180,5 @@ group("tests") {
     ":audio_core_unittests",
     "mixer:audio_mixer_tests",
     "test",
-    "//sdk/lib/media/audio_dfx/cpp:audio_dfx_tests",
   ]
 }
