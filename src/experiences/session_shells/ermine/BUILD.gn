@@ -161,3 +161,16 @@ flutter_test("ermine_unittests") {
     "//third_party/dart-pkg/pub/test",
   ]
 }
+
+flutter_test("visualizers_unittests") {
+  sources = [
+    "status_graph_visualizer_model_test.dart",
+    "status_progress_bar_visualizer_model_test.dart",
+    "status_tick_bar_visualizer_model_test.dart",
+  ]
+
+  deps = [
+    ":ermine_library",
+    "//third_party/dart-pkg/pub/test",
+  ]
+}

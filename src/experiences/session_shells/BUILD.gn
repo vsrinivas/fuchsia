@@ -42,5 +42,6 @@ group("dart_unittests") {
 
   deps = [
     "ermine:ermine_unittests($host_toolchain)",
+    "ermine:visualizers_unittests($host_toolchain)",
   ]
 }
