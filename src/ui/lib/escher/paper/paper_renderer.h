@@ -136,9 +136,6 @@ class PaperRenderer final : public Renderer {
   // renderer - it should be completely opaque.
   PaperDrawCallFactory* draw_call_factory() { return &draw_call_factory_; }
 
-  // Draws debug text on top of output image
-  void DrawDebugText(std::string text, vk::Offset2D offset, int32_t scale);
-
  private:
   explicit PaperRenderer(EscherWeakPtr escher, const PaperRendererConfig& config);
   PaperRenderer(const PaperRenderer&) = delete;
@@ -149,13 +146,6 @@ class PaperRenderer final : public Renderer {
     vk::Rect2D rect;
     vk::Viewport viewport;
     uint32_t eye_index;  // For PaperShaderPushConstants.
-  };
-
-  // Stores relevant info about the text the user wants to draw on scene
-  struct TextData {
-    std::string text;
-    vk::Offset2D offset;
-    int32_t scale;
   };
 
   // Stores all per-frame data in one place.
@@ -173,8 +163,6 @@ class PaperRenderer final : public Renderer {
     size_t num_lights;
 
     std::vector<CameraData> cameras;
-
-    std::vector<TextData> texts;
 
     // UniformBindings returned by PaperDrawCallFactory::BeginFrame().  These
     // contain camera and lighting parameters that are shared between draw
@@ -197,9 +185,6 @@ class PaperRenderer final : public Renderer {
   void GenerateCommandsForShadowVolumes(uint32_t camera_index);
   static void InitRenderPassInfo(RenderPassInfo* render_pass_info, ResourceRecycler* recycler,
                                  const FrameData& frame_data, uint32_t camera_index);
-
-  // Called to write text onto screen
-  void GenerateDebugCommands(CommandBuffer* cmd_buf);
 
   // Called when |config_.debug_frame_number| is true.  Uses |debug_font_| to
   // blit the current frame number to the output image.

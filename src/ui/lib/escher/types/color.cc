@@ -6,8 +6,6 @@
 
 #include <src/lib/fxl/strings/string_printf.h>
 
-#include <ostream>
-
 namespace escher {
 
 std::ostream& operator<<(std::ostream& os, const ColorRgba& c) {

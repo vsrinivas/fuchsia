@@ -16,13 +16,13 @@ namespace escher {
 // are assumed to be tightly packed (i.e. no row padding).
 template <typename ColorT>
 struct ColorHistogram {
-  ColorHistogram(const ColorT* pixels, size_t pixel_count) {
+  ColorHistogram(ColorT* pixels, size_t pixel_count) {
     for (size_t i = 0; i < pixel_count; ++i) {
       ++values[pixels[i]];
     }
   }
-  ColorHistogram(const uint8_t* pixel_bytes, size_t pixel_count)
-      : ColorHistogram(reinterpret_cast<const ColorT*>(pixel_bytes), pixel_count) {}
+  ColorHistogram(uint8_t* pixel_bytes, size_t pixel_count)
+      : ColorHistogram(reinterpret_cast<ColorT*>(pixel_bytes), pixel_count) {}
 
   // Return the number of occurrences of |color| in the histogram.
   size_t operator[](const ColorT& color) const {

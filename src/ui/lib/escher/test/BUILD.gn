@@ -21,7 +21,6 @@ if (is_mac) {
   test("escher_unittests") {
     sources = [
       "debug/debug_font_unittest.cc",
-      "debug/paper_renderer_test.cc",
       "fake_gpu_allocator.cc",
       "fixtures/readback_test.cc",
       "fixtures/readback_test.h",
