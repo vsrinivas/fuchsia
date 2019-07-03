@@ -19,7 +19,6 @@ source_set("cpp") {
 
   public_deps = [
     ":deprecated_service_provider",
-    "//garnet/public/lib/inspect",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",

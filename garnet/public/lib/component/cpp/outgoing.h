@@ -12,7 +12,6 @@
 #include <fs/service.h>
 #include <lib/fidl/cpp/thread_safe_binding_set.h>
 #include <lib/fit/function.h>
-#include <lib/inspect/deprecated/object_dir.h>
 
 #include <memory>
 
@@ -33,9 +32,7 @@ class Outgoing {
   // provide outgoing services back to its creator.
   //
   // Please use AddPublicService or public_dir() instead.
-  ServiceNamespace* deprecated_services() const {
-    return &deprecated_outgoing_services_;
-  }
+  ServiceNamespace* deprecated_services() const { return &deprecated_outgoing_services_; }
 
   // Gets the directory which is the root of the tree of file system objects
   // exported by this application to the rest of the system.
@@ -61,10 +58,6 @@ class Outgoing {
   // appmgr.
   const fbl::RefPtr<fs::PseudoDir>& ctrl_dir() const { return ctrl_dir_; }
 
-  // Gets the |ObjectDir|, which supports exposing structured information for
-  // inspection.
-  ObjectDir* object_dir() const { return object_dir_.get(); }
-
   // Start serving the root directory on the given channel.
   zx_status_t Serve(zx::channel dir_request);
 
@@ -82,22 +75,19 @@ class Outgoing {
   //
   //   AddPublicService(foobar_bindings_.GetHandler(this));
   template <typename Interface>
-  zx_status_t AddPublicService(
-      fidl::InterfaceRequestHandler<Interface> handler,
-      const std::string& service_name = Interface::Name_) const {
+  zx_status_t AddPublicService(fidl::InterfaceRequestHandler<Interface> handler,
+                               const std::string& service_name = Interface::Name_) const {
     return public_dir()->AddEntry(
         service_name.c_str(),
-        fbl::AdoptRef(new fs::Service(
-            [handler = std::move(handler)](zx::channel channel) {
-              handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
-              return ZX_OK;
-            })));
+        fbl::AdoptRef(new fs::Service([handler = std::move(handler)](zx::channel channel) {
+          handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
+          return ZX_OK;
+        })));
   }
 
   // Removes the specified interface from the set of public interfaces.
   template <typename Interface>
-  zx_status_t RemovePublicService(
-      const std::string& name = Interface::Name_) const {
+  zx_status_t RemovePublicService(const std::string& name = Interface::Name_) const {
     return public_dir()->RemoveEntry(name.c_str());
   }
 
@@ -107,11 +97,6 @@ class Outgoing {
   fbl::RefPtr<fs::PseudoDir> public_dir_;
   fbl::RefPtr<fs::PseudoDir> debug_dir_;
   fbl::RefPtr<fs::PseudoDir> ctrl_dir_;
-
-  fidl::DeprecatedBrokenBindingSet<fuchsia::inspect::Inspect,
-                                   std::shared_ptr<Object>>
-      inspect_bindings_;
-  std::unique_ptr<ObjectDir> object_dir_;
 
   mutable ServiceNamespace deprecated_outgoing_services_;
 };
