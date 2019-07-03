@@ -10,6 +10,7 @@
 + [object_get_child](syscalls/object_get_child.md) - find the child of an object by its koid
 + [object_get_info](syscalls/object_get_info.md) - obtain information about an object
 + [object_get_property](syscalls/object_get_property.md) - read an object property
++ [object_set_profile](syscalls/object_set_profile.md) - apply a profile to a thread
 + [object_set_property](syscalls/object_set_property.md) - modify an object property
 + [object_signal](syscalls/object_signal.md) - set or clear the user signals on an object
 + [object_signal_peer](syscalls/object_signal_peer.md) - set or clear the user signals in the opposite end
@@ -41,6 +42,9 @@
 + [task_kill](syscalls/task_kill.md) - cause a task to stop running
 + [task_resume_from_exception](syscalls/task_resume_from_exception.md) - resume a task from a previously caught exception
 + [task_suspend](syscalls/task_suspend.md) - cause a task to be suspended
+
+## Profiles
++ [profile_create](syscalls/profile_create.md) - create a new profile object
 
 ## Exceptions
 + [exception_get_thread](syscalls/exception_get_thread.md) - create a handle for the exception thread

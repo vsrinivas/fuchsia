@@ -27,6 +27,9 @@ Zircon actively manages the following resources:
 + [Job](objects/job.md)
 + [Task](objects/task.md)
 
+### Scheduling
++ [Profile](objects/profile.md)
+
 ### Signaling
 + [Event](objects/event.md)
 + [Event Pair](objects/eventpair.md)
