@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 use crate::auth_provider::{self, GoogleAuthProvider};
+use crate::http::UrlLoaderHttpClient;
 use crate::web::StandaloneWebFrame;
-use failure;
+use failure::Error;
 use fidl::endpoints::{create_proxy, ClientEnd};
-use fidl::Error;
 use fidl_fuchsia_auth::{
     AuthProviderFactoryRequest, AuthProviderFactoryRequestStream, AuthProviderStatus,
 };
+use fidl_fuchsia_net_oldhttp::{HttpServiceMarker, UrlLoaderMarker};
 use fidl_fuchsia_web::{ContextMarker, ContextProviderMarker, CreateContextParams, FrameMarker};
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
@@ -23,15 +24,20 @@ use std::sync::Arc;
 /// returning `AuthProvider` channels for a `GoogleAuthProvider`.
 pub struct GoogleAuthProviderFactory {
     /// The GoogleAuthProvider vended through `GetAuthProvider` requests.
-    google_auth_provider: Arc<GoogleAuthProvider<WebFrameSupplier>>,
+    google_auth_provider: Arc<GoogleAuthProvider<WebFrameSupplier, UrlLoaderHttpClient>>,
 }
 
 impl GoogleAuthProviderFactory {
     /// Create a new `GoogleAuthProviderFactory`
-    pub fn new() -> Self {
-        GoogleAuthProviderFactory {
-            google_auth_provider: Arc::new(GoogleAuthProvider::new(WebFrameSupplier::new())),
-        }
+    pub fn new() -> Result<Self, Error> {
+        let http_service = connect_to_service::<HttpServiceMarker>()?;
+        let (url_loader, url_loader_service) = create_proxy::<UrlLoaderMarker>()?;
+        http_service.create_url_loader(url_loader_service)?;
+        let frame_supplier = WebFrameSupplier::new();
+        let http_client = UrlLoaderHttpClient::new(url_loader);
+        Ok(GoogleAuthProviderFactory {
+            google_auth_provider: Arc::new(GoogleAuthProvider::new(frame_supplier, http_client)),
+        })
     }
 
     /// Handle requests passed to the supplied stream.
@@ -57,7 +63,8 @@ impl GoogleAuthProviderFactory {
             await!(auth_provider.handle_requests_from_stream(request_stream))
                 .unwrap_or_else(|e| error!("Error handling AuthProvider channel {:?}", e));
         });
-        responder.send(AuthProviderStatus::Ok)
+        responder.send(AuthProviderStatus::Ok)?;
+        Ok(())
     }
 }
 

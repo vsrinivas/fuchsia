@@ -34,4 +34,7 @@ lazy_static! {
     /// Entry point URL for authentication with Google.
     pub static ref AUTHORIZE_URI: Url =
         Url::parse("https://accounts.google.com/o/oauth2/v2/auth").unwrap();
+    /// URL for OAuth token exchange requests.
+    pub static ref OAUTH_URI: Url =
+        Url::parse("https://www.googleapis.com/oauth2/v4/token").unwrap();
 }
