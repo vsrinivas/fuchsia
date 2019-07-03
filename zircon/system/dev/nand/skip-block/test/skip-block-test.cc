@@ -95,6 +95,8 @@ public:
 
         switch (op->command) {
         case NAND_OP_READ: {
+            zx::vmo data_vmo(op->rw.data_vmo);
+            zx::vmo oob_vmo(op->rw.oob_vmo);
             if (op->rw.offset_nand >= num_nand_pages_ || !op->rw.length ||
                 (num_nand_pages_ - op->rw.offset_nand) < op->rw.length) {
                 result = ZX_ERR_OUT_OF_RANGE;
@@ -108,6 +110,8 @@ public:
             break;
         }
         case NAND_OP_WRITE: {
+            zx::vmo data_vmo(op->rw.data_vmo);
+            zx::vmo oob_vmo(op->rw.oob_vmo);
             if (op->rw.offset_nand >= num_nand_pages_ || !op->rw.length ||
                 (num_nand_pages_ - op->rw.offset_nand) < op->rw.length) {
                 result = ZX_ERR_OUT_OF_RANGE;
@@ -216,6 +220,15 @@ protected:
         ASSERT_EQ(status, expected);
     }
 
+    void Read(nand::ReadWriteOperation op, zx_status_t expected = ZX_OK) {
+        if (!client_) {
+            client_.emplace(std::move(ddk().FidlClient()));
+        }
+        zx_status_t status;
+        ASSERT_OK(client_->Read(std::move(op), &status));
+        ASSERT_EQ(status, expected);
+    }
+
     zx_device_t* parent() { return reinterpret_cast<zx_device_t*>(&ctx_); }
     nand::SkipBlockDevice& dev() { return *ctx_.dev; }
     Binder& ddk() { return ddk_; }
@@ -308,4 +321,40 @@ TEST_F(SkipBlockTest, MappingFailure) {
     ASSERT_FALSE(bad_block_grown);
     ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
     ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
+}
+
+TEST_F(SkipBlockTest, ReadSuccess) {
+    ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
+
+    // Read Block 5.
+    nand().set_result(ZX_OK);
+
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(fbl::round_up(kBlockSize, ZX_PAGE_SIZE), 0, &vmo));
+    nand::ReadWriteOperation op = {};
+    op.vmo = std::move(vmo);
+    op.block = 5;
+    op.block_count = 1;
+
+    ASSERT_NO_FATAL_FAILURES(Read(std::move(op), ZX_OK));
+    ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
+    ASSERT_EQ(nand().last_op(), NAND_OP_READ);
+}
+
+TEST_F(SkipBlockTest, ReadFailure) {
+    ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
+
+    // Read Block 7.
+    nand().set_result(ZX_ERR_INVALID_ARGS);
+
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(fbl::round_up(kBlockSize, ZX_PAGE_SIZE), 0, &vmo));
+    nand::ReadWriteOperation op = {};
+    op.vmo = std::move(vmo);
+    op.block = 7;
+    op.block_count = 1;
+
+    ASSERT_NO_FATAL_FAILURES(Read(std::move(op), ZX_ERR_INVALID_ARGS));
+    ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
+    ASSERT_EQ(nand().last_op(), NAND_OP_READ);
 }

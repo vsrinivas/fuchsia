@@ -287,7 +287,7 @@ void SkipBlockDevice::Read(ReadWriteOperation op, ReadCompleter::Sync completer)
 
     nand_operation_t* nand_op = nand_op_->operation();
     nand_op->rw.command = NAND_OP_READ;
-    nand_op->rw.data_vmo = op.vmo.get();
+    nand_op->rw.data_vmo = op_context.op.vmo.get();
     nand_op->rw.oob_vmo = ZX_HANDLE_INVALID;
     nand_op->rw.length = nand_info_.pages_per_block;
     nand_op->rw.offset_nand = physical_block * nand_info_.pages_per_block;
