@@ -234,6 +234,18 @@ mod tests {
     }
 
     #[test]
+    fn test_version_parse_leading_zeros() {
+        let version = Version::from([1, 2, 3, 4]);
+        assert_eq!("1.02.003.0004".parse::<Version>().unwrap(), version);
+
+        let version = Version::from([6, 4, 7]);
+        assert_eq!("06.4.07".parse::<Version>().unwrap(), version);
+
+        let version = Version::from([999]);
+        assert_eq!("0000999".parse::<Version>().unwrap(), version);
+    }
+
+    #[test]
     fn test_version_parse_error() {
         assert!("1.2.3.4.5".parse::<Version>().is_err());
         assert!("1.2.".parse::<Version>().is_err());
