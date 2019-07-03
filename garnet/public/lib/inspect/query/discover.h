@@ -4,5 +4,8 @@
 #ifndef LIB_INSPECT_QUERY_DISCOVER_H_
 #define LIB_INSPECT_QUERY_DISCOVER_H_
 #include <lib/inspect_deprecated/query/discover.h>
+namespace inspect {
+using namespace inspect_deprecated;
+}
 
 #endif  // LIB_INSPECT_QUERY_DISCOVER_H_

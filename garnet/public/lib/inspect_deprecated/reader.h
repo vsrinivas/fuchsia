@@ -12,7 +12,7 @@
 #include "lib/inspect_deprecated/hierarchy.h"
 #include "lib/inspect_deprecated/inspect.h"
 
-namespace inspect {
+namespace inspect_deprecated {
 
 // Vector of child names, as returned by the API.
 using ChildNameVector = fidl::VectorPtr<std::string>;
@@ -85,7 +85,7 @@ fit::result<ObjectHierarchy> ReadFromVmo(const zx::vmo& vmo);
 
 // Construct a new object hierarchy by synchronously reading objects out of the
 // given VMO Snapshot.
-fit::result<ObjectHierarchy> ReadFromSnapshot(vmo::Snapshot snapshot);
+fit::result<ObjectHierarchy> ReadFromSnapshot(::inspect::vmo::Snapshot snapshot);
 
 // Construct a new object hierarchy by synchronously reading objects out of the
 // contents of the given immutable buffer.
@@ -93,13 +93,13 @@ fit::result<ObjectHierarchy> ReadFromBuffer(fbl::Array<uint8_t> buffer);
 
 // TODO(crjohns, nathaniel): Needs to be asynchronous use of a ChildrenManager.
 // Construct a new object hierarchy by directly reading objects
-// from the given given inspect::Object. Will only read |depth| levels past the
+// from the given given inspect_deprecated::Object. Will only read |depth| levels past the
 // immediate object, or all levels if |depth| is -1.
 ObjectHierarchy ReadFromObject(const Node& object_root, int depth = -1);
 
 // Construct a new object hierarchy by reading the contents of a FIDL wrapper.
 ObjectHierarchy ReadFromFidlObject(const fuchsia::inspect::Object object);
 
-}  // namespace inspect
+}  // namespace inspect_deprecated
 
 #endif  // LIB_INSPECT_DEPRECATED_READER_H_

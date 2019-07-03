@@ -9,7 +9,7 @@
 
 #include "location.h"
 
-namespace inspect {
+namespace inspect_deprecated {
 
 // Synchronously find all inspect locations on the file system under the given
 // path.
@@ -18,6 +18,6 @@ std::vector<Location> SyncFindPaths(const std::string& path);
 // Synchronously find all inspect locations at any of the given globbed paths.
 std::vector<Location> SyncSearchGlobs(const std::vector<std::string>& globs);
 
-}  // namespace inspect
+}  // namespace inspect_deprecated
 
 #endif  // LIB_INSPECT_DEPRECATED_QUERY_DISCOVER_H_

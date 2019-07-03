@@ -11,7 +11,7 @@
 #include <stack>
 #include <vector>
 
-namespace inspect {
+namespace inspect_deprecated {
 
 namespace {
 // Helper to sort an array of T by the value of T::name().
@@ -82,4 +82,4 @@ void ObjectHierarchy::Sort() {
   }
 }
 
-}  // namespace inspect
+}  // namespace inspect_deprecated

@@ -4,5 +4,8 @@
 #ifndef LIB_INSPECT_QUERY_LOCATION_H_
 #define LIB_INSPECT_QUERY_LOCATION_H_
 #include <lib/inspect_deprecated/query/location.h>
+namespace inspect {
+using namespace inspect_deprecated;
+}
 
 #endif  // LIB_INSPECT_QUERY_LOCATION_H_

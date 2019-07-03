@@ -10,7 +10,7 @@
 
 using component::ObjectDir;
 
-namespace inspect {
+namespace inspect_deprecated {
 
 template <>
 component::Metric internal::MakeMetric<int64_t>(int64_t value) {
@@ -49,19 +49,21 @@ void LazyMetric::Set(MetricCallback callback) {
   }
 }
 
-#define DEFINE_PROPERTY_METHODS(CLASS, TYPE)                                                       \
-  CLASS::CLASS() {}                                                                                \
-  CLASS::CLASS(internal::EntityWrapper<component::Property> entity) {                              \
-    entity_.template emplace<kEntityWrapperVariant>(std::move(entity));                            \
-  }                                                                                                \
-  CLASS::CLASS(vmo::Property entity) { entity_.template emplace<kVmoVariant>(std::move(entity)); } \
-  void CLASS::Set(TYPE value) {                                                                    \
-    if (entity_.index() == kEntityWrapperVariant) {                                                \
-      auto& entity = entity_.template get<kEntityWrapperVariant>();                                \
-      entity.ParentObject()->SetProperty(entity.name(), component::Property(std::move(value)));    \
-    } else if (entity_.index() == kVmoVariant) {                                                   \
-      entity_.template get<kVmoVariant>().Set({(const char*)value.data(), value.size()});          \
-    }                                                                                              \
+#define DEFINE_PROPERTY_METHODS(CLASS, TYPE)                                                    \
+  CLASS::CLASS() {}                                                                             \
+  CLASS::CLASS(internal::EntityWrapper<component::Property> entity) {                           \
+    entity_.template emplace<kEntityWrapperVariant>(std::move(entity));                         \
+  }                                                                                             \
+  CLASS::CLASS(::inspect::vmo::Property entity) {                                               \
+    entity_.template emplace<kVmoVariant>(std::move(entity));                                   \
+  }                                                                                             \
+  void CLASS::Set(TYPE value) {                                                                 \
+    if (entity_.index() == kEntityWrapperVariant) {                                             \
+      auto& entity = entity_.template get<kEntityWrapperVariant>();                             \
+      entity.ParentObject()->SetProperty(entity.name(), component::Property(std::move(value))); \
+    } else if (entity_.index() == kVmoVariant) {                                                \
+      entity_.template get<kVmoVariant>().Set({(const char*)value.data(), value.size()});       \
+    }                                                                                           \
   }
 
 #define DEFINE_LAZY_PROPERTY_METHODS(CLASS, TYPE)                                  \
@@ -111,7 +113,9 @@ Node::Node(std::string name) : Node(component::ExposedObject(std::move(name))) {
 
 Node::Node(ObjectDir object_dir) : Node(component::ExposedObject(std::move(object_dir))) {}
 
-Node::Node(vmo::Object object) { object_.template emplace<kVmoVariant>(std::move(object)); }
+Node::Node(::inspect::vmo::Object object) {
+  object_.template emplace<kVmoVariant>(std::move(object));
+}
 
 Node::Node(component::ExposedObject object) {
   object_.template emplace<kComponentVariant>(std::move(object));
@@ -202,10 +206,10 @@ DoubleMetric Node::CreateDoubleMetric(std::string name, double value) {
 }
 
 IntArray Node::CreateIntArray(std::string name, size_t slots) {
-  return CreateIntArray(std::move(name), slots, vmo::ArrayFormat::kDefault);
+  return CreateIntArray(std::move(name), slots, ::inspect::vmo::ArrayFormat::kDefault);
 }
 
-IntArray Node::CreateIntArray(std::string name, size_t slots, vmo::ArrayFormat format) {
+IntArray Node::CreateIntArray(std::string name, size_t slots, ::inspect::vmo::ArrayFormat format) {
   if (object_.index() == kVmoVariant) {
     return IntArray(object_.template get<kVmoVariant>().CreateIntArray(name, slots, format));
   }
@@ -213,10 +217,11 @@ IntArray Node::CreateIntArray(std::string name, size_t slots, vmo::ArrayFormat f
 }
 
 UIntArray Node::CreateUIntArray(std::string name, size_t slots) {
-  return CreateUIntArray(std::move(name), slots, vmo::ArrayFormat::kDefault);
+  return CreateUIntArray(std::move(name), slots, ::inspect::vmo::ArrayFormat::kDefault);
 }
 
-UIntArray Node::CreateUIntArray(std::string name, size_t slots, vmo::ArrayFormat format) {
+UIntArray Node::CreateUIntArray(std::string name, size_t slots,
+                                ::inspect::vmo::ArrayFormat format) {
   if (object_.index() == kVmoVariant) {
     return UIntArray(object_.template get<kVmoVariant>().CreateUintArray(name, slots, format));
   }
@@ -224,10 +229,11 @@ UIntArray Node::CreateUIntArray(std::string name, size_t slots, vmo::ArrayFormat
 }
 
 DoubleArray Node::CreateDoubleArray(std::string name, size_t slots) {
-  return CreateDoubleArray(std::move(name), slots, vmo::ArrayFormat::kDefault);
+  return CreateDoubleArray(std::move(name), slots, ::inspect::vmo::ArrayFormat::kDefault);
 }
 
-DoubleArray Node::CreateDoubleArray(std::string name, size_t slots, vmo::ArrayFormat format) {
+DoubleArray Node::CreateDoubleArray(std::string name, size_t slots,
+                                    ::inspect::vmo::ArrayFormat format) {
   if (object_.index() == kVmoVariant) {
     return DoubleArray(object_.template get<kVmoVariant>().CreateDoubleArray(name, slots, format));
   }
@@ -316,7 +322,7 @@ StringProperty Node::CreateStringProperty(std::string name, std::string value) {
     return StringProperty(internal::EntityWrapper<component::Property>(std::move(name), object));
   } else if (object_.index() == kVmoVariant) {
     return StringProperty(object_.template get<kVmoVariant>().CreateProperty(
-        std::move(name), {value.data(), value.size()}, inspect::vmo::PropertyFormat::kUtf8));
+        std::move(name), {value.data(), value.size()}, ::inspect::vmo::PropertyFormat::kUtf8));
   }
 
   return StringProperty();
@@ -331,7 +337,7 @@ ByteVectorProperty Node::CreateByteVectorProperty(std::string name, VectorValue 
   } else if (object_.index() == kVmoVariant) {
     return ByteVectorProperty(object_.template get<kVmoVariant>().CreateProperty(
         std::move(name), {(const char*)value.data(), value.size()},
-        inspect::vmo::PropertyFormat::kBinary));
+        ::inspect::vmo::PropertyFormat::kBinary));
   }
 
   return ByteVectorProperty();
@@ -382,7 +388,7 @@ struct TreeState {
   Node root;
 
   // The VMO inspector object for this tree.
-  vmo::Inspector inspector;
+  ::inspect::vmo::Inspector inspector;
 };
 };  // namespace internal
 
@@ -402,7 +408,7 @@ Tree Inspector::CreateTree(std::string name) {
 
 Tree Inspector::CreateTree(std::string name, TreeSettings settings) {
   auto state = std::make_unique<internal::TreeState>();
-  state->inspector = vmo::Inspector(settings.initial_size, settings.maximum_size);
+  state->inspector = ::inspect::vmo::Inspector(settings.initial_size, settings.maximum_size);
   state->root = Node(state->inspector.CreateObject(name.c_str()));
 
   return Tree(std::move(state));
@@ -412,4 +418,4 @@ std::string UniqueName(const std::string& prefix) {
   return component::ExposedObject::UniqueName(prefix);
 }
 
-}  // namespace inspect
+}  // namespace inspect_deprecated

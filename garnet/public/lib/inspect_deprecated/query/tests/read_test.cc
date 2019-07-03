@@ -26,23 +26,23 @@
 #include "lib/inspect_deprecated/reader.h"
 #include "lib/inspect_deprecated/testing/inspect.h"
 
-using namespace inspect::testing;
+using namespace inspect_deprecated::testing;
 
 namespace {
 
 class TestDataWrapper {
  public:
-  explicit TestDataWrapper(inspect::Node object) : object_(std::move(object)) {
+  explicit TestDataWrapper(inspect_deprecated::Node object) : object_(std::move(object)) {
     version_ = object_.CreateStringProperty("version", "1.0");
     child_test_ = object_.CreateChild("test");
     count_ = child_test_.CreateIntMetric("count", 2);
   }
 
  private:
-  inspect::Node object_;
-  inspect::Node child_test_;
-  inspect::StringProperty version_;
-  inspect::IntMetric count_;
+  inspect_deprecated::Node object_;
+  inspect_deprecated::Node child_test_;
+  inspect_deprecated::StringProperty version_;
+  inspect_deprecated::IntMetric count_;
 };
 
 class ReadTest : public TestFixture {
@@ -50,7 +50,7 @@ class ReadTest : public TestFixture {
   ReadTest()
       : tree_(inspector_.CreateTree("root")),
         fidl_dir_(component::ObjectDir::Make("root")),
-        fidl_test_data_(inspect::Node(fidl_dir_)),
+        fidl_test_data_(inspect_deprecated::Node(fidl_dir_)),
         vmo_test_data_(std::move(tree_.GetRoot())) {
     // Host a FIDL and VMO inspect interface under /test in the global
     // namespace.
@@ -70,8 +70,8 @@ class ReadTest : public TestFixture {
   }
 
  protected:
-  inspect::Inspector inspector_;
-  inspect::Tree tree_;
+  inspect_deprecated::Inspector inspector_;
+  inspect_deprecated::Tree tree_;
   component::ObjectDir fidl_dir_;
   TestDataWrapper fidl_test_data_, vmo_test_data_;
   fidl::BindingSet<fuchsia::inspect::Inspect> bindings_;
@@ -88,12 +88,13 @@ TEST_F(ReadTest, ReadLocations) {
   const std::vector<std::string> paths = {"/test/root.inspect", "/test"};
 
   for (const auto& path : paths) {
-    fit::result<inspect::Source, std::string> result;
+    fit::result<inspect_deprecated::Source, std::string> result;
 
-    SchedulePromise(inspect::ReadLocation(inspect::Location::Parse(path).take_value())
-                        .then([&](fit::result<inspect::Source, std::string>& res) {
-                          result = std::move(res);
-                        }));
+    SchedulePromise(
+        inspect_deprecated::ReadLocation(inspect_deprecated::Location::Parse(path).take_value())
+            .then([&](fit::result<inspect_deprecated::Source, std::string>& res) {
+              result = std::move(res);
+            }));
 
     RunLoopUntil([&] { return !!result; });
 
@@ -115,12 +116,13 @@ TEST_F(ReadTest, ReadLocationsChild) {
   const std::vector<std::string> paths = {"/test/root.inspect#test", "/test#test"};
 
   for (const auto& path : paths) {
-    fit::result<inspect::Source, std::string> result;
+    fit::result<inspect_deprecated::Source, std::string> result;
 
-    SchedulePromise(inspect::ReadLocation(inspect::Location::Parse(path).take_value())
-                        .then([&](fit::result<inspect::Source, std::string>& res) {
-                          result = std::move(res);
-                        }));
+    SchedulePromise(
+        inspect_deprecated::ReadLocation(inspect_deprecated::Location::Parse(path).take_value())
+            .then([&](fit::result<inspect_deprecated::Source, std::string>& res) {
+              result = std::move(res);
+            }));
 
     RunLoopUntil([&] { return !!result; });
 
@@ -138,12 +140,13 @@ TEST_F(ReadTest, ReadLocationsError) {
   };
 
   for (const auto& path : paths) {
-    fit::result<inspect::Source, std::string> result;
+    fit::result<inspect_deprecated::Source, std::string> result;
 
-    SchedulePromise(inspect::ReadLocation(inspect::Location::Parse(path).take_value())
-                        .then([&](fit::result<inspect::Source, std::string>& res) {
-                          result = std::move(res);
-                        }));
+    SchedulePromise(
+        inspect_deprecated::ReadLocation(inspect_deprecated::Location::Parse(path).take_value())
+            .then([&](fit::result<inspect_deprecated::Source, std::string>& res) {
+              result = std::move(res);
+            }));
 
     RunLoopUntil([&] { return !!result; });
 

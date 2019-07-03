@@ -7,7 +7,7 @@
 
 #include "formatter.h"
 
-namespace inspect {
+namespace inspect_deprecated {
 class JsonFormatter : public Formatter {
  public:
   struct Options {
@@ -20,33 +20,37 @@ class JsonFormatter : public Formatter {
       : Formatter(path_format), options_(std::move(options)) {}
   ~JsonFormatter() = default;
 
-  std::string FormatSourceLocations(const std::vector<inspect::Source>& sources) const override;
+  std::string FormatSourceLocations(
+      const std::vector<inspect_deprecated::Source>& sources) const override;
 
-  std::string FormatChildListing(const std::vector<inspect::Source>& sources) const override;
+  std::string FormatChildListing(
+      const std::vector<inspect_deprecated::Source>& sources) const override;
 
-  std::string FormatSourcesRecursive(const std::vector<inspect::Source>& sources) const override;
+  std::string FormatSourcesRecursive(
+      const std::vector<inspect_deprecated::Source>& sources) const override;
 
-  std::string FormatHealth(const std::vector<inspect::Source>& sources) const override;
+  std::string FormatHealth(const std::vector<inspect_deprecated::Source>& sources) const override;
 
  private:
   template <typename WriterType>
   void InternalFormatSourceLocations(WriterType& writer,
-                                     const std::vector<inspect::Source>& sources) const;
+                                     const std::vector<inspect_deprecated::Source>& sources) const;
 
   template <typename WriterType>
   void InternalFormatChildListing(WriterType& writer,
-                                  const std::vector<inspect::Source>& sources) const;
+                                  const std::vector<inspect_deprecated::Source>& sources) const;
 
   template <typename WriterType>
   void InternalFormatSourcesRecursive(WriterType& writer,
-                                      const std::vector<inspect::Source>& sources) const;
+                                      const std::vector<inspect_deprecated::Source>& sources) const;
 
   template <typename WriterType>
-  void InternalFormatHealth(WriterType& writer, const std::vector<inspect::Source>& sources) const;
+  void InternalFormatHealth(WriterType& writer,
+                            const std::vector<inspect_deprecated::Source>& sources) const;
 
   Options options_;
 };
 
-}  // namespace inspect
+}  // namespace inspect_deprecated
 
 #endif  // LIB_INSPECT_DEPRECATED_QUERY_JSON_FORMATTER_H_

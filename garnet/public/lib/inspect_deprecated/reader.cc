@@ -16,7 +16,7 @@
 #include "lib/fit/bridge.h"
 #include "lib/inspect_deprecated/hierarchy.h"
 
-namespace inspect {
+namespace inspect_deprecated {
 
 namespace {
 
@@ -172,7 +172,9 @@ fit::promise<ObjectHierarchy> ReadFromFidl(ObjectReader reader, int depth) {
 }
 
 namespace vmo {
+using namespace inspect::vmo;
 namespace internal {
+using namespace inspect::vmo::internal;
 
 // A ParsedObject contains parsed information for an object.
 // It is built iteratively as children and values are discovered.
@@ -459,12 +461,13 @@ void Reader::InnerParseProperty(ParsedObject* parent, const Block* block) {
   auto& parent_properties = parent->hierarchy.node().properties();
   if (PropertyBlockPayload::Flags::Get<uint8_t>(block->payload.u64) &
       static_cast<uint8_t>(inspect::vmo::PropertyFormat::kBinary)) {
-    parent_properties.emplace_back(inspect::hierarchy::Property(
-        std::move(name),
-        inspect::hierarchy::ByteVectorProperty(std::vector<uint8_t>(buf, buf + total_length))));
+    parent_properties.emplace_back(inspect_deprecated::hierarchy::Property(
+        std::move(name), inspect_deprecated::hierarchy::ByteVectorProperty(
+                             std::vector<uint8_t>(buf, buf + total_length))));
   } else {
-    parent_properties.emplace_back(inspect::hierarchy::Property(
-        std::move(name), inspect::hierarchy::StringProperty(std::string(buf, total_length))));
+    parent_properties.emplace_back(inspect_deprecated::hierarchy::Property(
+        std::move(name),
+        inspect_deprecated::hierarchy::StringProperty(std::string(buf, total_length))));
   }
 }
 
@@ -511,4 +514,4 @@ ObjectHierarchy ReadFromFidlObject(fuchsia::inspect::Object object) {
   return ObjectHierarchy(FidlObjectToNode(std::move(object)), {});
 }
 
-}  // namespace inspect
+}  // namespace inspect_deprecated

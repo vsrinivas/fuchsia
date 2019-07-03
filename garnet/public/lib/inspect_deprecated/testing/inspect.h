@@ -12,7 +12,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-namespace inspect {
+namespace inspect_deprecated {
 
 namespace hierarchy {
 // Printers for inspect types.
@@ -209,6 +209,6 @@ std::vector<T> CreateExpectedExponentialHistogramContents(T floor, T initial_ste
 }
 
 }  // namespace testing
-}  // namespace inspect
+}  // namespace inspect_deprecated
 
 #endif  // LIB_INSPECT_DEPRECATED_TESTING_INSPECT_H_

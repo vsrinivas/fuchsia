@@ -11,7 +11,7 @@
 
 #include <string>
 
-namespace inspect {
+namespace inspect_deprecated {
 
 // ComponentInspector wraps an Inspector and Tree for a component.
 // These objects are available globally so long as the ComponentInspector
@@ -47,6 +47,6 @@ class ComponentInspector {
   Tree root_tree_;
 };
 
-}  // namespace inspect
+}  // namespace inspect_deprecated
 
 #endif  // LIB_INSPECT_DEPRECATED_COMPONENT_H_

@@ -6,13 +6,13 @@
 
 #include "lib/inspect_deprecated/hierarchy.h"
 
-using inspect::hierarchy::Metric;
-using inspect::hierarchy::Node;
-using inspect::hierarchy::Property;
+using inspect_deprecated::hierarchy::Metric;
+using inspect_deprecated::hierarchy::Node;
+using inspect_deprecated::hierarchy::Property;
 
 namespace {}  // namespace
 
-namespace inspect {
+namespace inspect_deprecated {
 
 namespace hierarchy {
 void PrintTo(const Metric& metric, std::ostream* os) {
@@ -64,7 +64,7 @@ void PrintTo(const Node& node, std::ostream* os) {
 }
 }  // namespace hierarchy
 
-void PrintTo(const ::inspect::ObjectHierarchy& hierarchy, std::ostream* os) {
+void PrintTo(const ::inspect_deprecated::ObjectHierarchy& hierarchy, std::ostream* os) {
   *os << "ObjectHierarchy(" << ::testing::PrintToString(hierarchy.node()) << ", "
       << ::testing::PrintToString(hierarchy.children().size()) << " children)";
 }
@@ -239,4 +239,4 @@ void internal::PropertyListMatcher::DescribeNegationTo(::std::ostream* os) const
 }
 
 }  // namespace testing
-}  // namespace inspect
+}  // namespace inspect_deprecated

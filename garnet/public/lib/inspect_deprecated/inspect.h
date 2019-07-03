@@ -16,7 +16,7 @@
 #include "lib/inspect-vmo/block.h"
 #include "lib/inspect-vmo/types.h"
 
-namespace inspect {
+namespace inspect_deprecated {
 
 class Node;
 
@@ -141,7 +141,7 @@ class StaticMetric final {
   }
 
  private:
-  friend class ::inspect::Node;
+  friend class ::inspect_deprecated::Node;
 
   // Index of the entity wrapper variant of the metric.
   static const int kEntityWrapperVariant = 1;
@@ -187,7 +187,7 @@ class ArrayMetric final {
   void Subtract(size_t index, T value) { vmo_metric_.Subtract(index, value); }
 
  private:
-  friend class ::inspect::Node;
+  friend class ::inspect_deprecated::Node;
 
   // Internal constructor wrapping a VMO type.
   explicit ArrayMetric(VmoType vmo_metric) : vmo_metric_(std::move(vmo_metric)) {}
@@ -196,22 +196,22 @@ class ArrayMetric final {
 };
 
 // Metric wrapping a signed integer.
-using IntMetric = StaticMetric<int64_t, vmo::IntMetric>;
+using IntMetric = StaticMetric<int64_t, ::inspect::vmo::IntMetric>;
 
 // Metric wrapping an unsigned integer.
-using UIntMetric = StaticMetric<uint64_t, vmo::UintMetric>;
+using UIntMetric = StaticMetric<uint64_t, ::inspect::vmo::UintMetric>;
 
 // Metric wrapping a double floating point number.
-using DoubleMetric = StaticMetric<double, vmo::DoubleMetric>;
+using DoubleMetric = StaticMetric<double, ::inspect::vmo::DoubleMetric>;
 
 // Array of signed integers.
-using IntArray = ArrayMetric<int64_t, vmo::IntArray>;
+using IntArray = ArrayMetric<int64_t, ::inspect::vmo::IntArray>;
 
 // Array of unsigned integers.
-using UIntArray = ArrayMetric<uint64_t, vmo::UintArray>;
+using UIntArray = ArrayMetric<uint64_t, ::inspect::vmo::UintArray>;
 
 // Array of double floating point numbers.
-using DoubleArray = ArrayMetric<double, vmo::DoubleArray>;
+using DoubleArray = ArrayMetric<double, ::inspect::vmo::DoubleArray>;
 
 template <typename T, typename VmoType>
 class HistogramMetric final {
@@ -235,7 +235,7 @@ class HistogramMetric final {
   void Insert(T value, T count) { histogram_.Insert(value, count); }
 
  private:
-  friend class ::inspect::Node;
+  friend class ::inspect_deprecated::Node;
 
   // Internal constructor wrapping a VMO type.
   HistogramMetric(VmoType histogram) : histogram_(std::move(histogram)) {}
@@ -244,22 +244,25 @@ class HistogramMetric final {
 };
 
 // Linear histogram of integers.
-using LinearIntHistogramMetric = HistogramMetric<int64_t, vmo::LinearIntHistogram>;
+using LinearIntHistogramMetric = HistogramMetric<int64_t, ::inspect::vmo::LinearIntHistogram>;
 
 // Linear histogram of unsigned integers.
-using LinearUIntHistogramMetric = HistogramMetric<uint64_t, vmo::LinearUintHistogram>;
+using LinearUIntHistogramMetric = HistogramMetric<uint64_t, ::inspect::vmo::LinearUintHistogram>;
 
 // Linear histogram of doubles.
-using LinearDoubleHistogramMetric = HistogramMetric<double, vmo::LinearDoubleHistogram>;
+using LinearDoubleHistogramMetric = HistogramMetric<double, ::inspect::vmo::LinearDoubleHistogram>;
 
 // Exponential histogram of integers.
-using ExponentialIntHistogramMetric = HistogramMetric<int64_t, vmo::ExponentialIntHistogram>;
+using ExponentialIntHistogramMetric =
+    HistogramMetric<int64_t, ::inspect::vmo::ExponentialIntHistogram>;
 
 // Exponential histogram of unsigned integers.
-using ExponentialUIntHistogramMetric = HistogramMetric<uint64_t, vmo::ExponentialUintHistogram>;
+using ExponentialUIntHistogramMetric =
+    HistogramMetric<uint64_t, ::inspect::vmo::ExponentialUintHistogram>;
 
 // Exponential histogram of doubles.
-using ExponentialDoubleHistogramMetric = HistogramMetric<double, vmo::ExponentialDoubleHistogram>;
+using ExponentialDoubleHistogramMetric =
+    HistogramMetric<double, ::inspect::vmo::ExponentialDoubleHistogram>;
 
 // Metric with value determined by evaluating a callback.
 class LazyMetric final {
@@ -278,7 +281,7 @@ class LazyMetric final {
   void Set(::component::Metric::ValueCallback callback);
 
  private:
-  friend class ::inspect::Node;
+  friend class ::inspect_deprecated::Node;
   // Internal constructor setting an actual value on a Node.
   explicit LazyMetric(internal::EntityWrapper<component::Metric> entity);
 
@@ -301,7 +304,7 @@ class StringProperty final {
   void Set(std::string value);
 
  private:
-  friend class ::inspect::Node;
+  friend class ::inspect_deprecated::Node;
 
   // Index of the entity wrapper variant of the property.
   static const int kEntityWrapperVariant = 1;
@@ -312,10 +315,10 @@ class StringProperty final {
   explicit StringProperty(internal::EntityWrapper<component::Property> entity);
 
   // Internal constructor wrapping a VMO entity.
-  explicit StringProperty(vmo::Property entity);
+  explicit StringProperty(::inspect::vmo::Property entity);
 
   fit::internal::variant<fit::internal::monostate, internal::EntityWrapper<component::Property>,
-                         vmo::Property>
+                         ::inspect::vmo::Property>
       entity_;
 };
 
@@ -330,7 +333,7 @@ class ByteVectorProperty final {
   void Set(::component::Property::ByteVector value);
 
  private:
-  friend class ::inspect::Node;
+  friend class ::inspect_deprecated::Node;
 
   // Index of the entity wrapper variant of the property.
   static const int kEntityWrapperVariant = 1;
@@ -341,10 +344,10 @@ class ByteVectorProperty final {
   explicit ByteVectorProperty(internal::EntityWrapper<component::Property> entity);
 
   // Internal constructor wrapping a VMO entity.
-  explicit ByteVectorProperty(vmo::Property entity);
+  explicit ByteVectorProperty(::inspect::vmo::Property entity);
 
   fit::internal::variant<fit::internal::monostate, internal::EntityWrapper<component::Property>,
-                         vmo::Property>
+                         ::inspect::vmo::Property>
       entity_;
 };
 
@@ -368,7 +371,7 @@ class LazyStringProperty final {
   void Set(StringValueCallback callback);
 
  private:
-  friend class ::inspect::Node;
+  friend class ::inspect_deprecated::Node;
 
   // Internal constructor setting an actual value on a Node.
   explicit LazyStringProperty(internal::EntityWrapper<component::Property> entity);
@@ -396,7 +399,7 @@ class LazyByteVectorProperty final {
   void Set(VectorValueCallback callback);
 
  private:
-  friend class ::inspect::Node;
+  friend class ::inspect_deprecated::Node;
 
   // Internal constructor setting an actual value on a Node.
   explicit LazyByteVectorProperty(internal::EntityWrapper<component::Property> entity);
@@ -428,7 +431,7 @@ class ChildrenCallback final {
   ChildrenCallback& operator=(ChildrenCallback&& other);
 
  private:
-  friend class ::inspect::Node;
+  friend class ::inspect_deprecated::Node;
 
   // Internal constructor setting an actual children callback on an object.
   ChildrenCallback(std::shared_ptr<::component::Object> object);
@@ -453,7 +456,7 @@ class Node final {
   explicit Node(component::ObjectDir object_dir);
 
   // Construct a Node wrapping the given VMO Object.
-  explicit Node(vmo::Object object);
+  explicit Node(::inspect::vmo::Object object);
 
   ~Node();
 
@@ -595,12 +598,15 @@ class Node final {
   // Construct a Node facade in front of an ExposedObject.
   explicit Node(component::ExposedObject object);
 
-  [[nodiscard]] IntArray CreateIntArray(std::string name, size_t slots, vmo::ArrayFormat format);
-  [[nodiscard]] UIntArray CreateUIntArray(std::string name, size_t slots, vmo::ArrayFormat format);
+  [[nodiscard]] IntArray CreateIntArray(std::string name, size_t slots,
+                                        ::inspect::vmo::ArrayFormat format);
+  [[nodiscard]] UIntArray CreateUIntArray(std::string name, size_t slots,
+                                          ::inspect::vmo::ArrayFormat format);
   [[nodiscard]] DoubleArray CreateDoubleArray(std::string name, size_t slots,
-                                              vmo::ArrayFormat format);
+                                              ::inspect::vmo::ArrayFormat format);
 
-  fit::internal::variant<fit::internal::monostate, component::ExposedObject, vmo::Object> object_;
+  fit::internal::variant<fit::internal::monostate, component::ExposedObject, ::inspect::vmo::Object>
+      object_;
 };
 
 // Settings to configure a specific Tree.
@@ -656,6 +662,6 @@ class Inspector {
 // Generate a unique name with the given prefix.
 std::string UniqueName(const std::string& prefix);
 
-}  // namespace inspect
+}  // namespace inspect_deprecated
 
 #endif  // LIB_INSPECT_DEPRECATED_INSPECT_H_

@@ -23,7 +23,7 @@ using testing::ElementsAre;
 using testing::IsEmpty;
 using testing::UnorderedElementsAre;
 
-using namespace inspect::testing;
+using namespace inspect_deprecated::testing;
 
 const char kObjectsName[] = "objects";
 
@@ -55,7 +55,7 @@ class TestReader : public gtest::RealLoopFixture {
 
  protected:
   std::shared_ptr<component::Object> object_;
-  inspect::Node root_object_;
+  inspect_deprecated::Node root_object_;
   fidl::InterfaceHandle<fuchsia::inspect::Inspect> client_;
 
  private:
@@ -65,14 +65,14 @@ class TestReader : public gtest::RealLoopFixture {
 };
 
 TEST_F(TestReader, Empty) {
-  inspect::ObjectReader reader(std::move(client_));
+  inspect_deprecated::ObjectReader reader(std::move(client_));
 
   fit::result<fuchsia::inspect::Object> result;
   SchedulePromise(reader.Read().then(
       [&](fit::result<fuchsia::inspect::Object>& res) { result = std::move(res); }));
 
   RunLoopUntil([&] { return !!result; });
-  EXPECT_THAT(inspect::ReadFromFidlObject(result.take_value()),
+  EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(result.take_value()),
               NodeMatches(AllOf(NameMatches(kObjectsName), MetricList(IsEmpty()),
                                 PropertyList(IsEmpty()))));
 }
@@ -82,22 +82,23 @@ TEST_F(TestReader, Values) {
   auto metric_uint = root_object_.CreateUIntMetric("uint", 10);
   auto metric_double = root_object_.CreateDoubleMetric("double", 1.25);
   auto prop_string = root_object_.CreateStringProperty("string", "value");
-  auto prop_bytes = root_object_.CreateByteVectorProperty("bytes", inspect::VectorValue(3, 'a'));
+  auto prop_bytes =
+      root_object_.CreateByteVectorProperty("bytes", inspect_deprecated::VectorValue(3, 'a'));
 
-  inspect::ObjectReader reader(std::move(client_));
+  inspect_deprecated::ObjectReader reader(std::move(client_));
   fit::result<fuchsia::inspect::Object> result;
   SchedulePromise(reader.Read().then(
       [&](fit::result<fuchsia::inspect::Object>& res) { result = std::move(res); }));
 
   RunLoopUntil([&] { return !!result; });
 
-  EXPECT_THAT(inspect::ReadFromFidlObject(result.take_value()),
+  EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(result.take_value()),
               NodeMatches(AllOf(
 
                   NameMatches(kObjectsName),
                   PropertyList(UnorderedElementsAre(
                       StringPropertyIs("string", "value"),
-                      ByteVectorPropertyIs("bytes", inspect::VectorValue(3, 'a')))),
+                      ByteVectorPropertyIs("bytes", inspect_deprecated::VectorValue(3, 'a')))),
                   MetricList(UnorderedElementsAre(IntMetricIs("int", -10), UIntMetricIs("uint", 10),
                                                   DoubleMetricIs("double", 1.25))))));
 }
@@ -106,10 +107,10 @@ TEST_F(TestReader, ListChildren) {
   auto child_a = root_object_.CreateChild("child a");
   auto child_b = root_object_.CreateChild("child b");
 
-  inspect::ObjectReader reader(std::move(client_));
-  fit::result<inspect::ChildNameVector> result;
+  inspect_deprecated::ObjectReader reader(std::move(client_));
+  fit::result<inspect_deprecated::ChildNameVector> result;
   SchedulePromise(reader.ListChildren().then(
-      [&](fit::result<inspect::ChildNameVector>& res) { result = std::move(res); }));
+      [&](fit::result<inspect_deprecated::ChildNameVector>& res) { result = std::move(res); }));
 
   RunLoopUntil([&] { return !!result; });
 
@@ -122,16 +123,17 @@ TEST_F(TestReader, OpenChild) {
   auto metric_a = child_a.CreateIntMetric("value", 1);
   auto child_b = root_object_.CreateChild("child b");
 
-  inspect::ObjectReader reader(std::move(client_));
+  inspect_deprecated::ObjectReader reader(std::move(client_));
   fit::result<fuchsia::inspect::Object> result;
   SchedulePromise(
       reader.OpenChild("child a")
-          .and_then([](inspect::ObjectReader& child_reader) { return child_reader.Read(); })
+          .and_then(
+              [](inspect_deprecated::ObjectReader& child_reader) { return child_reader.Read(); })
           .then([&](fit::result<fuchsia::inspect::Object>& res) { result = std::move(res); }));
 
   RunLoopUntil([&] { return !!result; });
 
-  EXPECT_THAT(inspect::ReadFromFidlObject(result.take_value()),
+  EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(result.take_value()),
               NodeMatches(AllOf(NameMatches("child a"),
                                 MetricList(UnorderedElementsAre(IntMetricIs("value", 1))))));
 }
@@ -142,10 +144,10 @@ TEST_F(TestReader, OpenChildren) {
   auto child_b = root_object_.CreateChild("child b");
   auto metric_b = child_b.CreateIntMetric("value", 1);
 
-  inspect::ObjectReader reader(std::move(client_));
+  inspect_deprecated::ObjectReader reader(std::move(client_));
   std::vector<fit::result<fuchsia::inspect::Object>> result;
   SchedulePromise(reader.OpenChildren()
-                      .and_then([](std::vector<inspect::ObjectReader>& child_reader) {
+                      .and_then([](std::vector<inspect_deprecated::ObjectReader>& child_reader) {
                         std::vector<fit::promise<fuchsia::inspect::Object>> promises;
 
                         for (auto& child : child_reader) {
@@ -165,7 +167,7 @@ TEST_F(TestReader, OpenChildren) {
   std::vector<std::string> names;
   for (size_t i = 0; i < result.size(); i++) {
     ASSERT_TRUE(result[i].is_ok());
-    auto obj = inspect::ReadFromFidlObject(result[i].take_value());
+    auto obj = inspect_deprecated::ReadFromFidlObject(result[i].take_value());
     EXPECT_THAT(obj, NodeMatches(MetricList(UnorderedElementsAre(IntMetricIs("value", 1)))));
     names.push_back(obj.node().name());
   }
@@ -192,7 +194,7 @@ class TestHierarchy : public TestReader {
     metric_c_ = child_b_c_.CreateDoubleMetric("value", 3);
   }
 
-  void ExpectHierarchy(const inspect::ObjectHierarchy& hierarchy) {
+  void ExpectHierarchy(const inspect_deprecated::ObjectHierarchy& hierarchy) {
     EXPECT_THAT(hierarchy.node(), AllOf(NameMatches(kObjectsName)));
     EXPECT_THAT(
         hierarchy.children(),
@@ -211,17 +213,19 @@ class TestHierarchy : public TestReader {
   };
 
  private:
-  inspect::Node child_a_, child_b_, child_b_c_;
-  inspect::IntMetric metric_a_;
-  inspect::UIntMetric metric_b_;
-  inspect::DoubleMetric metric_c_;
+  inspect_deprecated::Node child_a_, child_b_, child_b_c_;
+  inspect_deprecated::IntMetric metric_a_;
+  inspect_deprecated::UIntMetric metric_b_;
+  inspect_deprecated::DoubleMetric metric_c_;
 };
 
 TEST_F(TestHierarchy, ObjectHierarchy) {
-  fit::result<inspect::ObjectHierarchy> result;
+  fit::result<inspect_deprecated::ObjectHierarchy> result;
   SchedulePromise(
-      inspect::ReadFromFidl(inspect::ObjectReader(std::move(client_)))
-          .then([&](fit::result<inspect::ObjectHierarchy>& res) { result = std::move(res); }));
+      inspect_deprecated::ReadFromFidl(inspect_deprecated::ObjectReader(std::move(client_)))
+          .then([&](fit::result<inspect_deprecated::ObjectHierarchy>& res) {
+            result = std::move(res);
+          }));
 
   RunLoopUntil([&] { return !!result; });
 
@@ -231,10 +235,12 @@ TEST_F(TestHierarchy, ObjectHierarchy) {
 }
 
 TEST_F(TestHierarchy, ObjectHierarchyLimitDepth) {
-  fit::result<inspect::ObjectHierarchy> result;
-  SchedulePromise(
-      inspect::ReadFromFidl(inspect::ObjectReader(std::move(client_)), /*depth=*/1)
-          .then([&](fit::result<inspect::ObjectHierarchy>& res) { result = std::move(res); }));
+  fit::result<inspect_deprecated::ObjectHierarchy> result;
+  SchedulePromise(inspect_deprecated::ReadFromFidl(
+                      inspect_deprecated::ObjectReader(std::move(client_)), /*depth=*/1)
+                      .then([&](fit::result<inspect_deprecated::ObjectHierarchy>& res) {
+                        result = std::move(res);
+                      }));
 
   RunLoopUntil([&] { return !!result; });
 
@@ -250,13 +256,13 @@ TEST_F(TestHierarchy, ObjectHierarchyLimitDepth) {
 }
 
 TEST_F(TestHierarchy, ObjectHierarchyDirect) {
-  auto hierarchy = inspect::ReadFromObject(root_object_);
+  auto hierarchy = inspect_deprecated::ReadFromObject(root_object_);
 
   ExpectHierarchy(hierarchy);
 }
 
 TEST_F(TestHierarchy, ObjectHierarchyDirectLimitDepth) {
-  auto hierarchy = inspect::ReadFromObject(root_object_, /*depth=*/1);
+  auto hierarchy = inspect_deprecated::ReadFromObject(root_object_, /*depth=*/1);
 
   EXPECT_THAT(hierarchy,
               ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(NameMatches("child a"))),

@@ -14,7 +14,7 @@
 #include "lib/inspect_deprecated/query/location.h"
 #include "src/lib/files/glob.h"
 
-using inspect::Location;
+using inspect_deprecated::Location;
 using ::testing::UnorderedElementsAre;
 
 namespace {
@@ -69,8 +69,9 @@ TEST_F(DiscoverTest, SyncFindPaths) {
   // Run the search on the promise thread so it doesn't deadlock with the
   // server.
 
-  std::vector<inspect::Location> locations;
-  SchedulePromise(fit::make_promise([&] { locations = inspect::SyncFindPaths("/test"); }));
+  std::vector<inspect_deprecated::Location> locations;
+  SchedulePromise(
+      fit::make_promise([&] { locations = inspect_deprecated::SyncFindPaths("/test"); }));
 
   RunLoopUntil([&] { return !locations.empty(); });
 
@@ -108,11 +109,11 @@ TEST_F(DiscoverTest, SyncFindPaths) {
 };
 
 TEST_F(DiscoverTest, SyncFindNestedPath) {
-  std::vector<inspect::Location> locations1, locations2;
-  SchedulePromise(
-      fit::make_promise([&] { locations1 = inspect::SyncFindPaths("/test/hub#child/a"); }));
+  std::vector<inspect_deprecated::Location> locations1, locations2;
   SchedulePromise(fit::make_promise(
-      [&] { locations2 = inspect::SyncFindPaths("/test/hub/root.inspect#child/a"); }));
+      [&] { locations1 = inspect_deprecated::SyncFindPaths("/test/hub#child/a"); }));
+  SchedulePromise(fit::make_promise(
+      [&] { locations2 = inspect_deprecated::SyncFindPaths("/test/hub/root.inspect#child/a"); }));
 
   RunLoopUntil([&] { return !locations1.empty() && !locations2.empty(); });
 
@@ -138,9 +139,9 @@ TEST_F(DiscoverTest, SyncFindGlobs) {
   // Run the search on the promise thread so it doesn't deadlock with the
   // server.
 
-  std::vector<inspect::Location> locations;
+  std::vector<inspect_deprecated::Location> locations;
   SchedulePromise(fit::make_promise([&] {
-    locations = inspect::SyncSearchGlobs({"/*/hub/*", "/test/*", "/test/hub/*/*"});
+    locations = inspect_deprecated::SyncSearchGlobs({"/*/hub/*", "/test/*", "/test/hub/*/*"});
   }));
 
   RunLoopUntil([&] { return !locations.empty(); });

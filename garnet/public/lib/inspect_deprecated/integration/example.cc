@@ -31,14 +31,14 @@ namespace {
 // Global metrics should be raw pointers that are set back to nullptr when
 // deleted. Additional concurrency control should be used in multithreaded
 // settings.
-inspect::UIntMetric* number_of_employees = nullptr;
-inspect::UIntMetric* number_of_tasks = nullptr;
+inspect_deprecated::UIntMetric* number_of_employees = nullptr;
+inspect_deprecated::UIntMetric* number_of_tasks = nullptr;
 
 // Set the pointers to global values.
 // Returns a deferred_action that automatically sets the global pointers to null
 // when it goes out of scope.
-fit::deferred_action<fit::closure> SetGlobals(inspect::UIntMetric* employee_count,
-                                              inspect::UIntMetric* task_count) {
+fit::deferred_action<fit::closure> SetGlobals(inspect_deprecated::UIntMetric* employee_count,
+                                              inspect_deprecated::UIntMetric* task_count) {
   number_of_employees = employee_count;
   number_of_tasks = task_count;
   return fit::defer(fit::closure([] {
@@ -69,9 +69,9 @@ void CountTasks(int change) {
 class Task {
  public:
   // Construct a new |Task|.
-  // Note that the constructor takes an |inspect::Node|; this object is
+  // Note that the constructor takes an |inspect_deprecated::Node|; this object is
   // provided by the parent to allow linking into the inspect hierarchy.
-  Task(std::string bug_number, std::string name, inspect::Node object)
+  Task(std::string bug_number, std::string name, inspect_deprecated::Node object)
       : bug_number_(std::move(bug_number)), name_(std::move(name)), object_(std::move(object)) {
     // Increment the global count metric.
     CountTasks(1);
@@ -80,7 +80,7 @@ class Task {
     bug_number_property_ = object_.CreateStringProperty("bug", bug_number_);
     name_property_ = object_.CreateStringProperty("name", name_);
 
-    // The completion of the task is an |inspect::DoubleMetric|.
+    // The completion of the task is an |inspect_deprecated::DoubleMetric|.
     completion_metric_ = object_.CreateDoubleMetric("completion", 0);
   }
 
@@ -103,14 +103,14 @@ class Task {
 
   // Object for this |Task|. All exposed properties and metrics are rooted on
   // this Object.
-  inspect::Node object_;
+  inspect_deprecated::Node object_;
 
   // |StringProperty| for bug number and name.
-  inspect::StringProperty bug_number_property_;
-  inspect::StringProperty name_property_;
+  inspect_deprecated::StringProperty bug_number_property_;
+  inspect_deprecated::StringProperty name_property_;
 
   // Metric for this |Task|'s completion.
-  inspect::DoubleMetric completion_metric_;
+  inspect_deprecated::DoubleMetric completion_metric_;
 };
 
 // Structure representing an |Employee|'s performance.
@@ -138,14 +138,14 @@ struct EmployeePerformance {
 class Employee {
  public:
   // Create a new |Employee|.
-  // Note that the constructor takes an |inspect::Node| that we may use to
+  // Note that the constructor takes an |inspect_deprecated::Node| that we may use to
   // expose our own metrics, properties, and children Objects.
-  Employee(std::string name, std::string email, inspect::Node object)
+  Employee(std::string name, std::string email, inspect_deprecated::Node object)
       : name_(std::move(name)), email_(std::move(email)), object_(std::move(object)) {
     // Increment the global employee count.
     CountEmployees(1);
 
-    // Create an |inspect::StringProperty| for the name and email of this
+    // Create an |inspect_deprecated::StringProperty| for the name and email of this
     // employee.
     name_property_ = object_.CreateStringProperty("name", name_);
     email_property_ = object_.CreateStringProperty("email", email_);
@@ -157,7 +157,7 @@ class Employee {
     // child object, called "reports".
     report_object_ = object_.CreateChild("reports");
 
-    // Create an |inspect::LazyMetric| for this |Employee|'s personal
+    // Create an |inspect_deprecated::LazyMetric| for this |Employee|'s personal
     // performance. The "personal_performance" of an |Employee| is the average
     // completion of their |Task|s.
     lazy_metrics_.emplace_back(
@@ -168,7 +168,7 @@ class Employee {
           out->SetDouble(GetPerformance().CalculateCompletion());
         }));
 
-    // Create an |inspect::LazyMetric| for the performance of this
+    // Create an |inspect_deprecated::LazyMetric| for the performance of this
     // |Employee|'s reports. The "report" performance of an |Employee| is the
     // average completion of all |Task|s assigned to their direct reports.
     lazy_metrics_.emplace_back(
@@ -187,7 +187,7 @@ class Employee {
   ~Employee() { CountEmployees(-1); }
 
   // |Employee|s may be moved but not copied.
-  // This is often necessary because inspect::* types are not copyable.
+  // This is often necessary because inspect_deprecated::* types are not copyable.
   Employee(Employee&&) = default;
   Employee(const Employee&) = delete;
   Employee& operator=(Employee&&) = default;
@@ -214,12 +214,12 @@ class Employee {
     if (least_loaded_employee == this) {
       // If this |Employee| is the least loaded, take the |Task|...
       return tasks_
-          .emplace_back(
-              std::make_unique<Task>(std::move(bug_number), std::move(name),
-                                     // Note: We need to pass an Object linked under this Object
-                                     // into the new child. We use |inspect::UniqueName| to assign a
-                                     // globally unique suffix to the child's name.
-                                     task_object_.CreateChild(inspect::UniqueName("task-"))))
+          .emplace_back(std::make_unique<Task>(
+              std::move(bug_number), std::move(name),
+              // Note: We need to pass an Object linked under this Object
+              // into the new child. We use |inspect_deprecated::UniqueName| to assign a
+              // globally unique suffix to the child's name.
+              task_object_.CreateChild(inspect_deprecated::UniqueName("task-"))))
           .get();
     } else {
       // ... otherwise, recursively add the |Task| to the least loaded report.
@@ -262,19 +262,19 @@ class Employee {
   std::vector<std::unique_ptr<Employee>> reports_;
 
   // Object under which this |Employee| can expose inspect information.
-  inspect::Node object_;
+  inspect_deprecated::Node object_;
 
   // Properties for name and email.
-  inspect::StringProperty name_property_;
-  inspect::StringProperty email_property_;
+  inspect_deprecated::StringProperty name_property_;
+  inspect_deprecated::StringProperty email_property_;
 
   // Object under which this |Employee| nests |Task|s.
-  inspect::Node task_object_;
+  inspect_deprecated::Node task_object_;
   // Object under which this |Employee| nests reporting |Employee|s.
-  inspect::Node report_object_;
+  inspect_deprecated::Node report_object_;
 
   // Container for various computed "Lazy" metrics we wish to expose.
-  std::vector<inspect::LazyMetric> lazy_metrics_;
+  std::vector<inspect_deprecated::LazyMetric> lazy_metrics_;
 };
 
 int main(int argc, const char** argv) {
@@ -285,7 +285,7 @@ int main(int argc, const char** argv) {
 
   // Create a root object and bind it to out/
   auto root_object_dir = component::ObjectDir::Make("root");
-  inspect::Node root_object(root_object_dir);
+  inspect_deprecated::Node root_object(root_object_dir);
   fidl::BindingSet<fuchsia::inspect::Inspect> inspect_bindings_;
   context->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
       fuchsia::inspect::Inspect::Name_,

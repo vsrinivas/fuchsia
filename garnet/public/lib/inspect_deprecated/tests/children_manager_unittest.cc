@@ -35,7 +35,7 @@ using testing::ElementsAre;
 using testing::IsEmpty;
 using testing::UnorderedElementsAre;
 
-using namespace inspect::testing;
+using namespace inspect_deprecated::testing;
 
 bool NextBool(rng::Random* random) {
   auto bit_generator = random->NewBitGenerator<bool>();
@@ -106,7 +106,7 @@ std::set<std::vector<std::string>> CompleteTableDescription(int depth) {
   }
 }
 
-::testing::Matcher<const inspect::ObjectHierarchy&> CompleteMatcher(int depth) {
+::testing::Matcher<const inspect_deprecated::ObjectHierarchy&> CompleteMatcher(int depth) {
   if (depth == 0) {
     return ChildrenMatch(IsEmpty());
   } else {
@@ -117,9 +117,10 @@ std::set<std::vector<std::string>> CompleteTableDescription(int depth) {
   }
 }
 
-class Element final : public inspect::ChildrenManager {
+class Element final : public inspect_deprecated::ChildrenManager {
  public:
-  Element(async::TestLoop* test_loop, rng::Random* random, Table* table, inspect::Node inspect_node)
+  Element(async::TestLoop* test_loop, rng::Random* random, Table* table,
+          inspect_deprecated::Node inspect_node)
       : random_(random),
         test_loop_(test_loop),
         table_(table),
@@ -248,7 +249,7 @@ class Element final : public inspect::ChildrenManager {
   Element* ActivateChild(const std::string& child_short_name) {
     auto it = children_.find(child_short_name);
     if (it == children_.end()) {
-      inspect::Node child_inspect_node = inspect_node_.CreateChild(child_short_name);
+      inspect_deprecated::Node child_inspect_node = inspect_node_.CreateChild(child_short_name);
       auto emplacement = children_.emplace(
           std::piecewise_construct, std::forward_as_tuple(child_short_name),
           std::forward_as_tuple(test_loop_, random_,
@@ -280,7 +281,7 @@ class Element final : public inspect::ChildrenManager {
   rng::Random* random_;
   async::TestLoop* test_loop_;
   Table* table_;
-  inspect::Node inspect_node_;
+  inspect_deprecated::Node inspect_node_;
   fit::deferred_callback children_manager_retainer_;
 
   fit::closure on_empty_callback_;
@@ -303,11 +304,12 @@ enum class Activity {
 // Inspect-using application representative of those that use and that we think
 // are likely to use a ChildrenManager. The application:
 //   (1) Maintains a frequently-changing-shape variable-depth tree of elements
-//     that each statically maintain an inspect::Node.
+//     that each statically maintain an inspect_deprecated::Node.
 //   (2) The application is asynchronous.
 class Application final {
  public:
-  Application(async::TestLoop* loop, rng::Random* random, inspect::Node* application_inspect_node,
+  Application(async::TestLoop* loop, rng::Random* random,
+              inspect_deprecated::Node* application_inspect_node,
               const std::set<std::vector<std::string>>& table_description)
       : loop_(loop),
         random_(random),
@@ -331,7 +333,8 @@ class Application final {
       Element* element;
       const auto& it = elements_.find(first_short_name);
       if (it == elements_.end()) {
-        inspect::Node child_inspect_node = application_inspect_node_->CreateChild(first_short_name);
+        inspect_deprecated::Node child_inspect_node =
+            application_inspect_node_->CreateChild(first_short_name);
         auto emplacement = elements_.emplace(
             std::piecewise_construct, std::forward_as_tuple(first_short_name),
             std::forward_as_tuple(loop_, random_,
@@ -399,7 +402,7 @@ class Application final {
  private:
   async::TestLoop* loop_;
   rng::Random* random_;
-  inspect::Node* application_inspect_node_;
+  inspect_deprecated::Node* application_inspect_node_;
 
   // Representative of the application's persistent data on disk, the set of
   // names for which the application considers elements to exist (whether
@@ -416,7 +419,7 @@ class ChildrenManagerTest : public gtest::TestLoopFixture {
   ChildrenManagerTest()
       : executor_(dispatcher()),
         random_(test_loop().initial_state()),
-        top_level_node_(inspect::Node(kTestTopLevelNodeName)) {
+        top_level_node_(inspect_deprecated::Node(kTestTopLevelNodeName)) {
     elements_node_ = top_level_node_.CreateChild(kElementsInspectPathComponent);
   }
 
@@ -432,12 +435,12 @@ class ChildrenManagerTest : public gtest::TestLoopFixture {
                                        fidl::InterfacePtr<fuchsia::inspect::Inspect>* child);
   ::testing::AssertionResult Activate(Application* application, std::vector<std::string> full_name,
                                       fit::closure* retainer);
-  ::testing::AssertionResult ReadWithReaderAPI(inspect::ObjectHierarchy* hierarchy);
+  ::testing::AssertionResult ReadWithReaderAPI(inspect_deprecated::ObjectHierarchy* hierarchy);
 
   async::Executor executor_;
   rng::TestRandom random_;
-  inspect::Node top_level_node_;
-  inspect::Node elements_node_;
+  inspect_deprecated::Node top_level_node_;
+  inspect_deprecated::Node elements_node_;
 };
 
 ::testing::AssertionResult ChildrenManagerTest::OpenElementsNode(
@@ -518,7 +521,7 @@ class ChildrenManagerTest : public gtest::TestLoopFixture {
 }
 
 ::testing::AssertionResult ChildrenManagerTest::ReadWithReaderAPI(
-    inspect::ObjectHierarchy* hierarchy) {
+    inspect_deprecated::ObjectHierarchy* hierarchy) {
   bool callback_called;
   bool success;
   fidl::InterfaceHandle<fuchsia::inspect::Inspect> inspect_handle;
@@ -533,10 +536,10 @@ class ChildrenManagerTest : public gtest::TestLoopFixture {
   }
 
   callback_called = false;
-  fit::result<inspect::ObjectHierarchy> hierarchy_result;
+  fit::result<inspect_deprecated::ObjectHierarchy> hierarchy_result;
   auto hierarchy_promise =
-      inspect::ReadFromFidl(inspect::ObjectReader(std::move(inspect_handle)))
-          .then([&](fit::result<inspect::ObjectHierarchy>& then_hierarchy_result) {
+      inspect_deprecated::ReadFromFidl(inspect_deprecated::ObjectReader(std::move(inspect_handle)))
+          .then([&](fit::result<inspect_deprecated::ObjectHierarchy>& then_hierarchy_result) {
             callback_called = true;
             hierarchy_result = std::move(then_hierarchy_result);
           });
@@ -1041,7 +1044,7 @@ TEST_F(ChildrenManagerTest, ReaderAPIMinimalActiveElements) {
   fit::closure c_retainer;
   ASSERT_TRUE(Activate(&application, {"c"}, &c_retainer));
 
-  inspect::ObjectHierarchy hierarchy;
+  inspect_deprecated::ObjectHierarchy hierarchy;
   ASSERT_TRUE(ReadWithReaderAPI(&hierarchy));
   ASSERT_THAT(hierarchy, CompleteMatcher(depth));
 }
@@ -1059,7 +1062,7 @@ TEST_F(ChildrenManagerTest, ReaderAPISomeInactiveElements) {
   fit::closure c_retainer;
   ASSERT_TRUE(Activate(&application, {"c"}, &c_retainer));
 
-  inspect::ObjectHierarchy hierarchy;
+  inspect_deprecated::ObjectHierarchy hierarchy;
   ASSERT_TRUE(ReadWithReaderAPI(&hierarchy));
   ASSERT_THAT(hierarchy, CompleteMatcher(depth));
 }
@@ -1077,7 +1080,7 @@ TEST_F(ChildrenManagerTest, ReaderAPINoInactiveElements) {
     retainers.push_back(std::move(retainer));
   }
 
-  inspect::ObjectHierarchy hierarchy;
+  inspect_deprecated::ObjectHierarchy hierarchy;
   ASSERT_TRUE(ReadWithReaderAPI(&hierarchy));
   ASSERT_THAT(hierarchy, CompleteMatcher(depth));
 }
@@ -1120,7 +1123,7 @@ TEST_F(ChildrenManagerTest, ReaderAPIConcurrentInspection) {
   b_a_ptr.Unbind();
   RunLoopUntilIdle();
 
-  inspect::ObjectHierarchy hierarchy;
+  inspect_deprecated::ObjectHierarchy hierarchy;
   ASSERT_TRUE(ReadWithReaderAPI(&hierarchy));
   ASSERT_THAT(hierarchy, CompleteMatcher(depth));
 }

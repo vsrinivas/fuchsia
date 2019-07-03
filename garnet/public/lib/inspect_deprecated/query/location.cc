@@ -12,7 +12,7 @@
 
 #include "src/lib/fxl/strings/string_view.h"
 
-namespace inspect {
+namespace inspect_deprecated {
 
 std::regex inspect_file_regex() { return std::regex("\\.inspect$"); }
 
@@ -93,4 +93,4 @@ fit::result<Location, std::string> Location::Parse(const std::string& path) {
   }
 }
 
-}  // namespace inspect
+}  // namespace inspect_deprecated

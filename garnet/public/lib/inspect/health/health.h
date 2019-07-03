@@ -4,5 +4,8 @@
 #ifndef LIB_INSPECT_HEALTH_HEALTH_H_
 #define LIB_INSPECT_HEALTH_HEALTH_H_
 #include <lib/inspect_deprecated/health/health.h>
+namespace inspect {
+using namespace inspect_deprecated;
+}
 
 #endif  // LIB_INSPECT_HEALTH_HEALTH_H_

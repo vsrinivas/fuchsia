@@ -16,7 +16,7 @@
 
 #include "source.h"
 
-namespace inspect {
+namespace inspect_deprecated {
 
 namespace {
 
@@ -98,4 +98,4 @@ std::vector<Location> SyncSearchGlobs(const std::vector<std::string>& globs) {
   return locations;
 }
 
-}  // namespace inspect
+}  // namespace inspect_deprecated

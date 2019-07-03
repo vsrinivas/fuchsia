@@ -12,20 +12,20 @@
 
 namespace {
 
-using inspect::Node;
-using inspect::ObjectHierarchy;
+using inspect_deprecated::Node;
+using inspect_deprecated::ObjectHierarchy;
 using testing::AllOf;
 using testing::ElementsAre;
 using testing::IsEmpty;
-using namespace inspect::testing;
+using namespace inspect_deprecated::testing;
 
 // Convenience function for reading an ObjectHierarchy snapshot from a Tree.
-ObjectHierarchy GetHierarchy(const inspect::Tree& tree) {
+ObjectHierarchy GetHierarchy(const inspect_deprecated::Tree& tree) {
   zx::vmo duplicate;
   if (tree.GetVmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate) != ZX_OK) {
     return ObjectHierarchy();
   }
-  auto ret = inspect::ReadFromVmo(std::move(duplicate));
+  auto ret = inspect_deprecated::ReadFromVmo(std::move(duplicate));
   EXPECT_TRUE(ret.is_ok());
   if (ret.is_ok()) {
     return ret.take_value();
@@ -34,7 +34,7 @@ ObjectHierarchy GetHierarchy(const inspect::Tree& tree) {
 }
 
 TEST(Hierarchy, Sorting) {
-  auto tree = inspect::Inspector().CreateTree("test");
+  auto tree = inspect_deprecated::Inspector().CreateTree("test");
   auto& root = tree.GetRoot();
 
   auto string_sort_node = root.CreateChild("string_sort_node");

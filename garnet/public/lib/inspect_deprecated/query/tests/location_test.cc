@@ -12,7 +12,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using inspect::Location;
+using inspect_deprecated::Location;
 
 namespace {
 
@@ -46,9 +46,10 @@ TEST(Location, RelativePaths) {
   };
 
   std::vector<std::string> location_paths;
-  std::for_each(locations.begin(), locations.end(), [&](const inspect::Location& location) {
-    location_paths.push_back(location.RelativeFilePath());
-  });
+  std::for_each(locations.begin(), locations.end(),
+                [&](const inspect_deprecated::Location& location) {
+                  location_paths.push_back(location.RelativeFilePath());
+                });
 
   EXPECT_THAT(expected, ::testing::Pointwise(::testing::Eq(), location_paths));
 }
@@ -64,9 +65,10 @@ TEST(Location, AbsolutePaths) {
   };
 
   std::vector<std::string> location_paths;
-  std::for_each(locations.begin(), locations.end(), [&](const inspect::Location& location) {
-    location_paths.push_back(location.AbsoluteFilePath());
-  });
+  std::for_each(locations.begin(), locations.end(),
+                [&](const inspect_deprecated::Location& location) {
+                  location_paths.push_back(location.AbsoluteFilePath());
+                });
 
   EXPECT_THAT(expected, ::testing::Pointwise(::testing::Eq(), location_paths));
 }
@@ -82,9 +84,10 @@ TEST(Location, SimplifiedFilePaths) {
   };
 
   std::vector<std::string> location_paths;
-  std::for_each(locations.begin(), locations.end(), [&](const inspect::Location& location) {
-    location_paths.push_back(location.SimplifiedFilePath());
-  });
+  std::for_each(locations.begin(), locations.end(),
+                [&](const inspect_deprecated::Location& location) {
+                  location_paths.push_back(location.SimplifiedFilePath());
+                });
 
   EXPECT_THAT(expected, ::testing::Pointwise(::testing::Eq(), location_paths));
 }
@@ -107,10 +110,11 @@ TEST(Location, NodePaths) {
   };
 
   std::vector<std::string> location_paths, location_suffix_paths;
-  std::for_each(locations.begin(), locations.end(), [&](const inspect::Location& location) {
-    location_paths.push_back(location.NodePath());
-    location_suffix_paths.push_back(location.NodePath({"b", "c"}));
-  });
+  std::for_each(locations.begin(), locations.end(),
+                [&](const inspect_deprecated::Location& location) {
+                  location_paths.push_back(location.NodePath());
+                  location_suffix_paths.push_back(location.NodePath({"b", "c"}));
+                });
 
   EXPECT_THAT(expected, ::testing::Pointwise(::testing::Eq(), location_paths));
   EXPECT_THAT(expected_suffix, ::testing::Pointwise(::testing::Eq(), location_suffix_paths));
@@ -133,7 +137,7 @@ TEST(Location, Parse) {
       "/hub/path/root.inspect#",
   };
 
-  std::vector<inspect::Location> locations1, locations2;
+  std::vector<inspect_deprecated::Location> locations1, locations2;
   std::for_each(paths1.begin(), paths1.end(), [&](const std::string& path) {
     locations1.emplace_back(Location::Parse(path).take_value());
   });

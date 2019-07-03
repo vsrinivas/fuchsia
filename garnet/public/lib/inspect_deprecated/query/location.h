@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-namespace inspect {
+namespace inspect_deprecated {
 
 // Returns a regex that matches Inspect file names.
 std::regex inspect_file_regex();
@@ -88,6 +88,6 @@ struct Location {
 // Get a printable representation of the Location.:
 std::ostream& operator<<(std::ostream& os, const Location& location);
 
-}  // namespace inspect
+}  // namespace inspect_deprecated
 
 #endif  // LIB_INSPECT_DEPRECATED_QUERY_LOCATION_H_

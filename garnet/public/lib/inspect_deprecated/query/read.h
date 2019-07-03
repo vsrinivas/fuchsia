@@ -7,12 +7,12 @@
 
 #include "source.h"
 
-namespace inspect {
+namespace inspect_deprecated {
 
 // Consults the file system to interpret and open the given location, reading
 // it into a new Source.
 fit::promise<Source, std::string> ReadLocation(Location location, int depth = -1);
 
-}  // namespace inspect
+}  // namespace inspect_deprecated
 
 #endif  // LIB_INSPECT_DEPRECATED_QUERY_READ_H_

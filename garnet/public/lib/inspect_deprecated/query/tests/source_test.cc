@@ -23,13 +23,13 @@
 #include "lib/inspect_deprecated/reader.h"
 #include "lib/inspect_deprecated/testing/inspect.h"
 
-using namespace inspect::testing;
+using namespace inspect_deprecated::testing;
 
 namespace {
 
 class TestDataWrapper {
  public:
-  explicit TestDataWrapper(inspect::Node object) : object_(std::move(object)) {
+  explicit TestDataWrapper(inspect_deprecated::Node object) : object_(std::move(object)) {
     version_ = object_.CreateStringProperty("version", "1.0");
     child_test_ = object_.CreateChild("test");
     count_ = child_test_.CreateIntMetric("count", 2);
@@ -37,14 +37,14 @@ class TestDataWrapper {
   }
 
  private:
-  inspect::Node object_;
-  inspect::Node child_test_;
-  inspect::Node nested_child_;
-  inspect::StringProperty version_;
-  inspect::IntMetric count_;
+  inspect_deprecated::Node object_;
+  inspect_deprecated::Node child_test_;
+  inspect_deprecated::Node nested_child_;
+  inspect_deprecated::StringProperty version_;
+  inspect_deprecated::IntMetric count_;
 };
 
-void CheckHierarchyMatches(const inspect::ObjectHierarchy& hierarchy) {
+void CheckHierarchyMatches(const inspect_deprecated::ObjectHierarchy& hierarchy) {
   EXPECT_THAT(hierarchy,
               ::testing::AllOf(
                   NodeMatches(::testing::AllOf(
@@ -61,16 +61,18 @@ class SourceTestFidl : public TestFixture {
  public:
   SourceTestFidl()
       : fidl_dir_(component::ObjectDir::Make("root")),
-        test_data_(inspect::Node(fidl_dir_)),
+        test_data_(inspect_deprecated::Node(fidl_dir_)),
         binding_(fidl_dir_.object().get()) {
     binding_.Bind(ptr_.NewRequest().TakeChannel());
   }
 
-  fit::result<inspect::Source, std::string> MakeFromPath(std::string path, int depth = -1) {
-    fit::result<inspect::Source, std::string> result;
-    SchedulePromise(inspect::Source::MakeFromFidl(inspect::Location::Parse(path).take_value(),
-                                                  inspect::ObjectReader(std::move(ptr_)), depth)
-                        .then([&result](fit::result<inspect::Source, std::string>& res) {
+  fit::result<inspect_deprecated::Source, std::string> MakeFromPath(std::string path,
+                                                                    int depth = -1) {
+    fit::result<inspect_deprecated::Source, std::string> result;
+    SchedulePromise(inspect_deprecated::Source::MakeFromFidl(
+                        inspect_deprecated::Location::Parse(path).take_value(),
+                        inspect_deprecated::ObjectReader(std::move(ptr_)), depth)
+                        .then([&result](fit::result<inspect_deprecated::Source, std::string>& res) {
                           result = std::move(res);
                         }));
 
@@ -99,13 +101,15 @@ class SourceTestVmo : public TestFixture {
                               file_ptr_.NewRequest().TakeChannel()) == ZX_OK);
   }
 
-  fit::result<inspect::Source, std::string> MakeFromPath(std::string path, int depth = -1) {
-    fit::result<inspect::Source, std::string> result;
-    SchedulePromise(inspect::Source::MakeFromVmo(inspect::Location::Parse(path).take_value(),
-                                                 std::move(file_ptr_), depth)
-                        .then([&result](fit::result<inspect::Source, std::string>& res) {
-                          result = std::move(res);
-                        }));
+  fit::result<inspect_deprecated::Source, std::string> MakeFromPath(std::string path,
+                                                                    int depth = -1) {
+    fit::result<inspect_deprecated::Source, std::string> result;
+    SchedulePromise(
+        inspect_deprecated::Source::MakeFromVmo(
+            inspect_deprecated::Location::Parse(path).take_value(), std::move(file_ptr_), depth)
+            .then([&result](fit::result<inspect_deprecated::Source, std::string>& res) {
+              result = std::move(res);
+            }));
 
     RunLoopUntil([&result] { return !!result; });
 
@@ -115,8 +119,8 @@ class SourceTestVmo : public TestFixture {
   const std::string RootPath = "/test/root.inspect";
 
  protected:
-  inspect::Inspector inspector_;
-  inspect::Tree tree_;
+  inspect_deprecated::Inspector inspector_;
+  inspect_deprecated::Tree tree_;
   vfs::VmoFile vmo_file_;
   TestDataWrapper test_data_;
   fuchsia::io::FilePtr file_ptr_;
@@ -124,7 +128,8 @@ class SourceTestVmo : public TestFixture {
 
 class SourceTestFile : public SourceTestVmo {
  public:
-  fit::result<inspect::Source, std::string> MakeFromPath(std::string path, int depth = -1) {
+  fit::result<inspect_deprecated::Source, std::string> MakeFromPath(std::string path,
+                                                                    int depth = -1) {
     fit::result<std::string, std::string> path_or = WriteFromVmo(path);
     if (path_or.is_error()) {
       return fit::error(path_or.error());
@@ -135,10 +140,11 @@ class SourceTestFile : public SourceTestVmo {
                                    file_backed_ptr.NewRequest().TakeChannel().release());
     ZX_ASSERT(status == ZX_OK && file_backed_ptr.is_bound());
 
-    fit::result<inspect::Source, std::string> result;
-    SchedulePromise(inspect::Source::MakeFromVmo(inspect::Location::Parse(path).take_value(),
-                                                 std::move(file_backed_ptr), depth)
-                        .then([&result](fit::result<inspect::Source, std::string>& res) {
+    fit::result<inspect_deprecated::Source, std::string> result;
+    SchedulePromise(inspect_deprecated::Source::MakeFromVmo(
+                        inspect_deprecated::Location::Parse(path).take_value(),
+                        std::move(file_backed_ptr), depth)
+                        .then([&result](fit::result<inspect_deprecated::Source, std::string>& res) {
                           result = std::move(res);
                         }));
 
@@ -237,12 +243,13 @@ TYPED_TEST(SourceTestError, MakeError) {
   ASSERT_TRUE(result.is_error());
 }
 
-inspect::ObjectHierarchy MakeNode(std::string name) {
-  return inspect::ObjectHierarchy(inspect::hierarchy::Node(std::move(name)), {});
+inspect_deprecated::ObjectHierarchy MakeNode(std::string name) {
+  return inspect_deprecated::ObjectHierarchy(inspect_deprecated::hierarchy::Node(std::move(name)),
+                                             {});
 }
 
 TEST(Source, VisitObjectsInHierarchy) {
-  inspect::ObjectHierarchy root = MakeNode("root");
+  inspect_deprecated::ObjectHierarchy root = MakeNode("root");
   {
     auto child = MakeNode("child");
     child.children().emplace_back(MakeNode("nested"));
@@ -250,22 +257,22 @@ TEST(Source, VisitObjectsInHierarchy) {
   }
   root.children().emplace_back(MakeNode("a_child"));
 
-  auto source = inspect::Source({}, std::move(root));
+  auto source = inspect_deprecated::Source({}, std::move(root));
 
   std::vector<std::string> paths_visited;
-  source.VisitObjectsInHierarchy(
-      [&](const std::vector<std::string>& path, const inspect::ObjectHierarchy& hierarchy) {
-        paths_visited.push_back(fxl::JoinStrings(path, "/"));
-      });
+  source.VisitObjectsInHierarchy([&](const std::vector<std::string>& path,
+                                     const inspect_deprecated::ObjectHierarchy& hierarchy) {
+    paths_visited.push_back(fxl::JoinStrings(path, "/"));
+  });
 
   EXPECT_THAT(paths_visited, ::testing::ElementsAre("", "child", "child/nested", "a_child"));
 
   paths_visited.clear();
   source.SortHierarchy();
-  source.VisitObjectsInHierarchy(
-      [&](const std::vector<std::string>& path, const inspect::ObjectHierarchy& hierarchy) {
-        paths_visited.push_back(fxl::JoinStrings(path, "/"));
-      });
+  source.VisitObjectsInHierarchy([&](const std::vector<std::string>& path,
+                                     const inspect_deprecated::ObjectHierarchy& hierarchy) {
+    paths_visited.push_back(fxl::JoinStrings(path, "/"));
+  });
 
   EXPECT_THAT(paths_visited, ::testing::ElementsAre("", "a_child", "child", "child/nested"));
 }

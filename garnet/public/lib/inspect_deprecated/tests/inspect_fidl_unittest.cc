@@ -13,11 +13,11 @@
 
 namespace {
 
-using inspect::Node;
+using inspect_deprecated::Node;
 using testing::AllOf;
 using testing::IsEmpty;
 using testing::UnorderedElementsAre;
-using namespace inspect::testing;
+using namespace inspect_deprecated::testing;
 
 TEST(InspectFidl, EmptyObject) {
   Node obj;
@@ -27,12 +27,12 @@ TEST(InspectFidl, EmptyObject) {
   auto uint_metric = obj.CreateUIntMetric("uint", 0);
   auto double_metric = obj.CreateDoubleMetric("double", 0);
   auto str = obj.CreateStringProperty("str", "test");
-  auto bytes = obj.CreateByteVectorProperty("bytes", inspect::VectorValue(3, 'a'));
+  auto bytes = obj.CreateByteVectorProperty("bytes", inspect_deprecated::VectorValue(3, 'a'));
   auto lazy_metric =
       obj.CreateLazyMetric("lazy metric", [](component::Metric* out) { out->SetInt(0); });
   auto lazy_string = obj.CreateLazyStringProperty("lazy string", [] { return "test"; });
-  auto lazy_bytes =
-      obj.CreateLazyByteVectorProperty("lazy bytes", [] { return inspect::VectorValue(3, 'a'); });
+  auto lazy_bytes = obj.CreateLazyByteVectorProperty(
+      "lazy bytes", [] { return inspect_deprecated::VectorValue(3, 'a'); });
   auto lazy_children = obj.CreateChildrenCallback([](component::Object::ObjectVector* out) {});
 
   auto output = obj.object();
@@ -60,7 +60,7 @@ class ValueWrapper {
 
  private:
   Node object_;
-  inspect::IntMetric value_;
+  inspect_deprecated::IntMetric value_;
 };
 
 TEST(InspectFidl, Child) {
@@ -96,7 +96,7 @@ TEST(InspectFidl, ChildChaining) {
 TEST(InspectFidl, ChildrenCallbacks) {
   Node root("root");
   {
-    inspect::ChildrenCallback callback =
+    inspect_deprecated::ChildrenCallback callback =
         root.CreateChildrenCallback([](component::Object::ObjectVector* out) {
           out->push_back(component::ObjectDir::Make("temp").object());
         });
@@ -115,9 +115,9 @@ void DefaultMetricTest() {
 }
 
 TEST(InspectFidl, Metrics) {
-  DefaultMetricTest<inspect::IntMetric>();
-  DefaultMetricTest<inspect::UIntMetric>();
-  DefaultMetricTest<inspect::DoubleMetric>();
+  DefaultMetricTest<inspect_deprecated::IntMetric>();
+  DefaultMetricTest<inspect_deprecated::UIntMetric>();
+  DefaultMetricTest<inspect_deprecated::DoubleMetric>();
 
   Node root("root");
   {
@@ -132,35 +132,35 @@ TEST(InspectFidl, Metrics) {
     metric_double.Add(1);
     metric_double.Subtract(0.5);
     EXPECT_THAT(
-        inspect::ReadFromFidlObject(root.object()),
+        inspect_deprecated::ReadFromFidlObject(root.object()),
         NodeMatches(AllOf(MetricList(UnorderedElementsAre(
             IntMetricIs("int", -9), UIntMetricIs("uint", 9), DoubleMetricIs("double", 0.75))))));
   }
   // Check that the metrics are removed when they goes out of scope.
-  EXPECT_THAT(inspect::ReadFromFidlObject(root.object()),
+  EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(root.object()),
               NodeMatches(AllOf(MetricList(IsEmpty()))));
 
   {
     // Test that a later metric overwrites an earlier metric with the same name.
     auto metric_int = root.CreateIntMetric("value", -10);
     auto metric_uint = root.CreateUIntMetric("value", 10);
-    EXPECT_THAT(inspect::ReadFromFidlObject(root.object()),
+    EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(root.object()),
                 NodeMatches(AllOf(MetricList(UnorderedElementsAre(UIntMetricIs("value", 10))))));
 
     // Deleting any of the owners deletes the value.
     metric_int = root.CreateIntMetric("other", 0);
-    EXPECT_THAT(inspect::ReadFromFidlObject(root.object()),
+    EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(root.object()),
                 NodeMatches(AllOf(MetricList(UnorderedElementsAre(IntMetricIs("other", 0))))));
 
     // Adding to the deleted value does nothing.
     metric_uint.Add(100);
-    EXPECT_THAT(inspect::ReadFromFidlObject(root.object()),
+    EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(root.object()),
                 NodeMatches(AllOf(MetricList(UnorderedElementsAre(IntMetricIs("other", 0))))));
 
     // Setting the deleted value recreates it.
     // TODO(CF-275): Fix this behavior.
     metric_uint.Set(100);
-    EXPECT_THAT(inspect::ReadFromFidlObject(root.object()),
+    EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(root.object()),
                 NodeMatches(AllOf(MetricList(
                     UnorderedElementsAre(UIntMetricIs("value", 100), IntMetricIs("other", 0))))));
   }
@@ -177,15 +177,15 @@ TEST(InspectFidl, MetricCallbacks) {
         "value", [defer = std::move(defer), &metric_value](component::Metric* value) {
           value->SetInt(metric_value++);
         });
-    EXPECT_THAT(inspect::ReadFromFidlObject(root.object()),
+    EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(root.object()),
                 NodeMatches(AllOf(MetricList(UnorderedElementsAre(IntMetricIs("value", -100))))));
-    EXPECT_THAT(inspect::ReadFromFidlObject(root.object()),
+    EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(root.object()),
                 NodeMatches(AllOf(MetricList(UnorderedElementsAre(IntMetricIs("value", -99))))));
     EXPECT_FALSE(defer_called);
   }
   // Check that the callback is removed and destroyed (defer called) when it
   // goes out of scope.
-  EXPECT_THAT(inspect::ReadFromFidlObject(root.object()),
+  EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(root.object()),
               NodeMatches(AllOf(MetricList(IsEmpty()))));
   EXPECT_TRUE(defer_called);
 }
@@ -195,14 +195,15 @@ TEST(InspectFidl, Properties) {
   {
     auto property_string = root.CreateStringProperty("str", "test");
     property_string.Set("valid");
-    auto property_vector = root.CreateByteVectorProperty("vec", inspect::VectorValue(3, 'a'));
-    EXPECT_THAT(inspect::ReadFromFidlObject(root.object()),
+    auto property_vector =
+        root.CreateByteVectorProperty("vec", inspect_deprecated::VectorValue(3, 'a'));
+    EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(root.object()),
                 NodeMatches(AllOf(PropertyList(UnorderedElementsAre(
                     StringPropertyIs("str", "valid"),
-                    ByteVectorPropertyIs("vec", inspect::VectorValue(3, 'a')))))));
+                    ByteVectorPropertyIs("vec", inspect_deprecated::VectorValue(3, 'a')))))));
   }
   // Check that the properties are removed when they goes out of scope.
-  EXPECT_THAT(inspect::ReadFromFidlObject(root.object()),
+  EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(root.object()),
               NodeMatches(AllOf(PropertyList(IsEmpty()))));
 
   {
@@ -211,19 +212,19 @@ TEST(InspectFidl, Properties) {
     auto property_string = root.CreateStringProperty("string", "a");
     auto property_other = root.CreateStringProperty("string", "b");
     EXPECT_THAT(
-        inspect::ReadFromFidlObject(root.object()),
+        inspect_deprecated::ReadFromFidlObject(root.object()),
         NodeMatches(AllOf(PropertyList(UnorderedElementsAre(StringPropertyIs("string", "b"))))));
 
     // Deleting any of the owners deletes the value.
     property_string = root.CreateStringProperty("not_string", "b");
-    EXPECT_THAT(inspect::ReadFromFidlObject(root.object()),
+    EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(root.object()),
                 NodeMatches(AllOf(
                     PropertyList(UnorderedElementsAre(StringPropertyIs("not_string", "b"))))));
 
     // Setting the deleted value recreates it.
     // TODO(CF-275): Fix this behavior.
     property_other.Set("c");
-    EXPECT_THAT(inspect::ReadFromFidlObject(root.object()),
+    EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(root.object()),
                 NodeMatches(AllOf(PropertyList(UnorderedElementsAre(
                     StringPropertyIs("not_string", "b"), StringPropertyIs("string", "c"))))));
   }
@@ -236,7 +237,7 @@ TEST(InspectFidl, PropertyCallbacks) {
   auto defer2 = fit::defer([&defer_called2] { defer_called2 = true; });
   {
     std::string val = "1";
-    inspect::VectorValue vec(3, 'a');
+    inspect_deprecated::VectorValue vec(3, 'a');
     // Create a child and check it exists.
     auto property_string =
         root.CreateLazyStringProperty("string", [defer = std::move(defer1), &val] {
@@ -248,14 +249,14 @@ TEST(InspectFidl, PropertyCallbacks) {
           vec.push_back('a');
           return vec;
         });
-    EXPECT_THAT(inspect::ReadFromFidlObject(root.object()),
+    EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(root.object()),
                 NodeMatches(AllOf(PropertyList(UnorderedElementsAre(
                     StringPropertyIs("string", "12"),
-                    ByteVectorPropertyIs("vector", inspect::VectorValue(4, 'a')))))));
-    EXPECT_THAT(inspect::ReadFromFidlObject(root.object()),
+                    ByteVectorPropertyIs("vector", inspect_deprecated::VectorValue(4, 'a')))))));
+    EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(root.object()),
                 NodeMatches(AllOf(PropertyList(UnorderedElementsAre(
                     StringPropertyIs("string", "122"),
-                    ByteVectorPropertyIs("vector", inspect::VectorValue(5, 'a')))))));
+                    ByteVectorPropertyIs("vector", inspect_deprecated::VectorValue(5, 'a')))))));
     EXPECT_FALSE(defer_called1);
     EXPECT_FALSE(defer_called2);
   }

@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-namespace inspect {
+namespace inspect_deprecated {
 
 // Namespace hierarchy contains classes representing the parts of a parsed
 // ObjectHierarchy.
@@ -316,6 +316,6 @@ class ObjectHierarchy {
   hierarchy::Node node_;
   std::vector<ObjectHierarchy> children_;
 };
-}  // namespace inspect
+}  // namespace inspect_deprecated
 
 #endif  // LIB_INSPECT_DEPRECATED_HIERARCHY_H_

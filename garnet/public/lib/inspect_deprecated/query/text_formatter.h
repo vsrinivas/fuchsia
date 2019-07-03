@@ -7,7 +7,7 @@
 
 #include "formatter.h"
 
-namespace inspect {
+namespace inspect_deprecated {
 
 class TextFormatter : public Formatter {
  public:
@@ -20,18 +20,21 @@ class TextFormatter : public Formatter {
       : Formatter(path_format), options_(std::move(options)) {}
   ~TextFormatter() = default;
 
-  std::string FormatSourceLocations(const std::vector<inspect::Source>& sources) const override;
+  std::string FormatSourceLocations(
+      const std::vector<inspect_deprecated::Source>& sources) const override;
 
-  std::string FormatChildListing(const std::vector<inspect::Source>& sources) const override;
+  std::string FormatChildListing(
+      const std::vector<inspect_deprecated::Source>& sources) const override;
 
-  std::string FormatSourcesRecursive(const std::vector<inspect::Source>& sources) const override;
+  std::string FormatSourcesRecursive(
+      const std::vector<inspect_deprecated::Source>& sources) const override;
 
-  std::string FormatHealth(const std::vector<inspect::Source>& sources) const override;
+  std::string FormatHealth(const std::vector<inspect_deprecated::Source>& sources) const override;
 
  private:
   Options options_;
 };
 
-}  // namespace inspect
+}  // namespace inspect_deprecated
 
 #endif  // LIB_INSPECT_DEPRECATED_QUERY_TEXT_FORMATTER_H_

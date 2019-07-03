@@ -13,7 +13,7 @@
 
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace inspect {
+namespace inspect_deprecated {
 namespace {
 fit::result<fidl::InterfaceHandle<fuchsia::inspect::Inspect>, std::string> OpenInspectAtPath(
     const std::string& path) {
@@ -40,8 +40,8 @@ fit::promise<Source, std::string> ReadLocation(Location location, int depth) {
             return fit::error(fxl::StringPrintf("Failed to open %s\n", path.c_str()));
           });
     }
-    return Source::MakeFromFidl(std::move(location), inspect::ObjectReader(handle.take_value()),
-                                depth);
+    return Source::MakeFromFidl(std::move(location),
+                                inspect_deprecated::ObjectReader(handle.take_value()), depth);
   } else if (location.type == Location::Type::INSPECT_FILE_FORMAT) {
     fuchsia::io::FilePtr file_ptr;
     zx_status_t status =
@@ -62,4 +62,4 @@ fit::promise<Source, std::string> ReadLocation(Location location, int depth) {
   }
 }
 
-}  // namespace inspect
+}  // namespace inspect_deprecated

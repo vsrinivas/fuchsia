@@ -13,25 +13,24 @@
 #include "lib/inspect_deprecated/hierarchy.h"
 #include "location.h"
 
-namespace inspect {
+namespace inspect_deprecated {
 
 // A Source is the result of reading data from an Inspect Location.
 //
 // It wraps a Location along with the ObjectHierarchy that was read.
 class Source {
  public:
-  using Visitor =
-      fit::function<void(const std::vector<std::string>&, const inspect::ObjectHierarchy&)>;
+  using Visitor = fit::function<void(const std::vector<std::string>&,
+                                     const inspect_deprecated::ObjectHierarchy&)>;
 
-  Source(Location location, inspect::ObjectHierarchy hierarchy)
+  Source(Location location, inspect_deprecated::ObjectHierarchy hierarchy)
       : location_(std::move(location)), hierarchy_(std::move(hierarchy)) {}
 
   // Construct a new source consisting of an inspectable file path and path
   // components for the element to inspect within the hierarchy.
   // The hierarchy will be populated by the given ObjectReader.
-  static fit::promise<Source, std::string> MakeFromFidl(Location root_location,
-                                                        inspect::ObjectReader root_reader,
-                                                        int depth = -1);
+  static fit::promise<Source, std::string> MakeFromFidl(
+      Location root_location, inspect_deprecated::ObjectReader root_reader, int depth = -1);
 
   // Construct a new source consisting of an inspectable file path.
   static fit::promise<Source, std::string> MakeFromVmo(Location root_location,
@@ -42,7 +41,7 @@ class Source {
   const Location GetLocation() const { return location_; }
 
   // Return a reference to the requested object hierarchy.
-  const inspect::ObjectHierarchy& GetHierarchy() const { return hierarchy_; }
+  const inspect_deprecated::ObjectHierarchy& GetHierarchy() const { return hierarchy_; }
 
   // Visit each ObjectHierarchy recursively.
   // The visitor function receives a reference to the relative path within the
@@ -54,16 +53,16 @@ class Source {
 
  private:
   void VisitObjectsInHierarchyRecursively(const Visitor& visitor,
-                                          const inspect::ObjectHierarchy& current,
+                                          const inspect_deprecated::ObjectHierarchy& current,
                                           std::vector<std::string>* path) const;
 
   // The location of the root tree accessible through the file system.
   Location location_;
 
   // The requested portion of the hierarchy for this source.
-  inspect::ObjectHierarchy hierarchy_;
+  inspect_deprecated::ObjectHierarchy hierarchy_;
 };
 
-}  // namespace inspect
+}  // namespace inspect_deprecated
 
 #endif  // LIB_INSPECT_DEPRECATED_QUERY_SOURCE_H_

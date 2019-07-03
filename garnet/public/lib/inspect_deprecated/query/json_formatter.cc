@@ -17,7 +17,7 @@
 
 using cobalt::crypto::Base64Encode;
 
-namespace inspect {
+namespace inspect_deprecated {
 
 namespace {
 
@@ -77,25 +77,25 @@ void FormatArray(WriterType& writer, const ArrayType& array) {
 
 // Properly formats a metric based on its type.
 template <typename WriterType>
-void FormatMetricValue(WriterType& writer, const inspect::hierarchy::Metric& metric) {
+void FormatMetricValue(WriterType& writer, const inspect_deprecated::hierarchy::Metric& metric) {
   switch (metric.format()) {
-    case inspect::hierarchy::MetricFormat::INT_ARRAY:
-      FormatArray(writer, metric.Get<inspect::hierarchy::IntArray>());
+    case inspect_deprecated::hierarchy::MetricFormat::INT_ARRAY:
+      FormatArray(writer, metric.Get<inspect_deprecated::hierarchy::IntArray>());
       break;
-    case inspect::hierarchy::MetricFormat::UINT_ARRAY:
-      FormatArray(writer, metric.Get<inspect::hierarchy::UIntArray>());
+    case inspect_deprecated::hierarchy::MetricFormat::UINT_ARRAY:
+      FormatArray(writer, metric.Get<inspect_deprecated::hierarchy::UIntArray>());
       break;
-    case inspect::hierarchy::MetricFormat::DOUBLE_ARRAY:
-      FormatArray(writer, metric.Get<inspect::hierarchy::DoubleArray>());
+    case inspect_deprecated::hierarchy::MetricFormat::DOUBLE_ARRAY:
+      FormatArray(writer, metric.Get<inspect_deprecated::hierarchy::DoubleArray>());
       break;
-    case inspect::hierarchy::MetricFormat::INT:
-      FormatNumericValue(writer, metric.Get<inspect::hierarchy::IntMetric>().value());
+    case inspect_deprecated::hierarchy::MetricFormat::INT:
+      FormatNumericValue(writer, metric.Get<inspect_deprecated::hierarchy::IntMetric>().value());
       break;
-    case inspect::hierarchy::MetricFormat::UINT:
-      FormatNumericValue(writer, metric.Get<inspect::hierarchy::UIntMetric>().value());
+    case inspect_deprecated::hierarchy::MetricFormat::UINT:
+      FormatNumericValue(writer, metric.Get<inspect_deprecated::hierarchy::UIntMetric>().value());
       break;
-    case inspect::hierarchy::MetricFormat::DOUBLE:
-      FormatNumericValue(writer, metric.Get<inspect::hierarchy::DoubleMetric>().value());
+    case inspect_deprecated::hierarchy::MetricFormat::DOUBLE:
+      FormatNumericValue(writer, metric.Get<inspect_deprecated::hierarchy::DoubleMetric>().value());
       break;
     default:
       writer->String("<unknown metric format>");
@@ -123,19 +123,19 @@ std::unique_ptr<rapidjson::Writer<OutputStream>> GetJsonWriter(
 
 // Internal function to recursively format a hierarchy rooted at a given source.
 template <typename WriterType>
-void InternalFormatSource(WriterType& writer, const inspect::Source& source,
-                          const inspect::ObjectHierarchy& root) {
+void InternalFormatSource(WriterType& writer, const inspect_deprecated::Source& source,
+                          const inspect_deprecated::ObjectHierarchy& root) {
   writer->StartObject();
 
   // Properties.
   for (const auto& property : root.node().properties()) {
     writer->String(property.name());
     switch (property.format()) {
-      case inspect::hierarchy::PropertyFormat::STRING:
-        writer->String(property.Get<inspect::hierarchy::StringProperty>().value());
+      case inspect_deprecated::hierarchy::PropertyFormat::STRING:
+        writer->String(property.Get<inspect_deprecated::hierarchy::StringProperty>().value());
         break;
-      case inspect::hierarchy::PropertyFormat::BYTES: {
-        auto& val = property.Get<inspect::hierarchy::ByteVectorProperty>().value();
+      case inspect_deprecated::hierarchy::PropertyFormat::BYTES: {
+        auto& val = property.Get<inspect_deprecated::hierarchy::ByteVectorProperty>().value();
         std::string content;
         Base64Encode((uint8_t*)val.data(), val.size(), &content);
         writer->String("b64:" + content);
@@ -162,15 +162,15 @@ void InternalFormatSource(WriterType& writer, const inspect::Source& source,
 }
 
 template <typename WriterType>
-void WriteJsonForHealthNode(const std::string& node_name, const inspect::ObjectHierarchy& node,
-                            WriterType& writer) {
+void WriteJsonForHealthNode(const std::string& node_name,
+                            const inspect_deprecated::ObjectHierarchy& node, WriterType& writer) {
   std::string status;
   std::string message;
   for (auto& property : node.node().properties()) {
     if (property.name() == "status")
-      status = property.Get<inspect::hierarchy::StringProperty>().value();
+      status = property.Get<inspect_deprecated::hierarchy::StringProperty>().value();
     if (property.name() == "message")
-      message = property.Get<inspect::hierarchy::StringProperty>().value();
+      message = property.Get<inspect_deprecated::hierarchy::StringProperty>().value();
   }
 
   FXL_DCHECK(!status.empty());
@@ -190,11 +190,11 @@ void WriteJsonForHealthNode(const std::string& node_name, const inspect::ObjectH
 
 template <typename WriterType>
 void JsonFormatter::InternalFormatSourceLocations(
-    WriterType& writer, const std::vector<inspect::Source>& sources) const {
+    WriterType& writer, const std::vector<inspect_deprecated::Source>& sources) const {
   writer->StartArray();
   for (const auto& source : sources) {
     source.VisitObjectsInHierarchy(
-        [&](const Path& path, const inspect::ObjectHierarchy& hierarchy) {
+        [&](const Path& path, const inspect_deprecated::ObjectHierarchy& hierarchy) {
           writer->String(FormatPathOrName(source.GetLocation(), path, hierarchy.node().name()));
         });
   }
@@ -202,7 +202,7 @@ void JsonFormatter::InternalFormatSourceLocations(
 }
 
 std::string JsonFormatter::FormatSourceLocations(
-    const std::vector<inspect::Source>& sources) const {
+    const std::vector<inspect_deprecated::Source>& sources) const {
   rapidjson::StringBuffer buffer;
   if (options_.indent == 0) {
     auto writer = GetJsonWriter(buffer, options_);
@@ -215,8 +215,8 @@ std::string JsonFormatter::FormatSourceLocations(
 }
 
 template <typename WriterType>
-void JsonFormatter::InternalFormatChildListing(WriterType& writer,
-                                               const std::vector<inspect::Source>& sources) const {
+void JsonFormatter::InternalFormatChildListing(
+    WriterType& writer, const std::vector<inspect_deprecated::Source>& sources) const {
   writer->StartArray();
   for (const auto& source : sources) {
     const auto& hierarchy = source.GetHierarchy();
@@ -228,7 +228,8 @@ void JsonFormatter::InternalFormatChildListing(WriterType& writer,
   writer->EndArray();
 }
 
-std::string JsonFormatter::FormatChildListing(const std::vector<inspect::Source>& sources) const {
+std::string JsonFormatter::FormatChildListing(
+    const std::vector<inspect_deprecated::Source>& sources) const {
   rapidjson::StringBuffer buffer;
   if (options_.indent == 0) {
     auto writer = GetJsonWriter(buffer, options_);
@@ -242,7 +243,7 @@ std::string JsonFormatter::FormatChildListing(const std::vector<inspect::Source>
 
 template <typename WriterType>
 void JsonFormatter::InternalFormatSourcesRecursive(
-    WriterType& writer, const std::vector<inspect::Source>& sources) const {
+    WriterType& writer, const std::vector<inspect_deprecated::Source>& sources) const {
   writer->StartArray();
   for (const auto& source : sources) {
     writer->StartObject();
@@ -260,7 +261,7 @@ void JsonFormatter::InternalFormatSourcesRecursive(
 }
 
 std::string JsonFormatter::FormatSourcesRecursive(
-    const std::vector<inspect::Source>& sources) const {
+    const std::vector<inspect_deprecated::Source>& sources) const {
   rapidjson::StringBuffer buffer;
   if (options_.indent == 0) {
     auto writer = GetJsonWriter(buffer, options_);
@@ -272,7 +273,8 @@ std::string JsonFormatter::FormatSourcesRecursive(
   return buffer.GetString();
 }
 
-std::string JsonFormatter::FormatHealth(const std::vector<inspect::Source>& sources) const {
+std::string JsonFormatter::FormatHealth(
+    const std::vector<inspect_deprecated::Source>& sources) const {
   // Write to a pretty string.
   rapidjson::StringBuffer buffer;
   if (options_.indent == 0) {
@@ -288,14 +290,15 @@ std::string JsonFormatter::FormatHealth(const std::vector<inspect::Source>& sour
 }
 
 template <typename WriterType>
-void JsonFormatter::InternalFormatHealth(WriterType& writer,
-                                         const std::vector<inspect::Source>& sources) const {
+void JsonFormatter::InternalFormatHealth(
+    WriterType& writer, const std::vector<inspect_deprecated::Source>& sources) const {
   writer.StartObject();
   for (const auto& entry_point : sources) {
     entry_point.VisitObjectsInHierarchy(
         [&](const auto& path_to_node, const ObjectHierarchy& hierarchy) {
           // GetByPath returns nullptr if not found.
-          const ObjectHierarchy* health_node = hierarchy.GetByPath({inspect::kHealthNodeName});
+          const ObjectHierarchy* health_node =
+              hierarchy.GetByPath({inspect_deprecated::kHealthNodeName});
           if (!health_node)
             return;
 
@@ -308,4 +311,4 @@ void JsonFormatter::InternalFormatHealth(WriterType& writer,
   writer.EndObject();
 }
 
-}  // namespace inspect
+}  // namespace inspect_deprecated

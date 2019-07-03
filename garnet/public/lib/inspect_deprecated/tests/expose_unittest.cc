@@ -33,7 +33,7 @@ using testing::UnorderedElementsAre;
 }
 
 ::testing::Matcher<const fuchsia::inspect::Property&> ByteVectorPropertyIs(
-    const std::string& name, const inspect::VectorValue& value) {
+    const std::string& name, const inspect_deprecated::VectorValue& value) {
   return ::testing::AllOf(
       ::testing::Field(&fuchsia::inspect::Property::key, ::testing::StrEq(name)),
       ::testing::Field(

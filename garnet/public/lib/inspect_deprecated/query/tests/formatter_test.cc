@@ -12,24 +12,24 @@
 #include "lib/inspect_deprecated/query/source.h"
 #include "lib/inspect_deprecated/testing/inspect.h"
 
-using namespace inspect::testing;
-using namespace inspect::hierarchy;
+using namespace inspect_deprecated::testing;
+using namespace inspect_deprecated::hierarchy;
 
 namespace {
 
-inspect::Source MakeSourceFromHierarchy(inspect::ObjectHierarchy hierarchy) {
-  inspect::Location location = {
+inspect_deprecated::Source MakeSourceFromHierarchy(inspect_deprecated::ObjectHierarchy hierarchy) {
+  inspect_deprecated::Location location = {
       .directory_path = "./hub/",
       .file_name = "root.inspect",
       .inspect_path_components = {"child", "node"},
-      .type = inspect::Location::Type::INSPECT_FILE_FORMAT,
+      .type = inspect_deprecated::Location::Type::INSPECT_FILE_FORMAT,
   };
 
-  return inspect::Source(std::move(location), std::move(hierarchy));
+  return inspect_deprecated::Source(std::move(location), std::move(hierarchy));
 }
 
-inspect::Source MakeTestSource() {
-  inspect::ObjectHierarchy hierarchy;
+inspect_deprecated::Source MakeTestSource() {
+  inspect_deprecated::ObjectHierarchy hierarchy;
 
   {
     Node node;
@@ -46,25 +46,27 @@ inspect::Source MakeTestSource() {
     Node child;
     child.name() = "node_child";
     child.metrics().emplace_back(Metric("child_int", IntMetric(-5)));
-    auto& child_hierarchy =
-        hierarchy.children().emplace_back(inspect::ObjectHierarchy(std::move(child), {}));
+    auto& child_hierarchy = hierarchy.children().emplace_back(
+        inspect_deprecated::ObjectHierarchy(std::move(child), {}));
 
     Node child_health;
-    child_health.name() = inspect::kHealthNodeName;
+    child_health.name() = inspect_deprecated::kHealthNodeName;
     child_health.properties().emplace_back(
-        Property("status", StringProperty(inspect::kHealthUnhealthy)));
+        Property("status", StringProperty(inspect_deprecated::kHealthUnhealthy)));
     child_health.properties().emplace_back(
         Property("message", StringProperty("Some health error")));
 
-    child_hierarchy.children().emplace_back(inspect::ObjectHierarchy(std::move(child_health), {}));
+    child_hierarchy.children().emplace_back(
+        inspect_deprecated::ObjectHierarchy(std::move(child_health), {}));
   }
 
   {
     Node health;
-    health.name() = inspect::kHealthNodeName;
-    health.properties().emplace_back(Property("status", StringProperty(inspect::kHealthOk)));
+    health.name() = inspect_deprecated::kHealthNodeName;
+    health.properties().emplace_back(
+        Property("status", StringProperty(inspect_deprecated::kHealthOk)));
 
-    hierarchy.children().emplace_back(inspect::ObjectHierarchy(std::move(health), {}));
+    hierarchy.children().emplace_back(inspect_deprecated::ObjectHierarchy(std::move(health), {}));
   }
 
   return MakeSourceFromHierarchy(std::move(hierarchy));
@@ -72,15 +74,18 @@ inspect::Source MakeTestSource() {
 
 // Test that basic formatting works in JSON and Text for a small hierarchy.
 TEST(Formatter, PrintHierarchy) {
-  std::vector<inspect::Source> sources;
+  std::vector<inspect_deprecated::Source> sources;
   sources.emplace_back(MakeTestSource());
 
-  inspect::TextFormatter text_format(inspect::TextFormatter::Options{.indent = 2},
-                                     inspect::Formatter::PathFormat::NONE);
-  inspect::JsonFormatter json_format(inspect::JsonFormatter::Options{.indent = 2},
-                                     inspect::Formatter::PathFormat::NONE);
-  inspect::JsonFormatter json_format_no_indent(inspect::JsonFormatter::Options{.indent = 0},
-                                               inspect::Formatter::PathFormat::NONE);
+  inspect_deprecated::TextFormatter text_format(
+      inspect_deprecated::TextFormatter::Options{.indent = 2},
+      inspect_deprecated::Formatter::PathFormat::NONE);
+  inspect_deprecated::JsonFormatter json_format(
+      inspect_deprecated::JsonFormatter::Options{.indent = 2},
+      inspect_deprecated::Formatter::PathFormat::NONE);
+  inspect_deprecated::JsonFormatter json_format_no_indent(
+      inspect_deprecated::JsonFormatter::Options{.indent = 0},
+      inspect_deprecated::Formatter::PathFormat::NONE);
 
   std::vector<std::string> result = {
       text_format.FormatSourcesRecursive(sources),
@@ -140,10 +145,12 @@ TEST(Formatter, PrintHierarchy) {
 }
 
 TEST(Formatter, PrintListing) {
-  inspect::TextFormatter text_formatter({.indent = 2}, inspect::Formatter::PathFormat::FULL);
-  inspect::JsonFormatter json_formatter({.indent = 2}, inspect::Formatter::PathFormat::FULL);
+  inspect_deprecated::TextFormatter text_formatter({.indent = 2},
+                                                   inspect_deprecated::Formatter::PathFormat::FULL);
+  inspect_deprecated::JsonFormatter json_formatter({.indent = 2},
+                                                   inspect_deprecated::Formatter::PathFormat::FULL);
 
-  std::vector<inspect::Source> sources;
+  std::vector<inspect_deprecated::Source> sources;
   sources.emplace_back(MakeTestSource());
 
   EXPECT_EQ(text_formatter.FormatChildListing(sources),
@@ -157,10 +164,12 @@ TEST(Formatter, PrintListing) {
 }
 
 TEST(Formatter, PrintFind) {
-  inspect::TextFormatter text_formatter({.indent = 2}, inspect::Formatter::PathFormat::FULL);
-  inspect::JsonFormatter json_formatter({.indent = 2}, inspect::Formatter::PathFormat::FULL);
+  inspect_deprecated::TextFormatter text_formatter({.indent = 2},
+                                                   inspect_deprecated::Formatter::PathFormat::FULL);
+  inspect_deprecated::JsonFormatter json_formatter({.indent = 2},
+                                                   inspect_deprecated::Formatter::PathFormat::FULL);
 
-  std::vector<inspect::Source> sources;
+  std::vector<inspect_deprecated::Source> sources;
   sources.emplace_back(MakeTestSource());
 
   EXPECT_EQ(text_formatter.FormatSourceLocations(sources),
@@ -178,18 +187,20 @@ TEST(Formatter, PrintFind) {
 }
 
 TEST(Formatter, Health) {
-  std::vector<inspect::Source> sources;
+  std::vector<inspect_deprecated::Source> sources;
   sources.emplace_back(MakeTestSource());
 
   // Text.
-  inspect::TextFormatter text_formatter({.indent = 2}, inspect::Formatter::PathFormat::FULL);
+  inspect_deprecated::TextFormatter text_formatter({.indent = 2},
+                                                   inspect_deprecated::Formatter::PathFormat::FULL);
   EXPECT_EQ(text_formatter.FormatHealth(sources),
             R"(./hub/root.inspect#child/node = OK
 ./hub/root.inspect#child/node/node_child = UNHEALTHY (Some health error)
 )");
 
   // Indented json.
-  inspect::JsonFormatter json_formatter({.indent = 2}, inspect::Formatter::PathFormat::FULL);
+  inspect_deprecated::JsonFormatter json_formatter({.indent = 2},
+                                                   inspect_deprecated::Formatter::PathFormat::FULL);
   EXPECT_EQ(json_formatter.FormatHealth(sources),
             R"({
   "./hub/root.inspect#child/node": {
@@ -202,8 +213,8 @@ TEST(Formatter, Health) {
 })");
 
   // Non-indented json.
-  inspect::JsonFormatter json_formatter_no_indent({.indent = 0},
-                                                  inspect::Formatter::PathFormat::FULL);
+  inspect_deprecated::JsonFormatter json_formatter_no_indent(
+      {.indent = 0}, inspect_deprecated::Formatter::PathFormat::FULL);
   EXPECT_EQ(
       json_formatter_no_indent.FormatHealth(sources),
       R"({"./hub/root.inspect#child/node":{"status":"OK"},"./hub/root.inspect#child/node/node_child":{"status":"UNHEALTHY","message":"Some health error"}})");

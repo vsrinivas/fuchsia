@@ -12,21 +12,22 @@
 
 #include <stack>
 
-namespace inspect {
+namespace inspect_deprecated {
 
 namespace {
-fit::promise<inspect::ObjectReader> OpenPathInsideRoot(inspect::ObjectReader reader,
-                                                       std::vector<std::string> path_components,
-                                                       size_t index = 0) {
+fit::promise<inspect_deprecated::ObjectReader> OpenPathInsideRoot(
+    inspect_deprecated::ObjectReader reader, std::vector<std::string> path_components,
+    size_t index = 0) {
   if (index >= path_components.size()) {
-    return fit::make_promise([reader = std::move(reader)]() -> fit::result<inspect::ObjectReader> {
-      return fit::ok(reader);
-    });
+    return fit::make_promise(
+        [reader = std::move(reader)]() -> fit::result<inspect_deprecated::ObjectReader> {
+          return fit::ok(reader);
+        });
   }
 
   return reader.OpenChild(path_components[index])
       .and_then([reader = std::move(reader), path_components = std::move(path_components),
-                 index](inspect::ObjectReader& child) {
+                 index](inspect_deprecated::ObjectReader& child) {
         return OpenPathInsideRoot(child, path_components, index + 1);
       });
 }
@@ -42,33 +43,34 @@ fit::result<ObjectHierarchy> ReadFromFilePtr(const std::string& path, fuchsia::i
       return fit::error();
     }
     // fbl::Array takes ownership of buf.
-    return inspect::ReadFromBuffer(fbl::Array(buf.first, buf.second));
+    return inspect_deprecated::ReadFromBuffer(fbl::Array(buf.first, buf.second));
   }
-  return inspect::ReadFromVmo(info.vmofile().vmo);
+  return inspect_deprecated::ReadFromVmo(info.vmofile().vmo);
 }
 
 }  // namespace
 
 fit::promise<Source, std::string> Source::MakeFromFidl(Location location,
-                                                       inspect::ObjectReader root_reader,
+                                                       inspect_deprecated::ObjectReader root_reader,
                                                        int depth) {
   return OpenPathInsideRoot(std::move(root_reader), location.inspect_path_components)
-      .then([depth](fit::result<inspect::ObjectReader>& reader)
-                -> fit::promise<inspect::ObjectHierarchy> {
+      .then([depth](fit::result<inspect_deprecated::ObjectReader>& reader)
+                -> fit::promise<inspect_deprecated::ObjectHierarchy> {
         if (!reader.is_ok()) {
           return fit::make_promise(
-              []() -> fit::result<inspect::ObjectHierarchy> { return fit::error(); });
+              []() -> fit::result<inspect_deprecated::ObjectHierarchy> { return fit::error(); });
         }
-        return inspect::ReadFromFidl(reader.take_value(), depth);
+        return inspect_deprecated::ReadFromFidl(reader.take_value(), depth);
       })
-      .then([location = std::move(location)](
-                fit::result<inspect::ObjectHierarchy>& result) -> fit::result<Source, std::string> {
-        if (!result.is_ok()) {
-          return fit::error(fxl::Substitute("Failed to read $0", location.NodePath()));
-        }
+      .then(
+          [location = std::move(location)](fit::result<inspect_deprecated::ObjectHierarchy>& result)
+              -> fit::result<Source, std::string> {
+            if (!result.is_ok()) {
+              return fit::error(fxl::Substitute("Failed to read $0", location.NodePath()));
+            }
 
-        return fit::ok(Source(std::move(location), result.take_value()));
-      });
+            return fit::ok(Source(std::move(location), result.take_value()));
+          });
 }
 
 fit::promise<Source, std::string> Source::MakeFromVmo(Location root_location,
@@ -98,7 +100,7 @@ fit::promise<Source, std::string> Source::MakeFromVmo(Location root_location,
         // Navigate within the hierarchy to the correct location.
         for (const auto& path_component : root_location.inspect_path_components) {
           auto child = std::find_if(hierarchy->children().begin(), hierarchy->children().end(),
-                                    [&path_component](inspect::ObjectHierarchy& obj) {
+                                    [&path_component](inspect_deprecated::ObjectHierarchy& obj) {
                                       return obj.node().name() == path_component;
                                     });
           if (child == hierarchy->children().end()) {
@@ -116,7 +118,7 @@ fit::promise<Source, std::string> Source::MakeFromVmo(Location root_location,
           // Hierarchies at the max depth will have their children pruned, while
           // hierarchies at a lower depth simply push their children onto the
           // stack.
-          std::stack<std::pair<inspect::ObjectHierarchy*, int>> object_depth_stack;
+          std::stack<std::pair<inspect_deprecated::ObjectHierarchy*, int>> object_depth_stack;
 
           object_depth_stack.push(std::make_pair(hierarchy, 0));
           while (object_depth_stack.size() > 0) {
@@ -138,7 +140,7 @@ fit::promise<Source, std::string> Source::MakeFromVmo(Location root_location,
 }
 
 void Source::VisitObjectsInHierarchyRecursively(const Visitor& visitor,
-                                                const inspect::ObjectHierarchy& current,
+                                                const inspect_deprecated::ObjectHierarchy& current,
                                                 std::vector<std::string>* path) const {
   visitor(*path, current);
 
@@ -155,7 +157,7 @@ void Source::VisitObjectsInHierarchy(Visitor visitor) const {
 }
 
 void Source::SortHierarchy() {
-  std::stack<inspect::ObjectHierarchy*> hierarchies_to_sort;
+  std::stack<inspect_deprecated::ObjectHierarchy*> hierarchies_to_sort;
   hierarchies_to_sort.push(&hierarchy_);
   while (hierarchies_to_sort.size() > 0) {
     auto* hierarchy = hierarchies_to_sort.top();
@@ -167,4 +169,4 @@ void Source::SortHierarchy() {
   }
 }
 
-}  // namespace inspect
+}  // namespace inspect_deprecated

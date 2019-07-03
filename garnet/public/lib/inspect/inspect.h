@@ -4,5 +4,8 @@
 #ifndef LIB_INSPECT_INSPECT_H_
 #define LIB_INSPECT_INSPECT_H_
 #include <lib/inspect_deprecated/inspect.h>
+namespace inspect {
+using namespace inspect_deprecated;
+}
 
 #endif  // LIB_INSPECT_INSPECT_H_

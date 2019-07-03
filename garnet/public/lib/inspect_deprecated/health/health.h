@@ -7,7 +7,7 @@
 
 #include <lib/inspect_deprecated/inspect.h>
 
-namespace inspect {
+namespace inspect_deprecated {
 
 // The name of nodes implementing health for a parent node.
 constexpr char kHealthNodeName[] = "fuchsia.inspect.Health";
@@ -22,7 +22,7 @@ constexpr char kHealthStartingUp[] = "STARTING_UP";
 // Health status designating that the node is not healthy.
 constexpr char kHealthUnhealthy[] = "UNHEALTHY";
 
-// Represents the health associated with a given inspect::Node.
+// Represents the health associated with a given inspect_deprecated::Node.
 //
 // This class supports adding a Node with name "fuchsia.inspect.Health" that
 // consists of "status" and "message" properties. Nodes implementing
@@ -65,6 +65,6 @@ class NodeHealth {
   fit::optional<StringProperty> health_message_;
 };
 
-}  // namespace inspect
+}  // namespace inspect_deprecated
 
 #endif  // LIB_INSPECT_DEPRECATED_HEALTH_HEALTH_H_

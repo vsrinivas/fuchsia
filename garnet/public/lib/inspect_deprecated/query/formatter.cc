@@ -6,9 +6,9 @@
 
 #include "src/lib/files/path.h"
 
-namespace inspect {
+namespace inspect_deprecated {
 
-std::string Formatter::FormatPathOrName(const inspect::Location& location,
+std::string Formatter::FormatPathOrName(const inspect_deprecated::Location& location,
                                         const Path& path_from_location,
                                         const std::string& node_name) const {
   switch (path_format_) {
@@ -21,7 +21,7 @@ std::string Formatter::FormatPathOrName(const inspect::Location& location,
   }
 }
 
-std::string Formatter::FormatPath(const inspect::Location& location,
+std::string Formatter::FormatPath(const inspect_deprecated::Location& location,
                                   const Path& path_from_location) const {
   switch (path_format_) {
     case PathFormat::ABSOLUTE:
@@ -31,4 +31,4 @@ std::string Formatter::FormatPath(const inspect::Location& location,
   }
 }
 
-}  // namespace inspect
+}  // namespace inspect_deprecated

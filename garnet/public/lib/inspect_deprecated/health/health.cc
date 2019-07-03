@@ -4,7 +4,7 @@
 
 #include "health.h"
 
-namespace inspect {
+namespace inspect_deprecated {
 
 NodeHealth::NodeHealth(Node* parent_node)
     : health_node_(parent_node->CreateChild(kHealthNodeName)),
@@ -42,4 +42,4 @@ void NodeHealth::SetMessage(const std::string& message) {
   health_message_->Set(message);
 }
 
-}  // namespace inspect
+}  // namespace inspect_deprecated

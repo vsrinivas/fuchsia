@@ -7,7 +7,7 @@
 
 #include <memory>
 
-namespace inspect {
+namespace inspect_deprecated {
 
 std::weak_ptr<ComponentInspector> ComponentInspector::singleton_;
 
@@ -39,4 +39,4 @@ NodeHealth& ComponentInspector::Health() {
   return *component_health_.get();
 }
 
-}  // namespace inspect
+}  // namespace inspect_deprecated

@@ -17,7 +17,7 @@ using inspect::vmo::Object;
 using inspect::vmo::Property;
 using inspect::vmo::UintMetric;
 using testing::UnorderedElementsAre;
-using namespace inspect::testing;
+using namespace inspect_deprecated::testing;
 
 namespace {
 
@@ -44,9 +44,9 @@ TEST(VmoReader, CreateAndReadObjectHierarchy) {
   inspect::vmo::Snapshot snapshot;
   ASSERT_EQ(ZX_OK, inspect::vmo::Snapshot::Create(inspector->GetVmo(), &snapshot));
 
-  std::vector<fit::result<inspect::ObjectHierarchy>> hierarchies;
-  hierarchies.emplace_back(inspect::ReadFromSnapshot(std::move(snapshot)));
-  hierarchies.emplace_back(inspect::ReadFromVmo(inspector->GetVmo()));
+  std::vector<fit::result<inspect_deprecated::ObjectHierarchy>> hierarchies;
+  hierarchies.emplace_back(inspect_deprecated::ReadFromSnapshot(std::move(snapshot)));
+  hierarchies.emplace_back(inspect_deprecated::ReadFromVmo(inspector->GetVmo()));
   for (auto& root : hierarchies) {
     ASSERT_TRUE(root.is_ok());
     EXPECT_THAT(
