@@ -4,6 +4,9 @@
 
 #include <lib/fdio/spawn.h>
 
+#include <string>
+#include <vector>
+
 #include <fcntl.h>
 #include <fuchsia/process/c/fidl.h>
 #include <lib/fdio/directory.h>
@@ -366,6 +369,7 @@ static zx_status_t send_namespace(const zx::channel& launcher, size_t name_count
             memcpy(payload + offset, flat->path[n], size);
             offset += FIDL_ALIGN(size);
             handles[h++] = flat->handle[n];
+            flat->handle[n] = ZX_HANDLE_INVALID;
             n++;
         }
     }
@@ -436,6 +440,38 @@ zx_status_t fdio_spawn_etc(zx_handle_t job,
     return status != ZX_OK ? status : spawn_status;
 }
 
+static bool should_clone_namespace(std::string_view path,
+                                   const std::vector<std::string_view>& prefixes) {
+    for (const auto& prefix: prefixes) {
+        // Only share path if there is a directory prefix in |prefixes| that matches the path.
+        // Also take care to not match partial directory names. Ex, /foo should not match
+        // /foobar.
+        if (prefix.compare(0, prefix.size(), path) == 0 && (path.size() == prefix.size() || path[path.size()] == '/')) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static void filter_flat_namespace(fdio_flat_namespace_t* flat,
+                                  const std::vector<std::string_view>& prefixes) {
+    size_t read, write;
+    for (read = 0, write = 0; read < flat->count; ++read) {
+        if (should_clone_namespace(flat->path[read], prefixes)) {
+            if (read != write) {
+                flat->handle[write] = flat->handle[read];
+                flat->type[write] = flat->type[read];
+                const_cast<const char**>(flat->path)[write] = flat->path[read];
+            }
+            write++;
+        } else {
+            zx_handle_close(flat->handle[read]);
+            flat->handle[read] = ZX_HANDLE_INVALID;
+        }
+    }
+    flat->count = write;
+}
+
 __EXPORT
 zx_status_t fdio_spawn_vmo(zx_handle_t job,
                            uint32_t flags,
@@ -451,6 +487,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
     size_t name_count = 0;
     size_t name_len = 0;
     size_t handle_capacity = 0;
+    std::vector<std::string_view> shared_dirs;
     zx::channel launcher;
     zx::channel launcher_request;
     zx_handle_t msg_handles[FDIO_SPAWN_LAUNCH_HANDLE_COUNT];
@@ -505,6 +542,23 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
             }
             process_name = actions[i].name.data;
             break;
+        case FDIO_SPAWN_ACTION_CLONE_DIR: {
+            if (!actions[i].dir.prefix) {
+                status = ZX_ERR_INVALID_ARGS;
+                goto cleanup;
+            }
+            // The path must be absolute (rooted at '/') and not contain a trailing '/', but do
+            // allow the root namespace to be specified as "/".
+            size_t len = strlen(actions[i].dir.prefix);
+            if (len == 0 || actions[i].dir.prefix[0] != '/' || (len > 1 && actions[i].dir.prefix[len - 1] == '/')) {
+                status = ZX_ERR_INVALID_ARGS;
+                goto cleanup;
+            } else if (len == 1 && actions[i].dir.prefix[0] == '/') {
+                flags |= FDIO_SPAWN_CLONE_NAMESPACE;
+            } else {
+                shared_dirs.push_back(actions[i].dir.prefix);
+            }
+        } break;
         default:
             break;
         }
@@ -524,8 +578,18 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
     if ((flags & FDIO_SPAWN_CLONE_STDIO) != 0)
         handle_capacity += 3;
 
-    if ((flags & FDIO_SPAWN_CLONE_NAMESPACE) != 0) {
+    if (!shared_dirs.empty() || (flags & FDIO_SPAWN_CLONE_NAMESPACE) != 0) {
         status = fdio_ns_export_root(&flat);
+        if (status != ZX_OK) {
+            goto cleanup;
+        }
+
+        // If we don't clone the entire namespace, we need to filter down to only the
+        // directories that are prefixed by paths in FDIO_SPAWN_ACTION_CLONE_DIR actions.
+        if ((flags & FDIO_SPAWN_CLONE_NAMESPACE) == 0) {
+            filter_flat_namespace(flat, shared_dirs);
+        }
+
         name_count += flat->count;
         for (size_t i = 0; i < flat->count; ++i) {
             name_len += FIDL_ALIGN(strlen(flat->path[i]));
@@ -731,7 +795,9 @@ cleanup:
         }
     }
 
-    free(flat);
+    if (flat) {
+        fdio_ns_free_flat_ns(flat);
+    }
 
     if (msg_handles[FDIO_SPAWN_LAUNCH_HANDLE_EXECUTABLE] != ZX_HANDLE_INVALID)
         zx_handle_close(msg_handles[FDIO_SPAWN_LAUNCH_HANDLE_EXECUTABLE]);

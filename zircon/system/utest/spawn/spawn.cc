@@ -10,6 +10,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
+#include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
@@ -21,6 +22,8 @@
 #include <zircon/syscalls/policy.h>
 
 #include <string>
+
+#define FDIO_SPAWN_CLONE_ALL_EXCEPT_NS (FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_NAMESPACE)
 
 static constexpr char kSpawnChild[] = "bin/spawn-child";
 static constexpr char kSpawnLauncher[] = "bin/spawn-launcher";
@@ -465,6 +468,90 @@ static bool spawn_actions_name_test(void) {
     END_TEST;
 }
 
+static bool spawn_actions_share_dir_test(void) {
+    BEGIN_TEST;
+
+    zx_status_t status;
+    zx::process process;
+    const std::string path = new_path(kSpawnChild);
+
+    {
+        fdio_spawn_action_t action;
+        action.action = FDIO_SPAWN_ACTION_CLONE_DIR;
+        action.dir.prefix = "/";
+
+        const char* argv[] = {path.c_str(), "--flags", "namespace", nullptr};
+        status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_DEFAULT_LDSVC,
+                                path.c_str(), argv, nullptr, 1, &action,
+                                process.reset_and_get_address(), nullptr);
+        ASSERT_EQ(ZX_OK, status);
+        EXPECT_EQ(53, join(process));
+    }
+
+    {
+        fdio_spawn_action_t action;
+        action.action = FDIO_SPAWN_ACTION_CLONE_DIR;
+        action.dir.prefix = "/foo/bar/baz";
+
+        zx::channel h1, h2;
+        ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+        fdio_ns_t* ns = nullptr;
+        ASSERT_EQ(ZX_OK, fdio_ns_get_installed(&ns));
+        ASSERT_EQ(ZX_OK, fdio_ns_bind(ns, "/foo/bar/baz", h1.release()));
+
+        const char* argv[] = {path.c_str(), "--action", "ns-entry", nullptr};
+        status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL_EXCEPT_NS,
+                                path.c_str(), argv, nullptr, 1, &action,
+                                process.reset_and_get_address(), nullptr);
+        EXPECT_EQ(ZX_OK, status);
+        EXPECT_EQ(74, join(process));
+
+        // Unbind the test namespace.
+        EXPECT_EQ(ZX_OK, fdio_ns_unbind(ns, "/foo/bar/baz"));
+    }
+
+    {
+        // Verify we don't match paths in the middle of directory names. In this case, verify
+        // that /foo/bar/baz does not match as a prefix to the directory /foo/bar/bazel.
+        fdio_spawn_action_t action;
+        action.action = FDIO_SPAWN_ACTION_CLONE_DIR;
+        action.dir.prefix = "/foo/bar/baz";
+
+        zx::channel h1, h2;
+        ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+        fdio_ns_t* ns = nullptr;
+        ASSERT_EQ(ZX_OK, fdio_ns_get_installed(&ns));
+        ASSERT_EQ(ZX_OK, fdio_ns_bind(ns, "/foo/bar/bazel", h1.release()));
+
+        const char* argv[] = {path.c_str(), "--stat", "/foo/bar", nullptr};
+        status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL_EXCEPT_NS,
+                                path.c_str(), argv, nullptr, 1, &action,
+                                process.reset_and_get_address(), nullptr);
+        EXPECT_EQ(ZX_OK, status);
+        EXPECT_EQ(-6, join(process));
+
+        // Unbind the test namespace.
+        EXPECT_EQ(ZX_OK, fdio_ns_unbind(ns, "/foo/bar/bazel"));
+    }
+
+    {
+        // Same as above but the prefix does not exist in our namespace. The fdio_spawn_etc should
+        // succeed but the new process should not see any namespaces under that path.
+        fdio_spawn_action_t action;
+        action.action = FDIO_SPAWN_ACTION_CLONE_DIR;
+        action.dir.prefix = "/foo/bar/baz";
+
+        const char* argv[] = {path.c_str(), "--action", "ns-entry", nullptr};
+        status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL_EXCEPT_NS,
+                                path.c_str(), argv, nullptr, 1, &action,
+                                process.reset_and_get_address(), nullptr);
+        ASSERT_EQ(ZX_OK, status);
+        EXPECT_EQ(-4, join(process));
+    }
+
+    END_TEST;
+}
+
 static bool spawn_errors_test(void) {
     BEGIN_TEST;
 
@@ -593,6 +680,28 @@ static bool spawn_errors_test(void) {
         ASSERT_EQ(-1, close(fd));
     }
 
+    {
+        // FDIO_SPAWN_ACTION_CLONE_DIR with trailing '/' should be rejected.
+        fdio_spawn_action_t action;
+        action.action = FDIO_SPAWN_ACTION_CLONE_DIR;
+        action.dir.prefix = "/foo/bar/baz/";
+
+        zx::channel h1, h2;
+        ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+        fdio_ns_t* ns = nullptr;
+        ASSERT_EQ(ZX_OK, fdio_ns_get_installed(&ns));
+        ASSERT_EQ(ZX_OK, fdio_ns_bind(ns, "/foo/bar/baz", h1.release()));
+
+        const char* argv[] = {path.c_str(), "--action", "ns-entry", nullptr};
+        status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL_EXCEPT_NS,
+                                path.c_str(), argv, nullptr, 1, &action,
+                                process.reset_and_get_address(), nullptr);
+        EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+
+        // Unbind the test namespace.
+        EXPECT_EQ(ZX_OK, fdio_ns_unbind(ns, "/foo/bar/baz"));
+    }
+
     END_TEST;
 }
 
@@ -634,6 +743,7 @@ RUN_TEST(spawn_actions_fd_test)
 RUN_TEST(spawn_actions_ns_test)
 RUN_TEST(spawn_actions_h_test)
 RUN_TEST(spawn_actions_name_test)
+RUN_TEST(spawn_actions_share_dir_test)
 RUN_TEST(spawn_errors_test)
 RUN_TEST(spawn_vmo_test)
 END_TEST_CASE(spawn_tests)

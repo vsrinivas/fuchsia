@@ -137,6 +137,12 @@ zx_status_t fdio_spawn(zx_handle_t job,
 // Uses the |name| entry in the |fdio_spawn_action_t| union.
 #define FDIO_SPAWN_ACTION_SET_NAME ((uint32_t)0x0005u)
 
+// Shares the given directory by installing it into the namespace of spawned
+// process.
+//
+// Uses the |dir| entry in the |fdio_spawn_action_t| union
+#define FDIO_SPAWN_ACTION_CLONE_DIR ((uint32_t)0x0006u)
+
 // Instructs |fdio_spawn_etc| which actions to take.
 typedef struct fdio_spawn_action fdio_spawn_action_t;
 struct fdio_spawn_action {
@@ -175,6 +181,11 @@ struct fdio_spawn_action {
             // The name to assign to the spawned process.
             const char* data;
         } name;
+        struct {
+            // The directory to share with the spawned process. |prefix| may match zero or more
+            // entries in the callers flat namespace.
+            const char* prefix;
+        } dir;
     };
 };
 

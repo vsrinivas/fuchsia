@@ -11,6 +11,8 @@
 #include <lib/fdio/directory.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <zircon/dlfcn.h>
 #include <zircon/process.h>
@@ -86,6 +88,11 @@ static bool check_env(const char* name, const char* expected) {
     return !strcmp(actual, expected);
 }
 
+static bool do_stat(const char* path) {
+    struct stat statbuf;
+    return stat(path, &statbuf) == 0;
+}
+
 int main(int argc, char** argv) {
     if (argc == 0)
         return 42;
@@ -147,6 +154,11 @@ int main(int argc, char** argv) {
             return has_ns("/foo/bar/baz") && !has_ns("/baz/bar/foo") ? 74 : -4;
         if (!strcmp(action, "add-handle"))
             return has_arg(PA_USER0) && !has_arg(PA_USER1) ? 75 : -5;
+    }
+    if (!strcmp(cmd, "--stat")) {
+        if (argc != 3)
+            return -253;
+        return do_stat(argv[2]) ? 76 : -6;
     }
 
     return -250;
