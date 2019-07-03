@@ -4,9 +4,7 @@
 
 import("//products/terminal.gni")
 
-base_package_labels -= [
-  "//garnet/bin/terminal:tiles_with_terminal_config",
-]
+base_package_labels -= [ "//garnet/bin/terminal:tiles_with_terminal_config" ]
 
 base_package_labels += [
   "//src/modular/bundles:framework_experimental",
@@ -14,12 +12,11 @@ base_package_labels += [
   "//src/experiences/bin/term",
 ]
 
-cache_package_labels += [
-  "//src/experiences/bin/simple_browser",
-]
+cache_package_labels += [ "//src/experiences/bin/simple_browser" ]
 
 universe_package_labels += [
-  "//garnet/packages/prod:media_audio",
+  "//src/media/audio/audio",
+  "//src/media/audio/audio_core",
   "//peridot/packages/prod:cloud_provider_firestore",
   "//src/modular/bundles:tools",
 ]
