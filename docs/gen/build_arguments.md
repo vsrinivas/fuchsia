@@ -54,7 +54,7 @@ of an OTA. These pacakages are updated as an atomic unit during an OTA
 process and are immutable and are a superset of the TCB (Trusted Computing
 Base) for a product. These packages are never evicted by the system.
 
-**Current value for `target_cpu = "arm64"`:** `["//build/info:build-info", "//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/wlan:service", "//src/developer/bugreport", "//src/recovery/factory_reset", "//src/sys/netclock:netclock", "//bundles:kitchen_sink"]`
+**Current value for `target_cpu = "arm64"`:** `["//build/info:build-info", "//garnet/bin/appmgr", "//garnet/bin/appmgr:appmgr_scheme_config", "//garnet/bin/device_settings:device_settings_manager", "//garnet/bin/http", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/logger", "//garnet/bin/netcfg", "//garnet/bin/netcfg:config", "//garnet/bin/network_time_service", "//garnet/bin/pkg_cache", "//garnet/bin/pkg_resolver", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/stash:stash", "//garnet/bin/stash_ctl:stash_ctl", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/bin/timezone", "//garnet/go/src/amber", "//garnet/go/src/amber:amber_tools", "//garnet/go/src/amber:config", "//garnet/go/src/amber:pkgfs", "//garnet/lib/root_ssl_certificates", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/connectivity/bluetooth:core", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/netstack", "//src/connectivity/wlan:service", "//src/developer/bugreport", "//src/developer/crashpad_agent", "//src/developer/feedback_agent", "//src/developer/kernel_crash_checker", "//src/developer/kernel_crash_checker:config", "//src/identity/bin:core", "//src/recovery/factory_reset", "//src/sys/netclock", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
@@ -62,7 +62,7 @@ From //root_build_dir/args.gn:3
 
 From //BUILD.gn:16
 
-**Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/wlan:service", "//src/developer/bugreport", "//src/recovery/factory_reset", "//src/sys/netclock:netclock", "//bundles:kitchen_sink"]`
+**Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/appmgr", "//garnet/bin/appmgr:appmgr_scheme_config", "//garnet/bin/device_settings:device_settings_manager", "//garnet/bin/http", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/logger", "//garnet/bin/netcfg", "//garnet/bin/netcfg:config", "//garnet/bin/network_time_service", "//garnet/bin/pkg_cache", "//garnet/bin/pkg_resolver", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/stash:stash", "//garnet/bin/stash_ctl:stash_ctl", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/bin/timezone", "//garnet/go/src/amber", "//garnet/go/src/amber:amber_tools", "//garnet/go/src/amber:config", "//garnet/go/src/amber:pkgfs", "//garnet/lib/root_ssl_certificates", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/connectivity/bluetooth:core", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/netstack", "//src/connectivity/wlan:service", "//src/developer/bugreport", "//src/developer/crashpad_agent", "//src/developer/feedback_agent", "//src/developer/kernel_crash_checker", "//src/developer/kernel_crash_checker:config", "//src/identity/bin:core", "//src/recovery/factory_reset", "//src/sys/netclock", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
@@ -167,7 +167,7 @@ with `sources` and `outputs` in the style of a copy() target:
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:492
+From //build/images/BUILD.gn:490
 
 ### bootfs_only
 Put the "system image" package in the BOOTFS.  Hence what would
@@ -263,7 +263,7 @@ pressure arises or other policies indicate.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/core.gni:32
+From //products/core.gni:65
 
 **Overridden from the default:** `[]`
 
@@ -271,7 +271,7 @@ From //BUILD.gn:24
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/core.gni:32
+From //products/core.gni:65
 
 **Overridden from the default:** `[]`
 
@@ -390,7 +390,7 @@ module_suggester is not AOT compiled in debug builds
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/c5a27d21af29a6a79ac5a72d464741a41709d6da/runtime/dart/dart_component.gni#51)
+From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/52135d2bab8d6f0e5f5e23063137a1fbd0714f11/runtime/dart/dart_component.gni#51)
 
 ### dart_component_kind
 Allow for deduping the VM between standalone, flutter_runner and dart_runner.
@@ -449,7 +449,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/c5a27d21af29a6a79ac5a72d464741a41709d6da/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/52135d2bab8d6f0e5f5e23063137a1fbd0714f11/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -457,7 +457,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/c5a27d21af29a6a79ac5a72d464741a41709d6da/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/52135d2bab8d6f0e5f5e23063137a1fbd0714f11/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -507,7 +507,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/c5a27d21af29a6a79ac5a72d464741a41709d6da/runtime/dart/dart_component.gni#41)
+From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/52135d2bab8d6f0e5f5e23063137a1fbd0714f11/runtime/dart/dart_component.gni#41)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -589,7 +589,7 @@ These come after synthesized arguments to configure blobfs and pkgfs.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:475
+From //build/images/BUILD.gn:473
 
 ### embedder_for_target
 By default, the dynamic library target exposing the embedder API is only
@@ -694,15 +694,6 @@ This argument is temporary until Rust MLME is ready to be used.
 
 From //src/connectivity/wlan/lib/mlme/cpp/BUILD.gn:10
 
-### extra_authorized_keys_file
-Additional SSH authorized_keys file to include in the build.
-For example:
-  extra_authorized_keys_file=\"$HOME/.ssh/id_rsa.pub\"
-
-**Current value (from the default):** `""`
-
-From [//third_party/openssh-portable/fuchsia/developer-keys/BUILD.gn:11](https://fuchsia.googlesource.com/third_party/openssh-portable/+/366ad42e413739b31e10d157f37494777965a0da/fuchsia/developer-keys/BUILD.gn#11)
-
 ### extra_manifest_args
 Extra args to globally apply to the manifest generation script.
 
@@ -732,19 +723,19 @@ package and deduplicated by blobfs.
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/dart/dart_component.gni:27](https://fuchsia.googlesource.com/topaz/+/c5a27d21af29a6a79ac5a72d464741a41709d6da/runtime/dart/dart_component.gni#27)
+From [//topaz/runtime/dart/dart_component.gni:27](https://fuchsia.googlesource.com/topaz/+/52135d2bab8d6f0e5f5e23063137a1fbd0714f11/runtime/dart/dart_component.gni#27)
 
 ### flutter_default_app
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/c5a27d21af29a6a79ac5a72d464741a41709d6da/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/52135d2bab8d6f0e5f5e23063137a1fbd0714f11/runtime/dart/dart_component.gni#12)
 
 ### flutter_profile
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/c5a27d21af29a6a79ac5a72d464741a41709d6da/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/52135d2bab8d6f0e5f5e23063137a1fbd0714f11/runtime/dart/dart_component.gni#32)
 
 ### flutter_runtime_mode
 The runtime mode ("debug", "profile", or "release")
@@ -758,7 +749,7 @@ Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:38](https://fuchsia.googlesource.com/topaz/+/c5a27d21af29a6a79ac5a72d464741a41709d6da/runtime/dart/dart_component.gni#38)
+From [//topaz/runtime/dart/dart_component.gni:38](https://fuchsia.googlesource.com/topaz/+/52135d2bab8d6f0e5f5e23063137a1fbd0714f11/runtime/dart/dart_component.gni#38)
 
 ### flutter_use_fontconfig
 
@@ -770,7 +761,7 @@ From //third_party/flutter/third_party/txt/BUILD.gn:16
 
 **Current value (from the default):** `["collection", "flutter", "meta", "typed_data", "vector_math"]`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:8](https://fuchsia.googlesource.com/topaz/+/c5a27d21af29a6a79ac5a72d464741a41709d6da/runtime/flutter_runner/prebuilt_framework.gni#8)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:8](https://fuchsia.googlesource.com/topaz/+/52135d2bab8d6f0e5f5e23063137a1fbd0714f11/runtime/flutter_runner/prebuilt_framework.gni#8)
 
 ### fuchsia_sdk_root
 Consumers of the Fuchsia SDK instantiate templates for various SDK parts at
@@ -941,7 +932,7 @@ From //products/bringup.gni:13
 
 **Overridden from the default:** `[]`
 
-From //build/images/BUILD.gn:480
+From //build/images/BUILD.gn:478
 
 **Current value for `target_cpu = "x64"`:** `["bootsvc.next=bin/component_manager,fuchsia-boot:///boot#meta/root.cm,--use-builtin-process-launcher"]`
 
@@ -949,7 +940,7 @@ From //products/bringup.gni:13
 
 **Overridden from the default:** `[]`
 
-From //build/images/BUILD.gn:480
+From //build/images/BUILD.gn:478
 
 ### kernel_cmdline_files
 Files containing additional kernel command line arguments to bake into
@@ -959,7 +950,7 @@ These can be GN `//` source pathnames or absolute system pathnames.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:486
+From //build/images/BUILD.gn:484
 
 ### known_variants
 List of variants that will form the basis for variant toolchains.
@@ -1311,13 +1302,13 @@ From //build/dart/dart.gni:9
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:7](https://fuchsia.googlesource.com/topaz/+/c5a27d21af29a6a79ac5a72d464741a41709d6da/runtime/flutter_runner/prebuilt_framework.gni#7)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:7](https://fuchsia.googlesource.com/topaz/+/52135d2bab8d6f0e5f5e23063137a1fbd0714f11/runtime/flutter_runner/prebuilt_framework.gni#7)
 
 ### prebuilt_framework_path
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:6](https://fuchsia.googlesource.com/topaz/+/c5a27d21af29a6a79ac5a72d464741a41709d6da/runtime/flutter_runner/prebuilt_framework.gni#6)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:6](https://fuchsia.googlesource.com/topaz/+/52135d2bab8d6f0e5f5e23063137a1fbd0714f11/runtime/flutter_runner/prebuilt_framework.gni#6)
 
 ### prebuilt_libvulkan_arm_path
 
@@ -1510,7 +1501,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:632
+From //build/config/BUILDCONFIG.gn:614
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -1519,7 +1510,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:637
+From //build/config/BUILDCONFIG.gn:619
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -1538,15 +1529,6 @@ a list that can be spliced into [`select_variant`](#select_variant).
   variant = "asan_no_detect_leaks"
 }, {
   host = true
-  variant = "asan"
-}]
-}, {
-  name = "asan"
-  select_variant = [{
-  target_type = ["driver_module"]
-  variant = false
-}, {
-  host = false
   variant = "asan"
 }]
 }]
@@ -2148,17 +2130,17 @@ the build. The build system ensures that the universe package set includes
 the base and cache package sets, which means you do not need to redundantly
 include those labels in this variable.
 
-**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/prod:vboot_reference", "//bundles:tools"]`
+**Current value for `target_cpu = "arm64"`:** `["//garnet/tools/vboot_reference:cgpt_host", "//garnet/tools/vboot_reference:futility_host", "//bundles:tools"]`
 
-From //products/core.gni:34
+From //products/core.gni:67
 
 **Overridden from the default:** `[]`
 
 From //BUILD.gn:32
 
-**Current value for `target_cpu = "x64"`:** `["//garnet/packages/prod:vboot_reference", "//bundles:tools"]`
+**Current value for `target_cpu = "x64"`:** `["//garnet/tools/vboot_reference:cgpt_host", "//garnet/tools/vboot_reference:futility_host", "//bundles:tools"]`
 
-From //products/core.gni:34
+From //products/core.gni:67
 
 **Overridden from the default:** `[]`
 
@@ -2172,7 +2154,7 @@ package.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:498
+From //build/images/BUILD.gn:496
 
 ### use_ccache
 Set to true to enable compiling with ccache

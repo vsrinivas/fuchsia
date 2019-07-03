@@ -42,7 +42,7 @@ This toolchain is expected to support both Fuchsia targets and the host.
 
 **Current value (from the default):** `""`
 
-From //public/gn/toolchain/clang.gni:14
+From //public/gn/toolchain/clang.gni:16
 
 ### crash_diagnostics_dir
 Clang crash reports directory path. Use empty path to disable altogether.
@@ -151,7 +151,7 @@ system-installed tools found by the shell via `PATH` will be used.
 
 **Current value (from the default):** `""`
 
-From //public/gn/toolchain/gcc.gni:17
+From //public/gn/toolchain/gcc.gni:19
 
 ### goma_dir
 Directory containing the Goma source code.  This can be a GN
@@ -240,11 +240,11 @@ The empty list (or empty string) means don't use `--sysroot` at all.
 [{
   cpu = "arm64"
   os = "linux"
-  sysroot = "//prebuilt/downloads/sysroot/linux-arm64"
+  sysroot = "//../prebuilt/third_party/sysroot/linux-arm64"
 }, {
   cpu = "x64"
   os = "linux"
-  sysroot = "//prebuilt/downloads/sysroot/linux-x64"
+  sysroot = "//../prebuilt/third_party/sysroot/linux-x64"
 }]
 ```
 
@@ -320,7 +320,7 @@ Otherwise the tools are just expected to be found by the shell via `PATH`.
 
 **Current value (from the default):** `true`
 
-From //public/gn/toolchain/clang.gni:9
+From //public/gn/toolchain/clang.gni:11
 
 ### use_prebuilt_gcc
 If $gcc_tool_dir is "", then this controls how the GCC toolchain
@@ -329,7 +329,7 @@ the tools are just expected to be found in PATH.
 
 **Current value (from the default):** `true`
 
-From //public/gn/toolchain/gcc.gni:9
+From //public/gn/toolchain/gcc.gni:11
 
 ### variants
 List of "selectors" to request variant builds of certain targets.  Each
