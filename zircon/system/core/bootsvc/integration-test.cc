@@ -275,9 +275,12 @@ bool TestBootRootResource() {
   ASSERT_EQ(ZX_OK, status);
   ASSERT_TRUE(root_resource.is_valid());
 
-  // Check that a subsequent call results in a peer closed.
+  // Check that a subsequent call also results in a success.  Previous
+  // versions of this service would only provide the root resource to the
+  // first caller, and would close the channel thereafter.
   status = fuchsia_boot_RootResourceGet(local.get(), root_resource.reset_and_get_address());
-  ASSERT_EQ(ZX_ERR_PEER_CLOSED, status);
+  ASSERT_EQ(ZX_OK, status);
+  ASSERT_TRUE(root_resource.is_valid());
 
   END_TEST;
 }

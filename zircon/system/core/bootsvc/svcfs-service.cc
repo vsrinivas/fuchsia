@@ -120,12 +120,14 @@ constexpr fuchsia_boot_RootJob_ops kRootJobOps = {
 };
 
 zx_status_t RootResourceGet(void* ctx, fidl_txn_t* txn) {
-  zx::resource resource(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
-  if (!resource.is_valid()) {
-    printf("bootsvc: Invalid root resource\n");
-    return ZX_ERR_NOT_FOUND;
+  auto root_resource_handle = static_cast<const zx::resource*>(ctx);
+  zx::resource root_resource_dup;
+  zx_status_t status = root_resource_handle->duplicate(ZX_RIGHT_SAME_RIGHTS, &root_resource_dup);
+  if (status != ZX_OK) {
+    printf("bootsvc: Failed to duplicate root resource handle: %s\n", zx_status_get_string(status));
+    return status;
   }
-  return fuchsia_boot_RootResourceGet_reply(txn, resource.release());
+  return fuchsia_boot_RootResourceGet_reply(txn, root_resource_dup.release());
 }
 
 constexpr fuchsia_boot_RootResource_ops kRootResourceOps = {
@@ -195,11 +197,13 @@ fbl::RefPtr<fs::Service> CreateRootJobService(async_dispatcher_t* dispatcher) {
   });
 }
 
-fbl::RefPtr<fs::Service> CreateRootResourceService(async_dispatcher_t* dispatcher) {
-  return fbl::MakeRefCounted<fs::Service>([dispatcher](zx::channel channel) {
-    auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_RootResource_dispatch);
-    return fidl_bind(dispatcher, channel.release(), dispatch, nullptr, &kRootResourceOps);
-  });
+fbl::RefPtr<fs::Service> CreateRootResourceService(async_dispatcher_t* dispatcher,
+                                                   zx::resource root_resource) {
+  return fbl::MakeRefCounted<fs::Service>(
+      [dispatcher, resource = std::move(root_resource)](zx::channel channel) mutable {
+        auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_RootResource_dispatch);
+        return fidl_bind(dispatcher, channel.release(), dispatch, &resource, &kRootResourceOps);
+      });
 }
 
 }  // namespace bootsvc

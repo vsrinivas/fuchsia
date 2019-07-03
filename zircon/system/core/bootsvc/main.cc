@@ -241,6 +241,11 @@ int main(int argc, char** argv) {
   ZX_ASSERT_MSG(status == ZX_OK, "Loading boot arguments failed: %s\n",
                 zx_status_get_string(status));
 
+  // Take the root resource
+  printf("bootsvc: Taking root resource handle...\n");
+  zx::resource root_resource_handle(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
+  ZX_ASSERT_MSG(root_resource_handle.is_valid(), "Invalid root resource handle\n");
+
   // Set up the svcfs service
   printf("bootsvc: Creating svcfs service...\n");
   fbl::RefPtr<bootsvc::SvcfsService> svcfs_svc = bootsvc::SvcfsService::Create(loop.dispatcher());
@@ -257,8 +262,9 @@ int main(int argc, char** argv) {
   zx::job::default_job()->set_property(ZX_PROP_NAME, "root", 4);
   svcfs_svc->AddService(fuchsia_boot_RootJob_Name,
                         bootsvc::CreateRootJobService(loop.dispatcher()));
-  svcfs_svc->AddService(fuchsia_boot_RootResource_Name,
-                        bootsvc::CreateRootResourceService(loop.dispatcher()));
+  svcfs_svc->AddService(
+      fuchsia_boot_RootResource_Name,
+      bootsvc::CreateRootResourceService(loop.dispatcher(), std::move(root_resource_handle)));
 
   // Consume certain VMO types from the startup handle table
   printf("bootsvc: Loading kernel VMOs...\n");

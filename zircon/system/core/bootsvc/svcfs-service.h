@@ -62,7 +62,8 @@ fbl::RefPtr<fs::Service> CreateLogService(async_dispatcher_t* dispatcher, const 
 fbl::RefPtr<fs::Service> CreateRootJobService(async_dispatcher_t* dispatcher);
 
 // Create a service to provide the root resource.
-fbl::RefPtr<fs::Service> CreateRootResourceService(async_dispatcher_t* dispatcher);
+fbl::RefPtr<fs::Service> CreateRootResourceService(async_dispatcher_t* dispatcher,
+                                                   zx::resource root_resource);
 
 }  // namespace bootsvc
 
