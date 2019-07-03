@@ -5,6 +5,7 @@
 #include <fidl/utils.h>
 #include <lib/fit/function.h>
 
+#include "examples.h"
 #include "unittest_helpers.h"
 
 namespace fidl {
@@ -465,6 +466,24 @@ bool whitespace_and_comments() {
   END_TEST;
 }
 
+bool is_only_whitespace() {
+  BEGIN_TEST;
+  std::string good_output;
+  std::string bad_output;
+
+  for (auto element : Examples::map()) {
+    if (element.first.find("testdata/goodformat.test.fidl") != std::string::npos) {
+      good_output = Examples::map()[element.first];
+    } else if (element.first.find("testdata/badformat.fidl") != std::string::npos) {
+      bad_output = Examples::map()[element.first];
+    }
+  }
+
+  ASSERT_TRUE(OnlyWhitespaceChanged(bad_output, good_output));
+  END_TEST;
+}
+
+
 BEGIN_TEST_CASE(utils_tests)
 
 RUN_TEST(id_to_words)
@@ -475,6 +494,7 @@ RUN_TEST(lower_snake_case)
 RUN_TEST(konstant_case)
 RUN_TEST(lower_no_separator_case)
 RUN_TEST(whitespace_and_comments)
+RUN_TEST(is_only_whitespace)
 
 END_TEST_CASE(utils_tests)
 

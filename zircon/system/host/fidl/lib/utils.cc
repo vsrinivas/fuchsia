@@ -192,5 +192,19 @@ void WriteFindingsToErrorReporter(const Findings& findings, ErrorReporter* error
   }
 }
 
+bool OnlyWhitespaceChanged(const std::string& unformatted_input,
+                           const std::string& formatted_output) {
+  std::string formatted = formatted_output;
+  auto formatted_end = std::remove_if(formatted.begin(), formatted.end(), isspace);
+  formatted.erase(formatted_end, formatted.end());
+
+  std::string unformatted(unformatted_input);
+  auto unformatted_end =
+      std::remove_if(unformatted.begin(), unformatted.end(), isspace);
+  unformatted.erase(unformatted_end, unformatted.end());
+
+  return formatted == unformatted;
+}
+
 }  // namespace utils
 }  // namespace fidl

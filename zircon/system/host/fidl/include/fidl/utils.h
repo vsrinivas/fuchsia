@@ -151,6 +151,12 @@ void PrintFinding(std::ostream& os, const Finding& finding);
 // messages for a list of findings.
 void WriteFindingsToErrorReporter(const Findings& findings, ErrorReporter* error_reporter);
 
+// Gets a string with the original file contents, and a string with the
+// formatted file, and makes sure that the only difference is in the whitespace.
+// Used by the formatter to make sure that formatting was not destructive.
+bool OnlyWhitespaceChanged(const std::string& unformatted_input,
+                           const std::string& formatted_output);
+
 }  // namespace utils
 }  // namespace fidl
 

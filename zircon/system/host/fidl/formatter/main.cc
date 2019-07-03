@@ -7,8 +7,10 @@
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
 #include <fidl/source_manager.h>
+#include <fidl/utils.h>
 #include <stdio.h>
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -56,6 +58,20 @@ bool Format(const fidl::SourceFile& source_file, fidl::ErrorReporter* error_repo
   fidl::raw::FormattingTreeVisitor visitor;
   visitor.OnFile(ast);
   output = *visitor.formatted_output();
+
+  std::string source_file_str(source_file.data());
+  if (!fidl::utils::OnlyWhitespaceChanged(source_file_str, output)) {
+    // Note that this is only useful as long as we do not have the formatter do
+    // things that affect non-whitespace characters, like sort using statements
+    // or coalesce consts into const blocks.  If / when this happens, this check
+    // may need to be more nuanced (or, those things could happen in a separate pass).
+    std::string filename(source_file.filename());
+    Fail(
+        "Internal formatter failure: output is not the same as input processing file %s. "
+        "Please report a bug.",
+        filename.c_str());
+  }
+
   return true;
 }
 
