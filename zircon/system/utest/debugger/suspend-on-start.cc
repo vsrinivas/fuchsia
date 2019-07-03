@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include <lib/zx/exception.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 
@@ -19,32 +20,30 @@ struct suspend_on_start_test_state_t {
   int started_threads = 0;
 };
 
-bool suspend_on_start_test_handler(zx_handle_t inferior,
-                                   zx_handle_t port,
-                                   const zx_port_packet_t* packet,
+bool suspend_on_start_test_handler(inferior_data_t* data, const zx_port_packet_t* packet,
                                    void* handler_arg) {
     auto* test_state = reinterpret_cast<suspend_on_start_test_state_t*>(handler_arg);
     BEGIN_HELPER;
 
     // This test is supposed to only get an exception and nothing else.
-    ASSERT_TRUE(ZX_PKT_IS_EXCEPTION(packet->type));
+    ASSERT_EQ(tu_get_koid(data->exception_channel), packet->key);
+    auto [info, raw_exception] = tu_read_exception(data->exception_channel);
+    zx::exception exception(raw_exception);
 
-    zx_koid_t tid = packet->exception.tid;
-    switch (packet->type) {
-        case ZX_EXCP_THREAD_STARTING:
-            unittest_printf("thread %lu starting\n", tid);
-            // We only want to resume the first thread.
-            resume_inferior(inferior, port, tid);
-            test_state->started_threads++;
-            break;
-        case ZX_EXCP_THREAD_EXITING:
-            unittest_printf("thread %lu exiting\n", tid);
-            ASSERT_TRUE(handle_thread_exiting(inferior, port, packet));
-            break;
-        default:
-            unittest_printf("Unexpected exception %s (%u) on thread %lu\n",
-                            tu_exception_to_string(packet->type), packet->type, tid);
-            break;
+    switch (info.type) {
+    case ZX_EXCP_THREAD_STARTING:
+        unittest_printf("thread %lu starting\n", info.tid);
+        // We only want to resume the first thread.
+        test_state->started_threads++;
+        break;
+    case ZX_EXCP_THREAD_EXITING:
+        unittest_printf("thread %lu exiting\n", info.tid);
+        ASSERT_TRUE(handle_thread_exiting(data->inferior, &info, std::move(exception)));
+        break;
+    default:
+        unittest_printf("Unexpected exception %s (%u) on thread %lu\n",
+                        tu_exception_to_string(info.type), info.type, info.tid);
+        break;
     }
 
     END_HELPER;
@@ -62,15 +61,15 @@ bool SuspendOnStartTest() {
 
     // Attach to the inferior now because we want to see thread starting
     // exceptions.
-    zx_handle_t eport = tu_io_port_create();
+    zx_handle_t port = tu_io_port_create();
     size_t max_threads = 2;
-    inferior_data_t* inferior_data = attach_inferior(inferior, eport, max_threads);
+    inferior_data_t* inferior_data = attach_inferior(inferior, port, max_threads);
 
     suspend_on_start_test_state_t test_state = {};
     thrd_t wait_inf_thread = start_wait_inf_thread(inferior_data,
                                                    suspend_on_start_test_handler,
                                                    &test_state);
-    EXPECT_NE(eport, ZX_HANDLE_INVALID);
+    EXPECT_NE(port, ZX_HANDLE_INVALID);
 
     if (!start_inferior(lp))
         return false;
@@ -81,12 +80,12 @@ bool SuspendOnStartTest() {
     if (!shutdown_inferior(channel, inferior))
         return false;
 
-    // Stop the waiter thread before closing the eport that it's waiting on.
+    // Stop the waiter thread before closing the port that it's waiting on.
     join_wait_inf_thread(wait_inf_thread);
 
     detach_inferior(inferior_data, true);
 
-    tu_handle_close(eport);
+    tu_handle_close(port);
     tu_handle_close(channel);
     tu_handle_close(inferior);
 

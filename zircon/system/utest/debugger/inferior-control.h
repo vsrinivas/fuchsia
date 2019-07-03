@@ -12,6 +12,8 @@
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 
+#include <lib/zx/exception.h>
+
 struct thread_data_t {
     zx_koid_t tid;
     zx_handle_t handle;
@@ -23,18 +25,19 @@ struct inferior_data_t {
     zx_koid_t pid;
     // Borrowed handle of the inferior process.
     zx_handle_t inferior;
-    // Borrowed handle of the exception port.
-    zx_handle_t eport;
+    // Borrowed handle of the port listening for signals.
+    zx_handle_t port;
+    // Owned handle of the exception channel.
+    zx_handle_t exception_channel;
     // #entries in |threads|.
     size_t max_num_threads;
     // The array is unsorted, and there can be holes (tid,handle = invalid).
     thread_data_t* threads;
 };
 
-typedef bool (wait_inferior_exception_handler_t)(zx_handle_t inferior,
-                                                 zx_handle_t port,
-                                                 const zx_port_packet_t* packet,
-                                                 void* handler_arg);
+typedef bool(wait_inferior_exception_handler_t)(inferior_data_t* data,
+                                                const zx_port_packet_t* packet,
+                                                void* handler_arg);
 
 void dump_gregs(zx_handle_t thread_handle, const zx_thread_state_general_regs_t* regs);
 
@@ -55,27 +58,41 @@ zx_status_t create_inferior(const char* name, int argc, const char* const* argv,
 bool setup_inferior(const char* name, launchpad_t** out_lp, zx_handle_t* out_inferior,
                     zx_handle_t* out_channel);
 
-inferior_data_t* attach_inferior(zx_handle_t inferior, zx_handle_t eport,
-                                 size_t max_threads);
+// Attaches to |inferior| process.
+//
+// Creates a debug exception channel on |inferior| and uses wait_async() to
+// route the following signals through |port|:
+//   * process TERMINATED
+//   * exception channel READABLE
+//   * child thread TERMINATED, RUNNING, and SUSPENDED
+// Packet keys are the corresponding object KOIDs.
+//
+// Returns a newly allocated inferior_data_t, which must be destroyed by
+// calling detach_inferior(). On failure, exits the process.
+inferior_data_t* attach_inferior(zx_handle_t inferior, zx_handle_t port, size_t max_threads);
 
 bool expect_debugger_attached_eq(zx_handle_t inferior, bool expected, const char* msg);
 
-void detach_inferior(inferior_data_t* data, bool unbind_eport);
+// Detaches and deletes |data|.
+//
+// If |close_exception_channel| is false, the exception channel will remain
+// open. In this case the caller must have copied |data->exception_channel|
+// before calling this function and manually close it when finished.
+void detach_inferior(inferior_data_t* data, bool close_exception_channel);
 
-void unbind_inferior(zx_handle_t inferior);
+// Closes |data|'s exception channel.
+void unbind_inferior(inferior_data_t* data);
 
 bool start_inferior(launchpad_t* lp);
 
-bool resume_inferior(zx_handle_t inferior, zx_handle_t port, zx_koid_t tid);
-
 bool shutdown_inferior(zx_handle_t channel, zx_handle_t inferior);
 
-bool read_packet(zx_handle_t eport, zx_port_packet_t* packet);
+bool read_packet(zx_handle_t port, zx_port_packet_t* packet);
 
-bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t eport);
+bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t port);
 
-bool handle_thread_exiting(zx_handle_t inferior, zx_handle_t port,
-                           const zx_port_packet_t* packet);
+bool handle_thread_exiting(zx_handle_t inferior, const zx_exception_info_t* info,
+                           zx::exception exception);
 
 thrd_t start_wait_inf_thread(inferior_data_t* inferior_data,
                              wait_inferior_exception_handler_t* handler,

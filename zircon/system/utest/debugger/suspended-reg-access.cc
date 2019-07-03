@@ -12,6 +12,7 @@
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
 #include <lib/backtrace-request/backtrace-request.h>
+#include <lib/zx/exception.h>
 #include <lib/zx/thread.h>
 #include <pretty/hexdump.h>
 #include <test-utils/test-utils.h>
@@ -133,7 +134,7 @@ bool SuspendedRegAccessTest() {
     // ZX_EXCP_THREAD_STARTING.
     ASSERT_TRUE(recv_simple_response(channel, RESP_PONG), "");
 
-    zx_handle_t eport = tu_io_port_create();
+    zx_handle_t port = tu_io_port_create();
 
     // Keep looping until we know the thread is stopped in the assembler.
     // This is the only place we can guarantee particular registers have
@@ -144,7 +145,7 @@ bool SuspendedRegAccessTest() {
     while (true) {
         zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
         ASSERT_EQ(zx_task_suspend_token(thread, &suspend_token), ZX_OK);
-        ASSERT_TRUE(wait_thread_suspended(self_proc, thread, eport));
+        ASSERT_TRUE(wait_thread_suspended(self_proc, thread, port));
 
         read_inferior_gregs(thread, &regs);
         test_reg = regs.REG_ACCESS_TEST_REG;
@@ -176,7 +177,7 @@ bool SuspendedRegAccessTest() {
     EXPECT_EQ(reg_access_write_test_value, arg.result);
 
     tu_handle_close(channel);
-    tu_handle_close(eport);
+    tu_handle_close(port);
     END_TEST;
 }
 
@@ -307,12 +308,12 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
         EXPECT_TRUE(tu_channel_wait_readable(syscall_handle));
     }
 
-    zx_handle_t eport = tu_io_port_create();
+    zx_handle_t port = tu_io_port_create();
 
     zx_handle_t token;
     ASSERT_EQ(zx_task_suspend_token(thread, &token), ZX_OK);
 
-    ASSERT_TRUE(wait_thread_suspended(self_proc, thread, eport));
+    ASSERT_TRUE(wait_thread_suspended(self_proc, thread, port));
 
     zx_thread_state_general_regs_t regs;
     read_inferior_gregs(thread, &regs);
@@ -362,7 +363,7 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
     EXPECT_EQ(thread_result, 0);
     tu_handle_close(thread);
 
-    tu_handle_close(eport);
+    tu_handle_close(port);
     if (do_channel_call) {
         tu_handle_close(arg.syscall_handle);
     }
@@ -399,15 +400,15 @@ struct suspend_in_exception_data_t {
 
 // N.B. This runs on the wait-inferior thread.
 
-bool suspended_in_exception_handler(zx_handle_t inferior, zx_handle_t port,
-                                    const zx_port_packet_t* packet, void* handler_arg) {
+bool suspended_in_exception_handler(inferior_data_t* data, const zx_port_packet_t* packet,
+                                    void* handler_arg) {
     BEGIN_HELPER;
 
-    auto data = reinterpret_cast<suspend_in_exception_data_t*>(handler_arg);
+    auto suspend_data = reinterpret_cast<suspend_in_exception_data_t*>(handler_arg);
 
-    if (ZX_PKT_IS_SIGNAL_ONE(packet->type)) {
+    if (packet->key != tu_get_koid(data->exception_channel)) {
         // Must be a signal on one of the threads.
-        ASSERT_TRUE(packet->key != data->process_id);
+        ASSERT_TRUE(packet->key != suspend_data->process_id);
         zx_koid_t pkt_tid = packet->key;
 
         // The following signals are expected here.  Note that
@@ -417,40 +418,41 @@ bool suspended_in_exception_handler(zx_handle_t inferior, zx_handle_t port,
             // Nothing to do.
         }
         if (packet->signal.observed & ZX_THREAD_RUNNING) {
-            ASSERT_EQ(pkt_tid, data->thread_id);
-            atomic_fetch_add(&data->resume_count, 1);
+            ASSERT_EQ(pkt_tid, suspend_data->thread_id);
+            atomic_fetch_add(&suspend_data->resume_count, 1);
         }
         if (packet->signal.observed & ZX_THREAD_SUSPENDED) {
-            ASSERT_EQ(pkt_tid, data->thread_id);
-            atomic_fetch_add(&data->suspend_count, 1);
-            ASSERT_EQ(zx_handle_close(data->suspend_token), ZX_OK);
+            ASSERT_EQ(pkt_tid, suspend_data->thread_id);
+            atomic_fetch_add(&suspend_data->suspend_count, 1);
+            ASSERT_EQ(zx_handle_close(suspend_data->suspend_token), ZX_OK);
             // At this point we should get ZX_THREAD_RUNNING, we'll
             // process it later.
         }
     } else {
-        ASSERT_TRUE(ZX_PKT_IS_EXCEPTION(packet->type));
+        auto [info, raw_exception] = tu_read_exception(data->exception_channel);
+        zx::exception exception(raw_exception);
 
-        zx_koid_t pkt_tid = packet->exception.tid;
-
-        switch (packet->type) {
+        switch (info.type) {
         case ZX_EXCP_THREAD_EXITING:
             // N.B. We could get thread exiting messages from previous
             // tests.
-            EXPECT_TRUE(handle_thread_exiting(inferior, port, packet));
+            EXPECT_TRUE(handle_thread_exiting(data->inferior, &info, std::move(exception)));
             break;
 
         case ZX_EXCP_FATAL_PAGE_FAULT: {
             unittest_printf("wait-inf: got page fault exception\n");
 
-            ASSERT_EQ(pkt_tid, data->thread_id);
+            ASSERT_EQ(info.tid, suspend_data->thread_id);
 
             // Verify that the fault is at the PC we expected.
-            if (!test_segv_pc(data->thread_handle))
+            if (!test_segv_pc(suspend_data->thread_handle))
                 return false;
 
             // Suspend the thread before fixing the segv to verify register
             // access works while the thread is in an exception and suspended.
-            ASSERT_EQ(zx_task_suspend_token(data->thread_handle, &data->suspend_token), ZX_OK);
+            ASSERT_EQ(zx_task_suspend_token(suspend_data->thread_handle,
+                                            &suspend_data->suspend_token),
+                      ZX_OK);
 
             // Waiting for the thread to suspend doesn't work here as the
             // thread stays in the exception until we pass ZX_RESUME_EXCEPTION.
@@ -461,14 +463,16 @@ bool suspended_in_exception_handler(zx_handle_t inferior, zx_handle_t port,
             // Do some tests that require a suspended inferior.
             // This is required as the inferior does tests after it wakes up
             // that assumes we've done this.
-            test_memory_ops(inferior, data->thread_handle);
+            test_memory_ops(data->inferior, suspend_data->thread_handle);
 
             // Now correct the issue and resume the inferior.
-            fix_inferior_segv(data->thread_handle);
+            fix_inferior_segv(suspend_data->thread_handle);
 
-            atomic_fetch_add(&data->segv_count, 1);
+            atomic_fetch_add(&suspend_data->segv_count, 1);
 
-            ASSERT_EQ(zx_task_resume_from_exception(data->thread_handle, port, 0), ZX_OK);
+            uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
+            ASSERT_EQ(exception.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)),
+                      ZX_OK);
             // At this point we should get ZX_THREAD_SUSPENDED, we'll
             // process it later.
 
@@ -477,7 +481,7 @@ bool suspended_in_exception_handler(zx_handle_t inferior, zx_handle_t port,
 
         default: {
             char msg[128];
-            snprintf(msg, sizeof(msg), "unexpected packet type: 0x%x", packet->type);
+            snprintf(msg, sizeof(msg), "unexpected exception type: 0x%x", info.type);
             ASSERT_TRUE(false, msg);
             __UNREACHABLE;
         }
@@ -511,12 +515,12 @@ bool SuspendedInExceptionRegAccessTest() {
     // Defer attaching until after the inferior is running to test
     // attach_inferior's recording of existing threads. If that fails
     // it won't see thread suspended/running messages from the thread.
-    zx_handle_t eport = tu_io_port_create();
+    zx_handle_t port = tu_io_port_create();
     size_t max_threads = 10;
-    inferior_data_t* inferior_data = attach_inferior(inferior, eport, max_threads);
+    inferior_data_t* inferior_data = attach_inferior(inferior, port, max_threads);
     thrd_t wait_inf_thread =
         start_wait_inf_thread(inferior_data, suspended_in_exception_handler, &data);
-    EXPECT_NE(eport, ZX_HANDLE_INVALID);
+    EXPECT_NE(port, ZX_HANDLE_INVALID);
 
     send_simple_request(channel, RQST_CRASH_AND_RECOVER_TEST);
     // wait_inf_thread will process the crash and resume the inferior.
@@ -525,7 +529,7 @@ bool SuspendedInExceptionRegAccessTest() {
     if (!shutdown_inferior(channel, inferior))
         return false;
 
-    // Stop the waiter thread before closing the eport that it's waiting on.
+    // Stop the waiter thread before closing the port that it's waiting on.
     join_wait_inf_thread(wait_inf_thread);
 
     detach_inferior(inferior_data, true);
@@ -546,7 +550,7 @@ bool SuspendedInExceptionRegAccessTest() {
                 actual_msg);
 
     tu_handle_close(data.thread_handle);
-    tu_handle_close(eport);
+    tu_handle_close(port);
     tu_handle_close(channel);
     tu_handle_close(inferior);
 

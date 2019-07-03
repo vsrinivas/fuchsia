@@ -154,40 +154,35 @@ bool test_thread_start_register_access(reg_access_test_state_t* test_state,
 
 // N.B. This runs on the wait-inferior thread.
 
-bool thread_start_test_exception_handler_worker(zx_handle_t inferior, zx_handle_t port,
+bool thread_start_test_exception_handler_worker(inferior_data_t* data,
                                                 const zx_port_packet_t* packet,
                                                 void* handler_arg) {
     BEGIN_HELPER;
 
     auto test_state = reinterpret_cast<reg_access_test_state_t*>(handler_arg);
 
-    zx_koid_t pid = tu_get_koid(inferior);
-
-    if (ZX_PKT_IS_SIGNAL_ONE(packet->type)) {
-        ASSERT_TRUE(packet->key != pid);
+    if (packet->key != tu_get_koid(data->exception_channel)) {
+        ASSERT_TRUE(packet->key != tu_get_koid(data->inferior));
         // Must be a signal on one of the threads.
         // Here we're only expecting TERMINATED.
         ASSERT_TRUE(packet->signal.observed & ZX_THREAD_TERMINATED);
     } else {
-        ASSERT_TRUE(ZX_PKT_IS_EXCEPTION(packet->type));
+        auto [info, raw_exception] = tu_read_exception(data->exception_channel);
+        zx::exception exception(raw_exception);
 
-        zx_koid_t tid = packet->exception.tid;
-
-        switch (packet->type) {
+        switch (info.type) {
         case ZX_EXCP_THREAD_STARTING:
-            unittest_printf("wait-inf: thread %lu started\n", tid);
-            EXPECT_TRUE(test_thread_start_register_access(test_state, inferior, tid));
-            if (!resume_inferior(inferior, port, tid))
-                return false;
+            unittest_printf("wait-inf: thread %lu started\n", info.tid);
+            EXPECT_TRUE(test_thread_start_register_access(test_state, data->inferior, info.tid));
             break;
 
         case ZX_EXCP_THREAD_EXITING:
-            EXPECT_TRUE(handle_thread_exiting(inferior, port, packet));
+            EXPECT_TRUE(handle_thread_exiting(data->inferior, &info, std::move(exception)));
             break;
 
         default: {
             char msg[128];
-            snprintf(msg, sizeof(msg), "unexpected packet type: 0x%x", packet->type);
+            snprintf(msg, sizeof(msg), "unexpected exception type: 0x%x", info.type);
             ASSERT_TRUE(false, msg);
             __UNREACHABLE;
         }
@@ -199,17 +194,14 @@ bool thread_start_test_exception_handler_worker(zx_handle_t inferior, zx_handle_
 
 // N.B. This runs on the wait-inferior thread.
 
-bool thread_start_test_exception_handler(zx_handle_t inferior,
-                                         zx_handle_t port,
-                                         const zx_port_packet_t* packet,
+bool thread_start_test_exception_handler(inferior_data_t* data, const zx_port_packet_t* packet,
                                          void* handler_arg) {
-    bool pass = thread_start_test_exception_handler_worker(inferior, port,
-                                                           packet, handler_arg);
+    bool pass = thread_start_test_exception_handler_worker(data, packet, handler_arg);
 
     // If a test failed detach now so that a thread isn't left waiting in
     // ZX_EXCP_THREAD_STARTING for a response.
     if (!pass) {
-        unbind_inferior(inferior);
+        unbind_inferior(data);
     }
 
     return pass;
@@ -234,16 +226,16 @@ bool StoppedInThreadStartingRegAccessTest() {
 
     // Attach to the inferior now because we want to see thread starting
     // exceptions.
-    zx_handle_t eport = tu_io_port_create();
+    zx_handle_t port = tu_io_port_create();
     size_t max_threads = 10;
-    inferior_data_t* inferior_data = attach_inferior(inferior, eport, max_threads);
+    inferior_data_t* inferior_data = attach_inferior(inferior, port, max_threads);
 
     // State we need to maintain across the handling of the various exceptions.
     reg_access_test_state_t test_state{};
 
     thrd_t wait_inf_thread =
         start_wait_inf_thread(inferior_data, thread_start_test_exception_handler, &test_state);
-    EXPECT_NE(eport, ZX_HANDLE_INVALID);
+    EXPECT_NE(port, ZX_HANDLE_INVALID);
 
     if (!start_inferior(lp))
         return false;
@@ -277,12 +269,12 @@ bool StoppedInThreadStartingRegAccessTest() {
     if (!shutdown_inferior(channel, inferior))
         return false;
 
-    // Stop the waiter thread before closing the eport that it's waiting on.
+    // Stop the waiter thread before closing the port that it's waiting on.
     join_wait_inf_thread(wait_inf_thread);
 
     detach_inferior(inferior_data, true);
 
-    tu_handle_close(eport);
+    tu_handle_close(port);
     tu_handle_close(channel);
     tu_handle_close(inferior);
 
