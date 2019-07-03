@@ -240,7 +240,8 @@ config("nolibc") {
 
   if (is_gcc) {
     # Include this in every link.
-    libs = [ "$zx/scripts/dso_handle.ld" ]
+    # Note GN requires "./" so it doesn't think this should mean a -l switch.
+    libs = [ "./dso_handle.ld" ]
   } else {
     # TODO(mcgrathr): GCC 9 has -nolibc, so use it when we get that toolchain.
     ldflags += [ "-nolibc" ]
