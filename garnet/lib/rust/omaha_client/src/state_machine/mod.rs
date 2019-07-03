@@ -411,7 +411,7 @@ where
             );
             self.set_state(State::UpdateAvailable);
 
-            let install_plan = match IN::InstallPlan::try_create_from(&response) {
+            let install_plan = match IN::InstallPlan::try_create_from(&request_params, &response) {
                 Ok(plan) => plan,
                 Err(e) => {
                     error!("Unable to construct install plan! {}", e);

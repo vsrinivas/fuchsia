@@ -10,10 +10,11 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.logger.LogSink",
-            "fuchsia.stash.Store",
             "fuchsia.net.NameLookup",
+            "fuchsia.net.SocketProvider",
             "fuchsia.posix.socket.Provider",
-            "fuchsia.net.SocketProvider"
+            "fuchsia.stash.Store",
+            "fuchsia.sys.Launcher"
         ]
     }
 }

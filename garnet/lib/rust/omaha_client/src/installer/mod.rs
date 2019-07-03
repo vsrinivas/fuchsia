@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::protocol::response::Response;
+use crate::{protocol::response::Response, request_builder::RequestParams};
 use failure::Fail;
 use futures::future::BoxFuture;
 
@@ -15,7 +15,10 @@ pub trait Plan: std::marker::Sized {
 
     /// Try to create a new Plan from the given response, returning a PlanError if unable to do
     /// so.
-    fn try_create_from(response: &Response) -> Result<Self, Self::Error>;
+    fn try_create_from(
+        request_params: &RequestParams,
+        response: &Response,
+    ) -> Result<Self, Self::Error>;
 }
 
 /// The trait for the platform-specific Installer to implement.

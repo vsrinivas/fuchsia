@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use super::*;
-use crate::protocol::response::Response;
+use crate::{protocol::response::Response, request_builder::RequestParams};
 use failure::Fail;
 use futures::future::BoxFuture;
 use futures::prelude::*;
@@ -36,7 +36,10 @@ pub struct StubPlan;
 impl Plan for StubPlan {
     type Error = StubPlanErrors;
 
-    fn try_create_from(response: &Response) -> Result<Self, Self::Error> {
+    fn try_create_from(
+        _request_params: &RequestParams,
+        response: &Response,
+    ) -> Result<Self, Self::Error> {
         if response.protocol_version != "3.0" {
             Err(StubPlanErrors::Failed)
         } else {

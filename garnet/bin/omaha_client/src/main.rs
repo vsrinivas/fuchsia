@@ -9,7 +9,7 @@ use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;
 use http_request::FuchsiaHyperHttpRequest;
 use log::info;
-use omaha_client::{installer::stub::StubInstaller, state_machine::StateMachine};
+use omaha_client::state_machine::StateMachine;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -20,6 +20,7 @@ mod install_plan;
 mod metrics;
 mod policy;
 mod storage;
+mod temp_installer;
 mod timer;
 
 fn main() -> Result<(), Error> {
@@ -37,10 +38,11 @@ fn main() -> Result<(), Error> {
         let (_metrics_reporter, cobalt_fut) = metrics::CobaltMetricsReporter::new();
 
         let http = FuchsiaHyperHttpRequest::new();
+        let installer = temp_installer::FuchsiaInstaller::new()?;
         let mut state_machine = StateMachine::new(
             policy::FuchsiaPolicyEngine,
             http,
-            StubInstaller::default(),
+            installer,
             &config,
             timer::FuchsiaTimer,
         );
