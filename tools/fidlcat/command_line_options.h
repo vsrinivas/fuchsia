@@ -13,7 +13,7 @@ namespace fidlcat {
 
 struct CommandLineOptions {
   std::optional<std::string> connect;
-  std::optional<std::string> remote_pid;
+  std::vector<std::string> remote_pid;
   std::vector<std::string> remote_name;
   std::vector<std::string> symbol_paths;
   std::vector<std::string> fidl_ir_paths;

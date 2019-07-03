@@ -21,10 +21,9 @@ namespace fidlcat {
 
 const char kHelpIntro[] = R"(fidlcat [ <options> ] [ command [args] ]
 
-  fidlcat will intercept and record all fidl calls invoked by a given process.
-  The user may either attach to an existing process, or start a new process.  In
-  addition to the options given below, the command may be of the form "run
-  <component URL>", in which case the given component will be launched.
+  fidlcat will run the specified command until it exits.  It will intercept and
+  record all fidl calls invoked by the process.  The command may be of the form
+  "run <component URL>", in which case the given component will be launched.
 
 Options:
 
@@ -35,7 +34,7 @@ const char kRemoteHostHelp[] = R"(  --connect
       [<ipv6_addr>]:port.)";
 
 const char kRemotePidHelp[] = R"(  --remote-pid
-      The koid of the remote process.)";
+      The koid of the remote process. Can be passed multiple times.)";
 
 const char kRemoteNameHelp[] = R"(  --remote-name=<regexp>
   -f <regexp>
@@ -104,12 +103,12 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
     return status;
   }
 
-  if (requested_help || (options->remote_name.empty() && !options->remote_pid &&
+  if (requested_help || (options->remote_name.empty() && options->remote_pid.empty() &&
                          std::find(params->begin(), params->end(), "run") == params->end())) {
     return cmdline::Status::Error(kHelpIntro + parser.GetHelp());
   }
 
-  if (!options->remote_name.empty() && options->remote_pid) {
+  if (!options->remote_name.empty() && !options->remote_pid.empty()) {
     return cmdline::Status::Error("Cannot specify both a remote pid and name.");
   }
 

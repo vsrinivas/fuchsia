@@ -69,6 +69,12 @@ Dart programs:
 host$ fx fidlcat --remote-pid 21107
 ```
 
+You can use the `--remote-pid` flag multiple times to connect to multiple processes:
+
+```sh
+fx fidlcat --remote-pid <pid1> --remote-pid <pid2>
+```
+
 ### Launching a component with fidlcat
 
 Alternatively, you can launch a component directly using its URL:

@@ -136,7 +136,7 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
   ASSERT_TRUE(status.ok());
   ASSERT_EQ(2U, params.size()) << "Expected 0 params, got (at least) " << params[0];
   ASSERT_EQ(connect, *options.connect);
-  ASSERT_EQ(remote_pid, *options.remote_pid);
+  ASSERT_EQ(remote_pid, options.remote_pid[0]);
   ASSERT_EQ(symbol_path, options.symbol_paths[0]);
   ASSERT_EQ(fidl_ir_path, options.fidl_ir_paths[0]);
   ASSERT_TRUE(std::find(params.begin(), params.end(), "leftover") != params.end());

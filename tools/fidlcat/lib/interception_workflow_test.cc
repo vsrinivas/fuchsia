@@ -18,6 +18,7 @@
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
+#include "src/developer/debug/zxdb/client/target_impl.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
 
@@ -123,8 +124,9 @@ class DataForSyscallTest {
 
   const SystemCallTest* syscall() const { return syscall_.get(); }
 
-  void set_syscall(std::unique_ptr<SystemCallTest> syscall) {
-    syscall_ = std::move(syscall);
+  void set_syscall(std::unique_ptr<SystemCallTest> syscall) { syscall_ = std::move(syscall); }
+
+  void load_syscall_data() {
     size_t argument_count = syscall_->inputs().size();
     if (argument_count > param_regs_count_) {
       argument_count -= param_regs_count_;
@@ -193,8 +195,8 @@ class DataForSyscallTest {
     }
   }
 
-  void PopulateRegisters(std::vector<debug_ipc::Register>* registers) {
-    if (first_register_read_) {
+  void PopulateRegisters(uint64_t process_koid, std::vector<debug_ipc::Register>* registers) {
+    if (stepped_processes_.find(process_koid) == stepped_processes_.end()) {
       size_t count = std::min(param_regs_count_, syscall_->inputs().size());
       for (size_t i = 0; i < count; ++i) {
         PopulateRegister(param_regs_[i], syscall_->inputs()[i], registers);
@@ -219,14 +221,16 @@ class DataForSyscallTest {
     }
   }
 
-  void PopulateRegisters(debug_ipc::RegisterCategory& category) {
+  void PopulateRegisters(uint64_t process_koid, debug_ipc::RegisterCategory& category) {
     category.type = debug_ipc::RegisterCategory::Type::kGeneral;
-    PopulateRegisters(&category.registers);
+    PopulateRegisters(process_koid, &category.registers);
   }
 
-  void Step() {
+  void Step(uint64_t process_koid) {
+    // Increment the stack pointer to make it look as if we've stepped out of
+    // the zx_channel function.
     sp_ = stack_ + kMaxStackSizeInWords;
-    first_register_read_ = false;
+    stepped_processes_.insert(process_koid);
   }
 
   template <typename T>
@@ -261,7 +265,7 @@ class DataForSyscallTest {
   fidl_message_header_t header_;
   zx_handle_t handles_[2] = {0x01234567, 0x89abcdef};
   debug_ipc::Arch arch_;
-  bool first_register_read_ = true;
+  std::set<uint64_t> stepped_processes_;
 };
 
 // Provides the infrastructure needed to provide the data above.
@@ -303,7 +307,7 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
       std::function<void(const zxdb::Err&, debug_ipc::ReadRegistersReply)> cb) override {
     // TODO: Parameterize this so we can have more than one test.
     debug_ipc::ReadRegistersReply reply;
-    data_.PopulateRegisters(reply.categories.emplace_back());
+    data_.PopulateRegisters(request.process_koid, reply.categories.emplace_back());
     debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
                                                 [cb, reply]() { cb(zxdb::Err(), reply); });
   }
@@ -311,7 +315,7 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
   void Resume(const debug_ipc::ResumeRequest& request,
               std::function<void(const zxdb::Err&, debug_ipc::ResumeReply)> cb) override {
     debug_ipc::ResumeReply reply;
-    data_.Step();
+    data_.Step(request.process_koid);
     debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb, reply]() {
       cb(zxdb::Err(), reply);
       // This is so that the test can inject the next exception.
@@ -360,6 +364,9 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
                    std::unique_ptr<SyscallDecoderDispatcher> dispatcher);
 
  private:
+  static constexpr uint64_t kFirstPid = 3141;
+  static constexpr uint64_t kSecondPid = 2718;
+
   DataForSyscallTest data_;
   InterceptionRemoteAPI* mock_remote_api_;  // Owned by the session.
   DisplayOptions display_options_;
@@ -382,29 +389,32 @@ class InterceptionWorkflowTestArm : public InterceptionWorkflowTest {
   virtual debug_ipc::Arch GetArch() const override { return debug_ipc::Arch::kArm64; }
 };
 
-// This does process setup for the test.  It creates a fake process, injects
-// modules with the appropriate symbols, attaches to the process, etc.
+// This does process setup for the test.  It creates fake processes, injects
+// modules with the appropriate symbols, attaches to the processes, etc.
 class ProcessController {
  public:
-  ProcessController(InterceptionWorkflowTest* remote_api, zxdb::Session& session,
-                    debug_ipc::PlatformMessageLoop& loop);
+  ProcessController(std::vector<uint64_t> process_koids, InterceptionWorkflowTest* remote_api,
+                    zxdb::Session& session, debug_ipc::PlatformMessageLoop& loop);
   ~ProcessController();
 
   InterceptionWorkflowTest* remote_api() const { return remote_api_; }
   InterceptionWorkflow& workflow() { return workflow_; }
+  const std::vector<uint64_t>& process_koids() { return process_koids_; }
+
+  void InjectProcesses(zxdb::Session& session);
 
   void Initialize(zxdb::Session& session, std::unique_ptr<SyscallDecoderDispatcher> dispatcher);
   void Detach();
 
-  static constexpr uint64_t kProcessKoid = 1234;
   static constexpr uint64_t kThreadKoid = 5678;
 
  private:
   InterceptionWorkflowTest* remote_api_;
+  std::vector<uint64_t> process_koids_;
   InterceptionWorkflow workflow_;
 
-  zxdb::Process* process_ = nullptr;
-  zxdb::Target* target_ = nullptr;
+  std::vector<zxdb::Process*> processes_;
+  std::vector<zxdb::Target*> targets_;
 };
 
 class AlwaysQuit {
@@ -415,6 +425,26 @@ class AlwaysQuit {
  private:
   ProcessController* controller_;
 };
+
+void ProcessController::InjectProcesses(zxdb::Session& session) {
+  for (auto process_koid : process_koids_) {
+    zxdb::TargetImpl* found_target = nullptr;
+    for (zxdb::TargetImpl* target : session.system_impl().GetTargetImpls()) {
+      if (target->GetState() == zxdb::Target::State::kNone && target->GetArgs().empty()) {
+        found_target = target;
+        break;
+      }
+    }
+
+    if (!found_target) {  // No empty target, make a new one.
+      found_target = session.system_impl().CreateNewTargetImpl(nullptr);
+    }
+
+    std::string test_name = "test_" + std::to_string(process_koid);
+    found_target->CreateProcessForTesting(process_koid, test_name);
+    processes_.push_back(found_target->GetProcess());
+  }
+}
 
 template <typename T>
 void AppendElements(std::string& result, const T* a, const T* b, size_t num) {
@@ -504,32 +534,36 @@ class SyscallDisplayDispatcherTest : public SyscallDisplayDispatcher {
   ProcessController* controller_;
 };
 
-ProcessController::ProcessController(InterceptionWorkflowTest* remote_api, zxdb::Session& session,
+ProcessController::ProcessController(std::vector<uint64_t> process_koids,
+                                     InterceptionWorkflowTest* remote_api, zxdb::Session& session,
                                      debug_ipc::PlatformMessageLoop& loop)
-    : remote_api_(remote_api), workflow_(&session, &loop) {}
+    : remote_api_(remote_api), process_koids_(process_koids), workflow_(&session, &loop) {}
 
 void ProcessController::Initialize(zxdb::Session& session,
                                    std::unique_ptr<SyscallDecoderDispatcher> dispatcher) {
   std::vector<std::string> blank;
   workflow_.Initialize(blank, std::move(dispatcher));
 
-  // Create a fake process and thread.
-  process_ = remote_api_->InjectProcess(kProcessKoid);
-  zxdb::Thread* the_thread = remote_api_->InjectThread(kProcessKoid, kThreadKoid);
+  // Create fake processes and threads.
+  InjectProcesses(session);
 
-  // Observe thread.  This is usually done in workflow_::Attach, but
-  // RemoteAPITest has its own ideas about attaching, so that method only
-  // half-works (the half that registers the target with the workflow). We have
-  // to register the observer manually.
-  target_ = session.system().GetTargets()[0];
-  workflow_.AddObserver(target_);
-  workflow_.observer_.DidCreateProcess(target_, process_, false);
-  workflow_.observer_.process_observer().DidCreateThread(process_, the_thread);
+  for (zxdb::Process* process : processes_) {
+    zxdb::Thread* the_thread = remote_api_->InjectThread(process->GetKoid(), kThreadKoid);
 
-  // Attach to process.
-  zxdb::Err err;
+    // Observe thread.  This is usually done in workflow_::Attach, but
+    // RemoteAPITest has its own ideas about attaching, so that method only
+    // half-works (the half that registers the target with the workflow). We
+    // have to register the observer manually.
+    zxdb::Target* target = process->GetTarget();
+    targets_.push_back(target);
+    workflow_.AddObserver(target);
+    workflow_.observer_.DidCreateProcess(target, process, false);
+    workflow_.observer_.process_observer().DidCreateThread(process, the_thread);
+  }
+
+  // Attach to processes.
   debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [this]() {
-    workflow_.Attach(kProcessKoid, [](const zxdb::Err& err) {
+    workflow_.Attach(process_koids_, [](const zxdb::Err& err, uint64_t process_koid) {
       // Because we are already attached, we don't get here.
       FAIL() << "Should not be reached";
     });
@@ -555,14 +589,18 @@ void ProcessController::Initialize(zxdb::Session& session,
 }
 
 ProcessController::~ProcessController() {
-  process_->RemoveObserver(&workflow_.observer_.process_observer());
-  target_->RemoveObserver(&workflow_.observer_);
+  for (zxdb::Process* process : processes_) {
+    process->RemoveObserver(&workflow_.observer_.process_observer());
+  }
+  for (zxdb::Target* target : targets_) {
+    target->RemoveObserver(&workflow_.observer_);
+  }
 }
 
 void ProcessController::Detach() { workflow_.Detach(); }
 
 void InterceptionWorkflowTest::PerformCheckTest(std::unique_ptr<SystemCallTest> syscall) {
-  ProcessController controller(this, session(), loop());
+  ProcessController controller({kFirstPid, kSecondPid}, this, session(), loop());
 
   PerformTest(std::move(syscall), &controller,
               std::make_unique<SyscallDecoderDispatcherTest>(&controller));
@@ -570,14 +608,34 @@ void InterceptionWorkflowTest::PerformCheckTest(std::unique_ptr<SystemCallTest> 
 
 void InterceptionWorkflowTest::PerformDisplayTest(std::unique_ptr<SystemCallTest> syscall,
                                                   const char* expected) {
-  ProcessController controller(this, session(), loop());
+  ProcessController controller({kFirstPid, kSecondPid}, this, session(), loop());
 
   PerformTest(std::move(syscall), &controller,
               std::make_unique<SyscallDisplayDispatcherTest>(nullptr, display_options_, result_,
                                                              &controller));
+  // The outputs from each thread are separated by \n\n.
+  std::string delimiter = "\n\n";
+  // The first output ends after the first \n char in the delimiter.
+  std::string first = result_.str().substr(0, result_.str().find(delimiter) + 1);
+  // The second output starts after the first \n char in the delimiter.
+  std::string second = result_.str().substr(result_.str().find(delimiter) + 1);
 
-  // Check that the syscall generated the data we expect.
-  ASSERT_EQ(result_.str(), expected);
+  // Check that the two syscalls generated the data we expect.
+  ASSERT_EQ(expected, first);
+  ASSERT_NE(expected, second);
+
+  std::string str_expected(expected);
+  // The expected and the second should have the same data from different pids.  Replace
+  // the pid from the expected with the pid from the second, and they should look
+  // the same.
+  size_t i = 0;
+  std::string first_pid = std::to_string(kFirstPid);
+  std::string second_pid = std::to_string(kSecondPid);
+  while ((i = str_expected.find(first_pid, i)) != std::string::npos) {
+    str_expected.replace(i, first_pid.length(), second_pid);
+    i += second_pid.length();
+  }
+  ASSERT_EQ(str_expected, second);
 }
 
 void InterceptionWorkflowTest::PerformTest(std::unique_ptr<SystemCallTest> syscall,
@@ -585,42 +643,44 @@ void InterceptionWorkflowTest::PerformTest(std::unique_ptr<SystemCallTest> sysca
                                            std::unique_ptr<SyscallDecoderDispatcher> dispatcher) {
   data_.set_syscall(std::move(syscall));
   controller->Initialize(session(), std::move(dispatcher));
+  for (uint64_t process_koid : controller->process_koids()) {
+    data_.load_syscall_data();
+    {
+      // Trigger breakpoint.
+      debug_ipc::NotifyException notification;
+      notification.type = debug_ipc::NotifyException::Type::kGeneral;
+      notification.thread.process_koid = process_koid;
+      notification.thread.thread_koid = ProcessController::kThreadKoid;
+      notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
+      notification.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
+      debug_ipc::StackFrame frame(DataForSyscallTest::kSyscallSymbolAddress,
+                                  reinterpret_cast<uint64_t>(data_.sp()));
+      data_.PopulateRegisters(process_koid, &frame.regs);
+      notification.thread.frames.push_back(frame);
+      mock_remote_api().PopulateBreakpointIds(DataForSyscallTest::kSyscallSymbolAddress,
+                                              notification);
+      InjectException(notification);
+    }
 
-  {
-    // Trigger breakpoint.
-    debug_ipc::NotifyException notification;
-    notification.type = debug_ipc::NotifyException::Type::kGeneral;
-    notification.thread.process_koid = ProcessController::kProcessKoid;
-    notification.thread.thread_koid = ProcessController::kThreadKoid;
-    notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-    notification.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
-    debug_ipc::StackFrame frame(DataForSyscallTest::kSyscallSymbolAddress,
-                                reinterpret_cast<uint64_t>(data_.sp()));
-    data_.PopulateRegisters(&frame.regs);
-    notification.thread.frames.push_back(frame);
-    mock_remote_api().PopulateBreakpointIds(DataForSyscallTest::kSyscallSymbolAddress,
-                                            notification);
-    InjectException(notification);
+    debug_ipc::MessageLoop::Current()->Run();
+
+    {
+      // Trigger next breakpoint, when the syscall has completed.
+      debug_ipc::NotifyException notification;
+      notification.type = debug_ipc::NotifyException::Type::kGeneral;
+      notification.thread.process_koid = process_koid;
+      notification.thread.thread_koid = ProcessController::kThreadKoid;
+      notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
+      notification.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
+      debug_ipc::StackFrame frame(DataForSyscallTest::kReturnAddress,
+                                  reinterpret_cast<uint64_t>(data_.sp()));
+      data_.PopulateRegisters(process_koid, &frame.regs);
+      notification.thread.frames.push_back(frame);
+      InjectException(notification);
+    }
+
+    debug_ipc::MessageLoop::Current()->Run();
   }
-
-  debug_ipc::MessageLoop::Current()->Run();
-
-  {
-    // Trigger next breakpoint, when the syscall has completed.
-    debug_ipc::NotifyException notification;
-    notification.type = debug_ipc::NotifyException::Type::kGeneral;
-    notification.thread.process_koid = ProcessController::kProcessKoid;
-    notification.thread.thread_koid = ProcessController::kThreadKoid;
-    notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-    notification.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
-    debug_ipc::StackFrame frame(DataForSyscallTest::kReturnAddress,
-                                reinterpret_cast<uint64_t>(data_.sp()));
-    data_.PopulateRegisters(&frame.regs);
-    notification.thread.frames.push_back(frame);
-    InjectException(notification);
-  }
-
-  debug_ipc::MessageLoop::Current()->Run();
 
   // Making sure shutdown works.
   debug_ipc::MessageLoop::Current()->Run();
@@ -653,7 +713,7 @@ WRITE_TEST(ZxChannelWriteCheck, ZX_OK);
 
 WRITE_DISPLAY_TEST(ZxChannelWrite, ZX_OK,
                    "\n"
-                   "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_write("
+                   "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_write("
                    "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
                    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
                    "  \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=2 "
@@ -662,7 +722,7 @@ WRITE_DISPLAY_TEST(ZxChannelWrite, ZX_OK,
 
 WRITE_DISPLAY_TEST(ZxChannelWritePeerClosed, ZX_ERR_PEER_CLOSED,
                    "\n"
-                   "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_write("
+                   "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_write("
                    "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
                    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
                    "  \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=2 "
@@ -694,7 +754,7 @@ WRITE_DISPLAY_TEST(ZxChannelWritePeerClosed, ZX_ERR_PEER_CLOSED,
 
 READ_DISPLAY_TEST(ZxChannelRead, ZX_OK, true, true,
                   "\n"
-                  "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
+                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
                   "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                   "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
@@ -705,7 +765,7 @@ READ_DISPLAY_TEST(ZxChannelRead, ZX_OK, true, true,
 
 READ_DISPLAY_TEST(ZxChannelReadShouldWait, ZX_ERR_SHOULD_WAIT, true, true,
                   "\n"
-                  "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
+                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
                   "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                   "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
@@ -714,7 +774,7 @@ READ_DISPLAY_TEST(ZxChannelReadShouldWait, ZX_ERR_SHOULD_WAIT, true, true,
 
 READ_DISPLAY_TEST(ZxChannelReadTooSmall, ZX_ERR_BUFFER_TOO_SMALL, true, true,
                   "\n"
-                  "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
+                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
                   "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                   "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
@@ -725,7 +785,7 @@ READ_DISPLAY_TEST(ZxChannelReadTooSmall, ZX_ERR_BUFFER_TOO_SMALL, true, true,
 
 READ_DISPLAY_TEST(ZxChannelReadNoBytes, ZX_OK, false, true,
                   "\n"
-                  "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
+                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
                   "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                   "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
@@ -735,7 +795,7 @@ READ_DISPLAY_TEST(ZxChannelReadNoBytes, ZX_OK, false, true,
 
 READ_DISPLAY_TEST(ZxChannelReadNoHandles, ZX_OK, true, false,
                   "\n"
-                  "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
+                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
                   "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                   "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
@@ -777,7 +837,7 @@ READ_DISPLAY_TEST(ZxChannelReadNoHandles, ZX_OK, true, false,
 
 CALL_TEST(ZxChannelCall, ZX_OK, true, true,
           "\n"
-          "test \x1B[31m1234\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_call("
+          "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_call("
           "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
           "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
           "deadline:\x1B[32mtime\x1B[0m: \x1B[34mZX_TIME_INFINITE\x1B[0m, "

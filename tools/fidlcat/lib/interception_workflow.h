@@ -98,6 +98,7 @@ class InterceptingTargetObserver : public zxdb::TargetObserver {
 };
 
 using SimpleErrorFunction = std::function<void(const zxdb::Err&)>;
+using KoidFunction = std::function<void(const zxdb::Err&, uint64_t)>;
 
 // Controls the interactions with the debug agent.
 //
@@ -129,9 +130,9 @@ class InterceptionWorkflow {
   // the loop on completion.
   void Connect(const std::string& host, uint16_t port, SimpleErrorFunction and_then);
 
-  // Attach the workflow to the given koid.  Must be connected.  |and_then| is
+  // Attach the workflow to the given koids.  Must be connected.  |and_then| is
   // posted to the loop on completion.
-  void Attach(uint64_t process_koid, SimpleErrorFunction and_then);
+  void Attach(const std::vector<uint64_t>& process_koids, KoidFunction and_then);
 
   // Detach from one target.  session() keeps track of details about the Target
   // object; this just reduces the number of targets to which we are attached by
@@ -140,11 +141,11 @@ class InterceptionWorkflow {
 
   // Run the given |command| and attach to it.  Must be connected.  |and_then|
   // is posted to the loop on completion.
-  void Launch(const std::vector<std::string>& command, SimpleErrorFunction and_then);
+  void Launch(const std::vector<std::string>& command, KoidFunction and_then);
 
   // Run when a process matching the given |filter| regexp is started.  Must be
   // connected.  |and_then| is posted to the loop on completion.
-  void Filter(const std::vector<std::string>& filter, SimpleErrorFunction and_then);
+  void Filter(const std::vector<std::string>& filter, KoidFunction and_then);
 
   // Sets breakpoints for the various methods we intercept (zx_channel_*, etc)
   // for the given |target|

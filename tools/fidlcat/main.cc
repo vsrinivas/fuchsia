@@ -60,15 +60,17 @@ void CatchSigterm() {
 // Add the startup actions to the loop: connect, attach to pid, set breakpoints.
 void EnqueueStartup(InterceptionWorkflow& workflow, const CommandLineOptions& options,
                     std::vector<std::string>& params) {
-  uint64_t process_koid = ULLONG_MAX;
-  if (options.remote_pid) {
-    const std::string& pid_str = *options.remote_pid;
-    process_koid = strtoull(pid_str.c_str(), nullptr, 10);
-    // There is no process 0, and if there were, we probably wouldn't be able to
-    // talk with it.
-    if (process_koid == 0) {
-      fprintf(stderr, "Invalid pid %s\n", pid_str.c_str());
-      exit(1);
+  std::vector<uint64_t> process_koids;
+  if (!options.remote_pid.empty()) {
+    for (const std::string& pid_str : options.remote_pid) {
+      uint64_t process_koid = strtoull(pid_str.c_str(), nullptr, 10);
+      // There is no process 0, and if there were, we probably wouldn't be able to
+      // talk with it.
+      if (process_koid == 0) {
+        fprintf(stderr, "Invalid pid %s\n", pid_str.c_str());
+        exit(1);
+      }
+      process_koids.push_back(process_koid);
     }
   }
 
@@ -79,19 +81,19 @@ void EnqueueStartup(InterceptionWorkflow& workflow, const CommandLineOptions& op
     FXL_LOG(FATAL) << "Could not parse host/port pair: " << parse_err.msg();
   }
 
-  auto set_breakpoints = [&workflow, process_koid](const zxdb::Err& err) {
+  auto set_breakpoints = [&workflow](const zxdb::Err& err, uint64_t process_koid) {
     workflow.SetBreakpoints(process_koid);
   };
 
-  auto attach = [&workflow, process_koid, remote_name = options.remote_name, params,
+  auto attach = [&workflow, process_koids, remote_name = options.remote_name, params,
                  set_breakpoints = std::move(set_breakpoints)](const zxdb::Err& err) {
     if (!err.ok()) {
       FXL_LOG(FATAL) << "Unable to connect: " << err.msg();
       return;
     }
     FXL_LOG(INFO) << "Connected!";
-    if (process_koid != ULLONG_MAX) {
-      workflow.Attach(process_koid, set_breakpoints);
+    if (!process_koids.empty()) {
+      workflow.Attach(process_koids, set_breakpoints);
     } else if (!remote_name.empty()) {
       workflow.Filter(remote_name, set_breakpoints);
     } else {

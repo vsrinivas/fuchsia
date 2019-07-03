@@ -94,6 +94,22 @@ void InterceptingTargetObserver::DidCreateProcess(zxdb::Target* target, zxdb::Pr
 
 void InterceptingTargetObserver::WillDestroyProcess(zxdb::Target* target, zxdb::Process* process,
                                                     DestroyReason reason, int exit_code) {
+  std::string action;
+  switch (reason) {
+    case zxdb::TargetObserver::DestroyReason::kExit:
+      action = "exited";
+      break;
+    case zxdb::TargetObserver::DestroyReason::kDetach:
+      action = "detached";
+      break;
+    case zxdb::TargetObserver::DestroyReason::kKill:
+      action = "killed";
+      break;
+    default:
+      action = "detached for unknown reason";
+      break;
+  }
+  FXL_LOG(INFO) << "Process " << process->GetKoid() << " " << action;
   workflow_->Detach();
 }
 
@@ -190,24 +206,31 @@ void InterceptionWorkflow::AddObserver(zxdb::Target* target) {
   target_count_++;
 }
 
-void InterceptionWorkflow::Attach(uint64_t process_koid, SimpleErrorFunction and_then) {
-  zxdb::Target* target = GetTarget(process_koid);
-  if (target->GetProcess() && target->GetProcess()->GetKoid() == process_koid) {
-    return;
-  }
-
-  // TODO: Remove observer when appropriate.
-  AddObserver(target);
-  target->Attach(process_koid, [process_koid, and_then = std::move(and_then)](
-                                   fxl::WeakPtr<zxdb::Target>, const zxdb::Err& err) {
-    if (!err.ok()) {
-      FXL_LOG(INFO) << "Unable to attach to koid " << process_koid << ": " << err.msg();
-      return;
-    } else {
-      FXL_LOG(INFO) << "Attached to process with koid " << process_koid;
+void InterceptionWorkflow::Attach(const std::vector<uint64_t>& process_koids,
+                                  KoidFunction and_then) {
+  for (uint64_t process_koid : process_koids) {
+    // Get a target for this process.
+    zxdb::Target* target = GetTarget(process_koid);
+    // If we are already attached, then we are done.
+    if (target->GetProcess()) {
+      FXL_CHECK(target->GetProcess()->GetKoid() == process_koid)
+          << "Internal error: target attached to wrong process";
+      continue;
     }
-    and_then(err);
-  });
+
+    // The debugger is not yet attached to the process.  Attach to it.
+    AddObserver(target);
+    target->Attach(process_koid, [process_koid, and_then = std::move(and_then)](
+                                     fxl::WeakPtr<zxdb::Target>, const zxdb::Err& err) {
+      if (!err.ok()) {
+        FXL_LOG(INFO) << "Unable to attach to koid " << process_koid << ": " << err.msg();
+        return;
+      } else {
+        FXL_LOG(INFO) << "Attached to process with koid " << process_koid;
+      }
+      and_then(err, process_koid);
+    });
+  }
 }
 
 void InterceptionWorkflow::Detach() {
@@ -222,30 +245,28 @@ void InterceptionWorkflow::Detach() {
 
 class SetupTargetObserver : public zxdb::TargetObserver {
  public:
-  explicit SetupTargetObserver(SimpleErrorFunction&& fn) : fn_(std::move(fn)) {}
+  explicit SetupTargetObserver(KoidFunction&& fn) : fn_(std::move(fn)) {}
   virtual ~SetupTargetObserver() {}
 
   virtual void DidCreateProcess(zxdb::Target* target, zxdb::Process* process,
                                 bool autoattached_to_new_process) override {
-    fn_(zxdb::Err());
+    fn_(zxdb::Err(), process->GetKoid());
     target->RemoveObserver(this);
     delete this;
   }
 
  private:
-  SimpleErrorFunction fn_;
+  KoidFunction fn_;
 };
 
-void InterceptionWorkflow::Filter(const std::vector<std::string>& filter,
-                                  SimpleErrorFunction and_then) {
+void InterceptionWorkflow::Filter(const std::vector<std::string>& filter, KoidFunction and_then) {
   zxdb::JobContext* default_job = session_->system().GetJobContexts()[0];
   default_job->SendAndUpdateFilters(filter);
   GetTarget()->AddObserver(new SetupTargetObserver(std::move(and_then)));
   AddObserver(GetTarget());
 }
 
-void InterceptionWorkflow::Launch(const std::vector<std::string>& command,
-                                  SimpleErrorFunction and_then) {
+void InterceptionWorkflow::Launch(const std::vector<std::string>& command, KoidFunction and_then) {
   zxdb::Target* target = GetTarget();
   AddObserver(target);
 
@@ -282,7 +303,7 @@ void InterceptionWorkflow::Launch(const std::vector<std::string>& command,
                           << reply.status;
           }
           target->session()->ExpectComponent(reply.component_id);
-          and_then(err);
+          and_then(err, target->GetProcess()->GetKoid());
         });
     return;
   }
@@ -293,7 +314,7 @@ void InterceptionWorkflow::Launch(const std::vector<std::string>& command,
     if (!on_err(err)) {
       return;
     }
-    and_then(err);
+    and_then(err, target->GetProcess()->GetKoid());
   });
 }
 
