@@ -52,7 +52,8 @@ int usage(void) {
     fprintf(stderr, " decompress : Decompresses a compressed sparse file. --sparse input path is"
                     " required.\n");
     fprintf(stderr, "Flags (neither or both of offset/length must be specified):\n");
-    fprintf(stderr, " --slice [bytes] - specify slice size (default: %zu)\n", DEFAULT_SLICE_SIZE);
+    fprintf(stderr, " --slice [bytes] - specify slice size - only valid on container creation.\n"
+                    "                   (default: %zu)\n", DEFAULT_SLICE_SIZE);
     fprintf(stderr, " --offset [bytes] - offset at which container begins (fvm only)\n");
     fprintf(stderr, " --length [bytes] - length of container within file (fvm only)\n");
     fprintf(stderr, " --compress - specify that file should be compressed (sparse only)\n");
@@ -351,7 +352,7 @@ int main(int argc, char** argv) {
         }
 
         fbl::unique_ptr<SparseContainer> sparseContainer;
-        if (SparseContainer::Create(path, slice_size, flags, &sparseContainer) != ZX_OK) {
+        if (SparseContainer::CreateNew(path, slice_size, flags, &sparseContainer) != ZX_OK) {
             return -1;
         }
 
@@ -385,45 +386,68 @@ int main(int argc, char** argv) {
             return -1;
         }
 
-        SparseContainer compressedContainer(input_path, slice_size, flags);
-        if (compressedContainer.Decompress(path) != ZX_OK) {
+        fbl::unique_ptr<SparseContainer> compressedContainer;
+        if (SparseContainer::CreateExisting(input_path, &compressedContainer) != ZX_OK) {
             return -1;
         }
 
-        SparseContainer sparseContainer(path, slice_size, flags);
-        if (sparseContainer.Verify() != ZX_OK) {
+        if (compressedContainer->Decompress(path) != ZX_OK) {
+            return -1;
+        }
+
+        fbl::unique_ptr<SparseContainer> sparseContainer;
+        if (SparseContainer::CreateExisting(path, &sparseContainer) != ZX_OK) {
+            return -1;
+        }
+
+        if (sparseContainer->Verify() != ZX_OK) {
             return -1;
         }
     } else if (!strcmp(command, "size")) {
-        SparseContainer sparseContainer(path, slice_size, flags);
+        fbl::unique_ptr<SparseContainer> sparseContainer;
+        if (SparseContainer::CreateExisting(path, &sparseContainer) != ZX_OK) {
+            return -1;
+        }
 
         if (disk_size == 0) {
-            printf("%" PRIu64 "\n", sparseContainer.CalculateDiskSize());
-        } else if (sparseContainer.CheckDiskSize(disk_size) != ZX_OK) {
+            printf("%" PRIu64 "\n", sparseContainer->CalculateDiskSize());
+        } else if (sparseContainer->CheckDiskSize(disk_size) != ZX_OK) {
             fprintf(stderr, "Sparse container will not fit in target disk size\n");
             return -1;
         }
     } else if (!strcmp(command, "used-data-size")) {
-        SparseContainer sparseContainer(path, slice_size, flags);
+        fbl::unique_ptr<SparseContainer> sparseContainer;
+        if (SparseContainer::CreateExisting(path, &sparseContainer) != ZX_OK) {
+            return -1;
+        }
+
         uint64_t size;
 
-        if (sparseContainer.UsedDataSize(&size) != ZX_OK) {
+        if (sparseContainer->UsedDataSize(&size) != ZX_OK) {
             return -1;
         }
         printf("%" PRIu64 "\n", size);
     } else if (!strcmp(command, "used-inodes")) {
-        SparseContainer sparseContainer(path, slice_size, flags);
+        fbl::unique_ptr<SparseContainer> sparseContainer;
+        if (SparseContainer::CreateExisting(path, &sparseContainer) != ZX_OK) {
+            return -1;
+        }
+
         uint64_t used_inodes;
 
-        if (sparseContainer.UsedInodes(&used_inodes) != ZX_OK) {
+        if (sparseContainer->UsedInodes(&used_inodes) != ZX_OK) {
             return -1;
         }
         printf("%" PRIu64 "\n", used_inodes);
     } else if (!strcmp(command, "used-size")) {
-        SparseContainer sparseContainer(path, slice_size, flags);
+        fbl::unique_ptr<SparseContainer> sparseContainer;
+        if (SparseContainer::CreateExisting(path, &sparseContainer) != ZX_OK) {
+            return -1;
+        }
+
         uint64_t size;
 
-        if (sparseContainer.UsedSize(&size) != ZX_OK) {
+        if (sparseContainer->UsedSize(&size) != ZX_OK) {
             return -1;
         }
         printf("%" PRIu64 "\n", size);
@@ -437,7 +461,11 @@ int main(int argc, char** argv) {
             return -1;
         }
 
-        SparseContainer sparseData(input_path, slice_size, flags);
+        fbl::unique_ptr<SparseContainer> sparseData;
+        if (SparseContainer::CreateExisting(input_path, &sparseData) != ZX_OK) {
+            return -1;
+        }
+
         fbl::unique_ptr<fvm::host::FileWrapper> wrapper;
 
         if (disk_type == DiskType::File) {
@@ -470,7 +498,7 @@ int main(int argc, char** argv) {
             return -1;
         }
 
-        if (sparseData.Pave(std::move(wrapper), offset, length) != ZX_OK) {
+        if (sparseData->Pave(std::move(wrapper), offset, length) != ZX_OK) {
             return -1;
         }
     } else {

@@ -65,12 +65,26 @@ zx_status_t CompressionContext::Finish() {
     return ZX_OK;
 }
 
-zx_status_t SparseContainer::Create(const char* path, size_t slice_size, uint32_t flags,
-                                    fbl::unique_ptr<SparseContainer>* out) {
+zx_status_t SparseContainer::CreateNew(const char* path, size_t slice_size, uint32_t flags,
+                                       fbl::unique_ptr<SparseContainer>* out) {
     fbl::unique_ptr<SparseContainer> sparseContainer(new SparseContainer(path, slice_size,
                                                                          flags));
+
     zx_status_t status;
-    if ((status = sparseContainer->Init()) != ZX_OK) {
+    if ((status = sparseContainer->InitNew()) != ZX_OK) {
+        return status;
+    }
+
+    *out = std::move(sparseContainer);
+    return ZX_OK;
+}
+
+zx_status_t SparseContainer::CreateExisting(const char* path,
+                                            fbl::unique_ptr<SparseContainer>* out) {
+    fbl::unique_ptr<SparseContainer> sparseContainer(new SparseContainer(path, 0, 0));
+
+    zx_status_t status;
+    if ((status = sparseContainer->InitExisting()) != ZX_OK) {
         return status;
     }
 
@@ -79,63 +93,21 @@ zx_status_t SparseContainer::Create(const char* path, size_t slice_size, uint32_
 }
 
 SparseContainer::SparseContainer(const char* path, uint64_t slice_size, uint32_t flags)
-    : Container(path, slice_size, flags), valid_(false), disk_size_(0),
-      extent_size_(0) {
-    fd_.reset(open(path, O_CREAT | O_RDWR, 0666));
-
-    if (!fd_) {
-        fprintf(stderr, "Failed to open sparse data path\n");
-        return;
-    }
-
-    struct stat s;
-    if (fstat(fd_.get(), &s) < 0) {
-        fprintf(stderr, "Failed to stat %s\n", path);
-        return;
-    }
-
-    if (s.st_size > 0) {
-        disk_size_ = s.st_size;
-
-        fbl::unique_fd dup_fd(dup(fd_.get()));
-        if (fvm::SparseReader::CreateSilent(std::move(dup_fd), &reader_) != ZX_OK) {
-            fprintf(stderr, "SparseContainer: Failed to read metadata from sparse file\n");
-            return;
-        }
-
-        memcpy(&image_, reader_->Image(), sizeof(fvm::sparse_image_t));
-        slice_size_ = image_.slice_size;
-        extent_size_ = disk_size_ - image_.header_length;
-
-        uintptr_t partition_ptr = reinterpret_cast<uintptr_t>(reader_->Partitions());
-
-        for (unsigned i = 0; i < image_.partition_count; i++) {
-            SparsePartitionInfo partition;
-            memcpy(&partition.descriptor, reinterpret_cast<void*>(partition_ptr),
-                   sizeof(fvm::partition_descriptor_t));
-            partitions_.push_back(std::move(partition));
-            partition_ptr += sizeof(fvm::partition_descriptor_t);
-
-            for (size_t j = 0; j < partitions_[i].descriptor.extent_count; j++) {
-                fvm::extent_descriptor_t extent;
-                memcpy(&extent, reinterpret_cast<void*>(partition_ptr),
-                       sizeof(fvm::extent_descriptor_t));
-                partitions_[i].extents.push_back(extent);
-                partition_ptr += sizeof(fvm::extent_descriptor_t);
-            }
-        }
-
-        valid_ = true;
-        xprintf("Successfully read from existing sparse data container.\n");
-    }
-}
+    : Container(path, slice_size, flags), valid_(false), disk_size_(0), extent_size_(0) {}
 
 SparseContainer::~SparseContainer() = default;
 
-zx_status_t SparseContainer::Init() {
+zx_status_t SparseContainer::InitNew() {
     if (slice_size_ == 0) {
         fprintf(stderr, "Cannot initialize sparse container with no slice size\n");
         return ZX_ERR_BAD_STATE;
+    }
+
+    fd_.reset(open(path_.data(), O_CREAT | O_RDWR, 0666));
+
+    if (!fd_) {
+        fprintf(stderr, "Failed to open sparse data path\n");
+        return ZX_ERR_IO;
     }
 
     image_.magic = fvm::kSparseFormatMagic;
@@ -149,6 +121,61 @@ zx_status_t SparseContainer::Init() {
     valid_ = true;
     extent_size_ = 0;
     xprintf("Initialized new sparse data container.\n");
+    return ZX_OK;
+}
+
+zx_status_t SparseContainer::InitExisting() {
+    fd_.reset(open(path_.data(), O_RDWR, 0666));
+
+    if (!fd_) {
+        fprintf(stderr, "Failed to open sparse data path\n");
+        return ZX_ERR_IO;
+    }
+
+    struct stat s;
+    if (fstat(fd_.get(), &s) < 0) {
+        fprintf(stderr, "Failed to stat %s\n", path_.data());
+        return ZX_ERR_IO;
+    }
+
+    if (s.st_size == 0) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    disk_size_ = s.st_size;
+
+    fbl::unique_fd dup_fd(dup(fd_.get()));
+    zx_status_t status = fvm::SparseReader::CreateSilent(std::move(dup_fd), &reader_);
+    if (status != ZX_OK) {
+        fprintf(stderr, "SparseContainer: Failed to read metadata from sparse file\n");
+        return status;
+    }
+
+    memcpy(&image_, reader_->Image(), sizeof(fvm::sparse_image_t));
+    flags_ = image_.flags;
+    slice_size_ = image_.slice_size;
+    extent_size_ = disk_size_ - image_.header_length;
+
+    uintptr_t partition_ptr = reinterpret_cast<uintptr_t>(reader_->Partitions());
+
+    for (unsigned i = 0; i < image_.partition_count; i++) {
+        SparsePartitionInfo partition;
+        memcpy(&partition.descriptor, reinterpret_cast<void*>(partition_ptr),
+                sizeof(fvm::partition_descriptor_t));
+        partitions_.push_back(std::move(partition));
+        partition_ptr += sizeof(fvm::partition_descriptor_t);
+
+        for (size_t j = 0; j < partitions_[i].descriptor.extent_count; j++) {
+            fvm::extent_descriptor_t extent;
+            memcpy(&extent, reinterpret_cast<void*>(partition_ptr),
+                    sizeof(fvm::extent_descriptor_t));
+            partitions_[i].extents.push_back(extent);
+            partition_ptr += sizeof(fvm::extent_descriptor_t);
+        }
+    }
+
+    valid_ = true;
+    xprintf("Successfully read from existing sparse data container.\n");
     return ZX_OK;
 }
 

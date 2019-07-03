@@ -199,7 +199,7 @@ bool CreateSparse(uint32_t flags, size_t slice_size, bool should_pass, bool enab
     const char* path = ((flags & fvm::kSparseFlagLz4) != 0) ? sparse_lz4_path : sparse_path;
     unittest_printf("Creating sparse container: %s\n", path);
     fbl::unique_ptr<SparseContainer> sparseContainer;
-    ASSERT_EQ(SparseContainer::Create(path, slice_size, flags, &sparseContainer), ZX_OK,
+    ASSERT_EQ(SparseContainer::CreateNew(path, slice_size, flags, &sparseContainer), ZX_OK,
               "Failed to initialize sparse container");
     ASSERT_TRUE(AddPartitions(sparseContainer.get(), enable_data, should_pass));
     if (should_pass) {
@@ -252,17 +252,20 @@ bool ReportSparse(uint32_t flags) {
     BEGIN_HELPER;
     if ((flags & fvm::kSparseFlagLz4) != 0) {
         unittest_printf("Decompressing sparse file\n");
-        SparseContainer compressedContainer(sparse_lz4_path, DEFAULT_SLICE_SIZE, flags);
-        ASSERT_EQ(compressedContainer.Decompress(sparse_path), ZX_OK);
+        fbl::unique_ptr<SparseContainer> compressedContainer;
+        ASSERT_EQ(SparseContainer::CreateExisting(sparse_lz4_path, &compressedContainer), ZX_OK);
+        ASSERT_EQ(compressedContainer->Decompress(sparse_path), ZX_OK);
     }
 
     ASSERT_TRUE(ReportContainer(sparse_path, 0));
 
     // Check that the calculated disk size passes inspection, but any size lower doesn't.
-    SparseContainer container(sparse_path, 0, 0);
-    size_t expected_size = container.CalculateDiskSize();
-    ASSERT_EQ(container.CheckDiskSize(expected_size), ZX_OK);
-    ASSERT_NE(container.CheckDiskSize(expected_size - 1), ZX_OK);
+    fbl::unique_ptr<SparseContainer> container;
+    ASSERT_EQ(SparseContainer::CreateExisting(sparse_path, &container), ZX_OK);
+
+    size_t expected_size = container->CalculateDiskSize();
+    ASSERT_EQ(container->CheckDiskSize(expected_size), ZX_OK);
+    ASSERT_NE(container->CheckDiskSize(expected_size - 1), ZX_OK);
     END_HELPER;
 }
 
@@ -664,11 +667,13 @@ bool TestDiskSizeCalculation() {
     ASSERT_TRUE(GetSparseInfo(ContainerType, &flags, &path));
     ASSERT_TRUE(CreateSparseEnsure(flags, SliceSize, false /* enable_data */));
     ASSERT_TRUE(ReportSparse(flags));
-    SparseContainer sparseContainer(path, 0, 0);
 
-    size_t expected_size = sparseContainer.CalculateDiskSize();
-    ASSERT_EQ(sparseContainer.CheckDiskSize(expected_size), ZX_OK);
-    ASSERT_NE(sparseContainer.CheckDiskSize(expected_size - 1), ZX_OK);
+    fbl::unique_ptr<SparseContainer> sparseContainer;
+    ASSERT_EQ(SparseContainer::CreateExisting(path, &sparseContainer), ZX_OK);
+
+    size_t expected_size = sparseContainer->CalculateDiskSize();
+    ASSERT_EQ(sparseContainer->CheckDiskSize(expected_size), ZX_OK);
+    ASSERT_NE(sparseContainer->CheckDiskSize(expected_size - 1), ZX_OK);
 
     // Create an FVM using the same partitions and verify its size matches expected.
     ASSERT_TRUE(CreateFvmEnsure(false, 0, SliceSize, false /* enable_data */));
@@ -679,7 +684,7 @@ bool TestDiskSizeCalculation() {
     fbl::unique_ptr<fvm::host::UniqueFdWrapper> wrapper;
     ASSERT_EQ(fvm::host::UniqueFdWrapper::Open(fvm_path, O_RDWR | O_CREAT | O_EXCL, 0644, &wrapper),
               ZX_OK);
-    ASSERT_EQ(sparseContainer.Pave(std::move(wrapper), 0, 0), ZX_OK);
+    ASSERT_EQ(sparseContainer->Pave(std::move(wrapper), 0, 0), ZX_OK);
     ASSERT_TRUE(VerifyFvmSize(expected_size));
     ASSERT_TRUE(DestroyFvm());
 
@@ -774,17 +779,18 @@ bool TestPave() {
     size_t pave_offset = 0;
     size_t pave_size = 0;
 
-    SparseContainer sparseContainer(src_path, 0, 0);
-    size_t expected_size = sparseContainer.CalculateDiskSize();
+    fbl::unique_ptr<SparseContainer> sparseContainer;
+    ASSERT_EQ(SparseContainer::CreateExisting(src_path, &sparseContainer), ZX_OK);
+    size_t expected_size = sparseContainer->CalculateDiskSize();
     ASSERT_TRUE(CreatePaveFile(CreateType, SizeType, expected_size, &pave_offset, &pave_size));
 
     fbl::unique_ptr<fvm::host::UniqueFdWrapper> wrapper;
     ASSERT_EQ(fvm::host::UniqueFdWrapper::Open(fvm_path, O_RDWR | O_CREAT, 0644, &wrapper), ZX_OK);
 
     if (SizeType == PaveSizeType::kSmall) {
-        ASSERT_NE(sparseContainer.Pave(std::move(wrapper), pave_offset, pave_size), ZX_OK);
+        ASSERT_NE(sparseContainer->Pave(std::move(wrapper), pave_offset, pave_size), ZX_OK);
     } else {
-        ASSERT_EQ(sparseContainer.Pave(std::move(wrapper), pave_offset, pave_size), ZX_OK);
+        ASSERT_EQ(sparseContainer->Pave(std::move(wrapper), pave_offset, pave_size), ZX_OK);
         ASSERT_TRUE(ReportFvm(pave_offset));
     }
 
@@ -800,11 +806,12 @@ bool TestPave() {
 bool TestPaveZxcryptFail() {
     BEGIN_TEST;
     ASSERT_TRUE(CreateSparseEnsure(0, DEFAULT_SLICE_SIZE));
-    SparseContainer sparseContainer(sparse_path, 0, 0);
+    fbl::unique_ptr<SparseContainer> sparseContainer;
+    ASSERT_EQ(SparseContainer::CreateExisting(sparse_path, &sparseContainer), ZX_OK);
 
     fbl::unique_ptr<fvm::host::UniqueFdWrapper> wrapper;
     ASSERT_EQ(fvm::host::UniqueFdWrapper::Open(fvm_path, O_RDWR | O_CREAT, 0644, &wrapper), ZX_OK);
-    ASSERT_NE(sparseContainer.Pave(std::move(wrapper), 0, 0), ZX_OK);
+    ASSERT_NE(sparseContainer->Pave(std::move(wrapper), 0, 0), ZX_OK);
     ASSERT_TRUE(DestroySparse(0));
     ASSERT_EQ(unlink(fvm_path), 0);
     END_TEST;
@@ -834,6 +841,32 @@ bool TestExtendChangesMetadataSize() {
     ASSERT_TRUE(ExtendFvm(extended_container_size));
     ASSERT_TRUE(ReportFvm());
     ASSERT_TRUE(DestroyFvm());
+    END_TEST;
+}
+
+// Attempts to create a SparseContainer from an existing sparse image when one does not exist.
+bool CreateExistingSparseFails() {
+    BEGIN_TEST;
+    fbl::unique_ptr<SparseContainer> sparseContainer;
+    ASSERT_NE(SparseContainer::CreateExisting(sparse_path, &sparseContainer), ZX_OK);
+    END_TEST;
+}
+
+// Attempts to re-create a sparse image at the same path with a different slice size, verifying
+// that the slice size is updated.
+bool RecreateSparseWithDifferentSliceSize() {
+    BEGIN_TEST;
+    fbl::unique_ptr<SparseContainer> sparseContainer;
+
+    ASSERT_TRUE(CreateSparse(0, 8192, true));
+    ASSERT_EQ(SparseContainer::CreateExisting(sparse_path, &sparseContainer), ZX_OK);
+    ASSERT_EQ(sparseContainer->SliceSize(), 8192);
+
+    ASSERT_TRUE(CreateSparse(0, DEFAULT_SLICE_SIZE, true));
+    ASSERT_EQ(SparseContainer::CreateExisting(sparse_path, &sparseContainer), ZX_OK);
+    ASSERT_EQ(sparseContainer->SliceSize(), DEFAULT_SLICE_SIZE);
+
+    ASSERT_TRUE(DestroySparse(0));
     END_TEST;
 }
 
@@ -954,6 +987,8 @@ RUN_ALL_PAVE(8192)
 RUN_ALL_PAVE(DEFAULT_SLICE_SIZE)
 RUN_TEST_MEDIUM(TestPaveZxcryptFail)
 RUN_TEST_MEDIUM(TestExtendChangesMetadataSize)
+RUN_TEST_MEDIUM(CreateExistingSparseFails)
+RUN_TEST_MEDIUM(RecreateSparseWithDifferentSliceSize);
 
 // Too small total limit for inodes. Expect failure
 RUN_RESERVATION_TEST_FOR_ALL_TYPES(8192, false, 1, 0, 10)

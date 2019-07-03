@@ -38,11 +38,6 @@ public:
 
     virtual ~Container();
 
-    // Resets the Container state so we are ready to add a new set of partitions
-    // Init must be called separately from the constructor, as it will overwrite data pertinent to
-    // an existing Container.
-    virtual zx_status_t Init() = 0;
-
     // Reports various information about the Container, e.g. number of partitions, and runs fsck on
     // all supported partitions (blobfs, minfs)
     virtual zx_status_t Verify() const = 0;
@@ -87,9 +82,14 @@ public:
     // and the length should be the size of the file.
     static zx_status_t Create(const char* path, size_t slice_size, off_t offset, off_t length,
                               fbl::unique_ptr<FvmContainer>* out);
+
     FvmContainer(const char* path, size_t slice_size, off_t offset, off_t length);
     ~FvmContainer();
-    zx_status_t Init() final;
+
+    // Resets the FvmContainer state so we are ready to add a new set of partitions
+    // Init must be called separately from the constructor, as it will overwrite data pertinent to
+    // an existing FvmContainer.
+    zx_status_t Init();
     zx_status_t Verify() const final;
     zx_status_t Commit() final;
 
@@ -165,11 +165,18 @@ typedef zx_status_t(UsedSize_f)(const fbl::unique_fd& fd, off_t start, off_t end
 
 class SparseContainer final : public Container {
 public:
-    static zx_status_t Create(const char* path, size_t slice_size, uint32_t flags,
-                              fbl::unique_ptr<SparseContainer>* out);
-    SparseContainer(const char* path, uint64_t slice_size, uint32_t flags);
+    // Creates a new SparseContainer at the given |path|, regardless of whether one already exists.
+    // Uses the provided |slice_size| and |flags| to create the container and returns the result in
+    // |out|.
+    static zx_status_t CreateNew(const char* path, size_t slice_size, uint32_t flags,
+                                 fbl::unique_ptr<SparseContainer>* out);
+
+    // Creates a SparseContainer from the image located at |path|. Fails if a valid image does not
+    // already exist.
+    static zx_status_t CreateExisting(const char* path, fbl::unique_ptr<SparseContainer>* out);
+
     ~SparseContainer();
-    zx_status_t Init() final;
+
     zx_status_t Verify() const final;
 
     // On success, returns ZX_OK and copies the number of bytes used by data
@@ -213,6 +220,14 @@ private:
     fbl::Vector<SparsePartitionInfo> partitions_;
     CompressionContext compression_;
     fbl::unique_ptr<fvm::SparseReader> reader_;
+
+    SparseContainer(const char* path, uint64_t slice_size, uint32_t flags);
+
+    // Resets the SparseContainer state so we are ready to add a new set of partitions.
+    zx_status_t InitNew();
+
+    // Reads sparse data from disk so we are able to inspect the existing container.
+    zx_status_t InitExisting();
 
     zx_status_t AllocatePartition(fbl::unique_ptr<Format> format, FvmReservation* reserve);
     zx_status_t AllocateExtent(uint32_t part_index, uint64_t slice_start, uint64_t slice_count,

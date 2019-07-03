@@ -52,8 +52,12 @@ zx_status_t Container::Create(const char* path, off_t offset, off_t length,
         }
 
         // Found sparse container
-        fbl::unique_ptr<Container> sparseContainer(new SparseContainer(path, image->slice_size,
-                                                                       flags));
+        fbl::unique_ptr<SparseContainer> sparseContainer;
+        zx_status_t status = SparseContainer::CreateExisting(path, &sparseContainer);
+        if (status != ZX_OK) {
+            return status;
+        }
+
         *container = std::move(sparseContainer);
         return ZX_OK;
     }
