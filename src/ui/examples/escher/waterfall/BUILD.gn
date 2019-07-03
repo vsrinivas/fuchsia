@@ -28,8 +28,6 @@ executable("waterfall") {
 
 source_set("scenes") {
   sources = [
-    "scenes/demo_scene.cc",
-    "scenes/demo_scene.h",
     "scenes/paper_demo_scene1.cc",
     "scenes/paper_demo_scene1.h",
     "scenes/scene.cc",

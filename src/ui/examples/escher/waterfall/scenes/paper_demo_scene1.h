@@ -17,14 +17,10 @@ class PaperDemoScene1 : public Scene {
   explicit PaperDemoScene1(Demo* demo);
   ~PaperDemoScene1();
 
-  // Illegal, use the PaperScene version instead.
-  void Init(escher::Stage* stage) override;
-
-  // Illegal, use the PaperScene version instead.
-  escher::Model* Update(const escher::Stopwatch& stopwatch, uint64_t frame_count,
-                        escher::Stage* stage, escher::PaperRenderer* renderer) override;
-
+  // |Scene|
   void Init(escher::PaperScene* scene) override;
+
+  // |Scene|
   void Update(const escher::Stopwatch& stopwatch, uint64_t frame_count, escher::PaperScene* scene,
               escher::PaperRenderer* renderer) override;
 

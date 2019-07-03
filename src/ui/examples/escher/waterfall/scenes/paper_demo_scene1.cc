@@ -33,16 +33,6 @@ using escher::vec4;
 
 PaperDemoScene1::PaperDemoScene1(Demo* demo) : Scene(demo) {}
 
-void PaperDemoScene1::Init(escher::Stage* stage) {
-  FXL_DCHECK(false) << "Use PaperScene* version instead.";
-}
-
-escher::Model* PaperDemoScene1::Update(const escher::Stopwatch& stopwatch, uint64_t frame_count,
-                                       escher::Stage* stage, escher::PaperRenderer* renderer) {
-  FXL_DCHECK(false) << "Use PaperScene* version instead.";
-  return nullptr;
-}
-
 void PaperDemoScene1::Init(escher::PaperScene* scene) {
   red_ = fxl::MakeRefCounted<escher::Material>();
   bg_ = fxl::MakeRefCounted<escher::Material>();
