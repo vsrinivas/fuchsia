@@ -14,7 +14,6 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
-#include "src/ui/a11y/bin/a11y_manager/manager_impl.h"
 #include "src/ui/a11y/bin/a11y_manager/semantics/semantics_manager_impl.h"
 #include "src/ui/a11y/bin/a11y_manager/settings/settings_manager_impl.h"
 
@@ -29,7 +28,6 @@ class App {
  private:
   std::unique_ptr<sys::ComponentContext> startup_context_;
 
-  std::unique_ptr<ManagerImpl> a11y_manager_;
   std::unique_ptr<SettingsManagerImpl> settings_manager_impl_;
   std::unique_ptr<SemanticsManagerImpl> semantics_manager_impl_;
 

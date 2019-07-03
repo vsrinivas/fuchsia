@@ -45,8 +45,6 @@ source_set("lib") {
   sources = [
     "app.cc",
     "app.h",
-    "manager_impl.cc",
-    "manager_impl.h",
     "semantics/semantic_tree_impl.cc",
     "semantics/semantic_tree_impl.h",
     "semantics/semantics_manager_impl.cc",
@@ -62,6 +60,7 @@ source_set("lib") {
   public_deps = [
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.accessibility.semantics",
+    "//sdk/fidl/fuchsia.math",
   ]
 
   deps = [
