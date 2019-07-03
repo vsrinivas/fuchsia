@@ -5,15 +5,10 @@
 source_set("testing") {
   testonly = true
   sources = [
-    "inspect.cc",
     "inspect.h",
   ]
 
   public_deps = [
-    "//garnet/public/lib/inspect",
-    "//garnet/public/lib/inspect:reader",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/public/fidl/fuchsia-inspect",
+    "//garnet/public/lib/inspect_deprecated/testing",
   ]
 }

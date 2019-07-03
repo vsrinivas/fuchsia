@@ -4,23 +4,12 @@
 
 source_set("deprecated") {
   sources = [
-    "expose.cc",
     "expose.h",
-    "exposed_object.cc",
     "exposed_object.h",
-    "object_dir.cc",
     "object_dir.h",
   ]
 
-  deps = [
-    "//garnet/public/lib/syslog/cpp",
-  ]
-
   public_deps = [
-    "//sdk/lib/fidl/cpp",
-    "//zircon/public/fidl/fuchsia-inspect",
-    "//zircon/public/lib/fit",
-    "//zircon/public/lib/fs",
-    "//zircon/public/lib/zx",
+    "//garnet/public/lib/inspect_deprecated",
   ]
 }

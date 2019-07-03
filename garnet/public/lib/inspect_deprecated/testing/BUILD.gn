@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("testing") {
+  testonly = true
+  sources = [
+    "inspect.cc",
+    "inspect.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/inspect_deprecated",
+    "//garnet/public/lib/inspect_deprecated:reader",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/fidl/fuchsia-inspect",
+  ]
+}

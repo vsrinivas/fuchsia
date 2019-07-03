@@ -84,7 +84,7 @@ group("deprecated_shell_allowlist") {
     "//garnet/bin/trace/tests:trace_tests",
     "//garnet/go/src/amber:amber",
     "//garnet/go/src/amber/system_updater:system_updater_tests",
-    "//garnet/public/lib/inspect/integration:libinspect_integration_tests",
+    "//garnet/public/lib/inspect_deprecated/integration:libinspect_integration_tests",
     "//garnet/tests/benchmarks/input_latency:garnet_input_latency_benchmarks",
     "//garnet/tests/zircon/libdriver-integration-test:libdriver-integration-test",
     "//peridot/bin/module_resolver/module_package_indexer:module_package_indexer",

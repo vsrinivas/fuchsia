@@ -515,21 +515,21 @@ group("libc") {
 group("inspect_unittests") {
   testonly = true
   public_deps = [
-    "//garnet/public/lib/inspect/tests:inspect_unittests",
+    "//garnet/public/lib/inspect_deprecated/tests:inspect_unittests",
   ]
 }
 
 group("inspect_health_unittests") {
   testonly = true
   public_deps = [
-    "//garnet/public/lib/inspect/health/tests:inspect_health_unittests",
+    "//garnet/public/lib/inspect_deprecated/health/tests:inspect_health_unittests",
   ]
 }
 
 group("inspect_query_unittests") {
   testonly = true
   public_deps = [
-    "//garnet/public/lib/inspect/query/tests:inspect_query_unittests",
+    "//garnet/public/lib/inspect_deprecated/query/tests:inspect_query_unittests",
   ]
 }
 
@@ -1046,7 +1046,7 @@ group("go_tuf") {
 group("libinspect_integration_tests") {
   testonly = true
   public_deps = [
-    "//garnet/public/lib/inspect/integration:libinspect_integration_tests",
+    "//garnet/public/lib/inspect_deprecated/integration:libinspect_integration_tests",
   ]
 }
 
