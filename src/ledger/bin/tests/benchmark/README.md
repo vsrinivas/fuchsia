@@ -125,8 +125,10 @@ page.
     * `stories_single_active.tspec`: a single story is active at all times. Once
     editing is complete, the contents of the story (and any corresponding rows
     in the root page) are removed. This is the base case.
-    * `stories_wait_cached.tspec`: same as above, but wait for a precached
-    Ledger Page before creating a new Story.
+    * `stories_many_active.tspec`: same as in the base case, but keep up to 20
+    pages active, before clearing their contents.
+    * `stories_wait_cached.tspec`: same as in the base case, but wait for a
+    precached Ledger Page before creating a new Story.
     * `stories_memory.tspec`: how much memory is Ledger using after every story
     creation in the basic case?
 * __Disk space__: How much disk space does ledger use to store pages, objects

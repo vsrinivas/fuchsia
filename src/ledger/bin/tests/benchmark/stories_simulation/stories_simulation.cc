@@ -39,6 +39,7 @@ constexpr fxl::StringView kBinaryPath =
     "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/stories-simulation.cmx";
 
 constexpr fxl::StringView kStoryCountFlag = "story-count";
+constexpr fxl::StringView kActiveStoryCountFlag = "active-story-count";
 constexpr fxl::StringView kWaitForCachedPageFlag = "wait-for-cached-page";
 
 constexpr fxl::StringView kMessageQueuePageId = "MessageQueuePage";
@@ -156,15 +157,30 @@ void ReadAllFromPage(const PagePtr* page, const std::vector<uint8_t>& prefix,
 class StoriesBenchmark {
  public:
   StoriesBenchmark(async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
-                   int story_count, bool wait_for_cached);
+                   int story_count, int active_story_count, bool wait_for_cached);
 
   void Run();
 
  private:
+  // Initializes the default pages, i.e. the root, message queue and agent runner pages.
   void InitializeDefaultPages();
+
+  // Runs the |i|-th iteration of this page, i.e. creates the |i|-th story.
   void RunSingle(int i);
+
+  // Adds contents on the |i|-th story's page.
   void EditStory(int i, PageId story_id, fit::function<void()> callback);
+
+  // After the |i|-th story has been created, this method decides whether to perform a cleanup
+  // operation or not.
   void MaybeCleanup(int i, fit::function<void()> callback);
+
+  // Clears the page that was the |story_index|-th one to be created.
+  void ClearLRUPage(int story_index, fit::function<void()> callback);
+
+  // Clears all remaining pages from the list of active ones, starting by the |story_index|-th one
+  // to be created.
+  void ClearRemainingPages(size_t story_index, fit::function<void()> callback);
 
   void ShutDown();
   fit::closure QuitLoopClosure();
@@ -179,7 +195,8 @@ class StoriesBenchmark {
   LedgerMemoryEstimator memory_estimator_;
 
   // Input arguments.
-  const int story_count_;
+  const size_t story_count_;
+  const size_t active_story_count_;
   const bool wait_for_cached_page_;
 
   fuchsia::sys::ComponentControllerPtr component_controller_;
@@ -196,7 +213,7 @@ class StoriesBenchmark {
   EmptyWatcher message_queue_watcher_;
   EmptyWatcher agent_runner_watcher_;
 
-  // The list of active stories.
+  // The list of active stories. Newly created stories are appended at the end.
   std::list<ActiveStory> active_stories_;
   EmptyWatcher story_watcher1_;
   EmptyWatcher story_watcher2_;
@@ -206,13 +223,15 @@ class StoriesBenchmark {
 
 StoriesBenchmark::StoriesBenchmark(async::Loop* loop,
                                    std::unique_ptr<sys::ComponentContext> component_context,
-                                   int story_count, bool wait_for_cached_page)
+                                   int story_count, int active_story_count,
+                                   bool wait_for_cached_page)
     : loop_(loop),
       random_(0),
       generator_(&random_),
       page_data_generator_(&random_),
       component_context_(std::move(component_context)),
       story_count_(story_count),
+      active_story_count_(active_story_count),
       wait_for_cached_page_(wait_for_cached_page) {
   FXL_DCHECK(loop_);
   FXL_DCHECK(story_count > 0);
@@ -259,7 +278,7 @@ void StoriesBenchmark::InitializeDefaultPages() {
 }
 
 void StoriesBenchmark::RunSingle(int i) {
-  if (i == story_count_) {
+  if (i == static_cast<int>(story_count_)) {
     ShutDown();
     return;
   }
@@ -319,6 +338,10 @@ void StoriesBenchmark::EditStory(int i, PageId story_id, fit::function<void()> c
   story.story_id = story_id;
   story.connection2 = std::move(story_page);
   PagePtr* story_ptr = &story.connection2;
+
+  // This intentionally invalidates the watcher from the previous story: Even if
+  // multiple are active, a single one will be written to, and thus receive
+  // watcher notifications.
   AddWatcher(story_ptr, "", &story_watcher1_);
 
   std::vector<uint8_t> link_key = GetLinkKey(i);
@@ -346,38 +369,62 @@ void StoriesBenchmark::EditStory(int i, PageId story_id, fit::function<void()> c
 }
 
 void StoriesBenchmark::MaybeCleanup(int i, fit::function<void()> callback) {
-  // TODO(nellyv): update to have the number of not-cleaned-up pages as an argument.
-  // Clear and close the last page opened.
-  TRACE_ASYNC_BEGIN("benchmark", "story_cleanup", i);
+  FXL_DCHECK(active_stories_.size() <= active_story_count_);
+  // After the |i|th story, |i + 1| stories have been created in total.
+  size_t stories_created = i + 1;
+  if (stories_created < active_story_count_) {
+    // We don't have enough active pages, so don't clean up yet.
+    callback();
+    return;
+  }
+  // After having |active_story_count_| stories active, we can remove the least recently used one
+  // from the active stories list.
+  ClearLRUPage(stories_created - active_story_count_, std::move(callback));
+}
 
+void StoriesBenchmark::ClearLRUPage(int story_index, fit::function<void()> callback) {
+  // Clear and close the LRU page, i.e. the first element of |active_stories_|.
+  TRACE_ASYNC_BEGIN("benchmark", "story_cleanup", story_index);
   auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
-  FXL_DCHECK(active_stories_.size() == 1);
-  ActiveStory& story = active_stories_.back();
 
-  auto page_id = std::make_unique<PageId>(story.story_id);
+  ActiveStory& story = active_stories_.front();
 
-  ledger_->GetPage(std::move(page_id), story.connection_for_clear.NewRequest());
+  ledger_->GetPage(std::make_unique<PageId>(story.story_id),
+                   story.connection_for_clear.NewRequest());
   story.connection_for_clear->Clear();
   story.connection_for_clear->Sync(waiter->NewCallback());
 
-  root_page_->Delete(GetStoryName(i));
+  root_page_->Delete(GetStoryName(story_index));
   root_page_->Sync(waiter->NewCallback());
 
-  waiter->Finalize([this, i, callback = std::move(callback)] {
-    TRACE_ASYNC_END("benchmark", "story_cleanup", i);
+  waiter->Finalize([this, story_index, callback = std::move(callback)] {
+    TRACE_ASYNC_END("benchmark", "story_cleanup", story_index);
 
-    // Close other connections.
-    active_stories_.pop_back();
+    // Close all remaining connections to the page.
+    active_stories_.pop_front();
     callback();
   });
 }
 
-void StoriesBenchmark::ShutDown() {
-  FXL_DCHECK(active_stories_.empty());
+void StoriesBenchmark::ClearRemainingPages(size_t story_index, fit::function<void()> callback) {
+  if (story_index == story_count_) {
+    callback();
+    return;
+  }
+  ClearLRUPage(story_index, [this, story_index, callback = std::move(callback)]() mutable {
+    ClearRemainingPages(story_index + 1, std::move(callback));
+  });
+}
 
-  // Shut down the Ledger process first as it relies on |tmp_fs_| storage.
-  KillLedgerProcess(&component_controller_);
-  loop_->Quit();
+void StoriesBenchmark::ShutDown() {
+  size_t i = story_count_ - active_story_count_ + 1;
+  ClearRemainingPages(i, [this] {
+    FXL_DCHECK(active_stories_.empty());
+
+    // Shut down the Ledger process first as it relies on |tmp_fs_| storage.
+    KillLedgerProcess(&component_controller_);
+    loop_->Quit();
+  });
 }
 
 fit::closure StoriesBenchmark::QuitLoopClosure() {
@@ -388,7 +435,9 @@ void PrintUsage() {
   std::cout << "Usage: trace record "
             << kBinaryPath
             // Comment to make clang format not break formatting.
-            << " --" << kStoryCountFlag << "=<int>" << std::endl;
+            << " --" << kStoryCountFlag << "=<int>"
+            << " --" << kActiveStoryCountFlag << "=<int>"
+            << " [--" << kWaitForCachedPageFlag << "]" << std::endl;
 }
 
 bool GetPositiveIntValue(const fxl::CommandLine& command_line, fxl::StringView flag, int* value) {
@@ -412,9 +461,15 @@ int Main(int argc, const char** argv) {
     PrintUsage();
     return -1;
   }
+  int active_story_count;
+  if (!GetPositiveIntValue(command_line, kActiveStoryCountFlag, &active_story_count)) {
+    PrintUsage();
+    return -1;
+  }
   bool wait_for_cached_page = command_line.HasOption(kWaitForCachedPageFlag);
 
-  StoriesBenchmark app(&loop, std::move(component_context), story_count, wait_for_cached_page);
+  StoriesBenchmark app(&loop, std::move(component_context), story_count, active_story_count,
+                       wait_for_cached_page);
 
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }

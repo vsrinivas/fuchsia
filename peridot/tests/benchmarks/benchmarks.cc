@@ -64,6 +64,7 @@ int main(int argc, const char** argv) {
   benchmarks_runner.AddTspecBenchmark("ledger.disk_space_cleared_page", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_cleared_page.tspec");
   benchmarks_runner.AddTspecBenchmark("ledger.put_memory", "/pkgfs/packages/ledger_benchmarks/0/data/put_memory.tspec");
   benchmarks_runner.AddTspecBenchmark("ledger.stories_single_active", "/pkgfs/packages/ledger_benchmarks/0/data/stories_single_active.tspec");
+  benchmarks_runner.AddTspecBenchmark("ledger.stories_many_active", "/pkgfs/packages/ledger_benchmarks/0/data/stories_many_active.tspec");
   benchmarks_runner.AddTspecBenchmark("ledger.stories_wait_cached", "/pkgfs/packages/ledger_benchmarks/0/data/stories_wait_cached.tspec");
   benchmarks_runner.AddTspecBenchmark("ledger.stories_memory", "/pkgfs/packages/ledger_benchmarks/0/data/stories_memory.tspec");
   // clang-format on
