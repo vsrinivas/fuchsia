@@ -3196,7 +3196,6 @@ static zx_status_t ath10k_pci_clear_assoc(void* ctx, uint32_t options, const uin
 
 static zx_status_t ath10k_pci_start_hw_scan(void* ctx, const wlan_hw_scan_config_t* scan_config) {
     struct ath10k* ar = ctx;
-    ath10k_info("starting a hardware scan\n");
     return ath10k_mac_hw_scan(ar, scan_config);
 }
 
