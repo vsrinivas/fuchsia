@@ -197,9 +197,13 @@ class Access {
   // For buffers, get a pointer on the buffer data.
   virtual const Type* Content(SyscallDecoder* decoder) const = 0;
 
-  // Display the data on a stream.
+  // Display the data on a stream (with name and type).
   void Display(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, std::string_view name,
                std::ostream& os) const;
+
+  // Display a value on a stream
+  void DisplayValue(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Type value,
+                    std::ostream& os) const;
 };
 
 // Access to a system call argument. There is a direct access to the value
@@ -586,37 +590,66 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
 };
 
 template <typename Type>
+void Access<Type>::DisplayValue(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
+                                Type value, std::ostream& os) const {
+  os << "unimplemented generic value " << static_cast<uint32_t>(GetSyscallType());
+}
+
+template <>
+inline void Access<uint32_t>::DisplayValue(SyscallDisplayDispatcher* dispatcher,
+                                           SyscallDecoder* decoder, uint32_t value,
+                                           std::ostream& os) const {
+  const Colors& colors = dispatcher->colors();
+  switch (GetSyscallType()) {
+    case SyscallType::kUint32:
+      os << colors.blue << value << colors.reset;
+      break;
+    case SyscallType::kHandle:
+      os << colors.red << value << colors.reset;
+      break;
+    default:
+      os << "unimplemented uint32_t value " << static_cast<uint32_t>(GetSyscallType());
+      break;
+  }
+}
+
+template <>
+inline void Access<int64_t>::DisplayValue(SyscallDisplayDispatcher* dispatcher,
+                                          SyscallDecoder* decoder, int64_t value,
+                                          std::ostream& os) const {
+  const Colors& colors = dispatcher->colors();
+  switch (GetSyscallType()) {
+    case SyscallType::kTime:
+      os << DisplayTime(colors, value);
+      break;
+    default:
+      os << "unimplemented int64_t value " << static_cast<uint32_t>(GetSyscallType());
+      break;
+  }
+}
+template <typename Type>
 void Access<Type>::Display(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
                            std::string_view name, std::ostream& os) const {
   const Colors& colors = dispatcher->colors();
   switch (GetSyscallType()) {
     case SyscallType::kUint32:
       os << name << ":" << colors.green << "uint32" << colors.reset << ": ";
-      if (ValueValid(decoder)) {
-        os << colors.blue << Value(decoder) << colors.reset;
-      } else {
-        os << colors.red << "(nullptr)" << colors.reset;
-      }
       break;
     case SyscallType::kHandle:
       os << name << ":" << colors.green << "handle" << colors.reset << ": ";
-      if (ValueValid(decoder)) {
-        os << colors.red << Value(decoder) << colors.reset;
-      } else {
-        os << colors.red << "(nullptr)" << colors.reset;
-      }
       break;
     case SyscallType::kTime:
       os << name << ":" << colors.green << "time" << colors.reset << ": ";
-      if (ValueValid(decoder)) {
-        os << DisplayTime(colors, Value(decoder));
-      } else {
-        os << colors.red << "(nullptr)" << colors.reset;
-      }
       break;
     default:
-      os << "unimplemented type";
-      break;
+      os << name << ":" << colors.green << "unimplemented type "
+         << static_cast<uint32_t>(GetSyscallType()) << colors.reset;
+      return;
+  }
+  if (ValueValid(decoder)) {
+    DisplayValue(dispatcher, decoder, Value(decoder), os);
+  } else {
+    os << colors.red << "(nullptr)" << colors.reset;
   }
 }
 
