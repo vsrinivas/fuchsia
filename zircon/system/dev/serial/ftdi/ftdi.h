@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_SERIAL_FTDI_FTDI_H_
+#define ZIRCON_SYSTEM_DEV_SERIAL_FTDI_FTDI_H_
 
 #include <ddk/device.h>
 #include <ddk/protocol/usb.h>
@@ -18,13 +19,13 @@
 
 namespace ftdi_serial {
 
-constexpr uint16_t kFtdiTypeR       = 0x0600;
-constexpr uint16_t kFtdiTypeBm      = 0x0400;
-constexpr uint16_t kFtdiTypeAm      = 0x0200;
-constexpr uint16_t kFtdiType2232c   = 0x0500;
-constexpr uint16_t kFtdiType2232h   = 0x0700;
-constexpr uint16_t kFtdiType4232h   = 0x0800;
-constexpr uint16_t kFtdiType232h    = 0x0900;
+constexpr uint16_t kFtdiTypeR = 0x0600;
+constexpr uint16_t kFtdiTypeBm = 0x0400;
+constexpr uint16_t kFtdiTypeAm = 0x0200;
+constexpr uint16_t kFtdiType2232c = 0x0500;
+constexpr uint16_t kFtdiType2232h = 0x0700;
+constexpr uint16_t kFtdiType4232h = 0x0800;
+constexpr uint16_t kFtdiType232h = 0x0900;
 
 // Clock divisors.
 constexpr uint32_t kFtdiTypeRDivisor = 16;
@@ -32,10 +33,10 @@ constexpr uint32_t kFtdiHClk = 120000000;
 constexpr uint32_t kFtdiCClk = 48000000;
 
 // Usb binding rules.
-constexpr uint32_t kFtdiUsbVid        = 0x0403;
-constexpr uint32_t kFtdiUsb232rPid    = 0x6001;
-constexpr uint32_t kFtdiUsb2232Pid    = 0x6010;
-constexpr uint32_t kFtdiUsb232hPid    = 0x6014;
+constexpr uint32_t kFtdiUsbVid = 0x0403;
+constexpr uint32_t kFtdiUsb232rPid = 0x6001;
+constexpr uint32_t kFtdiUsb2232Pid = 0x6010;
+constexpr uint32_t kFtdiUsb232hPid = 0x6014;
 
 // Reset the port.
 constexpr uint8_t kFtdiSioReset = 0;
@@ -56,109 +57,109 @@ constexpr uint8_t kFtdiSioSetData = 4;
 constexpr uint8_t kFtdiSioSetBitmode = 0x0B;
 
 // Requests.
-constexpr uint8_t kFtdiSioResetRequest            = kFtdiSioReset;
-constexpr uint8_t kFtdiSioSetBaudrateRequest      = kFtdiSioSetBaudrate;
-constexpr uint8_t kFtdiSioSetDataRequest          = kFtdiSioSetData;
-constexpr uint8_t kFtdiSioSetFlowCtrlRequest      = kFtdiSioSetFlowCtrl;
-constexpr uint8_t kFtdiSioSetModemCtrlRequest     = kFtdiSioModemCtrl;
-constexpr uint8_t kFtdiSioPollModemStatusRequest  = 0x05;
-constexpr uint8_t kFtdiSioSetEventCharRequest     = 0x06;
-constexpr uint8_t kFtdiSioSetErrorCharRequest     = 0x07;
-constexpr uint8_t kFtdiSioSetLatencyTimerRequest  = 0x09;
-constexpr uint8_t kFtdiSioGetLatencyTimerRequest  = 0x0A;
-constexpr uint8_t kFtdiSioSetBitmodeRequest       = 0x0B;
-constexpr uint8_t kFtdiSioReadPinsRequest         = 0x0C;
-constexpr uint8_t kFtdiSioReadEepromRequest       = 0x90;
-constexpr uint8_t kFtdiSioWriteEepromRequest      = 0x91;
-constexpr uint8_t kFtdiSioEraseEepromRequest      = 0x92;
+constexpr uint8_t kFtdiSioResetRequest = kFtdiSioReset;
+constexpr uint8_t kFtdiSioSetBaudrateRequest = kFtdiSioSetBaudrate;
+constexpr uint8_t kFtdiSioSetDataRequest = kFtdiSioSetData;
+constexpr uint8_t kFtdiSioSetFlowCtrlRequest = kFtdiSioSetFlowCtrl;
+constexpr uint8_t kFtdiSioSetModemCtrlRequest = kFtdiSioModemCtrl;
+constexpr uint8_t kFtdiSioPollModemStatusRequest = 0x05;
+constexpr uint8_t kFtdiSioSetEventCharRequest = 0x06;
+constexpr uint8_t kFtdiSioSetErrorCharRequest = 0x07;
+constexpr uint8_t kFtdiSioSetLatencyTimerRequest = 0x09;
+constexpr uint8_t kFtdiSioGetLatencyTimerRequest = 0x0A;
+constexpr uint8_t kFtdiSioSetBitmodeRequest = 0x0B;
+constexpr uint8_t kFtdiSioReadPinsRequest = 0x0C;
+constexpr uint8_t kFtdiSioReadEepromRequest = 0x90;
+constexpr uint8_t kFtdiSioWriteEepromRequest = 0x91;
+constexpr uint8_t kFtdiSioEraseEepromRequest = 0x92;
 
 class FtdiDevice;
-using DeviceType = ddk::Device<FtdiDevice, ddk::Unbindable, ddk::Messageable, ddk::Writable,
-                               ddk::Readable>;
-class FtdiDevice : public DeviceType, public ddk::SerialImplProtocol<FtdiDevice,
-                                                                     ddk::base_protocol> {
-public:
-    explicit FtdiDevice(zx_device_t* parent) : DeviceType(parent), usb_client_(parent) {}
-    ~FtdiDevice();
+using DeviceType =
+    ddk::Device<FtdiDevice, ddk::Unbindable, ddk::Messageable, ddk::Writable, ddk::Readable>;
+class FtdiDevice : public DeviceType,
+                   public ddk::SerialImplProtocol<FtdiDevice, ddk::base_protocol> {
+ public:
+  explicit FtdiDevice(zx_device_t* parent) : DeviceType(parent), usb_client_(parent) {}
+  ~FtdiDevice();
 
-    zx_status_t Bind();
+  zx_status_t Bind();
 
-    void DdkUnbind();
+  void DdkUnbind();
 
-    void DdkRelease();
-    zx_status_t DdkWrite(const void* buf, size_t length, zx_off_t off,
-                         size_t* actual);
-    zx_status_t DdkRead(void* data, size_t len, zx_off_t off, size_t* actual);
+  void DdkRelease();
+  zx_status_t DdkWrite(const void* buf, size_t length, zx_off_t off, size_t* actual);
+  zx_status_t DdkRead(void* data, size_t len, zx_off_t off, size_t* actual);
 
-    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
-    static zx_status_t Bind(zx_device_t* device);
+  static zx_status_t Bind(zx_device_t* device);
 
-    // |ddk::SerialImpl|
-    zx_status_t SerialImplGetInfo(serial_port_info_t* info);
+  // |ddk::SerialImpl|
+  zx_status_t SerialImplGetInfo(serial_port_info_t* info);
 
-    // |ddk::SerialImpl|
-    zx_status_t SerialImplConfig(uint32_t baud_rate, uint32_t flags);
+  // |ddk::SerialImpl|
+  zx_status_t SerialImplConfig(uint32_t baud_rate, uint32_t flags);
 
-    // |ddk::SerialImpl|
-    zx_status_t SerialImplEnable(bool enable);
+  // |ddk::SerialImpl|
+  zx_status_t SerialImplEnable(bool enable);
 
-    // |ddk::SerialImpl|
-    zx_status_t SerialImplRead(void* data, size_t len, size_t* actual);
+  // |ddk::SerialImpl|
+  zx_status_t SerialImplRead(void* data, size_t len, size_t* actual);
 
-    // |ddk::SerialImpl|
-    zx_status_t SerialImplWrite(const void* buf, size_t length, size_t* actual);
+  // |ddk::SerialImpl|
+  zx_status_t SerialImplWrite(const void* buf, size_t length, size_t* actual);
 
-    // |ddk::SerialImpl|
-    zx_status_t SerialImplSetNotifyCallback(const serial_notify_t* cb);
+  // |ddk::SerialImpl|
+  zx_status_t SerialImplSetNotifyCallback(const serial_notify_t* cb);
 
-private:
-    static zx_status_t FidlCreateI2c(void* ctx, const fuchsia_hardware_ftdi_I2cBusLayout* layout,
-                                     const fuchsia_hardware_ftdi_I2cDevice* device);
-    zx_status_t Reset();
-    zx_status_t SetBaudrate(uint32_t baudrate);
-    zx_status_t CalcDividers(uint32_t* baudrate, uint32_t clock, uint32_t divisor,
-                             uint16_t* integer_div, uint16_t* fraction_div);
-    void WriteComplete(usb_request_t* request);
-    void ReadComplete(usb_request_t* request);
+ private:
+  static zx_status_t FidlCreateI2c(void* ctx, const fuchsia_hardware_ftdi_I2cBusLayout* layout,
+                                   const fuchsia_hardware_ftdi_I2cDevice* device);
+  zx_status_t Reset();
+  zx_status_t SetBaudrate(uint32_t baudrate);
+  zx_status_t CalcDividers(uint32_t* baudrate, uint32_t clock, uint32_t divisor,
+                           uint16_t* integer_div, uint16_t* fraction_div);
+  void WriteComplete(usb_request_t* request);
+  void ReadComplete(usb_request_t* request);
 
-    // Notifies the callback if the state is updated (|need_to_notify_cb| is true), and
-    // resets |need_to_notify_cb| to false.
-    void NotifyCallback() __TA_EXCLUDES(mutex_);
+  // Notifies the callback if the state is updated (|need_to_notify_cb| is true), and
+  // resets |need_to_notify_cb| to false.
+  void NotifyCallback() __TA_EXCLUDES(mutex_);
 
-    // Checks the readable and writeable state of the system. Updates |state_| and
-    // |need_to_notify_cb|. Any caller of this is responsible for calling NotifyCallback
-    // once the lock is released.
-    void CheckStateLocked() __TA_REQUIRES(mutex_);
-    zx_status_t SetBitMode(uint8_t line_mask, uint8_t mode);
+  // Checks the readable and writeable state of the system. Updates |state_| and
+  // |need_to_notify_cb|. Any caller of this is responsible for calling NotifyCallback
+  // once the lock is released.
+  void CheckStateLocked() __TA_REQUIRES(mutex_);
+  zx_status_t SetBitMode(uint8_t line_mask, uint8_t mode);
 
-    ddk::UsbProtocolClient usb_client_ = {};
+  ddk::UsbProtocolClient usb_client_ = {};
 
-    uint16_t ftditype_ = 0;
-    uint32_t baudrate_ = 0;
+  uint16_t ftditype_ = 0;
+  uint32_t baudrate_ = 0;
 
+  bool enabled_ = false;
+  uint32_t state_ = 0;
 
-    bool enabled_ = false;
-    uint32_t state_ = 0;
+  size_t read_offset_ = 0;
 
-    size_t read_offset_ = 0;
+  size_t parent_req_size_ = 0;
+  uint8_t bulk_in_addr_ = 0;
+  uint8_t bulk_out_addr_ = 0;
 
-    size_t parent_req_size_ = 0;
-    uint8_t bulk_in_addr_ = 0;
-    uint8_t bulk_out_addr_ = 0;
+  fbl::Mutex mutex_ = {};
 
-    fbl::Mutex mutex_ = {};
+  // pool of free USB requests
+  usb::RequestQueue<> free_read_queue_ __TA_GUARDED(mutex_);
+  usb::RequestQueue<> free_write_queue_ __TA_GUARDED(mutex_);
+  // list of received packets not yet read by upper layer
+  usb::RequestQueue<> completed_reads_queue_ __TA_GUARDED(mutex_);
 
-    // pool of free USB requests
-    usb::RequestQueue<> free_read_queue_ __TA_GUARDED(mutex_);
-    usb::RequestQueue<> free_write_queue_ __TA_GUARDED(mutex_);
-    // list of received packets not yet read by upper layer
-    usb::RequestQueue<> completed_reads_queue_ __TA_GUARDED(mutex_);
-
-    serial_port_info_t serial_port_info_ __TA_GUARDED(mutex_);
-    bool need_to_notify_cb_ = false;
-    serial_notify_t notify_cb_ = {};
-    std::thread cancel_thread_;
+  serial_port_info_t serial_port_info_ __TA_GUARDED(mutex_);
+  bool need_to_notify_cb_ = false;
+  serial_notify_t notify_cb_ = {};
+  std::thread cancel_thread_;
 };
 
-} // namespace ftdi_serial
+}  // namespace ftdi_serial
+
+#endif  // ZIRCON_SYSTEM_DEV_SERIAL_FTDI_FTDI_H_
