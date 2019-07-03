@@ -248,6 +248,20 @@ config("nolibc") {
   }
 }
 
+config("freestanding") {
+  cflags = [ "-ffreestanding" ]
+
+  # In Clang -fasynchronous-unwind-tables is the default for *-fuchsia
+  # targets.  But -ffreestanding defeats that (in target-independent logic
+  # in the Clang driver).  So add it back explicitly.  For GCC, it's
+  # already added explicitly in :compiler regardless so don't double it.
+  if (!is_gcc) {
+    cflags += [ "-fasynchronous-unwind-tables" ]
+  }
+
+  ldflags = cflags
+}
+
 config("data_sections") {
   cflags = [ "-fdata-sections" ]
 }

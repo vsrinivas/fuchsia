@@ -72,7 +72,7 @@ config("musl_internal.config") {
     cflags += [ "-fno-stack-protector" ]
   }
 
-  cflags += [ "-ffreestanding" ]
+  configs = [ "$zx/public/gn/config:freestanding" ]
 }
 
 if (toolchain.base_environment == "user") {
