@@ -24,11 +24,11 @@ type Shard struct {
 
 // MakeShards is the core algorithm to this tool. It takes a set of test specs and produces
 // a set of shards which may then be converted into Swarming tasks.
+// A single output Shard will contain only tests that have the same Envs.
 //
-// Environments that do not match all specified tags will be ignored.
+// Environments that do not match all tags will be ignored.
 //
-// This is the most naive algorithm at the moment. It just merges all tests together which
-// have the same environment setting into the same shard.
+// In Restricted mode, environments that don't specify a ServiceAccount will be ignored.
 func MakeShards(specs []TestSpec, mode Mode, tags []string) []*Shard {
 	// Collect the order of the shards so our shard ordering is deterministic with
 	// respect to the input.
@@ -96,6 +96,34 @@ func MultiplyShards(shards []*Shard, multipliers []TestModifier) ([]*Shard, erro
 		return nil, fmt.Errorf("Not all of the multiplier targets were found in the test manifest. Make sure the targets appear in $root_build_dir/tests.json")
 	}
 	return shards, nil
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// WithMaxSize returns a list of shards such that each shard contains fewer than maxShardSize tests.
+// If maxShardSize <= 0, just returns its input.
+func WithMaxSize(shards []*Shard, maxShardSize int) []*Shard {
+	if maxShardSize <= 0 {
+		return shards
+	}
+	output := make([]*Shard, 0, len(shards))
+	for _, shard := range shards {
+		for i := 0; i*maxShardSize < len(shard.Tests); i++ {
+			sliceStart := i * maxShardSize
+			sliceLimit := min((i+1)*maxShardSize, len(shard.Tests))
+			output = append(output, &Shard{
+				Name:  fmt.Sprintf("%s-(%d)", shard.Name, i),
+				Tests: shard.Tests[sliceStart:sliceLimit],
+				Env:   shard.Env,
+			})
+		}
+	}
+	return output
 }
 
 // Removes leading slashes and replaces all other `/` with `_`. This allows the

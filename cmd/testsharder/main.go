@@ -29,6 +29,9 @@ var (
 
 	// The path to the json manifest file containing the tests to mutiply.
 	multipliersPath string
+
+	// Maximum number of tests per shard.
+	maxShardSize int
 )
 
 func usage() {
@@ -46,6 +49,7 @@ func init() {
 	flag.Var(&mode, "mode", "mode in which to run the testsharder (e.g., normal or restricted).")
 	flag.Var(&tags, "tag", "environment tags on which to filter; only the tests that match all tags will be sharded")
 	flag.StringVar(&multipliersPath, "multipliers", "", "path to the json manifest containing tests to multiply")
+	flag.IntVar(&maxShardSize, "max-shard-size", 0, "maximum number of tests per shard. If <= 0, will be ignored. Otherwise, tests will be placed into more, smaller shards")
 	flag.Usage = usage
 }
 
@@ -82,6 +86,7 @@ func main() {
 			log.Fatal(err)
 		}
 	}
+	shards = testsharder.WithMaxSize(shards, maxShardSize)
 	f := os.Stdout
 	if outputFile != "" {
 		var err error

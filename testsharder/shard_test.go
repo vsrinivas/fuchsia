@@ -25,6 +25,31 @@ func assertEqual(t *testing.T, expected, actual []*Shard) {
 	}
 }
 
+func spec(id int, envs ...Environment) TestSpec {
+	return TestSpec{
+		Test: Test{
+			Location: fmt.Sprintf("/path/to/test/%d", id),
+		},
+		Envs: envs,
+	}
+}
+
+func shard(env Environment, ids ...int) *Shard {
+	return namedShard(env, env.Name(), ids...)
+}
+
+func namedShard(env Environment, name string, ids ...int) *Shard {
+	var tests []Test
+	for _, id := range ids {
+		tests = append(tests, spec(id, env).Test)
+	}
+	return &Shard{
+		Name:  name,
+		Tests: tests,
+		Env:   env,
+	}
+}
+
 func TestMakeShards(t *testing.T) {
 	env1 := Environment{
 		Dimensions: DimensionSet{DeviceType: "QEMU"},
@@ -46,27 +71,6 @@ func TestMakeShards(t *testing.T) {
 			}
 		}
 	})
-
-	spec := func(id int, envs ...Environment) TestSpec {
-		return TestSpec{
-			Test: Test{
-				Location: fmt.Sprintf("/path/to/test/%d", id),
-			},
-			Envs: envs,
-		}
-	}
-
-	shard := func(env Environment, ids ...int) *Shard {
-		var tests []Test
-		for _, id := range ids {
-			tests = append(tests, spec(id, env).Test)
-		}
-		return &Shard{
-			Name:  env.Name(),
-			Tests: tests,
-			Env:   env,
-		}
-	}
 
 	t.Run("tests of same environment are grouped", func(t *testing.T) {
 		actual := MakeShards(
@@ -272,5 +276,48 @@ func TestMultiplyShards(t *testing.T) {
 		if err == nil {
 			t.Fatalf("did not fail for invalid multipliers")
 		}
+	})
+}
+
+func TestWithMaxSize(t *testing.T) {
+	env1 := Environment{
+		Tags: []string{"env1"},
+	}
+	env2 := Environment{
+		Dimensions: DimensionSet{DeviceType: "env2"},
+		Tags:       []string{"env2"},
+	}
+	input := []*Shard{namedShard(env1, "env1", 1, 2, 3, 4, 5), namedShard(env2, "env2", 6, 7, 8)}
+	t.Run("does nothing if max is 0", func(t *testing.T) {
+		assertEqual(t, input, WithMaxSize(input, 0))
+	})
+	t.Run("does nothing if max is < 0", func(t *testing.T) {
+		assertEqual(t, input, WithMaxSize(input, -7))
+	})
+	assertShardsLessThanSize := func(t *testing.T, actual []*Shard, maxSize int) {
+		for _, s := range actual {
+			if len(s.Tests) > maxSize {
+				t.Errorf("Shard %s has %d tests, expected at most %d", s.Name, len(s.Tests), maxSize)
+			}
+		}
+	}
+	t.Run("max is larger than all shards", func(t *testing.T) {
+		maxSize := len(input[0].Tests)+len(input[1].Tests)
+		actual := WithMaxSize(input, maxSize)
+		assertEqual(t, []*Shard{
+			// Returns equivalent shards, but renamed.
+			namedShard(env1, "env1-(0)", 1, 2, 3, 4, 5), namedShard(env2, "env2-(0)", 6, 7, 8)},
+			actual)
+			assertShardsLessThanSize(t, actual, maxSize)
+	})
+	t.Run("applies max", func(t *testing.T) {
+		maxSize := 2
+		actual := WithMaxSize(input, maxSize)
+		assertEqual(t, []*Shard{
+			namedShard(env1, "env1-(0)", 1, 2), namedShard(env1, "env1-(1)", 3, 4),
+			namedShard(env1, "env1-(2)", 5),
+			namedShard(env2, "env2-(0)", 6, 7), namedShard(env2, "env2-(1)", 8)},
+			actual)
+		assertShardsLessThanSize(t, actual, maxSize)
 	})
 }
