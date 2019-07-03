@@ -50,6 +50,14 @@ Some additional command line arguments to `fx traceutil record` include:
    Specifies which target to take a trace.  Useful if you have multiple
    targets on the same network or network discovery is not working.
 
+ * `-binary`
+
+   Captures the trace in Fuchsia trace format on the target and performs
+   the conversion to JSON on the host. Defaults to true, use
+   `-binary=false` to force the conversion to happen on the target.
+   This flag is planned to be removed once all workflows have been tested to be
+   working with host-side conversion.
+
  * `-stream`
 
    Stream the trace output straight from the target to the host without

@@ -57,7 +57,7 @@ func newCaptureTraceConfig(f *flag.FlagSet) *captureTraceConfig {
 		"",
 		"Relative filepath for storing benchmark results.",
 	)
-	f.BoolVar(&config.Binary, "binary", false,
+	f.BoolVar(&config.Binary, "binary", true,
 		"Capture trace in binary format on the target.")
 	f.BoolVar(&config.Stream, "stream", false,
 		"Stream trace output to a local file, instead of saving to target disk and then copying it.")
