@@ -90,7 +90,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       auto name = NameFlatName(primitive_type->name);
       auto coded_primitive_type = std::make_unique<coded::PrimitiveType>(
           std::move(name), primitive_type->subtype,
-          flat::PrimitiveType::SubtypeSize(primitive_type->subtype), context);
+          primitive_type->shape.Size(), context);
       primitive_type_map_[WithContext(context, primitive_type)] = coded_primitive_type.get();
       coded_types_.push_back(std::move(coded_primitive_type));
       return coded_types_.back().get();
@@ -329,12 +329,12 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
     case flat::Decl::Kind::kBits: {
       auto bits_decl = static_cast<const flat::Bits*>(decl);
       std::string bits_name = NameCodedName(bits_decl->name);
-      auto bits_subtype =
-          static_cast<const flat::PrimitiveType*>(bits_decl->subtype_ctor->type)->subtype;
+      auto primitive_type = 
+          static_cast<const flat::PrimitiveType*>(bits_decl->subtype_ctor->type);
       named_coded_types_.emplace(
           &bits_decl->name, std::make_unique<coded::BitsType>(
-                                std::move(bits_name), bits_subtype,
-                                flat::PrimitiveType::SubtypeSize(bits_subtype), bits_decl->mask));
+                                std::move(bits_name), primitive_type->subtype,
+                                primitive_type->shape.Size(), bits_decl->mask));
       break;
     }
     case flat::Decl::Kind::kEnum: {
@@ -363,7 +363,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
           &enum_decl->name,
           std::make_unique<coded::EnumType>(
               std::move(enum_name), enum_decl->type->subtype,
-              flat::PrimitiveType::SubtypeSize(enum_decl->type->subtype), std::move(members)));
+              enum_decl->type->shape.Size(), std::move(members)));
       break;
     }
     case flat::Decl::Kind::kProtocol: {

@@ -601,6 +601,8 @@ struct PrimitiveType final : public Type {
   }
 
   static TypeShape Shape(types::PrimitiveSubtype subtype);
+
+private:
   static uint32_t SubtypeSize(types::PrimitiveSubtype subtype);
 };
 
