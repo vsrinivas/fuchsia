@@ -4,7 +4,7 @@
 
 #![feature(async_await, await_macro)]
 // This is needed for the pseudo_directory nesting in crate::model::tests
-#![recursion_limit = "128"]
+#![recursion_limit = "256"]
 
 pub mod ambient;
 pub mod elf_runner;

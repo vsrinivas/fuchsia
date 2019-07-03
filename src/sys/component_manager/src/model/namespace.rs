@@ -6,7 +6,7 @@ use {
     crate::constants::PKG_PATH,
     crate::directory_broker,
     crate::model::*,
-    cm_rust::{self, ComponentDecl, UseDirectoryDecl, UseServiceDecl},
+    cm_rust::{self, Capability, ComponentDecl, UseDirectoryDecl, UseServiceDecl, UseStorageDecl},
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd},
     fidl_fuchsia_io::{
         DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY,
@@ -90,9 +90,14 @@ impl IncomingNamespace {
                 cm_rust::UseDecl::Service(s) => {
                     Self::add_service_use(&mut svc_dirs, s, model.clone(), abs_moniker.clone())?;
                 }
-                cm_rust::UseDecl::Storage(_) => {
-                    error!("storage capabilities are not supported");
-                    return Err(ModelError::ComponentInvalid);
+                cm_rust::UseDecl::Storage(s) => {
+                    Self::add_storage_use(
+                        &mut ns,
+                        &mut directory_waiters,
+                        s,
+                        model.clone(),
+                        abs_moniker.clone(),
+                    )?;
                 }
             }
         }
@@ -132,9 +137,44 @@ impl IncomingNamespace {
         model: Model,
         abs_moniker: AbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        let (client_end, server_end) =
-            create_endpoints().expect("could not create directory proxy endpoints");
+        let target_path = use_.target_path.to_string();
         let capability = use_.clone().into();
+        Self::add_directory_helper(ns, waiters, target_path, capability, model, abs_moniker)
+    }
+
+    /// Adds a directory waiter to `waiters` and updates `ns` to contain a handle for the
+    /// storage described by `use_`. Once the channel is readable, the future calls
+    /// `route_storage` to forward the channel to the source component's outgoing directory and
+    /// terminates.
+    fn add_storage_use(
+        ns: &mut fsys::ComponentNamespace,
+        waiters: &mut Vec<FutureObj<()>>,
+        use_: &UseStorageDecl,
+        model: Model,
+        abs_moniker: AbsoluteMoniker,
+    ) -> Result<(), ModelError> {
+        let target_path = match use_ {
+            UseStorageDecl::Data(p) => p.to_string(),
+            UseStorageDecl::Cache(p) => p.to_string(),
+            UseStorageDecl::Meta => {
+                error!("meta is currently unsupported!");
+                return Err(ModelError::unsupported("meta storage capabilities"));
+            }
+        };
+        let capability = use_.clone().into();
+        Self::add_directory_helper(ns, waiters, target_path, capability, model, abs_moniker)
+    }
+
+    fn add_directory_helper(
+        ns: &mut fsys::ComponentNamespace,
+        waiters: &mut Vec<FutureObj<()>>,
+        target_path: String,
+        capability: Capability,
+        model: Model,
+        abs_moniker: AbsoluteMoniker,
+    ) -> Result<(), ModelError> {
+        let (client_end, server_end) =
+            create_endpoints().expect("could not create storage proxy endpoints");
         let route_on_usage = async move {
             // Wait for the channel to become readable.
             let server_end_chan = fasync::Channel::from_channel(server_end.into_channel())
@@ -151,12 +191,12 @@ impl IncomingNamespace {
                 server_end_chan.into_zx_channel()
             ));
             if let Err(e) = res {
-                error!("failed to route directory for component {}: {:?}", abs_moniker, e);
+                error!("failed to route storage for component {}: {:?}", abs_moniker, e);
             }
         };
 
         waiters.push(FutureObj::new(Box::new(route_on_usage)));
-        ns.paths.push(use_.target_path.to_string());
+        ns.paths.push(target_path);
         ns.directories.push(client_end);
         Ok(())
     }

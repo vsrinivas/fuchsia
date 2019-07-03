@@ -3,29 +3,31 @@
 // found in the LICENSE file.
 
 use {
-    crate::{directory_broker, model::testing::mocks::*, model::*},
+    crate::{
+        directory_broker, klog, model::routing::generate_storage_path,
+        model::testing::memfs::Memfs, model::testing::mocks::*, model::*,
+    },
     cm_rust::{
         Capability, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeSource, OfferDecl,
-        OfferSource, UseDecl,
+        OfferDirectorySource, OfferServiceSource, UseDecl, UseStorageDecl,
     },
-    fidl::endpoints::{self, ClientEnd, ServerEnd},
+    fidl::endpoints::{self, create_proxy, ClientEnd, ServerEnd},
     fidl_fidl_examples_echo::{self as echo, EchoMarker, EchoRequest, EchoRequestStream},
     fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY,
-        MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        DirectoryMarker, DirectoryProxy, FileMarker, NodeMarker, CLONE_FLAG_SAME_RIGHTS,
+        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE, OPEN_FLAG_CREATE,
+        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_vfs_pseudo_fs::{
-        directory, directory::entry::DirectoryEntry, file::simple::read_only, pseudo_directory,
-    },
+    fuchsia_vfs_pseudo_fs::{directory, directory::entry::DirectoryEntry, pseudo_directory},
     fuchsia_zircon as zx,
     fuchsia_zircon::HandleBased,
     futures::lock::Mutex,
     futures::TryStreamExt,
     std::{
         collections::{HashMap, HashSet},
-        convert::{TryFrom, TryInto},
+        convert::TryInto,
         ffi::CString,
         iter,
         path::PathBuf,
@@ -44,22 +46,14 @@ pub async fn get_child_realm<'a>(realm: &'a Realm, child: &'a str) -> Arc<Realm>
     await!(realm.state.lock()).child_realms.as_ref().unwrap()[&child.into()].clone()
 }
 
-/// Construct a capability for the hippo service.
-pub fn default_service_capability() -> Capability {
-    Capability::Service(CapabilityPath::try_from("/svc/hippo").unwrap())
+/// Construct a capability path for the hippo service.
+pub fn default_service_capability() -> CapabilityPath {
+    "/svc/hippo".try_into().unwrap()
 }
 
-pub fn new_service_capability(path: &str) -> Capability {
-    Capability::Service(CapabilityPath::try_from(path).unwrap())
-}
-
-/// Construct a capability for the hippo directory.
-pub fn default_directory_capability() -> Capability {
-    Capability::Directory(CapabilityPath::try_from("/data/hippo").unwrap())
-}
-
-pub fn new_directory_capability(path: &str) -> Capability {
-    Capability::Directory(CapabilityPath::try_from(path).unwrap())
+/// Construct a capability path for the hippo directory.
+pub fn default_directory_capability() -> CapabilityPath {
+    "/data/hippo".try_into().unwrap()
 }
 
 /// Returns an empty component decl for an executable component.
@@ -76,6 +70,23 @@ pub fn default_component_decl() -> ComponentDecl {
     }
 }
 
+pub enum CheckUse {
+    Service {
+        path: CapabilityPath,
+        should_succeed: bool,
+    },
+    Directory {
+        path: CapabilityPath,
+        should_succeed: bool,
+    },
+    Storage {
+        type_: fsys::StorageType,
+        // The relative moniker from the storage declaration to the use declaration. If None, this
+        // storage use is expected to fail.
+        storage_relation: Option<RelativeMoniker>,
+    },
+}
+
 /// A test for capability routing.
 ///
 /// All string arguments are referring to component names, not URLs, ex: "a", not "test:///a" or
@@ -84,6 +95,7 @@ pub struct RoutingTest {
     components: Vec<(&'static str, ComponentDecl)>,
     model: Model,
     namespaces: Namespaces,
+    memfs: Memfs,
 }
 
 impl RoutingTest {
@@ -93,12 +105,17 @@ impl RoutingTest {
         components: Vec<(&'static str, ComponentDecl)>,
         ambient: Box<dyn AmbientEnvironment>,
     ) -> Self {
+        // Ensure that kernel logging has been set up
+        let _ = klog::KernelLogger::init();
+
         let mut resolver = ResolverRegistry::new();
         let mut runner = MockRunner::new();
 
+        let memfs = Memfs::new();
+
         let mut mock_resolver = MockResolver::new();
         for (name, decl) in &components {
-            Self::host_capabilities(name, decl.clone(), &mut runner);
+            Self::host_capabilities(name, decl.clone(), &mut runner, &memfs);
             mock_resolver.add_component(name, decl.clone());
         }
         resolver.register("test".to_string(), Box::new(mock_resolver));
@@ -111,7 +128,7 @@ impl RoutingTest {
             root_default_runner: Box::new(runner),
             hooks: Vec::new(),
         });
-        Self { components, model, namespaces }
+        Self { components, model, namespaces, memfs }
     }
 
     /// Installs a new directory at /hippo in our namespace. Does nothing if this directory already
@@ -134,7 +151,8 @@ impl RoutingTest {
             panic!("bad status returned for fdio_ns_bind: {}", zx::Status::from_raw(status));
         }
         let mut out_dir = OutDir::new();
-        out_dir.add_directory();
+        out_dir.add_service();
+        out_dir.add_directory(&self.memfs);
         out_dir.host_fn()(ServerEnd::new(server_chan));
     }
 
@@ -161,12 +179,7 @@ impl RoutingTest {
     }
 
     /// Checks a `use` declaration at `moniker` by trying to use `capability`.
-    pub async fn check_use(
-        &self,
-        moniker: AbsoluteMoniker,
-        capability: Capability,
-        should_succeed: bool,
-    ) {
+    pub async fn check_use(&self, moniker: AbsoluteMoniker, check: CheckUse) {
         let component_name = await!(Self::bind_instance(&self.model, &moniker));
         let component_resolved_url = Self::resolved_url(&component_name);
         await!(Self::check_namespace(
@@ -174,8 +187,8 @@ impl RoutingTest {
             self.namespaces.clone(),
             self.components.clone()
         ));
-        match capability {
-            Capability::Service(path) => {
+        match check {
+            CheckUse::Service { path, should_succeed } => {
                 await!(capability_util::call_echo_svc_from_namespace(
                     path,
                     component_resolved_url,
@@ -183,13 +196,29 @@ impl RoutingTest {
                     should_succeed
                 ));
             }
-            Capability::Directory(path) => await!(capability_util::read_data_from_namespace(
-                path,
-                component_resolved_url,
-                self.namespaces.clone(),
-                should_succeed
-            )),
-            Capability::Storage(_) => panic!("storage capabilities are not supported"),
+            CheckUse::Directory { path, should_succeed } => {
+                await!(capability_util::read_data_from_namespace(
+                    path,
+                    component_resolved_url,
+                    self.namespaces.clone(),
+                    should_succeed
+                ))
+            }
+            CheckUse::Storage { type_, storage_relation } => {
+                await!(capability_util::write_file_to_storage(
+                    "/storage".try_into().unwrap(),
+                    component_resolved_url,
+                    self.namespaces.clone(),
+                    storage_relation.is_some(),
+                ));
+                if let Some(relative_moniker) = storage_relation {
+                    await!(capability_util::check_file_in_storage(
+                        type_,
+                        relative_moniker,
+                        &self.memfs
+                    ));
+                }
+            }
         }
     }
 
@@ -240,7 +269,11 @@ impl RoutingTest {
             .map(|u| match u {
                 UseDecl::Directory(d) => d.target_path.to_string(),
                 UseDecl::Service(s) => s.target_path.dirname,
-                UseDecl::Storage(_) => panic!("storage capabilites are not supported"),
+                UseDecl::Storage(UseStorageDecl::Data(p)) => p.to_string(),
+                UseDecl::Storage(UseStorageDecl::Cache(p)) => p.to_string(),
+                UseDecl::Storage(UseStorageDecl::Meta) => {
+                    panic!("meta storage currently unsupported")
+                }
             })
             .collect();
         let mut expected_paths = vec![];
@@ -281,38 +314,42 @@ impl RoutingTest {
     }
 
     /// Host all capabilities in `decl` that come from `self`.
-    fn host_capabilities(name: &str, decl: ComponentDecl, runner: &mut MockRunner) {
+    fn host_capabilities(name: &str, decl: ComponentDecl, runner: &mut MockRunner, memfs: &Memfs) {
         // if this decl is offering/exposing something from `Self`, let's host it
         let mut out_dir = None;
         for expose in decl.exposes.iter() {
-            let source = match expose {
-                ExposeDecl::Service(s) => &s.source,
-                ExposeDecl::Directory(d) => &d.source,
-            };
-            if *source == ExposeSource::Self_ {
-                Self::host_capability(&mut out_dir, &expose.clone().into());
+            match expose {
+                ExposeDecl::Service(s) if s.source == ExposeSource::Self_ => {
+                    out_dir.get_or_insert(OutDir::new()).add_service()
+                }
+                ExposeDecl::Directory(d) if d.source == ExposeSource::Self_ => {
+                    out_dir.get_or_insert(OutDir::new()).add_directory(memfs)
+                }
+                _ => (),
             }
         }
         for offer in decl.offers.iter() {
-            let source = match offer {
-                OfferDecl::Service(s) => &s.source,
-                OfferDecl::Directory(d) => &d.source,
-                OfferDecl::Storage(_) => panic!("storage capabilities are not supported"),
-            };
-            if *source == OfferSource::Self_ {
-                Self::host_capability(&mut out_dir, &offer.clone().into());
+            match offer {
+                OfferDecl::Service(s) if s.source == OfferServiceSource::Self_ => {
+                    out_dir.get_or_insert(OutDir::new()).add_service()
+                }
+                OfferDecl::Directory(d) if d.source == OfferDirectorySource::Self_ => {
+                    out_dir.get_or_insert(OutDir::new()).add_directory(memfs)
+                }
+                _ => (),
+            }
+        }
+        for storage in decl.storage.iter() {
+            // Storage capabilities can have a source of "self", so there are situations we want to
+            // test where a storage capability is offered and used and there's no directory
+            // capability in the manifest, so we must host the directory structure for this case in
+            // addition to directory offers.
+            if storage.source == OfferDirectorySource::Self_ {
+                out_dir.get_or_insert(OutDir::new()).add_directory(memfs)
             }
         }
         if let Some(out_dir) = out_dir {
             runner.host_fns.insert(format!("test:///{}_resolved", name), out_dir.host_fn());
-        }
-    }
-
-    fn host_capability(out_dir: &mut Option<OutDir>, capability: &Capability) {
-        match capability {
-            Capability::Service(_) => out_dir.get_or_insert(OutDir::new()).add_service(),
-            Capability::Directory(_) => out_dir.get_or_insert(OutDir::new()).add_directory(),
-            Capability::Storage(_) => panic!("storage capabilities are not supported"),
         }
     }
 
@@ -357,6 +394,46 @@ mod capability_util {
                 assert_eq!(format!("{:?}", err), "ClientRead(Status(PEER_CLOSED))");
             }
         }
+    }
+
+    pub async fn write_file_to_storage(
+        path: CapabilityPath,
+        resolved_url: String,
+        namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+        should_succeed: bool,
+    ) {
+        let dir_string = path.to_string();
+        let dir_proxy =
+            await!(get_dir_from_namespace(dir_string.as_str(), resolved_url, namespaces));
+        let (file_proxy, server_end) = create_proxy::<FileMarker>().unwrap();
+        let flags = OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE;
+        dir_proxy
+            .open(flags, MODE_TYPE_FILE, "hippos", ServerEnd::new(server_end.into_channel()))
+            .expect("failed to open file on storage");
+        let res = await!(file_proxy.write(&mut b"hippos can be stored here".to_vec().drain(..)));
+        match (res, should_succeed) {
+            (Ok((s, _)),true) => assert_eq!(zx::Status::OK, zx::Status::from_raw(s)),
+            (Err(_),false) => (),
+            (Ok((s, _)),false) => panic!("we shouldn't be able to access storage, but we opened a file! failed write with status {}", zx::Status::from_raw(s)),
+            (Err(e),true) => panic!("failed to write to file when we expected to be able to! {:?}", e),
+        }
+    }
+
+    pub async fn check_file_in_storage(
+        type_: fsys::StorageType,
+        relation: RelativeMoniker,
+        memfs: &Memfs,
+    ) {
+        let memfs_proxy = memfs.clone_root_handle();
+
+        let mut dir_path = generate_storage_path(type_, relation);
+
+        dir_path.push("hippos");
+
+        let file_proxy = io_util::open_file(&memfs_proxy, &dir_path, io_util::OPEN_RIGHT_READABLE)
+            .expect("failed to open file");
+        let res = await!(io_util::read_file(&file_proxy));
+        assert_eq!("hippos can be stored here".to_string(), res.expect("failed to read file"));
     }
 
     /// Looks up `resolved_url` in the namespace, and attempts to use `path`. Expects the service
@@ -483,7 +560,7 @@ mod capability_util {
         collection: &'a str,
         child_decl: ChildDecl,
     ) {
-        let path = CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").expect("no realm service");
+        let path: CapabilityPath = "/svc/fuchsia.sys2.Realm".try_into().expect("no realm service");
         let dir_proxy =
             await!(get_dir_from_namespace(&path.dirname, resolved_url.clone(), namespaces));
         let node_proxy = io_util::open_node(
@@ -554,26 +631,29 @@ pub struct OutDir {
     // function by `host_fn`. This logic should be updated to directly work on a directory once a
     // multithreaded rust vfs is implemented.
     host_service: bool,
-    host_directory: bool,
+    memfs_proxy: Option<Arc<DirectoryProxy>>,
 }
 
 impl OutDir {
     pub fn new() -> OutDir {
-        OutDir { host_service: false, host_directory: false }
+        OutDir { host_service: false, memfs_proxy: None }
     }
     /// Adds `svc/foo` to the out directory, which implements `fidl.examples.echo.Echo`.
     pub fn add_service(&mut self) {
         self.host_service = true;
     }
-    /// Adds `data/foo/hippo` to the out directory, which contains the string `hippo`
-    pub fn add_directory(&mut self) {
-        self.host_directory = true;
+    /// Adds `data/foo/hippo` to the out directory, which contains the string `hippo`, and adds
+    /// `storage` to the out directory, which contains a directory broker that reroutes connections
+    /// to a locally hosted memfs.
+    pub fn add_directory(&mut self, memfs: &Memfs) {
+        self.memfs_proxy = Some(Arc::new(memfs.clone_root_handle()));
     }
     /// Returns a function that will host this outgoing directory on the given ServerEnd.
     pub fn host_fn(&self) -> Box<Fn(ServerEnd<DirectoryMarker>) + Send + Sync> {
         let host_service = self.host_service;
-        let host_directory = self.host_directory;
+        let memfs_proxy = self.memfs_proxy.clone();
         Box::new(move |server_end: ServerEnd<DirectoryMarker>| {
+            let memfs_proxy = memfs_proxy.clone();
             fasync::spawn(async move {
                 let mut pseudo_dir = directory::simple::empty();
                 if host_service {
@@ -589,15 +669,30 @@ impl OutDir {
                         .map_err(|(s, _)| s)
                         .expect("failed to add svc entry");
                 }
-                if host_directory {
+                if let Some(memfs_proxy) = memfs_proxy {
+                    await!(Self::initialize_foo_hippo_in_memfs(&memfs_proxy));
+
+                    let memfs_proxy =
+                        io_util::clone_directory(&memfs_proxy, CLONE_FLAG_SAME_RIGHTS).unwrap();
                     pseudo_dir
                         .add_entry(
                             "data",
-                            pseudo_directory! {
-                                "foo" => pseudo_directory! {
-                                    "hippo" => read_only(|| Ok(b"hippo".to_vec())),
+                            directory_broker::DirectoryBroker::new(Box::new(
+                                move |flags, mode, path, server_end| {
+                                    if path == "" {
+                                        memfs_proxy
+                                            .clone(
+                                                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                                                server_end,
+                                            )
+                                            .expect("failed to clone cache subdir");
+                                    } else {
+                                        memfs_proxy
+                                            .open(flags, mode, &path, server_end)
+                                            .expect("failed to open cache subdir");
+                                    }
                                 },
-                            },
+                            )),
                         )
                         .map_err(|(s, _)| s)
                         .expect("failed to add data entry");
@@ -614,6 +709,24 @@ impl OutDir {
                 panic!("the pseudo dir exited!");
             });
         })
+    }
+
+    async fn initialize_foo_hippo_in_memfs(memfs_proxy: &DirectoryProxy) {
+        let foo_proxy = io_util::open_directory(
+            &memfs_proxy,
+            &PathBuf::from("foo"),
+            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .unwrap();
+        let hippo_proxy = io_util::open_file(
+            &foo_proxy,
+            &PathBuf::from("hippo"),
+            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .unwrap();
+        let (s, _) = await!(hippo_proxy.write(&mut b"hippo".to_vec().drain(..)))
+            .expect("failed to write to file");
+        assert_eq!(zx::Status::OK, zx::Status::from_raw(s));
     }
 
     /// Hosts a new service on server_end that implements fidl.examples.echo.Echo

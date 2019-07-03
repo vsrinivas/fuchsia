@@ -7,12 +7,13 @@ use {
     crate::model::testing::mocks::*,
     crate::model::testing::routing_test_helpers::*,
     cm_rust::{
-        self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
+        self, Capability, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
         ExposeDirectoryDecl, ExposeServiceDecl, ExposeSource, OfferDecl, OfferDirectoryDecl,
-        OfferServiceDecl, OfferSource, OfferTarget, UseDecl, UseDirectoryDecl, UseServiceDecl,
+        OfferDirectorySource, OfferServiceDecl, OfferServiceSource, OfferTarget, UseDecl,
+        UseDirectoryDecl, UseServiceDecl,
     },
     fidl_fuchsia_sys2 as fsys,
-    std::convert::TryFrom,
+    std::convert::{TryFrom, TryInto},
 };
 
 ///   a
@@ -67,13 +68,13 @@ async fn use_from_parent() {
             ComponentDecl {
                 offers: vec![
                     OfferDecl::Directory(OfferDirectoryDecl {
-                        source: OfferSource::Self_,
+                        source: OfferDirectorySource::Self_,
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
-                        source: OfferSource::Self_,
+                        source: OfferServiceSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
@@ -106,8 +107,14 @@ async fn use_from_parent() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["b"].into(), default_directory_capability(), true));
-    await!(test.check_use(vec!["b"].into(), default_service_capability(), true));
+    await!(test.check_use(
+        vec!["b"].into(),
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
+    ));
+    await!(test.check_use(
+        vec!["b"].into(),
+        CheckUse::Service { path: default_service_capability(), should_succeed: true }
+    ));
 }
 
 ///   a
@@ -130,13 +137,13 @@ async fn use_from_grandparent() {
             ComponentDecl {
                 offers: vec![
                     OfferDecl::Directory(OfferDirectoryDecl {
-                        source: OfferSource::Self_,
+                        source: OfferDirectorySource::Self_,
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
-                        source: OfferSource::Self_,
+                        source: OfferServiceSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
@@ -155,13 +162,13 @@ async fn use_from_grandparent() {
             ComponentDecl {
                 offers: vec![
                     OfferDecl::Directory(OfferDirectoryDecl {
-                        source: OfferSource::Realm,
+                        source: OfferDirectorySource::Realm,
                         source_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         target_path: CapabilityPath::try_from("/data/baz").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
-                        source: OfferSource::Realm,
+                        source: OfferServiceSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
@@ -194,8 +201,14 @@ async fn use_from_grandparent() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["b", "c"].into(), default_directory_capability(), true));
-    await!(test.check_use(vec!["b", "c"].into(), default_service_capability(), true));
+    await!(test.check_use(
+        vec!["b", "c"].into(),
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
+    ));
+    await!(test.check_use(
+        vec!["b", "c"].into(),
+        CheckUse::Service { path: default_service_capability(), should_succeed: true }
+    ));
 }
 
 ///     a
@@ -226,13 +239,13 @@ async fn use_from_sibling_no_root() {
             ComponentDecl {
                 offers: vec![
                     OfferDecl::Directory(OfferDirectoryDecl {
-                        source: OfferSource::Child("d".to_string()),
+                        source: OfferDirectorySource::Child("d".to_string()),
                         source_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         target_path: CapabilityPath::try_from("/data/foobar").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
-                        source: OfferSource::Child("d".to_string()),
+                        source: OfferServiceSource::Child("d".to_string()),
                         source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
@@ -290,8 +303,14 @@ async fn use_from_sibling_no_root() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["b", "c"].into(), default_directory_capability(), true));
-    await!(test.check_use(vec!["b", "c"].into(), default_service_capability(), true));
+    await!(test.check_use(
+        vec!["b", "c"].into(),
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
+    ));
+    await!(test.check_use(
+        vec!["b", "c"].into(),
+        CheckUse::Service { path: default_service_capability(), should_succeed: true }
+    ));
 }
 
 ///   a
@@ -309,13 +328,13 @@ async fn use_from_sibling_root() {
             ComponentDecl {
                 offers: vec![
                     OfferDecl::Directory(OfferDirectoryDecl {
-                        source: OfferSource::Child("b".to_string()),
+                        source: OfferDirectorySource::Child("b".to_string()),
                         source_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         target_path: CapabilityPath::try_from("/data/baz").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
-                        source: OfferSource::Child("b".to_string()),
+                        source: OfferServiceSource::Child("b".to_string()),
                         source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
@@ -373,8 +392,14 @@ async fn use_from_sibling_root() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["c"].into(), default_directory_capability(), true));
-    await!(test.check_use(vec!["c"].into(), default_service_capability(), true));
+    await!(test.check_use(
+        vec!["c"].into(),
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
+    ));
+    await!(test.check_use(
+        vec!["c"].into(),
+        CheckUse::Service { path: default_service_capability(), should_succeed: true }
+    ));
 }
 
 ///     a
@@ -395,13 +420,13 @@ async fn use_from_niece() {
             ComponentDecl {
                 offers: vec![
                     OfferDecl::Directory(OfferDirectoryDecl {
-                        source: OfferSource::Child("b".to_string()),
+                        source: OfferDirectorySource::Child("b".to_string()),
                         source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                         target_path: CapabilityPath::try_from("/data/foobar").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
-                        source: OfferSource::Child("b".to_string()),
+                        source: OfferServiceSource::Child("b".to_string()),
                         source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
@@ -482,8 +507,14 @@ async fn use_from_niece() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["c"].into(), default_directory_capability(), true));
-    await!(test.check_use(vec!["c"].into(), default_service_capability(), true));
+    await!(test.check_use(
+        vec!["c"].into(),
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
+    ));
+    await!(test.check_use(
+        vec!["c"].into(),
+        CheckUse::Service { path: default_service_capability(), should_succeed: true }
+    ));
 }
 
 ///      a
@@ -506,13 +537,13 @@ async fn use_kitchen_sink() {
             ComponentDecl {
                 offers: vec![
                     OfferDecl::Service(OfferServiceDecl {
-                        source: OfferSource::Self_,
+                        source: OfferServiceSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
-                        source: OfferSource::Child("b".to_string()),
+                        source: OfferDirectorySource::Child("b".to_string()),
                         source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                         target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
@@ -539,13 +570,13 @@ async fn use_kitchen_sink() {
                 program: None,
                 offers: vec![
                     OfferDecl::Directory(OfferDirectoryDecl {
-                        source: OfferSource::Child("d".to_string()),
+                        source: OfferDirectorySource::Child("d".to_string()),
                         source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                         target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                         target: OfferTarget::Child("e".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
-                        source: OfferSource::Realm,
+                        source: OfferServiceSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
                         target: OfferTarget::Child("e".to_string()),
@@ -577,13 +608,13 @@ async fn use_kitchen_sink() {
                 program: None,
                 offers: vec![
                     OfferDecl::Directory(OfferDirectoryDecl {
-                        source: OfferSource::Realm,
+                        source: OfferDirectorySource::Realm,
                         source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                         target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                         target: OfferTarget::Child("f".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
-                        source: OfferSource::Child("g".to_string()),
+                        source: OfferServiceSource::Child("g".to_string()),
                         source_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
                         target: OfferTarget::Child("f".to_string()),
@@ -678,10 +709,22 @@ async fn use_kitchen_sink() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["b", "e"].into(), default_directory_capability(), true));
-    await!(test.check_use(vec!["b", "e"].into(), default_service_capability(), true));
-    await!(test.check_use(vec!["c", "f"].into(), default_directory_capability(), true));
-    await!(test.check_use(vec!["c", "f"].into(), default_service_capability(), true));
+    await!(test.check_use(
+        vec!["b", "e"].into(),
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
+    ));
+    await!(test.check_use(
+        vec!["b", "e"].into(),
+        CheckUse::Service { path: default_service_capability(), should_succeed: true }
+    ));
+    await!(test.check_use(
+        vec!["c", "f"].into(),
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
+    ));
+    await!(test.check_use(
+        vec!["c", "f"].into(),
+        CheckUse::Service { path: default_service_capability(), should_succeed: true }
+    ));
 }
 
 ///  component manager's namespace
@@ -690,10 +733,10 @@ async fn use_kitchen_sink() {
 ///    \
 ///     b
 ///
-/// a: offers directory /hippo/data/foo from self as /foo
-/// a: offers service /svc/fidl.examples.echo.Echo from self as /echo/echo
+/// a: offers directory /hippo/data/foo from realm as /foo
+/// a: offers service /hippo/svc/foo from realm as /echo/echo
 /// b: uses directory /foo as /data/hippo
-/// b: uses service /echo/echo
+/// b: uses service /echo/echo as /svc/hippo
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_from_component_manager_namespace() {
     let components = vec![
@@ -702,15 +745,14 @@ async fn use_from_component_manager_namespace() {
             ComponentDecl {
                 offers: vec![
                     OfferDecl::Directory(OfferDirectoryDecl {
-                        source: OfferSource::Realm,
+                        source: OfferDirectorySource::Realm,
                         source_path: CapabilityPath::try_from("/hippo/data/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/foo").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
-                        source: OfferSource::Realm,
-                        source_path: CapabilityPath::try_from("/svc/fidl.examples.echo.Echo")
-                            .unwrap(),
+                        source: OfferServiceSource::Realm,
+                        source_path: CapabilityPath::try_from("/hippo/svc/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/echo/echo").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
                     }),
@@ -743,8 +785,14 @@ async fn use_from_component_manager_namespace() {
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
     test.install_hippo_dir();
-    await!(test.check_use(vec!["b"].into(), default_directory_capability(), true));
-    await!(test.check_use(vec!["b"].into(), default_service_capability(), true));
+    await!(test.check_use(
+        vec!["b"].into(),
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
+    ));
+    await!(test.check_use(
+        vec!["b"].into(),
+        CheckUse::Service { path: default_service_capability(), should_succeed: true }
+    ));
 }
 
 ///   a
@@ -787,8 +835,14 @@ async fn use_not_offered() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["b"].into(), default_directory_capability(), false));
-    await!(test.check_use(vec!["b"].into(), default_service_capability(), false));
+    await!(test.check_use(
+        vec!["b"].into(),
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: false }
+    ));
+    await!(test.check_use(
+        vec!["b"].into(),
+        CheckUse::Service { path: default_service_capability(), should_succeed: false }
+    ));
 }
 
 ///   a
@@ -809,13 +863,13 @@ async fn use_offer_source_not_exposed() {
                 offers: vec![
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                        source: OfferSource::Child("b".to_string()),
+                        source: OfferDirectorySource::Child("b".to_string()),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        source: OfferSource::Child("b".to_string()),
+                        source: OfferServiceSource::Child("b".to_string()),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
                     }),
@@ -855,8 +909,14 @@ async fn use_offer_source_not_exposed() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["c"].into(), default_directory_capability(), false));
-    await!(test.check_use(vec!["c"].into(), default_service_capability(), false));
+    await!(test.check_use(
+        vec!["c"].into(),
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: false }
+    ));
+    await!(test.check_use(
+        vec!["c"].into(),
+        CheckUse::Service { path: default_service_capability(), should_succeed: false }
+    ));
 }
 
 ///   a
@@ -890,13 +950,13 @@ async fn use_offer_source_not_offered() {
                 offers: vec![
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                        source: OfferSource::Realm,
+                        source: OfferDirectorySource::Realm,
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        source: OfferSource::Realm,
+                        source: OfferServiceSource::Realm,
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
                     }),
@@ -928,8 +988,14 @@ async fn use_offer_source_not_offered() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["b", "c"].into(), default_directory_capability(), false));
-    await!(test.check_use(vec!["b", "c"].into(), default_service_capability(), false));
+    await!(test.check_use(
+        vec!["b", "c"].into(),
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: false }
+    ));
+    await!(test.check_use(
+        vec!["b", "c"].into(),
+        CheckUse::Service { path: default_service_capability(), should_succeed: false }
+    ));
 }
 
 ///   a
@@ -999,8 +1065,14 @@ async fn use_from_expose() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["b"].into(), default_directory_capability(), false));
-    await!(test.check_use(vec!["b"].into(), default_service_capability(), false));
+    await!(test.check_use(
+        vec!["b"].into(),
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: false }
+    ));
+    await!(test.check_use(
+        vec!["b"].into(),
+        CheckUse::Service { path: default_service_capability(), should_succeed: false }
+    ));
 }
 
 ///   a
@@ -1021,13 +1093,13 @@ async fn offer_from_non_executable() {
                 offers: vec![
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                        source: OfferSource::Self_,
+                        source: OfferDirectorySource::Self_,
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        source: OfferSource::Self_,
+                        source: OfferServiceSource::Self_,
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
                     }),
@@ -1059,8 +1131,14 @@ async fn offer_from_non_executable() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["b"].into(), default_directory_capability(), false));
-    await!(test.check_use(vec!["b"].into(), default_service_capability(), false));
+    await!(test.check_use(
+        vec!["b"].into(),
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: false }
+    ));
+    await!(test.check_use(
+        vec!["b"].into(),
+        CheckUse::Service { path: default_service_capability(), should_succeed: false }
+    ));
 }
 
 ///   a
@@ -1081,13 +1159,13 @@ async fn use_in_collection() {
                 offers: vec![
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
-                        source: OfferSource::Self_,
+                        source: OfferDirectorySource::Self_,
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                        source: OfferSource::Self_,
+                        source: OfferServiceSource::Self_,
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
                     }),
@@ -1110,13 +1188,13 @@ async fn use_in_collection() {
                 offers: vec![
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                        source: OfferSource::Realm,
+                        source: OfferDirectorySource::Realm,
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target: OfferTarget::Collection("coll".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        source: OfferSource::Realm,
+                        source: OfferServiceSource::Realm,
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         target: OfferTarget::Collection("coll".to_string()),
                     }),
@@ -1170,8 +1248,14 @@ async fn use_in_collection() {
             startup: fsys::StartupMode::Lazy,
         }
     ));
-    await!(test.check_use(vec!["b", "coll:c"].into(), default_directory_capability(), true));
-    await!(test.check_use(vec!["b", "coll:d"].into(), default_service_capability(), true));
+    await!(test.check_use(
+        vec!["b", "coll:c"].into(),
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
+    ));
+    await!(test.check_use(
+        vec!["b", "coll:d"].into(),
+        CheckUse::Service { path: default_service_capability(), should_succeed: true }
+    ));
 }
 
 ///   a
@@ -1191,13 +1275,13 @@ async fn use_in_collection_not_offered() {
                 offers: vec![
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
-                        source: OfferSource::Self_,
+                        source: OfferDirectorySource::Self_,
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                        source: OfferSource::Self_,
+                        source: OfferServiceSource::Self_,
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
                     }),
@@ -1253,8 +1337,14 @@ async fn use_in_collection_not_offered() {
             startup: fsys::StartupMode::Lazy,
         }
     ));
-    await!(test.check_use(vec!["b", "coll:c"].into(), default_directory_capability(), false));
-    await!(test.check_use(vec!["b", "coll:c"].into(), default_service_capability(), false));
+    await!(test.check_use(
+        vec!["b", "coll:c"].into(),
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: false }
+    ));
+    await!(test.check_use(
+        vec!["b", "coll:c"].into(),
+        CheckUse::Service { path: default_service_capability(), should_succeed: false }
+    ));
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -1317,16 +1407,24 @@ async fn expose_from_self_and_child() {
     let test = RoutingTest::new("a", components, ambient);
     await!(test.check_use_exposed_dir(
         vec!["b"].into(),
-        new_directory_capability("/data/bar/hippo"),
+        Capability::Directory("/data/bar/hippo".try_into().unwrap()),
         true
     ));
     await!(test.check_use_exposed_dir(
         vec!["b"].into(),
-        new_service_capability("/svc/bar/hippo"),
+        Capability::Service("/svc/bar/hippo".try_into().unwrap()),
         true
     ));
-    await!(test.check_use_exposed_dir(vec!["b", "c"].into(), default_directory_capability(), true));
-    await!(test.check_use_exposed_dir(vec!["b", "c"].into(), default_service_capability(), true));
+    await!(test.check_use_exposed_dir(
+        vec!["b", "c"].into(),
+        Capability::Directory(default_directory_capability()),
+        true
+    ));
+    await!(test.check_use_exposed_dir(
+        vec!["b", "c"].into(),
+        Capability::Service(default_service_capability()),
+        true
+    ));
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -1376,8 +1474,24 @@ async fn use_not_exposed() {
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
     // Capability is only exposed from "c", so it only be usable from there.
-    await!(test.check_use_exposed_dir(vec!["b"].into(), default_directory_capability(), false,));
-    await!(test.check_use_exposed_dir(vec!["b"].into(), default_service_capability(), false,));
-    await!(test.check_use_exposed_dir(vec!["b", "c"].into(), default_directory_capability(), true));
-    await!(test.check_use_exposed_dir(vec!["b", "c"].into(), default_service_capability(), true));
+    await!(test.check_use_exposed_dir(
+        vec!["b"].into(),
+        Capability::Directory(default_directory_capability()),
+        false,
+    ));
+    await!(test.check_use_exposed_dir(
+        vec!["b"].into(),
+        Capability::Service(default_service_capability()),
+        false,
+    ));
+    await!(test.check_use_exposed_dir(
+        vec!["b", "c"].into(),
+        Capability::Directory(default_directory_capability()),
+        true
+    ));
+    await!(test.check_use_exposed_dir(
+        vec!["b", "c"].into(),
+        Capability::Service(default_service_capability()),
+        true
+    ));
 }

@@ -7,16 +7,16 @@
 use {
     failure::{err_msg, format_err, Error},
     fdio,
-    fidl::endpoints::create_proxy,
     fidl::endpoints::Proxy,
+    fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_io::{
-        DirectoryProxy, FileProxy, NodeProxy, MAX_BUF, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
-        OPEN_FLAG_DIRECTORY,
+        DirectoryMarker, DirectoryProxy, FileProxy, NodeProxy, MAX_BUF, MODE_TYPE_DIRECTORY,
+        MODE_TYPE_FILE, OPEN_FLAG_CREATE, OPEN_FLAG_DIRECTORY,
     },
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, HandleBased},
     std::ffi::CString,
-    std::path::PathBuf,
+    std::path::{Component, PathBuf},
     std::ptr,
     std::str::from_utf8,
 };
@@ -58,6 +58,27 @@ pub fn open_file<'a>(
     flags: u32,
 ) -> Result<FileProxy, Error> {
     node_to_file(open_node(dir, path, flags, MODE_TYPE_FILE)?)
+}
+
+pub fn create_sub_directories(
+    mut dir: DirectoryProxy,
+    path: &PathBuf,
+) -> Result<DirectoryProxy, Error> {
+    for part in path.components() {
+        if let Component::Normal(part) = part {
+            let (sub_dir_proxy, local_server_end) = create_proxy::<DirectoryMarker>()?;
+            dir.open(
+                OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE,
+                MODE_TYPE_DIRECTORY,
+                part.to_str().unwrap(),
+                ServerEnd::new(local_server_end.into_channel()),
+            )?;
+            dir = sub_dir_proxy;
+        } else {
+            return Err(format_err!("invalid item in path: {:?}", part));
+        }
+    }
+    Ok(dir)
 }
 
 // TODO: this function will block on the FDIO calls. This should be rewritten/wrapped/whatever to
@@ -257,6 +278,31 @@ mod tests {
             }
             assert_eq!(zx::Status::OK, zx::Status::from_raw(await!(file_proxy.close())?));
         }
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn create_sub_directories_test() -> Result<(), Error> {
+        let tempdir = TempDir::new()?;
+
+        let path = PathBuf::from("path/to/example/dir");
+        let file_name = PathBuf::from("example_file_name");
+        let data = "file contents";
+
+        let root_dir = open_directory_in_namespace(
+            tempdir.path().to_str().unwrap(),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )?;
+
+        let sub_dir = create_sub_directories(clone_directory(&root_dir, fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS)?, &path)?;
+        let file = open_file(&sub_dir, &file_name, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE)?;
+
+        let (s, _) = await!(file.write(&mut data.as_bytes().to_vec().into_iter()))?;
+        assert_eq!(zx::Status::OK, zx::Status::from_raw(s), "writing to the file failed");
+
+        let contents = std::fs::read_to_string(tempdir.path().join(path).join(file_name))?;
+        assert_eq!(&contents, &data, "File contents did not match");
+
         Ok(())
     }
 }

@@ -208,9 +208,9 @@ impl fmt::Display for AbsoluteMoniker {
 /// moniker prior to construction.
 ///
 /// Naming child monikers along both the "upwards" and "downwards" paths provides a strong
-/// strong guarantee that relative monikers are only meaningful when interpreted within isomorphic
-/// component instance subtrees.  (Compare with relative filesystem path notations which use
-/// ".." to perform upwards traversal and offer correspondingly weaker guarantees.)
+/// guarantee that relative monikers are only meaningful when interpreted within isomorphic
+/// component instance subtrees.  (Compare with relative filesystem path notations which use ".."
+/// to perform upwards traversal and offer correspondingly weaker guarantees.)
 ///
 /// For example, if two sibling component instances named "A" and "B" both possess relative
 /// monikers for another component instance named "C", then A's moniker for C and B's moniker
@@ -226,6 +226,23 @@ pub struct RelativeMoniker {
 impl RelativeMoniker {
     pub fn new(up_path: Vec<ChildMoniker>, down_path: Vec<ChildMoniker>) -> RelativeMoniker {
         RelativeMoniker { up_path, down_path }
+    }
+
+    pub fn from_absolute(from: &AbsoluteMoniker, to: &AbsoluteMoniker) -> RelativeMoniker {
+        let mut from_path = from.path().iter().peekable();
+        let mut to_path = to.path().iter().peekable();
+
+        while from_path.peek().is_some() && from_path.peek() == to_path.peek() {
+            from_path.next();
+            to_path.next();
+        }
+
+        let mut res = RelativeMoniker {
+            up_path: from_path.cloned().collect(),
+            down_path: to_path.cloned().collect(),
+        };
+        res.up_path.reverse();
+        res
     }
 
     pub fn up_path(&self) -> &Vec<ChildMoniker> {
@@ -443,6 +460,63 @@ mod tests {
                 ChildMoniker::new("b0".to_string(), None),
                 ChildMoniker::new("b".to_string(), None),
             ],
+        );
+        assert_eq!(false, cousin.is_self());
+        assert_eq!(".\\a\\a0/b0/b", format!("{}", cousin));
+    }
+
+    #[test]
+    fn relative_monikers_from_absolute() {
+        let me = RelativeMoniker::from_absolute(&vec![].into(), &vec![].into());
+        assert_eq!(true, me.is_self());
+        assert_eq!(".", format!("{}", me));
+
+        let me = RelativeMoniker::from_absolute(
+            &vec!["a", "b", "c"].into(),
+            &vec!["a", "b", "c"].into(),
+        );
+        assert_eq!(true, me.is_self());
+        assert_eq!(".", format!("{}", me));
+
+        let ancestor = RelativeMoniker::from_absolute(&vec!["a", "b"].into(), &vec![].into());
+        assert_eq!(false, ancestor.is_self());
+        assert_eq!(".\\b\\a", format!("{}", ancestor));
+
+        let ancestor = RelativeMoniker::from_absolute(
+            &vec!["a", "b", "c", "d"].into(),
+            &vec!["a", "b"].into(),
+        );
+        assert_eq!(false, ancestor.is_self());
+        assert_eq!(".\\d\\c", format!("{}", ancestor));
+
+        let descendant = RelativeMoniker::from_absolute(&vec![].into(), &vec!["a", "b"].into());
+        assert_eq!(false, descendant.is_self());
+        assert_eq!("./a/b", format!("{}", descendant));
+
+        let descendant = RelativeMoniker::from_absolute(
+            &vec!["a", "b"].into(),
+            &vec!["a", "b", "c", "d"].into(),
+        );
+        assert_eq!(false, descendant.is_self());
+        assert_eq!("./c/d", format!("{}", descendant));
+
+        let sibling = RelativeMoniker::from_absolute(&vec!["a"].into(), &vec!["b"].into());
+        assert_eq!(false, sibling.is_self());
+        assert_eq!(".\\a/b", format!("{}", sibling));
+
+        let sibling =
+            RelativeMoniker::from_absolute(&vec!["c", "a"].into(), &vec!["c", "b"].into());
+        assert_eq!(false, sibling.is_self());
+        assert_eq!(".\\a/b", format!("{}", sibling));
+
+        let cousin =
+            RelativeMoniker::from_absolute(&vec!["a0", "a"].into(), &vec!["b0", "b"].into());
+        assert_eq!(false, cousin.is_self());
+        assert_eq!(".\\a\\a0/b0/b", format!("{}", cousin));
+
+        let cousin = RelativeMoniker::from_absolute(
+            &vec!["c", "d", "a0", "a"].into(),
+            &vec!["c", "d", "b0", "b"].into(),
         );
         assert_eq!(false, cousin.is_self());
         assert_eq!(".\\a\\a0/b0/b", format!("{}", cousin));

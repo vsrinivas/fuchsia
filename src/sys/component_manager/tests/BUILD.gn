@@ -32,6 +32,13 @@ rustc_binary("hub_integration_test_bin") {
     "//third_party/rust_crates:url",
     "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
+  non_rust_deps = [
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/memfs",
+  ]
 }
 
 test_package("hub_integration_test") {
@@ -232,6 +239,13 @@ rustc_binary("no_pkg_resolver_test_bin") {
   deps = [
     "//garnet/public/rust/fuchsia-async",
     "//src/sys/component_manager:lib",
+  ]
+  non_rust_deps = [
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/memfs",
   ]
 }
 

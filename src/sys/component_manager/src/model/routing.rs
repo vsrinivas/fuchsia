@@ -4,12 +4,25 @@
 
 use {
     crate::model::*,
-    cm_rust::{self, Capability, CapabilityPath, ExposeDecl, ExposeSource, OfferDecl, OfferSource},
+    cm_rust::{
+        self, Capability, CapabilityPath, ExposeDecl, ExposeSource, OfferDecl,
+        OfferDirectorySource, OfferServiceSource, OfferStorageSource,
+    },
     failure::format_err,
-    fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-    fuchsia_zircon as zx,
+    fidl::endpoints::{create_proxy, ServerEnd},
+    fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
+    std::path::PathBuf,
     std::sync::Arc,
 };
+const FLAGS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
+
+/// Describes the source of a capability, for any type of capability.
+enum OfferSource<'a> {
+    Service(&'a OfferServiceSource),
+    Directory(&'a OfferDirectorySource),
+    Storage(&'a OfferStorageSource),
+}
 
 /// Describes the source of a capability, as determined by `find_capability_source`
 enum CapabilitySource {
@@ -20,6 +33,10 @@ enum CapabilitySource {
     ComponentMgrNamespace(Capability),
     /// This capability is an ambient service and originates from component manager itself.
     AmbientService(CapabilityPath, Arc<Realm>),
+    /// This capability originates from a storage declaration in a component's decl. The capability
+    /// here is the backing directory capability offered to this realm, into which storage requests
+    /// should be fed.
+    StorageDecl(Capability, OfferDirectorySource, Arc<Realm>),
 }
 
 /// Finds the source of the `capability` used by `absolute_moniker`, and pass along the
@@ -32,7 +49,16 @@ pub async fn route_use_capability<'a>(
     abs_moniker: AbsoluteMoniker,
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
-    let source = await!(find_capability_source(model, used_capability, abs_moniker))?;
+    if let Capability::Storage(type_) = used_capability {
+        return await!(route_and_open_storage_capability(
+            model,
+            type_.clone(),
+            open_mode,
+            abs_moniker,
+            server_chan
+        ));
+    }
+    let source = await!(find_capability_source(model, used_capability, &abs_moniker))?;
     await!(open_capability_at_source(model, open_mode, source, server_chan))
 }
 
@@ -62,15 +88,14 @@ async fn open_capability_at_source<'a>(
     source: CapabilitySource,
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
-    let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
     match source {
         CapabilitySource::ComponentMgrNamespace(source_capability) => {
             if let Some(path) = source_capability.path() {
-                io_util::connect_in_namespace(&path.to_string(), server_chan, flags)
+                io_util::connect_in_namespace(&path.to_string(), server_chan, FLAGS)
                     .map_err(|e| ModelError::capability_discovery_error(e))?;
             } else {
                 return Err(ModelError::capability_discovery_error(format_err!(
-                    "storage capabilities are not supported"
+                    "invalid capability type to come from component manager's namespace"
                 )));
             }
         }
@@ -79,14 +104,14 @@ async fn open_capability_at_source<'a>(
                 await!(Model::bind_instance_open_outgoing(
                     &model,
                     realm,
-                    flags,
+                    FLAGS,
                     open_mode,
                     path,
                     server_chan
                 ))?;
             } else {
                 return Err(ModelError::capability_discovery_error(format_err!(
-                    "storage capabilities are not supported"
+                    "invalid capability type to come from a component"
                 )));
             }
         }
@@ -98,8 +123,142 @@ async fn open_capability_at_source<'a>(
                 server_chan
             ))?;
         }
+        CapabilitySource::StorageDecl(..) => {
+            panic!("storage capabilities must be separately routed and opened");
+        }
     }
     Ok(())
+}
+
+async fn route_and_open_storage_capability(
+    model: &Model,
+    type_: fsys::StorageType,
+    open_mode: u32,
+    use_abs_moniker: AbsoluteMoniker,
+    server_chan: zx::Channel,
+) -> Result<(), ModelError> {
+    // Walk the offer chain to find the storage decl
+    let parent_moniker = match use_abs_moniker.parent() {
+        Some(m) => m,
+        None => {
+            return Err(ModelError::capability_discovery_error(format_err!(
+                "storage capabilities cannot come from component manager's namespace"
+            )))
+        }
+    };
+    let mut pos = WalkPosition {
+        capability: Capability::Storage(type_.clone()),
+        last_child_moniker: use_abs_moniker.path().last().map(|c| c.clone()),
+        moniker: parent_moniker,
+    };
+
+    let source = await!(walk_offer_chain(model, &mut pos))?;
+
+    let (dir_capability, dir_source, storage_decl_realm) = match source {
+        Some(CapabilitySource::StorageDecl(c, s, r)) => (c, s, r),
+        _ => {
+            return Err(ModelError::capability_discovery_error(format_err!(
+                "storage capabilities must come from a storage declaration"
+            )))
+        }
+    };
+
+    // Find the path and source of the directory capability.
+    let (capability_path, dir_source_realm) = match dir_source {
+        OfferDirectorySource::Self_ => {
+            (dir_capability.path().unwrap().clone(), storage_decl_realm.clone())
+        }
+        OfferDirectorySource::Realm => {
+            let source = await!(find_capability_source(
+                model,
+                &dir_capability,
+                &storage_decl_realm.abs_moniker
+            ))?;
+            match source {
+                CapabilitySource::Component(source_capability, realm) => {
+                    (source_capability.path().unwrap().clone(), realm)
+                }
+                _ => {
+                    return Err(ModelError::capability_discovery_error(format_err!(
+                        "storage capability backing directories must be provided by a component"
+                    )))
+                }
+            }
+        }
+        OfferDirectorySource::Child(n) => {
+            let mut pos = WalkPosition {
+                capability: dir_capability,
+                last_child_moniker: None,
+                moniker: storage_decl_realm.abs_moniker.child(ChildMoniker::new(n, None)),
+            };
+            match await!(walk_expose_chain(model, &mut pos))? {
+                CapabilitySource::Component(source_capability, realm) => {
+                    (source_capability.path().unwrap().clone(), realm)
+                }
+                _ => {
+                    return Err(ModelError::capability_discovery_error(format_err!(
+                        "storage capability backing directories must be provided by a component"
+                    )))
+                }
+            }
+        }
+    };
+
+    // Bind with a local proxy, so we can create and open the relevant sub-directory for
+    // this component.
+    let (dir_proxy, local_server_end) =
+        create_proxy::<DirectoryMarker>().expect("failed to create proxy");
+    await!(Model::bind_instance_open_outgoing(
+        &model,
+        dir_source_realm,
+        FLAGS,
+        open_mode,
+        &capability_path,
+        local_server_end.into_channel()
+    ))?;
+
+    // Open each node individually, so it can be created if it doesn't exist
+    let relative_moniker =
+        RelativeMoniker::from_absolute(&storage_decl_realm.abs_moniker, &use_abs_moniker);
+    let sub_dir_proxy =
+        io_util::create_sub_directories(dir_proxy, &generate_storage_path(type_, relative_moniker))
+            .map_err(|e| {
+                ModelError::capability_discovery_error(format_err!(
+                    "failed to create new directories: {}",
+                    e
+                ))
+            })?;
+
+    // clone the final connection to connect the channel we're routing to its destination
+    sub_dir_proxy
+        .clone(FLAGS, ServerEnd::new(server_chan))
+        .map_err(|e| ModelError::capability_discovery_error(format_err!("failed clone {}", e)))?;
+    Ok(())
+}
+
+/// Generates the path into a directory the provided component will be afforded for storage
+pub fn generate_storage_path(
+    type_: fsys::StorageType,          // The type of storage being used
+    relative_moniker: RelativeMoniker, // The relative moniker from the storage decl to the usage
+) -> PathBuf {
+    assert!(
+        !relative_moniker.down_path().is_empty(),
+        "storage capability appears to have been exposed or used by its source"
+    );
+
+    let mut down_path = relative_moniker.down_path().iter();
+
+    let mut dir_path = vec![down_path.next().unwrap().as_str().to_string()];
+    while let Some(p) = down_path.next() {
+        dir_path.push("children".to_string());
+        dir_path.push(p.as_str().to_string());
+    }
+    match type_ {
+        fsys::StorageType::Data => dir_path.push("data".to_string()),
+        fsys::StorageType::Cache => dir_path.push("cache".to_string()),
+        fsys::StorageType::Meta => dir_path.push("meta".to_string()),
+    }
+    dir_path.into_iter().collect()
 }
 
 /// Check if a used capability is ambient, and if so return the ambient `CapabilitySource`.
@@ -137,7 +296,7 @@ struct WalkPosition {
 async fn find_capability_source<'a>(
     model: &'a Model,
     used_capability: &'a Capability,
-    abs_moniker: AbsoluteMoniker,
+    abs_moniker: &'a AbsoluteMoniker,
 ) -> Result<CapabilitySource, ModelError> {
     if let Some(ambient_capability) =
         await!(find_ambient_capability(model, used_capability, &abs_moniker))?
@@ -181,17 +340,18 @@ async fn walk_offer_chain<'a>(
             last_child_moniker.name(),
             last_child_moniker.collection(),
         ) {
+            // source is a (Option<&OfferSource>,Option<&OfferStorageSource>), of which exactly one
+            // side will be Some and one side will be None. This is the source of offer, whose type
+            // varies depending on which variant of offer is present.
             let source = match offer {
-                OfferDecl::Service(d) => &d.source,
-                OfferDecl::Directory(d) => &d.source,
-                OfferDecl::Storage(_) => {
-                    return Err(ModelError::capability_discovery_error(format_err!(
-                        "storage capabilities are not supported"
-                    )))
-                }
+                OfferDecl::Service(s) => OfferSource::Service(&s.source),
+                OfferDecl::Directory(d) => OfferSource::Directory(&d.source),
+                OfferDecl::Storage(s) => OfferSource::Storage(s.source()),
             };
             match source {
-                OfferSource::Realm => {
+                OfferSource::Service(OfferServiceSource::Realm)
+                | OfferSource::Directory(OfferDirectorySource::Realm)
+                | OfferSource::Storage(OfferStorageSource::Realm) => {
                     // The offered capability comes from the realm, so follow the
                     // parent
                     pos.capability = offer.clone().into();
@@ -206,7 +366,8 @@ async fn walk_offer_chain<'a>(
                     };
                     continue 'offerloop;
                 }
-                OfferSource::Self_ => {
+                OfferSource::Service(OfferServiceSource::Self_)
+                | OfferSource::Directory(OfferDirectorySource::Self_) => {
                     // The offered capability comes from the current component,
                     // return our current location in the tree.
                     return Ok(Some(CapabilitySource::Component(
@@ -214,13 +375,24 @@ async fn walk_offer_chain<'a>(
                         current_realm.clone(),
                     )));
                 }
-                OfferSource::Child(child_name) => {
+                OfferSource::Service(OfferServiceSource::Child(child_name))
+                | OfferSource::Directory(OfferDirectorySource::Child(child_name)) => {
                     // The offered capability comes from a child, break the loop
                     // and begin walking the expose chain.
                     pos.capability = offer.clone().into();
                     pos.moniker =
                         pos.moniker.child(ChildMoniker::new(child_name.to_string(), None));
                     return Ok(None);
+                }
+                OfferSource::Storage(OfferStorageSource::Storage(storage_name)) => {
+                    let storage = decl
+                        .find_storage_source(&storage_name)
+                        .expect("storage offer references nonexistent section");
+                    return Ok(Some(CapabilitySource::StorageDecl(
+                        Capability::Directory(storage.source_path.clone()),
+                        storage.source.clone(),
+                        current_realm.clone(),
+                    )));
                 }
             }
         } else {
@@ -276,6 +448,55 @@ async fn walk_expose_chain<'a>(
                 pos.capability,
                 pos.moniker
             )));
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, fidl_fuchsia_sys2::StorageType};
+
+    #[test]
+    fn generate_storage_path_test() {
+        for (type_, relative_moniker, expected_output) in vec![
+            (StorageType::Data, RelativeMoniker::new(vec![], vec!["a".into()]), "a/data"),
+            (StorageType::Cache, RelativeMoniker::new(vec![], vec!["a".into()]), "a/cache"),
+            (StorageType::Meta, RelativeMoniker::new(vec![], vec!["a".into()]), "a/meta"),
+            (
+                StorageType::Data,
+                RelativeMoniker::new(vec![], vec!["a".into(), "b".into()]),
+                "a/children/b/data",
+            ),
+            (
+                StorageType::Cache,
+                RelativeMoniker::new(vec![], vec!["a".into(), "b".into()]),
+                "a/children/b/cache",
+            ),
+            (
+                StorageType::Meta,
+                RelativeMoniker::new(vec![], vec!["a".into(), "b".into()]),
+                "a/children/b/meta",
+            ),
+            (
+                StorageType::Data,
+                RelativeMoniker::new(vec![], vec!["a".into(), "b".into(), "c".into()]),
+                "a/children/b/children/c/data",
+            ),
+            (
+                StorageType::Cache,
+                RelativeMoniker::new(vec![], vec!["a".into(), "b".into(), "c".into()]),
+                "a/children/b/children/c/cache",
+            ),
+            (
+                StorageType::Meta,
+                RelativeMoniker::new(vec![], vec!["a".into(), "b".into(), "c".into()]),
+                "a/children/b/children/c/meta",
+            ),
+        ] {
+            assert_eq!(
+                generate_storage_path(type_, relative_moniker),
+                PathBuf::from(expected_output)
+            )
         }
     }
 }
