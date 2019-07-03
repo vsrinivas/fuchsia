@@ -188,14 +188,20 @@ fit::promise<RecvMsgType, Err> RemoteAPIImpl::Send(const SendMsgType& send_msg) 
 template <typename SendMsgType, typename RecvMsgType>
 void RemoteAPIImpl::Send(const SendMsgType& send_msg,
                          std::function<void(const Err&, RecvMsgType)> callback) {
-  auto promise = Send<SendMsgType, RecvMsgType>(send_msg).then(
-      [callback = std::move(callback)](fit::result<RecvMsgType, Err>& result) {
-        if (result.is_error())
-          callback(result.error(), RecvMsgType());
-        else
-          callback(Err(), result.take_value());
-      });
-  debug_ipc::MessageLoop::Current()->RunTask(FROM_HERE, std::move(promise));
+  auto promise = Send<SendMsgType, RecvMsgType>(send_msg);
+  if (callback) {
+    // Callback is optional.
+    debug_ipc::MessageLoop::Current()->RunTask(
+        FROM_HERE,
+        promise.then([callback = std::move(callback)](fit::result<RecvMsgType, Err>& result) {
+          if (result.is_error())
+            callback(result.error(), RecvMsgType());
+          else
+            callback(Err(), result.take_value());
+        }));
+  } else {
+    debug_ipc::MessageLoop::Current()->RunTask(FROM_HERE, std::move(promise));
+  }
 }
 
 }  // namespace zxdb
