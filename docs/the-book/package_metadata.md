@@ -186,8 +186,8 @@ in the `system` array, then `/system/bin` will appear in the namespaces of
 components loaded from the package.
 
 The `pkgfs` array contains a list of well-known paths within the pkgfs tree
-that are provided to the component. For example, if the string `packages`
-appears in the `pkgfs` array, then `/pkgfs/packages` will appear in the
+that are provided to the component. For example, if the string `versions`
+appears in the `pkgfs` array, then `/pkgfs/versions` will appear in the
 namespaces of components loaded from the package, providing access to all
 packages fully cached on the system.
 

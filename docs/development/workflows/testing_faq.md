@@ -68,7 +68,7 @@ This invocation runs all the test executables in the `scenic_tests` package.
 A (no networking): Start a QEMU instance (`fx run`), and then *manually* invoke
 the `runtests` command.
 
-In the QEMU shell, type in `runtests /pkgfs/packages/scenic_tests/0/test`. The
+In the QEMU shell, type in `run-test-component scenic_tests`. The
 argument is a specific directory containing the test executables.
 
 Note Well! Without networking, the files are loaded into the QEMU instance at

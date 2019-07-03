@@ -248,7 +248,7 @@ you can launch the [term](https://fuchsia.googlesource.com/topaz/+/master/app/te
 
 ## Running tests
 
-Compiled test binaries are installed in `/pkgfs/packages/`, and are referenced by a URI.
+Compiled test binaries are cached in pkgfs like other components, and are referenced by a URI.
 You can run a test by invoking it in the terminal. E.g.
 
 ```
