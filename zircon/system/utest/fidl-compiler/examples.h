@@ -14,6 +14,7 @@
 
 class Examples {
  public:
+  // Map from filename to raw source code.
   static std::map<std::string, std::string>& map() { return map_; }
 
  private:
