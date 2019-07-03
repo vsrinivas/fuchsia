@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/prebuilt.gni")
+
 # All the $current_cpu values that `current_os == "fuchsia"` supports.
 standard_fuchsia_cpus = [
   "arm64",
@@ -29,7 +31,7 @@ foreach(host, standard_build_hosts) {
     {
       cpu = host.cpu
       os = host.os
-      sysroot = "$zx/prebuilt/downloads/sysroot/$os-$cpu"
+      sysroot = "$prebuilt_dir/third_party/sysroot/$os-$cpu"
     },
   ]
 }

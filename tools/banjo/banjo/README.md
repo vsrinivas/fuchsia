@@ -10,7 +10,7 @@ Run the following commands:
 
 ```
 fx build tools/banjo/banjo
-cp out/default/host_x64/banjo_bin zircon/prebuilt/downloads/banjo/banjo_bin
+cp out/default/host_x64/banjo_bin prebuilt/tools/banjo/linux-x64/ # or mac-x64/
 fx build
 ```
 

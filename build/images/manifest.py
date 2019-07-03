@@ -54,10 +54,11 @@ def read_manifest_lines(sep, lines, title, manifest_cwd, result_cwd):
             # Make it relative to the cwd we want to work from.
             build_file = os.path.relpath(build_file, result_cwd)
 
-        # TODO(mcgrathr): Dismal kludge to avoid pulling in asan runtime
+        # TODO(BLD-548): Remove this once all consolidated to //prebuilt.
+        # Dismal kludge to avoid pulling in asan runtime
         # libraries from the zircon ulib bootfs.manifest because their source
         # file names don't match the ones in the toolchain manifest.
-        if 'prebuilt/downloads/clang/lib/' in build_file:
+        if '/prebuilt/third_party/clang/' in build_file:
             continue
 
         yield manifest_entry(group, target_file, build_file, title)

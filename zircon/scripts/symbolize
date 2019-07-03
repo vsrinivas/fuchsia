@@ -33,15 +33,25 @@ LTO=0
 THINLTO=0
 PROFILE=0
 XRAY=0
-ZIRCON_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PREBUILT_DIR="${ZIRCON_ROOT}/prebuilt/downloads"
+
+case "$(uname -s -m)" in
+  'Linux x86_64') readonly HOST_PLATFORM=linux-x64 ;;
+  'Linux arm64') readonly HOST_PLATFORM=linux-arm64 ;;
+  'Darwin x86_64') readonly HOST_PLATFORM=mac-x64 ;;
+  *)
+    echo >&2 "No prebuilts for this machine."
+    exit 1
+    ;;
+esac
+
+readonly ZIRCON_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+readonly PREBUILT_DIR="${ZIRCON_ROOT}/../prebuilt"
+readonly SYMBOLIZE="${PREBUILT_DIR}/tools/symbolize/${HOST_PLATFORM}/symbolize"
+readonly PREBUILT_CLANG_DIR="${PREBUILT_DIR}/third_party/clang/${HOST_PLATFORM}"
 
 if [[ -z "$LLVM_SYMBOLIZER" ]]; then
-  readonly LLVM_SYMBOLIZER="${PREBUILT_DIR}/clang/bin/llvm-symbolizer"
+  readonly LLVM_SYMBOLIZER="${PREBUILT_CLANG_DIR}/bin/llvm-symbolizer"
 fi
-
-readonly SYMBOLIZE="${PREBUILT_DIR}/symbolize"
-
 
 while getopts "a:CGAPLlXo:i:h" FLAG
 do
@@ -88,8 +98,7 @@ else
     IDARGS=(-ids "$IDSTXT")
 fi
 
-CLANG_BUILD_ID_DIR="${PREBUILT_DIR}/clang/lib/debug/.build-id"
 
 exec "$SYMBOLIZE" -llvm-symbolizer "$LLVM_SYMBOLIZER" \
-  -build-id-dir "$CLANG_BUILD_ID_DIR" \
+  -build-id-dir "${PREBUILT_CLANG_DIR}/lib/debug/.build-id" \
   "${IDARGS[@]}" "$@"

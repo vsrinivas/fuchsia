@@ -265,7 +265,7 @@ template("banjo_library") {
 
         visibility = [ ":*" ]
 
-        script = "//zircon/prebuilt/downloads/banjo/banjo_bin"
+        script = "//prebuilt/tools/banjo/${host_platform}/banjo_bin"
 
         inputs = [
           response_file,

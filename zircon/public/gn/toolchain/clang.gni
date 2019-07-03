@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/prebuilt.gni")
+
 declare_args() {
   # If $clang_tool_dir is "", then this controls how the Clang toolchain
   # binaries are found.  If true, then the standard prebuilt is used.
@@ -24,10 +26,10 @@ declare_args() {
 # change the string.
 clang_version_string = clang_tool_dir
 if (clang_tool_dir == "" && use_prebuilt_clang) {
-  _prebuilt_dir = "$zx/prebuilt/downloads/clang"
-  clang_tool_dir = "$_prebuilt_dir/bin"
+  _prebuilt_clang_dir = "$prebuilt_dir/third_party/clang/$host_platform"
+  clang_tool_dir = "$_prebuilt_clang_dir/bin"
   _prebuilt_cipd_version =
-      read_file("$_prebuilt_dir/.versions/clang.cipd_version", "json")
+      read_file("$_prebuilt_clang_dir/.versions/clang.cipd_version", "json")
   clang_version_string = _prebuilt_cipd_version.instance_id
 }
 

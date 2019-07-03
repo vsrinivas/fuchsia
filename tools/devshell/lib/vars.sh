@@ -44,14 +44,15 @@ function fx-symbolize {
   if [[ $# -gt 0 ]]; then
     idstxt=(-ids-rel -ids "$1")
   fi
-  local prebuilt_dir="${FUCHSIA_DIR}/zircon/prebuilt/downloads"
-  local llvm_symbolizer="${BUILDTOOLS_CLANG_DIR}/bin/llvm-symbolizer"
+  local symbolize="${FUCHSIA_DIR}/prebuilt/tools/symbolize/${BUILDTOOLS_PLATFORM}/symbolize"
+  local clang_dir="${FUCHSIA_DIR}/prebuilt/third_party/clang/${BUILDTOOLS_PLATFORM}"
+  local llvm_symbolizer="${clang_dir}/bin/llvm-symbolizer"
+  local toolchain_dir="${clang_dir}/lib/debug/.build-id"
   local download_dir="${FUCHSIA_DIR}/prebuilt_build_ids"
-  local toolchain_dir="${BUILDTOOLS_CLANG_DIR}/lib/debug/.build-id"
   local out_dir="${FUCHSIA_BUILD_DIR}/.build-id"
   local zircon_dir="${ZIRCON_BUILDROOT}/.build-id"
   set -x
-  "${prebuilt_dir}/symbolize" -llvm-symbolizer "$llvm_symbolizer" \
+  "$symbolize" -llvm-symbolizer "$llvm_symbolizer" \
     "${idstxt[@]}" \
     -build-id-dir "$download_dir" -build-id-dir "$toolchain_dir" \
     -build-id-dir "$out_dir" -build-id-dir "$zircon_dir"

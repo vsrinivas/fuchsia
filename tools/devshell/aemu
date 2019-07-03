@@ -10,7 +10,7 @@
 ##   -N run with emulated nic via tun/tap
 ##   -I <ifname> uses the tun/tap interface named ifname
 ##   -u <path> execute aemu if-up script, default is no script
-##   -e <directory> location of emulator, defaults to looking in zircon/prebuilt/downloads/aemu
+##   -e <directory> location of emulator, defaults to looking in prebuilt/third_party/aemu/PLATFORM
 ##   -g <port> enable gRPC service on port to control the emulator, default is 5556 when WebRTC service is enabled
 ##   -r <fps> webrtc frame rate when using gRPC service, default is 30
 ##   -x <port> enable WebRTC HTTP service on port
@@ -26,6 +26,8 @@ set -e
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/image_build_vars.sh || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fvm.sh || exit $?
 source "${FUCHSIA_DIR}/buildtools/vars.sh"
+
+readonly PREBUILT_AEMU_DIR="prebuilt/third_party/aemu/${BUILDTOOLS_PLATFORM}"
 
 ACCEL="auto"
 NET=0
@@ -116,8 +118,8 @@ if [[ "$FUCHSIA_ARCH" != "x64" ]]; then
   exit 1
 fi
 
-if [[ -z "$AEMU_DIR" && -d "${FUCHSIA_DIR}/zircon/prebuilt/downloads/aemu" ]]; then
-  AEMU_DIR="${FUCHSIA_DIR}/zircon/prebuilt/downloads/aemu/"
+if [[ -z "$AEMU_DIR" && -d "$PREBUILT_AEMU_DIR" ]]; then
+  AEMU_DIR="$PREBUILT_AEMU_DIR"
 fi
 
 if [[ -z "$GRPCWEBPROXY_DIR" && -d "${FUCHSIA_DIR}/prebuilt/third_party/grpcwebproxy" ]]; then

@@ -13,11 +13,11 @@ sdk_prebuilt_executable("dev_finder") {
 sdk_prebuilt_executable("symbolize") {
   category = "partner"
 
-  prebuilt = "//zircon/prebuilt/downloads/symbolize"
+  prebuilt = "//prebuilt/tools/symbolize/${host_platform}/symbolize"
 }
 
 sdk_prebuilt_executable("banjo") {
   category = "partner"
 
-  prebuilt = "//zircon/prebuilt/downloads/banjo/banjo_bin"
+  prebuilt = "//prebuilt/tools/banjo/${host_platform}/banjo_bin"
 }
