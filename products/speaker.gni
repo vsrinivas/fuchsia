@@ -6,11 +6,10 @@ import("//products/core.gni")
 
 base_package_labels += [
   "//src/modular/bundles:framework",
-  "//garnet/packages/prod:media_audio",
+  "//src/media/audio/audio",
+  "//src/media/audio/audio_core",
 ]
 
 cache_package_labels += []
 
-universe_package_labels += [
-  "//src/modular/bundles:tools",
-]
+universe_package_labels += [ "//src/modular/bundles:tools" ]
