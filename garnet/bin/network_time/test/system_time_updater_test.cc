@@ -2,26 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fake_rtc_device.h"
-
 #include <fcntl.h>
-#include <stdio.h>
-#include <time.h>
-#include <thread>
-
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-
 #include <lib/fsl/io/fd.h>
-#include <src/lib/fxl/strings/string_printf.h>
-#include <src/lib/fxl/strings/substitute.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>
 #include <lib/zx/time.h>
+#include <src/lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/substitute.h>
+#include <stdio.h>
+#include <time.h>
 
+#include <thread>
+
+#include "fake_rtc_device.h"
 #include "fuchsia/hardware/rtc/cpp/fidl.h"
 #include "garnet/bin/network_time/timezone.h"
 #include "gmock/gmock.h"
@@ -48,10 +46,10 @@ using time_server::FakeRtcDevice;
 using time_server::LocalRoughtimeServer;
 using time_server::Timezone;
 
-#define GARNET_BIN_NETWORK_TIME_TEST_PUBLIC_KEY                               \
-  0x3b, 0x6a, 0x27, 0xbc, 0xce, 0xb6, 0xa4, 0x2d, 0x62, 0xa3, 0xa8, 0xd0,     \
-      0x2a, 0x6f, 0x0d, 0x73, 0x65, 0x32, 0x15, 0x77, 0x1d, 0xe2, 0x43, 0xa6, \
-      0x3a, 0xc0, 0x48, 0xa1, 0x8b, 0x59, 0xda, 0x29
+#define GARNET_BIN_NETWORK_TIME_TEST_PUBLIC_KEY                                                   \
+  0x3b, 0x6a, 0x27, 0xbc, 0xce, 0xb6, 0xa4, 0x2d, 0x62, 0xa3, 0xa8, 0xd0, 0x2a, 0x6f, 0x0d, 0x73, \
+      0x65, 0x32, 0x15, 0x77, 0x1d, 0xe2, 0x43, 0xa6, 0x3a, 0xc0, 0x48, 0xa1, 0x8b, 0x59, 0xda,   \
+      0x29
 
 // Ed25519 private key used by |simple_server|. The
 // private part consists of all zeros and so is only for use in this example.
@@ -76,7 +74,7 @@ constexpr uint8_t kPublicKey[roughtime::kPublicKeyLength] = {
 #undef GARNET_BIN_NETWORK_TIME_TEST_PUBLIC_KEY
 
 constexpr char kNetworkTimePackage[] =
-    "fuchsia-pkg://fuchsia.com/network_time#meta/network_time.cmx";
+    "fuchsia-pkg://fuchsia.com/network_time_service#meta/network_time_service.cmx";
 
 constexpr char kFakeDevPath[] = "/fakedev";
 constexpr char kRtcServiceName[] = "fuchsia.hardware.rtc.Device";
@@ -111,29 +109,25 @@ class SystemTimeUpdaterTest : public TestWithEnvironment {
     fake_rtc_device_ = std::make_unique<FakeRtcDevice>();
     std::unique_ptr<vfs::Service> fake_rtc_service =
         std::make_unique<vfs::Service>(fake_rtc_device_->GetHandler());
-    ASSERT_EQ(ZX_OK, fake_dev_vfs_dir_->AddEntry(kRtcServiceName,
-                                                 std::move(fake_rtc_service)));
+    ASSERT_EQ(ZX_OK, fake_dev_vfs_dir_->AddEntry(kRtcServiceName, std::move(fake_rtc_service)));
   }
 
   void TearDown() override { TestWithEnvironment::TearDown(); }
 
   // Launch a local Roughtime server in a new thread.
-  std::unique_ptr<std::thread> LaunchLocalRoughtimeServer(
-      uint16_t port_number) {
-    local_roughtime_server_ = LocalRoughtimeServer::MakeInstance(
-        kPrivateKey, port_number, 1537485257118'000);
-    return std::make_unique<std::thread>(
-        std::thread([&]() { local_roughtime_server_->Start(); }));
+  std::unique_ptr<std::thread> LaunchLocalRoughtimeServer(uint16_t port_number) {
+    local_roughtime_server_ =
+        LocalRoughtimeServer::MakeInstance(kPrivateKey, port_number, 1537485257118'000);
+    return std::make_unique<std::thread>(std::thread([&]() { local_roughtime_server_->Start(); }));
   }
 
   // Launch the system time update service using the production config file.
-  fuchsia::sys::ComponentControllerPtr
-  LaunchSystemTimeUpdateServiceWithDefaultServers() {
+  fuchsia::sys::ComponentControllerPtr LaunchSystemTimeUpdateServiceWithDefaultServers() {
     return LaunchSystemTimeUpdateService(nullptr);
   }
 
-  fuchsia::sys::ComponentControllerPtr
-  LaunchSystemTimeUpdateServiceForLocalServer(uint16_t port_number) {
+  fuchsia::sys::ComponentControllerPtr LaunchSystemTimeUpdateServiceForLocalServer(
+      uint16_t port_number) {
     // Note that the host must explicitly be "::1". "localhost" is
     // misinterpreted as implying IPv4.
     const std::string kClientConfigJson = StringPrintf(
@@ -153,8 +147,7 @@ class SystemTimeUpdaterTest : public TestWithEnvironment {
     }
   ]
 })",
-        to_hex_string(kPublicKey, roughtime::kPublicKeyLength).c_str(),
-        port_number);
+        to_hex_string(kPublicKey, roughtime::kPublicKeyLength).c_str(), port_number);
     std::string client_config_path;
     temp_dir_.NewTempFileWithData(kClientConfigJson, &client_config_path);
     return LaunchSystemTimeUpdateService(client_config_path.c_str());
@@ -167,8 +160,7 @@ class SystemTimeUpdaterTest : public TestWithEnvironment {
  private:
   // Launch the system time update service, using the given config path. If
   // |opt_pathname| is null, then the production config file will be used.
-  fuchsia::sys::ComponentControllerPtr LaunchSystemTimeUpdateService(
-      const char* opt_pathname) {
+  fuchsia::sys::ComponentControllerPtr LaunchSystemTimeUpdateService(const char* opt_pathname) {
     zx_status_t status;
 
     LaunchInfo launch_info;
@@ -183,13 +175,12 @@ class SystemTimeUpdaterTest : public TestWithEnvironment {
         fsl::CloneChannelFromFileDescriptor(tmp_dir_fd.get()));
 
     if (opt_pathname != nullptr) {
-      launch_info.arguments.push_back(
-          StringPrintf("--config=%s", opt_pathname));
+      launch_info.arguments.push_back(StringPrintf("--config=%s", opt_pathname));
     }
 
     // Specify the service path at which to find a fake RTC device.
-    launch_info.arguments.push_back(
-        StringPrintf("--rtc_path=%s", kFakeRtcDevicePath));
+    launch_info.arguments.push_back(StringPrintf("--rtc_path=%s", kFakeRtcDevicePath));
+    launch_info.arguments.push_back("--immediate");
 
     // fuchsia::io::Directory is the directory interface that we expose to the
     // OS. vfs::PseudoDir is the C++ object that implements the
@@ -205,12 +196,10 @@ class SystemTimeUpdaterTest : public TestWithEnvironment {
 
     // Note that the indices of `paths` and `directories` have to line up.
     launch_info.flat_namespace->paths.push_back(kFakeDevPath);
-    launch_info.flat_namespace->directories.push_back(
-        fake_dev_io_dir.TakeChannel());
+    launch_info.flat_namespace->directories.push_back(fake_dev_io_dir.TakeChannel());
 
     fuchsia::sys::ComponentControllerPtr controller;
-    CreateComponentInCurrentEnvironment(std::move(launch_info),
-                                        controller.NewRequest());
+    CreateComponentInCurrentEnvironment(std::move(launch_info), controller.NewRequest());
     return controller;
   }
 
@@ -232,16 +221,14 @@ MATCHER_P3(EqualsGmtDate, expected_year, expected_month, expected_day,
       actual.day == expected_day) {
     return true;
   }
-  *result_listener << "GMT date {" << actual.year << ", "
-                   << unsigned(actual.month) << ", " << unsigned(actual.day)
-                   << "}";
+  *result_listener << "GMT date {" << actual.year << ", " << unsigned(actual.month) << ", "
+                   << unsigned(actual.day) << "}";
   return false;
 };
 
 TEST_F(SystemTimeUpdaterTest, UpdateTimeFromLocalRoughtimeServer) {
   // Launch the roughtime server in a separate thread.
-  const std::unique_ptr<std::thread> server_thread =
-      LaunchLocalRoughtimeServer(kPortNumber);
+  const std::unique_ptr<std::thread> server_thread = LaunchLocalRoughtimeServer(kPortNumber);
   // We detach the server thread instead of joining it because
   // |SimpleServer::ProcessBatch| might run indefinitely. There is no clean way
   // to terminate the server thread.
@@ -250,21 +237,18 @@ TEST_F(SystemTimeUpdaterTest, UpdateTimeFromLocalRoughtimeServer) {
   uint16_t port_number = local_roughtime_server_->GetPortNumber();
   ASSERT_GT(port_number, 0);
 
-  RunLoopWithTimeoutOrUntil(
-      [&]() { return local_roughtime_server_->IsRunning(); }, zx::sec(10),
-      zx::sec(1));
+  RunLoopWithTimeoutOrUntil([&]() { return local_roughtime_server_->IsRunning(); }, zx::sec(10),
+                            zx::sec(1));
   ASSERT_TRUE(local_roughtime_server_->IsRunning());
 
   // Back to the past...
   local_roughtime_server_->SetTime(1985, 10, 26, 9, 0, 0);
-  RunComponentUntilTerminated(
-      LaunchSystemTimeUpdateServiceForLocalServer(port_number), nullptr);
+  RunComponentUntilTerminated(LaunchSystemTimeUpdateServiceForLocalServer(port_number), nullptr);
   EXPECT_THAT(fake_rtc_device_->Get(), EqualsGmtDate(1985, 10, 26));
 
   // Back to the future...
   local_roughtime_server_->SetTime(2015, 10, 21, 7, 28, 0);
-  RunComponentUntilTerminated(
-      LaunchSystemTimeUpdateServiceForLocalServer(port_number), nullptr);
+  RunComponentUntilTerminated(LaunchSystemTimeUpdateServiceForLocalServer(port_number), nullptr);
   EXPECT_THAT(fake_rtc_device_->Get(), EqualsGmtDate(2015, 10, 21));
 
   local_roughtime_server_->Stop();
@@ -278,14 +262,13 @@ TEST_F(SystemTimeUpdaterTest, DISABLED_UpdateTimeFromPublicRoughtimeServer) {
       LaunchSystemTimeUpdateServiceWithDefaultServers();
   const zx::duration timeout = zx::sec(20);
   bool is_terminated = false;
-  component_controller.events().OnTerminated =
-      [&](int64_t return_code, fuchsia::sys::TerminationReason reason) {
-        EXPECT_EQ(reason, fuchsia::sys::TerminationReason::EXITED);
-        EXPECT_EQ(return_code, EXIT_SUCCESS);
-        is_terminated = true;
-      };
-  RunLoopWithTimeoutOrUntil([&]() { return is_terminated; }, timeout,
-                            zx::sec(1));
+  component_controller.events().OnTerminated = [&](int64_t return_code,
+                                                   fuchsia::sys::TerminationReason reason) {
+    EXPECT_EQ(reason, fuchsia::sys::TerminationReason::EXITED);
+    EXPECT_EQ(return_code, EXIT_SUCCESS);
+    is_terminated = true;
+  };
+  RunLoopWithTimeoutOrUntil([&]() { return is_terminated; }, timeout, zx::sec(1));
   EXPECT_TRUE(is_terminated);
 }
 

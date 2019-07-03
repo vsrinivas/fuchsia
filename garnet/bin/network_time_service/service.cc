@@ -13,8 +13,8 @@
 namespace network_time_service {
 
 TimeServiceImpl::TimeServiceImpl(std::unique_ptr<sys::ComponentContext> context,
-                                 const char server_config_path[])
-    : context_(std::move(context)), time_server_(server_config_path) {
+                                 const char server_config_path[], const char rtc_device_path[])
+    : context_(std::move(context)), time_server_(server_config_path, rtc_device_path) {
   context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
   context_->outgoing()->AddPublicService(deprecated_bindings_.GetHandler(this));
 }
@@ -24,8 +24,7 @@ TimeServiceImpl::~TimeServiceImpl() = default;
 void TimeServiceImpl::Update(uint8_t num_retries, UpdateCallback callback) {
   bool succeeded = time_server_.UpdateSystemTime(num_retries);
   if (!succeeded) {
-    FX_LOGS(ERROR) << "Failed to update system time after " << num_retries
-                   << " attempts";
+    FX_LOGS(ERROR) << "Failed to update system time after " << num_retries << " attempts";
   }
   callback(succeeded);
 }

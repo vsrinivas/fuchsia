@@ -256,7 +256,6 @@ group("all") {
     "//garnet/packages/prod:netstack_tools",
     "//garnet/packages/prod:network",
     "//garnet/packages/prod:network-speed-test",
-    "//garnet/packages/prod:network_time",
     "//garnet/packages/prod:odu",
     "//garnet/packages/prod:omaha_client",
     "//garnet/packages/prod:openssh",
@@ -639,7 +638,6 @@ group("root_ssl_certificates") {
 group("network_time") {
   testonly = true
   public_deps = [
-    "//garnet/bin/network_time",
     "//garnet/bin/network_time_service",
   ]
 }

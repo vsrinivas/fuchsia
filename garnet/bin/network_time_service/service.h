@@ -29,8 +29,8 @@ class TimeServiceImpl : public fuchsia::timezone::TimeService,
 
  public:
   // Constructs the time service with a caller-owned application context.
-  TimeServiceImpl(std::unique_ptr<sys::ComponentContext> context,
-                  const char server_config_path[]);
+  TimeServiceImpl(std::unique_ptr<sys::ComponentContext> context, const char server_config_path[],
+                  const char rtc_device_path[]);
   ~TimeServiceImpl();
 
   // |TimeServiceImpl|:
@@ -39,8 +39,7 @@ class TimeServiceImpl : public fuchsia::timezone::TimeService,
  private:
   std::unique_ptr<sys::ComponentContext> context_;
   fidl::BindingSet<fuchsia::timezone::TimeService> bindings_;
-  fidl::BindingSet<fuchsia::deprecatedtimezone::TimeService>
-      deprecated_bindings_;
+  fidl::BindingSet<fuchsia::deprecatedtimezone::TimeService> deprecated_bindings_;
   time_server::Timezone time_server_;
 };
 
