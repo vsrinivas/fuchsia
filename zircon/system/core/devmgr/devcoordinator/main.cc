@@ -285,20 +285,32 @@ int console_starter(void* arg) {
       nullptr,
   };
 
-  zx_status_t status = wait_for_file(device, zx::time::infinite());
-  if (status != ZX_OK) {
-    printf("devcoordinator: failed to wait for console '%s'\n", device);
-    return 1;
-  }
-  fbl::unique_fd fd(open(device, O_RDWR));
-  if (!fd.is_valid()) {
-    printf("devcoordinator: failed to open console '%s'\n", device);
-    return 1;
-  }
+  // Run thread forever, relaunching console shell on exit.
+  for (;;) {
+    zx_status_t status = wait_for_file(device, zx::time::infinite());
+    if (status != ZX_OK) {
+        printf("devcoordinator: failed to wait for console '%s' (%s)\n", device, zx_status_get_string(status));
+        return 1;
+    }
+    fbl::unique_fd fd(open(device, O_RDWR));
+    if (!fd.is_valid()) {
+        printf("devcoordinator: failed to open console '%s'\n", device);
+        return 1;
+    }
 
-  const char* argv_sh[] = {"/boot/bin/sh", nullptr};
-  devmgr::devmgr_launch(g_handles.svc_job, "sh:console", argv_sh, envp, fd.release(), nullptr,
-                        nullptr, 0, nullptr, FS_ALL);
+    const char* argv_sh[] = {"/boot/bin/sh", nullptr};
+    zx::process proc;
+    status = devmgr::devmgr_launch(g_handles.svc_job, "sh:console", argv_sh, envp, fd.release(), nullptr,
+                              nullptr, 0, &proc, FS_ALL);
+    if (status != ZX_OK) {
+      printf("devcoordinator: failed to launch console shell (%s)\n", zx_status_get_string(status));
+      return 1;
+    }
+
+    proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
+    printf("devcoordinator: console shell exited, restarting\n");
+  }
+  /* NOTREACHED */
   return 0;
 }
 
