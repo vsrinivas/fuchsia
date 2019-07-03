@@ -1,10 +1,17 @@
 {
-  "program": {
-    "binary": "test/font_provider_test"
-  },
-  "sandbox": {
-    "services": [
-      "fuchsia.sys.Launcher"
-    ]
-  }
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/font_provider_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
 }
