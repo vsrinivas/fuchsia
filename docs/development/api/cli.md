@@ -127,6 +127,36 @@ Here is some guidance for the nuts and bolts of creating a tool. We'll cover
 which language to write the tool in, what style to use in that language, and so
 on.
 
+### Naming
+
+The following applies to names of binaries, tools, sub-commands, and long
+parameter flags.
+
+Use well-known US English terms or nouns for names. Well-known nouns includes
+those in common use for the subject matter, or the names of whole subsystems.
+If a name does not appear in documentation, it is likely not well-known. If
+it does not appear in any implementation, it is definitely not well-known.
+
+Only use lower-case characters in the US-ASCII character set and hyphens.
+A single hyphen (`-`) is used to separate words in a name. A Platform
+required extension is an exception (such as `.exe`).
+
+Name CLI tools with more than three characters. Keep the short file names
+available for user shortcuts (aliases). If you believe a tool should have
+a very short name, request approval from the Fuchsia API Council.
+
+Keeping the points above in mind:
+
+- Prefer whole words rather than abbreviations.
+- Prefer shorter names where a user is expected type the name frequently. For
+  less frequently typed names bias to more explicit names.
+- Prefer a single word to multiple words
+- Prefer subcommands to multiple tools that are hyphenated (e.g. avoid
+  `foo-start`, `foo-stop`, `foo-reset`; instead have `foo` that accepts
+  commands `start|stop|reset`).
+- Prefer symmetry (particularly in verbs) with other similar commands or
+  sub-systems, unless that introduces a broken metaphor.
+
 ### Programming Languages
 
 Tools may be written in C++, Rust, and Go. For clarity, here are some languages
@@ -315,9 +345,9 @@ without its key) or optional values (where the key appears without its
 value). It's clearer to consider the key/value pair optional, but inseparable.
 I.e. if the key is present a value is required and vice versa. Consider making
 an argument instead of a keyed option with an optional key. E.g. rather than
-"`do_something [--config [<config_file>]]`" where not passing `[<config_file>]`
+"`do-something [--config [<config_file>]]`" where not passing `[<config_file>]`
 means don't use a config file; instead do
-"`do_something [--config <config_file>|--no-config]`" where passing
+"`do-something [--config <config_file>|--no-config]`" where passing
 `--no-config` means don't load a config file.
 
 ##### Mutually Exclusive Options
