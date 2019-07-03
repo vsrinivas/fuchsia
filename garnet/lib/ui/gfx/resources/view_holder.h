@@ -50,6 +50,12 @@ class ViewHolder final : public Node {
   // ViewProperties management.
   void SetViewProperties(fuchsia::ui::gfx::ViewProperties props);
   const fuchsia::ui::gfx::ViewProperties& GetViewProperties() { return view_properties_; }
+  escher::BoundingBox GetLocalBoundingBox() const;
+
+  // TODO(SCN-1496): Bounding boxes that are rotated by degrees that are not multiples
+  // of 90 will cause the box to grow/shrink. This needs to be accounted for in the
+  // rest of the code.
+  escher::BoundingBox GetWorldBoundingBox() const;
 
  protected:
   // |Node|

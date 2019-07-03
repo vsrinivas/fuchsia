@@ -344,7 +344,12 @@ void Node::RemoveImport(Import* import) {
   delegate->InvalidateGlobalTransform();
 }
 
-bool Node::GetIntersection(const escher::ray4& ray, float* out_distance) const { return false; }
+Node::IntersectionInfo Node::GetIntersection(const escher::ray4& ray,
+                                             const IntersectionInfo& parent_intersection) const {
+  IntersectionInfo result;
+  result.interval = parent_intersection.interval;
+  return result;
+}
 
 void Node::InvalidateGlobalTransform() {
   if (!global_transform_dirty_) {

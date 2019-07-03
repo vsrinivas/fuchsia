@@ -26,7 +26,8 @@ class ShapeNode final : public Node {
 
   void Accept(class ResourceVisitor* visitor) override;
 
-  bool GetIntersection(const escher::ray4& ray, float* out_distance) const override;
+  IntersectionInfo GetIntersection(const escher::ray4& ray,
+                                   const IntersectionInfo& parent_intersection) const override;
 
  private:
   MaterialPtr material_;

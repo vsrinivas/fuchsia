@@ -6,7 +6,8 @@
 
 namespace escher {
 
-bool IntersectRayBox(const escher::ray4& ray, const escher::BoundingBox& box, float* out_distance) {
+bool IntersectRayBox(const escher::ray4& ray, const escher::BoundingBox& box,
+                     Interval* out_interval) {
   // This algorithm is from "An Efficient and Robust Ray–Box Intersection
   // Algorithm" by Amy Williams et al. 2004. Division by zero is handled via
   // IEEE floating-point arithmetic. See paper for details.
@@ -53,12 +54,15 @@ bool IntersectRayBox(const escher::ray4& ray, const escher::BoundingBox& box, fl
   if (tz_max < t_max)
     t_max = tz_max;
 
-  *out_distance = t_min;
-
-  if (*out_distance < 0) {
-    *out_distance = t_max;
-    if (*out_distance < 0)
+  if (t_min < 0) {
+    if (t_max < 0) {
       return false;
+    }
+  }
+
+  // out_min and out_max values are only valid if there is a hit.
+  if (out_interval) {
+    *out_interval = Interval(glm::max(0.f, t_min), t_max);
   }
 
   return true;

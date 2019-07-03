@@ -43,13 +43,16 @@ struct ray4 {
   // The ray's direction vector in space.
   // Last component must be zero.
   glm::vec4 direction;
+
+  // Gets the coordinate point along the ray for a given parameterized distance.
+  glm::vec4 At(const float t) const { return origin + t * direction; }
 };
 
 // Used to compare whether two values are nearly equal.
 constexpr float kEpsilon = 0.000001f;
 
 inline ray4 operator*(const glm::mat4& matrix, const ray4& ray) {
-  return ray4{matrix * ray.origin, matrix * ray.direction};
+  return ray4{matrix * ray.origin, glm::normalize(matrix * ray.direction)};
 }
 
 // Oriented plane described by a normal vector and a distance from the origin

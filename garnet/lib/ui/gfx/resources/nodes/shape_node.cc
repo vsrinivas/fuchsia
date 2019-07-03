@@ -19,8 +19,12 @@ void ShapeNode::SetMaterial(MaterialPtr material) { material_ = std::move(materi
 
 void ShapeNode::SetShape(ShapePtr shape) { shape_ = std::move(shape); }
 
-bool ShapeNode::GetIntersection(const escher::ray4& ray, float* out_distance) const {
-  return shape_ && shape_->GetIntersection(ray, out_distance);
+Node::IntersectionInfo ShapeNode::GetIntersection(
+    const escher::ray4& ray, const IntersectionInfo& parent_intersection) const {
+  IntersectionInfo result;
+  bool hit = shape_ && shape_->GetIntersection(ray, &result.distance);
+  result.did_hit = hit && parent_intersection.interval.Contains(result.distance);
+  return result;
 }
 
 }  // namespace gfx

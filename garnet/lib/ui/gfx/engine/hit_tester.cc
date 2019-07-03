@@ -13,6 +13,44 @@
 namespace scenic_impl {
 namespace gfx {
 
+namespace {
+
+// Takes a ray in the coordinate system you are transforming to, the transform itself,
+// and a point in the original coordinate system, and gets the distance of the transformed
+// point to the ray origin. We assume that the point being passed in lies along the ray
+// direction in the original transform space, so this function does not generalize to
+// all possible points.
+float GetTransformedDistance(const escher::ray4& local_ray, const glm::mat4& transform,
+                             const glm::vec4& point) {
+  return glm::length((transform * point) - local_ray.origin);
+}
+
+// This function transforms an intersection struct from one coordinate system to the other.
+// Since the distances stored within a struct are the recorded distances between a ray
+// origin and a node in a given  space, they need to be updated when the coordinate
+// system changes.
+Node::IntersectionInfo GetTransformedIntersection(const Node::IntersectionInfo& intersection,
+                                                  const escher::ray4& outer_ray,
+                                                  const escher::ray4& local_ray,
+                                                  const glm::mat4& transform) {
+  Node::IntersectionInfo local_intersection = intersection;
+  // Get the coordinate points of the intersections based on the parameterized
+  // distances.
+  escher::Interval interval = intersection.interval;
+  glm::vec4 min_point = outer_ray.At(interval.min());
+  glm::vec4 max_point = outer_ray.At(interval.max());
+  glm::vec4 dist_point = outer_ray.At(intersection.distance);
+
+  // Transform the distances into the local coordinate system of the node and the
+  // local ray, so that the math lines up.
+  float local_min = GetTransformedDistance(local_ray, transform, min_point);
+  float local_max = GetTransformedDistance(local_ray, transform, max_point);
+  local_intersection.interval = escher::Interval(local_min, local_max);
+  local_intersection.distance = GetTransformedDistance(local_ray, transform, dist_point);
+  return local_intersection;
+}
+}  // namespace
+
 SessionHitTester::SessionHitTester(Session* session) : session_(session) { FXL_CHECK(session_); }
 
 bool SessionHitTester::should_participate(Node* node) {
@@ -24,13 +62,19 @@ std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray) {
   FXL_DCHECK(node);
   FXL_DCHECK(ray_info_ == nullptr);
   FXL_DCHECK(tag_info_ == nullptr);
+  FXL_DCHECK(intersection_info_ == nullptr);
   hits_.clear();  // Reset to good state after std::move.
 
   // Trace the ray.
   RayInfo local_ray_info{ray, glm::mat4(1.f)};
   ray_info_ = &local_ray_info;
+
+  // Get start intersection info with infinite bounds.
+  Node::IntersectionInfo intersection_info;
+  intersection_info_ = &intersection_info;
   AccumulateHitsLocal(node);
   ray_info_ = nullptr;
+  intersection_info_ = nullptr;
 
   FXL_DCHECK(tag_info_ == nullptr);
 
@@ -53,9 +97,19 @@ void HitTester::AccumulateHitsOuter(Node* node) {
   RayInfo local_ray_info{inverse_transform * outer_ray_info->ray,
                          inverse_transform * outer_ray_info->inverse_transform};
 
+  escher::ray4 outer_ray = outer_ray_info->ray;
+  escher::ray4 local_ray = local_ray_info.ray;
+
+  // Make outer and local intersections.
+  Node::IntersectionInfo* outer_intersection = intersection_info_;
+  Node::IntersectionInfo local_intersection =
+      GetTransformedIntersection(*outer_intersection, outer_ray, local_ray, inverse_transform);
+
   ray_info_ = &local_ray_info;
+  intersection_info_ = &local_intersection;
   AccumulateHitsLocal(node);
   ray_info_ = outer_ray_info;
+  intersection_info_ = outer_intersection;
 }
 
 void HitTester::AccumulateHitsLocal(Node* node) {
@@ -86,45 +140,66 @@ void HitTester::AccumulateHitsLocal(Node* node) {
 }
 
 void HitTester::AccumulateHitsInner(Node* node) {
-  if (node->clip_to_self() && !IsRayWithinPartsInner(node, ray_info_->ray))
+  if (node->clip_to_self() && !IsRayWithinPartsInner(node, ray_info_->ray, *intersection_info_))
     return;
 
-  float distance;
-  if (tag_info_ && node->GetIntersection(ray_info_->ray, &distance)) {
-    tag_info_->ReportIntersection(distance);
+  Node::IntersectionInfo* outer_intersection = intersection_info_;
+  Node::IntersectionInfo intersection = node->GetIntersection(ray_info_->ray, *intersection_info_);
+  intersection_info_ = &intersection;
+
+  if (intersection.did_hit && tag_info_) {
+    tag_info_->ReportIntersection(intersection.distance);
   }
 
-  ForEachDirectDescendantFrontToBack(*node, [this](Node* node) { AccumulateHitsOuter(node); });
+  // Only test the descendants if the current node permits it.
+  if (intersection.continue_with_children) {
+    ForEachDirectDescendantFrontToBack(*node, [this](Node* node) { AccumulateHitsOuter(node); });
+  }
+
+  intersection_info_ = outer_intersection;
 }
 
-bool HitTester::IsRayWithinPartsInner(Node* node, const escher::ray4& ray) {
-  return ForEachPartFrontToBackUntilTrue(
-      *node, [&ray](Node* node) { return IsRayWithinClippedContentOuter(node, ray); });
+// TODO(SCN-1493): This is only used for testing against "parts".
+bool HitTester::IsRayWithinPartsInner(const Node* node, const escher::ray4& ray,
+                                      const Node::IntersectionInfo& intersection) {
+  return ForEachPartFrontToBackUntilTrue(*node, [&ray, &intersection](Node* node) {
+    return IsRayWithinClippedContentOuter(node, ray, intersection);
+  });
 }
 
-bool HitTester::IsRayWithinClippedContentOuter(Node* node, const escher::ray4& ray) {
+// TODO(SCN-1493): This is only used for testing against "parts".
+bool HitTester::IsRayWithinClippedContentOuter(const Node* node, const escher::ray4& ray,
+                                               const Node::IntersectionInfo& intersection) {
   if (node->transform().IsIdentity()) {
-    return IsRayWithinClippedContentInner(node, ray);
+    return IsRayWithinClippedContentInner(node, ray, intersection);
   }
 
   auto inverse_transform = glm::inverse(static_cast<glm::mat4>(node->transform()));
   escher::ray4 local_ray = inverse_transform * ray;
-  return IsRayWithinClippedContentInner(node, local_ray);
+
+  Node::IntersectionInfo local_intersection =
+      GetTransformedIntersection(intersection, ray, local_ray, inverse_transform);
+
+  return IsRayWithinClippedContentInner(node, local_ray, local_intersection);
 }
 
-bool HitTester::IsRayWithinClippedContentInner(Node* node, const escher::ray4& ray) {
-  float distance;
-  if (node->GetIntersection(ray, &distance))
+// TODO(SCN-1493): This is only used for testing against "parts".
+bool HitTester::IsRayWithinClippedContentInner(const Node* node, const escher::ray4& ray,
+                                               const Node::IntersectionInfo& intersection) {
+  Node::IntersectionInfo new_intersection = node->GetIntersection(ray, intersection);
+  if (new_intersection.did_hit)
     return true;
 
-  if (IsRayWithinPartsInner(node, ray))
+  // TODO(SCN-1493): Get rid of node "parts".
+  if (IsRayWithinPartsInner(node, ray, intersection))
     return true;
 
   if (node->clip_to_self())
     return false;
 
-  return ForEachChildAndImportFrontToBackUntilTrue(
-      *node, [&ray](Node* node) { return IsRayWithinClippedContentOuter(node, ray); });
+  return ForEachChildAndImportFrontToBackUntilTrue(*node, [&ray, &intersection](Node* node) {
+    return IsRayWithinClippedContentOuter(node, ray, intersection);
+  });
 }
 
 }  // namespace gfx
