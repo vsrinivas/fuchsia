@@ -162,13 +162,19 @@ impl<'a> Encoder<'a> {
         handles: &'a mut Vec<zx::Handle>,
         x: &mut T,
     ) -> Result<()> {
-        let inline_size = round_up_to_align(x.inline_size(), 8);
-        buf.truncate(0);
-        buf.resize(inline_size, 0);
-        handles.truncate(0);
+        fn prepare_for_encoding<'a>(
+            buf: &'a mut Vec<u8>,
+            handles: &'a mut Vec<zx::Handle>,
+            ty_inline_size: usize,
+        ) -> Encoder<'a> {
+            let inline_size = round_up_to_align(ty_inline_size, 8);
+            buf.truncate(0);
+            buf.resize(inline_size, 0);
+            handles.truncate(0);
+            Encoder { offset: 0, remaining_depth: MAX_RECURSION, buf, handles }
+        }
 
-        let mut encoder = Encoder { offset: 0, remaining_depth: MAX_RECURSION, buf, handles };
-
+        let mut encoder = prepare_for_encoding(buf, handles, x.inline_size());
         x.encode(&mut encoder)
     }
 
@@ -208,12 +214,20 @@ impl<'a> Encoder<'a> {
     /// Adds as many zero bytes as padding as necessary to make sure that the `target` object size
     /// is equal to `inline_size()`. `start_pos` is the position in the `encoder` buffer of where
     /// the encoding started.  See `Encoder::offset`.
-    pub fn tail_padding<Target>(&mut self, target: &mut Target, start_pos: usize) -> Result<()>
+    pub fn tail_padding<Target>(&mut self, target: &Target, start_pos: usize) -> Result<()>
     where
         Target: Encodable
     {
+        self.tail_padding_inner(target.inline_size(), start_pos)
+    }
+
+    fn tail_padding_inner(
+        &mut self,
+        target_inline_size: usize,
+        start_pos: usize,
+    ) -> Result<()> {
         debug_assert!(start_pos <= self.offset);
-        self.padding(target.inline_size() - (self.offset - start_pos))
+        self.padding(target_inline_size - (self.offset - start_pos))
     }
 
     /// Runs the provided closure inside an encoder modified
@@ -228,10 +242,14 @@ impl<'a> Encoder<'a> {
         let old_offset = self.offset;
         self.offset = self.buf.len();
         // Create space for the new data
-        self.buf.resize(self.offset + round_up_to_align(len, 8), 0);
+        self.reserve_out_of_line(len);
         f(self)?;
         self.offset = old_offset;
         Ok(())
+    }
+
+    fn reserve_out_of_line(&mut self, len: usize) {
+        self.buf.resize(self.offset + round_up_to_align(len, 8), 0);
     }
 
     /// Append bytes to the very end (out-of-line) of the buffer.
@@ -307,6 +325,22 @@ impl<'a> Decoder<'a> {
     where
         F: FnOnce(&mut Decoder) -> Result<R>,
     {
+        let (old_buf, old_initial_buf_len) = self.before_read_out_of_line(len)?;
+        let res = f(self);
+
+        // Set the current `buf` back to its original position.
+        //
+        // After this transformation, the final `Decoder` looks like this:
+        // [---------------------------------]
+        //     ^---buf--^               ^ool^ (slices)
+        //                              ^out-of-line-advanced (index)
+        self.buf = old_buf;
+        self.initial_buf_len = old_initial_buf_len;
+        res
+    }
+
+    // Returns old_buf and old_initial_buf_len
+    fn before_read_out_of_line(&mut self, len: usize) -> Result<(&'a [u8], usize)> {
         // Currently, out-of-line points here:
         // [---------------------------------]
         //     ^---buf--^    ^-out-of-line--^ (slices)
@@ -335,17 +369,8 @@ impl<'a> Decoder<'a> {
         let old_initial_buf_len = self.initial_buf_len;
         self.buf = new_buf;
         self.initial_buf_len = new_initial_buf_len;
-        let res = f(self);
 
-        // Set the current `buf` back to its original position.
-        //
-        // After this transformation, the final `Decoder` looks like this:
-        // [---------------------------------]
-        //     ^---buf--^               ^ool^ (slices)
-        //                              ^out-of-line-advanced (index)
-        self.buf = old_buf;
-        self.initial_buf_len = old_initial_buf_len;
-        res
+        Ok((old_buf, old_initial_buf_len))
     }
 
     /// Whether or not the current section of inline bytes has been fully read.
@@ -1464,6 +1489,17 @@ impl<T: AutonullContainer + Encodable> Encodable for Option<T> {
     }
 }
 
+// Presence indicators always include at least one non-zero byte,
+// while absence indicators should always be entirely zeros.
+fn check_for_presence(
+    decoder: &mut Decoder<'_>,
+    inline_size: usize,
+) -> Result<bool> {
+    Ok(decoder.peek_slice(inline_size)?
+        .iter()
+        .any(|byte| *byte != 0))
+}
+
 impl<T: AutonullContainer + Decodable> Decodable for Option<T> {
     fn inline_align() -> usize {
         <T as Decodable>::inline_align()
@@ -1476,13 +1512,7 @@ impl<T: AutonullContainer + Decodable> Decodable for Option<T> {
     }
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         let inline_size = <T as Decodable>::inline_size();
-        let mut present = false;
-        for byte in decoder.peek_slice(inline_size)? {
-            if *byte != 0 {
-                present = true;
-                break;
-            }
-        }
+        let present = check_for_presence(decoder, inline_size)?;
         if present {
             self.get_or_insert_with(|| T::new_empty()).decode(decoder)?;
             Ok(())
@@ -1681,10 +1711,7 @@ macro_rules! fidl_empty_struct {
 }
 
 /// Encode the provided value behind a FIDL "envelope".
-pub fn encode_in_envelope<T>(val: &mut Option<&mut T>, encoder: &mut Encoder) -> Result<()>
-where
-    T: Encodable + ?Sized,
-{
+pub fn encode_in_envelope(val: &mut Option<&mut dyn Encodable>, encoder: &mut Encoder) -> Result<()> {
     // u32 num_bytes
     // u32 num_handles
     // 64-bit presence indicator
@@ -1772,7 +1799,7 @@ macro_rules! fidl_table {
                             }
                             while ordinal > next_ordinal_to_write {
                                 // Fill in envelopes for missing ordinals.
-                                $crate::encoding::encode_in_envelope::<()>(&mut None, encoder)?;
+                                $crate::encoding::encode_in_envelope(&mut None, encoder)?;
                                 next_ordinal_to_write += 1;
                             }
                             $crate::encoding::encode_in_envelope(encodable, encoder)?;
