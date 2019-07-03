@@ -174,24 +174,23 @@ Handle::Handle(Handle* rhs, zx_rights_t rights, uint32_t base_value)
 void Handle::TearDown() TA_EXCL(ArenaLock::Get()) {
     uint32_t old_base_value = base_value();
 
-    // Calling the handle dtor can cause many things to happen, so it is
-    // important to call it outside the lock.
-    this->~Handle();
+    // There may be stale pointers to this slot and they will look at process_id. We expect
+    // process_id to already have been cleared by the process dispatcher before the handle got to
+    // this point.
+    DEBUG_ASSERT(process_id() == 0);
 
-    // There may be stale pointers to this slot. Zero out most of its fields
-    // to ensure that the Handle does not appear to belong to any process
-    // or point to any Dispatcher.
-    memset(this, 0, sizeof(*this));
+    // Explicitly reset the dispatcher to drop the reference, if this deletes the dispatcher then
+    // many things could ultimately happen and so it is important that this be outside the lock.
+    // Performing an explicit reset instead of letting it happen in the destructor means that the
+    // pointer gets reset to null, which is important in case there are stale pointers to this slot.
+    this->dispatcher_.reset();
+    // The destructor does not do much of interest now since we have already cleaned up the
+    // dispatcher_ ref, but call it for completeness.
+    this->~Handle();
 
     // Hold onto the base_value for the next user of this slot, stashing
     // it at the beginning of the free slot.
     *reinterpret_cast<uint32_t*>(this) = old_base_value;
-
-    // Double-check that the process_id field is zero, ensuring that
-    // no process can refer to this slot while it's free. This isn't
-    // completely legal since |handle| points to unconstructed memory,
-    // but it should be safe enough for an assertion.
-    DEBUG_ASSERT(process_id() == 0);
 }
 
 void Handle::Delete() {
