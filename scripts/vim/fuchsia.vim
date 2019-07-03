@@ -87,6 +87,7 @@ if jiri_manifest != ""
       " Replace the normal go to tag key with YCM when editing C/CPP.
       nnoremap <C-]> :YcmCompleter GoTo<cr>
     endif
+    set textwidth=100
   endfunction
 
   augroup fuchsia
