@@ -100,21 +100,17 @@ public:
 
     zx_koid_t get_koid() const { return koid_; }
 
-    // Must be called under the handle table lock.
-    void increment_handle_count() TA_REQ(Handle::ArenaLock::Get()) {
-        ++handle_count_;
+    void increment_handle_count() {
+        handle_count_.fetch_add(1, ktl::memory_order_seq_cst);
     }
 
-    // Must be called under the handle table lock.
     // Returns true exactly when the handle count goes to zero.
-    bool decrement_handle_count() TA_REQ(Handle::ArenaLock::Get()) {
-        --handle_count_;
-        return handle_count_ == 0u;
+    bool decrement_handle_count() {
+        return handle_count_.fetch_sub(1, ktl::memory_order_seq_cst) == 1u;
     }
 
-    // Must be called under the handle table lock.
-    uint32_t current_handle_count() const TA_REQ_SHARED(Handle::ArenaLock::Get()) {
-        return handle_count_;
+    uint32_t current_handle_count() const {
+        return handle_count_.load(ktl::memory_order_seq_cst);;
     }
 
     using ObserverList = fbl::DoublyLinkedList<StateObserver*, StateObserver::ObserverListTraits>;
@@ -230,7 +226,7 @@ private:
     fbl::Canary<fbl::magic("DISP")> canary_;
 
     const zx_koid_t koid_;
-    uint32_t handle_count_ TA_GUARDED(Handle::ArenaLock::Get());
+    ktl::atomic<uint32_t> handle_count_;
 
     zx_signals_t signals_ TA_GUARDED(get_lock());
 
