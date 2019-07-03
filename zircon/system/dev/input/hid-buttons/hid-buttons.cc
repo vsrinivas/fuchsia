@@ -19,6 +19,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <hid/descriptor.h>
+#include <lib/device-protocol/pdev.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
@@ -228,8 +229,12 @@ zx_status_t HidButtonsDevice::ConfigureInterrupt(uint32_t idx, uint64_t int_port
     return ZX_OK;
 }
 
-zx_status_t HidButtonsDevice::Bind() {
+zx_status_t HidButtonsDevice::Bind(fbl::Array<Gpio> gpios,
+                                   fbl::Array<buttons_button_config_t> buttons) {
     zx_status_t status;
+
+    buttons_ = std::move(buttons);
+    gpios_ = std::move(gpios);
 
     status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port_);
     if (status != ZX_OK) {
@@ -237,73 +242,25 @@ zx_status_t HidButtonsDevice::Bind() {
         return status;
     }
 
-    pdev_protocol_t pdev;
-    status = device_get_protocol(parent_, ZX_PROTOCOL_PDEV, &pdev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s device_get_protocol failed %d\n", __FUNCTION__, status);
-        return status;
-    }
-
-    // Get buttons metadata.
-    size_t actual = 0;
-    status = device_get_metadata_size(parent_, DEVICE_METADATA_BUTTONS_BUTTONS, &actual);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s device_get_metadata_size failed %d\n", __FILE__, status);
-        return ZX_OK;
-    }
-    size_t n_buttons = actual / sizeof(buttons_button_config_t);
-    fbl::AllocChecker ac;
-    buttons_ = fbl::Array(new (&ac) buttons_button_config_t[n_buttons], n_buttons);
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    actual = 0;
-    status = device_get_metadata(parent_, DEVICE_METADATA_BUTTONS_BUTTONS, buttons_.get(),
-                                 buttons_.size() * sizeof(buttons_button_config_t), &actual);
-    if (status != ZX_OK || actual != buttons_.size() * sizeof(buttons_button_config_t)) {
-        zxlogf(ERROR, "%s device_get_metadata failed %d\n", __FILE__, status);
-        return status;
-    }
-
-    // Get gpios metadata.
-    actual = 0;
-    status = device_get_metadata_size(parent_, DEVICE_METADATA_BUTTONS_GPIOS, &actual);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s device_get_metadata_size failed %d\n", __FILE__, status);
-        return ZX_OK;
-    }
-    size_t n_gpios = actual / sizeof(buttons_gpio_config_t);
-    auto gpios_configs = fbl::Array(new (&ac) buttons_gpio_config_t[n_gpios], n_gpios);
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    actual = 0;
-    status = device_get_metadata(parent_, DEVICE_METADATA_BUTTONS_GPIOS, gpios_configs.get(),
-                                 gpios_configs.size() * sizeof(buttons_gpio_config_t), &actual);
-    if (status != ZX_OK || actual != gpios_configs.size() * sizeof(buttons_gpio_config_t)) {
-        zxlogf(ERROR, "%s device_get_metadata failed %d\n", __FILE__, status);
-        return status;
-    }
-
     // Check the metadata.
     for (uint32_t i = 0; i < buttons_.size(); ++i) {
-        if (buttons_[i].gpioA_idx >= gpios_configs.size()) {
+        if (buttons_[i].gpioA_idx >= gpios_.size()) {
             zxlogf(ERROR, "%s invalid gpioA_idx %u\n", __FUNCTION__, buttons_[i].gpioA_idx);
             return ZX_ERR_INTERNAL;
         }
-        if (buttons_[i].gpioB_idx >= gpios_configs.size()) {
+        if (buttons_[i].gpioB_idx >= gpios_.size()) {
             zxlogf(ERROR, "%s invalid gpioB_idx %u\n", __FUNCTION__, buttons_[i].gpioB_idx);
             return ZX_ERR_INTERNAL;
         }
-        if (gpios_configs[buttons_[i].gpioA_idx].type != BUTTONS_GPIO_TYPE_INTERRUPT) {
+        if (gpios_[buttons_[i].gpioA_idx].config.type != BUTTONS_GPIO_TYPE_INTERRUPT) {
             zxlogf(ERROR, "%s invalid gpioA type %u\n", __FUNCTION__,
-                   gpios_configs[buttons_[i].gpioA_idx].type);
+                   gpios_[buttons_[i].gpioA_idx].config.type);
             return ZX_ERR_INTERNAL;
         }
         if (buttons_[i].type == BUTTONS_TYPE_MATRIX &&
-            gpios_configs[buttons_[i].gpioB_idx].type != BUTTONS_GPIO_TYPE_MATRIX_OUTPUT) {
+            gpios_[buttons_[i].gpioB_idx].config.type != BUTTONS_GPIO_TYPE_MATRIX_OUTPUT) {
             zxlogf(ERROR, "%s invalid matrix gpioB type %u\n", __FUNCTION__,
-                   gpios_configs[buttons_[i].gpioB_idx].type);
+                   gpios_[buttons_[i].gpioB_idx].config.type);
             return ZX_ERR_INTERNAL;
         }
         if (buttons_[i].id == BUTTONS_ID_FDR) {
@@ -312,20 +269,8 @@ zx_status_t HidButtonsDevice::Bind() {
         }
     }
 
-    // Prepare the GPIOs.
-    gpios_ = fbl::Array(new (&ac) Gpio[n_gpios], n_gpios);
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
+    // Setup.
     for (uint32_t i = 0; i < gpios_.size(); ++i) {
-        gpios_[i].config = gpios_configs[i];
-        size_t actual;
-        status = PdevGetGpioProtocol(&pdev, i, &gpios_[i].gpio,
-                                     sizeof(gpios_[i].gpio), &actual);
-        if (status != ZX_OK || actual != sizeof(gpios_[i].gpio)) {
-            zxlogf(ERROR, "%s pdev_get_protocol failed %d\n", __FUNCTION__, status);
-            return ZX_ERR_NOT_SUPPORTED;
-        }
         status = gpio_set_alt_function(&gpios_[i].gpio, 0); // 0 means function GPIO.
         if (status != ZX_OK) {
             zxlogf(ERROR, "%s gpio_set_alt_function failed %d\n", __FUNCTION__, status);
@@ -393,7 +338,65 @@ static zx_status_t hid_buttons_bind(void* ctx, zx_device_t* parent) {
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-    auto status = dev->Bind();
+
+    ddk::PDev pdev(parent);
+    if (!pdev.is_valid()) {
+        zxlogf(ERROR, "%s PDev failed\n", __func__);
+        return ZX_ERR_INTERNAL;
+    }
+
+    // Get buttons metadata.
+    size_t actual = 0;
+    auto status = device_get_metadata_size(parent, DEVICE_METADATA_BUTTONS_BUTTONS, &actual);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s device_get_metadata_size failed %d\n", __FILE__, status);
+        return ZX_OK;
+    }
+    size_t n_buttons = actual / sizeof(buttons_button_config_t);
+    auto buttons = fbl::Array(new (&ac) buttons_button_config_t[n_buttons], n_buttons);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    actual = 0;
+    status = device_get_metadata(parent, DEVICE_METADATA_BUTTONS_BUTTONS, buttons.get(),
+                                 buttons.size() * sizeof(buttons_button_config_t), &actual);
+    if (status != ZX_OK || actual != buttons.size() * sizeof(buttons_button_config_t)) {
+        zxlogf(ERROR, "%s device_get_metadata failed %d\n", __FILE__, status);
+        return status;
+    }
+
+    // Get gpios metadata.
+    actual = 0;
+    status = device_get_metadata_size(parent, DEVICE_METADATA_BUTTONS_GPIOS, &actual);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s device_get_metadata_size failed %d\n", __FILE__, status);
+        return ZX_OK;
+    }
+    size_t n_gpios = actual / sizeof(buttons_gpio_config_t);
+    auto configs = fbl::Array(new (&ac) buttons_gpio_config_t[n_gpios], n_gpios);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    actual = 0;
+    status = device_get_metadata(parent, DEVICE_METADATA_BUTTONS_GPIOS, configs.get(),
+                                 configs.size() * sizeof(buttons_gpio_config_t), &actual);
+    if (status != ZX_OK || actual != configs.size() * sizeof(buttons_gpio_config_t)) {
+        zxlogf(ERROR, "%s device_get_metadata failed %d\n", __FILE__, status);
+        return status;
+    }
+
+    // Prepare gpios array.
+    auto gpios = fbl::Array(new (&ac) HidButtonsDevice::Gpio[n_gpios], n_gpios);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    for (uint32_t i = 0; i < n_gpios; ++i) {
+        pdev.GetGpio(i).GetProto(&gpios[i].gpio);
+        gpios[i].config = configs[i];
+    }
+
+
+    status = dev->Bind(std::move(gpios), std::move(buttons));
     if (status == ZX_OK) {
         // devmgr is now in charge of the memory for dev.
         __UNUSED auto ptr = dev.release();

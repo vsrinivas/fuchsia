@@ -42,88 +42,6 @@ enum class TestType {
     kTestMatrix,
 };
 
-class FakeDdkButtons : public fake_ddk::Bind {
-public:
-    FakeDdkButtons(TestType type)
-        : Bind(), type_(type) {}
-
-    zx_status_t DeviceGetMetadata(zx_device_t* dev, uint32_t type, void* buf, size_t buflen,
-                                  size_t* actual) {
-        switch (type) {
-        case DEVICE_METADATA_BUTTONS_BUTTONS:
-            switch (type_) {
-            case TestType::kTestDirect:
-                *actual = sizeof(buttons_direct);
-                if (buflen != sizeof(buttons_direct)) {
-                    return ZX_ERR_INTERNAL;
-                }
-                memcpy(buf, &buttons_direct[0], *actual);
-                break;
-            case TestType::kTestMatrix:
-                *actual = sizeof(buttons_matrix);
-                if (buflen != sizeof(buttons_matrix)) {
-                    return ZX_ERR_INTERNAL;
-                }
-                memcpy(buf, &buttons_matrix[0], *actual);
-                break;
-            }
-            break;
-        case DEVICE_METADATA_BUTTONS_GPIOS:
-            switch (type_) {
-            case TestType::kTestDirect:
-                *actual = sizeof(gpios_direct);
-                if (buflen != sizeof(gpios_direct)) {
-                    return ZX_ERR_INTERNAL;
-                }
-                memcpy(buf, &gpios_direct[0], *actual);
-                break;
-            case TestType::kTestMatrix:
-                *actual = sizeof(gpios_matrix);
-                if (buflen != sizeof(gpios_matrix)) {
-                    return ZX_ERR_INTERNAL;
-                }
-                memcpy(buf, &gpios_matrix[0], *actual);
-                break;
-            }
-            break;
-        default:
-            return ZX_ERR_INTERNAL;
-        }
-        return ZX_OK;
-    }
-
-    zx_status_t DeviceGetMetadataSize(zx_device_t* dev, uint32_t type, size_t* out_size) {
-        switch (type) {
-        case DEVICE_METADATA_BUTTONS_BUTTONS:
-            switch (type_) {
-            case TestType::kTestDirect:
-                *out_size = sizeof(buttons_direct);
-                break;
-            case TestType::kTestMatrix:
-                *out_size = sizeof(buttons_matrix);
-                break;
-            }
-            break;
-        case DEVICE_METADATA_BUTTONS_GPIOS:
-            switch (type_) {
-            case TestType::kTestDirect:
-                *out_size = sizeof(gpios_direct);
-                break;
-            case TestType::kTestMatrix:
-                *out_size = sizeof(gpios_matrix);
-                break;
-            }
-            break;
-        default:
-            return ZX_ERR_INTERNAL;
-        }
-        return ZX_OK;
-    }
-
-private:
-    TestType type_;
-};
-
 class HidButtonsDeviceTest : public HidButtonsDevice {
 public:
     HidButtonsDeviceTest(ddk::MockGpio* gpios, size_t gpios_count, TestType type)
@@ -173,25 +91,37 @@ public:
     }
 
     zx_status_t BindTest() {
-        FakeDdkButtons ddk(type_); // In these tests this is only used during binding.
-        fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
-        protocols[0] = {ZX_PROTOCOL_PDEV, {nullptr, nullptr}};
-        ddk.SetProtocols(std::move(protocols));
-        return HidButtonsDevice::Bind();
-    }
-
-    zx_status_t PdevGetGpioProtocol(const pdev_protocol_t* proto, uint32_t index,
-                                    void* out_protocol_buffer, size_t out_protocol_size,
-                                    size_t* out_protocol_actual) override {
-        if (index > gpio_mocks_.size()) {
-            return ZX_ERR_INVALID_ARGS;
+        const size_t n_gpios = gpio_mocks_.size();
+        auto gpios = fbl::Array(new HidButtonsDevice::Gpio[n_gpios], n_gpios);
+        for (size_t i = 0; i < n_gpios; ++i) {
+            gpios[i].gpio = *gpio_mocks_[i]->GetProto();
         }
-        if (out_protocol_size != sizeof(gpio_protocol_t)) {
-            return ZX_ERR_INTERNAL;
+        switch (type_) {
+        case TestType::kTestDirect:
+        {
+            for (size_t i = 0; i < n_gpios; ++i) {
+                gpios[i].config = gpios_direct[i];
+            }
+            constexpr size_t n_buttons = countof(buttons_direct);
+            auto buttons = fbl::Array(new buttons_button_config_t[n_buttons], n_buttons);
+            for (size_t i = 0; i < n_buttons; ++i) {
+                buttons[i] = buttons_direct[i];
+            }
+            return HidButtonsDevice::Bind(std::move(gpios), std::move(buttons));
         }
-        gpio_protocol_t* p = reinterpret_cast<gpio_protocol_t*>(out_protocol_buffer);
-        *p = *gpio_mocks_[index]->GetProto();
-        *out_protocol_actual = sizeof(gpio_protocol_t);
+        case TestType::kTestMatrix:
+        {
+            for (size_t i = 0; i < n_gpios; ++i) {
+                gpios[i].config = gpios_matrix[i];
+            }
+            constexpr size_t n_buttons = countof(buttons_matrix);
+            auto buttons = fbl::Array(new buttons_button_config_t[n_buttons], n_buttons);
+            for (size_t i = 0; i < n_buttons; ++i) {
+                buttons[i] = buttons_matrix[i];
+            }
+            return HidButtonsDevice::Bind(std::move(gpios), std::move(buttons));
+        }
+        }
         return ZX_OK;
     }
 
