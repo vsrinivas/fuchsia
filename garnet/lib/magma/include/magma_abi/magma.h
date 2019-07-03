@@ -328,7 +328,8 @@ void magma_submit_command_buffer(
     uint32_t context_id);
 
 ///
-/// \brief Submits a series of commands for execution on the GPU without using a command buffer.
+/// \brief Deprecated; Submits a series of commands for execution on the GPU without using a command
+///        buffer.
 /// \param connection An open connection.
 /// \param context_id A valid context ID.
 /// \param command_count The number of commands in the provided buffer.
@@ -339,6 +340,19 @@ void magma_execute_immediate_commands(
     uint32_t context_id,
     uint64_t command_count,
     struct magma_system_inline_command_buffer* command_buffers);
+
+///
+/// \brief Submits a series of commands for execution on the GPU without using a command buffer.
+/// \param connection An open connection.
+/// \param context_id A valid context ID.
+/// \param command_count The number of commands in the provided buffer.
+/// \param command_buffers An array of command_count magma_inline_command_buffer structs.
+///
+void magma_execute_immediate_commands2(
+    magma_connection_t connection,
+    uint32_t context_id,
+    uint64_t command_count,
+    struct magma_inline_command_buffer* command_buffers);
 
 ///
 /// \brief Creates a semaphore.

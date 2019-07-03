@@ -159,12 +159,12 @@ public:
     {
         uint8_t commands_buffer[kImmediateCommandSize * kImmediateCommandCount] = {};
         uint64_t semaphore_ids[]{0, 1, 2};
-        magma_system_inline_command_buffer commands[kImmediateCommandCount];
+        magma_inline_command_buffer commands[kImmediateCommandCount];
         for (size_t i = 0; i < kImmediateCommandCount; i++) {
             commands[i].data = commands_buffer;
             commands[i].size = kImmediateCommandSize;
             commands[i].semaphore_count = 3;
-            commands[i].semaphores = semaphore_ids;
+            commands[i].semaphore_ids = semaphore_ids;
         }
 
         client_connection_->ExecuteImmediateCommands(test_context_id, kImmediateCommandCount,

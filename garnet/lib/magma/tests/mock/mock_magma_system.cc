@@ -141,6 +141,12 @@ void magma_execute_immediate_commands(magma_connection_t connection, uint32_t co
 {
 }
 
+void magma_execute_immediate_commands2(magma_connection_t connection, uint32_t context_id,
+                                       uint64_t command_count,
+                                       struct magma_inline_command_buffer* command_buffers)
+{
+}
+
 magma_status_t magma_export(magma_connection_t connection, magma_buffer_t buffer,
                             uint32_t* buffer_handle_out)
 {

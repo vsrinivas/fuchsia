@@ -115,10 +115,18 @@ struct magma_system_command_buffer {
     uint32_t signal_semaphore_count;
 };
 
+// TODO(MA-580): remove (deprecated)
 struct magma_system_inline_command_buffer {
     void* data;
     uint64_t size;
     magma_semaphore_t* semaphores;
+    uint32_t semaphore_count;
+};
+
+struct magma_inline_command_buffer {
+    void* data;
+    uint64_t size;
+    uint64_t* semaphore_ids;
     uint32_t semaphore_count;
 };
 

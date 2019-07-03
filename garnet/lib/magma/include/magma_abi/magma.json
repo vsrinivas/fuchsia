@@ -587,7 +587,7 @@
       {
         "name": "magma_execute_immediate_commands",
         "type": "void",
-        "description": "Submits a series of commands for execution on the GPU without using a command buffer.",
+        "description": "Deprecated; Submits a series of commands for execution on the GPU without using a command buffer.",
         "arguments": [
           {
             "name": "connection",
@@ -608,6 +608,33 @@
             "name": "command_buffers",
             "type": "struct magma_system_inline_command_buffer*",
             "description": "An array of command_count magma_system_inline_command_buffer structs."
+          }
+        ]
+      },
+      {
+        "name": "magma_execute_immediate_commands2",
+        "type": "void",
+        "description": "Submits a series of commands for execution on the GPU without using a command buffer.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "context_id",
+            "type": "uint32_t",
+            "description": "A valid context ID."
+          },
+          {
+            "name": "command_count",
+            "type": "uint64_t",
+            "description": "The number of commands in the provided buffer."
+          },
+          {
+            "name": "command_buffers",
+            "type": "struct magma_inline_command_buffer*",
+            "description": "An array of command_count magma_inline_command_buffer structs."
           }
         ]
       },

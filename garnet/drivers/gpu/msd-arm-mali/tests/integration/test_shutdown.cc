@@ -48,7 +48,7 @@ public:
         if (result != 0)
             return DRET(result);
 
-        magma_execute_immediate_commands(connection_, context_id, 0, nullptr);
+        magma_execute_immediate_commands2(connection_, context_id, 0, nullptr);
 
         result = magma_get_error(connection_);
         return DRET(result);

@@ -355,9 +355,20 @@ void magma_submit_command_buffer(magma_connection_t connection, magma_buffer_t c
     delete platform_buffer;
 }
 
+// TODO(MA-580): remove (deprecated)
 void magma_execute_immediate_commands(magma_connection_t connection, uint32_t context_id,
                                       uint64_t command_count,
                                       magma_system_inline_command_buffer* command_buffers)
+{
+    // magma_inline_command_buffer is just renamed magma_system_inline_command_buffer
+    magma::PlatformConnectionClient::cast(connection)
+        ->ExecuteImmediateCommands(context_id, command_count,
+                                   reinterpret_cast<magma_inline_command_buffer*>(command_buffers));
+}
+
+void magma_execute_immediate_commands2(magma_connection_t connection, uint32_t context_id,
+                                       uint64_t command_count,
+                                       magma_inline_command_buffer* command_buffers)
 {
     magma::PlatformConnectionClient::cast(connection)
         ->ExecuteImmediateCommands(context_id, command_count, command_buffers);

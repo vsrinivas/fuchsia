@@ -89,12 +89,12 @@ public:
         ASSERT_TRUE(InitBatchBuffer(vaddr.data(), vaddr.size(), job_va, atom_number,
                                     atom_dependency, how, protected_mode));
 
-        magma_system_inline_command_buffer command_buffer;
+        magma_inline_command_buffer command_buffer;
         command_buffer.data = vaddr.data();
         command_buffer.size = vaddr.size();
-        command_buffer.semaphores = nullptr;
+        command_buffer.semaphore_ids = nullptr;
         command_buffer.semaphore_count = 0;
-        magma_execute_immediate_commands(connection_, context_id_, 1, &command_buffer);
+        magma_execute_immediate_commands2(connection_, context_id_, 1, &command_buffer);
 
         constexpr uint64_t kOneSecondPerNs = 1000000000;
         EXPECT_EQ(MAGMA_STATUS_OK, magma_wait_notification_channel(connection_, kOneSecondPerNs));

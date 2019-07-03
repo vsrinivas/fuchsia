@@ -242,6 +242,20 @@ public:
         test2->SemaphoreImport(handle, id);
     }
 
+    void ImmediateCommands()
+    {
+        uint32_t context_id;
+        magma_create_context(connection_, &context_id);
+        EXPECT_EQ(magma_get_error(connection_), 0);
+
+        magma_inline_command_buffer inline_command_buffer{};
+        magma_execute_immediate_commands2(connection_, context_id, 0, &inline_command_buffer);
+        EXPECT_EQ(magma_get_error(connection_), 0);
+
+        magma_release_context(connection_, context_id);
+        EXPECT_EQ(magma_get_error(connection_), 0);
+    }
+
     void ImageFormat()
     {
         fuchsia::sysmem::SingleBufferSettings buffer_settings;
@@ -338,7 +352,7 @@ public:
         EXPECT_EQ(MAGMA_STATUS_OK, magma_get_buffer_format_modifier(
                                        description, &has_format_modifier, &format_modifier));
         if (has_format_modifier) {
-          EXPECT_EQ(MAGMA_FORMAT_MODIFIER_LINEAR, format_modifier);
+            EXPECT_EQ(MAGMA_FORMAT_MODIFIER_LINEAR, format_modifier);
         }
 
         magma_image_plane_t planes[4];
@@ -436,6 +450,8 @@ TEST(MagmaAbi, SemaphoreImportExport)
     TestConnection test2;
     TestConnection::SemaphoreImportExport(&test1, &test2);
 }
+
+TEST(MagmaAbi, ImmediateCommands) { TestConnection().ImmediateCommands(); }
 
 TEST(MagmaAbi, ImageFormat)
 {
