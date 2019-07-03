@@ -19,5 +19,3 @@ Session.vim
 cipd.gni
 .cipd/*
 latest-commit-date
-third_party/
-!secondary/third_party
