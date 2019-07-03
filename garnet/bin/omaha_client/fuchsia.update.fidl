@@ -4,6 +4,15 @@
 
 library fuchsia.update;
 
+/// Information about the state of the update system.
+[Discoverable]
+protocol Info {
+    /// Retrieve the currently active update channel.
+    ///
+    /// - response `channel` The currently active update channel.
+    GetChannel() -> (string:128 channel);
+};
+
 [Discoverable]
 protocol Manager {
     /// Immediately check for an update.
