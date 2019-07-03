@@ -51,10 +51,15 @@ class SourceElement {
   explicit SourceElement(SourceElement const& element)
       : start_(element.start_), end_(element.end_) {}
 
-  explicit SourceElement(Token start, Token end)
-      : start_(start), end_(end) {}
+  explicit SourceElement(Token start, Token end) : start_(start), end_(end) {}
 
-  SourceLocation location() const { return start_.location(); }
+  SourceLocation location() const {
+    assert(&start_.location().source_file() == &end_.location().source_file());
+    const char* start_pos = start_.location().data().data();
+    const char* end_pos = end_.location().data().data() + end_.location().data().length();
+    return SourceLocation(std::string_view(start_pos, end_pos - start_pos),
+                          start_.location().source_file());
+  }
 
   virtual ~SourceElement() {}
 
@@ -75,8 +80,7 @@ class SourceElementMark {
 
 class Identifier final : public SourceElement {
  public:
-  explicit Identifier(SourceElement const& element)
-      : SourceElement(element) {}
+  explicit Identifier(SourceElement const& element) : SourceElement(element) {}
 
   void Accept(TreeVisitor* visitor) const;
 };
@@ -102,8 +106,7 @@ class Literal : public SourceElement {
     kFalse,
   };
 
-  explicit Literal(SourceElement const& element, Kind kind)
-      : SourceElement(element), kind(kind) {}
+  explicit Literal(SourceElement const& element, Kind kind) : SourceElement(element), kind(kind) {}
 
   virtual ~Literal() {}
 
@@ -112,24 +115,21 @@ class Literal : public SourceElement {
 
 class StringLiteral final : public Literal {
  public:
-  explicit StringLiteral(SourceElement const& element)
-      : Literal(element, Kind::kString) {}
+  explicit StringLiteral(SourceElement const& element) : Literal(element, Kind::kString) {}
 
   void Accept(TreeVisitor* visitor) const;
 };
 
 class NumericLiteral final : public Literal {
  public:
-  NumericLiteral(SourceElement const& element)
-      : Literal(element, Kind::kNumeric) {}
+  NumericLiteral(SourceElement const& element) : Literal(element, Kind::kNumeric) {}
 
   void Accept(TreeVisitor* visitor) const;
 };
 
 class Ordinal32 final : public SourceElement {
  public:
-  Ordinal32(SourceElement const& element, uint32_t value)
-      : SourceElement(element), value(value) {}
+  Ordinal32(SourceElement const& element, uint32_t value) : SourceElement(element), value(value) {}
 
   void Accept(TreeVisitor* visitor) const;
 
@@ -138,8 +138,7 @@ class Ordinal32 final : public SourceElement {
 
 class Ordinal64 final : public SourceElement {
  public:
-  Ordinal64(SourceElement const& element, uint64_t value)
-      : SourceElement(element), value(value) {}
+  Ordinal64(SourceElement const& element, uint64_t value) : SourceElement(element), value(value) {}
 
   void Accept(TreeVisitor* visitor) const;
 
@@ -148,16 +147,14 @@ class Ordinal64 final : public SourceElement {
 
 class TrueLiteral final : public Literal {
  public:
-  TrueLiteral(SourceElement const& element)
-      : Literal(element, Kind::kTrue) {}
+  TrueLiteral(SourceElement const& element) : Literal(element, Kind::kTrue) {}
 
   void Accept(TreeVisitor* visitor) const;
 };
 
 class FalseLiteral final : public Literal {
  public:
-  FalseLiteral(SourceElement const& element)
-      : Literal(element, Kind::kFalse) {}
+  FalseLiteral(SourceElement const& element) : Literal(element, Kind::kFalse) {}
 
   void Accept(TreeVisitor* visitor) const;
 };
@@ -169,8 +166,7 @@ class Constant : public SourceElement {
     kLiteral,
   };
 
-  explicit Constant(Token token, Kind kind)
-      : SourceElement(token, token), kind(kind) {}
+  explicit Constant(Token token, Kind kind) : SourceElement(token, token), kind(kind) {}
 
   virtual ~Constant() {}
 
@@ -232,7 +228,7 @@ class TypeConstructor final : public SourceElement {
                   std::unique_ptr<TypeConstructor> maybe_arg_type_ctor,
                   std::optional<types::HandleSubtype> handle_subtype,
                   std::unique_ptr<Constant> maybe_size, types::Nullability nullability)
-      : SourceElement(element.start_, element.end_),
+      : SourceElement(element),
         identifier(std::move(identifier)),
         maybe_arg_type_ctor(std::move(maybe_arg_type_ctor)),
         handle_subtype(handle_subtype),

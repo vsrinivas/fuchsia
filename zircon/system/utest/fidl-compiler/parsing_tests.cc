@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/attributes.h>
 #include <fidl/flat_ast.h>
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
+#include <fidl/raw_ast.h>
 #include <fidl/source_file.h>
 #include <locale.h>
 #include <unittest/unittest.h>
@@ -345,6 +347,32 @@ struct UseDependent {
   END_TEST;
 }
 
+bool multiline_comment_has_correct_source_location() {
+  BEGIN_TEST;
+
+  TestLibrary library("example.fidl", R"FIDL(
+  library example;
+
+  /// A
+  /// multiline
+  /// comment!
+  struct Empty{};
+  )FIDL");
+
+  std::unique_ptr<fidl::raw::File> ast;
+  library.Parse(&ast);
+
+  fidl::raw::Attribute attribute =
+      ast->struct_declaration_list.front()->attributes->attributes.front();
+  ASSERT_STR_EQ(attribute.name.c_str(), "Doc");
+  ASSERT_STR_EQ(std::string(attribute.location().data()).c_str(),
+                R"EXPECTED(/// A
+  /// multiline
+  /// comment!)EXPECTED");
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(parsing_tests)
@@ -359,4 +387,5 @@ RUN_TEST(bad_identifier_test)
 RUN_TEST(invalid_character_test)
 RUN_TEST(empty_struct_test)
 RUN_TEST(warn_on_type_alias_before_imports)
+RUN_TEST(multiline_comment_has_correct_source_location)
 END_TEST_CASE(parsing_tests)
