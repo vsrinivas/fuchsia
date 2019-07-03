@@ -7,7 +7,6 @@ library fuchsia.bluetooth;
 /// Represents a Bluetooth UUID in its 128-bit canonical form. While the Bluetooth standard supports
 /// 16- and 32-bit short form UUIDs over the wire, the Fuchsia FIDL libraries require all UUIDs to
 /// be represented in their canonical 128-bit form.
-[MaxHandles = "0"]
 struct Uuid {
     /// The UUID bytes in little-endian order.
     array<uint8>:16 value;

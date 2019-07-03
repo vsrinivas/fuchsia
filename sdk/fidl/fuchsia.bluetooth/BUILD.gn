@@ -9,6 +9,7 @@ fidl("fuchsia.bluetooth") {
 
   sources = [
     "address.fidl",
+    "appearance.fidl",
     "id.fidl",
     "nullables.fidl",
     "status.fidl",

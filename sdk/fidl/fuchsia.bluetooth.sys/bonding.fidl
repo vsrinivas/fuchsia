@@ -1,0 +1,111 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.sys;
+
+using fuchsia.bluetooth as bt;
+
+struct SecurityProperties {
+    bool authenticated;
+    bool secure_connections;
+    uint8 encryption_key_size;
+};
+
+/// Represents a 128-bit secret key.
+struct Key {
+    array<uint8>:16 value;
+};
+
+/// Represents a key that was received from a peer.
+struct PeerKey {
+    /// The security properties of this link under which this key was received.
+    SecurityProperties security;
+
+    /// The contents of the key.
+    Key data;
+};
+
+/// Represents a locally generated key that is distributed across one or more bonds.
+using LocalKey = Key;
+
+/// Represents a LE Long-Term peer key used for link encyrption. The |ediv| and |rand|
+/// fields are zero if distributed using LE Secure Connections pairing.
+struct Ltk {
+    PeerKey key;
+    uint16 ediv;
+    uint64 rand;
+};
+
+/// The preferred LE connection parameters of the peer.
+struct LeConnectionParameters {
+    uint16 connection_interval;
+    uint16 connection_latency;
+    uint16 supervision_timeout;
+};
+
+table LeData {
+    /// The identity address of the peer.
+    1: bt.Address address;
+
+    /// The peer's preferred connection parameters, if known.
+    2: LeConnectionParameters connection_parameters;
+
+    /// Known GATT service UUIDs.
+    3: vector<bt.Uuid> services;
+
+    /// The LE long-term key. Present if the link was encrypted.
+    4: Ltk ltk;
+
+    /// Identity Resolving RemoteKey used to generate and resolve random addresses.
+    5: PeerKey irk;
+
+    /// Connection Signature Resolving RemoteKey used for data signing without encryption.
+    6: PeerKey csrk;
+};
+
+table BredrData {
+    /// The public device address of the peer.
+    1: bt.Address address;
+
+    /// True if the peer prefers to lead the piconet. This is determined by role
+    /// switch procedures. Paging and connecting from a peer does not automatically
+    /// set this flag.
+    2: bool piconet_leader;
+
+    /// Known service UUIDs obtained from EIR data or SDP.
+    3: vector<bt.Uuid> services;
+
+    /// The semi-permanent BR/EDR key. Present if link was paired with Secure
+    /// Simple Pairing or stronger.
+    4: PeerKey link_key;
+};
+
+/// Represents the bonding data for a single peer.
+table BondingData {
+    /// The identifier that uniquely identifies this peer.
+    1: bt.PeerId identifier;
+
+    /// The local Bluetooth identity address that this bond is associated with.
+    2: bt.Address local_address;
+
+    /// The name of the peer, if known.
+    3: string name;
+
+    /// Bonding data that is present when this peer is paired on the LE transport.
+    4: LeData le;
+
+    /// Bonding data that is present when this peer is paired on the BR/EDR transport.
+    5: BredrData bredr;
+};
+
+/// Represents persistent local host data.
+table HostData {
+    /// The local Identity Resolving Key used by a bt-host device to generate Resolvable Private
+    /// Addresses when privacy is enabled.
+    ///
+    /// NOTE: This key is distributed to LE peers during pairing procedures. The client must take
+    /// care to assign an IRK that consistent with the local bt-host identity.
+    // TODO(BT-815): Document behavior once there is a better privacy policy when |irk| is null.
+    1: LocalKey irk;
+};

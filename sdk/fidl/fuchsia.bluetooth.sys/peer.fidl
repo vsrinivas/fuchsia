@@ -1,0 +1,64 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.sys;
+
+using fuchsia.bluetooth as bt;
+
+enum TechnologyType {
+    LOW_ENERGY = 1;
+    CLASSIC = 2;
+    DUAL_MODE = 3;
+};
+
+/// Represents a remote BR/EDR, LE, or dual-mode BR/EDR/LE peer.
+table Peer {
+    /// Uniquely identifies this peer on the current system.
+    ///
+    /// This field is always present.
+    1: bt.PeerId id;
+
+    /// Bluetooth device address that identifies this peer. Clients
+    /// should display this field to the user when |name| is not available.
+    ///
+    /// This field is always present.
+    ///
+    /// NOTE: Clients should use the `identifier` field to keep track of peers instead of their
+    /// address.
+    2: bt.Address address;
+
+    /// The Bluetooth technologies that are supported by this peer.
+    ///
+    /// This field is always present.
+    3: TechnologyType technology;
+
+    /// Whether or not a BR/EDR and/or LE connection exists to this peer.
+    ///
+    /// This field is always present.
+    4: bool connected;
+
+    /// Whether or not this peer is bonded.
+    ///
+    /// This field is always present.
+    5: bool bonded;
+
+    /// The name of the peer, if known.
+    6: string name;
+
+    /// The LE appearance property. Present if this peer supports LE and the
+    /// appearance information was obtained over advertising and/or GATT.
+    7: bt.Appearance appearance;
+
+    /// The class of device for this device, if known.
+    8: DeviceClass device_class;
+
+    /// The most recently obtained advertising signal strength for this peer. Present if known.
+    9: int8 rssi;
+
+    /// The most recently obtained transmission power for this peer. Present if known.
+    10: int8 tx_power;
+
+    /// The list of service UUIDs known to be available on this peer.
+    11: vector<bt.Uuid> services;
+};

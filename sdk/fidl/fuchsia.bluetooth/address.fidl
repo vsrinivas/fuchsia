@@ -4,9 +4,19 @@
 
 library fuchsia.bluetooth;
 
+enum AddressType : uint8 {
+    /// LE public device address or BR/EDR BD_ADDR.
+    PUBLIC = 1;
+
+    /// LE private or static random device address.
+    RANDOM = 2;
+};
+
 /// Represents a 48-bit Bluetooth Device Address.
-[MaxHandles = "0"]
 struct Address {
+    /// Type of the device address.
+    AddressType type;
+
     /// The device address bytes in little-endian order.
     array<uint8>:6 bytes;
 };

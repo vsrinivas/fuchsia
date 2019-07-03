@@ -1,0 +1,56 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.sys;
+
+using fuchsia.bluetooth as bt;
+using zx;
+
+/// Information about a Bluetooth controller and its associated host-subsystem state.
+table HostInfo {
+    /// Uniquely identifies a host on the current system.
+    ///
+    /// This field is always present.
+    1: bt.Id id;
+
+    /// The Bluetooth technologies that are supported by this adapter.
+    ///
+    /// This field is always present.
+    2: TechnologyType technology;
+
+    /// The identity address.
+    ///
+    /// This field is always present.
+    3: bt.Address address;
+
+    /// Indicates whether or not this is the active host. The system has one active host which
+    /// handles all Bluetooth procedures.
+    4: bool active;
+
+    /// The local name of this host. This is the name that is visible to other devices when this
+    /// host is in the discoverable mode.
+    5: string local_name;
+
+    /// Whether or not the local adapter is currently discoverable over BR/EDR and
+    /// LE physical channels.
+    6: bool discoverable;
+
+    /// Whether or not device discovery is currently being performed.
+    7: bool discovering;
+};
+
+/// Protocol used to observe and manage the Bluetooth controllers on the system.
+[Discoverable]
+protocol HostWatcher {
+    /// Obtain a list of all available Bluetooth controllers and their state. A response is sent
+    /// only if this list has changed since the last time the client has sent this message.
+    Watch() -> (vector<HostInfo> hosts);
+
+    /// Designates the host with the given `id` as active. All Bluetooth procedures will be routed
+    /// over this host. Any previously assigned active host will be disabled and all of its pending
+    /// procedures will be terminated.
+    ///
+    /// * error This can fail if a host with `id` was not found.
+    SetActive(bt.Id id) -> () error zx.status;
+};

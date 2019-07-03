@@ -4,7 +4,7 @@
 
 use {
     failure::{Error, ResultExt},
-    fidl_fuchsia_bluetooth::Address,
+    fidl_fuchsia_bluetooth::{Address, AddressType},
     fidl_fuchsia_bluetooth_host::HostProxy,
     fidl_fuchsia_bluetooth_test::EmulatorSettings,
     fuchsia_async as fasync,
@@ -24,7 +24,7 @@ fn timeout() -> zx::Duration {
 
 // Tests that creating and destroying a fake HCI device binds and unbinds the bt-host driver.
 pub async fn lifecycle_test(_: ()) -> Result<(), Error> {
-    let addr_bytes = Address { bytes: [1, 2, 3, 4, 5, 6] };
+    let addr_bytes = Address { type_: AddressType::Public, bytes: [1, 2, 3, 4, 5, 6] };
     let addr_str = "06:05:04:03:02:01";
     let settings = EmulatorSettings {
         address: Some(addr_bytes),

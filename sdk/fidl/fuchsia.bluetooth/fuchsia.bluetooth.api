@@ -1,7 +1,8 @@
 {
-  "fidl/fuchsia.bluetooth/address.fidl": "2d5a56e288a6a9f9ec3a56f8abffea87",
-  "fidl/fuchsia.bluetooth/id.fidl": "7140ca7c8185db294a9f9483b6a25b82",
+  "fidl/fuchsia.bluetooth/address.fidl": "96be17cc6fb2bf8d75c3cc486de8c776",
+  "fidl/fuchsia.bluetooth/appearance.fidl": "b32ebf2d23109e5f5dc31c7be94a2957",
+  "fidl/fuchsia.bluetooth/id.fidl": "1087e4d322d304473df494ad368917fd",
   "fidl/fuchsia.bluetooth/nullables.fidl": "682e58e24e544a81b6a1f4297b3d49fe",
   "fidl/fuchsia.bluetooth/status.fidl": "f119811211b70e0b1f2377969de1ec4f",
-  "fidl/fuchsia.bluetooth/uuid.fidl": "d95459bfd60f56c1c1d00b443b3e5855"
+  "fidl/fuchsia.bluetooth/uuid.fidl": "2c418089a57cbe76e1b7906d46553ca4"
 }
