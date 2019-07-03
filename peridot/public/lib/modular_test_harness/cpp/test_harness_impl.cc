@@ -64,7 +64,6 @@ class TestHarnessImpl::InterceptedComponentImpl
       : impl_(std::move(impl)), binding_(this, std::move(request)) {
     impl_->set_on_kill([this] {
       binding_.events().OnKill();
-      remove_handler_();
     });
   }
 

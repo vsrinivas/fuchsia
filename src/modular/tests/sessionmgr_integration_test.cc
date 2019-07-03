@@ -28,7 +28,7 @@ class MockAdmin : public fuchsia::device::manager::Administrator {
   bool suspend_called_ = false;
 };
 
-TEST_F(SessionmgrIntegrationTest, DISABLED_RebootCalledIfSessionmgrCrashNumberReachesRetryLimit) {
+TEST_F(SessionmgrIntegrationTest, RebootCalledIfSessionmgrCrashNumberReachesRetryLimit) {
   MockAdmin mock_admin;
   fidl::BindingSet<fuchsia::device::manager::Administrator> admin_bindings;
 
