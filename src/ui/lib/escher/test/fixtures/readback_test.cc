@@ -81,6 +81,10 @@ ReadbackTest::FrameData ReadbackTest::NewFrame(vk::ImageLayout framebuffer_layou
                    vk::AccessFlagBits::eTransferWrite | vk::AccessFlagBits::eTransferRead |
                        vk::AccessFlagBits::eColorAttachmentWrite);
 
+  // This allows the client to use the image as part of a FrameBuffer so that there is not an
+  // undefined layout
+  color_attachment_->set_swapchain_layout(framebuffer_layout);
+
   return FrameData{
       .frame = frame, .color_attachment = color_attachment_, .depth_attachment = depth_attachment_};
 }

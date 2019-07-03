@@ -218,14 +218,6 @@ void PaperRenderer::BeginFrame(const FramePtr& frame, const PaperScenePtr& scene
 
   shape_cache_.BeginFrame(frame_data_->gpu_uploader.get(), frame->frame_number());
 
-  if (config_.debug_frame_number) {
-    if (!debug_font_) {
-      debug_font_ = DebugFont::New(frame_data_->gpu_uploader.get(), escher()->image_cache());
-    }
-  } else {
-    debug_font_.reset();
-  }
-
   {
     // As described in the header file, we use the first camera's transform for
     // the purpose of depth-sorting.
@@ -254,6 +246,17 @@ void PaperRenderer::EndFrame() {
   TRACE_DURATION("gfx", "PaperRenderer::EndFrame");
   FXL_DCHECK(frame_data_);
 
+  if (config_.debug_frame_number) {
+    DrawDebugText(std::to_string(frame_data_->frame->frame_number()), {10, 10}, 4);
+  }
+  if (!frame_data_->texts.empty()) {
+    if (!debug_font_) {
+      debug_font_ = DebugFont::New(frame_data_->gpu_uploader.get(), escher()->image_cache());
+    }
+  } else {
+    debug_font_.reset();
+  }
+
   // TODO(ES-206): obtain a semaphore here that will be signalled by the
   // uploader and waited-upon by the "render command buffer".
   frame_data_->gpu_uploader->Submit();
@@ -276,9 +279,7 @@ void PaperRenderer::EndFrame() {
   }
   render_queue_.Clear();
 
-  if (config_.debug_frame_number) {
-    RenderFrameCounter();
-  }
+  GenerateDebugCommands(frame_data_->frame->cmds());
 
   frame_data_ = nullptr;
   transform_stack_.Clear();
@@ -286,28 +287,9 @@ void PaperRenderer::EndFrame() {
   draw_call_factory_.EndFrame();
 }
 
-void PaperRenderer::RenderFrameCounter() {
-  auto cb = frame_data_->frame->cmds();
-  auto& output_image = frame_data_->output_image;
-  auto layout = output_image->swapchain_layout();
-
-  if (layout == vk::ImageLayout::eUndefined)
-    return;
-
-  cb->ImageBarrier(
-      output_image, layout, vk::ImageLayout::eTransferDstOptimal,
-      vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eTransfer,
-      vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eTransferWrite,
-      vk::PipelineStageFlagBits::eTransfer, vk::AccessFlagBits::eTransferWrite);
-
-  debug_font_->Blit(cb, std::to_string(frame_data_->frame->frame_number()), output_image, {10, 10},
-                    4);
-
-  cb->ImageBarrier(
-      output_image, vk::ImageLayout::eTransferDstOptimal, layout,
-      vk::PipelineStageFlagBits::eTransfer, vk::AccessFlagBits::eTransferWrite,
-      vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eTransfer,
-      vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eTransferWrite);
+void PaperRenderer::DrawDebugText(std::string text, vk::Offset2D offset, int32_t scale) {
+  FXL_DCHECK(frame_data_);
+  frame_data_->texts.push_back({text, offset, scale});
 }
 
 void PaperRenderer::BindSceneAndCameraUniforms(uint32_t camera_index) {
@@ -488,6 +470,8 @@ void PaperRenderer::GenerateCommandsForNoShadows(uint32_t camera_index) {
   }
   cmd_buf->EndRenderPass();
   frame->AddTimestamp("finished no-shadows render pass");
+
+  GenerateDebugCommands(frame_data_->frame->cmds());
 }
 
 void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
@@ -627,6 +611,43 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
 
   cmd_buf->EndRenderPass();
   frame->AddTimestamp("finished shadow_volume render pass");
+}
+
+void PaperRenderer::GenerateDebugCommands(CommandBuffer* cmd_buf) {
+  if (frame_data_->texts.empty()) {
+    return;
+  }
+  TRACE_DURATION("gfx", "PaperRenderer::GenerateDebugCommands");
+
+  const FramePtr& frame = frame_data_->frame;
+  frame->AddTimestamp("started text render pass");
+
+  auto& output_image = frame_data_->output_image;
+  auto layout = output_image->swapchain_layout();
+
+  if (layout == vk::ImageLayout::eUndefined) {
+    FXL_LOG(WARNING) << "EXITING DUE TO UNDEFINED SWAPCHAIN LAYOUT";
+    return;
+  }
+
+  cmd_buf->ImageBarrier(
+      output_image, layout, vk::ImageLayout::eTransferDstOptimal,
+      vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eTransfer,
+      vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eTransferWrite,
+      vk::PipelineStageFlagBits::eTransfer, vk::AccessFlagBits::eTransferWrite);
+
+  for (std::size_t i = 0; i < frame_data_->texts.size(); i++) {
+    const TextData& td = frame_data_->texts[i];
+    debug_font_->Blit(cmd_buf, td.text, output_image, td.offset, td.scale);
+  }
+
+  cmd_buf->ImageBarrier(
+      output_image, vk::ImageLayout::eTransferDstOptimal, layout,
+      vk::PipelineStageFlagBits::eTransfer, vk::AccessFlagBits::eTransferWrite,
+      vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eTransfer,
+      vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eTransferWrite);
+
+  frame->AddTimestamp("finished text render pass");
 }
 
 std::pair<TexturePtr, TexturePtr> PaperRenderer::ObtainDepthAndMsaaTextures(const FramePtr& frame,
