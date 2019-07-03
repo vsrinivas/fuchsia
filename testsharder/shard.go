@@ -1,6 +1,7 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 package testsharder
 
 import (
@@ -73,8 +74,8 @@ func MakeShards(specs []TestSpec, mode Mode, tags []string) []*Shard {
 	return shards
 }
 
-// Appends new shards to shards where each new shard contains one test repeated
-// multiple times according to the specifications in multipliers.
+// MultiplyShards appends new shards to shards where each new shard contains one test
+// repeated multiple times according to the specifications in multipliers.
 func MultiplyShards(shards []*Shard, multipliers []TestModifier) ([]*Shard, error) {
 	multipliersFound := make(map[TestModifier]bool)
 	for _, shard := range shards {
@@ -139,9 +140,9 @@ func stringSlicesEq(s []string, t []string) bool {
 		return false
 	}
 	seen := make(map[string]int)
-	for i, _ := range s {
-		seen[s[i]] += 1
-		seen[t[i]] -= 1
+	for i := range s {
+		seen[s[i]]++
+		seen[t[i]]--
 	}
 	for _, v := range seen {
 		if v != 0 {

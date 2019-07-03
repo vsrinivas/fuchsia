@@ -2,12 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// The GN environments specified by test authors in the Fuchsia source
-// correspond directly to the Environment struct defined here.
-//
-// Note that by "platforms" we mean a specific group of dimension sets which
-// correspond to the currently available test platforms supported by the
-// infrastructure.
 package testsharder
 
 import (
@@ -20,6 +14,8 @@ import (
 )
 
 // Environment describes the full environment a test requires.
+// The GN environments specified by test authors in the Fuchsia source
+// correspond directly to the Environment struct defined here.
 type Environment struct {
 	// Dimensions gives the Swarming dimensions a test wishes to target.
 	Dimensions DimensionSet `json:"dimensions"`
@@ -92,6 +88,9 @@ func (dims DimensionSet) resolvesTo(other DimensionSet) bool {
 
 // LoadPlatforms loads the list of test platforms specified as a JSON list
 // produced by a build, given the root of the build directory.
+// Note that by "platforms" we mean a specific group of dimension sets which
+// correspond to the currently available test platforms supported by the
+// infrastructure.
 func LoadPlatforms(fuchsiaBuildDir string) ([]DimensionSet, error) {
 	platformManifestPath := filepath.Join(fuchsiaBuildDir, build.PlatformManifestName)
 	bytes, err := ioutil.ReadFile(platformManifestPath)
