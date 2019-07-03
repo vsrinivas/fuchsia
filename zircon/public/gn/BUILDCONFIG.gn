@@ -531,13 +531,6 @@ template("library") {
               }
             }
           }
-          if (deps + public_deps + [ "//zircon/public/lib/zircon" ] -
-              [ "//zircon/public/lib/zircon" ] != deps + public_deps) {
-            lib_dirs = [ rebase_path(
-                    get_label_info("$zx/system/ulib/zircon(${toolchain.shlib})",
-                                   "target_out_dir"),
-                    root_build_dir) ]
-          }
           install = install_files
           debug = debug_files
         },
