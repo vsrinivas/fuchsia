@@ -307,7 +307,37 @@ bool VulkanTest::Exec(VkFormat format, uint32_t width, bool direct, bool linear)
         return DRETF(false, "BindSharedCollection failed: %d", status);
     }
     fuchsia::sysmem::BufferCollectionConstraints constraints{};
-    if (direct) {
+    if (format == VK_FORMAT_UNDEFINED) {
+        // Use the other connection to specify the actual desired format and size,
+        // which should be compatible with what the vulkan driver can use.
+        DASSERT(direct);
+        constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageTransferDst;
+        // Try multiple format modifiers.
+        constraints.image_format_constraints_count = 2;
+        for (uint32_t i = 0; i < constraints.image_format_constraints_count; i++) {
+            fuchsia::sysmem::ImageFormatConstraints& image_constraints =
+                constraints.image_format_constraints[i];
+            image_constraints = fuchsia::sysmem::ImageFormatConstraints();
+            image_constraints.required_min_coded_width = 1024;
+            image_constraints.required_min_coded_height = 1024;
+            image_constraints.required_max_coded_width = 1024;
+            image_constraints.required_max_coded_height = 1024;
+            image_constraints.max_coded_width = 8192;
+            image_constraints.max_coded_height = 8192;
+            image_constraints.max_bytes_per_row = 0xffffffff;
+            image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGRA32;
+            if (i == 0) {
+                image_constraints.pixel_format.has_format_modifier = false;
+            } else {
+                image_constraints.pixel_format.has_format_modifier = true;
+                image_constraints.pixel_format.format_modifier.value =
+                    fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_X_TILED;
+            }
+            image_constraints.color_spaces_count = 1;
+            image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::SRGB;
+        }
+        status = sysmem_collection->SetConstraints(true, constraints);
+    } else if (direct) {
         status = sysmem_collection->SetConstraints(false, constraints);
     } else {
         constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageTransferDst;
@@ -363,6 +393,14 @@ bool VulkanTest::Exec(VkFormat format, uint32_t width, bool direct, bool linear)
             .pNext = nullptr,
             .collection = collection,
             .index = 0};
+        if (format == VK_FORMAT_UNDEFINED) {
+            EXPECT_EQ(fuchsia::sysmem::PixelFormatType::BGRA32, pixel_format.type);
+            // Ensure that the image created matches what was asked for on
+            // sysmem_connection.
+            image_create_info.extent.width = 1024;
+            image_create_info.extent.height = 1024;
+            image_create_info.format = VK_FORMAT_B8G8R8A8_UNORM;
+        }
         image_create_info.pNext = &image_format_fuchsia;
 
         result = vkCreateImage(vk_device_, &image_create_info, nullptr, &vk_image_);
@@ -691,6 +729,13 @@ TEST_P(VulkanImageExtensionTest, BufferCollectionDirectNV12)
     VulkanTest test;
     ASSERT_TRUE(test.Initialize());
     ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, true, GetParam()));
+}
+
+TEST_P(VulkanImageExtensionTest, BufferCollectionUndefined)
+{
+    VulkanTest test;
+    ASSERT_TRUE(test.Initialize());
+    ASSERT_TRUE(test.Exec(VK_FORMAT_UNDEFINED, 64, true, GetParam()));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionProtectedRGBA)
