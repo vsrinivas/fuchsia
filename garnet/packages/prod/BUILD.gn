@@ -131,10 +131,7 @@ group("feedback_agent") {
 group("auth") {
   testonly = true
   public_deps = [
-    "//src/identity/bin/account_handler",
-    "//src/identity/bin/account_manager",
-    "//src/identity/bin/google_auth_provider",
-    "//src/identity/bin/token_manager_factory",
+    "//src/identity/bin:core",
   ]
 }
 

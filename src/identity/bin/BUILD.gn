@@ -56,3 +56,13 @@ test_package("identity_bin_unittests") {
     },
   ]
 }
+
+# Core is the group that is included into the core product definition.
+group("core") {
+  public_deps = [
+    "account_handler",
+    "account_manager",
+    "google_auth_provider",
+    "token_manager_factory",
+  ]
+}

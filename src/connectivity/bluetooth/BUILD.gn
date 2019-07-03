@@ -14,3 +14,17 @@ group("bluetooth") {
     "tools",
   ]
 }
+
+# Core is the group that is included in the core product.
+group("core") {
+  public_deps = [
+    "hci/passthrough",
+    "core/bt-gap",
+    "core/bt-host",
+    "core/bt-init",
+    "tools/bt-snoop",
+    "profiles/bt-a2dp-sink",
+    "profiles/bt-avrcp",
+    "profiles/bt-hog",
+  ]
+}
