@@ -18,4 +18,7 @@ base_package_labels = []
 
 cache_package_labels = []
 
-universe_package_labels = [ "//garnet/packages/prod:vboot_reference" ]
+universe_package_labels = [
+  "//garnet/tools/vboot_reference:cgpt_host",
+  "//garnet/tools/vboot_reference:futility_host",
+]
