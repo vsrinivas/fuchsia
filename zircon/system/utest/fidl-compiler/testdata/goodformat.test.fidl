@@ -36,6 +36,10 @@ enum Enum2 : uint32 {
     enum_0 = 0; // More comments
 };
 
+bits Bats : uint64 {
+    FIRST_MEMBER = 0b010101;
+};
+
 /// a type alias doc comment
 using TheTypeAlias = vector:9;
 

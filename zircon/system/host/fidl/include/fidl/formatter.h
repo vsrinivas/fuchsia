@@ -100,8 +100,20 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
 
   virtual void OnEnumDeclaration(std::unique_ptr<EnumDeclaration> const& element) override {
     OnBlankLineRequiringNode();
-    ScopedBool mem(is_enum_decl_, true);
+    ScopedBool mem(is_enum_or_bits_decl_, true);
     TreeVisitor::OnEnumDeclaration(element);
+  }
+
+  virtual void OnBitsMember(std::unique_ptr<BitsMember> const& element) override {
+    OnBlankLineRespectingNode();
+    ScopedBool mem(is_member_decl_);
+    TreeVisitor::OnBitsMember(element);
+  }
+
+  virtual void OnBitsDeclaration(std::unique_ptr<BitsDeclaration> const& element) override {
+    OnBlankLineRequiringNode();
+    ScopedBool mem(is_enum_or_bits_decl_, true);
+    TreeVisitor::OnBitsDeclaration(element);
   }
 
   virtual void OnProtocolMethod(std::unique_ptr<ProtocolMethod> const& element) override {
@@ -169,8 +181,8 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
 
   virtual void OnTypeConstructor(std::unique_ptr<TypeConstructor> const& element) override {
     ScopedIncrement si(nested_type_depth_);
-    ScopedBool before_colon(blank_space_before_colon_, is_enum_decl_);
-    ScopedBool after_colon(blank_space_after_colon_, is_enum_decl_);
+    ScopedBool before_colon(blank_space_before_colon_, is_enum_or_bits_decl_);
+    ScopedBool after_colon(blank_space_after_colon_, is_enum_or_bits_decl_);
     TreeVisitor::OnTypeConstructor(element);
   }
 
@@ -354,7 +366,7 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
 
   void OnBlankLineRespectingNode() { blank_line_respecting_node_ = true; }
 
-  bool is_enum_decl_ = false;
+  bool is_enum_or_bits_decl_ = false;
   bool is_member_decl_ = false;
 
   // str is a gap plus the next meaningful token.
