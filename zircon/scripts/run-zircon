@@ -9,14 +9,7 @@
 function HELP {
     echo "help:"
     echo "-a <arch>            : arm64, or x64"
-    echo "-b                   : build first"
     echo "-c <text>            : add item to kernel commandline"
-    echo "-C                   : use Clang build"
-    echo "-G                   : use GCC build"
-    echo "-A                   : use ASan build"
-    echo "-P                   : use profile build"
-    echo "-L                   : use LTO build"
-    echo "-l                   : use ThinLTO build"
     echo "-d                   : run with emulated disk"
     echo "-D <disk file|device>: specify disk file or device path on host, default is blk.bin"
     echo "--disktype[=<type>]  : should be one of (ahci, virtio, nvme, virtio-scsi), default is ahci"
@@ -27,19 +20,15 @@ function HELP {
     echo "-m <memory in MB>    : memory size, default is ${MEMSIZE_DEFAULT}MB"
     echo "-n                   : run with emulated nic"
     echo "-N                   : run with emulated nic via tun/tap"
-    echo "-o <dir>             : build directory"
     echo "-q <directory>       : location of qemu, defaults to looking in prebuilt/downloads/qemu/bin, then \$PATH"
-    echo "-r                   : run release build"
     echo "-s <number of cpus>  : number of cpus, 1 for uniprocessor, default is 4"
     echo "-t <binary>          : use <binary> as the QEMU->ZBI trampoline"
     echo "-u <path>            : execute qemu startUp script, default is no script"
     echo "-V                   : try to use virtio devices"
-    echo "-X                   : use XRay build"
     echo "-z <zbi>             : boot specified complete ZBI via trampoline"
     echo "--audio[=<host_drv>] : use Intel HD Audio"
     echo "                     : <host_drv> should be one of (alsa, oss, pa, wav, none)"
     echo "--ahci=<disk image>  : run with disk image file as raw ahci drive"
-    echo "--build-debug        : build an image for use with gdb (equivalent to -d to build-zircon)"
     echo "--debugger           : Enable gdb stub and wait for connection"
     echo "--gic=<version>      : use GIC v2 or v3"
     echo "--no-serial          : Disable writing out to the guest's serial port"
@@ -56,13 +45,11 @@ AHCI=()
 ARCH=
 AUDIO=
 AUDIO_WAVFILE="/tmp/qemu.wav"
-BUILD=0
 DEBUGGER=0
 DISK=0
 DISKFILE="blk.bin"
 DISKTYPE=
 DISKFMT="raw"
-BUILDDIR=
 GIC=3
 GRAPHICS=0
 DO_KVM=0
@@ -74,9 +61,7 @@ MEMSIZE_DEFAULT=2048
 MEMSIZE=$MEMSIZE_DEFAULT
 NET=0
 QEMUDIR=
-RELEASE=0
 UPSCRIPT=no
-VARIANT=clang
 VNC=
 VIRTIO=0
 SERIAL=1
@@ -114,20 +99,13 @@ abspath() {
   esac
 }
 
-VARIANT=gcc
-BUILD_SWITCH=
-
-while getopts "Aa:bc:CdD:gGI:kLlm:nNo:Pq:rs:t::u:VXz:h-:" FLAG; do
+while getopts "a:c:dD:gI:km:nNq:s:t::u:Vz:h-:" FLAG; do
     case $FLAG in
-        A) VARIANT=asan BUILD_SWITCH=-A ;;
         a) ARCH=$OPTARG;;
-        b) BUILD=1;;
         c) CMDLINE+="$OPTARG ";;
-        C) VARIANT=clang BUILD_SWITCH=-C ;;
         d) DISK=1;;
         D) DISKFILE="$(abspath "$OPTARG")";;
         g) GRAPHICS=1;;
-        G) VARIANT=gcc BUILD_SWITCH=-G ;;
         I) IFNAME=$OPTARG;;
         k)
             if [[ "$(uname -s)" == "Darwin" ]]; then
@@ -136,20 +114,14 @@ while getopts "Aa:bc:CdD:gGI:kLlm:nNo:Pq:rs:t::u:VXz:h-:" FLAG; do
             fi
             DO_KVM=1
             ;;
-        L) VARIANT=lto BUILD_SWITCH=-L ;;
-        l) VARIANT=thinlto BUILD_SWITCH=-l ;;
         m) MEMSIZE=$OPTARG;;
         n) NET=1;;
         N) NET=2;;
-        o) BUILDDIR=$OPTARG;;
-        P) VARIANT=profile BUILD_SWITCH=-P ;;
         q) QEMUDIR=${OPTARG}/;;
-        r) RELEASE=1;;
         s) SMP=$OPTARG;;
         t) QEMU_KERNEL="$(abspath "$OPTARG")";;
         u) UPSCRIPT="$(abspath "$OPTARG")";;
         V) VIRTIO=1;;
-        X) VARIANT=xray BUILD_SWITCH=-X ;;
         z) QEMU_INITRD="$(abspath "$OPTARG")";;
         h) HELP;;
         \?)
@@ -162,7 +134,6 @@ while getopts "Aa:bc:CdD:gGI:kLlm:nNo:Pq:rs:t::u:VXz:h-:" FLAG; do
             audio) AUDIO=none;;
             audio=*) AUDIO=${OPTARG#*=};;
             wavfile=*) AUDIO_WAVFILE="$(abspath "${OPTARG#*=}")";;
-            build-debug) BUILD=1 VARIANT=noopt BUILD_SWITCH=-d;;
             debugger) DEBUGGER=1;;
             disktype=*) DISKTYPE=${OPTARG#*=};;
             diskfmt=*) DISKFMT=${OPTARG#*=};;
@@ -185,15 +156,6 @@ if [[ -z $ARCH ]]; then
     HELP
 fi
 
-if [[ -z "$BUILDDIR" ]]; then
-    BUILDDIR="$(dirname "$DIR")/build-$VARIANT"
-fi
-
-# build the project if asked for
-if (( $BUILD )); then
-    "$DIR/build-zircon" -a "$ARCH" $BUILD_SWITCH -o "$BUILDDIR" || exit
-fi
-
 # by default use the qemu binary located in the fuchsia buildtools
 # repo if we can find it, but allow -q to override it for people
 # who want to use their own.
@@ -211,27 +173,12 @@ if [[ -z $QEMUDIR && -d "$DIR/../prebuilt/downloads/qemu/bin" ]]; then
 fi
 
 if [[ -z "$QEMU_INITRD" ]]; then
-    QEMU_INITRD="$(abspath "$BUILDDIR/$ARCH.zbi")"
+    echo -z switch is mandatory
+    HELP
 fi
 
 if [[ -z "$QEMU_KERNEL" ]]; then
-    case $ARCH in
-    arm64) QEMU_KERNEL="$(abspath "$BUILDDIR/qemu-boot-shim.bin")" ;;
-    x64) QEMU_KERNEL="$(abspath "$BUILDDIR/multiboot.bin")" ;;
-    *)
-        echo >&2 "No QEMU trampoline for $ARCH"
-        exit 2
-        ;;
-    esac
-fi
-
-if (( $BUILD )); then
-    if [[ -n "$QEMU_INITRD" && "$QEMU_INITRD" != $BUILDDIR/* ]]; then
-        echo >&2 "WARNING: ZBI $QEMU_INITRD not in $BUILDDIR just built"
-    fi
-    if [[ -n "$QEMU_KERNEL" && "$QEMU_KERNEL" != $BUILDDIR/* ]]; then
-        echo >&2 "WARNING: trampoline $QEMU_KERNEL not in $BUILDDIR just built"
-    fi
+    echo -t switch is mandatory
 fi
 
 # construct the args for qemu
