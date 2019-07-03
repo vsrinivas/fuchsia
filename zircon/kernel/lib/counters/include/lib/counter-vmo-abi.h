@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <inttypes.h>
+
 // This file describes how the kernel exposes its internal counters to userland.
 // This is a PRIVATE UNSTABLE ABI that may change at any time!  The layouts used
 // here; the set of counters; their names, meanings, and types; and the set of
