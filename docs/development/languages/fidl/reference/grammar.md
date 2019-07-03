@@ -160,6 +160,7 @@ limits this to unsigned integer types, see [primitives].
 
 ### NOTE 3
 The `bits-or-enum-member-value` allows the more liberal `literal` in the grammar, but the compiler limits this to:
+
 * A `NUMERIC-LITERAL` in the context of an `enum`;
 * A `NUMERIC-LITERAL` which must be a power of two, in the context of a `bits`.
 
