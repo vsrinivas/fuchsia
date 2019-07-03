@@ -61,24 +61,6 @@ void ViewHolder::LinkDisconnected() {
   SendViewDisconnectedEvent();
 }
 
-// Generates an escher::BoundingBox from the given view properties.
-// TODO(SCN-1495) Create internal ViewProperties type.
-escher::BoundingBox ViewHolder::GetLocalBoundingBox() const {
-  fuchsia::ui::gfx::BoundingBox bbox = view_properties_.bounding_box;
-  fuchsia::ui::gfx::vec3 min = bbox.min;
-  fuchsia::ui::gfx::vec3 max = bbox.max;
-
-  glm::vec3 glm_min(min.x, min.y, min.z);
-  glm::vec3 glm_max(max.x, max.y, max.z);
-
-  return escher::BoundingBox(glm_min, glm_max);
-}
-
-// Returns the world-space bounding box.
-escher::BoundingBox ViewHolder::GetWorldBoundingBox() const {
-  return GetGlobalTransform() * GetLocalBoundingBox();
-}
-
 void ViewHolder::SetViewProperties(fuchsia::ui::gfx::ViewProperties props) {
   if (!fidl::Equals(props, view_properties_)) {
     view_properties_ = std::move(props);
@@ -88,7 +70,19 @@ void ViewHolder::SetViewProperties(fuchsia::ui::gfx::ViewProperties props) {
     // then be applied to all children of this view holder. This is
     // to ensure that all geometry gets clipped to the view bounds and
     // does not extend past its allowed extent.
-    SetClipPlanesFromBBox(GetLocalBoundingBox());
+
+    fuchsia::ui::gfx::BoundingBox bbox = view_properties_.bounding_box;
+    fuchsia::ui::gfx::vec3 min = bbox.min;
+    fuchsia::ui::gfx::vec3 max = bbox.max;
+
+    glm::vec3 glm_min(min.x, min.y, min.z);
+    glm::vec3 glm_max(max.x, max.y, max.z);
+
+    escher::BoundingBox e_bbox(glm_min, glm_max);
+
+    // TODO(SCN-1471) - Ensure that clipped meshes are not hit
+    // during hit tests.
+    SetClipPlanesFromBBox(e_bbox);
 #endif  // SCENIC_ENFORCE_VIEW_BOUND_CLIPPING
 
     SendViewPropertiesChangedEvent();

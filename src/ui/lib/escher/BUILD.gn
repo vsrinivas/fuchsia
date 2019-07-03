@@ -230,8 +230,6 @@ source_set("escher") {
     "geometry/indexed_triangle_mesh_upload.h",
     "geometry/intersection.cc",
     "geometry/intersection.h",
-    "geometry/interval.cc",
-    "geometry/interval.h",
     "geometry/plane_ops.h",
     "geometry/quad.cc",
     "geometry/quad.h",

@@ -14,7 +14,6 @@
 #include "garnet/lib/ui/gfx/resources/variable.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/ui/lib/escher/geometry/bounding_box.h"
-#include "src/ui/lib/escher/geometry/interval.h"
 #include "src/ui/lib/escher/geometry/transform.h"
 
 namespace scenic_impl {
@@ -31,21 +30,6 @@ using ViewPtr = fxl::RefPtr<View>;
 // scene/services/nodes.fidl.
 class Node : public Resource {
  public:
-  // Per-node intersection data for HitTester object.
-  struct IntersectionInfo {
-    // True if the ray intersects the given node.
-    bool did_hit = false;
-
-    // True if hit tester should traverse the node's descendants.
-    bool continue_with_children = true;
-
-    // Distance from ray origin to node hit point.
-    float distance = 0;
-
-    // Min and max extent of what can be hit.
-    escher::Interval interval = escher::Interval(0.f, FLT_MAX);
-  };
-
   static const ResourceTypeInfo kTypeInfo;
 
   virtual ~Node() override;
@@ -114,9 +98,7 @@ class Node : public Resource {
   //
   // Returns true if there is an intersection, otherwise returns false and
   // leaves |out_distance| unmodified.
-
-  virtual IntersectionInfo GetIntersection(const escher::ray4& ray,
-                                           const IntersectionInfo& parent_intersection) const;
+  virtual bool GetIntersection(const escher::ray4& ray, float* out_distance) const;
 
   // Walk up tree until we find the responsible View; otherwise return nullptr.
   // N.B. Typically the view and node are in the same session, but it's possible

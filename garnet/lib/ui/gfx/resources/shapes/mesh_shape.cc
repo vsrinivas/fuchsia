@@ -22,12 +22,7 @@ escher::Object MeshShape::GenerateRenderObject(const escher::mat4& transform,
 
 bool MeshShape::GetIntersection(const escher::ray4& ray, float* out_distance) const {
   // TODO(SCN-274): implement mesh-ray intersection.
-  escher::Interval interval;
-  bool hit = IntersectRayBox(ray, bounding_box_, &interval);
-  if (hit && out_distance) {
-    *out_distance = interval.min();
-  }
-  return hit;
+  return IntersectRayBox(ray, bounding_box_, out_distance);
 }
 
 bool MeshShape::BindBuffers(BufferPtr index_buffer,

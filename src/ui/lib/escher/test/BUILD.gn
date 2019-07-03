@@ -27,8 +27,6 @@ if (is_mac) {
       "fs/hack_filesystem_unittest.cc",
       "geometry/bounding_box_unittest.cc",
       "geometry/indexed_triangle_mesh_clip_unittest.cc",
-      "geometry/intersection_unittest.cc",
-      "geometry/interval_unittest.cc",
       "geometry/plane_unittest.cc",
       "gpu_allocator_unittest.cc",
       "gpu_mem_unittest.cc",
