@@ -943,6 +943,8 @@ func (ios *iostate) GetSockOpt(level, optName int16) (int16, []uint8, error) {
 	if n < len(b) {
 		panic(fmt.Sprintf("short %T: %d/%d", val, n, len(b)))
 	}
+	syslog.VLogTf(syslog.DebugVerbosity, "getsockopt", "%p: level=%d, optName=%d, optVal[%d]=%v", ios, level, optName, len(b), b)
+
 	return 0, b, nil
 }
 
@@ -961,6 +963,8 @@ func (ios *iostate) SetSockOpt(level, optName int16, optVal []uint8) (int16, err
 			return tcpipErrorToCode(err), nil
 		}
 	}
+	syslog.VLogTf(syslog.DebugVerbosity, "setsockopt", "%p: level=%d, optName=%d, optVal[%d]=%v", ios, level, optName, len(optVal), optVal)
+
 	return 0, nil
 }
 
