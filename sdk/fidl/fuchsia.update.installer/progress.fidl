@@ -1,0 +1,106 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.update.installer;
+
+/// Monitors update attempts as they start.
+protocol AttemptsMonitor {
+    /// Emitted when a new update attempt has started.
+    ///
+    /// + request `attempt_id` UUID identifying this update attempt.
+    /// + request `monitor` A protocol on which to receive progress updates.
+    -> OnStart(string attempt_id, Monitor monitor);
+};
+
+/// Monitors an update attempt.
+///
+/// When a Monitor is attached to an update attempt with
+/// [`MonitorOptions.should_notify`] set to true, the server will emit events on
+/// the protocol that the client must consume. Clients that attach to an attempt
+/// will be sent any events they may have missed (by attaching to an update
+/// attempt after it has started, for example).
+protocol Monitor {
+    /// Emitted when transitioning from one state to another.
+    ///
+    /// - response `state` The new state.
+    -> OnStateEnter(State state);
+
+    /// Retrieve the latest progress of this update attempt, blocking until
+    /// newer progress is available if this client has already seen the
+    /// currently available progress. If this update attempt has completed (or
+    /// failed), this API immediately returns the final progress.
+    ///
+    /// - response `progress` The latest progress of this update attempt.
+    GetNextProgress() -> (Progress progress);
+};
+
+/// States that an update attempt may transition through. An update attempt
+/// always starts in [`State.PREPARE`]. See each state for more details.
+enum State {
+    /// Fetching required metadata to begin the update. This state will also
+    /// compute and expose an estimate of the required download size.
+    ///
+    /// ## Next States
+    /// * [`State.DOWNLOAD`] on success.
+    /// * [`State.FAIL`] on error.
+    PREPARE = 0;
+
+    /// Downloading packages and kernel images.
+    ///
+    /// ## Next States
+    /// * [`State.STAGE`] on success.
+    /// * [`State.FAIL`] on error.
+    DOWNLOAD = 1;
+
+    /// Writing kernel images and preparing to switch over to the new system.
+    ///
+    /// ## Next States
+    /// * [`State.REBOOT`] if a reboot is required to complete the update.
+    /// * [`State.FINALIZE`] if a reboot is not required to complete the update.
+    /// * [`State.FAIL`] on error.
+    STAGE = 2;
+
+    /// Waiting to reboot.
+    ///
+    /// ## Next States
+    /// * [`State.FINALIZE`] if a reboot is not required to complete the update.
+    /// * [`State.FAIL`] on error.
+    REBOOT = 3;
+
+    /// Running final tasks post-reboot.
+    ///
+    /// ## Next States
+    /// * [`State.COMPLETE`] on success.
+    /// * [`State.FAIL`] on error.
+    FINALIZE = 4;
+
+    /// Terminal states. An update attempt will eventually end up in one of
+    /// these and will not transition out of them.
+    ///
+    /// ## Next States
+    /// none
+    COMPLETE = 5;
+    FAIL = 6;
+};
+
+/// Fixed precision decimal representing 100%.
+const uint8 PERCENT_MAX = 100;
+
+/// State of an update attempt.
+table Progress {
+    /// The current state of the update. Always present.
+    1: State state;
+
+    /// When not present, progress is not yet known. When present, must be less
+    /// than or equal to [`PERCENT_MAX`].
+    2: uint8 percent_complete;
+
+    /// The number of bytes that must be downloaded to apply this update.
+    /// Populated during [`State.PREPARE`].
+    3: uint64 download_size;
+
+    /// The number of bytes downloaded during this update attempt. Less than or
+    /// equal to [`download_size`].
+    4: uint64 bytes_downloaded;
+};

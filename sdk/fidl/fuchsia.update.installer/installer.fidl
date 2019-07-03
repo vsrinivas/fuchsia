@@ -1,0 +1,123 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.update.installer;
+
+using zx;
+
+/// Updates the system.
+///
+/// This protocol is intended to be consumed by a component capable of
+/// discovering when to update and what version of the system to install.
+[Discoverable]
+protocol Installer {
+    /// Get the status of the last update attempt. If this device hasn't
+    /// attempted an update since the last factory reset, every field in the
+    /// result will be absent.
+    ///
+    /// - response `info` the status of the last update attempt, if available.
+    GetLastUpdateResult() -> (UpdateResult info);
+
+    /// Get the status of the given update attempt, if it exists. If this device
+    /// hasn't attempted an update with the given `attempt_id` or forgotten about
+    /// that attempt, every field in the result will be absent.
+    ///
+    /// + request `attempt_id` UUID identifying the requested update attempt.
+    /// - response `info` the status of the last update attempt, if available.
+    GetUpdateResult(string attempt_id) -> (UpdateResult info);
+
+    /// Start an update if one is not running, or attach to a pending update
+    /// attempt. Attach the provided monitor to the update attempt.
+    ///
+    /// + request `url` The fuchsia-pkg URL of the update package to update to.
+    /// + request `options` Configuration options for this update attempt. Ignored or merged
+    ///     with the existing `options` if an update attempt is already in progress.
+    /// + request `monitor` A protocol on which to receive progress updates.
+    /// + request `monitor_options` Configuration options to control the behavior of the
+    ///     given [`Monitor`].
+    ///
+    /// - response `attempt_id` UUID identifying this update attempt. For
+    ///     updates that require a reboot, components may use this identifier to
+    ///     disambiguate the completion of this update attempt from new update
+    ///     attempts that start post-reboot.
+    StartUpdate(
+        string url,
+        Options options,
+        request<Monitor> monitor,
+        MonitorOptions monitor_options) -> (string attempt_id);
+
+    /// Attempt to monitor a specific update attempt, if it exists. This API
+    /// will not start an update if one is not already running.
+    ///
+    /// + request `attempt_id` UUID identifying the requested update attempt. If
+    ///     not given, monitor any active update attempt.
+    /// + request `monitor` A protocol on which to receive progress updates.
+    /// + request `monitor_options` Configuration options to control the behavior of the
+    ///     given [`Monitor`].
+    ///
+    /// - response `attached` Whether or not the provided monitor was attached
+    ///     to an in-progress update attempt. If false, monitor will be closed
+    ///     by the server.
+    MonitorUpdate(
+        string? attempt_id,
+        request<Monitor> monitor,
+        MonitorOptions monitor_options) -> (bool attached);
+
+    /// Monitor all update attempts as they start, as well as an in-progress
+    /// attempt, if there is one.
+    ///
+    /// + request `attempts_monitor` A protocol on which to receive [`Monitor`]
+    ///     instances as update attempts start.
+    /// + request `monitor_options` Configuration options to control the behavior of the
+    ///     given [`Monitor`].
+    MonitorAllUpdates(
+        request<AttemptsMonitor> attempts_monitor,
+        MonitorOptions monitor_options);
+};
+
+/// Metadata about a prior update attempt.
+table UpdateResult {
+    /// UUID for this specific update attempt. Always present.
+    1: string attempt_id;
+
+    // TODO stabilize the concept of what defines a system version. If it is a
+    // single blob ID, of what package? Or should it be a fuchsia-pkg URL?
+    /// Source version of this update attempt. Always present.
+    2: string source_version;
+
+    /// Target version of this update attempt, if known.
+    3: string target_version;
+
+    /// Configuration options for this update attempt. Always present.
+    4: Options options;
+
+    /// Terminal state of this update attempt. Always present.
+    5: State state;
+
+    /// When this update attempt started. Always present.
+    6: zx.time when;
+};
+
+/// Configuration options for an update attempt.
+table Options {
+    /// What initiated this update attempt. Required.
+    1: Initiator initiator;
+};
+
+/// Configuration options for the [`Monitor`] protocol.
+table MonitorOptions {
+    /// True if events should be sent over the [`Monitor`] protocol. Assumed to
+    /// be false if absent.
+    1: bool should_notify;
+};
+
+/// Who or what initiated the update check.
+enum Initiator {
+    /// The update check was initiated by an interactive user, or the user is
+    /// otherwise blocked and waiting for the result of this update check.
+    USER = 0;
+
+    /// The update check was initiated by a service, in the background.
+    SERVICE = 1;
+};
