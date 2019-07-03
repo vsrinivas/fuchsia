@@ -7,7 +7,6 @@ require (
 	github.com/google/go-cmp v0.3.0
 	github.com/google/subcommands v0.0.0-20181012225330-46f0354f6315
 	github.com/google/uuid v1.1.0
-	github.com/googleapis/gax-go v2.0.2+incompatible // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e // indirect
 	github.com/jtolds/gls v4.2.1+incompatible // indirect
 	github.com/julienschmidt/httprouter v1.2.0 // indirect
