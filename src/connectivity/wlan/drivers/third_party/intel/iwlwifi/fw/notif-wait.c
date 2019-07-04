@@ -31,28 +31,24 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include "notif-wait.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/notif-wait.h"
 
-#include <linux/export.h>
-#include <linux/sched.h>
-
-#include "iwl-drv.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
 
 void iwl_notification_wait_init(struct iwl_notif_wait_data* notif_wait) {
-  spin_lock_init(&notif_wait->notif_wait_lock);
-  INIT_LIST_HEAD(&notif_wait->notif_waits);
-  init_waitqueue_head(&notif_wait->notif_waitq);
+  mtx_init(&notif_wait->notif_wait_lock, mtx_plain);
+  list_initialize(&notif_wait->notif_waits);
+  sync_completion_reset(&notif_wait->notif_waitq);
 }
-IWL_EXPORT_SYMBOL(iwl_notification_wait_init);
 
 bool iwl_notification_wait(struct iwl_notif_wait_data* notif_wait, struct iwl_rx_packet* pkt) {
   bool triggered = false;
 
-  if (!list_empty(&notif_wait->notif_waits)) {
+  if (!list_is_empty(&notif_wait->notif_waits)) {
     struct iwl_notification_wait* w;
 
-    spin_lock(&notif_wait->notif_wait_lock);
-    list_for_each_entry(w, &notif_wait->notif_waits, list) {
+    mtx_lock(&notif_wait->notif_wait_lock);
+    list_for_every_entry (&notif_wait->notif_waits, w, struct iwl_notification_wait, list) {
       int i;
       bool found = false;
 
@@ -84,23 +80,23 @@ bool iwl_notification_wait(struct iwl_notif_wait_data* notif_wait, struct iwl_rx
         triggered = true;
       }
     }
-    spin_unlock(&notif_wait->notif_wait_lock);
+    mtx_unlock(&notif_wait->notif_wait_lock);
   }
 
   return triggered;
 }
-IWL_EXPORT_SYMBOL(iwl_notification_wait);
 
 void iwl_abort_notification_waits(struct iwl_notif_wait_data* notif_wait) {
   struct iwl_notification_wait* wait_entry;
 
-  spin_lock(&notif_wait->notif_wait_lock);
-  list_for_each_entry(wait_entry, &notif_wait->notif_waits, list) wait_entry->aborted = true;
-  spin_unlock(&notif_wait->notif_wait_lock);
+  mtx_lock(&notif_wait->notif_wait_lock);
+  list_for_every_entry (&notif_wait->notif_waits, wait_entry, struct iwl_notification_wait, list) {
+    wait_entry->aborted = true;
+  }
+  mtx_unlock(&notif_wait->notif_wait_lock);
 
-  wake_up_all(&notif_wait->notif_waitq);
+  sync_completion_signal(&notif_wait->notif_waitq);
 }
-IWL_EXPORT_SYMBOL(iwl_abort_notification_waits);
 
 void iwl_init_notification_wait(struct iwl_notif_wait_data* notif_wait,
                                 struct iwl_notification_wait* wait_entry, const uint16_t* cmds,
@@ -119,37 +115,29 @@ void iwl_init_notification_wait(struct iwl_notif_wait_data* notif_wait,
   wait_entry->triggered = false;
   wait_entry->aborted = false;
 
-  spin_lock_bh(&notif_wait->notif_wait_lock);
-  list_add(&wait_entry->list, &notif_wait->notif_waits);
-  spin_unlock_bh(&notif_wait->notif_wait_lock);
+  mtx_lock(&notif_wait->notif_wait_lock);
+  list_add_tail(&notif_wait->notif_waits, &wait_entry->list);
+  mtx_unlock(&notif_wait->notif_wait_lock);
 }
-IWL_EXPORT_SYMBOL(iwl_init_notification_wait);
 
 void iwl_remove_notification(struct iwl_notif_wait_data* notif_wait,
                              struct iwl_notification_wait* wait_entry) {
-  spin_lock_bh(&notif_wait->notif_wait_lock);
-  list_del(&wait_entry->list);
-  spin_unlock_bh(&notif_wait->notif_wait_lock);
+  mtx_lock(&notif_wait->notif_wait_lock);
+  list_delete(&wait_entry->list);
+  mtx_unlock(&notif_wait->notif_wait_lock);
 }
-IWL_EXPORT_SYMBOL(iwl_remove_notification);
 
-int iwl_wait_notification(struct iwl_notif_wait_data* notif_wait,
-                          struct iwl_notification_wait* wait_entry, unsigned long timeout) {
-  int ret;
+zx_status_t iwl_wait_notification(struct iwl_notif_wait_data* notif_wait,
+                                  struct iwl_notification_wait* wait_entry, zx_duration_t timeout) {
+  zx_status_t ret;
 
-  ret = wait_event_timeout(notif_wait->notif_waitq, wait_entry->triggered || wait_entry->aborted,
-                           timeout);
+  ret = sync_completion_wait(&notif_wait->notif_waitq, timeout);
 
   iwl_remove_notification(notif_wait, wait_entry);
 
   if (wait_entry->aborted) {
-    return -EIO;
+    return ZX_ERR_CANCELED;
   }
 
-  /* return value is always >= 0 */
-  if (ret <= 0) {
-    return -ETIMEDOUT;
-  }
-  return 0;
+  return ret;
 }
-IWL_EXPORT_SYMBOL(iwl_wait_notification);

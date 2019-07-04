@@ -18,7 +18,6 @@ source_set("core") {
 
   sources = [
     "fuchsia_porting.h",
-    "fw/init.c",
     "ieee80211.h",
     "iwl-config.h",
     "iwl-csr.h",
@@ -56,6 +55,8 @@ source_set("pcie") {
 
   sources = [
     "cfg/7000.c",
+    "fw/init.c",
+    "fw/notif-wait.c",
     "pcie/drv.c",
     "pcie/internal.h",
     "pcie/trans-gen2.c",
@@ -75,6 +76,7 @@ source_set("pcie") {
   public_deps = [
     "//zircon/public/banjo/ddk.protocol.pci",
     "//zircon/public/lib/device-protocol-pci",
+    "//zircon/public/lib/sync",
   ]
 }
 

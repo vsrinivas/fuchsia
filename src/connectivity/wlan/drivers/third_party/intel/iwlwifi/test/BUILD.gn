@@ -6,9 +6,15 @@ import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+# Compile flags
+testing_defines = [
+  "CONFIG_TEST_SIM=1",
+  "CPTCFG_IWLMVM=1",
+]
+
 # Simulated transportation layer -- for unittest code.
 source_set("iwlwifi_sim_trans_ss") {
-  defines = [ "CONFIG_TEST_SIM=1" ]
+  defines = testing_defines
 
   deps = [
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
@@ -46,6 +52,7 @@ executable("dummy_test") {
     "dummy_test.cc",
   ]
 
+  defines = testing_defines
   deps = testing_deps
 }
 
@@ -58,6 +65,19 @@ executable("mvm_test") {
     "mvm_test.cc",
   ]
 
+  defines = testing_defines
+  deps = testing_deps
+}
+
+executable("notif-wait_test") {
+  output_name = "notif-wait_test"
+  testonly = true
+
+  sources = [
+    "notif-wait_test.cc",
+  ]
+
+  defines = testing_defines
   deps = testing_deps
 }
 
@@ -69,6 +89,7 @@ executable("pcie_test") {
     "pcie_test.cc",
   ]
 
+  defines = testing_defines
   deps = testing_deps
 }
 
@@ -80,6 +101,7 @@ executable("utils_test") {
     "utils_test.cc",
   ]
 
+  defines = testing_defines
   deps = testing_deps
 }
 
@@ -89,6 +111,7 @@ unittest_package("iwlwifi_test") {
   deps = [
     ":dummy_test",
     ":mvm_test",
+    ":notif-wait_test",
     ":pcie_test",
     ":utils_test",
   ]
@@ -100,6 +123,10 @@ unittest_package("iwlwifi_test") {
     },
     {
       name = "mvm_test"
+      environments = basic_envs
+    },
+    {
+      name = "notif-wait_test"
       environments = basic_envs
     },
     {

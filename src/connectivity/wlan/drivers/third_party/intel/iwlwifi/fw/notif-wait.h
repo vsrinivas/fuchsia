@@ -33,19 +33,20 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_NOTIF_WAIT_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_NOTIF_WAIT_H_
 
+// The notification is a mechanism that the firmware can notify some events
+// up to driver, for example, the firmware setup is completed.
+
+#include <lib/sync/completion.h>
 #include <threads.h>
 #include <zircon/listnode.h>
+#include <zircon/types.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 
-// NEEDS_PORTING: seems that this is exactly what sync_completion_t is doing.
-
 struct iwl_notif_wait_data {
-  struct list_node notif_waits;
+  list_node_t notif_waits;
   mtx_t notif_wait_lock;
-#if 0   // NEEDS_PORTING
-    wait_queue_head_t notif_waitq;
-#endif  // NEEDS_PORTING
+  sync_completion_t notif_waitq;
 };
 
 #define MAX_NOTIF_CMDS 5
@@ -85,40 +86,34 @@ struct iwl_notification_wait {
   bool triggered, aborted;
 };
 
-/* caller functions */
+/* caller functions -- used by fw/ code */
 void iwl_notification_wait_init(struct iwl_notif_wait_data* notif_data);
 bool iwl_notification_wait(struct iwl_notif_wait_data* notif_data, struct iwl_rx_packet* pkt);
 void iwl_abort_notification_waits(struct iwl_notif_wait_data* notif_data);
 
 static inline void iwl_notification_notify(struct iwl_notif_wait_data* notif_data) {
-#if 0   // NEEDS_PORTING
-    wake_up_all(&notif_data->notif_waitq);
-#endif  // NEEDS_PORTING
+  sync_completion_signal(&notif_data->notif_waitq);
 }
 
 static inline void iwl_notification_wait_notify(struct iwl_notif_wait_data* notif_data,
                                                 struct iwl_rx_packet* pkt) {
-#if 0   // NEEDS_PORTING
-    if (iwl_notification_wait(notif_data, pkt)) { iwl_notification_notify(notif_data); }
-#endif  // NEEDS_PORTING
+  if (iwl_notification_wait(notif_data, pkt)) {
+    iwl_notification_notify(notif_data);
+  }
 }
 
-#if 0   // NEEDS_PORTING
-/* user functions */
-void __acquires(wait_entry)
-    iwl_init_notification_wait(struct iwl_notif_wait_data* notif_data,
-                               struct iwl_notification_wait* wait_entry, const uint16_t* cmds,
-                               int n_cmds,
-                               bool (*fn)(struct iwl_notif_wait_data* notif_data,
-                                          struct iwl_rx_packet* pkt, void* data),
-                               void* fn_data);
+/* user functions -- used by the other code in driver */
+void iwl_init_notification_wait(struct iwl_notif_wait_data* notif_data,
+                                struct iwl_notification_wait* wait_entry, const uint16_t* cmds,
+                                int n_cmds,
+                                bool (*fn)(struct iwl_notif_wait_data* notif_data,
+                                           struct iwl_rx_packet* pkt, void* data),
+                                void* fn_data);
 
-int __must_check __releases(wait_entry)
-    iwl_wait_notification(struct iwl_notif_wait_data* notif_data,
-                          struct iwl_notification_wait* wait_entry, unsigned long timeout);
+zx_status_t iwl_wait_notification(struct iwl_notif_wait_data* notif_data,
+                                  struct iwl_notification_wait* wait_entry, zx_duration_t timeout);
 
-void __releases(wait_entry) iwl_remove_notification(struct iwl_notif_wait_data* notif_data,
-                                                    struct iwl_notification_wait* wait_entry);
-#endif  // NEEDS_PORTING
+void iwl_remove_notification(struct iwl_notif_wait_data* notif_data,
+                             struct iwl_notification_wait* wait_entry);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_NOTIF_WAIT_H_
