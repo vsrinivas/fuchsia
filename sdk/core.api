@@ -50,6 +50,7 @@ sdk://fidl/fuchsia.sys
 sdk://fidl/fuchsia.sys.test
 sdk://fidl/fuchsia.sysinfo
 sdk://fidl/fuchsia.sysmem
+sdk://fidl/fuchsia.tracing.provider
 sdk://fidl/fuchsia.ui.app
 sdk://fidl/fuchsia.ui.gfx
 sdk://fidl/fuchsia.ui.input
@@ -87,7 +88,9 @@ sdk://pkg/sys_cpp
 sdk://pkg/sys_cpp_testing
 sdk://pkg/syslog
 sdk://pkg/sysroot
+sdk://pkg/trace
 sdk://pkg/trace-engine
+sdk://pkg/trace-provider-so
 sdk://pkg/vfs_cpp
 sdk://pkg/vulkan
 sdk://pkg/vulkan_layers

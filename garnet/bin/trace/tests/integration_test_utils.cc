@@ -27,9 +27,6 @@ const char kCategoryMemberName[] = "cat";
 // The name of the event name member in the json output file.
 const char kEventNameMemberName[] = "name";
 
-// Category for events we generate.
-#define CATEGORY_NAME "trace:test"
-
 // Name to use in instant events.
 #define INSTANT_EVENT_NAME "instant"
 

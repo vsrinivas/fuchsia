@@ -10,9 +10,11 @@
 #include <lib/trace-provider/fdio_connect.h>
 #include <lib/zx/channel.h>
 
+#include "export.h"
+
 const char kServicePath[] = "/svc/fuchsia.tracing.provider.Registry";
 
-zx_status_t trace_provider_connect_with_fdio(zx_handle_t* out_client) {
+EXPORT zx_status_t trace_provider_connect_with_fdio(zx_handle_t* out_client) {
     // Connect to the trace registry.
     zx::channel registry_client;
     zx::channel registry_service;

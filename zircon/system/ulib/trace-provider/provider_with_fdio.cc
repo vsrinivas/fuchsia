@@ -11,7 +11,9 @@
 #include <lib/trace-provider/provider.h>
 #include <lib/zx/process.h>
 
-trace_provider_t* trace_provider_create_with_name_fdio(
+#include "export.h"
+
+EXPORT trace_provider_t* trace_provider_create_with_name_fdio(
         async_dispatcher_t* dispatcher, const char* name) {
     ZX_DEBUG_ASSERT(dispatcher);
 
@@ -26,7 +28,7 @@ trace_provider_t* trace_provider_create_with_name_fdio(
     return trace_provider_create_with_name(to_service, dispatcher, name);
 }
 
-trace_provider_t* trace_provider_create_with_fdio(
+EXPORT trace_provider_t* trace_provider_create_with_fdio(
         async_dispatcher_t* dispatcher) {
     ZX_DEBUG_ASSERT(dispatcher);
 
@@ -42,7 +44,7 @@ trace_provider_t* trace_provider_create_with_fdio(
     return trace_provider_create_with_name_fdio(dispatcher, name);
 }
 
-trace_provider_t* trace_provider_create_synchronously_with_fdio(
+EXPORT trace_provider_t* trace_provider_create_synchronously_with_fdio(
         async_dispatcher_t* dispatcher, const char* name,
         bool* out_manager_is_tracing_already) {
     ZX_DEBUG_ASSERT(dispatcher);

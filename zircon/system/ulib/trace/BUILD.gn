@@ -48,9 +48,12 @@ template("trace_library") {
   }
 }
 
-# The default version for the normal case.
+# The default version for the normal case, and for the SDK.
+# For the SDK this needs to be published as "source": We're implemented in
+# C++ and C++ SDK libraries can't be published as "static".
 # TODO(PT-195): libtrace-engine.so is getting linked into places it shouldn't.
 trace_library("trace") {
+  sdk_publishable = true
   sdk = "source"
   public_deps = [
     "$zx/system/ulib/trace-engine:headers",

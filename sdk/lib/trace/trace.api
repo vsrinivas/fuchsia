@@ -1,0 +1,10 @@
+{
+  "pkg/trace/include/lib/trace/event.h": "a8abddbb3c7746e873dfe99b8d19ed2e",
+  "pkg/trace/include/lib/trace/event_args.h": "2451d262dc05adf80d2d321f31747523",
+  "pkg/trace/include/lib/trace/internal/event_args.h": "d6a24be3615a569fc2e4198a1b9413d0",
+  "pkg/trace/include/lib/trace/internal/event_common.h": "ed7a9e02141e89cb27761d15b1de417a",
+  "pkg/trace/include/lib/trace/internal/event_internal.h": "f5a0e37fa83a73b2d67175e70fd59c46",
+  "pkg/trace/include/lib/trace/internal/pairs_internal.h": "52d06b2a5a71b570fc87f164b9b039a9",
+  "pkg/trace/include/lib/trace/internal/string_traits.h": "f63c8473e05f26246c073ece62939490",
+  "pkg/trace/include/lib/trace/observer.h": "f7f56811a258c5db2da9983500408cf8"
+}

@@ -2,20 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Three copies of libtrace-provider are built:
+# Four copies of libtrace-provider are built:
 # (1) trace-provider: Main version that is used by non-drivers.
 #     This copy uses libtrace-engine.so.
-# (2) trace-provider-with-static-engine: For cases where a statically linked
+# (2) trace-provider-so: Same as trace-provider, but exported to SDK
+#     as a shared library. This copy uses libtrace-engine.so.
+# (3) trace-provider-with-static-engine: For cases where a statically linked
 #     trace-engine is needed. This is for very special cases. Please DO NOT
 #     use this unless you KNOW you need to. Generally you do not. If in doubt,
 #     ask.
-# (3) trace-provider-driver: This copy is for use by libdriver.so for the DDK.
+# (4) trace-provider-driver: This copy is for use by libdriver.so for the DDK.
 
 template("trace_provider_library") {
   library(target_name) {
     forward_variables_from(invoker, "*")
 
     configs += [ "$zx/public/gn/config:visibility_hidden" ]
+    if (defined(extra_configs)) {
+      configs += extra_configs
+    }
 
     # Not including fdio_connect.h.
     if (!defined(sdk_headers)) {
@@ -43,6 +48,7 @@ template("trace_provider_library") {
       sources = []
     }
     sources += [
+      "export.h",
       "fnv1hash.h",
       "handler.cc",
       "provider_impl.cc",
@@ -83,6 +89,28 @@ trace_provider_fdio_connect_headers = [ "lib/trace-provider/fdio_connect.h" ]
 # The default version for the normal case.
 trace_provider_library("trace-provider") {
   sdk = "source"
+  sdk_headers = trace_provider_fdio_connect_headers
+  public_deps = [
+    "$zx/system/ulib/trace-engine:headers",
+  ]
+  sources = trace_provider_fdio_sources
+  deps = trace_provider_fdio_connect_source_deps
+  deps += [ "$zx/system/ulib/trace-engine" ]
+}
+
+# Shared version for the SDK.
+# The issue is that the SDK doesn't (yet) support generating C FIDL bindings at
+# build time, which we need if we export as "source", and since we're
+# implemented in C++ we can't export as "static".
+# TODO(PT-220): The name here is temporary, pending being able to build
+# the library as "libtrace-provider.so".
+trace_provider_library("trace-provider-so") {
+  sdk_publishable = true
+  sdk = "shared"
+  shared = true
+  static = false
+  extra_configs = [ "$zx/public/gn/config:static-libc++" ]
+  defines = [ "SHARED_LIBRARY" ]
   sdk_headers = trace_provider_fdio_connect_headers
   public_deps = [
     "$zx/system/ulib/trace-engine:headers",

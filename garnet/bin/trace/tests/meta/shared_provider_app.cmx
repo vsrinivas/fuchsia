@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/shared_provider_app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

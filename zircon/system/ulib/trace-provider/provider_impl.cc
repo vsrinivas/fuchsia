@@ -17,6 +17,7 @@
 
 #include <utility>
 
+#include "export.h"
 #include "session.h"
 #include "utils.h"
 
@@ -238,7 +239,7 @@ void TraceProviderImpl::Connection::Close() {
 } // namespace internal
 } // namespace trace
 
-trace_provider_t* trace_provider_create_with_name(
+EXPORT trace_provider_t* trace_provider_create_with_name(
         zx_handle_t to_service_h, async_dispatcher_t* dispatcher,
         const char* name) {
     zx::channel to_service(to_service_h);
@@ -273,8 +274,8 @@ trace_provider_t* trace_provider_create_with_name(
         dispatcher, std::move(provider_service));
 }
 
-trace_provider_t* trace_provider_create(zx_handle_t to_service,
-                                        async_dispatcher_t* dispatcher) {
+EXPORT trace_provider_t* trace_provider_create(
+        zx_handle_t to_service, async_dispatcher_t* dispatcher) {
     auto self = zx::process::self();
     char name[ZX_MAX_NAME_LEN];
     auto status = self->get_property(ZX_PROP_NAME, name, sizeof(name));
@@ -286,7 +287,7 @@ trace_provider_t* trace_provider_create(zx_handle_t to_service,
     return trace_provider_create_with_name(to_service, dispatcher, name);
 }
 
-trace_provider_t* trace_provider_create_synchronously(
+EXPORT trace_provider_t* trace_provider_create_synchronously(
         zx_handle_t to_service_h, async_dispatcher_t* dispatcher,
         const char* name, bool* out_manager_is_tracing_already) {
     zx::channel to_service(to_service_h);
@@ -331,7 +332,7 @@ trace_provider_t* trace_provider_create_synchronously(
                                                   std::move(provider_service));
 }
 
-void trace_provider_destroy(trace_provider_t* provider) {
+EXPORT void trace_provider_destroy(trace_provider_t* provider) {
     ZX_DEBUG_ASSERT(provider);
     delete static_cast<trace::internal::TraceProviderImpl*>(provider);
 }

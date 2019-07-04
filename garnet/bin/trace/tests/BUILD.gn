@@ -289,6 +289,41 @@ executable("ktrace_integration_tests") {
   deps = [
     ":run_test",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/trace-reader",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("shared_provider_app") {
+  testonly = true
+
+  sources = [
+    "shared_provider.cc",
+  ]
+
+  deps = [
+    ":integration_test_utils",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-provider-so",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("shared_provider_integration_tests") {
+  testonly = true
+
+  sources = [
+    "shared_provider_integration_tests.cc"
+  ]
+
+  deps = [
+    ":integration_test_utils",
+    ":run_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/trace-reader",
     "//zircon/public/lib/zx",
   ]
 }
@@ -305,6 +340,8 @@ test_package("trace_tests") {
     ":return_child_result_tests",
     ":run_awhile",
     ":run_integration_test",
+    ":shared_provider_app",
+    ":shared_provider_integration_tests",
     ":trace_integration_tests",
     ":trace_tests_bin",
     ":two_providers_one_engine",
@@ -322,6 +359,10 @@ test_package("trace_tests") {
     },
     {
       name = "return_child_result_tests"
+      environments = basic_envs
+    },
+    {
+      name = "shared_provider_integration_tests"
       environments = basic_envs
     },
     {
@@ -351,6 +392,9 @@ test_package("trace_tests") {
       name = "run_integration_test"
     },
     {
+      name = "shared_provider_app"
+    },
+    {
       name = "two_providers_one_engine"
     },
     {
@@ -372,6 +416,10 @@ test_package("trace_tests") {
     {
       path = rebase_path("meta/nested_environment_test.cmx")
       dest = "nested_environment_test.cmx"
+    },
+    {
+      path = rebase_path("meta/shared_provider_app.cmx")
+      dest = "shared_provider_app.cmx"
     },
     {
       path = rebase_path("meta/two_providers_two_engines_test_app.cmx")
