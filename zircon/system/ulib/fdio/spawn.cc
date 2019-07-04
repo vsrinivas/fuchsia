@@ -446,7 +446,7 @@ static bool should_clone_namespace(std::string_view path,
         // Only share path if there is a directory prefix in |prefixes| that matches the path.
         // Also take care to not match partial directory names. Ex, /foo should not match
         // /foobar.
-        if (prefix.compare(0, prefix.size(), path) == 0 && (path.size() == prefix.size() || path[path.size()] == '/')) {
+        if (path.compare(0, prefix.size(), prefix) == 0 && (path.size() == prefix.size() || path[prefix.size()] == '/')) {
             return true;
         }
     }

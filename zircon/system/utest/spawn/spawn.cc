@@ -511,6 +511,31 @@ static bool spawn_actions_share_dir_test(void) {
     }
 
     {
+        // Test using a directory prefix. In this case, sharing /foo/bar should provide access to
+        // the /foo/bar/baz namespace.
+        fdio_spawn_action_t action;
+        action.action = FDIO_SPAWN_ACTION_CLONE_DIR;
+        action.dir.prefix = "/foo/bar";
+
+        fdio_ns_t* ns = nullptr;
+        ASSERT_EQ(ZX_OK, fdio_ns_get_installed(&ns));
+
+        zx::channel h1, h2;
+        ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+        ASSERT_EQ(ZX_OK, fdio_ns_bind(ns, "/foo/bar/baz", h1.release()));
+
+        const char* argv[] = {path.c_str(), "--stat", "/foo/bar", nullptr};
+        status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL_EXCEPT_NS,
+                                path.c_str(), argv, nullptr, 1, &action,
+                                process.reset_and_get_address(), nullptr);
+        EXPECT_EQ(ZX_OK, status);
+        EXPECT_EQ(76, join(process));
+
+        // Unbind the test namespace.
+        EXPECT_EQ(ZX_OK, fdio_ns_unbind(ns, "/foo/bar/baz"));
+    }
+
+    {
         // Verify we don't match paths in the middle of directory names. In this case, verify
         // that /foo/bar/baz does not match as a prefix to the directory /foo/bar/bazel.
         fdio_spawn_action_t action;
