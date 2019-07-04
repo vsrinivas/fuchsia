@@ -202,6 +202,10 @@ template("assemble_system") {
       "$target_out_dir/$target_name",
     ]
     args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
+    sources = []
+    deps = [
+        ":system_image.manifest",
+    ]
 
     if (!bootfs_only) {
       pkgfs = "bin/" + pkgfs_binary_name
@@ -212,12 +216,12 @@ template("assemble_system") {
       system_image_merkleroot =
           "$target_out_dir/system_image.meta/meta.far.merkle"
 
-      deps = [
+      deps += [
         ":system_image.meta",
         pkgfs_label,
       ]
 
-      sources = [
+      sources += [
         pkgfs_blob_manifest,
         system_image_merkleroot,
       ]
@@ -241,6 +245,21 @@ template("assemble_system") {
     foreach(entry, devmgr_config) {
       args += [ "--entry=$entry" ]
     }
+
+    # If there were any ASan drivers in the build, bin/devhost.asan
+    # should have been brought into the boot manifest.  devmgr needs to
+    # be told to use it in case there are ASan drivers in /system but
+    # none in /boot.  If there were any non-ASan drivers in the build,
+    # bin/devhost.asan will load them and needs to know to moderate the
+    # checking for interacting with uninstrumented code.
+    sources += [ boot_manifest ]
+    args += [
+      "--include=bin/devhost.asan",
+      "--include=bin/devhost",
+      "--rewrite=bin/devhost.asan=devmgr.devhost.asan=true",
+      "--rewrite=bin/devhost=devhost.asan.strict=false",
+      "--manifest=" + rebase_path(boot_manifest, root_build_dir),
+    ]
   }
 
   zbi(image_name) {
