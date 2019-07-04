@@ -53,13 +53,15 @@ var ruleset2 = []Rule{
 
 func TestRun(t *testing.T) {
 	var tests = []struct {
-		ruleset  []Rule
-		dir      Direction
-		netProto tcpip.NetworkProtocolNumber
-		packet   func() (buffer.Prependable, buffer.VectorisedView)
-		want     Action
+		description string
+		ruleset     []Rule
+		dir         Direction
+		netProto    tcpip.NetworkProtocolNumber
+		packet      func() (buffer.Prependable, buffer.VectorisedView)
+		want        Action
 	}{
 		{
+			"TcpDrop",
 			ruleset1,
 			Incoming,
 			header.IPv4ProtocolNumber,
@@ -74,6 +76,25 @@ func TestRun(t *testing.T) {
 			Drop,
 		},
 		{
+			"TcpFragmentPass",
+			ruleset1,
+			Incoming,
+			header.IPv4ProtocolNumber,
+			func() (buffer.Prependable, buffer.VectorisedView) {
+				headers, payload := tcpV4Packet([]byte("payload"), &tcpParams{
+					srcAddr: "\x0a\x00\x00\x00",
+					srcPort: 100,
+					dstAddr: "\x0a\x00\x00\x02",
+					dstPort: 200,
+				})
+				ip := header.IPv4(headers.View())
+				ip.SetFlagsFragmentOffset(ip.Flags(), 8)
+				return headers, payload
+			},
+			Pass,
+		},
+		{
+			"UdpPass",
 			ruleset2,
 			Incoming,
 			header.IPv4ProtocolNumber,
@@ -92,13 +113,15 @@ func TestRun(t *testing.T) {
 	f := New(nil)
 
 	for _, test := range tests {
-		f.rulesetMain.Lock()
-		f.rulesetMain.v = test.ruleset
-		f.rulesetMain.Unlock()
-		hdr, payload := test.packet()
-		if got := f.Run(test.dir, test.netProto, hdr, payload); got != test.want {
-			t.Fatalf("wrong action, want %v, got %v", test.want, got)
-		}
+		t.Run(test.description, func(t *testing.T) {
+			f.rulesetMain.Lock()
+			f.rulesetMain.v = test.ruleset
+			f.rulesetMain.Unlock()
+			hdr, payload := test.packet()
+			if got := f.Run(test.dir, test.netProto, hdr, payload); got != test.want {
+				t.Fatalf("wrong action, want %v, got %v", test.want, got)
+			}
+		})
 	}
 }
 

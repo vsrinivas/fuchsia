@@ -82,6 +82,9 @@ func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr bu
 		dstAddr = ipv4.DestinationAddress()
 		payloadLength = ipv4.PayloadLength()
 		transportHeader = ipv4[ipv4.HeaderLength():]
+		if ipv4.FragmentOffset() != 0 {
+			return Pass
+		}
 	case header.IPv6ProtocolNumber:
 		ipv6 := header.IPv6(hdr.View())
 		if !ipv6.IsValid(hdr.UsedLength() + payload.Size()) {
