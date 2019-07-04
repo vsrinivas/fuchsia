@@ -71,7 +71,7 @@ Enable detailed scheduler traces.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:39
+From //kernel/params.gni:43
 
 ### driver_unittest_log_flags
 Log levels to be printed when logs are enabled. Default is ERROR, WARNING, & INFO.
@@ -96,12 +96,10 @@ Enable printing of in driver logs in unittests.
 From //system/dev/lib/fake_ddk/BUILD.gn:7
 
 ### enable_fair_scheduler
-Disable fair scheduler by default on all architectures.
-ZX-3959: Disable by default until E2E tests stabilize.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:36
+From //kernel/params.gni:37
 
 ### enable_kernel_debugging_features
 Whether to include various features (non-shipping, insecure, etc.) in the
@@ -126,7 +124,7 @@ disabled.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:54
+From //kernel/params.gni:58
 
 ### enable_netsvc_debugging_features
 
@@ -139,7 +137,7 @@ Enable userspace PCI and disable kernel PCI.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:42
+From //kernel/params.gni:46
 
 ### gcc_tool_dir
 Directory where the GCC toolchain binaries ("gcc", "nm", etc.) are
@@ -187,7 +185,7 @@ Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
 
 **Current value (from the default):** `[]`
 
-From //kernel/params.gni:46
+From //kernel/params.gni:50
 
 ### kernel_version_string
 Version string embedded in the kernel for `zx_system_get_version`.
