@@ -37,8 +37,7 @@ def deps_data_to_package_data_list(data_path):
 
     # transform the data into a list since GN doesn't like dictionaries
     package_data_list = []
-    for package_name in package_name_to_data:
-        data = package_name_to_data[package_name]
+    for package_name, data in sorted(package_name_to_data.items()):
         package_data_list.append({
             "crate_name": data["crate_name"],
             "crate_type": data["crate_type"],
