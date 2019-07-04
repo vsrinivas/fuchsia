@@ -2,17 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <mutex>
+
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/net/llcpp/fidl.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/io.h>
-#include <lib/zircon-internal/debug.h>
-#include <lib/zxs/protocol.h>
-#include <lib/zxs/zxs.h>
 #include <netdb.h>
 #include <poll.h>
 #include <stdarg.h>
@@ -21,19 +15,27 @@
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
+#include <fuchsia/net/c/fidl.h>
+#include <fuchsia/net/llcpp/fidl.h>
+
 #include <zircon/assert.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
-#include <mutex>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/io.h>
+#include <lib/zircon-internal/debug.h>
+#include <lib/zxs/protocol.h>
+#include <lib/zxs/zxs.h>
 
 #include "private-socket.h"
 #include "private.h"
 #include "unistd.h"
 
-namespace fio = ::llcpp::fuchsia::io;
 namespace fnet = ::llcpp::fuchsia::net;
-namespace fsocket = ::llcpp::fuchsia::posix::socket;
 
 static zx_status_t get_service_handle(const char path[], zx::channel* out) {
     static zx_handle_t service_root;
@@ -73,60 +75,64 @@ static zx_status_t get_service_handle(const char path[], zx::channel* out) {
     return ZX_OK;
 }
 
-__EXPORT
-int socket(int domain, int type, int protocol) {
-    static fsocket::Provider::SyncClient* provider;
+static zx_status_t get_socket_provider(fnet::SocketProvider::SyncClient** out) {
+    static fnet::SocketProvider::SyncClient* saved;
 
     {
         static std::once_flag once;
         static zx_status_t status;
         std::call_once(once, [&]() {
             zx::channel out;
-            status = get_service_handle(fsocket::Provider::Name_, &out);
+            status = get_service_handle(fnet::SocketProvider::Name_, &out);
             if (status != ZX_OK) {
                 return;
             }
-            static fsocket::Provider::SyncClient client(std::move(out));
-            provider = &client;
+            static fnet::SocketProvider::SyncClient client(std::move(out));
+            saved = &client;
         });
         if (status != ZX_OK) {
-            return ERROR(status);
+            return status;
         }
     }
 
+    *out = saved;
+    return ZX_OK;
+}
+
+__EXPORT
+int socket(int domain, int type, int protocol) {
+    fnet::SocketProvider::SyncClient* socket_provider;
+    zx_status_t status = get_socket_provider(&socket_provider);
+    if (status != ZX_OK) {
+        return ERRNO(EIO);
+    }
+
     int16_t out_code;
-    zx::channel created;
+    zx::socket socket;
     // We're going to manage blocking on the client side, so always ask the
     // provider for a non-blocking socket.
-    zx_status_t status =
-        provider->Socket(static_cast<int16_t>(domain), static_cast<int16_t>(type) | SOCK_NONBLOCK,
-                         static_cast<int16_t>(protocol), &out_code, &created);
+    status = socket_provider->Socket(
+        static_cast<int16_t>(domain),
+        static_cast<int16_t>(type) | SOCK_NONBLOCK,
+        static_cast<int16_t>(protocol),
+        &out_code,
+        &socket);
     if (status != ZX_OK) {
         return ERROR(status);
     }
     if (out_code) {
         return ERRNO(out_code);
     }
-    fsocket::Control::SyncClient control(std::move(created));
 
-    fio::NodeInfo node_info;
-    status = control.Describe(&node_info);
+    zx_info_socket_t info;
+    status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), NULL, NULL);
     if (status != ZX_OK) {
         return ERROR(status);
     }
 
-    fdio_t* io;
-    switch (node_info.which()) {
-        case fio::NodeInfo::Tag::kSocket: {
-            status = fdio_socket_create(std::move(control),
-                                        std::move(node_info.mutable_socket().socket), &io);
-            if (status != ZX_OK) {
-                return ERROR(status);
-            }
-            break;
-        }
-        default:
-            return ERROR(ZX_ERR_INTERNAL);
+    fdio_t* io = fdio_socket_create(std::move(socket), info);
+    if (io == NULL) {
+        return ERROR(ZX_ERR_NO_RESOURCES);
     }
 
     if (type & SOCK_NONBLOCK) {
@@ -155,8 +161,8 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
     }
 
     int16_t out_code;
-    zx_status_t status = socket->control.Connect(
-        fidl::VectorView(len, reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr))), &out_code);
+    zx_status_t status = fuchsia_net_SocketControlConnect(
+        socket->socket.get(), (const uint8_t*)addr, len, &out_code);
     if (status != ZX_OK) {
         fdio_release(io);
         return ERROR(status);
@@ -168,16 +174,15 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
             *fdio_get_ioflag(io) |= IOFLAG_SOCKET_CONNECTING;
         } else {
             zx_signals_t observed;
-            status =
-                socket->socket.wait_one(ZXSIO_SIGNAL_OUTGOING, zx::time::infinite(), &observed);
+            status = socket->socket.wait_one(ZXSIO_SIGNAL_OUTGOING, zx::time::infinite(),
+                                             &observed);
             if (status != ZX_OK) {
                 fdio_release(io);
                 return ERROR(status);
             }
             // Call Connect() again after blocking to find connect's result.
-            status = socket->control.Connect(
-                fidl::VectorView(len, reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr))),
-                &out_code);
+            status = fuchsia_net_SocketControlConnect(
+                socket->socket.get(), (const uint8_t*)addr, len, &out_code);
             if (status != ZX_OK) {
                 fdio_release(io);
                 return ERROR(status);
@@ -186,16 +191,16 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
     }
 
     switch (out_code) {
-        case 0: {
-            *fdio_get_ioflag(io) |= IOFLAG_SOCKET_CONNECTED;
-            fdio_release(io);
-            return out_code;
-        }
+    case 0: {
+        *fdio_get_ioflag(io) |= IOFLAG_SOCKET_CONNECTED;
+        fdio_release(io);
+        return out_code;
+    }
 
-        default: {
-            fdio_release(io);
-            return ERRNO(out_code);
-        }
+    default: {
+        fdio_release(io);
+        return ERRNO(out_code);
+    }
     }
 }
 
@@ -208,8 +213,8 @@ int bind(int fd, const struct sockaddr* addr, socklen_t len) {
     }
 
     int16_t out_code;
-    zx_status_t status = socket->control.Bind(
-        fidl::VectorView(len, reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr))), &out_code);
+    zx_status_t status = fuchsia_net_SocketControlBind(
+        socket->socket.get(), (const uint8_t*)(addr), len, &out_code);
     fdio_release(io);
     if (status != ZX_OK) {
         return ERROR(status);
@@ -229,7 +234,8 @@ int listen(int fd, int backlog) {
     }
 
     int16_t out_code;
-    zx_status_t status = socket->control.Listen(static_cast<int16_t>(backlog), &out_code);
+    zx_status_t status = fuchsia_net_SocketControlListen(
+        socket->socket.get(), static_cast<int16_t>(backlog), &out_code);
     if (status != ZX_OK) {
         fdio_release(io);
         return ERROR(status);
@@ -244,7 +250,8 @@ int listen(int fd, int backlog) {
 }
 
 __EXPORT
-int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len, int flags) {
+int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
+            int flags) {
     if (flags & ~SOCK_NONBLOCK) {
         return ERRNO(EINVAL);
     }
@@ -259,7 +266,7 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
 
     zx_status_t status;
     int16_t out_code;
-    zx::channel accepted;
+    zx::socket accepted;
     {
         zxs_socket_t* socket;
         fdio_t* io = fd_to_socket(fd, &socket);
@@ -269,12 +276,13 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
         }
 
         bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
-
         for (;;) {
             // We're going to manage blocking on the client side, so always ask the
             // provider for a non-blocking socket.
-            status = socket->control.Accept(static_cast<int16_t>(flags) | SOCK_NONBLOCK, &out_code,
-                                            &accepted);
+            status = fuchsia_net_SocketControlAccept(
+                socket->socket.get(),
+                static_cast<int16_t>(flags) | SOCK_NONBLOCK,
+                &out_code);
             if (status != ZX_OK) {
                 break;
             }
@@ -284,8 +292,9 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
             if (out_code == EWOULDBLOCK) {
                 if (!nonblocking) {
                     zx_signals_t observed;
-                    status = socket->socket.wait_one(ZXSIO_SIGNAL_INCOMING | ZX_SOCKET_PEER_CLOSED,
-                                                     zx::time::infinite(), &observed);
+                    status = socket->socket.wait_one(
+                        ZXSIO_SIGNAL_INCOMING | ZX_SOCKET_PEER_CLOSED,
+                        zx::time::infinite(), &observed);
                     if (status != ZX_OK) {
                         break;
                     }
@@ -300,10 +309,30 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
             if (out_code) {
                 break;
             }
+
+            status = socket->socket.accept(&accepted);
+            if (status == ZX_ERR_SHOULD_WAIT) {
+                // Someone got in before us. If we're a blocking socket, try again.
+                if (!nonblocking) {
+                    zx_signals_t observed;
+                    status = socket->socket.wait_one(
+                        ZX_SOCKET_ACCEPT | ZX_SOCKET_PEER_CLOSED,
+                        zx::time::infinite(), &observed);
+                    if (status != ZX_OK) {
+                        break;
+                    }
+                    if (observed & ZX_SOCKET_ACCEPT) {
+                        continue;
+                    }
+                    ZX_ASSERT(observed & ZX_SOCKET_PEER_CLOSED);
+                    status = ZX_ERR_PEER_CLOSED;
+                }
+            }
             break;
         }
         fdio_release(io);
     }
+
     if (status != ZX_OK) {
         fdio_release_reserved(nfd);
         return ERROR(status);
@@ -312,45 +341,36 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
         fdio_release_reserved(nfd);
         return ERRNO(out_code);
     }
-    fsocket::Control::SyncClient control(std::move(accepted));
 
     if (len) {
-        uint8_t response_buffer[fidl::MaxSizeInChannel<fsocket::Control::GetPeerNameResponse>()];
-        fidl::DecodeResult result = control.GetPeerName(fidl::BytePart::WrapEmpty(response_buffer));
-        if (result.status != ZX_OK) {
+        int16_t out_code;
+        uint8_t buf[sizeof(struct sockaddr_storage)];
+        size_t actual;
+        zx_status_t status = fuchsia_net_SocketControlGetPeerName(
+            accepted.get(), &out_code, buf, sizeof(buf), &actual);
+        if (status != ZX_OK) {
             fdio_release_reserved(nfd);
-            return ERROR(result.status);
+            return ERROR(status);
         }
-        fsocket::Control::GetPeerNameResponse* response = result.Unwrap();
-        if (response->code) {
+        if (out_code) {
             fdio_release_reserved(nfd);
-            return ERRNO(response->code);
+            return ERRNO(out_code);
         }
-        memcpy(addr, response->addr.data(), MIN(*len, response->addr.count()));
-        *len = static_cast<socklen_t>(response->addr.count());
+        memcpy(addr, buf, MIN(*len, actual));
+        *len = static_cast<socklen_t>(actual);
     }
 
-    fio::NodeInfo node_info;
-    status = control.Describe(&node_info);
+    zx_info_socket_t info;
+    status = accepted.get_info(ZX_INFO_SOCKET, &info, sizeof(info), NULL, NULL);
     if (status != ZX_OK) {
         fdio_release_reserved(nfd);
         return ERROR(status);
     }
 
-    fdio_t* accepted_io;
-    switch (node_info.which()) {
-        case fio::NodeInfo::Tag::kSocket: {
-            status = fdio_socket_create(std::move(control),
-                                        std::move(node_info.mutable_socket().socket), &accepted_io);
-            if (status != ZX_OK) {
-                fdio_release_reserved(nfd);
-                return ERROR(status);
-            }
-            break;
-        }
-        default:
-            fdio_release_reserved(nfd);
-            return ERROR(ZX_ERR_INTERNAL);
+    fdio_t* accepted_io = fdio_socket_create(std::move(accepted), info);
+    if (accepted_io == NULL) {
+        fdio_release_reserved(nfd);
+        return ERROR(ZX_ERR_NO_RESOURCES);
     }
     *fdio_get_ioflag(accepted_io) |= IOFLAG_SOCKET_CONNECTED;
 
@@ -368,54 +388,43 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
 
 static int addrinfo_status_to_eai(fnet::AddrInfoStatus status) {
     switch (status) {
-        case fnet::AddrInfoStatus::ok:
-            return 0;
-        case fnet::AddrInfoStatus::bad_flags:
-            return EAI_BADFLAGS;
-        case fnet::AddrInfoStatus::no_name:
-            return EAI_NONAME;
-        case fnet::AddrInfoStatus::again:
-            return EAI_AGAIN;
-        case fnet::AddrInfoStatus::fail:
-            return EAI_FAIL;
-        case fnet::AddrInfoStatus::no_data:
-            return EAI_NONAME;
-        case fnet::AddrInfoStatus::buffer_overflow:
-            return EAI_OVERFLOW;
-        case fnet::AddrInfoStatus::system_error:
-            return EAI_SYSTEM;
-        default:
-            // unknown status
-            return EAI_SYSTEM;
+    case fnet::AddrInfoStatus::ok:
+        return 0;
+    case fnet::AddrInfoStatus::bad_flags:
+        return EAI_BADFLAGS;
+    case fnet::AddrInfoStatus::no_name:
+        return EAI_NONAME;
+    case fnet::AddrInfoStatus::again:
+        return EAI_AGAIN;
+    case fnet::AddrInfoStatus::fail:
+        return EAI_FAIL;
+    case fnet::AddrInfoStatus::no_data:
+        return EAI_NONAME;
+    case fnet::AddrInfoStatus::buffer_overflow:
+        return EAI_OVERFLOW;
+    case fnet::AddrInfoStatus::system_error:
+        return EAI_SYSTEM;
+    default:
+        // unknown status
+        return EAI_SYSTEM;
     }
 }
 
 __EXPORT
-int getaddrinfo(const char* __restrict node, const char* __restrict service,
-                const struct addrinfo* __restrict hints, struct addrinfo** __restrict res) {
+int getaddrinfo(const char* __restrict node,
+                const char* __restrict service,
+                const struct addrinfo* __restrict hints,
+                struct addrinfo** __restrict res) {
     if ((node == NULL && service == NULL) || res == NULL) {
         errno = EINVAL;
         return EAI_SYSTEM;
     }
 
-    static fnet::SocketProvider::SyncClient* socket_provider;
-
-    {
-        static std::once_flag once;
-        static zx_status_t status;
-        std::call_once(once, [&]() {
-            zx::channel out;
-            status = get_service_handle(fnet::SocketProvider::Name_, &out);
-            if (status != ZX_OK) {
-                return;
-            }
-            static fnet::SocketProvider::SyncClient client(std::move(out));
-            socket_provider = &client;
-        });
-        if (status != ZX_OK) {
-            errno = EIO;
-            return EAI_SYSTEM;
-        }
+    fnet::SocketProvider::SyncClient* socket_provider;
+    zx_status_t status = get_socket_provider(&socket_provider);
+    if (status != ZX_OK) {
+        errno = EIO;
+        return EAI_SYSTEM;
     }
 
     size_t node_size = 0;
@@ -443,9 +452,13 @@ int getaddrinfo(const char* __restrict node, const char* __restrict service,
     fnet::AddrInfoStatus info_status;
     uint32_t nres = 0;
     fidl::Array<fnet::AddrInfo, 4> ai;
-    zx_status_t status = socket_provider->GetAddrInfo(fidl::StringView(node_size, node),
-                                                      fidl::StringView(service_size, service), ht,
-                                                      &info_status, &nres, &ai);
+    status = socket_provider->GetAddrInfo(
+        fidl::StringView(node_size, node),
+        fidl::StringView(service_size, service),
+        ht,
+        &info_status,
+        &nres,
+        &ai);
 
     if (status != ZX_OK) {
         ERROR(status);
@@ -476,43 +489,43 @@ int getaddrinfo(const char* __restrict node, const char* __restrict service,
         entry[i].ai.ai_socktype = ai[i].sock_type;
         entry[i].ai.ai_protocol = ai[i].protocol;
         entry[i].ai.ai_addr = (struct sockaddr*)&entry[i].addr_storage;
-        entry[i].ai.ai_canonname = NULL;  // TODO: support canonname
+        entry[i].ai.ai_canonname = NULL; // TODO: support canonname
         switch (entry[i].ai.ai_family) {
-            case AF_INET: {
-                struct sockaddr_in* addr = (struct sockaddr_in*)entry[i].ai.ai_addr;
-                addr->sin_family = AF_INET;
-                addr->sin_port = htons(ai[i].port);
-                if (ai[i].addr.len > sizeof(ai[i].addr.val)) {
-                    free(entry);
-                    errno = EIO;
-                    return EAI_SYSTEM;
-                }
-                memcpy(&addr->sin_addr, ai[i].addr.val.data(), ai[i].addr.len);
-                entry[i].ai.ai_addrlen = sizeof(struct sockaddr_in);
-
-                break;
-            }
-
-            case AF_INET6: {
-                struct sockaddr_in6* addr = (struct sockaddr_in6*)entry[i].ai.ai_addr;
-                addr->sin6_family = AF_INET6;
-                addr->sin6_port = htons(ai[i].port);
-                if (ai[i].addr.len > sizeof(ai[i].addr.val)) {
-                    free(entry);
-                    errno = EIO;
-                    return EAI_SYSTEM;
-                }
-                memcpy(&addr->sin6_addr, ai[i].addr.val.data(), ai[i].addr.len);
-                entry[i].ai.ai_addrlen = sizeof(struct sockaddr_in6);
-
-                break;
-            }
-
-            default: {
+        case AF_INET: {
+            struct sockaddr_in* addr = (struct sockaddr_in*)entry[i].ai.ai_addr;
+            addr->sin_family = AF_INET;
+            addr->sin_port = htons(ai[i].port);
+            if (ai[i].addr.len > sizeof(ai[i].addr.val)) {
                 free(entry);
                 errno = EIO;
                 return EAI_SYSTEM;
             }
+            memcpy(&addr->sin_addr, ai[i].addr.val.data(), ai[i].addr.len);
+            entry[i].ai.ai_addrlen = sizeof(struct sockaddr_in);
+
+            break;
+        }
+
+        case AF_INET6: {
+            struct sockaddr_in6* addr = (struct sockaddr_in6*)entry[i].ai.ai_addr;
+            addr->sin6_family = AF_INET6;
+            addr->sin6_port = htons(ai[i].port);
+            if (ai[i].addr.len > sizeof(ai[i].addr.val)) {
+                free(entry);
+                errno = EIO;
+                return EAI_SYSTEM;
+            }
+            memcpy(&addr->sin6_addr, ai[i].addr.val.data(), ai[i].addr.len);
+            entry[i].ai.ai_addrlen = sizeof(struct sockaddr_in6);
+
+            break;
+        }
+
+        default: {
+            free(entry);
+            errno = EIO;
+            return EAI_SYSTEM;
+        }
         }
     }
     struct addrinfo* next = NULL;
@@ -526,7 +539,9 @@ int getaddrinfo(const char* __restrict node, const char* __restrict service,
 }
 
 __EXPORT
-void freeaddrinfo(struct addrinfo* res) { free(res); }
+void freeaddrinfo(struct addrinfo* res) {
+    free(res);
+}
 
 __EXPORT
 int getsockname(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len) {
@@ -540,20 +555,21 @@ int getsockname(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
         return ERRNO(EBADF);
     }
 
-    uint8_t response_buffer[fidl::MaxSizeInChannel<fsocket::Control::GetSockNameResponse>()];
-    fidl::DecodeResult result =
-        socket->control.GetSockName(fidl::BytePart::WrapEmpty(response_buffer));
+    int16_t out_code;
+    uint8_t buf[sizeof(struct sockaddr_storage)];
+    size_t actual;
+    zx_status_t status = fuchsia_net_SocketControlGetSockName(
+        socket->socket.get(), &out_code, buf, sizeof(buf), &actual);
     fdio_release(io);
-    if (result.status != ZX_OK) {
-        return ERROR(result.status);
+    if (status != ZX_OK) {
+        return ERROR(status);
     }
-    fsocket::Control::GetSockNameResponse* response = result.Unwrap();
-    if (response->code) {
-        return ERRNO(response->code);
+    if (out_code) {
+        return ERRNO(out_code);
     }
-    memcpy(addr, response->addr.data(), MIN(*len, response->addr.count()));
-    *len = static_cast<socklen_t>(response->addr.count());
-    return response->code;
+    memcpy(addr, buf, MIN(*len, actual));
+    *len = static_cast<socklen_t>(actual);
+    return out_code;
 }
 
 __EXPORT
@@ -568,20 +584,21 @@ int getpeername(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
         return ERRNO(EBADF);
     }
 
-    uint8_t response_buffer[fidl::MaxSizeInChannel<fsocket::Control::GetPeerNameResponse>()];
-    fidl::DecodeResult result =
-        socket->control.GetPeerName(fidl::BytePart::WrapEmpty(response_buffer));
+    int16_t out_code;
+    uint8_t buf[sizeof(struct sockaddr_storage)];
+    size_t actual;
+    zx_status_t status = fuchsia_net_SocketControlGetPeerName(
+        socket->socket.get(), &out_code, buf, sizeof(buf), &actual);
     fdio_release(io);
-    if (result.status != ZX_OK) {
-        return ERROR(result.status);
+    if (status != ZX_OK) {
+        return ERROR(status);
     }
-    fsocket::Control::GetPeerNameResponse* response = result.Unwrap();
-    if (response->code) {
-        return ERRNO(response->code);
+    if (out_code) {
+        return ERRNO(out_code);
     }
-    memcpy(addr, response->addr.data(), MIN(*len, response->addr.count()));
-    *len = static_cast<socklen_t>(response->addr.count());
-    return response->code;
+    memcpy(addr, buf, MIN(*len, actual));
+    *len = static_cast<socklen_t>(actual);
+    return out_code;
 }
 
 __EXPORT
@@ -610,32 +627,30 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
         return 0;
     }
 
-    uint8_t request_buffer[fidl::MaxSizeInChannel<fsocket::Control::GetSockOptRequest>()];
-    fidl::DecodedMessage<fsocket::Control::GetSockOptRequest> request(
-        fidl::BytePart::WrapFull(request_buffer));
-    uint8_t response_buffer[fidl::MaxSizeInChannel<fsocket::Control::GetSockOptResponse>()];
-    request.message()->level = static_cast<int16_t>(level);
-    request.message()->optname = static_cast<int16_t>(optname);
-    fidl::DecodeResult result =
-        socket->control.GetSockOpt(std::move(request), fidl::BytePart::WrapEmpty(response_buffer));
+    int16_t out_code;
+    size_t actual;
+    zx_status_t status = fuchsia_net_SocketControlGetSockOpt(
+        socket->socket.get(),
+        static_cast<int16_t>(level),
+        static_cast<int16_t>(optname),
+        &out_code,
+        static_cast<uint8_t*>(optval),
+        *optlen,
+        &actual);
     fdio_release(io);
-    if (result.status != ZX_OK) {
-        return ERROR(result.status);
+    if (status != ZX_OK) {
+        return ERROR(status);
     }
-    fsocket::Control::GetSockOptResponse* response = result.Unwrap();
-    if (response->code) {
-        return ERRNO(response->code);
+    if (out_code) {
+        return ERRNO(out_code);
     }
-    if (response->optval.count() > *optlen) {
-        return ERRNO(EINVAL);
-    }
-    memcpy(optval, response->optval.data(), response->optval.count());
-    *optlen = static_cast<socklen_t>(response->optval.count());
-    return response->code;
+    *optlen = static_cast<socklen_t>(actual);
+    return out_code;
 }
 
 __EXPORT
-int setsockopt(int fd, int level, int optname, const void* optval, socklen_t optlen) {
+int setsockopt(int fd, int level, int optname, const void* optval,
+               socklen_t optlen) {
     zxs_socket_t* socket;
     fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
@@ -657,9 +672,13 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
     }
 
     int16_t out_code;
-    zx_status_t status = socket->control.SetSockOpt(
-        static_cast<int16_t>(level), static_cast<int16_t>(optname),
-        fidl::VectorView(optlen, static_cast<uint8_t*>(const_cast<void*>(optval))), &out_code);
+    zx_status_t status = fuchsia_net_SocketControlSetSockOpt(
+        socket->socket.get(),
+        static_cast<int16_t>(level),
+        static_cast<int16_t>(optname),
+        static_cast<uint8_t*>(const_cast<void*>(optval)),
+        optlen,
+        &out_code);
     fdio_release(io);
     if (status != ZX_OK) {
         return ERROR(status);

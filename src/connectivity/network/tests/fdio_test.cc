@@ -5,7 +5,7 @@
 // These tests ensure the zircon libc can talk to netstack.
 // No network connection is required, only a running netstack binary.
 
-#include <fuchsia/posix/socket/cpp/fidl.h>
+#include <fuchsia/net/c/fidl.h>
 #include <lib/fdio/fd.h>
 #include <lib/sync/completion.h>
 #include <zircon/status.h>
@@ -41,10 +41,12 @@ TEST(NetStreamTest, BlockingAcceptWriteNoClose) {
         break;
       }
     }
-    ASSERT_EQ(ret, 0) << "bind failed: " << strerror(errno) << " port: " << port;
+    ASSERT_EQ(ret, 0) << "bind failed: " << strerror(errno)
+                      << " port: " << port;
 
     socklen_t addrlen = sizeof(addr);
-    ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
+    ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0)
+        << strerror(errno);
     ASSERT_EQ(addrlen, sizeof(addr));
 
     // remember the assigned port and use it for the next bind.
@@ -93,24 +95,24 @@ TEST(NetStreamTest, RaceClose) {
 
   sync_completion_t completion;
 
-  fuchsia::posix::socket::Control_SyncProxy control((zx::channel(handle)));
-
   std::vector<std::thread> workers;
   for (int i = 0; i < 10; i++) {
-    workers.push_back(std::thread([&control, &completion]() {
+    workers.push_back(std::thread([&handle, &completion]() {
       zx_status_t status = sync_completion_wait(&completion, ZX_TIME_INFINITE);
       ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
 
-      zx_status_t io_status = control.Close(&status);
-      if (io_status == ZX_OK) {
-        EXPECT_EQ(status, ZX_OK) << zx_status_get_string(status);
+      int16_t out_code;
+      status = fuchsia_net_SocketControlClose(handle, &out_code);
+      if (status == ZX_OK) {
+        EXPECT_EQ(out_code, 0) << strerror(out_code);
       } else {
-        EXPECT_EQ(io_status, ZX_ERR_PEER_CLOSED) << zx_status_get_string(io_status);
+        EXPECT_EQ(status, ZX_ERR_PEER_CLOSED) << zx_status_get_string(status);
       }
     }));
   }
 
   sync_completion_signal(&completion);
 
-  std::for_each(workers.begin(), workers.end(), std::mem_fn(&std::thread::join));
+  std::for_each(workers.begin(), workers.end(),
+                std::mem_fn(&std::thread::join));
 }

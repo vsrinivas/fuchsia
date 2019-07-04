@@ -44,6 +44,7 @@ library("fdio") {
     "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-io:llcpp",
     "$zx/system/fidl/fuchsia-ldsvc:c",
+    "$zx/system/fidl/fuchsia-net:c",
     "$zx/system/fidl/fuchsia-net:llcpp",
     "$zx/system/fidl/fuchsia-process:c",
     "$zx/system/ulib/fbl",

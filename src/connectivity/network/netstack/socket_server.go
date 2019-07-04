@@ -495,14 +495,16 @@ func (ios *iostate) loopControl() error {
 	}
 }
 
-func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, flags uint32) (*iostate, zx.Socket) {
+func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, isAccept bool) (*iostate, zx.Socket) {
+	var t uint32 = zx.SocketDatagram
 	if transProto == tcp.ProtocolNumber {
-		flags |= zx.SocketStream
-	} else {
-		flags |= zx.SocketDatagram
-		flags &^= zx.SocketHasAccept
+		t = zx.SocketStream
 	}
-	localS, peerS, err := zx.NewSocket(flags)
+	t |= zx.SocketHasControl
+	if !isAccept {
+		t |= zx.SocketHasAccept
+	}
+	localS, peerS, err := zx.NewSocket(t)
 	if err != nil {
 		panic(err)
 	}
@@ -522,13 +524,11 @@ func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto t
 	inEntry, inCh := waiter.NewChannelEntry(nil)
 	ios.wq.EventRegister(&inEntry, waiter.EventIn)
 
-	if flags&zx.SocketHasControl != 0 {
-		go func() {
-			if err := ios.loopControl(); err != nil {
-				syslog.Errorf("%p: loopControl: %s", ios, err)
-			}
-		}()
-	}
+	go func() {
+		if err := ios.loopControl(); err != nil {
+			syslog.Errorf("%p: loopControl: %s", ios, err)
+		}
+	}()
 	go func() {
 		defer ios.wq.EventUnregister(&inEntry)
 
@@ -740,7 +740,7 @@ func (s *socketImpl) Clone(flags uint32, object io.NodeInterfaceRequest) error {
 func (s *socketImpl) close() {
 	clones := atomic.AddInt64(&s.iostate.clones, -1)
 
-	if clones == 0 {
+	if clones == -1 {
 		s.iostate.close()
 	}
 
@@ -793,7 +793,7 @@ func (s *socketImpl) IoctlPosix(req int16, in []uint8) (int16, []uint8, error) {
 }
 
 func (s *socketImpl) Accept(flags int16) (int16, socket.ControlInterface, error) {
-	code, peer, ios, err := s.iostate.accept(flags, 0)
+	code, peer, ios, err := s.iostate.accept(flags)
 	if err != nil {
 		return 0, socket.ControlInterface{}, err
 	}
@@ -805,13 +805,16 @@ func (s *socketImpl) Accept(flags int16) (int16, socket.ControlInterface, error)
 		if err != nil {
 			return 0, socket.ControlInterface{}, err
 		}
-		if err := (&socketImpl{
+		s := &socketImpl{
 			iostate:        ios,
 			peer:           peer,
 			controlService: s.controlService,
-		}).Clone(0, io.NodeInterfaceRequest{Channel: h0}); err != nil {
+		}
+		bindingKey, err := s.controlService.Add(s, h0, func(error) { s.close() })
+		if err != nil {
 			return 0, socket.ControlInterface{}, err
 		}
+		s.bindingKey = bindingKey
 		return 0, socket.ControlInterface{Channel: h1}, nil
 	}
 }
@@ -876,7 +879,7 @@ func (ios *iostate) Listen(backlog int16) (int16, error) {
 }
 
 func (ios *iostate) Accept(flags int16) (int16, error) {
-	code, socket, _, err := ios.accept(flags, zx.SocketHasControl)
+	code, socket, _, err := ios.accept(flags)
 	if code == 0 && err == nil {
 		if err := ios.dataHandle.Share(zx.Handle(socket)); err != nil {
 			panic(err)
@@ -885,7 +888,7 @@ func (ios *iostate) Accept(flags int16) (int16, error) {
 	return code, err
 }
 
-func (ios *iostate) accept(flags int16, socketFlags uint32) (int16, zx.Socket, *iostate, error) {
+func (ios *iostate) accept(flags int16) (int16, zx.Socket, *iostate, error) {
 	ep, wq, err := ios.ep.Accept()
 	// NB: we need to do this before checking the error, or the incoming signal
 	// will never be cleared.
@@ -913,7 +916,7 @@ func (ios *iostate) accept(flags int16, socketFlags uint32) (int16, zx.Socket, *
 	}
 	syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: local=%+v, remote=%+v", ios, localAddr, remoteAddr)
 
-	ios, socket := newIostate(ios.ns, ios.netProto, ios.transProto, wq, ep, socketFlags)
+	ios, socket := newIostate(ios.ns, ios.netProto, ios.transProto, wq, ep, true)
 
 	return 0, socket, ios, nil
 }

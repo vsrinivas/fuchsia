@@ -14,7 +14,6 @@ use fidl_fuchsia_netemul_network::{
     NetworkConfig, NetworkContextMarker, NetworkManagerMarker, NetworkProxy,
 };
 use fidl_fuchsia_netstack::NetstackMarker;
-use fidl_fuchsia_posix_socket::ProviderMarker;
 use fidl_fuchsia_sys::{
     ComponentControllerEvent, ComponentControllerMarker, ComponentControllerProxy, LaunchInfo,
     LauncherMarker, TerminationReason,
@@ -87,7 +86,7 @@ async fn spawn_env(network: &NetworkProxy, options: SpawnOptions) -> Result<Env,
                 arguments: None,
             },
             LaunchService {
-                name: String::from(ProviderMarker::NAME),
+                name: String::from("fuchsia.net.SocketProvider"),
                 url: String::from(NETSTACK_URL),
                 arguments: None,
             },

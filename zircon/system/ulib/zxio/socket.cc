@@ -7,40 +7,34 @@
 #include <lib/zxio/ops.h>
 #include <zircon/syscalls.h>
 
-namespace fio = ::llcpp::fuchsia::io;
-
 static zx_status_t zxio_socket_close(zxio_t* io) {
     zxio_socket_t* zs = reinterpret_cast<zxio_socket_t*>(io);
     return zxs_close(std::move(zs->socket));
 }
 
 static zx_status_t zxio_socket_release(zxio_t* io, zx_handle_t* out_handle) {
-    *out_handle = reinterpret_cast<zxio_socket_t*>(io)->socket.control.mutable_channel()->release();
+    *out_handle = reinterpret_cast<zxio_socket_t*>(io)->socket.socket.release();
     return ZX_OK;
 }
 
 static zx_status_t zxio_socket_clone(zxio_t* io, zx_handle_t* out_handle) {
-    zxio_socket_t* socket = reinterpret_cast<zxio_socket_t*>(io);
-    zx::channel local, remote;
-    zx_status_t status = zx::channel::create(0, &local, &remote);
+    zx::object<zx::socket> out_channel;
+    zx_status_t status = reinterpret_cast<zxio_socket_t*>(io)->socket.socket.duplicate(ZX_RIGHT_SAME_RIGHTS, &out_channel);
     if (status != ZX_OK) {
         return status;
     }
-    status = socket->socket.control.Clone(fio::CLONE_FLAG_SAME_RIGHTS, std::move(remote));
-    if (status != ZX_OK) {
-        return status;
-    }
-    *out_handle = local.release();
+    *out_handle = out_channel.release();
     return ZX_OK;
 }
 
-static zx_status_t zxio_socket_read(zxio_t* io, void* buffer, size_t capacity, size_t* out_actual) {
+static zx_status_t zxio_socket_read(zxio_t* io, void* buffer, size_t capacity,
+                                    size_t* out_actual) {
     zxio_socket_t* zs = reinterpret_cast<zxio_socket_t*>(io);
     return zxs_recv(&zs->socket, buffer, capacity, out_actual);
 }
 
-static zx_status_t zxio_socket_write(zxio_t* io, const void* buffer, size_t capacity,
-                                     size_t* out_actual) {
+static zx_status_t zxio_socket_write(zxio_t* io, const void* buffer,
+                                     size_t capacity, size_t* out_actual) {
     zxio_socket_t* zs = reinterpret_cast<zxio_socket_t*>(io);
     return zxs_send(&zs->socket, buffer, capacity, out_actual);
 }

@@ -11,7 +11,6 @@ import (
 
 	"netstack/util"
 
-	"fidl/fuchsia/io"
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/posix/socket"
 
@@ -62,7 +61,7 @@ func toTransProto(typ, protocol int16) (int16, tcpip.TransportProtocolNumber) {
 }
 
 func (sp *providerImpl) Socket(domain, typ, protocol int16) (int16, socket.ControlInterface, error) {
-	code, ios, peer, err := sp.socket(domain, typ, protocol, 0)
+	code, ios, peer, err := sp.socket(domain, typ, protocol)
 	if err != nil {
 		return 0, socket.ControlInterface{}, err
 	}
@@ -73,22 +72,25 @@ func (sp *providerImpl) Socket(domain, typ, protocol int16) (int16, socket.Contr
 	if err != nil {
 		return 0, socket.ControlInterface{}, err
 	}
-	if err := (&socketImpl{
+	s := &socketImpl{
 		iostate:        ios,
 		peer:           peer,
 		controlService: &sp.controlService,
-	}).Clone(0, io.NodeInterfaceRequest{Channel: h0}); err != nil {
+	}
+	bindingKey, err := sp.controlService.Add(s, h0, func(error) { s.close() })
+	if err != nil {
 		return 0, socket.ControlInterface{}, err
 	}
+	s.bindingKey = bindingKey
 	return 0, socket.ControlInterface{Channel: h1}, nil
 }
 
 func (sp *socketProviderImpl) Socket(domain, typ, protocol int16) (int16, zx.Socket, error) {
-	code, _, socket, err := sp.socket(domain, typ, protocol, zx.SocketHasControl|zx.SocketHasAccept)
+	code, _, socket, err := sp.socket(domain, typ, protocol)
 	return code, socket, err
 }
 
-func (sp *socketProviderImpl) socket(domain, typ, protocol int16, flags uint32) (int16, *iostate, zx.Socket, error) {
+func (sp *socketProviderImpl) socket(domain, typ, protocol int16) (int16, *iostate, zx.Socket, error) {
 	var netProto tcpip.NetworkProtocolNumber
 	switch domain {
 	case C.AF_INET:
@@ -111,7 +113,7 @@ func (sp *socketProviderImpl) socket(domain, typ, protocol int16, flags uint32) 
 	if err != nil {
 		return tcpipErrorToCode(err), nil, zx.Socket(zx.HandleInvalid), nil
 	}
-	ios, socket := newIostate(sp.ns, netProto, transProto, wq, ep, flags)
+	ios, socket := newIostate(sp.ns, netProto, transProto, wq, ep, false)
 
 	return 0, ios, socket, nil
 }
