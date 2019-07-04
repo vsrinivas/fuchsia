@@ -15,6 +15,7 @@ constexpr char kFactoryItemsPath[] = "/svc/" fuchsia_boot_FactoryItems_Name;
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
 constexpr char kLogPath[] = "/svc/" fuchsia_boot_Log_Name;
 constexpr char kProfileProviderPath[] = "/svc/" fuchsia_scheduler_ProfileProvider_Name;
+constexpr char kRootResourcePath[] = "/svc/" fuchsia_boot_RootResource_Name;
 
 static bool test_open_factory_items(void) {
     BEGIN_TEST;
@@ -88,11 +89,29 @@ static bool test_open_profile_provider(void) {
     END_TEST;
 }
 
+static bool test_open_root_resource(void) {
+    BEGIN_TEST;
+
+    zx::channel client, server;
+    zx_status_t status = zx::channel::create(0, &client, &server);
+    ASSERT_EQ(ZX_OK, status, "zx::channel::create failed");
+
+    status = fdio_service_connect(kRootResourcePath, server.release());
+    ASSERT_EQ(ZX_OK, status, "fdio_service_connect failed");
+
+    zx::resource resource;
+    status = fuchsia_boot_RootResourceGet(client.get(), resource.reset_and_get_address());
+    ASSERT_EQ(ZX_OK, status, "fuchsia_boot_RootResourceGet failed");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(svc_tests)
 RUN_TEST(test_open_factory_items)
 RUN_TEST(test_open_items)
 RUN_TEST(test_open_log)
 RUN_TEST(test_open_profile_provider)
+RUN_TEST(test_open_root_resource)
 END_TEST_CASE(svc_tests)
 
 extern "C" {
