@@ -5,6 +5,7 @@
 #ifndef LIB_SYNC_CONDITION_H_
 #define LIB_SYNC_CONDITION_H_
 
+#include <assert.h>
 #include <lib/sync/mutex.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -23,7 +24,7 @@ typedef struct sync_condition {
 #endif
 } sync_condition_t;
 
-static_assert(sizeof(((sync_condition*)0)->lock) == sizeof(sync_mutex_t),
+static_assert(sizeof(((sync_condition_t*)0)->lock) == sizeof(sync_mutex_t),
         "sync_condition lock storage must be the same size as sync_mutex_t");
 
 #if !defined(__cplusplus)
