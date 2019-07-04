@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <elf.h>
 #include <fbl/auto_call.h>
 #include <fbl/function.h>
 #include <lib/zx/bti.h>
@@ -10,6 +11,8 @@
 #include <lib/zx/port.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <link.h>
+#include <utility>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/iommu.h>
@@ -18,6 +21,96 @@
 extern "C" __WEAK zx_handle_t get_root_resource(void);
 
 namespace {
+
+// Some tests below rely on sampling the memory statistics and having only the
+// page allocations directly incurred by the test code happen during the test.
+// Those samples can be polluted by any COW faults taken by this program itself
+// for touching its own data pages.  So avoid the pollution by preemptively
+// faulting in all the static data pages beforehand.
+class KmemStatsFixture : public zxtest::Test {
+public:
+    static void SetUpTestCase() {
+        if (get_root_resource) {
+            root_resource_ = zx::unowned_resource{get_root_resource()};
+            ASSERT_TRUE(root_resource_->is_valid());
+            ASSERT_EQ(dl_iterate_phdr(&DlIterpatePhdrCallback, nullptr), 0);
+        }
+    }
+
+    static void KmemStats(zx_info_kmem_stats_t* info) {
+        ASSERT_OK(root_resource_->get_info(ZX_INFO_KMEM_STATS, info,
+                                           sizeof(*info), nullptr, nullptr));
+    }
+
+    static size_t KmemVmoMemUsage() {
+        if (root_resource_->is_valid()) {
+            zx_info_kmem_stats_t info;
+            KmemStats(&info);
+            return info.vmo_bytes;
+        }
+        return 0;
+    }
+
+    static const zx::resource& RootResource() {
+        return *root_resource_;
+    }
+
+private:
+    static zx::unowned_resource root_resource_;
+
+    // Touch every page in the region to make sure it's been COW'd.
+    __attribute__((no_sanitize("all"))) static void PrefaultPages(
+        uintptr_t start, uintptr_t end) {
+        while (start < end) {
+            auto ptr = reinterpret_cast<volatile uintptr_t*>(start);
+            *ptr = *ptr;
+            start += ZX_PAGE_SIZE;
+        }
+    }
+
+    // Called on each loaded module to collect the bounds of its data pages.
+    static void PrefaultData(const Elf64_Phdr* const phdrs, uint16_t phnum,
+                             uintptr_t bias) {
+        // First find the RELRO segment, which may span part or all
+        // of a writable segment (that's thus no longer actually writable).
+        const Elf64_Phdr* relro = nullptr;
+        for (uint_fast16_t i = 0; i < phnum; ++i) {
+            const Elf64_Phdr* ph = &phdrs[i];
+            if (ph->p_type == PT_GNU_RELRO) {
+                relro = ph;
+                break;
+            }
+        }
+
+        // Now process each writable segment.
+        for (uint_fast16_t i = 0; i < phnum; ++i) {
+            const Elf64_Phdr* const ph = &phdrs[i];
+            if (ph->p_type != PT_LOAD || !(ph->p_flags & PF_W)) {
+                continue;
+            }
+            uintptr_t start = ph->p_vaddr;
+            uintptr_t end = ph->p_vaddr + ph->p_memsz;
+            ASSERT_LE(start, end);
+            if (relro && relro->p_vaddr >= start && relro->p_vaddr < end) {
+                start = relro->p_vaddr + relro->p_memsz;
+                ASSERT_GE(start, ph->p_vaddr);
+                if (start >= end) {
+                    continue;
+                }
+            }
+            start = (start + ZX_PAGE_SIZE - 1) & -uintptr_t{ZX_PAGE_SIZE};
+            end &= -uintptr_t{ZX_PAGE_SIZE};
+            PrefaultPages(bias + start, bias + end);
+        }
+    }
+
+    static int DlIterpatePhdrCallback(dl_phdr_info* info, size_t, void*) {
+        PrefaultData(info->dlpi_phdr, info->dlpi_phnum, info->dlpi_addr);
+        return 0;
+    }
+};
+
+zx::unowned_resource KmemStatsFixture::root_resource_;
 
 void VmoWrite(const zx::vmo& vmo, uint32_t data, uint32_t offset = 0) {
     zx_status_t status = vmo.write(static_cast<void*>(&data), offset, sizeof(data));
@@ -55,15 +148,6 @@ size_t VmoCommittedBytes(const zx::vmo& vmo) {
         return UINT64_MAX;
     }
     return info.committed_bytes;
-}
-
-size_t KmemVmoMemUsage() {
-    zx_info_kmem_stats_t info;
-    if (zx::unowned_resource(get_root_resource())->get_info(
-                ZX_INFO_KMEM_STATS, &info, sizeof(info), nullptr, nullptr) != ZX_OK) {
-        return UINT64_MAX;
-    }
-    return info.vmo_bytes;
 }
 
 // Simple class for managing vmo mappings w/o any external dependencies.
@@ -260,11 +344,13 @@ void CloseTestHelper(bool close_orig) {
 }
 
 TEST(VmoClone2TestCase, CloseOriginal) {
-    ASSERT_NO_FATAL_FAILURES(CloseTestHelper(true));
+    constexpr bool kCloseOriginal = true;
+    ASSERT_NO_FATAL_FAILURES(CloseTestHelper(kCloseOriginal));
 }
 
 TEST(VmoClone2TestCase, CloseClone) {
-    ASSERT_NO_FATAL_FAILURES(CloseTestHelper(false));
+    constexpr bool kCloseClone = false;
+    ASSERT_NO_FATAL_FAILURES(CloseTestHelper(kCloseClone));
 }
 
 // Basic memory accounting test that checks vmo memory attribution.
@@ -302,14 +388,15 @@ TEST(VmoClone2TestCase, ObjMemAccounting) {
     ASSERT_EQ(VmoCommittedBytes(clone), 2 * ZX_PAGE_SIZE);
 }
 
+using VmoClone2TestCase = KmemStatsFixture;
+
 // Basic memory accounting test that total memory consumption through kmem.
-TEST(VmoClone2TestCase, KmemAccounting) {
-    if (!get_root_resource) {
+TEST_F(VmoClone2TestCase, KmemAccounting) {
+    uint64_t start_size = KmemVmoMemUsage();
+    if (start_size == 0) {
         printf("Root resource not available, skipping\n");
         return;
     }
-
-    uint64_t start_size = KmemVmoMemUsage();
 
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(2 * ZX_PAGE_SIZE, 0, &vmo));
@@ -351,11 +438,8 @@ TEST(VmoClone2TestCase, KmemAccounting) {
 }
 
 // Tests that writes to a COW'ed zero page work and don't require redundant allocations.
-TEST(VmoClone2TestCase, ZeroPageWrite) {
-    uint64_t original = 0;
-    if (get_root_resource) {
-        original = KmemVmoMemUsage();
-    }
+TEST_F(VmoClone2TestCase, ZeroPageWrite) {
+    const uint64_t original = KmemVmoMemUsage();
 
     zx::vmo vmos[4];
     ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, vmos));
@@ -382,11 +466,8 @@ TEST(VmoClone2TestCase, ZeroPageWrite) {
 }
 
 // Tests closing a vmo with the last reference to a mostly forked page.
-TEST(VmoClone2TestCase, SplitPageClosure) {
-    uint64_t original = 0;
-    if (get_root_resource) {
-        original = KmemVmoMemUsage();
-    }
+TEST_F(VmoClone2TestCase, SplitPageClosure) {
+    const uint64_t original = KmemVmoMemUsage();
 
     // Create a chain of clones.
     zx::vmo vmo;
@@ -431,11 +512,8 @@ TEST(VmoClone2TestCase, SplitPageClosure) {
 
 // Tests that a clone with an offset accesses the right data and doesn't
 // unnecessarily retain pages when the parent is closed.
-TEST(VmoClone2TestCase, Offset) {
-    uint64_t original = 0;
-    if (get_root_resource) {
-        original = KmemVmoMemUsage();
-    }
+TEST_F(VmoClone2TestCase, Offset) {
+    const uint64_t original = KmemVmoMemUsage();
 
     zx::vmo vmo;
     ASSERT_NO_FATAL_FAILURES(InitPageTaggedVmo(3, &vmo));
@@ -460,17 +538,14 @@ TEST(VmoClone2TestCase, Offset) {
 
     // Check that the clone doesn't unnecessarily retain pages.
     ASSERT_EQ(VmoCommittedBytes(clone), 2 * ZX_PAGE_SIZE);
-    if (get_root_resource) {
+    if (original) {
         ASSERT_EQ(original + 2 * ZX_PAGE_SIZE, KmemVmoMemUsage());
     }
 }
 
 // Tests writing to the clones of a clone created with an offset.
-TEST(VmoClone2TestCase, OffsetTest2) {
-    uint64_t original = 0;
-    if (get_root_resource) {
-        original = KmemVmoMemUsage();
-    }
+TEST_F(VmoClone2TestCase, OffsetTest2) {
+    const uint64_t original = KmemVmoMemUsage();
 
     zx::vmo vmo;
     ASSERT_NO_FATAL_FAILURES(InitPageTaggedVmo(4, &vmo));
@@ -511,7 +586,7 @@ TEST(VmoClone2TestCase, OffsetTest2) {
     ASSERT_EQ(VmoCommittedBytes(clone1), kImplCost2);
     ASSERT_EQ(VmoCommittedBytes(clone2), 0);
     static_assert(kImplCost1 <= 4 * ZX_PAGE_SIZE && kImplCost2 <= 2 * ZX_PAGE_SIZE);
-    if (get_root_resource) {
+    if (original) {
         ASSERT_EQ(original + kImplCost1 + kImplCost2, KmemVmoMemUsage());
     }
 
@@ -519,23 +594,20 @@ TEST(VmoClone2TestCase, OffsetTest2) {
     clone1.reset();
     ASSERT_EQ(VmoCommittedBytes(vmo), 4 * ZX_PAGE_SIZE);
     ASSERT_EQ(VmoCommittedBytes(clone2), 0);
-    if (get_root_resource) {
+    if (original) {
         ASSERT_EQ(original + 4 * ZX_PAGE_SIZE, KmemVmoMemUsage());
     }
 
     clone2.reset();
 
-    if (get_root_resource) {
+    if (original) {
         ASSERT_EQ(original + 4 * ZX_PAGE_SIZE, KmemVmoMemUsage());
     }
 }
 
 // Tests writes to a page in a clone that is offset from the original and has a clone itself.
-TEST(VmoClone2TestCase, OffsetProgressiveWrite) {
-    uint64_t original = 0;
-    if (get_root_resource) {
-        original = KmemVmoMemUsage();
-    }
+TEST_F(VmoClone2TestCase, OffsetProgressiveWrite) {
+    const uint64_t original = KmemVmoMemUsage();
 
     zx::vmo vmo;
     ASSERT_NO_FATAL_FAILURES(InitPageTaggedVmo(2, &vmo));
@@ -564,7 +636,7 @@ TEST(VmoClone2TestCase, OffsetProgressiveWrite) {
     ASSERT_EQ(VmoCommittedBytes(vmo), 2 * ZX_PAGE_SIZE);
     ASSERT_EQ(VmoCommittedBytes(clone), ZX_PAGE_SIZE);
     ASSERT_EQ(VmoCommittedBytes(clone2), 0);
-    if (get_root_resource) {
+    if (original) {
         ASSERT_EQ(original + 3 * ZX_PAGE_SIZE, KmemVmoMemUsage());
     }
 
@@ -577,18 +649,15 @@ TEST(VmoClone2TestCase, OffsetProgressiveWrite) {
 
     // Check that the clone doesn't unnecessarily retain pages.
     ASSERT_EQ(VmoCommittedBytes(clone), ZX_PAGE_SIZE);
-    if (get_root_resource) {
+    if (original) {
         ASSERT_EQ(original + ZX_PAGE_SIZE, KmemVmoMemUsage());
     }
 }
 
 // Tests that a clone of a clone which overflows its parent properly interacts with
 // both of its ancestors (i.e. the orignal vmo and the first clone).
-TEST(VmoClone2TestCase, Overflow) {
-    uint64_t original = 0;
-    if (get_root_resource) {
-        original = KmemVmoMemUsage();
-    }
+TEST_F(VmoClone2TestCase, Overflow) {
+    const uint64_t original = KmemVmoMemUsage();
 
     zx::vmo vmo;
     ASSERT_NO_FATAL_FAILURES(InitPageTaggedVmo(1, &vmo));
@@ -619,7 +688,7 @@ TEST(VmoClone2TestCase, Overflow) {
     ASSERT_EQ(VmoCommittedBytes(clone), ZX_PAGE_SIZE);
     ASSERT_EQ(VmoCommittedBytes(clone2), ZX_PAGE_SIZE);
 
-    if (get_root_resource) {
+    if (original) {
         ASSERT_EQ(original + 3 * ZX_PAGE_SIZE, KmemVmoMemUsage());
     }
 
@@ -644,7 +713,7 @@ TEST(VmoClone2TestCase, Overflow) {
     ASSERT_EQ(VmoCommittedBytes(vmo), kImplCost1);
     ASSERT_EQ(VmoCommittedBytes(clone), kImplCost2);
     ASSERT_EQ(VmoCommittedBytes(clone2), kImplCost3);
-    if (get_root_resource) {
+    if (original) {
         ASSERT_EQ(original + kImplCost1 + kImplCost2 + kImplCost3, KmemVmoMemUsage());
     }
 
@@ -659,18 +728,15 @@ TEST(VmoClone2TestCase, Overflow) {
 
     ASSERT_EQ(VmoCommittedBytes(vmo), ZX_PAGE_SIZE);
     ASSERT_EQ(VmoCommittedBytes(clone2), 3 * ZX_PAGE_SIZE);
-    if (get_root_resource) {
+    if (original) {
         ASSERT_EQ(original + 4 * ZX_PAGE_SIZE, KmemVmoMemUsage());
     }
 }
 
 // Tests that a small clone doesn't require allocations for pages which it doesn't
 // have access to and that unneeded pages get freed if the original vmo is closed.
-TEST(VmoClone2TestCase, SmallClone) {
-    uint64_t original = 0;
-    if (get_root_resource) {
-        original = KmemVmoMemUsage();
-    }
+TEST_F(VmoClone2TestCase, SmallClone) {
+    const uint64_t original = KmemVmoMemUsage();
 
     zx::vmo vmo;
     ASSERT_NO_FATAL_FAILURES(InitPageTaggedVmo(3, &vmo));
@@ -688,7 +754,7 @@ TEST(VmoClone2TestCase, SmallClone) {
     ASSERT_NO_FATAL_FAILURES(VmoWrite(vmo, 5, 2 * ZX_PAGE_SIZE));
     ASSERT_EQ(VmoCommittedBytes(vmo), 3 * ZX_PAGE_SIZE);
     ASSERT_EQ(VmoCommittedBytes(clone), 0);
-    if (get_root_resource) {
+    if (original) {
         ASSERT_EQ(original + 3 * ZX_PAGE_SIZE, KmemVmoMemUsage());
     }
 
@@ -698,7 +764,7 @@ TEST(VmoClone2TestCase, SmallClone) {
     // all the extra pages are freed.
     ASSERT_NO_FATAL_FAILURES(VmoCheck(clone, 2));
     ASSERT_EQ(VmoCommittedBytes(clone), ZX_PAGE_SIZE);
-    if (get_root_resource) {
+    if (original) {
         ASSERT_EQ(original + ZX_PAGE_SIZE, KmemVmoMemUsage());
     }
 }
@@ -724,11 +790,8 @@ TEST(VmoClone2TestCase, SmallCloneChild) {
 }
 
 // Tests that closing a vmo with multiple small clones properly frees pages.
-TEST(VmoClone2TestCase, SmallClones) {
-    uint64_t original = 0;
-    if (get_root_resource) {
-        original = KmemVmoMemUsage();
-    }
+TEST_F(VmoClone2TestCase, SmallClones) {
+    const uint64_t original = KmemVmoMemUsage();
 
     zx::vmo vmo;
     ASSERT_NO_FATAL_FAILURES(InitPageTaggedVmo(3, &vmo));
@@ -745,7 +808,7 @@ TEST(VmoClone2TestCase, SmallClones) {
     ASSERT_EQ(VmoCommittedBytes(vmo), 3 * ZX_PAGE_SIZE);
     ASSERT_EQ(VmoCommittedBytes(clone), ZX_PAGE_SIZE);
     ASSERT_EQ(VmoCommittedBytes(clone2), 0);
-    if (get_root_resource) {
+    if (original) {
         ASSERT_EQ(original + 4 * ZX_PAGE_SIZE, KmemVmoMemUsage());
     }
 
@@ -759,87 +822,84 @@ TEST(VmoClone2TestCase, SmallClones) {
     static_assert(kImplClone1Cost <= 2 * ZX_PAGE_SIZE && kImplClone2Cost <= ZX_PAGE_SIZE);
     ASSERT_EQ(VmoCommittedBytes(clone), kImplClone1Cost);
     ASSERT_EQ(VmoCommittedBytes(clone2), kImplClone2Cost);
-    if (get_root_resource) {
+    if (original) {
         ASSERT_EQ(original + 2 * ZX_PAGE_SIZE, KmemVmoMemUsage());
     }
 }
 
-// Tests that disjoint clones work (i.e. create multiple clones, none of which overlap) and that
-// they don't unnecessarily retain/allocate memory after closing the original VMO. This tests
-// two cases - resetting the original vmo before writing to the clones and resetting the original
-// vmo after writing to the clones.
-void DisjointCloneTestHelper(bool early_close) {
-    uint64_t original = 0;
-    if (get_root_resource) {
-        original = KmemVmoMemUsage();
-    }
+// Tests that disjoint clones work (i.e. create multiple clones, none of which
+// overlap) and that they don't unnecessarily retain/allocate memory after
+// closing the original VMO. This tests two cases - resetting the original vmo
+// before writing to the clones and resetting the original vmo after writing to
+// the clones.
+struct VmoCloneDisjointClonesTests : public KmemStatsFixture {
+    static void DisjointClonesTest(bool early_close) {
+        const uint64_t original = KmemVmoMemUsage();
 
-    zx::vmo vmo;
-    ASSERT_NO_FATAL_FAILURES(InitPageTaggedVmo(4, &vmo));
+        zx::vmo vmo;
+        ASSERT_NO_FATAL_FAILURES(InitPageTaggedVmo(4, &vmo));
 
-    // Create a disjoint clone for each page in the orignal vmo: 2 direct and 2 through another
-    // intermediate COW clone.
-    zx::vmo clone;
-    ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2,
-                               1 * ZX_PAGE_SIZE, 2 * ZX_PAGE_SIZE, &clone));
+        // Create a disjoint clone for each page in the original vmo: 2 direct and 2 through another
+        // intermediate COW clone.
+        zx::vmo clone;
+        ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2,
+                                   1 * ZX_PAGE_SIZE, 2 * ZX_PAGE_SIZE, &clone));
 
-    zx::vmo leaf_clones[4];
-    ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, ZX_PAGE_SIZE, leaf_clones));
-    ASSERT_OK(clone.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, ZX_PAGE_SIZE, leaf_clones + 1));
-    ASSERT_OK(clone.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2,
-                                 ZX_PAGE_SIZE, ZX_PAGE_SIZE, leaf_clones + 2));
-    ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2,
-                        3 * ZX_PAGE_SIZE, ZX_PAGE_SIZE, leaf_clones + 3));
+        zx::vmo leaf_clones[4];
+        ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, ZX_PAGE_SIZE, leaf_clones));
+        ASSERT_OK(clone.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, ZX_PAGE_SIZE, leaf_clones + 1));
+        ASSERT_OK(clone.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2,
+                                     ZX_PAGE_SIZE, ZX_PAGE_SIZE, leaf_clones + 2));
+        ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2,
+                                   3 * ZX_PAGE_SIZE, ZX_PAGE_SIZE, leaf_clones + 3));
 
-    if (early_close) {
-        vmo.reset();
-        clone.reset();
-    }
-
-    // Check that each clone's has the correct data and then write to the clone.
-    for (unsigned i = 0; i < 4; i++) {
-        ASSERT_NO_FATAL_FAILURES(VmoCheck(leaf_clones[i], i + 1));
-        ASSERT_NO_FATAL_FAILURES(VmoWrite(leaf_clones[i], i + 5));
-    }
-
-    if (!early_close) {
-        // The number of allocated pages is implementation dependent, but it must be less
-        // than the total user-visible vmo size.
-        constexpr uint32_t kImplTotalPages = 10;
-        static_assert(kImplTotalPages <= 10);
-        if (original) {
-            ASSERT_EQ(original + 10 * ZX_PAGE_SIZE, KmemVmoMemUsage());
+        if (early_close) {
+            vmo.reset();
+            clone.reset();
         }
-        vmo.reset();
-        clone.reset();
-    }
 
-    // Check that the clones have the correct data and that nothing
-    // is unnecessary retained/allocated.
-    for (unsigned i = 0; i < 4; i++) {
-        ASSERT_NO_FATAL_FAILURES(VmoCheck(leaf_clones[i], i + 5));
-        ASSERT_EQ(VmoCommittedBytes(leaf_clones[i]), ZX_PAGE_SIZE);
+        // Check that each clone's has the correct data and then write to the clone.
+        for (unsigned i = 0; i < 4; i++) {
+            ASSERT_NO_FATAL_FAILURES(VmoCheck(leaf_clones[i], i + 1));
+            ASSERT_NO_FATAL_FAILURES(VmoWrite(leaf_clones[i], i + 5));
+        }
+
+        if (!early_close) {
+            // The number of allocated pages is implementation dependent, but it must be less
+            // than the total user-visible vmo size.
+            constexpr uint32_t kImplTotalPages = 10;
+            static_assert(kImplTotalPages <= 10);
+            if (original) {
+                ASSERT_EQ(original + 10 * ZX_PAGE_SIZE, KmemVmoMemUsage());
+            }
+            vmo.reset();
+            clone.reset();
+        }
+
+        // Check that the clones have the correct data and that nothing
+        // is unnecessary retained/allocated.
+        for (unsigned i = 0; i < 4; i++) {
+            ASSERT_NO_FATAL_FAILURES(VmoCheck(leaf_clones[i], i + 5));
+            ASSERT_EQ(VmoCommittedBytes(leaf_clones[i]), ZX_PAGE_SIZE);
+        }
+        if (original) {
+            ASSERT_EQ(original + 4 * ZX_PAGE_SIZE, KmemVmoMemUsage());
+        }
     }
-    if (original) {
-        ASSERT_EQ(original + 4 * ZX_PAGE_SIZE, KmemVmoMemUsage());
-    }
+};
+
+TEST_F(VmoCloneDisjointClonesTests, DisjointCloneEarlyClose) {
+    ASSERT_NO_FATAL_FAILURES(DisjointClonesTest(true));
 }
 
-TEST(VmoClone2TestCase, DisjointCloneEarlyClose) {
-    ASSERT_NO_FATAL_FAILURES(DisjointCloneTestHelper(true));
-}
-
-TEST(VmoClone2TestCase, DisjointCloneLateClose) {
-    ASSERT_NO_FATAL_FAILURES(DisjointCloneTestHelper(false));
+TEST_F(VmoCloneDisjointClonesTests, DisjointCloneLateClose) {
+    ASSERT_NO_FATAL_FAILURES(DisjointClonesTest(false));
 }
 
 // A second disjoint clone test that checks that closing the disjoint clones which haven't
 // yet been written to doesn't affect the contents of other disjoint clones.
-TEST(VmoClone2TestCase, DisjointCloneTest2) {
-    uint64_t original = 0;
-    if (get_root_resource) {
-        original = KmemVmoMemUsage();
-    }
+TEST_F(VmoClone2TestCase, DisjointCloneTest2) {
+    const uint64_t original = KmemVmoMemUsage();
 
     auto test_fn = [original](uint32_t perm[]) -> void {
         zx::vmo vmo;
@@ -954,125 +1014,121 @@ enum class ResizeTarget {
 };
 
 // Tests that resizing a (clone|cloned) vmo frees unnecessary pages.
-void ResizeTestHelper(Contiguity contiguity, ResizeTarget target) {
-    bool contiguous = contiguity == Contiguity::Contig;
-    bool resize_child = target == ResizeTarget::Child;
+class VmoCloneResizeTests : public KmemStatsFixture {
+ protected:
+    static void ResizeTest(Contiguity contiguity, ResizeTarget target) {
+        bool contiguous = contiguity == Contiguity::Contig;
+        bool resize_child = target == ResizeTarget::Child;
 
-    if (contiguous && !get_root_resource) {
-        printf("Root resource not available, skipping\n");
-        return;
+        const uint64_t original = KmemVmoMemUsage();
+        if (contiguous && original == 0) {
+            printf("Root resource not available, skipping\n");
+            return;
+        }
+
+        // Create a vmo and a clone of the same size.
+        zx::iommu iommu;
+        zx::bti bti;
+        zx::vmo vmo;
+        if (contiguous) {
+            zx_iommu_desc_dummy_t desc;
+            ASSERT_OK(zx::iommu::create(RootResource(), ZX_IOMMU_TYPE_DUMMY,
+                                      &desc, sizeof(desc), &iommu));
+            ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+            ASSERT_OK(zx::vmo::create_contiguous(bti, 4 * ZX_PAGE_SIZE, 0, &vmo));
+        } else {
+            ASSERT_OK(zx::vmo::create(4 * ZX_PAGE_SIZE, ZX_VMO_RESIZABLE, &vmo));
+        }
+
+        for (unsigned i = 0; i < 4; i++) {
+            ASSERT_NO_FATAL_FAILURES(VmoWrite(vmo, i + 1, i * ZX_PAGE_SIZE));
+        }
+
+        zx::vmo clone;
+        ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2 | ZX_VMO_CHILD_RESIZABLE,
+                                   0, 4 * ZX_PAGE_SIZE, &clone));
+
+        // Write to one page in each vmo.
+        ASSERT_NO_FATAL_FAILURES(VmoWrite(vmo, 5, ZX_PAGE_SIZE));
+        ASSERT_NO_FATAL_FAILURES(VmoWrite(clone, 5, 2 * ZX_PAGE_SIZE));
+
+        ASSERT_EQ(VmoCommittedBytes(vmo), 4 * ZX_PAGE_SIZE);
+        ASSERT_EQ(VmoCommittedBytes(clone), 2 * ZX_PAGE_SIZE);
+        if (original) {
+            ASSERT_EQ(original + 6 * ZX_PAGE_SIZE, KmemVmoMemUsage());
+        }
+
+        const zx::vmo& resize_target = resize_child ? clone : vmo;
+        const zx::vmo& original_size_vmo = resize_child ? vmo : clone;
+
+        if (contiguous && !resize_child) {
+            // Contiguous vmos can't be resizable.
+            ASSERT_EQ(resize_target.set_size(ZX_PAGE_SIZE), ZX_ERR_UNAVAILABLE);
+            return;
+        } else {
+            ASSERT_OK(resize_target.set_size(ZX_PAGE_SIZE));
+        }
+
+        // Check that the data in both vmos is correct.
+        for (unsigned i = 0; i < 4; i++) {
+            // The index of original_size_vmo's page we wrote to depends on which vmo it is
+            uint32_t written_page_idx = resize_child ? 1 : 2;
+            // If we're checking the page we wrote to, look for 5, otherwise look for the tagged value.
+            uint32_t expected_val = i == written_page_idx ? 5 : i + 1;
+            ASSERT_NO_FATAL_FAILURES(VmoCheck(original_size_vmo, expected_val, i * ZX_PAGE_SIZE));
+        }
+        ASSERT_NO_FATAL_FAILURES(VmoCheck(resize_target, 1));
+
+        // Check that pages are properly allocated/blamed.
+        ASSERT_EQ(VmoCommittedBytes(vmo), (resize_child ? 4 : 1) * ZX_PAGE_SIZE);
+        ASSERT_EQ(VmoCommittedBytes(clone), (resize_child ? 0 : 3) * ZX_PAGE_SIZE);
+        if (original) {
+            ASSERT_EQ(original + 4 * ZX_PAGE_SIZE, KmemVmoMemUsage());
+        }
+
+        // Check that growing the shrunk vmo doesn't expose anything.
+        ASSERT_OK(resize_target.set_size(2 * ZX_PAGE_SIZE));
+        ASSERT_NO_FATAL_FAILURES(VmoCheck(resize_target, 0, ZX_PAGE_SIZE));
+
+        // Check that writes into the non-resized vmo don't require allocating pages.
+        ASSERT_NO_FATAL_FAILURES(VmoWrite(original_size_vmo, 6, 3 * ZX_PAGE_SIZE));
+        ASSERT_EQ(VmoCommittedBytes(vmo), (resize_child ? 4 : 1) * ZX_PAGE_SIZE);
+        ASSERT_EQ(VmoCommittedBytes(clone), (resize_child ? 0 : 3) * ZX_PAGE_SIZE);
+        if (original) {
+            ASSERT_EQ(original + 4 * ZX_PAGE_SIZE, KmemVmoMemUsage());
+        }
+
+        // Check that closing the non-resized vmo frees the the inaccessible pages.
+        if (contiguous) {
+            ASSERT_NO_FATAL_FAILURES(CheckContigState<4>(bti, vmo));
+        }
+
+        // Check that closing the non-resized VMO frees the the inaccessible pages.
+        if (resize_child) {
+            vmo.reset();
+        } else {
+            clone.reset();
+        }
+
+        ASSERT_NO_FATAL_FAILURES(VmoCheck(resize_target, 1));
+        ASSERT_EQ(VmoCommittedBytes(resize_target), ZX_PAGE_SIZE);
+        if (original) {
+            ASSERT_EQ(original + ZX_PAGE_SIZE, KmemVmoMemUsage());
+        }
     }
+};
 
-    uint64_t original = 0;
-    if (get_root_resource) {
-        original = KmemVmoMemUsage();
-    }
-
-    // Create a vmo and a clone of the same size.
-    zx::iommu iommu;
-    zx::bti bti;
-    zx::vmo vmo;
-    if (contiguous) {
-        zx_iommu_desc_dummy_t desc;
-        ASSERT_OK(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY,
-                                  &desc, sizeof(desc), iommu.reset_and_get_address()));
-        ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
-        ASSERT_OK(zx::vmo::create_contiguous(bti, 4 * ZX_PAGE_SIZE, 0, &vmo));
-    } else {
-        ASSERT_OK(zx::vmo::create(4 * ZX_PAGE_SIZE, ZX_VMO_RESIZABLE, &vmo));
-    }
-
-    for (unsigned i = 0; i < 4; i++) {
-        ASSERT_NO_FATAL_FAILURES(VmoWrite(vmo, i + 1, i * ZX_PAGE_SIZE));
-    }
-
-    zx::vmo clone;
-    ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2 | ZX_VMO_CHILD_RESIZABLE,
-                               0, 4 * ZX_PAGE_SIZE, &clone));
-
-    // Write to one page in each vmo.
-    ASSERT_NO_FATAL_FAILURES(VmoWrite(vmo, 5, ZX_PAGE_SIZE));
-    ASSERT_NO_FATAL_FAILURES(VmoWrite(clone, 5, 2 * ZX_PAGE_SIZE));
-
-    ASSERT_EQ(VmoCommittedBytes(vmo), 4 * ZX_PAGE_SIZE);
-    ASSERT_EQ(VmoCommittedBytes(clone), 2 * ZX_PAGE_SIZE);
-    if (get_root_resource) {
-        ASSERT_EQ(original + 6 * ZX_PAGE_SIZE, KmemVmoMemUsage());
-    }
-
-    const zx::vmo& resize_target = resize_child ? clone : vmo;
-    const zx::vmo& original_size_vmo = resize_child ? vmo : clone;
-
-    if (contiguous && !resize_child) {
-        // Contigous vmos can't be resizable.
-        ASSERT_EQ(resize_target.set_size(ZX_PAGE_SIZE), ZX_ERR_UNAVAILABLE);
-        return;
-    } else {
-        ASSERT_OK(resize_target.set_size(ZX_PAGE_SIZE));
-    }
-
-    // Check that the data in both vmos is correct.
-    for (unsigned i = 0; i < 4; i++) {
-        // The index of original_size_vmo's page we wrote to depends on which vmo it is
-        uint32_t written_page_idx = resize_child ? 1 : 2;
-        // If we're checking the page we wrote to, look for 5, otherwise look for the tagged value.
-        uint32_t expected_val = i == written_page_idx ? 5 : i + 1;
-        ASSERT_NO_FATAL_FAILURES(VmoCheck(original_size_vmo, expected_val, i * ZX_PAGE_SIZE));
-    }
-    ASSERT_NO_FATAL_FAILURES(VmoCheck(resize_target, 1));
-
-    // Check that pages are properly allocated/blamed.
-    ASSERT_EQ(VmoCommittedBytes(vmo), (resize_child ? 4 : 1) * ZX_PAGE_SIZE);
-    ASSERT_EQ(VmoCommittedBytes(clone), (resize_child ? 0 : 3) * ZX_PAGE_SIZE);
-    if (get_root_resource) {
-        ASSERT_EQ(original + 4 * ZX_PAGE_SIZE, KmemVmoMemUsage());
-    }
-
-    // Check that growing the shrunk vmo doesn't expose anything.
-    ASSERT_OK(resize_target.set_size(2 * ZX_PAGE_SIZE));
-    ASSERT_NO_FATAL_FAILURES(VmoCheck(resize_target, 0, ZX_PAGE_SIZE));
-
-    // Check that writes into the non-resized vmo don't require allocating pages.
-    ASSERT_NO_FATAL_FAILURES(VmoWrite(original_size_vmo, 6, 3 * ZX_PAGE_SIZE));
-    ASSERT_EQ(VmoCommittedBytes(vmo), (resize_child ? 4 : 1) * ZX_PAGE_SIZE);
-    ASSERT_EQ(VmoCommittedBytes(clone), (resize_child ? 0 : 3) * ZX_PAGE_SIZE);
-    if (get_root_resource) {
-        ASSERT_EQ(original + 4 * ZX_PAGE_SIZE, KmemVmoMemUsage());
-    }
-
-    // Check that closing the non-resized vmo frees the the inaccessible pages.
-    if (contiguous) {
-        ASSERT_NO_FATAL_FAILURES(CheckContigState<4>(bti, vmo));
-    }
-
-    // Check that closing the non-resized VMO frees the the inaccessible pages.
-    if (resize_child) {
-        vmo.reset();
-    } else {
-        clone.reset();
-    }
-
-    ASSERT_NO_FATAL_FAILURES(VmoCheck(resize_target, 1));
-    ASSERT_EQ(VmoCommittedBytes(resize_target), ZX_PAGE_SIZE);
-    if (get_root_resource) {
-        ASSERT_EQ(original + ZX_PAGE_SIZE, KmemVmoMemUsage());
-    }
+TEST_F(VmoCloneResizeTests, ResizeChild) {
+    ASSERT_NO_FATAL_FAILURES(ResizeTest(Contiguity::NonContig, ResizeTarget::Child));
 }
 
-TEST(VmoClone2TestCase, ResizeChild) {
-    ASSERT_NO_FATAL_FAILURES(ResizeTestHelper(Contiguity::NonContig, ResizeTarget::Child));
-}
-
-TEST(VmoClone2TestCase, ResizeOriginal) {
-    ASSERT_NO_FATAL_FAILURES(ResizeTestHelper(Contiguity::NonContig, ResizeTarget::Parent));
+TEST_F(VmoCloneResizeTests, ResizeOriginal) {
+    ASSERT_NO_FATAL_FAILURES(ResizeTest(Contiguity::NonContig, ResizeTarget::Parent));
 }
 
 // Tests that growing a clone exposes zeros and doesn't consume memory on parent writes.
-TEST(VmoClone2TestCase, ResizeGrow) {
-    uint64_t original = 0;
-    if (get_root_resource) {
-        original = KmemVmoMemUsage();
-    }
+TEST_F(VmoClone2TestCase, ResizeGrow) {
+    const uint64_t original = KmemVmoMemUsage();
 
     zx::vmo vmo;
     ASSERT_NO_FATAL_FAILURES(InitPageTaggedVmo(2, &vmo));
@@ -1095,18 +1151,15 @@ TEST(VmoClone2TestCase, ResizeGrow) {
 
     ASSERT_EQ(VmoCommittedBytes(vmo), 2 * ZX_PAGE_SIZE);
     ASSERT_EQ(VmoCommittedBytes(clone), 0);
-    if (get_root_resource) {
+    if (original) {
         ASSERT_EQ(original + 2 * ZX_PAGE_SIZE, KmemVmoMemUsage());
     }
 }
 
 // Tests that a vmo with a child that has a non-zero offset can be truncated without
 // affecting the child.
-TEST(VmoClone2TestCase, ResizeOffsetChild) {
-    uint64_t original = 0;
-    if (get_root_resource) {
-        original = KmemVmoMemUsage();
-    }
+TEST_F(VmoClone2TestCase, ResizeOffsetChild) {
+    const uint64_t original = KmemVmoMemUsage();
 
     zx::vmo vmo;
     ASSERT_NO_FATAL_FAILURES(InitPageTaggedVmo(3, &vmo));
@@ -1119,17 +1172,14 @@ TEST(VmoClone2TestCase, ResizeOffsetChild) {
     ASSERT_NO_FATAL_FAILURES(VmoCheck(clone, 2));
     ASSERT_EQ(VmoCommittedBytes(vmo), 0);
     ASSERT_EQ(VmoCommittedBytes(clone), ZX_PAGE_SIZE);
-    if (get_root_resource) {
+    if (original) {
         ASSERT_EQ(original + ZX_PAGE_SIZE, KmemVmoMemUsage());
     }
 }
 
 // Tests that resize works with multiple disjoint children.
-TEST(VmoClone2TestCase, ResizeDisjointChild) {
-    uint64_t original = 0;
-    if (get_root_resource) {
-        original = KmemVmoMemUsage();
-    }
+TEST_F(VmoClone2TestCase, ResizeDisjointChild) {
+    const uint64_t original = KmemVmoMemUsage();
 
     auto test_fn = [original](uint32_t perm[]) -> void {
         zx::vmo vmo;
@@ -1146,7 +1196,7 @@ TEST(VmoClone2TestCase, ResizeDisjointChild) {
 
         // Nothing new should have been allocated and everything still belongs to the first vmo.
         ASSERT_EQ(VmoCommittedBytes(vmo), 3 * ZX_PAGE_SIZE);
-        if (get_root_resource) {
+        if (original) {
             ASSERT_EQ(original + 3 * ZX_PAGE_SIZE, KmemVmoMemUsage());
         }
 
@@ -1161,14 +1211,14 @@ TEST(VmoClone2TestCase, ResizeDisjointChild) {
         ASSERT_EQ(VmoCommittedBytes(clones[perm[0]]), 0);
         ASSERT_EQ(VmoCommittedBytes(clones[perm[1]]), 0);
         ASSERT_EQ(VmoCommittedBytes(clones[perm[2]]), ZX_PAGE_SIZE);
-        if (get_root_resource) {
+        if (original) {
             ASSERT_EQ(original + 1 * ZX_PAGE_SIZE, KmemVmoMemUsage());
         }
 
         ASSERT_OK(clones[perm[2]].set_size(0));
 
         ASSERT_EQ(VmoCommittedBytes(clones[perm[2]]), 0);
-        if (get_root_resource) {
+        if (original) {
             ASSERT_EQ(original, KmemVmoMemUsage());
         }
     };
@@ -1177,11 +1227,8 @@ TEST(VmoClone2TestCase, ResizeDisjointChild) {
 }
 
 // Tests that resize works when with progressive writes.
-TEST(VmoClone2TestCase, ResizeMultipleProgressive) {
-    uint64_t original = 0;
-    if (get_root_resource) {
-        original = KmemVmoMemUsage();
-    }
+TEST_F(VmoClone2TestCase, ResizeMultipleProgressive) {
+    uint64_t original = KmemVmoMemUsage();
 
     zx::vmo vmo;
     ASSERT_NO_FATAL_FAILURES(InitPageTaggedVmo(3, &vmo));
@@ -1209,7 +1256,7 @@ TEST(VmoClone2TestCase, ResizeMultipleProgressive) {
     ASSERT_EQ(VmoCommittedBytes(vmo), 3 * ZX_PAGE_SIZE);
     ASSERT_EQ(VmoCommittedBytes(clone), 0 * ZX_PAGE_SIZE);
     ASSERT_EQ(VmoCommittedBytes(clone2), 0 * ZX_PAGE_SIZE);
-    if (get_root_resource) {
+    if (original) {
         ASSERT_EQ(original + 3 * ZX_PAGE_SIZE, KmemVmoMemUsage());
     }
 
@@ -1224,7 +1271,7 @@ TEST(VmoClone2TestCase, ResizeMultipleProgressive) {
     ASSERT_EQ(VmoCommittedBytes(vmo), 0);
     ASSERT_EQ(VmoCommittedBytes(clone), kImplClone1Cost);
     ASSERT_EQ(VmoCommittedBytes(clone2), kImplClone2Cost);
-    if (get_root_resource) {
+    if (original) {
         ASSERT_EQ(original + ZX_PAGE_SIZE, KmemVmoMemUsage());
     }
 }
@@ -1280,11 +1327,13 @@ void ManyChildrenTestHelper(bool reverse_close) {
 }
 
 TEST(VmoClone2TestCase, ManyChildren) {
-    ASSERT_NO_FATAL_FAILURES(ManyChildrenTestHelper(false));
+    bool kForwardClose = false;
+    ASSERT_NO_FATAL_FAILURES(ManyChildrenTestHelper(kForwardClose));
 }
 
 TEST(VmoClone2TestCase, ManyChildrenRevClose) {
-    ASSERT_NO_FATAL_FAILURES(ManyChildrenTestHelper(true));
+    bool kReverseClose = true;
+    ASSERT_NO_FATAL_FAILURES(ManyChildrenTestHelper(kReverseClose));
 }
 
 // Creates a collection of clones and writes to their mappings in every permutation order
@@ -1352,11 +1401,8 @@ TEST(VmoClone2TestCase, ManyCloneOffset) {
 
 // Tests that a chain of clones where some have offsets doesn't mess up
 // the page migration logic.
-TEST(VmoClone2TestCase, ManyCloneMappingOffset) {
-    uint64_t original = 0;
-    if (get_root_resource) {
-        original = KmemVmoMemUsage();
-    }
+TEST_F(VmoClone2TestCase, ManyCloneMappingOffset) {
+    uint64_t original = KmemVmoMemUsage();
 
     zx::vmo vmos[4];
     ASSERT_OK(zx::vmo::create(2 * ZX_PAGE_SIZE, 0, vmos));
@@ -1396,108 +1442,109 @@ TEST(VmoClone2TestCase, ManyCloneMappingOffset) {
 
 // Tests the correctness and memory consumption of a chain of progressive clones, and
 // ensures that memory is properly discarded by closing/resizing the vmos.
-void ProgressiveCloneDiscardTestHelper(bool close) {
-    uint64_t original = 0;
-    if (get_root_resource) {
-        original = KmemVmoMemUsage();
-    }
+struct ProgressiveCloneDiscardTests : public KmemStatsFixture {
+    static void ProgressiveCloneDiscardTest(bool close) {
+        const uint64_t original = KmemVmoMemUsage();
 
-    constexpr uint64_t kNumClones = 6;
-    zx::vmo vmos[kNumClones];
-    ASSERT_NO_FATAL_FAILURES(InitPageTaggedVmo(kNumClones, vmos));
+        constexpr uint64_t kNumClones = 6;
+        zx::vmo vmos[kNumClones];
+        ASSERT_NO_FATAL_FAILURES(InitPageTaggedVmo(kNumClones, vmos));
 
-    ASSERT_EQ(VmoCommittedBytes(vmos[0]), kNumClones * ZX_PAGE_SIZE);
-    if (get_root_resource) {
-        ASSERT_EQ(original + kNumClones * ZX_PAGE_SIZE, KmemVmoMemUsage());
-    }
-
-    // Repeatedly clone the vmo while simultaniously changing it. Then check the total memory
-    // consumption. This must consume less pages than manually duplicating the vmo, but the
-    // precise amount consumed and the amount blamed to each vmo is implementation dependent.
-    // Furthermore, the amount blamed should match the amount allocated.
-    for (unsigned i = 1; i < kNumClones; i++) {
-        ASSERT_OK(vmos[0].create_child(ZX_VMO_CHILD_COPY_ON_WRITE2 | ZX_VMO_CHILD_RESIZABLE,
-                                       0, kNumClones * ZX_PAGE_SIZE, vmos + i));
-        ASSERT_NO_FATAL_FAILURES(VmoWrite(vmos[i], kNumClones + 2, i * ZX_PAGE_SIZE));
-    }
-    constexpr uint64_t kImplTotalPages = (kNumClones * (kNumClones + 1)) / 2;
-    static_assert(kImplTotalPages <= kNumClones * kNumClones);
-    for (unsigned i = 0; i < kNumClones; i++) {
-        ASSERT_EQ(VmoCommittedBytes(vmos[i]), (kNumClones - i) * ZX_PAGE_SIZE);
-    }
-    if (get_root_resource) {
-        ASSERT_EQ(original + kImplTotalPages * ZX_PAGE_SIZE, KmemVmoMemUsage());
-    }
-
-    // Check that the vmos have the right content.
-    for (unsigned i = 0; i < kNumClones; i++) {
-        for (unsigned j = 0; j < kNumClones; j++) {
-            uint32_t expected = (i != 0 && j == i) ? kNumClones + 2 : j + 1;
-            ASSERT_NO_FATAL_FAILURES(VmoCheck(vmos[i], expected, j * ZX_PAGE_SIZE));
+        ASSERT_EQ(VmoCommittedBytes(vmos[0]), kNumClones * ZX_PAGE_SIZE);
+        if (original) {
+            ASSERT_EQ(original + kNumClones * ZX_PAGE_SIZE, KmemVmoMemUsage());
         }
-    }
 
-    // Close the original vmo and check for correctness.
-    if (close) {
-        vmos[0].reset();
-    } else {
-        ASSERT_OK(vmos[0].set_size(0));
-    }
-
-    for (unsigned i = 1; i < kNumClones; i++) {
-        for (unsigned j = 0; j < kNumClones; j++) {
-            ASSERT_NO_FATAL_FAILURES(
-                    VmoCheck(vmos[i], j == i ? kNumClones + 2 : j + 1, j * ZX_PAGE_SIZE));
+        // Repeatedly clone the vmo while simultaniously changing it. Then check the total memory
+        // consumption. This must consume less pages than manually duplicating the vmo, but the
+        // precise amount consumed and the amount blamed to each vmo is implementation dependent.
+        // Furthermore, the amount blamed should match the amount allocated.
+        for (unsigned i = 1; i < kNumClones; i++) {
+            ASSERT_OK(vmos[0].create_child(ZX_VMO_CHILD_COPY_ON_WRITE2 | ZX_VMO_CHILD_RESIZABLE,
+                                           0, kNumClones * ZX_PAGE_SIZE, vmos + i));
+            ASSERT_NO_FATAL_FAILURES(VmoWrite(vmos[i], kNumClones + 2, i * ZX_PAGE_SIZE));
         }
-    }
+        constexpr uint64_t kImplTotalPages = (kNumClones * (kNumClones + 1)) / 2;
+        static_assert(kImplTotalPages <= kNumClones * kNumClones);
+        for (unsigned i = 0; i < kNumClones; i++) {
+            ASSERT_EQ(VmoCommittedBytes(vmos[i]), (kNumClones - i) * ZX_PAGE_SIZE);
+        }
+        if (original) {
+            ASSERT_EQ(original + kImplTotalPages * ZX_PAGE_SIZE, KmemVmoMemUsage());
+        }
 
-    // Check that some memory was freed and that all allocated memory is accounted for. The total
-    // amount retained is implementation dependent, but it must be less than manually copying
-    // the vmo. The amount blamed to each vmo does not need to be the same for both version
-    // of this test.
-    constexpr uint64_t kImplRemainingPages = kImplTotalPages - 1;
-    static_assert(kImplRemainingPages <= kNumClones * (kNumClones - 1));
-    uint64_t observed = 0;
-    for (unsigned i = 1; i < kNumClones; i++) {
-        observed += VmoCommittedBytes(vmos[i]);
-    }
-    if (get_root_resource) {
-        ASSERT_EQ(original + observed, KmemVmoMemUsage());
-    }
-    ASSERT_EQ(observed, kImplRemainingPages * ZX_PAGE_SIZE);
+        // Check that the vmos have the right content.
+        for (unsigned i = 0; i < kNumClones; i++) {
+            for (unsigned j = 0; j < kNumClones; j++) {
+                uint32_t expected = (i != 0 && j == i) ? kNumClones + 2 : j + 1;
+                ASSERT_NO_FATAL_FAILURES(VmoCheck(vmos[i], expected, j * ZX_PAGE_SIZE));
+            }
+        }
 
-    // Close all but the last two vmos. The total amount of memory consumed by the two remaining
-    // vmos is *not* implementation dependent.
-    for (unsigned i = 1; i < kNumClones - 2; i++) {
+        // Close the original vmo and check for correctness.
         if (close) {
-            vmos[i].reset();
+            vmos[0].reset();
         } else {
-            ASSERT_OK(vmos[i].set_size(0));
+            ASSERT_OK(vmos[0].set_size(0));
         }
-    }
 
-    for (unsigned i = kNumClones - 2; i < kNumClones; i++) {
-        for (unsigned j = 0; j < kNumClones; j++) {
-            ASSERT_NO_FATAL_FAILURES(
+        for (unsigned i = 1; i < kNumClones; i++) {
+            for (unsigned j = 0; j < kNumClones; j++) {
+                ASSERT_NO_FATAL_FAILURES(
                     VmoCheck(vmos[i], j == i ? kNumClones + 2 : j + 1, j * ZX_PAGE_SIZE));
+            }
+        }
+
+        // Check that some memory was freed and that all allocated memory is accounted for. The total
+        // amount retained is implementation dependent, but it must be less than manually copying
+        // the vmo. The amount blamed to each vmo does not need to be the same for both version
+        // of this test.
+        constexpr uint64_t kImplRemainingPages = kImplTotalPages - 1;
+        static_assert(kImplRemainingPages <= kNumClones * (kNumClones - 1));
+        uint64_t observed = 0;
+        for (unsigned i = 1; i < kNumClones; i++) {
+            observed += VmoCommittedBytes(vmos[i]);
+        }
+        if (original) {
+            ASSERT_EQ(original + observed, KmemVmoMemUsage());
+        }
+        ASSERT_EQ(observed, kImplRemainingPages * ZX_PAGE_SIZE);
+
+        // Close all but the last two vmos. The total amount of memory consumed by the two remaining
+        // vmos is *not* implementation dependent.
+        for (unsigned i = 1; i < kNumClones - 2; i++) {
+            if (close) {
+                vmos[i].reset();
+            } else {
+                ASSERT_OK(vmos[i].set_size(0));
+            }
+        }
+
+        for (unsigned i = kNumClones - 2; i < kNumClones; i++) {
+            for (unsigned j = 0; j < kNumClones; j++) {
+                ASSERT_NO_FATAL_FAILURES(
+                    VmoCheck(vmos[i], j == i ? kNumClones + 2 : j + 1, j * ZX_PAGE_SIZE));
+            }
+        }
+        if (original) {
+            ASSERT_EQ(original + (kNumClones + 2) * ZX_PAGE_SIZE, KmemVmoMemUsage());
         }
     }
-    if (get_root_resource) {
-        ASSERT_EQ(original + (kNumClones + 2) * ZX_PAGE_SIZE, KmemVmoMemUsage());
-    }
+};
+
+TEST_F(ProgressiveCloneDiscardTests, ProgressiveCloneClose) {
+    constexpr bool kClose = true;
+    ASSERT_NO_FATAL_FAILURES(ProgressiveCloneDiscardTest(kClose));
 }
 
-TEST(VmoClone2TestCase, ProgressiveCloneClose) {
-    ASSERT_NO_FATAL_FAILURES(ProgressiveCloneDiscardTestHelper(true));
-}
-
-TEST(VmoClone2TestCase, ProgressiveCloneTruncate) {
-    ASSERT_NO_FATAL_FAILURES(ProgressiveCloneDiscardTestHelper(false));
+TEST_F(ProgressiveCloneDiscardTests, ProgressiveCloneTruncate) {
+    constexpr bool kTruncate = false;
+    ASSERT_NO_FATAL_FAILURES(ProgressiveCloneDiscardTest(kTruncate));
 }
 
 // Tests that a contiguous VMO remains contiguous even after writes to its clones.
-TEST(VmoClone2TestCase, ContiguousVmo) {
-    if (!get_root_resource) {
+TEST_F(VmoClone2TestCase, ContiguousVmo) {
+    if (!RootResource()) {
         printf("Root resource not available, skipping\n");
         return;
     }
@@ -1505,8 +1552,8 @@ TEST(VmoClone2TestCase, ContiguousVmo) {
     zx::iommu iommu;
     zx::bti bti;
     zx_iommu_desc_dummy_t desc;
-    ASSERT_OK(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY,
-                              &desc, sizeof(desc), iommu.reset_and_get_address()));
+    ASSERT_OK(zx::iommu::create(RootResource(), ZX_IOMMU_TYPE_DUMMY,
+                              &desc, sizeof(desc), &iommu));
     ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
 
     zx::vmo vmos[4];
@@ -1538,8 +1585,8 @@ TEST(VmoClone2TestCase, ContiguousVmo) {
 }
 
 // Tests that closing the clone of a contiguous VMO doesn't cause problems with contiguity.
-TEST(VmoClone2TestCase, ContiguousVmoCloseChild) {
-    if (!get_root_resource) {
+TEST_F(VmoClone2TestCase, ContiguousVmoCloseChild) {
+    if (!RootResource()) {
         printf("Root resource not available, skipping\n");
         return;
     }
@@ -1547,8 +1594,8 @@ TEST(VmoClone2TestCase, ContiguousVmoCloseChild) {
     zx::iommu iommu;
     zx::bti bti;
     zx_iommu_desc_dummy_t desc;
-    ASSERT_OK(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY,
-                              &desc, sizeof(desc), iommu.reset_and_get_address()));
+    ASSERT_OK(zx::iommu::create(RootResource(), ZX_IOMMU_TYPE_DUMMY,
+                              &desc, sizeof(desc), &iommu));
     ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
 
     zx::vmo vmo;
@@ -1573,19 +1620,19 @@ TEST(VmoClone2TestCase, ContiguousVmoCloseChild) {
 
 // Tests that pages are properly become 'non-contiguous' after closing a contiguous VMO
 // with a child.
-TEST(VmoClone2TestCase, ContiguousVmoCloseOriginal) {
-    if (!get_root_resource) {
+TEST_F(VmoClone2TestCase, ContiguousVmoCloseOriginal) {
+    if (!RootResource()) {
         printf("Root resource not available, skipping\n");
         return;
     }
 
-    uint64_t original = KmemVmoMemUsage();
+    const uint64_t original = KmemVmoMemUsage();
 
     zx::iommu iommu;
     zx::bti bti;
     zx_iommu_desc_dummy_t desc;
-    ASSERT_OK(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY,
-                              &desc, sizeof(desc), iommu.reset_and_get_address()));
+    ASSERT_OK(zx::iommu::create(RootResource(), ZX_IOMMU_TYPE_DUMMY,
+                              &desc, sizeof(desc), &iommu));
     ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
 
     zx::vmo vmo;
@@ -1608,17 +1655,17 @@ TEST(VmoClone2TestCase, ContiguousVmoCloseOriginal) {
     ASSERT_EQ(original + ZX_PAGE_SIZE, KmemVmoMemUsage());
 }
 
-TEST(VmoClone2TestCase, ContiguousVmoResizeChild) {
-    ASSERT_NO_FATAL_FAILURES(ResizeTestHelper(Contiguity::Contig, ResizeTarget::Child));
+TEST_F(VmoCloneResizeTests, ContiguousVmoResizeChild) {
+    ASSERT_NO_FATAL_FAILURES(ResizeTest(Contiguity::Contig, ResizeTarget::Child));
 }
 
-TEST(VmoClone2TestCase, ContiguousVmoResizeOriginal) {
-    ASSERT_NO_FATAL_FAILURES(ResizeTestHelper(Contiguity::Contig, ResizeTarget::Parent));
+TEST_F(VmoCloneResizeTests, ContiguousVmoResizeOriginal) {
+    ASSERT_NO_FATAL_FAILURES(ResizeTest(Contiguity::Contig, ResizeTarget::Parent));
 }
 
 // Tests partial clones of contiguous vmos.
-TEST(VmoClone2TestCase, ContiguousVmoPartialClone) {
-    if (!get_root_resource) {
+TEST_F(VmoClone2TestCase, ContiguousVmoPartialClone) {
+    if (!RootResource()) {
         printf("Root resource not available, skipping\n");
         return;
     }
@@ -1626,8 +1673,8 @@ TEST(VmoClone2TestCase, ContiguousVmoPartialClone) {
     zx::iommu iommu;
     zx::bti bti;
     zx_iommu_desc_dummy_t desc;
-    ASSERT_OK(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY,
-                              &desc, sizeof(desc), iommu.reset_and_get_address()));
+    ASSERT_OK(zx::iommu::create(RootResource(), ZX_IOMMU_TYPE_DUMMY,
+                              &desc, sizeof(desc), &iommu));
     ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
 
     zx::vmo vmos[4];
@@ -1663,15 +1710,14 @@ TEST(VmoClone2TestCase, ContiguousVmoPartialClone) {
 }
 
 // Tests that clones based on physical vmos can't be created.
-TEST(VmoClone2TestCase, NoPhysical) {
-    if (!get_root_resource) {
+TEST_F(VmoClone2TestCase, NoPhysical) {
+    if (!RootResource()) {
         printf("Root resource not available, skipping\n");
         return;
     }
 
     zx::vmo vmo;
-    ASSERT_OK(zx_vmo_create_physical(
-                get_root_resource(), 0, ZX_PAGE_SIZE, vmo.reset_and_get_address()));
+    ASSERT_OK(zx::vmo::create_physical(RootResource(), 0, ZX_PAGE_SIZE, &vmo));
 
     zx::vmo clone;
     ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, ZX_PAGE_SIZE, &clone),
