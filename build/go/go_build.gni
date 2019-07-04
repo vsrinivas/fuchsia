@@ -84,7 +84,7 @@ template("go_build") {
       "//build/go/gen_library_metadata.py",
     ]
 
-    godepfile = "//buildtools/${host_platform}/godepfile"
+    godepfile = "//prebuilt/tools/godepfile/${host_platform}/godepfile"
     inputs = [
       godepfile,
     ]
@@ -170,7 +170,7 @@ template("go_build") {
     } else {
       args += [
         "--go-root",
-        rebase_path("//buildtools/${host_platform}/go"),
+        rebase_path("//prebuilt/third_party/go/${host_platform}"),
       ]
     }
 
@@ -188,7 +188,7 @@ template("go_build") {
     # list it as an output.
     args += [
       "--buildidtool",
-      rebase_path("//buildtools/${host_platform}/buildidtool", root_build_dir),
+      rebase_path("//prebuilt/tools/buildidtool/${host_platform}/buildidtool", root_build_dir),
       "--build-id-dir",
       ".build-id",
     ]

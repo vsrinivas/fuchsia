@@ -14,7 +14,7 @@ if (is_mac) {
 declare_args() {
   # Sets a custom base directory for `rustc` and `cargo`.
   # This can be used to test custom Rust toolchains.
-  rustc_prefix = "//buildtools/${host_platform}/rust/bin"
+  rustc_prefix = "//prebuilt/third_party/rust/${host_platform}/bin"
 
   # Sets the default LTO type for rustc bulids.
   rust_lto = ""
@@ -97,7 +97,7 @@ rust_build_args =
       "--rustc",
       rebase_path("$rustc_prefix/rustc"),
       "--cmake-dir",
-      rebase_path("//buildtools/cmake/bin"),
+      rebase_path("//prebuilt/third_party/cmake/${host_platform}/bin"),
       "--lib-dir",
       rebase_path(get_label_info(":any($shlib_toolchain)", "root_out_dir")),
       "--target",
@@ -119,4 +119,4 @@ rust_build_deps = _sysroot_deps + _std_deps
 # may not be compatible with newer ones.
 # To achieve this, we insert a build dependency on the rust version.
 rust_build_inputs =
-    [ "//buildtools/${host_platform}/rust/.versions/rust.cipd_version" ]
+    [ "//prebuilt/third_party/rust/${host_platform}/.versions/rust.cipd_version" ]

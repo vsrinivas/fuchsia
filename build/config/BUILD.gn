@@ -90,7 +90,7 @@ config("relative_paths") {
     # we invoke the compiler), rather than absolute.  This can affect
     # __FILE__ expansions (e.g. assertions in system headers).  We
     # normally run a compiler that's someplace within the source tree
-    # (//buildtools/...), so its absolute installation path will have a
+    # (//prebuilt/...), so its absolute installation path will have a
     # prefix matching absolute_path and hence be mapped to relative_path
     # in the debugging information, so this should actually be
     # superfluous for purposes of the debugging information.

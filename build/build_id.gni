@@ -33,7 +33,7 @@ template("build_id_entry") {
       stamp,
     ]
 
-    script = "//buildtools/${host_platform}/buildidtool"
+    script = "//prebuilt/tools/buildidtool/${host_platform}/buildidtool"
     args = [
       "-entry",
       ".debug=" + rebase_path(invoker.debug, root_build_dir),

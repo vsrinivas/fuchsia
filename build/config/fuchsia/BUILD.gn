@@ -70,13 +70,14 @@ config("compiler") {
 }
 
 config("toolchain_version_stamp") {
-  # We want to force a recompile and relink of the world whenever our toolchain changes since
-  # artifacts from an older version of the toolchain may or may not be compatible with newer ones.
-  # To achieve this, we insert a synthetic define into the compile line.
-  cipd_version = read_file(
-          "//buildtools/${host_platform}/clang/.versions/clang.cipd_version",
-          "json")
-  defines = [ "TOOLCHAIN_VERSION=${cipd_version.instance_id}" ]
+  if (clang_prefix == default_clang_prefix) {
+    # We want to force a recompile and relink of the world whenever our toolchain changes since
+    # artifacts from an older version of the toolchain may or may not be compatible with newer ones.
+    # To achieve this, we insert a synthetic define into the compile line.
+    cipd_version =
+        read_file("//prebuilt/third_party/clang/${host_platform}/.versions/clang.cipd_version", "json")
+    defines = [ "TOOLCHAIN_VERSION=${cipd_version.instance_id}" ]
+  }
 }
 
 config("compiler_sysroot") {

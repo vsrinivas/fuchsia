@@ -26,7 +26,7 @@ static_library("elflib") {
 # fx build
 # cp out/default/exe.unstripped/cowsay \
 #   src/lib/elflib/test_data/unstripped_example.arm64.elf
-# ./buildtools/linux-x64/clang/bin/llvm-objcopy \
+# ./prebuilt/third_party/clang/linux-x64/bin/llvm-objcopy \
 #     --strip-sections out/default/exe.unstripped/cowsay \
 #     src/lib/elflib/test_data/unstripped_example_stripped.arm64.elf
 copy("copy_example_elf") {

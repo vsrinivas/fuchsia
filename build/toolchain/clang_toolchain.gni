@@ -98,7 +98,7 @@ template("clang_toolchain") {
         strip = "xcrun strip"
       } else {
         strip = "${prefix}/llvm-objcopy"
-        buildidtool = rebase_path("//buildtools/${host_platform}/buildidtool",
+        buildidtool = rebase_path("//prebuilt/tools/buildidtool/${host_platform}/buildidtool",
                                   root_build_dir)
       }
     }

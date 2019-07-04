@@ -35,6 +35,11 @@ class variant(
     def matches(self, info, assume=False):
         if self.libprefix and info.interp:
             return info.interp.startswith(self.libprefix)
+        if not self.has_libcxx and info.soname in LIBCXX_SONAMES:
+            # Variants without their own toolchain libraries wind up placing
+            # vanilla toolchain libraries in the variant target lib directory
+            # so they should be accepted even though they don't really match.
+            return True
         if self.runtime:
             return self.runtime in info.needed or info.soname == self.runtime
         return assume

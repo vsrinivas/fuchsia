@@ -82,14 +82,14 @@ action("concatenate_ids_txts") {
 
 action("breakpad_symbols") {
   testonly = true
-  script = "//buildtools/${host_platform}/dump_breakpad_symbols"
+  script = "//prebuilt/tools/dump_breakpad_symbols/${host_platform}/dump_breakpad_symbols"
 
   deps = [
     ":concatenate_ids_txts",
   ]
 
   inputs = [
-    "//buildtools/${host_platform}/dump_syms/dump_syms",
+    "//prebuilt/tools/dump_syms/${host_platform}/dump_syms",
   ]
 
   sources = [
@@ -108,7 +108,7 @@ action("breakpad_symbols") {
     "-out-dir",
     rebase_path("$root_out_dir/breakpad_symbols"),
     "-dump-syms-path",
-    rebase_path("//buildtools/${host_platform}/dump_syms/dump_syms"),
+    rebase_path("//prebuilt/tools/dump_syms/${host_platform}/dump_syms"),
     "-depfile",
     rebase_path(depfile, root_build_dir),
     "-tar-file",

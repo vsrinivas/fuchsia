@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/clang/clang.gni")
+
 # TODO(SPN-35): Move these to a build_overrides/ file to support the
 # standalone build as well.
 
@@ -15,4 +17,4 @@ graphics_compute_glslangValidator_tool_target =
 
 # Path to the 'clang-format' host tool. Only used to generate debug shaders.
 graphics_compute_clang_format_host_tool =
-    "//buildtools/${host_os}-${host_cpu}/clang/bin/clang-format"
+    "$clang_prefix/clang-format"
