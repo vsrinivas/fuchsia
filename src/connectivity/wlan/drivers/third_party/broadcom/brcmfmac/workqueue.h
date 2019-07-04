@@ -70,4 +70,4 @@ void workqueue_schedule_default(struct work_struct* work);
 // returns.
 void workqueue_cancel_work(struct work_struct* work);
 
-#endif // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_WORKQUEUE_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_WORKQUEUE_H_

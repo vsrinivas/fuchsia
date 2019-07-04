@@ -13,8 +13,8 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef _BRCMF_FEATURE_H
-#define _BRCMF_FEATURE_H
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FEATURE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FEATURE_H_
 
 #include "core.h"
 
@@ -105,4 +105,4 @@ bool brcmf_feat_is_enabled(struct brcmf_if* ifp, enum brcmf_feat_id id);
  */
 bool brcmf_feat_is_quirk_enabled(struct brcmf_if* ifp, enum brcmf_feat_quirk quirk);
 
-#endif /* _BRCMF_FEATURE_H */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FEATURE_H_

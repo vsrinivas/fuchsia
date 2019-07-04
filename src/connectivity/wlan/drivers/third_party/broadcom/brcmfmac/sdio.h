@@ -14,8 +14,8 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef BRCMFMAC_SDIO_H
-#define BRCMFMAC_SDIO_H
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SDIO_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SDIO_H_
 
 #include <ddk/device.h>
 #include <ddk/protocol/sdio.h>
@@ -399,4 +399,4 @@ zx_status_t brcmf_sdio_sleep(struct brcmf_sdio* bus, bool sleep);
 void brcmf_sdio_trigger_dpc(struct brcmf_sdio* bus);
 int brcmf_sdio_oob_irqhandler(void* cookie);
 
-#endif /* BRCMFMAC_SDIO_H */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SDIO_H_

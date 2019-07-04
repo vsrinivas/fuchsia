@@ -13,8 +13,8 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef _BRCMF_PNO_H
-#define _BRCMF_PNO_H
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PNO_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PNO_H_
 
 #include <zircon/types.h>
 
@@ -84,4 +84,4 @@ uint64_t brcmf_pno_find_reqid_by_bucket(struct brcmf_pno_info* pi, uint32_t buck
  */
 uint32_t brcmf_pno_get_bucket_map(struct brcmf_pno_info* pi, struct brcmf_pno_net_info_le* netinfo);
 
-#endif /* _BRCMF_PNO_H */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PNO_H_

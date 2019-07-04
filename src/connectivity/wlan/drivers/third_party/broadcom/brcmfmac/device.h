@@ -14,8 +14,8 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef BRCMF_DEVICE_H
-#define BRCMF_DEVICE_H
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_DEVICE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_DEVICE_H_
 
 #include <assert.h>
 #include <pthread.h>
@@ -200,4 +200,4 @@ zx_status_t brcmf_debugfs_rm_recursive(zx_handle_t dir);
 zx_status_t brcmf_debugfs_create_u32_file(const char* name, uint32_t permissions,
                                           zx_handle_t parent, uint32_t* data_to_access);
 
-#endif /* BRCMF_DEVICE_H */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_DEVICE_H_

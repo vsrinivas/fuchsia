@@ -18,8 +18,8 @@
  * Common types *
  */
 
-#ifndef BRCMFMAC_CORE_H
-#define BRCMFMAC_CORE_H
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CORE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CORE_H_
 
 #include <threads.h>
 #include <atomic>
@@ -230,4 +230,4 @@ zx_status_t brcmf_core_init(zx_device_t* dev);
 void brcmf_core_exit(void);
 void brcmf_netdev_start_xmit(struct net_device* ndev, ethernet_netbuf_t* netbuf);
 
-#endif /* BRCMFMAC_CORE_H */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CORE_H_

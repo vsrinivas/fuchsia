@@ -14,8 +14,8 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef BRCMFMAC_BUS_H
-#define BRCMFMAC_BUS_H
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BUS_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BUS_H_
 
 #include <atomic>
 
@@ -233,4 +233,4 @@ void brcmf_bus_add_txhdrlen(struct brcmf_device* dev, uint len);
 zx_status_t brcmf_bus_register(zx_device_t* zxdev);
 void brcmf_bus_exit(void);
 
-#endif /* BRCMFMAC_BUS_H */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BUS_H_

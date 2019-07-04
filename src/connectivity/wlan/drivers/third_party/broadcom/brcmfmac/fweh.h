@@ -362,4 +362,4 @@ static inline void brcmf_fweh_process_netbuf(struct brcmf_pub* drvr, struct brcm
     brcmf_fweh_process_event(drvr, event_packet, netbuf->len + ETH_HLEN);
 }
 
-#endif /* SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWEH_H_ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWEH_H_

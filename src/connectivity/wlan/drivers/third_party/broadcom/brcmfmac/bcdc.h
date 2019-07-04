@@ -13,8 +13,8 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef BRCMFMAC_BCDC_H
-#define BRCMFMAC_BCDC_H
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BCDC_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BCDC_H_
 
 #include "core.h"
 #include "device.h"
@@ -26,4 +26,4 @@ void brcmf_proto_bcdc_txflowblock(struct brcmf_device* dev, bool state);
 void brcmf_proto_bcdc_txcomplete(struct brcmf_device* dev, struct brcmf_netbuf* txp, bool success);
 struct brcmf_fws_info* drvr_to_fws(struct brcmf_pub* drvr);
 
-#endif /* BRCMFMAC_BCDC_H */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BCDC_H_

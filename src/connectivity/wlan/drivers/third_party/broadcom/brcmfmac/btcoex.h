@@ -25,4 +25,4 @@ void brcmf_btcoex_detach(struct brcmf_cfg80211_info* cfg);
 zx_status_t brcmf_btcoex_set_mode(struct brcmf_cfg80211_vif* vif, enum brcmf_btcoex_mode mode,
                                   uint16_t duration);
 
-#endif /* SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BTCOEX_H_ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BTCOEX_H_

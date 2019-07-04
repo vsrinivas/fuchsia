@@ -14,8 +14,8 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _fwil_h_
-#define _fwil_h_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWIL_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWIL_H_
 
 #include "core.h"
 
@@ -115,4 +115,4 @@ zx_status_t brcmf_fil_bsscfg_int_set(struct brcmf_if* ifp, const char* name, uin
 zx_status_t brcmf_fil_bsscfg_int_get(struct brcmf_if* ifp, const char* name, uint32_t* data);
 const char* brcmf_fil_get_errstr(int32_t err);
 
-#endif /* _fwil_h_ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWIL_H_

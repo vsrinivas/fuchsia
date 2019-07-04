@@ -14,8 +14,8 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef BRCMFMAC_CFG80211_H
-#define BRCMFMAC_CFG80211_H
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CFG80211_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CFG80211_H_
 
 #include <threads.h>
 #include <atomic>
@@ -461,4 +461,4 @@ void brcmf_cfg80211_rx(struct brcmf_if* ifp, struct brcmf_netbuf* packet);
 // TODO: Move to core.h
 zx_status_t brcmf_netdev_open(struct net_device* ndev);
 
-#endif /* BRCMFMAC_CFG80211_H */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CFG80211_H_

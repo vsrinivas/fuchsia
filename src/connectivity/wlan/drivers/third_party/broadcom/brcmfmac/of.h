@@ -14,8 +14,8 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef BRCMF_OF_H
-#define BRCMF_OF_H
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_OF_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_OF_H_
 
 #include "common.h"
 #include "device.h"
@@ -23,4 +23,4 @@
 void brcmf_of_probe(struct brcmf_device* dev, enum brcmf_bus_type bus_type,
                     struct brcmf_mp_device* settings);
 
-#endif /* BRCMF_OF_H */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_OF_H_

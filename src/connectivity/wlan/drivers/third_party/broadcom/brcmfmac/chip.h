@@ -13,8 +13,8 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef BRCMF_CHIP_H
-#define BRCMF_CHIP_H
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CHIP_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CHIP_H_
 
 #include <zircon/types.h>
 
@@ -105,4 +105,4 @@ void brcmf_chip_set_passive(struct brcmf_chip* ci);
 bool brcmf_chip_set_active(struct brcmf_chip* ci, uint32_t rstvec);
 bool brcmf_chip_sr_capable(struct brcmf_chip* pub);
 
-#endif /* BRCMF_AXIDMP_H */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CHIP_H_

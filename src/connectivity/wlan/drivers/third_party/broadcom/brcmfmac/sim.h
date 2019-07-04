@@ -30,4 +30,4 @@ struct brcmf_simdev {
     std::unique_ptr<SimFirmware> sim_fw;
 };
 
-#endif // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_H_

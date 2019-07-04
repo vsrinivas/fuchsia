@@ -965,4 +965,4 @@ struct brcmf_gscan_config {
     struct brcmf_gscan_bucket_config bucket[1];
 };
 
-#endif /* SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWIL_TYPES_H_ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWIL_TYPES_H_

@@ -13,8 +13,8 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef BRCMFMAC_FIRMWARE_H
-#define BRCMFMAC_FIRMWARE_H
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FIRMWARE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FIRMWARE_H_
 
 #include "common.h"
 #include "device.h"
@@ -86,4 +86,4 @@ zx_status_t brcmf_fw_get_firmwares(struct brcmf_device* dev, uint16_t flags, con
                                                  const struct brcmf_firmware* fw, void* nvram_image,
                                                  uint32_t nvram_len));
 
-#endif /* BRCMFMAC_FIRMWARE_H */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FIRMWARE_H_
