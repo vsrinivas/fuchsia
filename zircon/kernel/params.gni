@@ -32,8 +32,12 @@ declare_args() {
   enable_lock_dep = false
 
   # Disable fair scheduler by default on all architectures.
-  # ZX-3959: Disable by default until E2E tests stabilize.
-  enable_fair_scheduler = false
+  # ZX-3964: Disable by default on arm64 until E2E tests stabilize.
+  if (current_cpu == "arm64") {
+    enable_fair_scheduler = false
+  } else if (current_cpu == "x64") {
+    enable_fair_scheduler = true
+  }
 
   # Enable detailed scheduler traces.
   detailed_scheduler_tracing = false
