@@ -78,6 +78,10 @@ def deduce_aux_variant(info, install_path):
         deduce_from = 'lib/' + info.interp
     elif info.soname is not None:
         deduce_from = install_path
+    elif 'libclang_rt.asan.so' in info.needed:
+        return make_variant('asan', info)
+    elif 'libclang_rt.ubsan_standalone.so' in info.needed:
+        return make_variant('ubsan', info)
     else:
         return None
     pathelts = deduce_from.split('/')
