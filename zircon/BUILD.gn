@@ -370,6 +370,7 @@ foreach(cpu, standard_fuchsia_cpus) {
     exclude_variant_tags = [ "instrumented" ]
     deps = [
       "$zx/system/core/devmgr:driver_deps",
+      "$zx/system/core/devmgr:driver_deps.asan",
     ]
   }
 
