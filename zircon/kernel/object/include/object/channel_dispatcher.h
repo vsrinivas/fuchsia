@@ -48,8 +48,7 @@ public:
     // Write to the opposing endpoint's message queue. |owner| is the process attempting to
     // write to the channel, or ZX_KOID_INVALID if kernel is doing it. If |owner| does not
     // match what was last set by Dispatcher::set_owner() the call will fail.
-    zx_status_t Write(zx_koid_t owner,
-                      MessagePacketPtr msg) TA_NO_THREAD_SAFETY_ANALYSIS;
+    zx_status_t Write(zx_koid_t owner, MessagePacketPtr msg);
 
     // Perform a transacted Write + Read. |owner| is the process attempting to write
     // to the channel, or ZX_KOID_INVALID if kernel is doing it. If |owner| does not
@@ -57,7 +56,7 @@ public:
     zx_status_t Call(zx_koid_t owner,
                      MessagePacketPtr msg,
                      zx_time_t deadline,
-                     MessagePacketPtr* reply) TA_NO_THREAD_SAFETY_ANALYSIS;
+                     MessagePacketPtr* reply);
 
     // Performs the wait-then-read half of Call.  This is meant for retrying
     // after an interruption caused by suspending.

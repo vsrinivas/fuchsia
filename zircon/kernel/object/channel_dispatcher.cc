@@ -225,6 +225,7 @@ zx_status_t ChannelDispatcher::Write(zx_koid_t owner, MessagePacketPtr msg) {
     if (!peer_)
         return ZX_ERR_PEER_CLOSED;
 
+    AssertHeld(*peer_->get_lock());
     peer_->WriteSelf(ktl::move(msg));
 
     return ZX_OK;
@@ -281,6 +282,7 @@ alloc_txid:
         waiters_.push_back(waiter);
 
         // (1) Write outbound message to opposing endpoint.
+        AssertHeld(*peer_->get_lock());
         peer_->WriteSelf(ktl::move(msg));
     }
 

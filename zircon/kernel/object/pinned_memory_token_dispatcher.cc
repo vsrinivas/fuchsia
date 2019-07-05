@@ -63,11 +63,10 @@ zx_status_t PinnedMemoryTokenDispatcher::Create(fbl::RefPtr<BusTransactionInitia
 
     // Create must be called with the BTI's lock held, so this is safe to
     // invoke.
-    [&]() TA_NO_THREAD_SAFETY_ANALYSIS {
-        new_handle.dispatcher()->bti_->AddPmoLocked(new_handle.dispatcher().get());
-    }();
-
-    new_handle.dispatcher()->initialized_ = true;
+    const fbl::RefPtr<PinnedMemoryTokenDispatcher>& dispatcher = new_handle.dispatcher();
+    AssertHeld(*dispatcher->bti_->get_lock());
+    dispatcher->bti_->AddPmoLocked(new_handle.dispatcher().get());
+    dispatcher->initialized_ = true;
 
     *handle = ktl::move(new_handle);
     *rights = default_rights();

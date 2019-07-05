@@ -129,7 +129,7 @@ zx_status_t SocketDispatcher::UserSignalSelfLocked(uint32_t clear_mask, uint32_t
     return ZX_OK;
 }
 
-zx_status_t SocketDispatcher::Shutdown(uint32_t how) TA_NO_THREAD_SAFETY_ANALYSIS {
+zx_status_t SocketDispatcher::Shutdown(uint32_t how) {
     canary_.Assert();
 
     LTRACE_ENTRY;
@@ -163,10 +163,11 @@ zx_status_t SocketDispatcher::Shutdown(uint32_t how) TA_NO_THREAD_SAFETY_ANALYSI
     // Our peer already be closed - if so, we've already updated our own bits so we are done. If the
     // peer is done, we need to notify them of the state change.
     if (peer_ != nullptr) {
+        AssertHeld(*peer_->get_lock());
         return peer_->ShutdownOtherLocked(how);
-    } else {
-        return ZX_OK;
     }
+
+    return ZX_OK;
 }
 
 zx_status_t SocketDispatcher::ShutdownOtherLocked(uint32_t how) {
@@ -209,7 +210,7 @@ zx_status_t SocketDispatcher::Write(Plane plane, user_in_ptr<const void> src, si
 }
 
 zx_status_t SocketDispatcher::WriteData(user_in_ptr<const void> src, size_t len,
-                                        size_t* nwritten) TA_NO_THREAD_SAFETY_ANALYSIS {
+                                        size_t* nwritten) {
     canary_.Assert();
 
     LTRACE_ENTRY;
@@ -229,11 +230,11 @@ zx_status_t SocketDispatcher::WriteData(user_in_ptr<const void> src, size_t len,
     if (len != static_cast<size_t>(static_cast<uint32_t>(len)))
         return ZX_ERR_INVALID_ARGS;
 
+    AssertHeld(*peer_->get_lock());
     return peer_->WriteSelfLocked(src, len, nwritten);
 }
 
-zx_status_t SocketDispatcher::WriteControl(user_in_ptr<const void> src, size_t len)
-    TA_NO_THREAD_SAFETY_ANALYSIS {
+zx_status_t SocketDispatcher::WriteControl(user_in_ptr<const void> src, size_t len) {
     canary_.Assert();
 
     if ((flags_ & ZX_SOCKET_HAS_CONTROL) == 0)
@@ -249,11 +250,12 @@ zx_status_t SocketDispatcher::WriteControl(user_in_ptr<const void> src, size_t l
     if (!peer_)
         return ZX_ERR_PEER_CLOSED;
 
+    AssertHeld(*peer_->get_lock());
     return peer_->WriteControlSelfLocked(src, len);
 }
 
 zx_status_t SocketDispatcher::WriteControlSelfLocked(user_in_ptr<const void> src,
-                                                     size_t len) TA_NO_THREAD_SAFETY_ANALYSIS {
+                                                     size_t len) {
     canary_.Assert();
 
     if (control_msg_len_ != 0)
@@ -265,14 +267,16 @@ zx_status_t SocketDispatcher::WriteControlSelfLocked(user_in_ptr<const void> src
     control_msg_len_ = static_cast<uint32_t>(len);
 
     UpdateStateLocked(0u, ZX_SOCKET_CONTROL_READABLE);
-    if (peer_)
+    if (peer_) {
+        AssertHeld(*peer_->get_lock());
         peer_->UpdateStateLocked(ZX_SOCKET_CONTROL_WRITABLE, 0u);
+    }
 
     return ZX_OK;
 }
 
 zx_status_t SocketDispatcher::WriteSelfLocked(user_in_ptr<const void> src, size_t len,
-                                              size_t* written) TA_NO_THREAD_SAFETY_ANALYSIS {
+                                              size_t* written) {
     canary_.Assert();
 
     if (is_full())
@@ -314,8 +318,10 @@ zx_status_t SocketDispatcher::WriteSelfLocked(user_in_ptr<const void> src, size_
     if (peer_ && is_full())
         clear |= ZX_SOCKET_WRITABLE;
 
-    if (clear)
+    if (clear) {
+        AssertHeld(*peer_->get_lock());
         peer_->UpdateStateLocked(clear, 0u);
+    }
 
     *written = st;
     return status;
@@ -333,7 +339,7 @@ zx_status_t SocketDispatcher::Read(Plane plane, ReadType type, user_out_ptr<void
 }
 
 zx_status_t SocketDispatcher::ReadData(ReadType type, user_out_ptr<void> dst, size_t len,
-                                       size_t* nread) TA_NO_THREAD_SAFETY_ANALYSIS {
+                                       size_t* nread) {
     canary_.Assert();
 
     LTRACE_ENTRY;
@@ -390,8 +396,10 @@ zx_status_t SocketDispatcher::ReadData(ReadType type, user_out_ptr<void> dst, si
                 set |= ZX_SOCKET_WRITE_THRESHOLD;
             if (was_full && (actual > 0))
                 set |= ZX_SOCKET_WRITABLE;
-            if (set)
+            if (set) {
+                AssertHeld(*peer_->get_lock());
                 peer_->UpdateStateLocked(0u, set);
+            }
         }
     }
 
@@ -400,7 +408,7 @@ zx_status_t SocketDispatcher::ReadData(ReadType type, user_out_ptr<void> dst, si
 }
 
 zx_status_t SocketDispatcher::ReadControl(ReadType type, user_out_ptr<void> dst, size_t len,
-                                          size_t* nread) TA_NO_THREAD_SAFETY_ANALYSIS {
+                                          size_t* nread) {
     canary_.Assert();
 
     if ((flags_ & ZX_SOCKET_HAS_CONTROL) == 0) {
@@ -419,8 +427,10 @@ zx_status_t SocketDispatcher::ReadControl(ReadType type, user_out_ptr<void> dst,
     if (type == ReadType::kConsume) {
         control_msg_len_ = 0;
         UpdateStateLocked(ZX_SOCKET_CONTROL_READABLE, 0u);
-        if (peer_)
+        if (peer_) {
+            AssertHeld(*peer_->get_lock());
             peer_->UpdateStateLocked(0u, ZX_SOCKET_CONTROL_WRITABLE);
+        }
     }
 
     *nread = copy_len;
@@ -438,7 +448,7 @@ zx_status_t SocketDispatcher::CheckShareable(SocketDispatcher* to_send) {
     return ZX_OK;
 }
 
-zx_status_t SocketDispatcher::Share(HandleOwner h) TA_NO_THREAD_SAFETY_ANALYSIS {
+zx_status_t SocketDispatcher::Share(HandleOwner h) {
     canary_.Assert();
 
     LTRACE_ENTRY;
@@ -450,10 +460,11 @@ zx_status_t SocketDispatcher::Share(HandleOwner h) TA_NO_THREAD_SAFETY_ANALYSIS 
     if (!peer_)
         return ZX_ERR_PEER_CLOSED;
 
+    AssertHeld(*peer_->get_lock());
     return peer_->ShareSelfLocked(ktl::move(h));
 }
 
-zx_status_t SocketDispatcher::ShareSelfLocked(HandleOwner h) TA_NO_THREAD_SAFETY_ANALYSIS {
+zx_status_t SocketDispatcher::ShareSelfLocked(HandleOwner h) {
     canary_.Assert();
 
     if (accept_queue_)
@@ -462,13 +473,15 @@ zx_status_t SocketDispatcher::ShareSelfLocked(HandleOwner h) TA_NO_THREAD_SAFETY
     accept_queue_ = ktl::move(h);
 
     UpdateStateLocked(0, ZX_SOCKET_ACCEPT);
-    if (peer_)
+    if (peer_) {
+        AssertHeld(*peer_->get_lock());
         peer_->UpdateStateLocked(ZX_SOCKET_SHARE, 0);
+    }
 
     return ZX_OK;
 }
 
-zx_status_t SocketDispatcher::Accept(HandleOwner* h) TA_NO_THREAD_SAFETY_ANALYSIS {
+zx_status_t SocketDispatcher::Accept(HandleOwner* h) {
     canary_.Assert();
 
     if (!(flags_ & ZX_SOCKET_HAS_ACCEPT))
@@ -482,18 +495,15 @@ zx_status_t SocketDispatcher::Accept(HandleOwner* h) TA_NO_THREAD_SAFETY_ANALYSI
     *h = ktl::move(accept_queue_);
 
     UpdateStateLocked(ZX_SOCKET_ACCEPT, 0);
-    if (peer_)
+    if (peer_) {
+        AssertHeld(*peer_->get_lock());
         peer_->UpdateStateLocked(0, ZX_SOCKET_SHARE);
+    }
 
     return ZX_OK;
 }
 
-// NOTE(abdulla): peer_ is protected by get_lock() while peer_->data_
-// is protected by peer_->get_lock(). These two locks are aliases of
-// one another so must only acquire one of them. Thread-safety
-// analysis does not know they are the same lock so we must disable
-// analysis.
-void SocketDispatcher::GetInfo(zx_info_socket_t* info) const TA_NO_THREAD_SAFETY_ANALYSIS {
+void SocketDispatcher::GetInfo(zx_info_socket_t* info) const {
     canary_.Assert();
     Guard<fbl::Mutex> guard{get_lock()};
     *info = zx_info_socket_t{
@@ -501,24 +511,29 @@ void SocketDispatcher::GetInfo(zx_info_socket_t* info) const TA_NO_THREAD_SAFETY
         .rx_buf_max = data_.max_size(),
         .rx_buf_size = data_.size(),
         .rx_buf_available = data_.size(flags_ & ZX_SOCKET_DATAGRAM),
-        .tx_buf_max = peer_ ? peer_->data_.max_size() : 0,
-        .tx_buf_size = peer_ ? peer_->data_.size() : 0,
+        .tx_buf_max = 0,
+        .tx_buf_size = 0,
     };
+    if (peer_) {
+        AssertHeld(*peer_->get_lock());  // Alias of this->get_lock().
+        info->tx_buf_max = peer_->data_.max_size();
+        info->tx_buf_size = peer_->data_.size();
+    }
 }
 
-size_t SocketDispatcher::GetReadThreshold() const TA_NO_THREAD_SAFETY_ANALYSIS {
+size_t SocketDispatcher::GetReadThreshold() const {
     canary_.Assert();
     Guard<fbl::Mutex> guard{get_lock()};
     return read_threshold_;
 }
 
-size_t SocketDispatcher::GetWriteThreshold() const TA_NO_THREAD_SAFETY_ANALYSIS {
+size_t SocketDispatcher::GetWriteThreshold() const {
     canary_.Assert();
     Guard<fbl::Mutex> guard{get_lock()};
     return write_threshold_;
 }
 
-zx_status_t SocketDispatcher::SetReadThreshold(size_t value) TA_NO_THREAD_SAFETY_ANALYSIS {
+zx_status_t SocketDispatcher::SetReadThreshold(size_t value) {
     canary_.Assert();
     Guard<fbl::Mutex> guard{get_lock()};
     if (value > data_.max_size())
@@ -539,11 +554,12 @@ zx_status_t SocketDispatcher::SetReadThreshold(size_t value) TA_NO_THREAD_SAFETY
     return ZX_OK;
 }
 
-zx_status_t SocketDispatcher::SetWriteThreshold(size_t value) TA_NO_THREAD_SAFETY_ANALYSIS {
+zx_status_t SocketDispatcher::SetWriteThreshold(size_t value) {
     canary_.Assert();
     Guard<fbl::Mutex> guard{get_lock()};
     if (peer_ == NULL)
         return ZX_ERR_PEER_CLOSED;
+    AssertHeld(*peer_->get_lock());
     if (value > peer_->data_.max_size())
         return ZX_ERR_INVALID_ARGS;
     write_threshold_ = value;
