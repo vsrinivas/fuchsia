@@ -172,11 +172,8 @@ public:
     explicit ConsistencyManager(X86PageTableBase* pt);
     ~ConsistencyManager();
 
-    // Disable thread safety analysis here because it has trouble identifying
-    // that |pt_->lock_| is held here.
-    void queue_free(vm_page_t* page) TA_NO_THREAD_SAFETY_ANALYSIS {
-        DEBUG_ASSERT(pt_->lock_.lock().IsHeld());
-
+    void queue_free(vm_page_t* page) {
+        AssertHeld(pt_->lock_);
         list_add_tail(&to_free_, &page->queue_node);
         pt_->pages_--;
     }
@@ -585,9 +582,8 @@ zx_status_t X86PageTableBase::AddMapping(volatile pt_entry_t* table, uint mmu_fl
         return AddMappingL0(table, mmu_flags, start_cursor, new_cursor, cm);
     }
 
-    // Disable thread safety analysis, since Clang has trouble noticing that
-    // lock_ is held when RemoveMapping is called.
-    auto abort = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
+    auto abort = fbl::MakeAutoCall([&]() {
+        AssertHeld(lock_);
         if (level == top_level()) {
             MappingCursor cursor = start_cursor;
             MappingCursor result;
@@ -860,7 +856,8 @@ zx_status_t X86PageTableBase::MapPages(vaddr_t vaddr, paddr_t* phys, size_t coun
         // TODO(teisenbe): Improve performance of this function by integrating deeper into
         // the algorithm (e.g. make the cursors aware of the page array).
         size_t idx = 0;
-        auto undo = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
+        auto undo = fbl::MakeAutoCall([&]() {
+            AssertHeld(lock_);
             if (idx > 0) {
                 MappingCursor start = {
                     .paddr = 0, .vaddr = vaddr, .size = idx * PAGE_SIZE,

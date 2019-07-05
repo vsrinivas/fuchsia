@@ -1472,8 +1472,7 @@ static zx_status_t x86_perfmon_map_buffers_locked(PerfmonState* state) {
     return status;
 }
 
-// This is invoked via mp_sync_exec which thread safety analysis cannot follow.
-static void x86_perfmon_start_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSIS {
+static void x86_perfmon_start_cpu_task(void* raw_context) {
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(!atomic_load(&perfmon_active) && raw_context);
 
@@ -1557,7 +1556,7 @@ zx_status_t arch_perfmon_start() {
 }
 
 // This is invoked via mp_sync_exec which thread safety analysis cannot follow.
-static void x86_perfmon_write_last_records(PerfmonState* state, uint32_t cpu) TA_NO_THREAD_SAFETY_ANALYSIS {
+static void x86_perfmon_write_last_records(PerfmonState* state, uint32_t cpu) {
     PerfmonCpuData* data = &state->cpu_data[cpu];
     perfmon::RecordHeader* next = data->buffer_next;
 
@@ -1627,8 +1626,7 @@ static void x86_perfmon_write_last_records(PerfmonState* state, uint32_t cpu) TA
     data->buffer_next = next;
 }
 
-// This is invoked via mp_sync_exec which thread safety analysis cannot follow.
-static void x86_perfmon_finalize_buffer(PerfmonState* state, uint32_t cpu) TA_NO_THREAD_SAFETY_ANALYSIS {
+static void x86_perfmon_finalize_buffer(PerfmonState* state, uint32_t cpu) {
     LTRACEF("Collecting last data for cpu %u\n", cpu);
 
     PerfmonCpuData* data = &state->cpu_data[cpu];
@@ -1650,8 +1648,7 @@ static void x86_perfmon_finalize_buffer(PerfmonState* state, uint32_t cpu) TA_NO
         reinterpret_cast<char*>(data->buffer_start);
 }
 
-// This is invoked via mp_sync_exec which thread safety analysis cannot follow.
-static void x86_perfmon_stop_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSIS {
+static void x86_perfmon_stop_cpu_task(void* raw_context) {
     // Disable all counters ASAP.
     disable_counters();
     apic_pmi_mask();
@@ -1713,7 +1710,7 @@ void arch_perfmon_stop() {
 
 // Worker for x86_perfmon_fini to be executed on all cpus.
 // This is invoked via mp_sync_exec which thread safety analysis cannot follow.
-static void x86_perfmon_reset_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSIS {
+static void x86_perfmon_reset_task(void* raw_context) {
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(!atomic_load(&perfmon_active));
     DEBUG_ASSERT(!raw_context);
@@ -1993,7 +1990,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
     return true;
 }
 
-void apic_pmi_interrupt_handler(x86_iframe_t *frame) TA_NO_THREAD_SAFETY_ANALYSIS {
+void apic_pmi_interrupt_handler(x86_iframe_t* frame) TA_REQ(PerfmonLock::Get()) {
     if (!atomic_load(&perfmon_active)) {
         apic_issue_eoi();
         return;

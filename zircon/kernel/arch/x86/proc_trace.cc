@@ -145,7 +145,7 @@ void arch_trace_process_create(uint64_t pid, paddr_t pt_phys) {
 
 // Worker for x86_ipt_alloc_trace to be executed on all cpus.
 // This is invoked via mp_sync_exec which thread safety analysis cannot follow.
-static void x86_ipt_set_mode_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSIS {
+static void x86_ipt_set_mode_task(void* raw_context) TA_REQ(IptLock::Get()) {
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(!active);
 
@@ -227,8 +227,7 @@ zx_status_t x86_ipt_free_trace() {
     return ZX_OK;
 }
 
-// This is invoked via mp_sync_exec which thread safety analysis cannot follow.
-static void x86_ipt_start_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSIS {
+static void x86_ipt_start_cpu_task(void* raw_context) TA_REQ(IptLock::Get()) {
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(active && raw_context);
 
@@ -298,8 +297,7 @@ zx_status_t x86_ipt_start() {
     return ZX_OK;
 }
 
-// This is invoked via mp_sync_exec which thread safety analysis cannot follow.
-static void x86_ipt_stop_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSIS {
+static void x86_ipt_stop_cpu_task(void* raw_context) TA_REQ(IptLock::Get()) {
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(raw_context);
 
