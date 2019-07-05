@@ -14,7 +14,6 @@
 #include <src/lib/files/unique_fd.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
-#include <zircon/device/ktrace.h>
 #include <zircon/status.h>
 
 #include "garnet/lib/debugger_utils/util.h"

@@ -14,8 +14,6 @@
 #include <fuchsia/tracing/kernel/c/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
-
-#include <zircon/device/ktrace.h>
 #include <zircon/status.h>
 
 static const char kDevicePath[] = "/dev/misc/ktrace";
