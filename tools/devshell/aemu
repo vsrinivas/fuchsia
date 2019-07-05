@@ -282,6 +282,6 @@ fi
 
 # run aemu
 set -x
-"${AEMU_DIR}${AEMU}" "${OPTIONS[@]}" -fuchsia \
+"${AEMU_DIR}/${AEMU}" "${OPTIONS[@]}" -fuchsia \
      -kernel "${FUCHSIA_BUILD_DIR}/${IMAGE_QEMU_KERNEL_RAW}" \
      -initrd "$KERNEL_ZBI" "${ARGS[@]}" -append "$CMDLINE" "$@"
