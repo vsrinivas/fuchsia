@@ -1,5 +1,8 @@
 {
     "program": {
         "binary": "test/ledger_lib_unittests"
+    },
+    "sandbox": {
+        "services": [ "fuchsia.logger.LogSink" ]
     }
 }

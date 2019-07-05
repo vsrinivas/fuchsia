@@ -4,7 +4,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.ledger.cloud.CloudProvider"
+            "fuchsia.ledger.cloud.CloudProvider",
+            "fuchsia.logger.LogSink"
         ]
     }
 }

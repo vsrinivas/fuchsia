@@ -22,6 +22,7 @@
             "isolated-persistent-storage"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.tracing.controller.Controller",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.sys.Launcher"
