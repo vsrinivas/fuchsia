@@ -10,11 +10,9 @@
 #include <fbl/algorithm.h>
 #include <ktl/limits.h>
 
-// utility function to test that offset + len is entirely within a range
-// returns false if out of range
-// NOTE: only use unsigned lengths
+// Is the range [offset, offset + len] fully inside the range [0, max] ?
 template <typename O, typename L>
-static inline bool InRange(O offset, L len, O trim_to_len) {
+static inline bool InRange(O offset, L len, O max) {
     static_assert(ktl::numeric_limits<O>::is_signed == false, "InRange requires unsigned type O");
     static_assert(ktl::numeric_limits<L>::is_signed == false, "InRange requires unsigned type L");
 
@@ -24,12 +22,12 @@ static inline bool InRange(O offset, L len, O trim_to_len) {
     }
 
     // we started off the end of the range
-    if (offset > trim_to_len) {
+    if (offset > max) {
         return false;
     }
 
     // does the end exceed the range?
-    if (offset + len > trim_to_len) {
+    if (offset + len > max) {
         return false;
     }
 
