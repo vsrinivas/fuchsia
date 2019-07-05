@@ -385,11 +385,13 @@ config("default_warnings") {
     "-Wno-unused-function",
     "-Werror=unused-label",
     "-Werror=return-type",
+    "-Wno-address-of-packed-member",
   ]
   cflags_c = [
     "-Werror=implicit-function-declaration",
     "-Wstrict-prototypes",
     "-Wwrite-strings",
+    "-Wno-absolute-value",
   ]
   cflags_cc = [
     "-Wconversion",
@@ -404,7 +406,6 @@ config("default_warnings") {
   } else {
     cflags += [
       "-Wnewline-eof",
-      "-Wno-address-of-packed-member",
       "-Wimplicit-fallthrough",
     ]
   }
