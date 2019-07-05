@@ -13,50 +13,43 @@ use futures::future::{FutureExt, LocalFutureObj};
 use futures::prelude::*;
 use futures::select;
 use futures::stream::FuturesUnordered;
-use std::cell::{Cell, RefCell};
+use std::cell::{Ref, RefCell};
 use std::convert::{Into, TryFrom};
 use std::rc::Rc;
 
+use crate::filter::{self, RequestFilter};
 use crate::serialization::*;
 use crate::state::*;
 use crate::utils::{FutureOrEmpty, Signal, SignalWatcher};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum ConnectionState {
-    Connected,
-    Disconnected,
-}
-
 /// Shared data accessible by any connection derived from a CloudSession.
 pub struct CloudSessionShared {
     pub storage: Rc<RefCell<Cloud>>,
-    network_state: Cell<ConnectionState>,
-    network_state_signal: RefCell<Signal>,
+    filter: RefCell<Box<dyn filter::RequestFilter>>,
+    filter_change_signal: RefCell<Signal>,
 }
 
 impl CloudSessionShared {
     pub fn new(storage: Rc<RefCell<Cloud>>) -> CloudSessionShared {
         CloudSessionShared {
             storage,
-            network_state: Cell::new(ConnectionState::Connected),
-            network_state_signal: RefCell::new(Signal::new()),
+            filter: RefCell::new(Box::new(filter::Always::new(filter::Status::Ok))),
+            filter_change_signal: RefCell::new(Signal::new()),
         }
     }
 
-    pub fn get_network_state(&self) -> ConnectionState {
-        self.network_state.get()
+    pub fn filter(&self) -> Ref<Box<dyn RequestFilter>> {
+        self.filter.borrow()
     }
 
-    pub fn set_network_state(&self, new_state: ConnectionState) {
-        if new_state == self.network_state.get() {
-            return;
-        };
-        self.network_state.set(new_state);
-        self.network_state_signal.borrow_mut().signal_and_rearm()
+    pub fn set_filter(&self, new_state: Box<dyn RequestFilter>) {
+        self.filter.replace(new_state);
+        self.filter_change_signal.borrow_mut().signal_and_rearm()
     }
 
-    pub fn watch_network_state(&self) -> SignalWatcher {
-        self.network_state_signal.borrow().watch()
+    /// Return a watcher that is trigerred when the network state changes.
+    pub fn watch_filter(&self) -> SignalWatcher {
+        self.filter_change_signal.borrow().watch()
     }
 }
 
@@ -77,7 +70,7 @@ struct DeviceSetSession {
 type DeviceSetSessionFuture = LocalFutureObj<'static, ()>;
 impl DeviceSetSession {
     fn new(shared: Rc<CloudSessionShared>, requests: DeviceSetRequestStream) -> DeviceSetSession {
-        let network_watcher = shared.watch_network_state();
+        let network_watcher = shared.watch_filter();
         DeviceSetSession { shared, requests: requests.fuse(), watcher: None, network_watcher }
     }
 
@@ -133,8 +126,8 @@ impl DeviceSetSession {
         loop {
             select! {
                 _ = &mut self.network_watcher => {
-                    self.network_watcher = self.shared.watch_network_state();
-                    if self.shared.get_network_state() == ConnectionState::Disconnected {
+                    self.network_watcher = self.shared.watch_filter();
+                    if self.shared.filter().device_set_watcher_status() == filter::Status::NetworkError {
                         if let Some((_watcher, proxy)) = self.watcher.take() {
                             proxy.on_error(Status::NetworkError)?
                         }
@@ -143,9 +136,12 @@ impl DeviceSetSession {
                 req = self.requests.try_next() =>
                     match req? {
                         None => return Ok(()),
-                        Some(req) => match self.shared.get_network_state() {
-                            ConnectionState::Disconnected => self.handle_request_disconnected(req)?,
-                            _ => self.handle_request(req)?,
+                        Some(req) => {
+                            let connected = self.shared.filter().device_set_request_status(&req);
+                            match connected {
+                                filter::Status::Ok => self.handle_request(req)?,
+                                filter::Status::NetworkError => self.handle_request_disconnected(req)?
+                            }
                         }
                     },
                 _ = FutureOrEmpty(self.watcher.as_mut().map(|(w, _)| w)) => {
@@ -189,7 +185,7 @@ impl PageSession {
         page_id: PageId,
         requests: PageCloudRequestStream,
     ) -> PageSession {
-        let network_watcher = shared.watch_network_state();
+        let network_watcher = shared.watch_filter();
         PageSession { shared, page_id, requests: requests.fuse(), watcher: None, network_watcher }
     }
 
@@ -232,7 +228,7 @@ impl PageSession {
         let page = storage.get_page(self.page_id.clone());
         match request {
             PageCloudRequest::AddCommits { commits, responder } => {
-                match Commit::deserialize_vec(commits.buffer) {
+                match Commit::deserialize_vec(&commits.buffer) {
                     Err(e) => responder.send(Status::from(e)),
                     Ok(commits) => responder.send(CloudError::status(page.add_commits(commits))),
                 }
@@ -246,7 +242,7 @@ impl PageSession {
                             Some((position, commits)) => (Some(position), commits),
                         };
                         let buf = Commit::serialize_vec(commits);
-                        // This must live until the end of the call
+                        // This must live until the end of the call.
                         let mut position = position.map(Token::into);
                         let position = position.as_mut().map(OutOfLine);
                         responder.send(
@@ -259,7 +255,7 @@ impl PageSession {
             }
             PageCloudRequest::AddObject { id, buffer, references: _, responder } => {
                 let mut data = Vec::new();
-                match read_buffer(buffer, &mut data) {
+                match read_buffer(&buffer, &mut data) {
                     Err(_) => responder.send(Status::ArgumentError),
                     Ok(()) => responder.send(CloudError::status(
                         page.add_object(ObjectId::from(id), Object { data }),
@@ -324,8 +320,8 @@ impl PageSession {
         loop {
             select! {
                 _ = &mut self.network_watcher => {
-                    self.network_watcher = self.shared.watch_network_state();
-                    if self.shared.get_network_state() == ConnectionState::Disconnected {
+                    self.network_watcher = self.shared.watch_filter();
+                    if self.shared.filter().page_cloud_watcher_status() == filter::Status::NetworkError {
                         if let Some((_watcher, proxy)) = self.watcher.take() {
                             // Ignoring errors because they should only close the proxy connection.
                             let _ = proxy.on_error(Status::NetworkError);
@@ -335,9 +331,12 @@ impl PageSession {
                 req = self.requests.try_next() => {
                     match req? {
                         None => return Ok(()),
-                        Some(req) => match self.shared.get_network_state() {
-                            ConnectionState::Disconnected => self.handle_request_disconnected(req)?,
-                            _ => self.handle_request(req)?
+                        Some(req) => {
+                            let connected = self.shared.filter().page_cloud_request_status(&req);
+                            match connected {
+                                filter::Status::Ok => self.handle_request(req)?,
+                                filter::Status::NetworkError => self.handle_request_disconnected(req)?
+                            }
                         }
                     }
                 },
@@ -422,6 +421,7 @@ mod tests {
     };
     use fuchsia_async as fasync;
     use pin_utils::pin_mut;
+    use std::cell::Cell;
     use std::rc::Rc;
 
     use super::*;
@@ -487,7 +487,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut client_fut).is_pending());
         assert!(waiting_on_watcher.get());
 
-        server_state.set_network_state(ConnectionState::Disconnected);
+        server_state.set_filter(Box::new(filter::Always::new(filter::Status::NetworkError)));
         assert!(exec.run_until_stalled(&mut client_fut).is_ready());
     }
 
@@ -558,7 +558,48 @@ mod tests {
         assert!(exec.run_until_stalled(&mut client_fut).is_pending());
         assert!(waiting_on_watcher.get());
 
-        server_state.set_network_state(ConnectionState::Disconnected);
+        server_state.set_filter(Box::new(filter::Always::new(filter::Status::NetworkError)));
+        assert!(exec.run_until_stalled(&mut client_fut).is_ready());
+    }
+
+    /// Tests that error injection works as expected.
+    #[test]
+    fn error_injection() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let (client, server) = create_endpoints::<PageCloudMarker>().unwrap();
+
+        let stream = server.into_stream().unwrap();
+        let server_state = Rc::new(CloudSessionShared::new(Rc::new(RefCell::new(Cloud::new()))));
+        let server_fut =
+            PageSession::new(Rc::clone(&server_state), PageId(vec![], vec![]), stream).run();
+        server_state.set_filter(Box::new(filter::Flaky::new(2)));
+        fasync::spawn_local(server_fut);
+
+        let proxy = client.into_proxy().unwrap();
+        let client_fut = async move {
+            // Query A fails twice.
+            let (status, _, _) = await!(proxy.get_commits(None)).unwrap();
+            assert_eq!(status, Status::NetworkError);
+            let (status, _, _) = await!(proxy.get_commits(None)).unwrap();
+            assert_eq!(status, Status::NetworkError);
+            // Query B fails.
+            let mut token = Token::into(Token(4));
+            let (status, _, _) = await!(proxy.get_commits(Some(OutOfLine(&mut token)))).unwrap();
+            assert_eq!(status, Status::NetworkError);
+            // Query A succeeds on the third try.
+            let (status, _, _) = await!(proxy.get_commits(None)).unwrap();
+            assert_eq!(status, Status::Ok);
+            // Query A's count is reset and it fails again.
+            let (status, _, _) = await!(proxy.get_commits(None)).unwrap();
+            assert_eq!(status, Status::NetworkError);
+            let (status, _, _) = await!(proxy.get_commits(None)).unwrap();
+            assert_eq!(status, Status::NetworkError);
+            let (status, _, _) = await!(proxy.get_commits(None)).unwrap();
+            assert_eq!(status, Status::Ok);
+        };
+        pin_mut!(client_fut);
+
         assert!(exec.run_until_stalled(&mut client_fut).is_ready());
     }
 }

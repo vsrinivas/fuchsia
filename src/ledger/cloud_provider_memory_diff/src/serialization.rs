@@ -28,9 +28,9 @@ impl PageId {
 }
 
 /// Reads bytes from a fidl buffer into `result`.
-pub fn read_buffer(buffer: fidl_fuchsia_mem::Buffer, output: &mut Vec<u8>) -> Result<(), Error> {
+pub fn read_buffer(buffer: &fidl_fuchsia_mem::Buffer, output: &mut Vec<u8>) -> Result<(), Error> {
     let size = buffer.size;
-    let vmo = buffer.vmo;
+    let vmo = &buffer.vmo;
     output.resize(size as usize, 0);
     vmo.read(output.as_mut_slice(), 0)?;
     Ok(())
@@ -115,7 +115,7 @@ impl Commit {
         .expect("Failed to write FIDL-encoded commit data to buffer")
     }
 
-    pub fn deserialize_vec(buf: fidl_fuchsia_mem::Buffer) -> Result<Vec<Commit>, CloudError> {
+    pub fn deserialize_vec(buf: &fidl_fuchsia_mem::Buffer) -> Result<Vec<Commit>, CloudError> {
         fidl::encoding::with_tls_coding_bufs(|data, _handles| {
             read_buffer(buf, data).map_err(|_| CloudError::ParseError)?;
             let mut serialized_commits = cloud::Commits { commits: vec![] };

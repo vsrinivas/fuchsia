@@ -70,7 +70,7 @@ pub struct PageCloud {
     commit_log: Vec<CommitId>,
     /// The set of commits uploaded by the clients.
     commits: HashMap<CommitId, Commit>,
-    /// Signal for new commits
+    /// Signal for new commits.
     commit_signal: Signal,
 }
 

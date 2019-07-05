@@ -24,6 +24,9 @@ enum NetworkState : int32 {
     DISCONNECTED = 1;
     /// The cloud behaves normally.
     CONNECTED = 2;
+    /// The cloud inject network errors the first few times a request is
+    /// attempted.
+    INJECT_NETWORK_ERRORS = 3;
 };
 
 /// Service controlling some CloudProvider connections sharing the same network

@@ -13,15 +13,15 @@ use futures::stream::FuturesUnordered;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::session::{CloudSession, CloudSessionFuture, CloudSessionShared, ConnectionState};
+use crate::filter;
+use crate::session::{CloudSession, CloudSessionFuture, CloudSessionShared};
 use crate::state::Cloud;
 
-impl From<NetworkState> for ConnectionState {
-    fn from(s: NetworkState) -> ConnectionState {
-        match s {
-            NetworkState::Connected => ConnectionState::Connected,
-            NetworkState::Disconnected => ConnectionState::Disconnected,
-        }
+fn filter_for_network_state(s: NetworkState) -> Box<dyn filter::RequestFilter> {
+    match s {
+        NetworkState::Connected => Box::new(filter::Always::new(filter::Status::Ok)),
+        NetworkState::Disconnected => Box::new(filter::Always::new(filter::Status::NetworkError)),
+        NetworkState::InjectNetworkErrors => Box::new(filter::Flaky::new(2)),
     }
 }
 
@@ -98,7 +98,7 @@ impl CloudController {
                     match req? {
                         None => return Ok(()),
                         Some(CloudControllerRequest::SetNetworkState {state, responder}) => {
-                            self.cloud_state.set_network_state(ConnectionState::from(state));
+                            self.cloud_state.set_filter(filter_for_network_state(state));
                             responder.send()?
                         },
                         Some(CloudControllerRequest::Connect {provider, ..}) => {
@@ -205,7 +205,7 @@ mod tests {
             let client1 = await!(connect_device_set(&proxy)).unwrap();
             let fingerprint = || vec![1, 2, 3].into_iter();
 
-            // Disconnect the first provider
+            // Disconnect the first provider.
             await!(client0.cloud_controller.set_network_state(NetworkState::Disconnected)).unwrap();
             assert_eq!(
                 await!(client0.device_set.check_fingerprint(&mut fingerprint())).unwrap(),
