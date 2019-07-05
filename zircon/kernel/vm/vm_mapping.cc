@@ -751,19 +751,12 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, PageRequest* p
     return ZX_OK;
 }
 
-// We disable thread safety analysis here because one of the common uses of this
-// function is for splitting one mapping object into several that will be backed
-// by the same VmObject.  In that case, object_->lock() gets aliased across all
-// of the VmMappings involved, but we have no way of informing the analyzer of
-// this, resulting in spurious warnings.  We could disable analysis on the
-// splitting functions instead, but they are much more involved, and we'd rather
-// have the analysis mostly functioning on those than on this much simpler
-// function.
-void VmMapping::ActivateLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
+void VmMapping::ActivateLocked() {
     DEBUG_ASSERT(state_ == LifeCycleState::NOT_READY);
     DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
     DEBUG_ASSERT(object_->lock()->lock().IsHeld());
     DEBUG_ASSERT(parent_);
+    AssertHeld(*object_->lock());
 
     state_ = LifeCycleState::ALIVE;
     object_->AddMappingLocked(this);

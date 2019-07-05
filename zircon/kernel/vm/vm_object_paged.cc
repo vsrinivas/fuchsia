@@ -610,18 +610,16 @@ bool VmObjectPaged::OnChildAddedLocked() {
     // zx_vmo_create_child was invoked and the vmo which that syscall created.
     DEBUG_ASSERT(children_list_len_ == 2);
 
-    // We need to proxy the child add to the original vmo so that
-    // it can update it's clone count.
-    return [&]() TA_NO_THREAD_SAFETY_ANALYSIS -> bool {
-        // Reaching into the children confuses analysis
-        for (auto& c : children_list_) {
-            if (c.user_id_ == user_id_) {
-                return c.OnChildAddedLocked();
-            }
+    // Reaching into the children confuses analysis
+    for (auto& c : children_list_) {
+        AssertHeld(c.lock_);
+        if (c.user_id_ == user_id_) {
+            return c.OnChildAddedLocked();
         }
-        // One of the children should always have a matching user_id.
-        panic("no child with matching user_id: %" PRIx64 "\n", user_id_);
-    }();
+    }
+
+    // One of the children should always have a matching user_id.
+    panic("no child with matching user_id: %" PRIx64 "\n", user_id_);
 }
 
 void VmObjectPaged::RemoveChild(VmObjectPaged* removed, Guard<fbl::Mutex>&& adopt) {
@@ -805,18 +803,19 @@ void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool rem
         // their split bits need to be cleared. Note that ::ReleaseCowParentPagesLocked ensures
         // that pages outside of the parent limit range won't have their split bits set.
         removed->page_list_.ForEveryPageInRange(
-                [removed_offset = removed->parent_offset_, this](vm_page_t* page, uint64_t offset)
-                // Analysis needs to be disabled since the main function has no information.
-                TA_NO_THREAD_SAFETY_ANALYSIS {
-            vm_page_t* p_page = page_list_.GetPage(offset + removed_offset);
-            if (p_page) {
-                // The page is definitely forked into |removed|, but shouldn't be forked twice.
-                DEBUG_ASSERT(p_page->object.cow_left_split ^ p_page->object.cow_right_split);
-                p_page->object.cow_left_split = 0;
-                p_page->object.cow_right_split = 0;
-            }
-            return ZX_ERR_NEXT;
-        }, removed->parent_start_limit_, removed->parent_limit_);
+            [removed_offset = removed->parent_offset_, this](vm_page_t* page, uint64_t offset) {
+                AssertHeld(lock_);
+                vm_page_t* p_page = page_list_.GetPage(offset + removed_offset);
+                if (p_page) {
+                    // The page is definitely forked into |removed|, but
+                    // shouldn't be forked twice.
+                    DEBUG_ASSERT(p_page->object.cow_left_split ^ p_page->object.cow_right_split);
+                    p_page->object.cow_left_split = 0;
+                    p_page->object.cow_right_split = 0;
+                }
+                return ZX_ERR_NEXT;
+            },
+            removed->parent_start_limit_, removed->parent_limit_);
 
         list_node covered_pages;
         list_initialize(&covered_pages);
@@ -944,7 +943,9 @@ size_t VmObjectPaged::AttributedPagesInRangeLocked(uint64_t offset, uint64_t len
             count++;
             return ZX_ERR_NEXT;
         },
-        [this, &count](uint64_t gap_start, uint64_t gap_end) TA_NO_THREAD_SAFETY_ANALYSIS {
+        [this, &count](uint64_t gap_start, uint64_t gap_end) {
+            AssertHeld(lock_);
+
             // If there's no parent, there's no pages to care about. If there is a non-hidden
             // parent, then that owns any pages in the gap, not us.
             if (!parent_ || !parent_->is_hidden()) {
@@ -1246,9 +1247,7 @@ void VmObjectPaged::ContiguousCowFixupLocked(VmObjectPaged* page_owner, uint64_t
     // in the page lists without having to worry about allocation.
     bool found = false;
     last_contig->page_list_.ForEveryPageInRange(
-        [page_owner, page_owner_offset, last_contig, &found](vm_page_t*& page1, uint64_t off)
-                // Walks the clone chain, which confuses analysis
-                TA_NO_THREAD_SAFETY_ANALYSIS {
+        [page_owner, page_owner_offset, last_contig, &found](vm_page_t*& page1, uint64_t off) {
 
             auto swap_fn = [&page1, &found](vm_page_t*& page2, uint64_t off) {
                 // We're guaranteed that the first page we see is the one we want.
@@ -1276,6 +1275,7 @@ void VmObjectPaged::ContiguousCowFixupLocked(VmObjectPaged* page_owner, uint64_t
             VmObjectPaged* cur = page_owner;
             uint64_t cur_offset = page_owner_offset;
             while (!found && cur != last_contig) {
+                AssertHeld(cur->lock_);
                 zx_status_t status = cur->page_list_.ForEveryPageInRange(
                     swap_fn, cur_offset, cur_offset + PAGE_SIZE);
                 DEBUG_ASSERT(status == ZX_OK);
