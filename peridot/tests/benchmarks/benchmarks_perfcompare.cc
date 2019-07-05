@@ -29,7 +29,7 @@ int main(int argc, const char** argv) {
   // Run these processes multiple times in order to account for
   // between-process variation in results (e.g. due to memory layout chosen
   // when a process starts).
-  for (int process = 0; process < 30; ++process) {
+  for (int process = 0; process < 6; ++process) {
     // Performance tests implemented in the Zircon repo.
     benchmarks_runner.AddLibPerfTestBenchmark(
         fxl::StringPrintf("zircon.perf_test_process%06d", process),
