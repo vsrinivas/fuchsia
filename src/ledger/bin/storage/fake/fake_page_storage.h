@@ -15,6 +15,8 @@
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/storage/fake/fake_journal_delegate.h"
+#include "src/ledger/bin/storage/fake/fake_object.h"
+#include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
@@ -76,6 +78,12 @@ class FakePageStorage : public PageStorageEmptyImpl {
   const std::map<ObjectIdentifier, std::string>& GetObjects() const;
   const std::map<ObjectDigest, ObjectReferencesAndPriority>& GetReferences() const;
 
+  // Returns true if |object_identifier| is still tracked by at least one live token.
+  bool HasLiveTokens(const ObjectIdentifier& identifier) const;
+
+  // Returns true if |token| has been issued by this fake storage.
+  bool HasIssuedToken(const std::unique_ptr<const PieceToken>& token) const;
+
   // Deletes this object from the fake local storage, but keeps it in its
   // "network" storage.
   void DeleteObjectFromLocal(const ObjectIdentifier& object_identifier);
@@ -95,6 +103,8 @@ class FakePageStorage : public PageStorageEmptyImpl {
 
  private:
   void SendNextObject();
+  // Returns a fake piece token and tracks it in tokens_.
+  std::unique_ptr<PieceToken> MakeFakeToken(ObjectIdentifier identifier);
 
   bool autocommit_ = true;
   bool drop_commit_notifications_ = false;
@@ -103,6 +113,7 @@ class FakePageStorage : public PageStorageEmptyImpl {
   ledger::Environment* const environment_;
   std::map<std::string, std::unique_ptr<FakeJournalDelegate>> journals_;
   std::map<ObjectIdentifier, std::string> objects_;
+  std::multimap<ObjectIdentifier, fake::FakeTokenChecker> tokens_;
   std::map<ObjectDigest, ObjectReferencesAndPriority> references_;
   std::map<CommitId, zx::time_utc> heads_;
   std::map<std::pair<CommitId, CommitId>, std::vector<CommitId>> merges_;

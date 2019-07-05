@@ -39,15 +39,30 @@ TEST(FakeObjectTest, FakeObject) {
   EXPECT_TRUE(references.empty());
 }
 
-TEST(FakeObjectTest, FakePieceToken) {
+TEST(FakeObjectTest, FakeTokenChecker) {
   const ObjectIdentifier identifier(1u, 2u, ObjectDigest("some digest"));
   auto token = std::make_unique<FakePieceToken>(identifier);
   EXPECT_EQ(token->GetIdentifier(), identifier);
 
-  FakeTokenChecker checker = token->GetChecker();
+  const FakeTokenChecker checker = token->GetChecker();
   EXPECT_TRUE(checker);
   token.reset();
   EXPECT_FALSE(checker);
+}
+
+TEST(FakeObjectTest, TracksToken) {
+  const ObjectIdentifier identifier(1u, 2u, ObjectDigest("some digest"));
+  auto fake_token = std::make_unique<FakePieceToken>(identifier);
+  const FakeTokenChecker checker = fake_token->GetChecker();
+
+  // Cast fake_token to a regular token to check TracksToken.
+  std::unique_ptr<const PieceToken> token(fake_token.release());
+
+  EXPECT_TRUE(checker.TracksToken(token));
+
+  std::unique_ptr<const PieceToken> another_token = std::make_unique<FakePieceToken>(identifier);
+  EXPECT_FALSE(checker.TracksToken(another_token));
+  EXPECT_FALSE(checker.TracksToken(nullptr));
 }
 
 }  // namespace

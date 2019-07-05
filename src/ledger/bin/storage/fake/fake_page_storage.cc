@@ -267,7 +267,7 @@ void FakePageStorage::GetPiece(
         }
 
         callback(Status::OK, std::make_unique<FakePiece>(object_identifier, it->second),
-                 std::make_unique<FakePieceToken>(object_identifier));
+                 MakeFakeToken(object_identifier));
       });
   async::PostDelayedTask(
       environment_->dispatcher(), [this] { SendNextObject(); }, kFakePageStorageDelay);
@@ -343,6 +343,27 @@ void FakePageStorage::DeleteObjectFromLocal(const ObjectIdentifier& object_ident
 }
 
 void FakePageStorage::SetDropCommitNotifications(bool drop) { drop_commit_notifications_ = drop; }
+
+std::unique_ptr<PieceToken> FakePageStorage::MakeFakeToken(ObjectIdentifier identifier) {
+  auto token = std::make_unique<FakePieceToken>(identifier);
+  tokens_.emplace(identifier, token->GetChecker());
+  return std::move(token);
+}
+
+bool FakePageStorage::HasLiveTokens(const ObjectIdentifier& object_identifier) const {
+  return std::any_of(tokens_.lower_bound(object_identifier), tokens_.upper_bound(object_identifier),
+                     [](const std::pair<const ObjectIdentifier, FakeTokenChecker>& it) {
+                       return static_cast<bool>(it.second);
+                     });
+}
+
+bool FakePageStorage::HasIssuedToken(const std::unique_ptr<const PieceToken>& token) const {
+  const auto& object_identifier = token->GetIdentifier();
+  return std::any_of(tokens_.lower_bound(object_identifier), tokens_.upper_bound(object_identifier),
+                     [&token](const std::pair<const ObjectIdentifier, FakeTokenChecker>& it) {
+                       return it.second.TracksToken(token);
+                     });
+}
 
 }  // namespace fake
 }  // namespace storage

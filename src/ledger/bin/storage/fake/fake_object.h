@@ -64,6 +64,9 @@ class FakeTokenChecker {
   // The token checker converts to true iff the PieceToken is still alive.
   explicit operator bool() const;
 
+  // Returns whether this token checker tracks |token|.
+  bool TracksToken(const std::unique_ptr<const PieceToken>& token) const;
+
  private:
   fxl::WeakPtr<FakePieceToken> token_;
 };
