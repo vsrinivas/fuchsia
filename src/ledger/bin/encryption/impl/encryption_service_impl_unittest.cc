@@ -67,6 +67,16 @@ class EncryptionServiceTest : public ledger::TestWithEnvironment {
     EXPECT_TRUE(called);
   }
 
+  void ApplyChunkingPermutation(uint64_t chunk_window_hash, Status* status, uint64_t* result) {
+    bool called;
+    fit::function<uint64_t(uint64_t)> permutation;
+    encryption_service_.GetChunkingPermutation(
+        callback::Capture(callback::SetWhenCalled(&called), status, &permutation));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
+    *result = permutation(chunk_window_hash);
+  }
+
   EncryptionServiceImpl encryption_service_;
 };
 
@@ -116,6 +126,22 @@ TEST_F(EncryptionServiceTest, EncryptDecryptObject) {
   DecryptObject(identifier, encrypted_bytes, &status, &decrypted_bytes);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(content, decrypted_bytes);
+}
+
+TEST_F(EncryptionServiceTest, GetApplyChunkingPermutation) {
+  uint64_t chunk_window_hash, result;
+  Status status;
+  auto bit_generator = environment_.random()->NewBitGenerator<uint64_t>();
+  chunk_window_hash =
+      std::uniform_int_distribution(0ul, std::numeric_limits<uint64_t>::max())(bit_generator);
+  ApplyChunkingPermutation(chunk_window_hash, &status, &result);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_NE(chunk_window_hash, result);
+  // Since we're using xor, applying the same permutation two times should yield
+  // the initial input;
+  ApplyChunkingPermutation(result, &status, &result);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(chunk_window_hash, result);
 }
 
 }  // namespace

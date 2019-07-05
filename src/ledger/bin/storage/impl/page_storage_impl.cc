@@ -370,50 +370,61 @@ void PageStorageImpl::AddObjectFromLocal(ObjectType object_type,
   auto managed_data_source = managed_container_.Manage(std::move(data_source));
   auto managed_data_source_ptr = managed_data_source->get();
   auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
-  SplitDataSource(
-      managed_data_source_ptr, object_type,
-      [this](ObjectDigest object_digest) {
-        FXL_DCHECK(IsDigestValid(object_digest));
-        return encryption_service_->MakeObjectIdentifier(std::move(object_digest));
-      },
-      [this](uint64_t chunk_window_hash) {
-        return encryption_service_->ChunkingPermutation(chunk_window_hash);
-      },
+  encryption_service_->GetChunkingPermutation(
       [this, waiter, managed_data_source = std::move(managed_data_source),
-       tree_references = std::move(tree_references), callback = std::move(traced_callback)](
-          IterationStatus status, std::unique_ptr<Piece> piece) mutable {
-        if (status == IterationStatus::ERROR) {
-          callback(Status::IO_ERROR, ObjectIdentifier());
+       tree_references = std::move(tree_references), managed_data_source_ptr, object_type,
+       callback = std::move(traced_callback)](
+          encryption::Status status,
+          fit::function<uint64_t(uint64_t)> chunking_permutation) mutable {
+        if (status != encryption::Status::OK) {
+          callback(Status::INTERNAL_ERROR, ObjectIdentifier());
           return;
         }
+        SplitDataSource(
+            managed_data_source_ptr, object_type,
+            [this](ObjectDigest object_digest) {
+              FXL_DCHECK(IsDigestValid(object_digest));
+              return encryption_service_->MakeObjectIdentifier(std::move(object_digest));
+            },
+            std::move(chunking_permutation),
+            [this, waiter, managed_data_source = std::move(managed_data_source),
+             tree_references = std::move(tree_references), callback = std::move(callback)](
+                IterationStatus status, std::unique_ptr<Piece> piece) mutable {
+              if (status == IterationStatus::ERROR) {
+                callback(Status::IO_ERROR, ObjectIdentifier());
+                return;
+              }
 
-        FXL_DCHECK(piece != nullptr);
-        ObjectIdentifier identifier = piece->GetIdentifier();
-        auto object_info = GetObjectDigestInfo(identifier.object_digest());
-        if (!object_info.is_inlined()) {
-          ObjectReferencesAndPriority piece_references;
-          if (piece->AppendReferences(&piece_references) != Status::OK) {
-            // The piece is generated internally by splitting, not coming from
-            // untrusted source, so decoding should never fail.
-            callback(Status::INTERNAL_ERROR, ObjectIdentifier());
-            return;
-          }
-          if (object_info.object_type == ObjectType::TREE_NODE) {
-            // There is at most one TREE_NODE, and it must be the last piece, so
-            // it is safe to add tree_references to piece_references there.
-            FXL_DCHECK(status == IterationStatus::DONE);
-            piece_references.insert(std::make_move_iterator(tree_references.begin()),
-                                    std::make_move_iterator(tree_references.end()));
-          }
-          AddPiece(std::move(piece), ChangeSource::LOCAL, IsObjectSynced::NO,
-                   std::move(piece_references), waiter->NewCallback());
-        }
-        if (status == IterationStatus::IN_PROGRESS)
-          return;
+              FXL_DCHECK(piece != nullptr);
+              ObjectIdentifier identifier = piece->GetIdentifier();
+              auto object_info = GetObjectDigestInfo(identifier.object_digest());
+              if (!object_info.is_inlined()) {
+                ObjectReferencesAndPriority piece_references;
+                if (piece->AppendReferences(&piece_references) != Status::OK) {
+                  // The piece is generated internally by splitting, not coming from
+                  // untrusted source, so decoding should never fail.
+                  callback(Status::INTERNAL_ERROR, ObjectIdentifier());
+                  return;
+                }
+                if (object_info.object_type == ObjectType::TREE_NODE) {
+                  // There is at most one TREE_NODE, and it must be the last piece, so
+                  // it is safe to add tree_references to piece_references there.
+                  FXL_DCHECK(status == IterationStatus::DONE);
+                  piece_references.insert(std::make_move_iterator(tree_references.begin()),
+                                          std::make_move_iterator(tree_references.end()));
+                }
+                AddPiece(std::move(piece), ChangeSource::LOCAL, IsObjectSynced::NO,
+                         std::move(piece_references), waiter->NewCallback());
+              }
+              if (status == IterationStatus::IN_PROGRESS)
+                return;
 
-        FXL_DCHECK(status == IterationStatus::DONE);
-        waiter->Finalize([identifier = std::move(identifier), callback = std::move(callback)](
-                             Status status) mutable { callback(status, std::move(identifier)); });
+              FXL_DCHECK(status == IterationStatus::DONE);
+              waiter->Finalize([identifier = std::move(identifier),
+                                callback = std::move(callback)](Status status) mutable {
+                callback(status, std::move(identifier));
+              });
+            });
       });
 }
 

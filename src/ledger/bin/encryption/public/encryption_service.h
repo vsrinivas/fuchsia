@@ -66,10 +66,10 @@ class EncryptionService {
                              std::string encrypted_data,
                              fit::function<void(Status, std::string)> callback) = 0;
 
-  // Applies a pseudorandom permutation to a given hash.
-  //
-  // This method is used for randomizing the way the big objects are chunked.
-  virtual uint64_t ChunkingPermutation(uint64_t chunk_window_hash) = 0;
+  // Returns a permutation that can be applied to the window hash in the
+  // chunking algorithm.
+  virtual void GetChunkingPermutation(
+      fit::function<void(Status, fit::function<uint64_t(uint64_t)>)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(EncryptionService);

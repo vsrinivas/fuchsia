@@ -267,8 +267,21 @@ void EncryptionServiceImpl::FetchReferenceKey(DeletionScopeSeed deletion_scope_s
       });
 }
 
-uint64_t EncryptionServiceImpl::ChunkingPermutation(uint64_t chunk_window_hash) {
-  return 1 + chunk_window_hash;
+void EncryptionServiceImpl::GetChunkingPermutation(
+    fit::function<void(Status, fit::function<uint64_t(uint64_t)>)> callback) {
+  master_keys_.Get(kDefaultKeyIndex, [this, callback = std::move(callback)](
+                                         Status status, const std::string& master_key) {
+    if (status != Status::OK) {
+      callback(status, nullptr);
+      return;
+    }
+    std::string derived_key = HMAC256KDF(fxl::Concatenate({master_key, namespace_id_}), 8u);
+    uint64_t chunking_permutation_key = *reinterpret_cast<uint64_t*>(derived_key.data());
+    auto chunking_permutation = [chunking_permutation_key](uint64_t chunk_window_hash) {
+      return chunk_window_hash ^ chunking_permutation_key;
+    };
+    callback(Status::OK, std::move(chunking_permutation));
+  });
 }
 
 }  // namespace encryption

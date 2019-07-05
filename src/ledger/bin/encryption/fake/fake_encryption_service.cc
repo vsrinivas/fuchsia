@@ -84,8 +84,10 @@ void FakeEncryptionService::DecryptObject(storage::ObjectIdentifier /*object_ide
                   });
 }
 
-uint64_t FakeEncryptionService::ChunkingPermutation(uint64_t chunk_window_hash) {
-  return DefaultPermutation(chunk_window_hash);
+void FakeEncryptionService::GetChunkingPermutation(
+    fit::function<void(Status, fit::function<uint64_t(uint64_t)>)> callback) {
+  auto chunking_permutation = [](uint64_t chunk_window_hash) { return chunk_window_hash + 1; };
+  callback(Status::OK, std::move(chunking_permutation));
 }
 
 std::string FakeEncryptionService::EncryptCommitSynchronous(

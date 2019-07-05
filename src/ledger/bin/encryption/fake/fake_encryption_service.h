@@ -44,7 +44,8 @@ class FakeEncryptionService : public EncryptionService {
                      fit::function<void(Status, std::string)> callback) override;
   void DecryptObject(storage::ObjectIdentifier object_identifier, std::string encrypted_data,
                      fit::function<void(Status, std::string)> callback) override;
-  uint64_t ChunkingPermutation(uint64_t chunk_window_hash) override;
+  void GetChunkingPermutation(
+      fit::function<void(Status, fit::function<uint64_t(uint64_t)>)> callback) override;
 
   // Synchronously encrypts the given commit.
   std::string EncryptCommitSynchronous(convert::ExtendedStringView commit_storage);
