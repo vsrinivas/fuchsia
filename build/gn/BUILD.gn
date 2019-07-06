@@ -89,7 +89,7 @@ action("breakpad_symbols") {
   ]
 
   inputs = [
-    "//prebuilt/tools/dump_syms/${host_platform}/dump_syms",
+    "//prebuilt/third_party/breakpad/${host_platform}/dump_syms/dump_syms",
   ]
 
   sources = [
@@ -108,7 +108,8 @@ action("breakpad_symbols") {
     "-out-dir",
     rebase_path("$root_out_dir/breakpad_symbols"),
     "-dump-syms-path",
-    rebase_path("//prebuilt/tools/dump_syms/${host_platform}/dump_syms"),
+    rebase_path(
+        "//prebuilt/third_party/breakpad/${host_platform}/dump_syms/dump_syms"),
     "-depfile",
     rebase_path(depfile, root_build_dir),
     "-tar-file",
