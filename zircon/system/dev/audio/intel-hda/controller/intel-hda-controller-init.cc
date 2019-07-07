@@ -678,7 +678,7 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
   // device because the Audio DSP will be added a child to the HDA
   // controller and ddktl requires the parent device node to be initialized
   // at construction time.
-  zx_status_t dsp_probe_result = ProbeAudioDSP(pci_dev);
+  zx_status_t dsp_probe_result = ProbeAudioDSP(dev_node_);
   if (dsp_probe_result != ZX_OK) {
     LOG(WARN, "Error probing DSP: %s", zx_status_get_string(dsp_probe_result));
     // We continue despite the failure because the absence of the Audio
