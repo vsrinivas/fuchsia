@@ -636,7 +636,7 @@ There are three types of storage capabilities:
 -   *cache*: same as data, but acts as a [cache directory](#cache-directory).
 -   *meta*: a directory is allocated to be used by component manager, where it
     will store metadata to enable features like persistent
-    [component collections](#component-collections).
+    [component collections](#component-collection).
 
 Storage capability is a [components v2](#components-v2) concept.
 
