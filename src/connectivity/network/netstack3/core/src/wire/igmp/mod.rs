@@ -28,7 +28,6 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 use self::messages::IgmpMessageType;
 use crate::error::ParseError;
 use crate::ip::Ipv4Addr;
-use crate::wire::ipv6::FixedHeader;
 use crate::wire::U16;
 
 /// Trait specifying serialization behavior for IGMP messages.
@@ -167,7 +166,7 @@ impl<B, M: MessageType<B>> IgmpPacketBuilder<B, M> {
 // can have an InnerPacketBuilder impl.
 impl<B, M: MessageType<B, VariableBody = ()>> InnerPacketBuilder for IgmpPacketBuilder<B, M> {
     fn bytes_len(&self) -> usize {
-        mem::size_of::<FixedHeader>() + mem::size_of::<M::FixedHeader>()
+        mem::size_of::<HeaderPrefix>() + mem::size_of::<M::FixedHeader>()
     }
 
     fn serialize(self, buffer: &mut [u8]) {

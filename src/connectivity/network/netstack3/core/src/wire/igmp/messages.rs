@@ -695,4 +695,24 @@ mod tests {
             }
         }
     }
+
+    // Asserts that a `Message` without `VariableBody` should have the same length
+    // as the given ground truth packet.
+    fn assert_message_length<Message: for<'a> MessageType<&'a [u8], VariableBody = ()>>(
+        mut ground_truth: &[u8],
+    ) {
+        use packet::serialize::InnerPacketBuilder;
+        let ground_truth_len = ground_truth.len();
+        let igmp = ground_truth.parse_with::<_, IgmpMessage<&[u8], Message>>(()).unwrap();
+        let builder_len = igmp.builder().bytes_len();
+        assert_eq!(builder_len, ground_truth_len);
+    }
+
+    #[test]
+    fn test_igmp_packet_length() {
+        assert_message_length::<IgmpMembershipQueryV2>(igmp_router_queries::v2::QUERY);
+        assert_message_length::<IgmpMembershipReportV1>(igmp_reports::v1::MEMBER_REPORT);
+        assert_message_length::<IgmpMembershipReportV2>(igmp_reports::v2::MEMBER_REPORT);
+        assert_message_length::<IgmpLeaveGroup>(igmp_leave_group::LEAVE_GROUP);
+    }
 }
