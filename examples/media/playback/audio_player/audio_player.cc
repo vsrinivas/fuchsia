@@ -22,20 +22,17 @@
 
 namespace examples {
 
-AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
-                         fit::closure quit_callback)
-    : quit_callback_(std::move(quit_callback)),
-      quit_when_done_(!params.stay()) {
+AudioPlayer::AudioPlayer(const AudioPlayerParams& params, fit::closure quit_callback)
+    : quit_callback_(std::move(quit_callback)), quit_when_done_(!params.stay()) {
   FXL_DCHECK(params.is_valid());
   FXL_DCHECK(quit_callback_);
 
   auto startup_context = sys::ComponentContext::Create();
 
   player_ = startup_context->svc()->Connect<fuchsia::media::playback::Player>();
-  player_.events().OnStatusChanged =
-      [this](fuchsia::media::playback::PlayerStatus status) {
-        HandleStatusChanged(status);
-      };
+  player_.events().OnStatusChanged = [this](fuchsia::media::playback::PlayerStatus status) {
+    HandleStatusChanged(status);
+  };
 
   if (!params.url().empty()) {
     url::GURL url = url::GURL(params.url());
@@ -54,8 +51,7 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
 
 AudioPlayer::~AudioPlayer() {}
 
-void AudioPlayer::HandleStatusChanged(
-    const fuchsia::media::playback::PlayerStatus& status) {
+void AudioPlayer::HandleStatusChanged(const fuchsia::media::playback::PlayerStatus& status) {
   // Process status received from the player.
   if (status.end_of_stream && quit_when_done_) {
     quit_callback_();
@@ -64,8 +60,7 @@ void AudioPlayer::HandleStatusChanged(
 
   if (status.problem) {
     if (!problem_shown_) {
-      FXL_DLOG(INFO) << "PROBLEM: " << status.problem->type << ", "
-                     << status.problem->details;
+      FXL_DLOG(INFO) << "PROBLEM: " << status.problem->type << ", " << status.problem->details;
       problem_shown_ = true;
       if (quit_when_done_) {
         quit_callback_();
@@ -79,19 +74,14 @@ void AudioPlayer::HandleStatusChanged(
   if (status.metadata && !metadata_shown_) {
     FXL_LOG(INFO) << "duration   " << std::fixed << std::setprecision(1)
                   << double(status.duration) / 1000000000.0 << " seconds";
-    MaybeLogMetadataProperty(
-        *status.metadata, fuchsia::media::METADATA_LABEL_TITLE, "title      ");
-    MaybeLogMetadataProperty(
-        *status.metadata, fuchsia::media::METADATA_LABEL_ARTIST, "artist     ");
-    MaybeLogMetadataProperty(
-        *status.metadata, fuchsia::media::METADATA_LABEL_ALBUM, "album      ");
-    MaybeLogMetadataProperty(*status.metadata,
-                             fuchsia::media::METADATA_LABEL_PUBLISHER,
+    MaybeLogMetadataProperty(*status.metadata, fuchsia::media::METADATA_LABEL_TITLE, "title      ");
+    MaybeLogMetadataProperty(*status.metadata, fuchsia::media::METADATA_LABEL_ARTIST,
+                             "artist     ");
+    MaybeLogMetadataProperty(*status.metadata, fuchsia::media::METADATA_LABEL_ALBUM, "album      ");
+    MaybeLogMetadataProperty(*status.metadata, fuchsia::media::METADATA_LABEL_PUBLISHER,
                              "publisher  ");
-    MaybeLogMetadataProperty(
-        *status.metadata, fuchsia::media::METADATA_LABEL_GENRE, "genre      ");
-    MaybeLogMetadataProperty(*status.metadata,
-                             fuchsia::media::METADATA_LABEL_COMPOSER,
+    MaybeLogMetadataProperty(*status.metadata, fuchsia::media::METADATA_LABEL_GENRE, "genre      ");
+    MaybeLogMetadataProperty(*status.metadata, fuchsia::media::METADATA_LABEL_COMPOSER,
                              "composer   ");
     metadata_shown_ = true;
   }
@@ -124,14 +114,13 @@ void AudioPlayer::HandleKeystroke(zx_status_t status, uint32_t events) {
 }
 
 void AudioPlayer::GetKeystroke() {
-  keystroke_waiter_.Wait(
-      [this](zx_status_t s, uint32_t e) { HandleKeystroke(s, e); },
-      STDIN_FILENO, POLLIN);
+  keystroke_waiter_.Wait([this](zx_status_t s, uint32_t e) { HandleKeystroke(s, e); }, STDIN_FILENO,
+                         POLLIN);
 }
 
-void AudioPlayer::MaybeLogMetadataProperty(
-    const fuchsia::media::Metadata& metadata, const std::string& property_label,
-    const std::string& prefix) {
+void AudioPlayer::MaybeLogMetadataProperty(const fuchsia::media::Metadata& metadata,
+                                           const std::string& property_label,
+                                           const std::string& prefix) {
   for (auto& property : metadata.properties) {
     if (property.label == property_label) {
       FXL_LOG(INFO) << prefix << property.value;

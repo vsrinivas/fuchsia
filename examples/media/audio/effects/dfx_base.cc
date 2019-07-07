@@ -26,8 +26,7 @@ bool DfxBase::GetNumEffects(uint32_t* num_effects_out) {
 }
 
 // static; dispatched by base class to the appropriate subclass static
-bool DfxBase::GetInfo(uint32_t effect_id,
-                      fuchsia_audio_dfx_description* dfx_desc) {
+bool DfxBase::GetInfo(uint32_t effect_id, fuchsia_audio_dfx_description* dfx_desc) {
   switch (effect_id) {
     case media::audio_dfx_test::Effect::Delay:
       return media::audio_dfx_test::DfxDelay::GetInfo(dfx_desc);
@@ -41,27 +40,23 @@ bool DfxBase::GetInfo(uint32_t effect_id,
 }
 
 // static; dispatched by base class to the appropriate subclass static
-bool DfxBase::GetControlInfo(
-    uint32_t effect_id, uint16_t control_num,
-    fuchsia_audio_dfx_control_description* dfx_control_desc) {
+bool DfxBase::GetControlInfo(uint32_t effect_id, uint16_t control_num,
+                             fuchsia_audio_dfx_control_description* dfx_control_desc) {
   switch (effect_id) {
     case media::audio_dfx_test::Effect::Rechannel:
-      return media::audio_dfx_test::DfxRechannel::GetControlInfo(
-          control_num, dfx_control_desc);
+      return media::audio_dfx_test::DfxRechannel::GetControlInfo(control_num, dfx_control_desc);
     case media::audio_dfx_test::Effect::Swap:
-      return media::audio_dfx_test::DfxSwap::GetControlInfo(control_num,
-                                                            dfx_control_desc);
+      return media::audio_dfx_test::DfxSwap::GetControlInfo(control_num, dfx_control_desc);
     case media::audio_dfx_test::Effect::Delay:
-      return media::audio_dfx_test::DfxDelay::GetControlInfo(control_num,
-                                                             dfx_control_desc);
+      return media::audio_dfx_test::DfxDelay::GetControlInfo(control_num, dfx_control_desc);
   }
 
   return false;
 }
 
 // static; dispatched by base class to the appropriate subclass static
-DfxBase* DfxBase::Create(uint32_t effect_id, uint32_t frame_rate,
-                         uint16_t channels_in, uint16_t channels_out) {
+DfxBase* DfxBase::Create(uint32_t effect_id, uint32_t frame_rate, uint16_t channels_in,
+                         uint16_t channels_out) {
   if (channels_in > FUCHSIA_AUDIO_DFX_CHANNELS_MAX ||
       channels_out > FUCHSIA_AUDIO_DFX_CHANNELS_MAX) {
     return nullptr;
@@ -69,16 +64,14 @@ DfxBase* DfxBase::Create(uint32_t effect_id, uint32_t frame_rate,
 
   switch (effect_id) {
     case media::audio_dfx_test::Effect::Delay:
-      return reinterpret_cast<DfxBase*>(
-          DfxDelay::Create(frame_rate, channels_in, channels_out));
+      return reinterpret_cast<DfxBase*>(DfxDelay::Create(frame_rate, channels_in, channels_out));
 
     case media::audio_dfx_test::Effect::Rechannel:
       return reinterpret_cast<DfxBase*>(
           DfxRechannel::Create(frame_rate, channels_in, channels_out));
 
     case media::audio_dfx_test::Effect::Swap:
-      return reinterpret_cast<DfxBase*>(
-          DfxSwap::Create(frame_rate, channels_in, channels_out));
+      return reinterpret_cast<DfxBase*>(DfxSwap::Create(frame_rate, channels_in, channels_out));
   }
 
   return nullptr;

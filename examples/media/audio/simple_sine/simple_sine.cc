@@ -24,8 +24,7 @@ constexpr double kAmplitude = 0.125;
 
 namespace examples {
 
-MediaApp::MediaApp(fit::closure quit_callback)
-    : quit_callback_(std::move(quit_callback)) {
+MediaApp::MediaApp(fit::closure quit_callback) : quit_callback_(std::move(quit_callback)) {
   FXL_DCHECK(quit_callback_);
 }
 
@@ -52,21 +51,18 @@ void MediaApp::Run(sys::ComponentContext* app_context) {
   // AudioRenderer defaults to unity gain, unmuted; we need not change our
   // volume. (Although not shown here, we would do so via the GainControl
   // interface.)
-  audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
-                               fuchsia::media::NO_TIMESTAMP);
+  audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP);
 }
 
 // Use StartupContext to acquire AudioPtr, which we only need in order to get
 // an AudioRendererPtr. Set an error handler, in case of channel closure.
 void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
-  fuchsia::media::AudioPtr audio =
-      app_context->svc()->Connect<fuchsia::media::Audio>();
+  fuchsia::media::AudioPtr audio = app_context->svc()->Connect<fuchsia::media::Audio>();
 
   audio->CreateAudioRenderer(audio_renderer_.NewRequest());
 
   audio_renderer_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR)
-        << "fuchsia::media::AudioRenderer connection lost. Quitting.";
+    FXL_LOG(ERROR) << "fuchsia::media::AudioRenderer connection lost. Quitting.";
     Shutdown();
   });
 }
@@ -92,9 +88,9 @@ zx_status_t MediaApp::CreateMemoryMapping() {
   payload_size_ = kFramesPerPayload * sizeof(float);
   total_mapping_size_ = payload_size_ * kNumPayloads;
 
-  zx_status_t status = payload_buffer_.CreateAndMap(
-      total_mapping_size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
-      &payload_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
+  zx_status_t status =
+      payload_buffer_.CreateAndMap(total_mapping_size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
+                                   &payload_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "VmoMapper:::CreateAndMap failed - " << status;
@@ -111,8 +107,7 @@ void MediaApp::WriteAudioIntoBuffer() {
   auto float_buffer = reinterpret_cast<float*>(payload_buffer_.start());
 
   for (size_t frame = 0; frame < kFramesPerPayload * kNumPayloads; ++frame) {
-    float_buffer[frame] =
-        kAmplitude * sin(frame * kFrequency * 2 * M_PI / kFrameRate);
+    float_buffer[frame] = kAmplitude * sin(frame * kFrequency * 2 * M_PI / kFrameRate);
   }
 }
 
@@ -165,9 +160,8 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto startup_context = sys::ComponentContext::Create();
 
-  examples::MediaApp media_app([&loop]() {
-    async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
-  });
+  examples::MediaApp media_app(
+      [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });
 
   media_app.Run(startup_context.get());
 

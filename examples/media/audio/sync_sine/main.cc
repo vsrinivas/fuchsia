@@ -33,15 +33,13 @@ int main(int argc, const char** argv) {
     media_app.set_verbose(true);
   }
 
-  std::string low_water_mark_ms = command_line.GetOptionValueWithDefault(
-      kLowWaterMarkSwitch, kLowWaterMarkDefaultValue);
-  media_app.set_low_water_mark_from_ms(
-      fxl::StringToNumber<int64_t>(low_water_mark_ms));
+  std::string low_water_mark_ms =
+      command_line.GetOptionValueWithDefault(kLowWaterMarkSwitch, kLowWaterMarkDefaultValue);
+  media_app.set_low_water_mark_from_ms(fxl::StringToNumber<int64_t>(low_water_mark_ms));
 
-  std::string high_water_mark_ms = command_line.GetOptionValueWithDefault(
-      kHighWaterMarkSwitch, kHighWaterMarkDefaultValue);
-  media_app.set_high_water_mark_from_ms(
-      fxl::StringToNumber<int64_t>(high_water_mark_ms));
+  std::string high_water_mark_ms =
+      command_line.GetOptionValueWithDefault(kHighWaterMarkSwitch, kHighWaterMarkDefaultValue);
+  media_app.set_high_water_mark_from_ms(fxl::StringToNumber<int64_t>(high_water_mark_ms));
 
   if (command_line.HasOption(kFloatFormatSwitch)) {
     media_app.set_float(true);

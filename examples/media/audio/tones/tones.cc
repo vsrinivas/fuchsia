@@ -31,9 +31,8 @@ static constexpr float kVolume = 0.2f;
 static constexpr float kDecay = 0.95f;
 static constexpr uint32_t kBeatsPerMinute = 90;
 static inline constexpr uint32_t nsec_to_packets(uint64_t nsec) {
-  return static_cast<uint32_t>(
-      ((nsec * kFramesPerSecond) + (kFramesPerBuffer - 1)) /
-      (ZX_SEC(1) * kFramesPerBuffer));
+  return static_cast<uint32_t>(((nsec * kFramesPerSecond) + (kFramesPerBuffer - 1)) /
+                               (ZX_SEC(1) * kFramesPerBuffer));
 }
 static constexpr uint32_t kSharedBufferPackets = nsec_to_packets(ZX_MSEC(300));
 
@@ -48,8 +47,7 @@ float Note(int32_t note) {
 
 // Translates a beat number into a time.
 constexpr int64_t Beat(float beat) {
-  return static_cast<int64_t>((beat * 60.0f * kFramesPerSecond) /
-                              kBeatsPerMinute);
+  return static_cast<int64_t>((beat * 60.0f * kFramesPerSecond) / kBeatsPerMinute);
 }
 
 static constexpr fuchsia::media::AudioSampleFormat kSampleFormat =
@@ -58,11 +56,10 @@ static constexpr uint32_t kBytesPerFrame = kChannelCount * sizeof(float);
 static constexpr size_t kBytesPerBuffer = kBytesPerFrame * kFramesPerBuffer;
 
 static const std::map<int, float> notes_by_key_ = {
-    {'a', Note(-4)}, {'z', Note(-3)}, {'s', Note(-2)}, {'x', Note(-1)},
-    {'c', Note(0)},  {'f', Note(1)},  {'v', Note(2)},  {'g', Note(3)},
-    {'b', Note(4)},  {'n', Note(5)},  {'j', Note(6)},  {'m', Note(7)},
-    {'k', Note(8)},  {',', Note(9)},  {'l', Note(10)}, {'.', Note(11)},
-    {'/', Note(12)}, {'\'', Note(13)}};
+    {'a', Note(-4)}, {'z', Note(-3)}, {'s', Note(-2)}, {'x', Note(-1)}, {'c', Note(0)},
+    {'f', Note(1)},  {'v', Note(2)},  {'g', Note(3)},  {'b', Note(4)},  {'n', Note(5)},
+    {'j', Note(6)},  {'m', Note(7)},  {'k', Note(8)},  {',', Note(9)},  {'l', Note(10)},
+    {'.', Note(11)}, {'/', Note(12)}, {'\'', Note(13)}};
 
 }  // namespace
 
@@ -71,8 +68,7 @@ Tones::Tones(bool interactive, fit::closure quit_callback)
   // Connect to the audio service and get an AudioRenderer.
   auto startup_context = sys::ComponentContext::Create();
 
-  fuchsia::media::AudioPtr audio =
-      startup_context->svc()->Connect<fuchsia::media::Audio>();
+  fuchsia::media::AudioPtr audio = startup_context->svc()->Connect<fuchsia::media::Audio>();
 
   audio->CreateAudioRenderer(audio_renderer_.NewRequest());
 
@@ -104,9 +100,7 @@ void Tones::Quit() {
 }
 
 void Tones::WaitForKeystroke() {
-  fd_waiter_.Wait(
-      [this](zx_status_t status, uint32_t events) { HandleKeystroke(); }, 0,
-      POLLIN);
+  fd_waiter_.Wait([this](zx_status_t status, uint32_t events) { HandleKeystroke(); }, 0, POLLIN);
 }
 
 void Tones::HandleKeystroke() {
@@ -114,8 +108,7 @@ void Tones::HandleKeystroke() {
 
   auto iter = notes_by_key_.find(c);
   if (iter != notes_by_key_.end()) {
-    tone_generators_.emplace_back(kFramesPerSecond, iter->second, kVolume,
-                                  kDecay);
+    tone_generators_.emplace_back(kFramesPerSecond, iter->second, kVolume, kDecay);
   }
 
   switch (c) {
@@ -132,8 +125,7 @@ void Tones::HandleKeystroke() {
 
 void Tones::HandleMidiNote(int note, int velocity, bool note_on) {
   if (note_on) {
-    tone_generators_.emplace_back(kFramesPerSecond, Note(note), kVolume,
-                                  kDecay);
+    tone_generators_.emplace_back(kFramesPerSecond, Note(note), kVolume, kDecay);
   }
 }
 
@@ -163,31 +155,28 @@ void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
 
   // figure out how many packets we need to keep in flight at all times.
   if (min_lead_time_nsec < 0) {
-    std::cerr << "AudioRenderer reported invalid lead time ("
-              << min_lead_time_nsec << "nSec)\n";
+    std::cerr << "AudioRenderer reported invalid lead time (" << min_lead_time_nsec << "nSec)\n";
     return;
   }
 
   min_lead_time_nsec += kLeadTimeOverheadNSec;
   target_packets_in_flight_ = nsec_to_packets(min_lead_time_nsec);
   if (target_packets_in_flight_ > kSharedBufferPackets) {
-    std::cerr
-        << "Required min lead time (" << min_lead_time_nsec
-        << " nsec) requires more than the maximum allowable buffers in flight ("
-        << target_packets_in_flight_ << " > " << kSharedBufferPackets << ")!\n";
+    std::cerr << "Required min lead time (" << min_lead_time_nsec
+              << " nsec) requires more than the maximum allowable buffers in flight ("
+              << target_packets_in_flight_ << " > " << kSharedBufferPackets << ")!\n";
     return;
   }
 
   if (!started_) {
     constexpr size_t total_mapping_size =
-        static_cast<size_t>(kSharedBufferPackets) * kFramesPerBuffer *
-        kBytesPerFrame;
+        static_cast<size_t>(kSharedBufferPackets) * kFramesPerBuffer * kBytesPerFrame;
 
     // Allocate a shared payload buffer; pass its handle to the AudioRenderer.
     zx::vmo payload_vmo;
     zx_status_t status = payload_buffer_.CreateAndMap(
-        total_mapping_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
-        &payload_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
+        total_mapping_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &payload_vmo,
+        ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
     if (status != ZX_OK) {
       std::cerr << "VmoMapper:::CreateAndMap failed - " << status << "\n";
@@ -216,8 +205,7 @@ void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
       std::cout << " | Z | X | C | V | B | N | M | , | . | / | \n";
       std::cout << "-+---+---+---+---+---+---+---+---+---+---+-\n";
     } else {
-      std::cout
-          << "Playing a tune. Use '--interactive' to play the keyboard.\n";
+      std::cout << "Playing a tune. Use '--interactive' to play the keyboard.\n";
       BuildScore();
     }
 
@@ -227,8 +215,7 @@ void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
     // input parameters. In effect, by using NO_TIMESTAMP for these two input
     // values, we align the following two things: "a local time of _As Soon As
     // We Safely Can_" and "the audio that I gave a PTS of _Zero_."
-    audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
-                                 fuchsia::media::NO_TIMESTAMP);
+    audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP);
     started_ = true;
   } else {
     SendPackets();
@@ -251,11 +238,9 @@ void Tones::SendPackets() {
     packet.payload_offset = (pts_ * kBytesPerFrame) % payload_buffer_.size();
     packet.payload_size = kBytesPerBuffer;
 
-    FXL_DCHECK((packet.payload_offset + packet.payload_size) <=
-               payload_buffer_.size());
+    FXL_DCHECK((packet.payload_offset + packet.payload_size) <= payload_buffer_.size());
 
-    auto payload_ptr = reinterpret_cast<uint8_t*>(payload_buffer_.start()) +
-                       packet.payload_offset;
+    auto payload_ptr = reinterpret_cast<uint8_t*>(payload_buffer_.start()) + packet.payload_offset;
 
     // Fill it with audio.
     FillBuffer(reinterpret_cast<float*>(payload_ptr));
@@ -323,8 +308,7 @@ void Tones::FillBuffer(float* buffer) {
     tone_generators_.emplace_back(kFramesPerSecond, frequency, kVolume, kDecay);
 
     // Mix the new tone generator, starting at the correct buffer offset.
-    tone_generators_.back().MixSamples(buffer + (offset * kChannelCount),
-                                       kFramesPerBuffer - offset,
+    tone_generators_.back().MixSamples(buffer + (offset * kChannelCount), kFramesPerBuffer - offset,
                                        kChannelCount);
   }
 

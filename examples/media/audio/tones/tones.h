@@ -62,8 +62,7 @@ class Tones {
 
   // Determines whether all audio has been sent.
   bool done() const {
-    return !interactive_ && frequencies_by_pts_.empty() &&
-           tone_generators_.empty();
+    return !interactive_ && frequencies_by_pts_.empty() && tone_generators_.empty();
   }
 
   bool interactive_;

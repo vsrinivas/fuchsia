@@ -28,8 +28,8 @@ std::unique_ptr<MidiKeyboard> MidiKeyboard::Create(Tones* owner) {
   DIR* dir = opendir(kDevMidiPath);
   if (!dir) {
     if (errno != ENOENT) {
-      FXL_LOG(WARNING) << "Error attempting to open \"" << kDevMidiPath
-                       << "\" (errno " << errno << ")";
+      FXL_LOG(WARNING) << "Error attempting to open \"" << kDevMidiPath << "\" (errno " << errno
+                       << ")";
     }
     return nullptr;
   }
@@ -47,20 +47,17 @@ std::unique_ptr<MidiKeyboard> MidiKeyboard::Create(Tones* owner) {
 
     fuchsia_hardware_midi_Info info;
     {
-        fzl::UnownedFdioCaller fdio_caller(dev_fd.get());
-        zx_status_t status = fuchsia_hardware_midi_DeviceGetInfo(
-                fdio_caller.borrow_channel(), &info);
-        if (status != ZX_OK) {
-            FXL_LOG(WARNING) << "fuchsia.hardware.midi.Device/GetInfo failed for \"" << devname
-                             << "\"";
-            return nullptr;
-        }
+      fzl::UnownedFdioCaller fdio_caller(dev_fd.get());
+      zx_status_t status = fuchsia_hardware_midi_DeviceGetInfo(fdio_caller.borrow_channel(), &info);
+      if (status != ZX_OK) {
+        FXL_LOG(WARNING) << "fuchsia.hardware.midi.Device/GetInfo failed for \"" << devname << "\"";
+        return nullptr;
+      }
     }
 
     if (info.is_source) {
       std::cout << "Creating MIDI source @ \"" << devname << "\"\n";
-      std::unique_ptr<MidiKeyboard> ret(
-          new MidiKeyboard(owner, std::move(dev_fd)));
+      std::unique_ptr<MidiKeyboard> ret(new MidiKeyboard(owner, std::move(dev_fd)));
       ret->Wait();
       return ret;
     }
@@ -76,9 +73,8 @@ MidiKeyboard::~MidiKeyboard() {
 }
 
 void MidiKeyboard::Wait() {
-  fd_waiter_.Wait(
-      [this](zx_status_t status, uint32_t events) { HandleEvent(); },
-      dev_.get(), POLLIN);
+  fd_waiter_.Wait([this](zx_status_t status, uint32_t events) { HandleEvent(); }, dev_.get(),
+                  POLLIN);
   waiting_ = true;
 }
 
@@ -103,8 +99,7 @@ void MidiKeyboard::HandleEvent() {
     }
 
     if (evt_size > 3) {
-      FXL_LOG(WARNING) << "Shutting down MIDI keyboard, bad event size ("
-                       << evt_size << ")";
+      FXL_LOG(WARNING) << "Shutting down MIDI keyboard, bad event size (" << evt_size << ")";
       return;
     }
 
@@ -122,8 +117,7 @@ void MidiKeyboard::HandleEvent() {
     if ((cmd == MIDI_NOTE_ON) || (cmd == MIDI_NOTE_OFF)) {
       // By default, MIDI event sources map the value 60 to middle C.
       static constexpr int kOffsetMiddleC = 60;
-      int note =
-          static_cast<int>(event[1] & MIDI_NOTE_NUMBER_MASK) - kOffsetMiddleC;
+      int note = static_cast<int>(event[1] & MIDI_NOTE_NUMBER_MASK) - kOffsetMiddleC;
       int velocity = static_cast<int>(event[2] & MIDI_NOTE_VELOCITY_MASK);
       bool note_on = (cmd == MIDI_NOTE_ON) && (velocity != 0);
 

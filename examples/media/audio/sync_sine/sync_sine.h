@@ -17,12 +17,8 @@ class MediaApp {
   ~MediaApp();
 
   void set_verbose(bool verbose) { verbose_ = verbose; }
-  void set_low_water_mark_from_ms(int64_t value) {
-    low_water_mark_ = ZX_MSEC(value);
-  }
-  void set_high_water_mark_from_ms(int64_t value) {
-    high_water_mark_ = ZX_MSEC(value);
-  }
+  void set_low_water_mark_from_ms(int64_t value) { low_water_mark_ = ZX_MSEC(value); }
+  void set_high_water_mark_from_ms(int64_t value) { high_water_mark_ = ZX_MSEC(value); }
   void set_float(bool enable_float) { use_float_ = enable_float; }
 
   int Run();

@@ -90,14 +90,11 @@ class FxProcessor {
                fuchsia::scheduler::ProfileProviderSyncPtr profile_provider);
 
  private:
-  using EffectFn = void (FxProcessor::*)(int16_t* src, int16_t* dst,
-                                         uint32_t frames);
+  using EffectFn = void (FxProcessor::*)(int16_t* src, int16_t* dst, uint32_t frames);
 
   static inline float Norm(int16_t value) {
-    return (value < 0)
-               ? static_cast<float>(value) / std::numeric_limits<int16_t>::min()
-               : static_cast<float>(value) /
-                     std::numeric_limits<int16_t>::max();
+    return (value < 0) ? static_cast<float>(value) / std::numeric_limits<int16_t>::min()
+                       : static_cast<float>(value) / std::numeric_limits<int16_t>::max();
   }
 
   static inline float FuzzNorm(float norm_value, float gain) {
@@ -111,9 +108,8 @@ class FxProcessor {
   void ProcessInput();
   void ProduceOutputPackets(fuchsia::media::StreamPacket* out_pkt1,
                             fuchsia::media::StreamPacket* out_pkt2);
-  void ApplyEffect(int16_t* src, uint32_t src_offset, uint32_t src_rb_size,
-                   int16_t* dst, uint32_t dst_offset, uint32_t dst_rb_size,
-                   uint32_t frames, EffectFn effect);
+  void ApplyEffect(int16_t* src, uint32_t src_offset, uint32_t src_rb_size, int16_t* dst,
+                   uint32_t dst_offset, uint32_t dst_rb_size, uint32_t frames, EffectFn effect);
 
   void CopyInputEffect(int16_t* src, int16_t* dst, uint32_t frames);
   void PreampInputEffect(int16_t* src, int16_t* dst, uint32_t frames);
@@ -121,15 +117,12 @@ class FxProcessor {
   void FuzzEffect(int16_t* src, int16_t* dst, uint32_t frames);
   void MixedFuzzEffect(int16_t* src, int16_t* dst, uint32_t frames);
 
-  fsl::FDWaiter::Callback handle_keystroke_thunk_ = [this](zx_status_t status,
-                                                           uint32_t event) {
+  fsl::FDWaiter::Callback handle_keystroke_thunk_ = [this](zx_status_t status, uint32_t event) {
     HandleKeystroke(status, event);
   };
 
-  void UpdateReverb(bool enabled, int32_t depth_delta = 0,
-                    float gain_delta = 0.0f);
-  void UpdateFuzz(bool enabled, float gain_delta = 0.0f,
-                  float mix_delta = 0.0f);
+  void UpdateReverb(bool enabled, int32_t depth_delta = 0, float gain_delta = 0.0f);
+  void UpdateFuzz(bool enabled, float gain_delta = 0.0f, float mix_delta = 0.0f);
   void UpdatePreampGain(float delta);
 
   fzl::VmoMapper output_buf_;
@@ -165,24 +158,21 @@ class FxProcessor {
   bool lead_time_frames_known_ = false;
 };
 
-void FxProcessor::Startup(
-    fuchsia::media::AudioPtr audio,
-    fuchsia::scheduler::ProfileProviderSyncPtr profile_provider) {
+void FxProcessor::Startup(fuchsia::media::AudioPtr audio,
+                          fuchsia::scheduler::ProfileProviderSyncPtr profile_provider) {
   auto cleanup = fit::defer([this] { Shutdown("Startup failure"); });
 
   zx_status_t profile_status;
   zx::profile profile;
   zx_status_t fidl_status = profile_provider->GetProfile(
-      24 /* HIGH_PRIORITY in LK */, "examples/media/audio/fx", &profile_status,
-      &profile);
+      24 /* HIGH_PRIORITY in LK */, "examples/media/audio/fx", &profile_status, &profile);
 
   if (fidl_status != ZX_OK || profile_status != ZX_OK) {
     printf("GetProfile failed (%d || %d)\n", fidl_status, profile_status);
     return;
   }
 
-  zx_status_t set_status =
-      zx_object_set_profile(zx_thread_self(), profile.get(), 0);
+  zx_status_t set_status = zx_object_set_profile(zx_thread_self(), profile.get(), 0);
   if (set_status != ZX_OK) {
     printf("zx_object_set_profile failed: %d\n", set_status);
     return;
@@ -196,9 +186,8 @@ void FxProcessor::Startup(
   FXL_DCHECK((input_->ring_buffer_bytes() % input_->frame_sz()) == 0);
   input_buffer_frames_ = input_->ring_buffer_bytes() / input_->frame_sz();
 
-  if (!wav_writer_.Initialize(
-          "/tmp/fx.wav", fuchsia::media::AudioSampleFormat::SIGNED_16,
-          input_->channel_cnt(), input_->frame_rate(), 16)) {
+  if (!wav_writer_.Initialize("/tmp/fx.wav", fuchsia::media::AudioSampleFormat::SIGNED_16,
+                              input_->channel_cnt(), input_->frame_rate(), 16)) {
     printf("Unable to initialize WAV file for recording.\n");
     return;
   }
@@ -206,9 +195,8 @@ void FxProcessor::Startup(
   // Create an AudioRenderer. Setup connection error handlers.
   audio->CreateAudioRenderer(audio_renderer_.NewRequest());
 
-  audio_renderer_.set_error_handler([this](zx_status_t status) {
-    Shutdown("fuchsia::media::AudioRenderer connection closed");
-  });
+  audio_renderer_.set_error_handler(
+      [this](zx_status_t status) { Shutdown("fuchsia::media::AudioRenderer connection closed"); });
 
   // Set the stream_type.
   fuchsia::media::AudioStreamType stream_type;
@@ -219,14 +207,14 @@ void FxProcessor::Startup(
 
   // Create and map a VMO, to mix and subsequently send data to the renderer.
   // Fill it with silence, then send a (read-only) VMO handle to the renderer.
-  output_buf_frames_ = static_cast<uint32_t>(
-      (OUTPUT_BUF_TIME * input_->frame_rate()) / 1000000000u);
+  output_buf_frames_ =
+      static_cast<uint32_t>((OUTPUT_BUF_TIME * input_->frame_rate()) / 1000000000u);
   output_buf_sz_ = static_cast<size_t>(input_->frame_sz()) * output_buf_frames_;
 
   zx::vmo rend_vmo;
-  zx_status_t res = output_buf_.CreateAndMap(
-      output_buf_sz_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &rend_vmo,
-      ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
+  zx_status_t res =
+      output_buf_.CreateAndMap(output_buf_sz_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
+                               &rend_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
   // We use only a single payload buffer, and hence when creating each packet we
   // can allow its payload_buffer_id to remain the default value of 0.
@@ -247,19 +235,17 @@ void FxProcessor::Startup(
   // depth so that the write pointer we get back will be the safe write
   // pointer position; IOW - not where the capture currently is, but where the
   // most recent frame which is guaranteed to be written to system memory is.
-  int64_t fifo_frames =
-      ((input_->fifo_depth() + input_->frame_sz() - 1) / input_->frame_sz());
+  int64_t fifo_frames = ((input_->fifo_depth() + input_->frame_sz() - 1) / input_->frame_sz());
 
   media::TimelineRate frames_per_nsec;
   {
     media::TimelineRate frames_per_sec(input_->frame_rate(), 1);
     media::TimelineRate sec_per_nsec(1, ZX_SEC(1));
-    frames_per_nsec =
-        media::TimelineRate::Product(frames_per_sec, sec_per_nsec);
+    frames_per_nsec = media::TimelineRate::Product(frames_per_sec, sec_per_nsec);
   }
 
-  clock_mono_to_input_wr_ptr_ = media::TimelineFunction(
-      -fifo_frames, input_->start_time(), frames_per_nsec);
+  clock_mono_to_input_wr_ptr_ =
+      media::TimelineFunction(-fifo_frames, input_->start_time(), frames_per_nsec);
 
   // Request notifications about the minimum clock lead time requirements. We
   // will be able to start to process the input stream once we know what this
@@ -350,8 +336,7 @@ void FxProcessor::OnMinLeadTimeChanged(int64_t new_min_lead_time_nsec) {
 }
 
 void FxProcessor::RequestKeystrokeMessage() {
-  keystroke_waiter_.Wait(std::move(handle_keystroke_thunk_), STDIN_FILENO,
-                         POLLIN);
+  keystroke_waiter_.Wait(std::move(handle_keystroke_thunk_), STDIN_FILENO, POLLIN);
 }
 
 void FxProcessor::HandleKeystroke(zx_status_t status, uint32_t events) {
@@ -503,8 +488,7 @@ void FxProcessor::ProcessInput() {
 
   // Schedule our next processing callback.
   async::PostDelayedTask(
-      async_get_default_dispatcher(), [this]() { ProcessInput(); },
-      zx::nsec(PROCESS_CHUNK_TIME));
+      async_get_default_dispatcher(), [this]() { ProcessInput(); }, zx::nsec(PROCESS_CHUNK_TIME));
 }
 
 void FxProcessor::ProduceOutputPackets(fuchsia::media::StreamPacket* out_pkt1,
@@ -513,8 +497,8 @@ void FxProcessor::ProduceOutputPackets(fuchsia::media::StreamPacket* out_pkt1,
   zx_time_t now = zx_clock_get_monotonic();
   int64_t input_wp = clock_mono_to_input_wr_ptr_.Apply(now);
   if (input_wp <= input_rp_) {
-    printf("input wp <= rp (wp %" PRId64 " rp %" PRId64 " now %" PRIu64 ")\n",
-           input_wp, input_rp_, now);
+    printf("input wp <= rp (wp %" PRId64 " rp %" PRId64 " now %" PRIu64 ")\n", input_wp, input_rp_,
+           now);
     Shutdown("Failed to produce output packet");
     return;
   }
@@ -530,8 +514,7 @@ void FxProcessor::ProduceOutputPackets(fuchsia::media::StreamPacket* out_pkt1,
   }
 
   uint32_t todo = static_cast<uint32_t>(todo64);
-  uint32_t input_start =
-      static_cast<uint32_t>(input_rp_) % input_buffer_frames_;
+  uint32_t input_start = static_cast<uint32_t>(input_rp_) % input_buffer_frames_;
   uint32_t output_start = output_buf_wp_ % output_buf_frames_;
   uint32_t output_space = output_buf_frames_ - output_start;
 
@@ -558,29 +541,26 @@ void FxProcessor::ProduceOutputPackets(fuchsia::media::StreamPacket* out_pkt1,
   // Now actually apply effects. Start by just copying the input to the output.
   auto input_base = reinterpret_cast<int16_t*>(input_->ring_buffer());
   auto output_base = reinterpret_cast<int16_t*>(output_buf_.start());
-  ApplyEffect(input_base, input_start, input_buffer_frames_, output_base,
-              output_start, output_buf_frames_, todo,
-              (preamp_gain_ == 0.0) ? &FxProcessor::CopyInputEffect
-                                    : &FxProcessor::PreampInputEffect);
+  ApplyEffect(
+      input_base, input_start, input_buffer_frames_, output_base, output_start, output_buf_frames_,
+      todo,
+      (preamp_gain_ == 0.0) ? &FxProcessor::CopyInputEffect : &FxProcessor::PreampInputEffect);
 
   // If enabled, add some fuzz
   if (fuzz_enabled_ && (fuzz_mix_ >= 0.01f)) {
-    ApplyEffect(output_base, output_start, output_buf_frames_, output_base,
-                output_start, output_buf_frames_, todo,
-                (fuzz_mix_ <= 0.99f) ? &FxProcessor::MixedFuzzEffect
-                                     : &FxProcessor::FuzzEffect);
+    ApplyEffect(output_base, output_start, output_buf_frames_, output_base, output_start,
+                output_buf_frames_, todo,
+                (fuzz_mix_ <= 0.99f) ? &FxProcessor::MixedFuzzEffect : &FxProcessor::FuzzEffect);
   }
 
   // If enabled, add some reverb.
   if (reverb_enabled_ && (reverb_feedback_gain_fixed_ > 0)) {
-    uint32_t reverb_start =
-        output_start + (output_buf_frames_ - reverb_depth_frames_);
+    uint32_t reverb_start = output_start + (output_buf_frames_ - reverb_depth_frames_);
     if (reverb_start >= output_buf_frames_)
       reverb_start -= output_buf_frames_;
 
-    ApplyEffect(output_base, reverb_start, output_buf_frames_, output_base,
-                output_start, output_buf_frames_, todo,
-                &FxProcessor::ReverbMixEffect);
+    ApplyEffect(output_base, reverb_start, output_buf_frames_, output_base, output_start,
+                output_buf_frames_, todo, &FxProcessor::ReverbMixEffect);
   }
 
   // Finally, update our input read pointer and our output write pointer.
@@ -588,10 +568,9 @@ void FxProcessor::ProduceOutputPackets(fuchsia::media::StreamPacket* out_pkt1,
   output_buf_wp_ += todo;
 }
 
-void FxProcessor::ApplyEffect(int16_t* src, uint32_t src_offset,
-                              uint32_t src_rb_size, int16_t* dst,
-                              uint32_t dst_offset, uint32_t dst_rb_size,
-                              uint32_t frames, EffectFn effect) {
+void FxProcessor::ApplyEffect(int16_t* src, uint32_t src_offset, uint32_t src_rb_size, int16_t* dst,
+                              uint32_t dst_offset, uint32_t dst_rb_size, uint32_t frames,
+                              EffectFn effect) {
   while (frames) {
     ZX_DEBUG_ASSERT(src_offset < src_rb_size);
     ZX_DEBUG_ASSERT(dst_offset < dst_rb_size);
@@ -604,8 +583,7 @@ void FxProcessor::ApplyEffect(int16_t* src, uint32_t src_offset,
     // here when we switch to C++17. The syntax for invoking a pointer to
     // non-static method on an object is ugly and hard to understand, and
     // people should not be forced to look at it.
-    ((*this).*(effect))(src + (src_offset * NUM_CHANNELS),
-                        dst + (dst_offset * NUM_CHANNELS), todo);
+    ((*this).*(effect))(src + (src_offset * NUM_CHANNELS), dst + (dst_offset * NUM_CHANNELS), todo);
 
     src_offset = (src_space > todo) ? (src_offset + todo) : 0;
     dst_offset = (dst_space > todo) ? (dst_offset + todo) : 0;
@@ -617,8 +595,7 @@ void FxProcessor::CopyInputEffect(int16_t* src, int16_t* dst, uint32_t frames) {
   ::memcpy(dst, src, frames * sizeof(*dst) * NUM_CHANNELS);
 }
 
-void FxProcessor::PreampInputEffect(int16_t* src, int16_t* dst,
-                                    uint32_t frames) {
+void FxProcessor::PreampInputEffect(int16_t* src, int16_t* dst, uint32_t frames) {
   for (uint32_t i = 0; i < frames * NUM_CHANNELS; ++i) {
     int32_t tmp = src[i];
     tmp *= preamp_gain_fixed_;
@@ -648,10 +625,8 @@ void FxProcessor::ReverbMixEffect(int16_t* src, int16_t* dst, uint32_t frames) {
 void FxProcessor::FuzzEffect(int16_t* src, int16_t* dst, uint32_t frames) {
   for (uint32_t i = 0; i < frames * NUM_CHANNELS; ++i) {
     float norm = FuzzNorm(Norm(src[i]), fuzz_gain_);
-    dst[i] =
-        (src[i] < 0)
-            ? static_cast<int16_t>(std::numeric_limits<int16_t>::min() * norm)
-            : static_cast<int16_t>(std::numeric_limits<int16_t>::max() * norm);
+    dst[i] = (src[i] < 0) ? static_cast<int16_t>(std::numeric_limits<int16_t>::min() * norm)
+                          : static_cast<int16_t>(std::numeric_limits<int16_t>::max() * norm);
   }
 }
 
@@ -660,24 +635,19 @@ void FxProcessor::MixedFuzzEffect(int16_t* src, int16_t* dst, uint32_t frames) {
     float norm = Norm(src[i]);
     float fnorm = FuzzNorm(norm, fuzz_gain_);
     float mixed = ((fnorm * fuzz_mix_) + (norm * fuzz_mix_inv_));
-    dst[i] =
-        (src[i] < 0)
-            ? static_cast<int16_t>(std::numeric_limits<int16_t>::min() * mixed)
-            : static_cast<int16_t>(std::numeric_limits<int16_t>::max() * mixed);
+    dst[i] = (src[i] < 0) ? static_cast<int16_t>(std::numeric_limits<int16_t>::min() * mixed)
+                          : static_cast<int16_t>(std::numeric_limits<int16_t>::max() * mixed);
   }
 }
 
-void FxProcessor::UpdateReverb(bool enabled, int32_t depth_delta,
-                               float gain_delta) {
+void FxProcessor::UpdateReverb(bool enabled, int32_t depth_delta, float gain_delta) {
   reverb_enabled_ = enabled;
 
-  reverb_depth_msec_ =
-      fbl::clamp<uint32_t>(reverb_depth_msec_ + depth_delta,
-                           MIN_REVERB_DEPTH_MSEC, MAX_REVERB_DEPTH_MSEC);
+  reverb_depth_msec_ = fbl::clamp<uint32_t>(reverb_depth_msec_ + depth_delta, MIN_REVERB_DEPTH_MSEC,
+                                            MAX_REVERB_DEPTH_MSEC);
 
-  reverb_feedback_gain_ =
-      fbl::clamp(reverb_feedback_gain_ + gain_delta, MIN_REVERB_FEEDBACK_GAIN,
-                 MAX_REVERB_FEEDBACK_GAIN);
+  reverb_feedback_gain_ = fbl::clamp(reverb_feedback_gain_ + gain_delta, MIN_REVERB_FEEDBACK_GAIN,
+                                     MAX_REVERB_FEEDBACK_GAIN);
 
   if (enabled) {
     reverb_depth_frames_ = (input_->frame_rate() * reverb_depth_msec_) / 1000u;
@@ -685,8 +655,7 @@ void FxProcessor::UpdateReverb(bool enabled, int32_t depth_delta,
     double gain_scale = pow(10.0, reverb_feedback_gain_ / 20.0);
     reverb_feedback_gain_fixed_ = static_cast<uint16_t>(gain_scale * 0x10000);
 
-    printf("%7s: %u mSec %.1f dB\n", "Reverb", reverb_depth_msec_,
-           reverb_feedback_gain_);
+    printf("%7s: %u mSec %.1f dB\n", "Reverb", reverb_depth_msec_, reverb_feedback_gain_);
   } else {
     printf("%7s: Disabled\n", "Reverb");
   }
@@ -694,33 +663,27 @@ void FxProcessor::UpdateReverb(bool enabled, int32_t depth_delta,
 
 void FxProcessor::UpdateFuzz(bool enabled, float gain_delta, float mix_delta) {
   fuzz_enabled_ = enabled;
-  fuzz_gain_ =
-      fbl::clamp(fuzz_gain_ + gain_delta, MIN_FUZZ_GAIN, MAX_FUZZ_GAIN);
+  fuzz_gain_ = fbl::clamp(fuzz_gain_ + gain_delta, MIN_FUZZ_GAIN, MAX_FUZZ_GAIN);
   fuzz_mix_ = fbl::clamp(fuzz_mix_ + mix_delta, MIN_FUZZ_MIX, MAX_FUZZ_MIX);
   fuzz_mix_inv_ = 1.0f - fuzz_mix_;
 
   if (enabled) {
-    printf("%7s: Gain %.1f Mix %.1f%%\n", "Fuzz", fuzz_gain_,
-           fuzz_mix_ * 100.0f);
+    printf("%7s: Gain %.1f Mix %.1f%%\n", "Fuzz", fuzz_gain_, fuzz_mix_ * 100.0f);
   } else {
     printf("%7s: Disabled\n", "Fuzz");
   }
 }
 
 void FxProcessor::UpdatePreampGain(float delta) {
-  preamp_gain_ =
-      fbl::clamp(preamp_gain_ + delta, MIN_PREAMP_GAIN, MAX_PREAMP_GAIN);
+  preamp_gain_ = fbl::clamp(preamp_gain_ + delta, MIN_PREAMP_GAIN, MAX_PREAMP_GAIN);
 
   double gain_scale = pow(10.0, preamp_gain_ / 20.0);
-  preamp_gain_fixed_ =
-      static_cast<uint16_t>(gain_scale * (0x1 << PREAMP_GAIN_FRAC_BITS));
+  preamp_gain_fixed_ = static_cast<uint16_t>(gain_scale * (0x1 << PREAMP_GAIN_FRAC_BITS));
 
   printf("%7s: %.1f dB\n", "PreGain", preamp_gain_);
 }
 
-void usage(const char* prog_name) {
-  printf("usage: %s [input_dev_num]\n", prog_name);
-}
+void usage(const char* prog_name) { printf("usage: %s [input_dev_num]\n", prog_name); }
 
 int main(int argc, char** argv) {
   uint32_t input_num = 0;
@@ -754,19 +717,16 @@ int main(int argc, char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  std::unique_ptr<sys::ComponentContext> startup_context =
-      sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> startup_context = sys::ComponentContext::Create();
 
-  fuchsia::media::AudioPtr audio =
-      startup_context->svc()->Connect<fuchsia::media::Audio>();
+  fuchsia::media::AudioPtr audio = startup_context->svc()->Connect<fuchsia::media::Audio>();
 
   fuchsia::scheduler::ProfileProviderSyncPtr profile_provider;
   startup_context->svc()->Connect<fuchsia::scheduler::ProfileProvider>(
       profile_provider.NewRequest());
 
-  FxProcessor fx(std::move(input), [&loop]() {
-    async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
-  });
+  FxProcessor fx(std::move(input),
+                 [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });
   fx.Startup(std::move(audio), std::move(profile_provider));
 
   loop.Run();

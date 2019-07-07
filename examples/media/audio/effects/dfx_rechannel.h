@@ -5,8 +5,8 @@
 // Refer to the accompanying README.md file for detailed API documentation
 // (functions, structs and constants).
 
-#ifndef LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_RECHANNEL_H_
-#define LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_RECHANNEL_H_
+#ifndef EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_RECHANNEL_H_
+#define EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_RECHANNEL_H_
 
 #include <lib/media/audio_dfx/cpp/audio_device_fx.h>
 #include <stdint.h>
@@ -33,20 +33,17 @@ class DfxRechannel : public DfxBase {
     return true;
   }
 
-  static bool GetControlInfo(uint16_t, fuchsia_audio_dfx_control_description*) {
-    return false;
-  }
+  static bool GetControlInfo(uint16_t, fuchsia_audio_dfx_control_description*) { return false; }
 
-  static DfxRechannel* Create(uint32_t frame_rate, uint16_t channels_in,
-                              uint16_t channels_out) {
+  static DfxRechannel* Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out) {
     return (channels_in == kNumChannelsIn && channels_out == kNumChannelsOut
                 ? new DfxRechannel(frame_rate)
                 : nullptr);
   }
 
   DfxRechannel(uint32_t frame_rate)
-      : DfxBase(Effect::Rechannel, kNumControls, frame_rate, kNumChannelsIn,
-                kNumChannelsOut, kLatencyFrames, kLatencyFrames) {}
+      : DfxBase(Effect::Rechannel, kNumControls, frame_rate, kNumChannelsIn, kNumChannelsOut,
+                kLatencyFrames, kLatencyFrames) {}
 
   // Effect converts a 5.1 mix into stereo.
   // Left  = FL + FC*sqr(.5) + BL  -and-  Right = FR + FC*sqr(.5) + BR
@@ -62,21 +59,16 @@ class DfxRechannel : public DfxBase {
       uint32_t in = frame * channels_in_;
       if (!encode_) {
         buff_out[out] =
-            (buff_in[in] + (0.707106781f * buff_in[in + 2]) + buff_in[in + 4]) *
-            0.369398062f;
+            (buff_in[in] + (0.707106781f * buff_in[in + 2]) + buff_in[in + 4]) * 0.369398062f;
         buff_out[out + 1] =
-            (buff_in[in + 1] + (0.707106781f * buff_in[in + 2]) +
-             buff_in[in + 5]) *
-            0.369398062f;
+            (buff_in[in + 1] + (0.707106781f * buff_in[in + 2]) + buff_in[in + 5]) * 0.369398062f;
       } else {
-        buff_out[out] =
-            (buff_in[in] + (0.707106781f * buff_in[in + 2]) +
-             (0.866025403f * buff_in[in + 4]) + (0.5f * buff_in[in + 5])) *
-            0.325400906f;
-        buff_out[out + 1] =
-            (buff_in[in + 1] + (0.707106781f * buff_in[in + 2]) -
-             (0.5f * buff_in[in + 4]) - (0.866025403f * buff_in[in + 5])) *
-            0.325400906f;
+        buff_out[out] = (buff_in[in] + (0.707106781f * buff_in[in + 2]) +
+                         (0.866025403f * buff_in[in + 4]) + (0.5f * buff_in[in + 5])) *
+                        0.325400906f;
+        buff_out[out + 1] = (buff_in[in + 1] + (0.707106781f * buff_in[in + 2]) -
+                             (0.5f * buff_in[in + 4]) - (0.866025403f * buff_in[in + 5])) *
+                            0.325400906f;
       }
     }
     return true;
@@ -88,4 +80,4 @@ class DfxRechannel : public DfxBase {
 
 }  // namespace media::audio_dfx_test
 
-#endif  // LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_RECHANNEL_H_
+#endif  // EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_RECHANNEL_H_

@@ -10,8 +10,7 @@
 
 namespace examples {
 
-ToneGenerator::ToneGenerator(uint32_t frames_per_second, float frequency,
-                             float volume, float decay)
+ToneGenerator::ToneGenerator(uint32_t frames_per_second, float frequency, float volume, float decay)
     : frames_per_second_(frames_per_second),
       frequency_(frequency),
       volume_(volume),
@@ -19,8 +18,7 @@ ToneGenerator::ToneGenerator(uint32_t frames_per_second, float frequency,
       real_sample_(0.0f),
       imaginary_sample_(1.0f) {}
 
-void ToneGenerator::MixSamples(float* dest, uint32_t frame_count,
-                               uint32_t channel_count) {
+void ToneGenerator::MixSamples(float* dest, uint32_t frame_count, uint32_t channel_count) {
   // We're using the 'slope iteration method' here to avoid calling |sin| for
   // every sample or having to build a lookup table. While this method is
   // theoretically correct, rounding errors will cause the resulting wave to

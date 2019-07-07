@@ -28,8 +28,7 @@ VuMeterView::VuMeterView(scenic::ViewContext view_context, async::Loop* loop)
       slow_right_(kSlowDecay) {
   FXL_DCHECK(loop);
 
-  auto audio =
-      startup_context()->ConnectToEnvironmentService<fuchsia::media::Audio>();
+  auto audio = startup_context()->ConnectToEnvironmentService<fuchsia::media::Audio>();
   audio->CreateAudioCapturer(audio_capturer_.NewRequest(), false);
 
   audio_capturer_.set_error_handler([this](zx_status_t status) {
@@ -37,9 +36,8 @@ VuMeterView::VuMeterView(scenic::ViewContext view_context, async::Loop* loop)
     Shutdown();
   });
 
-  audio_capturer_->GetStreamType([this](fuchsia::media::StreamType type) {
-    OnDefaultFormatFetched(std::move(type));
-  });
+  audio_capturer_->GetStreamType(
+      [this](fuchsia::media::StreamType type) { OnDefaultFormatFetched(std::move(type)); });
 }
 
 void VuMeterView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
@@ -65,8 +63,7 @@ void VuMeterView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
   }
 }
 
-void VuMeterView::OnSceneInvalidated(
-    fuchsia::images::PresentationInfo presentation_info) {
+void VuMeterView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {
   SkCanvas* canvas = AcquireCanvas();
   if (canvas) {
     DrawContent(canvas);
@@ -81,22 +78,18 @@ void VuMeterView::DrawContent(SkCanvas* canvas) {
   paint.setAntiAlias(true);
 
   paint.setColor(SK_ColorCYAN);
-  canvas->drawCircle(
-      logical_size().x / 3.0f, logical_size().y / 2,
-      (fast_left_.current() * logical_size().x / 2) / kVuFullWidth, paint);
-  canvas->drawCircle(
-      2.0f * logical_size().x / 3.0f, logical_size().y / 2,
-      (fast_right_.current() * logical_size().x / 2) / kVuFullWidth, paint);
+  canvas->drawCircle(logical_size().x / 3.0f, logical_size().y / 2,
+                     (fast_left_.current() * logical_size().x / 2) / kVuFullWidth, paint);
+  canvas->drawCircle(2.0f * logical_size().x / 3.0f, logical_size().y / 2,
+                     (fast_right_.current() * logical_size().x / 2) / kVuFullWidth, paint);
 
   paint.setColor(SK_ColorWHITE);
   paint.setStyle(SkPaint::kStroke_Style);
   paint.setStrokeWidth(SkIntToScalar(3));
-  canvas->drawCircle(
-      logical_size().x / 3.0f, logical_size().y / 2,
-      (slow_left_.current() * logical_size().x / 2) / kVuFullWidth, paint);
-  canvas->drawCircle(
-      2.0f * logical_size().x / 3.0f, logical_size().y / 2,
-      (slow_right_.current() * logical_size().x / 2) / kVuFullWidth, paint);
+  canvas->drawCircle(logical_size().x / 3.0f, logical_size().y / 2,
+                     (slow_left_.current() * logical_size().x / 2) / kVuFullWidth, paint);
+  canvas->drawCircle(2.0f * logical_size().x / 3.0f, logical_size().y / 2,
+                     (slow_right_.current() * logical_size().x / 2) / kVuFullWidth, paint);
 }
 
 void VuMeterView::SendCaptureRequest() {
@@ -115,27 +108,23 @@ void VuMeterView::SendCaptureRequest() {
   request_in_flight_ = true;
 }
 
-void VuMeterView::OnDefaultFormatFetched(
-    fuchsia::media::StreamType default_type) {
+void VuMeterView::OnDefaultFormatFetched(fuchsia::media::StreamType default_type) {
   // Set the media type, keep the default sample rate but make sure that we
   // normalize to stereo 16-bit LPCM.
   FXL_DCHECK(default_type.medium_specific.is_audio());
   const auto& audio_details = default_type.medium_specific.audio();
 
-  audio_capturer_->SetPcmStreamType(
-      media::CreateAudioStreamType(fuchsia::media::AudioSampleFormat::SIGNED_16,
-                                   2, audio_details.frames_per_second));
+  audio_capturer_->SetPcmStreamType(media::CreateAudioStreamType(
+      fuchsia::media::AudioSampleFormat::SIGNED_16, 2, audio_details.frames_per_second));
 
   uint64_t payload_buffer_size =
-      kBytesPerFrame *
-      ((kCaptureDuration * audio_details.frames_per_second) / ZX_SEC(1));
+      kBytesPerFrame * ((kCaptureDuration * audio_details.frames_per_second) / ZX_SEC(1));
 
-  constexpr zx_rights_t rights =
-      ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP;
+  constexpr zx_rights_t rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP;
   zx_status_t zx_res;
   zx::vmo vmo;
-  zx_res = payload_buffer_.CreateAndMap(payload_buffer_size, ZX_VM_PERM_READ,
-                                        nullptr, &vmo, rights);
+  zx_res =
+      payload_buffer_.CreateAndMap(payload_buffer_size, ZX_VM_PERM_READ, nullptr, &vmo, rights);
   if (zx_res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create payload buffer (res " << zx_res << ")";
     Shutdown();
@@ -155,8 +144,7 @@ void VuMeterView::OnPacketCaptured(fuchsia::media::StreamPacket packet) {
   }
 
   // TODO(dalesat): Synchronize display and captured audio.
-  uint32_t frame_count =
-      static_cast<uint32_t>(payload_buffer_.size() / kBytesPerFrame);
+  uint32_t frame_count = static_cast<uint32_t>(payload_buffer_.size() / kBytesPerFrame);
   int16_t* samples = reinterpret_cast<int16_t*>(payload_buffer_.start());
 
   for (uint32_t i = 0; i < frame_count; ++i) {

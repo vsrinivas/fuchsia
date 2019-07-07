@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "examples/media/audio/sync_sine/sync_sine.h"
+
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/syscalls.h>
 
 #include <cmath>
 
-#include "examples/media/audio/sync_sine/sync_sine.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "src/lib/fxl/logging.h"
 
@@ -30,15 +31,13 @@ constexpr double kFrequencyScalar = 2 * M_PI * kFrequency / kFrameRate;
 
 // Loop for 2 seconds.
 constexpr size_t kTotalDurationSecs = 2;
-constexpr size_t kNumPacketsToSend =
-    kTotalDurationSecs * kFrameRate / kFramesPerPayload;
+constexpr size_t kNumPacketsToSend = kTotalDurationSecs * kFrameRate / kFramesPerPayload;
 
 }  // namespace
 
 namespace examples {
 
-MediaApp::MediaApp(std::unique_ptr<sys::ComponentContext> context)
-    : context_(std::move(context)) {}
+MediaApp::MediaApp(std::unique_ptr<sys::ComponentContext> context) : context_(std::move(context)) {}
 MediaApp::~MediaApp() = default;
 
 // Prepare for playback, compute playback data, supply media packets, start.
@@ -93,8 +92,7 @@ int MediaApp::Run() {
 
   constexpr zx_duration_t nsec_per_payload = ZX_MSEC(kMSecsPerPayload);
   uint32_t initial_payloads = std::min<uint32_t>(
-      (high_water_mark_ + nsec_per_payload - 1) / nsec_per_payload,
-      kNumPacketsToSend);
+      (high_water_mark_ + nsec_per_payload - 1) / nsec_per_payload, kNumPacketsToSend);
 
   while (num_packets_sent_ < initial_payloads) {
     SendAudioPacket(CreateAudioPacket(num_packets_sent_));
@@ -107,9 +105,8 @@ int MediaApp::Run() {
   // times that were used. In effect, by using NO_TIMESTAMP for these two input
   // values, we align the following two things: "a local time of _As Soon As
   // We Safely Can_" and "the audio that I gave a PTS of _Zero_."
-  audio_renderer_sync_->Play(fuchsia::media::NO_TIMESTAMP,
-                             fuchsia::media::NO_TIMESTAMP, &ref_start_time,
-                             &media_start_time);
+  audio_renderer_sync_->Play(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP,
+                             &ref_start_time, &media_start_time);
   start_time_known_ = true;
 
   // TODO(johngro): This program is making the assumption that the platform's
@@ -150,9 +147,8 @@ bool MediaApp::SetStreamType() {
   FXL_DCHECK(audio_renderer_sync_);
 
   fuchsia::media::AudioStreamType stream_type;
-  stream_type.sample_format =
-      use_float_ ? fuchsia::media::AudioSampleFormat::FLOAT
-                 : fuchsia::media::AudioSampleFormat::SIGNED_16;
+  stream_type.sample_format = use_float_ ? fuchsia::media::AudioSampleFormat::FLOAT
+                                         : fuchsia::media::AudioSampleFormat::SIGNED_16;
   stream_type.channels = kNumChannels;
   stream_type.frames_per_second = kFrameRate;
 
@@ -167,9 +163,9 @@ bool MediaApp::SetStreamType() {
 // buffers. Open a PacketConsumer, and send it a duplicate handle of our VMO.
 zx_status_t MediaApp::CreateMemoryMapping() {
   zx::vmo payload_vmo;
-  zx_status_t status = payload_buffer_.CreateAndMap(
-      total_mapping_size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
-      &payload_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
+  zx_status_t status =
+      payload_buffer_.CreateAndMap(total_mapping_size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
+                                   &payload_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "VmoMapper:::CreateAndMap failed - " << status;
@@ -185,8 +181,7 @@ zx_status_t MediaApp::CreateMemoryMapping() {
 // Write a sine wave into our audio buffer. We'll continuously loop/resubmit it.
 void MediaApp::WriteAudioIntoBuffer(void* buffer, size_t num_frames) {
   for (size_t frame = 0; frame < num_frames; ++frame) {
-    float val =
-        kAmplitudeScalar * sin(static_cast<double>(frame) * kFrequencyScalar);
+    float val = kAmplitudeScalar * sin(static_cast<double>(frame) * kFrequencyScalar);
 
     for (size_t chan_num = 0; chan_num < kNumChannels; ++chan_num) {
       if (use_float_) {
@@ -194,8 +189,8 @@ void MediaApp::WriteAudioIntoBuffer(void* buffer, size_t num_frames) {
         float_buffer[frame * kNumChannels + chan_num] = val;
       } else {
         auto int_buffer = reinterpret_cast<int16_t*>(buffer);
-        int_buffer[frame * kNumChannels + chan_num] = static_cast<int16_t>(
-            round(val * std::numeric_limits<int16_t>::max()));
+        int_buffer[frame * kNumChannels + chan_num] =
+            static_cast<int16_t>(round(val * std::numeric_limits<int16_t>::max()));
       }
     }
   }
@@ -221,9 +216,7 @@ fuchsia::media::StreamPacket MediaApp::CreateAudioPacket(size_t payload_num) {
 bool MediaApp::SendAudioPacket(fuchsia::media::StreamPacket packet) {
   if (verbose_) {
     const float delay =
-        (start_time_known_ ? (float)zx_clock_get_monotonic() - clock_start_time_
-                           : 0) /
-        1000000;
+        (start_time_known_ ? (float)zx_clock_get_monotonic() - clock_start_time_ : 0) / 1000000;
     printf("SendAudioPacket num %zu time %.2f\n", num_packets_sent_, delay);
   }
 
@@ -239,8 +232,7 @@ bool MediaApp::SendAudioPacket(fuchsia::media::StreamPacket packet) {
 // (asynchronous) AudioRenderer interface and process callbacks from SendPacket.
 bool MediaApp::RefillBuffer() {
   const zx_time_t now = zx_clock_get_monotonic();
-  const zx_duration_t time_data_needed =
-      now - std::min(now, clock_start_time_) + high_water_mark_;
+  const zx_duration_t time_data_needed = now - std::min(now, clock_start_time_) + high_water_mark_;
   size_t num_payloads_needed =
       ceil(static_cast<float>(time_data_needed) / ZX_MSEC(kMSecsPerPayload));
   num_payloads_needed = std::min(kNumPacketsToSend, num_payloads_needed);
@@ -248,8 +240,7 @@ bool MediaApp::RefillBuffer() {
   if (verbose_) {
     printf("RefillBuffer  now: %.3f start: %.3f :: need %lu (%.4f), sent %lu\n",
            (float)now / 1000000, (float)clock_start_time_ / 1000000,
-           num_payloads_needed * kMSecsPerPayload,
-           (float)time_data_needed / 1000000,
+           num_payloads_needed * kMSecsPerPayload, (float)time_data_needed / 1000000,
            num_packets_sent_ * kMSecsPerPayload);
   }
   while (num_packets_sent_ < num_payloads_needed) {
@@ -262,8 +253,7 @@ bool MediaApp::RefillBuffer() {
 }
 
 void MediaApp::WaitForPackets(size_t num_packets) {
-  const zx_duration_t audio_submitted =
-      ZX_MSEC(kMSecsPerPayload) * num_packets_sent_;
+  const zx_duration_t audio_submitted = ZX_MSEC(kMSecsPerPayload) * num_packets_sent_;
 
   FXL_DCHECK(num_packets_sent_ <= kNumPacketsToSend);
   zx_time_t wake_time = clock_start_time_ + audio_submitted;

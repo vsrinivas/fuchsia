@@ -17,8 +17,7 @@ class ToneGenerator {
   // |decay| specifies the factor by which volume should be reduced in one
   // second. A |decay| value of 0.0 produces a constant tone. A |decay| value
   // of 0.9 reducees the volume 90% (to 10%) in one second.
-  ToneGenerator(uint32_t frames_per_second, float frequency, float volume,
-                float decay);
+  ToneGenerator(uint32_t frames_per_second, float frequency, float volume, float decay);
 
   // Mixes |frame_count| samples into |dest|, summing the first sample into
   // |*dest|, the next into |*(dest + channel_count)|, etc. |channel_count| is

@@ -50,8 +50,7 @@ class VuMeterView : public scenic::SkiaView {
   };
 
   // |scenic::BaseView|
-  void OnSceneInvalidated(
-      fuchsia::images::PresentationInfo presentation_info) override;
+  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
   void OnInputEvent(fuchsia::ui::input::InputEvent event) override;
 
   // Draws the UI.

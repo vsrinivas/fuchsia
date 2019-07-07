@@ -27,8 +27,7 @@ AudioPlayerParams::AudioPlayerParams(const fxl::CommandLine& command_line) {
       url_ = "file://";
       url_.append(arg);
       url_found = true;
-    } else if (arg.compare(0, 7, "http://") == 0 ||
-               arg.compare(0, 8, "https://") == 0 ||
+    } else if (arg.compare(0, 7, "http://") == 0 || arg.compare(0, 8, "https://") == 0 ||
                arg.compare(0, 8, "file:///") == 0) {
       url_ = arg;
       url_found = true;

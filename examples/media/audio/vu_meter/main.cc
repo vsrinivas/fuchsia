@@ -20,8 +20,7 @@ int main(int argc, const char** argv) {
 
   scenic::ViewProviderComponent component(
       [&loop](scenic::ViewContext view_context) {
-        return std::make_unique<examples::VuMeterView>(std::move(view_context),
-                                                       &loop);
+        return std::make_unique<examples::VuMeterView>(std::move(view_context), &loop);
       },
       &loop);
 

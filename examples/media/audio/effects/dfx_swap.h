@@ -5,8 +5,8 @@
 // Refer to the accompanying README.md file for detailed API documentation
 // (functions, structs and constants).
 
-#ifndef LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_SWAP_H_
-#define LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_SWAP_H_
+#ifndef EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_SWAP_H_
+#define EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_SWAP_H_
 
 #include <lib/media/audio_dfx/cpp/audio_device_fx.h>
 #include <stdint.h>
@@ -33,24 +33,20 @@ class DfxSwap : public DfxBase {
     return true;
   }
 
-  static bool GetControlInfo(uint16_t, fuchsia_audio_dfx_control_description*) {
-    return false;
-  }
+  static bool GetControlInfo(uint16_t, fuchsia_audio_dfx_control_description*) { return false; }
 
-  static DfxSwap* Create(uint32_t frame_rate, uint16_t channels_in,
-                         uint16_t channels_out) {
+  static DfxSwap* Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out) {
     return (channels_in == kNumChannelsIn && channels_out == kNumChannelsOut
                 ? new DfxSwap(frame_rate, channels_in)
                 : nullptr);
   }
 
   DfxSwap(uint32_t frame_rate, uint16_t channels)
-      : DfxBase(Effect::Swap, kNumControls, frame_rate, channels, channels,
-                kLatencyFrames, kLatencyFrames) {}
+      : DfxBase(Effect::Swap, kNumControls, frame_rate, channels, channels, kLatencyFrames,
+                kLatencyFrames) {}
 
   bool ProcessInplace(uint32_t num_frames, float* audio_buff) {
-    for (uint32_t sample = 0; sample < num_frames * channels_in_;
-         sample += channels_in_) {
+    for (uint32_t sample = 0; sample < num_frames * channels_in_; sample += channels_in_) {
       float temp = audio_buff[sample];
       audio_buff[sample] = audio_buff[sample + 1];
       audio_buff[sample + 1] = temp;
@@ -61,4 +57,4 @@ class DfxSwap : public DfxBase {
 
 }  // namespace media::audio_dfx_test
 
-#endif  // LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_SWAP_H_
+#endif  // EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_SWAP_H_

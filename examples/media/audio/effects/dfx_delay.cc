@@ -27,15 +27,13 @@ bool DfxDelay::GetInfo(fuchsia_audio_dfx_description* dfx_desc) {
 }
 
 // static -- uses DfxDelay classwide consts
-bool DfxDelay::GetControlInfo(
-    uint16_t control_num,
-    fuchsia_audio_dfx_control_description* device_fx_control_desc) {
+bool DfxDelay::GetControlInfo(uint16_t control_num,
+                              fuchsia_audio_dfx_control_description* device_fx_control_desc) {
   if (control_num >= kNumControls) {
     return false;
   }
 
-  strlcpy(device_fx_control_desc->name, "Delay (in frames)",
-          sizeof(device_fx_control_desc->name));
+  strlcpy(device_fx_control_desc->name, "Delay (in frames)", sizeof(device_fx_control_desc->name));
   device_fx_control_desc->max_val = static_cast<float>(kMaxDelayFrames);
   device_fx_control_desc->min_val = static_cast<float>(kMinDelayFrames);
   device_fx_control_desc->initial_val = static_cast<float>(kInitialDelayFrames);
@@ -43,8 +41,7 @@ bool DfxDelay::GetControlInfo(
 }
 
 // static -- called from static DfxBase::Create
-DfxDelay* DfxDelay::Create(uint32_t frame_rate, uint16_t channels_in,
-                           uint16_t channels_out) {
+DfxDelay* DfxDelay::Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out) {
   if (channels_in != channels_out) {
     return nullptr;
   }
@@ -56,12 +53,11 @@ DfxDelay* DfxDelay::Create(uint32_t frame_rate, uint16_t channels_in,
 // DfxDelay: instance member functions
 //
 DfxDelay::DfxDelay(uint32_t frame_rate, uint16_t channels)
-    : DfxBase(Effect::Delay, kNumControls, frame_rate, channels, channels,
-              kLatencyFrames, kLatencyFrames) {
+    : DfxBase(Effect::Delay, kNumControls, frame_rate, channels, channels, kLatencyFrames,
+              kLatencyFrames) {
   // This buff must accommodate our maximum delay, plus the largest 'num_frames'
   // required by process_inplace -- which can be as large as frame_rate.
-  delay_buff_ =
-      std::make_unique<float[]>((kMaxDelayFrames + frame_rate) * channels);
+  delay_buff_ = std::make_unique<float[]>((kMaxDelayFrames + frame_rate) * channels);
 
   delay_samples_ = kInitialDelayFrames * channels_in_;
   ::memset(delay_buff_.get(), 0, delay_samples_ * sizeof(float));
@@ -75,8 +71,7 @@ bool DfxDelay::GetControlValue(uint16_t control_num, float* value_out) {
 
 // This effect chooses to self-flush, upon any change to our delay setting.
 bool DfxDelay::SetControlValue(uint16_t control_num, float value) {
-  if (control_num >= kNumControls || value > kMaxDelayFrames ||
-      value < kMinDelayFrames) {
+  if (control_num >= kNumControls || value > kMaxDelayFrames || value < kMinDelayFrames) {
     return false;
   }
 

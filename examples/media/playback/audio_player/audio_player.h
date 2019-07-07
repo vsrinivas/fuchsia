@@ -25,13 +25,11 @@ class AudioPlayer {
 
  private:
   // Handles a status update from the player.
-  void HandleStatusChanged(
-      const fuchsia::media::playback::PlayerStatus& status);
+  void HandleStatusChanged(const fuchsia::media::playback::PlayerStatus& status);
 
   // Logs a metadata property, if it exists.
   void MaybeLogMetadataProperty(const fuchsia::media::Metadata& metadata,
-                                const std::string& property_label,
-                                const std::string& prefix);
+                                const std::string& property_label, const std::string& prefix);
 
   void GetKeystroke();
   void HandleKeystroke(zx_status_t status, uint32_t events);

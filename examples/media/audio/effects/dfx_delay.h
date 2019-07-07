@@ -5,8 +5,8 @@
 // Refer to the accompanying README.md file for detailed API documentation
 // (functions, structs and constants).
 
-#ifndef LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_DELAY_H_
-#define LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_DELAY_H_
+#ifndef EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_DELAY_H_
+#define EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_DELAY_H_
 
 #include <lib/media/audio_dfx/cpp/audio_device_fx.h>
 #include <stdint.h>
@@ -27,8 +27,7 @@ class DfxDelay : public DfxBase {
  public:
   static constexpr uint16_t kNumControls = 1;
   static constexpr uint16_t kNumChannelsIn = FUCHSIA_AUDIO_DFX_CHANNELS_ANY;
-  static constexpr uint16_t kNumChannelsOut =
-      FUCHSIA_AUDIO_DFX_CHANNELS_SAME_AS_IN;
+  static constexpr uint16_t kNumChannelsOut = FUCHSIA_AUDIO_DFX_CHANNELS_SAME_AS_IN;
   static constexpr uint32_t kLatencyFrames = 0;
 
   static constexpr uint32_t kMaxDelayFrames = 64000;
@@ -36,12 +35,10 @@ class DfxDelay : public DfxBase {
   static constexpr uint32_t kInitialDelayFrames = 0;
 
   static bool GetInfo(fuchsia_audio_dfx_description* dfx_desc);
-  static bool GetControlInfo(
-      uint16_t control_num,
-      fuchsia_audio_dfx_control_description* device_fx_control_desc);
+  static bool GetControlInfo(uint16_t control_num,
+                             fuchsia_audio_dfx_control_description* device_fx_control_desc);
 
-  static DfxDelay* Create(uint32_t frame_rate, uint16_t channels_in,
-                          uint16_t channels_out);
+  static DfxDelay* Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out);
 
   DfxDelay(uint32_t frame_rate, uint16_t channels);
   ~DfxDelay() = default;
@@ -62,4 +59,4 @@ class DfxDelay : public DfxBase {
 
 }  // namespace media::audio_dfx_test
 
-#endif  // LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_DELAY_H_
+#endif  // EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_DELAY_H_

@@ -5,14 +5,13 @@
 // Refer to the accompanying README.md file for detailed API documentation
 // (functions, structs and constants).
 
-#ifndef LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_BASE_H_
-#define LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_BASE_H_
+#ifndef EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_BASE_H_
+#define EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_BASE_H_
 
 #include <lib/media/audio_dfx/cpp/audio_device_fx.h>
 #include <stdint.h>
 
 #include <memory>
-
 
 namespace media::audio_dfx_test {
 
@@ -23,18 +22,15 @@ class DfxBase {
   static constexpr uint16_t kNumTestEffects = Effect::Count;
 
   static bool GetNumEffects(uint32_t* num_effects_out);
-  static bool GetInfo(uint32_t effect_id,
-                      fuchsia_audio_dfx_description* dfx_desc);
-  static bool GetControlInfo(
-      uint32_t effect_id, uint16_t control_num,
-      fuchsia_audio_dfx_control_description* dfx_control_desc);
+  static bool GetInfo(uint32_t effect_id, fuchsia_audio_dfx_description* dfx_desc);
+  static bool GetControlInfo(uint32_t effect_id, uint16_t control_num,
+                             fuchsia_audio_dfx_control_description* dfx_control_desc);
 
-  static DfxBase* Create(uint32_t effect_id, uint32_t frame_rate,
-                         uint16_t channels_in, uint16_t channels_out);
+  static DfxBase* Create(uint32_t effect_id, uint32_t frame_rate, uint16_t channels_in,
+                         uint16_t channels_out);
 
-  DfxBase(uint32_t effect_id, uint16_t num_controls, uint32_t frame_rate,
-          uint16_t channels_in, uint16_t channels_out, uint32_t frames_latency,
-          uint32_t suggested_buff_frames)
+  DfxBase(uint32_t effect_id, uint16_t num_controls, uint32_t frame_rate, uint16_t channels_in,
+          uint16_t channels_out, uint32_t frames_latency, uint32_t suggested_buff_frames)
       : effect_id_(effect_id),
         num_controls_(num_controls),
         frame_rate_(frame_rate),
@@ -70,4 +66,4 @@ class DfxBase {
 
 }  // namespace media::audio_dfx_test
 
-#endif  // LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_BASE_H_
+#endif  // EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_BASE_H_

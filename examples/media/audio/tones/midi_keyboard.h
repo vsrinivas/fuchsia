@@ -22,8 +22,7 @@ class MidiKeyboard {
  private:
   friend std::unique_ptr<MidiKeyboard>::deleter_type;
 
-  MidiKeyboard(Tones* owner, fxl::UniqueFD dev)
-      : owner_(owner), dev_(std::move(dev)) {}
+  MidiKeyboard(Tones* owner, fxl::UniqueFD dev) : owner_(owner), dev_(std::move(dev)) {}
   ~MidiKeyboard();
 
   void Wait();
