@@ -6,6 +6,29 @@ the Platform Source Tree. Some of the information in this document might be of
 interest to clients of the Fuchsia SDK, but the primary focus of the document is
 how the Fuchsia project develops the SDK.
 
+## Governance
+
+The contents of the Fuchsia SDK are governed by the [Fuchsia API Council]. The
+SDK does not contain libraries developed outside the Fuchsia project because
+those libraries are not subject to the governance of the Fuchsia API Council.
+
+Client libraries in the SDK do not depend on libraries outside the SDK unless
+the external library has been approved by the Fuchsia API Council. Typically,
+the council will not approve a dependency unless the dependency has strict
+evolution criteria (e.g., the standard libraries for the various supported
+languages).
+
+### Example: Google Test
+
+The Fuchsia SDK does not include the _Google Test_ library because the
+governance for the _Google Test_ library is provided by Google, not by the
+Fuchsia API Council.
+
+The Fuchsia SDK does not depend on the _Google Test_ library because the
+[promises made by the governing body](https://abseil.io/about/philosophy#upgrade-support)
+for the _Google Test_ library are not compatible with the model used by the
+Fuchsia SDK.
+
 ## FIDL interfaces and libzircon are the system ABI
 
 Broadly speaking, the binary interface to the system is defined by the FIDL
@@ -120,4 +143,5 @@ in `<zircon/assert.h>`, to assert invariants. Client libraries may also use the
 `_MSG` variants to provide a message when the assertion fails.
 
 
+[Fuchsia API Council]: ../api/council.md
 [FIDL API style rubric]: ../languages/fidl/style.md
