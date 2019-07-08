@@ -217,7 +217,8 @@ protocol EmptyProtocol {
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
-          "has_response": false
+          "has_response": false,
+          "is_composed": false
         },
         {
           "ordinal": 388770671,
@@ -252,7 +253,8 @@ protocol EmptyProtocol {
           ],
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
-          "maybe_response_has_padding": true
+          "maybe_response_has_padding": true,
+          "is_composed": false
         },
         {
           "ordinal": 2071775804,
@@ -310,7 +312,8 @@ protocol EmptyProtocol {
           ],
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
-          "maybe_response_has_padding": true
+          "maybe_response_has_padding": true,
+          "is_composed": false
         }
       ]
     }
@@ -867,7 +870,8 @@ protocol sub {
           ],
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
-          "maybe_response_has_padding": false
+          "maybe_response_has_padding": false,
+          "is_composed": false
         }
       ]
     },
@@ -933,7 +937,8 @@ protocol sub {
           ],
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
-          "maybe_response_has_padding": false
+          "maybe_response_has_padding": false,
+          "is_composed": true
         }
       ]
     }
@@ -1030,7 +1035,8 @@ protocol Child {
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
-          "has_response": false
+          "has_response": false,
+          "is_composed": false
         }
       ]
     },
@@ -1075,7 +1081,8 @@ protocol Child {
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
-          "has_response": false
+          "has_response": false,
+          "is_composed": true
         },
         {
           "ordinal": 19139766,
@@ -1110,7 +1117,8 @@ protocol Child {
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
-          "has_response": false
+          "has_response": false,
+          "is_composed": false
         }
       ]
     }
@@ -1217,7 +1225,8 @@ protocol Example {
           ],
           "maybe_response_size": 32,
           "maybe_response_alignment": 8,
-          "maybe_response_has_padding": true
+          "maybe_response_has_padding": true,
+          "is_composed": false
         }
       ]
     }
@@ -2259,7 +2268,8 @@ protocol Top {
           ],
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
-          "maybe_response_has_padding": true
+          "maybe_response_has_padding": true,
+          "is_composed": true
         }
       ]
     }
@@ -2524,7 +2534,8 @@ xunion ExampleXUnion {
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
-          "has_response": false
+          "has_response": false,
+          "is_composed": false
         }
       ]
     }

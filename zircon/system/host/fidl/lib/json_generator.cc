@@ -300,9 +300,9 @@ void JSONGenerator::Generate(const flat::Protocol& value) {
   });
 }
 
-void JSONGenerator::Generate(const flat::Protocol::Method* method) {
-  assert(method != nullptr);
-  const auto& value = *method;
+void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_info) {
+  assert(method_with_info.method != nullptr);
+  const auto& value = *method_with_info.method;
   GenerateObject([&]() {
     GenerateObjectMember("ordinal", value.generated_ordinal32, Position::kFirst);
     GenerateObjectMember("generated_ordinal", value.generated_ordinal32);
@@ -318,6 +318,7 @@ void JSONGenerator::Generate(const flat::Protocol::Method* method) {
     if (value.maybe_response != nullptr) {
       GenerateRequest("maybe_response", *value.maybe_response);
     }
+    GenerateObjectMember("is_composed", method_with_info.is_composed);
   });
 }
 
@@ -573,8 +574,8 @@ std::set<const flat::Library*, LibraryComparator> TransitiveDependencies(
   // Discover additional dependencies that are required to support
   // cross-library protocol composition.
   for (const auto& protocol : library->protocol_declarations_) {
-    for (const auto method : protocol->all_methods) {
-      dependencies.insert(method->owning_protocol->name.library());
+    for (const auto method_with_info : protocol->all_methods) {
+      dependencies.insert(method_with_info.method->owning_protocol->name.library());
     }
   }
   dependencies.erase(library);

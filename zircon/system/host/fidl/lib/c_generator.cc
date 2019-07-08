@@ -796,9 +796,9 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
     }
     // TODO: Transport::SocketControl should imply NoHandles.
     named_protocol.transport = ParseTransport(protocol_info->GetAttribute("Transport"));
-    for (const auto& method_pointer : protocol_info->all_methods) {
-      assert(method_pointer != nullptr);
-      const auto& method = *method_pointer;
+    for (const auto& method_with_info : protocol_info->all_methods) {
+      assert(method_with_info.method != nullptr);
+      const auto& method = *method_with_info.method;
       NamedMethod named_method;
       std::string method_name = NameMethod(named_protocol.c_name, method);
       named_method.ordinal = method.generated_ordinal32->value;

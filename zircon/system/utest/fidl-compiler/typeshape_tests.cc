@@ -1898,8 +1898,8 @@ protocol Child {
   auto child = child_library.LookupProtocol("Child");
   ASSERT_NONNULL(child);
   ASSERT_EQ(child->all_methods.size(), 1);
-  auto& sync = child->all_methods[0];
-  auto sync_request = sync->maybe_request;
+  auto& sync_with_info = child->all_methods[0];
+  auto sync_request = sync_with_info.method->maybe_request;
   ASSERT_NONNULL(sync_request);
   EXPECT_TRUE(CheckTypeShape(sync_request->typeshape, Expected{
                                                           .size = 16,

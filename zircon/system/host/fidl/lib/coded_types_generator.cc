@@ -202,9 +202,9 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
       coded::ProtocolType* coded_protocol =
           static_cast<coded::ProtocolType*>(named_coded_types_[&decl->name].get());
       size_t i = 0;
-      for (const auto& method_pointer : protocol_decl->all_methods) {
-        assert(method_pointer != nullptr);
-        const auto& method = *method_pointer;
+      for (const auto& method_with_info : protocol_decl->all_methods) {
+        assert(method_with_info.method != nullptr);
+        const auto& method = *method_with_info.method;
         auto CompileMessage = [&](const flat::Struct& message) -> void {
           std::unique_ptr<coded::MessageType>& coded_message = coded_protocol->messages[i++];
           std::vector<coded::StructField>& request_fields = coded_message->fields;
@@ -371,9 +371,9 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
       std::string protocol_name = NameCodedName(protocol_decl->name);
       std::string protocol_qname = NameFlatName(protocol_decl->name);
       std::vector<std::unique_ptr<coded::MessageType>> protocol_messages;
-      for (const auto& method_pointer : protocol_decl->all_methods) {
-        assert(method_pointer != nullptr);
-        const auto& method = *method_pointer;
+      for (const auto& method_with_info : protocol_decl->all_methods) {
+        assert(method_with_info.method != nullptr);
+        const auto& method = *method_with_info.method;
         std::string method_name = NameMethod(protocol_name, method);
         std::string method_qname = NameMethod(protocol_qname, method);
         auto CreateMessage = [&](const flat::Struct& message, types::MessageKind kind) -> void {

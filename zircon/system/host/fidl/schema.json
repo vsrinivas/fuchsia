@@ -295,7 +295,8 @@
                 "generated_ordinal",
                 "name",
                 "has_request",
-                "has_response"
+                "has_response",
+                "is_composed"
             ],
             "properties": {
                 "maybe_attributes": {
@@ -362,6 +363,10 @@
                 },
                 "maybe_response_has_padding": {
                     "description": "Flag indicating if there could be padding bytes in the response",
+                    "type": "boolean"
+                },
+                "is_composed": {
+                    "description": "Flag indicating whether method was composed into this protocol",
                     "type": "boolean"
                 }
             }

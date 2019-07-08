@@ -110,7 +110,7 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void Generate(const flat::Enum& value);
   void Generate(const flat::Enum::Member& value);
   void Generate(const flat::Protocol& value);
-  void Generate(const flat::Protocol::Method* value);
+  void Generate(const flat::Protocol::MethodWithInfo& value);
   void Generate(const flat::LiteralConstant& value);
   void Generate(const flat::Struct& value);
   void Generate(const flat::Struct::Member& value);

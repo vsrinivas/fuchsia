@@ -872,6 +872,16 @@ struct Protocol final : public TypeDecl {
     Protocol* owning_protocol = nullptr;
   };
 
+  // Used to keep track of a all methods (i.e. including composed methods).
+  // Method pointers here are set after composed_protocols are compiled, and
+  // are owned by the corresponding composed_protocols.
+  struct MethodWithInfo {
+    MethodWithInfo(const Method* method, bool is_composed)
+      : method(method), is_composed(is_composed) {}
+    const Method* method;
+    const bool is_composed;
+  };
+
   Protocol(std::unique_ptr<raw::AttributeList> attributes, Name name,
            std::set<Name> composed_protocols, std::vector<Method> methods)
       : TypeDecl(Kind::kProtocol, std::move(attributes), std::move(name)),
@@ -884,9 +894,7 @@ struct Protocol final : public TypeDecl {
 
   std::set<Name> composed_protocols;
   std::vector<Method> methods;
-  // Pointers here are set after composed_protocols are compiled, and
-  // are owned by the corresponding composed_protocols.
-  std::vector<const Method*> all_methods;
+  std::vector<MethodWithInfo> all_methods;
 };
 
 struct TypeAlias final : public Decl {

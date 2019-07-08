@@ -2693,21 +2693,23 @@ bool Library::VerifyDeclAttributes(Decl* decl) {
       // Attributes: check placement.
       ValidateAttributesPlacement(AttributeSchema::Placement::kProtocolDecl,
                                   protocol_declaration->attributes.get());
-      for (const auto method : protocol_declaration->all_methods) {
-        ValidateAttributesPlacement(AttributeSchema::Placement::kMethod, method->attributes.get());
+      for (const auto& method_with_info : protocol_declaration->all_methods) {
+        ValidateAttributesPlacement(AttributeSchema::Placement::kMethod,
+                                    method_with_info.method->attributes.get());
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraints.
-        for (const auto method : protocol_declaration->all_methods) {
-          if (method->maybe_request) {
-            ValidateAttributesConstraints(method->maybe_request,
+        for (const auto method_with_info : protocol_declaration->all_methods) {
+          const auto& method = *method_with_info.method;
+          if (method.maybe_request) {
+            ValidateAttributesConstraints(method.maybe_request,
                                           protocol_declaration->attributes.get());
-            ValidateAttributesConstraints(method->maybe_request, method->attributes.get());
+            ValidateAttributesConstraints(method.maybe_request, method.attributes.get());
           }
-          if (method->maybe_response) {
-            ValidateAttributesConstraints(method->maybe_response,
+          if (method.maybe_response) {
+            ValidateAttributesConstraints(method.maybe_response,
                                           protocol_declaration->attributes.get());
-            ValidateAttributesConstraints(method->maybe_response, method->attributes.get());
+            ValidateAttributesConstraints(method.maybe_response, method.attributes.get());
           }
         }
       }
@@ -2979,7 +2981,8 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
       }
 
       // Add a pointer to this method to the protocol_declarations list.
-      protocol_declaration->all_methods.push_back(&method);
+      bool is_composed = protocol_declaration != protocol;
+      protocol_declaration->all_methods.emplace_back(&method, is_composed);
     }
     return true;
   };
@@ -3229,7 +3232,7 @@ bool Library::Compile() {
   //
   // For now though, we fixup the representation after the fact.
   for (auto& protocol_decl : protocol_declarations_) {
-    for (auto& method : protocol_decl->all_methods) {
+    for (auto& method_with_info : protocol_decl->all_methods) {
       auto FixupMessage = [&](Struct* message) {
         auto header_field_shape = FieldShape(TypeShape(16u, 4u));
         std::vector<FieldShape*> message_struct;
@@ -3238,10 +3241,10 @@ bool Library::Compile() {
           message_struct.push_back(&param.fieldshape);
         message->typeshape = FidlMessageTypeShape(&message_struct);
       };
-      if (method->maybe_request)
-        FixupMessage(method->maybe_request);
-      if (method->maybe_response)
-        FixupMessage(method->maybe_response);
+      if (method_with_info.method->maybe_request)
+        FixupMessage(method_with_info.method->maybe_request);
+      if (method_with_info.method->maybe_response)
+        FixupMessage(method_with_info.method->maybe_response);
     }
   }
 
