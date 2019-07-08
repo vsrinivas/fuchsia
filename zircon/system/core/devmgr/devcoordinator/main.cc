@@ -1011,7 +1011,6 @@ int main(int argc, char** argv) {
   config.require_system = require_system;
   config.asan_drivers = boot_args.GetBool("devmgr.devhost.asan", false);
   config.suspend_fallback = boot_args.GetBool("devmgr.suspend-timeout-fallback", false);
-  config.suspend_debug = boot_args.GetBool("devmgr.suspend-timeout-debug", false);
   config.disable_netsvc = devmgr_args.disable_netsvc;
 
   // TODO(ZX-4178): Remove all uses of the root resource.

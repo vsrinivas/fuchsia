@@ -55,6 +55,8 @@ class SuspendContext {
 
   void set_task(fbl::RefPtr<SuspendTask> task) { task_ = std::move(task); }
 
+  const SuspendTask& task() const { return *task_; }
+
   Flags flags() const { return flags_; }
   void set_flags(Flags flags) { flags_ = flags; }
   uint32_t sflags() const { return sflags_; }
@@ -111,8 +113,6 @@ struct CoordinatorConfig {
   bool asan_drivers;
   // Whether to reboot the device when suspend does not finish on time.
   bool suspend_fallback;
-  // Whether to print out debugging when suspend does not finish on time.
-  bool suspend_debug;
 };
 
 class Coordinator {
@@ -196,7 +196,6 @@ class Coordinator {
   bool disable_netsvc() const { return config_.disable_netsvc; }
   bool require_system() const { return config_.require_system; }
   bool suspend_fallback() const { return config_.suspend_fallback; }
-  bool suspend_debug() const { return config_.suspend_debug; }
 
   void set_running(bool running) { running_ = running; }
   bool system_available() const { return system_available_; }

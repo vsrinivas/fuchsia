@@ -22,6 +22,8 @@ class SuspendTask final : public Task {
 
   ~SuspendTask() final;
 
+  const Device& device() const { return *device_; }
+
  private:
   void Run() final;
 

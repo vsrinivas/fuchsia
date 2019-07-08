@@ -28,6 +28,7 @@ class Task : public fbl::RefCounted<Task> {
     auto* status = std::get_if<zx_status_t>(&status_);
     return status ? *status : ZX_ERR_UNAVAILABLE;
   }
+  const fbl::Vector<Task*>& Dependencies() const { return dependencies_; }
 
   // It is an error to destroy a Task before it is completed
   virtual ~Task();
@@ -66,11 +67,14 @@ class Task : public fbl::RefCounted<Task> {
   // Record a new dependent.  |dependent->DependencyComplete()| will be
   // invoked when |this| is completed (or if it is already completed).
   void RegisterDependent(fbl::RefPtr<Task> dependent);
-  // Invoked whenever a dependency completes
-  void DependencyComplete(zx_status_t status);
+  // Invoked whenever a dependency completes. |dependency| must be an
+  // element of dependencies_.
+  void DependencyComplete(const Task* dependency, zx_status_t status);
 
   // List of tasks that should be notified when this task is complete
   fbl::Vector<fbl::RefPtr<Task>> dependents_;
+  // Reverse of dependents_
+  fbl::Vector<Task*> dependencies_;
 
   struct Incomplete {};
   // Whether or not this task has completed

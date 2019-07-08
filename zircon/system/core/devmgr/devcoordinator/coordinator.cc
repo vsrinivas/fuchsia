@@ -1172,23 +1172,26 @@ void Coordinator::HandleNewDevice(const fbl::RefPtr<Device>& dev) {
   BindDevice(dev, fbl::StringPiece("") /* autobind */, true /* new device */);
 }
 
-static int suspend_timeout_thread(void* arg) {
-  // 10 seconds
-  zx_nanosleep(zx_deadline_after(ZX_SEC(10)));
-
-  auto coordinator = static_cast<Coordinator*>(arg);
-  auto ctx = &coordinator->suspend_context();
-  if (coordinator->suspend_debug()) {
-    if (ctx->flags() == SuspendContext::Flags::kRunning) {
-      return 0;  // success
+static void dump_suspend_task_dependencies(const SuspendTask& task, int depth = 0) {
+  const char* status = "";
+  if (task.is_completed()) {
+    status = zx_status_get_string(task.status());
+  } else {
+    bool dependence = false;
+    for (const auto* dependency : task.Dependencies()) {
+      if (!dependency->is_completed()) {
+        dependence = true;
+        break;
+      }
     }
-    log(ERROR, "devcoordinator: suspend time out\n");
-    log(ERROR, "  sflags: 0x%08x\n", ctx->sflags());
+    status = dependence ? "<dependence>" : "<suspending>";
   }
-  if (coordinator->suspend_fallback()) {
-    suspend_fallback(coordinator->root_resource(), ctx->sflags());
+  log(INFO, "%sSuspend %s: %s\n", fbl::String(2 * depth, ' ').data(),
+      task.device().name().data(),
+      status);
+  for (const auto* dependency : task.Dependencies()) {
+    dump_suspend_task_dependencies(*reinterpret_cast<const SuspendTask*>(dependency), depth + 1);
   }
-  return 0;
 }
 
 void Coordinator::Suspend(SuspendContext ctx, std::function<void(zx_status_t)> callback) {
@@ -1201,7 +1204,7 @@ void Coordinator::Suspend(SuspendContext ctx, std::function<void(zx_status_t)> c
   if (!sys_device_->proxy()) {
     return;
   }
-  if (suspend_context().flags() == SuspendContext::Flags::kSuspend) {
+  if (InSuspend()) {
     return;
   }
 
@@ -1235,14 +1238,20 @@ void Coordinator::Suspend(SuspendContext ctx, std::function<void(zx_status_t)> c
   auto task = SuspendTask::Create(sys_device(), ctx.sflags(), std::move(completion));
   suspend_context().set_task(std::move(task));
 
-  if (suspend_fallback() || suspend_debug()) {
-    thrd_t t;
-    int ret = thrd_create_with_name(&t, suspend_timeout_thread, this, "devcoord-suspend-timeout");
-    if (ret != thrd_success) {
-      log(ERROR, "devcoordinator: failed to create suspend timeout thread\n");
-    } else {
-      thrd_detach(t);
-    }
+  auto status = async::PostDelayedTask(dispatcher(), [this] {
+      if (!InSuspend()) {
+        return;  // Suspend failed to complete.
+      }
+      auto& ctx = suspend_context();
+      log(ERROR, "devcoordinator: suspend time out\n");
+      log(ERROR, "  sflags: 0x%08x\n", ctx.sflags());
+      dump_suspend_task_dependencies(ctx.task());
+      if (suspend_fallback()) {
+        ::suspend_fallback(root_resource(), ctx.sflags());
+      }
+  }, zx::sec(10));
+  if (status != ZX_OK) {
+    log(ERROR, "devcoordinator: Failed to create suspend timeout watchdog\n");
   }
 }
 

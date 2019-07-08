@@ -40,14 +40,8 @@ otherwise remain at 0.
 
 ## devmgr\.require-system=\<bool\>
 
-Instructs the devmgr that a /system volume is required.  Without this,
-devmgr assumes this is a standalone Zircon build and not a full Fuchsia
-system.
-
-## devmgr\.suspend-timeout-debug
-
-If this option is set, the system prints out debugging when mexec, suspend,
-reboot, or power off did not finish in 10 seconds.
+Instructs the devmgr that a /system volume is required. Without this, devmgr
+assumes this is a standalone Zircon build and not a full Fuchsia system.
 
 ## devmgr\.suspend-timeout-fallback
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "task.h"
+#include "../shared/log.h"
 
 namespace devmgr {
 
@@ -26,6 +27,7 @@ void Task::ExecuteTask(async_dispatcher_t* dispatcher, async::TaskBase* task, zx
 
 // Called to record a new dependency
 void Task::AddDependency(const fbl::RefPtr<Task>& dependency) {
+  dependencies_.push_back(dependency.get());
   dependency->self_ = dependency;
   dependency->RegisterDependent(fbl::WrapRefPtr(this));
 }
@@ -36,13 +38,13 @@ void Task::RegisterDependent(fbl::RefPtr<Task> dependent) {
   // Check if we're already completed
   auto* status = std::get_if<zx_status_t>(&status_);
   if (status != nullptr) {
-    return dependent->DependencyComplete(*status);
+    return dependent->DependencyComplete(this, *status);
   }
 
   dependents_.push_back(std::move(dependent));
 }
 
-void Task::DependencyComplete(zx_status_t status) {
+void Task::DependencyComplete(const Task* dependency, zx_status_t status) {
   ++finished_dependencies_count_;
   if (finished_dependencies_count_ == total_dependencies_count_) {
     ZX_ASSERT(async_task_.Post(dispatcher_) == ZX_OK);
@@ -50,6 +52,14 @@ void Task::DependencyComplete(zx_status_t status) {
   if (status != ZX_OK && std::holds_alternative<Incomplete>(status_)) {
     DependencyFailed(status);
   }
+  for (unsigned i = 0; i < dependencies_.size(); ++i) {
+    if (dependency == dependencies_[i]) {
+      dependencies_.erase(i);
+      return;
+    }
+  }
+  log(ERROR, "devcoordinator: dependency %p not found, already removed?\n",
+      dependency);
 }
 
 void Task::Complete(zx_status_t status) {
@@ -57,9 +67,10 @@ void Task::Complete(zx_status_t status) {
 
   status_ = status;
   for (auto& dependent : dependents_) {
-    dependent->DependencyComplete(status);
+    dependent->DependencyComplete(this, status);
   }
   dependents_.reset();
+  dependencies_.reset();
 
   Completion completion(std::move(completion_));
   if (completion) {
