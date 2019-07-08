@@ -59,9 +59,10 @@ class FirebaseAuthImplTest : public gtest::TestLoopFixture {
   FirebaseAuthImplTest()
       : token_manager_(dispatcher()),
         token_manager_binding_(&token_manager_),
-        firebase_auth_({"api_key", "user_id", "firebase-test", 1}, dispatcher(),
-                       token_manager_binding_.NewBinding().Bind(), InitBackoff(),
-                       std::make_unique<MockCobaltLogger>(&report_observation_count_)) {}
+        firebase_auth_(
+            {"api_key", "user_id", /* collect_cobalt_metrics */ true, "firebase-test", 1},
+            dispatcher(), token_manager_binding_.NewBinding().Bind(), InitBackoff(),
+            std::make_unique<MockCobaltLogger>(&report_observation_count_)) {}
 
   ~FirebaseAuthImplTest() override {}
 

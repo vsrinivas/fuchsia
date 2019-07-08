@@ -49,7 +49,7 @@ FirebaseAuthImpl::FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher
       max_retries_(config_.max_retries),
       cobalt_client_name_(config_.cobalt_client_name),
       task_runner_(dispatcher) {
-  if (component_context) {
+  if (config.collect_cobalt_metrics && component_context) {
     cobalt_logger_ = cobalt::NewCobaltLoggerFromProjectName(dispatcher, component_context,
                                                             cobalt_registry::kProjectName);
   } else {

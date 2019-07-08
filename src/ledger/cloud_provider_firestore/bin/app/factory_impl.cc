@@ -8,6 +8,7 @@
 #include <lib/fit/function.h>
 
 #include "src/ledger/cloud_provider_firestore/bin/firestore/firestore_service_impl.h"
+#include "src/ledger/lib/firebase_auth/firebase_auth_impl.h"
 #include "src/lib/fxl/logging.h"
 
 namespace cloud_provider_firestore {
@@ -25,6 +26,7 @@ firebase_auth::FirebaseAuthImpl::Config GetFirebaseAuthConfig(
   firebase_auth::FirebaseAuthImpl::Config config;
   config.api_key = api_key;
   config.user_profile_id = user_profile_id;
+  config.collect_cobalt_metrics = !cobalt_client_name.empty();
   config.cobalt_client_name = cobalt_client_name;
 
   return config;

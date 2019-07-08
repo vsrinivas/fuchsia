@@ -23,6 +23,10 @@ constexpr char kAppUrl[] =
     "fuchsia-pkg://fuchsia.com/cloud_provider_firestore"
     "#meta/cloud_provider_firestore.cmx";
 
+// Matches cloud_provider_firestore flag defined in
+// src/ledger/cloud_provider_firestore/bin/app/app.cc (with leading "--" added).
+constexpr fxl::StringView kNoCobaltReporting = "--disable_reporting";
+
 std::string GenerateUserId() {
   // Always use a real random generator for user ids.
   rng::SystemRandom system_random;
@@ -108,6 +112,7 @@ void CloudProviderFactory::Init() {
   component::Services child_services;
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kAppUrl;
+  launch_info.arguments.push_back(kNoCobaltReporting.ToString());
   launch_info.directory_request = child_services.NewRequest();
   fuchsia::sys::LauncherPtr launcher;
   component_context_->svc()->Connect(launcher.NewRequest());

@@ -44,12 +44,15 @@ class FirebaseAuthImpl : public FirebaseAuth {
     std::string api_key;
     // The user profile id to use with the |token_manager|.
     std::string user_profile_id;
+    // Whether Cobalt metrics are to be collected.
+    bool collect_cobalt_metrics = true;
     // Name of the client to record during Cobalt error reporting.
     std::string cobalt_client_name;
     // Maximum number of retries on non-fatal errors.
     int max_retries = 5;
   };
 
+  // Creates an instance of FirebaseAuthImpl.
   FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher, rng::Random* random,
                    fuchsia::auth::TokenManagerPtr token_manager,
                    sys::ComponentContext* component_context);
