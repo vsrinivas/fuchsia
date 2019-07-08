@@ -226,6 +226,9 @@ protocol Controller {
     // Imports a VMO backed image. If tiling is not typeSimple, it is up to
     // the driver and client to agree on its meaning through some mechanism
     // outside the scope of this API.
+    //
+    // DEPRECATED: This should not be used with buffer collections - ImportImage
+    // should be used instead.
     ImportVmoImage(ImageConfig image_config, handle<vmo> vmo, int32 offset) -> (zx.status res, uint64 image_id);
 
     // Imports a Buffer-Collection backed image. If tiling is not typeSimple,
@@ -440,10 +443,14 @@ protocol Controller {
     // until this event informs them otherwise.
     -> ClientOwnershipChange(bool has_ownership);
 
+    // DEPRECATED: Do not use this in new code.
+    //
     // Computes the stride (in pixels) necessary for a linear image with the
     // given width and pixel format. Returns 0 on error.
     ComputeLinearImageStride(uint32 width, uint32 pixel_format) -> (uint32 stride);
 
+    // DEPRECATED: Use either ImportBufferCollection or GetSingleBufferFramebuffer in new code.
+    //
     // Allocates a VMO of the requested size which can be used for images.
     // TODO: move this into a separate video buffer management system.
     AllocateVmo(uint64 size) -> (zx.status res, handle<vmo>? vmo);
