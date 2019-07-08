@@ -1,6 +1,5 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/developer/crashpad_agent/report_annotations.h"
 
@@ -24,8 +23,7 @@ namespace fuchsia {
 namespace crash {
 namespace {
 
-// The crash server expects specific key and values for some annotations in Dart
-// crash reports.
+// The crash server expects specific key and values for some annotations in Dart crash reports.
 const char kDartTypeKey[] = "type";
 const char kDartTypeValue[] = "DartError";
 const char kDartErrorMessageKey[] = "error_message";
@@ -47,8 +45,7 @@ std::map<std::string, std::string> MakeDefaultAnnotations(
   std::map<std::string, std::string> annotations = {
       {"product", "Fuchsia"},
       {"version", ReadStringFromFile("/config/build-info/version")},
-      // We use ptype to benefit from Chrome's "Process type" handling in
-      // the crash server UI.
+      // We use ptype to benefit from Chrome's "Process type" handling in the crash server UI.
       {"ptype", program_name},
   };
 

@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #ifndef SRC_DEVELOPER_FEEDBACK_AGENT_INSPECT_PTR_H_
 #define SRC_DEVELOPER_FEEDBACK_AGENT_INSPECT_PTR_H_
@@ -15,8 +14,7 @@ namespace feedback {
 
 // Collects the Inspect data.
 //
-// Requires "shell" in the features of the calling component's sandbox to access
-// the hub.
+// Requires "shell" in the features of the calling component's sandbox to access the hub.
 fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* dispatcher,
                                                       zx::duration timeout);
 

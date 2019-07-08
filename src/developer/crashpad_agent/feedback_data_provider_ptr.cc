@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/developer/crashpad_agent/feedback_data_provider_ptr.h"
 
@@ -19,15 +18,14 @@ FeedbackDataProvider::FeedbackDataProvider(async_dispatcher_t* dispatcher,
 fit::promise<fuchsia::feedback::Data> FeedbackDataProvider::GetData(zx::duration timeout) {
   data_provider_ = services_->Connect<fuchsia::feedback::DataProvider>();
 
-  // fit::promise does not have the notion of a timeout. So we post a delayed
-  // task that will call the completer after the timeout and return an error.
+  // fit::promise does not have the notion of a timeout. So we post a delayed task that will call
+  // the completer after the timeout and return an error.
   //
-  // We wrap the delayed task in a CancelableClosure so we can cancel it when
-  // the fit::bridge is completed another way.
+  // We wrap the delayed task in a CancelableClosure so we can cancel it when the fit::bridge is
+  // completed another way.
   //
-  // It is safe to pass "this" to the fit::function as the callback won't be
-  // callable when the CancelableClosure goes out of scope, which is before
-  // "this".
+  // It is safe to pass "this" to the fit::function as the callback won't be callable when the
+  // CancelableClosure goes out of scope, which is before "this".
   done_after_timeout_.Reset([this] {
     if (!done_.completer) {
       return;

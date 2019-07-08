@@ -1,6 +1,5 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/developer/crashpad_agent/crashpad_agent.h"
 
@@ -40,15 +39,13 @@ namespace fuchsia {
 namespace crash {
 namespace {
 
-// We keep the local Crashpad database size under a certain value. As we want to
-// check the produced attachments in the database, we should set the size to be
-// at least the total size for a single report so that it does not get cleaned
-// up before we are able to inspect its attachments.
-// For now, a single report should take up to 1MB.
+// We keep the local Crashpad database size under a certain value. As we want to check the produced
+// attachments in the database, we should set the size to be at least the total size for a single
+// report so that it does not get cleaned up before we are able to inspect its attachments. For now,
+// a single report should take up to 1MB.
 constexpr uint64_t kMaxTotalReportSizeInKb = 1024u;
 
-// A full second should be enough for the stub feedback data provider to return
-// its result.
+// A full second should be enough for the stub feedback data provider to return its result.
 constexpr uint64_t kFeedbackDataCollectionTimeoutInMillisecondsKey = 1000u;
 
 constexpr bool alwaysReturnSuccess = true;
@@ -56,13 +53,13 @@ constexpr bool alwaysReturnFailure = false;
 
 // Unit-tests the implementation of the fuchsia.crash.Analyzer FIDL interface.
 //
-// This does not test the environment service. It directly instantiates the
-// class, without connecting through FIDL.
+// This does not test the environment service. It directly instantiates the class, without
+// connecting through FIDL.
 class CrashpadAgentTest : public gtest::RealLoopFixture {
  public:
   void SetUp() override {
-    // The underlying agent is initialized with a default config, but can
-    // be reset via ResetAgent() if a different config is necessary.
+    // The underlying agent is initialized with a default config, but can be reset via ResetAgent()
+    // if a different config is necessary.
     ResetAgent(
         Config{/*crashpad_database=*/
                {
@@ -102,8 +99,8 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
   // Resets the underlying stub feedback data provider and registers it in the
   // |service_directory_provider_|.
   //
-  // This can only be done once per test as ServiceDirectoryProvider does not
-  // allow overridding a service. Hence why it is not in the SetUp().
+  // This can only be done once per test as ServiceDirectoryProvider does not allow overridding a
+  // service. Hence why it is not in the SetUp().
   void ResetFeedbackDataProvider(
       std::unique_ptr<StubFeedbackDataProvider> stub_feedback_data_provider) {
     stub_feedback_data_provider_ = std::move(stub_feedback_data_provider);
@@ -116,7 +113,7 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
   // Checks that there is:
   //   * only one set of attachments
   //   * the set of attachment filenames matches the concatenation of
-  //   |expected_extra_attachments| and feedback_attachment_keys_
+  //     |expected_extra_attachments| and stub_feedback_data_provider_->attachment_keys()
   //   * no attachment is empty
   // in the local Crashpad database.
   void CheckAttachments(const std::vector<std::string>& expected_extra_attachments = {}) {
@@ -124,8 +121,8 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
     // We expect a single crash report to have been generated.
     ASSERT_EQ(subdirs.size(), 1u);
 
-    // We expect as attachments the ones returned by the feedback::DataProvider
-    // and the extra ones specific to the crash analysis flow under test.
+    // We expect as attachments the ones returned by the feedback::DataProvider and the extra ones
+    // specific to the crash analysis flow under test.
     std::vector<std::string> expected_attachments = expected_extra_attachments;
     if (stub_feedback_data_provider_) {
       expected_attachments.insert(expected_attachments.begin(),
@@ -145,8 +142,8 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
     }
   }
 
-  // Returns all the attachment subdirectories under the over-arching attachment
-  // directory. Each subdirectory corresponds to one local crash report.
+  // Returns all the attachment subdirectories under the over-arching attachment directory. Each
+  // subdirectory corresponds to one local crash report.
   std::vector<std::string> GetAttachmentSubdirs() {
     std::vector<std::string> subdirs;
     FXL_CHECK(files::ReadDirContents(attachments_dir_, &subdirs));
@@ -154,13 +151,11 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
     return subdirs;
   }
 
-  // Runs one crash analysis. Useful to test shared logic among all crash
-  // analysis flows.
+  // Runs one crash analysis. Useful to test shared logic among all crash analysis flows.
   //
   // |attachment| allows to control the lower bound of the size of the report.
   //
-  // Today we use the kernel panic flow because it requires fewer arguments to
-  // set up.
+  // Today we use the kernel panic flow because it requires fewer arguments to set up.
   Analyzer_OnKernelPanicCrashLog_Result RunOneCrashAnalysis(const std::string& attachment) {
     fuchsia::mem::Buffer crash_log;
     FXL_CHECK(fsl::VmoFromString(attachment, &crash_log));
@@ -177,11 +172,9 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
     return out_result;
   }
 
-  // Runs one crash analysis. Useful to test shared logic among all crash
-  // analysis flows.
+  // Runs one crash analysis. Useful to test shared logic among all crash analysis flows.
   //
-  // Today we use the kernel panic flow because it requires fewer arguments to
-  // set up.
+  // Today we use the kernel panic flow because it requires fewer arguments to set up.
   Analyzer_OnKernelPanicCrashLog_Result RunOneCrashAnalysis() {
     return RunOneCrashAnalysis("irrelevant, just not empty");
   }
@@ -219,15 +212,14 @@ TEST_F(CrashpadAgentTest, OnNativeException_C_Basic) {
   zx::process process;
   zx::thread thread;
 
-  // Create the child jobs of the current job now so we can bind to the
-  // exception port before spawning the crashing program.
+  // Create the child jobs of the current job now so we can bind to the exception port before
+  // spawning the crashing program.
   zx::unowned_job current_job(zx_job_default());
   ASSERT_EQ(zx::job::create(*current_job, 0, &job), ZX_OK);
   ASSERT_EQ(zx::port::create(0u, &exception_port), ZX_OK);
   ASSERT_EQ(zx_task_bind_exception_port(job.get(), exception_port.get(), 0u, 0u), ZX_OK);
 
-  // Create child process using our utility program `crasher` that will crash on
-  // startup.
+  // Create child process using our utility program `crasher` that will crash on startup.
   const char* argv[] = {"crasher", nullptr};
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   ASSERT_EQ(fdio_spawn_etc(job.get(), FDIO_SPAWN_CLONE_ALL, "/pkg/bin/crasher_exe", argv, nullptr,
@@ -235,8 +227,8 @@ TEST_F(CrashpadAgentTest, OnNativeException_C_Basic) {
             ZX_OK)
       << err_msg;
 
-  // Wait up to 1s for the exception to be thrown. We need the process and
-  // thread to be blocked in the exception for Crashpad to analyze them.
+  // Wait up to 1s for the exception to be thrown. We need the process and thread to be blocked in
+  // the exception for Crashpad to analyze them.
   zx_port_packet_t packet;
   ASSERT_EQ(exception_port.wait(zx::deadline_after(zx::sec(1)), &packet), ZX_OK);
   ASSERT_TRUE(ZX_PKT_IS_EXCEPTION(packet.type));
@@ -266,10 +258,9 @@ TEST_F(CrashpadAgentTest, OnNativeException_C_Basic) {
   EXPECT_TRUE(out_result.is_response());
   CheckAttachments();
 
-  // We kill the job so that it doesn't try to reschedule the process, which
-  // would crash again, but this time would be handled by the real agent
-  // attached to the root job as the exception has already been handled by the
-  // parent and child jobs.
+  // We kill the job so that it doesn't try to reschedule the process, which would crash again, but
+  // this time would be handled by the real agent attached to the root job as the exception has
+  // already been handled by the parent and child jobs.
   job.kill();
 }
 
@@ -340,8 +331,8 @@ TEST_F(CrashpadAgentTest, OnKernelPanicCrashLog_Basic) {
 
 TEST_F(CrashpadAgentTest, PruneDatabase_ZeroSize) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  // We reset the agent with a max database size of 0, meaning reports will
-  // get cleaned up before the end of the |agent_| call.
+  // We reset the agent with a max database size of 0, meaning reports will get cleaned up before
+  // the end of the |agent_| call.
   ResetAgent(Config{/*crashpad_database=*/
                     {
                         /*path=*/database_path_.path(),
@@ -372,8 +363,8 @@ std::string GenerateString(const uint64_t string_size_in_kb) {
 
 TEST_F(CrashpadAgentTest, PruneDatabase_SizeForOneReport) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  // We reset the agent with a max database size equivalent to the expected
-  // size of a report plus the value of an especially large attachment.
+  // We reset the agent with a max database size equivalent to the expected size of a report plus
+  // the value of an especially large attachment.
   const uint64_t crash_log_size_in_kb = 2u * kMaxTotalReportSizeInKb;
   const std::string large_string = GenerateString(crash_log_size_in_kb);
   ResetAgent(Config{/*crashpad_database=*/
@@ -396,16 +387,14 @@ TEST_F(CrashpadAgentTest, PruneDatabase_SizeForOneReport) {
   const std::vector<std::string> attachment_subdirs = GetAttachmentSubdirs();
   ASSERT_EQ(attachment_subdirs.size(), 1u);
 
-  // We sleep for one second to guarantee a different creation time for the
-  // next crash report.
+  // We sleep for one second to guarantee a different creation time for the next crash report.
   zx::nanosleep(zx::deadline_after(zx::sec(1)));
 
   // We generate a new crash report.
   EXPECT_TRUE(RunOneCrashAnalysis(large_string).is_response());
 
-  // We check that only one set of attachments is there and that it is a
-  // different directory than previously (the directory name is the local crash
-  // report ID).
+  // We check that only one set of attachments is there and that it is a different directory than
+  // previously (the directory name is the local crash report ID).
   const std::vector<std::string> new_attachment_subdirs = GetAttachmentSubdirs();
   EXPECT_EQ(new_attachment_subdirs.size(), 1u);
   EXPECT_THAT(new_attachment_subdirs,
@@ -453,8 +442,8 @@ TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoUpload) {
 TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackAttachments) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoAttachment>());
   EXPECT_TRUE(RunOneCrashAnalysis().is_response());
-  // The only attachment should be the one from the crash analysis as no
-  // feedback data attachments will be retrieved.
+  // The only attachment should be the one from the crash analysis as no feedback data attachments
+  // will be retrieved.
   CheckAttachments({"kernel_panic_crash_log"});
 }
 
@@ -466,25 +455,24 @@ TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackAnnotations) {
 TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackData) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoData>());
   EXPECT_TRUE(RunOneCrashAnalysis().is_response());
-  // The only attachment should be the one from the crash analysis as no
-  // feedback data will be retrieved.
+  // The only attachment should be the one from the crash analysis as no feedback data will be
+  // retrieved.
   CheckAttachments({"kernel_panic_crash_log"});
 }
 
 TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackDataProvider) {
-  // We pass a nullptr stub so there will be no fuchsia.feedback.DataProvider
-  // service to connect to.
+  // We pass a nullptr stub so there will be no fuchsia.feedback.DataProvider service to connect to.
   ResetFeedbackDataProvider(nullptr);
   EXPECT_TRUE(RunOneCrashAnalysis().is_response());
-  // The only attachment should be the one from the crash analysis as no
-  // feedback data will be retrieved.
+  // The only attachment should be the one from the crash analysis as no feedback data will be
+  // retrieved.
   CheckAttachments({"kernel_panic_crash_log"});
 }
 
 TEST_F(CrashpadAgentTest, AnalysisSucceedOnFeedbackDataProviderTakingTooLong) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderNeverReturning>());
-  // We use a timeout of 1ms for the feedback data collection as the test will
-  // need to wait that long before skipping feedback data collection.
+  // We use a timeout of 1ms for the feedback data collection as the test will need to wait that
+  // long before skipping feedback data collection.
   ResetAgent(
       Config{/*crashpad_database=*/
              {
@@ -500,14 +488,14 @@ TEST_F(CrashpadAgentTest, AnalysisSucceedOnFeedbackDataProviderTakingTooLong) {
       std::make_unique<StubCrashServer>(alwaysReturnSuccess));
 
   EXPECT_TRUE(RunOneCrashAnalysis().is_response());
-  // The only attachment should be the one from the crash analysis as no
-  // feedback data will be retrieved.
+  // The only attachment should be the one from the crash analysis as no feedback data will be
+  // retrieved.
   CheckAttachments({"kernel_panic_crash_log"});
 }
 
 TEST_F(CrashpadAgentTest, OneFeedbackDataProviderConnectionPerAnalysis) {
-  // We use a stub that returns no data as we are not interested in the
-  // payload, just the number of different connections to the stub.
+  // We use a stub that returns no data as we are not interested in the payload, just the number of
+  // different connections to the stub.
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoData>());
 
   const size_t num_calls = 5u;
@@ -523,8 +511,8 @@ TEST_F(CrashpadAgentTest, OneFeedbackDataProviderConnectionPerAnalysis) {
   RunLoopUntil([&out_results] { return out_results.size() == num_calls; });
 
   EXPECT_EQ(total_num_feedback_data_provider_bindings(), num_calls);
-  // The unbinding is asynchronous so we need to run the loop until all the
-  // outstanding connections are actually closed in the stub.
+  // The unbinding is asynchronous so we need to run the loop until all the outstanding connections
+  // are actually closed in the stub.
   RunLoopUntil([this] { return current_num_feedback_data_provider_bindings() == 0u; });
 }
 

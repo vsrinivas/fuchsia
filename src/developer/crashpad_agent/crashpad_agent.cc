@@ -1,6 +1,5 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/developer/crashpad_agent/crashpad_agent.h"
 
@@ -71,8 +70,8 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
                             << " - falling back to default config file";
   }
 
-  // We try to load the default config included in the package if no override
-  // config was specified or we failed to parse it.
+  // We try to load the default config included in the package if no override config was specified
+  // or we failed to parse it.
   const zx_status_t status = ParseConfig(kDefaultConfigPath, &config);
   if (status == ZX_OK) {
     return CrashpadAgent::TryCreate(dispatcher, std::move(services), std::move(config));
@@ -110,8 +109,8 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     return nullptr;
   }
 
-  // Today we enable uploads here. In the future, this will most likely be set
-  // in some external settings.
+  // Today we enable uploads here. In the future, this will most likely be set in some external
+  // settings.
   database->GetSettings()->SetUploadsEnabled(config.crash_server.enable_upload);
 
   return std::unique_ptr<CrashpadAgent>(new CrashpadAgent(dispatcher, std::move(services),
@@ -216,8 +215,7 @@ fit::promise<Data> CrashpadAgent::GetFeedbackData() {
   return feedback_data_providers_[id]
       ->GetData(zx::msec(config_.feedback_data_collection_timeout_in_milliseconds))
       .then([this, id](fit::result<Data>& result) {
-        // We close the connection to the feedback data provider and then
-        // forward the result.
+        // We close the connection to the feedback data provider and then forward the result.
         if (feedback_data_providers_.erase(id) == 0) {
           FX_LOGS(ERROR) << "No fuchsia.feedback.DataProvider connection to close with id " << id;
         }
@@ -256,30 +254,28 @@ fit::promise<void> CrashpadAgent::OnNativeException(zx::process process, zx::thr
     const std::map<std::string, fuchsia::mem::Buffer> attachments = MakeAttachments(&feedback_data);
 
     // Set minidump and create local crash report.
-    //   * The annotations will be stored in the minidump of the report
-    //     and augmented with modules' annotations.
+    //   * The annotations will be stored in the minidump of the report and augmented with modules'
+    //     annotations.
     //   * The attachments will be stored in the report.
-    // We don't pass an upload_thread so we can do the upload ourselves
-    // synchronously.
+    // We don't pass an upload_thread so we can do the upload ourselves synchronously.
     crashpad::CrashReportExceptionHandler exception_handler(
         database_.get(), /*upload_thread=*/nullptr, &annotations, &attachments,
         /*user_stream_data_sources=*/nullptr);
     crashpad::UUID local_report_id;
     if (!exception_handler.HandleException(process, thread, &local_report_id)) {
-      // TODO(DX-1659): remove bogus call (no report has been created so
-      // attempting to skip its upload results in a failure) once we can
-      // test this code path.
+      // TODO(DX-1659): remove bogus call (no report has been created so attempting to skip its
+      // upload results in a failure) once we can test this code path.
       database_->SkipReportUpload(local_report_id,
                                   crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
-      // TODO(DX-1654): attempt to generate a crash report without a
-      // minidump instead of just bailing.
+      // TODO(DX-1654): attempt to generate a crash report without a minidump instead of just
+      // bailing.
       FX_LOGS(ERROR) << "error writing local crash report";
       return fit::error();
     }
 
-    // For userspace, we read back the annotations from the minidump
-    // instead of passing them as argument like for kernel crashes because
-    // the Crashpad handler augmented them with the modules' annotations.
+    // For userspace, we read back the annotations from the minidump instead of passing them as
+    // argument like for kernel crashes because the Crashpad handler augmented them with the
+    // modules' annotations.
     if (!UploadReport(local_report_id, /*annotations=*/nullptr,
                       /*read_annotations_from_minidump=*/true)) {
       return fit::error();
@@ -424,9 +420,8 @@ bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id,
     }
   }
 
-  // We have to build the MIME multipart message ourselves as all the public
-  // Crashpad helpers are asynchronous and we won't be able to know the upload
-  // status nor the server report ID.
+  // We have to build the MIME multipart message ourselves as all the public Crashpad helpers are
+  // asynchronous and we won't be able to know the upload status nor the server report ID.
   crashpad::HTTPMultipartBuilder http_multipart_builder;
   http_multipart_builder.SetGzipEnabled(true);
   for (const auto& kv : *final_annotations) {
@@ -459,10 +454,9 @@ bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id,
 }
 
 void CrashpadAgent::PruneDatabase() {
-  // We need to create a new condition every time we prune as it internally
-  // maintains a cumulated total size as it iterates over the reports in the
-  // database and we want to reset that cumulated total size every time we
-  // prune.
+  // We need to create a new condition every time we prune as it internally maintains a cumulated
+  // total size as it iterates over the reports in the database and we want to reset that cumulated
+  // total size every time we prune.
   crashpad::DatabaseSizePruneCondition pruning_condition(config_.crashpad_database.max_size_in_kb);
   crashpad::PruneCrashReportDatabase(database_.get(), &pruning_condition);
 }

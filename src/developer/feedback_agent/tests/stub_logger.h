@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #ifndef SRC_DEVELOPER_FEEDBACK_AGENT_TESTS_STUB_LOGGER_H_
 #define SRC_DEVELOPER_FEEDBACK_AGENT_TESTS_STUB_LOGGER_H_
@@ -20,8 +19,9 @@ namespace fuchsia {
 namespace feedback {
 
 // Returns a LogMessage with the given severity, message and optional tags.
-// The process and thread ids are constants. The timestamp is a constant plus
-// the optionally provided offset.
+//
+// The process and thread ids are constants. The timestamp is a constant plus the optionally
+// provided offset.
 fuchsia::logger::LogMessage BuildLogMessage(const int32_t severity, const std::string& text,
                                             const zx::duration timestamp_offset = zx::duration(0),
                                             const std::vector<std::string>& tags = {});
@@ -29,14 +29,13 @@ fuchsia::logger::LogMessage BuildLogMessage(const int32_t severity, const std::s
 // Stub Log service to return canned responses to Log::DumpLogs().
 class StubLogger : public fuchsia::logger::Log {
  public:
-  // Returns a request handler for binding to this stub service.
-  // We pass a dispatcher to be able to run it on a different loop than the
-  // default one.
+  // Returns a request handler for binding to this stub service. We pass a dispatcher to be able to
+  // run it on a different loop than the default one.
   fidl::InterfaceRequestHandler<fuchsia::logger::Log> GetHandler(async_dispatcher_t* dispatcher) {
     return bindings_.GetHandler(this, dispatcher);
   }
 
-  // fuchsia::logger::Log methods.
+  // |fuchsia::logger::Log|.
   void Listen(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
               std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override {
     FXL_NOTIMPLEMENTED();

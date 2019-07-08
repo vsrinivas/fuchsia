@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #ifndef SRC_DEVELOPER_FEEDBACK_AGENT_DATA_PROVIDER_H_
 #define SRC_DEVELOPER_FEEDBACK_AGENT_DATA_PROVIDER_H_
@@ -24,8 +23,9 @@ namespace feedback {
 class DataProviderImpl : public DataProvider {
  public:
   // Static factory method.
-  // Returns nullptr if the data provider cannot be instantiated, e.g., because
-  // the config cannot be parsed.
+  //
+  // Returns nullptr if the data provider cannot be instantiated, e.g., because the config cannot be
+  // parsed.
   static std::unique_ptr<DataProviderImpl> TryCreate(
       async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services);
 

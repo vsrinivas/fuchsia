@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include <filesystem>
 #include <fstream>
@@ -63,8 +62,7 @@ int main(int argc, char* argv[]) {
   }
   FXL_DCHECK(input);
 
-  // Bugreport requires the caller to provide a valid directory to where output
-  // the report.
+  // Bugreport requires the caller to provide a valid directory to where output the report.
   auto& pos_args = command_line.positional_args();
   if (pos_args.size() != 1u) {
     FXL_LOG(ERROR) << "A single output path should be given.";

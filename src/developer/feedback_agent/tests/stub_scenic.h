@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #ifndef SRC_DEVELOPER_FEEDBACK_AGENT_TESTS_STUB_SCENIC_H_
 #define SRC_DEVELOPER_FEEDBACK_AGENT_TESTS_STUB_SCENIC_H_
@@ -18,13 +17,12 @@
 namespace fuchsia {
 namespace feedback {
 
-// Returns an empty screenshot, still needed when Scenic::TakeScreenshot()
-// returns false as the FIDL ScreenshotData field is not marked optional in
-// fuchsia.ui.scenic.Scenic.TakeScreenshot.
+// Returns an empty screenshot, still needed when Scenic::TakeScreenshot() returns false as the FIDL
+// ScreenshotData field is not marked optional in fuchsia.ui.scenic.Scenic.TakeScreenshot.
 fuchsia::ui::scenic::ScreenshotData CreateEmptyScreenshot();
 
-// Returns an 8-bit BGRA image of a |image_dim_in_px| x |image_dim_in_px|
-// checkerboard, where each white/black region is a 10x10 pixel square.
+// Returns an 8-bit BGRA image of a |image_dim_in_px| x |image_dim_in_px| checkerboard, where each
+// white/black region is a 10x10 pixel square.
 fuchsia::ui::scenic::ScreenshotData CreateCheckerboardScreenshot(const size_t image_dim_in_px);
 
 // Returns an empty screenshot with a pixel format different from BGRA-8.

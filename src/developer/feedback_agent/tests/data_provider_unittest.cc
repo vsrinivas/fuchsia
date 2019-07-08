@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/developer/feedback_agent/data_provider.h"
 
@@ -70,9 +69,8 @@ std::unique_ptr<Screenshot> MakeUniqueScreenshot(const size_t image_dim_in_px) {
 struct GetScreenshotResponse {
   std::unique_ptr<Screenshot> screenshot;
 
-  // This should be kept in sync with DoGetScreenshotResponseMatch() as we only
-  // want to display what we actually compare, for now the presence of a
-  // screenshot and its dimensions if present.
+  // This should be kept in sync with DoGetScreenshotResponseMatch() as we only want to display what
+  // we actually compare, for now the presence of a screenshot and its dimensions if present.
   operator std::string() const {
     if (!screenshot) {
       return "no screenshot";
@@ -82,8 +80,7 @@ struct GetScreenshotResponse {
                              dimensions_in_px.height);
   }
 
-  // This is used by gTest to pretty-prints failed expectations instead of the
-  // default byte string.
+  // This is used by gTest to pretty-prints failed expectations instead of the default byte string.
   friend std::ostream& operator<<(std::ostream& os, const GetScreenshotResponse& response) {
     return os << std::string(response);
   }
@@ -91,9 +88,8 @@ struct GetScreenshotResponse {
 
 // Compares two GetScreenshotResponse.
 //
-// This should be kept in sync with std::string() as we only want to display
-// what we actually compare, for now the presence of a screenshot and its
-// dimensions.
+// This should be kept in sync with std::string() as we only want to display what we actually
+// compare, for now the presence of a screenshot and its dimensions.
 template <typename ResultListenerT>
 bool DoGetScreenshotResponseMatch(const GetScreenshotResponse& actual,
                                   const GetScreenshotResponse& expected,
@@ -122,8 +118,7 @@ bool DoGetScreenshotResponseMatch(const GetScreenshotResponse& actual,
   return true;
 }
 
-// Returns true if gMock |arg| matches |expected|, assuming two
-// GetScreenshotResponse.
+// Returns true if gMock |arg| matches |expected|, assuming two GetScreenshotResponse.
 MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expected.get())) {
   return DoGetScreenshotResponseMatch(arg, expected, result_listener);
 }
@@ -151,19 +146,18 @@ bool DoAttachmentMatch(const Attachment& actual, const std::string& expected_key
   return true;
 }
 
-// Returns true if gMock |arg|.key matches |expected_key| and str(|arg|.value)
-// matches |expected_value|, assuming two Attachment.
+// Returns true if gMock |arg|.key matches |expected_key| and str(|arg|.value) matches
+// |expected_value|, assuming two Attachment.
 MATCHER_P2(MatchesAttachment, expected_key, expected_value,
            "matches an attachment with key '" + std::string(expected_key) + "' and value '" +
                std::string(expected_value) + "'") {
   return DoAttachmentMatch(arg, expected_key, expected_value, result_listener);
 }
 
-// Unit-tests the implementation of the fuchsia.feedback.DataProvider FIDL
-// interface.
+// Unit-tests the implementation of the fuchsia.feedback.DataProvider FIDL interface.
 //
-// This does not test the environment service. It directly instantiates the
-// class, without connecting through FIDL.
+// This does not test the environment service. It directly instantiates the class, without
+// connecting through FIDL.
 class DataProviderImplTest : public ::sys::testing::TestWithEnvironment {
  public:
   void SetUp() override { ResetDataProvider(kDefaultConfig); }
@@ -207,10 +201,9 @@ class DataProviderImplTest : public ::sys::testing::TestWithEnvironment {
 
   // Injects a test app that exposes some Inspect data in the test environment.
   //
-  // Useful to guarantee there is a component within the environment that
-  // exposes Inspect data as we are excluding system_objects paths from the
-  // Inspect discovery and the test component itself only has a system_objects
-  // Inspect node.
+  // Useful to guarantee there is a component within the environment that exposes Inspect data as we
+  // are excluding system_objects paths from the Inspect discovery and the test component itself
+  // only has a system_objects Inspect node.
   void InjectInspectTestApp() {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url =
@@ -328,9 +321,8 @@ TEST_F(DataProviderImplTest, GetScreenshot_FailOnScenicReturningNonBGRA8Screensh
 }
 
 TEST_F(DataProviderImplTest, GetScreenshot_ParallelRequests) {
-  // We simulate three calls to DataProviderImpl::GetScreenshot(): one for which
-  // the stub Scenic will return a checkerboard 10x10, one for a 20x20 and one
-  // failure.
+  // We simulate three calls to DataProviderImpl::GetScreenshot(): one for which the stub Scenic
+  // will return a checkerboard 10x10, one for a 20x20 and one failure.
   const size_t num_calls = 3u;
   const size_t image_dim_in_px_0 = 10u;
   const size_t image_dim_in_px_1 = 20u;
@@ -354,12 +346,12 @@ TEST_F(DataProviderImplTest, GetScreenshot_ParallelRequests) {
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
-  // We cannot assume that the order of the DataProviderImpl::GetScreenshot()
-  // calls match the order of the Scenic::TakeScreenshot() callbacks because of
-  // the async message loop. Thus we need to match them as sets.
+  // We cannot assume that the order of the DataProviderImpl::GetScreenshot() calls match the order
+  // of the Scenic::TakeScreenshot() callbacks because of the async message loop. Thus we need to
+  // match them as sets.
   //
-  // We set the expectations in advance and then pass a reference to the gMock
-  // matcher using testing::ByRef() because the underlying VMO is not copyable.
+  // We set the expectations in advance and then pass a reference to the gMock matcher using
+  // testing::ByRef() because the underlying VMO is not copyable.
   const GetScreenshotResponse expected_0 = {MakeUniqueScreenshot(image_dim_in_px_0)};
   const GetScreenshotResponse expected_1 = {MakeUniqueScreenshot(image_dim_in_px_1)};
   const GetScreenshotResponse expected_2 = {nullptr};
@@ -380,8 +372,7 @@ TEST_F(DataProviderImplTest, GetScreenshot_ParallelRequests) {
 }
 
 TEST_F(DataProviderImplTest, GetScreenshot_OneScenicConnectionPerGetScreenshotCall) {
-  // We use a stub that always returns false as we are not interested in the
-  // responses.
+  // We use a stub that always returns false as we are not interested in the responses.
   ResetScenic(std::make_unique<StubScenicAlwaysReturnsFalse>());
 
   const size_t num_calls = 5u;
@@ -395,8 +386,8 @@ TEST_F(DataProviderImplTest, GetScreenshot_OneScenicConnectionPerGetScreenshotCa
   RunLoopUntil([&feedback_responses] { return feedback_responses.size() == num_calls; });
 
   EXPECT_EQ(total_num_scenic_bindings(), num_calls);
-  // The unbinding is asynchronous so we need to run the loop until all the
-  // outstanding connections are actually close in the stub.
+  // The unbinding is asynchronous so we need to run the loop until all the outstanding connections
+  // are actually close in the stub.
   RunLoopUntil([this] { return current_num_scenic_bindings() == 0u; });
 }
 
@@ -404,13 +395,12 @@ TEST_F(DataProviderImplTest, GetData_SmokeTest) {
   DataProvider_GetData_Result result = GetData();
 
   ASSERT_TRUE(result.is_response());
-  // There is nothing else we can assert here as no missing annotation nor
-  // attachment is fatal.
+  // There is nothing else we can assert here as no missing annotation nor attachment is fatal.
 }
 
 TEST_F(DataProviderImplTest, GetData_SysLog) {
-  // CollectSystemLogs() has its own set of unit tests so we only cover one log
-  // message here to check that we are attaching the logs.
+  // CollectSystemLogs() has its own set of unit tests so we only cover one log message here to
+  // check that we are attaching the logs.
   ResetLogger({
       BuildLogMessage(FX_LOG_INFO, "log message",
                       /*timestamp_offset=*/zx::duration(0), {"foo"}),
@@ -475,8 +465,7 @@ TEST_F(DataProviderImplTest, GetData_Inspect) {
     rapidjson::SchemaValidator validator(schema);
     EXPECT_TRUE(inspect_json.Accept(validator));
 
-    // We then check that we get the expected Inspect data for the injected test
-    // app.
+    // We then check that we get the expected Inspect data for the injected test app.
     bool has_entry_for_test_app = false;
     for (const auto& obj : inspect_json.GetArray()) {
       const std::string path = obj["path"].GetString();
@@ -548,8 +537,8 @@ TEST_F(DataProviderImplTest, GetData_UnknownAllowlistedAttachment) {
 
 }  // namespace
 
-// Pretty-prints Attachment in gTest matchers instead of the default byte string
-// in case of failed expectations.
+// Pretty-prints Attachment in gTest matchers instead of the default byte string in case of failed
+// expectations.
 void PrintTo(const Attachment& attachment, std::ostream* os) {
   *os << fostr::Indent;
   *os << fostr::NewLine << "key: " << attachment.key;

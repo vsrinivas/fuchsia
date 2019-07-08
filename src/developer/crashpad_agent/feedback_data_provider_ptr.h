@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #ifndef SRC_DEVELOPER_CRASHPAD_AGENT_FEEDBACK_DATA_PROVIDER_PTR_H_
 #define SRC_DEVELOPER_CRASHPAD_AGENT_FEEDBACK_DATA_PROVIDER_PTR_H_
@@ -20,9 +19,8 @@
 namespace fuchsia {
 namespace crash {
 
-// Wraps around fuchsia::feedback::DataProviderPtr to handle establishing the
-// connection, losing the connection, waiting for the callback, enforcing a
-// timeout, etc.
+// Wraps around fuchsia::feedback::DataProviderPtr to handle establishing the connection, losing the
+// connection, waiting for the callback, enforcing a timeout, etc.
 class FeedbackDataProvider {
  public:
   FeedbackDataProvider(async_dispatcher_t* dispatcher,
@@ -36,8 +34,8 @@ class FeedbackDataProvider {
 
   fuchsia::feedback::DataProviderPtr data_provider_;
   fit::bridge<fuchsia::feedback::Data> done_;
-  // We wrap the delayed task we post on the async loop to timeout in a
-  // CancelableClosure so we can cancel it if we are done another way.
+  // We wrap the delayed task we post on the async loop to timeout in a CancelableClosure so we can
+  // cancel it if we are done another way.
   fxl::CancelableClosure done_after_timeout_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FeedbackDataProvider);

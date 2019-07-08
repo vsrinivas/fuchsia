@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #ifndef SRC_DEVELOPER_FEEDBACK_AGENT_ATTACHMENTS_H_
 #define SRC_DEVELOPER_FEEDBACK_AGENT_ATTACHMENTS_H_
@@ -18,11 +17,10 @@
 namespace fuchsia {
 namespace feedback {
 
-// Returns attachments useful to attach in feedback reports (crash or user
-// feedback).
+// Returns attachments useful to attach in feedback reports (crash or user feedback).
 //
-// - only attachments which keys are in the |allowlist| will be returned.
-// - |timeout| is per attachment.
+// * only attachments which keys are in the |allowlist| will be returned.
+// * |timeout| is per attachment.
 std::vector<fit::promise<Attachment>> GetAttachments(
     async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
     const std::set<std::string>& allowlist, zx::duration timeout);

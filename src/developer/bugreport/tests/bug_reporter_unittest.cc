@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/developer/bugreport/bug_reporter.h"
 
@@ -31,9 +30,8 @@ class BugReporterTest : public gtest::RealLoopFixture {
   BugReporterTest()
       : service_directory_provider_loop_(&kAsyncLoopConfigNoAttachToThread),
         service_directory_provider_(service_directory_provider_loop_.dispatcher()) {
-    // We run the service directory provider in a different loop and thread so
-    // that the MakeBugReport can connect to the stub feedback data provider
-    // synchronously.
+    // We run the service directory provider in a different loop and thread so that the
+    // MakeBugReport can connect to the stub feedback data provider synchronously.
     FXL_CHECK(service_directory_provider_loop_.StartThread("service directory provider thread") ==
               ZX_OK);
   }

@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/developer/feedback_agent/annotations.h"
 
@@ -25,8 +24,7 @@ namespace feedback {
 namespace {
 
 fit::promise<std::string> GetDeviceBoardName() {
-  // fuchsia.sysinfo.Device is not Discoverable so we need to construct the
-  // channel ourselves.
+  // fuchsia.sysinfo.Device is not Discoverable so we need to construct the channel ourselves.
   const char kSysInfoPath[] = "/dev/misc/sysinfo";
   const int fd = open(kSysInfoPath, O_RDWR);
   if (fd < 0) {

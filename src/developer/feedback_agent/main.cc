@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -15,8 +14,8 @@
 
 fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider> SpawnNewDataProvider() {
   return [](fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
-    // We spawn a new process to which we forward the channel of the incoming
-    // request so it can handle it.
+    // We spawn a new process to which we forward the channel of the incoming request so it can
+    // handle it.
     //
     // Note that today we do not keep track of the spawned process.
     fdio_spawn_action_t actions = {};
@@ -44,10 +43,10 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = sys::ComponentContext::Create();
-  // We spawn a new process capable of handling fuchsia.feedback.DataProvider
-  // requests on every incoming request. This has the advantage of tying each
-  // request to a different process that can be cleaned up once it is done or
-  // after a timeout and take care of dangling threads for instance, cf. CF-756.
+  // We spawn a new process capable of handling fuchsia.feedback.DataProvider requests on every
+  // incoming request. This has the advantage of tying each request to a different process that can
+  // be cleaned up once it is done or after a timeout and take care of dangling threads for
+  // instance, cf. CF-756.
   context->outgoing()->AddPublicService(SpawnNewDataProvider());
 
   loop.Run();

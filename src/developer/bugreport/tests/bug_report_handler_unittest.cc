@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/developer/bugreport/client/bug_report_handler.h"
 
@@ -36,9 +35,8 @@ constexpr char kValidDocument[] = R"(
   }
 )";
 
-// The stream reader loads data in chunk, so a long document will be effectively
-// split several times during load. This long (valid) document is meant to test
-// that case.
+// The stream reader loads data in chunk, so a long document will be effectively split several times
+// during load. This long (valid) document is meant to test that case.
 constexpr char kValidDocumentLongDocument[] = R"(
   {
     "annotations":

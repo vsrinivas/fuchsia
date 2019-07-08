@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/developer/feedback_agent/inspect_ptr.h"
 
@@ -31,23 +30,21 @@ namespace feedback {
 fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* dispatcher,
                                                       zx::duration timeout) {
   using Locations = std::vector<::inspect::Location>;
-  // First, we discover all the Inspect entrypoints under the realm of the
-  // calling component.
+  // First, we discover all the Inspect entrypoints under the realm of the calling component.
 
-  // We use a fit::bridge to create a fit::promise that will be completed when
-  // the discovery is done, returning the discovered locations.
+  // We use a fit::bridge to create a fit::promise that will be completed when the discovery is
+  // done, returning the discovered locations.
   //
-  // We use a shared_ptr to share the bridge between this function, the async
-  // loop on which we post the delayed task to timeout and the second thread on
-  // which we run the discovery.
+  // We use a shared_ptr to share the bridge between this function, the async loop on which we post
+  // the delayed task to timeout and the second thread on which we run the discovery.
   std::shared_ptr<fit::bridge<Locations, void>> discovery_done =
       std::make_shared<fit::bridge<Locations, void>>();
 
-  // fit::promise does not have the notion of a timeout. So we post a delayed
-  // task that will call the completer after the timeout and return an error.
+  // fit::promise does not have the notion of a timeout. So we post a delayed task that will call
+  // the completer after the timeout and return an error.
   //
-  // We wrap the delayed task in a CancelableClosure so we can cancel it when
-  // the fit::bridge is completed another way.
+  // We wrap the delayed task in a CancelableClosure so we can cancel it when the fit::bridge is
+  // completed another way.
   std::unique_ptr<fxl::CancelableClosure> discovery_done_after_timeout =
       std::make_unique<fxl::CancelableClosure>([discovery_done] {
         if (discovery_done->completer) {
@@ -64,14 +61,13 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* dispat
     return fit::make_result_promise<fuchsia::mem::Buffer>(fit::error());
   }
 
-  // We run the discovery in a separate thread as the calling component will
-  // itself be discovered and we don't want to deadlock it, cf. CF-756.
+  // We run the discovery in a separate thread as the calling component will itself be discovered
+  // and we don't want to deadlock it, cf. CF-756.
   //
-  // Note that this thread could be left dangling if it hangs forever trying to
-  // opendir() a currently serving out/ directory from one of the discovered
-  // components. It is okay to have potentially dangling threads as we run each
-  // fuchsia.feedback.DataProvider request in a separate process that exits when
-  // the connection with the client is closed.
+  // Note that this thread could be left dangling if it hangs forever trying to opendir() a
+  // currently serving out/ directory from one of the discovered components. It is okay to have
+  // potentially dangling threads as we run each fuchsia.feedback.DataProvider request in a separate
+  // process that exits when the connection with the client is closed.
   std::thread([discovery_done,
                discovery_done_after_timeout = std::move(discovery_done_after_timeout)]() mutable {
     Locations locations = ::inspect::SyncFindPaths("/hub");
@@ -89,8 +85,7 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* dispat
     }
   }).detach();
 
-  // Then, we connect to each entrypoint and read asynchronously its Inspect
-  // data.
+  // Then, we connect to each entrypoint and read asynchronously its Inspect data.
   return discovery_done->consumer.promise_or(fit::error()).and_then([](Locations& locations) {
     std::vector<fit::promise<::inspect::Source, std::string>> sources;
     for (auto location : locations) {

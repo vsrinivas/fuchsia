@@ -1,6 +1,5 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/developer/crashpad_agent/config.h"
 
@@ -146,8 +145,8 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config) {
 
   // We use a local config to only set the out argument after all the checks.
   Config local_config;
-  // It is safe to directly access the fields for which the keys are marked as
-  // required as we have checked the config against the schema.
+  // It is safe to directly access the fields for which the keys are marked as required as we have
+  // checked the config against the schema.
 
   local_config.crashpad_database =
       ParseCrashpadDatabaseConfig(doc[kCrashpadDatabaseKey].GetObject());

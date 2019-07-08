@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/developer/feedback_agent/attachments.h"
 
@@ -27,8 +26,8 @@ namespace fuchsia {
 namespace feedback {
 namespace {
 
-// This is actually synchronous, but we return a fit::promise to match other
-// attachment providers that are asynchronous.
+// This is actually synchronous, but we return a fit::promise to match other attachment providers
+// that are asynchronous.
 fit::promise<fuchsia::mem::Buffer> GetKernelLog() {
   zx::debuglog log;
   const zx_status_t create_status =
@@ -38,8 +37,7 @@ fit::promise<fuchsia::mem::Buffer> GetKernelLog() {
     return fit::make_result_promise<fuchsia::mem::Buffer>(fit::error());
   }
 
-  // zx_log_record_t has a flexible array member, so we need to allocate the
-  // buffer explicitly.
+  // zx_log_record_t has a flexible array member, so we need to allocate the buffer explicitly.
   char buf[ZX_LOG_RECORD_MAX + 1];
   zx_log_record_t* record = reinterpret_cast<zx_log_record_t*>(buf);
   std::string kernel_log;
@@ -64,8 +62,8 @@ fit::promise<fuchsia::mem::Buffer> GetKernelLog() {
   return fit::make_ok_promise(std::move(vmo).ToTransport());
 }
 
-// This is actually synchronous, but we return a fit::promise to match other
-// attachment providers that are asynchronous.
+// This is actually synchronous, but we return a fit::promise to match other attachment providers
+// that are asynchronous.
 fit::promise<fuchsia::mem::Buffer> VmoFromFilename(const std::string& filename) {
   fsl::SizedVmo vmo;
   if (!fsl::VmoFromFilename(filename, &vmo)) {

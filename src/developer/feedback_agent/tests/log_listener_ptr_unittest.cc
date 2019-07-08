@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/developer/feedback_agent/log_listener_ptr.h"
 
@@ -56,9 +55,8 @@ class CollectSystemLogTest : public gtest::RealLoopFixture {
       : executor_(dispatcher()),
         service_directory_provider_loop_(&kAsyncLoopConfigNoAttachToThread),
         service_directory_provider_(service_directory_provider_loop_.dispatcher()) {
-    // We run the service directory provider in a different loop and thread so
-    // that the stub logger can sleep (blocking call) without affecting the main
-    // loop.
+    // We run the service directory provider in a different loop and thread so that the stub logger
+    // can sleep (blocking call) without affecting the main loop.
     FXL_CHECK(service_directory_provider_loop_.StartThread("service directory provider thread") ==
               ZX_OK);
   }
@@ -143,8 +141,8 @@ TEST_F(CollectSystemLogTest, Succeed_LoggerUnbindsFromLogListenerAfterOneMessage
 }
 
 TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
-  // The logger will sleep after the first message and longer than the log
-  // collection timeout, resulting in partial logs.
+  // The logger will sleep after the first message and longer than the log collection timeout,
+  // resulting in partial logs.
   const zx::duration logger_sleep = zx::sec(1);
   const zx::duration log_collection_timeout = zx::msec(500);
 
@@ -232,8 +230,8 @@ TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
   // First, we check we have had a successful flow.
   ASSERT_TRUE(result.is_ok());
 
-  // Then, we check that if the logger closes the connection (and triggers the
-  // error handler on the LogListener side), we don't crash (cf. DX-1602).
+  // Then, we check that if the logger closes the connection (and triggers the error handler on the
+  // LogListener side), we don't crash (cf. DX-1602).
   stub_logger->CloseAllConnections();
 }
 
@@ -242,8 +240,8 @@ TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
 
 namespace mem {
 
-// Pretty-prints string VMOs in gTest matchers instead of the default byte
-// string in case of failed expectations.
+// Pretty-prints string VMOs in gTest matchers instead of the default byte string in case of failed
+// expectations.
 void PrintTo(const Buffer& vmo, std::ostream* os) {
   std::string value;
   FXL_CHECK(fsl::StringFromVmo(vmo, &value));

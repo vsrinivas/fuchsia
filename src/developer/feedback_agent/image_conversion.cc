@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/developer/feedback_agent/image_conversion.h"
 
@@ -49,8 +48,7 @@ bool RawToPng(const png_structp png_ptr, const png_infop info_ptr,
   }
   png_set_rows(png_ptr, info_ptr, &rows[0]);
 
-  // Tell libpng how to process each row?
-  // libpng is so obscure.
+  // Tell libpng how to process each row? libpng is so obscure.
   std::vector<uint8_t> pixels;
   png_set_write_fn(
       png_ptr, &pixels,
@@ -60,8 +58,7 @@ bool RawToPng(const png_structp png_ptr, const png_infop info_ptr,
       },
       NULL);
 
-  // This is actually the blocking call. At the end, the info and image will be
-  // written to |pixels|.
+  // This is actually the blocking call. At the end, the info and image will be written to |pixels|.
   png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_BGR, NULL);
 
   fsl::SizedVmo sized_vmo;

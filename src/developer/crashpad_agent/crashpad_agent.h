@@ -1,6 +1,5 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #ifndef SRC_DEVELOPER_CRASHPAD_AGENT_CRASHPAD_AGENT_H_
 #define SRC_DEVELOPER_CRASHPAD_AGENT_CRASHPAD_AGENT_H_
@@ -34,8 +33,9 @@ namespace crash {
 class CrashpadAgent : public Analyzer {
  public:
   // Static factory methods.
-  // Returns nullptr if the agent cannot be instantiated, e.g., because the
-  // local report database cannot be accessed.
+  //
+  // Returns nullptr if the agent cannot be instantiated, e.g., because the local report database
+  // cannot be accessed.
   static std::unique_ptr<CrashpadAgent> TryCreate(
       async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services);
   static std::unique_ptr<CrashpadAgent> TryCreate(async_dispatcher_t* dispatcher,
@@ -64,24 +64,21 @@ class CrashpadAgent : public Analyzer {
                                                ManagedRuntimeException exception);
   fit::promise<void> OnKernelPanicCrashLog(fuchsia::mem::Buffer crash_log);
 
-  // Makes a new connection to fuchsia.feedback.DataProvider and requests
-  // asynchronously the feedback data.
+  // Makes a new connection to fuchsia.feedback.DataProvider and requests asynchronously the
+  // feedback data.
   fit::promise<fuchsia::feedback::Data> GetFeedbackData();
 
-  // Uploads local crash report of ID |local_report_id|, attaching either the
-  // passed |annotations| or reading the annotations from its minidump.
+  // Uploads local crash report of ID |local_report_id|, attaching either the passed |annotations|
+  // or reading the annotations from its minidump.
   //
-  // Either |annotations| or |read_annotations_from_minidump| must be set, but
-  // only one of them.
+  // Either |annotations| or |read_annotations_from_minidump| must be set, but only one of them.
   bool UploadReport(const crashpad::UUID& local_report_id,
                     const std::map<std::string, std::string>* annotations,
                     bool read_annotations_from_minidump);
 
-  // Deletes oldest crash reports to keep |database_| under a maximum size read
-  // from |config_|.
+  // Deletes oldest crash reports to keep |database_| under a maximum size read from |config_|.
   //
-  // Report age is defined by their
-  // crashpad::CrashReportDatabase::Report::creation_time.
+  // Report age is defined by their crashpad::CrashReportDatabase::Report::creation_time.
   void PruneDatabase();
 
   async_dispatcher_t* dispatcher_;

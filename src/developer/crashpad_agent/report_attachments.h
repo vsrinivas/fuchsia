@@ -1,6 +1,5 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #ifndef SRC_DEVELOPER_CRASHPAD_AGENT_REPORT_ATTACHMENTS_H_
 #define SRC_DEVELOPER_CRASHPAD_AGENT_REPORT_ATTACHMENTS_H_
@@ -14,20 +13,19 @@
 namespace fuchsia {
 namespace crash {
 
-// Adds the set of file attachments we want in a crash report for managed
-// runtime exceptions to the |report|.
+// Adds the set of file attachments we want in a crash report for managed runtime exceptions to the
+// |report|.
 //
-// |feedback_data| may contain attachments that are shared with other
-// feedback reports, e.g., user feedback reports.
+// |feedback_data| may contain attachments that are shared with other feedback reports, e.g., user
+// feedback reports.
 void AddManagedRuntimeExceptionAttachments(crashpad::CrashReportDatabase::NewReport* report,
                                            const fuchsia::feedback::Data& feedback_data,
                                            ManagedRuntimeException* exception);
 
-// Adds the set of file attachments we want in a crash report for kernel
-// panics to the |report|.
+// Adds the set of file attachments we want in a crash report for kernel panics to the |report|.
 //
-// |feedback_data| may contain attachments that are shared with other
-// feedback reports, e.g., user feedback reports.
+// |feedback_data| may contain attachments that are shared with other feedback reports, e.g., user
+// feedback reports.
 void AddKernelPanicAttachments(crashpad::CrashReportDatabase::NewReport* report,
                                const fuchsia::feedback::Data& feedback_data,
                                fuchsia::mem::Buffer crash_log);

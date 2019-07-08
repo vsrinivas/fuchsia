@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/developer/feedback_agent/config.h"
 
@@ -91,8 +90,8 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config) {
 
   // We use a local config to only set the out argument after all the checks.
   Config local_config = {};
-  // It is safe to directly access the field as the keys are marked as
-  // required and we have checked the config against the schema.
+  // It is safe to directly access the field as the keys are marked as required and we have checked
+  // the config against the schema.
   for (const auto& annotation_key : doc[kAnnotationWhitelistKey].GetArray()) {
     // No need to warn on duplicates as the schema enforces "uniqueItems".
     local_config.annotation_allowlist.insert(annotation_key.GetString());

@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #ifndef SRC_DEVELOPER_FEEDBACK_AGENT_LOG_LISTENER_PTR_H_
 #define SRC_DEVELOPER_FEEDBACK_AGENT_LOG_LISTENER_PTR_H_
@@ -34,8 +33,7 @@ class LogListener : public fuchsia::logger::LogListener {
   explicit LogListener(async_dispatcher_t* dispatcher,
                        std::shared_ptr<::sys::ServiceDirectory> services);
 
-  // Collects the logs and returns a promise to when the collection is done or
-  // the timeout over.
+  // Collects the logs and returns a promise to when the collection is done or the timeout over.
   fit::promise<void> CollectLogs(zx::duration timeout);
 
   // Returns the logs that have been collected so far.
@@ -60,8 +58,8 @@ class LogListener : public fuchsia::logger::LogListener {
   std::string logs_;
 
   fit::bridge<void, void> done_;
-  // We wrap the delayed task we post on the async loop to timeout in a
-  // CancelableClosure so we can cancel it if we are done another way.
+  // We wrap the delayed task we post on the async loop to timeout in a CancelableClosure so we can
+  // cancel it if we are done another way.
   fxl::CancelableClosure done_after_timeout_;
 };
 

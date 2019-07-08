@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/developer/feedback_agent/tests/stub_scenic.h"
 
@@ -44,9 +43,8 @@ ScreenshotData CreateCheckerboardScreenshot(const size_t image_dim_in_px) {
 
   // We go pixel by pixel, row by row. |y| tracks the row and |x| the column.
   //
-  // We compute in which |block_size| x |block_size| block the pixel is to
-  // determine the color (black or white). |block_y| tracks the "block" row and
-  // |block_x| the "block" column.
+  // We compute in which |block_size| x |block_size| block the pixel is to determine the color
+  // (black or white). |block_y| tracks the "block" row and |block_x| the "block" column.
   for (size_t y = 0; y < height; ++y) {
     size_t block_y = y / block_size;
     for (size_t x = 0; x < width; ++x) {
@@ -78,8 +76,8 @@ ScreenshotData CreateNonBGRA8Screenshot() {
 
 void StubScenic::TakeScreenshot(TakeScreenshotCallback callback) {
   FXL_CHECK(!take_screenshot_responses_.empty())
-      << "You need to set up Scenic::TakeScreenshot() responses before "
-         "testing GetScreenshot() using set_scenic_responses()";
+      << "You need to set up Scenic::TakeScreenshot() responses before testing GetScreenshot() "
+         "using set_scenic_responses()";
   TakeScreenshotResponse response = std::move(take_screenshot_responses_[0]);
   take_screenshot_responses_.erase(take_screenshot_responses_.begin());
   callback(std::move(response.screenshot), response.success);

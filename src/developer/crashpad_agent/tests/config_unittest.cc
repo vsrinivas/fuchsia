@@ -1,6 +1,5 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/developer/crashpad_agent/config.h"
 
@@ -44,8 +43,7 @@ TEST(ConfigTest, ParseConfig_ValidConfig_NoUploadServerUrlIgnored) {
   EXPECT_EQ(config.crashpad_database.path, "/foo/crashes");
   EXPECT_EQ(config.crashpad_database.max_size_in_kb, 1024u);
   EXPECT_FALSE(config.crash_server.enable_upload);
-  // Even though a URL is set in the config file, we check that it is not set in
-  // the struct.
+  // Even though a URL is set in the config file, we check that it is not set in the struct.
   EXPECT_EQ(config.crash_server.url, nullptr);
 }
 

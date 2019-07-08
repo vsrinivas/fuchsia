@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -21,8 +20,8 @@
 int main(int argc, const char** argv) {
   syslog::InitLogger({"feedback"});
 
-  // This process is spawned by the feedback_agent process, which forwards it
-  // the incoming request through PA_USER0.
+  // This process is spawned by the feedback_agent process, which forwards it the incoming request
+  // through PA_USER0.
   fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request(
       zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 0))));
   if (!request.is_valid()) {
@@ -39,9 +38,9 @@ int main(int argc, const char** argv) {
   }
 
   fidl::Binding<fuchsia::feedback::DataProvider> binding(data_provider.get());
-  // TODO(DX-1497): in addition to exiting the process when the connection is
-  // closed, we should have an internal timeout since the last call and exit the
-  // process then in case clients don't close the connection themselves.
+  // TODO(DX-1497): in addition to exiting the process when the connection is closed, we should have
+  // an internal timeout since the last call and exit the process then in case clients don't close
+  // the connection themselves.
   binding.set_error_handler([&loop](zx_status_t status) {
     loop.Shutdown();
     // We exit successfully when the client closes the connection.
