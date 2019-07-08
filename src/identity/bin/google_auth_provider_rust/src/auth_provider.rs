@@ -5,9 +5,12 @@
 use crate::constants::{AUTHORIZE_URI, DEFAULT_SCOPES, FUCHSIA_CLIENT_ID, REDIRECT_URI};
 use crate::error::{AuthProviderError, ResultExt};
 use crate::http::HttpClient;
-use crate::oauth::{build_request_with_auth_code, parse_response_with_refresh_token};
+use crate::oauth::{
+    build_request_with_auth_code, parse_auth_code_from_redirect, parse_response_with_refresh_token,
+    AccessToken, AuthCode, RefreshToken,
+};
 use crate::web::StandaloneWebFrame;
-use failure::{format_err, Error};
+use failure::Error;
 use fidl;
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::ClientEnd;
@@ -23,17 +26,9 @@ use fidl_fuchsia_auth::{
 use fuchsia_scenic::ViewTokenPair;
 use futures::prelude::*;
 use log::{info, warn};
-use std::borrow::Cow;
-use std::collections::HashMap;
 use url::Url;
 
 type AuthProviderResult<T> = Result<T, AuthProviderError>;
-#[derive(Debug, PartialEq)]
-struct AuthCode(String);
-#[derive(Debug, PartialEq)]
-struct RefreshToken(String);
-#[derive(Debug, PartialEq)]
-struct AccessToken(String);
 
 /// Trait for structs capable of creating new Web frames.
 pub trait WebFrameSupplier {
@@ -249,7 +244,7 @@ where
             warn!("Error while attempting to stop UI overlay: {:?}", err);
         }
 
-        Self::parse_auth_code_from_redirect(redirect_url)
+        parse_auth_code_from_redirect(redirect_url)
     }
 
     fn authorize_url(user_profile_id: Option<String>) -> AuthProviderResult<Url> {
@@ -268,44 +263,17 @@ where
             .auth_provider_status(AuthProviderStatus::InternalError)
     }
 
-    fn parse_auth_code_from_redirect(url: Url) -> AuthProviderResult<AuthCode> {
-        if (url.scheme(), url.domain(), url.path())
-            != (REDIRECT_URI.scheme(), REDIRECT_URI.domain(), REDIRECT_URI.path())
-        {
-            return Err(AuthProviderError::new(AuthProviderStatus::InternalError)
-                .with_cause(format_err!("Redirected to unexpected URL")));
-        }
-
-        let params = url.query_pairs().collect::<HashMap<Cow<str>, Cow<str>>>();
-
-        if let Some(auth_code) = params.get("code") {
-            Ok(AuthCode(auth_code.as_ref().to_string()))
-        } else if let Some(error_code) = params.get("error") {
-            let error_status = match error_code.as_ref() {
-                "access_denied" => AuthProviderStatus::UserCancelled,
-                "server_error" => AuthProviderStatus::OauthServerError,
-                "temporarily_unavailable" => AuthProviderStatus::OauthServerError,
-                _ => AuthProviderStatus::UnknownError,
-            };
-            Err(AuthProviderError::new(error_status))
-        } else {
-            Err(AuthProviderError::new(AuthProviderStatus::UnknownError)
-                .with_cause(format_err!("Authorize redirect contained neither code nor error")))
-        }
-    }
-
     /// Trades an OAuth auth code for a refresh token and access token.
     async fn exchange_auth_code(
         &self,
         auth_code: AuthCode,
     ) -> AuthProviderResult<(RefreshToken, AccessToken)> {
-        let request = build_request_with_auth_code(auth_code.0)
+        let request = build_request_with_auth_code(auth_code)
             .auth_provider_status(AuthProviderStatus::UnknownError)?;
 
         let (response_body, status_code) = await!(self.http_client.request(request))?;
 
-        let parsed_response = parse_response_with_refresh_token(response_body, status_code)?;
-        Ok((RefreshToken(parsed_response.0), AccessToken(parsed_response.1)))
+        parse_response_with_refresh_token(response_body, status_code)
     }
 
     /// Use an access token to retrieve profile information.
@@ -468,8 +436,6 @@ mod tests {
     use futures::future::{ready, FutureObj};
     use hyper::StatusCode;
 
-    type TestGoogleAuthProvider = GoogleAuthProvider<TestWebFrameSupplier, TestHttpClient>;
-
     /// A no-op implementation of `WebFrameSupplier`
     struct TestWebFrameSupplier;
 
@@ -519,12 +485,6 @@ mod tests {
         }
     }
 
-    fn url_with_query(url_base: &Url, query: &str) -> Url {
-        let mut url = url_base.clone();
-        url.set_query(Some(query));
-        url
-    }
-
     /// Creates an auth provider.  If http_client is not given, uses a `TestHttpClient`
     /// that returns an `UnsupportedProvider` error.
     fn get_auth_provider_proxy(http_client: Option<TestHttpClient>) -> AuthProviderProxy {
@@ -548,22 +508,6 @@ mod tests {
     /// Construct an `AuthCode` from a str reference.
     fn auth_code(code: &str) -> AuthCode {
         AuthCode(code.to_string())
-    }
-
-    #[fasync::run_until_stalled(test)]
-    async fn test_auth_code_from_redirect() -> Result<(), Error> {
-        let success_url = url_with_query(&REDIRECT_URI, "code=test-auth-code");
-        assert_eq!(
-            auth_code("test-auth-code"),
-            TestGoogleAuthProvider::parse_auth_code_from_redirect(success_url).unwrap()
-        );
-
-        let canceled_url = url_with_query(&REDIRECT_URI, "error=access_denied");
-        assert_eq!(
-            AuthProviderStatus::UserCancelled,
-            TestGoogleAuthProvider::parse_auth_code_from_redirect(canceled_url).unwrap_err().status
-        );
-        Ok(())
     }
 
     #[fasync::run_until_stalled(test)]
