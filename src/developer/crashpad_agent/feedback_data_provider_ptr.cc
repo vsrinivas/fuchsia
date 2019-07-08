@@ -49,7 +49,6 @@ fit::promise<fuchsia::feedback::Data> FeedbackDataProvider::GetData(zx::duration
 
     FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.feedback.DataProvider";
     done_->completer.complete_error();
-    done_after_timeout_.Cancel();
   });
 
   data_provider_->GetData([this](fuchsia::feedback::DataProvider_GetData_Result out_result) {
@@ -63,10 +62,13 @@ fit::promise<fuchsia::feedback::Data> FeedbackDataProvider::GetData(zx::duration
     } else {
       done_->completer.complete_ok(std::move(out_result.response().data));
     }
-    done_after_timeout_.Cancel();
   });
 
-  return done_->consumer.promise_or(fit::error());
+  return done_->consumer.promise_or(fit::error())
+      .then([this](fit::result<fuchsia::feedback::Data>& result) {
+        done_after_timeout_.Cancel();
+        return std::move(result);
+      });
 }
 
 }  // namespace crash
