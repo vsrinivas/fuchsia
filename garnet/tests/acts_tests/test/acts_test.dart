@@ -65,7 +65,10 @@ Future<Process> runActs(final String tmpDirPath, final String tests) {
   Process.runSync('chmod', ['+x', actsBinAbsPath]);
 
   return Process.start(actsBinAbsPath, actsArgs, environment: {
-    'PYTHONPATH': '$tmpDirPath/$actsFrameworkRelPath'
+    'PYTHONPATH': '$tmpDirPath/$actsFrameworkRelPath',
+    // Required for some Wifi testcases
+    'LANG': 'C.UTF-8',
+    'LC_ALL': 'C.UTF-8'
   });
 }
 
