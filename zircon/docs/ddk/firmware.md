@@ -21,7 +21,7 @@ files:
 
 * One or more firmware files
 * A license file
-* [README.fuchsia](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/source_code/third_party-metadata.md)
+* [README.fuchsia](/docs/development/source_code/third_party-metadata.md)
 
 README.fuchsia must contain at least the following directives:
 
@@ -91,5 +91,5 @@ MODULE_FIRMWARE := <name>/<path-to-binary-blob>
 This will install the firmware to bootfs under
 `/boot/lib/firmware/$(basename $(MODULE_FIRMWARE))`.
 
-The `load_firmware()` API, defined in [`driver.h`](../../system/ulib/ddk/include/ddk/driver.h)
+The `load_firmware()` API, defined in [`driver.h`](/zircon/system/ulib/ddk/include/ddk/driver.h)
 loads the firmware pointed to by the path in a VMO.

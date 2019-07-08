@@ -15,7 +15,7 @@ by providing mixins that ensure type safety and perform basic functionality.
 > * [CRTPs &mdash; or Curiously Recurring Template Patterns][crtp].
 
 The mixins that we'll be discussing are defined in
-[`//zircon/system/ulib/ddktl/include/ddktl/device.h`][include/ddktl/device.h].
+[`//zircon/system/ulib/ddktl/include/ddktl/device.h`][/zircon/system/ulib/ddktl/include/ddktl/device.h].
 
 The following mixins are provided:
 
@@ -118,8 +118,8 @@ any **open()**, **close()**, and **read()** client calls
 will now flow to your implementations of **DdkOpen()**, **DdkClose()**,
 and **DdkRead()**, respectively.
 
-As an example, in the directory [`//zircon/system/dev/block/zxcrypt`][dev/block/zxcrypt]
-we have a typical device declaration ([`device.h`][dev/block/zxcrypt/device.h]):
+As an example, in the directory [`//zircon/system/dev/block/zxcrypt`][/zircon/system/dev/block/zxcrypt]
+we have a typical device declaration ([`device.h`][/zircon/system/dev/block/zxcrypt/device.h]):
 
 ```c++
 [01] class Device;
@@ -152,7 +152,7 @@ Lines `[11` .. `15]` provide the prototypes for the three optional mixins and th
 mandatory **DdkRelease()** member function.
 
 Here's an example of the `zxcrypt` device's `DdkGetProtocol` implementation (from
-[`device.cpp`][dev/block/zxcrypt/device.cpp]):
+[`device.cpp`][/zircon/system/dev/block/zxcrypt/device.cc]):
 
 ```c++
 zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out) {
@@ -179,7 +179,7 @@ zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out) {
 Let's take a look at how a driver uses the DDKTL.
 
 We're going to use the USB XHCI driver for this set of code samples; you can find it
-[here: `//zircon/system/dev/usb/xhci/usb-xhci.cpp`][usbxhci.cpp].
+[here: `//zircon/system/dev/usb/xhci/usb-xhci.cpp`][/zircon/system/dev/usb/xhci//usbx-hci.cc].
 
 In the previous sections, we saw [simple, C-based drivers](simple.md).
 Recall that those drivers had binding instructions (usually at the bottom of the
@@ -293,12 +293,12 @@ zx_status_t UsbXhci::InitPci() {
 This usage is typical.
 
 <!-- xref table -->
-[bti]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/bus_transaction_initiator.md
+[bti]: /zircon/docs/objects/bus_transaction_initiator.md
 [crtp]: https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern
-[ddk-tutorial]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/ddk/ddk-tutorial.md
-[dev/block/zxcrypt/device.cpp]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/dev/block/zxcrypt/device.cpp
-[dev/block/zxcrypt/device.h]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/dev/block/zxcrypt/device.h
-[dev/block/zxcrypt]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/dev/block/zxcrypt
-[include/ddktl/device.h]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/ddktl/include/ddktl/device.h
+[ddk-tutorial]: /zircon/docs/ddk/ddk-tutorial.md
+[dev/block/zxcrypt/device.cpp]: /zircon/system/dev/block/zxcrypt/device.cc
+[dev/block/zxcrypt/device.h]: /zircon/system/dev/block/zxcrypt/device.h
+[dev/block/zxcrypt]: /zircon/system/dev/block/zxcrypt
+[include/ddktl/device.h]: /zircon/system/ulib/ddktl/include/ddktl/device.h
 [mixins]: https://en.wikipedia.org/wiki/Mixin
-[usbxhci.cpp]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/dev/usb/xhci/usb-xhci.cpp
+[usbxhci.cpp]: /zircon/system/dev/usb/xhci/usb-xhci.cc

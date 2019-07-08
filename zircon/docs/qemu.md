@@ -1,7 +1,6 @@
 # QEMU
 
-Zircon can [run under
-emulation](https://fuchsia.googlesource.com/fuchsia/+/master/docs/getting_started.md#Boot-from-QEMU)
+Zircon can [run under emulation](/docs/getting_started.md#Boot-from-QEMU)
 using QEMU. QEMU can either be installed via prebuilt binaries, or built
 locally.
 
@@ -278,4 +277,4 @@ directory and anyone should be able to restore your state and start to poke
 at stuff from the QEMU console.
 
 
-[minfs-create-image]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/minfs.md#Host-Device-QEMU-Only
+[minfs-create-image]: /zircon/docs/minfs.md#Host-Device-QEMU-Only

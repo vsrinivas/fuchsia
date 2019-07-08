@@ -8,7 +8,7 @@ updated atomically as part of a system update.
 **component** - a unit of execution started by the component franework which
 constructs its sandbox environment.
 
-**[package](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/go/src/pm/README.md#structure-of-a-fuchsia-package)** - a unit of distribution in Fuchsia which is a collection of files
+**[package](/garnet/go/src/pm/README.md#structure-of-a-fuchsia-package)** - a unit of distribution in Fuchsia which is a collection of files
 
 ## Scope
 

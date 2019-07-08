@@ -2,7 +2,7 @@
 
 At this point in time, Zircon is under heavy, active development, and we're
 not seeking major changes or new features from new contributors, however, if
-you desire to [contribute](https://fuchsia.googlesource.com/fuchsia/+/master/docs/CONTRIBUTING.md), small bugfixes are welcome.
+you desire to [contribute](/docs/CONTRIBUTING.md), small bugfixes are welcome.
 
 Here are some general guidelines for patches to Zircon.  This list is
 incomplete and will be expanded over time.
@@ -63,7 +63,7 @@ incomplete and will be expanded over time.
       currently used to generate API docs for DDK.  `./scripts/make-markdown` runs `h2md` against
       all source files in the `system/` tree.
 
-[googlesource-docs]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/
-[syscall-doc]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls.md
-[cmdline-doc]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/kernel_cmdline.md
-[h2md-doc]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/h2md.md
+[googlesource-docs]: /zircon/docs/
+[syscall-doc]: /zircon/docs/syscalls.md
+[cmdline-doc]: /zircon/docs/kernel_cmdline.md
+[h2md-doc]: /zircon/docs/h2md.md

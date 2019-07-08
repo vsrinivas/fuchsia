@@ -4,12 +4,12 @@ This document describes how to get a NUC up and running with Fuchsia.
 
 [1. Get Parts](#parts)<br/>
 [2. Prepare the NUC](#nuc)<br/>
-[3. Install Fuchsia](#install)<br/>
+[3. Install Fuchsia](#build)<br/>
 [4. Update NUC BIOS to allow netbooting](#bios)<br/>
 
 -----
 
-## 1. Get Parts <a name="parts"/>
+## 1. Get Parts <a name="parts"></a>
 
 You’ll need the following:
 
@@ -42,7 +42,7 @@ This table shows what I bought from Amazon.
 
 -----
 
-## 2. Prepare the NUC <a name="nuc"/>
+## 2. Prepare the NUC <a name="nuc"></a>
 NUCs don’t come with RAM or an SSD so you need to install them.
 <br/><center><img width="50%" src="/docs/images/developing_on_nuc/parts.jpg"/></center><br/>
 
@@ -62,7 +62,7 @@ NUCs don’t come with RAM or an SSD so you need to install them.
 
 -----
 
-## 3. Update NUC BIOS to enable EFI booting <a name="bios"/>
+## 3. Update NUC BIOS to enable EFI booting <a name="bios"></a>
 
 1. Reboot NUC.
 1. Press F2 while booting to enter BIOS.
@@ -73,13 +73,13 @@ NUCs don’t come with RAM or an SSD so you need to install them.
 
 -----
 
-## 4. Build Fuchsia <a name="build"/>
+## 4. Build Fuchsia <a name="build"></a>
 
 1. Follow the [getting started guidelines](/docs/getting_started.md)
 
 -----
 
-## 5. Pave Fuchsia <a name="pave"/>
+## 5. Pave Fuchsia <a name="pave"></a>
 
 1. Plug in your USB key to your build workstation
 1. Identify the path to your USB key by running `fx list-usb-disks`
