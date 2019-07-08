@@ -16,5 +16,5 @@ graphics_compute_glslangValidator_tool_target =
     "//third_party/shaderc/third_party/glslang:glslangValidator"
 
 # Path to the 'clang-format' host tool. Only used to generate debug shaders.
-graphics_compute_clang_format_host_tool =
-    "$clang_prefix/clang-format"
+# Should be either an absolute path, or a path relative to |root_out_dir|.
+graphics_compute_clang_format_host_tool = "$clang_prefix/clang-format"
