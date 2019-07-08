@@ -7,12 +7,13 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/buttons.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
 
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
 #include "astro.h"
+
+namespace astro {
 
 static const pbus_gpio_t astro_buttons_gpios[] = {
     {
@@ -63,24 +64,28 @@ static const pbus_metadata_t available_buttons_metadata[] = {
     }
 };
 
-static pbus_dev_t astro_buttons_dev = {
-    .name = "astro-buttons",
-    .vid = PDEV_VID_GENERIC,
-    .pid = PDEV_PID_GENERIC,
-    .did = PDEV_DID_HID_BUTTONS,
-    .gpio_list = astro_buttons_gpios,
-    .gpio_count = countof(astro_buttons_gpios),
-    .metadata_list = available_buttons_metadata,
-    .metadata_count = countof(available_buttons_metadata),
-};
+static pbus_dev_t astro_buttons_dev = []() {
+    pbus_dev_t dev = {};
+    dev.name = "astro-buttons";
+    dev.vid = PDEV_VID_GENERIC;
+    dev.pid = PDEV_PID_GENERIC;
+    dev.did = PDEV_DID_HID_BUTTONS;
+    dev.gpio_list = astro_buttons_gpios;
+    dev.gpio_count = countof(astro_buttons_gpios);
+    dev.metadata_list = available_buttons_metadata;
+    dev.metadata_count = countof(available_buttons_metadata);
+    return dev;
+}();
 
-zx_status_t astro_buttons_init(aml_bus_t* bus) {
+zx_status_t Astro::ButtonsInit() {
 
-    zx_status_t status = pbus_device_add(&bus->pbus, &astro_buttons_dev);
+    zx_status_t status = pbus_.DeviceAdd(&astro_buttons_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s pbus_device_add failed: %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
         return status;
     }
 
     return ZX_OK;
 }
+
+} // namespace astro

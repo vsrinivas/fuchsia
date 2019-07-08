@@ -124,7 +124,7 @@ TEST_F(DeviceEnumerationTest, Vim2Test) {
 
 TEST_F(DeviceEnumerationTest, AstroTest) {
     static const char* kDevicePaths[] = {
-        "sys/platform/aml-bus",
+        "sys/platform/astro",
         "sys/platform/05:03:1/aml-axg-gpio",
         "sys/platform/00:00:13/hid-buttons/hid-device-000",
         "sys/platform/05:00:2/aml-i2c",
@@ -155,6 +155,9 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
         "sys/platform/05:00:f/aml-raw_nand/nand/sys-config/skip-block",
         "sys/platform/05:00:f/aml-raw_nand/nand/migration/skip-block",
         "sys/platform/05:00:7/aml-sd-emmc/sdmmc",
+        "sys/platform/05:00:7/aml-sd-emmc/sdmmc/sdmmc-sdio",
+        "sys/platform/05:00:7/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1/component",
+        "sys/platform/05:00:7/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2/component",
         "wifi",
         "tcs3400-light/tcs-3400/hid-device-000",
         "sys/platform/05:03:11/clocks",

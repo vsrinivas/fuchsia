@@ -8,7 +8,6 @@ library("amlogic") {
     "aml-pdm-audio.cc",
     "aml-tdm-audio.cc",
     "s905d2-hiu.c",
-    "s905d2-mali.c",
     "s905d2-pll-rates.c",
   ]
   deps = [

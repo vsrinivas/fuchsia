@@ -10,9 +10,9 @@
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
-#include <limits.h>
-
 #include "astro.h"
+
+namespace astro {
 
 static const pbus_mmio_t i2c_mmios[] = {
     {
@@ -57,24 +57,36 @@ static const i2c_channel_t i2c_channels[] = {
     {
         .bus_id = ASTRO_I2C_2,
         .address = I2C_FOCALTECH_TOUCH_ADDR,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
         // binds as composite device
     },
     // Goodix touch screen
     {
         .bus_id = ASTRO_I2C_2,
         .address = I2C_GOODIX_TOUCH_ADDR,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
         // binds as composite device
     },
     // Light sensor
     {
         .bus_id = ASTRO_I2C_A0_0,
         .address = I2C_AMBIENTLIGHT_ADDR,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
         // binds as composite device
     },
     // Audio output
     {
         .bus_id = ASTRO_I2C_3,
         .address = I2C_AUDIO_CODEC_ADDR,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
         // binds as composite device
     },
 };
@@ -84,40 +96,44 @@ static const pbus_metadata_t i2c_metadata[] = {
         .type = DEVICE_METADATA_I2C_CHANNELS,
         .data_buffer = &i2c_channels,
         .data_size = sizeof(i2c_channels),
-    }
+    },
 };
 
-static const pbus_dev_t i2c_dev = {
-    .name = "i2c",
-    .vid = PDEV_VID_AMLOGIC,
-    .pid = PDEV_PID_GENERIC,
-    .did = PDEV_DID_AMLOGIC_I2C,
-    .mmio_list = i2c_mmios,
-    .mmio_count = countof(i2c_mmios),
-    .irq_list = i2c_irqs,
-    .irq_count = countof(i2c_irqs),
-    .metadata_list = i2c_metadata,
-    .metadata_count = countof(i2c_metadata),
-};
+static const pbus_dev_t i2c_dev = []() {
+    pbus_dev_t dev = {};
+    dev.name = "i2c";
+    dev.vid = PDEV_VID_AMLOGIC;
+    dev.pid = PDEV_PID_GENERIC;
+    dev.did = PDEV_DID_AMLOGIC_I2C;
+    dev.mmio_list = i2c_mmios;
+    dev.mmio_count = countof(i2c_mmios);
+    dev.irq_list = i2c_irqs;
+    dev.irq_count = countof(i2c_irqs);
+    dev.metadata_list = i2c_metadata;
+    dev.metadata_count = countof(i2c_metadata);
+    return dev;
+}();
 
-zx_status_t aml_i2c_init(aml_bus_t* bus) {
+zx_status_t Astro::I2cInit() {
     // setup pinmux for our I2C busses
 
     //i2c_ao_0
-    gpio_impl_set_alt_function(&bus->gpio, S905D2_GPIOAO(2), 1);
-    gpio_impl_set_alt_function(&bus->gpio, S905D2_GPIOAO(3), 1);
+    gpio_impl_.SetAltFunction(S905D2_GPIOAO(2), 1);
+    gpio_impl_.SetAltFunction(S905D2_GPIOAO(3), 1);
     //i2c2
-    gpio_impl_set_alt_function(&bus->gpio, S905D2_GPIOZ(14), 3);
-    gpio_impl_set_alt_function(&bus->gpio, S905D2_GPIOZ(15), 3);
+    gpio_impl_.SetAltFunction(S905D2_GPIOZ(14), 3);
+    gpio_impl_.SetAltFunction(S905D2_GPIOZ(15), 3);
     //i2c3
-    gpio_impl_set_alt_function(&bus->gpio, S905D2_GPIOA(14), 2);
-    gpio_impl_set_alt_function(&bus->gpio, S905D2_GPIOA(15), 2);
+    gpio_impl_.SetAltFunction(S905D2_GPIOA(14), 2);
+    gpio_impl_.SetAltFunction(S905D2_GPIOA(15), 2);
 
-    zx_status_t status = pbus_device_add(&bus->pbus, &i2c_dev);
+    zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml_i2c_init: pbus_device_add failed: %d\n", status);
+        zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
         return status;
     }
 
     return ZX_OK;
 }
+
+} // namespace astro
