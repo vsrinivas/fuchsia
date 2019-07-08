@@ -83,8 +83,8 @@
 // `pub(crate) use` will prevent items from being accidentally re-exported).
 pub(crate) use self::internal::*;
 pub use self::internal::{
-    AddrSubnet, AddrSubnetEither, EntryDest, EntryEither, IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
-    Subnet, SubnetEither,
+    AddrSubnet, AddrSubnetEither, EntryDest, EntryDestEither, EntryEither, IpAddr, Ipv4, Ipv4Addr,
+    Ipv6, Ipv6Addr, Subnet, SubnetEither,
 };
 
 mod internal {
@@ -731,9 +731,9 @@ mod internal {
         }
     }
 
-    impl<A: Display> Debug for Subnet<A> {
+    impl<A: Debug> Debug for Subnet<A> {
         fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-            write!(f, "{}/{}", self.network, self.prefix)
+            write!(f, "{:?}/{}", self.network, self.prefix)
         }
     }
 
@@ -793,16 +793,31 @@ mod internal {
     ///
     /// `EntryDest` can either be a device or another network address.
     #[allow(missing_docs)]
-    #[derive(Copy, Clone, Eq, PartialEq)]
+    #[derive(Debug, Copy, Clone, Eq, PartialEq)]
     pub enum EntryDest<A> {
         Local { device: DeviceId },
         Remote { next_hop: A },
     }
 
+    /// A local forwarding destination, or a remote forwarding destination that
+    /// can be an IPv4 or an IPv6 address.
+    pub type EntryDestEither = EntryDest<IpAddr>;
+
+    impl<A: ext::IpAddress> From<EntryDest<A>> for EntryDest<IpAddr> {
+        fn from(entry: EntryDest<A>) -> Self {
+            match entry {
+                EntryDest::Local { device } => EntryDest::Local { device },
+                EntryDest::Remote { next_hop } => {
+                    EntryDest::Remote { next_hop: next_hop.into_ip_addr() }
+                }
+            }
+        }
+    }
+
     /// A forwarding entry.
     ///
     /// `Entry` is a `Subnet` paired with an `EntryDest`.
-    #[derive(Copy, Clone, Eq, PartialEq)]
+    #[derive(Debug, Copy, Clone, Eq, PartialEq)]
     pub struct Entry<A> {
         pub subnet: Subnet<A>,
         pub dest: EntryDest<A>,
@@ -810,10 +825,54 @@ mod internal {
 
     /// An IPv4 forwarding entry or an IPv6 forwarding entry.
     #[allow(missing_docs)]
-    #[derive(Copy, Clone, Eq, PartialEq)]
+    #[derive(Debug, Copy, Clone, Eq, PartialEq)]
     pub enum EntryEither {
         V4(Entry<Ipv4Addr>),
         V6(Entry<Ipv6Addr>),
+    }
+
+    impl EntryEither {
+        /// Creates a new [`EntryEither`] with the given `subnet` and
+        /// `destination`.
+        ///
+        /// Returns `None` if `subnet` and `destination` are not the same IP
+        /// version (both `V4` or both `V6`) when `destination` is a remote
+        /// value.
+        pub fn new(subnet: SubnetEither, destination: EntryDestEither) -> Option<EntryEither> {
+            match destination {
+                EntryDest::Local { device } => match subnet {
+                    SubnetEither::V4(subnet) => {
+                        Some(EntryEither::V4(Entry { subnet, dest: EntryDest::Local { device } }))
+                    }
+                    SubnetEither::V6(subnet) => {
+                        Some(EntryEither::V6(Entry { subnet, dest: EntryDest::Local { device } }))
+                    }
+                },
+                EntryDest::Remote { next_hop } => match (subnet, next_hop) {
+                    (SubnetEither::V4(subnet), IpAddr::V4(next_hop)) => {
+                        Some(EntryEither::V4(Entry {
+                            subnet,
+                            dest: EntryDest::Remote { next_hop },
+                        }))
+                    }
+                    (SubnetEither::V6(subnet), IpAddr::V6(next_hop)) => {
+                        Some(EntryEither::V6(Entry {
+                            subnet,
+                            dest: EntryDest::Remote { next_hop },
+                        }))
+                    }
+                    _ => None,
+                },
+            }
+        }
+
+        /// Gets the subnet and destination for this [`EntryEither`].
+        pub fn into_subnet_dest(self) -> (SubnetEither, EntryDestEither) {
+            match self {
+                EntryEither::V4(entry) => (entry.subnet.into(), entry.dest.into()),
+                EntryEither::V6(entry) => (entry.subnet.into(), entry.dest.into()),
+            }
+        }
     }
 
     impl From<Entry<Ipv4Addr>> for EntryEither {
@@ -1286,6 +1345,30 @@ mod internal {
             ]);
             assert!(multi.is_multicast());
             assert!(!multi.is_valid_unicast());
+        }
+
+        #[test]
+        fn test_entry_either() {
+            // check that trying to build an EntryEither with mismatching IpAddr
+            // fails, and with matching ones succeeds:
+            let subnet_v4 = Subnet::new(Ipv4Addr::new([192, 168, 0, 0]), 24).unwrap().into();
+            let subnet_v6 =
+                Subnet::new(Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]), 64)
+                    .unwrap()
+                    .into();
+            let entry_v4 = EntryDest::Remote { next_hop: Ipv4Addr::new([192, 168, 0, 1]) }.into();
+            let entry_v6 = EntryDest::Remote {
+                next_hop: Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
+            }
+            .into();
+            assert!(EntryEither::new(subnet_v4, entry_v6).is_none());
+            assert!(EntryEither::new(subnet_v6, entry_v4).is_none());
+            let valid_v4 = EntryEither::new(subnet_v4, entry_v4).unwrap();
+            let valid_v6 = EntryEither::new(subnet_v6, entry_v6).unwrap();
+            // check that the split produces results requal to the generating
+            // parts:
+            assert_eq!((subnet_v4, entry_v4), valid_v4.into_subnet_dest());
+            assert_eq!((subnet_v6, entry_v6), valid_v6.into_subnet_dest());
         }
     }
 }

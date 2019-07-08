@@ -42,8 +42,8 @@ pub use crate::device::{
 };
 pub use crate::error::NetstackError;
 pub use crate::ip::{
-    icmp, AddrSubnet, AddrSubnetEither, EntryDest, EntryEither, IpAddr, IpLayerEventDispatcher,
-    IpStateBuilder, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet, SubnetEither,
+    icmp, AddrSubnet, AddrSubnetEither, EntryDest, EntryDestEither, EntryEither, IpAddr,
+    IpLayerEventDispatcher, IpStateBuilder, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet, SubnetEither,
 };
 pub use crate::transport::udp::UdpEventDispatcher;
 pub use crate::transport::TransportLayerEventDispatcher;
