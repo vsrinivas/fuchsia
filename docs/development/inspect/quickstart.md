@@ -66,7 +66,7 @@ See [Viewing Inspect Data](#viewing-inspect-data) below to view what you are now
 See [Supported Data Types](#supported-data-types) for a full list of data types you can try.
 
 Want to test your Inspect integration? Include [testing/inspect.h](/garnet/public/lib/inspect/testing/inspect.h)
-in your unit test for a full set of matchers. See [this example](/garnet/public/lib/inspect/tests/inspect_vmo_unittest.cc)
+in your unit test for a full set of matchers. See [this example](/garnet/public/lib/inspect_deprecated/tests/inspect_vmo_unittest.cc)
 of how it is used.
 
 Read on to learn how Inspect is meant to be used in C++.

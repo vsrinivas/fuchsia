@@ -70,7 +70,7 @@ To give you a big picture:
 ![Figure: The corporate ladder](relations.png)
 
 > The source code for this example is in
-> [`//garnet/public/lib/inspect/integration/example.cc`][example.cc].
+> [`//garnet/public/lib/inspect_deprecated/integration/example.cc`][example.cc].
 
 First, let's look at the internal organization of the data from `example.cc`
 (line identifiers are local to the description, not the actual file):
@@ -633,4 +633,4 @@ From Chris:
 [iquery]: /docs/development/inspect/iquery.md
 [inspect]: /docs/development/inspect/README.md
 [zxdb]: /docs/development/debugger/README.md
-[example.cc]: /garnet/public/lib/inspect/integration/example.cc
+[example.cc]: /garnet/public/lib/inspect_deprecated/integration/example.cc

@@ -795,7 +795,7 @@ Complex objects are arrays, vectors, structures, tables, unions, or xunions
 which contain pointers or handles which require fix-up.
 These are precisely the kinds of
 objects for which **encoding tables** must be generated. See [C
-Language Bindings](../../languages/c.md)
+Language Bindings](/docs/development/languages/fidl/tutorial/tutorial-c.md)
 for information about encoding
 tables. Therefore, limiting the nesting depth of complex objects has the effect
 of limiting the recursion depth for traversal of encoding tables.

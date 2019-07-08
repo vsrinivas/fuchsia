@@ -28,7 +28,7 @@ The back-end and runtime library locations are based on the target:
 
 Target    | Back-end                                               | Runtime Libraries
 ----------|--------------------------------------------------------|------------------
-C         | [//zircon/system/host/fidl/lib/c_generator.cpp][be-c]  | [//zircon/system/ulib/fidl/][rtl-c]
+C         | [//zircon/system/host/fidl/lib/c_generator.cc][be-c]   | [//zircon/system/ulib/fidl/][rtl-c]
 C++       | [//garnet/go/src/fidl/compiler/backend/cpp/][be-cpp]   | [//zircon/system/ulib/fidl/][rtl-c] & [//garnet/public/lib/fidl/cpp/][rtl-cpp]
 Go        | [//garnet/go/src/fidl/compiler/backend/golang/][be-go] | [//third_party/go/src/syscall/zx/fidl/][rtl-go]
 Rust      | [//garnet/go/src/fidl/compiler/backend/rust/][be-rust] | [//garnet/public/lib/fidl/rust/fidl/][rtl-rust]
@@ -297,7 +297,7 @@ fidl fmt --library my_library.fidl -i
 
 <!-- xrefs -->
 [cpp-style]: /docs/development/languages/c-cpp/cpp-style.md
-[be-c]: /zircon/system/host/fidl/lib/c_generator.cpp
+[be-c]: /zircon/system/host/fidl/lib/c_generator.cc
 [be-cpp]: /garnet/go/src/fidl/compiler/backend/cpp/
 [be-dart]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidlgen_dart/
 [be-go]: /garnet/go/src/fidl/compiler/backend/golang/
