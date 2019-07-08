@@ -30,7 +30,7 @@ trace [options] command [command-specific options]
     --return-child-result=[true]: Pass on the child's return code.
     --duration=[10]: Trace will be active for this many seconds after the
         session has been started. The provided value must be integral.
-    --output-file=[/data/trace.json]: Trace data is stored in this file
+    --output-file=[/tmp/trace.json]: Trace data is stored in this file
         The output file may be "tcp:IP-ADDRESS:PORT" in which case a stream
         socket is connected to that address and trace data is streamed directly
         to it instead of saving the output locally. Streaming via TCP is

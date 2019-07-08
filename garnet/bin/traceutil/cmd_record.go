@@ -255,7 +255,7 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 	// TODO(dje): Should we use prefix on the remote file name as well?
 	var remoteFilename string
 	if cmd.captureConfig.Binary {
-		remoteFilename = "/data/trace.fxt"
+		remoteFilename = "/tmp/trace.fxt"
 		// Disable compression.
 		// `trace` can handle --compress with --binary and produce a correct .fxt.gz file, but currently `trace2json` does not handle compressed fxt files.
 		// TODO(PT-125): Remove this once trace2json supports .fxt.gz files.
@@ -264,7 +264,7 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 			cmd.captureConfig.Compress = false
 		}
 	} else {
-		remoteFilename = "/data/trace.json"
+		remoteFilename = "/tmp/trace.json"
 	}
 	var localFile *os.File = nil
 	if cmd.captureConfig.Stream {

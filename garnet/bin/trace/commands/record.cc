@@ -425,14 +425,14 @@ Command::Info RecordCommand::Describe() {
       "record",
       "starts tracing and records data",
       {{"spec-file=[none]", "Tracing specification file"},
-       {"output-file=[/data/trace.json]",
+       {"output-file=[/tmp/trace.json]",
         "Trace data is stored in this file. "
         "If the output file is \"tcp:TCP-ADDRESS\" then the output is streamed "
         "to that address. This option is generally only used by traceutil."},
        {"binary=[false]",
         "Output the binary trace rather than converting to JSON. "
         "If this is set, then the default output location will be "
-        "/data/trace.fxt"},
+        "/tmp/trace.fxt"},
        {"compress=[false]",
         "Compress trace output. This option is ignored "
         "when streaming over a TCP socket."},

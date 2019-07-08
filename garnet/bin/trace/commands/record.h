@@ -47,8 +47,8 @@ class RecordCommand : public CommandWithController {
         controller::BufferingMode::ONESHOT;
     bool binary = false;
     bool compress = false;
-    std::string output_file_name = "/data/trace.json";
-    static constexpr char kDefaultBinaryOutputFileName[] = "/data/trace.fxt";
+    std::string output_file_name = "/tmp/trace.json";
+    static constexpr char kDefaultBinaryOutputFileName[] = "/tmp/trace.fxt";
     std::string benchmark_results_file;
     std::string test_suite;
     measure::Measurements measurements;
