@@ -58,6 +58,11 @@ public:
     // PerProcessGtt::Owner
     magma::PlatformBusMapper* GetBusMapper() override { return owner_->GetBusMapper(); }
 
+    // Maps |page_count| pages of the given |buffer| at |page_offset| to |gpu_addr| into the
+    // GPU address space belonging to this connection.
+    magma::Status MapBufferGpu(std::shared_ptr<MsdIntelBuffer> buffer, uint64_t gpu_addr,
+                               uint64_t page_offset, uint64_t page_count);
+
     void ReleaseBuffer(magma::PlatformBuffer* buffer);
 
     // Submit pending release mappings on the given context

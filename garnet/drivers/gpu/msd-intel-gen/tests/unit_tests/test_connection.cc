@@ -111,6 +111,27 @@ public:
         EXPECT_EQ(0u, mappings.size());
     }
 
+    void ReuseGpuAddrWithoutRelease()
+    {
+        auto connection = MsdIntelConnection::Create(this, 0);
+        ASSERT_TRUE(connection);
+
+        constexpr uint64_t kBufferSizeInPages = 1;
+        constexpr uint64_t kGpuAddr = 0x10000;
+
+        for (uint32_t i = 0; i < 2; i++) {
+            std::shared_ptr<MsdIntelBuffer> buffer =
+                MsdIntelBuffer::Create(kBufferSizeInPages * magma::page_size(), "test");
+            EXPECT_EQ(MAGMA_STATUS_OK,
+                      connection->MapBufferGpu(buffer, kGpuAddr, 0, kBufferSizeInPages).get());
+
+            std::shared_ptr<GpuMapping> mapping =
+                connection->per_process_gtt()->FindGpuMapping(kGpuAddr);
+            ASSERT_TRUE(mapping);
+            EXPECT_EQ(mapping->BufferId(), buffer->platform_buffer()->id());
+        }
+    }
+
     static void KillCallbackStatic(void* token, msd_notification_t* notification)
     {
         EXPECT_EQ(MSD_CONNECTION_NOTIFICATION_CONTEXT_KILLED, notification->type);
@@ -130,4 +151,9 @@ TEST(MsdIntelConnection, ReleaseBuffer) { TestMsdIntelConnection().ReleaseBuffer
 TEST(MsdIntelConnection, ReleaseBufferWhileMapped)
 {
     TestMsdIntelConnection().ReleaseBufferWhileMapped();
+}
+
+TEST(MsdIntelConnection, ReuseGpuAddrWithoutRelease)
+{
+    TestMsdIntelConnection().ReuseGpuAddrWithoutRelease();
 }

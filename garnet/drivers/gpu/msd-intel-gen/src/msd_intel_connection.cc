@@ -34,8 +34,32 @@ magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* abi_connection,
                                              uint64_t flags)
 {
     auto connection = MsdIntelAbiConnection::cast(abi_connection)->ptr();
+    auto buffer = MsdIntelAbiBuffer::cast(abi_buffer)->ptr();
+    magma::Status status = connection->MapBufferGpu(buffer, gpu_addr, page_offset, page_count);
+    return status.get();
+}
 
-    std::shared_ptr<GpuMapping> mapping = connection->per_process_gtt()->FindGpuMapping(gpu_addr);
+magma::Status MsdIntelConnection::MapBufferGpu(std::shared_ptr<MsdIntelBuffer> buffer,
+                                               uint64_t gpu_addr, uint64_t page_offset,
+                                               uint64_t page_count)
+{
+    std::shared_ptr<GpuMapping> mapping = per_process_gtt()->FindGpuMapping(gpu_addr);
+
+    if (mapping && mapping->BufferId() != buffer->platform_buffer()->id()) {
+        // Since we don't implement unmap, its possible for the client driver
+        // to reuse an address before releasing the buffer.
+        // If the mapping is not currently in use (use_count 2, because we're holding one ref here),
+        // we can release it.
+        if (mapping.use_count() > 2) {
+            return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Mapping in use, buffer mismatch %lu != %lu",
+                            mapping->BufferId(), buffer->platform_buffer()->id());
+        }
+        auto platform_buffer = mapping->buffer()->platform_buffer();
+        DLOG("Reusing gpu_addr 0x%lx by releasing buffer %lu", gpu_addr, platform_buffer->id());
+        mapping = nullptr;
+        ReleaseBuffer(platform_buffer);
+    }
+
     if (mapping) {
         if (mapping->offset() != page_offset * magma::page_size())
             return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
@@ -45,7 +69,7 @@ magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* abi_connection,
         if (mapping->length() >= page_count * magma::page_size())
             return MAGMA_STATUS_OK;
 
-        magma::Status status = connection->per_process_gtt()->GrowMapping(
+        magma::Status status = per_process_gtt()->GrowMapping(
             mapping.get(), page_count - mapping->length() / magma::page_size());
         if (!status.ok())
             return DRET_MSG(status.get(), "GrowMapping failed");
@@ -53,14 +77,15 @@ magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* abi_connection,
         return MAGMA_STATUS_OK;
     }
 
-    magma::Status status = AddressSpace::MapBufferGpu(connection->per_process_gtt(),
-                                                      MsdIntelAbiBuffer::cast(abi_buffer)->ptr(),
-                                                      gpu_addr, page_offset, page_count, &mapping);
+    magma::Status status = AddressSpace::MapBufferGpu(per_process_gtt(), buffer, gpu_addr,
+                                                      page_offset, page_count, &mapping);
     if (!status.ok())
         return DRET_MSG(status.get(), "MapBufferGpu failed");
 
-    if (!connection->per_process_gtt()->AddMapping(std::move(mapping)))
+    if (!per_process_gtt()->AddMapping(mapping))
         return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to add mapping");
+
+    DLOG("MapBufferGpu %lu addr 0x%lx", mapping->BufferId(), gpu_addr);
 
     return MAGMA_STATUS_OK;
 }
@@ -89,6 +114,8 @@ void MsdIntelConnection::ReleaseBuffer(magma::PlatformBuffer* buffer)
     std::vector<std::shared_ptr<GpuMapping>> mappings;
     per_process_gtt()->ReleaseBuffer(buffer, &mappings);
 
+    DLOG("ReleaseBuffer %lu\n", buffer->id());
+
     bool killed = false;
     for (const auto& mapping : mappings) {
         uint32_t use_count = mapping.use_count();
@@ -104,7 +131,7 @@ void MsdIntelConnection::ReleaseBuffer(magma::PlatformBuffer* buffer)
         } else {
             // It's an error to release a buffer while it has inflight mappings, as that
             // can fault the gpu.
-            DLOG("mapping use_count %d", use_count);
+            DLOG("buffer %lu mapping use_count %d", mapping->BufferId(), use_count);
             if (!killed) {
                 SendContextKilled();
                 killed = true;
