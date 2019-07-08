@@ -31,8 +31,9 @@ for a workflow summary.
 Detailed instructions for obtaining and building Fuchsia are available from the
 [Getting Started](/docs/getting_started.md) guide, but we'll assume here that the
 target system is x86-based and that you want to build a complete system. To
-configure our build for this we can run `fx set x64` and then build with
-`fx build`.
+configure our build for this we can run `fx set {product_name}.x64` and then build with
+`fx build`. For Pixelbook, rather than using the x64 build, you need to specify the
+Chromebook board. Example: `fx set core.chromebook-x64`.
 
 ## Creating install media
 

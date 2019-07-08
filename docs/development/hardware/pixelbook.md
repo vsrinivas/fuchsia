@@ -1,5 +1,10 @@
 # Preparing to install Fuchsia on Pixelbook
 
+## Prerequisites
+Ensure that you have a chromebook build for Fuchsia. Note that Chromebook is now a
+distinct board configuration from other x64 devices. See [Paving](../workflows/paving.md#building) for
+more information.
+
 ## Update ChromeOS
 
 If your Pixelbook has never been booted, it is best to boot it normally to check
