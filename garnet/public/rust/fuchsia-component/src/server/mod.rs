@@ -14,8 +14,9 @@ use {
     fidl_fuchsia_io::{
         DirectoryObject, DirectoryProxy, DirectoryRequest, DirectoryRequestStream, FileRequest,
         FileRequestStream, NodeAttributes, NodeInfo, NodeMarker, NodeRequest, NodeRequestStream,
-        SeekOrigin, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
-        OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        SeekOrigin, CLONE_FLAG_SAME_RIGHTS, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys::{
         EnvironmentControllerProxy, EnvironmentMarker, EnvironmentOptions, LauncherProxy,
@@ -122,7 +123,7 @@ pub struct ServiceFs<ServiceObjTy: ServiceObjTrait> {
 const ROOT_NODE: usize = 0;
 const NO_FLAGS: u32 = 0;
 const CLONE_REQ_SUPPORTED_FLAGS: u32 =
-    OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
+    OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE | CLONE_FLAG_SAME_RIGHTS;
 const OPEN_REQ_SUPPORTED_FLAGS: u32 = OPEN_RIGHT_READABLE
     | OPEN_RIGHT_WRITABLE
     | OPEN_FLAG_DESCRIBE
@@ -257,7 +258,8 @@ pub struct ProxyTo<S, O> {
 impl<S: DiscoverableService, O> Service for ProxyTo<S, O> {
     type Output = O;
     fn connect(&mut self, channel: zx::Channel) -> Option<O> {
-        if let Err(e) = fdio::service_connect_at(&self.directory_request, S::SERVICE_NAME, channel) {
+        if let Err(e) = fdio::service_connect_at(&self.directory_request, S::SERVICE_NAME, channel)
+        {
             eprintln!("failed to proxy request to {}: {:?}", S::SERVICE_NAME, e);
         }
         None

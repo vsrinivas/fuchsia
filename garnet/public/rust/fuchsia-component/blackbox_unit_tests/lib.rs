@@ -9,7 +9,7 @@
 
 use {
     failure::Error,
-    fidl::endpoints::create_proxy,
+    fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_io::{
         DirectoryMarker, FileMarker, FileProxy, NodeInfo, NodeMarker, SeekOrigin, Service,
     },
@@ -41,6 +41,46 @@ async fn open_service_node_reference() -> Result<(), Error> {
         let (node_proxy, node_server_end) = create_proxy::<NodeMarker>()?;
         dir_proxy.open(flags, mode, PATH, node_server_end)?;
         drop(dir_proxy);
+
+        let info = await!(node_proxy.describe())?;
+        if let NodeInfo::Service(Service {}) = info {
+            // ok
+        } else {
+            panic!("expected service node, found {:?}", info);
+        }
+        drop(node_proxy);
+        Ok::<(), Error>(())
+    };
+
+    let ((), ()) = await!(try_join(serve_fut, open_reference_fut))?;
+    Ok(())
+}
+
+// Identical to `open_service_node_reference`, but clones the opened directory before attempting to
+// open the service node.
+#[run_until_stalled(test)]
+async fn clone_service_dir() -> Result<(), Error> {
+    const PATH: &str = "service_name";
+
+    let mut fs = ServiceFs::new();
+    fs.add_service_at(PATH, |_chan| Some(()));
+    let (dir_proxy, dir_server_end) = create_proxy::<DirectoryMarker>()?;
+    fs.serve_connection(dir_server_end.into_channel())?;
+    let serve_fut = fs.collect().map(Ok);
+
+    let open_reference_fut = async {
+        let (dir_proxy_clone, dir_server_end_clone) = create_proxy::<DirectoryMarker>()?;
+        dir_proxy.clone(
+            fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS,
+            ServerEnd::new(dir_server_end_clone.into_channel()),
+        )?;
+        drop(dir_proxy);
+
+        let flags = fidl_fuchsia_io::OPEN_FLAG_NODE_REFERENCE;
+        let mode = fidl_fuchsia_io::MODE_TYPE_SERVICE;
+        let (node_proxy, node_server_end) = create_proxy::<NodeMarker>()?;
+        dir_proxy_clone.open(flags, mode, PATH, node_server_end)?;
+        drop(dir_proxy_clone);
 
         let info = await!(node_proxy.describe())?;
         if let NodeInfo::Service(Service {}) = info {
