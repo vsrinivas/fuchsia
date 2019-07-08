@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <libgen.h>
 #include <limits.h>
+#include <regex>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -178,8 +179,8 @@ bool WriteSummaryJSONSucceeds() {
     std::unique_ptr<char[]> buf(new char[kOneMegabyte]);
     FILE* buf_file = fmemopen(buf.get(), kOneMegabyte, "w");
     fbl::Vector<std::unique_ptr<Result>> results;
-    results.push_back(std::make_unique<Result>("/a", SUCCESS, 0));
-    results.push_back(std::make_unique<Result>("b", FAILED_TO_LAUNCH, 0));
+    results.push_back(std::make_unique<Result>("/a", SUCCESS, 0, 10));
+    results.push_back(std::make_unique<Result>("b", FAILED_TO_LAUNCH, 0, 0));
     ASSERT_EQ(0, WriteSummaryJSON(results, "output.txt", "/tmp/file_path",
                                   buf_file));
     fclose(buf_file);
@@ -190,12 +191,14 @@ bool WriteSummaryJSONSucceeds() {
     {
       "name": "/a",
       "output_file": "a/output.txt",
-      "result": "PASS"
+      "result": "PASS",
+      "duration_milliseconds": 10
     },
     {
       "name": "b",
       "output_file": "b/output.txt",
-      "result": "FAIL"
+      "result": "FAIL",
+      "duration_milliseconds": 0
     }
   ],
   "outputs": {
@@ -215,8 +218,8 @@ bool WriteSummaryJSONSucceedsWithoutSyslogPath() {
     std::unique_ptr<char[]> buf(new char[kOneMegabyte]);
     FILE* buf_file = fmemopen(buf.get(), kOneMegabyte, "w");
     fbl::Vector<std::unique_ptr<Result>> results;
-    results.push_back(std::make_unique<Result>("/a", SUCCESS, 0));
-    results.push_back(std::make_unique<Result>("b", FAILED_TO_LAUNCH, 0));
+    results.push_back(std::make_unique<Result>("/a", SUCCESS, 0, 10));
+    results.push_back(std::make_unique<Result>("b", FAILED_TO_LAUNCH, 0, 0));
     ASSERT_EQ(0, WriteSummaryJSON(results, "output.txt", /*syslog_path=*/"",
                                   buf_file));
     fclose(buf_file);
@@ -227,12 +230,14 @@ bool WriteSummaryJSONSucceedsWithoutSyslogPath() {
     {
       "name": "/a",
       "output_file": "a/output.txt",
-      "result": "PASS"
+      "result": "PASS",
+      "duration_milliseconds": 10
     },
     {
       "name": "b",
       "output_file": "b/output.txt",
-      "result": "FAIL"
+      "result": "FAIL",
+      "duration_milliseconds": 0
     }
   ]
 }
@@ -251,8 +256,8 @@ bool WriteSummaryJSONBadTestName() {
     // A test name and output file consisting entirely of slashes should trigger
     // an error.
     fbl::Vector<std::unique_ptr<Result>> results;
-    results.push_back(std::make_unique<Result>("///", SUCCESS, 0));
-    results.push_back(std::make_unique<Result>("b", FAILED_TO_LAUNCH, 0));
+    results.push_back(std::make_unique<Result>("///", SUCCESS, 0, 10));
+    results.push_back(std::make_unique<Result>("b", FAILED_TO_LAUNCH, 0, 10));
     ASSERT_NE(0, WriteSummaryJSON(results, /*output_file_basename=*/"///",
                                   /*syslog_path=*/"/", buf_file));
     fclose(buf_file);
@@ -675,26 +680,31 @@ bool DiscoverAndRunTestsWithOutput() {
     ASSERT_TRUE(GetOutputFileRelPath(output_dir, fail_file_name,
                                      &failure_output_rel_path));
 
-    fbl::StringBuffer<1024> expected_pass_output_buf;
-    expected_pass_output_buf.AppendPrintf(
-        "    {\n"
-        "      \"name\": \"%s\",\n"
-        "      \"output_file\": \"%s\",\n"
-        "      \"result\": \"PASS\"\n"
-        "    }",
+    char expected_pass_output_buf[1024];
+    sprintf(
+        expected_pass_output_buf,
+R"(    \{
+      "name": "%s",
+      "output_file": "%s",
+      "result": "PASS",
+      "duration_milliseconds": \d+
+    \})",
         succeed_file_name.c_str(),
-        success_output_rel_path.c_str() +
-            1); // +1 to discard the leading slash.
-    fbl::StringBuffer<1024> expected_fail_output_buf;
-    expected_fail_output_buf.AppendPrintf(
-        "    {\n"
-        "      \"name\": \"%s\",\n"
-        "      \"output_file\": \"%s\",\n"
-        "      \"result\": \"FAIL\"\n"
-        "    }",
+        success_output_rel_path.c_str() + 1); // +1 to discard the leading slash.
+    std::regex expected_pass_output_regex(expected_pass_output_buf);
+
+    char expected_fail_output_buf[1024];
+    sprintf(
+        expected_fail_output_buf,
+R"(    \{
+      "name": "%s",
+      "output_file": "%s",
+      "result": "FAIL",
+      "duration_milliseconds": \d+
+    \})",
         fail_file_name.c_str(),
-        failure_output_rel_path.c_str() +
-            1); // +1 to discared the leading slash.
+        failure_output_rel_path.c_str() + 1); // +1 to discared the leading slash.
+    std::regex expected_fail_output_regex(expected_fail_output_buf);
 
     // Extract the actual output.
     const fbl::String output_path = JoinPath(output_dir, "summary.json");
@@ -707,33 +717,20 @@ bool DiscoverAndRunTestsWithOutput() {
 
     // The order of the tests in summary.json is not defined, so first check the
     // prefix, then be permissive about order of the actual tests.
-    size_t buf_index = 0;
-    EXPECT_EQ(0, strncmp(kExpectedJSONOutputPrefix, &buf[buf_index],
+    EXPECT_EQ(0, strncmp(kExpectedJSONOutputPrefix, &buf[0],
                          kExpectedJSONOutputPrefixSize));
-    buf_index += kExpectedJSONOutputPrefixSize;
 
-    if (!strncmp(expected_pass_output_buf.c_str(), &buf[buf_index],
-                 expected_pass_output_buf.size())) {
-        buf_index += expected_pass_output_buf.size();
-        EXPECT_EQ(0, strncmp(",\n", &buf[buf_index], sizeof(",\n") - 1));
-        buf_index += sizeof(",\n") - 1;
-        EXPECT_EQ(0, strncmp(expected_fail_output_buf.c_str(), &buf[buf_index],
-                             expected_fail_output_buf.size()));
-        buf_index += expected_fail_output_buf.size();
-    } else if (!strncmp(expected_fail_output_buf.c_str(), &buf[buf_index],
-                        expected_fail_output_buf.size())) {
-        buf_index += expected_fail_output_buf.size();
-        EXPECT_EQ(0, strncmp(",\n", &buf[buf_index], sizeof(",\n") - 1));
-        buf_index += sizeof(",\n") - 1;
-        EXPECT_EQ(0, strncmp(expected_pass_output_buf.c_str(), &buf[buf_index],
-                             expected_pass_output_buf.size()));
-        buf_index += expected_pass_output_buf.size();
-    } else {
-        printf("Unexpected buffer contents: %s\n", buf);
-        EXPECT_TRUE(false,
-                    "output buf didn't contain expected pass or fail strings");
-    }
-    EXPECT_STR_EQ("\n  ]\n}\n", &buf[buf_index]);
+    std::cmatch fail_output_match;
+    std::cmatch pass_output_match;
+
+    EXPECT_TRUE(std::regex_search(buf, pass_output_match, expected_pass_output_regex));
+    EXPECT_TRUE(std::regex_search(buf, fail_output_match, expected_fail_output_regex));
+
+    auto outputs_end_index = std::max(
+        pass_output_match.position() + pass_output_match.length(),
+        fail_output_match.position() + fail_output_match.length()
+    );
+    EXPECT_STR_EQ("\n  ]\n}\n", &buf[outputs_end_index]);
 
     END_TEST;
 }

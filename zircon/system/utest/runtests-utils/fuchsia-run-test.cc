@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <regex>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -240,11 +241,14 @@ bool RunAllTestsPublishData() {
 
     fbl::StringBuffer<1024> expected_output_buf;
     expected_output_buf.AppendPrintf(
-        "      \"name\": \"%s\",\n"
-        "      \"output_file\": \"%s\",\n"
-        "      \"result\": \"PASS\"",
+R"(
+      "name": "%s",
+      "output_file": "%s",
+      "result": "PASS",
+      "duration_milliseconds": \d+)",
         test_name.c_str(),
         test_output_rel_path.c_str() + 1); // +1 to discard the leading slash.
+    std::regex expected_output_regex(expected_output_buf.c_str());
 
     fbl::String test_data_sink_rel_path;
     ASSERT_TRUE(GetOutputFileRelPath(output_dir, JoinPath(test_name, "test"),
@@ -269,7 +273,7 @@ bool RunAllTestsPublishData() {
     EXPECT_LT(0, fread(buf, sizeof(buf[0]), sizeof(buf), output_file));
     fclose(output_file);
 
-    EXPECT_NONNULL(strstr(buf, expected_output_buf.c_str()));
+    EXPECT_TRUE(std::regex_search(buf, expected_output_regex));
     EXPECT_NONNULL(strstr(buf, expected_data_sink_buf.c_str()));
 
     END_TEST;

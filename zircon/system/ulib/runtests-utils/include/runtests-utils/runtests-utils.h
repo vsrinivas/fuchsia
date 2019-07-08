@@ -59,12 +59,16 @@ struct Result {
     int64_t return_code; // Only valid if launch_status == SUCCESS or FAILED_NONZERO_RETURN_CODE.
     using HashTable = fbl::HashTable<fbl::String, std::unique_ptr<DataSink>>;
     HashTable data_sinks; // Mapping from data sink name to list of files.
-    // TODO(ZX-2050): Track duration of test binary.
+    int64_t duration_milliseconds;
 
     // Constructor really only needed until we have C++14, which will allow call-sites to use
     // aggregate initializer syntax.
-    Result(const char* name_arg, LaunchStatus launch_status_arg, int64_t return_code_arg)
-        : name(name_arg), launch_status(launch_status_arg), return_code(return_code_arg) {}
+    Result(const char* name_arg, LaunchStatus launch_status_arg, int64_t return_code_arg,
+           int64_t duration_milliseconds_arg)
+        : name(name_arg),
+          launch_status(launch_status_arg),
+          return_code(return_code_arg),
+          duration_milliseconds(duration_milliseconds_arg) {}
 };
 
 // Function that invokes a test binary and writes its output to a file.
