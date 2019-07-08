@@ -7,18 +7,18 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fit/promise.h>
-#include <lib/inspect/reader.h>
+#include <lib/inspect_deprecated/reader.h>
 
 #include <vector>
 
 #include "garnet/bin/iquery/options.h"
-#include "garnet/public/lib/inspect/query/source.h"
+#include "garnet/public/lib/inspect_deprecated/query/source.h"
 
 namespace iquery {
 
-fit::promise<std::vector<inspect::Source>> RunCat(const Options*);
-fit::promise<std::vector<inspect::Source>> RunFind(const Options*);
-fit::promise<std::vector<inspect::Source>> RunLs(const Options*);
+fit::promise<std::vector<inspect_deprecated::Source>> RunCat(const Options*);
+fit::promise<std::vector<inspect_deprecated::Source>> RunFind(const Options*);
+fit::promise<std::vector<inspect_deprecated::Source>> RunLs(const Options*);
 
 }  // namespace iquery
 

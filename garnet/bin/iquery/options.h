@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_IQUERY_OPTIONS_H_
 #define GARNET_BIN_IQUERY_OPTIONS_H_
 
-#include <lib/inspect/query/formatter.h>
+#include <lib/inspect_deprecated/query/formatter.h>
 #include <src/lib/fxl/command_line.h>
 
 #include <memory>
@@ -36,8 +36,8 @@ class Options {
   Options::Mode mode = Options::Mode::UNSET;
 
   // Path formatting mode.
-  inspect::Formatter::PathFormat path_format =
-      inspect::Formatter::PathFormat::NONE;
+  inspect_deprecated::Formatter::PathFormat path_format =
+      inspect_deprecated::Formatter::PathFormat::NONE;
 
   // Create a health search, which looks for specific nodes within the inspect
   // hierarchy.
@@ -57,7 +57,7 @@ class Options {
   FormatterType formatter_type;
 
   // Instance of the formatter.
-  std::unique_ptr<inspect::Formatter> formatter;
+  std::unique_ptr<inspect_deprecated::Formatter> formatter;
 
   // Create |Options| by parsing the given command line.
   Options(const fxl::CommandLine& command_line);

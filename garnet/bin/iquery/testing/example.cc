@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/inspect/component.h>
+#include <lib/inspect_deprecated/component.h>
 #include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings_command_line.h>
@@ -12,7 +12,7 @@
 #include <variant>
 #include <vector>
 
-#include "lib/inspect/inspect.h"
+#include "lib/inspect_deprecated/inspect.h"
 
 size_t current_suffix = 0;
 void ResetUniqueNames() { current_suffix = 0; }
@@ -24,8 +24,7 @@ std::string UniqueName(const char* name) {
 // Cells expose a string property, an int metric, and a double metric.
 class Cell {
  public:
-  Cell(const std::string& name, int64_t value, double double_value,
-       inspect::Node obj)
+  Cell(const std::string& name, int64_t value, double double_value, inspect_deprecated::Node obj)
       : object_(std::move(obj)) {
     name_ = object_.CreateStringProperty("name", name);
     value_ = object_.CreateIntMetric("value", value);
@@ -33,16 +32,16 @@ class Cell {
   }
 
  private:
-  inspect::Node object_;
-  inspect::StringProperty name_;
-  inspect::IntMetric value_;
-  inspect::DoubleMetric double_value_;
+  inspect_deprecated::Node object_;
+  inspect_deprecated::StringProperty name_;
+  inspect_deprecated::IntMetric value_;
+  inspect_deprecated::DoubleMetric double_value_;
 };
 
 // A row in the table, contains cells.
 class Row {
  public:
-  explicit Row(inspect::Node obj) : object_(std::move(obj)) {}
+  explicit Row(inspect_deprecated::Node obj) : object_(std::move(obj)) {}
 
   Row(Row&&) = default;
   Row& operator=(Row&&) = default;
@@ -50,21 +49,19 @@ class Row {
   Cell* AddCell(const std::string& name, int64_t value, double double_value) {
     // Construct a new cell in-place, and expose it as a child of this object in
     // the Inspect output.
-    cells_.push_back(Cell(name, value, double_value,
-                          object_.CreateChild(UniqueName("cell"))));
+    cells_.push_back(Cell(name, value, double_value, object_.CreateChild(UniqueName("cell"))));
     return &(*cells_.rbegin());
   }
 
  private:
-  inspect::Node object_;
+  inspect_deprecated::Node object_;
   std::vector<Cell> cells_;
 };
 
 // A table, contains rows.
 class Table {
  public:
-  Table(int row_count, int col_count, inspect::Node obj)
-      : object_(std::move(obj)) {
+  Table(int row_count, int col_count, inspect_deprecated::Node obj) : object_(std::move(obj)) {
     object_name_ = object_.CreateStringProperty("object_name", "Example Table");
     binary_data_ = object_.CreateByteVectorProperty(
         "binary_data", std::vector<uint8_t>({0x20, 0x0, 0x11, 0x12, 0x5}));
@@ -77,8 +74,7 @@ class Table {
       for (int j = 0; j < col_count; ++j) {
         // name is "(row,col)", value is i*j, and double_value is percentage
         // done.
-        row->AddCell(fxl::StringPrintf("(%d,%d)", i, j), i * j,
-                     100.0 * (++idx) / total);
+        row->AddCell(fxl::StringPrintf("(%d,%d)", i, j), i * j, 100.0 * (++idx) / total);
       }
     }
   }
@@ -90,15 +86,15 @@ class Table {
   }
 
  private:
-  inspect::Node object_;
-  inspect::StringProperty object_name_;
-  inspect::ByteVectorProperty binary_data_;
+  inspect_deprecated::Node object_;
+  inspect_deprecated::StringProperty object_name_;
+  inspect_deprecated::ByteVectorProperty binary_data_;
   std::vector<Row> rows_;
 };
 
 template <typename HistogramType, typename NumericType>
-HistogramType PopulatedHistogram(HistogramType histogram, NumericType floor,
-                                 NumericType step, size_t count) {
+HistogramType PopulatedHistogram(HistogramType histogram, NumericType floor, NumericType step,
+                                 size_t count) {
   for (size_t i = 0; i < count; i++) {
     histogram.Insert(floor);
     floor += step;
@@ -113,8 +109,7 @@ int main(int argc, char** argv) {
   // Construct a demo table with the rows and columns given on the command line.
   auto rows = command_line.GetOptionValueWithDefault("rows", "");
   auto columns = command_line.GetOptionValueWithDefault("columns", "");
-  if (rows.empty() || columns.empty() || atoi(rows.c_str()) == 0 ||
-      atoi(columns.c_str()) == 0) {
+  if (rows.empty() || columns.empty() || atoi(rows.c_str()) == 0 || atoi(columns.c_str()) == 0) {
     fprintf(stderr, R"text(Usage: %s --rows=N --columns=M
   Example component to showcase Inspect API objects, including an NxM
   nested table.
@@ -132,12 +127,10 @@ int main(int argc, char** argv) {
   fidl::BindingSet<fuchsia::inspect::Inspect> inspect_bindings_;
   component_context->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
       fuchsia::inspect::Inspect::Name_,
-      std::make_unique<vfs::Service>(
-          inspect_bindings_.GetHandler(root.object().get())));
-  auto root_object_fidl = inspect::Node(root);
+      std::make_unique<vfs::Service>(inspect_bindings_.GetHandler(root.object().get())));
+  auto root_object_fidl = inspect_deprecated::Node(root);
 
-  auto inspector =
-      inspect::ComponentInspector::Initialize(component_context.get());
+  auto inspector = inspect_deprecated::ComponentInspector::Initialize(component_context.get());
   auto& root_object_vmo = inspector->root_tree()->GetRoot();
 
   // Storage for the two different table implementations, for ensuring they are
@@ -147,22 +140,20 @@ int main(int argc, char** argv) {
   const int row_count = atoi(rows.c_str());
   const int col_count = atoi(columns.c_str());
 
-  std::vector<
-      std::variant<inspect::IntArray, inspect::UIntArray, inspect::DoubleArray>>
+  std::vector<std::variant<inspect_deprecated::IntArray, inspect_deprecated::UIntArray,
+                           inspect_deprecated::DoubleArray>>
       arrays;
-  std::vector<std::variant<inspect::LinearIntHistogramMetric,
-                           inspect::LinearUIntHistogramMetric,
-                           inspect::LinearDoubleHistogramMetric,
-                           inspect::ExponentialIntHistogramMetric,
-                           inspect::ExponentialUIntHistogramMetric,
-                           inspect::ExponentialDoubleHistogramMetric>>
+  std::vector<std::variant<inspect_deprecated::LinearIntHistogramMetric,
+                           inspect_deprecated::LinearUIntHistogramMetric,
+                           inspect_deprecated::LinearDoubleHistogramMetric,
+                           inspect_deprecated::ExponentialIntHistogramMetric,
+                           inspect_deprecated::ExponentialUIntHistogramMetric,
+                           inspect_deprecated::ExponentialDoubleHistogramMetric>>
       histograms;
 
-  for (auto* root :
-       std::vector<inspect::Node*>({&root_object_fidl, &root_object_vmo})) {
+  for (auto* root : std::vector<inspect_deprecated::Node*>({&root_object_fidl, &root_object_vmo})) {
     ResetUniqueNames();
-    tables.emplace_back(row_count, col_count,
-                        root->CreateChild(UniqueName("table")));
+    tables.emplace_back(row_count, col_count, root->CreateChild(UniqueName("table")));
 
     {
       auto array = root->CreateIntArray(UniqueName("array"), 3);
@@ -189,29 +180,21 @@ int main(int argc, char** argv) {
       arrays.emplace_back(std::move(array));
     }
 
-    histograms.emplace_back(
-        PopulatedHistogram(root->CreateLinearIntHistogramMetric(
-                               UniqueName("histogram"), -10, 5, 3),
-                           -20, 1, 40));
     histograms.emplace_back(PopulatedHistogram(
-        root->CreateLinearUIntHistogramMetric(UniqueName("histogram"), 5, 5, 3),
-        0, 1, 40));
-    histograms.emplace_back(
-        PopulatedHistogram(root->CreateLinearDoubleHistogramMetric(
-                               UniqueName("histogram"), 0, .5, 3),
-                           -1.0, .1, 40.0));
-    histograms.emplace_back(
-        PopulatedHistogram(root->CreateExponentialIntHistogramMetric(
-                               UniqueName("histogram"), -10, 5, 2, 3),
-                           -20, 1, 40));
-    histograms.emplace_back(
-        PopulatedHistogram(root->CreateExponentialUIntHistogramMetric(
-                               UniqueName("histogram"), 1, 1, 2, 3),
-                           0, 1, 40));
-    histograms.emplace_back(
-        PopulatedHistogram(root->CreateExponentialDoubleHistogramMetric(
-                               UniqueName("histogram"), 0, 1.25, 3, 3),
-                           -1.0, .1, 40.0));
+        root->CreateLinearIntHistogramMetric(UniqueName("histogram"), -10, 5, 3), -20, 1, 40));
+    histograms.emplace_back(PopulatedHistogram(
+        root->CreateLinearUIntHistogramMetric(UniqueName("histogram"), 5, 5, 3), 0, 1, 40));
+    histograms.emplace_back(PopulatedHistogram(
+        root->CreateLinearDoubleHistogramMetric(UniqueName("histogram"), 0, .5, 3), -1.0, .1,
+        40.0));
+    histograms.emplace_back(PopulatedHistogram(
+        root->CreateExponentialIntHistogramMetric(UniqueName("histogram"), -10, 5, 2, 3), -20, 1,
+        40));
+    histograms.emplace_back(PopulatedHistogram(
+        root->CreateExponentialUIntHistogramMetric(UniqueName("histogram"), 1, 1, 2, 3), 0, 1, 40));
+    histograms.emplace_back(PopulatedHistogram(
+        root->CreateExponentialDoubleHistogramMetric(UniqueName("histogram"), 0, 1.25, 3, 3), -1.0,
+        .1, 40.0));
   }
 
   loop.Run();

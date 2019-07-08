@@ -22,7 +22,7 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/inspect:component",
+    "//garnet/public/lib/inspect_deprecated:component",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
