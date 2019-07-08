@@ -1,0 +1,18 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.modular.intl.internal;
+
+using fuchsia.intl;
+
+/// Raw inputs for producing a `fuchsia.intl.Profile`. This is only used internally in
+/// `IntlPropertyProviderImpl`, for keeping track of incoming settings before assembling a
+/// `fuchsia.intl.Profile`.
+struct RawProfileData {
+    // Just language, region, script, and variant; no extensions.
+    vector<fuchsia.intl.LocaleId> language_tags;
+    vector<fuchsia.intl.TimeZoneId> time_zone_ids;
+    vector<fuchsia.intl.CalendarId> calendar_ids;
+    fuchsia.intl.TemperatureUnit temperature_unit;
+};

@@ -1,0 +1,128 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+fidl("fidl") {
+  name = "fuchsia.modular.intl.internal"
+  visibility = [ ":*" ]
+  sources = [
+    "internal.fidl",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.intl",
+  ]
+}
+
+source_set("intl_property_provider_impl") {
+  sources = [
+    "intl_property_provider_impl.cc",
+    "intl_property_provider_impl.h",
+  ]
+
+  deps = [
+    ":locale_util",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fostr/fidl/fuchsia.intl",
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/lib/icu_data/cpp",
+    "//third_party/icu",
+  ]
+
+  public_deps = [
+    ":fidl",
+    "//sdk/fidl/fuchsia.deprecatedtimezone",
+    "//sdk/fidl/fuchsia.intl",
+  ]
+}
+
+executable("intl_property_provider_impl_test_bin") {
+  testonly = true
+  output_name = "intl_property_provider_impl_test"
+
+  sources = [
+    "intl_property_provider_impl_test.cc",
+  ]
+
+  deps = [
+    ":intl_property_provider_impl",
+    "//garnet/public/lib/fostr/fidl/fuchsia.intl",
+    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.deprecatedtimezone",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fidl_fuchsia_intl_ext/cpp",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+source_set("locale_util") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "locale_util.cc",
+    "locale_util.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.intl",
+    "//garnet/public/lib/syslog/cpp",
+    "//src/lib/fxl",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.intl",
+    "//third_party/icu",
+  ]
+}
+
+executable("locale_util_unit_test_bin") {
+  testonly = true
+  output_name = "locale_util_unit_test"
+
+  sources = [
+    "locale_util_unit_test.cc",
+  ]
+
+  deps = [
+    ":locale_util",
+    "//garnet/public/lib/fostr/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.intl",
+    "//src/lib/fidl_fuchsia_intl_ext/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/icu_data/cpp",
+    "//third_party/icu",
+  ]
+}
+
+test_package("intl_property_provider_impl_tests") {
+  deps = [
+    ":intl_property_provider_impl_test_bin",
+    ":locale_util_unit_test_bin",
+  ]
+
+  tests = [
+    {
+      name = "intl_property_provider_impl_test"
+      environments = basic_envs
+    },
+    {
+      name = "locale_util_unit_test"
+      environments = basic_envs
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
+      dest = "icudtl.dat"
+    },
+  ]
+}
