@@ -47,7 +47,7 @@ static void SetupIPv4(Packet* packet) {
   test_ipv4.protocol = protocol;
   test_ipv4.saddr = ip4addr_src;
   test_ipv4.daddr = ip4addr_dst;
-  packet->ipv4 = &test_ipv4;
+  packet->ip = &test_ipv4;
 }
 
 static void SetupIPv6(Packet* packet) {
@@ -121,7 +121,7 @@ void VersionTest(VersionFn filter_fn) {
   FilterPtr ip6filter_fn = filter_fn(6);
 
   Packet packet = SetupEth(htons(ETH_P_IP));
-  packet.ipv4 = nullptr;
+  packet.ip = nullptr;
   EXPECT_FALSE(ip4filter_fn->match(packet));
   EXPECT_FALSE(ip6filter_fn->match(packet));
 

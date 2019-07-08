@@ -31,11 +31,20 @@ namespace netdump {
 
 class Packet {
  public:
+  Packet() { reset(); }
+
+  void reset() {
+    frame_length = 0;
+    frame = nullptr;
+    ip = nullptr;
+    transport = nullptr;
+  }
+
   // `frame_len` is supplied by the client user of filter, so it is expected in host byte order.
   uint16_t frame_length;
   const struct ethhdr* frame;
   union {
-    const struct iphdr* ipv4;
+    const struct iphdr* ip;  // For both IPv4 and IPv6.
     const ip6_hdr_t* ipv6;
   };
   union {
