@@ -5,7 +5,6 @@
 #include "src/ui/examples/escher/waterfall/scenes/paper_demo_scene1.h"
 
 #include "src/ui/lib/escher/geometry/plane_ops.h"
-#include "src/ui/lib/escher/geometry/tessellation.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/material/material.h"
 #include "src/ui/lib/escher/math/lerp.h"

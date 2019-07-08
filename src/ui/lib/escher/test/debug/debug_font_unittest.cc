@@ -41,7 +41,7 @@ class DebugFontTest : public ReadbackTest {
   std::unique_ptr<DebugFont> debug_font_;
 };
 
-VK_TEST_F(DebugFontTest, Digits) {
+VK_TEST_F(DebugFontTest, Glyphs) {
   // Constants relating to individual glyphs.
   constexpr uint32_t kNumPixelsPerGlyph = DebugFont::kGlyphWidth * DebugFont::kGlyphHeight;
 
@@ -82,11 +82,14 @@ VK_TEST_F(DebugFontTest, Digits) {
     // Each time, we draw on top of the previous glyph.
     draw_and_check_histogram(" ", 0);
     draw_and_check_histogram("1", 5);
-    draw_and_check_histogram("2", 17);
+    draw_and_check_histogram("A", 12);
     draw_and_check_histogram("!", 4);
 
+    // Draw a glyph that has not been defined, it should draw a black square.
+    draw_and_check_histogram("Z", 25);
+
     // Draw several glyphs next to each other.
-    draw_and_check_histogram(" 12!", 0 + 5 + 17 + 4);
+    draw_and_check_histogram(" 1A!", 0 + 5 + 12 + 4);
 
     frame->EndFrame(SemaphorePtr(), []() {});
   }

@@ -246,7 +246,36 @@ std::unique_ptr<uint8_t[]> DebugFont::GetFontPixels() {
   // == 0001 1111 1000 1111 1100 0011 1111
   glyph_bits[int32_t{'9'}] = 0x1f8fc3f;
 
-  // TODO(ES-208): glyphs for ASCII 0x3A - 0x7F
+  // TODO(ES-208): glyphs for ASCII 0x3A - 0x40 and 0x44 - 0x7F
+
+  // ‘A’
+  // ..1..
+  // .1.1.
+  // 11111
+  // 1...1
+  // 1...1
+  // == 00100 01010 11111 10001 10001
+  glyph_bits[int32_t{'A'}] = 0x457E31;
+
+  // ‘B’
+  // 1111.
+  // 1...1
+  // 1111.
+  // 1...1
+  // 1111.
+  // == 11110 10001 11110 10001 11110
+  glyph_bits[int32_t{'B'}] = 0x1E8FA3E;
+
+  // ‘C’
+  // .1111
+  // 1....
+  // 1....
+  // 1....
+  // .1111
+  // == 11111 10000 10000 10000 11111
+  glyph_bits[int32_t{'C'}] = 0x1F8421F;
+
+  // TODO(ES-208): glyphs for ASCII 0x44 - 0x7F
 
   // Process the bits that describe each glyph, turning them into black
   // and white pixels.

@@ -5,6 +5,7 @@
 #include "src/ui/examples/escher/waterfall/waterfall_demo.h"
 
 #include "src/ui/examples/escher/waterfall/scenes/paper_demo_scene1.h"
+#include "src/ui/examples/escher/waterfall/scenes/paper_demo_scene2.h"
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
 #include "src/ui/lib/escher/geometry/tessellation.h"
 #include "src/ui/lib/escher/paper/paper_scene.h"
@@ -76,6 +77,7 @@ void WaterfallDemo::InitializePaperScene(const DemoHarness::WindowParams& window
 
 void WaterfallDemo::InitializeDemoScenes() {
   demo_scenes_.emplace_back(new PaperDemoScene1(this));
+  demo_scenes_.emplace_back(new PaperDemoScene2(this));
   for (auto& scene : demo_scenes_) {
     scene->Init(paper_scene_.get());
   }
