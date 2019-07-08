@@ -25,7 +25,6 @@ driver("dwmac") {
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fzl",
-    "$zx/system/ulib/pretty",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",

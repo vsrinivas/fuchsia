@@ -59,8 +59,8 @@ int DWMacDevice::Thread() {
             zxlogf(ERROR, "dwmac: Interrupt error\n");
             break;
         }
-        uint32_t stat = dwdma_regs_->status;
-        dwdma_regs_->status = stat;
+        uint32_t stat = mmio_->Read32(DW_MAC_DMA_STATUS);
+        mmio_->Write32(stat, DW_MAC_DMA_STATUS);
 
         if (stat & DMA_STATUS_GLI) {
             fbl::AutoLock lock(&lock_); //Note: limited scope of autolock
@@ -109,7 +109,8 @@ int DWMacDevice::WorkerThread() {
 }
 
 void DWMacDevice::UpdateLinkStatus() {
-    bool temp = dwmac_regs_->rgmiistatus & GMAC_RGMII_STATUS_LNKSTS;
+    bool temp = mmio_->ReadMasked32(GMAC_RGMII_STATUS_LNKSTS, DW_MAC_MAC_RGMIISTATUS);
+
     if (temp != online_) {
         online_ = temp;
         if (ethernet_client_.is_valid()) {
@@ -119,24 +120,20 @@ void DWMacDevice::UpdateLinkStatus() {
         }
     }
     if (online_) {
-        dwmac_regs_->conf |= GMAC_CONF_TE | GMAC_CONF_RE;
+        mmio_->SetBits32((GMAC_CONF_TE | GMAC_CONF_RE), DW_MAC_MAC_CONF);
     } else {
-        dwmac_regs_->conf &= ~(GMAC_CONF_TE | GMAC_CONF_RE);
+        mmio_->ClearBits32((GMAC_CONF_TE | GMAC_CONF_RE), DW_MAC_MAC_CONF);
     }
     zxlogf(INFO, "dwmac: Link is now %s\n", online_ ? "up" : "down");
 }
 
 zx_status_t DWMacDevice::InitPdev() {
     // Map mac control registers and dma control registers.
-    auto status = pdev_.MapMmio(kEthMacMmio, &dwmac_regs_iobuff_);
+    auto status = pdev_.MapMmio(kEthMacMmio, &mmio_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "dwmac: could not map dwmac mmio: %d\n", status);
         return status;
     }
-
-    dwmac_regs_ = static_cast<volatile dw_mac_regs_t*>(dwmac_regs_iobuff_->get());
-    dwmac_mmc_regs_ = offset_ptr<volatile uint32_t>(dwmac_regs_, DW_MAC_MMC_BASE_OFFSET);
-    dwdma_regs_ = offset_ptr<volatile dw_dma_regs_t>(dwmac_regs_, DW_DMA_BASE_OFFSET);
 
     // Map dma interrupt.
     status = pdev_.GetInterrupt(0, &dma_irq_);
@@ -207,20 +204,21 @@ zx_status_t DWMacDevice::Create(void* ctx, zx_device_t* device) {
     mac_device->GetMAC(components[COMPONENT_PDEV]);
 
     // Reset the dma peripheral.
-    mac_device->dwdma_regs_->busmode |= DMAMAC_SRST;
+    mac_device->mmio_->SetBits32(DMAMAC_SRST, DW_MAC_DMA_BUSMODE);
     uint32_t loop_count = 10;
     do {
         zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
         loop_count--;
-    } while ((mac_device->dwdma_regs_->busmode & DMAMAC_SRST) && loop_count);
+    } while (mac_device->mmio_->ReadMasked32(DMAMAC_SRST, DW_MAC_DMA_BUSMODE) && loop_count);
     if (!loop_count) {
         return ZX_ERR_TIMED_OUT;
     }
 
     // Mac address register was erased by the reset; set it!
-    mac_device->dwmac_regs_->macaddr0hi = (mac_device->mac_[5] << 8) | (mac_device->mac_[4] << 0);
-    mac_device->dwmac_regs_->macaddr0lo = (mac_device->mac_[3] << 24) | (mac_device->mac_[2] << 16)
-    | (mac_device->mac_[1] << 8) | (mac_device->mac_[0] << 0);
+    mac_device->mmio_->Write32((mac_device->mac_[5] << 8) | (mac_device->mac_[4] << 0),
+        DW_MAC_MAC_MACADDR0HI);
+    mac_device->mmio_->Write32((mac_device->mac_[3] << 24) | (mac_device->mac_[2] << 16)
+        | (mac_device->mac_[1] << 8) | (mac_device->mac_[0] << 0), DW_MAC_MAC_MACADDR0LO);
 
     auto cleanup = fbl::MakeAutoCall([&]() { mac_device->ShutDown(); });
 
@@ -326,10 +324,11 @@ zx_status_t DWMacDevice::InitBuffers() {
     }
 
     desc_buffer_->LookupPhys(0, &tmpaddr);
-    dwdma_regs_->txdesclistaddr = static_cast<uint32_t>(tmpaddr);
+    mmio_->Write32(static_cast<uint32_t>(tmpaddr), DW_MAC_DMA_TXDESCLISTADDR);
 
     desc_buffer_->LookupPhys(kNumDesc * sizeof(dw_dmadescr_t), &tmpaddr);
-    dwdma_regs_->rxdesclistaddr = static_cast<uint32_t>(tmpaddr);
+    mmio_->Write32(static_cast<uint32_t>(tmpaddr), DW_MAC_DMA_RXDESCLISTADDR);
+
     return ZX_OK;
 }
 
@@ -338,17 +337,17 @@ void DWMacDevice::EthernetImplGetBti(zx::bti* bti) {
 }
 
 zx_status_t DWMacDevice::EthMacMdioWrite(uint32_t reg, uint32_t val) {
-    dwmac_regs_->miidata = val;
+    mmio_->Write32(val, DW_MAC_MAC_MIIDATA);
 
     uint32_t miiaddr = (mii_addr_ << MIIADDRSHIFT) |
                        (reg << MIIREGSHIFT) |
                        MII_WRITE;
 
-    dwmac_regs_->miiaddr = miiaddr | MII_CLKRANGE_150_250M | MII_BUSY;
+    mmio_->Write32(miiaddr | MII_CLKRANGE_150_250M | MII_BUSY, DW_MAC_MAC_MIIADDR);
 
     zx_time_t deadline = zx_deadline_after(ZX_MSEC(3));
     do {
-        if (!(dwmac_regs_->miiaddr & MII_BUSY)) {
+        if (!mmio_->ReadMasked32(MII_BUSY, DW_MAC_MAC_MIIADDR)) {
             return ZX_OK;
         }
         zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
@@ -360,12 +359,12 @@ zx_status_t DWMacDevice::EthMacMdioRead(uint32_t reg, uint32_t* val) {
     uint32_t miiaddr = (mii_addr_ << MIIADDRSHIFT) |
                        (reg << MIIREGSHIFT);
 
-    dwmac_regs_->miiaddr = miiaddr | MII_CLKRANGE_150_250M | MII_BUSY;
+    mmio_->Write32(miiaddr | MII_CLKRANGE_150_250M | MII_BUSY, DW_MAC_MAC_MIIADDR);
 
     zx_time_t deadline = zx_deadline_after(ZX_MSEC(3));
     do {
-        if (!(dwmac_regs_->miiaddr & MII_BUSY)) {
-            *val = dwmac_regs_->miidata;
+        if (!mmio_->ReadMasked32(MII_BUSY, DW_MAC_MAC_MIIADDR)) {
+            *val = mmio_->Read32(DW_MAC_MAC_MIIDATA);
             return ZX_OK;
         }
         zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
@@ -433,8 +432,8 @@ zx_status_t DWMacDevice::GetMAC(zx_device_t* dev) {
     if (status != ZX_OK || actual < 6) {
         zxlogf(ERROR, "dwmac: MAC address metadata load failed. Falling back on HW setting.");
         // read MAC address from hardware register
-        uint32_t hi = dwmac_regs_->macaddr0hi;
-        uint32_t lo = dwmac_regs_->macaddr0lo;
+        uint32_t hi = mmio_->Read32(DW_MAC_MAC_MACADDR0HI);
+        uint32_t lo = mmio_->Read32(DW_MAC_MAC_MACADDR0LO);
 
         /* Extract the MAC address from the high and low words */
         buffer[0] = static_cast<uint8_t>(lo & 0xff);
@@ -482,60 +481,61 @@ zx_status_t DWMacDevice::EthernetImplStart(const ethernet_ifc_protocol_t* ifc) {
 
 zx_status_t DWMacDevice::InitDevice() {
 
-    dwdma_regs_->intenable = 0;
-    dwdma_regs_->busmode = X8PBL | DMA_PBL;
+    mmio_->Write32(0, DW_MAC_DMA_INTENABLE);
 
-    dwdma_regs_->opmode = DMA_OPMODE_TSF | DMA_OPMODE_RSF;
+    mmio_->Write32(X8PBL | DMA_PBL, DW_MAC_DMA_BUSMODE);
 
-    dwdma_regs_->opmode |= DMA_OPMODE_SR | DMA_OPMODE_ST; //start tx and rx
+    mmio_->Write32(DMA_OPMODE_TSF | DMA_OPMODE_RSF, DW_MAC_DMA_OPMODE);
+    mmio_->SetBits32(DMA_OPMODE_SR | DMA_OPMODE_ST, DW_MAC_DMA_OPMODE);
 
     //Clear all the interrupt flags
-    dwdma_regs_->status = ~0;
+    mmio_->Write32(~0, DW_MAC_DMA_STATUS);
 
     //Disable(mask) interrupts generated by the mmc block
-    dwmac_mmc_regs_[DW_MAC_MMC_MMC_INTR_MASK_RX] = ~0;
-    dwmac_mmc_regs_[DW_MAC_MMC_MMC_INTR_MASK_TX] = ~0;
-    dwmac_mmc_regs_[DW_MAC_MMC_MMC_IPC_INTR_MASK_RX] = ~0;
+    mmio_->Write32(~0, DW_MAC_MMC_INTR_MASK_RX);
+    mmio_->Write32(~0, DW_MAC_MMC_INTR_MASK_TX);
+    mmio_->Write32(~0, DW_MAC_MMC_IPC_INTR_MASK_RX);
 
     //Enable Interrupts
-    dwdma_regs_->intenable = DMA_INT_NIE | DMA_INT_AIE | DMA_INT_FBE |
-                             DMA_INT_RIE | DMA_INT_RUE | DMA_INT_OVE |
-                             DMA_INT_UNE | DMA_INT_TSE | DMA_INT_RSE;
+    mmio_->Write32(DMA_INT_NIE | DMA_INT_AIE | DMA_INT_FBE |
+                   DMA_INT_RIE | DMA_INT_RUE | DMA_INT_OVE |
+                   DMA_INT_UNE | DMA_INT_TSE | DMA_INT_RSE, DW_MAC_DMA_INTENABLE);
 
-    dwmac_regs_->macaddr1lo = 0;
-    dwmac_regs_->macaddr1hi = 0;
-    dwmac_regs_->hashtablehigh = 0xffffffff;
-    dwmac_regs_->hashtablelow = 0xffffffff;
+    mmio_->Write32(0, DW_MAC_MAC_MACADDR0HI);
+    mmio_->Write32(0, DW_MAC_MAC_MACADDR0LO);
+    mmio_->Write32(~0, DW_MAC_MAC_HASHTABLEHI);
+    mmio_->Write32(~0, DW_MAC_MAC_HASHTABLELO);
 
     //TODO - configure filters
-    zxlogf(INFO, "macaddr0hi = %08x\n", dwmac_regs_->macaddr0hi);
-    zxlogf(INFO, "macaddr0lo = %08x\n", dwmac_regs_->macaddr0lo);
+    zxlogf(INFO, "macaddr0hi = %08x\n", mmio_->Read32(DW_MAC_MAC_MACADDR0HI));
+    zxlogf(INFO, "macaddr0lo = %08x\n", mmio_->Read32(DW_MAC_MAC_MACADDR0LO));
 
-    dwmac_regs_->framefilt |= (1 << 10) | (1 << 4) | (1 << 0); //promiscuous
+    mmio_->SetBits32((1 << 10) | (1 << 4) | (1 << 0), DW_MAC_MAC_FRAMEFILT);
 
-    dwmac_regs_->conf = GMAC_CORE_INIT;
+    mmio_->Write32(GMAC_CORE_INIT, DW_MAC_MAC_CONF);
 
     return ZX_OK;
 }
 
 zx_status_t DWMacDevice::DeInitDevice() {
     //Disable Interrupts
-    dwdma_regs_->intenable = 0;
+    mmio_->Write32(0, DW_MAC_DMA_INTENABLE);
+
     //Disable Transmit and Receive
-    dwmac_regs_->conf &= ~(GMAC_CONF_TE | GMAC_CONF_RE);
+    mmio_->ClearBits32(GMAC_CONF_TE | GMAC_CONF_RE, DW_MAC_MAC_CONF);
 
     //reset the phy (hold in reset)
     //gpio_write(&gpios_[PHY_RESET], 0);
 
     //transmit and receive are not disables, safe to null descriptor list ptrs
-    dwdma_regs_->txdesclistaddr = 0;
-    dwdma_regs_->rxdesclistaddr = 0;
+    mmio_->Write32(0, DW_MAC_DMA_TXDESCLISTADDR);
+    mmio_->Write32(0, DW_MAC_DMA_RXDESCLISTADDR);
 
     return ZX_OK;
 }
 
 uint32_t DWMacDevice::DmaRxStatus() {
-    return (dwdma_regs_->status & DMA_STATUS_RS_MASK) >> DMA_STATUS_RS_POS;
+    return mmio_->ReadMasked32(DMA_STATUS_RS_MASK, DW_MAC_DMA_STATUS) >> DMA_STATUS_RS_POS;
 }
 
 void DWMacDevice::ProcRxBuffer(uint32_t int_status) {
@@ -573,7 +573,7 @@ void DWMacDevice::ProcRxBuffer(uint32_t int_status) {
         if (curr_rx_buf_ == 0) {
             loop_count_++;
         }
-        dwdma_regs_->rxpolldemand = ~0;
+        mmio_->Write32(~0, DW_MAC_DMA_RXPOLLDEMAND);
     }
 }
 
@@ -613,7 +613,7 @@ zx_status_t DWMacDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t
     curr_tx_buf_ = (curr_tx_buf_ + 1) % kNumDesc;
 
     hw_mb();
-    dwdma_regs_->txpolldemand = ~0;
+    mmio_->Write32(~0, DW_MAC_DMA_TXPOLLDEMAND);
     tx_counter_++;
     return ZX_OK;
 }

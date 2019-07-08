@@ -26,66 +26,58 @@
 #include "pinned-buffer.h"
 
 // clang-format off
-typedef struct dw_mac_regs {
-    uint32_t conf;            /*0 0x00 */
-    uint32_t framefilt;       /*1 0x04 */
-    uint32_t hashtablehigh;   /*2 0x08 */
-    uint32_t hashtablelow;    /*3 0x0c */
-    uint32_t miiaddr;         /*4 0x10 */
-    uint32_t miidata;         /*5 0x14 */
-    uint32_t flowcontrol;     /*6 0x18 */
-    uint32_t vlantag;         /*7 0x1c */
-    uint32_t version;         /*8 0x20 */
-    uint32_t  reserved_1[5];  /*9 - 13 */
-    uint32_t intreg;          /*14 0x38 */
-    uint32_t intmask;         /*15 0x3c */
-    uint32_t macaddr0hi;      /*16 0x40 */
-    uint32_t macaddr0lo;      /*17 0x44 */
-    uint32_t macaddr1hi;      /*18 0x48 */
-    uint32_t macaddr1lo;      /*19 0x4c */
-    uint32_t reserved_2[34];  /*18 - 53 */
-    uint32_t rgmiistatus;     /*54 0xd8 */
-} __PACKED dw_mac_regs_t;
+#define DW_MAC_MAC_CONF             (0x0000)
+#define DW_MAC_MAC_FRAMEFILT        (0x0004)
+#define DW_MAC_MAC_HASHTABLEHI      (0x0008)
+#define DW_MAC_MAC_HASHTABLELO      (0x000c)
+#define DW_MAC_MAC_MIIADDR          (0x0010)
+#define DW_MAC_MAC_MIIDATA          (0x0014)
+#define DW_MAC_MAC_FLOWCONTROL      (0x0018)
+#define DW_MAC_MAC_VALANTAG         (0x001c)
+#define DW_MAC_MAC_VERSION          (0x0020)
+#define DW_MAC_MAC_DEBUG            (0x0024)
+#define DW_MAC_MAC_REMOTEWAKEFILT   (0x0028)
+#define DW_MAC_MAC_PMTCONTROL       (0x002c)
+#define DW_MAC_MAC_LPICONTROL       (0x0030)
+#define DW_MAC_MAC_LPITIMERS        (0x0034)
+#define DW_MAC_MAC_INTREG           (0x0038)
+#define DW_MAC_MAC_INTMASK          (0x003c)
+#define DW_MAC_MAC_MACADDR0HI       (0x0040)
+#define DW_MAC_MAC_MACADDR0LO       (0x0044)
+#define DW_MAC_MAC_MACADDR1HI       (0x0048)
+#define DW_MAC_MAC_MACADDR1LO       (0x004c)
+#define DW_MAC_MAC_RGMIISTATUS      (0x00d8)
 
-// Offset of the mac management counters block
-#define DW_MAC_MMC_BASE_OFFSET (0x0100)
+// Offsets of the mac management counters
+#define DW_MAC_MMC_CNTRL            (0x0100)
+#define DW_MAC_MMC_INTR_RX          (0x0104)
+#define DW_MAC_MMC_INTR_TX          (0x0108)
+#define DW_MAC_MMC_INTR_MASK_RX     (0x010c)
+#define DW_MAC_MMC_INTR_MASK_TX     (0x0110)
+#define DW_MAC_MMC_RXFRAMECOUNT_GB  (0x0180)
+#define DW_MAC_MMC_RXOCTETCOUNT_GB  (0x0184)
+#define DW_MAC_MMC_RXOCTETCOUNT_G   (0x0188)
+#define DW_MAC_MMC_IPC_INTR_MASK_RX (0x0200)
+#define DW_MAC_MMC_IPC_INTR_RX      (0x0208)
 
-#define DW_MAC_MMC_MMC_CNTRL        (0x00)
-#define DW_MAC_MMC_MMC_INTR_RX      (0x01)
-#define DW_MAC_MMC_MMC_INTR_TX      (0x02)
-#define DW_MAC_MMC_MMC_INTR_MASK_RX (0x03)
-#define DW_MAC_MMC_MMC_INTR_MASK_TX (0x04)
-
-#define DW_MAC_MMC_RXFRAMECOUNT_GB  (32)
-#define DW_MAC_MMC_RXOCTETCOUNT_GB  (33)
-#define DW_MAC_MMC_RXOCTETCOUNT_G   (34)
-
-#define DW_MAC_MMC_MMC_IPC_INTR_MASK_RX (64)
-#define DW_MAC_MMC_MMC_IPC_INTR_RX (66)
-
-// Offset of DMA regs into dwmac register block
-#define DW_DMA_BASE_OFFSET    (0x1000)
-
-typedef struct dw_dma_regs {
-    uint32_t busmode;              /*0  0x00 */
-    uint32_t txpolldemand;         /*1  0x04 */
-    uint32_t rxpolldemand;         /*2  0x08 */
-    uint32_t rxdesclistaddr;       /*3  0x0c */
-    uint32_t txdesclistaddr;       /*4  0x10 */
-    uint32_t status;               /*5  0x14 */
-    uint32_t opmode;               /*6  0x18 */
-    uint32_t intenable;            /*7  0x1c */
-    uint32_t missedframes;         /*8  0x20 */
-    uint32_t rxwdt;                /*9  0x24 */
-    uint32_t axibusmode;           /*10 0x28 */
-    uint32_t axistatus;            /*11 0x2c */
-    uint32_t reserved[6];
-    uint32_t currhosttxdesc;       /*18 0x48 */
-    uint32_t currhostrxdesc;       /*19 0x4c */
-    uint32_t currhosttxbuffaddr;   /*20 0x50 */
-    uint32_t currhostrxbuffaddr;   /*21 0x54 */
-    uint32_t hwfeature;            /*22 0x58 */
-} __PACKED dw_dma_regs_t;
+// Offsets of DMA registers
+#define DW_MAC_DMA_BUSMODE              (0x1000)
+#define DW_MAC_DMA_TXPOLLDEMAND         (0x1004)
+#define DW_MAC_DMA_RXPOLLDEMAND         (0x1008)
+#define DW_MAC_DMA_RXDESCLISTADDR       (0x100c)
+#define DW_MAC_DMA_TXDESCLISTADDR       (0x1010)
+#define DW_MAC_DMA_STATUS               (0x1014)
+#define DW_MAC_DMA_OPMODE               (0x1018)
+#define DW_MAC_DMA_INTENABLE            (0x101c)
+#define DW_MAC_DMA_MISSEDFRAMES         (0x1020)
+#define DW_MAC_DMA_RXWDT                (0x1024)
+#define DW_MAC_DMA_AXIBUSMODE           (0x1028)
+#define DW_MAC_DMA_AXISTATUS            (0x102c)
+#define DW_MAC_DMA_CURRHOSTTXDESC       (0x1048)
+#define DW_MAC_DMA_CURRHOSTRXDESC       (0x104c)
+#define DW_MAC_DMA_CURRHOSTTXBUFFADDR   (0x1050)
+#define DW_MAC_DMA_CURRHOSTRXBUFFADDR   (0x1054)
+#define DW_MAC_DMA_HWFEATURE            (0x1058)
 
 //DMA transaction descriptors
 typedef volatile struct dw_dmadescr {
@@ -176,11 +168,7 @@ private:
     ddk::PDev pdev_;
     ddk::EthBoardProtocolClient eth_board_;
 
-    std::optional<ddk::MmioBuffer> dwmac_regs_iobuff_;
-
-    volatile dw_mac_regs_t* dwmac_regs_ = nullptr;
-    volatile dw_dma_regs_t* dwdma_regs_ = nullptr;
-    volatile uint32_t* dwmac_mmc_regs_ = nullptr;
+    std::optional<ddk::MmioBuffer> mmio_;
 
     fbl::Mutex lock_;
     ddk::EthernetIfcProtocolClient ethernet_client_ __TA_GUARDED(lock_);

@@ -15,12 +15,13 @@ void DWMacDevice::DumpRegisters() {
             zxlogf(INFO, "MDIO READ TIMEOUT%u\n", i);
         }
     }
-    zxlogf(INFO, "mac addr hi -> %08x\n", dwmac_regs_->macaddr0hi);
-    zxlogf(INFO, "mac addr lo -> %08x\n", dwmac_regs_->macaddr0lo);
-    zxlogf(INFO, "mac version -> %08x\n", dwmac_regs_->version);
-    zxlogf(INFO, "\ndma hwfeature -> %08x\n", dwdma_regs_->hwfeature);
-    zxlogf(INFO, "dma busmode   -> %08x\n", dwdma_regs_->busmode);
-    zxlogf(INFO, "dma status    -> %08x\n", dwdma_regs_->status);
+    zxlogf(INFO, "mac addr hi -> %08x\n", mmio_->Read32(DW_MAC_MAC_MACADDR0HI));
+    zxlogf(INFO, "mac addr lo -> %08x\n", mmio_->Read32(DW_MAC_MAC_MACADDR0LO));
+    zxlogf(INFO, "mac version -> %08x\n", mmio_->Read32(DW_MAC_MAC_VERSION));
+
+    zxlogf(INFO, "\ndma hwfeature -> %08x\n", mmio_->Read32(DW_MAC_DMA_HWFEATURE));
+    zxlogf(INFO, "dma busmode   -> %08x\n", mmio_->Read32(DW_MAC_DMA_BUSMODE));
+    zxlogf(INFO, "dma status    -> %08x\n", mmio_->Read32(DW_MAC_DMA_STATUS));
     uint32_t temp;
     EthMacMdioRead(1, &temp);
     zxlogf(INFO, "MII Status = %08x\n", temp);
