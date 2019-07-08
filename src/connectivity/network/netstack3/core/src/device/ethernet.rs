@@ -248,7 +248,7 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
                 .encapsulate(EthernetFrameBuilder::new(local_mac, dst_mac, A::Version::ETHER_TYPE))
                 .serialize_outer()
                 .map_err(|(err, ser)| (err, ser.into_serializer().into_serializer()))?;
-            ctx.dispatcher().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
+            ctx.dispatcher_mut().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
         }
         Err(local_addr) => {
             let state = get_device_state_mut(ctx.state_mut(), device_id);
@@ -471,7 +471,7 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
             .encapsulate(EthernetFrameBuilder::new(src, dst, EtherType::Arp))
             .serialize_outer()
             .map_err(|(err, _)| err)?;
-        ctx.dispatcher().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
+        ctx.dispatcher_mut().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
         Ok(())
     }
 
@@ -567,7 +567,7 @@ impl ndp::NdpDevice for EthernetNdpDevice {
             .encapsulate(EthernetFrameBuilder::new(src, dst, EtherType::Ipv6))
             .serialize_outer()
             .map_err(|(err, _)| err)?;
-        ctx.dispatcher().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
+        ctx.dispatcher_mut().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
         Ok(())
     }
 
@@ -635,7 +635,7 @@ fn mac_resolved<D: EventDispatcher>(
                 .map_err(|(err, _)| err);
 
             match serialized {
-                Ok(buffer) => ctx.dispatcher().send_frame(device_id, buffer.as_ref()),
+                Ok(buffer) => ctx.dispatcher_mut().send_frame(device_id, buffer.as_ref()),
                 Err(e) => debug!("Failed to serialize pending frame {:?}", e),
             }
         }

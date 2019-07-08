@@ -292,7 +292,7 @@ impl EventLoop {
                     if let Ok(status) = await!(device.client.get_status()) {
                         info!("device {:?} status changed to: {:?}", id, status);
                         #[cfg(test)]
-                        self.ctx.dispatcher().send_test_event(TestEvent::DeviceStatusChanged {
+                        self.ctx.dispatcher_mut().send_test_event(TestEvent::DeviceStatusChanged {
                             id: id.id(),
                             status,
                         });
@@ -310,7 +310,7 @@ impl EventLoop {
                 // the timer event, the timer event will be erroneously cancelled by the
                 // cancel_timeout() before it's being triggered.
                 // TODO(NET-2138): Create a unit test for the processing logic.
-                self.ctx.dispatcher().cancel_timeout(id);
+                self.ctx.dispatcher_mut().cancel_timeout(id);
                 handle_timeout(&mut self.ctx, id);
             }
             None => bail!("Stream of events ended unexpectedly"),
@@ -458,7 +458,7 @@ impl EventLoop {
         match pos {
             Some(pos) => {
                 // TODO(rheacock): ensure that the core client deletes all data
-                self.ctx.dispatcher().devices.remove(pos);
+                self.ctx.dispatcher_mut().devices.remove(pos);
                 None
             }
             None => Some(fidl_net_stack::Error { type_: fidl_net_stack::ErrorType::NotFound }), // Invalid device ID

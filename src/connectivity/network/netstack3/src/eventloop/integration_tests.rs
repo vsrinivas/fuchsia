@@ -143,7 +143,7 @@ impl TestStack {
         let (event_sender, evt_rcv) = futures::channel::mpsc::unbounded();
         let mut event_loop = EventLoop::new_with_channels(event_sender.clone(), evt_rcv);
         let (test_sender, mut test_receiver) = futures::channel::mpsc::unbounded();
-        event_loop.ctx.dispatcher().test_events = Some(test_sender);
+        event_loop.ctx.dispatcher_mut().test_events = Some(test_sender);
         let data = Arc::new(Mutex::new(TestData::default()));
         let data_clone = Arc::clone(&data);
         let test_events = Arc::<Mutex<Option<mpsc::UnboundedSender<TestEvent>>>>::default();

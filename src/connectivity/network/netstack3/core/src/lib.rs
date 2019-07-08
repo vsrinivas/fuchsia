@@ -162,8 +162,13 @@ impl<D: EventDispatcher> Context<D> {
         &mut self.state
     }
 
-    /// Get the dispatcher.
-    pub fn dispatcher(&mut self) -> &mut D {
+    /// Get the dispatcher immutably.
+    pub fn dispatcher(&self) -> &D {
+        &self.dispatcher
+    }
+
+    /// Get the dispatcher mutably.
+    pub fn dispatcher_mut(&mut self) -> &mut D {
         &mut self.dispatcher
     }
 

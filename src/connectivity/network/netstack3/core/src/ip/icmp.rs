@@ -1282,7 +1282,7 @@ mod tests {
             *net.context("alice").state().test_counters.get("receive_icmp_packet::echo_reply"),
             1
         );
-        let replies = net.context("alice").dispatcher().take_icmp_replies(conn);
+        let replies = net.context("alice").dispatcher_mut().take_icmp_replies(conn);
         assert!(!replies.is_empty());
         let (seq, body) = &replies[0];
         assert_eq!(*seq, 7);

@@ -1224,11 +1224,11 @@ mod tests {
         // the second one is solely used to update the time stored
         // inside the dispatcher.
         let expiration_period_from_now = TimerId(TimerIdInner::Nop(0));
-        ctx.dispatcher()
+        ctx.dispatcher_mut()
             .schedule_timeout(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD, expiration_period_from_now);
         let five_seconds_from_now = TimerId(TimerIdInner::Nop(1));
         let five_seconds = Duration::from_secs(5);
-        ctx.dispatcher().schedule_timeout(five_seconds, five_seconds_from_now);
+        ctx.dispatcher_mut().schedule_timeout(five_seconds, five_seconds_from_now);
 
         testutil::trigger_timers_until(&mut ctx, |id| id == &five_seconds_from_now);
         assert_eq!(ctx.dispatcher().now() - start, five_seconds);
