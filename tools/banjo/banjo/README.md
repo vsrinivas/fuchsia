@@ -43,17 +43,9 @@ instance IDs for mac and linux *will* be different. You may notice multiple git
 revision hashes under a single instance ID; this occurs when multiple packages
 uploaded to CIPD were binary identical so they got deduplicated.
 
-* Update the following files with the git revision and Instance IDs:
-
-```
-//zircon/prebuilt/zircon.ensure
-//zircon/prebuilt/zircon.versions
-```
-
-You can use
-[this cl]( https://fuchsia.googlesource.com/fuchsia/+/0af3c7e6aee0f55d0da7ed9daa6b8e7b97291eda)
-as a reference.
-
-* Run `zircon/scripts/download-prebuilts && fx build` and ensure build works
+* Update `//integration/fuchsia/prebuilt` with the git revision.
+* Run `//integration/update-lockfiles.sh`.
+* Commit your change to your local branch (otherwise next step will not work).
+* Run `jiri update --local-manifest && fx build` and ensure build works
 correctly (confirm it has the new changes you expect).
 * Upload change for review.
