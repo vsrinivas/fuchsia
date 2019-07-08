@@ -1,0 +1,22 @@
+{
+    "program": {
+        "binary": "data/login_e2e_tester"
+    },
+    "sandbox": {
+        "pkgfs": [
+            "packages"
+        ],
+        "services": [
+            "fuchsia.auth.TokenManagerFactory",
+            "fuchsia.fonts.Provider",
+            "fuchsia.logger.LogSink",
+            "fuchsia.modular.Clipboard",
+            "fuchsia.modular.ContextWriter",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

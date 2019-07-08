@@ -1,0 +1,59 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/test.gni")
+import("//topaz/runtime/flutter_runner/flutter_app.gni")
+
+flutter_jit_app("login_e2e_tester") {
+  main_dart = "lib/main.dart"
+
+  package_name = "login_e2e_tester"
+
+  meta = [
+    {
+      path = rebase_path("meta/login_e2e_tester.cmx")
+      dest = "login_e2e_tester.cmx"
+    },
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.auth",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//third_party/dart-pkg/pub/args",
+    "//topaz/lib/settings:lib.settings",
+    "//topaz/public/dart/fidl",
+    "//topaz/public/dart/fuchsia_inspect",
+    "//topaz/public/dart/fuchsia_logger",
+    "//topaz/public/dart/fuchsia_scenic_flutter",
+    "//topaz/public/dart/fuchsia_services",
+    "//topaz/public/dart/widgets:lib.widgets",
+  ]
+}
+
+dart_test("google_auth_e2e_test") {
+  sources = [
+    "google_auth_test.dart",
+  ]
+
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/matcher",
+    "//third_party/dart-pkg/pub/test",
+    "//third_party/dart-pkg/pub/webdriver",
+  ]
+}
+
+# TODO(satsukiu): Chromedriver needs to be added as a non-dart dependency.
+# Before this is done, the Chromedriver version in //prebuilt needs to be
+# automatically kept up to date with the Chrome version - this is tracked in
+# IN-1321
+
+group("test") {
+  testonly = true
+
+  deps = [
+    ":google_auth_e2e_test",
+    ":login_e2e_tester",
+  ]
+}
