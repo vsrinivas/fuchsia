@@ -163,49 +163,28 @@ func computePercentile(array []float64, targetPercentile int) float64 {
 	return array[index]*(1-fractional) + array[index+1]*fractional
 }
 
-// Returns the overall fps and an array of fps per one second window for the
-// given events.
-func calculateFps(model benchmarking.Model, fpsEventCat string, fpsEventName string) (fps float64, fpsPerWindow []float64) {
+// Returns the overall fps for the given events.
+func calculateFps(model benchmarking.Model, fpsEventCat string, fpsEventName string) float64 {
 	fpsEvents := model.FindEvents(benchmarking.EventsFilter{Cat: &fpsEventCat, Name: &fpsEventName})
 	if len(fpsEvents) == 0 {
-		fmt.Printf("Found no events with Category: %s and Name: %s\n", fpsEventCat, fpsEventName)
-		return 0, []float64{}
+		fmt.Printf("Warning: Found no events with Category: %s and Name: %s\n", fpsEventCat, fpsEventName)
+		return 0
 	}
 	return calculateFpsForEvents(fpsEvents)
 }
 
-func calculateFpsForEvents(fpsEvents []*benchmarking.Event) (fps float64, fpsPerWindow []float64) {
+func calculateFpsForEvents(fpsEvents []*benchmarking.Event) float64 {
 	events := make([]*benchmarking.Event, len(fpsEvents))
 	copy(events, fpsEvents)
 	sort.Sort(ByStartTime(events))
+
 	baseTime := events[0].Start
-
-	// window = one-second time window
-	const WindowLength float64 = OneSecInUsecs
-	fpsPerWindow = make([]float64, 0)
-	windowEndTime := baseTime + WindowLength
-
-	numFramesInWindow := 0.0
-	numFrames := 0.0
-
-	for _, event := range events {
-		for windowEndTime <= event.Start {
-			fpsPerWindow = append(fpsPerWindow, numFramesInWindow)
-			windowEndTime += WindowLength
-			numFramesInWindow = 0
-		}
-		numFramesInWindow++
-		numFrames++
-	}
 	lastEventTime := events[len(events)-1].Start
+	numFrames := len(events)
 
-	for windowEndTime < lastEventTime {
-		fpsPerWindow = append(fpsPerWindow, numFramesInWindow)
-		windowEndTime += WindowLength
-		numFramesInWindow = 0
-	}
-	fps = float64(numFrames) / ((lastEventTime - baseTime) / OneSecInUsecs)
-	return fps, fpsPerWindow
+	fps := float64(numFrames) / ((lastEventTime - baseTime) / OneSecInUsecs)
+
+	return fps
 }
 
 func averageGap(events []*benchmarking.Event, cat1 string, name1 string, cat2 string, name2 string) float64 {

@@ -63,17 +63,8 @@ func TestCalculateFpsForEvents(t *testing.T) {
 		},
 	}
 	expectedFps := 12.0 / 7.3
-	expectedFpsPerWindow := []float64{4, 2, 1, 1, 1, 0, 0}
-	fps, fpsPerWindow := calculateFpsForEvents(events)
+	fps := calculateFpsForEvents(events)
 	if !almostEqual(fps, expectedFps) {
 		t.Errorf("Calculated incorrect fps: got %f, expected %f", fps, expectedFps)
-	}
-	if len(fpsPerWindow) != len(expectedFpsPerWindow) {
-		t.Errorf("Expected %d windows, got %d", len(expectedFpsPerWindow), len(fpsPerWindow))
-	}
-	for i, expected := range expectedFpsPerWindow {
-		if !almostEqual(fpsPerWindow[i], expected) {
-			t.Errorf("Window %d got %f fps, expected %f", i, fpsPerWindow[i], expected)
-		}
 	}
 }

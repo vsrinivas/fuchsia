@@ -97,8 +97,8 @@ func reportFlutterFpsForInstance(model benchmarking.Model, testSuite string, tes
 	flutterStr := "flutter"
 	vsyncCallbackStr := "vsync callback"
 	vsyncEvents := instance.uiThread.FindEvents(benchmarking.EventsFilter{Cat: &flutterStr, Name: &vsyncCallbackStr})
-	fps, fpsPerTimeWindow := calculateFpsForEvents(vsyncEvents)
-	fmt.Printf("%.4g FPS\nFPS per one-second window: %v\n", fps, fpsPerTimeWindow)
+	fps := calculateFpsForEvents(vsyncEvents)
+	fmt.Printf("%.4g FPS\n", fps)
 
 	if len(instance.gpuThread.Events) == 0 {
 		panic("No GPU thread found\n")
@@ -109,13 +109,6 @@ func reportFlutterFpsForInstance(model benchmarking.Model, testSuite string, tes
 		TestSuite: testSuite,
 		Unit:      benchmarking.FramesPerSecond,
 		Values:    []float64{jsonFloat(fps)},
-	})
-
-	testResultsFile.Add(&benchmarking.TestCaseResults{
-		Label:     instance.metricName + "_minimum_fps_per_one_second_time_window",
-		TestSuite: testSuite,
-		Unit:      benchmarking.FramesPerSecond,
-		Values:    []float64{jsonFloat(computeMin(fpsPerTimeWindow))},
 	})
 
 	frameStr := "vsync callback"

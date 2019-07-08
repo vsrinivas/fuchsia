@@ -19,8 +19,8 @@ import (
 // Compute the FPS and latency within Scenic for |model|, also writing results to
 // |testResultsFile| if provided.
 func reportScenicFps(model benchmarking.Model, testSuite string, testResultsFile *benchmarking.TestResultsFile, allApps bool, appDebugNames []string) {
-	fps, fpsPerTimeWindow := calculateFps(model, "gfx", "FramePresented")
-	fmt.Printf("%.4g FPS\nFPS per one-second window: %v\n", fps, fpsPerTimeWindow)
+	fps := calculateFps(model, "gfx", "FramePresented")
+	fmt.Printf("%.4g FPS\n", fps)
 
 	reportFrameStats(model, testSuite, testResultsFile)
 
