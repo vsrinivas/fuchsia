@@ -13,13 +13,12 @@ to find and use the results of your benchmarks in the dashboard.
 
 ## Accessing the Dashboard
 
-*** promo
 **Be sure to sign into your google.com account or else Fuchsia data will be hidden.**
 
 The login button is in the top right corner of the screen.
-***
 
-The dashboard can be found at https://chromeperf.appspot.com/report.
+The dashboard can be found at [https://chromeperf.appspot.com/report](https://chromeperf.appspot.com/report).
+
 
 ## Searching and Adding Graphs
 
