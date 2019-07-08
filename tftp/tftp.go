@@ -25,10 +25,7 @@ const (
 	retries      = 5               // default number of retries
 	blockSize    = 1024            // default block size
 	datagramSize = 1028            // default datagram size
-	// Throttle bootserver transfers to avoid issues with the Monoprice adapters
-	// overflowing buffers when combined with the board performance
-	// TODO: Consume a -w value from the build or just use bootserver.
-	windowSize = 10 // default window size
+	windowSize   = 256             // default window size
 )
 
 const (
