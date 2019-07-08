@@ -139,10 +139,6 @@ void ActivePageManager::CheckEmpty() {
 }
 
 void ActivePageManager::OnSyncBacklogDownloaded() {
-  if (sync_backlog_downloaded_) {
-    FXL_LOG(INFO) << "Initial sync in background finished. "
-                  << "Clients will receive a change notification.";
-  }
   sync_backlog_downloaded_ = true;
   for (auto& [page_impl, on_done] : page_impls_) {
     AddPageImpl(std::move(page_impl), std::move(on_done));
