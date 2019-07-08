@@ -106,9 +106,8 @@ class Rectangle final : public Shape {
 // Represents a rounded rectangle shape resource in a session.
 class RoundedRectangle final : public Shape {
  public:
-  RoundedRectangle(Session* session, float width, float height,
-                   float top_left_radius, float top_right_radius,
-                   float bottom_right_radius, float bottom_left_radius);
+  RoundedRectangle(Session* session, float width, float height, float top_left_radius,
+                   float top_right_radius, float bottom_right_radius, float bottom_left_radius);
   RoundedRectangle(RoundedRectangle&& moved);
   ~RoundedRectangle();
 };
@@ -118,10 +117,8 @@ class RoundedRectangle final : public Shape {
 class Image : public Resource {
  public:
   // Creates an image resource bound to a session.
-  Image(const Memory& memory, off_t memory_offset,
-        fuchsia::images::ImageInfo info);
-  Image(Session* session, uint32_t memory_id, off_t memory_offset,
-        fuchsia::images::ImageInfo info);
+  Image(const Memory& memory, off_t memory_offset, fuchsia::images::ImageInfo info);
+  Image(Session* session, uint32_t memory_id, off_t memory_offset, fuchsia::images::ImageInfo info);
   ~Image();
 
   // Returns the number of bytes needed to represent an image.
@@ -145,8 +142,7 @@ class Image : public Resource {
 class Buffer final : public Resource {
  public:
   Buffer(const Memory& memory, off_t memory_offset, size_t buffer_size);
-  Buffer(Session* session, uint32_t memory_id, off_t memory_offset,
-         size_t buffer_size);
+  Buffer(Session* session, uint32_t memory_id, off_t memory_offset, size_t buffer_size);
   Buffer(Buffer&& moved);
   ~Buffer();
 };
@@ -162,13 +158,10 @@ class Mesh final : public Shape {
 
   // These arguments are documented in commands.fidl; see
   // BindMeshBuffersCmd.
-  void BindBuffers(const Buffer& index_buffer,
-                   fuchsia::ui::gfx::MeshIndexFormat index_format,
-                   uint64_t index_offset, uint32_t index_count,
-                   const Buffer& vertex_buffer,
-                   fuchsia::ui::gfx::MeshVertexFormat vertex_format,
-                   uint64_t vertex_offset, uint32_t vertex_count,
-                   const float bounding_box_min[3],
+  void BindBuffers(const Buffer& index_buffer, fuchsia::ui::gfx::MeshIndexFormat index_format,
+                   uint64_t index_offset, uint32_t index_count, const Buffer& vertex_buffer,
+                   fuchsia::ui::gfx::MeshVertexFormat vertex_format, uint64_t vertex_offset,
+                   uint32_t vertex_count, const float bounding_box_min[3],
                    const float bounding_box_max[3]);
 };
 
@@ -195,17 +188,13 @@ class Material final : public Resource {
 class Node : public Resource {
  public:
   // Sets the node's transform properties.
-  void SetTranslation(float tx, float ty, float tz) {
-    SetTranslation((float[3]){tx, ty, tz});
-  }
+  void SetTranslation(float tx, float ty, float tz) { SetTranslation((float[3]){tx, ty, tz}); }
 
   void SetTranslation(const float translation[3]);
 
   void SetTranslation(uint32_t variable_id);
 
-  void SetScale(float sx, float sy, float sz) {
-    SetScale((float[3]){sx, sy, sz});
-  }
+  void SetScale(float sx, float sy, float sz) { SetScale((float[3]){sx, sy, sz}); }
   void SetScale(const float scale[3]);
   void SetScale(uint32_t variable_id);
   void SetRotation(float qi, float qj, float qk, float qw) {
@@ -213,14 +202,11 @@ class Node : public Resource {
   }
   void SetRotation(const float quaternion[4]);
   void SetRotation(uint32_t variable_id);
-  void SetAnchor(float ax, float ay, float az) {
-    SetAnchor((float[3]){ax, ay, az});
-  }
+  void SetAnchor(float ax, float ay, float az) { SetAnchor((float[3]){ax, ay, az}); }
   void SetAnchor(const float anchor[3]);
   void SetAnchor(uint32_t variable_id);
 
-  void SendSizeChangeHint(float width_change_factor,
-                          float height_change_factor);
+  void SendSizeChangeHint(float width_change_factor, float height_change_factor);
 
   // Sets the node's tag value.
   void SetTag(uint32_t tag_value);
@@ -338,8 +324,7 @@ class ImportNode final : public ContainerNode {
 /// Each |ViewHolder| is linked to a paired |View| via a shared token pair.
 class ViewHolder final : public Resource {
  public:
-  ViewHolder(Session* session, zx::eventpair token,
-             const std::string& debug_name);
+  ViewHolder(Session* session, zx::eventpair token, const std::string& debug_name);
   ViewHolder(Session* session, fuchsia::ui::views::ViewHolderToken token,
              const std::string& debug_name);
   ViewHolder(ViewHolder&& moved);
@@ -347,19 +332,15 @@ class ViewHolder final : public Resource {
 
   // Set properties of the attached view.
 
-  void SetViewProperties(float min_x, float min_y, float min_z, float max_x,
-                         float max_y, float max_z, float in_min_x,
-                         float in_min_y, float in_min_z, float in_max_x,
-                         float in_max_y, float in_max_z) {
-    SetViewProperties((float[3]){min_x, min_y, min_z},
-                      (float[3]){max_x, max_y, max_z},
+  void SetViewProperties(float min_x, float min_y, float min_z, float max_x, float max_y,
+                         float max_z, float in_min_x, float in_min_y, float in_min_z,
+                         float in_max_x, float in_max_y, float in_max_z) {
+    SetViewProperties((float[3]){min_x, min_y, min_z}, (float[3]){max_x, max_y, max_z},
                       (float[3]){in_min_x, in_min_y, in_min_z},
                       (float[3]){in_max_x, in_max_y, in_max_z});
   }
-  void SetViewProperties(const float bounding_box_min[3],
-                         const float bounding_box_max[3],
-                         const float inset_from_min[3],
-                         const float inset_from_max[3]);
+  void SetViewProperties(const float bounding_box_min[3], const float bounding_box_max[3],
+                         const float inset_from_min[3], const float inset_from_max[3]);
   void SetViewProperties(const fuchsia::ui::gfx::ViewProperties& props);
 };
 
@@ -372,11 +353,10 @@ class ViewHolder final : public Resource {
 class View final : public Resource {
  public:
   View(Session* session, zx::eventpair token, const std::string& debug_name);
+  View(Session* session, fuchsia::ui::views::ViewToken token, const std::string& debug_name);
   View(Session* session, fuchsia::ui::views::ViewToken token,
+       fuchsia::ui::views::ViewRefControl control_ref, fuchsia::ui::views::ViewRef view_ref,
        const std::string& debug_name);
-  View(Session* session, fuchsia::ui::views::ViewToken token,
-       fuchsia::ui::views::ViewRefControl control_ref,
-       fuchsia::ui::views::ViewRef view_ref, const std::string& debug_name);
   View(View&& moved);
   ~View();
 
@@ -418,9 +398,7 @@ class Variable final : public Resource {
 class Light : public Resource {
  public:
   // Sets the light's color.
-  void SetColor(float red, float green, float blue) {
-    SetColor((float[3]){red, green, blue});
-  }
+  void SetColor(float red, float green, float blue) { SetColor((float[3]){red, green, blue}); }
   void SetColor(const float rgb[3]);
   void SetColor(uint32_t variable_id);
 
@@ -449,9 +427,7 @@ class DirectionalLight final : public Light {
   ~DirectionalLight();
 
   // Sets the light's direction.
-  void SetDirection(float dx, float dy, float dz) {
-    SetDirection((float[3]){dx, dy, dz});
-  }
+  void SetDirection(float dx, float dy, float dz) { SetDirection((float[3]){dx, dy, dz}); }
   void SetDirection(const float direction[3]);
   void SetDirection(uint32_t variable_id);
 };
@@ -464,9 +440,7 @@ class PointLight final : public Light {
   ~PointLight();
 
   // Sets the light's direction.
-  void SetPosition(float dx, float dy, float dz) {
-    SetPosition((float[3]){dx, dy, dz});
-  }
+  void SetPosition(float dx, float dy, float dz) { SetPosition((float[3]){dx, dy, dz}); }
   void SetPosition(const float direction[3]);
   void SetPosition(uint32_t variable_id);
 
@@ -517,11 +491,10 @@ class CameraBase : public Resource {
   CameraBase(CameraBase&& moved) : Resource(std::move(moved)) {}
   ~CameraBase() {}
   // Sets the camera's view parameters.
-  void SetTransform(const float eye_position[3], const float eye_look_at[3],
-                    const float eye_up[3]);
+  void SetTransform(const float eye_position[3], const float eye_look_at[3], const float eye_up[3]);
   // Sets the camera pose buffer
-  void SetPoseBuffer(const Buffer& buffer, uint32_t num_entries,
-                     int64_t base_time, uint64_t time_interval);
+  void SetPoseBuffer(const Buffer& buffer, uint32_t num_entries, int64_t base_time,
+                     uint64_t time_interval);
 };
 
 // Represents a camera resource in a session.
@@ -545,8 +518,7 @@ class StereoCamera final : public CameraBase {
   ~StereoCamera();
 
   // Sets the camera's projection parameters.
-  void SetStereoProjection(const float left_projection[16],
-                           const float right_projection[16]);
+  void SetStereoProjection(const float left_projection[16], const float right_projection[16]);
 };
 
 // Represents a renderer resource in a session.
@@ -585,14 +557,10 @@ class Layer final : public Resource {
   ~Layer();
 
   // Sets the layer's XY translation and Z-order.
-  void SetTranslation(float tx, float ty, float tz) {
-    SetTranslation((float[3]){tx, ty, tz});
-  }
+  void SetTranslation(float tx, float ty, float tz) { SetTranslation((float[3]){tx, ty, tz}); }
   void SetTranslation(const float translation[3]);
 
-  void SetSize(float width, float height) {
-    SetSize((float[2]){width, height});
-  }
+  void SetSize(float width, float height) { SetSize((float[2]){width, height}); }
   void SetSize(const float size[2]);
 
   void SetRenderer(const Renderer& renderer) {

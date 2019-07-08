@@ -19,11 +19,9 @@ constexpr const T& clamp(const T& v, const T& lo, const T& hi) {
 
 }  // namespace
 
-Resource::Resource(Session* session)
-    : session_(session), id_(session->AllocResourceId()) {}
+Resource::Resource(Session* session) : session_(session), id_(session->AllocResourceId()) {}
 
-Resource::Resource(Resource&& moved)
-    : session_(moved.session_), id_(moved.id_) {
+Resource::Resource(Resource&& moved) : session_(moved.session_), id_(moved.id_) {
   auto& moved_session = *const_cast<Session**>(&moved.session_);
   auto& moved_id = *const_cast<uint32_t*>(&moved.id_);
   moved_session = nullptr;
@@ -66,8 +64,7 @@ Circle::Circle(Circle&& moved) : Shape(std::move(moved)) {}
 
 Circle::~Circle() = default;
 
-Rectangle::Rectangle(Session* session, float width, float height)
-    : Shape(session) {
+Rectangle::Rectangle(Session* session, float width, float height) : Shape(session) {
   session->Enqueue(NewCreateRectangleCmd(id(), width, height));
 }
 
@@ -76,36 +73,29 @@ Rectangle::Rectangle(Rectangle&& moved) : Shape(std::move(moved)) {}
 Rectangle::~Rectangle() = default;
 
 RoundedRectangle::RoundedRectangle(Session* session, float width, float height,
-                                   float top_left_radius,
-                                   float top_right_radius,
-                                   float bottom_right_radius,
-                                   float bottom_left_radius)
+                                   float top_left_radius, float top_right_radius,
+                                   float bottom_right_radius, float bottom_left_radius)
     : Shape(session) {
-  session->Enqueue(NewCreateRoundedRectangleCmd(
-      id(), width, height, top_left_radius, top_right_radius,
-      bottom_right_radius, bottom_left_radius));
+  session->Enqueue(NewCreateRoundedRectangleCmd(id(), width, height, top_left_radius,
+                                                top_right_radius, bottom_right_radius,
+                                                bottom_left_radius));
 }
 
-RoundedRectangle::RoundedRectangle(RoundedRectangle&& moved)
-    : Shape(std::move(moved)) {}
+RoundedRectangle::RoundedRectangle(RoundedRectangle&& moved) : Shape(std::move(moved)) {}
 
 RoundedRectangle::~RoundedRectangle() = default;
 
-Image::Image(const Memory& memory, off_t memory_offset,
-             fuchsia::images::ImageInfo info)
+Image::Image(const Memory& memory, off_t memory_offset, fuchsia::images::ImageInfo info)
     : Image(memory.session(), memory.id(), memory_offset, std::move(info)) {}
 
 Image::Image(Session* session, uint32_t memory_id, off_t memory_offset,
              fuchsia::images::ImageInfo info)
     : Resource(session), memory_offset_(memory_offset), info_(info) {
-  session->Enqueue(
-      NewCreateImageCmd(id(), memory_id, memory_offset_, std::move(info)));
+  session->Enqueue(NewCreateImageCmd(id(), memory_id, memory_offset_, std::move(info)));
 }
 
 Image::Image(Image&& moved)
-    : Resource(std::move(moved)),
-      memory_offset_(moved.memory_offset_),
-      info_(moved.info_) {}
+    : Resource(std::move(moved)), memory_offset_(moved.memory_offset_), info_(moved.info_) {}
 
 Image::~Image() = default;
 
@@ -116,11 +106,9 @@ size_t Image::ComputeSize(const fuchsia::images::ImageInfo& image_info) {
 Buffer::Buffer(const Memory& memory, off_t memory_offset, size_t num_bytes)
     : Buffer(memory.session(), memory.id(), memory_offset, num_bytes) {}
 
-Buffer::Buffer(Session* session, uint32_t memory_id, off_t memory_offset,
-               size_t num_bytes)
+Buffer::Buffer(Session* session, uint32_t memory_id, off_t memory_offset, size_t num_bytes)
     : Resource(session) {
-  session->Enqueue(
-      NewCreateBufferCmd(id(), memory_id, memory_offset, num_bytes));
+  session->Enqueue(NewCreateBufferCmd(id(), memory_id, memory_offset, num_bytes));
 }
 
 Buffer::Buffer(Buffer&& moved) : Resource(std::move(moved)) {}
@@ -130,37 +118,28 @@ Buffer::~Buffer() = default;
 Memory::Memory(Session* session, zx::vmo vmo, uint64_t allocation_size,
                fuchsia::images::MemoryType memory_type)
     : Resource(session), memory_type_(memory_type) {
-  session->Enqueue(
-      NewCreateMemoryCmd(id(), std::move(vmo), allocation_size, memory_type));
+  session->Enqueue(NewCreateMemoryCmd(id(), std::move(vmo), allocation_size, memory_type));
 }
 
-Memory::Memory(Memory&& moved)
-    : Resource(std::move(moved)), memory_type_(moved.memory_type_) {}
+Memory::Memory(Memory&& moved) : Resource(std::move(moved)), memory_type_(moved.memory_type_) {}
 
 Memory::~Memory() = default;
 
-Mesh::Mesh(Session* session) : Shape(session) {
-  session->Enqueue(NewCreateMeshCmd(id()));
-}
+Mesh::Mesh(Session* session) : Shape(session) { session->Enqueue(NewCreateMeshCmd(id())); }
 
 Mesh::Mesh(Mesh&& moved) : Shape(std::move(moved)) {}
 
 Mesh::~Mesh() = default;
 
-void Mesh::BindBuffers(const Buffer& index_buffer,
-                       fuchsia::ui::gfx::MeshIndexFormat index_format,
-                       uint64_t index_offset, uint32_t index_count,
-                       const Buffer& vertex_buffer,
-                       fuchsia::ui::gfx::MeshVertexFormat vertex_format,
-                       uint64_t vertex_offset, uint32_t vertex_count,
-                       const float bounding_box_min[3],
+void Mesh::BindBuffers(const Buffer& index_buffer, fuchsia::ui::gfx::MeshIndexFormat index_format,
+                       uint64_t index_offset, uint32_t index_count, const Buffer& vertex_buffer,
+                       fuchsia::ui::gfx::MeshVertexFormat vertex_format, uint64_t vertex_offset,
+                       uint32_t vertex_count, const float bounding_box_min[3],
                        const float bounding_box_max[3]) {
-  ZX_DEBUG_ASSERT(session() == index_buffer.session() &&
-                  session() == vertex_buffer.session());
+  ZX_DEBUG_ASSERT(session() == index_buffer.session() && session() == vertex_buffer.session());
   session()->Enqueue(NewBindMeshBuffersCmd(
-      id(), index_buffer.id(), index_format, index_offset, index_count,
-      vertex_buffer.id(), std::move(vertex_format), vertex_offset, vertex_count,
-      bounding_box_min, bounding_box_max));
+      id(), index_buffer.id(), index_format, index_offset, index_count, vertex_buffer.id(),
+      std::move(vertex_format), vertex_offset, vertex_count, bounding_box_min, bounding_box_max));
 }
 
 Material::Material(Session* session) : Resource(session) {
@@ -175,8 +154,7 @@ void Material::SetTexture(uint32_t image_id) {
   session()->Enqueue(NewSetTextureCmd(id(), image_id));
 }
 
-void Material::SetColor(uint8_t red, uint8_t green, uint8_t blue,
-                        uint8_t alpha) {
+void Material::SetColor(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha) {
   session()->Enqueue(NewSetColorCmd(id(), red, green, blue, alpha));
 }
 
@@ -194,13 +172,9 @@ void Node::SetTranslation(uint32_t variable_id) {
   session()->Enqueue(NewSetTranslationCmd(id(), variable_id));
 }
 
-void Node::SetScale(const float scale[3]) {
-  session()->Enqueue(NewSetScaleCmd(id(), scale));
-}
+void Node::SetScale(const float scale[3]) { session()->Enqueue(NewSetScaleCmd(id(), scale)); }
 
-void Node::SetScale(uint32_t variable_id) {
-  session()->Enqueue(NewSetScaleCmd(id(), variable_id));
-}
+void Node::SetScale(uint32_t variable_id) { session()->Enqueue(NewSetScaleCmd(id(), variable_id)); }
 
 void Node::SetRotation(const float quaternion[4]) {
   session()->Enqueue(NewSetRotationCmd(id(), quaternion));
@@ -210,26 +184,19 @@ void Node::SetRotation(uint32_t variable_id) {
   session()->Enqueue(NewSetRotationCmd(id(), variable_id));
 }
 
-void Node::SetAnchor(const float anchor[3]) {
-  session()->Enqueue(NewSetAnchorCmd(id(), anchor));
-}
+void Node::SetAnchor(const float anchor[3]) { session()->Enqueue(NewSetAnchorCmd(id(), anchor)); }
 
 void Node::SetAnchor(uint32_t variable_id) {
   session()->Enqueue(NewSetAnchorCmd(id(), variable_id));
 }
 
-void Node::SendSizeChangeHint(float width_change_factor,
-                              float height_change_factor) {
-  session()->Enqueue(NewSendSizeChangeHintCmdHACK(id(), width_change_factor,
-                                                  height_change_factor));
+void Node::SendSizeChangeHint(float width_change_factor, float height_change_factor) {
+  session()->Enqueue(NewSendSizeChangeHintCmdHACK(id(), width_change_factor, height_change_factor));
 }
 
-void Node::SetTag(uint32_t tag_value) {
-  session()->Enqueue(NewSetTagCmd(id(), tag_value));
-}
+void Node::SetTag(uint32_t tag_value) { session()->Enqueue(NewSetTagCmd(id(), tag_value)); }
 
-void Node::SetHitTestBehavior(
-    fuchsia::ui::gfx::HitTestBehavior hit_test_behavior) {
+void Node::SetHitTestBehavior(fuchsia::ui::gfx::HitTestBehavior hit_test_behavior) {
   session()->Enqueue(NewSetHitTestBehaviorCmd(id(), hit_test_behavior));
 }
 
@@ -243,9 +210,7 @@ ShapeNode::ShapeNode(ShapeNode&& moved) : Node(std::move(moved)) {}
 
 ShapeNode::~ShapeNode() = default;
 
-void ShapeNode::SetShape(uint32_t shape_id) {
-  session()->Enqueue(NewSetShapeCmd(id(), shape_id));
-}
+void ShapeNode::SetShape(uint32_t shape_id) { session()->Enqueue(NewSetShapeCmd(id(), shape_id)); }
 
 void ShapeNode::SetMaterial(uint32_t material_id) {
   session()->Enqueue(NewSetMaterialCmd(id(), material_id));
@@ -265,9 +230,7 @@ void ContainerNode::AddPart(uint32_t part_node_id) {
   session()->Enqueue(NewAddPartCmd(id(), part_node_id));
 }
 
-void ContainerNode::DetachChildren() {
-  session()->Enqueue(NewDetachChildrenCmd(id()));
-}
+void ContainerNode::DetachChildren() { session()->Enqueue(NewDetachChildrenCmd(id())); }
 
 EntityNode::EntityNode(Session* session) : ContainerNode(session) {
   session->Enqueue(NewCreateEntityNodeCmd(id()));
@@ -297,21 +260,19 @@ ImportNode::ImportNode(Session* session) : ContainerNode(session) {}
 
 ImportNode::ImportNode(ImportNode&& moved) : ContainerNode(std::move(moved)) {}
 
-ImportNode::~ImportNode() {
-  ZX_DEBUG_ASSERT_MSG(is_bound_, "Import was never bound.");
-}
+ImportNode::~ImportNode() { ZX_DEBUG_ASSERT_MSG(is_bound_, "Import was never bound."); }
 
 void ImportNode::Bind(zx::eventpair import_token) {
   ZX_DEBUG_ASSERT(!is_bound_);
-  session()->Enqueue(NewImportResourceCmd(
-      id(), fuchsia::ui::gfx::ImportSpec::NODE, std::move(import_token)));
+  session()->Enqueue(
+      NewImportResourceCmd(id(), fuchsia::ui::gfx::ImportSpec::NODE, std::move(import_token)));
   is_bound_ = true;
 }
 
 void ImportNode::BindAsRequest(zx::eventpair* out_export_token) {
   ZX_DEBUG_ASSERT(!is_bound_);
-  session()->Enqueue(NewImportResourceCmdAsRequest(
-      id(), fuchsia::ui::gfx::ImportSpec::NODE, out_export_token));
+  session()->Enqueue(
+      NewImportResourceCmdAsRequest(id(), fuchsia::ui::gfx::ImportSpec::NODE, out_export_token));
   is_bound_ = true;
 }
 
@@ -323,15 +284,13 @@ void ImportNode::Snapshot(fuchsia::ui::gfx::SnapshotCallbackHACKPtr callback) {
   session()->Enqueue(NewTakeSnapshotCmdHACK(id(), std::move(callback)));
 }
 
-ViewHolder::ViewHolder(Session* session, zx::eventpair token,
-                       const std::string& debug_name)
+ViewHolder::ViewHolder(Session* session, zx::eventpair token, const std::string& debug_name)
     : Resource(session) {
-  session->Enqueue(NewCreateViewHolderCmd(
-      id(), scenic::ToViewHolderToken(std::move(token)), debug_name));
+  session->Enqueue(
+      NewCreateViewHolderCmd(id(), scenic::ToViewHolderToken(std::move(token)), debug_name));
 }
 
-ViewHolder::ViewHolder(Session* session,
-                       fuchsia::ui::views::ViewHolderToken token,
+ViewHolder::ViewHolder(Session* session, fuchsia::ui::views::ViewHolderToken token,
                        const std::string& debug_name)
     : Resource(session) {
   session->Enqueue(NewCreateViewHolderCmd(id(), std::move(token), debug_name));
@@ -341,39 +300,32 @@ ViewHolder::ViewHolder(ViewHolder&& moved) : Resource(std::move(moved)) {}
 
 ViewHolder::~ViewHolder() = default;
 
-void ViewHolder::SetViewProperties(const float bounding_box_min[3],
-                                   const float bounding_box_max[3],
-                                   const float inset_from_min[3],
-                                   const float inset_from_max[3]) {
-  session()->Enqueue(NewSetViewPropertiesCmd(id(), bounding_box_min,
-                                             bounding_box_max, inset_from_min,
-                                             inset_from_max));
+void ViewHolder::SetViewProperties(const float bounding_box_min[3], const float bounding_box_max[3],
+                                   const float inset_from_min[3], const float inset_from_max[3]) {
+  session()->Enqueue(NewSetViewPropertiesCmd(id(), bounding_box_min, bounding_box_max,
+                                             inset_from_min, inset_from_max));
 }
 
-void ViewHolder::SetViewProperties(
-    const fuchsia::ui::gfx::ViewProperties& props) {
+void ViewHolder::SetViewProperties(const fuchsia::ui::gfx::ViewProperties& props) {
   session()->Enqueue(NewSetViewPropertiesCmd(id(), props));
 }
 
 View::View(Session* session, zx::eventpair token, const std::string& debug_name)
     : Resource(session) {
-  session->Enqueue(NewCreateViewCmd(id(), scenic::ToViewToken(std::move(token)),
-                                    debug_name));
+  session->Enqueue(NewCreateViewCmd(id(), scenic::ToViewToken(std::move(token)), debug_name));
 }
 
-View::View(Session* session, fuchsia::ui::views::ViewToken token,
-           const std::string& debug_name)
+View::View(Session* session, fuchsia::ui::views::ViewToken token, const std::string& debug_name)
     : Resource(session) {
   session->Enqueue(NewCreateViewCmd(id(), std::move(token), debug_name));
 }
 
 View::View(Session* session, fuchsia::ui::views::ViewToken token,
-           fuchsia::ui::views::ViewRefControl control_ref,
-           fuchsia::ui::views::ViewRef view_ref, const std::string& debug_name)
+           fuchsia::ui::views::ViewRefControl control_ref, fuchsia::ui::views::ViewRef view_ref,
+           const std::string& debug_name)
     : Resource(session) {
-  session->Enqueue(NewCreateViewCmd(id(), std::move(token),
-                                    std::move(control_ref), std::move(view_ref),
-                                    debug_name));
+  session->Enqueue(NewCreateViewCmd(id(), std::move(token), std::move(control_ref),
+                                    std::move(view_ref), debug_name));
 }
 
 View::View(View&& moved) : Resource(std::move(moved)) {}
@@ -402,8 +354,7 @@ OpacityNodeHACK::OpacityNodeHACK(Session* session) : ContainerNode(session) {
   session->Enqueue(NewCreateOpacityNodeCmdHACK(id()));
 }
 
-OpacityNodeHACK::OpacityNodeHACK(OpacityNodeHACK&& moved)
-    : ContainerNode(std::move(moved)) {}
+OpacityNodeHACK::OpacityNodeHACK(OpacityNodeHACK&& moved) : ContainerNode(std::move(moved)) {}
 
 OpacityNodeHACK::~OpacityNodeHACK() = default;
 
@@ -412,8 +363,7 @@ void OpacityNodeHACK::SetOpacity(float opacity) {
   session()->Enqueue(NewSetOpacityCmd(id(), opacity));
 }
 
-Variable::Variable(Session* session, fuchsia::ui::gfx::Value initial_value)
-    : Resource(session) {
+Variable::Variable(Session* session, fuchsia::ui::gfx::Value initial_value) : Resource(session) {
   session->Enqueue(NewCreateVariableCmd(id(), std::move(initial_value)));
 }
 
@@ -429,9 +379,7 @@ Scene::Scene(Scene&& moved) : ContainerNode(std::move(moved)) {}
 
 Scene::~Scene() = default;
 
-void Scene::AddLight(uint32_t light_id) {
-  session()->Enqueue(NewAddLightCmd(id(), light_id));
-}
+void Scene::AddLight(uint32_t light_id) { session()->Enqueue(NewAddLightCmd(id(), light_id)); }
 
 void Scene::AddAmbientLight(uint32_t light_id) {
   session()->Enqueue(NewSceneAddAmbientLightCmd(id(), light_id));
@@ -447,17 +395,15 @@ void Scene::AddPointLight(uint32_t light_id) {
 
 void Scene::DetachLights() { session()->Enqueue(NewDetachLightsCmd(id())); }
 
-void CameraBase::SetTransform(const float eye_position[3],
-                              const float eye_look_at[3],
+void CameraBase::SetTransform(const float eye_position[3], const float eye_look_at[3],
                               const float eye_up[3]) {
-  session()->Enqueue(
-      NewSetCameraTransformCmd(id(), eye_position, eye_look_at, eye_up));
+  session()->Enqueue(NewSetCameraTransformCmd(id(), eye_position, eye_look_at, eye_up));
 }
 
-void CameraBase::SetPoseBuffer(const Buffer& buffer, uint32_t num_entries,
-                               int64_t base_time, uint64_t time_interval) {
-  session()->Enqueue(NewSetCameraPoseBufferCmd(id(), buffer.id(), num_entries,
-                                               base_time, time_interval));
+void CameraBase::SetPoseBuffer(const Buffer& buffer, uint32_t num_entries, int64_t base_time,
+                               uint64_t time_interval) {
+  session()->Enqueue(
+      NewSetCameraPoseBufferCmd(id(), buffer.id(), num_entries, base_time, time_interval));
 }
 
 Camera::Camera(const Scene& scene) : Camera(scene.session(), scene.id()) {}
@@ -474,23 +420,19 @@ void Camera::SetProjection(const float fovy) {
   session()->Enqueue(NewSetCameraProjectionCmd(id(), fovy));
 }
 
-StereoCamera::StereoCamera(const Scene& scene)
-    : StereoCamera(scene.session(), scene.id()) {}
+StereoCamera::StereoCamera(const Scene& scene) : StereoCamera(scene.session(), scene.id()) {}
 
-StereoCamera::StereoCamera(Session* session, uint32_t scene_id)
-    : CameraBase(session) {
+StereoCamera::StereoCamera(Session* session, uint32_t scene_id) : CameraBase(session) {
   session->Enqueue(NewCreateStereoCameraCmd(id(), scene_id));
 }
 
-StereoCamera::StereoCamera(StereoCamera&& moved)
-    : CameraBase(std::move(moved)) {}
+StereoCamera::StereoCamera(StereoCamera&& moved) : CameraBase(std::move(moved)) {}
 
 StereoCamera::~StereoCamera() = default;
 
 void StereoCamera::SetStereoProjection(const float left_projection[16],
                                        const float right_projection[16]) {
-  session()->Enqueue(
-      NewSetStereoCameraProjectionCmd(id(), left_projection, right_projection));
+  session()->Enqueue(NewSetStereoCameraProjectionCmd(id(), left_projection, right_projection));
 }
 
 Renderer::Renderer(Session* session) : Resource(session) {
@@ -525,9 +467,7 @@ void Renderer::SetEnableDebugging(bool enable_debugging) {
   SetParam(std::move(param));
 }
 
-Layer::Layer(Session* session) : Resource(session) {
-  session->Enqueue(NewCreateLayerCmd(id()));
-}
+Layer::Layer(Session* session) : Resource(session) { session->Enqueue(NewCreateLayerCmd(id())); }
 
 Layer::Layer(Layer&& moved) : Resource(std::move(moved)) {}
 
@@ -537,9 +477,7 @@ void Layer::SetRenderer(uint32_t renderer_id) {
   session()->Enqueue(NewSetRendererCmd(id(), renderer_id));
 }
 
-void Layer::SetSize(const float size[2]) {
-  session()->Enqueue(NewSetSizeCmd(id(), size));
-}
+void Layer::SetSize(const float size[2]) { session()->Enqueue(NewSetSizeCmd(id(), size)); }
 
 LayerStack::LayerStack(Session* session) : Resource(session) {
   session->Enqueue(NewCreateLayerStackCmd(id()));
@@ -549,24 +487,19 @@ LayerStack::LayerStack(LayerStack&& moved) : Resource(std::move(moved)) {}
 
 LayerStack::~LayerStack() = default;
 
-void LayerStack::AddLayer(uint32_t layer_id) {
-  session()->Enqueue(NewAddLayerCmd(id(), layer_id));
-}
+void LayerStack::AddLayer(uint32_t layer_id) { session()->Enqueue(NewAddLayerCmd(id(), layer_id)); }
 
 void LayerStack::RemoveLayer(uint32_t layer_id) {
   session()->Enqueue(NewRemoveLayerCmd(id(), layer_id));
 }
 
-void LayerStack::RemoveAllLayers() {
-  session()->Enqueue(NewRemoveAllLayersCmd(id()));
-}
+void LayerStack::RemoveAllLayers() { session()->Enqueue(NewRemoveAllLayersCmd(id())); }
 
 DisplayCompositor::DisplayCompositor(Session* session) : Resource(session) {
   session->Enqueue(NewCreateDisplayCompositorCmd(id()));
 }
 
-DisplayCompositor::DisplayCompositor(DisplayCompositor&& moved)
-    : Resource(std::move(moved)) {}
+DisplayCompositor::DisplayCompositor(DisplayCompositor&& moved) : Resource(std::move(moved)) {}
 
 DisplayCompositor::~DisplayCompositor() = default;
 
@@ -574,11 +507,10 @@ void DisplayCompositor::SetLayerStack(uint32_t layer_stack_id) {
   session()->Enqueue(NewSetLayerStackCmd(id(), layer_stack_id));
 }
 
-void DisplayCompositor::SetColorConversion(
-    const std::array<float, 3>& preoffsets, const std::array<float, 9>& matrix,
-    const std::array<float, 3>& postoffsets) {
-  session()->Enqueue(NewSetDisplayColorConversionCmdHACK(id(), preoffsets,
-                                                         matrix, postoffsets));
+void DisplayCompositor::SetColorConversion(const std::array<float, 3>& preoffsets,
+                                           const std::array<float, 9>& matrix,
+                                           const std::array<float, 3>& postoffsets) {
+  session()->Enqueue(NewSetDisplayColorConversionCmdHACK(id(), preoffsets, matrix, postoffsets));
 }
 
 void DisplayCompositor::SetLayoutRotation(uint32_t rotation_degrees) {
@@ -607,9 +539,7 @@ Light::Light(Light&& moved) : Resource(std::move(moved)) {}
 
 Light::~Light() = default;
 
-void Light::SetColor(const float rgb[3]) {
-  session()->Enqueue(NewSetLightColorCmd(id(), rgb));
-}
+void Light::SetColor(const float rgb[3]) { session()->Enqueue(NewSetLightColorCmd(id(), rgb)); }
 
 void Light::SetColor(uint32_t variable_id) {
   session()->Enqueue(NewSetLightColorCmd(id(), variable_id));
@@ -629,8 +559,7 @@ DirectionalLight::DirectionalLight(Session* session) : Light(session) {
   session->Enqueue(NewCreateDirectionalLightCmd(id()));
 }
 
-DirectionalLight::DirectionalLight(DirectionalLight&& moved)
-    : Light(std::move(moved)) {}
+DirectionalLight::DirectionalLight(DirectionalLight&& moved) : Light(std::move(moved)) {}
 
 DirectionalLight::~DirectionalLight() = default;
 
