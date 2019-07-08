@@ -23,6 +23,7 @@ group("tests") {
   testonly = true
   data_deps = [
     "hello_world:tests",
+    "media:tests",
     "rust_static_linking:static_linking_tests",
     "isolated_cache:tests",
   ]
