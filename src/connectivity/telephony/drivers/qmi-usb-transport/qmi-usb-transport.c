@@ -17,7 +17,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <usb/usb.h>
-#include <zircon/device/qmi-transport.h>
 #include <zircon/hw/usb/cdc.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/port.h>
