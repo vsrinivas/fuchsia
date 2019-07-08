@@ -150,7 +150,11 @@ func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []build.Ima
 	hasRAMKernel := files[len(files)-1].name == kernelNetsvcName
 	n := netboot.NewClient(time.Second)
 	if hasRAMKernel {
-		return n.Boot(addr)
+		// Try to send the boot command a few times, as there's no ack, so it's
+		// not possible to tell if it's successfully booted or not.
+		for i := 0; i < 5; i++ {
+			n.Boot(addr)
+		}
 	}
 	return n.Reboot(addr)
 }
