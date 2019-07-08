@@ -9,6 +9,7 @@
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/fit/function.h>
 #include <lib/svc/cpp/services.h>
+#include <zircon/status.h>
 
 #include <utility>
 
@@ -84,7 +85,23 @@ CloudProviderFactory::CloudProviderFactory(
   FXL_DCHECK(!api_key_.empty());
 }
 
-CloudProviderFactory::~CloudProviderFactory() { services_loop_.Shutdown(); }
+CloudProviderFactory::~CloudProviderFactory() {
+  // Kill the cloud provider instance and wait until it disconnects before
+  // shutting down the services thread that runs the token manager that is
+  // exposed to it.
+  cloud_provider_controller_->Kill();
+  auto channel = cloud_provider_controller_.Unbind().TakeChannel();
+  zx_signals_t observed;
+  auto wait_status =
+      channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(zx::sec(5)), &observed);
+  if (wait_status != ZX_OK) {
+    FXL_LOG(WARNING) << "Failed waiting for the cloud provider to close (timeout?): "
+                     << zx_status_get_string(wait_status);
+  }
+
+  // Now it's safe to shut down the services loop.
+  services_loop_.Shutdown();
+}
 
 void CloudProviderFactory::Init() {
   services_loop_.StartThread();
