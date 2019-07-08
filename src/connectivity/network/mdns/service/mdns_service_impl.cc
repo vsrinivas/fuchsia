@@ -211,10 +211,12 @@ void MdnsServiceImpl::PublishServiceInstance(
 MdnsServiceImpl::Subscriber::Subscriber(
     fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber> handle, fit::closure deleter) {
   client_.Bind(std::move(handle));
-  client_.set_error_handler([this, deleter = std::move(deleter)](zx_status_t status) {
+  client_.set_error_handler([this, deleter = std::move(deleter)](zx_status_t status) mutable {
+    // Clearing the error handler frees the capture list, so we need to save |deleter|.
+    auto save_deleter = std::move(deleter);
     client_.set_error_handler(nullptr);
     client_.Unbind();
-    deleter();
+    save_deleter();
   });
 }
 
@@ -349,9 +351,11 @@ MdnsServiceImpl::ResponderPublisher::ResponderPublisher(
     : responder_(std::move(responder)), callback_(std::move(callback)) {
   FXL_DCHECK(responder_);
 
-  responder_.set_error_handler([this, deleter = std::move(deleter)](zx_status_t status) {
+  responder_.set_error_handler([this, deleter = std::move(deleter)](zx_status_t status) mutable {
+    // Clearing the error handler frees the capture list, so we need to save |deleter|.
+    auto save_deleter = std::move(deleter);
     responder_.set_error_handler(nullptr);
-    deleter();
+    save_deleter();
   });
 
   responder_.events().SetSubtypes = [this](std::vector<std::string> subtypes) {
