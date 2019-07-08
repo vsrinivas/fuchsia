@@ -61,7 +61,7 @@ func New(indexDir string, blobDir *fdio.Directory) (*Filesystem, error) {
 		fs:                   f,
 
 		dirs: map[string]fs.Directory{
-			"ctl": &rootDirectory{
+			"ctl": &ctlDirectory{
 				unsupportedDirectory: unsupportedDirectory("/ctl"),
 				fs:                   f,
 				dirs: map[string]fs.Directory{
@@ -80,7 +80,6 @@ func New(indexDir string, blobDir *fdio.Directory) (*Filesystem, error) {
 				unsupportedDirectory: unsupportedDirectory("/needs"),
 				fs:                   f,
 			},
-			"garbage": unsupportedDirectory("/garbage"),
 			"packages": &packagesRoot{
 				unsupportedDirectory: unsupportedDirectory("/packages"),
 				fs:                   f,
@@ -90,10 +89,6 @@ func New(indexDir string, blobDir *fdio.Directory) (*Filesystem, error) {
 				fs:                   f,
 			},
 			"system": unsupportedDirectory("/system"),
-			"validation": &validationDir{
-				unsupportedDirectory: unsupportedDirectory("/validation"),
-				fs:                   f,
-			},
 		},
 	}
 

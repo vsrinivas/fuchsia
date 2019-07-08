@@ -5,7 +5,6 @@
 package pkgfs
 
 import (
-	"log"
 	"strings"
 	"sync"
 	"thinfs/fs"
@@ -89,17 +88,4 @@ func (d *rootDirectory) dir(path string) fs.Directory {
 
 func (d *rootDirectory) dirLocked(path string) fs.Directory {
 	return d.dirs[path]
-}
-
-func (d *rootDirectory) Unlink(path string) error {
-	// the toplevel "garbage" file is a special control file. When it is
-	// unlinked, we trigger garbage collection.
-	if path == "garbage" {
-		if err := d.fs.GC(); err != nil {
-			log.Printf("unlink garbage: %s", err)
-		}
-		return nil
-	}
-
-	return d.unsupportedDirectory.Unlink(path)
 }
