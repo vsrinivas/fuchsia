@@ -66,8 +66,8 @@ executable("hub_tests") {
   deps = [
     "//garnet/bin/sysmgr:lib",
     "//garnet/public/lib/async_promise",
-    "//garnet/public/lib/inspect/query",
-    "//garnet/public/lib/inspect/testing",
+    "//garnet/public/lib/inspect_deprecated/query",
+    "//garnet/public/lib/inspect_deprecated/testing",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",

@@ -7,9 +7,9 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/inspect/deprecated/expose.h>
-#include <lib/inspect/reader.h>
-#include <lib/inspect/testing/inspect.h>
+#include <lib/inspect_deprecated/deprecated/expose.h>
+#include <lib/inspect_deprecated/reader.h>
+#include <lib/inspect_deprecated/testing/inspect.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <src/lib/fxl/strings/substitute.h>
 #include <zircon/device/vfs.h>
@@ -24,7 +24,7 @@ using ::fxl::Substitute;
 using sys::testing::EnclosingEnvironment;
 using ::testing::ElementsAre;
 using ::testing::UnorderedElementsAre;
-using namespace inspect::testing;
+using namespace inspect_deprecated::testing;
 
 constexpr char kTestComponent[] =
     "fuchsia-pkg://fuchsia.com/inspect_vmo_integration_tests#meta/"
@@ -38,8 +38,7 @@ class InspectTest : public sys::testing::TestWithEnvironment {
     launch_info.url = kTestComponent;
 
     environment_ = CreateNewEnclosingEnvironment("test", CreateServices());
-    environment_->CreateComponent(std::move(launch_info),
-                                  controller_.NewRequest());
+    environment_->CreateComponent(std::move(launch_info), controller_.NewRequest());
     bool ready = false;
     controller_.events().OnDirectoryReady = [&ready] { ready = true; };
     RunLoopUntil([&ready] { return ready; });
@@ -52,19 +51,18 @@ class InspectTest : public sys::testing::TestWithEnvironment {
   void CheckShutdown() {
     controller_->Kill();
     bool done = false;
-    controller_.events().OnTerminated =
-        [&done](int64_t code, fuchsia::sys::TerminationReason reason) {
-          ASSERT_EQ(fuchsia::sys::TerminationReason::EXITED, reason);
-          done = true;
-        };
+    controller_.events().OnTerminated = [&done](int64_t code,
+                                                fuchsia::sys::TerminationReason reason) {
+      ASSERT_EQ(fuchsia::sys::TerminationReason::EXITED, reason);
+      done = true;
+    };
     RunLoopUntil([&done] { return done; });
   }
 
   // Open the root object connection on the given sync pointer.
   // Returns ZX_OK on success.
   zx_status_t GetInspectVmo(zx::vmo* out_vmo) {
-    files::Glob glob(Substitute("/hub/r/test/*/c/$0/*/out/objects/root.inspect",
-                                kTestProcessName));
+    files::Glob glob(Substitute("/hub/r/test/*/c/$0/*/out/objects/root.inspect", kTestProcessName));
     if (glob.size() == 0) {
       return ZX_ERR_NOT_FOUND;
     }
@@ -104,44 +102,37 @@ TEST_F(InspectTest, ReadHierarchy) {
   zx::vmo vmo;
   ASSERT_EQ(ZX_OK, GetInspectVmo(&vmo));
 
-  auto hierarchy = inspect::ReadFromVmo(std::move(vmo)).take_value();
+  auto hierarchy = inspect_deprecated::ReadFromVmo(std::move(vmo)).take_value();
 
   EXPECT_THAT(
       hierarchy,
       AllOf(
           NodeMatches(NameMatches("root")),
           ChildrenMatch(UnorderedElementsAre(
-              AllOf(NodeMatches(AllOf(
-                        NameMatches("t1"),
-                        PropertyList(UnorderedElementsAre(
-                            StringPropertyIs("version", "1.0"),
-                            ByteVectorPropertyIs(
-                                "frame", std::vector<uint8_t>({0, 0, 0})))),
-                        MetricList(
-                            UnorderedElementsAre(IntMetricIs("value", -10))))),
+              AllOf(NodeMatches(
+                        AllOf(NameMatches("t1"),
+                              PropertyList(UnorderedElementsAre(
+                                  StringPropertyIs("version", "1.0"),
+                                  ByteVectorPropertyIs("frame", std::vector<uint8_t>({0, 0, 0})))),
+                              MetricList(UnorderedElementsAre(IntMetricIs("value", -10))))),
                     ChildrenMatch(UnorderedElementsAre(
-                        NodeMatches(AllOf(NameMatches("item-0x0"),
-                                          MetricList(UnorderedElementsAre(
-                                              IntMetricIs("value", 10))))),
-                        NodeMatches(AllOf(NameMatches("item-0x1"),
-                                          MetricList(UnorderedElementsAre(
-                                              IntMetricIs("value", 100)))))
+                        NodeMatches(AllOf(NameMatches("item-0x0"), MetricList(UnorderedElementsAre(
+                                                                       IntMetricIs("value", 10))))),
+                        NodeMatches(AllOf(NameMatches("item-0x1"), MetricList(UnorderedElementsAre(
+                                                                       IntMetricIs("value", 100)))))
 
                             ))),
-              AllOf(
-                  NodeMatches(AllOf(
-                      NameMatches("t2"),
-                      PropertyList(UnorderedElementsAre(
-                          StringPropertyIs("version", "1.0"),
-                          ByteVectorPropertyIs(
-                              "frame", std::vector<uint8_t>({0, 0, 0})))),
-                      MetricList(
-                          UnorderedElementsAre(IntMetricIs("value", -10))))),
-                  ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
-                      NameMatches("item-0x2"), MetricList(UnorderedElementsAre(
-                                                   IntMetricIs("value", 4)))))))
+              AllOf(NodeMatches(
+                        AllOf(NameMatches("t2"),
+                              PropertyList(UnorderedElementsAre(
+                                  StringPropertyIs("version", "1.0"),
+                                  ByteVectorPropertyIs("frame", std::vector<uint8_t>({0, 0, 0})))),
+                              MetricList(UnorderedElementsAre(IntMetricIs("value", -10))))),
+                    ChildrenMatch(UnorderedElementsAre(NodeMatches(
+                        AllOf(NameMatches("item-0x2"),
+                              MetricList(UnorderedElementsAre(IntMetricIs("value", 4)))))))
 
-                      )))));
+                        )))));
 }
 
 }  // namespace

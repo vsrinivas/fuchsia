@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/inspect/deprecated/exposed_object.h>
+#include <lib/inspect_deprecated/deprecated/exposed_object.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include "lib/inspect/deprecated/object_dir.h"
+#include "lib/inspect_deprecated/deprecated/object_dir.h"
 
 const char* VALUE = "value";
 
@@ -24,20 +24,18 @@ class Item : public component::ExposedObject {
 class Table : public component::ExposedObject {
  public:
   Table(const std::string& name) : ExposedObject("table-" + name) {
-    object_dir().set_metric(
-        {"item_size"},
-        component::CallbackMetric([this](component::Metric* out_metric) {
-          uint64_t sum = 0;
-          for (const auto& item : items_) {
-            sum += item->size();
-          }
-          out_metric->SetUInt(sum);
-        }));
+    object_dir().set_metric({"item_size"},
+                            component::CallbackMetric([this](component::Metric* out_metric) {
+                              uint64_t sum = 0;
+                              for (const auto& item : items_) {
+                                sum += item->size();
+                              }
+                              out_metric->SetUInt(sum);
+                            }));
     object_dir().set_prop("version", "1.0");
     // Try binary values and keys.
     object_dir().set_prop("frame", std::vector<uint8_t>({0x10, 0x00, 0x10}));
-    object_dir().set_prop(std::string("\x10\x10", 2),
-                          std::vector<uint8_t>({0, 0, 0}));
+    object_dir().set_prop(std::string("\x10\x10", 2), std::vector<uint8_t>({0, 0, 0}));
     object_dir().set_metric(std::string("\x10", 1), component::IntMetric(-10));
   }
 
@@ -74,8 +72,7 @@ int main(int argc, const char** argv) {
   invalid.set_prop("test1", "...");
   invalid.set_metric("test2", component::IntMetric(10));
   invalid.set_child(component::Object::Make("temp"));
-  invalid.set_children_callback(
-      [](std::vector<std::shared_ptr<component::Object>>* out) {});
+  invalid.set_children_callback([](std::vector<std::shared_ptr<component::Object>>* out) {});
   invalid.add_metric("test2", 2);
   invalid.sub_metric("test2", 2);
 
@@ -103,8 +100,7 @@ int main(int argc, const char** argv) {
   fidl::BindingSet<fuchsia::inspect::Inspect> inspect_bindings_;
   context->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
       fuchsia::inspect::Inspect::Name_,
-      std::make_unique<vfs::Service>(
-          inspect_bindings_.GetHandler(root_object.object().get())));
+      std::make_unique<vfs::Service>(inspect_bindings_.GetHandler(root_object.object().get())));
 
   loop.Run();
   return 0;

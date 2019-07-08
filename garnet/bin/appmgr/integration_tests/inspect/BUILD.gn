@@ -26,7 +26,7 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/inspect:component",
+    "//garnet/public/lib/inspect_deprecated:component",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -40,7 +40,7 @@ executable("test") {
   ]
 
   deps = [
-    "//garnet/public/lib/inspect",
+    "//garnet/public/lib/inspect_deprecated",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
@@ -56,7 +56,7 @@ executable("bin-vmo") {
   ]
 
   deps = [
-    "//garnet/public/lib/inspect:component",
+    "//garnet/public/lib/inspect_deprecated:component",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -71,8 +71,8 @@ executable("test-vmo") {
   ]
 
   deps = [
-    "//garnet/public/lib/inspect:reader",
-    "//garnet/public/lib/inspect/testing",
+    "//garnet/public/lib/inspect_deprecated:reader",
+    "//garnet/public/lib/inspect_deprecated/testing",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
@@ -89,7 +89,7 @@ executable("bin-health") {
   ]
 
   deps = [
-    "//garnet/public/lib/inspect:component",
+    "//garnet/public/lib/inspect_deprecated:component",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -104,8 +104,8 @@ executable("test-health") {
   ]
 
   deps = [
-    "//garnet/public/lib/inspect:reader",
-    "//garnet/public/lib/inspect/testing",
+    "//garnet/public/lib/inspect_deprecated:reader",
+    "//garnet/public/lib/inspect_deprecated/testing",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",

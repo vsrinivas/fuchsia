@@ -7,7 +7,7 @@
 
 #include <fbl/string.h>
 #include <fs/lazy-dir.h>
-#include <lib/inspect/deprecated/exposed_object.h>
+#include <lib/inspect_deprecated/deprecated/exposed_object.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <src/lib/fxl/strings/string_view.h>

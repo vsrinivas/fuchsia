@@ -8,7 +8,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/inspect/deprecated/expose.h>
+#include <lib/inspect_deprecated/deprecated/expose.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <src/lib/fxl/strings/substitute.h>
 
@@ -36,8 +36,7 @@ class InspectTest : public sys::testing::TestWithEnvironment {
     launch_info.url = kTestComponent;
 
     environment_ = CreateNewEnclosingEnvironment("test", CreateServices());
-    environment_->CreateComponent(std::move(launch_info),
-                                  controller_.NewRequest());
+    environment_->CreateComponent(std::move(launch_info), controller_.NewRequest());
     bool ready = false;
     controller_.events().OnDirectoryReady = [&ready] { ready = true; };
     RunLoopUntil([&ready] { return ready; });
@@ -47,37 +46,33 @@ class InspectTest : public sys::testing::TestWithEnvironment {
   void CheckShutdown() {
     controller_->Kill();
     bool done = false;
-    controller_.events().OnTerminated =
-        [&done](int64_t code, fuchsia::sys::TerminationReason reason) {
-          ASSERT_EQ(fuchsia::sys::TerminationReason::EXITED, reason);
-          done = true;
-        };
+    controller_.events().OnTerminated = [&done](int64_t code,
+                                                fuchsia::sys::TerminationReason reason) {
+      ASSERT_EQ(fuchsia::sys::TerminationReason::EXITED, reason);
+      done = true;
+    };
     RunLoopUntil([&done] { return done; });
   }
 
   // Open the root object connection on the given sync pointer.
   // Returns ZX_OK on success.
   zx_status_t GetInspectConnection(fuchsia::inspect::InspectSyncPtr* out_ptr) {
-    files::Glob glob(
-        Substitute("/hub/r/test/*/c/$0/*/out/objects", kTestProcessName));
+    files::Glob glob(Substitute("/hub/r/test/*/c/$0/*/out/objects", kTestProcessName));
     if (glob.size() == 0) {
       return ZX_ERR_NOT_FOUND;
     }
 
-    std::string path =
-        Substitute("$0/$1", std::string(*glob.begin()),
-                   std::string(fuchsia::inspect::Inspect::Name_));
+    std::string path = Substitute("$0/$1", std::string(*glob.begin()),
+                                  std::string(fuchsia::inspect::Inspect::Name_));
 
-    return fdio_service_connect(path.c_str(),
-                                out_ptr->NewRequest().TakeChannel().release());
+    return fdio_service_connect(path.c_str(), out_ptr->NewRequest().TakeChannel().release());
   }
 
   // Traverse from the current location of ptr down the object tree to a child
   // with the given name.
   // Returns true on success, otherwise false is returned and ptr is not
   // changed.
-  bool Traverse(fuchsia::inspect::InspectSyncPtr* ptr,
-                const std::string& name) {
+  bool Traverse(fuchsia::inspect::InspectSyncPtr* ptr, const std::string& name) {
     fuchsia::inspect::InspectSyncPtr child;
     bool ret;
     (*ptr)->OpenChild(name, child.NewRequest(), &ret);
@@ -98,8 +93,7 @@ TEST_F(InspectTest, InspectTopLevel) {
 
   fidl::VectorPtr<std::string> children;
   inspect->ListChildren(&children);
-  EXPECT_THAT(*children,
-              UnorderedElementsAre("table-t1", "table-t2", "lazy_child"));
+  EXPECT_THAT(*children, UnorderedElementsAre("table-t1", "table-t2", "lazy_child"));
 }
 
 MATCHER_P2(StringProperty, name, value, "") {
@@ -111,13 +105,11 @@ MATCHER_P2(VectorProperty, name, value, "") {
 }
 
 MATCHER_P2(UIntMetric, name, value, "") {
-  return arg.key == name && arg.value.is_uint_value() &&
-         arg.value.uint_value() == (uint64_t)value;
+  return arg.key == name && arg.value.is_uint_value() && arg.value.uint_value() == (uint64_t)value;
 }
 
 MATCHER_P2(IntMetric, name, value, "") {
-  return arg.key == name && arg.value.is_int_value() &&
-         arg.value.int_value() == (int64_t)value;
+  return arg.key == name && arg.value.is_int_value() && arg.value.int_value() == (int64_t)value;
 }
 
 TEST_F(InspectTest, InspectOpenRead) {
@@ -134,12 +126,11 @@ TEST_F(InspectTest, InspectOpenRead) {
   ASSERT_EQ(ZX_OK, inspect->ReadData(&obj));
   EXPECT_EQ("table-t1", obj.name);
   EXPECT_THAT(*obj.properties,
-              UnorderedElementsAre(
-                  StringProperty("version", "1.0"),
-                  VectorProperty("frame", ByteVector({0x10, 0x00, 0x10})),
-                  VectorProperty("\x10\x10", ByteVector({0x00, 0x00, 0x00}))));
-  EXPECT_THAT(*obj.metrics, UnorderedElementsAre(UIntMetric("item_size", 32),
-                                                 IntMetric("\x10", -10)));
+              UnorderedElementsAre(StringProperty("version", "1.0"),
+                                   VectorProperty("frame", ByteVector({0x10, 0x00, 0x10})),
+                                   VectorProperty("\x10\x10", ByteVector({0x00, 0x00, 0x00}))));
+  EXPECT_THAT(*obj.metrics,
+              UnorderedElementsAre(UIntMetric("item_size", 32), IntMetric("\x10", -10)));
 
   ASSERT_EQ(ZX_OK, GetInspectConnection(&inspect));
   ASSERT_TRUE(Traverse(&inspect, "table-t2"));
@@ -154,8 +145,7 @@ TEST_F(InspectTest, InspectOpenRead) {
   fuchsia::inspect::Object subtable;
   fuchsia::inspect::InspectSyncPtr child_request;
   bool ok = false;
-  ASSERT_EQ(ZX_OK, inspect->OpenChild("table-subtable",
-                                      child_request.NewRequest(), &ok));
+  ASSERT_EQ(ZX_OK, inspect->OpenChild("table-subtable", child_request.NewRequest(), &ok));
   ASSERT_TRUE(ok);
   child_request->ReadData(&subtable);
   EXPECT_EQ(subtable.name, "table-subtable");
@@ -163,8 +153,7 @@ TEST_F(InspectTest, InspectOpenRead) {
   ASSERT_EQ(ZX_OK, child_request->ListChildren(&children));
   EXPECT_THAT(*children, UnorderedElementsAre("item-0x3"));
   EXPECT_THAT(*subtable.metrics,
-              UnorderedElementsAre(UIntMetric("item_size", 16),
-                                   IntMetric("\x10", -10)));
+              UnorderedElementsAre(UIntMetric("item_size", 16), IntMetric("\x10", -10)));
 
   ASSERT_EQ(ZX_OK, GetInspectConnection(&inspect));
   fuchsia::inspect::InspectSyncPtr lazy_child;
@@ -173,8 +162,7 @@ TEST_F(InspectTest, InspectOpenRead) {
   ASSERT_TRUE(open_ok);
   obj = fuchsia::inspect::Object();
   lazy_child->ReadData(&obj);
-  EXPECT_THAT(*obj.properties,
-              UnorderedElementsAre(StringProperty("version", "1")));
+  EXPECT_THAT(*obj.properties, UnorderedElementsAre(StringProperty("version", "1")));
 }
 
 }  // namespace
