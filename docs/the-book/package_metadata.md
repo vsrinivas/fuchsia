@@ -4,16 +4,16 @@ The Fuchsia package format contains an extensive metadata directory. This
 document describes the metadata extensions that are understood by Fuchsia
 itself.
 
-See [/garnet/go/src/pm#Structure-of-a-Fuchsia-Package] for
+See [/garnet/go/src/pm#Structure-of-a-Fuchsia-Package][pm-structure] for
 more information about where these files appear in a package.
 
-## metadata
+## Metadata
 
-See [/garnet/go/src/pm#metadata]
+See [/garnet/go/src/pm#metadata][pm-metadata]
 
 ## contents
 
-See [/garnet/go/src/pm#contents]
+See [/garnet/go/src/pm#contents][pm-contents]
 
 ## Component manifest
 
@@ -198,7 +198,7 @@ component may access. A typical component will require a number services from
 component will have the ability to launch other components and access network
 services. A component may declare any list of services in its `services`
 whitelist, but it will only be able to access services present in its
-[environment](../glossary.md#environment). This property should be defined by
+[environment](/docs/glossary.md#environment). This property should be defined by
 all new components, and soon a migration will take place to convert all
 components to define `services`.
 
@@ -210,7 +210,7 @@ to use that feature.
 The set of currently known features are as follows:
 
 - `config-data`, which will provide any configuration data available to the
-  package this component is in that was provided in the [config-data](../development/config_data.md)
+  package this component is in that was provided in the [config-data](/docs/development/config_data.md)
   package on the system.
 
 - `introspection`, which requests access to introspect the system. The
@@ -258,4 +258,7 @@ See [sandboxing.md](sandboxing.md) for more information about sandboxing.
 
 
 [runner]: /sdk/fidl/fuchsia.sys/runner.fidl
-[test-components]: ../development/testing/running_tests_as_components.md
+[test-components]: /docs/development/testing/running_tests_as_components.md
+[pm-contents]: /garnet/go/src/pm#metadata
+[pm-metadata]: /garnet/go/src/pm#metadata
+[pm-structure]: /garnet/go/src/pm#Structure-of-a-Fuchsia-Package
