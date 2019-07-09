@@ -17,7 +17,10 @@ source_set("core") {
   defines = config_flags
 
   sources = [
+    "cfg/7000.c",
     "fuchsia_porting.h",
+    "fw/init.c",
+    "fw/notif-wait.c",
     "ieee80211.h",
     "iwl-config.h",
     "iwl-csr.h",
@@ -43,6 +46,9 @@ source_set("core") {
   deps = [
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
+  ]
+
+  public_deps = [
     "//zircon/public/lib/sync",
   ]
 }
@@ -54,9 +60,6 @@ source_set("pcie") {
   defines = config_flags
 
   sources = [
-    "cfg/7000.c",
-    "fw/init.c",
-    "fw/notif-wait.c",
     "pcie/drv.c",
     "pcie/internal.h",
     "pcie/trans-gen2.c",
