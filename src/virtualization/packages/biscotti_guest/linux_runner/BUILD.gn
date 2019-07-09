@@ -90,7 +90,7 @@ action("extras") {
   args = [
     rebase_path(extras_image),
     rebase_path("${lib_path}/libvulkan_intel_linux.so"),  # Intel Vulkan ICD
-    rebase_path("${lib_path}/libvulkan_linux.so"),  # Vulkan Loader
+    rebase_path("${lib_path}/libvulkan.so"),  # Vulkan Loader
     rebase_path("${exe_path}/virtmagma_unit_tests_linux"),
     rebase_path("${exe_path}/virtmagma_vulkan_unit_tests"),
   ]
