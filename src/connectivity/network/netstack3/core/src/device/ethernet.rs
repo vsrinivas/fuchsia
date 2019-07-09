@@ -218,7 +218,7 @@ impl EthernetIpExt for Ipv6 {
 #[specialize_ip_address]
 pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
     ctx: &mut Context<D>,
-    device_id: u64,
+    device_id: usize,
     local_addr: A,
     body: S,
 ) -> Result<(), (MtuError<S::InnerError>, S)> {
@@ -309,7 +309,7 @@ impl<'a, A: IpAddress> From<&'a MulticastAddr<A>> for Mac {
 /// Receive an Ethernet frame from the network.
 pub(crate) fn receive_frame<D: EventDispatcher>(
     ctx: &mut Context<D>,
-    device_id: u64,
+    device_id: usize,
     bytes: &mut [u8],
 ) {
     let mut buffer = Buf::new(bytes, ..);
@@ -361,7 +361,7 @@ pub(crate) fn receive_frame<D: EventDispatcher>(
 #[specialize_ip_address]
 pub(crate) fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
-    device_id: u64,
+    device_id: usize,
 ) -> Option<AddrSubnet<A>> {
     #[ipv4addr]
     return get_device_state(ctx.state(), device_id).ipv4_addr_sub;
@@ -375,7 +375,7 @@ pub(crate) fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
 /// address.
 pub(crate) fn get_ipv6_link_local_addr<D: EventDispatcher>(
     ctx: &mut Context<D>,
-    device_id: u64,
+    device_id: usize,
 ) -> Ipv6Addr {
     // TODO(brunodalbo) the link local address is subject to the same collision
     //  verifications as prefix global addresses, we should keep a state machine
@@ -388,7 +388,7 @@ pub(crate) fn get_ipv6_link_local_addr<D: EventDispatcher>(
 #[specialize_ip_address]
 pub(crate) fn set_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
-    device_id: u64,
+    device_id: usize,
     addr_sub: AddrSubnet<A>,
 ) {
     #[ipv4addr]
@@ -398,7 +398,7 @@ pub(crate) fn set_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
 }
 
 /// Get the MTU associated with this device.
-pub(crate) fn get_mtu<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64) -> u32 {
+pub(crate) fn get_mtu<D: EventDispatcher>(ctx: &mut Context<D>, device_id: usize) -> u32 {
     get_device_state(ctx.state(), device_id).mtu
 }
 
@@ -408,7 +408,7 @@ pub(crate) fn get_mtu<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64) 
 /// any future conflicting gratuitous ARPs to be ignored.
 pub(crate) fn insert_static_arp_table_entry<D: EventDispatcher>(
     ctx: &mut Context<D>,
-    device_id: u64,
+    device_id: usize,
     addr: Ipv4Addr,
     mac: Mac,
 ) {
@@ -418,7 +418,7 @@ pub(crate) fn insert_static_arp_table_entry<D: EventDispatcher>(
 /// Insert an entry into this device's NDP table.
 pub(crate) fn insert_ndp_table_entry<D: EventDispatcher>(
     ctx: &mut Context<D>,
-    device_id: u64,
+    device_id: usize,
     addr: Ipv6Addr,
     mac: Mac,
 ) {
@@ -427,7 +427,7 @@ pub(crate) fn insert_ndp_table_entry<D: EventDispatcher>(
 
 fn get_device_state_mut<D: EventDispatcher>(
     state: &mut StackState<D>,
-    device_id: u64,
+    device_id: usize,
 ) -> &mut EthernetDeviceState {
     // TODO(joshlf): Sometimes we want lookups to be infallible (if we know that
     // the device exists), but sometimes we want to report an error to the user.
@@ -441,7 +441,7 @@ fn get_device_state_mut<D: EventDispatcher>(
 
 fn get_device_state<D: EventDispatcher>(
     state: &StackState<D>,
-    device_id: u64,
+    device_id: usize,
 ) -> &EthernetDeviceState {
     // TODO(joshlf): Sometimes we want lookups to be infallible (if we know that
     // the device exists), but sometimes we want to report an error to the user.
@@ -462,7 +462,7 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
 
     fn send_arp_frame<D: EventDispatcher, S: Serializer>(
         ctx: &mut Context<D>,
-        device_id: u64,
+        device_id: usize,
         dst: Self::HardwareAddr,
         body: S,
     ) -> Result<(), MtuError<S::InnerError>> {
@@ -477,25 +477,25 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
 
     fn get_arp_state<D: EventDispatcher>(
         state: &mut StackState<D>,
-        device_id: u64,
+        device_id: usize,
     ) -> &mut ArpState<Ipv4Addr, Self> {
         &mut get_device_state_mut(state, device_id).ipv4_arp
     }
 
     fn get_protocol_addr<D: EventDispatcher>(
         state: &StackState<D>,
-        device_id: u64,
+        device_id: usize,
     ) -> Option<Ipv4Addr> {
         get_device_state(state, device_id).ipv4_addr_sub.map(AddrSubnet::into_addr)
     }
 
-    fn get_hardware_addr<D: EventDispatcher>(state: &StackState<D>, device_id: u64) -> Mac {
+    fn get_hardware_addr<D: EventDispatcher>(state: &StackState<D>, device_id: usize) -> Mac {
         get_device_state(state, device_id).mac
     }
 
     fn address_resolved<D: EventDispatcher>(
         ctx: &mut Context<D>,
-        device_id: u64,
+        device_id: usize,
         proto_addr: Ipv4Addr,
         hw_addr: Mac,
     ) {
@@ -504,7 +504,7 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
 
     fn address_resolution_failed<D: EventDispatcher>(
         ctx: &mut Context<D>,
-        device_id: u64,
+        device_id: usize,
         proto_addr: Ipv4Addr,
     ) {
         mac_resolution_failed(ctx, device_id, IpAddr::V4(proto_addr));
@@ -520,21 +520,21 @@ impl ndp::NdpDevice for EthernetNdpDevice {
 
     fn get_ndp_state<D: EventDispatcher>(
         state: &mut StackState<D>,
-        device_id: u64,
+        device_id: usize,
     ) -> &mut ndp::NdpState<Self> {
         &mut get_device_state_mut(state, device_id).ndp
     }
 
     fn get_link_layer_addr<D: EventDispatcher>(
         state: &StackState<D>,
-        device_id: u64,
+        device_id: usize,
     ) -> Self::LinkAddress {
         get_device_state(state, device_id).mac
     }
 
     fn get_ipv6_addr<D: EventDispatcher>(
         state: &StackState<D>,
-        device_id: u64,
+        device_id: usize,
     ) -> Option<Ipv6Addr> {
         let state = get_device_state(state, device_id);
         // TODO(brunodalbo) just returning either the configured or EUI
@@ -548,7 +548,7 @@ impl ndp::NdpDevice for EthernetNdpDevice {
 
     fn has_ipv6_addr<D: EventDispatcher>(
         state: &StackState<D>,
-        device_id: u64,
+        device_id: usize,
         address: &Ipv6Addr,
     ) -> bool {
         let state = get_device_state(state, device_id);
@@ -558,7 +558,7 @@ impl ndp::NdpDevice for EthernetNdpDevice {
 
     fn send_ipv6_frame_to<D: EventDispatcher, S: Serializer>(
         ctx: &mut Context<D>,
-        device_id: u64,
+        device_id: usize,
         dst: Mac,
         body: S,
     ) -> Result<(), MtuError<S::InnerError>> {
@@ -573,20 +573,20 @@ impl ndp::NdpDevice for EthernetNdpDevice {
 
     fn send_ipv6_frame<D: EventDispatcher, S: Serializer>(
         ctx: &mut Context<D>,
-        device_id: u64,
+        device_id: usize,
         next_hop: Ipv6Addr,
         body: S,
     ) -> Result<(), MtuError<S::InnerError>> {
         send_ip_frame(ctx, device_id, next_hop, body).map_err(|e| e.0)
     }
 
-    fn get_device_id(id: u64) -> DeviceId {
+    fn get_device_id(id: usize) -> DeviceId {
         DeviceId::new_ethernet(id)
     }
 
     fn address_resolved<D: EventDispatcher>(
         ctx: &mut Context<D>,
-        device_id: u64,
+        device_id: usize,
         address: &Ipv6Addr,
         link_address: Self::LinkAddress,
     ) {
@@ -595,7 +595,7 @@ impl ndp::NdpDevice for EthernetNdpDevice {
 
     fn address_resolution_failed<D: EventDispatcher>(
         ctx: &mut Context<D>,
-        device_id: u64,
+        device_id: usize,
         address: &Ipv6Addr,
     ) {
         mac_resolution_failed(ctx, device_id, IpAddr::V6(*address));
@@ -609,7 +609,7 @@ impl ndp::NdpDevice for EthernetNdpDevice {
 /// resolved either by ARP or NDP.
 fn mac_resolved<D: EventDispatcher>(
     ctx: &mut Context<D>,
-    device_id: u64,
+    device_id: usize,
     address: IpAddr,
     dst_mac: Mac,
 ) {
@@ -649,7 +649,7 @@ fn mac_resolved<D: EventDispatcher>(
 /// fails to resolve either by ARP or NDP.
 fn mac_resolution_failed<D: EventDispatcher>(
     ctx: &mut Context<D>,
-    device_id: u64,
+    device_id: usize,
     address: IpAddr,
 ) {
     // TODO(brunodalbo) what do we do here in regards to the pending frames?

@@ -22,18 +22,18 @@ use crate::{Context, EventDispatcher};
 /// An ID identifying a device.
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct DeviceId {
-    id: u64,
+    id: usize,
     protocol: DeviceProtocol,
 }
 
 impl DeviceId {
     /// Construct a new `DeviceId` for an Ethernet device.
-    pub(crate) fn new_ethernet(id: u64) -> DeviceId {
+    pub(crate) fn new_ethernet(id: usize) -> DeviceId {
         DeviceId { id, protocol: DeviceProtocol::Ethernet }
     }
 
     #[allow(missing_docs)]
-    pub fn id(self) -> u64 {
+    pub fn id(self) -> usize {
         self.id
     }
 }
@@ -104,8 +104,8 @@ pub(crate) struct DeviceLayerState {
     // Invariant: even though each protocol has its own hash map, IDs (used as
     // keys in the hash maps) are unique across all hash maps. This is
     // guaranteed by allocating IDs sequentially, and never re-using an ID.
-    next_id: u64,
-    ethernet: HashMap<u64, EthernetDeviceState>,
+    next_id: usize,
+    ethernet: HashMap<usize, EthernetDeviceState>,
 }
 
 impl DeviceLayerState {
@@ -121,7 +121,7 @@ impl DeviceLayerState {
         DeviceId::new_ethernet(id)
     }
 
-    fn allocate_id(&mut self) -> u64 {
+    fn allocate_id(&mut self) -> usize {
         let id = self.next_id;
         self.next_id += 1;
         id

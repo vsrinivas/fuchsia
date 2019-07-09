@@ -72,8 +72,8 @@ impl ArpHardwareType {
 /// This is used to retry sending ARP requests and to expire existing ARP table entries.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) enum ArpTimerId<P: PType> {
-    RequestRetry { device_id: u64, ip_addr: P },
-    EntryExpiration { device_id: u64, ip_addr: P },
+    RequestRetry { device_id: usize, ip_addr: P },
+    EntryExpiration { device_id: usize, ip_addr: P },
 }
 
 impl Into<TimerId> for ArpTimerId<Ipv4Addr> {
@@ -83,11 +83,11 @@ impl Into<TimerId> for ArpTimerId<Ipv4Addr> {
 }
 
 impl ArpTimerId<Ipv4Addr> {
-    fn new_request_retry_timer_id(device_id: u64, ip_addr: Ipv4Addr) -> TimerId {
+    fn new_request_retry_timer_id(device_id: usize, ip_addr: Ipv4Addr) -> TimerId {
         ArpTimerId::RequestRetry { device_id, ip_addr }.into()
     }
 
-    fn new_entry_expiration_timer_id(device_id: u64, ip_addr: Ipv4Addr) -> TimerId {
+    fn new_entry_expiration_timer_id(device_id: usize, ip_addr: Ipv4Addr) -> TimerId {
         ArpTimerId::EntryExpiration { device_id, ip_addr }.into()
     }
 }
@@ -110,7 +110,7 @@ pub(crate) trait ArpDevice<P: PType + Eq + Hash>: Sized {
     /// request in a device layer frame, and sends it.
     fn send_arp_frame<D: EventDispatcher, S: Serializer>(
         ctx: &mut Context<D>,
-        device_id: u64,
+        device_id: usize,
         dst: Self::HardwareAddr,
         body: S,
     ) -> Result<(), MtuError<S::InnerError>>;
@@ -118,23 +118,23 @@ pub(crate) trait ArpDevice<P: PType + Eq + Hash>: Sized {
     /// Get a mutable reference to a device's ARP state.
     fn get_arp_state<D: EventDispatcher>(
         state: &mut StackState<D>,
-        device_id: u64,
+        device_id: usize,
     ) -> &mut ArpState<P, Self>;
 
     /// Get the protocol address of this interface.
-    fn get_protocol_addr<D: EventDispatcher>(state: &StackState<D>, device_id: u64) -> Option<P>;
+    fn get_protocol_addr<D: EventDispatcher>(state: &StackState<D>, device_id: usize) -> Option<P>;
 
     /// Get the hardware address of this interface.
     fn get_hardware_addr<D: EventDispatcher>(
         state: &StackState<D>,
-        device_id: u64,
+        device_id: usize,
     ) -> Self::HardwareAddr;
 
     /// Notifies the device layer that the hardware address `hw_addr`
     /// was resolved for a the given protocol address `proto_addr`.
     fn address_resolved<D: EventDispatcher>(
         ctx: &mut Context<D>,
-        device_id: u64,
+        device_id: usize,
         proto_addr: P,
         hw_addr: Self::HardwareAddr,
     );
@@ -143,7 +143,7 @@ pub(crate) trait ArpDevice<P: PType + Eq + Hash>: Sized {
     /// the the given protocol address `proto_addr` failed.
     fn address_resolution_failed<D: EventDispatcher>(
         ctx: &mut Context<D>,
-        device_id: u64,
+        device_id: usize,
         proto_addr: P,
     );
 }
@@ -213,7 +213,7 @@ pub(crate) fn receive_arp_packet<
     B: BufferMut,
 >(
     ctx: &mut Context<D>,
-    device_id: u64,
+    device_id: usize,
     src_addr: AD::HardwareAddr,
     dst_addr: AD::HardwareAddr,
     mut buffer: B,
@@ -358,7 +358,7 @@ pub(crate) fn receive_arp_packet<
 /// any future conflicting gratuitous ARPs to be ignored.
 pub(crate) fn insert_static<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
     ctx: &mut Context<D>,
-    device_id: u64,
+    device_id: usize,
     net: P,
     hw: AD::HardwareAddr,
 ) {
@@ -376,7 +376,7 @@ pub(crate) fn insert_static<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDev
 fn insert_dynamic<D: EventDispatcher, P: PType + Hash + Eq, AD: ArpDevice<P>>(
     dispatcher: &mut D,
     state: &mut ArpState<P, AD>,
-    device_id: u64,
+    device_id: usize,
     net: P,
     hw: AD::HardwareAddr,
 ) {
@@ -392,7 +392,7 @@ fn insert_dynamic<D: EventDispatcher, P: PType + Hash + Eq, AD: ArpDevice<P>>(
 /// Look up the hardware address for a network protocol address.
 pub(crate) fn lookup<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
     ctx: &mut Context<D>,
-    device_id: u64,
+    device_id: usize,
     local_addr: AD::HardwareAddr,
     lookup_addr: P,
 ) -> Option<AD::HardwareAddr> {
@@ -423,7 +423,7 @@ const DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD: Duration = Duration::from_secs(60);
 
 fn send_arp_request<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
     ctx: &mut Context<D>,
-    device_id: u64,
+    device_id: usize,
     lookup_addr: P,
 ) {
     let tries_remaining = AD::get_arp_state(ctx.state_mut(), device_id)
@@ -593,7 +593,7 @@ mod tests {
 
     fn send_arp_packet(
         ctx: &mut Context<DummyEventDispatcher>,
-        device_id: u64,
+        device_id: usize,
         op: ArpOp,
         sender_ipv4: Ipv4Addr,
         target_ipv4: Ipv4Addr,
@@ -647,7 +647,7 @@ mod tests {
     // set up a simple testing environment; return the context and
     // the device id to the single ethernet device in the environment.
     // The device has TEST_LOCAL_MAC as its MAC address.
-    fn set_up_simple_test_environment() -> (Context<DummyEventDispatcher>, u64) {
+    fn set_up_simple_test_environment() -> (Context<DummyEventDispatcher>, usize) {
         let mut state = StackState::default();
         let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU).id();
         let ctx = Context::new(state, DummyEventDispatcher::default());

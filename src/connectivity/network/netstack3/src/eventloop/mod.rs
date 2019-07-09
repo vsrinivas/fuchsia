@@ -607,7 +607,9 @@ impl EventLoop {
                     },
                     destination: match v4_entry.dest {
                         EntryDest::Local { device } => {
-                            fidl_net_stack::ForwardingDestination::DeviceId(device.id())
+                            fidl_net_stack::ForwardingDestination::DeviceId(
+                                u64::try_from(device.id()).unwrap(),
+                            )
                         }
                         EntryDest::Remote { next_hop } => {
                             fidl_net_stack::ForwardingDestination::NextHop(
@@ -627,7 +629,9 @@ impl EventLoop {
                     },
                     destination: match v6_entry.dest {
                         EntryDest::Local { device } => {
-                            fidl_net_stack::ForwardingDestination::DeviceId(device.id())
+                            fidl_net_stack::ForwardingDestination::DeviceId(
+                                u64::try_from(device.id()).unwrap(),
+                            )
                         }
                         EntryDest::Remote { next_hop } => {
                             fidl_net_stack::ForwardingDestination::NextHop(

@@ -8,14 +8,14 @@ use std::collections::HashMap;
 
 pub type BindingId = u64;
 
-type RawId = u64;
+type RawId = usize;
 
 pub trait CoreId: Sized + Clone {
     fn raw_id(&self) -> RawId;
 }
 
 impl CoreId for DeviceId {
-    fn raw_id(&self) -> u64 {
+    fn raw_id(&self) -> RawId {
         self.id()
     }
 }
@@ -219,7 +219,7 @@ where
 
     /// Gets an iterator over all tracked devices.
     pub fn iter_devices(&self) -> impl Iterator<Item = &DeviceInfo<C, I>> {
-        self.active_devices.iter().chain(self.inactive_devices.iter()).map(|(_, v)| v)
+        self.active_devices.values().chain(self.inactive_devices.values())
     }
 
     /// Retrieve device with [`BindingId`].
@@ -295,7 +295,7 @@ mod tests {
     type TestDevices = Devices<MockDeviceId, u64>;
 
     #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-    struct MockDeviceId(u64);
+    struct MockDeviceId(usize);
 
     impl CoreId for MockDeviceId {
         fn raw_id(&self) -> RawId {

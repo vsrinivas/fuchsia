@@ -76,28 +76,30 @@ pub(crate) trait NdpDevice: Sized {
     /// Get a mutable reference to a device's NDP state.
     fn get_ndp_state<D: EventDispatcher>(
         state: &mut StackState<D>,
-        device_id: u64,
+        device_id: usize,
     ) -> &mut NdpState<Self>;
 
     /// Get the link layer address for a device.
     fn get_link_layer_addr<D: EventDispatcher>(
         state: &StackState<D>,
-        device_id: u64,
+        device_id: usize,
     ) -> Self::LinkAddress;
 
     /// Get *an* IPv6 address for this device.
     ///
     /// Any **unicast** IPv6 address is a valid return value. Violating this
     /// rule may result in incorrect IP packets being sent.
-    fn get_ipv6_addr<D: EventDispatcher>(state: &StackState<D>, device_id: u64)
-        -> Option<Ipv6Addr>;
+    fn get_ipv6_addr<D: EventDispatcher>(
+        state: &StackState<D>,
+        device_id: usize,
+    ) -> Option<Ipv6Addr>;
 
     /// Checks whether this device has the provided `address`.
     ///
     /// `address` is guaranteed to be a valid unicast address.
     fn has_ipv6_addr<D: EventDispatcher>(
         state: &StackState<D>,
-        device_id: u64,
+        device_id: usize,
         address: &Ipv6Addr,
     ) -> bool;
 
@@ -108,7 +110,7 @@ pub(crate) trait NdpDevice: Sized {
     /// a link-layer frame and encapsulate the provided IPv6 body.
     fn send_ipv6_frame_to<D: EventDispatcher, S: Serializer>(
         ctx: &mut Context<D>,
-        device_id: u64,
+        device_id: usize,
         dst: Self::LinkAddress,
         body: S,
     ) -> Result<(), MtuError<S::InnerError>>;
@@ -120,13 +122,13 @@ pub(crate) trait NdpDevice: Sized {
     /// address from the provided `next_hop` IPv6 address.
     fn send_ipv6_frame<D: EventDispatcher, S: Serializer>(
         ctx: &mut Context<D>,
-        device_id: u64,
+        device_id: usize,
         next_hop: Ipv6Addr,
         body: S,
     ) -> Result<(), MtuError<S::InnerError>>;
 
     /// Retrieves the complete `DeviceId` for a given `id`.
-    fn get_device_id(id: u64) -> DeviceId;
+    fn get_device_id(id: usize) -> DeviceId;
 
     /// Notifies device layer that the link-layer address for the neighbor in
     /// `address` has been resolved to `link_address`.
@@ -135,7 +137,7 @@ pub(crate) trait NdpDevice: Sized {
     /// were queued waiting for address resolution.
     fn address_resolved<D: EventDispatcher>(
         ctx: &mut Context<D>,
-        device_id: u64,
+        device_id: usize,
         address: &Ipv6Addr,
         link_address: Self::LinkAddress,
     );
@@ -144,7 +146,7 @@ pub(crate) trait NdpDevice: Sized {
     /// the neighbor in `address` failed.
     fn address_resolution_failed<D: EventDispatcher>(
         ctx: &mut Context<D>,
-        device_id: u64,
+        device_id: usize,
         address: &Ipv6Addr,
     );
 }
@@ -169,7 +171,7 @@ impl<D: NdpDevice> Default for NdpState<D> {
 /// This is used to retry sending Neighbor Discovery Protocol requests.
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub(crate) struct NdpTimerId {
-    device_id: u64,
+    device_id: usize,
     neighbor_addr: Ipv6Addr,
 }
 
@@ -177,7 +179,7 @@ impl NdpTimerId {
     /// Creates a new `NdpTimerId` wrapped inside a `TimerId` with the provided
     /// `device_id` and `neighbor_addr`.
     pub(crate) fn new_neighbor_solicitation_timer_id(
-        device_id: u64,
+        device_id: usize,
         neighbor_addr: Ipv6Addr,
     ) -> TimerId {
         Self { device_id, neighbor_addr }.into()
@@ -226,7 +228,7 @@ fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(ctx: &mut Context<D>,
 /// Look up the link layer address
 pub(crate) fn lookup<D: EventDispatcher, ND: NdpDevice>(
     ctx: &mut Context<D>,
-    device_id: u64,
+    device_id: usize,
     lookup_addr: Ipv6Addr,
 ) -> Option<ND::LinkAddress> {
     // An IPv6 multicast address should always be sent on a broadcast
@@ -265,7 +267,7 @@ pub(crate) fn lookup<D: EventDispatcher, ND: NdpDevice>(
 /// Insert a neighbor to the known neihbors table.
 pub(crate) fn insert_neighbor<D: EventDispatcher, ND: NdpDevice>(
     ctx: &mut Context<D>,
-    device_id: u64,
+    device_id: usize,
     net: Ipv6Addr,
     hw: ND::LinkAddress,
 ) {
@@ -336,7 +338,7 @@ impl<H> Default for NeighborTable<H> {
 
 fn send_neighbor_solicitation<D: EventDispatcher, ND: NdpDevice>(
     ctx: &mut Context<D>,
-    device_id: u64,
+    device_id: usize,
     lookup_addr: Ipv6Addr,
 ) {
     // TODO(brunodalbo) when we send neighbor solicitations, we SHOULD set
@@ -365,7 +367,7 @@ fn send_neighbor_solicitation<D: EventDispatcher, ND: NdpDevice>(
 
 fn send_neighbor_advertisement<D: EventDispatcher, ND: NdpDevice>(
     ctx: &mut Context<D>,
-    device_id: u64,
+    device_id: usize,
     solicited: bool,
     device_addr: Ipv6Addr,
     dst_ip: Ipv6Addr,
@@ -403,7 +405,7 @@ fn send_neighbor_advertisement<D: EventDispatcher, ND: NdpDevice>(
 /// Helper function to send ndp packet over an NdpDevice
 fn send_ndp_packet<D: EventDispatcher, ND: NdpDevice, B: ByteSlice, M>(
     ctx: &mut Context<D>,
-    device_id: u64,
+    device_id: usize,
     src_ip: Ipv6Addr,
     dst_ip: Ipv6Addr,
     link_addr: ND::LinkAddress,
@@ -457,7 +459,7 @@ pub(crate) fn receive_ndp_packet<D: EventDispatcher, B>(
 
 fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
     ctx: &mut Context<D>,
-    device_id: u64,
+    device_id: usize,
     src_ip: Ipv6Addr,
     dst_ip: Ipv6Addr,
     packet: Icmpv6Packet<B>,
