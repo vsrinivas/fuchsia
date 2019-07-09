@@ -4,7 +4,6 @@
 
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
-#include "garnet/lib/ui/scenic/tests/mocks.h"
 #include "garnet/lib/ui/scenic/tests/scenic_gfx_test.h"
 
 namespace scenic_impl {

@@ -41,7 +41,6 @@ struct SessionContext {
   escher::RoundedRectFactory* escher_rounded_rect_factory = nullptr;
   escher::ReleaseFenceSignaller* release_fence_signaller = nullptr;
   EventTimestamper* event_timestamper = nullptr;
-  SessionManager* session_manager = nullptr;
   FrameScheduler* frame_scheduler = nullptr;
   DisplayManager* display_manager = nullptr;
   SceneGraphWeakPtr scene_graph;

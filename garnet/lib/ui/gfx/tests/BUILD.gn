@@ -14,18 +14,29 @@ group("tests") {
   ]
 }
 
+source_set("mocks") {
+  testonly = true
+  sources = [
+    "frame_scheduler_mocks.cc",
+    "frame_scheduler_mocks.h",
+    "mocks.cc",
+    "mocks.h",
+  ]
+  public_deps = [
+    ":util",
+    "//garnet/lib/ui/gfx",
+    "//garnet/public/lib/inspect",
+  ]
+}
+
 source_set("testing_deps") {
   testonly = true
   sources = [
     "error_reporting_test.cc",
     "error_reporting_test.h",
-    "frame_scheduler_mocks.cc",
-    "frame_scheduler_mocks.h",
     "frame_scheduler_test.cc",
     "frame_scheduler_test.h",
     "gfx_test.h",
-    "mocks.cc",
-    "mocks.h",
     "session_handler_test.cc",
     "session_handler_test.h",
     "session_test.cc",
@@ -34,6 +45,7 @@ source_set("testing_deps") {
     "vk_session_test.h",
   ]
   public_deps = [
+    ":mocks",
     ":util",
     "//garnet/lib/ui/gfx",
     "//garnet/lib/ui/scenic/tests:testing_deps",

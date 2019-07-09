@@ -9,23 +9,26 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-TEST_F(SessionHandlerTest,
-       WhenSessionHandlerDestroyed_ShouldRemoveSessionHandlerPtrFromSessionManager) {
-  ASSERT_NE(session_handler(), nullptr);
+constexpr SessionId kSessionId = 1;
 
-  auto id = session_handler()->session()->id();
+TEST(SessionHandlerTest,
+     WhenSessionHandlerDestroyed_ShouldRemoveSessionHandlerPtrFromSessionManager) {
+  SessionManager manager;
+  SessionContext session_context;
+  scenic_impl::Session session(kSessionId, nullptr);
 
-  auto session_manager = engine_->session_context().session_manager;
-  ASSERT_NE(session_manager, nullptr);
+  CommandDispatcherContext dispatch_context(nullptr, &session, kSessionId);
 
-  EXPECT_NE(session_handler(), nullptr);
-  EXPECT_EQ(session_manager->FindSessionHandler(id), session_handler());
+  auto handler = manager.CreateCommandDispatcher(std::move(dispatch_context), session_context);
+  ASSERT_NE(handler, nullptr);
+
+  EXPECT_EQ(manager.FindSessionHandler(kSessionId), handler.get());
 
   // Reset session_handler
-  command_dispatcher_.reset();
+  handler.reset();
 
-  EXPECT_EQ(session_handler(), nullptr);
-  EXPECT_EQ(session_manager->FindSessionHandler(id), nullptr);
+  EXPECT_EQ(handler, nullptr);
+  EXPECT_EQ(manager.FindSessionHandler(kSessionId), nullptr);
 }
 
 }  // namespace test

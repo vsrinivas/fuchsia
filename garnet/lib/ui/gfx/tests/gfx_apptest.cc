@@ -63,8 +63,8 @@ TEST_F(GfxSystemTest, ReleaseFences) {
   scenic()->CreateSession(session.NewRequest(), nullptr);
   RunLoopUntilIdle();
   EXPECT_EQ(1U, scenic()->num_sessions());
-  auto handler = static_cast<SessionHandlerForTest*>(
-      gfx_system()->engine()->session_manager()->FindSessionHandler(1));
+  auto handler =
+      static_cast<SessionHandlerForTest*>(gfx_system()->session_manager()->FindSessionHandler(1));
   {
     std::vector<fuchsia::ui::scenic::Command> commands;
     commands.push_back(scenic::NewCommand(scenic::NewCreateCircleCmd(1, 50.f)));
@@ -104,8 +104,8 @@ TEST_F(GfxSystemTest, AcquireAndReleaseFences) {
   scenic()->CreateSession(session.NewRequest(), nullptr);
   RunLoopUntilIdle();
   EXPECT_EQ(1U, scenic()->num_sessions());
-  auto handler = static_cast<SessionHandlerForTest*>(
-      gfx_system()->engine()->session_manager()->FindSessionHandler(1));
+  auto handler =
+      static_cast<SessionHandlerForTest*>(gfx_system()->session_manager()->FindSessionHandler(1));
   {
     std::vector<fuchsia::ui::scenic::Command> commands;
     commands.push_back(scenic::NewCommand(scenic::NewCreateCircleCmd(1, 50.f)));

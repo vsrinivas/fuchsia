@@ -8,18 +8,18 @@
 
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
-#include "garnet/lib/ui/scenic/tests/mocks.h"
+#include "garnet/lib/ui/gfx/tests/mocks.h"
 
 namespace scenic_impl {
 namespace test {
 
 void ScenicGfxTest::InitializeScenic(Scenic* scenic) {
   auto display_manager = std::make_unique<gfx::DisplayManager>();
-  display_manager->SetDefaultDisplayForTests(std::make_unique<test::TestDisplay>(
+  display_manager->SetDefaultDisplayForTests(std::make_unique<gfx::test::TestDisplay>(
       /*id*/ 0, /* width */ 0, /* height */ 0));
   command_buffer_sequencer_ = std::make_unique<escher::impl::CommandBufferSequencer>();
-  scenic_->RegisterSystem<GfxSystemForTest>(std::move(display_manager),
-                                            command_buffer_sequencer_.get());
+  scenic_->RegisterSystem<gfx::test::GfxSystemForTest>(std::move(display_manager),
+                                                       command_buffer_sequencer_.get());
 
   RunLoopUntilIdle();  // Finish initialization
 }

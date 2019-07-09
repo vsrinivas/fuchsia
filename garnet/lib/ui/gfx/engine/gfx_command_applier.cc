@@ -65,6 +65,18 @@ constexpr std::array<fuchsia::ui::gfx::Value::Tag, 2> kFloatValueTypes{
 
 }  // anonymous namespace
 
+CommandContext::CommandContext(std::unique_ptr<escher::BatchGpuUploader> uploader)
+    : batch_gpu_uploader_(std::move(uploader)) {}
+
+void CommandContext::Flush() {
+  if (batch_gpu_uploader_) {
+    // Submit regardless of whether or not there are updates to release the
+    // underlying CommandBuffer so the pool and sequencer don't stall out.
+    // TODO(ES-115) to remove this restriction.
+    batch_gpu_uploader_->Submit();
+  }
+}
+
 bool GfxCommandApplier::AssertValueIsOfType(const fuchsia::ui::gfx::Value& value,
                                             const fuchsia::ui::gfx::Value::Tag* tags,
                                             size_t tag_count, Session* session) {

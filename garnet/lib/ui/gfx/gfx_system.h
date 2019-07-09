@@ -9,6 +9,7 @@
 
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/engine/engine.h"
+#include "garnet/lib/ui/gfx/engine/gfx_command_applier.h"
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"
 #include "garnet/lib/ui/scenic/system.h"
 #include "src/ui/lib/escher/escher.h"
@@ -18,12 +19,12 @@ namespace gfx {
 
 class Compositor;
 
-class GfxSystem : public TempSystemDelegate {
+class GfxSystem : public TempSystemDelegate, public SessionUpdater {
  public:
   static constexpr TypeId kTypeId = kGfx;
   static const char* kName;
 
-  explicit GfxSystem(SystemContext context, std::unique_ptr<DisplayManager> display_manager);
+  GfxSystem(SystemContext context, std::unique_ptr<DisplayManager> display_manager);
   ~GfxSystem();
 
   CommandDispatcherUniquePtr CreateCommandDispatcher(CommandDispatcherContext context) override;
@@ -34,6 +35,13 @@ class GfxSystem : public TempSystemDelegate {
   void GetDisplayOwnershipEvent(
       fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) override;
 
+  // |SessionUpdater|
+  virtual UpdateResults UpdateSessions(std::unordered_set<SessionId> sessions_to_update,
+                                       zx_time_t presentation_time, uint64_t trace_id) override;
+
+  // |SessionUpdater|
+  virtual void PrepareFrame(zx_time_t presentation_time, uint64_t trace_id) override;
+
   // TODO(SCN-906): Break out Engine, instead of coupling it to GfxSystem.
   CompositorWeakPtr GetCompositor(GlobalId compositor_id) const;
   gfx::Session* GetSession(SessionId session_id) const;
@@ -41,13 +49,22 @@ class GfxSystem : public TempSystemDelegate {
   // TODO(SCN-906): Remove this in favor of unified initialization.
   void AddInitClosure(fit::closure closure);
 
+  // For tests.
+  SessionManager* session_manager() { return session_manager_.get(); }
+
  protected:
   // Protected so test classes can expose.
+  //
+  // TODO(SCN-1491): Replace with dependency injection.
+  virtual std::unique_ptr<SessionManager> InitializeSessionManager();
   virtual std::unique_ptr<escher::Escher> InitializeEscher();
   virtual std::unique_ptr<Engine> InitializeEngine();
 
+  std::shared_ptr<FrameScheduler> frame_scheduler_;
+  std::unique_ptr<SessionManager> session_manager_;
   std::unique_ptr<Engine> engine_;
   std::unique_ptr<DisplayManager> display_manager_;
+  std::unique_ptr<escher::Escher> escher_;
 
  private:
   fit::closure DelayedInitClosure();
@@ -72,6 +89,9 @@ class GfxSystem : public TempSystemDelegate {
                              uint64_t object, size_t location, int32_t messageCode,
                              const char* pLayerPrefix, const char* pMessage);
 
+  void DumpSessionMapResources(std::ostream& output,
+                               std::unordered_set<GlobalId, GlobalId::Hash>* visited_resources);
+
   // TODO(SCN-452): Remove this when we externalize Displays.
   bool initialized_ = false;
   std::vector<fit::closure> run_after_initialized_;
@@ -79,9 +99,17 @@ class GfxSystem : public TempSystemDelegate {
   escher::VulkanInstancePtr vulkan_instance_;
   escher::VulkanDeviceQueuesPtr vulkan_device_queues_;
   vk::SurfaceKHR surface_;
-  std::unique_ptr<escher::Escher> escher_;
 
   VkDebugReportCallbackEXT debug_report_callback_;
+
+  std::optional<CommandContext> command_context_;
+
+  // Tracks the number of sessions returning ApplyUpdateResult::needs_render
+  // and uses it for tracing.
+  uint64_t needs_render_count_ = 0;
+  uint64_t processed_needs_render_count_ = 0;
+
+  fxl::WeakPtrFactory<GfxSystem> weak_factory_;  // must be last
 };
 
 }  // namespace gfx

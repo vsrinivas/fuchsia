@@ -47,7 +47,7 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   void RequestToPresent(scenic::Session* session);
 
   // Debugging function.
-  std::string DumpScenes() { return gfx_->engine()->DumpScenes(); }
+  std::string DumpScenes();
 
   // Offers a way to call
   // |fuchsia.ui.policy.accessibility.PointerEventRegistry| for testing.

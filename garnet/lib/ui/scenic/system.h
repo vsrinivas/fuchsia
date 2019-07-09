@@ -82,12 +82,12 @@ class System {
     on_initialized_callback_ = std::move(callback);
   }
 
+  // Marks this system as initialized and invokes callback if it's set (for tests).
+  void SetToInitialized();
+
  protected:
   // TODO(SCN-906): Remove/refactor this under-used deferred-init logic.
   bool initialized_ = true;
-
-  // Marks this system as initialized and invokes callback if it's set.
-  void SetToInitialized();
 
  private:
   OnInitializedCallback on_initialized_callback_;

@@ -75,9 +75,9 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   display_manager.SetDefaultDisplayForTests(std::make_unique<Display>(
       /*id*/ 0, /*px-width*/ 9, /*px-height*/ 9));
   sys::testing::ComponentContextProvider context_provider_;
-  std::unique_ptr<Engine> engine =
-      std::make_unique<EngineForTest>(context_provider_.context(), &display_manager,
-                                      /*release fence signaller*/ nullptr);
+  std::unique_ptr<Engine> engine = std::make_unique<Engine>(
+      context_provider_.context(), /*frame_scheduler*/ nullptr, &display_manager,
+      /*release fence signaller*/ nullptr, escher::EscherWeakPtr());
 
   // Create our tokens for View/ViewHolder creation.
   auto [view_token_1, view_holder_token_1] = scenic::ViewTokenPair::New();

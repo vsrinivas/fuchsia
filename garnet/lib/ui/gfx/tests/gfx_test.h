@@ -9,35 +9,11 @@
 
 #include "garnet/lib/ui/gfx/gfx_system.h"
 #include "garnet/lib/ui/gfx/tests/mocks.h"
-#include "garnet/lib/ui/scenic/tests/mocks.h"
 #include "garnet/lib/ui/scenic/tests/scenic_test.h"
 
 namespace scenic_impl {
 namespace gfx {
 namespace test {
-
-class GfxSystemForTest : public GfxSystem {
- public:
-  static constexpr TypeId kTypeId = kGfx;
-
-  explicit GfxSystemForTest(SystemContext context, std::unique_ptr<DisplayManager> display_manager,
-                            escher::impl::CommandBufferSequencer* command_buffer_sequencer)
-      : GfxSystem(std::move(context), std::move(display_manager)),
-        command_buffer_sequencer_(command_buffer_sequencer) {}
-
-  Engine* engine() { return engine_.get(); }
-
- private:
-  std::unique_ptr<Engine> InitializeEngine() override {
-    return std::make_unique<EngineForTest>(
-        context()->app_context(), display_manager_.get(),
-        std::make_unique<ReleaseFenceSignallerForTest>(command_buffer_sequencer_));
-  }
-
-  std::unique_ptr<escher::Escher> InitializeEscher() override { return nullptr; }
-
-  escher::impl::CommandBufferSequencer* command_buffer_sequencer_;
-};
 
 class GfxSystemTest : public scenic_impl::test::ScenicTest {
  public:
@@ -62,7 +38,7 @@ class GfxSystemTest : public scenic_impl::test::ScenicTest {
 
   void InitializeScenic(Scenic* scenic) override {
     auto display_manager = std::make_unique<gfx::DisplayManager>();
-    display_manager->SetDefaultDisplayForTests(std::make_unique<scenic_impl::test::TestDisplay>(
+    display_manager->SetDefaultDisplayForTests(std::make_unique<TestDisplay>(
         /*id*/ 0, /* width */ 0, /* height */ 0));
     command_buffer_sequencer_ = std::make_unique<escher::impl::CommandBufferSequencer>();
     gfx_system_ = scenic->RegisterSystem<GfxSystemForTest>(std::move(display_manager),

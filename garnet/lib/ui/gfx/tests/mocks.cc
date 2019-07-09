@@ -6,7 +6,6 @@
 
 #include "garnet/lib/ui/gfx/engine/default_frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/frame_predictor.h"
-#include "garnet/lib/ui/gfx/tests/session_test.h"
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
 
 namespace scenic_impl {
@@ -66,19 +65,6 @@ std::unique_ptr<SessionHandler> SessionManagerForTest::CreateSessionHandler(
       event_reporter_ ? event_reporter_ : event_reporter,
       error_reporter_ ? error_reporter_ : error_reporter);
 }
-
-EngineForTest::EngineForTest(sys::ComponentContext* component_context,
-                             DisplayManager* display_manager,
-                             std::unique_ptr<escher::ReleaseFenceSignaller> r,
-                             EventReporter* event_reporter, ErrorReporter* error_reporter)
-    : Engine(component_context,
-             std::make_unique<DefaultFrameScheduler>(
-                 display_manager->default_display(),
-                 std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
-                                                  DefaultFrameScheduler::kInitialUpdateDuration)),
-             display_manager, std::move(r),
-             std::make_unique<SessionManagerForTest>(event_reporter, error_reporter),
-             escher::EscherWeakPtr()) {}
 
 }  // namespace test
 }  // namespace gfx

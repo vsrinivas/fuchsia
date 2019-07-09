@@ -27,7 +27,6 @@ void SessionTest::SetUp() {
 
 void SessionTest::TearDown() {
   session_.reset();
-  session_manager_.reset();
   frame_scheduler_.reset();
   display_manager_.reset();
   events_.clear();
@@ -45,7 +44,6 @@ SessionContext SessionTest::CreateSessionContext() {
       nullptr,                 // escher::RoundedRectFactory*
       nullptr,                 // escher::ReleaseFenceSignaller*
       nullptr,                 // EventTimestamper*
-      session_manager_.get(),  // SessionManager*
       frame_scheduler_.get(),  // FrameScheduler*
       display_manager_.get(),  // DisplayManager*
       SceneGraphWeakPtr(),     // SceneGraphWeakPtr

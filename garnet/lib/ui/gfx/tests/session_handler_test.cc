@@ -4,9 +4,13 @@
 
 #include "garnet/lib/ui/gfx/tests/session_handler_test.h"
 
+#include "garnet/lib/ui/gfx/engine/default_frame_scheduler.h"
+
 namespace scenic_impl {
 namespace gfx {
 namespace test {
+
+SessionHandlerTest::SessionHandlerTest() : weak_factory_(this) {}
 
 void SessionHandlerTest::SetUp() {
   InitializeScenic();
@@ -19,11 +23,13 @@ void SessionHandlerTest::SetUp() {
 void SessionHandlerTest::TearDown() {
   command_dispatcher_.reset();
   engine_.reset();
+  frame_scheduler_.reset();
   command_buffer_sequencer_.reset();
   display_manager_.reset();
   scenic_.reset();
   app_context_.reset();
   events_.clear();
+  session_manager_.reset();
 }
 
 void SessionHandlerTest::InitializeScenic() {
@@ -35,11 +41,12 @@ void SessionHandlerTest::InitializeScenic() {
 
 void SessionHandlerTest::InitializeSessionHandler() {
   auto session_context = engine_->session_context();
-  auto session_manager = session_context.session_manager;
   auto session_id = SessionId(1);
 
   InitializeScenicSession(session_id);
-  command_dispatcher_ = session_manager->CreateCommandDispatcher(
+
+  session_manager_ = std::make_unique<SessionManagerForTest>(this, this->error_reporter()),
+  command_dispatcher_ = session_manager_->CreateCommandDispatcher(
       CommandDispatcherContext(scenic_.get(), scenic_session_.get()), std::move(session_context));
 }
 
@@ -55,9 +62,15 @@ void SessionHandlerTest::InitializeEngine() {
   auto mock_release_fence_signaller =
       std::make_unique<ReleaseFenceSignallerForTest>(command_buffer_sequencer_.get());
 
-  engine_ = std::make_unique<EngineForTest>(app_context_.get(), display_manager_.get(),
-                                            std::move(mock_release_fence_signaller),
-                                            /*event reporter*/ this, this->error_reporter());
+  frame_scheduler_ = std::make_shared<DefaultFrameScheduler>(
+      display_manager_->default_display(),
+      std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
+                                       DefaultFrameScheduler::kInitialUpdateDuration));
+  engine_ =
+      std::make_unique<Engine>(app_context_.get(), frame_scheduler_, display_manager_.get(),
+                               std::move(mock_release_fence_signaller), escher::EscherWeakPtr());
+  frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());
+  frame_scheduler_->AddSessionUpdater(weak_factory_.GetWeakPtr());
 }
 
 void SessionHandlerTest::InitializeScenicSession(SessionId session_id) {
@@ -82,6 +95,36 @@ void SessionHandlerTest::EnqueueEvent(fuchsia::ui::scenic::Command unhandled) {
   scenic_event.set_unhandled(std::move(unhandled));
   events_.push_back(std::move(scenic_event));
 }
+
+SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
+    std::unordered_set<SessionId> sessions_to_update, zx_time_t presentation_time,
+    uint64_t trace_id) {
+  UpdateResults update_results;
+  CommandContext context(nullptr);
+
+  for (auto session_id : sessions_to_update) {
+    auto session_handler = session_manager_->FindSessionHandler(session_id);
+    if (!session_handler) {
+      // This means the session that requested the update died after the
+      // request. Requiring the scene to be re-rendered to reflect the session's
+      // disappearance is probably desirable. ImagePipe also relies on this to
+      // be true, since it calls ScheduleUpdate() in its destructor.
+      update_results.needs_render = true;
+      continue;
+    }
+
+    auto session = session_handler->session();
+
+    auto apply_results = session->ApplyScheduledUpdates(&context, presentation_time);
+  }
+
+  // Flush work to the GPU.
+  context.Flush();
+
+  return update_results;
+}
+
+void SessionHandlerTest::PrepareFrame(zx_time_t presentation_time, uint64_t trace_id) {}
 
 }  // namespace test
 }  // namespace gfx

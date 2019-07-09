@@ -26,6 +26,9 @@ DefaultFrameScheduler::DefaultFrameScheduler(const Display* display,
       frame_predictor_(std::move(predictor)),
       inspect_node_(std::move(inspect_node)),
       weak_factory_(this) {
+  FXL_DCHECK(display_);
+  FXL_DCHECK(frame_predictor_);
+
   outstanding_frames_.reserve(kMaxOutstandingFrames);
 
   inspect_frame_number_ = inspect_node_.CreateUIntMetric("most_recent_frame_number", frame_number_);
@@ -297,19 +300,19 @@ DefaultFrameScheduler::UpdateManager::ApplyUpdates(zx_time_t presentation_time,
   }
 
   SessionUpdater::UpdateResults update_results;
-  ApplyToCompactedVector(
-      &session_updaters_, [this, &sessions_to_update, &update_results, presentation_time,
-                           frame_number](SessionUpdater* updater) {
-        auto session_results =
-            updater->UpdateSessions(sessions_to_update, presentation_time, frame_number);
+  ApplyToCompactedVector(&session_updaters_, [this, &sessions_to_update, &update_results,
+                                              presentation_time,
+                                              frame_number](SessionUpdater* updater) {
+    auto session_results =
+        updater->UpdateSessions(sessions_to_update, presentation_time, frame_number);
 
-        // Aggregate results from each updater.
-        update_results.needs_render = update_results.needs_render || session_results.needs_render;
-        update_results.sessions_to_reschedule.insert(session_results.sessions_to_reschedule.begin(),
-                                                     session_results.sessions_to_reschedule.end());
+    // Aggregate results from each updater.
+    update_results.needs_render = update_results.needs_render || session_results.needs_render;
+    update_results.sessions_to_reschedule.insert(session_results.sessions_to_reschedule.begin(),
+                                                 session_results.sessions_to_reschedule.end());
 
-        SessionUpdater::MoveCallbacksFromTo(&session_results.present_callbacks, &callbacks_this_frame_);
-      });
+    SessionUpdater::MoveCallbacksFromTo(&session_results.present_callbacks, &callbacks_this_frame_);
+  });
 
   // Push updates that (e.g.) had unreached fences back onto the queue to be retried next frame.
   for (auto session_id : update_results.sessions_to_reschedule) {

@@ -29,8 +29,26 @@ using ImageBasePtr = fxl::RefPtr<ImageBase>;
 class ImagePipe;
 using ImagePipePtr = fxl::RefPtr<ImagePipe>;
 
-class CommandContext;
 class Session;
+
+// Graphical context for a set of session updates.
+// The CommandContext is only valid during a single processing batch, and should
+// not be accessed/stored outside of that.
+class CommandContext {
+ public:
+  // Creates an empty command context.
+  CommandContext();
+
+  CommandContext(std::unique_ptr<escher::BatchGpuUploader> uploader);
+
+  escher::BatchGpuUploader* batch_gpu_uploader() const { return batch_gpu_uploader_.get(); }
+
+  // Flush any work accumulated during command processing.
+  void Flush();
+
+ private:
+  std::unique_ptr<escher::BatchGpuUploader> batch_gpu_uploader_;
+};
 
 // Responsible for applying gfx commands to sessions.
 // Does not own any state. The session to be modified is instead

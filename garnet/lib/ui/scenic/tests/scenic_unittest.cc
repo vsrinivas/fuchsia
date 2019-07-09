@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/lib/ui/gfx/tests/mocks.h"
 #include "garnet/lib/ui/scenic/tests/dummy_system.h"
-#include "garnet/lib/ui/scenic/tests/mocks.h"
 #include "garnet/lib/ui/scenic/tests/scenic_gfx_test.h"
 #include "garnet/lib/ui/scenic/tests/scenic_test.h"
 #include "gtest/gtest.h"
@@ -12,7 +12,7 @@ namespace scenic_impl {
 namespace test {
 
 TEST_F(ScenicTest, SessionCreatedAfterAllSystemsInitialized) {
-  auto mock_system = scenic()->RegisterSystem<MockSystemWithDelayedInitialization>();
+  auto mock_system = scenic()->RegisterSystem<DummySystem>(false);
 
   EXPECT_EQ(scenic()->num_sessions(), 0U);
 

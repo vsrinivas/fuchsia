@@ -29,22 +29,10 @@
 namespace scenic_impl {
 namespace gfx {
 
-CommandContext::CommandContext(std::unique_ptr<escher::BatchGpuUploader> uploader)
-    : batch_gpu_uploader_(std::move(uploader)) {}
-
-void CommandContext::Flush() {
-  if (batch_gpu_uploader_) {
-    // Submit regardless of whether or not there are updates to release the
-    // underlying CommandBuffer so the pool and sequencer don't stall out.
-    // TODO(ES-115) to remove this restriction.
-    batch_gpu_uploader_->Submit();
-  }
-}
-
 Engine::Engine(sys::ComponentContext* component_context,
-               std::unique_ptr<FrameScheduler> frame_scheduler,
-               std::unique_ptr<SessionManager> session_manager, DisplayManager* display_manager,
-               escher::EscherWeakPtr weak_escher, inspect::Node inspect_node)
+               const std::shared_ptr<FrameScheduler>& frame_scheduler,
+               DisplayManager* display_manager, escher::EscherWeakPtr weak_escher,
+               inspect::Node inspect_node)
     : display_manager_(display_manager),
       escher_(std::move(weak_escher)),
       engine_renderer_(std::make_unique<EngineRenderer>(
@@ -56,43 +44,29 @@ Engine::Engine(sys::ComponentContext* component_context,
       rounded_rect_factory_(std::make_unique<escher::RoundedRectFactory>(escher_)),
       release_fence_signaller_(
           std::make_unique<escher::ReleaseFenceSignaller>(escher()->command_buffer_sequencer())),
-      session_manager_(std::move(session_manager)),
-      frame_scheduler_(std::move(frame_scheduler)),
-      has_vulkan_(escher_ && escher_->vk_device()),
+      frame_scheduler_(frame_scheduler),
       inspect_node_(std::move(inspect_node)),
       weak_factory_(this) {
-  FXL_DCHECK(frame_scheduler_);
-  FXL_DCHECK(session_manager_);
   FXL_DCHECK(display_manager_);
   FXL_DCHECK(escher_);
 
-  InitializeFrameScheduler();
   InitializeInspectObjects();
 }
 
 Engine::Engine(sys::ComponentContext* component_context,
-               std::unique_ptr<FrameScheduler> frame_scheduler, DisplayManager* display_manager,
+               const std::shared_ptr<FrameScheduler>& frame_scheduler,
+               DisplayManager* display_manager,
                std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
-               std::unique_ptr<SessionManager> session_manager, escher::EscherWeakPtr weak_escher)
+               escher::EscherWeakPtr weak_escher)
     : display_manager_(display_manager),
       escher_(std::move(weak_escher)),
       event_timestamper_(component_context),
       release_fence_signaller_(std::move(release_fence_signaller)),
-      session_manager_(std::move(session_manager)),
-      frame_scheduler_(std::move(frame_scheduler)),
-      has_vulkan_(escher_ && escher_->vk_device()),
+      frame_scheduler_(frame_scheduler),
       weak_factory_(this) {
-  FXL_DCHECK(frame_scheduler_);
   FXL_DCHECK(display_manager_);
 
-  InitializeFrameScheduler();
   InitializeInspectObjects();
-}
-
-void Engine::InitializeFrameScheduler() {
-  auto weak = weak_factory_.GetWeakPtr();
-  frame_scheduler_->SetFrameRenderer(weak);
-  frame_scheduler_->AddSessionUpdater(weak);
 }
 
 void Engine::InitializeInspectObjects() {
@@ -134,68 +108,6 @@ std::optional<HardwareLayerAssignment> GetHardwareLayerAssignment(const Composit
   };
 }
 
-CommandContext Engine::CreateCommandContext(uint64_t trace_id) {
-  return CommandContext(has_vulkan() ? escher::BatchGpuUploader::New(escher_, trace_id) : nullptr);
-}
-
-// Applies scheduled updates to a session. If the update fails, the session is
-// killed. Returns true if a new render is needed, false otherwise.
-SessionUpdater::UpdateResults Engine::UpdateSessions(
-    std::unordered_set<SessionId> sessions_to_update, zx_time_t presentation_time,
-    uint64_t trace_id) {
-  SessionUpdater::UpdateResults update_results;
-  for (auto session_id : sessions_to_update) {
-    auto session_handler = session_manager_->FindSessionHandler(session_id);
-    if (!session_handler) {
-      // This means the session that requested the update died after the
-      // request. Requiring the scene to be re-rendered to reflect the session's
-      // disappearance is probably desirable. ImagePipe also relies on this to
-      // be true, since it calls ScheduleUpdate() in it's destructor.
-      update_results.needs_render = true;
-      continue;
-    }
-
-    auto session = session_handler->session();
-
-    if (!command_context_) {
-      command_context_ = std::make_optional<CommandContext>(CreateCommandContext(trace_id));
-    }
-    auto apply_results = session->ApplyScheduledUpdates(&(command_context_.value()),
-                                                        presentation_time, needs_render_count_);
-
-    // If update fails, kill the entire client session.
-    if (!apply_results.success) {
-      // TODO(SCN-1485): schedule another frame because the session's contents
-      // will be removed from the scene.  We could insert |session_id| into
-      // |update_results.sessions_to_reschedule|, but it's probably cleaner to
-      // handle this uniformly with the case that the client abruptly closes
-      // the channel.
-      session_handler->KillSession();
-    } else {
-      if (!apply_results.all_fences_ready) {
-        update_results.sessions_to_reschedule.insert(session_id);
-
-        // NOTE: one might be tempted to CHECK that the callbacks/image_pipe_callbacks are
-        // empty at this point, reasoning that if some fences aren't ready, then no callbacks should
-        // be collected.  However, the session may have had multiple queued updates, some of
-        // which had all fences ready and therefore contributed callbacks.
-      }
-      //  Collect the callbacks to be passed back in the |UpdateResults|.
-      SessionUpdater::MoveCallbacksFromTo(&apply_results.callbacks,
-                                          &update_results.present_callbacks);
-      SessionUpdater::MoveCallbacksFromTo(&apply_results.image_pipe_callbacks,
-                                          &update_results.present_callbacks);
-    }
-
-    if (apply_results.needs_render) {
-      update_results.needs_render = true;
-      ++needs_render_count_;
-    }
-  }
-
-  return update_results;
-}
-
 bool Engine::RenderFrame(const FrameTimingsPtr& timings, zx_time_t presentation_time) {
   uint64_t frame_number = timings->frame_number();
 
@@ -203,16 +115,7 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings, zx_time_t presentation_
   // without also updating the "process_gfx_trace.go" script.
   TRACE_DURATION("gfx", "RenderFrame", "frame_number", frame_number, "time", presentation_time);
 
-  while (processed_needs_render_count_ < needs_render_count_) {
-    TRACE_FLOW_END("gfx", "needs_render", processed_needs_render_count_);
-    ++processed_needs_render_count_;
-  }
-
   TRACE_FLOW_BEGIN("gfx", "scenic_frame", frame_number);
-
-  // Flush work to the gpu.
-  command_context_->Flush();
-  command_context_.reset();
 
   UpdateAndDeliverMetrics(presentation_time);
 
@@ -381,82 +284,20 @@ void Engine::CleanupEscher() {
   }
 }
 
-std::string Engine::DumpScenes() const {
-  std::ostringstream output;
-  std::unordered_set<GlobalId, GlobalId::Hash> visited_resources;
+void Engine::DumpScenes(std::ostream& output,
+                        std::unordered_set<GlobalId, GlobalId::Hash>* visited_resources) const {
+  FXL_DCHECK(visited_resources);
 
   // Dump all Compositors and all transitively-reachable Resources.
   // Remember the set of visited resources; the next step will be to dump the
   // unreachable resources.
   output << "Compositors: \n";
   for (auto compositor : scene_graph_.compositors()) {
-    DumpVisitor visitor(DumpVisitor::VisitorContext(output, &visited_resources));
+    DumpVisitor visitor(DumpVisitor::VisitorContext(output, visited_resources));
 
     compositor->Accept(&visitor);
     output << "\n===\n\n";
   }
-
-  // Iterate through all sessions to find Nodes that weren't reachable from any
-  // compositor.  When such a Node is found, we walk up the tree to find the
-  // un-reachable sub-tree root, and then dump that. All visited Resources are
-  // added to |visited_resources|, so that they are not printed again later.
-  output << "============================================================\n";
-  output << "============================================================\n\n";
-  output << "Detached Nodes (unreachable by any Compositor): \n";
-  for (auto& [session_id, session_handler] : session_manager_->sessions()) {
-    const std::unordered_map<ResourceId, ResourcePtr>& resources =
-        session_handler->session()->resources()->map();
-    for (auto& [resource_id, resource_ptr] : resources) {
-      auto visited_resource_iter = visited_resources.find(GlobalId(session_id, resource_id));
-      if (visited_resource_iter == visited_resources.end()) {
-        FXL_DCHECK(resource_ptr);  // Should always be valid.
-
-        if (resource_ptr->IsKindOf<Node>()) {
-          // Attempt to find the root of this detached tree of Nodes.
-          Node* root_node = resource_ptr->As<Node>().get();
-
-          while (Node* new_root = root_node->parent()) {
-            auto visited_node_iter = visited_resources.find(GlobalId(session_id, new_root->id()));
-            if (visited_node_iter != visited_resources.end()) {
-              FXL_NOTREACHED() << "Unvisited child should not have a visited parent!";
-            }
-
-            root_node = new_root;
-          }
-
-          // Dump the entire detached Node tree, starting from the root.  This
-          // will also mark everything in the tree as visited.
-          DumpVisitor visitor(DumpVisitor::VisitorContext(output, &visited_resources));
-          root_node->Accept(&visitor);
-
-          output << "\n===\n\n";
-        }
-      }
-    }
-  }
-
-  // Dump any detached resources which could not be reached by a compositor
-  // or a Node tree.
-  output << "============================================================\n";
-  output << "============================================================\n\n";
-  output << "Other Detached Resources (unreachable by any Compositor): \n";
-  for (auto& [session_id, session_handler] : session_manager_->sessions()) {
-    const std::unordered_map<ResourceId, ResourcePtr>& resources =
-        session_handler->session()->resources()->map();
-    for (auto& [resource_id, resource_ptr] : resources) {
-      auto visited_resource_iter = visited_resources.find(GlobalId(session_id, resource_id));
-      if (visited_resource_iter == visited_resources.end()) {
-        FXL_DCHECK(resource_ptr);  // Should always be valid.
-
-        DumpVisitor visitor(DumpVisitor::VisitorContext(output, &visited_resources));
-        resource_ptr->Accept(&visitor);
-
-        output << "\n===\n\n";
-      }
-    }
-  }
-
-  return output.str();
 }
 
 }  // namespace gfx

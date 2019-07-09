@@ -6,7 +6,10 @@
 
 #include <hid/hid.h>
 
+#include <unordered_set>
+
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
+#include "garnet/lib/ui/gfx/id.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/ui/input/cpp/formatting.h"
@@ -29,6 +32,7 @@ using fuchsia::ui::input::PointerEventType;
 using fuchsia::ui::input::SendKeyboardInputCmd;
 using fuchsia::ui::input::SendPointerInputCmd;
 using fuchsia::ui::scenic::SessionListener;
+using scenic_impl::GlobalId;
 using scenic_impl::ResourceId;
 using scenic_impl::Scenic;
 using scenic_impl::gfx::DisplayManager;
@@ -45,6 +49,13 @@ void InputSystemTest::RequestToPresent(scenic::Session* session) {
   bool scene_presented = false;
   session->Present(/*presentation time*/ 0, [](auto) {});
   RunLoopFor(zx::msec(20));  // Schedule the render task.
+}
+
+std::string InputSystemTest::DumpScenes() {
+  std::ostringstream output;
+  std::unordered_set<GlobalId, GlobalId::Hash> visited_resources;
+  gfx_->engine()->DumpScenes(output, &visited_resources);
+  return output.str();
 }
 
 void InputSystemTest::TearDown() {

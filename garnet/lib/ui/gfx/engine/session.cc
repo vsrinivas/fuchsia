@@ -148,11 +148,8 @@ void Session::ScheduleImagePipeUpdate(uint64_t presentation_time, ImagePipePtr i
 }
 
 Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* command_context,
-                                                          uint64_t target_presentation_time,
-                                                          uint64_t needs_render_id) {
+                                                          uint64_t target_presentation_time) {
   FXL_DCHECK(target_presentation_time >= last_presentation_time_);
-  TRACE_DURATION("gfx", "Session::ApplyScheduledUpdates", "session_id", id_, "session_debug_name",
-                 debug_name_, "target_presentation_time", target_presentation_time);
 
   ApplyUpdateResult update_results{
       .success = false, .needs_render = false, .all_fences_ready = true};
@@ -239,10 +236,6 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* comman
     update_results.needs_render = true;
   }
   image_pipe_updates_to_upload.clear();
-
-  if (update_results.needs_render) {
-    TRACE_FLOW_BEGIN("gfx", "needs_render", needs_render_id);
-  }
 
   update_results.success = true;
   return update_results;

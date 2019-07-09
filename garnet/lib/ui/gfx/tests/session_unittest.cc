@@ -46,7 +46,7 @@ TEST_F(SessionTest, ScheduleUpdated_ShouldBeAppliedOnTime) {
       std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
 
   auto command_context = CreateCommandContext();
-  auto update_result = session()->ApplyScheduledUpdates(&command_context, 100, 1);
+  auto update_result = session()->ApplyScheduledUpdates(&command_context, 100);
   EXPECT_TRUE(update_result.success);
   EXPECT_TRUE(update_result.needs_render);
 }

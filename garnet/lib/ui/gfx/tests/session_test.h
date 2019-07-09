@@ -62,7 +62,6 @@ class SessionTest : public ErrorReportingTest, public EventReporter {
   std::unique_ptr<DisplayManager> display_manager_;
   std::unique_ptr<FrameScheduler> frame_scheduler_;
   std::unique_ptr<Session> session_;
-  std::unique_ptr<SessionManager> session_manager_;
   std::vector<fuchsia::ui::scenic::Event> events_;
 };
 

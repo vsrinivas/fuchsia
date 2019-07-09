@@ -19,8 +19,8 @@ source_set("testing_deps") {
     "scenic_test.h",
   ]
   public_deps = [
-    ":mocks",
     "//garnet/lib/ui/gfx",
+    "//garnet/lib/ui/gfx/tests:mocks",
     "//garnet/lib/ui/scenic",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/inspect",
@@ -43,18 +43,6 @@ source_set("dummy_system") {
   ]
 }
 
-source_set("mocks") {
-  sources = [
-    "mocks.cc",
-    "mocks.h",
-  ]
-  deps = [
-    ":dummy_system",
-    "//garnet/lib/ui/gfx",
-    "//garnet/public/lib/inspect",
-  ]
-}
-
 executable("unittests") {
   output_name = "scenic_unittests"
   testonly = true
@@ -63,8 +51,8 @@ executable("unittests") {
   ]
   deps = [
     ":dummy_system",
-    ":mocks",
     ":testing_deps",
+    "//garnet/lib/ui/gfx/tests:testing_deps",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

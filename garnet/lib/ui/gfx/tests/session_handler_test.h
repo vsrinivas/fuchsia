@@ -22,7 +22,10 @@ namespace test {
 
 // For testing SessionHandler without having to manually provide all the state
 // necessary for SessionHandler to run
-class SessionHandlerTest : public ErrorReportingTest, public EventReporter {
+class SessionHandlerTest : public ErrorReportingTest, public EventReporter, public SessionUpdater {
+ public:
+  SessionHandlerTest();
+
  protected:
   // | ::testing::Test |
   void SetUp() override;
@@ -40,18 +43,29 @@ class SessionHandlerTest : public ErrorReportingTest, public EventReporter {
   void InitializeScenicSession(SessionId session_id);
 
   SessionHandler* session_handler() {
+    FXL_DCHECK(command_dispatcher_);
     return static_cast<SessionHandler*>(command_dispatcher_.get());
   }
+
+  // |SessionUpdater|
+  UpdateResults UpdateSessions(std::unordered_set<SessionId> sessions_to_update,
+                               zx_time_t presentation_time, uint64_t trace_id) override;
+  // |SessionUpdater|
+  void PrepareFrame(zx_time_t presentation_time, uint64_t trace_id) override;
 
   std::unique_ptr<sys::ComponentContext> app_context_;
   std::unique_ptr<Scenic> scenic_;
   std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
-  std::unique_ptr<EngineForTest> engine_;
+  std::unique_ptr<Engine> engine_;
+  std::shared_ptr<FrameScheduler> frame_scheduler_;
   std::unique_ptr<DisplayManager> display_manager_;
   std::unique_ptr<scenic_impl::Session> scenic_session_;
   CommandDispatcherUniquePtr command_dispatcher_;
+  std::unique_ptr<SessionManagerForTest> session_manager_;
 
   std::vector<fuchsia::ui::scenic::Event> events_;
+
+  fxl::WeakPtrFactory<SessionHandlerTest> weak_factory_;  // must be last
 };
 
 }  // namespace test
