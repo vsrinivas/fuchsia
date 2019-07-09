@@ -878,6 +878,24 @@ pub trait BufferView<B: ByteSlice>: Sized + AsRef<[u8]> {
         self.take_back(len).unwrap()
     }
 
+    /// Takes a single byte of the buffer's body from the front.
+    ///
+    /// `take_byte_front` consumes a single byte from the from of the buffer's
+    /// body. It's equivalent to calling `take_front(1)` and copying out the
+    /// single byte on successful return.
+    fn take_byte_front(&mut self) -> Option<u8> {
+        self.take_front(1).map(|x| x[0])
+    }
+
+    /// Takes a single byte of the buffer's body from the back.
+    ///
+    /// `take_byte_back` consumes a single byte from the fron of the buffer's
+    /// body. It's equivalent to calling `take_back(1)` and copying out the
+    /// single byte on successful return.
+    fn take_byte_back(&mut self) -> Option<u8> {
+        self.take_back(1).map(|x| x[0])
+    }
+
     /// Converts this view into a reference to the buffer's body.
     ///
     /// `into_rest` consumes this `BufferView` by value, and returns a reference
@@ -1953,5 +1971,17 @@ mod tests {
         let mut b = &mut &buf[..];
         assert_eq!(b.take_rest_back(), &buf[..]);
         assert_eq!(b.len(), 0);
+    }
+
+    #[test]
+    fn take_byte_front_back() {
+        let buf = [1_u8, 2, 3, 4];
+        let mut b = &mut &buf[..];
+        assert_eq!(b.take_byte_front().unwrap(), 1);
+        assert_eq!(b.take_byte_front().unwrap(), 2);
+        assert_eq!(b.take_byte_back().unwrap(), 4);
+        assert_eq!(b.take_byte_back().unwrap(), 3);
+        assert!(b.take_byte_front().is_none());
+        assert!(b.take_byte_back().is_none());
     }
 }
