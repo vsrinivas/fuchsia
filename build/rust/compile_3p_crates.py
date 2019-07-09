@@ -109,6 +109,7 @@ def main():
             "-L", os.path.join(args.sysroot, "lib"),
             "-Clink-arg=--pack-dyn-relocs=relr",
             "-Clink-arg=--threads",
+            "-Clink-arg=--icf=all",
             "-Clink-arg=-L%s" % os.path.join(args.sysroot, "lib"),
             "-Clink-arg=-L%s" % os.path.join(args.clang_resource_dir, args.target, "lib"),
         ]
@@ -122,7 +123,7 @@ def main():
         if args.target.endswith("linux-gnu"):
             rustflags += ["-Clink-arg=-Wl,--build-id"]
         if not args.target.endswith("darwin"):
-            rustflags += ["-Clink-arg=-Wl,--threads"]
+            rustflags += ["-Clink-arg=-Wl,--threads", "-Clink-arg=-Wl,--icf=all"]
         env["CARGO_TARGET_LINKER"] = clang_c_compiler
         env["CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER"] = clang_c_compiler
         env["CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER"] = clang_c_compiler

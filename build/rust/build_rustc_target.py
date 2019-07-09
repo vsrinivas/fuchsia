@@ -198,6 +198,7 @@ def main():
             "-Clink-arg=-L%s" % os.path.join(args.clang_resource_dir, args.target, "lib"),
             "-Clink-arg=--threads",
             "-Clink-arg=-dynamic-linker=ld.so.1",
+            "-Clink-arg=--icf=all",
         ]
         if args.target.startswith("aarch64"):
             call_args += ["-Clink-arg=--fix-cortex-a53-843419"]
@@ -210,7 +211,7 @@ def main():
         if args.target.endswith("linux-gnu"):
             call_args += ["-Clink-arg=-Wl,--build-id"]
         if not args.target.endswith("darwin"):
-            call_args += ["-Clink-arg=-Wl,--threads"]
+            call_args += ["-Clink-arg=-Wl,--threads", "-Clink-arg=-Wl,--icf=all"]
 
     if args.mmacosx_version_min:
         call_args += [
