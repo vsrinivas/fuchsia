@@ -87,6 +87,11 @@ static const gpio_pin_t gpio_pins[] = {
     {GPIO_LIGHT_INTERRUPT},
     // For SPI interface.
     {GPIO_SPICC0_SS0},
+    // For buttons.
+    {GPIO_VOLUME_UP},
+    {GPIO_VOLUME_DOWN},
+    {GPIO_VOLUME_BOTH},
+    {GPIO_MIC_PRIVACY},
 };
 
 static const pbus_metadata_t gpio_metadata[] = {

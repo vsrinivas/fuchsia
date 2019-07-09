@@ -16,5 +16,9 @@ namespace astro {
 #define GPIO_LIGHT_INTERRUPT    S905D2_GPIOAO(5)
 #define GPIO_AUDIO_SOC_FAULT_L  S905D2_GPIOA(4)
 #define GPIO_SOC_AUDIO_EN       S905D2_GPIOA(5)
+#define GPIO_VOLUME_UP          S905D2_GPIOZ(5)
+#define GPIO_VOLUME_DOWN        S905D2_GPIOZ(6)
+#define GPIO_VOLUME_BOTH        S905D2_GPIOAO(10)
+#define GPIO_MIC_PRIVACY        S905D2_GPIOZ(2)
 
 } // namespace astro

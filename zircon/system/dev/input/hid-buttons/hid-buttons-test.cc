@@ -6,7 +6,6 @@
 
 #include <ddk/metadata.h>
 #include <ddk/metadata/buttons.h>
-#include <ddk/protocol/platform/bus.h>
 #include <ddktl/protocol/gpio.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <mock/ddktl/protocol/gpio.h>

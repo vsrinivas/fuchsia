@@ -85,6 +85,11 @@ static const gpio_pin_t gpio_pins[] = {
     // For audio.
     { GPIO_AUDIO_SOC_FAULT_L },
     { GPIO_SOC_AUDIO_EN },
+    // For buttons.
+    { GPIO_VOLUME_UP },
+    { GPIO_VOLUME_DOWN },
+    { GPIO_VOLUME_BOTH },
+    { GPIO_MIC_PRIVACY },
 };
 
 static const pbus_metadata_t gpio_metadata[] = {

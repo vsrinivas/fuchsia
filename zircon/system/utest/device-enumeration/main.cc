@@ -126,7 +126,7 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
     static const char* kDevicePaths[] = {
         "sys/platform/astro",
         "sys/platform/05:03:1/aml-axg-gpio",
-        "sys/platform/00:00:13/hid-buttons/hid-device-000",
+        "astro-buttons/hid-buttons",
         "sys/platform/05:00:2/aml-i2c",
         "sys/platform/05:03:17/aml-gpu",
         "sys/platform/05:00:18/aml-usb-phy-v2",
@@ -150,8 +150,6 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
         "sys/platform/05:00:f/aml-raw_nand/nand/zircon-b/skip-block",
         "sys/platform/05:00:f/aml-raw_nand/nand/zircon-a/skip-block",
         "sys/platform/05:00:f/aml-raw_nand/nand/zircon-r/skip-block",
-        "sys/platform/05:00:f/aml-raw_nand/nand/fvm/ftl/block/fvm/blobfs-p-1/block",
-        "sys/platform/05:00:f/aml-raw_nand/nand/fvm/ftl/block/fvm/minfs-p-2/block/zxcrypt/unsealed/block",
         "sys/platform/05:00:f/aml-raw_nand/nand/sys-config/skip-block",
         "sys/platform/05:00:f/aml-raw_nand/nand/migration/skip-block",
         "sys/platform/05:00:7/aml-sd-emmc/sdmmc",
@@ -206,7 +204,7 @@ TEST_F(DeviceEnumerationTest, CleoTest) {
         "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-mmc/block/part-027/block",
         "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-mmc/block/part-028/block",
         "sys/platform/0d:00:4/mtk-sdmmc",
-        "sys/platform/00:00:13/hid-buttons/hid-device-000",
+        "mt8167-buttons/hid-buttons",
         "sys/platform/0d:00:14/mt-usb/usb-peripheral/function-000/cdc-eth-function/ethernet",
         "touch/focaltouch HidDevice/hid-device-000",
         "sys/platform/0d:00:9/mtk-thermal",
@@ -256,7 +254,8 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
         "ft5726-touch",
         "sys/platform/00:00:e/optee-tz",
         "sys/platform/00:00:f/fallback-rtc",
-        "spi/aml-spi-0/spi/spi-0-0"
+        "spi/aml-spi-0/spi/spi-0-0",
+        "sherlock-buttons/hid-buttons",
     };
 
     ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
@@ -298,7 +297,7 @@ TEST_F(DeviceEnumerationTest, Mt8167sRefTest) {
         "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-mmc/block/part-027/block",
         "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-mmc/block/part-028/block",
         "sys/platform/0d:00:4/mtk-sdmmc",
-        "sys/platform/00:00:13/hid-buttons/hid-device-000",
+        "mt8167-buttons/hid-buttons",
         "sys/platform/0d:00:14/mt-usb/usb-peripheral/function-000/cdc-eth-function/ethernet",
         "sys/platform/0d:00:9/mtk-thermal",
     };

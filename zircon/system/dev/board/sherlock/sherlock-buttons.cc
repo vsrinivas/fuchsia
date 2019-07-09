@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -11,28 +12,52 @@
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
 
+#include "sherlock-gpios.h"
 #include "sherlock.h"
 
 namespace sherlock {
 
 zx_status_t Sherlock::ButtonsInit() {
-    constexpr pbus_gpio_t sherlock_buttons_gpios[] = {
-        {
-            // Volume up.
-            .gpio = T931_GPIOZ(4),
-        },
-        {
-            // Volume down.
-            .gpio = T931_GPIOZ(5),
-        },
-        {
-            // Both Volume up and down pressed.
-            .gpio = T931_GPIOZ(13),
-        },
-        {
-            // Mic privacy switch.
-            .gpio = T931_GPIOH(3),
-        },
+    static const zx_bind_inst_t root_match[] = {
+        BI_MATCH(),
+    };
+    static const zx_bind_inst_t volume_up_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+        BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_VOLUME_UP),
+    };
+    static const zx_bind_inst_t volume_down_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+        BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_VOLUME_DOWN),
+    };
+    static const zx_bind_inst_t volume_both_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+        BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_VOLUME_BOTH),
+    };
+    static const zx_bind_inst_t mic_privacy_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+        BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_MIC_PRIVACY),
+    };
+    static const device_component_part_t volume_up_component[] = {
+        { countof(root_match), root_match },
+        { countof(volume_up_match), volume_up_match },
+    };
+    static const device_component_part_t volume_down_component[] = {
+        { countof(root_match), root_match },
+        { countof(volume_down_match), volume_down_match },
+    };
+    static const device_component_part_t volume_both_component[] = {
+        { countof(root_match), root_match },
+        { countof(volume_both_match), volume_both_match },
+    };
+    static const device_component_part_t mic_privacy_component[] = {
+        { countof(root_match), root_match },
+        { countof(mic_privacy_match), mic_privacy_match },
+    };
+    static const device_component_t components[] = {
+        { countof(volume_up_component), volume_up_component },
+        { countof(volume_down_component), volume_down_component },
+        { countof(volume_both_component), volume_both_component },
+        { countof(mic_privacy_component), mic_privacy_component },
     };
     // clang-format off
     static constexpr buttons_button_config_t buttons[] = {
@@ -65,14 +90,13 @@ zx_status_t Sherlock::ButtonsInit() {
     sherlock_buttons_dev.vid = PDEV_VID_GENERIC;
     sherlock_buttons_dev.pid = PDEV_PID_GENERIC;
     sherlock_buttons_dev.did = PDEV_DID_HID_BUTTONS;
-    sherlock_buttons_dev.gpio_list = sherlock_buttons_gpios;
-    sherlock_buttons_dev.gpio_count = countof(sherlock_buttons_gpios);
     sherlock_buttons_dev.metadata_list = available_buttons_metadata;
     sherlock_buttons_dev.metadata_count = countof(available_buttons_metadata);
 
-    zx_status_t status = pbus_.DeviceAdd(&sherlock_buttons_dev);
+    auto status = pbus_.CompositeDeviceAdd(&sherlock_buttons_dev, components,
+                                                  countof(components), UINT32_MAX);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pbus_.DeviceAdd failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d\n", __func__, status);
         return status;
     }
 

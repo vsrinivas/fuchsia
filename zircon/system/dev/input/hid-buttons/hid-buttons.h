@@ -6,7 +6,6 @@
 
 #include <ddk/metadata/buttons.h>
 #include <ddk/protocol/gpio.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/hidbus.h>
 #include <fbl/array.h>

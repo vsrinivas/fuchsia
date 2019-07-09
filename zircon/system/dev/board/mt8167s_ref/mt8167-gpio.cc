@@ -52,6 +52,14 @@ zx_status_t Mt8167::GpioInit() {
         { MT8167_GPIO108_MSDC1_DAT2 },
         // For audio in
         { MT8167_GPIO24_EINT24 },
+        // For mt8167 buttons.
+        { MT8167_GPIO_KP_ROW0 },
+        { MT8167_GPIO_KP_ROW1 },
+        { MT8167_GPIO_KP_COL0 },
+        { MT8167_GPIO_KP_COL1 },
+        // For cleo buttons.
+        { MT8167_GPIO_VOLUME_UP },
+        { MT8167_GPIO_MIC_PRIVACY },
     };
 
     const pbus_metadata_t cleo_gpio_metadata[] = {
