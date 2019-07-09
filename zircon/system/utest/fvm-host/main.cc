@@ -27,9 +27,13 @@ static char fvm_path[PATH_MAX];
 
 static constexpr char kEmptyString[] = "";
 
+#ifndef __APPLE__
+// TODO(FLK-259): Re-enable tests once the cause of timeout has been determined.
+// Ifdef these out to remove a build warning on mac.
 static constexpr uint32_t kDefaultNumDirs = 10;
 static constexpr uint32_t kDefaultNumFiles = 10;
 static constexpr uint32_t kDefaultMaxSize = (1 << 20);
+#endif
 
 typedef enum {
     MINFS,
