@@ -20,7 +20,7 @@ e.g. `"$zx/system/ulib/zircon"`.
 ## `executable()` and `test()`
 
 The primary target type in producing a binary is `executable()`.  This produces
-an exectuable binary from the listed sources.  The Zircon build also provides a
+an executable binary from the listed sources.  The Zircon build also provides a
 means to indicate the location in the image wherein that binary should be
 installed via the `install_path` variable in the target scope.
 `install_path` can be:

@@ -72,5 +72,8 @@ requested address.
 
 ## SEE ALSO
 
+ - [`zx_process_write_memory()`]
 
-[process_write_memory](process_write_memory.md).
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_process_write_memory()`]: process_write_memory.md

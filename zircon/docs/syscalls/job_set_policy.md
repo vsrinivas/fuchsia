@@ -85,7 +85,7 @@ Where *condition* is one of
   to use [`zx_vmo_replace_as_executable()`] with a **ZX_HANDLE_INVALID**
   as the second argument rather than a valid **ZX_RSRC_KIND_VMEX**.
 + **ZX_POL_NEW_ANY** is a special *condition* that stands for all of
-  the above **ZX_NEW** condtions such as **ZX_POL_NEW_VMO**,
+  the above **ZX_NEW** conditions such as **ZX_POL_NEW_VMO**,
   **ZX_POL_NEW_CHANNEL**, **ZX_POL_NEW_EVENT**, **ZX_POL_NEW_EVENTPAIR**,
   **ZX_POL_NEW_PORT**, **ZX_POL_NEW_SOCKET**, **ZX_POL_NEW_FIFO**,
   and any future **ZX_NEW** policy. This will include any new

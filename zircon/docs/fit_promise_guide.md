@@ -349,7 +349,7 @@ To change types in the middle of the sequence, use `then` to consume the prior
 result and produce a new result of the desired type.
 
 The following example does not compile because the error type returned by the
-the last `and_then` handler is incompatible with the prior handler's result.
+last `and_then` handler is incompatible with the prior handler's result.
 
 ```cpp
 auto a = fit::make_promise([] {

@@ -9,12 +9,12 @@ collections are useful:
 * LockClass - A type that supports building a compile-time collection of state
   objects for runtime lock validation purposes.
 
-The following sections discuss common and unique requriements of each use case,
+The following sections discuss common and unique requirements of each use case,
 the current challenges with the implementations, and proposed solutions.
 
 ## StringRef
 
-StringRef is a type that implments the concept of string references. A string
+StringRef is a type that implements the concept of string references. A string
 reference is a mapping from a numeric id to a character string. Using the
 mapping makes more economical use of the trace buffer: an (id, string)
 pair is emitted once in a tracing session and then subsequent events may refer

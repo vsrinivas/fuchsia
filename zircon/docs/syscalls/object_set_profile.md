@@ -24,7 +24,7 @@ zx_status_t zx_object_set_profile(zx_handle_t handle,
 specified in *handle*.
 
 The parameter *profile* is a handle to a [profile] object created with
-`zx_profile_create()`.
+[`zx_profile_create()`].
 
 *options* is currently ignored, and should be set to `0` by callers.
 

@@ -303,7 +303,7 @@ the kernel.
 
 ## Examples
 
-Zircon code that uses exceptions can be viewed for futher examples, including:
+Zircon code that uses exceptions can be viewed for further examples, including:
 
 - `system/core/svchost/crashsvc`: system-level crash handler
 - `system/utest/exception`: exception unit tests

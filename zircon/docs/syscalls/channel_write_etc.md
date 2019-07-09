@@ -28,7 +28,7 @@ This syscall has not been implemented yet.
 Like [`zx_channel_write()`] it attempts to write a message of *num_bytes*
 bytes and *num_handles* handles to the channel specified by *handle*, but in
 addition it will perform operations in the handles that are being
-transfered with *handles* being an array of `zx_handle_disposition_t`:
+transferred with *handles* being an array of `zx_handle_disposition_t`:
 
 ```
 typedef struct zx_handle_disposition {
@@ -51,10 +51,10 @@ the entire operation fails.
 
 The operation applied to *handle* is one of:
 
-*   **ZX_HANDLE_OP_MOVE**: The *handle* will be transfered with rights *rights*
+*   **ZX_HANDLE_OP_MOVE**: The *handle* will be transferred with rights *rights*
 which can be *ZX_RIGHT_SAME_RIGHTS* or a reduced set of rights. This is
 equivalent to issuing [`zx_handle_replace()`] except that this operation can
-also remove the *ZX_RIGHT_TRANSFER* on the transfered handle.
+also remove the *ZX_RIGHT_TRANSFER* on the transferred handle.
 
 *   **ZX_HANDLE_OP_DUPLICATE**: The *handle* will be duplicated with rights
 rights* which can be *ZX_RIGHT_SAME_RIGHTS* or a reduced set of rights. This
@@ -127,7 +127,7 @@ largest allowable size for channel messages.
 
 ## NOTES
 
-If the caller removes the the **ZX_RIGHT_TRANSFER** to a handle attached
+If the caller removes the **ZX_RIGHT_TRANSFER** to a handle attached
 to a message, the reader of the message will receive a handle that cannot
 be written to any other channel, but still can be using according to its
 rights and can be closed if not needed.

@@ -49,5 +49,8 @@ to the new kernel.
 
 ## SEE ALSO
 
+ - [`zx_system_mexec_payload_get()`]
 
-[system_mexec_payload_get](system_mexec_payload_get.md).
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_system_mexec_payload_get()`]: system_mexec_payload_get.md

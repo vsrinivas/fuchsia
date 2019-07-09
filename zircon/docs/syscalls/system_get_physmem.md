@@ -42,5 +42,8 @@ the system, only at boot time.  This might change in the future.
 
 ## SEE ALSO
 
+ - [`zx_system_get_num_cpus()`]
 
-[system_get_num_cpus](system_get_num_cpus.md).
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_system_get_num_cpus()`]: system_get_num_cpus.md

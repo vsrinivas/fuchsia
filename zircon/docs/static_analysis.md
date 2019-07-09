@@ -15,7 +15,7 @@ Assuming you already obtained a local copy of Fuchsia workspace according to the
 ./scripts/analyze-zircon
 ```
 
-The Clang Static Analyzer will be run on Zircon code base with default checkers. After the finish of the analysis, you can see an outout in stdout similar to the one below:
+The Clang Static Analyzer will be run on Zircon code base with default checkers. After the finish of the analysis, you can see an output in stdout similar to the one below:
 
 ```
 scan-build: Run 'scan-view $LOCAL_DIR/fuchsia/zircon/AnalysisResult/scan-build-2017-08-08-11-26-25-914570-SKSE39' to examine bug reports.

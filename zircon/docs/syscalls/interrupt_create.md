@@ -36,7 +36,7 @@ Physical interrupts honor the options **ZX_INTERRUPT_EDGE_LOW**, **ZX_INTERRUPT_
 **ZX_INTERRUPT_LEVEL_LOW**, **ZX_INTERRUPT_LEVEL_HIGH**, and **ZX_INTERRUPT_REMAP_IRQ**.
 
 The handles will have **ZX_RIGHT_INSPECT**, **ZX_RIGHT_DUPLICATE**, **ZX_RIGHT_TRANSFER**
-(allowing them to be sent to another process via channel write), **ZX_RIGHT_READ**,
+(allowing them to be sent to another process via [`zx_channel_write()`]), **ZX_RIGHT_READ**,
 **ZX_RIGHT_WRITE** (required for [`zx_interrupt_ack()`]), **ZX_RIGHT_WAIT** (required for
 [`zx_interrupt_wait()`], and **ZX_RIGHT_SIGNAL** (required for [`zx_interrupt_trigger()`]).
 
@@ -85,6 +85,7 @@ In a future build this error will no longer occur.
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
+[`zx_channel_write()`]: channel_write.md
 [`zx_handle_close()`]: handle_close.md
 [`zx_interrupt_ack()`]: interrupt_ack.md
 [`zx_interrupt_bind()`]: interrupt_bind.md

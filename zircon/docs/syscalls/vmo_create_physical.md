@@ -42,10 +42,10 @@ The following rights will be set on the handle by default:
 **ZX_RIGHT_MAP** - May be mapped.
 
 **ZX_RIGHT_GET_PROPERTY** - May get its properties using
-[object_get_property](object_get_property.md).
+[`zx_object_get_property()`].
 
 **ZX_RIGHT_SET_PROPERTY** - May set its properties using
-[object_set_property](object_set_property.md).
+[`zx_object_set_property()`].
 
 The **ZX_VMO_ZERO_CHILDREN** signal is active on a newly created VMO. It becomes
 inactive whenever a child of the VMO is created and becomes active again when
@@ -88,6 +88,8 @@ In a future build this error will no longer occur.
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
+[`zx_object_get_property()`]: object_get_property.md
+[`zx_object_set_property()`]: object_set_property.md
 [`zx_vmar_map()`]: vmar_map.md
 [`zx_vmo_read()`]: vmo_read.md
 [`zx_vmo_write()`]: vmo_write.md

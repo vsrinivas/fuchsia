@@ -40,5 +40,8 @@ TODO(ZX-2399)
 
 ## SEE ALSO
 
+ - [`zx_system_get_physmem()`]
 
-[system_get_physmem](system_get_physmem.md).
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
+[`zx_system_get_physmem()`]: system_get_physmem.md

@@ -38,15 +38,14 @@ enough space for all of *buffer*. If a non-zero amount of data was written to
 the socket, the amount written is returned via *actual* and the call succeeds.
 Otherwise, if the socket was already full, the call returns
 **ZX_ERR_SHOULD_WAIT** and the client should wait (e.g., with
-[object_wait_one](object_wait_one.md) or
-[object_wait_async](object_wait_async.md)). For datagram sockets, attempting to
-write a packet larger than the socket's capacity will fail with
-**ZX_ERR_OUT_OF_RANGE**.
+[`zx_object_wait_one()`] or [`zx_object_wait_async()`]).
+
 
 A **ZX_SOCKET_DATAGRAM** socket write is never short. If the socket has
 insufficient space for *buffer*, it writes nothing and returns
 **ZX_ERR_SHOULD_WAIT**. If the write succeeds, *buffer_size* is returned via
-*actual*.
+*actual*. Attempting to write a packet larger than the datagram socket's
+capacity will fail with **ZX_ERR_OUT_OF_RANGE**.
 
 ## RIGHTS
 
@@ -95,6 +94,8 @@ In a future build this error will no longer occur.
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
+[`zx_object_wait_async()`]: object_wait_async.md
+[`zx_object_wait_one()`]: object_wait_one.md
 [`zx_socket_accept()`]: socket_accept.md
 [`zx_socket_create()`]: socket_create.md
 [`zx_socket_read()`]: socket_read.md

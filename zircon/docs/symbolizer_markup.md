@@ -84,7 +84,7 @@ The markup format supports a restricted subset of ANSI X3.64 SGR (Select
 Graphic Rendition) control sequences.  These are unlike other markup
 elements:
  * They specify presentation details (**bold** or colors) rather than
-   semantic information.  The assocation of semantic meaning with color
+   semantic information.  The association of semantic meaning with color
    (e.g. red for errors) is chosen by the code doing the logging, rather
    than by the UI presentation of the symbolizing filter.  This is a
    concession to existing code (e.g. LLVM sanitizer runtimes) that use

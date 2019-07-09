@@ -41,10 +41,10 @@ The following rights will be set on the handle by default:
 **ZX_RIGHT_MAP** - May be mapped.
 
 **ZX_RIGHT_GET_PROPERTY** - May get its properties using
-[object_get_property](object_get_property.md).
+[`zx_object_get_property()`].
 
 **ZX_RIGHT_SET_PROPERTY** - May set its properties using
-[object_set_property](object_set_property.md).
+[`zx_object_set_property()`].
 
 The *options* field can be 0 or **ZX_VMO_RESIZABLE** to create a VMO
 that can change size. Children of a non-resizable VMO can be resized.
@@ -87,6 +87,8 @@ In a future build this error will no longer occur.
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
+[`zx_object_get_property()`]: object_get_property.md
+[`zx_object_set_property()`]: object_set_property.md
 [`zx_vmar_map()`]: vmar_map.md
 [`zx_vmo_create_child()`]: vmo_create_child.md
 [`zx_vmo_get_size()`]: vmo_get_size.md

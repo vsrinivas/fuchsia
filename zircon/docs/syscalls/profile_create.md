@@ -24,7 +24,7 @@ zx_status_t zx_profile_create(zx_handle_t root_job,
 `zx_profile_create()` creates a new [profile](../objects/profile.md) object.
 
 The parameter *profile* specifies the settings in the profile, which in turn
-will be applied to threads when `zx_object_set_profile()` is called. While the
+will be applied to threads when [`zx_object_set_profile()`] is called. While the
 type `zx_profile_info_t` has support for additional settings in the future,
 currently only `priority` is implemented in the kernel. *options* must be zero.
 

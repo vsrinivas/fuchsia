@@ -29,7 +29,7 @@ of the channel.  Messages written to one handle may be read from
 the opposite.
 
 The handles will have **ZX_RIGHT_TRANSFER** (allowing them to be sent
-to another process via channel write), **ZX_RIGHT_WRITE** (allowing
+to another process via [`zx_channel_write()`]), **ZX_RIGHT_WRITE** (allowing
 messages to be written to them), and **ZX_RIGHT_READ** (allowing messages
 to be read from them).
 

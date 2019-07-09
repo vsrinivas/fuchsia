@@ -24,7 +24,7 @@ zx_status_t zx_resource_create(zx_handle_t parent_rsrc,
 
 ## DESCRIPTION
 
-`zx_resource_create()` creates an resource object for use with other DDK
+`zx_resource_create()` creates a resource object for use with other DDK
 syscalls. Resources are typically handed out to bus drivers and rarely need to
 be interacted with directly by drivers using driver protocols. Resource objects
 grant access to an address space range starting at *base* up to but not
@@ -61,9 +61,9 @@ On success, a valid resource handle is returned in *resource_out*.
 negative error value is returned.
 
 The returned handle will have **ZX_RIGHT_TRANSFER** (allowing it to be sent to
-another process via channel write), **ZX_RIGHT_DUPLICATE** (allowing the handle
-to be duplicated), **ZX_RIGHT_INSPECT** (to allow inspection of the object with
-[object_get_info](object_get_info.md) and **ZX_RIGHT_WRITE** which is checked by
+another process via [`zx_channel_write()`]), **ZX_RIGHT_DUPLICATE** (allowing
+the handle to be duplicated), **ZX_RIGHT_INSPECT** (to allow inspection of the
+object with [`zx_object_get_info()`] and **ZX_RIGHT_WRITE** which is checked by
 `zx_resource_create()` itself.
 
 ## RIGHTS
@@ -99,7 +99,9 @@ longer occur.
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
+[`zx_channel_write()`]: channel_write.md
 [`zx_handle_close()`]: handle_close.md
 [`zx_interrupt_create()`]: interrupt_create.md
 [`zx_ioports_request()`]: ioports_request.md
+[`zx_object_get_info()`]: object_get_info.md
 [`zx_vmo_create_physical()`]: vmo_create_physical.md
