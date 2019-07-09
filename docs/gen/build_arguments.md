@@ -350,7 +350,7 @@ From //build/config/BUILD.gn:9
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/0f2e2064a102c58f4cd343428b949c9a158e9723/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/1bd77324acfccfe6d319a8926ab63e04e806248a/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 TODO(scottmg): https://crbug.com/crashpad/266 fuchsia:DX-690: BoringSSL
@@ -359,7 +359,7 @@ a BoringSSL lib again.
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/0f2e2064a102c58f4cd343428b949c9a158e9723/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/1bd77324acfccfe6d319a8926ab63e04e806248a/util/net/tls.gni#21)
 
 ### create_kernel_service_snapshot
 
@@ -390,7 +390,7 @@ module_suggester is not AOT compiled in debug builds
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/54bd645bb50f5310eeacf7d60d9024c63ff38ab9/runtime/dart/dart_component.gni#51)
+From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/7759ccefc7e351e2db7d26d36168be3cd6ef7419/runtime/dart/dart_component.gni#51)
 
 ### dart_component_kind
 Allow for deduping the VM between standalone, flutter_runner and dart_runner.
@@ -449,7 +449,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/54bd645bb50f5310eeacf7d60d9024c63ff38ab9/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/7759ccefc7e351e2db7d26d36168be3cd6ef7419/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -457,7 +457,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/54bd645bb50f5310eeacf7d60d9024c63ff38ab9/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/7759ccefc7e351e2db7d26d36168be3cd6ef7419/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -507,7 +507,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/54bd645bb50f5310eeacf7d60d9024c63ff38ab9/runtime/dart/dart_component.gni#41)
+From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/7759ccefc7e351e2db7d26d36168be3cd6ef7419/runtime/dart/dart_component.gni#41)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -723,19 +723,19 @@ package and deduplicated by blobfs.
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/dart/dart_component.gni:27](https://fuchsia.googlesource.com/topaz/+/54bd645bb50f5310eeacf7d60d9024c63ff38ab9/runtime/dart/dart_component.gni#27)
+From [//topaz/runtime/dart/dart_component.gni:27](https://fuchsia.googlesource.com/topaz/+/7759ccefc7e351e2db7d26d36168be3cd6ef7419/runtime/dart/dart_component.gni#27)
 
 ### flutter_default_app
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/54bd645bb50f5310eeacf7d60d9024c63ff38ab9/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/7759ccefc7e351e2db7d26d36168be3cd6ef7419/runtime/dart/dart_component.gni#12)
 
 ### flutter_profile
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/54bd645bb50f5310eeacf7d60d9024c63ff38ab9/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/7759ccefc7e351e2db7d26d36168be3cd6ef7419/runtime/dart/dart_component.gni#32)
 
 ### flutter_runtime_mode
 The runtime mode ("debug", "profile", or "release")
@@ -749,7 +749,7 @@ Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:38](https://fuchsia.googlesource.com/topaz/+/54bd645bb50f5310eeacf7d60d9024c63ff38ab9/runtime/dart/dart_component.gni#38)
+From [//topaz/runtime/dart/dart_component.gni:38](https://fuchsia.googlesource.com/topaz/+/7759ccefc7e351e2db7d26d36168be3cd6ef7419/runtime/dart/dart_component.gni#38)
 
 ### flutter_use_fontconfig
 
@@ -761,7 +761,7 @@ From //third_party/flutter/third_party/txt/BUILD.gn:16
 
 **Current value (from the default):** `["collection", "flutter", "meta", "typed_data", "vector_math"]`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:8](https://fuchsia.googlesource.com/topaz/+/54bd645bb50f5310eeacf7d60d9024c63ff38ab9/runtime/flutter_runner/prebuilt_framework.gni#8)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:8](https://fuchsia.googlesource.com/topaz/+/7759ccefc7e351e2db7d26d36168be3cd6ef7419/runtime/flutter_runner/prebuilt_framework.gni#8)
 
 ### fuchsia_sdk_root
 Consumers of the Fuchsia SDK instantiate templates for various SDK parts at
@@ -1302,13 +1302,13 @@ From //build/dart/dart.gni:9
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:7](https://fuchsia.googlesource.com/topaz/+/54bd645bb50f5310eeacf7d60d9024c63ff38ab9/runtime/flutter_runner/prebuilt_framework.gni#7)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:7](https://fuchsia.googlesource.com/topaz/+/7759ccefc7e351e2db7d26d36168be3cd6ef7419/runtime/flutter_runner/prebuilt_framework.gni#7)
 
 ### prebuilt_framework_path
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:6](https://fuchsia.googlesource.com/topaz/+/54bd645bb50f5310eeacf7d60d9024c63ff38ab9/runtime/flutter_runner/prebuilt_framework.gni#6)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:6](https://fuchsia.googlesource.com/topaz/+/7759ccefc7e351e2db7d26d36168be3cd6ef7419/runtime/flutter_runner/prebuilt_framework.gni#6)
 
 ### prebuilt_libvulkan_arm_path
 
@@ -2286,7 +2286,7 @@ From //garnet/lib/magma/include/virtio/virtmagma_debug.gni:7
 
 **Current value (from the default):** `"warn,error"`
 
-From [//third_party/vulkan_loader_and_validation_layers/loader/BUILD.gn:26](https://fuchsia.googlesource.com/third_party/vulkan_loader_and_validation_layers/+/d206994cd4596997511c09e72b211a494ee5b338/loader/BUILD.gn#26)
+From [//third_party/vulkan_loader_and_validation_layers/loader/BUILD.gn:26](https://fuchsia.googlesource.com/third_party/vulkan_loader_and_validation_layers/+/0050e278b9e45844d314058126205c67078ebcb2/loader/BUILD.gn#26)
 
 ### vulkan_sdk
 
