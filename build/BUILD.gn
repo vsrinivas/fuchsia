@@ -115,5 +115,15 @@ group("system_deprecated_data_allowlist") {
   # the "deprecated-data" value in their "system" capability. Do not add to
   # this list. Instead, use the config_data() template to gather data from
   # other build entities that your component would like to use at run time.
-  visibility = [ "//garnet/bin/appmgr/integration_tests/sandbox/features/system-deprecated-data:uses_system_deprecated_data" ]
+  visibility = [
+    "//garnet/bin/appmgr/integration_tests/sandbox/features/system-deprecated-data:uses_system_deprecated_data",
+    "//garnet/bin/sysmgr",
+    "//garnet/bin/sysmgr/integration_tests",
+    "//peridot/bin/module_resolver",
+    "//src/experiences/bin/simple_browser",
+    "//src/connectivity/wlan/wlanstack",
+    "//topaz/bin/datetime_settings",
+    "//topaz/bin/settings",
+    "//topaz/public/dart/fuchsia_webview_flutter/examples/webview_mod",
+  ]
 }
