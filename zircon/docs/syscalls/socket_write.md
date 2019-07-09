@@ -61,8 +61,10 @@ capacity will fail with **ZX_ERR_OUT_OF_RANGE**.
 
 **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ZX_ERR_BAD_STATE**  *options* includes **ZX_SOCKET_CONTROL** and the
-socket was not created with **ZX_SOCKET_HAS_CONTROL**.
+**ZX_ERR_BAD_STATE**  Either:
+1. *options* includes **ZX_SOCKET_CONTROL** and the socket was not created
+   with **ZX_SOCKET_HAS_CONTROL**, or
+2. writing has been disabled for this socket endpoint via [`zx_socket_shutdown()`].
 
 **ZX_ERR_WRONG_TYPE**  *handle* is not a socket handle.
 
@@ -75,8 +77,6 @@ control plane, a previous control message is still in the socket.
 
 **ZX_ERR_OUT_OF_RANGE**  The socket was created with **ZX_SOCKET_DATAGRAM** and
 *buffer* is larger than the remaining space in the socket.
-
-**ZX_ERR_BAD_STATE**  Writing has been disabled for this socket endpoint.
 
 **ZX_ERR_PEER_CLOSED**  The other side of the socket is closed.
 
