@@ -281,6 +281,16 @@ class CodecAdapter {
   // N times and CoreCodecConfigureBuffers() has also been called.
   virtual void CoreCodecEnsureBuffersNotConfigured(CodecPort port) = 0;
 
+  // The core codec may need to specify what input constraints to be used.
+  //
+  // This is called on the StreamControl ordering domain after CoreCodecInit and
+  // will not be called again after that as input constraints are static. Unlike
+  // most CodecAdapter functions, the CodecAdapter provides a default
+  // implementation that will work for most codecs. A codec-specific
+  // CodecAdapter may override this if it has different constraints.
+  virtual std::unique_ptr<const fuchsia::media::StreamBufferConstraints>
+  CoreCodecBuildNewInputConstraints();
+
   // The core codec needs to specify what output config is needed.
   //
   // output_re_config_required true:

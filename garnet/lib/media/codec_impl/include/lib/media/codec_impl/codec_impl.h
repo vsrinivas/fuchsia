@@ -1005,6 +1005,10 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   void CoreCodecEnsureBuffersNotConfigured(CodecPort port) override;
 
   __WARN_UNUSED_RESULT
+  std::unique_ptr<const fuchsia::media::StreamBufferConstraints> CoreCodecBuildNewInputConstraints()
+      override;
+
+  __WARN_UNUSED_RESULT
   std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
   CoreCodecBuildNewOutputConstraints(
       uint64_t stream_lifetime_ordinal,

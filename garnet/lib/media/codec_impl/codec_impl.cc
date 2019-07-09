@@ -42,60 +42,6 @@ namespace {
 // channel with no valid circuit-breaker value for the incoming channel data.
 constexpr size_t kMaxInFlightStreams = 10;
 
-constexpr uint64_t kInputBufferConstraintsVersionOrdinal = 1;
-constexpr uint64_t kInputDefaultBufferConstraintsVersionOrdinal =
-    kInputBufferConstraintsVersionOrdinal;
-
-// TODO(dustingreen): Make these defaults/settings overridable per CodecAdapter
-// implementation.  For a few of them, maybe require the CodecAdapter to
-// specify (as in no default for some of them).
-
-constexpr uint32_t kInputPacketCountForCodecMin = 2;
-// This is fairly arbitrary, but roughly speaking, 1 to be decoding, 1 to be in
-// flight from the client, 1 to be in flight back to the client.  We may want
-// to adjust this upward if we find it's needed to keep the HW busy when there's
-// any backlog.
-constexpr uint32_t kInputPacketCountForCodecRecommended = 3;
-constexpr uint32_t kInputPacketCountForCodecRecommendedMax = 16;
-constexpr uint32_t kInputPacketCountForCodecMax = 64;
-
-constexpr uint32_t kInputDefaultPacketCountForCodec =
-    kInputPacketCountForCodecRecommended;
-
-constexpr uint32_t kInputPacketCountForClientMin = 1;
-constexpr uint32_t kInputPacketCountForClientMax =
-    std::numeric_limits<uint32_t>::max();
-
-// This is fairly arbitrary, but rough speaking, 1 to be filling, 1 to be in
-// flight toward the codec, and 1 to be in flight from the codec.  This doesn't
-// intend to be large enough to ride out any hypothetical decoder performance
-// variability vs. needed decode rate.
-constexpr uint32_t kInputDefaultPacketCountForClient = 3;
-
-// TODO(dustingreen): Implement and permit single-buffer mode.  (The default
-// will probably remain buffer per packet mode though.)
-constexpr bool kInputSingleBufferModeAllowed = false;
-constexpr bool kInputDefaultSingleBufferMode = false;
-
-// A client using the min shouldn't necessarily expect performance to be
-// acceptable when running higher bit-rates.
-constexpr uint32_t kInputPerPacketBufferBytesMin = 8 * 1024;
-// This is fairly arbitrary, but roughly speaking, ~266 KiB for an average frame
-// at 50 Mbps for 4k video, rounded up to 512 KiB buffer space per packet to
-// allow most but not all frames to fit in one packet.  It could be equally
-// reasonable to say the average-size compressed from should barely fit in one
-// packet's buffer space, or the average-size compressed frame should split to
-// ~1.5 packets, but we don't want an excessive number of packets required per
-// frame (not even for I frames).
-constexpr uint32_t kInputPerPacketBufferBytesRecommended = 512 * 1024;
-// This is an arbitrary cap for now.  The only reason it's larger than
-// recommended is to allow some room to profile whether larger buffer space per
-// packet might be useful for performance.
-constexpr uint32_t kInputPerPacketBufferBytesMax = 4 * 1024 * 1024;
-
-constexpr uint32_t kInputDefaultPerPacketBufferBytes =
-    kInputPerPacketBufferBytesRecommended;
-
 class ScopedUnlock {
  public:
   explicit ScopedUnlock(std::unique_lock<std::mutex>& unique_lock)
@@ -302,49 +248,12 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
       ZX_DEBUG_ASSERT(!tmp_interface_request_);
     });
 
-    fuchsia::media::StreamBufferConstraints buffer_constraints;
-    auto* default_settings = buffer_constraints.mutable_default_settings();
-    buffer_constraints.set_buffer_constraints_version_ordinal(
-        kInputBufferConstraintsVersionOrdinal);
-    default_settings->set_buffer_lifetime_ordinal(0);
-    default_settings->set_buffer_constraints_version_ordinal(
-        kInputBufferConstraintsVersionOrdinal);
-    default_settings->set_packet_count_for_server(
-        kInputDefaultPacketCountForCodec);
-    default_settings->set_packet_count_for_client(
-        kInputDefaultPacketCountForClient);
-    default_settings->set_per_packet_buffer_bytes(
-        kInputDefaultPerPacketBufferBytes);
-    default_settings->set_single_buffer_mode(kInputDefaultSingleBufferMode);
-    default_settings->set_buffer_constraints_version_ordinal(
-        kInputDefaultBufferConstraintsVersionOrdinal);
-    buffer_constraints.set_packet_count_for_server_recommended_max(
-        kInputPacketCountForCodecRecommendedMax);
-    buffer_constraints.set_per_packet_buffer_bytes_min(
-        kInputPerPacketBufferBytesMin);
-    buffer_constraints.set_per_packet_buffer_bytes_recommended(
-        kInputPerPacketBufferBytesRecommended);
-    buffer_constraints.set_per_packet_buffer_bytes_max(
-        kInputPerPacketBufferBytesMax);
-    buffer_constraints.set_packet_count_for_server_min(
-        kInputPacketCountForCodecMin);
-    buffer_constraints.set_packet_count_for_server_recommended(
-        kInputPacketCountForCodecRecommended);
-    buffer_constraints.set_packet_count_for_server_max(
-        kInputPacketCountForCodecMax);
-    buffer_constraints.set_packet_count_for_client_min(
-        kInputPacketCountForClientMin);
-    buffer_constraints.set_packet_count_for_client_max(
-        kInputPacketCountForClientMax);
-    buffer_constraints.set_single_buffer_mode_allowed(
-        kInputSingleBufferModeAllowed);
+    input_constraints_ = CoreCodecBuildNewInputConstraints();
 
-    input_constraints_ =
-        std::make_unique<fuchsia::media::StreamBufferConstraints>(
-            std::move(buffer_constraints));
+    ZX_DEBUG_ASSERT(input_constraints_);
 
     sent_buffer_constraints_version_ordinal_[kInputPort] =
-        kInputBufferConstraintsVersionOrdinal;
+        input_constraints_->buffer_constraints_version_ordinal();
     PostToSharedFidl([this] {
       // See "is_bound_checks" comment up top.
       if (binding_.is_bound()) {
@@ -3837,6 +3746,28 @@ bool CodecImpl::IsCoreCodecHwBased() {
   return codec_adapter_->IsCoreCodecHwBased();
 }
 
+std::unique_ptr<const fuchsia::media::StreamBufferConstraints>
+CodecImpl::CoreCodecBuildNewInputConstraints() {
+  ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
+  std::unique_ptr<const fuchsia::media::StreamBufferConstraints> constraints =
+      codec_adapter_->CoreCodecBuildNewInputConstraints();
+  ZX_DEBUG_ASSERT(constraints);
+  ZX_DEBUG_ASSERT(constraints->has_buffer_constraints_version_ordinal());
+
+  // StreamProcessor guarantees that these default settings as-is (except buffer_lifetime_ordinal)
+  // will satisfy the constraints indicated by the other fields of StreamBufferConstraints.
+  ZX_DEBUG_ASSERT(constraints->has_default_settings());
+  ZX_DEBUG_ASSERT(constraints->default_settings().has_buffer_lifetime_ordinal() &&
+                  constraints->default_settings().buffer_lifetime_ordinal() == 0);
+  ZX_DEBUG_ASSERT(constraints->default_settings().has_buffer_constraints_version_ordinal());
+  ZX_DEBUG_ASSERT(constraints->default_settings().has_packet_count_for_server());
+  ZX_DEBUG_ASSERT(constraints->default_settings().has_packet_count_for_client());
+  ZX_DEBUG_ASSERT(constraints->default_settings().has_per_packet_buffer_bytes());
+  ZX_DEBUG_ASSERT(constraints->default_settings().has_single_buffer_mode() &&
+                  constraints->default_settings().single_buffer_mode() == false);
+
+  return constraints;
+}
 // Caller must ensure that this is called only on one thread at a time, only
 // during setup, during a core codec initiated mid-stream format change, or
 // during stream start before any input data has been delivered for the new
