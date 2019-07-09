@@ -57,28 +57,26 @@ LogListener::LogListener(async_dispatcher_t* dispatcher,
     : dispatcher_(dispatcher), services_(services), binding_(this) {}
 
 fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
-  done_ = std::make_shared<fit::bridge<void, void>>();
-
   fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener_h;
   binding_.Bind(log_listener_h.NewRequest());
   binding_.set_error_handler([this](zx_status_t status) {
-    if (!done_ || !done_->completer) {
+    if (!done_.completer) {
       return;
     }
 
     FX_PLOGS(ERROR, status) << "LogListener error";
-    done_->completer.complete_error();
+    done_.completer.complete_error();
     Reset();
   });
 
   logger_ = services_->Connect<fuchsia::logger::Log>();
   logger_.set_error_handler([this](zx_status_t status) {
-    if (!done_ || !done_->completer) {
+    if (!done_.completer) {
       return;
     }
 
     FX_PLOGS(ERROR, status) << "Lost connection to Log service";
-    done_->completer.complete_error();
+    done_.completer.complete_error();
     Reset();
   });
   // Resets |log_many_called_| for the new call to DumpLogs().
@@ -90,13 +88,17 @@ fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
   //
   // We wrap the delayed task in a CancelableClosure so we can cancel it when
   // the fit::bridge is completed by Done() or another error.
-  done_after_timeout_.Reset([done = done_] {
-    if (!done || !done->completer) {
+  //
+  // It is safe to pass "this" to the fit::function as the callback won't be
+  // callable when the CancelableClosure goes out of scope, which is before
+  // "this".
+  done_after_timeout_.Reset([this] {
+    if (!done_.completer) {
       return;
     }
 
     FX_LOGS(ERROR) << "System log collection timed out";
-    done->completer.complete_error();
+    done_.completer.complete_error();
   });
   const zx_status_t post_status = async::PostDelayedTask(
       dispatcher_, [cb = done_after_timeout_.callback()] { cb(); }, timeout);
@@ -104,7 +106,7 @@ fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
     FX_PLOGS(ERROR, post_status) << "Failed to post delayed task, no timeout for log collection";
   }
 
-  return done_->consumer.promise_or(fit::error());
+  return done_.consumer.promise_or(fit::error());
 }
 
 void LogListener::LogMany(::std::vector<fuchsia::logger::LogMessage> messages) {
@@ -148,7 +150,7 @@ void LogListener::Log(fuchsia::logger::LogMessage message) {
 }
 
 void LogListener::Done() {
-  if (!done_ || !done_->completer) {
+  if (!done_.completer) {
     return;
   }
 
@@ -160,12 +162,11 @@ void LogListener::Done() {
     FX_LOGS(WARNING) << "Done() was called, but no logs have been collected yet";
   }
 
-  done_->completer.complete_ok();
+  done_.completer.complete_ok();
   Reset();
 }
 
 void LogListener::Reset() {
-  done_.reset();
   done_after_timeout_.Cancel();
   binding_.Unbind();
   logger_.Unbind();

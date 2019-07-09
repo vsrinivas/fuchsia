@@ -34,9 +34,7 @@ class Scenic {
   const std::shared_ptr<::sys::ServiceDirectory> services_;
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
-  // We use a shared_ptr to share the bridge between this and the async loop on
-  // which we post the delayed task to timeout.
-  std::shared_ptr<fit::bridge<fuchsia::ui::scenic::ScreenshotData>> done_;
+  fit::bridge<fuchsia::ui::scenic::ScreenshotData> done_;
   // We wrap the delayed task we post on the async loop to timeout in a
   // CancelableClosure so we can cancel it if we are done another way.
   fxl::CancelableClosure done_after_timeout_;
