@@ -17,6 +17,7 @@ mod configuration;
 mod fidl;
 mod http_request;
 mod install_plan;
+mod installer;
 mod metrics;
 mod policy;
 mod storage;
