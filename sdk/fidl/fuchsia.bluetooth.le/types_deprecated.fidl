@@ -6,17 +6,50 @@ library fuchsia.bluetooth.le;
 
 using fuchsia.bluetooth;
 
+// [[DEPRECATED]]
 struct ServiceDataEntry {
     string uuid;
     bytes data;
 };
 
+// [[DEPRECATED]]
 struct ManufacturerSpecificDataEntry {
     uint16 company_id;
     bytes data;
 };
 
 // Represents advertising and scan response data advertised by a broadcaster or peripheral.
+// [[DEPRECATED]]
+struct AdvertisingDataDeprecated {
+    // Name of the device.
+    string? name;
+
+    // The radio transmission power level reported in the advertisement.
+    fuchsia.bluetooth.Int8? tx_power_level;
+
+    // The appearance reported in the advertisemet.
+    fuchsia.bluetooth.UInt16? appearance;
+
+    // List of service UUIDs reported in the advertisement.
+    vector<string>? service_uuids;
+
+    // Service data included in the advertisement.
+    vector<ServiceDataEntry>? service_data;
+
+    // Manufacturer specific data entries.
+    vector<ManufacturerSpecificDataEntry>? manufacturer_specific_data;
+
+    // Service UUIDs that were solicited in the advertisement. Peripherals can invite centrals that
+    // expose certain services to connect to them using service solicitation.
+    vector<string>? solicited_service_uuids;
+
+    // URIs included in the advertising packet.
+    // These are full URIs (they are encoded/decoded automatically)
+    vector<string>? uris;
+};
+
+// TODO(BT-812, FIDL-483): Temporary copy for a rename, since type-aliasing is not supported.
+// [[DEPRECATED]]
 struct AdvertisingData {
     // Name of the device.
     string? name;
@@ -47,6 +80,7 @@ struct AdvertisingData {
 
 // Represents a remote Bluetooth Low Energy device. A RemoteDevice can represent a central,
 // broadcaster, or peripheral based on the API from which it was received.
+// [[DEPRECATED]]
 struct RemoteDevice {
     // Identifier that uniquely identifies this device on the current system.
     string identifier;
@@ -59,12 +93,13 @@ struct RemoteDevice {
     fuchsia.bluetooth.Int8? rssi;
 
     // Advertising data broadcast by this device if this device is a broadcaster or peripheral.
-    AdvertisingData? advertising_data;
+    AdvertisingDataDeprecated? advertising_data;
 };
 
 // Filter parameters for use during a scan. A discovered peripheral or broadcaster will be reported
 // to applications only if it satisfies all of the provided filter parameters. Null fields will be
 // ignored.
+// [[DEPRECATED]]
 struct ScanFilter {
     // Filter based on advertised service UUIDs. A peripheral that advertises at least one of the
     // entries in `service_uuids` will satisfy this filter.

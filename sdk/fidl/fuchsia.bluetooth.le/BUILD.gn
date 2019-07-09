@@ -10,7 +10,7 @@ fidl("fuchsia.bluetooth.le") {
   sources = [
     "central.fidl",
     "peripheral.fidl",
-    "types.fidl",
+    "types_deprecated.fidl",
   ]
 
   public_deps = [

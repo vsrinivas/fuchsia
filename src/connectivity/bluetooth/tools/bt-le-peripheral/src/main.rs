@@ -9,8 +9,8 @@ use {
     failure::{bail, Error, ResultExt},
     fidl_fuchsia_bluetooth::UInt16,
     fidl_fuchsia_bluetooth_le::{
-        AdvertisingData, ManufacturerSpecificDataEntry, PeripheralMarker, PeripheralProxy,
-        ServiceDataEntry,
+        AdvertisingDataDeprecated, ManufacturerSpecificDataEntry, PeripheralMarker,
+        PeripheralProxy, ServiceDataEntry,
     },
     fuchsia_async as fasync,
     fuchsia_bluetooth::assigned_numbers::{find_service_uuid, AssignedNumber},
@@ -200,14 +200,19 @@ fn optionalize<T>(vec: Vec<T>) -> Option<Vec<T>> {
 /// Start advertising and print status on success or construct error on failure
 async fn start_advertising<'a>(
     peripheral: &'a PeripheralProxy,
-    adv: &'a mut AdvertisingData,
+    adv: &'a mut AdvertisingDataDeprecated,
     service_names: &'a [String],
     connectable: bool,
     interval_ms: u32,
     anonymous: bool,
 ) -> Result<(), Error> {
-    let (status, adv_id) =
-        await!(peripheral.start_advertising(adv, None, connectable, interval_ms, anonymous))?;
+    let (status, adv_id) = await!(peripheral.start_advertising_deprecated(
+        adv,
+        None,
+        connectable,
+        interval_ms,
+        anonymous
+    ))?;
     if let Some(err) = status.error {
         bail!("Failed to initiate advertisement: {:?}", err);
     }
@@ -246,7 +251,7 @@ fn main() -> Result<(), Error> {
     manufacturer_data.extend(binary_manufacturer_data);
 
     // unchanging advertising data used for the lifetime of the program
-    let mut adv = AdvertisingData {
+    let mut adv = AdvertisingDataDeprecated {
         name: device_name,
         tx_power_level: None,
         appearance: appearance.map(|value| Box::new(UInt16 { value })),

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use failure::{bail, Error, ResultExt};
-use fidl_fuchsia_bluetooth_le::{AdvertisingData, PeripheralMarker, PeripheralProxy};
+use fidl_fuchsia_bluetooth_le::{AdvertisingDataDeprecated, PeripheralMarker, PeripheralProxy};
 use fuchsia_bluetooth::error::Error as BTError;
 use fuchsia_component as app;
 use fuchsia_syslog::macros::*;
@@ -82,7 +82,7 @@ impl BleAdvertiseFacade {
 
     pub async fn start_adv(
         &self,
-        adv_data: Option<AdvertisingData>,
+        adv_data: Option<AdvertisingDataDeprecated>,
         interval: Option<u32>,
         connectable: bool,
     ) -> Result<(), Error> {
@@ -91,7 +91,7 @@ impl BleAdvertiseFacade {
 
         let mut ad = match adv_data {
             Some(ad) => ad,
-            None => AdvertisingData {
+            None => AdvertisingDataDeprecated {
                 name: None,
                 tx_power_level: None,
                 appearance: None,
@@ -108,8 +108,13 @@ impl BleAdvertiseFacade {
         let periph = &self.inner.read().peripheral.clone();
         match &periph {
             Some(p) => {
-                let (status, adv_id) =
-                    await!(p.start_advertising(&mut ad, None, connectable, intv, false))?;
+                let (status, adv_id) = await!(p.start_advertising_deprecated(
+                    &mut ad,
+                    None,
+                    connectable,
+                    intv,
+                    false
+                ))?;
                 match status.error {
                     None => {
                         fx_log_info!(tag: "start_adv", "Started advertising id: {:?}", adv_id);
@@ -136,7 +141,7 @@ impl BleAdvertiseFacade {
         let periph = &self.inner.read().peripheral.clone();
         match &periph {
             Some(p) => {
-                await!(p.stop_advertising(&adv_id))?;
+                await!(p.stop_advertising_deprecated(&adv_id))?;
                 self.set_adv_id(None);
                 Ok(())
             }

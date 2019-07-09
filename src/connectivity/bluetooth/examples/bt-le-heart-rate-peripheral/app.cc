@@ -4,18 +4,17 @@
 
 #include "app.h"
 
+#include <src/lib/fxl/logging.h>
+
 #include <functional>
 #include <iostream>
-
-#include <src/lib/fxl/logging.h>
 
 namespace ble = fuchsia::bluetooth::le;
 
 namespace bt_le_heart_rate {
 
 App::App(std::unique_ptr<HeartModel> heart_model)
-    : context_(sys::ComponentContext::Create()),
-      service_(std::move(heart_model)) {
+    : context_(sys::ComponentContext::Create()), service_(std::move(heart_model)) {
   gatt_server_ = context_->svc()->Connect<fuchsia::bluetooth::gatt::Server>();
   FXL_DCHECK(gatt_server_);
 
@@ -23,14 +22,12 @@ App::App(std::unique_ptr<HeartModel> heart_model)
 
   peripheral_ = context_->svc()->Connect<ble::Peripheral>();
   FXL_DCHECK(peripheral_);
-  peripheral_.events().OnCentralConnected =
-      fit::bind_member(this, &App::OnCentralConnected);
-  peripheral_.events().OnCentralDisconnected =
-      fit::bind_member(this, &App::OnCentralDisconnected);
+  peripheral_.events().OnCentralConnected = fit::bind_member(this, &App::OnCentralConnected);
+  peripheral_.events().OnCentralDisconnected = fit::bind_member(this, &App::OnCentralDisconnected);
 }
 
 void App::StartAdvertising() {
-  ble::AdvertisingData ad;
+  ble::AdvertisingDataDeprecated ad;
   ad.name = kDeviceName;
   ad.service_uuids = fidl::VectorPtr<std::string>({Service::kServiceUuid});
 
@@ -40,12 +37,11 @@ void App::StartAdvertising() {
               << ", advertisement_id: " << advertisement_id << std::endl;
   };
 
-  peripheral_->StartAdvertising(std::move(ad), nullptr, true, 60, false,
-                                std::move(start_adv_result_cb));
+  peripheral_->StartAdvertisingDeprecated(std::move(ad), nullptr, true, 60, false,
+                                          std::move(start_adv_result_cb));
 }
 
-void App::OnCentralConnected(fidl::StringPtr advertisement_id,
-                             ble::RemoteDevice central) {
+void App::OnCentralConnected(fidl::StringPtr advertisement_id, ble::RemoteDevice central) {
   std::cout << "Central (" << central.identifier << ") connected" << std::endl;
 
   // Start another advertisement so other peers can connect.

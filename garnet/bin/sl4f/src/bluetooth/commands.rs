@@ -4,7 +4,7 @@
 
 use failure::{bail, Error};
 use fidl_fuchsia_bluetooth_gatt::ServiceInfo;
-use fidl_fuchsia_bluetooth_le::{AdvertisingData, ScanFilter};
+use fidl_fuchsia_bluetooth_le::{AdvertisingDataDeprecated, ScanFilter};
 use fuchsia_bluetooth::error::Error as BTError;
 use fuchsia_syslog::macros::*;
 use parking_lot::RwLock;
@@ -37,7 +37,7 @@ macro_rules! parse_arg {
 // a FIDL ble_advertise command
 fn ble_advertise_args_to_fidl(
     args_raw: Value,
-) -> Result<(Option<AdvertisingData>, Option<u32>, bool), Error> {
+) -> Result<(Option<AdvertisingDataDeprecated>, Option<u32>, bool), Error> {
     let adv_data_raw = match args_raw.get("advertising_data") {
         Some(adr) => adr.clone(),
         None => bail!("Advertising data missing."),
@@ -57,7 +57,7 @@ fn ble_advertise_args_to_fidl(
 
     // TODO(NET-1026): Is there a better way to unpack the args into an AdvData
     // struct? Unfortunately, can't derive deserialize for AdvData
-    let ad = Some(AdvertisingData {
+    let ad = Some(AdvertisingDataDeprecated {
         name: name,
         tx_power_level: None,
         appearance: None,
