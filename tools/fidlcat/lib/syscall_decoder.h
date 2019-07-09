@@ -60,7 +60,8 @@ class SyscallUse {
   SyscallUse() = default;
   virtual ~SyscallUse() = default;
 
-  virtual void SyscallDecoded(SyscallDecoder* syscall);
+  virtual void SyscallInputsDecoded(SyscallDecoder* syscall);
+  virtual void SyscallOutputsDecoded(SyscallDecoder* syscall);
   virtual void SyscallDecodingError(const SyscallDecoderError& error, SyscallDecoder* syscall);
 };
 
@@ -210,12 +211,14 @@ class SyscallDisplay : public SyscallUse {
   SyscallDisplay(SyscallDisplayDispatcher* dispatcher, std::ostream& os)
       : dispatcher_(dispatcher), os_(os) {}
 
-  void SyscallDecoded(SyscallDecoder* syscall) override;
+  void SyscallInputsDecoded(SyscallDecoder* syscall) override;
+  void SyscallOutputsDecoded(SyscallDecoder* syscall) override;
   void SyscallDecodingError(const SyscallDecoderError& error, SyscallDecoder* syscall) override;
 
  private:
   SyscallDisplayDispatcher* const dispatcher_;
   std::ostream& os_;
+  std::string line_header_;
 };
 
 }  // namespace fidlcat

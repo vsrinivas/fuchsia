@@ -142,7 +142,7 @@ TEST_F(WireParserTest, ParseSingleString) {
                                                                                                 \
     std::stringstream result;                                                                   \
     if (decoded_request != nullptr) {                                                           \
-      decoded_request->PrettyPrint(result, FakeColors, 0, 80, 80);                              \
+      decoded_request->PrettyPrint(result, FakeColors, "", 0, 80, 80);                          \
     }                                                                                           \
     ASSERT_EQ(result.str(), _pretty_print)                                                      \
         << "expected = " << _pretty_print << " actual = " << result.str();                      \

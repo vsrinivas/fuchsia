@@ -356,6 +356,8 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
 
   DataForSyscallTest& data() { return data_; }
 
+  void set_with_process_info() { display_options_.with_process_info = true; }
+
   void PerformCheckTest(std::unique_ptr<SystemCallTest> syscall);
 
   void PerformDisplayTest(std::unique_ptr<SystemCallTest> syscall, const char* expected);
@@ -463,7 +465,7 @@ class SyscallCheck : public SyscallUse {
  public:
   explicit SyscallCheck(ProcessController* controller) : controller_(controller) {}
 
-  void SyscallDecoded(SyscallDecoder* syscall) override {
+  void SyscallOutputsDecoded(SyscallDecoder* syscall) override {
     DataForSyscallTest& data = controller_->remote_api()->data();
     FXL_DCHECK(syscall->Value(0) == kHandle);  // handle
     FXL_DCHECK(syscall->Value(1) == 0);        // options
@@ -613,12 +615,18 @@ void InterceptionWorkflowTest::PerformDisplayTest(std::unique_ptr<SystemCallTest
   PerformTest(std::move(syscall), &controller,
               std::make_unique<SyscallDisplayDispatcherTest>(nullptr, display_options_, result_,
                                                              &controller));
-  // The outputs from each thread are separated by \n\n.
-  std::string delimiter = "\n\n";
-  // The first output ends after the first \n char in the delimiter.
-  std::string first = result_.str().substr(0, result_.str().find(delimiter) + 1);
-  // The second output starts after the first \n char in the delimiter.
-  std::string second = result_.str().substr(result_.str().find(delimiter) + 1);
+  std::string both_results = result_.str();
+  // The second output starts with "test_2718"
+  size_t split = both_results.find("test_2718");
+  ASSERT_NE(split, std::string::npos);
+  if (!display_options_.with_process_info) {
+    // When we don't have the process info on each line, the first displayed line is empty (instead
+    // of having the process name, process id and thread id). Go back one position to add this line
+    // to the second comparison (and remove it from the first comparison);
+    --split;
+  }
+  std::string first = both_results.substr(0, split);
+  std::string second = both_results.substr(split);
 
   // Check that the two syscalls generated the data we expect.
   ASSERT_EQ(expected, first);
@@ -716,8 +724,10 @@ WRITE_DISPLAY_TEST(ZxChannelWrite, ZX_OK,
                    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_write("
                    "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
                    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
+                   ""
                    "  \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=2 "
                    "ordinal=8639255294892834816\n"
+                   ""
                    "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 WRITE_DISPLAY_TEST(ZxChannelWritePeerClosed, ZX_ERR_PEER_CLOSED,
@@ -725,8 +735,10 @@ WRITE_DISPLAY_TEST(ZxChannelWritePeerClosed, ZX_ERR_PEER_CLOSED,
                    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_write("
                    "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
                    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
+                   ""
                    "  \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=2 "
                    "ordinal=8639255294892834816\n"
+                   ""
                    "  -> \x1B[31mZX_ERR_PEER_CLOSED\x1B[0m\n");
 
 #define READ_DISPLAY_TEST_CONTENT(errno, check_bytes, check_handles, expected)                   \
@@ -759,7 +771,9 @@ READ_DISPLAY_TEST(ZxChannelRead, ZX_OK, true, true,
                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                   "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
                   "num_handles:\x1B[32muint32\x1B[0m: \x1B[34m64\x1B[0m)\n"
+                  ""
                   "  -> \x1B[32mZX_OK\x1B[0m\n"
+                  ""
                   "    \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=2 "
                   "ordinal=8639255294892834816\n");
 
@@ -770,6 +784,7 @@ READ_DISPLAY_TEST(ZxChannelReadShouldWait, ZX_ERR_SHOULD_WAIT, true, true,
                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                   "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
                   "num_handles:\x1B[32muint32\x1B[0m: \x1B[34m64\x1B[0m)\n"
+                  ""
                   "  -> \x1B[31mZX_ERR_SHOULD_WAIT\x1B[0m\n");
 
 READ_DISPLAY_TEST(ZxChannelReadTooSmall, ZX_ERR_BUFFER_TOO_SMALL, true, true,
@@ -779,6 +794,7 @@ READ_DISPLAY_TEST(ZxChannelReadTooSmall, ZX_ERR_BUFFER_TOO_SMALL, true, true,
                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                   "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
                   "num_handles:\x1B[32muint32\x1B[0m: \x1B[34m64\x1B[0m)\n"
+                  ""
                   "  -> \x1B[31mZX_ERR_BUFFER_TOO_SMALL\x1B[0m ("
                   "actual_bytes:\x1B[32muint32\x1B[0m: \x1B[34m16\x1B[0m, "
                   "actual_handles:\x1B[32muint32\x1B[0m: \x1B[34m2\x1B[0m)\n");
@@ -790,7 +806,9 @@ READ_DISPLAY_TEST(ZxChannelReadNoBytes, ZX_OK, false, true,
                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                   "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
                   "num_handles:\x1B[32muint32\x1B[0m: \x1B[34m64\x1B[0m)\n"
+                  ""
                   "  -> \x1B[32mZX_OK\x1B[0m\n"
+                  ""
                   "    \x1B[31mCan't decode message\x1B[0m num_bytes=0 num_handles=2\n");
 
 READ_DISPLAY_TEST(ZxChannelReadNoHandles, ZX_OK, true, false,
@@ -800,7 +818,9 @@ READ_DISPLAY_TEST(ZxChannelReadNoHandles, ZX_OK, true, false,
                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                   "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
                   "num_handles:\x1B[32muint32\x1B[0m: \x1B[34m64\x1B[0m)\n"
+                  ""
                   "  -> \x1B[32mZX_OK\x1B[0m\n"
+                  ""
                   "    \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=0 "
                   "ordinal=8639255294892834816\n");
 
@@ -843,10 +863,40 @@ CALL_TEST(ZxChannelCall, ZX_OK, true, true,
           "deadline:\x1B[32mtime\x1B[0m: \x1B[34mZX_TIME_INFINITE\x1B[0m, "
           "rd_num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
           "rd_num_handles:\x1B[32muint32\x1B[0m: \x1B[34m64\x1B[0m)\n"
+          ""
           "  \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=2 "
           "ordinal=8639255294892834816\n"
+          ""
           "  -> \x1B[32mZX_OK\x1B[0m\n"
+          ""
           "    \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=2 "
           "ordinal=8639255294892834816\n");
+
+#define CALL_TEST_WITH_PROCESS_INFO(name, errno, check_bytes, check_handles, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                                          \
+    set_with_process_info();                                                           \
+    CALL_TEST_CONTENT(errno, check_bytes, check_handles, expected);                    \
+  }                                                                                    \
+  TEST_F(InterceptionWorkflowTestArm, name) {                                          \
+    set_with_process_info();                                                           \
+    CALL_TEST_CONTENT(errno, check_bytes, check_handles, expected);                    \
+  }
+
+CALL_TEST_WITH_PROCESS_INFO(ZxChannelCallWithProcessInfo, ZX_OK, true, true,
+                            "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m \n"
+                            "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_call("
+                            "handle:\x1B[32mhandle\x1B[0m: \x1B[31m3472498096\x1B[0m, "
+                            "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
+                            "deadline:\x1B[32mtime\x1B[0m: \x1B[34mZX_TIME_INFINITE\x1B[0m, "
+                            "rd_num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
+                            "rd_num_handles:\x1B[32muint32\x1B[0m: \x1B[34m64\x1B[0m)\n"
+                            "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m "
+                            "  \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=2 "
+                            "ordinal=8639255294892834816\n"
+                            "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m "
+                            "  -> \x1B[32mZX_OK\x1B[0m\n"
+                            "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m "
+                            "    \x1B[31mCan't decode message\x1B[0m num_bytes=16 num_handles=2 "
+                            "ordinal=8639255294892834816\n");
 
 }  // namespace fidlcat

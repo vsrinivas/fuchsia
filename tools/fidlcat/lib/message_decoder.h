@@ -67,6 +67,7 @@ class MessageDecoderDispatcher {
   LibraryLoader* loader() const { return loader_; }
   const DisplayOptions& display_options() const { return display_options_; }
   const Colors& colors() const { return colors_; }
+  bool with_process_info() const { return display_options_.with_process_info; }
   std::map<std::tuple<zx_handle_t, uint64_t>, Direction>& handle_directions() {
     return handle_directions_;
   }
@@ -79,7 +80,8 @@ class MessageDecoderDispatcher {
 
   bool DecodeMessage(uint64_t process_koid, zx_handle_t handle, const uint8_t* bytes,
                      uint32_t num_bytes, const zx_handle_t* handles, uint32_t num_handles,
-                     SyscallFidlType type, std::ostream& os, int tabs = 0);
+                     SyscallFidlType type, std::ostream& os, std::string_view line_header = "",
+                     int tabs = 0);
 
  private:
   LibraryLoader* const loader_;

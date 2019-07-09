@@ -43,8 +43,8 @@ class Field {
                            rapidjson::Value& result) const;
 
   // Pretty print of the field.
-  virtual void PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
-                           int max_line_size) const = 0;
+  virtual void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header,
+                           int tabs, int remaining_size, int max_line_size) const = 0;
 
  private:
   const std::string name_;
@@ -86,8 +86,8 @@ class RawField : public InlineField {
 
   int DisplaySize(int remaining_size) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
-                   int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 
  private:
   const uint64_t size_;
@@ -106,8 +106,8 @@ class NumericField : public InlineField {
                : std::to_string(internal::MemoryFrom<T, const uint8_t*>(data())).size();
   }
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
-                   int max_line_size) const override {
+  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override {
     if (data() == nullptr) {
       os << colors.red << "invalid" << colors.reset;
     } else {
@@ -130,8 +130,8 @@ class StringField : public NullableField {
   void ExtractJson(rapidjson::Document::AllocatorType& allocator,
                    rapidjson::Value& result) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
-                   int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 
  private:
   const uint64_t string_length_;
@@ -146,8 +146,8 @@ class BoolField : public InlineField {
 
   int DisplaySize(int remaining_size) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
-                   int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 };
 
 // An object. This represents a struct, a request or a response.
@@ -165,8 +165,8 @@ class Object : public NullableField {
   void ExtractJson(rapidjson::Document::AllocatorType& allocator,
                    rapidjson::Value& result) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
-                   int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 
  private:
   const Struct& struct_definition_;
@@ -192,8 +192,8 @@ class EnvelopeField : public NullableField {
   void ExtractJson(rapidjson::Document::AllocatorType& allocator,
                    rapidjson::Value& result) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
-                   int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 
  private:
   uint32_t num_bytes_ = 0;
@@ -216,8 +216,8 @@ class TableField : public NullableField {
   void ExtractJson(rapidjson::Document::AllocatorType& allocator,
                    rapidjson::Value& result) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
-                   int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 
  private:
   const Table& table_definition_;
@@ -242,8 +242,8 @@ class UnionField : public NullableField {
   void ExtractJson(rapidjson::Document::AllocatorType& allocator,
                    rapidjson::Value& result) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
-                   int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 
  private:
   const Union& union_definition_;
@@ -271,8 +271,8 @@ class ArrayField : public Field {
   void ExtractJson(rapidjson::Document::AllocatorType& allocator,
                    rapidjson::Value& result) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
-                   int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 
  private:
   std::vector<std::unique_ptr<Field>> fields_;
@@ -291,8 +291,8 @@ class VectorField : public NullableField {
   void ExtractJson(rapidjson::Document::AllocatorType& allocator,
                    rapidjson::Value& result) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
-                   int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 
  private:
   const uint64_t size_;
@@ -312,8 +312,8 @@ class EnumField : public InlineField {
   void ExtractJson(rapidjson::Document::AllocatorType& allocator,
                    rapidjson::Value& result) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
-                   int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 
  private:
   const Enum& enum_definition_;
@@ -329,8 +329,8 @@ class HandleField : public Field {
 
   void DecodeContent(MessageDecoder* decoder) override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
-                   int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 
  private:
   const zx_handle_t handle_;

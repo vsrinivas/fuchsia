@@ -354,7 +354,7 @@ class SyscallInputOutputBase {
 
   // Displays large (multi lines) inputs or outputs.
   virtual void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
-                              int tabs, std::ostream& os) const {}
+                              std::string_view line_header, int tabs, std::ostream& os) const {}
 
  private:
   const int64_t error_code_;
@@ -420,8 +420,8 @@ class SyscallFidlMessage : public SyscallInputOutputBase {
     }
   }
 
-  void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, int tabs,
-                      std::ostream& os) const override;
+  void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
+                      std::string_view line_header, int tabs, std::ostream& os) const override;
 
  private:
   const SyscallFidlType type_;
@@ -572,7 +572,15 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
       : message_decoder_dispatcher_(loader, display_options), os_(os) {}
 
   MessageDecoderDispatcher& message_decoder_dispatcher() { return message_decoder_dispatcher_; }
+
   const Colors& colors() const { return message_decoder_dispatcher_.colors(); }
+
+  bool with_process_info() const { return message_decoder_dispatcher_.with_process_info(); }
+
+  const SyscallDisplay* last_displayed_syscall() const { return last_displayed_syscall_; }
+  void set_last_displayed_syscall(const SyscallDisplay* last_displayed_syscall) {
+    last_displayed_syscall_ = last_displayed_syscall;
+  }
 
   void AddLaunchedProcess(uint64_t process_koid) override {
     message_decoder_dispatcher_.AddLaunchedProcess(process_koid);
@@ -585,6 +593,8 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
  private:
   // Class which can decode a FIDL message.
   MessageDecoderDispatcher message_decoder_dispatcher_;
+  // The last syscall we displayed the inputs on the stream.
+  const SyscallDisplay* last_displayed_syscall_ = nullptr;
   // The stream which will receive the syscall decodings.
   std::ostream& os_;
 };

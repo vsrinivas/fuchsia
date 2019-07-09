@@ -22,19 +22,21 @@
 ## - This scripts uses the tool "nc" for testing TCP connections. Check that it
 ##   is in $PATH and that it works.
 ##
-## Usage: fx fidlcat [--debug-mode] [(--port|-p) <PORT>]
+## Usage: fx fidlcat [--debug-mode] [(--port|-p) <PORT>] [--with-process-info]
 ##                   [--remote-pid <pid>|--remote-name <names>|run <component URL>]
 ##
-##    --port            Port the debug agent will be listening on. Will use 2345
-##                      by default.
-##    --debug-mode      Whether the debug agent's debug logs should be shown.
-##    --remote-pid      The koid of the remote process to trace
-##    --remote-name     A set of comma-separated regexes.  When a process
-##                      whose name matches one of the regexes starts, fidlcat
-##                      will trace it.  Can be provided multiple times for
-##                      multiple regexes.
-##    run               a token indicating that you want to invoke and trace the
-##                      following component URL.
+##    --port               Port the debug agent will be listening on. Will use 2345
+##                         by default.
+##    --debug-mode         Whether the debug agent's debug logs should be shown.
+##    --with-process-info  Display the process name, process id and thread id on
+##                         each line (useful for grep).
+##    --remote-pid         The koid of the remote process to trace
+##    --remote-name        A set of comma-separated regexes.  When a process
+##                         whose name matches one of the regexes starts, fidlcat
+##                         will trace it.  Can be provided multiple times for
+##                         multiple regexes.
+##    run                  a token indicating that you want to invoke and trace the
+##                         following component URL.
 ##
 ## Flags after -- are parsed by fidlcat.  Example usage:
 ##
@@ -52,6 +54,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../contri
 
 agent_out="/dev/null"
 debug_mode=
+with_process_info=
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -66,6 +69,9 @@ while [[ $# -gt 0 ]]; do
     --debug-mode)
       agent_out="/dev/stdout"
       debug_mode="--debug-mode"
+      ;;
+    --with-process-info)
+      with_process_info="--with-process-info"
       ;;
     --remote-pid)
       break # Remaining flags are passed to fidlcat
@@ -103,4 +109,5 @@ launch_debug_agent
   "-s" "${ZIRCON_BUILDROOT}" \
   "-s" "${BUILDTOOLS_CLANG_DIR}/lib/debug" \
   --pretty-print \
+  ${with_process_info} \
   $@

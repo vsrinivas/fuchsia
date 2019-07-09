@@ -7,6 +7,7 @@
 
 struct DisplayOptions {
   bool pretty_print = false;
+  bool with_process_info = false;
   int columns = 0;
   bool needs_colors = false;
 };

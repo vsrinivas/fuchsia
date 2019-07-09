@@ -27,7 +27,8 @@ std::string DocumentToString(rapidjson::Document& document) {
 bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t handle,
                                              const uint8_t* bytes, uint32_t num_bytes,
                                              const zx_handle_t* handles, uint32_t num_handles,
-                                             SyscallFidlType type, std::ostream& os, int tabs) {
+                                             SyscallFidlType type, std::ostream& os,
+                                             std::string_view line_header, int tabs) {
   if (loader_ == nullptr) {
     return false;
   }
@@ -131,28 +132,30 @@ bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t 
   }
 
   if (direction == Direction::kUnknown) {
-    os << std::string(tabs * kTabSize, ' ') << colors_.red << "Can't determine request/response."
-       << colors_.reset << " it can be:\n";
+    os << line_header << std::string(tabs * kTabSize, ' ') << colors_.red
+       << "Can't determine request/response." << colors_.reset << " it can be:\n";
     ++tabs;
   }
 
   if (matched_request && (is_request || (direction == Direction::kUnknown))) {
-    os << std::string(tabs * kTabSize, ' ') << colors_.white_on_magenta << "request"
+    os << line_header << std::string(tabs * kTabSize, ' ') << colors_.white_on_magenta << "request"
        << colors_.reset << ' ' << colors_.green << method->enclosing_interface().name() << '.'
        << method->name() << colors_.reset << " = ";
     if (display_options_.pretty_print) {
-      decoded_request->PrettyPrint(os, colors_, tabs, tabs * kTabSize, display_options_.columns);
+      decoded_request->PrettyPrint(os, colors_, line_header, tabs, tabs * kTabSize,
+                                   display_options_.columns);
     } else {
       os << DocumentToString(actual_request);
     }
     os << '\n';
   }
   if (matched_response && (!is_request || (direction == Direction::kUnknown))) {
-    os << std::string(tabs * kTabSize, ' ') << colors_.white_on_magenta << "response"
+    os << line_header << std::string(tabs * kTabSize, ' ') << colors_.white_on_magenta << "response"
        << colors_.reset << ' ' << colors_.green << method->enclosing_interface().name() << '.'
        << method->name() << colors_.reset << " = ";
     if (display_options_.pretty_print) {
-      decoded_response->PrettyPrint(os, colors_, tabs, tabs * kTabSize, display_options_.columns);
+      decoded_response->PrettyPrint(os, colors_, line_header, tabs, tabs * kTabSize,
+                                    display_options_.columns);
     } else {
       os << DocumentToString(actual_response);
     }

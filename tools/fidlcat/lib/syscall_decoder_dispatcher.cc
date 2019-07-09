@@ -41,7 +41,8 @@ class ZxChannelCallArgs {
 };
 
 void SyscallFidlMessage::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
-                                        SyscallDecoder* decoder, int tabs, std::ostream& os) const {
+                                        SyscallDecoder* decoder, std::string_view line_header,
+                                        int tabs, std::ostream& os) const {
   zx_handle_t handle = handle_->Value(decoder);
   const uint8_t* bytes = bytes_->Content(decoder);
   uint32_t num_bytes = num_bytes_->Value(decoder);
@@ -49,9 +50,9 @@ void SyscallFidlMessage::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
   uint32_t num_handles = num_handles_->Value(decoder);
   if (!dispatcher->message_decoder_dispatcher().DecodeMessage(
           decoder->thread()->GetProcess()->GetKoid(), handle, bytes, num_bytes, handles,
-          num_handles, type_, os, tabs)) {
-    os << std::string(tabs * kTabSize, ' ') << dispatcher->colors().red << "Can't decode message"
-       << dispatcher->colors().reset << " num_bytes=" << num_bytes
+          num_handles, type_, os, line_header, tabs)) {
+    os << line_header << std::string(tabs * kTabSize, ' ') << dispatcher->colors().red
+       << "Can't decode message" << dispatcher->colors().reset << " num_bytes=" << num_bytes
        << " num_handles=" << num_handles;
     if ((bytes != nullptr) && (num_bytes >= sizeof(fidl_message_header_t))) {
       const fidl_message_header_t* header = reinterpret_cast<const fidl_message_header_t*>(bytes);

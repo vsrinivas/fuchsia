@@ -120,7 +120,9 @@ void MemoryDumpToVector(const zxdb::MemoryDump& dump, std::vector<uint8_t>* outp
   }
 }
 
-void SyscallUse::SyscallDecoded(SyscallDecoder* syscall) { syscall->Destroy(); }
+void SyscallUse::SyscallInputsDecoded(SyscallDecoder* syscall) {}
+
+void SyscallUse::SyscallOutputsDecoded(SyscallDecoder* syscall) { syscall->Destroy(); }
 
 void SyscallUse::SyscallDecodingError(const SyscallDecoderError& error, SyscallDecoder* syscall) {
   FXL_LOG(ERROR) << error.message();
@@ -270,6 +272,7 @@ void SyscallDecoder::LoadInputs() {
 }
 
 void SyscallDecoder::StepToReturnAddress() {
+  use_->SyscallInputsDecoded(this);
   zxdb::BreakpointSettings settings;
   settings.enabled = true;
   settings.stop_mode = zxdb::BreakpointSettings::StopMode::kThread;
@@ -326,30 +329,51 @@ void SyscallDecoder::DecodeAndDisplay() {
   if (pending_request_count_ > 0) {
     return;
   }
-  use_->SyscallDecoded(this);
+  use_->SyscallOutputsDecoded(this);
 }
 
 void SyscallDecoder::Destroy() { dispatcher_->DeleteDecoder(this); }
 
-void SyscallDisplay::SyscallDecoded(SyscallDecoder* syscall) {
-  os_ << '\n';
-
+void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* syscall) {
   const Colors& colors = dispatcher_->colors();
+  line_header_ = syscall->thread()->GetProcess()->GetName() + ' ' + colors.red +
+                 std::to_string(syscall->thread()->GetProcess()->GetKoid()) + colors.reset + ':' +
+                 colors.red + std::to_string(syscall->thread_id()) + colors.reset + ' ';
+
+  if (dispatcher_->with_process_info()) {
+    os_ << line_header_ << '\n';
+  } else {
+    os_ << '\n';
+  }
+
   // Displays the header and the inline input arguments.
-  os_ << syscall->thread()->GetProcess()->GetName() << ' ' << colors.red
-      << syscall->thread()->GetProcess()->GetKoid() << colors.reset << ':' << colors.red
-      << syscall->thread_id() << colors.reset << ' ' << syscall->syscall()->name() << '(';
+  os_ << line_header_ << syscall->syscall()->name() << '(';
   const char* separator = "";
   for (const auto& input : syscall->syscall()->inputs()) {
     separator = input->DisplayInline(dispatcher_, syscall, separator, os_);
   }
   os_ << ")\n";
+
+  if (!dispatcher_->with_process_info()) {
+    line_header_ = "";
+  }
+
   // Displays the outline input arguments.
   for (const auto& input : syscall->syscall()->inputs()) {
-    input->DisplayOutline(dispatcher_, syscall, /*tabs=*/1, os_);
+    input->DisplayOutline(dispatcher_, syscall, line_header_, /*tabs=*/1, os_);
   }
+  dispatcher_->set_last_displayed_syscall(this);
+}
+
+void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* syscall) {
+  if (dispatcher_->last_displayed_syscall() != this) {
+    // Add a blank line to tell the user that this display is not linked to the
+    // previous displayed lines.
+    os_ << "\n";
+  }
+  const Colors& colors = dispatcher_->colors();
   // Displays the returned value.
-  os_ << "  -> ";
+  os_ << line_header_ << "  -> ";
   if (static_cast<zx_status_t>(syscall->syscall_return_value()) == ZX_OK) {
     os_ << colors.green << "ZX_OK" << colors.reset;
   } else {
@@ -358,7 +382,7 @@ void SyscallDisplay::SyscallDecoded(SyscallDecoder* syscall) {
     os_ << colors.reset;
   }
   // And the inline output arguments (if any).
-  separator = " (";
+  const char* separator = " (";
   for (const auto& output : syscall->syscall()->outputs()) {
     if (output->error_code() == static_cast<zx_status_t>(syscall->syscall_return_value())) {
       separator = output->DisplayInline(dispatcher_, syscall, separator, os_);
@@ -371,7 +395,7 @@ void SyscallDisplay::SyscallDecoded(SyscallDecoder* syscall) {
   // Displays the outline output arguments.
   for (const auto& output : syscall->syscall()->outputs()) {
     if (output->error_code() == static_cast<zx_status_t>(syscall->syscall_return_value())) {
-      output->DisplayOutline(dispatcher_, syscall, /*tabs=*/2, os_);
+      output->DisplayOutline(dispatcher_, syscall, line_header_, /*tabs=*/2, os_);
     }
   }
   // Now our job is done, we can destroy the object.

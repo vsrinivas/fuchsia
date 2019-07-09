@@ -68,6 +68,9 @@ const char kSymbolPathHelp[] = R"(  --symbol-path=<path>
 const char kPrettyPrintHelp[] = R"(  --pretty-print
       Use a formated print instead of JSON.)";
 
+const char kWithProcessInfoHelp[] = R"(  --with-process-info
+      Display the process name, process id and thread id on each line.)";
+
 const char kColorsHelp[] = R"(  --colors=[never|auto|always]
       For pretty print, use colors:
       - never
@@ -93,6 +96,8 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("fidl-ir-path", 0, kFidlIrPathHelp, &CommandLineOptions::fidl_ir_paths);
   parser.AddSwitch("symbol-path", 's', kSymbolPathHelp, &CommandLineOptions::symbol_paths);
   parser.AddSwitch("pretty-print", 0, kPrettyPrintHelp, &CommandLineOptions::pretty_print);
+  parser.AddSwitch("with-process-info", 0, kWithProcessInfoHelp,
+                   &CommandLineOptions::with_process_info);
   parser.AddSwitch("colors", 0, kColorsHelp, &CommandLineOptions::colors);
   parser.AddSwitch("columns", 0, kColumnsHelp, &CommandLineOptions::columns);
   bool requested_help = false;
@@ -113,6 +118,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   }
 
   display_options->pretty_print = options->pretty_print;
+  display_options->with_process_info = options->with_process_info;
 
   struct winsize term_size;
   term_size.ws_col = 0;
