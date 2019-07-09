@@ -26,7 +26,7 @@ usbctl peripheral init-test
 3. Run the host test:
 
 ```
-./build-arm64/host_tests/usb-peripheral-test
+out/default.zircon/host-x64-linux-clang/obj/system/dev/usb/usb-peripheral-test/usb-peripheral-test
 ```
 
 If the test succeeds, you should see something like:
