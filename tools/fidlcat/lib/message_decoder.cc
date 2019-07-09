@@ -87,21 +87,26 @@ bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t 
     }
   }
   bool is_request = false;
+  const char* message_direction = "";
   switch (type) {
     case SyscallFidlType::kOutputMessage:
       if (direction == Direction::kClient) {
         is_request = true;
       }
+      message_direction = "sent ";
       break;
     case SyscallFidlType::kInputMessage:
       if (direction == Direction::kServer) {
         is_request = true;
       }
+      message_direction = "received ";
       break;
     case SyscallFidlType::kOutputRequest:
       is_request = true;
+      message_direction = "sent ";
       break;
     case SyscallFidlType::kInputResponse:
+      message_direction = "received ";
       break;
   }
   if (direction != Direction::kUnknown) {
@@ -138,9 +143,9 @@ bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t 
   }
 
   if (matched_request && (is_request || (direction == Direction::kUnknown))) {
-    os << line_header << std::string(tabs * kTabSize, ' ') << colors_.white_on_magenta << "request"
-       << colors_.reset << ' ' << colors_.green << method->enclosing_interface().name() << '.'
-       << method->name() << colors_.reset << " = ";
+    os << line_header << std::string(tabs * kTabSize, ' ') << colors_.white_on_magenta
+       << message_direction << "request" << colors_.reset << ' ' << colors_.green
+       << method->enclosing_interface().name() << '.' << method->name() << colors_.reset << " = ";
     if (display_options_.pretty_print) {
       decoded_request->PrettyPrint(os, colors_, line_header, tabs, tabs * kTabSize,
                                    display_options_.columns);
@@ -150,9 +155,9 @@ bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t 
     os << '\n';
   }
   if (matched_response && (!is_request || (direction == Direction::kUnknown))) {
-    os << line_header << std::string(tabs * kTabSize, ' ') << colors_.white_on_magenta << "response"
-       << colors_.reset << ' ' << colors_.green << method->enclosing_interface().name() << '.'
-       << method->name() << colors_.reset << " = ";
+    os << line_header << std::string(tabs * kTabSize, ' ') << colors_.white_on_magenta
+       << message_direction << "response" << colors_.reset << ' ' << colors_.green
+       << method->enclosing_interface().name() << '.' << method->name() << colors_.reset << " = ";
     if (display_options_.pretty_print) {
       decoded_response->PrettyPrint(os, colors_, line_header, tabs, tabs * kTabSize,
                                     display_options_.columns);

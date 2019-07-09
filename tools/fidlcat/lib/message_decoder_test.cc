@@ -61,7 +61,7 @@ class MessageDecoderTest : public ::testing::Test {
 TEST_F(MessageDecoderTest, TestStringLaunched) {
   decoder_->AddLaunchedProcess(process_koid_);
   TEST_DECODE_MESSAGE(FidlcatTestInterface, String,
-                      "request test.fidlcat.examples/FidlcatTestInterface.String = {\n"
+                      "sent request test.fidlcat.examples/FidlcatTestInterface.String = {\n"
                       "  s: string = \"Hello World\"\n"
                       "}\n",
                       "Hello World");
@@ -69,7 +69,7 @@ TEST_F(MessageDecoderTest, TestStringLaunched) {
 
 TEST_F(MessageDecoderTest, TestStringAttached) {
   TEST_DECODE_MESSAGE(FidlcatTestInterface, String,
-                      "request test.fidlcat.examples/FidlcatTestInterface.String = {\n"
+                      "sent request test.fidlcat.examples/FidlcatTestInterface.String = {\n"
                       "  s: string = \"Hello World\"\n"
                       "}\n",
                       "Hello World");
@@ -78,7 +78,7 @@ TEST_F(MessageDecoderTest, TestStringAttached) {
 TEST_F(MessageDecoderTest, TestEchoLaunched) {
   decoder_->AddLaunchedProcess(process_koid_);
   TEST_DECODE_MESSAGE(Echo, EchoString,
-                      "request test.fidlcat.examples/Echo.EchoString = {\n"
+                      "sent request test.fidlcat.examples/Echo.EchoString = {\n"
                       "  value: string = \"Hello World\"\n"
                       "}\n",
                       "Hello World", [](::fidl::StringPtr) {});
@@ -87,10 +87,10 @@ TEST_F(MessageDecoderTest, TestEchoLaunched) {
 TEST_F(MessageDecoderTest, TestEchoAttached) {
   TEST_DECODE_MESSAGE(Echo, EchoString,
                       "Can't determine request/response. it can be:\n"
-                      "  request test.fidlcat.examples/Echo.EchoString = {\n"
+                      "  sent request test.fidlcat.examples/Echo.EchoString = {\n"
                       "    value: string = \"Hello World\"\n"
                       "  }\n"
-                      "  response test.fidlcat.examples/Echo.EchoString = {\n"
+                      "  sent response test.fidlcat.examples/Echo.EchoString = {\n"
                       "    response: string = \"Hello World\"\n"
                       "  }\n",
                       "Hello World", [](::fidl::StringPtr) {});
