@@ -26,15 +26,6 @@ dart_test("sl4f_test") {
     },
 
     # The astro environment has tags as it is still to be run on an FYI builder.
-    #
-    # TODO(INTK-1143): `e2e-terminal` will be changed to `e2e-fyi` soon. Once
-    # that ticket is closed, remove the `e2e-terminal` variant.
-    {
-      dimensions = {
-        device_type = "Astro"
-      }
-      tags = [ "e2e-terminal" ]
-    },
     {
       dimensions = {
         device_type = "Astro"
