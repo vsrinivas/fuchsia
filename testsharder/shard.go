@@ -105,6 +105,14 @@ func min(a, b int) int {
 	return b
 }
 
+func divRoundUp(a, b int) int {
+	if a % b == 0 {
+		return a / b
+	} else {
+		return (a / b) + 1
+	}
+}
+
 // WithMaxSize returns a list of shards such that each shard contains fewer than maxShardSize tests.
 // If maxShardSize <= 0, just returns its input.
 func WithMaxSize(shards []*Shard, maxShardSize int) []*Shard {
@@ -113,11 +121,18 @@ func WithMaxSize(shards []*Shard, maxShardSize int) []*Shard {
 	}
 	output := make([]*Shard, 0, len(shards))
 	for _, shard := range shards {
-		for i := 0; i*maxShardSize < len(shard.Tests); i++ {
-			sliceStart := i * maxShardSize
-			sliceLimit := min((i+1)*maxShardSize, len(shard.Tests))
+		numNewShards := divRoundUp(len(shard.Tests), maxShardSize)
+		// Evenly distribute the tests between the new shards.
+		maxTestsPerNewShard := divRoundUp(len(shard.Tests), numNewShards)
+		for i := 0; i < numNewShards; i++ {
+			sliceStart := i * maxTestsPerNewShard
+			sliceLimit := min((i+1)*maxTestsPerNewShard, len(shard.Tests))
+			newName := shard.Name
+			if numNewShards > 1 {
+				newName = fmt.Sprintf("%s-(%d)", shard.Name, i+1)
+			}
 			output = append(output, &Shard{
-				Name:  fmt.Sprintf("%s-(%d)", shard.Name, i),
+				Name:  newName,
 				Tests: shard.Tests[sliceStart:sliceLimit],
 				Env:   shard.Env,
 			})

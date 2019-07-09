@@ -279,6 +279,13 @@ func TestMultiplyShards(t *testing.T) {
 	})
 }
 
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 func TestWithMaxSize(t *testing.T) {
 	env1 := Environment{
 		Tags: []string{"env1"},
@@ -301,22 +308,29 @@ func TestWithMaxSize(t *testing.T) {
 			}
 		}
 	}
-	t.Run("max is larger than all shards", func(t *testing.T) {
-		maxSize := len(input[0].Tests)+len(input[1].Tests)
+	t.Run("max is larger greater or equal to all shards", func(t *testing.T) {
+		maxSize := max(len(input[0].Tests), len(input[1].Tests))
 		actual := WithMaxSize(input, maxSize)
-		assertEqual(t, []*Shard{
-			// Returns equivalent shards, but renamed.
-			namedShard(env1, "env1-(0)", 1, 2, 3, 4, 5), namedShard(env2, "env2-(0)", 6, 7, 8)},
-			actual)
-			assertShardsLessThanSize(t, actual, maxSize)
+		assertEqual(t, input, actual)
+		assertShardsLessThanSize(t, actual, maxSize)
 	})
+
 	t.Run("applies max", func(t *testing.T) {
 		maxSize := 2
 		actual := WithMaxSize(input, maxSize)
 		assertEqual(t, []*Shard{
-			namedShard(env1, "env1-(0)", 1, 2), namedShard(env1, "env1-(1)", 3, 4),
-			namedShard(env1, "env1-(2)", 5),
-			namedShard(env2, "env2-(0)", 6, 7), namedShard(env2, "env2-(1)", 8)},
+			namedShard(env1, "env1-(1)", 1, 2), namedShard(env1, "env1-(2)", 3, 4),
+			namedShard(env1, "env1-(3)", 5),
+			namedShard(env2, "env2-(1)", 6, 7), namedShard(env2, "env2-(2)", 8)},
+			actual)
+		assertShardsLessThanSize(t, actual, maxSize)
+	})
+	t.Run("evenly distributes tests", func(t *testing.T) {
+		maxSize := 4
+		actual := WithMaxSize(input, maxSize)
+		assertEqual(t, []*Shard{
+			namedShard(env1, "env1-(1)", 1, 2, 3), namedShard(env1, "env1-(2)", 4, 5),
+			namedShard(env2, "env2", 6, 7, 8)},
 			actual)
 		assertShardsLessThanSize(t, actual, maxSize)
 	})
