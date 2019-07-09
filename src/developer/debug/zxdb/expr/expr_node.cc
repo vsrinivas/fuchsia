@@ -108,7 +108,9 @@ void ExprNode::EvalFollowReferences(fxl::RefPtr<EvalContext> context, EvalCallba
 
 void AddressOfExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
   expr_->EvalFollowReferences(context, [cb = std::move(cb)](const Err& err, ExprValue value) {
-    if (value.source().type() != ExprValueSource::Type::kMemory) {
+    if (err.has_error()) {
+      cb(err, ExprValue());
+    } else if (value.source().type() != ExprValueSource::Type::kMemory) {
       cb(Err("Can't take the address of a temporary."), ExprValue());
     } else {
       // Construct a pointer type to the variable.

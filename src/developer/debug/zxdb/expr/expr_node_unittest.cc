@@ -264,6 +264,26 @@ TEST_F(ExprNodeTest, DereferenceReferencePointer) {
   EXPECT_TRUE(called);
   EXPECT_TRUE(out_err.has_error());
   EXPECT_EQ("Invalid pointer 0x0", out_err.msg());
+
+  // Try to take the address of the invalid expression above. The error should be forwarded.
+  auto addr_bad_deref_node = fxl::MakeRefCounted<AddressOfExprNode>(std::move(bad_deref_node));
+  called = false;
+  out_err = Err();
+  out_value = ExprValue();
+  addr_bad_deref_node->Eval(context,
+                            [&called, &out_err, &out_value](const Err& err, ExprValue value) {
+                              called = true;
+                              out_err = err;
+                              out_value = value;
+                              debug_ipc::MessageLoop::Current()->QuitNow();
+                            });
+
+  // Should complete asynchronously.
+  EXPECT_FALSE(called);
+  loop().Run();
+  EXPECT_TRUE(called);
+  EXPECT_TRUE(out_err.has_error());
+  EXPECT_EQ("Invalid pointer 0x0", out_err.msg());
 }
 
 // This also tests ExprNode::EvalFollowReferences() by making the index a
