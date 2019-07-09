@@ -11,7 +11,7 @@ using fuchsia.intl;
 
 /// The maximum number of font families that can be returned in a
 /// `TypefaceInfoResponse`.
-const uint32 MAX_TYPEFACE_RESULTS = 500;
+const uint32 MAX_TYPEFACE_RESULTS = 50;
 
 enum Error {
     NOT_FOUND = 1;
