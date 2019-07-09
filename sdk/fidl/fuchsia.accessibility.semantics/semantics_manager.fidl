@@ -4,6 +4,7 @@
 
 library fuchsia.accessibility.semantics;
 
+using fuchsia.math;
 using fuchsia.ui.views;
 
 /// An interface to manage connections with views for the purposes of gathering semantic information
@@ -36,10 +37,27 @@ protocol SemanticTree {
     DeleteSemanticNodes(vector<uint32> node_ids);
 };
 
+/// Results of hit testing on a view's semantic tree which is implemented by
+/// Runtimes(like Flutter/Chrome) and sent to Accessibility.
+table Hit {
+    // Unique ID that represents the node in a particular UI.
+    // Zero is assumed to be the root node and the only entry point to the tree.
+    // node_id will not be filled when there is no hit.
+    1: uint32 node_id;
+
+    // The ordered list of node id's which represent path from root node to
+    // the hit node.
+    2: vector<uint32> path_from_root;
+};
+
 /// A semantic provider is the client-side interface that the manager can use to
 /// ask clients to perform accessibility actions.
 protocol SemanticActionListener {
     // Asks the semantics provider to perform an accessibility action on the
     // node with node id in the front-end.
     OnAccessibilityActionRequested(uint32 node_id, Action action) -> (bool handled);
+
+    // Asks the semantics provider to perform hit testing and return the result.
+    [Transitional]
+    HitTest(fuchsia.math.PointF local_point) -> (Hit result);
 };

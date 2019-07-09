@@ -36,6 +36,10 @@ class MockSemanticActionListener
       fuchsia::accessibility::semantics::SemanticActionListener::
           OnAccessibilityActionRequestedCallback callback) override {}
 
+  // |fuchsia::accessibility::semantics::SemanticActionListener|
+  void HitTest(::fuchsia::math::PointF local_point,
+                         HitTestCallback callback) override {}
+
   sys::ComponentContext* context_;
   fuchsia::accessibility::semantics::SemanticsManagerPtr manager_;
   fuchsia::accessibility::semantics::SemanticTreePtr tree_ptr_;
