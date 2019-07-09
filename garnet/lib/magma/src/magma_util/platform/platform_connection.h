@@ -72,7 +72,7 @@ public:
         while (connection->HandleRequest())
             ;
         // the runloop terminates when the remote closes, or an error is experienced
-        // so this is the apropriate time to let the connection go out of scope and be destroyed
+        // so this is the appropriate time to let the connection go out of scope and be destroyed
     }
 
 private:

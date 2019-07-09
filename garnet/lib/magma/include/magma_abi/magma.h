@@ -373,7 +373,7 @@ void magma_release_semaphore(
     magma_semaphore_t semaphore);
 
 ///
-/// \brief Returnes a unique id for the given semaphore.
+/// \brief Returns a unique id for the given semaphore.
 /// \param semaphore A valid semaphore.
 ///
 uint64_t magma_get_semaphore_id(

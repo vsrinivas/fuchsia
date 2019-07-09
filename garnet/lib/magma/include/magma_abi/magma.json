@@ -675,7 +675,7 @@
       {
         "name": "magma_get_semaphore_id",
         "type": "uint64_t",
-        "description": "Returnes a unique id for the given semaphore.",
+        "description": "Returns a unique id for the given semaphore.",
         "arguments": [
           {
             "name": "semaphore",
