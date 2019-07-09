@@ -57,9 +57,10 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
 }  // namespace
 
 TestWithEnvironment::TestWithEnvironment()
-    : environment_(EnvironmentBuilder()
+    : io_loop_interface_(test_loop().StartNewLoop()),
+      environment_(EnvironmentBuilder()
                        .SetAsync(dispatcher())
-                       .SetIOAsync(dispatcher())
+                       .SetIOAsync(io_loop_interface_->dispatcher())
                        .SetStartupContext(component_context_provider_.context())
                        .SetClock(std::make_unique<timekeeper::TestLoopTestClock>(&test_loop()))
                        .SetRandom(std::make_unique<rng::TestRandom>(test_loop().initial_state()))

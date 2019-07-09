@@ -24,6 +24,7 @@ class TestWithEnvironment : public gtest::TestLoopFixture {
       fit::function<void(coroutine::CoroutineHandler*)> run_test, zx::duration delay = zx::sec(0));
 
   sys::testing::ComponentContextProvider component_context_provider_;
+  std::unique_ptr<async::LoopInterface> io_loop_interface_;
   Environment environment_;
 
  private:

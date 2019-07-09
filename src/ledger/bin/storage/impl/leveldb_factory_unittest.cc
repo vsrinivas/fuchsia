@@ -221,42 +221,25 @@ TEST_F(LevelDbFactoryTest, QuitWhenBusy) {
   db_factory_ptr->Init();
   RunLoopUntilIdle();
 
-  Status status_0, status_1;
+  Status status_0;
   std::unique_ptr<Db> db_0, db_1;
-  bool called_0, called_1;
+  bool called_0;
 
+  // Post the initialization code to the I/O loop.
   db_factory_ptr->GetOrCreateDb(db_path_.SubPath(fxl::NumberToString(0)),
                                 DbFactory::OnDbNotFound::CREATE,
-                                callback::Capture(
-                                    [this, callback = callback::SetWhenCalled(&called_0)]() {
-                                      callback();
-                                      QuitLoop();
-                                    },
-                                    &status_0, &db_0));
+                                callback::Capture(callback::SetWhenCalled(&called_0),
+                                                  &status_0, &db_0));
 
-  db_factory_ptr->GetOrCreateDb(
-      db_path_.SubPath(fxl::NumberToString(1)), DbFactory::OnDbNotFound::CREATE,
-      callback::Capture(callback::SetWhenCalled(&called_1), &status_1, &db_1));
-
-  RunLoopUntilIdle();
-
-  // The first database should be created, but not the second one.
-  {
-    EXPECT_TRUE(called_0);
-    EXPECT_EQ(Status::OK, status_0);
-    ledger::DetachedPath path = db_path_.SubPath(fxl::NumberToString(0));
-    EXPECT_TRUE(files::IsDirectoryAt(path.root_fd(), path.path()));
-
-    EXPECT_FALSE(called_1);
-  }
-
+  // Delete the factory before any code is run on the I/O loop.
   db_factory_ptr.reset();
 
+  // Pump all loops.
   RunLoopUntilIdle();
 
-  // The callback for the second database should not be executed even after
-  // re-running the runloop.
-  EXPECT_FALSE(called_1);
+  // The callback for the database should not be executed given that the factory
+  // has been deleted.
+  EXPECT_FALSE(called_0);
 }
 
 }  // namespace
