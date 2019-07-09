@@ -191,6 +191,7 @@ def main():
     if args.target.endswith("fuchsia"):
         call_args += [
             "-L", os.path.join(args.sysroot, "lib"),
+            "-Clinker=%s" % os.path.join(args.clang_prefix, "lld"),
             "-Clink-arg=--pack-dyn-relocs=relr",
             "-Clink-arg=--sysroot=%s" % args.sysroot,
             "-Clink-arg=-L%s" % os.path.join(args.sysroot, "lib"),
