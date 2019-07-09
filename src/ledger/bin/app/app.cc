@@ -8,8 +8,8 @@
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
-#include <lib/inspect/deprecated/object_dir.h>
-#include <lib/inspect/inspect.h>
+#include <lib/inspect_deprecated/deprecated/object_dir.h>
+#include <lib/inspect_deprecated/inspect.h>
 #include <lib/sys/cpp/component_context.h>
 #include <trace-provider/provider.h>
 #include <unistd.h>
@@ -46,8 +46,8 @@ struct AppParams {
 };
 
 struct InspectObjects {
-  inspect::Node top_level_node;
-  inspect::StringProperty statistic_gathering;
+  inspect_deprecated::Node top_level_node;
+  inspect_deprecated::StringProperty statistic_gathering;
 };
 
 fit::deferred_action<fit::closure> SetupCobalt(bool disable_statistics,
@@ -91,7 +91,7 @@ class App : public ledger_internal::LedgerController {
         ->AddEntry(fuchsia::inspect::Inspect::Name_,
                    std::make_unique<vfs::Service>(
                        inspect_bindings_.GetHandler(object_dir.object().get())));
-    inspect_objects_.top_level_node = inspect::Node(std::move(object_dir));
+    inspect_objects_.top_level_node = inspect_deprecated::Node(std::move(object_dir));
     inspect_objects_.statistic_gathering = inspect_objects_.top_level_node.CreateStringProperty(
         "statistic_gathering", app_params_.disable_statistics ? "off" : "on");
 

@@ -10,8 +10,8 @@
 #include <lib/callback/waiter.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
-#include <lib/inspect/inspect.h>
-#include <lib/inspect/testing/inspect.h>
+#include <lib/inspect_deprecated/inspect.h>
+#include <lib/inspect_deprecated/testing/inspect.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 
@@ -47,9 +47,9 @@
 namespace ledger {
 namespace {
 
-using ::inspect::testing::ChildrenMatch;
-using ::inspect::testing::NameMatches;
-using ::inspect::testing::NodeMatches;
+using ::inspect_deprecated::testing::ChildrenMatch;
+using ::inspect_deprecated::testing::NameMatches;
+using ::inspect_deprecated::testing::NodeMatches;
 using ::testing::AllOf;
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
@@ -255,7 +255,7 @@ class LedgerManagerTest : public TestWithEnvironment {
     storage_ptr = storage.get();
     std::unique_ptr<FakeLedgerSync> sync = std::make_unique<FakeLedgerSync>();
     sync_ptr = sync.get();
-    top_level_node_ = inspect::Node(kTestTopLevelNodeName.ToString());
+    top_level_node_ = inspect_deprecated::Node(kTestTopLevelNodeName.ToString());
     disk_cleanup_manager_ = std::make_unique<FakeDiskCleanupManager>();
     ledger_manager_ = std::make_unique<LedgerManager>(
         &environment_, kLedgerName.ToString(),
@@ -270,7 +270,7 @@ class LedgerManagerTest : public TestWithEnvironment {
  protected:
   FakeLedgerStorage* storage_ptr;
   FakeLedgerSync* sync_ptr;
-  inspect::Node top_level_node_;
+  inspect_deprecated::Node top_level_node_;
   std::unique_ptr<FakeDiskCleanupManager> disk_cleanup_manager_;
   std::unique_ptr<LedgerManager> ledger_manager_;
   LedgerPtr ledger_;
@@ -1084,9 +1084,10 @@ TEST_F(LedgerManagerTest, GetPageDisconnect) {
 // validates that the matched object has a hierarchy with a node for the
 // LedgerManager under test, a node named |kPagesInspectPathComponent|
 // under that, and a node for each of the given |page_ids| under that.
-testing::Matcher<const inspect::ObjectHierarchy&> HierarchyMatcher(
+testing::Matcher<const inspect_deprecated::ObjectHierarchy&> HierarchyMatcher(
     const std::vector<storage::PageId>& page_ids) {
-  auto page_expectations = std::vector<testing::Matcher<const inspect::ObjectHierarchy&>>();
+  auto page_expectations =
+      std::vector<testing::Matcher<const inspect_deprecated::ObjectHierarchy&>>();
   std::set<storage::PageId> sorted_and_unique_page_ids;
   for (const storage::PageId& page_id : page_ids) {
     sorted_and_unique_page_ids.insert(page_id);
@@ -1115,7 +1116,7 @@ class LedgerManagerWithRealStorageTest : public TestWithEnvironment {
         &environment_, encryption_service.get(), db_factory_.get(), DetachedPath(tmpfs_.root_fd()),
         storage::CommitPruningPolicy::NEVER);
     std::unique_ptr<FakeLedgerSync> sync = std::make_unique<FakeLedgerSync>();
-    top_level_node_ = inspect::Node(kTestTopLevelNodeName.ToString());
+    top_level_node_ = inspect_deprecated::Node(kTestTopLevelNodeName.ToString());
     attachment_node_ =
         top_level_node_.CreateChild(kSystemUnderTestAttachmentPointPathComponent.ToString());
     disk_cleanup_manager_ = std::make_unique<FakeDiskCleanupManager>();
@@ -1145,13 +1146,13 @@ class LedgerManagerWithRealStorageTest : public TestWithEnvironment {
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   std::unique_ptr<storage::fake::FakeDbFactory> db_factory_;
   // TODO(nathaniel): Because we use the ChildrenManager API, we need to do our
-  // reads using FIDL, and because we want to use inspect::ReadFromFidl for our
+  // reads using FIDL, and because we want to use inspect_deprecated::ReadFromFidl for our
   // reads, we need to have these two objects (one parent, one child, both part
   // of the test, and with the system under test attaching to the child) rather
   // than just one. Even though this is test code this is still a layer of
   // indirection that should be eliminable in Inspect's upcoming "VMO-World".
-  inspect::Node top_level_node_;
-  inspect::Node attachment_node_;
+  inspect_deprecated::Node top_level_node_;
+  inspect_deprecated::Node attachment_node_;
   std::unique_ptr<FakeDiskCleanupManager> disk_cleanup_manager_;
   std::unique_ptr<LedgerManager> ledger_manager_;
 
@@ -1173,7 +1174,7 @@ TEST_F(LedgerManagerWithRealStorageTest, InspectAPIDisconnectedPagePresence) {
 
   // When nothing has yet requested a page, check that the Inspect hierarchy
   // is as expected with no nodes representing pages.
-  inspect::ObjectHierarchy zeroth_hierarchy;
+  inspect_deprecated::ObjectHierarchy zeroth_hierarchy;
   ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &zeroth_hierarchy));
   EXPECT_THAT(zeroth_hierarchy, HierarchyMatcher({}));
 
@@ -1182,7 +1183,7 @@ TEST_F(LedgerManagerWithRealStorageTest, InspectAPIDisconnectedPagePresence) {
   PagePtr first_page_ptr;
   ledger_ptr->GetPage(fidl::MakeOptional(first_page_id), first_page_ptr.NewRequest());
   RunLoopUntilIdle();
-  inspect::ObjectHierarchy hierarchy_after_one_connection;
+  inspect_deprecated::ObjectHierarchy hierarchy_after_one_connection;
   ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &hierarchy_after_one_connection));
   EXPECT_THAT(hierarchy_after_one_connection, HierarchyMatcher({storage_page_ids[0]}));
 
@@ -1191,7 +1192,7 @@ TEST_F(LedgerManagerWithRealStorageTest, InspectAPIDisconnectedPagePresence) {
   PagePtr second_page_ptr;
   ledger_ptr->GetPage(fidl::MakeOptional(second_page_id), second_page_ptr.NewRequest());
   RunLoopUntilIdle();
-  inspect::ObjectHierarchy hierarchy_after_two_connections;
+  inspect_deprecated::ObjectHierarchy hierarchy_after_two_connections;
   ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &hierarchy_after_two_connections));
   EXPECT_THAT(hierarchy_after_two_connections,
               HierarchyMatcher({storage_page_ids[0], storage_page_ids[1]}));
@@ -1205,7 +1206,7 @@ TEST_F(LedgerManagerWithRealStorageTest, InspectAPIDisconnectedPagePresence) {
 
   // When one of the two pages has been disconnected, check that an inspection
   // still finds both.
-  inspect::ObjectHierarchy hierarchy_after_one_disconnection;
+  inspect_deprecated::ObjectHierarchy hierarchy_after_one_disconnection;
   ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &hierarchy_after_one_disconnection));
   EXPECT_THAT(hierarchy_after_one_disconnection,
               HierarchyMatcher({storage_page_ids[0], storage_page_ids[1]}));
@@ -1215,7 +1216,7 @@ TEST_F(LedgerManagerWithRealStorageTest, InspectAPIDisconnectedPagePresence) {
   PagePtr third_page_ptr;
   ledger_ptr->GetPage(fidl::MakeOptional(third_page_id), third_page_ptr.NewRequest());
   RunLoopUntilIdle();
-  inspect::ObjectHierarchy hierarchy_with_second_and_third_connection;
+  inspect_deprecated::ObjectHierarchy hierarchy_with_second_and_third_connection;
   ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &hierarchy_with_second_and_third_connection));
   EXPECT_THAT(hierarchy_with_second_and_third_connection, HierarchyMatcher(storage_page_ids));
 
@@ -1227,7 +1228,7 @@ TEST_F(LedgerManagerWithRealStorageTest, InspectAPIDisconnectedPagePresence) {
   third_page_ptr.Unbind();
   RunLoopUntilIdle();
 
-  inspect::ObjectHierarchy hierarchy_after_three_disconnections;
+  inspect_deprecated::ObjectHierarchy hierarchy_after_three_disconnections;
   ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &hierarchy_after_three_disconnections));
   EXPECT_THAT(hierarchy_after_three_disconnections, HierarchyMatcher(storage_page_ids));
 }

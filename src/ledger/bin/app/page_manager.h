@@ -7,7 +7,7 @@
 
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
-#include <lib/inspect/inspect.h>
+#include <lib/inspect_deprecated/inspect.h>
 
 #include <optional>
 #include <string>
@@ -41,7 +41,7 @@ class PageManager {
   PageManager(Environment* environment, std::string ledger_name, storage::PageId page_id,
               PageUsageListener* page_usage_listener, storage::LedgerStorage* ledger_storage,
               sync_coordinator::LedgerSync* ledger_sync, LedgerMergeManager* ledger_merge_manager,
-              inspect::Node inspect_node);
+              inspect_deprecated::Node inspect_node);
   ~PageManager();
 
   // Checks whether the given page is closed and synced. The result returned in
@@ -151,10 +151,10 @@ class PageManager {
 
   // The static Inspect object maintaining in Inspect a representation of this
   // |PageManager|.
-  inspect::Node inspect_node_;
+  inspect_deprecated::Node inspect_node_;
   // The static Inspect object to which this |PageManager|'s commits are
   // attached.
-  inspect::Node commits_node_;
+  inspect_deprecated::Node commits_node_;
   fit::deferred_callback children_manager_retainer_;
 
   // A nonnegative count of the number of "registered interests" for this

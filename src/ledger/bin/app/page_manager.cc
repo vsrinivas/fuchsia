@@ -10,7 +10,7 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/inspect/inspect.h>
+#include <lib/inspect_deprecated/inspect.h>
 #include <trace/event.h>
 
 #include <string>
@@ -37,7 +37,8 @@ PageManager::PageManager(Environment* environment, std::string ledger_name, stor
                          PageUsageListener* page_usage_listener,
                          storage::LedgerStorage* ledger_storage,
                          sync_coordinator::LedgerSync* ledger_sync,
-                         LedgerMergeManager* ledger_merge_manager, inspect::Node inspect_node)
+                         LedgerMergeManager* ledger_merge_manager,
+                         inspect_deprecated::Node inspect_node)
     : environment_(environment),
       ledger_name_(std::move(ledger_name)),
       page_id_(std::move(page_id)),

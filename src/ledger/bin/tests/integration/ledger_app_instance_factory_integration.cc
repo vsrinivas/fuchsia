@@ -94,7 +94,7 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
         : environment_(BuildEnvironment(loop, dispatcher, io_dispatcher,
                                         component_context_provider_.context(), random)),
           factory_impl_(&environment_, std::move(user_communicator_factory),
-                        inspect::Node("unused_in_test_inspect_node")),
+                        inspect_deprecated::Node("unused_in_test_inspect_node")),
           binding_(&factory_impl_, std::move(request)) {}
     ~LedgerRepositoryFactoryContainer() {}
 

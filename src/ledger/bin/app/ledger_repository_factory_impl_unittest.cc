@@ -8,9 +8,9 @@
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fsl/io/fd.h>
-#include <lib/inspect/inspect.h>
-#include <lib/inspect/reader.h>
-#include <lib/inspect/testing/inspect.h>
+#include <lib/inspect_deprecated/inspect.h>
+#include <lib/inspect_deprecated/reader.h>
+#include <lib/inspect_deprecated/testing/inspect.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -25,12 +25,12 @@
 namespace ledger {
 namespace {
 
-using ::inspect::testing::ChildrenMatch;
-using ::inspect::testing::MetricList;
-using ::inspect::testing::NameMatches;
-using ::inspect::testing::NodeMatches;
-using ::inspect::testing::PropertyList;
-using ::inspect::testing::UIntMetricIs;
+using ::inspect_deprecated::testing::ChildrenMatch;
+using ::inspect_deprecated::testing::MetricList;
+using ::inspect_deprecated::testing::NameMatches;
+using ::inspect_deprecated::testing::NodeMatches;
+using ::inspect_deprecated::testing::PropertyList;
+using ::inspect_deprecated::testing::UIntMetricIs;
 using ::testing::AllOf;
 using ::testing::Contains;
 using ::testing::IsEmpty;
@@ -43,7 +43,7 @@ constexpr char kUserID[] = "test user ID";
 class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
  public:
   LedgerRepositoryFactoryImplTest() {
-    top_level_inspect_node_ = inspect::Node(kTestTopLevelNodeName);
+    top_level_inspect_node_ = inspect_deprecated::Node(kTestTopLevelNodeName);
     repository_factory_ = std::make_unique<LedgerRepositoryFactoryImpl>(
         &environment_, nullptr,
         top_level_inspect_node_.CreateChild(kRepositoriesInspectPathComponent.ToString()));
@@ -57,7 +57,7 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
       const std::string& name, ledger_internal::LedgerRepositoryPtr* ledger_repository_ptr);
 
   scoped_tmpfs::ScopedTmpFS tmpfs_;
-  inspect::Node top_level_inspect_node_;
+  inspect_deprecated::Node top_level_inspect_node_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> repository_factory_;
 
  private:
@@ -98,7 +98,7 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
 }
 
 TEST_F(LedgerRepositoryFactoryImplTest, InspectAPINoRepositories) {
-  auto hierarchy = inspect::ReadFromObject(top_level_inspect_node_);
+  auto hierarchy = inspect_deprecated::ReadFromObject(top_level_inspect_node_);
   EXPECT_THAT(hierarchy, AllOf(NodeMatches(AllOf(NameMatches(kTestTopLevelNodeName),
                                                  MetricList(IsEmpty()), PropertyList(IsEmpty()))),
                                ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
@@ -131,7 +131,7 @@ TEST_F(LedgerRepositoryFactoryImplTest, InspectAPITwoRepositoriesOneAccessedTwic
   // children) to verify that that repository is listed (and to learn the name
   // under which it is listed) and that it was requested once.
   ASSERT_TRUE(CallGetRepository(first_directory, &first_ledger_repository_ptr));
-  auto top_hierarchy = inspect::ReadFromObject(top_level_inspect_node_);
+  auto top_hierarchy = inspect_deprecated::ReadFromObject(top_level_inspect_node_);
   auto lone_repository_match = NodeMatches(
       MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent.ToString(), 1UL))));
   auto first_inspection_repositories_match =
@@ -148,7 +148,7 @@ TEST_F(LedgerRepositoryFactoryImplTest, InspectAPITwoRepositoriesOneAccessedTwic
   // (and to learn the name under which it is listed) and that the two
   // repositories were each requested once.
   ASSERT_TRUE(CallGetRepository(second_directory, &second_ledger_repository_ptr));
-  top_hierarchy = inspect::ReadFromObject(top_level_inspect_node_);
+  top_hierarchy = inspect_deprecated::ReadFromObject(top_level_inspect_node_);
   auto second_inspection_two_repositories_match = UnorderedElementsAre(
       NodeMatches(
           AllOf(NameMatches(first_repository_name),
@@ -163,7 +163,8 @@ TEST_F(LedgerRepositoryFactoryImplTest, InspectAPITwoRepositoriesOneAccessedTwic
   second_repository_name =
       find_if_not(top_hierarchy.children()[0].children().begin(),
                   top_hierarchy.children()[0].children().end(),
-                  [&first_repository_name](const inspect::ObjectHierarchy& repository_hierarchy) {
+                  [&first_repository_name](
+                      const inspect_deprecated::ObjectHierarchy& repository_hierarchy) {
                     return repository_hierarchy.node().name() == first_repository_name;
                   })
           ->node()
@@ -175,7 +176,7 @@ TEST_F(LedgerRepositoryFactoryImplTest, InspectAPITwoRepositoriesOneAccessedTwic
   // same names) and are described as having been requested twice and once,
   // respectively.
   ASSERT_TRUE(CallGetRepository(first_directory, &first_again_ledger_repository_ptr));
-  top_hierarchy = inspect::ReadFromObject(top_level_inspect_node_);
+  top_hierarchy = inspect_deprecated::ReadFromObject(top_level_inspect_node_);
   auto third_inspection_two_repositories_match = UnorderedElementsAre(
       NodeMatches(
           AllOf(NameMatches(first_repository_name),

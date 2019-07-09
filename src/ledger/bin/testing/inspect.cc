@@ -10,10 +10,10 @@
 #include <lib/callback/set_when_called.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
-#include <lib/inspect/deprecated/expose.h>
-#include <lib/inspect/hierarchy.h>
-#include <lib/inspect/inspect.h>
-#include <lib/inspect/reader.h>
+#include <lib/inspect_deprecated/deprecated/expose.h>
+#include <lib/inspect_deprecated/hierarchy.h>
+#include <lib/inspect_deprecated/inspect.h>
+#include <lib/inspect_deprecated/reader.h>
 
 #include <functional>
 #include <string>
@@ -24,8 +24,9 @@
 
 namespace ledger {
 
-testing::AssertionResult Inspect(inspect::Node* top_level_node, async::TestLoop* test_loop,
-                                 inspect::ObjectHierarchy* hierarchy) {
+testing::AssertionResult Inspect(inspect_deprecated::Node* top_level_node,
+                                 async::TestLoop* test_loop,
+                                 inspect_deprecated::ObjectHierarchy* hierarchy) {
   bool callback_called;
   bool success;
   fidl::InterfaceHandle<fuchsia::inspect::Inspect> inspect_handle;
@@ -41,10 +42,10 @@ testing::AssertionResult Inspect(inspect::Node* top_level_node, async::TestLoop*
   }
 
   async::Executor executor(test_loop->dispatcher());
-  fit::result<inspect::ObjectHierarchy> hierarchy_result;
+  fit::result<inspect_deprecated::ObjectHierarchy> hierarchy_result;
   auto hierarchy_promise =
-      inspect::ReadFromFidl(inspect::ObjectReader(std::move(inspect_handle)))
-          .then([&](fit::result<inspect::ObjectHierarchy>& then_hierarchy_result) {
+      inspect_deprecated::ReadFromFidl(inspect_deprecated::ObjectReader(std::move(inspect_handle)))
+          .then([&](fit::result<inspect_deprecated::ObjectHierarchy>& then_hierarchy_result) {
             hierarchy_result = std::move(then_hierarchy_result);
           });
   executor.schedule_task(std::move(hierarchy_promise));

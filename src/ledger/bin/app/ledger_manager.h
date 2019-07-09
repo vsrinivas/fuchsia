@@ -9,7 +9,7 @@
 #include <lib/callback/auto_cleanable.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
-#include <lib/inspect/inspect.h>
+#include <lib/inspect_deprecated/inspect.h>
 
 #include <functional>
 #include <map>
@@ -41,9 +41,10 @@ namespace ledger {
 // LedgerManager owns all per-ledger-instance objects: LedgerStorage and a FIDL
 // LedgerImpl. It is safe to delete it at any point - this closes all channels,
 // deletes the LedgerImpl and tears down the storage.
-class LedgerManager : public LedgerImpl::Delegate, inspect::ChildrenManager {
+class LedgerManager : public LedgerImpl::Delegate, inspect_deprecated::ChildrenManager {
  public:
-  LedgerManager(Environment* environment, std::string ledger_name, inspect::Node inspect_node,
+  LedgerManager(Environment* environment, std::string ledger_name,
+                inspect_deprecated::Node inspect_node,
                 std::unique_ptr<encryption::EncryptionService> encryption_service,
                 std::unique_ptr<storage::LedgerStorage> storage,
                 std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync,
@@ -77,7 +78,7 @@ class LedgerManager : public LedgerImpl::Delegate, inspect::ChildrenManager {
                fit::function<void(Status)> callback) override;
   void SetConflictResolverFactory(fidl::InterfaceHandle<ConflictResolverFactory> factory) override;
 
-  // inspect::ChildrenManager:
+  // inspect_deprecated::ChildrenManager:
   void GetNames(fit::function<void(std::vector<std::string>)> callback) override;
   void Attach(std::string name, fit::function<void(fit::closure)> callback) override;
 
@@ -133,9 +134,9 @@ class LedgerManager : public LedgerImpl::Delegate, inspect::ChildrenManager {
 
   // The static Inspect object maintaining in Inspect a representation of this
   // LedgerManager.
-  inspect::Node inspect_node_;
+  inspect_deprecated::Node inspect_node_;
   // The static Inspect object to which this LedgerManager's pages are attached.
-  inspect::Node pages_node_;
+  inspect_deprecated::Node pages_node_;
   fit::deferred_callback children_manager_retainer_;
 
   // Must be the last member.

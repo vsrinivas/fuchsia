@@ -10,7 +10,7 @@
 #include <lib/callback/waiter.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
-#include <lib/inspect/inspect.h>
+#include <lib/inspect_deprecated/inspect.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 
@@ -228,7 +228,7 @@ class PageManagerTest : public TestWithEnvironment {
     disk_cleanup_manager_ = std::make_unique<FakeDiskCleanupManager>();
     page_manager_ = std::make_unique<PageManager>(
         &environment_, kLedgerName, convert::ToString(page_id_.id), disk_cleanup_manager_.get(),
-        storage_.get(), sync_.get(), ledger_merge_manager_.get(), inspect::Node());
+        storage_.get(), sync_.get(), ledger_merge_manager_.get(), inspect_deprecated::Node());
   }
 
   PageId RandomId() {

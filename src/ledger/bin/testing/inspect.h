@@ -6,9 +6,9 @@
 #define SRC_LEDGER_BIN_TESTING_INSPECT_H_
 
 #include <lib/async-testing/test_loop.h>
-#include <lib/inspect/deprecated/expose.h>
-#include <lib/inspect/hierarchy.h>
-#include <lib/inspect/inspect.h>
+#include <lib/inspect_deprecated/deprecated/expose.h>
+#include <lib/inspect_deprecated/hierarchy.h>
+#include <lib/inspect_deprecated/inspect.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -18,12 +18,13 @@ namespace ledger {
 
 inline constexpr fxl::StringView kSystemUnderTestAttachmentPointPathComponent = "attachment_point";
 
-// Given an |inspect::Node| under which another |inspect::Node| is available at
-// |kSystemUnderTestAttachmentPointPathComponent|, reads the exposed Inspect
-// data of the system under test and assigned to |hierarchy| the
-// |inspect::ObjectHierarchy| of the read data.
-testing::AssertionResult Inspect(inspect::Node* top_level_node, async::TestLoop* test_loop,
-                                 inspect::ObjectHierarchy* hierarchy);
+// Given an |inspect_deprecated::Node| under which another |inspect_deprecated::Node| is available
+// at |kSystemUnderTestAttachmentPointPathComponent|, reads the exposed Inspect data of the system
+// under test and assigned to |hierarchy| the |inspect_deprecated::ObjectHierarchy| of the read
+// data.
+testing::AssertionResult Inspect(inspect_deprecated::Node* top_level_node,
+                                 async::TestLoop* test_loop,
+                                 inspect_deprecated::ObjectHierarchy* hierarchy);
 
 }  // namespace ledger
 

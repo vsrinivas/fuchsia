@@ -10,8 +10,8 @@
 #include <lib/callback/auto_cleanable.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fit/function.h>
-#include <lib/inspect/deprecated/expose.h>
-#include <lib/inspect/inspect.h>
+#include <lib/inspect_deprecated/deprecated/expose.h>
+#include <lib/inspect_deprecated/inspect.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/disk_cleanup_manager.h"
@@ -34,7 +34,7 @@ namespace ledger {
 
 class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositorySyncableDelegate,
                              public PageEvictionManager::Delegate,
-                             public inspect::ChildrenManager {
+                             public inspect_deprecated::ChildrenManager {
  public:
   // Creates a new LedgerRepositoryImpl object. Guarantees that |db_factory|
   // will outlive the given |disk_cleanup_manager|.
@@ -43,7 +43,8 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
                        std::unique_ptr<SyncWatcherSet> watchers,
                        std::unique_ptr<sync_coordinator::UserSync> user_sync,
                        std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
-                       PageUsageListener* page_usage_listener, inspect::Node inspect_node);
+                       PageUsageListener* page_usage_listener,
+                       inspect_deprecated::Node inspect_node);
   ~LedgerRepositoryImpl() override;
 
   void set_on_empty(fit::closure on_empty_callback) {
@@ -74,7 +75,7 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
   void DiskCleanUp(fit::function<void(Status)> callback) override;
   void Close(fit::function<void(Status)> callback) override;
 
-  // inspect::ChildrenManager:
+  // inspect_deprecated::ChildrenManager:
   void GetNames(fit::function<void(std::vector<std::string>)> callback) override;
   void Attach(std::string ledger_name, fit::function<void(fit::closure)> callback) override;
 
@@ -108,9 +109,9 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
   // Callback set when closing this repository.
   fit::function<void(Status)> close_callback_;
 
-  inspect::Node inspect_node_;
-  inspect::UIntMetric requests_metric_;
-  inspect::Node ledgers_inspect_node_;
+  inspect_deprecated::Node inspect_node_;
+  inspect_deprecated::UIntMetric requests_metric_;
+  inspect_deprecated::Node ledgers_inspect_node_;
   fit::deferred_callback children_manager_retainer_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryImpl);

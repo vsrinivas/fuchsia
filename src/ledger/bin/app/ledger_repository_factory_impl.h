@@ -11,8 +11,8 @@
 #include <lib/callback/auto_cleanable.h>
 #include <lib/callback/cancellable.h>
 #include <lib/callback/managed_container.h>
-#include <lib/inspect/deprecated/expose.h>
-#include <lib/inspect/inspect.h>
+#include <lib/inspect_deprecated/deprecated/expose.h>
+#include <lib/inspect_deprecated/inspect.h>
 
 #include <memory>
 #include <string>
@@ -36,7 +36,7 @@ class LedgerRepositoryFactoryImpl
   explicit LedgerRepositoryFactoryImpl(
       Environment* environment,
       std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
-      inspect::Node inspect_node);
+      inspect_deprecated::Node inspect_node);
   ~LedgerRepositoryFactoryImpl() override;
 
   // LedgerRepositoryFactorySyncableDelegate:
@@ -72,7 +72,7 @@ class LedgerRepositoryFactoryImpl
 
   callback::AutoCleanableMap<std::string, LedgerRepositoryContainer> repositories_;
 
-  inspect::Node inspect_node_;
+  inspect_deprecated::Node inspect_node_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryImpl);
 };

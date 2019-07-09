@@ -10,7 +10,7 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/inspect/inspect.h>
+#include <lib/inspect_deprecated/inspect.h>
 #include <trace/event.h>
 
 #include <string>
@@ -33,7 +33,7 @@
 namespace ledger {
 
 LedgerManager::LedgerManager(Environment* environment, std::string ledger_name,
-                             inspect::Node inspect_node,
+                             inspect_deprecated::Node inspect_node,
                              std::unique_ptr<encryption::EncryptionService> encryption_service,
                              std::unique_ptr<storage::LedgerStorage> storage,
                              std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync,

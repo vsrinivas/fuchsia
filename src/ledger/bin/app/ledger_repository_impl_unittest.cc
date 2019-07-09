@@ -11,10 +11,10 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/inspect/deprecated/expose.h>
-#include <lib/inspect/hierarchy.h>
-#include <lib/inspect/inspect.h>
-#include <lib/inspect/testing/inspect.h>
+#include <lib/inspect_deprecated/deprecated/expose.h>
+#include <lib/inspect_deprecated/hierarchy.h>
+#include <lib/inspect_deprecated/inspect.h>
+#include <lib/inspect_deprecated/testing/inspect.h>
 
 #include <vector>
 
@@ -39,11 +39,11 @@ namespace {
 constexpr char kInspectPathComponent[] = "test_repository";
 constexpr char kTestTopLevelNodeName[] = "top-level-of-test node";
 
-using ::inspect::testing::ChildrenMatch;
-using ::inspect::testing::MetricList;
-using ::inspect::testing::NameMatches;
-using ::inspect::testing::NodeMatches;
-using ::inspect::testing::UIntMetricIs;
+using ::inspect_deprecated::testing::ChildrenMatch;
+using ::inspect_deprecated::testing::MetricList;
+using ::inspect_deprecated::testing::NameMatches;
+using ::inspect_deprecated::testing::NodeMatches;
+using ::inspect_deprecated::testing::UIntMetricIs;
 using ::testing::AllOf;
 using ::testing::Contains;
 using ::testing::ElementsAre;
@@ -55,9 +55,10 @@ using ::testing::IsEmpty;
 // that validates that the matched object has a hierarchy with a node for the
 // LedgerRepositoryImpl under test, a node named |kLedgersInspectPathComponent|
 // under that, and a node for each of the given |ledger_names| under that.
-::testing::Matcher<const inspect::ObjectHierarchy&> HierarchyMatcher(
+::testing::Matcher<const inspect_deprecated::ObjectHierarchy&> HierarchyMatcher(
     const std::vector<std::string> ledger_names) {
-  auto ledger_expectations = std::vector<::testing::Matcher<const inspect::ObjectHierarchy&>>();
+  auto ledger_expectations =
+      std::vector<::testing::Matcher<const inspect_deprecated::ObjectHierarchy&>>();
   for (const std::string& ledger_name : ledger_names) {
     ledger_expectations.push_back(NodeMatches(NameMatches(ledger_name)));
   }
@@ -71,7 +72,7 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
   LedgerRepositoryImplTest() {
     auto fake_page_eviction_manager = std::make_unique<FakeDiskCleanupManager>();
     disk_cleanup_manager_ = fake_page_eviction_manager.get();
-    top_level_node_ = inspect::Node(kTestTopLevelNodeName);
+    top_level_node_ = inspect_deprecated::Node(kTestTopLevelNodeName);
     attachment_node_ =
         top_level_node_.CreateChild(kSystemUnderTestAttachmentPointPathComponent.ToString());
 
@@ -88,13 +89,13 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   FakeDiskCleanupManager* disk_cleanup_manager_;
   // TODO(nathaniel): Because we use the ChildrenManager API, we need to do our
-  // reads using FIDL, and because we want to use inspect::ReadFromFidl for our
+  // reads using FIDL, and because we want to use inspect_deprecated::ReadFromFidl for our
   // reads, we need to have these two objects (one parent, one child, both part
   // of the test, and with the system under test attaching to the child) rather
   // than just one. Even though this is test code this is still a layer of
   // indirection that should be eliminable in Inspect's upcoming "VMO-World".
-  inspect::Node top_level_node_;
-  inspect::Node attachment_node_;
+  inspect_deprecated::Node top_level_node_;
+  inspect_deprecated::Node attachment_node_;
   std::unique_ptr<LedgerRepositoryImpl> repository_;
 
  private:
@@ -132,7 +133,7 @@ TEST_F(LedgerRepositoryImplTest, ConcurrentCalls) {
 TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   // When nothing has bound to the repository, check that the "requests" metric
   // is present and is zero.
-  inspect::ObjectHierarchy zeroth_hierarchy;
+  inspect_deprecated::ObjectHierarchy zeroth_hierarchy;
   ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &zeroth_hierarchy));
   EXPECT_THAT(zeroth_hierarchy, ChildrenMatch(Contains(NodeMatches(MetricList(Contains(UIntMetricIs(
                                     kRequestsInspectPathComponent.ToString(), 0UL)))))));
@@ -141,7 +142,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   // metric is present and is one.
   ledger_internal::LedgerRepositoryPtr first_ledger_repository_ptr;
   repository_->BindRepository(first_ledger_repository_ptr.NewRequest());
-  inspect::ObjectHierarchy first_hierarchy;
+  inspect_deprecated::ObjectHierarchy first_hierarchy;
   ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &first_hierarchy));
   EXPECT_THAT(first_hierarchy, ChildrenMatch(Contains(NodeMatches(MetricList(Contains(UIntMetricIs(
                                    kRequestsInspectPathComponent.ToString(), 1UL)))))));
@@ -150,7 +151,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   // "requests" metric is present and is two.
   ledger_internal::LedgerRepositoryPtr second_ledger_repository_ptr;
   repository_->BindRepository(second_ledger_repository_ptr.NewRequest());
-  inspect::ObjectHierarchy second_hierarchy;
+  inspect_deprecated::ObjectHierarchy second_hierarchy;
   ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &second_hierarchy));
   EXPECT_THAT(second_hierarchy, ChildrenMatch(Contains(NodeMatches(MetricList(Contains(UIntMetricIs(
                                     kRequestsInspectPathComponent.ToString(), 2UL)))))));
@@ -164,7 +165,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPILedgerPresence) {
 
   // When nothing has requested a ledger, check that the Inspect hierarchy is as
   // expected with no nodes representing ledgers.
-  inspect::ObjectHierarchy zeroth_hierarchy;
+  inspect_deprecated::ObjectHierarchy zeroth_hierarchy;
   ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &zeroth_hierarchy));
   EXPECT_THAT(zeroth_hierarchy, HierarchyMatcher({}));
 
@@ -174,7 +175,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPILedgerPresence) {
   ledger_repository_ptr->GetLedger(convert::ToArray(first_ledger_name),
                                    first_ledger_ptr.NewRequest());
   RunLoopUntilIdle();
-  inspect::ObjectHierarchy first_hierarchy;
+  inspect_deprecated::ObjectHierarchy first_hierarchy;
   ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &first_hierarchy));
   EXPECT_THAT(first_hierarchy, HierarchyMatcher({first_ledger_name}));
 
@@ -184,7 +185,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPILedgerPresence) {
   ledger_repository_ptr->GetLedger(convert::ToArray(second_ledger_name),
                                    second_ledger_ptr.NewRequest());
   RunLoopUntilIdle();
-  inspect::ObjectHierarchy second_hierarchy;
+  inspect_deprecated::ObjectHierarchy second_hierarchy;
   ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &second_hierarchy));
   EXPECT_THAT(second_hierarchy, HierarchyMatcher({first_ledger_name, second_ledger_name}));
 }
@@ -197,7 +198,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIDisconnectedLedgerPresence) {
 
   // When nothing has yet requested a ledger, check that the Inspect hierarchy
   // is as expected with no nodes representing ledgers.
-  inspect::ObjectHierarchy zeroth_hierarchy;
+  inspect_deprecated::ObjectHierarchy zeroth_hierarchy;
   ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &zeroth_hierarchy));
   EXPECT_THAT(zeroth_hierarchy, HierarchyMatcher({}));
 
@@ -207,7 +208,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIDisconnectedLedgerPresence) {
   ledger_repository_ptr->GetLedger(convert::ToArray(first_ledger_name),
                                    first_ledger_ptr.NewRequest());
   RunLoopUntilIdle();
-  inspect::ObjectHierarchy hierarchy_after_one_connection;
+  inspect_deprecated::ObjectHierarchy hierarchy_after_one_connection;
   ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &hierarchy_after_one_connection));
   EXPECT_THAT(hierarchy_after_one_connection, HierarchyMatcher({first_ledger_name}));
 
@@ -217,7 +218,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIDisconnectedLedgerPresence) {
   ledger_repository_ptr->GetLedger(convert::ToArray(second_ledger_name),
                                    second_ledger_ptr.NewRequest());
   RunLoopUntilIdle();
-  inspect::ObjectHierarchy hierarchy_after_two_connections;
+  inspect_deprecated::ObjectHierarchy hierarchy_after_two_connections;
   ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &hierarchy_after_two_connections));
   EXPECT_THAT(hierarchy_after_two_connections,
               HierarchyMatcher({first_ledger_name, second_ledger_name}));
@@ -227,7 +228,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIDisconnectedLedgerPresence) {
 
   // When one of the two ledgers has been disconnected, check that an inspection
   // still finds both.
-  inspect::ObjectHierarchy hierarchy_after_one_disconnection;
+  inspect_deprecated::ObjectHierarchy hierarchy_after_one_disconnection;
   ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &hierarchy_after_one_disconnection));
   EXPECT_THAT(hierarchy_after_one_disconnection,
               HierarchyMatcher({first_ledger_name, second_ledger_name}));
@@ -237,7 +238,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIDisconnectedLedgerPresence) {
 
   // When both of the ledgers have been disconnected, check that an inspection
   // still finds both.
-  inspect::ObjectHierarchy hierarchy_after_two_disconnections;
+  inspect_deprecated::ObjectHierarchy hierarchy_after_two_disconnections;
   ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &hierarchy_after_two_disconnections));
   EXPECT_THAT(hierarchy_after_two_disconnections,
               HierarchyMatcher({first_ledger_name, second_ledger_name}));

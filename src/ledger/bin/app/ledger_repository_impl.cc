@@ -5,8 +5,8 @@
 #include "src/ledger/bin/app/ledger_repository_impl.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/inspect/deprecated/expose.h>
-#include <lib/inspect/deprecated/object_dir.h>
+#include <lib/inspect_deprecated/deprecated/expose.h>
+#include <lib/inspect_deprecated/deprecated/object_dir.h>
 #include <trace/event.h>
 
 #include "peridot/lib/base64url/base64url.h"
@@ -33,7 +33,7 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(DetachedPath content_path, Environmen
                                            std::unique_ptr<sync_coordinator::UserSync> user_sync,
                                            std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
                                            PageUsageListener* page_usage_listener,
-                                           inspect::Node inspect_node)
+                                           inspect_deprecated::Node inspect_node)
     : content_path_(std::move(content_path)),
       environment_(environment),
       db_factory_(std::move(db_factory)),

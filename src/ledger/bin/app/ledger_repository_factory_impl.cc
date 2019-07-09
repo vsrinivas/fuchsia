@@ -12,9 +12,9 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/io/fd.h>
-#include <lib/inspect/deprecated/expose.h>
-#include <lib/inspect/deprecated/object_dir.h>
-#include <lib/inspect/inspect.h>
+#include <lib/inspect_deprecated/deprecated/expose.h>
+#include <lib/inspect_deprecated/deprecated/object_dir.h>
+#include <lib/inspect_deprecated/inspect.h>
 #include <stdio.h>
 #include <trace/event.h>
 #include <unistd.h>
@@ -242,7 +242,7 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
 LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
     Environment* environment,
     std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
-    inspect::Node inspect_node)
+    inspect_deprecated::Node inspect_node)
     : environment_(environment),
       user_communicator_factory_(std::move(user_communicator_factory)),
       inspect_node_(std::move(inspect_node)) {}
