@@ -15,15 +15,19 @@ group("test") {
 executable("memory_monitor_unittests") {
   testonly = true
   output_name = "memory_monitor_unittests"
+
   sources = [
+    "high_water_unittest.cc",
     "monitor_unittest.cc",
   ]
 
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//src/developer/memory/metrics/tests:utils",
     "//src/developer/memory/monitor:lib",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/memfs",
   ]
 }
 

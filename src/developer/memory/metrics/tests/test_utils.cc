@@ -105,4 +105,11 @@ zx_status_t TestUtils::GetCapture(Capture& capture, CaptureLevel level, const Os
   return Capture::GetCapture(capture, state, level, os);
 }
 
+zx_status_t CaptureSupplier::GetCapture(Capture& capture, CaptureLevel level) {
+  auto& t = templates_.at(index_);
+  t.time = index_++;
+  TestUtils::CreateCapture(capture, t);
+  return ZX_OK;
+}
+
 }  // namespace memory

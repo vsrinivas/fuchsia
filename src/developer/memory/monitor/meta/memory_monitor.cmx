@@ -6,6 +6,9 @@
         "dev": [
             "misc/sysinfo"
         ],
+        "features": [
+            "isolated-cache-storage"
+        ],
         "services": [
             "fuchsia.tracing.provider.Registry"
         ]

@@ -18,6 +18,7 @@
 #include <memory>
 
 #include "src/developer/memory/metrics/capture.h"
+#include "src/developer/memory/monitor/high_water.h"
 
 namespace monitor {
 
@@ -44,7 +45,8 @@ class Monitor : public fuchsia::memory::Monitor {
   // Alerts all watchers when an update has occurred.
   void NotifyWatchers(const zx_info_kmem_stats_t& stats);
 
-  ::memory::CaptureState capture_state_;
+  memory::CaptureState capture_state_;
+  HighWater high_water_;
   uint64_t prealloc_size_;
   zx::vmo prealloc_vmo_;
   bool logging_;
