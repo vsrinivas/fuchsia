@@ -69,11 +69,31 @@ static zx_status_t test_gpio(gpio_protocol_t* gpio) {
 
 static zx_status_t test_clock(clock_protocol_t* clock) {
     zx_status_t status;
+    const uint64_t kOneMegahertz = 1000000;
+    uint64_t out_rate = 0;
 
     if ((status = clock_enable(clock)) != ZX_OK) {
         return status;
     }
     if ((status = clock_disable(clock)) != ZX_OK) {
+        return status;
+    }
+
+    bool is_enabled = false;
+    printf("calling clock_is_enabled\n");
+    if ((status = clock_is_enabled(clock, &is_enabled)) != ZX_OK) {
+        return status;
+    }
+
+    if ((status = clock_set_rate(clock, kOneMegahertz)) != ZX_OK) {
+        return status;
+    }
+
+    if ((status = clock_query_supported_rate(clock, kOneMegahertz, &out_rate)) != ZX_OK) {
+        return status;
+    }
+
+    if ((status = clock_get_rate(clock, &out_rate)) != ZX_OK) {
         return status;
     }
 

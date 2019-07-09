@@ -185,11 +185,22 @@ struct GpioProxyResponse {
 enum class ClockOp {
     ENABLE,
     DISABLE,
+    IS_ENABLED,
+    SET_RATE,
+    QUERY_SUPPORTED_RATE,
+    GET_RATE,
 };
 
 struct ClockProxyRequest {
     ProxyRequest header;
     ClockOp op;
+    uint64_t rate;
+};
+
+struct ClockProxyResponse {
+    ProxyResponse header;
+    bool is_enabled;
+    uint64_t rate;
 };
 
 // ZX_PROTOCOL_POWER proxy support.

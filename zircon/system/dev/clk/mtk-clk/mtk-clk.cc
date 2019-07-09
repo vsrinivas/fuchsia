@@ -299,7 +299,19 @@ zx_status_t MtkClk::ClockImplDisable(uint32_t index) {
     return ZX_OK;
 }
 
-zx_status_t MtkClk::ClockImplRequestRate(uint32_t id, uint64_t hz) {
+zx_status_t MtkClk::ClockImplIsEnabled(uint32_t id, bool* out_enabled) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t MtkClk::ClockImplSetRate(uint32_t id, uint64_t hz) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t MtkClk::ClockImplQuerySupportedRate(uint32_t id, uint64_t max_rate, uint64_t* out_best_rate) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t MtkClk::ClockImplGetRate(uint32_t id, uint64_t* out_current_rate) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

@@ -127,7 +127,19 @@ zx_status_t HisiClock::ClockImplDisable(uint32_t clock) {
     return Toggle(clock, false);
 }
 
-zx_status_t HisiClock::ClockImplRequestRate(uint32_t id, uint64_t hz) {
+zx_status_t HisiClock::ClockImplIsEnabled(uint32_t id, bool* out_enabled) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t HisiClock::ClockImplSetRate(uint32_t id, uint64_t hz) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t HisiClock::ClockImplQuerySupportedRate(uint32_t id, uint64_t max_rate, uint64_t* out_best_rate) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t HisiClock::ClockImplGetRate(uint32_t id, uint64_t* out_current_rate) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

@@ -65,6 +65,10 @@ public:
     zx_status_t AmlogicCanvasFree(uint8_t canvas_idx);
     zx_status_t ClockEnable();
     zx_status_t ClockDisable();
+    zx_status_t ClockIsEnabled(bool* out_enabled);
+    zx_status_t ClockSetRate(uint64_t hz);
+    zx_status_t ClockQuerySupportedRate(uint64_t max_rate, uint64_t* out_max_supported_rate);
+    zx_status_t ClockGetRate(uint64_t* out_current_rate);
     zx_status_t EthBoardResetPhy();
     zx_status_t GpioConfigIn(uint32_t flags);
     zx_status_t GpioConfigOut(uint8_t initial_value);

@@ -154,20 +154,70 @@ zx_status_t ComponentProxy::AmlogicCanvasFree(uint8_t canvas_idx) {
 
 zx_status_t ComponentProxy::ClockEnable() {
     ClockProxyRequest req = {};
-    ProxyResponse resp = {};
+    ClockProxyResponse resp = {};
     req.header.proto_id = ZX_PROTOCOL_CLOCK;
     req.op = ClockOp::ENABLE;
 
-    return Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
+    return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
 zx_status_t ComponentProxy::ClockDisable() {
     ClockProxyRequest req = {};
-    ProxyResponse resp = {};
+    ClockProxyResponse resp = {};
     req.header.proto_id = ZX_PROTOCOL_CLOCK;
     req.op = ClockOp::DISABLE;
 
-    return Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
+    return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+}
+
+zx_status_t ComponentProxy::ClockIsEnabled(bool* out_enabled) {
+    ClockProxyRequest req = {};
+    ClockProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_CLOCK;
+    req.op = ClockOp::IS_ENABLED;
+
+    auto status = Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    if (status == ZX_OK) {
+        *out_enabled = resp.is_enabled;
+    }
+    return status;
+}
+
+zx_status_t ComponentProxy::ClockSetRate(uint64_t hz) {
+    ClockProxyRequest req = {};
+    ClockProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_CLOCK;
+    req.op = ClockOp::SET_RATE;
+    req.rate = hz;
+
+    return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+}
+
+zx_status_t ComponentProxy::ClockQuerySupportedRate(uint64_t max_rate, uint64_t* out_max_supported_rate) {
+    ClockProxyRequest req = {};
+    ClockProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_CLOCK;
+    req.op = ClockOp::QUERY_SUPPORTED_RATE;
+    req.rate = max_rate;
+
+    auto status = Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    if (status == ZX_OK) {
+        *out_max_supported_rate = resp.rate;
+    }
+    return status;
+}
+
+zx_status_t ComponentProxy::ClockGetRate(uint64_t* out_current_rate) {
+    ClockProxyRequest req = {};
+    ClockProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_CLOCK;
+    req.op = ClockOp::GET_RATE;
+
+    auto status = Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    if (status == ZX_OK) {
+        *out_current_rate = resp.rate;
+    }
+    return status;
 }
 
 zx_status_t ComponentProxy::EthBoardResetPhy() {

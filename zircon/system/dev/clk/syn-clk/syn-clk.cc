@@ -233,7 +233,20 @@ zx_status_t SynClk::ClockImplDisable(uint32_t index) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t SynClk::ClockImplRequestRate(uint32_t index, uint64_t hz) {
+zx_status_t SynClk::ClockImplIsEnabled(uint32_t id, bool* out_enabled) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t SynClk::ClockImplQuerySupportedRate(uint32_t id, uint64_t max_rate, uint64_t* out_best_rate) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t SynClk::ClockImplGetRate(uint32_t id, uint64_t* out_current_rate) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+
+zx_status_t SynClk::ClockImplSetRate(uint32_t index, uint64_t hz) {
     switch (index) {
     case as370::kClkAvpll0:
         return AvpllSetRate(true, static_cast<uint32_t>(hz));
@@ -273,7 +286,7 @@ zx_status_t SynClk::RegisterClockProtocol() {
 //#define TEST_DAI_CLOCKS
 #ifdef TEST_DAI_CLOCKS
     ClockImplEnable(as370::kClkAvpll0);
-    ClockImplRequestRate(as370::kClkAvpll0, static_cast<uint32_t>(48000) * 64 * 512);
+    ClockImplSetRate(as370::kClkAvpll0, static_cast<uint32_t>(48000) * 64 * 512);
 #endif
 
     auto status = pbus.RegisterProtocol(ZX_PROTOCOL_CLOCK_IMPL, &clk_proto, sizeof(clk_proto));

@@ -78,6 +78,11 @@ private:
     zx_status_t RpcGpioSetPolarity(uint32_t index, uint32_t flags);
     zx_status_t RpcClockEnable(uint32_t index);
     zx_status_t RpcClockDisable(uint32_t index);
+    zx_status_t RpcClockIsEnabled(uint32_t index, bool* result);
+    zx_status_t RpcClockSetRate(uint32_t index, uint64_t rate);
+    zx_status_t RpcClockQuerySupportedRate(uint32_t index, uint64_t max_rate, uint64_t* out_rate);
+    zx_status_t RpcClockGetRate(uint32_t index, uint64_t* out_current_rate);
+
     zx_status_t RpcSysmemConnect(zx::channel allocator2_request);
     zx_status_t RpcCanvasConfig(zx::vmo vmo, size_t offset, const canvas_info_t* info,
                                 uint8_t* out_canvas_idx);

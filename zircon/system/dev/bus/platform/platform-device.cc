@@ -337,6 +337,51 @@ zx_status_t PlatformDevice::RpcClockDisable(uint32_t index) {
     return bus_->clk()->Disable(resources_.clk(index).clk);
 }
 
+zx_status_t PlatformDevice::RpcClockIsEnabled(uint32_t index, bool* result) {
+    if (bus_->clk() == nullptr) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    if (index >= resources_.clk_count()) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    return bus_->clk()->IsEnabled(resources_.clk(index).clk, result);
+}
+
+zx_status_t PlatformDevice::RpcClockSetRate(uint32_t index, uint64_t rate) {
+    if (bus_->clk() == nullptr) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    if (index >= resources_.clk_count()) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    return bus_->clk()->SetRate(resources_.clk(index).clk, rate);
+}
+
+zx_status_t PlatformDevice::RpcClockQuerySupportedRate(uint32_t index, uint64_t max_rate,
+                                                       uint64_t* out_rate) {
+    if (bus_->clk() == nullptr) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    if (index >= resources_.clk_count()) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    return bus_->clk()->QuerySupportedRate(resources_.clk(index).clk, max_rate, out_rate);
+}
+
+zx_status_t PlatformDevice::RpcClockGetRate(uint32_t index, uint64_t* out_current_rate) {
+    if (bus_->clk() == nullptr) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    if (index >= resources_.clk_count()) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    return bus_->clk()->GetRate(resources_.clk(index).clk, out_current_rate);
+}
+
 zx_status_t PlatformDevice::RpcSysmemConnect(zx::channel allocator_request) {
     if (bus_->sysmem() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -481,7 +526,8 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
                    sizeof(*req));
             return ZX_ERR_INTERNAL;
         }
-        resp_len = sizeof(*resp_header);
+        auto resp = reinterpret_cast<rpc_clk_rsp_t*>(&resp_buf);
+        resp_len = sizeof(*resp);
 
         switch (req_header->op) {
         case CLK_ENABLE:
@@ -489,6 +535,18 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
             break;
         case CLK_DISABLE:
             status = RpcClockDisable(req->index);
+            break;
+        case CLK_IS_ENABLED:
+            status = RpcClockIsEnabled(req->index, &resp->is_enabled);
+            break;
+        case CLK_SET_RATE:
+            status = RpcClockSetRate(req->index, req->rate);
+            break;
+        case CLK_QUERY_SUPPORTED_RATE:
+            status = RpcClockQuerySupportedRate(req->index, req->rate, &resp->rate);
+            break;
+        case CLK_GET_RATE:
+            status = RpcClockGetRate(req->index, &resp->rate);
             break;
         default:
             zxlogf(ERROR, "%s: unknown clk op %u\n", __func__, req_header->op);

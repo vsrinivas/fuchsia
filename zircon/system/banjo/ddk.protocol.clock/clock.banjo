@@ -8,6 +8,27 @@ using zx;
 
 [Layout = "ddk-protocol"]
 protocol Clock {
+
+    /// Enables (ungates) this clock.
+    /// Drivers *must* call enable on all clocks they depend upon.
     Enable() -> (zx.status s);
+
+    /// Disables (gates) this clock.
+    /// Drivers should call this method to indicate to the clock subsystem that
+    /// a particular clock signal is no longer necessary.
     Disable() -> (zx.status s);
+
+    /// Returns `true` if a given clock is running.
+    /// May query the hardware or return a cached value.
+    IsEnabled() -> (zx.status s, bool enabled);
+
+    /// Attempt to set the rate of the clock provider.
+    SetRate(uint64 hz) -> (zx.status s);
+
+    /// Query the hardware for the highest supported rate that does not
+    /// exceed hz_in.
+    QuerySupportedRate(uint64 hz_in) -> (zx.status s, uint64 hz_out);
+
+    /// Returns the current rate that a given clock is running at.
+    GetRate() -> (zx.status s, uint64 hz);
 };

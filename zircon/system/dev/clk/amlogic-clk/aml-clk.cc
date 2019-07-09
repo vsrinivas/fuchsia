@@ -184,7 +184,19 @@ zx_status_t AmlClock::ClockImplDisable(uint32_t clk) {
     return ClkToggle(clk, false);
 }
 
-zx_status_t AmlClock::ClockImplRequestRate(uint32_t id, uint64_t hz) {
+zx_status_t AmlClock::ClockImplIsEnabled(uint32_t id, bool* out_enabled) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t AmlClock::ClockImplSetRate(uint32_t id, uint64_t hz) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t AmlClock::ClockImplQuerySupportedRate(uint32_t id, uint64_t max_rate, uint64_t* out_best_rate) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t AmlClock::ClockImplGetRate(uint32_t id, uint64_t* out_current_rate) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

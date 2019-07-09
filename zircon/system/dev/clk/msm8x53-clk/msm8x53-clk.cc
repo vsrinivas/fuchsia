@@ -124,7 +124,11 @@ zx_status_t Msm8x53Clk::ClockImplDisable(uint32_t index) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Msm8x53Clk::ClockImplRequestRate(uint32_t id, uint64_t hz) {
+zx_status_t Msm8x53Clk::ClockImplIsEnabled(uint32_t id, bool* out_enabled) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Msm8x53Clk::ClockImplSetRate(uint32_t id, uint64_t hz) {
     const uint32_t index = msm8x53::MsmClkIndex(id);
     const msm8x53::msm_clk_type clock_type = msm8x53::MsmClkType(id);
 
@@ -137,6 +141,14 @@ zx_status_t Msm8x53Clk::ClockImplRequestRate(uint32_t id, uint64_t hz) {
         zxlogf(WARN, "msm_clk: unsupported clock type: %u\n", (uint16_t)clock_type);
     }
 
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Msm8x53Clk::ClockImplQuerySupportedRate(uint32_t id, uint64_t max_rate, uint64_t* out_best_rate) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Msm8x53Clk::ClockImplGetRate(uint32_t id, uint64_t* out_current_rate) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

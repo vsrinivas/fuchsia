@@ -6,10 +6,17 @@ library ddk.protocol.clockimpl;
 
 using zx;
 
+/// Each method in this protocol has a corresponding method in clock.banjo
+/// See clock.banjo for documentation for each method.
 [Layout = "ddk-protocol"]
 protocol ClockImpl {
+    /// Clock Gating Control.
     Enable(uint32 id) -> (zx.status s);
     Disable(uint32 id) -> (zx.status s);
+    IsEnabled(uint32 id) -> (zx.status s, bool enabled);
 
-    RequestRate(uint32 id, uint64 rate) -> (zx.status s);
+    /// Clock Frequency Scaling Control.
+    SetRate(uint32 id, uint64 hz) -> (zx.status s);
+    QuerySupportedRate(uint32 id, uint64 hz) -> (zx.status s, uint64 hz);
+    GetRate(uint32 id) -> (zx.status s, uint64 hz);
 };

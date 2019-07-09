@@ -37,11 +37,15 @@ public:
 
     zx_status_t ClockImplEnable(uint32_t clock_id);
     zx_status_t ClockImplDisable(uint32_t clock_id);
-    zx_status_t ClockImplRequestRate(uint32_t id, uint64_t hz);
+    zx_status_t ClockImplIsEnabled(uint32_t id, bool* out_enabled);
+
+    zx_status_t ClockImplSetRate(uint32_t id, uint64_t hz);
+    zx_status_t ClockImplQuerySupportedRate(uint32_t id, uint64_t max_rate, uint64_t* out_best_rate);
+    zx_status_t ClockImplGetRate(uint32_t id, uint64_t* out_current_rate);
 
 private:
-    static constexpr uint32_t MIN_CLOCK = 1;
-    static constexpr uint32_t MAX_CLOCK = 8;
+    static constexpr uint32_t kMinClock = 1;
+    static constexpr uint32_t kMaxClock = 8;
 };
 
 zx_status_t TestClockDevice::Init() {
@@ -95,21 +99,43 @@ void TestClockDevice::DdkRelease() {
 }
 
 zx_status_t TestClockDevice::ClockImplEnable(uint32_t clock_id) {
-    if (clock_id < MIN_CLOCK || clock_id > MAX_CLOCK) {
+    if (clock_id < kMinClock || clock_id > kMaxClock) {
         return ZX_ERR_INVALID_ARGS;
     }
     return ZX_OK;
 }
 
 zx_status_t TestClockDevice::ClockImplDisable(uint32_t clock_id) {
-    if (clock_id < MIN_CLOCK || clock_id > MAX_CLOCK) {
+    if (clock_id < kMinClock || clock_id > kMaxClock) {
         return ZX_ERR_INVALID_ARGS;
     }
     return ZX_OK;
 }
 
-zx_status_t TestClockDevice::ClockImplRequestRate(uint32_t clock_id, uint64_t hz) {
-    if (clock_id < MIN_CLOCK || clock_id > MAX_CLOCK) {
+zx_status_t TestClockDevice::ClockImplIsEnabled(uint32_t clock_id, bool* out_enabled) {
+    if (clock_id < kMinClock || clock_id > kMaxClock) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return ZX_OK;
+}
+
+zx_status_t TestClockDevice::ClockImplQuerySupportedRate(uint32_t id, uint64_t max_rate,
+                                                         uint64_t* out_best_rate) {
+    if (id < kMinClock || id > kMaxClock) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return ZX_OK;
+}
+
+zx_status_t TestClockDevice::ClockImplGetRate(uint32_t id, uint64_t* out_current_rate) {
+    if (id < kMinClock || id > kMaxClock) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return ZX_OK;
+}
+
+zx_status_t TestClockDevice::ClockImplSetRate(uint32_t clock_id, uint64_t hz) {
+    if (clock_id < kMinClock || clock_id > kMaxClock) {
         return ZX_ERR_INVALID_ARGS;
     }
     return ZX_OK;

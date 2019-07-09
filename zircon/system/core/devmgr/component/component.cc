@@ -74,7 +74,7 @@ zx_status_t Component::RpcClock(const uint8_t* req_buf, uint32_t req_size, uint8
         zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
         return ZX_ERR_INTERNAL;
     }
-    auto* resp = reinterpret_cast<ProxyResponse*>(resp_buf);
+    auto* resp = reinterpret_cast<ClockProxyResponse*>(resp_buf);
     *out_resp_size = sizeof(*resp);
 
     switch (req->op) {
@@ -82,6 +82,14 @@ zx_status_t Component::RpcClock(const uint8_t* req_buf, uint32_t req_size, uint8
         return clock_.Enable();
     case ClockOp::DISABLE:
         return clock_.Disable();
+    case ClockOp::IS_ENABLED:
+        return clock_.IsEnabled(&resp->is_enabled);
+    case ClockOp::SET_RATE:
+        return clock_.SetRate(req->rate);
+    case ClockOp::QUERY_SUPPORTED_RATE:
+        return clock_.QuerySupportedRate(req->rate, &resp->rate);
+    case ClockOp::GET_RATE:
+        return clock_.GetRate(&resp->rate);
     default:
         zxlogf(ERROR, "%s: unknown clk op %u\n", __func__, static_cast<uint32_t>(req->op));
         return ZX_ERR_INTERNAL;

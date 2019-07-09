@@ -115,22 +115,90 @@ zx_status_t ProxyGpio::GpioWrite(uint8_t value) {
 
 zx_status_t ProxyClock::ClockEnable() {
     rpc_clk_req_t req = {};
-    platform_proxy_rsp_t resp = {};
+    rpc_clk_rsp_t resp = {};
     req.header.proto_id = ZX_PROTOCOL_CLOCK;
     req.header.op = CLK_ENABLE;
     req.index = index_;
 
-    return proxy_->Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
+    return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
 zx_status_t ProxyClock::ClockDisable() {
     rpc_clk_req_t req = {};
-    platform_proxy_rsp_t resp = {};
+    rpc_clk_rsp_t resp = {};
     req.header.proto_id = ZX_PROTOCOL_CLOCK;
     req.header.op = CLK_DISABLE;
     req.index = index_;
 
-    return proxy_->Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
+    return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+}
+
+zx_status_t ProxyClock::ClockIsEnabled(bool* out_enabled) {
+    rpc_clk_req_t req = {};
+    rpc_clk_rsp_t resp = {};
+
+    req.header.proto_id = ZX_PROTOCOL_CLOCK;
+    req.header.op = CLK_IS_ENABLED;
+
+    req.index = index_;
+
+    zx_status_t status = proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+
+    if (status == ZX_OK) {
+        *out_enabled = resp.is_enabled;
+    }
+
+    return status;
+}
+
+zx_status_t ProxyClock::ClockSetRate(uint64_t rate) {
+    rpc_clk_req_t req = {};
+    rpc_clk_rsp_t resp = {};
+
+    req.header.proto_id = ZX_PROTOCOL_CLOCK;
+    req.header.op = CLK_SET_RATE;
+
+    req.index = index_;
+    req.rate = rate;
+
+    return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+}
+
+zx_status_t ProxyClock::ClockQuerySupportedRate(uint64_t max_rate, uint64_t* out_max_supported_rate) {
+    rpc_clk_req_t req = {};
+    rpc_clk_rsp_t resp = {};
+
+    req.header.proto_id = ZX_PROTOCOL_CLOCK;
+    req.header.op = CLK_QUERY_SUPPORTED_RATE;
+
+    req.index = index_;
+    req.rate = max_rate;
+
+    zx_status_t status = proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+
+    if (status == ZX_OK) {
+        *out_max_supported_rate = resp.rate;
+    }
+
+    return status;
+}
+
+zx_status_t ProxyClock::ClockGetRate(uint64_t* out_current_rate) {
+    rpc_clk_req_t req = {};
+    rpc_clk_rsp_t resp = {};
+
+    req.header.proto_id = ZX_PROTOCOL_CLOCK;
+    req.header.op = CLK_GET_RATE;
+
+    req.index = index_;
+
+    zx_status_t status = proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+
+    if (status == ZX_OK) {
+        *out_current_rate = resp.rate;
+    }
+
+    return status;
 }
 
 zx_status_t ProxySysmem::SysmemConnect(zx::channel allocator_request) {

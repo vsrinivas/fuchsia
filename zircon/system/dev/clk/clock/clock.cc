@@ -26,6 +26,23 @@ zx_status_t ClockDevice::ClockDisable() {
     return clock_.Disable(id_);
 }
 
+zx_status_t ClockDevice::ClockIsEnabled(bool* out_enabled) {
+    return clock_.IsEnabled(id_, out_enabled);
+}
+
+zx_status_t ClockDevice::ClockSetRate(uint64_t hz) {
+    return clock_.SetRate(id_, hz);
+}
+
+zx_status_t ClockDevice::ClockQuerySupportedRate(uint64_t max_rate, uint64_t* out_max_supported_rate) {
+    return clock_.QuerySupportedRate(id_, max_rate, out_max_supported_rate);
+}
+
+zx_status_t ClockDevice::ClockGetRate(uint64_t* out_current_rate) {
+    return clock_.GetRate(id_, out_current_rate);
+}
+
+
 void ClockDevice::DdkUnbind() {
     DdkRemove();
 }

@@ -27,6 +27,11 @@ public:
 
     zx_status_t ClockEnable();
     zx_status_t ClockDisable();
+    zx_status_t ClockIsEnabled(bool* out_enabled);
+
+    zx_status_t ClockSetRate(uint64_t hz);
+    zx_status_t ClockQuerySupportedRate(uint64_t max_rate, uint64_t* out_max_supported_rate);
+    zx_status_t ClockGetRate(uint64_t* out_current_rate);
 
 private:
     const ddk::ClockImplProtocolClient clock_;

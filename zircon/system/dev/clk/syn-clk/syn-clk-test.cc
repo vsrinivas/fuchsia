@@ -74,7 +74,7 @@ TEST(ClkSynTest, AvpllSetRateBad) {
     ddk_mock::MockMmioRegRegion audio_region(audio_regs.get(), 4, as370::kAudioGlobalSize/4);
     SynClkTest test(global_region, audio_region);
 
-    EXPECT_NOT_OK(test.ClockImplRequestRate(0, 3'200'000'001)); // Too high.
+    EXPECT_NOT_OK(test.ClockImplSetRate(0, 3'200'000'001)); // Too high.
 }
 
 TEST(ClkSynTest, AvpllSetRateGood) {
@@ -96,7 +96,7 @@ TEST(ClkSynTest, AvpllSetRateGood) {
     audio_regs[0x0018/4].ExpectRead(0xffffffff).ExpectWrite(0xfffffffe); // Remove bypass.
     audio_regs[0x0044/4].ExpectRead(0x00000000).ExpectWrite(0x00000004); // Clock enable.
 
-    EXPECT_OK(test.ClockImplRequestRate(0, 800'000'000));
+    EXPECT_OK(test.ClockImplSetRate(0, 800'000'000));
 
     audio_region.VerifyAll();
 }
@@ -120,7 +120,7 @@ TEST(ClkSynTest, AvpllSetRateMax) {
     audio_regs[0x0018/4].ExpectRead(0xffffffff).ExpectWrite(0xfffffffe); // Remove bypass.
     audio_regs[0x0044/4].ExpectRead(0x00000000).ExpectWrite(0x00000004); // Clock enable.
 
-    EXPECT_OK(test.ClockImplRequestRate(0, 3'200'000'000));
+    EXPECT_OK(test.ClockImplSetRate(0, 3'200'000'000));
 
     audio_region.VerifyAll();
 }
@@ -146,7 +146,7 @@ TEST(ClkSynTest, AvpllSetRateFractional) {
     audio_regs[0x0018/4].ExpectRead(0xffffffff).ExpectWrite(0xfffffffe); // Remove bypass.
     audio_regs[0x0044/4].ExpectRead(0x00000000).ExpectWrite(0x00000004); // Clock enable.
 
-    EXPECT_OK(test.ClockImplRequestRate(0, 2'123'000'000));
+    EXPECT_OK(test.ClockImplSetRate(0, 2'123'000'000));
 
     audio_region.VerifyAll();
 }
@@ -170,7 +170,7 @@ TEST(ClkSynTest, AvpllSetRatePll1) {
     audio_regs[0x0038/4].ExpectRead(0xffffffff).ExpectWrite(0xfffffffe); // Remove bypass.
     audio_regs[0x0044/4].ExpectRead(0x00000000).ExpectWrite(0x00000008); // Clock enable.
 
-    EXPECT_OK(test.ClockImplRequestRate(1, 800'000'000));
+    EXPECT_OK(test.ClockImplSetRate(1, 800'000'000));
 
     audio_region.VerifyAll();
 }

@@ -34,17 +34,17 @@ TEST(ClkTest8x53, TestSetRcgMnd) {
     cc_regs[kTestClock.CmdReg()].ExpectWrite(0x1);
 
     // Invalid clock ID and bad rate.
-    zx_status_t st = clk.ClockImplRequestRate(0, 0);
+    zx_status_t st = clk.ClockImplSetRate(0, 0);
     EXPECT_NE(st, ZX_OK);
 
     // Set a good clock and a bad rate.
     constexpr uint64_t kBadClkRate = 1;
-    st = clk.ClockImplRequestRate(msm8x53::kBlsp1Uart2AppsClkSrc, kBadClkRate);
+    st = clk.ClockImplSetRate(msm8x53::kBlsp1Uart2AppsClkSrc, kBadClkRate);
     EXPECT_NE(st, ZX_OK);
 
     // Try setting a clock that exists.
     const uint64_t kGoodClkRate = kTestFrequency.rate();
-    st = clk.ClockImplRequestRate(msm8x53::kBlsp1Uart2AppsClkSrc, kGoodClkRate);
+    st = clk.ClockImplSetRate(msm8x53::kBlsp1Uart2AppsClkSrc, kGoodClkRate);
     EXPECT_OK(st);
 
     cc_regs.VerifyAll();
@@ -65,12 +65,12 @@ TEST(ClkTest8x53, TestSetRcgHid) {
 
     // Set a good clock and a bad rate.
     constexpr uint64_t kBadClkRate = 1;
-    zx_status_t st = clk.ClockImplRequestRate(msm8x53::kCsi0pClkSrc, kBadClkRate);
+    zx_status_t st = clk.ClockImplSetRate(msm8x53::kCsi0pClkSrc, kBadClkRate);
     EXPECT_NE(st, ZX_OK);
 
     // Try setting a clock that exists.
     const uint64_t kGoodClkRate = kTestFrequency.rate();
-    st = clk.ClockImplRequestRate(msm8x53::kCsi0pClkSrc, kGoodClkRate);
+    st = clk.ClockImplSetRate(msm8x53::kCsi0pClkSrc, kGoodClkRate);
     EXPECT_OK(st);
 
     cc_regs.VerifyAll();
@@ -92,7 +92,7 @@ TEST(ClkTest8x53, TestRcgEnableDisabe) {
     EXPECT_NE(st, ZX_OK);
 
     // Okay, set a frequency and try again.
-    st = clk.ClockImplRequestRate(kTestClkId, kTestFrequency.rate());
+    st = clk.ClockImplSetRate(kTestClkId, kTestFrequency.rate());
     EXPECT_OK(st);
 
     // Try enabling the RCG again and make sure it works.
