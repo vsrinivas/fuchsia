@@ -9,6 +9,7 @@ use wep_deprecated;
 use wlan_common::{format::MacFmt, ie::rsn::cipher, RadioConfig};
 use wlan_rsn::key::exchange::Key;
 use wlan_rsn::rsna::{self, SecAssocStatus, SecAssocUpdate};
+use wlan_rsn::ProtectionInfo;
 
 use super::bss::ClientConfig;
 use super::rsn::Rsna;
@@ -628,7 +629,7 @@ fn process_eapol_ind(
     rsna: &mut Rsna,
     ind: &fidl_mlme::EapolIndication,
 ) -> RsnaStatus {
-    let mic_size = rsna.negotiated_rsne.mic_size;
+    let mic_size = rsna.negotiated_protection.mic_size;
     let eapol_pdu = &ind.data[..];
     let eapol_frame = match eapol::KeyFrameRx::parse(mic_size as usize, eapol_pdu) {
         Ok(key_frame) => eapol::Frame::Key(key_frame),
@@ -781,7 +782,14 @@ fn to_associating_state(cfg: ClientConfig, cmd: ConnectCommand, mlme_sink: &Mlme
     let s_rsne_data = match &cmd.protection {
         Protection::Open | Protection::Wep(_) => None,
         Protection::Rsna(rsna) => {
-            let s_rsne = rsna.negotiated_rsne.to_full_rsne();
+            let s_protection = rsna.negotiated_protection.to_full_protection();
+            let s_rsne = match s_protection {
+                ProtectionInfo::Rsne(rsne) => rsne,
+                ProtectionInfo::LegacyWpa(_wpa) => {
+                    error!("Cannot associate with wpa!");
+                    return State::Idle { cfg };
+                }
+            };
             let mut buf = Vec::with_capacity(s_rsne.len());
             // Writing an RSNE into a Vector can never fail as a Vector can be grown when more
             // space is required. If this panic ever triggers, something is clearly broken
@@ -824,7 +832,7 @@ mod tests {
     use std::error::Error;
     use std::sync::Arc;
     use wlan_common::{ie::rsn::rsne::RsnCapabilities, RadioConfig};
-    use wlan_rsn::{rsna::UpdateSink, NegotiatedRsne};
+    use wlan_rsn::{rsna::UpdateSink, NegotiatedProtection};
 
     use crate::client::test_utils::{
         expect_info_event, fake_protected_bss_description, fake_unprotected_bss_description,
@@ -1669,7 +1677,8 @@ mod tests {
             bss: Box::new(bss),
             responder: Some(responder),
             protection: Protection::Rsna(Rsna {
-                negotiated_rsne: NegotiatedRsne::from_rsne(&rsne).expect("invalid NegotiatedRsne"),
+                negotiated_protection: NegotiatedProtection::from_rsne(&rsne)
+                    .expect("invalid NegotiatedProtection"),
                 supplicant: Box::new(supplicant),
             }),
             radio_cfg: RadioConfig::default(),
@@ -1753,7 +1762,8 @@ mod tests {
         let bss = protected_bss(b"foo".to_vec(), bssid);
         let rsne = test_utils::wpa2_psk_ccmp_rsne_with_caps(RsnCapabilities(0));
         let rsna = Rsna {
-            negotiated_rsne: NegotiatedRsne::from_rsne(&rsne).expect("invalid NegotiatedRsne"),
+            negotiated_protection: NegotiatedProtection::from_rsne(&rsne)
+                .expect("invalid NegotiatedProtection"),
             supplicant: Box::new(supplicant),
         };
         State::Associated {

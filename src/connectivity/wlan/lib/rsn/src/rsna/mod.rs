@@ -6,6 +6,7 @@ use crate::integrity::integrity_algorithm;
 use crate::key::exchange::Key;
 use crate::keywrap::keywrap_algorithm;
 use crate::Error;
+use crate::ProtectionInfo;
 use eapol;
 use failure::{self, bail, ensure};
 use wlan_common::ie::rsn::{
@@ -13,6 +14,7 @@ use wlan_common::ie::rsn::{
     cipher::{Cipher, GROUP_CIPHER_SUITE, TKIP},
     rsne::{RsnCapabilities, Rsne},
 };
+use wlan_common::ie::wpa::WpaIe;
 use zerocopy::ByteSlice;
 
 pub mod esssa;
@@ -20,7 +22,13 @@ pub mod esssa;
 pub mod test_util;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct NegotiatedRsne {
+enum ProtectionType {
+    LegacyWpa1,
+    Rsne,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct NegotiatedProtection {
     pub group_data: Cipher,
     pub pairwise: Cipher,
     pub akm: Akm,
@@ -28,39 +36,80 @@ pub struct NegotiatedRsne {
     // Some networks carry RSN capabilities.
     // To construct a valid RSNE, these capabilities must be tracked.
     caps: Option<RsnCapabilities>,
+    protection_type: ProtectionType,
 }
 
-impl NegotiatedRsne {
-    pub fn from_rsne(rsne: &Rsne) -> Result<NegotiatedRsne, failure::Error> {
-        ensure!(rsne.group_data_cipher_suite.is_some(), Error::InvalidNegotiatedRsne);
-        let group_data = rsne.group_data_cipher_suite.as_ref().unwrap();
+impl NegotiatedProtection {
+    pub fn from_protection(protection: &ProtectionInfo) -> Result<Self, failure::Error> {
+        match protection {
+            ProtectionInfo::Rsne(rsne) => Self::from_rsne(rsne),
+            ProtectionInfo::LegacyWpa(wpa) => Self::from_legacy_wpa(wpa),
+        }
+    }
 
-        ensure!(rsne.pairwise_cipher_suites.len() == 1, Error::InvalidNegotiatedRsne);
+    /// Validates that this RSNE contains only one of each cipher type and one AKM, and produces
+    /// a corresponding negotiated protection scheme.
+    pub fn from_rsne(rsne: &Rsne) -> Result<Self, failure::Error> {
+        let group_data =
+            rsne.group_data_cipher_suite.as_ref().ok_or(Error::InvalidNegotiatedProtection)?;
+
+        ensure!(rsne.pairwise_cipher_suites.len() == 1, Error::InvalidNegotiatedProtection);
         let pairwise = &rsne.pairwise_cipher_suites[0];
 
-        ensure!(rsne.akm_suites.len() == 1, Error::InvalidNegotiatedRsne);
+        ensure!(rsne.akm_suites.len() == 1, Error::InvalidNegotiatedProtection);
         let akm = &rsne.akm_suites[0];
 
         let mic_size = akm.mic_bytes();
-        ensure!(mic_size.is_some(), Error::InvalidNegotiatedRsne);
+        ensure!(mic_size.is_some(), Error::InvalidNegotiatedProtection);
         let mic_size = mic_size.unwrap();
 
-        Ok(NegotiatedRsne {
+        Ok(Self {
             group_data: group_data.clone(),
             pairwise: pairwise.clone(),
             akm: akm.clone(),
             mic_size,
             caps: rsne.rsn_capabilities.clone(),
+            protection_type: ProtectionType::Rsne,
         })
     }
 
-    pub fn to_full_rsne(&self) -> Rsne {
-        let mut s_rsne = Rsne::new();
-        s_rsne.group_data_cipher_suite = Some(self.group_data.clone());
-        s_rsne.pairwise_cipher_suites = vec![self.pairwise.clone()];
-        s_rsne.akm_suites = vec![self.akm.clone()];
-        s_rsne.rsn_capabilities = self.caps.clone();
-        s_rsne
+    /// Validates that this WPA1 element contains only one of each cipher type and one AKM, and
+    /// produces a corresponding negotiated protection scheme.
+    pub fn from_legacy_wpa(wpa: &WpaIe) -> Result<Self, failure::Error> {
+        ensure!(wpa.unicast_cipher_list.len() == 1, Error::InvalidNegotiatedProtection);
+        ensure!(wpa.akm_list.len() == 1, Error::InvalidNegotiatedProtection);
+        let akm = wpa.akm_list[0].clone();
+        let mic_size = akm.mic_bytes().ok_or(Error::InvalidNegotiatedProtection)?;
+        let group_data = wpa.multicast_cipher.clone();
+        let pairwise = wpa.unicast_cipher_list[0].clone();
+        Ok(Self {
+            group_data,
+            pairwise,
+            akm,
+            mic_size,
+            caps: None,
+            protection_type: ProtectionType::LegacyWpa1,
+        })
+    }
+
+    /// Converts this NegotiatedProtection into a ProtectionInfo that may be written into 802.11
+    /// frames.
+    pub fn to_full_protection(&self) -> ProtectionInfo {
+        match self.protection_type {
+            ProtectionType::Rsne => {
+                let mut s_rsne = Rsne::new();
+                s_rsne.group_data_cipher_suite = Some(self.group_data.clone());
+                s_rsne.pairwise_cipher_suites = vec![self.pairwise.clone()];
+                s_rsne.akm_suites = vec![self.akm.clone()];
+                s_rsne.rsn_capabilities = self.caps.clone();
+                ProtectionInfo::Rsne(s_rsne)
+            }
+            ProtectionType::LegacyWpa1 => ProtectionInfo::LegacyWpa(WpaIe {
+                multicast_cipher: self.group_data.clone(),
+                unicast_cipher_list: vec![self.pairwise.clone()],
+                akm_list: vec![self.akm.clone()],
+            }),
+        }
     }
 }
 
@@ -134,7 +183,7 @@ impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
     pub fn from_frame(
         frame: eapol::KeyFrameRx<B>,
         role: &Role,
-        rsne: &NegotiatedRsne,
+        protection: &NegotiatedProtection,
         key_replay_counter: u64,
     ) -> Result<Dot11VerifiedKeyFrame<B>, failure::Error> {
         let sender = match role {
@@ -155,7 +204,7 @@ impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
         };
 
         // IEEE Std 802.11-2016, 12.7.2 b.1)
-        let expected_version = derive_key_descriptor_version(key_descriptor, rsne);
+        let expected_version = derive_key_descriptor_version(key_descriptor, protection);
         ensure!(
             frame.key_frame_fields.key_info().key_descriptor_version() == expected_version,
             Error::UnsupportedKeyDescriptorVersion(
@@ -224,7 +273,8 @@ impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
                 // To improve interoperability, a value of 0 or the pairwise temporal key length is
                 // allowed for frames sent by the Supplicant.
                 Role::Supplicant if frame.key_frame_fields.key_len.to_native() != 0 => {
-                    let tk_bits = rsne.pairwise.tk_bits().ok_or(Error::UnsupportedCipherSuite)?;
+                    let tk_bits =
+                        protection.pairwise.tk_bits().ok_or(Error::UnsupportedCipherSuite)?;
                     let tk_len = tk_bits / 8;
                     ensure!(
                         frame.key_frame_fields.key_len.to_native() == tk_len,
@@ -233,7 +283,8 @@ impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
                 }
                 // Authenticator must use the pairwise cipher's key length.
                 Role::Authenticator => {
-                    let tk_bits = rsne.pairwise.tk_bits().ok_or(Error::UnsupportedCipherSuite)?;
+                    let tk_bits =
+                        protection.pairwise.tk_bits().ok_or(Error::UnsupportedCipherSuite)?;
                     let tk_len = tk_bits / 8;
                     ensure!(
                         frame.key_frame_fields.key_len.to_native() == tk_len,
@@ -324,10 +375,10 @@ impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
 /// Key Descriptor Version is based on the negotiated AKM, Pairwise- and Group Cipher suite.
 pub fn derive_key_descriptor_version(
     key_descriptor_type: eapol::KeyDescriptor,
-    rsne: &NegotiatedRsne,
+    protection: &NegotiatedProtection,
 ) -> u16 {
-    let akm = &rsne.akm;
-    let pairwise = &rsne.pairwise;
+    let akm = &protection.akm;
+    let pairwise = &protection.pairwise;
 
     if !akm.has_known_algorithm() || !pairwise.has_known_usage() {
         return 0;
@@ -340,7 +391,7 @@ pub fn derive_key_descriptor_version(
                 _ => 0,
             },
             eapol::KeyDescriptor::IEEE802DOT11
-                if pairwise.is_enhanced() || rsne.group_data.is_enhanced() =>
+                if pairwise.is_enhanced() || protection.group_data.is_enhanced() =>
             {
                 2
             }
@@ -378,22 +429,22 @@ pub type UpdateSink = Vec<SecAssocUpdate>;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rsna::{test_util, NegotiatedRsne, Role};
+    use crate::rsna::{test_util, NegotiatedProtection, Role};
     use wlan_common::ie::rsn::{akm, cipher, rsne::Rsne, suite_selector::OUI};
 
     #[test]
-    fn test_negotiated_rsne_from_rsne() {
+    fn test_negotiated_protection_from_rsne() {
         let rsne = make_rsne(Some(cipher::GCMP_256), vec![cipher::CCMP_128], vec![akm::PSK]);
-        NegotiatedRsne::from_rsne(&rsne).expect("error, could not create negotiated RSNE");
+        NegotiatedProtection::from_rsne(&rsne).expect("error, could not create negotiated RSNE");
 
         let rsne = make_rsne(None, vec![cipher::CCMP_128], vec![akm::PSK]);
-        NegotiatedRsne::from_rsne(&rsne).expect_err("error, created negotiated RSNE");
+        NegotiatedProtection::from_rsne(&rsne).expect_err("error, created negotiated RSNE");
 
         let rsne = make_rsne(Some(cipher::CCMP_128), vec![], vec![akm::PSK]);
-        NegotiatedRsne::from_rsne(&rsne).expect_err("error, created negotiated RSNE");
+        NegotiatedProtection::from_rsne(&rsne).expect_err("error, created negotiated RSNE");
 
         let rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![]);
-        NegotiatedRsne::from_rsne(&rsne).expect_err("error, created negotiated RSNE");
+        NegotiatedProtection::from_rsne(&rsne).expect_err("error, created negotiated RSNE");
     }
 
     // IEEE requires the key length to be zeroed in the 4-Way Handshake but some vendors send the
@@ -401,7 +452,7 @@ mod tests {
     // interoperability,
     #[test]
     fn test_supplicant_sends_zeroed_and_non_zeroed_key_length() {
-        let rsne = NegotiatedRsne::from_rsne(&test_util::get_s_rsne())
+        let protection = NegotiatedProtection::from_rsne(&test_util::get_s_rsne())
             .expect("could not derive negotiated RSNE");
         let mut env = test_util::FourwayTestEnv::new();
 
@@ -414,7 +465,7 @@ mod tests {
         let mut msg2 = msg2_base.copy_keyframe_mut(&mut buf);
         msg2.key_frame_fields.key_len.set_from_native(0);
         test_util::finalize_key_frame(&mut msg2, Some(ptk.kck()));
-        let result = Dot11VerifiedKeyFrame::from_frame(msg2, &Role::Authenticator, &rsne, 12);
+        let result = Dot11VerifiedKeyFrame::from_frame(msg2, &Role::Authenticator, &protection, 12);
         assert!(result.is_ok(), "failed verifying message: {}", result.unwrap_err());
 
         // Use CCMP-128 key length. Not officially IEEE 802.11 compliant but relaxed for
@@ -423,7 +474,7 @@ mod tests {
         let mut msg2 = msg2_base.copy_keyframe_mut(&mut buf);
         msg2.key_frame_fields.key_len.set_from_native(16);
         test_util::finalize_key_frame(&mut msg2, Some(ptk.kck()));
-        let result = Dot11VerifiedKeyFrame::from_frame(msg2, &Role::Authenticator, &rsne, 12);
+        let result = Dot11VerifiedKeyFrame::from_frame(msg2, &Role::Authenticator, &protection, 12);
         assert!(result.is_ok(), "failed verifying message: {}", result.unwrap_err());
     }
 
@@ -442,19 +493,36 @@ mod tests {
         msg2.key_frame_fields.key_len.set_from_native(29);
         test_util::finalize_key_frame(&mut msg2, Some(ptk.kck()));
 
-        let rsne = NegotiatedRsne::from_rsne(&test_util::get_s_rsne())
+        let protection = NegotiatedProtection::from_rsne(&test_util::get_s_rsne())
             .expect("could not derive negotiated RSNE");
-        let result = Dot11VerifiedKeyFrame::from_frame(msg2, &Role::Authenticator, &rsne, 12);
+        let result = Dot11VerifiedKeyFrame::from_frame(msg2, &Role::Authenticator, &protection, 12);
         assert!(result.is_err(), "successfully verified illegal message");
     }
 
     #[test]
     fn test_to_rsne() {
         let rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
-        let negotiated_rsne = NegotiatedRsne::from_rsne(&rsne)
+        let negotiated_protection = NegotiatedProtection::from_rsne(&rsne)
             .expect("error, could not create negotiated RSNE")
-            .to_full_rsne();
-        assert_eq!(negotiated_rsne, rsne);
+            .to_full_protection();
+        match negotiated_protection {
+            ProtectionInfo::Rsne(negotiated_protection) => assert_eq!(negotiated_protection, rsne),
+            _ => panic!("error, negotiated RSNE turned into a different protection type"),
+        }
+    }
+
+    #[test]
+    fn test_to_legacy_wpa() {
+        let wpa_ie = make_wpa(Some(cipher::TKIP), vec![cipher::TKIP], vec![akm::PSK]);
+        let negotiated_protection = NegotiatedProtection::from_legacy_wpa(&wpa_ie)
+            .expect("error, could not create negotiated WPA")
+            .to_full_protection();
+        match negotiated_protection {
+            ProtectionInfo::LegacyWpa(negotiated_protection) => {
+                assert_eq!(negotiated_protection, wpa_ie)
+            }
+            _ => panic!("error, negotiated WPA turned into a different protection type"),
+        }
     }
 
     fn make_cipher(suite_type: u8) -> cipher::Cipher {
@@ -471,6 +539,14 @@ mod tests {
         rsne.pairwise_cipher_suites = pairwise.into_iter().map(make_cipher).collect();
         rsne.akm_suites = akms.into_iter().map(make_akm).collect();
         rsne
+    }
+
+    fn make_wpa(unicast: Option<u8>, multicast: Vec<u8>, akms: Vec<u8>) -> WpaIe {
+        WpaIe {
+            multicast_cipher: unicast.map(make_cipher).expect("failed to make wpa ie!"),
+            unicast_cipher_list: multicast.into_iter().map(make_cipher).collect(),
+            akm_list: akms.into_iter().map(make_akm).collect(),
+        }
     }
 
 }

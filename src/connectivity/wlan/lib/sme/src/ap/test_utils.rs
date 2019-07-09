@@ -5,7 +5,7 @@
 use eapol;
 use std::sync::{Arc, Mutex};
 use wlan_common::ie::rsn::rsne::RsnCapabilities;
-use wlan_rsn::{rsna::UpdateSink, NegotiatedRsne};
+use wlan_rsn::{rsna::UpdateSink, NegotiatedProtection};
 
 use crate::{ap::authenticator::Authenticator, test_utils};
 
@@ -13,12 +13,12 @@ use crate::{ap::authenticator::Authenticator, test_utils};
 pub struct MockAuthenticator {
     initiate: Arc<Mutex<UpdateSink>>,
     on_eapol_frame: Arc<Mutex<UpdateSink>>,
-    negotiated_rsne: NegotiatedRsne,
+    negotiated_protection: NegotiatedProtection,
 }
 
 impl Authenticator for MockAuthenticator {
-    fn get_negotiated_rsne(&self) -> &NegotiatedRsne {
-        &self.negotiated_rsne
+    fn get_negotiated_protection(&self) -> &NegotiatedProtection {
+        &self.negotiated_protection
     }
 
     fn reset(&mut self) {
@@ -50,7 +50,7 @@ impl MockAuthenticator {
         MockAuthenticator {
             initiate: initiate_mock,
             on_eapol_frame: on_eapol_frame_mock,
-            negotiated_rsne: NegotiatedRsne::from_rsne(&rsne).unwrap(),
+            negotiated_protection: NegotiatedProtection::from_rsne(&rsne).unwrap(),
         }
     }
 }

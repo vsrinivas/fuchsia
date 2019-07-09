@@ -10,7 +10,7 @@ use crate::key::ptk::Ptk;
 use crate::key_data::kde;
 use crate::keywrap::keywrap_algorithm;
 use crate::rsna::{
-    derive_key_descriptor_version, Dot11VerifiedKeyFrame, NegotiatedRsne, SecAssocUpdate,
+    derive_key_descriptor_version, Dot11VerifiedKeyFrame, NegotiatedProtection, SecAssocUpdate,
     UnverifiedKeyData, UpdateSink,
 };
 use crate::Error;
@@ -118,9 +118,9 @@ fn initiate_internal(
     krc: u64,
     anonce: &[u8],
 ) -> Result<(), failure::Error> {
-    let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
+    let protection = NegotiatedProtection::from_protection(&cfg.s_protection)?;
     let krc = krc + 1;
-    let msg1 = create_message_1(anonce, &rsne, krc)?;
+    let msg1 = create_message_1(anonce, &protection, krc)?;
     update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg1));
     Ok(())
 }
@@ -138,8 +138,9 @@ fn process_message_2<B: ByteSlice>(
 
     let gtk =
         cfg.gtk_provider.as_ref().expect("GtkProvider is missing").lock().unwrap().get_gtk()?;
-    let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
-    let msg3 = create_message_3(&cfg, ptk.kck(), ptk.kek(), &gtk, &anonce[..], &rsne, next_krc)?;
+    let protection = NegotiatedProtection::from_protection(&cfg.s_protection)?;
+    let msg3 =
+        create_message_3(&cfg, ptk.kck(), ptk.kek(), &gtk, &anonce[..], &protection, next_krc)?;
 
     update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg3));
     Ok((ptk, gtk))
@@ -162,17 +163,17 @@ fn process_message_4<B: ByteSlice>(
 // IEEE Std 802.11-2016, 12.7.6.2
 fn create_message_1<B: ByteSlice>(
     anonce: B,
-    rsne: &NegotiatedRsne,
+    protection: &NegotiatedProtection,
     krc: u64,
 ) -> Result<eapol::KeyFrameBuf, failure::Error> {
-    let version = derive_key_descriptor_version(eapol::KeyDescriptor::IEEE802DOT11, rsne);
+    let version = derive_key_descriptor_version(eapol::KeyDescriptor::IEEE802DOT11, protection);
     let key_info = eapol::KeyInformation(0)
         .with_key_descriptor_version(version)
         .with_key_type(eapol::KeyType::PAIRWISE)
         .with_key_ack(true);
 
-    let key_len = match rsne.pairwise.tk_bits() {
-        None => bail!("unknown cipher used for pairwise key: {:?}", rsne.pairwise),
+    let key_len = match protection.pairwise.tk_bits() {
+        None => bail!("unknown cipher used for pairwise key: {:?}", protection.pairwise),
         Some(tk_bits) => tk_bits / 8,
     };
     eapol::KeyFrameTx::new(
@@ -187,7 +188,7 @@ fn create_message_1<B: ByteSlice>(
             0,         // rsc
         ),
         vec![],
-        rsne.mic_size as usize,
+        protection.mic_size as usize,
     )
     .serialize()
     .finalize_without_mic()
@@ -205,14 +206,22 @@ pub fn handle_message_2<B: ByteSlice>(
     // Safe: The nonce must be accessed to compute the PTK. The frame will still be fully verified
     // before accessing any of its fields.
     let snonce = &frame.unsafe_get_raw().key_frame_fields.key_nonce[..];
-    let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
+    let protection = NegotiatedProtection::from_protection(&cfg.s_protection)?;
 
-    let ptk = Ptk::new(pmk, &cfg.a_addr, &cfg.s_addr, anonce, snonce, &rsne.akm, rsne.pairwise)?;
+    let ptk = Ptk::new(
+        pmk,
+        &cfg.a_addr,
+        &cfg.s_addr,
+        anonce,
+        snonce,
+        &protection.akm,
+        protection.pairwise,
+    )?;
 
     // PTK was computed, verify the frame's MIC.
     let frame = match frame.get() {
         Dot11VerifiedKeyFrame::WithUnverifiedMic(unverified_mic) => {
-            match unverified_mic.verify_mic(ptk.kck(), &rsne.akm)? {
+            match unverified_mic.verify_mic(ptk.kck(), &protection.akm)? {
                 UnverifiedKeyData::Encrypted(_) => {
                     bail!("msg2 of 4-Way Handshake must not be encrypted")
                 }
@@ -240,19 +249,20 @@ fn create_message_3(
     kek: &[u8],
     gtk: &Gtk,
     anonce: &[u8],
-    rsne: &NegotiatedRsne,
+    protection: &NegotiatedProtection,
     krc: u64,
 ) -> Result<eapol::KeyFrameBuf, failure::Error> {
     // Construct key data which contains the Beacon's RSNE and a GTK KDE.
     let mut w = kde::Writer::new(vec![]);
-    w.write_rsne(&cfg.a_rsne)?;
+    w.write_protection(&cfg.a_protection)?;
     w.write_gtk(&kde::Gtk::new(gtk.key_id(), kde::GtkInfoTx::BothRxTx, gtk.tk()))?;
     let key_data = w.finalize_for_encryption()?;
-    let encrypted_key_data =
-        keywrap_algorithm(&rsne.akm).ok_or(Error::UnsupportedAkmSuite)?.wrap(kek, &key_data[..])?;
+    let encrypted_key_data = keywrap_algorithm(&protection.akm)
+        .ok_or(Error::UnsupportedAkmSuite)?
+        .wrap(kek, &key_data[..])?;
 
     // Construct message.
-    let version = derive_key_descriptor_version(eapol::KeyDescriptor::IEEE802DOT11, rsne);
+    let version = derive_key_descriptor_version(eapol::KeyDescriptor::IEEE802DOT11, protection);
     let key_info = eapol::KeyInformation(0)
         .with_key_descriptor_version(version)
         .with_key_type(eapol::KeyType::PAIRWISE)
@@ -262,8 +272,8 @@ fn create_message_3(
         .with_secure(true)
         .with_encrypted_key_data(true);
 
-    let key_len = match rsne.pairwise.tk_bits() {
-        None => bail!("unknown cipher used for pairwise key: {:?}", rsne.pairwise),
+    let key_len = match protection.pairwise.tk_bits() {
+        None => bail!("unknown cipher used for pairwise key: {:?}", protection.pairwise),
         Some(tk_bits) => tk_bits / 8,
     };
 
@@ -279,11 +289,11 @@ fn create_message_3(
             0,         // rsc
         ),
         encrypted_key_data,
-        rsne.mic_size as usize,
+        protection.mic_size as usize,
     )
     .serialize();
 
-    let mic = compute_mic_from_buf(kck, &rsne.akm, msg3.unfinalized_buf())
+    let mic = compute_mic_from_buf(kck, &protection.akm, msg3.unfinalized_buf())
         .map_err(|e| failure::Error::from(e))?;
     msg3.finalize_with_mic(&mic[..]).map_err(|e| e.into())
 }
@@ -295,10 +305,10 @@ pub fn handle_message_4<B: ByteSlice>(
     krc: u64,
     frame: FourwayHandshakeFrame<B>,
 ) -> Result<(), failure::Error> {
-    let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
+    let protection = NegotiatedProtection::from_protection(&cfg.s_protection)?;
     let frame = match frame.get() {
         Dot11VerifiedKeyFrame::WithUnverifiedMic(unverified_mic) => {
-            match unverified_mic.verify_mic(kck, &rsne.akm)? {
+            match unverified_mic.verify_mic(kck, &protection.akm)? {
                 UnverifiedKeyData::Encrypted(_) => {
                     bail!("msg4 of 4-Way Handshake must not be encrypted")
                 }

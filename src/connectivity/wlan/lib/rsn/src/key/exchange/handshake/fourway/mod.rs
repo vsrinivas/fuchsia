@@ -7,13 +7,13 @@ mod supplicant;
 
 use crate::crypto_utils::nonce::NonceReader;
 use crate::key::{exchange, gtk::GtkProvider};
-use crate::rsna::{Dot11VerifiedKeyFrame, NegotiatedRsne, Role, SecAssocUpdate, UpdateSink};
+use crate::rsna::{Dot11VerifiedKeyFrame, NegotiatedProtection, Role, SecAssocUpdate, UpdateSink};
 use crate::state_machine::StateMachine;
 use crate::Error;
+use crate::ProtectionInfo;
 use eapol;
 use failure::{self, bail, ensure};
 use std::sync::{Arc, Mutex};
-use wlan_common::ie::rsn::rsne::Rsne;
 use zerocopy::ByteSlice;
 
 #[derive(Debug, PartialEq)]
@@ -84,9 +84,9 @@ impl<B: ByteSlice> std::ops::Deref for FourwayHandshakeFrame<B> {
 pub struct Config {
     pub role: Role,
     pub s_addr: [u8; 6],
-    pub s_rsne: Rsne,
+    pub s_protection: ProtectionInfo,
     pub a_addr: [u8; 6],
-    pub a_rsne: Rsne,
+    pub a_protection: ProtectionInfo,
     pub nonce_rdr: Arc<NonceReader>,
     pub gtk_provider: Option<Arc<Mutex<GtkProvider>>>,
 }
@@ -95,16 +95,19 @@ impl Config {
     pub fn new(
         role: Role,
         s_addr: [u8; 6],
-        s_rsne: Rsne,
+        s_protection: ProtectionInfo,
         a_addr: [u8; 6],
-        a_rsne: Rsne,
+        a_protection: ProtectionInfo,
         nonce_rdr: Arc<NonceReader>,
         gtk_provider: Option<Arc<Mutex<GtkProvider>>>,
     ) -> Result<Config, failure::Error> {
         ensure!(role != Role::Authenticator || gtk_provider.is_some(), "GtkProvider is missing");
-        ensure!(NegotiatedRsne::from_rsne(&s_rsne).is_ok(), "invalid s_rsne");
+        ensure!(
+            NegotiatedProtection::from_protection(&s_protection).is_ok(),
+            "invalid supplicant protection"
+        );
 
-        Ok(Config { role, s_addr, s_rsne, a_addr, a_rsne, nonce_rdr, gtk_provider })
+        Ok(Config { role, s_addr, s_protection, a_addr, a_protection, nonce_rdr, gtk_provider })
     }
 }
 
@@ -112,9 +115,9 @@ impl PartialEq for Config {
     fn eq(&self, other: &Config) -> bool {
         self.role == other.role
             && self.s_addr == other.s_addr
-            && self.s_rsne == other.s_rsne
+            && self.s_protection == other.s_protection
             && self.a_addr == other.a_addr
-            && self.a_rsne == other.a_rsne
+            && self.a_protection == other.a_protection
     }
 }
 

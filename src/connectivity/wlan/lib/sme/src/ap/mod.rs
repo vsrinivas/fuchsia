@@ -32,7 +32,9 @@ use wlan_common::{
     channel::{Channel, Phy},
     RadioConfig,
 };
-use wlan_rsn::{self, gtk::GtkProvider, nonce::NonceReader, psk, NegotiatedRsne};
+use wlan_rsn::{
+    self, gtk::GtkProvider, nonce::NonceReader, psk, NegotiatedProtection, ProtectionInfo,
+};
 
 const DEFAULT_BEACON_PERIOD: u16 = 100;
 const DEFAULT_DTIM_PERIOD: u8 = 1;
@@ -422,9 +424,9 @@ impl InfraBss {
             gtk_provider,
             a_rsn.psk.clone(),
             client_addr.clone(),
-            s_rsne,
+            ProtectionInfo::Rsne(s_rsne),
             self.ctx.device_info.addr,
-            a_rsn.rsne,
+            ProtectionInfo::Rsne(a_rsn.rsne),
         )
         .map_err(|e| {
             warn!("failed to create authenticator: {}", e);
@@ -470,8 +472,8 @@ fn validate_s_rsne(s_rsne: &Rsne, a_rsne: &Rsne) -> Result<(), failure::Error> {
 }
 
 fn get_gtk_provider(s_rsne: &Rsne) -> Result<Arc<Mutex<GtkProvider>>, failure::Error> {
-    let negotiated_rsne = NegotiatedRsne::from_rsne(&s_rsne)?;
-    let gtk_provider = GtkProvider::new(negotiated_rsne.group_data)?;
+    let negotiated_protection = NegotiatedProtection::from_rsne(&s_rsne)?;
+    let gtk_provider = GtkProvider::new(negotiated_protection.group_data)?;
     Ok(Arc::new(Mutex::new(gtk_provider)))
 }
 

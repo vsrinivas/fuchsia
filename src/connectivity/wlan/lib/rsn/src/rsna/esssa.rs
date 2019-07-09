@@ -10,7 +10,7 @@ use crate::key::exchange::{
 };
 use crate::key::{gtk::Gtk, ptk::Ptk};
 use crate::rsna::{
-    Dot11VerifiedKeyFrame, NegotiatedRsne, Role, SecAssocStatus, SecAssocUpdate, UpdateSink,
+    Dot11VerifiedKeyFrame, NegotiatedProtection, Role, SecAssocStatus, SecAssocUpdate, UpdateSink,
 };
 use crate::state_machine::StateMachine;
 use crate::Error;
@@ -146,8 +146,8 @@ impl Gtksa {
 pub(crate) struct EssSa {
     // Determines the device's role (Supplicant or Authenticator).
     role: Role,
-    // The RSNE used for this association.
-    pub negotiated_rsne: NegotiatedRsne,
+    // The protection used for this association.
+    pub negotiated_protection: NegotiatedProtection,
     // The last valid key replay counter. Messages with a key replay counter lower than this counter
     // value will be dropped.
     key_replay_counter: u64,
@@ -162,7 +162,7 @@ pub(crate) struct EssSa {
 impl EssSa {
     pub fn new(
         role: Role,
-        negotiated_rsne: NegotiatedRsne,
+        negotiated_protection: NegotiatedProtection,
         auth_cfg: auth::Config,
         ptk_exch_cfg: exchange::Config,
         gtk_exch_cfg: Option<exchange::Config>,
@@ -172,7 +172,7 @@ impl EssSa {
         let auth_method = auth::Method::from_config(auth_cfg)?;
         let rsna = EssSa {
             role,
-            negotiated_rsne,
+            negotiated_protection,
             key_replay_counter: 0,
             pmksa: StateMachine::new(Pmksa::Initialized { method: auth_method }),
             ptksa: StateMachine::new(Ptksa::Uninitialized { cfg: ptk_exch_cfg }),
@@ -368,7 +368,7 @@ impl EssSa {
         let result = Dot11VerifiedKeyFrame::from_frame(
             frame,
             &self.role,
-            &self.negotiated_rsne,
+            &self.negotiated_protection,
             self.key_replay_counter,
         );
         // TODO(hahnr): The status should not be pushed as an update but instead as a Result.

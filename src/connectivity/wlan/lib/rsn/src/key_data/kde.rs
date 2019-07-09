@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 use super::Element;
+use crate::ProtectionInfo;
 use bitfield::bitfield;
 use nom::IResult::{Done, Incomplete};
 use nom::{call, do_parse, eof, error_position, map, named, named_args, take, try_parse};
 use nom::{le_u8, IResult, Needed};
 use wlan_common::appendable::{Appendable, BufferTooSmall};
-use wlan_common::{ie::rsn::rsne::Rsne, organization::Oui};
+use wlan_common::organization::Oui;
 
 pub const TYPE: u8 = 0xDD;
 const PADDING_DATA_LEN: u8 = 0;
@@ -38,12 +39,7 @@ impl Header {
     }
 
     pub fn new_dot11(data_type: u8, data_len: usize) -> Header {
-        Header {
-            type_: TYPE,
-            len: (HDR_OUI_TYPE_LEN + data_len) as u8,
-            data_type,
-            oui: Oui::DOT11,
-        }
+        Header { type_: TYPE, len: (HDR_OUI_TYPE_LEN + data_len) as u8, data_type, oui: Oui::DOT11 }
     }
 
     fn data_len(&self) -> usize {
@@ -177,8 +173,11 @@ impl<A: Appendable> Writer<A> {
         self.buf.bytes_written()
     }
 
-    pub fn write_rsne(&mut self, rsne: &Rsne) -> Result<(), BufferTooSmall> {
-        rsne.write_into(&mut self.buf)
+    pub fn write_protection(&mut self, protection: &ProtectionInfo) -> Result<(), BufferTooSmall> {
+        match protection {
+            ProtectionInfo::Rsne(rsne) => rsne.write_into(&mut self.buf),
+            ProtectionInfo::LegacyWpa(_wpa) => unimplemented!(),
+        }
     }
 
     fn write_kde_hdr(&mut self, hdr: Header) -> Result<(), BufferTooSmall> {

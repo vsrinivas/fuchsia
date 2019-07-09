@@ -160,13 +160,14 @@ fn is_zero(slice: &[u8]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rsna::{test_util, NegotiatedRsne};
+    use crate::rsna::{test_util, NegotiatedProtection};
 
     fn verify_group_key_frame(key_frame: eapol::KeyFrameBuf, role: Role) {
-        let rsne = NegotiatedRsne::from_rsne(&test_util::get_s_rsne()).expect("error getting RNSE");
+        let protection =
+            NegotiatedProtection::from_rsne(&test_util::get_s_rsne()).expect("error getting RNSE");
         let parsed_frame = eapol::KeyFrameRx::parse(test_util::mic_len(), &key_frame[..])
             .expect("failed to parse group key frame");
-        let frame = Dot11VerifiedKeyFrame::from_frame(parsed_frame, &role, &rsne, 0)
+        let frame = Dot11VerifiedKeyFrame::from_frame(parsed_frame, &role, &protection, 0)
             .expect("couldn't verify frame");
         GroupKeyHandshakeFrame::from_verified(frame, role).expect("error verifying group_frame");
     }

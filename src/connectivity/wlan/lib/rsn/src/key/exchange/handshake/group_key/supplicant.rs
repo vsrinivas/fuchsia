@@ -114,7 +114,7 @@ mod tests {
     use super::*;
     use crate::key::exchange::handshake::group_key::GroupKey;
     use crate::key_data::kde;
-    use crate::rsna::{test_util, Dot11VerifiedKeyFrame, NegotiatedRsne, Role};
+    use crate::rsna::{test_util, Dot11VerifiedKeyFrame, NegotiatedProtection, Role};
     use wlan_common::big_endian::BigEndianU64;
     use wlan_common::ie::rsn::akm::{Akm, PSK};
     use wlan_common::ie::rsn::cipher::{Cipher, CCMP_128};
@@ -129,8 +129,9 @@ mod tests {
         key_frame: eapol::KeyFrameRx<B>,
         role: Role,
     ) -> Result<Dot11VerifiedKeyFrame<B>, failure::Error> {
-        let rsne = NegotiatedRsne::from_rsne(&test_util::get_s_rsne()).expect("error getting RNSE");
-        Dot11VerifiedKeyFrame::from_frame(key_frame, &role, &rsne, 0)
+        let protection =
+            NegotiatedProtection::from_rsne(&test_util::get_s_rsne()).expect("error getting RNSE");
+        Dot11VerifiedKeyFrame::from_frame(key_frame, &role, &protection, 0)
     }
 
     fn fake_msg1() -> eapol::KeyFrameBuf {

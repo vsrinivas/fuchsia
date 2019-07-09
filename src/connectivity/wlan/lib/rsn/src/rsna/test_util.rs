@@ -13,7 +13,7 @@ use crate::key::{
 use crate::key_data::kde;
 use crate::keywrap::keywrap_algorithm;
 use crate::psk;
-use crate::rsna::{Dot11VerifiedKeyFrame, NegotiatedRsne, SecAssocUpdate};
+use crate::rsna::{Dot11VerifiedKeyFrame, NegotiatedProtection, SecAssocUpdate};
 use crate::{Authenticator, Supplicant};
 use eapol::KeyFrameTx;
 use hex::FromHex;
@@ -60,9 +60,9 @@ pub fn get_supplicant() -> Supplicant {
         nonce_rdr,
         psk,
         test_util::S_ADDR,
-        test_util::get_s_rsne(),
+        ProtectionInfo::Rsne(test_util::get_s_rsne()),
         test_util::A_ADDR,
-        test_util::get_a_rsne(),
+        ProtectionInfo::Rsne(test_util::get_a_rsne()),
     )
     .expect("could not create Supplicant")
 }
@@ -78,9 +78,9 @@ pub fn get_authenticator() -> Authenticator {
         Arc::new(Mutex::new(gtk_provider)),
         psk,
         test_util::S_ADDR,
-        test_util::get_s_rsne(),
+        ProtectionInfo::Rsne(test_util::get_s_rsne()),
         test_util::A_ADDR,
-        test_util::get_a_rsne(),
+        ProtectionInfo::Rsne(test_util::get_a_rsne()),
     )
     .expect("could not create Authenticator")
 }
@@ -149,7 +149,7 @@ where
 {
     let mut w = kde::Writer::new(vec![]);
     w.write_gtk(&kde::Gtk::new(2, kde::GtkInfoTx::BothRxTx, gtk)).expect("error writing GTK KDE");
-    w.write_rsne(&get_a_rsne()).expect("error writing RSNE");
+    w.write_protection(&ProtectionInfo::Rsne(get_a_rsne())).expect("error writing RSNE");
     let key_data = w.finalize_for_encryption().expect("error finalizing key data");
     let encrypted_key_data = encrypt_key_data(ptk.kek(), &key_data[..]);
 
@@ -217,9 +217,9 @@ pub fn make_fourway_cfg(role: Role) -> fourway::Config {
     fourway::Config::new(
         role,
         test_util::S_ADDR,
-        test_util::get_s_rsne(),
+        ProtectionInfo::Rsne(test_util::get_s_rsne()),
         test_util::A_ADDR,
-        test_util::get_a_rsne(),
+        ProtectionInfo::Rsne(test_util::get_a_rsne()),
         nonce_rdr,
         Some(Arc::new(Mutex::new(gtk_provider))),
     )
@@ -243,10 +243,10 @@ fn make_verified<B: ByteSlice + std::fmt::Debug>(
     role: Role,
     key_replay_counter: u64,
 ) -> Dot11VerifiedKeyFrame<B> {
-    let rsne = NegotiatedRsne::from_rsne(&test_util::get_s_rsne())
+    let protection = NegotiatedProtection::from_rsne(&test_util::get_s_rsne())
         .expect("could not derive negotiated RSNE");
 
-    let result = Dot11VerifiedKeyFrame::from_frame(frame, &role, &rsne, key_replay_counter);
+    let result = Dot11VerifiedKeyFrame::from_frame(frame, &role, &protection, key_replay_counter);
     assert!(result.is_ok(), "failed verifying message sent to {:?}: {}", role, result.unwrap_err());
     result.unwrap()
 }

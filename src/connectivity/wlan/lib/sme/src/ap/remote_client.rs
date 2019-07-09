@@ -66,7 +66,7 @@ impl RemoteClient {
             Some(authenticator) => authenticator,
             None => bail!("ignoring EapolInd msg; BSS is not protected"),
         };
-        let mic_size = authenticator.get_negotiated_rsne().mic_size;
+        let mic_size = authenticator.get_negotiated_protection().mic_size;
         match eapol::KeyFrameRx::parse(mic_size as usize, &ind.data[..]) {
             Ok(key_frame) => {
                 let frame = eapol::Frame::Key(key_frame);

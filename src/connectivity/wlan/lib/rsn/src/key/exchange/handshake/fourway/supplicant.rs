@@ -10,15 +10,15 @@ use crate::key::ptk::Ptk;
 use crate::key_data;
 use crate::key_data::kde;
 use crate::rsna::{
-    Dot11VerifiedKeyFrame, NegotiatedRsne, SecAssocUpdate, UnverifiedKeyData, UpdateSink,
+    Dot11VerifiedKeyFrame, NegotiatedProtection, SecAssocUpdate, UnverifiedKeyData, UpdateSink,
 };
 use crate::Error;
+use crate::ProtectionInfo;
 use crypto::util::fixed_time_eq;
 use eapol;
 use eapol::KeyFrameBuf;
 use failure::{self, bail, ensure};
 use log::error;
-use wlan_common::ie::rsn::rsne::Rsne;
 use zerocopy::ByteSlice;
 
 // IEEE Std 802.11-2016, 12.7.6.2
@@ -36,11 +36,12 @@ fn handle_message_1<B: ByteSlice>(
         Dot11VerifiedKeyFrame::WithoutMic(frame) => frame,
     };
     let anonce = frame.key_frame_fields.key_nonce;
-    let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
+    let protection = NegotiatedProtection::from_protection(&cfg.s_protection)?;
 
-    let pairwise = rsne.pairwise.clone();
-    let ptk = Ptk::new(pmk, &cfg.a_addr, &cfg.s_addr, &anonce[..], snonce, &rsne.akm, pairwise)?;
-    let msg2 = create_message_2(cfg, ptk.kck(), &rsne, &frame, &snonce[..])?;
+    let pairwise = protection.pairwise.clone();
+    let ptk =
+        Ptk::new(pmk, &cfg.a_addr, &cfg.s_addr, &anonce[..], snonce, &protection.akm, pairwise)?;
+    let msg2 = create_message_2(cfg, ptk.kck(), &protection, &frame, &snonce[..])?;
 
     Ok((msg2, ptk, anonce))
 }
@@ -49,7 +50,7 @@ fn handle_message_1<B: ByteSlice>(
 fn create_message_2<B: ByteSlice>(
     cfg: &Config,
     kck: &[u8],
-    rsne: &NegotiatedRsne,
+    protection: &NegotiatedProtection,
     msg1: &eapol::KeyFrameRx<B>,
     snonce: &[u8],
 ) -> Result<KeyFrameBuf, failure::Error> {
@@ -59,7 +60,7 @@ fn create_message_2<B: ByteSlice>(
         .with_key_mic(true);
 
     let mut w = kde::Writer::new(vec![]);
-    w.write_rsne(&cfg.s_rsne)?;
+    w.write_protection(&cfg.s_protection)?;
     let key_data = w.finalize_for_plaintext()?;
 
     let msg2 = eapol::KeyFrameTx::new(
@@ -78,7 +79,7 @@ fn create_message_2<B: ByteSlice>(
     )
     .serialize();
 
-    let mic = compute_mic_from_buf(kck, &rsne.akm, msg2.unfinalized_buf())
+    let mic = compute_mic_from_buf(kck, &protection.akm, msg2.unfinalized_buf())
         .map_err(|e| failure::Error::from(e))?;
     msg2.finalize_with_mic(&mic[..]).map_err(|e| e.into())
 }
@@ -90,12 +91,12 @@ fn handle_message_3<B: ByteSlice>(
     kek: &[u8],
     msg3: FourwayHandshakeFrame<B>,
 ) -> Result<(KeyFrameBuf, Gtk), failure::Error> {
-    let negotiated_rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
+    let negotiated_protection = NegotiatedProtection::from_protection(&cfg.s_protection)?;
     let (frame, key_data) = match msg3.get() {
         Dot11VerifiedKeyFrame::WithUnverifiedMic(unverified_mic) => {
-            match unverified_mic.verify_mic(kck, &negotiated_rsne.akm)? {
+            match unverified_mic.verify_mic(kck, &negotiated_protection.akm)? {
                 UnverifiedKeyData::Encrypted(encrypted) => {
-                    encrypted.decrypt(kek, &negotiated_rsne.akm)?
+                    encrypted.decrypt(kek, &negotiated_protection.akm)?
                 }
                 UnverifiedKeyData::NotEncrypted(_) => {
                     bail!("msg3 of 4-Way Handshake must carry encrypted key data")
@@ -106,25 +107,31 @@ fn handle_message_3<B: ByteSlice>(
     };
 
     let mut gtk: Option<key_data::kde::Gtk> = None;
-    let mut rsne: Option<Rsne> = None;
-    let mut _second_rsne: Option<Rsne> = None;
+    let mut protection: Option<ProtectionInfo> = None;
+    let mut _second_protection: Option<ProtectionInfo> = None;
     let elements = key_data::extract_elements(&key_data[..])?;
+    // TODO: Need to handle WPA1 here.
     for ele in elements {
-        match (ele, rsne.as_ref()) {
+        match (ele, protection.as_ref()) {
             (key_data::Element::Gtk(_, e), _) => gtk = Some(e),
-            (key_data::Element::Rsne(e), None) => rsne = Some(e),
-            (key_data::Element::Rsne(e), Some(_)) => _second_rsne = Some(e),
+            (key_data::Element::Rsne(e), None) => protection = Some(ProtectionInfo::Rsne(e)),
+            (key_data::Element::Rsne(e), Some(_)) => {
+                _second_protection = Some(ProtectionInfo::Rsne(e))
+            }
             _ => (),
         }
     }
 
     // Proceed if key data held a GTK and RSNE and RSNE is the Authenticator's announced one.
-    match (gtk, rsne) {
-        (Some(gtk), Some(rsne)) => {
-            ensure!(&rsne == &cfg.a_rsne, Error::InvalidKeyDataRsne);
-            let msg4 = create_message_4(&negotiated_rsne, kck, &frame)?;
+    match (gtk, protection) {
+        (Some(gtk), Some(protection)) => {
+            ensure!(&protection == &cfg.a_protection, Error::InvalidKeyDataRsne);
+            let msg4 = create_message_4(&negotiated_protection, kck, &frame)?;
             let rsc = frame.key_frame_fields.key_rsc.to_native();
-            Ok((msg4, Gtk::from_gtk(gtk.gtk, gtk.info.key_id(), negotiated_rsne.group_data, rsc)?))
+            Ok((
+                msg4,
+                Gtk::from_gtk(gtk.gtk, gtk.info.key_id(), negotiated_protection.group_data, rsc)?,
+            ))
         }
         _ => bail!(Error::InvalidKeyDataContent),
     }
@@ -132,7 +139,7 @@ fn handle_message_3<B: ByteSlice>(
 
 // IEEE Std 802.11-2016, 12.7.6.5
 fn create_message_4<B: ByteSlice>(
-    rsne: &NegotiatedRsne,
+    protection: &NegotiatedProtection,
     kck: &[u8],
     msg3: &eapol::KeyFrameRx<B>,
 ) -> Result<KeyFrameBuf, failure::Error> {
@@ -158,7 +165,7 @@ fn create_message_4<B: ByteSlice>(
     )
     .serialize();
 
-    let mic = compute_mic_from_buf(kck, &rsne.akm, msg4.unfinalized_buf())
+    let mic = compute_mic_from_buf(kck, &protection.akm, msg4.unfinalized_buf())
         .map_err(|e| failure::Error::from(e))?;
     msg4.finalize_with_mic(&mic[..]).map_err(|e| e.into())
 }

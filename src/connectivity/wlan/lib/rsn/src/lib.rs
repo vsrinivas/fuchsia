@@ -29,18 +29,26 @@ use crate::key::exchange::{
 use crate::rsna::esssa::EssSa;
 use crate::rsna::{Role, UpdateSink};
 use std::sync::{Arc, Mutex};
+use wlan_common::ie::{rsn::rsne::Rsne, wpa::WpaIe};
 
 pub use crate::auth::psk;
 pub use crate::crypto_utils::nonce;
 pub use crate::key::gtk;
 pub use crate::key::gtk::GtkProvider;
-pub use crate::rsna::NegotiatedRsne;
-use wlan_common::ie::rsn::rsne;
+pub use crate::rsna::NegotiatedProtection;
+
 use zerocopy::ByteSlice;
 
 #[derive(Debug, PartialEq)]
 pub struct Supplicant {
     esssa: EssSa,
+}
+
+/// Any information (i.e. info elements) used to negotiate protection on an RSN.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ProtectionInfo {
+    Rsne(Rsne),
+    LegacyWpa(WpaIe),
 }
 
 impl Supplicant {
@@ -49,24 +57,24 @@ impl Supplicant {
         nonce_rdr: Arc<nonce::NonceReader>,
         psk: psk::Psk,
         s_addr: [u8; 6],
-        s_rsne: rsne::Rsne,
+        s_protection: ProtectionInfo,
         a_addr: [u8; 6],
-        a_rsne: rsne::Rsne,
+        a_protection: ProtectionInfo,
     ) -> Result<Supplicant, failure::Error> {
-        let negotiated_rsne = NegotiatedRsne::from_rsne(&s_rsne)?;
-        let akm = negotiated_rsne.akm.clone();
-        let group_data = negotiated_rsne.group_data.clone();
+        let negotiated_protection = NegotiatedProtection::from_protection(&s_protection)?;
+        let akm = negotiated_protection.akm.clone();
+        let group_data = negotiated_protection.group_data.clone();
 
         let esssa = EssSa::new(
             Role::Supplicant,
-            negotiated_rsne,
+            negotiated_protection,
             auth::Config::ComputedPsk(psk),
             exchange::Config::FourWayHandshake(fourway::Config::new(
                 Role::Supplicant,
                 s_addr,
-                s_rsne,
+                s_protection,
                 a_addr,
-                a_rsne,
+                a_protection,
                 nonce_rdr,
                 None,
             )?),
@@ -121,21 +129,21 @@ impl Authenticator {
         gtk_provider: Arc<Mutex<gtk::GtkProvider>>,
         psk: psk::Psk,
         s_addr: [u8; 6],
-        s_rsne: rsne::Rsne,
+        s_protection: ProtectionInfo,
         a_addr: [u8; 6],
-        a_rsne: rsne::Rsne,
+        a_protection: ProtectionInfo,
     ) -> Result<Authenticator, failure::Error> {
-        let negotiated_rsne = NegotiatedRsne::from_rsne(&s_rsne)?;
+        let negotiated_protection = NegotiatedProtection::from_protection(&s_protection)?;
         let esssa = EssSa::new(
             Role::Authenticator,
-            negotiated_rsne,
+            negotiated_protection,
             auth::Config::ComputedPsk(psk),
             exchange::Config::FourWayHandshake(fourway::Config::new(
                 Role::Authenticator,
                 s_addr,
-                s_rsne,
+                s_protection,
                 a_addr,
-                a_rsne,
+                a_protection,
                 nonce_rdr,
                 Some(gtk_provider),
             )?),
@@ -146,8 +154,8 @@ impl Authenticator {
         Ok(Authenticator { esssa })
     }
 
-    pub fn get_negotiated_rsne(&self) -> &NegotiatedRsne {
-        &self.esssa.negotiated_rsne
+    pub fn get_negotiated_protection(&self) -> &NegotiatedProtection {
+        &self.esssa.negotiated_protection
     }
 
     /// Resets all established Security Associations and invalidates all derived keys.
@@ -315,8 +323,8 @@ pub enum Error {
     BufferTooSmall(usize, usize),
     #[fail(display = "error, SMK-Handshake is not supported")]
     SmkHandshakeNotSupported,
-    #[fail(display = "error, negotiated RSNE is invalid")]
-    InvalidNegotiatedRsne,
+    #[fail(display = "error, negotiated protection is invalid")]
+    InvalidNegotiatedProtection,
 }
 
 impl From<std::io::Error> for Error {

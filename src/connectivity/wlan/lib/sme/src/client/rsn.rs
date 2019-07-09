@@ -8,19 +8,21 @@ use wlan_common::ie::rsn::{
     rsne::{self, Rsne},
     OUI,
 };
-use wlan_rsn::{self, nonce::NonceReader, psk, rsna::UpdateSink, NegotiatedRsne};
+use wlan_rsn::{
+    self, nonce::NonceReader, psk, rsna::UpdateSink, NegotiatedProtection, ProtectionInfo,
+};
 
 use crate::{client::state::Protection, DeviceInfo};
 
 #[derive(Debug)]
 pub struct Rsna {
-    pub negotiated_rsne: NegotiatedRsne,
+    pub negotiated_protection: NegotiatedProtection,
     pub supplicant: Box<Supplicant>,
 }
 
 impl PartialEq for Rsna {
     fn eq(&self, other: &Self) -> bool {
-        self.negotiated_rsne == other.negotiated_rsne
+        self.negotiated_protection == other.negotiated_protection
     }
 }
 
@@ -97,7 +99,7 @@ pub fn get_rsna(
         .to_full_result()
         .map_err(|e| format_err!("invalid RSNE {:02x?}: {:?}", a_rsne_bytes, e))?;
     let s_rsne = derive_s_rsne(&a_rsne)?;
-    let negotiated_rsne = NegotiatedRsne::from_rsne(&s_rsne)?;
+    let negotiated_protection = NegotiatedProtection::from_rsne(&s_rsne)?;
     let psk = compute_psk(credential, &bss.ssid[..])?;
     let supplicant = wlan_rsn::Supplicant::new_wpa2psk_ccmp128(
         // Note: There should be one Reader per device, not per SME.
@@ -105,12 +107,12 @@ pub fn get_rsna(
         NonceReader::new(&device_info.addr[..])?,
         psk,
         device_info.addr,
-        s_rsne,
+        ProtectionInfo::Rsne(s_rsne),
         bss.bssid,
-        a_rsne,
+        ProtectionInfo::Rsne(a_rsne),
     )
     .map_err(|e| format_err!("failed to create ESS-SA: {:?}", e))?;
-    Ok(Protection::Rsna(Rsna { negotiated_rsne, supplicant: Box::new(supplicant) }))
+    Ok(Protection::Rsna(Rsna { negotiated_protection, supplicant: Box::new(supplicant) }))
 }
 
 fn compute_psk(credential: &fidl_sme::Credential, ssid: &[u8]) -> Result<psk::Psk, failure::Error> {

@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use eapol;
-use wlan_rsn::{self, rsna::UpdateSink, NegotiatedRsne};
+use wlan_rsn::{self, rsna::UpdateSink, NegotiatedProtection};
 
 // Trait has to be Send because wlanstack wraps SME into a Future
 pub trait Authenticator: std::fmt::Debug + std::marker::Send {
-    fn get_negotiated_rsne(&self) -> &NegotiatedRsne;
+    fn get_negotiated_protection(&self) -> &NegotiatedProtection;
     fn reset(&mut self);
     fn initiate(&mut self, update_sink: &mut UpdateSink) -> Result<(), failure::Error>;
     fn on_eapol_frame(
@@ -18,8 +18,8 @@ pub trait Authenticator: std::fmt::Debug + std::marker::Send {
 }
 
 impl Authenticator for wlan_rsn::Authenticator {
-    fn get_negotiated_rsne(&self) -> &NegotiatedRsne {
-        wlan_rsn::Authenticator::get_negotiated_rsne(self)
+    fn get_negotiated_protection(&self) -> &NegotiatedProtection {
+        wlan_rsn::Authenticator::get_negotiated_protection(self)
     }
 
     fn reset(&mut self) {

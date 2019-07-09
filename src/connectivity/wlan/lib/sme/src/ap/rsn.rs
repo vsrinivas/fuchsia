@@ -8,7 +8,7 @@ use wlan_common::ie::rsn::{
     rsne::{RsnCapabilities, Rsne},
     OUI,
 };
-use wlan_rsn::NegotiatedRsne;
+use wlan_rsn::NegotiatedProtection;
 
 fn make_cipher(suite_type: u8) -> cipher::Cipher {
     cipher::Cipher { oui: OUI, suite_type }
@@ -27,7 +27,8 @@ fn make_rsne(data: Option<u8>, pairwise: Vec<u8>, akms: Vec<u8>) -> Rsne {
     rsne
 }
 
-/// Verify that supplicant RSNE is a valid NegotiatedRsne, and is a subset of authenticator RSNE
+/// Verify that Supplicant RSNE is a valid NegotiatedProtection, and is a subset of Authenticator
+/// RSNE
 pub fn is_valid_rsne_subset(s_rsne: &Rsne, a_rsne: &Rsne) -> Result<bool, failure::Error> {
     let s_caps = s_rsne.rsn_capabilities.as_ref().unwrap_or(&RsnCapabilities(0));
     let s_mgmt_req = s_caps.mgmt_frame_protection_req();
@@ -50,7 +51,7 @@ pub fn is_valid_rsne_subset(s_rsne: &Rsne, a_rsne: &Rsne) -> Result<bool, failur
         _ => (),
     }
 
-    let neg_rsne = NegotiatedRsne::from_rsne(&s_rsne)?;
+    let neg_rsne = NegotiatedProtection::from_rsne(&s_rsne)?;
 
     Ok(a_rsne.group_data_cipher_suite.iter().any(|c| *c == neg_rsne.group_data)
         && a_rsne.pairwise_cipher_suites.iter().any(|c| *c == neg_rsne.pairwise)
@@ -96,7 +97,7 @@ mod tests {
             make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::EAP, akm::PSK]);
         let result = is_valid_rsne_subset(&s_rsne, &a_rsne);
         assert!(result.is_err());
-        assert!(format!("{:?}", result.unwrap_err()).contains("InvalidNegotiatedRsne"));
+        assert!(format!("{:?}", result.unwrap_err()).contains("InvalidNegotiatedProtection"));
     }
 
     #[test]
