@@ -66,20 +66,12 @@ TEST(MockFunction, WithMatcher) {
   MockFunction<int, int> mock_function_int;
   MockFunction<void, int> mock_function_void;
 
-  mock_function_int.ExpectCallWithMatcher(
-      [](const std::tuple<int>& actual, const std::tuple<int>& expected) {
-        EXPECT_EQ(std::get<0>(actual), 138);
-        EXPECT_EQ(std::get<0>(expected), 137);
-        return true;
-      },
-      42, 137);
-  mock_function_void.ExpectCallWithMatcher(
-      [](const std::tuple<int>& actual, const std::tuple<int>& expected) {
-        EXPECT_EQ(std::get<0>(actual), 159);
-        EXPECT_EQ(std::get<0>(expected), 314);
-        return true;
-      },
-      314);
+  mock_function_int.ExpectCallWithMatcher(42, [](int actual) {
+    EXPECT_EQ(actual, 138);
+  });
+  mock_function_void.ExpectCallWithMatcher([](int actual) {
+    EXPECT_EQ(actual, 159);
+  });
 
   EXPECT_EQ(mock_function_int.Call(138), 42);
   mock_function_void.Call(159);
