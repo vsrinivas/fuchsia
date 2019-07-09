@@ -461,16 +461,6 @@ Breakpoint* SystemImpl::CreateNewInternalBreakpoint() {
   return to_return;
 }
 
-Filter* SystemImpl::CreateNewFilter() {
-  Filter* to_return = filters_.emplace_back(std::make_unique<Filter>(session())).get();
-
-  // Notify observers (may mutate filter list).
-  for (auto& observer : observers())
-    observer.DidCreateFilter(to_return);
-
-  return to_return;
-}
-
 void SystemImpl::DeleteBreakpoint(Breakpoint* breakpoint) {
   BreakpointImpl* impl = static_cast<BreakpointImpl*>(breakpoint);
   auto found = breakpoints_.find(impl->backend_id());
@@ -486,6 +476,39 @@ void SystemImpl::DeleteBreakpoint(Breakpoint* breakpoint) {
       observer.WillDestroyBreakpoint(breakpoint);
   }
   breakpoints_.erase(found);
+}
+
+Filter* SystemImpl::CreateNewFilter() {
+  Filter* to_return = filters_.emplace_back(std::make_unique<Filter>(session())).get();
+
+  // Notify observers (may mutate filter list).
+  for (auto& observer : observers())
+    observer.DidCreateFilter(to_return);
+
+  return to_return;
+}
+
+void SystemImpl::DeleteFilter(Filter* filter) {
+  auto found = filters_.begin();
+  for (; found != filters_.end(); ++found) {
+    if (found->get() == filter) {
+      break;
+    }
+  }
+
+  if (found == filters_.end()) {
+    // Should always have found the filter.
+    FXL_NOTREACHED();
+    return;
+  }
+
+  for (auto& observer : observers())
+    observer.WillDestroyFilter(filter);
+
+  filters_.erase(found);
+
+  // TODO: Yeah, yeah. This needs to go. Patch soon.
+  MarkFiltersDirty();
 }
 
 void SystemImpl::Pause(std::function<void()> on_paused) {

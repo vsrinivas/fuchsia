@@ -125,6 +125,7 @@ source_set("tests") {
     "string_formatters_unittest.cc",
     "string_util_unittest.cc",
     "verbs_memory_unittest.cc",
+    "verbs_shared_unittest.cc",
     "verbs_symbol_unittest.cc",
   ]
 

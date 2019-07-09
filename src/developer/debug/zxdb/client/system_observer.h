@@ -38,8 +38,9 @@ class SystemObserver {
   virtual void DidCreateBreakpoint(Breakpoint* breakpoint) {}
   virtual void WillDestroyBreakpoint(Breakpoint* breakpoint) {}
 
-  // Called immediately after creation of a filter.
+  // Called immediately after creation / before destruction of a filter.
   virtual void DidCreateFilter(Filter* filter) {}
+  virtual void WillDestroyFilter(Filter* filter) {}
 
   // Indicates an informational message from the symbol indexing system.
   // This will be things like "X" symbols loaded from "Y".

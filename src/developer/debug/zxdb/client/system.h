@@ -97,12 +97,15 @@ class System : public ClientObject {
   // GetBreakpoints() and are used to implement internal stepping functions.
   virtual Breakpoint* CreateNewInternalBreakpoint() = 0;
 
-  // Creates a new filter. It will have no associated pattern.
-  virtual Filter* CreateNewFilter() = 0;
-
   // Deletes the given breakpoint. The passed-in pointer will be invalid after
   // this call. Used for both internal and external breakpoints.
   virtual void DeleteBreakpoint(Breakpoint* breakpoint) = 0;
+
+  // Creates a new filter. It will have no associated pattern.
+  virtual Filter* CreateNewFilter() = 0;
+
+  // Delete a filter. The passed-in pointer will be invalid after this call.
+  virtual void DeleteFilter(Filter* filter) = 0;
 
   // Pauses (suspends in Zircon terms) all threads of all attached processes.
   //

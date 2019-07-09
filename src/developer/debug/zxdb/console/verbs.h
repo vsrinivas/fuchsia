@@ -70,6 +70,7 @@ enum class Verb {
   kQuit,
   kQuitAgent,
   kRegs,
+  kRm,
   kRun,
   kSet,
   kStack,

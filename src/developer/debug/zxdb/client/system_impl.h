@@ -57,8 +57,9 @@ class SystemImpl final : public System,
   JobContext* CreateNewJobContext(JobContext* clone) override;
   Breakpoint* CreateNewBreakpoint() override;
   Breakpoint* CreateNewInternalBreakpoint() override;
-  Filter* CreateNewFilter() override;
   void DeleteBreakpoint(Breakpoint* breakpoint) override;
+  Filter* CreateNewFilter() override;
+  void DeleteFilter(Filter* filter) override;
   void Pause(std::function<void()> on_paused) override;
   void Continue() override;
   bool HasDownload(const std::string& build_id) override;

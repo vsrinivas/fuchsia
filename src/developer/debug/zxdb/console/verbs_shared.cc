@@ -81,11 +81,44 @@ Err DoNew(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
+// rm --------------------------------------------------------------------------
+
+const char kRmShortHelp[] = "rm: Remove a filter.";
+const char kRmHelp[] =
+    R"(rm
+
+  Removes a filter. You must specify the filter explicitly to delete it.
+
+  Filters can be added with the attach command.
+
+Hints
+
+  To see a list of available filters, type "filter".
+
+Example
+
+  filter 3 rm
+      Remove filter number 3.
+)";
+Err DoRm(ConsoleContext* context, const Command& cmd) {
+  Err err = cmd.ValidateNouns({Noun::kFilter});
+  if (err.has_error())
+    return err;
+
+  if (!cmd.HasNoun(Noun::kFilter) || cmd.GetNounIndex(Noun::kFilter) == Command::kNoIndex)
+    return Err("You must explicitly specify \"filter n rm\" to remove a filter.");
+
+  context->session()->system().DeleteFilter(cmd.filter());
+
+  return Err();
+}
+
 }  // namespace
 
 void AppendSharedVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kNew] =
       VerbRecord(&DoNew, {"new"}, kNewShortHelp, kNewHelp, CommandGroup::kGeneral);
+  (*verbs)[Verb::kRm] = VerbRecord(&DoRm, {"rm"}, kRmShortHelp, kRmHelp, CommandGroup::kGeneral);
 }
 
 }  // namespace zxdb
