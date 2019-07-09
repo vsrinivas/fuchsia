@@ -71,6 +71,11 @@ zx_status_t UnwindStackAndroid(const zx::process& process,
   // stack pointer at the time of the call).
   unwindstack::Unwinder unwinder(max_depth + 1, &maps, &unwind_regs,
                                  std::move(memory), true);
+  // We don't need names from the unwinder since those are computed in the client. This will
+  // generally fail anyway since the target binaries don't usually have symbols, so turning off
+  // makes it a little more efficient.
+  unwinder.SetResolveNames(false);
+
   unwinder.Unwind();
 
   stack->reserve(unwinder.NumFrames());
