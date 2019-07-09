@@ -83,6 +83,22 @@ void SyscallDecoderDispatcher::DeleteDecoder(SyscallDecoder* decoder) {
 
 void SyscallDecoderDispatcher::Populate() {
   {
+    Syscall* zx_channel_create = Add("zx_channel_create");
+    // Arguments
+    auto options = zx_channel_create->Argument<uint32_t>(SyscallType::kUint32);
+    auto out0 = zx_channel_create->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    auto out1 = zx_channel_create->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_channel_create->Input<uint32_t>("options",
+                                       std::make_unique<ArgumentAccess<uint32_t>>(options));
+    // Outputs
+    zx_channel_create->Output<zx_handle_t>(ZX_OK, "out0",
+                                           std::make_unique<ArgumentAccess<zx_handle_t>>(out0));
+    zx_channel_create->Output<zx_handle_t>(ZX_OK, "out1",
+                                           std::make_unique<ArgumentAccess<zx_handle_t>>(out1));
+  }
+
+  {
     Syscall* zx_channel_write = Add("zx_channel_write");
     // Arguments
     auto handle = zx_channel_write->Argument<zx_handle_t>(SyscallType::kHandle);

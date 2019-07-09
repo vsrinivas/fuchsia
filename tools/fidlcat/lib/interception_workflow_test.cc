@@ -31,6 +31,17 @@ constexpr uint32_t kHandle = 0xcefa1db0;
 
 class SystemCallTest {
  public:
+  static std::unique_ptr<SystemCallTest> ZxChannelCreate(int64_t result,
+                                                         std::string_view result_name,
+                                                         uint32_t options, zx_handle_t* out0,
+                                                         zx_handle_t* out1) {
+    auto value = std::make_unique<SystemCallTest>("zx_channel_create", result, result_name);
+    value->inputs_.push_back(options);
+    value->inputs_.push_back(reinterpret_cast<uint64_t>(out0));
+    value->inputs_.push_back(reinterpret_cast<uint64_t>(out1));
+    return value;
+  }
+
   static std::unique_ptr<SystemCallTest> ZxChannelWrite(
       int64_t result, std::string_view result_name, zx_handle_t handle, uint32_t options,
       const uint8_t* bytes, uint32_t num_bytes, const zx_handle_t* handles, uint32_t num_handles) {
@@ -693,6 +704,22 @@ void InterceptionWorkflowTest::PerformTest(std::unique_ptr<SystemCallTest> sysca
   // Making sure shutdown works.
   debug_ipc::MessageLoop::Current()->Run();
 }
+
+#define CREATE_TEST_CONTENT(errno, expected) \
+  zx_handle_t out0 = 12345678;               \
+  zx_handle_t out1 = 87654321;               \
+  PerformDisplayTest(SystemCallTest::ZxChannelCreate(errno, #errno, 0, &out0, &out1), expected);
+
+#define CREATE_TEST(name, errno, expected)                                            \
+  TEST_F(InterceptionWorkflowTestX64, name) { CREATE_TEST_CONTENT(errno, expected); } \
+  TEST_F(InterceptionWorkflowTestArm, name) { CREATE_TEST_CONTENT(errno, expected); }
+
+CREATE_TEST(ZxChannelCreate, ZX_OK,
+            "\n"
+            "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_create("
+            "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
+            "  -> \x1B[32mZX_OK\x1B[0m (out0:\x1B[32mhandle\x1B[0m: \x1B[31m12345678\x1B[0m, "
+            "out1:\x1B[32mhandle\x1B[0m: \x1B[31m87654321\x1B[0m)\n");
 
 #define WRITE_TEST_CONTENT(errno)                                                            \
   data().set_check_bytes();                                                                  \
