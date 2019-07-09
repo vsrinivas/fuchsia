@@ -183,7 +183,6 @@ struct iwl_op_mode {
 };
 
 static inline void iwl_op_mode_stop(struct iwl_op_mode* op_mode) {
-  might_sleep();
   op_mode->ops->stop(op_mode);
 }
 
@@ -213,7 +212,6 @@ static inline void iwl_op_mode_queue_not_full(struct iwl_op_mode* op_mode, int q
 }
 
 static inline bool __must_check iwl_op_mode_hw_rf_kill(struct iwl_op_mode* op_mode, bool state) {
-  might_sleep();
   return op_mode->ops->hw_rf_kill(op_mode, state);
 }
 
@@ -230,18 +228,14 @@ static inline void iwl_op_mode_cmd_queue_full(struct iwl_op_mode* op_mode) {
 }
 
 static inline void iwl_op_mode_nic_config(struct iwl_op_mode* op_mode) {
-  might_sleep();
   op_mode->ops->nic_config(op_mode);
 }
 
 static inline void iwl_op_mode_wimax_active(struct iwl_op_mode* op_mode) {
-  might_sleep();
   op_mode->ops->wimax_active(op_mode);
 }
 
 static inline int iwl_op_mode_enter_d0i3(struct iwl_op_mode* op_mode) {
-  might_sleep();
-
   if (!op_mode->ops->enter_d0i3) {
     return 0;
   }
@@ -249,8 +243,6 @@ static inline int iwl_op_mode_enter_d0i3(struct iwl_op_mode* op_mode) {
 }
 
 static inline int iwl_op_mode_exit_d0i3(struct iwl_op_mode* op_mode) {
-  might_sleep();
-
   if (!op_mode->ops->exit_d0i3) {
     return 0;
   }

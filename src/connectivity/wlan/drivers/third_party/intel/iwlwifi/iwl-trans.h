@@ -778,8 +778,6 @@ static inline void iwl_trans_configure(struct iwl_trans* trans,
 }
 
 static inline int _iwl_trans_start_hw(struct iwl_trans* trans, bool low_power) {
-  might_sleep();
-
   return trans->ops->start_hw(trans, low_power);
 }
 
@@ -788,8 +786,6 @@ static inline int iwl_trans_start_hw(struct iwl_trans* trans) {
 }
 
 static inline void iwl_trans_op_mode_leave(struct iwl_trans* trans) {
-  might_sleep();
-
   if (trans->ops->op_mode_leave) {
     trans->ops->op_mode_leave(trans);
   }
@@ -800,8 +796,6 @@ static inline void iwl_trans_op_mode_leave(struct iwl_trans* trans) {
 }
 
 static inline void iwl_trans_fw_alive(struct iwl_trans* trans, uint32_t scd_addr) {
-  might_sleep();
-
   trans->state = IWL_TRANS_FW_ALIVE;
 
   trans->ops->fw_alive(trans, scd_addr);
@@ -809,8 +803,6 @@ static inline void iwl_trans_fw_alive(struct iwl_trans* trans, uint32_t scd_addr
 
 static inline int iwl_trans_start_fw(struct iwl_trans* trans, const struct fw_img* fw,
                                      bool run_in_rfkill) {
-  might_sleep();
-
   WARN_ON_ONCE(!trans->rx_mpdu_cmd);
 
   clear_bit(STATUS_FW_ERROR, &trans->status);
@@ -825,8 +817,6 @@ enum iwl_xvt_dbg_flags {
 
 static inline int iwl_trans_start_fw_dbg(struct iwl_trans* trans, const struct fw_img* fw,
                                          bool run_in_rfkill, uint32_t dbg_flags) {
-  might_sleep();
-
   if (WARN_ON_ONCE(!trans->ops->start_fw_dbg && dbg_flags)) {
     return -ENOTSUPP;
   }
@@ -841,8 +831,6 @@ static inline int iwl_trans_start_fw_dbg(struct iwl_trans* trans, const struct f
 #endif
 
 static inline void _iwl_trans_stop_device(struct iwl_trans* trans, bool low_power) {
-  might_sleep();
-
   trans->ops->stop_device(trans, low_power);
 
   trans->state = IWL_TRANS_NO_FW;
@@ -853,7 +841,6 @@ static inline void iwl_trans_stop_device(struct iwl_trans* trans) {
 }
 
 static inline void iwl_trans_d3_suspend(struct iwl_trans* trans, bool test, bool reset) {
-  might_sleep();
   if (trans->ops->d3_suspend) {
     trans->ops->d3_suspend(trans, test, reset);
   }
@@ -861,7 +848,6 @@ static inline void iwl_trans_d3_suspend(struct iwl_trans* trans, bool test, bool
 
 static inline int iwl_trans_d3_resume(struct iwl_trans* trans, enum iwl_d3_status* status,
                                       bool test, bool reset) {
-  might_sleep();
   if (!trans->ops->d3_resume) {
     return 0;
   }
@@ -942,8 +928,6 @@ static inline bool
 iwl_trans_txq_enable_cfg(struct iwl_trans* trans, int queue, uint16_t ssn,
                          const struct iwl_trans_txq_scd_cfg* cfg,
                          unsigned int queue_wdg_timeout) {
-    might_sleep();
-
     if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
         IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
         return false;
@@ -977,8 +961,6 @@ iwl_trans_txq_alloc(struct iwl_trans* trans,
                     __le16 flags, uint8_t sta_id, uint8_t tid,
                     int cmd_id, int size,
                     unsigned int wdg_timeout) {
-    might_sleep();
-
     if (WARN_ON_ONCE(!trans->ops->txq_alloc)) {
         return -ENOTSUPP;
     }

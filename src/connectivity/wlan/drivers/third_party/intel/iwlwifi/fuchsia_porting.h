@@ -201,8 +201,6 @@ static inline void clear_bit(int nbits, volatile unsigned long* addr) {
   addr[nbits / BITS_PER_LONG] &= ~(1UL << (nbits % BITS_PER_LONG));
 }
 
-static inline void might_sleep() {}
-
 static inline void* vmalloc(unsigned long size) { return malloc(size); }
 
 static inline void* kmemdup(const void* src, size_t len) {
