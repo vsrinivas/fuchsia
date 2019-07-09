@@ -4,7 +4,7 @@
 
 test("cleanup") {
   sources = [
-    "cleanup.c",
+    "cleanup.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",
