@@ -261,9 +261,9 @@ where
     on_read: Option<OnRead>,
 
     /// Maximum size the buffer that holds the value written into this file can grow to.  When the
-    /// buffer is populated by a the [`on_read`] handler, this restriction is not enforced.  The
+    /// buffer is populated by the [`on_read`] handler, this restriction is not enforced.  The
     /// maximum size of the buffer passed into [`on_write`] is the maximum of the size of the
-    /// buffer that [`on_read`] have returnd and this value.
+    /// buffer that [`on_read`] have returned and this value.
     capacity: u64,
 
     /// A handler to be invoked to "update" the file content, if it was modified during a
