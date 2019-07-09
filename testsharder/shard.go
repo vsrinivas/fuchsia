@@ -108,9 +108,8 @@ func min(a, b int) int {
 func divRoundUp(a, b int) int {
 	if a % b == 0 {
 		return a / b
-	} else {
-		return (a / b) + 1
 	}
+	return (a / b) + 1
 }
 
 // WithMaxSize returns a list of shards such that each shard contains fewer than maxShardSize tests.
