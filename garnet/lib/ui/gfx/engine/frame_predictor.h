@@ -7,8 +7,6 @@
 
 #include <lib/zx/time.h>
 
-#include <vector>
-
 #include "garnet/lib/ui/gfx/engine/duration_predictor.h"
 
 namespace scenic_impl {
@@ -43,10 +41,10 @@ class FramePredictor {
   // enough to apply one update and render a frame, in order to hit the
   // predicted presentation time.
   //
-  // Both |PredictedTimes.latch_point_time| and |PredictedTimes.presentation_time|
-  // are guaranteed to be after |request.now|.
-  // |PredictedTimes.presentation_time| is guaranteed to be later than or equal
-  // to |request.requested_presentation_time|.
+  // Both |PredictedTimes.latch_point_time| and
+  // |PredictedTimes.presentation_time| are guaranteed to be after
+  // |request.now|. |PredictedTimes.presentation_time| is guaranteed to be later
+  // than or equal to |request.requested_presentation_time|.
   PredictedTimes GetPrediction(PredictionRequest request) const;
 
   // Used by the client to report a measured render duration. The render

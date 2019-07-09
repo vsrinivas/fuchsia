@@ -25,6 +25,7 @@ DefaultFrameScheduler::DefaultFrameScheduler(const Display* display,
       display_(display),
       frame_predictor_(std::move(predictor)),
       inspect_node_(std::move(inspect_node)),
+      stats_(inspect_node_.CreateChild("Frame Stats")),
       weak_factory_(this) {
   FXL_DCHECK(display_);
   FXL_DCHECK(frame_predictor_);
@@ -238,13 +239,13 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
   FXL_DCHECK(outstanding_frames_[0].get() == &timings) << "out-of-order.";
 
   FXL_DCHECK(timings.finalized());
+  const FrameTimings::Timestamps timestamps = timings.GetTimestamps();
+  stats_.RecordFrame(timestamps, display_->GetVsyncInterval());
 
   if (timings.FrameWasDropped()) {
     TRACE_INSTANT("gfx", "FrameDropped", TRACE_SCOPE_PROCESS, "frame_number",
                   timings.frame_number());
   } else {
-    FrameTimings::Timestamps timestamps = timings.GetTimestamps();
-
     if (TRACE_CATEGORY_ENABLED("gfx")) {
       // Log trace data..
       zx_duration_t target_vs_actual =

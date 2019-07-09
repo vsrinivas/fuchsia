@@ -281,6 +281,8 @@ source_set("frame_scheduler") {
     "engine/frame_predictor.cc",
     "engine/frame_predictor.h",
     "engine/frame_scheduler.h",
+    "engine/frame_stats.cc",
+    "engine/frame_stats.h",
     "engine/frame_timings.cc",
     "engine/frame_timings.h",
 

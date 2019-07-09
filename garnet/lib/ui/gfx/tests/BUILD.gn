@@ -50,9 +50,12 @@ source_set("testing_deps") {
     "//garnet/lib/ui/gfx",
     "//garnet/lib/ui/scenic/tests:testing_deps",
     "//garnet/lib/ui/scenic/util",
+    "//garnet/public/lib/async_promise",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/inspect",
+    "//garnet/public/lib/inspect:reader",
+    "//garnet/public/lib/inspect/testing",
     "//garnet/public/lib/ui/input/cpp",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.scenic",
@@ -92,6 +95,7 @@ executable("unittests") {
     "escher_vulkan_smoke_test.cc",
     "event_timestamper_unittest.cc",
     "frame_predictor_unittest.cc",
+    "frame_stats_unittest.cc",
     "frame_timings_unittest.cc",
     "gfx_command_applier_unittest.cc",
     "hardware_layer_assignment_unittest.cc",
@@ -120,6 +124,7 @@ executable("unittests") {
     ":testing_deps",
     "//garnet/lib/ui/gfx:object_linker",
     "//src/ui/lib/glm_workaround",
+    "//third_party/googletest:gmock",
   ]
   include_dirs = [ "//src/ui/lib/escher" ]
 }

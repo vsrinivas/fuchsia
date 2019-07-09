@@ -14,6 +14,7 @@
 
 #include "garnet/lib/ui/gfx/engine/frame_predictor.h"
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
+#include "garnet/lib/ui/gfx/engine/frame_stats.h"
 #include "garnet/lib/ui/gfx/id.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -172,6 +173,8 @@ class DefaultFrameScheduler : public FrameScheduler {
   inspect::UIntMetric inspect_frame_number_;
   inspect::UIntMetric inspect_last_successful_update_start_time_;
   inspect::UIntMetric inspect_last_successful_render_start_time_;
+
+  FrameStats stats_;
 
   fxl::WeakPtrFactory<DefaultFrameScheduler> weak_factory_;  // must be last
 
