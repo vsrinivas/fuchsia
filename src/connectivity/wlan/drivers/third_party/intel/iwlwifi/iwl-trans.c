@@ -41,19 +41,12 @@
 struct iwl_trans* iwl_trans_alloc(unsigned int priv_size, const struct iwl_cfg* cfg,
                                   const struct iwl_trans_ops* ops) {
   struct iwl_trans* trans;
-#ifdef CONFIG_LOCKDEP
-  static struct lock_class_key __key;
-#endif
 
   trans = calloc(1, sizeof(*trans) + priv_size);
   if (!trans) {
     IWL_ERR(trans, "Failed to allocate transport\n");
     return NULL;
   }
-
-#ifdef CONFIG_LOCKDEP
-  lockdep_init_map(&trans->sync_cmd_lockdep_map, "sync_cmd_lockdep_map", &__key, 0);
-#endif
 
   trans->cfg = cfg;
   trans->ops = ops;

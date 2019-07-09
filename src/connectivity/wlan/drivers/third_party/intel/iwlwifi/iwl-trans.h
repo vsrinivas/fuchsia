@@ -736,10 +736,6 @@ struct iwl_trans {
   /* The following fields are internal only */
   struct dentry* dbgfs_dir;
 
-#ifdef CONFIG_LOCKDEP
-  struct lockdep_map sync_cmd_lockdep_map;
-#endif
-
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
   struct iwl_dbg_cfg dbg_cfg;
 #endif
