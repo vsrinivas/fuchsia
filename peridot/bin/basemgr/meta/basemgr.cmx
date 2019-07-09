@@ -10,6 +10,7 @@
         "services": [
             "fuchsia.auth.account.AccountManager",
             "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.deprecatedtimezone.Timezone",
             "fuchsia.device.manager.Administrator",
             "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.ui.policy.Presenter",

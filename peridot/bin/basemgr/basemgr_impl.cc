@@ -63,6 +63,7 @@ constexpr char kTokenManagerFactoryUrl[] =
 
 BasemgrImpl::BasemgrImpl(
     fuchsia::modular::session::BasemgrConfig config,
+    const std::shared_ptr<sys::ServiceDirectory> incoming_services,
     fuchsia::sys::LauncherPtr launcher,
     fuchsia::ui::policy::PresenterPtr presenter,
     fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
@@ -71,6 +72,7 @@ BasemgrImpl::BasemgrImpl(
     fuchsia::device::manager::AdministratorPtr device_administrator,
     fit::function<void()> on_shutdown)
     : config_(std::move(config)),
+      component_context_services_(std::move(incoming_services)),
       launcher_(std::move(launcher)),
       presenter_(std::move(presenter)),
       device_settings_manager_(std::move(device_settings_manager)),
@@ -203,9 +205,9 @@ void BasemgrImpl::Start() {
   auto story_shell_config =
       fidl::To<fuchsia::modular::AppConfig>(config_.story_shell().app_config());
   session_provider_.reset(new SessionProvider(
-      /* delegate= */ this, launcher_.get(), std::move(device_administrator_),
-      std::move(sessionmgr_config), CloneStruct(session_shell_config_),
-      std::move(story_shell_config),
+      /* delegate= */ this, component_context_services_, launcher_.get(),
+      std::move(device_administrator_), std::move(sessionmgr_config),
+      CloneStruct(session_shell_config_), std::move(story_shell_config),
       config_.use_session_shell_for_story_shell_factory(),
       /* on_zero_sessions= */
       [this] {

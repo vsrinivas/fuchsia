@@ -18,12 +18,29 @@ const zx::duration kMaxCrashRecoveryDuration =
     zx::msec(3600 * 1000);  // 1 hour in milliseconds
 
 SessionProvider::SessionProvider(
+    Delegate* const delegate, const std::shared_ptr<sys::ServiceDirectory>& incoming_services,
+    fuchsia::sys::Launcher* const launcher,
+    fuchsia::device::manager::AdministratorPtr administrator,
+    fuchsia::modular::AppConfig sessionmgr,
+    fuchsia::modular::AppConfig session_shell,
+    fuchsia::modular::AppConfig story_shell,
+    bool use_session_shell_for_story_shell_factory,
+    fit::function<void()> on_zero_sessions)
+    : SessionProvider(delegate, launcher, std::move(administrator),
+                      std::move(sessionmgr), std::move(session_shell),
+                      std::move(story_shell),
+                      use_session_shell_for_story_shell_factory,
+                      IntlPropertyProviderImpl::Create(incoming_services),
+                      std::move(on_zero_sessions)) {}
+
+SessionProvider::SessionProvider(
     Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
     fuchsia::device::manager::AdministratorPtr administrator,
     fuchsia::modular::AppConfig sessionmgr,
     fuchsia::modular::AppConfig session_shell,
     fuchsia::modular::AppConfig story_shell,
     bool use_session_shell_for_story_shell_factory,
+    std::unique_ptr<IntlPropertyProviderImpl> intl_property_provider,
     fit::function<void()> on_zero_sessions)
     : delegate_(delegate),
       launcher_(launcher),
@@ -33,8 +50,14 @@ SessionProvider::SessionProvider(
       story_shell_(std::move(story_shell)),
       use_session_shell_for_story_shell_factory_(
           use_session_shell_for_story_shell_factory),
-      on_zero_sessions_(std::move(on_zero_sessions)) {
+      on_zero_sessions_(std::move(on_zero_sessions)),
+      intl_property_provider_(std::move(intl_property_provider)) {
   last_crash_time_ = zx::clock::get_monotonic();
+  // Bind `fuchsia.intl.PropertyProvider` to the implementation instance owned
+  // by this class.
+  sessionmgr_service_dir_.AddEntry(
+      fuchsia::intl::PropertyProvider::Name_,
+      std::make_unique<vfs::Service>(intl_property_provider_->GetHandler()));
 }
 
 bool SessionProvider::StartSession(
@@ -61,6 +84,16 @@ bool SessionProvider::StartSession(
     session_id = std::string(account->id);
   }
 
+  // Set up a service directory for serving `fuchsia.intl.PropertyProvider` to
+  // the `Sessionmgr`.
+  fidl::InterfaceHandle<fuchsia::io::Directory> dir_handle;
+  sessionmgr_service_dir_.Serve(
+      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+      dir_handle.NewRequest().TakeChannel());
+  auto services = fuchsia::sys::ServiceList::New();
+  services->names.push_back(fuchsia::intl::PropertyProvider::Name_);
+  services->host_directory = dir_handle.TakeChannel();
+
   auto done = [this](SessionContextImpl::ShutDownReason shutdown_reason,
                      bool logout_users) {
     OnSessionShutdown(shutdown_reason, logout_users);
@@ -72,7 +105,7 @@ bool SessionProvider::StartSession(
       CloneStruct(session_shell_), CloneStruct(story_shell_),
       use_session_shell_for_story_shell_factory_,
       std::move(ledger_token_manager), std::move(agent_token_manager),
-      std::move(account), std::move(view_token),
+      std::move(account), std::move(view_token), std::move(services),
       /* get_presentation= */
       [this](
           fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {

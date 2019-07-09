@@ -232,6 +232,7 @@ void SessionmgrImpl::Initialize(
         called = true;
 
         InitializeLedger(std::move(ledger_token_manager));
+        InitializeIntlPropertyProvider();
         InitializeMessageQueueManager();
         InitializeDiscovermgr();
         InitializeMaxwellAndModular(std::move(session_shell_url),
@@ -265,7 +266,8 @@ void SessionmgrImpl::InitializeSessionEnvironment(std::string session_id) {
   session_id_ = session_id;
 
   static const auto* const kEnvServices =
-      new std::vector<std::string>{fuchsia::modular::Clipboard::Name_};
+      new std::vector<std::string>{fuchsia::modular::Clipboard::Name_,
+                                   fuchsia::intl::PropertyProvider::Name_};
   session_environment_ = std::make_unique<Environment>(
       component_context_->svc()->Connect<fuchsia::sys::Environment>(),
       std::string(kSessionEnvironmentLabelPrefix) + session_id_, *kEnvServices,
@@ -385,6 +387,17 @@ void SessionmgrImpl::InitializeLedger(
         Shutdown();
       });
   AtEnd(Reset(&ledger_client_));
+}
+
+void SessionmgrImpl::InitializeIntlPropertyProvider() {
+  session_environment_->AddService<fuchsia::intl::PropertyProvider>(
+      [this](fidl::InterfaceRequest<fuchsia::intl::PropertyProvider> request) {
+        if (terminating_) {
+          return;
+        }
+        component_context_->svc()->Connect<fuchsia::intl::PropertyProvider>(
+                std::move(request));
+      });
 }
 
 void SessionmgrImpl::InitializeClipboard() {

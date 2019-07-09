@@ -95,6 +95,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager);
   void InitializeLedger(
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager);
+  void InitializeIntlPropertyProvider();
   void InitializeDeviceMap();
   void InitializeClipboard();
   void InitializeMessageQueueManager();

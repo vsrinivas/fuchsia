@@ -12,7 +12,10 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/vfs/cpp/pseudo_dir.h>
 
+#include "peridot/bin/basemgr/intl_property_provider_impl/intl_property_provider_impl.h"
 #include "peridot/bin/basemgr/session_context_impl.h"
 #include "peridot/bin/basemgr/session_provider.h"
 
@@ -37,6 +40,7 @@ class SessionProvider {
   // meant to be a callback for BasemgrImpl to either display a base shell or
   // start a new session.
   SessionProvider(Delegate* const delegate,
+                  const std::shared_ptr<sys::ServiceDirectory>& incoming_services,
                   fuchsia::sys::Launcher* const launcher,
                   fuchsia::device::manager::AdministratorPtr administrator,
                   fuchsia::modular::AppConfig sessionmgr,
@@ -44,6 +48,21 @@ class SessionProvider {
                   fuchsia::modular::AppConfig story_shell,
                   bool use_session_shell_for_story_shell_factory,
                   fit::function<void()> on_zero_sessions);
+
+  // Target constructor.
+  //
+  // |on_zero_sessions| is invoked when all sessions have been deleted. This is
+  // meant to be a callback for BasemgrImpl to either display a base shell or
+  // start a new session.
+  SessionProvider(
+      Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
+      fuchsia::device::manager::AdministratorPtr administrator,
+      fuchsia::modular::AppConfig sessionmgr,
+      fuchsia::modular::AppConfig session_shell,
+      fuchsia::modular::AppConfig story_shell,
+      bool use_session_shell_for_story_shell_factory,
+      std::unique_ptr<IntlPropertyProviderImpl> intl_property_provider,
+      fit::function<void()> on_zero_sessions);
 
   // Starts a new sessionmgr process if there isn't one already. Returns false
   // if there is an existing sessionmgr process, and does not start a new
@@ -91,6 +110,11 @@ class SessionProvider {
 
   fit::function<void()> on_zero_sessions_;
   std::unique_ptr<SessionContextImpl> session_context_;
+
+  // Service directory from which `fuchsia.intl.PropertyProvider` and others
+  // will be served to child `Sessionmgr`s.
+  vfs::PseudoDir sessionmgr_service_dir_;
+  std::unique_ptr<IntlPropertyProviderImpl> intl_property_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionProvider);
 };

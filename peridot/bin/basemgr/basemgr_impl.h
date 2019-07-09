@@ -60,6 +60,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // |on_shutdown| Callback invoked when this basemgr instance is shutdown.
   explicit BasemgrImpl(
       fuchsia::modular::session::BasemgrConfig config,
+      const std::shared_ptr<sys::ServiceDirectory> incoming_services,
       fuchsia::sys::LauncherPtr launcher,
       fuchsia::ui::policy::PresenterPtr presenter,
       fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
@@ -147,6 +148,9 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // in |config_.session_shell_map()| is currently active.
   std::vector<fuchsia::modular::session::SessionShellConfig>::size_type
       active_session_shell_configs_index_{};
+
+  // Retained to be used in creating a `SessionProvider`.
+  const std::shared_ptr<sys::ServiceDirectory> component_context_services_;
 
   // Used to launch component instances, such as the base shell.
   fuchsia::sys::LauncherPtr launcher_;

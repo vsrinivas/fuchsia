@@ -168,7 +168,7 @@ std::unique_ptr<modular::BasemgrImpl> ConfigureBasemgr(
   component_context->svc()->Connect(administrator.NewRequest());
 
   return std::make_unique<modular::BasemgrImpl>(
-      std::move(config),
+      std::move(config), component_context->svc(),
       component_context->svc()->Connect<fuchsia::sys::Launcher>(),
       std::move(presenter), std::move(device_settings_manager), std::move(wlan),
       std::move(account_manager), std::move(administrator),

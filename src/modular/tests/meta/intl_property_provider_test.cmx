@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/intl_property_provider_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.intl.PropertyProvider",
+            "fuchsia.modular.ModuleContext",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

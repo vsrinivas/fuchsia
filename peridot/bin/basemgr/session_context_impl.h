@@ -54,6 +54,10 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   // must ensure its uniqueness. sessionmgr creates an Environment namespace
   // with the given |session_id|, and this will crash if it tries to create an
   // environment with a pre-existing name.
+  //
+  // |additional_services| are services that will be installed into the
+  // Sessionmgr's namespace, including an implementation of
+  // `fuchsia.intl.PropertyProvider`.
   SessionContextImpl(
       fuchsia::sys::Launcher* const launcher, std::string session_id,
       fuchsia::modular::AppConfig sessionmgr_config,
@@ -64,6 +68,7 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
       fuchsia::modular::auth::AccountPtr account,
       fuchsia::ui::views::ViewToken view_token,
+      fuchsia::sys::ServiceListPtr additional_services,
       GetPresentationCallback get_presentation,
       OnSessionShutdownCallback on_session_shutdown);
 
