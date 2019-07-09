@@ -1062,7 +1062,7 @@ group("zircon") {
 group("runtime") {
   testonly = true
   public_deps = [
-    "//garnet/bin/appmgr:appmgr_unittests",
+    "//garnet/bin/appmgr:unittests",
     "//garnet/bin/appmgr/integration_tests:appmgr_integration_tests",
     "//garnet/bin/appmgr/integration_tests/inspect:inspect_integration_tests",
     "//garnet/bin/appmgr/integration_tests/inspect:inspect_vmo_integration_tests",

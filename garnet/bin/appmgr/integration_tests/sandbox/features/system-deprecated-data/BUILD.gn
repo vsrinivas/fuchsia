@@ -18,3 +18,11 @@ sandbox_test_package("uses_system_deprecated_data") {
 
   environments = basic_envs
 }
+
+group("system-deprecated-data") {
+  testonly = true
+  deps = [
+    ":uses_system_deprecated_data",
+    "//garnet/bin/appmgr:system_data_file",
+  ]
+}

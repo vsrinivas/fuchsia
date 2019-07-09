@@ -9,7 +9,7 @@ group("features") {
     "shell",
     "shell-commands",
     "storage",
-    "system-deprecated-data:uses_system_deprecated_data",
+    "system-deprecated-data",
     "system-temp",
   ]
 }

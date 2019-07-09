@@ -83,8 +83,13 @@ void NamespaceBuilder::AddSandbox(
     PushDirectoryFromPath("/dev/" + path);
   }
 
-  for (const auto& path : sandbox.system())
-    PushDirectoryFromPath("/system/" + path);
+  for (const auto& path : sandbox.system()) {
+    if (path == "deprecated-data") {
+      PushDirectoryFromPath("/system/data");
+    } else {
+      PushDirectoryFromPath("/system/" + path);
+    }
+  }
 
   for (const auto& path : sandbox.pkgfs())
     PushDirectoryFromPath("/pkgfs/" + path);

@@ -178,6 +178,14 @@ config_data("appmgr_scheme_config") {
   ]
 }
 
+group("unittests") {
+  testonly = true
+  public_deps = [
+    ":appmgr_unittests",
+    ":system_data_file",
+  ]
+}
+
 test_package("appmgr_unittests") {
   deprecated_shell = "//build"
 
@@ -188,6 +196,16 @@ test_package("appmgr_unittests") {
     {
       name = "appmgr_unittests"
       environments = basic_envs
+    },
+  ]
+}
+
+package("system_data_file") {
+  deprecated_system_image = true
+  resources = [
+    {
+      path = "test_file.txt"
+      dest = "test_file.txt"
     },
   ]
 }

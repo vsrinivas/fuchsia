@@ -5,5 +5,5 @@
 #include "garnet/bin/appmgr/integration_tests/sandbox/namespace_test.h"
 
 TEST_F(NamespaceTest, UsesSystemDeprecatedData) {
-    // TODO(jmatt) Fill in once appmgr supports "deprecated-data"
+    ExpectExists("/system/data/test_file.txt");
 }
