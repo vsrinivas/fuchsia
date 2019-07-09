@@ -5,7 +5,9 @@
 #include "lib/simplehid/simplehid.h"
 
 #include <lib/sync/completion.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
+
+namespace simplehid {
 
 namespace {
 
@@ -33,11 +35,7 @@ void IoQueueMock(void* ctx, const void* buf_buffer, size_t buf_size) {
 
 }  // namespace
 
-namespace simplehid {
-
-bool TestNoReports() {
-    BEGIN_TEST;
-
+TEST(SimpleHidTest, NoReports) {
     bool called = false;
     fit::function<zx_status_t(TestReport*)> get_input_report = [&called](TestReport* report) {
         called = true;
@@ -47,7 +45,7 @@ bool TestNoReports() {
     };
 
     zx::port port;
-    ASSERT_EQ(ZX_OK, zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0, &port));
 
     SimpleHid<TestReport> test(std::move(port), std::move(get_input_report));
 
@@ -55,32 +53,31 @@ bool TestNoReports() {
     hidbus_ifc_protocol_ops_t ifc_ops = {IoQueueMock};
     hidbus_ifc_protocol_t ifc = {&ifc_ops, &ctx};
 
-    ASSERT_EQ(ZX_OK, test.HidbusStart(&ifc));
-    EXPECT_EQ(ZX_OK, test.SetReportInterval(0));
+    ASSERT_OK(test.HidbusStart(&ifc));
+    ASSERT_OK(test.SetReportInterval(0));
 
-    ASSERT_EQ(ZX_ERR_TIMED_OUT, sync_completion_wait(&ctx.signal, ZX_SEC(3)));
+    ASSERT_STATUS(ZX_ERR_TIMED_OUT, sync_completion_wait(&ctx.signal, ZX_SEC(3)));
 
     test.HidbusStop();
 
     EXPECT_FALSE(called);
     EXPECT_EQ(0, test.GetReportInterval());
-
-    END_TEST;
 }
 
-bool TestReports() {
-    BEGIN_TEST;
+TEST(SimpleHidTest, Reports) {
+    constexpr uint32_t kReportValue1 = 0x3f455860;
+    constexpr uint32_t kReportValue2 = 0xe365dcec;
 
     bool called = false;
     fit::function<zx_status_t(TestReport*)> get_input_report = [&called](TestReport* report) {
         called = true;
-        report->value1 = 0x3f455860;
-        report->value2 = 0xe365dcec;
+        report->value1 = kReportValue1;
+        report->value2 = kReportValue2;
         return ZX_OK;
     };
 
     zx::port port;
-    ASSERT_EQ(ZX_OK, zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0, &port));
 
     SimpleHid<TestReport> test(std::move(port), std::move(get_input_report));
 
@@ -88,25 +85,18 @@ bool TestReports() {
     hidbus_ifc_protocol_ops_t ifc_ops = {IoQueueMock};
     hidbus_ifc_protocol_t ifc = {&ifc_ops, &ctx};
 
-    ASSERT_EQ(ZX_OK, test.HidbusStart(&ifc));
-    EXPECT_EQ(ZX_OK, test.SetReportInterval(1000));
+    ASSERT_OK(test.HidbusStart(&ifc));
+    ASSERT_OK(test.SetReportInterval(1000));
 
-    EXPECT_EQ(ZX_OK, sync_completion_wait(&ctx.signal, ZX_SEC(3)));
+    ASSERT_OK(sync_completion_wait(&ctx.signal, ZX_SEC(3)));
 
     test.HidbusStop();
 
     EXPECT_TRUE(called);
     EXPECT_EQ(sizeof(ctx.report), ctx.report_size);
     EXPECT_EQ(1000, test.GetReportInterval());
-    EXPECT_EQ(0x3f455860, ctx.report.value1);
-    EXPECT_EQ(0xe365dcec, ctx.report.value2);
-
-    END_TEST;
+    EXPECT_EQ(kReportValue1, ctx.report.value1);
+    EXPECT_EQ(kReportValue2, ctx.report.value2);
 }
 
 }  // namespace simplehid
-
-BEGIN_TEST_CASE(SimpleHidTests)
-RUN_TEST_SMALL(simplehid::TestNoReports)
-RUN_TEST_SMALL(simplehid::TestReports)
-END_TEST_CASE(SimpleHidTests)
