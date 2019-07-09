@@ -46,7 +46,7 @@ class FilterBuilder {
   // MAC address expression.
   virtual T mac(std::array<uint8_t, ETH_ALEN> address, TokenPtr addr_type) = 0;
 
-  // IP version.
+  // IP version. In this and following functions, the parser guarantees `version` is 4 or 6.
   virtual T ip_version(uint8_t version) = 0;
   // IP packet length.
   virtual T ip_pkt_length(uint8_t version, uint16_t length, TokenPtr comparator) = 0;

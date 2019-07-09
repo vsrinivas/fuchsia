@@ -50,11 +50,11 @@ class Parser {
       return error_result<T>("Filter string expected.\n");
     }
 
-    std::optional<T> filter = Syntax<T>().parse(false, tkz_, &env, builder);
+    std::optional<T> filter = parse(&env, builder);
 
     if (filter != std::nullopt) {
       // Parse success, return the filter.
-      return filter_result(*filter);
+      return filter_result(std::move(*filter));
     }
 
     // On parse error, build the error message.
@@ -67,6 +67,12 @@ class Parser {
 
  protected:  // Protected instead of private for testing.
   const Tokenizer& tkz_;
+
+  // Allow subclasses to inject a custom `Environment`, e.g. for testing.
+  template <class T>
+  inline std::optional<T> parse(Environment* env, FilterBuilder<T>* builder) {
+    return Syntax<T>(tkz_, env, builder).parse();
+  }
 
   // Insert some ANSI escape characters to highlight the syntax error in console.
   // If the error is at the end location, highlight this by reproducing `filter_spec` and
@@ -102,7 +108,7 @@ class Parser {
 
   template <class T>
   inline std::variant<T, ParseError> filter_result(T filter) {
-    return std::variant<T, ParseError>(std::in_place_index_t<0>(), filter);
+    return std::variant<T, ParseError>(std::in_place_index_t<0>(), std::move(filter));
   }
 
   template <class T>
