@@ -229,10 +229,12 @@ table T {          table T {
 
 **Transition Considerations**: **TODO**
 
-## xunions
+## unions
 
 Note: unions (vs **x**unions) are deprecated.
-However, they follow similar rules to structs.
+However, they follow similar rules to [structs](#structs).
+
+## xunions
 
 #### Reordering members
 
