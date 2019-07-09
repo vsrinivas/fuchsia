@@ -641,6 +641,17 @@ bool TryFormatArrayOrString(FormatNode* node, const Type* type,
   return false;
 }
 
+// Unspecified types are normally nullptr_t and print as a number (probably 0x0).
+void FormatUnspecified(FormatNode* node) {
+  node->set_description_kind(FormatNode::kOther);
+
+  uint64_t unspecified_value = 0;
+  if (node->value().PromoteTo64(&unspecified_value).has_error())
+    node->set_description("<unspecified>");
+  else
+    node->set_description(fxl::StringPrintf("0x%" PRIx64, unspecified_value));
+}
+
 }  // namespace
 
 void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
@@ -743,7 +754,11 @@ void FillFormatNodeDescription(FormatNode* node, const FormatExprValueOptions& o
     // Enumerations.
     FormatEnum(node, enum_type, options);
   } else if (const Collection* coll = type->AsCollection()) {
+    // Collections (structs, classes, and unions).
     FormatCollection(node, coll, options, context);
+  } else if (type->tag() == DwarfTag::kUnspecifiedType) {
+    // Unspecified (nullptr_t).
+    FormatUnspecified(node);
   } else {
     node->set_err(Err("Unsupported type for new formatting system."));
   }

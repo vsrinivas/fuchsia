@@ -761,4 +761,24 @@ TEST_F(FormatTest, TruncatedArray) {
       SyncTreeTypeDesc(ExprValue(array_type, data, source), opts));
 }
 
+// Tests printing nullptr_t which is defined as "typedef decltype(nullptr) nullptr_t;".
+TEST_F(FormatTest, NullptrT) {
+  // Clang and GCC currently defined "decltype(nullptr)" as an "unspecified"
+  // type. Our decoder will force these to be the size of a pointer (the
+  // symbols don't seem to define a size).
+  auto underlying_type = fxl::MakeRefCounted<Type>(DwarfTag::kUnspecifiedType);
+  underlying_type->set_assigned_name("decltype(nullptr_t)");
+  underlying_type->set_byte_size(8);
+
+  // The nullptr_t is defined as a typedef for the above.
+  auto nullptr_t_type =
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kTypedef, LazySymbol(underlying_type));
+  nullptr_t_type->set_assigned_name("nullptr_t");
+
+  ExprValue null_value(nullptr_t_type, {0, 0, 0, 0, 0, 0, 0, 0});
+
+  FormatExprValueOptions opts;
+  EXPECT_EQ(" = nullptr_t, 0x0\n", SyncTreeTypeDesc(null_value, opts));
+}
+
 }  // namespace zxdb
