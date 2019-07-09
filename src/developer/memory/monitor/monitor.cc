@@ -22,28 +22,21 @@
 
 #include <iostream>
 
-#include "lib/zx/time.h"
-#include "src/developer/memory/metrics/capture.h"
-#include "src/developer/memory/metrics/printer.h"
-#include "src/developer/memory/monitor/high_water.h"
-
 namespace monitor {
 
 using namespace memory;
 
-const char Monitor::kTraceName[] = "memory_monitor";
-
 namespace {
-const zx::duration kPollFrequency = zx::sec(60);
-const uint64_t kThreshold = 256 * 1024;
+
+constexpr char kKstatsPathComponent[] = "kstats";
+
 }  // namespace
+
+const char Monitor::kTraceName[] = "memory_monitor";
 
 Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
                  const fxl::CommandLine& command_line, async_dispatcher_t* dispatcher)
-    : high_water_(
-          "/cache", kPollFrequency, kThreshold, dispatcher,
-          [this](Capture& c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); }),
-      prealloc_size_(0),
+    : prealloc_size_(0),
       logging_(command_line.HasOption("log")),
       tracing_(false),
       delay_(zx::sec(1)),
@@ -58,6 +51,7 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
 
   component_context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
   root_object_.set_children_callback(
+      {kKstatsPathComponent},
       [this](component::Object::ObjectVector* out_children) { Inspect(out_children); });
   component_context_->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
       fuchsia::inspect::Inspect::Name_,
@@ -122,7 +116,7 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
 
 Monitor::~Monitor() {
   // TODO(CF-257).
-  root_object_.set_children_callback(nullptr);
+  root_object_.set_children_callback({kKstatsPathComponent}, nullptr);
 }
 
 void Monitor::Watch(fidl::InterfaceHandle<fuchsia::memory::Watcher> watcher) {
@@ -166,20 +160,23 @@ void Monitor::PrintHelp() {
 }
 
 void Monitor::Inspect(component::Object::ObjectVector* out_children) {
-  auto mem = component::ObjectDir::Make("memory");
+  auto kstats = component::ObjectDir::Make(kKstatsPathComponent);
   Capture capture;
-  auto s = Capture::GetCapture(capture, capture_state_, VMO);
+  auto s = Capture::GetCapture(capture, capture_state_, KMEM);
   if (s != ZX_OK) {
     FXL_LOG(ERROR) << "Error getting capture: " << zx_status_get_string(s);
   }
-  std::ostringstream oss;
-  Summary summary(capture);
-  Printer printer(oss);
-  printer.PrintSummary(summary, VMO, memory::SORTED);
-  mem.set_prop("current", oss.str());
-  mem.set_prop("high_water", high_water_.GetHighWater());
-  mem.set_prop("previous_high_water", high_water_.GetHighWater());
-  out_children->push_back(mem.object());
+  auto const& kmem = capture.kmem();
+
+  kstats.set_metric("total_bytes", component::UIntMetric(kmem.total_bytes));
+  kstats.set_metric("free_bytes", component::UIntMetric(kmem.free_bytes));
+  kstats.set_metric("wired_bytes", component::UIntMetric(kmem.wired_bytes));
+  kstats.set_metric("total_heap_bytes", component::UIntMetric(kmem.total_heap_bytes));
+  kstats.set_metric("vmo_bytes", component::UIntMetric(kmem.vmo_bytes));
+  kstats.set_metric("mmu_overhead_bytes", component::UIntMetric(kmem.mmu_overhead_bytes));
+  kstats.set_metric("ipc_bytes", component::UIntMetric(kmem.ipc_bytes));
+  kstats.set_metric("other_bytes", component::UIntMetric(kmem.other_bytes));
+  out_children->push_back(kstats.object());
 }
 
 void Monitor::SampleAndPost() {

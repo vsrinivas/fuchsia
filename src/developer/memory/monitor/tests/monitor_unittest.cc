@@ -37,7 +37,7 @@ class MonitorUnitTest : public gtest::TestLoopFixture {
   std::unique_ptr<Monitor> monitor_;
 };
 
-class WatcherForTest : public fuchsia::memory::Watcher {
+class WatcherForTest : public Watcher {
  public:
   WatcherForTest(fit::function<void(uint64_t free_bytes)> on_change)
       : on_change_(std::move(on_change)) {}

@@ -8,7 +8,6 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 
-#include "lib/async/cpp/task.h"
 #include "src/developer/memory/metrics/capture.h"
 
 namespace memory {
@@ -27,8 +26,11 @@ class Watcher {
           fit::function<void(const Capture&)> high_water_cb);
   ~Watcher() = default;
 
+  void Run();
+
  private:
   void CaptureMemory();
+  void CaptureMemoryRepeatedly();
 
   uint64_t least_free_bytes_;
   zx::duration poll_frequency_;
@@ -36,9 +38,6 @@ class Watcher {
   async_dispatcher_t* dispatcher_;
   fit::function<zx_status_t(Capture&, CaptureLevel level)> capture_cb_;
   fit::function<void(const Capture&)> high_water_cb_;
-  async::TaskClosureMethod<Watcher, &Watcher::CaptureMemory> task_{this};
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(Watcher);
 };
 
 }  // namespace memory

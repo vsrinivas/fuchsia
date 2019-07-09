@@ -12,20 +12,6 @@ group("test") {
   ]
 }
 
-source_set("utils") {
-  testonly = true
-  sources = [
-    "test_utils.cc",
-    "test_utils.h",
-  ]
-  deps = [
-    "//garnet/public/lib/gtest",
-    "//src/developer/memory/metrics",
-    "//src/lib/fxl",
-    "//zircon/public/lib/zx",
-  ]
-}
-
 executable("memory_metrics_unittests") {
   testonly = true
   output_name = "memory_metrics_unittests"
@@ -33,11 +19,12 @@ executable("memory_metrics_unittests") {
     "capture_unittest.cc",
     "printer_unittest.cc",
     "summary_unittest.cc",
+    "test_utils.cc",
+    "test_utils.h",
     "watcher_unittest.cc",
   ]
 
   deps = [
-    ":utils",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/memory/metrics",
