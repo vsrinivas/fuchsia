@@ -177,15 +177,20 @@ Status LedgerRepositoryImpl::GetLedgerManager(convert::ExtendedStringView ledger
   std::string name_as_string = convert::ToString(ledger_name);
   std::unique_ptr<encryption::EncryptionService> encryption_service =
       encryption_service_factory_.MakeEncryptionService(name_as_string);
+  std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync;
+  storage::CommitPruningPolicy pruning_policy;
+  if (user_sync_) {
+    ledger_sync = user_sync_->CreateLedgerSync(name_as_string, encryption_service.get());
+    pruning_policy = storage::CommitPruningPolicy::NEVER;
+  } else {
+    pruning_policy = storage::CommitPruningPolicy::LOCAL_IMMEDIATE;
+  }
   auto ledger_storage = std::make_unique<storage::LedgerStorageImpl>(
-      environment_, encryption_service.get(), db_factory_.get(), GetPathFor(name_as_string));
+      environment_, encryption_service.get(), db_factory_.get(), GetPathFor(name_as_string),
+      pruning_policy);
   Status status = ledger_storage->Init();
   if (status != Status::OK) {
     return status;
-  }
-  std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync;
-  if (user_sync_) {
-    ledger_sync = user_sync_->CreateLedgerSync(name_as_string, encryption_service.get());
   }
   auto result = ledger_managers_.emplace(
       std::piecewise_construct, std::forward_as_tuple(name_as_string),

@@ -265,8 +265,8 @@ class PageStorageTest : public ledger::TestWithEnvironment {
         std::make_unique<ControlledLevelDb>(dispatcher(), ledger::DetachedPath(tmpfs_->root_fd()));
     leveldb_ = db.get();
     ASSERT_EQ(Status::OK, db->Init());
-    storage_ =
-        std::make_unique<PageStorageImpl>(&environment_, &encryption_service_, std::move(db), id);
+    storage_ = std::make_unique<PageStorageImpl>(&environment_, &encryption_service_, std::move(db),
+                                                 id, CommitPruningPolicy::NEVER);
 
     bool called;
     Status status;

@@ -90,17 +90,19 @@ int64_t GetObjectPartLength(int64_t max_size, int64_t object_size, int64_t start
 
 PageStorageImpl::PageStorageImpl(ledger::Environment* environment,
                                  encryption::EncryptionService* encryption_service,
-                                 std::unique_ptr<Db> db, PageId page_id)
+                                 std::unique_ptr<Db> db, PageId page_id, CommitPruningPolicy policy)
     : PageStorageImpl(environment, encryption_service,
-                      std::make_unique<PageDbImpl>(environment, std::move(db)),
-                      std::move(page_id)) {}
+                      std::make_unique<PageDbImpl>(environment, std::move(db)), std::move(page_id),
+                      policy) {}
 
 PageStorageImpl::PageStorageImpl(ledger::Environment* environment,
                                  encryption::EncryptionService* encryption_service,
-                                 std::unique_ptr<PageDb> page_db, PageId page_id)
+                                 std::unique_ptr<PageDb> page_db, PageId page_id,
+                                 CommitPruningPolicy policy)
     : environment_(environment),
       encryption_service_(encryption_service),
       page_id_(std::move(page_id)),
+      commit_pruner_(environment_, this, &commit_tracker_, policy),
       db_(std::move(page_db)),
       page_sync_(nullptr),
       coroutine_manager_(environment->coroutine_service()) {}
@@ -205,6 +207,36 @@ void PageStorageImpl::CommitJournal(
         }
 
         callback(status, std::move(commit));
+      });
+}
+
+void PageStorageImpl::DeleteCommits(std::vector<std::unique_ptr<const Commit>> commits,
+                                    fit::function<void(Status)> callback) {
+  coroutine_manager_.StartCoroutine(
+      std::move(callback), [this, commits = std::move(commits)](
+                               CoroutineHandler* handler, fit::function<void(Status)> callback) {
+        std::unique_ptr<PageDb::Batch> batch;
+        Status status = db_->StartBatch(handler, &batch);
+        if (status != Status::OK) {
+          callback(status);
+          return;
+        }
+        for (const std::unique_ptr<const Commit>& commit : commits) {
+          auto parents = commit->GetParentIds();
+          if (parents.size() > 1) {
+            status = batch->DeleteMerge(handler, parents[0], parents[1], commit->GetId());
+            if (status != Status::OK) {
+              callback(status);
+              return;
+            }
+          }
+          status = batch->DeleteCommit(handler, commit->GetId(), commit->GetRootIdentifier());
+          if (status != Status::OK) {
+            callback(status);
+            return;
+          }
+        }
+        callback(batch->Execute(handler));
       });
 }
 
@@ -1388,7 +1420,11 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
                  });
   commit_tracker_.AddHeads(std::move(new_heads));
   NotifyWatchersOfNewCommits(commits_to_send, source);
-
+  commit_pruner_.Prune([](Status status) {
+    if (status != Status::OK) {
+      FXL_LOG(ERROR) << "Error when pruning: " << status;
+    }
+  });
   return s;
 }
 

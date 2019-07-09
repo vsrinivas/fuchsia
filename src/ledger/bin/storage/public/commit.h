@@ -51,6 +51,13 @@ class Commit {
   FXL_DISALLOW_COPY_AND_ASSIGN(Commit);
 };
 
+// Comparator for commits that order commits based on their generation, then on
+// their id, with highest generation/highest id first.
+struct GenerationComparator {
+  bool operator()(const std::unique_ptr<const storage::Commit>& lhs,
+                  const std::unique_ptr<const storage::Commit>& rhs) const;
+};
+
 }  // namespace storage
 
 #endif  // SRC_LEDGER_BIN_STORAGE_PUBLIC_COMMIT_H_

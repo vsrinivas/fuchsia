@@ -74,7 +74,7 @@ class CommitWalkMap {
   // The number of interesting elements in the map.
   size_t interesting_nodes_ = 0;
   // The underlying map.
-  std::map<std::unique_ptr<const storage::Commit>, WalkFlags, GenerationComparator> map_;
+  std::map<std::unique_ptr<const storage::Commit>, WalkFlags, storage::GenerationComparator> map_;
 };
 
 }  // namespace
@@ -169,12 +169,6 @@ Status FindCommonAncestors(coroutine::CoroutineHandler* handler, storage::PageSt
   }
 
   return Status::OK;
-}
-
-bool GenerationComparator::operator()(const std::unique_ptr<const storage::Commit>& lhs,
-                                      const std::unique_ptr<const storage::Commit>& rhs) const {
-  return std::forward_as_tuple(lhs->GetGeneration(), lhs->GetId()) >
-         std::forward_as_tuple(rhs->GetGeneration(), rhs->GetId());
 }
 
 }  // namespace ledger

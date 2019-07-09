@@ -59,12 +59,21 @@ class PageDbMutator {
                                                  CommitIdView parent1_id, CommitIdView parent2_id,
                                                  CommitIdView merge_commit_id) = 0;
 
+  FXL_WARN_UNUSED_RESULT virtual Status DeleteMerge(coroutine::CoroutineHandler* handler,
+                                                    CommitIdView parent1_id,
+                                                    CommitIdView parent2_id,
+                                                    CommitIdView commit_id) = 0;
+
   // Commits.
   // Adds the given |commit|, referencing |root_node|, in the database.
   FXL_WARN_UNUSED_RESULT virtual Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler,
                                                               const CommitId& commit_id,
                                                               const ObjectIdentifier& root_node,
                                                               fxl::StringView storage_bytes) = 0;
+
+  FXL_WARN_UNUSED_RESULT virtual Status DeleteCommit(coroutine::CoroutineHandler* handler,
+                                                     CommitIdView commit_id,
+                                                     const ObjectIdentifier& root_node) = 0;
 
   // Object data.
   // Writes the content of the given object, and reference information from this

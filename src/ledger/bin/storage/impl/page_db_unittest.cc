@@ -51,7 +51,8 @@ class PageDbTest : public ledger::TestWithEnvironment {
       : encryption_service_(dispatcher()),
         base_path(tmpfs_.root_fd()),
         page_storage_(&environment_, &encryption_service_,
-                      GetLevelDb(dispatcher(), base_path.SubPath("storage")), "page_id"),
+                      GetLevelDb(dispatcher(), base_path.SubPath("storage")), "page_id",
+                      CommitPruningPolicy::NEVER),
         page_db_(&environment_, GetLevelDb(dispatcher(), base_path.SubPath("page_db"))) {}
 
   ~PageDbTest() override {}

@@ -47,12 +47,14 @@ std::string GetId(fxl::StringView bytes) {
 
 LedgerStorageImpl::LedgerStorageImpl(ledger::Environment* environment,
                                      encryption::EncryptionService* encryption_service,
-                                     DbFactory* db_factory, ledger::DetachedPath content_dir)
+                                     DbFactory* db_factory, ledger::DetachedPath content_dir,
+                                     CommitPruningPolicy policy)
     : environment_(environment),
       encryption_service_(encryption_service),
       db_factory_(db_factory),
       storage_dir_(std::move(content_dir)),
       staging_dir_(storage_dir_.SubPath(kStagingDirName)),
+      pruning_policy_(policy),
       weak_factory_(this) {}
 
 LedgerStorageImpl::~LedgerStorageImpl() {}
@@ -142,7 +144,7 @@ void LedgerStorageImpl::InitializePageStorage(
     PageId page_id, std::unique_ptr<Db> db,
     fit::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
   auto storage = std::make_unique<PageStorageImpl>(environment_, encryption_service_, std::move(db),
-                                                   std::move(page_id));
+                                                   std::move(page_id), pruning_policy_);
   PageStorageImpl* storage_ptr = storage.get();
   storage_in_initialization_[storage_ptr] = std::move(storage);
   storage_ptr->Init([this, callback = std::move(callback), storage_ptr](Status status) mutable {

@@ -78,7 +78,8 @@ fit::function<void(storage::Journal*)> TestWithPageStorage::DeleteKeyFromJournal
     return ::testing::AssertionFailure() << "LevelDb::Init failed with status " << status;
   }
   auto local_page_storage = std::make_unique<storage::PageStorageImpl>(
-      &environment_, &encryption_service_, std::move(db), kRootPageId.ToString());
+      &environment_, &encryption_service_, std::move(db), kRootPageId.ToString(),
+      storage::CommitPruningPolicy::NEVER);
 
   bool called;
   local_page_storage->Init(callback::Capture(callback::SetWhenCalled(&called), &status));

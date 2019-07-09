@@ -103,7 +103,7 @@ std::string ReferenceRow::GetCommitKeyPrefixFor(const ObjectDigest& destination)
 
 constexpr fxl::StringView UnsyncedCommitRow::kPrefix;
 
-std::string UnsyncedCommitRow::GetKeyFor(const CommitId& commit_id) {
+std::string UnsyncedCommitRow::GetKeyFor(CommitIdView commit_id) {
   return fxl::Concatenate({kPrefix, commit_id});
 }
 

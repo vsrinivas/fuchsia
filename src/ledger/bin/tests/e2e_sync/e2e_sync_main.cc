@@ -53,7 +53,8 @@ int Main(int argc, char** argv) {
 
 }  // namespace
 
-std::vector<const LedgerAppInstanceFactoryBuilder*> GetLedgerAppInstanceFactoryBuilders() {
+std::vector<const LedgerAppInstanceFactoryBuilder*> GetLedgerAppInstanceFactoryBuilders(
+    EnableSynchronization /*sync_state*/) {
   static auto static_builder = FactoryBuilderE2eImpl();
   std::vector<const LedgerAppInstanceFactoryBuilder*> builders = {&static_builder};
   return builders;

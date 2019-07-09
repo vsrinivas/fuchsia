@@ -54,8 +54,8 @@ class LiveCommitTrackerTest : public ledger::TestWithEnvironment {
     tmpfs_ = std::make_unique<scoped_tmpfs::ScopedTmpFS>();
     auto leveldb = std::make_unique<fake::FakeDb>(dispatcher());
     PageId id = RandomString(environment_.random(), 10);
-    storage_ = std::make_unique<PageStorageImpl>(&environment_, &encryption_service_,
-                                                 std::move(leveldb), id);
+    storage_ = std::make_unique<PageStorageImpl>(
+        &environment_, &encryption_service_, std::move(leveldb), id, CommitPruningPolicy::NEVER);
 
     bool called;
     Status status;

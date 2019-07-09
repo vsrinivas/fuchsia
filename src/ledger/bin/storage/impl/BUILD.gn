@@ -80,6 +80,8 @@ source_set("lib") {
   sources = [
     "commit_impl.cc",
     "commit_impl.h",
+    "commit_pruner.cc",
+    "commit_pruner.h",
     "data_serialization.h",
     "db_serialization.cc",
     "db_serialization.h",
@@ -173,6 +175,7 @@ source_set("unittests") {
 
   sources = [
     "commit_impl_unittest.cc",
+    "commit_pruner_unittest.cc",
     "commit_random_impl.cc",
     "commit_random_impl.h",
     "db_serialization_unittest.cc",

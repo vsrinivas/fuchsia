@@ -17,13 +17,6 @@
 
 namespace ledger {
 
-// Comparator for commits that order commits based on their generation, then on
-// their id, with highest generation/highest id first.
-struct GenerationComparator {
-  bool operator()(const std::unique_ptr<const storage::Commit>& lhs,
-                  const std::unique_ptr<const storage::Commit>& rhs) const;
-};
-
 // Records the result of comparing two commits.
 enum class CommitComparison : int {
   // Each commit contains changes that are not present in the other commit.

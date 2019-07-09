@@ -241,6 +241,12 @@ Status PageDbImpl::AddMerge(coroutine::CoroutineHandler* handler, CommitIdView p
   return Status::ILLEGAL_STATE;
 }
 
+Status PageDbImpl::DeleteMerge(coroutine::CoroutineHandler* handler, CommitIdView parent1_id,
+                               CommitIdView parent2_id, CommitIdView commit_id) {
+  // This should only be called in a batch.
+  return Status::ILLEGAL_STATE;
+}
+
 Status PageDbImpl::AddCommitStorageBytes(CoroutineHandler* handler, const CommitId& commit_id,
                                          const ObjectIdentifier& root_node,
                                          fxl::StringView storage_bytes) {
@@ -248,6 +254,12 @@ Status PageDbImpl::AddCommitStorageBytes(CoroutineHandler* handler, const Commit
   RETURN_ON_ERROR(StartBatch(handler, &batch));
   RETURN_ON_ERROR(batch->AddCommitStorageBytes(handler, commit_id, root_node, storage_bytes));
   return batch->Execute(handler);
+}
+
+Status PageDbImpl::DeleteCommit(coroutine::CoroutineHandler* handler, CommitIdView commit_id,
+                                const ObjectIdentifier& root_node) {
+  // This should only be called in a batch.
+  return Status::ILLEGAL_STATE;
 }
 
 Status PageDbImpl::WriteObject(CoroutineHandler* handler, const Piece& piece,

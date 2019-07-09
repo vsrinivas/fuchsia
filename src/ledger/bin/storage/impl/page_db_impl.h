@@ -69,9 +69,13 @@ class PageDbImpl : public PageDb {
   Status RemoveHead(coroutine::CoroutineHandler* handler, CommitIdView head) override;
   Status AddMerge(coroutine::CoroutineHandler* handler, CommitIdView parent1_id,
                   CommitIdView parent2_id, CommitIdView merge_commit_id) override;
+  Status DeleteMerge(coroutine::CoroutineHandler* handler, CommitIdView parent1_id,
+                     CommitIdView parent2_id, CommitIdView commit_id) override;
   Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler, const CommitId& commit_id,
                                const ObjectIdentifier& root_node,
                                fxl::StringView storage_bytes) override;
+  Status DeleteCommit(coroutine::CoroutineHandler* handler, CommitIdView commit_id,
+                      const ObjectIdentifier& root_node) override;
   Status WriteObject(coroutine::CoroutineHandler* handler, const Piece& piece,
                      PageDbObjectStatus object_status,
                      const ObjectReferencesAndPriority& references) override;

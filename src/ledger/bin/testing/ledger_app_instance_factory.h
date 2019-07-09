@@ -82,11 +82,19 @@ class LedgerAppInstanceFactory {
   virtual rng::Random* GetRandom() = 0;
 };
 
+// Whether tests should only be performed with synchronization enabled, or whether
+// offline/disconnected cases should be considered too.
+enum class EnableSynchronization {
+  SYNC_ONLY,
+  SYNC_OR_OFFLINE,
+};
+
 // Returns the list of LedgerAppInstanceFactoryBuilder to be passed as
 // parameters to the tests. The implementation of this function changes
 // depending on whether the tests are ran as integration tests, or end to end
 // tests.
-std::vector<const LedgerAppInstanceFactoryBuilder*> GetLedgerAppInstanceFactoryBuilders();
+std::vector<const LedgerAppInstanceFactoryBuilder*> GetLedgerAppInstanceFactoryBuilders(
+    EnableSynchronization sync_state = EnableSynchronization::SYNC_OR_OFFLINE);
 
 }  // namespace ledger
 

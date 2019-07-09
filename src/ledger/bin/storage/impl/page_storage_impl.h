@@ -16,6 +16,7 @@
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/environment/environment.h"
+#include "src/ledger/bin/storage/impl/commit_pruner.h"
 #include "src/ledger/bin/storage/impl/live_commit_tracker.h"
 #include "src/ledger/bin/storage/impl/page_db_impl.h"
 #include "src/ledger/bin/storage/public/db.h"
@@ -34,10 +35,10 @@ class PageStorageImpl : public PageStorage {
  public:
   PageStorageImpl(ledger::Environment* environment,
                   encryption::EncryptionService* encryption_service, std::unique_ptr<Db> db,
-                  PageId page_id);
+                  PageId page_id, CommitPruningPolicy policy);
   PageStorageImpl(ledger::Environment* environment,
                   encryption::EncryptionService* encryption_service,
-                  std::unique_ptr<PageDb> page_db, PageId page_id);
+                  std::unique_ptr<PageDb> page_db, PageId page_id, CommitPruningPolicy policy);
 
   ~PageStorageImpl() override;
 
@@ -67,6 +68,8 @@ class PageStorageImpl : public PageStorage {
                                             std::unique_ptr<const Commit> right) override;
   void CommitJournal(std::unique_ptr<Journal> journal,
                      fit::function<void(Status, std::unique_ptr<const Commit>)> callback) override;
+  void DeleteCommits(std::vector<std::unique_ptr<const Commit>> commits,
+                     fit::function<void(Status)> callback) override;
   void AddCommitWatcher(CommitWatcher* watcher) override;
   void RemoveCommitWatcher(CommitWatcher* watcher) override;
   void IsSynced(fit::function<void(Status, bool)> callback) override;
@@ -244,6 +247,7 @@ class PageStorageImpl : public PageStorage {
   encryption::EncryptionService* const encryption_service_;
   const PageId page_id_;
   LiveCommitTracker commit_tracker_;
+  CommitPruner commit_pruner_;
   std::unique_ptr<PageDb> db_;
   fxl::ObserverList<CommitWatcher> watchers_;
   callback::ManagedContainer managed_container_;

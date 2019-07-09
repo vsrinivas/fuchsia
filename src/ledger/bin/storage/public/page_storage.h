@@ -93,6 +93,10 @@ class PageStorage : public PageSyncClient {
       std::unique_ptr<Journal> journal,
       fit::function<void(Status, std::unique_ptr<const Commit>)> callback) = 0;
 
+  // Deletes the provided commits from local storage.
+  virtual void DeleteCommits(std::vector<std::unique_ptr<const Commit>> commits,
+                             fit::function<void(Status)> callback) = 0;
+
   // Registers the given |CommitWatcher| which will be notified on new commits.
   // A given |CommitWatcher| must not be added more than once.
   virtual void AddCommitWatcher(CommitWatcher* watcher) = 0;

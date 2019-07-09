@@ -83,10 +83,20 @@ Status PageDbEmptyImpl::AddMerge(coroutine::CoroutineHandler* /*handler*/,
                                  CommitIdView /*merge_commit_id*/) {
   return Status::ILLEGAL_STATE;
 }
+Status PageDbEmptyImpl::DeleteMerge(coroutine::CoroutineHandler* /*handler*/,
+                                    CommitIdView /*parent1_id*/, CommitIdView /*parent2_id*/,
+                                    CommitIdView /*commit_id*/) {
+  return Status::NOT_IMPLEMENTED;
+}
 Status PageDbEmptyImpl::AddCommitStorageBytes(CoroutineHandler* /*handler*/,
                                               const CommitId& /*commit_id*/,
                                               const ObjectIdentifier& /*root_node*/,
                                               fxl::StringView /*storage_bytes*/) {
+  return Status::NOT_IMPLEMENTED;
+}
+Status PageDbEmptyImpl::DeleteCommit(coroutine::CoroutineHandler* /*handler*/,
+                                     CommitIdView /*commit_id*/,
+                                     const ObjectIdentifier& /*root_node*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::WriteObject(CoroutineHandler* /*handler*/, const Piece& /*piece*/,

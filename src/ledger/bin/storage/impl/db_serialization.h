@@ -73,7 +73,7 @@ class UnsyncedCommitRow {
  public:
   static constexpr fxl::StringView kPrefix = "unsynced/commits/";
 
-  static std::string GetKeyFor(const CommitId& commit_id);
+  static std::string GetKeyFor(CommitIdView commit_id);
 };
 
 class ObjectStatusRow {

@@ -25,7 +25,8 @@ class LedgerStorageImpl : public LedgerStorage {
  public:
   LedgerStorageImpl(ledger::Environment* environment,
                     encryption::EncryptionService* encryption_service,
-                    storage::DbFactory* db_factory, ledger::DetachedPath content_dir);
+                    storage::DbFactory* db_factory, ledger::DetachedPath content_dir,
+                    CommitPruningPolicy policy);
   ~LedgerStorageImpl() override;
 
   // Initializes this LedgerStorageImpl by creating the |content_dir| directory
@@ -65,6 +66,9 @@ class LedgerStorageImpl : public LedgerStorage {
   // ensures that any created PageStorage that has not yet been passed to the
   // caller will be deleted when this object is deleted.
   std::map<PageStorage*, std::unique_ptr<PageStorage>> storage_in_initialization_;
+
+  // Pruning policy for all pages created in this ledger.
+  CommitPruningPolicy pruning_policy_;
 
   // This must be the last member of the class.
   fxl::WeakPtrFactory<LedgerStorageImpl> weak_factory_;

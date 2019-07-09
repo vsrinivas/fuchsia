@@ -28,7 +28,8 @@ class JournalTest : public ledger::TestWithEnvironment {
   JournalTest()
       : encryption_service_(dispatcher()),
         page_storage_(&environment_, &encryption_service_,
-                      std::make_unique<storage::fake::FakeDb>(dispatcher()), "page_id"),
+                      std::make_unique<storage::fake::FakeDb>(dispatcher()), "page_id",
+                      CommitPruningPolicy::NEVER),
         object_identifier_(0u, 0u, MakeObjectDigest("value")) {}
 
   ~JournalTest() override {}

@@ -65,6 +65,12 @@ void PageStorageEmptyImpl::CommitJournal(
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }
 
+void PageStorageEmptyImpl::DeleteCommits(std::vector<std::unique_ptr<const Commit>> /*commit*/,
+                                         fit::function<void(Status)> callback) {
+  FXL_NOTIMPLEMENTED();
+  callback(Status::NOT_IMPLEMENTED);
+}
+
 void PageStorageEmptyImpl::AddCommitWatcher(CommitWatcher* /*watcher*/) { FXL_NOTIMPLEMENTED(); }
 
 void PageStorageEmptyImpl::RemoveCommitWatcher(CommitWatcher* /*watcher*/) { FXL_NOTIMPLEMENTED(); }

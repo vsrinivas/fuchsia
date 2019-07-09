@@ -146,6 +146,9 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
 }
 
 cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
+  if (!cloud_provider_) {
+    return nullptr;
+  }
   cloud_provider::CloudProviderPtr cloud_provider;
   async::PostTask(services_dispatcher_,
                   callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
@@ -205,16 +208,20 @@ class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
 
 enum EnableP2PMesh { NO, YES };
 
+// Whether to enable sync or not.
+enum class EnableSync { YES, NO };
+
 }  // namespace
 
 class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
  public:
-  LedgerAppInstanceFactoryImpl(InjectNetworkError inject_network_error,
+  LedgerAppInstanceFactoryImpl(EnableSync enable_sync, InjectNetworkError inject_network_error,
                                EnableP2PMesh enable_p2p_mesh)
       : loop_controller_(&loop_),
         random_(loop_.initial_state()),
         services_loop_(loop_controller_.StartNewLoop()),
         cloud_provider_(FakeCloudProvider::Builder().SetInjectNetworkError(inject_network_error)),
+        enable_sync_(enable_sync),
         enable_p2p_mesh_(enable_p2p_mesh) {}
   ~LedgerAppInstanceFactoryImpl() override;
 
@@ -233,6 +240,7 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
   fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider, FakeCloudProvider> cloud_provider_;
   int app_instance_counter_ = 0;
   OvernetFactory overnet_factory_;
+  const EnableSync enable_sync_;
   const EnableP2PMesh enable_p2p_mesh_;
 };
 
@@ -247,16 +255,23 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> repository_factory_request =
       repository_factory_ptr.NewRequest();
 
-  std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory;
-  if (enable_p2p_mesh_ == EnableP2PMesh::YES) {
-    user_communicator_factory = std::make_unique<FakeUserCommunicatorFactory>(
-        &loop_controller_.test_loop(), services_loop_->dispatcher(), &random_, &overnet_factory_,
-        app_instance_counter_);
+  std::unique_ptr<LedgerAppInstanceImpl> result;
+  if (enable_sync_ == EnableSync::YES) {
+    std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory;
+    if (enable_p2p_mesh_ == EnableP2PMesh::YES) {
+      user_communicator_factory = std::make_unique<FakeUserCommunicatorFactory>(
+          &loop_controller_.test_loop(), services_loop_->dispatcher(), &random_, &overnet_factory_,
+          app_instance_counter_);
+    }
+    result = std::make_unique<LedgerAppInstanceImpl>(
+        &loop_controller_, services_loop_->dispatcher(), &random_,
+        std::move(repository_factory_request), std::move(repository_factory_ptr), &cloud_provider_,
+        std::move(user_communicator_factory));
+  } else {
+    result = std::make_unique<LedgerAppInstanceImpl>(
+        &loop_controller_, services_loop_->dispatcher(), &random_,
+        std::move(repository_factory_request), std::move(repository_factory_ptr), nullptr, nullptr);
   }
-  auto result = std::make_unique<LedgerAppInstanceImpl>(
-      &loop_controller_, services_loop_->dispatcher(), &random_,
-      std::move(repository_factory_request), std::move(repository_factory_ptr), &cloud_provider_,
-      std::move(user_communicator_factory));
   app_instance_counter_++;
   return result;
 }
@@ -269,26 +284,31 @@ namespace {
 
 class FactoryBuilderIntegrationImpl : public LedgerAppInstanceFactoryBuilder {
  public:
-  FactoryBuilderIntegrationImpl(InjectNetworkError inject_error, EnableP2PMesh enable_p2p)
-      : inject_error_(inject_error), enable_p2p_(enable_p2p){};
+  FactoryBuilderIntegrationImpl(EnableSync enable_sync, InjectNetworkError inject_error,
+                                EnableP2PMesh enable_p2p)
+      : enable_sync_(enable_sync), inject_error_(inject_error), enable_p2p_(enable_p2p){};
 
   std::unique_ptr<LedgerAppInstanceFactory> NewFactory() const override {
-    return std::make_unique<LedgerAppInstanceFactoryImpl>(inject_error_, enable_p2p_);
+    return std::make_unique<LedgerAppInstanceFactoryImpl>(enable_sync_, inject_error_, enable_p2p_);
   }
 
  private:
+  EnableSync enable_sync_;
   InjectNetworkError inject_error_;
   EnableP2PMesh enable_p2p_;
 };
 
 }  // namespace
 
-std::vector<const LedgerAppInstanceFactoryBuilder*> GetLedgerAppInstanceFactoryBuilders() {
-  static std::vector<std::unique_ptr<FactoryBuilderIntegrationImpl>> static_builders;
+std::vector<const LedgerAppInstanceFactoryBuilder*> GetLedgerAppInstanceFactoryBuilders(
+    EnableSynchronization sync_state) {
+  static std::vector<std::unique_ptr<FactoryBuilderIntegrationImpl>> static_sync_builders;
+  static std::vector<std::unique_ptr<FactoryBuilderIntegrationImpl>> static_offline_builders;
   static std::once_flag flag;
 
-  auto static_builders_ptr = &static_builders;
-  std::call_once(flag, [&static_builders_ptr] {
+  auto static_sync_builders_ptr = &static_sync_builders;
+  auto static_offline_builders_ptr = &static_offline_builders;
+  std::call_once(flag, [&static_sync_builders_ptr, &static_offline_builders_ptr] {
     for (auto inject_error : {InjectNetworkError::NO, InjectNetworkError::YES}) {
       for (auto enable_p2p : {EnableP2PMesh::NO, EnableP2PMesh::YES}) {
         if (enable_p2p == EnableP2PMesh::YES && inject_error != InjectNetworkError::YES) {
@@ -296,16 +316,24 @@ std::vector<const LedgerAppInstanceFactoryBuilder*> GetLedgerAppInstanceFactoryB
           // are fast enough for the CQ.
           continue;
         }
-        static_builders_ptr->push_back(
-            std::make_unique<FactoryBuilderIntegrationImpl>(inject_error, enable_p2p));
+        static_sync_builders_ptr->push_back(std::make_unique<FactoryBuilderIntegrationImpl>(
+            EnableSync::YES, inject_error, enable_p2p));
       }
     }
+    static_offline_builders_ptr->push_back(std::make_unique<FactoryBuilderIntegrationImpl>(
+        EnableSync::NO, InjectNetworkError::NO, EnableP2PMesh::NO));
   });
 
   std::vector<const LedgerAppInstanceFactoryBuilder*> builders;
 
-  for (const auto& builder : static_builders) {
+  for (const auto& builder : static_sync_builders) {
     builders.push_back(builder.get());
+  }
+
+  if (sync_state == EnableSynchronization::SYNC_OR_OFFLINE) {
+    for (const auto& builder : static_offline_builders) {
+      builders.push_back(builder.get());
+    }
   }
 
   return builders;

@@ -416,7 +416,8 @@ INSTANTIATE_TEST_SUITE_P(
                        // Temporarily reduced the number of simulated Ledgers to reduce flaky
                        // failures on bots, see LE-752. TODO(ppi): revert back to (2, 6).
                        ::testing::Range(2, 3),
-                       ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders())));
+                       ::testing::ValuesIn(
+                           GetLedgerAppInstanceFactoryBuilders(EnableSynchronization::SYNC_ONLY))));
 
 }  // namespace
 }  // namespace ledger

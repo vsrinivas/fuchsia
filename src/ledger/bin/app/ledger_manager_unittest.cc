@@ -1112,9 +1112,8 @@ class LedgerManagerWithRealStorageTest : public TestWithEnvironment {
     auto encryption_service = std::make_unique<encryption::FakeEncryptionService>(dispatcher());
     db_factory_ = std::make_unique<storage::fake::FakeDbFactory>(dispatcher());
     auto ledger_storage = std::make_unique<storage::LedgerStorageImpl>(
-        &environment_, encryption_service.get(),
-
-        db_factory_.get(), DetachedPath(tmpfs_.root_fd()));
+        &environment_, encryption_service.get(), db_factory_.get(), DetachedPath(tmpfs_.root_fd()),
+        storage::CommitPruningPolicy::NEVER);
     std::unique_ptr<FakeLedgerSync> sync = std::make_unique<FakeLedgerSync>();
     top_level_node_ = inspect::Node(kTestTopLevelNodeName.ToString());
     attachment_node_ =

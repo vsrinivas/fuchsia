@@ -154,5 +154,13 @@ enum class JournalContainsClearOperation { NO, YES };
 
 using Status = ledger::Status;
 
+enum class CommitPruningPolicy {
+  // Commits are never prunied.
+  NEVER,
+  // Commits are pruned as soon as possible, based on the local state only. Do not use this policy
+  // if the device is synchronizing with other devices.
+  LOCAL_IMMEDIATE,
+};
+
 }  // namespace storage
 #endif  // SRC_LEDGER_BIN_STORAGE_PUBLIC_TYPES_H_
