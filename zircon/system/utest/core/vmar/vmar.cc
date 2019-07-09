@@ -8,9 +8,13 @@
 #include <errno.h>
 #include <limits>
 #include <stdalign.h>
+#include <thread>
 #include <unistd.h>
 
 #include <fbl/algorithm.h>
+#include <lib/zx/vmo.h>
+#include <lib/zx/process.h>
+#include <lib/zx/vmar.h>
 #include <sys/mman.h>
 #include <unittest/unittest.h>
 #include <zircon/process.h>
@@ -2173,6 +2177,47 @@ bool allow_faults_test() {
     END_TEST;
 }
 
+// Regression test for a scenario where process_read_memory could use a stale RefPtr<VmObject>
+// This will not always detect the failure scenario, but will never false positive.
+bool concurrent_unmap_read_memory() {
+    BEGIN_TEST;
+
+    auto root_vmar = zx::vmar::root_self();
+
+    zx::vmar child_vmar;
+    uintptr_t addr;
+    ASSERT_EQ(root_vmar->allocate(0, ZX_PAGE_SIZE * 4, ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ,
+                                  &child_vmar, &addr), ZX_OK);
+
+    std::atomic<bool> running = true;
+    std::thread t = std::thread([addr, &running] {
+        auto self = zx::process::self();
+        while (running) {
+            uint64_t data;
+            size_t temp;
+            self->read_memory(addr, &data, sizeof(data), &temp);
+        }
+    });
+
+    // Iterate some number of times to attempt to hit the race condition. This is a best effort and
+    // even when the bug is present it could take minutes of running to trigger it.
+    for (int i = 0; i < 1000; i++) {
+        uintptr_t temp;
+        // vmo must be created in the loop so that it is destroyed each iteration leading to there
+        // being no references to the underlying VmObject in the kernel.
+        zx::vmo vmo;
+        ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo), ZX_OK);
+        ASSERT_EQ(child_vmar.map(0, vmo, 0, ZX_PAGE_SIZE, ZX_VM_SPECIFIC | ZX_VM_PERM_READ, &temp),
+                  ZX_OK);
+        ASSERT_EQ(child_vmar.unmap(addr, ZX_PAGE_SIZE), ZX_OK);
+    }
+
+    running = false;
+    t.join();
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(vmar_tests)
@@ -2206,4 +2251,5 @@ RUN_TEST(partial_unmap_and_read);
 RUN_TEST(partial_unmap_and_write);
 RUN_TEST(partial_unmap_with_vmar_offset);
 RUN_TEST(allow_faults_test);
+RUN_TEST(concurrent_unmap_read_memory);
 END_TEST_CASE(vmar_tests)

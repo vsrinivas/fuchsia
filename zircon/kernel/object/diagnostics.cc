@@ -440,7 +440,7 @@ public:
     AspaceVmoDumper(char format_unit) : format_unit_(format_unit) {}
     bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar,
                      uint depth) final {
-        auto vmo = map->vmo();
+        auto vmo = map->vmo_locked();
         DumpVmObject(
             *vmo,
             format_unit_,
@@ -523,9 +523,10 @@ public:
                      uint depth) override {
         usage.mapped_pages += map->size() / PAGE_SIZE;
 
-        size_t committed_pages = map->vmo()->AttributedPagesInRange(
+        auto vmo = map->vmo_locked();
+        size_t committed_pages = vmo->AttributedPagesInRange(
             map->object_offset(), map->size());
-        uint32_t share_count = map->vmo()->share_count();
+        uint32_t share_count = vmo->share_count();
         if (share_count == 1) {
             usage.private_pages += committed_pages;
         } else {
@@ -598,7 +599,7 @@ public:
         available_++;
         if (nelem_ < max_) {
             zx_info_maps_t entry = {};
-            auto vmo = map->vmo();
+            auto vmo = map->vmo_locked();
             vmo->get_name(entry.name, sizeof(entry.name));
             entry.base = map->base();
             entry.size = map->size();
@@ -681,7 +682,7 @@ public:
             // We're likely to see the same VMO a couple times in a given
             // address space (e.g., somelib.so mapped as r--, r-x), but leave it
             // to userspace to do deduping.
-            zx_info_vmo_t entry = VmoToInfoEntry(map->vmo().get(),
+            zx_info_vmo_t entry = VmoToInfoEntry(map->vmo_locked().get(),
                                                  /*is_handle=*/false,
                                                  /*handle_rights=*/0);
             if (vmos_.copy_array_to_user(&entry, 1, nelem_) != ZX_OK) {

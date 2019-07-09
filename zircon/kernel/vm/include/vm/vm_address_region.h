@@ -71,7 +71,7 @@ public:
         return true;
     }
 
-    // |vmar| is the parent of |map|.
+    // |vmar| is the parent of |map|. The root VmAspace's lock will be held when this is called.
     virtual bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar,
                              uint depth) {
         return true;
@@ -430,7 +430,11 @@ public:
     // Accessors for VMO-mapping state
     uint arch_mmu_flags() const { return arch_mmu_flags_; }
     uint64_t object_offset() const { return object_offset_; }
-    const fbl::RefPtr<VmObject>& vmo() const { return object_; }
+    // Intended to be used from VmEnumerator callbacks where the aspace_->lock() will be held.
+    fbl::RefPtr<VmObject> vmo_locked() const {
+        return object_;
+    }
+    fbl::RefPtr<VmObject> vmo() const;
 
     // Convenience wrapper for vmo()->DecommitRange() with the necessary
     // offset modification and locking.

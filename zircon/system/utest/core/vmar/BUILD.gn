@@ -12,5 +12,6 @@ source_set("vmar") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
   ]
 }

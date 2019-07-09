@@ -38,6 +38,11 @@ VmMapping::~VmMapping() {
             this, aspace_.get(), base_, size_);
 }
 
+fbl::RefPtr<VmObject> VmMapping::vmo() const {
+    Guard<fbl::Mutex> guard{aspace_->lock()};
+    return vmo_locked();
+}
+
 size_t VmMapping::AllocatedPagesLocked() const {
     canary_.Assert();
     DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
@@ -582,7 +587,8 @@ zx_status_t VmMapping::DestroyLocked() {
         object_->RemoveMappingLocked(this);
     }
 
-    // detach from any object we have mapped
+    // detach from any object we have mapped. Note that we are holding the aspace_->lock() so we
+    // will not race with other threads calling vmo()
     object_.reset();
 
     // Detach the now dead region from the parent
