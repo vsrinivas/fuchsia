@@ -1,0 +1,33 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+syntax = "proto3";
+
+service GuestInteractionService {
+  rpc Get(GetRequest) returns (stream GetResponse);
+}
+
+enum OperationStatus {
+  OK = 0;
+  GRPC_FAILURE = 1;
+
+  CLIENT_MISSING_FILE_FAILURE = 2;
+  CLIENT_CREATE_FILE_FAILURE = 3;
+  CLIENT_FILE_READ_FAILURE = 4;
+  CLIENT_FILE_WRITE_FAILURE = 5;
+
+  SERVER_MISSING_FILE_FAILURE = 6;
+  SERVER_CREATE_FILE_FAILURE = 7;
+  SERVER_FILE_READ_FAILURE = 8;
+  SERVER_FILE_WRITE_FAILURE = 9;
+}
+
+message GetRequest {
+  string source = 1;
+}
+
+message GetResponse {
+  OperationStatus status = 1;
+  bytes data = 2;
+}

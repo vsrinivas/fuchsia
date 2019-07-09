@@ -1,0 +1,137 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+import("//third_party/protobuf/proto_library.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":guest_interaction_tests",
+  ]
+}
+
+proto_library("proto") {
+  sources = [
+    "proto/guest_interaction.proto",
+  ]
+
+  generate_python = false
+  cc_generator_options = "lite"
+  generator_plugin_suffix = ".grpc.pb"
+  generator_plugin_label = "//third_party/grpc:grpc_cpp_plugin"
+
+  import_dirs = [ "//third_party/protobuf/src" ]
+  deps = [
+    "//third_party/grpc:grpc++",
+  ]
+}
+
+source_set("common") {
+  sources = [
+    "common.h",
+  ]
+  deps = [
+    ":proto",
+    "//third_party/grpc:grpc++",
+  ]
+}
+
+source_set("platform_interface_posix") {
+  sources = [
+    "platform_interface/platform_interface.h",
+    "platform_interface/posix_platform.cc",
+  ]
+  deps = [
+    "//third_party/grpc:grpc++",
+    "//third_party/protobuf:protobuf_full",
+  ]
+}
+
+source_set("client_lib") {
+  sources = [
+    "client/client_operation_state.h",
+    "platform_interface/platform_interface.h",
+  ]
+  deps = [
+    ":common",
+    ":proto",
+    "//sdk/lib/sys/cpp",
+    "//third_party/grpc:grpc++",
+  ]
+}
+
+source_set("server_lib") {
+  sources = [
+    "platform_interface/platform_interface.h",
+    "server/server_operation_state.h",
+  ]
+  deps = [
+    ":common",
+    ":proto",
+    "//third_party/grpc:grpc++",
+  ]
+}
+
+source_set("test_lib") {
+  testonly = true
+  sources = [
+    "test/test_lib.h",
+  ]
+  deps = [
+    ":proto",
+    "//third_party/googletest:gtest_main",
+    "//third_party/grpc:grpc++",
+  ]
+}
+
+executable("client_operation_test") {
+  testonly = true
+  sources = [
+    "test/client_operation_test.cc",
+  ]
+  deps = [
+    ":client_lib",
+    ":proto",
+    ":test_lib",
+    "//sdk/lib/sys/cpp",
+    "//third_party/googletest:gtest_main",
+    "//third_party/grpc:grpc++",
+  ]
+}
+
+executable("server_operation_test") {
+  testonly = true
+  sources = [
+    "test/server_operation_test.cc",
+  ]
+  deps = [
+    ":proto",
+    ":server_lib",
+    ":test_lib",
+    "//sdk/lib/sys/cpp",
+    "//third_party/googletest:gtest_main",
+    "//third_party/grpc:grpc++",
+  ]
+}
+
+test_package("guest_interaction_tests") {
+  deps = [
+    ":client_operation_test",
+    ":server_operation_test",
+  ]
+
+  tests = [
+    {
+      name = "client_operation_test"
+      environments = [ nuc_env ]
+    },
+    {
+      name = "server_operation_test"
+      environments = [ nuc_env ]
+    },
+  ]
+}
