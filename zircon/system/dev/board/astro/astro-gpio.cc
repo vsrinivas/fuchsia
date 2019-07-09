@@ -130,7 +130,7 @@ zx_status_t Astro::GpioInit() {
     }
 
 #ifdef GPIO_TEST
-    const pbus_gpio_t gpio_test_gpios[] = {
+    static const pbus_gpio_t gpio_test_gpios[] = {
         {
             // SYS_LED
             .gpio = S905D2_GPIOAO(11),
@@ -141,14 +141,16 @@ zx_status_t Astro::GpioInit() {
         }
     };
 
-    const pbus_dev_t gpio_test_dev = {
-        .name = "astro-gpio-test",
-        .vid = PDEV_VID_GENERIC,
-        .pid = PDEV_PID_GENERIC,
-        .did = PDEV_DID_GPIO_TEST,
-        .gpio_list = gpio_test_gpios,
-        .gpio_count = countof(gpio_test_gpios),
-    };
+    const pbus_dev_t gpio_test_dev = []() {
+	pbus_dev_t dev = {};
+        dev.name = "astro-gpio-test";
+        dev.vid = PDEV_VID_GENERIC;
+        dev.pid = PDEV_PID_GENERIC;
+        dev.did = PDEV_DID_GPIO_TEST;
+        dev.gpio_list = gpio_test_gpios;
+        dev.gpio_count = countof(gpio_test_gpios);
+        return dev;
+    }();
 
     if ((status = pbus_.DeviceAdd(&gpio_test_dev)) != ZX_OK) {
         zxlogf(ERROR, "%s: DeviceAdd gpio_test failed: %d\n", __func__, status);
