@@ -28,48 +28,21 @@ trait CmInto<T> {
     fn cm_into(self) -> Result<T, Error>;
 }
 
-/// Generates a `CmInto` implementation for `Vec<type>` that calls `cm_into()` on each element.
-macro_rules! cm_into_vec {
-    ($into_type:ty, $from_type:ty) => {
-        impl CmInto<Vec<$into_type>> for Vec<$from_type> {
-            fn cm_into(self) -> Result<Vec<$into_type>, Error> {
-                let mut out = vec![];
-                for e in self.into_iter() {
-                    out.push(e.cm_into()?);
-                }
-                Ok(out)
-            }
-        }
-    };
+impl<T,U> CmInto<Option<Vec<U>>> for Option<Vec<T>>
+    where T: CmInto<U>
+{
+    fn cm_into(self) -> Result<Option<Vec<U>>, Error> {
+        self.and_then(|x| if x.is_empty() { None } else { Some(x.cm_into()) } ).transpose()
+    }
 }
 
-/// Generates a `CmInto` implementation for `Opt<Vec<type>>` that calls `cm_into()` on each element.
-macro_rules! cm_into_opt_vec {
-    ($into_type:ty, $from_type:ty) => {
-        impl CmInto<Option<Vec<$into_type>>> for Option<Vec<$from_type>> {
-            fn cm_into(self) -> Result<Option<Vec<$into_type>>, Error> {
-                match self {
-                    Some(from) => {
-                        let mut out = vec![];
-                        for e in from.into_iter() {
-                            out.push(e.cm_into()?);
-                        }
-                        Ok(Some(out))
-                    }
-                    None => Ok(None),
-                }
-            }
-        }
-    };
+impl<T,U> CmInto<Vec<U>> for Vec<T>
+    where T: CmInto<U>
+{
+    fn cm_into(self) -> Result<Vec<U>, Error> {
+        self.into_iter().map(|x| x.cm_into()).collect()
+    }
 }
-
-cm_into_opt_vec!(fsys::UseDecl, cm::Use);
-cm_into_opt_vec!(fsys::ExposeDecl, cm::Expose);
-cm_into_opt_vec!(fsys::OfferDecl, cm::Offer);
-cm_into_opt_vec!(fsys::ChildDecl, cm::Child);
-cm_into_opt_vec!(fsys::CollectionDecl, cm::Collection);
-cm_into_opt_vec!(fsys::StorageDecl, cm::Storage);
-cm_into_vec!(fsys::Ref, cm::Ref);
 
 impl CmInto<fsys::ComponentDecl> for cm::Document {
     fn cm_into(self) -> Result<fsys::ComponentDecl, Error> {
