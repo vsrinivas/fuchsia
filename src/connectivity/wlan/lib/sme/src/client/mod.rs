@@ -92,18 +92,19 @@ pub struct ClientSme {
 pub enum ConnectResult {
     Success,
     Canceled,
-    Failed,
-    BadCredentials,
+    Failed(ConnectFailure),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ConnectFailure {
     NoMatchingBssFound,
+    SelectNetwork,
     ScanFailure(fidl_mlme::ScanResultCodes),
     JoinFailure(fidl_mlme::JoinResultCodes),
     AuthenticationFailure(fidl_mlme::AuthenticateResultCodes),
     AssociationFailure(fidl_mlme::AssociateResultCodes),
     RsnaTimeout,
+    EstablishRsna,
 }
 
 pub type EssDiscoveryResult = Result<Vec<EssInfo>, DiscoveryError>;
@@ -113,7 +114,6 @@ pub enum InfoEvent {
     ConnectStarted,
     ConnectFinished {
         result: ConnectResult,
-        failure: Option<ConnectFailure>,
     },
     MlmeScanStart {
         txn_id: ScanTxnId,
@@ -205,12 +205,7 @@ impl ClientSme {
         });
         // If the new scan replaced an existing pending JoinScan, notify the existing transaction
         if let Some(token) = canceled_token {
-            report_connect_finished(
-                Some(token.responder),
-                &self.context,
-                ConnectResult::Canceled,
-                None,
-            );
+            report_connect_finished(Some(token.responder), &self.context, ConnectResult::Canceled);
         }
         self.send_scan_request(req);
         receiver
@@ -299,8 +294,7 @@ impl super::Station for ClientSme {
                                         report_connect_finished(
                                             Some(token.responder),
                                             &self.context,
-                                            ConnectResult::Failed,
-                                            None,
+                                            ConnectResult::Failed(ConnectFailure::SelectNetwork),
                                         );
                                         state
                                     }
@@ -314,8 +308,7 @@ impl super::Station for ClientSme {
                                 report_connect_finished(
                                     Some(token.responder),
                                     &self.context,
-                                    ConnectResult::Failed,
-                                    Some(ConnectFailure::NoMatchingBssFound),
+                                    ConnectResult::Failed(ConnectFailure::NoMatchingBssFound),
                                 );
                                 state
                             }
@@ -326,8 +319,7 @@ impl super::Station for ClientSme {
                                 report_connect_finished(
                                     Some(token.responder),
                                     &self.context,
-                                    ConnectResult::Failed,
-                                    Some(ConnectFailure::NoMatchingBssFound),
+                                    ConnectResult::Failed(ConnectFailure::NoMatchingBssFound),
                                 );
                                 state
                             }
@@ -342,18 +334,13 @@ impl super::Station for ClientSme {
                             scan_failure: format!("{:?}", e),
                         );
                         error!("cannot join network because scan failed: {:?}", e);
-                        let (result, failure) = match e {
-                            JoinScanFailure::Canceled => (ConnectResult::Canceled, None),
+                        let result = match e {
+                            JoinScanFailure::Canceled => ConnectResult::Canceled,
                             JoinScanFailure::ScanFailed(code) => {
-                                (ConnectResult::Failed, Some(ConnectFailure::ScanFailure(code)))
+                                ConnectResult::Failed(ConnectFailure::ScanFailure(code))
                             }
                         };
-                        report_connect_finished(
-                            Some(token.responder),
-                            &self.context,
-                            result,
-                            failure,
-                        );
+                        report_connect_finished(Some(token.responder), &self.context, result);
                         state
                     }
                     ScanResult::DiscoveryFinished { tokens, result } => {
@@ -422,12 +409,11 @@ fn report_connect_finished(
     responder: Option<Responder<ConnectResult>>,
     context: &Context,
     result: ConnectResult,
-    failure: Option<ConnectFailure>,
 ) {
     if let Some(responder) = responder {
         responder.respond(result.clone());
     }
-    context.info_sink.send(InfoEvent::ConnectFinished { result, failure });
+    context.info_sink.send(InfoEvent::ConnectFinished { result });
 }
 
 pub fn get_protection(
@@ -667,7 +653,7 @@ mod tests {
         // Simulate scan end and verify that underlying state machine's status is not changed,
         report_fake_scan_result(&mut sme, fake_wep_bss_description(b"foo".to_vec()));
         assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
-        assert_eq!(Ok(Some(ConnectResult::Failed)), connect_fut.try_recv());
+        assert_connect_result_failed(&mut connect_fut);
     }
 
     #[test]
@@ -794,7 +780,7 @@ mod tests {
         }
 
         // User should get a message that connection failed
-        assert_eq!(Ok(Some(ConnectResult::Failed)), connect_fut.try_recv());
+        assert_connect_result_failed(&mut connect_fut);
     }
 
     #[test]
@@ -835,7 +821,7 @@ mod tests {
         }
 
         // User should get a message that connection failed
-        assert_eq!(Ok(Some(ConnectResult::Failed)), connect_fut.try_recv());
+        assert_connect_result_failed(&mut connect_fut);
     }
 
     #[test]
@@ -874,7 +860,7 @@ mod tests {
         }
 
         // User should get a message that connection failed
-        assert_eq!(Ok(Some(ConnectResult::Failed)), connect_fut.try_recv());
+        assert_connect_result_failed(&mut connect_fut);
     }
 
     #[test]
@@ -890,6 +876,13 @@ mod tests {
 
         expect_info_event(&mut info_stream, InfoEvent::MlmeScanEnd { txn_id: 1 });
         expect_info_event(&mut info_stream, InfoEvent::AssociationStarted { att_id: 1 });
+    }
+
+    fn assert_connect_result_failed(connect_fut: &mut oneshot::Receiver<ConnectResult>) {
+        match connect_fut.try_recv() {
+            Ok(Some(ConnectResult::Failed(..))) => (), // expected path
+            other => panic!("expect ConnectResult::Failed, got {:?}", other),
+        }
     }
 
     fn connect_req(ssid: Ssid, credential: fidl_sme::Credential) -> fidl_sme::ConnectRequest {

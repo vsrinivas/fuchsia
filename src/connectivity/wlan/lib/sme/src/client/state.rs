@@ -70,7 +70,7 @@ pub struct ConnectCommand {
 #[derive(Debug)]
 pub enum RsnaStatus {
     Established,
-    Failed(ConnectResult),
+    Failed,
     Unchanged,
     Progressed { new_resp_timeout: Option<EventId> },
 }
@@ -162,8 +162,7 @@ impl State {
                         report_connect_finished(
                             cmd.responder,
                             &context,
-                            ConnectResult::Failed,
-                            Some(ConnectFailure::JoinFailure(other)),
+                            ConnectResult::Failed(ConnectFailure::JoinFailure(other)),
                         );
                         state_change_msg.replace(format!("failed join; result code: {:?}", other));
                         State::Idle { cfg }
@@ -182,8 +181,7 @@ impl State {
                         report_connect_finished(
                             cmd.responder,
                             &context,
-                            ConnectResult::Failed,
-                            Some(ConnectFailure::AuthenticationFailure(other)),
+                            ConnectResult::Failed(ConnectFailure::AuthenticationFailure(other)),
                         );
                         state_change_msg.replace(format!("failed auth; result code: {:?}", other));
                         State::Idle { cfg }
@@ -217,8 +215,8 @@ impl State {
                 }
                 MlmeEvent::DeauthenticateInd { ind } => {
                     if let LinkState::EstablishingRsna { responder, .. } = link_state {
-                        let connect_result = deauth_code_to_connect_result(ind.reason_code);
-                        report_connect_finished(responder, &context, connect_result, None);
+                        let connect_result = ConnectResult::Failed(ConnectFailure::EstablishRsna);
+                        report_connect_finished(responder, &context, connect_result);
                     }
                     state_change_msg.replace(format!(
                         "received DeauthenticateInd msg; reason code {:?}",
@@ -267,15 +265,15 @@ impl State {
                                     responder,
                                     &context,
                                     ConnectResult::Success,
-                                    None,
                                 );
                                 state_change_msg.replace("RSNA established".to_string());
                                 let link_state =
                                     LinkState::LinkUp { protection: Protection::Rsna(rsna) };
                                 State::Associated { cfg, bss, last_rssi, link_state, radio_cfg }
                             }
-                            RsnaStatus::Failed(result) => {
-                                report_connect_finished(responder, &context, result, None);
+                            RsnaStatus::Failed => {
+                                let result = ConnectResult::Failed(ConnectFailure::EstablishRsna);
+                                report_connect_finished(responder, &context, result);
                                 send_deauthenticate_request(bss, &context.mlme_sink);
                                 state_change_msg.replace("RSNA failed".to_string());
                                 State::Idle { cfg }
@@ -359,8 +357,7 @@ impl State {
                         report_connect_finished(
                             responder,
                             &context,
-                            ConnectResult::Failed,
-                            Some(ConnectFailure::RsnaTimeout),
+                            ConnectResult::Failed(ConnectFailure::RsnaTimeout),
                         );
                         send_deauthenticate_request(bss, &context.mlme_sink);
                         state_change_msg.replace("RSNA timeout".to_string());
@@ -403,8 +400,7 @@ impl State {
                             report_connect_finished(
                                 responder,
                                 &context,
-                                ConnectResult::Failed,
-                                Some(ConnectFailure::RsnaTimeout),
+                                ConnectResult::Failed(ConnectFailure::RsnaTimeout),
                             );
                             send_deauthenticate_request(bss, &context.mlme_sink);
                             state_change_msg.replace("key frame rx timeout".to_string());
@@ -477,10 +473,10 @@ impl State {
         match self {
             State::Idle { .. } => {}
             State::Joining { cmd, .. } | State::Authenticating { cmd, .. } => {
-                report_connect_finished(cmd.responder, &context, ConnectResult::Canceled, None);
+                report_connect_finished(cmd.responder, &context, ConnectResult::Canceled);
             }
             State::Associating { cmd, .. } => {
-                report_connect_finished(cmd.responder, &context, ConnectResult::Canceled, None);
+                report_connect_finished(cmd.responder, &context, ConnectResult::Canceled);
                 send_deauthenticate_request(cmd.bss, &context.mlme_sink);
             }
             State::Associated { bss, .. } => {
@@ -562,7 +558,7 @@ fn handle_mlme_assoc_conf(
                     }
                 },
                 Protection::Open | Protection::Wep(_) => {
-                    report_connect_finished(cmd.responder, &context, ConnectResult::Success, None);
+                    report_connect_finished(cmd.responder, &context, ConnectResult::Success);
                     state_change_msg.replace("successful association".to_string());
                     State::Associated {
                         cfg,
@@ -579,8 +575,7 @@ fn handle_mlme_assoc_conf(
             report_connect_finished(
                 cmd.responder,
                 &context,
-                ConnectResult::Failed,
-                Some(ConnectFailure::AssociationFailure(other)),
+                ConnectResult::Failed(ConnectFailure::AssociationFailure(other)),
             );
             state_change_msg.replace(format!("failed association; result code: {:?}", other));
             State::Idle { cfg }
@@ -626,14 +621,6 @@ fn triggered(id: &Option<EventId>, received_id: EventId) -> bool {
 
 fn cancel(event_id: &mut Option<EventId>) {
     let _ = event_id.take();
-}
-
-fn deauth_code_to_connect_result(reason_code: fidl_mlme::ReasonCode) -> ConnectResult {
-    match reason_code {
-        fidl_mlme::ReasonCode::InvalidAuthentication
-        | fidl_mlme::ReasonCode::Ieee8021XAuthFailed => ConnectResult::BadCredentials,
-        _ => ConnectResult::Failed,
-    }
 }
 
 fn process_eapol_ind(
@@ -706,12 +693,7 @@ fn process_eapol_ind(
                 match status {
                     // ESS Security Association was successfully established. Link is now up.
                     SecAssocStatus::EssSaEstablished => return RsnaStatus::Established,
-                    // TODO(hahnr): The API should not expose whether or not the connection failed
-                    // because of bad credentials as it allows callers to reason about location
-                    // information since the network was apparently found.
-                    SecAssocStatus::WrongPassword => {
-                        return RsnaStatus::Failed(ConnectResult::BadCredentials);
-                    }
+                    SecAssocStatus::WrongPassword => return RsnaStatus::Failed,
                 }
             }
         }
@@ -826,13 +808,10 @@ fn handle_supplicant_start_failure(
     error!("deauthenticating; could not start Supplicant: {}", e);
     send_deauthenticate_request(bss, &context.mlme_sink);
 
-    // TODO(hahnr): Report RSNA specific failure instead.
-    let reason = fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified;
     report_connect_finished(
         responder,
         &context,
-        ConnectResult::Failed,
-        Some(ConnectFailure::AssociationFailure(reason)),
+        ConnectResult::Failed(ConnectFailure::EstablishRsna),
     );
 }
 
@@ -892,7 +871,7 @@ mod tests {
         expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 1 });
         expect_info_event(
             &mut h.info_stream,
-            InfoEvent::ConnectFinished { result: ConnectResult::Success, failure: None },
+            InfoEvent::ConnectFinished { result: ConnectResult::Success },
         );
     }
 
@@ -943,7 +922,7 @@ mod tests {
         expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 1 });
         expect_info_event(
             &mut h.info_stream,
-            InfoEvent::ConnectFinished { result: ConnectResult::Success, failure: None },
+            InfoEvent::ConnectFinished { result: ConnectResult::Success },
         );
     }
 
@@ -1007,7 +986,7 @@ mod tests {
         expect_info_event(&mut h.info_stream, InfoEvent::RsnaEstablished { att_id: 1 });
         expect_info_event(
             &mut h.info_stream,
-            InfoEvent::ConnectFinished { result: ConnectResult::Success, failure: None },
+            InfoEvent::ConnectFinished { result: ConnectResult::Success },
         );
     }
 
@@ -1028,18 +1007,13 @@ mod tests {
         let state = state.on_mlme_event(join_conf, &mut h.context);
         assert_idle(state);
 
+        let result = ConnectResult::Failed(ConnectFailure::JoinFailure(
+            fidl_mlme::JoinResultCodes::JoinFailureTimeout,
+        ));
         // User should be notified that connection attempt failed
-        expect_result(receiver, ConnectResult::Failed);
+        expect_result(receiver, result.clone());
 
-        expect_info_event(
-            &mut h.info_stream,
-            InfoEvent::ConnectFinished {
-                result: ConnectResult::Failed,
-                failure: Some(ConnectFailure::JoinFailure(
-                    fidl_mlme::JoinResultCodes::JoinFailureTimeout,
-                )),
-            },
-        );
+        expect_info_event(&mut h.info_stream, InfoEvent::ConnectFinished { result });
     }
 
     #[test]
@@ -1062,18 +1036,13 @@ mod tests {
         let state = state.on_mlme_event(auth_conf, &mut h.context);
         assert_idle(state);
 
+        let result = ConnectResult::Failed(ConnectFailure::AuthenticationFailure(
+            fidl_mlme::AuthenticateResultCodes::Refused,
+        ));
         // User should be notified that connection attempt failed
-        expect_result(receiver, ConnectResult::Failed);
+        expect_result(receiver, result.clone());
 
-        expect_info_event(
-            &mut h.info_stream,
-            InfoEvent::ConnectFinished {
-                result: ConnectResult::Failed,
-                failure: Some(ConnectFailure::AuthenticationFailure(
-                    fidl_mlme::AuthenticateResultCodes::Refused,
-                )),
-            },
-        );
+        expect_info_event(&mut h.info_stream, InfoEvent::ConnectFinished { result });
     }
 
     #[test]
@@ -1091,18 +1060,13 @@ mod tests {
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
         assert_idle(state);
 
+        let result = ConnectResult::Failed(ConnectFailure::AssociationFailure(
+            fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+        ));
         // User should be notified that connection attempt failed
-        expect_result(receiver, ConnectResult::Failed);
+        expect_result(receiver, result.clone());
 
-        expect_info_event(
-            &mut h.info_stream,
-            InfoEvent::ConnectFinished {
-                result: ConnectResult::Failed,
-                failure: Some(ConnectFailure::AssociationFailure(
-                    fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
-                )),
-            },
-        );
+        expect_info_event(&mut h.info_stream, InfoEvent::ConnectFinished { result });
     }
 
     #[test]
@@ -1157,17 +1121,10 @@ mod tests {
         let _state = state.on_mlme_event(assoc_conf, &mut h.context);
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_mlme::ReasonCode::StaLeaving);
-        expect_result(receiver, ConnectResult::Failed);
+        let result = ConnectResult::Failed(ConnectFailure::EstablishRsna);
+        expect_result(receiver, result.clone());
         expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 0 });
-        expect_info_event(
-            &mut h.info_stream,
-            InfoEvent::ConnectFinished {
-                result: ConnectResult::Failed,
-                failure: Some(ConnectFailure::AssociationFailure(
-                    fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
-                )),
-            },
-        );
+        expect_info_event(&mut h.info_stream, InfoEvent::ConnectFinished { result });
     }
 
     #[test]
@@ -1264,11 +1221,9 @@ mod tests {
         let _state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update]);
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_mlme::ReasonCode::StaLeaving);
-        expect_result(receiver, ConnectResult::BadCredentials);
-        expect_info_event(
-            &mut h.info_stream,
-            InfoEvent::ConnectFinished { result: ConnectResult::BadCredentials, failure: None },
-        );
+        let result = ConnectResult::Failed(ConnectFailure::EstablishRsna);
+        expect_result(receiver, result.clone());
+        expect_info_event(&mut h.info_stream, InfoEvent::ConnectFinished { result });
     }
 
     #[test]
@@ -1294,7 +1249,7 @@ mod tests {
         let _state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_mlme::ReasonCode::StaLeaving);
-        expect_result(receiver, ConnectResult::Failed);
+        expect_result(receiver, ConnectResult::Failed(ConnectFailure::RsnaTimeout));
     }
 
     #[test]
@@ -1323,7 +1278,7 @@ mod tests {
         }
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_mlme::ReasonCode::StaLeaving);
-        expect_result(receiver, ConnectResult::Failed);
+        expect_result(receiver, ConnectResult::Failed(ConnectFailure::RsnaTimeout));
     }
 
     #[test]

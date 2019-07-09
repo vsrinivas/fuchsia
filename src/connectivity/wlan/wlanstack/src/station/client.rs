@@ -163,7 +163,7 @@ async fn connect(
         Some(txn) => Some(txn.into_stream()?.control_handle()),
     };
     let receiver = sme.lock().unwrap().on_connect_command(req);
-    let result = await!(receiver).unwrap_or(ConnectResult::Failed);
+    let result = await!(receiver).ok();
     let send_result = send_connect_result(handle, result);
     filter_out_peer_closed(send_result)?;
     Ok(())
@@ -205,7 +205,7 @@ fn handle_info_event(
         InfoEvent::ConnectStarted => {
             connection_times.connect_started_time = Some(zx::Time::get(zx::ClockId::Monotonic));
         }
-        InfoEvent::ConnectFinished { result, failure } => {
+        InfoEvent::ConnectFinished { result } => {
             if let Some(connect_started_time) = connection_times.connect_started_time {
                 let connection_finished_time = zx::Time::get(zx::ClockId::Monotonic);
                 telemetry::report_connection_delay(
@@ -213,7 +213,6 @@ fn handle_info_event(
                     connect_started_time,
                     connection_finished_time,
                     &result,
-                    &failure,
                 );
                 connection_times.connect_started_time = None;
             }
@@ -325,14 +324,13 @@ fn convert_bss_info(bss: BssInfo) -> fidl_sme::BssInfo {
 
 fn send_connect_result(
     handle: Option<fidl_sme::ConnectTransactionControlHandle>,
-    result: ConnectResult,
+    result: Option<ConnectResult>,
 ) -> Result<(), fidl::Error> {
     if let Some(handle) = handle {
         let code = match result {
-            ConnectResult::Success => fidl_sme::ConnectResultCode::Success,
-            ConnectResult::Canceled => fidl_sme::ConnectResultCode::Canceled,
-            ConnectResult::Failed => fidl_sme::ConnectResultCode::Failed,
-            ConnectResult::BadCredentials => fidl_sme::ConnectResultCode::BadCredentials,
+            Some(ConnectResult::Success) => fidl_sme::ConnectResultCode::Success,
+            Some(ConnectResult::Canceled) => fidl_sme::ConnectResultCode::Canceled,
+            Some(ConnectResult::Failed(..)) | None => fidl_sme::ConnectResultCode::Failed,
         };
         handle.send_on_finished(code)?;
     }
