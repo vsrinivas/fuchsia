@@ -863,7 +863,7 @@ pub trait BufferView<B: ByteSlice>: Sized + AsRef<[u8]> {
     /// `take_rest_front` consumes the rest of the bytes from the buffer's body.
     /// After a call to `take_rest_front`, the body is empty, and the bytes
     /// which were previously in the body are now in the prefix.
-    fn take_rest_front(mut self) -> B {
+    fn take_rest_front(&mut self) -> B {
         let len = self.len();
         self.take_front(len).unwrap()
     }
@@ -873,7 +873,7 @@ pub trait BufferView<B: ByteSlice>: Sized + AsRef<[u8]> {
     /// `take_rest_back` consumes the rest of the bytes from the buffer's body.
     /// After a call to `take_rest_back`, the body is empty, and the bytes which
     /// were previously in the body are now in the suffix.
-    fn take_rest_back(mut self) -> B {
+    fn take_rest_back(&mut self) -> B {
         let len = self.len();
         self.take_back(len).unwrap()
     }
@@ -1942,4 +1942,16 @@ mod tests {
         test_buf_grow_front_panics,
         test_buf_grow_back_panics,
     );
+
+    #[test]
+    fn take_rest_front_back() {
+        let buf = [1_u8, 2, 3];
+        let mut b = &mut &buf[..];
+        assert_eq!(b.take_rest_front(), &buf[..]);
+        assert_eq!(b.len(), 0);
+
+        let mut b = &mut &buf[..];
+        assert_eq!(b.take_rest_back(), &buf[..]);
+        assert_eq!(b.len(), 0);
+    }
 }
