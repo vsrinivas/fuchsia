@@ -256,9 +256,7 @@ public:
     // and ::OnUserChildRemoved are called where appropraite.
     //
     // |guard| must be this vmo's lock.
-    virtual void RemoveChild(VmObjectPaged* child, Guard<Mutex>&& guard)
-        // Analysis doesn't know |guard| is this vmo's lock.
-        TA_NO_THREAD_SAFETY_ANALYSIS;
+    virtual void RemoveChild(VmObjectPaged* child, Guard<Mutex>&& guard) TA_REQ(lock_);
 
     // Drops |c| from the child list without going through the full removal
     // process. ::RemoveChild is probably what you want here.
@@ -271,9 +269,7 @@ public:
     // this vmo is removed. Updates state and notifies userspace if necessary.
     //
     // The guard passed to this function is the vmo's lock.
-    void OnUserChildRemoved(Guard<Mutex>&& guard)
-        // Analysis doesn't know |guard| is this vmo's lock.
-        TA_NO_THREAD_SAFETY_ANALYSIS;
+    void OnUserChildRemoved(Guard<Mutex>&& guard) TA_REQ(lock_);
 
     // Called by AddChildLocked. VmObject::OnChildAddedLocked eventually needs to be invoked
     // on the VmObject which is held by the dispatcher which matches |user_id|. Implementations
