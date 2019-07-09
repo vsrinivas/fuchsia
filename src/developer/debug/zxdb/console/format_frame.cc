@@ -12,7 +12,6 @@
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/format_value.h"
-#include "src/developer/debug/zxdb/console/format_value_process_context_impl.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
@@ -29,8 +28,7 @@ void ListCompletedFrames(Thread* thread, bool include_params, bool long_format) 
   Console* console = Console::get();
   int active_frame_id = console->context().GetActiveFrameIdForThread(thread);
 
-  auto helper = fxl::MakeRefCounted<FormatValue>(
-      std::make_unique<FormatValueProcessContextImpl>(thread->GetProcess()));
+  auto helper = fxl::MakeRefCounted<FormatValue>();
 
   // Formatting used for long format mode.
   FormatExprValueOptions format_options;
@@ -154,8 +152,7 @@ void FormatFrameLong(const Frame* frame, bool include_params, FormatValue* out,
 
 void FormatFrameAsync(ConsoleContext* context, Target* target, Thread* thread, Frame* frame,
                       bool force_types) {
-  auto helper =
-      fxl::MakeRefCounted<FormatValue>(std::make_unique<FormatValueProcessContextImpl>(target));
+  auto helper = fxl::MakeRefCounted<FormatValue>();
   FormatFrameLong(frame, force_types, helper.get(), FormatExprValueOptions(),
                   context->GetActiveFrameIdForThread(thread));
   helper->Complete([helper](OutputBuffer out) { Console::get()->Output(out); });

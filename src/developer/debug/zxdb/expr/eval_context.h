@@ -10,6 +10,7 @@
 #include "src/developer/debug/zxdb/expr/expr_language.h"
 #include "src/developer/debug/zxdb/expr/name_lookup.h"
 #include "src/developer/debug/zxdb/expr/parsed_identifier.h"
+#include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 
 namespace zxdb {
@@ -86,6 +87,9 @@ class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
   // It is assumed this callback is used for parsing and discarded rather than
   // stored since it may have references back the eval context.
   virtual NameLookupCallback GetSymbolNameLookupCallback() = 0;
+
+  // Returns a symbolized (if possible) location for the given address.
+  virtual Location GetLocationForAddress(uint64_t address) const = 0;
 };
 
 }  // namespace zxdb

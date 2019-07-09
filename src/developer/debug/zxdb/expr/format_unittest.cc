@@ -13,7 +13,10 @@
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/enumeration.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/function_type.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
+#include "src/developer/debug/zxdb/symbols/member_ptr.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 #include "src/developer/debug/zxdb/symbols/variant.h"
@@ -27,6 +30,7 @@ class FormatTest : public TestWithLoop {
  public:
   FormatTest() : eval_context_(fxl::MakeRefCounted<MockEvalContext>()) {}
 
+  fxl::RefPtr<MockEvalContext> eval_context() const { return eval_context_; }
   MockSymbolDataProvider* provider() { return eval_context_->data_provider(); }
 
   // Formats a given node synchronously.
@@ -779,6 +783,78 @@ TEST_F(FormatTest, NullptrT) {
 
   FormatExprValueOptions opts;
   EXPECT_EQ(" = nullptr_t, 0x0\n", SyncTreeTypeDesc(null_value, opts));
+}
+
+TEST_F(FormatTest, FunctionPtr) {
+  // This is a function type. There isn't a corresponding C/C++ type for a function type (without a
+  // pointer modifier) but we define it anyway in case it comes up (possibly another language).
+  auto func_type = fxl::MakeRefCounted<FunctionType>(LazySymbol(), std::vector<LazySymbol>());
+
+  // This type is "void (*)()"
+  auto func_ptr_type =
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(func_type));
+
+  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
+
+  auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+  function->set_assigned_name("MyFunc");
+
+  // Map the address to point to the function.
+  constexpr uint64_t kAddress = 0x1234;
+  eval_context()->AddLocation(kAddress, Location(kAddress, FileLine("file.cc", 21), 0,
+                                                 symbol_context, LazySymbol(function)));
+
+  // Function.
+  FormatExprValueOptions opts;
+  ExprValue null_func(func_type, {0, 0, 0, 0, 0, 0, 0, 0});
+  EXPECT_EQ(" = void(), 0x0\n", SyncTreeTypeDesc(null_func, opts));
+
+  // Null function pointer.
+  ExprValue null_ptr(func_ptr_type, {0, 0, 0, 0, 0, 0, 0, 0});
+  EXPECT_EQ(" = void (*)(), 0x0\n", SyncTreeTypeDesc(null_ptr, opts));
+
+  // Function pointer to unknown memory is printed in hex.
+  EXPECT_EQ(" = void (*)(), 0x5\n",
+            SyncTreeTypeDesc(ExprValue(func_ptr_type, {5, 0, 0, 0, 0, 0, 0, 0}), opts));
+
+  // Found symbol (matching kAddress) should be printed.
+  ExprValue good_ptr(func_ptr_type, {0x34, 0x12, 0, 0, 0, 0, 0, 0});
+  EXPECT_EQ(" = void (*)(), &MyFunc (0x1234)\n", SyncTreeTypeDesc(good_ptr, opts));
+
+  // Member function pointer. The type naming of function pointers is tested by
+  // the MemberPtr class, and otherwise the code paths are the same, so here
+  // we only need to verify things are hooked up.
+  auto containing = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType, "MyClass");
+
+  auto member_func = fxl::MakeRefCounted<MemberPtr>(LazySymbol(containing), LazySymbol(func_type));
+  ExprValue null_member_func_ptr(member_func, {0, 0, 0, 0, 0, 0, 0, 0});
+  EXPECT_EQ(" = void (MyClass::*)(), 0x0\n", SyncTreeTypeDesc(null_member_func_ptr, opts));
+
+  // Member function to a known symbol. This doesn't resolve to something that
+  // looks like a class member, but that's OK, wherever the address points to
+  // is what we print.
+  ExprValue good_member_func_ptr(member_func, {0x34, 0x12, 0, 0, 0, 0, 0, 0});
+  EXPECT_EQ(" = void (MyClass::*)(), &MyFunc (0x1234)\n",
+            SyncTreeTypeDesc(good_member_func_ptr, opts));
+}
+
+// This tests pointers to member data. Pointers to member functions were tested by the FunctionPtr
+// test.
+TEST_F(FormatTest, MemberPtr) {
+  auto containing = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType, "MyClass");
+
+  auto int32_type = MakeInt32Type();
+  auto member_int32 =
+      fxl::MakeRefCounted<MemberPtr>(LazySymbol(containing), LazySymbol(int32_type));
+
+  // Null pointer.
+  FormatExprValueOptions opts;
+  ExprValue null_member_ptr(member_int32, {0, 0, 0, 0, 0, 0, 0, 0});
+  EXPECT_EQ(" = int32_t MyClass::*, 0x0\n", SyncTreeTypeDesc(null_member_ptr, opts));
+
+  // Regular pointer.
+  ExprValue good_member_ptr(member_int32, {0x34, 0x12, 0, 0, 0, 0, 0, 0});
+  EXPECT_EQ(" = int32_t MyClass::*, 0x1234\n", SyncTreeTypeDesc(good_member_ptr, opts));
 }
 
 }  // namespace zxdb

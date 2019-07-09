@@ -133,8 +133,7 @@ bool IsPointerToFunction(const ModifiedType* pointer) {
 
 }  // namespace
 
-FormatValue::FormatValue(std::unique_ptr<ProcessContext> process_context)
-    : process_context_(std::move(process_context)), weak_factory_(this) {}
+FormatValue::FormatValue() : weak_factory_(this) {}
 FormatValue::~FormatValue() = default;
 
 void FormatValue::AppendValue(fxl::RefPtr<EvalContext> eval_context, const ExprValue& value,
@@ -234,7 +233,7 @@ void FormatValue::FormatExprValue(fxl::RefPtr<EvalContext> eval_context, const E
       case DwarfTag::kPointerType:
         // Function pointers need special handling.
         if (IsPointerToFunction(modified_type))
-          FormatFunctionPointer(value, options, &out);
+          FormatFunctionPointer(eval_context, value, options, &out);
         else
           FormatPointer(value, options, &out);
         break;
@@ -246,11 +245,11 @@ void FormatValue::FormatExprValue(fxl::RefPtr<EvalContext> eval_context, const E
     }
   } else if (const MemberPtr* member_ptr = type->AsMemberPtr()) {
     // Pointers to class/struct members.
-    FormatMemberPtr(value, member_ptr, options, &out);
+    FormatMemberPtr(eval_context, value, member_ptr, options, &out);
   } else if (const FunctionType* func = type->AsFunctionType()) {
     // Functions. These don't have a direct C++ equivalent without being
     // modified by a "pointer". Assume these act like pointers to functions.
-    FormatFunctionPointer(value, options, &out);
+    FormatFunctionPointer(eval_context, value, options, &out);
   } else if (const Enumeration* enum_type = type->AsEnumeration()) {
     // Enumerations.
     FormatEnum(value, enum_type, options, &out);
@@ -787,7 +786,8 @@ void FormatValue::FormatReference(fxl::RefPtr<EvalContext> eval_context, const E
       });
 }
 
-void FormatValue::FormatFunctionPointer(const ExprValue& value,
+void FormatValue::FormatFunctionPointer(fxl::RefPtr<EvalContext> eval_context,
+                                        const ExprValue& value,
                                         const FormatExprValueOptions& options, OutputBuffer* out) {
   // Unlike pointers, we don't print the type for function pointers. These
   // are usually very long and not very informative. If explicitly requested,
@@ -816,7 +816,7 @@ void FormatValue::FormatFunctionPointer(const ExprValue& value,
   }
 
   // Try to symbolize the function being pointed to.
-  Location loc = process_context_->GetLocationForAddress(address);
+  Location loc = eval_context->GetLocationForAddress(address);
   std::string function_name;
   if (loc.symbol()) {
     if (const Function* func = loc.symbol().Get()->AsFunction())
@@ -830,8 +830,9 @@ void FormatValue::FormatFunctionPointer(const ExprValue& value,
   }
 }
 
-void FormatValue::FormatMemberPtr(const ExprValue& value, const MemberPtr* type,
-                                  const FormatExprValueOptions& options, OutputBuffer* out) {
+void FormatValue::FormatMemberPtr(fxl::RefPtr<EvalContext> eval_context, const ExprValue& value,
+                                  const MemberPtr* type, const FormatExprValueOptions& options,
+                                  OutputBuffer* out) {
   const Type* container_type = type->container_type().Get()->AsType();
   const Type* pointed_to_type = type->member_type().Get()->AsType();
   if (!container_type || !pointed_to_type) {
@@ -842,7 +843,7 @@ void FormatValue::FormatMemberPtr(const ExprValue& value, const MemberPtr* type,
   if (const FunctionType* func = pointed_to_type->AsFunctionType()) {
     // Pointers to member functions can be handled just like regular function
     // pointers.
-    FormatFunctionPointer(value, options, out);
+    FormatFunctionPointer(eval_context, value, options, out);
   } else {
     // Pointers to everything else can be handled like normal pointers.
     FormatPointer(value, options, out);

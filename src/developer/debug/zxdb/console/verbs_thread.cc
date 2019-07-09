@@ -23,7 +23,6 @@
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/format_target.h"
 #include "src/developer/debug/zxdb/console/format_value.h"
-#include "src/developer/debug/zxdb/console/format_value_process_context_impl.h"
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
@@ -531,8 +530,7 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
-  auto helper = fxl::MakeRefCounted<FormatValue>(
-      std::make_unique<FormatValueProcessContextImpl>(cmd.target()));
+  auto helper = fxl::MakeRefCounted<FormatValue>();
   for (const auto& pair : vars) {
     helper->AppendVariable(location.symbol_context(), cmd.frame()->GetEvalContext(), pair.second,
                            options);
@@ -861,8 +859,7 @@ Err DoPrint(ConsoleContext* context, const Command& cmd) {
   // depending on whether there's a stopped thread, a process, or nothing.
   fxl::RefPtr<EvalContext> eval_context = GetEvalContextForCommand(cmd);
 
-  auto formatter = fxl::MakeRefCounted<FormatValue>(
-      std::make_unique<FormatValueProcessContextImpl>(cmd.target()));
+  auto formatter = fxl::MakeRefCounted<FormatValue>();
 
   FormatExprValueOptions options;
   Err err = GetFormatExprValueOptions(cmd, &options);

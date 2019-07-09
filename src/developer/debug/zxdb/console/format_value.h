@@ -53,19 +53,6 @@ class Variable;
 //   helper->Complete([helper](OutputBuffer out) { UseIt(out); });
 class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
  public:
-  // Abstract interface for looking up information about a process.
-  //
-  // It may be this can be folded into the EvalContext and this class
-  // removed.
-  class ProcessContext {
-   public:
-    virtual ~ProcessContext() = default;
-
-    // Given an address in the process, returns the (symbolized if possible)
-    // Location for that address.
-    virtual Location GetLocationForAddress(uint64_t address) const = 0;
-  };
-
   using Callback = std::function<void(OutputBuffer)>;
 
   // Construct with fxl::MakeRefCounted<FormatValue>().
@@ -157,7 +144,7 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   // keys (AppendToOutputKey, AsyncAppend, OutputKeyComplete).
   using OutputKey = intptr_t;
 
-  explicit FormatValue(std::unique_ptr<ProcessContext> process_context);
+  FormatValue();
   ~FormatValue();
 
   // Formats the given expression value to the output buffer. The variant that
@@ -216,10 +203,11 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
                      OutputBuffer* out);
   void FormatReference(fxl::RefPtr<EvalContext> eval_context, const ExprValue& value,
                        const FormatExprValueOptions& options, OutputKey output_key);
-  void FormatFunctionPointer(const ExprValue& value, const FormatExprValueOptions& options,
-                             OutputBuffer* out);
-  void FormatMemberPtr(const ExprValue& value, const MemberPtr* type,
-                       const FormatExprValueOptions& options, OutputBuffer* out);
+  void FormatFunctionPointer(fxl::RefPtr<EvalContext> eval_context, const ExprValue& value,
+                             const FormatExprValueOptions& options, OutputBuffer* out);
+  void FormatMemberPtr(fxl::RefPtr<EvalContext> eval_context, const ExprValue& value,
+                       const MemberPtr* type, const FormatExprValueOptions& options,
+                       OutputBuffer* out);
   void FormatZxStatusT(const ExprValue& value, const FormatExprValueOptions& options,
                        OutputKey output_key);
   void FormatRustEnum(fxl::RefPtr<EvalContext> eval_context, const ExprValue& value,
@@ -256,7 +244,6 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   // destructive.
   void RecursiveCollectOutput(OutputNode* node, OutputBuffer* out);
 
-  std::unique_ptr<ProcessContext> process_context_;
   Callback complete_callback_;
   std::vector<OutputBuffer> buffers_;
 

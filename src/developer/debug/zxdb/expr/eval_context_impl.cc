@@ -252,6 +252,17 @@ NameLookupCallback EvalContextImpl::GetSymbolNameLookupCallback() {
   };
 }
 
+Location EvalContextImpl::GetLocationForAddress(uint64_t address) const {
+  if (!process_symbols_)
+    return Location(Location::State::kAddress, address);  // Can't symbolize.
+
+  auto locations = process_symbols_->ResolveInputLocation(InputLocation(address));
+
+  // Given an exact address, ResolveInputLocation() should only return one result.
+  FXL_DCHECK(locations.size() == 1u);
+  return locations[0];
+}
+
 void EvalContextImpl::DoResolve(FoundName found, ValueCallback cb) const {
   if (found.kind() == FoundName::kVariable) {
     // Simple variable resolution.

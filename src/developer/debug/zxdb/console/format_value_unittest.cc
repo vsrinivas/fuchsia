@@ -6,7 +6,6 @@
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
-#include "src/developer/debug/zxdb/console/mock_format_value_process_context.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
@@ -45,7 +44,6 @@ class FormatValueTest : public TestWithLoop {
  public:
   FormatValueTest() : eval_context_(fxl::MakeRefCounted<MockEvalContext>()) {}
 
-  MockFormatValueProcessContext& process_context() { return process_context_; }
   fxl::RefPtr<MockEvalContext>& eval_context() { return eval_context_; }
   MockSymbolDataProvider* provider() { return eval_context_->data_provider(); }
 
@@ -54,10 +52,7 @@ class FormatValueTest : public TestWithLoop {
     bool called = false;
     std::string output;
 
-    // Makes a heap-allocated copy of the ProcessContext for the formatter to
-    // manage.
-    auto formatter = fxl::MakeRefCounted<FormatValue>(
-        std::make_unique<MockFormatValueProcessContext>(process_context_));
+    auto formatter = fxl::MakeRefCounted<FormatValue>();
 
     formatter->AppendValue(eval_context_, value, opts);
     formatter->Complete([&called, &output](OutputBuffer out) {
@@ -76,7 +71,6 @@ class FormatValueTest : public TestWithLoop {
   }
 
  private:
-  MockFormatValueProcessContext process_context_;
   fxl::RefPtr<MockEvalContext> eval_context_;
 };
 
@@ -625,7 +619,7 @@ TEST_F(FormatValueTest, FunctionPtr) {
 
   // Map the address to point to the function.
   constexpr uint64_t kAddress = 0x1234;
-  process_context().AddResult(kAddress, Location(kAddress, FileLine("file.cc", 21), 0,
+  eval_context()->AddLocation(kAddress, Location(kAddress, FileLine("file.cc", 21), 0,
                                                  symbol_context, LazySymbol(function)));
 
   // Function.

@@ -20,6 +20,7 @@
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/enumeration.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
+#include "src/developer/debug/zxdb/symbols/member_ptr.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/variant.h"
@@ -40,6 +41,13 @@ bool IsNumericBaseType(int base_type) {
          base_type == BaseType::kBaseTypeBoolean || base_type == BaseType::kBaseTypeFloat ||
          base_type == BaseType::kBaseTypeSignedChar ||
          base_type == BaseType::kBaseTypeUnsignedChar || base_type == BaseType::kBaseTypeUTF;
+}
+
+// Returns true if the given type (assumed to be a pointer) is a pointer to a function (but NOT a
+// member function).
+bool IsPointerToFunction(const ModifiedType* pointer) {
+  FXL_DCHECK(pointer->tag() == DwarfTag::kPointerType);
+  return !!pointer->modified().Get()->AsFunctionType();
 }
 
 // Appends the given byte to the destination, escaping as per C rules.
@@ -188,7 +196,6 @@ void FormatNumeric(FormatNode* node, const FormatExprValueOptions& options) {
     }
   }
 }
-
 void FormatZxStatusT(FormatNode* node, const FormatExprValueOptions& options) {
   FormatNumeric(node, options);
 
@@ -471,6 +478,66 @@ void FormatReference(FormatNode* node, const FormatExprValueOptions& options,
   node->children().push_back(std::move(deref_node));
 }
 
+void FormatFunctionPointer(FormatNode* node, const FormatExprValueOptions& options,
+                           fxl::RefPtr<EvalContext> eval_context) {
+  node->set_description_kind(FormatNode::kFunctionPointer);
+
+  Err err = node->value().EnsureSizeIs(kTargetPointerSize);
+  if (err.has_error()) {
+    node->set_err(err);
+    return;
+  }
+
+  TargetPointer address = node->value().GetAs<TargetPointer>();
+  if (address == 0) {
+    // Special-case null pointers. Don't bother trying to decode the address.
+    node->set_description("0x0");
+    return;
+  }
+
+  // Try to symbolize the function being pointed to.
+  Location loc = eval_context->GetLocationForAddress(address);
+  std::string function_name;
+  if (loc.symbol()) {
+    if (const Function* func = loc.symbol().Get()->AsFunction())
+      function_name = func->GetFullName();
+  }
+  if (function_name.empty()) {
+    // No function name, just print out the address.
+    node->set_description(fxl::StringPrintf("0x%" PRIx64, address));
+  } else {
+    node->set_description(fxl::StringPrintf("&%s (0x%" PRIx64 ")", function_name.c_str(), address));
+  }
+}
+
+void FormatMemberPtr(FormatNode* node, const MemberPtr* type, const FormatExprValueOptions& options,
+                     fxl::RefPtr<EvalContext> eval_context) {
+  const Type* container_type = type->container_type().Get()->AsType();
+  const Type* pointed_to_type = type->member_type().Get()->AsType();
+  if (!container_type || !pointed_to_type) {
+    node->set_err(Err("Missing symbol information."));
+    return;
+  }
+
+  if (const FunctionType* func = pointed_to_type->AsFunctionType()) {
+    // Pointers to member functions can be handled just like regular function pointers.
+    FormatFunctionPointer(node, options, eval_context);
+  } else {
+    // Pointers to data.
+    node->set_description_kind(FormatNode::kOther);
+    if (Err err = node->value().EnsureSizeIs(kTargetPointerSize); err.has_error()) {
+      node->set_err(err);
+      return;
+    }
+
+    // The address goes in the description.
+    //
+    // TODO(brettw) it would be nice if this iterrogated the type and figured out the name of the
+    // member being pointed to. The address is not very helpful.
+    node->set_description(fxl::StringPrintf("0x%" PRIx64, node->value().GetAs<TargetPointer>()));
+  }
+}
+
 // Sometimes we know the real length of the array as in c "char[12]" type. In this case the expanded
 // children should always include all elements, even if there is a null in the middle. This is what
 // length_was_known means. When unset we assume a guessed length (as in "char*"), stop at the first
@@ -732,11 +799,10 @@ void FillFormatNodeDescription(FormatNode* node, const FormatExprValueOptions& o
     switch (modified_type->tag()) {
       case DwarfTag::kPointerType:
         // Function pointers need special handling.
-        /* TODO(brettw) implement this.
         if (IsPointerToFunction(modified_type))
-          FormatFunctionPointer(value, options, &out);
-        else*/
-        FormatPointer(node, options, context);
+          FormatFunctionPointer(node, options, context);
+        else
+          FormatPointer(node, options, context);
         break;
       case DwarfTag::kReferenceType:
       case DwarfTag::kRvalueReferenceType:
@@ -750,6 +816,13 @@ void FillFormatNodeDescription(FormatNode* node, const FormatExprValueOptions& o
   } else if (IsNumericBaseType(node->value().GetBaseType())) {
     // Numeric types.
     FormatNumeric(node, options);
+  } else if (const MemberPtr* member_ptr = type->AsMemberPtr()) {
+    // Pointers to class/struct members.
+    FormatMemberPtr(node, member_ptr, options, context);
+  } else if (const FunctionType* func = type->AsFunctionType()) {
+    // Functions. These don't have a direct C++ equivalent without being
+    // modified by a "pointer". Assume these act like pointers to functions.
+    FormatFunctionPointer(node, options, context);
   } else if (const Enumeration* enum_type = type->AsEnumeration()) {
     // Enumerations.
     FormatEnum(node, enum_type, options);

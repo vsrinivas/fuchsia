@@ -37,11 +37,22 @@ class Variable;
 // any invalid context.
 class EvalContextImpl : public EvalContext {
  public:
-  // The ProcessSymbols can be a null weak pointer in which case globals will
-  // not be resolved (this can make testing easier).
+  // All of the input pointers can be null:
+  //
+  //  - The ProcessSymbols can be a null weak pointer in which case globals will not be resolved.
+  //    This can make testing easier and supports evaluating math without a loaded program.
+  //
+  //  - The SymbolDataProvider can be null in which case anything that requires memory from the
+  //    target will fail. Some operations like pure math don't require this.
+  //
+  //  - The code block can be null in which case nothing using the current scope will work. This
+  //    includes local variables, variables on "this", and things relative to the current namespace.
+  //
+  // The variant that takes a location will extract the code block from the location if possible.
   EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
                   const SymbolContext& symbol_context,
-                  fxl::RefPtr<SymbolDataProvider> data_provider, fxl::RefPtr<CodeBlock> code_block);
+                  fxl::RefPtr<SymbolDataProvider> data_provider,
+                  fxl::RefPtr<CodeBlock> code_block = fxl::RefPtr<CodeBlock>());
   EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
                   fxl::RefPtr<SymbolDataProvider> data_provider, const Location& location);
   ~EvalContextImpl() override;
@@ -54,6 +65,7 @@ class EvalContextImpl : public EvalContext {
   fxl::RefPtr<Type> GetConcreteType(const Type* type) const override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
   NameLookupCallback GetSymbolNameLookupCallback() override;
+  Location GetLocationForAddress(uint64_t address) const override;
 
  private:
   struct ResolutionState;

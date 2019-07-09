@@ -25,9 +25,12 @@ class MockEvalContext : public EvalContext {
   // Adds the given mocked variable with the given name and value.
   void AddVariable(const std::string& name, ExprValue v);
 
-  // Adds a definition for the given mocked type for returning from
-  // ResolveForwardDefinition() and GetConcreteType().
+  // Adds a definition for the given mocked type for returning from ResolveForwardDefinition() and
+  // GetConcreteType().
   void AddType(fxl::RefPtr<Type> type);
+
+  // Adds a location result for GetLocationForAddress().
+  void AddLocation(uint64_t address, Location location);
 
   // EvalContext implementation.
   ExprLanguage GetLanguage() const override { return language_; }
@@ -37,11 +40,13 @@ class MockEvalContext : public EvalContext {
   fxl::RefPtr<Type> GetConcreteType(const Type* type) const override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
   NameLookupCallback GetSymbolNameLookupCallback() override;
+  Location GetLocationForAddress(uint64_t address) const override;
 
  private:
   fxl::RefPtr<MockSymbolDataProvider> data_provider_;
   std::map<std::string, ExprValue> values_;
   std::map<std::string, fxl::RefPtr<Type>> types_;
+  std::map<uint64_t, Location> locations_;
   ExprLanguage language_ = ExprLanguage::kC;
 };
 

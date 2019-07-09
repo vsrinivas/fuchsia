@@ -20,6 +20,10 @@ void MockEvalContext::AddVariable(const std::string& name, ExprValue v) { values
 
 void MockEvalContext::AddType(fxl::RefPtr<Type> type) { types_[type->GetFullName()] = type; }
 
+void MockEvalContext::AddLocation(uint64_t address, Location location) {
+  locations_[address] = std::move(location);
+}
+
 // EvalContext implementation.
 void MockEvalContext::GetNamedValue(const ParsedIdentifier& ident, ValueCallback cb) const {
   // Can ignore the symbol output for this test, it's not needed by the
@@ -59,6 +63,13 @@ NameLookupCallback MockEvalContext::GetSymbolNameLookupCallback() {
     }
     return FoundName();
   };
+}
+
+Location MockEvalContext::GetLocationForAddress(uint64_t address) const {
+  auto found = locations_.find(address);
+  if (found == locations_.end())
+    return Location(Location::State::kAddress, address);
+  return found->second;
 }
 
 }  // namespace zxdb
