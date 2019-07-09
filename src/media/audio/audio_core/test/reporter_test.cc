@@ -4,20 +4,20 @@
 
 #include "src/media/audio/audio_core/reporter.h"
 
-#include <lib/inspect/testing/inspect.h>
+#include <lib/inspect_deprecated/testing/inspect.h>
 
 #include "lib/gtest/test_loop_fixture.h"
 #include "src/media/audio/audio_core/audio_device.h"
 
 namespace media::audio::test {
 
-using inspect::testing::ChildrenMatch;
-using inspect::testing::DoubleMetricIs;
-using inspect::testing::MetricList;
-using inspect::testing::NameMatches;
-using inspect::testing::NodeMatches;
-using inspect::testing::PropertyList;
-using inspect::testing::UIntMetricIs;
+using inspect_deprecated::testing::ChildrenMatch;
+using inspect_deprecated::testing::DoubleMetricIs;
+using inspect_deprecated::testing::MetricList;
+using inspect_deprecated::testing::NameMatches;
+using inspect_deprecated::testing::NodeMatches;
+using inspect_deprecated::testing::PropertyList;
+using inspect_deprecated::testing::UIntMetricIs;
 using testing::AllOf;
 using testing::IsEmpty;
 
@@ -28,19 +28,19 @@ class ReporterTest : public gtest::TestLoopFixture {
     under_test_.Init(component_context.get());
   }
 
-  inspect::ObjectHierarchy GetHierarchy() {
+  inspect_deprecated::ObjectHierarchy GetHierarchy() {
     zx::vmo duplicate;
     if (under_test_.tree().GetVmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate) != ZX_OK) {
-      return inspect::ObjectHierarchy();
+      return inspect_deprecated::ObjectHierarchy();
     }
 
-    auto ret = inspect::ReadFromVmo(std::move(duplicate));
+    auto ret = inspect_deprecated::ReadFromVmo(std::move(duplicate));
     EXPECT_TRUE(ret.is_ok());
     if (ret.is_ok()) {
       return ret.take_value();
     }
 
-    return inspect::ObjectHierarchy();
+    return inspect_deprecated::ObjectHierarchy();
   }
 
   Reporter under_test_;

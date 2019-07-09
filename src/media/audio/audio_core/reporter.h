@@ -6,7 +6,7 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_REPORTER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <lib/inspect/component.h>
+#include <lib/inspect_deprecated/component.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <unordered_map>
@@ -53,7 +53,7 @@ class Reporter {
  public:
   static Reporter& Singleton();
 
-  const inspect::Tree& tree() { return *inspector_->root_tree(); }
+  const inspect_deprecated::Tree& tree() { return *inspector_->root_tree(); }
 
   ////////////////////////////////////////////////////////////////////////////
   // The following methods are intended to be called using REP. For example:
@@ -111,40 +111,40 @@ class Reporter {
 
  private:
   struct Device {
-    Device(inspect::Node node) : node_(std::move(node)) {
+    Device(inspect_deprecated::Node node) : node_(std::move(node)) {
       gain_db_ = node_.CreateDoubleMetric("gain db", 0.0);
       muted_ = node_.CreateUIntMetric("muted", 0);
       agc_supported_ = node_.CreateUIntMetric("agc supported", 0);
       agc_enabled_ = node_.CreateUIntMetric("agc enabled", 0);
     }
-    inspect::Node node_;
-    inspect::DoubleMetric gain_db_;
-    inspect::UIntMetric muted_;
-    inspect::UIntMetric agc_supported_;
-    inspect::UIntMetric agc_enabled_;
+    inspect_deprecated::Node node_;
+    inspect_deprecated::DoubleMetric gain_db_;
+    inspect_deprecated::UIntMetric muted_;
+    inspect_deprecated::UIntMetric agc_supported_;
+    inspect_deprecated::UIntMetric agc_enabled_;
   };
 
   struct Output : public Device {
-    Output(inspect::Node node) : Device(std::move(node)) {}
+    Output(inspect_deprecated::Node node) : Device(std::move(node)) {}
   };
 
   struct Input : public Device {
-    Input(inspect::Node node) : Device(std::move(node)) {}
+    Input(inspect_deprecated::Node node) : Device(std::move(node)) {}
   };
 
   struct PayloadBuffer {
-    PayloadBuffer(inspect::Node node, uint64_t size) : node_(std::move(node)) {
+    PayloadBuffer(inspect_deprecated::Node node, uint64_t size) : node_(std::move(node)) {
       size_ = node_.CreateUIntMetric("size", size);
       packets_ = node_.CreateUIntMetric("packets", 0);
     }
 
-    inspect::Node node_;
-    inspect::UIntMetric size_;
-    inspect::UIntMetric packets_;
+    inspect_deprecated::Node node_;
+    inspect_deprecated::UIntMetric size_;
+    inspect_deprecated::UIntMetric packets_;
   };
 
   struct ClientPort {
-    ClientPort(inspect::Node node) : node_(std::move(node)) {
+    ClientPort(inspect_deprecated::Node node) : node_(std::move(node)) {
       sample_format_ = node_.CreateUIntMetric("sample format", 0);
       channels_ = node_.CreateUIntMetric("channels", 0);
       frames_per_second_ = node_.CreateUIntMetric("frames per second", 0);
@@ -153,34 +153,34 @@ class Reporter {
       muted_ = node_.CreateUIntMetric("muted", 0);
       set_gain_with_ramp_calls_ = node_.CreateUIntMetric("calls to SetGainWithRamp", 0);
     }
-    inspect::Node node_;
-    inspect::UIntMetric sample_format_;
-    inspect::UIntMetric channels_;
-    inspect::UIntMetric frames_per_second_;
+    inspect_deprecated::Node node_;
+    inspect_deprecated::UIntMetric sample_format_;
+    inspect_deprecated::UIntMetric channels_;
+    inspect_deprecated::UIntMetric frames_per_second_;
 
-    inspect::Node payload_buffers_node_;
+    inspect_deprecated::Node payload_buffers_node_;
     std::unordered_map<uint32_t, PayloadBuffer> payload_buffers_;
 
-    inspect::DoubleMetric gain_db_;
-    inspect::UIntMetric muted_;
+    inspect_deprecated::DoubleMetric gain_db_;
+    inspect_deprecated::UIntMetric muted_;
 
     // We're just counting these calls for now. |SetGainWithRamp| isn't
     // implemented and should never be called.
-    inspect::UIntMetric set_gain_with_ramp_calls_;
+    inspect_deprecated::UIntMetric set_gain_with_ramp_calls_;
   };
 
   struct Renderer : ClientPort {
-    Renderer(inspect::Node node) : ClientPort(std::move(node)) {
+    Renderer(inspect_deprecated::Node node) : ClientPort(std::move(node)) {
       min_clock_lead_time_ns_ = node_.CreateUIntMetric("min clock lead time (ns)", 0);
       pts_continuity_threshold_seconds_ =
           node_.CreateDoubleMetric("pts continuity threshold (s)", 0.0);
     }
-    inspect::UIntMetric min_clock_lead_time_ns_;
-    inspect::DoubleMetric pts_continuity_threshold_seconds_;
+    inspect_deprecated::UIntMetric min_clock_lead_time_ns_;
+    inspect_deprecated::DoubleMetric pts_continuity_threshold_seconds_;
   };
 
   struct Capturer : ClientPort {
-    Capturer(inspect::Node node) : ClientPort(std::move(node)) {}
+    Capturer(inspect_deprecated::Node node) : ClientPort(std::move(node)) {}
   };
 
   Device* FindOutput(const AudioDevice& device);
@@ -191,15 +191,15 @@ class Reporter {
   std::string NextCapturerName();
 
   sys::ComponentContext* component_context_ = nullptr;
-  std::shared_ptr<inspect::ComponentInspector> inspector_;
-  inspect::UIntMetric failed_to_open_device_count_;
-  inspect::UIntMetric failed_to_obtain_fdio_service_channel_count_;
-  inspect::UIntMetric failed_to_obtain_stream_channel_count_;
-  inspect::UIntMetric device_startup_failed_count_;
-  inspect::Node outputs_node_;
-  inspect::Node inputs_node_;
-  inspect::Node renderers_node_;
-  inspect::Node capturers_node_;
+  std::shared_ptr<inspect_deprecated::ComponentInspector> inspector_;
+  inspect_deprecated::UIntMetric failed_to_open_device_count_;
+  inspect_deprecated::UIntMetric failed_to_obtain_fdio_service_channel_count_;
+  inspect_deprecated::UIntMetric failed_to_obtain_stream_channel_count_;
+  inspect_deprecated::UIntMetric device_startup_failed_count_;
+  inspect_deprecated::Node outputs_node_;
+  inspect_deprecated::Node inputs_node_;
+  inspect_deprecated::Node renderers_node_;
+  inspect_deprecated::Node capturers_node_;
   std::unordered_map<const AudioDevice*, Output> outputs_;
   std::unordered_map<const AudioDevice*, Input> inputs_;
   std::unordered_map<const AudioRendererImpl*, Renderer> renderers_;

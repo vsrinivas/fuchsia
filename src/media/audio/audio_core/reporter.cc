@@ -22,8 +22,8 @@ void Reporter::Init(sys::ComponentContext* component_context) {
   FXL_DCHECK(!component_context_);
   component_context_ = component_context;
 
-  inspector_ = inspect::ComponentInspector::Initialize(component_context_);
-  inspect::Node& root_node = inspector_->root_tree()->GetRoot();
+  inspector_ = inspect_deprecated::ComponentInspector::Initialize(component_context_);
+  inspect_deprecated::Node& root_node = inspector_->root_tree()->GetRoot();
   failed_to_open_device_count_ = root_node.CreateUIntMetric("count of failures to open device", 0);
   failed_to_obtain_fdio_service_channel_count_ =
       root_node.CreateUIntMetric("count of failures to obtain device fdio service channel", 0);
