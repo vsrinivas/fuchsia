@@ -341,6 +341,9 @@ bool VulkanTest::Exec(VkFormat format, uint32_t width, bool direct, bool linear)
         status = sysmem_collection->SetConstraints(false, constraints);
     } else {
         constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageTransferDst;
+        // The total buffer count should be 1 with or without this set (because
+        // the Vulkan driver sets a minimum of one buffer).
+        constraints.min_buffer_count_for_camping = 1;
         status = sysmem_collection->SetConstraints(true, constraints);
     }
     if (status != ZX_OK) {
@@ -365,6 +368,8 @@ bool VulkanTest::Exec(VkFormat format, uint32_t width, bool direct, bool linear)
     if (status != ZX_OK) {
         return DRETF(false, "Close failed: %d", status);
     }
+
+    EXPECT_EQ(1u, buffer_collection_info.buffer_count);
     fuchsia::sysmem::PixelFormat pixel_format =
         buffer_collection_info.settings.image_format_constraints.pixel_format;
     DLOG("Allocated format %d has_modifier %d modifier %lx\n", pixel_format.type,

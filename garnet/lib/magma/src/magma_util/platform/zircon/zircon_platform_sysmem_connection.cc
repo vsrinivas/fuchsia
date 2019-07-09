@@ -119,7 +119,7 @@ public:
 
     ZirconPlatformBufferConstraints(const magma_buffer_format_constraints_t* constraints)
     {
-        constraints_.min_buffer_count_for_camping = constraints->count;
+        constraints_.min_buffer_count = constraints->count;
         // Ignore input usage
         fuchsia::sysmem::BufferUsage usage;
         usage.vulkan = fuchsia::sysmem::vulkanUsageTransientAttachment |

@@ -247,8 +247,7 @@ bool ImagePipeSurfaceDisplay::CreateImage(
     return false;
   }
   fuchsia::sysmem::BufferCollectionConstraints constraints{};
-  // Use - 1 because vulkan assumes it's allocating an image by default.
-  constraints.min_buffer_count_for_camping = image_count - 1;
+  constraints.min_buffer_count = image_count;
   // Used because every constraints need to have a usage.
   constraints.usage.display = fuchsia::sysmem::displayUsageLayer;
   status = sysmem_collection->SetConstraints(true, constraints);
