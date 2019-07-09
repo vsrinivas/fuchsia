@@ -242,9 +242,13 @@ bool Parse(const fidl::SourceFile& source_file, fidl::ErrorReporter* error_repor
   return true;
 }
 
-void Write(std::ostringstream output, std::fstream file) {
-  file << output.str();
+void Write(std::ostringstream output_stream, const std::string file_path) {
+  std::fstream file = Open(file_path, std::ios::out);
+  file << output_stream.str();
   file.flush();
+  if (file.fail()) {
+    Fail("Failed to flush output to file: %s\n", file_path.c_str());
+  }
 }
 
 }  // namespace
@@ -252,8 +256,7 @@ void Write(std::ostringstream output, std::fstream file) {
 // TODO(pascallouis): remove forward declaration, this was only introduced to
 // reduce diff size while breaking things up.
 int compile(fidl::ErrorReporter* error_reporter, fidl::flat::Typespace* typespace,
-            std::string library_name,
-            std::map<std::pair<Behavior, std::string>, std::fstream> outputs,
+            std::string library_name, std::vector<std::pair<Behavior, std::string>> outputs,
             std::vector<fidl::SourceManager> source_managers);
 
 int main(int argc, char* argv[]) {
@@ -286,7 +289,7 @@ int main(int argc, char* argv[]) {
   std::string library_name;
 
   bool warnings_as_errors = false;
-  std::map<std::pair<Behavior, std::string>, std::fstream> outputs;
+  std::vector<std::pair<Behavior, std::string>> outputs;
   while (args->Remaining()) {
     // Try to parse an output type.
     std::string behavior_argument = args->Claim();
@@ -301,19 +304,19 @@ int main(int argc, char* argv[]) {
       warnings_as_errors = true;
     } else if (behavior_argument == "--c-header") {
       std::string path = args->Claim();
-      outputs.emplace(std::make_pair(Behavior::kCHeader, path), Open(path, std::ios::out));
+      outputs.emplace_back(std::make_pair(Behavior::kCHeader, path));
     } else if (behavior_argument == "--c-client") {
       std::string path = args->Claim();
-      outputs.emplace(std::make_pair(Behavior::kCClient, path), Open(path, std::ios::out));
+      outputs.emplace_back(std::make_pair(Behavior::kCClient, path));
     } else if (behavior_argument == "--c-server") {
       std::string path = args->Claim();
-      outputs.emplace(std::make_pair(Behavior::kCServer, path), Open(path, std::ios::out));
+      outputs.emplace_back(std::make_pair(Behavior::kCServer, path));
     } else if (behavior_argument == "--tables") {
       std::string path = args->Claim();
-      outputs.emplace(std::make_pair(Behavior::kTables, path), Open(path, std::ios::out));
+      outputs.emplace_back(std::make_pair(Behavior::kTables, path));
     } else if (behavior_argument == "--json") {
       std::string path = args->Claim();
-      outputs.emplace(std::make_pair(Behavior::kJSON, path), Open(path, std::ios::out));
+      outputs.emplace_back(std::make_pair(Behavior::kJSON, path));
     } else if (behavior_argument == "--name") {
       library_name = args->Claim();
     } else if (behavior_argument == "--files") {
@@ -352,8 +355,7 @@ int main(int argc, char* argv[]) {
 }
 
 int compile(fidl::ErrorReporter* error_reporter, fidl::flat::Typespace* typespace,
-            std::string library_name,
-            std::map<std::pair<Behavior, std::string>, std::fstream> outputs,
+            std::string library_name, std::vector<std::pair<Behavior, std::string>> outputs,
             std::vector<fidl::SourceManager> source_managers) {
   fidl::flat::Libraries all_libraries;
   const fidl::flat::Library* final_library = nullptr;
@@ -409,33 +411,33 @@ int compile(fidl::ErrorReporter* error_reporter, fidl::flat::Typespace* typespac
   // We recompile dependencies, and only emit output for the final
   // library.
   for (auto& output : outputs) {
-    auto& behavior = output.first.first;
-    auto& output_file = output.second;
+    auto& behavior = output.first;
+    auto& file_path = output.second;
 
     switch (behavior) {
       case Behavior::kCHeader: {
         fidl::CGenerator generator(final_library);
-        Write(generator.ProduceHeader(), std::move(output_file));
+        Write(generator.ProduceHeader(), file_path);
         break;
       }
       case Behavior::kCClient: {
         fidl::CGenerator generator(final_library);
-        Write(generator.ProduceClient(), std::move(output_file));
+        Write(generator.ProduceClient(), file_path);
         break;
       }
       case Behavior::kCServer: {
         fidl::CGenerator generator(final_library);
-        Write(generator.ProduceServer(), std::move(output_file));
+        Write(generator.ProduceServer(), file_path);
         break;
       }
       case Behavior::kTables: {
         fidl::TablesGenerator generator(final_library);
-        Write(generator.Produce(), std::move(output_file));
+        Write(generator.Produce(), file_path);
         break;
       }
       case Behavior::kJSON: {
         fidl::JSONGenerator generator(final_library);
-        Write(generator.Produce(), std::move(output_file));
+        Write(generator.Produce(), file_path);
         break;
       }
     }
