@@ -230,7 +230,7 @@ pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: TimerId) {
 /// `Instant` can be implemented by any type which represents an instant in
 /// time. This can include any sort of real-world clock time (e.g.,
 /// [`std::time::Instant`]) or fake time such as in testing.
-pub trait Instant: Sized + Copy + Clone {
+pub trait Instant: Sized + Ord + Copy + Clone {
     /// Returns the amount of time elapsed from another instant to this one.
     ///
     /// # Panics

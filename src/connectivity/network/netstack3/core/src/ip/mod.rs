@@ -5,6 +5,7 @@
 //! The Internet Protocol, versions 4 and 6.
 
 mod forwarding;
+mod gmp;
 pub mod icmp;
 mod igmp;
 mod ipv6;

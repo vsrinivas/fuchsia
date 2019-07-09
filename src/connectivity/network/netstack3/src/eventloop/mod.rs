@@ -701,7 +701,7 @@ impl EventLoopInner {
 }
 
 /// A thin wrapper around `zx::Time` that implements `core::Instant`.
-#[derive(Copy, Clone)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
 struct ZxTime(zx::Time);
 
 impl netstack3_core::Instant for ZxTime {
