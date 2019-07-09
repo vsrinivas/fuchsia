@@ -158,7 +158,7 @@ protocol ViewContainer {
                            float32 height_change_factor);
 
     // Request the snapshot of the child view.
-    RequestSnapshotHACK(uint32 child_key)-> (fuchsia.mem.Buffer data);
+    RequestSnapshotHACK(uint32 child_key) -> (fuchsia.mem.Buffer data);
 };
 
 // An interface clients may implement to receive events from a view container.

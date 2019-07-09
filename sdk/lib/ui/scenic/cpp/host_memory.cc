@@ -13,8 +13,7 @@ namespace {
 
 // Returns true if a memory object is of an appropriate size to recycle.
 bool CanReuseMemory(const HostMemory& memory, size_t desired_size) {
-  return memory.data_size() >= desired_size &&
-         memory.data_size() <= desired_size * 2;
+  return memory.data_size() >= desired_size && memory.data_size() <= desired_size * 2;
 }
 
 std::pair<zx::vmo, std::shared_ptr<HostData>> AllocateMemory(size_t size) {
@@ -37,28 +36,22 @@ std::pair<zx::vmo, std::shared_ptr<HostData>> AllocateMemory(size_t size) {
 
 }  // namespace
 
-HostData::HostData(const zx::vmo& vmo, off_t offset, size_t size)
-    : size_(size) {
-  static const uint32_t flags =
-      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE;
+HostData::HostData(const zx::vmo& vmo, off_t offset, size_t size) : size_(size) {
+  static const uint32_t flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE;
   uintptr_t ptr;
-  zx_status_t status =
-      zx::vmar::root_self()->map(0, vmo, offset, size, flags, &ptr);
+  zx_status_t status = zx::vmar::root_self()->map(0, vmo, offset, size, flags, &ptr);
   ZX_ASSERT_MSG(status == ZX_OK, "map failed: status=%d", status);
   ptr_ = reinterpret_cast<void*>(ptr);
 }
 
 HostData::~HostData() {
-  zx_status_t status =
-      zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(ptr_), size_);
+  zx_status_t status = zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(ptr_), size_);
   ZX_ASSERT_MSG(status == ZX_OK, "unmap failed: status=%d", status);
 }
 
-HostMemory::HostMemory(Session* session, size_t size)
-    : HostMemory(session, AllocateMemory(size)) {}
+HostMemory::HostMemory(Session* session, size_t size) : HostMemory(session, AllocateMemory(size)) {}
 
-HostMemory::HostMemory(Session* session,
-                       std::pair<zx::vmo, std::shared_ptr<HostData>> init)
+HostMemory::HostMemory(Session* session, std::pair<zx::vmo, std::shared_ptr<HostData>> init)
     : Memory(session, std::move(init.first), init.second->size(),
              fuchsia::images::MemoryType::HOST_MEMORY),
       data_(std::move(init.second)) {}
@@ -68,19 +61,14 @@ HostMemory::HostMemory(HostMemory&& moved)
 
 HostMemory::~HostMemory() = default;
 
-HostImage::HostImage(const HostMemory& memory, off_t memory_offset,
-                     fuchsia::images::ImageInfo info)
-    : HostImage(memory.session(), memory.id(), memory_offset, memory.data(),
-                std::move(info)) {}
+HostImage::HostImage(const HostMemory& memory, off_t memory_offset, fuchsia::images::ImageInfo info)
+    : HostImage(memory.session(), memory.id(), memory_offset, memory.data(), std::move(info)) {}
 
 HostImage::HostImage(Session* session, uint32_t memory_id, off_t memory_offset,
-                     std::shared_ptr<HostData> data,
-                     fuchsia::images::ImageInfo info)
-    : Image(session, memory_id, memory_offset, std::move(info)),
-      data_(std::move(data)) {}
+                     std::shared_ptr<HostData> data, fuchsia::images::ImageInfo info)
+    : Image(session, memory_id, memory_offset, std::move(info)), data_(std::move(data)) {}
 
-HostImage::HostImage(HostImage&& moved)
-    : Image(std::move(moved)), data_(std::move(moved.data_)) {}
+HostImage::HostImage(HostImage&& moved) : Image(std::move(moved)), data_(std::move(moved.data_)) {}
 
 HostImage::~HostImage() = default;
 
@@ -131,12 +119,10 @@ const HostImage* HostImagePool::GetImage(uint32_t index) {
     return nullptr;
 
   if (!memory_ptrs_[index]) {
-    memory_ptrs_[index] =
-        std::make_unique<HostMemory>(session_, Image::ComputeSize(image_info_));
+    memory_ptrs_[index] = std::make_unique<HostMemory>(session_, Image::ComputeSize(image_info_));
   }
 
-  image_ptrs_[index] =
-      std::make_unique<HostImage>(*memory_ptrs_[index], 0u, image_info_);
+  image_ptrs_[index] = std::make_unique<HostImage>(*memory_ptrs_[index], 0u, image_info_);
   return image_ptrs_[index].get();
 }
 

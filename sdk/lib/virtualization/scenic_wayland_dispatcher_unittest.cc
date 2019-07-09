@@ -51,9 +51,7 @@ class FakeDispatcher : public fuchsia::virtualization::WaylandDispatcher,
 
  private:
   // |fuchsia::virtualization::WaylandDispatcher|
-  void OnNewConnection(zx::channel channel) {
-    connections_.push_back(std::move(channel));
-  }
+  void OnNewConnection(zx::channel channel) { connections_.push_back(std::move(channel)); }
 
   sys::testing::FakeComponent component_;
   fidl::BindingSet<fuchsia::virtualization::WaylandDispatcher> bindings_;
@@ -67,10 +65,8 @@ class ScenicWaylandDispatcherTest : public gtest::TestLoopFixture {
   void SetUp() override {
     TestLoopFixture::SetUp();
     dispatcher_.reset(new ScenicWaylandDispatcher(
-        provider_.context(),
-        fit::bind_member(this, &ScenicWaylandDispatcherTest::OnNewView)));
-    provider_.service_directory_provider()->AddService(
-        fake_launcher_.GetHandler());
+        provider_.context(), fit::bind_member(this, &ScenicWaylandDispatcherTest::OnNewView)));
+    provider_.service_directory_provider()->AddService(fake_launcher_.GetHandler());
 
     fake_dispatcher_impl_.reset(new FakeDispatcher());
     fake_dispatcher_impl_->Register(fake_launcher_);
@@ -80,12 +76,8 @@ class ScenicWaylandDispatcherTest : public gtest::TestLoopFixture {
 
  protected:
   ScenicWaylandDispatcher* dispatcher() const { return dispatcher_.get(); }
-  FakeDispatcher* remote_dispatcher() const {
-    return fake_dispatcher_impl_.get();
-  }
-  std::vector<fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>>* views() {
-    return &views_;
-  }
+  FakeDispatcher* remote_dispatcher() const { return fake_dispatcher_impl_.get(); }
+  std::vector<fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>>* views() { return &views_; }
 
  private:
   void OnNewView(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view) {

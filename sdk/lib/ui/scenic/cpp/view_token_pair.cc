@@ -10,8 +10,8 @@ namespace scenic {
 ViewTokenPair ViewTokenPair::New() {
   ViewTokenPair token_pair;
 
-  auto status = zx::eventpair::create(0u, &token_pair.view_token.value,
-                                      &token_pair.view_holder_token.value);
+  auto status =
+      zx::eventpair::create(0u, &token_pair.view_token.value, &token_pair.view_holder_token.value);
   // Assert even in non-debug builds, because eventpair creation can fail under
   // normal operation.  Failure can occur for example, if the job creation
   // policy governing this process forbids eventpair creation.

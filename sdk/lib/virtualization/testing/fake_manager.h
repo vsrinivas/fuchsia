@@ -29,30 +29,23 @@ class FakeManager : public fuchsia::virtualization::Manager,
 
  private:
   // |fuchsia::virtualization::Manager|
-  void Create(
-      fidl::StringPtr label,
-      fidl::InterfaceRequest<fuchsia::virtualization::Realm> env) override;
+  void Create(fidl::StringPtr label,
+              fidl::InterfaceRequest<fuchsia::virtualization::Realm> env) override;
   void List(ListCallback callback) override;
-  void Connect(
-      uint32_t id,
-      fidl::InterfaceRequest<fuchsia::virtualization::Realm> env) override;
+  void Connect(uint32_t id, fidl::InterfaceRequest<fuchsia::virtualization::Realm> env) override;
 
   // |fuchsia::virtualization::Realm|
-  void LaunchInstance(
-      fuchsia::virtualization::LaunchInfo launch_info,
-      fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
-      LaunchInstanceCallback callback) override;
+  void LaunchInstance(fuchsia::virtualization::LaunchInfo launch_info,
+                      fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
+                      LaunchInstanceCallback callback) override;
   void ListInstances(ListInstancesCallback callback) override;
-  void ConnectToInstance(uint32_t id,
-                         fidl::InterfaceRequest<fuchsia::virtualization::Guest>
-                             controller) override;
+  void ConnectToInstance(
+      uint32_t id, fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller) override;
   void ConnectToBalloon(
       uint32_t id,
-      fidl::InterfaceRequest<fuchsia::virtualization::BalloonController>
-          controller) override;
+      fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> controller) override;
   void GetHostVsockEndpoint(
-      fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint>
-          endpoint) override;
+      fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint) override;
 
   // |fuchsia::virtualization::Guest|
   void GetSerial(GetSerialCallback callback) override;

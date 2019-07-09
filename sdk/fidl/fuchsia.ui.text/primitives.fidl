@@ -16,7 +16,7 @@ library fuchsia.ui.text;
 /// become invalid. TextField should take care never reuse position IDs, even across
 /// revisions.
 struct Position {
-  uint64 id;
+    uint64 id;
 };
 
 /// A selection is the current range of the text that is selected by the user,
@@ -29,9 +29,9 @@ struct Position {
 /// of selections flip directions when crossing the RTL/LTR boundary, but no
 /// special code is needed to handle crossing the boundary in the model.
 struct Selection {
-  Range range;
-  SelectionAnchor anchor;
-  Affinity affinity;
+    Range range;
+    SelectionAnchor anchor;
+    Affinity affinity;
 };
 
 /// Selection anchor states which edge of the selection is the anchor, and which
@@ -39,8 +39,8 @@ struct Selection {
 /// dragging across some text to select it, the anchor is the edge that stays in
 /// place, and the focus is the edge that moves around.
 enum SelectionAnchor {
-  ANCHORED_AT_START = 1;
-  ANCHORED_AT_END = 2;
+    ANCHORED_AT_START = 1;
+    ANCHORED_AT_END = 2;
 };
 
 /// A range is the grapheme clusters between `start` and `end`. When sending
@@ -48,8 +48,8 @@ enum SelectionAnchor {
 /// `end`. However, when receiving ranges from clients, it should accept
 /// `start` and `end` in any order.
 struct Range {
-  Position start;
-  Position end;
+    Position start;
+    Position end;
 };
 
 /// Whether a Position is visually upstream or downstream when ambiguous.
@@ -59,6 +59,6 @@ struct Range {
 /// (at the start of the second line). A text affinity disambiguates between those
 /// cases. (Something similar happens with between runs of bidirectional text.)
 enum Affinity {
-  UPSTREAM = 0;
-  DOWNSTREAM = 1;
+    UPSTREAM = 0;
+    DOWNSTREAM = 1;
 };

@@ -8,8 +8,7 @@
 namespace guest {
 namespace testing {
 
-zx_status_t FakeGuestVsock::ConnectToHost(uint32_t port,
-                                          ConnectCallback callback) {
+zx_status_t FakeGuestVsock::ConnectToHost(uint32_t port, ConnectCallback callback) {
   return host_vsock_->AcceptConnectionFromGuest(port, std::move(callback));
 }
 

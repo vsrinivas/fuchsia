@@ -17,21 +17,17 @@ namespace guest {
 // wayland shell surface.
 //
 // This class is not thread-safe.
-class ScenicWaylandDispatcher
-    : public fuchsia::virtualization::WaylandDispatcher {
+class ScenicWaylandDispatcher : public fuchsia::virtualization::WaylandDispatcher {
  public:
-  using ViewListener = fit::function<void(
-      fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>)>;
+  using ViewListener = fit::function<void(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>)>;
 
-  ScenicWaylandDispatcher(sys::ComponentContext* context,
-                          ViewListener listener = nullptr)
+  ScenicWaylandDispatcher(sys::ComponentContext* context, ViewListener listener = nullptr)
       : context_(context), listener_(std::move(listener)){};
 
   // |fuchsia::virtualization::WaylandDispatcher|
   void OnNewConnection(zx::channel channel);
 
-  fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher>
-  NewBinding() {
+  fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher> NewBinding() {
     return bindings_.NewBinding();
   }
 

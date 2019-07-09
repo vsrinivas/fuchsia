@@ -371,10 +371,8 @@ enum Key : uint32 {
     /// Corresponds to USB HID page 0x0007 usage 0x00e7
     RIGHT_META = 0x00000058;
 
-
     // Keypad keys
     // Reserved range: 0x00000200 - 0x000002ff
-
 
     /// Keypad Num Lock and Clear
     /// Corresponds to USB HID page 0x0007 usage 0x0053
@@ -444,10 +442,8 @@ enum Key : uint32 {
     /// Corresponds to USB HID page 0x0007 usage 0x0063
     KEYPAD_DOT = 0x00000210;
 
-
     // Media keys
     // Reserved range: 0x00000300 - 0x000004ff
-
 
     // Mute
     // Corresponds to USB HID page 0x000c usage 0x00e2
@@ -461,9 +457,7 @@ enum Key : uint32 {
     // Corresponds to USB HID page 0x000c usage 0x00ea
     MEDIA_VOLUME_DECREMENT = 0x00000302;
 
-
     // Next available range: 0x00000500
-
 
     // TODO: Define additional USB HID keys as needed.
     //

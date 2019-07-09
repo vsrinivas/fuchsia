@@ -11,13 +11,13 @@ using fuchsia.ui.text;
 /// RunTest should contain a fresh TextField handle that points to an empty text field.
 [Discoverable]
 protocol TextFieldTestSuite {
-  RunTest(fuchsia.ui.text.TextField field, uint64 test_id) -> (bool passed, string message);
-  ListTests() -> (vector<TestInfo> results);
+    RunTest(fuchsia.ui.text.TextField field, uint64 test_id) -> (bool passed, string message);
+    ListTests() -> (vector<TestInfo> results);
 };
 
 /// Indicates if the tests passed, and a human-readable message indicating test failures
 /// if not.
 struct TestInfo {
-  uint64 id;
-  string name;
+    uint64 id;
+    string name;
 };

@@ -12,6 +12,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 #include <lib/zx/event.h>
+
 #include <utility>
 
 namespace scenic {
@@ -31,18 +32,16 @@ class Session : private fuchsia::ui::scenic::SessionListener {
  public:
   // Provides timing information about a presentation request which has
   // been applied by the scene manager.
-  using PresentCallback =
-      fit::function<void(fuchsia::images::PresentationInfo info)>;
+  using PresentCallback = fit::function<void(fuchsia::images::PresentationInfo info)>;
 
   // Called when session events are received.
-  using EventHandler =
-      fit::function<void(std::vector<fuchsia::ui::scenic::Event>)>;
+  using EventHandler = fit::function<void(std::vector<fuchsia::ui::scenic::Event>)>;
 
   // Wraps the provided session and session listener.
   // The listener is optional.
-  explicit Session(fuchsia::ui::scenic::SessionPtr session,
-                   fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener>
-                       session_listener = nullptr);
+  explicit Session(
+      fuchsia::ui::scenic::SessionPtr session,
+      fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener> session_listener = nullptr);
 
   // Creates a new session using the provided Scenic and binds the listener to
   // this object. The Scenic itself is not retained after construction.
@@ -62,9 +61,7 @@ class Session : private fuchsia::ui::scenic::SessionListener {
   }
 
   // Sets a callback which is invoked when events are received.
-  void set_event_handler(EventHandler event_handler) {
-    event_handler_ = std::move(event_handler);
-  }
+  void set_event_handler(EventHandler event_handler) { event_handler_ = std::move(event_handler); }
 
   // Gets a pointer to the underlying session interface.
   fuchsia::ui::scenic::Session* session() { return session_.get(); }

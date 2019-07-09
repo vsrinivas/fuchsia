@@ -14,10 +14,10 @@ using fuchsia.ui.input2;
 [Discoverable]
 protocol Manager {
 
-  /// Detect shortcuts and notify clients of activations.
-  /// Returns true if shortcut was matched and client handled it, false otherwise.
-  HandleKeyEvent(fuchsia.ui.input2.KeyEvent event) -> (bool was_handled);
+    /// Detect shortcuts and notify clients of activations.
+    /// Returns true if shortcut was matched and client handled it, false otherwise.
+    HandleKeyEvent(fuchsia.ui.input2.KeyEvent event) -> (bool was_handled);
 
-  // TODO: implement when the design is approved.
-  // HandleFocusChange(FocusChain focus) -> ();
+    // TODO: implement when the design is approved.
+    // HandleFocusChange(FocusChain focus) -> ();
 };

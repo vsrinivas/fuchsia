@@ -17,16 +17,15 @@ TEST(ViewTokenPairTest, ViewTokensAreRelated) {
 
   // Get info about the |view_token|.
   zx_info_handle_basic_t view_info;
-  zx_status_t view_status =
-      zx_object_get_info(view_token.value.get(), ZX_INFO_HANDLE_BASIC,
-                         &view_info, sizeof(view_info), nullptr, nullptr);
+  zx_status_t view_status = zx_object_get_info(view_token.value.get(), ZX_INFO_HANDLE_BASIC,
+                                               &view_info, sizeof(view_info), nullptr, nullptr);
   EXPECT_EQ(view_status, ZX_OK);
 
   // Get info about the |view_holder_token|.
   zx_info_handle_basic_t view_holder_info;
-  zx_status_t view_holder_status = zx_object_get_info(
-      view_holder_token.value.get(), ZX_INFO_HANDLE_BASIC, &view_holder_info,
-      sizeof(view_holder_info), nullptr, nullptr);
+  zx_status_t view_holder_status =
+      zx_object_get_info(view_holder_token.value.get(), ZX_INFO_HANDLE_BASIC, &view_holder_info,
+                         sizeof(view_holder_info), nullptr, nullptr);
   EXPECT_EQ(view_holder_status, ZX_OK);
 
   // The tokens' koids should always be related.

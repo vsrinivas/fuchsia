@@ -10,9 +10,8 @@ namespace scenic {
 ViewRefPair ViewRefPair::New() {
   ViewRefPair ref_pair;
 
-  auto status =
-      zx::eventpair::create(/*options*/ 0u, &ref_pair.control_ref.reference,
-                            &ref_pair.view_ref.reference);
+  auto status = zx::eventpair::create(/*options*/ 0u, &ref_pair.control_ref.reference,
+                                      &ref_pair.view_ref.reference);
   // Assert even in non-debug builds, because eventpair creation can fail under
   // normal operation.  Failure can occur for example, if the job creation
   // policy governing this process forbids eventpair creation.
@@ -22,8 +21,7 @@ ViewRefPair ViewRefPair::New() {
   ZX_ASSERT(status == ZX_OK);
 
   // Remove signaling from view_ref; Scenic requires it.
-  ref_pair.view_ref.reference.replace(ZX_RIGHTS_BASIC,
-                                      &ref_pair.view_ref.reference);
+  ref_pair.view_ref.reference.replace(ZX_RIGHTS_BASIC, &ref_pair.view_ref.reference);
   return ref_pair;
 }
 

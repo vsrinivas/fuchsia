@@ -17,8 +17,7 @@ void ScenicWaylandDispatcher::OnNewConnection(zx::channel channel) {
   GetOrStartBridge()->OnNewConnection(std::move(channel));
 }
 
-fuchsia::virtualization::WaylandDispatcher*
-ScenicWaylandDispatcher::GetOrStartBridge() {
+fuchsia::virtualization::WaylandDispatcher* ScenicWaylandDispatcher::GetOrStartBridge() {
   if (!dispatcher_) {
     // Launch the bridge process.
     zx::channel request;
@@ -27,21 +26,17 @@ ScenicWaylandDispatcher::GetOrStartBridge() {
         .url = kWaylandDispatcherPackage,
         .directory_request = std::move(request),
     };
-    ConnectToLauncher()->CreateComponent(std::move(launch_info),
-                                         bridge_.NewRequest());
+    ConnectToLauncher()->CreateComponent(std::move(launch_info), bridge_.NewRequest());
     // If we hit an error just close the bridge. It will get relaunched in
     // response to the next new connection.
-    bridge_.set_error_handler(
-        fit::bind_member(this, &ScenicWaylandDispatcher::Reset));
-    dispatcher_.set_error_handler(
-        fit::bind_member(this, &ScenicWaylandDispatcher::Reset));
+    bridge_.set_error_handler(fit::bind_member(this, &ScenicWaylandDispatcher::Reset));
+    dispatcher_.set_error_handler(fit::bind_member(this, &ScenicWaylandDispatcher::Reset));
 
     // Connect to the |WaylandDispatcher| FIDL interface and forward the
     // channel along.
     services->Connect(dispatcher_.NewRequest());
     services->Connect(view_producer_.NewRequest());
-    view_producer_.events().OnNewView =
-        fit::bind_member(this, &ScenicWaylandDispatcher::OnNewView);
+    view_producer_.events().OnNewView = fit::bind_member(this, &ScenicWaylandDispatcher::OnNewView);
   }
 
   return dispatcher_.get();

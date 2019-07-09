@@ -64,8 +64,7 @@ class HostMemory final : public Memory {
   void* data_ptr() const { return data_->ptr(); }
 
  private:
-  explicit HostMemory(Session* session,
-                      std::pair<zx::vmo, std::shared_ptr<HostData>> init);
+  explicit HostMemory(Session* session, std::pair<zx::vmo, std::shared_ptr<HostData>> init);
 
   std::shared_ptr<HostData> data_;
 };
@@ -77,8 +76,7 @@ class HostMemory final : public Memory {
 // constructor.
 class HostImage final : public Image {
  public:
-  HostImage(const HostMemory& memory, off_t memory_offset,
-            fuchsia::images::ImageInfo info);
+  HostImage(const HostMemory& memory, off_t memory_offset, fuchsia::images::ImageInfo info);
   HostImage(Session* session, uint32_t memory_id, off_t memory_offset,
             std::shared_ptr<HostData> data, fuchsia::images::ImageInfo info);
   HostImage(HostImage&& moved);
@@ -91,9 +89,7 @@ class HostImage final : public Image {
   const std::shared_ptr<HostData>& data() const { return data_; }
 
   // Gets a pointer to the image data.
-  void* image_ptr() const {
-    return static_cast<uint8_t*>(data_->ptr()) + memory_offset();
-  }
+  void* image_ptr() const { return static_cast<uint8_t*>(data_->ptr()) + memory_offset(); }
 
  private:
   std::shared_ptr<HostData> data_;

@@ -10,16 +10,14 @@
 namespace scenic {
 namespace mesh_utils {
 
-std::unique_ptr<Mesh> NewMeshWithVertices(
-    Session* session, const std::vector<float>& vertices,
-    const std::vector<uint32_t>& indices) {
+std::unique_ptr<Mesh> NewMeshWithVertices(Session* session, const std::vector<float>& vertices,
+                                          const std::vector<uint32_t>& indices) {
   auto mesh = std::make_unique<Mesh>(session);
 
   ZX_DEBUG_ASSERT(vertices.size() % 3 == 0);
   const uint64_t num_vertices = vertices.size() / 3;
 
-  ZX_DEBUG_ASSERT(*std::max_element(indices.begin(), indices.end()) <
-                  num_vertices);
+  ZX_DEBUG_ASSERT(*std::max_element(indices.begin(), indices.end()) < num_vertices);
 
   // TODO(SCN-558) vertex_elements should be 3.
   uint64_t vertex_elements = 5;
@@ -54,14 +52,13 @@ std::unique_ptr<Mesh> NewMeshWithVertices(
   status = vmo.write(indices.data(), vertex_buffer_size, index_buffer_size);
   ZX_DEBUG_ASSERT(status == ZX_OK);
 
-  Memory mem(session, std::move(vmo), vmo_size,
-             fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
+  Memory mem(session, std::move(vmo), vmo_size, fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
   Buffer vertex_buffer(mem, 0, vertex_buffer_size);
   Buffer index_buffer(mem, vertex_buffer_size, index_buffer_size);
 
-  auto vertex_format = NewMeshVertexFormat(
-      fuchsia::ui::gfx::ValueType::kVector3, fuchsia::ui::gfx::ValueType::kNone,
-      fuchsia::ui::gfx::ValueType::kVector2);
+  auto vertex_format =
+      NewMeshVertexFormat(fuchsia::ui::gfx::ValueType::kVector3, fuchsia::ui::gfx::ValueType::kNone,
+                          fuchsia::ui::gfx::ValueType::kVector2);
 
   // Compute bounding box.
   std::vector<float> bounding_box_min;
@@ -83,10 +80,9 @@ std::unique_ptr<Mesh> NewMeshWithVertices(
   }
 
   // Bind buffers.
-  mesh->BindBuffers(index_buffer, fuchsia::ui::gfx::MeshIndexFormat::kUint32, 0,
-                    indices.size(), vertex_buffer, std::move(vertex_format), 0,
-                    num_vertices, bounding_box_min.data(),
-                    bounding_box_max.data());
+  mesh->BindBuffers(index_buffer, fuchsia::ui::gfx::MeshIndexFormat::kUint32, 0, indices.size(),
+                    vertex_buffer, std::move(vertex_format), 0, num_vertices,
+                    bounding_box_min.data(), bounding_box_max.data());
   return mesh;
 }
 

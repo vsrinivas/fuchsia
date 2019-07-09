@@ -15,14 +15,14 @@ enum KeyEventPhase {
 
 /// Keyboard event is generated to reflect key input.
 table KeyEvent {
-  /// Physical key being pressed.
-  ///
-  /// Keyboard layout is applied (QWERTY/AZERTY/Dvorak/etc).
-  1: Key key;
+    /// Physical key being pressed.
+    ///
+    /// Keyboard layout is applied (QWERTY/AZERTY/Dvorak/etc).
+    1: Key key;
 
-  /// Phase of input.
-  2: KeyEventPhase phase;
+    /// Phase of input.
+    2: KeyEventPhase phase;
 
-  /// Modifier keys being held.
-  3: Modifiers modifiers;
+    /// Modifier keys being held.
+    3: Modifiers modifiers;
 };

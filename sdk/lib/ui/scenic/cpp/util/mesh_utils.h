@@ -14,8 +14,7 @@ namespace mesh_utils {
 // contain exactly 3 floats per vertex specifying the vertex position and
 // indices must contain 3 uint32_t's per primitive.
 // This method may perform poorly on very large meshes so use with care.
-std::unique_ptr<Mesh> NewMeshWithVertices(Session* session,
-                                          const std::vector<float>& vertices,
+std::unique_ptr<Mesh> NewMeshWithVertices(Session* session, const std::vector<float>& vertices,
                                           const std::vector<uint32_t>& indices);
 
 }  // namespace mesh_utils

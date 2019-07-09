@@ -10,25 +10,22 @@
 namespace guest {
 namespace testing {
 
-void FakeManager::Create(
-    fidl::StringPtr label,
-    fidl::InterfaceRequest<fuchsia::virtualization::Realm> request) {
+void FakeManager::Create(fidl::StringPtr label,
+                         fidl::InterfaceRequest<fuchsia::virtualization::Realm> request) {
   FXL_CHECK(!realm_binding_.is_bound()) << "Realm is already bound";
   realm_binding_.Bind(std::move(request));
 }
 
-void FakeManager::LaunchInstance(
-    fuchsia::virtualization::LaunchInfo launch_info,
-    fidl::InterfaceRequest<fuchsia::virtualization::Guest> request,
-    LaunchInstanceCallback callback) {
+void FakeManager::LaunchInstance(fuchsia::virtualization::LaunchInfo launch_info,
+                                 fidl::InterfaceRequest<fuchsia::virtualization::Guest> request,
+                                 LaunchInstanceCallback callback) {
   FXL_CHECK(!guest_binding_.is_bound()) << "Guest is already bound";
   guest_binding_.Bind(std::move(request));
   callback(kGuestCid);
 }
 
 void FakeManager::GetHostVsockEndpoint(
-    fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint>
-        request) {
+    fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> request) {
   host_vsock_.AddBinding(std::move(request));
 }
 
@@ -46,8 +43,7 @@ void FakeManager::List(ListCallback callback) {
   callback({});
 }
 
-void FakeManager::Connect(
-    uint32_t id, fidl::InterfaceRequest<fuchsia::virtualization::Realm> env) {
+void FakeManager::Connect(uint32_t id, fidl::InterfaceRequest<fuchsia::virtualization::Realm> env) {
   FXL_CHECK(false) << "Manager::Connect is not supported by "
                       "FakeManager";
 }
@@ -59,16 +55,13 @@ void FakeManager::ListInstances(ListInstancesCallback callback) {
 }
 
 void FakeManager::ConnectToInstance(
-    uint32_t id,
-    fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller) {
+    uint32_t id, fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller) {
   FXL_CHECK(false) << "Realm::ConnectToInstance is not "
                       "supported by FakeManager";
 }
 
 void FakeManager::ConnectToBalloon(
-    uint32_t id,
-    fidl::InterfaceRequest<fuchsia::virtualization::BalloonController>
-        controller) {
+    uint32_t id, fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> controller) {
   FXL_CHECK(false) << "Realm::ConnectToBalloon is not "
                       "supported by FakeManager";
 }

@@ -12,17 +12,17 @@ library fuchsia.ui.input;
 /// affinity disambiguates between those cases. (Something similar happens with
 /// between runs of bidirectional text.)
 enum TextAffinity {
-  /// The position has affinity for the upstream side of the text position.
-  ///
-  /// For example, if the offset of the text position is a line break, the
-  /// position represents the end of the first line.
-  UPSTREAM = 0;
+    /// The position has affinity for the upstream side of the text position.
+    ///
+    /// For example, if the offset of the text position is a line break, the
+    /// position represents the end of the first line.
+    UPSTREAM = 0;
 
-  /// The position has affinity for the downstream side of the text position.
-  ///
-  /// For example, if the offset of the text position is a line break, the
-  /// position represents the start of the second line.
-  DOWNSTREAM = 1;
+    /// The position has affinity for the downstream side of the text position.
+    ///
+    /// For example, if the offset of the text position is a line break, the
+    /// position represents the start of the second line.
+    DOWNSTREAM = 1;
 };
 
 /// A range of characters in a string of text. Although strings in FIDL's wire
@@ -30,15 +30,15 @@ enum TextAffinity {
 /// for legacy reasons. These text input APIs will eventually be replaced by
 /// fuchsia.ui.text, which uses code points instead.
 struct TextRange {
-  /// The index of the first UTF-16 code unit in the range.
-  ///
-  /// If `start` and `end` are both -1, the text range is empty.
-  int64 start = -1;
+    /// The index of the first UTF-16 code unit in the range.
+    ///
+    /// If `start` and `end` are both -1, the text range is empty.
+    int64 start = -1;
 
-  /// The next index after the last UTF-16 code unit in this range.
-  ///
-  /// If `start` and `end` are both -1, the text range is empty.
-  int64 end = -1;
+    /// The next index after the last UTF-16 code unit in this range.
+    ///
+    /// If `start` and `end` are both -1, the text range is empty.
+    int64 end = -1;
 };
 
 /// A range of text that represents a selection. Although strings in FIDL's wire
@@ -49,22 +49,22 @@ struct TextRange {
 /// Text selection is always directional. Direction should be determined by
 /// comparing base and extent.
 struct TextSelection {
-  /// The offset at which the selection originates, as measured in UTF-16 code units.
-  ///
-  /// Might be larger than, smaller than, or equal to extent.
-  int64 base;
+    /// The offset at which the selection originates, as measured in UTF-16 code units.
+    ///
+    /// Might be larger than, smaller than, or equal to extent.
+    int64 base;
 
-  /// The offset at which the selection terminates, as measured in UTF-16 code units.
-  ///
-  /// When the user uses the arrow keys to adjust the selection, this is the
-  /// value that changes. Similarly, if the current theme paints a caret on one
-  /// side of the selection, this is the location at which to paint the caret.
-  ///
-  /// Might be larger than, smaller than, or equal to base.
-  int64 extent;
+    /// The offset at which the selection terminates, as measured in UTF-16 code units.
+    ///
+    /// When the user uses the arrow keys to adjust the selection, this is the
+    /// value that changes. Similarly, if the current theme paints a caret on one
+    /// side of the selection, this is the location at which to paint the caret.
+    ///
+    /// Might be larger than, smaller than, or equal to base.
+    int64 extent;
 
-  /// If the text range is collapsed and has more than one visual location
-  /// (e.g., occurs at a line break), which of the two locations to use when
-  /// painting the caret.
-  TextAffinity affinity;
+    /// If the text range is collapsed and has more than one visual location
+    /// (e.g., occurs at a line break), which of the two locations to use when
+    /// painting the caret.
+    TextAffinity affinity;
 };

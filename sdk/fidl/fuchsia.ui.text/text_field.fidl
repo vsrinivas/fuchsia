@@ -8,61 +8,60 @@ library fuchsia.ui.text;
 /// revision number. Any time the revision number is incremented, all these Positions
 /// become invalid, and a new TextFieldState is sent through OnUpdate.
 table TextFieldState {
-  /// (required) The start and end of the entire text field.
-  1: Range document;
+    /// (required) The start and end of the entire text field.
+    1: Range document;
 
-  /// (required) The currently selected range of text.
-  2: Selection selection;
+    /// (required) The currently selected range of text.
+    2: Selection selection;
 
-  /// The range that indicates the text that is being composed, or currently
-  /// receiving suggestions from the keyboard. It should be displayed in some
-  /// distinct way, such as underlined.
-  3: Range composition;
+    /// The range that indicates the text that is being composed, or currently
+    /// receiving suggestions from the keyboard. It should be displayed in some
+    /// distinct way, such as underlined.
+    3: Range composition;
 
-  /// Some keyboards, notably Japanese, give the user buttons to highlight just a
-  /// subset of the composition string for suggestions. It must be equal to or a subset
-  /// of the composition range. If the composition range changes, the TextField may
-  /// discard this and require the keyboard to create a new one.
-  4: Range composition_highlight;
+    /// Some keyboards, notably Japanese, give the user buttons to highlight just a
+    /// subset of the composition string for suggestions. It must be equal to or a subset
+    /// of the composition range. If the composition range changes, the TextField may
+    /// discard this and require the keyboard to create a new one.
+    4: Range composition_highlight;
 
-  /// A dead key is a key combination you press before another key to add diacritical
-  /// marks, accents, or other changes to the second key. After the first key, a
-  /// highlighted character indicates that the next character will be different. This
-  /// range is that highlighted character. If the selection moves away from this
-  /// highlight range, or if the contents of the highlight range change, the TextField
-  /// may discard this and require the keyboard to create a new one.
-  5: Range dead_key_highlight;
+    /// A dead key is a key combination you press before another key to add diacritical
+    /// marks, accents, or other changes to the second key. After the first key, a
+    /// highlighted character indicates that the next character will be different. This
+    /// range is that highlighted character. If the selection moves away from this
+    /// highlight range, or if the contents of the highlight range change, the TextField
+    /// may discard this and require the keyboard to create a new one.
+    5: Range dead_key_highlight;
 
-  /// (required) This number is increased any time content in the text field is changed,
-  /// if the selection is changed, or if anything else about the state is changed.
-  6: uint64 revision;
+    /// (required) This number is increased any time content in the text field is changed,
+    /// if the selection is changed, or if anything else about the state is changed.
+    6: uint64 revision;
 };
 
 /// Indicates errors that can occur with various TextField methods. Until FIDL supports
 /// result return types, if Error has any value except OK, the client must ignore
 /// all other return data from that method.
 enum Error {
-  // Once FIDL supports Result return types, this option can be removed.
-  OK = 0;
+    // Once FIDL supports Result return types, this option can be removed.
+    OK = 0;
 
-  /// Indicates the revision number passed to the method is no longer valid.
-  BAD_REVISION = 1;
+    /// Indicates the revision number passed to the method is no longer valid.
+    BAD_REVISION = 1;
 
-  /// Indicates an edit would be valid, but custom text field code does not allow that change
-  /// to be made, like inserting number into a text field.
-  INVALID_EDIT = 2;
+    /// Indicates an edit would be valid, but custom text field code does not allow that change
+    /// to be made, like inserting number into a text field.
+    INVALID_EDIT = 2;
 
-  /// Bad request entirely, like an unknown position that doesn't match the edits revision.
-  /// Indicates a bug with client code.
-  BAD_REQUEST = 3;
+    /// Bad request entirely, like an unknown position that doesn't match the edits revision.
+    /// Indicates a bug with client code.
+    BAD_REQUEST = 3;
 
-  /// For a contents() request, indicates there is no text between the two position that is known.
-  /// (If only a substring is known, it should be returned, with the `start` Position set
-  /// appropriately). For a distance() request, indicates the number of characters between the
-  /// two position is unknowably large.
-  UNKNOWABLE = 4;
+    /// For a contents() request, indicates there is no text between the two position that is known.
+    /// (If only a substring is known, it should be returned, with the `start` Position set
+    /// appropriately). For a distance() request, indicates the number of characters between the
+    /// two position is unknowably large.
+    UNKNOWABLE = 4;
 };
-
 
 /// Represents a text field or other kind of editing interface that wants to receive text input
 /// from the operating system. This interface is also what is passed to a keyboard to allow it
@@ -76,60 +75,60 @@ enum Error {
 /// assume that there will only be one client at a time; they don't need to
 /// keep track of a separate transaction list for each client.
 protocol TextField {
-  /// Any time the revision number increments, this event fires, with the latest version of
-  /// the state. It also fires when a new client connects to the service, so it can get an
-  /// initial state without waiting for an edit.
-  -> OnUpdate(TextFieldState state);
+    /// Any time the revision number increments, this event fires, with the latest version of
+    /// the state. It also fires when a new client connects to the service, so it can get an
+    /// initial state without waiting for an edit.
+    -> OnUpdate(TextFieldState state);
 
-  // READ METHODS
+    // READ METHODS
 
-  /// Returns a new position that is `offset` unicode code points away from `old_position`
-  PositionOffset(Position old_position, int64 offset, uint64 revision) -> (Position new_position, Error error);
+    /// Returns a new position that is `offset` unicode code points away from `old_position`
+    PositionOffset(Position old_position, int64 offset, uint64 revision) -> (Position new_position, Error error);
 
-  /// Returns number of unicode code points between two positions. If the position range.start is after
-  /// range.end, then the range is considered `inverted` and distance will be negative.
-  /// For all positions A and B, PositionOffset(A, Distance(A, B)) == B
-  Distance(Range range, uint64 revision) -> (int64 distance, Error error);
+    /// Returns number of unicode code points between two positions. If the position range.start is after
+    /// range.end, then the range is considered `inverted` and distance will be negative.
+    /// For all positions A and B, PositionOffset(A, Distance(A, B)) == B
+    Distance(Range range, uint64 revision) -> (int64 distance, Error error);
 
-  /// Returns string of unicode code points between two positions
-  Contents(Range range, uint64 revision) -> (string contents, Position start, Error error);
+    /// Returns string of unicode code points between two positions
+    Contents(Range range, uint64 revision) -> (string contents, Position start, Error error);
 
-  // TRANSACTION METHODS
+    // TRANSACTION METHODS
 
-  /// Starts a transaction. If it's called a second time with no CommitEdit()
-  /// call, the changes from the first uncommitted transaction are discarded as
-  /// though AbortEdit() was called.
-  BeginEdit(uint64 revision);
+    /// Starts a transaction. If it's called a second time with no CommitEdit()
+    /// call, the changes from the first uncommitted transaction are discarded as
+    /// though AbortEdit() was called.
+    BeginEdit(uint64 revision);
 
-  /// If the transaction's revision number (from BeginEdit) is still current,
-  /// runs all edit commands queued in this transaction. If not, returns
-  /// BAD_REVISION.
-  CommitEdit() -> (Error error);
+    /// If the transaction's revision number (from BeginEdit) is still current,
+    /// runs all edit commands queued in this transaction. If not, returns
+    /// BAD_REVISION.
+    CommitEdit() -> (Error error);
 
-  /// Discards the current transaction.
-  AbortEdit();
+    /// Discards the current transaction.
+    AbortEdit();
 
-  // EDITING METHODS — used within a transaction
+    // EDITING METHODS — used within a transaction
 
-  /// Replaces text in the range with new_text. It's the client's
-  /// responsibility to make sure new_text isn't too long for a FIDL message;
-  /// if it is, the client should break up the string into separate replace
-  /// calls.
-  Replace(Range range, string new_text);
+    /// Replaces text in the range with new_text. It's the client's
+    /// responsibility to make sure new_text isn't too long for a FIDL message;
+    /// if it is, the client should break up the string into separate replace
+    /// calls.
+    Replace(Range range, string new_text);
 
-  /// Sets the selection range.
-  SetSelection(Selection selection);
+    /// Sets the selection range.
+    SetSelection(Selection selection);
 
-  /// Sets the composition range and the composition highlight range. For more info,
-  /// see TextState's comments.
-  SetComposition(Range composition_range, Range? highlight_range);
+    /// Sets the composition range and the composition highlight range. For more info,
+    /// see TextState's comments.
+    SetComposition(Range composition_range, Range? highlight_range);
 
-  /// Clears both the composition range, and the composition highlight range.
-  ClearComposition();
+    /// Clears both the composition range, and the composition highlight range.
+    ClearComposition();
 
-  /// Sets the dead key highlight range. For more info, see TextState's comments.
-  SetDeadKeyHighlight(Range range);
+    /// Sets the dead key highlight range. For more info, see TextState's comments.
+    SetDeadKeyHighlight(Range range);
 
-  /// Clears the dead key highlight range.
-  ClearDeadKeyHighlight();
+    /// Clears the dead key highlight range.
+    ClearDeadKeyHighlight();
 };

@@ -10,8 +10,7 @@ namespace guest {
 namespace testing {
 
 void FakeHostVsock::Listen(
-    uint32_t port,
-    fidl::InterfaceHandle<fuchsia::virtualization::HostVsockAcceptor> acceptor,
+    uint32_t port, fidl::InterfaceHandle<fuchsia::virtualization::HostVsockAcceptor> acceptor,
     ListenCallback callback) {
   if (listeners_.find(port) != listeners_.end()) {
     callback(ZX_ERR_ALREADY_BOUND);
@@ -27,25 +26,23 @@ void FakeHostVsock::Connect(uint32_t cid, uint32_t port, zx::handle handle,
     callback(ZX_ERR_INVALID_ARGS);
     return;
   }
-  guest_vsock_->AcceptConnectionFromHost(port, std::move(handle),
-                                         std::move(callback));
+  guest_vsock_->AcceptConnectionFromHost(port, std::move(handle), std::move(callback));
 }
 
-zx_status_t FakeHostVsock::AcceptConnectionFromGuest(
-    uint32_t port, fit::function<void(zx::handle)> callback) {
+zx_status_t FakeHostVsock::AcceptConnectionFromGuest(uint32_t port,
+                                                     fit::function<void(zx::handle)> callback) {
   auto it = listeners_.find(port);
   if (it == listeners_.end()) {
     return ZX_ERR_CONNECTION_REFUSED;
   }
-  it->second->Accept(
-      kGuestCid, last_guest_port_--, port,
-      [callback = std::move(callback)](auto status, auto handle) {
-        if (status == ZX_OK) {
-          callback(std::move(handle));
-        } else {
-          callback(zx::handle());
-        }
-      });
+  it->second->Accept(kGuestCid, last_guest_port_--, port,
+                     [callback = std::move(callback)](auto status, auto handle) {
+                       if (status == ZX_OK) {
+                         callback(std::move(handle));
+                       } else {
+                         callback(zx::handle());
+                       }
+                     });
   return ZX_OK;
 }
 

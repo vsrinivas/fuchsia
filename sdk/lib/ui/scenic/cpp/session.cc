@@ -2,17 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/ui/scenic/cpp/session.h>
-
 #include <lib/ui/scenic/cpp/commands.h>
+#include <lib/ui/scenic/cpp/session.h>
 #include <stdio.h>
 #include <zircon/assert.h>
 
 namespace scenic {
 
 constexpr size_t kCommandsPerMessage =
-    (ZX_CHANNEL_MAX_MSG_BYTES - sizeof(fidl_message_header_t) -
-     sizeof(fidl_vector_t)) /
+    (ZX_CHANNEL_MAX_MSG_BYTES - sizeof(fidl_message_header_t) - sizeof(fidl_vector_t)) /
     sizeof(fuchsia::ui::scenic::Command);
 
 SessionPtrAndListenerRequest CreateScenicSessionPtrAndListenerRequest(
@@ -27,28 +25,23 @@ SessionPtrAndListenerRequest CreateScenicSessionPtrAndListenerRequest(
 }
 
 Session::Session(fuchsia::ui::scenic::SessionPtr session,
-                 fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener>
-                     session_listener)
+                 fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener> session_listener)
     : session_(std::move(session)), session_listener_binding_(this) {
   ZX_DEBUG_ASSERT(session_);
   if (session_listener.is_valid())
     session_listener_binding_.Bind(std::move(session_listener));
 }
 
-Session::Session(fuchsia::ui::scenic::Scenic* scenic)
-    : session_listener_binding_(this) {
+Session::Session(fuchsia::ui::scenic::Scenic* scenic) : session_listener_binding_(this) {
   ZX_DEBUG_ASSERT(scenic);
-  scenic->CreateSession(session_.NewRequest(),
-                        session_listener_binding_.NewBinding());
+  scenic->CreateSession(session_.NewRequest(), session_listener_binding_.NewBinding());
 }
 
 Session::Session(SessionPtrAndListenerRequest session_and_listener)
-    : Session(std::move(session_and_listener.first),
-              std::move(session_and_listener.second)) {}
+    : Session(std::move(session_and_listener.first), std::move(session_and_listener.second)) {}
 
 Session::~Session() {
-  ZX_DEBUG_ASSERT_MSG(resource_count_ == 0,
-                      "Some resources outlived the session: %u",
+  ZX_DEBUG_ASSERT_MSG(resource_count_ == 0, "Some resources outlived the session: %u",
                       resource_count_);
 }
 
@@ -105,8 +98,8 @@ void Session::Present(uint64_t presentation_time, PresentCallback callback) {
   ZX_DEBUG_ASSERT(session_);
   Flush();
 
-  session_->Present(presentation_time, std::move(acquire_fences_),
-                    std::move(release_fences_), std::move(callback));
+  session_->Present(presentation_time, std::move(acquire_fences_), std::move(release_fences_),
+                    std::move(callback));
 }
 
 void Session::Unbind() {
@@ -134,8 +127,6 @@ void Session::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
     event_handler_(std::move(events));
 }
 
-void Session::SetDebugName(const std::string& debug_name) {
-  session_->SetDebugName(debug_name);
-}
+void Session::SetDebugName(const std::string& debug_name) { session_->SetDebugName(debug_name); }
 
 }  // namespace scenic

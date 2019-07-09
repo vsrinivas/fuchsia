@@ -20,8 +20,8 @@ struct ViewTokenPair {
   fuchsia::ui::views::ViewHolderToken view_holder_token;
 };
 
-using ViewTokenStdPair = std::pair<fuchsia::ui::views::ViewToken,
-                                   fuchsia::ui::views::ViewHolderToken>;
+using ViewTokenStdPair =
+    std::pair<fuchsia::ui::views::ViewToken, fuchsia::ui::views::ViewHolderToken>;
 
 // Convenience function which allows clients to easily create a |ViewToken| /
 // |ViewHolderToken| pair for use with |View| resources.
