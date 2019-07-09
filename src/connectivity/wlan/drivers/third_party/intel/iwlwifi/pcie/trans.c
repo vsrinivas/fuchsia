@@ -528,9 +528,9 @@ static int iwl_pcie_nic_init(struct iwl_trans* trans) {
     int ret;
 
     /* nic_init */
-    spin_lock(&trans_pcie->irq_lock);
+    mtx_lock(&trans_pcie->irq_lock);
     ret = iwl_pcie_apm_init(trans);
-    spin_unlock(&trans_pcie->irq_lock);
+    mtx_unlock(&trans_pcie->irq_lock);
 
     if (ret) { return ret; }
 
@@ -3134,9 +3134,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci, const struct i
 
   trans_pcie->trans = trans;
   trans_pcie->opmode_down = true;
-#if 0   // NEEDS_PORTING
-    spin_lock_init(&trans_pcie->irq_lock);
-#endif  // NEEDS_PORTING
+  mtx_init(&trans_pcie->irq_lock, mtx_plain);
   mtx_init(&trans_pcie->reg_lock, mtx_plain);
   mtx_init(&trans_pcie->mutex, mtx_plain);
 #if 0   // NEEDS_PORTING

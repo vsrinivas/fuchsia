@@ -224,9 +224,9 @@ static int iwl_pcie_gen2_nic_init(struct iwl_trans* trans) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
     /* TODO: most of the logic can be removed in A0 - but not in Z0 */
-    spin_lock(&trans_pcie->irq_lock);
+    mtx_lock(&trans_pcie->irq_lock);
     iwl_pcie_gen2_apm_init(trans);
-    spin_unlock(&trans_pcie->irq_lock);
+    mtx_unlock(&trans_pcie->irq_lock);
 
     iwl_op_mode_nic_config(trans->op_mode);
 

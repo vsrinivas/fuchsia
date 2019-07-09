@@ -544,9 +544,7 @@ struct iwl_trans_pcie {
   bool debug_rfkill;
   struct isr_statistics isr_stats;
 
-#if 0   // NEEDS_PORTING
-    spinlock_t irq_lock;
-#endif  // NEEDS_PORTING
+  mtx_t irq_lock;
   mtx_t mutex;
   uint32_t inta_mask;
   uint32_t scd_base_addr;
@@ -793,20 +791,17 @@ static inline void iwl_pcie_ctxt_info_free_fw_img(struct iwl_trans* trans) {
     dram->fw_cnt = 0;
     dram->fw = NULL;
 }
-
 #endif  // NEEDS_PORTING
+
 static inline void iwl_disable_interrupts(struct iwl_trans* trans) {
-#if 0   // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-    spin_lock(&trans_pcie->irq_lock);
+    mtx_lock(&trans_pcie->irq_lock);
     _iwl_disable_interrupts(trans);
-    spin_unlock(&trans_pcie->irq_lock);
-#endif  // NEEDS_PORTING
-  _iwl_disable_interrupts(trans);
+    mtx_unlock(&trans_pcie->irq_lock);
 }
-#if 0   // NEEDS_PORTING
 
+#if 0   // NEEDS_PORTING
 static inline void _iwl_enable_interrupts(struct iwl_trans* trans) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
@@ -830,9 +825,9 @@ static inline void _iwl_enable_interrupts(struct iwl_trans* trans) {
 static inline void iwl_enable_interrupts(struct iwl_trans* trans) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-    spin_lock(&trans_pcie->irq_lock);
+    mtx_lock(&trans_pcie->irq_lock);
     _iwl_enable_interrupts(trans);
-    spin_unlock(&trans_pcie->irq_lock);
+    mtx_unlock(&trans_pcie->irq_lock);
 }
 #endif  // NEEDS_PORTING
 

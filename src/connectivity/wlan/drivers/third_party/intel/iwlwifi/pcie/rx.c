@@ -1588,7 +1588,7 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void* dev_id) {
 
   lock_map_acquire(&trans->sync_cmd_lockdep_map);
 
-  spin_lock(&trans_pcie->irq_lock);
+  mtx_lock(&trans_pcie->irq_lock);
 
   /* dram interrupt table not set yet,
    * use legacy interrupt.
@@ -1623,7 +1623,7 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void* dev_id) {
     if (test_bit(STATUS_INT_ENABLED, &trans->status)) {
       _iwl_enable_interrupts(trans);
     }
-    spin_unlock(&trans_pcie->irq_lock);
+    mtx_unlock(&trans_pcie->irq_lock);
     lock_map_release(&trans->sync_cmd_lockdep_map);
     return IRQ_NONE;
   }
@@ -1634,7 +1634,7 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void* dev_id) {
      * already raised an interrupt.
      */
     IWL_WARN(trans, "HARDWARE GONE?? INTA == 0x%08x\n", inta);
-    spin_unlock(&trans_pcie->irq_lock);
+    mtx_unlock(&trans_pcie->irq_lock);
     goto out;
   }
 
@@ -1654,7 +1654,7 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void* dev_id) {
   if (iwl_have_debug_level(IWL_DL_ISR))
     IWL_DEBUG_ISR(trans, "inta 0x%08x, enabled 0x%08x\n", inta, iwl_read32(trans, CSR_INT_MASK));
 
-  spin_unlock(&trans_pcie->irq_lock);
+  mtx_unlock(&trans_pcie->irq_lock);
 
   /* Now service all interrupt bits discovered above. */
   if (inta & CSR_INT_BIT_HW_ERR) {
@@ -1795,7 +1795,7 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void* dev_id) {
     IWL_WARN(trans, "Disabled INTA bits 0x%08x were pending\n", inta & ~trans_pcie->inta_mask);
   }
 
-  spin_lock(&trans_pcie->irq_lock);
+  mtx_lock(&trans_pcie->irq_lock);
   /* only Re-enable all interrupt if disabled by irq */
   if (test_bit(STATUS_INT_ENABLED, &trans->status)) {
     _iwl_enable_interrupts(trans);
@@ -1808,7 +1808,7 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void* dev_id) {
   else if (handled & CSR_INT_BIT_RF_KILL) {
     iwl_enable_rfkill_int(trans);
   }
-  spin_unlock(&trans_pcie->irq_lock);
+  mtx_unlock(&trans_pcie->irq_lock);
 
 out:
   lock_map_release(&trans->sync_cmd_lockdep_map);
@@ -1866,7 +1866,7 @@ void iwl_pcie_reset_ict(struct iwl_trans* trans) {
     return;
   }
 
-  spin_lock(&trans_pcie->irq_lock);
+  mtx_lock(&trans_pcie->irq_lock);
   _iwl_disable_interrupts(trans);
 
   memset(trans_pcie->ict_tbl, 0, ICT_SIZE);
@@ -1882,16 +1882,16 @@ void iwl_pcie_reset_ict(struct iwl_trans* trans) {
   trans_pcie->ict_index = 0;
   iwl_write32(trans, CSR_INT, trans_pcie->inta_mask);
   _iwl_enable_interrupts(trans);
-  spin_unlock(&trans_pcie->irq_lock);
+  mtx_unlock(&trans_pcie->irq_lock);
 }
 
 /* Device is going down disable ict interrupt usage */
 void iwl_pcie_disable_ict(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-  spin_lock(&trans_pcie->irq_lock);
+  mtx_lock(&trans_pcie->irq_lock);
   trans_pcie->use_ict = false;
-  spin_unlock(&trans_pcie->irq_lock);
+  mtx_unlock(&trans_pcie->irq_lock);
 }
 
 irqreturn_t iwl_pcie_isr(int irq, void* data) {
@@ -1922,7 +1922,7 @@ irqreturn_t iwl_pcie_irq_msix_handler(int irq, void* dev_id) {
 
   lock_map_acquire(&trans->sync_cmd_lockdep_map);
 
-  spin_lock(&trans_pcie->irq_lock);
+  mtx_lock(&trans_pcie->irq_lock);
   inta_fh = iwl_read32(trans, CSR_MSIX_FH_INT_CAUSES_AD);
   inta_hw = iwl_read32(trans, CSR_MSIX_HW_INT_CAUSES_AD);
   /*
@@ -1930,7 +1930,7 @@ irqreturn_t iwl_pcie_irq_msix_handler(int irq, void* dev_id) {
    */
   iwl_write32(trans, CSR_MSIX_FH_INT_CAUSES_AD, inta_fh);
   iwl_write32(trans, CSR_MSIX_HW_INT_CAUSES_AD, inta_hw);
-  spin_unlock(&trans_pcie->irq_lock);
+  mtx_unlock(&trans_pcie->irq_lock);
 
   trace_iwlwifi_dev_irq_msix(trans->dev, entry, true, inta_fh, inta_hw);
 
