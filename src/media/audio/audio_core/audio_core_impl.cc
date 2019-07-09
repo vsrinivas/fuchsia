@@ -8,10 +8,10 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "src/lib/fxl/log_settings.h"
 #include "src/media/audio/audio_core/audio_capturer_impl.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
+#include "src/media/audio/audio_core/logging.h"
 
 namespace media::audio {
 namespace {
@@ -32,15 +32,8 @@ AudioCoreImpl::AudioCoreImpl(std::unique_ptr<sys::ComponentContext> startup_cont
       vmar_manager_(
           fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)) {
   FXL_DCHECK(vmar_manager_ != nullptr) << "Failed to allocate VMAR";
-  fxl::LogSettings settings;
 
-#ifdef NDEBUG
-  settings.min_log_level = fxl::LOG_WARNING;
-#else
-  settings.min_log_level = fxl::LOG_INFO;
-#endif
-
-  fxl::SetLogSettings(settings);
+  Logging::Init();
 
   // Stash a pointer to our async object.
   dispatcher_ = async_get_default_dispatcher();
@@ -104,18 +97,21 @@ void AudioCoreImpl::Shutdown() {
 
 void AudioCoreImpl::CreateAudioRenderer(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request) {
+  AUD_VLOG(TRACE);
   device_manager_.AddAudioRenderer(
       AudioRendererImpl::Create(std::move(audio_renderer_request), this));
 }
 
 void AudioCoreImpl::CreateAudioCapturer(
     bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request) {
+  AUD_VLOG(TRACE);
   device_manager_.AddAudioCapturer(
       AudioCapturerImpl::Create(loopback, std::move(audio_capturer_request), this));
 }
 
 void AudioCoreImpl::SetSystemGain(float gain_db) {
   // NAN is undefined and "signless". We cannot simply clamp it into range.
+  AUD_VLOG(TRACE) << " (" << gain_db << " dB)";
   if (isnan(gain_db)) {
     FXL_LOG(ERROR) << "Invalid system gain " << gain_db << " dB -- making no change";
     return;
@@ -139,6 +135,7 @@ void AudioCoreImpl::SetSystemGain(float gain_db) {
 }
 
 void AudioCoreImpl::SetSystemMute(bool muted) {
+  AUD_VLOG(TRACE) << " (mute: " << muted << ")";
   if (system_muted_ == muted) {
     // A device might have received a SetDeviceMute call since we last set this.
     // Only update devices that have diverged from the System Gain/Mute values.
@@ -154,6 +151,7 @@ void AudioCoreImpl::SetSystemMute(bool muted) {
 }
 
 void AudioCoreImpl::NotifyGainMuteChanged() {
+  AUD_VLOG(TRACE) << " (" << system_gain_db_ << " dB, mute: " << system_muted_ << ")";
   for (auto& binding : bindings_.bindings()) {
     binding->events().SystemGainMuteChanged(system_gain_db_, system_muted_);
   }
@@ -180,6 +178,8 @@ float AudioCoreImpl::GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage
 }
 
 void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) {
+  AUD_VLOG(TRACE) << " (usage: " << static_cast<int>(usage) << ", " << gain_db << " dB)";
+
   auto usage_index = fidl::ToUnderlying(usage);
   if (usage_index >= fuchsia::media::RENDER_USAGE_COUNT) {
     FXL_LOG(ERROR) << "Unexpected Render Usage: " << usage_index;
@@ -189,6 +189,8 @@ void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, f
 }
 
 void AudioCoreImpl::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db) {
+  AUD_VLOG(TRACE) << " (usage: " << static_cast<int>(usage) << ", " << gain_db << " dB)";
+
   auto usage_index = fidl::ToUnderlying(usage);
   if (usage_index >= fuchsia::media::CAPTURE_USAGE_COUNT) {
     FXL_LOG(ERROR) << "Unexpected Capture Usage: " << usage_index;
@@ -198,10 +200,12 @@ void AudioCoreImpl::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage,
 }
 
 void AudioCoreImpl::SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) {
+  AUD_VLOG(TRACE) << " (policy: " << static_cast<int>(policy) << ")";
   device_manager_.SetRoutingPolicy(policy);
 }
 
 void AudioCoreImpl::EnableDeviceSettings(bool enabled) {
+  AUD_VLOG(TRACE) << " (enabled: " << enabled << ")";
   device_manager_.EnableDeviceSettings(enabled);
 }
 

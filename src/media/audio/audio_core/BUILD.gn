@@ -92,6 +92,7 @@ source_set("audio_core_lib") {
     "driver_utils.cc",
     "driver_utils.h",
     "fwd_decls.h",
+    "logging.h",
     "pending_flush_token.cc",
     "pending_flush_token.h",
     "reporter.cc",

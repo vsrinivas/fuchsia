@@ -9,9 +9,9 @@
 
 #include <limits>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/time/time_delta.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
+#include "src/media/audio/audio_core/logging.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
 
@@ -355,6 +355,7 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_rendere
 
   // If packet has no frames, there's no need to mix it; it may be skipped.
   if (packet->end_pts() == packet->start_pts()) {
+    AUD_VLOG_OBJ(TRACE, audio_renderer.get()) << " skipping an empty packet!";
     return true;
   }
 
@@ -366,13 +367,12 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_rendere
   // window edge of our filter centered at our first sampling point, then this
   // packet is entirely in the past and may be skipped.
   if (final_pts < (first_sample_ftf - mixer.neg_filter_width())) {
-    FXL_LOG(ERROR) << __func__ << " (" << reinterpret_cast<void*>(audio_renderer.get())
-                   << ") skipped entire packet ending at PTS " << std::hex << final_pts
-                   << "; missed packet start by "
-                   << static_cast<float>(first_sample_ftf - mixer.neg_filter_width() -
-                                         packet->start_pts()) /
-                          (48.0 * Mixer::FRAC_ONE)
-                   << "ms";
+    auto clock_mono_late = info->clock_mono_to_frac_source_frames.rate().Inverse().Scale(
+        first_sample_ftf - mixer.neg_filter_width() - packet->start_pts());
+    AUD_LOG_OBJ(ERROR, audio_renderer.get())
+        << ", skip pkt [" << packet->start_pts() << "," << final_pts << "]: missed "
+        << first_sample_ftf - mixer.neg_filter_width() << " by "
+        << static_cast<double>(clock_mono_late) / ZX_MSEC(1) << "ms";
     return true;
   }
 
@@ -397,15 +397,16 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_rendere
     // In determining output_offset and input_offset, we want to "round up" any
     // subframes that are present, to the next integer frame. To do this, we
     // subtract a single subframe (to handle the no-subframes case), then scale
-    // (which truncates any subframes), then add an additional 'round-up' frame.
+    // (which truncates subframes), then add an additional 'round-up' frame.
     output_offset_64 =
         dest_to_src.Inverse().Scale(packet->start_pts() - first_sample_pos_window_edge - 1) + 1;
+
     input_offset_64 += dest_to_src.Scale(output_offset_64);
   }
 
   if (output_offset_64) {
-    FXL_LOG(WARNING) << __func__ << " (" << reinterpret_cast<void*>(audio_renderer.get())
-                     << ") skipped " << std::dec << output_offset_64 << " output frames";
+    AUD_LOG_OBJ(WARNING, audio_renderer.get())
+        << " skipped " << output_offset_64 << " output frames";
   }
 
   FXL_DCHECK(output_offset_64 >= 0);
@@ -446,7 +447,8 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_rendere
     //
     // TODO(mpuryear): integrate bookkeeping into the Mixer itself (MTWN-129).
 
-    uint32_t prev_output_offset = output_offset;
+    auto prev_output_offset = output_offset;
+    auto prev_frac_input_offset = frac_input_offset;
 
     // Check whether we are still ramping
     bool ramping = info->gain.IsRamping();
@@ -460,6 +462,10 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_rendere
                                        packet->frac_frame_len(), &frac_input_offset,
                                        cur_mix_job_.accumulate, info);
     FXL_DCHECK(output_offset <= frames_left);
+    AUD_VLOG_OBJ(SPEW, this) << " consumed from " << std::hex << std::setw(8)
+                             << prev_frac_input_offset << " to " << std::setw(8)
+                             << frac_input_offset << ", of " << std::setw(8)
+                             << packet->frac_frame_len();
 
     // If src is ramping, advance by delta of output_offset
     if (ramping) {
