@@ -189,11 +189,11 @@ void Checker::DumpSlices(const fbl::Vector<Slice>& slices) const {
             logger_.Log("  Allocated as virtual slice %zu\n", run_start->virtual_slice);
             logger_.Log("  Allocated to partition %zu\n", run_start->virtual_partition);
         } else if (run_length > 1) {
-            logger_.Log("Physical Slices [%zu, %zu] allocated\n", run_start->physical_slice,
-                        run_start->physical_slice + run_length - 1);
-            logger_.Log("  Allocated as virtual slices [%zu, %zu]\n", run_start->virtual_slice,
-                        run_start->virtual_slice + run_length - 1);
-            logger_.Log("  Allocated to partition %zu\n", run_start->virtual_partition);
+          logger_.Log("%zu Physical Slices [%" PRIu64 ", %" PRIu64 "] allocated\n", run_length,
+                      run_start->physical_slice, run_start->physical_slice + run_length - 1);
+          logger_.Log("  Allocated as virtual slices [%zu, %zu]\n", run_start->virtual_slice,
+                      run_start->virtual_slice + run_length - 1);
+          logger_.Log("  Allocated to partition %zu\n", run_start->virtual_partition);
         }
         run_start = nullptr;
         run_length = 0;

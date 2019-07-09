@@ -209,6 +209,8 @@ zx_status_t SparseContainer::Verify() const {
         for (unsigned j = 0; j < partitions_[i].descriptor.extent_count; j++) {
             extent_lengths.push_back(partitions_[i].extents[j].extent_length);
             end += partitions_[i].extents[j].extent_length;
+            xprintf("\tExtent[%u]: slice_start: %" PRIu64 ". slice_count: %" PRIu64 "\n", j,
+                    partitions_[i].extents[j].slice_start, partitions_[i].extents[j].slice_count);
         }
 
         zx_status_t status;
