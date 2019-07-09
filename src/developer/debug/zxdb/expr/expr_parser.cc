@@ -631,7 +631,7 @@ fxl::RefPtr<ExprNode> ExprParser::LeftParenPrefix(const ExprToken& token) {
     if (has_error())
       return nullptr;
 
-    fxl::RefPtr<TypeExprNode> type_ref(const_cast<TypeExprNode*>(type_expr));
+    fxl::RefPtr<TypeExprNode> type_ref = RefPtrTo(type_expr);
     return fxl::MakeRefCounted<CastExprNode>(CastType::kC, std::move(type_ref),
                                              std::move(cast_expr));
   }

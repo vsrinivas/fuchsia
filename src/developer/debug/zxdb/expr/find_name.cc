@@ -86,7 +86,7 @@ FoundName FoundNameFromDieRef(const ModuleSymbols* module_symbols, const FindNam
 
   if (const Type* type = symbol->AsType()) {
     if (options.find_types)
-      return FoundName(fxl::RefPtr<Type>(const_cast<Type*>(type)));
+      return FoundName(RefPtrTo(type));
     return FoundName();
   }
 

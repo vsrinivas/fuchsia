@@ -85,8 +85,8 @@ EvalContextImpl::EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symb
   const CodeBlock* function = location.symbol().Get()->AsCodeBlock();
   if (function) {
     // Const cast unfortunately required for RefPtr constructor.
-    block_ = fxl::RefPtr<const CodeBlock>(const_cast<CodeBlock*>(
-        function->GetMostSpecificChild(location.symbol_context(), location.address())));
+    block_ =
+        RefPtrTo(function->GetMostSpecificChild(location.symbol_context(), location.address()));
 
     // Extract the language for the code if possible.
     if (const CompileUnit* unit = function->GetCompileUnit())
@@ -138,7 +138,7 @@ void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier, ValueCal
 
 void EvalContextImpl::GetVariableValue(fxl::RefPtr<Variable> var, ValueCallback cb) const {
   // Need to explicitly take a reference to the type.
-  fxl::RefPtr<Type> type(const_cast<Type*>(var->type().Get()->AsType()));
+  fxl::RefPtr<Type> type = RefPtrTo(var->type().Get()->AsType());
   if (!type) {
     cb(Err("Missing type information."), var, ExprValue());
     return;
@@ -189,7 +189,7 @@ fxl::RefPtr<Type> EvalContextImpl::ResolveForwardDefinition(const Type* type) co
   Identifier ident = type->GetIdentifier();
   if (ident.empty()) {
     // Some things like modified types don't have real identifier names.
-    return fxl::RefPtr<Type>(const_cast<Type*>(type));
+    return RefPtrTo(type);
   }
   ParsedIdentifier parsed_ident = ToParsedIdentifier(ident);
 
@@ -210,7 +210,7 @@ fxl::RefPtr<Type> EvalContextImpl::ResolveForwardDefinition(const Type* type) co
   }
 
   // Nothing found in the index.
-  return fxl::RefPtr<Type>(const_cast<Type*>(type));
+  return RefPtrTo(type);
 }
 
 fxl::RefPtr<Type> EvalContextImpl::GetConcreteType(const Type* type) const {
@@ -219,7 +219,7 @@ fxl::RefPtr<Type> EvalContextImpl::GetConcreteType(const Type* type) const {
 
   // Iteratively strip C-V qualifications, follow typedefs, and follow forward
   // declarations.
-  fxl::RefPtr<Type> cur(const_cast<Type*>(type));
+  fxl::RefPtr<Type> cur = RefPtrTo(type);
   do {
     // Follow forward declarations.
     if (cur->is_declaration()) {
@@ -229,7 +229,7 @@ fxl::RefPtr<Type> EvalContextImpl::GetConcreteType(const Type* type) const {
     }
 
     // Strip C-V qualifiers and follow typedefs.
-    cur = fxl::RefPtr<Type>(const_cast<Type*>(cur->StripCVT()));
+    cur = RefPtrTo(cur->StripCVT());
   } while (cur && cur->is_declaration());
   return cur;
 }
@@ -323,7 +323,7 @@ void EvalContextImpl::OnDwarfEvalComplete(const Err& err,
   } else {
     // The DWARF result is a pointer to the value.
     ResolvePointer(
-        fxl::RefPtr<EvalContext>(const_cast<EvalContextImpl*>(this)), result_int, state->type,
+        RefPtrTo(this), result_int, state->type,
         [state, weak_this = weak_factory_.GetWeakPtr()](const Err& err, ExprValue value) {
           if (weak_this)
             state->callback(err, state->symbol, std::move(value));

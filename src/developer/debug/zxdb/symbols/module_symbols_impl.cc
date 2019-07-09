@@ -242,7 +242,7 @@ std::vector<fxl::RefPtr<Function>> ModuleSymbolsImpl::GetMainFunctions() const {
     auto symbol_ref = IndexDieRefToSymbol(ref);
     const Function* func = symbol_ref.Get()->AsFunction();
     if (func)
-      result.emplace_back(const_cast<Function*>(func));
+      result.emplace_back(RefPtrTo(func));
   }
   return result;
 }
@@ -331,8 +331,7 @@ std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
     } else if (const Variable* variable = symbol->AsVariable()) {
       // Symbol is a variable. This will be the case for global variables and file- and class-level
       // statics. This always symbolizes since we already computed the symbol.
-      result.push_back(LocationForVariable(symbol_context,
-                                           fxl::RefPtr<Variable>(const_cast<Variable*>(variable))));
+      result.push_back(LocationForVariable(symbol_context, RefPtrTo(variable)));
     } else {
       // Unknown type of symbol.
       continue;

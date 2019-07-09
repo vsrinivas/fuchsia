@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/debug/zxdb/common/ref_ptr_to.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_lang.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_tag.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"

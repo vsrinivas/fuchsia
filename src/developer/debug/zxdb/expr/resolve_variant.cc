@@ -48,7 +48,7 @@ Err ResolveVariant(fxl::RefPtr<EvalContext> context, const ExprValue& value,
     if (var->discr_value()) {
       if (*var->discr_value() == discr) {
         // Found match.
-        *result = fxl::RefPtr<Variant>(const_cast<Variant*>(var));
+        *result = RefPtrTo(var);
         return Err();
       }
     } else {
@@ -59,7 +59,7 @@ Err ResolveVariant(fxl::RefPtr<EvalContext> context, const ExprValue& value,
 
   // No match means use the default value if there is one.
   if (default_var) {
-    *result = fxl::RefPtr<Variant>(const_cast<Variant*>(default_var));
+    *result = RefPtrTo(default_var);
     return Err();
   }
 

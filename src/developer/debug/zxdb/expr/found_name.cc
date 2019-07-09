@@ -18,21 +18,17 @@ FoundName::FoundName(Kind kind, const std::string& name) : kind_(kind), name_(na
   FXL_DCHECK(kind == kNone || kind == kNamespace || kind == kTemplate);
 }
 
-FoundName::FoundName(const Variable* variable)
-    : kind_(kVariable), variable_(const_cast<Variable*>(variable)) {}
+FoundName::FoundName(const Variable* variable) : kind_(kVariable), variable_(RefPtrTo(variable)) {}
 
-FoundName::FoundName(const Function* function)
-    : kind_(kFunction), function_(const_cast<Function*>(function)) {}
+FoundName::FoundName(const Function* function) : kind_(kFunction), function_(RefPtrTo(function)) {}
 
 FoundName::FoundName(const Variable* object_ptr, FoundMember member)
-    : kind_(kMemberVariable),
-      object_ptr_(const_cast<Variable*>(object_ptr)),
-      member_(std::move(member)) {}
+    : kind_(kMemberVariable), object_ptr_(RefPtrTo(object_ptr)), member_(std::move(member)) {}
 
 FoundName::FoundName(const Variable* object_ptr, const DataMember* data_member,
                      uint32_t data_member_offset)
     : kind_(kMemberVariable),
-      object_ptr_(const_cast<Variable*>(object_ptr)),
+      object_ptr_(RefPtrTo(object_ptr)),
       member_(data_member, data_member_offset) {}
 
 FoundName::FoundName(fxl::RefPtr<Type> type) : kind_(kType), type_(std::move(type)) {}

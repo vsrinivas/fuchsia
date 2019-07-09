@@ -67,8 +67,7 @@ void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, const ExprValue& poin
   if (err.has_error()) {
     cb(err, ExprValue());
   } else {
-    ResolvePointer(std::move(eval_context), pointer_value,
-                   fxl::RefPtr<Type>(const_cast<Type*>(pointed_to)), std::move(cb));
+    ResolvePointer(std::move(eval_context), pointer_value, RefPtrTo(pointed_to), std::move(cb));
   }
 }
 
@@ -101,8 +100,8 @@ void EnsureResolveReference(fxl::RefPtr<EvalContext> eval_context, ExprValue val
   if (err.has_error()) {
     cb(err, ExprValue());
   } else {
-    ResolvePointer(std::move(eval_context), pointer_value,
-                   fxl::RefPtr<Type>(const_cast<Type*>(underlying_type)), std::move(cb));
+    ResolvePointer(std::move(eval_context), pointer_value, RefPtrTo(underlying_type),
+                   std::move(cb));
   }
 }
 

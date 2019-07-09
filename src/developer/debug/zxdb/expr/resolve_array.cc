@@ -37,7 +37,7 @@ Err ResolveStaticArray(const ExprValue& array, const ArrayType* array_type, size
       break;
 
     std::vector<uint8_t> item_data(&data[begin_offset], &data[begin_offset] + type_size);
-    result->emplace_back(fxl::RefPtr<Type>(const_cast<Type*>(value_type)), std::move(item_data),
+    result->emplace_back(RefPtrTo(value_type), std::move(item_data),
                          array.source().GetOffsetInto(begin_offset));
   }
   return Err();

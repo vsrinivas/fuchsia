@@ -148,16 +148,15 @@ void FormatValue::AppendVariable(const SymbolContext& symbol_context,
   OutputKey output_key =
       AsyncAppend(NodeType::kVariable, var->GetAssignedName(), GetRootOutputKey());
 
-  eval_context->GetVariableValue(fxl::RefPtr<Variable>(const_cast<Variable*>(var)),
-                                 [weak_this = weak_factory_.GetWeakPtr(), eval_context, options,
-                                  output_key](const Err& err, fxl::RefPtr<Symbol>, ExprValue val) {
-                                   // The variable has been resolved, now we need to print it (which
-                                   // could in itself be asynchronous).
-                                   if (weak_this) {
-                                     weak_this->FormatExprValue(eval_context, err, val, options,
-                                                                false, output_key);
-                                   }
-                                 });
+  eval_context->GetVariableValue(
+      RefPtrTo(var), [weak_this = weak_factory_.GetWeakPtr(), eval_context, options, output_key](
+                         const Err& err, fxl::RefPtr<Symbol>, ExprValue val) {
+        // The variable has been resolved, now we need to print it (which
+        // could in itself be asynchronous).
+        if (weak_this) {
+          weak_this->FormatExprValue(eval_context, err, val, options, false, output_key);
+        }
+      });
 }
 
 void FormatValue::Append(OutputBuffer out) {
@@ -918,33 +917,33 @@ void FormatValue::FormatRustTuple(fxl::RefPtr<EvalContext> eval_context, const C
   FormatNode* node_ptr = node.get();
   FillFormatNodeDescription(
       node_ptr, options, eval_context,
-      fit::deferred_action<fit::callback<void()>>(
-          [weak_this = weak_factory_.GetWeakPtr(), node = std::move(node), eval_context,
-           coll = fxl::RefPtr<Collection>(const_cast<Collection*>(coll)), options, output_key]() {
-            if (!weak_this)
-              return;
+      fit::deferred_action<fit::callback<void()>>([weak_this = weak_factory_.GetWeakPtr(),
+                                                   node = std::move(node), eval_context,
+                                                   coll = RefPtrTo(coll), options, output_key]() {
+        if (!weak_this)
+          return;
 
-            if (node->err().has_error()) {
-              weak_this->OutputKeyComplete(output_key, ErrToOutput(node->err()));
-              return;
-            }
+        if (node->err().has_error()) {
+          weak_this->OutputKeyComplete(output_key, ErrToOutput(node->err()));
+          return;
+        }
 
-            // Display tuple structs with the non-qualified type name, e.g.
-            // "Some(32)".
-            if (coll->GetSpecialType() == Collection::kRustTupleStruct)
-              weak_this->AppendToOutputKey(output_key, coll->GetAssignedName() + "(");
-            else
-              weak_this->AppendToOutputKey(output_key, OutputBuffer("("));
+        // Display tuple structs with the non-qualified type name, e.g.
+        // "Some(32)".
+        if (coll->GetSpecialType() == Collection::kRustTupleStruct)
+          weak_this->AppendToOutputKey(output_key, coll->GetAssignedName() + "(");
+        else
+          weak_this->AppendToOutputKey(output_key, OutputBuffer("("));
 
-            for (size_t i = 0; i < node->children().size(); i++) {
-              if (i > 0)
-                weak_this->AppendToOutputKey(output_key, OutputBuffer(", "));
-              weak_this->FormatExprValue(eval_context, node->children()[i]->value(), options, false,
-                                         weak_this->AsyncAppend(output_key));
-            }
+        for (size_t i = 0; i < node->children().size(); i++) {
+          if (i > 0)
+            weak_this->AppendToOutputKey(output_key, OutputBuffer(", "));
+          weak_this->FormatExprValue(eval_context, node->children()[i]->value(), options, false,
+                                     weak_this->AsyncAppend(output_key));
+        }
 
-            weak_this->OutputKeyComplete(output_key, OutputBuffer(")"));
-          }));
+        weak_this->OutputKeyComplete(output_key, OutputBuffer(")"));
+      }));
 }
 
 FormatValue::OutputKey FormatValue::GetRootOutputKey() {

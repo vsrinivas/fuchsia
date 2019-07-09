@@ -374,9 +374,8 @@ void SizeofExprNode::SizeofType(fxl::RefPtr<EvalContext> context, const Type* in
     return;
   }
 
-  if (DwarfTagIsEitherReference(type->tag())) {
-    type = fxl::RefPtr<Type>(const_cast<Type*>(type->AsModifiedType()->modified().Get()->AsType()));
-  }
+  if (DwarfTagIsEitherReference(type->tag()))
+    type = RefPtrTo(type->AsModifiedType()->modified().Get()->AsType());
   if (!type) {
     cb(Err("Symbol error for '%s'.", in_type->GetFullName().c_str()), ExprValue());
     return;

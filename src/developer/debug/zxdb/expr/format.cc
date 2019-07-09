@@ -541,8 +541,8 @@ void FormatCharPointer(FormatNode* node, const Type* char_type,
   auto shared_cb = std::make_shared<fit::deferred_callback>(std::move(cb));
   data_provider->GetMemoryAsync(
       address, bytes_to_fetch,
-      [address, bytes_to_fetch, char_type = fxl::RefPtr<Type>(const_cast<Type*>(char_type)),
-       weak_node = node->GetWeakPtr(), shared_cb](const Err& err, std::vector<uint8_t> data) {
+      [address, bytes_to_fetch, char_type = RefPtrTo(char_type), weak_node = node->GetWeakPtr(),
+       shared_cb](const Err& err, std::vector<uint8_t> data) {
         if (!weak_node)
           return;
 

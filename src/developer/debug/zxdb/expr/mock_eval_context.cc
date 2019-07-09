@@ -38,7 +38,7 @@ void MockEvalContext::GetVariableValue(fxl::RefPtr<Variable> variable, ValueCall
 fxl::RefPtr<Type> MockEvalContext::ResolveForwardDefinition(const Type* type) const {
   auto found = types_.find(type->GetFullName());
   if (found == types_.end())  // Not found, return the input.
-    return fxl::RefPtr<Type>(const_cast<Type*>(type));
+    return RefPtrTo(type);
   return found->second;
 }
 

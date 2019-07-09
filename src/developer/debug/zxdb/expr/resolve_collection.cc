@@ -75,7 +75,7 @@ Err GetMemberType(const Collection* coll, const DataMember* member,
   if (!member)
     return GetErrorForInvalidMemberOf(coll);
 
-  *member_type = fxl::RefPtr<Type>(const_cast<Type*>(member->type().Get()->AsType()));
+  *member_type = RefPtrTo(member->type().Get()->AsType());
   if (!*member_type) {
     return Err("Bad type information for '%s.%s'.", coll->GetFullName().c_str(),
                member->GetAssignedName().c_str());
@@ -192,8 +192,7 @@ void ResolveMemberByPointer(
 
   DoResolveMemberByPointer(
       context, base_ptr, coll, found_member,
-      [cb = std::move(cb),
-       member_ref = fxl::RefPtr<DataMember>(const_cast<DataMember*>(found_member.data_member()))](
+      [cb = std::move(cb), member_ref = RefPtrTo(found_member.data_member())](
           const Err& err, ExprValue value) { cb(err, std::move(member_ref), std::move(value)); });
 }
 
@@ -202,8 +201,7 @@ Err ResolveInherited(const ExprValue& value, const InheritedFrom* from, ExprValu
   if (!from_type)
     return GetErrorForInvalidMemberOf(value);
 
-  return ExtractSubType(value, fxl::RefPtr<Type>(const_cast<Type*>(from_type)), from->offset(),
-                        out);
+  return ExtractSubType(value, RefPtrTo(from_type), from->offset(), out);
 }
 
 Err ResolveInherited(const ExprValue& value, fxl::RefPtr<Type> base_type, uint64_t offset,
