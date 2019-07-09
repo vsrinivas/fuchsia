@@ -938,7 +938,7 @@ For example, this pattern is used by `fuchsia.process.Launcher` to let the
 client send an arbitrary number of environment variables.
 
 A more sophisticated version of this pattern creates a protocol that
-represents the transaction, often called a _tear-off protocol:
+represents the transaction, often called a _tear-off protocol_:
 
 ```fidl
 protocol BarTransaction {
