@@ -24,7 +24,9 @@ use crate::wire::ethernet::{
 use crate::wire::ipv4::{
     Ipv4PacketBuilder, IPV4_CHECKSUM_OFFSET, IPV4_MIN_HDR_LEN, IPV4_TTL_OFFSET,
 };
-use crate::{EventDispatcher, StackStateBuilder, TimerId};
+use crate::{
+    EventDispatcher, IcmpEventDispatcher, IpLayerEventDispatcher, StackStateBuilder, TimerId,
+};
 
 #[derive(Default)]
 struct BenchmarkEventDispatcher;
@@ -42,17 +44,33 @@ impl DeviceLayerEventDispatcher for BenchmarkEventDispatcher {
     fn send_frame(&mut self, device: DeviceId, frame: &[u8]) {}
 }
 
+impl IcmpEventDispatcher for BenchmarkEventDispatcher {
+    type IcmpConn = ();
+
+    fn receive_icmp_echo_reply(&mut self, conn: &Self::IcmpConn, seq_num: u16, data: &[u8]) {
+        unimplemented!()
+    }
+}
+
+impl IpLayerEventDispatcher for BenchmarkEventDispatcher {}
+
 impl EventDispatcher for BenchmarkEventDispatcher {
-    fn schedule_timeout(&mut self, duration: Duration, id: TimerId) -> Option<Instant> {
+    type Instant = std::time::Instant;
+
+    fn now(&self) -> Self::Instant {
         unimplemented!()
     }
 
-    fn schedule_timeout_instant(&mut self, time: Instant, id: TimerId) -> Option<Instant> {
+    fn schedule_timeout(&mut self, duration: Duration, id: TimerId) -> Option<Self::Instant> {
         unimplemented!()
     }
 
-    fn cancel_timeout(&mut self, id: TimerId) -> Option<Instant> {
+    fn schedule_timeout_instant(&mut self, time: Instant, id: TimerId) -> Option<Self::Instant> {
         unimplemented!()
+    }
+
+    fn cancel_timeout(&mut self, id: TimerId) -> Option<Self::Instant> {
+        None
     }
 }
 
