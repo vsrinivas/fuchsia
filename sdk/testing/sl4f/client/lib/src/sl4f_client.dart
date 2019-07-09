@@ -8,7 +8,7 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show Platform, Process, ProcessStartMode, SocketException;
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
@@ -18,6 +18,10 @@ import 'exceptions.dart';
 import 'inspect.dart';
 
 final _log = Logger('sl4f_client');
+
+/// Diagnostics have been known to hang in some failure cases. In those cases, log
+/// and move on.
+const _diagnosticTimeout = Duration(minutes: 2);
 
 /// Handles the SL4F server and communication with it.
 class Sl4f {
@@ -190,8 +194,8 @@ class Sl4f {
     if (exitCode != 0) {
       _log
         ..warning('$cmd; exit code: $exitCode')
-        ..warning(await process.stdout.transform(utf8.decoder).join())
-        ..warning(await process.stderr.transform(utf8.decoder).join());
+        ..warning(await systemEncoding.decodeStream(process.stdout))
+        ..warning(await systemEncoding.decodeStream(process.stderr));
       return false;
     }
 
@@ -239,25 +243,35 @@ class Sl4f {
   /// Dumps files with useful device diagnostics.
   Future<void> dumpDiagnostics(String dumpName, {Dump dump}) async {
     final dumper = dump ?? Dump();
-    await _dumpStdout('top -n 1', '$dumpName-diagnostic-top', dumper);
-    await _dumpStdout(
+    await _dumpDiagnostic('top -n 1', '$dumpName-diagnostic-top', dumper);
+    await _dumpDiagnostic(
         'kstats -c -m -n 1', '$dumpName-diagnostic-kstats', dumper);
-    await _dumpStdout('iquery --report', '$dumpName-diagnostic-iquery', dumper);
-    await _dumpStdout('ps -T', '$dumpName-diagnostic-ps', dumper);
+    await _dumpDiagnostic(
+        'iquery --report', '$dumpName-diagnostic-iquery', dumper);
+    await _dumpDiagnostic('ps -T', '$dumpName-diagnostic-ps', dumper);
   }
 
-  Future<void> _dumpStdout(String cmd, String dumpName, Dump dump) async {
+  Future<void> _dumpDiagnostic(String cmd, String dumpName, Dump dump) async {
     final proc = await sshProcess(cmd);
     if (await proc.exitCode != 0) {
-      _log.warning('when running $cmd:\n'
-          '${await proc.stdout.transform(utf8.decoder).join()}');
+      _log
+        ..warning('$cmd; exit code: $exitCode')
+        ..warning(await systemEncoding.decodeStream(proc.stdout))
+        ..warning(await systemEncoding.decodeStream(proc.stderr));
       return null;
     }
     final sink = dump.openForWrite(dumpName, 'txt');
-    return Future.wait([
-      sink.addStream(proc.stdout).then((_) => sink.close()),
+    await Future.wait([
+      sink.addStream(proc.stdout).then((_) => sink
+        ..flush()
+        ..close()),
       proc.stdin.close()
-    ]);
+    ]).timeout(_diagnosticTimeout, onTimeout: () async {
+      _log.warning('$cmd; did not complete after $_diagnosticTimeout');
+      proc.kill();
+      await sink.close();
+      return null;
+    });
   }
 
   /// Sends an empty http request to the server to verify if it's listening on
