@@ -8,6 +8,7 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
+#include <endian.h>
 #include <lib/device-protocol/pdev.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
