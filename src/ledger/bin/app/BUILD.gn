@@ -196,6 +196,7 @@ source_set("unittests") {
     "merging/test_utils.h",
     "page_availability_manager_unittest.cc",
     "page_connection_notifier_unittest.cc",
+    "page_delegate_unittest.cc",
     "page_eviction_manager_impl_unittest.cc",
     "page_eviction_policies_unittest.cc",
     "page_impl_unittest.cc",

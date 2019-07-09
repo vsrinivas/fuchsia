@@ -77,6 +77,8 @@ void ActivePageManager::AddPageImpl(std::unique_ptr<PageImpl> page_impl,
   page_delegates_
       .emplace(environment_->coroutine_service(), this, page_storage_.get(), merge_resolver_.get(),
                &watchers_, std::move(page_impl))
+      // Note that if the page connection is already cut at this point, |Init()|
+      // will delete the newly created PageDelegate.
       .Init(std::move(traced_on_done));
 }
 

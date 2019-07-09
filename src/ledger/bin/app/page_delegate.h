@@ -44,6 +44,8 @@ class PageDelegate {
                SyncWatcherSet* watchers, std::unique_ptr<PageImpl> page_impl);
   ~PageDelegate();
 
+  // Initializes this PageDelegate. |Init| may call the |on_empty| callback if
+  // the Page connection is already cut.
   void Init(fit::function<void(Status)> on_done);
 
   void set_on_empty(fit::closure on_empty_callback) {

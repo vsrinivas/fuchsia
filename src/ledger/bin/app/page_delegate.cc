@@ -57,6 +57,7 @@ void PageDelegate::Init(fit::function<void(Status)> on_done) {
     return;
   }
   page_impl_->SetPageDelegate(this);
+  CheckEmpty();
   on_done(Status::OK);
 }
 

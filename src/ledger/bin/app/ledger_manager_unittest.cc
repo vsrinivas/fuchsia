@@ -35,6 +35,7 @@
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
 #include "src/ledger/bin/storage/impl/ledger_storage_impl.h"
 #include "src/ledger/bin/storage/public/ledger_storage.h"
+#include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
 #include "src/ledger/bin/testing/inspect.h"
@@ -999,6 +1000,85 @@ TEST_F(LedgerManagerTest, MultipleConflictResolvers) {
   EXPECT_FALSE(factory2.disconnected);
 }
 
+class DelayingLedgerStorage : public storage::LedgerStorage {
+ public:
+  DelayingLedgerStorage() {}
+  ~DelayingLedgerStorage() override {}
+
+  void CreatePageStorage(storage::PageId page_id,
+                         fit::function<void(storage::Status, std::unique_ptr<storage::PageStorage>)>
+                             callback) override {
+    get_page_calls_.emplace_back(std::move(page_id), std::move(callback));
+  }
+
+  void GetPageStorage(storage::PageId page_id,
+                      fit::function<void(storage::Status, std::unique_ptr<storage::PageStorage>)>
+                          callback) override {
+    get_page_calls_.emplace_back(std::move(page_id), std::move(callback));
+  }
+
+  void DeletePageStorage(storage::PageIdView /*page_id*/,
+                         fit::function<void(storage::Status)> callback) override {
+    FXL_NOTIMPLEMENTED();
+    callback(Status::NOT_IMPLEMENTED);
+  }
+
+  void ListPages(
+      fit::function<void(storage::Status, std::set<storage::PageId>)> callback) override {
+    FXL_NOTIMPLEMENTED();
+    callback(Status::NOT_IMPLEMENTED, {});
+  };
+
+  std::vector<std::pair<
+      storage::PageId, fit::function<void(storage::Status, std::unique_ptr<storage::PageStorage>)>>>
+      get_page_calls_;
+};
+
+// Verifies that closing a page before PageStorage is ready does not leave live
+// objects.
+// In this test, we request a Page, but before we are able to construct a
+// PageStorage, we close the connection. In that case, we should not leak
+// anything.
+TEST_F(LedgerManagerTest, GetPageDisconnect) {
+  // Setup
+  std::unique_ptr<DelayingLedgerStorage> storage = std::make_unique<DelayingLedgerStorage>();
+  auto storage_ptr = storage.get();
+  std::unique_ptr<FakeLedgerSync> sync = std::make_unique<FakeLedgerSync>();
+  auto disk_cleanup_manager = std::make_unique<FakeDiskCleanupManager>();
+  auto ledger_manager = std::make_unique<LedgerManager>(
+      &environment_, kLedgerName.ToString(),
+      top_level_node_.CreateChild(kInspectPathComponent.ToString()),
+      std::make_unique<encryption::FakeEncryptionService>(dispatcher()), std::move(storage),
+      std::move(sync), disk_cleanup_manager_.get());
+
+  LedgerPtr ledger;
+  ledger_manager->BindLedger(ledger.NewRequest());
+  RunLoopUntilIdle();
+
+  PageId id = RandomId(environment_);
+
+  PagePtr page1;
+  ledger->GetPage(fidl::MakeOptional(id), page1.NewRequest());
+  RunLoopUntilIdle();
+
+  ASSERT_THAT(storage_ptr->get_page_calls_, testing::SizeIs(1));
+  page1.Unbind();
+  RunLoopUntilIdle();
+
+  auto it = storage_ptr->get_page_calls_.begin();
+  it->second(storage::Status::OK,
+             std::make_unique<storage::fake::FakePageStorage>(&environment_, it->first));
+  RunLoopUntilIdle();
+
+  PagePtr page2;
+  ledger->GetPage(fidl::MakeOptional(id), page2.NewRequest());
+  RunLoopUntilIdle();
+
+  // We verify that we ask again for a new PageStorage, the previous one was
+  // correctly discarded.
+  EXPECT_THAT(storage_ptr->get_page_calls_, testing::SizeIs(2));
+}
+
 // Constructs a Matcher to be matched against a test-owned Inspect object (the
 // Inspect object to which the LedgerManager under test attaches a child) that
 // validates that the matched object has a hierarchy with a node for the
@@ -1043,7 +1123,7 @@ class LedgerManagerWithRealStorageTest : public TestWithEnvironment {
     ledger_manager_ = std::make_unique<LedgerManager>(
         &environment_, kLedgerName.ToString(),
         attachment_node_.CreateChild(kInspectPathComponent.ToString()),
-        std::move(encryption_service), std::move(std::move(ledger_storage)), std::move(sync),
+        std::move(encryption_service), std::move(ledger_storage), std::move(sync),
         disk_cleanup_manager_.get());
   }
 
