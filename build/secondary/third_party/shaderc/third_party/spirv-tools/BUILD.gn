@@ -555,3 +555,14 @@ executable("spirv-tools-cpp-example") {
     "examples/cpp-interface/main.cpp",
   ]
 }
+executable("spirv-link") {
+  deps = [
+    ":spirv-deps",
+    ":spirv-tools",
+    ":spirv-tools-opt",
+  ]
+  sources = [
+    "source/link/linker.cpp",
+    "tools/link/linker.cpp",
+  ]
+}
