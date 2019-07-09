@@ -8,6 +8,7 @@
 #![deny(missing_docs)]
 #![deny(unreachable_patterns)]
 
+mod devices;
 mod eventloop;
 mod fidl_worker;
 

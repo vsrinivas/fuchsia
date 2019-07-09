@@ -565,15 +565,15 @@ async fn test_add_remove_interface() {
         .expect("Add interface succeeds");
     // check that the created ID matches the one saved in the event loop state:
     let dev_info =
-        test_stack.event_loop.ctx.dispatcher().get_device_client(if_id).expect("Get device client");
-    assert_eq!(&dev_info.path, "fake_topo_path");
+        test_stack.event_loop.ctx.dispatcher().get_device_info(if_id).expect("Get device client");
+    assert_eq!(dev_info.path(), "fake_topo_path");
 
     // remove the interface:
     let () = await!(test_stack.run_future(stack.del_ethernet_interface(if_id)))
         .squash_result()
         .expect("Remove interface");
     // ensure the interface disappeared from records:
-    assert!(test_stack.event_loop.ctx.dispatcher().get_device_client(if_id).is_none());
+    assert!(test_stack.event_loop.ctx.dispatcher().get_device_info(if_id).is_none());
 
     // if we try to remove it again, NotFound should be returned:
     let res = await!(test_stack.run_future(stack.del_ethernet_interface(if_id)))
