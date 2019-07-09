@@ -57,7 +57,7 @@ Use `void*` for pointers to arbitrary types in the caller's address space. Use
 `zx_vaddr_t` / `zx_paddr_t` for addresses that might be in other address spaces.
 
 Use `zx_time_t` for timeouts, which must be expressed as absolute deadlines in
-nanoseconds in the `ZX_CLOCK_MONOTONIC` timebase. In scenarios were absolute
+nanoseconds in the `ZX_CLOCK_MONOTONIC` timebase. In scenarios where absolute
 deadlines do not make sense (for example, timer slack), use `zx_duration_t` to
 represent an amount of time in nanoseconds with no specific timebase.
 
