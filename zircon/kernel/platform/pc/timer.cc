@@ -24,6 +24,7 @@
 #include <kernel/cmdline.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
+#include <ktl/limits.h>
 #include <lib/fixed_point.h>
 #include <lk/init.h>
 #include <platform.h>
@@ -360,7 +361,7 @@ outer:
 }
 
 static uint64_t calibrate_tsc_count(uint16_t duration_ms) {
-    uint64_t best_time = UINT64_MAX;
+    zx_ticks_t best_time = ktl::numeric_limits<zx_ticks_t>::max();
 
     for (int tries = 0; tries < 3; ++tries) {
         switch (calibration_clock) {
@@ -399,7 +400,7 @@ static uint64_t calibrate_tsc_count(uint16_t duration_ms) {
         if (tsc_ticks < best_time) {
             best_time = tsc_ticks;
         }
-        LTRACEF("Calibration trial %d found %" PRIu64 " ticks/ms\n",
+        LTRACEF("Calibration trial %d found %" PRId64 " ticks/ms\n",
                 tries, tsc_ticks);
         switch (calibration_clock) {
         case CLOCK_HPET:

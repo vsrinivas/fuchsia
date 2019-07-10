@@ -32,13 +32,12 @@ BufferReader::BufferReader(const std::string& name, const void* buffer,
       header_(reinterpret_cast<const BufferHeader*>(buffer)),
       next_record_(buffer_ + sizeof(*header_)),
       buffer_end_(buffer_ + capture_end),
-      ticks_per_second_(header_->ticks_per_second) {
-}
+      ticks_per_second_(header_->ticks_per_second) {}
 
 ReaderStatus BufferReader::AnalyzeHeader(const BufferHeader* header,
                                          size_t buffer_size) {
-  FXL_VLOG(2) << "Reading header, buffer version "
-              << header->version << ", " << header->capture_end << " bytes";
+  FXL_VLOG(2) << "Reading header, buffer version " << header->version << ", "
+              << header->capture_end << " bytes";
 
   // TODO(dje): check magic
 
@@ -59,7 +58,7 @@ ReaderStatus BufferReader::AnalyzeHeader(const BufferHeader* header,
   }
 
 #ifdef __Fuchsia__
-  uint64_t user_ticks_per_second = zx_ticks_per_second();
+  zx_ticks_t user_ticks_per_second = zx_ticks_per_second();
   if (header->ticks_per_second != user_ticks_per_second) {
     FXL_LOG(WARNING) << "Kernel and userspace are using different tracing"
                      << " timebases, tracks may be misaligned:"
@@ -79,8 +78,7 @@ ReaderStatus BufferReader::ReadNextRecord(SampleRecord* record) {
     return set_status(ReaderStatus::kNoMoreRecords);
   }
 
-  const RecordHeader* hdr =
-    reinterpret_cast<const RecordHeader*>(next_record_);
+  const RecordHeader* hdr = reinterpret_cast<const RecordHeader*>(next_record_);
   if (next_record_ + sizeof(*hdr) > buffer_end_) {
     FXL_LOG(ERROR) << name_ << ": Bad trace data"
                    << ", no space for final record header";
@@ -106,34 +104,30 @@ ReaderStatus BufferReader::ReadNextRecord(SampleRecord* record) {
   FXL_VLOG(10) << "ReadNextRecord: offset=" << (next_record_ - buffer_);
 
   switch (record_type) {
-  case kRecordTypeTime:
-    record->time =
-      reinterpret_cast<const TimeRecord*>(next_record_);
-    time_ = record->time->time;
-    break;
-  case kRecordTypeTick:
-    record->tick =
-      reinterpret_cast<const TickRecord*>(next_record_);
-    break;
-  case kRecordTypeCount:
-    record->count =
-      reinterpret_cast<const CountRecord*>(next_record_);
-    break;
-  case kRecordTypeValue:
-    record->value =
-      reinterpret_cast<const ValueRecord*>(next_record_);
-    break;
-  case kRecordTypePc:
-    record->pc = reinterpret_cast<const PcRecord*>(next_record_);
-    break;
-  case kRecordTypeLastBranch:
-    record->last_branch =
-      reinterpret_cast<const LastBranchRecord*>(next_record_);
-    break;
-  default:
-    // We shouldn't get here because RecordSize() should have returned
-    // zero and we would have skipped to the next cpu.
-    __UNREACHABLE;
+    case kRecordTypeTime:
+      record->time = reinterpret_cast<const TimeRecord*>(next_record_);
+      time_ = record->time->time;
+      break;
+    case kRecordTypeTick:
+      record->tick = reinterpret_cast<const TickRecord*>(next_record_);
+      break;
+    case kRecordTypeCount:
+      record->count = reinterpret_cast<const CountRecord*>(next_record_);
+      break;
+    case kRecordTypeValue:
+      record->value = reinterpret_cast<const ValueRecord*>(next_record_);
+      break;
+    case kRecordTypePc:
+      record->pc = reinterpret_cast<const PcRecord*>(next_record_);
+      break;
+    case kRecordTypeLastBranch:
+      record->last_branch =
+          reinterpret_cast<const LastBranchRecord*>(next_record_);
+      break;
+    default:
+      // We shouldn't get here because RecordSize() should have returned
+      // zero and we would have skipped to the next cpu.
+      __UNREACHABLE;
   }
 
   last_record_ = next_record_;

@@ -6,6 +6,7 @@
 #define ZIRCON_SYSTEM_ULIB_STORAGE_METRICS_STORAGE_METRICS_H_
 
 #include <atomic>
+#include <limits>
 #include <optional>
 #include <stdio.h>
 
@@ -13,7 +14,7 @@
 #include <fuchsia/storage/metrics/c/fidl.h>
 
 namespace storage_metrics {
-constexpr uint64_t kUninitializedMinimumLatency = UINT64_MAX;
+constexpr zx_ticks_t kUninitializedMinimumLatency = std::numeric_limits<zx_ticks_t>::max();
 using CallStatFidl = fuchsia_storage_metrics_CallStat;
 using CallStatRawFidl = fuchsia_storage_metrics_CallStatRaw;
 
@@ -56,9 +57,9 @@ public:
     // true then success_stat_ is chosen for CallStatRaw, is false then
     // failures_stat_ is chosen for CallStatRaw, or if ||success| is nullopt
     // then an aggregate of success_stat_ and failures_stat_ is returned.
-    uint64_t minimum_latency(std::optional<bool> success = std::nullopt) const;
-    uint64_t maximum_latency(std::optional<bool> success = std::nullopt) const;
-    uint64_t total_time_spent(std::optional<bool> success = std::nullopt) const;
+    zx_ticks_t minimum_latency(std::optional<bool> success = std::nullopt) const;
+    zx_ticks_t maximum_latency(std::optional<bool> success = std::nullopt) const;
+    zx_ticks_t total_time_spent(std::optional<bool> success = std::nullopt) const;
     uint64_t total_calls(std::optional<bool> success = std::nullopt) const;
     uint64_t bytes_transferred(std::optional<bool> success = std::nullopt) const;
 
@@ -80,13 +81,13 @@ private:
         void UpdateRawCallStat(zx_ticks_t delta_time, uint64_t bytes_transferred);
 
         // Minimum time taken by a request to be served.
-        std::atomic<uint64_t> minimum_latency;
+        std::atomic<zx_ticks_t> minimum_latency;
 
         // Maximum time taken by a request to be served.
-        std::atomic<uint64_t> maximum_latency;
+        std::atomic<zx_ticks_t> maximum_latency;
 
         // Total time spent to serve requests.
-        std::atomic<uint64_t> total_time_spent;
+        std::atomic<zx_ticks_t> total_time_spent;
 
         // Total number of calls.
         std::atomic<uint64_t> total_calls;

@@ -83,7 +83,8 @@ static bool timer_enabled(GuestState* guest_state) {
 }
 
 void timer_maybe_interrupt(GuestState* guest_state, GichState* gich_state) {
-  if (timer_enabled(guest_state) && current_ticks() >= guest_state->cntv_cval_el0 &&
+  if (timer_enabled(guest_state) &&
+      static_cast<uint64_t>(current_ticks()) >= guest_state->cntv_cval_el0 &&
       gich_state->GetInterruptState(kTimerVector) == InterruptState::INACTIVE) {
     gich_state->Track(kTimerVector, hypervisor::InterruptType::PHYSICAL);
   }
@@ -107,7 +108,7 @@ static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_st
   ktrace_vcpu_exit(VCPU_WFI_INSTRUCTION, guest_state->system_state.elr_el2);
   zx_time_t deadline = ZX_TIME_INFINITE;
   if (timer_enabled(guest_state)) {
-    if (current_ticks() >= guest_state->cntv_cval_el0) {
+    if (static_cast<uint64_t>(current_ticks()) >= guest_state->cntv_cval_el0) {
       return ZX_OK;
     }
     deadline = cntpct_to_zx_time(guest_state->cntv_cval_el0);

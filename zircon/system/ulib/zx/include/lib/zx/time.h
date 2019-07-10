@@ -6,6 +6,7 @@
 #define LIB_ZX_TIME_H_
 
 #include <stdint.h>
+#include <limits>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
@@ -117,16 +118,54 @@ public:
     // Acquires the number of ticks contained within this object.
     constexpr zx_ticks_t get() const { return value_; }
 
+    static constexpr ticks infinite() {
+        return ticks(INFINITE);
+    }
+
+    static constexpr ticks infinite_past() {
+        return ticks(INFINITE_PAST);
+    }
+
     constexpr ticks operator+(ticks other) const {
-        return ticks(value_ + other.value_);
+        zx_ticks_t x = 0;
+
+        if (unlikely(add_overflow(value_, other.value_, &x))) {
+            if (x >= 0) {
+                return infinite_past();
+            } else {
+                return infinite();
+            }
+        }
+
+        return ticks(x);
     }
 
     constexpr ticks operator-(ticks other) const {
-        return ticks(value_ - other.value_);
+        zx_ticks_t x = 0;
+
+        if (unlikely(sub_overflow(value_, other.value_, &x))) {
+            if (x >= 0) {
+                return infinite_past();
+            } else {
+                return infinite();
+            }
+        }
+
+        return ticks(x);
     }
 
     constexpr ticks operator*(uint64_t multiplier) const {
-        return ticks(value_ * multiplier);
+        zx_ticks_t x = 0;
+
+        if (unlikely(mul_overflow(value_, multiplier, &x))) {
+            if (value_ < 0) {
+                return infinite_past();
+            } else {
+                return infinite();
+            }
+        }
+
+        return ticks(x);
     }
 
     constexpr ticks operator/(uint64_t divisor) const {
@@ -146,17 +185,17 @@ public:
     }
 
     constexpr ticks& operator+=(ticks other) {
-        value_ += other.value_;
+        *this = *this + other;
         return *this;
     }
 
     constexpr ticks& operator-=(ticks other) {
-        value_ -= other.value_;
+        *this = *this - other;
         return *this;
     }
 
     constexpr ticks& operator*=(uint64_t multiplier) {
-        value_ *= multiplier;
+        *this = *this * multiplier;
         return *this;
     }
 
@@ -178,6 +217,9 @@ public:
     constexpr bool operator>=(ticks other) const { return value_ >= other.value_; }
 
 private:
+    static constexpr zx_ticks_t INFINITE = std::numeric_limits<zx_ticks_t>::max();
+    static constexpr zx_ticks_t INFINITE_PAST = std::numeric_limits<zx_ticks_t>::min();
+
     zx_ticks_t value_ = 0;
 };
 

@@ -855,13 +855,13 @@ static bool pmi_interrupt_handler(const iframe_short_t *frame, PerfmonState* sta
     auto data = &state->cpu_data[cpu];
 
     zx_ticks_t now = current_ticks();
-    TRACEF("cpu %u: now %lu, sp %p\n", cpu, now, __GET_FRAME());
+    TRACEF("cpu %u: now %ld, sp %p\n", cpu, now, __GET_FRAME());
 
     // Rather than continually checking if we have enough space, just
     // conservatively check for the maximum amount we'll need.
     size_t space_needed = get_max_space_needed_for_all_records(state);
     if (reinterpret_cast<char*>(data->buffer_next) + space_needed > data->buffer_end) {
-        TRACEF("cpu %u: @%lu pmi buffer full\n", cpu, now);
+        TRACEF("cpu %u: @%ld pmi buffer full\n", cpu, now);
         data->buffer_start->flags |= perfmon::BufferHeader::kBufferFlagFull;
         return false;
     }

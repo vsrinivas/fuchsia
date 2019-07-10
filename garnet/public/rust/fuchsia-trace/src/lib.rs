@@ -664,9 +664,9 @@ fn trace_make_inline_string_ref(string: &str) -> sys::trace_string_ref_t {
 
 mod sys {
     #![allow(non_camel_case_types, unused)]
-    use fuchsia_zircon::sys::{zx_handle_t, zx_koid_t, zx_obj_type_t, zx_status_t};
+    use fuchsia_zircon::sys::{zx_handle_t, zx_koid_t, zx_obj_type_t, zx_status_t, zx_ticks_t};
 
-    pub type trace_ticks_t = u64;
+    pub type trace_ticks_t = zx_ticks_t;
     pub type trace_counter_id_t = u64;
     pub type trace_async_id_t = u64;
     pub type trace_flow_id_t = u64;

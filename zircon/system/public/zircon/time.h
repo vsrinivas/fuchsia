@@ -17,7 +17,7 @@ typedef int64_t zx_time_t;
 // a duration in nanoseconds
 typedef int64_t zx_duration_t;
 // a duration in hardware ticks
-typedef uint64_t zx_ticks_t;
+typedef int64_t zx_ticks_t;
 
 #define ZX_TIME_INFINITE INT64_MAX
 #define ZX_TIME_INFINITE_PAST INT64_MIN

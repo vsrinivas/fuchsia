@@ -290,24 +290,126 @@ TEST(ZxTestCase, TimeNanoSleep) {
 }
 
 TEST(ZxTestCase, Ticks) {
+    // Check that the default constructor initialized to 0.
     ASSERT_EQ(zx::ticks().get(), 0);
 
+    // Sanity check the math operators.
+    zx::ticks res;
+
+    // Addition
+    res = zx::ticks(5) + zx::ticks(7);
+    ASSERT_EQ(res.get(), 12);
+    res = zx::ticks(5);
+    res += zx::ticks(7);
+    ASSERT_EQ(res.get(), 12);
+
+    // Subtraction
+    res = zx::ticks(5) - zx::ticks(7);
+    ASSERT_EQ(res.get(), -2);
+    res = zx::ticks(5);
+    res -= zx::ticks(7);
+    ASSERT_EQ(res.get(), -2);
+
+    // Multiplication
+    res = zx::ticks(7) * 3;
+    ASSERT_EQ(res.get(), 21);
+    res = zx::ticks(7);
+    res *= 3;
+    ASSERT_EQ(res.get(), 21);
+
+    // Division
+    res = zx::ticks(25) / 7;
+    ASSERT_EQ(res.get(), 3);
+    res = zx::ticks(25);
+    res /= 7;
+    ASSERT_EQ(res.get(), 3);
+
+    // Modulus
+    res = zx::ticks(25) % 7;
+    ASSERT_EQ(res.get(), 4);
+    res = zx::ticks(25);
+    res %= 7;
+    ASSERT_EQ(res.get(), 4);
+
+    // Test basic comparison, also set up for testing monotonicity.
     zx::ticks before = zx::ticks::now();
     ASSERT_GT(before.get(), 0);
     zx::ticks after = before + zx::ticks(1);
 
     ASSERT_LT(before.get(), after.get());
     ASSERT_TRUE(before < after);
+    ASSERT_TRUE(before <= after);
+    ASSERT_TRUE(before <= before);
+
+    ASSERT_TRUE(after > before);
+    ASSERT_TRUE(after >= before);
+    ASSERT_TRUE(after >= after);
+
+    ASSERT_TRUE(before == before);
+    ASSERT_TRUE(before != after);
+
     after -= zx::ticks(1);
     ASSERT_EQ(before.get(), after.get());
     ASSERT_TRUE(before == after);
 
+    // Make sure that zx::ticks TPS agrees with the syscall.
     ASSERT_EQ(zx::ticks::per_second().get(), zx_ticks_per_second());
 
     // Compare a duration (nanoseconds) with the ticks equivalent.
     zx::ticks second = zx::ticks::per_second();
     ASSERT_EQ(fzl::TicksToNs(second).get(), zx::sec(1).get());
     ASSERT_TRUE(fzl::TicksToNs(second) == zx::sec(1));
+
+    // Make sure that the libzx ticks operators saturate properly, instead of
+    // overflowing.  Start with addition.
+    constexpr zx::ticks ALMOST_MAX = zx::ticks(std::numeric_limits<zx_ticks_t>::max() - 5);
+    constexpr zx::ticks ALMOST_MIN = zx::ticks(std::numeric_limits<zx_ticks_t>::min() + 5);
+    constexpr zx::ticks ABSOLUTE_MIN = zx::ticks(std::numeric_limits<zx_ticks_t>::min());
+    constexpr zx::ticks ZERO = zx::ticks(0);
+
+    res = ALMOST_MAX + zx::ticks(10);
+    ASSERT_EQ(res.get(), zx::ticks::infinite().get());
+    res = ALMOST_MAX;
+    res += zx::ticks(10);
+    ASSERT_EQ(res.get(), zx::ticks::infinite().get());
+
+    res = ALMOST_MIN + zx::ticks(-10);
+    ASSERT_EQ(res.get(), zx::ticks::infinite_past().get());
+    res = ALMOST_MIN;
+    res += zx::ticks(-10);
+    ASSERT_EQ(res.get(), zx::ticks::infinite_past().get());
+
+    // Now, subtraction
+    res = ALMOST_MIN - zx::ticks(10);
+    ASSERT_EQ(res.get(), zx::ticks::infinite_past().get());
+    res = ALMOST_MIN;
+    res -= zx::ticks(10);
+    ASSERT_EQ(res.get(), zx::ticks::infinite_past().get());
+
+    res = ALMOST_MAX - zx::ticks(-10);
+    ASSERT_EQ(res.get(), zx::ticks::infinite().get());
+    res = ALMOST_MAX;
+    res -= zx::ticks(-10);
+    ASSERT_EQ(res.get(), zx::ticks::infinite().get());
+
+    res = ZERO - ABSOLUTE_MIN;
+    ASSERT_EQ(res.get(), zx::ticks::infinite().get());
+    res = ZERO;
+    res -= ABSOLUTE_MIN;
+    ASSERT_EQ(res.get(), zx::ticks::infinite().get());
+
+    // Finally, multiplication
+    res = ALMOST_MAX * 2;
+    ASSERT_EQ(res.get(), zx::ticks::infinite().get());
+    res = ALMOST_MAX;
+    res *= 2;
+    ASSERT_EQ(res.get(), zx::ticks::infinite().get());
+
+    res = ALMOST_MIN * 2;
+    ASSERT_EQ(res.get(), zx::ticks::infinite_past().get());
+    res = ALMOST_MIN;
+    res *= 2;
+    ASSERT_EQ(res.get(), zx::ticks::infinite_past().get());
 
     // Hopefully, we haven't moved backwards in time.
     after = zx::ticks::now();

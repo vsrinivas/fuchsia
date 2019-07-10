@@ -44,13 +44,13 @@ void CallStat::CallStatRaw::UpdateRawCallStat(zx_ticks_t delta_time, uint64_t by
     total_time_spent += delta_time;
     bytes_transferred += bytes;
 
-    uint64_t max = maximum_latency.load();
+    zx_ticks_t max = maximum_latency.load();
     while (delta_time > max) {
         maximum_latency.compare_exchange_strong(max, delta_time);
         max = maximum_latency.load();
     }
 
-    uint64_t min = minimum_latency.load();
+    zx_ticks_t min = minimum_latency.load();
     while (delta_time < min) {
         minimum_latency.compare_exchange_strong(min, delta_time);
         min = minimum_latency.load();
@@ -76,7 +76,7 @@ void CallStat::CopyToFidl(CallStatFidl* out) const {
     failure_stat_.CopyToRawFidl(&out->failure);
 }
 
-uint64_t CallStat::minimum_latency(std::optional<bool> success) const {
+zx_ticks_t CallStat::minimum_latency(std::optional<bool> success) const {
     if (success) {
         if (*success == true) {
             return success_stat_.minimum_latency;
@@ -86,7 +86,7 @@ uint64_t CallStat::minimum_latency(std::optional<bool> success) const {
     }
     return std::min(success_stat_.minimum_latency, failure_stat_.minimum_latency);
 }
-uint64_t CallStat::maximum_latency(std::optional<bool> success) const {
+zx_ticks_t CallStat::maximum_latency(std::optional<bool> success) const {
     if (success) {
         if (*success == true) {
             return success_stat_.maximum_latency;
@@ -96,7 +96,7 @@ uint64_t CallStat::maximum_latency(std::optional<bool> success) const {
     }
     return std::max(success_stat_.maximum_latency, failure_stat_.maximum_latency);
 }
-uint64_t CallStat::total_time_spent(std::optional<bool> success) const {
+zx_ticks_t CallStat::total_time_spent(std::optional<bool> success) const {
     if (success) {
         if (*success == true) {
             return success_stat_.total_time_spent;
@@ -138,11 +138,11 @@ void CallStat::Dump(FILE* stream, const char* stat_name, std::optional<bool> suc
     }
     fprintf(stream, "%s.%s.total_calls:         %lu\n", stat_name, stat_success,
             total_calls(success));
-    fprintf(stream, "%s.%s.total_time_spent:    %lu\n", stat_name, stat_success,
+    fprintf(stream, "%s.%s.total_time_spent:    %ld\n", stat_name, stat_success,
             total_time_spent(success));
-    fprintf(stream, "%s.%s.maximum_latency:     %lu\n", stat_name, stat_success,
+    fprintf(stream, "%s.%s.maximum_latency:     %ld\n", stat_name, stat_success,
             maximum_latency(success));
-    fprintf(stream, "%s.%s.minimum_latency:     %lu\n", stat_name, stat_success,
+    fprintf(stream, "%s.%s.minimum_latency:     %ld\n", stat_name, stat_success,
             minimum_latency(success) == kUninitializedMinimumLatency ? 0
                                                                      : minimum_latency(success));
     fprintf(stream, "%s.%s.bytes_transferred:   %lu\n", stat_name, stat_success,

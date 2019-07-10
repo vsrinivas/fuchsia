@@ -72,7 +72,8 @@ bool ComparePartialBuffer(const fbl::Vector<trace::Record>& records,
         return false;
     }
     // Sanity check the recorded ticks/seconds.
-    if (records[0].GetInitialization().ticks_per_second != zx_ticks_per_second()) {
+    if (records[0].GetInitialization().ticks_per_second !=
+        static_cast<trace_ticks_t>(zx_ticks_per_second())) {
         fprintf(stderr, "Bad ticks/second field in initialization record\n");
         return false;
     }

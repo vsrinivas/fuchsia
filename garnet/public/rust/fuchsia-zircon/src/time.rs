@@ -309,7 +309,7 @@ impl Time {
 /// Wraps the
 /// [zx_ticks_get](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/ticks_get.md)
 /// syscall.
-pub fn ticks_get() -> u64 {
+pub fn ticks_get() -> i64 {
     unsafe { sys::zx_ticks_get() }
 }
 
@@ -318,7 +318,7 @@ pub fn ticks_get() -> u64 {
 /// Wraps the
 /// [zx_ticks_per_second](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/ticks_per_second.md)
 /// syscall.
-pub fn ticks_per_second() -> u64 {
+pub fn ticks_per_second() -> i64 {
     unsafe { sys::zx_ticks_per_second() }
 }
 
