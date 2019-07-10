@@ -19,6 +19,12 @@ namespace escher {
 bool IntersectRayBox(const escher::ray4& ray, const escher::BoundingBox& box,
                      Interval* out_interval);
 
+// Returns whether a ray intersects a 3D triangle or not. Upon return, |out_distance|
+// contains the distance from the ray origin to the intersection point in units of
+// ray length.
+bool IntersectRayTriangle(const escher::ray4& ray, const glm::vec3& v1, const glm::vec3& v2,
+                          const glm::vec3& v3, float* out_distance);
+
 // Return the distance from the ray origin to the intersection point in units
 // of ray length, or FLT_MAX if the line and plane are (nearly) parallel.  This
 // can be used to test line, ray, and line-segment intersection:

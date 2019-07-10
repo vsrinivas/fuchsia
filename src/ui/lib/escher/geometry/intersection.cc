@@ -68,4 +68,76 @@ bool IntersectRayBox(const escher::ray4& ray, const escher::BoundingBox& box,
   return true;
 }
 
+// Use the "inside-out" test where the intersection point between the ray and the plane
+// that contains the triangle is tested against each of the triangles edges. If the
+// hit-point is inside all three edges then the ray has intersected the triangle.
+bool IntersectRayTriangle(const escher::ray4& ray, const glm::vec3& v0, const glm::vec3& v1,
+                          const glm::vec3& v2, float* out_distance) {
+  // Get ray components.
+  const glm::vec3 orig(ray.origin);
+  const glm::vec3 dir(ray.direction);
+
+  // Get the normal vector for the triangle by computing the cross product
+  // of two of its edges, and normalizing the result.
+  glm::vec3 edge_1(v1 - v0);
+  glm::vec3 edge_2(v2 - v0);
+  glm::vec3 norm = glm::normalize(glm::cross(edge_1, edge_2));
+
+  // Find the intersection point between the ray and the triangle's plane.
+  // First check if the ray is parallel to the plane, in which case there
+  // is no intersection. Do this by computing the dot product of the ray direction
+  // with the normal. If it is 0, that indicates that the ray direction vector is
+  // 90 degrees from the normal, meaning it is parallel to the plane.
+  float dot_ray_norm = glm::dot(norm, dir);
+  if (fabs(dot_ray_norm) < kEpsilon) {
+    return false;
+  }
+
+  // Check to see if the triangle is behind the ray origin by doing a ray-plane
+  // intersection test and seeing if the parameterized distance |t| is negative.
+  float t = glm::dot(v0 - orig, norm) / dot_ray_norm;
+  if (t < 0.f) {
+    return false;
+  }
+
+  // Now we know that 1) the triangle is in front of the ray and 2) the ray intersections
+  // the plane. So we can grab the intersection point.
+  glm::vec3 point(ray.At(t));
+
+  // Now we perform the "inside out" test with P, to see if it lies on the inside of all
+  // three of the triangle's edges. This is a quick lambda function to do the edge testing
+  // so that we don't have to rewrite the same code three times.
+  auto IsInside = [&point, &norm](const glm::vec3& va, const glm::vec3& vb) {
+    glm::vec3 edge = vb - va;
+    glm::vec3 dist_p = point - va;
+    glm::vec3 perpendicular = glm::cross(edge, dist_p);
+
+    // If the normal and the perpendicular vector are facing the same direction, the point
+    // is inside the edge.
+    return glm::dot(norm, perpendicular) >= 0.f;
+  };
+
+  // Check edge 0.
+  if (!IsInside(v0, v1)) {
+    return false;
+  }
+
+  // Check edge 1.
+  if (!IsInside(v1, v2)) {
+    return false;
+  }
+
+  // Check edge 2.
+  if (!IsInside(v2, v0)) {
+    return false;
+  }
+
+  // The ray hit the triangle! Write out the distance before returning.
+  if (out_distance) {
+    *out_distance = t;
+  }
+
+  return true;
+}
+
 }  // namespace escher

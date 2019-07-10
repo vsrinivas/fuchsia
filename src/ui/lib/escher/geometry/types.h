@@ -43,6 +43,9 @@ struct ray4 {
   // The ray's direction vector in space.
   // Last component must be zero.
   glm::vec4 direction;
+
+  // Gets the coordinate point along the ray for a given parameterized distance.
+  glm::vec4 At(const float t) const { return origin + t * direction; }
 };
 
 // Used to compare whether two values are nearly equal.
