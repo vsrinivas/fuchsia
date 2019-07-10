@@ -5,22 +5,51 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_FORMAT_NODE_CONSOLE_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_FORMAT_NODE_CONSOLE_H_
 
+#include "lib/fit/defer.h"
+#include "src/developer/debug/zxdb/console/async_output_buffer.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/format_expr_value_options.h"
 
 namespace zxdb {
 
+class ExprValue;
 struct FormatExprValueOptions;
 class FormatNode;
 
 // Console-output-specific options format formatting.
-struct ConsoleFormatNodeOptions : public FormatExprValueOptions {};
+struct ConsoleFormatNodeOptions : public FormatExprValueOptions {
+  // The number of pointers to resolve to values recursively.
+  //
+  // When we encounter pointers, we can't blindly follow and expand them because there can be
+  // cycles and this will put us into an infinite loop.
+  //
+  // This number tracks the number of nested pointers that the code will resolve to the pointed-to
+  // values. A value of 0 does not expand pointers and will only print their address. A value of two
+  // would print up to two nested levels of pointer. These need not be consecutive in the hierarchy:
+  // there could be a pointer, then a bunch of levels of concrete struct nesting, then another
+  // pointer and this would count toward the two.
+  int pointer_expand_depth = 1;
+
+  // An upper bound on the level of nesting that we'll do. This prevents the presentation from
+  // getting too crazy and also protects against infinite recursion in some error cases.
+  int max_depth = 16;
+};
+
+// Recursively describes the given format node according to the given settings. Executes the given
+// callback on completion or if the node is destroyed before formatting is done.
+void DescribeFormatNodeForConsole(FormatNode* node, const ConsoleFormatNodeOptions& options,
+                                  fxl::RefPtr<EvalContext> context, fit::deferred_callback cb);
 
 // Formats the given FormatNode for the console.
 //
 // This assumes the node has been evaluated and described as desired by the caller so the result
 // can be synchronously formatted and returned.
 OutputBuffer FormatNodeForConsole(const FormatNode& node, const ConsoleFormatNodeOptions& options);
+
+// Describes and formats the given ExprValue and writes it to the given asynchronous output buffer.
+void FormatValueForConsole(ExprValue value, const ConsoleFormatNodeOptions& options,
+                           fxl::RefPtr<EvalContext> context, fxl::RefPtr<AsyncOutputBuffer> output);
 
 }  // namespace zxdb
 

@@ -723,43 +723,12 @@ void FormatUnspecified(FormatNode* node) {
     node->set_description(fxl::StringPrintf("0x%" PRIx64, unspecified_value));
 }
 
-}  // namespace
-
-void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
-                         fit::deferred_callback cb) {
-  switch (node->source()) {
-    case FormatNode::kValue:
-      // Already has the value.
-      return;
-    case FormatNode::kExpression: {
-      // Evaluate the expression.
-      // TODO(brettw) remove this make_shared when EvalExpression takes a fit::callback.
-      auto shared_cb = std::make_shared<fit::deferred_callback>(std::move(cb));
-      EvalExpression(node->expression(), context, true,
-                     [weak_node = node->GetWeakPtr(), shared_cb](const Err& err, ExprValue value) {
-                       if (!weak_node)
-                         return;
-                       if (err.has_error()) {
-                         weak_node->set_err(err);
-                         weak_node->SetValue(ExprValue());
-                       } else {
-                         weak_node->SetValue(std::move(value));
-                       }
-                     });
-      return;
-    }
-    case FormatNode::kProgramatic:
-      // Lambda provides the value.
-      node->FillProgramaticValue(std::move(context), std::move(cb));
-      return;
-  }
-  FXL_NOTREACHED();
-}
-
-void FillFormatNodeDescription(FormatNode* node, const FormatExprValueOptions& options,
-                               fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
-  if (node->state() == FormatNode::kEmpty || node->state() == FormatNode::kUnevaluated ||
-      node->err().has_error()) {
+// Given a node with a value already filled, fills the description.
+void FillFormatNodeDescriptionFromValue(FormatNode* node, const FormatExprValueOptions& options,
+                                        fxl::RefPtr<EvalContext> context,
+                                        fit::deferred_callback cb) {
+  FXL_DCHECK(node->state() != FormatNode::kUnevaluated);
+  if (node->state() == FormatNode::kEmpty || node->err().has_error()) {
     node->set_state(FormatNode::kDescribed);
     return;
   }
@@ -838,6 +807,61 @@ void FillFormatNodeDescription(FormatNode* node, const FormatExprValueOptions& o
     FormatUnspecified(node);
   } else {
     node->set_err(Err("Unsupported type for new formatting system."));
+  }
+}
+
+}  // namespace
+
+void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
+                         fit::deferred_callback cb) {
+  switch (node->source()) {
+    case FormatNode::kValue:
+      // Already has the value.
+      return;
+    case FormatNode::kExpression: {
+      // Evaluate the expression.
+      // TODO(brettw) remove this make_shared when EvalExpression takes a fit::callback.
+      auto shared_cb = std::make_shared<fit::deferred_callback>(std::move(cb));
+      EvalExpression(node->expression(), context, true,
+                     [weak_node = node->GetWeakPtr(), shared_cb](const Err& err, ExprValue value) {
+                       if (!weak_node)
+                         return;
+                       if (err.has_error()) {
+                         weak_node->set_err(err);
+                         weak_node->SetValue(ExprValue());
+                       } else {
+                         weak_node->SetValue(std::move(value));
+                       }
+                     });
+      return;
+    }
+    case FormatNode::kProgramatic:
+      // Lambda provides the value.
+      node->FillProgramaticValue(std::move(context), std::move(cb));
+      return;
+  }
+  FXL_NOTREACHED();
+}
+
+void FillFormatNodeDescription(FormatNode* node, const FormatExprValueOptions& options,
+                               fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
+  if (node->state() == FormatNode::kEmpty || node->err().has_error()) {
+    node->set_state(FormatNode::kDescribed);
+    return;
+  }
+
+  if (node->state() == FormatNode::kUnevaluated) {
+    // Need to compute the value (possibly asynchronously).
+    FillFormatNodeValue(node, context,
+                        fit::defer_callback([weak_node = node->GetWeakPtr(), options, context,
+                                             cb = std::move(cb)]() mutable {
+                          if (weak_node)
+                            FillFormatNodeDescriptionFromValue(weak_node.get(), options, context,
+                                                               std::move(cb));
+                        }));
+  } else {
+    // Value already available, can format now.
+    FillFormatNodeDescriptionFromValue(node, options, context, std::move(cb));
   }
 }
 

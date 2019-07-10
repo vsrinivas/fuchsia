@@ -4,12 +4,33 @@
 
 #include "src/developer/debug/zxdb/console/format_node_console.h"
 
+#include "src/developer/debug/zxdb/common/ref_ptr_to.h"
+#include "src/developer/debug/zxdb/expr/format.h"
 #include "src/developer/debug/zxdb/expr/format_expr_value_options.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace zxdb {
 
 namespace {
+
+// Provides a way to execute a single callback when a set of deferred actions is complete.
+class AggregateDeferredCallback : public fxl::RefCountedThreadSafe<AggregateDeferredCallback> {
+ public:
+  // Returns a subordinate callback, the completion of which will contribute to the outer callback.
+  fit::deferred_callback MakeSubordinate() {
+    // This callback exists only to hold the bound reference to the outer callback.
+    return fit::defer_callback([ref = RefPtrTo(this)]() {});
+  }
+
+ private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(AggregateDeferredCallback);
+  FRIEND_MAKE_REF_COUNTED(AggregateDeferredCallback);
+
+  explicit AggregateDeferredCallback(fit::deferred_callback cb) : outer_(std::move(cb)) {}
+
+  fit::deferred_callback outer_;
+};
 
 // Some state needs to be tracked recursively as we iterate through the tree.
 struct RecursiveState {
@@ -17,6 +38,12 @@ struct RecursiveState {
   // for example, to avoid duplicating the type information for every entry.
   bool inhibit_one_name = false;
   bool inhibit_one_type = false;
+
+  // Counter for the levels of nesting. The top level is 0.
+  int depth = 0;
+
+  // Number of pointers we've expanded so far in this level of recursion.
+  int pointer_depth = 0;
 
   // Returns a modified version of the state for one additional level of recursion.
   RecursiveState Advance() const;
@@ -27,7 +54,39 @@ RecursiveState RecursiveState::Advance() const {
   result.inhibit_one_name = false;
   result.inhibit_one_type = false;
 
+  result.depth++;
+
   return result;
+}
+
+void RecursiveDescribeFormatNode(FormatNode* node, const ConsoleFormatNodeOptions& options,
+                                 fxl::RefPtr<EvalContext> context, const RecursiveState& state,
+                                 fit::deferred_callback cb) {
+  if (state.depth == options.max_depth)
+    return;  // Reached max depth, give up.
+
+  FillFormatNodeDescription(
+      node, options, context,
+      fit::defer_callback([weak_node = node->GetWeakPtr(), options, context, cb = std::move(cb),
+                           state = state.Advance()]() mutable {
+        // Description is complete.
+        if (!weak_node || weak_node->children().empty())
+          return;
+
+        // Check for pointer expansion to avoid recursing into too many.
+        if (weak_node->description_kind() == FormatNode::kPointer) {
+          if (state.pointer_depth == options.pointer_expand_depth)
+            return;  // Don't recurse into another level of pointer.
+          state.pointer_depth++;
+        }
+
+        // Recurse into children.
+        auto aggregator = fxl::MakeRefCounted<AggregateDeferredCallback>(std::move(cb));
+        for (const auto& child : weak_node->children()) {
+          RecursiveDescribeFormatNode(child.get(), options, context, state,
+                                      aggregator->MakeSubordinate());
+        }
+      }));
 }
 
 void AppendNode(const FormatNode* node, const ConsoleFormatNodeOptions& options,
@@ -143,6 +202,17 @@ void AppendStandard(const FormatNode* node, const ConsoleFormatNodeOptions& opti
 void AppendNode(const FormatNode* node, const ConsoleFormatNodeOptions& options,
                 const RecursiveState& state, OutputBuffer* out) {
   AppendNodeNameAndType(node, options, state, out);
+  if (state.depth == options.max_depth) {
+    // Hit max depth, give up.
+    out->Append(Syntax::kComment, "…");
+    return;
+  }
+
+  if (node->err().has_error()) {
+    // Write the error.
+    out->Append(Syntax::kComment, "<" + node->err().msg() + ">");
+    return;
+  }
 
   switch (node->description_kind()) {
     case FormatNode::kNone:
@@ -166,20 +236,37 @@ void AppendNode(const FormatNode* node, const ConsoleFormatNodeOptions& options,
       AppendReference(node, options, state, out);
       break;
     case FormatNode::kRustEnum:
-      // TODO(brettw)
-      break;
     case FormatNode::kRustTuple:
-      // TODO(brettw)
+      // TODO(brettw): need more specific formatting. For now just output the default.
+      AppendStandard(node, options, state, out);
       break;
   }
 }
 
 }  // namespace
 
+void DescribeFormatNodeForConsole(FormatNode* node, const ConsoleFormatNodeOptions& options,
+                                  fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
+  RecursiveDescribeFormatNode(node, options, context, RecursiveState(), std::move(cb));
+}
+
 OutputBuffer FormatNodeForConsole(const FormatNode& node, const ConsoleFormatNodeOptions& options) {
   OutputBuffer out;
   AppendNode(&node, options, RecursiveState(), &out);
   return out;
+}
+
+void FormatValueForConsole(ExprValue value, const ConsoleFormatNodeOptions& options,
+                           fxl::RefPtr<EvalContext> context,
+                           fxl::RefPtr<AsyncOutputBuffer> output) {
+  auto node = std::make_unique<FormatNode>(std::string(), std::move(value));
+  FormatNode* node_ptr = node.get();
+  DescribeFormatNodeForConsole(
+      node_ptr, options, context,
+      fit::defer_callback([node = std::move(node), options, out = std::move(output)]() {
+        // Asynchronous expansion is complete, now format the completed output.
+        out->Complete(FormatNodeForConsole(*node, options));
+      }));
 }
 
 }  // namespace zxdb

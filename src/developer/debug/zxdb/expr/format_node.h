@@ -84,7 +84,7 @@ class FormatNode {
 
   // The format of the description.
   enum DescriptionKind {
-    kNone,
+    kNone = 0,
     kArray,
     kBaseType,         // Integers, characters, bools, etc.
     kCollection,       // Structs, classes.
@@ -99,7 +99,7 @@ class FormatNode {
 
   // See the class comment above about the lifecycle.
   enum State {
-    kEmpty,        // No value, default constructed. An empty node can have a name to indicate
+    kEmpty = 0,    // No value, default constructed. An empty node can have a name to indicate
                    // "nothing with that name.".
     kUnevaluated,  // Unevaluated expression.
     kHasValue,     // Have the value but not converted to a string.

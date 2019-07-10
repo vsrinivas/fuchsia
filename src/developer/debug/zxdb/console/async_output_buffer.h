@@ -8,6 +8,7 @@
 #include <functional>
 #include <variant>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 
@@ -44,7 +45,7 @@ class Err;
 //    out->Complete();
 class AsyncOutputBuffer : public fxl::RefCountedThreadSafe<AsyncOutputBuffer> {
  public:
-  using CompletionCallback = std::function<void()>;
+  using CompletionCallback = fit::callback<void()>;
 
   ~AsyncOutputBuffer() = default;
 
