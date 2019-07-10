@@ -14,6 +14,7 @@
 // TODO(eieio): Is there a better namespace to put these in, or perhaps they
 // should just be used from the lockdep namespace?
 using lockdep::AdoptLock;
+using lockdep::AssertHeld;
 using lockdep::Guard;
 using lockdep::GuardMultiple;
 using lockdep::Lock;

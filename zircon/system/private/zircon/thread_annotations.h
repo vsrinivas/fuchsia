@@ -23,6 +23,8 @@
 // TA_TRY_ACQ(bool, x)          function acquires the mutex |x| if the function returns |bool|
 // TA_REL(x)                    function releases the mutex |x|
 // TA_REL_SHARED(x)             function releases the shared for reading mutex |x|
+// TA_ASSERT(x)                 function asserts that |x| is held
+// TA_ASSERT_SHARED(x)          function asserts that |x| is held for shared reading
 // TA_REQ(x)                    function requires that the caller hold the mutex |x|
 // TA_REQ_SHARED(x)             function requires that the caller hold the mutex |x| for shared reading
 // TA_EXCL(x)                   function requires that the caller not be holding the mutex |x|
@@ -45,6 +47,8 @@
 #define TA_TRY_ACQ(...) THREAD_ANNOTATION(try_acquire_capability(__VA_ARGS__))
 #define TA_REL(...) THREAD_ANNOTATION(release_capability(__VA_ARGS__))
 #define TA_REL_SHARED(...) THREAD_ANNOTATION(release_shared_capability(__VA_ARGS__))
+#define TA_ASSERT(...) THREAD_ANNOTATION(assert_capability(__VA_ARGS__))
+#define TA_ASSERT_SHARED(...) THREAD_ANNOTATION(assert_shared_capability(__VA_ARGS__))
 #define TA_REQ(...) THREAD_ANNOTATION(requires_capability(__VA_ARGS__))
 #define TA_REQ_SHARED(...) THREAD_ANNOTATION(requires_shared_capability(__VA_ARGS__))
 #define TA_EXCL(...) THREAD_ANNOTATION(locks_excluded(__VA_ARGS__))
