@@ -96,6 +96,7 @@ The following capabilities can be routed:
 - `service`: A filesystem service node that can be used to open a channel to a
   service provider.
 - `directory`: A filesystem directory.
+- `storage`: A filesystem directory that is isolated to the component using it.
 
 #### Routing terminology
 
@@ -108,9 +109,9 @@ language of capability routing consists of the following three keywords:
 - `offer`: A component may `offer` a capability to a *target*, which is either a
   [child](#child-component-instances) or [collection](#collections). When a
   capability is offered to a child, the child instance may `use` the capability
-  or `offer` it to one of its own targets. Likewise, when a capability is offered
-  to a collection, any instance in the collection may `use` the capability or
-  `offer` it.
+  or `offer` it to one of its own targets. Likewise, when a capability is
+  offered to a collection, any instance in the collection may `use` the
+  capability or `offer` it.
 - `expose`: When a component `exposes` a capability to its containing realm
   (i.e., its parent), the parent may `offer` the capability to one of its other
   children. A component may `expose` any capability that it provides, or that
@@ -137,8 +138,8 @@ the component framework itself is the provider of the service, any component may
 `use` it without an explicit `offer`.  Fuchsia supports the following framework
 services:
 
-- [`fuchsia.sys2.Realm`](/sdk/fidl/fuchsia.sys2/realm.fidl): Allows a component to
-  manage and bind to its children. Scoped to the component's realm.
+- [`fuchsia.sys2.Realm`](/sdk/fidl/fuchsia.sys2/realm.fidl): Allows a component
+  to manage and bind to its children. Scoped to the component's realm.
 
 #### Capability paths
 
@@ -155,6 +156,32 @@ context:
 - A *target path* is either a path in the component's namespace (for `use`), or
   the path by which the capability is being `offered` or `exposed` to another
   component.
+
+#### Storage capabilities
+
+Storage capabilities are not directly provided from a component instance's
+[outgoing directory](/docs/development/abi/system.md#outgoing-directory), but
+are created from preexisting directory capabilities that are declared in
+[`storage`](#storage) in a component manifest. This declaration describes the
+source for a directory capability and can then be listed as a source for
+offering storage capabilities.
+
+Storage capabilities cannot be [exposed](#expose).
+
+#### Storage types
+
+Storage capabilities are identified by types. Valid storage types are `data`,
+`cache`, and `meta`, each having different semantics:
+
+- `data`: A mutable directory the component may store its state in. This
+  directory is guaranteed to be unique and non-overlapping with
+  directories provided to other components.
+- `cache`: Identical to the `data` storage type, but the framework may delete
+  items from this directory to reclaim space.
+- `meta`: A directory where the framework can store metadata for the component
+  instance. Features such as persistent collections must use this capability as
+  they require component manager to store data on the component's behalf. The
+  component cannot directly access this directory.
 
 #### Examples
 
@@ -287,8 +314,12 @@ explained in [Routing terminology](#routing-terminology).
     - `service`: The [source path](#capability-paths) of a service capability.
     - `directory`: The [source path](#capability-paths) of a directory
       capability.
+    - `storage`: The [type](#storage-types) of a storage capability. A manifest
+      can only declare one `use` for each storage type.
 - `as` *(optional)*: The explicit [target path](#capability-paths) for the
-  capability. If omitted, defaults to the source path.
+  capability. If omitted, defaults to the source path for service and directory
+  capabilities, and one of `/data` or `/cache` for storage capabilities. This
+  property cannot be used for meta storage capabilities.
 
 Example:
 
@@ -299,7 +330,11 @@ Example:
     },
     {
         "directory": "/data/themes",
-        "as": "/data",
+        "as": "/themes",
+    },
+    {
+        "storage": "data",
+        "as": "/my_data",
     },
 ],
 ```
@@ -348,16 +383,24 @@ explained in [Routing terminology](#routing-terminology).
     - `service`: The [source path](#capability-paths) of a service capability.
     - `directory`: The [source path](#capability-paths) of a directory
       capability.
+    - `storage`: The [type](#storage-types) of a storage capability.
 - `from`: The source of the capability, one of:
-    - `realm`: The component's containing realm (parent).
-    - `self`: This component.
+    - `realm`: The component's containing realm (parent). This source can be
+      used for all capability types.
+    - `self`: This component. This source can only be used when offering service
+      or directory capabilities.
     - `#<child-name>`: A [reference](#references) to a child component instance.
+      This source can only be used when offering service or directory
+      capabilities.
+    - `#<storage-name>` A [reference](#references) to a storage declaration.
+      This source can only be used when offering storage capabilities.
 - `to`: An array of target declarations, each of which is an object with the
   following properties:
     - `dest`: A [reference](#references) to the target (child or collection) to
       which the capability is being offered, `#<target-name>`.
     - `as` *(optional)*: The explicit [target path](#capability-paths) for the
-      capability. If omitted, defaults to the source path.
+      capability. If omitted, defaults to the source path. This path cannot be
+      used for storage capabilities.
 
 Example:
 
@@ -385,8 +428,32 @@ Example:
             { "dest": "#fshost" },
         ],
     },
+    {
+        "storage": "meta",
+        "from": "realm",
+        "to": [
+            { "dest": "#logger" },
+        ],
+    },
 ],
 ```
+
+### storage
+
+A `storage` declaration creates three storage capabilities, for "data", "cache",
+and "meta" storage. These storage capabilities are backed by a preexisting
+directory capability, as explained in [Storage
+capabilities](#storage-capabilities).
+
+`storage` is an array of objects with the following properties:
+
+- `name`: A name for this storage section which can be used by an `offer`.
+- `from`: The source of the directory capability backing the new storage
+  capabilities, one of:
+    - `realm`: The component's containing realm (parent).
+    - `self`: This component.
+    - `#<child-name>`: A [reference](#references) to a child component instance.
+- `path`: The [source path](#capability-paths) of a directory capability.
 
 ### facets
 
@@ -408,3 +475,4 @@ A reference may refer to:
 - A [static child instance](#child-component-instances) whose name is
   `<reference-name>`.
 - A [collection](#component-collections) whose name is `<reference-name>`.
+- A [storage declaration](#storage) whose name is `<reference-name>`.

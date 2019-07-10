@@ -237,6 +237,33 @@ async fn route_and_open_storage_capability(
 }
 
 /// Generates the path into a directory the provided component will be afforded for storage
+///
+/// The path of the sub-directory for a component that uses a storage capability is based on:
+///
+/// - Each component instance's name as given in the `children` section of its parent's manifest,
+/// for each component instance in the path from the [`storage` declaration][storage-syntax] to the
+/// [`use` declaration][use-syntax].
+/// - The storage type.
+///
+/// These names are used as path elements, separated by elements of the name "children". The
+/// storage type is then appended to this path.
+///
+/// For example, if the following component instance tree exists, with `a` declaring storage
+/// capabilities, and then cache storage being offered down the chain to `d`:
+///
+/// ```
+///  a  <- declares storage, offers cache storage to b
+///  |
+///  b  <- offers cache storage to c
+///  |
+///  c  <- offers cache storage to d
+///  |
+///  d  <- uses cache storage as `/my_cache`
+/// ```
+///
+/// When `d` attempts to access `/my_cache` the framework creates the sub-directory
+/// `b/children/c/children/d/cache` in the directory used by `a` to declare storage capabilities.
+/// Then, the framework gives 'd' access to this new directory.
 pub fn generate_storage_path(
     type_: fsys::StorageType,          // The type of storage being used
     relative_moniker: RelativeMoniker, // The relative moniker from the storage decl to the usage

@@ -641,6 +641,7 @@ There are three types of storage capabilities:
 Storage capability is a [components v2](#components-v2) concept.
 
 -   [Capability routing](#capability-routing)
+-   [Storage capabilities](/docs/the-book/components/storage_capabilities.md)
 
 #### **Story**
 
