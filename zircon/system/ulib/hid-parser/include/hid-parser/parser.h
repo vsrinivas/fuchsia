@@ -17,7 +17,7 @@ namespace hid {
 //
 // The DeviceDescriptor data is organized at the first level by the
 // three arrays which correspond to the feature fields for the input,
-// output, and feature reports. Input, ouput, and feature reports each
+// output, and feature reports. Input, output, and feature reports each
 // have their own length and fields: they are logically connected only
 // because they share a report_id. The arrays of report features are of
 // length {type}_count. Eg: the input_fields array has input_size ReportField
@@ -115,7 +115,7 @@ namespace hid {
 //
 //
 // Input, Output, and Feature reports are all sent over unique channels, which
-// is how they are distingushed. This is important because they can share the
+// is how they are distinguished. This is important because they can share the
 // same report id.
 
 // Logical minimum and maximum per hid spec.
@@ -156,7 +156,7 @@ enum NodeType : uint32_t {
 };
 
 enum FieldTypeFlags : uint32_t {
-    // Indicates if field can be modfied. Constant often means is padding.
+    // Indicates if field can be modified. Constant often means is padding.
     kData = 1 << 0,
     kConstant = 1 << 1,
     // The field is either an array or scalar. If it is an array only
@@ -249,7 +249,7 @@ enum ParseResult : uint32_t {
     kParseOverflow = 9,
     kParseLeftovers = 10,
     kParseUnexpectedCol = 11,
-    kParseUnexectedItem = 12,
+    kParseUnexpectedItem = 12,
     kParseInvalidUsage = 13,
     kParseMissingUsage = 14,
     kParserMissingPage = 15,

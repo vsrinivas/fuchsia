@@ -323,7 +323,7 @@ public:
 
     ParseResult add_field(NodeType type, uint32_t data) { // Main
         if (coll_.size() == 0)
-            return kParseUnexectedItem;
+            return kParseUnexpectedItem;
 
         if (!validate_ranges())
             return kParseInvalidRange;
