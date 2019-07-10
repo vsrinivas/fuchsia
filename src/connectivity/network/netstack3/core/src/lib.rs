@@ -37,6 +37,7 @@ mod transport;
 mod types;
 mod wire;
 
+pub use crate::data_structures::{IdMapCollection, IdMapCollectionKey};
 pub use crate::device::{
     ethernet::Mac, get_ip_addr_subnet, receive_frame, DeviceId, DeviceLayerEventDispatcher,
 };

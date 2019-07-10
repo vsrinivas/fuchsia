@@ -435,7 +435,7 @@ fn get_device_state_mut<D: EventDispatcher>(
     state
         .device
         .ethernet
-        .get_mut(&device_id)
+        .get_mut(device_id)
         .unwrap_or_else(|| panic!("no such Ethernet device: {}", device_id))
 }
 
@@ -449,7 +449,7 @@ fn get_device_state<D: EventDispatcher>(
     state
         .device
         .ethernet
-        .get(&device_id)
+        .get(device_id)
         .unwrap_or_else(|| panic!("no such Ethernet device: {}", device_id))
 }
 
@@ -712,7 +712,7 @@ mod tests {
                 .build::<DummyEventDispatcher>();
             send_ip_frame(
                 &mut ctx,
-                1,
+                0,
                 DUMMY_CONFIG_V4.remote_ip,
                 BufferSerializer::new_vec(Buf::new(&mut vec![0; size], ..)),
             );

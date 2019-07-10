@@ -4,6 +4,9 @@
 
 //! Common data structures.
 
+pub(crate) use id_map::IdMap;
+pub use id_map_collection::{IdMapCollection, IdMapCollectionKey};
+
 /// Identifer map data structure.
 ///
 /// Defines the [`IdMap`] data structure: A generic container mapped keyed
@@ -306,6 +309,7 @@ pub mod id_map_collection {
     }
 
     impl<K: IdMapCollectionKey, T> IdMapCollection<K, T> {
+        /// Creates a new empty `IdMapCollection`.
         pub fn new() -> Self {
             let mut data = Vec::new();
             data.resize_with(K::VARIANT_COUNT, IdMap::default);
@@ -318,6 +322,11 @@ pub mod id_map_collection {
 
         fn get_map_mut(&mut self, key: &K) -> &mut IdMap<T> {
             &mut self.data[key.get_variant()]
+        }
+
+        /// Returns `true` if the `IdMapCollection` holds no items.
+        pub fn is_empty(&self) -> bool {
+            self.data.iter().all(|d| d.is_empty())
         }
 
         /// Returns a reference to the item indexed by `key`, or `None` if
@@ -447,6 +456,14 @@ pub mod id_map_collection {
             }
             assert_eq!(c, 3);
             assert_eq!(sum, 0);
+        }
+
+        #[test]
+        fn test_is_empty() {
+            let mut t = TestCollection::new();
+            assert!(t.is_empty());
+            assert!(t.insert(&KEY_B, 15).is_none());
+            assert!(!t.is_empty());
         }
 
         #[test]

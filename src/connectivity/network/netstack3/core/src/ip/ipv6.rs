@@ -216,7 +216,7 @@ mod tests {
             10,
             IpProto::Tcp,
         );
-        let device_id = DeviceId::new_ethernet(1);
+        let device_id = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;
         let mut buffer = BufferSerializer::new_vec(Buf::new(vec![1, 2, 3, 4, 5], ..))
             .encapsulate(builder)

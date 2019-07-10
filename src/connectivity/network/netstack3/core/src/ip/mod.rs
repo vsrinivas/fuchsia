@@ -1234,7 +1234,7 @@ mod tests {
     fn test_ipv6_icmp_parameter_problem_non_must() {
         let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6)
             .build::<DummyEventDispatcher>();
-        let device = DeviceId::new_ethernet(1);
+        let device = DeviceId::new_ethernet(0);
 
         //
         // Test parsing an IPv6 packet with invalid next header value which
@@ -1271,7 +1271,7 @@ mod tests {
     fn test_ipv6_icmp_parameter_problem_must() {
         let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6)
             .build::<DummyEventDispatcher>();
-        let device = DeviceId::new_ethernet(1);
+        let device = DeviceId::new_ethernet(0);
 
         //
         // Test parsing an IPv6 packet where we MUST send an ICMP parameter problem
@@ -1317,7 +1317,7 @@ mod tests {
     fn test_ipv6_unrecognized_ext_hdr_option() {
         let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6)
             .build::<DummyEventDispatcher>();
-        let device = DeviceId::new_ethernet(1);
+        let device = DeviceId::new_ethernet(0);
         let mut expected_icmps = 0;
         let mut bytes = [0; 64];
         let frame_dst = FrameDestination::Unicast;
@@ -1441,7 +1441,7 @@ mod tests {
     fn test_ip_packet_reassembly_not_needed<I: Ip>() {
         let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
             .build::<DummyEventDispatcher>();
-        let device = DeviceId::new_ethernet(1);
+        let device = DeviceId::new_ethernet(0);
         let fragment_id = 5;
 
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
@@ -1469,7 +1469,7 @@ mod tests {
     fn test_ip_packet_reassembly<I: Ip>() {
         let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
             .build::<DummyEventDispatcher>();
-        let device = DeviceId::new_ethernet(1);
+        let device = DeviceId::new_ethernet(0);
         let fragment_id = 5;
 
         //
@@ -1507,7 +1507,7 @@ mod tests {
     fn test_ip_packet_reassembly_with_packets_arriving_out_of_order<I: Ip>() {
         let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
             .build::<DummyEventDispatcher>();
-        let device = DeviceId::new_ethernet(1);
+        let device = DeviceId::new_ethernet(0);
         let fragment_id_0 = 5;
         let fragment_id_1 = 10;
         let fragment_id_2 = 15;
@@ -1570,7 +1570,7 @@ mod tests {
     fn test_ip_packet_reassembly_timeout<I: Ip>() {
         let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
             .build::<DummyEventDispatcher>();
-        let device = DeviceId::new_ethernet(1);
+        let device = DeviceId::new_ethernet(0);
         let fragment_id = 5;
 
         //
@@ -1627,12 +1627,12 @@ mod tests {
         let contexts = vec![(a.clone(), alice), (b.clone(), bob)].into_iter();
         let mut net = DummyNetwork::new(contexts, move |net, device_id| {
             if *net == a {
-                (b.clone(), DeviceId::new_ethernet(1), None)
+                (b.clone(), DeviceId::new_ethernet(0), None)
             } else {
-                (a.clone(), DeviceId::new_ethernet(1), None)
+                (a.clone(), DeviceId::new_ethernet(0), None)
             }
         });
-        let device = DeviceId::new_ethernet(1);
+        let device = DeviceId::new_ethernet(0);
         let fragment_id = 5;
 
         //
@@ -1694,7 +1694,7 @@ mod tests {
         dispatcher_builder.add_ndp_table_entry(0, extra_ip, extra_mac);
         dispatcher_builder.add_ndp_table_entry(0, extra_mac.to_ipv6_link_local(None), extra_mac);
         let mut ctx = dispatcher_builder.build_with(state_builder, DummyEventDispatcher::default());
-        let device = DeviceId::new_ethernet(1);
+        let device = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;
 
         // Construct an IPv6 packet that is too big for our MTU (MTU = 1280; body itself is 5000).
@@ -1794,7 +1794,7 @@ mod tests {
         let dummy_config = get_dummy_config::<I::Addr>();
         let mut ctx = DummyEventDispatcherBuilder::from_config(dummy_config.clone())
             .build::<DummyEventDispatcher>();
-        let device = DeviceId::new_ethernet(1);
+        let device = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;
 
         //
@@ -1894,7 +1894,7 @@ mod tests {
         let dummy_config = get_dummy_config::<I::Addr>();
         let mut ctx = DummyEventDispatcherBuilder::from_config(dummy_config.clone())
             .build::<DummyEventDispatcher>();
-        let device = DeviceId::new_ethernet(1);
+        let device = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;
 
         //
@@ -1950,7 +1950,7 @@ mod tests {
         let dummy_config = get_dummy_config::<Ipv4Addr>();
         let mut ctx = DummyEventDispatcherBuilder::from_config(dummy_config.clone())
             .build::<DummyEventDispatcher>();
-        let device = DeviceId::new_ethernet(1);
+        let device = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;
 
         //

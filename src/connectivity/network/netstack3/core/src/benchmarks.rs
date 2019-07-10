@@ -112,7 +112,7 @@ fn bench_forward_minimum(b: &mut Bencher, frame_size: usize) {
         .serialize_outer()
         .unwrap();
 
-    let device = DeviceId::new_ethernet(1);
+    let device = DeviceId::new_ethernet(0);
     b.iter(|| {
         let buf = buf.as_mut();
         black_box(receive_frame(black_box(&mut ctx), black_box(device), black_box(buf)));

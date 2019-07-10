@@ -1022,7 +1022,7 @@ mod tests {
         ctx.state_mut().ip.v4.forward = true;
         receive_ip_packet::<_, _, Ipv4>(
             &mut ctx,
-            DeviceId::new_ethernet(1),
+            DeviceId::new_ethernet(0),
             FrameDestination::Unicast,
             buffer,
         );

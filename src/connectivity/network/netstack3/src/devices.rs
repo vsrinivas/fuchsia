@@ -2,23 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use ethernet as eth;
-use netstack3_core::DeviceId;
 use std::collections::HashMap;
 
+use ethernet as eth;
+use netstack3_core::{DeviceId, IdMapCollection, IdMapCollectionKey};
+
 pub type BindingId = u64;
-
-type RawId = usize;
-
-pub trait CoreId: Sized + Clone {
-    fn raw_id(&self) -> RawId;
-}
-
-impl CoreId for DeviceId {
-    fn raw_id(&self) -> RawId {
-        self.id()
-    }
-}
 
 /// Keeps tabs on devices.
 ///
@@ -58,20 +47,18 @@ impl CoreId for DeviceId {
 //       id_map and the device info is moved into inactive_devices.
 //    => For the up case, the inactive_devices entry is removed and one entry is
 //       created in each of active_devices and id_map.
-pub struct Devices<C = DeviceId, I = CommonInfo> {
-    // TODO(brunodalbo): Make active_devices the same vec-based data structure
-    //  that is used by core.
-    active_devices: HashMap<RawId, DeviceInfo<C, I>>,
+pub struct Devices<C: IdMapCollectionKey = DeviceId, I = CommonInfo> {
+    active_devices: IdMapCollection<C, DeviceInfo<C, I>>,
     // invariant: all values in id_map are valid keys in active_devices.
     id_map: HashMap<BindingId, C>,
     inactive_devices: HashMap<BindingId, DeviceInfo<C, I>>,
     last_id: BindingId,
 }
 
-impl<C, I> Default for Devices<C, I> {
+impl<C: IdMapCollectionKey, I> Default for Devices<C, I> {
     fn default() -> Self {
         Self {
-            active_devices: HashMap::new(),
+            active_devices: IdMapCollection::new(),
             id_map: HashMap::new(),
             inactive_devices: HashMap::new(),
             last_id: 0,
@@ -97,7 +84,7 @@ pub enum ToggleError {
 
 impl<C, I> Devices<C, I>
 where
-    C: CoreId,
+    C: IdMapCollectionKey + Clone,
 {
     /// Allocates a new [`BindingId`].
     fn alloc_id(&mut self) -> BindingId {
@@ -112,13 +99,13 @@ where
     /// and a [`DeviceInfo`] struct will be created with the provided `info` and
     /// IDs.
     pub fn add_active_device(&mut self, core_id: C, info: I) -> Option<BindingId> {
-        if self.active_devices.contains_key(&core_id.raw_id()) {
+        if self.active_devices.get(&core_id).is_some() {
             return None;
         }
         let id = self.alloc_id();
 
         self.active_devices
-            .insert(core_id.raw_id(), DeviceInfo { id, core_id: Some(core_id.clone()), info });
+            .insert(&core_id, DeviceInfo { id, core_id: Some(core_id.clone()), info });
         self.id_map.insert(id, core_id);
 
         Some(id)
@@ -159,7 +146,7 @@ where
     ) -> Result<&DeviceInfo<C, I>, ToggleError> {
         if self.id_map.contains_key(&id) {
             return Err(ToggleError::NoChange);
-        } else if self.active_devices.contains_key(&core_id.raw_id()) {
+        } else if self.active_devices.get(&core_id).is_some() {
             return Err(ToggleError::AlreadyExists);
         }
 
@@ -168,9 +155,12 @@ where
             Some(mut info) => {
                 assert!(info.core_id.is_none());
                 info.core_id = Some(core_id.clone());
-                let raw_id = core_id.raw_id();
-                self.id_map.insert(id, core_id);
-                Ok(self.active_devices.entry(raw_id).or_insert(info))
+
+                self.id_map.insert(id, core_id.clone());
+                self.active_devices.insert(&core_id, info);
+                // we can unwrap here because we just inserted the device
+                // above.
+                Ok(self.active_devices.get(&core_id).unwrap())
             }
         }
     }
@@ -198,7 +188,7 @@ where
             Some(core_id) => {
                 // we can unwrap here because of the invariant between
                 // id_map and active_devices.
-                let mut dev_id = self.active_devices.remove(&core_id.raw_id()).unwrap();
+                let mut dev_id = self.active_devices.remove(&core_id).unwrap();
                 dev_id.core_id = None;
 
                 Ok((core_id, self.inactive_devices.entry(id).or_insert(dev_id)))
@@ -212,21 +202,21 @@ where
     /// associated [`DeviceInfo`] if `id` is found or `None` otherwise.
     pub fn remove_device(&mut self, id: BindingId) -> Option<DeviceInfo<C, I>> {
         match self.id_map.remove(&id) {
-            Some(core) => self.active_devices.remove(&core.raw_id()),
+            Some(core) => self.active_devices.remove(&core),
             None => self.inactive_devices.remove(&id),
         }
     }
 
     /// Gets an iterator over all tracked devices.
     pub fn iter_devices(&self) -> impl Iterator<Item = &DeviceInfo<C, I>> {
-        self.active_devices.values().chain(self.inactive_devices.values())
+        self.active_devices.iter().chain(self.inactive_devices.values())
     }
 
     /// Retrieve device with [`BindingId`].
     pub fn get_device(&self, id: BindingId) -> Option<&DeviceInfo<C, I>> {
         self.id_map
             .get(&id)
-            .and_then(|device_id| self.active_devices.get(&device_id.raw_id()))
+            .and_then(|device_id| self.active_devices.get(&device_id))
             .or_else(|| self.inactive_devices.get(&id))
     }
 
@@ -237,7 +227,12 @@ where
 
     /// Retrieve mutable reference to device by associated [`CoreId`] `id`.
     pub fn get_core_device_mut(&mut self, id: C) -> Option<&mut DeviceInfo<C, I>> {
-        self.active_devices.get_mut(&id.raw_id())
+        self.active_devices.get_mut(&id)
+    }
+
+    /// Retrieve associated `binding_id` for `core_id`.
+    pub fn get_binding_id(&self, core_id: C) -> Option<BindingId> {
+        self.active_devices.get(&core_id).map(|d| d.id)
     }
 }
 
@@ -297,9 +292,15 @@ mod tests {
     #[derive(Copy, Clone, Eq, PartialEq, Debug)]
     struct MockDeviceId(usize);
 
-    impl CoreId for MockDeviceId {
-        fn raw_id(&self) -> RawId {
-            self.0
+    impl IdMapCollectionKey for MockDeviceId {
+        const VARIANT_COUNT: usize = 1;
+
+        fn get_variant(&self) -> usize {
+            0
+        }
+
+        fn get_id(&self) -> usize {
+            self.0 as usize
         }
     }
 
@@ -320,6 +321,8 @@ mod tests {
         assert_eq!(d.get_device(b).unwrap().core_id.unwrap(), core_b);
         assert_eq!(d.get_core_id(a).unwrap(), core_a);
         assert_eq!(d.get_core_id(b).unwrap(), core_b);
+        assert_eq!(d.get_binding_id(core_a).unwrap(), a);
+        assert_eq!(d.get_binding_id(core_b).unwrap(), b);
 
         // check that we can retrieve both devices by the core id:
         assert!(d.get_core_device_mut(core_a).is_some());

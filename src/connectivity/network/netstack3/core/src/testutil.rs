@@ -1055,9 +1055,9 @@ where
     let contexts = vec![(a.clone(), alice), (b.clone(), bob)].into_iter();
     DummyNetwork::<N, _>::new(contexts, move |net, device_id| {
         if *net == a {
-            (b.clone(), DeviceId::new_ethernet(1), latency)
+            (b.clone(), DeviceId::new_ethernet(0), latency)
         } else {
-            (a.clone(), DeviceId::new_ethernet(1), latency)
+            (a.clone(), DeviceId::new_ethernet(0), latency)
         }
     })
 }

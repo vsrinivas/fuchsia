@@ -617,7 +617,7 @@ mod tests {
         local.add_device(TEST_LOCAL_MAC);
         let mut remote = DummyEventDispatcherBuilder::default();
         remote.add_device(TEST_REMOTE_MAC);
-        let device_id = DeviceId::new_ethernet(1);
+        let device_id = DeviceId::new_ethernet(0);
 
         let mut net = DummyNetwork::new(
             vec![("local", local.build()), ("remote", remote.build())].into_iter(),

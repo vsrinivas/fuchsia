@@ -8,13 +8,12 @@ pub(crate) mod arp;
 pub(crate) mod ethernet;
 pub(crate) mod ndp;
 
-use std::collections::HashMap;
 use std::fmt::{self, Debug, Display, Formatter};
 
 use log::debug;
 use packet::{MtuError, Serializer};
 
-use crate::data_structures::id_map_collection::IdMapCollectionKey;
+use crate::data_structures::{IdMap, IdMapCollectionKey};
 use crate::device::ethernet::{EthernetDeviceState, Mac};
 use crate::ip::{ext, AddrSubnet, IpAddress, Ipv4Addr, Ipv6Addr};
 use crate::{Context, EventDispatcher};
@@ -101,11 +100,7 @@ impl FrameDestination {
 
 /// The state associated with the device layer.
 pub(crate) struct DeviceLayerState {
-    // Invariant: even though each protocol has its own hash map, IDs (used as
-    // keys in the hash maps) are unique across all hash maps. This is
-    // guaranteed by allocating IDs sequentially, and never re-using an ID.
-    next_id: usize,
-    ethernet: HashMap<usize, EthernetDeviceState>,
+    ethernet: IdMap<EthernetDeviceState>,
 }
 
 impl DeviceLayerState {
@@ -115,16 +110,9 @@ impl DeviceLayerState {
     /// MTU. The MTU will be taken as a limit on the size of Ethernet payloads -
     /// the Ethernet header is not counted towards the MTU.
     pub(crate) fn add_ethernet_device(&mut self, mac: Mac, mtu: u32) -> DeviceId {
-        let id = self.allocate_id();
-        self.ethernet.insert(id, EthernetDeviceState::new(mac, mtu));
+        let id = self.ethernet.push(EthernetDeviceState::new(mac, mtu));
         debug!("adding Ethernet device with ID {} and MTU {}", id, mtu);
         DeviceId::new_ethernet(id)
-    }
-
-    fn allocate_id(&mut self) -> usize {
-        let id = self.next_id;
-        self.next_id += 1;
-        id
     }
 }
 
@@ -132,7 +120,7 @@ impl DeviceLayerState {
 // interface, which does not allow for IDs of zero.
 impl Default for DeviceLayerState {
     fn default() -> DeviceLayerState {
-        DeviceLayerState { next_id: 1, ethernet: HashMap::new() }
+        DeviceLayerState { ethernet: IdMap::new() }
     }
 }
 

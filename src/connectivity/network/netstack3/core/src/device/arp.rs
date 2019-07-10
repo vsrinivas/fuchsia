@@ -907,7 +907,7 @@ mod tests {
         remote.add_device_with_ip(TEST_REMOTE_MAC, remote_ip, subnet);
         remote.add_device_route(subnet, 0);
 
-        let device_id = DeviceId::new_ethernet(1);
+        let device_id = DeviceId::new_ethernet(0);
         let mut net = testutil::DummyNetwork::new(
             vec![("local", local.build()), ("remote", remote.build())].into_iter(),
             |ctx, device| {

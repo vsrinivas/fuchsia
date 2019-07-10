@@ -595,8 +595,14 @@ impl EventLoop {
         None
     }
 
-    fn fidl_get_forwarding_table(&self) -> Vec<fidl_net_stack::ForwardingEntry> {
-        get_all_routes(&self.ctx)
+    // TODO(brunodalbo): make this &self once the split between dispatcher and
+    //  dispatcher_mut lands.
+    fn fidl_get_forwarding_table(&mut self) -> Vec<fidl_net_stack::ForwardingEntry> {
+        // TODO(brunodalbo): we don't need to copy the routes once the split
+        //  between dispatcher and dispatcher_mut lands.
+        let routes: Vec<_> = get_all_routes(&self.ctx).collect();
+        routes
+            .into_iter()
             .map(|entry| match entry {
                 EntryEither::V4(v4_entry) => fidl_net_stack::ForwardingEntry {
                     subnet: fidl_net::Subnet {
@@ -608,7 +614,7 @@ impl EventLoop {
                     destination: match v4_entry.dest {
                         EntryDest::Local { device } => {
                             fidl_net_stack::ForwardingDestination::DeviceId(
-                                u64::try_from(device.id()).unwrap(),
+                                self.ctx.dispatcher().devices.get_binding_id(device).unwrap(),
                             )
                         }
                         EntryDest::Remote { next_hop } => {
@@ -630,7 +636,7 @@ impl EventLoop {
                     destination: match v6_entry.dest {
                         EntryDest::Local { device } => {
                             fidl_net_stack::ForwardingDestination::DeviceId(
-                                u64::try_from(device.id()).unwrap(),
+                                self.ctx.dispatcher().devices.get_binding_id(device).unwrap(),
                             )
                         }
                         EntryDest::Remote { next_hop } => {
