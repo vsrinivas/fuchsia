@@ -47,6 +47,13 @@ typedef struct saniziter_shadow_bounds {
 // Returns the shadow bounds for the current process.
 sanitizer_shadow_bounds_t __sanitizer_shadow_bounds(void);
 
+// Fill the shadow memory corresponding to [base, base+size) with |value|. The
+// threshold is used as a hint to determine when to switch to a more efficient
+// mechanism when zero-filling large shadow regions. This assumes that both
+// |base| and |size| are aligned to the shadow multiple.
+void __sanitizer_fill_shadow(uintptr_t base, size_t size, uint8_t value,
+                             size_t threshold);
+
 // Write logging information from the sanitizer runtime.  The buffer
 // is expected to be printable text with '\n' ending each line.
 // Timestamps and globally unique identifiers of the calling process

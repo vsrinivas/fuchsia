@@ -4,7 +4,10 @@
 
 #include <ldmsg/ldmsg.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/process.h>
+#include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <limits.h>
 #include <loader-service/loader-service.h>
 #include <zircon/dlfcn.h>
 #include <zircon/processargs.h>
@@ -13,6 +16,9 @@
 #include <zxtest/zxtest.h>
 
 #include <atomic>
+#if __has_feature(address_sanitizer)
+#include <sanitizer/asan_interface.h>
+#endif
 
 namespace {
 
@@ -175,3 +181,57 @@ TEST(SanitzerUtilsTest, DebugConfig) {
   EXPECT_EQ(old2, my_service, "unexpected previous service handle");
   old2.reset();
 }
+
+#if __has_feature(address_sanitizer)
+TEST(SanitzerUtilsTest, FillShadow) {
+  zx_info_task_stats_t task_stats;
+
+  // Snapshot the memory use at the beginning.
+  ASSERT_OK(zx::process::self()->get_info(ZX_INFO_TASK_STATS, &task_stats,
+                                          sizeof(zx_info_task_stats_t), nullptr, nullptr));
+
+  size_t init_mem_use = task_stats.mem_private_bytes;
+
+  const size_t len = 32 * PAGE_SIZE;
+
+  // Allocate some memory...
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(0, 0, &vmo));
+  uintptr_t addr;
+  ASSERT_OK(zx::vmar::root_self()->map(0, vmo, 0, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr));
+
+  size_t alloc_mem_use = task_stats.mem_private_bytes;
+
+  ASSERT_OK(zx::process::self()->get_info(ZX_INFO_TASK_STATS, &task_stats,
+                                          sizeof(zx_info_task_stats_t), nullptr, nullptr));
+
+  EXPECT_GE(alloc_mem_use, init_mem_use, "");
+
+  // ..and poison it.
+  ASAN_POISON_MEMORY_REGION((void*)addr, len);
+
+  // Snapshot the memory use after the allocation.
+  ASSERT_OK(zx::process::self()->get_info(ZX_INFO_TASK_STATS, &task_stats,
+                                          sizeof(zx_info_task_stats_t), nullptr, nullptr));
+
+  size_t memset_mem_use = task_stats.mem_private_bytes;
+
+  // We expect the memory use to go up.
+  EXPECT_GT(memset_mem_use, alloc_mem_use, "");
+
+  // Unpoison the shadow.
+  __sanitizer_fill_shadow(addr, len, 0, 0);
+
+  // Snapshot the memory use after unpoisoning.
+  ASSERT_OK(zx::process::self()->get_info(ZX_INFO_TASK_STATS, &task_stats,
+                                          sizeof(zx_info_task_stats_t), nullptr, nullptr));
+
+  size_t fill_shadow_mem_use = task_stats.mem_private_bytes;
+
+  // We expect the memory use to decrease.
+  EXPECT_LT(fill_shadow_mem_use, memset_mem_use, "");
+
+  // Deallocate the memory.
+  ASSERT_OK(zx::vmar::root_self()->unmap(addr, len));
+}
+#endif

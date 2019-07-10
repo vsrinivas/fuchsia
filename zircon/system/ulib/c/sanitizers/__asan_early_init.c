@@ -17,6 +17,7 @@
 #if __has_feature(address_sanitizer)
 
 static sanitizer_shadow_bounds_t shadow_bounds ATTR_RELRO;
+static zx_handle_t shadow_vmo ATTR_RELRO;
 
 __NO_SAFESTACK NO_ASAN void __asan_early_init(void) {
     zx_info_vmar_t info;
@@ -63,23 +64,19 @@ __NO_SAFESTACK NO_ASAN void __asan_early_init(void) {
           PAGE_SIZE - 1) & -PAGE_SIZE) -
         shadow_shadow_size;
 
-    // Now we're ready to allocate and map the actual shadow.
-    zx_handle_t vmo;
-    status = _zx_vmo_create(shadow_used_size, 0, &vmo);
+    // Now we're ready to allocate and map the actual shadow. We keep the VMO
+    // to allow decommit of shadow memory later, see below.
+    status = _zx_vmo_create(shadow_used_size, 0, &shadow_vmo);
     if (status != ZX_OK)
         __builtin_trap();
-    _zx_object_set_property(vmo, ZX_PROP_NAME,
+    _zx_object_set_property(shadow_vmo, ZX_PROP_NAME,
                             SHADOW_VMO_NAME, sizeof(SHADOW_VMO_NAME) - 1);
 
     status = _zx_vmar_map(
         shadow_vmar,
         ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-        shadow_shadow_size - info.base, vmo, 0, shadow_used_size, &shadow_addr);
+        shadow_shadow_size - info.base, shadow_vmo, 0, shadow_used_size, &shadow_addr);
     if (status != ZX_OK || shadow_addr != shadow_shadow_size)
-        __builtin_trap();
-
-    status = _zx_handle_close(vmo);
-    if (status != ZX_OK)
         __builtin_trap();
 
     // Drop the VMAR handle.
@@ -106,6 +103,33 @@ sanitizer_shadow_bounds_t __sanitizer_shadow_bounds(void) {
     return shadow_bounds;
 }
 
+void __sanitizer_fill_shadow(uintptr_t base, size_t size, uint8_t value,
+                             size_t threshold) {
+    const uintptr_t shadow_base = base >> ASAN_SHADOW_SHIFT;
+    if (shadow_base < shadow_bounds.shadow_base) {
+        __builtin_trap();
+    }
+    const size_t shadow_size = size >> ASAN_SHADOW_SHIFT;
+    if (!value && shadow_size >= threshold) {
+        uintptr_t page_start = (shadow_base + PAGE_SIZE - 1) & -PAGE_SIZE;
+        uintptr_t page_end = (shadow_base + shadow_size) & -PAGE_SIZE;
+        // We're directly clearing the partial pages...
+        __unsanitized_memset((void*)shadow_base, 0, page_start - shadow_base);
+        __unsanitized_memset((void*)page_end, 0, shadow_base + shadow_size - page_end);
+        // ...and telling the kernel to drop all the whole pages to stop using
+        // the memory and get fresh zero-fill pages on the next write.
+        zx_status_t status = _zx_vmo_op_range(shadow_vmo, ZX_VMO_OP_DECOMMIT,
+                                              page_start - shadow_bounds.shadow_base,
+                                              page_end - page_start,
+                                              NULL, 0);
+        if (status != ZX_OK) {
+            __builtin_trap();
+        }
+    } else {
+        __unsanitized_memset((void*)shadow_base, value, shadow_size);
+    }
+}
+
 #else
 
 static const char kBadDepsMessage[] =
@@ -114,6 +138,11 @@ static const char kBadDepsMessage[] =
 // This should never be called in the unsanitized runtime.
 // But it's still part of the ABI.
 sanitizer_shadow_bounds_t __sanitizer_shadow_bounds(void) {
+    __sanitizer_log_write(kBadDepsMessage, sizeof(kBadDepsMessage) - 1);
+    __builtin_trap();
+}
+
+void __sanitizer_fill_shadow(uintptr_t base, size_t size, uint8_t value, uintptr_t threshold) {
     __sanitizer_log_write(kBadDepsMessage, sizeof(kBadDepsMessage) - 1);
     __builtin_trap();
 }
