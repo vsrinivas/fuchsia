@@ -82,11 +82,9 @@ if (is_mac) {
       ":gtest_escher",
       "base:base_unittests",
       "//src/lib/fxl",
+      "//third_party/glslang:glslang_sources",
       "//third_party/googletest:gmock",
-      "//third_party/shaderc/libshaderc",
-      "//third_party/shaderc/third_party/glslang",
-      "//third_party/shaderc/third_party/glslang:SPIRV",
-      "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
+      "//third_party/shaderc:libshaderc",
     ]
 
     if (is_linux) {

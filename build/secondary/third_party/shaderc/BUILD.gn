@@ -1,0 +1,17 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Proxy GN targets used to prepare for the migration of the Fuchsia tree
+# to a newer upstream repository for shaderc.
+#
+# See https://fuchsia.atlassian.net/browse/MA-640 for details.
+
+group("libshaderc") {
+  # Note the subtle difference in GN target paths here:
+  #   //third_party/shaderc:libshaderc            (upstream)
+  #   //third_party/shaderc/libshaderc:libshaderc (legacy)
+  public_deps = [
+    "//third_party/shaderc/libshaderc:libshaderc",
+  ]
+}

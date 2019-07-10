@@ -6,16 +6,14 @@ import("//build/package.gni")
 
 source_set("libshaderc") {
   deps = [
+    "//third_party/glslang:glslang_default_resource_limits_sources",
+    "//third_party/glslang:glslang_sources",
     "//third_party/shaderc/libshaderc_util",
-    "//third_party/shaderc/third_party/glslang:SPIRV",
-    "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
-    "//third_party/shaderc/third_party/spirv-tools:spirv-tools-opt",
+    "//third_party/spirv-tools:spvtools_opt",
   ]
   include_dirs = [
     "//third_party/shaderc/libshaderc/include",
     "//third_party/shaderc/libshaderc_util/include",
-    "//third_party/shaderc/third_party/glslang",
-    "//third_party/shaderc/third_party/spirv-tools/include",
   ]
   sources = [
     "include/shaderc/shaderc.h",

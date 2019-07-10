@@ -12,16 +12,11 @@ config("libshaderc_warnings") {
 source_set("libshaderc_util") {
   configs += [ ":libshaderc_warnings" ]
   deps = [
-    "//third_party/shaderc/third_party/glslang",
-    "//third_party/shaderc/third_party/glslang:SPIRV",
-    "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
-    "//third_party/shaderc/third_party/spirv-tools:spirv-tools-opt",
+    "//third_party/glslang:glslang_default_resource_limits_sources",
+    "//third_party/glslang:glslang_sources",
+    "//third_party/spirv-tools:spvtools_opt",
   ]
-  include_dirs = [
-    "//third_party/shaderc/libshaderc_util/include",
-    "//third_party/shaderc/third_party/glslang",
-    "//third_party/shaderc/third_party/spirv-tools/include",
-  ]
+  include_dirs = [ "//third_party/shaderc/libshaderc_util/include" ]
   sources = [
     "include/libshaderc_util/compiler.h",
     "include/libshaderc_util/counting_includer.h",

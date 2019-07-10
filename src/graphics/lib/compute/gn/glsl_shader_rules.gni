@@ -158,7 +158,7 @@ template("graphics_compute_compile_glsl_shader_foreach") {
   #
   _gen_opt_target_name = "gen_opt_${target_name}"
   compiled_action_foreach(_gen_opt_target_name) {
-    tool = "//third_party/shaderc/third_party/spirv-tools:spirv-opt"
+    tool = "//third_party/spirv-tools:spirv-opt"
     sources = get_target_outputs(":${_gen_spv_target_name}")
     outputs = [
       "${_output_dir}/opt/{{source_name_part}}.spv",
@@ -183,7 +183,7 @@ template("graphics_compute_compile_glsl_shader_foreach") {
   #       the invoker's target_name, or this won't work.
   #
   compiled_action_foreach(target_name) {
-    tool = "//third_party/shaderc/third_party/glslang:spirv-remap"
+    tool = "//third_party/glslang:spirv-remap"
     sources = get_target_outputs(":${_gen_opt_target_name}")
     outputs = [
       "${_output_dir}/remap/{{source_name_part}}.spv",

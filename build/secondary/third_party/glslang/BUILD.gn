@@ -1,0 +1,59 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Proxy GN targets used to prepare for the migration of the Fuchsia tree
+# to a newer upstream repository for glslang.
+#
+# See https://fuchsia.atlassian.net/browse/MA-640 for details.
+
+_legacy_dir = "//third_party/shaderc/third_party/glslang"
+
+# This target is used in a compiled_action and cannot be
+# a group, but an executable, so rebuild everything from
+# the same set of sources. This also means the legacy
+# target needs to be renamed to avoid GN complaining that
+# two targets can generate the same executable!
+executable("spirv-remap") {
+  sources = [
+    "${_legacy_dir}/StandAlone/spirv-remap.cpp",
+  ]
+  defines = [ "ENABLE_OPT=1" ]
+  deps = [
+    "${_legacy_dir}:SPIRV",
+    "${_legacy_dir}:SPVRemapper",
+    "${_legacy_dir}:glslang",
+  ]
+}
+
+# Same issue for this executable, except that the legacy
+# executable is named "glslangValidator" and does not
+# conflict with this target name!
+executable("glslang_validator") {
+  include_dirs = [ _legacy_dir ]
+  defines = [ "ENABLE_OPT=0" ]
+  sources = [
+    "${_legacy_dir}/StandAlone/StandAlone.cpp",
+  ]
+  deps = [
+    "${_legacy_dir}:SPIRV",
+    "${_legacy_dir}:SPVRemapper",
+    "${_legacy_dir}:glslang",
+    "${_legacy_dir}:glslang-default-resource-limits",
+  ]
+}
+
+group("glslang_sources") {
+  deps = [
+    "${_legacy_dir}:SPIRV",
+    "${_legacy_dir}:SPVRemapper",
+    "${_legacy_dir}:glslang",
+  ]
+  public_configs = [ "${_legacy_dir}:glslang_config" ]
+}
+
+group("glslang_default_resource_limits_sources") {
+  deps = [
+    "${_legacy_dir}:glslang-default-resource-limits",
+  ]
+}

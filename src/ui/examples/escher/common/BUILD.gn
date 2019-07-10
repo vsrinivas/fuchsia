@@ -11,9 +11,8 @@ static_library("common") {
   ]
   deps = [
     "//src/lib/fxl",
-    "//third_party/shaderc/third_party/glslang",
-    "//third_party/shaderc/third_party/glslang:SPIRV",
-    "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
+    "//third_party/glslang:glslang_default_resource_limits_sources",
+    "//third_party/glslang:glslang_sources",
   ]
   public_deps = [
     ":headers",

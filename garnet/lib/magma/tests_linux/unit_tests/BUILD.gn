@@ -49,7 +49,7 @@ executable("virtmagma_vulkan_unit_tests") {
 }
 
 compiled_action("basic_compute") {
-  tool = "//third_party/shaderc/third_party/glslang:glslangValidator"
+  tool = "//third_party/glslang:glslang_validator"
   inputs = [
     "${target_name}.glsl",
   ]

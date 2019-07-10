@@ -133,7 +133,12 @@ static_library("SPVRemapper") {
     "SPIRV/SPVRemapper.cpp",
   ]
 }
-executable("spirv-remap") {
+
+# The target below was renamed with a -legacy suffix to avoid conflicts
+# with the one under
+# //build/secondary/third_party/glslang/BUILD.gn
+# See comments in that file to understand why.
+executable("spirv-remap-legacy") {
   sources = [
     "StandAlone/spirv-remap.cpp",
   ]

@@ -498,7 +498,12 @@ static_library("spirv-tools-opt") {
     "source/opt/workaround1209.cpp",
   ]
 }
-executable("spirv-opt") {
+
+# NOTE: The target below was renamed with a -legacy suffix to avoid
+# conflicts with the one under
+# //build/secondary/third_party/spirv-tools/BUILD.gn
+# See comments in that file to understand why!
+executable("spirv-opt-legacy") {
   deps = [
     ":spirv-deps",
     ":spirv-tools",
