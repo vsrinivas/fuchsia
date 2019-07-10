@@ -181,10 +181,12 @@ public:
     // manipulating the underlying lock. Incorrect manipulation could confuse
     // the validator, trigger lock assertions, and/or deadlock.
     LockType& lock() { return lock_; }
+    const LockType& lock() const { return lock_; }
 
     // Returns the capability of the underlying lock. This is expected by Guard
     // as an additional static assertion target.
     LockType& capability() __TA_RETURN_CAPABILITY(lock_) { return lock_; }
+    const LockType& capability() const __TA_RETURN_CAPABILITY(lock_) { return lock_; }
 
 protected:
     // Initializes the Lock instance with the given LockClassId and passes any
@@ -241,6 +243,7 @@ public:
     ~Lock() = default;
 
     LockType& lock() { return Reference; }
+    const LockType& lock() const { return Reference; }
 
 protected:
     constexpr Lock(LockClassId id)

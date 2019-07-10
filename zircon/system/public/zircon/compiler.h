@@ -99,6 +99,8 @@
 #define __TA_REQUIRES(...) __THREAD_ANNOTATION(__requires_capability__(__VA_ARGS__))
 #define __TA_REQUIRES_SHARED(...) __THREAD_ANNOTATION(__requires_shared_capability__(__VA_ARGS__))
 #define __TA_EXCLUDES(...) __THREAD_ANNOTATION(__locks_excluded__(__VA_ARGS__))
+#define __TA_ASSERT(...) __THREAD_ANNOTATION(__assert_capability__(__VA_ARGS__))
+#define __TA_ASSERT_SHARED(...) __THREAD_ANNOTATION(__assert_shared_capability__(__VA_ARGS__))
 #define __TA_RETURN_CAPABILITY(x) __THREAD_ANNOTATION(__lock_returned__(x))
 #define __TA_SCOPED_CAPABILITY __THREAD_ANNOTATION(__scoped_lockable__)
 #define __TA_NO_THREAD_SAFETY_ANALYSIS __THREAD_ANNOTATION(__no_thread_safety_analysis__)

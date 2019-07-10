@@ -121,6 +121,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/launchpad/test",
       "$zx/system/ulib/lazy_init:lazy_init-test",
       "$zx/system/ulib/libzbi/test",
+      "$zx/system/ulib/lockdep:test",
       "$zx/system/ulib/memfs/test",
       "$zx/system/ulib/minfs/allocator/test",
       "$zx/system/ulib/minfs/test",

@@ -49,6 +49,17 @@ struct IsSharedLockPolicy<LockPolicy,
     static constexpr bool Value = true;
 };
 
+// Detect whether `LockPolicy<LockType>::AssertHeld(const LockType&)` is a valid expression.
+template <typename LockType, typename = void>
+struct PolicyHasAssertHeld : std::false_type {};
+template <typename LockType>
+struct PolicyHasAssertHeld<LockType, std::void_t<decltype(LockPolicy<LockType>::AssertHeld(
+                                         std::declval<const LockType>()))>> : std::true_type {};
+
+// Enable if the given LockType has a policy supporting `AssertHeld`.
+template <typename LockType>
+using EnableIfPolicyHasAssertHeld = std::enable_if_t<PolicyHasAssertHeld<LockType>::value>;
+
 // Enable if the given T is nestable and uses same type as LockType.
 template <typename T, typename LockType>
 using EnableIfNestable = typename std::enable_if<
@@ -70,6 +81,22 @@ using EnableIfNotShared = typename std::enable_if<
     !IsSharedLockPolicy<LockPolicy<LockType, Option>>::Value>::type;
 
 } // namespace internal
+
+// Assert that the given lock is exclusively held by the current thread.
+//
+// Can be used both for runtime debugging checks, and also to help when
+// thread safety analysis can't prove you are holding a lock. The underlying
+// lock implementation may optimize away asserts in release builds.
+//
+// Calling this function requires that LockType has a policy implementing
+// `AssertHeld`. The default policy automatically implements AssertHeld
+// if the underlying lock object has an `AssertHeld` method.
+template <typename Lockable>
+void AssertHeld(const Lockable& lock) __TA_ASSERT(lock) __TA_ASSERT(lock.lock())
+        __TA_ASSERT(lock.capability())
+{
+    LockPolicy<internal::GetLockType<Lockable>>::AssertHeld(lock.lock());
+}
 
 // Type tag to select the (private) ordered Guard constructor.
 enum OrderedLockTag { OrderedLock };

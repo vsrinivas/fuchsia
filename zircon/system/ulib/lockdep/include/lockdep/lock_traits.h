@@ -149,6 +149,9 @@ constexpr inline LockFlags SingletonLockFlags(
         auto& capability() __TA_RETURN_CAPABILITY(global_lock) {                            \
             return global_lock;                                                             \
         }                                                                                   \
+        const auto& capability() const __TA_RETURN_CAPABILITY(global_lock) {                \
+            return global_lock;                                                             \
+        }                                                                                   \
     }
 
 // Tags the given lock type with the given lock state flags value. This informs

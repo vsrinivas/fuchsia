@@ -52,6 +52,10 @@ namespace lockdep {
 //          // Releases the lock for this lock type.
 //          // Restores any state required for this lock type.
 //      }
+//      static void AssertHeld(const LockType& lock) __TA_ASSERT(lock) {
+//          // Assert that "lock" is held by the current thread,
+//          // aborting execution if not.
+//      }
 //  };
 //
 #define LOCK_DEP_POLICY_OPTION(lock_type, option_name, lock_policy)           \
@@ -88,6 +92,20 @@ using LookupLockPolicy =
         static_cast<RemoveGlobalReference<Lock>*>(nullptr),
         static_cast<Option*>(nullptr)));
 
+namespace internal {
+
+// Detect whether T has a member function `AssertHeld()`.
+template <typename T, typename = void>
+struct HasAssertHeld : std::false_type {};
+template <typename T>
+struct HasAssertHeld<T, std::void_t<decltype(std::declval<const T>().AssertHeld())>>
+    : std::true_type {};
+
+template <typename T>
+using EnableIfHasAssertHeld = std::enable_if_t<HasAssertHeld<T>::value>;
+
+}  // namespace internal
+
 // Default lock policy type that describes how to acquire and release a basic
 // mutex with no additional state or flags.
 struct DefaultLockPolicy {
@@ -107,6 +125,19 @@ struct DefaultLockPolicy {
     template <typename Lock>
     static void Release(Lock* lock, State*) __TA_RELEASE(lock) {
         lock->Release();
+    }
+
+    // Assert that the given lock is exclusively held by the current thread.
+    //
+    // Can be used both for runtime debugging checks, and also to help when
+    // thread safety analysis can't prove you are holding a lock. The underlying
+    // lock implementation may optimize away asserts in release builds.
+    //
+    // This will typically be invoked by users through the function
+    // "AssertHeld()" declared in "guard.h".
+    template <typename Lock, typename = internal::EnableIfHasAssertHeld<Lock>>
+    static void AssertHeld(const Lock& lock) __TA_ASSERT(lock) {
+        lock.AssertHeld();
     }
 };
 
