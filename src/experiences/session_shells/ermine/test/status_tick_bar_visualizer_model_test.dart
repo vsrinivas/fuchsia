@@ -10,11 +10,15 @@ import 'package:ermine_library/src/widgets/status_tick_bar_visualizer.dart';
 import 'package:test/test.dart';
 
 void main() {
+  StatusTickBarVisualizerModel testTickBarModel;
+
+  setUp(() async {
+    testTickBarModel = StatusTickBarVisualizerModel();
+  });
+
   test(
       'test to confirm StatusTickBarVisualizerModel contains non-breaking default values',
       () {
-    StatusTickBarVisualizerModel testTickBarModel =
-        StatusTickBarVisualizerModel();
     expect(testTickBarModel.barValue, 'loading...');
     expect(testTickBarModel.barFill, greaterThanOrEqualTo(0));
     expect(
@@ -26,27 +30,37 @@ void main() {
     expect(testTickBarModel.barFirst, isNotNull);
   });
 
-  test('test to confirm StatusTickBarVisualizerModel setters work properly',
+  test(
+      'test to confirm StatusTickBarVisualizerModel barValue setter works properly',
       () {
-    StatusTickBarVisualizerModel testTickBarModel =
-        StatusTickBarVisualizerModel();
-    // Check setter for barValue
     String initialBarValue = testTickBarModel.barValue;
     expect(testTickBarModel.barValue, initialBarValue);
     String testValue = 'testBarValue';
     testTickBarModel.barValue = testValue;
     expect(testTickBarModel.barValue, testValue);
-    // Check setter for barFill
+  });
+
+  test(
+      'test to confirm StatusTickBarVisualizerModel barFill setter works properly',
+      () {
     double initialBarFill = testTickBarModel.barFill;
     expect(testTickBarModel.barFill, initialBarFill);
     double randomBarFill = Random().nextDouble() * 100;
     testTickBarModel.barFill = randomBarFill;
     expect(testTickBarModel.barFill, randomBarFill);
-    // Check setter for barMax
+  });
+
+  test(
+      'test to confirm StatusTickBarVisualizerModel barMax setter works properly',
+      () {
     double initialBarMax = testTickBarModel.barMax;
     expect(testTickBarModel.barMax, initialBarMax);
     double randomBarMax = Random().nextDouble() * 100;
     testTickBarModel.barMax = randomBarMax;
     expect(testTickBarModel.barMax, randomBarMax);
+  });
+
+  tearDown(() async {
+    testTickBarModel = null;
   });
 }

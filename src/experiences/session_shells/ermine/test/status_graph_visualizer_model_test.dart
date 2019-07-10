@@ -10,10 +10,15 @@ import 'package:ermine_library/src/widgets/status_graph_visualizer.dart';
 import 'package:test/test.dart';
 
 void main() {
+  StatusGraphVisualizerModel testGraphModel;
+
+  setUp(() async {
+    testGraphModel = StatusGraphVisualizerModel();
+  });
+
   test(
       'test to confirm StatusGraphVisualizerModel contains non-breaking default values',
       () {
-    StatusGraphVisualizerModel testGraphModel = StatusGraphVisualizerModel();
     expect(testGraphModel.graphValue, 'loading...');
     expect(
         testGraphModel.graphData, lessThanOrEqualTo(testGraphModel.graphMax));
@@ -31,19 +36,23 @@ void main() {
     expect(testGraphModel.fillActive, isNotNull);
   });
 
-  test('test to confirm StatusGraphModel setters work properly', () {
-    StatusGraphVisualizerModel testGraphModel = StatusGraphVisualizerModel();
-    // Check setter for graphValue
+  test('test to confirm StatusGraphModel graphValue setter works properly', () {
     String initialBarValue = testGraphModel.graphValue;
     expect(testGraphModel.graphValue, initialBarValue);
     String testValue = 'testGraphValue';
     testGraphModel.graphValue = testValue;
     expect(testGraphModel.graphValue, testValue);
-    // Check setter for graphData
+  });
+
+  test('test to confirm StatusGraphModel graphData setter works properly', () {
     double initialBarMax = testGraphModel.graphData;
     expect(testGraphModel.graphData, initialBarMax);
     double randomGraphData = Random().nextDouble() * 100;
     testGraphModel.graphData = randomGraphData;
     expect(testGraphModel.graphData, randomGraphData);
+  });
+
+  tearDown(() async {
+    testGraphModel = null;
   });
 }
