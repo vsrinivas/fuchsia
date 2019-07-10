@@ -22,7 +22,6 @@ const SYSTEM_UPDATER_RESOURCE_URL: &str = "fuchsia-pkg://fuchsia.com/amber#meta/
 
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
-#[allow(dead_code)] // TODO(PKG-767) remove when server implemented
 pub enum Initiator {
     Manual,
     Automatic,
@@ -37,6 +36,7 @@ impl std::fmt::Display for Initiator {
     }
 }
 
+// On success, system will reboot before this function returns
 pub async fn apply_system_update(
     current_system_image: Hash,
     latest_system_image: Hash,

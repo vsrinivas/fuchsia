@@ -13,7 +13,7 @@ use std::io::{self, BufRead};
 
 const UPDATE_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/update/0";
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum SystemUpdateStatus {
     UpToDate { system_image: Hash },
     UpdateAvailable { current_system_image: Hash, latest_system_image: Hash },

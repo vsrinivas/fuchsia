@@ -12,9 +12,6 @@ pub struct Error {
 
 #[derive(Clone, Eq, PartialEq, Debug, Fail)]
 pub enum ErrorKind {
-    #[fail(display = "error creating executor")]
-    CreateExecutor,
-
     #[fail(display = "error reading /system/meta")]
     ReadSystemMeta,
 
