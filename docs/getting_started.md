@@ -193,7 +193,7 @@ package. A typical development
 [workflow](development/workflows/package_update.md) involves re-building and
 pushing Fuchsia packages to a development device or QEMU virtual device.
 
-Make a change to the rolldice binary in `garnet/bin/rolldice/src/main.rs`.
+Make a change to the rolldice binary in `examples/rolldice/src/main.rs`.
 
 Re-build and push the rolldice package to a running Fuchsia device with:
 

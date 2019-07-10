@@ -11,12 +11,6 @@ group("archivist") {
     "//garnet/bin/archivist",
   ]
 }
-group("rolldice") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/rolldice",
-  ]
-}
 
 group("tz-util") {
   testonly = true
@@ -263,7 +257,6 @@ group("all") {
     "//garnet/packages/prod:pm",
     "//garnet/packages/prod:ralink",
     "//garnet/packages/prod:realtek",
-    "//garnet/packages/prod:rolldice",
     "//garnet/packages/prod:root_ssl_certificates",
     "//garnet/packages/prod:run",
     "//garnet/packages/prod:runtime",

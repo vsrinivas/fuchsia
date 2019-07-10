@@ -13,6 +13,7 @@ group("examples") {
     "hello_world",
     "isolated_cache",
     "media",
+    "rolldice",
     "speech",
     "//examples/components/basic:components_basic_example",
     "//examples/components/routing:components_routing_example",
@@ -23,8 +24,9 @@ group("tests") {
   testonly = true
   data_deps = [
     "hello_world:tests",
-    "media:tests",
-    "rust_static_linking:static_linking_tests",
     "isolated_cache:tests",
+    "media:tests",
+    "rolldice:rolldice-tests",
+    "rust_static_linking:static_linking_tests",
   ]
 }
