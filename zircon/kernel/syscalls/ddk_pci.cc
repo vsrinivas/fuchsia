@@ -685,8 +685,7 @@ zx_status_t sys_pci_map_interrupt(zx_handle_t dev_handle,
     /**
      * Returns a handle that can be waited on.
      * @param handle Handle associated with a PCI device
-     * @param which_irq Identifier for an IRQ, returned in sys_pci_get_nth_device, or -1 for legacy
-     * interrupts
+     * @param which_irq Identifier for an IRQ, returned in sys_pci_get_nth_device
      * @param out_handle pointer to a handle to associate with the interrupt mapping
      */
     LTRACEF("handle %x\n", dev_handle);
