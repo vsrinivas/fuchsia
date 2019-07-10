@@ -45,9 +45,7 @@ DebugAgent::DebugAgent(debug_ipc::StreamBuffer* stream,
 
 DebugAgent::~DebugAgent() = default;
 
-fxl::WeakPtr<DebugAgent> DebugAgent::GetWeakPtr() {
-  return weak_factory_.GetWeakPtr();
-}
+fxl::WeakPtr<DebugAgent> DebugAgent::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 void DebugAgent::RemoveDebuggedProcess(zx_koid_t process_koid) {
   auto found = procs_.find(process_koid);
@@ -82,15 +80,13 @@ void DebugAgent::OnConfigAgent(const debug_ipc::ConfigAgentRequest& request,
   reply->results = HandleActions(request.actions, &configuration_);
 }
 
-void DebugAgent::OnHello(const debug_ipc::HelloRequest& request,
-                         debug_ipc::HelloReply* reply) {
+void DebugAgent::OnHello(const debug_ipc::HelloRequest& request, debug_ipc::HelloReply* reply) {
   TIME_BLOCK();
   // Version and signature are default-initialized to their current values.
   reply->arch = arch::ArchProvider::Get().GetArch();
 }
 
-void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request,
-                          debug_ipc::LaunchReply* reply) {
+void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request, debug_ipc::LaunchReply* reply) {
   TIME_BLOCK();
   switch (request.inferior_type) {
     case debug_ipc::InferiorType::kBinary:
@@ -106,8 +102,7 @@ void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request,
   reply->status = ZX_ERR_INVALID_ARGS;
 }
 
-void DebugAgent::OnKill(const debug_ipc::KillRequest& request,
-                        debug_ipc::KillReply* reply) {
+void DebugAgent::OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillReply* reply) {
   TIME_BLOCK();
   auto debug_process = GetDebuggedProcess(request.process_koid);
 
@@ -131,8 +126,7 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
   OnAttach(transaction_id, request);
 }
 
-void DebugAgent::OnAttach(uint32_t transaction_id,
-                          const debug_ipc::AttachRequest& request) {
+void DebugAgent::OnAttach(uint32_t transaction_id, const debug_ipc::AttachRequest& request) {
   TIME_BLOCK();
 
   if (request.type == debug_ipc::TaskType::kProcess) {
@@ -172,8 +166,7 @@ void DebugAgent::OnAttach(uint32_t transaction_id,
   stream()->Write(writer.MessageComplete());
 }
 
-void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request,
-                          debug_ipc::DetachReply* reply) {
+void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::DetachReply* reply) {
   TIME_BLOCK();
   switch (request.type) {
     case debug_ipc::TaskType::kJob: {
@@ -201,8 +194,7 @@ void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request,
   }
 }
 
-void DebugAgent::OnPause(const debug_ipc::PauseRequest& request,
-                         debug_ipc::PauseReply* reply) {
+void DebugAgent::OnPause(const debug_ipc::PauseRequest& request, debug_ipc::PauseReply* reply) {
   TIME_BLOCK();
   if (request.process_koid) {
     // Single process.
@@ -221,8 +213,7 @@ void DebugAgent::OnQuitAgent(const debug_ipc::QuitAgentRequest& request,
   debug_ipc::MessageLoop::Current()->QuitNow();
 };
 
-void DebugAgent::OnResume(const debug_ipc::ResumeRequest& request,
-                          debug_ipc::ResumeReply* reply) {
+void DebugAgent::OnResume(const debug_ipc::ResumeRequest& request, debug_ipc::ResumeReply* reply) {
   TIME_BLOCK();
   if (request.process_koid) {
     // Single process.
@@ -230,8 +221,7 @@ void DebugAgent::OnResume(const debug_ipc::ResumeRequest& request,
     if (proc) {
       proc->OnResume(request);
     } else {
-      FXL_LOG(WARNING) << "Could not find process by koid: "
-                       << request.process_koid;
+      FXL_LOG(WARNING) << "Could not find process by koid: " << request.process_koid;
     }
   } else {
     // All debugged processes.
@@ -275,8 +265,7 @@ void DebugAgent::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
 void DebugAgent::OnReadRegisters(const debug_ipc::ReadRegistersRequest& request,
                                  debug_ipc::ReadRegistersReply* reply) {
   TIME_BLOCK();
-  DebuggedThread* thread =
-      GetDebuggedThread(request.process_koid, request.thread_koid);
+  DebuggedThread* thread = GetDebuggedThread(request.process_koid, request.thread_koid);
   if (thread) {
     thread->ReadRegisters(request.categories, &reply->categories);
   } else {
@@ -284,12 +273,10 @@ void DebugAgent::OnReadRegisters(const debug_ipc::ReadRegistersRequest& request,
   }
 }
 
-void DebugAgent::OnWriteRegisters(
-    const debug_ipc::WriteRegistersRequest& request,
-    debug_ipc::WriteRegistersReply* reply) {
+void DebugAgent::OnWriteRegisters(const debug_ipc::WriteRegistersRequest& request,
+                                  debug_ipc::WriteRegistersReply* reply) {
   TIME_BLOCK();
-  DebuggedThread* thread =
-      GetDebuggedThread(request.process_koid, request.thread_koid);
+  DebuggedThread* thread = GetDebuggedThread(request.process_koid, request.thread_koid);
   if (thread) {
     reply->status = thread->WriteRegisters(request.registers);
   } else {
@@ -298,9 +285,8 @@ void DebugAgent::OnWriteRegisters(
   }
 }
 
-void DebugAgent::OnAddOrChangeBreakpoint(
-    const debug_ipc::AddOrChangeBreakpointRequest& request,
-    debug_ipc::AddOrChangeBreakpointReply* reply) {
+void DebugAgent::OnAddOrChangeBreakpoint(const debug_ipc::AddOrChangeBreakpointRequest& request,
+                                         debug_ipc::AddOrChangeBreakpointReply* reply) {
   switch (request.breakpoint_type) {
     case debug_ipc::BreakpointType::kSoftware:
     case debug_ipc::BreakpointType::kHardware:
@@ -314,9 +300,8 @@ void DebugAgent::OnAddOrChangeBreakpoint(
   FXL_NOTREACHED() << "Invalid Breakpoint Type.";
 }
 
-void DebugAgent::OnRemoveBreakpoint(
-    const debug_ipc::RemoveBreakpointRequest& request,
-    debug_ipc::RemoveBreakpointReply* reply) {
+void DebugAgent::OnRemoveBreakpoint(const debug_ipc::RemoveBreakpointRequest& request,
+                                    debug_ipc::RemoveBreakpointReply* reply) {
   TIME_BLOCK();
   RemoveBreakpoint(request.breakpoint_id);
 }
@@ -330,21 +315,17 @@ void DebugAgent::OnSysInfo(const debug_ipc::SysInfoRequest& request,
   reply->num_cpus = zx_system_get_num_cpus();
   reply->memory_mb = zx_system_get_physmem() / kMegabyte;
 
-  zx_system_get_features(ZX_FEATURE_KIND_HW_BREAKPOINT_COUNT,
-                         &reply->hw_breakpoint_count);
+  zx_system_get_features(ZX_FEATURE_KIND_HW_BREAKPOINT_COUNT, &reply->hw_breakpoint_count);
 
-  zx_system_get_features(ZX_FEATURE_KIND_HW_WATCHPOINT_COUNT,
-                         &reply->hw_watchpoint_count);
+  zx_system_get_features(ZX_FEATURE_KIND_HW_WATCHPOINT_COUNT, &reply->hw_watchpoint_count);
 }
 
 void DebugAgent::OnThreadStatus(const debug_ipc::ThreadStatusRequest& request,
                                 debug_ipc::ThreadStatusReply* reply) {
   TIME_BLOCK();
-  DebuggedThread* thread =
-      GetDebuggedThread(request.process_koid, request.thread_koid);
+  DebuggedThread* thread = GetDebuggedThread(request.process_koid, request.thread_koid);
   if (thread) {
-    thread->FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kFull,
-                             nullptr, &reply->record);
+    thread->FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kFull, nullptr, &reply->record);
   } else {
     // When the thread is not found the thread record is set to "dead".
     reply->record.process_koid = request.process_koid;
@@ -353,8 +334,7 @@ void DebugAgent::OnThreadStatus(const debug_ipc::ThreadStatusRequest& request,
   }
 }
 
-zx_status_t DebugAgent::RegisterBreakpoint(Breakpoint* bp,
-                                           zx_koid_t process_koid,
+zx_status_t DebugAgent::RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
                                            uint64_t address) {
   DebuggedProcess* proc = GetDebuggedProcess(process_koid);
   if (proc)
@@ -365,17 +345,15 @@ zx_status_t DebugAgent::RegisterBreakpoint(Breakpoint* bp,
   return ZX_ERR_NOT_FOUND;
 }
 
-void DebugAgent::UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
-                                      uint64_t address) {
+void DebugAgent::UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) {
   // The process might legitimately be not found if it was terminated.
   DebuggedProcess* proc = GetDebuggedProcess(process_koid);
   if (proc)
     proc->UnregisterBreakpoint(bp, address);
 }
 
-void DebugAgent::SetupBreakpoint(
-    const debug_ipc::AddOrChangeBreakpointRequest& request,
-    debug_ipc::AddOrChangeBreakpointReply* reply) {
+void DebugAgent::SetupBreakpoint(const debug_ipc::AddOrChangeBreakpointRequest& request,
+                                 debug_ipc::AddOrChangeBreakpointReply* reply) {
   uint32_t id = request.breakpoint.id;
   auto found = breakpoints_.find(id);
   if (found == breakpoints_.end()) {
@@ -384,13 +362,11 @@ void DebugAgent::SetupBreakpoint(
                          std::forward_as_tuple(this))
                 .first;
   }
-  reply->status =
-      found->second.SetSettings(request.breakpoint_type, request.breakpoint);
+  reply->status = found->second.SetSettings(request.breakpoint_type, request.breakpoint);
 }
 
-zx_status_t DebugAgent::RegisterWatchpoint(
-    Watchpoint* wp, zx_koid_t process_koid,
-    const debug_ipc::AddressRange& range) {
+zx_status_t DebugAgent::RegisterWatchpoint(Watchpoint* wp, zx_koid_t process_koid,
+                                           const debug_ipc::AddressRange& range) {
   DebuggedProcess* process = GetDebuggedProcess(process_koid);
   if (!process) {
     // The process might legitimately be not found if there was a race between
@@ -412,9 +388,8 @@ void DebugAgent::UnregisterWatchpoint(Watchpoint* wp, zx_koid_t process_koid,
   process->UnregisterWatchpoint(wp, range);
 }
 
-void DebugAgent::SetupWatchpoint(
-    const debug_ipc::AddOrChangeBreakpointRequest& request,
-    debug_ipc::AddOrChangeBreakpointReply* reply) {
+void DebugAgent::SetupWatchpoint(const debug_ipc::AddOrChangeBreakpointRequest& request,
+                                 debug_ipc::AddOrChangeBreakpointReply* reply) {
   auto id = request.breakpoint.id;
 
   auto wp_it = watchpoints_.find(id);
@@ -471,8 +446,7 @@ DebuggedJob* DebugAgent::GetDebuggedJob(zx_koid_t koid) {
   return found->second.get();
 }
 
-DebuggedThread* DebugAgent::GetDebuggedThread(zx_koid_t process_koid,
-                                              zx_koid_t thread_koid) {
+DebuggedThread* DebugAgent::GetDebuggedThread(zx_koid_t process_koid, zx_koid_t thread_koid) {
   DebuggedProcess* process = GetDebuggedProcess(process_koid);
   if (!process)
     return nullptr;
@@ -489,8 +463,7 @@ zx_status_t DebugAgent::AddDebuggedJob(zx_koid_t job_koid, zx::job zx_job) {
   return ZX_OK;
 }
 
-zx_status_t DebugAgent::AddDebuggedProcess(
-    DebuggedProcessCreateInfo&& create_info) {
+zx_status_t DebugAgent::AddDebuggedProcess(DebuggedProcessCreateInfo&& create_info) {
   zx_koid_t process_koid = create_info.koid;
   auto proc = std::make_unique<DebuggedProcess>(this, std::move(create_info));
   zx_status_t status = proc->Init();
@@ -501,8 +474,7 @@ zx_status_t DebugAgent::AddDebuggedProcess(
   return ZX_OK;
 }
 
-void DebugAgent::AttachToProcess(uint32_t transaction_id,
-                                 zx_koid_t process_koid) {
+void DebugAgent::AttachToProcess(uint32_t transaction_id, zx_koid_t process_koid) {
   // Don't return early without sending this reply, even in the failure case.
   debug_ipc::AttachReply reply;
   reply.status = ZX_ERR_NOT_FOUND;
@@ -590,8 +562,7 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
 
   ComponentDescription description;
   ComponentHandles handles;
-  zx_status_t status =
-      component_launcher.Prepare(request.argv, &description, &handles);
+  zx_status_t status = component_launcher.Prepare(request.argv, &description, &handles);
   if (status != ZX_OK) {
     reply->status = status;
     return;
@@ -644,15 +615,15 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
   // TODO(donosoc): This should hook into the debug agent so it can correctly
   //                shutdown the state associated with waiting for this
   //                component.
-  controller.events().OnTerminated =
-      [agent = GetWeakPtr(), description](
-          int64_t return_code, fuchsia::sys::TerminationReason reason) {
-        // If the agent is gone, there isn't anything more to do.
-        if (!agent)
-          return;
+  controller.events().OnTerminated = [agent = GetWeakPtr(), description](
+                                         int64_t return_code,
+                                         fuchsia::sys::TerminationReason reason) {
+    // If the agent is gone, there isn't anything more to do.
+    if (!agent)
+      return;
 
-        agent->OnComponentTerminated(return_code, description, reason);
-      };
+    agent->OnComponentTerminated(return_code, description, reason);
+  };
 
   ExpectedComponent expected_component;
   expected_component.description = description;
@@ -663,8 +634,7 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
   reply->status = ZX_OK;
 }
 
-void DebugAgent::OnProcessStart(const std::string& filter,
-                                zx::process process_handle) {
+void DebugAgent::OnProcessStart(const std::string& filter, zx::process process_handle) {
   TIME_BLOCK();
   ComponentDescription description;
   ComponentHandles handles;
@@ -674,8 +644,7 @@ void DebugAgent::OnProcessStart(const std::string& filter,
     handles = std::move(it->second.handles);
 
     // Add to the list of running components.
-    running_components_[description.component_id] =
-        std::move(it->second.controller);
+    running_components_[description.component_id] = std::move(it->second.controller);
     expected_components_.erase(it);
   } else {
     description.process_name = NameForObject(process_handle);
@@ -706,8 +675,7 @@ void DebugAgent::OnProcessStart(const std::string& filter,
   AddDebuggedProcess(std::move(create_info));
 }
 
-void DebugAgent::OnComponentTerminated(int64_t return_code,
-                                       const ComponentDescription& description,
+void DebugAgent::OnComponentTerminated(int64_t return_code, const ComponentDescription& description,
                                        fuchsia::sys::TerminationReason reason) {
   DEBUG_LOG(Process) << "Component " << description.url << " exited with "
                      << sys::HumanReadableTerminationReason(reason);
@@ -724,8 +692,7 @@ void DebugAgent::OnComponentTerminated(int64_t return_code,
 
   if (debug_ipc::IsDebugModeActive()) {
     std::stringstream ss;
-    ss << "Still expecting the following components: "
-       << expected_components_.size();
+    ss << "Still expecting the following components: " << expected_components_.size();
     for (auto& expected : expected_components_) {
       ss << std::endl << "* " << expected.first;
     }

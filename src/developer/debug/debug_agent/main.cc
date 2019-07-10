@@ -65,19 +65,16 @@ const char kDebugModeHelp[] = R"(  --debug-mode
 const char kUnwindHelp[] = R"(  --unwind=[aosp|ng]
       Force using either the AOSP or NG unwinder for generating stack traces.)";
 
-cmdline::Status ParseCommandLine(int argc, const char* argv[],
-                                 CommandLineOptions* options) {
+cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options) {
   cmdline::ArgsParser<CommandLineOptions> parser;
 
   parser.AddSwitch("port", 0, kPortHelp, &CommandLineOptions::port);
-  parser.AddSwitch("debug-mode", 'd', kDebugModeHelp,
-                   &CommandLineOptions::debug_mode);
+  parser.AddSwitch("debug-mode", 'd', kDebugModeHelp, &CommandLineOptions::debug_mode);
   parser.AddSwitch("unwind", 0, kUnwindHelp, &CommandLineOptions::unwind);
 
   // Special --help switch which doesn't exist in the options structure.
   bool requested_help = false;
-  parser.AddGeneralSwitch("help", 'h', kHelpHelp,
-                          [&requested_help]() { requested_help = true; });
+  parser.AddGeneralSwitch("help", 'h', kHelpHelp, [&requested_help]() { requested_help = true; });
 
   std::vector<std::string> params;
   cmdline::Status status = parser.Parse(argc, argv, options, &params);
@@ -96,8 +93,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[],
 // Represents one connection to a client.
 class SocketConnection {
  public:
-  SocketConnection(std::shared_ptr<sys::ServiceDirectory> services)
-      : services_(services) {}
+  SocketConnection(std::shared_ptr<sys::ServiceDirectory> services) : services_(services) {}
   ~SocketConnection() {}
 
   // |main_thread_loop| is used for posting a task that creates the debug agent after accepting a
@@ -247,9 +243,7 @@ void SocketServer::Run(debug_ipc::MessageLoop* main_thread_loop, int port,
   printf("Connection established.\n");
 }
 
-void SocketServer::Reset() {
-  connection_.reset();
-}
+void SocketServer::Reset() { connection_.reset(); }
 
 }  // namespace
 }  // namespace debug_agent
@@ -330,9 +324,7 @@ int main(int argc, const char* argv[]) {
     }
     message_loop->Cleanup();
   } else {
-    fprintf(
-        stderr,
-        "ERROR: --port=<port-number> required. See debug_agent --help.\n\n");
+    fprintf(stderr, "ERROR: --port=<port-number> required. See debug_agent --help.\n\n");
     return 1;
   }
 

@@ -33,9 +33,8 @@ zx_status_t SoftwareBreakpoint::Install() {
     return ZX_ERR_UNAVAILABLE;
 
   // Replace with breakpoint instruction.
-  status = memory_accessor_->WriteProcessMemory(
-      address, &arch::kBreakInstruction, sizeof(arch::BreakInstructionType),
-      &actual);
+  status = memory_accessor_->WriteProcessMemory(address, &arch::kBreakInstruction,
+                                                sizeof(arch::BreakInstructionType), &actual);
   if (status != ZX_OK)
     return status;
   if (actual != sizeof(arch::BreakInstructionType))
@@ -71,11 +70,10 @@ void SoftwareBreakpoint::Uninstall() {
     return;  // Replaced with something else, ignore.
   }
 
-  status = memory_accessor_->WriteProcessMemory(
-      address, &previous_data_, sizeof(arch::BreakInstructionType), &actual);
+  status = memory_accessor_->WriteProcessMemory(address, &previous_data_,
+                                                sizeof(arch::BreakInstructionType), &actual);
   if (status != ZX_OK || actual != sizeof(arch::BreakInstructionType)) {
-    fprintf(stderr, "Warning: unable to remove breakpoint at %" PRIX64 ".",
-            address);
+    fprintf(stderr, "Warning: unable to remove breakpoint at %" PRIX64 ".", address);
   }
 
   installed_ = false;
@@ -94,8 +92,7 @@ void SoftwareBreakpoint::FixupMemoryBlock(debug_ipc::MemoryBlock* block) {
   // buffer).
   for (size_t i = 0; i < src_size; i++) {
     uint64_t dest_address = process_bp_->address() + i;
-    if (dest_address >= block->address &&
-        dest_address < block->address + block->size)
+    if (dest_address >= block->address && dest_address < block->address + block->size)
       block->data[dest_address - block->address] = src[i];
   }
 }

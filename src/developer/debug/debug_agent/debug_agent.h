@@ -59,43 +59,32 @@ class DebugAgent : public RemoteAPI,
   // RemoteAPI implementation.
   void OnConfigAgent(const debug_ipc::ConfigAgentRequest& request,
                      debug_ipc::ConfigAgentReply* reply) override;
-  void OnHello(const debug_ipc::HelloRequest& request,
-               debug_ipc::HelloReply* reply) override;
-  void OnLaunch(const debug_ipc::LaunchRequest& request,
-                debug_ipc::LaunchReply* reply) override;
-  void OnKill(const debug_ipc::KillRequest& request,
-              debug_ipc::KillReply* reply) override;
+  void OnHello(const debug_ipc::HelloRequest& request, debug_ipc::HelloReply* reply) override;
+  void OnLaunch(const debug_ipc::LaunchRequest& request, debug_ipc::LaunchReply* reply) override;
+  void OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillReply* reply) override;
   void OnAttach(std::vector<char> serialized) override;
   // |transaction_id| is the id of the IPC message.
-  void OnAttach(uint32_t transaction_id,
-                const debug_ipc::AttachRequest&) override;
-  void OnDetach(const debug_ipc::DetachRequest& request,
-                debug_ipc::DetachReply* reply) override;
-  void OnPause(const debug_ipc::PauseRequest& request,
-               debug_ipc::PauseReply* reply) override;
+  void OnAttach(uint32_t transaction_id, const debug_ipc::AttachRequest&) override;
+  void OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::DetachReply* reply) override;
+  void OnPause(const debug_ipc::PauseRequest& request, debug_ipc::PauseReply* reply) override;
   void OnQuitAgent(const debug_ipc::QuitAgentRequest& request,
                    debug_ipc::QuitAgentReply* reply) override;
-  void OnResume(const debug_ipc::ResumeRequest& request,
-                debug_ipc::ResumeReply* reply) override;
-  void OnModules(const debug_ipc::ModulesRequest& request,
-                 debug_ipc::ModulesReply* reply) override;
+  void OnResume(const debug_ipc::ResumeRequest& request, debug_ipc::ResumeReply* reply) override;
+  void OnModules(const debug_ipc::ModulesRequest& request, debug_ipc::ModulesReply* reply) override;
   void OnProcessTree(const debug_ipc::ProcessTreeRequest& request,
                      debug_ipc::ProcessTreeReply* reply) override;
-  void OnThreads(const debug_ipc::ThreadsRequest& request,
-                 debug_ipc::ThreadsReply* reply) override;
+  void OnThreads(const debug_ipc::ThreadsRequest& request, debug_ipc::ThreadsReply* reply) override;
   void OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
                     debug_ipc::ReadMemoryReply* reply) override;
   void OnReadRegisters(const debug_ipc::ReadRegistersRequest& request,
                        debug_ipc::ReadRegistersReply* reply) override;
   void OnWriteRegisters(const debug_ipc::WriteRegistersRequest& request,
                         debug_ipc::WriteRegistersReply* reply) override;
-  void OnAddOrChangeBreakpoint(
-      const debug_ipc::AddOrChangeBreakpointRequest& request,
-      debug_ipc::AddOrChangeBreakpointReply* reply) override;
+  void OnAddOrChangeBreakpoint(const debug_ipc::AddOrChangeBreakpointRequest& request,
+                               debug_ipc::AddOrChangeBreakpointReply* reply) override;
   void OnRemoveBreakpoint(const debug_ipc::RemoveBreakpointRequest& request,
                           debug_ipc::RemoveBreakpointReply* reply) override;
-  void OnSysInfo(const debug_ipc::SysInfoRequest& request,
-                 debug_ipc::SysInfoReply* reply) override;
+  void OnSysInfo(const debug_ipc::SysInfoRequest& request, debug_ipc::SysInfoReply* reply) override;
   void OnThreadStatus(const debug_ipc::ThreadStatusRequest& request,
                       debug_ipc::ThreadStatusReply* reply) override;
   void OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
@@ -107,10 +96,8 @@ class DebugAgent : public RemoteAPI,
 
   // Breakpoint::ProcessDelegate implementation --------------------------------
 
-  zx_status_t RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
-                                 uint64_t address) override;
-  void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
-                            uint64_t address) override;
+  zx_status_t RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) override;
+  void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) override;
 
   void SetupBreakpoint(const debug_ipc::AddOrChangeBreakpointRequest& request,
                        debug_ipc::AddOrChangeBreakpointReply* reply);
@@ -133,8 +120,7 @@ class DebugAgent : public RemoteAPI,
   zx_status_t AddDebuggedProcess(DebuggedProcessCreateInfo&&);
   DebuggedProcess* GetDebuggedProcess(zx_koid_t koid);
 
-  DebuggedThread* GetDebuggedThread(zx_koid_t process_koid,
-                                    zx_koid_t thread_koid);
+  DebuggedThread* GetDebuggedThread(zx_koid_t process_koid, zx_koid_t thread_koid);
 
   // Attempts to attach to the given process and sends a AttachReply message
   // to the client with the result.
@@ -142,10 +128,8 @@ class DebugAgent : public RemoteAPI,
 
   void LaunchProcess(const debug_ipc::LaunchRequest&, debug_ipc::LaunchReply*);
 
-  void LaunchComponent(const debug_ipc::LaunchRequest&,
-                       debug_ipc::LaunchReply*);
-  void OnComponentTerminated(int64_t return_code,
-                             const ComponentDescription& description,
+  void LaunchComponent(const debug_ipc::LaunchRequest&, debug_ipc::LaunchReply*);
+  void OnComponentTerminated(int64_t return_code, const ComponentDescription& description,
                              fuchsia::sys::TerminationReason reason);
 
   debug_ipc::StreamBuffer* stream_;

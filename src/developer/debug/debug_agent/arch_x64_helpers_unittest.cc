@@ -20,8 +20,8 @@ namespace arch {
 namespace {
 
 void SetupHWBreakpointTest(debug_ipc::FileLineFunction file_line,
-                           zx_thread_state_debug_regs_t* debug_regs,
-                           uint64_t address, zx_status_t expected_result) {
+                           zx_thread_state_debug_regs_t* debug_regs, uint64_t address,
+                           zx_status_t expected_result) {
   zx_status_t result = SetupHWBreakpoint(address, debug_regs);
   ASSERT_EQ(result, expected_result)
       << "[" << file_line.ToString() << "] "
@@ -30,8 +30,8 @@ void SetupHWBreakpointTest(debug_ipc::FileLineFunction file_line,
 }
 
 void RemoveHWBreakpointTest(debug_ipc::FileLineFunction file_line,
-                            zx_thread_state_debug_regs_t* debug_regs,
-                            uint64_t address, zx_status_t expected_result) {
+                            zx_thread_state_debug_regs_t* debug_regs, uint64_t address,
+                            zx_status_t expected_result) {
   zx_status_t result = RemoveHWBreakpoint(address, debug_regs);
   ASSERT_EQ(result, expected_result)
       << "[" << file_line.ToString() << "] "
@@ -40,8 +40,8 @@ void RemoveHWBreakpointTest(debug_ipc::FileLineFunction file_line,
 }
 
 void SetupWatchpointTest(debug_ipc::FileLineFunction file_line,
-                         zx_thread_state_debug_regs_t* debug_regs,
-                         uint64_t address, zx_status_t expected_result) {
+                         zx_thread_state_debug_regs_t* debug_regs, uint64_t address,
+                         zx_status_t expected_result) {
   zx_status_t result = SetupWatchpoint(address, debug_regs);
   ASSERT_EQ(result, expected_result)
       << "[" << file_line.ToString() << "] "
@@ -50,8 +50,8 @@ void SetupWatchpointTest(debug_ipc::FileLineFunction file_line,
 }
 
 void RemoveWatchpointTest(debug_ipc::FileLineFunction file_line,
-                          zx_thread_state_debug_regs_t* debug_regs,
-                          uint64_t address, zx_status_t expected_result) {
+                          zx_thread_state_debug_regs_t* debug_regs, uint64_t address,
+                          zx_status_t expected_result) {
   zx_status_t result = RemoveWatchpoint(address, debug_regs);
   ASSERT_EQ(result, expected_result)
       << "[" << file_line.ToString() << "] "
@@ -85,8 +85,7 @@ uint64_t GetWatchpointDR7Mask(size_t index) {
 }
 
 // Merges into |val| the flag values for active hw breakpoints within |indices|.
-uint64_t JoinDR7HWBreakpointMask(uint64_t val,
-                                 std::initializer_list<size_t> indices = {}) {
+uint64_t JoinDR7HWBreakpointMask(uint64_t val, std::initializer_list<size_t> indices = {}) {
   for (size_t index : indices) {
     FXL_DCHECK(index < 4);
     val |= GetHWBreakpointDR7Mask(index);
@@ -96,8 +95,7 @@ uint64_t JoinDR7HWBreakpointMask(uint64_t val,
 }
 
 // Merges into |val| the flag values for active watchpoints within |indices|.
-uint64_t JoinDR7WatchpointMask(uint64_t val,
-                               std::initializer_list<size_t> indices = {}) {
+uint64_t JoinDR7WatchpointMask(uint64_t val, std::initializer_list<size_t> indices = {}) {
   for (size_t index : indices) {
     FXL_DCHECK(index < 4);
     val |= GetWatchpointDR7Mask(index);
@@ -125,8 +123,7 @@ TEST(x64Helpers, WritingGeneralRegs) {
 
   zx_thread_state_general_regs_t out = {};
   zx_status_t res = WriteGeneralRegisters(regs, &out);
-  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got "
-                        << debug_ipc::ZxStatusToString(res);
+  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug_ipc::ZxStatusToString(res);
 
   EXPECT_EQ(out.rax, 0x0102030405060708u);
   EXPECT_EQ(out.rbx, 0x0102030405060708u);
@@ -153,8 +150,7 @@ TEST(x64Helpers, WritingGeneralRegs) {
   regs.push_back(CreateUint64Register(debug_ipc::RegisterID::kX64_r10, 0xbeef));
 
   res = WriteGeneralRegisters(regs, &out);
-  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got "
-                        << debug_ipc::ZxStatusToString(res);
+  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug_ipc::ZxStatusToString(res);
 
   EXPECT_EQ(out.rax, 0xaabbu);
   EXPECT_EQ(out.rbx, 0x0102030405060708u);
@@ -203,8 +199,7 @@ TEST(x64Helpers, SettingHWBreakpoints) {
   EXPECT_EQ(debug_regs.dr7, JoinDR7HWBreakpointMask(0, {0}));
 
   // Adding the same breakpoint should detect that the same already exists.
-  SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress1,
-                        ZX_ERR_ALREADY_BOUND);
+  SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress1, ZX_ERR_ALREADY_BOUND);
   EXPECT_EQ(debug_regs.dr[0], kAddress1);
   EXPECT_EQ(debug_regs.dr[1], 0u);
   EXPECT_EQ(debug_regs.dr[2], 0u);
@@ -238,8 +233,7 @@ TEST(x64Helpers, SettingHWBreakpoints) {
   EXPECT_EQ(debug_regs.dr7, JoinDR7HWBreakpointMask(0, {0, 1, 2, 3}));
 
   // No more registers left should not change anything.
-  SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5,
-                        ZX_ERR_NO_RESOURCES);
+  SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5, ZX_ERR_NO_RESOURCES);
   EXPECT_EQ(debug_regs.dr[0], kAddress1);
   EXPECT_EQ(debug_regs.dr[1], kAddress2);
   EXPECT_EQ(debug_regs.dr[2], kAddress3);
@@ -256,8 +250,7 @@ TEST(x64Helpers, RemovingHWBreakpoint) {
   SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress2, ZX_OK);
   SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_OK);
   SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress4, ZX_OK);
-  SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5,
-                        ZX_ERR_NO_RESOURCES);
+  SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5, ZX_ERR_NO_RESOURCES);
 
   RemoveHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_OK);
   EXPECT_EQ(debug_regs.dr[0], kAddress1);
@@ -268,8 +261,7 @@ TEST(x64Helpers, RemovingHWBreakpoint) {
   EXPECT_EQ(debug_regs.dr7, JoinDR7HWBreakpointMask(0, {0, 1, 3}));
 
   // Removing same breakpoint should not work.
-  RemoveHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3,
-                         ZX_ERR_OUT_OF_RANGE);
+  RemoveHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_ERR_OUT_OF_RANGE);
   EXPECT_EQ(debug_regs.dr[0], kAddress1);
   EXPECT_EQ(debug_regs.dr[1], kAddress2);
   EXPECT_EQ(debug_regs.dr[2], 0u);
@@ -278,8 +270,7 @@ TEST(x64Helpers, RemovingHWBreakpoint) {
   EXPECT_EQ(debug_regs.dr7, JoinDR7HWBreakpointMask(0, {0, 1, 3}));
 
   // Removing an unknown address should warn and change nothing.
-  RemoveHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, 0xaaaaaaa,
-                         ZX_ERR_OUT_OF_RANGE);
+  RemoveHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, 0xaaaaaaa, ZX_ERR_OUT_OF_RANGE);
   EXPECT_EQ(debug_regs.dr[0], kAddress1);
   EXPECT_EQ(debug_regs.dr[1], kAddress2);
   EXPECT_EQ(debug_regs.dr[2], 0u);
@@ -313,8 +304,7 @@ TEST(x64Helpers, RemovingHWBreakpoint) {
   EXPECT_EQ(debug_regs.dr7, JoinDR7HWBreakpointMask(0, {0, 1, 2, 3}));
 
   // Already exists should not change.
-  SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5,
-                        ZX_ERR_ALREADY_BOUND);
+  SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5, ZX_ERR_ALREADY_BOUND);
   EXPECT_EQ(debug_regs.dr[0], kAddress5);
   EXPECT_EQ(debug_regs.dr[1], kAddress2);
   EXPECT_EQ(debug_regs.dr[2], kAddress1);
@@ -323,8 +313,7 @@ TEST(x64Helpers, RemovingHWBreakpoint) {
   EXPECT_EQ(debug_regs.dr7, JoinDR7HWBreakpointMask(0, {0, 1, 2, 3}));
 
   // No more resources.
-  SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3,
-                        ZX_ERR_NO_RESOURCES);
+  SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_ERR_NO_RESOURCES);
   EXPECT_EQ(debug_regs.dr[0], kAddress5);
   EXPECT_EQ(debug_regs.dr[1], kAddress2);
   EXPECT_EQ(debug_regs.dr[2], kAddress1);
@@ -333,8 +322,7 @@ TEST(x64Helpers, RemovingHWBreakpoint) {
   EXPECT_EQ(debug_regs.dr7, JoinDR7HWBreakpointMask(0, {0, 1, 2, 3}));
 
   // Attempting to remove a watchpoint should not work.
-  RemoveWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3,
-                       ZX_ERR_OUT_OF_RANGE);
+  RemoveWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_ERR_OUT_OF_RANGE);
   EXPECT_EQ(debug_regs.dr[0], kAddress5);
   EXPECT_EQ(debug_regs.dr[1], kAddress2);
   EXPECT_EQ(debug_regs.dr[2], kAddress1);
@@ -363,8 +351,7 @@ TEST(x64Helpers, SettingWatchpoints) {
   EXPECT_EQ(debug_regs.dr7, JoinDR7WatchpointMask(0, {0}));
 
   // Adding the same breakpoint should detect that the same already exists.
-  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress1,
-                      ZX_ERR_ALREADY_BOUND);
+  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress1, ZX_ERR_ALREADY_BOUND);
   EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress1));
   EXPECT_EQ(debug_regs.dr[1], 0u);
   EXPECT_EQ(debug_regs.dr[2], 0u);
@@ -403,8 +390,7 @@ TEST(x64Helpers, SettingWatchpoints) {
   }
 
   // No more registers left should not change anything.
-  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5,
-                      ZX_ERR_NO_RESOURCES);
+  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5, ZX_ERR_NO_RESOURCES);
   EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress1));
   EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
   EXPECT_EQ(debug_regs.dr[2], AlignedAddress(kAddress3));
@@ -425,8 +411,7 @@ TEST(x64Helpers, RemovingWatchpoints) {
   SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress2, ZX_OK);
   SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_OK);
   SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress4, ZX_OK);
-  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5,
-                      ZX_ERR_NO_RESOURCES);
+  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5, ZX_ERR_NO_RESOURCES);
 
   RemoveWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_OK);
   EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress1));
@@ -441,8 +426,7 @@ TEST(x64Helpers, RemovingWatchpoints) {
   }
 
   // Removing same watchpoint should not work.
-  RemoveWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3,
-                       ZX_ERR_OUT_OF_RANGE);
+  RemoveWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_ERR_OUT_OF_RANGE);
   EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress1));
   EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
   EXPECT_EQ(debug_regs.dr[2], 0u);
@@ -455,8 +439,7 @@ TEST(x64Helpers, RemovingWatchpoints) {
   }
 
   // Removing an unknown address should warn and change nothing.
-  RemoveWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, 0xaaaaaaa,
-                       ZX_ERR_OUT_OF_RANGE);
+  RemoveWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, 0xaaaaaaa, ZX_ERR_OUT_OF_RANGE);
   EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress1));
   EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
   EXPECT_EQ(debug_regs.dr[2], 0u);
@@ -469,8 +452,7 @@ TEST(x64Helpers, RemovingWatchpoints) {
   }
 
   // Attempting to remove a HW breakpoint should not work.
-  RemoveHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress1,
-                         ZX_ERR_OUT_OF_RANGE);
+  RemoveHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress1, ZX_ERR_OUT_OF_RANGE);
   EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress1));
   EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
   EXPECT_EQ(debug_regs.dr[2], 0u);
@@ -520,8 +502,7 @@ TEST(x64Helpers, RemovingWatchpoints) {
   }
 
   // Already exists should not change.
-  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5,
-                      ZX_ERR_ALREADY_BOUND);
+  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5, ZX_ERR_ALREADY_BOUND);
   EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress5));
   EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
   EXPECT_EQ(debug_regs.dr[2], AlignedAddress(kAddress1));
@@ -534,8 +515,7 @@ TEST(x64Helpers, RemovingWatchpoints) {
   }
 
   // No more resources.
-  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3,
-                      ZX_ERR_NO_RESOURCES);
+  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_ERR_NO_RESOURCES);
   EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress5));
   EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
   EXPECT_EQ(debug_regs.dr[2], AlignedAddress(kAddress1));

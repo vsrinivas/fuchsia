@@ -13,8 +13,7 @@
 
 namespace debug_agent {
 
-BinaryLauncher::BinaryLauncher(
-    std::shared_ptr<sys::ServiceDirectory> env_services)
+BinaryLauncher::BinaryLauncher(std::shared_ptr<sys::ServiceDirectory> env_services)
     : builder_(env_services) {}
 BinaryLauncher::~BinaryLauncher() = default;
 

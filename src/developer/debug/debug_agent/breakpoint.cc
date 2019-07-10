@@ -12,26 +12,22 @@ namespace debug_agent {
 namespace {
 
 // Debug logging to see if a breakpoint applies to a thread.
-void LogAppliesToThread(uint32_t breakpoint_id, zx_koid_t pid, zx_koid_t tid,
-                        bool applies) {
-  DEBUG_LOG(Breakpoint) << "Breakpoint " << breakpoint_id
-                        << " applies to [P: " << pid << ", T: " << tid << "]? "
-                        << applies;
+void LogAppliesToThread(uint32_t breakpoint_id, zx_koid_t pid, zx_koid_t tid, bool applies) {
+  DEBUG_LOG(Breakpoint) << "Breakpoint " << breakpoint_id << " applies to [P: " << pid
+                        << ", T: " << tid << "]? " << applies;
 }
 
 }  // namespace
 
-Breakpoint::Breakpoint(ProcessDelegate* process_delegate)
-    : process_delegate_(process_delegate) {}
+Breakpoint::Breakpoint(ProcessDelegate* process_delegate) : process_delegate_(process_delegate) {}
 
 Breakpoint::~Breakpoint() {
   for (const auto& loc : locations_)
     process_delegate_->UnregisterBreakpoint(this, loc.first, loc.second);
 }
 
-zx_status_t Breakpoint::SetSettings(
-    debug_ipc::BreakpointType type,
-    const debug_ipc::BreakpointSettings& settings) {
+zx_status_t Breakpoint::SetSettings(debug_ipc::BreakpointType type,
+                                    const debug_ipc::BreakpointSettings& settings) {
   FXL_DCHECK(type == debug_ipc::BreakpointType::kSoftware ||
              type == debug_ipc::BreakpointType::kHardware)
       << "Got: " << debug_ipc::BreakpointTypeToString(type);

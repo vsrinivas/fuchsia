@@ -22,9 +22,7 @@ ArchProvider& ArchProvider::Get() {
   return *arch_provider.get();
 }
 
-void ArchProvider::Set(std::unique_ptr<ArchProvider> arch) {
-  arch_provider = std::move(arch);
-}
+void ArchProvider::Set(std::unique_ptr<ArchProvider> arch) { arch_provider = std::move(arch); }
 
 ArchProvider::~ArchProvider() = default;
 

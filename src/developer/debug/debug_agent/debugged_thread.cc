@@ -35,8 +35,7 @@ namespace {
 
 bool IsBlockedOnException(const zx::thread& thread) {
   zx_info_thread info;
-  return thread.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr,
-                         nullptr) == ZX_OK &&
+  return thread.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr) == ZX_OK &&
          info.state == ZX_THREAD_STATE_BLOCKED_EXCEPTION;
 }
 
@@ -71,9 +70,8 @@ const char* ExceptionTypeToString(uint32_t type) {
 
 }  // namespace
 
-DebuggedThread::DebuggedThread(DebuggedProcess* process, zx::thread thread,
-                               zx_koid_t koid, zx::exception exception,
-                               ThreadCreationOption option)
+DebuggedThread::DebuggedThread(DebuggedProcess* process, zx::thread thread, zx_koid_t koid,
+                               zx::exception exception, ThreadCreationOption option)
     : debug_agent_(process->debug_agent()),
       process_(process),
       thread_(std::move(thread)),
@@ -98,11 +96,10 @@ void DebuggedThread::OnException(zx::exception exception_token,
   exception_token_ = std::move(exception_token);
 
   debug_ipc::NotifyException exception;
-  exception.type =
-      arch::ArchProvider::Get().DecodeExceptionType(*this, exception_info.type);
+  exception.type = arch::ArchProvider::Get().DecodeExceptionType(*this, exception_info.type);
 
-  DEBUG_LOG(Thread) << ThreadPreamble(this) << "Exception: "
-                    << ExceptionTypeToString(exception_info.type) << " -> "
+  DEBUG_LOG(Thread) << ThreadPreamble(this)
+                    << "Exception: " << ExceptionTypeToString(exception_info.type) << " -> "
                     << debug_ipc::NotifyException::TypeToString(exception.type);
 
   zx_thread_state_general_regs regs;
@@ -181,14 +178,13 @@ void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
   SendExceptionNotification(exception, regs);
 }
 
-void DebuggedThread::HandleGeneralException(
-    debug_ipc::NotifyException* exception, zx_thread_state_general_regs* regs) {
+void DebuggedThread::HandleGeneralException(debug_ipc::NotifyException* exception,
+                                            zx_thread_state_general_regs* regs) {
   SendExceptionNotification(exception, regs);
 }
 
-void DebuggedThread::HandleSoftwareBreakpoint(
-    debug_ipc::NotifyException* exception, zx_thread_state_general_regs* regs) {
-
+void DebuggedThread::HandleSoftwareBreakpoint(debug_ipc::NotifyException* exception,
+                                              zx_thread_state_general_regs* regs) {
   auto on_stop = UpdateForSoftwareBreakpoint(regs, &exception->hit_breakpoints);
   switch (on_stop) {
     case OnStop::kIgnore:
@@ -206,10 +202,9 @@ void DebuggedThread::HandleSoftwareBreakpoint(
   FXL_NOTREACHED() << "Invalid OnStop.";
 }
 
-void DebuggedThread::HandleHardwareBreakpoint(
-    debug_ipc::NotifyException* exception, zx_thread_state_general_regs* regs) {
-  if (UpdateForHardwareBreakpoint(regs, &exception->hit_breakpoints) ==
-      OnStop::kIgnore)
+void DebuggedThread::HandleHardwareBreakpoint(debug_ipc::NotifyException* exception,
+                                              zx_thread_state_general_regs* regs) {
+  if (UpdateForHardwareBreakpoint(regs, &exception->hit_breakpoints) == OnStop::kIgnore)
     return;
 
   SendExceptionNotification(exception, regs);
@@ -223,10 +218,9 @@ void DebuggedThread::HandleWatchpoint(debug_ipc::NotifyException* exception,
   SendExceptionNotification(exception, regs);
 }
 
-void DebuggedThread::SendExceptionNotification(
-    debug_ipc::NotifyException* exception, zx_thread_state_general_regs* regs) {
-  FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal, regs,
-                   &exception->thread);
+void DebuggedThread::SendExceptionNotification(debug_ipc::NotifyException* exception,
+                                               zx_thread_state_general_regs* regs) {
+  FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal, regs, &exception->thread);
 
   // Keep the thread suspended for the client.
 
@@ -253,16 +247,14 @@ void DebuggedThread::ResumeException() {
   // We need to mark that this token is correctly handled before closing it.
   if (exception_token_.is_valid()) {
     uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
-    zx_status_t status = exception_token_.set_property(ZX_PROP_EXCEPTION_STATE,
-                                                       &state, sizeof(state));
+    zx_status_t status =
+        exception_token_.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));
     FXL_DCHECK(status == ZX_OK) << "Got: " << zx_status_get_string(status);
   }
   exception_token_.reset();
 }
 
-void DebuggedThread::ResumeSuspension() {
-  suspend_token_.reset();
-}
+void DebuggedThread::ResumeSuspension() { suspend_token_.reset(); }
 
 bool DebuggedThread::Suspend(bool synchronous) {
   // Subsequent suspend calls should return immediatelly. Note that this does
@@ -322,8 +314,7 @@ bool DebuggedThread::WaitForSuspension(zx::time deadline) {
       return true;
 
     zx_signals_t observed;
-    status = thread_.wait_one(ZX_THREAD_SUSPENDED,
-                              zx::deadline_after(poll_time), &observed);
+    status = thread_.wait_one(ZX_THREAD_SUSPENDED, zx::deadline_after(poll_time), &observed);
     if (status == ZX_OK && (observed & ZX_THREAD_SUSPENDED))
       return true;
 
@@ -331,18 +322,16 @@ bool DebuggedThread::WaitForSuspension(zx::time deadline) {
   return false;
 }
 
-void DebuggedThread::FillThreadRecord(
-    debug_ipc::ThreadRecord::StackAmount stack_amount,
-    const zx_thread_state_general_regs* optional_regs,
-    debug_ipc::ThreadRecord* record) const {
+void DebuggedThread::FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack_amount,
+                                      const zx_thread_state_general_regs* optional_regs,
+                                      debug_ipc::ThreadRecord* record) const {
   record->process_koid = process_->koid();
   record->thread_koid = koid();
   record->name = NameForObject(thread_);
 
   // State (running, blocked, etc.).
   zx_info_thread info;
-  if (thread_.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr) ==
-      ZX_OK) {
+  if (thread_.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr) == ZX_OK) {
     record->state = ThreadStateToEnums(info.state, &record->blocked_reason);
   } else {
     FXL_NOTREACHED();
@@ -360,8 +349,8 @@ void DebuggedThread::FillThreadRecord(
     zx_thread_state_general_regs queried_regs;  // Storage for fetched regs.
     zx_thread_state_general_regs* regs = nullptr;
     if (!optional_regs) {
-      if (thread_.read_state(ZX_THREAD_STATE_GENERAL_REGS, &queried_regs,
-                             sizeof(queried_regs)) == ZX_OK)
+      if (thread_.read_state(ZX_THREAD_STATE_GENERAL_REGS, &queried_regs, sizeof(queried_regs)) ==
+          ZX_OK)
         regs = &queried_regs;
     } else {
       // We don't change the values here but *InRegs below returns mutable
@@ -373,11 +362,10 @@ void DebuggedThread::FillThreadRecord(
       // Minimal stacks are 2 (current frame and calling one). Full stacks max
       // out at 256 to prevent edge cases, especially around corrupted stacks.
       uint32_t max_stack_depth =
-          stack_amount == debug_ipc::ThreadRecord::StackAmount::kMinimal ? 2
-                                                                         : 256;
+          stack_amount == debug_ipc::ThreadRecord::StackAmount::kMinimal ? 2 : 256;
 
-      UnwindStack(process_->process(), process_->dl_debug_addr(), thread_,
-                  *regs, max_stack_depth, &record->frames);
+      UnwindStack(process_->process(), process_->dl_debug_addr(), thread_, *regs, max_stack_depth,
+                  &record->frames);
     }
   } else {
     // Didn't bother querying the stack.
@@ -393,8 +381,7 @@ void DebuggedThread::ReadRegisters(
   for (const auto& cat_type : cats_to_get) {
     auto& cat = out->emplace_back();
     cat.type = cat_type;
-    zx_status_t status = arch::ArchProvider::Get().ReadRegisters(
-        cat_type, thread_, &cat.registers);
+    zx_status_t status = arch::ArchProvider::Get().ReadRegisters(cat_type, thread_, &cat.registers);
     if (status != ZX_OK) {
       out->pop_back();
       FXL_LOG(ERROR) << "Could not get register state for category: "
@@ -403,15 +390,13 @@ void DebuggedThread::ReadRegisters(
   }
 }
 
-zx_status_t DebuggedThread::WriteRegisters(
-    const std::vector<debug_ipc::Register>& regs) {
+zx_status_t DebuggedThread::WriteRegisters(const std::vector<debug_ipc::Register>& regs) {
   // We use a map to keep track of which categories will change.
-  std::map<debug_ipc::RegisterCategory::Type, debug_ipc::RegisterCategory>
-      categories;
+  std::map<debug_ipc::RegisterCategory::Type, debug_ipc::RegisterCategory> categories;
 
   bool rip_change = false;
-  debug_ipc::RegisterID rip_id = GetSpecialRegisterID(
-      arch::ArchProvider::Get().GetArch(), debug_ipc::SpecialRegisterType::kIP);
+  debug_ipc::RegisterID rip_id = GetSpecialRegisterID(arch::ArchProvider::Get().GetArch(),
+                                                      debug_ipc::SpecialRegisterType::kIP);
 
   // We append each register to the correct category to be changed.
   for (const debug_ipc::Register& reg : regs) {
@@ -437,8 +422,8 @@ zx_status_t DebuggedThread::WriteRegisters(
     zx_status_t res = arch::ArchProvider::Get().WriteRegisters(cat, &thread_);
     if (res != ZX_OK) {
       FXL_LOG(WARNING) << "Could not write category "
-                       << debug_ipc::RegisterCategory::TypeToString(cat_type)
-                       << ": " << debug_ipc::ZxStatusToString(res);
+                       << debug_ipc::RegisterCategory::TypeToString(cat_type) << ": "
+                       << debug_ipc::ZxStatusToString(res);
     }
   }
   // If the debug agent wrote to the thread IP directly, then current state is
@@ -453,12 +438,10 @@ zx_status_t DebuggedThread::WriteRegisters(
 
 void DebuggedThread::SendThreadNotification() const {
   debug_ipc::NotifyThread notify;
-  FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal, nullptr,
-                   &notify.record);
+  FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal, nullptr, &notify.record);
 
   debug_ipc::MessageWriter writer;
-  debug_ipc::WriteNotifyThread(
-      debug_ipc::MsgHeader::Type::kNotifyThreadStarting, notify, &writer);
+  debug_ipc::WriteNotifyThread(debug_ipc::MsgHeader::Type::kNotifyThreadStarting, notify, &writer);
   debug_agent_->stream()->Write(writer.MessageComplete());
 }
 
@@ -468,36 +451,32 @@ void DebuggedThread::WillDeleteProcessBreakpoint(ProcessBreakpoint* bp) {
 }
 
 DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
-    zx_thread_state_general_regs* regs,
-    std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
+    zx_thread_state_general_regs* regs, std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
   // Get the correct address where the CPU is after hitting a breakpoint
   // (this is architecture specific).
   uint64_t breakpoint_address =
-      arch::ArchProvider::Get()
-          .BreakpointInstructionForSoftwareExceptionAddress(
-              *arch::ArchProvider::Get().IPInRegs(regs));
+      arch::ArchProvider::Get().BreakpointInstructionForSoftwareExceptionAddress(
+          *arch::ArchProvider::Get().IPInRegs(regs));
 
   DEBUG_LOG(Thread) << ThreadPreamble(this) << "Hit SW breakpoint on 0x" << std::hex
                     << breakpoint_address;
 
-  ProcessBreakpoint* found_bp =
-      process_->FindProcessBreakpointForAddr(breakpoint_address);
+  ProcessBreakpoint* found_bp = process_->FindProcessBreakpointForAddr(breakpoint_address);
   if (found_bp) {
     FixSoftwareBreakpointAddress(found_bp, regs);
 
     // When hitting a breakpoint, we need to check if indeed this exception
     // should apply to this thread or not.
     if (!found_bp->ShouldHitThread(koid())) {
-      DEBUG_LOG(Thread) << ThreadPreamble(this)
-                        << "SW Breakpoint not for me. Ignoring.";
+      DEBUG_LOG(Thread) << ThreadPreamble(this) << "SW Breakpoint not for me. Ignoring.";
       // The way to go over is to step over the breakpoint as one would over
       // a resume.
       current_breakpoint_ = found_bp;
       return OnStop::kResume;
     }
 
-    UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kSoftware,
-                                  found_bp, regs, hit_breakpoints);
+    UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kSoftware, found_bp, regs,
+                                  hit_breakpoints);
 
     // The found_bp could have been deleted if it was a one-shot, so must
     // not be dereferenced below this.
@@ -513,17 +492,15 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
       *arch::ArchProvider::Get().IPInRegs(regs) =
           arch::ArchProvider::Get().NextInstructionForSoftwareExceptionAddress(
               *arch::ArchProvider::Get().IPInRegs(regs));
-      zx_status_t status =
-          thread_.write_state(ZX_THREAD_STATE_GENERAL_REGS, regs,
-                              sizeof(zx_thread_state_general_regs));
+      zx_status_t status = thread_.write_state(ZX_THREAD_STATE_GENERAL_REGS, regs,
+                                               sizeof(zx_thread_state_general_regs));
       if (status != ZX_OK) {
         fprintf(stderr, "Warning: could not update IP on thread, error = %d.",
                 static_cast<int>(status));
       }
 
       if (!process_->dl_debug_addr() && process_->RegisterDebugState()) {
-        DEBUG_LOG(Thread) << ThreadPreamble(this)
-                          << "Found ld.so breakpoint. Sending modules.";
+        DEBUG_LOG(Thread) << ThreadPreamble(this) << "Found ld.so breakpoint. Sending modules.";
         // This breakpoint was the explicit breakpoint ld.so executes to
         // notify us that the loader is ready. Send the current module list
         // and silently keep this thread stopped. The client will explicitly
@@ -551,14 +528,11 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
 }
 
 DebuggedThread::OnStop DebuggedThread::UpdateForHardwareBreakpoint(
-    zx_thread_state_general_regs* regs,
-    std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
+    zx_thread_state_general_regs* regs, std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
   uint64_t breakpoint_address =
-      arch::ArchProvider::Get()
-          .BreakpointInstructionForHardwareExceptionAddress(
-              *arch::ArchProvider::Get().IPInRegs(regs));
-  ProcessBreakpoint* found_bp =
-      process_->FindProcessBreakpointForAddr(breakpoint_address);
+      arch::ArchProvider::Get().BreakpointInstructionForHardwareExceptionAddress(
+          *arch::ArchProvider::Get().IPInRegs(regs));
+  ProcessBreakpoint* found_bp = process_->FindProcessBreakpointForAddr(breakpoint_address);
   if (!found_bp) {
     // Hit a hw debug exception that doesn't belong to any ProcessBreakpoint.
     // This is probably a race between the removal and the exception handler.
@@ -569,8 +543,8 @@ DebuggedThread::OnStop DebuggedThread::UpdateForHardwareBreakpoint(
   }
 
   FixSoftwareBreakpointAddress(found_bp, regs);
-  UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kHardware, found_bp,
-                                regs, hit_breakpoints);
+  UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kHardware, found_bp, regs,
+                                hit_breakpoints);
 
   // The ProcessBreakpoint could've been deleted if it was a one-shot, so must
   // not be derefereced below this.
@@ -579,8 +553,7 @@ DebuggedThread::OnStop DebuggedThread::UpdateForHardwareBreakpoint(
 }
 
 DebuggedThread::OnStop DebuggedThread::UpdateForWatchpoint(
-    zx_thread_state_general_regs* regs,
-    std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
+    zx_thread_state_general_regs* regs, std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
   auto& arch = arch::ArchProvider::Get();
   uint64_t address = arch.InstructionForWatchpointHit(*this);
 
@@ -603,33 +576,32 @@ DebuggedThread::OnStop DebuggedThread::UpdateForWatchpoint(
   return OnStop::kNotify;
 }
 
-void DebuggedThread::FixSoftwareBreakpointAddress(
-    ProcessBreakpoint* process_breakpoint, zx_thread_state_general_regs* regs) {
+void DebuggedThread::FixSoftwareBreakpointAddress(ProcessBreakpoint* process_breakpoint,
+                                                  zx_thread_state_general_regs* regs) {
   // When the program hits one of our breakpoints, set the IP back to
   // the exact address that triggered the breakpoint. When the thread
   // resumes, this is the address that it will resume from (after
   // putting back the original instruction), and will be what the client
   // wants to display to the user.
   *arch::ArchProvider::Get().IPInRegs(regs) = process_breakpoint->address();
-  zx_status_t status = thread_.write_state(
-      ZX_THREAD_STATE_GENERAL_REGS, regs, sizeof(zx_thread_state_general_regs));
+  zx_status_t status =
+      thread_.write_state(ZX_THREAD_STATE_GENERAL_REGS, regs, sizeof(zx_thread_state_general_regs));
   if (status != ZX_OK) {
     fprintf(stderr, "Warning: could not update IP on thread, error = %d.",
             static_cast<int>(status));
   }
 }
 
-void DebuggedThread::FixAddressForWatchpointHit(
-    ProcessWatchpoint* watchpoint, zx_thread_state_general_regs* regs) {
+void DebuggedThread::FixAddressForWatchpointHit(ProcessWatchpoint* watchpoint,
+                                                zx_thread_state_general_regs* regs) {
   auto& arch_provider = arch::ArchProvider::Get();
-  *arch_provider.IPInRegs(regs) = arch_provider.NextInstructionForWatchpointHit(
-      *arch_provider.IPInRegs(regs));
+  *arch_provider.IPInRegs(regs) =
+      arch_provider.NextInstructionForWatchpointHit(*arch_provider.IPInRegs(regs));
 }
 
 void DebuggedThread::UpdateForHitProcessBreakpoint(
-    debug_ipc::BreakpointType exception_type,
-    ProcessBreakpoint* process_breakpoint, zx_thread_state_general_regs* regs,
-    std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
+    debug_ipc::BreakpointType exception_type, ProcessBreakpoint* process_breakpoint,
+    zx_thread_state_general_regs* regs, std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
   current_breakpoint_ = process_breakpoint;
 
   process_breakpoint->OnHit(exception_type, hit_breakpoints);

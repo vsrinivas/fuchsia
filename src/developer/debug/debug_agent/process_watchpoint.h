@@ -21,8 +21,7 @@ class Watchpoint;
 
 class ProcessWatchpoint {
  public:
-  ProcessWatchpoint(Watchpoint*, DebuggedProcess*,
-                    const debug_ipc::AddressRange& range);
+  ProcessWatchpoint(Watchpoint*, DebuggedProcess*, const debug_ipc::AddressRange& range);
   ~ProcessWatchpoint();
 
   zx_status_t process_koid() const;
@@ -56,9 +55,8 @@ class ProcessWatchpoint {
 
   // Performs the actual arch installation.
   // Will update |installed_threads_| accordingly.
-  zx_status_t UpdateWatchpoints(
-      const std::vector<DebuggedThread*>& threads_to_remove,
-      const std::vector<DebuggedThread*>& threads_to_install);
+  zx_status_t UpdateWatchpoints(const std::vector<DebuggedThread*>& threads_to_remove,
+                                const std::vector<DebuggedThread*>& threads_to_install);
 
   // A Process Watchpoint is only related to one abstract watchpoint.
   // This is because watchpoint will differ in range most frequently and having

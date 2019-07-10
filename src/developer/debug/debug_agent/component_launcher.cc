@@ -49,8 +49,7 @@ zx::socket AddStdio(int fd, fuchsia::sys::LaunchInfo* launch_info) {
 
 }  // namespace
 
-ComponentLauncher::ComponentLauncher(
-    std::shared_ptr<sys::ServiceDirectory> services)
+ComponentLauncher::ComponentLauncher(std::shared_ptr<sys::ServiceDirectory> services)
     : services_(std::move(services)) {}
 
 zx_status_t ComponentLauncher::Prepare(std::vector<std::string> argv,

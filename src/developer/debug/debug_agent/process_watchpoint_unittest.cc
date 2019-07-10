@@ -21,9 +21,8 @@ namespace {
 // A no-op process delegate.
 class TestProcessDelegate : public Watchpoint::ProcessDelegate {
  public:
-  using WatchpointMap =
-      std::multimap<debug_ipc::AddressRange, std::unique_ptr<ProcessWatchpoint>,
-                    debug_ipc::AddressRangeCompare>;
+  using WatchpointMap = std::multimap<debug_ipc::AddressRange, std::unique_ptr<ProcessWatchpoint>,
+                                      debug_ipc::AddressRangeCompare>;
 
   const WatchpointMap& watchpoint_map() const { return wps_; }
 
@@ -32,22 +31,19 @@ class TestProcessDelegate : public Watchpoint::ProcessDelegate {
   }
 
   // This only gets called if Breakpoint.SetSettings() is called.
-  zx_status_t RegisterWatchpoint(
-      Watchpoint* wp, zx_koid_t process_koid,
-      const debug_ipc::AddressRange& range) override {
+  zx_status_t RegisterWatchpoint(Watchpoint* wp, zx_koid_t process_koid,
+                                 const debug_ipc::AddressRange& range) override {
     auto proc_it = procs_.find(process_koid);
     FXL_DCHECK(proc_it != procs_.end());
 
     auto found = wps_.find(range);
     if (found != wps_.end())
       return ZX_ERR_INTERNAL;
-    auto pwp =
-        std::make_unique<ProcessWatchpoint>(wp, proc_it->second.get(), range);
+    auto pwp = std::make_unique<ProcessWatchpoint>(wp, proc_it->second.get(), range);
 
     zx_status_t status = pwp->Init();
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failure initializing: "
-                     << debug_ipc::ZxStatusToString(status);
+      FXL_LOG(ERROR) << "Failure initializing: " << debug_ipc::ZxStatusToString(status);
       return status;
     }
 
@@ -117,8 +113,7 @@ TEST(ProcessWatchpoint, InstallAndRemove) {
   settings.locations.push_back({kProcessId2, 0, 0, kAddressRange2});
 
   zx_status_t res = watchpoint->SetSettings(settings);
-  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got: "
-                        << debug_ipc::ZxStatusToString(res);
+  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got: " << debug_ipc::ZxStatusToString(res);
 
   // Should have installed only one process watchpoint per process.
   const auto& watchpoint_map = process_delegate.watchpoint_map();

@@ -27,8 +27,8 @@ zx_thread_state_debug_regs_t GetDefaultRegs() {
 }
 
 void SetupHWBreakpointTest(debug_ipc::FileLineFunction file_line,
-                           zx_thread_state_debug_regs_t* debug_regs,
-                           uint64_t address, zx_status_t expected_result) {
+                           zx_thread_state_debug_regs_t* debug_regs, uint64_t address,
+                           zx_status_t expected_result) {
   zx_status_t result = SetupHWBreakpoint(address, debug_regs);
   ASSERT_EQ(result, expected_result)
       << "[" << file_line.ToString() << "] "
@@ -37,8 +37,8 @@ void SetupHWBreakpointTest(debug_ipc::FileLineFunction file_line,
 }
 
 void RemoveHWBreakpointTest(debug_ipc::FileLineFunction file_line,
-                            zx_thread_state_debug_regs_t* debug_regs,
-                            uint64_t address, zx_status_t expected_result) {
+                            zx_thread_state_debug_regs_t* debug_regs, uint64_t address,
+                            zx_status_t expected_result) {
   zx_status_t result = RemoveHWBreakpoint(address, debug_regs);
   ASSERT_EQ(result, expected_result)
       << "[" << file_line.ToString() << "] "
@@ -112,8 +112,7 @@ TEST(arm64Helpers, SettingBreakpoints) {
   }
 
   // No more registers left should not change anything.
-  SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5,
-                        ZX_ERR_NO_RESOURCES);
+  SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5, ZX_ERR_NO_RESOURCES);
   EXPECT_EQ(debug_regs.hw_bps[0].dbgbcr & kDbgbvrE, 1u);
   EXPECT_EQ(debug_regs.hw_bps[0].dbgbvr, kAddress1);
   EXPECT_EQ(debug_regs.hw_bps[1].dbgbcr & kDbgbvrE, 1u);
@@ -136,8 +135,7 @@ TEST(arm64Helpers, Removing) {
   SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress2, ZX_OK);
   SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_OK);
   SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress4, ZX_OK);
-  SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5,
-                        ZX_ERR_NO_RESOURCES);
+  SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5, ZX_ERR_NO_RESOURCES);
 
   RemoveHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_OK);
   EXPECT_EQ(debug_regs.hw_bps[0].dbgbcr & kDbgbvrE, 1u);
@@ -154,8 +152,7 @@ TEST(arm64Helpers, Removing) {
   }
 
   // Removing same breakpoint should not work.
-  RemoveHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3,
-                         ZX_ERR_OUT_OF_RANGE);
+  RemoveHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_ERR_OUT_OF_RANGE);
   EXPECT_EQ(debug_regs.hw_bps[0].dbgbcr & kDbgbvrE, 1u);
   EXPECT_EQ(debug_regs.hw_bps[0].dbgbvr, kAddress1);
   EXPECT_EQ(debug_regs.hw_bps[1].dbgbcr & kDbgbvrE, 1u);
@@ -170,8 +167,7 @@ TEST(arm64Helpers, Removing) {
   }
 
   // Removing an unknown address should warn and change nothing.
-  RemoveHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, 0xaaaaaaa,
-                         ZX_ERR_OUT_OF_RANGE);
+  RemoveHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, 0xaaaaaaa, ZX_ERR_OUT_OF_RANGE);
   EXPECT_EQ(debug_regs.hw_bps[0].dbgbcr & kDbgbvrE, 1u);
   EXPECT_EQ(debug_regs.hw_bps[0].dbgbvr, kAddress1);
   EXPECT_EQ(debug_regs.hw_bps[1].dbgbcr & kDbgbvrE, 1u);
@@ -243,8 +239,7 @@ TEST(arm64Helpers, Removing) {
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbvr, 0u);
   }
 
-  SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3,
-                        ZX_ERR_NO_RESOURCES);
+  SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_ERR_NO_RESOURCES);
   EXPECT_EQ(debug_regs.hw_bps[0].dbgbcr & kDbgbvrE, 1u);
   EXPECT_EQ(debug_regs.hw_bps[0].dbgbvr, kAddress5);
   EXPECT_EQ(debug_regs.hw_bps[1].dbgbcr & kDbgbvrE, 1u);
@@ -259,8 +254,7 @@ TEST(arm64Helpers, Removing) {
   }
 
   // No more registers.
-  SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3,
-                        ZX_ERR_NO_RESOURCES);
+  SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_ERR_NO_RESOURCES);
   EXPECT_EQ(debug_regs.hw_bps[0].dbgbcr & kDbgbvrE, 1u);
   EXPECT_EQ(debug_regs.hw_bps[0].dbgbvr, kAddress5);
   EXPECT_EQ(debug_regs.hw_bps[1].dbgbcr & kDbgbvrE, 1u);

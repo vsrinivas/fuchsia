@@ -24,13 +24,11 @@ class TestProcessDelegate : public Breakpoint::ProcessDelegate {
     unregister_calls_.clear();
   }
 
-  zx_status_t RegisterBreakpoint(Breakpoint*, zx_koid_t process_koid,
-                                 uint64_t address) override {
+  zx_status_t RegisterBreakpoint(Breakpoint*, zx_koid_t process_koid, uint64_t address) override {
     register_calls_.push_back(std::make_pair(process_koid, address));
     return ZX_OK;
   }
-  void UnregisterBreakpoint(Breakpoint*, zx_koid_t process_koid,
-                            uint64_t address) override {
+  void UnregisterBreakpoint(Breakpoint*, zx_koid_t process_koid, uint64_t address) override {
     unregister_calls_.push_back(std::make_pair(process_koid, address));
   }
 
@@ -56,10 +54,8 @@ TEST(Breakpoint, Registration) {
   pr_settings.address = kAddress1;
 
   // Apply the settings.
-  ASSERT_EQ(ZX_OK,
-            bp.SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
-  EXPECT_EQ(CallVector({CallPair{kProcess1, kAddress1}}),
-            delegate.register_calls());
+  ASSERT_EQ(ZX_OK, bp.SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
+  EXPECT_EQ(CallVector({CallPair{kProcess1, kAddress1}}), delegate.register_calls());
   EXPECT_TRUE(delegate.unregister_calls().empty());
 
   delegate.Clear();
@@ -71,12 +67,9 @@ TEST(Breakpoint, Registration) {
   pr_settings.thread_koid = 0;
   pr_settings.address = kAddress2;
 
-  ASSERT_EQ(ZX_OK,
-            bp.SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
-  EXPECT_EQ(CallVector({CallPair{kProcess2, kAddress2}}),
-            delegate.register_calls());
-  EXPECT_EQ(CallVector({CallPair{kProcess1, kAddress1}}),
-            delegate.unregister_calls());
+  ASSERT_EQ(ZX_OK, bp.SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
+  EXPECT_EQ(CallVector({CallPair{kProcess2, kAddress2}}), delegate.register_calls());
+  EXPECT_EQ(CallVector({CallPair{kProcess1, kAddress1}}), delegate.unregister_calls());
 
   // Add a new location
   delegate.Clear();
@@ -99,8 +92,7 @@ TEST(Breakpoint, Registration) {
   settings.locations.push_back(old_pr_settings);
   settings.locations.push_back(new_pr_settings);
 
-  ASSERT_EQ(ZX_OK,
-            bp.SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
+  ASSERT_EQ(ZX_OK, bp.SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
 
   EXPECT_EQ(CallVector({{kProcess1, kAddress1}, {kProcess3, kAddress3}}),
             delegate.register_calls());
@@ -125,10 +117,8 @@ TEST(Breakpoint, Destructor) {
   pr_settings.address = kAddress1;
 
   // Apply the settings.
-  ASSERT_EQ(ZX_OK,
-            bp->SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
-  EXPECT_EQ(CallVector({CallPair{kProcess1, kAddress1}}),
-            delegate.register_calls());
+  ASSERT_EQ(ZX_OK, bp->SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
+  EXPECT_EQ(CallVector({CallPair{kProcess1, kAddress1}}), delegate.register_calls());
   EXPECT_TRUE(delegate.unregister_calls().empty());
 
   delegate.Clear();
@@ -136,8 +126,7 @@ TEST(Breakpoint, Destructor) {
   // Delete the breakpoint to make sure the locations get updated.
   delegate.Clear();
   bp.reset();
-  EXPECT_EQ(CallVector({CallPair{kProcess1, kAddress1}}),
-            delegate.unregister_calls());
+  EXPECT_EQ(CallVector({CallPair{kProcess1, kAddress1}}), delegate.unregister_calls());
 }
 
 TEST(Breakpoint, HitCount) {
@@ -158,8 +147,7 @@ TEST(Breakpoint, HitCount) {
   pr_settings.address = kAddress1;
 
   // Apply the settings.
-  ASSERT_EQ(ZX_OK,
-            bp->SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
+  ASSERT_EQ(ZX_OK, bp->SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
   delegate.Clear();
 
   EXPECT_EQ(kBreakpointId, bp->stats().id);
@@ -195,8 +183,7 @@ TEST(Breakpoint, OneShot) {
   pr_settings.address = kAddress;
 
   // Apply the settings.
-  ASSERT_EQ(ZX_OK,
-            bp->SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
+  ASSERT_EQ(ZX_OK, bp->SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
   delegate.Clear();
 
   EXPECT_EQ(kBreakpointId, bp->stats().id);

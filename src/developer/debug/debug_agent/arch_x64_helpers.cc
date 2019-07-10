@@ -20,8 +20,8 @@ namespace {
 
 uint64_t HWDebugResourceEnabled(uint64_t dr7, size_t index) {
   FXL_DCHECK(index < 4);
-  static uint64_t masks[4] = {X86_FLAG_MASK(DR7L0), X86_FLAG_MASK(DR7L1),
-                              X86_FLAG_MASK(DR7L2), X86_FLAG_MASK(DR7L3)};
+  static uint64_t masks[4] = {X86_FLAG_MASK(DR7L0), X86_FLAG_MASK(DR7L1), X86_FLAG_MASK(DR7L2),
+                              X86_FLAG_MASK(DR7L3)};
 
   return (dr7 & masks[index]) != 0;
 }
@@ -133,8 +133,7 @@ zx_status_t WriteGeneralRegisters(const std::vector<debug_ipc::Register>& regs,
 
 // HW Breakpoints --------------------------------------------------------------
 
-zx_status_t SetupHWBreakpoint(uint64_t address,
-                              zx_thread_state_debug_regs_t* debug_regs) {
+zx_status_t SetupHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t* debug_regs) {
   // Search for a free slot.
   int slot = -1;
   for (size_t i = 0; i < 4; i++) {
@@ -158,12 +157,10 @@ zx_status_t SetupHWBreakpoint(uint64_t address,
   return ZX_OK;
 }
 
-zx_status_t RemoveHWBreakpoint(uint64_t address,
-                               zx_thread_state_debug_regs_t* debug_regs) {
+zx_status_t RemoveHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t* debug_regs) {
   // Search for the slot.
   for (int i = 0; i < 4; i++) {
-    if (!HWDebugResourceEnabled(debug_regs->dr7, i) ||
-        IsWatchpoint(debug_regs->dr7, i)) {
+    if (!HWDebugResourceEnabled(debug_regs->dr7, i) || IsWatchpoint(debug_regs->dr7, i)) {
       continue;
     }
 
@@ -188,8 +185,7 @@ inline uint64_t AlignedAddress(uint64_t address) { return address & ~0b111; }
 
 }  // namespace
 
-zx_status_t SetupWatchpoint(uint64_t address,
-                            zx_thread_state_debug_regs_t* debug_regs) {
+zx_status_t SetupWatchpoint(uint64_t address, zx_thread_state_debug_regs_t* debug_regs) {
   // Search for a free slot.
   int slot = -1;
   for (int i = 0; i < 4; i++) {
@@ -214,11 +210,9 @@ zx_status_t SetupWatchpoint(uint64_t address,
   return ZX_OK;
 }
 
-zx_status_t RemoveWatchpoint(uint64_t address,
-                             zx_thread_state_debug_regs_t* debug_regs) {
+zx_status_t RemoveWatchpoint(uint64_t address, zx_thread_state_debug_regs_t* debug_regs) {
   for (int i = 0; i < 4; i++) {
-    if (!HWDebugResourceEnabled(debug_regs->dr7, i) ||
-        IsHWBreakpoint(debug_regs->dr7, i)) {
+    if (!HWDebugResourceEnabled(debug_regs->dr7, i) || IsHWBreakpoint(debug_regs->dr7, i)) {
       continue;
     }
 
@@ -277,11 +271,9 @@ std::string DebugRegistersToString(const zx_thread_state_debug_regs_t& regs) {
 
 std::string DR6ToString(uint64_t dr6) {
   return fxl::StringPrintf(
-      "0x%lx: B0=%d, B1=%d, B2=%d, B3=%d, BD=%d, BS=%d, BT=%d", dr6,
-      X86_FLAG_VALUE(dr6, DR6B0), X86_FLAG_VALUE(dr6, DR6B1),
-      X86_FLAG_VALUE(dr6, DR6B2), X86_FLAG_VALUE(dr6, DR6B3),
-      X86_FLAG_VALUE(dr6, DR6BD), X86_FLAG_VALUE(dr6, DR6BS),
-      X86_FLAG_VALUE(dr6, DR6BT));
+      "0x%lx: B0=%d, B1=%d, B2=%d, B3=%d, BD=%d, BS=%d, BT=%d", dr6, X86_FLAG_VALUE(dr6, DR6B0),
+      X86_FLAG_VALUE(dr6, DR6B1), X86_FLAG_VALUE(dr6, DR6B2), X86_FLAG_VALUE(dr6, DR6B3),
+      X86_FLAG_VALUE(dr6, DR6BD), X86_FLAG_VALUE(dr6, DR6BS), X86_FLAG_VALUE(dr6, DR6BT));
 }
 
 std::string DR7ToString(uint64_t dr7) {
@@ -289,15 +281,12 @@ std::string DR7ToString(uint64_t dr7) {
       "0x%lx: L0=%d, G0=%d, L1=%d, G1=%d, L2=%d, G2=%d, L3=%d, G4=%d, LE=%d, "
       "GE=%d, GD=%d, R/W0=%d, LEN0=%d, R/W1=%d, LEN1=%d, R/W2=%d, LEN2=%d, "
       "R/W3=%d, LEN3=%d",
-      dr7, X86_FLAG_VALUE(dr7, DR7L0), X86_FLAG_VALUE(dr7, DR7G0),
-      X86_FLAG_VALUE(dr7, DR7L1), X86_FLAG_VALUE(dr7, DR7G1),
-      X86_FLAG_VALUE(dr7, DR7L2), X86_FLAG_VALUE(dr7, DR7G2),
-      X86_FLAG_VALUE(dr7, DR7L3), X86_FLAG_VALUE(dr7, DR7G3),
-      X86_FLAG_VALUE(dr7, DR7LE), X86_FLAG_VALUE(dr7, DR7GE),
-      X86_FLAG_VALUE(dr7, DR7GD), X86_FLAG_VALUE(dr7, DR7RW0),
-      X86_FLAG_VALUE(dr7, DR7LEN0), X86_FLAG_VALUE(dr7, DR7RW1),
-      X86_FLAG_VALUE(dr7, DR7LEN1), X86_FLAG_VALUE(dr7, DR7RW2),
-      X86_FLAG_VALUE(dr7, DR7LEN2), X86_FLAG_VALUE(dr7, DR7RW3),
+      dr7, X86_FLAG_VALUE(dr7, DR7L0), X86_FLAG_VALUE(dr7, DR7G0), X86_FLAG_VALUE(dr7, DR7L1),
+      X86_FLAG_VALUE(dr7, DR7G1), X86_FLAG_VALUE(dr7, DR7L2), X86_FLAG_VALUE(dr7, DR7G2),
+      X86_FLAG_VALUE(dr7, DR7L3), X86_FLAG_VALUE(dr7, DR7G3), X86_FLAG_VALUE(dr7, DR7LE),
+      X86_FLAG_VALUE(dr7, DR7GE), X86_FLAG_VALUE(dr7, DR7GD), X86_FLAG_VALUE(dr7, DR7RW0),
+      X86_FLAG_VALUE(dr7, DR7LEN0), X86_FLAG_VALUE(dr7, DR7RW1), X86_FLAG_VALUE(dr7, DR7LEN1),
+      X86_FLAG_VALUE(dr7, DR7RW2), X86_FLAG_VALUE(dr7, DR7LEN2), X86_FLAG_VALUE(dr7, DR7RW3),
       X86_FLAG_VALUE(dr7, DR7LEN3));
 }
 

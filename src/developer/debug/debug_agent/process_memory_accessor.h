@@ -11,11 +11,11 @@ namespace debug_agent {
 // process' memory. This allows such tasks to be mocked out for testing.
 class ProcessMemoryAccessor {
  public:
-  virtual zx_status_t ReadProcessMemory(uintptr_t address, void* buffer,
-                                        size_t len, size_t* actual) = 0;
+  virtual zx_status_t ReadProcessMemory(uintptr_t address, void* buffer, size_t len,
+                                        size_t* actual) = 0;
 
-  virtual zx_status_t WriteProcessMemory(uintptr_t address, const void* buffer,
-                                         size_t len, size_t* actual) = 0;
+  virtual zx_status_t WriteProcessMemory(uintptr_t address, const void* buffer, size_t len,
+                                         size_t* actual) = 0;
 };
 
 }  // namespace debug_agent

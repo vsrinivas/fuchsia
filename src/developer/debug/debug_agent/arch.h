@@ -48,8 +48,7 @@ class ArchProvider {
 
   // Returns the address of the breakpoint instruction given the address of
   // a software breakpoint exception.
-  uint64_t BreakpointInstructionForSoftwareExceptionAddress(
-      uint64_t exception_addr);
+  uint64_t BreakpointInstructionForSoftwareExceptionAddress(uint64_t exception_addr);
 
   // Returns the instruction following the one causing the given software
   // exception.
@@ -70,23 +69,20 @@ class ArchProvider {
   static void SaveGeneralRegs(const zx_thread_state_general_regs& input,
                               std::vector<debug_ipc::Register>* out);
 
-  virtual zx_status_t ReadRegisters(
-      const debug_ipc::RegisterCategory::Type& cat, const zx::thread&,
-      std::vector<debug_ipc::Register>* out);
+  virtual zx_status_t ReadRegisters(const debug_ipc::RegisterCategory::Type& cat, const zx::thread&,
+                                    std::vector<debug_ipc::Register>* out);
 
   // The RegisterCategory will have the corresponding register values, which
   // the arch will make sure it writes correctly. Since each category is a
   // different syscall anyway, there is no need to group many categories into
   // one call.
-  virtual zx_status_t WriteRegisters(const debug_ipc::RegisterCategory&,
-                                     zx::thread*);
+  virtual zx_status_t WriteRegisters(const debug_ipc::RegisterCategory&, zx::thread*);
 
   // Hardware Exceptions -------------------------------------------------------
 
   // Returns the address of the instruction that hit the exception from the
   // address reported by the exception.
-  uint64_t BreakpointInstructionForHardwareExceptionAddress(
-      uint64_t exception_addr);
+  uint64_t BreakpointInstructionForHardwareExceptionAddress(uint64_t exception_addr);
 
   // Currently HW notifications can mean both a single step or a hardware debug
   // register exception. We need platform-specific queries to figure which one
@@ -98,10 +94,8 @@ class ArchProvider {
   virtual zx_status_t InstallHWBreakpoint(zx::thread*, uint64_t address);
   virtual zx_status_t UninstallHWBreakpoint(zx::thread*, uint64_t address);
 
-  virtual zx_status_t InstallWatchpoint(zx::thread*,
-                                        const debug_ipc::AddressRange&);
-  virtual zx_status_t UninstallWatchpoint(zx::thread*,
-                                          const debug_ipc::AddressRange&);
+  virtual zx_status_t InstallWatchpoint(zx::thread*, const debug_ipc::AddressRange&);
+  virtual zx_status_t UninstallWatchpoint(zx::thread*, const debug_ipc::AddressRange&);
 };
 
 }  // namespace arch

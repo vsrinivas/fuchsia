@@ -28,8 +28,7 @@ std::optional<bool> StringToBool(const std::string& value) {
   }
 }
 
-debug_ipc::zx_status_t HandleQuitOnExit(const std::string& str,
-                                        AgentConfiguration* config) {
+debug_ipc::zx_status_t HandleQuitOnExit(const std::string& str, AgentConfiguration* config) {
   auto value = StringToBool(str);
   if (!value)
     return ZX_ERR_INVALID_ARGS;
@@ -40,8 +39,7 @@ debug_ipc::zx_status_t HandleQuitOnExit(const std::string& str,
 }  // namespace
 
 std::vector<debug_ipc::zx_status_t> HandleActions(
-    const std::vector<debug_ipc::ConfigAction>& actions,
-    AgentConfiguration* config) {
+    const std::vector<debug_ipc::ConfigAction>& actions, AgentConfiguration* config) {
   // Iterate over all the actions and always return an answer for each one.
   std::vector<debug_ipc::zx_status_t> results;
   for (const auto& action : actions) {
@@ -53,8 +51,7 @@ std::vector<debug_ipc::zx_status_t> HandleActions(
         break;
     }
 
-    FXL_NOTREACHED() << "Invalid ConfigAction::Type: "
-                     << static_cast<uint32_t>(action.type);
+    FXL_NOTREACHED() << "Invalid ConfigAction::Type: " << static_cast<uint32_t>(action.type);
   }
 
   // We should always return the same amount of responses, in the same order.
@@ -62,8 +59,7 @@ std::vector<debug_ipc::zx_status_t> HandleActions(
 
   if (debug_ipc::IsDebugModeActive()) {
     for (size_t i = 0; i < actions.size(); i++) {
-      DEBUG_LOG(Agent) << "Action "
-                       << debug_ipc::ConfigAction::TypeToString(actions[i].type)
+      DEBUG_LOG(Agent) << "Action " << debug_ipc::ConfigAction::TypeToString(actions[i].type)
                        << " (" << actions[i].value
                        << "): " << debug_ipc::ZxStatusToString(results[i]);
     }

@@ -26,8 +26,7 @@ class Watchpoint {
    public:
     // Will call AppendProcessWatchpoint will the unique ID that the particular
     // process assigned to that process watchpoint installation.
-    virtual zx_status_t RegisterWatchpoint(Watchpoint* wp,
-                                           zx_koid_t process_koid,
+    virtual zx_status_t RegisterWatchpoint(Watchpoint* wp, zx_koid_t process_koid,
                                            const debug_ipc::AddressRange&) = 0;
     virtual void UnregisterWatchpoint(Watchpoint* wp, zx_koid_t process_koid,
                                       const debug_ipc::AddressRange&) = 0;

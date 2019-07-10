@@ -48,8 +48,7 @@ struct DebuggedProcessCreateInfo {
 
 // Creates a CreateInfo struct from only the required fields.
 
-class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
-                        public ProcessMemoryAccessor {
+class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public ProcessMemoryAccessor {
  public:
   // Caller must call Init immediately after construction and delete the
   // object if that fails.
@@ -67,13 +66,10 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   zx_status_t Init();
 
   // IPC handlers.
-  void OnPause(const debug_ipc::PauseRequest& request,
-               debug_ipc::PauseReply* reply);
+  void OnPause(const debug_ipc::PauseRequest& request, debug_ipc::PauseReply* reply);
   void OnResume(const debug_ipc::ResumeRequest& request);
-  void OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
-                    debug_ipc::ReadMemoryReply* reply);
-  void OnKill(const debug_ipc::KillRequest& request,
-              debug_ipc::KillReply* reply);
+  void OnReadMemory(const debug_ipc::ReadMemoryRequest& request, debug_ipc::ReadMemoryReply* reply);
+  void OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillReply* reply);
   void OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
                       debug_ipc::AddressSpaceReply* reply);
   void OnModules(debug_ipc::ModulesReply* reply);
@@ -86,8 +82,7 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   // If |synchronous| is false, this call will send the suspend commands to the
   // kernel and return immediatelly. It will block on all the suspend signals
   // otherwise.
-  void SuspendAll(bool synchronous = false,
-                  std::vector<zx_koid_t>* suspended_koids = nullptr);
+  void SuspendAll(bool synchronous = false, std::vector<zx_koid_t>* suspended_koids = nullptr);
 
   // Returns the thread or null if there is no known thread for this koid.
   virtual DebuggedThread* GetThread(zx_koid_t thread_koid) const;
@@ -124,28 +119,23 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   // process.
   zx_status_t RegisterBreakpoint(Breakpoint* bp, uint64_t address);
   void UnregisterBreakpoint(Breakpoint* bp, uint64_t address);
-  const std::map<uint64_t, std::unique_ptr<ProcessBreakpoint>>& breakpoints()
-      const {
+  const std::map<uint64_t, std::unique_ptr<ProcessBreakpoint>>& breakpoints() const {
     return breakpoints_;
   }
 
   zx_status_t RegisterWatchpoint(Watchpoint*, const debug_ipc::AddressRange&);
   void UnregisterWatchpoint(Watchpoint*, const debug_ipc::AddressRange&);
 
-  const std::map<uint64_t, std::unique_ptr<ProcessWatchpoint>>& watchpoints()
-      const {
+  const std::map<uint64_t, std::unique_ptr<ProcessWatchpoint>>& watchpoints() const {
     return watchpoints_;
   }
 
  private:
   // ZirconExceptionWatcher implementation.
-  void OnThreadStarting(zx::exception exception_token,
-                        zx_exception_info_t exception_info) override;
+  void OnThreadStarting(zx::exception exception_token, zx_exception_info_t exception_info) override;
   void OnProcessTerminated(zx_koid_t process_koid) override;
-  void OnThreadExiting(zx::exception exception_token,
-                       zx_exception_info_t exception_info) override;
-  void OnException(zx::exception exception_token,
-                   zx_exception_info_t exception_info) override;
+  void OnThreadExiting(zx::exception exception_token, zx_exception_info_t exception_info) override;
+  void OnException(zx::exception exception_token, zx_exception_info_t exception_info) override;
 
   void OnStdout(bool close);
   void OnStderr(bool close);
@@ -169,8 +159,8 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   // ProcessMemoryAccessor implementation.
   zx_status_t ReadProcessMemory(uintptr_t address, void* buffer, size_t len,
                                 size_t* actual) override;
-  zx_status_t WriteProcessMemory(uintptr_t address, const void* buffer,
-                                 size_t len, size_t* actual) override;
+  zx_status_t WriteProcessMemory(uintptr_t address, const void* buffer, size_t len,
+                                 size_t* actual) override;
 
   DebugAgent* debug_agent_;  // Non-owning.
 

@@ -22,8 +22,7 @@ namespace {
 // Provides a fake view of memory with the given initial contents.
 class FakeMemory : public ProcessMemoryAccessor {
  public:
-  FakeMemory(intptr_t address, const char* data, size_t data_len)
-      : address_(address) {
+  FakeMemory(intptr_t address, const char* data, size_t data_len) : address_(address) {
     data_.assign(data, data + data_len);
   }
 
@@ -40,8 +39,8 @@ class FakeMemory : public ProcessMemoryAccessor {
     return ZX_OK;
   }
 
-  zx_status_t WriteProcessMemory(uintptr_t address, const void* buffer,
-                                 size_t len, size_t* actual) override {
+  zx_status_t WriteProcessMemory(uintptr_t address, const void* buffer, size_t len,
+                                 size_t* actual) override {
     *actual = 0;
     if (address < address_ || address + len > address_ + data_.size())
       return ZX_ERR_NO_MEMORY;  // We require everything to be mapped.
@@ -79,14 +78,10 @@ class BreakpointFakeMemory {
 
   // Returns true if the buffer starts with a breakpoint instruction for the
   // current platform.
-  bool StartsWithBreak() const {
-    return AsInstructionType() == arch::kBreakInstruction;
-  }
+  bool StartsWithBreak() const { return AsInstructionType() == arch::kBreakInstruction; }
 
   // Returns true if the buffer is in its original state.
-  bool IsOriginal() const {
-    return memcmp(memory_.data(), kOriginalData, kDataSize) == 0;
-  }
+  bool IsOriginal() const { return memcmp(memory_.data(), kOriginalData, kDataSize) == 0; }
 
  private:
   FakeMemory memory_;
@@ -105,12 +100,11 @@ class TestProcessDelegate : public Breakpoint::ProcessDelegate {
   }
 
   // This only gets called if Breakpoint.SetSettings() is called.
-  zx_status_t RegisterBreakpoint(Breakpoint* bp, zx_koid_t koid,
-                                 uint64_t address) override {
+  zx_status_t RegisterBreakpoint(Breakpoint* bp, zx_koid_t koid, uint64_t address) override {
     auto found = bps_.find(address);
     if (found == bps_.end()) {
-      auto pbp = std::make_unique<ProcessBreakpoint>(bp, procs_[koid].get(),
-                                                     mem_.memory(), address);
+      auto pbp =
+          std::make_unique<ProcessBreakpoint>(bp, procs_[koid].get(), mem_.memory(), address);
 
       zx_status_t status = pbp->Init();
       if (status != ZX_OK) {
@@ -124,8 +118,7 @@ class TestProcessDelegate : public Breakpoint::ProcessDelegate {
     }
     return ZX_OK;
   }
-  void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t,
-                            uint64_t address) override {
+  void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t, uint64_t address) override {
     auto found = bps_.find(address);
     if (found == bps_.end())
       GTEST_FAIL();
@@ -144,9 +137,8 @@ class TestProcessDelegate : public Breakpoint::ProcessDelegate {
 
 constexpr uintptr_t BreakpointFakeMemory::kAddress;
 constexpr size_t BreakpointFakeMemory::kDataSize;
-const char
-    BreakpointFakeMemory::kOriginalData[BreakpointFakeMemory::kDataSize] = {
-        0x01, 0x02, 0x03, 0x04};
+const char BreakpointFakeMemory::kOriginalData[BreakpointFakeMemory::kDataSize] = {0x01, 0x02, 0x03,
+                                                                                   0x04};
 
 }  // namespace
 
@@ -157,8 +149,7 @@ TEST(ProcessBreakpoint, InstallAndFixup) {
   zx_koid_t process_koid = 0x1234;
   MockProcess process(process_koid);
 
-  ProcessBreakpoint bp(&main_breakpoint, &process,
-                       process_delegate.mem().memory(),
+  ProcessBreakpoint bp(&main_breakpoint, &process, process_delegate.mem().memory(),
                        BreakpointFakeMemory::kAddress);
   ASSERT_EQ(ZX_OK, bp.Init());
 
@@ -180,9 +171,8 @@ TEST(ProcessBreakpoint, InstallAndFixup) {
 
   // FixupMemoryBlock should give back the original data.
   bp.FixupMemoryBlock(&block);
-  EXPECT_EQ(
-      0, memcmp(&block.data[kBlockOffset], BreakpointFakeMemory::kOriginalData,
-                BreakpointFakeMemory::kDataSize));
+  EXPECT_EQ(0, memcmp(&block.data[kBlockOffset], BreakpointFakeMemory::kOriginalData,
+                      BreakpointFakeMemory::kDataSize));
 }
 
 // Attempts to step over the breakpoint from multiple threads at the same
@@ -215,8 +205,7 @@ TEST(ProcessBreakpoint, StepMultiple) {
   mock_thread5->set_client_state(DebuggedThread::ClientState::kPaused);
   mock_thread5->Suspend();
 
-  ProcessBreakpoint bp(&main_breakpoint, &process,
-                       process_delegate.mem().memory(),
+  ProcessBreakpoint bp(&main_breakpoint, &process, process_delegate.mem().memory(),
                        BreakpointFakeMemory::kAddress);
   ASSERT_EQ(ZX_OK, bp.Init());
 
@@ -360,35 +349,29 @@ TEST(ProcessBreakpoint, HitCount) {
 
   // Create a ProcessBreakpoint referencing the two Breakpoint objects
   // (corresponds to two logical breakpoints at the same address).
-  std::unique_ptr<Breakpoint> main_breakpoint1 =
-      std::make_unique<Breakpoint>(&process_delegate);
-  zx_status_t status = main_breakpoint1->SetSettings(
-      debug_ipc::BreakpointType::kSoftware, settings);
+  std::unique_ptr<Breakpoint> main_breakpoint1 = std::make_unique<Breakpoint>(&process_delegate);
+  zx_status_t status =
+      main_breakpoint1->SetSettings(debug_ipc::BreakpointType::kSoftware, settings);
   ASSERT_EQ(ZX_OK, status);
 
-  std::unique_ptr<Breakpoint> main_breakpoint2 =
-      std::make_unique<Breakpoint>(&process_delegate);
+  std::unique_ptr<Breakpoint> main_breakpoint2 = std::make_unique<Breakpoint>(&process_delegate);
   constexpr uint32_t kBreakpointId2 = 13;
   settings.id = kBreakpointId2;
-  status = main_breakpoint2->SetSettings(debug_ipc::BreakpointType::kSoftware,
-                                         settings);
+  status = main_breakpoint2->SetSettings(debug_ipc::BreakpointType::kSoftware, settings);
   ASSERT_EQ(ZX_OK, status);
 
   // There should only be one address with a breakpoint.
   ASSERT_EQ(1u, process_delegate.bps().size());
-  EXPECT_EQ(BreakpointFakeMemory::kAddress,
-            process_delegate.bps().begin()->first);
+  EXPECT_EQ(BreakpointFakeMemory::kAddress, process_delegate.bps().begin()->first);
 
   // Hitting the ProcessBreakpoint should update both Breakpoints.
   std::vector<debug_ipc::BreakpointStats> stats;
-  process_delegate.bps().begin()->second->OnHit(
-      debug_ipc::BreakpointType::kSoftware, &stats);
+  process_delegate.bps().begin()->second->OnHit(debug_ipc::BreakpointType::kSoftware, &stats);
   ASSERT_EQ(2u, stats.size());
 
   // Order of the vector is not defined so allow either.
-  EXPECT_TRUE(
-      (stats[0].id == kBreakpointId1 && stats[1].id == kBreakpointId2) ||
-      (stats[0].id == kBreakpointId2 && stats[1].id == kBreakpointId1));
+  EXPECT_TRUE((stats[0].id == kBreakpointId1 && stats[1].id == kBreakpointId2) ||
+              (stats[0].id == kBreakpointId2 && stats[1].id == kBreakpointId1));
 
   // The hit count of both should be 1 (order doesn't matter).
   EXPECT_EQ(1u, stats[0].hit_count);
@@ -427,8 +410,7 @@ TEST(ProcessBreakpoint, HWBreakpointForAllThreads) {
   settings1.id = kBreakpointId1;
   // This location is for all threads.
   settings1.locations.push_back({kProcessId, 0, kAddress});
-  zx_status_t status =
-      breakpoint->SetSettings(debug_ipc::BreakpointType::kHardware, settings1);
+  zx_status_t status = breakpoint->SetSettings(debug_ipc::BreakpointType::kHardware, settings1);
   ASSERT_EQ(status, ZX_OK);
 
   // Should have installed the breakpoint.
@@ -473,8 +455,7 @@ TEST(ProcessBreakpoint, HWBreakpointWithThreadId) {
   debug_ipc::BreakpointSettings settings1 = {};
   settings1.id = kBreakpointId1;
   settings1.locations.push_back({kProcessId, kThreadId1, kAddress});
-  zx_status_t status =
-      breakpoint1->SetSettings(debug_ipc::BreakpointType::kHardware, settings1);
+  zx_status_t status = breakpoint1->SetSettings(debug_ipc::BreakpointType::kHardware, settings1);
   ASSERT_EQ(status, ZX_OK);
   // Should have installed the process breakpoint.
   ASSERT_EQ(process_delegate.bps().size(), 1u);

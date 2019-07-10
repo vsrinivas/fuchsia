@@ -26,21 +26,20 @@ namespace {
 
 uint64_t GetKoidForHandle(zx_handle_t handle) {
   zx_info_handle_basic_t info;
-  zx_status_t res = zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info,
-                                       sizeof(info), NULL, NULL);
+  zx_status_t res =
+      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
   if (res != ZX_OK)
     return 0;
   return static_cast<uint64_t>(info.koid);
 }
 
-zx_status_t LaunchProcess(zx_handle_t job, const std::vector<const char*>& argv,
-                          const char* name, int outfd, zx_handle_t* proc) {
+zx_status_t LaunchProcess(zx_handle_t job, const std::vector<const char*>& argv, const char* name,
+                          int outfd, zx_handle_t* proc) {
   std::vector<const char*> normalized_argv = argv;
   normalized_argv.push_back(nullptr);
 
   fdio_spawn_action_t actions[] = {
-      {.action = FDIO_SPAWN_ACTION_CLONE_FD,
-       .fd = {.local_fd = outfd, .target_fd = STDOUT_FILENO}},
+      {.action = FDIO_SPAWN_ACTION_CLONE_FD, .fd = {.local_fd = outfd, .target_fd = STDOUT_FILENO}},
       {.action = FDIO_SPAWN_ACTION_CLONE_FD,
        .fd = {.local_fd = STDIN_FILENO, .target_fd = STDIN_FILENO}},
       {.action = FDIO_SPAWN_ACTION_CLONE_FD,
@@ -48,22 +47,19 @@ zx_status_t LaunchProcess(zx_handle_t job, const std::vector<const char*>& argv,
       {.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = name}}};
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   zx_status_t status =
-      fdio_spawn_etc(job, FDIO_SPAWN_CLONE_ALL, normalized_argv.front(),
-                     normalized_argv.data(), nullptr, arraysize(actions),
-                     actions, proc, err_msg);
+      fdio_spawn_etc(job, FDIO_SPAWN_CLONE_ALL, normalized_argv.front(), normalized_argv.data(),
+                     nullptr, arraysize(actions), actions, proc, err_msg);
   return status;
 }
 
 }  // namespace
 
-const char kBinaryPath[] =
-    "/pkgfs/packages/debug_agent_tests/0/bin/process_loop";
+const char kBinaryPath[] = "/pkgfs/packages/debug_agent_tests/0/bin/process_loop";
 
 int main() {
   zx_handle_t default_job = zx_job_default();
   zx_handle_t child_job;
-  if (zx_status_t status = zx_job_create(default_job, 0u, &child_job);
-      status != ZX_OK) {
+  if (zx_status_t status = zx_job_create(default_job, 0u, &child_job); status != ZX_OK) {
     FXL_LOG(ERROR) << "Could not create a child job.";
     exit(1);
   }
@@ -111,9 +107,8 @@ int main() {
     FXL_LOG(INFO) << "Creating process.";
     Process process;
     process.name = fxl::StringPrintf("process-%lu", processes.size());
-    zx_status_t status =
-        LaunchProcess(child_job, {kBinaryPath}, process.name.data(),
-                      pipe_fds[0], &process.proc_handle);
+    zx_status_t status = LaunchProcess(child_job, {kBinaryPath}, process.name.data(), pipe_fds[0],
+                                       &process.proc_handle);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Could not create process " << process.name << ": "
                      << zx_status_get_string(status);

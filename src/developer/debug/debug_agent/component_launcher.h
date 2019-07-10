@@ -39,8 +39,7 @@ class ComponentLauncher {
 
   // Will fail if |argv| is invalid. The first element should be the component
   // url needed to launch.
-  zx_status_t Prepare(std::vector<std::string> argv,
-                      ComponentDescription* description,
+  zx_status_t Prepare(std::vector<std::string> argv, ComponentDescription* description,
                       ComponentHandles* handles);
 
   // The launcher has to be already successfully prepared.

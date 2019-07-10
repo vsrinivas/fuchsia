@@ -72,7 +72,6 @@ class BreakpointStreamBackend : public MockStreamBackend {
 
   const std::vector<debug_ipc::NotifyException>& exceptions() const { return exceptions_; }
 
-
   // The messages we're interested in handling ---------------------------------
 
   // Searches the loaded modules for specific one.
@@ -122,7 +121,7 @@ class BreakpointStreamBackend : public MockStreamBackend {
 
 TEST(BreakpointIntegration, SWBreakpoint) {
   // Uncomment for debugging the test.
-  //debug_ipc::SetDebugMode(true);
+  // debug_ipc::SetDebugMode(true);
 
   // We attempt to load the pre-made .so.
   SoWrapper so_wrapper;
@@ -256,8 +255,7 @@ TEST(BreakpointIntegration, HWBreakpoint) {
   SoWrapper so_wrapper;
   ASSERT_TRUE(so_wrapper.Init(kTestSo)) << "Could not load so " << kTestSo;
 
-  uint64_t symbol_offset =
-      so_wrapper.GetSymbolOffset(kTestSo, kExportedFunctionName);
+  uint64_t symbol_offset = so_wrapper.GetSymbolOffset(kTestSo, kExportedFunctionName);
   ASSERT_NE(symbol_offset, 0u);
 
   MessageLoopWrapper loop_wrapper;
@@ -304,8 +302,7 @@ TEST(BreakpointIntegration, HWBreakpoint) {
     uint64_t module_base = mock_stream_backend.so_test_base_addr();
     uint64_t module_function = module_base + symbol_offset;
 
-    DEBUG_LOG(Test) << "Setting breakpoint at 0x" << std::hex
-                    << module_function;
+    DEBUG_LOG(Test) << "Setting breakpoint at 0x" << std::hex << module_function;
 
     // We add a breakpoint in that address.
     constexpr uint32_t kBreakpointId = 1234u;

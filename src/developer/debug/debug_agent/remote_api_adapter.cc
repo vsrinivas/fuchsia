@@ -42,8 +42,7 @@ void DispatchMessage(RemoteAPIAdapter* adapter,
 
 }  // namespace
 
-RemoteAPIAdapter::RemoteAPIAdapter(RemoteAPI* remote_api,
-                                   debug_ipc::StreamBuffer* stream)
+RemoteAPIAdapter::RemoteAPIAdapter(RemoteAPI* remote_api, debug_ipc::StreamBuffer* stream)
     : api_(remote_api), stream_(stream) {}
 
 RemoteAPIAdapter::~RemoteAPIAdapter() {}
@@ -51,8 +50,7 @@ RemoteAPIAdapter::~RemoteAPIAdapter() {}
 void RemoteAPIAdapter::OnStreamReadable() {
   while (true) {
     debug_ipc::MsgHeader header;
-    size_t bytes_read =
-        stream_->Peek(reinterpret_cast<char*>(&header), sizeof(header));
+    size_t bytes_read = stream_->Peek(reinterpret_cast<char*>(&header), sizeof(header));
     if (bytes_read != sizeof(header))
       return;  // Don't have enough data for the header.
     if (!stream_->IsAvailable(header.size))
@@ -65,8 +63,7 @@ void RemoteAPIAdapter::OnStreamReadable() {
     // Range check the message type.
     if (header.type == debug_ipc::MsgHeader::Type::kNone ||
         header.type >= debug_ipc::MsgHeader::Type::kNumMessages) {
-      fprintf(stderr, "Invalid message type %u, ignoring.\n",
-              static_cast<unsigned>(header.type));
+      fprintf(stderr, "Invalid message type %u, ignoring.\n", static_cast<unsigned>(header.type));
       return;
     }
 
@@ -80,8 +77,7 @@ void RemoteAPIAdapter::OnStreamReadable() {
         this, &RemoteAPI::On##msg_type, std::move(buffer), #msg_type);         \
     break
 
-    DEBUG_LOG(RemoteAPI) << "Received "
-                         << debug_ipc::MsgHeader::TypeToString(header.type);
+    DEBUG_LOG(RemoteAPI) << "Received " << debug_ipc::MsgHeader::TypeToString(header.type);
 
     switch (header.type) {
       DISPATCH(ConfigAgent);

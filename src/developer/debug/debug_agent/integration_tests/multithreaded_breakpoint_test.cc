@@ -109,8 +109,8 @@ class BreakpointStreamBackend : public MockStreamBackend {
   TestStage test_stage_ = TestStage::kWaitingForThreadToStart;
 };
 
-std::pair<LaunchRequest, LaunchReply> GetLaunchRequest(
-    const BreakpointStreamBackend& backend, std::string exe) {
+std::pair<LaunchRequest, LaunchReply> GetLaunchRequest(const BreakpointStreamBackend& backend,
+                                                       std::string exe) {
   LaunchRequest launch_request = {};
   launch_request.argv = {exe, fxl::StringPrintf("%lu", backend.thread_count())};
   launch_request.inferior_type = InferiorType::kBinary;
@@ -119,9 +119,8 @@ std::pair<LaunchRequest, LaunchReply> GetLaunchRequest(
 
 constexpr uint32_t kBreakpointId = 1234u;
 
-std::pair<AddOrChangeBreakpointRequest, AddOrChangeBreakpointReply>
-GetBreakpointRequest(zx_koid_t process_koid, zx_koid_t thread_koid,
-                     uint64_t address) {
+std::pair<AddOrChangeBreakpointRequest, AddOrChangeBreakpointReply> GetBreakpointRequest(
+    zx_koid_t process_koid, zx_koid_t thread_koid, uint64_t address) {
   // We add a breakpoint in that address.
   debug_ipc::ProcessBreakpointSettings location = {};
   location.process_koid = process_koid;
@@ -132,8 +131,8 @@ GetBreakpointRequest(zx_koid_t process_koid, zx_koid_t thread_koid,
   breakpoint_request.breakpoint.id = kBreakpointId;
   breakpoint_request.breakpoint.locations.push_back(location);
 
-  DEBUG_LOG(Test) << "Setting breakpoint for [P: " << process_koid
-                  << ", T: " << thread_koid << "] on 0x" << std::hex << address;
+  DEBUG_LOG(Test) << "Setting breakpoint for [P: " << process_koid << ", T: " << thread_koid
+                  << "] on 0x" << std::hex << address;
 
   return {breakpoint_request, {}};
 }
@@ -159,8 +158,7 @@ TEST(MultithreadedBreakpoint, DISABLED_SWBreakpoint) {
   SoWrapper so_wrapper;
   ASSERT_TRUE(so_wrapper.Init(kTestSo)) << "Could not load so " << kTestSo;
 
-  uint64_t symbol_offset =
-      so_wrapper.GetSymbolOffset(kTestSo, "MultithreadedFunctionToBreakOn");
+  uint64_t symbol_offset = so_wrapper.GetSymbolOffset(kTestSo, "MultithreadedFunctionToBreakOn");
   ASSERT_NE(symbol_offset, 0u);
 
   MessageLoopWrapper loop_wrapper;
@@ -172,8 +170,7 @@ TEST(MultithreadedBreakpoint, DISABLED_SWBreakpoint) {
     BreakpointStreamBackend backend(loop, 5);
     RemoteAPI* remote_api = backend.remote_api();
 
-    static constexpr const char kExecutable[] =
-        "/pkg/bin/multithreaded_breakpoint_test_exe";
+    static constexpr const char kExecutable[] = "/pkg/bin/multithreaded_breakpoint_test_exe";
     auto [lnch_request, lnch_reply] = GetLaunchRequest(backend, kExecutable);
     remote_api->OnLaunch(lnch_request, &lnch_reply);
     ASSERT_EQ(lnch_reply.status, ZX_OK) << ZxStatusToString(lnch_reply.status);
@@ -196,11 +193,11 @@ TEST(MultithreadedBreakpoint, DISABLED_SWBreakpoint) {
     // We get the offset of the loaded function within the process space.
     uint64_t module_base = backend.so_test_base_addr();
     uint64_t module_function = module_base + symbol_offset;
-    DEBUG_LOG(Test) << std::hex << "BASE: 0x" << module_base << ", OFFSET: 0x"
-                    << symbol_offset << ", FINAL: 0x" << module_function;
+    DEBUG_LOG(Test) << std::hex << "BASE: 0x" << module_base << ", OFFSET: 0x" << symbol_offset
+                    << ", FINAL: 0x" << module_function;
 
-    auto [brk_request, brk_reply] = GetBreakpointRequest(
-        backend.process_koid(), thread_koid, module_function);
+    auto [brk_request, brk_reply] =
+        GetBreakpointRequest(backend.process_koid(), thread_koid, module_function);
     remote_api->OnAddOrChangeBreakpoint(brk_request, &brk_reply);
     ASSERT_EQ(brk_reply.status, ZX_OK) << ZxStatusToString(brk_reply.status);
 
@@ -248,8 +245,7 @@ void BreakpointStreamBackend::ResumeAllThreads() {
 
 // Records the exception given from the debug agent.
 void BreakpointStreamBackend::HandleNotifyException(NotifyException exception) {
-  DEBUG_LOG(Test) << "Received "
-                  << NotifyException::TypeToString(exception.type)
+  DEBUG_LOG(Test) << "Received " << NotifyException::TypeToString(exception.type)
                   << " on Thread: " << exception.thread.thread_koid;
   thread_excp_.push_back(exception);
   ShouldQuitLoop();
@@ -267,8 +263,7 @@ void BreakpointStreamBackend::HandleNotifyModules(NotifyModules modules) {
   ShouldQuitLoop();
 }
 
-void BreakpointStreamBackend::HandleNotifyProcessExiting(
-    NotifyProcessExiting process) {
+void BreakpointStreamBackend::HandleNotifyProcessExiting(NotifyProcessExiting process) {
   DEBUG_LOG(Test) << "Process " << process.process_koid
                   << " exiting with return code: " << process.return_code;
   FXL_DCHECK(process.process_koid == process_koid_);

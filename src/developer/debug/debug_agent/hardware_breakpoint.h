@@ -23,9 +23,7 @@ class HardwareBreakpoint {
   // Uninstall all the threads.
   zx_status_t Uninstall();
 
-  const std::set<zx_koid_t>& installed_threads() const {
-    return installed_threads_;
-  }
+  const std::set<zx_koid_t>& installed_threads() const { return installed_threads_; }
 
  private:
   // Install/Uninstall a particular thread.

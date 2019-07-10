@@ -47,9 +47,8 @@ class DebuggedThread {
   // will be suspended, but when we attach to a process with existing threads
   // it won't in in this state. The |starting| flag indicates that this is
   // a thread discovered via a debug notification.
-  DebuggedThread(DebuggedProcess* process, zx::thread thread,
-                 zx_koid_t thread_koid, zx::exception exception,
-                 ThreadCreationOption option);
+  DebuggedThread(DebuggedProcess* process, zx::thread thread, zx_koid_t thread_koid,
+                 zx::exception exception, ThreadCreationOption option);
   virtual ~DebuggedThread();
 
   const DebuggedProcess* process() const { return process_; }
@@ -57,8 +56,7 @@ class DebuggedThread {
   const zx::thread& thread() const { return thread_; }
   zx_koid_t koid() const { return koid_; }
 
-  void OnException(zx::exception exception_token,
-                   zx_exception_info_t exception_info);
+  void OnException(zx::exception exception_token, zx_exception_info_t exception_info);
 
   // Resumes execution of the thread. The thread should currently be in a
   // stopped state. If it's not stopped, this will be ignored.
@@ -109,9 +107,8 @@ class DebuggedThread {
                         debug_ipc::ThreadRecord* record) const;
 
   // Register reading and writing.
-  void ReadRegisters(
-      const std::vector<debug_ipc::RegisterCategory::Type>& cats_to_get,
-      std::vector<debug_ipc::RegisterCategory>* out) const;
+  void ReadRegisters(const std::vector<debug_ipc::RegisterCategory::Type>& cats_to_get,
+                     std::vector<debug_ipc::RegisterCategory>* out) const;
   zx_status_t WriteRegisters(const std::vector<debug_ipc::Register>& regs);
 
   // Sends a notification to the client about the state of this thread.
@@ -128,7 +125,7 @@ class DebuggedThread {
   virtual bool IsSuspended() const { return suspend_token_.is_valid(); }
   virtual bool IsInException() const { return exception_token_.is_valid(); }
 
-  bool stepping_over_breakpoint() const { return stepping_over_breakpoint_;  }
+  bool stepping_over_breakpoint() const { return stepping_over_breakpoint_; }
   void set_stepping_over_breakpoint(bool so) { stepping_over_breakpoint_ = so; }
 
  private:
@@ -138,31 +135,22 @@ class DebuggedThread {
     kResume,  // The thread should be resumed from this exception.
   };
 
-  void HandleSingleStep(debug_ipc::NotifyException*,
-                        zx_thread_state_general_regs*);
-  void HandleGeneralException(debug_ipc::NotifyException*,
-                              zx_thread_state_general_regs*);
-  void HandleSoftwareBreakpoint(debug_ipc::NotifyException*,
-                                zx_thread_state_general_regs*);
-  void HandleHardwareBreakpoint(debug_ipc::NotifyException*,
-                                zx_thread_state_general_regs*);
-  void HandleWatchpoint(debug_ipc::NotifyException*,
-                        zx_thread_state_general_regs*);
+  void HandleSingleStep(debug_ipc::NotifyException*, zx_thread_state_general_regs*);
+  void HandleGeneralException(debug_ipc::NotifyException*, zx_thread_state_general_regs*);
+  void HandleSoftwareBreakpoint(debug_ipc::NotifyException*, zx_thread_state_general_regs*);
+  void HandleHardwareBreakpoint(debug_ipc::NotifyException*, zx_thread_state_general_regs*);
+  void HandleWatchpoint(debug_ipc::NotifyException*, zx_thread_state_general_regs*);
 
-  void SendExceptionNotification(debug_ipc::NotifyException*,
-                                 zx_thread_state_general_regs*);
+  void SendExceptionNotification(debug_ipc::NotifyException*, zx_thread_state_general_regs*);
 
-  OnStop UpdateForSoftwareBreakpoint(
-      zx_thread_state_general_regs* regs,
-      std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
+  OnStop UpdateForSoftwareBreakpoint(zx_thread_state_general_regs* regs,
+                                     std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
 
-  OnStop UpdateForHardwareBreakpoint(
-      zx_thread_state_general_regs* regs,
-      std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
+  OnStop UpdateForHardwareBreakpoint(zx_thread_state_general_regs* regs,
+                                     std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
 
-  OnStop UpdateForWatchpoint(
-      zx_thread_state_general_regs* regs,
-      std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
+  OnStop UpdateForWatchpoint(zx_thread_state_general_regs* regs,
+                             std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
 
   // When hitting a SW breakpoint, the PC needs to be correctly re-set depending
   // on where the CPU leaves the PC after a SW exception.
@@ -178,16 +166,15 @@ class DebuggedThread {
   //
   // WARNING: The ProcessBreakpoint argument could be deleted in this call
   // if it was a one-shot breakpoint.
-  void UpdateForHitProcessBreakpoint(
-      debug_ipc::BreakpointType exception_type,
-      ProcessBreakpoint* process_breakpoint, zx_thread_state_general_regs* regs,
-      std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
+  void UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType exception_type,
+                                     ProcessBreakpoint* process_breakpoint,
+                                     zx_thread_state_general_regs* regs,
+                                     std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
 
   // WARNING: The ProcessWatchpoint argument could be deleted in this call
   // if it was a one-shot breakpoint.
-  void UpdateForWatchpointHit(
-      ProcessWatchpoint*, zx_thread_state_general_regs* regs,
-      std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
+  void UpdateForWatchpointHit(ProcessWatchpoint*, zx_thread_state_general_regs* regs,
+                              std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
 
   // Sets or clears the single step bit on the thread.
   void SetSingleStep(bool single_step);
@@ -199,8 +186,7 @@ class DebuggedThread {
 
   // The main thing we're doing. When automatically resuming, this will be
   // what happens.
-  debug_ipc::ResumeRequest::How run_mode_ =
-      debug_ipc::ResumeRequest::How::kContinue;
+  debug_ipc::ResumeRequest::How run_mode_ = debug_ipc::ResumeRequest::How::kContinue;
 
   // When run_mode_ == kStepInRange, this defines the range (end non-inclusive).
   uint64_t step_in_range_begin_ = 0;

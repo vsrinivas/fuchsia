@@ -59,7 +59,7 @@ void SuspendAllOtherNonSteppingOverThreads(ProcessBreakpoint* b, DebuggedProcess
       continue;
     }
 
-    thread->Suspend(false);   // Async suspend.
+    thread->Suspend(false);  // Async suspend.
   }
 
   // We wait on all the suspend signals to trigger.
@@ -71,10 +71,8 @@ void SuspendAllOtherNonSteppingOverThreads(ProcessBreakpoint* b, DebuggedProcess
 
 }  // namespace
 
-ProcessBreakpoint::ProcessBreakpoint(Breakpoint* breakpoint,
-                                     DebuggedProcess* process,
-                                     ProcessMemoryAccessor* memory_accessor,
-                                     uint64_t address)
+ProcessBreakpoint::ProcessBreakpoint(Breakpoint* breakpoint, DebuggedProcess* process,
+                                     ProcessMemoryAccessor* memory_accessor, uint64_t address)
     : process_(process), memory_accessor_(memory_accessor), address_(address) {
   breakpoints_.push_back(breakpoint);
 }
@@ -85,8 +83,7 @@ zx_status_t ProcessBreakpoint::Init() { return Update(); }
 
 zx_status_t ProcessBreakpoint::RegisterBreakpoint(Breakpoint* breakpoint) {
   // Shouldn't get duplicates.
-  FXL_DCHECK(std::find(breakpoints_.begin(), breakpoints_.end(), breakpoint) ==
-             breakpoints_.end());
+  FXL_DCHECK(std::find(breakpoints_.begin(), breakpoints_.end(), breakpoint) == breakpoints_.end());
   breakpoints_.push_back(breakpoint);
   // Check if we need to install/uninstall a breakpoint.
   return Update();
@@ -118,9 +115,8 @@ bool ProcessBreakpoint::ShouldHitThread(zx_koid_t thread_koid) const {
   return false;
 }
 
-void ProcessBreakpoint::OnHit(
-    debug_ipc::BreakpointType exception_type,
-    std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
+void ProcessBreakpoint::OnHit(debug_ipc::BreakpointType exception_type,
+                              std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
   hit_breakpoints->clear();
   for (Breakpoint* breakpoint : breakpoints_) {
     // Only care for breakpoints that match the exception type.
@@ -133,7 +129,6 @@ void ProcessBreakpoint::OnHit(
 }
 
 void ProcessBreakpoint::BeginStepOver(zx_koid_t thread_koid) {
-
   FXL_DCHECK(!CurrentlySteppingOver(thread_koid));
   DebuggedThread* thread = process_->GetThread(thread_koid);
   FXL_DCHECK(thread);
@@ -170,7 +165,6 @@ void ProcessBreakpoint::EndStepOver(zx_koid_t thread_koid) {
   DEBUG_LOG(Breakpoint) << Preamble(this) << "Thread " << thread_koid << " ending step over.";
   LogThreadsSteppingOver(this, threads_stepping_over_);
 
-
   // If all the threads have stepped over, we reinstall the breakpoint and
   // resume all threads.
   if (!CurrentlySteppingOver()) {
@@ -193,8 +187,7 @@ bool ProcessBreakpoint::SoftwareBreakpointInstalled() const {
 }
 
 bool ProcessBreakpoint::HardwareBreakpointInstalled() const {
-  return hardware_breakpoint_ != nullptr &&
-         !hardware_breakpoint_->installed_threads().empty();
+  return hardware_breakpoint_ != nullptr && !hardware_breakpoint_->installed_threads().empty();
 }
 
 bool ProcessBreakpoint::CurrentlySteppingOver(zx_koid_t thread_koid) const {
@@ -217,8 +210,7 @@ zx_status_t ProcessBreakpoint::Update() {
   if (sw_bp_count == 0 && software_breakpoint_) {
     software_breakpoint_.reset();
   } else if (sw_bp_count > 0 && !software_breakpoint_) {
-    software_breakpoint_ =
-        std::make_unique<SoftwareBreakpoint>(this, memory_accessor_);
+    software_breakpoint_ = std::make_unique<SoftwareBreakpoint>(this, memory_accessor_);
     zx_status_t status = software_breakpoint_->Install();
     if (status != ZX_OK)
       return status;

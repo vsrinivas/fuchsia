@@ -17,8 +17,7 @@ Watchpoint::~Watchpoint() {
   }
 }
 
-zx_status_t Watchpoint::SetSettings(
-    const debug_ipc::BreakpointSettings& settings) {
+zx_status_t Watchpoint::SetSettings(const debug_ipc::BreakpointSettings& settings) {
   zx_status_t result = ZX_OK;
   settings_ = settings;
   stats_.id = settings_.id;
@@ -39,8 +38,7 @@ zx_status_t Watchpoint::SetSettings(
   // Added locations.
   for (const auto& loc : updated_locations) {
     if (installed_watchpoints_.find(loc) == installed_watchpoints_.end()) {
-      zx_status_t process_status =
-          delegate_->RegisterWatchpoint(this, loc.process_koid, loc.range);
+      zx_status_t process_status = delegate_->RegisterWatchpoint(this, loc.process_koid, loc.range);
       if (process_status != ZX_OK)
         result = process_status;
     }
@@ -50,8 +48,7 @@ zx_status_t Watchpoint::SetSettings(
   return result;
 }
 
-bool Watchpoint::ThreadsToInstall(zx_koid_t process_koid,
-                                  std::set<zx_koid_t>* out) const {
+bool Watchpoint::ThreadsToInstall(zx_koid_t process_koid, std::set<zx_koid_t>* out) const {
   std::set<zx_koid_t> thread_koids = {};
   for (const auto& location : settings_.locations) {
     if (location.process_koid != process_koid)
@@ -73,8 +70,7 @@ bool Watchpoint::ThreadsToInstall(zx_koid_t process_koid,
   return true;
 }
 
-bool Watchpoint::WatchpointInstallation::operator<(
-    const WatchpointInstallation& other) const {
+bool Watchpoint::WatchpointInstallation::operator<(const WatchpointInstallation& other) const {
   if (process_koid != other.process_koid)
     return process_koid < other.process_koid;
 

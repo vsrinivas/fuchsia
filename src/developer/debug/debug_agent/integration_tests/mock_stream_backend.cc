@@ -19,11 +19,9 @@ MockStreamBackend::MockStreamBackend() {
   agent_ = std::make_unique<DebugAgent>(&stream_, std::move(services));
 }
 
-size_t MockStreamBackend::ConsumeStreamBufferData(const char* data,
-                                                  size_t len) {
+size_t MockStreamBackend::ConsumeStreamBufferData(const char* data, size_t len) {
   // We assume we always get a header.
-  const debug_ipc::MsgHeader* header =
-      reinterpret_cast<const debug_ipc::MsgHeader*>(data);
+  const debug_ipc::MsgHeader* header = reinterpret_cast<const debug_ipc::MsgHeader*>(data);
 
   // Buffer for the message and create a reader.
   std::vector<char> msg_buffer;
@@ -35,8 +33,7 @@ size_t MockStreamBackend::ConsumeStreamBufferData(const char* data,
   // NOTE: Here is where you add more notification handlers as they are sent by
   //       the debug agent.
   uint32_t transaction = 0;
-  DEBUG_LOG(Test) << "Got notification: "
-                  << debug_ipc::MsgHeader::TypeToString(header->type);
+  DEBUG_LOG(Test) << "Got notification: " << debug_ipc::MsgHeader::TypeToString(header->type);
   switch (header->type) {
     case debug_ipc::MsgHeader::Type::kAttach: {
       debug_ipc::AttachReply attach;

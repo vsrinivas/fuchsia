@@ -83,15 +83,15 @@ int main() {
   FXL_DCHECK(status == ZX_OK) << "Could not suspend thread: " << status;
 
   zx_signals_t observed;
-  status = zx_object_wait_one(thread_handle, ZX_THREAD_SUSPENDED,
-                              zx_deadline_after(ZX_MSEC(500)), &observed);
+  status = zx_object_wait_one(thread_handle, ZX_THREAD_SUSPENDED, zx_deadline_after(ZX_MSEC(500)),
+                              &observed);
   FXL_DCHECK(status == ZX_OK) << "Could not get suspended signal: " << status;
 
   FXL_LOG(INFO) << "****** Writing debug registers.";
 
   auto debug_regs = GetDebugRegs();
-  status = zx_thread_write_state(thread_handle, ZX_THREAD_STATE_DEBUG_REGS,
-                                 &debug_regs, sizeof(debug_regs));
+  status = zx_thread_write_state(thread_handle, ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
+                                 sizeof(debug_regs));
   FXL_DCHECK(status == ZX_OK) << "Could not write debug regs: " << status;
 
   FXL_LOG(INFO) << "****** Resuming thread.";

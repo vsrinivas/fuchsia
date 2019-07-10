@@ -17,17 +17,13 @@ namespace debug_agent {
 // the code is doing within the tests.
 class MockArchProvider : public arch::ArchProvider {
  public:
-  zx_status_t InstallHWBreakpoint(zx::thread* thread,
-                                  uint64_t address) override;
+  zx_status_t InstallHWBreakpoint(zx::thread* thread, uint64_t address) override;
 
-  zx_status_t UninstallHWBreakpoint(zx::thread* thread,
-                                    uint64_t address) override;
+  zx_status_t UninstallHWBreakpoint(zx::thread* thread, uint64_t address) override;
 
-  zx_status_t InstallWatchpoint(zx::thread*,
-                                const debug_ipc::AddressRange&) override;
+  zx_status_t InstallWatchpoint(zx::thread*, const debug_ipc::AddressRange&) override;
 
-  zx_status_t UninstallWatchpoint(zx::thread*,
-                                  const debug_ipc::AddressRange&) override;
+  zx_status_t UninstallWatchpoint(zx::thread*, const debug_ipc::AddressRange&) override;
 
   size_t BreakpointInstallCount(uint64_t address) const;
   size_t TotalBreakpointInstallCalls() const;
@@ -43,10 +39,8 @@ class MockArchProvider : public arch::ArchProvider {
   std::map<uint64_t, size_t> bp_installs_;
   std::map<uint64_t, size_t> bp_uninstalls_;
 
-  std::map<debug_ipc::AddressRange, size_t, debug_ipc::AddressRangeCompare>
-      wp_installs_;
-  std::map<debug_ipc::AddressRange, size_t, debug_ipc::AddressRangeCompare>
-      wp_uninstalls_;
+  std::map<debug_ipc::AddressRange, size_t, debug_ipc::AddressRangeCompare> wp_installs_;
+  std::map<debug_ipc::AddressRange, size_t, debug_ipc::AddressRangeCompare> wp_uninstalls_;
 };
 
 // Meant as an RAII container for MockArchProvider.

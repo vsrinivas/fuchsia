@@ -16,13 +16,10 @@ class RemoteAPI {
   RemoteAPI() {}
   virtual ~RemoteAPI() {}
 
-  virtual void OnHello(const debug_ipc::HelloRequest& request,
-                       debug_ipc::HelloReply* reply) = 0;
+  virtual void OnHello(const debug_ipc::HelloRequest& request, debug_ipc::HelloReply* reply) = 0;
 
-  virtual void OnLaunch(const debug_ipc::LaunchRequest& request,
-                        debug_ipc::LaunchReply* reply) = 0;
-  virtual void OnKill(const debug_ipc::KillRequest& request,
-                      debug_ipc::KillReply* reply) = 0;
+  virtual void OnLaunch(const debug_ipc::LaunchRequest& request, debug_ipc::LaunchReply* reply) = 0;
+  virtual void OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillReply* reply) = 0;
 
   virtual void OnConfigAgent(const debug_ipc::ConfigAgentRequest& request,
                              debug_ipc::ConfigAgentReply* reply) = 0;
@@ -34,23 +31,19 @@ class RemoteAPI {
   virtual void OnAttach(std::vector<char> serialized) = 0;
   // This is an overload with the result of reading |serialized|.
   // We have this so it's easier to call a MockRemoteAPI.
-  virtual void OnAttach(uint32_t transaction_id,
-                        const debug_ipc::AttachRequest&) = 0;
+  virtual void OnAttach(uint32_t transaction_id, const debug_ipc::AttachRequest&) = 0;
 
-  virtual void OnDetach(const debug_ipc::DetachRequest& request,
-                        debug_ipc::DetachReply* reply) = 0;
+  virtual void OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::DetachReply* reply) = 0;
 
   virtual void OnModules(const debug_ipc::ModulesRequest& request,
                          debug_ipc::ModulesReply* reply) = 0;
 
-  virtual void OnPause(const debug_ipc::PauseRequest& request,
-                       debug_ipc::PauseReply* reply) = 0;
+  virtual void OnPause(const debug_ipc::PauseRequest& request, debug_ipc::PauseReply* reply) = 0;
 
   virtual void OnQuitAgent(const debug_ipc::QuitAgentRequest& request,
                            debug_ipc::QuitAgentReply* reply) = 0;
 
-  virtual void OnResume(const debug_ipc::ResumeRequest& request,
-                        debug_ipc::ResumeReply* reply) = 0;
+  virtual void OnResume(const debug_ipc::ResumeRequest& request, debug_ipc::ResumeReply* reply) = 0;
 
   virtual void OnProcessTree(const debug_ipc::ProcessTreeRequest& request,
                              debug_ipc::ProcessTreeReply* reply) = 0;
@@ -67,13 +60,11 @@ class RemoteAPI {
   virtual void OnWriteRegisters(const debug_ipc::WriteRegistersRequest& request,
                                 debug_ipc::WriteRegistersReply* reply) = 0;
 
-  virtual void OnAddOrChangeBreakpoint(
-      const debug_ipc::AddOrChangeBreakpointRequest& request,
-      debug_ipc::AddOrChangeBreakpointReply* reply) = 0;
+  virtual void OnAddOrChangeBreakpoint(const debug_ipc::AddOrChangeBreakpointRequest& request,
+                                       debug_ipc::AddOrChangeBreakpointReply* reply) = 0;
 
-  virtual void OnRemoveBreakpoint(
-      const debug_ipc::RemoveBreakpointRequest& request,
-      debug_ipc::RemoveBreakpointReply* reply) = 0;
+  virtual void OnRemoveBreakpoint(const debug_ipc::RemoveBreakpointRequest& request,
+                                  debug_ipc::RemoveBreakpointReply* reply) = 0;
 
   virtual void OnSysInfo(const debug_ipc::SysInfoRequest& request,
                          debug_ipc::SysInfoReply* reply) = 0;

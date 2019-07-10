@@ -21,8 +21,7 @@ namespace debug_agent {
 //
 // dl_iterate_phdr iterates over all the modules until one of them returns
 // non-zero (signal to stop) or when there are no more modules left.
-int SoWrapper::IteratePhdrCallback(struct ::dl_phdr_info* info, size_t size,
-                                   void* user) {
+int SoWrapper::IteratePhdrCallback(struct ::dl_phdr_info* info, size_t size, void* user) {
   SoWrapper* so_wrapper = reinterpret_cast<SoWrapper*>(user);
   so_wrapper->module_offsets_[info->dlpi_name] = info->dlpi_addr;
 
@@ -61,8 +60,7 @@ uint64_t SoWrapper::GetSymbolAddress(const char* symbol_name) const {
   return reinterpret_cast<uint64_t>(symbol);
 }
 
-uint64_t SoWrapper::GetSymbolOffset(const char* module,
-                                    const char* symbol) const {
+uint64_t SoWrapper::GetSymbolOffset(const char* module, const char* symbol) const {
   uint64_t module_start = GetModuleStartAddress(module);
   if (module_start == 0)
     return 0;

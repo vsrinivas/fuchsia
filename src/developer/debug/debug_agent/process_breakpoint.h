@@ -31,10 +31,8 @@ class ProcessBreakpoint {
   //
   // Call Init() immediately after construction to initialize the parts that
   // can report errors.
-  explicit ProcessBreakpoint(Breakpoint* breakpoint,
-                             DebuggedProcess* debugged_process,
-                             ProcessMemoryAccessor* memory_accessor,
-                             uint64_t address);
+  explicit ProcessBreakpoint(Breakpoint* breakpoint, DebuggedProcess* debugged_process,
+                             ProcessMemoryAccessor* memory_accessor, uint64_t address);
   ~ProcessBreakpoint();
 
   // Call immediately after construction. If it returns failure, the breakpoint

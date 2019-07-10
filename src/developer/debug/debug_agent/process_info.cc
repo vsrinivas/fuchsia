@@ -27,13 +27,12 @@ namespace debug_agent {
 
 namespace {
 
-zx_status_t WalkModules(
-    const zx::process& process, uint64_t dl_debug_addr,
-    std::function<bool(const zx::process&, uint64_t, uint64_t)> cb) {
+zx_status_t WalkModules(const zx::process& process, uint64_t dl_debug_addr,
+                        std::function<bool(const zx::process&, uint64_t, uint64_t)> cb) {
   size_t num_read = 0;
   uint64_t lmap = 0;
-  zx_status_t status = process.read_memory(
-      dl_debug_addr + offsetof(r_debug, r_map), &lmap, sizeof(lmap), &num_read);
+  zx_status_t status =
+      process.read_memory(dl_debug_addr + offsetof(r_debug, r_map), &lmap, sizeof(lmap), &num_read);
   if (status != ZX_OK)
     return status;
 
@@ -46,13 +45,13 @@ zx_status_t WalkModules(
       return ZX_ERR_BAD_STATE;
 
     uint64_t base;
-    if (process.read_memory(lmap + offsetof(link_map, l_addr), &base,
-                            sizeof(base), &num_read) != ZX_OK)
+    if (process.read_memory(lmap + offsetof(link_map, l_addr), &base, sizeof(base), &num_read) !=
+        ZX_OK)
       break;
 
     uint64_t next;
-    if (process.read_memory(lmap + offsetof(link_map, l_next), &next,
-                            sizeof(next), &num_read) != ZX_OK)
+    if (process.read_memory(lmap + offsetof(link_map, l_next), &next, sizeof(next), &num_read) !=
+        ZX_OK)
       break;
 
     if (!cb(process, base, lmap))
@@ -64,8 +63,7 @@ zx_status_t WalkModules(
   return ZX_OK;
 }
 
-debug_ipc::ThreadRecord::BlockedReason ThreadStateBlockedReasonToEnum(
-    uint32_t state) {
+debug_ipc::ThreadRecord::BlockedReason ThreadStateBlockedReasonToEnum(uint32_t state) {
   FXL_DCHECK(ZX_THREAD_STATE_BASIC(state) == ZX_THREAD_STATE_BLOCKED);
 
   switch (state) {
@@ -92,8 +90,8 @@ debug_ipc::ThreadRecord::BlockedReason ThreadStateBlockedReasonToEnum(
 }
 
 // Reads a null-terminated string from the given address of the given process.
-zx_status_t ReadNullTerminatedString(const zx::process& process,
-                                     zx_vaddr_t vaddr, std::string* dest) {
+zx_status_t ReadNullTerminatedString(const zx::process& process, zx_vaddr_t vaddr,
+                                     std::string* dest) {
   // Max size of string we'll load as a sanity check.
   constexpr size_t kMaxString = 32768;
 
@@ -103,8 +101,7 @@ zx_status_t ReadNullTerminatedString(const zx::process& process,
   char block[kBlockSize];
   while (dest->size() < kMaxString) {
     size_t num_read = 0;
-    zx_status_t status =
-        process.read_memory(vaddr, block, kBlockSize, &num_read);
+    zx_status_t status = process.read_memory(vaddr, block, kBlockSize, &num_read);
     if (status != ZX_OK)
       return status;
 
@@ -124,40 +121,36 @@ zx_status_t ReadNullTerminatedString(const zx::process& process,
 }  // namespace
 
 zx_status_t GetProcessInfo(zx_handle_t process, zx_info_process* info) {
-  return zx_object_get_info(process, ZX_INFO_PROCESS, info,
-                            sizeof(zx_info_process), nullptr, nullptr);
+  return zx_object_get_info(process, ZX_INFO_PROCESS, info, sizeof(zx_info_process), nullptr,
+                            nullptr);
 }
 
-zx_status_t GetModulesForProcess(const zx::process& process,
-                                 uint64_t dl_debug_addr,
+zx_status_t GetModulesForProcess(const zx::process& process, uint64_t dl_debug_addr,
                                  std::vector<debug_ipc::Module>* modules) {
   return WalkModules(
-      process, dl_debug_addr,
-      [modules](const zx::process& process, uint64_t base, uint64_t lmap) {
+      process, dl_debug_addr, [modules](const zx::process& process, uint64_t base, uint64_t lmap) {
         debug_ipc::Module module;
         module.base = base;
 
         uint64_t str_addr;
         size_t num_read;
-        if (process.read_memory(lmap + offsetof(link_map, l_name), &str_addr,
-                                sizeof(str_addr), &num_read) != ZX_OK)
+        if (process.read_memory(lmap + offsetof(link_map, l_name), &str_addr, sizeof(str_addr),
+                                &num_read) != ZX_OK)
           return false;
 
         if (ReadNullTerminatedString(process, str_addr, &module.name) != ZX_OK)
           return false;
 
-        auto elf = elflib::ElfLib::Create(
-            [&process, base = module.base](uint64_t offset,
-                                           std::vector<uint8_t>* buf) {
-              size_t num_read = 0;
+        auto elf = elflib::ElfLib::Create([&process, base = module.base](
+                                              uint64_t offset, std::vector<uint8_t>* buf) {
+          size_t num_read = 0;
 
-              if (process.read_memory(base + offset, buf->data(), buf->size(),
-                                      &num_read) != ZX_OK) {
-                return false;
-              }
+          if (process.read_memory(base + offset, buf->data(), buf->size(), &num_read) != ZX_OK) {
+            return false;
+          }
 
-              return num_read == buf->size();
-            });
+          return num_read == buf->size();
+        });
 
         if (elf) {
           module.build_id = elf->GetGNUBuildID();
@@ -181,9 +174,8 @@ std::vector<zx_info_maps_t> GetProcessMaps(const zx::process& process) {
   while (true) {
     map.resize(count_guess);
 
-    zx_status_t status =
-        process.get_info(ZX_INFO_PROCESS_MAPS, &map[0],
-                         sizeof(zx_info_maps) * map.size(), &actual, &avail);
+    zx_status_t status = process.get_info(ZX_INFO_PROCESS_MAPS, &map[0],
+                                          sizeof(zx_info_maps) * map.size(), &actual, &avail);
 
     if (status != ZX_OK) {
       fprintf(stderr, "error %d for zx_object_get_info\n", status);
@@ -200,15 +192,14 @@ std::vector<zx_info_maps_t> GetProcessMaps(const zx::process& process) {
   return map;
 }
 
-bool ReadProcessMemoryBlock(const zx::process& process, uint64_t address,
-                            uint32_t size, debug_ipc::MemoryBlock* block) {
+bool ReadProcessMemoryBlock(const zx::process& process, uint64_t address, uint32_t size,
+                            debug_ipc::MemoryBlock* block) {
   block->address = address;
   block->size = size;
   block->data.resize(size);
 
   size_t bytes_read = 0;
-  if (process.read_memory(address, &block->data[0], block->size, &bytes_read) ==
-          ZX_OK &&
+  if (process.read_memory(address, &block->data[0], block->size, &bytes_read) == ZX_OK &&
       bytes_read == size) {
     block->valid = true;
     return true;
@@ -218,8 +209,7 @@ bool ReadProcessMemoryBlock(const zx::process& process, uint64_t address,
   return false;
 }
 
-void ReadProcessMemoryBlocks(const zx::process& process, uint64_t address,
-                             uint32_t size,
+void ReadProcessMemoryBlocks(const zx::process& process, uint64_t address, uint32_t size,
                              std::vector<debug_ipc::MemoryBlock>* blocks) {
   // Optimistically assume the read will work which will be faster in the
   // common case.
@@ -260,8 +250,7 @@ void ReadProcessMemoryBlocks(const zx::process& process, uint64_t address,
     if (end == begin)
       continue;
     blocks->emplace_back();
-    ReadProcessMemoryBlock(process, begin, static_cast<uint32_t>(end - begin),
-                           &blocks->back());
+    ReadProcessMemoryBlock(process, begin, static_cast<uint32_t>(end - begin), &blocks->back());
     begin = end;
   }
 }

@@ -57,18 +57,15 @@ zx::process LaunchProcess(const zx::job& job, const std::string name,
 
   std::vector<fdio_spawn_action_t> actions;
   normalized_argv.push_back(nullptr);
-  actions.push_back(
-      {.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = name.c_str()}});
+  actions.push_back({.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = name.c_str()}});
 
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   zx_handle_t process_handle;
-  zx_status_t status =
-      fdio_spawn_etc(job.get(), FDIO_SPAWN_CLONE_ALL, argv[0], argv.data(),
-                     nullptr,  // Environ
-                     actions.size(), actions.data(), &process_handle, err_msg);
+  zx_status_t status = fdio_spawn_etc(job.get(), FDIO_SPAWN_CLONE_ALL, argv[0], argv.data(),
+                                      nullptr,  // Environ
+                                      actions.size(), actions.data(), &process_handle, err_msg);
   if (status != ZX_OK) {
-    FXL_NOTREACHED() << "Failed to spawn command (" << ZxStatusToString(status)
-                     << "): " << err_msg;
+    FXL_NOTREACHED() << "Failed to spawn command (" << ZxStatusToString(status) << "): " << err_msg;
   }
   return zx::process(process_handle);
 }
@@ -144,8 +141,7 @@ class JobStreamBackend : public MockStreamBackend {
 
 // Process Management Utility Functions ----------------------------------------
 
-void ResumeAllProcesses(RemoteAPI* remote_api,
-                        const JobStreamBackend& backend) {
+void ResumeAllProcesses(RemoteAPI* remote_api, const JobStreamBackend& backend) {
   for (const auto& start_event : backend.process_start_events()) {
     // We continue the process.
     ResumeRequest resume_request;
@@ -190,14 +186,12 @@ void VerifyAllProcessesExited(const JobStreamBackend& backend,
 
     if (!found)
       FXL_NOTREACHED() << "Process " << name << " did not exit.";
-    ASSERT_EQ(found->return_code, return_code)
-        << " Process " << name << " expected return code " << return_code
-        << ", got " << found->return_code;
+    ASSERT_EQ(found->return_code, return_code) << " Process " << name << " expected return code "
+                                               << return_code << ", got " << found->return_code;
   }
 }
 
-uint64_t FindModuleBaseAddress(const NotifyModules& modules,
-                               const std::string& module_name) {
+uint64_t FindModuleBaseAddress(const NotifyModules& modules, const std::string& module_name) {
   for (const auto& module : modules.modules) {
     if (module.name == module_name)
       return module.base;
@@ -247,8 +241,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   zx::job job = CreateJob();
   std::vector<zx::process> processes;
   processes.push_back(LaunchProcess(job, "true", {"/pkg/bin/debug_test_true"}));
-  processes.push_back(
-      LaunchProcess(job, "false", {"/pkg/bin/debug_test_false"}));
+  processes.push_back(LaunchProcess(job, "false", {"/pkg/bin/debug_test_false"}));
 
   // We should receive all the start events.
   for (size_t i = 0; i < processes.size(); i++) {
@@ -314,8 +307,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   FXL_VLOG(1) << "Launching new processes.";
 
   // We launch two processes.
-  processes.push_back(LaunchProcess(job, "breakpoint_test_exe",
-                                    {"/pkg/bin/breakpoint_test_exe"}));
+  processes.push_back(LaunchProcess(job, "breakpoint_test_exe", {"/pkg/bin/breakpoint_test_exe"}));
   processes.push_back(LaunchProcess(job, "true", {"/pkg/bin/debug_test_true"}));
 
   // Should only catch one.
@@ -345,12 +337,10 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
 
   // The exported symbol we're going to put the breakpoint on.
   const char* kExportedFunctionName = "InsertBreakpointFunction";
-  uint64_t symbol_offset =
-      so_wrapper.GetSymbolOffset(kTestSo, kExportedFunctionName);
+  uint64_t symbol_offset = so_wrapper.GetSymbolOffset(kTestSo, kExportedFunctionName);
   ASSERT_NE(symbol_offset, 0u);
 
-  uint64_t base_address =
-      FindModuleBaseAddress(backend.module_events().back(), kModuleToSearch);
+  uint64_t base_address = FindModuleBaseAddress(backend.module_events().back(), kModuleToSearch);
   uint64_t function_address = base_address + symbol_offset;
 
   uint64_t process_koid = backend.process_start_events().back().koid;

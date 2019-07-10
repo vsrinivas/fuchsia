@@ -15,8 +15,7 @@
 
 namespace debug_agent {
 
-DebuggedJob::DebuggedJob(ProcessStartHandler* handler, zx_koid_t job_koid,
-                         zx::job job)
+DebuggedJob::DebuggedJob(ProcessStartHandler* handler, zx_koid_t job_koid, zx::job job)
     : handler_(handler), koid_(job_koid), job_(std::move(job)) {}
 
 DebuggedJob::~DebuggedJob() = default;
@@ -44,8 +43,7 @@ void DebuggedJob::OnProcessStarting(zx::exception exception_token,
   // logging for this with a lot of "/boot/bin/sh" starting.
   // We filter this out as it makes debugging much harder.
   if (proc_name != "/boot/bin/sh") {
-    DEBUG_LOG(Job) << "Debugged job " << koid_ << ": Process " << proc_name
-                   << " starting.";
+    DEBUG_LOG(Job) << "Debugged job " << koid_ << ": Process " << proc_name << " starting.";
   }
 
   // Search through the available filters. If the regex is not valid, fallback
@@ -67,8 +65,8 @@ void DebuggedJob::OnProcessStarting(zx::exception exception_token,
   }
 
   if (matching_filter) {
-    DEBUG_LOG(Job) << "Filter " << matching_filter->filter
-                   << " matches process " << proc_name << ". Attaching.";
+    DEBUG_LOG(Job) << "Filter " << matching_filter->filter << " matches process " << proc_name
+                   << ". Attaching.";
     handler_->OnProcessStart(matching_filter->filter, std::move(process));
   }
 

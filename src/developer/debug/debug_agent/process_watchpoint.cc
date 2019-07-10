@@ -29,8 +29,7 @@ std::string KoidsToString(const std::vector<DebuggedThread*>& threads) {
 
 }  // namespace
 
-ProcessWatchpoint::ProcessWatchpoint(Watchpoint* watchpoint,
-                                     DebuggedProcess* process,
+ProcessWatchpoint::ProcessWatchpoint(Watchpoint* watchpoint, DebuggedProcess* process,
                                      const debug_ipc::AddressRange& range)
     : watchpoint_(watchpoint), process_(process), range_(range) {}
 
@@ -40,8 +39,7 @@ zx_status_t ProcessWatchpoint::Init() { return Update(); }
 
 zx_status_t ProcessWatchpoint::Update() {
   std::set<zx_koid_t> watched_threads = {};
-  bool threads_present =
-      watchpoint_->ThreadsToInstall(process_->koid(), &watched_threads);
+  bool threads_present = watchpoint_->ThreadsToInstall(process_->koid(), &watched_threads);
   FXL_DCHECK(threads_present);
 
   std::vector<DebuggedThread*> threads_to_remove = {};

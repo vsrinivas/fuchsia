@@ -81,8 +81,7 @@ TEST(ElfSymbol, Lookup) {
   SoWrapper so_wrapper;
   ASSERT_TRUE(so_wrapper.Init(kTestSo)) << "Could not load so " << kTestSo;
 
-  uint64_t symbol_offset =
-      so_wrapper.GetSymbolOffset(kTestSo, kExportedFunctionName);
+  uint64_t symbol_offset = so_wrapper.GetSymbolOffset(kTestSo, kExportedFunctionName);
   ASSERT_NE(symbol_offset, 0u);
 
   MessageLoopWrapper loop_wrapper;
@@ -100,8 +99,7 @@ TEST(ElfSymbol, Lookup) {
     debug_ipc::LaunchReply launch_reply;
     remote_api->OnLaunch(launch_request, &launch_reply);
     ASSERT_EQ(launch_reply.status, ZX_OK)
-        << "Expected ZX_OK, Got: "
-        << debug_ipc::ZxStatusToString(launch_reply.status);
+        << "Expected ZX_OK, Got: " << debug_ipc::ZxStatusToString(launch_reply.status);
 
     // We run the look to get the notifications sent by the agent.
     // The stream backend will stop the loop once it has received the modules

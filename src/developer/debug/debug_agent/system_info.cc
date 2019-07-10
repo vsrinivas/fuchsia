@@ -35,16 +35,14 @@ zx::job GetRootJob() {
   }
 
   zx::channel channel;
-  zx_status_t status =
-      fdio_get_service_handle(fd, channel.reset_and_get_address());
+  zx_status_t status = fdio_get_service_handle(fd, channel.reset_and_get_address());
   if (status != ZX_OK) {
     FXL_NOTREACHED();
     return zx::job();
   }
 
   zx_handle_t root_job;
-  zx_status_t fidl_status =
-      fuchsia_sysinfo_DeviceGetRootJob(channel.get(), &status, &root_job);
+  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetRootJob(channel.get(), &status, &root_job);
   if (fidl_status != ZX_OK || status != ZX_OK) {
     FXL_NOTREACHED();
     return zx::job();
@@ -52,8 +50,8 @@ zx::job GetRootJob() {
   return zx::job(root_job);
 }
 
-debug_ipc::ProcessTreeRecord GetProcessTreeRecord(
-    const zx::object_base& object, debug_ipc::ProcessTreeRecord::Type type) {
+debug_ipc::ProcessTreeRecord GetProcessTreeRecord(const zx::object_base& object,
+                                                  debug_ipc::ProcessTreeRecord::Type type) {
   debug_ipc::ProcessTreeRecord result;
   result.type = type;
   result.koid = KoidForObject(object);
@@ -69,8 +67,8 @@ debug_ipc::ProcessTreeRecord GetProcessTreeRecord(
           GetProcessTreeRecord(job, debug_ipc::ProcessTreeRecord::Type::kJob));
     }
     for (const auto& proc : child_procs) {
-      result.children.push_back(GetProcessTreeRecord(
-          proc, debug_ipc::ProcessTreeRecord::Type::kProcess));
+      result.children.push_back(
+          GetProcessTreeRecord(proc, debug_ipc::ProcessTreeRecord::Type::kProcess));
     }
   }
   return result;
@@ -112,8 +110,7 @@ bool FindJob(zx::job root_job, zx_koid_t search_for, zx::job* out) {
 }  // namespace
 
 zx_status_t GetProcessTree(debug_ipc::ProcessTreeRecord* root) {
-  *root = GetProcessTreeRecord(GetRootJob(),
-                               debug_ipc::ProcessTreeRecord::Type::kJob);
+  *root = GetProcessTreeRecord(GetRootJob(), debug_ipc::ProcessTreeRecord::Type::kJob);
   return ZX_OK;
 }
 

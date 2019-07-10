@@ -13,8 +13,7 @@
 namespace debug_agent {
 namespace arch {
 
-zx_status_t SetupHWBreakpoint(uint64_t address,
-                              zx_thread_state_debug_regs_t* debug_regs) {
+zx_status_t SetupHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t* debug_regs) {
   // We search for an unset register.
   int slot = -1;
   for (int i = 0; i < debug_regs->hw_bps_count; i++) {
@@ -44,8 +43,7 @@ zx_status_t SetupHWBreakpoint(uint64_t address,
   return ZX_OK;
 }
 
-zx_status_t RemoveHWBreakpoint(uint64_t address,
-                               zx_thread_state_debug_regs_t* debug_regs) {
+zx_status_t RemoveHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t* debug_regs) {
   // Search for an breakpoint with this address.
   int slot = -1;
   for (int i = 0; i < debug_regs->hw_bps_count; i++) {
@@ -92,12 +90,9 @@ std::string DebugRegistersToString(const zx_thread_state_debug_regs_t& regs) {
     ss << fxl::StringPrintf(
         "%lu. DBGBVR: 0x%lx, DBGBCR: E=%d, PMC=%d, BAS=%d, HMC=%d, SSC=%d, "
         "LBN=%d, BT=%d",
-        i, dbgbvr, ARM64_FLAG_VALUE(dbgbcr, DBGBCR, E),
-        ARM64_FLAG_VALUE(dbgbcr, DBGBCR, PMC),
-        ARM64_FLAG_VALUE(dbgbcr, DBGBCR, BAS),
-        ARM64_FLAG_VALUE(dbgbcr, DBGBCR, HMC),
-        ARM64_FLAG_VALUE(dbgbcr, DBGBCR, SSC),
-        ARM64_FLAG_VALUE(dbgbcr, DBGBCR, LBN),
+        i, dbgbvr, ARM64_FLAG_VALUE(dbgbcr, DBGBCR, E), ARM64_FLAG_VALUE(dbgbcr, DBGBCR, PMC),
+        ARM64_FLAG_VALUE(dbgbcr, DBGBCR, BAS), ARM64_FLAG_VALUE(dbgbcr, DBGBCR, HMC),
+        ARM64_FLAG_VALUE(dbgbcr, DBGBCR, SSC), ARM64_FLAG_VALUE(dbgbcr, DBGBCR, LBN),
         ARM64_FLAG_VALUE(dbgbcr, DBGBCR, BT));
     ss << std::endl;
   }

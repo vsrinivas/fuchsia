@@ -52,8 +52,7 @@ std::vector<char> ReadSocketInput(debug_ipc::BufferedZxSocket* socket) {
 
 // Meant to be used in debug logging.
 std::string LogPreamble(const DebuggedProcess* process) {
-  return fxl::StringPrintf("[P: %lu (%s)] ", process->koid(),
-                           process->name().c_str());
+  return fxl::StringPrintf("[P: %lu (%s)] ", process->koid(), process->name().c_str());
 }
 
 void LogRegisterBreakpoint(DebuggedProcess* process, Breakpoint* bp, uint64_t address) {
@@ -71,20 +70,18 @@ void LogRegisterBreakpoint(DebuggedProcess* process, Breakpoint* bp, uint64_t ad
 }  // namespace
 
 DebuggedProcessCreateInfo::DebuggedProcessCreateInfo() = default;
-DebuggedProcessCreateInfo::DebuggedProcessCreateInfo(zx_koid_t process_koid,
-                                                     zx::process handle)
+DebuggedProcessCreateInfo::DebuggedProcessCreateInfo(zx_koid_t process_koid, zx::process handle)
     : koid(process_koid), handle(std::move(handle)) {}
 
-DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent,
-                                 DebuggedProcessCreateInfo&& create_info)
+DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, DebuggedProcessCreateInfo&& create_info)
     : debug_agent_(debug_agent),
       koid_(create_info.koid),
       process_(std::move(create_info.handle)),
       name_(std::move(create_info.name)) {
   // set this property so we can know about module loads.
   const intptr_t kMagicValue = ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET;
-  zx_object_set_property(process_.get(), ZX_PROP_PROCESS_DEBUG_ADDR,
-                         &kMagicValue, sizeof(kMagicValue));
+  zx_object_set_property(process_.get(), ZX_PROP_PROCESS_DEBUG_ADDR, &kMagicValue,
+                         sizeof(kMagicValue));
 
   // If create_info out or err are not valid, calling Init on the
   // BufferedZxSocket will fail and leave it in an invalid state. This is
@@ -127,8 +124,7 @@ zx_status_t DebuggedProcess::Init() {
   config.process_handle = process_.get();
   config.process_koid = koid_;
   config.watcher = this;
-  zx_status_t status =
-      loop->WatchProcessExceptions(std::move(config), &process_watch_handle_);
+  zx_status_t status = loop->WatchProcessExceptions(std::move(config), &process_watch_handle_);
   if (status != ZX_OK)
     return status;
 
@@ -141,8 +137,8 @@ zx_status_t DebuggedProcess::Init() {
     stdout_.set_error_callback([this]() { OnStdout(true); });
     status = stdout_.Start();
     if (status != ZX_OK) {
-      FXL_LOG(WARNING) << "Could not listen on stdout for process " << name_
-                       << ": " << debug_ipc::ZxStatusToString(status);
+      FXL_LOG(WARNING) << "Could not listen on stdout for process " << name_ << ": "
+                       << debug_ipc::ZxStatusToString(status);
       stdout_.Reset();
     }
   }
@@ -152,8 +148,8 @@ zx_status_t DebuggedProcess::Init() {
     stderr_.set_error_callback([this]() { OnStderr(true); });
     status = stderr_.Start();
     if (status != ZX_OK) {
-      FXL_LOG(WARNING) << "Could not listen on stderr for process " << name_
-                       << ": " << debug_ipc::ZxStatusToString(status);
+      FXL_LOG(WARNING) << "Could not listen on stderr for process " << name_ << ": "
+                       << debug_ipc::ZxStatusToString(status);
       stderr_.Reset();
     }
   }
@@ -175,8 +171,7 @@ void DebuggedProcess::OnPause(const debug_ipc::PauseRequest& request,
       // rare (perhaps we raced with the thread being destroyed). Either way,
       // send our current knowledge of the thread's state.
       debug_ipc::ThreadRecord record;
-      thread->FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal,
-                               nullptr, &record);
+      thread->FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal, nullptr, &record);
       reply->threads.push_back(std::move(record));
     }
     // Could be not found if there is a race between the thread exiting and
@@ -219,8 +214,7 @@ void DebuggedProcess::OnResume(const debug_ipc::ResumeRequest& request) {
 
 void DebuggedProcess::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
                                    debug_ipc::ReadMemoryReply* reply) {
-  ReadProcessMemoryBlocks(process_, request.address, request.size,
-                          &reply->blocks);
+  ReadProcessMemoryBlocks(process_, request.address, request.size, &reply->blocks);
 
   // Remove any breakpoint instructions we've inserted.
   //
@@ -236,8 +230,7 @@ void DebuggedProcess::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
   }
 }
 
-void DebuggedProcess::OnKill(const debug_ipc::KillRequest& request,
-                             debug_ipc::KillReply* reply) {
+void DebuggedProcess::OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillReply* reply) {
   // Remove the watch handle before killing the process to avoid getting
   // exceptions after we stopped listening to them.
   process_watch_handle_ = {};
@@ -265,28 +258,23 @@ std::vector<DebuggedThread*> DebuggedProcess::GetThreads() const {
 }
 
 void DebuggedProcess::PopulateCurrentThreads() {
-  for (zx_koid_t koid :
-       GetChildKoids(process_.get(), ZX_INFO_PROCESS_THREADS)) {
+  for (zx_koid_t koid : GetChildKoids(process_.get(), ZX_INFO_PROCESS_THREADS)) {
     FXL_DCHECK(threads_.find(koid) == threads_.end());
 
     zx_handle_t handle;
-    if (zx_object_get_child(process_.get(), koid, ZX_RIGHT_SAME_RIGHTS,
-                            &handle) == ZX_OK) {
+    if (zx_object_get_child(process_.get(), koid, ZX_RIGHT_SAME_RIGHTS, &handle) == ZX_OK) {
       auto added = threads_.emplace(
-          koid, std::make_unique<DebuggedThread>(
-                    this, zx::thread(handle), koid, zx::exception(),
-                    ThreadCreationOption::kRunningKeepRunning));
+          koid, std::make_unique<DebuggedThread>(this, zx::thread(handle), koid, zx::exception(),
+                                                 ThreadCreationOption::kRunningKeepRunning));
       added.first->second->SendThreadNotification();
     }
   }
 }
 
-void DebuggedProcess::FillThreadRecords(
-    std::vector<debug_ipc::ThreadRecord>* threads) {
+void DebuggedProcess::FillThreadRecords(std::vector<debug_ipc::ThreadRecord>* threads) {
   for (const auto& pair : threads_) {
     debug_ipc::ThreadRecord record;
-    pair.second->FillThreadRecord(
-        debug_ipc::ThreadRecord::StackAmount::kMinimal, nullptr, &record);
+    pair.second->FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal, nullptr, &record);
     threads->push_back(std::move(record));
   }
 }
@@ -296,8 +284,7 @@ bool DebuggedProcess::RegisterDebugState() {
     return true;  // Previously set.
 
   uintptr_t debug_addr = 0;
-  if (process_.get_property(ZX_PROP_PROCESS_DEBUG_ADDR, &debug_addr,
-                            sizeof(debug_addr)) != ZX_OK)
+  if (process_.get_property(ZX_PROP_PROCESS_DEBUG_ADDR, &debug_addr, sizeof(debug_addr)) != ZX_OK)
     return false;  // Can't read value.
 
   if (!debug_addr || debug_addr == ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET)
@@ -310,8 +297,7 @@ bool DebuggedProcess::RegisterDebugState() {
   return true;
 }
 
-void DebuggedProcess::SendModuleNotification(
-    std::vector<uint64_t> paused_thread_koids) {
+void DebuggedProcess::SendModuleNotification(std::vector<uint64_t> paused_thread_koids) {
   // Notify the client of any libraries.
   debug_ipc::NotifyModules notify;
   notify.process_koid = koid_;
@@ -325,8 +311,7 @@ void DebuggedProcess::SendModuleNotification(
   debug_agent_->stream()->Write(writer.MessageComplete());
 }
 
-ProcessBreakpoint* DebuggedProcess::FindProcessBreakpointForAddr(
-    uint64_t address) {
+ProcessBreakpoint* DebuggedProcess::FindProcessBreakpointForAddr(uint64_t address) {
   auto found = breakpoints_.find(address);
   if (found == breakpoints_.end())
     return nullptr;
@@ -334,22 +319,19 @@ ProcessBreakpoint* DebuggedProcess::FindProcessBreakpointForAddr(
 }
 
 ProcessWatchpoint* DebuggedProcess::FindWatchpointByAddress(uint64_t address) {
-  DEBUG_LOG(Process) << LogPreamble(this) << "WP address 0x" << std::hex
-                     << address;
+  DEBUG_LOG(Process) << LogPreamble(this) << "WP address 0x" << std::hex << address;
   auto it = watchpoints_.find(address);
   if (it == watchpoints_.end())
     return nullptr;
   return it->second.get();
 }
 
-zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp,
-                                                uint64_t address) {
+zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp, uint64_t address) {
   LogRegisterBreakpoint(this, bp, address);
 
   auto found = breakpoints_.find(address);
   if (found == breakpoints_.end()) {
-    auto process_breakpoint =
-        std::make_unique<ProcessBreakpoint>(bp, this, this, address);
+    auto process_breakpoint = std::make_unique<ProcessBreakpoint>(bp, this, this, address);
     zx_status_t status = process_breakpoint->Init();
     if (status != ZX_OK)
       return status;
@@ -378,13 +360,12 @@ void DebuggedProcess::UnregisterBreakpoint(Breakpoint* bp, uint64_t address) {
   }
 }
 
-zx_status_t DebuggedProcess::RegisterWatchpoint(
-    Watchpoint* wp, const debug_ipc::AddressRange& range) {
+zx_status_t DebuggedProcess::RegisterWatchpoint(Watchpoint* wp,
+                                                const debug_ipc::AddressRange& range) {
   // We should not install the same watchpoint twice.
   FXL_DCHECK(watchpoints_.find(range.begin) == watchpoints_.end());
 
-  DEBUG_LOG(Process) << LogPreamble(this)
-                     << "Registering watchpoint: " << wp->id() << " on [0x"
+  DEBUG_LOG(Process) << LogPreamble(this) << "Registering watchpoint: " << wp->id() << " on [0x"
                      << std::hex << range.begin << ", 0x" << range.end << ").";
 
   auto process_wp = std::make_unique<ProcessWatchpoint>(wp, this, range);
@@ -396,8 +377,7 @@ zx_status_t DebuggedProcess::RegisterWatchpoint(
   return ZX_OK;
 }
 
-void DebuggedProcess::UnregisterWatchpoint(
-    Watchpoint* wp, const debug_ipc::AddressRange& range) {
+void DebuggedProcess::UnregisterWatchpoint(Watchpoint* wp, const debug_ipc::AddressRange& range) {
   // The process watchpoint owns the resource and will free it upon destruction.
   auto node = watchpoints_.extract(range.begin);
   FXL_DCHECK(!node.empty());
@@ -427,17 +407,15 @@ void DebuggedProcess::OnThreadStarting(zx::exception exception,
   zx::thread thread = GetThreadFromException(exception.get());
 
   auto added = threads_.emplace(
-      exception_info.tid,
-      std::make_unique<DebuggedThread>(
-          this, std::move(thread), exception_info.tid, std::move(exception),
-          ThreadCreationOption::kSuspendedKeepSuspended));
+      exception_info.tid, std::make_unique<DebuggedThread>(
+                              this, std::move(thread), exception_info.tid, std::move(exception),
+                              ThreadCreationOption::kSuspendedKeepSuspended));
 
   // Notify the client.
   added.first->second->SendThreadNotification();
 }
 
-void DebuggedProcess::OnThreadExiting(zx::exception exception,
-                                      zx_exception_info_t exception_info) {
+void DebuggedProcess::OnThreadExiting(zx::exception exception, zx_exception_info_t exception_info) {
   FXL_DCHECK(exception_info.pid == koid());
 
   // Clean up our DebuggedThread object.
@@ -461,8 +439,7 @@ void DebuggedProcess::OnThreadExiting(zx::exception exception,
   notify.record.state = debug_ipc::ThreadRecord::State::kDead;
 
   debug_ipc::MessageWriter writer;
-  debug_ipc::WriteNotifyThread(debug_ipc::MsgHeader::Type::kNotifyThreadExiting,
-                               notify, &writer);
+  debug_ipc::WriteNotifyThread(debug_ipc::MsgHeader::Type::kNotifyThreadExiting, notify, &writer);
   debug_agent_->stream()->Write(writer.MessageComplete());
 }
 
@@ -472,17 +449,15 @@ void DebuggedProcess::OnException(zx::exception exception_token,
 
   DebuggedThread* thread = GetThread(exception_info.tid);
   if (!thread) {
-    FXL_LOG(ERROR) << "Exception on thread " << exception_info.tid
-                   << " which we don't know about.";
+    FXL_LOG(ERROR) << "Exception on thread " << exception_info.tid << " which we don't know about.";
     return;
   }
 
   thread->OnException(std::move(exception_token), exception_info);
 }
 
-void DebuggedProcess::OnAddressSpace(
-    const debug_ipc::AddressSpaceRequest& request,
-    debug_ipc::AddressSpaceReply* reply) {
+void DebuggedProcess::OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
+                                     debug_ipc::AddressSpaceReply* reply) {
   std::vector<zx_info_maps_t> map = GetProcessMaps(process_);
   if (request.address != 0u) {
     for (const auto& entry : map) {
@@ -512,18 +487,16 @@ void DebuggedProcess::OnModules(debug_ipc::ModulesReply* reply) {
     GetModulesForProcess(process_, dl_debug_addr_, &reply->modules);
 }
 
-void DebuggedProcess::OnWriteMemory(
-    const debug_ipc::WriteMemoryRequest& request,
-    debug_ipc::WriteMemoryReply* reply) {
+void DebuggedProcess::OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
+                                    debug_ipc::WriteMemoryReply* reply) {
   size_t actual = 0;
-  reply->status = process_.write_memory(request.address, &request.data[0],
-                                        request.data.size(), &actual);
+  reply->status =
+      process_.write_memory(request.address, &request.data[0], request.data.size(), &actual);
   if (reply->status == ZX_OK && actual != request.data.size())
     reply->status = ZX_ERR_IO;  // Convert partial writes to errors.
 }
 
-void DebuggedProcess::SuspendAll(bool synchronous,
-                                 std::vector<uint64_t>* suspended_koids) {
+void DebuggedProcess::SuspendAll(bool synchronous, std::vector<uint64_t>* suspended_koids) {
   // We issue the suspension order for all the threads.
   for (auto& [thread_koid, thread] : threads_) {
     bool was_suspended = thread->Suspend(synchronous);
@@ -543,13 +516,12 @@ void DebuggedProcess::SuspendAll(bool synchronous,
   }
 }
 
-zx_status_t DebuggedProcess::ReadProcessMemory(uintptr_t address, void* buffer,
-                                               size_t len, size_t* actual) {
+zx_status_t DebuggedProcess::ReadProcessMemory(uintptr_t address, void* buffer, size_t len,
+                                               size_t* actual) {
   return process_.read_memory(address, buffer, len, actual);
 }
 
-zx_status_t DebuggedProcess::WriteProcessMemory(uintptr_t address,
-                                                const void* buffer, size_t len,
+zx_status_t DebuggedProcess::WriteProcessMemory(uintptr_t address, const void* buffer, size_t len,
                                                 size_t* actual) {
   return process_.write_memory(address, buffer, len, actual);
 }
@@ -582,8 +554,7 @@ void DebuggedProcess::OnStderr(bool close) {
   SendIO(debug_ipc::NotifyIO::Type::kStderr, std::move(data));
 }
 
-void DebuggedProcess::SendIO(debug_ipc::NotifyIO::Type type,
-                             const std::vector<char>& data) {
+void DebuggedProcess::SendIO(debug_ipc::NotifyIO::Type type, const std::vector<char>& data) {
   // We send the IO message in chunks.
   auto it = data.begin();
   size_t size = data.size();

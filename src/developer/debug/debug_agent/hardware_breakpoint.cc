@@ -21,8 +21,7 @@ enum class WarningType {
   kUninstall,
 };
 
-void Warn(WarningType type, zx_koid_t thread_koid, uint64_t address,
-          zx_status_t status) {
+void Warn(WarningType type, zx_koid_t thread_koid, uint64_t address, zx_status_t status) {
   // This happens normally when we receive a ZX_EXCP_THREAD_EXITING exception,
   // making the system ignore our uninstall requests.
   if (status == ZX_ERR_NOT_FOUND)
@@ -32,19 +31,16 @@ void Warn(WarningType type, zx_koid_t thread_koid, uint64_t address,
   FXL_LOG(WARNING) << fxl::StringPrintf(
       "Could not %s HW breakpoint for thread %u at "
       "%" PRIX64 ": %s",
-      verb, static_cast<uint32_t>(thread_koid), address,
-      zx_status_get_string(status));
+      verb, static_cast<uint32_t>(thread_koid), address, zx_status_get_string(status));
 }
 
 }  // namespace
 
-HardwareBreakpoint::HardwareBreakpoint(ProcessBreakpoint* process_bp)
-    : process_bp_(process_bp) {}
+HardwareBreakpoint::HardwareBreakpoint(ProcessBreakpoint* process_bp) : process_bp_(process_bp) {}
 
 HardwareBreakpoint::~HardwareBreakpoint() { Uninstall(); }
 
-zx_status_t HardwareBreakpoint::Update(
-    const std::set<zx_koid_t>& thread_koids) {
+zx_status_t HardwareBreakpoint::Update(const std::set<zx_koid_t>& thread_koids) {
   // We get a snapshot of which threads are already installed.
   auto current_threads = installed_threads_;
 
@@ -86,8 +82,8 @@ zx_status_t HardwareBreakpoint::Install(zx_koid_t thread_koid) {
     return ZX_ERR_NOT_FOUND;
   }
 
-  DEBUG_LOG(Breakpoint) << "Installing HW breakpoint on thread " << thread_koid
-                        << " on address 0x" << std::hex << address;
+  DEBUG_LOG(Breakpoint) << "Installing HW breakpoint on thread " << thread_koid << " on address 0x"
+                        << std::hex << address;
 
   // Thread needs to be suspended or on an exception (ZX-3772).
   // We make a synchronous (blocking) call.
@@ -130,8 +126,8 @@ zx_status_t HardwareBreakpoint::Uninstall(zx_koid_t thread_koid) {
     return ZX_ERR_NOT_FOUND;
   }
 
-  DEBUG_LOG(Breakpoint) << "Removing HW breakpoint on thread " << thread_koid
-                        << " on address 0x" << std::hex << address;
+  DEBUG_LOG(Breakpoint) << "Removing HW breakpoint on thread " << thread_koid << " on address 0x"
+                        << std::hex << address;
 
   // Thread needs to be suspended or on an exception (ZX-3772).
   // We make a synchronous (blocking) call.

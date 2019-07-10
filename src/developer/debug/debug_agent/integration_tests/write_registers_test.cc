@@ -63,12 +63,8 @@ class RegistersStreamBackend : public MockStreamBackend {
 
   uint64_t so_test_base_addr() const { return so_test_base_addr_; }
   const std::vector<NotifyException>& exceptions() const { return exceptions_; }
-  const std::vector<NotifyThread>& thread_notifications() const {
-    return thread_notifications_;
-  }
-  const std::optional<debug_ipc::NotifyProcess>& process_exit() const {
-    return process_exit_;
-  }
+  const std::vector<NotifyThread>& thread_notifications() const { return thread_notifications_; }
+  const std::optional<debug_ipc::NotifyProcess>& process_exit() const { return process_exit_; }
 
   // Debug Agent Notifications overrides ---------------------------------------
 
@@ -144,8 +140,7 @@ TEST(WriteRegisterTest, BranchOnRAX) {
     debug_ipc::LaunchReply launch_reply;
     remote_api->OnLaunch(launch_request, &launch_reply);
     ASSERT_EQ(launch_reply.status, static_cast<uint32_t>(ZX_OK))
-        << "Expected ZX_OK, Got: "
-        << debug_ipc::ZxStatusToString(launch_reply.status);
+        << "Expected ZX_OK, Got: " << debug_ipc::ZxStatusToString(launch_reply.status);
 
     loop->Run();
 
@@ -166,15 +161,13 @@ TEST(WriteRegisterTest, BranchOnRAX) {
 
     // We should have gotten a software exception.
     ASSERT_EQ(stream_backend.exceptions().size(), 1u);
-    ASSERT_EQ(stream_backend.exceptions().back().type,
-              NotifyException::Type::kSoftware);
+    ASSERT_EQ(stream_backend.exceptions().back().type, NotifyException::Type::kSoftware);
 
     // Write the registers.
     WriteRegistersRequest write_reg_request;
     write_reg_request.process_koid = launch_reply.process_koid;
     write_reg_request.thread_koid = thread_notification.record.koid;
-    write_reg_request.registers.push_back(
-        CreateUint64Register(RegisterID::kX64_rax, 1u));
+    write_reg_request.registers.push_back(CreateUint64Register(RegisterID::kX64_rax, 1u));
 
     WriteRegistersReply write_reg_reply;
     remote_api->OnWriteRegisters(write_reg_request, &write_reg_reply);
@@ -192,8 +185,7 @@ TEST(WriteRegisterTest, BranchOnRAX) {
     // We should have received a notification that the process exited with exit
     // code 0.
     ASSERT_TRUE(stream_backend.process_exit());
-    EXPECT_EQ(stream_backend.process_exit()->process_koid,
-              launch_reply.process_koid);
+    EXPECT_EQ(stream_backend.process_exit()->process_koid, launch_reply.process_koid);
     EXPECT_EQ(stream_backend.process_exit()->return_code, 0u);
   }
 }
@@ -226,8 +218,7 @@ TEST(WriteRegisterTest, JumpPC) {
     debug_ipc::LaunchReply launch_reply;
     remote_api->OnLaunch(launch_request, &launch_reply);
     ASSERT_EQ(launch_reply.status, static_cast<uint32_t>(ZX_OK))
-        << "Expected ZX_OK, Got: "
-        << debug_ipc::ZxStatusToString(launch_reply.status);
+        << "Expected ZX_OK, Got: " << debug_ipc::ZxStatusToString(launch_reply.status);
 
     loop->Run();
 
@@ -252,8 +243,7 @@ TEST(WriteRegisterTest, JumpPC) {
 
     // We should have gotten a software exception.
     ASSERT_EQ(stream_backend.exceptions().size(), 1u);
-    ASSERT_EQ(stream_backend.exceptions().back().type,
-              NotifyException::Type::kSoftware);
+    ASSERT_EQ(stream_backend.exceptions().back().type, NotifyException::Type::kSoftware);
     const ThreadRecord& record = stream_backend.exceptions().back().thread;
     ASSERT_EQ(record.stack_amount, ThreadRecord::StackAmount::kMinimal);
     ASSERT_FALSE(record.frames.empty());
@@ -288,8 +278,7 @@ TEST(WriteRegisterTest, JumpPC) {
     // We should have received a notification that the process exited with exit
     // code 0.
     ASSERT_TRUE(stream_backend.process_exit());
-    EXPECT_EQ(stream_backend.process_exit()->process_koid,
-              launch_reply.process_koid);
+    EXPECT_EQ(stream_backend.process_exit()->process_koid, launch_reply.process_koid);
     EXPECT_EQ(stream_backend.process_exit()->return_code, 0u);
   }
 }

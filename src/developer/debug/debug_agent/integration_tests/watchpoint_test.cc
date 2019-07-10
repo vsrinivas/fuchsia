@@ -74,11 +74,11 @@ class WatchpointStreamBackend : public MockStreamBackend {
 
 constexpr uint32_t kWatchpointId = 0x1234;
 
-std::pair<LaunchRequest, LaunchReply> GetLaunchRequest(
-    const WatchpointStreamBackend& backend, std::string exe);
+std::pair<LaunchRequest, LaunchReply> GetLaunchRequest(const WatchpointStreamBackend& backend,
+                                                       std::string exe);
 
-std::pair<AddOrChangeBreakpointRequest, AddOrChangeBreakpointReply>
-GetWatchpointRequest(const WatchpointStreamBackend& backend, uint64_t address);
+std::pair<AddOrChangeBreakpointRequest, AddOrChangeBreakpointReply> GetWatchpointRequest(
+    const WatchpointStreamBackend& backend, uint64_t address);
 
 #if defined(__x86_64__)
 TEST(Watchpoint, DefaultCase) {
@@ -93,8 +93,7 @@ TEST(Watchpoint, DISABLED_DefaultCase) {
   SoWrapper so_wrapper;
   ASSERT_TRUE(so_wrapper.Init(kTestSo)) << "Could not load so " << kTestSo;
 
-  uint64_t variable_offset =
-      so_wrapper.GetSymbolOffset(kTestSo, "gWatchpointVariable");
+  uint64_t variable_offset = so_wrapper.GetSymbolOffset(kTestSo, "gWatchpointVariable");
   ASSERT_NE(variable_offset, 0u);
 
   MessageLoopWrapper loop_wrapper;
@@ -118,9 +117,8 @@ TEST(Watchpoint, DISABLED_DefaultCase) {
     ASSERT_NE(backend.so_test_base_addr(), 0u);
     uint64_t address = backend.so_test_base_addr() + variable_offset;
 
-    DEBUG_LOG(Test) << std::hex << "Base: 0x" << backend.so_test_base_addr()
-                    << ", Offset: 0x" << variable_offset
-                    << ", Actual Address: 0x" << address;
+    DEBUG_LOG(Test) << std::hex << "Base: 0x" << backend.so_test_base_addr() << ", Offset: 0x"
+                    << variable_offset << ", Actual Address: 0x" << address;
 
     auto [wp_request, wp_reply] = GetWatchpointRequest(backend, address);
     remote_api->OnAddOrChangeBreakpoint(wp_request, &wp_reply);
@@ -153,16 +151,16 @@ TEST(Watchpoint, DISABLED_DefaultCase) {
 
 // Helpers ---------------------------------------------------------------------
 
-std::pair<LaunchRequest, LaunchReply> GetLaunchRequest(
-    const WatchpointStreamBackend& backend, std::string exe) {
+std::pair<LaunchRequest, LaunchReply> GetLaunchRequest(const WatchpointStreamBackend& backend,
+                                                       std::string exe) {
   LaunchRequest launch_request = {};
   launch_request.argv = {exe};
   launch_request.inferior_type = InferiorType::kBinary;
   return {launch_request, {}};
 }
 
-std::pair<AddOrChangeBreakpointRequest, AddOrChangeBreakpointReply>
-GetWatchpointRequest(const WatchpointStreamBackend& backend, uint64_t address) {
+std::pair<AddOrChangeBreakpointRequest, AddOrChangeBreakpointReply> GetWatchpointRequest(
+    const WatchpointStreamBackend& backend, uint64_t address) {
   // We add a breakpoint in that address.
   debug_ipc::ProcessBreakpointSettings location = {};
   location.process_koid = backend.process_koid();
@@ -206,8 +204,7 @@ void WatchpointStreamBackend::HandleNotifyModules(NotifyModules modules) {
 
 // Records the exception given from the debug agent.
 void WatchpointStreamBackend::HandleNotifyException(NotifyException exception) {
-  DEBUG_LOG(Test) << "Received "
-                  << NotifyException::TypeToString(exception.type)
+  DEBUG_LOG(Test) << "Received " << NotifyException::TypeToString(exception.type)
                   << " on Thread: " << exception.thread.thread_koid;
   exceptions_.push_back(std::move(exception));
   ShouldQuitLoop();
@@ -219,8 +216,7 @@ void WatchpointStreamBackend::HandleNotifyThreadStarting(NotifyThread thread) {
   ShouldQuitLoop();
 }
 
-void WatchpointStreamBackend::HandleNotifyProcessExiting(
-    NotifyProcessExiting process) {
+void WatchpointStreamBackend::HandleNotifyProcessExiting(NotifyProcessExiting process) {
   DEBUG_LOG(Test) << "Process " << process.process_koid
                   << " exiting with return code: " << process.return_code;
   FXL_DCHECK(process.process_koid == process_koid_);

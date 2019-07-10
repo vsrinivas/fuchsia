@@ -6,26 +6,23 @@
 
 namespace debug_agent {
 
-zx_status_t MockArchProvider::InstallHWBreakpoint(zx::thread* thread,
-                                                  uint64_t address) {
+zx_status_t MockArchProvider::InstallHWBreakpoint(zx::thread* thread, uint64_t address) {
   bp_installs_[address]++;
   return ZX_OK;
 }
 
-zx_status_t MockArchProvider::UninstallHWBreakpoint(zx::thread* thread,
-                                                    uint64_t address) {
+zx_status_t MockArchProvider::UninstallHWBreakpoint(zx::thread* thread, uint64_t address) {
   bp_uninstalls_[address]++;
   return ZX_OK;
 }
 
-zx_status_t MockArchProvider::InstallWatchpoint(
-    zx::thread*, const debug_ipc::AddressRange& range) {
+zx_status_t MockArchProvider::InstallWatchpoint(zx::thread*, const debug_ipc::AddressRange& range) {
   wp_installs_[range]++;
   return ZX_OK;
 }
 
-zx_status_t MockArchProvider::UninstallWatchpoint(
-    zx::thread*, const debug_ipc::AddressRange& range) {
+zx_status_t MockArchProvider::UninstallWatchpoint(zx::thread*,
+                                                  const debug_ipc::AddressRange& range) {
   wp_uninstalls_[range]++;
   return ZX_OK;
 }
@@ -60,8 +57,7 @@ size_t MockArchProvider::TotalBreakpointUninstallCalls() const {
   return total;
 }
 
-size_t MockArchProvider::WatchpointInstallCount(
-    const debug_ipc::AddressRange& range) const {
+size_t MockArchProvider::WatchpointInstallCount(const debug_ipc::AddressRange& range) const {
   auto it = wp_installs_.find(range);
   if (it == wp_installs_.end())
     return 0;
@@ -76,8 +72,7 @@ size_t MockArchProvider::TotalWatchpointInstallCalls() const {
   return total;
 }
 
-size_t MockArchProvider::WatchpointUninstallCount(
-    const debug_ipc::AddressRange& range) const {
+size_t MockArchProvider::WatchpointUninstallCount(const debug_ipc::AddressRange& range) const {
   auto it = wp_uninstalls_.find(range);
   if (it == wp_uninstalls_.end())
     return 0;

@@ -20,8 +20,7 @@ namespace {
 
 using debug_ipc::RegisterID;
 
-inline debug_ipc::Register CreateRegister(RegisterID id, uint32_t length,
-                                          const void* val_ptr) {
+inline debug_ipc::Register CreateRegister(RegisterID id, uint32_t length, const void* val_ptr) {
   debug_ipc::Register reg;
   reg.id = id;
   const uint8_t* ptr = reinterpret_cast<const uint8_t*>(val_ptr);
@@ -29,11 +28,9 @@ inline debug_ipc::Register CreateRegister(RegisterID id, uint32_t length,
   return reg;
 }
 
-zx_status_t ReadGeneralRegs(const zx::thread& thread,
-                            std::vector<debug_ipc::Register>* out) {
+zx_status_t ReadGeneralRegs(const zx::thread& thread, std::vector<debug_ipc::Register>* out) {
   zx_thread_state_general_regs gen_regs;
-  zx_status_t status = thread.read_state(ZX_THREAD_STATE_GENERAL_REGS,
-                                         &gen_regs, sizeof(gen_regs));
+  zx_status_t status = thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &gen_regs, sizeof(gen_regs));
   if (status != ZX_OK)
     return status;
 
@@ -41,11 +38,9 @@ zx_status_t ReadGeneralRegs(const zx::thread& thread,
   return ZX_OK;
 }
 
-zx_status_t ReadFPRegs(const zx::thread& thread,
-                       std::vector<debug_ipc::Register>* out) {
+zx_status_t ReadFPRegs(const zx::thread& thread, std::vector<debug_ipc::Register>* out) {
   zx_thread_state_fp_regs fp_regs;
-  zx_status_t status =
-      thread.read_state(ZX_THREAD_STATE_FP_REGS, &fp_regs, sizeof(fp_regs));
+  zx_status_t status = thread.read_state(ZX_THREAD_STATE_FP_REGS, &fp_regs, sizeof(fp_regs));
   if (status != ZX_OK)
     return status;
 
@@ -69,11 +64,9 @@ zx_status_t ReadFPRegs(const zx::thread& thread,
   return ZX_OK;
 }
 
-inline zx_status_t ReadVectorRegs(const zx::thread& thread,
-                                  std::vector<debug_ipc::Register>* out) {
+inline zx_status_t ReadVectorRegs(const zx::thread& thread, std::vector<debug_ipc::Register>* out) {
   zx_thread_state_vector_regs vec_regs;
-  zx_status_t status = thread.read_state(ZX_THREAD_STATE_VECTOR_REGS, &vec_regs,
-                                         sizeof(vec_regs));
+  zx_status_t status = thread.read_state(ZX_THREAD_STATE_VECTOR_REGS, &vec_regs, sizeof(vec_regs));
   if (status != ZX_OK)
     return status;
 
@@ -93,11 +86,10 @@ inline zx_status_t ReadVectorRegs(const zx::thread& thread,
 
 // TODO: Enable this when the zircon patch for debug registers lands.
 
-inline zx_status_t ReadDebugRegs(const zx::thread& thread,
-                                 std::vector<debug_ipc::Register>* out) {
+inline zx_status_t ReadDebugRegs(const zx::thread& thread, std::vector<debug_ipc::Register>* out) {
   zx_thread_state_debug_regs_t debug_regs;
-  zx_status_t status = thread.read_state(ZX_THREAD_STATE_DEBUG_REGS,
-                                         &debug_regs, sizeof(debug_regs));
+  zx_status_t status =
+      thread.read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
   if (status != ZX_OK)
     return status;
 
@@ -115,26 +107,22 @@ inline zx_status_t ReadDebugRegs(const zx::thread& thread,
 
 const BreakInstructionType kBreakInstruction = 0xCC;
 
-uint64_t ArchProvider::BreakpointInstructionForSoftwareExceptionAddress(
-    uint64_t exception_addr) {
+uint64_t ArchProvider::BreakpointInstructionForSoftwareExceptionAddress(uint64_t exception_addr) {
   // An X86 exception is 1 byte and a breakpoint exception is triggered with
   // RIP pointing to the following instruction.
   return exception_addr - 1;
 }
 
-uint64_t ArchProvider::NextInstructionForSoftwareExceptionAddress(
-    uint64_t exception_addr) {
+uint64_t ArchProvider::NextInstructionForSoftwareExceptionAddress(uint64_t exception_addr) {
   // Exception address is the one following the instruction that caused it,
   // so nothing needs to be done.
   return exception_addr;
 }
 
-bool ArchProvider::IsBreakpointInstruction(zx::process& process,
-                                           uint64_t address) {
+bool ArchProvider::IsBreakpointInstruction(zx::process& process, uint64_t address) {
   uint8_t data;
   size_t actual_read = 0;
-  if (process.read_memory(address, &data, 1, &actual_read) != ZX_OK ||
-      actual_read != 1)
+  if (process.read_memory(address, &data, 1, &actual_read) != ZX_OK || actual_read != 1)
     return false;
 
   // This handles the normal encoding of debug breakpoints (0xCC). It's also
@@ -168,11 +156,9 @@ void ArchProvider::SaveGeneralRegs(const zx_thread_state_general_regs& input,
   out->push_back(CreateRegister(RegisterID::kX64_rflags, 8u, &input.rflags));
 }
 
-uint64_t ArchProvider::InstructionForWatchpointHit(
-    const DebuggedThread& thread) {
+uint64_t ArchProvider::InstructionForWatchpointHit(const DebuggedThread& thread) {
   zx_thread_state_debug_regs_t debug_regs;
-  thread.thread().read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
-                             sizeof(debug_regs));
+  thread.thread().read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
   uint64_t exception_address = 0;
   // HW breakpoints have priority over single-step.
   if (X86_FLAG_VALUE(debug_regs.dr6, DR6B0)) {
@@ -190,26 +176,19 @@ uint64_t ArchProvider::InstructionForWatchpointHit(
   return exception_address;
 }
 
-uint64_t ArchProvider::NextInstructionForWatchpointHit(
-    uint64_t exception_addr) {
+uint64_t ArchProvider::NextInstructionForWatchpointHit(uint64_t exception_addr) {
   return exception_addr;
 }
 
-uint64_t* ArchProvider::IPInRegs(zx_thread_state_general_regs* regs) {
-  return &regs->rip;
-}
-uint64_t* ArchProvider::SPInRegs(zx_thread_state_general_regs* regs) {
-  return &regs->rsp;
-}
-uint64_t* ArchProvider::BPInRegs(zx_thread_state_general_regs* regs) {
-  return &regs->rbp;
-}
+uint64_t* ArchProvider::IPInRegs(zx_thread_state_general_regs* regs) { return &regs->rip; }
+uint64_t* ArchProvider::SPInRegs(zx_thread_state_general_regs* regs) { return &regs->rsp; }
+uint64_t* ArchProvider::BPInRegs(zx_thread_state_general_regs* regs) { return &regs->rbp; }
 
 ::debug_ipc::Arch ArchProvider::GetArch() { return ::debug_ipc::Arch::kX64; }
 
-zx_status_t ArchProvider::ReadRegisters(
-    const debug_ipc::RegisterCategory::Type& cat, const zx::thread& thread,
-    std::vector<debug_ipc::Register>* out) {
+zx_status_t ArchProvider::ReadRegisters(const debug_ipc::RegisterCategory::Type& cat,
+                                        const zx::thread& thread,
+                                        std::vector<debug_ipc::Register>* out) {
   switch (cat) {
     case debug_ipc::RegisterCategory::Type::kGeneral:
       return ReadGeneralRegs(thread, out);
@@ -230,8 +209,7 @@ zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory& cat,
   switch (cat.type) {
     case debug_ipc::RegisterCategory::Type::kGeneral: {
       zx_thread_state_general_regs_t regs;
-      zx_status_t res =
-          thread->read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
+      zx_status_t res = thread->read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
       if (res != ZX_OK)
         return res;
 
@@ -240,8 +218,7 @@ zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory& cat,
       if (res != ZX_OK)
         return res;
 
-      return thread->write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs,
-                                 sizeof(regs));
+      return thread->write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
     }
     case debug_ipc::RegisterCategory::Type::kFP:
     case debug_ipc::RegisterCategory::Type::kVector:
@@ -259,8 +236,7 @@ zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory& cat,
 namespace {
 
 debug_ipc::NotifyException::Type DetermineHWException(
-    const DebuggedThread& thread,
-    const zx_thread_state_debug_regs_t& debug_regs) {
+    const DebuggedThread& thread, const zx_thread_state_debug_regs_t& debug_regs) {
   // TODO(DX-1445): This permits only one trigger per exception, when overlaps
   //                could occur. For a first pass this is acceptable.
   uint64_t exception_address = 0;
@@ -297,31 +273,28 @@ debug_ipc::NotifyException::Type DetermineHWException(
 
 }  // namespace
 
-uint64_t ArchProvider::BreakpointInstructionForHardwareExceptionAddress(
-    uint64_t exception_addr) {
+uint64_t ArchProvider::BreakpointInstructionForHardwareExceptionAddress(uint64_t exception_addr) {
   // x86 returns the instruction *about* to be executed when hitting the hw
   // breakpoint.
   return exception_addr;
 }
 
-debug_ipc::NotifyException::Type ArchProvider::DecodeExceptionType(
-    const DebuggedThread& thread, uint32_t exception_type) {
+debug_ipc::NotifyException::Type ArchProvider::DecodeExceptionType(const DebuggedThread& thread,
+                                                                   uint32_t exception_type) {
   if (exception_type == ZX_EXCP_SW_BREAKPOINT) {
     return debug_ipc::NotifyException::Type::kSoftware;
   } else if (exception_type == ZX_EXCP_HW_BREAKPOINT) {
     zx_thread_state_debug_regs_t debug_regs;
-    zx_status_t status = thread.thread().read_state(
-        ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
+    zx_status_t status =
+        thread.thread().read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
 
     // Assume single step when in doubt.
     if (status != ZX_OK) {
-      FXL_LOG(WARNING) << "Could not access debug registers for thread "
-                       << thread.koid();
+      FXL_LOG(WARNING) << "Could not access debug registers for thread " << thread.koid();
       return debug_ipc::NotifyException::Type::kSingleStep;
     }
 
-    DEBUG_LOG(Archx64) << "Decoding HW exception. "
-                       << DR6ToString(debug_regs.dr6);
+    DEBUG_LOG(Archx64) << "Decoding HW exception. " << DR6ToString(debug_regs.dr6);
 
     return DetermineHWException(thread, debug_regs);
   } else {
@@ -329,14 +302,12 @@ debug_ipc::NotifyException::Type ArchProvider::DecodeExceptionType(
   }
 }
 
-zx_status_t ArchProvider::InstallHWBreakpoint(zx::thread* thread,
-                                              uint64_t address) {
+zx_status_t ArchProvider::InstallHWBreakpoint(zx::thread* thread, uint64_t address) {
   FXL_DCHECK(thread);
   // NOTE: Thread needs for the thread to be stopped. Will fail otherwise.
   zx_status_t status;
   zx_thread_state_debug_regs_t debug_regs;
-  status = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
-                              sizeof(debug_regs));
+  status = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
   if (status != ZX_OK)
     return status;
 
@@ -350,18 +321,15 @@ zx_status_t ArchProvider::InstallHWBreakpoint(zx::thread* thread,
   DEBUG_LOG(Archx64) << "After installing HW breakpoint: " << std::endl
                      << DebugRegistersToString(debug_regs);
 
-  return thread->write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
-                             sizeof(debug_regs));
+  return thread->write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
 }
 
-zx_status_t ArchProvider::UninstallHWBreakpoint(zx::thread* thread,
-                                                uint64_t address) {
+zx_status_t ArchProvider::UninstallHWBreakpoint(zx::thread* thread, uint64_t address) {
   FXL_DCHECK(thread);
   // NOTE: Thread needs for the thread to be stopped. Will fail otherwise.
   zx_status_t status;
   zx_thread_state_debug_regs_t debug_regs;
-  status = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
-                              sizeof(debug_regs));
+  status = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
   if (status != ZX_OK)
     return status;
 
@@ -375,18 +343,16 @@ zx_status_t ArchProvider::UninstallHWBreakpoint(zx::thread* thread,
   DEBUG_LOG(Archx64) << "After uninstalling HW breakpoint: " << std::endl
                      << DebugRegistersToString(debug_regs);
 
-  return thread->write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
-                             sizeof(debug_regs));
+  return thread->write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
 }
 
-zx_status_t ArchProvider::InstallWatchpoint(
-    zx::thread* thread, const debug_ipc::AddressRange& range) {
+zx_status_t ArchProvider::InstallWatchpoint(zx::thread* thread,
+                                            const debug_ipc::AddressRange& range) {
   FXL_DCHECK(thread);
   // NOTE: Thread needs for the thread to be stopped. Will fail otherwise.
   zx_status_t status;
   zx_thread_state_debug_regs_t debug_regs;
-  status = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
-                              sizeof(debug_regs));
+  status = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
   if (status != ZX_OK)
     return status;
 
@@ -401,18 +367,16 @@ zx_status_t ArchProvider::InstallWatchpoint(
   DEBUG_LOG(Archx64) << "After installing watchpoint: " << std::endl
                      << DebugRegistersToString(debug_regs);
 
-  return thread->write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
-                             sizeof(debug_regs));
+  return thread->write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
 }
 
-zx_status_t ArchProvider::UninstallWatchpoint(
-    zx::thread* thread, const debug_ipc::AddressRange& range) {
+zx_status_t ArchProvider::UninstallWatchpoint(zx::thread* thread,
+                                              const debug_ipc::AddressRange& range) {
   FXL_DCHECK(thread);
   // NOTE: Thread needs for the thread to be stopped. Will fail otherwise.
   zx_status_t status;
   zx_thread_state_debug_regs_t debug_regs;
-  status = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
-                              sizeof(debug_regs));
+  status = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
   if (status != ZX_OK)
     return status;
 
@@ -427,8 +391,7 @@ zx_status_t ArchProvider::UninstallWatchpoint(
   DEBUG_LOG(Archx64) << "After uninstalling watchpoint: " << std::endl
                      << DebugRegistersToString(debug_regs);
 
-  return thread->write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
-                             sizeof(debug_regs));
+  return thread->write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
 }
 
 }  // namespace arch

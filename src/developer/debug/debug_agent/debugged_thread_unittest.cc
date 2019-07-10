@@ -45,8 +45,7 @@ bool FindRegister(const std::vector<Register>& regs, RegisterID id) {
 
 class FakeArchProvider : public arch::ArchProvider {
  public:
-  zx_status_t ReadRegisters(const debug_ipc::RegisterCategory::Type& type,
-                            const zx::thread&,
+  zx_status_t ReadRegisters(const debug_ipc::RegisterCategory::Type& type, const zx::thread&,
                             std::vector<debug_ipc::Register>* out) override {
     auto it = categories_.find(type);
     if (it == categories_.end())
@@ -56,8 +55,7 @@ class FakeArchProvider : public arch::ArchProvider {
     return ZX_OK;
   }
 
-  zx_status_t WriteRegisters(const debug_ipc::RegisterCategory& cat,
-                             zx::thread*) override {
+  zx_status_t WriteRegisters(const debug_ipc::RegisterCategory& cat, zx::thread*) override {
     auto& written_cat = regs_written_[cat.type];
     for (const Register& reg : cat.registers) {
       written_cat.push_back(reg);
@@ -77,8 +75,7 @@ class FakeArchProvider : public arch::ArchProvider {
     }
   }
 
-  const std::map<RegisterCategory::Type, std::vector<Register>>& regs_written()
-      const {
+  const std::map<RegisterCategory::Type, std::vector<Register>>& regs_written() const {
     return regs_written_;
   }
 
@@ -105,15 +102,13 @@ class ScopedFakeArchProvider {
 
 class FakeProcess : public DebuggedProcess {
  public:
-  FakeProcess(zx_koid_t koid)
-      : DebuggedProcess(nullptr, {koid, zx::process()}) {}
+  FakeProcess(zx_koid_t koid) : DebuggedProcess(nullptr, {koid, zx::process()}) {}
   ~FakeProcess() = default;
 
   DebuggedThread* CreateThread(zx_koid_t tid) {
     if (!thread_) {
-      thread_ = std::make_unique<DebuggedThread>(
-          this, zx::thread(), tid, zx::exception(),
-          ThreadCreationOption::kSuspendedKeepSuspended);
+      thread_ = std::make_unique<DebuggedThread>(this, zx::thread(), tid, zx::exception(),
+                                                 ThreadCreationOption::kSuspendedKeepSuspended);
     }
     return thread_.get();
   }
@@ -132,8 +127,7 @@ TEST(DebuggedThread, ReadRegisters) {
   FakeProcess fake_process(1u);
   DebuggedThread* thread = fake_process.CreateThread(1u);
 
-  std::vector<RegisterCategory::Type> cats_to_get = {
-      RegisterCategory::Type::kGeneral};
+  std::vector<RegisterCategory::Type> cats_to_get = {RegisterCategory::Type::kGeneral};
 
   std::vector<RegisterCategory> categories;
   thread->ReadRegisters(cats_to_get, &categories);
@@ -156,9 +150,9 @@ TEST(DebuggedThread, ReadRegistersGettingErrorShouldStillReturnTheRest) {
   arch->AddCategory(RegisterCategory::Type::kGeneral, kGeneralCount);
   arch->AddCategory(RegisterCategory::Type::kDebug, kDebugCount);
 
-  std::vector<RegisterCategory::Type> cats_to_get = {
-      RegisterCategory::Type::kGeneral, RegisterCategory::Type::kVector,
-      RegisterCategory::Type::kDebug};
+  std::vector<RegisterCategory::Type> cats_to_get = {RegisterCategory::Type::kGeneral,
+                                                     RegisterCategory::Type::kVector,
+                                                     RegisterCategory::Type::kDebug};
 
   std::vector<RegisterCategory> categories;
   thread->ReadRegisters(cats_to_get, &categories);
@@ -239,22 +233,19 @@ TEST(DebuggedThread, FillThreadRecord) {
   // Set the name of the current thread so we can find it.
   const std::string thread_name("ProcessInfo test thread name");
   std::string old_name = NameForObject(current_thread);
-  current_thread.set_property(ZX_PROP_NAME, thread_name.c_str(),
-                              thread_name.size());
+  current_thread.set_property(ZX_PROP_NAME, thread_name.c_str(), thread_name.size());
   EXPECT_EQ(thread_name, NameForObject(current_thread));
 
-  auto thread = std::make_unique<DebuggedThread>(
-      &fake_process, std::move(current_thread), current_thread_koid,
-      zx::exception(), ThreadCreationOption::kRunningKeepRunning);
+  auto thread = std::make_unique<DebuggedThread>(&fake_process, std::move(current_thread),
+                                                 current_thread_koid, zx::exception(),
+                                                 ThreadCreationOption::kRunningKeepRunning);
 
   // Request no stack since this thread should be running.
   debug_ipc::ThreadRecord record;
-  thread->FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kNone, nullptr,
-                           &record);
+  thread->FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kNone, nullptr, &record);
 
   // Put back the old thread name for hygiene.
-  zx::thread::self()->set_property(ZX_PROP_NAME, old_name.c_str(),
-                                   old_name.size());
+  zx::thread::self()->set_property(ZX_PROP_NAME, old_name.c_str(), old_name.size());
 
   // Validate the results.
   EXPECT_EQ(kProcessKoid, record.process_koid);

@@ -40,8 +40,7 @@ void __attribute__((noinline)) ThreadFunc2(ThreadData* data) {
 
   // Block until the backtrace is done being completed.
   if (!data->backtrace_done) {
-    data->backtrace_done_cv.wait(lock,
-                                 [data]() { return data->backtrace_done; });
+    data->backtrace_done_cv.wait(lock, [data]() { return data->backtrace_done; });
   }
 }
 
@@ -66,8 +65,7 @@ zx::suspend_token SyncSuspendThread(zx::thread& thread) {
 
   // Need long timeout when running on shared bots on QEMU.
   zx_signals_t observed = 0;
-  status = thread.wait_one(ZX_THREAD_SUSPENDED, zx::deadline_after(zx::sec(10)),
-                           &observed);
+  status = thread.wait_one(ZX_THREAD_SUSPENDED, zx::deadline_after(zx::sec(10)), &observed);
   EXPECT_TRUE(observed & ZX_THREAD_SUSPENDED);
   if (status != ZX_OK)
     return zx::suspend_token();
@@ -91,20 +89,18 @@ void DoUnwindTest(bool expect_registers) {
 
     // Get the registers for the unwinder.
     zx_thread_state_general_regs regs;
-    zx_status_t status = data.thread.read_state(ZX_THREAD_STATE_GENERAL_REGS,
-                                                &regs, sizeof(regs));
+    zx_status_t status = data.thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
     ASSERT_EQ(ZX_OK, status);
 
     // The debug addr is necessary to find the unwind information.
     uintptr_t debug_addr = 0;
-    status = zx::process::self()->get_property(ZX_PROP_PROCESS_DEBUG_ADDR,
-                                               &debug_addr, sizeof(debug_addr));
+    status = zx::process::self()->get_property(ZX_PROP_PROCESS_DEBUG_ADDR, &debug_addr,
+                                               sizeof(debug_addr));
     ASSERT_EQ(ZX_OK, status);
     ASSERT_NE(0u, debug_addr);
 
     // Do the unwinding.
-    status = UnwindStack(*zx::process::self(), debug_addr, data.thread, regs,
-                         16, &stack);
+    status = UnwindStack(*zx::process::self(), debug_addr, data.thread, regs, 16, &stack);
     ASSERT_EQ(ZX_OK, status);
 
     data.backtrace_done = true;

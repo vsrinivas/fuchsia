@@ -50,8 +50,8 @@ int main() {
 
   {
     zx_signals_t observed;
-    status = zx_object_wait_one(thread_handle, ZX_THREAD_SUSPENDED,
-                                zx_deadline_after(ZX_SEC(1)), &observed);
+    status = zx_object_wait_one(thread_handle, ZX_THREAD_SUSPENDED, zx_deadline_after(ZX_SEC(1)),
+                                &observed);
     FXL_DCHECK(status == ZX_OK) << "Could not get suspended signal: " << status;
     FXL_DCHECK((observed & ZX_THREAD_SUSPENDED) != 0);
   }
@@ -61,8 +61,8 @@ int main() {
   zx_handle_close(suspend_token);
   {
     zx_signals_t observed;
-    status = zx_object_wait_one(thread_handle, ZX_THREAD_RUNNING,
-                                zx_deadline_after(ZX_SEC(1)), &observed);
+    status = zx_object_wait_one(thread_handle, ZX_THREAD_RUNNING, zx_deadline_after(ZX_SEC(1)),
+                                &observed);
     FXL_DCHECK(status == ZX_OK) << "Could not get running signal: " << status;
     FXL_DCHECK((observed & ZX_THREAD_RUNNING) != 0);
   }
