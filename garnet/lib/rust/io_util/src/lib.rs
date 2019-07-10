@@ -16,7 +16,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, HandleBased},
     std::ffi::CString,
-    std::path::{Component, PathBuf},
+    std::path::{Component, Path},
     std::ptr,
     std::str::from_utf8,
 };
@@ -30,7 +30,7 @@ pub const OPEN_RIGHT_WRITABLE: u32 = fidl_fuchsia_io::OPEN_RIGHT_WRITABLE;
 /// encountered). This function will not block.
 pub fn open_node<'a>(
     dir: &'a DirectoryProxy,
-    path: &'a PathBuf,
+    path: &'a Path,
     flags: u32,
     mode: u32,
 ) -> Result<NodeProxy, Error> {
@@ -44,7 +44,7 @@ pub fn open_node<'a>(
 /// convert it into a DirectoryProxy. This function will not block.
 pub fn open_directory<'a>(
     dir: &'a DirectoryProxy,
-    path: &'a PathBuf,
+    path: &'a Path,
     flags: u32,
 ) -> Result<DirectoryProxy, Error> {
     node_to_directory(open_node(dir, path, flags | OPEN_FLAG_DIRECTORY, MODE_TYPE_DIRECTORY)?)
@@ -54,7 +54,7 @@ pub fn open_directory<'a>(
 /// it into a FileProxy. This function will not block.
 pub fn open_file<'a>(
     dir: &'a DirectoryProxy,
-    path: &'a PathBuf,
+    path: &'a Path,
     flags: u32,
 ) -> Result<FileProxy, Error> {
     node_to_file(open_node(dir, path, flags, MODE_TYPE_FILE)?)
@@ -62,7 +62,7 @@ pub fn open_file<'a>(
 
 pub fn create_sub_directories(
     mut dir: DirectoryProxy,
-    path: &PathBuf,
+    path: &Path,
 ) -> Result<DirectoryProxy, Error> {
     for part in path.components() {
         if let Component::Normal(part) = part {
@@ -181,12 +181,11 @@ pub fn clone_directory(dir: &DirectoryProxy, flags: u32) -> Result<DirectoryProx
 
 /// canonicalize_path will remove a leading `/` if it exists, since it's always unnecessary and in
 /// some cases disallowed (US-569).
-pub fn canonicalize_path(path: &str) -> String {
-    let mut res = path.to_string();
-    if res.starts_with("/") {
-        res.remove(0);
+pub fn canonicalize_path(path: &str) -> &str {
+    if path.starts_with('/') {
+        return &path[1..];
     }
-    res
+    path
 }
 
 #[cfg(test)]
@@ -206,22 +205,19 @@ mod tests {
         tempfile::TempDir,
     };
 
-    #[test]
-    fn open_and_read_file_test() {
-        let mut executor = fasync::Executor::new().unwrap();
-        executor.run_singlethreaded(async {
-            let tempdir = TempDir::new().expect("failed to create tmp dir");
-            let data = "abc".repeat(10000);
-            fs::write(tempdir.path().join("myfile"), &data).expect("failed writing file");
+    #[fasync::run_singlethreaded(test)]
+    async fn open_and_read_file_test() {
+        let tempdir = TempDir::new().expect("failed to create tmp dir");
+        let data = "abc".repeat(10000);
+        fs::write(tempdir.path().join("myfile"), &data).expect("failed writing file");
 
-            let dir =
-                open_directory_in_namespace(tempdir.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
-                    .expect("could not open tmp dir");
-            let path = PathBuf::from("myfile");
-            let file = open_file(&dir, &path, OPEN_RIGHT_READABLE).expect("could not open file");
-            let contents = await!(read_file(&file)).expect("could not read file");
-            assert_eq!(&contents, &data, "File contents did not match");
-        });
+        let dir =
+            open_directory_in_namespace(tempdir.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
+                .expect("could not open tmp dir");
+        let path = Path::new("myfile");
+        let file = open_file(&dir, &path, OPEN_RIGHT_READABLE).expect("could not open file");
+        let contents = await!(read_file(&file)).expect("could not read file");
+        assert_eq!(&contents, &data, "File contents did not match");
     }
 
     #[fasync::run_until_stalled(test)]
@@ -258,7 +254,7 @@ mod tests {
             ("write_only", OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, false),
             ("write_only", OPEN_RIGHT_WRITABLE, true),
         ] {
-            let file_proxy = open_file(&example_dir_proxy, &PathBuf::from(file_name), flags)?;
+            let file_proxy = open_file(&example_dir_proxy, &Path::new(file_name), flags)?;
             match (should_succeed, await!(file_proxy.describe())) {
                 (true, Ok(_)) => (),
                 (false, Err(_)) => continue,
@@ -285,8 +281,8 @@ mod tests {
     async fn create_sub_directories_test() -> Result<(), Error> {
         let tempdir = TempDir::new()?;
 
-        let path = PathBuf::from("path/to/example/dir");
-        let file_name = PathBuf::from("example_file_name");
+        let path = Path::new("path/to/example/dir");
+        let file_name = Path::new("example_file_name");
         let data = "file contents";
 
         let root_dir = open_directory_in_namespace(
@@ -294,8 +290,15 @@ mod tests {
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )?;
 
-        let sub_dir = create_sub_directories(clone_directory(&root_dir, fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS)?, &path)?;
-        let file = open_file(&sub_dir, &file_name, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE)?;
+        let sub_dir = create_sub_directories(
+            clone_directory(&root_dir, fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS)?,
+            &path,
+        )?;
+        let file = open_file(
+            &sub_dir,
+            &file_name,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE,
+        )?;
 
         let (s, _) = await!(file.write(&mut data.as_bytes().to_vec().into_iter()))?;
         assert_eq!(zx::Status::OK, zx::Status::from_raw(s), "writing to the file failed");

@@ -134,8 +134,9 @@ impl Model {
                     "component hosting capability is non-executable: {}",
                     realm.abs_moniker
                 )))?;
-            let path = io_util::canonicalize_path(&path.to_string());
-            out_dir.open(flags, open_mode, &path, server_end).expect("failed to send open message");
+            let path = path.to_string();
+            let path = io_util::canonicalize_path(&path);
+            out_dir.open(flags, open_mode, path, server_end).expect("failed to send open message");
             eager_children
         };
         await!(self.bind_eager_children_recursive(eager_children))?;

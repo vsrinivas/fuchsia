@@ -13,7 +13,7 @@ use {
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon as zx,
     futures::future::FutureObj,
-    std::path::PathBuf,
+    std::path::Path,
 };
 
 pub static SCHEME: &str = "fuchsia-pkg";
@@ -36,11 +36,12 @@ impl FuchsiaPkgResolver {
         // Parse URL.
         let fuchsia_pkg_url = PkgUrl::parse(component_url)
             .map_err(|e| ResolverError::url_parse_error(component_url, e))?;
-        fuchsia_pkg_url
-            .resource()
-            .ok_or(ResolverError::url_missing_resource_error(component_url))?;
+        let cm_path = Path::new(
+            fuchsia_pkg_url
+                .resource()
+                .ok_or(ResolverError::url_missing_resource_error(component_url))?,
+        );
         let package_url = fuchsia_pkg_url.root_url().to_string();
-        let cm_path: PathBuf = fuchsia_pkg_url.resource().unwrap().into();
 
         // Resolve package.
         let (package_dir_c, package_dir_s) = zx::Channel::create()
@@ -66,7 +67,7 @@ impl FuchsiaPkgResolver {
         let dir = ClientEnd::<DirectoryMarker>::new(package_dir_c)
             .into_proxy()
             .expect("failed to create directory proxy");
-        let file = io_util::open_file(&dir, &cm_path, io_util::OPEN_RIGHT_READABLE)
+        let file = io_util::open_file(&dir, cm_path, io_util::OPEN_RIGHT_READABLE)
             .map_err(|e| ResolverError::manifest_not_available(component_url, e))?;
         let cm_str = await!(io_util::read_file(&file))
             .map_err(|e| ResolverError::manifest_not_available(component_url, e))?;
@@ -185,8 +186,8 @@ mod tests {
         let fsys::Package { package_url, package_dir } = package.unwrap();
         assert_eq!(package_url.unwrap(), "fuchsia-pkg://fuchsia.com/hello_world");
         let dir_proxy = package_dir.unwrap().into_proxy().unwrap();
-        let path = PathBuf::from("meta/component_manager_tests_hello_world.cm");
-        let file_proxy = io_util::open_file(&dir_proxy, &path, io_util::OPEN_RIGHT_READABLE)
+        let path = Path::new("meta/component_manager_tests_hello_world.cm");
+        let file_proxy = io_util::open_file(&dir_proxy, path, io_util::OPEN_RIGHT_READABLE)
             .expect("could not open cm");
         let cm_contents = await!(io_util::read_file(&file_proxy)).expect("could not read cm");
         assert_eq!(

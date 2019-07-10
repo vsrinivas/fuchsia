@@ -303,7 +303,7 @@ mod tests {
         fidl_fuchsia_sys2 as fsys,
         fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
         fuchsia_zircon as zx,
-        std::{convert::TryFrom, iter, path::PathBuf},
+        std::{convert::TryFrom, iter, path::Path},
     };
 
     /// Hosts an out directory with a 'foo' file.
@@ -546,7 +546,7 @@ mod tests {
 
         let in_dir = io_util::open_directory(
             &hub_proxy,
-            &PathBuf::from("self/exec/in"),
+            &Path::new("self/exec/in"),
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");

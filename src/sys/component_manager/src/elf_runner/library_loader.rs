@@ -11,7 +11,7 @@ use {
     futures::{TryFutureExt, TryStreamExt},
     io_util,
     log::*,
-    std::path::PathBuf,
+    std::path::Path,
 };
 
 /// start will expose the `fuchsia.ldsvc.Loader` service over the given channel, providing VMO
@@ -51,7 +51,7 @@ pub fn start(lib_proxy: DirectoryProxy, chan: zx::Channel) {
                         responder.control_handle().shutdown();
                     }
                     LoaderRequest::Config { config, responder } => {
-                        match parse_config_string(&lib_proxy, config) {
+                        match parse_config_string(&lib_proxy, &config) {
                             Ok(new_search_path) => {
                                 search_dirs = new_search_path;
                                 responder.send(zx::sys::ZX_OK)?;
@@ -91,7 +91,7 @@ pub async fn load_vmo<'a>(
     object_name: &'a str,
 ) -> Result<zx::Vmo, Error> {
     let file_proxy =
-        io_util::open_file(dir_proxy, &PathBuf::from(object_name), io_util::OPEN_RIGHT_READABLE)?;
+        io_util::open_file(dir_proxy, &Path::new(object_name), io_util::OPEN_RIGHT_READABLE)?;
     let (status, fidlbuf) = await!(file_proxy.get_buffer(VMO_FLAG_READ))
         .map_err(|e| format_err!("reading object at {:?} failed: {}", object_name, e))?;
     let status = zx::Status::from_raw(status);
@@ -110,26 +110,22 @@ pub async fn load_vmo<'a>(
 /// directories which should be searched for objects.
 fn parse_config_string(
     dir_proxy: &DirectoryProxy,
-    mut config: String,
+    config: &str,
 ) -> Result<Vec<DirectoryProxy>, Error> {
     if config.contains("/") {
         return Err(format_err!("'/' chacter found in loader service config string"));
     }
     if Some('!') == config.chars().last() {
-        config.pop();
         let sub_dir_proxy = io_util::open_directory(
             dir_proxy,
-            &PathBuf::from(&config),
+            &Path::new(&config[..config.len() - 1]),
             io_util::OPEN_RIGHT_READABLE,
         )?;
         Ok(vec![sub_dir_proxy])
     } else {
         let dir_proxy_clone = io_util::clone_directory(dir_proxy, CLONE_FLAG_SAME_RIGHTS)?;
-        let sub_dir_proxy = io_util::open_directory(
-            dir_proxy,
-            &PathBuf::from(&config),
-            io_util::OPEN_RIGHT_READABLE,
-        )?;
+        let sub_dir_proxy =
+            io_util::open_directory(dir_proxy, &Path::new(config), io_util::OPEN_RIGHT_READABLE)?;
         Ok(vec![sub_dir_proxy, dir_proxy_clone])
     }
 }

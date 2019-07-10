@@ -31,7 +31,7 @@ use {
         lock::Mutex,
     },
     rand::Rng,
-    std::{collections::HashMap, iter, path::PathBuf, sync::Arc},
+    std::{collections::HashMap, iter, path::Path, sync::Arc},
 };
 
 // TODO(fsamuel): We might want to store other things in this struct in the
@@ -221,23 +221,22 @@ impl ElfRunner {
 
     async fn load_launch_info<'a>(
         &'a self,
-        url: String,
+        url: &'a str,
         start_info: fsys::ComponentStartInfo,
         launcher: &'a fproc::LauncherProxy,
     ) -> Result<(Option<RuntimeDirectory>, fproc::LaunchInfo), Error> {
-        let bin_path = get_program_binary(&start_info)
-            .map_err(|e| RunnerError::invalid_args(url.as_ref(), e))?;
+        let bin_path =
+            get_program_binary(&start_info).map_err(|e| RunnerError::invalid_args(url, e))?;
         let bin_arg = &[String::from(
             PKG_PATH.join(&bin_path).to_str().ok_or(err_msg("invalid binary path"))?,
         )];
         let args = get_program_args(&start_info)?;
 
-        let name = PathBuf::from(url)
+        let name = Path::new(url)
             .file_name()
             .ok_or(err_msg("invalid url"))?
             .to_str()
-            .ok_or(err_msg("invalid url"))?
-            .to_string();
+            .ok_or(err_msg("invalid url"))?;
 
         // Convert the directories into proxies, so we can find "/pkg" and open "lib" and bin_path
         let ns = start_info
@@ -257,8 +256,7 @@ impl ElfRunner {
             .find(|(p, _)| p.as_str() == pkg_str)
             .ok_or(err_msg("/pkg missing from namespace"))?;
 
-        let lib_proxy =
-            io_util::open_directory(pkg_proxy, &PathBuf::from("lib"), OPEN_RIGHT_READABLE)?;
+        let lib_proxy = io_util::open_directory(pkg_proxy, &Path::new("lib"), OPEN_RIGHT_READABLE)?;
 
         // The loader service should only be able to load files from `/pkg/lib`. Giving it a larger
         // scope is potentially a security vulnerability, as it could make it trivial for parts of
@@ -325,7 +323,7 @@ impl ElfRunner {
 
         Ok((
             runtime_dir,
-            fproc::LaunchInfo { executable: executable_vmo, job: child_job, name: name },
+            fproc::LaunchInfo { executable: executable_vmo, job: child_job, name: name.to_owned() },
         ))
     }
 
@@ -341,7 +339,7 @@ impl ElfRunner {
 
         // Load the component
         let (runtime_dir, mut launch_info) =
-            await!(self.load_launch_info(resolved_url.clone(), start_info, &launcher))
+            await!(self.load_launch_info(&resolved_url, start_info, &launcher))
                 .map_err(|e| RunnerError::component_load_error(resolved_url.as_ref(), e))?;
 
         let job_koid = launch_info
@@ -497,7 +495,7 @@ mod tests {
     // refactoring this into a test util file.
     async fn read_file<'a>(root_proxy: &'a DirectoryProxy, path: &'a str) -> String {
         let file_proxy =
-            io_util::open_file(&root_proxy, &PathBuf::from(path), io_util::OPEN_RIGHT_READABLE)
+            io_util::open_file(&root_proxy, &Path::new(path), io_util::OPEN_RIGHT_READABLE)
                 .expect("Failed to open file.");
         let res = await!(io_util::read_file(&file_proxy));
         res.expect("Unable to read file.")

@@ -30,7 +30,7 @@ use {
         convert::TryInto,
         ffi::CString,
         iter,
-        path::PathBuf,
+        path::Path,
         ptr,
         sync::Arc,
     },
@@ -382,7 +382,7 @@ mod capability_util {
     ) {
         let path = path.to_string();
         let dir_proxy = await!(get_dir_from_namespace(&path, resolved_url, namespaces));
-        let file = PathBuf::from("hippo");
+        let file = Path::new("hippo");
         let file_proxy = io_util::open_file(&dir_proxy, &file, OPEN_RIGHT_READABLE)
             .expect("failed to open file");
         let res = await!(io_util::read_file(&file_proxy));
@@ -447,7 +447,7 @@ mod capability_util {
         let dir_proxy = await!(get_dir_from_namespace(&path.dirname, resolved_url, namespaces));
         let node_proxy = io_util::open_node(
             &dir_proxy,
-            &PathBuf::from(path.basename),
+            &Path::new(&path.basename),
             OPEN_RIGHT_READABLE,
             MODE_TYPE_SERVICE,
         )
@@ -481,7 +481,7 @@ mod capability_util {
         let (node_proxy, server_end) = endpoints::create_proxy::<NodeMarker>().unwrap();
         await!(open_exposed_dir(&path, abs_moniker, model, MODE_TYPE_DIRECTORY, server_end));
         let dir_proxy = DirectoryProxy::new(node_proxy.into_channel().unwrap());
-        let file = PathBuf::from("hippo");
+        let file = Path::new("hippo");
         let file_proxy = io_util::open_file(&dir_proxy, &file, OPEN_RIGHT_READABLE)
             .expect("failed to open file");
         let res = await!(io_util::read_file(&file_proxy));
@@ -534,7 +534,7 @@ mod capability_util {
             await!(get_dir_from_namespace(&path.dirname, resolved_url.clone(), namespaces));
         let node_proxy = io_util::open_node(
             &dir_proxy,
-            &PathBuf::from(path.basename),
+            &Path::new(&path.basename),
             OPEN_RIGHT_READABLE,
             MODE_TYPE_SERVICE,
         )
@@ -565,7 +565,7 @@ mod capability_util {
             await!(get_dir_from_namespace(&path.dirname, resolved_url.clone(), namespaces));
         let node_proxy = io_util::open_node(
             &dir_proxy,
-            &PathBuf::from(path.basename),
+            &Path::new(&path.basename),
             OPEN_RIGHT_READABLE,
             MODE_TYPE_SERVICE,
         )
@@ -714,13 +714,13 @@ impl OutDir {
     async fn initialize_foo_hippo_in_memfs(memfs_proxy: &DirectoryProxy) {
         let foo_proxy = io_util::open_directory(
             &memfs_proxy,
-            &PathBuf::from("foo"),
+            &Path::new("foo"),
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .unwrap();
         let hippo_proxy = io_util::open_file(
             &foo_proxy,
-            &PathBuf::from("hippo"),
+            &Path::new("hippo"),
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .unwrap();
