@@ -213,6 +213,7 @@ TEST_F(TaskTest, InitTaskTest) {
     EXPECT_EQ(received_ids.end(), entry);
     received_ids.push_back(task_id);
   }
+  ASSERT_OK(gdc_device_->StopThread());
 }
 
 TEST_F(TaskTest, RemoveTaskTest) {
@@ -226,6 +227,8 @@ TEST_F(TaskTest, RemoveTaskTest) {
 
   // Invalid id.
   ASSERT_DEATH(([this, task_id]() { gdc_device_->GdcRemoveTask(task_id + 1); }));
+
+  ASSERT_OK(gdc_device_->StopThread());
 }
 
 TEST_F(TaskTest, ProcessInvalidFrameTest) {
