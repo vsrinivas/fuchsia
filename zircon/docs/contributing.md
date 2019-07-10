@@ -59,11 +59,6 @@ incomplete and will be expanded over time.
       kernel cmdline options in [docs/kernel_cmdline.md][cmdline-doc].  When editing or adding
       syscalls or cmdlines, update the docs!
 
-    - [The `h2md` tool][h2md-doc] can scrape source files and extract embedded Markdown.  It's
-      currently used to generate API docs for DDK.  `./scripts/make-markdown` runs `h2md` against
-      all source files in the `system/` tree.
-
 [googlesource-docs]: /zircon/docs/
 [syscall-doc]: /zircon/docs/syscalls.md
 [cmdline-doc]: /zircon/docs/kernel_cmdline.md
-[h2md-doc]: /zircon/docs/h2md.md
