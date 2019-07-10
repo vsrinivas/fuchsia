@@ -7,6 +7,11 @@
 
 import("build_settings.gni")
 
+_is_fuchsia_tree = defined(is_fuchsia_tree) && is_fuchsia_tree
+if (_is_fuchsia_tree) {
+  import("//build/testing/test_spec.gni")
+}
+
 # A target providing access to Vulkan at compile time when added to deps.
 # TODO(SPN-14): Change this to a more recent upstream.
 graphics_compute_vulkan_loader_target = "${graphics_compute_dir}/gn/host:vulkan"
@@ -54,17 +59,35 @@ template("graphics_compute_vulkan_executable") {
 # links a gtest_main library appropriate for the host. DO NOT CALL DIRECTLY,
 # Use graphics_compute_unittest_package() instead.
 template("graphics_compute_unittest_package_rule") {
-  if (defined(invoker.package_name)) {
-    _package_name = invoker.package_name
-  } else {
-    _package_name = target_name
+  _main_target_name = target_name
+  _output_name = target_name
+  if (defined(invoker.output_name)) {
+    _output_name = invoker.output_name
   }
-  executable(_package_name) {
+  _output_path = "${root_out_dir}/${_output_name}"
+
+  _deps = []
+
+  if (_is_fuchsia_tree) {
+    # Support 'fx run-host-tests <test_name>' for Fuchsia tree builds.
+    _test_spec_target_name = "${target_name}__test_spec"
+    test_spec(_test_spec_target_name) {
+      testonly = true
+      name = _main_target_name
+      location = _output_path
+      command = [ rebase_path(_output_path, root_build_dir) ]
+    }
+
+    _deps += [ ":${_test_spec_target_name}" ]
+  }
+
+  _program_target = "bin_${target_name}"
+  executable(_program_target) {
     testonly = true
+    output_name = _output_name
     forward_variables_from(invoker,
                            "*",
                            [
-                             "package_name",
                              "target_name",
                              "tests",
                            ])
@@ -74,11 +97,11 @@ template("graphics_compute_unittest_package_rule") {
     deps += invoker.tests
     deps += [ "//third_party/googletest:gtest_main" ]
   }
-  if (defined(invoker.package_name) && _package_name != target_name) {
-    group(target_name) {
-      deps = [
-        ":${_package_name}",
-      ]
-    }
+
+  _deps += [ ":${_program_target}" ]
+
+  group(_main_target_name) {
+    testonly = true
+    deps = _deps
   }
 }

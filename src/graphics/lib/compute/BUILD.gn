@@ -4,6 +4,9 @@
 
 import("gn/testing.gni")
 
+# Ensure that host tests are always rebuilt with device ones on Linux hosts.
+_build_host_tests = is_fuchsia && host_os == "linux"
+
 group("compute") {
   deps = [
     "common",
@@ -12,31 +15,51 @@ group("compute") {
     "spinel",
     "spinel-rs",
     "spinel/platforms/vk",
+    "tests/vk/vk_subgroup_info",  # TODO: Not a test, move to tools/
   ]
 }
 
+# IMPORTANT: Most graphics compute tests cannot run on the CQ for now due to
+# a missing appropriate bot configuration (see SPN-42 for details). Thus tests
+# are spread over two targets.
+#
+
+# These tests will always run on the Fuchsia CQ since they are reachable from
+# //bundles/tests. These tests can be run with 'fx run-test' as well as
+# 'fx run-host-tests'.
 group("tests") {
   testonly = true
   public_deps = [
     ":graphics_compute_unittests",
+    "spinel-rs:spinel-rs-tests",
+  ]
+  if (_build_host_tests) {
+    data_deps = [
+      ":tests($host_toolchain)",
+    ]
+  }
+}
+
+# This is the set of all tests, including thoses that do not run on the CQ
+# until SPN-42 is fixed. These tests can be run with 'fx run-test' on a
+# Fuchsia device. For host tests, one will need to manually invoke them
+# (e.g. out/default/host_x64/<test_name>).
+group("all_tests") {
+  testonly = true
+  public_deps = [
+    ":tests",
     "hotsort:tests",
     "spinel:tests",
-    "tests/vk/vk_subgroup_info",
   ]
-  if (current_toolchain != host_toolchain && host_os == "linux") {
-    # Force generation of host tests on Linux.
-    deps = [
-      ":tests($host_toolchain)",
+  if (_build_host_tests) {
+    data_deps = [
+      ":all_tests($host_toolchain)",
     ]
   }
 }
 
 # A target used to group all simple graphics compute unit-tests
 # (i.e. those that do not depend on Vulkan for now).
-#
-# IMPORTANT: Add this target to your universe_package_labels variable
-# in out/default/args.gn to be able to run this on a device.
-#
 graphics_compute_unittest_package("graphics_compute_unittests") {
   tests = [ "common:common_unittests" ]
 }

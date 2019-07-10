@@ -97,20 +97,23 @@ template("graphics_compute_vulkan_executable") {
 
 # NOTE: DO NOT CALL DIRECTLY, use graphics_compute_unittest_package() instead.
 #
-# Accepts the same variables as graphics_compute_unittests_package()
+# Accepts the following variables:
+#
 #
 template("graphics_compute_unittest_package_rule") {
-  _package_name = get_label_info(target_name, "name")
+  # Each dependency listed in |tests| is a source_set, so create an executable
+  # target that links them to gtest_main, then a package for it.
+  _binary_target = "bin_${target_name}"
+  _test_target_name = target_name
 
-  # Generate the binary test program that will end up in the package.
-  _package_binary = "bin_${_package_name}"
-  executable(_package_binary) {
-    testonly = true
+  executable(_binary_target) {
     forward_variables_from(invoker,
                            "*",
                            [
-                             "tests",
+                             "deps",
+                             "meta",
                              "target_name",
+                             "tests",
                            ])
     if (!defined(deps)) {
       deps = []
@@ -120,17 +123,46 @@ template("graphics_compute_unittest_package_rule") {
       # This version sets up logging appropriately for Fuchsia on startup.
       "//src/lib/fxl/test:gtest_main",
     ]
+    output_name = _test_target_name
+    testonly = true
   }
 
-  unittest_package(target_name) {
-    forward_variables_from(invoker, "*", [ "tests" ])
+  # Generate a manifest
+  _test_manifest = "${target_gen_dir}/meta/${_test_target_name}.cmx"
+  _test_manifest_target = "${_test_target_name}__manifest"
+  generated_file(_test_manifest_target) {
+    outputs = [
+      _test_manifest,
+    ]
+    contents = {
+      program = {
+        binary = "test/${_test_target_name}"
+      }
+      sandbox = {
+        features = [ "system-temp" ]
+        services = [ "fuchsia.logger.LogSink" ]
+      }
+    }
+    output_conversion = "json"
+  }
+
+  # Create a package now.
+  test_package(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "public_deps",
+                             "package_name",
+                             "meta",
+                           ])
+    deps = [
+      ":${_binary_target}",
+      ":${_test_manifest_target}",
+    ]
     tests = [
       {
-        name = _package_binary
+        name = _test_target_name
+        manifest = _test_manifest
       },
-    ]
-    deps = [
-      ":${_package_binary}",
     ]
   }
 }
