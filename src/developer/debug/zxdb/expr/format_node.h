@@ -82,7 +82,8 @@ class FormatNode {
     kProgramatic,  // Evaluate a GetProgramaticValue() callback.
   };
 
-  // The format of the description.
+  // The kind of thing the description describes. This is set when the node is put in the described
+  // state according to what it evaluated to.
   enum DescriptionKind {
     kNone = 0,
     kArray,
@@ -95,6 +96,15 @@ class FormatNode {
     kRustEnum,   // Rust-style enum (can have values associated with enums).
     kRustTuple,  // Includes TupleStructs (check the type).
     kString,
+  };
+
+  // What this node means to its parent. This is not based on the value in any way and can only
+  // be computed by the parent.
+  enum ChildKind {
+    kNormalChild = 0,   // No special meaning.
+    kBaseClass,         // The base class of a collection. Normally a collection itself.
+    kArrayItem,         // One member of an array.
+    kPointerExpansion,  // The child of a pointer node that represents the thing it points to.
   };
 
   // See the class comment above about the lifecycle.
@@ -131,6 +141,10 @@ class FormatNode {
 
   State state() const { return state_; }
   void set_state(State s) { state_ = s; }
+
+  // See the ChildKind enum above. This is set by the parent node when it creates a child.
+  ChildKind child_kind() const { return child_kind_; }
+  void set_child_kind(ChildKind ck) { child_kind_ = ck; }
 
   // The name of this node. This is used for things like structure member names when nodes are
   // expanded. For nodes with an expression type, this name is not used.
@@ -184,6 +198,7 @@ class FormatNode {
   // See the getters above for documentation.
   Source source_ = kValue;
   State state_ = kEmpty;
+  ChildKind child_kind_ = kNormalChild;
 
   std::string name_;
 

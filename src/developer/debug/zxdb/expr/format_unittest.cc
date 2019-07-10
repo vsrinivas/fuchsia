@@ -819,7 +819,7 @@ TEST_F(FormatTest, FunctionPtr) {
 
   // Found symbol (matching kAddress) should be printed.
   ExprValue good_ptr(func_ptr_type, {0x34, 0x12, 0, 0, 0, 0, 0, 0});
-  EXPECT_EQ(" = void (*)(), &MyFunc (0x1234)\n", SyncTreeTypeDesc(good_ptr, opts));
+  EXPECT_EQ(" = void (*)(), &MyFunc\n", SyncTreeTypeDesc(good_ptr, opts));
 
   // Member function pointer. The type naming of function pointers is tested by
   // the MemberPtr class, and otherwise the code paths are the same, so here
@@ -834,8 +834,11 @@ TEST_F(FormatTest, FunctionPtr) {
   // looks like a class member, but that's OK, wherever the address points to
   // is what we print.
   ExprValue good_member_func_ptr(member_func, {0x34, 0x12, 0, 0, 0, 0, 0, 0});
-  EXPECT_EQ(" = void (MyClass::*)(), &MyFunc (0x1234)\n",
-            SyncTreeTypeDesc(good_member_func_ptr, opts));
+  EXPECT_EQ(" = void (MyClass::*)(), &MyFunc\n", SyncTreeTypeDesc(good_member_func_ptr, opts));
+
+  // Numeric overrides force addresses instead of the resolved name.
+  opts.num_format = FormatExprValueOptions::NumFormat::kHex;
+  EXPECT_EQ(" = void (MyClass::*)(), 0x1234\n", SyncTreeTypeDesc(good_member_func_ptr, opts));
 }
 
 // This tests pointers to member data. Pointers to member functions were tested by the FunctionPtr

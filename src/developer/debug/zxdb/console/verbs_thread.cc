@@ -19,10 +19,10 @@
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/format_frame.h"
+#include "src/developer/debug/zxdb/console/format_node_console.h"
 #include "src/developer/debug/zxdb/console/format_register.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/format_target.h"
-#include "src/developer/debug/zxdb/console/format_value.h"
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
@@ -49,12 +49,12 @@ constexpr int kForceNumberUnsigned = 6;
 constexpr int kForceNumberHex = 7;
 constexpr int kMaxArraySize = 8;
 
-// If the system has at least one running process, returns true. If not,
-// returns false and sets the err.
+// If the system has at least one running process, returns true. If not, returns false and sets the
+// err.
 //
-// When doing global things like System::Continue(), it will succeed if there
-// are no running programs (it will successfully continue all 0 processes).
-// This is confusing to the user so this function is used to check first.
+// When doing global things like System::Continue(), it will succeed if there are no running
+// programs (it will successfully continue all 0 processes). This is confusing to the user so this
+// function is used to check first.
 bool VerifySystemHasRunningProcess(System* system, Err* err) {
   for (const Target* target : system->GetTargets()) {
     if (target->GetProcess())
@@ -65,7 +65,13 @@ bool VerifySystemHasRunningProcess(System* system, Err* err) {
 }
 
 // Populates the formatting options with the given command's switches.
-Err GetFormatExprValueOptions(const Command& cmd, FormatExprValueOptions* options) {
+Err GetConsoleFormatNodeOptions(const Command& cmd, ConsoleFormatNodeOptions* options) {
+  // These defaults currently don't have exposed options. A pointer expand depth of two seems most
+  // useful because it will expand "this" and one member, but beyond two some things like doubly-
+  // linked lists get pretty insane.
+  options->pointer_expand_depth = 2;
+  options->max_depth = 16;
+
   // Verbosity.
   if (cmd.HasSwitch(kForceAllTypes))
     options->verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
@@ -130,7 +136,7 @@ Err GetFormatExprValueOptions(const Command& cmd, FormatExprValueOptions* option
   "  -u  Unsigned decimal\n"                                                  \
   "  -x  Unsigned hexadecimal\n"
 
-// backtrace -------------------------------------------------------------------
+// backtrace ---------------------------------------------------------------------------------------
 
 const char kBacktraceShortHelp[] = "backtrace / bt: Print a backtrace.";
 const char kBacktraceHelp[] =
@@ -159,14 +165,13 @@ Err DoBacktrace(ConsoleContext* context, const Command& cmd) {
   if (!cmd.thread())
     return Err("There is no thread to have frames.");
 
-  // TODO(brettw) this should share formatting options and parsing with the
-  // printing commands.
+  // TODO(brettw) this should share formatting options and parsing with the printing commands.
   bool show_params = cmd.HasSwitch(kForceAllTypes);
   OutputFrameList(cmd.thread(), show_params, true);
   return Err();
 }
 
-// continue --------------------------------------------------------------------
+// continue ----------------------------------------------------------------------------------------
 
 const char kContinueShortHelp[] = "continue / c: Continue a suspended thread or process.";
 const char kContinueHelp[] =
@@ -236,7 +241,7 @@ Err DoContinue(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-// down ------------------------------------------------------------------------
+// down --------------------------------------------------------------------------------------------
 
 const char kDownShortHelp[] = "down: Move down the stack";
 const char kDownHelp[] =
@@ -279,7 +284,7 @@ Err DoDown(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-// up --------------------------------------------------------------------------
+// up ----------------------------------------------------------------------------------------------
 
 const char kUpShortHelp[] = "up: Move up the stack";
 const char kUpHelp[] =
@@ -387,7 +392,7 @@ Err DoFinish(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-// jump ------------------------------------------------------------------------
+// jump --------------------------------------------------------------------------------------------
 
 const char kJumpShortHelp[] = "jump / jmp: Set the instruction pointer to a different address.";
 const char kJumpHelp[] =
@@ -428,8 +433,8 @@ Err DoJump(ConsoleContext* context, const Command& cmd) {
     if (err.has_error()) {
       console->Output(err);
     } else if (thread) {
-      // Reset the current stack frame to the top to reflect the location
-      // the user has just jumped to.
+      // Reset the current stack frame to the top to reflect the location the user has just jumped
+      // to.
       console->context().SetActiveFrameIdForThread(thread.get(), 0);
 
       // Tell the user where they are.
@@ -441,7 +446,7 @@ Err DoJump(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-// locals ----------------------------------------------------------------------
+// locals ------------------------------------------------------------------------------------------
 
 const char kLocalsShortHelp[] = "locals: Print local variables and function args.";
 const char kLocalsHelp[] =
@@ -471,8 +476,7 @@ Examples
       Prints locals with types.
 )";
 Err DoLocals(ConsoleContext* context, const Command& cmd) {
-  Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "locals");
-  if (err.has_error())
+  if (Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "locals"); err.has_error())
     return err;
 
   const Location& location = cmd.frame()->GetLocation();
@@ -482,9 +486,9 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
   if (!function)
     return Err("Symbols are corrupt.");
 
-  // Walk upward from the innermost lexical block for the current IP to collect
-  // local variables. Using the map allows collecting only the innermost
-  // version of a given name, and sorts them as we go.
+  // Walk upward from the innermost lexical block for the current IP to collect local variables.
+  // Using the map allows collecting only the innermost version of a given name, and sorts them as
+  // we go.
   std::map<std::string, const Variable*> vars;
   VisitLocalBlocks(function->GetMostSpecificChild(location.symbol_context(), location.address()),
                    [&vars](const CodeBlock* block) {
@@ -503,17 +507,16 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
                      return VisitResult::kContinue;
                    });
 
-  // Add function parameters. Don't overwrite existing names in case of
-  // duplicates to duplicate the shadowing rules of the language.
+  // Add function parameters. Don't overwrite existing names in case of duplicates to duplicate the
+  // shadowing rules of the language.
   for (const auto& param : function->parameters()) {
     const Variable* var = param.Get()->AsVariable();
     if (!var)
       continue;  // Symbols are corrupt.
 
-    // Here we do not exclude artificial parameters. "this" will be marked as
-    // artificial and we want to include it. We could special-case the object
-    // pointer and exclude the rest, but there's not much other use for
-    // compiler-generated parameters for now.
+    // Here we do not exclude artificial parameters. "this" will be marked as artificial and we want
+    // to include it. We could special-case the object pointer and exclude the rest, but there's not
+    // much other use for compiler-generated parameters for now.
 
     const std::string& name = var->GetAssignedName();
     if (vars.find(name) == vars.end())
@@ -525,22 +528,21 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
     return Err();
   }
 
-  FormatExprValueOptions options;
-  err = GetFormatExprValueOptions(cmd, &options);
-  if (err.has_error())
+  ConsoleFormatNodeOptions options;
+  if (Err err = GetConsoleFormatNodeOptions(cmd, &options); err.has_error())
     return err;
 
-  auto helper = fxl::MakeRefCounted<FormatValue>();
+  auto output = fxl::MakeRefCounted<AsyncOutputBuffer>();
   for (const auto& pair : vars) {
-    helper->AppendVariable(location.symbol_context(), cmd.frame()->GetEvalContext(), pair.second,
-                           options);
-    helper->Append(OutputBuffer("\n"));
+    output->Append(FormatVariableForConsole(pair.second, options, cmd.frame()->GetEvalContext()));
+    output->Append("\n");
   }
-  helper->Complete([helper](OutputBuffer out) { Console::get()->Output(out); });
+  output->Complete();
+  Console::get()->Output(std::move(output));
   return Err();
 }
 
-// next ------------------------------------------------------------------------
+// next --------------------------------------------------------------------------------------------
 
 const char kNextShortHelp[] = "next / n: Single-step over one source line.";
 const char kNextHelp[] =
@@ -642,7 +644,7 @@ Err DoNexti(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-// pause -----------------------------------------------------------------------
+// pause -------------------------------------------------------------------------------------------
 
 const char kPauseShortHelp[] = "pause / pa: Pause a thread or process.";
 const char kPauseHelp[] =
@@ -692,8 +694,7 @@ Examples
 )";
 
 Err PauseThread(ConsoleContext* context, Thread* thread) {
-  // Only save the thread (for printing source info) if it's the current
-  // thread.
+  // Only save the thread (for printing source info) if it's the current thread.
   Target* target = thread->GetProcess()->GetTarget();
   bool show_source =
       context->GetActiveTarget() == target && context->GetActiveThreadForTarget(target) == thread;
@@ -717,15 +718,14 @@ Err PauseThread(ConsoleContext* context, Thread* thread) {
   return Err();
 }
 
-// Source information on this thread will be printed out on completion. The
-// current thread may be null.
+// Source information on this thread will be printed out on completion. The current thread may be
+// null.
 Err PauseTarget(ConsoleContext* context, Target* target, Thread* current_thread) {
   Process* process = target->GetProcess();
   if (!process)
     return Err("Process not running, can't pause.");
 
-  // Only save the thread (for printing source info) if it's the current
-  // thread.
+  // Only save the thread (for printing source info) if it's the current thread.
   fxl::WeakPtr<Thread> weak_thread;
   if (current_thread && context->GetActiveTarget() == target &&
       context->GetActiveThreadForTarget(target) == current_thread)
@@ -748,8 +748,8 @@ Err PauseTarget(ConsoleContext* context, Target* target, Thread* current_thread)
   return Err();
 }
 
-// Source information on this thread will be printed out on completion. The
-// current thread may be null.
+// Source information on this thread will be printed out on completion. The current thread may be
+// null.
 Err PauseSystem(System* system, Thread* current_thread) {
   Err err;
   if (!VerifySystemHasRunningProcess(system, &err))
@@ -776,9 +776,8 @@ Err PauseSystem(System* system, Thread* current_thread) {
         out.Append("\n");
       }
     }
-    // Skip the process list if there's only one and we're showing the thread
-    // info below. Otherwise the one thing paused is duplicated twice and this
-    // is the most common case.
+    // Skip the process list if there's only one and we're showing the thread info below. Otherwise
+    // the one thing paused is duplicated twice and this is the most common case.
     if (paused_process_count > 1 || !weak_thread) {
       console->Output("Paused:\n");
       console->Output(out);
@@ -806,7 +805,7 @@ Err DoPause(ConsoleContext* context, const Command& cmd) {
   return PauseSystem(&context->session()->system(), cmd.thread());
 }
 
-// print -----------------------------------------------------------------------
+// print -------------------------------------------------------------------------------------------
 
 const char kPrintShortHelp[] = "print / p: Print a variable or expression.";
 const char kPrintHelp[] =
@@ -855,33 +854,26 @@ Examples
       Print a variable with types in the context of a specific stack frame.
 )";
 Err DoPrint(ConsoleContext* context, const Command& cmd) {
-  // This will work in any context, but the data that's available will vary
-  // depending on whether there's a stopped thread, a process, or nothing.
+  // This will work in any context, but the data that's available will vary depending on whether
+  // there's a stopped thread, a process, or nothing.
   fxl::RefPtr<EvalContext> eval_context = GetEvalContextForCommand(cmd);
 
-  auto formatter = fxl::MakeRefCounted<FormatValue>();
-
-  FormatExprValueOptions options;
-  Err err = GetFormatExprValueOptions(cmd, &options);
+  ConsoleFormatNodeOptions options;
+  Err err = GetConsoleFormatNodeOptions(cmd, &options);
   if (err.has_error())
     return err;
 
   auto data_provider = eval_context->GetDataProvider();
   return EvalCommandExpression(
-      cmd, "print", eval_context, false,
-      [formatter, options, eval_context](const Err& err, ExprValue value) {
-        if (err.has_error()) {
+      cmd, "print", eval_context, false, [options, eval_context](const Err& err, ExprValue value) {
+        if (err.has_error())
           Console::get()->Output(err);
-        } else {
-          formatter->AppendValue(eval_context, value, options);
-          // Bind the formatter to keep it in scope across this
-          // async call.
-          formatter->Complete([formatter](OutputBuffer out) { Console::get()->Output(out); });
-        }
+        else
+          Console::get()->Output(FormatValueForConsole(value, options, eval_context));
       });
 }
 
-// step ------------------------------------------------------------------------
+// step --------------------------------------------------------------------------------------------
 
 const char kStepShortHelp[] = "step / s: Step one source line, going into subroutines.";
 const char kStepHelp[] =
@@ -953,8 +945,8 @@ Err DoStep(ConsoleContext* context, const Command& cmd) {
     controller->set_stop_on_no_symbols(cmd.HasSwitch(kStepIntoUnsymbolized));
     cmd.thread()->ContinueWith(std::move(controller), std::move(completion));
   } else if (cmd.args().size() == 1) {
-    // Step into a specific named subroutine. This uses the "step over"
-    // controller with a special condition.
+    // Step into a specific named subroutine. This uses the "step over" controller with a special
+    // condition.
     if (cmd.HasSwitch(kStepIntoUnsymbolized)) {
       return Err(
           "The --unsymbolized switch is not compatible with a named "
@@ -976,7 +968,7 @@ Err DoStep(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-// stepi -----------------------------------------------------------------------
+// stepi -------------------------------------------------------------------------------------------
 
 const char kStepiShortHelp[] = "stepi / si: Single-step a thread one machine instruction.";
 const char kStepiHelp[] =
@@ -1019,7 +1011,7 @@ Err DoStepi(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-// regs ------------------------------------------------------------------------
+// regs --------------------------------------------------------------------------------------------
 
 using debug_ipc::RegisterCategory;
 
@@ -1076,8 +1068,7 @@ Examples
 constexpr int kRegsCategoriesSwitch = 1;
 constexpr int kRegsExtendedSwitch = 2;
 
-// Converts the saved registers on a given stack frame to the right format for
-// printing.
+// Converts the saved registers on a given stack frame to the right format for printing.
 RegisterSet FrameRegistersToSet(const Frame* frame) {
   RegisterSet result_set;
   result_set.set_arch(frame->session()->arch());
@@ -1100,8 +1091,8 @@ void OnRegsComplete(const Err& cmd_err, const RegisterSet& register_set,
     return;
   }
 
-  // Always output warning first if needed. If the filtering fails it could be
-  // because the register wasn't saved.
+  // Always output warning first if needed. If the filtering fails it could be because the register
+  // wasn't saved.
   if (show_non_topmost_warning) {
     OutputBuffer warning_out;
     warning_out.Append(Syntax::kWarning, GetExclamation());
@@ -1144,8 +1135,8 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
 
   bool top_stack_frame = (cmd.frame() == cmd.thread()->GetStack()[0]);
 
-  // General purpose are the default. Other categories can only be shown for
-  // the top stack frame since they require reading from the current CPU state.
+  // General purpose are the default. Other categories can only be shown for the top stack frame
+  // since they require reading from the current CPU state.
   std::vector<RegisterCategory::Type> cats_to_show = {RegisterCategory::Type::kGeneral};
   if (top_stack_frame && cmd.HasSwitch(kRegsCategoriesSwitch)) {
     auto option = cmd.GetSwitchValue(kRegsCategoriesSwitch);
@@ -1177,9 +1168,8 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
   options.filter_regexp = std::move(regex_filter);
 
   if (top_stack_frame) {
-    // Always request the current registers even if we're only printing the
-    // general ones (which will be cached on the top stack frame). The thread
-    // state could have changed out from under us.
+    // Always request the current registers even if we're only printing the general ones (which will
+    // be cached on the top stack frame). The thread state could have changed out from under us.
     cmd.thread()->ReadRegisters(
         std::move(cats_to_show),
         [options = std::move(options)](const Err& err, const RegisterSet& registers) {
@@ -1192,7 +1182,7 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-// until -----------------------------------------------------------------------
+// until -------------------------------------------------------------------------------------------
 
 const char kUntilShortHelp[] = "until / u: Runs a thread until a location is reached.";
 const char kUntilHelp[] =
@@ -1259,11 +1249,10 @@ Err DoUntil(ConsoleContext* context, const Command& cmd) {
 
   // Decode the location.
   //
-  // The validation on this is a bit tricky. Most uses apply to the current
-  // thread and take some implicit information from the current frame (which
-  // requires the thread be stopped). But when doing a process-wide one, don't
-  // require a currently stopped thread unless it's required to compute the
-  // location.
+  // The validation on this is a bit tricky. Most uses apply to the current thread and take some
+  // implicit information from the current frame (which requires the thread be stopped). But when
+  // doing a process-wide one, don't require a currently stopped thread unless it's required to
+  // compute the location.
   InputLocation location;
   if (cmd.args().empty()) {
     // No args means use the current location.

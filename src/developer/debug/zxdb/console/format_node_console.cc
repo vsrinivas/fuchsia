@@ -98,6 +98,19 @@ bool TypeForcedOn(const ConsoleFormatNodeOptions& options, const RecursiveState&
          options.verbosity == FormatExprValueOptions::Verbosity::kAllTypes;
 }
 
+// Get a possibly-elided version of the type name for a medium verbosity level.
+std::string GetElidedTypeName(const std::string& name) {
+  // Names shorter than this are always displayed in full.
+  if (name.size() <= 32)
+    return name;
+
+  // This value was picked to be smaller than the above value so we don't elide one or two
+  // characters (which looks dumb). It was selected to be long enough so that with the common prefix
+  // of "std::__2::" (which occurs on many long types), you still get enough to read approximately
+  // what the type is.
+  return name.substr(0, 20) + "…";
+}
+
 // Appends the formatted name and "=" as needed by this node.
 void AppendNodeNameAndType(const FormatNode* node, const ConsoleFormatNodeOptions& options,
                            const RecursiveState& state, OutputBuffer* out) {
@@ -105,7 +118,17 @@ void AppendNodeNameAndType(const FormatNode* node, const ConsoleFormatNodeOption
     out->Append(Syntax::kComment, "(" + node->type() + ") ");
 
   if (!state.inhibit_one_name && !node->name().empty()) {
-    out->Append(Syntax::kVariable, node->name());
+    // Node name. Base class names are less important so get dimmed. Especially STL base classes
+    // can get very long so we also elide them unless verbose mode is turned on.
+    if (node->child_kind() == FormatNode::kBaseClass) {
+      if (options.verbosity == ConsoleFormatNodeOptions::Verbosity::kMinimal)
+        out->Append(Syntax::kComment, GetElidedTypeName(node->name()));
+      else
+        out->Append(Syntax::kComment, node->name());
+    } else {
+      // Normal variable-style node name.
+      out->Append(Syntax::kVariable, node->name());
+    }
     out->Append(" = ");
   }
 }
@@ -158,8 +181,13 @@ void AppendPointer(const FormatNode* node, const ConsoleFormatNodeOptions& optio
     out->Append(Syntax::kComment, "(*)");
 
   // Pointers will have a child node that expands to the pointed-to value. If this is in a
-  // "described" state, then we have the data and should show it. Otherwise omit this.
-  if (node->children().empty() || node->children()[0]->state() != FormatNode::kDescribed) {
+  // "described" state with no error, then show the data.
+  //
+  // Don't show errors dereferencing pointers here since for long structure listings with
+  // potentially multiple bad pointers, these get very verbose. The user can print the specific
+  // value and see the error if desired.
+  if (node->children().empty() || node->children()[0]->state() != FormatNode::kDescribed ||
+      node->children()[0]->err().has_error()) {
     // Just have the pointer address.
     out->Append(node->description());
   } else {
@@ -256,17 +284,34 @@ OutputBuffer FormatNodeForConsole(const FormatNode& node, const ConsoleFormatNod
   return out;
 }
 
-void FormatValueForConsole(ExprValue value, const ConsoleFormatNodeOptions& options,
-                           fxl::RefPtr<EvalContext> context,
-                           fxl::RefPtr<AsyncOutputBuffer> output) {
-  auto node = std::make_unique<FormatNode>(std::string(), std::move(value));
+fxl::RefPtr<AsyncOutputBuffer> FormatValueForConsole(ExprValue value,
+                                                     const ConsoleFormatNodeOptions& options,
+                                                     fxl::RefPtr<EvalContext> context,
+                                                     const std::string& value_name) {
+  auto node = std::make_unique<FormatNode>(value_name, std::move(value));
   FormatNode* node_ptr = node.get();
-  DescribeFormatNodeForConsole(
-      node_ptr, options, context,
-      fit::defer_callback([node = std::move(node), options, out = std::move(output)]() {
-        // Asynchronous expansion is complete, now format the completed output.
-        out->Complete(FormatNodeForConsole(*node, options));
-      }));
+
+  auto out = fxl::MakeRefCounted<AsyncOutputBuffer>();
+  DescribeFormatNodeForConsole(node_ptr, options, context,
+                               fit::defer_callback([node = std::move(node), options, out]() {
+                                 // Asynchronous expansion is complete, now format the completed
+                                 // output.
+                                 out->Complete(FormatNodeForConsole(*node, options));
+                               }));
+  return out;
+}
+
+fxl::RefPtr<AsyncOutputBuffer> FormatVariableForConsole(const Variable* var,
+                                                        const ConsoleFormatNodeOptions& options,
+                                                        fxl::RefPtr<EvalContext> context) {
+  auto out = fxl::MakeRefCounted<AsyncOutputBuffer>();
+  context->GetVariableValue(
+      RefPtrTo(var), [name = var->GetAssignedName(), context, options, out](
+                         const Err& err, fxl::RefPtr<Symbol>, ExprValue value) {
+        // Variable value resolved. Print it.
+        out->Complete(FormatValueForConsole(std::move(value), options, context, name));
+      });
+  return out;
 }
 
 }  // namespace zxdb

@@ -16,6 +16,7 @@ namespace zxdb {
 class ExprValue;
 struct FormatExprValueOptions;
 class FormatNode;
+class Variable;
 
 // Console-output-specific options format formatting.
 struct ConsoleFormatNodeOptions : public FormatExprValueOptions {
@@ -47,9 +48,19 @@ void DescribeFormatNodeForConsole(FormatNode* node, const ConsoleFormatNodeOptio
 // can be synchronously formatted and returned.
 OutputBuffer FormatNodeForConsole(const FormatNode& node, const ConsoleFormatNodeOptions& options);
 
-// Describes and formats the given ExprValue and writes it to the given asynchronous output buffer.
-void FormatValueForConsole(ExprValue value, const ConsoleFormatNodeOptions& options,
-                           fxl::RefPtr<EvalContext> context, fxl::RefPtr<AsyncOutputBuffer> output);
+// Describes and formats the given ExprValue and returns it as an async output buffer.
+//
+// If the value_name is given, it will be printed with that name, otherwise it will have no name.
+fxl::RefPtr<AsyncOutputBuffer> FormatValueForConsole(ExprValue value,
+                                                     const ConsoleFormatNodeOptions& options,
+                                                     fxl::RefPtr<EvalContext> context,
+                                                     const std::string& value_name = std::string());
+
+// Like FormatValueForConsole but evaluates the given variable in the given context to get the
+// result. The name of the variable will be included.
+fxl::RefPtr<AsyncOutputBuffer> FormatVariableForConsole(const Variable* var,
+                                                        const ConsoleFormatNodeOptions& options,
+                                                        fxl::RefPtr<EvalContext> context);
 
 }  // namespace zxdb
 

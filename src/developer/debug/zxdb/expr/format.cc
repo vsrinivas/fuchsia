@@ -386,14 +386,16 @@ void FormatCollection(FormatNode* node, const Collection* coll,
 
     // Derived class nodes are named by the type of the base class.
     std::string from_name = from->GetFullName();
+    std::unique_ptr<FormatNode> base_class_node;
 
     ExprValue from_value;
-    Err err = ResolveInherited(node->value(), inherited, &from_value);
-    if (err.has_error()) {
-      node->children().push_back(std::make_unique<FormatNode>(from_name, err));
-    } else {
-      node->children().push_back(std::make_unique<FormatNode>(from_name, from_value));
-    }
+    if (Err err = ResolveInherited(node->value(), inherited, &from_value); err.has_error())
+      base_class_node = std::make_unique<FormatNode>(from_name, err);
+    else
+      base_class_node = std::make_unique<FormatNode>(from_name, from_value);
+
+    base_class_node->set_child_kind(FormatNode::kBaseClass);
+    node->children().push_back(std::move(base_class_node));
   }
 
   // Data members.
@@ -433,20 +435,23 @@ void FormatPointer(FormatNode* node, const FormatExprValueOptions& options,
   }
 
   // The address goes in the description.
-  node->set_description(fxl::StringPrintf("0x%" PRIx64, node->value().GetAs<TargetPointer>()));
+  TargetPointer pointer_value = node->value().GetAs<TargetPointer>();
+  node->set_description(fxl::StringPrintf("0x%" PRIx64, pointer_value));
 
   // Make a child node that's the dereferenced pointer value. If/when we support GUIs, we should
   // probably remove the intermediate node and put the dereferenced struct members directly as
   // children on this node. Otherwise it's an annoying extra step to expand to things.
-
-  // Use our name but with a "*" to show it dereferenced.
-  auto deref_node = std::make_unique<FormatNode>(
-      "*" + node->name(),
-      [ptr_value = node->value()](fxl::RefPtr<EvalContext> context,
-                                  fit::callback<void(const Err& err, ExprValue value)> cb) {
-        ResolvePointer(context, ptr_value, FitCallbackToStdFunction(std::move(cb)));
-      });
-  node->children().push_back(std::move(deref_node));
+  if (pointer_value != 0) {
+    // Use our name but with a "*" to show it dereferenced.
+    auto deref_node = std::make_unique<FormatNode>(
+        "*" + node->name(),
+        [ptr_value = node->value()](fxl::RefPtr<EvalContext> context,
+                                    fit::callback<void(const Err& err, ExprValue value)> cb) {
+          ResolvePointer(context, ptr_value, FitCallbackToStdFunction(std::move(cb)));
+        });
+    deref_node->set_child_kind(FormatNode::kPointerExpansion);
+    node->children().push_back(std::move(deref_node));
+  }
 }
 
 // For now a reference is formatted like a pointer where the outer node is the address, and the
@@ -475,6 +480,7 @@ void FormatReference(FormatNode* node, const FormatExprValueOptions& options,
                             fit::callback<void(const Err& err, ExprValue value)> cb) {
         EnsureResolveReference(context, ref, FitCallbackToStdFunction(std::move(cb)));
       });
+  deref_node->set_child_kind(FormatNode::kPointerExpansion);
   node->children().push_back(std::move(deref_node));
 }
 
@@ -495,6 +501,14 @@ void FormatFunctionPointer(FormatNode* node, const FormatExprValueOptions& optio
     return;
   }
 
+  // Allow overrides for the number format. Normally one would expect to
+  // provide a hex override to get the address rather than the resolved
+  // function name.
+  if (options.num_format != NumFormat::kDefault) {
+    FormatNumeric(node, options);
+    return;
+  }
+
   // Try to symbolize the function being pointed to.
   Location loc = eval_context->GetLocationForAddress(address);
   std::string function_name;
@@ -506,7 +520,7 @@ void FormatFunctionPointer(FormatNode* node, const FormatExprValueOptions& optio
     // No function name, just print out the address.
     node->set_description(fxl::StringPrintf("0x%" PRIx64, address));
   } else {
-    node->set_description(fxl::StringPrintf("&%s (0x%" PRIx64 ")", function_name.c_str(), address));
+    node->set_description("&" + function_name);
   }
 }
 
@@ -567,8 +581,10 @@ void FormatCharArray(FormatNode* node, fxl::RefPtr<Type> char_type, const uint8_
   // Add children to the first null unless the length was known in advance.
   size_t child_len = length_was_known ? length : output_len;
   for (size_t i = 0; i < child_len; i++) {
-    node->children().push_back(std::make_unique<FormatNode>(fxl::StringPrintf("[%zu]", i),
-                                                            ExprValue(char_type, {data[i]})));
+    auto char_node = std::make_unique<FormatNode>(fxl::StringPrintf("[%zu]", i),
+                                                  ExprValue(char_type, {data[i]}));
+    char_node->set_child_kind(FormatNode::kArrayItem);
+    node->children().push_back(std::move(char_node));
   }
 
   // Add an indication if the string was truncated to the max size.
@@ -651,12 +667,16 @@ void FormatArray(FormatNode* node, int elt_count, const FormatExprValueOptions& 
   }
 
   for (size_t i = 0; i < items.size(); i++) {
-    node->children().push_back(
-        std::make_unique<FormatNode>(fxl::StringPrintf("[%zu]", i), std::move(items[i])));
+    auto item_node =
+        std::make_unique<FormatNode>(fxl::StringPrintf("[%zu]", i), std::move(items[i]));
+    item_node->set_child_kind(FormatNode::kArrayItem);
+    node->children().push_back(std::move(item_node));
   }
 
   if (static_cast<uint32_t>(elt_count) > items.size()) {
     // Add "..." annotation to show some things were clipped.
+    //
+    // We may want to put a flag on the node that it was clipped.
     node->children().push_back(std::make_unique<FormatNode>("..."));
   }
 }

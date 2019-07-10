@@ -28,9 +28,7 @@ class FormatValueConsoleTest : public TestWithLoop {
 
   // Synchronously calls FormatExprValue, returning the result.
   std::string SyncFormatValue(const ExprValue& value, const ConsoleFormatNodeOptions& opts) {
-    auto output = fxl::MakeRefCounted<AsyncOutputBuffer>();
-
-    FormatValueForConsole(value, opts, eval_context_, output);
+    auto output = FormatValueForConsole(value, opts, eval_context_);
 
     if (!output->is_complete()) {
       // Need to wait for async completion.
@@ -112,9 +110,29 @@ TEST(FormatNodeConsole, Collection) {
   EXPECT_EQ("{a = 42, b = 3.14159}", out.AsString());
 
   // With types forced.
-  options.verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
-  out = FormatNodeForConsole(node, options);
+  ConsoleFormatNodeOptions type_options;
+  type_options.verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
+  out = FormatNodeForConsole(node, type_options);
   EXPECT_EQ("(MyClass) {(int) a = 42, (double) b = 3.14159}", out.AsString());
+
+  // Add a very long base class name.
+  auto base_node =
+      std::make_unique<FormatNode>("This_is::a::VeryLongBaseClass<which, should, be, elided>");
+  base_node->set_child_kind(FormatNode::kBaseClass);
+  base_node->set_description_kind(FormatNode::kCollection);
+  base_node->set_state(FormatNode::kDescribed);
+  node.children().insert(node.children().begin(), std::move(base_node));
+
+  // Test with no eliding.
+  out = FormatNodeForConsole(node, options);
+  EXPECT_EQ("{This_is::a::VeryLongBaseClass<which, should, be, elided> = {}, a = 42, b = 3.14159}",
+            out.AsString());
+
+  // With eliding.
+  ConsoleFormatNodeOptions elide_options;
+  elide_options.verbosity = ConsoleFormatNodeOptions::Verbosity::kMinimal;
+  out = FormatNodeForConsole(node, elide_options);
+  EXPECT_EQ("{This_is::a::VeryLong… = {}, a = 42, b = 3.14159}", out.AsString());
 }
 
 TEST(FormatNodeConsole, Array) {
@@ -190,6 +208,12 @@ TEST(FormatNodeConsole, Pointer) {
   EXPECT_EQ("a = (*)0x12345678 🡺 42", out.AsString());
   out = FormatNodeForConsole(node, type_options);
   EXPECT_EQ("(int*) a = 0x12345678 🡺 42", out.AsString());
+
+  // Report an error for the pointed-to value, it should now be omitted.
+  node.children()[0]->set_err(Err("Bad pointer"));
+  node.children()[0]->set_description(std::string());
+  out = FormatNodeForConsole(node, options);
+  EXPECT_EQ("a = (*)0x12345678", out.AsString());
 }
 
 TEST(FormatNodeConsole, Reference) {
