@@ -60,7 +60,8 @@ class FtdiI2c : public DeviceType, public ddk::I2cImplProtocol<FtdiI2c, ddk::bas
   zx_status_t I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* op_list, size_t op_count);
 
   zx_status_t Ping(uint8_t bus_address);
-  zx_status_t Write(uint8_t bus_address, std::vector<uint8_t> data);
+  zx_status_t Transact(uint8_t bus_address, std::vector<uint8_t> write_data,
+                       std::vector<uint8_t>* read_data);
   zx_status_t Enable();
 
  private:
@@ -70,12 +71,17 @@ class FtdiI2c : public DeviceType, public ddk::I2cImplProtocol<FtdiI2c, ddk::bas
   static constexpr uint8_t kI2cWriteCommandByte3 = 0x00;
   static constexpr uint8_t kI2cReadAckCommandByte1 = 0x22;
   static constexpr uint8_t kI2cReadAckCommandByte2 = 0x00;
+  static constexpr uint8_t kI2cReadOneByteCommand[] = {0x20, 0x00, 0x00, 0x13, 0x00, 0x00};
+  static constexpr uint8_t kI2cReadFinalByteCommand[] = {0x20, 0x00, 0x00, 0x13, 0x00, 0xFF};
   // Every full write requires 49 additional bytes. These are for the start and end I2C
   // sequence commands.
   static constexpr uint8_t kI2cNumCommandBytesPerFullWrite = 49;
+  static constexpr uint8_t kI2cNumCommandBytesPerFullReadWrite =
+      kI2cNumCommandBytesPerFullWrite + 48;
   // We need to write 12 bytes for every written byte. There are 3 prefix command bytes, a 6
   // byte command to reset GPIO pins, and a 2 byte suffix command for reading the ACK bit.
   static constexpr uint8_t kI2cNumCommandBytesPerWriteByte = 12;
+  static constexpr uint8_t kI2cNumCommandBytesPerReadByte = 12;
   static constexpr uint8_t kI2cCommandFinishTransaction = 0x87;
   static constexpr uint8_t kFtdiCommandDriveZeroMode = 0x9E;
 
@@ -84,6 +90,10 @@ class FtdiI2c : public DeviceType, public ddk::I2cImplProtocol<FtdiI2c, ddk::bas
                                          size_t* bytes_written);
   zx_status_t WriteTransactionEndToBuf(size_t index, std::vector<uint8_t>* buffer,
                                        size_t* bytes_written);
+  void WriteI2CByteWriteToBuf(size_t index, uint8_t byte, std::vector<uint8_t>* buffer,
+                              size_t* bytes_written);
+  void WriteI2CByteReadToBuf(size_t index, bool final_byte, std::vector<uint8_t>* buffer,
+                             size_t* bytes_written);
 
   thrd_t enable_thread_;
 

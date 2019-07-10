@@ -107,14 +107,66 @@ zx_status_t FtdiI2c::WriteIdleToBuf(size_t index, std::vector<uint8_t>* buffer,
   return ZX_OK;
 }
 
+// This adds the command to write one byte over I2C into the buffer.
+void FtdiI2c::WriteI2CByteWriteToBuf(size_t index, uint8_t byte, std::vector<uint8_t>* buffer,
+                                     size_t* bytes_written) {
+  size_t new_index = index;
+  (*buffer)[new_index++] = kI2cWriteCommandByte1;
+  (*buffer)[new_index++] = kI2cWriteCommandByte2;
+  (*buffer)[new_index++] = kI2cWriteCommandByte3;
+  (*buffer)[new_index++] = byte;
+
+  mpsse_.SetGpio(pin_layout_.scl, Mpsse::Direction::OUT, Mpsse::Level::LOW);
+  mpsse_.SetGpio(pin_layout_.sda_out, Mpsse::Direction::OUT, Mpsse::Level::HIGH);
+  size_t temp_written = 0;
+  mpsse_.GpioWriteCommandToBuffer(new_index, buffer, &temp_written);
+  new_index += temp_written;
+
+  // Read bit for ACK/NAK.
+  (*buffer)[new_index++] = kI2cReadAckCommandByte1;
+  (*buffer)[new_index++] = kI2cReadAckCommandByte2;
+  *bytes_written = new_index - index;
+}
+
+void FtdiI2c::WriteI2CByteReadToBuf(size_t index, bool final_byte, std::vector<uint8_t>* buffer,
+                                    size_t* bytes_written) {
+  size_t temp_written = 0;
+  size_t new_index = index;
+  if (final_byte) {
+    memcpy(buffer->data() + new_index, kI2cReadFinalByteCommand, sizeof(kI2cReadFinalByteCommand));
+    new_index += sizeof(kI2cReadFinalByteCommand);
+  } else {
+    memcpy(buffer->data() + new_index, kI2cReadOneByteCommand, sizeof(kI2cReadOneByteCommand));
+    new_index += sizeof(kI2cReadOneByteCommand);
+  }
+  mpsse_.SetGpio(pin_layout_.scl, Mpsse::Direction::OUT, Mpsse::Level::LOW);
+  mpsse_.SetGpio(pin_layout_.sda_out, Mpsse::Direction::OUT, Mpsse::Level::HIGH);
+  mpsse_.GpioWriteCommandToBuffer(new_index, buffer, &temp_written);
+  new_index += temp_written;
+  *bytes_written = new_index - index;
+}
+
 void FtdiI2c::DdkUnbind() {
   thrd_join(enable_thread_, NULL);
   DdkRemove();
 }
 
-zx_status_t FtdiI2c::Write(uint8_t bus_address, std::vector<uint8_t> data) {
-  std::vector<uint8_t> transaction(kI2cNumCommandBytesPerFullWrite +
-                                   (kI2cNumCommandBytesPerWriteByte * data.size()));
+zx_status_t FtdiI2c::Transact(uint8_t bus_address, std::vector<uint8_t> write_data,
+                              std::vector<uint8_t>* read_data) {
+  size_t transaction_size;
+  size_t expected_reads = 0;
+  size_t read_size = (read_data == nullptr) ? 0 : read_data->size();
+  bool is_read = (read_size != 0);
+  if (!is_read) {
+    transaction_size =
+        kI2cNumCommandBytesPerFullWrite + (kI2cNumCommandBytesPerWriteByte * write_data.size());
+  } else {
+    transaction_size = kI2cNumCommandBytesPerFullReadWrite +
+                       (kI2cNumCommandBytesPerWriteByte * write_data.size()) +
+                       (kI2cNumCommandBytesPerReadByte * read_size);
+  }
+
+  std::vector<uint8_t> transaction(transaction_size);
   size_t transaction_index = 0;
   size_t bytes_written = 0;
 
@@ -130,23 +182,13 @@ zx_status_t FtdiI2c::Write(uint8_t bus_address, std::vector<uint8_t> data) {
   }
   transaction_index += bytes_written;
 
-  auto it = data.begin();
-  it = data.insert(it, static_cast<uint8_t>(bus_address << 1));
+  auto it = write_data.begin();
+  it = write_data.insert(it, static_cast<uint8_t>(bus_address << 1));
 
-  for (size_t i = 0; i < data.size(); i++) {
-    transaction[transaction_index++] = kI2cWriteCommandByte1;
-    transaction[transaction_index++] = kI2cWriteCommandByte2;
-    transaction[transaction_index++] = kI2cWriteCommandByte3;
-    transaction[transaction_index++] = data[i];
-
-    mpsse_.SetGpio(pin_layout_.scl, Mpsse::Direction::OUT, Mpsse::Level::LOW);
-    mpsse_.SetGpio(pin_layout_.sda_out, Mpsse::Direction::OUT, Mpsse::Level::HIGH);
-    mpsse_.GpioWriteCommandToBuffer(transaction_index, &transaction, &bytes_written);
+  for (size_t i = 0; i < write_data.size(); i++) {
+    WriteI2CByteWriteToBuf(transaction_index, write_data[i], &transaction, &bytes_written);
     transaction_index += bytes_written;
-
-    // Read bit for ACK/NAK.
-    transaction[transaction_index++] = kI2cReadAckCommandByte1;
-    transaction[transaction_index++] = kI2cReadAckCommandByte2;
+    expected_reads++;
   }
 
   status = WriteTransactionEndToBuf(transaction_index, &transaction, &bytes_written);
@@ -155,11 +197,43 @@ zx_status_t FtdiI2c::Write(uint8_t bus_address, std::vector<uint8_t> data) {
   }
   transaction_index += bytes_written;
 
+  if (is_read) {
+    zx_status_t status = WriteIdleToBuf(transaction_index, &transaction, &bytes_written);
+    if (status != ZX_OK) {
+      return status;
+    }
+    transaction_index += bytes_written;
+
+    status = WriteTransactionStartToBuf(transaction_index, &transaction, &bytes_written);
+    if (status != ZX_OK) {
+      return status;
+    }
+    transaction_index += bytes_written;
+
+    WriteI2CByteWriteToBuf(transaction_index, static_cast<uint8_t>(bus_address << 1 | 0x1),
+                           &transaction, &bytes_written);
+    transaction_index += bytes_written;
+    expected_reads++;
+
+    // Send the read commands.
+    for (size_t i = 0; i < read_size; i++) {
+      WriteI2CByteReadToBuf(transaction_index, (i == (read_size - 1)), &transaction,
+                            &bytes_written);
+      transaction_index += bytes_written;
+      expected_reads++;
+    }
+
+    status = WriteTransactionEndToBuf(transaction_index, &transaction, &bytes_written);
+    if (status != ZX_OK) {
+      return status;
+    }
+    transaction_index += bytes_written;
+  }
+
   // Ask for response immediately
   transaction[transaction_index++] = kI2cCommandFinishTransaction;
 
   if (transaction_index != transaction.size()) {
-    printf("Index (%ld) != size (%ld) \n", transaction_index, transaction.size());
     return ZX_ERR_INTERNAL;
   }
 
@@ -168,17 +242,23 @@ zx_status_t FtdiI2c::Write(uint8_t bus_address, std::vector<uint8_t> data) {
     return status;
   }
 
-  std::vector<uint8_t> response(data.size());
-  status = mpsse_.Read(response.data(), data.size());
+  std::vector<uint8_t> response(expected_reads);
+  status = mpsse_.Read(response.data(), response.size());
   if (status != ZX_OK) {
     return status;
   }
 
   // Check each response byte to see if its an ACK (zero) or NACK (non-zero).
-  for (size_t i = 0; i < response.size(); i++) {
+  for (size_t i = 0; i < response.size() - read_size; i++) {
     if ((response[i] & 0x1) != 0) {
+      zxlogf(INFO, "Ftdi-i2c: Recieved NACK on byte %ld (data=%d)\n", i, response[i]);
       return ZX_ERR_INTERNAL;
     }
+  }
+
+  // Copy the read information.
+  if (read_size) {
+    memcpy(read_data->data(), response.data() + (response.size() - read_size), read_size);
   }
 
   return ZX_OK;
@@ -187,7 +267,7 @@ zx_status_t FtdiI2c::Write(uint8_t bus_address, std::vector<uint8_t> data) {
 zx_status_t FtdiI2c::Ping(uint8_t bus_address) {
   std::vector<uint8_t> data(1);
   data[0] = 0x00;
-  return Write(bus_address, data);
+  return Transact(bus_address, data, nullptr);
 }
 
 // This adds the command to transition SCL from high to low.
@@ -236,34 +316,54 @@ zx_status_t FtdiI2c::I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* op_li
                                      size_t op_count) {
   zx_status_t status;
   std::vector<uint8_t> write_data(kFtdiI2cMaxTransferSize);
-  size_t write_data_index = 0;
+  std::vector<uint8_t> read_data(kFtdiI2cMaxTransferSize);
+  size_t total_read_bytes = 0;
+  size_t total_write_bytes = 0;
+  size_t last_stopped_op = 0;
   for (size_t i = 0; i < op_count; i++) {
     if (op_list[i].is_read) {
-      // TODO(dgilhooley) - Hook up FTDI to an i2c device that supports Read, so
-      // Read can be tested and implemented
-      return ZX_ERR_NOT_SUPPORTED;
+      total_read_bytes += op_list[i].data_size;
     } else {
       size_t copy_amt = op_list[i].data_size;
       uint8_t* data_buffer = reinterpret_cast<uint8_t*>(op_list[i].data_buffer);
       size_t data_buffer_index = 0;
       while (copy_amt--) {
-        if (write_data_index == kFtdiI2cMaxTransferSize) {
+        if (total_write_bytes == kFtdiI2cMaxTransferSize) {
           return ZX_ERR_INTERNAL;
         }
-        write_data[write_data_index++] = data_buffer[data_buffer_index++];
+        write_data[total_write_bytes++] = data_buffer[data_buffer_index++];
       }
     }
 
     if (op_list[i].stop) {
-      write_data.resize(write_data_index);
-      status = Write(static_cast<uint8_t>(op_list[i].address), write_data);
+      write_data.resize(total_write_bytes);
+      read_data.resize(total_read_bytes);
+      status = Transact(static_cast<uint8_t>(op_list[i].address), write_data, &read_data);
       if (status != ZX_OK) {
+        zxlogf(ERROR, "I2c transact failed with %d\n", status);
         return status;
+      }
+
+      if (total_read_bytes > 0) {
+        size_t read_back_index = 0;
+        for (size_t j = last_stopped_op + 1; j <= i; j++) {
+          if (op_list[j].is_read) {
+            memcpy(op_list[j].data_buffer, read_data.data() + read_back_index,
+                   op_list[j].data_size);
+            read_back_index += op_list[j].data_size;
+          }
+        }
       }
 
       // Reset the write_data for the next transaction.
       write_data.resize(kFtdiI2cMaxTransferSize);
-      write_data_index = 0;
+      read_data.resize(kFtdiI2cMaxTransferSize);
+      total_write_bytes = 0;
+
+      // Reset the read data for the next transaction.
+      total_read_bytes = 0;
+
+      last_stopped_op = i;
     }
   }
 

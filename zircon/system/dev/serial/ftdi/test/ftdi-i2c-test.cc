@@ -171,4 +171,63 @@ TEST_F(FtdiI2cTest, PingTest) {
   ASSERT_OK(status);
 }
 
+TEST_F(FtdiI2cTest, ReadTest) {
+  FtdiI2c device = FtdiBasicInit();
+
+  serial_.FailOnUnexpectedReadWrite(false);
+  std::vector<uint8_t> serial_read_data = {
+      0x00,  // The ACK for writing bus address.
+      0x00,  // The ACK for writing register value.
+      0x00,  // The ACK for initiating a read.
+      0xDE,  // The Value we will be reading out.
+  };
+  serial_.PushExpectedRead(std::move(serial_read_data));
+
+  i2c_impl_op_t op_list[2] = {};
+  op_list[0].is_read = false;
+  op_list[0].stop = false;
+  uint8_t write_data = 0xAB;
+  op_list[0].data_buffer = &write_data;
+  op_list[0].data_size = sizeof(write_data);
+
+  op_list[1].is_read = true;
+  op_list[1].stop = true;
+  uint8_t read_data = 0;
+  op_list[1].data_buffer = &read_data;
+  op_list[1].data_size = sizeof(read_data);
+
+  zx_status_t status = device.I2cImplTransact(0, op_list, 2);
+  ASSERT_OK(status);
+  ASSERT_EQ(0xDE, read_data);
+}
+
+TEST_F(FtdiI2cTest, NackReadTest) {
+  FtdiI2c device = FtdiBasicInit();
+
+  serial_.FailOnUnexpectedReadWrite(false);
+  std::vector<uint8_t> serial_read_data = {
+      0x01,  // The NACK for writing bus address.
+      0x01,  // The NACK for writing register value.
+      0x01,  // The NACK for initiating a read.
+      0x00,  // The Value we will be reading out.
+  };
+  serial_.PushExpectedRead(std::move(serial_read_data));
+
+  i2c_impl_op_t op_list[2] = {};
+  op_list[0].is_read = false;
+  op_list[0].stop = false;
+  uint8_t write_data = 0xAB;
+  op_list[0].data_buffer = &write_data;
+  op_list[0].data_size = sizeof(write_data);
+
+  op_list[1].is_read = true;
+  op_list[1].stop = true;
+  uint8_t read_data = 0;
+  op_list[1].data_buffer = &read_data;
+  op_list[1].data_size = sizeof(read_data);
+
+  zx_status_t status = device.I2cImplTransact(0, op_list, 2);
+  ASSERT_EQ(ZX_ERR_INTERNAL, status);
+}
+
 }  // namespace ftdi_mpsse
