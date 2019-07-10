@@ -39,5 +39,5 @@ can be accommodated. Look for directories containing a file called
 'amendments.json' for examples of this.
 
 If you have formatters for all the types in your library, you can just provide
-a formattting.h and skip the amendments business. There are currently no
+a formatting.h and skip the amendments business. There are currently no
 examples of this.

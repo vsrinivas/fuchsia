@@ -10,7 +10,7 @@
 
 namespace fostr {
 
-// Use these otuput manipulators to generate indented output:
+// Use these output manipulators to generate indented output:
 //
 // os << fostr::IdentBy(2); // Default is 4 spaces.
 // os << "items:";
