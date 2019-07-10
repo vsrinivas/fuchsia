@@ -207,5 +207,9 @@ package("system_data_file") {
       path = "test_file.txt"
       dest = "test_file.txt"
     },
+    {
+      path = "test_file.txt"
+      dest = "subdir/test_file.txt"
+    },
   ]
 }
