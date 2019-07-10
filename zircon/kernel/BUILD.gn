@@ -382,7 +382,7 @@ if (current_toolchain == default_toolchain) {
     ]
   }
 
-  # Copy gdb extension script file needed for kernel debugging.
+  # Link gdb extension script file needed for kernel debugging.
   action("gdb_extension") {
     visibility = [ ":*" ]
     sources = [
@@ -393,7 +393,7 @@ if (current_toolchain == default_toolchain) {
     ]
     script = "/bin/ln"
     args = [
-      "-s",
+      "-sf",
       rebase_path("scripts/zircon.elf-gdb.py", target_out_dir),
       rebase_path(target_out_dir, root_build_dir),
     ]
