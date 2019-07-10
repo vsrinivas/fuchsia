@@ -618,7 +618,15 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
   log(RPC_OUT, "devhost[%s] add '%s'\n", path, child->name);
 
   bool add_invisible = child->flags & DEV_FLAG_INVISIBLE;
+  fuchsia_device_manager_AddDeviceConfig add_device_config = 0;
 
+  // TODO(ravoorir): Support this per device configuration. Uncomment the below when
+  // we can configure this per device.
+  /*if (child->flags & DEV_FLAG_ALLOW_MULTI_COMPOSITE) {
+    add_device_config |= fuchsia_device_manager_AddDeviceConfig_ALLOW_MULTI_COMPOSITE;
+  }*/
+
+  add_device_config |= fuchsia_device_manager_AddDeviceConfig_ALLOW_MULTI_COMPOSITE;
   zx_status_t status;
   zx::channel hrpc, hsend;
   if ((status = zx::channel::create(0, &hrpc, &hsend)) != ZX_OK) {
@@ -649,8 +657,8 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
     status = fuchsia_device_manager_CoordinatorAddDevice(
         rpc.get(), hsend.release(), reinterpret_cast<const uint64_t*>(props), prop_count,
         child->name, strlen(child->name), child->protocol_id, child->driver->libname().data(),
-        child->driver->libname().size(), proxy_args, proxy_args_len, client_remote.release(),
-        &call_status, &device_id);
+        child->driver->libname().size(), proxy_args, proxy_args_len, add_device_config,
+        client_remote.release(), &call_status, &device_id);
   }
   if (status != ZX_OK) {
     log(ERROR, "devhost[%s] add '%s': rpc sending failed: %d\n", path, child->name, status);

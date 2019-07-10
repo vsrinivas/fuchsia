@@ -38,6 +38,63 @@ enum class CompatibilityTestStatus : uint32_t {
 class DeviceController;
 struct DeviceComponentPart;
 struct DeviceComponent;
+class AddDeviceConfig final {
+public:
+  constexpr AddDeviceConfig() : value_(0u) {}
+  explicit constexpr AddDeviceConfig(uint32_t value) : value_(value) {}
+  const static AddDeviceConfig ALLOW_MULTI_COMPOSITE;
+  const static AddDeviceConfig mask;
+
+  explicit constexpr inline operator uint32_t() const { return value_; }
+  constexpr inline operator bool() const { return value_; }
+  constexpr inline AddDeviceConfig operator~() const;
+  constexpr inline AddDeviceConfig operator|(const AddDeviceConfig& other) const;
+  constexpr inline AddDeviceConfig operator&(const AddDeviceConfig& other) const;
+  constexpr inline AddDeviceConfig operator^(const AddDeviceConfig& other) const;
+  constexpr inline void operator|=(const AddDeviceConfig& other);
+  constexpr inline void operator&=(const AddDeviceConfig& other);
+  constexpr inline void operator^=(const AddDeviceConfig& other);
+
+private:
+  uint32_t value_;
+};
+constexpr const ::llcpp::fuchsia::device::manager::AddDeviceConfig AddDeviceConfig::ALLOW_MULTI_COMPOSITE = ::llcpp::fuchsia::device::manager::AddDeviceConfig(1u);
+constexpr const ::llcpp::fuchsia::device::manager::AddDeviceConfig AddDeviceConfig::mask = ::llcpp::fuchsia::device::manager::AddDeviceConfig(1u);
+
+constexpr inline ::llcpp::fuchsia::device::manager::AddDeviceConfig AddDeviceConfig::operator~() const {
+  return ::llcpp::fuchsia::device::manager::AddDeviceConfig(static_cast<uint32_t>(~this->value_ & mask.value_));
+}
+
+constexpr inline ::llcpp::fuchsia::device::manager::AddDeviceConfig AddDeviceConfig::operator|(
+    const ::llcpp::fuchsia::device::manager::AddDeviceConfig& other) const {
+  return ::llcpp::fuchsia::device::manager::AddDeviceConfig(static_cast<uint32_t>(this->value_ | other.value_));
+}
+
+constexpr inline ::llcpp::fuchsia::device::manager::AddDeviceConfig AddDeviceConfig::operator&(
+    const ::llcpp::fuchsia::device::manager::AddDeviceConfig& other) const {
+  return ::llcpp::fuchsia::device::manager::AddDeviceConfig(static_cast<uint32_t>(this->value_ & other.value_));
+}
+
+constexpr inline ::llcpp::fuchsia::device::manager::AddDeviceConfig AddDeviceConfig::operator^(
+    const ::llcpp::fuchsia::device::manager::AddDeviceConfig& other) const {
+  return ::llcpp::fuchsia::device::manager::AddDeviceConfig(static_cast<uint32_t>(this->value_ ^ other.value_));
+}
+
+constexpr inline void AddDeviceConfig::operator|=(
+    const ::llcpp::fuchsia::device::manager::AddDeviceConfig& other) {
+  this->value_ |= other.value_;
+}
+
+constexpr inline void AddDeviceConfig::operator&=(
+    const ::llcpp::fuchsia::device::manager::AddDeviceConfig& other) {
+  this->value_ &= other.value_;
+}
+
+constexpr inline void AddDeviceConfig::operator^=(
+    const ::llcpp::fuchsia::device::manager::AddDeviceConfig& other) {
+  this->value_ ^= other.value_;
+}
+
 class Coordinator;
 
 extern "C" const fidl_type_t fuchsia_device_manager_DebugDumperDumpTreeRequestTable;
@@ -1206,6 +1263,7 @@ class Coordinator final {
     uint32_t protocol_id;
     ::fidl::StringView driver_path;
     ::fidl::StringView args;
+    AddDeviceConfig device_add_config;
     ::zx::channel client_remote;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorAddDeviceRequestTable;
@@ -1514,7 +1572,7 @@ class Coordinator final {
     // and will be forwarded to the shadow device. `client_remote`, if present,
     // will be passed to the device as an open connection for the client.
     // On success, the returned `local_device_id` is the identifier assigned by devmgr.
-    zx_status_t AddDevice(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, int32_t* out_status, uint64_t* out_local_device_id);
+    zx_status_t AddDevice(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, int32_t* out_status, uint64_t* out_local_device_id);
 
     // Record the addition of a new device that can be communicated with via `rpc`.
     // For binding purposes, it is has properties `props`. `name` and `driver_path`
@@ -1525,7 +1583,7 @@ class Coordinator final {
     // On success, the returned `local_device_id` is the identifier assigned by devmgr.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<AddDeviceResponse> AddDevice(::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_local_device_id);
+    ::fidl::DecodeResult<AddDeviceResponse> AddDevice(::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_local_device_id);
 
     // Record the addition of a new device that can be communicated with via `rpc`.
     // For binding purposes, it is has properties `props`. `name` and `driver_path`
@@ -1764,7 +1822,7 @@ class Coordinator final {
     // and will be forwarded to the shadow device. `client_remote`, if present,
     // will be passed to the device as an open connection for the client.
     // On success, the returned `local_device_id` is the identifier assigned by devmgr.
-    static zx_status_t AddDevice(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, int32_t* out_status, uint64_t* out_local_device_id);
+    static zx_status_t AddDevice(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, int32_t* out_status, uint64_t* out_local_device_id);
 
     // Record the addition of a new device that can be communicated with via `rpc`.
     // For binding purposes, it is has properties `props`. `name` and `driver_path`
@@ -1775,7 +1833,7 @@ class Coordinator final {
     // On success, the returned `local_device_id` is the identifier assigned by devmgr.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<AddDeviceResponse> AddDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_local_device_id);
+    static ::fidl::DecodeResult<AddDeviceResponse> AddDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_local_device_id);
 
     // Record the addition of a new device that can be communicated with via `rpc`.
     // For binding purposes, it is has properties `props`. `name` and `driver_path`
@@ -2021,7 +2079,7 @@ class Coordinator final {
 
     using AddDeviceCompleter = ::fidl::Completer<AddDeviceCompleterBase>;
 
-    virtual void AddDevice(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, AddDeviceCompleter::Sync _completer) = 0;
+    virtual void AddDevice(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, AddDeviceCompleter::Sync _completer) = 0;
 
     class AddDeviceInvisibleCompleterBase : public _Base {
      public:
@@ -2411,6 +2469,11 @@ static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceComponent, parts
 static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceComponent) == ::llcpp::fuchsia::device::manager::DeviceComponent::PrimarySize);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::device::manager::AddDeviceConfig> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::AddDeviceConfig>);
+static_assert(sizeof(::llcpp::fuchsia::device::manager::AddDeviceConfig) == sizeof(uint32_t));
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest> : public std::true_type {};
 template <>
 struct IsFidlMessage<::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest> : public std::true_type {};
@@ -2422,7 +2485,8 @@ static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDevice
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest, protocol_id) == 56);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest, driver_path) == 64);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest, args) == 80);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest, client_remote) == 96);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest, device_add_config) == 96);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest, client_remote) == 100);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator::AddDeviceResponse> : public std::true_type {};

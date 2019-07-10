@@ -46,6 +46,12 @@ const uint32 DEVICE_COMPONENT_PARTS_MAX = 16;
 /// Maximum instructions in a match program
 const uint32 DEVICE_COMPONENT_PART_INSTRUCTIONS_MAX = 32;
 
+/// Bit flags for device add configuration
+bits AddDeviceConfig : uint32 {
+    ///  Device can be a component in multiple composite devices
+    ALLOW_MULTI_COMPOSITE = 0x00000001;
+};
+
 /// A part of a description of a DeviceComponent
 struct DeviceComponentPart {
     // This is an awful hack around the LLCPP bindings not being ready yet.
@@ -161,6 +167,7 @@ protocol Coordinator {
               vector<DeviceProperty>:PROPERTIES_MAX props,
               string:DEVICE_NAME_MAX name, uint32 protocol_id,
               string:DEVICE_PATH_MAX? driver_path, string:DEVICE_ARGS_MAX? args,
+              AddDeviceConfig device_add_config,
               handle<channel>? client_remote)
         -> (zx.status status, LocalDeviceId local_device_id);
 

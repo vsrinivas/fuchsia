@@ -572,12 +572,18 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
   // If we're creating a device that's using the component driver, inform the
   // component.
   if (component_driver_ != nullptr && dev->libname() == component_driver_->libname) {
-    CompositeDeviceComponent* component = dev->parent()->component();
-    component->set_component_device(dev);
-    status = component->composite()->TryAssemble();
-    if (status != ZX_OK && status != ZX_ERR_SHOULD_WAIT) {
-      log(ERROR, "devcoordinator: failed to assemble composite: %s\n",
-          zx_status_get_string(status));
+    for (auto& cur_component : dev->parent()->components()) {
+      if (cur_component.component_device() == nullptr) {
+        // Pick the first component that does not have a device added by the component
+        // driver.
+        cur_component.set_component_device(dev);
+        status = cur_component.composite()->TryAssemble();
+        if (status != ZX_OK && status != ZX_ERR_SHOULD_WAIT) {
+          log(ERROR, "devcoordinator: failed to assemble composite: %s\n",
+              zx_status_get_string(status));
+        }
+        break;
+      }
     }
   }
 
@@ -656,7 +662,17 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
     // If it is, then its parent will know about which one (since the parent
     // is the actual device matched by the component description).
     const auto& parent = dev->parent();
-    parent->component()->Unbind();
+
+    for (auto itr = parent->components().begin(); itr != parent->components().end();) {
+      auto& cur_component = *itr;
+      // Advance the iterator because we will erase the current element from the list.
+      ++itr;
+      if (cur_component.component_device() == dev) {
+        cur_component.Unbind();
+        parent->components().erase(cur_component);
+        break;
+      }
+    }
   }
 
   // detach from devhost
@@ -775,7 +791,7 @@ zx_status_t Coordinator::AddCompositeDevice(
   // Try to bind the new composite device specification against existing
   // devices.
   for (auto& dev : devices_) {
-    if (!dev.is_bindable()) {
+    if (!dev.is_bindable() && !dev.is_composite_bindable()) {
       continue;
     }
 
@@ -1101,7 +1117,8 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev, Devhost* t
 
 zx_status_t Coordinator::AttemptBind(const Driver* drv, const fbl::RefPtr<Device>& dev) {
   // cannot bind driver to already bound device
-  if ((dev->flags & DEV_CTX_BOUND) && (!(dev->flags & DEV_CTX_MULTI_BIND))) {
+  if ((dev->flags & DEV_CTX_BOUND) &&
+       !(dev->flags & (DEV_CTX_MULTI_BIND | DEV_CTX_ALLOW_MULTI_COMPOSITE))) {
     return ZX_ERR_BAD_STATE;
   }
   if (!(dev->flags & DEV_CTX_MUST_ISOLATE)) {
@@ -1308,7 +1325,7 @@ void Coordinator::DriverAddedSys(Driver* drv, const char* version) {
 
 zx_status_t Coordinator::BindDriverToDevice(const fbl::RefPtr<Device>& dev, const Driver* drv,
                                             bool autobind, const AttemptBindFunc& attempt_bind) {
-  if (!dev->is_bindable()) {
+  if (!dev->is_bindable() && !(dev->is_composite_bindable())) {
     return ZX_ERR_NEXT;
   }
   if (!driver_is_bindable(drv, dev->protocol_id(), dev->props(), autobind)) {
@@ -1377,13 +1394,17 @@ zx_status_t Coordinator::BindDevice(const fbl::RefPtr<Device>& dev, fbl::StringP
   // Attempt composite device matching first.  This is unnecessary if a
   // specific driver has been requested.
   if (autobind) {
+    zx_status_t status;
     for (auto& composite : composite_devices_) {
       size_t index;
       if (composite.TryMatchComponents(dev, &index)) {
         log(SPEW, "devcoordinator: dev='%s' matched component %zu of composite='%s'\n",
             dev->name().data(), index, composite.name().data());
-
-        return composite.BindComponent(index, dev);
+        status = composite.BindComponent(index, dev);
+        if (status != ZX_OK) {
+          log(ERROR, "composite bind component failed\n");
+          return status;
+        }
       }
     }
   }

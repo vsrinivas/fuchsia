@@ -24,7 +24,8 @@ using namespace devmgr;
 // LibDriver Device Interface
 
 #define ALLOWED_FLAGS \
-  (DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INSTANCE | DEVICE_ADD_MUST_ISOLATE | DEVICE_ADD_INVISIBLE)
+  (DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INSTANCE | \
+   DEVICE_ADD_MUST_ISOLATE | DEVICE_ADD_INVISIBLE | DEVICE_ADD_ALLOW_MULTI_COMPOSITE)
 
 __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* parent,
                                             device_add_args_t* args, zx_device_t** out) {
@@ -71,6 +72,9 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     }
     if (args->flags & DEVICE_ADD_INVISIBLE) {
       dev->flags |= DEV_FLAG_INVISIBLE;
+    }
+    if (args->flags & DEVICE_ADD_ALLOW_MULTI_COMPOSITE) {
+      dev->flags |= DEV_FLAG_ALLOW_MULTI_COMPOSITE;
     }
 
     // out must be set before calling devhost_device_add().

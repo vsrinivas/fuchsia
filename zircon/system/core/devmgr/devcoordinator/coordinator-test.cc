@@ -37,24 +37,42 @@ constexpr char kDriverPath[] = "/boot/driver/test/mock-device.so";
 constexpr char kLogMessage[] = "log message text";
 constexpr char kLogTestCaseName[] = "log test case";
 
-devmgr::CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher) {
+void CreateBootArgs(const char* config, size_t size, devmgr::BootArgs* boot_args) {
+  zx::vmo vmo;
+  zx_status_t status = zx::vmo::create(size, 0, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  status = vmo.write(config, 0, size);
+  ASSERT_EQ(ZX_OK, status);
+
+  status = devmgr::BootArgs::Create(std::move(vmo), size, boot_args);
+  ASSERT_EQ(ZX_OK, status);
+}
+
+devmgr::CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher,
+                                        devmgr::BootArgs* boot_args) {
   devmgr::CoordinatorConfig config{};
+  const char config1[] = "key1=old-value\0key2=value2\0key1=new-value";
+  if (boot_args != nullptr) {
+    CreateBootArgs(config1, sizeof(config1), boot_args);
+  }
   config.dispatcher = dispatcher;
   config.require_system = false;
   config.asan_drivers = false;
+  config.boot_args = boot_args;
   zx::event::create(0, &config.fshost_event);
   return config;
 }
 
 TEST(CoordinatorTestCase, InitializeCoreDevices) {
-  devmgr::Coordinator coordinator(DefaultConfig(nullptr));
+  devmgr::Coordinator coordinator(DefaultConfig(nullptr, nullptr));
 
   zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
   ASSERT_EQ(ZX_OK, status);
 }
 
 TEST(CoordinatorTestCase, DumpState) {
-  devmgr::Coordinator coordinator(DefaultConfig(nullptr));
+  devmgr::Coordinator coordinator(DefaultConfig(nullptr, nullptr));
 
   zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
   ASSERT_EQ(ZX_OK, status);
@@ -88,7 +106,7 @@ TEST(CoordinatorTestCase, LoadDriver) {
 
 TEST(CoordinatorTestCase, BindDrivers) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-  devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher()));
+  devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
 
   zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
   ASSERT_EQ(ZX_OK, status);
@@ -108,7 +126,7 @@ TEST(CoordinatorTestCase, BindDrivers) {
 // Test binding drivers against the root/test/misc devices
 TEST(CoordinatorTestCase, BindDriversForBuiltins) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-  devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher()));
+  devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
 
   zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
   ASSERT_EQ(ZX_OK, status);
@@ -267,7 +285,7 @@ void CheckBindDriverReceived(const zx::channel& remote, const char* expected_dri
 
 TEST(CoordinatorTestCase, BindDevices) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-  devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher()));
+  devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
 
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
 
@@ -435,7 +453,7 @@ class TestDriverTestReporter : public devmgr::DriverTestReporter {
 
 TEST(CoordinatorTestCase, TestOutput) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-  devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher()));
+  devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
 
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
 
@@ -758,7 +776,8 @@ class MultipleDeviceTestCase : public zxtest::Test {
   // These should be listed after devhost/sys_proxy as it needs to be
   // destroyed before them.
   async::Loop loop_{&kAsyncLoopConfigNoAttachToThread};
-  devmgr::Coordinator coordinator_{DefaultConfig(loop_.dispatcher())};
+  devmgr::BootArgs boot_args_;
+  devmgr::Coordinator coordinator_{DefaultConfig(loop_.dispatcher(), &boot_args_)};
 
   // A list of all devices that were added during this test, and their
   // channels.  These exist to keep them alive until the test is over.
@@ -776,6 +795,7 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<devmgr::Device>& parent
       parent, std::move(local), nullptr /* props_data */, 0 /* props_count */, name, protocol_id,
       driver.data() /* driver_path */, nullptr /* args */, false /* invisible */,
       zx::channel() /* client_remote */, &state.device);
+  state.device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
   ASSERT_EQ(ZX_OK, status);
   loop_.RunUntilIdle();
 
@@ -1006,7 +1026,7 @@ void CompositeTestCase::CheckCompositeCreation(const char* composite_name,
 
     // Synthesize the AddDevice request the component driver would send
     char name[32];
-    snprintf(name, sizeof(name), "component-device-%zu", i);
+    snprintf(name, sizeof(name), "%s-comp-device-%zu", composite_name, i);
     ASSERT_NO_FATAL_FAILURES(
         AddDevice(device_state->device, name, 0, driver, &component_indexes_out[i]));
   }
@@ -1027,6 +1047,72 @@ class CompositeAddOrderTestCase : public CompositeTestCase {
   };
   void ExecuteTest(AddLocation add);
 };
+
+class CompositeAddOrderSharedComponentTestCase : public CompositeAddOrderTestCase {
+ public:
+  enum class DevNum {
+    DEV1 = 1,
+    DEV2,
+  };
+  void ExecuteSharedComponentTest(AddLocation dev1Add, AddLocation dev2Add);
+};
+
+void CompositeAddOrderSharedComponentTestCase::ExecuteSharedComponentTest(AddLocation dev1_add,
+                                                                          AddLocation dev2_add) {
+  size_t device_indexes[3];
+  uint32_t protocol_id[] = {
+      ZX_PROTOCOL_GPIO,
+      ZX_PROTOCOL_I2C,
+      ZX_PROTOCOL_ETHERNET,
+  };
+  static_assert(fbl::count_of(protocol_id) == fbl::count_of(device_indexes));
+
+  const char* kCompositeDev1Name = "composite-dev1";
+  const char* kCompositeDev2Name = "composite-dev2";
+  auto do_add = [&](const char* devname) {
+    ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(
+        platform_bus(), protocol_id, fbl::count_of(protocol_id), nullptr /* props */, 0, devname));
+  };
+
+  if (dev1_add == AddLocation::BEFORE) {
+    ASSERT_NO_FATAL_FAILURES(do_add(kCompositeDev1Name));
+  }
+
+  if (dev2_add == AddLocation::BEFORE) {
+    ASSERT_NO_FATAL_FAILURES(do_add(kCompositeDev2Name));
+  }
+  // Add the devices to construct the composite out of.
+  for (size_t i = 0; i < fbl::count_of(device_indexes); ++i) {
+    char name[32];
+    snprintf(name, sizeof(name), "device-%zu", i);
+    ASSERT_NO_FATAL_FAILURES(
+        AddDevice(platform_bus(), name, protocol_id[i], "", &device_indexes[i]));
+    if (i == 0 && dev1_add == AddLocation::MIDDLE) {
+      ASSERT_NO_FATAL_FAILURES(do_add(kCompositeDev1Name));
+    }
+    if (i == 0 && dev2_add == AddLocation::MIDDLE) {
+      ASSERT_NO_FATAL_FAILURES(do_add(kCompositeDev2Name));
+    }
+  }
+
+  if (dev1_add == AddLocation::AFTER) {
+    ASSERT_NO_FATAL_FAILURES(do_add(kCompositeDev1Name));
+  }
+
+  zx::channel composite_remote1;
+  zx::channel composite_remote2;
+  size_t component_device1_indexes[fbl::count_of(device_indexes)];
+  size_t component_device2_indexes[fbl::count_of(device_indexes)];
+  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDev1Name, device_indexes,
+                                                  fbl::count_of(device_indexes),
+                                                  component_device1_indexes, &composite_remote1));
+  if (dev2_add == AddLocation::AFTER) {
+    ASSERT_NO_FATAL_FAILURES(do_add(kCompositeDev2Name));
+  }
+  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDev2Name, device_indexes,
+                                                  fbl::count_of(device_indexes),
+                                                  component_device2_indexes, &composite_remote2));
+}
 
 void CompositeAddOrderTestCase::ExecuteTest(AddLocation add) {
   size_t device_indexes[3];
@@ -1074,12 +1160,32 @@ TEST_F(CompositeAddOrderTestCase, DefineBeforeDevices) {
   ASSERT_NO_FATAL_FAILURES(ExecuteTest(AddLocation::BEFORE));
 }
 
+TEST_F(CompositeAddOrderTestCase, DefineAfterDevices) {
+  ASSERT_NO_FATAL_FAILURES(ExecuteTest(AddLocation::AFTER));
+}
+
 TEST_F(CompositeAddOrderTestCase, DefineInbetweenDevices) {
   ASSERT_NO_FATAL_FAILURES(ExecuteTest(AddLocation::MIDDLE));
 }
 
-TEST_F(CompositeAddOrderTestCase, DefineAfterDevices) {
-  ASSERT_NO_FATAL_FAILURES(ExecuteTest(AddLocation::AFTER));
+TEST_F(CompositeAddOrderSharedComponentTestCase, DefineDevice1BeforeDevice2Before) {
+  ASSERT_NO_FATAL_FAILURES(ExecuteSharedComponentTest(AddLocation::BEFORE, AddLocation::BEFORE));
+}
+
+TEST_F(CompositeAddOrderSharedComponentTestCase, DefineDevice1BeforeDevice2After) {
+  ASSERT_NO_FATAL_FAILURES(ExecuteSharedComponentTest(AddLocation::BEFORE, AddLocation::AFTER));
+}
+
+TEST_F(CompositeAddOrderSharedComponentTestCase, DefineDevice1MiddleDevice2Before) {
+  ASSERT_NO_FATAL_FAILURES(ExecuteSharedComponentTest(AddLocation::BEFORE, AddLocation::MIDDLE));
+}
+
+TEST_F(CompositeAddOrderSharedComponentTestCase, DefineDevice1MiddleDevice2After) {
+  ASSERT_NO_FATAL_FAILURES(ExecuteSharedComponentTest(AddLocation::MIDDLE, AddLocation::AFTER));
+}
+
+TEST_F(CompositeAddOrderSharedComponentTestCase, DefineDevice1AfterDevice2After) {
+  ASSERT_NO_FATAL_FAILURES(ExecuteSharedComponentTest(AddLocation::AFTER, AddLocation::AFTER));
 }
 
 TEST_F(CompositeTestCase, CantAddFromNonPlatformBus) {
@@ -1091,6 +1197,145 @@ TEST_F(CompositeTestCase, CantAddFromNonPlatformBus) {
   ASSERT_NO_FATAL_FAILURES(
       BindCompositeDefineComposite(device_state->device, protocol_id, fbl::count_of(protocol_id),
                                    nullptr /* props */, 0, "composite-dev", ZX_ERR_ACCESS_DENIED));
+}
+
+TEST_F(CompositeTestCase, AddMultipleSharedComponentCompositeDevices) {
+  size_t device_indexes[2];
+  zx_status_t status = ZX_OK;
+  uint32_t protocol_id[] = {
+      ZX_PROTOCOL_GPIO,
+      ZX_PROTOCOL_I2C,
+  };
+  static_assert(fbl::count_of(protocol_id) == fbl::count_of(device_indexes));
+
+  for (size_t i = 0; i < fbl::count_of(device_indexes); ++i) {
+    char name[32];
+    snprintf(name, sizeof(name), "device-%zu", i);
+    ASSERT_NO_FATAL_FAILURES(
+        AddDevice(platform_bus(), name, protocol_id[i], "", &device_indexes[i]));
+  }
+
+  for (size_t i = 1; i <= 5; i++) {
+    char composite_dev_name[32];
+    snprintf(composite_dev_name, sizeof(composite_dev_name), "composite-dev-%zu", i);
+    ASSERT_NO_FATAL_FAILURES(
+        BindCompositeDefineComposite(platform_bus(), protocol_id, fbl::count_of(protocol_id),
+                                     nullptr /* props */, 0, composite_dev_name));
+  }
+
+  zx::channel composite_remote[5];
+  size_t component_device_indexes[5][fbl::count_of(device_indexes)];
+  for (size_t i = 1; i <= 5; i++) {
+    char composite_dev_name[32];
+    snprintf(composite_dev_name, sizeof(composite_dev_name), "composite-dev-%zu", i);
+    ASSERT_NO_FATAL_FAILURES(
+        CheckCompositeCreation(composite_dev_name, device_indexes, fbl::count_of(device_indexes),
+                               component_device_indexes[i - 1], &composite_remote[i - 1]));
+  }
+  auto device1 = device(device_indexes[1])->device;
+  size_t count = 0;
+  for (auto& child : device1->children()) {
+    count++;
+    char name[32];
+    snprintf(name, sizeof(name), "composite-dev-%zu-comp-device-1", count);
+    if (strcmp(child.name().data(), name)) {
+      status = ZX_ERR_INTERNAL;
+    }
+  }
+  ASSERT_OK(status);
+  ASSERT_EQ(count, 5);
+}
+
+TEST_F(CompositeTestCase, SharedComponentUnbinds) {
+  size_t device_indexes[2];
+  uint32_t protocol_id[] = {
+      ZX_PROTOCOL_GPIO,
+      ZX_PROTOCOL_I2C,
+  };
+  static_assert(fbl::count_of(protocol_id) == fbl::count_of(device_indexes));
+
+  const char* kCompositeDev1Name = "composite-dev-1";
+  const char* kCompositeDev2Name = "composite-dev-2";
+  ASSERT_NO_FATAL_FAILURES(
+      BindCompositeDefineComposite(platform_bus(), protocol_id, fbl::count_of(protocol_id),
+                                   nullptr /* props */, 0, kCompositeDev1Name));
+
+  ASSERT_NO_FATAL_FAILURES(
+      BindCompositeDefineComposite(platform_bus(), protocol_id, fbl::count_of(protocol_id),
+                                   nullptr /* props */, 0, kCompositeDev2Name));
+
+  // Add the devices to construct the composite out of.
+  for (size_t i = 0; i < fbl::count_of(device_indexes); ++i) {
+    char name[32];
+    snprintf(name, sizeof(name), "device-%zu", i);
+    ASSERT_NO_FATAL_FAILURES(
+        AddDevice(platform_bus(), name, protocol_id[i], "", &device_indexes[i]));
+  }
+  zx::channel composite1_remote;
+  zx::channel composite2_remote;
+  size_t component_device1_indexes[fbl::count_of(device_indexes)];
+  size_t component_device2_indexes[fbl::count_of(device_indexes)];
+  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDev1Name, device_indexes,
+                                                  fbl::count_of(device_indexes),
+                                                  component_device1_indexes, &composite1_remote));
+  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDev2Name, device_indexes,
+                                                  fbl::count_of(device_indexes),
+                                                  component_device2_indexes, &composite2_remote));
+  loop()->RunUntilIdle();
+
+  {
+    // Remove device the composite, device 0's component device, and device 0
+    auto device1 = device(device_indexes[1])->device;
+    fbl::RefPtr<devmgr::Device> comp_device1;
+    fbl::RefPtr<devmgr::Device> comp_device2;
+    for (auto& comp : device1->components()) {
+      auto comp_device = comp.composite()->device();
+      if (!strcmp(comp_device->name().data(), kCompositeDev1Name)) {
+        comp_device1 = comp_device;
+        continue;
+      }
+      if (!strcmp(comp_device->name().data(), kCompositeDev2Name)) {
+        comp_device2 = comp_device;
+        continue;
+      }
+    }
+    ASSERT_OK(coordinator()->RemoveDevice(comp_device1, false));
+    ASSERT_OK(coordinator()->RemoveDevice(comp_device2, false));
+
+    ASSERT_NO_FATAL_FAILURES(RemoveDevice(component_device1_indexes[0]));
+    ASSERT_NO_FATAL_FAILURES(RemoveDevice(component_device2_indexes[0]));
+    ASSERT_NO_FATAL_FAILURES(RemoveDevice(device_indexes[0]));
+  }
+
+  // Add the device back and verify the composite gets created again
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus(), "device-0", protocol_id[0], "", &device_indexes[0]));
+  {
+    auto device_state = device(device_indexes[0]);
+    // Wait for the components to get bound
+    fbl::String driver = coordinator()->component_driver()->libname;
+    ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(device_state->remote, driver.data()));
+    loop()->RunUntilIdle();
+
+    // Synthesize the AddDevice request the component driver would send
+    ASSERT_NO_FATAL_FAILURES(AddDevice(device_state->device, "composite-dev1-comp-device-0", 0,
+                                       driver, &component_device1_indexes[0]));
+  }
+  {
+    auto device_state = device(device_indexes[0]);
+    // Wait for the components to get bound
+    fbl::String driver = coordinator()->component_driver()->libname;
+    ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(device_state->remote, driver.data()));
+    loop()->RunUntilIdle();
+
+    // Synthesize the AddDevice request the component driver would send
+    ASSERT_NO_FATAL_FAILURES(AddDevice(device_state->device, "composite-dev2-comp-device-0", 0,
+                                       driver, &component_device2_indexes[0]));
+  }
+  ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(
+      devhost_remote(), kCompositeDev1Name, fbl::count_of(device_indexes), &composite1_remote));
+  ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(
+      devhost_remote(), kCompositeDev2Name, fbl::count_of(device_indexes), &composite2_remote));
 }
 
 TEST_F(CompositeTestCase, ComponentUnbinds) {
@@ -1123,8 +1368,14 @@ TEST_F(CompositeTestCase, ComponentUnbinds) {
   {
     // Remove device the composite, device 0's component device, and device 0
     auto device1 = device(device_indexes[1])->device;
-    auto composite = device1->component()->composite()->device();
-    ASSERT_OK(coordinator()->RemoveDevice(composite, false));
+    fbl::RefPtr<devmgr::Device> comp_device;
+    for (auto& comp : device1->components()) {
+      comp_device = comp.composite()->device();
+      if (!strcmp(comp_device->name().data(), kCompositeDevName)) {
+        break;
+      }
+    }
+    ASSERT_OK(coordinator()->RemoveDevice(comp_device, false));
 
     ASSERT_NO_FATAL_FAILURES(RemoveDevice(component_device_indexes[0]));
     ASSERT_NO_FATAL_FAILURES(RemoveDevice(device_indexes[0]));

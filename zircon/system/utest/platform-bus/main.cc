@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/platform-defs.h>
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/devmgr-integration-test/fixture.h>
+#include <lib/devmgr-launcher/launch.h>
+#include <lib/zx/vmo.h>
+#include <libzbi/zbi-cpp.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#include <ddk/platform-defs.h>
-#include <lib/devmgr-integration-test/fixture.h>
-#include <lib/devmgr-launcher/launch.h>
-#include <lib/zx/vmo.h>
 #include <libzbi/zbi-cpp.h>
 #include <zircon/boot/image.h>
 #include <zircon/status.h>
@@ -26,29 +26,29 @@ namespace {
 using devmgr_integration_test::IsolatedDevmgr;
 using devmgr_integration_test::RecursiveWaitForFile;
 
-zbi_platform_id_t kPlatformId = [](){
-    zbi_platform_id_t plat_id = {};
-    plat_id.vid = PDEV_VID_TEST;
-    plat_id.pid = PDEV_PID_PBUS_TEST;
-    strcpy(plat_id.board_name, "pbus-test");
-    return plat_id;
+zbi_platform_id_t kPlatformId = []() {
+  zbi_platform_id_t plat_id = {};
+  plat_id.vid = PDEV_VID_TEST;
+  plat_id.pid = PDEV_PID_PBUS_TEST;
+  strcpy(plat_id.board_name, "pbus-test");
+  return plat_id;
 }();
 
 zx_status_t GetBootItem(uint32_t type, uint32_t extra, zx::vmo* out, uint32_t* length) {
-    if (type != ZBI_TYPE_PLATFORM_ID) {
-        return ZX_OK;
-    }
-    zx::vmo vmo;
-    zx_status_t status = zx::vmo::create(sizeof(kPlatformId), 0, &vmo);
-    if (status != ZX_OK) {
-        return status;
-    }
-    status = vmo.write(&kPlatformId, 0, sizeof(kPlatformId));
-    if (status != ZX_OK) {
-        return status;
-    }
-    *out = std::move(vmo);
+  if (type != ZBI_TYPE_PLATFORM_ID) {
     return ZX_OK;
+  }
+  zx::vmo vmo;
+  zx_status_t status = zx::vmo::create(sizeof(kPlatformId), 0, &vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = vmo.write(&kPlatformId, 0, sizeof(kPlatformId));
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out = std::move(vmo);
+  return ZX_OK;
 }
 
 TEST(PbusTest, Enumeration) {
@@ -86,6 +86,7 @@ TEST(PbusTest, Enumeration) {
                                    "sys/platform/11:01:8/test-i2c/i2c/i2c-1-5/component", &fd));
     EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:6/component", &fd));
     EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "composite-dev/composite", &fd));
+    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "composite-dev-2/composite", &fd), ZX_OK);
 
     const int dirfd = devmgr.devfs_root().get();
     struct stat st;

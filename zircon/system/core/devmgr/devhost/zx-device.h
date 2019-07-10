@@ -207,17 +207,17 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
 // clang-format off
 
-#define DEV_FLAG_DEAD           0x00000001  // being deleted
-#define DEV_FLAG_VERY_DEAD      0x00000002  // safe for ref0 and release()
-#define DEV_FLAG_UNBINDABLE     0x00000004  // nobody may bind to this device
-#define DEV_FLAG_BUSY           0x00000010  // device being created
-#define DEV_FLAG_INSTANCE       0x00000020  // this device was created-on-open
-#define DEV_FLAG_MULTI_BIND     0x00000080  // this device accepts many children
-#define DEV_FLAG_ADDED          0x00000100  // device_add() has been called for this device
-#define DEV_FLAG_INVISIBLE      0x00000200  // device not visible via devfs
-#define DEV_FLAG_UNBOUND        0x00000400  // informed that it should self-delete asap
-#define DEV_FLAG_WANTS_REBIND   0x00000800  // when last child goes, rebind this device
-
+#define DEV_FLAG_DEAD                  0x00000001  // being deleted
+#define DEV_FLAG_VERY_DEAD             0x00000002  // safe for ref0 and release()
+#define DEV_FLAG_UNBINDABLE            0x00000004  // nobody may bind to this device
+#define DEV_FLAG_BUSY                  0x00000010  // device being created
+#define DEV_FLAG_INSTANCE              0x00000020  // this device was created-on-open
+#define DEV_FLAG_MULTI_BIND            0x00000080  // this device accepts many children
+#define DEV_FLAG_ADDED                 0x00000100  // device_add() has been called for this device
+#define DEV_FLAG_INVISIBLE             0x00000200  // device not visible via devfs
+#define DEV_FLAG_UNBOUND               0x00000400  // informed that it should self-delete asap
+#define DEV_FLAG_WANTS_REBIND          0x00000800  // when last child goes, rebind this device
+#define DEV_FLAG_ALLOW_MULTI_COMPOSITE 0x00001000 // can be part of multiple composite devices
 // clang-format on
 
 zx_status_t device_bind(const fbl::RefPtr<zx_device_t>& dev, const char* drv_libname);

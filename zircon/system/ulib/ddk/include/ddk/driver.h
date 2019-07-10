@@ -70,6 +70,9 @@ enum {
     // This device will not be visible in devfs or available for binding
     // until device_make_visible() is called on it.
     DEVICE_ADD_INVISIBLE    = (1 << 3),
+
+    // This device is allowed to be bindable in multiple composite devices
+    DEVICE_ADD_ALLOW_MULTI_COMPOSITE = (1 << 4),
 };
 
 // Device Manager API
