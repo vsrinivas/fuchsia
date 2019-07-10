@@ -136,7 +136,7 @@ int WriteSummaryJSON(const fbl::Vector<std::unique_ptr<Result>>& results,
         fprintf(summary_json, "      \"result\": \"%s\",\n",
                 result->launch_status == runtests::SUCCESS ? "PASS" : "FAIL");
 
-        fprintf(summary_json, "      \"duration_milliseconds\": %ld",
+        fprintf(summary_json, "      \"duration_milliseconds\": %" PRId64,
                 result->duration_milliseconds);
 
         // Write all data sinks.
