@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:test/test.dart';
 import 'package:image/image.dart';
+import 'package:logging/logging.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
+import 'package:test/test.dart';
 
 int _ignoreAlpha(int pixel) => pixel & 0x00ffffff;
 
@@ -19,6 +20,9 @@ const _tries = 10;
 const _delay = Duration(seconds: 10);
 
 void main() {
+  Logger.root
+    ..level = Level.ALL
+    ..onRecord.listen((rec) => print('[${rec.level}]: ${rec.message}'));
   sl4f.Sl4f sl4fDriver;
   sl4f.Scenic scenicDriver;
 
@@ -35,10 +39,14 @@ void main() {
 
   test('the startup screen is not black', () async {
     for (var attempt = 0; attempt < _tries; attempt++) {
-      final screen = await scenicDriver.takeScreenshot(dumpName: 'screen');
-      if (!_isAllBlack(screen)) {
-        print('Saw a screen that is not black.');
-        return;
+      try {
+        final screen = await scenicDriver.takeScreenshot(dumpName: 'screen');
+        if (!_isAllBlack(screen)) {
+          print('Saw a screen that is not black.');
+          return;
+        }
+      } on sl4f.JsonRpcException {
+        print('Error taking screenshot; Scenic might not be ready yet.');
       }
       await Future.delayed(_delay);
     }
