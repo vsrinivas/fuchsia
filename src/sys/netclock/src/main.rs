@@ -88,10 +88,14 @@ async fn maintain_utc(
     for i in 0.. {
         match await!(time_service.update(1)) {
             Ok(true) => {
-                notifs.0.lock().set_source(
-                    ftime::UtcSource::External,
-                    zx::Time::get(zx::ClockId::Monotonic).into_nanos(),
+                let monotonic_before = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
+                let utc_now = Utc::now().timestamp_nanos();
+                let monotonic_after = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
+                info!(
+                    "CF-884:monotonic_before={}:utc={}:monotonic_after={}",
+                    monotonic_before, utc_now, monotonic_after,
                 );
+                notifs.0.lock().set_source(ftime::UtcSource::External, monotonic_before);
                 break;
             }
             Ok(false) => {
