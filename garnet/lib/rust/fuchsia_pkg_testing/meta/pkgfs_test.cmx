@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "test/pkgfs_test"
+    },
+    "sandbox": {
+        "dev": [
+            "misc/ramctl"
+        ],
+        "features": [
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

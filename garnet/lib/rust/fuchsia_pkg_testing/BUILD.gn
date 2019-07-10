@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
@@ -14,31 +15,75 @@ rustc_library("fuchsia_pkg_testing") {
 
   deps = [
     "//garnet/lib/rust/fuchsia_pkg",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-merkle",
+    "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-zircon",
+    "//src/storage/ramdevice-client",
     "//src/sys/lib/fuchsia_url:fuchsia_url",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:openat",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:walkdir",
+    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 
-test_package("fuchsia_pkg_testing_tests") {
+rustc_test("pkgfs_test") {
+  edition = "2018"
+  source_root = "tests/pkgfs_test.rs"
   deps = [
+    ":fuchsia_pkg_testing",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-merkle",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:openat",
+  ]
+}
+
+# Include blobfs in the build, which comes from Zircon
+generate_manifest("blobfs.manifest") {
+  visibility = [ ":*" ]
+  args = []
+  foreach(pattern, [ "bin/blobfs" ]) {
+    args += [ "--binary=" + pattern ]
+  }
+}
+manifest_outputs = get_target_outputs(":blobfs.manifest")
+manifest_file = manifest_outputs[0]
+
+test_package("fuchsia_pkg_testing_tests") {
+  extra = [ manifest_file ]
+  deps = [
+    ":blobfs.manifest",
     ":fuchsia_pkg_testing_test",
+    ":pkgfs_test",
+    "//garnet/go/src/grand_unified_binary",
+  ]
+
+  binaries = [
+    {
+      name = "pkgsvr"
+      source = "grand_unified_binary"
+    },
   ]
 
   tests = [
     {
       name = "fuchsia_pkg_testing_lib_test"
       dest = "fuchsia_pkg_testing_tests"
+      environments = basic_envs
+    },
+    {
+      name = "pkgfs_test"
       environments = basic_envs
     },
   ]
