@@ -30,6 +30,6 @@ library("device-protocol-pdev") {
 
   deps = [
     # pdev.cpp has #include <lib/mmio/mmio.h>.
-    "$zx/system/dev/lib/mmio:headers",
+    "$zx/system/dev/lib/mmio",
   ]
 }
