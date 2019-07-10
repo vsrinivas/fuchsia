@@ -367,6 +367,40 @@ mod tests {
         ret
     }
 
+    #[specialize_ip]
+    fn match_arms_specialized_for_ip<I: Ip>(a: u32) -> u32 {
+        match a {
+            1 => 255,
+            2 => 127,
+            #[ipv4]
+            3 => 63,
+            #[ipv6]
+            4 => 31,
+            #[ipv4]
+            5 => 15,
+            #[ipv6]
+            6 => 7,
+            _ => 0,
+        }
+    }
+
+    #[specialize_ip_address]
+    fn match_arms_specialized_for_ip_address<A: IpAddress>(a: u32) -> u32 {
+        match a {
+            1 => 256,
+            2 => 128,
+            #[ipv4addr]
+            3 => 64,
+            #[ipv6addr]
+            4 => 32,
+            #[ipv4addr]
+            5 => 16,
+            #[ipv6addr]
+            6 => 8,
+            _ => 0,
+        }
+    }
+
     #[test]
     fn test_simple_specialize_for_ip() {
         assert_eq!(simple_specialized_for_ip::<Ipv4>(), 1);
@@ -507,5 +541,43 @@ mod tests {
         assert_eq!(b, 15);
         assert_eq!(c, 20);
         assert_eq!(d, 36);
+    }
+
+    #[test]
+    fn test_match_arms_specialized_for_ip() {
+        assert_eq!(match_arms_specialized_for_ip::<Ipv4>(1), 255);
+        assert_eq!(match_arms_specialized_for_ip::<Ipv4>(2), 127);
+        assert_eq!(match_arms_specialized_for_ip::<Ipv4>(3), 63);
+        assert_eq!(match_arms_specialized_for_ip::<Ipv4>(4), 0);
+        assert_eq!(match_arms_specialized_for_ip::<Ipv4>(5), 15);
+        assert_eq!(match_arms_specialized_for_ip::<Ipv4>(6), 0);
+        assert_eq!(match_arms_specialized_for_ip::<Ipv4>(7), 0);
+
+        assert_eq!(match_arms_specialized_for_ip::<Ipv6>(1), 255);
+        assert_eq!(match_arms_specialized_for_ip::<Ipv6>(2), 127);
+        assert_eq!(match_arms_specialized_for_ip::<Ipv6>(3), 0);
+        assert_eq!(match_arms_specialized_for_ip::<Ipv6>(4), 31);
+        assert_eq!(match_arms_specialized_for_ip::<Ipv6>(5), 0);
+        assert_eq!(match_arms_specialized_for_ip::<Ipv6>(6), 7);
+        assert_eq!(match_arms_specialized_for_ip::<Ipv6>(7), 0);
+    }
+
+    #[test]
+    fn test_match_arms_specialized_for_ip_address() {
+        assert_eq!(match_arms_specialized_for_ip_address::<Ipv4Addr>(1), 256);
+        assert_eq!(match_arms_specialized_for_ip_address::<Ipv4Addr>(2), 128);
+        assert_eq!(match_arms_specialized_for_ip_address::<Ipv4Addr>(3), 64);
+        assert_eq!(match_arms_specialized_for_ip_address::<Ipv4Addr>(4), 0);
+        assert_eq!(match_arms_specialized_for_ip_address::<Ipv4Addr>(5), 16);
+        assert_eq!(match_arms_specialized_for_ip_address::<Ipv4Addr>(6), 0);
+        assert_eq!(match_arms_specialized_for_ip_address::<Ipv4Addr>(7), 0);
+
+        assert_eq!(match_arms_specialized_for_ip_address::<Ipv6Addr>(1), 256);
+        assert_eq!(match_arms_specialized_for_ip_address::<Ipv6Addr>(2), 128);
+        assert_eq!(match_arms_specialized_for_ip_address::<Ipv6Addr>(3), 0);
+        assert_eq!(match_arms_specialized_for_ip_address::<Ipv6Addr>(4), 32);
+        assert_eq!(match_arms_specialized_for_ip_address::<Ipv6Addr>(5), 0);
+        assert_eq!(match_arms_specialized_for_ip_address::<Ipv6Addr>(6), 8);
+        assert_eq!(match_arms_specialized_for_ip_address::<Ipv6Addr>(7), 0);
     }
 }

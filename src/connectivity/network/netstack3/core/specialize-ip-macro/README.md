@@ -48,14 +48,23 @@ fn foo<D: EventDispatcher, I: Ip>() {
     #[ipv6]
     do_other_ipv6_thing();
 
-    do_thing_d();
+    match do_thing_d() {
+        #[ipv4]
+        4 => do_ipv4_thing_e(),
+
+        #[ipv6]
+        6 => do_ipv6_thing_e(),
+
+        _ => do_other_thing_e(),
+    };
 }
 ```
 
 
 The `#[ipv4]` (`#[ipv4addr]`) and `#[ipv6]` (`#[ipv6addr]`) attributes are used
-to indicate a statement which should only be included in a particular version of
-the function. If multiple statements are required, a block can be used:
+to indicate a statement or match arm which should only be included in a
+particular version of the function. If multiple statements are required, a block
+can be used:
 
 ```rust
 #[ipv4]
@@ -65,10 +74,10 @@ the function. If multiple statements are required, a block can be used:
 }
 ```
 
-Any statement not annotated with `#[ipv4]` or `#[ipv6]` will be present in both
-versions of the function, while statements annotated with `#[ipv4]` will be
-removed in the `Ipv6` version of the function, and vice versa. The above example
-would compile into:
+Any statement or match arm not annotated with `#[ipv4]` or `#[ipv6]` will be
+present in both versions of the function, while statements or match arms
+annotated with `#[ipv4]` will be removed in the `Ipv6` version of the function,
+and vice versa. The above example would compile into:
 
 ```rust
 /// `Ipv4` version
@@ -85,7 +94,10 @@ fn foo<D: EventDispatcher>() {
         do_thing_c();
     }
 
-    do_thing_d();
+    match do_thing_d() {
+        4 => do_ipv4_thing_e(),
+        _ => do_other_thing_e(),
+    };
 }
 
 /// `Ipv6` version
@@ -101,7 +113,10 @@ fn foo<D: EventDispatcher>() {
 
     do_other_ipv6_thing();
 
-    do_thing_d();
+    match do_thing_d() {
+        6 => do_ipv6_thing_e(),
+        _ => do_other_thing_e(),
+    };
 }
 ```
 
@@ -109,9 +124,10 @@ fn foo<D: EventDispatcher>() {
 
 ### Statements vs Expressions
 
-Due to the way the Rust parser works, only statements may be annotated with
-`#[ipv4]` or `#[ipv6]`; they cannot be used to annotate expressions. In other
-words, the following will fail to parse before the proc macro is ever run:
+Due to the way the Rust parser works, only statements and match arms may be
+annotated with `#[ipv4]` or `#[ipv6]`; they cannot be used to annotate
+expressions. In other words, the following will fail to parse before the proc
+macro is ever run:
 
 ```rust
 #[specialize_ip]

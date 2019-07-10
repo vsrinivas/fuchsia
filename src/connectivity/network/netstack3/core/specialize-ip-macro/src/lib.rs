@@ -15,8 +15,9 @@ use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::ToTokens;
 use syn::visit_mut::{self, VisitMut};
 use syn::{
-    punctuated::Punctuated, ArgCaptured, AttrStyle, Attribute, Block, Error, Expr, FnArg, FnDecl,
-    GenericParam, Ident, Item, ItemFn, Pat, Path, Stmt, TypeImplTrait, TypeParamBound,
+    punctuated::Punctuated, ArgCaptured, AttrStyle, Attribute, Block, Error, Expr, ExprMatch,
+    FnArg, FnDecl, GenericParam, Ident, Item, ItemFn, Pat, Path, Stmt, TypeImplTrait,
+    TypeParamBound,
 };
 
 #[proc_macro_attribute]
@@ -323,6 +324,21 @@ fn parse_input(input: ItemFn, cfg: &Config) -> Input {
                 })
                 .collect();
             visit_mut::visit_block_mut(self, i);
+        }
+
+        fn visit_expr_match_mut(&mut self, i: &mut ExprMatch) {
+            i.arms = i
+                .arms
+                .drain(..)
+                .filter_map(|mut arm| {
+                    match parse_rewrite_attrs(&mut arm.attrs, self.errors, self.cfg) {
+                        Some(attr) if attr == self.attr => Some(arm),
+                        Some(_) => None,
+                        None => Some(arm),
+                    }
+                })
+                .collect();
+            visit_mut::visit_expr_match_mut(self, i);
         }
     }
 
