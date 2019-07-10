@@ -84,16 +84,10 @@ Status PageDbImpl::GetCommitStorageBytes(CoroutineHandler* handler, CommitIdView
 }
 
 Status PageDbImpl::ReadObject(CoroutineHandler* handler, const ObjectIdentifier& object_identifier,
-                              std::unique_ptr<const Piece>* piece,
-                              std::unique_ptr<const PieceToken>* token) {
+                              std::unique_ptr<const Piece>* piece) {
   FXL_DCHECK(piece);
-  FXL_DCHECK(token);
-  *token = object_tracker_.GetPieceToken(object_identifier);
   const Status status = db_->GetObject(
       handler, ObjectRow::GetKeyFor(object_identifier.object_digest()), object_identifier, piece);
-  if (status != Status::OK) {
-    token->reset();
-  }
   return status;
 }
 

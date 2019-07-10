@@ -28,8 +28,8 @@ Status PageDbEmptyImpl::GetCommitStorageBytes(CoroutineHandler* /*handler*/,
 }
 Status PageDbEmptyImpl::ReadObject(CoroutineHandler* /*handler*/,
                                    const ObjectIdentifier& /*object_identifier*/,
-                                   std::unique_ptr<const Piece>* /*piece*/,
-                                   std::unique_ptr<const PieceToken>* /*token*/) {
+                                   std::unique_ptr<const Piece>* /*piece*/
+) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::HasObject(CoroutineHandler* /*handler*/,

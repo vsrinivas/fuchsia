@@ -60,9 +60,7 @@ class FakePageStorage : public PageStorageEmptyImpl {
   void GetObject(ObjectIdentifier object_identifier, Location location,
                  fit::function<void(Status, std::unique_ptr<const Object>)> callback) override;
   void GetPiece(ObjectIdentifier object_identifier,
-                fit::function<void(Status, std::unique_ptr<const Piece>,
-                                   std::unique_ptr<const PieceToken> token)>
-                    callback) override;
+                fit::function<void(Status, std::unique_ptr<const Piece>)> callback) override;
   void GetCommitContents(const Commit& commit, std::string min_key,
                          fit::function<bool(Entry)> on_next,
                          fit::function<void(Status)> on_done) override;
@@ -77,12 +75,6 @@ class FakePageStorage : public PageStorageEmptyImpl {
 
   const std::map<ObjectIdentifier, std::string>& GetObjects() const;
   const std::map<ObjectDigest, ObjectReferencesAndPriority>& GetReferences() const;
-
-  // Returns true if |object_identifier| is still tracked by at least one live token.
-  bool HasLiveTokens(const ObjectIdentifier& identifier) const;
-
-  // Returns true if |token| has been issued by this fake storage.
-  bool HasIssuedToken(const std::unique_ptr<const PieceToken>& token) const;
 
   // Deletes this object from the fake local storage, but keeps it in its
   // "network" storage.
@@ -103,8 +95,6 @@ class FakePageStorage : public PageStorageEmptyImpl {
 
  private:
   void SendNextObject();
-  // Returns a fake piece token and tracks it in tokens_.
-  std::unique_ptr<PieceToken> MakeFakeToken(ObjectIdentifier identifier);
 
   bool autocommit_ = true;
   bool drop_commit_notifications_ = false;
@@ -113,7 +103,6 @@ class FakePageStorage : public PageStorageEmptyImpl {
   ledger::Environment* const environment_;
   std::map<std::string, std::unique_ptr<FakeJournalDelegate>> journals_;
   std::map<ObjectIdentifier, std::string> objects_;
-  std::multimap<ObjectIdentifier, fake::FakeTokenChecker> tokens_;
   std::map<ObjectDigest, ObjectReferencesAndPriority> references_;
   std::map<CommitId, zx::time_utc> heads_;
   std::map<std::pair<CommitId, CommitId>, std::vector<CommitId>> merges_;

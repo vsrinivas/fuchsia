@@ -225,9 +225,8 @@ void FakePageStorage::AddObjectFromLocal(ObjectType /*object_type*/,
 void FakePageStorage::GetObject(
     ObjectIdentifier object_identifier, Location /*location*/,
     fit::function<void(Status, std::unique_ptr<const Object>)> callback) {
-  GetPiece(object_identifier, [callback = std::move(callback)](
-                                  Status status, std::unique_ptr<const Piece> piece,
-                                  std::unique_ptr<const PieceToken> token) {
+  GetPiece(object_identifier, [callback = std::move(callback)](Status status,
+                                                               std::unique_ptr<const Piece> piece) {
     return callback(status,
                     piece == nullptr ? nullptr : std::make_unique<FakeObject>(std::move(piece)));
   });
@@ -237,8 +236,7 @@ void FakePageStorage::GetObjectPart(ObjectIdentifier object_identifier, int64_t 
                                     int64_t max_size, Location location,
                                     fit::function<void(Status, fsl::SizedVmo)> callback) {
   GetPiece(object_identifier, [offset, max_size, callback = std::move(callback)](
-                                  Status status, std::unique_ptr<const Piece> piece,
-                                  std::unique_ptr<const PieceToken> token) {
+                                  Status status, std::unique_ptr<const Piece> piece) {
     if (status != Status::OK) {
       callback(status, nullptr);
       return;
@@ -254,20 +252,17 @@ void FakePageStorage::GetObjectPart(ObjectIdentifier object_identifier, int64_t 
   });
 }
 
-void FakePageStorage::GetPiece(
-    ObjectIdentifier object_identifier,
-    fit::function<void(Status, std::unique_ptr<const Piece>, std::unique_ptr<const PieceToken>)>
-        callback) {
+void FakePageStorage::GetPiece(ObjectIdentifier object_identifier,
+                               fit::function<void(Status, std::unique_ptr<const Piece>)> callback) {
   object_requests_.emplace_back(
       [this, object_identifier = std::move(object_identifier), callback = std::move(callback)] {
         auto it = objects_.find(object_identifier);
         if (it == objects_.end()) {
-          callback(Status::INTERNAL_NOT_FOUND, nullptr, nullptr);
+          callback(Status::INTERNAL_NOT_FOUND, nullptr);
           return;
         }
 
-        callback(Status::OK, std::make_unique<FakePiece>(object_identifier, it->second),
-                 MakeFakeToken(object_identifier));
+        callback(Status::OK, std::make_unique<FakePiece>(object_identifier, it->second));
       });
   async::PostDelayedTask(
       environment_->dispatcher(), [this] { SendNextObject(); }, kFakePageStorageDelay);
@@ -343,27 +338,6 @@ void FakePageStorage::DeleteObjectFromLocal(const ObjectIdentifier& object_ident
 }
 
 void FakePageStorage::SetDropCommitNotifications(bool drop) { drop_commit_notifications_ = drop; }
-
-std::unique_ptr<PieceToken> FakePageStorage::MakeFakeToken(ObjectIdentifier identifier) {
-  auto token = std::make_unique<FakePieceToken>(identifier);
-  tokens_.emplace(identifier, token->GetChecker());
-  return std::move(token);
-}
-
-bool FakePageStorage::HasLiveTokens(const ObjectIdentifier& object_identifier) const {
-  return std::any_of(tokens_.lower_bound(object_identifier), tokens_.upper_bound(object_identifier),
-                     [](const std::pair<const ObjectIdentifier, FakeTokenChecker>& it) {
-                       return static_cast<bool>(it.second);
-                     });
-}
-
-bool FakePageStorage::HasIssuedToken(const std::unique_ptr<const PieceToken>& token) const {
-  const auto& object_identifier = token->GetIdentifier();
-  return std::any_of(tokens_.lower_bound(object_identifier), tokens_.upper_bound(object_identifier),
-                     [&token](const std::pair<const ObjectIdentifier, FakeTokenChecker>& it) {
-                       return it.second.TracksToken(token);
-                     });
-}
 
 }  // namespace fake
 }  // namespace storage

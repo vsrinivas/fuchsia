@@ -28,7 +28,6 @@ namespace cloud_sync {
 namespace {
 using ::storage::fake::FakeObject;
 using ::storage::fake::FakePiece;
-using ::storage::fake::FakePieceToken;
 using ::storage::fake::FakeTokenChecker;
 
 // Fake implementation of storage::Commit.
@@ -88,30 +87,14 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   }
 
   void GetPiece(storage::ObjectIdentifier object_identifier,
-                fit::function<void(ledger::Status, std::unique_ptr<const storage::Piece>,
-                                   std::unique_ptr<const storage::PieceToken>)>
-                    callback) override {
-    // If there was already a token for this identifier, check that it expired
-    // and delete it.
-    auto it = tokens.find(object_identifier);
-    if (it != tokens.end()) {
-      EXPECT_FALSE(it->second);
-      tokens.erase(it);
-    }
-    // Create a fresh token for the piece.
-    auto token = std::make_unique<FakePieceToken>(object_identifier);
-    tokens.emplace(object_identifier, token->GetChecker());
+                fit::function<void(ledger::Status, std::unique_ptr<const storage::Piece>)> callback)
+      override {
     callback(ledger::Status::OK,
-             std::move(unsynced_objects_to_return[std::move(object_identifier)]), std::move(token));
+             std::move(unsynced_objects_to_return[std::move(object_identifier)]));
   }
 
   void MarkPieceSynced(storage::ObjectIdentifier object_identifier,
                        fit::function<void(ledger::Status)> callback) override {
-    // Check first that we got an identifier for the piece, and that it is still
-    // alive.
-    auto it = tokens.find(object_identifier);
-    ASSERT_TRUE(it != tokens.end());
-    EXPECT_TRUE(it->second);
     objects_marked_as_synced.insert(object_identifier);
     callback(ledger::Status::OK);
   }
@@ -137,8 +120,6 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   std::map<storage::ObjectIdentifier, std::unique_ptr<const FakePiece>> unsynced_objects_to_return;
   std::set<storage::ObjectIdentifier> objects_marked_as_synced;
   std::set<storage::CommitId> commits_marked_as_synced;
-  // Token checkers for pieces returned by GetPiece.
-  std::map<storage::ObjectIdentifier, FakeTokenChecker> tokens;
   std::vector<std::unique_ptr<const storage::Commit>> unsynced_commits;
 };
 

@@ -93,10 +93,8 @@ class PageStorageImpl : public PageStorage {
                      fit::function<void(Status, fsl::SizedVmo)> callback) override;
   void GetObject(ObjectIdentifier object_identifier, Location location,
                  fit::function<void(Status, std::unique_ptr<const Object>)> callback) override;
-  void GetPiece(
-      ObjectIdentifier object_identifier,
-      fit::function<void(Status, std::unique_ptr<const Piece>, std::unique_ptr<const PieceToken>)>
-          callback) override;
+  void GetPiece(ObjectIdentifier object_identifier,
+                fit::function<void(Status, std::unique_ptr<const Piece>)> callback) override;
   void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
                        fit::function<void(Status)> callback) override;
   void GetSyncMetadata(fxl::StringView key,
@@ -134,8 +132,6 @@ class PageStorageImpl : public PageStorage {
                          fit::function<void(Status, std::unique_ptr<const Object>)>)>;
 
   // Marks all pieces needed for the given objects as local.
-  // The caller is responsible for keeping an PieceToken to objects in
-  // |object_identifiers|; this method will not attempt to keep them alive.
   FXL_WARN_UNUSED_RESULT Status
   MarkAllPiecesLocal(coroutine::CoroutineHandler* handler, PageDb::Batch* batch,
                      std::vector<ObjectIdentifier> object_identifiers);
@@ -150,24 +146,19 @@ class PageStorageImpl : public PageStorage {
                 IsObjectSynced is_object_synced, ObjectReferencesAndPriority references,
                 fit::function<void(Status)> callback);
 
-  // Returns the piece identified by |object_identifier|. |location| is either
-  // LOCAL and NETWORK, and defines whether the piece should be looked up
-  // remotely if not available locally.
-  // When the piece has been retrieved remotely, attempts to add it to storage
-  // before returning it with an PieceToken. If this is not possible, ie. when
-  // the piece is an index tree-node that requires the full object to compute
-  // its references, also returns a WritePieceCallback, and a null PieceToken.
-  // It is the callers responsability to invoke this callback to add the piece
-  // to storage once they have gathered the full object.
-  // The WritePieceCallback is safe to call as long as this class is valid. It
-  // should not outlive the returned piece (since a reference to the piece must
-  // be passed to it when invoked), and in practice should be called as soon as
-  // the full object containing the piece has been constructed to ensure data is
-  // persisted to disk as early as possible.
-  void GetOrDownloadPiece(ObjectIdentifier object_identifier, Location location,
-                          fit::function<void(Status, std::unique_ptr<const Piece>,
-                                             std::unique_ptr<const PieceToken>, WritePieceCallback)>
-                              callback);
+  // Returns the piece identified by |object_identifier|. |location| is either LOCAL and NETWORK,
+  // and defines whether the piece should be looked up remotely if not available locally.
+  // When the piece has been retrieved remotely, attempts to add it to storage before returning it.
+  // If this is not possible, ie. when the piece is an index tree-node that requires the full object
+  // to compute its references, also returns a WritePieceCallback. It is the callers responsability
+  // to invoke this callback to add the piece to storage once they have gathered the full object.
+  // The WritePieceCallback is safe to call as long as this class is valid. It should not outlive
+  // the returned piece (since a reference to the piece must be passed to it when invoked), and in
+  // practice should be called as soon as the full object containing the piece has been constructed
+  // to ensure data is persisted to disk as early as possible.
+  void GetOrDownloadPiece(
+      ObjectIdentifier object_identifier, Location location,
+      fit::function<void(Status, std::unique_ptr<const Piece>, WritePieceCallback)> callback);
 
   // Reads the content of a piece into a provided VMO. Takes into account the
   // global offset and size in order to be able to read only the requested part

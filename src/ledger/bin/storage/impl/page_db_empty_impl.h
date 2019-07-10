@@ -27,8 +27,7 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
 
   // PageDb and PageDb::Batch:
   Status ReadObject(coroutine::CoroutineHandler* handler, const ObjectIdentifier& object_identifier,
-                    std::unique_ptr<const Piece>* piece,
-                    std::unique_ptr<const PieceToken>* token) override;
+                    std::unique_ptr<const Piece>* piece) override;
   Status HasObject(coroutine::CoroutineHandler* handler,
                    const ObjectIdentifier& object_identifier) override;
   Status GetUnsyncedCommitIds(coroutine::CoroutineHandler* handler,

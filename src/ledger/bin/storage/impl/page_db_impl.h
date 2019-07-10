@@ -28,9 +28,6 @@ class PageDbImpl : public PageDb {
   PageDbImpl(ledger::Environment* environment, std::unique_ptr<Db> db);
   ~PageDbImpl() override;
 
-  // Provides read-only access to the object tracker for statistics and tests.
-  const PieceTracker& object_tracker() { return object_tracker_; }
-
   // PageDb:
   Status StartBatch(coroutine::CoroutineHandler* handler,
                     std::unique_ptr<PageDb::Batch>* batch) override;
@@ -41,8 +38,7 @@ class PageDbImpl : public PageDb {
   Status GetCommitStorageBytes(coroutine::CoroutineHandler* handler, CommitIdView commit_id,
                                std::string* storage_bytes) override;
   Status ReadObject(coroutine::CoroutineHandler* handler, const ObjectIdentifier& object_identifier,
-                    std::unique_ptr<const Piece>* piece,
-                    std::unique_ptr<const PieceToken>* token) override;
+                    std::unique_ptr<const Piece>* piece) override;
   Status HasObject(coroutine::CoroutineHandler* handler,
                    const ObjectIdentifier& object_identifier) override;
   Status GetUnsyncedCommitIds(coroutine::CoroutineHandler* handler,
@@ -92,7 +88,6 @@ class PageDbImpl : public PageDb {
 
  private:
   ledger::Environment* environment_;
-  PieceTracker object_tracker_;
   std::unique_ptr<Db> db_;
 };
 

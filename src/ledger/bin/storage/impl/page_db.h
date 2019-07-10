@@ -168,8 +168,7 @@ class PageDb : public PageDbMutator {
   // Reads the content of the given piece.
   FXL_WARN_UNUSED_RESULT virtual Status ReadObject(coroutine::CoroutineHandler* handler,
                                                    const ObjectIdentifier& object_identifier,
-                                                   std::unique_ptr<const Piece>* piece,
-                                                   std::unique_ptr<const PieceToken>* token) = 0;
+                                                   std::unique_ptr<const Piece>* piece) = 0;
 
   // Checks whether the object with the given |object_digest| is stored in the
   // database. Returns |OK| if the objet was found, or |INTERNAL_NOT_FOUND| if

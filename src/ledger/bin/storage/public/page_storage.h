@@ -183,10 +183,8 @@ class PageStorage : public PageSyncClient {
   // and not expanded. The piece is guaranteed to remain available in storage as
   // long as the returned token is alive. The returned token must be nullptr if
   // and only if the returned piece is nullptr.
-  virtual void GetPiece(
-      ObjectIdentifier object_identifier,
-      fit::function<void(Status, std::unique_ptr<const Piece>, std::unique_ptr<const PieceToken>)>
-          callback) = 0;
+  virtual void GetPiece(ObjectIdentifier object_identifier,
+                        fit::function<void(Status, std::unique_ptr<const Piece>)> callback) = 0;
 
   // Sets the opaque sync metadata associated with this page associated with the
   // given |key|. This state is persisted through restarts and can be retrieved

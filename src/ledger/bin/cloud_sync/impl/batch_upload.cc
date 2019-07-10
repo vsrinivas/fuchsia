@@ -114,22 +114,19 @@ void BatchUpload::GetObjectContentAndUpload(storage::ObjectIdentifier object_ide
       callback::MakeScoped(
           weak_ptr_factory_.GetWeakPtr(),
           [this, object_identifier, object_name = std::move(object_name)](
-              ledger::Status storage_status, std::unique_ptr<const storage::Piece> piece,
-              std::unique_ptr<const storage::PieceToken> token) mutable {
+              ledger::Status storage_status, std::unique_ptr<const storage::Piece> piece) mutable {
             FXL_DCHECK(storage_status == ledger::Status::OK);
-            UploadObject(std::move(object_identifier), std::move(object_name), std::move(piece),
-                         std::move(token));
+            UploadObject(std::move(object_identifier), std::move(object_name), std::move(piece));
           }));
 }
 
 void BatchUpload::UploadObject(storage::ObjectIdentifier object_identifier, std::string object_name,
-                               std::unique_ptr<const storage::Piece> piece,
-                               std::unique_ptr<const storage::PieceToken> token) {
+                               std::unique_ptr<const storage::Piece> piece) {
   encryption_service_->EncryptObject(
       object_identifier, piece->GetData(),
       callback::MakeScoped(
           weak_ptr_factory_.GetWeakPtr(),
-          [this, object_identifier, object_name = std::move(object_name), token = std::move(token)](
+          [this, object_identifier, object_name = std::move(object_name)](
               encryption::Status encryption_status, std::string encrypted_data) mutable {
             if (encryption_status != encryption::Status::OK) {
               EnqueueForRetryAndSignalError(std::move(object_identifier));
@@ -137,13 +134,12 @@ void BatchUpload::UploadObject(storage::ObjectIdentifier object_identifier, std:
             }
 
             UploadEncryptedObject(std::move(object_identifier), std::move(object_name),
-                                  std::move(encrypted_data), std::move(token));
+                                  std::move(encrypted_data));
           }));
 }
 
 void BatchUpload::UploadEncryptedObject(storage::ObjectIdentifier object_identifier,
-                                        std::string object_name, std::string content,
-                                        std::unique_ptr<const storage::PieceToken> token) {
+                                        std::string object_name, std::string content) {
   fsl::SizedVmo data;
   if (!fsl::VmoFromString(content, &data)) {
     EnqueueForRetryAndSignalError(std::move(object_identifier));
@@ -154,8 +150,8 @@ void BatchUpload::UploadEncryptedObject(storage::ObjectIdentifier object_identif
       ->AddObject(convert::ToArray(object_name), std::move(data).ToTransport(), {},
                   callback::MakeScoped(
                       weak_ptr_factory_.GetWeakPtr(),
-                      [this, object_identifier = std::move(object_identifier),
-                       token = std::move(token)](cloud_provider::Status status) mutable {
+                      [this, object_identifier = std::move(object_identifier)](
+                          cloud_provider::Status status) mutable {
                         FXL_DCHECK(current_uploads_ > 0);
                         current_uploads_--;
 
@@ -168,11 +164,7 @@ void BatchUpload::UploadEncryptedObject(storage::ObjectIdentifier object_identif
                         storage_->MarkPieceSynced(
                             std::move(object_identifier),
                             callback::MakeScoped(
-                                weak_ptr_factory_.GetWeakPtr(),
-                                [this, token = std::move(token)](ledger::Status status) {
-                                  // Object is marked, it is safe to drop |token| at
-                                  // this point.
-
+                                weak_ptr_factory_.GetWeakPtr(), [this](ledger::Status status) {
                                   FXL_DCHECK(current_objects_handled_ > 0);
                                   current_objects_handled_--;
                                   if (status != ledger::Status::OK) {

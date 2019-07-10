@@ -76,12 +76,11 @@ class BatchUpload {
 
   // Uploads the given object.
   void UploadObject(storage::ObjectIdentifier object_identifier, std::string object_name,
-                    std::unique_ptr<const storage::Piece> piece,
-                    std::unique_ptr<const storage::PieceToken> token);
+                    std::unique_ptr<const storage::Piece> piece);
 
   // Uploads the given object.
   void UploadEncryptedObject(storage::ObjectIdentifier object_identifier, std::string object_name,
-                             std::string content, std::unique_ptr<const storage::PieceToken> token);
+                             std::string content);
 
   // Filters already synced commits.
   void FilterAndUploadCommits();

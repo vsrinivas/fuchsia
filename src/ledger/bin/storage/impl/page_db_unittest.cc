@@ -190,12 +190,9 @@ TEST_F(PageDbTest, ObjectStorage) {
     const ObjectIdentifier child_identifier = RandomObjectIdentifier(environment_.random());
     const std::string content = RandomString(environment_.random(), 32 * 1024);
     std::unique_ptr<const Piece> piece;
-    std::unique_ptr<const PieceToken> token;
     PageDbObjectStatus object_status;
 
-    EXPECT_EQ(Status::INTERNAL_NOT_FOUND,
-              page_db_.ReadObject(handler, object_identifier, &piece, &token));
-    EXPECT_EQ(token, nullptr);
+    EXPECT_EQ(Status::INTERNAL_NOT_FOUND, page_db_.ReadObject(handler, object_identifier, &piece));
     ASSERT_EQ(
         Status::OK,
         page_db_.WriteObject(
@@ -204,17 +201,13 @@ TEST_F(PageDbTest, ObjectStorage) {
             {{child_identifier.object_digest(), KeyPriority::LAZY}}));
     ASSERT_EQ(Status::OK, page_db_.GetObjectStatus(handler, object_identifier, &object_status));
     EXPECT_EQ(PageDbObjectStatus::TRANSIENT, object_status);
-    ASSERT_EQ(Status::OK, page_db_.ReadObject(handler, object_identifier, &piece, &token));
+    ASSERT_EQ(Status::OK, page_db_.ReadObject(handler, object_identifier, &piece));
     EXPECT_EQ(content, piece->GetData());
     ObjectReferencesAndPriority references;
     EXPECT_EQ(Status::OK,
               page_db_.GetInboundObjectReferences(handler, child_identifier, &references));
     EXPECT_THAT(references,
                 ElementsAre(Pair(object_identifier.object_digest(), KeyPriority::LAZY)));
-    EXPECT_EQ(token->GetIdentifier(), piece->GetIdentifier());
-    EXPECT_EQ(page_db_.object_tracker().count(piece->GetIdentifier()), 1);
-    token.reset();
-    EXPECT_EQ(page_db_.object_tracker().count(piece->GetIdentifier()), 0);
     // Update the object to LOCAL. The new content and references should be
     // ignored.
     const std::string new_content = RandomString(environment_.random(), 32 * 1024);
