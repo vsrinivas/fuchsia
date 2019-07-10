@@ -55,7 +55,7 @@ std::unique_ptr<StreamFramer> MakeFramer(
     const fuchsia::overnet::streamlinkfuzzer::UntrustedLinkDescription& desc) {
   switch (desc.Which()) {
     case fuchsia::overnet::streamlinkfuzzer::UntrustedLinkDescription::Tag::
-        Empty:
+        kUnknown:
       return nullptr;
     case fuchsia::overnet::streamlinkfuzzer::UntrustedLinkDescription::Tag::
         kReliable:

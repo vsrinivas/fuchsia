@@ -43,7 +43,7 @@ class RoutingTableFuzzer {
           // crash.
           routing_table_.ProcessUpdate({}, {}, true);
           break;
-        case RoutingTableAction::Tag::Empty:
+        case RoutingTableAction::Tag::kUnknown:
           break;
       }
     }

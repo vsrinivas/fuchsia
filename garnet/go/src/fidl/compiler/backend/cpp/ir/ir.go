@@ -119,6 +119,7 @@ type XUnion struct {
 	MaxHandles   int
 	MaxOutOfLine int
 	Kind         xunionKind
+	types.Strictness
 }
 
 type XUnionMember struct {
@@ -1000,6 +1001,7 @@ func (c *compiler) compileXUnionMember(val types.XUnionMember) XUnionMember {
 
 func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 	name := c.compileCompoundIdentifier(val.Name, "", "")
+
 	r := XUnion{
 		Attributes:   val.Attributes,
 		Namespace:    c.namespace,
@@ -1008,6 +1010,7 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 		Size:         val.Size,
 		MaxHandles:   val.MaxHandles,
 		MaxOutOfLine: val.MaxOutOfLine,
+		Strictness:   val.Strictness,
 	}
 
 	for _, v := range val.Members {

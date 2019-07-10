@@ -23,9 +23,42 @@ class {{ .Name }} {
   {{ .Name }}({{ .Name }}&&);
   {{ .Name }}& operator=({{ .Name }}&&);
 
-  enum Tag : fidl_xunion_tag_t {
-    Empty = 0,
-  {{- range .Members }}
+  {{/* There are two different tag types here:
+
+    * fidl_xunion_tag_t: This is an "open" enum that encompasses all possible ordinal values
+      (including zero). Ordinal() returns a fidl_xunion_tag_t.
+    * An inner ::Tag enum: This only contains valid ordinals for this xunion. Which() returns a
+      ::Tag.
+
+    The two types generally carry the same value. However:
+
+    * If the ordinal is zero, which is only ever the case when the xunion is first constructed and
+      not yet set:
+      * tag_, which is a fidl_xunion_tag_t, will be kEmpty (which is kFidlXUnionEmptyTag, or 0).
+        kEmpty is intended for internal use only; clients should use ::Tag instead.
+      * Ordinal() will return kEmpty.
+      * Which() will return Tag::kUnknown.
+      * UnknownData() will return nullptr.
+    * if the xunion is non-strict (flexible) and has been de-serialized from a xunion with an
+      ordinal that's unknown to the client's schema:
+      * tag_ will be the raw ordinal from the serialized xunion,
+      * Ordinal() will return tag_,
+      * Which() will return Tag::kUnknown.
+      * UnknownData() will return a pointer to a valid std::vector<uint8_t> with the unknown data.
+
+    */ -}}
+
+    enum : fidl_xunion_tag_t {
+      kEmpty = kFidlXUnionEmptyTag,
+    };
+
+    enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+    {{ if .IsFlexible -}}
+      kUnknown = 0,
+      {{- /* TODO(FIDL-728): Remove the Empty tag below. */}}
+      Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
+    {{ end -}}
+    {{- range .Members }}
     {{ .TagName }} = {{ .Ordinal }},  // {{ .Ordinal | printf "%#x" }}
   {{- end }}
   };
@@ -40,7 +73,8 @@ class {{ .Name }} {
 
   bool is_{{ .Name }}() const { return tag_ == Tag::{{ .TagName }}; }
   {{range .DocComments}}
-  //{{ . }}{{- end}}
+  //{{ . }}
+  {{- end}}
   {{ .Type.OvernetEmbeddedDecl }}& {{ .Name }}() {
     EnsureStorageInitialized(Tag::{{ .TagName }});
     return {{ .StorageName }};
@@ -49,21 +83,55 @@ class {{ .Name }} {
   //{{ . }}
   {{- end}}
   const {{ .Type.OvernetEmbeddedDecl }}& {{ .Name }}() const { return {{ .StorageName }}; }
-  void set_{{ .Name }}({{ .Type.OvernetEmbeddedDecl }} value);
+  {{ $.Name }}& set_{{ .Name }}({{ .Type.OvernetEmbeddedDecl }} value);
   {{- end }}
 
-  Tag Which() const { return Tag(tag_); }
+  Tag Which() const {
+    {{ if .IsFlexible }}
+    switch (tag_) {
+      {{- range .Members }}
+    case Tag::{{ .TagName }}:
+      {{- end }}
+      return Tag(tag_);
+    default:
+      return Tag::kUnknown;
+    }
+    {{ else }}
+    return Tag(tag_);
+    {{ end }}
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+
+  const std::vector<uint8_t>* UnknownData() const {
+    {{- if .IsStrict }}
+    return nullptr;
+    {{- else }}
+    if (Which() != Tag::kUnknown) {
+      return nullptr;
+    }
+
+    return &unknown_data_;
+    {{- end }}
+  }
 
   friend ::fidl::Equality<{{ .Namespace }}::embedded::{{ .Name }}>;
 
-  private:
+ private:
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = Tag::Empty;
+  ::fidl_xunion_tag_t tag_ = kEmpty;
   union {
   {{- range .Members }}
     {{ .Type.OvernetEmbeddedDecl }} {{ .StorageName }};
+  {{- end }}
+  {{- if .IsFlexible }}
+    std::vector<uint8_t> unknown_data_;
   {{- end }}
   };
 };
@@ -96,8 +164,14 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
     {{ .StorageName }} = std::move(other.{{ .StorageName }});
     break;
   {{- end }}
-   default:
-    break;
+    case kEmpty:
+      break;
+    {{- if .IsFlexible }}
+    default:
+      new (&unknown_data_) decltype(unknown_data_);
+      unknown_data_ = std::move(other.unknown_data_);
+      break;
+    {{- end }}
   }
 }
 
@@ -106,16 +180,22 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
-    {{- range .Members }}
-     case Tag::{{ .TagName }}:
-      {{- if .Type.OvernetEmbeddedDtor }}
-      new (&{{ .StorageName }}) {{ .Type.OvernetEmbeddedDecl }}();
+      {{- range .Members }}
+      case Tag::{{ .TagName }}:
+        {{- if .Type.OvernetEmbeddedDtor }}
+        new (&{{ .StorageName }}) {{ .Type.OvernetEmbeddedDecl }}();
+        {{- end }}
+        {{ .StorageName }} = std::move(other.{{ .StorageName }});
+        break;
       {{- end }}
-      {{ .StorageName }} = std::move(other.{{ .StorageName }});
-      break;
-    {{- end }}
-     default:
-      break;
+      case kEmpty:
+        break;
+      {{- if .IsFlexible }}
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_ = std::move(other.unknown_data_);
+        break;
+      {{- end }}
     }
   }
   return *this;
@@ -135,7 +215,9 @@ void {{ .Name }}::Encode(::overnet::internal::Encoder* encoder, size_t offset) {
       break;
     }
     {{- end }}
-    case Tag::Empty:
+    {{- if .IsFlexible }}
+    case Tag::kUnknown:
+    {{- end }}
     default:
        break;
   }
@@ -159,7 +241,7 @@ void {{ .Name }}::Decode(::overnet::internal::Decoder* decoder, {{ .Name }}* val
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(Tag::Empty);
+    value->EnsureStorageInitialized(kEmpty);
     return;
   }
 
@@ -177,12 +259,12 @@ void {{ .Name }}::Decode(::overnet::internal::Decoder* decoder, {{ .Name }}* val
     ::fidl::Decode(decoder, &value->{{ .StorageName }}, envelope_offset);
     break;
   {{- end }}
+  {{ if .IsFlexible -}}
    default:
-    {{/* The decoder doesn't have a schema for this tag, so it simply does
-         nothing. The generated code doesn't need to update the offsets to
-         "skip" the secondary object nor claim handles, since BufferWalker does
-         that. */ -}}
+    value->unknown_data_.resize(xunion->envelope.num_bytes);
+    memcpy(value->unknown_data_.data(), xunion->envelope.data, xunion->envelope.num_bytes);
     break;
+  {{ end -}}
   }
 {{ end }}
 }
@@ -205,26 +287,35 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
 
 {{- range $member := .Members }}
 
-void {{ $.Name }}::set_{{ .Name }}({{ .Type.OvernetEmbeddedDecl }} value) {
+{{ $.Name }}& {{ $.Name }}::set_{{ .Name }}({{ .Type.OvernetEmbeddedDecl }} value) {
   EnsureStorageInitialized(Tag::{{ .TagName }});
   {{ .StorageName }} = std::move(value);
+  return *this;
 }
 
 {{- end }}
 
 void {{ .Name }}::Destroy() {
   switch (tag_) {
-  {{- range .Members }}
-   case Tag::{{ .TagName }}:
-    {{- if .Type.OvernetEmbeddedDtor }}
-    {{ .StorageName }}.{{ .Type.OvernetEmbeddedDtor }}();
+    {{- range .Members }}
+    case Tag::{{ .TagName }}:
+      {{- if .Type.OvernetEmbeddedDtor }}
+      {{ .StorageName }}.{{ .Type.OvernetEmbeddedDtor }}();
+      {{- end }}
+      break;
     {{- end }}
-    break;
-  {{- end }}
-   default:
-    break;
+    {{ if .IsFlexible }}
+    case kEmpty:
+      break;
+    default:
+      unknown_data_.~vector();
+      break;
+    {{ else }}
+    default:
+      break;
+    {{ end }}
   }
-  tag_ = Tag::Empty;
+  tag_ = kEmpty;
 }
 
 void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -232,6 +323,8 @@ void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
+      case kEmpty:
+        break;
       {{- range .Members }}
       {{- if .Type.OvernetEmbeddedDtor }}
       case Tag::{{ .TagName }}:
@@ -240,6 +333,9 @@ void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
       {{- end }}
       {{- end }}
       default:
+        {{- if .IsFlexible }}
+        new (&unknown_data_) decltype(unknown_data_);
+        {{- end }}
         break;
     }
   }
@@ -263,22 +359,17 @@ struct CodingTraits<std::unique_ptr<{{ .Namespace }}::embedded::{{ .Name }}>> {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
-    } else {
-      {{/* |empty| is explicitly a non-static variable so that we don't use
-           binary space, and sacrifice a little runtime overhead instead to
-           construct the empty xunion on the stack. */ -}}
-      {{ .Namespace }}::embedded::{{ .Name }} empty;
-      empty.Encode(encoder, offset);
     }
   }
 
   static void Decode(::overnet::internal::Decoder* decoder, std::unique_ptr<{{ .Namespace }}::embedded::{{ .Name }}>* value, size_t offset) {
-    value->reset(new {{ .Namespace }}::embedded::{{ .Name }});
-
     fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
+      value->reset(nullptr);
       return;
     }
+
+    value->reset(new {{ .Namespace }}::embedded::{{ .Name }});
 
     {{ .Namespace }}::embedded::{{ .Name }}::Decode(decoder, value->get(), offset);
   }
@@ -299,8 +390,10 @@ struct ToEmbeddedTraits<{{ .Namespace }}::{{ .Name }}> {
         _out.set_{{ $member.Name }}(ToEmbedded(_value.{{ $member.Name }}()));
         break;
       {{- end }}
-      case {{ $.Namespace }}::{{ $.Name }}::Tag::Empty:
+      {{ if .IsFlexible }}
+      case {{ $.Namespace }}::{{ $.Name }}::Tag::kUnknown:
         break;
+      {{- end }}
     }
     return _out;
   }
@@ -309,23 +402,29 @@ struct ToEmbeddedTraits<{{ .Namespace }}::{{ .Name }}> {
 template<>
 struct Equality<{{ .Namespace }}::embedded::{{ .Name }}> {
   static inline bool Equals(const {{ .Namespace }}::embedded::{{ .Name }}& _lhs, const {{ .Namespace }}::embedded::{{ .Name }}& _rhs) {
-    if (_lhs.Which() != _rhs.Which()) {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     {{ with $xunion := . -}}
-    switch (_lhs.Which()) {
+    switch (_lhs.Ordinal()) {
+      case {{ $xunion.Namespace }}::{{ $xunion.Name }}::kEmpty:
+        return true;
       {{- range .Members }}
-      case {{ $xunion.Namespace}}::embedded::{{ $xunion.Name }}::Tag::{{ .TagName }}:
+      case {{ $xunion.Namespace }}::embedded::{{ $xunion.Name }}::Tag::{{ .TagName }}:
         return ::fidl::Equals(_lhs.{{ .StorageName }}, _rhs.{{ .StorageName }});
       {{- end }}
-      case {{ $xunion.Namespace}}::embedded::{{ $xunion.Name }}::Tag::Empty:
-        return true;
+      {{ if .IsFlexible -}}
+      default:
+        return *_lhs.UnknownData() == *_rhs.UnknownData();
+      {{ else }}
       default:
         return false;
+      {{ end -}}
     }
     {{end -}}
   }
 };
+
 {{- end }}
 `

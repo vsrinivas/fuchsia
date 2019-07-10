@@ -118,11 +118,6 @@ class FidlDecoder final : public fidl::Visitor<fidl::MutatingVisitorTrait,
       *handle = ZX_HANDLE_INVALID;
       return Status::kConstraintViolationError;
     }
-    if ((*handles_)[handle_idx_].Which() ==
-        fuchsia::overnet::protocol::ZirconHandle::Tag::Empty) {
-      SetError("invalid handle detected in handle table");
-      return Status::kConstraintViolationError;
-    }
     *handle = handle_idx_ + 1;
     handle_idx_++;
     return Status::kSuccess;

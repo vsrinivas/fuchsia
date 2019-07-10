@@ -34,7 +34,7 @@ class StreamMutator {
                     [offset, bit](uint8_t* p) { p[offset] ^= bit; });
               });
           break;
-        case fuchsia::overnet::streamlinkfuzzer::StreamMutation::Tag::Empty:
+        case fuchsia::overnet::streamlinkfuzzer::StreamMutation::Tag::kUnknown:
           break;
       }
     }
@@ -180,7 +180,7 @@ class StreamLinkFuzzer {
         continue;
       }
       switch (action.type.Which()) {
-        case PeerToPeerActionType::Tag::Empty:
+        case PeerToPeerActionType::Tag::kUnknown:
           break;
         case PeerToPeerActionType::Tag::kSendPacket: {
           auto* lnk = link(action.node);
@@ -283,7 +283,7 @@ Helpers MakeHelpers(
     fuchsia::overnet::streamlinkfuzzer::PeerToPeerLinkDescription* desc) {
   switch (desc->Which()) {
     case fuchsia::overnet::streamlinkfuzzer::PeerToPeerLinkDescription::Tag::
-        Empty:
+        kUnknown:
       return Helpers{nullptr, StreamMutator({}), StreamMutator({})};
     case fuchsia::overnet::streamlinkfuzzer::PeerToPeerLinkDescription::Tag::
         kReliable:

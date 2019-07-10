@@ -16,7 +16,7 @@ struct ZirconChannelMessage {
 
 /// A single handle to be proxied.
 /// Not all Zircon types are supported.
-xunion ZirconHandle {
+strict xunion ZirconHandle {
     /// A proxied channel.
     ChannelHandle channel;
     /// A proxied socket.

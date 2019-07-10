@@ -386,7 +386,6 @@ func TestCompileInterface(t *testing.T) {
 	}
 }
 
-
 func TestCompileInterfaceLLCPP(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -907,7 +906,7 @@ func TestCompileTableLlcppNamespaceShouldBeRenamed(t *testing.T) {
 	for _, ex := range cases {
 		t.Run(ex.name, func(t *testing.T) {
 			root := types.Root{
-				Name: types.EncodedLibraryIdentifier("llcpp.foo"),
+				Name:   types.EncodedLibraryIdentifier("llcpp.foo"),
 				Tables: []types.Table{ex.input},
 				DeclOrder: []types.EncodedCompoundIdentifier{
 					ex.input.Name,
@@ -964,6 +963,7 @@ func TestCompileXUnion(t *testing.T) {
 				Size:         24,
 				MaxHandles:   0,
 				MaxOutOfLine: 4294967295,
+				Strictness:   types.IsFlexible,
 			},
 			expected: XUnion{
 				Attributes: types.Attributes{
@@ -995,6 +995,7 @@ func TestCompileXUnion(t *testing.T) {
 				Size:         24,
 				MaxHandles:   0,
 				MaxOutOfLine: 4294967295,
+				Strictness:   types.IsFlexible,
 			},
 		},
 		{
@@ -1037,6 +1038,7 @@ func TestCompileXUnion(t *testing.T) {
 				Size:         24,
 				MaxHandles:   0,
 				MaxOutOfLine: 4294967295,
+				Strictness:   types.IsFlexible,
 			},
 			expected: XUnion{
 				Attributes: types.Attributes{},
@@ -1080,6 +1082,7 @@ func TestCompileXUnion(t *testing.T) {
 				Size:         24,
 				MaxHandles:   0,
 				MaxOutOfLine: 4294967295,
+				Strictness:   types.IsFlexible,
 			},
 		},
 	}

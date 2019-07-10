@@ -136,12 +136,6 @@ void TestHarnessImpl::ConnectToModularService(
     case fuchsia::modular::testing::ModularService::Tag::kAgentContext: {
       BufferSessionAgentService(std::move(service.agent_context()));
     } break;
-
-    case fuchsia::modular::testing::ModularService::Tag::Empty: {
-      FXL_LOG(ERROR) << "The given ModularService is empty.";
-      CloseBindingIfError(ZX_ERR_INVALID_ARGS);
-      return;
-    } break;
   }
 }
 

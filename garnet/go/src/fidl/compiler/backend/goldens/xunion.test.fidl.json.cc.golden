@@ -17,14 +17,18 @@ OlderSimpleUnion::~OlderSimpleUnion() {
 
 OlderSimpleUnion::OlderSimpleUnion(OlderSimpleUnion&& other) : tag_(other.tag_) {
   switch (tag_) {
-   case Tag::kI:
-    i_ = std::move(other.i_);
-    break;
-   case Tag::kF:
-    f_ = std::move(other.f_);
-    break;
-   default:
-    break;
+    case Tag::kI:
+      i_ = std::move(other.i_);
+      break;
+    case Tag::kF:
+      f_ = std::move(other.f_);
+      break;
+    case kEmpty:
+      break;
+    default:
+      new (&unknown_data_) decltype(unknown_data_);
+      unknown_data_ = std::move(other.unknown_data_);
+      break;
   }
 }
 
@@ -33,14 +37,18 @@ OlderSimpleUnion& OlderSimpleUnion::operator=(OlderSimpleUnion&& other) {
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
-     case Tag::kI:
-      i_ = std::move(other.i_);
-      break;
-     case Tag::kF:
-      f_ = std::move(other.f_);
-      break;
-     default:
-      break;
+      case Tag::kI:
+        i_ = std::move(other.i_);
+        break;
+      case Tag::kF:
+        f_ = std::move(other.f_);
+        break;
+      case kEmpty:
+        break;
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_ = std::move(other.unknown_data_);
+        break;
     }
   }
   return *this;
@@ -63,7 +71,7 @@ void OlderSimpleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
       ::fidl::Encode(encoder, &f_, envelope_offset);
       break;
     }
-    case Tag::Empty:
+    case Tag::kUnknown:
     default:
        break;
   }
@@ -83,7 +91,7 @@ void OlderSimpleUnion::Decode(::fidl::Decoder* decoder, OlderSimpleUnion* value,
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(Tag::Empty);
+    value->EnsureStorageInitialized(kEmpty);
     return;
   }
 
@@ -93,14 +101,16 @@ void OlderSimpleUnion::Decode(::fidl::Decoder* decoder, OlderSimpleUnion* value,
   const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
-   case Tag::kI:
-    ::fidl::Decode(decoder, &value->i_, envelope_offset);
-    break;
-   case Tag::kF:
-    ::fidl::Decode(decoder, &value->f_, envelope_offset);
-    break;
-   default:
-    break;
+    case Tag::kI:
+      ::fidl::Decode(decoder, &value->i_, envelope_offset);
+      break;
+    case Tag::kF:
+      ::fidl::Decode(decoder, &value->f_, envelope_offset);
+      break;
+  default:
+      value->unknown_data_.resize(xunion->envelope.num_bytes);
+      memcpy(value->unknown_data_.data(), xunion->envelope.data, xunion->envelope.num_bytes);
+      break;
   }
 
 }
@@ -132,14 +142,19 @@ OlderSimpleUnion& OlderSimpleUnion::set_f(float value) {
 
 void OlderSimpleUnion::Destroy() {
   switch (tag_) {
-   case Tag::kI:
-    break;
-   case Tag::kF:
-    break;
-   default:
-    break;
+    case Tag::kI:
+      break;
+    case Tag::kF:
+      break;
+  
+    case kEmpty:
+      break;
+    default:
+      unknown_data_.~vector();
+      break;
+  
   }
-  tag_ = Tag::Empty;
+  tag_ = kEmpty;
 }
 
 void OlderSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -147,7 +162,10 @@ void OlderSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
+      case kEmpty:
+        break;
       default:
+        new (&unknown_data_) decltype(unknown_data_);
         break;
     }
   }
@@ -163,19 +181,23 @@ NewerSimpleUnion::~NewerSimpleUnion() {
 
 NewerSimpleUnion::NewerSimpleUnion(NewerSimpleUnion&& other) : tag_(other.tag_) {
   switch (tag_) {
-   case Tag::kI:
-    i_ = std::move(other.i_);
-    break;
-   case Tag::kS:
-    new (&s_) ::std::string();
-    s_ = std::move(other.s_);
-    break;
-   case Tag::kV:
-    new (&v_) ::std::vector<::std::string>();
-    v_ = std::move(other.v_);
-    break;
-   default:
-    break;
+    case Tag::kI:
+      i_ = std::move(other.i_);
+      break;
+    case Tag::kS:
+      new (&s_) ::std::string();
+      s_ = std::move(other.s_);
+      break;
+    case Tag::kV:
+      new (&v_) ::std::vector<::std::string>();
+      v_ = std::move(other.v_);
+      break;
+    case kEmpty:
+      break;
+    default:
+      new (&unknown_data_) decltype(unknown_data_);
+      unknown_data_ = std::move(other.unknown_data_);
+      break;
   }
 }
 
@@ -184,19 +206,23 @@ NewerSimpleUnion& NewerSimpleUnion::operator=(NewerSimpleUnion&& other) {
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
-     case Tag::kI:
-      i_ = std::move(other.i_);
-      break;
-     case Tag::kS:
-      new (&s_) ::std::string();
-      s_ = std::move(other.s_);
-      break;
-     case Tag::kV:
-      new (&v_) ::std::vector<::std::string>();
-      v_ = std::move(other.v_);
-      break;
-     default:
-      break;
+      case Tag::kI:
+        i_ = std::move(other.i_);
+        break;
+      case Tag::kS:
+        new (&s_) ::std::string();
+        s_ = std::move(other.s_);
+        break;
+      case Tag::kV:
+        new (&v_) ::std::vector<::std::string>();
+        v_ = std::move(other.v_);
+        break;
+      case kEmpty:
+        break;
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_ = std::move(other.unknown_data_);
+        break;
     }
   }
   return *this;
@@ -224,7 +250,7 @@ void NewerSimpleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
       ::fidl::Encode(encoder, &v_, envelope_offset);
       break;
     }
-    case Tag::Empty:
+    case Tag::kUnknown:
     default:
        break;
   }
@@ -244,7 +270,7 @@ void NewerSimpleUnion::Decode(::fidl::Decoder* decoder, NewerSimpleUnion* value,
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(Tag::Empty);
+    value->EnsureStorageInitialized(kEmpty);
     return;
   }
 
@@ -254,19 +280,21 @@ void NewerSimpleUnion::Decode(::fidl::Decoder* decoder, NewerSimpleUnion* value,
   const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
-   case Tag::kI:
-    ::fidl::Decode(decoder, &value->i_, envelope_offset);
-    break;
-   case Tag::kS:
-    new (&value->s_) ::std::string();
-    ::fidl::Decode(decoder, &value->s_, envelope_offset);
-    break;
-   case Tag::kV:
-    new (&value->v_) ::std::vector<::std::string>();
-    ::fidl::Decode(decoder, &value->v_, envelope_offset);
-    break;
-   default:
-    break;
+    case Tag::kI:
+      ::fidl::Decode(decoder, &value->i_, envelope_offset);
+      break;
+    case Tag::kS:
+      new (&value->s_) ::std::string();
+      ::fidl::Decode(decoder, &value->s_, envelope_offset);
+      break;
+    case Tag::kV:
+      new (&value->v_) ::std::vector<::std::string>();
+      ::fidl::Decode(decoder, &value->v_, envelope_offset);
+      break;
+  default:
+      value->unknown_data_.resize(xunion->envelope.num_bytes);
+      memcpy(value->unknown_data_.data(), xunion->envelope.data, xunion->envelope.num_bytes);
+      break;
   }
 
 }
@@ -308,18 +336,23 @@ NewerSimpleUnion& NewerSimpleUnion::set_v(::std::vector<::std::string> value) {
 
 void NewerSimpleUnion::Destroy() {
   switch (tag_) {
-   case Tag::kI:
-    break;
-   case Tag::kS:
-    s_.~basic_string();
-    break;
-   case Tag::kV:
-    v_.~vector();
-    break;
-   default:
-    break;
+    case Tag::kI:
+      break;
+    case Tag::kS:
+      s_.~basic_string();
+      break;
+    case Tag::kV:
+      v_.~vector();
+      break;
+  
+    case kEmpty:
+      break;
+    default:
+      unknown_data_.~vector();
+      break;
+  
   }
-  tag_ = Tag::Empty;
+  tag_ = kEmpty;
 }
 
 void NewerSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -327,6 +360,8 @@ void NewerSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
+      case kEmpty:
+        break;
       case Tag::kS:
         new (&s_) ::std::string();
         break;
@@ -334,6 +369,7 @@ void NewerSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
         new (&v_) ::std::vector<::std::string>();
         break;
       default:
+        new (&unknown_data_) decltype(unknown_data_);
         break;
     }
   }

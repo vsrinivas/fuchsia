@@ -21,8 +21,14 @@ class OlderSimpleUnion {
   OlderSimpleUnion(OlderSimpleUnion&&);
   OlderSimpleUnion& operator=(OlderSimpleUnion&&);
 
-  enum Tag : fidl_xunion_tag_t {
-    Empty = 0,
+  enum : fidl_xunion_tag_t {
+    kEmpty = kFidlXUnionEmptyTag,
+  };
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+  kUnknown = 0,
+    Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
+  
     kI = 1026732503,  // 0x3d32b1d7
     kF = 1362546558,  // 0x5136cf7e
   };
@@ -53,7 +59,31 @@ class OlderSimpleUnion {
   const float& f() const { return f_; }
   OlderSimpleUnion& set_f(float value);
 
-  Tag Which() const { return Tag(tag_); }
+  Tag Which() const {
+    
+    switch (tag_) {
+      case Tag::kI:
+      case Tag::kF:
+        return Tag(tag_);
+      default:
+        return Tag::kUnknown;
+    }
+    
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+
+  const std::vector<uint8_t>* UnknownData() const {
+    if (Which() != Tag::kUnknown) {
+      return nullptr;
+    }
+
+    return &unknown_data_;
+  }
 
   friend ::fidl::Equality<::test::name::OlderSimpleUnion>;
 
@@ -61,10 +91,11 @@ class OlderSimpleUnion {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = Tag::Empty;
+  ::fidl_xunion_tag_t tag_ = kEmpty;
   union {
     int64_t i_;
     float f_;
+    std::vector<uint8_t> unknown_data_;
   };
 };
 
@@ -85,8 +116,14 @@ class NewerSimpleUnion {
   NewerSimpleUnion(NewerSimpleUnion&&);
   NewerSimpleUnion& operator=(NewerSimpleUnion&&);
 
-  enum Tag : fidl_xunion_tag_t {
-    Empty = 0,
+  enum : fidl_xunion_tag_t {
+    kEmpty = kFidlXUnionEmptyTag,
+  };
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+  kUnknown = 0,
+    Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
+  
     kI = 693944286,  // 0x295cbfde
     kS = 473666119,  // 0x1c3b9247
     kV = 1815655055,  // 0x6c38b28f
@@ -128,7 +165,32 @@ class NewerSimpleUnion {
   const ::std::vector<::std::string>& v() const { return v_; }
   NewerSimpleUnion& set_v(::std::vector<::std::string> value);
 
-  Tag Which() const { return Tag(tag_); }
+  Tag Which() const {
+    
+    switch (tag_) {
+      case Tag::kI:
+      case Tag::kS:
+      case Tag::kV:
+        return Tag(tag_);
+      default:
+        return Tag::kUnknown;
+    }
+    
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+
+  const std::vector<uint8_t>* UnknownData() const {
+    if (Which() != Tag::kUnknown) {
+      return nullptr;
+    }
+
+    return &unknown_data_;
+  }
 
   friend ::fidl::Equality<::test::name::NewerSimpleUnion>;
 
@@ -136,11 +198,12 @@ class NewerSimpleUnion {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = Tag::Empty;
+  ::fidl_xunion_tag_t tag_ = kEmpty;
   union {
     int64_t i_;
     ::std::string s_;
     ::std::vector<::std::string> v_;
+    std::vector<uint8_t> unknown_data_;
   };
 };
 
@@ -166,9 +229,6 @@ struct CodingTraits<std::unique_ptr<::test::name::OlderSimpleUnion>> {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
-    } else {
-      ::test::name::OlderSimpleUnion empty;
-      empty.Encode(encoder, offset);
     }
   }
 
@@ -193,20 +253,20 @@ inline zx_status_t Clone(const ::test::name::OlderSimpleUnion& value,
 template<>
 struct Equality<::test::name::OlderSimpleUnion> {
   static inline bool Equals(const ::test::name::OlderSimpleUnion& _lhs, const ::test::name::OlderSimpleUnion& _rhs) {
-    if (_lhs.Which() != _rhs.Which()) {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
-    switch (_lhs.Which()) {
+    switch (_lhs.Ordinal()) {
+      case ::test::name::OlderSimpleUnion::kEmpty:
+        return true;
       case ::test::name::OlderSimpleUnion::Tag::kI:
         return ::fidl::Equals(_lhs.i_, _rhs.i_);
       case ::test::name::OlderSimpleUnion::Tag::kF:
         return ::fidl::Equals(_lhs.f_, _rhs.f_);
-      case ::test::name::OlderSimpleUnion::Tag::Empty:
-        return true;
       default:
-        return false;
-    }
+        return *_lhs.UnknownData() == *_rhs.UnknownData();
+      }
     }
 };
 template <>
@@ -221,9 +281,6 @@ struct CodingTraits<std::unique_ptr<::test::name::NewerSimpleUnion>> {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
-    } else {
-      ::test::name::NewerSimpleUnion empty;
-      empty.Encode(encoder, offset);
     }
   }
 
@@ -248,21 +305,21 @@ inline zx_status_t Clone(const ::test::name::NewerSimpleUnion& value,
 template<>
 struct Equality<::test::name::NewerSimpleUnion> {
   static inline bool Equals(const ::test::name::NewerSimpleUnion& _lhs, const ::test::name::NewerSimpleUnion& _rhs) {
-    if (_lhs.Which() != _rhs.Which()) {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
-    switch (_lhs.Which()) {
+    switch (_lhs.Ordinal()) {
+      case ::test::name::NewerSimpleUnion::kEmpty:
+        return true;
       case ::test::name::NewerSimpleUnion::Tag::kI:
         return ::fidl::Equals(_lhs.i_, _rhs.i_);
       case ::test::name::NewerSimpleUnion::Tag::kS:
         return ::fidl::Equals(_lhs.s_, _rhs.s_);
       case ::test::name::NewerSimpleUnion::Tag::kV:
         return ::fidl::Equals(_lhs.v_, _rhs.v_);
-      case ::test::name::NewerSimpleUnion::Tag::Empty:
-        return true;
       default:
-        return false;
-    }
+        return *_lhs.UnknownData() == *_rhs.UnknownData();
+      }
     }
 };}  // namespace fidl

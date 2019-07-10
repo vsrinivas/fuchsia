@@ -84,6 +84,10 @@ xunion SampleXUnion {
     SimpleTable st;
 };
 
+struct SampleXUnionInStruct {
+    SampleXUnion xu;
+};
+
 struct InlineXUnionInStruct {
     string before;
     SampleXUnion xu;

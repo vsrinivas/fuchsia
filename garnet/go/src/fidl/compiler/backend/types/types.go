@@ -361,6 +361,7 @@ type XUnion struct {
 	Alignment    int                       `json:"alignment"`
 	MaxHandles   int                       `json:"max_handles"`
 	MaxOutOfLine int                       `json:"max_out_of_line"`
+	Strictness   `json:"strict"`
 }
 
 // XUnionMember represents the declaration of a field in a FIDL extensible
@@ -531,6 +532,24 @@ type Const struct {
 	Type  Type                      `json:"type"`
 	Name  EncodedCompoundIdentifier `json:"name"`
 	Value Constant                  `json:"value"`
+}
+
+// Strictness represents whether a FIDL object is strict or flexible. See
+// <https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/ftp/ftp-033> for more
+// information.
+type Strictness bool
+
+const (
+	IsFlexible Strictness = false
+	IsStrict   Strictness = true
+)
+
+func (s Strictness) IsStrict() bool {
+	return s == IsStrict
+}
+
+func (s Strictness) IsFlexible() bool {
+	return s == IsFlexible
 }
 
 type DeclType string

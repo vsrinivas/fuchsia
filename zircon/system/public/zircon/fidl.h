@@ -338,6 +338,10 @@ typedef struct {
 
 typedef uint32_t fidl_xunion_tag_t;
 
+enum {
+    kFidlXUnionEmptyTag = 0,  // The tag representing an empty xunion.
+};
+
 typedef struct {
     fidl_xunion_tag_t tag;
     uint32_t padding; // Should always be zero.

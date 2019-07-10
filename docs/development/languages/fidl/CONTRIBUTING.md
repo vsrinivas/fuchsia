@@ -96,8 +96,6 @@ we do our best to describe the commands used to validate our work there.
 
 ### fidlc
 
-In `zircon/`:
-
 ```sh
 # optional; builds fidlc for the host with ASan <https://github.com/google/sanitizers/wiki/AddressSanitizer>
 fx set core.x64 --variant=host_asan
@@ -128,9 +126,22 @@ fx run -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-coding-tables-test
 
 ### fidlgen (LLCPP, HLCPP, Rust, Go)
 
+Build:
+
+```sh
+fx build garnet/go/src/fidl
+```
+
+Run:
+
+```sh
+$FUCHSIA_DIR/out/default/host_x64/fidlgen
+```
+
 Some example tests you can run:
 
 ```sh
+fx run-host-tests fidlgen_cpp_test
 fx run-host-tests fidlgen_cpp_ir_test
 fx run-host-tests fidlgen_golang_ir_test
 ```

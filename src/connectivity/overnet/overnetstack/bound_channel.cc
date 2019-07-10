@@ -368,10 +368,6 @@ overnet::Status BoundChannel::DecodeMessageThen(
         app_->BindSocket(std::move(*fork_status), std::move(a));
         handle_objects.push_back(std::move(b));
       } break;
-      case fuchsia::overnet::protocol::ZirconHandle::Tag::Empty: {
-        return overnet::Status(overnet::StatusCode::INVALID_ARGUMENT,
-                               "Bad handle type");
-      } break;
     }
   }
 

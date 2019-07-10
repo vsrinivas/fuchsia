@@ -23,8 +23,14 @@ class OlderSimpleUnion {
   OlderSimpleUnion(OlderSimpleUnion&&);
   OlderSimpleUnion& operator=(OlderSimpleUnion&&);
 
-  enum Tag : fidl_xunion_tag_t {
-    Empty = 0,
+  enum : fidl_xunion_tag_t {
+      kEmpty = kFidlXUnionEmptyTag,
+    };
+
+    enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+    kUnknown = 0,
+      Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
+    
     kI = 1026732503,  // 0x3d32b1d7
     kF = 1362546558,  // 0x5136cf7e
   };
@@ -43,7 +49,7 @@ class OlderSimpleUnion {
   }
   
   const int64_t& i() const { return i_; }
-  void set_i(int64_t value);
+  OlderSimpleUnion& set_i(int64_t value);
 
   bool is_f() const { return tag_ == Tag::kF; }
   
@@ -53,20 +59,45 @@ class OlderSimpleUnion {
   }
   
   const float& f() const { return f_; }
-  void set_f(float value);
+  OlderSimpleUnion& set_f(float value);
 
-  Tag Which() const { return Tag(tag_); }
+  Tag Which() const {
+    
+    switch (tag_) {
+    case Tag::kI:
+    case Tag::kF:
+      return Tag(tag_);
+    default:
+      return Tag::kUnknown;
+    }
+    
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+
+  const std::vector<uint8_t>* UnknownData() const {
+    if (Which() != Tag::kUnknown) {
+      return nullptr;
+    }
+
+    return &unknown_data_;
+  }
 
   friend ::fidl::Equality<::test::name::embedded::OlderSimpleUnion>;
 
-  private:
+ private:
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = Tag::Empty;
+  ::fidl_xunion_tag_t tag_ = kEmpty;
   union {
     int64_t i_;
     float f_;
+    std::vector<uint8_t> unknown_data_;
   };
 };
 
@@ -87,8 +118,14 @@ class NewerSimpleUnion {
   NewerSimpleUnion(NewerSimpleUnion&&);
   NewerSimpleUnion& operator=(NewerSimpleUnion&&);
 
-  enum Tag : fidl_xunion_tag_t {
-    Empty = 0,
+  enum : fidl_xunion_tag_t {
+      kEmpty = kFidlXUnionEmptyTag,
+    };
+
+    enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+    kUnknown = 0,
+      Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
+    
     kI = 693944286,  // 0x295cbfde
     kS = 473666119,  // 0x1c3b9247
     kV = 1815655055,  // 0x6c38b28f
@@ -108,7 +145,7 @@ class NewerSimpleUnion {
   }
   
   const int64_t& i() const { return i_; }
-  void set_i(int64_t value);
+  NewerSimpleUnion& set_i(int64_t value);
 
   bool is_s() const { return tag_ == Tag::kS; }
   
@@ -118,7 +155,7 @@ class NewerSimpleUnion {
   }
   
   const ::std::string& s() const { return s_; }
-  void set_s(::std::string value);
+  NewerSimpleUnion& set_s(::std::string value);
 
   bool is_v() const { return tag_ == Tag::kV; }
   
@@ -128,21 +165,47 @@ class NewerSimpleUnion {
   }
   
   const ::std::vector<::std::string>& v() const { return v_; }
-  void set_v(::std::vector<::std::string> value);
+  NewerSimpleUnion& set_v(::std::vector<::std::string> value);
 
-  Tag Which() const { return Tag(tag_); }
+  Tag Which() const {
+    
+    switch (tag_) {
+    case Tag::kI:
+    case Tag::kS:
+    case Tag::kV:
+      return Tag(tag_);
+    default:
+      return Tag::kUnknown;
+    }
+    
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+
+  const std::vector<uint8_t>* UnknownData() const {
+    if (Which() != Tag::kUnknown) {
+      return nullptr;
+    }
+
+    return &unknown_data_;
+  }
 
   friend ::fidl::Equality<::test::name::embedded::NewerSimpleUnion>;
 
-  private:
+ private:
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = Tag::Empty;
+  ::fidl_xunion_tag_t tag_ = kEmpty;
   union {
     int64_t i_;
     ::std::string s_;
     ::std::vector<::std::string> v_;
+    std::vector<uint8_t> unknown_data_;
   };
 };
 
@@ -170,19 +233,17 @@ struct CodingTraits<std::unique_ptr<::test::name::embedded::OlderSimpleUnion>> {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
-    } else {
-      ::test::name::embedded::OlderSimpleUnion empty;
-      empty.Encode(encoder, offset);
     }
   }
 
   static void Decode(::overnet::internal::Decoder* decoder, std::unique_ptr<::test::name::embedded::OlderSimpleUnion>* value, size_t offset) {
-    value->reset(new ::test::name::embedded::OlderSimpleUnion);
-
     fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
+      value->reset(nullptr);
       return;
     }
+
+    value->reset(new ::test::name::embedded::OlderSimpleUnion);
 
     ::test::name::embedded::OlderSimpleUnion::Decode(decoder, value->get(), offset);
   }
@@ -204,7 +265,8 @@ struct ToEmbeddedTraits<::test::name::OlderSimpleUnion> {
       case ::test::name::OlderSimpleUnion::Tag::kF:
         _out.set_f(ToEmbedded(_value.f()));
         break;
-      case ::test::name::OlderSimpleUnion::Tag::Empty:
+      
+      case ::test::name::OlderSimpleUnion::Tag::kUnknown:
         break;
     }
     return _out;
@@ -214,20 +276,20 @@ struct ToEmbeddedTraits<::test::name::OlderSimpleUnion> {
 template<>
 struct Equality<::test::name::embedded::OlderSimpleUnion> {
   static inline bool Equals(const ::test::name::embedded::OlderSimpleUnion& _lhs, const ::test::name::embedded::OlderSimpleUnion& _rhs) {
-    if (_lhs.Which() != _rhs.Which()) {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
-    switch (_lhs.Which()) {
+    switch (_lhs.Ordinal()) {
+      case ::test::name::OlderSimpleUnion::kEmpty:
+        return true;
       case ::test::name::embedded::OlderSimpleUnion::Tag::kI:
         return ::fidl::Equals(_lhs.i_, _rhs.i_);
       case ::test::name::embedded::OlderSimpleUnion::Tag::kF:
         return ::fidl::Equals(_lhs.f_, _rhs.f_);
-      case ::test::name::embedded::OlderSimpleUnion::Tag::Empty:
-        return true;
       default:
-        return false;
-    }
+        return *_lhs.UnknownData() == *_rhs.UnknownData();
+      }
     }
 };
 template <>
@@ -242,19 +304,17 @@ struct CodingTraits<std::unique_ptr<::test::name::embedded::NewerSimpleUnion>> {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
-    } else {
-      ::test::name::embedded::NewerSimpleUnion empty;
-      empty.Encode(encoder, offset);
     }
   }
 
   static void Decode(::overnet::internal::Decoder* decoder, std::unique_ptr<::test::name::embedded::NewerSimpleUnion>* value, size_t offset) {
-    value->reset(new ::test::name::embedded::NewerSimpleUnion);
-
     fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
+      value->reset(nullptr);
       return;
     }
+
+    value->reset(new ::test::name::embedded::NewerSimpleUnion);
 
     ::test::name::embedded::NewerSimpleUnion::Decode(decoder, value->get(), offset);
   }
@@ -279,7 +339,8 @@ struct ToEmbeddedTraits<::test::name::NewerSimpleUnion> {
       case ::test::name::NewerSimpleUnion::Tag::kV:
         _out.set_v(ToEmbedded(_value.v()));
         break;
-      case ::test::name::NewerSimpleUnion::Tag::Empty:
+      
+      case ::test::name::NewerSimpleUnion::Tag::kUnknown:
         break;
     }
     return _out;
@@ -289,21 +350,21 @@ struct ToEmbeddedTraits<::test::name::NewerSimpleUnion> {
 template<>
 struct Equality<::test::name::embedded::NewerSimpleUnion> {
   static inline bool Equals(const ::test::name::embedded::NewerSimpleUnion& _lhs, const ::test::name::embedded::NewerSimpleUnion& _rhs) {
-    if (_lhs.Which() != _rhs.Which()) {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
-    switch (_lhs.Which()) {
+    switch (_lhs.Ordinal()) {
+      case ::test::name::NewerSimpleUnion::kEmpty:
+        return true;
       case ::test::name::embedded::NewerSimpleUnion::Tag::kI:
         return ::fidl::Equals(_lhs.i_, _rhs.i_);
       case ::test::name::embedded::NewerSimpleUnion::Tag::kS:
         return ::fidl::Equals(_lhs.s_, _rhs.s_);
       case ::test::name::embedded::NewerSimpleUnion::Tag::kV:
         return ::fidl::Equals(_lhs.v_, _rhs.v_);
-      case ::test::name::embedded::NewerSimpleUnion::Tag::Empty:
-        return true;
       default:
-        return false;
-    }
+        return *_lhs.UnknownData() == *_rhs.UnknownData();
+      }
     }
 };}  // namespace fidl

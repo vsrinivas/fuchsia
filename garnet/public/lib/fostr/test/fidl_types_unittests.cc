@@ -2,21 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fostr/fidl_types.h"
+#include <fuchsia/example/fostr/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fostr/fidl/fuchsia/example/fostr/formatting.h>
 
 #include <sstream>
 
-#include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/example/fostr/cpp/fidl.h>
-#include <lib/fostr/fidl/fuchsia/example/fostr/formatting.h>
-#include <lib/async-loop/cpp/loop.h>
-
-#include "lib/fsl/handles/object_info.h"
-
 #include "gtest/gtest.h"
+#include "lib/fostr/fidl_types.h"
+#include "lib/fsl/handles/object_info.h"
 
 namespace fostr {
 namespace {
+
+#define EXPECT_FIDL_TO_FORMAT_AS(Value, Expected) \
+  do {                                            \
+    std::ostringstream os;                        \
+    os << (Value);                                \
+    EXPECT_EQ(Expected, os.str());                \
+  } while (0)
 
 // Matches string |value| from an istream.
 std::istream& operator>>(std::istream& is, const std::string& value) {
@@ -30,6 +35,25 @@ std::istream& operator>>(std::istream& is, const std::string& value) {
   is.peek();
 
   return is;
+}
+
+// Tests an empty xunion.
+TEST(FidlTypes, XunionEmpty) {
+  using fidl::operator<<;
+
+  fuchsia::example::fostr::MyXunion xu;
+
+  EXPECT_FIDL_TO_FORMAT_AS(xu, "<empty xunion>");
+}
+
+// Tests a set xunion.
+TEST(FidlTypes, XunionSet) {
+  using fidl::operator<<;
+
+  fuchsia::example::fostr::MyXunion xu;
+  xu.set_i(5);
+
+  EXPECT_FIDL_TO_FORMAT_AS(xu, "i 5");
 }
 
 // Tests std::array formatting.
@@ -65,8 +89,8 @@ TEST(FidlTypes, ArrayOfUint8) {
     large_array[i + 10] = i;
   }
 
-  os << Indent << "small:" << small_array << fostr::NewLine
-     << "medium:" << medium_array << fostr::NewLine << "large:" << large_array;
+  os << Indent << "small:" << small_array << fostr::NewLine << "medium:" << medium_array
+     << fostr::NewLine << "large:" << large_array;
 
   EXPECT_EQ(
       "small:"
@@ -135,8 +159,8 @@ TEST(FidlTypes, ArrayOfInt8) {
     large_array[i + 10] = static_cast<int8_t>(i);
   }
 
-  os << Indent << "small:" << small_array << fostr::NewLine
-     << "medium:" << medium_array << fostr::NewLine << "large:" << large_array;
+  os << Indent << "small:" << small_array << fostr::NewLine << "medium:" << medium_array
+     << fostr::NewLine << "large:" << large_array;
 
   EXPECT_EQ(
       "small:"
@@ -227,9 +251,8 @@ TEST(FidlTypes, VectorPtrOfUint8) {
     large_vector.push_back(i);
   }
 
-  os << fostr::Indent << "null:" << null_vector << ", empty:" << empty_vector
-     << fostr::NewLine << "small:" << small_vector << fostr::NewLine
-     << "medium:" << medium_vector << fostr::NewLine
+  os << fostr::Indent << "null:" << null_vector << ", empty:" << empty_vector << fostr::NewLine
+     << "small:" << small_vector << fostr::NewLine << "medium:" << medium_vector << fostr::NewLine
      << "large:" << large_vector;
 
   EXPECT_EQ(
@@ -301,9 +324,8 @@ TEST(FidlTypes, VectorPtrOfInt8) {
     large_vector.push_back(static_cast<int8_t>(i));
   }
 
-  os << fostr::Indent << "null:" << null_vector << ", empty:" << empty_vector
-     << fostr::NewLine << "small:" << small_vector << fostr::NewLine
-     << "medium:" << medium_vector << fostr::NewLine
+  os << fostr::Indent << "null:" << null_vector << ", empty:" << empty_vector << fostr::NewLine
+     << "small:" << small_vector << fostr::NewLine << "medium:" << medium_vector << fostr::NewLine
      << "large:" << large_vector;
 
   EXPECT_EQ(
@@ -475,13 +497,6 @@ TEST(FidlTypes, InterfaceRequest) {
   EXPECT_EQ(fsl::GetKoid(interface_request.channel().get()), koid);
   EXPECT_EQ(fsl::GetKoid(interface_ptr.channel().get()), related_koid);
 }
-
-#define EXPECT_FIDL_TO_FORMAT_AS(Value, Expected) \
-   do {                                           \
-       std::ostringstream os;                     \
-       os << (Value);                             \
-       EXPECT_EQ(Expected, os.str());             \
-   } while (0)
 
 TEST(FidlTypes, BitsFormatting) {
   using namespace fuchsia::example::fostr;
