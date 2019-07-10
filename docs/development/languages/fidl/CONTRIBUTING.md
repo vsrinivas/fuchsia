@@ -85,7 +85,7 @@ fx set terminal.x64 --with //bundles:kitchen_sink --with //vendor/google/bundles
 To symbolize backtraces, you'll need a symbolizer in scope:
 
 ```sh
-export ASAN_SYMBOLIZER_PATH="$FUCHSIA_DIR/zircon/prebuilt/downloads/clang/bin/llvm-symbolizer"
+export ASAN_SYMBOLIZER_PATH="$FUCHSIA_DIR/buildtools/linux-x64/clang/bin/llvm-symbolizer"
 ```
 
 ## Compiling, and Running Tests
