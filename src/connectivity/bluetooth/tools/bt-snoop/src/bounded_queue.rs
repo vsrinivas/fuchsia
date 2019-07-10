@@ -9,7 +9,7 @@ pub trait SizeOf {
     fn size_of(&self) -> usize;
 }
 
-/// An implementor has some concept of the time at which it was created and knows how to retreive
+/// An implementor has some concept of the time at which it was created and knows how to retrieve
 /// that time.
 pub trait CreatedAt {
     /// Return the `Duration` since the Unix Epoch that represents when `self` was created.

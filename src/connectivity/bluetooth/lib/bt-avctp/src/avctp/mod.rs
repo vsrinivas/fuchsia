@@ -48,7 +48,7 @@ pub struct PeerInner {
     response_waiters: Mutex<Slab<ResponseWaiter>>,
 
     /// A queue of requests that have been received and are waiting to
-    /// be reponded to, along with the waker for the task that has
+    /// be responded to, along with the waker for the task that has
     /// taken the request receiver (if it exists)
     incoming_requests: Mutex<CommandQueue>,
 }

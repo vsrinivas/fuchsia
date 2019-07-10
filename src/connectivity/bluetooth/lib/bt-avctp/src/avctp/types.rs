@@ -56,7 +56,7 @@ impl From<[u8; 2]> for ProfileId {
 }
 
 pub_decodable_enum! {
-    /// Indicated whether this paket is part of a fragmented packet set.
+    /// Indicates whether this packet is part of a fragmented packet set.
     /// See Section 6.1
     PacketType<u8, Error> {
         Single => 0x00,

@@ -159,7 +159,7 @@ impl Peer {
                 // The packet needs to be 8 bytes long according to spec. First three bytes are
                 // handled in the response header. Remaining buf is initialized to 0xff.
                 let mut pbuf: [u8; 5] = [0xff; 5];
-                // Set page (bits 6-4) to 0, and set all extention_code (bits 2-0) on.
+                // Set page (bits 6-4) to 0, and set all extension_code (bits 2-0) on.
                 pbuf[0] = 0b111;
                 // Set subunit_type (bits 7-3) to panel (0x09), and max_subunit_ID (bits 2-0) to 0.
                 pbuf[1] = u8::from(&SubunitType::Panel) << 3;
