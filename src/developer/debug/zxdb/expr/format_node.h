@@ -90,10 +90,11 @@ class FormatNode {
     kCollection,       // Structs, classes.
     kFunctionPointer,  // Pointer to a standalone function or member function.
     kOther,            // Unknown or stuff that doesn't fit into other categories.
-    kRustEnum,         // Rust-style enum (can have values associated with enums).
-    kRustTuple,        // Includes TupleStructs (check the type).
     kPointer,
     kReference,
+    kRustEnum,   // Rust-style enum (can have values associated with enums).
+    kRustTuple,  // Includes TupleStructs (check the type).
+    kString,
   };
 
   // See the class comment above about the lifecycle.
@@ -133,6 +134,7 @@ class FormatNode {
 
   // The name of this node. This is used for things like structure member names when nodes are
   // expanded. For nodes with an expression type, this name is not used.
+  void set_name(const std::string& n) { name_ = n; }
   const std::string& name() const { return name_; }
 
   // When source() == kExpression this is the expression to evaluate. Use FillFormatNodeValue() to

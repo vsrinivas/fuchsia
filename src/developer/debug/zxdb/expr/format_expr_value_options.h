@@ -9,6 +9,9 @@
 
 namespace zxdb {
 
+// TODO(brettw) when the new formatting system is completed, this should be separated into a
+// console-specific part with verbosity, and a base-class for the number format, etc. for the
+// format_node layer.
 struct FormatExprValueOptions {
   enum class NumFormat { kDefault, kUnsigned, kSigned, kHex, kChar };
 

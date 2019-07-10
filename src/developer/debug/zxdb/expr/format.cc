@@ -532,7 +532,7 @@ void FormatMemberPtr(FormatNode* node, const MemberPtr* type, const FormatExprVa
 
     // The address goes in the description.
     //
-    // TODO(brettw) it would be nice if this iterrogated the type and figured out the name of the
+    // TODO(brettw) it would be nice if this interrogated the type and figured out the name of the
     // member being pointed to. The address is not very helpful.
     node->set_description(fxl::StringPrintf("0x%" PRIx64, node->value().GetAs<TargetPointer>()));
   }
@@ -546,6 +546,8 @@ void FormatMemberPtr(FormatNode* node, const MemberPtr* type, const FormatExprVa
 // TODO(brettw) currently this handles 8-bit chracters only.
 void FormatCharArray(FormatNode* node, fxl::RefPtr<Type> char_type, const uint8_t* data,
                      size_t length, bool length_was_known, bool truncated) {
+  node->set_description_kind(FormatNode::kString);
+
   // Expect the string to be null-terminated. If we didn't find a null before the end of the buffer,
   // mark as truncated.
   size_t output_len = strnlen(reinterpret_cast<const char*>(data), length);
@@ -581,6 +583,8 @@ void FormatCharArray(FormatNode* node, fxl::RefPtr<Type> char_type, const uint8_
 void FormatCharPointer(FormatNode* node, const Type* char_type,
                        const FormatExprValueOptions& options, fxl::RefPtr<EvalContext> eval_context,
                        fit::deferred_callback cb) {
+  node->set_description_kind(FormatNode::kString);
+
   if (node->value().data().size() != kTargetPointerSize) {
     node->set_err(Err("Bad pointer data."));
     return;
