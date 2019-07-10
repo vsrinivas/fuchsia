@@ -7,6 +7,7 @@
 #include <ddk/debug.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fake-bti/bti.h>
+#include <lib/mmio/mmio.h>
 #include <lib/syslog/global.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <stdint.h>
@@ -18,6 +19,7 @@
 #include <utility>
 #include <vector>
 
+#include "../gdc-regs.h"
 #include "../gdc.h"
 #include "src/camera/drivers/test_utils/fake-buffer-collection.h"
 
@@ -62,10 +64,8 @@ class TaskTest : public zxtest::Test {
 
   // Sets up GdcDevice, initialize a task.
   // Returns a task id.
-  uint32_t SetupForFrameProcessing() {
+  uint32_t SetupForFrameProcessing(ddk_mock::MockMmioRegRegion& fake_regs) {
     SetUpBufferCollections(kNumberOfBuffers);
-    ddk_mock::MockMmioReg fake_reg_array[kNumberOfMmios];
-    ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t), kNumberOfMmios);
 
     zx::port port;
     EXPECT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
@@ -98,6 +98,33 @@ class TaskTest : public zxtest::Test {
     EXPECT_OK(gdc_device_->StartThread());
 
     return task_id;
+  }
+
+  void SetExpectations(ddk_mock::MockMmioRegRegion& fake_regs) {
+    GetMockReg<Config>(fake_regs).ExpectWrite(0).ExpectWrite(0).ExpectWrite(1);
+
+    GetMockReg<ConfigAddr>(fake_regs).ExpectWrite();
+    GetMockReg<ConfigSize>(fake_regs).ExpectWrite();
+
+    GetMockReg<DataInWidth>(fake_regs).ExpectWrite(input_buffer_collection_.format.image.width);
+    GetMockReg<DataInHeight>(fake_regs).ExpectWrite(input_buffer_collection_.format.image.height);
+    GetMockReg<DataOutWidth>(fake_regs).ExpectWrite(output_buffer_collection_.format.image.width);
+    GetMockReg<DataOutHeight>(fake_regs).ExpectWrite(output_buffer_collection_.format.image.height);
+
+    GetMockReg<Data1InAddr>(fake_regs).ExpectWrite();
+    GetMockReg<Data1InOffset>(fake_regs).ExpectWrite(
+        input_buffer_collection_.format.image.planes[0].bytes_per_row);
+
+    GetMockReg<Data2InAddr>(fake_regs).ExpectWrite();
+    GetMockReg<Data2InOffset>(fake_regs).ExpectWrite(
+        input_buffer_collection_.format.image.planes[0].bytes_per_row);
+
+    GetMockReg<Data1OutAddr>(fake_regs).ExpectWrite();
+    GetMockReg<Data1OutOffset>(fake_regs).ExpectWrite(
+        output_buffer_collection_.format.image.planes[0].bytes_per_row);
+    GetMockReg<Data2OutAddr>(fake_regs).ExpectWrite();
+    GetMockReg<Data2OutOffset>(fake_regs).ExpectWrite(
+        output_buffer_collection_.format.image.planes[0].bytes_per_row);
   }
 
   void TearDown() override {
@@ -166,7 +193,10 @@ TEST_F(TaskTest, InvalidVmoTest) {
 }
 
 TEST_F(TaskTest, InitTaskTest) {
-  __UNUSED auto task_id = SetupForFrameProcessing();
+  ddk_mock::MockMmioReg fake_reg_array[kNumberOfMmios];
+  ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t), kNumberOfMmios);
+
+  __UNUSED auto task_id = SetupForFrameProcessing(fake_regs);
 
   std::vector<uint32_t> received_ids;
   for (uint32_t i = 0; i < kMaxTasks; i++) {
@@ -186,7 +216,10 @@ TEST_F(TaskTest, InitTaskTest) {
 }
 
 TEST_F(TaskTest, RemoveTaskTest) {
-  auto task_id = SetupForFrameProcessing();
+  ddk_mock::MockMmioReg fake_reg_array[kNumberOfMmios];
+  ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t), kNumberOfMmios);
+
+  auto task_id = SetupForFrameProcessing(fake_regs);
 
   // Valid id.
   ASSERT_NO_DEATH(([this, task_id]() { gdc_device_->GdcRemoveTask(task_id); }));
@@ -196,7 +229,10 @@ TEST_F(TaskTest, RemoveTaskTest) {
 }
 
 TEST_F(TaskTest, ProcessInvalidFrameTest) {
-  __UNUSED auto task_id = SetupForFrameProcessing();
+  ddk_mock::MockMmioReg fake_reg_array[kNumberOfMmios];
+  ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t), kNumberOfMmios);
+
+  __UNUSED auto task_id = SetupForFrameProcessing(fake_regs);
 
   // Invalid task id.
   zx_status_t status = gdc_device_->GdcProcessFrame(0xFF, 0);
@@ -206,7 +242,10 @@ TEST_F(TaskTest, ProcessInvalidFrameTest) {
 }
 
 TEST_F(TaskTest, InvalidBufferProcessFrameTest) {
-  __UNUSED auto task_id = SetupForFrameProcessing();
+  ddk_mock::MockMmioReg fake_reg_array[kNumberOfMmios];
+  ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t), kNumberOfMmios);
+
+  __UNUSED auto task_id = SetupForFrameProcessing(fake_regs);
 
   // Invalid buffer id.
   zx_status_t status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers);
@@ -216,7 +255,12 @@ TEST_F(TaskTest, InvalidBufferProcessFrameTest) {
 }
 
 TEST_F(TaskTest, ProcessFrameTest) {
-  auto task_id = SetupForFrameProcessing();
+  ddk_mock::MockMmioReg fake_reg_array[kNumberOfMmios];
+  ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t), kNumberOfMmios);
+
+  auto task_id = SetupForFrameProcessing(fake_regs);
+
+  SetExpectations(fake_regs);
 
   // Valid buffer & task id.
   zx_status_t status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1);
@@ -231,10 +275,15 @@ TEST_F(TaskTest, ProcessFrameTest) {
   EXPECT_EQ(1, callback_check_.size());
 
   ASSERT_OK(gdc_device_->StopThread());
+
+  fake_regs.VerifyAll();
 }
 
 TEST_F(TaskTest, ReleaseValidFrameTest) {
-  auto task_id = SetupForFrameProcessing();
+  ddk_mock::MockMmioReg fake_reg_array[kNumberOfMmios];
+  ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t), kNumberOfMmios);
+
+  auto task_id = SetupForFrameProcessing(fake_regs);
 
   // Valid buffer & task id.
   zx_status_t status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1);
@@ -256,7 +305,10 @@ TEST_F(TaskTest, ReleaseValidFrameTest) {
 }
 
 TEST_F(TaskTest, ReleaseInValidFrameTest) {
-  auto task_id = SetupForFrameProcessing();
+  ddk_mock::MockMmioReg fake_reg_array[kNumberOfMmios];
+  ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t), kNumberOfMmios);
+
+  auto task_id = SetupForFrameProcessing(fake_regs);
 
   // Valid buffer & task id.
   zx_status_t status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1);
@@ -278,7 +330,10 @@ TEST_F(TaskTest, ReleaseInValidFrameTest) {
 }
 
 TEST_F(TaskTest, MultipleProcessFrameTest) {
-  auto task_id = SetupForFrameProcessing();
+  ddk_mock::MockMmioReg fake_reg_array[kNumberOfMmios];
+  ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t), kNumberOfMmios);
+
+  auto task_id = SetupForFrameProcessing(fake_regs);
 
   // Process few frames, putting them in a queue
   zx_status_t status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1);
