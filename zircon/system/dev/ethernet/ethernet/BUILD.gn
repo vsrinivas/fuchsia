@@ -17,6 +17,7 @@ driver("ethernet") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
   ]
 }
 
@@ -37,6 +38,7 @@ test("ethernet-unittest") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zxtest",
   ]
 }

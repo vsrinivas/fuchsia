@@ -22,7 +22,7 @@
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <utility>
 

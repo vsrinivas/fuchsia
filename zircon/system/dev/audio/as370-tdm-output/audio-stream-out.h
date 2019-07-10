@@ -19,7 +19,7 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
 #include <lib/sync/completion.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include "codec.h"
 

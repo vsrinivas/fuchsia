@@ -17,6 +17,7 @@ driver("ram-nand") {
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
 }
@@ -32,6 +33,7 @@ source_set("common") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon-internal",
   ]
 }
 
@@ -58,6 +60,7 @@ test("ram-nand-test") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]

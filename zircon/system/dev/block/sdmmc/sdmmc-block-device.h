@@ -16,7 +16,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <lib/operation/block.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include "sdmmc-device.h"
 

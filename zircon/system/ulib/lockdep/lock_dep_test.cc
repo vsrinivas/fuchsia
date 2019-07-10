@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zircon-internal/thread_annotations.h>
 #include <lockdep/lockdep.h>
 #include <zxtest/zxtest.h>
 
 #include "lockdep/lock_traits.h"
-#include "zircon/thread_annotations.h"
 
 // If enabled, introduce locking errors into the tests that we expect Clang
 // to detect.

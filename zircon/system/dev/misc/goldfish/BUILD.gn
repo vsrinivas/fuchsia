@@ -20,6 +20,7 @@ driver("goldfish") {
     "$zx/system/ulib/fidl-utils",
     "$zx/system/ulib/trace:headers",
     "$zx/system/ulib/trace:trace-driver",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
 }

@@ -23,7 +23,7 @@
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page_list.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 // the main VM object type, holding a list of pages

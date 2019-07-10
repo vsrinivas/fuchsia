@@ -6,7 +6,7 @@
 
 #include <ddk/device.h>
 #include <zircon/types.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <stddef.h>
 #include <stdint.h>
 

@@ -23,6 +23,7 @@ source_set("common") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fidl-utils",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
 }

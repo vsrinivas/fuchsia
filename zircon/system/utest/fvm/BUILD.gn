@@ -34,6 +34,7 @@ test("fvm") {
     "$zx/system/ulib/trace-engine",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/third_party/ulib/cksum",
     "$zx/third_party/ulib/uboringssl",

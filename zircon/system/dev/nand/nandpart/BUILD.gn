@@ -19,6 +19,7 @@ driver("nandpart") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
 }
@@ -43,6 +44,7 @@ test("nandpart-test") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]

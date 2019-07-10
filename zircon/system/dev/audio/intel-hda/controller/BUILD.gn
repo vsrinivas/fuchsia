@@ -51,6 +51,8 @@ driver("intel-hda") {
     "$zx/system/ulib/intel-hda",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
   data_deps = [

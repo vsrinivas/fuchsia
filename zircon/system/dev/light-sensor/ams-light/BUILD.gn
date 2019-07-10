@@ -18,6 +18,7 @@ driver("ams-light") {
     "$zx/system/ulib/hid",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
 

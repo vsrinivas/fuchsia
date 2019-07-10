@@ -17,6 +17,7 @@ driver("goldfish-display") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/trace:headers",
     "$zx/system/ulib/trace:trace-driver",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
 }

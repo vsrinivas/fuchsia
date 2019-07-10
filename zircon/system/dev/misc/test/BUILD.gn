@@ -12,5 +12,6 @@ driver("test") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
   ]
 }

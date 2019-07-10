@@ -15,7 +15,7 @@
 #include <zircon/assert.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 // Normally just defined in the kernel:
 #define PAGE_SIZE_SHIFT 12

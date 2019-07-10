@@ -11,7 +11,7 @@
 #include <threads.h>
 #include <unittest/unittest.h>
 #include <zircon/syscalls.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 

@@ -7,7 +7,7 @@
 #include "backend.h"
 #include <lib/mmio/mmio.h>
 #include <optional>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 namespace virtio {
 

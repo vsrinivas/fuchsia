@@ -34,7 +34,7 @@
 #include <zircon/boot/image.h>
 #include <zircon/device/block.h>
 #include <zircon/process.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include "server.h"
 #include "server-manager.h"

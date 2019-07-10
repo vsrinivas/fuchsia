@@ -13,7 +13,7 @@
 #include <fuchsia/hardware/serial/llcpp/fidl.h>
 #include <lib/zx/event.h>
 #include <lib/zx/socket.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 namespace fidl {

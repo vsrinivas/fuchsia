@@ -9,7 +9,7 @@
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
 #include <lib/sync/completion.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zxtest/zxtest.h>
 
 namespace mock_hidbus_ifc {

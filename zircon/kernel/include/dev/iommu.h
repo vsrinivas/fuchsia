@@ -11,7 +11,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <vm/vm_object.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <stdbool.h>
 #include <sys/types.h>

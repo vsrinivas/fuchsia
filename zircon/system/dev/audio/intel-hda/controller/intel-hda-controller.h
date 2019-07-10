@@ -23,7 +23,7 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 #include <atomic>

@@ -24,7 +24,7 @@
 #include <virtio/vsock.h>
 
 #include <fuchsia/hardware/vsock/c/fidl.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 namespace virtio {
 

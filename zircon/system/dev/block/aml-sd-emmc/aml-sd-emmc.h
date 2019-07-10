@@ -15,7 +15,7 @@
 #include <lib/zx/interrupt.h>
 #include <soc/aml-common/aml-sd-emmc.h>
 #include <threads.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 namespace sdmmc {
 

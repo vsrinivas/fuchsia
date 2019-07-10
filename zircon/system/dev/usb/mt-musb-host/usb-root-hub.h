@@ -16,7 +16,7 @@
 #include <usb/request-cpp.h>
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb/hub.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 namespace mt_usb_hci {

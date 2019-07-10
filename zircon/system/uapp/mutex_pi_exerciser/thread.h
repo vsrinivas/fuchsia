@@ -13,7 +13,7 @@
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
 #include <threads.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 #include "event.h"

@@ -17,7 +17,7 @@
 #include <fbl/unique_ptr.h>
 #include <virtio/net.h>
 #include <zircon/compiler.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 namespace virtio {

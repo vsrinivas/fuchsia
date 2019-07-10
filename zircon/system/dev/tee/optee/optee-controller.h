@@ -15,7 +15,7 @@
 #include <fuchsia/hardware/tee/c/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/resource.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include "optee-message.h"
 #include "optee-smc.h"

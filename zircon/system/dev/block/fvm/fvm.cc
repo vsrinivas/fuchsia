@@ -22,7 +22,7 @@
 #include <zircon/device/block.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include "fvm-private.h"
 #include "slice-extent.h"

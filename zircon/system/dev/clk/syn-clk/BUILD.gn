@@ -21,6 +21,7 @@ driver("syn-clk") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
 }
@@ -48,6 +49,7 @@ test("syn-clk-test") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]

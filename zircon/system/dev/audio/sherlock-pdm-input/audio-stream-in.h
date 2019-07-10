@@ -17,7 +17,7 @@
 
 #include <soc/aml-common/aml-pdm-audio.h>
 
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <optional>
 

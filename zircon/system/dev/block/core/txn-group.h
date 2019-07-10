@@ -10,7 +10,7 @@
 
 #include <zircon/device/block.h>
 #include <ddk/protocol/block.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 #include <fbl/intrusive_double_list.h>

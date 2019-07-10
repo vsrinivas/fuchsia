@@ -9,7 +9,7 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <memory>
 #include <unittest/unittest.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 namespace {
 

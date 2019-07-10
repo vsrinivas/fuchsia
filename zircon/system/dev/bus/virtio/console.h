@@ -9,7 +9,7 @@
 #include <ddk/device.h>
 #include <fbl/array.h>
 #include <fbl/intrusive_double_list.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 namespace virtio {
 

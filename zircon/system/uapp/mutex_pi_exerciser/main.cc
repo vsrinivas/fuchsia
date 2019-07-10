@@ -8,7 +8,7 @@
 #include <pthread.h>
 #include <vector>
 #include <zircon/assert.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 #include "event.h"

@@ -19,6 +19,7 @@ executable("mutex_pi_exerciser") {
     "$zx/system/ulib/trace-engine",
     "$zx/system/ulib/trace-provider:trace-provider-with-fdio",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
 }

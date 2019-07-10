@@ -26,6 +26,7 @@ driver("sdmmc") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/trace:trace-driver",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
 
     # TODO(BLD-353): This is actually a transitive dependency of the ddk
@@ -64,6 +65,7 @@ test("sdmmc-test") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/trace:trace-driver",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]

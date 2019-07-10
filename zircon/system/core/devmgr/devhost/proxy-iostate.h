@@ -9,7 +9,7 @@
 #include <fbl/unique_ptr.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include "../shared/async-loop-owned-rpc-handler.h"
 

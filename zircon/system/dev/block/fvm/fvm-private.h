@@ -11,7 +11,7 @@
 #include <ddk/device.h>
 #include <fvm/format.h>
 #include <zircon/device/block.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 #ifdef __cplusplus

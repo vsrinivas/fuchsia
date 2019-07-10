@@ -12,5 +12,6 @@ source_set("sync-mutex") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
   ]
 }

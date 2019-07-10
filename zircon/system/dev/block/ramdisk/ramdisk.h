@@ -18,7 +18,7 @@
 #include <lib/zx/vmo.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/block.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 namespace ramdisk {

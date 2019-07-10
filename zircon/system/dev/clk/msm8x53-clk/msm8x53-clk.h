@@ -10,7 +10,7 @@
 #include <fuchsia/hardware/clock/c/fidl.h>
 #include <lib/mmio/mmio.h>
 #include <soc/msm8x53/msm8x53-clock.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 namespace clk {
 

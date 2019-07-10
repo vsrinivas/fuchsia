@@ -11,7 +11,7 @@
 #include <fbl/mutex.h>
 #include <hid/bma253.h>
 #include <lib/simplehid/simplehid.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 namespace accel {
 

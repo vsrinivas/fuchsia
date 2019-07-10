@@ -14,8 +14,9 @@ In Zircon, we provide our own set of macros wrapping the annotations and have
 annotated our synchronization primitives. When writing new code involving
 synchronization or annotating existing code, in most cases you should use the
 thread annotation macros provided by
-[system/private/zircon/thread\_annotations.h](../system/private/zircon/thread_annotations.h). These macros all begin with
-the prefix `"TA_"` for thread analysis. The most commonly used ones are:
+[<lib/zircon-internal/thread\_annotations.h](../system/ulib/zircon-internal/include/lib/zircon-internal/thread_annotations.h).
+These macros all begin with the prefix `"TA_"` for thread analysis. The most
+commonly used ones are:
 
 * `TA_GUARDED(x)` the annotated variable is guarded by the capability (e.g. lock) `x`
 * `TA_ACQ(x...)` function acquires all of the mutexes in the set `x` and hold them after returning

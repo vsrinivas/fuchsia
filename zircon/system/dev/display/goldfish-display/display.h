@@ -15,7 +15,7 @@
 #include <fbl/mutex.h>
 #include <lib/zx/pmt.h>
 #include <threads.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 namespace goldfish {

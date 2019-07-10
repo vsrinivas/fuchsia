@@ -16,7 +16,7 @@
 #include <hwreg/mmio.h>
 #include <lib/mmio/mmio.h>
 #include <fuchsia/hardware/clock/c/fidl.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <optional>
 

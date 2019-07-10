@@ -19,7 +19,7 @@
 #include <lk/init.h>
 #include <object/thread_dispatcher.h>
 #include <vm/vm_aspace.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #define ktrace_ticks_per_ms() (ticks_per_second() / 1000)
 

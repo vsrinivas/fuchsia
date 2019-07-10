@@ -9,7 +9,7 @@
 #include <fbl/mutex.h>
 #include <intel-hda/utils/intel-audio-dsp-ipc.h>
 #include <lib/sync/completion.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include "debug-logging.h"
 

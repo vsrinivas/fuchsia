@@ -53,7 +53,7 @@
 #include <zircon/device/block.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <unittest/unittest.h>
 

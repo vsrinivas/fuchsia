@@ -21,7 +21,7 @@
 #include <lib/sync/completion.h>
 #include <zircon/boot/image.h>
 #include <zircon/listnode.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 namespace ftl {

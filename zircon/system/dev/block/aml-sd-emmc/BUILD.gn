@@ -21,8 +21,10 @@ driver("aml-sd-emmc") {
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
   ]
 }
+
 test("aml-sd-emmc-test") {
   testonly = true
   output_name = "aml-sd-emmc-test"
@@ -46,6 +48,7 @@ test("aml-sd-emmc-test") {
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]

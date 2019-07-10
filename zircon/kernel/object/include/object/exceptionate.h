@@ -10,7 +10,7 @@
 #include <object/channel_dispatcher.h>
 #include <object/excp_port.h>
 #include <object/handle.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 #include <fbl/ref_ptr.h>

@@ -19,7 +19,7 @@
 #include <stdint.h>
 #include <vm/vm.h>
 #include <vm/vm_object.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 // VMO representing a physical range of memory

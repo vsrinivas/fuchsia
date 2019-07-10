@@ -24,7 +24,7 @@
 #include <zircon/hw/usb/hid.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <atomic>
 #include <memory>

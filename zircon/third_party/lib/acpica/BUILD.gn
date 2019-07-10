@@ -230,6 +230,7 @@ static_library("acpica") {
       "$zx/system/ulib/ddk",
       "$zx/system/ulib/fbl",
       "$zx/system/ulib/pci",
+      "$zx/system/ulib/zircon-internal",
     ]
     defines = []
     if (enable_user_pci) {

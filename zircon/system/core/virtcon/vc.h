@@ -10,7 +10,7 @@
 #include <hid/hid.h>
 #include <lib/fdio/vfs.h>
 #include <zircon/listnode.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <port/port.h>
 #include <stdbool.h>
 #include <threads.h>

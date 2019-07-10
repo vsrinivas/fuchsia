@@ -17,7 +17,7 @@
 #include <fs-test-utils/blobfs/blobfs.h>
 #include <fs-test-utils/fixture.h>
 #include <lib/fdio/io.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <unittest/unittest.h>
 
 namespace fs_test_utils {

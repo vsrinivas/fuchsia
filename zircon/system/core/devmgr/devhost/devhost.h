@@ -22,7 +22,7 @@
 #include <threads.h>
 #include <zircon/compiler.h>
 #include <zircon/fidl.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 #include "../shared/async-loop-owned-rpc-handler.h"

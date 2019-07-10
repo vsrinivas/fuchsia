@@ -24,7 +24,7 @@
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <zircon/pixelformat.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include "aml-dsi-host.h"
 #include "astro-clock.h"

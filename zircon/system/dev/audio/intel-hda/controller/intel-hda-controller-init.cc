@@ -6,7 +6,7 @@
 #include <limits.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <utility>
 

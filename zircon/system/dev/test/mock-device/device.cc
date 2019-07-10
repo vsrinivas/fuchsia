@@ -19,7 +19,7 @@
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 #include "fidl.h"

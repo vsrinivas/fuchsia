@@ -26,6 +26,7 @@ driver("optee") {
     "$zx/system/ulib/region-alloc",
     "$zx/system/ulib/tee-client-api",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
   data_deps = [

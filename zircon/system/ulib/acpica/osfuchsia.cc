@@ -24,7 +24,7 @@
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #if !defined(__x86_64__) && !defined(__x86__)
 #error "Unsupported architecture"

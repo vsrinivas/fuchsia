@@ -22,6 +22,7 @@ driver("mtk-sdmmc") {
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
 }
@@ -49,6 +50,7 @@ test("mtk-sdmmc-test") {
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]

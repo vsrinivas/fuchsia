@@ -38,6 +38,7 @@ source_set("shared") {
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/third_party/ulib/uboringssl",
   ]

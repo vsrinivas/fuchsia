@@ -11,7 +11,7 @@
 #include <hid/ltr-578als.h>
 #include <lib/simplehid/simplehid.h>
 #include <lib/zx/port.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 namespace light {
 

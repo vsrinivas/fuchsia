@@ -102,6 +102,7 @@ driver("platform-bus-x86") {
     "$zx/system/ulib/pci",
     "$zx/system/ulib/region-alloc",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/third_party/lib/acpica",
     "$zx/third_party/ulib/chromiumos-platform-ec",
   ]
@@ -160,6 +161,7 @@ test("x86-lid-test") {
     "$zx/system/ulib/hid",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zxtest",
     "$zx/third_party/lib/acpica",
   ]

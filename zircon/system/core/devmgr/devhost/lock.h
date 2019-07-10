@@ -6,7 +6,7 @@
 #define ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_LOCK_H_
 
 #include <threads.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <atomic>
 

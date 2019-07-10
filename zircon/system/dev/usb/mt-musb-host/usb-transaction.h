@@ -9,7 +9,7 @@
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
 #include <zircon/hw/usb.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 namespace mt_usb_hci {
 

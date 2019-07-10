@@ -9,7 +9,7 @@
 #include <fbl/mutex.h>
 #include <lib/mmio/mmio.h>
 #include <soc/as370/as370-clk.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 namespace clk {
 

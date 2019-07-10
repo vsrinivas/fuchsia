@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <lib/zx/handle.h>
 #include <zircon/assert.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 #include "tpm.h"

@@ -21,5 +21,6 @@ driver("ramdisk") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
   ]
 }

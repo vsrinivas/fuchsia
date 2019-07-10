@@ -23,7 +23,7 @@
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/hw/pci.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 namespace pci {
 

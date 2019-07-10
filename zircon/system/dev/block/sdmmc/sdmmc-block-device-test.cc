@@ -7,7 +7,7 @@
 #include <hw/sdmmc.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-function/mock-function.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zxtest/zxtest.h>
 
 #include "mock-sdmmc-device.h"

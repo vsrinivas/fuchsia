@@ -17,7 +17,7 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/interrupt.h>
 #include <soc/mt8167/mt8167-sdmmc.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <utility>
 

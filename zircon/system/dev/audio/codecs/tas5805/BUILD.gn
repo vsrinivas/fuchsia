@@ -16,6 +16,7 @@ driver("tas5805") {
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
 }
@@ -38,6 +39,7 @@ test("tas5805-test") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]

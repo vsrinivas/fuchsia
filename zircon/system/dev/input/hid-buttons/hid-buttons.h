@@ -13,7 +13,7 @@
 #include <hid/buttons.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/port.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <optional>
 

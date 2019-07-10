@@ -11,7 +11,7 @@
 #include <lockdep/guard_multiple.h>
 #include <lockdep/lockdep.h>
 #include <stdint.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #if WITH_LOCK_DEP_TESTS
 

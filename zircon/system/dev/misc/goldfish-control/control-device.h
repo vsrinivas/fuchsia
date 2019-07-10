@@ -15,7 +15,7 @@
 #include <fuchsia/hardware/goldfish/control/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 #include <map>

@@ -40,7 +40,7 @@
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_physical.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #define LOCAL_TRACE 0
 

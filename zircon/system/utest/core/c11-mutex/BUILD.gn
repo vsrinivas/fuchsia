@@ -11,5 +11,6 @@ source_set("c11-mutex") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
   ]
 }

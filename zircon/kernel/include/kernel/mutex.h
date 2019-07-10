@@ -18,7 +18,7 @@
 #include <ktl/atomic.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 // Kernel mutex support.
 //

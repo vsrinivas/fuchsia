@@ -12,7 +12,7 @@
 #include <stddef.h>
 
 #include <zircon/compiler.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 DECLARE_SINGLETON_MUTEX(TheHeapLock);
 

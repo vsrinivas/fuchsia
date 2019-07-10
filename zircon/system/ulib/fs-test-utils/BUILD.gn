@@ -22,6 +22,9 @@ library("fs-test-utils") {
   public_deps = [
     # <fs-test-utils/fixture.h> has #include <ramdevice-client/ramdisk.h>.
     "$zx/system/ulib/ramdevice-client:headers",
+
+    # <fs-test-utils/blobfs/bloblist.h> has #include <lib/zircon-internal/thread_annotations.h>.
+    "$zx/system/ulib/zircon-internal:headers",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",

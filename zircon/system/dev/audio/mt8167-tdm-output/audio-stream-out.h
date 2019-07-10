@@ -22,7 +22,7 @@
 #include <lib/simple-audio-stream/simple-audio-stream.h>
 #include <lib/sync/completion.h>
 #include <soc/mt8167/mt8167-audio-out.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include "codec.h"
 

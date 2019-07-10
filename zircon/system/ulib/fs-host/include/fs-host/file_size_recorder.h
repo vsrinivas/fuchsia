@@ -7,7 +7,7 @@
 #include <mutex>
 
 #include <fbl/unique_fd.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 // Helper class to record file size information into a log.
 class FileSizeRecorder {

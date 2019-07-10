@@ -17,7 +17,7 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
 #include <zircon/compiler.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <atomic>
 

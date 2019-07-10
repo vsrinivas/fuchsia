@@ -20,7 +20,7 @@
 #include <trace.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 static paddr_t bootstrap_phys_addr = UINT64_MAX;

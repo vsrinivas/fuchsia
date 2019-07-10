@@ -17,7 +17,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <lib/device-protocol/i2c-channel.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 namespace audio {
 

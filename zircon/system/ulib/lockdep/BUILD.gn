@@ -43,6 +43,7 @@ test("lockdep-test") {
   deps = [
     ":lockdep",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zxtest",
   ]
 }

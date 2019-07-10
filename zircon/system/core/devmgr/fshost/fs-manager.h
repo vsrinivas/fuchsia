@@ -12,7 +12,7 @@
 #include <lib/zx/event.h>
 #include <lib/zx/job.h>
 #include <zircon/compiler.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 // Used for fshost signals.

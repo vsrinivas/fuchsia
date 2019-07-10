@@ -39,6 +39,7 @@ group("common") {
     "$zx/system/ulib/hid",
     "$zx/system/ulib/port",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
 }

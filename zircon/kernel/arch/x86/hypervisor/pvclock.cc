@@ -10,7 +10,7 @@
 #include <hypervisor/guest_physical_address_space.h>
 #include <platform.h>
 #include <vm/physmap.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 #include "pvclock_priv.h"

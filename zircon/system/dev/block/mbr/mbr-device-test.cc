@@ -19,7 +19,7 @@
 #include <zircon/device/block.h>
 #include <zircon/errors.h>
 #include <zircon/hw/gpt.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zxtest/zxtest.h>
 
 #include "mbr-test-data.h"

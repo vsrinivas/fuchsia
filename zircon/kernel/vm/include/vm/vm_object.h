@@ -22,7 +22,7 @@
 #include <vm/page.h>
 #include <vm/vm.h>
 #include <vm/vm_page_list.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 class VmMapping;

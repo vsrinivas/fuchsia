@@ -38,6 +38,7 @@ source_set("user_pci") {
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/region-alloc",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
 
     # TODO(ZX-4062): This shouldn't be here if the mmio code is actually

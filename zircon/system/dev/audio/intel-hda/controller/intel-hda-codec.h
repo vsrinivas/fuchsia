@@ -21,7 +21,7 @@
 #include <lib/zx/handle.h>
 #include <stdint.h>
 #include <string.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include "codec-cmd-job.h"
 #include "debug-logging.h"

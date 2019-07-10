@@ -13,7 +13,7 @@
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <ktl/atomic.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 namespace crypto {
 

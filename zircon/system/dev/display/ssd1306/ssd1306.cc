@@ -17,7 +17,7 @@
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/device-protocol/i2c.h>
 #include <threads.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <array>
 

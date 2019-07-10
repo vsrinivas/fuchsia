@@ -14,6 +14,7 @@ library("fake-bti") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
   configs += [ "$zx/public/gn/config:static-libc++" ]

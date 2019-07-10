@@ -12,7 +12,7 @@
 #include <string.h>
 #include <threads.h>
 #include <zircon/listnode.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 #include "intel-i2c-controller.h"

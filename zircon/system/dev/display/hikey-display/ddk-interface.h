@@ -10,7 +10,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/pixelformat.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include "adv7533.h"
 #include "hi3660-dsi.h"

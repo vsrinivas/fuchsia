@@ -43,6 +43,7 @@ source_set("common") {
     "$zx/system/ulib/image-format",
     "$zx/system/ulib/mipi-dsi",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
 }

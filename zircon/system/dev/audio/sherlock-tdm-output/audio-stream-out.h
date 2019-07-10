@@ -22,7 +22,7 @@
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 #include <soc/aml-common/aml-tdm-audio.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include "tas5720.h"
 

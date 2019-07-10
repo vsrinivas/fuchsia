@@ -19,7 +19,7 @@
 #include <zircon/compiler.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls/resource.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 class ResourceRecord;

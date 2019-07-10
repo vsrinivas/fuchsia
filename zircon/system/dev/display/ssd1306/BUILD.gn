@@ -16,5 +16,6 @@ driver("ssd1306") {
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
   ]
 }

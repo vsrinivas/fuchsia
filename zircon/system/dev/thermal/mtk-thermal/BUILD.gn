@@ -24,6 +24,7 @@ driver("mtk-thermal") {
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
 }
@@ -54,6 +55,7 @@ test("mtk-thermal-test") {
     "$zx/system/ulib/mock-function",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]

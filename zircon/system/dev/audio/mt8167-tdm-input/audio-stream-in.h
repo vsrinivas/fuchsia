@@ -14,7 +14,7 @@
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 #include <soc/mt8167/mt8167-audio-in.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include "tlv320adc.h"
 

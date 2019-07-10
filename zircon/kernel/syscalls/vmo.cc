@@ -20,7 +20,7 @@
 
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include "priv.h"
 

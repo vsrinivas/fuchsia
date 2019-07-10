@@ -17,7 +17,7 @@
 #include <kernel/wait.h>
 #include <ktl/atomic.h>
 #include <stdint.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 namespace internal {
 

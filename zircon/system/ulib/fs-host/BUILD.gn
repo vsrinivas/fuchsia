@@ -8,6 +8,10 @@ library("fs-host") {
     "common.cc",
     "file_size_recorder.cc",
   ]
+  public_deps = [
+    # <fs-host/file_size_recorder.h> has #include <lib/zircon-internal/thread_annotations.h>.
+    "$zx/system/ulib/zircon-internal:headers",
+  ]
   deps = [
     "$zx/system/ulib/fbl",
   ]

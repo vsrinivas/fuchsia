@@ -6,7 +6,7 @@
 #include <intel-hda/utils/intel-hda-registers.h>
 #include <string.h>
 #include <zircon/assert.h>
-#include <zircon/thread_annotations.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include "codec-cmd-job.h"
 #include "debug-logging.h"
