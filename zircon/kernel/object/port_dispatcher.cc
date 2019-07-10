@@ -88,9 +88,9 @@ PortPacket::PortPacket(const void* handle, PortAllocator* allocator)
     // Note that packet is initialized to zeros.
 }
 
-PortObserver::PortObserver(uint32_t type, const Handle* handle, fbl::RefPtr<PortDispatcher> port,
+PortObserver::PortObserver(uint32_t options, const Handle* handle, fbl::RefPtr<PortDispatcher> port,
                            Lock<fbl::Mutex>* port_lock, uint64_t key, zx_signals_t signals)
-    : type_(type),
+    : options_(options),
       trigger_(signals),
       packet_(handle, nullptr),
       port_(ktl::move(port)),
@@ -104,7 +104,7 @@ PortObserver::PortObserver(uint32_t type, const Handle* handle, fbl::RefPtr<Port
     auto& packet = packet_.packet;
     packet.status = ZX_OK;
     packet.key = key;
-    packet.type = type_;
+    packet.type = ZX_PKT_TYPE_SIGNAL_ONE;
     packet.signal.trigger = trigger_;
 }
 
@@ -151,14 +151,14 @@ StateObserver::Flags PortObserver::MaybeQueue(zx_signals_t new_state, uint64_t c
     if ((trigger_ & new_state) == 0u)
         return 0;
 
+    if (options_ & ZX_WAIT_ASYNC_TIMESTAMP) {
+        // Getting the current time can be somewhat expensive.
+        packet_.packet.signal.timestamp = current_time();
+    }
     // Queue cannot fail because the packet is not allocated in the packet arena,
     // and does not count against the per-port limit.
-    auto status = port_->Queue(&packet_, new_state, count);
-
-    if ((type_ == ZX_PKT_TYPE_SIGNAL_ONE) || (status != ZX_OK))
-        return kNeedRemoval;
-
-    return 0;
+    port_->Queue(&packet_, new_state, count);
+    return kNeedRemoval;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -424,22 +424,9 @@ zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint6
     if (!dispatcher->is_waitable())
         return ZX_ERR_NOT_SUPPORTED;
 
-    uint32_t type;
-    switch (options) {
-        case ZX_WAIT_ASYNC_ONCE:
-            type = ZX_PKT_TYPE_SIGNAL_ONE;
-            break;
-        case 1u:
-            printf("ZX_WAIT_ASYNC_REPEATING no longer supported. Use ZX_WAIT_ASYNC_ONCE.\n");
-            return ZX_ERR_INVALID_ARGS;
-            break;
-        default:
-            return ZX_ERR_INVALID_ARGS;
-    }
-
     fbl::AllocChecker ac;
     auto observer = new (&ac)
-        PortObserver(type, handle, fbl::RefPtr<PortDispatcher>(this), get_lock(), key, signals);
+        PortObserver(options, handle, fbl::RefPtr<PortDispatcher>(this), get_lock(), key, signals);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }

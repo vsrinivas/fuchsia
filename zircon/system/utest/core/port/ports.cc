@@ -21,14 +21,14 @@ namespace {
 
 TEST(PortTest, QueueNullPtrReturnsInvalidArgs) {
     zx::port port;
-    ASSERT_OK(zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0u, &port));
 
     EXPECT_EQ(port.queue(nullptr), ZX_ERR_INVALID_ARGS);
 }
 
 TEST(PortTest, QueueWaitVerifyUserPacket) {
     zx::port port;
-    ASSERT_OK(zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0u, &port));
 
     constexpr zx_port_packet_t kPortUserPacket = {
         12ull,
@@ -52,7 +52,7 @@ TEST(PortTest, QueueWaitVerifyUserPacket) {
 
 TEST(PortTest, PortTimeout) {
     zx::port port;
-    ASSERT_OK(zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0u, &port));
 
     zx_port_packet_t packet = {};
 
@@ -61,7 +61,7 @@ TEST(PortTest, PortTimeout) {
 
 TEST(PortTest, QueueAndClose) {
     zx::port port;
-    ASSERT_OK(zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0u, &port));
 
     constexpr zx_port_packet_t kPortUserPacket = {
         1ull,
@@ -75,7 +75,7 @@ TEST(PortTest, QueueAndClose) {
 
 TEST(PortTest, QueueTooMany) {
     zx::port port;
-    ASSERT_OK(zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0u, &port));
     constexpr uint32_t kNumberPortQueueSize = 2049;
 
     constexpr zx_port_packet_t kPortUserPacket = {
@@ -101,7 +101,7 @@ TEST(PortTest, AsyncWaitChannelTimedOut) {
     constexpr uint64_t kEventKey = 6567;
 
     zx::port port;
-    ASSERT_OK(zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0u, &port));
 
     zx::channel ch[2];
     ASSERT_OK(zx::channel::create(0u, &ch[0], &ch[1]));
@@ -116,7 +116,7 @@ TEST(PortTest, AsyncWaitChannel) {
     constexpr uint64_t kEventKey = 6567;
 
     zx::port port;
-    ASSERT_OK(zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0u, &port));
 
     zx::channel ch[2];
     ASSERT_OK(zx::channel::create(0u, &ch[0], &ch[1]));
@@ -192,7 +192,7 @@ TEST(PortTest, AsyncWaitCloseOrder) {
 
 TEST(PortTest, EventAsyncSignalWaitSingle) {
     zx::port port;
-    ASSERT_OK(zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0u, &port));
 
     zx::event event;
     ASSERT_OK(zx::event::create(0u, &event));
@@ -220,7 +220,7 @@ TEST(PortTest, EventAsyncSignalWaitSingle) {
 
 TEST(PortTest, AsyncWaitEventRepeat) {
     zx::port port;
-    ASSERT_OK(zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0u, &port));
 
     zx::event event;
     ASSERT_OK(zx::event::create(0u, &event));
@@ -261,7 +261,7 @@ TEST(PortTest, AsyncWaitEventManyAllProcessed) {
     constexpr size_t kEventCount = 16 * 1024 + 1;
 
     zx::port port;
-    ASSERT_OK(zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0u, &port));
 
     zx::event event[kEventCount];
     for (size_t i = 0; i < kEventCount; i++) {
@@ -292,7 +292,7 @@ TEST(PortTest, AsyncWaitEventManyAllProcessed) {
 // invalid option.
 TEST(PortTest, AsyncWaitInvalidOption) {
     zx::port port;
-    ASSERT_OK(zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0u, &port));
     zx::event event;
     ASSERT_OK(zx::event::create(0u, &event));
 
@@ -315,7 +315,7 @@ TEST(PortTest, ChannelAsyncWaitOnExistingStateIsNotified) {
     ch[0].reset();
 
     zx::port port;
-    ASSERT_OK(zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0u, &port));
 
     ASSERT_OK(ch[1].wait_async(port, kEventKey, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
               ZX_WAIT_ASYNC_ONCE));
@@ -346,7 +346,7 @@ TEST(PortTest, CancelEventKey) {
     zx::port port;
     zx::event event;
 
-    ASSERT_OK(zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0u, &port));
     ASSERT_OK(zx::event::create(0u, &event));
 
     // Notice repeated key below.
@@ -391,7 +391,7 @@ TEST(PortTest, CancelEventKey) {
 TEST(PortTest, CancelEventKeyAfter) {
     zx::port port;
 
-    ASSERT_OK(zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0u, &port));
 
     const uint64_t keys[] = {128u, 3u, 3u};
     zx::event ev[fbl::count_of(keys)];
@@ -447,7 +447,7 @@ TEST(PortTest, ThreadEvents) {
         } while (--count);
     };
 
-    ASSERT_OK(zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0u, &port));
     ASSERT_OK(zx::event::create(0u, &event));
 
     std::thread port_waiters[kNumPortWaiterThreads];
@@ -468,6 +468,56 @@ TEST(PortTest, ThreadEvents) {
         port_waiters[ix].join();
         EXPECT_OK(return_status[ix]);
     }
+}
+
+TEST(PortTest, Timestamp) {
+    // Test that the timestamp feature returns reasonable numbers. We use
+    // a single thread so the numbers should be nanosecond-grade reliable.
+    zx::port port;
+    zx::event event[2];
+    ASSERT_OK(zx::port::create(0u, &port));
+    ASSERT_OK(zx::event::create(0u, &event[0]));
+    ASSERT_OK(zx::event::create(0u, &event[1]));
+
+    ASSERT_OK(event[0].wait_async(port, 1, ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_TIMESTAMP));
+    ASSERT_OK(event[1].wait_async(port, 2, ZX_EVENT_SIGNALED, 0u));
+
+    auto before = zx::clock::get_monotonic();
+    ASSERT_OK(event[0].signal(0u, ZX_EVENT_SIGNALED));
+    auto after = zx::clock::get_monotonic();
+    ASSERT_OK(event[1].signal(0u, ZX_EVENT_SIGNALED));
+
+    zx_port_packet_t packet[2];
+    ASSERT_OK(port.wait(zx::time::infinite(), &packet[0]));
+    ASSERT_OK(port.wait(zx::time::infinite(), &packet[1]));
+
+    ASSERT_EQ(packet[0].signal.trigger, ZX_EVENT_SIGNALED);
+    ASSERT_EQ(packet[1].signal.trigger, ZX_EVENT_SIGNALED);
+
+    EXPECT_LE(before, zx::time(packet[0].signal.timestamp));
+    EXPECT_GE(after, zx::time(packet[0].signal.timestamp));
+
+    EXPECT_EQ(0u, packet[1].signal.timestamp);
+
+    // Now test the same using event[0] in place of event[1].
+    ASSERT_OK(event[0].signal(ZX_EVENT_SIGNALED, 0u));
+    ASSERT_OK(event[1].signal(ZX_EVENT_SIGNALED, 0u));
+
+    ASSERT_OK(event[1].wait_async(port, 1, ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_TIMESTAMP));
+    ASSERT_OK(event[0].wait_async(port, 2, ZX_EVENT_SIGNALED, 0u));
+
+    ASSERT_OK(event[0].signal(0u, ZX_EVENT_SIGNALED));
+    before = zx::clock::get_monotonic();
+    ASSERT_OK(event[1].signal(0u, ZX_EVENT_SIGNALED));
+    after = zx::clock::get_monotonic();
+
+    ASSERT_OK(port.wait(zx::time::infinite(), &packet[0]));
+    ASSERT_OK(port.wait(zx::time::infinite(), &packet[1]));
+
+    EXPECT_LE(before, zx::time(packet[1].signal.timestamp));
+    EXPECT_GE(after, zx::time(packet[1].signal.timestamp));
+
+    EXPECT_EQ(0u, packet[0].signal.timestamp);
 }
 
 constexpr uint32_t kStressCount = 20000;
@@ -530,7 +580,7 @@ TEST(PortStressTest, WaitSignalCancel) {
 
     zx::port port;
     zx::event event;
-    ASSERT_OK(zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0u, &port));
     ASSERT_OK(zx::event::create(0u, &event));
     zx_status_t waiter_status = ZX_ERR_INTERNAL;
     std::atomic<bool> keep_running(true);
@@ -614,7 +664,7 @@ TEST(PortStressTest, SignalCloseWait) {
     };
 
     zx::port port;
-    ASSERT_OK(zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0u, &port));
 
     constexpr unsigned kNumSignalers = 4;
     std::thread signalers[kNumSignalers];

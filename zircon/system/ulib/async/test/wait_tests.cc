@@ -14,7 +14,7 @@ const zx_packet_signal_t dummy_signal{
     .trigger = dummy_trigger,
     .observed = ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1,
     .count = 0u,
-    .reserved0 = 0u,
+    .timestamp = 0u,
     .reserved1 = 0u};
 
 class MockDispatcher : public async::DispatcherStub {

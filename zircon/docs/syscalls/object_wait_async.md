@@ -28,7 +28,8 @@ Use [`zx_port_wait()`] to retrieve the packets.
 
 *handle* points to the object that is to be watched for changes and must be a waitable object.
 
-The *options* argument must be set to **ZX_WAIT_ASYNC_ONCE**.
+The *options* argument can be 0 or it can be ZX_WAIT_ASYNC_TIMESTAMP which causes
+the system to capture a timestamp when the wait triggered.
 
 The *signals* argument indicates which signals on the object specified by *handle*
 will cause a packet to be enqueued, and if **any** of those signals are asserted when
@@ -53,12 +54,18 @@ typedef struct zx_packet_signal {
     zx_signals_t trigger;
     zx_signals_t observed;
     uint64_t count;
+    zx_time_t timestamp;       // depends on ZX_WAIT_ASYNC_TIMESTAMP
+    uint64_t reserved1;
 } zx_packet_signal_t;
 ```
 
 *trigger* is the signals used in the call to `zx_object_wait_async()`, *observed* is the
-signals actually observed, and *count* is a per object defined count of pending operations. Use
-the `zx_port_packet_t`'s *key* member to track what object this packet corresponds to and
+signals actually observed, *count* is a per object defined count of pending operations
+and *timestamp* is clock-monotonic time when the object state transitioned to meet the
+trigger condition. If options does not include ZX_WAIT_ASYNC_TIMESTAMP the timestamp is
+reported as 0.
+
+Use the `zx_port_packet_t`'s *key* member to track what object this packet corresponds to and
 therefore match *count* with the operation.
 
 ## RIGHTS
@@ -75,7 +82,7 @@ therefore match *count* with the operation.
 
 ## ERRORS
 
-**ZX_ERR_INVALID_ARGS**  *options* is not **ZX_WAIT_ASYNC_ONCE**.
+**ZX_ERR_INVALID_ARGS**  *options* is not 0 or **ZX_WAIT_ASYNC_TIMESTAMP**.
 
 **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle or *port* is not a valid handle.
 

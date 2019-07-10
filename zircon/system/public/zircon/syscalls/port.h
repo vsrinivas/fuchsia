@@ -14,6 +14,7 @@ __BEGIN_CDECLS
 
 // zx_object_wait_async() options
 #define ZX_WAIT_ASYNC_ONCE          ((uint32_t)0u)
+#define ZX_WAIT_ASYNC_TIMESTAMP     ((uint32_t)1u)
 
 // packet types.  zx_port_packet_t::type
 #define ZX_PKT_TYPE_USER            ((uint8_t)0x00u)
@@ -65,7 +66,7 @@ typedef struct zx_packet_signal {
     zx_signals_t trigger;
     zx_signals_t observed;
     uint64_t count;
-    uint64_t reserved0;
+    uint64_t timestamp;
     uint64_t reserved1;
 } zx_packet_signal_t;
 

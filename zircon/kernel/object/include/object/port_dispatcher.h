@@ -129,7 +129,7 @@ public:
 
     using List = fbl::DoublyLinkedList<PortObserver*, PortObserver::ListTraits>;
 
-    PortObserver(uint32_t type, const Handle* handle, fbl::RefPtr<PortDispatcher> port,
+    PortObserver(uint32_t options, const Handle* handle, fbl::RefPtr<PortDispatcher> port,
                  Lock<fbl::Mutex>* port_lock, uint64_t key, zx_signals_t signals);
 
     ~PortObserver() = default;
@@ -155,7 +155,7 @@ private:
     // OnInitialize(), OnStateChange() and OnCancel().
     Flags MaybeQueue(zx_signals_t new_state, uint64_t count);
 
-    const uint32_t type_;
+    const uint32_t options_;
     const zx_signals_t trigger_;
     PortPacket packet_;
 
