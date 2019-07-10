@@ -242,6 +242,15 @@ zx_status_t VmObjectDispatcher::CreateChild(uint32_t options, uint64_t offset, u
     LTRACEF("options 0x%x offset %#" PRIx64 " size %#" PRIx64 "\n",
             options, offset, size);
 
+    if (options & ZX_VMO_CHILD_SLICE) {
+        // No other flags are valid for slices.
+        options &= ~ZX_VMO_CHILD_SLICE;
+        if (options) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return vmo_->CreateChildSlice(offset, size, copy_name, child_vmo);
+    }
+
     // Check for mutually-exclusive child type flags.
     CloneType type;
     if (options & ZX_VMO_CHILD_COPY_ON_WRITE) {

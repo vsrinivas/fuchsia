@@ -405,6 +405,90 @@ void VmObjectPaged::InsertHiddenParentLocked(fbl::RefPtr<VmObjectPaged>&& hidden
     hidden_parent->size_ = size_;
 }
 
+zx_status_t VmObjectPaged::CreateChildSlice(uint64_t offset, uint64_t size, bool copy_name,
+                                             fbl::RefPtr<VmObject>* child_vmo) {
+    LTRACEF("vmo %p offset %#" PRIx64 " size %#" PRIx64 "\n", this, offset, size);
+
+    canary_.Assert();
+
+    // Offset must be page aligned.
+    if (!IS_PAGE_ALIGNED(offset)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Make sure size is page aligned.
+    zx_status_t status = RoundSize(size, &size);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // Slice must be wholly contained.
+    uint64_t our_size;
+    {
+        // size_ is not an atomic variable and although it should not be changing, as we are not
+        // allowing this operation on resizable vmo's, we should still be holding the lock to
+        // correctly read size_. Unfortunately we must also drop then drop the lock in order to
+        // perform the allocation.
+        Guard<fbl::Mutex> guard{&lock_};
+        our_size = size_;
+    }
+    if (!InRange(offset, size, our_size)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Forbid creating children of resizable VMOs. This restriction may be lifted in the future.
+    if (is_resizable()) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    // There are two reasons for declaring/allocating the clones outside of the vmo's lock. First,
+    // the dtor might require taking the lock, so we need to ensure that it isn't called until
+    // after the lock is released. Second, diagnostics code makes calls into vmos while holding
+    // the global vmo lock. Since the VmObject ctor takes the global lock, we can't construct
+    // any vmos under any vmo lock.
+    fbl::AllocChecker ac;
+    auto vmo = fbl::AdoptRef<VmObjectPaged>(new (&ac) VmObjectPaged(
+        kSlice, pmm_alloc_flags_, size, lock_ptr_, nullptr));
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    bool notify_one_child;
+    {
+        Guard<fbl::Mutex> guard{&lock_};
+
+        // If this VMO is contiguous then we allow creating an uncached slice as we will never
+        // have to perform zeroing of pages. Pages will never be zeroed since contiguous VMOs have
+        // all of their pages allocated (and so COW of the zero page will never happen). The VMO is
+        // also not allowed to be resizable and so will never have to allocate new pages (and zero
+        // them).
+        if (cache_policy_ != ARCH_MMU_FLAG_CACHED && !is_contiguous()) {
+            return ZX_ERR_BAD_STATE;
+        }
+        vmo->cache_policy_ = cache_policy_;
+        vmo->parent_offset_ = offset;
+        vmo->parent_limit_ = size;
+
+        vmo->InitializeOriginalParentLocked(fbl::WrapRefPtr(this), offset);
+
+        // add the new vmo as a child before we do anything, since its
+        // dtor expects to find it in its parent's child list
+        notify_one_child = AddChildLocked(vmo.get());
+
+        if (copy_name) {
+            vmo->name_ = name_;
+        }
+    }
+
+    if (notify_one_child) {
+        NotifyOneChild();
+    }
+
+    *child_vmo = ktl::move(vmo);
+
+    return ZX_OK;
+}
+
 zx_status_t VmObjectPaged::CreateCowClone(Resizability resizable, CloneType type,
                                           uint64_t offset, uint64_t size,
                                           bool copy_name, fbl::RefPtr<VmObject>* child_vmo) {
@@ -1286,6 +1370,13 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
 
     offset = ROUNDDOWN(offset, PAGE_SIZE);
 
+    if (is_slice()) {
+        uint64_t parent_offset;
+        VmObjectPaged *parent = PagedParentOfSliceLocked(&parent_offset);
+        return parent->GetPageLocked(offset + parent_offset, pf_flags, free_list, page_request,
+                                    page_out, pa_out);
+    }
+
     vm_page_t* p;
 
     // see if we already have a page at that offset
@@ -1540,12 +1631,35 @@ zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len) {
 zx_status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len) {
     canary_.Assert();
     LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
+    list_node_t list;
+    list_initialize(&list);
+    zx_status_t status;
+    {
+        Guard<fbl::Mutex> guard{&lock_};
+        status = DecommitRangeLocked(offset, len, list);
+    }
+    if (status == ZX_OK) {
+        pmm_free(&list);
+    }
+    return status;
+}
+
+zx_status_t VmObjectPaged::DecommitRangeLocked(uint64_t offset, uint64_t len, list_node_t &free_list) {
 
     if (options_ & kContiguous) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    Guard<fbl::Mutex> guard{&lock_};
+    if (is_slice()) {
+        uint64_t parent_offset;
+        VmObjectPaged* parent = PagedParentOfSliceLocked(&parent_offset);
+        // Use a lambda to escape thread analysis as it does not understand that we are holding the
+        // parents lock right now.
+        return [parent, &free_list, len] (uint64_t offset)
+                TA_NO_THREAD_SAFETY_ANALYSIS -> zx_status_t {
+            return parent->DecommitRangeLocked(offset, len, free_list);
+        }(offset + parent_offset);
+    }
 
     // trim the size
     uint64_t new_len;
@@ -1578,13 +1692,7 @@ zx_status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len) {
     // unmap all of the pages in this range on all the mapping regions
     RangeChangeUpdateLocked(start, page_aligned_len);
 
-    list_node_t list;
-    list_initialize(&list);
-    page_list_.RemovePages(start, end, &list);
-
-    guard.Release();
-
-    pmm_free(&list);
+    page_list_.RemovePages(start, end, &free_list);
 
     return ZX_OK;
 }
@@ -1606,6 +1714,16 @@ zx_status_t VmObjectPaged::PinLocked(uint64_t offset, uint64_t len) {
 
     if (unlikely(len == 0)) {
         return ZX_OK;
+    }
+
+    if (is_slice()) {
+        uint64_t parent_offset;
+        VmObjectPaged *parent = PagedParentOfSliceLocked(&parent_offset);
+        // Use a lambda to escape thread analysis as it does not understand that we are holding the
+        // parents lock right now.
+        return [parent, len] (uint64_t offset) TA_NO_THREAD_SAFETY_ANALYSIS -> zx_status_t {
+            return parent->PinLocked(offset, len);
+        }(offset + parent_offset);
     }
 
     const uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
@@ -1650,6 +1768,16 @@ void VmObjectPaged::UnpinLocked(uint64_t offset, uint64_t len) {
 
     if (unlikely(len == 0)) {
         return;
+    }
+
+    if (is_slice()) {
+        uint64_t parent_offset;
+        VmObjectPaged *parent = PagedParentOfSliceLocked(&parent_offset);
+        // Use a lambda to escape thread analysis as it does not understand that we are holding the
+        // parents lock right now.
+        return [parent, len] (uint64_t offset) TA_NO_THREAD_SAFETY_ANALYSIS {
+            parent->UnpinLocked(offset, len);
+        }(offset + parent_offset);
     }
 
     const uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
@@ -2270,4 +2398,18 @@ bool VmObjectPaged::IsBidirectionalClonable() const {
         parent = p->parent_;
     }
     return true;
+}
+
+VmObjectPaged* VmObjectPaged::PagedParentOfSliceLocked(uint64_t *offset) {
+    DEBUG_ASSERT(is_slice());
+    VmObjectPaged *cur = this;
+    uint64_t off = 0;
+    while (cur->is_slice()) {
+        off += cur->parent_offset_;
+        DEBUG_ASSERT(cur->parent_);
+        DEBUG_ASSERT(cur->parent_->is_paged());
+        cur = static_cast<VmObjectPaged*>(cur->parent_.get());
+    }
+    *offset = off;
+    return cur;
 }

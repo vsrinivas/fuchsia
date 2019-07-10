@@ -10,6 +10,7 @@ source_set("vmo") {
     # TODO(stevensd): Rename once the clone flag names are cleaned up
     "vmo-clone2.cc",
     "vmo-signal.cc",
+    "vmo-slice.cc",
     "vmo.cc",
   ]
   deps = [

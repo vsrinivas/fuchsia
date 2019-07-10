@@ -195,6 +195,11 @@ public:
         return ZX_ERR_NOT_SUPPORTED;
     }
 
+    virtual zx_status_t CreateChildSlice(uint64_t offset, uint64_t size, bool copy_name,
+                                         fbl::RefPtr<VmObject>* child_vmo) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
     // Returns true if this VMO is a child VMO.
     enum ChildType { kNotChild, kCowClone };
     virtual ChildType child_type() const = 0;

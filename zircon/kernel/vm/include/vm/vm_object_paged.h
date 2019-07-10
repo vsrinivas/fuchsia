@@ -33,6 +33,7 @@ public:
     static constexpr uint32_t kResizable = (1u << 0);
     static constexpr uint32_t kContiguous = (1u << 1);
     static constexpr uint32_t kHidden = (1u << 2);
+    static constexpr uint32_t kSlice = (1u << 3);
 
     static zx_status_t Create(uint32_t pmm_alloc_flags,
                               uint32_t options,
@@ -86,6 +87,7 @@ public:
         Guard<fbl::Mutex> guard{&lock_};
         return (original_parent_user_id_ != 0) ? ChildType::kCowClone : ChildType::kNotChild;
     }
+    bool is_slice() const { return options_ & kSlice; }
     uint64_t parent_user_id() const override {
         Guard<fbl::Mutex> guard{&lock_};
         return original_parent_user_id_;
@@ -150,6 +152,11 @@ public:
         page_source_->Detach();
     }
 
+    zx_status_t CreateChildSlice(uint64_t offset, uint64_t size, bool copy_name,
+                                 fbl::RefPtr<VmObject>* child_vmo) override
+        // This function reaches into the created child, which confuses analysis.
+        TA_NO_THREAD_SAFETY_ANALYSIS;
+
     static constexpr uint64_t MAX_SIZE = VmPageList::MAX_SIZE;
     // Ensure that MAX_SIZE + PAGE_SIZE doesn't overflow so VmObjectPaged doesn't
     // need to worry about overflow for loop bounds.
@@ -193,6 +200,11 @@ private:
 
     zx_status_t PinLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
     void UnpinLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
+
+    // Internal decommit range helper that expects the lock to be held. On success it will populate
+    // the past in page list with any pages that should be freed.
+    zx_status_t DecommitRangeLocked(uint64_t offset, uint64_t len, list_node_t &free_list)
+        TA_REQ(lock_);
 
     fbl::RefPtr<PageSource> GetRootPageSourceLocked() const
         // Walks the parent chain to get the root page source, which confuses analysis.
@@ -306,6 +318,13 @@ private:
     // of the parent) into the remaining child.
     void MergeContentWithChildLocked(VmObjectPaged* removed, bool removed_left)
             // Accesses into the child confuse analysis
+            TA_NO_THREAD_SAFETY_ANALYSIS;
+
+    // Only valid to be called when is_slice() is true and returns the first parent of this
+    // hierarchy that is not a slice. The offset of this slice within that VmObjectPaged is set as
+    // the output.
+    VmObjectPaged* PagedParentOfSliceLocked(uint64_t *offset)
+            // Calling into the parent confuses analysis
             TA_NO_THREAD_SAFETY_ANALYSIS;
 
     // Outside of initialization/destruction, hidden vmos always have two children. For

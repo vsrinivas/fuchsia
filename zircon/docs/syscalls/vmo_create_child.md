@@ -39,6 +39,12 @@ ranges outside of the parent vmo's size will contain zeros, and writes will
 allocate new zero filled pages.  See the NOTES section below for details on
 VMO syscall interactions with clones.
 
+- **ZX_VMO_CHILD_SLICE** - Create a slice that has direct read/write access into
+a section of the parent. All operations on the slice vmo behave as if they were
+done on the parent. A slice differs from a duplicate handle to the parent by allowing
+access to only a subrange of the parent vmo, and allowing for the
+**ZX_VMO_ZERO_CHILDREN** signal to be used.
+
 
 In addition, *options* can contain zero or more of the following flags to
 further specify the child's behavior:
@@ -63,7 +69,7 @@ If *options* is **ZX_VMO_CHILD_COPY_ON_WRITE** the following rights are added:
 
 ## NOTES
 
-Cloning a VMO causes the existing (source) VMO **ZX_VMO_ZERO_CHILDREN** signal
+Creating a child VMO causes the existing (source) VMO **ZX_VMO_ZERO_CHILDREN** signal
 to become inactive. Only when the last child is destroyed and no mappings
 of those child into address spaces exist, will **ZX_VMO_ZERO_CHILDREN** become
 active again.
