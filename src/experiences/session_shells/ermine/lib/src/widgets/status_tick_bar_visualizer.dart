@@ -123,9 +123,9 @@ class StatusTickBarVisualizerModel extends ChangeNotifier {
   // Maximum amount the bar visualization can be filled.
   double _barMax;
   // Maximum amount of tick marks allowed to be in row.
-  int _tickMax;
+  final int _tickMax;
   // Determines if bar visualization is first in order in row.
-  bool _barFirst;
+  final bool _barFirst;
 
   set barFill(double updatedBarFill) {
     _barFill = updatedBarFill;

@@ -127,13 +127,13 @@ class StatusProgressBarVisualizerModel extends ChangeNotifier {
   // Maximum amount the progress bar visualization can be filled.
   double _barMax;
   // Double between 0 - 1 that determines the ratio of bar to text in container.
-  double _barSize;
+  final double _barSize;
   // Height of bar visualization & text.
-  double _barHeight;
+  final double _barHeight;
   // Determines if bar visualization is first in order in row.
-  bool _barFirst;
+  final bool _barFirst;
   // Offsets bar from alignment axis.
-  double _offset;
+  final double _offset;
 
   set barValue(String updatedBarValue) {
     _barValue = updatedBarValue;

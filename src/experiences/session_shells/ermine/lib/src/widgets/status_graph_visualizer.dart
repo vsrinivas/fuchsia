@@ -185,19 +185,19 @@ class StatusGraphVisualizerModel extends ChangeNotifier {
   // Data to be represented in graph.
   double _graphData;
   // Height of graph widget.
-  double _graphHeight;
+  final double _graphHeight;
   // Width of graph widget.
-  double _graphWidth;
+  final double _graphWidth;
   // Min data value found within data being plotted.
-  double _graphMin;
+  final double _graphMin;
   // Max data value found within data being plotted.
-  double _graphMax;
+  final double _graphMax;
   // Determines if graph visualization is first in order in row.
-  bool _graphFirst;
+  final bool _graphFirst;
   // If true, draws border around graph.
-  bool _borderActive;
+  final bool _borderActive;
   // Determines if graph is filled underneath.
-  bool _fillActive;
+  final bool _fillActive;
   final List<double> _graphDataList = List.filled(50, 0);
 
   StatusGraphVisualizerModel({
