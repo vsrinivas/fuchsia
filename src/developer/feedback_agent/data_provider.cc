@@ -22,8 +22,8 @@ namespace {
 
 const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
 
-// Timeout for a single asynchronous attachment, e.g., syslog collection.
-const zx::duration kAttachmentTimeout = zx::sec(10);
+// Timeout for a single asynchronous piece of data, e.g., syslog collection.
+const zx::duration kDataTimeout = zx::sec(10);
 // Timeout for requesting the screenshot from Scenic.
 const zx::duration kScreenshotTimeout = zx::sec(10);
 
@@ -49,26 +49,28 @@ DataProviderImpl::DataProviderImpl(async_dispatcher_t* dispatcher,
     : dispatcher_(dispatcher), executor_(dispatcher), services_(services), config_(config) {}
 
 void DataProviderImpl::GetData(GetDataCallback callback) {
-  auto annotations = fit::join_promise_vector(GetAnnotations(config_.annotation_allowlist))
-                         .and_then([](std::vector<fit::result<Annotation>>& annotations)
-                                       -> fit::result<std::vector<Annotation>> {
-                           std::vector<Annotation> ok_annotations;
-                           for (auto& annotation : annotations) {
-                             if (annotation.is_ok()) {
-                               ok_annotations.emplace_back(annotation.take_value());
-                             }
-                           }
+  auto annotations =
+      fit::join_promise_vector(
+          GetAnnotations(dispatcher_, services_, config_.annotation_allowlist, kDataTimeout))
+          .and_then([](std::vector<fit::result<Annotation>>& annotations)
+                        -> fit::result<std::vector<Annotation>> {
+            std::vector<Annotation> ok_annotations;
+            for (auto& annotation : annotations) {
+              if (annotation.is_ok()) {
+                ok_annotations.emplace_back(annotation.take_value());
+              }
+            }
 
-                           if (ok_annotations.empty()) {
-                             return fit::error();
-                           }
+            if (ok_annotations.empty()) {
+              return fit::error();
+            }
 
-                           return fit::ok(ok_annotations);
-                         });
+            return fit::ok(ok_annotations);
+          });
 
   auto attachments =
       fit::join_promise_vector(
-          GetAttachments(dispatcher_, services_, config_.attachment_allowlist, kAttachmentTimeout))
+          GetAttachments(dispatcher_, services_, config_.attachment_allowlist, kDataTimeout))
           .and_then([](std::vector<fit::result<Attachment>>& attachments)
                         -> fit::result<std::vector<Attachment>> {
             std::vector<Attachment> ok_attachments;

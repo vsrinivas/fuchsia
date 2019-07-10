@@ -16,6 +16,7 @@
 
 #include <string>
 
+#include "src/developer/feedback_agent/channel_provider_ptr.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"
 
@@ -65,7 +66,9 @@ fit::promise<std::string> ReadStringFromFile(const std::string& filepath) {
   return fit::make_ok_promise(fxl::TrimString(content, "\r\n").ToString());
 }
 
-fit::promise<std::string> BuildValue(const std::string& key) {
+fit::promise<std::string> BuildValue(const std::string& key, async_dispatcher_t* dispatcher,
+                                     std::shared_ptr<::sys::ServiceDirectory> services,
+                                     const zx::duration timeout) {
   if (key == "device.board-name") {
     return GetDeviceBoardName();
   } else if (key == "build.board") {
@@ -76,14 +79,18 @@ fit::promise<std::string> BuildValue(const std::string& key) {
     return ReadStringFromFile("/config/build-info/latest-commit-date");
   } else if (key == "build.version") {
     return ReadStringFromFile("/config/build-info/version");
+  } else if (key == "channel") {
+    return RetrieveCurrentChannel(dispatcher, services, timeout);
   } else {
     FX_LOGS(WARNING) << "Unknown annotation " << key;
     return fit::make_result_promise<std::string>(fit::error());
   }
 }
 
-fit::promise<Annotation> BuildAnnotation(const std::string& key) {
-  return BuildValue(key)
+fit::promise<Annotation> BuildAnnotation(const std::string& key, async_dispatcher_t* dispatcher,
+                                         std::shared_ptr<::sys::ServiceDirectory> services,
+                                         const zx::duration timeout) {
+  return BuildValue(key, dispatcher, services, timeout)
       .and_then([key](std::string& value) -> fit::result<Annotation> {
         Annotation annotation;
         annotation.key = key;
@@ -98,7 +105,9 @@ fit::promise<Annotation> BuildAnnotation(const std::string& key) {
 
 }  // namespace
 
-std::vector<fit::promise<Annotation>> GetAnnotations(const std::set<std::string>& allowlist) {
+std::vector<fit::promise<Annotation>> GetAnnotations(
+    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
+    const std::set<std::string>& allowlist, zx::duration timeout) {
   if (allowlist.empty()) {
     FX_LOGS(WARNING) << "Annotation allowlist is empty, nothing to retrieve";
     return {};
@@ -106,7 +115,7 @@ std::vector<fit::promise<Annotation>> GetAnnotations(const std::set<std::string>
 
   std::vector<fit::promise<Annotation>> annotations;
   for (const auto& key : allowlist) {
-    annotations.push_back(BuildAnnotation(key));
+    annotations.push_back(BuildAnnotation(key, dispatcher, services, timeout));
   }
   return annotations;
 }

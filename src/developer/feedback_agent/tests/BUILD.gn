@@ -10,6 +10,9 @@ test_package("feedback_agent_tests") {
 
   tests = [
     {
+      name = "channel_provider_ptr_unittest"
+    },
+    {
       name = "data_provider_unittest"
     },
     {
@@ -82,12 +85,34 @@ test_package("feedback_agent_tests") {
   ]
 
   deps = [
+    ":channel_provider_ptr_unittest",
     ":config_unittest",
     ":data_provider_unittest",
     ":feedback_agent_integration_test",
     ":inspect_exe",
     ":log_listener_ptr_unittest",
     ":scenic_ptr_unittest",
+  ]
+}
+
+executable("channel_provider_ptr_unittest") {
+  testonly = true
+
+  sources = [
+    "channel_provider_ptr_unittest.cc",
+  ]
+
+  deps = [
+    ":stub_channel_provider",
+    "//garnet/public/lib/async_promise",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/developer/feedback_agent:src",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
   ]
 }
 
@@ -118,6 +143,7 @@ executable("data_provider_unittest") {
   ]
 
   deps = [
+    ":stub_channel_provider",
     ":stub_logger",
     ":stub_scenic",
     "//garnet/public/lib/fostr",
@@ -229,6 +255,18 @@ executable("scenic_ptr_unittest") {
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("stub_channel_provider") {
+  sources = [
+    "stub_channel_provider.cc",
+    "stub_channel_provider.h",
+  ]
+
+  public_deps = [
+    "//garnet/bin/omaha_client:fuchsia.update",
+    "//sdk/lib/fidl/cpp",
   ]
 }
 

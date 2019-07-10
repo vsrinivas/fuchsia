@@ -14,7 +14,8 @@
             "fuchsia.logger.Log",
             "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
-            "fuchsia.ui.scenic.Scenic"
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.update.Info"
         ]
     }
 }

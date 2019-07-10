@@ -10,6 +10,7 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/time.h>
 
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>

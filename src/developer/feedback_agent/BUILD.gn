@@ -76,6 +76,8 @@ source_set("src") {
     "annotations.h",
     "attachments.cc",
     "attachments.h",
+    "channel_provider_ptr.cc",
+    "channel_provider_ptr.h",
     "config.cc",
     "config.h",
     "data_provider.cc",
@@ -91,6 +93,7 @@ source_set("src") {
   ]
 
   public_deps = [
+    "//garnet/bin/omaha_client:fuchsia.update",
     "//garnet/public/lib/async_promise",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.images",

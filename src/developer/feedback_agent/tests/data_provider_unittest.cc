@@ -28,6 +28,7 @@
 #include <vector>
 
 #include "src/developer/feedback_agent/config.h"
+#include "src/developer/feedback_agent/tests/stub_channel_provider.h"
 #include "src/developer/feedback_agent/tests/stub_logger.h"
 #include "src/developer/feedback_agent/tests/stub_scenic.h"
 #include "src/lib/fxl/logging.h"
@@ -43,8 +44,8 @@ namespace feedback {
 namespace {
 
 const std::set<std::string> kDefaultAnnotations = {
-    "build.board",   "build.latest-commit-date", "build.product",
-    "build.version", "device.board-name",
+    "build.board", "build.latest-commit-date", "build.product", "build.version",
+    "channel",     "device.board-name",
 };
 const std::set<std::string> kDefaultAttachments = {
     "build.snapshot.xml",
@@ -86,7 +87,7 @@ struct GetScreenshotResponse {
   }
 };
 
-// Compares two GetScreenshotResponse.
+// Compares two GetScreenshotResponse objects.
 //
 // This should be kept in sync with std::string() as we only want to display what we actually
 // compare, for now the presence of a screenshot and its dimensions.
@@ -118,12 +119,12 @@ bool DoGetScreenshotResponseMatch(const GetScreenshotResponse& actual,
   return true;
 }
 
-// Returns true if gMock |arg| matches |expected|, assuming two GetScreenshotResponse.
+// Returns true if gMock |arg| matches |expected|, assuming two GetScreenshotResponse objects.
 MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expected.get())) {
   return DoGetScreenshotResponseMatch(arg, expected, result_listener);
 }
 
-// Compares two Attachment.
+// Compares two Attachment objects.
 template <typename ResultListenerT>
 bool DoAttachmentMatch(const Attachment& actual, const std::string& expected_key,
                        const std::string& expected_value, ResultListenerT* result_listener) {
@@ -147,11 +148,36 @@ bool DoAttachmentMatch(const Attachment& actual, const std::string& expected_key
 }
 
 // Returns true if gMock |arg|.key matches |expected_key| and str(|arg|.value) matches
-// |expected_value|, assuming two Attachment.
+// |expected_value|, assuming two Attachment objects.
 MATCHER_P2(MatchesAttachment, expected_key, expected_value,
            "matches an attachment with key '" + std::string(expected_key) + "' and value '" +
                std::string(expected_value) + "'") {
   return DoAttachmentMatch(arg, expected_key, expected_value, result_listener);
+}
+
+// Compares two Annotation objects.
+template <typename ResultListenerT>
+bool DoAnnotationMatch(const Annotation& actual, const std::string& expected_key,
+                       const std::string& expected_value, ResultListenerT* result_listener) {
+  if (actual.key != expected_key) {
+    *result_listener << "Expected key " << expected_key << ", got " << actual.key;
+    return false;
+  }
+
+  if (actual.value.compare(expected_value) != 0) {
+    *result_listener << "Expected value " << expected_value << ", got " << actual.value;
+    return false;
+  }
+
+  return true;
+}
+
+// Returns true if gMock |arg|.key matches |expected_key| and str(|arg|.value) matches
+// |expected_value|, assuming two Annotation objects.
+MATCHER_P2(MatchesAnnotation, expected_key, expected_value,
+           "matches an annotation with key '" + std::string(expected_key) + "' and value '" +
+               std::string(expected_value) + "'") {
+  return DoAnnotationMatch(arg, expected_key, expected_value, result_listener);
 }
 
 // Unit-tests the implementation of the fuchsia.feedback.DataProvider FIDL interface.
@@ -183,7 +209,7 @@ class DataProviderImplTest : public ::sys::testing::TestWithEnvironment {
         dispatcher(), service_directory_provider_.service_directory(), config));
   }
 
-  // Resets the underlying |scenic_| using the given |scenic|.
+  // Resets the underlying |stub_scenic_| using the given |scenic|.
   void ResetScenic(std::unique_ptr<StubScenic> stub_scenic) {
     stub_scenic_ = std::move(stub_scenic);
     if (stub_scenic_) {
@@ -191,11 +217,19 @@ class DataProviderImplTest : public ::sys::testing::TestWithEnvironment {
     }
   }
 
-  // Resets the underlying |logger_| with the given log |messages|.
+  // Resets the underlying |stub_logger_| with the given log |messages|.
   void ResetLogger(const std::vector<fuchsia::logger::LogMessage>& messages) {
     stub_logger_.reset(new StubLogger());
     stub_logger_->set_messages(messages);
     FXL_CHECK(service_directory_provider_.AddService(stub_logger_->GetHandler(dispatcher())) ==
+              ZX_OK);
+  }
+
+  // Resets the underlying |stub_channel_provider| with the given |channel|.
+  void ResetChannelProvider(std::string channel) {
+    stub_channel_provider_.reset(new StubUpdateInfo());
+    stub_channel_provider_->set_channel(channel);
+    FXL_CHECK(service_directory_provider_.AddService(stub_channel_provider_->GetHandler()) ==
               ZX_OK);
   }
 
@@ -254,6 +288,7 @@ class DataProviderImplTest : public ::sys::testing::TestWithEnvironment {
 
   std::unique_ptr<StubScenic> stub_scenic_;
   std::unique_ptr<StubLogger> stub_logger_;
+  std::unique_ptr<StubUpdateInfo> stub_channel_provider_;
 };
 
 TEST_F(DataProviderImplTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
@@ -491,6 +526,17 @@ TEST_F(DataProviderImplTest, GetData_Inspect) {
     EXPECT_TRUE(has_entry_for_test_app);
   }
   EXPECT_TRUE(found_inspect_attachment);
+}
+
+TEST_F(DataProviderImplTest, GetData_Channel) {
+  ResetChannelProvider("my-channel");
+
+  DataProvider_GetData_Result result = GetData();
+
+  ASSERT_TRUE(result.is_response());
+  ASSERT_TRUE(result.response().data.has_annotations());
+  EXPECT_THAT(result.response().data.annotations(),
+              testing::Contains(MatchesAnnotation("channel", "my-channel")));
 }
 
 TEST_F(DataProviderImplTest, GetData_EmptyAnnotationAllowlist) {
