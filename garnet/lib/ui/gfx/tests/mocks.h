@@ -17,45 +17,11 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-class SessionHandlerForTest : public SessionHandler {
- public:
-  SessionHandlerForTest(SessionContext session_context, SessionId session_id, Scenic* scenic,
-                        EventReporter* event_reporter = EventReporter::Default(),
-                        ErrorReporter* error_reporter = ErrorReporter::Default());
-
-  SessionHandlerForTest(CommandDispatcherContext command_dispatcher_context,
-                        SessionContext session_context, EventReporter* event_reporter,
-                        ErrorReporter* error_reporter);
-
-  // |scenic::CommandDispatcher|
-  void DispatchCommand(fuchsia::ui::scenic::Command command) override;
-
-  // |fuchsia::ui::scenic::Session / scenic::TempSessionDelegate|
-  void Present(uint64_t presentation_time, ::std::vector<zx::event> acquire_fences,
-               ::std::vector<zx::event> release_fences,
-               fuchsia::ui::scenic::Session::PresentCallback callback) override;
-
-  // Return the number of commands that have been enqueued.
-  uint32_t command_count() const { return command_count_; }
-
-  // Return the number of times that Present() has been called.
-  uint32_t present_count() const { return present_count_; }
-
- private:
-  std::atomic<uint32_t> command_count_;
-  std::atomic<uint32_t> present_count_;
-};
-
 class ReleaseFenceSignallerForTest : public escher::ReleaseFenceSignaller {
  public:
   ReleaseFenceSignallerForTest(escher::impl::CommandBufferSequencer* command_buffer_sequencer);
 
   void AddCPUReleaseFence(zx::event fence) override;
-
-  uint32_t num_calls_to_add_cpu_release_fence() { return num_calls_to_add_cpu_release_fence_; }
-
- private:
-  uint32_t num_calls_to_add_cpu_release_fence_ = 0;
 };
 
 class SessionManagerForTest : public SessionManager {

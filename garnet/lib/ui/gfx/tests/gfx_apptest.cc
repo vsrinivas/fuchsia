@@ -63,8 +63,6 @@ TEST_F(GfxSystemTest, ReleaseFences) {
   scenic()->CreateSession(session.NewRequest(), nullptr);
   RunLoopUntilIdle();
   EXPECT_EQ(1U, scenic()->num_sessions());
-  auto handler =
-      static_cast<SessionHandlerForTest*>(gfx_system()->session_manager()->FindSessionHandler(1));
   {
     std::vector<fuchsia::ui::scenic::Command> commands;
     commands.push_back(scenic::NewCommand(scenic::NewCreateCircleCmd(1, 50.f)));
@@ -73,7 +71,6 @@ TEST_F(GfxSystemTest, ReleaseFences) {
     session->Enqueue(std::move(commands));
   }
   RunLoopUntilIdle();
-  EXPECT_EQ(2u, handler->command_count());
   // Create release fences
   std::vector<zx::event> release_fences = CreateEventArray(2);
   zx::event release_fence1 = CopyEvent(release_fences.at(0));
@@ -84,14 +81,12 @@ TEST_F(GfxSystemTest, ReleaseFences) {
   session->Present(0u, std::vector<zx::event>(), std::move(release_fences),
                    [](fuchsia::images::PresentationInfo info) {});
   RunLoopFor(zx::sec(1));
-  EXPECT_EQ(1u, handler->present_count());
   EXPECT_FALSE(IsFenceSignalled(release_fence1));
   EXPECT_FALSE(IsFenceSignalled(release_fence2));
   // Call Present again with no release fences.
   session->Present(0u, std::vector<zx::event>(), std::vector<zx::event>(),
                    [](fuchsia::images::PresentationInfo info) {});
   RunLoopFor(zx::sec(1));
-  EXPECT_EQ(2u, handler->present_count());
   EXPECT_TRUE(IsFenceSignalled(release_fence2));
 }
 
@@ -104,8 +99,6 @@ TEST_F(GfxSystemTest, AcquireAndReleaseFences) {
   scenic()->CreateSession(session.NewRequest(), nullptr);
   RunLoopUntilIdle();
   EXPECT_EQ(1U, scenic()->num_sessions());
-  auto handler =
-      static_cast<SessionHandlerForTest*>(gfx_system()->session_manager()->FindSessionHandler(1));
   {
     std::vector<fuchsia::ui::scenic::Command> commands;
     commands.push_back(scenic::NewCommand(scenic::NewCreateCircleCmd(1, 50.f)));
@@ -114,7 +107,6 @@ TEST_F(GfxSystemTest, AcquireAndReleaseFences) {
     session->Enqueue(std::move(commands));
   }
   RunLoopUntilIdle();
-  EXPECT_EQ(2u, handler->command_count());
   // Create acquire and release fences
   zx::event acquire_fence;
   ASSERT_EQ(ZX_OK, zx::event::create(0, &acquire_fence));
@@ -128,13 +120,11 @@ TEST_F(GfxSystemTest, AcquireAndReleaseFences) {
   session->Present(0u, std::move(acquire_fences), std::move(release_fences),
                    [](fuchsia::images::PresentationInfo info) {});
   RunLoopFor(zx::sec(1));
-  EXPECT_EQ(1u, handler->present_count());
   EXPECT_FALSE(IsFenceSignalled(release_fence));
   // Call Present again with no fences.
   session->Present(0u, std::vector<zx::event>(), std::vector<zx::event>(),
                    [](fuchsia::images::PresentationInfo info) {});
   RunLoopFor(zx::sec(1));
-  EXPECT_EQ(2u, handler->present_count());
   EXPECT_FALSE(IsFenceSignalled(release_fence));
   // Now signal the acquire fence.
   acquire_fence.signal(0u, escher::kFenceSignalled);
