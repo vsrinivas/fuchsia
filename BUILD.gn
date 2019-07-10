@@ -56,6 +56,10 @@ declare_args() {
   # Where to emit a tracelog from Zircon's GN run. No trace will be produced if
   # given the empty string. Path can be source-absolute or system-absolute.
   zircon_tracelog = ""
+
+  # Compliation database filter. Gets passed to --export_compile_commands=<filter>.
+  # Default is $target_cpu.
+  zircon_compdb_filter = target_cpu
 }
 
 zircon_ninja_targets = [ "legacy-$target_cpu" ] + zircon_extra_ninja_targets
@@ -112,7 +116,7 @@ if (current_toolchain == default_toolchain) {
         "# Instead, edit $root_build_dir/args.gn to add$0x0a" +
         "# zircon_extra_args = { ... } to override settings below.$0x0a" +
         "forward_variables_from($zircon_args, \"*\")",
-    "--export-compile-commands=default",
+    "--export-compile-commands=$zircon_compdb_filter",
     rebase_path(zircon_root_build_dir, root_build_dir),
   ]
 
