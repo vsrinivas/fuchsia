@@ -101,6 +101,40 @@ const char* ObjectTypeToString(zx_obj_type_t type) {
     }
 }
 
+template <size_t max_preview_start, size_t max_preview_end>
+fbl::String PreviewBlobData(const void* blob, size_t blob_size) {
+    static_assert((max_preview_start + max_preview_end) > 0);
+
+    auto blob_data = (const unsigned char*) blob;
+    fbl::StringBuffer<3 * (max_preview_start + max_preview_end) + 128> result;
+
+    size_t num_leading_bytes;
+    size_t num_trailing_bytes;
+    if (blob_size <= (max_preview_start + max_preview_end)) {
+        num_leading_bytes = blob_size;
+        num_trailing_bytes = 0;
+    } else {
+        num_leading_bytes = max_preview_start;
+        num_trailing_bytes = max_preview_end;
+    }
+
+    result.Append('<');
+    for (size_t i = 0; i < num_leading_bytes; i++) {
+        if (i > 0)
+            result.Append(' ');
+        result.AppendPrintf("%02x", blob_data[i]);
+    }
+    if (num_trailing_bytes)
+        result.Append(" ...");
+    for (size_t i = blob_size - num_trailing_bytes; i < blob_size; i++) {
+        result.Append(' ');
+        result.AppendPrintf("%02x", blob_data[i]);
+    }
+    result.Append('>');
+
+    return result.ToString();
+}
+
 fbl::String FormatArgumentList(const fbl::Vector<trace::Argument>& args) {
     fbl::StringBuffer<1024> result;
 
@@ -501,8 +535,9 @@ fbl::String Record::ToString() const {
     case RecordType::kBlob:
         // TODO(dje): Could print something like the first 16 bytes of the
         // payload or some such.
-        return fbl::StringPrintf("Blob(name: %s, size: %zu)",
-                                 blob_.name.c_str(), blob_.blob_size);
+        return fbl::StringPrintf("Blob(name: %s, size: %zu, preview: %s)",
+                                 blob_.name.c_str(), blob_.blob_size,
+                                 PreviewBlobData<8, 8>(blob_.blob, blob_.blob_size).c_str());
     case RecordType::kKernelObject:
         return fbl::StringPrintf("KernelObject(koid: %" PRIu64 ", type: %s, name: \"%s\", %s)",
                                  kernel_object_.koid,

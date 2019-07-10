@@ -703,6 +703,7 @@ TEST(TraceRecords, Record) {
     {
         const char name[] = "name";
         const char blob[] = "abc";
+        const char preview[] = "<61 62 63 00>";
         trace::Record r(trace::Record::Blob{
             TRACE_BLOB_TYPE_DATA, "name", blob, sizeof(blob)});
         EXPECT_EQ(trace::RecordType::kBlob, r.type());
@@ -722,8 +723,8 @@ TEST(TraceRecords, Record) {
         EXPECT_EQ(sizeof(blob), r.GetBlob().blob_size);
         EXPECT_STR_EQ(blob, reinterpret_cast<const char*>(r.GetBlob().blob));
 
-        auto expected = fbl::StringPrintf("Blob(name: %s, size: %zu)",
-                                          name, sizeof(blob));
+        auto expected = fbl::StringPrintf("Blob(name: %s, size: %zu, preview: %s)",
+                                          name, sizeof(blob), preview);
         EXPECT_STR_EQ(expected.c_str(), r.ToString().c_str());
     }
 

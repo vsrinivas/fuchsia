@@ -9,11 +9,14 @@
 #include <trace/event.h>
 #include <zircon/syscalls.h>
 
+#include <array>
+#include <memory>
+
 #include "fixture_macros.h"
 
 namespace {
 
-static bool blob_test(void) {
+static bool blob_test() {
     BEGIN_TRACE_TEST;
 
     fixture_initialize_and_start_tracing();
@@ -21,6 +24,8 @@ static bool blob_test(void) {
     const char name[] = "name";
     trace_string_ref_t name_ref = trace_make_inline_c_string_ref(name);
     const char blob[] = "abc";
+    const size_t length = sizeof(blob);
+    const char preview[] = "<61 62 63 00>";
 
     {
         auto context = trace::TraceContext::Acquire();
@@ -31,14 +36,14 @@ static bool blob_test(void) {
                                         blob, sizeof(blob));
     }
 
-    auto expected = fbl::StringPrintf("Blob(name: %s, size: %zu)\n",
-                                      name, sizeof(blob));
+    auto expected = fbl::StringPrintf("Blob(name: %s, size: %zu, preview: %s)\n",
+                                      name, length, preview);
     EXPECT_TRUE(fixture_compare_records(expected.c_str()), "record mismatch");
 
     END_TRACE_TEST;
 }
 
-static bool blob_macro_test(void) {
+static bool blob_macro_test() {
     BEGIN_TRACE_TEST;
 
     fixture_initialize_and_start_tracing();
@@ -48,11 +53,12 @@ static bool blob_macro_test(void) {
     for (unsigned i = 0; i < sizeof(blob); ++i) {
         blob[i] = static_cast<char>(i);
     }
+    const char preview[] = "<00 01 02 03 04 05 06 07 ... f8 f9 fa fb fc fd fe ff>";
 
     TRACE_BLOB(TRACE_BLOB_TYPE_DATA, name, blob, sizeof(blob));
     auto expected = fbl::StringPrintf("String(index: 1, \"%s\")\n"
-                                      "Blob(name: %s, size: %zu)\n",
-                                      name, name, sizeof(blob));
+                                      "Blob(name: %s, size: %zu, preview: %s)\n",
+                                      name, name, sizeof(blob), preview);
     EXPECT_TRUE(fixture_compare_records(expected.c_str()), "record mismatch");
 
     END_TRACE_TEST;
