@@ -94,10 +94,11 @@ config("profile") {
   asmflags = compiler_flags
   cflags = compiler_flags
   ldflags = compiler_flags
+  defines = [ "LLVM_PROFILE" ]
 }
 
 group("profile_deps") {
-  if (is_fuchsia) {
+  if (is_fuchsia && !is_kernel) {
     # The statically-linked profiling runtime depends on libzircon.
     deps = [
       "$zx/system/ulib/zircon",

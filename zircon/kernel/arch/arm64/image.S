@@ -77,7 +77,7 @@ FUNCTION(apply_fixups)
 
 // The generated kernel-fixups.inc invokes this macro for each run of fixups.
 .macro fixup addr, n, stride
-    adr x9, FIXUP_LOCATION(\addr)
+    adr_global x9, FIXUP_LOCATION(\addr)
 .if \n >= 4 && \stride == 8
     // Do a loop handling adjacent pairs.
     mov x16, #(\n / 2)

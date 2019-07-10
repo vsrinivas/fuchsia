@@ -9,13 +9,18 @@ import("$zx/public/gn/toolchain/environment_redirect.gni")
 library("userabi") {
   kernel = true
   sources = []
+  public_deps = [
+    # <lib/userabi/userboot.h> has #include <lib/instrumentation/vmo.h>.
+    "$zx/kernel/lib/instrumentation:headers",
+  ]
   if (is_kernel) {
     deps = [
       ":userboot",
       ":vdso",
+      "$zx/kernel/lib/instrumentation",
     ]
     public_configs = [ ":vdso-valid-sysret" ]
-    public_deps = [
+    public_deps += [
       # Dependents can use the generated header via $public_configs
       # (above), and so need to depend on the generation action.
       ":gen-vdso-valid-sysret",

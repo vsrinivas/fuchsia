@@ -57,8 +57,12 @@ add sp, sp, #\value
 .endm
 
 .macro adr_global reg, symbol
+#if TINY
+adr \reg, \symbol
+#else
 adrp \reg, \symbol
 add \reg, \reg, #:lo12:\symbol
+#endif
 .endm
 
 .macro movabs reg, symbol

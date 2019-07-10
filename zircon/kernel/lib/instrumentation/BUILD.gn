@@ -1,0 +1,31 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("instrumentation") {
+  kernel = true
+  sources = []
+  public_deps = [
+    "$zx/system/ulib/fbl:headers",
+  ]
+  if (is_kernel) {
+    sources += [ "vmo.cc" ]
+    deps = [
+      "$zx/kernel/object",
+      "$zx/system/ulib/fbl",
+    ]
+
+    _profile_config = [ "$zx/public/gn/config/instrumentation:profile" ]
+    if (configs + _profile_config - _profile_config != configs) {
+      deps += [ ":profile" ]
+    }
+  }
+}
+
+source_set("profile") {
+  visibility = [ ":*" ]
+  sources = [
+    "profile.cc",
+  ]
+  include_dirs = [ "$zx/../garnet/third_party/llvm/include" ]
+}

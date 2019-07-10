@@ -184,14 +184,50 @@ SECTIONS
      * there's no good way to define __rodata_end to be exactly the
      * end of all the orphans sections.  But the only use we have
      * for __rodata_end is to round it up to page size anyway, so
-     * just define it inside the .data section below, which is
+     * just define it inside the writable section below, which is
      * exactly the end of the orphans rounded up to the next page.
      */
 
-    .data : ALIGN(4096) {
+    __llvm_profile_header : ALIGN(4096) {
         PROVIDE_HIDDEN(__rodata_end = .);
         PROVIDE_HIDDEN(__data_start = .);
 
+        /*
+         * Keep this page-aligned/rounded so it can be exported as a VMO.
+         * Unfortunately this means it all has to be writable, when really
+         * only the __lvm_prf_cnts portion needs to be writable.  But it
+         * would be wasteful to page-align and complicated to set up the
+         * mappings to have this be both contiguous in the VMO and only
+         * have the middle bit be writable in the kernel address space
+         * (either by alternating read-only and writable pages here instead
+         * of keeping the big rodata and data segments, or differently
+         * complicated by placing the read-only and writable portions
+         * discontiguously in the kernel's view but putting those physical
+         * pages into the VMO in a different order.
+         */
+        PROVIDE_HIDDEN(__llvm_profile_start = .);
+        KEEP(*(__llvm_profile_header))
+        PROVIDE_HIDDEN(__start___llvm_prf_data = .);
+    } :data
+    __llvm_prf_data : {
+        KEEP(*(__llvm_prf_data))
+        PROVIDE_HIDDEN(__stop___llvm_prf_data = .);
+    }
+    __llvm_prf_cnts : {
+        PROVIDE_HIDDEN(__start___llvm_prf_cnts = .);
+        KEEP(*(__llvm_prf_cnts))
+        PROVIDE_HIDDEN(__stop___llvm_prf_cnts = .);
+    }
+    __llvm_prf_names : {
+        PROVIDE_HIDDEN(__start___llvm_prf_names = .);
+        KEEP(*(__llvm_prf_names))
+        PROVIDE_HIDDEN(__stop___llvm_prf_names = .);
+    }
+    PROVIDE_HIDDEN(__llvm_profile_end = .);
+    . = ALIGN(4096);
+    PROVIDE_HIDDEN(__llvm_profile_vmo_end = .);
+
+    .data : ALIGN(128) {
         /* Pull out any aligned data into a separate section to make sure
          * individual variables do not alias with any unaligned vars.
          */
@@ -202,11 +238,11 @@ SECTIONS
 
         /*
          * Make sure the total file size is aligned to 8 bytes so the image
-         * can go into a BOOTDATA container, which requires 8-byte alignment.
+         * can go into a ZBI container, which requires 8-byte alignment.
          */
         . = ALIGN(8);
         PROVIDE_HIDDEN(__data_end = .);
-    } :data
+    }
 
     /*
      * Any writable orphan sections would be inserted here.

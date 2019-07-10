@@ -9,6 +9,7 @@ library("uboringssl") {
 
   sources = [
     "crypto/fipsmodule/sha/sha256.c",
+    "crypto/mem.c",
   ]
 
   if (is_kernel) {
@@ -55,7 +56,6 @@ library("uboringssl") {
       "crypto/fipsmodule/modes/gcm.c",
       "crypto/fipsmodule/modes/polyval.c",
       "crypto/hkdf/hkdf.c",
-      "crypto/mem.c",
       "crypto/thread_pthread.c",
       "zircon-unused.c",
 

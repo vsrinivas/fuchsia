@@ -54,6 +54,27 @@ OUTFILE="$2"
 DEPFILE="$3"
 
 grok_fixups() {
+  if [[ "$("$AWK" --version 2>&1)" == GNU* ]]; then
+      # This is just asort(relocs) in GNU awk; POSIX awk has no such function.
+      sort_relocs='asort(relocs)'
+  else
+      # Bubble sort ftw.  Unreasonably slow when there are too many relocs.
+      # Sorting is only an optimization to find runs, so punt when the build
+      # would take forever.  This should only happen in strange builds like
+      # instrumented ones and if it's happening things are not optimized well
+      # so making the fixup code a bit smaller is the least of the troubles.
+      sort_relocs='
+      for (n = 1; n < nrelocs && nrelocs < 5000; ++n) {
+          for (i = 1; i <= nrelocs - 1; ++i) {
+              if (relocs[i] > relocs[i + 1]) {
+                  tmp = relocs[i];
+                  relocs[i] = relocs[i + 1];
+                  relocs[i + 1] = tmp;
+              }
+          }
+      }'
+  fi
+
   "$AWK" -v kernel="$KERNEL" -v objdump="$OBJDUMP" -v pure=$PURE '
 BEGIN {
     nrelocs = 0;
@@ -129,7 +150,7 @@ $3 ~ /^R_AARCH64_ADR_/ || $3 ~ /^R_AARCH64_.*ABS_L/ {
         bad = 0;
     } else if (r_offset % 8 != 0) {
         bad = "misaligned r_offset";
-    } else if (secname !~ /^\.(ro)?data|^\.kcounter.desc|\.init_array|code_patch_table/) {
+    } else if (secname !~ /^\.(ro)?data|^\.kcounter.desc|\.init_array|code_patch_table|__llvm_prf_data/) {
         bad = "fixup in unexpected section"
     } else {
         bad = 0;
@@ -151,18 +172,7 @@ sed '\''1,/^Disassembly/d;/^$/d;s/^/    /;/%s/s/^  /=>/'\''", $1);
     }
 }
 END {
-    # This is just asort(relocs) in GNU awk, but mawk has no such function.
-    # Bubble sort ftw.
-    for (n = 1; n < nrelocs; ++n) {
-        for (i = 1; i <= nrelocs - 1; ++i) {
-            if (relocs[i] > relocs[i + 1]) {
-                tmp = relocs[i];
-                relocs[i] = relocs[i + 1];
-                relocs[i + 1] = tmp;
-            }
-        }
-    }
-
+    '"$sort_relocs"'
     if (pure) {
         if (nrelocs > 0) {
             print "Binary not purely position-independent: needs", nrelocs, "fixups" > "/dev/stderr";
@@ -186,9 +196,9 @@ END {
         offset = relocs[i];
         if (offset == run_start + (run_length * run_stride)) {
             ++run_length;
-        } else if (i > 0 && run_length == 1 &&
-            (offset - run_start) % 8 == 0 &&
-            (offset - run_start) < max_stride) {
+        } else if (offset > run_start && i > 0 && run_length == 1 &&
+                   (offset - run_start) % 8 == 0 &&
+                   (offset - run_start) < max_stride) {
             run_stride = offset - run_start;
             run_length = 2;
         } else {

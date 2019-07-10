@@ -305,10 +305,7 @@ standard_variants += [
       name = "profile"
       configs = [ "$zx/public/gn/config/instrumentation:profile" ]
       implicit_deps = [ "$zx/public/gn/config/instrumentation:profile_deps" ]
-      tags = [
-        "instrumented",
-        "useronly",
-      ]
+      tags = [ "instrumented" ]
     }
   },
   {

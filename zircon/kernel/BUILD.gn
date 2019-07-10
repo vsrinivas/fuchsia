@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/config/levels.gni")
 import("$zx/public/gn/config/product_parameters.gni")
 import("$zx/public/gn/config/standard.gni")
 import("$zx/public/gn/toolchain/c_utils.gni")
@@ -380,6 +381,14 @@ if (current_toolchain == default_toolchain) {
       "image.ld",
       zircon_elf_rspfile,
     ]
+
+    # If the span of where fixups might be is short enough, the fixup code
+    # itself can be shorter.  Assume the kernel will fit under the
+    # threshold (about 1MB) in well-optimized builds.
+    if (opt_level > 1 && toolchain.tags + [ "instrumented" ] -
+                         [ "instrumented" ] == toolchain.tags) {
+      defines = [ "TINY" ]
+    }
   }
 
   # Link gdb extension script file needed for kernel debugging.

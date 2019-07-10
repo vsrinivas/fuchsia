@@ -13,6 +13,7 @@
 #include <lib/console.h>
 #include <lib/counters.h>
 #include <lib/elf-psabi/sp.h>
+#include <lib/instrumentation/vmo.h>
 #include <lib/userabi/rodso.h>
 #include <lib/userabi/userboot.h>
 #include <lib/userabi/vdso.h>
@@ -202,7 +203,7 @@ void bootstrap_vmos(Handle** handles) {
 #if ENABLE_ENTROPY_COLLECTOR_TEST
     ASSERT(!crypto::entropy::entropy_was_lost);
     status = get_vmo_handle(crypto::entropy::entropy_vmo,
-                            true, nullptr, &handles[i++]);
+                            true, nullptr, &handles[kEntropyTestData]);
     ASSERT(status == ZX_OK);
 #endif
 
@@ -229,6 +230,9 @@ void bootstrap_vmos(Handle** handles) {
                             sizeof(counters::kArenaVmoName) - 1);
     status = get_vmo_handle(ktl::move(kcounters_vmo), true, nullptr,
                             &handles[kCounters]);
+    ASSERT(status == ZX_OK);
+
+    status = InstrumentationData::GetVmos(&handles[kFirstInstrumentationData]);
     ASSERT(status == ZX_OK);
 }
 

@@ -2,13 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "bootdata.h"
-#include "bootfs.h"
-#include "loader-service.h"
-#include "option.h"
-#include "userboot-elf.h"
-#include "util.h"
-
 #include <array>
 #include <climits>
 #include <cstring>
@@ -27,6 +20,13 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 #include <zircon/syscalls/system.h>
+
+#include "bootdata.h"
+#include "bootfs.h"
+#include "loader-service.h"
+#include "option.h"
+#include "userboot-elf.h"
+#include "util.h"
 
 namespace {
 

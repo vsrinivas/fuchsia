@@ -8,6 +8,7 @@
 // That is, the contents of the message sent on userboot's bootstrap channel.
 
 #include <cstdint>
+#include <lib/instrumentation/vmo.h>
 
 namespace userboot {
 
@@ -55,7 +56,8 @@ enum HandleIndex : uint32_t {
     kEntropyTestData,
 #endif
 
-    kHandleCount
+    kFirstInstrumentationData,
+    kHandleCount = kFirstInstrumentationData + InstrumentationData::vmo_count()
 };
 
 } // namespace userboot
