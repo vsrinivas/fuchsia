@@ -10,10 +10,11 @@
 
 namespace ftl {
 
+// Automatically doubles the effective OOB size if it's less than 16 bytes.
 class OobDoubler {
   public:
-    explicit OobDoubler(const nand_protocol_t* parent, bool active)
-            : parent_(parent), active_(active) {}
+    constexpr static uint32_t kThreshold = 16;
+    explicit OobDoubler(const nand_protocol_t* parent) : parent_(parent) {}
     ~OobDoubler() {}
 
     // Nand protocol interface.
@@ -22,7 +23,7 @@ class OobDoubler {
 
   private:
     ddk::NandProtocolClient parent_;
-    bool active_;
+    bool active_ = false;
 };
 
 }  // namespace ftl.

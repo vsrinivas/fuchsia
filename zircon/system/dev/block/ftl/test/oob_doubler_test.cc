@@ -17,9 +17,9 @@ constexpr size_t kUnchanged = 20;
 
 class NandTester : public ddk::NandProtocol<NandTester> {
   public:
-    NandTester() : proto_({&nand_protocol_ops_, this}) {
+    explicit NandTester(uint32_t oob_size) : proto_({&nand_protocol_ops_, this}) {
         info_.page_size = kPageSize;
-        info_.oob_size = kOobSize;
+        info_.oob_size = oob_size;
         info_.pages_per_block = kBlockSize;
         info_.num_blocks = kUnchanged;
         info_.ecc_bits = kUnchanged;
@@ -49,19 +49,19 @@ class NandTester : public ddk::NandProtocol<NandTester> {
 };
 
 TEST(OobDoublerTest, TrivialLifetime) {
-    NandTester tester;
-    ftl::OobDoubler doubler(tester.proto(), false);
+    NandTester tester(kOobSize);
+    ftl::OobDoubler doubler(tester.proto());
 }
 
 TEST(OobDoublerTest, QueryDisabled) {
-    NandTester tester;
-    ftl::OobDoubler doubler(tester.proto(), false);
+    NandTester tester(ftl::OobDoubler::kThreshold);
+    ftl::OobDoubler doubler(tester.proto());
 
     fuchsia_hardware_nand_Info info;
     size_t op_size;
     doubler.Query(&info, &op_size);
     EXPECT_EQ(kPageSize, info.page_size);
-    EXPECT_EQ(kOobSize, info.oob_size);
+    EXPECT_EQ(ftl::OobDoubler::kThreshold, info.oob_size);
     EXPECT_EQ(kBlockSize, info.pages_per_block);
     EXPECT_EQ(kUnchanged, info.num_blocks);
     EXPECT_EQ(kUnchanged, info.ecc_bits);
@@ -69,8 +69,8 @@ TEST(OobDoublerTest, QueryDisabled) {
 }
 
 TEST(OobDoublerTest, QueryEnabled) {
-    NandTester tester;
-    ftl::OobDoubler doubler(tester.proto(), true);
+    NandTester tester(kOobSize);
+    ftl::OobDoubler doubler(tester.proto());
 
     fuchsia_hardware_nand_Info info;
     size_t op_size;
@@ -84,8 +84,8 @@ TEST(OobDoublerTest, QueryEnabled) {
 }
 
 TEST(OobDoublerTest, QueueDisabled) {
-    NandTester tester;
-    ftl::OobDoubler doubler(tester.proto(), false);
+    NandTester tester(ftl::OobDoubler::kThreshold);
+    ftl::OobDoubler doubler(tester.proto());
 
     nand_operation_t op = {};
     op.command = NAND_OP_READ;
@@ -104,8 +104,13 @@ TEST(OobDoublerTest, QueueDisabled) {
 }
 
 TEST(OobDoublerTest, QueueEnabled) {
-    NandTester tester;
-    ftl::OobDoubler doubler(tester.proto(), true);
+    NandTester tester(kOobSize);
+    ftl::OobDoubler doubler(tester.proto());
+
+    // Query() is needed to enable the doubler.
+    fuchsia_hardware_nand_Info info;
+    size_t op_size;
+    doubler.Query(&info, &op_size);
 
     nand_operation_t op = {};
     op.command = NAND_OP_READ;

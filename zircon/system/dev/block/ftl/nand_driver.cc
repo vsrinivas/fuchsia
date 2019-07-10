@@ -27,9 +27,8 @@ uint32_t GetParameter(const char* key) {
 
 class NandDriverImpl : public ftl::NandDriver {
   public:
-    constexpr static bool kUseHardware = true;
     NandDriverImpl(const nand_protocol_t* parent, const bad_block_protocol_t* bad_block)
-            : parent_(parent, kUseHardware), bad_block_protocol_(bad_block) {}
+            : parent_(parent), bad_block_protocol_(bad_block) {}
     ~NandDriverImpl() final {}
 
     // NdmDriver interface:
@@ -69,7 +68,7 @@ const char* NandDriverImpl::Init() {
         return "Failed to query bad blocks";
     }
 
-    ZX_DEBUG_ASSERT(info_.oob_size == 16);
+    ZX_DEBUG_ASSERT(info_.oob_size >= 16);
     return nullptr;
 }
 

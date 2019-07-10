@@ -10,6 +10,7 @@ namespace ftl {
 
 void OobDoubler::Query(fuchsia_hardware_nand_Info* info_out, size_t* nand_op_size_out) {
     parent_.Query(info_out, nand_op_size_out);
+    active_ = info_out->oob_size < kThreshold;
     if (active_) {
         info_out->page_size *= 2;
         info_out->oob_size *= 2;

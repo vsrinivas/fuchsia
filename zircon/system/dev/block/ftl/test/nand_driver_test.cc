@@ -26,9 +26,9 @@ constexpr uint32_t kEccBits = 12;
 // Fake for the nand protocol.
 class FakeNand : public ddk::NandProtocol<FakeNand> {
   public:
-    FakeNand() : proto_({&nand_protocol_ops_, this}) {
+    explicit FakeNand(uint32_t oob_size = kRealOobSize) : proto_({&nand_protocol_ops_, this}) {
         info_.page_size = kRealPageSize;
-        info_.oob_size = kRealOobSize;
+        info_.oob_size = oob_size;
         info_.pages_per_block = kRealBlockSize;
         info_.num_blocks = kNumBlocks;
         info_.ecc_bits = kEccBits;
@@ -137,6 +137,14 @@ TEST_F(NandDriverTest, TrivialLifetime) {
 
 TEST_F(NandDriverTest, Init) {
     auto driver = ftl::NandDriver::Create(nand_proto(), bad_block_proto());
+    ASSERT_EQ(nullptr, driver->Init());
+}
+
+TEST(NandDriverTest, InitWithBigNand) {
+    const uint32_t kLargeOobSize = 45;
+    FakeNand nand_proto(kLargeOobSize);
+    FakeBadBlock bad_block_proto;
+    auto driver = ftl::NandDriver::Create(nand_proto.proto(), bad_block_proto.proto());
     ASSERT_EQ(nullptr, driver->Init());
 }
 

@@ -43,7 +43,7 @@ TEST(NandOperationTest, SetOobVmo) {
 
 class NandTester : public ddk::NandProtocol<NandTester> {
   public:
-    NandTester() : proto_({&nand_protocol_ops_, this}), doubler_(&proto_, false) {}
+    NandTester() : proto_({&nand_protocol_ops_, this}), doubler_(&proto_) {}
 
     ftl::OobDoubler* doubler() { return &doubler_; }
     nand_operation_t* operation() { return operation_; }
