@@ -10,7 +10,7 @@
           "type": "array",
           "items": {
             "not": {
-              "enum": ["deprecated-data"]
+              "pattern": "^/*deprecated-data"
             }
           }
         }
