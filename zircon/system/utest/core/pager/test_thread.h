@@ -6,6 +6,7 @@
 
 #include <fbl/function.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/suspend_token.h>
 #include <lib/zx/thread.h>
 #include <threads.h>
@@ -66,7 +67,7 @@ private:
 
     thrd_t thrd_;
     zx::thread zx_thread_;
-    zx_handle_t port_ = ZX_HANDLE_INVALID;
+    zx::channel exception_channel_;
     bool success_ = false;
 
     zx::suspend_token suspend_token_;

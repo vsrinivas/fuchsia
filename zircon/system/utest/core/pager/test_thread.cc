@@ -4,12 +4,12 @@
 
 #include <fbl/function.h>
 #include <inspector/inspector.h>
+#include <lib/zx/exception.h>
 #include <string.h>
 #include <threads.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/debug.h>
-#include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
 
 #include "test_thread.h"
@@ -37,8 +37,6 @@ TestThread::~TestThread() {
     } else {
         ZX_ASSERT(thrd_join(thrd_, nullptr) == thrd_success);
     }
-
-    zx_handle_close(port_);
 }
 
 bool TestThread::Start() {
@@ -53,14 +51,7 @@ bool TestThread::Start() {
         return false;
     }
 
-    if (zx_port_create(0, &port_) != ZX_OK) {
-        return false;
-    }
-    if (zx_task_bind_exception_port(zx_thread_.get(), port_, 0, 0) != ZX_OK) {
-        return false;
-    }
-    if (zx_object_wait_async(zx_thread_.get(), port_, 0,
-                             ZX_THREAD_TERMINATED, ZX_WAIT_ASYNC_ONCE) != ZX_OK) {
+    if (zx_thread_.create_exception_channel(0, &exception_channel_) != ZX_OK) {
         return false;
     }
 
@@ -82,13 +73,14 @@ bool TestThread::WaitForCrash(uintptr_t crash_addr) {
 }
 
 bool TestThread::Wait(bool expect_failure, bool expect_crash, uintptr_t crash_addr) {
-    zx_port_packet_t packet;
-    ZX_ASSERT(zx_port_wait(port_, ZX_TIME_INFINITE, &packet) == ZX_OK);
+    zx_signals_t signals;
+    ZX_ASSERT(exception_channel_.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                          zx::time::infinite(), &signals) == ZX_OK);
 
-    if (ZX_PKT_IS_SIGNAL_ONE(packet.type)) {
-        // We got a ZX_THREAD_TERMINATED signal.
+    if (signals & ZX_CHANNEL_PEER_CLOSED) {
+        // Thread has terminated.
         return !expect_crash && success_ != expect_failure;
-    } else if (ZX_PKT_IS_EXCEPTION(packet.type)) {
+    } else if (signals & ZX_CHANNEL_READABLE) {
         zx_exception_report_t report;
         ZX_ASSERT(zx_object_get_info(zx_thread_.get(), ZX_INFO_THREAD_EXCEPTION_REPORT,
                                      &report, sizeof(report), NULL, NULL) == ZX_OK);
@@ -119,10 +111,16 @@ bool TestThread::Wait(bool expect_failure, bool expect_crash, uintptr_t crash_ad
         ZX_ASSERT(zx_thread_.write_state(ZX_THREAD_STATE_GENERAL_REGS,
                                          &regs, sizeof(regs)) == ZX_OK);
 
-        ZX_ASSERT(zx_task_resume_from_exception(zx_thread_.get(), port_, 0) == ZX_OK);
+        zx_exception_info_t info;
+        zx::exception exception;
+        ZX_ASSERT(exception_channel_.read(0, &info, exception.reset_and_get_address(),
+                                          sizeof(info), 1, nullptr, nullptr) == ZX_OK);
+
+        uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
+        ZX_ASSERT(exception.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)) == ZX_OK);
         return res;
     } else {
-        ZX_ASSERT_MSG(false, "Unexpceted port message");
+        ZX_ASSERT_MSG(false, "Unexpected channel signals");
     }
 }
 
