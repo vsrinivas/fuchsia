@@ -21,9 +21,9 @@ class TestFuzzer(unittest.TestCase):
   def test_filter(self):
     host = MockHost()
     fuzzers = host.fuzzers
-    self.assertEqual(len(Fuzzer.filter(fuzzers, '')), 5)
-    self.assertEqual(len(Fuzzer.filter(fuzzers, '/')), 5)
-    self.assertEqual(len(Fuzzer.filter(fuzzers, 'mock')), 5)
+    self.assertEqual(len(Fuzzer.filter(fuzzers, '')), 6)
+    self.assertEqual(len(Fuzzer.filter(fuzzers, '/')), 6)
+    self.assertEqual(len(Fuzzer.filter(fuzzers, 'mock')), 6)
     self.assertEqual(len(Fuzzer.filter(fuzzers, 'package1')), 3)
     self.assertEqual(len(Fuzzer.filter(fuzzers, 'target1')), 3)
     self.assertEqual(len(Fuzzer.filter(fuzzers, 'package2/target1')), 2)

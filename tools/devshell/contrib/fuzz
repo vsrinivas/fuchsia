@@ -69,15 +69,25 @@ for arg in "$@"; do
     -h)
       cmd="help"
       ;;
-    -d|--device|-o|--output|-s|--staging)
+    -d|--device)
+      arg="--device"
       add=2
       ;;
-    -f|--foreground|-n|--no-cipd)
+    -o|--output)
+      arg="--output"
+      add=2
+      ;;
+    -s|--staging)
+      arg="--staging"
+      add=2
+      ;;
+    -f|--foreground)
+      arg="--foreground"
       add=1
       ;;
-    -*)
-      echo "Unknown option: $1"
-      cmd="help"
+    -n|--no-cipd)
+      arg="--no-cipd"
+      add=1
       ;;
     *)
       if [[ -z "$cmd" ]] && [[ $add -eq 0 ]]; then

@@ -14,23 +14,19 @@ class Args:
   def make_parser(cls, description, name_required=True, label_present=False):
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
-        '-d',
         '--device',
         help='Name of device, only needed when multiple devices are present.')
     parser.add_argument(
-        '-f',
         '--foreground',
         action='store_true',
         help='If true, display fuzzer output.')
     parser.add_argument(
-        '-n',
         '--no-cipd',
         action='store_true',
         help='Skip steps which involve transferring packages to or from CIPD')
     parser.add_argument(
-        '-o', '--output', help='Path under which to store results.')
+        '--output', help='Path under which to store results.')
     parser.add_argument(
-        '-s',
         '--staging',
         help='Host directory to use for un/packing corpus bundles.' +
         ' Defaults to a temporary directory.')
