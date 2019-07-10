@@ -78,7 +78,7 @@ public:
     // Returns:
     //   ZX_ERR_NEXT if there is no valid underlying channel.
     //   ZX_ERR_NO_MEMORY if we failed to allocate memory.
-    zx_status_t SendException(fbl::RefPtr<ExceptionDispatcher> exception);
+    zx_status_t SendException(const fbl::RefPtr<ExceptionDispatcher>& exception);
 
 private:
     bool HasValidChannelLocked() const TA_REQ(lock_);

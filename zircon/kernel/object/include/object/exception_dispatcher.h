@@ -38,6 +38,12 @@ public:
     ~ExceptionDispatcher() final;
 
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_EXCEPTION; }
+
+    // Marks the current exception handler as done.
+    //
+    // Once a handle has been created around this object, either
+    // WaitForHandleClose() or DiscardHandleClose() must be called to reset
+    // our state for the next handler.
     void on_zero_handles() final;
 
     fbl::RefPtr<ThreadDispatcher> thread() const { return thread_; }
@@ -78,11 +84,22 @@ public:
 
     // Blocks until the exception handler is done processing.
     //
+    // This must be called exactly once every time this exception is
+    // successfully sent out to userspace, in order to wait for the response
+    // and reset the internal state.
+    //
     // Returns:
     //   ZX_OK if the exception was handled and the thread should resume.
     //   ZX_ERR_NEXT if the exception should be passed to the next handler.
     //   ZX_ERR_INTERNAL_INTR_KILLED if the thread was killed.
-    zx_status_t WaitForResponse();
+    zx_status_t WaitForHandleClose();
+
+    // Resets the exception state for the next handler.
+    //
+    // This must be called instead of WaitForHandleClose() if a handle is
+    // created around this exception but fails to make it out to userspace,
+    // in order to reset the internal state.
+    void DiscardHandleClose();
 
     // Wipe out exception state, which indicates the thread has died.
     void Clear();

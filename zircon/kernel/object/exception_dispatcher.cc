@@ -119,7 +119,7 @@ void ExceptionDispatcher::SetResumeThreadOnClose(bool resume_on_close) {
     resume_on_close_ = resume_on_close;
 }
 
-zx_status_t ExceptionDispatcher::WaitForResponse() {
+zx_status_t ExceptionDispatcher::WaitForHandleClose() {
     canary_.Assert();
 
     zx_status_t status;
@@ -146,6 +146,15 @@ zx_status_t ExceptionDispatcher::WaitForResponse() {
     status = resume_on_close_ ? ZX_OK : ZX_ERR_NEXT;
     resume_on_close_ = false;
     return status;
+}
+
+void ExceptionDispatcher::DiscardHandleClose() {
+    canary_.Assert();
+
+    response_event_.Unsignal();
+
+    Guard<fbl::Mutex> guard{get_lock()};
+    resume_on_close_ = false;
 }
 
 void ExceptionDispatcher::Clear() {

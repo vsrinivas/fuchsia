@@ -1960,6 +1960,35 @@ TEST(ExceptionTest, CloseChannelWithoutException) {
     EXPECT_OK(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
 }
 
+// Make sure a closed exception channel has no effect on other handlers.
+TEST(ExceptionTest, SkipClosedExceptionChannel) {
+    TestLoop loop;
+    zx::channel job_channel, process_channel;
+    ASSERT_OK(loop.job().create_exception_channel(0, &job_channel));
+    ASSERT_OK(loop.process().create_exception_channel(0, &process_channel));
+
+    {
+        zx::channel thread_channel;
+        ASSERT_OK(loop.aux_thread().create_exception_channel(0, &thread_channel));
+    }
+
+    loop.CrashAuxThread();
+
+    // We should receive the exception on the process handler and it should
+    // wait for our response as normal.
+    {
+        zx::exception exception = ReadException(process_channel, ZX_EXCP_FATAL_PAGE_FAULT);
+        ASSERT_EQ(job_channel.wait_one(ZX_CHANNEL_READABLE, zx::deadline_after(kTestTimeout),
+                                       nullptr),
+                  ZX_ERR_TIMED_OUT);
+    }
+
+    // The exception should continue up to the job handler as normal.
+    zx::exception exception = ReadException(job_channel, ZX_EXCP_FATAL_PAGE_FAULT);
+
+    ASSERT_OK(loop.aux_thread().kill());
+}
+
 // Killing the task should mark its exception channels with PEER_CLOSED.
 // Parameterized to more easily run it against the different handler types.
 template <auto task_func>

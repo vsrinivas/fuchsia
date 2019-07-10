@@ -62,7 +62,7 @@ bool Exceptionate::HasValidChannelLocked() const {
     return channel_handle_.dispatcher() && !channel_handle_.dispatcher()->PeerHasClosed();
 }
 
-zx_status_t Exceptionate::SendException(fbl::RefPtr<ExceptionDispatcher> exception) {
+zx_status_t Exceptionate::SendException(const fbl::RefPtr<ExceptionDispatcher>& exception) {
     DEBUG_ASSERT(exception);
 
     Guard<fbl::Mutex> guard{&lock_};
@@ -82,17 +82,16 @@ zx_status_t Exceptionate::SendException(fbl::RefPtr<ExceptionDispatcher> excepti
         return status;
     }
 
-    // Do this before we ktl::move() the exception. It's OK if the function
-    // fails after this point, all exception sending funnels through here so
-    // the task rights will get overwritten next time we try to send it.
+    // It's OK if the function fails after this point, all exception sending
+    // funnels through here so the task rights will get overwritten next time
+    // we try to send it.
     //
     // This is safe to do because we know that an ExceptionDispatcher only goes
     // to one handler at a time, so we'll never change the task rights while
     // the exception is out in userspace.
     exception->SetTaskRights(thread_rights_, process_rights_);
 
-    HandleOwner exception_handle(Handle::Make(ktl::move(exception),
-                                              ExceptionDispatcher::default_rights()));
+    HandleOwner exception_handle(Handle::Make(exception, ExceptionDispatcher::default_rights()));
     if (!exception_handle) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -100,6 +99,13 @@ zx_status_t Exceptionate::SendException(fbl::RefPtr<ExceptionDispatcher> excepti
     message->set_owns_handles(true);
 
     status = channel_handle_.dispatcher()->Write(ZX_KOID_INVALID, ktl::move(message));
+
+    // If sending failed for any reason, the exception handle never made it to
+    // userspace and has now gone out of scope, triggering on_zero_handles(),
+    // so we need to reset the exception.
+    if (status != ZX_OK) {
+        exception->DiscardHandleClose();
+    }
 
     // ZX_ERR_PEER_CLOSED just indicates that there's no longer an endpoint
     // to receive exceptions, simplify things for callers by collapsing this

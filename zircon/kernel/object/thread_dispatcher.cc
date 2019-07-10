@@ -1027,7 +1027,7 @@ zx_status_t ThreadDispatcher::HandleException(Exceptionate* exceptionate,
 
     LTRACEF("blocking on exception response\n");
 
-    zx_status_t status = exception->WaitForResponse();
+    zx_status_t status = exception->WaitForHandleClose();
 
     LTRACEF("received exception response %d\n", status);
 
