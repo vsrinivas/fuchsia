@@ -10,7 +10,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <lib/device-protocol/platform-device.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/clock.h>
@@ -18,6 +17,7 @@
 #include <fuchsia/gpu/magma/c/fidl.h>
 #include <hw/reg.h>
 #include <lib/device-protocol/pdev.h>
+#include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/mmio/mmio.h>
 #include <memory>
@@ -74,6 +74,7 @@ public:
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
     zx_status_t Query(uint64_t query_id, fidl_txn_t* transaction);
+    zx_status_t QueryReturnsBuffer(uint64_t query_id, fidl_txn_t* transaction);
     zx_status_t Connect(uint64_t client_id, fidl_txn_t* transaction);
     zx_status_t DumpState(uint32_t dump_type);
     zx_status_t Restart();

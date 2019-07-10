@@ -79,6 +79,23 @@ static zx_status_t device_fidl_query(void* context, uint64_t query_id, fidl_txn_
     return ZX_OK;
 }
 
+static zx_status_t device_fidl_query_returns_buffer(void* context, uint64_t query_id,
+                                                    fidl_txn_t* transaction)
+{
+    DLOG("device_fidl_query_returns_buffer");
+    sysdrv_device_t* device = get_device(context);
+
+    zx_handle_t result;
+    if (!device->magma_system_device->QueryReturnsBuffer(query_id, &result))
+        return DRET_MSG(ZX_ERR_INVALID_ARGS, "unhandled query param 0x%" PRIx64, query_id);
+    DLOG("query returns buffer query_id 0x%" PRIx64 " returning 0x%x", query_id, result);
+
+    zx_status_t status = fuchsia_gpu_magma_DeviceQueryReturnsBuffer_reply(transaction, result);
+    if (status != ZX_OK)
+        return DRET_MSG(ZX_ERR_INTERNAL, "magma_DeviceQueryReturnsBuffer_reply failed: %d", status);
+    return ZX_OK;
+}
+
 static zx_status_t device_fidl_connect(void* context, uint64_t client_id, fidl_txn_t* transaction)
 {
     DLOG("magma_DeviceConnectOrdinal");
@@ -128,6 +145,7 @@ static zx_status_t device_fidl_test_restart(void* context)
 
 static fuchsia_gpu_magma_Device_ops_t device_fidl_ops = {
     .Query = device_fidl_query,
+    .QueryReturnsBuffer = device_fidl_query_returns_buffer,
     .Connect = device_fidl_connect,
     .DumpState = device_fidl_dump_state,
     .TestRestart = device_fidl_test_restart,

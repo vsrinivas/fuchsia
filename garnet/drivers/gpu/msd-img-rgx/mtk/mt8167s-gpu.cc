@@ -12,8 +12,8 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <lib/device-protocol/platform-device.h>
 #include <ddk/protocol/platform/device.h>
+#include <lib/device-protocol/platform-device.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/clock.h>
@@ -159,6 +159,7 @@ void Mt8167sGpu::DdkRelease() { delete this; }
 
 static fuchsia_gpu_magma_Device_ops_t device_fidl_ops = {
     .Query = fidl::Binder<Mt8167sGpu>::BindMember<&Mt8167sGpu::Query>,
+    .QueryReturnsBuffer = fidl::Binder<Mt8167sGpu>::BindMember<&Mt8167sGpu::QueryReturnsBuffer>,
     .Connect = fidl::Binder<Mt8167sGpu>::BindMember<&Mt8167sGpu::Connect>,
     .DumpState = fidl::Binder<Mt8167sGpu>::BindMember<&Mt8167sGpu::DumpState>,
     .TestRestart = fidl::Binder<Mt8167sGpu>::BindMember<&Mt8167sGpu::Restart>,
@@ -428,6 +429,21 @@ zx_status_t Mt8167sGpu::Query(uint64_t query_id, fidl_txn_t* transaction)
     zx_status_t status = fuchsia_gpu_magma_DeviceQuery_reply(transaction, result);
     if (status != ZX_OK)
         return DRET_MSG(ZX_ERR_INTERNAL, "magma_DeviceQuery_reply failed: %d", status);
+    return ZX_OK;
+}
+
+zx_status_t Mt8167sGpu::QueryReturnsBuffer(uint64_t query_id, fidl_txn_t* transaction)
+{
+    DLOG("Mt8167sGpu::QueryReturnsBuffer");
+    std::lock_guard<std::mutex> lock(magma_mutex_);
+    zx_handle_t result;
+    if (!magma_system_device_->QueryReturnsBuffer(query_id, &result))
+        return DRET_MSG(ZX_ERR_INVALID_ARGS, "unhandled query param 0x%" PRIx64, query_id);
+    DLOG("query exteneded query_id 0x%" PRIx64 " returning 0x%x", query_id, result);
+
+    zx_status_t status = fuchsia_gpu_magma_DeviceQueryReturnsBuffer_reply(transaction, result);
+    if (status != ZX_OK)
+        return DRET_MSG(ZX_ERR_INTERNAL, "magma_DeviceQueryReturnsBuffer_reply failed: %d", status);
     return ZX_OK;
 }
 

@@ -674,6 +674,12 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* val
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
 }
 
+magma_status_t msd_device_query_returns_buffer(msd_device_t* device, uint64_t id,
+                                               uint32_t* buffer_out)
+{
+    return DRET(MAGMA_STATUS_UNIMPLEMENTED);
+}
+
 void msd_device_dump_status(msd_device_t* device, uint32_t dump_type)
 {
     MsdIntelDevice::cast(device)->DumpStatusToLog();

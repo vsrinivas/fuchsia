@@ -30,6 +30,18 @@ magma_status_t magma_query(
     uint64_t* value_out);
 
 ///
+/// \brief Performs a query for a large amount of data and puts that into a buffer. Returns
+///        synchronously
+/// \param file_descriptor An open device of class gpu.
+/// \param id A vendor-specific ID.
+/// \param handle_out Handle to the returned buffer.
+///
+magma_status_t magma_query_returns_buffer(
+    int32_t file_descriptor,
+    uint64_t id,
+    uint32_t* handle_out);
+
+///
 /// \brief Opens a connection to a device.
 /// \param file_descriptor An open device of class gpu.
 /// \param connection_out Returned connection.

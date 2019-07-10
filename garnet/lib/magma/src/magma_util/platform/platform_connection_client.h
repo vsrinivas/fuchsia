@@ -25,6 +25,7 @@ public:
     static bool GetHandles(int fd, uint32_t* device_handle_out,
                            uint32_t* device_notification_handle_out);
     static bool Query(int fd, uint64_t query_id, uint64_t* result_out);
+    static bool QueryReturnsBuffer(int fd, uint64_t query_id, uint32_t* buffer_out);
 
     static std::unique_ptr<PlatformConnectionClient> Create(uint32_t device_handle,
                                                             uint32_t device_notification_handle);

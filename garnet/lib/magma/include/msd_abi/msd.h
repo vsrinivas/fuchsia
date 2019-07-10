@@ -30,6 +30,10 @@ void msd_device_destroy(struct msd_device_t* dev);
 // Returns a value associated with the given id.
 magma_status_t msd_device_query(struct msd_device_t* device, uint64_t id, uint64_t* value_out);
 
+// Returns a buffer containing values associated with the given id.
+magma_status_t msd_device_query_returns_buffer(struct msd_device_t* device, uint64_t id,
+                                               uint32_t* buffer_out);
+
 void msd_device_dump_status(struct msd_device_t* dev, uint32_t dump_flags);
 
 // Opens a device for the given client. Returns null on failure

@@ -38,6 +38,7 @@ public:
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
     zx_status_t Query(uint64_t query_id, fidl_txn_t* transaction);
+    zx_status_t QueryReturnsBuffer(uint64_t query_id, fidl_txn_t* transaction);
     zx_status_t Connect(uint64_t client_id, fidl_txn_t* transaction);
     zx_status_t DumpState(uint32_t dump_type);
     zx_status_t Restart();

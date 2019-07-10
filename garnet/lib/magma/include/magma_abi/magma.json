@@ -24,6 +24,28 @@
         ]
       },
       {
+        "name": "magma_query_returns_buffer",
+        "type": "magma_status_t",
+        "description": "Performs a query for a large amount of data and puts that into a buffer. Returns synchronously",
+        "arguments": [
+          {
+            "name": "file_descriptor",
+            "type": "int32_t",
+            "description": "An open device of class gpu."
+          },
+          {
+            "name": "id",
+            "type": "uint64_t",
+            "description": "A vendor-specific ID."
+          },
+          {
+            "name": "handle_out",
+            "type": "uint32_t*",
+            "description": "Handle to the returned buffer."
+          }
+        ]
+      },
+      {
         "name": "magma_create_connection",
         "type": "magma_status_t",
         "description": "Opens a connection to a device.",

@@ -33,8 +33,11 @@ executable("msd_img_rgx_no_hardware_integration_tests_executable") {
 
   defines = [ "NO_HARDWARE" ]
   sources = [
+    "test_query.cc",
     "test_shutdown.cc",
   ]
+
+  include_dirs = [ "//garnet/drivers/gpu/msd-img-rgx/no_hardware" ]
 
   public_deps = [
     "$zircon_build_root/public/lib/fdio",

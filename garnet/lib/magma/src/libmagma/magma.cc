@@ -55,6 +55,19 @@ magma_status_t magma_query(int fd, uint64_t id, uint64_t* value_out)
     return MAGMA_STATUS_OK;
 }
 
+magma_status_t magma_query_returns_buffer(int fd, uint64_t id, uint32_t* result_out)
+{
+    if (!result_out)
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "bad result_out address");
+
+    if (!magma::PlatformConnectionClient::QueryReturnsBuffer(fd, id, result_out))
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR,
+                        "magma::PlatformConnectionClient::QueryReturnsBuffer failed");
+
+    DLOG("magma_query_returns_buffer id %" PRIu64 " returned buffer 0x%x", id, *result_out);
+    return MAGMA_STATUS_OK;
+}
+
 void magma_create_context(magma_connection_t connection, uint32_t* context_id_out)
 {
     magma::PlatformConnectionClient::cast(connection)->CreateContext(context_id_out);

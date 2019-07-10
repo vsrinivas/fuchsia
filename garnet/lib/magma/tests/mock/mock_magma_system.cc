@@ -54,6 +54,12 @@ magma_status_t magma_query(int32_t fd, uint64_t id, uint64_t* value_out)
     return MAGMA_STATUS_INVALID_ARGS;
 }
 
+magma_status_t magma_query_returns_buffer(int32_t file_descriptor, uint64_t id,
+                                          uint32_t* handle_out)
+{
+    return MAGMA_STATUS_INVALID_ARGS;
+}
+
 void magma_create_context(magma_connection_t connection, uint32_t* context_id_out)
 {
     *context_id_out = static_cast<MockConnection*>(connection)->next_context_id();

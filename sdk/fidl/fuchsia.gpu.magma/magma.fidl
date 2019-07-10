@@ -11,6 +11,9 @@ protocol Device {
     // Get a parameter.
     Query(uint64 query_id) -> (uint64 result);
 
+    // Get a parameter and store it in a new vmo.
+    QueryReturnsBuffer(uint64 query_id) -> (handle<vmo> result);
+
     // Get the magma ipc channels.
     Connect(uint64 client_id) -> (handle<channel> primary_channel, handle<channel> notification_channel);
 

@@ -295,6 +295,22 @@ bool PlatformConnectionClient::Query(int fd, uint64_t query_id, uint64_t* result
     return true;
 }
 
+bool PlatformConnectionClient::QueryReturnsBuffer(int fd, uint64_t query_id, uint32_t* buffer_out)
+{
+    fdio_t* fdio = fdio_unsafe_fd_to_io(fd);
+    if (!fdio)
+        return DRETF(false, "invalid fd: %d", fd);
+    *buffer_out = ZX_HANDLE_INVALID;
+    zx_status_t status = fuchsia_gpu_magma_DeviceQueryReturnsBuffer(
+        fdio_unsafe_borrow_channel(fdio), query_id, buffer_out);
+    fdio_unsafe_release(fdio);
+
+    if (status != ZX_OK)
+        return DRETF(false, "magma_DeviceQueryReturnsBuffer failed: %d", status);
+
+    return true;
+}
+
 bool PlatformConnectionClient::GetHandles(int fd, uint32_t* device_handle_out,
                                           uint32_t* device_notification_handle_out)
 {

@@ -1173,6 +1173,12 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* val
     return MsdArmDevice::cast(device)->QueryInfo(id, value_out);
 }
 
+magma_status_t msd_device_query_returns_buffer(msd_device_t* device, uint64_t id,
+                                               uint32_t* buffer_out)
+{
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
 void msd_device_dump_status(msd_device_t* device, uint32_t dump_type)
 {
     uint32_t perf_dump_type =

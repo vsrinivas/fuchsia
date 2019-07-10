@@ -64,6 +64,10 @@ public:
     {
         return msd_device_query(msd_dev(), id, value_out);
     }
+    magma::Status QueryReturnsBuffer(uint32_t id, uint32_t* buffer_out)
+    {
+        return msd_device_query_returns_buffer(msd_dev(), id, buffer_out);
+    }
 
 private:
     msd_device_unique_ptr_t msd_dev_;

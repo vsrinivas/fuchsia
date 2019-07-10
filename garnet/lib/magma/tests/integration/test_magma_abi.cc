@@ -376,6 +376,15 @@ public:
         magma_sysmem_connection_release(connection);
     }
 
+    void QueryReturnsBuffer()
+    {
+        uint32_t handle_out = 0;
+        // Driver's shouldn't allow this value to be queried through this entrypoint.
+        EXPECT_NE(MAGMA_STATUS_OK,
+                  magma_query_returns_buffer(fd_, MAGMA_QUERY_DEVICE_ID, &handle_out));
+        EXPECT_EQ(0u, handle_out);
+    }
+
 private:
     int fd_ = -1;
     magma_connection_t connection_;
@@ -469,6 +478,12 @@ TEST(MagmaAbi, SysmemLinearFormatModifier)
 {
     TestConnection test;
     test.Sysmem(true);
+}
+
+TEST(MagmaAbi, QueryReturnsBuffer)
+{
+    TestConnection test;
+    test.QueryReturnsBuffer();
 }
 
 TEST(MagmaAbi, FromC) { EXPECT_TRUE(test_magma_abi_from_c()); }

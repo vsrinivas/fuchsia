@@ -20,11 +20,15 @@
 
 #include "img-sys-device.h"
 #include "magma_util/macros.h"
+#include "no_hardware_testing.h"
+#include "platform_buffer.h"
 #include "sys_driver/magma_driver.h"
 
 namespace {
 static fuchsia_gpu_magma_Device_ops_t device_fidl_ops = {
     .Query = fidl::Binder<NoHardwareGpu>::BindMember<&NoHardwareGpu::Query>,
+    .QueryReturnsBuffer =
+        fidl::Binder<NoHardwareGpu>::BindMember<&NoHardwareGpu::QueryReturnsBuffer>,
     .Connect = fidl::Binder<NoHardwareGpu>::BindMember<&NoHardwareGpu::Connect>,
     .DumpState = fidl::Binder<NoHardwareGpu>::BindMember<&NoHardwareGpu::DumpState>,
     .TestRestart = fidl::Binder<NoHardwareGpu>::BindMember<&NoHardwareGpu::Restart>,
@@ -111,6 +115,36 @@ zx_status_t NoHardwareGpu::Query(uint64_t query_id, fidl_txn_t* transaction)
     zx_status_t status = fuchsia_gpu_magma_DeviceQuery_reply(transaction, result);
     if (status != ZX_OK)
         return DRET_MSG(ZX_ERR_INTERNAL, "magma_DeviceQuery_reply failed: %d", status);
+    return ZX_OK;
+}
+
+zx_status_t NoHardwareGpu::QueryReturnsBuffer(uint64_t query_id, fidl_txn_t* transaction)
+{
+    DLOG("NoHardwareGpu::QueryReturnsBuffer");
+    std::lock_guard<std::mutex> lock(magma_mutex_);
+
+    zx_handle_t result;
+    switch (query_id) {
+        case no_hardware_testing::kDummyQueryId: {
+            auto buffer = magma::PlatformBuffer::Create(4096, "query-buffer");
+            if (!buffer)
+                return DRET(ZX_ERR_NO_MEMORY);
+            if (!buffer->Write(&no_hardware_testing::kDummyQueryResult, 0,
+                               sizeof(no_hardware_testing::kDummyQueryResult)))
+                return DRET(ZX_ERR_INTERNAL);
+            if (!buffer->duplicate_handle(&result))
+                return DRET(ZX_ERR_INTERNAL);
+            break;
+        }
+        default:
+            if (!magma_system_device_->QueryReturnsBuffer(query_id, &result))
+                return DRET_MSG(ZX_ERR_INVALID_ARGS, "unhandled query param 0x%" PRIx64, query_id);
+    }
+    DLOG("query query_id 0x%" PRIx64 " returning 0x%x", query_id, result);
+
+    zx_status_t status = fuchsia_gpu_magma_DeviceQueryReturnsBuffer_reply(transaction, result);
+    if (status != ZX_OK)
+        return DRET_MSG(ZX_ERR_INTERNAL, "magma_DeviceQueryReturnsBuffer_reply failed: %d", status);
     return ZX_OK;
 }
 
