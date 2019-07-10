@@ -7,10 +7,16 @@
 #define MT8167_GPIO16_EINT16                 16
 #define MT8167_GPIO24_EINT24                 24
 #define MT8167_GPIO25_EINT25                 25
+#define MT8167_GPIO52_SDA1                   52
+#define MT8167_GPIO53_SCL1                   53
 #define MT8167_GPIO55_DISP_PWM               54
 #define MT8167_GPIO55_I2S_DATA_IN            55
+#define MT8167_GPIO58_SDA0                   58
+#define MT8167_GPIO59_SCL0                   59
 #define MT8167_GPIO56_I2S_LRCK               56
 #define MT8167_GPIO25_I2S_BCK                57
+#define MT8167_GPIO60_SDA2                   60
+#define MT8167_GPIO61_SCL2                   61
 #define MT8167_GPIO100_CMDAT0                100
 #define MT8167_GPIO101_CMDAT1                101
 #define MT8167_GPIO102_CMMCLK                102

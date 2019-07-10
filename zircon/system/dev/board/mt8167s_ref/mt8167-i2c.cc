@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -9,7 +10,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
-
+#include <soc/mt8167/mt8167-gpio.h>
 #include <soc/mt8167/mt8167-hw.h>
 
 #include "mt8167.h"
@@ -17,15 +18,65 @@
 namespace board_mt8167 {
 
 zx_status_t Mt8167::I2cInit() {
-    constexpr pbus_gpio_t i2c_gpios[] = {
-        { 58 }, // SDA0_0
-        { 59 }, // SCL0_0
-        { 52 }, // SDA1_0
-        { 53 }, // SCL1_0
-        { 60 }, // SDA2_0
-        { 61 }, // SCL2_0
+    static const zx_bind_inst_t root_match[] = {
+        BI_MATCH(),
     };
-
+    static const zx_bind_inst_t sda0_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+        BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO58_SDA0),
+    };
+    static const zx_bind_inst_t scl0_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+        BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO59_SCL0),
+    };
+    static const zx_bind_inst_t sda1_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+        BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO52_SDA1),
+    };
+    static const zx_bind_inst_t scl1_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+        BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO53_SCL1),
+    };
+    static const zx_bind_inst_t sda2_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+        BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO60_SDA2),
+    };
+    static const zx_bind_inst_t scl2_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+        BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO61_SCL2),
+    };
+    static const device_component_part_t sda0_component[] = {
+        { countof(root_match), root_match },
+        { countof(sda0_match), sda0_match },
+    };
+    static const device_component_part_t scl0_component[] = {
+        { countof(root_match), root_match },
+        { countof(scl0_match), scl0_match },
+    };
+    static const device_component_part_t sda1_component[] = {
+        { countof(root_match), root_match },
+        { countof(sda1_match), sda1_match },
+    };
+    static const device_component_part_t scl1_component[] = {
+        { countof(root_match), root_match },
+        { countof(scl1_match), scl1_match },
+    };
+    static const device_component_part_t sda2_component[] = {
+        { countof(root_match), root_match },
+        { countof(sda2_match), sda2_match },
+    };
+    static const device_component_part_t scl2_component[] = {
+        { countof(root_match), root_match },
+        { countof(scl2_match), scl2_match },
+    };
+    static const device_component_t components[] = {
+        { countof(sda0_component), sda0_component },
+        { countof(scl0_component), scl0_component },
+        { countof(sda1_component), sda1_component },
+        { countof(scl1_component), scl1_component },
+        { countof(sda2_component), sda2_component },
+        { countof(scl2_component), scl2_component },
+    };
     constexpr pbus_mmio_t i2c_mmios[] = {
         {
             .base = MT8167_I2C0_BASE,
@@ -146,16 +197,13 @@ zx_status_t Mt8167::I2cInit() {
     };
 
     pbus_dev_t i2c_dev = {};
-    i2c_dev.name = "i2c0";
+    i2c_dev.name = "mt8167-i2c";
     i2c_dev.vid = PDEV_VID_MEDIATEK;
     i2c_dev.did = PDEV_DID_MEDIATEK_I2C;
     i2c_dev.mmio_list = i2c_mmios;
     i2c_dev.mmio_count = countof(i2c_mmios);
     i2c_dev.irq_list = i2c_irqs;
     i2c_dev.irq_count = countof(i2c_irqs);
-    i2c_dev.gpio_list = i2c_gpios;
-    i2c_dev.gpio_count = countof(i2c_gpios);
-
 
     if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_CLEO) {
         i2c_dev.metadata_list = cleo_i2c_metadata;
@@ -168,9 +216,10 @@ zx_status_t Mt8167::I2cInit() {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
+    auto status = pbus_.CompositeDeviceAdd(&i2c_dev, components, countof(components),
+        UINT32_MAX);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d\n", __FUNCTION__, status);
         return status;
     }
 

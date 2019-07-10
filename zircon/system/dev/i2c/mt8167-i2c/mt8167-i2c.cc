@@ -9,14 +9,13 @@
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/i2cimpl.h>
-#include <lib/device-protocol/platform-device.h>
 #include <ddk/protocol/platform/device.h>
+#include <ddktl/protocol/composite.h>
 #include <lib/device-protocol/pdev.h>
-
+#include <lib/device-protocol/platform-device.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
-
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
 
@@ -198,31 +197,37 @@ int Mt8167I2c::TestThread() {
 }
 
 zx_status_t Mt8167I2c::GetI2cGpios(fbl::Array<ddk::GpioProtocolClient>* gpios) {
-    ddk::PDev pdev(parent());
-    if (!pdev.is_valid()) {
-        zxlogf(ERROR, "%s ZX_PROTOCOL_PLATFORM_DEV failed\n", __FUNCTION__);
+    ddk::CompositeProtocolClient composite(parent());
+    if (!composite.is_valid()) {
+        zxlogf(ERROR, "%s: Could not get composite protocol\n", __FILE__);
         return ZX_ERR_NOT_SUPPORTED;
+    }
+    auto component_count = composite.GetComponentCount();
+    if (component_count != kMaxComponents) {
+        zxlogf(ERROR, "%s Wrong number of components %u\n", __func__, component_count);
+        return ZX_ERR_INTERNAL;
+    }
+    size_t actual = 0;
+    zx_device_t* components[kMaxComponents];
+    composite.GetComponents(components, component_count, &actual);
+    if (actual != component_count) {
+        return ZX_ERR_INTERNAL;
     }
 
-    pdev_device_info_t dev_info;
-    zx_status_t status = pdev.GetDeviceInfo(&dev_info);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s pdev_get_device_info failed %d\n", __FUNCTION__, status);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    size_t gpio_count = kMaxComponents - 1; // kMaxComponents is 1 pdev + 6 GPIOs for 3 I2C busses.
 
     fbl::AllocChecker ac;
-    gpios->reset(new (&ac) ddk::GpioProtocolClient[dev_info.gpio_count], dev_info.gpio_count);
+    gpios->reset(new (&ac) ddk::GpioProtocolClient[gpio_count], gpio_count);
     if (!ac.check()) {
         zxlogf(ERROR, "%s ZX_ERR_NO_MEMORY\n", __FUNCTION__);
         return ZX_ERR_NO_MEMORY;
     }
 
-    for (uint32_t i = 0; i < dev_info.gpio_count; i++) {
-        (*gpios)[i] = pdev.GetGpio(i);
-        if (!(*gpios)[i].is_valid()) {
+    for (uint32_t i = 0; i < gpio_count; i++) {
+        auto status = device_get_protocol(components[i + 1], ZX_PROTOCOL_GPIO, &((*gpios)[i]));
+        if (status != ZX_OK) {
             zxlogf(ERROR, "%s ZX_PROTOCOL_GPIO failed\n", __FUNCTION__);
-            return ZX_ERR_NOT_SUPPORTED;
+            return status;
         }
     }
 
@@ -272,15 +277,26 @@ zx_status_t Mt8167I2c::Bind() {
         return status;
     }
 
-    pdev_protocol_t pdev;
-    status = device_get_protocol(parent(), ZX_PROTOCOL_PDEV, &pdev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s ZX_PROTOCOL_PLATFORM_DEV failed %d\n", __FUNCTION__, status);
+    ddk::CompositeProtocolClient composite(parent());
+    if (!composite.is_valid()) {
+        zxlogf(ERROR, "%s: Could not get composite protocol\n", __FILE__);
         return ZX_ERR_NOT_SUPPORTED;
     }
+    auto component_count = composite.GetComponentCount();
+    if (component_count != kMaxComponents) {
+        zxlogf(ERROR, "%s Wrong number of components %u\n", __func__, component_count);
+        return ZX_ERR_INTERNAL;
+    }
+    size_t actual = 0;
+    zx_device_t* components[kMaxComponents];
+    composite.GetComponents(components, component_count, &actual);
+    if (actual != component_count) {
+        return ZX_ERR_INTERNAL;
+    }
 
+    ddk::PDev pdev = components[0];
     pdev_device_info_t info;
-    status = pdev_get_device_info(&pdev, &info);
+    status = pdev.GetDeviceInfo(&info);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s pdev_get_device_info failed %d\n", __FUNCTION__, status);
         return ZX_ERR_NOT_SUPPORTED;
@@ -292,18 +308,18 @@ zx_status_t Mt8167I2c::Bind() {
         return ZX_ERR_INTERNAL;
     }
 
-    mmio_buffer_t mmio;
-    status = pdev_map_mmio_buffer(&pdev, bus_count_, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+    std::optional<ddk::MmioBuffer> mmio;
+    status = pdev.MapMmio(bus_count_, &mmio);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s pdev_map_mmio_buffer failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s MapMmio %u failed %d\n", __FUNCTION__, bus_count_, status);
         return status;
     }
-    xo_regs_ = XoRegs(mmio); // Last MMIO is for XO clock.
+    xo_regs_ = XoRegs(std::move(*mmio)); // Last MMIO is for XO clock.
 
     for (uint32_t id = 0; id < bus_count_; id++) {
-        status = pdev_map_mmio_buffer(&pdev, id, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+        status = pdev.MapMmio(id, &mmio);
         if (status != ZX_OK) {
-            zxlogf(ERROR, "%s pdev_map_mmio_buffer failed %d\n", __FUNCTION__, status);
+            zxlogf(ERROR, "%s MapMmio %d failed %d\n", __FUNCTION__, id, status);
             return status;
         }
 
@@ -313,9 +329,9 @@ zx_status_t Mt8167I2c::Bind() {
             zxlogf(ERROR, "%s zx::event::create failed %d\n", __FUNCTION__, status);
             return status;
         }
-        keys_.push_back({ddk::MmioBuffer(mmio), zx::interrupt(), std::move(event)});
+        keys_.push_back({std::move(*mmio), zx::interrupt(), std::move(event)});
 
-        status = pdev_get_interrupt(&pdev, id, 0, keys_[id].irq.reset_and_get_address());
+        status = pdev.GetInterrupt(id, &keys_[id].irq);
         if (status != ZX_OK) {
             return status;
         }
@@ -397,7 +413,7 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(mt8167_i2c, mt8167_i2c::driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_I2C),
 ZIRCON_DRIVER_END(mt8167_i2c)

@@ -174,7 +174,6 @@ TEST_F(DeviceEnumerationTest, CleoTest) {
     static const char* kDevicePaths[] = {
         "sys/platform/mt8167s_ref",
         "sys/platform/0d:00:1/mt8167-gpio",
-        "sys/platform/0d:00:6/mt8167-i2c",
         "sys/platform/0d:00:8/mtk-clk",
         "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-mmc/block/part-000/block",
         "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-mmc/block/part-001/block",
@@ -210,7 +209,7 @@ TEST_F(DeviceEnumerationTest, CleoTest) {
         "sys/platform/0d:00:14/mt-usb/usb-peripheral/function-000/cdc-eth-function/ethernet",
         "touch/focaltouch HidDevice/hid-device-000",
         "sys/platform/0d:00:9/mtk-thermal",
-        "sys/platform/0d:00:6/mt8167-i2c/i2c/i2c-0-83/ltr-578als/hid-device-000",
+        "mt8167-i2c",
     };
 
     ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

@@ -4,21 +4,20 @@
 
 #pragma once
 
+#include <threads.h>
+
+#include <optional>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/i2cimpl.h>
-
 #include <fbl/array.h>
 #include <fbl/vector.h>
-
+#include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/event.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/port.h>
-
-#include <threads.h>
-
-#include <optional>
 
 #include "mt8167-i2c-regs.h"
 
@@ -55,6 +54,8 @@ protected:
     uint32_t bus_count_;
 
 private:
+    static constexpr uint32_t kMaxComponents = 7; // 1 pdev + 6 GPIOs for 3 I2C busses.
+
     struct Key {
         ddk::MmioBuffer mmio;
         zx::interrupt irq;

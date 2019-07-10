@@ -229,8 +229,8 @@ public:
 
 class XoRegs : public ddk::MmioBuffer {
 public:
-    explicit XoRegs(mmio_buffer_t& mmio)
-        : ddk::MmioBuffer(mmio) {}
+    explicit XoRegs(ddk::MmioBuffer mmio)
+        : ddk::MmioBuffer(std::move(mmio)) {}
 
     // TODO(andresoportus): This should be part of a clock driver.
     void ClockEnable(uint32_t id, bool enable) {

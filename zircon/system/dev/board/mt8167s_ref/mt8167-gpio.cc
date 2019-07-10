@@ -60,6 +60,13 @@ zx_status_t Mt8167::GpioInit() {
         // For cleo buttons.
         { MT8167_GPIO_VOLUME_UP },
         { MT8167_GPIO_MIC_PRIVACY },
+        // For I2C.
+        { MT8167_GPIO58_SDA0 },
+        { MT8167_GPIO59_SCL0 },
+        { MT8167_GPIO52_SDA1 },
+        { MT8167_GPIO53_SCL1 },
+        { MT8167_GPIO60_SDA2 },
+        { MT8167_GPIO61_SCL2 },
     };
 
     const pbus_metadata_t cleo_gpio_metadata[] = {
