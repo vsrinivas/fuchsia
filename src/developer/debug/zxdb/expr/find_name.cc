@@ -8,6 +8,7 @@
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/found_name.h"
 #include "src/developer/debug/zxdb/expr/index_walker.h"
+#include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
@@ -16,11 +17,11 @@
 #include "src/developer/debug/zxdb/symbols/index.h"
 #include "src/developer/debug/zxdb/symbols/index_node.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
+#include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/developer/debug/zxdb/symbols/target_symbols.h"
-#include "src/developer/debug/zxdb/symbols/type_utils.h"
 
 namespace zxdb {
 
@@ -350,11 +351,30 @@ void FindMemberOnThis(const FindNameContext& context, const FindNameOptions& opt
     return;  // No "this" pointer.
 
   // Pointed-to type for "this".
-  const Collection* collection = nullptr;
-  if (GetPointedToCollection(this_var->type().Get()->AsType(), &collection).has_error())
-    return;  // Symbols likely corrupt.
+  //
+  // TODO(brettw) this assumes the type of "this" is not a forward declaration. Currently that's
+  // true because the compiler will always need to have the definition of "this" to actually
+  // generate any code that uses it. But it's possible for the compiler to encode the symbols that
+  // way.
+  //
+  // Ideally we would use GetConcretePointedToCollection() for this lookup, but the implementation
+  // of that needs an ExprEvalContext which makes a FindNameContext, rather than the other way
+  // around. Maybe the best thing would be to separate out the concrete type resolution from the
+  // ExprEvalContext. But that needs to be done carefully to avoid complicating everything.
+  const Type* this_type = this_var->type().Get()->AsType();
+  if (!this_type)
+    return;  // Bad type.
+  this_type = this_type->StripCVT();
 
-  FindMember(context, options, collection, looking_for, this_var, result);
+  const ModifiedType* modified = this_type->AsModifiedType();
+  if (!modified || modified->tag() != DwarfTag::kPointerType)
+    return;  // Not a pointer.
+
+  const Collection* this_coll = modified->modified().Get()->AsCollection();
+  if (!this_coll)
+    return;  // "this" is not a collection, probably corrupt.
+
+  FindMember(context, options, this_coll, looking_for, this_var, result);
 }
 
 VisitResult FindIndexedName(const FindNameContext& context, const FindNameOptions& options,

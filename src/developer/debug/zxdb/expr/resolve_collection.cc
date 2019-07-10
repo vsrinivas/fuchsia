@@ -16,7 +16,6 @@
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
-#include "src/developer/debug/zxdb/symbols/type_utils.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -24,9 +23,8 @@ namespace zxdb {
 
 namespace {
 
-// A wrapper around FindMember that issues errors rather than returning
-// an optional. The base can be null for the convenience of the caller. On
-// error, the output FoundMember will be untouched.
+// A wrapper around FindMember that issues errors rather than returning an optional. The base can be
+// null for the convenience of the caller. On error, the output FoundMember will be untouched.
 Err FindMemberWithErr(const Collection* base, const ParsedIdentifier& identifier,
                       FoundMember* out) {
   if (!base) {
@@ -54,8 +52,7 @@ Err GetErrorForInvalidMemberOf(const Collection* coll) {
              coll->GetFullName().c_str());
 }
 
-// Tries to describe the type of the value as best as possible when a member
-// access is invalid.
+// Tries to describe the type of the value as best as possible when a member access is invalid.
 Err GetErrorForInvalidMemberOf(const ExprValue& value) {
   if (!value.type())
     return Err("No type information.");
@@ -68,8 +65,7 @@ Err GetErrorForInvalidMemberOf(const ExprValue& value) {
              value.type()->GetFullName().c_str());
 }
 
-// Validates the input member (it will null check) and extracts the type
-// for the member.
+// Validates the input member (it will null check) and extracts the type for the member.
 Err GetMemberType(const Collection* coll, const DataMember* member,
                   fxl::RefPtr<Type>* member_type) {
   if (!member)
@@ -104,9 +100,8 @@ void DoResolveMemberByPointer(fxl::RefPtr<EvalContext> context, const ExprValue&
                  std::move(cb));
 }
 
-// Extracts an embedded type inside of a base. This can be used for finding
-// collection data members and inherited classes, both of which consist of a
-// type and an offset.
+// Extracts an embedded type inside of a base. This can be used for finding collection data members
+// and inherited classes, both of which consist of a type and an offset.
 Err ExtractSubType(const ExprValue& base, fxl::RefPtr<Type> sub_type, uint32_t offset,
                    ExprValue* out) {
   uint32_t size = sub_type->byte_size();
@@ -120,9 +115,9 @@ Err ExtractSubType(const ExprValue& base, fxl::RefPtr<Type> sub_type, uint32_t o
   return Err();
 }
 
-// This variant takes a precomputed offset of the data member in the base
-// class. This is to support the case where the data member is in a derived
-// class (the derived class will have its own offset).
+// This variant takes a precomputed offset of the data member in the base class. This is to support
+// the case where the data member is in a derived class (the derived class will have its own
+// offset).
 Err DoResolveMember(fxl::RefPtr<EvalContext> context, const ExprValue& base,
                     const FoundMember& member, ExprValue* out) {
   fxl::RefPtr<Type> concrete_type = base.GetConcreteType(context.get());
@@ -163,36 +158,29 @@ Err ResolveMember(fxl::RefPtr<EvalContext> context, const ExprValue& base,
 void ResolveMemberByPointer(fxl::RefPtr<EvalContext> context, const ExprValue& base_ptr,
                             const FoundMember& found_member,
                             std::function<void(const Err&, ExprValue)> cb) {
-  const Collection* coll = nullptr;
-  Err err = GetPointedToCollection(base_ptr.type(), &coll);
-  if (err.has_error()) {
-    cb(err, ExprValue());
-    return;
-  }
+  fxl::RefPtr<Collection> pointed_to;
+  Err err = GetConcretePointedToCollection(context, base_ptr.type(), &pointed_to);
+  if (err.has_error())
+    return cb(err, ExprValue());
 
-  DoResolveMemberByPointer(context, base_ptr, coll, found_member, std::move(cb));
+  DoResolveMemberByPointer(context, base_ptr, pointed_to.get(), found_member, std::move(cb));
 }
 
 void ResolveMemberByPointer(
     fxl::RefPtr<EvalContext> context, const ExprValue& base_ptr, const ParsedIdentifier& identifier,
     std::function<void(const Err&, fxl::RefPtr<DataMember>, ExprValue)> cb) {
-  const Collection* coll = nullptr;
-  Err err = GetPointedToCollection(base_ptr.type(), &coll);
-  if (err.has_error()) {
-    cb(err, nullptr, ExprValue());
-    return;
-  }
+  fxl::RefPtr<Collection> coll;
+  if (Err err = GetConcretePointedToCollection(context, base_ptr.type(), &coll); err.has_error())
+    return cb(err, nullptr, ExprValue());
 
   FoundMember found_member;
-  err = FindMemberWithErr(coll, identifier, &found_member);
-  if (err.has_error()) {
-    cb(err, nullptr, ExprValue());
-    return;
-  }
+  if (Err err = FindMemberWithErr(coll.get(), identifier, &found_member); err.has_error())
+    return cb(err, nullptr, ExprValue());
 
   DoResolveMemberByPointer(
-      context, base_ptr, coll, found_member,
-      [cb = std::move(cb), member_ref = RefPtrTo(found_member.data_member())](
+      context, base_ptr, coll.get(), found_member,
+      [cb = std::move(cb),
+       member_ref = RefPtrTo(found_member.data_member())](
           const Err& err, ExprValue value) { cb(err, std::move(member_ref), std::move(value)); });
 }
 
@@ -207,6 +195,22 @@ Err ResolveInherited(const ExprValue& value, const InheritedFrom* from, ExprValu
 Err ResolveInherited(const ExprValue& value, fxl::RefPtr<Type> base_type, uint64_t offset,
                      ExprValue* out) {
   return ExtractSubType(value, std::move(base_type), offset, out);
+}
+
+Err GetConcretePointedToCollection(const fxl::RefPtr<EvalContext>& eval_context, const Type* input,
+                                   fxl::RefPtr<Collection>* pointed_to) {
+  fxl::RefPtr<Type> to_type;
+  if (Err err = GetPointedToType(eval_context, input, &to_type); err.has_error())
+    return err;
+  to_type = eval_context->GetConcreteType(to_type.get());
+
+  if (const Collection* collection = to_type->AsCollection()) {
+    *pointed_to = fxl::RefPtr<Collection>(const_cast<Collection*>(collection));
+    return Err();
+  }
+
+  return Err("Attempting to dereference a pointer to '%s' which is not a class, struct, or union.",
+             to_type->GetFullName().c_str());
 }
 
 }  // namespace zxdb

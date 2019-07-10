@@ -16,31 +16,36 @@ class EvalContext;
 class ExprValue;
 class Type;
 
-// Creates an ExprValue of the given type from the data at the given address.
-// Issues the callback on completion. The type can be null (it will immediately
-// call the callback with an error).
+// Creates an ExprValue of the given type from the data at the given address. Issues the callback on
+// completion. The type can be null (it will immediately call the callback with an error).
 //
 // It's assumed the type is already concrete (so it has a size).
 void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, uint64_t address, fxl::RefPtr<Type> type,
                     std::function<void(const Err&, ExprValue)> cb);
 
-// Similar to the above but the pointer and type comes from the given
-// ExprValue, which is assumed to be a pointer type. If it's not a pointer
-// type, the callback will be issued with an error.
+// Similar to the above but the pointer and type comes from the given ExprValue, which is assumed to
+// be a pointer type. If it's not a pointer type, the callback will be issued with an error.
 void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, const ExprValue& pointer,
                     std::function<void(const Err&, ExprValue)> cb);
 
-// Ensures that the value is not a reference type (rvalue or regular). The
-// result will be an ExprValue passed to the callback that has any reference
-// types stripped.
+// Ensures that the value is not a reference type (rvalue or regular). The result will be an
+// ExprValue passed to the callback that has any reference types stripped.
 //
-// If the input ExprValue does not have a reference type, calls the callback
-// immediately (from within the calling function's stack frame) with the input.
+// If the input ExprValue does not have a reference type, calls the callback immediately (from
+// within the calling function's stack frame) with the input.
 //
-// If the value is a reference type, it will be resolved and the value will be
-// the value of the referenced data.
-void EnsureResolveReference(fxl::RefPtr<EvalContext> eval_context, ExprValue value,
+// If the value is a reference type, it will be resolved and the value will be the value of the
+// referenced data.
+void EnsureResolveReference(const fxl::RefPtr<EvalContext>& eval_context, ExprValue value,
                             std::function<void(const Err&, ExprValue)> cb);
+
+// Verifies that |input| type is a pointer and fills the pointed-to type into |*pointed_to|. In
+// other cases, returns an error. The input type can be null (which will produce an error) or
+// non-concrete (const, forward definition, etc.) so the caller doesn't have to check.
+//
+// The returned type may not necessarily be concrete (need to preserve, const, etc.).
+Err GetPointedToType(const fxl::RefPtr<EvalContext>& eval_context, const Type* input,
+                     fxl::RefPtr<Type>* pointed_to);
 
 }  // namespace zxdb
 

@@ -52,7 +52,6 @@ static_library("symbols") {
     "system_symbols.h",
     "target_symbols.h",
     "type.h",
-    "type_utils.h",
     "value.h",
     "variable.h",
     "variable_location.h",
@@ -109,7 +108,6 @@ static_library("symbols") {
     "system_symbols.cc",
     "target_symbols.cc",
     "type.cc",
-    "type_utils.cc",
     "value.cc",
     "variable.cc",
     "variable_location.cc",
@@ -237,7 +235,6 @@ source_set("tests") {
     "symbol_utils_unittest.cc",
     "target_symbols_unittest.cc",
     "test_symbol_module.cc",
-    "type_utils_unittest.cc",
     "variable_location_unittest.cc",
     "visit_scopes_unittest.cc",
   ]

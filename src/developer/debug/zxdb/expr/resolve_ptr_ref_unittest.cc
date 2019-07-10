@@ -171,4 +171,48 @@ TEST_F(ResolvePtrRefTest, ConstRef) {
   EXPECT_EQ(kAddress, out_value.source().address());
 }
 
+TEST_F(ResolvePtrRefTest, GetPointedToType_Null) {
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
+
+  fxl::RefPtr<Type> pointed_to;
+  Err err = GetPointedToType(eval_context, nullptr, &pointed_to);
+  EXPECT_TRUE(err.has_error());
+  EXPECT_EQ("No type information.", err.msg());
+}
+
+TEST_F(ResolvePtrRefTest, GetPointedToType_NotPointer) {
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
+
+  auto int32_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 4, "int32_t");
+
+  fxl::RefPtr<Type> pointed_to;
+  Err err = GetPointedToType(eval_context, int32_type.get(), &pointed_to);
+  EXPECT_TRUE(err.has_error());
+  EXPECT_EQ("Attempting to dereference 'int32_t' which is not a pointer.", err.msg());
+}
+
+TEST_F(ResolvePtrRefTest, GetPointedToType_NoPointedToType) {
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
+
+  // Pointer to nothing.
+  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol());
+
+  fxl::RefPtr<Type> pointed_to;
+  Err err = GetPointedToType(eval_context, ptr_type.get(), &pointed_to);
+  EXPECT_TRUE(err.has_error());
+  EXPECT_EQ("Missing pointer type info, please file a bug with a repro.", err.msg());
+}
+
+TEST_F(ResolvePtrRefTest, GetPointedToType_Good) {
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
+
+  auto int32_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 4, "int32_t");
+  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(int32_type));
+
+  fxl::RefPtr<Type> pointed_to;
+  Err err = GetPointedToType(eval_context, ptr_type.get(), &pointed_to);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+  EXPECT_EQ(int32_type.get(), pointed_to.get());
+}
+
 }  // namespace zxdb
