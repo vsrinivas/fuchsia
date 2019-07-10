@@ -100,7 +100,7 @@ info entry* `PA_HND(PA_VMO_VDSO, 0)`.
 
 ### **abigen** tool
 
-The [`abigen` tool](../system/host/abigen/) generates both C/C++ function
+The [`abigen` tool](../tools/abigen/) generates both C/C++ function
 declarations that form the public [system call](syscalls.md) API, and some
 C++ and assembly code used in the implementation of the vDSO.  Both the
 public API and the private interface between the kernel and the vDSO code

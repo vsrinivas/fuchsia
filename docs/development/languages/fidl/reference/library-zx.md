@@ -2,7 +2,7 @@
 # Internal library zx
 
 The `fidlc` compiler automatically generates `library zx` (internally) into
-[//zircon/system/host/fidl/lib/library_zx.cc](/zircon/system/host/fidl/lib/library_zx.cc).
+[//zircon/tools/fidl/lib/library_zx.cc](/zircon/tools/fidl/lib/library_zx.cc).
 
 You will find content similar to the following:
 
@@ -36,4 +36,3 @@ Types](/docs/development/api/system.md#types). For example,
 > The `CHANNEL_MAX_MSG_BYTES` and `CHANNEL_MAX_MSG_HANDLES`
 > are bound at `fidlc` compile time (that is, when the **compiler**
 > is compiled) and reflect the constants present at that time.
-

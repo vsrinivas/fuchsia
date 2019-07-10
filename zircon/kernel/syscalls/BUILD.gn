@@ -7,7 +7,7 @@ import("abigen.gni")
 
 if (current_toolchain == default_toolchain) {
   host_tool_action("generate_syscalls.abigen") {
-    tool = "$zx/system/host/banjo:compiler"
+    tool = "$zx/tools/banjo:compiler"
     sources = [
       "$zx/system/public/zircon/syscalls.banjo",
     ]

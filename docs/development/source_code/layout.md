@@ -93,6 +93,17 @@ pattern:
         * You make a new name for the code that (a) does not match upstream and
           (b) does not appear in any other third_party directory anywhere in the
           Fuchsia Source Tree
+ * `tools/` (optional)
+   * This directory contains command-line tools provided by the area.  These
+     are usually things that can (or must) be built for the development host
+     rather than for Fuchsia.  They may or may not be used directly in the
+     area's own build, but can also be used by developers.  They may or may
+     not be published in an SDK.  Special-purpose tools that are used in the
+     build but really are not intended for developers to use directly should
+     be kept near their uses rather than here.
+   * This should contain a a subdirectory named for each tool (or collection
+     of related tools with a natural collective name), rather than putting all
+     of the area's tools together into the top `tools/BUILD.gn` file.
  * `[subareas]` (optional)
     * Subareas should follow the generic area template
     * Do not create deeply nested area structures (e.g., three should be enough)
@@ -113,11 +124,10 @@ of the `/src/lib` directory.
 ### Dependency Structure
 
 In addition to depending on itself, an area can depend only on the top-level
-`build`, `buildtools`, `sdk`, and `third_party` directories, as well as the
-`lib` directories of its ancestors:
+`build`, `sdk`, and `third_party` directories, as well as the `lib` directories
+of its ancestors:
 
  * `//build`
- * `//buildtools`
  * `//sdk`
  * `//third_party`
  * `(../)+lib/`

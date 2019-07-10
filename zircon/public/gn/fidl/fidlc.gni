@@ -26,7 +26,7 @@ import("$zx/public/gn/host_tool_action.gni")
 #   tool
 #     Optional: Label of the host_tool() to run.
 #     Type: label_no_toolchain
-#     Default: "$zx/system/host/fidl:fidlc"
+#     Default: "$zx/tools/fidl:fidlc"
 #
 template("fidlc") {
   if (current_toolchain == default_toolchain) {
@@ -86,7 +86,7 @@ template("fidlc") {
       if (defined(invoker.tool)) {
         tool = invoker.tool
       } else {
-        tool = "$zx/system/host/fidl:fidlc"
+        tool = "$zx/tools/fidl:fidlc"
       }
       outputs = fidlc_outputs
       deps = [

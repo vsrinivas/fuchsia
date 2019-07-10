@@ -37,7 +37,7 @@ template("banjo_c_library") {
     visibility = [ ":*" ]
     forward_variables_from(invoker, [ "testonly" ])
 
-    tool = "$zx/system/host/banjo:compiler"
+    tool = "$zx/tools/banjo:compiler"
 
     deps = [
       ":$banjo_target",

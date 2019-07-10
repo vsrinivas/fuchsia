@@ -15,7 +15,7 @@ test("compiler") {
   ]
   configs += [ "//build/config/sanitizers:asan" ]
   deps = [
-    "//zircon/system/host/fidl:compiler",
+    "//zircon/tools/fidl:compiler",
   ]
   if (enable_ossfuzz) {
     libs = [ "FuzzingEngine" ]

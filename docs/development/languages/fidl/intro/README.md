@@ -28,7 +28,7 @@ This document is a description of the Fuchsia Interface Definition Language
 [Low-Level C++ Language Bindings]: ../tutorial/bindings-llcpp.md
 [High-Level C++ Language Bindings]: ../tutorial/tutorial-cpp.md#high_level-c_language-bindings
 [C/Low-Level/High-Level C++ Bindings Comparison]: ../tutorial/c-family-comparison.md
-[Examples]: /zircon/system/host/fidl/examples
+[Examples]: /zircon/tools/fidl/examples
 [Tutorial]: ../tutorial/README.md
 
 [TOC]
@@ -145,7 +145,7 @@ Requirements
 
 ## Where to Find the Code
 
-- [The compiler](/zircon/system/host/fidl)
+- [The compiler](/zircon/tools/fidl)
 - [C and low-level C++ bindings](/zircon/system/ulib/fidl)
 - [High-level C++ bindings](/sdk/lib/fidl/cpp)
 - [Go bindings](https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/fidl/)

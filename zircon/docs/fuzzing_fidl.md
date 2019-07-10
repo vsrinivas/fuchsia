@@ -1,6 +1,6 @@
 # Fuzzing the FIDL host tools
 
-Some notes on fuzzing the `system/host/fidl` parser using
+Some notes on fuzzing the `tools/fidl` parser using
 [afl-fuzz](http://lcamtuf.coredump.cx/afl/).
 
 ## Build afl-fuzz
@@ -17,7 +17,7 @@ with whatever path you downloaded and built it with.
 
 afl-fuzz treats crashes as interesting but the parser currently calls `__builtin_trap()`
 when it encounters invalid syntax.
-Remove that line in [parser.h](../system/host/fidl/parser.h) - its in the `Parser::Fail()` method.
+Remove that line in [parser.h](../tools/fidl/parser.h) - its in the `Parser::Fail()` method.
 
 ## Build the `fidl` tool with afl-fuzz's instrumentation
 
@@ -36,10 +36,10 @@ adjusting if you're not building on x86 Linux, etc.
 
 The parser includes some examples to use as inputs.
 As FIDL becomes adopted we can expand our inputs to include all of the different protocols
-declared across our tree, but for now we use what's in `system/host/fidl/examples`.
+declared across our tree, but for now we use what's in `tools/fidl/examples`.
 
 ```
-$AFL_PATH/afl-fuzz -i system/host/fidl/examples -o fidl-fuzz-out build-x86/tools/fidl dump '@@'
+$AFL_PATH/afl-fuzz -i tools/fidl/examples -o fidl-fuzz-out build-x86/tools/fidl dump '@@'
 ```
 
 ## Results

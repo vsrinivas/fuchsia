@@ -89,7 +89,7 @@ struct Opt {
     input: Vec<PathBuf>,
 
     /// FIDL IR JSON files to process. These files are expected to be in the format described by
-    /// https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/host/fidl/schema.json
+    /// https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/tools/fidl/schema.json
     #[structopt(short = "i", long = "fidl-ir", parse(from_os_str))]
     fidl_ir: Vec<PathBuf>,
 

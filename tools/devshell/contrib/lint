@@ -241,11 +241,11 @@ fidl_lint_is_outdated() {
     # executable. Touching these files in this order will ensure the
     # executable is rebuilt and relinked.
     touch "${FIDL_LINT}"
-    touch "${FUCHSIA_DIR}/zircon/system/host/fidl/linter/main.cpp"
+    touch "${FUCHSIA_DIR}/zircon/tools/fidl/linter/main.cpp"
     return $yes
   fi
   local files_out_of_date=$(
-    find "${FUCHSIA_DIR}/zircon/system/host/fidl" -newer "${FIDL_LINT}" | wc -l
+    find "${FUCHSIA_DIR}/zircon/tools/fidl" -newer "${FIDL_LINT}" | wc -l
   )
   if (( ${files_out_of_date} > 0 )); then
     return $yes

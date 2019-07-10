@@ -316,7 +316,7 @@ template("zbi") {
       rspfile,
     ]
 
-    tool = "$zx/system/host/zbi"
+    tool = "$zx/tools/zbi"
     args = [
       "--output=" + rebase_path(output_file, root_build_dir),
       "--depfile=" + rebase_path(depfile, root_build_dir),

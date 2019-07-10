@@ -6,7 +6,7 @@
 if (current_toolchain == default_toolchain) {
   action("gen-examples") {
     visibility = [ ":examples" ]
-    examples_dir = "$zx/system/host/fidl/examples"
+    examples_dir = "$zx/tools/fidl/examples"
     outputs = [
       "$target_gen_dir/examples.cc",
     ]
@@ -77,9 +77,9 @@ if (current_toolchain == default_toolchain) {
     ]
     deps = [
       ":examples",
-      "$zx/system/host/fidl",
       "$zx/system/ulib/unittest",
       "$zx/third_party/ulib/uboringssl",
+      "$zx/tools/fidl",
     ]
   }
 

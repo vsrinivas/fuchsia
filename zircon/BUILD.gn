@@ -21,74 +21,11 @@ declare_args() {
     ":build-tests",
     ":ids",
     ":images",
-    ":tools",
-  ]
-}
-
-# Build the native host tools intended for developer use.
-_tools_targets = [ "tools" ]
-foreach(host, standard_build_hosts) {
-  _tools_targets += [ "tools-${host.os}-${host.cpu}" ]
-  environment_redirect("tools-${host.os}-${host.cpu}.redirect") {
-    visibility = [ ":*" ]
-    testonly = true
-    environment_label = "$zx/public/gn/toolchain:host"
-    cpu = host.cpu
-    os = host.os
-    direct = true
-    deps = [
-      "$zx/system/host:tools",
-    ]
-  }
-}
-
-group("tools.redirect") {
-  visibility = [ ":*" ]
-  testonly = true
-  public_deps = [
-    ":tools-${host_os}-${host_cpu}",
+    "tools",
   ]
 }
 
 if (current_toolchain == default_toolchain) {
-  # Install the host developer tools for the running host platform in the
-  # "$root_build_dir/tools/" directory.
-  foreach(tools_target, _tools_targets) {
-    tools_rspfile = "$target_gen_dir/${tools_target}.rsp"
-    generated_file("$tools_target.rsp") {
-      visibility = [ ":$tools_target" ]
-      testonly = true
-      outputs = [
-        tools_rspfile,
-      ]
-      deps = [
-        ":$tools_target.redirect",
-      ]
-      output_conversion = "list lines"
-      data_keys = [ "tool_executables" ]
-    }
-
-    action(tools_target) {
-      testonly = true
-      deps = [
-        ":$tools_target.rsp",
-      ]
-      script = "$zx/scripts/copy-files"
-      depfile = "$target_out_dir/$target_name.d"
-      outputs = [
-        depfile,
-      ]
-      sources = [
-        tools_rspfile,
-      ]
-      args = [
-        tools_target,
-        rebase_path(depfile, root_build_dir),
-        rebase_path(tools_rspfile, root_build_dir),
-      ]
-    }
-  }
-
   # Make ninja aliases for e.g. bootloader that gets all bootloader-$cpu.
   top_level_redirects = [
     "bootloader",
@@ -194,9 +131,9 @@ if (current_toolchain == default_toolchain) {
       walk_keys = [ "legacy_barrier" ]
       deps = [
         ":all-ulib-$cpu",
-        ":tools",
         "$zx/system/banjo",
         "$zx/system/fidl",
+        "tools",
       ]
     }
 
@@ -253,7 +190,7 @@ foreach(cpu, standard_fuchsia_cpus) {
       # instead of default when they want only one architecture at a time,
       # give them tools as well since that's what they expect.
       data_deps = [
-        ":tools",
+        "tools",
       ]
     }
 
@@ -524,7 +461,7 @@ build_api_module("legacy_images") {
   testonly = true
   data_keys = [ "images" ]
   deps = [
-    ":tools",
+    "tools",
   ]
   foreach(cpu, standard_fuchsia_cpus) {
     deps += [ ":legacy-$cpu" ]
@@ -751,7 +688,7 @@ if (current_toolchain == default_toolchain) {
     ]
     deps = [
       ":$current_cpu($default_toolchain)",
-      ":tools($default_toolchain)",
+      "tools($default_toolchain)",
     ]
     data_keys = [ "elf_link_output" ]
   }

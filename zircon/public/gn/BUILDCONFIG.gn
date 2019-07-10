@@ -1465,7 +1465,7 @@ template("test") {
 # Build a C/C++ executable for a "host-style" command-line tool.
 #
 # A host_tool() target can be the $tool parameter to host_tool_action().
-# If it's a dependency of $zx/system/host:tools then it will be included
+# If it's a dependency of $zx/tools:tools then it will be included
 # in SDK builds.
 #
 # A host_tool() target might also be built for the Fuchsia target system,

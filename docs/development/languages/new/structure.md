@@ -18,7 +18,7 @@ The public entry points for the vDSO are defined in
 [syscalls.banjo](/zircon/system/public/zircon/syscalls.banjo).
 This file is processed by the [abigen](/zircon/docs/vdso.md#abigen-tool)
 tool. When adding a new language, consider using the `-json` flag to dump
-[a JSON representation](/zircon/system/host/abigen/syscall_schema.json)
+[a JSON representation](/zircon/tools/abigen/syscall_schema.json)
 of the Zircon system calls:
 
 ```sh
@@ -98,7 +98,7 @@ the language runtime.
 
 ### FIDL compiler backend
 
-The [FIDL compiler](/zircon/system/host/fidl/)
+The [FIDL compiler](/zircon/tools/fidl/)
 has a single frontend that is used for all languages and multiple backends that
 support a diverse assortment of languages. The frontend produces a
 [JSON intermediate format](/docs/development/languages/fidl/reference/json-ir.md)

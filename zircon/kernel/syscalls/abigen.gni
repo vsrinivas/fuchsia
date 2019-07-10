@@ -38,7 +38,7 @@ template("abigen") {
                              "visibility",
                            ])
 
-    tool = "$zx/system/host/abigen"
+    tool = "$zx/tools/abigen"
 
     deps = [
       _abigen_label,

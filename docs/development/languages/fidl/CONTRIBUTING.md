@@ -21,14 +21,14 @@ The [FIDL](README.md) toolchain is composed of roughly three parts:
 
 ### Code Location
 
-The front-end lives at [//zircon/system/host/fidl/][fidlc-source],
+The front-end lives at [//zircon/tools/fidl/][fidlc-source],
 with tests in [//zircon/system/utest/fidl/][fidlc-tests].
 
 The back-end and runtime library locations are based on the target:
 
 Target    | Back-end                                               | Runtime Libraries
 ----------|--------------------------------------------------------|------------------
-C         | [//zircon/system/host/fidl/lib/c_generator.cc][be-c]   | [//zircon/system/ulib/fidl/][rtl-c]
+C         | [//zircon/tools/fidl/lib/c_generator.cc][be-c]         | [//zircon/system/ulib/fidl/][rtl-c]
 C++       | [//garnet/go/src/fidl/compiler/backend/cpp/][be-cpp]   | [//zircon/system/ulib/fidl/][rtl-c] & [//garnet/public/lib/fidl/cpp/][rtl-cpp]
 Go        | [//garnet/go/src/fidl/compiler/backend/golang/][be-go] | [//third_party/go/src/syscall/zx/fidl/][rtl-go]
 Rust      | [//garnet/go/src/fidl/compiler/backend/rust/][be-rust] | [//garnet/public/lib/fidl/rust/fidl/][rtl-rust]
@@ -308,7 +308,7 @@ fidl fmt --library my_library.fidl -i
 
 <!-- xrefs -->
 [cpp-style]: /docs/development/languages/c-cpp/cpp-style.md
-[be-c]: /zircon/system/host/fidl/lib/c_generator.cc
+[be-c]: /zircon/tools/fidl/lib/c_generator.cc
 [be-cpp]: /garnet/go/src/fidl/compiler/backend/cpp/
 [be-dart]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidlgen_dart/
 [be-go]: /garnet/go/src/fidl/compiler/backend/golang/
@@ -316,7 +316,7 @@ fidl fmt --library my_library.fidl -i
 [be-js]: https://chromium.googlesource.com/chromium/src/+/master/build/fuchsia/fidlgen_js/
 [bindings_test-dart]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidl_bindings_test
 [compatibility_test]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidl_compatibility_test
-[fidlc-source]: /zircon/system/host/fidl/
+[fidlc-source]: /zircon/tools/fidl/
 [fidlc-coding-tables-tests]: /zircon/system/utest/fidl-coding-tables/
 [fidlc-compiler-tests]: /zircon/system/utest/fidl-compiler/
 [fidlc-tests]: /zircon/system/utest/fidl/

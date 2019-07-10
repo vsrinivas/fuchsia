@@ -1,0 +1,76 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Copy files into a directory based on a metadata collection.
+#
+# This does a metadata collection as in generated_file() so collect a list
+# of file paths (relative to $root_build_dir).  The copied_files_dir()
+# target is an action() target that copies all those files from the
+# metadata-supplied path to that path's basename in $output_dir.
+#
+# Parameters
+#
+#   * data_deps
+#     - Optional: Usual GN meaning; no effect on what gets copied.
+#     - Type: list(label)
+#
+#   * data_keys
+#     - Required: See generated_file().  The metadata collected be all
+#       path strings relative to $root_build_dir.
+#     - Type: list(string)
+#
+#   deps
+#     - Required: The $data_keys metadata is collected from these targets.
+#     - Type: list(label)
+#
+#   output_dir
+#     - Optional: Directory to copy (actually hard-link) files into.
+#     - Type: path
+#     - Default: "$root_build_dir/$target_name"
+#
+template("copied_files_dir") {
+  main_target = target_name
+  rspfile_target = "_copy_files.$main_target.rsp"
+  rspfile = "$target_gen_dir/$main_target.rsp"
+
+  generated_file(rspfile_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":$main_target" ]
+    outputs = [
+      rspfile,
+    ]
+    output_conversion = "list lines"
+    data_keys = invoker.data_keys
+    forward_variables_from(invoker, [ "deps" ])
+  }
+
+  action(main_target) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "output_dir",
+                             "testonly",
+                             "visibility",
+                           ])
+    deps = [
+      ":$rspfile_target",
+    ]
+    script = "$zx/public/gn/copied_files_dir.sh"
+    depfile = "$target_out_dir/$target_name.d"
+    outputs = [
+      depfile,
+    ]
+    sources = [
+      rspfile,
+    ]
+    if (!defined(output_dir)) {
+      output_dir = "$root_out_dir/$target_name"
+    }
+    args = [
+      rebase_path(output_dir, root_build_dir),
+      rebase_path(depfile, root_build_dir),
+      rebase_path(rspfile, root_build_dir),
+    ]
+  }
+}
