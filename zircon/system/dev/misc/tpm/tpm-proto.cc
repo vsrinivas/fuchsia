@@ -203,7 +203,7 @@ static zx_status_t GetBurstCount(HardwareInterface* iface, Locality loc,
     return ZX_ERR_TIMED_OUT;
 }
 
-// Returns the true/false value of the the STS.EXPECT bit, or < 0 on error
+// Returns the true/false value of the STS.EXPECT bit, or < 0 on error
 static zx_status_t GetStatusExpect(HardwareInterface* iface, Locality loc,
                                    bool* expect) {
     uint32_t status_field;
@@ -215,7 +215,7 @@ static zx_status_t GetStatusExpect(HardwareInterface* iface, Locality loc,
     return ZX_OK;
 }
 
-// Returns the true/false value of the the STS.DATA_AVAIL bit, or < 0 on error
+// Returns the true/false value of the STS.DATA_AVAIL bit, or < 0 on error
 static zx_status_t GetStatusDataAvail(HardwareInterface* iface, Locality loc,
                                       bool* data_avail) {
     uint32_t status_field;
@@ -247,7 +247,7 @@ static zx_status_t AbortCommand(HardwareInterface* iface, Locality loc) {
     return iface->WriteStatus(loc, TPM_STS_CMD_RDY);
 }
 
-// Returns the true/false value of the the ACCESS.ACTIVE bit, or < 0 on error
+// Returns the true/false value of the ACCESS.ACTIVE bit, or < 0 on error
 static zx_status_t GetActiveLocality(HardwareInterface* iface, Locality loc,
                                      bool* active) {
     uint8_t val;
