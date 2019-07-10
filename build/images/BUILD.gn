@@ -494,6 +494,14 @@ declare_args() {
   # list are strings that must match the filename to be included in the update
   # package.
   update_kernels = []
+
+  # Prebuilt bootloader image to be included into update (OTA) package and
+  # paving process.
+  bootloader_prebuilt = ""
+
+  # HW revision of the bootloader to be included into OTA package and paving
+  # process.
+  bootloader_hw_revision = ""
 }
 
 images += [
@@ -546,8 +554,8 @@ action("devmgr_config.txt") {
         "$target_out_dir/system_image.meta/meta.far.merkle"
 
     deps += [
-      "//build/info:latest-commit-date",
       ":system_image.meta",
+      "//build/info:latest-commit-date",
       pkgfs_label,
     ]
     sources += [
@@ -578,7 +586,8 @@ action("devmgr_config.txt") {
     # Add the backstop UTC value from the integration repo latest commit
     args += [
       "--contents",
-      "--entry=devmgr.epoch=" + rebase_path(build_info_files.latest_unix_stamp, root_build_dir),
+      "--entry=devmgr.epoch=" +
+          rebase_path(build_info_files.latest_unix_stamp, root_build_dir),
       "--no-contents",
       "--reset-rewrite",
     ]
@@ -1173,6 +1182,27 @@ if (target_cpu != "arm64" && !use_vboot) {
       ]
     },
   ]
+} else {
+  if (bootloader_prebuilt != "") {
+    images += [
+      {
+        deps = []
+        json = {
+          name = "efi"
+          type = "blk"
+          bootserver_pave = [ "--bootloader" ]
+        }
+        sdk = "bootloader.img"
+        updater = "bootloader"
+        public = [
+          "IMAGE_BOOTLOADER_RAW",
+        ]
+        sources = [
+          "$bootloader_prebuilt$bootloader_hw_revision",
+        ]
+      },
+    ]
+  }
 }
 
 # Pseudo-target to record information about the sizes of filesystems assembled
