@@ -5,10 +5,7 @@
 use {
     failure::Error,
     fidl_fuchsia_bluetooth::{self, Int8},
-    fidl_fuchsia_bluetooth_control::{
-        AdapterInfo, AdapterState, BondingData, BredrData, HostData, LeConnectionParameters,
-        LeData, LocalKey, Ltk, RemoteDevice, RemoteKey, SecurityProperties,
-    },
+    fidl_fuchsia_bluetooth_control::{AdapterInfo, AdapterState, RemoteDevice},
     std::{
         fs::{File, OpenOptions},
         path::Path,
@@ -90,66 +87,6 @@ pub fn clone_host_state(a: &AdapterState) -> AdapterState {
         discovering: discovering,
         discoverable: discoverable,
         local_service_uuids: a.local_service_uuids.clone(),
-    }
-}
-
-/// Clone BondingData
-pub fn clone_bonding_data(bd: &BondingData) -> BondingData {
-    BondingData {
-        identifier: bd.identifier.clone(),
-        local_address: bd.local_address.clone(),
-        name: bd.name.clone(),
-        le: bd.le.as_ref().map(|v| Box::new(clone_le_data(&v))),
-        bredr: bd.bredr.as_ref().map(|v| Box::new(clone_bredr_data(&v))),
-    }
-}
-
-/// Clone HostData
-pub fn clone_host_data(hd: &HostData) -> HostData {
-    HostData { irk: hd.irk.as_ref().map(|v| Box::new(clone_local_key(&v))) }
-}
-
-fn clone_le_conn_params(cp: &LeConnectionParameters) -> LeConnectionParameters {
-    LeConnectionParameters { ..*cp }
-}
-
-fn clone_security_props(sp: &SecurityProperties) -> SecurityProperties {
-    SecurityProperties { ..*sp }
-}
-
-fn clone_remote_key(key: &RemoteKey) -> RemoteKey {
-    RemoteKey { security_properties: clone_security_props(&key.security_properties), ..*key }
-}
-
-fn clone_local_key(key: &LocalKey) -> LocalKey {
-    LocalKey { ..*key }
-}
-
-fn clone_ltk(ltk: &Ltk) -> Ltk {
-    Ltk { key: clone_remote_key(&ltk.key), ..*ltk }
-}
-
-fn clone_le_data(le: &LeData) -> LeData {
-    LeData {
-        address: le.address.clone(),
-        connection_parameters: le
-            .connection_parameters
-            .as_ref()
-            .map(|v| Box::new(clone_le_conn_params(&v))),
-        services: le.services.clone(),
-        ltk: le.ltk.as_ref().map(|v| Box::new(clone_ltk(&v))),
-        irk: le.irk.as_ref().map(|v| Box::new(clone_remote_key(&v))),
-        csrk: le.csrk.as_ref().map(|v| Box::new(clone_remote_key(&v))),
-        ..*le
-    }
-}
-
-fn clone_bredr_data(bredr: &BredrData) -> BredrData {
-    BredrData {
-        address: bredr.address.clone(),
-        services: bredr.services.clone(),
-        link_key: bredr.link_key.as_ref().map(|v| Box::new(clone_ltk(&v))),
-        ..*bredr
     }
 }
 

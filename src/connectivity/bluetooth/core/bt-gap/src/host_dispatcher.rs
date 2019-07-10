@@ -20,7 +20,7 @@ use {
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
         self as bt,
-        util::{clone_bonding_data, clone_host_data, clone_host_info, clone_remote_device},
+        util::{clone_host_info, clone_remote_device},
     },
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon::{self as zx, Duration},
@@ -664,7 +664,7 @@ async fn try_restore_bonds(
     // Load bonding data that use this host's `address` as their "local identity address".
     let opt_data: Option<Vec<_>> = {
         let lock = hd.state.read();
-        lock.stash.list_bonds(address).map(|iter| iter.map(clone_bonding_data).collect())
+        lock.stash.list_bonds(address).map(|iter| iter.cloned().collect())
     };
     let data = match opt_data {
         Some(data) => data,
@@ -693,14 +693,14 @@ fn assign_host_data(
     let data = match stash.get_host_data(address) {
         Some(host_data) => {
             fx_vlog!(1, "restored IRK");
-            clone_host_data(host_data)
+            host_data.clone()
         }
         None => {
             // Generate a new IRK.
             fx_vlog!(1, "generating new IRK");
             let new_data = HostData { irk: Some(Box::new(generate_irk()?)) };
 
-            if let Err(e) = stash.store_host_data(address, clone_host_data(&new_data)) {
+            if let Err(e) = stash.store_host_data(address, new_data.clone()) {
                 fx_log_err!("failed to persist local IRK");
                 return Err(e);
             }
