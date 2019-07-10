@@ -369,6 +369,326 @@ class TestParser : public Parser {
     EXPECT_EQ(env.begin() + 5, env.error_loc);  // Error on first ")".
   }
 
+  void MacTest() {
+    std::string mac_str1 = ":de:AD:beef:ab::CD";  // Any distribution of `:` should be acceptable.
+    std::string mac_str2 = "de:ad:be:ef:ab:cd:";
+    std::string mac_str3 = "00:00:00:01:02:03";  // Leading zeros should be acceptable.
+    // Assuming little-endian for host byte order.
+    std::array<uint8_t, ETH_ALEN> mac{0xcd, 0xab, 0xef, 0xbe, 0xad, 0xde};
+    std::array<uint8_t, ETH_ALEN> mac_leading_zeros{0x03, 0x02, 0x01, 0x00, 0x00, 0x00};
+    bld_.mac_mock.ExpectCall({}, mac, TKZ.HOST);
+    bld_.mac_mock.ExpectCall({}, mac, TKZ.SRC);
+    bld_.mac_mock.ExpectCall({}, mac_leading_zeros, TKZ.DST);
+
+    ExpectSuccess(parse("ether host " + mac_str1, &bld_));
+    ExpectSuccess(parse("ether src host " + mac_str2, &bld_));
+    ExpectSuccess(parse("ether dst host " + mac_str3, &bld_));
+    bld_.verify_and_clear_all();
+
+    bld_.stop_call_mocks();
+    Environment env = TestEnv("ether src deadbeefabcd");
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_EXPECTED_HOST, env.error_cause.c_str());
+    EXPECT_STR_EQ("deadbeefabcd", (**env.error_loc)->get_term().c_str());
+
+    env = TestEnv("ether host");
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_EXPECTED_MAC, env.error_cause.c_str());
+    EXPECT_EQ(env.end(), env.error_loc);
+
+    env = TestEnv("ether host de:ad");
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_MAC_LENGTH, env.error_cause.c_str());
+    EXPECT_STR_EQ("de:ad", (**env.error_loc)->get_term().c_str());
+
+    env = TestEnv("ether host de:::::ad0102030405");
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_MAC_LENGTH, env.error_cause.c_str());
+    EXPECT_STR_EQ("de:::::ad0102030405", (**env.error_loc)->get_term().c_str());
+
+    env = TestEnv("ether host address");
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_MAC_LENGTH, env.error_cause.c_str());
+    EXPECT_STR_EQ("address", (**env.error_loc)->get_term().c_str());
+
+    env = TestEnv("ether host addressofmac");  // 12 characters, so failure is on non-hex digits.
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_EXPECTED_HEX, env.error_cause.c_str());
+    EXPECT_STR_EQ("addressofmac", (**env.error_loc)->get_term().c_str());
+
+    env = TestEnv("ether host 0xaabbccddeeff");
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_MAC_LENGTH, env.error_cause.c_str());
+    EXPECT_STR_EQ("0xaabbccddeeff", (**env.error_loc)->get_term().c_str());
+
+    env = TestEnv("ether host 0x:aa:bb:cc:dd:ee:ff");
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_MAC_LENGTH, env.error_cause.c_str());
+    EXPECT_STR_EQ("0x:aa:bb:cc:dd:ee:ff", (**env.error_loc)->get_term().c_str());
+
+    env = TestEnv("ether host aa-bb-cc-dd-ee-ff");
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_MAC_LENGTH, env.error_cause.c_str());
+    EXPECT_STR_EQ("aa-bb-cc-dd-ee-ff", (**env.error_loc)->get_term().c_str());
+
+    env = TestEnv("ether host 0x1122334455");  // 12 characters.
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_EXPECTED_HEX, env.error_cause.c_str());
+    EXPECT_STR_EQ("0x1122334455", (**env.error_loc)->get_term().c_str());
+  }
+
+  void EthertypeTest() {
+    bld_.ethertype_mock.ExpectCall({}, TKZ.ARP->get_tag<uint16_t>());
+    bld_.ethertype_mock.ExpectCall({}, TKZ.VLAN->get_tag<uint16_t>());
+
+    ExpectSuccess(parse("arp", &bld_));
+    ExpectSuccess(parse("ether proto vlan", &bld_));
+    bld_.verify_and_clear_all();
+
+    bld_.stop_call_mocks();
+    Environment env = TestEnv("ether arp");
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_EXPECTED_ETH_FIELD, env.error_cause.c_str());
+    EXPECT_STR_EQ("arp", (**env.error_loc)->get_term().c_str());
+
+    env = TestEnv("ether");
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_EXPECTED_ETH_FIELD, env.error_cause.c_str());
+    EXPECT_EQ(env.end(), env.error_loc);
+
+    env = TestEnv("ether proto lasers");
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_EXPECTED_ETH_TYPE, env.error_cause.c_str());
+    EXPECT_STR_EQ("lasers", (**env.error_loc)->get_term().c_str());
+  }
+
+  void IpVersionTest() {
+    bld_.ip_version_mock.ExpectCall({}, 4);
+    bld_.ip_version_mock.ExpectCall({}, 6);
+    bld_.ip_version_mock.ExpectCall(444, 4);
+    bld_.ip_version_mock.ExpectCall(666, 6);
+    bld_.disjunction_mock.ExpectCall({}, 444, 666);
+
+    ExpectSuccess(parse("ip", &bld_));
+    ExpectSuccess(parse("ether proto ip6", &bld_));
+    ExpectSuccess(parse("ether proto ip or ip6", &bld_));
+    bld_.verify_and_clear_all();
+
+    bld_.stop_call_mocks();
+    Environment env = TestEnv("proto ip6");
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_EXPECTED_TRANSPORT, env.error_cause.c_str());
+    EXPECT_STR_EQ("ip6", (**env.error_loc)->get_term().c_str());
+  }
+
+  void IpLengthTest() {
+    bld_.ip_pkt_length_mock.ExpectCall({}, 4, 400, TKZ.LESS);
+    bld_.ip_pkt_length_mock.ExpectCall({}, 6, 600, TKZ.GREATER);
+
+    ExpectSuccess(parse("ip less 400", &bld_));
+    ExpectSuccess(parse("ip6 greater 600", &bld_));
+    bld_.verify_and_clear_all();
+
+    bld_.stop_call_mocks();
+    Environment env = TestEnv("ether proto less 400");
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_EXPECTED_ETH_TYPE, env.error_cause.c_str());
+    EXPECT_STR_EQ("less", (**env.error_loc)->get_term().c_str());
+  }
+
+  void HostTest() {
+    std::string ipv4_addr_str = "192.168.42.1";
+    std::string ipv6_addr_str = "2001:4860:4860::8844";
+    // Assuming little-endian for host byte order.
+    uint32_t ipv4_addr = 0xc0a82a01;  // 192.168.42.1.
+    std::array<uint8_t, IP6_ADDR_LEN> ipv6_addr{0x44, 0x88, 0,    0,    0,    0,    0,    0,
+                                                0,    0,    0x60, 0x48, 0x60, 0x48, 0x01, 0x20};
+    bld_.ipv4_address_mock.ExpectCall({}, ipv4_addr, TKZ.HOST);
+    bld_.ipv6_address_mock.ExpectCall({}, ipv6_addr, TKZ.DST);
+    bld_.ipv4_address_mock.ExpectCall({}, ipv4_addr, TKZ.SRC);
+
+    ExpectSuccess(parse("ip host " + ipv4_addr_str, &bld_));
+    ExpectSuccess(parse("ip6 dst host " + ipv6_addr_str, &bld_));
+    ExpectSuccess(parse("src host " + ipv4_addr_str, &bld_));
+    bld_.verify_and_clear_all();
+
+    bld_.stop_call_mocks();
+    Environment env = TestEnv("ip6 host");
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_EXPECTED_IP_ADDR, env.error_cause.c_str());
+    EXPECT_EQ(env.end(), env.error_loc);
+
+    env = TestEnv("ip host 1.1.1.1.1");
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_EXPECTED_IP_ADDR, env.error_cause.c_str());
+    EXPECT_STR_EQ("1.1.1.1.1", (**env.error_loc)->get_term().c_str());
+
+    env = TestEnv("ip6 src host " + ipv4_addr_str);
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_EXPECTED_IPV6_GOT_IPV4, env.error_cause.c_str());
+    EXPECT_STR_EQ(ipv4_addr_str.c_str(), (**env.error_loc)->get_term().c_str());
+
+    env = TestEnv("ip4 src host " + ipv6_addr_str);
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_EXPECTED_IPV4_GOT_IPV6, env.error_cause.c_str());
+    EXPECT_STR_EQ(ipv6_addr_str.c_str(), (**env.error_loc)->get_term().c_str());
+  }
+
+  void PortTest() {
+    std::string ranges_str = "100-200,300,20,ssh";
+    std::vector<PortRange> ranges{{100, 200}, {300, 300}, {20, 20}, {22, 22}};
+    bld_.ports_mock.ExpectCall({}, ranges, TKZ.DST);
+    bld_.ports_mock.ExpectCall({}, ranges, TKZ.PORT);
+    bld_.ip_version_mock.ExpectCall(0, 6);
+    bld_.ports_mock.ExpectCall(1, ranges, TKZ.SRC);
+    bld_.conjunction_mock.ExpectCall({}, 0, 1);
+
+    ExpectSuccess(parse("dst port " + ranges_str, &bld_));
+    ExpectSuccess(parse("port " + ranges_str, &bld_));
+    ExpectSuccess(parse("ip6 src port " + ranges_str, &bld_));
+    bld_.verify_and_clear_all();
+
+    bld_.stop_call_mocks();
+    Environment env = TestEnv("src " + ranges_str);
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_EXPECTED_PORT, env.error_cause.c_str());
+    EXPECT_STR_EQ(ranges_str.c_str(), (**env.error_loc)->get_term().c_str());
+
+    env = TestEnv("port");
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_EXPECTED_PORT_VALUE, env.error_cause.c_str());
+    EXPECT_EQ(env.end(), env.error_loc);
+
+    env = TestEnv("port ,,,");
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ((std::string(ERROR_INVALID_PORT) + " ''.").c_str(), env.error_cause.c_str());
+    EXPECT_STR_EQ(",,,", (**env.error_loc)->get_term().c_str());
+
+    env = TestEnv("port 1,2,random,4");
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ((std::string(ERROR_INVALID_PORT) + " 'random'.").c_str(),
+                  env.error_cause.c_str());
+    EXPECT_STR_EQ("1,2,random,4", (**env.error_loc)->get_term().c_str());
+  }
+
+  void TransTest() {
+    bld_.ip_protocol_mock.ExpectCall({}, 4, IPPROTO_UDP);
+    bld_.ip_protocol_mock.ExpectCall({}, 6, IPPROTO_TCP);
+    bld_.ip_protocol_mock.ExpectCall(0, 4, IPPROTO_ICMP);
+    bld_.ip_protocol_mock.ExpectCall(1, 6, IPPROTO_ICMPV6);
+    bld_.disjunction_mock.ExpectCall({}, 0, 1);
+
+    ExpectSuccess(parse("ip proto udp", &bld_));
+    ExpectSuccess(parse("ip6 tcp", &bld_));
+    ExpectSuccess(parse("icmp", &bld_));
+    bld_.verify_and_clear_all();
+
+    bld_.stop_call_mocks();
+    Environment env = TestEnv("proto");
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_EXPECTED_TRANSPORT, env.error_cause.c_str());
+    EXPECT_EQ(env.end(), env.error_loc);
+
+    env = TestEnv("ip proto transport");
+    ExpectError(parse(&env, &bld_));
+    EXPECT_STR_EQ(ERROR_EXPECTED_TRANSPORT, env.error_cause.c_str());
+    EXPECT_STR_EQ("transport", (**env.error_loc)->get_term().c_str());
+  }
+
+  // Integration tests of full parsing of long filter strings.
+  void FullParseTest1() {
+    std::string filter_str =
+        "not ( dst port 22,8083 or ip6 dst port dbglog,dbgack,65026,65268 or \
+                              proto udp dst port 2345 or ip4 udp dst port 1900 )";
+
+    bld_.ports_mock.ExpectCall(0, std::vector<PortRange>{{22, 22}, {8083, 8083}}, TKZ.DST);
+
+    bld_.ip_version_mock.ExpectCall(1, 6);
+    bld_.ports_mock.ExpectCall(2,
+                               std::vector<PortRange>{{DEBUGLOG_PORT, DEBUGLOG_PORT},
+                                                      {DEBUGLOG_ACK_PORT, DEBUGLOG_ACK_PORT},
+                                                      {65026, 65026},
+                                                      {65268, 65268}},
+                               TKZ.DST);
+    bld_.conjunction_mock.ExpectCall(3, 1, 2);
+
+    bld_.disjunction_mock.ExpectCall(4, 0, 3);
+
+    bld_.ip_protocol_mock.ExpectCall(5, 4, IPPROTO_UDP);
+    bld_.ip_protocol_mock.ExpectCall(6, 6, IPPROTO_UDP);
+    bld_.disjunction_mock.ExpectCall(7, 5, 6);
+    bld_.ports_mock.ExpectCall(8, std::vector<PortRange>{{2345, 2345}}, TKZ.DST);
+    bld_.conjunction_mock.ExpectCall(9, 7, 8);
+
+    bld_.disjunction_mock.ExpectCall(10, 4, 9);
+
+    bld_.ip_protocol_mock.ExpectCall(11, 4, IPPROTO_UDP);
+    bld_.ports_mock.ExpectCall(12, std::vector<PortRange>{{1900, 1900}}, TKZ.DST);
+    bld_.conjunction_mock.ExpectCall(13, 11, 12);
+
+    bld_.disjunction_mock.ExpectCall(14, 10, 13);
+    bld_.negation_mock.ExpectCall({}, 14);
+
+    ExpectSuccess(parse(filter_str, &bld_));
+    bld_.verify_and_clear_all();
+  }
+
+  void FullParseTest2() {
+    std::string filter_str =
+        "ether proto ip proto tcp src port 12-13 and ( port 8 or dst port 9 ) \
+                              and ether host 123456789AbC and ( greater 100 or ip less 80 )";
+
+    bld_.ip_protocol_mock.ExpectCall(0, 4, IPPROTO_TCP);
+    bld_.ports_mock.ExpectCall(1, std::vector<PortRange>{{12, 13}}, TKZ.SRC);
+    bld_.conjunction_mock.ExpectCall(2, 0, 1);
+
+    bld_.ports_mock.ExpectCall(3, std::vector<PortRange>{{8, 8}}, TKZ.PORT);
+    bld_.ports_mock.ExpectCall(4, std::vector<PortRange>{{9, 9}}, TKZ.DST);
+    bld_.disjunction_mock.ExpectCall(5, 3, 4);
+
+    bld_.conjunction_mock.ExpectCall(6, 2, 5);
+
+    bld_.mac_mock.ExpectCall(7, std::array<uint8_t, ETH_ALEN>{0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12},
+                             TKZ.HOST);
+    bld_.conjunction_mock.ExpectCall(8, 6, 7);
+
+    bld_.frame_length_mock.ExpectCall(9, 100, TKZ.GREATER);
+    bld_.ip_pkt_length_mock.ExpectCall(10, 4, 80, TKZ.LESS);
+    bld_.disjunction_mock.ExpectCall(11, 9, 10);
+
+    bld_.conjunction_mock.ExpectCall({}, 8, 11);
+
+    ExpectSuccess(parse(filter_str, &bld_));
+    bld_.verify_and_clear_all();
+  }
+
+  void FullParseTest3() {
+    std::string filter_str =
+        "arp or ( greater 20 and ( ip tcp or ( ( vlan ) ) ) and less 300 ) \
+                              or host 192.168.42.15";
+    uint32_t ipv4_addr = 0xc0a82a0f;  // 192.168.42.15.
+
+    bld_.ethertype_mock.ExpectCall(0, ETH_P_ARP);
+
+    bld_.frame_length_mock.ExpectCall(1, 20, TKZ.GREATER);
+
+    bld_.ip_protocol_mock.ExpectCall(2, 4, IPPROTO_TCP);
+    bld_.ethertype_mock.ExpectCall(3, ETH_P_8021Q);
+    bld_.disjunction_mock.ExpectCall(4, 2, 3);
+
+    bld_.conjunction_mock.ExpectCall(5, 1, 4);
+    bld_.frame_length_mock.ExpectCall(6, 300, TKZ.LESS);
+    bld_.conjunction_mock.ExpectCall(7, 5, 6);
+
+    bld_.disjunction_mock.ExpectCall(8, 0, 7);
+
+    bld_.ipv4_address_mock.ExpectCall(9, ipv4_addr, TKZ.HOST);
+    bld_.disjunction_mock.ExpectCall({}, 8, 9);
+
+    ExpectSuccess(parse(filter_str, &bld_));
+    bld_.verify_and_clear_all();
+  }
+
   explicit TestParser() : Parser(TKZ), bld_(TKZ) { bld_.expect_no_call_all(); }
 
  private:
@@ -400,6 +720,16 @@ NETDUMP_TEST(FrameLengthTest)
 NETDUMP_TEST(NotTest)
 NETDUMP_TEST(CompositionTest)
 NETDUMP_TEST(ParenthesisTest)
+NETDUMP_TEST(MacTest)
+NETDUMP_TEST(EthertypeTest)
+NETDUMP_TEST(IpVersionTest)
+NETDUMP_TEST(IpLengthTest)
+NETDUMP_TEST(HostTest)
+NETDUMP_TEST(PortTest)
+NETDUMP_TEST(TransTest)
+NETDUMP_TEST(FullParseTest1)
+NETDUMP_TEST(FullParseTest2)
+NETDUMP_TEST(FullParseTest3)
 
 #undef NETDUMP_TEST
 
