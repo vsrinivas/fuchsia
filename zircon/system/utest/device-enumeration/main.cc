@@ -117,6 +117,8 @@ TEST_F(DeviceEnumerationTest, Vim2Test) {
         "vim-thermal/vim-thermal",
         "gpio-light/gpio-light",
         "wifi/broadcom-wlanphy",
+        "sys/platform/05:02:b/aml-mailbox",
+        "class/thermal/000",
     };
 
     ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

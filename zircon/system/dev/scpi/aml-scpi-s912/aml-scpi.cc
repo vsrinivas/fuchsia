@@ -87,6 +87,7 @@ zx_status_t AmlSCPI::ScpiGetDvfsIdx(uint8_t power_domain, uint16_t* idx) {
     struct {
         uint32_t status;
         uint8_t idx;
+        uint8_t padding[3];
     } __PACKED aml_dvfs_idx_info;
 
     if (!idx || power_domain >= fuchsia_hardware_thermal_MAX_DVFS_DOMAINS) {
@@ -110,6 +111,7 @@ zx_status_t AmlSCPI::ScpiSetDvfsIdx(uint8_t power_domain, uint16_t idx) {
     struct {
         uint8_t power_domain;
         uint16_t idx;
+        uint8_t padding;
     } __PACKED aml_dvfs_idx_info;
 
     if (power_domain >= fuchsia_hardware_thermal_MAX_DVFS_DOMAINS) {
