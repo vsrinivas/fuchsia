@@ -54,6 +54,7 @@
         },
         "fuchsia.test": {
             "injected-services": {
+                "fuchsia.devicesettings.DeviceSettingsManager": "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/device_settings_manager.cmx",
                 "fuchsia.net.oldhttp.HttpService": "fuchsia-pkg://fuchsia.com/http#meta/http.cmx"
             },
             "system-services": [
@@ -73,6 +74,7 @@
             "packages"
         ],
         "services": [
+            "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.net.NameLookup",
             "fuchsia.net.oldhttp.HttpService",
             "fuchsia.sys.Launcher",
