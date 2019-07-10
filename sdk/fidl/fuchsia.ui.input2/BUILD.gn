@@ -9,7 +9,12 @@ fidl("fuchsia.ui.input2") {
 
   sources = [
     "events.fidl",
+    "keyboard.fidl",
     "keys.fidl",
     "modifiers.fidl",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.views",
   ]
 }
