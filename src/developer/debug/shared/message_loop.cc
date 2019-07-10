@@ -47,7 +47,7 @@ void MessageLoop::Run() {
   RunImpl();
 }
 
-void MessageLoop::PostTask(FileLineFunction file_line, std::function<void()> fn) {
+void MessageLoop::PostTask(FileLineFunction file_line, fit::function<void()> fn) {
   PostTaskInternal(std::move(file_line), std::move(fn));
 }
 
@@ -63,7 +63,7 @@ void MessageLoop::RunTask(FileLineFunction file_line, fit::pending_task pending_
 }
 
 void MessageLoop::PostTimer(FileLineFunction file_line, uint64_t delta_ms,
-                            std::function<void()> fn) {
+                            fit::function<void()> fn) {
   constexpr uint64_t kMsToNs = 1000000;
 
   bool needs_awaken;

@@ -20,9 +20,7 @@ class BufferedFD final : public FDWatcher, public StreamBuffer::Writer {
   BufferedFD();
   ~BufferedFD();
 
-  // A MessageLoop must already be set up on the current threa.
-  //
-  // Returns true on success.
+  // A MessageLoop must already be set up on the current thread. Returns true on success.
   bool Init(fxl::UniqueFD fd);
 
   void set_data_available_callback(DataAvailableCallback cb) { callback_ = cb; }

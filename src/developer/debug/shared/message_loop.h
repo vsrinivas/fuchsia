@@ -91,7 +91,7 @@ class MessageLoop : public fit::executor, public fit::suspended_task::resolver {
   void Run();
 
   // Posts the given work to the message loop. It will be added to the end of the work queue.
-  void PostTask(FileLineFunction file_line, std::function<void()> fn);
+  void PostTask(FileLineFunction file_line, fit::function<void()> fn);
   void PostTask(FileLineFunction file_line, fit::pending_task task);
 
   // Runs the given task immediately. If it reports a pending completion it will complete
@@ -104,7 +104,7 @@ class MessageLoop : public fit::executor, public fit::suspended_task::resolver {
 
   // Set a task to run after a certain number of miliseconds have elapsed. Granularity is hard to
   // guarantee but the timer shouldn't fire earlier than expected.
-  void PostTimer(FileLineFunction file_line, uint64_t delta_ms, std::function<void()> fn);
+  void PostTimer(FileLineFunction file_line, uint64_t delta_ms, fit::function<void()> fn);
 
   // Starts watching the given file descriptor in the given mode. Returns a WatchHandle that scopes
   // the watch operation (when the handle is destroyed the watcher is unregistered).
@@ -166,7 +166,7 @@ class MessageLoop : public fit::executor, public fit::suspended_task::resolver {
   // task_queue_ of pending runnable tasks.
   struct Task {
     Task() = default;
-    Task(FileLineFunction fl, std::function<void()> fn)
+    Task(FileLineFunction fl, fit::function<void()> fn)
         : file_line(std::move(fl)), task_fn(std::move(fn)) {}
     Task(FileLineFunction fl, fit::pending_task pend)
         : file_line(std::move(fl)), pending(std::move(pend)) {}
@@ -174,7 +174,7 @@ class MessageLoop : public fit::executor, public fit::suspended_task::resolver {
     FileLineFunction file_line;
 
     // Only one of these two members will be non-null.
-    std::function<void()> task_fn;
+    fit::function<void()> task_fn;
     fit::pending_task pending;
   };
 

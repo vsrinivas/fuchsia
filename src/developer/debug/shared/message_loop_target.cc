@@ -58,6 +58,8 @@ zx_status_t MessageLoopTarget::InitTarget() {
 }
 
 void MessageLoopTarget::Cleanup() {
+  DEBUG_LOG(MessageLoop) << "Cleaning up the message loop.";
+
   // We need to remove the signal/exception handlers before the message loop
   // goes away.
   signal_handlers_.clear();
