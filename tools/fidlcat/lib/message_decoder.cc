@@ -37,12 +37,14 @@ bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t 
     return false;
   }
   const fidl_message_header_t* header = reinterpret_cast<const fidl_message_header_t*>(bytes);
-  const InterfaceMethod* method = loader_->GetByOrdinal(header->ordinal);
-  if (method == nullptr) {
-    FXL_LOG(WARNING) << "Protocol method with ordinal 0x" << std::hex << header->ordinal
-                     << " not found";
+  const std::vector<const InterfaceMethod*>* methods = loader_->GetByOrdinal(header->ordinal);
+  if (methods == nullptr || methods->empty()) {
+    FXL_LOG(WARNING) << "No protocol method with ordinal 0x" << std::hex << header->ordinal
+                     << " found";
     return false;
   }
+
+  const InterfaceMethod* method = (*methods)[0];
 
   std::unique_ptr<Object> decoded_request;
   bool matched_request =

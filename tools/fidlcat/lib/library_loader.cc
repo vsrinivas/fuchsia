@@ -209,6 +209,7 @@ InterfaceMethod::InterfaceMethod(const Interface& interface, const rapidjson::Va
       ordinal_(std::strtoll(value["ordinal"].GetString(), nullptr, 10)),
       // TODO(FIDL-524): Remove post-migration.
       old_ordinal_(std::strtoll(value["generated_ordinal"].GetString(), nullptr, 10) << 32),
+      is_composed_(value["is_composed"].GetBool()),
       name_(value["name"].GetString()) {
   if (value_["has_request"].GetBool()) {
     request_ = std::unique_ptr<Struct>(new Struct(interface.enclosing_library(), value));
@@ -238,7 +239,7 @@ bool Interface::GetMethodByFullName(const std::string& name,
 }
 
 Library::Library(LibraryLoader* enclosing_loader, rapidjson::Document& document,
-                 std::map<Ordinal64, const InterfaceMethod*>& index)
+                 std::map<Ordinal64, std::unique_ptr<std::vector<const InterfaceMethod*>>>& index)
     : enclosing_loader_(enclosing_loader), backing_document_(std::move(document)) {
   auto interfaces_array = backing_document_["interface_declarations"].GetArray();
   interfaces_.reserve(interfaces_array.Size());

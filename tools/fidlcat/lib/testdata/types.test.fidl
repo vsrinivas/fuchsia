@@ -127,6 +127,7 @@ struct handle_struct {
     handle<channel> h3;
 };
 
+[FragileBase]
 protocol ParamProtocol {
     Method();
 };

@@ -75,7 +75,10 @@ TEST_F(WireParserTest, ParseSingleString) {
 
   fidl_message_header_t header = message.header();
 
-  const InterfaceMethod* method = loader_->GetByOrdinal(header.ordinal);
+  const std::vector<const InterfaceMethod*>* methods = loader_->GetByOrdinal(header.ordinal);
+  ASSERT_NE(methods, nullptr);
+  ASSERT_TRUE(!methods->empty());
+  const InterfaceMethod* method = (*methods)[0];
   ASSERT_NE(method, nullptr);
   ASSERT_EQ("Grob", method->name());
   std::unique_ptr<fidlcat::Object> decoded_request;
@@ -112,7 +115,10 @@ TEST_F(WireParserTest, ParseSingleString) {
                                                                                                 \
     fidl_message_header_t header = message.header();                                            \
                                                                                                 \
-    const InterfaceMethod* method = loader_->GetByOrdinal(header.ordinal);                      \
+    const std::vector<const InterfaceMethod*>* methods = loader_->GetByOrdinal(header.ordinal); \
+    ASSERT_NE(methods, nullptr);                                                                \
+    ASSERT_TRUE(!methods->empty());                                                          \
+    const InterfaceMethod* method = (*methods)[0];                                              \
     ASSERT_NE(method, nullptr);                                                                 \
     ASSERT_EQ(#_iface, method->name());                                                         \
                                                                                                 \
@@ -942,7 +948,8 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
           ],
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
-          "has_response": false
+          "has_response": false,
+          "is_composed": false
         }
       ]
     }
@@ -968,7 +975,11 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
 
   fidl_message_header_t header = message.header();
 
-  const InterfaceMethod* method = loader.GetByOrdinal(header.ordinal);
+  const std::vector<const InterfaceMethod*>* methods = loader.GetByOrdinal(header.ordinal);
+  ASSERT_NE(methods, nullptr);
+  ASSERT_TRUE(!methods->empty());
+
+  const InterfaceMethod* method = (*methods)[0];
   // If this is null, you probably have to update the schema above.
   ASSERT_NE(method, nullptr);
 

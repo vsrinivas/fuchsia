@@ -26,9 +26,9 @@
 // following, if they have a fidl::Message:
 //
 // fidl_message_header_t header = message.header();
-// const InterfaceMethod* method = loader_->GetByOrdinal(header.ordinal);
+// const std::vector<const InterfaceMethod*>* methods = loader_->GetByOrdinal(header.ordinal);
 // rapidjson::Document actual;
-// fidlcat::RequestToJSON(method, message, actual);
+// fidlcat::RequestToJSON(methods->at(0), message, actual);
 //
 // |actual| will then contain the contents of the message in JSON
 // (human-readable) format.
@@ -277,6 +277,7 @@ class InterfaceMethod {
   const Interface& enclosing_interface() const { return enclosing_interface_; }
   Ordinal64 ordinal() const { return ordinal_; }
   Ordinal64 old_ordinal() const { return old_ordinal_; }
+  bool is_composed() const { return is_composed_; }
   std::string name() const { return name_; }
   Struct* request() const {
     if (request_ != nullptr) {
@@ -303,6 +304,7 @@ class InterfaceMethod {
   const rapidjson::Value& value_;
   const Ordinal64 ordinal_;
   const Ordinal64 old_ordinal_;
+  const bool is_composed_;
   const std::string name_;
   std::unique_ptr<Struct> request_;
   std::unique_ptr<Struct> response_;
@@ -318,11 +320,23 @@ class Interface {
   const Library& enclosing_library() const { return enclosing_library_; }
   std::string_view name() const { return name_; }
 
-  void AddMethodsToIndex(std::map<Ordinal64, const InterfaceMethod*>& index) {
+  void AddMethodsToIndex(
+      std::map<Ordinal64, std::unique_ptr<std::vector<const InterfaceMethod*>>>& index) {
     for (size_t i = 0; i < interface_methods_.size(); i++) {
       const InterfaceMethod* method = interface_methods_[i].get();
-      index[method->ordinal()] = method;
-      index[method->old_ordinal()] = method;
+      if (index[method->ordinal()] == nullptr) {
+        index[method->ordinal()] = std::make_unique<std::vector<const InterfaceMethod*>>();
+        index[method->old_ordinal()] = std::make_unique<std::vector<const InterfaceMethod*>>();
+      }
+      // Ensure composed methods come after non-composed methods.  The fidlcat
+      // libraries pick the first one they find.
+      if (method->is_composed()) {
+        index[method->ordinal()]->push_back(method);
+        index[method->old_ordinal()]->push_back(method);
+      } else {
+        index[method->ordinal()]->insert(index[method->ordinal()]->begin(), method);
+        index[method->old_ordinal()]->insert(index[method->old_ordinal()]->begin(), method);
+      }
     }
   }
 
@@ -369,7 +383,7 @@ class Library {
 
  private:
   Library(LibraryLoader* enclosing_loader, rapidjson::Document& document,
-          std::map<Ordinal64, const InterfaceMethod*>& index);
+          std::map<Ordinal64, std::unique_ptr<std::vector<const InterfaceMethod*>>>& index);
 
   // Decode all the values from the JSON definition.
   void DecodeTypes();
@@ -397,12 +411,16 @@ class LibraryLoader {
   LibraryLoader& operator=(const LibraryLoader&) = delete;
   LibraryLoader(const LibraryLoader&) = delete;
 
-  // Returns true and sets **method if the ordinal was present in the map, and
-  // false otherwise.
-  const InterfaceMethod* GetByOrdinal(Ordinal64 ordinal) {
+  // Returns a pointer to a set of methods that have this ordinal.  There may be
+  // more than one if the method was composed into multiple protocols.  For
+  // convenience, the methods that are not composed are at the front of the
+  // vector.  Returns |nullptr| if there is no such method.  The returned
+  // pointer continues to be owned by the LibraryLoader, and should not be
+  // deleted.
+  const std::vector<const InterfaceMethod*>* GetByOrdinal(Ordinal64 ordinal) {
     auto m = ordinal_map_.find(ordinal);
     if (m != ordinal_map_.end()) {
-      return m->second;
+      return m->second.get();
     }
     return nullptr;
   }
@@ -437,7 +455,7 @@ class LibraryLoader {
   }
 
   std::map<std::string, std::unique_ptr<Library>> representations_;
-  std::map<Ordinal64, const InterfaceMethod*> ordinal_map_;
+  std::map<Ordinal64, std::unique_ptr<std::vector<const InterfaceMethod*>>> ordinal_map_;
 };
 
 }  // namespace fidlcat

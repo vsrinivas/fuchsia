@@ -103,6 +103,7 @@ source_set("tests") {
 action("json_for_test") {
   deps = [
     ":fidl($fidl_toolchain)",
+    ":fidl-composed($fidl_toolchain)",
     ":fidl-sys($fidl_toolchain)",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp/test:frobinator",
@@ -121,6 +122,8 @@ action("json_for_test") {
     rebase_path(root_build_dir) +
         "/fidling/gen/tools/fidlcat/lib/fidl.fidl.json",
     rebase_path(root_build_dir) +
+        "/fidling/gen/tools/fidlcat/lib/fidl-composed.fidl.json",
+    rebase_path(root_build_dir) +
         "/fidling/gen/tools/fidlcat/lib/fidl-sys.fidl.json",
   ]
 }
@@ -131,6 +134,18 @@ fidl("fidl") {
   sources = [
     "testdata/empty.test.fidl",
     "testdata/types.test.fidl",
+  ]
+}
+
+fidl("fidl-composed") {
+  name = "test.fidlcat.composedinto"
+
+  sources = [
+    "testdata/composed_into.test.fidl",
+  ]
+
+  deps = [
+    ":fidl",
   ]
 }
 
