@@ -43,7 +43,7 @@ zx_status_t FvmInfo::Reset(size_t disk_size, size_t slice_size) {
     xprintf("fvm_init: Slice Count: %" PRIu64 ", size: %" PRIu64 "\n", sb->pslice_count,
             sb->slice_size);
     xprintf("fvm_init: Vpart offset: %zu, length: %zu\n", fvm::PartitionTable::kOffset,
-            fvm::VPartitionTable::kLength);
+            fvm::PartitionTable::kLength);
     xprintf("fvm_init: Atable offset: %zu, length: %zu\n", fvm::AllocationTable::kOffset,
             fvm::AllocationTable::Length(disk_size, slice_size));
     xprintf("fvm_init: Backup meta starts at: %zu\n", fvm::BackupStart(disk_size, slice_size));
