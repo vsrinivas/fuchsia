@@ -260,8 +260,26 @@ class SetupTargetObserver : public zxdb::TargetObserver {
 };
 
 void InterceptionWorkflow::Filter(const std::vector<std::string>& filter, KoidFunction and_then) {
+  std::set<std::string> filter_set(filter.begin(), filter.end());
+
+  for (auto it = filters_.begin(); it != filters_.end();) {
+    if (filter_set.find((*it)->pattern()) != filter_set.end()) {
+      filter_set.erase((*it)->pattern());
+      ++it;
+    } else {
+      session_->system().DeleteFilter(*it);
+      it = filters_.erase(it);
+    }
+  }
+
   zxdb::JobContext* default_job = session_->system().GetJobContexts()[0];
-  default_job->SendAndUpdateFilters(filter);
+
+  for (const auto& pattern : filter_set) {
+    filters_.push_back(session_->system().CreateNewFilter());
+    filters_.back()->SetPattern(pattern);
+    filters_.back()->SetJob(default_job);
+  }
+
   GetTarget()->AddObserver(new SetupTargetObserver(std::move(and_then)));
   AddObserver(GetTarget());
 }

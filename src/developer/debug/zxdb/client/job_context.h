@@ -71,10 +71,6 @@ class JobContext : public ClientObject {
   // executed when the detach is complete (or fails).
   virtual void Detach(Callback callback) = 0;
 
-  // Set filters for this job. TODO: Remove this as soon as fidlcat can use the
-  // object model.
-  virtual void SendAndUpdateFilters(std::vector<std::string> filters) = 0;
-
   // Provides the setting schema for this object.
   static fxl::RefPtr<SettingSchema> GetSchema();
 

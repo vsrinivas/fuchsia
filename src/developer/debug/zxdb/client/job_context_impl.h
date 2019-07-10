@@ -45,6 +45,9 @@ class JobContextImpl : public JobContext, public SettingStoreObserver {
   // If the job is not running, this will do nothing.
   void ImplicitlyDetach();
 
+  // Same as the two-argument version below but forces an update if the last one failed.
+  void SendAndUpdateFilters(std::vector<std::string> filters);
+
   // JobContext implementation:
   State GetState() const override;
   Job* GetJob() const override;
@@ -52,7 +55,6 @@ class JobContextImpl : public JobContext, public SettingStoreObserver {
   void AttachToSystemRoot(Callback callback) override;
   void AttachToComponentRoot(Callback callback) override;
   void Detach(Callback callback) override;
-  void SendAndUpdateFilters(std::vector<std::string> filters) override;
 
   // SettingStoreObserver implementation
   void OnSettingChanged(const SettingStore&, const std::string& setting_name) override;

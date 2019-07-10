@@ -12,6 +12,7 @@
 #include "src/developer/debug/shared/buffered_fd.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/client/breakpoint.h"
+#include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/process_observer.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -179,6 +180,7 @@ class InterceptionWorkflow {
 
   debug_ipc::BufferedFD buffer_;
   zxdb::Session* session_;
+  std::vector<zxdb::Filter*> filters_;
   bool delete_session_;
   debug_ipc::PlatformMessageLoop* loop_;
   bool delete_loop_;
