@@ -64,7 +64,9 @@ class TileChrome extends StatelessWidget {
                   ? EdgeInsets.all(_kBorderSize)
                   : null,
               color: focused ? Colors.white : Colors.grey,
-              child: child ?? Container(color: Colors.transparent),
+              child: ClipRect(
+                child: child ?? Container(color: Colors.transparent),
+              ),
             ),
           ),
 
