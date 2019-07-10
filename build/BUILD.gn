@@ -124,6 +124,6 @@ group("system_deprecated_data_allowlist") {
     "//src/connectivity/wlan/wlanstack",
     "//topaz/bin/datetime_settings",
     "//topaz/bin/settings",
-    "//topaz/public/dart/fuchsia_webview_flutter/examples/webview_mod",
+    "//topaz/public/dart/fuchsia_webview_flutter/examples/webview_mod:webview_mod_pkg",
   ]
 }
