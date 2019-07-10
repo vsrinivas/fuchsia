@@ -133,8 +133,7 @@ impl Ipv6ExtensionHeaderImpl {
         context: &Ipv6ExtensionHeaderParsingContext,
     ) -> Result<(u8, u8), Ipv6ExtensionHeaderParsingError> {
         let next_header = data
-            .take_front(1)
-            .map(|x| x[0])
+            .take_byte_front()
             .ok_or_else(|| Ipv6ExtensionHeaderParsingError::BufferExhausted)?;
 
         // Make sure we recognize the next header.
@@ -150,8 +149,7 @@ impl Ipv6ExtensionHeaderImpl {
         }
 
         let hdr_ext_len = data
-            .take_front(1)
-            .map(|x| x[0])
+            .take_byte_front()
             .ok_or_else(|| Ipv6ExtensionHeaderParsingError::BufferExhausted)?;
 
         Ok((next_header, hdr_ext_len))
@@ -619,7 +617,7 @@ where
         context: &mut Self::Context,
     ) -> Result<Option<Option<Self::Record>>, Self::Error> {
         // If we have no more bytes left, we are done.
-        let kind = match data.take_front(1).map(|x| x[0]) {
+        let kind = match data.take_byte_front() {
             None => return Ok(None),
             Some(k) => k,
         };
@@ -642,8 +640,7 @@ where
         }
 
         let len = data
-            .take_front(1)
-            .map(|x| x[0])
+            .take_byte_front()
             .ok_or_else(|| ExtensionHeaderOptionParsingError::BufferExhausted)?;
 
         let data = data

@@ -1157,7 +1157,7 @@ pub(crate) mod options {
         // For an explanation of this format, see the "Options" section of
         // https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_segment_structure
         loop {
-            let kind = match bytes.take_front(1).map(|x| x[0]) {
+            let kind = match bytes.take_byte_front() {
                 None => return Ok(None),
                 Some(k) => {
                     // Can't do pattern matching with associated constants,
@@ -1170,7 +1170,7 @@ pub(crate) mod options {
                     k
                 }
             };
-            let len = match bytes.take_front(1).map(|x| x[0]) {
+            let len = match bytes.take_byte_front() {
                 None => return Err(OptionParseErr::Internal),
                 Some(len) => (len as usize) * O::OPTION_LEN_MULTIPLIER,
             };
