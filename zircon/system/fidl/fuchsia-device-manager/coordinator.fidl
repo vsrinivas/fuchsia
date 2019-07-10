@@ -99,6 +99,11 @@ protocol DeviceController {
     /// interface channel will close instead of returning a result.
     Unbind();
 
+    /// Ask the devhost to complete the removal of this device, which previously had
+    /// invoked |ScheduleRemove|. This is a special case that can be removed
+    /// once |device_remove| invokes |unbind|.
+    CompleteRemoval();
+
     /// Ask the devhost to remove this device.  On success, the remote end of
     /// this interface channel will close instead of returning a result.
     RemoveDevice();
@@ -180,6 +185,13 @@ protocol Coordinator {
                        string:DEVICE_PATH_MAX? driver_path,
                        string:DEVICE_ARGS_MAX? args, handle<channel>? client_remote)
         -> (zx.status status, LocalDeviceId local_device_id);
+
+    /// Requests the devcoordinator schedule the removal of this device,
+    /// and the unbinding of its children.
+    ScheduleRemove();
+
+    /// Sent as the response to |Unbind| or |CompleteRemoval|.
+    UnbindDone();
 
     /// Record the removal of this device.
     RemoveDevice() -> (zx.status status);

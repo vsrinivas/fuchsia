@@ -62,6 +62,9 @@ constexpr char kSystemFirmwarePath[] = "/system/lib/firmware";
 constexpr char kItemsPath[] = "/bootsvc/" fuchsia_boot_Items_Name;
 constexpr char kRootJobPath[] = "/bootsvc/" fuchsia_boot_RootJob_Name;
 
+// TODO(jocelyndang): this can be removed once we switch to using the unbind tasks.
+constexpr bool kUseUnbindTasks = false;
+
 // Tells VFS to exit by shutting down the fshost. Note that this is called from
 // multiple different locations; during suspension, and in a low-memory
 // situation. Currently, both of these calls happen on the same dispatcher
@@ -615,6 +618,10 @@ zx_status_t Coordinator::MakeVisible(const fbl::RefPtr<Device>& dev) {
   return ZX_OK;
 }
 
+void Coordinator::ScheduleRemove(const fbl::RefPtr<Device>& dev) {
+  dev->RequestUnbindTask(false /* do_unbind */);
+}
+
 // Remove device from parent
 // forced indicates this is removal due to a channel close
 // or process exit, which means we should remove all other
@@ -646,9 +653,14 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
   dev->CompleteSuspend(ZX_OK);
 
   if (dev->proxy()) {
-    zx_status_t r = dh_send_remove_device(dev->proxy().get());
-    if (r != ZX_OK) {
-      log(ERROR, "devcoordinator: failed to send message in dc_remove_device: %d\n", r);
+    if (!kUseUnbindTasks) {
+      zx_status_t r = dh_send_remove_device(dev->proxy().get());
+      if (r != ZX_OK) {
+        log(ERROR, "devcoordinator: failed to send message in dc_remove_device: %d\n", r);
+      }
+    } else if (forced) {
+      // If it was not a forced removal, the device's unbind task would schedule the proxy unbind.
+      ScheduleRemove(dev->proxy());
     }
   }
 

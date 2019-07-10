@@ -44,6 +44,7 @@ class DeviceControllerConnection
   void RemoveDevice(RemoveDeviceCompleter::Sync _completer) override;
   void Suspend(uint32_t flags, SuspendCompleter::Sync _completer) override;
   void Unbind(UnbindCompleter::Sync _completer) override;
+  void CompleteRemoval(CompleteRemovalCompleter::Sync _completer) override;
   void CompleteCompatibilityTests(llcpp::fuchsia::device::manager::CompatibilityTestStatus status,
                                   CompleteCompatibilityTestsCompleter::Sync _completer) override;
 

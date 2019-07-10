@@ -30,6 +30,7 @@ void SuspendTask::Run() {
       case Device::State::kDead:
       case Device::State::kSuspended:
         continue;
+      case Device::State::kUnbinding:
       case Device::State::kSuspending:
       case Device::State::kActive:
         break;
@@ -49,12 +50,21 @@ void SuspendTask::Run() {
       case Device::State::kDead:
       case Device::State::kSuspended:
         break;
+      case Device::State::kUnbinding:
       case Device::State::kSuspending:
       case Device::State::kActive: {
         AddDependency(device_->proxy()->RequestSuspendTask(flags_));
         return;
       }
     }
+  }
+
+  // The device is about to be unbound, wait for it to complete.
+  if (device_->state() == Device::State::kUnbinding) {
+    auto unbind_task = device_->GetActiveUnbind();
+    ZX_ASSERT(unbind_task != nullptr);
+    AddDependency(unbind_task);
+    return;
   }
 
   // Check if this device is not in a devhost.  This happens for the

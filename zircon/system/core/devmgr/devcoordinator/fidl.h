@@ -24,6 +24,7 @@ zx_status_t dh_send_bind_driver(const Device* dev, const char* libname, zx::vmo 
 zx_status_t dh_send_connect_proxy(const Device* dev, zx::channel proxy);
 zx_status_t dh_send_suspend(const Device* dev, uint32_t flags);
 zx_status_t dh_send_unbind(const Device* dev);
+zx_status_t dh_send_complete_removal(const Device* dev);
 zx_status_t dh_send_complete_compatibility_tests(const Device* dev, zx_status_t test_status_);
 zx_status_t dh_send_create_composite_device(Devhost* dh, const Device* composite_dev,
                                             const CompositeDevice& composite,

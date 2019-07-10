@@ -31,6 +31,7 @@ class Devhost;
 struct Devnode;
 class SuspendContext;
 class SuspendTask;
+class UnbindTask;
 
 // clang-format off
 
@@ -259,10 +260,19 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
   // or after it becomes visible.
   zx_status_t SignalReadyForBind(zx::duration delay = zx::sec(0));
 
-  using SuspendCompletion = fit::function<void(zx_status_t)>;
+  using SuspendCompletion = fit::callback<void(zx_status_t)>;
   // Issue a Suspend request to this device.  When the response comes in, the
   // given completion will be invoked.
   zx_status_t SendSuspend(uint32_t flags, SuspendCompletion completion);
+
+  using UnbindCompletion = fit::callback<void(zx_status_t)>;
+  // Issue an Unbind request to this device. This is equivalent to running the unbind hook
+  // of a device followed by a CompleteRemoval request
+  // When the response comes in, the given completion will be invoked.
+  zx_status_t SendUnbind(UnbindCompletion completion);
+  // Issue a CompleteRemoval request to this device. When the response comes in, the
+  // given completion will be invoked.
+  zx_status_t SendCompleteRemoval(UnbindCompletion completion);
 
   // Break the relationship between this device object and its parent
   void DetachFromParent();
@@ -322,6 +332,8 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
   }
   void AddMetadata(fbl::unique_ptr<Metadata> md) { metadata_.push_front(std::move(md)); }
 
+  // Returns the in-progress suspend task if it exists, nullptr otherwise.
+  fbl::RefPtr<SuspendTask> GetActiveSuspend() { return active_suspend_; }
   // Creates a new suspend task if necessary and returns a reference to it.
   // If one is already in-progress, a reference to it is returned instead
   fbl::RefPtr<SuspendTask> RequestSuspendTask(uint32_t suspend_flags);
@@ -329,6 +341,17 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
   // only exposed currently because RemoveDevice is on Coordinator instead of
   // Device.
   void CompleteSuspend(zx_status_t status);
+
+  // Returns the in-progress unbind task if it exists, nullptr otherwise.
+  // Unbind tasks are used to facilitate |Unbind| as well as |CompleteRemoval| requests.
+  fbl::RefPtr<UnbindTask> GetActiveUnbind() { return active_unbind_; }
+  // Creates a new unbind task if necessary and returns a reference to it.
+  // If one is already in-progress, a reference to it is returned instead.
+  // If |do_unbind| is true, an |Unbind| request will be sent to the device,
+  // otherwise a |CompleteRemoval| request will be sent.
+  fbl::RefPtr<UnbindTask> RequestUnbindTask(bool do_unbind = true);
+  // Run the completion for the outstanding unbind, if any.
+  zx_status_t CompleteUnbind();
 
   zx_status_t DriverCompatibiltyTest();
 
@@ -353,6 +376,7 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
     kActive,
     kSuspending,  // The devhost is in the process of suspending the device.
     kSuspended,
+    kUnbinding,   // The devhost is in the process of unbinding the device.
     kDead,        // The device has been remove()'d
   };
 
@@ -456,6 +480,13 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
   // completed.  It will likely mark |active_suspend_| as completed and clear
   // it.
   SuspendCompletion suspend_completion_;
+
+  // If an unbind is in-progress, this task represents it.
+  fbl::RefPtr<UnbindTask> active_unbind_;
+  // If an unbind is in-progress, this completion will be invoked when it is
+  // completed. It will likely mark |active_unbind_| as completed and clear
+  // it.
+  UnbindCompletion unbind_completion_;
 
   // For attaching as an open connection to the proxy device,
   // or once the device becomes visible.

@@ -149,6 +149,10 @@ void DeviceControllerConnection::Unbind(UnbindCompleter::Sync completer) {
   devhost_device_unbind(this->dev());
 }
 
+void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync completer) {
+  // TODO(jocelyndang): implement this.
+}
+
 DeviceControllerConnection::DeviceControllerConnection(fbl::RefPtr<zx_device> dev, zx::channel rpc)
     : dev_(std::move(dev)) {
   dev_->rpc = zx::unowned_channel(rpc);

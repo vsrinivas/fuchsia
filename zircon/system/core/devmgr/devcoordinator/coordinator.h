@@ -28,6 +28,7 @@
 #include "driver.h"
 #include "metadata.h"
 #include "suspend-task.h"
+#include "unbind-task.h"
 #include "vmo-writer.h"
 
 namespace devmgr {
@@ -157,6 +158,8 @@ class Coordinator {
                         const uint64_t* props_data, size_t props_count, fbl::StringPiece name,
                         uint32_t protocol_id, fbl::StringPiece driver_path, fbl::StringPiece args,
                         bool invisible, zx::channel client_remote, fbl::RefPtr<Device>* new_device);
+  // Begin scheduling for removal of the device and unbinding of its children.
+  void ScheduleRemove(const fbl::RefPtr<Device>& dev);
   zx_status_t RemoveDevice(const fbl::RefPtr<Device>& dev, bool forced);
   zx_status_t MakeVisible(const fbl::RefPtr<Device>& dev);
   zx_status_t BindDevice(const fbl::RefPtr<Device>& dev, fbl::StringPiece drvlibname,

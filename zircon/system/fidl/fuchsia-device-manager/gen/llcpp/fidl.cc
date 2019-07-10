@@ -973,6 +973,8 @@ extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerConnectProxy
 [[maybe_unused]]
 constexpr uint64_t kDeviceController_Unbind_Ordinal = 1925042818lu << 32;
 [[maybe_unused]]
+constexpr uint64_t kDeviceController_CompleteRemoval_Ordinal = 357886888lu << 32;
+[[maybe_unused]]
 constexpr uint64_t kDeviceController_RemoveDevice_Ordinal = 98258146lu << 32;
 [[maybe_unused]]
 constexpr uint64_t kDeviceController_Suspend_Ordinal = 1150324762lu << 32;
@@ -1151,6 +1153,25 @@ zx_status_t DeviceController::Call::Unbind(zx::unowned_channel _client_end) {
   _request._hdr.ordinal = kDeviceController_Unbind_Ordinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(UnbindRequest));
   ::fidl::DecodedMessage<UnbindRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    return _encode_request_result.status;
+  }
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+}
+
+
+zx_status_t DeviceController::SyncClient::CompleteRemoval() {
+  return DeviceController::Call::CompleteRemoval(zx::unowned_channel(this->channel_));
+}
+
+zx_status_t DeviceController::Call::CompleteRemoval(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CompleteRemovalRequest>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _request = *reinterpret_cast<CompleteRemovalRequest*>(_write_bytes);
+  _request._hdr.ordinal = kDeviceController_CompleteRemoval_Ordinal;
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(CompleteRemovalRequest));
+  ::fidl::DecodedMessage<CompleteRemovalRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
@@ -1362,6 +1383,16 @@ bool DeviceController::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::UnbindCompleter::Sync(txn));
       return true;
     }
+    case kDeviceController_CompleteRemoval_Ordinal: {
+      auto result = ::fidl::DecodeAs<CompleteRemovalRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->CompleteRemoval(
+        Interface::CompleteRemovalCompleter::Sync(txn));
+      return true;
+    }
     case kDeviceController_RemoveDevice_Ordinal: {
       auto result = ::fidl::DecodeAs<RemoveDeviceRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1480,6 +1511,10 @@ extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceResponse
 constexpr uint64_t kCoordinator_AddDeviceInvisible_Ordinal = 1811214030lu << 32;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceInvisibleRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceInvisibleResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kCoordinator_ScheduleRemove_Ordinal = 1705227782lu << 32;
+[[maybe_unused]]
+constexpr uint64_t kCoordinator_UnbindDone_Ordinal = 1157876008lu << 32;
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_RemoveDevice_Ordinal = 511080328lu << 32;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRemoveDeviceResponseTable;
@@ -1750,6 +1785,44 @@ zx_status_t Coordinator::Call::AddDeviceInvisible(zx::unowned_channel _client_en
       ::fidl::DecodedMessage<Coordinator::AddDeviceInvisibleResponse>());
   }
   return ::fidl::Decode(std::move(_call_result.message));
+}
+
+
+zx_status_t Coordinator::SyncClient::ScheduleRemove() {
+  return Coordinator::Call::ScheduleRemove(zx::unowned_channel(this->channel_));
+}
+
+zx_status_t Coordinator::Call::ScheduleRemove(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleRemoveRequest>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _request = *reinterpret_cast<ScheduleRemoveRequest*>(_write_bytes);
+  _request._hdr.ordinal = kCoordinator_ScheduleRemove_Ordinal;
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ScheduleRemoveRequest));
+  ::fidl::DecodedMessage<ScheduleRemoveRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    return _encode_request_result.status;
+  }
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+}
+
+
+zx_status_t Coordinator::SyncClient::UnbindDone() {
+  return Coordinator::Call::UnbindDone(zx::unowned_channel(this->channel_));
+}
+
+zx_status_t Coordinator::Call::UnbindDone(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UnbindDoneRequest>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _request = *reinterpret_cast<UnbindDoneRequest*>(_write_bytes);
+  _request._hdr.ordinal = kCoordinator_UnbindDone_Ordinal;
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(UnbindDoneRequest));
+  ::fidl::DecodedMessage<UnbindDoneRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    return _encode_request_result.status;
+  }
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 
@@ -2865,6 +2938,26 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
       auto message = result.message.message();
       impl->AddDeviceInvisible(std::move(message->rpc), std::move(message->props), std::move(message->name), std::move(message->protocol_id), std::move(message->driver_path), std::move(message->args), std::move(message->client_remote),
         Interface::AddDeviceInvisibleCompleter::Sync(txn));
+      return true;
+    }
+    case kCoordinator_ScheduleRemove_Ordinal: {
+      auto result = ::fidl::DecodeAs<ScheduleRemoveRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->ScheduleRemove(
+        Interface::ScheduleRemoveCompleter::Sync(txn));
+      return true;
+    }
+    case kCoordinator_UnbindDone_Ordinal: {
+      auto result = ::fidl::DecodeAs<UnbindDoneRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->UnbindDone(
+        Interface::UnbindDoneCompleter::Sync(txn));
       return true;
     }
     case kCoordinator_RemoveDevice_Ordinal: {

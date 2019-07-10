@@ -903,6 +903,8 @@ class DeviceController final {
 
   using UnbindRequest = ::fidl::AnyZeroArgMessage;
 
+  using CompleteRemovalRequest = ::fidl::AnyZeroArgMessage;
+
   using RemoveDeviceRequest = ::fidl::AnyZeroArgMessage;
 
   struct SuspendResponse final {
@@ -995,6 +997,11 @@ class DeviceController final {
     // interface channel will close instead of returning a result.
     zx_status_t Unbind();
 
+    // Ask the devhost to complete the removal of this device, which previously had
+    // invoked |ScheduleRemove|. This is a special case that can be removed
+    // once |device_remove| invokes |unbind|.
+    zx_status_t CompleteRemoval();
+
     // Ask the devhost to remove this device.  On success, the remote end of
     // this interface channel will close instead of returning a result.
     zx_status_t RemoveDevice();
@@ -1075,6 +1082,11 @@ class DeviceController final {
     // interface channel will close instead of returning a result.
     static zx_status_t Unbind(zx::unowned_channel _client_end);
 
+    // Ask the devhost to complete the removal of this device, which previously had
+    // invoked |ScheduleRemove|. This is a special case that can be removed
+    // once |device_remove| invokes |unbind|.
+    static zx_status_t CompleteRemoval(zx::unowned_channel _client_end);
+
     // Ask the devhost to remove this device.  On success, the remote end of
     // this interface channel will close instead of returning a result.
     static zx_status_t RemoveDevice(zx::unowned_channel _client_end);
@@ -1136,6 +1148,10 @@ class DeviceController final {
     using UnbindCompleter = ::fidl::Completer<>;
 
     virtual void Unbind(UnbindCompleter::Sync _completer) = 0;
+
+    using CompleteRemovalCompleter = ::fidl::Completer<>;
+
+    virtual void CompleteRemoval(CompleteRemovalCompleter::Sync _completer) = 0;
 
     using RemoveDeviceCompleter = ::fidl::Completer<>;
 
@@ -1301,6 +1317,10 @@ class Coordinator final {
     static constexpr uint32_t MaxOutOfLine = 4128;
     using ResponseType = AddDeviceInvisibleResponse;
   };
+
+  using ScheduleRemoveRequest = ::fidl::AnyZeroArgMessage;
+
+  using UnbindDoneRequest = ::fidl::AnyZeroArgMessage;
 
   struct RemoveDeviceResponse final {
     FIDL_ALIGNDECL
@@ -1613,6 +1633,13 @@ class Coordinator final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<AddDeviceInvisibleResponse> AddDeviceInvisible(::fidl::DecodedMessage<AddDeviceInvisibleRequest> params, ::fidl::BytePart response_buffer);
 
+    // Requests the devcoordinator schedule the removal of this device,
+    // and the unbinding of its children.
+    zx_status_t ScheduleRemove();
+
+    // Sent as the response to |Unbind| or |CompleteRemoval|.
+    zx_status_t UnbindDone();
+
     // Record the removal of this device.
     zx_status_t RemoveDevice(int32_t* out_status);
 
@@ -1863,6 +1890,13 @@ class Coordinator final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<AddDeviceInvisibleResponse> AddDeviceInvisible(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddDeviceInvisibleRequest> params, ::fidl::BytePart response_buffer);
 
+    // Requests the devcoordinator schedule the removal of this device,
+    // and the unbinding of its children.
+    static zx_status_t ScheduleRemove(zx::unowned_channel _client_end);
+
+    // Sent as the response to |Unbind| or |CompleteRemoval|.
+    static zx_status_t UnbindDone(zx::unowned_channel _client_end);
+
     // Record the removal of this device.
     static zx_status_t RemoveDevice(zx::unowned_channel _client_end, int32_t* out_status);
 
@@ -2094,6 +2128,14 @@ class Coordinator final {
     using AddDeviceInvisibleCompleter = ::fidl::Completer<AddDeviceInvisibleCompleterBase>;
 
     virtual void AddDeviceInvisible(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, AddDeviceInvisibleCompleter::Sync _completer) = 0;
+
+    using ScheduleRemoveCompleter = ::fidl::Completer<>;
+
+    virtual void ScheduleRemove(ScheduleRemoveCompleter::Sync _completer) = 0;
+
+    using UnbindDoneCompleter = ::fidl::Completer<>;
+
+    virtual void UnbindDone(UnbindDoneCompleter::Sync _completer) = 0;
 
     class RemoveDeviceCompleterBase : public _Base {
      public:

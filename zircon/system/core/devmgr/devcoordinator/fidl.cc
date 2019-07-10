@@ -182,6 +182,21 @@ zx_status_t dh_send_unbind(const Device* dev) {
   return msg.Write(dev->channel()->get(), 0);
 }
 
+zx_status_t dh_send_complete_removal(const Device* dev) {
+  FIDL_ALIGNDECL char
+      wr_bytes[sizeof(fuchsia_device_manager_DeviceControllerCompleteRemovalRequest)];
+  fidl::Builder builder(wr_bytes, sizeof(wr_bytes));
+
+  auto req = builder.New<fuchsia_device_manager_DeviceControllerCompleteRemovalRequest>();
+  ZX_ASSERT(req != nullptr);
+  req->hdr.ordinal = fuchsia_device_manager_DeviceControllerCompleteRemovalOrdinal;
+  // TODO(teisenbe): Allocate and track txids
+  req->hdr.txid = 1;
+
+  fidl::Message msg(builder.Finalize(), fidl::HandlePart(nullptr, 0));
+  return msg.Write(dev->channel()->get(), 0);
+}
+
 zx_status_t dh_send_create_composite_device(Devhost* dh, const Device* composite_dev,
                                             const CompositeDevice& composite,
                                             const uint64_t* component_local_ids, zx::channel rpc) {

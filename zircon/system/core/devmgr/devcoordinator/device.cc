@@ -246,10 +246,59 @@ void Device::CompleteSuspend(zx_status_t status) {
   }
 
   active_suspend_ = nullptr;
-  SuspendCompletion completion(std::move(suspend_completion_));
-  if (completion) {
-    completion(status);
+  if (suspend_completion_) {
+    suspend_completion_(status);
   }
+}
+
+fbl::RefPtr<UnbindTask> Device::RequestUnbindTask(bool do_unbind) {
+  if (active_unbind_ == nullptr) {
+    active_unbind_ = UnbindTask::Create(fbl::WrapRefPtr(this), do_unbind);
+  }
+  return active_unbind_;
+}
+
+zx_status_t Device::SendUnbind(UnbindCompletion completion) {
+  if (unbind_completion_) {
+    // We already have a pending unbind
+    return ZX_ERR_UNAVAILABLE;
+  }
+  log(DEVLC, "devcoordinator: unbind dev %p name='%s'\n", this, name_.data());
+  zx_status_t status = dh_send_unbind(this);
+  if (status != ZX_OK) {
+    return status;
+  }
+  state_ = Device::State::kUnbinding;
+  unbind_completion_ = std::move(completion);
+  return ZX_OK;
+}
+
+zx_status_t Device::SendCompleteRemoval(UnbindCompletion completion) {
+  if (unbind_completion_) {
+    // We already have a pending unbind
+    return ZX_ERR_UNAVAILABLE;
+  }
+  log(DEVLC, "devcoordinator: complete removal dev %p name='%s'\n", this, name_.data());
+  zx_status_t status = dh_send_complete_removal(this);
+  if (status != ZX_OK) {
+    return status;
+  }
+  state_ = Device::State::kUnbinding;
+  unbind_completion_ = std::move(completion);
+  return ZX_OK;
+}
+
+zx_status_t Device::CompleteUnbind() {
+  if (!unbind_completion_) {
+    log(ERROR, "devcoordinator: rpc: unexpected unbind reply for '%s'\n", name_.data());
+    return ZX_ERR_IO;
+  }
+  coordinator->RemoveDevice(fbl::WrapRefPtr(this), false);
+  if (unbind_completion_) {
+    unbind_completion_(ZX_OK);
+  }
+  active_unbind_ = nullptr;
+  return ZX_OK;
 }
 
 // Handle inbound messages from devhost to devices
@@ -375,6 +424,8 @@ static zx_status_t fidl_AddDeviceInvisible(void* ctx, zx_handle_t raw_rpc,
                                            size_t driver_path_size, const char* args_data,
                                            size_t args_size, zx_handle_t raw_client_remote,
                                            fidl_txn_t* txn);
+static zx_status_t fidl_ScheduleRemove(void* ctx);
+static zx_status_t fidl_UnbindDone(void* ctx);
 static zx_status_t fidl_RemoveDevice(void* ctx, fidl_txn_t* txn);
 static zx_status_t fidl_MakeVisible(void* ctx, fidl_txn_t* txn);
 static zx_status_t fidl_RunCompatibilityTests(void* ctx, int64_t hook_wait_time, fidl_txn_t* txn);
@@ -399,6 +450,8 @@ static zx_status_t fidl_AddCompositeDevice(
 static const fuchsia_device_manager_Coordinator_ops_t fidl_ops = {
     .AddDevice = fidl_AddDevice,
     .AddDeviceInvisible = fidl_AddDeviceInvisible,
+    .ScheduleRemove = fidl_ScheduleRemove,
+    .UnbindDone = fidl_UnbindDone,
     .RemoveDevice = fidl_RemoveDevice,
     .MakeVisible = fidl_MakeVisible,
     .BindDevice = fidl_BindDevice,
@@ -761,6 +814,26 @@ static zx_status_t fidl_AddDeviceInvisible(void* ctx, zx_handle_t raw_rpc,
   
   uint64_t local_id = device != nullptr ? device->local_id() : 0;
   return fuchsia_device_manager_CoordinatorAddDeviceInvisible_reply(txn, status, local_id);
+}
+
+static zx_status_t fidl_ScheduleRemove(void* ctx) {
+  auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
+
+  log(DEVLC, "devcoordinator: schedule remove '%s'\n", dev->name().data());
+
+  dev->coordinator->ScheduleRemove(dev);
+
+  return ZX_OK;
+}
+
+static zx_status_t fidl_UnbindDone(void* ctx) {
+  auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
+
+  log(DEVLC, "devcoordinator: unbind done '%s'\n", dev->name().data());
+
+  dev->CompleteUnbind();
+  // Return STOP to signal we are done with this channel
+  return ZX_ERR_STOP;
 }
 
 static zx_status_t fidl_RemoveDevice(void* ctx, fidl_txn_t* txn) {
