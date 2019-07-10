@@ -5,12 +5,13 @@
 use {
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_bluetooth_control::{
-        AdapterInfo, BondingData, DeviceClass, HostData, InputCapabilityType, OutputCapabilityType,
-        PairingDelegateMarker, RemoteDevice,
+        self as control, AdapterInfo, DeviceClass, HostData, InputCapabilityType,
+        OutputCapabilityType, PairingDelegateMarker, RemoteDevice,
     },
     fidl_fuchsia_bluetooth_gatt::ClientProxy,
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
     fidl_fuchsia_bluetooth_le::CentralProxy,
+    fuchsia_bluetooth::types::BondingData,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::{Future, FutureExt, StreamExt},
     parking_lot::RwLock,
@@ -98,8 +99,9 @@ impl HostDevice {
 
     pub fn restore_bonds(
         &self,
-        mut bonds: Vec<BondingData>,
+        bonds: Vec<BondingData>,
     ) -> impl Future<Output = types::Result<()>> {
+        let mut bonds: Vec<_> = bonds.into_iter().map(control::BondingData::from).collect();
         self.host.add_bonded_devices(&mut bonds.iter_mut()).map(from_fidl_status)
     }
 
@@ -153,7 +155,7 @@ pub async fn handle_events<H: HostListener>(
             HostEvent::OnDeviceRemoved { identifier } => listener.on_peer_removed(identifier),
             HostEvent::OnNewBondingData { data } => {
                 fx_log_info!("Received bonding data");
-                if let Err(e) = listener.on_new_host_bond(data) {
+                if let Err(e) = listener.on_new_host_bond(data.into()) {
                     fx_log_err!("Failed to persist bonding data: {:#?}", e);
                 }
             }

@@ -11,8 +11,8 @@ use {
     fidl_fuchsia_bluetooth::{Error as FidlError, ErrorCode},
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_control::{
-        AdapterInfo, BondingData, ControlControlHandle, DeviceClass, HostData, InputCapabilityType,
-        LocalKey, OutputCapabilityType, PairingDelegateProxy, RemoteDevice,
+        AdapterInfo, ControlControlHandle, DeviceClass, HostData, InputCapabilityType, LocalKey,
+        OutputCapabilityType, PairingDelegateProxy, RemoteDevice,
     },
     fidl_fuchsia_bluetooth_gatt::Server_Marker,
     fidl_fuchsia_bluetooth_host::HostProxy,
@@ -20,6 +20,7 @@ use {
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
         self as bt,
+        types::BondingData,
         util::{clone_host_info, clone_remote_device},
     },
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn, fx_vlog},

@@ -5,11 +5,11 @@
 use {
     failure::Error,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_bluetooth_control::{BondingData, HostData},
+    fidl_fuchsia_bluetooth_control::HostData,
     fidl_fuchsia_stash::{
         GetIteratorMarker, StoreAccessorMarker, StoreAccessorProxy, StoreMarker, Value,
     },
-    fuchsia_bluetooth::error::Error as BtError,
+    fuchsia_bluetooth::{error::Error as BtError, types::BondingData},
     fuchsia_syslog::{fx_log_err, fx_log_info},
     serde_json,
     std::collections::HashMap,
@@ -79,7 +79,7 @@ impl Stash {
         fx_log_info!("store_bond (id: {})", data.identifier);
 
         // Persist the serialized blob.
-        let serialized = serde_json::to_string(&BondingDataSerializer(&data))?;
+        let serialized = serde_json::to_string(&BondingDataSerializer(&data.clone().into()))?;
         self.proxy
             .set_value(&bonding_data_key(&data.identifier), &mut Value::Stringval(serialized))?;
         self.proxy.commit()?;
@@ -154,7 +154,7 @@ impl Stash {
             for key_value in next {
                 if let Value::Stringval(json) = key_value.val {
                     let bonding_data: BondingDataDeserializer = serde_json::from_str(&json)?;
-                    let bonding_data = bonding_data.contents();
+                    let bonding_data = BondingData::from(bonding_data.contents());
                     let local_address_entries = bonding_map
                         .entry(bonding_data.local_address.clone())
                         .or_insert(HashMap::new());
@@ -509,9 +509,9 @@ mod tests {
         assert!(stash.list_bonds("00:00:00:00:00:00").is_none());
 
         let mut iter = stash.list_bonds("00:00:00:00:00:01").expect("expected to find address");
-        let next_id = &iter.next().unwrap().identifier;
+        let next_id = &iter.next().unwrap().identifier.clone();
         assert!("id-1" == next_id.as_str() || "id-2" == next_id.as_str());
-        let next_id = &iter.next().unwrap().identifier;
+        let next_id = &iter.next().unwrap().identifier.clone();
         assert!("id-1" == next_id.as_str() || "id-2" == next_id.as_str());
         assert_eq!(None, iter.next());
     }
