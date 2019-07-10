@@ -83,7 +83,7 @@ class TestHost(unittest.TestCase):
     if not os.getenv('FUCHSIA_DIR'):
       return
     platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
-    executable = Host.join('zircon', 'prebuilt', 'downloads', 'symbolize')
+    executable = Host.join('prebuilt', 'tools', 'symbolize', platform, 'symbolize')
     symbolizer = Host.join('buildtools', platform, 'clang', 'bin',
                            'llvm-symbolizer')
     with self.assertRaises(Host.ConfigError):
@@ -137,7 +137,7 @@ class TestHost(unittest.TestCase):
     build_ids = Host.join(build_dir, 'ids.txt')
     zxtools = Host.join(build_dir + '.zircon', 'tools')
     platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
-    executable = Host.join('zircon', 'prebuilt', 'downloads', 'symbolize')
+    executable = Host.join('prebuilt', 'tools', 'symbolize', platform, 'symbolize')
     symbolizer = Host.join('buildtools', platform, 'clang', 'bin',
                            'llvm-symbolizer')
     if not os.path.exists(ssh_config) or not os.path.exists(

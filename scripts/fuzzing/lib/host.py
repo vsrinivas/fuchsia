@@ -107,7 +107,7 @@ class Host(object):
     platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
     self.set_platform(platform)
     self.set_symbolizer(
-        Host.join('zircon', 'prebuilt', 'downloads', 'symbolize'),
+        Host.join('prebuilt', 'tools', 'symbolize', platform, 'symbolize'),
         Host.join('buildtools', platform, 'clang', 'bin', 'llvm-symbolizer'))
     json_file = Host.join(build_dir, 'fuzzers.json')
     # fuzzers.json isn't emitted in release builds
