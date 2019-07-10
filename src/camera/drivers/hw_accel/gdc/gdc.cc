@@ -11,6 +11,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <hw/reg.h>
+#include <lib/image-format/image_format.h>
 #include <stdint.h>
 #include <zircon/assert.h>
 #include <zircon/threads.h>
@@ -26,8 +27,11 @@ namespace {
 
 constexpr uint32_t kHiu = 0;
 constexpr uint32_t kGdc = 1;
+constexpr uint32_t kAxiAlignment = 16;
 
 }  // namespace
+
+static inline uint32_t AxiWordAlign(uint32_t value) { return fbl::round_up(value, kAxiAlignment); }
 
 void GdcDevice::InitClocks() {
   // First reset the clocks.
@@ -73,11 +77,146 @@ zx_status_t GdcDevice::GdcInitTask(const buffer_collection_info_t* input_buffer_
   return ZX_OK;
 }
 
+void GdcDevice::Start() {
+  // Transition from 0->1 means GDC latches the data on the
+  // configuration ports and starts the processing.
+  // clang-format off
+  Config::Get()
+      .ReadFrom(gdc_mmio())
+      .set_start(0)
+      .WriteTo(gdc_mmio());
+
+  Config::Get()
+      .ReadFrom(gdc_mmio())
+      .set_start(1)
+      .WriteTo(gdc_mmio());
+  // clang-format on
+}
+
+void GdcDevice::Stop() {
+  // clang-format off
+  Config::Get()
+      .ReadFrom(gdc_mmio())
+      .set_start(0)
+      .WriteTo(gdc_mmio());
+  // clang-format on
+}
+
 void GdcDevice::ProcessTask(TaskInfo& info) {
   auto task = info.task;
   auto input_buffer_index = info.input_buffer_index;
+  // clang-format off
 
-  // TODO(CAM-33): Add Processing of the frame implementation here.
+  // The way we have our SW instrumented, GDC should never be busy
+  // proccessing at this point. Doing a sanity check here to ensure
+  // that its not busy processing an image.
+   ZX_ASSERT(!Status::Get().ReadFrom(gdc_mmio()).busy());
+
+  Stop();
+
+  // Program the GDC configuration registers.
+  auto size = AxiWordAlign(task->GetConigVmoPhysSize());
+  auto addr = AxiWordAlign(task->GetConigVmoPhysAddr());
+  ConfigAddr::Get()
+      .ReadFrom(gdc_mmio())
+      .set_config_addr(addr)
+      .WriteTo(gdc_mmio());
+
+  ConfigSize::Get()
+      .ReadFrom(gdc_mmio())
+      .set_config_size(size)
+      .WriteTo(gdc_mmio());
+
+  // Program the Input frame details.
+  auto input_format = task->input_format();
+  DataInWidth::Get()
+      .ReadFrom(gdc_mmio())
+      .set_width(input_format.width)
+      .WriteTo(gdc_mmio());
+
+  DataInHeight::Get()
+      .ReadFrom(gdc_mmio())
+      .set_height(input_format.height)
+      .WriteTo(gdc_mmio());
+
+  // Program the Output frame details.
+  auto output_format = task->output_format();
+  DataOutWidth::Get()
+      .ReadFrom(gdc_mmio())
+      .set_width(output_format.width)
+      .WriteTo(gdc_mmio());
+
+  DataOutHeight::Get()
+      .ReadFrom(gdc_mmio())
+      .set_height(output_format.height)
+      .WriteTo(gdc_mmio());
+
+  // Program Data1In Address Register (Y).
+  zx_paddr_t input_y_addr;
+  auto input_line_offset = input_format.planes[0].bytes_per_row;
+  ZX_ASSERT(ZX_OK == task->GetInputBufferPhysAddr(input_buffer_index, &input_y_addr));
+  Data1InAddr::Get()
+      .ReadFrom(gdc_mmio())
+      .set_addr(AxiWordAlign(input_y_addr))
+      .WriteTo(gdc_mmio());
+
+  // Program Data1In Offset Register (Y)
+  Data1InOffset::Get()
+      .ReadFrom(gdc_mmio())
+      .set_offset(input_line_offset)
+      .WriteTo(gdc_mmio());
+
+  // Program Data2In Address Register (UV).
+  auto input_uv_addr = input_y_addr + (input_line_offset * input_format.height);
+  Data2InAddr::Get()
+      .ReadFrom(gdc_mmio())
+      .set_addr(input_uv_addr)
+      .WriteTo(gdc_mmio());
+
+  // Program Data2In Offset Register (UV)
+  Data2InOffset::Get()
+      .ReadFrom(gdc_mmio())
+      .set_offset(input_line_offset)
+      .WriteTo(gdc_mmio());
+
+  // Now programming the output DMA registers.
+  // First lets fetch an unused buffer from the VMO pool.
+  uint32_t output_y_addr;
+  {
+    fbl::AutoLock lock(&output_vmo_pool_lock_);
+    output_y_addr = task->GetOutputBufferPhysAddr();
+  }
+
+  // Program Data1Out Address Register (Y).
+  auto output_line_offset = output_format.planes[0].bytes_per_row;
+  Data1OutAddr::Get()
+      .ReadFrom(gdc_mmio())
+      .set_addr(AxiWordAlign(output_y_addr))
+      .WriteTo(gdc_mmio());
+
+  // Program Data1Out Offset Register (Y)
+  Data1OutOffset::Get()
+      .ReadFrom(gdc_mmio())
+      .set_offset(output_line_offset)
+      .WriteTo(gdc_mmio());
+
+  // Program Data2Out Address Register (UV).
+  auto output_uv_addr = output_y_addr + (output_line_offset * output_format.height);
+  Data2OutAddr::Get()
+      .ReadFrom(gdc_mmio())
+      .set_addr(AxiWordAlign(output_uv_addr))
+      .WriteTo(gdc_mmio());
+
+  // Program Data2Out Offset Register (UV)
+  Data2OutOffset::Get()
+      .ReadFrom(gdc_mmio())
+      .set_offset(output_line_offset)
+      .WriteTo(gdc_mmio());
+
+  // clang-format on
+
+  // Start GDC processing.
+  Start();
 
   zx_port_packet_t packet;
   ZX_ASSERT(ZX_OK == WaitForInterrupt(&packet));
@@ -93,9 +232,8 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
   if (packet.key == kPortKeyDebugFakeInterrupt || packet.key == kPortKeyIrqMsg) {
     // Invoke the callback function and tell about the output buffer index
     // which is ready to be used.
-    // TODO(CAM-33): pass actual output buffer index instead of
-    // input_buffer_index.
-    task->callback()->frame_ready(task->callback()->ctx, input_buffer_index);
+    auto output_buffer_index = task->GetOutputBufferIndex();
+    task->callback()->frame_ready(task->callback()->ctx, output_buffer_index);
   }
 }
 
@@ -172,7 +310,15 @@ void GdcDevice::GdcRemoveTask(uint32_t task_index) {
 }
 
 void GdcDevice::GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index) {
-  // TODO(CAM-33): Implement this.
+  // Find the entry in hashmap.
+  auto task_entry = task_map_.find(task_index);
+  ZX_ASSERT(task_entry != task_map_.end());
+
+  // Validate |input_buffer_index|.
+  ZX_ASSERT(task_entry->second->IsInputBufferIndexValid(buffer_index));
+
+  auto task = task_entry->second.get();
+  ZX_ASSERT(ZX_OK == task->ReleaseOutputBuffer(buffer_index));
 }
 
 // static

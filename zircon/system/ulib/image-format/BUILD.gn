@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 library("image-format") {
+  sdk = "source"
+  sdk_headers = [ "lib/image-format/image_format.h" ]
   sources = [
     "image_format.cc",
   ]

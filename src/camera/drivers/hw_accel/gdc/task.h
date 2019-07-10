@@ -12,6 +12,8 @@
 #include <lib/syslog/global.h>
 #include <zircon/fidl.h>
 
+#include <deque>
+
 namespace gdc {
 // The |Task| class store all the information pertaining to
 // a task when registered. It maintains the VMO pool for the
@@ -45,10 +47,25 @@ class Task {
     return input_buffer_index < input_buffers_.size();
   }
 
-  // Returns a |Buffer| object which is free for use as output buffer.
-  std::optional<fzl::VmoPool::Buffer> GetOutputBuffer() {
-    return output_buffers_.LockBufferForWrite();
+  // Returns the physical address for the output buffer which is
+  // picked from the pool of free buffers.
+  uint32_t GetOutputBufferPhysAddr() {
+    auto buffer = output_buffers_.LockBufferForWrite();
+    ZX_ASSERT(buffer);
+    auto addr = static_cast<uint32_t>(buffer->physical_address());
+    write_locked_buffers_.push_front(std::move(*buffer));
+    return addr;
   }
+
+  // Releases the write lock of the output buffer and returns back and index.
+  uint32_t GetOutputBufferIndex() {
+    auto index = write_locked_buffers_.back().ReleaseWriteLockAndGetIndex();
+    write_locked_buffers_.pop_back();
+    return index;
+  }
+
+  // Returns the output buffer back to the VMO pool to be reused again.
+  zx_status_t ReleaseOutputBuffer(uint32_t index) { return output_buffers_.ReleaseBuffer(index); }
 
   image_format_t input_format() { return input_format_; }
   image_format_t output_format() { return output_format_; }
@@ -79,6 +96,7 @@ class Task {
   image_format_t input_format_;
   image_format_t output_format_;
   const gdc_callback_t* callback_;
+  std::deque<fzl::VmoPool::Buffer> write_locked_buffers_;
 };
 }  // namespace gdc
 

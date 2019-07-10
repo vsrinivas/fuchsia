@@ -79,6 +79,7 @@ group("ulib") {
     "hid",
     "hid-parser",
     "hwreg",
+    "image-format",
     "inet6",
     "inspect-vmo",
     "inspector",

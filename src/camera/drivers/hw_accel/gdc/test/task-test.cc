@@ -233,6 +233,50 @@ TEST_F(TaskTest, ProcessFrameTest) {
   ASSERT_OK(gdc_device_->StopThread());
 }
 
+TEST_F(TaskTest, ReleaseValidFrameTest) {
+  auto task_id = SetupForFrameProcessing();
+
+  // Valid buffer & task id.
+  zx_status_t status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1);
+  EXPECT_OK(status);
+
+  // Trigger the interrupt manually.
+  zx_port_packet packet = {kPortKeyDebugFakeInterrupt, ZX_PKT_TYPE_USER, ZX_OK, {}};
+  EXPECT_OK(port_.queue(&packet));
+
+  // Check if the callback was called.
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+  EXPECT_EQ(1, callback_check_.size());
+
+  // Release the output buffer index provided as callback.
+  ASSERT_NO_DEATH(
+      ([this, task_id]() { gdc_device_->GdcReleaseFrame(task_id, callback_check_.back()); }));
+
+  ASSERT_OK(gdc_device_->StopThread());
+}
+
+TEST_F(TaskTest, ReleaseInValidFrameTest) {
+  auto task_id = SetupForFrameProcessing();
+
+  // Valid buffer & task id.
+  zx_status_t status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1);
+  EXPECT_OK(status);
+
+  // Trigger the interrupt manually.
+  zx_port_packet packet = {kPortKeyDebugFakeInterrupt, ZX_PKT_TYPE_USER, ZX_OK, {}};
+  EXPECT_OK(port_.queue(&packet));
+
+  // Check if the callback was called.
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+  EXPECT_EQ(1, callback_check_.size());
+
+  // Release the output buffer index provided as callback.
+  ASSERT_DEATH(
+      ([this, task_id]() { gdc_device_->GdcReleaseFrame(task_id + 1, callback_check_.back()); }));
+
+  ASSERT_OK(gdc_device_->StopThread());
+}
+
 TEST_F(TaskTest, MultipleProcessFrameTest) {
   auto task_id = SetupForFrameProcessing();
 

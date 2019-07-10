@@ -97,12 +97,15 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
   void InitClocks();
   int FrameProcessingThread();
   int JoinThread() { return thrd_join(processing_thread_, nullptr); }
+  void Start();
+  void Stop();
 
   void ProcessTask(TaskInfo& info);
   zx_status_t WaitForInterrupt(zx_port_packet_t* packet);
 
   // Used to access the processing queue.
   fbl::Mutex lock_;
+  fbl::Mutex output_vmo_pool_lock_;
 
   // HHI register block has the clock registers
   ddk::MmioBuffer clock_mmio_;
