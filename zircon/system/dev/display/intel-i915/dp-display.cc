@@ -918,7 +918,7 @@ bool DpDisplay::Query() {
         // Convert from the dpcd field's units of 200kHz to mHz.
         uint32_t val = ((high << 8) | low) / 5;
         // Make sure we support it. The list is ascending, so this will pick the max.
-        if (val == 1620 || val == 2700 || val == 5400) {
+        if (val == 1620 || val == 2700 || val == 3240 || val == 5400) {
           dp_link_rate_mhz_ = val;
           dp_link_rate_idx_plus1_ =
               static_cast<uint8_t>(((i - dpcd::DPCD_SUPPORTED_LINK_RATE_START) / 2) + 1);
@@ -992,6 +992,8 @@ bool DpDisplay::InitDdi() {
     dpll_link_rate = registers::DpllControl1::kLinkRate810Mhz;
   } else if (dp_link_rate_mhz_ == 2700) {
     dpll_link_rate = registers::DpllControl1::kLinkRate1350Mhz;
+  } else if (dp_link_rate_mhz_ == 3240) {
+    dpll_link_rate = registers::DpllControl1::kLinkRate1620Mhz;
   } else {
     ZX_ASSERT(dp_link_rate_mhz_ == 5400);
     dpll_link_rate = registers::DpllControl1::kLinkRate2700Mhz;
@@ -1058,6 +1060,8 @@ bool DpDisplay::ComputeDpllState(uint32_t pixel_clock_10khz, struct dpll_state* 
     config->dp_rate = registers::DpllControl1::kLinkRate810Mhz;
   } else if (dp_link_rate_mhz_ == 2700) {
     config->dp_rate = registers::DpllControl1::kLinkRate1350Mhz;
+  } else if (dp_link_rate_mhz_ == 3240) {
+    config->dp_rate = registers::DpllControl1::kLinkRate1620Mhz;
   } else {
     ZX_ASSERT(dp_link_rate_mhz_ == 5400);
     config->dp_rate = registers::DpllControl1::kLinkRate2700Mhz;
