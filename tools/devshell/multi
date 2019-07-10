@@ -246,7 +246,7 @@ function multi-set {
     fi
     while [[ -z "$spec_file" ]] || {
             read build <&3 &&
-              while [[ -z "$build" || "$build" == "#*" ]] && read build <&3; do
+              while [[ -z "$build" || "$build" == \#* ]] && read build <&3; do
                 :
               done
           }; do
