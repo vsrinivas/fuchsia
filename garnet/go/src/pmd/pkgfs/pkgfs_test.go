@@ -134,6 +134,12 @@ func TestAddPackage(t *testing.T) {
 	panicerr(src.Close())
 	panicerr(dst.Close())
 
+	// Opening it again gives EEXIST
+	_, err = iou.OpenFrom(pkgfsDir, filepath.Join("install/pkg", merkleroot), os.O_RDWR|os.O_CREATE, 0777)
+	if !os.IsExist(err) {
+		panicerr(err)
+	}
+
 	d, err := blobDir.Open(merkleroot, syscall.O_PATH, 0777)
 	panicerr(err)
 	_, err = d.Stat()

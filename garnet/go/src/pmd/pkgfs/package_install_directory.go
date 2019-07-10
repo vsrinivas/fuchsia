@@ -204,8 +204,6 @@ func (f *installFile) open() error {
 		// "Fulfill" any needs against the blob that was attempted to be written.
 		f.fs.index.Fulfill(f.name)
 
-		err = fs.ErrAlreadyExists
-
 		if f.isPkg {
 			// Importing a package file that is already present in blobfs could fail for
 			// a number of reasons, such as the package being invalid, and so on. We need
@@ -215,20 +213,21 @@ func (f *installFile) open() error {
 			// `fs.ErrAlreadyExists` on a package meta.far write does not in and of
 			// itself indicate that the whole package is present, only that the package
 			// metadata blob is present.
-			e := f.importPackage()
-			if e == nil {
-				err = fs.ErrAlreadyExists
-			} else {
-				err = e
+			if err := f.importPackage(); err != nil {
+				return err
 			}
 		}
+		return fs.ErrAlreadyExists
+	}
+
+	if err != nil {
+		return goErrToFSErr(err)
 	}
 
 	if f.isPkg {
 		f.fs.index.Installing(f.name)
 	}
-
-	return goErrToFSErr(err)
+	return nil
 }
 
 func (f *installFile) Write(p []byte, off int64, whence int) (int, error) {
