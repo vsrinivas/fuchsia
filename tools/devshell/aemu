@@ -5,7 +5,7 @@
 
 ### start fuchsia in aemu
 
-## usage: fx aemu [-a <mode>] [-N [-I <ifname>]] [-u <path>] [-g <port> [-r <fps>]] [-x <port> [-X <directory>]] [-e <directory>] [-w <size>] [--audio] [--headless] [--software-gpu] [--debugger]
+## usage: fx aemu [-a <mode>] [-N [-I <ifname>]] [-u <path>] [-g <port> [-r <fps>] [-t <cmd>]] [-x <port> [-X <directory>]] [-e <directory>] [-w <size>] [--audio] [--headless] [--software-gpu] [--debugger]
 ##   -a <mode> acceleration mode (auto, off, kvm, hvf, hax), default is auto
 ##   -N run with emulated nic via tun/tap
 ##   -I <ifname> uses the tun/tap interface named ifname
@@ -13,6 +13,7 @@
 ##   -e <directory> location of emulator, defaults to looking in prebuilt/third_party/aemu/PLATFORM
 ##   -g <port> enable gRPC service on port to control the emulator, default is 5556 when WebRTC service is enabled
 ##   -r <fps> webrtc frame rate when using gRPC service, default is 30
+##   -t <cmd> execute the given command to obtain turn configuration
 ##   -x <port> enable WebRTC HTTP service on port
 ##   -X <directory> location of grpcwebproxy, defaults to looking in prebuilt/third_party/grpcwebproxy
 ##   -w <size> window size, default is 1280x800
@@ -40,6 +41,7 @@ UPSCRIPT=no
 WINDOW_SIZE="1280x800"
 GRPC=
 RTCFPS="30"
+TURNCFG=""
 GPU="host"
 VULKAN=1
 HTTP=0
@@ -85,6 +87,10 @@ while [[ $# -ge 1 ]]; do
   -r)
     shift
     RTCFPS="$1"
+    ;;
+  -t)
+    shift
+    TURNCFG="$1"
     ;;
   -w)
     shift
@@ -197,11 +203,14 @@ fi
 if (( $GRPC )); then
   OPTIONS+=("-grpc" "$GRPC")
   OPTIONS+=("-rtcfps" "$RTCFPS")
+  if [[ -n "$TURNCFG" ]]; then
+    OPTIONS+=("-turncfg" "$TURNCFG")
+  fi
 fi
 
 if (( $NET )); then
   if [[ "$(uname -s)" == "Darwin" ]]; then
-    if [ -z "$IFNAME" ]; then
+    if [[ -z "$IFNAME" ]]; then
       IFNAME="tap0"
     fi
     if [[ ! -c "/dev/$IFNAME" ]]; then
@@ -215,7 +224,7 @@ if (( $NET )); then
       exit 1
     fi
   else
-    if [ -z "$IFNAME" ]; then
+    if [[ -z "$IFNAME" ]]; then
       IFNAME="qemu"
     fi
     TAP_IFS=$(ip tuntap show 2>/dev/null)
@@ -250,7 +259,7 @@ KERNEL_ZBI="${img_dir}/fuchsia-ssh.zbi"
 "${ZIRCON_TOOLS_DIR}/zbi" -o "${KERNEL_ZBI}" "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}" \
   --entry "data/ssh/authorized_keys=${FUCHSIA_DIR}/.ssh/authorized_keys"
 
-if [ -n "$IMAGE_FVM_RAW" ]; then
+if [[ -n "$IMAGE_FVM_RAW" ]]; then
   fvmimg="${img_dir}/fvm.blk"
   fx-fvm-extend-image "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}" $fvmimg
   ARGS+=("-drive" "file=${fvmimg},format=raw,if=none,id=mydisk")
