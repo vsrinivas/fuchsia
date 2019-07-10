@@ -490,7 +490,11 @@ impl FontService {
         request: fonts_exp::ListTypefacesRequest,
     ) -> Result<fonts_exp::TypefaceInfoResponse, fonts_exp::Error> {
         let query = request.query.as_ref();
-        let max_results = request.max_results.unwrap_or(fonts_exp::MAX_TYPEFACE_RESULTS);
+        // Must be >0 and <=MAX_TYPEFACE_RESULTS
+        let max_results = request
+            .max_results
+            .filter(|x| (1..fonts_exp::MAX_TYPEFACE_RESULTS).contains(x))
+            .unwrap_or(fonts_exp::MAX_TYPEFACE_RESULTS);
         let flags = request.flags.unwrap_or(fonts_exp::ListTypefacesRequestFlags::new_empty());
 
         let matched_families = self.list_typefaces_match_families(flags, query);

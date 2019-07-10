@@ -670,6 +670,20 @@ mod experimental_api {
         Ok(())
     }
 
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list_typefaces_invalid_max_results_uses_default_value() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_test_fonts()?;
+
+        let request =
+            fonts_exp::ListTypefacesRequest { flags: None, max_results: Some(0), query: None };
+
+        let response = await!(font_provider.list_typefaces(request))?;
+        let results = response.unwrap().results.unwrap();
+
+        assert!(!results.is_empty(), "{:?}", results);
+        Ok(())
+    }
+
     fn name_query(name: &str) -> Option<fonts_exp::ListTypefacesQuery> {
         let query = fonts_exp::ListTypefacesQuery {
             family: Some(fonts::FamilyName { name: String::from(name) }),
@@ -818,7 +832,7 @@ mod experimental_api {
         let response = await!(font_provider.list_typefaces(request))?;
         let results = response.unwrap().results.unwrap();
 
-        assert_eq!(results.len(), 2 , "{:?}", results);
+        assert_eq!(results.len(), 2, "{:?}", results);
         for result in results {
             assert!(result.languages.unwrap().contains(&locale("ja")));
         }
@@ -836,7 +850,7 @@ mod experimental_api {
         let response = await!(font_provider.list_typefaces(request))?;
         let results = response.unwrap().results.unwrap();
 
-        assert_eq!(results.len(), 2 , "{:?}", results);
+        assert_eq!(results.len(), 2, "{:?}", results);
         for result in results {
             assert!(result.languages.as_ref().unwrap().contains(&locale("zh-Hant")));
             assert!(result.languages.as_ref().unwrap().contains(&locale("zh-Bopo")));
