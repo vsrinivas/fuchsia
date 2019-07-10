@@ -10,10 +10,10 @@
 #include <future>
 
 #include "gtest/gtest.h"
-#include "src/cobalt/bin/system-metrics/fake_cpu_stats_fetcher.h"
-#include "src/cobalt/bin/system-metrics/fake_memory_stats_fetcher.h"
-#include "src/cobalt/bin/system-metrics/fake_temperature_fetcher.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
+#include "src/cobalt/bin/system-metrics/testing/fake_cpu_stats_fetcher.h"
+#include "src/cobalt/bin/system-metrics/testing/fake_memory_stats_fetcher.h"
+#include "src/cobalt/bin/system-metrics/testing/fake_temperature_fetcher.h"
 #include "src/cobalt/bin/testing/fake_clock.h"
 #include "src/cobalt/bin/testing/fake_logger.h"
 #include "src/cobalt/bin/utils/clock.h"

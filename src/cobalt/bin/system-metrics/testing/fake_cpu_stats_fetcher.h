@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_COBALT_BIN_SYSTEM_METRICS_FAKE_CPU_STATS_FETCHER_H_
-#define SRC_COBALT_BIN_SYSTEM_METRICS_FAKE_CPU_STATS_FETCHER_H_
-
-#include <lib/zx/resource.h>
+#ifndef SRC_COBALT_BIN_SYSTEM_METRICS_TESTING_FAKE_CPU_STATS_FETCHER_H_
+#define SRC_COBALT_BIN_SYSTEM_METRICS_TESTING_FAKE_CPU_STATS_FETCHER_H_
 
 #include "src/cobalt/bin/system-metrics/cpu_stats_fetcher.h"
 
@@ -19,4 +17,4 @@ class FakeCpuStatsFetcher : public cobalt::CpuStatsFetcher {
 
 }  // namespace cobalt
 
-#endif  // SRC_COBALT_BIN_SYSTEM_METRICS_FAKE_CPU_STATS_FETCHER_H_
+#endif  // SRC_COBALT_BIN_SYSTEM_METRICS_TESTING_FAKE_CPU_STATS_FETCHER_H_

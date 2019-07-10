@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/cobalt/bin/system-metrics/fake_memory_stats_fetcher.h"
+#include "src/cobalt/bin/system-metrics/testing/fake_memory_stats_fetcher.h"
 
 #include <lib/zx/resource.h>
 

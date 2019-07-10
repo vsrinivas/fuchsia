@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_COBALT_BIN_SYSTEM_METRICS_FAKE_MEMORY_STATS_FETCHER_H_
-#define SRC_COBALT_BIN_SYSTEM_METRICS_FAKE_MEMORY_STATS_FETCHER_H_
+#ifndef SRC_COBALT_BIN_SYSTEM_METRICS_TESTING_FAKE_MEMORY_STATS_FETCHER_H_
+#define SRC_COBALT_BIN_SYSTEM_METRICS_TESTING_FAKE_MEMORY_STATS_FETCHER_H_
 
 #include <lib/zx/resource.h>
 
@@ -19,4 +19,4 @@ class FakeMemoryStatsFetcher : public cobalt::MemoryStatsFetcher {
 
 }  // namespace cobalt
 
-#endif  // SRC_COBALT_BIN_SYSTEM_METRICS_FAKE_MEMORY_STATS_FETCHER_H_
+#endif  // SRC_COBALT_BIN_SYSTEM_METRICS_TESTING_FAKE_MEMORY_STATS_FETCHER_H_

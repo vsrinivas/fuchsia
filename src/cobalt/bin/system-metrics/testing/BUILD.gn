@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("fake_fetchers") {
+  testonly = true
+
+  sources = [
+    "fake_cpu_stats_fetcher.cc",
+    "fake_cpu_stats_fetcher.h",
+    "fake_memory_stats_fetcher.cc",
+    "fake_memory_stats_fetcher.h",
+    "fake_temperature_fetcher.cc",
+    "fake_temperature_fetcher.h",
+  ]
+
+  deps = [
+    "..:system_metrics_daemon_lib",
+    "//zircon/public/fidl/fuchsia-cobalt",
+  ]
+}

@@ -77,17 +77,12 @@ executable("cobalt_system_metrics_unittests") {
   testonly = true
 
   sources = [
-    "fake_cpu_stats_fetcher.cc",
-    "fake_cpu_stats_fetcher.h",
-    "fake_memory_stats_fetcher.cc",
-    "fake_memory_stats_fetcher.h",
-    "fake_temperature_fetcher.cc",
-    "fake_temperature_fetcher.h",
     "system_metrics_daemon_test.cc",
   ]
 
   deps = [
     ":system_metrics_daemon_lib",
+    "testing:fake_fetchers",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
