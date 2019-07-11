@@ -349,7 +349,7 @@ bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t por
     // Verify thread is suspended
     zx_info_thread_t info = tu_thread_get_info(thread);
     ASSERT_EQ(info.state, ZX_THREAD_STATE_SUSPENDED);
-    ASSERT_EQ(info.wait_exception_port_type, ZX_EXCEPTION_PORT_TYPE_NONE);
+    ASSERT_EQ(info.wait_exception_channel_type, ZX_EXCEPTION_CHANNEL_TYPE_NONE);
 
     END_HELPER;
 }

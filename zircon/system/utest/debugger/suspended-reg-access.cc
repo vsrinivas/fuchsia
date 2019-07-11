@@ -301,7 +301,7 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
         zx_nanosleep(zx_deadline_after(ZX_USEC(100)));
         thread_info = tu_thread_get_info(thread);
     } while (thread_info.state != expected_blocked_reason);
-    ASSERT_EQ(thread_info.wait_exception_port_type, ZX_EXCEPTION_PORT_TYPE_NONE);
+    ASSERT_EQ(thread_info.wait_exception_channel_type, ZX_EXCEPTION_CHANNEL_TYPE_NONE);
 
     // Extra sanity check for channels.
     if (do_channel_call) {
