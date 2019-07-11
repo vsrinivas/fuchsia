@@ -20,7 +20,6 @@ class App {
 
  private:
   std::unique_ptr<Scenic> scenic_;
-  fidl::BindingSet<Scenic> bindings_;
 };
 
 }  // namespace scenic_impl
