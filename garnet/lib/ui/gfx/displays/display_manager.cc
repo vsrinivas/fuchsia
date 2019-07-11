@@ -63,7 +63,7 @@ void DisplayManager::OnAsync(async_dispatcher_t* dispatcher, async::WaitBase* se
                              zx_status_t status, const zx_packet_signal_t* signal) {
   if (status & ZX_CHANNEL_PEER_CLOSED) {
     // TODO(SCN-244): handle this more robustly.
-    FXL_DCHECK(false) << "Display controller channel lost";
+    FXL_CHECK(false) << "Display controller channel lost";
     return;
   }
 
@@ -142,14 +142,23 @@ void DisplayManager::ClientOwnershipChange(bool has_ownership) {
 uint64_t DisplayManager::ImportEvent(const zx::event& event) {
   zx::event dup;
   uint64_t event_id = next_event_id_++;
-  if (event.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup) == ZX_OK &&
-      display_controller_->ImportEvent(std::move(dup), event_id) == ZX_OK) {
-    return event_id;
+  if (event.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup) != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to duplicate event";
+    return fuchsia::hardware::display::invalidId;
   }
-  return fuchsia::hardware::display::invalidId;
+
+  if (display_controller_->ImportEvent(std::move(dup), event_id) != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to import display controller event";
+    return fuchsia::hardware::display::invalidId;
+  }
+  return event_id;
 }
 
-void DisplayManager::ReleaseEvent(uint64_t id) { display_controller_->ReleaseEvent(id); }
+void DisplayManager::ReleaseEvent(uint64_t id) {
+  if (display_controller_->ReleaseEvent(id) != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to release display controller event";
+  }
+}
 
 void DisplayManager::SetImageConfig(int32_t width, int32_t height, zx_pixel_format_t format) {
   image_config_.height = height;
@@ -165,7 +174,9 @@ void DisplayManager::SetImageConfig(int32_t width, int32_t height, zx_pixel_form
   FXL_DCHECK(false) << "Display swapchain only supported on intel and ARM";
 #endif
 
-  display_controller_->SetLayerPrimaryConfig(layer_id_, image_config_);
+  if (display_controller_->SetLayerPrimaryConfig(layer_id_, image_config_) != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to set layer primary config";
+  }
 }
 
 uint64_t DisplayManager::ImportImage(uint64_t collection_id, uint32_t index) {
@@ -179,13 +190,17 @@ uint64_t DisplayManager::ImportImage(uint64_t collection_id, uint32_t index) {
   return id;
 }
 
-void DisplayManager::ReleaseImage(uint64_t id) { display_controller_->ReleaseImage(id); }
+void DisplayManager::ReleaseImage(uint64_t id) {
+  if (display_controller_->ReleaseImage(id) != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to release image";
+  }
+}
 
 fuchsia::sysmem::BufferCollectionTokenSyncPtr DisplayManager::CreateBufferCollection() {
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
   zx_status_t status = sysmem_allocator_->AllocateSharedCollection(local_token.NewRequest());
   if (status != ZX_OK) {
-    FXL_DLOG(ERROR) << "CreateBufferCollection failed " << status;
+    FXL_LOG(ERROR) << "CreateBufferCollection failed " << status;
     return nullptr;
   }
   return local_token;
@@ -197,7 +212,7 @@ fuchsia::sysmem::BufferCollectionSyncPtr DisplayManager::GetCollectionFromToken(
   zx_status_t status =
       sysmem_allocator_->BindSharedCollection(std::move(token), collection.NewRequest());
   if (status != ZX_OK) {
-    FXL_DLOG(ERROR) << "BindSharedCollection failed " << status;
+    FXL_LOG(ERROR) << "BindSharedCollection failed " << status;
     return nullptr;
   }
   return collection;
@@ -210,15 +225,17 @@ uint64_t DisplayManager::ImportBufferCollection(
   if (display_controller_->ImportBufferCollection(buffer_collection_id, std::move(token),
                                                   &status) != ZX_OK ||
       status != ZX_OK) {
-    FXL_DLOG(ERROR) << "ImportBufferCollection failed - status: " << status;
+    FXL_LOG(ERROR) << "ImportBufferCollection failed - status: " << status;
     return 0;
   }
 
   if (display_controller_->SetBufferCollectionConstraints(buffer_collection_id, image_config_,
                                                           &status) != ZX_OK ||
       status != ZX_OK) {
-    FXL_DLOG(ERROR) << "SetBufferCollectionConstraints failed.";
-    display_controller_->ReleaseBufferCollection(buffer_collection_id);
+    FXL_LOG(ERROR) << "SetBufferCollectionConstraints failed.";
+    if (display_controller_->ReleaseBufferCollection(buffer_collection_id) != ZX_OK) {
+      FXL_LOG(ERROR) << "ReleaseBufferCollection failed.";
+    }
     return 0;
   }
 
@@ -226,7 +243,9 @@ uint64_t DisplayManager::ImportBufferCollection(
 }
 
 void DisplayManager::ReleaseBufferCollection(uint64_t id) {
-  display_controller_->ReleaseBufferCollection(id);
+  if (display_controller_->ReleaseBufferCollection(id) != ZX_OK) {
+    FXL_LOG(ERROR) << "ReleaseBufferCollection failed.";
+  }
 }
 
 void DisplayManager::Flip(Display* display, uint64_t buffer, uint64_t render_finished_event_id,
@@ -234,11 +253,11 @@ void DisplayManager::Flip(Display* display, uint64_t buffer, uint64_t render_fin
   zx_status_t status = display_controller_->SetLayerImage(
       layer_id_, buffer, render_finished_event_id, signal_event_id);
   // TODO(SCN-244): handle this more robustly.
-  FXL_DCHECK(status == ZX_OK) << "DisplayManager::Flip failed";
+  FXL_CHECK(status == ZX_OK) << "DisplayManager::Flip failed";
 
   status = display_controller_->ApplyConfig();
   // TODO(SCN-244): handle this more robustly.
-  FXL_DCHECK(status == ZX_OK) << "DisplayManager::Flip failed";
+  FXL_CHECK(status == ZX_OK) << "DisplayManager::Flip failed";
 }
 
 void DisplayManager::SetDisplayColorConversion(Display* display, const ColorTransform& transform) {
@@ -247,8 +266,9 @@ void DisplayManager::SetDisplayColorConversion(Display* display, const ColorTran
 
   // For testing purposes, display_controller_ can be null
   if (display_controller_) {
-    display_controller_->SetDisplayColorConversion(display_id, transform.preoffsets,
-                                                   transform.matrix, transform.postoffsets);
+    zx_status_t status = display_controller_->SetDisplayColorConversion(
+        display_id, transform.preoffsets, transform.matrix, transform.postoffsets);
+    FXL_CHECK(status == ZX_OK) << "SetDisplayColorConversion failed";
   }
 
   // For testing and future-proofing purposes.
