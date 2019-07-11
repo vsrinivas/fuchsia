@@ -3,6 +3,9 @@
         "binary": "bin/system-update-checker"
     },
     "sandbox": {
+        "features": [
+            "deprecated-misc-storage"
+        ],
         "pkgfs": [
             "ctl"
         ],

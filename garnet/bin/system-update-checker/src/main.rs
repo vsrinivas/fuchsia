@@ -7,12 +7,15 @@
 mod apply;
 mod check;
 mod errors;
+mod info_handler;
 mod manager_manager;
 mod manager_service;
 
+
+use crate::info_handler::InfoHandler;
 use crate::manager_service::RealManagerService;
 use failure::{Error, ResultExt};
-use fidl_fuchsia_update::ManagerRequestStream;
+use fidl_fuchsia_update::{InfoRequestStream, ManagerRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::fx_log_err;
@@ -27,10 +30,12 @@ fn main() -> Result<(), Error> {
 
     // TODO(PKG-768) use _manager_manager
     let (_manager_manager, manager_service) = RealManagerService::new_manager_and_service();
+    let info_handler = InfoHandler::default();
 
     let mut fs = ServiceFs::new();
     fs.dir("svc")
-        .add_fidl_service(move |stream| IncomingServices::Manager(stream, manager_service.clone()));
+        .add_fidl_service(move |stream| IncomingServices::Manager(stream, manager_service.clone()))
+        .add_fidl_service(move |stream| IncomingServices::Info(stream, info_handler.clone()));
     fs.take_and_serve_directory_handle().context("ServiceFs::take_and_serve_directory_handle")?;
     let fidl_fut = fs.for_each_concurrent(MAX_CONCURRENT_CONNECTIONS, |incoming_service| {
         handle_incoming_service(incoming_service)
@@ -43,12 +48,16 @@ fn main() -> Result<(), Error> {
 
 enum IncomingServices {
     Manager(ManagerRequestStream, RealManagerService),
+    Info(InfoRequestStream, InfoHandler),
 }
 
 async fn handle_incoming_service(incoming_service: IncomingServices) -> Result<(), Error> {
     match incoming_service {
         IncomingServices::Manager(request_stream, manager_service) => {
             await!(manager_service.handle_request_stream(request_stream))
+        }
+        IncomingServices::Info(request_stream, handler) => {
+            await!(handler.handle_request_stream(request_stream))
         }
     }
 }
