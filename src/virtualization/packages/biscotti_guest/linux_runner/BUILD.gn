@@ -24,6 +24,11 @@ declare_args() {
   # This is useful for including some GN-built binaries into the guest image
   # without modifying the termina images.
   linux_runner_extras = false
+
+  # If `true`, all block devices that would normally load as READ_WRITE will
+  # be loaded as VOLATILE_WRITE. This is useful when working on changes to
+  # the linux kernel as crashes and panics can sometimes corrupt the images.
+  linux_runner_volatile_block = false
 }
 
 config("linux_runner_net_config") {
@@ -67,6 +72,9 @@ source_set("lib") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/trace-provider-with-fdio",
   ]
+  if (linux_runner_volatile_block) {
+    defines = [ "USE_VOLATILE_BLOCK" ]
+  }
 }
 
 action("extras") {

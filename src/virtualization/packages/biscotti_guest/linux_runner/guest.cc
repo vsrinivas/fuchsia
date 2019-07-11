@@ -91,9 +91,14 @@ static fidl::VectorPtr<fuchsia::virtualization::BlockDevice> GetBlockDevices(
   auto file_handle = GetOrCreateStatefulPartition(stateful_image_size);
   FXL_CHECK(file_handle) << "Failed to open stateful file";
   fidl::VectorPtr<fuchsia::virtualization::BlockDevice> devices;
+#ifdef USE_VOLATILE_BLOCK
+  auto stateful_block_mode = fuchsia::virtualization::BlockMode::VOLATILE_WRITE;
+#else
+  auto stateful_block_mode = fuchsia::virtualization::BlockMode::READ_WRITE;
+#endif
   devices.push_back({
       "stateful",
-      fuchsia::virtualization::BlockMode::READ_WRITE,
+      stateful_block_mode,
       fuchsia::virtualization::BlockFormat::RAW,
       std::move(file_handle),
   });
