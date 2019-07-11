@@ -237,6 +237,7 @@ void JSONGenerator::Generate(const flat::Name& value) {
 void JSONGenerator::Generate(const flat::Bits& value) {
   GenerateObject([&]() {
     GenerateObjectMember("name", value.name, Position::kFirst);
+    GenerateObjectMember("location", NameLocation(value.name));
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("type", value.subtype_ctor->type);
@@ -252,6 +253,7 @@ void JSONGenerator::Generate(const flat::Bits& value) {
 void JSONGenerator::Generate(const flat::Bits::Member& value) {
   GenerateObject([&]() {
     GenerateObjectMember("name", value.name, Position::kFirst);
+    GenerateObjectMember("location", NameLocation(value.name));
     GenerateObjectMember("value", value.value);
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);

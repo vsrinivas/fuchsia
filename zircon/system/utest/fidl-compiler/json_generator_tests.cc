@@ -1500,6 +1500,11 @@ bits Bits : uint64 {
   "bits_declarations": [
     {
       "name": "fidl.test.json/Bits",
+      "location": {
+        "filename": "json.fidl",
+        "line": 4,
+        "column": 6
+      },
       "type": {
         "kind": "primitive",
         "subtype": "uint64"
@@ -1508,6 +1513,11 @@ bits Bits : uint64 {
       "members": [
         {
           "name": "SMALLEST",
+          "location": {
+            "filename": "json.fidl",
+            "line": 5,
+            "column": 5
+          },
           "value": {
             "kind": "literal",
             "literal": {
@@ -1519,6 +1529,11 @@ bits Bits : uint64 {
         },
         {
           "name": "BIGGEST",
+          "location": {
+            "filename": "json.fidl",
+            "line": 6,
+            "column": 5
+          },
           "value": {
             "kind": "literal",
             "literal": {
@@ -1611,6 +1626,11 @@ struct Struct {
   "bits_declarations": [
     {
       "name": "values/Bits",
+      "location": {
+        "filename": "json.fidl",
+        "line": 21,
+        "column": 6
+      },
       "type": {
         "kind": "primitive",
         "subtype": "uint32"
@@ -1619,6 +1639,11 @@ struct Struct {
       "members": [
         {
           "name": "B",
+          "location": {
+            "filename": "json.fidl",
+            "line": 22,
+            "column": 3
+          },
           "value": {
             "kind": "literal",
             "literal": {
@@ -2379,6 +2404,11 @@ xunion ExampleXUnion {
   "bits_declarations": [
     {
       "name": "example/ExampleBits",
+      "location": {
+        "filename": "example.fidl",
+        "line": 9,
+        "column": 6
+      },
       "maybe_attributes": [
         {
           "name": "OnBits",
@@ -2393,6 +2423,11 @@ xunion ExampleXUnion {
       "members": [
         {
           "name": "MEMBER",
+          "location": {
+            "filename": "example.fidl",
+            "line": 11,
+            "column": 5
+          },
           "value": {
             "kind": "literal",
             "literal": {
