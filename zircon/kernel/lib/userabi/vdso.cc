@@ -126,7 +126,7 @@ public:
 
     // Fill the given code region (a whole function) with safely invalid code.
     // This code should never be run, and any attempt to use it should crash.
-    void blacklist(uintptr_t address, size_t size) {
+    void block_execution(uintptr_t address, size_t size) {
         ASSERT(address >= VDSO_CODE_START);
         ASSERT(address + size < VDSO_CODE_END);
         address -= VDSO_CODE_START;
@@ -165,10 +165,10 @@ private:
         dynsym_window.set_symbol(_##symbol, target);    \
     } while (0)
 
-// Blacklist the named zx_* function.  The symbol table entry will
+// Block the named zx_* function.  The symbol table entry will
 // become invisible to runtime symbol resolution, and the code of
 // the function will be clobbered with trapping instructions.
-#define BLACKLIST_SYSCALL(dynsym_window, code_window, symbol)   \
+#define BLOCK_SYSCALL(dynsym_window, code_window, symbol)   \
     do {                                                        \
         dynsym_window.localize_symbol(symbol);                  \
         dynsym_window.localize_symbol(_##symbol);               \
@@ -178,19 +178,19 @@ private:
         dynsym_window.get_symbol(_##symbol, &_address, &_size); \
         ASSERT(address == _address);                            \
         ASSERT(size == _size);                                  \
-        code_window.blacklist(address, size);                   \
+        code_window.block_execution(address, size);             \
     } while (0)
 
 // Random attributes in syscalls.abigen become "categories" of syscalls.
-// For each category, define a function blacklist_<category> to blacklist
-// all the syscalls in that category.  These functions can be used in
-// VDso::CreateVariant (below) to blacklist a category of syscalls for
-// a particular variant vDSO.
-#define SYSCALL_CATEGORY_BEGIN(category)                                  \
-    void blacklist_##category##_syscalls(VDsoDynSymWindow& dynsym_window, \
-                                         VDsoCodeWindow& code_window) {
+// For each category, define a function block_<category> to block all the
+// syscalls in that category.  These functions can be used in
+// VDso::CreateVariant (below) to block a category of syscalls for a particular
+// variant vDSO.
+#define SYSCALL_CATEGORY_BEGIN(category)                              \
+    void block_##category##_syscalls(VDsoDynSymWindow& dynsym_window, \
+                                     VDsoCodeWindow& code_window) {
 #define SYSCALL_IN_CATEGORY(syscall) \
-    BLACKLIST_SYSCALL(dynsym_window, code_window, zx_##syscall);
+    BLOCK_SYSCALL(dynsym_window, code_window, zx_##syscall);
 #define SYSCALL_CATEGORY_END(category) \
     }
 #include <zircon/syscall-category.inc>
@@ -273,12 +273,12 @@ void VDso::GetVariants(Handle** vmos) const {
 }
 
 // Each vDSO variant VMO is made via a COW clone of the main/default vDSO
-// VMO.  A variant can blacklist some system calls, by syscall category.
+// VMO.  A variant can block some system calls, by syscall category.
 // This works by modifying the symbol table entries to make the symbols
 // invisible to dynamic linking (STB_LOCAL) and then clobbering the code
 // with trapping instructions.  In this way, all the code locations are the
 // same across variants and the syscall entry enforcement doesn't have to
-// care which variant is in use.  The places where the blacklisted
+// care which variant is in use.  The places where the blocked
 // syscalls' syscall entry instructions would be no longer have the syscall
 // instructions, so a process using the variant can never get into syscall
 // entry with that PC value and hence can never pass the vDSO enforcement
@@ -300,12 +300,12 @@ void VDso::CreateVariant(Variant variant) {
     switch (variant) {
     case Variant::TEST1:
         name = "vdso/test1";
-        blacklist_test_category1_syscalls(dynsym_window, code_window);
+        block_test_category1_syscalls(dynsym_window, code_window);
         break;
 
     case Variant::TEST2:
         name = "vdso/test2";
-        blacklist_test_category2_syscalls(dynsym_window, code_window);
+        block_test_category2_syscalls(dynsym_window, code_window);
         break;
 
     // No default case so the compiler will warn about new enum entries.
