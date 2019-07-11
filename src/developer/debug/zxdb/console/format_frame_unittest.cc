@@ -8,7 +8,8 @@
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 #include "src/developer/debug/zxdb/client/session.h"
-#include "src/developer/debug/zxdb/console/format_value.h"
+#include "src/developer/debug/zxdb/console/async_output_buffer_test_util.h"
+#include "src/developer/debug/zxdb/console/format_node_console.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
@@ -19,30 +20,14 @@ namespace zxdb {
 namespace {
 
 // Synchronous wrapper around asynchronous long formatting.
-std::string SyncFormatFrameLong(const Frame* frame, const FormatExprValueOptions& options) {
+std::string SyncFormatFrameLong(const Frame* frame, const ConsoleFormatNodeOptions& options) {
   debug_ipc::PlatformMessageLoop loop;
   loop.Init();
 
-  auto helper = fxl::MakeRefCounted<FormatValue>();
-  FormatFrameLong(frame, false, helper.get(), FormatExprValueOptions());
-
-  std::string out_string;
-  bool complete = false;
-  helper->Complete([&loop, &out_string, &complete](OutputBuffer out) {
-    complete = true;
-    out_string = out.AsString();
-    loop.QuitNow();
-  });
-
-  if (!complete) {
-    // Did not complete synchronously, run the loop.
-    loop.Run();
-  }
-
-  EXPECT_TRUE(complete);
+  auto out = LoopUntilAsyncOutputBufferComplete(FormatFrameLong(frame, false, options));
 
   loop.Cleanup();
-  return out_string;
+  return out.AsString();
 }
 
 }  // namespace
@@ -51,25 +36,22 @@ TEST(FormatFrame, Unsymbolized) {
   MockFrame frame(nullptr, nullptr, Location(Location::State::kSymbolized, 0x12345678), 0x567890, 0,
                   std::vector<Register>(), 0xdeadbeef);
 
-  OutputBuffer out;
-
   // Short format just prints the address.
-  FormatFrame(&frame, false, &out);
+  auto out = FormatFrame(&frame, false);
   EXPECT_EQ("0x12345678", out.AsString());
 
   // Long version should do the same (not duplicate it).
   EXPECT_EQ("\n      IP = 0x12345678, SP = 0x567890, base = 0xdeadbeef",
-            SyncFormatFrameLong(&frame, FormatExprValueOptions()));
+            SyncFormatFrameLong(&frame, ConsoleFormatNodeOptions()));
 
   // With index.
-  out = OutputBuffer();
-  FormatFrame(&frame, false, &out, 3);
+  out = FormatFrame(&frame, false, 3);
   EXPECT_EQ("Frame 3 0x12345678", out.AsString());
 }
 
 TEST(FormatFrame, Inline) {
-  // This is to have some place for the inline frame to refer to as the
-  // underlying physical frame. The values are ignored.
+  // This is to have some place for the inline frame to refer to as the underlying physical frame.
+  // The values are ignored.
   MockFrame physical_frame(nullptr, nullptr, Location(Location::State::kSymbolized, 0x12345678),
                            0x567890);
 
@@ -86,7 +68,7 @@ TEST(FormatFrame, Inline) {
   EXPECT_EQ(
       "Function() • file.cc:22 (inline)\n"
       "      IP = 0x12345678, SP = 0x567890, base = 0xdeadbeef",
-      SyncFormatFrameLong(&inline_frame, FormatExprValueOptions()));
+      SyncFormatFrameLong(&inline_frame, ConsoleFormatNodeOptions()));
 }
 
 }  // namespace zxdb

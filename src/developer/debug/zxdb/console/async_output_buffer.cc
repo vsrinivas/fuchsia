@@ -28,9 +28,8 @@ void AsyncOutputBuffer::Append(fxl::RefPtr<AsyncOutputBuffer> buf) {
   if (!buf->is_complete()) {
     pending_resolution_++;
 
-    // We're keeping a reference to the appended buffer so we know it's safe
-    // to capture |this|. We don't want to use a RefPtr here or it will create
-    // a reference cycle.
+    // We're keeping a reference to the appended buffer so we know it's safe to capture |this|. We
+    // don't want to use a RefPtr here or it will create a reference cycle.
     buf->SetCompletionCallback([this]() {
       FXL_DCHECK(pending_resolution_ > 0);
       pending_resolution_--;

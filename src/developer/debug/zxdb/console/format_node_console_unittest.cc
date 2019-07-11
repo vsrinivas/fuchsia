@@ -6,6 +6,7 @@
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
+#include "src/developer/debug/zxdb/console/async_output_buffer_test_util.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
@@ -28,21 +29,8 @@ class FormatValueConsoleTest : public TestWithLoop {
 
   // Synchronously calls FormatExprValue, returning the result.
   std::string SyncFormatValue(const ExprValue& value, const ConsoleFormatNodeOptions& opts) {
-    auto output = FormatValueForConsole(value, opts, eval_context_);
-
-    if (!output->is_complete()) {
-      // Need to wait for async completion.
-      bool called = false;
-      output->SetCompletionCallback([&called]() {
-        called = true;
-        debug_ipc::MessageLoop::Current()->QuitNow();
-      });
-
-      loop().Run();
-
-      EXPECT_TRUE(called);
-    }
-    return output->DestructiveFlatten().AsString();
+    return LoopUntilAsyncOutputBufferComplete(FormatValueForConsole(value, opts, eval_context_))
+        .AsString();
   }
 
  private:

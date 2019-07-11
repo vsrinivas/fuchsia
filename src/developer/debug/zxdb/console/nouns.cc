@@ -26,9 +26,9 @@
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/developer/debug/zxdb/console/format_frame.h"
 #include "src/developer/debug/zxdb/console/format_job.h"
+#include "src/developer/debug/zxdb/console/format_node_console.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/format_target.h"
-#include "src/developer/debug/zxdb/console/format_value.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
@@ -42,7 +42,7 @@ namespace {
 constexpr int kForceTypes = 1;
 constexpr int kVerboseSwitch = 2;
 
-// Frames ----------------------------------------------------------------------
+// Frames ------------------------------------------------------------------------------------------
 
 const char kFrameShortHelp[] = "frame / f: Select or list stack frames.";
 const char kFrameHelp[] =
@@ -88,8 +88,8 @@ Examples
     Selects the specified process, thread, and frame.
 )";
 
-// Returns true if processing should stop (either a frame command or an error),
-// false to continue processing to the next noun type.
+// Returns true if processing should stop (either a frame command or an error), false to continue
+// processing to the next noun type.
 bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   if (!cmd.HasNoun(Noun::kFrame))
     return false;
@@ -101,24 +101,26 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
 
   if (cmd.GetNounIndex(Noun::kFrame) == Command::kNoIndex) {
     // Just "frame", this lists available frames.
-    OutputFrameList(cmd.thread(), cmd.HasSwitch(kForceTypes), cmd.HasSwitch(kVerboseSwitch));
+    Console::get()->Output(
+        FormatFrameList(cmd.thread(), cmd.HasSwitch(kForceTypes), cmd.HasSwitch(kVerboseSwitch)));
     return true;
   }
 
-  // Explicit index provided, this switches the current context. The thread
-  // should be already resolved to a valid pointer if it was specified on the
-  // command line (otherwise the command would have been rejected before here).
+  // Explicit index provided, this switches the current context. The thread should be already
+  // resolved to a valid pointer if it was specified on the command line (otherwise the command
+  // would have been rejected before here).
   FXL_DCHECK(cmd.frame());
   context->SetActiveFrameForThread(cmd.frame());
   // Setting the active frame also sets the active thread and target.
   context->SetActiveThreadForTarget(cmd.thread());
   context->SetActiveTarget(cmd.target());
 
-  FormatFrameAsync(context, cmd.target(), cmd.thread(), cmd.frame(), cmd.HasSwitch(kForceTypes));
+  ConsoleFormatNodeOptions options;
+  Console::get()->Output(FormatFrameLong(cmd.frame(), cmd.HasSwitch(kForceTypes), options));
   return true;
 }
 
-// Filters ---------------------------------------------------------------------
+// Filters -----------------------------------------------------------------------------------------
 
 const char kFilterShortHelp[] = "filter: Select or list process filters.";
 const char kFilterHelp[] =
@@ -191,8 +193,8 @@ void ListFilters(ConsoleContext* context, JobContext* job) {
   Console::get()->Output(out);
 }
 
-// Returns true if processing should stop (either a filter command or an error),
-// false to continue processing to the next noun type.
+// Returns true if processing should stop (either a filter command or an error), false to continue
+// processing to the next noun type.
 bool HandleFilterNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   if (!cmd.HasNoun(Noun::kFilter))
     return false;
@@ -212,7 +214,7 @@ bool HandleFilterNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   return true;
 }
 
-// Threads ---------------------------------------------------------------------
+// Threads -----------------------------------------------------------------------------------------
 
 const char kThreadShortHelp[] = "thread / t: Select or list threads.";
 const char kThreadHelp[] =
@@ -290,18 +292,17 @@ void ListThreads(ConsoleContext* context, Process* process) {
   Console::get()->Output(out);
 }
 
-// Updates the thread list from the debugged process and asynchronously prints
-// the result. When the user lists threads, we really don't want to be
-// misleading and show out-of-date thread names which the developer might be
-// relying on. Therefore, force a sync of the thread list from the target
+// Updates the thread list from the debugged process and asynchronously prints the result. When the
+// user lists threads, we really don't want to be misleading and show out-of-date thread names which
+// the developer might be relying on. Therefore, force a sync of the thread list from the target
 // (which should be fast) before displaying the thread list.
 void ScheduleListThreads(Process* process) {
   // Since the Process issues the callback, it's OK to capture the pointer.
   process->SyncThreads([process]() { ListThreads(&Console::get()->context(), process); });
 }
 
-// Returns true if processing should stop (either a thread command or an error),
-// false to continue processing to the nex noun type.
+// Returns true if processing should stop (either a thread command or an error), false to continue
+// processing to the nex noun type.
 bool HandleThreadNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   if (!cmd.HasNoun(Noun::kThread))
     return false;
@@ -313,15 +314,14 @@ bool HandleThreadNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   }
 
   if (cmd.GetNounIndex(Noun::kThread) == Command::kNoIndex) {
-    // Just "thread" or "process 2 thread" specified, this lists available
-    // threads.
+    // Just "thread" or "process 2 thread" specified, this lists available threads.
     ScheduleListThreads(process);
     return true;
   }
 
-  // Explicit index provided, this switches the current context. The thread
-  // should be already resolved to a valid pointer if it was specified on the
-  // command line (otherwise the command would have been rejected before here).
+  // Explicit index provided, this switches the current context. The thread should be already
+  // resolved to a valid pointer if it was specified on the command line (otherwise the command
+  // would have been rejected before here).
   FXL_DCHECK(cmd.thread());
   context->SetActiveThreadForTarget(cmd.thread());
   // Setting the active thread also sets the active target.
@@ -330,7 +330,7 @@ bool HandleThreadNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   return true;
 }
 
-// Jobs -------------------------------------------------------------------
+// Jobs --------------------------------------------------------------------------------------------
 
 const char kJobShortHelp[] = "job / j: Select or list job contexts.";
 const char kJobHelp[] =
@@ -371,8 +371,8 @@ Examples
       Attach to job context 2, regardless of the active one.
 )";
 
-// Returns true if processing should stop (either a thread command or an error),
-// false to continue processing to the nex noun type.
+// Returns true if processing should stop (either a thread command or an error), false to continue
+// processing to the nex noun type.
 bool HandleJobNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   if (!cmd.HasNoun(Noun::kJob))
     return false;
@@ -389,7 +389,7 @@ bool HandleJobNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   return true;
 }
 
-// Processes -------------------------------------------------------------------
+// Processes ---------------------------------------------------------------------------------------
 
 const char kProcessShortHelp[] = "process / pr: Select or list process contexts.";
 const char kProcessHelp[] =
@@ -428,8 +428,8 @@ Examples
       Runs process context 2, regardless of the active one.
 )";
 
-// Returns true if processing should stop (either a thread command or an error),
-// false to continue processing to the next noun type.
+// Returns true if processing should stop (either a thread command or an error), false to continue
+// processing to the next noun type.
 bool HandleProcessNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   if (!cmd.HasNoun(Noun::kProcess))
     return false;
@@ -440,16 +440,16 @@ bool HandleProcessNoun(ConsoleContext* context, const Command& cmd, Err* err) {
     return true;
   }
 
-  // Explicit index provided, this switches the current context. The target
-  // should be already resolved to a valid pointer if it was specified on the
-  // command line (otherwise the command would have been rejected before here).
+  // Explicit index provided, this switches the current context. The target should be already
+  // resolved to a valid pointer if it was specified on the command line (otherwise the command
+  // would have been rejected before here).
   FXL_DCHECK(cmd.target());
   context->SetActiveTarget(cmd.target());
   Console::get()->Output(FormatTarget(context, cmd.target()));
   return true;
 }
 
-// Global ----------------------------------------------------------------------
+// Global ------------------------------------------------------------------------------------------
 
 const char kGlobalShortHelp[] = "global / gl: Global override for commands.";
 const char kGlobalHelp[] =
@@ -471,7 +471,7 @@ bool HandleGlobalNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   return true;
 }
 
-// Breakpoints -----------------------------------------------------------------
+// Breakpoints -------------------------------------------------------------------------------------
 
 const char kBreakpointShortHelp[] = "breakpoint / bp: Select or list breakpoints.";
 const char kBreakpointHelp[] =
@@ -572,37 +572,36 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
   Console::get()->Output(out);
 }
 
-// Returns true if breakpoint was specified (and therefore nothing else
-// should be called. If breakpoint is specified but there was an error, *err
-// will be set.
+// Returns true if breakpoint was specified (and therefore nothing else should be called. If
+// breakpoint is specified but there was an error, *err will be set.
 bool HandleBreakpointNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   if (!cmd.HasNoun(Noun::kBreakpoint))
     return false;
 
-  // With no verb, breakpoint can not be combined with any other noun. Saying
-  // "process 2 breakpoint" doesn't make any sense.
+  // With no verb, breakpoint can not be combined with any other noun. Saying "process 2 breakpoint"
+  // doesn't make any sense.
   *err = cmd.ValidateNouns({Noun::kBreakpoint});
   if (err->has_error())
     return true;
 
   if (cmd.GetNounIndex(Noun::kBreakpoint) == Command::kNoIndex) {
-    // Just "breakpoint", this lists available breakpoints. The verbose switch
-    // expands each individual breakpoint location.
+    // Just "breakpoint", this lists available breakpoints. The verbose switch expands each
+    // individual breakpoint location.
     bool include_locations = cmd.HasSwitch(kVerboseSwitch);
     ListBreakpoints(context, include_locations);
     return true;
   }
 
-  // Explicit index provided, this switches the current context. The breakpoint
-  // should be already resolved to a valid pointer if it was specified on the
-  // command line (otherwise the command would have been rejected before here).
+  // Explicit index provided, this switches the current context. The breakpoint should be already
+  // resolved to a valid pointer if it was specified on the command line (otherwise the command
+  // would have been rejected before here).
   FXL_DCHECK(cmd.breakpoint());
   context->SetActiveBreakpoint(cmd.breakpoint());
   Console::get()->Output(FormatBreakpoint(context, cmd.breakpoint()));
   return true;
 }
 
-// Symbol Servers --------------------------------------------------------------
+// Symbol Servers ----------------------------------------------------------------------------------
 
 const char kSymServerShortHelp[] = "sym-server: Select or list symbol servers.";
 const char kSymServerHelp[] =
@@ -696,8 +695,7 @@ bool HandleSymbolServerNoun(ConsoleContext* context, const Command& cmd, Err* er
   if (!cmd.HasNoun(Noun::kSymServer))
     return false;
 
-  // sym-server only makes sense by itself. It doesn't make sense with any
-  // other nouns.
+  // sym-server only makes sense by itself. It doesn't make sense with any other nouns.
   *err = cmd.ValidateNouns({Noun::kSymServer});
   if (err->has_error())
     return true;
@@ -708,10 +706,9 @@ bool HandleSymbolServerNoun(ConsoleContext* context, const Command& cmd, Err* er
     return true;
   }
 
-  // Explicit index provided, this switches the current context. The symbol
-  // server should be already resolved to a valid pointer if it was specified
-  // on the command line (otherwise the command would have been rejected before
-  // here).
+  // Explicit index provided, this switches the current context. The symbol server should be already
+  // resolved to a valid pointer if it was specified on the command line (otherwise the command
+  // would have been rejected before here).
   FXL_DCHECK(cmd.sym_server());
   context->SetActiveSymbolServer(cmd.sym_server());
 
@@ -801,9 +798,9 @@ Err ExecuteNoun(ConsoleContext* context, const Command& cmd) {
 }
 
 void AppendNouns(std::map<Noun, NounRecord>* nouns) {
-  // If non-kNone, the "command groups" on the noun will cause the help for
-  // that noun to additionall appear under that section (people expect the
-  // "thread" command to appear in the process section).
+  // If non-kNone, the "command groups" on the noun will cause the help for that noun to additionall
+  // appear under that section (people expect the "thread" command to appear in the process
+  // section).
   (*nouns)[Noun::kBreakpoint] = NounRecord({"breakpoint", "bp"}, kBreakpointShortHelp,
                                            kBreakpointHelp, CommandGroup::kBreakpoint);
 

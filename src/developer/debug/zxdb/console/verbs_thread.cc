@@ -167,7 +167,7 @@ Err DoBacktrace(ConsoleContext* context, const Command& cmd) {
 
   // TODO(brettw) this should share formatting options and parsing with the printing commands.
   bool show_params = cmd.HasSwitch(kForceAllTypes);
-  OutputFrameList(cmd.thread(), show_params, true);
+  Console::get()->Output(FormatFrameList(cmd.thread(), show_params, true));
   return Err();
 }
 
@@ -279,8 +279,8 @@ Err DoDown(ConsoleContext* context, const Command& cmd) {
   id -= 1;
 
   context->SetActiveFrameIdForThread(cmd.thread(), id);
-  FormatFrameAsync(context, cmd.target(), cmd.thread(), cmd.thread()->GetStack()[id]);
-
+  Console::get()->Output(
+      FormatFrameLong(cmd.thread()->GetStack()[id], false, ConsoleFormatNodeOptions()));
   return Err();
 }
 
@@ -301,12 +301,10 @@ Examples
       Move up the stack on thread 1
 )";
 Err DoUp(ConsoleContext* context, const Command& cmd) {
-  Err err = AssertStoppedThreadCommand(context, cmd, true, "up");
-  if (err.has_error())
+  if (Err err = AssertStoppedThreadCommand(context, cmd, true, "up"); err.has_error())
     return err;
 
   auto id = context->GetActiveFrameIdForThread(cmd.thread());
-
   if (id < 0) {
     return Err("Cannot find current frame.");
   }
@@ -330,7 +328,8 @@ Err DoUp(ConsoleContext* context, const Command& cmd) {
       Console::get()->Output(got);
     } else {
       context->SetActiveFrameIdForThread(cmd.thread(), id);
-      FormatFrameAsync(context, cmd.target(), cmd.thread(), cmd.thread()->GetStack()[id]);
+      Console::get()->Output(
+          FormatFrameLong(cmd.thread()->GetStack()[id], false, ConsoleFormatNodeOptions()));
     }
   };
 
