@@ -12,6 +12,9 @@ open the corresponding directory.
 
 See instructions on [`rust-lang/rust.vim`](https://github.com/rust-lang/rust.vim).
 
+If you use Tagbar, see [this post](https://users.rust-lang.org/t/taglist-like-vim-plugin-for-rust/21924/13)
+for instructions on making it work better with Rust.
+
 ## Visual Studio Code
 
 The VS Code plugin uses the RLS (Rust language server) so you'll need to first
