@@ -114,11 +114,16 @@ class SystemTimeUpdaterTest : public TestWithEnvironment {
 
   void TearDown() override { TestWithEnvironment::TearDown(); }
 
-  // Launch a local Roughtime server in a new thread.
+  // Launch a local Roughtime server in a new thread.  The new thread owns the
+  // local Roughtime server because it is going to outlive the test.
   std::unique_ptr<std::thread> LaunchLocalRoughtimeServer(uint16_t port_number) {
-    local_roughtime_server_ =
+    auto local_roughtime_server =
         LocalRoughtimeServer::MakeInstance(kPrivateKey, port_number, 1537485257118'000);
-    return std::make_unique<std::thread>(std::thread([&]() { local_roughtime_server_->Start(); }));
+    local_roughtime_server_ = local_roughtime_server.release();
+    return std::make_unique<std::thread>(std::thread([&]() {
+      local_roughtime_server_->Start();
+      delete local_roughtime_server_;
+    }));
   }
 
   // Launch the system time update service using the production config file.
@@ -155,7 +160,7 @@ class SystemTimeUpdaterTest : public TestWithEnvironment {
 
   std::unique_ptr<vfs::PseudoDir> fake_dev_vfs_dir_ = nullptr;
   std::unique_ptr<FakeRtcDevice> fake_rtc_device_ = nullptr;
-  std::unique_ptr<LocalRoughtimeServer> local_roughtime_server_ = nullptr;
+  LocalRoughtimeServer* local_roughtime_server_ = nullptr;
 
  private:
   // Launch the system time update service, using the given config path. If
