@@ -123,6 +123,7 @@ Mutex::~Mutex() {
 void Mutex::Acquire() {
     magic_.Assert();
     DEBUG_ASSERT(!arch_blocking_disallowed());
+    DEBUG_ASSERT(arch_num_spinlocks_held() == 0);
 
     thread_t* ct = get_current_thread();
     uintptr_t old_mutex_state;
