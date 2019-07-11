@@ -100,7 +100,6 @@ group("deprecated_shell_allowlist") {
     "//src/developer/debug/debug_agent:debug_agent_tests",
     "//src/developer/feedback_agent:feedback_agent",
     "//src/developer/feedback_agent/tests:feedback_agent_tests",
-    "//src/lib/isolated_devmgr:isolated_devmgr_tests",
     "//src/recovery/factory_reset:factory_reset_tests",
   ]
 }

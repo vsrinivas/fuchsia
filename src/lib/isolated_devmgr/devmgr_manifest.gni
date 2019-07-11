@@ -6,8 +6,7 @@ import("//build/images/manifest.gni")
 
 # Creates a devmgr_manifest to be used by isolated devmgr components.
 # TODO(brunodalbo) expand this template in the future to allow specifying which drivers specifically
-#  we want to include in the component, which will allow us to not need "shell" feature in the
-#  componentized version.
+#  we want to include in the component.
 template("devmgr_manifest") {
   action(target_name) {
     forward_variables_from(invoker,

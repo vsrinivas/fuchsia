@@ -33,8 +33,20 @@ Options:
    --help: displays this help page.
 
 Note: isolated_devmgr runs as a component, so all paths must be relative to the component's
-namespace. When using any paths that point to /boot/*, features "shell" must be part of the
-manifest.
+namespace. Since the devmgr libraries and executables are currently under /boot, the components
+sandbox metadata must include the "/boot/bin" and "/boot/lib". Additionally, it's common to load
+drivers out of "/boot/driver" and this directory must also be specificed in the components sandbox
+metadata to make these drivers available to isolated_devmgr.
+
+Example sandbox metadata:
+
+    "sandbox": {
+        "boot": [
+            "bin",
+            "driver",
+            "lib"
+        ]
+    }
 )";
 }
 

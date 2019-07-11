@@ -60,8 +60,10 @@ multiple times) lists drivers to load when it is launched.
         "binary": "bin/isolated_devmgr"
     },
     "sandbox": {
-        "features": [
-            "shell"
+        "boot": [
+            "bin",
+            "driver",
+            "lib"
         ],
         "services": [
             "fuchsia.process.Launcher",
@@ -70,11 +72,6 @@ multiple times) lists drivers to load when it is launched.
     }
 }
 ```
-> Note: we currently always need to add "shell" to the features of this component because it's
-> always looking into /boot. Future versions will be able to provide more hermeticity and we'll
-> not need "shell" anymore
-> @@brunodalbo
-
 With this custom isolated devmgr, you can then use it in test cases by either launching it manually
 using the fuchsia-url for your package (in this example
 `fuchsia-pkg://fuchsia.com/my_devmgr#meta/my_devmgr.cmx`) or you can inject it as a service and

@@ -9,8 +9,10 @@
         "binary": "bin/isolated_devmgr"
     },
     "sandbox": {
-        "features": [
-            "deprecated-shell"
+        "boot": [
+            "bin",
+            "driver",
+            "lib"
         ],
         "services": [
             "fuchsia.process.Launcher",

@@ -3,8 +3,10 @@
         "binary": "test/isolated_devmgr_tests"
     },
     "sandbox": {
-        "features": [
-            "deprecated-shell"
+        "boot": [
+            "bin",
+            "driver",
+            "lib"
         ],
         "services": [
             "fuchsia.process.Launcher",
