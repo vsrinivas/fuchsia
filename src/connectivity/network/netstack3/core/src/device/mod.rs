@@ -116,8 +116,6 @@ impl DeviceLayerState {
     }
 }
 
-// `next_id` starts at 1 for compatiblity with the fuchsia.net.stack.Stack
-// interface, which does not allow for IDs of zero.
 impl Default for DeviceLayerState {
     fn default() -> DeviceLayerState {
         DeviceLayerState { ethernet: IdMap::new() }

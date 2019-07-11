@@ -162,6 +162,7 @@ pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: IpLay
 ///
 /// `dispatch_receive_ip_packet` panics if the protocol is unrecognized and
 /// `parse_metadata` is `None`.
+#[specialize_ip_address]
 fn dispatch_receive_ip_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     device: Option<DeviceId>,
@@ -175,20 +176,39 @@ fn dispatch_receive_ip_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     increment_counter!(ctx, "dispatch_receive_ip_packet");
 
     let res = match proto {
-        IpProto::Icmp | IpProto::Icmpv6 => {
+        // IPv4-only.
+        #[ipv4addr]
+        IpProto::Icmp => {
             icmp::receive_icmp_packet(ctx, device, src_ip, dst_ip, buffer);
             Ok(())
         }
+
+        // IPv4-only.
+        #[ipv4addr]
         IpProto::Igmp => {
             igmp::receive_igmp_packet(ctx, src_ip, dst_ip, buffer);
             Ok(())
         }
-        IpProto::Tcp => crate::transport::tcp::receive_ip_packet(ctx, src_ip, dst_ip, buffer),
-        IpProto::Udp => crate::transport::udp::receive_ip_packet(ctx, src_ip, dst_ip, buffer),
+
+        // IPv6-only.
+        #[ipv6addr]
+        IpProto::Icmpv6 => {
+            icmp::receive_icmp_packet(ctx, device, src_ip, dst_ip, buffer);
+            Ok(())
+        }
+
         // A value of `IpProto::NoNextHeader` tells us that there is no header whatsoever
         // following the last lower-level header so we stop processing here.
+        //
+        // IPv6-only.
+        #[ipv6addr]
         IpProto::NoNextHeader => Ok(()),
-        IpProto::Other(_) => {
+
+        // IPv4 and IPv6.
+        IpProto::Tcp => crate::transport::tcp::receive_ip_packet(ctx, src_ip, dst_ip, buffer),
+        IpProto::Udp => crate::transport::udp::receive_ip_packet(ctx, src_ip, dst_ip, buffer),
+
+        _ => {
             // Undo the parsing of the IP packet header so that the buffer
             // contains the entire original IP packet.
             let meta = parse_metadata.unwrap();
@@ -1041,9 +1061,9 @@ mod tests {
     use crate::testutil::*;
     use crate::wire::ethernet::EthernetFrame;
     use crate::wire::icmp::{
-        IcmpDestUnreachable, IcmpIpExt, IcmpPacketBuilder, IcmpParseArgs, IcmpUnusedCode,
-        Icmpv4DestUnreachableCode, Icmpv6Packet, Icmpv6PacketTooBig, Icmpv6ParameterProblemCode,
-        MessageBody,
+        IcmpDestUnreachable, IcmpEchoRequest, IcmpIpExt, IcmpPacketBuilder, IcmpParseArgs,
+        IcmpUnusedCode, Icmpv4DestUnreachableCode, Icmpv6Packet, Icmpv6PacketTooBig,
+        Icmpv6ParameterProblemCode, MessageBody,
     };
     use crate::wire::ipv4::Ipv4PacketBuilder;
     use crate::wire::ipv6::ext_hdrs::ExtensionHeaderOptionAction;
@@ -2042,5 +2062,84 @@ mod tests {
 
         // Should not have updated the PMTU as the current PMTU is lower.
         assert_eq!(get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(), 68);
+    }
+
+    #[test]
+    fn test_invalid_icmpv4_in_ipv6() {
+        let ip_config = get_dummy_config::<Ipv6Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::from_config(ip_config.clone())
+            .build::<DummyEventDispatcher>();
+        let device = DeviceId::new_ethernet(1);
+        let frame_dst = FrameDestination::Unicast;
+
+        let ic_config = get_dummy_config::<Ipv4Addr>();
+        let icmp_builder = IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
+            ic_config.remote_ip,
+            ic_config.local_ip,
+            IcmpUnusedCode,
+            IcmpEchoRequest::new(0, 0),
+        );
+
+        let ip_builder =
+            Ipv6PacketBuilder::new(ip_config.remote_ip, ip_config.local_ip, 64, IpProto::Icmp);
+
+        let mut buf = BufferSerializer::new_vec(Buf::new(Vec::new(), ..))
+            .encapsulate(icmp_builder)
+            .encapsulate(ip_builder)
+            .serialize_outer()
+            .unwrap();
+
+        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
+
+        // Should not have dispatched the packet.
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
+
+        // In IPv6, the next header value (ICMP(v4)) would have been considered
+        // unrecognized so an ICMP paramter problem response SHOULD be sent, but
+        // the netstack chooses to just drop the packet since we are not
+        // required to send the ICMP response.
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 0);
+    }
+
+    #[test]
+    fn test_invalid_icmpv6_in_ipv4() {
+        let ip_config = get_dummy_config::<Ipv4Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::from_config(ip_config.clone())
+            .build::<DummyEventDispatcher>();
+        // First possible device id.
+        let device = DeviceId::new_ethernet(0);
+        let frame_dst = FrameDestination::Unicast;
+
+        let ic_config = get_dummy_config::<Ipv6Addr>();
+        let icmp_builder = IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+            ic_config.remote_ip,
+            ic_config.local_ip,
+            IcmpUnusedCode,
+            IcmpEchoRequest::new(0, 0),
+        );
+
+        let ip_builder =
+            Ipv4PacketBuilder::new(ip_config.remote_ip, ip_config.local_ip, 64, IpProto::Icmpv6);
+
+        let mut buf = BufferSerializer::new_vec(Buf::new(Vec::new(), ..))
+            .encapsulate(icmp_builder)
+            .encapsulate(ip_builder)
+            .serialize_outer()
+            .unwrap();
+
+        receive_ip_packet::<_, _, Ipv4>(&mut ctx, device, frame_dst, buf);
+
+        // Should have dispatched the packet but resulted in an ICMP error.
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+        assert_eq!(get_counter_val(&mut ctx, "send_icmpv4_dest_unreachable"), 1);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
+        let buf = &ctx.dispatcher.frames_sent()[0].1[..];
+        let (_, _, _, _, msg, code) =
+            parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv4, _, IcmpDestUnreachable, _>(
+                buf,
+                |_| {},
+            )
+            .unwrap();
+        assert_eq!(code, Icmpv4DestUnreachableCode::DestProtocolUnreachable);
     }
 }

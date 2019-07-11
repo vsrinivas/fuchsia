@@ -692,6 +692,8 @@ fn send_icmpv4_dest_unreachable<D: EventDispatcher, B: BufferMut>(
     mut original_packet: B,
     header_len: usize,
 ) {
+    increment_counter!(ctx, "send_icmpv4_dest_unreachable");
+
     // Per RFC 792, body contains entire IPv4 header + 64 bytes of original
     // body.
     original_packet.shrink_back_to(header_len + 64);
