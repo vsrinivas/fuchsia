@@ -71,6 +71,8 @@ source_set("piece_tracker") {
 
   public_deps = [
     "//src/ledger/bin/storage/public",
+    "//src/ledger/bin/synchronization:dispatcher_checker",
+    "//src/lib/fxl",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

@@ -11,55 +11,70 @@ namespace storage {
 namespace {
 
 // Converts a map of ObjectIdentifier counts to a string listing them.
-std::string TokenCountsToString(const std::map<ObjectIdentifier, int>& token_counts) {
+std::string TokenCountsToString(
+    const std::map<ObjectIdentifier, std::weak_ptr<PieceToken>>& tokens) {
   std::ostringstream stream;
-  for (const auto& token : token_counts) {
-    stream << "\n" << token.first << " " << token.second;
+  for (const auto& token : tokens) {
+    stream << "\n" << token.first << " " << token.second.use_count();
   }
   return stream.str();
 }
 
 }  // namespace
 
-PieceTracker::PieceTracker() = default;
-
-PieceTracker::PieceTokenImpl::PieceTokenImpl(PieceTracker* tracker, ObjectIdentifier identifier)
-    : tracker_(tracker),
-      map_entry_(tracker_->token_counts_.emplace(std::move(identifier), 0).first) {
-  ++map_entry_->second;
-  FXL_VLOG(1) << "PieceToken " << map_entry_->first << " " << map_entry_->second;
-}
-
-PieceTracker::PieceTokenImpl::~PieceTokenImpl() {
-  --map_entry_->second;
-  FXL_VLOG(1) << "PieceToken " << map_entry_->first << " " << map_entry_->second;
-  if (map_entry_->second == 0) {
-    tracker_->token_counts_.erase(map_entry_);
+// PieceToken implementation that cleans up its entry in the the token map upon destruction.
+class PieceTracker::PieceTokenImpl : public PieceToken {
+ public:
+  explicit PieceTokenImpl(PieceTracker* tracker,
+                          std::map<ObjectIdentifier, std::weak_ptr<PieceToken>>::iterator map_entry)
+      : tracker_(tracker), map_entry_(map_entry) {
+    FXL_VLOG(1) << "PieceToken: start tracking " << map_entry_->first;
   }
-}
 
-const ObjectIdentifier& PieceTracker::PieceTokenImpl::GetIdentifier() const {
-  return map_entry_->first;
-}
+  ~PieceTokenImpl() override {
+    FXL_VLOG(1) << "PieceToken: stop tracking " << map_entry_->first;
+    FXL_DCHECK(tracker_->thread_checker_.IsCreationThreadCurrent());
+    FXL_DCHECK(tracker_->dispatcher_checker_.IsCreationDispatcherCurrent());
+    FXL_DCHECK(map_entry_->second.expired());
 
-PieceTracker::~PieceTracker() {
-  FXL_DCHECK(token_counts_.empty()) << TokenCountsToString(token_counts_);
-}
+    tracker_->tokens_.erase(map_entry_);
+  }
 
-std::unique_ptr<PieceToken> PieceTracker::GetPieceToken(ObjectIdentifier identifier) {
-  // Using `new` to access a non-public constructor.
-  return std::unique_ptr<PieceToken>(new PieceTokenImpl(this, std::move(identifier)));
+  const ObjectIdentifier& GetIdentifier() const override { return map_entry_->first; }
+
+ private:
+  PieceTracker* tracker_;
+  std::map<ObjectIdentifier, std::weak_ptr<PieceToken>>::iterator map_entry_;
+};
+
+PieceTracker::PieceTracker() {}
+
+PieceTracker::~PieceTracker() { FXL_DCHECK(tokens_.empty()) << TokenCountsToString(tokens_); }
+
+std::shared_ptr<PieceToken> PieceTracker::GetPieceToken(ObjectIdentifier identifier) {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(dispatcher_checker_.IsCreationDispatcherCurrent());
+
+  auto [it, created] = tokens_.try_emplace(std::move(identifier));
+  if (!created) {
+    FXL_DCHECK(!it->second.expired());
+    return it->second.lock();
+  }
+  auto token = std::make_shared<PieceTokenImpl>(this, it);
+  it->second = token;
+  FXL_DCHECK(it->second.use_count() == 1);
+  return token;
 }
 
 int PieceTracker::count(const ObjectIdentifier& identifier) const {
-  auto it = token_counts_.find(identifier);
-  if (it == token_counts_.end()) {
+  auto it = tokens_.find(identifier);
+  if (it == tokens_.end()) {
     return 0;
   }
-  return it->second;
+  return it->second.use_count();
 }
 
-int PieceTracker::size() const { return token_counts_.size(); }
+int PieceTracker::size() const { return tokens_.size(); }
 
 DiscardableToken::DiscardableToken(ObjectIdentifier identifier)
     : identifier_(std::move(identifier)) {

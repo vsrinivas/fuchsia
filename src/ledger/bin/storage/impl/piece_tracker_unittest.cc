@@ -16,11 +16,11 @@ using ::testing::IsEmpty;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
-using PieceTokenTest = ledger::TestWithEnvironment;
+using PieceTrackerTest = ledger::TestWithEnvironment;
 
 ObjectIdentifier CreateObjectIdentifier(ObjectDigest digest) { return {1u, 2u, std::move(digest)}; }
 
-TEST_F(PieceTokenTest, PieceTracker) {
+TEST_F(PieceTrackerTest, CountsAndCleansUp) {
   const ObjectIdentifier identifier = RandomObjectIdentifier(environment_.random());
   const ObjectIdentifier another_identifier = RandomObjectIdentifier(environment_.random());
 
@@ -29,36 +29,49 @@ TEST_F(PieceTokenTest, PieceTracker) {
   EXPECT_EQ(tracker.size(), 0);
 
   auto token_1 = tracker.GetPieceToken(identifier);
+  EXPECT_EQ(token_1->GetIdentifier(), identifier);
   EXPECT_EQ(tracker.count(identifier), 1);
   EXPECT_EQ(tracker.size(), 1);
 
   auto token_2 = tracker.GetPieceToken(identifier);
-  EXPECT_NE(token_1.get(), token_2.get());
+  EXPECT_EQ(token_2->GetIdentifier(), identifier);
   EXPECT_EQ(tracker.count(identifier), 2);
   EXPECT_EQ(tracker.size(), 1);
 
   auto token_3 = tracker.GetPieceToken(another_identifier);
+  EXPECT_EQ(token_3->GetIdentifier(), another_identifier);
   EXPECT_EQ(tracker.count(identifier), 2);
   EXPECT_EQ(tracker.count(another_identifier), 1);
   EXPECT_EQ(tracker.size(), 2);
 
+  auto token_4 = token_3;
+  EXPECT_EQ(token_4->GetIdentifier(), another_identifier);
+  EXPECT_EQ(tracker.count(identifier), 2);
+  EXPECT_EQ(tracker.count(another_identifier), 2);
+  EXPECT_EQ(tracker.size(), 2);
+
   token_1.reset();
   EXPECT_EQ(tracker.count(identifier), 1);
-  EXPECT_EQ(tracker.count(another_identifier), 1);
+  EXPECT_EQ(tracker.count(another_identifier), 2);
   EXPECT_EQ(tracker.size(), 2);
 
   token_2.reset();
   EXPECT_EQ(tracker.count(identifier), 0);
-  EXPECT_EQ(tracker.count(another_identifier), 1);
+  EXPECT_EQ(tracker.count(another_identifier), 2);
   EXPECT_EQ(tracker.size(), 1);
 
   token_3.reset();
+  EXPECT_EQ(tracker.count(identifier), 0);
+  EXPECT_EQ(tracker.count(another_identifier), 1);
+  EXPECT_EQ(tracker.size(), 1);
+
+  token_4.reset();
   EXPECT_EQ(tracker.count(identifier), 0);
   EXPECT_EQ(tracker.count(another_identifier), 0);
   EXPECT_EQ(tracker.size(), 0);
 }
 
-TEST_F(PieceTokenTest, DiscardableToken) {
+TEST_F(PieceTrackerTest, DiscardableToken) {
   std::string data = RandomString(environment_.random(), 12);
   ObjectIdentifier identifier =
       CreateObjectIdentifier(ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));

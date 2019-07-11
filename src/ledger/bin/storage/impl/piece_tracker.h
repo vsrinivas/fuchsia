@@ -5,29 +5,33 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_PIECE_TRACKER_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_PIECE_TRACKER_H_
 
+#include <map>
 #include <memory>
-#include <set>
 
-#include "lib/fit/function.h"
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/bin/synchronization/dispatcher_checker.h"
+#include "src/lib/fxl/synchronization/thread_checker.h"
 
 namespace storage {
 
 // A class to create and track piece tokens.
 class PieceTracker {
  public:
+  class PieceTokenImpl;
+
   PieceTracker();
   ~PieceTracker();
 
-  // This class is neither copyable nor movable. It is essential because object
-  // tokens reference it.
+  // This class is neither copyable nor movable. It is essential because object tokens reference it.
   PieceTracker(const PieceTracker&) = delete;
   PieceTracker& operator=(const PieceTracker&) = delete;
 
-  // Returns an PieceToken, which must be destroyed before the |PieceTracker|
-  // instance that created it.
-  std::unique_ptr<PieceToken> GetPieceToken(ObjectIdentifier identifier);
+  // Returns a PieceToken tracking |identifier|.
+  // This function must called only from the thread that created this |PieceTracker|.
+  // Destruction of the returned token must happen on the same thread too, and happen before the
+  // |PieceTracker| instance is destroyed.
+  std::shared_ptr<PieceToken> GetPieceToken(ObjectIdentifier identifier);
 
   // Returns the number of live tokens issued for |identifier|.
   int count(const ObjectIdentifier& identifier) const;
@@ -36,23 +40,13 @@ class PieceTracker {
   int size() const;
 
  private:
-  // PieceToken implementation that increments and decrements the associated
-  // counter in |token_counts_| during construction and destruction.
-  class PieceTokenImpl : public PieceToken {
-   public:
-    explicit PieceTokenImpl(PieceTracker* tracker, ObjectIdentifier identifier);
-    ~PieceTokenImpl() override;
-
-    const ObjectIdentifier& GetIdentifier() const override;
-
-   private:
-    PieceTracker* tracker_;
-    std::map<ObjectIdentifier, int>::iterator map_entry_;
-  };
-
   // Number of live tokens per identifier. Entries are cleaned up when the count
   // reaches zero.
-  std::map<ObjectIdentifier, int> token_counts_;
+  std::map<ObjectIdentifier, std::weak_ptr<PieceToken>> tokens_;
+
+  // To check for multithreaded accesses.
+  fxl::ThreadChecker thread_checker_;
+  ledger::DispatcherChecker dispatcher_checker_;
 };
 
 // Token that does not hold a reference, when it is safe to discard the piece
