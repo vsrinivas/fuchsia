@@ -12,6 +12,7 @@ use {
 };
 
 mod client;
+mod system;
 
 /// SettingClient exercises the functionality found in SetUI service. Currently,
 /// action parameters are specified at as individual arguments, but the goal is
@@ -37,17 +38,23 @@ enum SettingClient {
         #[structopt(short = "t", long = "type")]
         setting_type: String,
     },
+    // Operations that use the new interfaces.
+    #[structopt(name = "system")]
+    System {
+        #[structopt(short = "m", long = "login_mode")]
+        login_mode: Option<String>,
+    },
 }
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["setui-client"]).expect("Can't init logger");
 
-    let setui =
-        connect_to_service::<SetUiServiceMarker>().context("Failed to connect to setui service")?;
-
     match SettingClient::from_args() {
         SettingClient::Mutate { setting_type, value, remove_users } => {
+            let setui = connect_to_service::<SetUiServiceMarker>()
+                .context("Failed to connect to setui service")?;
+
             await!(client::mutate(setui, setting_type, value))?;
 
             if remove_users {
@@ -60,8 +67,16 @@ async fn main() -> Result<(), Error> {
             }
         }
         SettingClient::Get { setting_type } => {
+            let setui = connect_to_service::<SetUiServiceMarker>()
+                .context("Failed to connect to setui service")?;
             let description = describe_setting(await!(client::get(setui, setting_type.clone()))?)?;
             println!("value for setting[{}]:{}", setting_type, description);
+        }
+        SettingClient::System { login_mode } => {
+            let system_service = connect_to_service::<fidl_fuchsia_settings::SystemMarker>()
+                .context("Failed to connect to system service")?;
+            let output = await!(system::command(system_service, login_mode))?;
+            println!("System: {}", output);
         }
     }
 
