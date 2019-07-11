@@ -33,35 +33,60 @@ class AggregateDeferredCallback : public fxl::RefCountedThreadSafe<AggregateDefe
 
 // Some state needs to be tracked recursively as we iterate through the tree.
 struct RecursiveState {
-  // Forces name/type information off for exactly one level of printing. Use for array printing,
-  // for example, to avoid duplicating the type information for every entry.
+  // Forces various information off for exactly one level of printing. Use for array printing, for
+  // example, to avoid duplicating the type information for every entry.
   bool inhibit_one_name = false;
   bool inhibit_one_type = false;
 
-  // Counter for the levels of nesting. The top level is 0.
-  int depth = 0;
+  // When one node redirects to a child (as in pointers), the child node does not get separate
+  // indenting when it starts because we want to continue where the enclosing node left off.
+  // This flag indicates this state.
+  //
+  // Set with AdvanceTransparentNesting().
+  bool transparent_nesting = false;
+
+  // How deep in the node tree we are, the top level is 0.
+  int tree_depth = 0;
+
+  // How many levels of visual indent we are, the top level is 0. This is often the same as the
+  // tree depth but some things like pointer resolution are different levels of the tree but
+  // are presented as the same visual level.
+  int indent_depth = 0;
 
   // Number of pointers we've expanded so far in this level of recursion.
   int pointer_depth = 0;
 
-  // Returns a modified version of the state for one additional level of recursion.
+  // Returns a modified version of the state for one additional level of recursion, advancing
+  // both indent and tree depth.
   RecursiveState Advance() const;
+
+  // Advances the tree depth but not the visual nesting depth.
+  RecursiveState AdvanceTransparentNesting() const;
 };
 
 RecursiveState RecursiveState::Advance() const {
   RecursiveState result = *this;
   result.inhibit_one_name = false;
   result.inhibit_one_type = false;
+  result.transparent_nesting = false;
 
-  result.depth++;
+  result.tree_depth++;
+  result.indent_depth++;
 
+  return result;
+}
+
+RecursiveState RecursiveState::AdvanceTransparentNesting() const {
+  RecursiveState result = Advance();
+  result.indent_depth--;  // Undo visual indent from Advance().
+  result.transparent_nesting = true;
   return result;
 }
 
 void RecursiveDescribeFormatNode(FormatNode* node, const ConsoleFormatOptions& options,
                                  fxl::RefPtr<EvalContext> context, const RecursiveState& state,
                                  fit::deferred_callback cb) {
-  if (state.depth == options.max_depth)
+  if (state.tree_depth == options.max_depth)
     return;  // Reached max depth, give up.
 
   FillFormatNodeDescription(
@@ -97,21 +122,43 @@ bool TypeForcedOn(const ConsoleFormatOptions& options, const RecursiveState& sta
 }
 
 // Get a possibly-elided version of the type name for a medium verbosity level.
-std::string GetElidedTypeName(const std::string& name) {
+std::string GetElidedTypeName(const ConsoleFormatOptions& options, const std::string& name) {
+  if (options.verbosity != ConsoleFormatOptions::Verbosity::kMinimal)
+    return name;  // No eliding except in minimal mode.
+
+  // Pick different thresholds depending on if we're doing multiline or not. The threshold and
+  // the eliding length are different so we don't elide one or two characters.
+  size_t always_allow_below = 64;
+  size_t elide_to = 50;
+  if (options.wrapping == ConsoleFormatOptions::Wrapping::kNone) {
+    always_allow_below /= 2;
+    elide_to /= 2;
+  }
+
   // Names shorter than this are always displayed in full.
-  if (name.size() <= 32)
+  if (name.size() <= always_allow_below)
     return name;
 
-  // This value was picked to be smaller than the above value so we don't elide one or two
-  // characters (which looks dumb). It was selected to be long enough so that with the common prefix
-  // of "std::__2::" (which occurs on many long types), you still get enough to read approximately
-  // what the type is.
-  return name.substr(0, 20) + "…";
+  return name.substr(0, elide_to) + "…";
+}
+
+// Checks if indentation is necessary and outputs the correct number of spaces if so.
+//
+// force_for_transparent_nesting will override the "transparent nesting" flag and do the indent.
+// This is used for closing brackets which should always be indented, while for the opening
+// a transparently nested thing just gets appended after its parent and the indent is skipped.
+void AppendIndent(const ConsoleFormatOptions& options, const RecursiveState& state,
+                  OutputBuffer* out, bool force_for_transparent_nesting = false) {
+  if (options.wrapping == ConsoleFormatOptions::Wrapping::kExpanded &&
+      (!state.transparent_nesting || force_for_transparent_nesting))
+    out->Append(std::string(options.indent_amount * state.indent_depth, ' '));
 }
 
 // Appends the formatted name and "=" as needed by this node.
 void AppendNodeNameAndType(const FormatNode* node, const ConsoleFormatOptions& options,
                            const RecursiveState& state, OutputBuffer* out) {
+  AppendIndent(options, state, out);
+
   if (TypeForcedOn(options, state))
     out->Append(Syntax::kComment, "(" + node->type() + ") ");
 
@@ -119,10 +166,7 @@ void AppendNodeNameAndType(const FormatNode* node, const ConsoleFormatOptions& o
     // Node name. Base class names are less important so get dimmed. Especially STL base classes
     // can get very long so we also elide them unless verbose mode is turned on.
     if (node->child_kind() == FormatNode::kBaseClass) {
-      if (options.verbosity == ConsoleFormatOptions::Verbosity::kMinimal)
-        out->Append(Syntax::kComment, GetElidedTypeName(node->name()));
-      else
-        out->Append(Syntax::kComment, node->name());
+      out->Append(Syntax::kComment, GetElidedTypeName(options, node->name()));
     } else {
       // Normal variable-style node name.
       out->Append(Syntax::kVariable, node->name());
@@ -133,41 +177,62 @@ void AppendNodeNameAndType(const FormatNode* node, const ConsoleFormatOptions& o
 
 void AppendArray(const FormatNode* node, const ConsoleFormatOptions& options,
                  const RecursiveState& state, OutputBuffer* out) {
+  if (node->children().empty()) {
+    // Special-case the empty struct because we never want wrapping.
+    out->Append("{}");
+    return;
+  }
+
   RecursiveState child_state = state.Advance();
-  child_state.inhibit_one_name = true;
+  // In multiline mode, show the names of the array indices ("[0] = ...").
+  child_state.inhibit_one_name = (options.wrapping == ConsoleFormatOptions::Wrapping::kNone);
   child_state.inhibit_one_type = true;  // Don't show the type for every child.
 
   out->Append("{");
-  bool needs_comma = false;
-  for (const auto& child : node->children()) {
-    if (needs_comma)
-      out->Append(", ");
-    else
-      needs_comma = true;
+  if (options.wrapping == ConsoleFormatOptions::Wrapping::kExpanded)
+    out->Append("\n");
+
+  for (size_t i = 0; i < node->children().size(); i++) {
+    const FormatNode* child = node->children()[i].get();
 
     // Arrays can have "empty" nodes which use the name to indicate clipping ("...").
     if (child->state() == FormatNode::kEmpty)
       out->Append(Syntax::kComment, child->name());
     else
-      AppendNode(child.get(), options, child_state, out);
+      AppendNode(child, options, child_state, out);
+
+    // Append commas in single-line mode for all but the last one.
+    if (i + 1 < node->children().size() &&
+        options.wrapping == ConsoleFormatOptions::Wrapping::kNone)
+      out->Append(", ");
   }
+  AppendIndent(options, state, out, true);
   out->Append("}");
 }
 
 void AppendCollection(const FormatNode* node, const ConsoleFormatOptions& options,
                       const RecursiveState& state, OutputBuffer* out) {
+  if (node->children().empty()) {
+    // Special-case the empty array because we never want wrapping.
+    out->Append("{}");
+    return;
+  }
+
   RecursiveState child_state = state.Advance();
 
   out->Append("{");
-  bool needs_comma = false;
-  for (const auto& child : node->children()) {
-    if (needs_comma)
-      out->Append(", ");
-    else
-      needs_comma = true;
+  if (options.wrapping == ConsoleFormatOptions::Wrapping::kExpanded)
+    out->Append("\n");
 
-    AppendNode(child.get(), options, child_state, out);
+  for (size_t i = 0; i < node->children().size(); i++) {
+    AppendNode(node->children()[i].get(), options, child_state, out);
+
+    // Append commas in single-line mode for all but the last one.
+    if (i + 1 < node->children().size() &&
+        options.wrapping == ConsoleFormatOptions::Wrapping::kNone)
+      out->Append(", ");
   }
+  AppendIndent(options, state, out, true);
   out->Append("}");
 }
 
@@ -190,8 +255,8 @@ void AppendPointer(const FormatNode* node, const ConsoleFormatOptions& options,
     out->Append(node->description());
   } else {
     // Have the pointed-to data, dim the address and show the data. Omit types because we already
-    // printed the pointer type.
-    RecursiveState child_state = state.Advance();
+    // printed the pointer type. We do not want to indent another level.
+    RecursiveState child_state = state.AdvanceTransparentNesting();
     child_state.inhibit_one_name = true;
     child_state.inhibit_one_type = true;
 
@@ -210,8 +275,8 @@ void AppendReference(const FormatNode* node, const ConsoleFormatOptions& options
     // actual value.
     out->Append(Syntax::kComment, "(&)" + node->description());
   } else {
-    // Have the pointed-to data, just show the value.
-    RecursiveState child_state = state.Advance();
+    // Have the pointed-to data, just show the value. We do not want to indent another level.
+    RecursiveState child_state = state.AdvanceTransparentNesting();
     child_state.inhibit_one_name = true;
     child_state.inhibit_one_type = true;
 
@@ -228,45 +293,47 @@ void AppendStandard(const FormatNode* node, const ConsoleFormatOptions& options,
 void AppendNode(const FormatNode* node, const ConsoleFormatOptions& options,
                 const RecursiveState& state, OutputBuffer* out) {
   AppendNodeNameAndType(node, options, state, out);
-  if (state.depth == options.max_depth) {
+  if (state.tree_depth == options.max_depth) {
     // Hit max depth, give up.
     out->Append(Syntax::kComment, "…");
-    return;
-  }
-
-  if (node->err().has_error()) {
+  } else if (node->err().has_error()) {
     // Write the error.
     out->Append(Syntax::kComment, "<" + node->err().msg() + ">");
-    return;
+  } else {
+    // Normal formatting.
+    switch (node->description_kind()) {
+      case FormatNode::kNone:
+      case FormatNode::kBaseType:
+      case FormatNode::kFunctionPointer:
+      case FormatNode::kOther:
+      case FormatNode::kString:
+        // All these things just print the description only.
+        AppendStandard(node, options, state, out);
+        break;
+      case FormatNode::kArray:
+        AppendArray(node, options, state, out);
+        break;
+      case FormatNode::kCollection:
+        AppendCollection(node, options, state, out);
+        break;
+      case FormatNode::kPointer:
+        AppendPointer(node, options, state, out);
+        break;
+      case FormatNode::kReference:
+        AppendReference(node, options, state, out);
+        break;
+      case FormatNode::kRustEnum:
+      case FormatNode::kRustTuple:
+        // TODO(brettw): need more specific formatting. For now just output the default.
+        AppendStandard(node, options, state, out);
+        break;
+    }
   }
 
-  switch (node->description_kind()) {
-    case FormatNode::kNone:
-    case FormatNode::kBaseType:
-    case FormatNode::kFunctionPointer:
-    case FormatNode::kOther:
-    case FormatNode::kString:
-      // All these things just print the description only.
-      AppendStandard(node, options, state, out);
-      break;
-    case FormatNode::kArray:
-      AppendArray(node, options, state, out);
-      break;
-    case FormatNode::kCollection:
-      AppendCollection(node, options, state, out);
-      break;
-    case FormatNode::kPointer:
-      AppendPointer(node, options, state, out);
-      break;
-    case FormatNode::kReference:
-      AppendReference(node, options, state, out);
-      break;
-    case FormatNode::kRustEnum:
-    case FormatNode::kRustTuple:
-      // TODO(brettw): need more specific formatting. For now just output the default.
-      AppendStandard(node, options, state, out);
-      break;
-  }
+  // Transparent nesting means that this node doesn't get its own separate indenting or newlines,
+  // these will be handled by the enclosing one.
+  if (options.wrapping == ConsoleFormatOptions::Wrapping::kExpanded && !state.transparent_nesting)
+    out->Append("\n");
 }
 
 }  // namespace

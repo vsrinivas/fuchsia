@@ -33,6 +33,13 @@ struct ConsoleFormatOptions : public FormatOptions {
   };
   Verbosity verbosity = Verbosity::kMedium;
 
+  enum class Wrapping {
+    kNone,     // No linebreaks or whitespace will be inserted.
+    kExpanded  // Every member will be on a separate line and indented.
+  };
+  Wrapping wrapping = Wrapping::kNone;
+  int indent_amount = 2;  // Number of spaces to indent when using expanded formatting.
+
   // The number of pointers to resolve to values recursively.
   //
   // When we encounter pointers, we can't blindly follow and expand them because there can be

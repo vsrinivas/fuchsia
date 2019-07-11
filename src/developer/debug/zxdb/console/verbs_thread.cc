@@ -66,11 +66,14 @@ bool VerifySystemHasRunningProcess(System* system, Err* err) {
 
 // Populates the formatting options with the given command's switches.
 Err GetConsoleFormatOptions(const Command& cmd, ConsoleFormatOptions* options) {
-  // These defaults currently don't have exposed options. A pointer expand depth of two seems most
-  // useful because it will expand "this" and one member, but beyond two some things like doubly-
-  // linked lists get pretty insane.
-  options->pointer_expand_depth = 2;
+  // These defaults currently don't have exposed options. A pointer expand depth of one allows
+  // local variables and "this" to be expanded without expanding anything else. Often pointed-to
+  // classes are less useful and can be very large.
+  options->pointer_expand_depth = 1;
   options->max_depth = 16;
+
+  // All current users of this want the expanded form.
+  options->wrapping = ConsoleFormatOptions::Wrapping::kExpanded;
 
   // Verbosity.
   if (cmd.HasSwitch(kForceAllTypes))

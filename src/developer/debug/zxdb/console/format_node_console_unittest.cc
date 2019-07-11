@@ -104,8 +104,8 @@ TEST(FormatNodeConsole, Collection) {
   EXPECT_EQ("(MyClass) {(int) a = 42, (double) b = 3.14159}", out.AsString());
 
   // Add a very long base class name.
-  auto base_node =
-      std::make_unique<FormatNode>("This_is::a::VeryLongBaseClass<which, should, be, elided>");
+  auto base_node = std::make_unique<FormatNode>(
+      "This_is::a::VeryLongBaseClass<which, should, be, elided, abcdefghijklmnopqrstuvwxyz>");
   base_node->set_child_kind(FormatNode::kBaseClass);
   base_node->set_description_kind(FormatNode::kCollection);
   base_node->set_state(FormatNode::kDescribed);
@@ -113,14 +113,27 @@ TEST(FormatNodeConsole, Collection) {
 
   // Test with no eliding.
   out = FormatNodeForConsole(node, options);
-  EXPECT_EQ("{This_is::a::VeryLongBaseClass<which, should, be, elided> = {}, a = 42, b = 3.14159}",
-            out.AsString());
+  EXPECT_EQ(
+      "{This_is::a::VeryLongBaseClass<which, should, be, elided, abcdefghijklmnopqrstuvwxyz> = {}, "
+      "a = 42, b = 3.14159}",
+      out.AsString());
 
   // With eliding.
   ConsoleFormatOptions elide_options;
   elide_options.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
   out = FormatNodeForConsole(node, elide_options);
-  EXPECT_EQ("{This_is::a::VeryLong… = {}, a = 42, b = 3.14159}", out.AsString());
+  EXPECT_EQ("{This_is::a::VeryLongBaseC… = {}, a = 42, b = 3.14159}", out.AsString());
+
+  // Expanded mode eliding shows more.
+  elide_options.wrapping = ConsoleFormatOptions::Wrapping::kExpanded;
+  out = FormatNodeForConsole(node, elide_options);
+  EXPECT_EQ(
+      "{\n"
+      "  This_is::a::VeryLongBaseClass<which, should, be, e… = {}\n"
+      "  a = 42\n"
+      "  b = 3.14159\n"
+      "}\n",
+      out.AsString());
 }
 
 TEST(FormatNodeConsole, Array) {
@@ -169,6 +182,7 @@ TEST(FormatNodeConsole, Pointer) {
   // Pointed to value. Don't fill it in yet.
   auto child = std::make_unique<FormatNode>("*");
   child->set_state(FormatNode::kUnevaluated);
+  child->set_child_kind(FormatNode::kPointerExpansion);
   node.children().push_back(std::move(child));
 
   // Print the bare pointer.
@@ -214,6 +228,7 @@ TEST(FormatNodeConsole, Reference) {
   // Pointed to value. Don't fill it in yet.
   auto child = std::make_unique<FormatNode>();
   child->set_state(FormatNode::kUnevaluated);
+  child->set_child_kind(FormatNode::kPointerExpansion);
   node.children().push_back(std::move(child));
 
   // Print the bare reference.
@@ -351,6 +366,55 @@ TEST_F(FormatValueConsoleTest, NestingLimits) {
   EXPECT_EQ("{c = {b = (*)0x2200 🡺 {a = (*)0x1100}}}", SyncFormatValue(c_value, opts));
   opts.max_depth = 6;
   EXPECT_EQ("{c = {b = (*)0x2200 🡺 {a = (*)0x1100 🡺 12}}}", SyncFormatValue(c_value, opts));
+}
+
+TEST_F(FormatValueConsoleTest, ExpandedPrinting) {
+  // struct Nested {
+  //   int32 variable1;
+  //   int32 variable2;
+  // };
+  auto int32_type = MakeInt32Type();
+  auto nested_collection = MakeCollectionType(
+      DwarfTag::kStructureType, "Nested", {{"variable1", int32_type}, {"variable2", int32_type}});
+
+  // nested_ptr = &Nested{ variable1 = 12, variable2 = 34 };
+  auto nested_ptr =
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(nested_collection));
+  constexpr uint64_t kNestedAddress = 0x1100;
+  provider()->AddMemory(kNestedAddress, {12, 0, 0, 0, 34, 0, 0, 0});
+
+  // struct Empty {};
+  auto empty_collection = MakeCollectionType(DwarfTag::kStructureType, "Empty", {});
+
+  // struct Outer {
+  //   Nested* nested;
+  //   Empty empty;
+  // };
+  auto outer_collection = MakeCollectionType(DwarfTag::kStructureType, "Outer",
+                                             {{"nested", nested_ptr}, {"empty", empty_collection}});
+
+  // outer_value = Outer{ nested = nested_ptr, empty = Empty{} }
+  ExprValue outer_value(outer_collection, {0, 0x11, 0, 0, 0, 0, 0, 0});
+
+  // First do non-expanded mode.
+  ConsoleFormatOptions opts;
+  opts.pointer_expand_depth = 1000;
+  opts.max_depth = 1000;
+  opts.wrapping = ConsoleFormatOptions::Wrapping::kNone;
+  EXPECT_EQ("{nested = (*)0x1100 🡺 {variable1 = 12, variable2 = 34}, empty = {}}",
+            SyncFormatValue(outer_value, opts));
+
+  // Expanded mode.
+  opts.wrapping = ConsoleFormatOptions::Wrapping::kExpanded;
+  EXPECT_EQ(
+      "{\n"
+      "  nested = (*)0x1100 🡺 {\n"
+      "    variable1 = 12\n"
+      "    variable2 = 34\n"
+      "  }\n"
+      "  empty = {}\n"
+      "}\n",
+      SyncFormatValue(outer_value, opts));
 }
 
 }  // namespace zxdb
