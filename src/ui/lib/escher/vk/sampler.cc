@@ -71,8 +71,8 @@ Sampler::Sampler(ResourceRecycler* resource_recycler, vk::Format format, vk::Fil
 
 Sampler::~Sampler() {
   if (is_immutable_) {
-    vk_device().destroySamplerYcbcrConversion(ycbcr_conversion_.conversion, nullptr,
-                                              vulkan_context().loader);
+    vk_device().destroySamplerYcbcrConversionKHR(ycbcr_conversion_.conversion, nullptr,
+                                                 vulkan_context().loader);
   }
   vk_device().destroySampler(sampler_);
 }
