@@ -940,7 +940,11 @@ zx::channel fs_clone(const char* path) {
     return zx::channel();
   }
   if (!strcmp(path, "boot")) {
-    fdio_open("/boot", ZX_FS_RIGHT_READABLE, h1.release());
+    zx_status_t status = fdio_open("/boot", ZX_FS_RIGHT_READABLE, h1.release());
+    if (status != ZX_OK) {
+      log(ERROR, "devcoordinator: fdio_open(\"/boot\") failed: %s\n", zx_status_get_string(status));
+      return zx::channel();
+    }
     return h0;
   }
   zx::unowned_channel fs(g_handles.fs_root);
@@ -955,7 +959,12 @@ zx::channel fs_clone(const char* path) {
     fs = devfs_root_borrow();
     path += 4;
   }
-  fdio_open_at(fs->get(), path, flags, h1.release());
+  zx_status_t status = fdio_open_at(fs->get(), path, flags, h1.release());
+  if (status != ZX_OK) {
+    log(ERROR, "devcoordinator: fdio_open_at failed for path %s: %s\n", path,
+               zx_status_get_string(status));
+    return zx::channel();
+  }
   return h0;
 }
 

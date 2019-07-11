@@ -43,21 +43,6 @@ zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root) {
         return status;
     }
 
-    // Create a new client to /boot to give to devmgr
-    zx::channel bootfs_client;
-    {
-        zx::channel bootfs_server;
-        status = zx::channel::create(0, &bootfs_client, &bootfs_server);
-        if (status != ZX_OK) {
-            return status;
-        }
-
-        status = fdio_open("/boot", ZX_FS_RIGHT_READABLE, bootfs_server.release());
-        if (status != ZX_OK) {
-            return status;
-        }
-    }
-
     // Create a new client to /svc to maybe give to devmgr
     zx::channel svc_client;
     {
@@ -130,8 +115,8 @@ zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root) {
     }
 
     actions.push_back(fdio_spawn_action_t{
-        .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-        .ns = {.prefix = "/boot", .handle = bootfs_client.release()},
+        .action = FDIO_SPAWN_ACTION_CLONE_DIR,
+        .dir = {.prefix = "/boot"},
     });
 
     if (args.use_system_svchost) {

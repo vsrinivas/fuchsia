@@ -37,25 +37,31 @@ namespace devmgr {
 
 #define CHILD_JOB_RIGHTS (ZX_RIGHTS_BASIC | ZX_RIGHT_MANAGE_JOB | ZX_RIGHT_MANAGE_PROCESS)
 
+enum class FdioAction {
+  AddNsEntry = 1,
+  CloneDir = 2,
+};
+
 // clang-format off
 
 static struct {
     const char* mount;
     const char* name;
     uint32_t flags;
+    FdioAction action;
 } FSTAB[] = {
-    { "/svc",       "svc",       FS_SVC },
-    { "/hub",       "hub",       FS_HUB },
-    { "/bin",       "bin",       FS_BIN },
-    { "/dev",       "dev",       FS_DEV },
-    { "/boot",      "boot",      FS_BOOT },
-    { "/data",      "data",      FS_DATA },
-    { "/system",    "system",    FS_SYSTEM },
-    { "/install",   "install",   FS_INSTALL },
-    { "/volume",    "volume",    FS_VOLUME },
-    { "/blob",      "blob",      FS_BLOB },
-    { "/pkgfs",     "pkgfs",     FS_PKGFS },
-    { "/tmp",       "tmp",       FS_TMP },
+    { "/svc",       "svc",       FS_SVC,      FdioAction::AddNsEntry },
+    { "/hub",       "hub",       FS_HUB,      FdioAction::AddNsEntry },
+    { "/bin",       "bin",       FS_BIN,      FdioAction::AddNsEntry },
+    { "/dev",       "dev",       FS_DEV,      FdioAction::AddNsEntry },
+    { "/boot",      "boot",      FS_BOOT,     FdioAction::CloneDir },
+    { "/data",      "data",      FS_DATA,     FdioAction::AddNsEntry },
+    { "/system",    "system",    FS_SYSTEM,   FdioAction::AddNsEntry },
+    { "/install",   "install",   FS_INSTALL,  FdioAction::AddNsEntry },
+    { "/volume",    "volume",    FS_VOLUME,   FdioAction::AddNsEntry },
+    { "/blob",      "blob",      FS_BLOB,     FdioAction::AddNsEntry },
+    { "/pkgfs",     "pkgfs",     FS_PKGFS,    FdioAction::AddNsEntry },
+    { "/tmp",       "tmp",       FS_TMP,      FdioAction::AddNsEntry },
 };
 
 // clang-format on
@@ -118,12 +124,24 @@ zx_status_t devmgr_launch_with_loader(const zx::job& job, const char* name, zx::
         if (!(FSTAB[n].flags & flags)) {
             continue;
         }
-        zx_handle_t h;
-        if ((h = fs_clone(FSTAB[n].name).release()) != ZX_HANDLE_INVALID) {
+        switch (FSTAB[n].action) {
+        case FdioAction::AddNsEntry: {
+            zx_handle_t h;
+            if ((h = fs_clone(FSTAB[n].name).release()) != ZX_HANDLE_INVALID) {
+                actions.push_back((fdio_spawn_action_t){
+                    .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+                    .ns = { .prefix = FSTAB[n].mount, .handle = h },
+                });
+            }
+        } break;
+        case FdioAction::CloneDir:
             actions.push_back((fdio_spawn_action_t){
-                .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-                .ns = { .prefix = FSTAB[n].mount, .handle = h },
+                .action = FDIO_SPAWN_ACTION_CLONE_DIR,
+                .dir = { .prefix = FSTAB[n].mount },
             });
+            break;
+        default:
+            __UNREACHABLE;
         }
     }
 
