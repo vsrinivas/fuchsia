@@ -1080,6 +1080,9 @@ class Dependencies {
   bool Register(const SourceLocation& location, std::string_view filename, Library* dep_library,
                 const std::unique_ptr<raw::Identifier>& maybe_alias);
 
+  // Returns true if this dependency set contains a library with the given name and filename.
+  bool Contains(std::string_view filename, const std::vector<std::string_view>& name);
+
   // Looks up a dependent library by |filename| and |name|, and marks it as
   // used.
   bool LookupAndUse(std::string_view filename, const std::vector<std::string_view>& name,

@@ -78,8 +78,7 @@ struct MethodScope {
 // A helper class to track when a Decl is compiling and compiled.
 class Compiling {
  public:
-  explicit Compiling(Decl* decl)
-      : decl_(decl) { decl_->compiling = true; }
+  explicit Compiling(Decl* decl) : decl_(decl) { decl_->compiling = true; }
 
   ~Compiling() {
     decl_->compiling = false;
@@ -1266,6 +1265,16 @@ bool Dependencies::InsertByName(std::string_view filename,
   return insert.second;
 }
 
+bool Dependencies::Contains(std::string_view filename, const std::vector<std::string_view>& name) {
+  auto iter1 = dependencies_.find(std::string(filename));
+  if (iter1 == dependencies_.end()) {
+    return false;
+  }
+
+  auto iter2 = iter1->second->find(name);
+  return iter2 != iter1->second->end();
+}
+
 bool Dependencies::LookupAndUse(std::string_view filename,
                                 const std::vector<std::string_view>& name, Library** out_library) {
   auto iter1 = dependencies_.find(std::string(filename));
@@ -1454,6 +1463,16 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
     std::string message = "Name collision: ";
     message.append(name->name_part());
     return Fail(*name, message);
+  }
+  if (name->maybe_location()) {
+    if (dependencies_.Contains(name->maybe_location()->source_file().filename(),
+                               {name->name_part()})) {
+      std::ostringstream out;
+      out << "Declaration name '" << name->name_part()
+          << "' conflicts with a library import; consider using the 'as' keyword to import the "
+             "library under a different name.";
+      return Fail(*name, out.str());
+    }
   }
 
   switch (kind) {
