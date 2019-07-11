@@ -126,6 +126,8 @@ class PaperRenderer final : public Renderer {
                 mat4* matrix = nullptr);
   void DrawRoundedRect(const RoundedRectSpec& spec, const PaperMaterialPtr& material,
                        PaperDrawableFlags flags = {}, mat4* matrix = nullptr);
+  void DrawBoundingBox(const BoundingBox& box, const PaperMaterialPtr& material,
+                       PaperDrawableFlags flags = {});
 
   // Convenient way to draw "legacy" escher::Objects.  Generates and enqueues
   // draw-calls that will emit Vulkan commands during EndFrame().

@@ -83,6 +83,15 @@ void PaperDrawCallFactory::DrawRoundedRect(const RoundedRectSpec& spec,
   EnqueueDrawCalls(entry, material, flags);
 }
 
+void PaperDrawCallFactory::DrawBoundingBox(const PaperMaterial& material,
+                                           PaperDrawableFlags flags) {
+  FXL_DCHECK(frame_);
+  const auto& transform = transform_stack_->Top();
+  const auto& entry =
+      shape_cache_->GetBoxMesh(transform.clip_planes.data(), transform.clip_planes.size());
+  EnqueueDrawCalls(entry, material, flags);
+}
+
 void PaperDrawCallFactory::EnqueueDrawCalls(const PaperShapeCacheEntry& cache_entry,
                                             const PaperMaterial& material,
                                             PaperDrawableFlags drawable_flags) {

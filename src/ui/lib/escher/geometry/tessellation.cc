@@ -115,6 +115,78 @@ IndexedTriangleMesh2d<vec2> NewCircleIndexedTriangleMesh(const MeshSpec& spec,
   return mesh;
 }
 
+// Constructs an axis-aligned unit cube mesh.
+IndexedTriangleMesh3d<vec2> NewCubeIndexedTriangleMesh(const MeshSpec& spec) {
+  FXL_DCHECK((spec == MeshSpec{.attributes = {MeshAttribute::kPosition3D, MeshAttribute::kUV}}));
+  IndexedTriangleMesh3d<vec2> mesh;
+
+  const size_t vertex_count = 8;  // Four in front, four in back.
+  const size_t index_count = 36;  // 6 faces * 2 triangles * 3 verts.
+
+  mesh.resize_indices(index_count);
+  mesh.resize_vertices(vertex_count);
+
+  vec3* pos = mesh.positions.data();
+  vec2* uv = mesh.attributes1.data();
+  auto* indices = mesh.indices.data();
+
+  // Front four verts.
+  pos[0] = vec3(0, 0, 0);
+  pos[1] = vec3(1, 0, 0);
+  pos[2] = vec3(1, 1, 0);
+  pos[3] = vec3(0, 1, 0);
+
+  // Back four verts.
+  pos[4] = vec3(0, 1, 1);
+  pos[5] = vec3(1, 1, 1);
+  pos[6] = vec3(1, 0, 1);
+  pos[7] = vec3(0, 0, 1);
+
+  // TODO(ES-218): Add separate box mesh type with split verts and proper uv coords. Since this
+  // box is currently only being used for wireframe rendering, it doesn't need texcoords.
+  for (size_t t = 0; t < vertex_count; t++) {
+    uv[t] = vec2(0.f, 0.f);
+  }
+
+  size_t index = 0;
+  auto AddIndex = [&index, &indices](uint32_t val) {
+    indices[index] = val;
+    index++;
+  };
+
+  auto AddTriangle = [&AddIndex](uint32_t val1, uint32_t val2, uint32_t val3) {
+    AddIndex(val1);
+    AddIndex(val2);
+    AddIndex(val3);
+  };
+
+  // Front face.
+  AddTriangle(0, 1, 2);
+  AddTriangle(0, 2, 3);
+
+  // Top face.
+  AddTriangle(2, 4, 3);
+  AddTriangle(2, 5, 4);
+
+  // Right face.
+  AddTriangle(1, 5, 2);
+  AddTriangle(1, 5, 6);
+
+  // Left face.
+  AddTriangle(0, 4, 7);
+  AddTriangle(0, 3, 4);
+
+  // Back face.
+  AddTriangle(5, 7, 4);
+  AddTriangle(5, 6, 7);
+
+  // Bottom face.
+  AddTriangle(0, 7, 6);
+  AddTriangle(0, 6, 1);
+
+  return mesh;
+}
+
 MeshPtr NewCircleMesh(MeshBuilderFactory* factory, const MeshSpec& spec, int subdivisions,
                       vec2 center, float radius, float offset_magnitude) {
   // Compute the number of vertices in the tessellated circle.

@@ -126,6 +126,12 @@ std::vector<plane3> BoundingBox::CreatePlanes() const {
   return result;
 }
 
+mat4 BoundingBox::CreateTransform() const {
+  mat4 transform = glm::translate(mat4(), min_);
+  transform = glm::scale(transform, vec3(width(), height(), depth()));
+  return transform;
+}
+
 uint32_t BoundingBox::NumClippedCorners(const plane2& plane, const float_t& epsilon) const {
   uint32_t count = 0;
   float_t adjusted_epsilon = std::max(epsilon, 0.f);

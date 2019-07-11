@@ -32,6 +32,7 @@ class PaperDrawCallFactory final {
   void DrawRect(vec2 min, vec2 max, const PaperMaterial& material, PaperDrawableFlags flags = {});
   void DrawRoundedRect(const RoundedRectSpec& spec, const PaperMaterial& material,
                        PaperDrawableFlags flags = {});
+  void DrawBoundingBox(const PaperMaterial& material, PaperDrawableFlags flags = {});
 
   // Generate and enqueue 0 or more draw calls for the mesh/material combo.
   // The mesh is transformed into world space by the matrix atop the transform

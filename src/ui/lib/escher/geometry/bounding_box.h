@@ -61,6 +61,11 @@ class BoundingBox {
 
   std::vector<plane3> CreatePlanes() const;
 
+  // Generates a matrix based on the min/max value of the current bounding box that would,
+  // if applied to a unit cube, scale/translate that cube to be the exact size and shape
+  // of the existing bounding box.
+  mat4 CreateTransform() const;
+
  private:
   vec3 min_;
   vec3 max_;

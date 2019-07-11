@@ -369,6 +369,23 @@ void PaperRenderer::DrawRoundedRect(const RoundedRectSpec& spec, const PaperMate
   }
 }
 
+void PaperRenderer::DrawBoundingBox(const BoundingBox& box, const PaperMaterialPtr& material,
+                                    PaperDrawableFlags flags) {
+  if (!material) {
+    return;
+  }
+
+  if (material->texture()) {
+    FXL_LOG(ERROR) << "TODO(ES-218): Box meshes do not currently support textures.";
+    return;
+  }
+
+  mat4 matrix = box.CreateTransform();
+  transform_stack_.PushTransform(matrix);
+  draw_call_factory_.DrawBoundingBox(*material.get(), flags);
+  transform_stack_.Pop();
+}
+
 void PaperRenderer::DrawLegacyObject(const Object& obj, PaperDrawableFlags flags) {
   FXL_DCHECK(frame_data_);
 

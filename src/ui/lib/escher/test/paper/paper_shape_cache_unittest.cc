@@ -14,6 +14,39 @@
 namespace {
 using namespace escher;
 
+// Make sure that the PaperShapeCache properly creates
+// a box mesh.
+VK_TEST(PaperShapeCache, TestBoundingBox) {
+  EscherWeakPtr escher = test::GetEscher()->GetWeakPtr();
+  PaperShapeCache cache(escher, PaperRendererConfig());
+
+  // Request a bounding box.
+  uint64_t frame_number = 1;
+  {
+    auto frame = escher->NewFrame("PaperShapeCache unit-test", frame_number);
+
+    auto uploader = BatchGpuUploader::New(escher);
+
+    cache.BeginFrame(uploader.get(), frame_number);
+
+    auto& entry = cache.GetBoxMesh(nullptr, 0);
+    EXPECT_NE(entry.mesh, MeshPtr());
+    EXPECT_EQ(cache.size(), 1U);
+
+    // A box has 36 indices and 8 vertices.
+    EXPECT_EQ(entry.num_indices, 36U);
+    EXPECT_EQ(entry.mesh->num_vertices(), 8U);
+
+    uploader->Submit();
+    cache.EndFrame();
+
+    frame->EndFrame(SemaphorePtr(), []() {});
+  }
+
+  escher->vk_device().waitIdle();
+  ASSERT_TRUE(escher->Cleanup());
+}
+
 VK_TEST(PaperShapeCache, TestCaching) {
   EscherWeakPtr escher = test::GetEscher()->GetWeakPtr();
 

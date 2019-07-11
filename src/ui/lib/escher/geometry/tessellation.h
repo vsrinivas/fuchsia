@@ -70,6 +70,11 @@ MeshPtr NewFullScreenMesh(MeshBuilderFactory* factory);
 MeshPtr NewSphereMesh(MeshBuilderFactory* factory, const MeshSpec& spec, int subdivisions,
                       vec3 center, float radius);
 
+// This returns a cube shaped mesh, with it's min-bounds point at the origin.
+// To get boxes of different dimensions, this mesh can just be scaled in a
+// non-uniform manner in the (x,y,z) directions with its transformation matrix.
+IndexedTriangleMesh3d<vec2> NewCubeIndexedTriangleMesh(const MeshSpec& spec);
+
 }  // namespace escher
 
 #endif  // SRC_UI_LIB_ESCHER_GEOMETRY_TESSELLATION_H_
