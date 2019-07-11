@@ -10,6 +10,7 @@ base_package_labels += [
   "//garnet/bin/ui:root_presenter",
   "//garnet/bin/ui:scenic",
   "//garnet/bin/vulkan_loader",
+  "//src/ui/a11y",
   "//src/ui/bin/ime:ime_service",
 ]
 
