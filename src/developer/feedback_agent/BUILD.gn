@@ -93,11 +93,11 @@ source_set("src") {
   ]
 
   public_deps = [
-    "//garnet/bin/omaha_client:fuchsia.update",
     "//garnet/public/lib/async_promise",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.update",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/fidl/fuchsia-mem",

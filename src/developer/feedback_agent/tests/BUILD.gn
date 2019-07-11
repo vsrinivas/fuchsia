@@ -265,7 +265,7 @@ source_set("stub_channel_provider") {
   ]
 
   public_deps = [
-    "//garnet/bin/omaha_client:fuchsia.update",
+    "//sdk/fidl/fuchsia.update",
     "//sdk/lib/fidl/cpp",
   ]
 }
