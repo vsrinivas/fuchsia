@@ -293,7 +293,7 @@ mod tests {
         },
         cm_rust::{
             self, CapabilityPath, ChildDecl, ComponentDecl, UseDecl, UseDirectoryDecl,
-            UseServiceDecl,
+            UseServiceDecl, UseSource,
         },
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_io::{
@@ -406,7 +406,7 @@ mod tests {
         let hub = Arc::new(Hub::new(root_component_url.clone(), root_directory).unwrap());
         hooks.push(hub);
         let model = Arc::new(model::Model::new(model::ModelParams {
-            ambient: Box::new(mocks::MockAmbientEnvironment::new()),
+            framework_services: Box::new(mocks::MockFrameworkServiceHost::new()),
             root_component_url,
             root_resolver_registry: resolver,
             root_default_runner: Box::new(runner),
@@ -525,14 +525,17 @@ mod tests {
                     }],
                     uses: vec![
                         UseDecl::Directory(UseDirectoryDecl {
+                            source: UseSource::Realm,
                             source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                             target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         }),
                         UseDecl::Service(UseServiceDecl {
+                            source: UseSource::Realm,
                             source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                             target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         }),
                         UseDecl::Directory(UseDirectoryDecl {
+                            source: UseSource::Realm,
                             source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                             target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         }),

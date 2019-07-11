@@ -12,6 +12,7 @@ xunion Ref {
     ChildRef child;
     CollectionRef collection;
     StorageRef storage;
+    FrameworkRef framework;
 };
 
 /// A reference to a component’s containing realm, i.e. the parent component.
@@ -41,3 +42,6 @@ table CollectionRef {
 table StorageRef {
     1: string:MAX_STORAGE_NAME_LENGTH name;
 };
+
+/// A reference to the component framework itself.
+table FrameworkRef {};

@@ -7,7 +7,7 @@ use {
         directory_broker::RoutingFn,
         model::{moniker::AbsoluteMoniker, routing::*, Model},
     },
-    cm_rust::Capability,
+    cm_rust::{Capability, UseDecl},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::NodeMarker,
     fuchsia_async as fasync,
@@ -26,11 +26,11 @@ impl RoutingFacade {
     }
 
     /// Returns a factory for functions that route a `use` declaration to its source.
-    pub fn route_use_fn_factory(&self) -> impl Fn(AbsoluteMoniker, Capability) -> RoutingFn {
+    pub fn route_use_fn_factory(&self) -> impl Fn(AbsoluteMoniker, UseDecl) -> RoutingFn {
         let model = self.model.clone();
-        move |abs_moniker: AbsoluteMoniker, capability: Capability| {
+        move |abs_moniker: AbsoluteMoniker, use_: UseDecl| {
             let model = model.clone();
-            route_use_fn(model, abs_moniker, capability)
+            route_use_fn(model, abs_moniker, use_)
         }
     }
 
@@ -44,17 +44,17 @@ impl RoutingFacade {
     }
 }
 
-fn route_use_fn(model: Model, abs_moniker: AbsoluteMoniker, capability: Capability) -> RoutingFn {
+fn route_use_fn(model: Model, abs_moniker: AbsoluteMoniker, use_: UseDecl) -> RoutingFn {
     Box::new(
         move |_flags: u32, mode: u32, _relative_path: String, server_end: ServerEnd<NodeMarker>| {
             let model = model.clone();
             let abs_moniker = abs_moniker.clone();
-            let capability = capability.clone();
+            let use_ = use_.clone();
             fasync::spawn(async move {
                 let res = await!(route_use_capability(
                     &model,
                     mode,
-                    &capability,
+                    &use_,
                     abs_moniker.clone(),
                     server_end.into_channel()
                 ));

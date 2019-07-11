@@ -130,6 +130,15 @@
               "data"
             ]
           },
+          "from": {
+            "title": "Used capability source",
+            "pattern": "^(realm|framework)$",
+            "description": "The component which is offering the capability to use. Either \"realm\" (default) or \"framework\"\".",
+            "examples": [
+              "realm",
+              "framework"
+            ]
+          },
           "as": {
             "title": "Used capability target path",
             "description": "The path to which the capability will be installed in the component's incoming namespace. Defaults to \"service\"/\"directory\".",

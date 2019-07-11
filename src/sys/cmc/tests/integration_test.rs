@@ -3,7 +3,7 @@ use failure::Error;
 use fidl_fuchsia_data as fd;
 use fidl_fuchsia_sys2::{
     ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability, ExposeDecl,
-    ExposeDirectoryDecl, OfferDecl, OfferServiceDecl, Ref, SelfRef, StartupMode, UseDecl,
+    ExposeDirectoryDecl, OfferDecl, OfferServiceDecl, RealmRef, Ref, SelfRef, StartupMode, UseDecl,
     UseServiceDecl,
 };
 use std::fs::File;
@@ -24,6 +24,7 @@ fn main() {
             }],
         };
         let uses = vec![UseDecl::Service(UseServiceDecl {
+            source: Some(Ref::Realm(RealmRef {})),
             source_path: Some("/fonts/CoolFonts".to_string()),
             target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
         })];

@@ -6,7 +6,7 @@
 
 use {
     component_manager_lib::{
-        ambient::RealAmbientEnvironment,
+        framework_services::RealFrameworkServiceHost,
         elf_runner::{ElfRunner, ProcessLauncherConnector},
         model::{
             self,
@@ -49,7 +49,7 @@ async fn main() -> Result<(), Error> {
     hooks.push(hub.clone());
 
     let params = ModelParams {
-        ambient: Box::new(RealAmbientEnvironment::new()),
+        framework_services: Box::new(RealFrameworkServiceHost::new()),
         root_component_url: root_component_url,
         root_resolver_registry: resolver_registry,
         root_default_runner: Box::new(runner),

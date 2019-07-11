@@ -100,11 +100,13 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
     for use_ in use_in {
         let target_path = extract_target_path(use_, use_);
         let out = if let Some(p) = use_.service() {
+            let source = extract_use_source(use_)?;
             let target_path = target_path.ok_or(Error::internal(format!("no capability")))?;
-            Ok(cm::Use::Service(cm::UseService { source_path: p.clone(), target_path }))
+            Ok(cm::Use::Service(cm::UseService { source, source_path: p.clone(), target_path }))
         } else if let Some(p) = use_.directory() {
+            let source = extract_use_source(use_)?;
             let target_path = target_path.ok_or(Error::internal(format!("no capability")))?;
-            Ok(cm::Use::Directory(cm::UseDirectory { source_path: p.clone(), target_path }))
+            Ok(cm::Use::Directory(cm::UseDirectory { source, source_path: p.clone(), target_path }))
         } else if let Some(p) = use_.storage() {
             Ok(cm::Use::Storage(cm::UseStorage {
                 type_: str_to_storage_type(p.as_str())?,
@@ -234,6 +236,17 @@ fn translate_storage(storage_in: &Vec<cml::Storage>) -> Result<Vec<cm::Storage>,
             })
         })
         .collect()
+}
+
+fn extract_use_source(in_obj: &cml::Use) -> Result<cm::Ref, Error> {
+    match in_obj.from.as_ref() {
+        Some(from) => match from as &str {
+            "realm" => Ok(cm::Ref::Realm(cm::RealmRef {})),
+            "framework" => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
+            _ => Err(Error::internal(format!("invalid \"from\" for \"use\": {}", from))),
+        },
+        None => Ok(cm::Ref::Realm(cm::RealmRef {})),
+    }
 }
 
 fn extract_expose_source<T>(in_obj: &T) -> Result<cm::Ref, Error>
@@ -440,8 +453,9 @@ mod tests {
             input = json!({
                 "use": [
                     { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
-                    { "service": "/svc/fuchsia.sys2.Realm" },
+                    { "service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
                     { "directory": "/data/assets" },
+                    { "directory": "/data/config", "from": "realm" },
                     { "storage": "meta" },
                     { "storage": "cache", "as": "/tmp" },
                 ],
@@ -450,20 +464,38 @@ mod tests {
     "uses": [
         {
             "service": {
+                "source": {
+                    "realm": {}
+                },
                 "source_path": "/fonts/CoolFonts",
                 "target_path": "/svc/fuchsia.fonts.Provider"
             }
         },
         {
             "service": {
+                "source": {
+                    "framework": {}
+                },
                 "source_path": "/svc/fuchsia.sys2.Realm",
                 "target_path": "/svc/fuchsia.sys2.Realm"
             }
         },
         {
             "directory": {
+                "source": {
+                    "realm": {}
+                },
                 "source_path": "/data/assets",
                 "target_path": "/data/assets"
+            }
+        },
+        {
+            "directory": {
+                "source": {
+                    "realm": {}
+                },
+                "source_path": "/data/config",
+                "target_path": "/data/config"
             }
         },
         {
@@ -886,6 +918,9 @@ mod tests {
     "uses": [
         {
             "service": {
+                "source": {
+                    "realm": {}
+                },
                 "source_path": "/fonts/CoolFonts",
                 "target_path": "/svc/fuchsia.fonts.Provider"
             }
@@ -970,7 +1005,7 @@ mod tests {
                 { "directory": "/data/assets" }
             ]
         });
-        let output = r#"{"uses":[{"service":{"source_path":"/fonts/CoolFonts","target_path":"/svc/fuchsia.fonts.Provider"}},{"directory":{"source_path":"/data/assets","target_path":"/data/assets"}}]}"#;
+        let output = r#"{"uses":[{"service":{"source":{"realm":{}},"source_path":"/fonts/CoolFonts","target_path":"/svc/fuchsia.fonts.Provider"}},{"directory":{"source":{"realm":{}},"source_path":"/data/assets","target_path":"/data/assets"}}]}"#;
         compile_test(input, &output, false);
     }
 

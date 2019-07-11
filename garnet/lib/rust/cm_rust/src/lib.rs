@@ -288,12 +288,14 @@ fidl_into_enum!(UseDecl, UseDecl, fsys::UseDecl, fsys::UseDecl,
                 });
 fidl_into_struct!(UseServiceDecl, UseServiceDecl, fsys::UseServiceDecl, fsys::UseServiceDecl,
                   {
+                      source: UseSource,
                       source_path: CapabilityPath,
                       target_path: CapabilityPath,
                   });
 fidl_into_struct!(UseDirectoryDecl, UseDirectoryDecl, fsys::UseDirectoryDecl,
                   fsys::UseDirectoryDecl,
                   {
+                      source: UseSource,
                       source_path: CapabilityPath,
                       target_path: CapabilityPath,
                   });
@@ -489,6 +491,9 @@ fn from_fidl_dict(dict: fdata::Dictionary) -> HashMap<String, Value> {
 
 /// Generic container for any capability type. Doesn't map onto any fidl declaration, but useful as
 /// an intermediate representation.
+// TODO: `Capability` tries to merge representations for `use`, `offer`, and `expose`, and as such
+// obscures the differences between them and loses information. Consider removing this type in
+// favor of using `UseDecl`, `ExposeDecl`, and `OfferDecl` directly.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Capability {
     Service(CapabilityPath),
@@ -715,6 +720,31 @@ impl OfferStorageDecl {
             OfferStorageDecl::Cache(OfferStorage { target, .. }) => target,
             OfferStorageDecl::Meta(OfferStorage { target, .. }) => target,
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum UseSource {
+    Realm,
+    Framework,
+}
+
+impl FidlIntoNative<UseSource> for Option<fsys::Ref> {
+    fn fidl_into_native(self) -> UseSource {
+        match self.unwrap() {
+            fsys::Ref::Realm(_) => UseSource::Realm,
+            fsys::Ref::Framework(_) => UseSource::Framework,
+            _ => panic!("invalid UseSource variant"),
+        }
+    }
+}
+
+impl NativeIntoFidl<Option<fsys::Ref>> for UseSource {
+    fn native_into_fidl(self) -> Option<fsys::Ref> {
+        Some(match self {
+            UseSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            UseSource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
+        })
     }
 }
 
@@ -1075,10 +1105,12 @@ mod tests {
                ]}),
                uses: Some(vec![
                    fsys::UseDecl::Service(fsys::UseServiceDecl {
+                       source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                        source_path: Some("/svc/netstack".to_string()),
                        target_path: Some("/svc/mynetstack".to_string()),
                    }),
                    fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
+                       source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                        source_path: Some("/data/dir".to_string()),
                        target_path: Some("/data".to_string()),
                    }),
@@ -1187,10 +1219,12 @@ mod tests {
                     ]}),
                     uses: vec![
                         UseDecl::Service(UseServiceDecl {
+                            source: UseSource::Realm,
                             source_path: "/svc/netstack".try_into().unwrap(),
                             target_path: "/svc/mynetstack".try_into().unwrap(),
                         }),
                         UseDecl::Directory(UseDirectoryDecl {
+                            source: UseSource::Framework,
                             source_path: "/data/dir".try_into().unwrap(),
                             target_path: "/data".try_into().unwrap(),
                         }),
@@ -1311,10 +1345,12 @@ mod tests {
         from_use_capability => {
             input = vec![
                 UseDecl::Service(UseServiceDecl {
+                    source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/foo/bar").unwrap(),
                     target_path: CapabilityPath::try_from("/blah").unwrap(),
                 }),
                 UseDecl::Directory(UseDirectoryDecl {
+                    source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/foo/bar").unwrap(),
                     target_path: CapabilityPath::try_from("/blah").unwrap(),
                 }),

@@ -6,9 +6,8 @@ use {
     crate::directory_broker::{DirectoryBroker, RoutingFn},
     crate::model::addable_directory::AddableDirectory,
     crate::model::*,
-    cm_rust::{Capability, ComponentDecl, ExposeDecl},
+    cm_rust::{Capability, CapabilityPath, ComponentDecl, ExposeDecl, UseDecl, UseStorageDecl},
     fuchsia_vfs_pseudo_fs::directory,
-    log::*,
     std::collections::HashMap,
 };
 
@@ -24,21 +23,13 @@ impl DirTree {
     /// `routing_factory` is a closure that generates the routing function that will be called
     /// when a leaf node is opened.
     pub fn build_from_uses(
-        routing_factory: impl Fn(AbsoluteMoniker, Capability) -> RoutingFn,
+        routing_factory: impl Fn(AbsoluteMoniker, UseDecl) -> RoutingFn,
         abs_moniker: &AbsoluteMoniker,
         decl: ComponentDecl,
     ) -> Result<Self, ModelError> {
         let mut tree = DirTree { directory_nodes: HashMap::new(), broker_nodes: HashMap::new() };
         for use_ in decl.uses {
-            let capability = match use_ {
-                cm_rust::UseDecl::Directory(d) => Capability::Directory(d.target_path),
-                cm_rust::UseDecl::Service(d) => Capability::Service(d.target_path),
-                cm_rust::UseDecl::Storage(_) => {
-                    error!("storage capabilities are not supported");
-                    return Err(ModelError::ComponentInvalid);
-                }
-            };
-            tree.add_capability(&routing_factory, abs_moniker, &capability);
+            tree.add_use_capability(&routing_factory, abs_moniker, &use_)?;
         }
         Ok(tree)
     }
@@ -46,6 +37,7 @@ impl DirTree {
     /// Builds a directory hierarchy from a component's `exposes` declarations.
     /// `routing_factory` is a closure that generates the routing function that will be called
     /// when a leaf node is opened.
+    // TODO: refactor to take ExposeDecl
     pub fn build_from_exposes(
         routing_factory: impl Fn(AbsoluteMoniker, Capability) -> RoutingFn,
         abs_moniker: &AbsoluteMoniker,
@@ -57,7 +49,7 @@ impl DirTree {
                 ExposeDecl::Service(d) => Capability::Service(d.target_path),
                 ExposeDecl::Directory(d) => Capability::Directory(d.target_path),
             };
-            tree.add_capability(&routing_factory, abs_moniker, &capability);
+            tree.add_expose_capability(&routing_factory, abs_moniker, &capability);
         }
         tree
     }
@@ -80,13 +72,41 @@ impl DirTree {
         Ok(())
     }
 
-    fn add_capability(
+    fn add_use_capability(
+        &mut self,
+        routing_factory: &impl Fn(AbsoluteMoniker, UseDecl) -> RoutingFn,
+        abs_moniker: &AbsoluteMoniker,
+        use_: &UseDecl,
+    ) -> Result<(), ModelError> {
+        let path = match use_ {
+            cm_rust::UseDecl::Directory(d) => &d.target_path,
+            cm_rust::UseDecl::Service(d) => &d.target_path,
+            cm_rust::UseDecl::Storage(UseStorageDecl::Data(p)) => &p,
+            cm_rust::UseDecl::Storage(UseStorageDecl::Cache(p)) => &p,
+            cm_rust::UseDecl::Storage(UseStorageDecl::Meta) => {
+                // Meta storage doesn't show up in the namespace, nothing to do.
+                return Ok(());
+            }
+        };
+        let tree = self.to_directory_node(path);
+        let routing_fn = routing_factory(abs_moniker.clone(), use_.clone());
+        tree.broker_nodes.insert(path.basename.to_string(), routing_fn);
+        Ok(())
+    }
+
+    fn add_expose_capability(
         &mut self,
         routing_factory: &impl Fn(AbsoluteMoniker, Capability) -> RoutingFn,
         abs_moniker: &AbsoluteMoniker,
         capability: &Capability,
     ) {
         let path = capability.path().expect("missing path");
+        let tree = self.to_directory_node(path);
+        let routing_fn = routing_factory(abs_moniker.clone(), capability.clone());
+        tree.broker_nodes.insert(path.basename.to_string(), routing_fn);
+    }
+
+    fn to_directory_node(&mut self, path: &CapabilityPath) -> &mut DirTree {
         let components = path.dirname.split("/");
         let mut tree = self;
         for component in components {
@@ -96,8 +116,7 @@ impl DirTree {
                 ));
             }
         }
-        let routing_fn = routing_factory(abs_moniker.clone(), capability.clone());
-        tree.broker_nodes.insert(path.basename.to_string(), routing_fn);
+        tree
     }
 }
 
@@ -108,7 +127,7 @@ mod tests {
         crate::model::testing::{mocks, routing_test_helpers::default_component_decl, test_utils},
         cm_rust::{
             CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeServiceDecl, ExposeSource,
-            UseDecl, UseDirectoryDecl, UseServiceDecl,
+            UseDecl, UseDirectoryDecl, UseServiceDecl, UseSource,
         },
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
@@ -123,21 +142,25 @@ mod tests {
     async fn build_from_uses() {
         // Call `build_from_uses` with a routing factory that routes to a mock directory or service,
         // and a `ComponentDecl` with `use` declarations.
-        let routing_factory = mocks::proxying_routing_factory();
+        let routing_factory = mocks::proxy_use_routing_factory();
         let decl = ComponentDecl {
             uses: vec![
                 UseDecl::Directory(UseDirectoryDecl {
+                    source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/in/data/hippo").unwrap(),
                 }),
                 UseDecl::Service(UseServiceDecl {
+                    source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/in/svc/hippo").unwrap(),
                 }),
-                UseDecl::Directory(UseDirectoryDecl {
-                    source_path: CapabilityPath::try_from("/data/foo").unwrap(),
-                    target_path: CapabilityPath::try_from("/in/data/bar").unwrap(),
-                }),
+                UseDecl::Storage(UseStorageDecl::Data(
+                    CapabilityPath::try_from("/in/data/persistent").unwrap(),
+                )),
+                UseDecl::Storage(UseStorageDecl::Cache(
+                    CapabilityPath::try_from("/in/data/cache").unwrap(),
+                )),
             ],
             ..default_component_decl()
         };
@@ -162,13 +185,17 @@ mod tests {
             .into_proxy()
             .expect("failed to create directory proxy");
         assert_eq!(
-            vec!["in/data/bar", "in/data/hippo", "in/svc/hippo"],
+            vec!["in/data/cache", "in/data/hippo", "in/data/persistent", "in/svc/hippo"],
             await!(test_utils::list_directory_recursive(&in_dir_proxy))
         );
 
         // Expect that calls on the directory nodes reach the mock directory/service.
-        assert_eq!("friend", await!(test_utils::read_file(&in_dir_proxy, "in/data/bar/hello")));
         assert_eq!("friend", await!(test_utils::read_file(&in_dir_proxy, "in/data/hippo/hello")));
+        assert_eq!(
+            "friend",
+            await!(test_utils::read_file(&in_dir_proxy, "in/data/persistent/hello"))
+        );
+        assert_eq!("friend", await!(test_utils::read_file(&in_dir_proxy, "in/data/cache/hello")));
         assert_eq!(
             "hippos".to_string(),
             await!(test_utils::call_echo(&in_dir_proxy, "in/svc/hippo"))
@@ -177,9 +204,9 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn build_from_exposes() {
-        // Call `build_from_uses` with a routing factory that routes to a mock directory or service,
-        // and a `ComponentDecl` with `expose` declarations.
-        let routing_factory = mocks::proxying_routing_factory();
+        // Call `build_from_exposes` with a routing factory that routes to a mock directory or
+        // service, and a `ComponentDecl` with `expose` declarations.
+        let routing_factory = mocks::proxy_expose_routing_factory();
         let decl = ComponentDecl {
             exposes: vec![
                 ExposeDecl::Directory(ExposeDirectoryDecl {

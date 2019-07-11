@@ -5,8 +5,8 @@
 use {
     crate::model::*,
     cm_rust::{
-        self, Capability, CapabilityPath, ExposeDecl, ExposeSource, OfferDecl,
-        OfferDirectorySource, OfferServiceSource, OfferStorageSource,
+        self, Capability, ExposeDecl, ExposeSource, OfferDecl, OfferDirectorySource,
+        OfferServiceSource, OfferStorageSource, UseDecl, UseSource,
     },
     failure::format_err,
     fidl::endpoints::{create_proxy, ServerEnd},
@@ -31,8 +31,8 @@ enum CapabilitySource {
     Component(Capability, Arc<Realm>),
     /// This capability originates from component manager's namespace.
     ComponentMgrNamespace(Capability),
-    /// This capability is an ambient service and originates from component manager itself.
-    AmbientService(CapabilityPath, Arc<Realm>),
+    /// This capability originates from component manager itself.
+    FrameworkCapability(Capability, Arc<Realm>),
     /// This capability originates from a storage declaration in a component's decl. The capability
     /// here is the backing directory capability offered to this realm, into which storage requests
     /// should be fed.
@@ -45,11 +45,11 @@ enum CapabilitySource {
 pub async fn route_use_capability<'a>(
     model: &'a Model,
     open_mode: u32,
-    used_capability: &'a Capability,
+    use_decl: &'a UseDecl,
     abs_moniker: AbsoluteMoniker,
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
-    if let Capability::Storage(type_) = used_capability {
+    if let Capability::Storage(type_) = use_decl.clone().into() {
         return await!(route_and_open_storage_capability(
             model,
             type_.clone(),
@@ -58,7 +58,7 @@ pub async fn route_use_capability<'a>(
             server_chan
         ));
     }
-    let source = await!(find_capability_source(model, used_capability, &abs_moniker))?;
+    let source = await!(find_used_capability_source(model, use_decl, &abs_moniker))?;
     await!(open_capability_at_source(model, open_mode, source, server_chan))
 }
 
@@ -115,16 +115,28 @@ async fn open_capability_at_source<'a>(
                 )));
             }
         }
-        CapabilitySource::AmbientService(source_capability_path, realm) => {
-            await!(AmbientEnvironment::serve(
-                model.clone(),
-                realm,
-                &source_capability_path,
-                server_chan
-            ))?;
+        CapabilitySource::FrameworkCapability(capability, realm) => {
+            await!(open_framework_capability(model.clone(), realm, &capability, server_chan))?;
         }
         CapabilitySource::StorageDecl(..) => {
             panic!("storage capabilities must be separately routed and opened");
+        }
+    }
+    Ok(())
+}
+
+async fn open_framework_capability(
+    model: Model,
+    realm: Arc<Realm>,
+    capability: &Capability,
+    server_chan: zx::Channel,
+) -> Result<(), ModelError> {
+    match capability {
+        Capability::Service(path) => {
+            await!(FrameworkServiceHost::serve(model.clone(), realm, &path, server_chan))?;
+        }
+        _ => {
+            return Err(ModelError::unsupported("Non-service framework capability"));
         }
     }
     Ok(())
@@ -169,7 +181,7 @@ async fn route_and_open_storage_capability(
             (dir_capability.path().unwrap().clone(), storage_decl_realm.clone())
         }
         OfferDirectorySource::Realm => {
-            let source = await!(find_capability_source(
+            let source = await!(find_offered_capability_source(
                 model,
                 &dir_capability,
                 &storage_decl_realm.abs_moniker
@@ -288,20 +300,39 @@ pub fn generate_storage_path(
     dir_path.into_iter().collect()
 }
 
-/// Check if a used capability is ambient, and if so return the ambient `CapabilitySource`.
-async fn find_ambient_capability<'a>(
+/// Check if a used capability is a framework service, and if so return a framework `CapabilitySource`.
+async fn find_framework_capability<'a>(
     model: &'a Model,
-    used_capability: &'a Capability,
+    use_decl: &'a UseDecl,
     abs_moniker: &'a AbsoluteMoniker,
 ) -> Result<Option<CapabilitySource>, ModelError> {
-    if let Some(path) = AMBIENT_SERVICES.iter().find(|p| match used_capability {
-        Capability::Service(s) => **p == s,
-        _ => false,
-    }) {
-        let realm = await!(model.look_up_realm(abs_moniker))?;
-        Ok(Some(CapabilitySource::AmbientService((*path).clone(), realm)))
-    } else {
-        Ok(None)
+    let source = match use_decl {
+        UseDecl::Service(ref s) => Some(&s.source),
+        UseDecl::Directory(ref d) => Some(&d.source),
+        UseDecl::Storage(_) => None,
+    };
+    match source {
+        Some(UseSource::Framework) => {
+            let used_capability = use_decl.clone().into();
+            let path = FRAMEWORK_SERVICES
+                .iter()
+                .find(|p| match &used_capability {
+                    Capability::Service(s) => **p == s,
+                    _ => false,
+                })
+                .ok_or_else(|| {
+                    ModelError::capability_discovery_error(format_err!(
+                        "Invalid framework capability {}",
+                        used_capability
+                    ))
+                })?;
+            let realm = await!(model.look_up_realm(abs_moniker))?;
+            Ok(Some(CapabilitySource::FrameworkCapability(
+                Capability::Service((*path).clone()),
+                realm,
+            )))
+        }
+        _ => Ok(None),
     }
 }
 
@@ -315,30 +346,38 @@ struct WalkPosition {
     moniker: AbsoluteMoniker,
 }
 
-/// find_capability_source will walk the component tree to find the originating source of a
-/// capability, starting on the given abs_moniker. It returns the absolute moniker of the
-/// originating component, a reference to its realm, and the capability exposed or offered at the
-/// originating source. If the absolute moniker and realm are None, then the capability originates
-/// at the returned path in componentmgr's namespace.
-async fn find_capability_source<'a>(
+async fn find_used_capability_source<'a>(
     model: &'a Model,
-    used_capability: &'a Capability,
+    use_decl: &'a UseDecl,
     abs_moniker: &'a AbsoluteMoniker,
 ) -> Result<CapabilitySource, ModelError> {
-    if let Some(ambient_capability) =
-        await!(find_ambient_capability(model, used_capability, &abs_moniker))?
+    if let Some(framework_capability) =
+        await!(find_framework_capability(model, use_decl, abs_moniker))?
     {
-        return Ok(ambient_capability);
+        return Ok(framework_capability);
     }
+    let capability = use_decl.clone().into();
+    await!(find_offered_capability_source(model, &capability, abs_moniker))
+}
 
+/// Walks the component tree to find the originating source of a capability, starting on the given
+/// abs_moniker. It returns the absolute moniker of the originating component, a reference to its
+/// realm, and the capability exposed or offered at the originating source. If the absolute moniker
+/// and realm are None, then the capability originates at the returned path in componentmgr's
+/// namespace.
+async fn find_offered_capability_source<'a>(
+    model: &'a Model,
+    capability: &'a Capability,
+    abs_moniker: &'a AbsoluteMoniker,
+) -> Result<CapabilitySource, ModelError> {
     let moniker = match abs_moniker.parent() {
         Some(m) => m,
-        None => return Ok(CapabilitySource::ComponentMgrNamespace(used_capability.clone())),
+        None => return Ok(CapabilitySource::ComponentMgrNamespace(capability.clone())),
     };
     let mut pos = WalkPosition {
-        capability: used_capability.clone(),
+        capability: capability.clone(),
         last_child_moniker: abs_moniker.path().last().map(|c| c.clone()),
-        moniker: moniker,
+        moniker,
     };
 
     if let Some(source) = await!(walk_offer_chain(model, &mut pos))? {

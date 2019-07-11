@@ -16,7 +16,6 @@ pub const LAZY: &str = "lazy";
 pub const EAGER: &str = "eager";
 pub const PERSISTENT: &str = "persistent";
 pub const TRANSIENT: &str = "transient";
-pub const AMBIENT_PATHS: [&str; 1] = ["/svc/fuchsia.sys2.Realm"];
 
 #[derive(Deserialize, Debug)]
 pub struct Document {
@@ -70,6 +69,7 @@ pub struct Use {
     pub directory: Option<String>,
     pub storage: Option<String>,
     pub r#as: Option<String>,
+    pub from: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]

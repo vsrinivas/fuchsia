@@ -53,8 +53,8 @@ async fn storage_and_dir_from_parent() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b"].into(),
         CheckUse::Storage {
@@ -122,8 +122,8 @@ async fn storage_from_parent_dir_from_grandparent() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b", "c"].into(),
         CheckUse::Storage {
@@ -189,8 +189,8 @@ async fn storage_and_dir_from_grandparent() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b", "c"].into(),
         CheckUse::Storage {
@@ -257,8 +257,8 @@ async fn storage_from_parent_dir_from_sibling() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["c"].into(),
         CheckUse::Storage {
@@ -351,8 +351,8 @@ async fn storage_multiple_types() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["c"].into(),
         CheckUse::Storage {
@@ -407,8 +407,8 @@ async fn use_the_wrong_type_of_storage() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Cache, storage_relation: None }
@@ -449,8 +449,8 @@ async fn use_storage_when_not_offered() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Cache, storage_relation: None }
@@ -516,8 +516,8 @@ async fn dir_offered_from_nonexecutable() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b", "c"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Data, storage_relation: None }

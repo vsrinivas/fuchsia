@@ -53,6 +53,9 @@
         },
         {
           "required": [ "storage" ]
+        },
+        {
+          "required": [ "framework" ]
         }
       ],
       "properties": {
@@ -96,6 +99,10 @@
               "allOf": [{ "$ref": "#/definitions/name-clause" }]
             }
           }
+        },
+        "framework": {
+          "type": "object",
+          "title": "Component framework"
         }
       }
     },
@@ -155,10 +162,15 @@
             "type": "object",
             "title": "Used service capability",
             "required": [
+              "source",
               "source_path",
               "target_path"
             ],
             "properties": {
+              "source": {
+                "title": "Used service source",
+                "allOf": [{ "$ref": "#/definitions/reference-clause" }]
+              },
               "source_path": {
                 "title": "Used service source path",
                 "allOf": [{ "$ref": "#/definitions/path-clause" }]
@@ -173,16 +185,21 @@
             "type": "object",
             "title": "Used directory capability",
             "required": [
+              "source",
               "source_path",
               "target_path"
             ],
             "properties": {
+              "source": {
+                "title": "Used directory source",
+                "allOf": [{ "$ref": "#/definitions/reference-clause" }]
+              },
               "source_path": {
-                "title": "Used service source path",
+                "title": "Used directory source path",
                 "allOf": [{ "$ref": "#/definitions/path-clause" }]
               },
               "target_path": {
-                "title": "Used service target path",
+                "title": "Used directory target path",
                 "allOf": [{ "$ref": "#/definitions/path-clause" }]
               }
             }

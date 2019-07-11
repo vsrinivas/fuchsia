@@ -5,6 +5,9 @@
     "uses": [
         {
             "service": {
+                "source": {
+                    "realm": {}
+                },
                 "source_path": "/fonts/CoolFonts",
                 "target_path": "/svc/fuchsia.fonts.Provider"
             }

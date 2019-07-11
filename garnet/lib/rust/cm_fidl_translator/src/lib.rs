@@ -28,16 +28,18 @@ trait CmInto<T> {
     fn cm_into(self) -> Result<T, Error>;
 }
 
-impl<T,U> CmInto<Option<Vec<U>>> for Option<Vec<T>>
-    where T: CmInto<U>
+impl<T, U> CmInto<Option<Vec<U>>> for Option<Vec<T>>
+where
+    T: CmInto<U>,
 {
     fn cm_into(self) -> Result<Option<Vec<U>>, Error> {
-        self.and_then(|x| if x.is_empty() { None } else { Some(x.cm_into()) } ).transpose()
+        self.and_then(|x| if x.is_empty() { None } else { Some(x.cm_into()) }).transpose()
     }
 }
 
-impl<T,U> CmInto<Vec<U>> for Vec<T>
-    where T: CmInto<U>
+impl<T, U> CmInto<Vec<U>> for Vec<T>
+where
+    T: CmInto<U>,
 {
     fn cm_into(self) -> Result<Vec<U>, Error> {
         self.into_iter().map(|x| x.cm_into()).collect()
@@ -91,6 +93,7 @@ impl CmInto<fsys::OfferDecl> for cm::Offer {
 impl CmInto<fsys::UseServiceDecl> for cm::UseService {
     fn cm_into(self) -> Result<fsys::UseServiceDecl, Error> {
         Ok(fsys::UseServiceDecl {
+            source: Some(self.source.cm_into()?),
             source_path: Some(self.source_path),
             target_path: Some(self.target_path),
         })
@@ -100,6 +103,7 @@ impl CmInto<fsys::UseServiceDecl> for cm::UseService {
 impl CmInto<fsys::UseDirectoryDecl> for cm::UseDirectory {
     fn cm_into(self) -> Result<fsys::UseDirectoryDecl, Error> {
         Ok(fsys::UseDirectoryDecl {
+            source: Some(self.source.cm_into()?),
             source_path: Some(self.source_path),
             target_path: Some(self.target_path),
         })
@@ -236,6 +240,12 @@ impl CmInto<fsys::StorageRef> for cm::StorageRef {
     }
 }
 
+impl CmInto<fsys::FrameworkRef> for cm::FrameworkRef {
+    fn cm_into(self) -> Result<fsys::FrameworkRef, Error> {
+        Ok(fsys::FrameworkRef {})
+    }
+}
+
 impl CmInto<fsys::Ref> for cm::Ref {
     fn cm_into(self) -> Result<fsys::Ref, Error> {
         Ok(match self {
@@ -244,6 +254,7 @@ impl CmInto<fsys::Ref> for cm::Ref {
             cm::Ref::Child(c) => fsys::Ref::Child(c.cm_into()?),
             cm::Ref::Collection(c) => fsys::Ref::Collection(c.cm_into()?),
             cm::Ref::Storage(r) => fsys::Ref::Storage(r.cm_into()?),
+            cm::Ref::Framework(f) => fsys::Ref::Framework(f.cm_into()?),
         })
     }
 }
@@ -482,20 +493,38 @@ mod tests {
                 "uses": [
                     {
                         "service": {
+                            "source": {
+                                "realm": {}
+                            },
                             "source_path": "/fonts/CoolFonts",
                             "target_path": "/svc/fuchsia.fonts.Provider"
                         }
                     },
                     {
                         "service": {
+                            "source": {
+                                "framework": {}
+                            },
                             "source_path": "/svc/fuchsia.sys2.Realm",
                             "target_path": "/svc/fuchsia.sys2.Realm"
                         }
                     },
                     {
                         "directory": {
+                            "source": {
+                                "realm": {}
+                            },
                             "source_path": "/data/assets",
                             "target_path": "/data"
+                        }
+                    },
+                    {
+                        "directory": {
+                            "source": {
+                                "framework": {}
+                            },
+                            "source_path": "/pkg",
+                            "target_path": "/pkg"
                         }
                     },
                     {
@@ -509,16 +538,24 @@ mod tests {
             output = {
                 let uses = vec![
                     fsys::UseDecl::Service(fsys::UseServiceDecl {
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_path: Some("/fonts/CoolFonts".to_string()),
                         target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
                     }),
                     fsys::UseDecl::Service(fsys::UseServiceDecl {
+                        source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                         source_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
                         target_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
                     }),
                     fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_path: Some("/data/assets".to_string()),
                         target_path: Some("/data".to_string()),
+                    }),
+                    fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
+                        source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                        source_path: Some("/pkg".to_string()),
+                        target_path: Some("/pkg".to_string()),
                     }),
                     fsys::UseDecl::Storage(fsys::UseStorageDecl {
                         type_: Some(fsys::StorageType::Cache),
@@ -981,6 +1018,9 @@ mod tests {
                 "uses": [
                     {
                         "service": {
+                            "source": {
+                                "realm": {}
+                            },
                             "source_path": "/fonts/CoolFonts",
                             "target_path": "/svc/fuchsia.fonts.Provider"
                         }
@@ -1056,6 +1096,7 @@ mod tests {
                 ]};
                 let uses = vec![
                     fsys::UseDecl::Service(fsys::UseServiceDecl {
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_path: Some("/fonts/CoolFonts".to_string()),
                         target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
                     }),

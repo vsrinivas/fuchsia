@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 mod addable_directory;
-pub mod ambient;
 mod component;
 pub mod dir_tree;
 pub mod error;
 mod exposed_dir;
+pub mod framework_services;
 pub mod hub;
 mod model;
 mod moniker;
@@ -21,6 +21,6 @@ pub mod testing;
 pub(crate) mod tests;
 
 pub use self::{
-    ambient::*, component::*, dir_tree::*, error::*, exposed_dir::*, hub::*, model::*, moniker::*,
-    namespace::*, resolver::*, routing::*, routing_facade::*, runner::*,
+    component::*, dir_tree::*, error::*, exposed_dir::*, framework_services::*, hub::*, model::*,
+    moniker::*, namespace::*, resolver::*, routing::*, routing_facade::*, runner::*,
 };

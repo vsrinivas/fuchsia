@@ -60,12 +60,14 @@ pub enum Use {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UseService {
+    pub source: Ref,
     pub source_path: String,
     pub target_path: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UseDirectory {
+    pub source: Ref,
     pub source_path: String,
     pub target_path: String,
 }
@@ -156,6 +158,8 @@ pub enum Ref {
     Collection(CollectionRef),
     #[serde(rename = "storage")]
     Storage(StorageRef),
+    #[serde(rename = "framework")]
+    Framework(FrameworkRef),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -178,3 +182,6 @@ pub struct CollectionRef {
 pub struct StorageRef {
     pub name: String,
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct FrameworkRef {}

@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::ambient::RealAmbientEnvironment,
+    crate::framework_services::RealFrameworkServiceHost,
     crate::model::testing::mocks::*,
     crate::model::testing::routing_test_helpers::*,
     cm_rust::{
         self, Capability, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
         ExposeDirectoryDecl, ExposeServiceDecl, ExposeSource, OfferDecl, OfferDirectoryDecl,
         OfferDirectorySource, OfferServiceDecl, OfferServiceSource, OfferTarget, UseDecl,
-        UseDirectoryDecl, UseServiceDecl,
+        UseDirectoryDecl, UseServiceDecl, UseSource,
     },
     fidl_fuchsia_sys2 as fsys,
     std::convert::{TryFrom, TryInto},
@@ -20,9 +20,9 @@ use {
 ///    \
 ///     b
 ///
-/// b: uses ambient service /svc/fuchsia.sys2.Realm
+/// b: uses framework service /svc/fuchsia.sys2.Realm
 #[fuchsia_async::run_singlethreaded(test)]
-async fn use_ambient() {
+async fn use_framework_service() {
     let components = vec![
         (
             "a",
@@ -39,6 +39,7 @@ async fn use_ambient() {
             "b",
             ComponentDecl {
                 uses: vec![UseDecl::Service(UseServiceDecl {
+                    source: UseSource::Framework,
                     source_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                 })],
@@ -46,9 +47,9 @@ async fn use_ambient() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let bind_calls = ambient.bind_calls.clone();
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let bind_calls = framework_services.bind_calls.clone();
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use_realm(vec!["b"].into(), bind_calls));
 }
 
@@ -93,10 +94,12 @@ async fn use_from_parent() {
             ComponentDecl {
                 uses: vec![
                     UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     }),
                     UseDecl::Service(UseServiceDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     }),
@@ -105,8 +108,8 @@ async fn use_from_parent() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
@@ -187,10 +190,12 @@ async fn use_from_grandparent() {
             ComponentDecl {
                 uses: vec![
                     UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     }),
                     UseDecl::Service(UseServiceDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     }),
@@ -199,8 +204,8 @@ async fn use_from_grandparent() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b", "c"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
@@ -271,10 +276,12 @@ async fn use_from_sibling_no_root() {
             ComponentDecl {
                 uses: vec![
                     UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/foobar").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     }),
                     UseDecl::Service(UseServiceDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     }),
@@ -301,8 +308,8 @@ async fn use_from_sibling_no_root() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b", "c"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
@@ -378,10 +385,12 @@ async fn use_from_sibling_root() {
             ComponentDecl {
                 uses: vec![
                     UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     }),
                     UseDecl::Service(UseServiceDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     }),
@@ -390,8 +399,8 @@ async fn use_from_sibling_root() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["c"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
@@ -475,10 +484,12 @@ async fn use_from_niece() {
             ComponentDecl {
                 uses: vec![
                     UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/foobar").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     }),
                     UseDecl::Service(UseServiceDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     }),
@@ -505,8 +516,8 @@ async fn use_from_niece() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["c"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
@@ -651,10 +662,12 @@ async fn use_kitchen_sink() {
             ComponentDecl {
                 uses: vec![
                     UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     }),
                     UseDecl::Service(UseServiceDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     }),
@@ -667,10 +680,12 @@ async fn use_kitchen_sink() {
             ComponentDecl {
                 uses: vec![
                     UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     }),
                     UseDecl::Service(UseServiceDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     }),
@@ -707,8 +722,8 @@ async fn use_kitchen_sink() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b", "e"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
@@ -770,10 +785,12 @@ async fn use_from_component_manager_namespace() {
             ComponentDecl {
                 uses: vec![
                     UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     }),
                     UseDecl::Service(UseServiceDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/echo/echo").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     }),
@@ -782,8 +799,8 @@ async fn use_from_component_manager_namespace() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     test.install_hippo_dir();
     await!(test.check_use(
         vec!["b"].into(),
@@ -821,10 +838,12 @@ async fn use_not_offered() {
             ComponentDecl {
                 uses: vec![
                     UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     }),
                     UseDecl::Service(UseServiceDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     }),
@@ -833,8 +852,8 @@ async fn use_not_offered() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false }
@@ -895,10 +914,12 @@ async fn use_offer_source_not_exposed() {
             ComponentDecl {
                 uses: vec![
                     UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     }),
                     UseDecl::Service(UseServiceDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     }),
@@ -907,8 +928,8 @@ async fn use_offer_source_not_exposed() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["c"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false }
@@ -974,10 +995,12 @@ async fn use_offer_source_not_offered() {
             ComponentDecl {
                 uses: vec![
                     UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     }),
                     UseDecl::Service(UseServiceDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     }),
@@ -986,8 +1009,8 @@ async fn use_offer_source_not_offered() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b", "c"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false }
@@ -1028,10 +1051,12 @@ async fn use_from_expose() {
             ComponentDecl {
                 uses: vec![
                     UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     }),
                     UseDecl::Service(UseServiceDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     }),
@@ -1063,8 +1088,8 @@ async fn use_from_expose() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false }
@@ -1117,10 +1142,12 @@ async fn offer_from_non_executable() {
             ComponentDecl {
                 uses: vec![
                     UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     }),
                     UseDecl::Service(UseServiceDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     }),
@@ -1129,8 +1156,8 @@ async fn offer_from_non_executable() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false }
@@ -1182,6 +1209,7 @@ async fn use_in_collection() {
             "b",
             ComponentDecl {
                 uses: vec![UseDecl::Service(UseServiceDecl {
+                    source: UseSource::Framework,
                     source_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                 })],
@@ -1210,6 +1238,7 @@ async fn use_in_collection() {
             "c",
             ComponentDecl {
                 uses: vec![UseDecl::Directory(UseDirectoryDecl {
+                    source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                 })],
@@ -1220,6 +1249,7 @@ async fn use_in_collection() {
             "d",
             ComponentDecl {
                 uses: vec![UseDecl::Service(UseServiceDecl {
+                    source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 })],
@@ -1227,9 +1257,9 @@ async fn use_in_collection() {
             },
         ),
     ];
-    // `RealAmbientEnvironment` is needed to create dynamic children.
-    let ambient = Box::new(RealAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    // `RealFrameworkServiceHost` is needed to create dynamic children.
+    let framework_services = Box::new(RealFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.create_dynamic_child(
         vec!["b"].into(),
         "coll",
@@ -1298,6 +1328,7 @@ async fn use_in_collection_not_offered() {
             "b",
             ComponentDecl {
                 uses: vec![UseDecl::Service(UseServiceDecl {
+                    source: UseSource::Framework,
                     source_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                 })],
@@ -1313,10 +1344,12 @@ async fn use_in_collection_not_offered() {
             ComponentDecl {
                 uses: vec![
                     UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     }),
                     UseDecl::Service(UseServiceDecl {
+                        source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     }),
@@ -1325,9 +1358,9 @@ async fn use_in_collection_not_offered() {
             },
         ),
     ];
-    // `RealAmbientEnvironment` is needed to create dynamic children.
-    let ambient = Box::new(RealAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    // `RealFrameworkServiceHost` is needed to create dynamic children.
+    let framework_services = Box::new(RealFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.create_dynamic_child(
         vec!["b"].into(),
         "coll",
@@ -1403,8 +1436,8 @@ async fn expose_from_self_and_child() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use_exposed_dir(
         vec!["b"].into(),
         Capability::Directory("/data/bar/hippo".try_into().unwrap()),
@@ -1471,8 +1504,8 @@ async fn use_not_exposed() {
             },
         ),
     ];
-    let ambient = Box::new(MockAmbientEnvironment::new());
-    let test = RoutingTest::new("a", components, ambient);
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
     // Capability is only exposed from "c", so it only be usable from there.
     await!(test.check_use_exposed_dir(
         vec!["b"].into(),

@@ -8,26 +8,26 @@ use {
     futures::future::FutureObj, futures::prelude::*, log::*, std::sync::Arc,
 };
 
-/// Provides the implementation of `AmbientEnvironment` which is used in production.
-pub struct RealAmbientEnvironment {}
+/// Provides the implementation of `FrameworkServiceHost` which is used in production.
+pub struct RealFrameworkServiceHost {}
 
-impl AmbientEnvironment for RealAmbientEnvironment {
+impl FrameworkServiceHost for RealFrameworkServiceHost {
     fn serve_realm_service(
         &self,
         model: Model,
         realm: Arc<Realm>,
         stream: fsys::RealmRequestStream,
-    ) -> FutureObj<'static, Result<(), AmbientError>> {
+    ) -> FutureObj<'static, Result<(), FrameworkServiceError>> {
         FutureObj::new(Box::new(async move {
             await!(Self::do_serve_realm_service(model, realm, stream))
-                .map_err(|e| AmbientError::service_error(REALM_SERVICE.to_string(), e))
+                .map_err(|e| FrameworkServiceError::service_error(REALM_SERVICE.to_string(), e))
         }))
     }
 }
 
-impl RealAmbientEnvironment {
+impl RealFrameworkServiceHost {
     pub fn new() -> Self {
-        RealAmbientEnvironment {}
+        RealFrameworkServiceHost {}
     }
 
     async fn do_serve_realm_service(
@@ -170,14 +170,14 @@ mod tests {
         resolver.register("test".to_string(), Box::new(mock_resolver));
         let hook = Arc::new(TestHook::new());
         let model = Model::new(ModelParams {
-            ambient: Box::new(RealAmbientEnvironment::new()),
+            framework_services: Box::new(RealFrameworkServiceHost::new()),
             root_component_url: "test:///root".to_string(),
             root_resolver_registry: resolver,
             root_default_runner: Box::new(runner),
             hooks: vec![hook.clone()],
         });
 
-        // Host ambient service.
+        // Host framework service.
         assert!(await!(model.look_up_and_bind_instance(vec!["system"].into())).is_ok());
         let system_realm = await!(get_child_realm(&*model.root_realm, "system"));
         let (realm_proxy, stream) =
@@ -186,8 +186,12 @@ mod tests {
             let system_realm = system_realm.clone();
             let model = model.clone();
             fasync::spawn(async move {
-                await!(model.ambient.serve_realm_service(model.clone(), system_realm, stream))
-                    .expect("failed serving realm service");
+                await!(model.framework_services.serve_realm_service(
+                    model.clone(),
+                    system_realm,
+                    stream
+                ))
+                .expect("failed serving realm service");
             });
         }
 
@@ -243,14 +247,14 @@ mod tests {
         );
         resolver.register("test".to_string(), Box::new(mock_resolver));
         let model = Model::new(ModelParams {
-            ambient: Box::new(RealAmbientEnvironment::new()),
+            framework_services: Box::new(RealFrameworkServiceHost::new()),
             root_component_url: "test:///root".to_string(),
             root_resolver_registry: resolver,
             root_default_runner: Box::new(runner),
             hooks: vec![],
         });
 
-        // Host ambient service.
+        // Host framework service.
         assert!(await!(model.look_up_and_bind_instance(vec!["system"].into())).is_ok());
         let system_realm = await!(get_child_realm(&*model.root_realm, "system"));
         let (realm_proxy, stream) =
@@ -259,8 +263,12 @@ mod tests {
             let system_realm = system_realm.clone();
             let model = model.clone();
             fasync::spawn(async move {
-                await!(model.ambient.serve_realm_service(model.clone(), system_realm, stream))
-                    .expect("failed serving realm service");
+                await!(model.framework_services.serve_realm_service(
+                    model.clone(),
+                    system_realm,
+                    stream
+                ))
+                .expect("failed serving realm service");
             });
         }
 
@@ -372,22 +380,26 @@ mod tests {
         resolver.register("test".to_string(), Box::new(mock_resolver));
         let hook = Arc::new(TestHook::new());
         let model = Model::new(ModelParams {
-            ambient: Box::new(RealAmbientEnvironment::new()),
+            framework_services: Box::new(RealFrameworkServiceHost::new()),
             root_component_url: "test:///root".to_string(),
             root_resolver_registry: resolver,
             root_default_runner: Box::new(runner),
             hooks: vec![hook.clone()],
         });
 
-        // Host ambient service.
+        // Host framework service.
         let (realm_proxy, stream) =
             endpoints::create_proxy_and_stream::<fsys::RealmMarker>().unwrap();
         {
             let model = model.clone();
             let root_realm = model.root_realm.clone();
             fasync::spawn(async move {
-                await!(model.ambient.serve_realm_service(model.clone(), root_realm, stream))
-                    .expect("failed serving realm service");
+                await!(model.framework_services.serve_realm_service(
+                    model.clone(),
+                    root_realm,
+                    stream
+                ))
+                .expect("failed serving realm service");
             });
         }
 
@@ -451,22 +463,26 @@ mod tests {
         resolver.register("test".to_string(), Box::new(mock_resolver));
         let hook = Arc::new(TestHook::new());
         let model = Model::new(ModelParams {
-            ambient: Box::new(RealAmbientEnvironment::new()),
+            framework_services: Box::new(RealFrameworkServiceHost::new()),
             root_component_url: "test:///root".to_string(),
             root_resolver_registry: resolver,
             root_default_runner: Box::new(runner),
             hooks: vec![hook.clone()],
         });
 
-        // Host ambient service.
+        // Host framework service.
         let (realm_proxy, stream) =
             endpoints::create_proxy_and_stream::<fsys::RealmMarker>().unwrap();
         {
             let model = model.clone();
             let root_realm = model.root_realm.clone();
             fasync::spawn(async move {
-                await!(model.ambient.serve_realm_service(model.clone(), root_realm, stream))
-                    .expect("failed serving realm service");
+                await!(model.framework_services.serve_realm_service(
+                    model.clone(),
+                    root_realm,
+                    stream
+                ))
+                .expect("failed serving realm service");
             });
         }
 
@@ -533,22 +549,26 @@ mod tests {
         resolver.register("test".to_string(), Box::new(mock_resolver));
         runner.cause_failure("unrunnable");
         let model = Model::new(ModelParams {
-            ambient: Box::new(RealAmbientEnvironment::new()),
+            framework_services: Box::new(RealFrameworkServiceHost::new()),
             root_component_url: "test:///root".to_string(),
             root_resolver_registry: resolver,
             root_default_runner: Box::new(runner),
             hooks: vec![],
         });
 
-        // Host ambient service.
+        // Host framework service.
         let (realm_proxy, stream) =
             endpoints::create_proxy_and_stream::<fsys::RealmMarker>().unwrap();
         {
             let model = model.clone();
             let root_realm = model.root_realm.clone();
             fasync::spawn(async move {
-                await!(model.ambient.serve_realm_service(model.clone(), root_realm, stream))
-                    .expect("failed serving realm service");
+                await!(model.framework_services.serve_realm_service(
+                    model.clone(),
+                    root_realm,
+                    stream
+                ))
+                .expect("failed serving realm service");
             });
         }
 

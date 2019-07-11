@@ -169,12 +169,20 @@ impl<'a> ValidationContext<'a> {
     }
 
     fn validate_use(&self, use_: &cml::Use) -> Result<(), Error> {
-        match (use_.storage.as_ref().map(|s| s.as_str()), &use_.r#as) {
+        let storage = use_.storage.as_ref().map(|s| s.as_str());
+        match (storage, &use_.r#as) {
             (Some("meta"), Some(_)) => {
                 Err(Error::validate("\"as\" field cannot be used with storage type \"meta\""))
             }
             _ => Ok(()),
-        }
+        }?;
+        match (storage, &use_.from) {
+            (Some(_), Some(_)) => {
+                Err(Error::validate("\"from\" field cannot be used with \"storage\""))
+            }
+            _ => Ok(()),
+        }?;
+        Ok(())
     }
 
     fn validate_storage(&self, storage: &cml::Storage) -> Result<(), Error> {
@@ -320,14 +328,6 @@ impl<'a> ValidationContext<'a> {
             Some(a) => a,
             None => source_path,
         };
-
-        // Check that the target path is not an ambient capability.
-        if cml::AMBIENT_PATHS.contains(&target_path) {
-            return Err(Error::validate(format!(
-                "Target `{}` path \"{}\" shares the path of an ambient capability.",
-                keyword, target_path
-            )));
-        }
 
         // Check that target path is not a duplicate of another capability.
         let target_name = target_obj.dest().unwrap_or("");
@@ -533,12 +533,27 @@ mod tests {
                 "uses": [
                     {
                         "service": {
+                            "source": {
+                                "realm": {},
+                            },
                             "source_path": "/svc/fuchsia.boot.Log",
                             "target_path": "/svc/fuchsia.logger.Log"
                         }
                     },
                     {
+                        "service": {
+                            "source": {
+                                "framework": {},
+                            },
+                            "source_path": "/svc/fuchsia.sys2.Realm",
+                            "target_path": "/svc/fuchsia.sys2.Realm"
+                        }
+                    },
+                    {
                         "directory": {
+                            "source": {
+                                "realm": {},
+                            },
                             "source_path": "/data/assets",
                             "target_path": "/data/kitten_assets"
                         }
@@ -1113,6 +1128,9 @@ mod tests {
                 "uses": [
                     {
                         "directory": {
+                            "source": {
+                                "realm": {},
+                            },
                             "source_path": "/foo/?!@#$%/Bar",
                             "target_path": "/bar/&*()/Baz"
                         }
@@ -1126,6 +1144,9 @@ mod tests {
                 "uses": [
                     {
                         "directory": {
+                            "source": {
+                                "realm": {},
+                            },
                             "source_path": "",
                             "target_path": "/bar"
                         }
@@ -1139,6 +1160,9 @@ mod tests {
                 "uses": [
                     {
                         "directory": {
+                            "source": {
+                                "realm": {},
+                            },
                             "source_path": "/",
                             "target_path": "/bar"
                         }
@@ -1152,6 +1176,9 @@ mod tests {
                 "uses": [
                     {
                         "directory": {
+                            "source": {
+                                "realm": {},
+                            },
                             "source_path": "foo/bar",
                             "target_path": "/bar"
                         }
@@ -1165,6 +1192,9 @@ mod tests {
                 "uses": [
                     {
                         "directory": {
+                            "source": {
+                                "realm": {},
+                            },
                             "source_path": "/foo/bar/",
                             "target_path": "/bar"
                         }
@@ -1178,6 +1208,9 @@ mod tests {
                 "uses": [
                     {
                         "directory": {
+                            "source": {
+                                "realm": {},
+                            },
                             "source_path": format!("/{}", "a".repeat(1024)),
                             "target_path": "/bar"
                         }
@@ -1298,7 +1331,9 @@ mod tests {
             input = json!({
                 "use": [
                   { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
+                  { "service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
                   { "directory": "/data/assets" },
+                  { "directory": "/data/config", "from": "realm" },
                   { "storage": "data", "as": "/example" },
                   { "storage": "cache", "as": "/tmp" },
                   { "storage": "meta" }
@@ -1317,6 +1352,20 @@ mod tests {
                 "use": [ { "storage": "meta", "as": "/meta" } ]
             }),
             result = Err(Error::validate("\"as\" field cannot be used with storage type \"meta\"")),
+        },
+        test_cml_use_from_with_meta_storage => {
+            input = json!({
+                "use": [ { "storage": "cache", "from": "realm" } ]
+            }),
+            result = Err(Error::validate("\"from\" field cannot be used with \"storage\"")),
+        },
+        test_cml_use_invalid_from => {
+            input = json!({
+                "use": [
+                  { "service": "/fonts/CoolFonts", "from": "self" }
+                ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/from")),
         },
 
         // expose
@@ -1382,17 +1431,6 @@ mod tests {
                 ]
             }),
             result = Err(Error::validate("\"/thing\" is a duplicate \"expose\" target path")),
-        },
-        test_cml_expose_ambient_path => {
-            input = json!({
-                "expose": [
-                    {
-                        "service": "/svc/fuchsia.sys2.Realm",
-                        "from": "self",
-                    },
-                ],
-            }),
-            result = Err(Error::validate("Target `expose` path \"/svc/fuchsia.sys2.Realm\" shares the path of an ambient capability.")),
         },
         test_cml_expose_bad_from => {
             input = json!({
@@ -1718,26 +1756,6 @@ mod tests {
                 } ]
             }),
             result = Err(Error::validate("\"cache\" storage is offered to \"#echo_server\" multiple times")),
-        },
-        test_cml_offer_ambient_target_path => {
-            input = json!({
-                "offer": [
-                    {
-                        "service": "/svc/realm",
-                        "from": "self",
-                        "to": [
-                            { "dest": "#logger", "as": "/svc/fuchsia.sys2.Realm" },
-                        ],
-                    },
-                ],
-                "children": [
-                    {
-                        "name": "logger",
-                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
-                    },
-                ],
-            }),
-            result = Err(Error::validate("Target `offer` path \"/svc/fuchsia.sys2.Realm\" shares the path of an ambient capability.")),
         },
 
         // children

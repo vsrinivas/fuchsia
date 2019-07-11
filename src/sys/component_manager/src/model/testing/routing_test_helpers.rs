@@ -103,7 +103,7 @@ impl RoutingTest {
     pub fn new(
         root_component: &'static str,
         components: Vec<(&'static str, ComponentDecl)>,
-        ambient: Box<dyn AmbientEnvironment>,
+        framework_services: Box<dyn FrameworkServiceHost>,
     ) -> Self {
         // Ensure that kernel logging has been set up
         let _ = klog::KernelLogger::init();
@@ -122,7 +122,7 @@ impl RoutingTest {
 
         let namespaces = runner.namespaces.clone();
         let model = Model::new(ModelParams {
-            ambient,
+            framework_services,
             root_component_url: format!("test:///{}", root_component),
             root_resolver_registry: resolver,
             root_default_runner: Box::new(runner),
@@ -545,8 +545,7 @@ mod capability_util {
         let exposed_capabilities = ServerEnd::new(server_chan);
         let res = await!(realm_proxy.bind_child(child_ref, exposed_capabilities));
 
-        // Check for side effects: ambient environment should have received the `bind_child`
-        // call.
+        // Check for side effects: realm service should have received the `bind_child` call.
         let _ = res.expect("failed to use realm service");
         let bind_url =
             format!("test:///{}_resolved", await!(bind_calls.lock()).last().expect("no bind call"));

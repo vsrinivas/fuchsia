@@ -5,107 +5,74 @@
 use {
     crate::directory_broker::RoutingFn,
     crate::model::*,
-    cm_rust::{Capability, ComponentDecl},
+    cm_rust::{Capability, ComponentDecl, UseDecl},
     failure::{format_err, Error},
-    fidl::endpoints::{ClientEnd, ServerEnd},
+    fidl::endpoints::ServerEnd,
     fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream},
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io::{DirectoryMarker, NodeMarker},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_vfs_pseudo_fs::{
         directory::{self, entry::DirectoryEntry},
         file::simple::read_only,
     },
-    fuchsia_zircon as zx,
     futures::future::FutureObj,
     futures::lock::Mutex,
     futures::prelude::*,
     std::{
         collections::{HashMap, HashSet},
         convert::TryFrom,
-        iter,
         sync::Arc,
     },
 };
 
-/// Creates a routing function generator that does the following:
+/// Creates a routing function factory for `UseDecl` that does the following:
 /// - Redirects all directory capabilities to a directory with the file "hello".
 /// - Redirects all service capabilities to the echo service.
-pub fn proxying_routing_factory() -> impl Fn(AbsoluteMoniker, Capability) -> RoutingFn {
-    let mut sub_dir = directory::simple::empty();
-    let (sub_dir_client, sub_dir_server) = zx::Channel::create().unwrap();
-    sub_dir.open(
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-        MODE_TYPE_DIRECTORY,
-        &mut iter::empty(),
-        ServerEnd::<NodeMarker>::new(sub_dir_server.into()),
-    );
-    sub_dir
-        .add_entry("hello", { read_only(move || Ok(b"friend".to_vec())) })
-        .map_err(|(s, _)| s)
-        .expect("Failed to add 'hello' entry");
-    let sub_dir_proxy = ClientEnd::<DirectoryMarker>::new(sub_dir_client)
-        .into_proxy()
-        .expect("failed to create directory proxy");
-    fasync::spawn(async move {
-        let _ = await!(sub_dir);
-    });
-
-    move |_abs_moniker: AbsoluteMoniker, capability: Capability| {
-        // Create a DirectoryProxy for use by every route function we stamp out.
-        let (client_chan, server_chan) = zx::Channel::create().unwrap();
-        let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
-        sub_dir_proxy
-            .clone(flags, ServerEnd::<NodeMarker>::new(server_chan.into()))
-            .expect("Unable to clone root directory.");
-        let dir = ClientEnd::<DirectoryMarker>::new(client_chan)
-            .into_proxy()
-            .expect("failed to create directory proxy");
-        let capability = capability.clone();
-        Box::new(
-            move |flags: u32,
-                  mode: u32,
-                  relative_path: String,
-                  server_end: ServerEnd<NodeMarker>| {
-                serve_capability(flags, mode, relative_path, server_end, &dir, &capability);
-            },
-        )
+pub fn proxy_use_routing_factory() -> impl Fn(AbsoluteMoniker, UseDecl) -> RoutingFn {
+    move |_abs_moniker: AbsoluteMoniker, use_decl: UseDecl| {
+        new_proxy_routing_fn(use_decl.clone().into())
     }
 }
 
-fn serve_capability(
-    flags: u32,
-    mode: u32,
-    relative_path: String,
-    server_end: ServerEnd<NodeMarker>,
-    dir: &DirectoryProxy,
-    capability: &Capability,
-) {
-    match capability {
-        Capability::Service(_) => {
-            fasync::spawn(async move {
-                let server_end: ServerEnd<EchoMarker> = ServerEnd::new(server_end.into_channel());
-                let mut stream: EchoRequestStream = server_end.into_stream().unwrap();
-                while let Some(EchoRequest::EchoString { value, responder }) =
-                    await!(stream.try_next()).unwrap()
-                {
-                    responder.send(value.as_ref().map(|s| &**s)).unwrap();
-                }
-            });
-        }
-        Capability::Directory(_) => {
-            if !relative_path.is_empty() {
-                dir.open(flags, mode, &relative_path, server_end).expect("Unable to open 'dir'.");
-            } else {
-                dir.clone(flags, server_end).expect("Unable to clone 'dir'.");
-            }
-        }
-        _ => {
-            panic!("unexpected capability type");
-        }
+/// Creates a routing function factory for `ExposeDecl` that does the following:
+/// - Redirects all directory capabilities to a directory with the file "hello".
+/// - Redirects all service capabilities to the echo service.
+pub fn proxy_expose_routing_factory() -> impl Fn(AbsoluteMoniker, Capability) -> RoutingFn {
+    move |_abs_moniker: AbsoluteMoniker, capability: Capability| {
+        new_proxy_routing_fn(capability.clone())
     }
+}
+
+fn new_proxy_routing_fn(capability: Capability) -> RoutingFn {
+    Box::new(
+        move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
+            match capability {
+                Capability::Service(_) => {
+                    fasync::spawn(async move {
+                        let server_end: ServerEnd<EchoMarker> =
+                            ServerEnd::new(server_end.into_channel());
+                        let mut stream: EchoRequestStream = server_end.into_stream().unwrap();
+                        while let Some(EchoRequest::EchoString { value, responder }) =
+                            await!(stream.try_next()).unwrap()
+                        {
+                            responder.send(value.as_ref().map(|s| &**s)).unwrap();
+                        }
+                    });
+                }
+                Capability::Directory(_) | Capability::Storage(_) => {
+                    let mut sub_dir = directory::simple::empty();
+                    sub_dir
+                        .add_entry("hello", { read_only(move || Ok(b"friend".to_vec())) })
+                        .map_err(|(s, _)| s)
+                        .expect("Failed to add 'hello' entry");
+                    sub_dir.open(flags, mode, &mut relative_path.split("/"), server_end);
+                    fasync::spawn(async move {
+                        let _ = await!(sub_dir);
+                    });
+                }
+            }
+        },
+    )
 }
 
 pub struct MockResolver {
@@ -199,18 +166,18 @@ impl Runner for MockRunner {
     }
 }
 
-pub struct MockAmbientEnvironment {
+pub struct MockFrameworkServiceHost {
     /// List of calls to `BindChild` with component's relative moniker.
     pub bind_calls: Arc<Mutex<Vec<String>>>,
 }
 
-impl AmbientEnvironment for MockAmbientEnvironment {
+impl FrameworkServiceHost for MockFrameworkServiceHost {
     fn serve_realm_service(
         &self,
         _model: Model,
         realm: Arc<Realm>,
         stream: fsys::RealmRequestStream,
-    ) -> FutureObj<Result<(), AmbientError>> {
+    ) -> FutureObj<Result<(), FrameworkServiceError>> {
         FutureObj::new(Box::new(async move {
             await!(self.do_serve_realm_service(realm, stream))
                 .expect(&format!("serving {} failed", REALM_SERVICE.to_string()));
@@ -219,9 +186,9 @@ impl AmbientEnvironment for MockAmbientEnvironment {
     }
 }
 
-impl MockAmbientEnvironment {
+impl MockFrameworkServiceHost {
     pub fn new() -> Self {
-        MockAmbientEnvironment { bind_calls: Arc::new(Mutex::new(vec![])) }
+        MockFrameworkServiceHost { bind_calls: Arc::new(Mutex::new(vec![])) }
     }
 
     async fn do_serve_realm_service(

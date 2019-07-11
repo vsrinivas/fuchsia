@@ -15,29 +15,37 @@ xunion UseDecl {
 /// Declares a service used by a component, which was offered to the component's
 /// environment.
 table UseServiceDecl {
+    /// The provider of the service relative to the component itself. Must
+    /// be |realm| or |framework|.
+    1: Ref source;
+
     /// Path identifying the service, by which it was presented to this
     /// component.
-    1: string:MAX_PATH_LENGTH source_path;
+    2: string:MAX_PATH_LENGTH source_path;
 
     /// The path where the capability should be installed in the component's
     /// namespace.
     ///
     /// Must be an absolute path starting with /.
-    2: string:MAX_PATH_LENGTH target_path;
+    3: string:MAX_PATH_LENGTH target_path;
 };
 
 /// Declares a directory used by a component, which was offered to the component's
 /// environment.
 table UseDirectoryDecl {
+    /// The provider of the directory relative to the component itself. Must
+    /// be |realm| or |framework|.
+    1: Ref source;
+
     /// Path identifying the directory, by which it was presented to this
     /// component.
-    1: string:MAX_PATH_LENGTH source_path;
+    2: string:MAX_PATH_LENGTH source_path;
 
     /// The path where the capability should be installed in the component's
     /// namespace.
     ///
     /// Must be an absolute path starting with /.
-    2: string:MAX_PATH_LENGTH target_path;
+    3: string:MAX_PATH_LENGTH target_path;
 };
 
 /// Declares storage used by a component, which was offered to the component's

@@ -41,8 +41,8 @@ pub type Hooks = Vec<Arc<dyn Hook + Send + Sync + 'static>>;
 /// Parameters for initializing a component model, particularly the root of the component
 /// instance tree.
 pub struct ModelParams {
-    /// The ambient environment.
-    pub ambient: Box<dyn AmbientEnvironment>,
+    /// The host for services provided by the framework.
+    pub framework_services: Box<dyn FrameworkServiceHost>,
     /// The URL of the root component.
     pub root_component_url: String,
     /// The component resolver registry used in the root realm.
@@ -65,7 +65,7 @@ pub struct ModelParams {
 #[derive(Clone)]
 pub struct Model {
     pub root_realm: Arc<Realm>,
-    pub ambient: Arc<dyn AmbientEnvironment>,
+    pub framework_services: Arc<dyn FrameworkServiceHost>,
     pub hooks: Arc<Hooks>,
 }
 
@@ -73,7 +73,7 @@ impl Model {
     /// Creates a new component model and initializes its topology.
     pub fn new(params: ModelParams) -> Model {
         Model {
-            ambient: params.ambient.into(),
+            framework_services: params.framework_services.into(),
             root_realm: Arc::new(Realm {
                 resolver_registry: Arc::new(params.root_resolver_registry),
                 default_runner: Arc::new(params.root_default_runner),

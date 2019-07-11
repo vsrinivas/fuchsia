@@ -22,7 +22,7 @@ async fn bind_instance_root() {
     mock_resolver.add_component("root", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
-        ambient: Box::new(MockAmbientEnvironment::new()),
+        framework_services: Box::new(MockFrameworkServiceHost::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
@@ -47,7 +47,7 @@ async fn bind_instance_root_non_existent() {
     mock_resolver.add_component("root", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
-        ambient: Box::new(MockAmbientEnvironment::new()),
+        framework_services: Box::new(MockFrameworkServiceHost::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
@@ -93,7 +93,7 @@ async fn bind_instance_child() {
     let mut hooks: Hooks = Vec::new();
     hooks.push(hook.clone());
     let model = Model::new(ModelParams {
-        ambient: Box::new(MockAmbientEnvironment::new()),
+        framework_services: Box::new(MockFrameworkServiceHost::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
@@ -151,7 +151,7 @@ async fn bind_instance_child_non_existent() {
     mock_resolver.add_component("system", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
-        ambient: Box::new(MockAmbientEnvironment::new()),
+        framework_services: Box::new(MockFrameworkServiceHost::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
@@ -247,7 +247,7 @@ async fn bind_instance_eager_children() {
     let mut hooks: Hooks = Vec::new();
     hooks.push(hook.clone());
     let model = Model::new(ModelParams {
-        ambient: Box::new(MockAmbientEnvironment::new()),
+        framework_services: Box::new(MockFrameworkServiceHost::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
@@ -316,7 +316,7 @@ async fn bind_instance_no_execute() {
     mock_resolver.add_component("b", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
-        ambient: Box::new(MockAmbientEnvironment::new()),
+        framework_services: Box::new(MockFrameworkServiceHost::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
@@ -373,7 +373,7 @@ async fn bind_instance_recursive_child() {
     let mut hooks: Hooks = Vec::new();
     hooks.push(hook.clone());
     let model = Model::new(ModelParams {
-        ambient: Box::new(MockAmbientEnvironment::new()),
+        framework_services: Box::new(MockFrameworkServiceHost::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
