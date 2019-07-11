@@ -11,15 +11,21 @@ group("test") {
 
 test("intel-hda-test") {
   sources = [
+    "board_name.cc",
+    "board_name.h",
     "intel_hda_test.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-kernel:c",
+    "$zx/system/fidl/fuchsia-sysinfo:c",
     "$zx/system/ulib/audio-proto-utils",
     "$zx/system/ulib/audio-utils",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/intel-hda",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxio",
     "$zx/system/ulib/zxtest",
   ]
 }

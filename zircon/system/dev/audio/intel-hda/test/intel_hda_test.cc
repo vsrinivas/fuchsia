@@ -5,14 +5,22 @@
 #include <audio-utils/audio-device-stream.h>
 #include <audio-utils/audio-input.h>
 #include <audio-utils/audio-output.h>
+#include <fbl/string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <zircon/types.h>
 #include <zxtest/zxtest.h>
 
+#include <array>
+#include <cstdlib>
 #include <iostream>
+#include <set>
 #include <string>
+
+#include "board_name.h"
+#include "zircon/errors.h"
+#include "zircon/status.h"
 
 namespace audio::intel_hda {
 namespace {
@@ -45,6 +53,11 @@ std::string_view StringResponseAsStringView(audio_stream_cmd_get_string_resp_t* 
   return std::string_view(reinterpret_cast<const char*>(response->str), response->strlen);
 }
 
+TEST(IntelHda, DevicePresent) {
+  EXPECT_TRUE(audio::intel_hda::IntelHdaDevicePresent(),
+              "Expected to find at least one input and one output stream.");
+}
+
 TEST(IntelHda, BasicStreamInfo) {
   // Open the selected stream.
   constexpr uint32_t kFirstDevice = 0;
@@ -68,21 +81,49 @@ TEST(IntelHda, BasicStreamInfo) {
   EXPECT_GT(formats.size(), 0);
 }
 
+std::set<std::string> BoardsWithIntelHda() {
+  // List of hardware boards we expect to have Intel HDA hardware.
+  //
+  // We can't run tests on platforms without the appropriate hardware,
+  // and dynamically probing for hardware risks us missing bugs where
+  // the driver fails to bring up the hardware correctly. Instead, we
+  // have a list of "known supported" platforms.
+  return std::set<std::string>({
+      "Eve",  // Pixelbook.
+  });
+}
+
+bool ShouldRunTests(const std::string& board_name) {
+  // Run tests if we can see audio inputs/outputs have been populated in the /dev tree.
+  if (IntelHdaDevicePresent()) {
+    return true;
+  }
+
+  // Also run the tests if we know that the hardware we are running on _should_
+  // have populated audio inputs/outputs in the /dev tree.
+  std::set<std::string> boards = BoardsWithIntelHda();
+  return boards.find(board_name) != boards.end();
+}
+
 }  // namespace
 }  // namespace audio::intel_hda
 
 int main(int argc, char** argv) {
-  // If we can't find the Intel HDA device in the /dev tree, skip all
-  // associated tests.
-  //
-  // This isn't ideal, because a failure that prevents discovery of the
-  // Intel HDA device will be silently ignored. Longer term, we should
-  // determine a better way of determining when to run these tests
-  // (board name? PCI device identifier? etc etc).
-  if (!audio::intel_hda::IntelHdaDevicePresent()) {
-    std::cout << "No Intel HDA device found. Skipping Intel HDA tests.\n";
+  // Get the hardware platform we are running on.
+  fbl::String board_name;
+  zx_status_t status = audio::intel_hda::GetBoardName(&board_name);
+  if (status != ZX_OK) {
+    std::cerr << "Unable to determine hardware platform: " << zx_status_get_string(status) << ".\n";
+    return status;
+  }
+  std::cerr << "Tests running on board '" << board_name.c_str() << "'.\n\n";
+
+  // Only run tests on systems that have (or _should_ have) Intel HDA hardware.
+  if (!audio::intel_hda::ShouldRunTests(board_name.c_str())) {
+    std::cerr << "No Intel HDA hardware found or expected. Skipping tests.\n";
     return 0;
   }
 
+  // Run tests.
   return RUN_ALL_TESTS(argc, argv);
 }
