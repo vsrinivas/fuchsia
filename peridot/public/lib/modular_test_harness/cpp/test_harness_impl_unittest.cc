@@ -26,8 +26,7 @@ constexpr char kFakeSessionShellUrl[] =
     "fuchsia-pkg://example.com/FAKE_SESSION_SHELL_PKG/fake_session_shell.cmx";
 constexpr char kFakeStoryShellUrl[] =
     "fuchsia-pkg://example.com/FAKE_STORY_SHELL_PKG/fake_story_shell.cmx";
-constexpr char kFakeModuleUrl[] =
-    "fuchsia-pkg://example.com/FAKE_MODULE_PKG/fake_module.cmx";
+constexpr char kFakeModuleUrl[] = "fuchsia-pkg://example.com/FAKE_MODULE_PKG/fake_module.cmx";
 
 namespace modular {
 namespace testing {
@@ -37,20 +36,16 @@ std::string GenerateFakeUrl() {
   zx_cprng_draw(&random_number, sizeof random_number);
   constexpr char kFakeUrlSubstitutePattern[] =
       "fuchsia-pkg://example.com/GENERATED_URL_$0#meta/GENERATED_URL_$0.cmx";
-  return fxl::Substitute(kFakeUrlSubstitutePattern,
-                         std::to_string(random_number));
+  return fxl::Substitute(kFakeUrlSubstitutePattern, std::to_string(random_number));
 }
 };  // namespace
 
 class TestHarnessImplTest : public sys::testing::TestWithEnvironment {
  public:
   TestHarnessImplTest()
-      : harness_impl_(real_env(), harness_.NewRequest(),
-                      [this] { did_exit_ = true; }) {}
+      : harness_impl_(real_env(), harness_.NewRequest(), [this] { did_exit_ = true; }) {}
 
-  fuchsia::modular::testing::TestHarnessPtr& test_harness() {
-    return harness_;
-  };
+  fuchsia::modular::testing::TestHarnessPtr& test_harness() { return harness_; };
 
   bool did_exit() { return did_exit_; }
 
@@ -83,8 +78,7 @@ TEST_F(TestHarnessImplTest, MakeBasemgrConfigDir) {
 
   fuchsia::modular::testing::TestHarnessSpec spec;
   fuchsia::modular::session::SessionShellMapEntry session_shell_entry;
-  session_shell_entry.mutable_config()->mutable_app_config()->set_url(
-      kSessionShellForTest);
+  session_shell_entry.mutable_config()->mutable_app_config()->set_url(kSessionShellForTest);
 
   spec.mutable_basemgr_config()->mutable_session_shell_map()->push_back(
       std::move(session_shell_entry));
@@ -93,25 +87,19 @@ TEST_F(TestHarnessImplTest, MakeBasemgrConfigDir) {
   // "data" dir.
   auto namespace_dir = std::make_unique<vfs::PseudoDir>();
   {
-    auto dir_split =
-        fxl::SplitString(modular_config::kOverriddenConfigDir, "/",
-                         fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+    auto dir_split = fxl::SplitString(modular_config::kOverriddenConfigDir, "/",
+                                      fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
     ASSERT_EQ(2u, dir_split.size());
 
     auto second_dir = std::make_unique<vfs::PseudoDir>();
-    second_dir->AddEntry(dir_split[1].ToString(),
-                         MakeBasemgrConfigDir(std::move(spec)));
+    second_dir->AddEntry(dir_split[1].ToString(), MakeBasemgrConfigDir(std::move(spec)));
     namespace_dir->AddEntry(dir_split[0].ToString(), std::move(second_dir));
   }
 
   modular::PseudoDirServer server(std::move(namespace_dir));
   modular::ModularConfigReader config_reader(server.OpenAt("."));
-  EXPECT_EQ(kSessionShellForTest, config_reader.GetBasemgrConfig()
-                                      .session_shell_map()
-                                      .at(0)
-                                      .config()
-                                      .app_config()
-                                      .url());
+  EXPECT_EQ(kSessionShellForTest,
+            config_reader.GetBasemgrConfig().session_shell_map().at(0).config().app_config().url());
 }
 
 // Test that additional injected services are made available, spin up the
@@ -132,15 +120,13 @@ TEST_F(TestHarnessImplTest, DefaultInjectedServices) {
   {
     fuchsia::modular::testing::InterceptSpec intercept_spec;
     intercept_spec.set_component_url(generated_accountmgr_url);
-    spec.mutable_components_to_intercept()->push_back(
-        std::move(intercept_spec));
+    spec.mutable_components_to_intercept()->push_back(std::move(intercept_spec));
   }
 
   bool intercepted_accountmgr = false;
   test_harness().events().OnNewComponent =
       [&](fuchsia::sys::StartupInfo startup_info,
-          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
-              component) {
+          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
         if (startup_info.launch_info.url == generated_accountmgr_url) {
           intercepted_accountmgr = true;
         } else {
@@ -151,9 +137,8 @@ TEST_F(TestHarnessImplTest, DefaultInjectedServices) {
   test_harness()->Run(std::move(spec));
 
   fuchsia::auth::account::AccountManagerPtr accountmgr;
-  test_harness()->ConnectToEnvironmentService(
-      fuchsia::auth::account::AccountManager::Name_,
-      accountmgr.NewRequest().TakeChannel());
+  test_harness()->ConnectToEnvironmentService(fuchsia::auth::account::AccountManager::Name_,
+                                              accountmgr.NewRequest().TakeChannel());
 
   RunLoopUntil([&] { return intercepted_accountmgr; });
 }
@@ -167,24 +152,21 @@ TEST_F(TestHarnessImplTest, ComponentProvidedService) {
   auto generated_componentctx_url = GenerateFakeUrl();
 
   spec.mutable_env_services()->mutable_services_from_components()->push_back(
-      fuchsia::modular::testing::ComponentService{
-          // Provide a custom injected service.
-          .name = fuchsia::modular::ComponentContext::Name_,
-          .url = generated_componentctx_url});
+      fuchsia::modular::testing::ComponentService{// Provide a custom injected service.
+                                                  .name = fuchsia::modular::ComponentContext::Name_,
+                                                  .url = generated_componentctx_url});
 
   // Intercept the component URL which supplies ComponentContext.
   {
     fuchsia::modular::testing::InterceptSpec intercept_spec;
     intercept_spec.set_component_url(generated_componentctx_url);
-    spec.mutable_components_to_intercept()->push_back(
-        std::move(intercept_spec));
+    spec.mutable_components_to_intercept()->push_back(std::move(intercept_spec));
   }
 
   bool intercepted_componentctx = false;
   test_harness().events().OnNewComponent =
       [&](fuchsia::sys::StartupInfo startup_info,
-          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
-              component) {
+          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
         if (startup_info.launch_info.url == generated_componentctx_url) {
           intercepted_componentctx = true;
         } else {
@@ -195,9 +177,8 @@ TEST_F(TestHarnessImplTest, ComponentProvidedService) {
   test_harness()->Run(std::move(spec));
 
   fuchsia::modular::ComponentContextPtr componentctx;
-  test_harness()->ConnectToEnvironmentService(
-      fuchsia::modular::ComponentContext::Name_,
-      componentctx.NewRequest().TakeChannel());
+  test_harness()->ConnectToEnvironmentService(fuchsia::modular::ComponentContext::Name_,
+                                              componentctx.NewRequest().TakeChannel());
 
   RunLoopUntil([&] { return intercepted_componentctx; });
 }
@@ -208,20 +189,16 @@ TEST_F(TestHarnessImplTest, InterceptBaseShell) {
   shell_intercept_spec.set_component_url(kFakeBaseShellUrl);
 
   fuchsia::modular::testing::TestHarnessSpec spec;
-  spec.mutable_basemgr_config()
-      ->mutable_base_shell()
-      ->mutable_app_config()
-      ->set_url(kFakeBaseShellUrl);
-  spec.mutable_components_to_intercept()->push_back(
-      std::move(shell_intercept_spec));
+  spec.mutable_basemgr_config()->mutable_base_shell()->mutable_app_config()->set_url(
+      kFakeBaseShellUrl);
+  spec.mutable_components_to_intercept()->push_back(std::move(shell_intercept_spec));
 
   // Listen for base shell interception.
   bool intercepted = false;
 
   test_harness().events().OnNewComponent =
       [&](fuchsia::sys::StartupInfo startup_info,
-          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
-              component) {
+          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
         ASSERT_EQ(kFakeBaseShellUrl, startup_info.launch_info.url);
         intercepted = true;
       };
@@ -241,19 +218,16 @@ TEST_F(TestHarnessImplTest, InterceptSessionShell) {
     fuchsia::modular::session::SessionShellMapEntry entry;
     entry.mutable_config()->mutable_app_config()->set_url(kFakeSessionShellUrl);
 
-    spec.mutable_basemgr_config()->mutable_session_shell_map()->push_back(
-        std::move(entry));
+    spec.mutable_basemgr_config()->mutable_session_shell_map()->push_back(std::move(entry));
   }
-  spec.mutable_components_to_intercept()->push_back(
-      std::move(shell_intercept_spec));
+  spec.mutable_components_to_intercept()->push_back(std::move(shell_intercept_spec));
 
   // 2. Listen for session shell interception.
   bool intercepted = false;
   test_harness().events().OnNewComponent =
       [&intercepted](
           fuchsia::sys::StartupInfo startup_info,
-          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
-              component) {
+          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
         if (startup_info.launch_info.url == kFakeSessionShellUrl)
           intercepted = true;
       };
@@ -269,19 +243,15 @@ TEST_F(TestHarnessImplTest, InterceptStoryShellAndModule) {
   shell_intercept_spec.set_component_url(kFakeStoryShellUrl);
 
   fuchsia::modular::testing::TestHarnessSpec spec;
-  spec.mutable_basemgr_config()
-      ->mutable_story_shell()
-      ->mutable_app_config()
-      ->set_url(shell_intercept_spec.component_url());
-  spec.mutable_components_to_intercept()->push_back(
-      std::move(shell_intercept_spec));
+  spec.mutable_basemgr_config()->mutable_story_shell()->mutable_app_config()->set_url(
+      shell_intercept_spec.component_url());
+  spec.mutable_components_to_intercept()->push_back(std::move(shell_intercept_spec));
 
   // Setup kFakeModuleUrl interception.
   {
     fuchsia::modular::testing::InterceptSpec intercept_spec;
     intercept_spec.set_component_url(kFakeModuleUrl);
-    spec.mutable_components_to_intercept()->push_back(
-        std::move(intercept_spec));
+    spec.mutable_components_to_intercept()->push_back(std::move(intercept_spec));
   }
 
   // Listen for story shell interception.
@@ -291,8 +261,7 @@ TEST_F(TestHarnessImplTest, InterceptStoryShellAndModule) {
 
   test_harness().events().OnNewComponent =
       [&](fuchsia::sys::StartupInfo startup_info,
-          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
-              component) {
+          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
         if (startup_info.launch_info.url == kFakeModuleUrl) {
           fake_module_intercepted = true;
         } else if (startup_info.launch_info.url == kFakeStoryShellUrl) {
@@ -327,10 +296,8 @@ TEST_F(TestHarnessImplTest, InterceptStoryShellAndModule) {
   story_master->Enqueue(std::move(cmds));
   story_master->Execute([](fuchsia::modular::ExecuteResult result) {});
 
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return story_shell_intercepted; },
-                                        zx::sec(10)));
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return fake_module_intercepted; },
-                                        zx::sec(10)));
+  RunLoopUntil([&] { return story_shell_intercepted; });
+  RunLoopUntil([&] { return fake_module_intercepted; });
 };
 
 // Tests that services in |TestHarnessSpec.env_services.service_dir| are
@@ -342,21 +309,18 @@ TEST_F(TestHarnessImplTest, EnvironmentServiceDirectory) {
   auto svc_dir = std::make_unique<vfs::PseudoDir>();
   svc_dir->AddEntry(kTestServiceName,
                     std::make_unique<vfs::Service>(
-                        [&svc_requested](zx::channel request,
-                                         async_dispatcher_t* dispatcher) {
+                        [&svc_requested](zx::channel request, async_dispatcher_t* dispatcher) {
                           svc_requested = true;
                         }));
 
   PseudoDirServer svc_dir_server(std::move(svc_dir));
 
   fuchsia::modular::testing::TestHarnessSpec spec;
-  spec.mutable_env_services()->set_service_dir(
-      svc_dir_server.Serve().Unbind().TakeChannel());
+  spec.mutable_env_services()->set_service_dir(svc_dir_server.Serve().Unbind().TakeChannel());
   test_harness()->Run(std::move(spec));
 
   fuchsia::io::NodePtr node;
-  test_harness()->ConnectToEnvironmentService(kTestServiceName,
-                                              node.NewRequest().TakeChannel());
+  test_harness()->ConnectToEnvironmentService(kTestServiceName, node.NewRequest().TakeChannel());
   RunLoopUntil([&] { return svc_requested; });
 }
 
@@ -392,8 +356,7 @@ TEST_F(TestHarnessImplTest, ParseConfigFromString) {
   test_harness()->ParseConfig(
       config, config_path,
       [&](fuchsia::modular::session::BasemgrConfig parsed_basemgr_config,
-          fuchsia::modular::session::SessionmgrConfig
-              parsed_sessionmgr_config) {
+          fuchsia::modular::session::SessionmgrConfig parsed_sessionmgr_config) {
         basemgr_config = std::move(parsed_basemgr_config);
         sessionmgr_config = std::move(parsed_sessionmgr_config);
         done = true;
@@ -404,9 +367,8 @@ TEST_F(TestHarnessImplTest, ParseConfigFromString) {
   EXPECT_EQ("fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
             basemgr_config.base_shell().app_config().url());
   ASSERT_EQ(1u, basemgr_config.session_shell_map().size());
-  EXPECT_EQ(
-      "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
-      basemgr_config.session_shell_map().at(0).config().app_config().url());
+  EXPECT_EQ("fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
+            basemgr_config.session_shell_map().at(0).config().app_config().url());
   EXPECT_TRUE(sessionmgr_config.use_memfs_for_ledger());
 }
 
