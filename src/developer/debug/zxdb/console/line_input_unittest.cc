@@ -113,6 +113,62 @@ TEST(LineInput, CursorCommands) {
   EXPECT_EQ(0u, input.pos());
 }
 
+TEST(LineInput, CtrlD) {
+  std::string prompt("Prompt ");
+  TestLineInput input(prompt);
+
+  input.BeginReadLine();
+
+  EXPECT_FALSE(input.OnInputStr("abcd"));
+  // "abcd|"
+  EXPECT_EQ(4u, input.pos());
+
+  EXPECT_FALSE(input.OnInputStr("\x1b[D\x1b[D"));  // 2 x Left.
+  // "ab|cd"
+  EXPECT_EQ(2u, input.pos());
+
+  EXPECT_FALSE(input.OnInput(4)); // Ctrl+D
+  // "ab|d"
+  EXPECT_EQ("abd", input.line());
+  EXPECT_EQ(2u, input.pos());
+
+  EXPECT_FALSE(input.OnInputStr("\x1b[C"));  // Right.
+  // "abd|"
+  EXPECT_EQ(3u, input.pos());
+  EXPECT_EQ("abd", input.line());
+
+  EXPECT_FALSE(input.OnInput(4)); // Ctrl+D
+  // No change when hit Ctrl+D at the end of the line.
+  EXPECT_EQ("abd", input.line());
+  EXPECT_EQ(3u, input.pos());
+
+  // Erase everything and then exit.
+
+  EXPECT_FALSE(input.OnInputStr("\x1b[D\x1b[D\x1b[D"));  // 3 x Left.
+  // "|abd"
+  EXPECT_EQ(0u, input.pos());
+
+  EXPECT_FALSE(input.OnInput(4)); // Ctrl+D
+  // "|bd"
+  EXPECT_EQ("bd", input.line());
+  EXPECT_EQ(0u, input.pos());
+
+  EXPECT_FALSE(input.OnInput(4)); // Ctrl+D
+  // "|d"
+  EXPECT_EQ("d", input.line());
+  EXPECT_EQ(0u, input.pos());
+
+  EXPECT_FALSE(input.OnInput(4)); // Ctrl+D
+  // "|"
+  EXPECT_EQ("", input.line());
+  EXPECT_EQ(0u, input.pos());
+
+  // Ctrl+D on an empty line is exit.
+
+  EXPECT_TRUE(input.OnInput(4)); // Ctrl+D
+  EXPECT_TRUE(input.eof());
+}
+
 TEST(LineInput, History) {
   TestLineInput input("");
 

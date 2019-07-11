@@ -129,7 +129,7 @@ class LineInputBase {
   void HandleNegAck();
   // EndOfTransimission is the name for Ctrl-W in ASCII world.
   void HandleEndOfTransimission();
-  // EndOfFile means Ctrl-D
+  // EndOfFile means Ctrl-D with an empty input line.
   void HandleEndOfFile();
 
   void Insert(char c);

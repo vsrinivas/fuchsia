@@ -94,8 +94,13 @@ bool LineInputBase::OnInput(char c) {
       MoveLeft();
       break;
     case SpecialCharacters::kKeyControlD:
-      HandleEndOfFile();
-      return true;
+      if (cur_line().empty()) {
+        HandleEndOfFile();
+        return true;
+      } else {
+        HandleDelete();
+      }
+      break;
     case SpecialCharacters::kKeyControlE:
       MoveEnd();
       break;
