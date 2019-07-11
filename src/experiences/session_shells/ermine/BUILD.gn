@@ -165,8 +165,11 @@ flutter_test("ermine_unittests") {
 flutter_test("visualizers_unittests") {
   sources = [
     "status_graph_visualizer_model_test.dart",
+    "status_graph_visualizer_test.dart",
     "status_progress_bar_visualizer_model_test.dart",
+    "status_progress_bar_visualizer_test.dart",
     "status_tick_bar_visualizer_model_test.dart",
+    "status_tick_bar_visualizer_test.dart",
   ]
 
   deps = [
