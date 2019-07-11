@@ -4,8 +4,6 @@
 
 bootfs_only = true
 
-is_bringup = true
-
 zircon_enable_kernel_debugging_features = true
 zircon_enable_netsvc_debugging_features = true
 

@@ -6,13 +6,8 @@ declare_args() {
   # Board name used for paving and amber updates.
   board_name = ""
 
-  # A list of packages to always include in the 'base' package set. Used by the
+  # A list of package labels to include in the 'base' package set. Used by the
   # board definition rather than the product definition.
-  bringup_package_labels = []
-
-  # A list of package labels to include in the 'base' package set unless
-  # bringup configuration is enabled. Used by the board definition rather than
-  # the product definition.
   board_package_labels = []
 
   # List of kernel command line this board to bake into the boot image that are
