@@ -4,6 +4,10 @@
 
 #include "src/ledger/bin/app/ledger_manager.h"
 
+#include <string>
+#include <utility>
+#include <vector>
+
 #include <lib/async/cpp/task.h>
 #include <lib/callback/ensure_called.h>
 #include <lib/callback/scoped_callback.h>
@@ -12,10 +16,6 @@
 #include <lib/fit/function.h>
 #include <lib/inspect_deprecated/inspect.h>
 #include <trace/event.h>
-
-#include <string>
-#include <utility>
-#include <vector>
 
 #include "src/ledger/bin/app/active_page_manager_container.h"
 #include "src/ledger/bin/app/constants.h"
@@ -84,6 +84,10 @@ void LedgerManager::PageIsClosedOfflineAndEmpty(
 void LedgerManager::DeletePageStorage(convert::ExtendedStringView page_id,
                                       fit::function<void(storage::Status)> callback) {
   GetOrCreatePageManager(page_id)->DeletePageStorage(std::move(callback));
+}
+
+void LedgerManager::TrySyncClosedPage(convert::ExtendedStringView page_id) {
+  GetOrCreatePageManager(page_id)->StartPageSync();
 }
 
 void LedgerManager::GetPage(storage::PageIdView page_id, PageState page_state,

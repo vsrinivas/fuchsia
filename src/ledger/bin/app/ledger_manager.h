@@ -5,16 +5,16 @@
 #ifndef SRC_LEDGER_BIN_APP_LEDGER_MANAGER_H_
 #define SRC_LEDGER_BIN_APP_LEDGER_MANAGER_H_
 
+#include <functional>
+#include <map>
+#include <memory>
+#include <type_traits>
+
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/callback/auto_cleanable.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/inspect_deprecated/inspect.h>
-
-#include <functional>
-#include <map>
-#include <memory>
-#include <type_traits>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/ledger_impl.h"
@@ -71,6 +71,9 @@ class LedgerManager : public LedgerImpl::Delegate, inspect_deprecated::ChildrenM
   // Deletes the local copy of the page. If the page is currently open, the
   // callback will be called with |ILLEGAL_STATE|.
   void DeletePageStorage(convert::ExtendedStringView page_id, fit::function<void(Status)> callback);
+
+  // Tries to open the closed page and start a sync with the cloud.
+  void TrySyncClosedPage(convert::ExtendedStringView page_id);
 
   // LedgerImpl::Delegate:
   void GetPage(convert::ExtendedStringView page_id, PageState page_state,

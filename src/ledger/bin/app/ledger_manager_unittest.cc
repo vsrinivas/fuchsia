@@ -4,6 +4,12 @@
 
 #include "src/ledger/bin/app/ledger_manager.h"
 
+#include <cstdint>
+#include <memory>
+#include <set>
+#include <utility>
+#include <vector>
+
 #include <lib/async/cpp/task.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
@@ -14,12 +20,6 @@
 #include <lib/inspect_deprecated/testing/inspect.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
-
-#include <cstdint>
-#include <memory>
-#include <set>
-#include <utility>
-#include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -982,6 +982,55 @@ TEST_F(LedgerManagerTest, MultipleConflictResolvers) {
   RunLoopUntilIdle();
   EXPECT_FALSE(factory1.disconnected);
   EXPECT_FALSE(factory2.disconnected);
+}
+
+// Verifies that the LedgerManager triggers page sync for a page that exists and was closed.
+TEST_F(LedgerManagerTest, TrySyncClosedPageSyncStarted) {
+  storage_ptr->should_get_page_fail = false;
+  PagePtr page;
+  PageId id = RandomId(environment_);
+  storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
+  storage::PageId page_id = convert::ExtendedStringView(id.id).ToString();
+
+  EXPECT_EQ(0, sync_ptr->GetSyncCallsCount(page_id));
+
+  // Opens the page and starts the sync with the cloud for the first time.
+  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(1, sync_ptr->GetSyncCallsCount(page_id));
+
+  page.Unbind();
+  RunLoopUntilIdle();
+
+  // Reopens closed page and starts the sync.
+  ledger_manager_->TrySyncClosedPage(storage_page_id);
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(2, sync_ptr->GetSyncCallsCount(page_id));
+}
+
+// Verifies that the LedgerManager does not triggers the sync for a currently open page.
+TEST_F(LedgerManagerTest, TrySyncClosedPageWithOpenedPage) {
+  storage_ptr->should_get_page_fail = false;
+  PagePtr page;
+  PageId id = RandomId(environment_);
+  storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
+  storage::PageId page_id = convert::ExtendedStringView(id.id).ToString();
+
+  EXPECT_EQ(0, sync_ptr->GetSyncCallsCount(page_id));
+
+  // Opens the page and starts the sync with the cloud for the first time.
+  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(1, sync_ptr->GetSyncCallsCount(page_id));
+
+  // Tries to reopen the already-open page.
+  ledger_manager_->TrySyncClosedPage(storage_page_id);
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(1, sync_ptr->GetSyncCallsCount(page_id));
 }
 
 class DelayingLedgerStorage : public storage::LedgerStorage {
