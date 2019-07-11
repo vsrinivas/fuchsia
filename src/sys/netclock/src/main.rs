@@ -5,7 +5,7 @@
 #![feature(async_await, await_macro)]
 
 use {
-    chrono::{DateTime, Utc},
+    chrono::prelude::*,
     failure::{Error, ResultExt},
     fidl_fuchsia_net as fnet, fidl_fuchsia_time as ftime, fidl_fuchsia_timezone as ftz,
     fuchsia_async::{self as fasync, DurationExt},
@@ -58,9 +58,13 @@ fn backstop_time(path: impl AsRef<Path>) -> Result<DateTime<Utc>, Error> {
 }
 
 fn assert_backstop_time_correct() {
+    let expected_minimum = backstop_time("/config/build-info/latest-commit-date").unwrap();
+    let current_utc = Utc::now();
     assert!(
-        backstop_time("/config/build-info/latest-commit-date").unwrap() <= Utc::now(),
-        "latest guaranteed UTC timestamp must be earlier than current system time"
+        expected_minimum <= current_utc,
+        "latest known-past UTC time ({}) must be earlier than current system time ({})",
+        expected_minimum,
+        current_utc,
     );
 }
 
