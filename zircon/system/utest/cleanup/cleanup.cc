@@ -5,56 +5,48 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <unittest/unittest.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/event.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+#include <zxtest/zxtest.h>
 
-static const char* msg = "This is a test message, please discard.";
+namespace {
 
-bool cleanup_test(void) {
-  BEGIN_TEST;
-  zx_handle_t p0[2], p1[2];
+constexpr char kMessage[] = "This is a test message, please discard.";
+
+TEST(CleanupTest, CloseOneEndWaitOnOther) {
+  // Create a channel, close one end, try to wait on the other. See that
+  // the wait succeeds and results in "peer closed".
+
+  zx::channel a, b;
+  ASSERT_OK(zx::channel::create(0, &a, &b));
+  b.reset();
+
   zx_signals_t pending;
-  zx_status_t r;
+  ASSERT_OK(
+      a.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &pending));
+  ASSERT_EQ(pending, ZX_CHANNEL_PEER_CLOSED);
+}
 
-  // TEST1
-  // Create a channel, close one end, try to wait on the other.
-  r = zx_channel_create(0, p1, p1 + 1);
-  ASSERT_EQ(r, ZX_OK, "cleanup-test: channel create 1 failed");
-
-  zx_handle_close(p1[1]);
-  unittest_printf("cleanup-test: about to wait, should return with PEER_CLOSED\n");
-  r = zx_object_wait_one(p1[0], ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE,
-                         &pending);
-  ASSERT_EQ(r, ZX_OK, "cleanup-test: FAILED");
-
-  ASSERT_EQ(pending, ZX_CHANNEL_PEER_CLOSED, "cleanup-test: FAILED");
-  unittest_printf("cleanup-test: SUCCESS, observed PEER_CLOSED signal\n\n");
-  zx_handle_close(p1[0]);
-
-  // TEST2
+TEST(CleanupTest, CloseOneEndWriteFails) {
   // Create a channel, close one end. Then create an event and write a
   // message on the channel sending the event along. See that the write
   // fails (because the other end is closed) and that the event is
   // consumed (because the write failed).
-  r = zx_channel_create(0, p1, p1 + 1);
-  ASSERT_EQ(r, ZX_OK, "cleanup-test: channel create 1 failed");
-  zx_handle_close(p1[1]);
 
-  zx_handle_t event = ZX_HANDLE_INVALID;
-  r = zx_event_create(0u, &event);
-  ASSERT_EQ(r, ZX_OK, "");
-  ASSERT_NE(event, ZX_HANDLE_INVALID, "cleanup-test: event create failed");
-  r = zx_channel_write(p1[0], 0, &msg, sizeof(msg), &event, 1);
-  ASSERT_EQ(r, ZX_ERR_PEER_CLOSED, "cleanup-test: unexpected message_write return code");
+  zx::channel a, b;
+  ASSERT_OK(zx::channel::create(0, &a, &b));
+  b.reset();
 
-  r = zx_object_signal(event, 0u, ZX_EVENT_SIGNALED);
-  ASSERT_EQ(r, ZX_ERR_BAD_HANDLE, "cleanup-test: able to signal event!");
-  unittest_printf("cleanup-test: SUCCESS, event is closed\n\n");
+  zx::event event;
+  ASSERT_OK(zx::event::create(0, &event));
+  zx_handle_t handle = event.get();
+  ASSERT_STATUS(ZX_ERR_PEER_CLOSED, a.write(0, kMessage, sizeof(kMessage), &handle, 1));
+  ASSERT_STATUS(ZX_ERR_BAD_HANDLE, event.signal(0, ZX_EVENT_SIGNALED));
+}
 
-  zx_handle_close(p1[0]);
-
-  // TEST3
+TEST(CleanupTest, MessageHandlesAreClosed) {
   // Simulates the case where we prepare a message channel with a
   // message+channelhandle already in it and the far end closed,
   // like we pass to newly created processes, but then (say
@@ -63,27 +55,19 @@ bool cleanup_test(void) {
   // that the channel handle bundled with the message should
   // be closed and waiting on the opposing handle should
   // signal PEER_CLOSED.
-  r = zx_channel_create(0, p0, p0 + 1);
-  ASSERT_EQ(r, ZX_OK, "cleanup-test: channel create 0 failed");
 
-  r = zx_channel_create(0, p1, p1 + 1);
-  ASSERT_EQ(r, ZX_OK, "cleanup-test: channel create 1 failed");
+  zx::channel a, b;
+  zx::channel c, d;
+  ASSERT_OK(zx::channel::create(0, &a, &b));
+  ASSERT_OK(zx::channel::create(0, &c, &d));
 
-  r = zx_channel_write(p0[0], 0, &msg, sizeof(msg), &p1[1], 1);
-  ASSERT_EQ(r, ZX_OK, "cleanup-test: channel write failed");
+  zx_handle_t handle = d.get();
+  ASSERT_OK(a.write(0, kMessage, sizeof(kMessage), &handle, 1));
 
-  zx_handle_close(p0[0]);
-  zx_handle_close(p0[1]);
+  a.reset();
+  b.reset();
 
-  unittest_printf("cleanup-test: about to wait, should return with PEER_CLOSED\n");
-  r = zx_object_wait_one(p1[0], ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
-  ASSERT_EQ(r, ZX_OK, "cleanup-test: FAILED");
-
-  unittest_printf("cleanup-test: PASSED\n");
-  zx_handle_close(p1[0]);
-  END_TEST;
+  ASSERT_OK(c.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr));
 }
 
-BEGIN_TEST_CASE(cleanup_tests)
-RUN_TEST(cleanup_test)
-END_TEST_CASE(cleanup_tests)
+}  // anonymous namespace
