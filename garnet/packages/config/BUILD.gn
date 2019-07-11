@@ -114,3 +114,10 @@ group("virtual_audio") {
     "//src/media/audio/virtual_audio_service:virtual_audio_config",
   ]
 }
+
+group("overnetstack") {
+  testonly = true
+  public_deps = [
+    "//src/connectivity/overnet/overnetstack:config",
+  ]
+}
