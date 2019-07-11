@@ -21,7 +21,7 @@ bool IntersectRayBox(const escher::ray4& ray, const escher::BoundingBox& box,
 
 // Returns whether a ray intersects a 3D triangle or not. Upon return, |out_distance|
 // contains the distance from the ray origin to the intersection point in units of
-// ray length.
+// "ray length" (i.e. the length of the ray's direction vector).
 bool IntersectRayTriangle(const escher::ray4& ray, const glm::vec3& v1, const glm::vec3& v2,
                           const glm::vec3& v3, float* out_distance);
 

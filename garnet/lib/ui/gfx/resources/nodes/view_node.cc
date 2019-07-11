@@ -5,6 +5,7 @@
 #include "garnet/lib/ui/gfx/resources/nodes/view_node.h"
 
 #include "garnet/lib/ui/gfx/engine/session.h"
+#include "src/ui/lib/escher/geometry/intersection.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -17,6 +18,56 @@ ViewNode::ViewNode(Session* session, ResourceId view_id)
 
 ViewPtr ViewNode::FindOwningView() const {
   return session()->resources()->FindResource<View>(view_id_);
+}
+
+// Test the ray against the bounding box of the view, which is
+// stored in the properties of the view holder.
+Node::IntersectionInfo ViewNode::GetIntersection(
+    const escher::ray4& ray, const IntersectionInfo& parent_intersection) const {
+  FXL_DCHECK(parent_intersection.continue_with_children);
+  IntersectionInfo result;
+#if !SCENIC_ENFORCE_VIEW_BOUND_CLIPPING
+  // Explicitly set to true, since views do not clip while the
+  // above macro is false.
+  result.continue_with_children = true;
+  result.interval = parent_intersection.interval;
+  return result;
+#endif  // SCENIC_ENFORCE_VIEW_BOUND_CLIPPING
+
+  View* view = GetView();
+  if (view) {
+    ViewHolder* holder = view->view_holder();
+    if (holder) {
+      escher::BoundingBox bbox = holder->GetLocalBoundingBox();
+
+      // Intersect the ray with the view's bounding box.
+      escher::Interval hit_interval;
+      bool hit_result = IntersectRayBox(ray, bbox, &hit_interval);
+
+      escher::Interval result_interval;
+      if (hit_result) {
+        result_interval = parent_intersection.interval.Intersect(hit_interval);
+
+        // Only hit if the ray intersects the bounding box AND if the intersection
+        // interval is not completely clipped by the parent.
+        result.did_hit = !result_interval.is_empty();
+      }
+
+      // If there's a hit, intersect the parent's interval with the current hit interval,
+      // and use that as the new interval going forward. Otherwise just use the existing
+      // interval from the parent.
+      result.interval = result.did_hit ? result_interval : parent_intersection.interval;
+
+      // Traversal should only continue if the current bounding box is hit and if the
+      // interval is non-empty.
+      result.continue_with_children = result.did_hit && !result.interval.is_empty();
+
+      // Hit distance is the same as the minimum interval.
+      result.distance = result.interval.min();
+    }
+  }
+
+  return result;
 }
 
 }  // namespace gfx

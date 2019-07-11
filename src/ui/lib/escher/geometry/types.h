@@ -52,7 +52,7 @@ struct ray4 {
 constexpr float kEpsilon = 0.000001f;
 
 inline ray4 operator*(const glm::mat4& matrix, const ray4& ray) {
-  return ray4{matrix * ray.origin, matrix * ray.direction};
+  return ray4{matrix * ray.origin, glm::normalize(matrix * ray.direction)};
 }
 
 // Oriented plane described by a normal vector and a distance from the origin

@@ -28,6 +28,10 @@ class ViewNode final : public Node {
   // Returns pointer to the View that owns this node.
   View* GetView() const { return FindOwningView().get(); }
 
+  // |Node|
+  IntersectionInfo GetIntersection(const escher::ray4& ray,
+                                   const IntersectionInfo& parent_intersection) const override;
+
  private:
   friend class View;
   ViewNode(Session* session, ResourceId view_id);
