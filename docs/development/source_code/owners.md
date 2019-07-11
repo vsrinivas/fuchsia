@@ -17,10 +17,8 @@ questions about it.
 
 ## Responsibilities
 
-Eventually, Fuchsia will require changes to have an OWNERS +2 review.
-
-For now, this is not required, and many OWNERS files contain a `*` allowing
-anyone to provide such a +2.
+Fuchsia requires changes to have an OWNERS +2 review. However, many OWNERS files
+contain a `*` allowing anyone to provide such a +2.
 
 ## Tools
 
