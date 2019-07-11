@@ -60,7 +60,7 @@ From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:16
+From //build/product.gni:14
 
 **Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/appmgr", "//garnet/bin/appmgr:appmgr_scheme_config", "//garnet/bin/device_settings:device_settings_manager", "//garnet/bin/http", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/logger", "//garnet/bin/netcfg", "//garnet/bin/netcfg:config", "//garnet/bin/network_time_service", "//garnet/bin/pkg_cache", "//garnet/bin/pkg_resolver", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/stash:stash", "//garnet/bin/stash_ctl:stash_ctl", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/bin/timezone", "//garnet/go/src/amber", "//garnet/go/src/amber:amber_tools", "//garnet/go/src/amber:config", "//garnet/go/src/amber:pkgfs", "//garnet/lib/root_ssl_certificates", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/connectivity/bluetooth:core", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/netstack", "//src/connectivity/wlan:service", "//src/developer/bugreport", "//src/developer/crashpad_agent", "//src/developer/feedback_agent", "//src/developer/kernel_crash_checker", "//src/developer/kernel_crash_checker:config", "//src/identity/bin:core", "//src/recovery/factory_reset", "//src/sys/netclock", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//bundles:kitchen_sink"]`
 
@@ -68,7 +68,7 @@ From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:16
+From //build/product.gni:14
 
 ### blobfs_maximum_bytes
 In addition to reserving space for inodes and data, fs needs additional
@@ -118,7 +118,7 @@ required by this board. See also kernel_cmdline_args in
 
 **Current value (from the default):** `[]`
 
-From //build/board.gni:16
+From //build/board.gni:21
 
 ### board_name
 Board name used for paving and amber updates.
@@ -140,8 +140,9 @@ From //boards/x64.gni:7
 From //build/board.gni:7
 
 ### board_package_labels
-A list of package labels to include in the 'base' package set. Used by the
-board definition rather than the product definition.
+A list of package labels to include in the 'base' package set unless
+bringup configuration is enabled. Used by the board definition rather than
+the product definition.
 
 **Current value for `target_cpu = "arm64"`:** `["//garnet/packages/prod:drivers", "//garnet/packages/prod:sysmem-assistant"]`
 
@@ -149,7 +150,7 @@ From //boards/arm64.gni:9
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:11
+From //build/board.gni:16
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/packages/prod:drivers"]`
 
@@ -157,7 +158,7 @@ From //boards/x64.gni:9
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:11
+From //build/board.gni:16
 
 ### bootfs_extra
 List of extra manifest entries for files to add to the BOOTFS.
@@ -204,6 +205,14 @@ paving process.
 **Current value (from the default):** `""`
 
 From //build/images/BUILD.gn:500
+
+### bringup_package_labels
+A list of packages to always include in the 'base' package set. Used by the
+board definition rather than the product definition.
+
+**Current value (from the default):** `[]`
+
+From //build/board.gni:11
 
 ### build_info_board
 Board configuration of the current build
@@ -279,19 +288,19 @@ pressure arises or other policies indicate.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/core.gni:65
+From //products/core.gni:67
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:24
+From //build/product.gni:22
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/core.gni:65
+From //products/core.gni:67
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:24
+From //build/product.gni:22
 
 ### clang_lib_dir
 Path to Clang lib directory.
@@ -930,6 +939,25 @@ true or false in similar circumstances.
 
 From [//third_party/icu/config.gni:15](https://fuchsia.googlesource.com/third_party/icu/+/1aa5008165095c7651f500f77e04336cd2748660/config.gni#15)
 
+### is_bringup
+Whether this is a bringup configuration.
+
+**Current value for `target_cpu = "arm64"`:** `false`
+
+From //products/core.gni:9
+
+**Overridden from the default:** `false`
+
+From //build/product.gni:7
+
+**Current value for `target_cpu = "x64"`:** `false`
+
+From //products/core.gni:9
+
+**Overridden from the default:** `false`
+
+From //build/product.gni:7
+
 ### is_debug
 Debug build.
 
@@ -944,7 +972,7 @@ See also //zircon/docs/kernel_cmdline.md and
 
 **Current value for `target_cpu = "arm64"`:** `["bootsvc.next=bin/component_manager,fuchsia-boot:///boot#meta/root.cm,--use-builtin-process-launcher"]`
 
-From //products/bringup.gni:13
+From //products/bringup.gni:15
 
 **Overridden from the default:** `[]`
 
@@ -952,7 +980,7 @@ From //build/images/BUILD.gn:478
 
 **Current value for `target_cpu = "x64"`:** `["bootsvc.next=bin/component_manager,fuchsia-boot:///boot#meta/root.cm,--use-builtin-process-launcher"]`
 
-From //products/bringup.gni:13
+From //products/bringup.gni:15
 
 **Overridden from the default:** `[]`
 
@@ -1232,7 +1260,7 @@ A list of labels for meta packages to be included in the monolith.
 
 **Current value for `target_cpu = "arm64"`:** `["//build/images:config-data", "//build/images:shell-commands", "//src/sys/component_index:component_index"]`
 
-From //products/core.gni:12
+From //products/core.gni:14
 
 **Overridden from the default:** `[]`
 
@@ -1240,7 +1268,7 @@ From //build/images/BUILD.gn:37
 
 **Current value for `target_cpu = "x64"`:** `["//build/images:config-data", "//build/images:shell-commands", "//src/sys/component_index:component_index"]`
 
-From //products/core.gni:12
+From //products/core.gni:14
 
 **Overridden from the default:** `[]`
 
@@ -2148,19 +2176,19 @@ include those labels in this variable.
 
 **Current value for `target_cpu = "arm64"`:** `["//garnet/tools/vboot_reference:cgpt_host", "//garnet/tools/vboot_reference:futility_host", "//bundles:tools"]`
 
-From //products/core.gni:67
+From //products/core.gni:69
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:32
+From //build/product.gni:30
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/tools/vboot_reference:cgpt_host", "//garnet/tools/vboot_reference:futility_host", "//bundles:tools"]`
 
-From //products/core.gni:67
+From //products/core.gni:69
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:32
+From //build/product.gni:30
 
 ### update_kernels
 (deprecated) List of kernel images to include in the update (OTA) package.
@@ -2384,7 +2412,7 @@ silently clobber the default value shown here.
 }
 ```
 
-From //BUILD.gn:85
+From //BUILD.gn:63
 
 ### zircon_asserts
 
@@ -2410,7 +2438,7 @@ Default is $target_cpu.
 
 **Current value (from the default):** `"arm64"`
 
-From //BUILD.gn:62
+From //BUILD.gn:40
 
 ### zircon_enable_kernel_debugging_features
 Whether to include various features (non-shipping, insecure, etc.) in the
@@ -2418,37 +2446,37 @@ kernel or netsvc builds.
 
 **Current value for `target_cpu = "arm64"`:** `false`
 
-From //products/core.gni:9
+From //products/core.gni:11
 
 **Overridden from the default:** `false`
 
-From //BUILD.gn:53
+From //BUILD.gn:31
 
 **Current value for `target_cpu = "x64"`:** `false`
 
-From //products/core.gni:9
+From //products/core.gni:11
 
 **Overridden from the default:** `false`
 
-From //BUILD.gn:53
+From //BUILD.gn:31
 
 ### zircon_enable_netsvc_debugging_features
 
 **Current value for `target_cpu = "arm64"`:** `false`
 
-From //products/core.gni:10
+From //products/core.gni:12
 
 **Overridden from the default:** `false`
 
-From //BUILD.gn:54
+From //BUILD.gn:32
 
 **Current value for `target_cpu = "x64"`:** `false`
 
-From //products/core.gni:10
+From //products/core.gni:12
 
 **Overridden from the default:** `false`
 
-From //BUILD.gn:54
+From //BUILD.gn:32
 
 ### zircon_extra_args
 [Zircon GN build arguments](../../../zircon/docs/gen/build_arguments.md).
@@ -2465,14 +2493,14 @@ to explicitly set Zircon's `variants` here.
 
 **Current value (from the default):** `{ }`
 
-From //BUILD.gn:45
+From //BUILD.gn:23
 
 ### zircon_extra_ninja_targets
 Additional targets to pass to the Zircon Ninja build.
 
 **Current value (from the default):** `[]`
 
-From //BUILD.gn:49
+From //BUILD.gn:27
 
 ### zircon_r_partition
 
@@ -2486,7 +2514,7 @@ given the empty string. Path can be source-absolute or system-absolute.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:58
+From //BUILD.gn:36
 
 ### zxcrypt_key_source
 This argument specifies from where the system should obtain the zxcrypt

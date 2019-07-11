@@ -62,7 +62,7 @@ From //public/gn/config/BUILD.gn:11
 ### default_deps
 Defines the `//:default` target: what `ninja` with no arguments does.
 
-**Current value (from the default):** `[":build-tests", ":ids", ":images", ":tools"]`
+**Current value (from the default):** `[":build-tests", ":ids", ":images", "tools"]`
 
 From //BUILD.gn:20
 
