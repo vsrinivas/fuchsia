@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ledger/bin/testing/dispatcher_checker.h"
+#include "src/ledger/bin/synchronization/dispatcher_checker.h"
 
 #include <lib/async/cpp/task.h>
 

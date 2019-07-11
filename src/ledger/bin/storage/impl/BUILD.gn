@@ -124,9 +124,9 @@ source_set("lib") {
     "//src/ledger/bin/encryption/public",
     "//src/ledger/bin/environment",
     "//src/ledger/bin/filesystem",
-    "//src/ledger/bin/lock",
     "//src/ledger/bin/storage/impl/btree:lib",
     "//src/ledger/bin/storage/public",
+    "//src/ledger/bin/synchronization:lock",
     "//src/lib/fxl",
     "//zircon/public/lib/trace",
   ]

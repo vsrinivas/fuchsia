@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LEDGER_BIN_LOCK_LOCK_H_
-#define SRC_LEDGER_BIN_LOCK_LOCK_H_
+#ifndef SRC_LEDGER_BIN_SYNCHRONIZATION_LOCK_H_
+#define SRC_LEDGER_BIN_SYNCHRONIZATION_LOCK_H_
 
 #include <lib/callback/operation_serializer.h>
 
@@ -32,4 +32,4 @@ FXL_WARN_UNUSED_RESULT coroutine::ContinuationStatus AcquireLock(
 
 }  // namespace lock
 
-#endif  // SRC_LEDGER_BIN_LOCK_LOCK_H_
+#endif  // SRC_LEDGER_BIN_SYNCHRONIZATION_LOCK_H_

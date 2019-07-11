@@ -26,7 +26,6 @@
 #include <utility>
 
 #include "src/ledger/bin/cobalt/cobalt.h"
-#include "src/ledger/bin/lock/lock.h"
 #include "src/ledger/bin/storage/impl/btree/diff.h"
 #include "src/ledger/bin/storage/impl/btree/iterator.h"
 #include "src/ledger/bin/storage/impl/commit_impl.h"
@@ -42,6 +41,7 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/bin/synchronization/lock.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"

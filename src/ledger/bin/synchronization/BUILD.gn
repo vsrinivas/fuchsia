@@ -19,17 +19,34 @@ source_set("lock") {
   configs += [ "//src/ledger:ledger_config" ]
 }
 
+source_set("dispatcher_checker") {
+  sources = [
+    "dispatcher_checker.h",
+  ]
+
+  public_deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-default",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
 source_set("unittests") {
   testonly = true
 
   sources = [
+    "dispatcher_checker_unittest.cc",
     "lock_unittest.cc",
   ]
 
   deps = [
+    ":dispatcher_checker",
     ":lock",
+    "//src/ledger/bin/testing:lib",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/async",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

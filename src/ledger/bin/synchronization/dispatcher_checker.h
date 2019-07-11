@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LEDGER_BIN_TESTING_DISPATCHER_CHECKER_H_
-#define SRC_LEDGER_BIN_TESTING_DISPATCHER_CHECKER_H_
+#ifndef SRC_LEDGER_BIN_SYNCHRONIZATION_DISPATCHER_CHECKER_H_
+#define SRC_LEDGER_BIN_SYNCHRONIZATION_DISPATCHER_CHECKER_H_
 
 #include <lib/async/default.h>
 
@@ -42,4 +42,4 @@ class DispatcherChecker final {
 
 }  // namespace ledger
 
-#endif  // SRC_LEDGER_BIN_TESTING_DISPATCHER_CHECKER_H_
+#endif  // SRC_LEDGER_BIN_SYNCHRONIZATION_DISPATCHER_CHECKER_H_

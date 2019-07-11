@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ledger/bin/lock/lock.h"
+#include "src/ledger/bin/synchronization/lock.h"
 
 #include <lib/fit/function.h>
 
