@@ -9,13 +9,15 @@
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
 #include "src/developer/debug/zxdb/client/thread_controller.h"
-#include "src/developer/debug/zxdb/client/thread_impl_test_support.h"
+#include "src/developer/debug/zxdb/client/test_thread_observer.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
 
 namespace zxdb {
 
 namespace {
+
+class ThreadImplTest : public RemoteAPITest {};
 
 // This ThreadController always responds with "continue".
 class ContinueThreadController : public ThreadController {
@@ -101,7 +103,7 @@ TEST_F(ThreadImplTest, Frames) {
   expected_reply.record = break_notification.thread;  // Copies existing frame.
   expected_reply.record.stack_amount = debug_ipc::ThreadRecord::StackAmount::kFull;
   expected_reply.record.frames.emplace_back(kAddress2, kStack2, 0);
-  mock_remote_api().set_thread_status_reply(expected_reply);
+  mock_remote_api()->set_thread_status_reply(expected_reply);
 
   // Asynchronously request the frames.
   thread->GetStack().SyncFrames([](const Err&) { debug_ipc::MessageLoop::Current()->QuitNow(); });
@@ -116,7 +118,7 @@ TEST_F(ThreadImplTest, Frames) {
   EXPECT_EQ(kStack2, stack[1]->GetStackPointer());
 
   // Resuming the thread should clear the frames.
-  mock_remote_api().set_resume_quits_loop(true);
+  mock_remote_api()->set_resume_quits_loop(true);
   thread->Continue();
   EXPECT_EQ(0u, thread->GetStack().size());
   EXPECT_FALSE(thread->GetStack().has_all_frames());
@@ -241,7 +243,7 @@ TEST_F(ThreadImplTest, JumpTo) {
   status.record = notification.thread;  // Copies existing frame.
   status.record.stack_amount = debug_ipc::ThreadRecord::StackAmount::kFull;
   status.record.frames[0].ip = kDestAddress;
-  mock_remote_api().set_thread_status_reply(status);
+  mock_remote_api()->set_thread_status_reply(status);
 
   // Do jump.
   bool called = false;
@@ -255,7 +257,7 @@ TEST_F(ThreadImplTest, JumpTo) {
 
   // The command should have sent a request to write to the IP. There should
   // be a single register with a value of the new address.
-  const auto& written = mock_remote_api().last_write_registers().registers;
+  const auto& written = mock_remote_api()->last_write_registers().registers;
   ASSERT_EQ(1u, written.size());
   ASSERT_EQ(sizeof(uint64_t), written[0].data.size());
   EXPECT_EQ(0, memcmp(&kDestAddress, &written[0].data[0], sizeof(uint64_t)));

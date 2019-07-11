@@ -495,11 +495,16 @@ void SystemImpl::Pause(std::function<void()> on_paused) {
 }
 
 void SystemImpl::Continue() {
-  debug_ipc::ResumeRequest request;
-  request.process_koid = 0;  // 0 means all processes.
-  request.how = debug_ipc::ResumeRequest::How::kContinue;
-  session()->remote_api()->Resume(request,
-                                  std::function<void(const Err&, debug_ipc::ResumeReply)>());
+  // Tell each process to continue as it desires.
+  //
+  // It would be more efficient to tell the backend to resume all threads in all processes but the
+  // Thread client objects have state which needs to be updated (like the current stack) and the
+  // thread could have a controller that wants to continue in a specific way (like single-step or
+  // step in a range).
+  for (const auto& target : targets_) {
+    if (Process* process = target->GetProcess())
+      process->Continue();
+  }
 }
 
 bool SystemImpl::HasDownload(const std::string& build_id) {

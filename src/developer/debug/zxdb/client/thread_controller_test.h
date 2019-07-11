@@ -45,17 +45,10 @@ class ThreadControllerTest : public RemoteAPITest {
   // mock.
   MockModuleSymbols* module_symbols() const { return module_symbols_; }
 
-  MockRemoteAPI* mock_remote_api() const { return mock_remote_api_; }
-
  private:
-  // RemoteAPITest implementation:
-  std::unique_ptr<RemoteAPI> GetRemoteAPIImpl() override;
-
   // Non-owning pointer to the injected fake process/thread.
   Process* process_ = nullptr;
   Thread* thread_ = nullptr;
-
-  MockRemoteAPI* mock_remote_api_;  // Owned by the session.
 
   // Non-owning (the pointer is owned by the SystemSymbols and held alive
   // because of our ModuleRef below).

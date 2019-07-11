@@ -19,19 +19,7 @@ namespace zxdb {
 
 using debug_ipc::RegisterID;
 
-class FrameImplTest : public RemoteAPITest {
- public:
-  std::unique_ptr<RemoteAPI> GetRemoteAPIImpl() {
-    auto remote_api = std::make_unique<MockRemoteAPI>();
-    mock_remote_api_ = remote_api.get();
-    return remote_api;
-  }
-
-  MockRemoteAPI* mock_remote_api() const { return mock_remote_api_; }
-
- private:
-  MockRemoteAPI* mock_remote_api_ = nullptr;  // Owned by System.
-};
+class FrameImplTest : public RemoteAPITest {};
 
 class MockThread : public Thread, public Stack::Delegate {
  public:

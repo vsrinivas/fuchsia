@@ -53,10 +53,4 @@ void ThreadControllerTest::SetUp() {
   target->process()->OnModules(modules, std::vector<uint64_t>());
 }
 
-std::unique_ptr<RemoteAPI> ThreadControllerTest::GetRemoteAPIImpl() {
-  auto remote_api = std::make_unique<MockRemoteAPI>();
-  mock_remote_api_ = remote_api.get();
-  return remote_api;
-}
-
 }  // namespace zxdb

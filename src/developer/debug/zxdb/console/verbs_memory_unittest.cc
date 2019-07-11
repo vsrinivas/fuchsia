@@ -29,14 +29,14 @@ class VerbsMemoryTest : public RemoteAPITest {
  public:
   std::unique_ptr<RemoteAPI> GetRemoteAPIImpl() {
     auto remote_api = std::make_unique<MemoryMockRemoteAPI>();
-    mock_remote_api_ = remote_api.get();
+    memory_mock_remote_api_ = remote_api.get();
     return remote_api;
   }
 
-  MemoryMockRemoteAPI* mock_remote_api() const { return mock_remote_api_; }
+  MemoryMockRemoteAPI* memory_mock_remote_api() const { return memory_mock_remote_api_; }
 
  private:
-  MemoryMockRemoteAPI* mock_remote_api_ = nullptr;  // Owned by System.
+  MemoryMockRemoteAPI* memory_mock_remote_api_ = nullptr;  // Owned by System.
 };
 
 }  // namespace
@@ -94,7 +94,7 @@ TEST_F(VerbsMemoryTest, Stack) {
   mem_data.resize(1024);
   mem_data[0] = 0xff;
   mem_data[1] = 0xee;
-  mock_remote_api()->AddMemory(kSP0, mem_data);
+  memory_mock_remote_api()->AddMemory(kSP0, mem_data);
 
   console.ProcessInputLine("stack");
 

@@ -2,21 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/client/thread_impl_test_support.h"
+#include "src/developer/debug/zxdb/client/test_thread_observer.h"
 
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
-
-ThreadImplTest::ThreadImplTest() = default;
-ThreadImplTest::~ThreadImplTest() = default;
-
-std::unique_ptr<RemoteAPI> ThreadImplTest::GetRemoteAPIImpl() {
-  auto remote_api = std::make_unique<MockRemoteAPI>();
-  mock_remote_api_ = remote_api.get();
-  return std::move(remote_api);
-}
 
 TestThreadObserver::TestThreadObserver(Thread* thread) : thread_(thread) {
   thread->AddObserver(this);

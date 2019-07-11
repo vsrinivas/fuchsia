@@ -8,7 +8,6 @@
 #include "src/developer/debug/zxdb/client/inline_thread_controller_test.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/thread.h"
-#include "src/developer/debug/zxdb/client/thread_impl_test_support.h"
 #include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_THREAD_IMPL_TEST_SUPPORT_H_
-#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_THREAD_IMPL_TEST_SUPPORT_H_
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_TEST_THREAD_OBSERVER_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_TEST_THREAD_OBSERVER_H_
 
 // This file contains a test harness and helper classes for writing tests
 // involving lower-level thread control such as ThreadImpl itself, and
@@ -14,20 +14,6 @@
 #include "src/developer/debug/zxdb/client/thread_observer.h"
 
 namespace zxdb {
-
-class ThreadImplTest : public RemoteAPITest {
- public:
-  ThreadImplTest();
-  ~ThreadImplTest() override;
-
-  MockRemoteAPI& mock_remote_api() { return *mock_remote_api_; }
-
- protected:
-  std::unique_ptr<RemoteAPI> GetRemoteAPIImpl() override;
-
- private:
-  MockRemoteAPI* mock_remote_api_;  // Owned by the session.
-};
 
 class TestThreadObserver : public ThreadObserver {
  public:
@@ -51,4 +37,4 @@ class TestThreadObserver : public ThreadObserver {
 
 }  // namespace zxdb
 
-#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_THREAD_IMPL_TEST_SUPPORT_H_
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_TEST_THREAD_OBSERVER_H_
