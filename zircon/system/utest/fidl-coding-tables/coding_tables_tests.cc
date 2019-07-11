@@ -192,3 +192,25 @@ TEST(MyEnum, CodingTable) {
   const fidl::FidlCodedEnum& my_enum_table = my_enum_type.coded_enum;
   ASSERT_EQ(fidl::FidlCodedPrimitive::kUint32, my_enum_table.underlying_type);
 }
+
+
+// This ensures that the number collision tests compile. (See FIDL-448).
+// These tests ensure that the name mangling rules used in the generator avoid certain types
+// of collisions that appeared in earlier versions (e.g. number of elements would merge with
+// other content).
+TEST(NumberCollision, CodingTable) {  
+  const fidl_type& type = fidl_test_example_codingtables_CodingNumberCollisionRequestTable;
+  ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, type.type_tag);
+  const fidl::FidlCodedStruct& request_struct = type.coded_struct;
+  ASSERT_EQ(1, request_struct.field_count);
+  ASSERT_STR_EQ("fidl.test.example.codingtables/CodingNumberCollisionRequest", request_struct.name);
+  const fidl::FidlStructField& number_collision_field = request_struct.fields[0];
+  // Transaction message header is 16 bytes.
+  ASSERT_EQ(16, number_collision_field.offset);
+
+  const fidl_type& number_collision_type = *number_collision_field.type;
+  ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, number_collision_type.type_tag);
+  const fidl::FidlCodedStruct& number_collision_table = number_collision_type.coded_struct;
+  ASSERT_STR_EQ("fidl.test.example.codingtables/NumberCollision", number_collision_table.name);
+  ASSERT_EQ(6, number_collision_table.field_count);
+}

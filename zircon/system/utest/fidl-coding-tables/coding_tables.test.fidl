@@ -37,6 +37,18 @@ enum MyEnum : uint32 {
     BAR = 42;
 };
 
+// Types defined to detect collisions in the mangled coding table output.
+struct A {};
+struct A1 {};
+struct NumberCollision {
+  array<A>:11 a;
+  array<A1>:1 b;
+  vector<A>:11 c;
+  vector<A1>:1 d;
+  string:11 e;
+  string:1 f;
+};
+
 // fidlc will only expose coding tables for message types.
 // However, we can obtain the coding tables for SomeStruct/MyXUnion etc. via the coding table
 // for request message types, by defining dummy methods which take a single desired argument.
@@ -58,4 +70,6 @@ protocol Coding {
 
     MyBits(MyBits b);
     MyEnum(MyEnum e);
+
+    NumberCollision(NumberCollision x);
 };

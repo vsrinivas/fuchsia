@@ -36,6 +36,13 @@ std::string FormatName(const flat::Name& name, std::string_view library_separato
   return compiled_name;
 }
 
+std::string LengthPrefixedString(std::string_view str) {
+  std::ostringstream out;
+  out << str.length();
+  out << str;
+  return out.str();
+}
+
 }  // namespace
 
 std::string StringJoin(const std::vector<std::string_view>& strings, std::string_view separator) {
@@ -408,7 +415,6 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind) {
 }
 
 std::string NameIdentifier(SourceLocation name) {
-  // TODO(TO-704) C name escaping and ergonomics.
   return std::string(name.data());
 }
 
@@ -471,20 +477,20 @@ std::string NameMessage(std::string_view method_name, types::MessageKind kind) {
 std::string NameTable(std::string_view type_name) { return std::string(type_name) + "Table"; }
 
 std::string NamePointer(std::string_view name) {
-  std::string pointer_name(name);
-  pointer_name += "Pointer";
+  std::string pointer_name("Pointer");
+  pointer_name += LengthPrefixedString(name);
   return pointer_name;
 }
 
 std::string NameMembers(std::string_view name) {
-  std::string members_name(name);
-  members_name += "Members";
+  std::string members_name("Members");
+  members_name += LengthPrefixedString(name);
   return members_name;
 }
 
 std::string NameFields(std::string_view name) {
-  std::string fields_name(name);
-  fields_name += "Fields";
+  std::string fields_name("Fields");
+  fields_name += LengthPrefixedString(name);
   return fields_name;
 }
 
@@ -499,32 +505,33 @@ std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nul
 
 std::string NameCodedProtocolHandle(std::string_view protocol_name,
                                     types::Nullability nullability) {
-  std::string name(protocol_name);
-  name += "Protocol";
+  std::string name("Protocol");
+  name += LengthPrefixedString(protocol_name);
   name += NameNullability(nullability);
   return name;
 }
 
 std::string NameCodedRequestHandle(std::string_view protocol_name, types::Nullability nullability) {
-  std::string name(protocol_name);
-  name += "Request";
+  std::string name("Request");
+  name += LengthPrefixedString(protocol_name);
   name += NameNullability(nullability);
   return name;
 }
 
 std::string NameCodedArray(std::string_view element_name, uint64_t size) {
   std::string name("Array");
-  name += element_name;
   name += NameSize(size);
+  name += "_";
+  name += LengthPrefixedString(element_name);
   return name;
 }
 
 std::string NameCodedVector(std::string_view element_name, uint64_t max_size,
                             types::Nullability nullability) {
   std::string name("Vector");
-  name += element_name;
   name += NameSize(max_size);
   name += NameNullability(nullability);
+  name += LengthPrefixedString(element_name);
   return name;
 }
 

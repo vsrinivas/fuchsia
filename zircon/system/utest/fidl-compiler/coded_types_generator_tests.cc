@@ -35,7 +35,7 @@ struct Arrays {
   ASSERT_EQ(fidl::types::PrimitiveSubtype::kUint8, type0_primitive->subtype);
 
   auto type1 = gen.coded_types().at(1).get();
-  ASSERT_STR_EQ("Arrayuint87", type1->coded_name.c_str());
+  ASSERT_STR_EQ("Array7_5uint8", type1->coded_name.c_str());
   ASSERT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type1->coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kArray, type1->kind);
   auto type1_array = static_cast<const fidl::coded::ArrayType*>(type1);
@@ -43,7 +43,7 @@ struct Arrays {
   ASSERT_EQ(type0, type1_array->element_type);
 
   auto type2 = gen.coded_types().at(2).get();
-  ASSERT_STR_EQ("ArrayArrayuint8777", type2->coded_name.c_str());
+  ASSERT_STR_EQ("Array77_13Array7_5uint8", type2->coded_name.c_str());
   ASSERT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type2->coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kArray, type2->kind);
   auto type2_array = static_cast<const fidl::coded::ArrayType*>(type2);
@@ -51,7 +51,7 @@ struct Arrays {
   ASSERT_EQ(type1, type2_array->element_type);
 
   auto type3 = gen.coded_types().at(3).get();
-  ASSERT_STR_EQ("ArrayArrayArrayuint87771001", type3->coded_name.c_str());
+  ASSERT_STR_EQ("Array1001_23Array77_13Array7_5uint8", type3->coded_name.c_str());
   ASSERT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type3->coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kArray, type3->kind);
   auto type3_array = static_cast<const fidl::coded::ArrayType*>(type3);
@@ -92,7 +92,7 @@ struct Vectors {
   ASSERT_EQ(2, gen.coded_types().size());
 
   auto type0 = gen.coded_types().at(0).get();
-  ASSERT_STR_EQ("Vectorexample_SomeStruct10nonnullable", type0->coded_name.c_str());
+  ASSERT_STR_EQ("Vector10nonnullable18example_SomeStruct", type0->coded_name.c_str());
   ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type0->coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kVector, type0->kind);
   auto type0_vector = static_cast<const fidl::coded::VectorType*>(type0);
@@ -102,7 +102,7 @@ struct Vectors {
   ASSERT_EQ(fidl::types::Nullability::kNonnullable, type0_vector->nullability);
 
   auto type1 = gen.coded_types().at(1).get();
-  ASSERT_STR_EQ("VectorVectorexample_SomeStruct10nonnullable20nonnullable",
+  ASSERT_STR_EQ("Vector20nonnullable39Vector10nonnullable18example_SomeStruct",
                 type1->coded_name.c_str());
   ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type1->coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kVector, type1->kind);
@@ -134,7 +134,7 @@ protocol UseOfProtocol {
   ASSERT_EQ(2, gen.coded_types().size());
 
   auto type0 = gen.coded_types().at(0).get();
-  ASSERT_STR_EQ("example_SomeProtocolProtocolnonnullable", type0->coded_name.c_str());
+  ASSERT_STR_EQ("Protocol20example_SomeProtocolnonnullable", type0->coded_name.c_str());
   ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type0->coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kProtocolHandle, type0->kind);
   ASSERT_EQ(4, type0->size);
@@ -176,7 +176,7 @@ protocol UseOfRequestOfProtocol {
   ASSERT_EQ(2, gen.coded_types().size());
 
   auto type0 = gen.coded_types().at(0).get();
-  ASSERT_STR_EQ("example_SomeProtocolRequestnonnullable", type0->coded_name.c_str());
+  ASSERT_STR_EQ("Request20example_SomeProtocolnonnullable", type0->coded_name.c_str());
   ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type0->coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kRequestHandle, type0->kind);
   ASSERT_EQ(4, type0->size);
@@ -483,7 +483,7 @@ table MyTable {
   ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type2_primitive->subtype);
 
   auto type3 = gen.coded_types().at(3).get();
-  ASSERT_STR_EQ("Arraybool42", type3->coded_name.c_str());
+  ASSERT_STR_EQ("Array42_4bool", type3->coded_name.c_str());
   ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type3->coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kArray, type3->kind);
   auto type3_array = static_cast<const fidl::coded::ArrayType*>(type3);
