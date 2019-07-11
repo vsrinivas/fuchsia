@@ -8,8 +8,6 @@
 group("ledger") {
   testonly = true
   public_deps = [
-    "//garnet/packages/config:overnetstack",
-    "//garnet/packages/prod:overnetstack",
     "//src/ledger/bin",
   ]
 }
