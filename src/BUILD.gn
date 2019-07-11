@@ -36,7 +36,6 @@ group("tests") {
     "connectivity:tests",
     "developer:tests",
     "experiences:tests",
-    "fuzzing:tests",
     "graphics:tests",
     "identity:tests",
     "ledger:tests",

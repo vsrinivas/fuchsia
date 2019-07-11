@@ -18,9 +18,6 @@ exceptions = {
     '//src/cobalt': [
         '//src/connectivity/wlan/lib/mlme/cpp:mlme',
     ],
-    '//src/connectivity/bluetooth': [
-        '//src/fuzzing/cpp',
-    ],
     '//src/connectivity/network': [
         '//garnet/go/src/fidlext/fuchsia/hardware/ethernet:fidlext_fuchsia_hardware_ethernet_fake_lib',
         '//garnet/go/src/grand_unified_binary:grand_unified_binary',
@@ -28,7 +25,6 @@ exceptions = {
     ],
     '//src/connectivity/network/mdns': [
         '//garnet/lib/inet',
-        '//src/fuzzing/cpp',
     ],
     '//src/connectivity/network/netstack3': [
         '//src/connectivity/network/testing/netemul/lib/',
@@ -39,7 +35,6 @@ exceptions = {
     ],
     '//src/connectivity/overnet': [
         '//garnet/examples/fidl/services:echo',
-        '//src/fuzzing/cpp',
     ],
     '//src/connectivity/wlan': [
         '//garnet/lib/wlan/',
@@ -81,7 +76,6 @@ exceptions = {
     '//src/ledger': [
         '//peridot/lib/',
         '//peridot/third_party/modp_b64:modp_b64',
-        '//src/fuzzing',
     ],
     '//src/ledger/bin/testing/ledger_test_instance_provider': [
         '//peridot/lib/',

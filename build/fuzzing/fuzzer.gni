@@ -101,7 +101,7 @@ template("fuzzer") {
     # Explicitly forward visibility for nested scopes.
     forward_variables_from(invoker, [ "visibility" ])
     deps += [
-      "//src/fuzzing/cpp:fuzzer_test",
+      "//src/lib/fuzzing/cpp:fuzzer_test",
       "//third_party/googletest:gtest_main",
     ]
   }

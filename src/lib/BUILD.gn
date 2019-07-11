@@ -26,6 +26,7 @@ group("tests") {
     "cobalt:tests",
     "containers/cpp:tests",
     "fidl_table_validation:tests",
+    "fuzzing:tests",
     "isolated_devmgr:tests",
     "process_builder:tests",
     "rust_backtrace:tests",
