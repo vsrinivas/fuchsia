@@ -36,7 +36,7 @@ Sampler::Sampler(ResourceRecycler* resource_recycler, vk::Format format, vk::Fil
     ycbcr_create_info.chromaFilter = filter;
     ycbcr_create_info.forceExplicitReconstruction = VK_FALSE;
 
-    ycbcr_conversion_ = ESCHER_CHECKED_VK_RESULT(device.createSamplerYcbcrConversion(
+    ycbcr_conversion_ = ESCHER_CHECKED_VK_RESULT(device.createSamplerYcbcrConversionKHR(
         ycbcr_create_info, nullptr, resource_recycler->vulkan_context().loader));
     is_immutable_ = true;
   }
