@@ -1,0 +1,73 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.test;
+
+/// Name of a test case.
+using Name = string:512;
+
+/// Description of a single test case.
+table Case {
+    /// Used to show human readable results.
+    1: Name name;
+};
+
+/// Defines the end state of a test case.
+enum Status {
+    PASSED = 1;
+    FAILED = 2;
+
+    // TODO: Add more as required.
+};
+
+/// Represents the results of invoking a single test case.
+/// Should be named 'Result', but this interacts awkwardly with Rust's generated
+/// code.
+table Outcome {
+    1: Status status;
+
+    // TODO: Fill in additional test results, such as:
+    //  - machine parsable test results
+    //  - instrumentation data
+    //  - traces & detailed timing information
+    //  - auxiliary logs such as syslog
+};
+
+/// Listener listens to results from |`Suite.Run`| request.
+protocol RunListener {
+    /// Indicates that an individual test case has started execution and provides
+    /// the primary log stream used by this test case.
+    OnTestCaseStarted(Name name, handle<socket> primary_log);
+
+    /// Indicates that an invididual test case has completed and outcome is
+    /// available.
+    OnTestCaseFinished(Name name, Outcome outcome);
+};
+
+/// Specification of a test to run.
+table Invocation {
+    /// Test case to execute.
+    1: Case case;
+
+    // TODO:
+    // - providing parameters for parameterized tests
+    // - handle to store artifacts for a tests case.
+};
+
+// TODO:
+//  - filtering on suites & categories
+//  - specifying different execution orders (e.g. random order, repeat, etc)
+table RunOptions {
+};
+
+[Discoverable]
+protocol Suite {
+    /// Enumerate the test cases available in this test suite.
+    GetTests() -> (vector<Case> cases);
+
+    /// Run the specified test cases. Results are returned over the results
+    /// channel. The Suite is expected to execute tests one at a time in the order
+    /// specified. Closing |run_listener| marks end of this call.
+    Run(vector<Invocation> tests, RunOptions options, RunListener run_listener);
+};

@@ -1,0 +1,170 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("test_suite_lib") {
+  sources = [
+    "test_suite.cc",
+    "test_suite.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.test",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("passing-test-example") {
+  deps = [
+    ":test_suite_lib",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+  sources = [
+    "passing_test_example.cc",
+  ]
+}
+
+executable("failing-test-example") {
+  deps = [
+    ":test_suite_lib",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+  sources = [
+    "failing_test_example.cc",
+  ]
+}
+
+executable("no-test-example") {
+  deps = [
+    ":test_suite_lib",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+  sources = [
+    "no_test_example.cc",
+  ]
+}
+
+executable("get-tests-hangs-example") {
+  deps = [
+    ":test_suite_lib",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+  sources = [
+    "get_tests_hangs_example.cc",
+  ]
+}
+
+executable("get-tests-closes-channel-example") {
+  deps = [
+    ":test_suite_lib",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+  sources = [
+    "get_tests_closes_channel_example.cc",
+  ]
+}
+
+executable("run-hangs-example") {
+  deps = [
+    ":test_suite_lib",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+  sources = [
+    "run_hangs_example.cc",
+  ]
+}
+
+executable("run-closes-channel-example") {
+  deps = [
+    ":test_suite_lib",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+  sources = [
+    "run_closes_channel_example.cc",
+  ]
+}
+
+package("example-tests") {
+  deps = [
+    ":failing-test-example",
+    ":get-tests-closes-channel-example",
+    ":get-tests-hangs-example",
+    ":no-test-example",
+    ":passing-test-example",
+    ":run-closes-channel-example",
+    ":run-hangs-example",
+  ]
+
+  binaries = [
+    {
+      name = "passing-test-example"
+    },
+
+    {
+      name = "no-test-example"
+    },
+
+    {
+      name = "failing-test-example"
+    },
+    {
+      name = "get-tests-hangs-example"
+    },
+    {
+      name = "run-hangs-example"
+    },
+    {
+      name = "get-tests-closes-channel-example"
+    },
+    {
+      name = "run-closes-channel-example"
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/passing-test-example.cmx"
+      dest = "passing-test-example.cmx"
+    },
+    {
+      path = "meta/no-test-example.cmx"
+      dest = "no-test-example.cmx"
+    },
+    {
+      path = "meta/failing-test-example.cmx"
+      dest = "failing-test-example.cmx"
+    },
+    {
+      path = "meta/get-tests-hangs-example.cmx"
+      dest = "get-tests-hangs-example.cmx"
+    },
+    {
+      path = "meta/get-tests-closes-channel-example.cmx"
+      dest = "get-tests-closes-channel-example.cmx"
+    },
+    {
+      path = "meta/run-closes-channel-example.cmx"
+      dest = "run-closes-channel-example.cmx"
+    },
+    {
+      path = "meta/run-hangs-example.cmx"
+      dest = "run-hangs-example.cmx"
+    },
+  ]
+}
+
+group("tests") {
+  deps = [
+    ":example-tests",
+  ]
+}
