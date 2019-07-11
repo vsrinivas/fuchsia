@@ -29,6 +29,8 @@
 #include "src/developer/debug/zxdb/client/arch_info.h"
 #include "src/developer/debug/zxdb/client/breakpoint_action.h"
 #include "src/developer/debug/zxdb/client/breakpoint_impl.h"
+#include "src/developer/debug/zxdb/client/filter.h"
+#include "src/developer/debug/zxdb/client/job_context.h"
 #include "src/developer/debug/zxdb/client/minidump_remote_api.h"
 #include "src/developer/debug/zxdb/client/process_impl.h"
 #include "src/developer/debug/zxdb/client/remote_api_impl.h"
@@ -752,6 +754,14 @@ void Session::AddObserver(SessionObserver* observer) { observers_.AddObserver(ob
 
 void Session::RemoveObserver(SessionObserver* observer) { observers_.RemoveObserver(observer); }
 
+void Session::AddFilterObserver(FilterObserver* observer) {
+  filter_observers_.AddObserver(observer);
+}
+
+void Session::RemoveFilterObserver(FilterObserver* observer) {
+  filter_observers_.RemoveObserver(observer);
+}
+
 void Session::SendSessionNotification(SessionObserver::NotificationType type, const char* fmt,
                                       ...) {
   va_list ap;
@@ -789,7 +799,7 @@ fxl::WeakPtr<Session> Session::GetWeakPtr() { return weak_factory_.GetWeakPtr();
 void Session::QuitAgent(std::function<void(const Err&)> cb) {
   bool is_connected = IsConnected();
 
-  // We call disconnect even when is_connected if false, just in case there is a
+  // We call disconnect even when is_connected is false, just in case there is a
   // pending connection going on.
   if (!is_connected) {
     Disconnect(nullptr);

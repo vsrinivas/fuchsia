@@ -16,6 +16,7 @@ namespace zxdb {
 class Filter : public ClientObject {
  public:
   explicit Filter(Session* session);
+  virtual ~Filter();
 
   void SetPattern(const std::string& pattern);
   void SetJob(JobContext* job);

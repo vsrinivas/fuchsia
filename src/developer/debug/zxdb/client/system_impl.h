@@ -32,9 +32,6 @@ class SystemImpl final : public System,
 
   ProcessImpl* ProcessImplFromKoid(uint64_t koid) const;
 
-  // Lets us know that we should sync the filters with the debug agent.
-  void MarkFiltersDirty();
-
   // Broadcasts the global process notifications.
   void NotifyDidCreateProcess(Process* process);
   void NotifyWillDestroyProcess(Process* process);
@@ -123,7 +120,6 @@ class SystemImpl final : public System,
   std::map<uint32_t, std::unique_ptr<BreakpointImpl>> breakpoints_;
 
   std::vector<std::unique_ptr<Filter>> filters_;
-  bool filters_dirty_ = false;
 
   SystemSymbols symbols_;
 

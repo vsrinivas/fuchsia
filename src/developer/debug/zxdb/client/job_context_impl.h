@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_JOB_CONTEXT_IMPL_H_
 
 #include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/zxdb/client/filter_observer.h"
 #include "src/developer/debug/zxdb/client/job_context.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -15,7 +16,7 @@ namespace zxdb {
 class JobImpl;
 class SystemImpl;
 
-class JobContextImpl : public JobContext, public SettingStoreObserver {
+class JobContextImpl : public JobContext, public SettingStoreObserver, public FilterObserver {
  public:
   // The system owns this object and will outlive it.
   JobContextImpl(SystemImpl* system, bool is_implicit_root);
@@ -59,6 +60,11 @@ class JobContextImpl : public JobContext, public SettingStoreObserver {
   // SettingStoreObserver implementation
   void OnSettingChanged(const SettingStore&, const std::string& setting_name) override;
 
+  // FilterObserver implementation
+  void DidCreateFilter(Filter* filter) override;
+  void OnChangedFilter(Filter* filter, std::optional<JobContext*> previous_job) override;
+  void WillDestroyFilter(Filter* filter) override;
+
  private:
   SystemImpl* system_;  // Owns |this|.
 
@@ -71,6 +77,8 @@ class JobContextImpl : public JobContext, public SettingStoreObserver {
   bool last_filter_set_failed_ = false;
 
   fxl::WeakPtrFactory<JobContextImpl> impl_weak_factory_;
+
+  void RefreshFilters();
 
   void AttachInternal(debug_ipc::TaskType type, uint64_t koid, Callback callback);
 

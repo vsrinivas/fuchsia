@@ -9,6 +9,7 @@
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/zx_status.h"
+#include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/job_impl.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -25,12 +26,15 @@ JobContextImpl::JobContextImpl(SystemImpl* system, bool is_implicit_root)
       is_implicit_root_(is_implicit_root),
       impl_weak_factory_(this) {
   settings_.set_name("job");
+  session()->AddFilterObserver(this);
+  RefreshFilters();
 }
 
 JobContextImpl::~JobContextImpl() {
   // If the job is still running, make sure we broadcast terminated
   // notifications before deleting everything.
   ImplicitlyDetach();
+  session()->RemoveFilterObserver(this);
 }
 
 std::unique_ptr<JobContextImpl> JobContextImpl::Clone(SystemImpl* system) {
@@ -214,6 +218,52 @@ void JobContextImpl::OnDetachReply(const Err& err, uint32_t status, Callback cal
   }
 
   callback(GetWeakPtr(), issue_err);
+}
+
+void JobContextImpl::DidCreateFilter(Filter* filter) {
+  if (!filter->valid()) {
+    return;
+  }
+
+  if (filter->job() && filter->job() != this) {
+    return;
+  }
+
+  RefreshFilters();
+}
+
+void JobContextImpl::OnChangedFilter(Filter* filter, std::optional<JobContext*> previous_job) {
+  if (!filter->valid()) {
+    // The filter only becomes invalid if the job it applies to dies. We're not dead, so this filter
+    // never applied to us.
+    return;
+  }
+
+  if ((previous_job && (*previous_job == this || !*previous_job)) || filter->job() == this ||
+      !filter->job()) {
+    RefreshFilters();
+  }
+}
+
+void JobContextImpl::WillDestroyFilter(Filter* filter) {
+  // Same process.
+  DidCreateFilter(filter);
+}
+
+void JobContextImpl::RefreshFilters() {
+  std::vector<std::string> items;
+
+  for (const auto& filter : session()->system().GetFilters()) {
+    if (!filter->valid()) {
+      continue;
+    }
+
+    if (filter->job() == this || !filter->job()) {
+      items.push_back(filter->pattern());
+    }
+  }
+
+  SendAndUpdateFilters(items);
 }
 
 }  // namespace zxdb

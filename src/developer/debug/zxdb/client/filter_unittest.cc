@@ -118,6 +118,9 @@ TEST_F(FilterTest, SetSpecificFilters) {
   EXPECT_TRUE(job_context_alive);
 
   filter->SetPattern("foo");
+  // Two jobs update, two quits.
+  MessageLoop::Current()->Run();
+  MessageLoop::Current()->Run();
   filter->SetJob(context_a);
   MessageLoop::Current()->Run();
 
@@ -174,16 +177,30 @@ TEST_F(FilterTest, SetExAnteFilters) {
 
   auto contexts = session().system().GetJobContexts();
   ASSERT_EQ(1u, contexts.size());
-  auto context = contexts[0];
+  auto context_a = contexts[0];
+  auto context_b = session().system().CreateNewJobContext(context_a);
   bool job_context_alive;
   Err ctx_err;
 
-  context->Attach(1234,
-                  [&job_context_alive, &ctx_err](fxl::WeakPtr<JobContext> ctx, const Err& err) {
-                    ctx_err = err;
-                    job_context_alive = !!ctx;
-                    MessageLoop::Current()->QuitNow();
-                  });
+  context_a->Attach(1234,
+                    [&job_context_alive, &ctx_err](fxl::WeakPtr<JobContext> ctx, const Err& err) {
+                      ctx_err = err;
+                      job_context_alive = !!ctx;
+                      MessageLoop::Current()->QuitNow();
+                    });
+  MessageLoop::Current()->Run();
+
+  EXPECT_FALSE(ctx_err.has_error());
+  EXPECT_TRUE(job_context_alive);
+
+  context_b->Attach(5678,
+                    [&job_context_alive, &ctx_err](fxl::WeakPtr<JobContext> ctx, const Err& err) {
+                      ctx_err = err;
+                      job_context_alive = !!ctx;
+                      MessageLoop::Current()->QuitNow();
+                    });
+  MessageLoop::Current()->Run();
+  // One spin to attach the job, another spin to update the filters.
   MessageLoop::Current()->Run();
 
   EXPECT_FALSE(ctx_err.has_error());
@@ -191,6 +208,9 @@ TEST_F(FilterTest, SetExAnteFilters) {
 
   ASSERT_EQ(1u, sink().filters[1234u].size());
   EXPECT_EQ("foo", sink().filters[1234u][0]);
+
+  ASSERT_EQ(1u, sink().filters[5678u].size());
+  EXPECT_EQ("foo", sink().filters[5678u][0]);
 }
 
 }  // namespace zxdb

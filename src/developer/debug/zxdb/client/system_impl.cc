@@ -193,7 +193,12 @@ SystemImpl::~SystemImpl() {
     for (auto& observer : observers())
       observer.WillDestroyTarget(target.get());
   }
+
   targets_.clear();
+
+  // Filters list may be iterated as we clean them up. Move its contents here first then let it
+  // drop so the dying objects are out of the system.
+  auto filters = std::move(filters_);
 }
 
 ProcessImpl* SystemImpl::ProcessImplFromKoid(uint64_t koid) const {
@@ -203,50 +208,6 @@ ProcessImpl* SystemImpl::ProcessImplFromKoid(uint64_t koid) const {
       return process;
   }
   return nullptr;
-}
-
-void SystemImpl::MarkFiltersDirty() {
-  if (!debug_ipc::MessageLoop::Current()) {
-    filters_dirty_ = false;
-    return;
-  }
-
-  if (filters_dirty_) {
-    return;
-  }
-
-  filters_dirty_ = true;
-
-  debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [weak_this = weak_factory_.GetWeakPtr()]() {
-        if (!weak_this) {
-          return;
-        }
-
-        std::map<JobContext*, std::vector<std::string>> filters_by_job;
-        std::vector<std::string> filters;
-
-        for (const auto& filter : weak_this->filters_) {
-          if (!filter->valid()) {
-            continue;
-          }
-
-          if (!filter->job()) {
-            filters.push_back(filter->pattern());
-          } else {
-            filters_by_job[filter->job()].push_back(filter->pattern());
-          }
-        }
-
-        for (auto& ctx : weak_this->job_contexts_) {
-          auto& items = filters_by_job[ctx.get()];
-          std::copy(filters.begin(), filters.end(), std::back_inserter(items));
-
-          ctx->SendAndUpdateFilters(items);
-        }
-
-        weak_this->filters_dirty_ = false;
-      });
 }
 
 void SystemImpl::NotifyDidCreateProcess(Process* process) {
@@ -505,10 +466,11 @@ void SystemImpl::DeleteFilter(Filter* filter) {
   for (auto& observer : observers())
     observer.WillDestroyFilter(filter);
 
+  // Move this aside while we modify the list, then let it drop at the end of the function. That way
+  // the destructor doesn't see itself in the list of active filters when it emits
+  // WillDestroyFilter.
+  auto filter_ptr = std::move(*found);
   filters_.erase(found);
-
-  // TODO: Yeah, yeah. This needs to go. Patch soon.
-  MarkFiltersDirty();
 }
 
 void SystemImpl::Pause(std::function<void()> on_paused) {
@@ -613,8 +575,6 @@ void SystemImpl::AddNewJobContext(std::unique_ptr<JobContextImpl> job_context) {
   job_contexts_.push_back(std::move(job_context));
   for (auto& observer : observers())
     observer.DidCreateJobContext(for_observers);
-
-  MarkFiltersDirty();
 }
 
 void SystemImpl::OnSettingChanged(const SettingStore& store, const std::string& setting_name) {

@@ -8,18 +8,39 @@
 
 namespace zxdb {
 
-Filter::Filter(Session* session) : ClientObject(session) {}
+Filter::Filter(Session* session) : ClientObject(session) {
+  for (auto& observer : this->session()->filter_observers()) {
+    observer.DidCreateFilter(this);
+  }
+}
+
+Filter::~Filter() {
+  for (auto& observer : session()->filter_observers()) {
+    observer.WillDestroyFilter(this);
+  }
+}
 
 void Filter::SetPattern(const std::string& pattern) {
   pattern_ = pattern;
 
-  session()->system_impl().MarkFiltersDirty();
+  if (valid()) {
+    for (auto& observer : session()->filter_observers()) {
+      observer.OnChangedFilter(this, job());
+    }
+  }
 }
 
 void Filter::SetJob(JobContext* job) {
-  job_ = job ? std::optional(job->GetWeakPtr()) : std::nullopt;
+  std::optional<JobContext*> previous(this->job());
 
-  session()->system_impl().MarkFiltersDirty();
+  if (!valid()) {
+    previous = std::nullopt;
+  }
+
+  job_ = job ? std::optional(job->GetWeakPtr()) : std::nullopt;
+  for (auto& observer : session()->filter_observers()) {
+    observer.OnChangedFilter(this, previous);
+  }
 }
 
 }  // namespace zxdb
