@@ -72,6 +72,7 @@ update() {
   if $cipd_ok && CIPD="$(find_cipd)"; then
     # We have CIPD, so use it.
     if [[ "$("$CIPD" ls fuchsia_internal | tail -1)" != "No matching packages." ]]; then
+      internal_access=true
       run_cipd "$CIPD" ensure -root "$DOWNLOAD_DIR" || return
     fi
   fi
