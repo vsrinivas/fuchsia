@@ -12,7 +12,7 @@ namespace block {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kFtl_Format_Ordinal = 888193465lu << 32;
+constexpr uint64_t kFtl_Format_Ordinal = 0x34f0c1b900000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_FtlFormatResponseTable;
 
 }  // namespace
@@ -116,7 +116,8 @@ bool Ftl::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kFtl_Format_Ordinal: {
+    case kFtl_Format_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<FormatRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -174,24 +175,24 @@ void Ftl::Interface::FormatCompleterBase::Reply(::fidl::DecodedMessage<FormatRes
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kBlock_GetInfo_Ordinal = 1920533656lu << 32;
+constexpr uint64_t kBlock_GetInfo_Ordinal = 0x7279049800000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockGetInfoResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBlock_GetStats_Ordinal = 1941514068lu << 32;
+constexpr uint64_t kBlock_GetStats_Ordinal = 0x73b9275400000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockGetStatsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockGetStatsResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBlock_GetFifo_Ordinal = 1667329470lu << 32;
+constexpr uint64_t kBlock_GetFifo_Ordinal = 0x63616dbe00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockGetFifoResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBlock_AttachVmo_Ordinal = 1927229030lu << 32;
+constexpr uint64_t kBlock_AttachVmo_Ordinal = 0x72df2e6600000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockAttachVmoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockAttachVmoResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBlock_CloseFifo_Ordinal = 1800029715lu << 32;
+constexpr uint64_t kBlock_CloseFifo_Ordinal = 0x6b4a461300000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockCloseFifoResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBlock_RebindDevice_Ordinal = 740294064lu << 32;
+constexpr uint64_t kBlock_RebindDevice_Ordinal = 0x2c1ffdb000000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockRebindDeviceResponseTable;
 
 }  // namespace
@@ -655,7 +656,8 @@ bool Block::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kBlock_GetInfo_Ordinal: {
+    case kBlock_GetInfo_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetInfoRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -665,7 +667,8 @@ bool Block::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::GetInfoCompleter::Sync(txn));
       return true;
     }
-    case kBlock_GetStats_Ordinal: {
+    case kBlock_GetStats_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetStatsRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -676,7 +679,8 @@ bool Block::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::GetStatsCompleter::Sync(txn));
       return true;
     }
-    case kBlock_GetFifo_Ordinal: {
+    case kBlock_GetFifo_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetFifoRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -686,7 +690,8 @@ bool Block::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::GetFifoCompleter::Sync(txn));
       return true;
     }
-    case kBlock_AttachVmo_Ordinal: {
+    case kBlock_AttachVmo_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<AttachVmoRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -697,7 +702,8 @@ bool Block::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::AttachVmoCompleter::Sync(txn));
       return true;
     }
-    case kBlock_CloseFifo_Ordinal: {
+    case kBlock_CloseFifo_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CloseFifoRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -707,7 +713,8 @@ bool Block::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::CloseFifoCompleter::Sync(txn));
       return true;
     }
-    case kBlock_RebindDevice_Ordinal: {
+    case kBlock_RebindDevice_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<RebindDeviceRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);

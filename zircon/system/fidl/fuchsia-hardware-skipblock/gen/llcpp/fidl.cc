@@ -12,14 +12,14 @@ namespace skipblock {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kSkipBlock_GetPartitionInfo_Ordinal = 1635856238lu << 32;
+constexpr uint64_t kSkipBlock_GetPartitionInfo_Ordinal = 0x61812f6e00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockGetPartitionInfoResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kSkipBlock_Read_Ordinal = 1759755874lu << 32;
+constexpr uint64_t kSkipBlock_Read_Ordinal = 0x68e3be6200000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockReadRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockReadResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kSkipBlock_Write_Ordinal = 1769830154lu << 32;
+constexpr uint64_t kSkipBlock_Write_Ordinal = 0x697d770a00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteResponseTable;
 
@@ -308,7 +308,8 @@ bool SkipBlock::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kSkipBlock_GetPartitionInfo_Ordinal: {
+    case kSkipBlock_GetPartitionInfo_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetPartitionInfoRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -318,7 +319,8 @@ bool SkipBlock::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::GetPartitionInfoCompleter::Sync(txn));
       return true;
     }
-    case kSkipBlock_Read_Ordinal: {
+    case kSkipBlock_Read_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<ReadRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -329,7 +331,8 @@ bool SkipBlock::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::ReadCompleter::Sync(txn));
       return true;
     }
-    case kSkipBlock_Write_Ordinal: {
+    case kSkipBlock_Write_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<WriteRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);

@@ -203,10 +203,7 @@ type Interface struct {
 
 type Method struct {
 	types.Attributes
-	Ordinal              uint64
-	OrdinalName          string
-	GenOrdinal           uint64
-	GenOrdinalName       string
+	types.Ordinals
 	Name                 string
 	NameInLowerSnakeCase string
 	HasRequest           bool
@@ -812,11 +809,12 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		}
 		_, transitional := v.LookupAttribute("Transitional")
 		m := Method{
-			Attributes:           v.Attributes,
-			Ordinal:              v.Ordinal,
-			OrdinalName:          fmt.Sprintf("k%s_%s_Ordinal", r.Name, v.Name),
-			GenOrdinal:           v.GenOrdinal,
-			GenOrdinalName:       fmt.Sprintf("k%s_%s_GenOrdinal", r.Name, v.Name),
+			Attributes: v.Attributes,
+			Ordinals: types.NewOrdinals(
+				v,
+				fmt.Sprintf("k%s_%s_Ordinal", r.Name, v.Name),
+				fmt.Sprintf("k%s_%s_GenOrdinal", r.Name, v.Name),
+			),
 			Name:                 name,
 			NameInLowerSnakeCase: common.ToSnakeCase(name),
 			HasRequest:           v.HasRequest,

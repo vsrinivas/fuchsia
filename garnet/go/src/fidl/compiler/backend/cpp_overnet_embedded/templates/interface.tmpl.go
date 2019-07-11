@@ -133,10 +133,9 @@ class {{ .StubName }} : public ::overnet::internal::FidlChannel, public {{ .Even
 namespace {
 
 {{- range .Methods }}
-  {{ if ne .GenOrdinal .Ordinal }}
-constexpr uint64_t {{ .GenOrdinalName }} = {{ .GenOrdinal }}lu << 32;
+  {{- range .Ordinals.Reads }}
+constexpr uint64_t {{ .Name }} = {{ .Ordinal }}lu;
   {{- end }}
-constexpr uint64_t {{ .OrdinalName }} = {{ .Ordinal }}lu << 32;
   {{- if .HasRequest }}
 extern "C" const fidl_type_t {{ .RequestTypeName }};
   {{- end }}
@@ -167,10 +166,10 @@ zx_status_t {{ .ProxyName }}::Dispatch_(::fuchsia::overnet::protocol::ZirconChan
     {{- range .Methods }}
       {{- if not .HasRequest }}
         {{- if .HasResponse }}
-          {{- if ne .GenOrdinal .Ordinal }}
-    case {{ .GenOrdinalName }}:
+          {{- range .Ordinal.Reads }}
+    case {{ .Name }}:
           {{- end }}
-    case {{ .OrdinalName }}: {
+    {
       if (!{{ .Name }}) {
         status = ZX_OK;
         break;
@@ -211,7 +210,7 @@ namespace {
 }  // namespace
 {{- end }}
 void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
-  ::overnet::internal::Encoder _encoder({{ .OrdinalName }}, io_.get());
+  ::overnet::internal::Encoder _encoder({{ .Ordinals.Write.Name }}, io_.get());
     {{- if .Request }}
   _encoder.Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t));
       {{- range .Request }}
@@ -261,10 +260,10 @@ zx_status_t {{ .StubName }}::Dispatch_(
   switch (ordinal) {
     {{- range .Methods }}
       {{- if .HasRequest }}
-        {{- if ne .GenOrdinal .Ordinal }}
-    case {{ .GenOrdinalName }}:
+        {{- range .Ordinals.Reads }}
+    case {{ .Name }}:
         {{- end }}
-    case {{ .OrdinalName }}: {
+    {
       const char* error_msg = nullptr;
       status = decoder.FidlDecode(&{{ .RequestTypeName }}, &error_msg);
       if (status != ZX_OK) {
@@ -282,7 +281,7 @@ zx_status_t {{ .StubName }}::Dispatch_(
         {{- if .HasResponse -}}
           {{- if .Request }}, {{ end -}}
           [this]({{ template "Params" .Response }}) {
-            ::overnet::internal::Encoder _encoder({{ .OrdinalName }}, io_.get());
+            ::overnet::internal::Encoder _encoder({{ .Ordinals.Write.Name }}, io_.get());
             {{- if .Response }}
             _encoder.Alloc({{ .ResponseSize }} - sizeof(fidl_message_header_t));
               {{- range .Response }}
@@ -309,7 +308,7 @@ zx_status_t {{ .StubName }}::Dispatch_(
   {{- if not .HasRequest }}
     {{- if .HasResponse }}
 void {{ $.StubName }}::{{ template "EventMethodSignature" . }} {
-  ::overnet::internal::Encoder _encoder({{ .OrdinalName }}, io_.get());
+  ::overnet::internal::Encoder _encoder({{ .Ordinals.Write.Name }}, io_.get());
     {{- if .Response }}
   _encoder.Alloc({{ .ResponseSize }} - sizeof(fidl_message_header_t));
       {{- range .Response }}

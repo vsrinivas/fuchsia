@@ -12,10 +12,10 @@ namespace serial {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetClass_Ordinal = 1699322127lu << 32;
+constexpr uint64_t kDevice_GetClass_Ordinal = 0x6549990f00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceGetClassResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_SetConfig_Ordinal = 280807052lu << 32;
+constexpr uint64_t kDevice_SetConfig_Ordinal = 0x10bcc68c00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceSetConfigResponseTable;
 
 }  // namespace
@@ -209,7 +209,8 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDevice_GetClass_Ordinal: {
+    case kDevice_GetClass_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetClassRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -219,7 +220,8 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::GetClassCompleter::Sync(txn));
       return true;
     }
-    case kDevice_SetConfig_Ordinal: {
+    case kDevice_SetConfig_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SetConfigRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);

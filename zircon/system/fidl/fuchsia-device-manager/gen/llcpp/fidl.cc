@@ -12,15 +12,15 @@ namespace manager {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDebugDumper_DumpTree_Ordinal = 939808908lu << 32;
+constexpr uint64_t kDebugDumper_DumpTree_Ordinal = 0x3804588c00000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_DebugDumperDumpTreeRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DebugDumperDumpTreeResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDebugDumper_DumpDrivers_Ordinal = 1379392627lu << 32;
+constexpr uint64_t kDebugDumper_DumpDrivers_Ordinal = 0x5237dc7300000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_DebugDumperDumpDriversRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DebugDumperDumpDriversResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDebugDumper_DumpBindingProperties_Ordinal = 424998641lu << 32;
+constexpr uint64_t kDebugDumper_DumpBindingProperties_Ordinal = 0x1954f6f100000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_DebugDumperDumpBindingPropertiesRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DebugDumperDumpBindingPropertiesResponseTable;
 
@@ -316,7 +316,8 @@ bool DebugDumper::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDebugDumper_DumpTree_Ordinal: {
+    case kDebugDumper_DumpTree_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<DumpTreeRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -327,7 +328,8 @@ bool DebugDumper::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         Interface::DumpTreeCompleter::Sync(txn));
       return true;
     }
-    case kDebugDumper_DumpDrivers_Ordinal: {
+    case kDebugDumper_DumpDrivers_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<DumpDriversRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -338,7 +340,8 @@ bool DebugDumper::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         Interface::DumpDriversCompleter::Sync(txn));
       return true;
     }
-    case kDebugDumper_DumpBindingProperties_Ordinal: {
+    case kDebugDumper_DumpBindingProperties_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<DumpBindingPropertiesRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -467,7 +470,7 @@ void DebugDumper::Interface::DumpBindingPropertiesCompleterBase::Reply(::fidl::D
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kAdministrator_Suspend_Ordinal = 2127208844lu << 32;
+constexpr uint64_t kAdministrator_Suspend_Ordinal = 0x7ecaa18c00000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_AdministratorSuspendRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_AdministratorSuspendResponseTable;
 
@@ -571,7 +574,8 @@ bool Administrator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kAdministrator_Suspend_Ordinal: {
+    case kAdministrator_Suspend_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SuspendRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -630,13 +634,13 @@ void Administrator::Interface::SuspendCompleterBase::Reply(::fidl::DecodedMessag
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDevhostController_CreateDeviceStub_Ordinal = 764285003lu << 32;
+constexpr uint64_t kDevhostController_CreateDeviceStub_Ordinal = 0x2d8e104b00000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceStubRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kDevhostController_CreateDevice_Ordinal = 795841975lu << 32;
+constexpr uint64_t kDevhostController_CreateDevice_Ordinal = 0x2f6f95b700000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kDevhostController_CreateCompositeDevice_Ordinal = 898521609lu << 32;
+constexpr uint64_t kDevhostController_CreateCompositeDevice_Ordinal = 0x358e5a0900000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateCompositeDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateCompositeDeviceResponseTable;
 
@@ -883,7 +887,8 @@ bool DevhostController::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tr
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDevhostController_CreateDeviceStub_Ordinal: {
+    case kDevhostController_CreateDeviceStub_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CreateDeviceStubRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -894,7 +899,8 @@ bool DevhostController::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tr
         Interface::CreateDeviceStubCompleter::Sync(txn));
       return true;
     }
-    case kDevhostController_CreateDevice_Ordinal: {
+    case kDevhostController_CreateDevice_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CreateDeviceRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -905,7 +911,8 @@ bool DevhostController::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tr
         Interface::CreateDeviceCompleter::Sync(txn));
       return true;
     }
-    case kDevhostController_CreateCompositeDevice_Ordinal: {
+    case kDevhostController_CreateCompositeDevice_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CreateCompositeDeviceRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -964,24 +971,24 @@ void DevhostController::Interface::CreateCompositeDeviceCompleterBase::Reply(::f
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDeviceController_BindDriver_Ordinal = 1027533467lu << 32;
+constexpr uint64_t kDeviceController_BindDriver_Ordinal = 0x3d3eea9b00000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerBindDriverRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerBindDriverResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDeviceController_ConnectProxy_Ordinal = 1479413147lu << 32;
+constexpr uint64_t kDeviceController_ConnectProxy_Ordinal = 0x582e0d9b00000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerConnectProxyRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kDeviceController_Unbind_Ordinal = 1925042818lu << 32;
+constexpr uint64_t kDeviceController_Unbind_Ordinal = 0x72bdd28200000000lu;
 [[maybe_unused]]
-constexpr uint64_t kDeviceController_CompleteRemoval_Ordinal = 357886888lu << 32;
+constexpr uint64_t kDeviceController_CompleteRemoval_Ordinal = 0x1554eba800000000lu;
 [[maybe_unused]]
-constexpr uint64_t kDeviceController_RemoveDevice_Ordinal = 98258146lu << 32;
+constexpr uint64_t kDeviceController_RemoveDevice_Ordinal = 0x5db4ce200000000lu;
 [[maybe_unused]]
-constexpr uint64_t kDeviceController_Suspend_Ordinal = 1150324762lu << 32;
+constexpr uint64_t kDeviceController_Suspend_Ordinal = 0x4490901a00000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerSuspendRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerSuspendResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDeviceController_CompleteCompatibilityTests_Ordinal = 1197356668lu << 32;
+constexpr uint64_t kDeviceController_CompleteCompatibilityTests_Ordinal = 0x475e367c00000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsRequestTable;
 
 }  // namespace
@@ -1351,7 +1358,8 @@ bool DeviceController::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDeviceController_BindDriver_Ordinal: {
+    case kDeviceController_BindDriver_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<BindDriverRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1362,7 +1370,8 @@ bool DeviceController::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::BindDriverCompleter::Sync(txn));
       return true;
     }
-    case kDeviceController_ConnectProxy_Ordinal: {
+    case kDeviceController_ConnectProxy_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<ConnectProxyRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1373,7 +1382,8 @@ bool DeviceController::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::ConnectProxyCompleter::Sync(txn));
       return true;
     }
-    case kDeviceController_Unbind_Ordinal: {
+    case kDeviceController_Unbind_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<UnbindRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1383,7 +1393,8 @@ bool DeviceController::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::UnbindCompleter::Sync(txn));
       return true;
     }
-    case kDeviceController_CompleteRemoval_Ordinal: {
+    case kDeviceController_CompleteRemoval_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CompleteRemovalRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1393,7 +1404,8 @@ bool DeviceController::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::CompleteRemovalCompleter::Sync(txn));
       return true;
     }
-    case kDeviceController_RemoveDevice_Ordinal: {
+    case kDeviceController_RemoveDevice_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<RemoveDeviceRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1403,7 +1415,8 @@ bool DeviceController::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::RemoveDeviceCompleter::Sync(txn));
       return true;
     }
-    case kDeviceController_Suspend_Ordinal: {
+    case kDeviceController_Suspend_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SuspendRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1414,7 +1427,8 @@ bool DeviceController::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::SuspendCompleter::Sync(txn));
       return true;
     }
-    case kDeviceController_CompleteCompatibilityTests_Ordinal: {
+    case kDeviceController_CompleteCompatibilityTests_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CompleteCompatibilityTestsRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1504,60 +1518,60 @@ void DeviceController::Interface::SuspendCompleterBase::Reply(::fidl::DecodedMes
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kCoordinator_AddDevice_Ordinal = 1247712482lu << 32;
+constexpr uint64_t kCoordinator_AddDevice_Ordinal = 0x4a5e94e200000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kCoordinator_AddDeviceInvisible_Ordinal = 1811214030lu << 32;
+constexpr uint64_t kCoordinator_AddDeviceInvisible_Ordinal = 0x6bf4eece00000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceInvisibleRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceInvisibleResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kCoordinator_ScheduleRemove_Ordinal = 1705227782lu << 32;
+constexpr uint64_t kCoordinator_ScheduleRemove_Ordinal = 0x65a3b60600000000lu;
 [[maybe_unused]]
-constexpr uint64_t kCoordinator_UnbindDone_Ordinal = 1157876008lu << 32;
+constexpr uint64_t kCoordinator_UnbindDone_Ordinal = 0x4503c92800000000lu;
 [[maybe_unused]]
-constexpr uint64_t kCoordinator_RemoveDevice_Ordinal = 511080328lu << 32;
+constexpr uint64_t kCoordinator_RemoveDevice_Ordinal = 0x1e76778800000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRemoveDeviceResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kCoordinator_MakeVisible_Ordinal = 1389715036lu << 32;
+constexpr uint64_t kCoordinator_MakeVisible_Ordinal = 0x52d55e5c00000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorMakeVisibleResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kCoordinator_BindDevice_Ordinal = 1343367265lu << 32;
+constexpr uint64_t kCoordinator_BindDevice_Ordinal = 0x5012286100000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorBindDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorBindDeviceResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kCoordinator_GetTopologicalPath_Ordinal = 1773327249lu << 32;
+constexpr uint64_t kCoordinator_GetTopologicalPath_Ordinal = 0x69b2d39100000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorGetTopologicalPathResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kCoordinator_LoadFirmware_Ordinal = 2060886133lu << 32;
+constexpr uint64_t kCoordinator_LoadFirmware_Ordinal = 0x7ad6a07500000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorLoadFirmwareRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorLoadFirmwareResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kCoordinator_GetMetadata_Ordinal = 799782349lu << 32;
+constexpr uint64_t kCoordinator_GetMetadata_Ordinal = 0x2fabb5cd00000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorGetMetadataRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorGetMetadataResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kCoordinator_GetMetadataSize_Ordinal = 826148625lu << 32;
+constexpr uint64_t kCoordinator_GetMetadataSize_Ordinal = 0x313e071100000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorGetMetadataSizeRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorGetMetadataSizeResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kCoordinator_AddMetadata_Ordinal = 837427846lu << 32;
+constexpr uint64_t kCoordinator_AddMetadata_Ordinal = 0x31ea228600000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddMetadataRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddMetadataResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kCoordinator_PublishMetadata_Ordinal = 450449235lu << 32;
+constexpr uint64_t kCoordinator_PublishMetadata_Ordinal = 0x1ad94f5300000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorPublishMetadataRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorPublishMetadataResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kCoordinator_AddCompositeDevice_Ordinal = 1211683670lu << 32;
+constexpr uint64_t kCoordinator_AddCompositeDevice_Ordinal = 0x4838d35600000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddCompositeDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddCompositeDeviceResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kCoordinator_DirectoryWatch_Ordinal = 708253076lu << 32;
+constexpr uint64_t kCoordinator_DirectoryWatch_Ordinal = 0x2a37159400000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorDirectoryWatchRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorDirectoryWatchResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kCoordinator_RunCompatibilityTests_Ordinal = 376985851lu << 32;
+constexpr uint64_t kCoordinator_RunCompatibilityTests_Ordinal = 0x167858fb00000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRunCompatibilityTestsResponseTable;
 
 }  // namespace
@@ -2918,7 +2932,8 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kCoordinator_AddDevice_Ordinal: {
+    case kCoordinator_AddDevice_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<AddDeviceRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2929,7 +2944,8 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         Interface::AddDeviceCompleter::Sync(txn));
       return true;
     }
-    case kCoordinator_AddDeviceInvisible_Ordinal: {
+    case kCoordinator_AddDeviceInvisible_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<AddDeviceInvisibleRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2940,7 +2956,8 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         Interface::AddDeviceInvisibleCompleter::Sync(txn));
       return true;
     }
-    case kCoordinator_ScheduleRemove_Ordinal: {
+    case kCoordinator_ScheduleRemove_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<ScheduleRemoveRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2950,7 +2967,8 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         Interface::ScheduleRemoveCompleter::Sync(txn));
       return true;
     }
-    case kCoordinator_UnbindDone_Ordinal: {
+    case kCoordinator_UnbindDone_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<UnbindDoneRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2960,7 +2978,8 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         Interface::UnbindDoneCompleter::Sync(txn));
       return true;
     }
-    case kCoordinator_RemoveDevice_Ordinal: {
+    case kCoordinator_RemoveDevice_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<RemoveDeviceRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2970,7 +2989,8 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         Interface::RemoveDeviceCompleter::Sync(txn));
       return true;
     }
-    case kCoordinator_MakeVisible_Ordinal: {
+    case kCoordinator_MakeVisible_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<MakeVisibleRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2980,7 +3000,8 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         Interface::MakeVisibleCompleter::Sync(txn));
       return true;
     }
-    case kCoordinator_BindDevice_Ordinal: {
+    case kCoordinator_BindDevice_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<BindDeviceRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2991,7 +3012,8 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         Interface::BindDeviceCompleter::Sync(txn));
       return true;
     }
-    case kCoordinator_GetTopologicalPath_Ordinal: {
+    case kCoordinator_GetTopologicalPath_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetTopologicalPathRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -3001,7 +3023,8 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         Interface::GetTopologicalPathCompleter::Sync(txn));
       return true;
     }
-    case kCoordinator_LoadFirmware_Ordinal: {
+    case kCoordinator_LoadFirmware_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<LoadFirmwareRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -3012,7 +3035,8 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         Interface::LoadFirmwareCompleter::Sync(txn));
       return true;
     }
-    case kCoordinator_GetMetadata_Ordinal: {
+    case kCoordinator_GetMetadata_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetMetadataRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -3023,7 +3047,8 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         Interface::GetMetadataCompleter::Sync(txn));
       return true;
     }
-    case kCoordinator_GetMetadataSize_Ordinal: {
+    case kCoordinator_GetMetadataSize_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetMetadataSizeRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -3034,7 +3059,8 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         Interface::GetMetadataSizeCompleter::Sync(txn));
       return true;
     }
-    case kCoordinator_AddMetadata_Ordinal: {
+    case kCoordinator_AddMetadata_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<AddMetadataRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -3045,7 +3071,8 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         Interface::AddMetadataCompleter::Sync(txn));
       return true;
     }
-    case kCoordinator_PublishMetadata_Ordinal: {
+    case kCoordinator_PublishMetadata_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<PublishMetadataRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -3056,7 +3083,8 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         Interface::PublishMetadataCompleter::Sync(txn));
       return true;
     }
-    case kCoordinator_AddCompositeDevice_Ordinal: {
+    case kCoordinator_AddCompositeDevice_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<AddCompositeDeviceRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -3067,7 +3095,8 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         Interface::AddCompositeDeviceCompleter::Sync(txn));
       return true;
     }
-    case kCoordinator_DirectoryWatch_Ordinal: {
+    case kCoordinator_DirectoryWatch_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<DirectoryWatchRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -3078,7 +3107,8 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         Interface::DirectoryWatchCompleter::Sync(txn));
       return true;
     }
-    case kCoordinator_RunCompatibilityTests_Ordinal: {
+    case kCoordinator_RunCompatibilityTests_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<RunCompatibilityTestsRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);

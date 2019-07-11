@@ -68,7 +68,7 @@ zx_status_t {{ .LLProps.InterfaceName }}::Call::{{ template "StaticCallSyncReque
   {{- else }}
   auto& _request = *reinterpret_cast<{{ .Name }}Request*>(_write_bytes);
   {{- end }}
-  _request._hdr.ordinal = {{ .OrdinalName }};
+  _request._hdr.ordinal = {{ .Ordinals.Write.Name }};
   {{- template "FillRequestStructMembers" .Request -}}
 
   {{- if .LLProps.LinearizeRequest }}

@@ -14,16 +14,16 @@ namespace bus {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kBus_Enable_Ordinal = 1384139352lu << 32;
+constexpr uint64_t kBus_Enable_Ordinal = 0x52804a5800000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusEnableResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBus_Disable_Ordinal = 1231209839lu << 32;
+constexpr uint64_t kBus_Disable_Ordinal = 0x4962c56f00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusDisableResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBus_Connect_Ordinal = 1649590424lu << 32;
+constexpr uint64_t kBus_Connect_Ordinal = 0x6252c09800000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusConnectResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBus_Disconnect_Ordinal = 1715215559lu << 32;
+constexpr uint64_t kBus_Disconnect_Ordinal = 0x663c1cc700000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusDisconnectResponseTable;
 
 }  // namespace
@@ -400,7 +400,8 @@ bool Bus::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kBus_Enable_Ordinal: {
+    case kBus_Enable_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<EnableRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -410,7 +411,8 @@ bool Bus::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
         Interface::EnableCompleter::Sync(txn));
       return true;
     }
-    case kBus_Disable_Ordinal: {
+    case kBus_Disable_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<DisableRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -420,7 +422,8 @@ bool Bus::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
         Interface::DisableCompleter::Sync(txn));
       return true;
     }
-    case kBus_Connect_Ordinal: {
+    case kBus_Connect_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<ConnectRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -430,7 +433,8 @@ bool Bus::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
         Interface::ConnectCompleter::Sync(txn));
       return true;
     }
-    case kBus_Disconnect_Ordinal: {
+    case kBus_Disconnect_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<DisconnectRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);

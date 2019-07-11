@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+
 	"fidl/compiler/backend/types"
 	. "fidl/compiler/backend/typestest"
 )
@@ -86,10 +88,14 @@ func TestCompileInterface(t *testing.T) {
 				StackAllocEventBuffer: true,
 				Methods: []Method{
 					{
-						Ordinal:              1,
-						OrdinalName:          "kTest_First_Ordinal",
-						GenOrdinal:           314159,
-						GenOrdinalName:       "kTest_First_GenOrdinal",
+						Ordinals: types.NewOrdinals(
+							types.Method{
+								Ordinal:    1,
+								GenOrdinal: 314159,
+							},
+							"kTest_First_Ordinal",
+							"kTest_First_GenOrdinal",
+						),
 						Name:                 "First",
 						NameInLowerSnakeCase: "first",
 						HasRequest:           true,
@@ -127,10 +133,14 @@ func TestCompileInterface(t *testing.T) {
 						},
 					},
 					{
-						Ordinal:              2,
-						OrdinalName:          "kTest_Second_Ordinal",
-						GenOrdinal:           271828,
-						GenOrdinalName:       "kTest_Second_GenOrdinal",
+						Ordinals: types.NewOrdinals(
+							types.Method{
+								Ordinal:    2,
+								GenOrdinal: 271828,
+							},
+							"kTest_Second_Ordinal",
+							"kTest_Second_GenOrdinal",
+						),
 						Name:                 "Second",
 						NameInLowerSnakeCase: "second",
 						HasRequest:           true,
@@ -226,10 +236,14 @@ func TestCompileInterface(t *testing.T) {
 				StackAllocEventBuffer: true,
 				Methods: []Method{
 					{
-						Ordinal:              1,
-						OrdinalName:          "kEventTest_First_Ordinal",
-						GenOrdinal:           314159,
-						GenOrdinalName:       "kEventTest_First_GenOrdinal",
+						Ordinals: types.NewOrdinals(
+							types.Method{
+								Ordinal:    1,
+								GenOrdinal: 314159,
+							},
+							"kEventTest_First_Ordinal",
+							"kEventTest_First_GenOrdinal",
+						),
 						Name:                 "First",
 						NameInLowerSnakeCase: "first",
 						Request:              []Parameter{},
@@ -319,10 +333,14 @@ func TestCompileInterface(t *testing.T) {
 				StackAllocEventBuffer: false,
 				Methods: []Method{
 					{
-						Ordinal:              2,
-						OrdinalName:          "kEventTest_Second_Ordinal",
-						GenOrdinal:           271828,
-						GenOrdinalName:       "kEventTest_Second_GenOrdinal",
+						Ordinals: types.NewOrdinals(
+							types.Method{
+								Ordinal:    2,
+								GenOrdinal: 271828,
+							},
+							"kEventTest_Second_Ordinal",
+							"kEventTest_Second_GenOrdinal",
+						),
 						Name:                 "Second",
 						NameInLowerSnakeCase: "second",
 						HasRequest:           false,
@@ -379,8 +397,8 @@ func TestCompileInterface(t *testing.T) {
 			if !ok || actual == nil {
 				t.Fatalf("decls[0] not an interface, was instead %T", result.Decls[0])
 			}
-			if !reflect.DeepEqual(ex.expected, *actual) {
-				t.Fatalf("expected %+v\nactual %+v", ex.expected, *actual)
+			if diff := cmp.Diff(ex.expected, *actual, cmp.AllowUnexported(types.Ordinals{})); diff != "" {
+				t.Errorf("expected != actual (-want +got)\n%s", diff)
 			}
 		})
 	}
@@ -460,10 +478,14 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 				StackAllocEventBuffer: true,
 				Methods: []Method{
 					{
-						Ordinal:              1,
-						OrdinalName:          "kTest_First_Ordinal",
-						GenOrdinal:           314159,
-						GenOrdinalName:       "kTest_First_GenOrdinal",
+						Ordinals: types.NewOrdinals(
+							types.Method{
+								Ordinal:    1,
+								GenOrdinal: 314159,
+							},
+							"kTest_First_Ordinal",
+							"kTest_First_GenOrdinal",
+						),
 						Name:                 "First",
 						NameInLowerSnakeCase: "first",
 						HasRequest:           true,
@@ -501,10 +523,14 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 						},
 					},
 					{
-						Ordinal:              2,
-						OrdinalName:          "kTest_Second_Ordinal",
-						GenOrdinal:           271828,
-						GenOrdinalName:       "kTest_Second_GenOrdinal",
+						Ordinals: types.NewOrdinals(
+							types.Method{
+								Ordinal:    2,
+								GenOrdinal: 271828,
+							},
+							"kTest_Second_Ordinal",
+							"kTest_Second_GenOrdinal",
+						),
 						Name:                 "Second",
 						NameInLowerSnakeCase: "second",
 						HasRequest:           true,
@@ -600,10 +626,14 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 				StackAllocEventBuffer: true,
 				Methods: []Method{
 					{
-						Ordinal:              1,
-						OrdinalName:          "kEventTest_First_Ordinal",
-						GenOrdinal:           314159,
-						GenOrdinalName:       "kEventTest_First_GenOrdinal",
+						Ordinals: types.NewOrdinals(
+							types.Method{
+								Ordinal:    1,
+								GenOrdinal: 314159,
+							},
+							"kEventTest_First_Ordinal",
+							"kEventTest_First_GenOrdinal",
+						),
 						Name:                 "First",
 						NameInLowerSnakeCase: "first",
 						Request:              []Parameter{},
@@ -693,10 +723,14 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 				StackAllocEventBuffer: false,
 				Methods: []Method{
 					{
-						Ordinal:              2,
-						OrdinalName:          "kEventTest_Second_Ordinal",
-						GenOrdinal:           271828,
-						GenOrdinalName:       "kEventTest_Second_GenOrdinal",
+						Ordinals: types.NewOrdinals(
+							types.Method{
+								Ordinal:    2,
+								GenOrdinal: 271828,
+							},
+							"kEventTest_Second_Ordinal",
+							"kEventTest_Second_GenOrdinal",
+						),
 						Name:                 "Second",
 						NameInLowerSnakeCase: "second",
 						HasRequest:           false,

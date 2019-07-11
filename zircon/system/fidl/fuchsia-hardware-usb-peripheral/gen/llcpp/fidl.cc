@@ -13,7 +13,7 @@ namespace peripheral {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kEvents_FunctionRegistered_Ordinal = 1221228626lu << 32;
+constexpr uint64_t kEvents_FunctionRegistered_Ordinal = 0x48ca785200000000lu;
 
 }  // namespace
 
@@ -56,7 +56,8 @@ bool Events::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kEvents_FunctionRegistered_Ordinal: {
+    case kEvents_FunctionRegistered_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<FunctionRegisteredRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -95,30 +96,30 @@ void Events::Interface::FunctionRegisteredCompleterBase::Reply() {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDevice_SetDeviceDescriptor_Ordinal = 2131057011lu << 32;
+constexpr uint64_t kDevice_SetDeviceDescriptor_Ordinal = 0x7f05597300000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetDeviceDescriptorResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_AllocStringDesc_Ordinal = 1367785636lu << 32;
+constexpr uint64_t kDevice_AllocStringDesc_Ordinal = 0x5186c0a400000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceAllocStringDescRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceAllocStringDescResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_AddFunction_Ordinal = 1656734289lu << 32;
+constexpr uint64_t kDevice_AddFunction_Ordinal = 0x62bfc25100000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceAddFunctionRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceAddFunctionResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_BindFunctions_Ordinal = 304025206lu << 32;
+constexpr uint64_t kDevice_BindFunctions_Ordinal = 0x121f0e7600000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceBindFunctionsResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_ClearFunctions_Ordinal = 1309602560lu << 32;
+constexpr uint64_t kDevice_ClearFunctions_Ordinal = 0x4e0ef30000000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceClearFunctionsResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetMode_Ordinal = 1753749227lu << 32;
+constexpr uint64_t kDevice_GetMode_Ordinal = 0x688816eb00000000lu;
 [[maybe_unused]]
-constexpr uint64_t kDevice_SetMode_Ordinal = 1354898460lu << 32;
+constexpr uint64_t kDevice_SetMode_Ordinal = 0x50c21c1c00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetModeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetModeResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_SetStateChangeListener_Ordinal = 71343575lu << 32;
+constexpr uint64_t kDevice_SetStateChangeListener_Ordinal = 0x4409dd700000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerRequestTable;
 
 }  // namespace
@@ -829,7 +830,8 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDevice_SetDeviceDescriptor_Ordinal: {
+    case kDevice_SetDeviceDescriptor_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SetDeviceDescriptorRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -840,7 +842,8 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::SetDeviceDescriptorCompleter::Sync(txn));
       return true;
     }
-    case kDevice_AllocStringDesc_Ordinal: {
+    case kDevice_AllocStringDesc_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<AllocStringDescRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -851,7 +854,8 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::AllocStringDescCompleter::Sync(txn));
       return true;
     }
-    case kDevice_AddFunction_Ordinal: {
+    case kDevice_AddFunction_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<AddFunctionRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -862,7 +866,8 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::AddFunctionCompleter::Sync(txn));
       return true;
     }
-    case kDevice_BindFunctions_Ordinal: {
+    case kDevice_BindFunctions_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<BindFunctionsRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -872,7 +877,8 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::BindFunctionsCompleter::Sync(txn));
       return true;
     }
-    case kDevice_ClearFunctions_Ordinal: {
+    case kDevice_ClearFunctions_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<ClearFunctionsRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -882,7 +888,8 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::ClearFunctionsCompleter::Sync(txn));
       return true;
     }
-    case kDevice_GetMode_Ordinal: {
+    case kDevice_GetMode_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetModeRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -892,7 +899,8 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::GetModeCompleter::Sync(txn));
       return true;
     }
-    case kDevice_SetMode_Ordinal: {
+    case kDevice_SetMode_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SetModeRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -903,7 +911,8 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::SetModeCompleter::Sync(txn));
       return true;
     }
-    case kDevice_SetStateChangeListener_Ordinal: {
+    case kDevice_SetStateChangeListener_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SetStateChangeListenerRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);

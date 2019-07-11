@@ -12,7 +12,7 @@ namespace camera {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetChannel_Ordinal = 1982578164lu << 32;
+constexpr uint64_t kDevice_GetChannel_Ordinal = 0x762bbdf400000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_camera_DeviceGetChannelRequestTable;
 
 }  // namespace
@@ -79,7 +79,8 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDevice_GetChannel_Ordinal: {
+    case kDevice_GetChannel_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetChannelRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -109,14 +110,14 @@ bool Device::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kStream_Start_Ordinal = 2078685701lu << 32;
+constexpr uint64_t kStream_Start_Ordinal = 0x7be63a0500000000lu;
 [[maybe_unused]]
-constexpr uint64_t kStream_Stop_Ordinal = 1804311781lu << 32;
+constexpr uint64_t kStream_Stop_Ordinal = 0x6b8b9ce500000000lu;
 [[maybe_unused]]
-constexpr uint64_t kStream_ReleaseFrame_Ordinal = 1698050785lu << 32;
+constexpr uint64_t kStream_ReleaseFrame_Ordinal = 0x653632e100000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_camera_StreamReleaseFrameRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kStream_OnFrameAvailable_Ordinal = 652350782lu << 32;
+constexpr uint64_t kStream_OnFrameAvailable_Ordinal = 0x26e2153e00000000lu;
 
 }  // namespace
 
@@ -269,7 +270,8 @@ zx_status_t Stream::Call::HandleEvents(zx::unowned_channel client_end,
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
-    case kStream_OnFrameAvailable_Ordinal: {
+    case kStream_OnFrameAvailable_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<OnFrameAvailableResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -291,7 +293,8 @@ bool Stream::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kStream_Start_Ordinal: {
+    case kStream_Start_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<StartRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -301,7 +304,8 @@ bool Stream::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::StartCompleter::Sync(txn));
       return true;
     }
-    case kStream_Stop_Ordinal: {
+    case kStream_Stop_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<StopRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -311,7 +315,8 @@ bool Stream::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::StopCompleter::Sync(txn));
       return true;
     }
-    case kStream_ReleaseFrame_Ordinal: {
+    case kStream_ReleaseFrame_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<ReleaseFrameRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -371,14 +376,14 @@ zx_status_t Stream::SendOnFrameAvailableEvent(::zx::unowned_channel _chan, ::fid
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kControl_GetFormats_Ordinal = 162112720lu << 32;
+constexpr uint64_t kControl_GetFormats_Ordinal = 0x9a9a4d000000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlGetFormatsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlGetFormatsResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kControl_CreateStream_Ordinal = 1736026147lu << 32;
+constexpr uint64_t kControl_CreateStream_Ordinal = 0x6779a82300000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlCreateStreamRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kControl_GetDeviceInfo_Ordinal = 1203933883lu << 32;
+constexpr uint64_t kControl_GetDeviceInfo_Ordinal = 0x47c292bb00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlGetDeviceInfoResponseTable;
 
 }  // namespace
@@ -639,7 +644,8 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kControl_GetFormats_Ordinal: {
+    case kControl_GetFormats_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetFormatsRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -650,7 +656,8 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         Interface::GetFormatsCompleter::Sync(txn));
       return true;
     }
-    case kControl_CreateStream_Ordinal: {
+    case kControl_CreateStream_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CreateStreamRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -661,7 +668,8 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         Interface::CreateStreamCompleter::Sync(txn));
       return true;
     }
-    case kControl_GetDeviceInfo_Ordinal: {
+    case kControl_GetDeviceInfo_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetDeviceInfoRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -755,14 +763,14 @@ void Control::Interface::GetDeviceInfoCompleterBase::Reply(::fidl::DecodedMessag
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kControlV2_GetFormats_Ordinal = 1829792861lu << 32;
+constexpr uint64_t kControlV2_GetFormats_Ordinal = 0x6d106c5d00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2GetFormatsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2GetFormatsResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kControlV2_CreateStream_Ordinal = 1600661084lu << 32;
+constexpr uint64_t kControlV2_CreateStream_Ordinal = 0x5f68265c00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2CreateStreamRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kControlV2_GetDeviceInfo_Ordinal = 1539432325lu << 32;
+constexpr uint64_t kControlV2_GetDeviceInfo_Ordinal = 0x5bc1df8500000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2GetDeviceInfoResponseTable;
 
 }  // namespace
@@ -1023,7 +1031,8 @@ bool ControlV2::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kControlV2_GetFormats_Ordinal: {
+    case kControlV2_GetFormats_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetFormatsRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1034,7 +1043,8 @@ bool ControlV2::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::GetFormatsCompleter::Sync(txn));
       return true;
     }
-    case kControlV2_CreateStream_Ordinal: {
+    case kControlV2_CreateStream_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CreateStreamRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1045,7 +1055,8 @@ bool ControlV2::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::CreateStreamCompleter::Sync(txn));
       return true;
     }
-    case kControlV2_GetDeviceInfo_Ordinal: {
+    case kControlV2_GetDeviceInfo_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetDeviceInfoRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);

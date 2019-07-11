@@ -73,7 +73,7 @@ const SyncRequestCallerAllocate = `
   {{- else }}
   auto& _request = *reinterpret_cast<{{ .Name }}Request*>(_request_buffer.data());
   {{- end }}
-  _request._hdr.ordinal = {{ .OrdinalName }};
+  _request._hdr.ordinal = {{ .Ordinals.Write.Name }};
   {{- template "FillRequestStructMembers" .Request -}}
 
   {{- if .LLProps.LinearizeRequest }}

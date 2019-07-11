@@ -11,40 +11,40 @@ namespace net {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kSocketControl_Bind_Ordinal = 2092731140lu << 32;
+constexpr uint64_t kSocketControl_Bind_Ordinal = 0x7cbc8b0400000000lu;
 extern "C" const fidl_type_t fuchsia_net_SocketControlBindRequestTable;
 extern "C" const fidl_type_t fuchsia_net_SocketControlBindResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kSocketControl_Connect_Ordinal = 345505709lu << 32;
+constexpr uint64_t kSocketControl_Connect_Ordinal = 0x1497ffad00000000lu;
 extern "C" const fidl_type_t fuchsia_net_SocketControlConnectRequestTable;
 extern "C" const fidl_type_t fuchsia_net_SocketControlConnectResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kSocketControl_Listen_Ordinal = 1117818704lu << 32;
+constexpr uint64_t kSocketControl_Listen_Ordinal = 0x42a08f5000000000lu;
 extern "C" const fidl_type_t fuchsia_net_SocketControlListenRequestTable;
 extern "C" const fidl_type_t fuchsia_net_SocketControlListenResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kSocketControl_Accept_Ordinal = 796734679lu << 32;
+constexpr uint64_t kSocketControl_Accept_Ordinal = 0x2f7d34d700000000lu;
 extern "C" const fidl_type_t fuchsia_net_SocketControlAcceptRequestTable;
 extern "C" const fidl_type_t fuchsia_net_SocketControlAcceptResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kSocketControl_Close_Ordinal = 506040350lu << 32;
+constexpr uint64_t kSocketControl_Close_Ordinal = 0x1e29901e00000000lu;
 extern "C" const fidl_type_t fuchsia_net_SocketControlCloseResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kSocketControl_GetSockName_Ordinal = 764939941lu << 32;
+constexpr uint64_t kSocketControl_GetSockName_Ordinal = 0x2d980ea500000000lu;
 extern "C" const fidl_type_t fuchsia_net_SocketControlGetSockNameResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kSocketControl_GetPeerName_Ordinal = 472396488lu << 32;
+constexpr uint64_t kSocketControl_GetPeerName_Ordinal = 0x1c2832c800000000lu;
 extern "C" const fidl_type_t fuchsia_net_SocketControlGetPeerNameResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kSocketControl_SetSockOpt_Ordinal = 1365685084lu << 32;
+constexpr uint64_t kSocketControl_SetSockOpt_Ordinal = 0x5166b35c00000000lu;
 extern "C" const fidl_type_t fuchsia_net_SocketControlSetSockOptRequestTable;
 extern "C" const fidl_type_t fuchsia_net_SocketControlSetSockOptResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kSocketControl_GetSockOpt_Ordinal = 2132650507lu << 32;
+constexpr uint64_t kSocketControl_GetSockOpt_Ordinal = 0x7f1daa0b00000000lu;
 extern "C" const fidl_type_t fuchsia_net_SocketControlGetSockOptRequestTable;
 extern "C" const fidl_type_t fuchsia_net_SocketControlGetSockOptResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kSocketControl_Ioctl_Ordinal = 1157859964lu << 32;
+constexpr uint64_t kSocketControl_Ioctl_Ordinal = 0x45038a7c00000000lu;
 extern "C" const fidl_type_t fuchsia_net_SocketControlIoctlRequestTable;
 extern "C" const fidl_type_t fuchsia_net_SocketControlIoctlResponseTable;
 
@@ -866,7 +866,8 @@ bool SocketControl::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kSocketControl_Bind_Ordinal: {
+    case kSocketControl_Bind_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<BindRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -877,7 +878,8 @@ bool SocketControl::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
         Interface::BindCompleter::Sync(txn));
       return true;
     }
-    case kSocketControl_Connect_Ordinal: {
+    case kSocketControl_Connect_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<ConnectRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -888,7 +890,8 @@ bool SocketControl::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
         Interface::ConnectCompleter::Sync(txn));
       return true;
     }
-    case kSocketControl_Listen_Ordinal: {
+    case kSocketControl_Listen_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<ListenRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -899,7 +902,8 @@ bool SocketControl::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
         Interface::ListenCompleter::Sync(txn));
       return true;
     }
-    case kSocketControl_Accept_Ordinal: {
+    case kSocketControl_Accept_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<AcceptRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -910,7 +914,8 @@ bool SocketControl::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
         Interface::AcceptCompleter::Sync(txn));
       return true;
     }
-    case kSocketControl_Close_Ordinal: {
+    case kSocketControl_Close_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CloseRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -920,7 +925,8 @@ bool SocketControl::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
         Interface::CloseCompleter::Sync(txn));
       return true;
     }
-    case kSocketControl_GetSockName_Ordinal: {
+    case kSocketControl_GetSockName_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetSockNameRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -930,7 +936,8 @@ bool SocketControl::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
         Interface::GetSockNameCompleter::Sync(txn));
       return true;
     }
-    case kSocketControl_GetPeerName_Ordinal: {
+    case kSocketControl_GetPeerName_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetPeerNameRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -940,7 +947,8 @@ bool SocketControl::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
         Interface::GetPeerNameCompleter::Sync(txn));
       return true;
     }
-    case kSocketControl_SetSockOpt_Ordinal: {
+    case kSocketControl_SetSockOpt_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SetSockOptRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -951,7 +959,8 @@ bool SocketControl::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
         Interface::SetSockOptCompleter::Sync(txn));
       return true;
     }
-    case kSocketControl_GetSockOpt_Ordinal: {
+    case kSocketControl_GetSockOpt_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetSockOptRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -962,7 +971,8 @@ bool SocketControl::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
         Interface::GetSockOptCompleter::Sync(txn));
       return true;
     }
-    case kSocketControl_Ioctl_Ordinal: {
+    case kSocketControl_Ioctl_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<IoctlRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1328,7 +1338,7 @@ void SocketControl::Interface::IoctlCompleterBase::Reply(::fidl::DecodedMessage<
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kConnectivity_OnNetworkReachable_Ordinal = 1703348424lu << 32;
+constexpr uint64_t kConnectivity_OnNetworkReachable_Ordinal = 0x658708c800000000lu;
 extern "C" const fidl_type_t fuchsia_net_ConnectivityOnNetworkReachableEventTable;
 
 }  // namespace
@@ -1390,7 +1400,8 @@ zx_status_t Connectivity::Call::HandleEvents(zx::unowned_channel client_end,
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
-    case kConnectivity_OnNetworkReachable_Ordinal: {
+    case kConnectivity_OnNetworkReachable_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<OnNetworkReachableResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -1647,11 +1658,11 @@ Ipv6Address& ::llcpp::fuchsia::net::IpAddress::mutable_ipv6() {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kNameLookup_LookupIp_Ordinal = 818031436lu << 32;
+constexpr uint64_t kNameLookup_LookupIp_Ordinal = 0x30c22b4c00000000lu;
 extern "C" const fidl_type_t fuchsia_net_NameLookupLookupIpRequestTable;
 extern "C" const fidl_type_t fuchsia_net_NameLookupLookupIpResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kNameLookup_LookupHostname_Ordinal = 391654548lu << 32;
+constexpr uint64_t kNameLookup_LookupHostname_Ordinal = 0x17582c9400000000lu;
 extern "C" const fidl_type_t fuchsia_net_NameLookupLookupHostnameRequestTable;
 extern "C" const fidl_type_t fuchsia_net_NameLookupLookupHostnameResponseTable;
 
@@ -1783,7 +1794,8 @@ bool NameLookup::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kNameLookup_LookupIp_Ordinal: {
+    case kNameLookup_LookupIp_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<LookupIpRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1794,7 +1806,8 @@ bool NameLookup::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         Interface::LookupIpCompleter::Sync(txn));
       return true;
     }
-    case kNameLookup_LookupHostname_Ordinal: {
+    case kNameLookup_LookupHostname_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<LookupHostnameRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1901,11 +1914,11 @@ void NameLookup::Interface::LookupHostnameCompleterBase::Reply(::fidl::DecodedMe
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kSocketProvider_Socket_Ordinal = 316444173lu << 32;
+constexpr uint64_t kSocketProvider_Socket_Ordinal = 0x12dc8e0d00000000lu;
 extern "C" const fidl_type_t fuchsia_net_SocketProviderSocketRequestTable;
 extern "C" const fidl_type_t fuchsia_net_SocketProviderSocketResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kSocketProvider_GetAddrInfo_Ordinal = 498796293lu << 32;
+constexpr uint64_t kSocketProvider_GetAddrInfo_Ordinal = 0x1dbb070500000000lu;
 extern "C" const fidl_type_t fuchsia_net_SocketProviderGetAddrInfoRequestTable;
 extern "C" const fidl_type_t fuchsia_net_SocketProviderGetAddrInfoResponseTable;
 
@@ -2121,7 +2134,8 @@ bool SocketProvider::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kSocketProvider_Socket_Ordinal: {
+    case kSocketProvider_Socket_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SocketRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2132,7 +2146,8 @@ bool SocketProvider::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::SocketCompleter::Sync(txn));
       return true;
     }
-    case kSocketProvider_GetAddrInfo_Ordinal: {
+    case kSocketProvider_GetAddrInfo_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetAddrInfoRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);

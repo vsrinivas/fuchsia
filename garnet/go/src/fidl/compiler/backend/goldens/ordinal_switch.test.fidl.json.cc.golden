@@ -8,17 +8,13 @@ namespace name {
 
 #ifdef __Fuchsia__
 namespace {
-  
-constexpr uint64_t kSwitchingOrdinals_OrdinalFive_Ordinal = 2005164903lu << 32;
+constexpr uint64_t kSwitchingOrdinals_OrdinalFive_Ordinal = 0x7784636700000000lu;
 extern "C" const fidl_type_t test_name_SwitchingOrdinalsOrdinalFiveRequestTable;
-  
-constexpr uint64_t kSwitchingOrdinals_OnlyGeneratedOrdinal_Ordinal = 667506719lu << 32;
+constexpr uint64_t kSwitchingOrdinals_OnlyGeneratedOrdinal_Ordinal = 0x27c9581f00000000lu;
 extern "C" const fidl_type_t test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable;
-  
-constexpr uint64_t kSwitchingOrdinals_EventOrdinalFifteen_Ordinal = 1467258273lu << 32;
+constexpr uint64_t kSwitchingOrdinals_EventOrdinalFifteen_Ordinal = 0x577495a100000000lu;
 extern "C" const fidl_type_t test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable;
-  
-constexpr uint64_t kSwitchingOrdinals_EventOnlyGeneratedOrdinal_Ordinal = 2146190926lu << 32;
+constexpr uint64_t kSwitchingOrdinals_EventOnlyGeneratedOrdinal_Ordinal = 0x7fec464e00000000lu;
 extern "C" const fidl_type_t test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable;
 
 }  // namespace
@@ -39,7 +35,8 @@ SwitchingOrdinals_Proxy::~SwitchingOrdinals_Proxy() = default;
 zx_status_t SwitchingOrdinals_Proxy::Dispatch_(::fidl::Message message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
-    case kSwitchingOrdinals_EventOrdinalFifteen_Ordinal: {
+    case kSwitchingOrdinals_EventOrdinalFifteen_Ordinal:
+    {
       if (!EventOrdinalFifteen) {
         status = ZX_OK;
         break;
@@ -53,7 +50,8 @@ zx_status_t SwitchingOrdinals_Proxy::Dispatch_(::fidl::Message message) {
       EventOrdinalFifteen();
       break;
     }
-    case kSwitchingOrdinals_EventOnlyGeneratedOrdinal_Ordinal: {
+    case kSwitchingOrdinals_EventOnlyGeneratedOrdinal_Ordinal:
+    {
       if (!EventOnlyGeneratedOrdinal) {
         status = ZX_OK;
         break;
@@ -101,7 +99,8 @@ zx_status_t SwitchingOrdinals_Stub::Dispatch_(
   zx_status_t status = ZX_OK;
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case kSwitchingOrdinals_OrdinalFive_Ordinal: {
+    case kSwitchingOrdinals_OrdinalFive_Ordinal:
+    {
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_SwitchingOrdinalsOrdinalFiveRequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -111,7 +110,8 @@ zx_status_t SwitchingOrdinals_Stub::Dispatch_(
       impl_->OrdinalFive();
       break;
     }
-    case kSwitchingOrdinals_OnlyGeneratedOrdinal_Ordinal: {
+    case kSwitchingOrdinals_OnlyGeneratedOrdinal_Ordinal:
+    {
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable, &error_msg);
       if (status != ZX_OK) {

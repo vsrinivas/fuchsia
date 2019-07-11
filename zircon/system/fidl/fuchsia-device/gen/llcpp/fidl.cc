@@ -11,37 +11,37 @@ namespace device {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kController_Bind_Ordinal = 816958813lu << 32;
+constexpr uint64_t kController_Bind_Ordinal = 0x30b1cd5d00000000lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerBindRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerBindResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kController_Unbind_Ordinal = 1601034312lu << 32;
+constexpr uint64_t kController_Unbind_Ordinal = 0x5f6dd84800000000lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerUnbindResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kController_GetDriverName_Ordinal = 1989761741lu << 32;
+constexpr uint64_t kController_GetDriverName_Ordinal = 0x76995acd00000000lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetDriverNameResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kController_GetDeviceName_Ordinal = 930755808lu << 32;
+constexpr uint64_t kController_GetDeviceName_Ordinal = 0x377a34e000000000lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetDeviceNameResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kController_GetTopologicalPath_Ordinal = 1125106390lu << 32;
+constexpr uint64_t kController_GetTopologicalPath_Ordinal = 0x430fc2d600000000lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetTopologicalPathResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kController_GetEventHandle_Ordinal = 1942670134lu << 32;
+constexpr uint64_t kController_GetEventHandle_Ordinal = 0x73cacb3600000000lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetEventHandleResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kController_GetDriverLogFlags_Ordinal = 1549496467lu << 32;
+constexpr uint64_t kController_GetDriverLogFlags_Ordinal = 0x5c5b709300000000lu;
 [[maybe_unused]]
-constexpr uint64_t kController_SetDriverLogFlags_Ordinal = 2102817579lu << 32;
+constexpr uint64_t kController_SetDriverLogFlags_Ordinal = 0x7d56732b00000000lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerSetDriverLogFlagsResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kController_DebugSuspend_Ordinal = 1710371364lu << 32;
+constexpr uint64_t kController_DebugSuspend_Ordinal = 0x65f2322400000000lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerDebugSuspendResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kController_DebugResume_Ordinal = 1609443780lu << 32;
+constexpr uint64_t kController_DebugResume_Ordinal = 0x5fee29c400000000lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerDebugResumeResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kController_RunCompatibilityTests_Ordinal = 1212996015lu << 32;
+constexpr uint64_t kController_RunCompatibilityTests_Ordinal = 0x484cd9af00000000lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerRunCompatibilityTestsResponseTable;
 
 }  // namespace
@@ -972,7 +972,8 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kController_Bind_Ordinal: {
+    case kController_Bind_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<BindRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -983,7 +984,8 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         Interface::BindCompleter::Sync(txn));
       return true;
     }
-    case kController_Unbind_Ordinal: {
+    case kController_Unbind_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<UnbindRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -993,7 +995,8 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         Interface::UnbindCompleter::Sync(txn));
       return true;
     }
-    case kController_GetDriverName_Ordinal: {
+    case kController_GetDriverName_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetDriverNameRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1003,7 +1006,8 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         Interface::GetDriverNameCompleter::Sync(txn));
       return true;
     }
-    case kController_GetDeviceName_Ordinal: {
+    case kController_GetDeviceName_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetDeviceNameRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1013,7 +1017,8 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         Interface::GetDeviceNameCompleter::Sync(txn));
       return true;
     }
-    case kController_GetTopologicalPath_Ordinal: {
+    case kController_GetTopologicalPath_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetTopologicalPathRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1023,7 +1028,8 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         Interface::GetTopologicalPathCompleter::Sync(txn));
       return true;
     }
-    case kController_GetEventHandle_Ordinal: {
+    case kController_GetEventHandle_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetEventHandleRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1033,7 +1039,8 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         Interface::GetEventHandleCompleter::Sync(txn));
       return true;
     }
-    case kController_GetDriverLogFlags_Ordinal: {
+    case kController_GetDriverLogFlags_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetDriverLogFlagsRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1043,7 +1050,8 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         Interface::GetDriverLogFlagsCompleter::Sync(txn));
       return true;
     }
-    case kController_SetDriverLogFlags_Ordinal: {
+    case kController_SetDriverLogFlags_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SetDriverLogFlagsRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1054,7 +1062,8 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         Interface::SetDriverLogFlagsCompleter::Sync(txn));
       return true;
     }
-    case kController_DebugSuspend_Ordinal: {
+    case kController_DebugSuspend_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<DebugSuspendRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1064,7 +1073,8 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         Interface::DebugSuspendCompleter::Sync(txn));
       return true;
     }
-    case kController_DebugResume_Ordinal: {
+    case kController_DebugResume_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<DebugResumeRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1074,7 +1084,8 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         Interface::DebugResumeCompleter::Sync(txn));
       return true;
     }
-    case kController_RunCompatibilityTests_Ordinal: {
+    case kController_RunCompatibilityTests_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<RunCompatibilityTestsRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);

@@ -11,12 +11,12 @@ namespace sysmem {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kBufferCollectionToken_Duplicate_Ordinal = 1580679187lu << 32;
+constexpr uint64_t kBufferCollectionToken_Duplicate_Ordinal = 0x5e37401300000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionTokenDuplicateRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollectionToken_Sync_Ordinal = 840486752lu << 32;
+constexpr uint64_t kBufferCollectionToken_Sync_Ordinal = 0x3218cf6000000000lu;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollectionToken_Close_Ordinal = 565867829lu << 32;
+constexpr uint64_t kBufferCollectionToken_Close_Ordinal = 0x21ba753500000000lu;
 
 }  // namespace
 
@@ -134,7 +134,8 @@ bool BufferCollectionToken::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kBufferCollectionToken_Duplicate_Ordinal: {
+    case kBufferCollectionToken_Duplicate_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<DuplicateRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -145,7 +146,8 @@ bool BufferCollectionToken::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl
         Interface::DuplicateCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollectionToken_Sync_Ordinal: {
+    case kBufferCollectionToken_Sync_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SyncRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -155,7 +157,8 @@ bool BufferCollectionToken::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl
         Interface::SyncCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollectionToken_Close_Ordinal: {
+    case kBufferCollectionToken_Close_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CloseRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -194,14 +197,14 @@ void BufferCollectionToken::Interface::SyncCompleterBase::Reply() {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kHeap_AllocateVmo_Ordinal = 196714381lu << 32;
+constexpr uint64_t kHeap_AllocateVmo_Ordinal = 0xbb99f8d00000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_HeapAllocateVmoResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kHeap_CreateResource_Ordinal = 900305090lu << 32;
+constexpr uint64_t kHeap_CreateResource_Ordinal = 0x35a990c200000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_HeapCreateResourceRequestTable;
 extern "C" const fidl_type_t fuchsia_sysmem_HeapCreateResourceResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kHeap_DestroyResource_Ordinal = 668940193lu << 32;
+constexpr uint64_t kHeap_DestroyResource_Ordinal = 0x27df37a100000000lu;
 
 }  // namespace
 
@@ -484,7 +487,8 @@ bool Heap::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kHeap_AllocateVmo_Ordinal: {
+    case kHeap_AllocateVmo_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<AllocateVmoRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -495,7 +499,8 @@ bool Heap::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::AllocateVmoCompleter::Sync(txn));
       return true;
     }
-    case kHeap_CreateResource_Ordinal: {
+    case kHeap_CreateResource_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CreateResourceRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -506,7 +511,8 @@ bool Heap::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::CreateResourceCompleter::Sync(txn));
       return true;
     }
-    case kHeap_DestroyResource_Ordinal: {
+    case kHeap_DestroyResource_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<DestroyResourceRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -608,10 +614,10 @@ void Heap::Interface::DestroyResourceCompleterBase::Reply() {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDriverConnector_Connect_Ordinal = 813883444lu << 32;
+constexpr uint64_t kDriverConnector_Connect_Ordinal = 0x3082e03400000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_DriverConnectorConnectRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kDriverConnector_GetProtectedMemoryInfo_Ordinal = 282632817lu << 32;
+constexpr uint64_t kDriverConnector_GetProtectedMemoryInfo_Ordinal = 0x10d8a27100000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_DriverConnectorGetProtectedMemoryInfoResponseTable;
 
 }  // namespace
@@ -773,7 +779,8 @@ bool DriverConnector::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDriverConnector_Connect_Ordinal: {
+    case kDriverConnector_Connect_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<ConnectRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -784,7 +791,8 @@ bool DriverConnector::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
         Interface::ConnectCompleter::Sync(txn));
       return true;
     }
-    case kDriverConnector_GetProtectedMemoryInfo_Ordinal: {
+    case kDriverConnector_GetProtectedMemoryInfo_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetProtectedMemoryInfoRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -846,13 +854,13 @@ void DriverConnector::Interface::GetProtectedMemoryInfoCompleterBase::Reply(::fi
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kAllocator_AllocateNonSharedCollection_Ordinal = 565270487lu << 32;
+constexpr uint64_t kAllocator_AllocateNonSharedCollection_Ordinal = 0x21b157d700000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_AllocatorAllocateNonSharedCollectionRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kAllocator_AllocateSharedCollection_Ordinal = 916773828lu << 32;
+constexpr uint64_t kAllocator_AllocateSharedCollection_Ordinal = 0x36a4dbc400000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_AllocatorAllocateSharedCollectionRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kAllocator_BindSharedCollection_Ordinal = 493382005lu << 32;
+constexpr uint64_t kAllocator_BindSharedCollection_Ordinal = 0x1d68697500000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_AllocatorBindSharedCollectionRequestTable;
 
 }  // namespace
@@ -1029,7 +1037,8 @@ bool Allocator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kAllocator_AllocateNonSharedCollection_Ordinal: {
+    case kAllocator_AllocateNonSharedCollection_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<AllocateNonSharedCollectionRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1040,7 +1049,8 @@ bool Allocator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::AllocateNonSharedCollectionCompleter::Sync(txn));
       return true;
     }
-    case kAllocator_AllocateSharedCollection_Ordinal: {
+    case kAllocator_AllocateSharedCollection_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<AllocateSharedCollectionRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1051,7 +1061,8 @@ bool Allocator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::AllocateSharedCollectionCompleter::Sync(txn));
       return true;
     }
-    case kAllocator_BindSharedCollection_Ordinal: {
+    case kAllocator_BindSharedCollection_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<BindSharedCollectionRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1173,12 +1184,12 @@ ImageFormat& ::llcpp::fuchsia::sysmem::BufferFormat::mutable_image() {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_Ordinal = 525651766lu << 32;
+constexpr uint64_t kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_Ordinal = 0x1f54cf3600000000lu;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollectionEvents_OnBuffersAllocated_Ordinal = 1748036703lu << 32;
+constexpr uint64_t kBufferCollectionEvents_OnBuffersAllocated_Ordinal = 0x6830ec5f00000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionEventsOnBuffersAllocatedRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollectionEvents_OnAllocateSingleBufferDone_Ordinal = 1823617849lu << 32;
+constexpr uint64_t kBufferCollectionEvents_OnAllocateSingleBufferDone_Ordinal = 0x6cb2333900000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionEventsOnAllocateSingleBufferDoneRequestTable;
 
 }  // namespace
@@ -1323,7 +1334,8 @@ bool BufferCollectionEvents::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fid
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_Ordinal: {
+    case kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<OnDuplicatedTokensKnownByServerRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1333,7 +1345,8 @@ bool BufferCollectionEvents::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fid
         Interface::OnDuplicatedTokensKnownByServerCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollectionEvents_OnBuffersAllocated_Ordinal: {
+    case kBufferCollectionEvents_OnBuffersAllocated_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<OnBuffersAllocatedRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1344,7 +1357,8 @@ bool BufferCollectionEvents::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fid
         Interface::OnBuffersAllocatedCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollectionEvents_OnAllocateSingleBufferDone_Ordinal: {
+    case kBufferCollectionEvents_OnAllocateSingleBufferDone_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<OnAllocateSingleBufferDoneRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1374,30 +1388,30 @@ bool BufferCollectionEvents::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kBufferCollection_SetEventSink_Ordinal = 357278768lu << 32;
+constexpr uint64_t kBufferCollection_SetEventSink_Ordinal = 0x154ba43000000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionSetEventSinkRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollection_Sync_Ordinal = 364524065lu << 32;
+constexpr uint64_t kBufferCollection_Sync_Ordinal = 0x15ba322100000000lu;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollection_SetConstraints_Ordinal = 1411081086lu << 32;
+constexpr uint64_t kBufferCollection_SetConstraints_Ordinal = 0x541b637e00000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionSetConstraintsRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollection_WaitForBuffersAllocated_Ordinal = 456576936lu << 32;
+constexpr uint64_t kBufferCollection_WaitForBuffersAllocated_Ordinal = 0x1b36cfa800000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionWaitForBuffersAllocatedResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollection_CheckBuffersAllocated_Ordinal = 156573902lu << 32;
+constexpr uint64_t kBufferCollection_CheckBuffersAllocated_Ordinal = 0x95520ce00000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionCheckBuffersAllocatedResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollection_CloseSingleBuffer_Ordinal = 402848328lu << 32;
+constexpr uint64_t kBufferCollection_CloseSingleBuffer_Ordinal = 0x1802fa4800000000lu;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollection_AllocateSingleBuffer_Ordinal = 463501412lu << 32;
+constexpr uint64_t kBufferCollection_AllocateSingleBuffer_Ordinal = 0x1ba0786400000000lu;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollection_WaitForSingleBufferAllocated_Ordinal = 921069347lu << 32;
+constexpr uint64_t kBufferCollection_WaitForSingleBufferAllocated_Ordinal = 0x36e6672300000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionWaitForSingleBufferAllocatedResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollection_CheckSingleBufferAllocated_Ordinal = 318847260lu << 32;
+constexpr uint64_t kBufferCollection_CheckSingleBufferAllocated_Ordinal = 0x1301391c00000000lu;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollection_Close_Ordinal = 1618761496lu << 32;
+constexpr uint64_t kBufferCollection_Close_Ordinal = 0x607c571800000000lu;
 
 }  // namespace
 
@@ -2009,7 +2023,8 @@ bool BufferCollection::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kBufferCollection_SetEventSink_Ordinal: {
+    case kBufferCollection_SetEventSink_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SetEventSinkRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2020,7 +2035,8 @@ bool BufferCollection::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::SetEventSinkCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollection_Sync_Ordinal: {
+    case kBufferCollection_Sync_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SyncRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2030,7 +2046,8 @@ bool BufferCollection::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::SyncCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollection_SetConstraints_Ordinal: {
+    case kBufferCollection_SetConstraints_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SetConstraintsRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2041,7 +2058,8 @@ bool BufferCollection::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::SetConstraintsCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollection_WaitForBuffersAllocated_Ordinal: {
+    case kBufferCollection_WaitForBuffersAllocated_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<WaitForBuffersAllocatedRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2051,7 +2069,8 @@ bool BufferCollection::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::WaitForBuffersAllocatedCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollection_CheckBuffersAllocated_Ordinal: {
+    case kBufferCollection_CheckBuffersAllocated_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CheckBuffersAllocatedRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2061,7 +2080,8 @@ bool BufferCollection::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::CheckBuffersAllocatedCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollection_CloseSingleBuffer_Ordinal: {
+    case kBufferCollection_CloseSingleBuffer_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CloseSingleBufferRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2072,7 +2092,8 @@ bool BufferCollection::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::CloseSingleBufferCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollection_AllocateSingleBuffer_Ordinal: {
+    case kBufferCollection_AllocateSingleBuffer_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<AllocateSingleBufferRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2083,7 +2104,8 @@ bool BufferCollection::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::AllocateSingleBufferCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollection_WaitForSingleBufferAllocated_Ordinal: {
+    case kBufferCollection_WaitForSingleBufferAllocated_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<WaitForSingleBufferAllocatedRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2094,7 +2116,8 @@ bool BufferCollection::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::WaitForSingleBufferAllocatedCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollection_CheckSingleBufferAllocated_Ordinal: {
+    case kBufferCollection_CheckSingleBufferAllocated_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CheckSingleBufferAllocatedRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2105,7 +2128,8 @@ bool BufferCollection::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::CheckSingleBufferAllocatedCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollection_Close_Ordinal: {
+    case kBufferCollection_Close_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CloseRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);

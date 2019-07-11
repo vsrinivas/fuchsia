@@ -8,19 +8,15 @@ namespace name {
 
 #ifdef __Fuchsia__
 namespace {
-  
-constexpr uint64_t kParent_GetChild_Ordinal = 915586153lu << 32;
+constexpr uint64_t kParent_GetChild_Ordinal = 0x3692bc6900000000lu;
 extern "C" const fidl_type_t test_name_ParentGetChildRequestTable;
 extern "C" const fidl_type_t test_name_ParentGetChildResponseTable;
-  
-constexpr uint64_t kParent_GetChildRequest_Ordinal = 1068158078lu << 32;
+constexpr uint64_t kParent_GetChildRequest_Ordinal = 0x3faacc7e00000000lu;
 extern "C" const fidl_type_t test_name_ParentGetChildRequestRequestTable;
 extern "C" const fidl_type_t test_name_ParentGetChildRequestResponseTable;
-  
-constexpr uint64_t kParent_TakeChild_Ordinal = 1275478777lu << 32;
+constexpr uint64_t kParent_TakeChild_Ordinal = 0x4c0642f900000000lu;
 extern "C" const fidl_type_t test_name_ParentTakeChildRequestTable;
-  
-constexpr uint64_t kParent_TakeChildRequest_Ordinal = 1589872250lu << 32;
+constexpr uint64_t kParent_TakeChildRequest_Ordinal = 0x5ec3867a00000000lu;
 extern "C" const fidl_type_t test_name_ParentTakeChildRequestRequestTable;
 
 }  // namespace
@@ -183,7 +179,8 @@ zx_status_t Parent_Stub::Dispatch_(
   zx_status_t status = ZX_OK;
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case kParent_GetChild_Ordinal: {
+    case kParent_GetChild_Ordinal:
+    {
       if (!response.needs_response()) {
         FIDL_REPORT_DECODING_ERROR(message, &test_name_ParentGetChildRequestTable, "Message needing a response with no txid");
         return ZX_ERR_INVALID_ARGS;
@@ -197,7 +194,8 @@ zx_status_t Parent_Stub::Dispatch_(
       impl_->GetChild(Parent_GetChild_Responder(std::move(response), ordinal));
       break;
     }
-    case kParent_GetChildRequest_Ordinal: {
+    case kParent_GetChildRequest_Ordinal:
+    {
       if (!response.needs_response()) {
         FIDL_REPORT_DECODING_ERROR(message, &test_name_ParentGetChildRequestRequestTable, "Message needing a response with no txid");
         return ZX_ERR_INVALID_ARGS;
@@ -211,7 +209,8 @@ zx_status_t Parent_Stub::Dispatch_(
       impl_->GetChildRequest(Parent_GetChildRequest_Responder(std::move(response), ordinal));
       break;
     }
-    case kParent_TakeChild_Ordinal: {
+    case kParent_TakeChild_Ordinal:
+    {
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_ParentTakeChildRequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -223,7 +222,8 @@ zx_status_t Parent_Stub::Dispatch_(
       impl_->TakeChild(std::move(arg0));
       break;
     }
-    case kParent_TakeChildRequest_Ordinal: {
+    case kParent_TakeChildRequest_Ordinal:
+    {
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_ParentTakeChildRequestRequestTable, &error_msg);
       if (status != ZX_OK) {

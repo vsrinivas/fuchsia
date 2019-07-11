@@ -12,7 +12,7 @@ Reply(::fidl::DecodedMessage<{{ .Name }}Response> params)
 {{- define "ReplyInPlaceMethodDefinition" }}
 void {{ .LLProps.InterfaceName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyInPlaceMethodSignature" . }} {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = {{ .OrdinalName }};
+  params.message()->_hdr.ordinal = {{ .Ordinals.Write.Name }};
   CompleterBase::SendReply(std::move(params));
 }
 {{- end }}

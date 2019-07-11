@@ -26,7 +26,10 @@ bool {{ .Name }}::TryDispatch{{ template "SyncServerDispatchMethodSignature" }} 
   switch (hdr->ordinal) {
   {{- range .Methods }}
     {{- if .HasRequest }}
-    case {{ .OrdinalName }}: {
+      {{- range .Ordinals.Reads }}
+    case {{ .Name }}:
+      {{- end }}
+    {
       auto result = ::fidl::DecodeAs<{{ .Name }}Request>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);

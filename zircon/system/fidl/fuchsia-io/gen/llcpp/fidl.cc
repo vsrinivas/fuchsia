@@ -11,7 +11,7 @@ namespace io {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDirectoryWatcher_OnEvent_Ordinal = 546032797lu << 32;
+constexpr uint64_t kDirectoryWatcher_OnEvent_Ordinal = 0x208bcc9d00000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryWatcherOnEventRequestTable;
 
 }  // namespace
@@ -86,7 +86,8 @@ bool DirectoryWatcher::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDirectoryWatcher_OnEvent_Ordinal: {
+    case kDirectoryWatcher_OnEvent_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<OnEventRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -274,29 +275,29 @@ Socket& ::llcpp::fuchsia::io::NodeInfo::mutable_socket() {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kNode_Clone_Ordinal = 402549324lu << 32;
+constexpr uint64_t kNode_Clone_Ordinal = 0x17fe6a4c00000000lu;
 extern "C" const fidl_type_t fuchsia_io_NodeCloneRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kNode_Close_Ordinal = 1387878023lu << 32;
+constexpr uint64_t kNode_Close_Ordinal = 0x52b9568700000000lu;
 extern "C" const fidl_type_t fuchsia_io_NodeCloseResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kNode_Describe_Ordinal = 526573406lu << 32;
+constexpr uint64_t kNode_Describe_Ordinal = 0x1f62df5e00000000lu;
 extern "C" const fidl_type_t fuchsia_io_NodeDescribeResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kNode_OnOpen_Ordinal = 1191225277lu << 32;
+constexpr uint64_t kNode_OnOpen_Ordinal = 0x4700a7bd00000000lu;
 extern "C" const fidl_type_t fuchsia_io_NodeOnOpenEventTable;
 [[maybe_unused]]
-constexpr uint64_t kNode_Sync_Ordinal = 1648508842lu << 32;
+constexpr uint64_t kNode_Sync_Ordinal = 0x62423faa00000000lu;
 extern "C" const fidl_type_t fuchsia_io_NodeSyncResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kNode_GetAttr_Ordinal = 1166403528lu << 32;
+constexpr uint64_t kNode_GetAttr_Ordinal = 0x4585e7c800000000lu;
 extern "C" const fidl_type_t fuchsia_io_NodeGetAttrResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kNode_SetAttr_Ordinal = 198530458lu << 32;
+constexpr uint64_t kNode_SetAttr_Ordinal = 0xbd5559a00000000lu;
 extern "C" const fidl_type_t fuchsia_io_NodeSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeSetAttrResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kNode_Ioctl_Ordinal = 905161895lu << 32;
+constexpr uint64_t kNode_Ioctl_Ordinal = 0x35f3aca700000000lu;
 extern "C" const fidl_type_t fuchsia_io_NodeIoctlRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeIoctlResponseTable;
 
@@ -938,7 +939,8 @@ zx_status_t Node::Call::HandleEvents(zx::unowned_channel client_end,
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
-    case kNode_OnOpen_Ordinal: {
+    case kNode_OnOpen_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<OnOpenResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -960,7 +962,8 @@ bool Node::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kNode_Clone_Ordinal: {
+    case kNode_Clone_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CloneRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -971,7 +974,8 @@ bool Node::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::CloneCompleter::Sync(txn));
       return true;
     }
-    case kNode_Close_Ordinal: {
+    case kNode_Close_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CloseRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -981,7 +985,8 @@ bool Node::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::CloseCompleter::Sync(txn));
       return true;
     }
-    case kNode_Describe_Ordinal: {
+    case kNode_Describe_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<DescribeRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -991,7 +996,8 @@ bool Node::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::DescribeCompleter::Sync(txn));
       return true;
     }
-    case kNode_Sync_Ordinal: {
+    case kNode_Sync_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SyncRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1001,7 +1007,8 @@ bool Node::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::SyncCompleter::Sync(txn));
       return true;
     }
-    case kNode_GetAttr_Ordinal: {
+    case kNode_GetAttr_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetAttrRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1011,7 +1018,8 @@ bool Node::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::GetAttrCompleter::Sync(txn));
       return true;
     }
-    case kNode_SetAttr_Ordinal: {
+    case kNode_SetAttr_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SetAttrRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1022,7 +1030,8 @@ bool Node::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::SetAttrCompleter::Sync(txn));
       return true;
     }
-    case kNode_Ioctl_Ordinal: {
+    case kNode_Ioctl_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<IoctlRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1281,60 +1290,60 @@ void Node::Interface::IoctlCompleterBase::Reply(::fidl::DecodedMessage<IoctlResp
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kFile_Clone_Ordinal = 402549324lu << 32;
+constexpr uint64_t kFile_Clone_Ordinal = 0x17fe6a4c00000000lu;
 extern "C" const fidl_type_t fuchsia_io_FileCloneRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kFile_Close_Ordinal = 1387878023lu << 32;
+constexpr uint64_t kFile_Close_Ordinal = 0x52b9568700000000lu;
 extern "C" const fidl_type_t fuchsia_io_FileCloseResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kFile_Describe_Ordinal = 526573406lu << 32;
+constexpr uint64_t kFile_Describe_Ordinal = 0x1f62df5e00000000lu;
 extern "C" const fidl_type_t fuchsia_io_FileDescribeResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kFile_OnOpen_Ordinal = 1191225277lu << 32;
+constexpr uint64_t kFile_OnOpen_Ordinal = 0x4700a7bd00000000lu;
 extern "C" const fidl_type_t fuchsia_io_FileOnOpenEventTable;
 [[maybe_unused]]
-constexpr uint64_t kFile_Sync_Ordinal = 1648508842lu << 32;
+constexpr uint64_t kFile_Sync_Ordinal = 0x62423faa00000000lu;
 extern "C" const fidl_type_t fuchsia_io_FileSyncResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kFile_GetAttr_Ordinal = 1166403528lu << 32;
+constexpr uint64_t kFile_GetAttr_Ordinal = 0x4585e7c800000000lu;
 extern "C" const fidl_type_t fuchsia_io_FileGetAttrResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kFile_SetAttr_Ordinal = 198530458lu << 32;
+constexpr uint64_t kFile_SetAttr_Ordinal = 0xbd5559a00000000lu;
 extern "C" const fidl_type_t fuchsia_io_FileSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSetAttrResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kFile_Ioctl_Ordinal = 905161895lu << 32;
+constexpr uint64_t kFile_Ioctl_Ordinal = 0x35f3aca700000000lu;
 extern "C" const fidl_type_t fuchsia_io_FileIoctlRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileIoctlResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kFile_Read_Ordinal = 636961156lu << 32;
+constexpr uint64_t kFile_Read_Ordinal = 0x25f7418400000000lu;
 extern "C" const fidl_type_t fuchsia_io_FileReadResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kFile_ReadAt_Ordinal = 2087865796lu << 32;
+constexpr uint64_t kFile_ReadAt_Ordinal = 0x7c724dc400000000lu;
 extern "C" const fidl_type_t fuchsia_io_FileReadAtResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kFile_Write_Ordinal = 85125024lu << 32;
+constexpr uint64_t kFile_Write_Ordinal = 0x512e7a000000000lu;
 extern "C" const fidl_type_t fuchsia_io_FileWriteRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileWriteResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kFile_WriteAt_Ordinal = 1045766885lu << 32;
+constexpr uint64_t kFile_WriteAt_Ordinal = 0x3e5522e500000000lu;
 extern "C" const fidl_type_t fuchsia_io_FileWriteAtRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileWriteAtResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kFile_Seek_Ordinal = 2016048965lu << 32;
+constexpr uint64_t kFile_Seek_Ordinal = 0x782a774500000000lu;
 extern "C" const fidl_type_t fuchsia_io_FileSeekRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSeekResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kFile_Truncate_Ordinal = 1118517818lu << 32;
+constexpr uint64_t kFile_Truncate_Ordinal = 0x42ab3a3a00000000lu;
 extern "C" const fidl_type_t fuchsia_io_FileTruncateResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kFile_GetFlags_Ordinal = 1679205366lu << 32;
+constexpr uint64_t kFile_GetFlags_Ordinal = 0x6416a3f600000000lu;
 [[maybe_unused]]
-constexpr uint64_t kFile_SetFlags_Ordinal = 1059310710lu << 32;
+constexpr uint64_t kFile_SetFlags_Ordinal = 0x3f23cc7600000000lu;
 extern "C" const fidl_type_t fuchsia_io_FileSetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSetFlagsResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kFile_GetBuffer_Ordinal = 1958938995lu << 32;
+constexpr uint64_t kFile_GetBuffer_Ordinal = 0x74c3097300000000lu;
 extern "C" const fidl_type_t fuchsia_io_FileGetBufferRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileGetBufferResponseTable;
 
@@ -2720,7 +2729,8 @@ zx_status_t File::Call::HandleEvents(zx::unowned_channel client_end,
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
-    case kFile_OnOpen_Ordinal: {
+    case kFile_OnOpen_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<OnOpenResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -2742,7 +2752,8 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kFile_Clone_Ordinal: {
+    case kFile_Clone_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CloneRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2753,7 +2764,8 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::CloneCompleter::Sync(txn));
       return true;
     }
-    case kFile_Close_Ordinal: {
+    case kFile_Close_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CloseRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2763,7 +2775,8 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::CloseCompleter::Sync(txn));
       return true;
     }
-    case kFile_Describe_Ordinal: {
+    case kFile_Describe_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<DescribeRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2773,7 +2786,8 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::DescribeCompleter::Sync(txn));
       return true;
     }
-    case kFile_Sync_Ordinal: {
+    case kFile_Sync_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SyncRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2783,7 +2797,8 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::SyncCompleter::Sync(txn));
       return true;
     }
-    case kFile_GetAttr_Ordinal: {
+    case kFile_GetAttr_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetAttrRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2793,7 +2808,8 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::GetAttrCompleter::Sync(txn));
       return true;
     }
-    case kFile_SetAttr_Ordinal: {
+    case kFile_SetAttr_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SetAttrRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2804,7 +2820,8 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::SetAttrCompleter::Sync(txn));
       return true;
     }
-    case kFile_Ioctl_Ordinal: {
+    case kFile_Ioctl_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<IoctlRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2815,7 +2832,8 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::IoctlCompleter::Sync(txn));
       return true;
     }
-    case kFile_Read_Ordinal: {
+    case kFile_Read_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<ReadRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2826,7 +2844,8 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::ReadCompleter::Sync(txn));
       return true;
     }
-    case kFile_ReadAt_Ordinal: {
+    case kFile_ReadAt_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<ReadAtRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2837,7 +2856,8 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::ReadAtCompleter::Sync(txn));
       return true;
     }
-    case kFile_Write_Ordinal: {
+    case kFile_Write_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<WriteRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2848,7 +2868,8 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::WriteCompleter::Sync(txn));
       return true;
     }
-    case kFile_WriteAt_Ordinal: {
+    case kFile_WriteAt_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<WriteAtRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2859,7 +2880,8 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::WriteAtCompleter::Sync(txn));
       return true;
     }
-    case kFile_Seek_Ordinal: {
+    case kFile_Seek_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SeekRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2870,7 +2892,8 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::SeekCompleter::Sync(txn));
       return true;
     }
-    case kFile_Truncate_Ordinal: {
+    case kFile_Truncate_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<TruncateRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2881,7 +2904,8 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::TruncateCompleter::Sync(txn));
       return true;
     }
-    case kFile_GetFlags_Ordinal: {
+    case kFile_GetFlags_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetFlagsRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2891,7 +2915,8 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::GetFlagsCompleter::Sync(txn));
       return true;
     }
-    case kFile_SetFlags_Ordinal: {
+    case kFile_SetFlags_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SetFlagsRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2902,7 +2927,8 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::SetFlagsCompleter::Sync(txn));
       return true;
     }
-    case kFile_GetBuffer_Ordinal: {
+    case kFile_GetBuffer_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetBufferRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -3465,57 +3491,57 @@ void File::Interface::GetBufferCompleterBase::Reply(::fidl::DecodedMessage<GetBu
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDirectory_Clone_Ordinal = 402549324lu << 32;
+constexpr uint64_t kDirectory_Clone_Ordinal = 0x17fe6a4c00000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryCloneRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectory_Close_Ordinal = 1387878023lu << 32;
+constexpr uint64_t kDirectory_Close_Ordinal = 0x52b9568700000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryCloseResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectory_Describe_Ordinal = 526573406lu << 32;
+constexpr uint64_t kDirectory_Describe_Ordinal = 0x1f62df5e00000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryDescribeResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectory_OnOpen_Ordinal = 1191225277lu << 32;
+constexpr uint64_t kDirectory_OnOpen_Ordinal = 0x4700a7bd00000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryOnOpenEventTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectory_Sync_Ordinal = 1648508842lu << 32;
+constexpr uint64_t kDirectory_Sync_Ordinal = 0x62423faa00000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectorySyncResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectory_GetAttr_Ordinal = 1166403528lu << 32;
+constexpr uint64_t kDirectory_GetAttr_Ordinal = 0x4585e7c800000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryGetAttrResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectory_SetAttr_Ordinal = 198530458lu << 32;
+constexpr uint64_t kDirectory_SetAttr_Ordinal = 0xbd5559a00000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectorySetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectorySetAttrResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectory_Ioctl_Ordinal = 905161895lu << 32;
+constexpr uint64_t kDirectory_Ioctl_Ordinal = 0x35f3aca700000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryIoctlRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryIoctlResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectory_Open_Ordinal = 2011483371lu << 32;
+constexpr uint64_t kDirectory_Open_Ordinal = 0x77e4cceb00000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryOpenRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectory_Unlink_Ordinal = 750443289lu << 32;
+constexpr uint64_t kDirectory_Unlink_Ordinal = 0x2cbadb1900000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryUnlinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryUnlinkResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectory_ReadDirents_Ordinal = 782580781lu << 32;
+constexpr uint64_t kDirectory_ReadDirents_Ordinal = 0x2ea53c2d00000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryReadDirentsResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectory_Rewind_Ordinal = 1886584199lu << 32;
+constexpr uint64_t kDirectory_Rewind_Ordinal = 0x7072fd8700000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryRewindResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectory_GetToken_Ordinal = 840416493lu << 32;
+constexpr uint64_t kDirectory_GetToken_Ordinal = 0x3217bced00000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryGetTokenResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectory_Rename_Ordinal = 1251258540lu << 32;
+constexpr uint64_t kDirectory_Rename_Ordinal = 0x4a94b0ac00000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryRenameRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryRenameResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectory_Link_Ordinal = 462052964lu << 32;
+constexpr uint64_t kDirectory_Link_Ordinal = 0x1b8a5e6400000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryLinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryLinkResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectory_Watch_Ordinal = 1522700084lu << 32;
+constexpr uint64_t kDirectory_Watch_Ordinal = 0x5ac28f3400000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryWatchRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryWatchResponseTable;
 
@@ -4863,7 +4889,8 @@ zx_status_t Directory::Call::HandleEvents(zx::unowned_channel client_end,
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
-    case kDirectory_OnOpen_Ordinal: {
+    case kDirectory_OnOpen_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<OnOpenResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -4885,7 +4912,8 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDirectory_Clone_Ordinal: {
+    case kDirectory_Clone_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CloneRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -4896,7 +4924,8 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::CloneCompleter::Sync(txn));
       return true;
     }
-    case kDirectory_Close_Ordinal: {
+    case kDirectory_Close_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CloseRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -4906,7 +4935,8 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::CloseCompleter::Sync(txn));
       return true;
     }
-    case kDirectory_Describe_Ordinal: {
+    case kDirectory_Describe_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<DescribeRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -4916,7 +4946,8 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::DescribeCompleter::Sync(txn));
       return true;
     }
-    case kDirectory_Sync_Ordinal: {
+    case kDirectory_Sync_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SyncRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -4926,7 +4957,8 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::SyncCompleter::Sync(txn));
       return true;
     }
-    case kDirectory_GetAttr_Ordinal: {
+    case kDirectory_GetAttr_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetAttrRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -4936,7 +4968,8 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::GetAttrCompleter::Sync(txn));
       return true;
     }
-    case kDirectory_SetAttr_Ordinal: {
+    case kDirectory_SetAttr_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SetAttrRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -4947,7 +4980,8 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::SetAttrCompleter::Sync(txn));
       return true;
     }
-    case kDirectory_Ioctl_Ordinal: {
+    case kDirectory_Ioctl_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<IoctlRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -4958,7 +4992,8 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::IoctlCompleter::Sync(txn));
       return true;
     }
-    case kDirectory_Open_Ordinal: {
+    case kDirectory_Open_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<OpenRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -4969,7 +5004,8 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::OpenCompleter::Sync(txn));
       return true;
     }
-    case kDirectory_Unlink_Ordinal: {
+    case kDirectory_Unlink_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<UnlinkRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -4980,7 +5016,8 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::UnlinkCompleter::Sync(txn));
       return true;
     }
-    case kDirectory_ReadDirents_Ordinal: {
+    case kDirectory_ReadDirents_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<ReadDirentsRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -4991,7 +5028,8 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::ReadDirentsCompleter::Sync(txn));
       return true;
     }
-    case kDirectory_Rewind_Ordinal: {
+    case kDirectory_Rewind_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<RewindRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -5001,7 +5039,8 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::RewindCompleter::Sync(txn));
       return true;
     }
-    case kDirectory_GetToken_Ordinal: {
+    case kDirectory_GetToken_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetTokenRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -5011,7 +5050,8 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::GetTokenCompleter::Sync(txn));
       return true;
     }
-    case kDirectory_Rename_Ordinal: {
+    case kDirectory_Rename_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<RenameRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -5022,7 +5062,8 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::RenameCompleter::Sync(txn));
       return true;
     }
-    case kDirectory_Link_Ordinal: {
+    case kDirectory_Link_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<LinkRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -5033,7 +5074,8 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::LinkCompleter::Sync(txn));
       return true;
     }
-    case kDirectory_Watch_Ordinal: {
+    case kDirectory_Watch_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<WatchRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -5509,78 +5551,78 @@ void Directory::Interface::WatchCompleterBase::Reply(::fidl::DecodedMessage<Watc
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_Clone_Ordinal = 402549324lu << 32;
+constexpr uint64_t kDirectoryAdmin_Clone_Ordinal = 0x17fe6a4c00000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminCloneRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_Close_Ordinal = 1387878023lu << 32;
+constexpr uint64_t kDirectoryAdmin_Close_Ordinal = 0x52b9568700000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminCloseResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_Describe_Ordinal = 526573406lu << 32;
+constexpr uint64_t kDirectoryAdmin_Describe_Ordinal = 0x1f62df5e00000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminDescribeResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_OnOpen_Ordinal = 1191225277lu << 32;
+constexpr uint64_t kDirectoryAdmin_OnOpen_Ordinal = 0x4700a7bd00000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOnOpenEventTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_Sync_Ordinal = 1648508842lu << 32;
+constexpr uint64_t kDirectoryAdmin_Sync_Ordinal = 0x62423faa00000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSyncResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_GetAttr_Ordinal = 1166403528lu << 32;
+constexpr uint64_t kDirectoryAdmin_GetAttr_Ordinal = 0x4585e7c800000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetAttrResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_SetAttr_Ordinal = 198530458lu << 32;
+constexpr uint64_t kDirectoryAdmin_SetAttr_Ordinal = 0xbd5559a00000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSetAttrResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_Ioctl_Ordinal = 905161895lu << 32;
+constexpr uint64_t kDirectoryAdmin_Ioctl_Ordinal = 0x35f3aca700000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminIoctlRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminIoctlResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_Open_Ordinal = 2011483371lu << 32;
+constexpr uint64_t kDirectoryAdmin_Open_Ordinal = 0x77e4cceb00000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOpenRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_Unlink_Ordinal = 750443289lu << 32;
+constexpr uint64_t kDirectoryAdmin_Unlink_Ordinal = 0x2cbadb1900000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnlinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnlinkResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_ReadDirents_Ordinal = 782580781lu << 32;
+constexpr uint64_t kDirectoryAdmin_ReadDirents_Ordinal = 0x2ea53c2d00000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminReadDirentsResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_Rewind_Ordinal = 1886584199lu << 32;
+constexpr uint64_t kDirectoryAdmin_Rewind_Ordinal = 0x7072fd8700000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminRewindResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_GetToken_Ordinal = 840416493lu << 32;
+constexpr uint64_t kDirectoryAdmin_GetToken_Ordinal = 0x3217bced00000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetTokenResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_Rename_Ordinal = 1251258540lu << 32;
+constexpr uint64_t kDirectoryAdmin_Rename_Ordinal = 0x4a94b0ac00000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminRenameRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminRenameResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_Link_Ordinal = 462052964lu << 32;
+constexpr uint64_t kDirectoryAdmin_Link_Ordinal = 0x1b8a5e6400000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminLinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminLinkResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_Watch_Ordinal = 1522700084lu << 32;
+constexpr uint64_t kDirectoryAdmin_Watch_Ordinal = 0x5ac28f3400000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminWatchRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminWatchResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_Mount_Ordinal = 2120159974lu << 32;
+constexpr uint64_t kDirectoryAdmin_Mount_Ordinal = 0x7e5f12e600000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminMountRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminMountResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_MountAndCreate_Ordinal = 841348753lu << 32;
+constexpr uint64_t kDirectoryAdmin_MountAndCreate_Ordinal = 0x3225f69100000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminMountAndCreateRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminMountAndCreateResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_Unmount_Ordinal = 620898132lu << 32;
+constexpr uint64_t kDirectoryAdmin_Unmount_Ordinal = 0x2502275400000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnmountResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_UnmountNode_Ordinal = 383400103lu << 32;
+constexpr uint64_t kDirectoryAdmin_UnmountNode_Ordinal = 0x16da38a700000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnmountNodeResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_QueryFilesystem_Ordinal = 1713999250lu << 32;
+constexpr uint64_t kDirectoryAdmin_QueryFilesystem_Ordinal = 0x66298d9200000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminQueryFilesystemResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_GetDevicePath_Ordinal = 787943096lu << 32;
+constexpr uint64_t kDirectoryAdmin_GetDevicePath_Ordinal = 0x2ef70eb800000000lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetDevicePathResponseTable;
 
 }  // namespace
@@ -7422,7 +7464,8 @@ zx_status_t DirectoryAdmin::Call::HandleEvents(zx::unowned_channel client_end,
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
-    case kDirectoryAdmin_OnOpen_Ordinal: {
+    case kDirectoryAdmin_OnOpen_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<OnOpenResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -7444,7 +7487,8 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDirectoryAdmin_Clone_Ordinal: {
+    case kDirectoryAdmin_Clone_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CloneRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -7455,7 +7499,8 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::CloneCompleter::Sync(txn));
       return true;
     }
-    case kDirectoryAdmin_Close_Ordinal: {
+    case kDirectoryAdmin_Close_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<CloseRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -7465,7 +7510,8 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::CloseCompleter::Sync(txn));
       return true;
     }
-    case kDirectoryAdmin_Describe_Ordinal: {
+    case kDirectoryAdmin_Describe_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<DescribeRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -7475,7 +7521,8 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::DescribeCompleter::Sync(txn));
       return true;
     }
-    case kDirectoryAdmin_Sync_Ordinal: {
+    case kDirectoryAdmin_Sync_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SyncRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -7485,7 +7532,8 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::SyncCompleter::Sync(txn));
       return true;
     }
-    case kDirectoryAdmin_GetAttr_Ordinal: {
+    case kDirectoryAdmin_GetAttr_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetAttrRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -7495,7 +7543,8 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::GetAttrCompleter::Sync(txn));
       return true;
     }
-    case kDirectoryAdmin_SetAttr_Ordinal: {
+    case kDirectoryAdmin_SetAttr_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SetAttrRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -7506,7 +7555,8 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::SetAttrCompleter::Sync(txn));
       return true;
     }
-    case kDirectoryAdmin_Ioctl_Ordinal: {
+    case kDirectoryAdmin_Ioctl_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<IoctlRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -7517,7 +7567,8 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::IoctlCompleter::Sync(txn));
       return true;
     }
-    case kDirectoryAdmin_Open_Ordinal: {
+    case kDirectoryAdmin_Open_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<OpenRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -7528,7 +7579,8 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::OpenCompleter::Sync(txn));
       return true;
     }
-    case kDirectoryAdmin_Unlink_Ordinal: {
+    case kDirectoryAdmin_Unlink_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<UnlinkRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -7539,7 +7591,8 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::UnlinkCompleter::Sync(txn));
       return true;
     }
-    case kDirectoryAdmin_ReadDirents_Ordinal: {
+    case kDirectoryAdmin_ReadDirents_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<ReadDirentsRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -7550,7 +7603,8 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::ReadDirentsCompleter::Sync(txn));
       return true;
     }
-    case kDirectoryAdmin_Rewind_Ordinal: {
+    case kDirectoryAdmin_Rewind_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<RewindRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -7560,7 +7614,8 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::RewindCompleter::Sync(txn));
       return true;
     }
-    case kDirectoryAdmin_GetToken_Ordinal: {
+    case kDirectoryAdmin_GetToken_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetTokenRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -7570,7 +7625,8 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::GetTokenCompleter::Sync(txn));
       return true;
     }
-    case kDirectoryAdmin_Rename_Ordinal: {
+    case kDirectoryAdmin_Rename_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<RenameRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -7581,7 +7637,8 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::RenameCompleter::Sync(txn));
       return true;
     }
-    case kDirectoryAdmin_Link_Ordinal: {
+    case kDirectoryAdmin_Link_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<LinkRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -7592,7 +7649,8 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::LinkCompleter::Sync(txn));
       return true;
     }
-    case kDirectoryAdmin_Watch_Ordinal: {
+    case kDirectoryAdmin_Watch_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<WatchRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -7603,7 +7661,8 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::WatchCompleter::Sync(txn));
       return true;
     }
-    case kDirectoryAdmin_Mount_Ordinal: {
+    case kDirectoryAdmin_Mount_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<MountRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -7614,7 +7673,8 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::MountCompleter::Sync(txn));
       return true;
     }
-    case kDirectoryAdmin_MountAndCreate_Ordinal: {
+    case kDirectoryAdmin_MountAndCreate_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<MountAndCreateRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -7625,7 +7685,8 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::MountAndCreateCompleter::Sync(txn));
       return true;
     }
-    case kDirectoryAdmin_Unmount_Ordinal: {
+    case kDirectoryAdmin_Unmount_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<UnmountRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -7635,7 +7696,8 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::UnmountCompleter::Sync(txn));
       return true;
     }
-    case kDirectoryAdmin_UnmountNode_Ordinal: {
+    case kDirectoryAdmin_UnmountNode_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<UnmountNodeRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -7645,7 +7707,8 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::UnmountNodeCompleter::Sync(txn));
       return true;
     }
-    case kDirectoryAdmin_QueryFilesystem_Ordinal: {
+    case kDirectoryAdmin_QueryFilesystem_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<QueryFilesystemRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -7655,7 +7718,8 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::QueryFilesystemCompleter::Sync(txn));
       return true;
     }
-    case kDirectoryAdmin_GetDevicePath_Ordinal: {
+    case kDirectoryAdmin_GetDevicePath_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetDevicePathRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);

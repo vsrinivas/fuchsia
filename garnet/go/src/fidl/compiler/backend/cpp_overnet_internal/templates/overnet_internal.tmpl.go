@@ -176,7 +176,9 @@ class {{ .StubName }} : public ::overnet::FidlStream, public {{ .Name }} {
 namespace {
 
 {{ range .Methods }}
-constexpr uint32_t {{ .OrdinalName }} = {{ .Ordinal }}u;
+  {{- range .Ordinals.Reads }}
+constexpr uint64_t {{ .Name }} = {{ .Ordinal }}lu;
+  {{- end }}
   {{- if .HasRequest }}
 extern "C" const fidl_type_t {{ .RequestTypeName }};
   {{- end }}
@@ -201,7 +203,10 @@ zx_status_t {{ .ProxyName }}::Dispatch_(::fidl::Message* message) {
     {{- range .Methods }}
       {{- if not .HasRequest }}
         {{- if .HasResponse }}
-    case {{ .OrdinalName }}: {
+          {{- range .Ordinals.Reads }}
+    case {{ .Name }}:
+          {{- end}}
+    {
       const char* error_msg = nullptr;
       status = message->Decode(&{{ .ResponseTypeName }}, &error_msg);
       if (status != ZX_OK) {
@@ -236,7 +241,7 @@ zx_status_t {{ .ProxyName }}::Dispatch_(::fidl::Message* message) {
 {{ range .Methods }}
   {{- if .HasRequest }}
 void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
-  ::fidl::Encoder _encoder({{ .OrdinalName }});
+  ::fidl::Encoder _encoder({{ .Ordinals.Write.Name }});
     {{- if .Request }}
   _encoder.Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t));
       {{- range .Request }}
@@ -278,7 +283,10 @@ zx_status_t {{ .StubName }}::Dispatch_(::fidl::Message* message) {
   switch (message->ordinal()) {
     {{- range .Methods }}
       {{- if .HasRequest }}
-    case {{ .OrdinalName }}: {
+        {{- range .Ordinals.Reads }}
+    case {{ .Name }}:
+        {{- end }}
+    {
       const char* error_msg = nullptr;
       status = message->Decode(&{{ .RequestTypeName }}, &error_msg);
       if (status != ZX_OK) {
@@ -298,7 +306,7 @@ zx_status_t {{ .StubName }}::Dispatch_(::fidl::Message* message) {
         {{- end -}}
         {{- if .HasResponse -}}
           {{- if .Request }}, {{ end -}}[this]({{ template "Params" .Response }}) {
-            ::fidl::Encoder _encoder({{ .OrdinalName }});
+            ::fidl::Encoder _encoder({{ .Ordinals.Write.Name }});
             {{- if .Response }}
             _encoder.Alloc({{ .ResponseSize }} - sizeof(fidl_message_header_t));
               {{- range .Response }}
@@ -325,7 +333,7 @@ zx_status_t {{ .StubName }}::Dispatch_(::fidl::Message* message) {
   {{- if not .HasRequest }}
     {{- if .HasResponse }}
 void {{ $.StubName }}::{{ template "EventMethodSignature" . }} {
-  ::fidl::Encoder _encoder({{ .OrdinalName }});
+  ::fidl::Encoder _encoder({{ .Ordinals.Write.Name }});
     {{- if .Response }}
   _encoder.Alloc({{ .ResponseSize }} - sizeof(fidl_message_header_t));
       {{- range .Response }}

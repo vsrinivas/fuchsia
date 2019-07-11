@@ -21,7 +21,7 @@ zx_status_t {{ .LLProps.InterfaceName }}::{{ template "SendEventCallerAllocateMe
   auto& _response = *reinterpret_cast<{{ .Name }}Response*>(_buffer.data());
   {{- end }}
   _response._hdr = {};
-  _response._hdr.ordinal = {{ .OrdinalName }};
+  _response._hdr.ordinal = {{ .Ordinals.Write.Name }};
   {{- template "FillResponseStructMembers" .Response -}}
 
   {{- if .LLProps.LinearizeResponse }}

@@ -11,16 +11,16 @@ namespace name {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kParent_GetChild_Ordinal = 915586153lu << 32;
+constexpr uint64_t kParent_GetChild_Ordinal = 0x3692bc6900000000lu;
 extern "C" const fidl_type_t test_name_ParentGetChildResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kParent_GetChildRequest_Ordinal = 1068158078lu << 32;
+constexpr uint64_t kParent_GetChildRequest_Ordinal = 0x3faacc7e00000000lu;
 extern "C" const fidl_type_t test_name_ParentGetChildRequestResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kParent_TakeChild_Ordinal = 1275478777lu << 32;
+constexpr uint64_t kParent_TakeChild_Ordinal = 0x4c0642f900000000lu;
 extern "C" const fidl_type_t test_name_ParentTakeChildRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kParent_TakeChildRequest_Ordinal = 1589872250lu << 32;
+constexpr uint64_t kParent_TakeChildRequest_Ordinal = 0x5ec3867a00000000lu;
 extern "C" const fidl_type_t test_name_ParentTakeChildRequestRequestTable;
 
 }  // namespace
@@ -323,7 +323,8 @@ bool Parent::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kParent_GetChild_Ordinal: {
+    case kParent_GetChild_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetChildRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -333,7 +334,8 @@ bool Parent::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::GetChildCompleter::Sync(txn));
       return true;
     }
-    case kParent_GetChildRequest_Ordinal: {
+    case kParent_GetChildRequest_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetChildRequestRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -343,7 +345,8 @@ bool Parent::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::GetChildRequestCompleter::Sync(txn));
       return true;
     }
-    case kParent_TakeChild_Ordinal: {
+    case kParent_TakeChild_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<TakeChildRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -354,7 +357,8 @@ bool Parent::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::TakeChildCompleter::Sync(txn));
       return true;
     }
-    case kParent_TakeChildRequest_Ordinal: {
+    case kParent_TakeChildRequest_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<TakeChildRequestRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);

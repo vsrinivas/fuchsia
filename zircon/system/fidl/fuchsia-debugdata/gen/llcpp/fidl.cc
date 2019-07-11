@@ -11,10 +11,10 @@ namespace debugdata {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDebugData_Publish_Ordinal = 591050383lu << 32;
+constexpr uint64_t kDebugData_Publish_Ordinal = 0x233ab68f00000000lu;
 extern "C" const fidl_type_t fuchsia_debugdata_DebugDataPublishRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kDebugData_LoadConfig_Ordinal = 154447333lu << 32;
+constexpr uint64_t kDebugData_LoadConfig_Ordinal = 0x934ade500000000lu;
 extern "C" const fidl_type_t fuchsia_debugdata_DebugDataLoadConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_debugdata_DebugDataLoadConfigResponseTable;
 
@@ -190,7 +190,8 @@ bool DebugData::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDebugData_Publish_Ordinal: {
+    case kDebugData_Publish_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<PublishRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -201,7 +202,8 @@ bool DebugData::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::PublishCompleter::Sync(txn));
       return true;
     }
-    case kDebugData_LoadConfig_Ordinal: {
+    case kDebugData_LoadConfig_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<LoadConfigRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);

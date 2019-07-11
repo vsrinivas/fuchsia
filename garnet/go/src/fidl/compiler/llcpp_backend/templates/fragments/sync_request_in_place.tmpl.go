@@ -35,7 +35,7 @@ const SyncRequestInPlace = `
   ::fidl::DecodedMessage<{{ .Name }}Request> params(std::move(_request_buffer));
   {{- end }}
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = {{ .OrdinalName }};
+  params.message()->_hdr.ordinal = {{ .Ordinals.Write.Name }};
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
   {{- if .Response }}

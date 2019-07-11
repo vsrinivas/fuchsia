@@ -130,18 +130,14 @@ zx_status_t WithErrorSyntax_ErrorAsEnum_Response::Clone(WithErrorSyntax_ErrorAsE
 }
 #ifdef __Fuchsia__
 namespace {
-  
-constexpr uint64_t kKitchenSink_MethodA_Ordinal = 450577456lu << 32;
+constexpr uint64_t kKitchenSink_MethodA_Ordinal = 0x1adb443000000000lu;
 extern "C" const fidl_type_t test_name_KitchenSinkMethodARequestTable;
-  
-constexpr uint64_t kKitchenSink_EventA_Ordinal = 1795426833lu << 32;
+constexpr uint64_t kKitchenSink_EventA_Ordinal = 0x6b040a1100000000lu;
 extern "C" const fidl_type_t test_name_KitchenSinkEventAEventTable;
-  
-constexpr uint64_t kKitchenSink_MethodB_Ordinal = 1999489700lu << 32;
+constexpr uint64_t kKitchenSink_MethodB_Ordinal = 0x772dcaa400000000lu;
 extern "C" const fidl_type_t test_name_KitchenSinkMethodBRequestTable;
 extern "C" const fidl_type_t test_name_KitchenSinkMethodBResponseTable;
-  
-constexpr uint64_t kKitchenSink_MutateSocket_Ordinal = 115851270lu << 32;
+constexpr uint64_t kKitchenSink_MutateSocket_Ordinal = 0x6e7c00600000000lu;
 extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketRequestTable;
 extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketResponseTable;
 
@@ -163,7 +159,8 @@ KitchenSink_Proxy::~KitchenSink_Proxy() = default;
 zx_status_t KitchenSink_Proxy::Dispatch_(::fidl::Message message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
-    case kKitchenSink_EventA_Ordinal: {
+    case kKitchenSink_EventA_Ordinal:
+    {
       if (!EventA) {
         status = ZX_OK;
         break;
@@ -322,7 +319,8 @@ zx_status_t KitchenSink_Stub::Dispatch_(
   zx_status_t status = ZX_OK;
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case kKitchenSink_MethodA_Ordinal: {
+    case kKitchenSink_MethodA_Ordinal:
+    {
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_KitchenSinkMethodARequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -335,7 +333,8 @@ zx_status_t KitchenSink_Stub::Dispatch_(
       impl_->MethodA(std::move(arg0), std::move(arg1));
       break;
     }
-    case kKitchenSink_MethodB_Ordinal: {
+    case kKitchenSink_MethodB_Ordinal:
+    {
       if (!response.needs_response()) {
         FIDL_REPORT_DECODING_ERROR(message, &test_name_KitchenSinkMethodBRequestTable, "Message needing a response with no txid");
         return ZX_ERR_INVALID_ARGS;
@@ -352,7 +351,8 @@ zx_status_t KitchenSink_Stub::Dispatch_(
       impl_->MethodB(std::move(arg0), std::move(arg1), KitchenSink_MethodB_Responder(std::move(response), ordinal));
       break;
     }
-    case kKitchenSink_MutateSocket_Ordinal: {
+    case kKitchenSink_MutateSocket_Ordinal:
+    {
       if (!response.needs_response()) {
         FIDL_REPORT_DECODING_ERROR(message, &test_name_KitchenSinkMutateSocketRequestTable, "Message needing a response with no txid");
         return ZX_ERR_INVALID_ARGS;
@@ -426,18 +426,14 @@ zx_status_t KitchenSink_SyncProxy::MutateSocket(::zx::socket a, ::zx::socket* ou
 
 #ifdef __Fuchsia__
 namespace {
-  
-constexpr uint64_t kKitchenSink_MethodA_Ordinal = 450577456lu << 32;
+constexpr uint64_t kKitchenSink_MethodA_Ordinal = 0x1adb443000000000lu;
 extern "C" const fidl_type_t test_name_KitchenSinkMethodARequestTable;
-  
-constexpr uint64_t kKitchenSink_EventA_Ordinal = 1795426833lu << 32;
+constexpr uint64_t kKitchenSink_EventA_Ordinal = 0x6b040a1100000000lu;
 extern "C" const fidl_type_t test_name_KitchenSinkEventAEventTable;
-  
-constexpr uint64_t kKitchenSink_MethodB_Ordinal = 1999489700lu << 32;
+constexpr uint64_t kKitchenSink_MethodB_Ordinal = 0x772dcaa400000000lu;
 extern "C" const fidl_type_t test_name_KitchenSinkMethodBRequestTable;
 extern "C" const fidl_type_t test_name_KitchenSinkMethodBResponseTable;
-  
-constexpr uint64_t kKitchenSink_MutateSocket_Ordinal = 115851270lu << 32;
+constexpr uint64_t kKitchenSink_MutateSocket_Ordinal = 0x6e7c00600000000lu;
 extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketRequestTable;
 extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketResponseTable;
 
@@ -459,7 +455,8 @@ KitchenSink_Proxy::~KitchenSink_Proxy() = default;
 zx_status_t KitchenSink_Proxy::Dispatch_(::fidl::Message message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
-    case kKitchenSink_EventA_Ordinal: {
+    case kKitchenSink_EventA_Ordinal:
+    {
       if (!EventA) {
         status = ZX_OK;
         break;
@@ -618,7 +615,8 @@ zx_status_t KitchenSink_Stub::Dispatch_(
   zx_status_t status = ZX_OK;
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case kKitchenSink_MethodA_Ordinal: {
+    case kKitchenSink_MethodA_Ordinal:
+    {
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_KitchenSinkMethodARequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -631,7 +629,8 @@ zx_status_t KitchenSink_Stub::Dispatch_(
       impl_->MethodA(std::move(arg0), std::move(arg1));
       break;
     }
-    case kKitchenSink_MethodB_Ordinal: {
+    case kKitchenSink_MethodB_Ordinal:
+    {
       if (!response.needs_response()) {
         FIDL_REPORT_DECODING_ERROR(message, &test_name_KitchenSinkMethodBRequestTable, "Message needing a response with no txid");
         return ZX_ERR_INVALID_ARGS;
@@ -648,7 +647,8 @@ zx_status_t KitchenSink_Stub::Dispatch_(
       impl_->MethodB(std::move(arg0), std::move(arg1), KitchenSink_MethodB_Responder(std::move(response), ordinal));
       break;
     }
-    case kKitchenSink_MutateSocket_Ordinal: {
+    case kKitchenSink_MutateSocket_Ordinal:
+    {
       if (!response.needs_response()) {
         FIDL_REPORT_DECODING_ERROR(message, &test_name_KitchenSinkMutateSocketRequestTable, "Message needing a response with no txid");
         return ZX_ERR_INVALID_ARGS;
@@ -722,18 +722,14 @@ zx_status_t KitchenSink_SyncProxy::MutateSocket(::zx::socket a, ::zx::socket* ou
 
 #ifdef __Fuchsia__
 namespace {
-  
-constexpr uint64_t kChannelProtocol_MethodA_Ordinal = 1432785874lu << 32;
+constexpr uint64_t kChannelProtocol_MethodA_Ordinal = 0x556693d200000000lu;
 extern "C" const fidl_type_t test_name_ChannelProtocolMethodARequestTable;
-  
-constexpr uint64_t kChannelProtocol_EventA_Ordinal = 477676034lu << 32;
+constexpr uint64_t kChannelProtocol_EventA_Ordinal = 0x1c78c20200000000lu;
 extern "C" const fidl_type_t test_name_ChannelProtocolEventAEventTable;
-  
-constexpr uint64_t kChannelProtocol_MethodB_Ordinal = 180770075lu << 32;
+constexpr uint64_t kChannelProtocol_MethodB_Ordinal = 0xac6551b00000000lu;
 extern "C" const fidl_type_t test_name_ChannelProtocolMethodBRequestTable;
 extern "C" const fidl_type_t test_name_ChannelProtocolMethodBResponseTable;
-  
-constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal = 1258480262lu << 32;
+constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal = 0x4b02e28600000000lu;
 extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketRequestTable;
 extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
 
@@ -755,7 +751,8 @@ ChannelProtocol_Proxy::~ChannelProtocol_Proxy() = default;
 zx_status_t ChannelProtocol_Proxy::Dispatch_(::fidl::Message message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
-    case kChannelProtocol_EventA_Ordinal: {
+    case kChannelProtocol_EventA_Ordinal:
+    {
       if (!EventA) {
         status = ZX_OK;
         break;
@@ -914,7 +911,8 @@ zx_status_t ChannelProtocol_Stub::Dispatch_(
   zx_status_t status = ZX_OK;
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case kChannelProtocol_MethodA_Ordinal: {
+    case kChannelProtocol_MethodA_Ordinal:
+    {
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_ChannelProtocolMethodARequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -927,7 +925,8 @@ zx_status_t ChannelProtocol_Stub::Dispatch_(
       impl_->MethodA(std::move(arg0), std::move(arg1));
       break;
     }
-    case kChannelProtocol_MethodB_Ordinal: {
+    case kChannelProtocol_MethodB_Ordinal:
+    {
       if (!response.needs_response()) {
         FIDL_REPORT_DECODING_ERROR(message, &test_name_ChannelProtocolMethodBRequestTable, "Message needing a response with no txid");
         return ZX_ERR_INVALID_ARGS;
@@ -944,7 +943,8 @@ zx_status_t ChannelProtocol_Stub::Dispatch_(
       impl_->MethodB(std::move(arg0), std::move(arg1), ChannelProtocol_MethodB_Responder(std::move(response), ordinal));
       break;
     }
-    case kChannelProtocol_MutateSocket_Ordinal: {
+    case kChannelProtocol_MutateSocket_Ordinal:
+    {
       if (!response.needs_response()) {
         FIDL_REPORT_DECODING_ERROR(message, &test_name_ChannelProtocolMutateSocketRequestTable, "Message needing a response with no txid");
         return ZX_ERR_INVALID_ARGS;
@@ -1018,18 +1018,14 @@ zx_status_t ChannelProtocol_SyncProxy::MutateSocket(::zx::socket a, ::zx::socket
 
 #ifdef __Fuchsia__
 namespace {
-  
-constexpr uint64_t kSocketControlProtocol_MethodA_Ordinal = 1007842318lu << 32;
+constexpr uint64_t kSocketControlProtocol_MethodA_Ordinal = 0x3c12740e00000000lu;
 extern "C" const fidl_type_t test_name_SocketControlProtocolMethodARequestTable;
-  
-constexpr uint64_t kSocketControlProtocol_EventA_Ordinal = 955483393lu << 32;
+constexpr uint64_t kSocketControlProtocol_EventA_Ordinal = 0x38f3850100000000lu;
 extern "C" const fidl_type_t test_name_SocketControlProtocolEventAEventTable;
-  
-constexpr uint64_t kSocketControlProtocol_MethodB_Ordinal = 677342235lu << 32;
+constexpr uint64_t kSocketControlProtocol_MethodB_Ordinal = 0x285f6c1b00000000lu;
 extern "C" const fidl_type_t test_name_SocketControlProtocolMethodBRequestTable;
 extern "C" const fidl_type_t test_name_SocketControlProtocolMethodBResponseTable;
-  
-constexpr uint64_t kSocketControlProtocol_MutateSocket_Ordinal = 255772213lu << 32;
+constexpr uint64_t kSocketControlProtocol_MutateSocket_Ordinal = 0xf3ec63500000000lu;
 extern "C" const fidl_type_t test_name_SocketControlProtocolMutateSocketRequestTable;
 extern "C" const fidl_type_t test_name_SocketControlProtocolMutateSocketResponseTable;
 
@@ -1051,7 +1047,8 @@ SocketControlProtocol_Proxy::~SocketControlProtocol_Proxy() = default;
 zx_status_t SocketControlProtocol_Proxy::Dispatch_(::fidl::Message message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
-    case kSocketControlProtocol_EventA_Ordinal: {
+    case kSocketControlProtocol_EventA_Ordinal:
+    {
       if (!EventA) {
         status = ZX_OK;
         break;
@@ -1210,7 +1207,8 @@ zx_status_t SocketControlProtocol_Stub::Dispatch_(
   zx_status_t status = ZX_OK;
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case kSocketControlProtocol_MethodA_Ordinal: {
+    case kSocketControlProtocol_MethodA_Ordinal:
+    {
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_SocketControlProtocolMethodARequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -1223,7 +1221,8 @@ zx_status_t SocketControlProtocol_Stub::Dispatch_(
       impl_->MethodA(std::move(arg0), std::move(arg1));
       break;
     }
-    case kSocketControlProtocol_MethodB_Ordinal: {
+    case kSocketControlProtocol_MethodB_Ordinal:
+    {
       if (!response.needs_response()) {
         FIDL_REPORT_DECODING_ERROR(message, &test_name_SocketControlProtocolMethodBRequestTable, "Message needing a response with no txid");
         return ZX_ERR_INVALID_ARGS;
@@ -1240,7 +1239,8 @@ zx_status_t SocketControlProtocol_Stub::Dispatch_(
       impl_->MethodB(std::move(arg0), std::move(arg1), SocketControlProtocol_MethodB_Responder(std::move(response), ordinal));
       break;
     }
-    case kSocketControlProtocol_MutateSocket_Ordinal: {
+    case kSocketControlProtocol_MutateSocket_Ordinal:
+    {
       if (!response.needs_response()) {
         FIDL_REPORT_DECODING_ERROR(message, &test_name_SocketControlProtocolMutateSocketRequestTable, "Message needing a response with no txid");
         return ZX_ERR_INVALID_ARGS;
@@ -1314,33 +1314,25 @@ zx_status_t SocketControlProtocol_SyncProxy::MutateSocket(::zx::socket a, ::zx::
 
 #ifdef __Fuchsia__
 namespace {
-  
-constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal = 503576693lu << 32;
+constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal = 0x1e03f87500000000lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
-  
-constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal = 1308023765lu << 32;
+constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal = 0x4df6dbd500000000lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
-  
-constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal = 107534328lu << 32;
+constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal = 0x668d7f800000000lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
-  
-constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal = 432149361lu << 32;
+constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal = 0x19c2137100000000lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
-  
-constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal = 1995585907lu << 32;
+constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal = 0x76f2397300000000lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
-  
-constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal = 426977568lu << 32;
+constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal = 0x1973292000000000lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
-  
-constexpr uint64_t kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal = 1769985842lu << 32;
+constexpr uint64_t kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal = 0x697fd73200000000lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
-  
-constexpr uint64_t kWithAndWithoutRequestResponse_OnWithResponse_Ordinal = 2051478023lu << 32;
+constexpr uint64_t kWithAndWithoutRequestResponse_OnWithResponse_Ordinal = 0x7a47120700000000lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
 }  // namespace
@@ -1361,7 +1353,8 @@ WithAndWithoutRequestResponse_Proxy::~WithAndWithoutRequestResponse_Proxy() = de
 zx_status_t WithAndWithoutRequestResponse_Proxy::Dispatch_(::fidl::Message message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
-    case kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
+    case kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal:
+    {
       if (!OnEmptyResponse) {
         status = ZX_OK;
         break;
@@ -1375,7 +1368,8 @@ zx_status_t WithAndWithoutRequestResponse_Proxy::Dispatch_(::fidl::Message messa
       OnEmptyResponse();
       break;
     }
-    case kWithAndWithoutRequestResponse_OnWithResponse_Ordinal: {
+    case kWithAndWithoutRequestResponse_OnWithResponse_Ordinal:
+    {
       if (!OnWithResponse) {
         status = ZX_OK;
         break;
@@ -1631,7 +1625,8 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
   zx_status_t status = ZX_OK;
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal: {
+    case kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal:
+    {
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -1641,7 +1636,8 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
       impl_->NoRequestNoResponse();
       break;
     }
-    case kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal: {
+    case kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal:
+    {
       if (!response.needs_response()) {
         FIDL_REPORT_DECODING_ERROR(message, &test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable, "Message needing a response with no txid");
         return ZX_ERR_INVALID_ARGS;
@@ -1655,7 +1651,8 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
       impl_->NoRequestEmptyResponse(WithAndWithoutRequestResponse_NoRequestEmptyResponse_Responder(std::move(response), ordinal));
       break;
     }
-    case kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal: {
+    case kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal:
+    {
       if (!response.needs_response()) {
         FIDL_REPORT_DECODING_ERROR(message, &test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable, "Message needing a response with no txid");
         return ZX_ERR_INVALID_ARGS;
@@ -1669,7 +1666,8 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
       impl_->NoRequestWithResponse(WithAndWithoutRequestResponse_NoRequestWithResponse_Responder(std::move(response), ordinal));
       break;
     }
-    case kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal: {
+    case kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal:
+    {
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -1681,7 +1679,8 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
       impl_->WithRequestNoResponse(std::move(arg0));
       break;
     }
-    case kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal: {
+    case kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal:
+    {
       if (!response.needs_response()) {
         FIDL_REPORT_DECODING_ERROR(message, &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable, "Message needing a response with no txid");
         return ZX_ERR_INVALID_ARGS;
@@ -1697,7 +1696,8 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
       impl_->WithRequestEmptyResponse(std::move(arg0), WithAndWithoutRequestResponse_WithRequestEmptyResponse_Responder(std::move(response), ordinal));
       break;
     }
-    case kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal: {
+    case kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal:
+    {
       if (!response.needs_response()) {
         FIDL_REPORT_DECODING_ERROR(message, &test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable, "Message needing a response with no txid");
         return ZX_ERR_INVALID_ARGS;
@@ -1882,12 +1882,10 @@ void WithErrorSyntax_ErrorAsEnum_Result::set_err(ErrorEnun value) {
 }
 #ifdef __Fuchsia__
 namespace {
-  
-constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal = 2069369145lu << 32;
+constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal = 0x7b58113900000000lu;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
-  
-constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 1284890143lu << 32;
+constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 0x4c95de1f00000000lu;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumRequestTable;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
 
@@ -2039,7 +2037,8 @@ zx_status_t WithErrorSyntax_Stub::Dispatch_(
   zx_status_t status = ZX_OK;
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case kWithErrorSyntax_ErrorAsPrimitive_Ordinal: {
+    case kWithErrorSyntax_ErrorAsPrimitive_Ordinal:
+    {
       if (!response.needs_response()) {
         FIDL_REPORT_DECODING_ERROR(message, &test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable, "Message needing a response with no txid");
         return ZX_ERR_INVALID_ARGS;
@@ -2053,7 +2052,8 @@ zx_status_t WithErrorSyntax_Stub::Dispatch_(
       impl_->ErrorAsPrimitive(WithErrorSyntax_ErrorAsPrimitive_Responder(std::move(response), ordinal));
       break;
     }
-    case kWithErrorSyntax_ErrorAsEnum_Ordinal: {
+    case kWithErrorSyntax_ErrorAsEnum_Ordinal:
+    {
       if (!response.needs_response()) {
         FIDL_REPORT_DECODING_ERROR(message, &test_name_WithErrorSyntaxErrorAsEnumRequestTable, "Message needing a response with no txid");
         return ZX_ERR_INVALID_ARGS;

@@ -11,19 +11,19 @@ namespace sysinfo {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetRootJob_Ordinal = 1695053783lu << 32;
+constexpr uint64_t kDevice_GetRootJob_Ordinal = 0x650877d700000000lu;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetRootJobResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetRootResource_Ordinal = 149620396lu << 32;
+constexpr uint64_t kDevice_GetRootResource_Ordinal = 0x8eb06ac00000000lu;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetRootResourceResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetHypervisorResource_Ordinal = 946381163lu << 32;
+constexpr uint64_t kDevice_GetHypervisorResource_Ordinal = 0x3868a16b00000000lu;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetHypervisorResourceResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetBoardName_Ordinal = 1752599405lu << 32;
+constexpr uint64_t kDevice_GetBoardName_Ordinal = 0x68768b6d00000000lu;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetBoardNameResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetInterruptControllerInfo_Ordinal = 1602992612lu << 32;
+constexpr uint64_t kDevice_GetInterruptControllerInfo_Ordinal = 0x5f8bb9e400000000lu;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetInterruptControllerInfoResponseTable;
 
 }  // namespace
@@ -435,7 +435,8 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDevice_GetRootJob_Ordinal: {
+    case kDevice_GetRootJob_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetRootJobRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -445,7 +446,8 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::GetRootJobCompleter::Sync(txn));
       return true;
     }
-    case kDevice_GetRootResource_Ordinal: {
+    case kDevice_GetRootResource_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetRootResourceRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -455,7 +457,8 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::GetRootResourceCompleter::Sync(txn));
       return true;
     }
-    case kDevice_GetHypervisorResource_Ordinal: {
+    case kDevice_GetHypervisorResource_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetHypervisorResourceRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -465,7 +468,8 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::GetHypervisorResourceCompleter::Sync(txn));
       return true;
     }
-    case kDevice_GetBoardName_Ordinal: {
+    case kDevice_GetBoardName_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetBoardNameRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -475,7 +479,8 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::GetBoardNameCompleter::Sync(txn));
       return true;
     }
-    case kDevice_GetInterruptControllerInfo_Ordinal: {
+    case kDevice_GetInterruptControllerInfo_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<GetInterruptControllerInfoRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);

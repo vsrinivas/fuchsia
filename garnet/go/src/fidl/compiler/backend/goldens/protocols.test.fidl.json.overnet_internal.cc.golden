@@ -12,14 +12,14 @@
 namespace {
 
 
-constexpr uint32_t kKitchenSink_MethodA_Ordinal = 450577456u;
+constexpr uint64_t kKitchenSink_MethodA_Ordinal = 0x1adb443000000000lu;
 extern "C" const fidl_type_t test_name_KitchenSinkMethodARequestTable;
-constexpr uint32_t kKitchenSink_EventA_Ordinal = 1795426833u;
+constexpr uint64_t kKitchenSink_EventA_Ordinal = 0x6b040a1100000000lu;
 extern "C" const fidl_type_t test_name_KitchenSinkEventAEventTable;
-constexpr uint32_t kKitchenSink_MethodB_Ordinal = 1999489700u;
+constexpr uint64_t kKitchenSink_MethodB_Ordinal = 0x772dcaa400000000lu;
 extern "C" const fidl_type_t test_name_KitchenSinkMethodBRequestTable;
 extern "C" const fidl_type_t test_name_KitchenSinkMethodBResponseTable;
-constexpr uint32_t kKitchenSink_MutateSocket_Ordinal = 115851270u;
+constexpr uint64_t kKitchenSink_MutateSocket_Ordinal = 0x6e7c00600000000lu;
 extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketRequestTable;
 extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketResponseTable;
 
@@ -32,7 +32,8 @@ KitchenSink_Proxy::~KitchenSink_Proxy() = default;
 zx_status_t KitchenSink_Proxy::Dispatch_(::fidl::Message* message) {
   zx_status_t status = ZX_OK;
   switch (message->ordinal()) {
-    case kKitchenSink_EventA_Ordinal: {
+    case kKitchenSink_EventA_Ordinal:
+    {
       const char* error_msg = nullptr;
       status = message->Decode(&test_name_KitchenSinkEventAEventTable, &error_msg);
       if (status != ZX_OK) {
@@ -103,7 +104,8 @@ KitchenSink_Stub::~KitchenSink_Stub() = default;
 zx_status_t KitchenSink_Stub::Dispatch_(::fidl::Message* message) {
   zx_status_t status = ZX_OK;
   switch (message->ordinal()) {
-    case kKitchenSink_MethodA_Ordinal: {
+    case kKitchenSink_MethodA_Ordinal:
+    {
       const char* error_msg = nullptr;
       status = message->Decode(&test_name_KitchenSinkMethodARequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -117,7 +119,8 @@ zx_status_t KitchenSink_Stub::Dispatch_(::fidl::Message* message) {
       MethodA(std::move(arg0), std::move(arg1));
       break;
     }
-    case kKitchenSink_MethodB_Ordinal: {
+    case kKitchenSink_MethodB_Ordinal:
+    {
       const char* error_msg = nullptr;
       status = message->Decode(&test_name_KitchenSinkMethodBRequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -136,7 +139,8 @@ zx_status_t KitchenSink_Stub::Dispatch_(::fidl::Message* message) {
           });
       break;
     }
-    case kKitchenSink_MutateSocket_Ordinal: {
+    case kKitchenSink_MutateSocket_Ordinal:
+    {
       const char* error_msg = nullptr;
       status = message->Decode(&test_name_KitchenSinkMutateSocketRequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -181,14 +185,14 @@ void KitchenSink_Stub::EventA(int64_t a, int64_t b) {
 namespace {
 
 
-constexpr uint32_t kOvernetInternalProtocol_MethodA_Ordinal = 1993818253u;
+constexpr uint64_t kOvernetInternalProtocol_MethodA_Ordinal = 0x76d7408d00000000lu;
 extern "C" const fidl_type_t test_name_OvernetInternalProtocolMethodARequestTable;
-constexpr uint32_t kOvernetInternalProtocol_EventA_Ordinal = 1746007436u;
+constexpr uint64_t kOvernetInternalProtocol_EventA_Ordinal = 0x6811f58c00000000lu;
 extern "C" const fidl_type_t test_name_OvernetInternalProtocolEventAEventTable;
-constexpr uint32_t kOvernetInternalProtocol_MethodB_Ordinal = 952134976u;
+constexpr uint64_t kOvernetInternalProtocol_MethodB_Ordinal = 0x38c06d4000000000lu;
 extern "C" const fidl_type_t test_name_OvernetInternalProtocolMethodBRequestTable;
 extern "C" const fidl_type_t test_name_OvernetInternalProtocolMethodBResponseTable;
-constexpr uint32_t kOvernetInternalProtocol_MutateSocket_Ordinal = 1691201382u;
+constexpr uint64_t kOvernetInternalProtocol_MutateSocket_Ordinal = 0x64cdaf6600000000lu;
 extern "C" const fidl_type_t test_name_OvernetInternalProtocolMutateSocketRequestTable;
 extern "C" const fidl_type_t test_name_OvernetInternalProtocolMutateSocketResponseTable;
 
@@ -201,7 +205,8 @@ OvernetInternalProtocol_Proxy::~OvernetInternalProtocol_Proxy() = default;
 zx_status_t OvernetInternalProtocol_Proxy::Dispatch_(::fidl::Message* message) {
   zx_status_t status = ZX_OK;
   switch (message->ordinal()) {
-    case kOvernetInternalProtocol_EventA_Ordinal: {
+    case kOvernetInternalProtocol_EventA_Ordinal:
+    {
       const char* error_msg = nullptr;
       status = message->Decode(&test_name_OvernetInternalProtocolEventAEventTable, &error_msg);
       if (status != ZX_OK) {
@@ -272,7 +277,8 @@ OvernetInternalProtocol_Stub::~OvernetInternalProtocol_Stub() = default;
 zx_status_t OvernetInternalProtocol_Stub::Dispatch_(::fidl::Message* message) {
   zx_status_t status = ZX_OK;
   switch (message->ordinal()) {
-    case kOvernetInternalProtocol_MethodA_Ordinal: {
+    case kOvernetInternalProtocol_MethodA_Ordinal:
+    {
       const char* error_msg = nullptr;
       status = message->Decode(&test_name_OvernetInternalProtocolMethodARequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -286,7 +292,8 @@ zx_status_t OvernetInternalProtocol_Stub::Dispatch_(::fidl::Message* message) {
       MethodA(std::move(arg0), std::move(arg1));
       break;
     }
-    case kOvernetInternalProtocol_MethodB_Ordinal: {
+    case kOvernetInternalProtocol_MethodB_Ordinal:
+    {
       const char* error_msg = nullptr;
       status = message->Decode(&test_name_OvernetInternalProtocolMethodBRequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -305,7 +312,8 @@ zx_status_t OvernetInternalProtocol_Stub::Dispatch_(::fidl::Message* message) {
           });
       break;
     }
-    case kOvernetInternalProtocol_MutateSocket_Ordinal: {
+    case kOvernetInternalProtocol_MutateSocket_Ordinal:
+    {
       const char* error_msg = nullptr;
       status = message->Decode(&test_name_OvernetInternalProtocolMutateSocketRequestTable, &error_msg);
       if (status != ZX_OK) {

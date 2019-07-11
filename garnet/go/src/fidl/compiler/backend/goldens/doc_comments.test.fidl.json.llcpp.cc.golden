@@ -54,9 +54,9 @@ int32_t& ::llcpp::test::name::Union::mutable_Field() {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kInterface_Method_Ordinal = 1061382220lu << 32;
+constexpr uint64_t kInterface_Method_Ordinal = 0x3f43684c00000000lu;
 [[maybe_unused]]
-constexpr uint64_t kInterface_OnEvent_Ordinal = 325918733lu << 32;
+constexpr uint64_t kInterface_OnEvent_Ordinal = 0x136d200d00000000lu;
 
 }  // namespace
 
@@ -136,7 +136,8 @@ zx_status_t Interface::Call::HandleEvents(zx::unowned_channel client_end,
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
-    case kInterface_OnEvent_Ordinal: {
+    case kInterface_OnEvent_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<OnEventResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -157,7 +158,8 @@ bool Interface::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kInterface_Method_Ordinal: {
+    case kInterface_Method_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<MethodRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);

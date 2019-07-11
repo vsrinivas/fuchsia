@@ -194,11 +194,9 @@ zx_status_t Struct::Clone(Struct* _result) const {
 }
 #ifdef __Fuchsia__
 namespace {
-  
-constexpr uint64_t kInterface_Method_Ordinal = 1061382220lu << 32;
+constexpr uint64_t kInterface_Method_Ordinal = 0x3f43684c00000000lu;
 extern "C" const fidl_type_t test_name_InterfaceMethodRequestTable;
-  
-constexpr uint64_t kInterface_OnEvent_Ordinal = 325918733lu << 32;
+constexpr uint64_t kInterface_OnEvent_Ordinal = 0x136d200d00000000lu;
 extern "C" const fidl_type_t test_name_InterfaceOnEventEventTable;
 
 }  // namespace
@@ -219,7 +217,8 @@ Interface_Proxy::~Interface_Proxy() = default;
 zx_status_t Interface_Proxy::Dispatch_(::fidl::Message message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
-    case kInterface_OnEvent_Ordinal: {
+    case kInterface_OnEvent_Ordinal:
+    {
       if (!OnEvent) {
         status = ZX_OK;
         break;
@@ -263,7 +262,8 @@ zx_status_t Interface_Stub::Dispatch_(
   zx_status_t status = ZX_OK;
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case kInterface_Method_Ordinal: {
+    case kInterface_Method_Ordinal:
+    {
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_InterfaceMethodRequestTable, &error_msg);
       if (status != ZX_OK) {

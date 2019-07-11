@@ -94,8 +94,6 @@ func EnsureLibrary(l EncodedLibraryIdentifier, eci EncodedCompoundIdentifier) En
 	return EncodedCompoundIdentifier(new_eci)
 }
 
-type Ordinal uint32
-
 type PrimitiveSubtype string
 
 const (

@@ -12,7 +12,7 @@ Send{{ .Name }}Event(::zx::unowned_channel _chan, ::fidl::DecodedMessage<{{ .Nam
 {{- define "SendEventInPlaceMethodDefinition" }}
 zx_status_t {{ .LLProps.InterfaceName }}::{{ template "SendEventInPlaceMethodSignature" . }} {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = {{ .OrdinalName }};
+  params.message()->_hdr.ordinal = {{ .Ordinals.Write.Name }};
   return ::fidl::Write(zx::unowned_channel(_chan), std::move(params));
 }
 {{- end }}

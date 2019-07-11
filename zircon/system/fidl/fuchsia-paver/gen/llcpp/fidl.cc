@@ -83,11 +83,11 @@ ReadInfo& ::llcpp::fuchsia::paver::ReadResult::mutable_info() {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kPayloadStream_RegisterVmo_Ordinal = 272943321lu << 32;
+constexpr uint64_t kPayloadStream_RegisterVmo_Ordinal = 0x1044c8d900000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PayloadStreamRegisterVmoRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PayloadStreamRegisterVmoResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPayloadStream_ReadData_Ordinal = 741764662lu << 32;
+constexpr uint64_t kPayloadStream_ReadData_Ordinal = 0x2c366e3600000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PayloadStreamReadDataResponseTable;
 
 }  // namespace
@@ -281,7 +281,8 @@ bool PayloadStream::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kPayloadStream_RegisterVmo_Ordinal: {
+    case kPayloadStream_RegisterVmo_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<RegisterVmoRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -292,7 +293,8 @@ bool PayloadStream::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
         Interface::RegisterVmoCompleter::Sync(txn));
       return true;
     }
-    case kPayloadStream_ReadData_Ordinal: {
+    case kPayloadStream_ReadData_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<ReadDataRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -438,35 +440,35 @@ int32_t& ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::mutable
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kPaver_QueryActiveConfiguration_Ordinal = 1134945427lu << 32;
+constexpr uint64_t kPaver_QueryActiveConfiguration_Ordinal = 0x43a5e49300000000lu;
 [[maybe_unused]]
-constexpr uint64_t kPaver_SetActiveConfiguration_Ordinal = 604066686lu << 32;
+constexpr uint64_t kPaver_SetActiveConfiguration_Ordinal = 0x2401537e00000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPaver_MarkActiveConfigurationSuccessful_Ordinal = 646268842lu << 32;
+constexpr uint64_t kPaver_MarkActiveConfigurationSuccessful_Ordinal = 0x268547aa00000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverMarkActiveConfigurationSuccessfulResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPaver_ForceRecoveryConfiguration_Ordinal = 959881446lu << 32;
+constexpr uint64_t kPaver_ForceRecoveryConfiguration_Ordinal = 0x3936a0e600000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverForceRecoveryConfigurationResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPaver_WriteAsset_Ordinal = 1780273052lu << 32;
+constexpr uint64_t kPaver_WriteAsset_Ordinal = 0x6a1ccf9c00000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPaver_WriteVolumes_Ordinal = 1907609382lu << 32;
+constexpr uint64_t kPaver_WriteVolumes_Ordinal = 0x71b3cf2600000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteVolumesRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteVolumesResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPaver_WriteBootloader_Ordinal = 1265344886lu << 32;
+constexpr uint64_t kPaver_WriteBootloader_Ordinal = 0x4b6ba17600000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteBootloaderRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteBootloaderResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPaver_WriteDataFile_Ordinal = 2072261598lu << 32;
+constexpr uint64_t kPaver_WriteDataFile_Ordinal = 0x7b8433de00000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteDataFileRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteDataFileResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPaver_WipeVolumes_Ordinal = 113153696lu << 32;
+constexpr uint64_t kPaver_WipeVolumes_Ordinal = 0x6be96a000000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWipeVolumesResponseTable;
 
 }  // namespace
@@ -1307,7 +1309,8 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kPaver_QueryActiveConfiguration_Ordinal: {
+    case kPaver_QueryActiveConfiguration_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<QueryActiveConfigurationRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1317,7 +1320,8 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::QueryActiveConfigurationCompleter::Sync(txn));
       return true;
     }
-    case kPaver_SetActiveConfiguration_Ordinal: {
+    case kPaver_SetActiveConfiguration_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<SetActiveConfigurationRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1328,7 +1332,8 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::SetActiveConfigurationCompleter::Sync(txn));
       return true;
     }
-    case kPaver_MarkActiveConfigurationSuccessful_Ordinal: {
+    case kPaver_MarkActiveConfigurationSuccessful_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<MarkActiveConfigurationSuccessfulRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1338,7 +1343,8 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::MarkActiveConfigurationSuccessfulCompleter::Sync(txn));
       return true;
     }
-    case kPaver_ForceRecoveryConfiguration_Ordinal: {
+    case kPaver_ForceRecoveryConfiguration_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<ForceRecoveryConfigurationRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1348,7 +1354,8 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::ForceRecoveryConfigurationCompleter::Sync(txn));
       return true;
     }
-    case kPaver_WriteAsset_Ordinal: {
+    case kPaver_WriteAsset_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<WriteAssetRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1359,7 +1366,8 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::WriteAssetCompleter::Sync(txn));
       return true;
     }
-    case kPaver_WriteVolumes_Ordinal: {
+    case kPaver_WriteVolumes_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<WriteVolumesRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1370,7 +1378,8 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::WriteVolumesCompleter::Sync(txn));
       return true;
     }
-    case kPaver_WriteBootloader_Ordinal: {
+    case kPaver_WriteBootloader_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<WriteBootloaderRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1381,7 +1390,8 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::WriteBootloaderCompleter::Sync(txn));
       return true;
     }
-    case kPaver_WriteDataFile_Ordinal: {
+    case kPaver_WriteDataFile_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<WriteDataFileRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1392,7 +1402,8 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::WriteDataFileCompleter::Sync(txn));
       return true;
     }
-    case kPaver_WipeVolumes_Ordinal: {
+    case kPaver_WipeVolumes_Ordinal:
+    {
       auto result = ::fidl::DecodeAs<WipeVolumesRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);

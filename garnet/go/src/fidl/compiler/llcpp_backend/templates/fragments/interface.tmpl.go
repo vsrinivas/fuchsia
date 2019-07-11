@@ -372,8 +372,10 @@ namespace {
 {{ $interface := . -}}
 
 {{- range .Methods }}
+  {{- range .Ordinals.Reads }}
 [[maybe_unused]]
-constexpr uint64_t {{ .OrdinalName }} = {{ .Ordinal }}lu << 32;
+constexpr uint64_t {{ .Name }} = {{ .Ordinal }}lu;
+  {{- end }}
   {{- if .LLProps.EncodeRequest }}
 extern "C" const fidl_type_t {{ .RequestTypeName }};
   {{- end }}
