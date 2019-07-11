@@ -73,13 +73,13 @@ you may see any combination of requested signals when they return.
 
 <br>
 
- - [`zx_task_bind_exception_port()`] - attach an exception port to a task
+ - [`zx_task_create_exception_channel()`] - listen for task exceptions
  - [`zx_task_kill()`] - cause a task to stop running
 
 [`zx_futex_wake_handle_close_thread_exit()`]: ../syscalls/futex_wake_handle_close_thread_exit.md
 [`zx_object_get_child()`]: ../syscalls/object_get_child.md
 [`zx_process_start()`]: ../syscalls/process_start.md
-[`zx_task_bind_exception_port()`]: ../syscalls/task_bind_exception_port.md
+[`zx_task_create_exception_channel()`]: ../syscalls/task_create_exception_channel.md
 [`zx_task_kill()`]: ../syscalls/task_kill.md
 [`zx_thread_create()`]: ../syscalls/thread_create.md
 [`zx_thread_exit()`]: ../syscalls/thread_exit.md

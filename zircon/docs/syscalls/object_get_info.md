@@ -192,9 +192,9 @@ typedef struct zx_info_thread {
 
     // If |state| is ZX_THREAD_STATE_BLOCKED_EXCEPTION, the thread has gotten
     // an exception and is waiting for the exception to be handled by the
-    // specified port.
-    // The value is one of ZX_EXCEPTION_PORT_TYPE_*.
-    uint32_t wait_exception_port_type;
+    // specified channel.
+    // The value is one of ZX_EXCEPTION_CHANNEL_TYPE_*.
+    uint32_t wait_exception_channel_type;
 } zx_info_thread_t;
 ```
 
@@ -229,18 +229,18 @@ exception, the value returned in **state** is one of the following:
 *   **ZX_THREAD_STATE_BLOCKED_WAIT_MANY**: The thread is stopped in [`zx_object_wait_many()`].
 *   **ZX_THREAD_STATE_BLOCKED_INTERRUPT**: The thread is stopped in [`zx_interrupt_wait()`].
 
-The various **ZX_EXCEPTION_PORT_TYPE_** values are defined by
+The various **ZX_EXCEPTION_CHANNEL_TYPE_** values are defined by
 
 ```
 #include <zircon/syscalls/exception.h>
 ```
 
-*   **ZX_EXCEPTION_PORT_TYPE_NONE**
-*   **ZX_EXCEPTION_PORT_TYPE_DEBUGGER**
-*   **ZX_EXCEPTION_PORT_TYPE_THREAD**
-*   **ZX_EXCEPTION_PORT_TYPE_PROCESS**
-*   **ZX_EXCEPTION_PORT_TYPE_JOB**
-*   **ZX_EXCEPTION_PORT_TYPE_JOB_DEBUGGER**
+*   **ZX_EXCEPTION_CHANNEL_TYPE_NONE**
+*   **ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER**
+*   **ZX_EXCEPTION_CHANNEL_TYPE_THREAD**
+*   **ZX_EXCEPTION_CHANNEL_TYPE_PROCESS**
+*   **ZX_EXCEPTION_CHANNEL_TYPE_JOB**
+*   **ZX_EXCEPTION_CHANNEL_TYPE_JOB_DEBUGGER**
 
 ### ZX_INFO_THREAD_EXCEPTION_REPORT
 

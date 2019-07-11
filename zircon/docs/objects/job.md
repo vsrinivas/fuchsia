@@ -28,11 +28,11 @@ controlled as a single entity.
  - [`zx_job_create()`] - create a new child job.
  - [`zx_process_create()`] - create a new process within a job.
  - [`zx_job_set_policy()`] - set policy for new processes in the job.
- - [`zx_task_bind_exception_port()`] - attach an exception port to a task
+ - [`zx_task_create_exception_channel()`] - listen for task exceptions
  - [`zx_task_kill()`] - cause a task to stop running.
 
 [`zx_job_create()`]: ../syscalls/job_create.md
 [`zx_job_set_policy()`]: ../syscalls/job_set_policy.md
 [`zx_process_create()`]: ../syscalls/process_create.md
-[`zx_task_bind_exception_port()`]: ../syscalls/task_bind_exception_port.md
+[`zx_task_create_exception_channel()`]: ../syscalls/task_create_exception_channel.md
 [`zx_task_kill()`]: ../syscalls/task_kill.md

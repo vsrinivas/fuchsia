@@ -16,8 +16,8 @@ TODO
 
 ## SYSCALLS
 
- - [`zx_task_bind_exception_port()`] - attach an exception port to a task
+ - [`zx_task_create_exception_channel()`] - listen for task exceptions
  - [`zx_task_kill()`] - cause a task to stop running
 
-[`zx_task_bind_exception_port()`]: ../syscalls/task_bind_exception_port.md
+[`zx_task_create_exception_channel()`]: ../syscalls/task_create_exception_channel.md
 [`zx_task_kill()`]: ../syscalls/task_kill.md

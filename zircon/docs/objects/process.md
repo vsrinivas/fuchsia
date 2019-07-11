@@ -52,6 +52,10 @@ be added to a process that was started and then its last thread has exited.
 
 <br>
 
+ - [`zx_task_create_exception_channel()`] - listen for task exceptions
+
+<br>
+
  - [`zx_vmar_map()`] - Map memory into an address space range
  - [`zx_vmar_protect()`] - Change permissions on an address space range
  - [`zx_vmar_unmap()`] - Unmap memory from an address space range
@@ -62,6 +66,7 @@ be added to a process that was started and then its last thread has exited.
 [`zx_process_read_memory()`]: ../syscalls/process_read_memory.md
 [`zx_process_start()`]: ../syscalls/process_start.md
 [`zx_process_write_memory()`]: ../syscalls/process_write_memory.md
+[`zx_task_create_exception_channel()`]: ../syscalls/task_create_exception_channel.md
 [`zx_vmar_map()`]: ../syscalls/vmar_map.md
 [`zx_vmar_protect()`]: ../syscalls/vmar_protect.md
 [`zx_vmar_unmap()`]: ../syscalls/vmar_unmap.md

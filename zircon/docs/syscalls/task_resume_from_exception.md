@@ -20,6 +20,9 @@ zx_status_t zx_task_resume_from_exception(zx_handle_t handle,
 
 ## DESCRIPTION
 
+**Note: exception ports are deprecated and will be removed soon. See**
+**[exceptions](../exceptions.md) for information on the replacement API.**
+
 `zx_task_resume_from_exception()` causes the requested task to resume after an
 exception has been reported to the debug exception port. The port parameter
 should identify the [exception port](task_bind_exception_port.md) to which the
