@@ -31,8 +31,8 @@ fxl::RefPtr<AsyncOutputBuffer> ListCompletedFrames(Thread* thread, bool include_
   auto out = fxl::MakeRefCounted<AsyncOutputBuffer>();
 
   // Formatting used for long format mode. These are minimal since there is often a lot of data.
-  ConsoleFormatNodeOptions format_options;
-  format_options.verbosity = ConsoleFormatNodeOptions::Verbosity::kMinimal;
+  ConsoleFormatOptions format_options;
+  format_options.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
   format_options.pointer_expand_depth = 1;
   format_options.max_depth = 4;
 
@@ -107,7 +107,7 @@ OutputBuffer FormatFrame(const Frame* frame, bool include_params, int id) {
 }
 
 fxl::RefPtr<AsyncOutputBuffer> FormatFrameLong(const Frame* frame, bool include_params,
-                                               const ConsoleFormatNodeOptions& options, int id) {
+                                               const ConsoleFormatOptions& options, int id) {
   auto out = fxl::MakeRefCounted<AsyncOutputBuffer>();
 
   if (id >= 0)

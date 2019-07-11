@@ -115,7 +115,7 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   context->SetActiveThreadForTarget(cmd.thread());
   context->SetActiveTarget(cmd.target());
 
-  ConsoleFormatNodeOptions options;
+  ConsoleFormatOptions options;
   Console::get()->Output(FormatFrameLong(cmd.frame(), cmd.HasSwitch(kForceTypes), options));
   return true;
 }

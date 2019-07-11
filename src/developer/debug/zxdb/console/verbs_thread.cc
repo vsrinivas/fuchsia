@@ -65,7 +65,7 @@ bool VerifySystemHasRunningProcess(System* system, Err* err) {
 }
 
 // Populates the formatting options with the given command's switches.
-Err GetConsoleFormatNodeOptions(const Command& cmd, ConsoleFormatNodeOptions* options) {
+Err GetConsoleFormatOptions(const Command& cmd, ConsoleFormatOptions* options) {
   // These defaults currently don't have exposed options. A pointer expand depth of two seems most
   // useful because it will expand "this" and one member, but beyond two some things like doubly-
   // linked lists get pretty insane.
@@ -74,11 +74,11 @@ Err GetConsoleFormatNodeOptions(const Command& cmd, ConsoleFormatNodeOptions* op
 
   // Verbosity.
   if (cmd.HasSwitch(kForceAllTypes))
-    options->verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
+    options->verbosity = ConsoleFormatOptions::Verbosity::kAllTypes;
   else if (cmd.HasSwitch(kVerboseFormat))
-    options->verbosity = FormatExprValueOptions::Verbosity::kMedium;
+    options->verbosity = ConsoleFormatOptions::Verbosity::kMedium;
   else
-    options->verbosity = FormatExprValueOptions::Verbosity::kMinimal;
+    options->verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
 
   // Array size.
   if (cmd.HasSwitch(kMaxArraySize)) {
@@ -91,11 +91,11 @@ Err GetConsoleFormatNodeOptions(const Command& cmd, ConsoleFormatNodeOptions* op
 
   // Mapping from command-line parameter to format enum.
   constexpr size_t kFormatCount = 4;
-  static constexpr std::pair<int, FormatExprValueOptions::NumFormat> kFormats[kFormatCount] = {
-      {kForceNumberChar, FormatExprValueOptions::NumFormat::kChar},
-      {kForceNumberUnsigned, FormatExprValueOptions::NumFormat::kUnsigned},
-      {kForceNumberSigned, FormatExprValueOptions::NumFormat::kSigned},
-      {kForceNumberHex, FormatExprValueOptions::NumFormat::kHex}};
+  static constexpr std::pair<int, ConsoleFormatOptions::NumFormat> kFormats[kFormatCount] = {
+      {kForceNumberChar, ConsoleFormatOptions::NumFormat::kChar},
+      {kForceNumberUnsigned, ConsoleFormatOptions::NumFormat::kUnsigned},
+      {kForceNumberSigned, ConsoleFormatOptions::NumFormat::kSigned},
+      {kForceNumberHex, ConsoleFormatOptions::NumFormat::kHex}};
 
   int num_type_overrides = 0;
   for (const auto& cur : kFormats) {
@@ -280,7 +280,7 @@ Err DoDown(ConsoleContext* context, const Command& cmd) {
 
   context->SetActiveFrameIdForThread(cmd.thread(), id);
   Console::get()->Output(
-      FormatFrameLong(cmd.thread()->GetStack()[id], false, ConsoleFormatNodeOptions()));
+      FormatFrameLong(cmd.thread()->GetStack()[id], false, ConsoleFormatOptions()));
   return Err();
 }
 
@@ -329,7 +329,7 @@ Err DoUp(ConsoleContext* context, const Command& cmd) {
     } else {
       context->SetActiveFrameIdForThread(cmd.thread(), id);
       Console::get()->Output(
-          FormatFrameLong(cmd.thread()->GetStack()[id], false, ConsoleFormatNodeOptions()));
+          FormatFrameLong(cmd.thread()->GetStack()[id], false, ConsoleFormatOptions()));
     }
   };
 
@@ -527,8 +527,8 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
     return Err();
   }
 
-  ConsoleFormatNodeOptions options;
-  if (Err err = GetConsoleFormatNodeOptions(cmd, &options); err.has_error())
+  ConsoleFormatOptions options;
+  if (Err err = GetConsoleFormatOptions(cmd, &options); err.has_error())
     return err;
 
   auto output = fxl::MakeRefCounted<AsyncOutputBuffer>();
@@ -857,8 +857,8 @@ Err DoPrint(ConsoleContext* context, const Command& cmd) {
   // there's a stopped thread, a process, or nothing.
   fxl::RefPtr<EvalContext> eval_context = GetEvalContextForCommand(cmd);
 
-  ConsoleFormatNodeOptions options;
-  Err err = GetConsoleFormatNodeOptions(cmd, &options);
+  ConsoleFormatOptions options;
+  Err err = GetConsoleFormatOptions(cmd, &options);
   if (err.has_error())
     return err;
 

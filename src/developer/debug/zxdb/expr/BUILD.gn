@@ -1,4 +1,4 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyrigh 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -32,9 +32,9 @@ static_library("expr") {
     "find_name.h",
     "format.cc",
     "format.h",
-    "format_expr_value_options.h",
     "format_node.cc",
     "format_node.h",
+    "format_options.h",
     "found_member.cc",
     "found_member.h",
     "found_name.cc",

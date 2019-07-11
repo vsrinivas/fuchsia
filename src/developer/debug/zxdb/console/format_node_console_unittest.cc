@@ -28,7 +28,7 @@ class FormatValueConsoleTest : public TestWithLoop {
   MockSymbolDataProvider* provider() { return eval_context_->data_provider(); }
 
   // Synchronously calls FormatExprValue, returning the result.
-  std::string SyncFormatValue(const ExprValue& value, const ConsoleFormatNodeOptions& opts) {
+  std::string SyncFormatValue(const ExprValue& value, const ConsoleFormatOptions& opts) {
     return LoopUntilAsyncOutputBufferComplete(FormatValueForConsole(value, opts, eval_context_))
         .AsString();
   }
@@ -50,15 +50,15 @@ void FillBaseTypeNode(const std::string& type_name, const std::string& descripti
 TEST(FormatNodeConsole, SimpleValue) {
   FormatNode node;
   FillBaseTypeNode("int", "54", &node);
-  ConsoleFormatNodeOptions options;
+  ConsoleFormatOptions options;
 
   // Bare value.
   OutputBuffer out = FormatNodeForConsole(node, options);
   EXPECT_EQ("kNormal \"54\"", out.GetDebugString());
 
   // Bare value with types forced on.
-  ConsoleFormatNodeOptions type_options;
-  type_options.verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
+  ConsoleFormatOptions type_options;
+  type_options.verbosity = ConsoleFormatOptions::Verbosity::kAllTypes;
   out = FormatNodeForConsole(node, type_options);
   EXPECT_EQ(R"(kComment "(int) ", kNormal "54")", out.GetDebugString());
 
@@ -79,7 +79,7 @@ TEST(FormatNodeConsole, Collection) {
   node.set_description_kind(FormatNode::kCollection);
   node.set_description("This description is not displayed for a collection.");
 
-  ConsoleFormatNodeOptions options;
+  ConsoleFormatOptions options;
 
   // Empty collection.
   OutputBuffer out = FormatNodeForConsole(node, options);
@@ -98,8 +98,8 @@ TEST(FormatNodeConsole, Collection) {
   EXPECT_EQ("{a = 42, b = 3.14159}", out.AsString());
 
   // With types forced.
-  ConsoleFormatNodeOptions type_options;
-  type_options.verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
+  ConsoleFormatOptions type_options;
+  type_options.verbosity = ConsoleFormatOptions::Verbosity::kAllTypes;
   out = FormatNodeForConsole(node, type_options);
   EXPECT_EQ("(MyClass) {(int) a = 42, (double) b = 3.14159}", out.AsString());
 
@@ -117,8 +117,8 @@ TEST(FormatNodeConsole, Collection) {
             out.AsString());
 
   // With eliding.
-  ConsoleFormatNodeOptions elide_options;
-  elide_options.verbosity = ConsoleFormatNodeOptions::Verbosity::kMinimal;
+  ConsoleFormatOptions elide_options;
+  elide_options.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
   out = FormatNodeForConsole(node, elide_options);
   EXPECT_EQ("{This_is::a::VeryLong… = {}, a = 42, b = 3.14159}", out.AsString());
 }
@@ -131,7 +131,7 @@ TEST(FormatNodeConsole, Array) {
   node.set_description("This description is not displayed for arrays.");
 
   // Empty array.
-  ConsoleFormatNodeOptions options;
+  ConsoleFormatOptions options;
   OutputBuffer out = FormatNodeForConsole(node, options);
   EXPECT_EQ("{}", out.AsString());
 
@@ -153,8 +153,8 @@ TEST(FormatNodeConsole, Array) {
   EXPECT_EQ("{42, 137, ...}", out.AsString());
 
   // With types forced on.
-  ConsoleFormatNodeOptions type_options;
-  type_options.verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
+  ConsoleFormatOptions type_options;
+  type_options.verbosity = ConsoleFormatOptions::Verbosity::kAllTypes;
   out = FormatNodeForConsole(node, type_options);
   EXPECT_EQ("(int[2]) {42, 137, ...}", out.AsString());
 }
@@ -172,7 +172,7 @@ TEST(FormatNodeConsole, Pointer) {
   node.children().push_back(std::move(child));
 
   // Print the bare pointer.
-  ConsoleFormatNodeOptions options;
+  ConsoleFormatOptions options;
   OutputBuffer out = FormatNodeForConsole(node, options);
   EXPECT_EQ("(*)0x12345678", out.AsString());
 
@@ -185,8 +185,8 @@ TEST(FormatNodeConsole, Pointer) {
 
   // Print with type information. Should only show on the pointer and not be duplicated on the
   // pointed-to value.
-  ConsoleFormatNodeOptions type_options;
-  type_options.verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
+  ConsoleFormatOptions type_options;
+  type_options.verbosity = ConsoleFormatOptions::Verbosity::kAllTypes;
   out = FormatNodeForConsole(node, type_options);
   EXPECT_EQ("(int*) 0x12345678 🡺 42", out.AsString());
 
@@ -217,7 +217,7 @@ TEST(FormatNodeConsole, Reference) {
   node.children().push_back(std::move(child));
 
   // Print the bare reference.
-  ConsoleFormatNodeOptions options;
+  ConsoleFormatOptions options;
   OutputBuffer out = FormatNodeForConsole(node, options);
   EXPECT_EQ("(&)0x12345678", out.AsString());
 
@@ -230,8 +230,8 @@ TEST(FormatNodeConsole, Reference) {
 
   // Print with type information. Should only show on the pointer and not be duplicated on the
   // pointed-to value.
-  ConsoleFormatNodeOptions type_options;
-  type_options.verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
+  ConsoleFormatOptions type_options;
+  type_options.verbosity = ConsoleFormatOptions::Verbosity::kAllTypes;
   out = FormatNodeForConsole(node, type_options);
   EXPECT_EQ("(int&) 42", out.AsString());
 
@@ -244,7 +244,7 @@ TEST(FormatNodeConsole, Reference) {
 }
 
 TEST_F(FormatValueConsoleTest, SimpleSync) {
-  ConsoleFormatNodeOptions opts;
+  ConsoleFormatOptions opts;
 
   // Basic synchronous number.
   ExprValue val_int16(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 2, "short"),
@@ -254,8 +254,8 @@ TEST_F(FormatValueConsoleTest, SimpleSync) {
 
 // Tests collections and nested references.
 TEST_F(FormatValueConsoleTest, Collection) {
-  ConsoleFormatNodeOptions opts;
-  opts.num_format = FormatExprValueOptions::NumFormat::kHex;
+  ConsoleFormatOptions opts;
+  opts.num_format = ConsoleFormatOptions::NumFormat::kHex;
 
   auto int32_type = MakeInt32Type();
 
@@ -327,7 +327,7 @@ TEST_F(FormatValueConsoleTest, NestingLimits) {
   ExprValue c_value(c_type, {0, 0x22, 0, 0, 0, 0, 0, 0});
 
   // Expand different levels of pointers but allow everything else.
-  ConsoleFormatNodeOptions opts;
+  ConsoleFormatOptions opts;
   opts.pointer_expand_depth = 0;
   opts.max_depth = 1000;
   EXPECT_EQ("{c = {b = (*)0x2200}}", SyncFormatValue(c_value, opts));

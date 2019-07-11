@@ -10,7 +10,7 @@
 
 namespace zxdb {
 
-struct ConsoleFormatNodeOptions;
+struct ConsoleFormatOptions;
 class Frame;
 class OutputBuffer;
 class Thread;
@@ -35,8 +35,7 @@ OutputBuffer FormatFrame(const Frame* frame, bool include_params, int id = -1);
 //
 // This does not append a newline at the end of the output.
 fxl::RefPtr<AsyncOutputBuffer> FormatFrameLong(const Frame* frame, bool include_params,
-                                               const ConsoleFormatNodeOptions& options,
-                                               int id = -1);
+                                               const ConsoleFormatOptions& options, int id = -1);
 
 }  // namespace zxdb
 

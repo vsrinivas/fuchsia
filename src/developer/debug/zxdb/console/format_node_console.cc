@@ -6,7 +6,6 @@
 
 #include "src/developer/debug/zxdb/common/ref_ptr_to.h"
 #include "src/developer/debug/zxdb/expr/format.h"
-#include "src/developer/debug/zxdb/expr/format_expr_value_options.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 
@@ -59,7 +58,7 @@ RecursiveState RecursiveState::Advance() const {
   return result;
 }
 
-void RecursiveDescribeFormatNode(FormatNode* node, const ConsoleFormatNodeOptions& options,
+void RecursiveDescribeFormatNode(FormatNode* node, const ConsoleFormatOptions& options,
                                  fxl::RefPtr<EvalContext> context, const RecursiveState& state,
                                  fit::deferred_callback cb) {
   if (state.depth == options.max_depth)
@@ -89,13 +88,12 @@ void RecursiveDescribeFormatNode(FormatNode* node, const ConsoleFormatNodeOption
       }));
 }
 
-void AppendNode(const FormatNode* node, const ConsoleFormatNodeOptions& options,
+void AppendNode(const FormatNode* node, const ConsoleFormatOptions& options,
                 const RecursiveState& state, OutputBuffer* out);
 
 // Returns true if the combination of options means the type should be shown.
-bool TypeForcedOn(const ConsoleFormatNodeOptions& options, const RecursiveState& state) {
-  return !state.inhibit_one_type &&
-         options.verbosity == FormatExprValueOptions::Verbosity::kAllTypes;
+bool TypeForcedOn(const ConsoleFormatOptions& options, const RecursiveState& state) {
+  return !state.inhibit_one_type && options.verbosity == ConsoleFormatOptions::Verbosity::kAllTypes;
 }
 
 // Get a possibly-elided version of the type name for a medium verbosity level.
@@ -112,7 +110,7 @@ std::string GetElidedTypeName(const std::string& name) {
 }
 
 // Appends the formatted name and "=" as needed by this node.
-void AppendNodeNameAndType(const FormatNode* node, const ConsoleFormatNodeOptions& options,
+void AppendNodeNameAndType(const FormatNode* node, const ConsoleFormatOptions& options,
                            const RecursiveState& state, OutputBuffer* out) {
   if (TypeForcedOn(options, state))
     out->Append(Syntax::kComment, "(" + node->type() + ") ");
@@ -121,7 +119,7 @@ void AppendNodeNameAndType(const FormatNode* node, const ConsoleFormatNodeOption
     // Node name. Base class names are less important so get dimmed. Especially STL base classes
     // can get very long so we also elide them unless verbose mode is turned on.
     if (node->child_kind() == FormatNode::kBaseClass) {
-      if (options.verbosity == ConsoleFormatNodeOptions::Verbosity::kMinimal)
+      if (options.verbosity == ConsoleFormatOptions::Verbosity::kMinimal)
         out->Append(Syntax::kComment, GetElidedTypeName(node->name()));
       else
         out->Append(Syntax::kComment, node->name());
@@ -133,7 +131,7 @@ void AppendNodeNameAndType(const FormatNode* node, const ConsoleFormatNodeOption
   }
 }
 
-void AppendArray(const FormatNode* node, const ConsoleFormatNodeOptions& options,
+void AppendArray(const FormatNode* node, const ConsoleFormatOptions& options,
                  const RecursiveState& state, OutputBuffer* out) {
   RecursiveState child_state = state.Advance();
   child_state.inhibit_one_name = true;
@@ -156,7 +154,7 @@ void AppendArray(const FormatNode* node, const ConsoleFormatNodeOptions& options
   out->Append("}");
 }
 
-void AppendCollection(const FormatNode* node, const ConsoleFormatNodeOptions& options,
+void AppendCollection(const FormatNode* node, const ConsoleFormatOptions& options,
                       const RecursiveState& state, OutputBuffer* out) {
   RecursiveState child_state = state.Advance();
 
@@ -173,7 +171,7 @@ void AppendCollection(const FormatNode* node, const ConsoleFormatNodeOptions& op
   out->Append("}");
 }
 
-void AppendPointer(const FormatNode* node, const ConsoleFormatNodeOptions& options,
+void AppendPointer(const FormatNode* node, const ConsoleFormatOptions& options,
                    const RecursiveState& state, OutputBuffer* out) {
   // When type information is forced on, the type will have already been printed. Otherwise we print
   // a "(*)" to indicate the value is a pointer.
@@ -202,7 +200,7 @@ void AppendPointer(const FormatNode* node, const ConsoleFormatNodeOptions& optio
   }
 }
 
-void AppendReference(const FormatNode* node, const ConsoleFormatNodeOptions& options,
+void AppendReference(const FormatNode* node, const ConsoleFormatOptions& options,
                      const RecursiveState& state, OutputBuffer* out) {
   // References will have a child node that expands to the referenced value. If this is in a
   // "described" state, then we have the data and should show it. Otherwise omit this.
@@ -222,12 +220,12 @@ void AppendReference(const FormatNode* node, const ConsoleFormatNodeOptions& opt
 }
 
 // Appends the description for a normal node (number or whatever).
-void AppendStandard(const FormatNode* node, const ConsoleFormatNodeOptions& options,
+void AppendStandard(const FormatNode* node, const ConsoleFormatOptions& options,
                     const RecursiveState& state, OutputBuffer* out) {
   out->Append(node->description());
 }
 
-void AppendNode(const FormatNode* node, const ConsoleFormatNodeOptions& options,
+void AppendNode(const FormatNode* node, const ConsoleFormatOptions& options,
                 const RecursiveState& state, OutputBuffer* out) {
   AppendNodeNameAndType(node, options, state, out);
   if (state.depth == options.max_depth) {
@@ -273,19 +271,19 @@ void AppendNode(const FormatNode* node, const ConsoleFormatNodeOptions& options,
 
 }  // namespace
 
-void DescribeFormatNodeForConsole(FormatNode* node, const ConsoleFormatNodeOptions& options,
+void DescribeFormatNodeForConsole(FormatNode* node, const ConsoleFormatOptions& options,
                                   fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
   RecursiveDescribeFormatNode(node, options, context, RecursiveState(), std::move(cb));
 }
 
-OutputBuffer FormatNodeForConsole(const FormatNode& node, const ConsoleFormatNodeOptions& options) {
+OutputBuffer FormatNodeForConsole(const FormatNode& node, const ConsoleFormatOptions& options) {
   OutputBuffer out;
   AppendNode(&node, options, RecursiveState(), &out);
   return out;
 }
 
 fxl::RefPtr<AsyncOutputBuffer> FormatValueForConsole(ExprValue value,
-                                                     const ConsoleFormatNodeOptions& options,
+                                                     const ConsoleFormatOptions& options,
                                                      fxl::RefPtr<EvalContext> context,
                                                      const std::string& value_name) {
   auto node = std::make_unique<FormatNode>(value_name, std::move(value));
@@ -302,7 +300,7 @@ fxl::RefPtr<AsyncOutputBuffer> FormatValueForConsole(ExprValue value,
 }
 
 fxl::RefPtr<AsyncOutputBuffer> FormatVariableForConsole(const Variable* var,
-                                                        const ConsoleFormatNodeOptions& options,
+                                                        const ConsoleFormatOptions& options,
                                                         fxl::RefPtr<EvalContext> context) {
   auto out = fxl::MakeRefCounted<AsyncOutputBuffer>();
   context->GetVariableValue(

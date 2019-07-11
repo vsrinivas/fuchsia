@@ -14,7 +14,7 @@
 namespace zxdb {
 
 class EvalContext;
-struct FormatExprValueOptions;
+struct FormatOptions;
 class FormatNode;
 
 // Fills the value() of a FormatNode based on its expression. This does not
@@ -43,7 +43,7 @@ void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
 //
 // The callback will always be issued, even if the node is destroyed. Callers
 // should keep a weak pointer to the node if they do not control its lifetime.
-void FillFormatNodeDescription(FormatNode* node, const FormatExprValueOptions& options,
+void FillFormatNodeDescription(FormatNode* node, const FormatOptions& options,
                                fxl::RefPtr<EvalContext> context, fit::deferred_callback cb);
 
 }  // namespace zxdb

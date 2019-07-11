@@ -20,7 +20,7 @@ namespace zxdb {
 namespace {
 
 // Synchronous wrapper around asynchronous long formatting.
-std::string SyncFormatFrameLong(const Frame* frame, const ConsoleFormatNodeOptions& options) {
+std::string SyncFormatFrameLong(const Frame* frame, const ConsoleFormatOptions& options) {
   debug_ipc::PlatformMessageLoop loop;
   loop.Init();
 
@@ -42,7 +42,7 @@ TEST(FormatFrame, Unsymbolized) {
 
   // Long version should do the same (not duplicate it).
   EXPECT_EQ("\n      IP = 0x12345678, SP = 0x567890, base = 0xdeadbeef",
-            SyncFormatFrameLong(&frame, ConsoleFormatNodeOptions()));
+            SyncFormatFrameLong(&frame, ConsoleFormatOptions()));
 
   // With index.
   out = FormatFrame(&frame, false, 3);
@@ -68,7 +68,7 @@ TEST(FormatFrame, Inline) {
   EXPECT_EQ(
       "Function() • file.cc:22 (inline)\n"
       "      IP = 0x12345678, SP = 0x567890, base = 0xdeadbeef",
-      SyncFormatFrameLong(&inline_frame, ConsoleFormatNodeOptions()));
+      SyncFormatFrameLong(&inline_frame, ConsoleFormatOptions()));
 }
 
 }  // namespace zxdb
