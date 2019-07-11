@@ -6,6 +6,8 @@ import("//products/bringup.gni")
 
 bootfs_only = false
 
+is_bringup = false
+
 zircon_enable_kernel_debugging_features = false
 zircon_enable_netsvc_debugging_features = false
 

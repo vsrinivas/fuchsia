@@ -4,33 +4,11 @@
 
 import("//build/board.gni")
 import("//build/config/fuchsia/zircon.gni")
+import("//build/product.gni")
 import("//build/testing/platforms.gni")
 import("//build/toolchain/goma.gni")
 
 declare_args() {
-  # If you add package labels to this variable, the packages will be included in
-  # the 'base' package set, which represents the set of packages that are part
-  # of an OTA. These pacakages are updated as an atomic unit during an OTA
-  # process and are immutable and are a superset of the TCB (Trusted Computing
-  # Base) for a product. These packages are never evicted by the system.
-  base_package_labels = []
-
-  # If you add package labels to this variable, the packages will be included
-  # in the 'cache' package set, which represents an additional set of software
-  # that is made available on disk immediately after paving and in factory
-  # flows. These packages are not updated with an OTA, but instead are updated
-  # ephemerally. This cache of software can be evicted by the system if storage
-  # pressure arises or other policies indicate.
-  cache_package_labels = []
-
-  # If you add package labels to this variable, the packages will be included
-  # in the 'universe' package set, which represents all software that is
-  # produced that is to be published to a package repository or to the SDK by
-  # the build. The build system ensures that the universe package set includes
-  # the base and cache package sets, which means you do not need to redundantly
-  # include those labels in this variable.
-  universe_package_labels = []
-
   # [Zircon GN build arguments](../../../zircon/docs/gen/build_arguments.md).
   # This is included in the default value of [`zircon_args`](#zircon_args) so
   # you can set this to add things there without wiping out the defaults.
@@ -238,7 +216,10 @@ write_file("$root_build_dir/platforms.json", target_platforms, "json")
 group("additional_base_packages") {
   testonly = true
   visibility = [ "//build/images:base_packages" ]
-  public_deps = base_package_labels + board_package_labels
+  public_deps = base_package_labels + bringup_package_labels
+  if (!is_bringup) {
+    public_deps += board_package_labels
+  }
 }
 
 group("additional_cache_packages") {
