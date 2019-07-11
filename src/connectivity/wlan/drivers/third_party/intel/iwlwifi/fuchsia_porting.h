@@ -184,21 +184,63 @@ struct wireless_dev {
 typedef struct wait_queue wait_queue_t;
 typedef struct wait_queue_head wait_queue_head_t;
 
-////
-// Inlines functions
-////
+typedef struct {
+  int value;
+} atomic_t;
 
+////
+// Inline functions
+////
 static inline int test_bit(int nbits, const volatile unsigned long* addr) {
   return 1UL & (addr[nbits / BITS_PER_LONG] >> (nbits % BITS_PER_LONG));
 }
 
-static inline void set_bit(int nbits, unsigned long* addr) {
-  addr[nbits / BITS_PER_LONG] |= 1UL << (nbits % BITS_PER_LONG);
+static inline bool test_and_set_bit(long bit, volatile unsigned long* addr) {
+  unsigned long mask = 1ul << bit;
+  return mask & __atomic_fetch_or(addr, mask, __ATOMIC_SEQ_CST);
 }
-#define __set_bit set_bit
 
-static inline void clear_bit(int nbits, volatile unsigned long* addr) {
-  addr[nbits / BITS_PER_LONG] &= ~(1UL << (nbits % BITS_PER_LONG));
+static inline bool test_and_clear_bit(long bit, volatile unsigned long* addr) {
+  unsigned long mask = 1ul << bit;
+  return mask & __atomic_fetch_and(addr, ~mask, __ATOMIC_SEQ_CST);
+}
+
+static inline void set_bit(long bit, unsigned long* addr) { test_and_set_bit(bit, addr); }
+
+static inline void clear_bit(long bit, volatile unsigned long* addr) {
+  test_and_clear_bit(bit, addr);
+}
+
+// This is the non-atomic version of set_bit.
+static inline void __set_bit(long bit, unsigned long* addr) { *addr |= 1ul << bit; }
+
+static inline int atomic_read(const atomic_t* atomic) {
+  return __atomic_load_n(&atomic->value, __ATOMIC_RELAXED);
+}
+
+static inline void atomic_set(atomic_t* atomic, int value) {
+  __atomic_store_n(&atomic->value, value, __ATOMIC_RELAXED);
+}
+
+static inline int atomic_xchg(atomic_t* atomic, int value) {
+  return __atomic_exchange_n(&atomic->value, value, __ATOMIC_SEQ_CST);
+}
+
+static inline int atomic_inc(atomic_t* atomic) {
+  return __atomic_fetch_add(&atomic->value, 1, __ATOMIC_SEQ_CST);
+}
+
+static inline int atomic_dec_if_positive(atomic_t* atomic) {
+  int current = atomic_read(atomic);
+  while (1) {
+    if (current <= 0) {
+      return current;
+    }
+    if (__atomic_compare_exchange_n(&atomic->value, &current, current - 1, false /* weak */,
+                                    __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) {
+      return current - 1;
+    }
+  }
 }
 
 static inline void* vmalloc(unsigned long size) { return malloc(size); }
