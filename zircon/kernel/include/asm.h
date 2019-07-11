@@ -13,6 +13,8 @@
 
 #include <arch/asm_macros.h>
 
+// clang-format off
+
 // for functions that don't have an "end" or don't want .cfi_startproc
 #define LOCAL_FUNCTION_LABEL(x) .type x,STT_FUNC; x:
 #define FUNCTION_LABEL(x) .global x; .hidden x; LOCAL_FUNCTION_LABEL(x)
@@ -34,7 +36,7 @@
 #define DW_OP_lit0            0x30
 
 .macro cfi_register_is_zero reg
-    .cfi_escape DW_CFA_val_expression, \reg, 1, DW_OP_lit0
+  .cfi_escape DW_CFA_val_expression, \reg, 1, DW_OP_lit0
 .endm
 
 // We want .debug_frame not .eh_frame.
