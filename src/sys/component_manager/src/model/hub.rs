@@ -159,6 +159,76 @@ impl Hub {
         )
     }
 
+    fn add_resolved_url_file(
+        execution_directory: &mut directory::controlled::Controlled<'static>,
+        resolved_url: String,
+        abs_moniker: &model::AbsoluteMoniker
+    ) -> Result<(), ModelError> {
+        execution_directory.add_node(
+            "resolved_url",
+            {
+                read_only(move || Ok(resolved_url.clone().into_bytes()))
+            },
+            &abs_moniker,
+        )?;
+        Ok(())
+    }
+
+    fn add_in_directory(
+        execution_directory: &mut directory::controlled::Controlled<'static>,
+        realm_state: &model::RealmState,
+        routing_facade: model::RoutingFacade,
+        abs_moniker: &model::AbsoluteMoniker
+    ) -> Result<(), ModelError> {
+        let execution = realm_state.execution.as_ref().unwrap();
+        let decl = realm_state.decl.as_ref().expect("ComponentDecl unavailable.");
+        let tree = model::DirTree::build_from_uses(
+            routing_facade.route_use_fn_factory(),
+            &abs_moniker,
+            decl.clone(),
+        )?;
+        let mut in_dir = directory::simple::empty();
+        tree.install(&abs_moniker, &mut in_dir)?;
+        let pkg_dir = execution.namespace.as_ref().and_then(|n| n.package_dir.as_ref());
+        if let Some(pkg_dir) = Self::clone_dir(pkg_dir) {
+            in_dir.add_node(
+                "pkg",
+                directory_broker::DirectoryBroker::new(Self::route_open_fn(pkg_dir)),
+                &abs_moniker,
+            )?;
+        }
+        execution_directory.add_node("in", in_dir, &abs_moniker)?;
+        Ok(())
+    }
+
+    fn add_out_directory(
+        execution_directory: &mut directory::controlled::Controlled<'static>,
+        execution: &model::Execution,
+        abs_moniker: &model::AbsoluteMoniker) -> Result<(), ModelError> {
+        if let Some(out_dir) = Self::clone_dir(execution.outgoing_dir.as_ref()) {
+            execution_directory.add_node(
+                "out",
+                directory_broker::DirectoryBroker::new(Self::route_open_fn(out_dir)),
+                &abs_moniker,
+            )?;
+        }
+        Ok(())
+    }
+
+    fn add_runtime_directory(
+        execution_directory: &mut directory::controlled::Controlled<'static>,
+        execution: &model::Execution,
+        abs_moniker: &model::AbsoluteMoniker) -> Result<(), ModelError> {
+        if let Some(runtime_dir) = Self::clone_dir(execution.runtime_dir.as_ref()) {
+            execution_directory.add_node(
+                "runtime",
+                directory_broker::DirectoryBroker::new(Self::route_open_fn(runtime_dir)),
+                &abs_moniker,
+            )?;
+        }
+        Ok(())
+    }
+
     pub async fn on_bind_instance_async<'a>(
         &'a self,
         realm: Arc<model::Realm>,
@@ -191,52 +261,22 @@ impl Hub {
                 };
                 instance.execution = Some(exec);
 
-                // Add a 'resolved_url' file.
-                execution_controlled.add_node(
-                    "resolved_url",
-                    {
-                        let resolved_url = execution.resolved_url.clone();
-                        read_only(move || Ok(resolved_url.clone().into_bytes()))
-                    },
-                    &abs_moniker,
-                )?;
+                Self::add_resolved_url_file(&mut execution_controlled,
+                                            execution.resolved_url.clone(),
+                                            &abs_moniker)?;
 
-                // Add an 'in' directory.
-                let decl = realm_state.decl.as_ref().expect("ComponentDecl unavailable.");
-                let tree = model::DirTree::build_from_uses(
-                    routing_facade.route_use_fn_factory(),
-                    &abs_moniker,
-                    decl.clone(),
-                )?;
-                let mut in_dir = directory::simple::empty();
-                tree.install(&abs_moniker, &mut in_dir)?;
-                let pkg_dir = execution.namespace.as_ref().and_then(|n| n.package_dir.as_ref());
-                if let Some(pkg_dir) = Self::clone_dir(pkg_dir) {
-                    in_dir.add_node(
-                        "pkg",
-                        directory_broker::DirectoryBroker::new(Self::route_open_fn(pkg_dir)),
-                        &abs_moniker,
-                    )?;
-                }
-                execution_controlled.add_node("in", in_dir, &abs_moniker)?;
+                Self::add_in_directory(&mut execution_controlled,
+                                       realm_state,
+                                       routing_facade,
+                                       &abs_moniker)?;
 
-                // Install the out directory if we can successfully clone it.
-                if let Some(out_dir) = Self::clone_dir(execution.outgoing_dir.as_ref()) {
-                    execution_controlled.add_node(
-                        "out",
-                        directory_broker::DirectoryBroker::new(Self::route_open_fn(out_dir)),
-                        &abs_moniker,
-                    )?;
-                }
+                Self::add_out_directory(&mut execution_controlled,
+                                        execution,
+                                        &abs_moniker)?;
 
-                // Install the runtime directory if we can successfully clone it.
-                if let Some(runtime_dir) = Self::clone_dir(execution.runtime_dir.as_ref()) {
-                    execution_controlled.add_node(
-                        "runtime",
-                        directory_broker::DirectoryBroker::new(Self::route_open_fn(runtime_dir)),
-                        &abs_moniker,
-                    )?;
-                }
+                Self::add_runtime_directory(&mut execution_controlled,
+                                            execution,
+                                            &abs_moniker)?;
 
                 await!(instance.directory.add_node("exec", execution_controlled, &abs_moniker))?;
             }
