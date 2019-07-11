@@ -124,6 +124,14 @@ fx build
 fx run -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-coding-tables-test
 ```
 
+To regenerate the FIDL definitions used in unit testing, run:
+```sh
+fx build zircon/tools
+$FUCHSIA_DIR/out/default.zircon/tools/fidlc \
+  --tables $FUCHSIA_DIR/zircon/system/utest/fidl/fidl/extra_messages.cc \
+  --files $FUCHSIA_DIR/zircon/system/utest/fidl/fidl/extra_messages.test.fidl
+```
+
 ### fidlgen (LLCPP, HLCPP, Rust, Go)
 
 Build:
