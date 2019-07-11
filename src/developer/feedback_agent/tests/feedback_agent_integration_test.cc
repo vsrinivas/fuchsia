@@ -155,6 +155,7 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
                                                             MatchesKey("build.version"),
                                                             MatchesKey("build.board"),
                                                             MatchesKey("build.product"),
+                                                            MatchesKey("channel"),
                                                         }));
   ASSERT_TRUE(out_result.response().data.has_attachments());
   EXPECT_THAT(out_result.response().data.attachments(), testing::UnorderedElementsAreArray({

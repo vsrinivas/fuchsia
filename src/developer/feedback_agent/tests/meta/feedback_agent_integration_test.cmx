@@ -6,6 +6,7 @@
                 "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx",
                 "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx",
                 "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
+                "fuchsia.update.Info": "fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx",
                 "fuchsia.vulkan.loader.Loader": "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"
             }
         }
