@@ -17,6 +17,10 @@ source_set("iwlwifi_sim_trans_ss") {
   defines = testing_defines
   testonly = true
 
+  sources = [
+    "trans-sim.cc",
+  ]
+
   public_deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-device:sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env:simenv",
@@ -32,6 +36,7 @@ group("test") {
   ]
 }
 
+# Definition for simulated transportation layer + gtest
 testing_deps = [
   ":iwlwifi_sim_trans_ss",
   "//src/lib/fxl/test:gtest_main",
