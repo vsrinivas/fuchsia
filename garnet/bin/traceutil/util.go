@@ -30,8 +30,16 @@ func getCommandOutput(command string, args ...string) (string, error) {
 	return string(output), err
 }
 
+func fullExt(filename string) string {
+	ext := path.Ext(filename)
+	if ext == ".gz" {
+		ext = path.Ext(filename[0:len(filename)-len(ext)]) + ext
+	}
+	return ext
+}
+
 func replaceFilenameExt(filename string, newExt string) string {
-	oldExt := path.Ext(filename)
+	oldExt := fullExt(filename)
 	return filename[0:len(filename)-len(oldExt)] + "." + newExt
 }
 

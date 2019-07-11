@@ -14,13 +14,15 @@ executable("bin") {
   ]
 
   deps = [
-    ":trace_parser",
+    ":lib",
     "//garnet/public/lib/fxl",
   ]
 }
 
-source_set("trace_parser") {
+source_set("lib") {
   sources = [
+    "convert.cc",
+    "convert.h",
     "trace_parser.cc",
     "trace_parser.h",
   ]
@@ -32,6 +34,7 @@ source_set("trace_parser") {
   public_deps = [
     "//garnet/lib/trace_converters:chromium",
     "//third_party/rapidjson",
+    "//third_party/zlib:zfstream",
     "//zircon/public/lib/trace-reader",
   ]
 }
@@ -48,9 +51,11 @@ install_host_tools("trace2json") {
 copy("copy_test_data") {
   sources = [
     "test_data/example_benchmark.fxt",
-    "test_data/example_benchmark.json",
+    "test_data/example_benchmark_expected.json",
     "test_data/simple_trace.fxt",
-    "test_data/simple_trace.json",
+    "test_data/simple_trace.fxt.gz",
+    "test_data/simple_trace_expected.json",
+    "test_data/simple_trace_expected.json.gz",
   ]
 
   outputs = [
@@ -60,9 +65,11 @@ copy("copy_test_data") {
   metadata = {
     test_runtime_deps = [
       "$root_out_dir/test_data/trace2json/example_benchmark.fxt",
-      "$root_out_dir/test_data/trace2json/example_benchmark.json",
+      "$root_out_dir/test_data/trace2json/example_benchmark_expected.json",
       "$root_out_dir/test_data/trace2json/simple_trace.fxt",
-      "$root_out_dir/test_data/trace2json/simple_trace.json",
+      "$root_out_dir/test_data/trace2json/simple_trace.fxt.gz",
+      "$root_out_dir/test_data/trace2json/simple_trace_expected.json",
+      "$root_out_dir/test_data/trace2json/simple_trace_expected.json.gz",
     ]
   }
 }
@@ -71,11 +78,12 @@ test("trace2json_tests") {
   output_name = "trace2json_tests"
 
   sources = [
+    "convert_test.cc",
     "trace_parser_test.cc",
   ]
 
   deps = [
-    ":trace_parser",
+    ":lib",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]

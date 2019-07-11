@@ -256,13 +256,6 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 	var remoteFilename string
 	if cmd.captureConfig.Binary {
 		remoteFilename = "/tmp/trace.fxt"
-		// Disable compression.
-		// `trace` can handle --compress with --binary and produce a correct .fxt.gz file, but currently `trace2json` does not handle compressed fxt files.
-		// TODO(PT-125): Remove this once trace2json supports .fxt.gz files.
-		if cmd.captureConfig.Compress {
-			fmt.Println("Warning: -compress is being ignored as -binary is specified.")
-			cmd.captureConfig.Compress = false
-		}
 	} else {
 		remoteFilename = "/tmp/trace.json"
 	}
@@ -365,7 +358,7 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 	if cmd.captureConfig.Binary {
 		jsonFilename = replaceFilenameExt(localFilename, "json")
 		jsonGenerator := getJsonGenerator()
-		err = convertToJson(jsonGenerator, jsonFilename, localFilename)
+		err = convertToJson(jsonGenerator, cmd.captureConfig.Compress, jsonFilename, localFilename)
 		if err != nil {
 			fmt.Println(err.Error())
 			return subcommands.ExitFailure

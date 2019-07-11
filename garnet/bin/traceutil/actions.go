@@ -20,10 +20,10 @@ import (
 const defaultCategories = "app,benchmark,gfx,input,kernel:meta,kernel:sched,ledger,magma,modular,motown,view,flutter,dart,dart:compiler,dart:dart,dart:debugger,dart:embedder,dart:gc,dart:isolate,dart:profiler,dart:vm"
 
 type captureTraceConfig struct {
-	Categories           string
-	BufferSize           uint // [MB]
-	BufferingMode        string
-	Duration             time.Duration
+	Categories    string
+	BufferSize    uint // [MB]
+	BufferingMode string
+	Duration      time.Duration
 	// Command is set differently as it is passed via positional args.
 	Command              []string
 	BenchmarkResultsFile string
@@ -219,11 +219,14 @@ func convertToHtml(generator string, outputPath string,
 	return err
 }
 
-func convertToJson(generator string, outputPath string, inputPath string) error {
+func convertToJson(generator string, compressedInput bool, outputPath string, inputPath string) error {
 	fmt.Printf("Converting %s to %s... ", inputPath, outputPath)
 	var args []string
 	args = append(args, "--input-file="+inputPath)
 	args = append(args, "--output-file="+outputPath)
+	if compressedInput {
+		args = append(args, "--compressed-input")
+	}
 	err := runCommand(generator, args)
 	if err != nil {
 		fmt.Printf("failed: %s\n", err.Error())

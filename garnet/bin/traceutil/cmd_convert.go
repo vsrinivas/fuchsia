@@ -8,7 +8,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"path"
 
 	"github.com/google/subcommands"
 )
@@ -46,17 +45,12 @@ func (cmd *cmdConvert) Execute(_ context.Context, f *flag.FlagSet,
 	ret := subcommands.ExitSuccess
 
 	for _, filename := range f.Args() {
-		extension := path.Ext(filename)
+		extension := fullExt(filename)
 		basename := filename[0 : len(filename)-len(extension)]
-		if extension == ".gz" {
-			secondExtension := path.Ext(basename)
-			extension = secondExtension + extension
-			basename = basename[0 : len(basename)-len(secondExtension)]
-		}
-		if extension == ".fxt" {
+		if extension == ".fxt" || extension == ".fxt.gz" {
 			jsonGenerator := getJsonGenerator()
 			jsonFilename := basename + ".json"
-			err := convertToJson(jsonGenerator, jsonFilename, filename)
+			err := convertToJson(jsonGenerator, extension == ".fxt.gz", jsonFilename, filename)
 			if err != nil {
 				ret = subcommands.ExitFailure
 				continue
