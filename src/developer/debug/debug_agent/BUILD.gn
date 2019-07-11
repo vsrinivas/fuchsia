@@ -44,6 +44,8 @@ static_library("lib") {
     "remote_api.h",
     "remote_api_adapter.cc",
     "remote_api_adapter.h",
+    "socket_connection.cc",
+    "socket_connection.h",
     "software_breakpoint.cc",
     "software_breakpoint.h",
     "system_info.cc",

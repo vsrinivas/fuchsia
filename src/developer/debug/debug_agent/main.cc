@@ -2,27 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <arpa/inet.h>
 #include <cmdline/args_parser.h>
-#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <unistd.h>
 
 #include <memory>
 #include <thread>
 
-#include "lib/sys/cpp/service_directory.h"
-#include "src/developer/debug/debug_agent/debug_agent.h"
-#include "src/developer/debug/debug_agent/remote_api_adapter.h"
+#include "src/developer/debug/debug_agent/socket_connection.h"
 #include "src/developer/debug/debug_agent/unwind.h"
-#include "src/developer/debug/shared/buffered_fd.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 using namespace debug_ipc;
@@ -88,167 +80,10 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   return cmdline::Status::Ok();
 }
 
-// SocketConnection ------------------------------------------------------------
-
-// Represents one connection to a client.
-class SocketConnection {
- public:
-  SocketConnection(std::shared_ptr<sys::ServiceDirectory> services) : services_(services) {}
-  ~SocketConnection() {}
-
-  // |main_thread_loop| is used for posting a task that creates the debug agent after accepting a
-  // a connection. This is because the debug agent assumes it's running on the message loop's
-  // thread.
-  bool Accept(debug_ipc::MessageLoop* main_thread_loop, int server_fd);
-
-  const debug_agent::DebugAgent* agent() const { return agent_.get(); }
-
- private:
-  std::shared_ptr<sys::ServiceDirectory> services_;
-  debug_ipc::BufferedFD buffer_;
-
-  std::unique_ptr<debug_agent::DebugAgent> agent_;
-  std::unique_ptr<debug_agent::RemoteAPIAdapter> adapter_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(SocketConnection);
-};
-
-bool SocketConnection::Accept(debug_ipc::MessageLoop* main_thread_loop, int server_fd) {
-  sockaddr_in6 addr;
-  memset(&addr, 0, sizeof(addr));
-
-  socklen_t addrlen = sizeof(addr);
-  fxl::UniqueFD client(accept(server_fd, reinterpret_cast<sockaddr*>(&addr), &addrlen));
-  if (!client.is_valid()) {
-    FXL_LOG(ERROR) << "Couldn't accept connection.";
-    return false;
-  }
-
-  if (fcntl(client.get(), F_SETFL, O_NONBLOCK) < 0) {
-    FXL_LOG(ERROR) << "Couldn't make port nonblocking.";
-    return false;
-  }
-
-  // We need to post the agent initialization to the other thread.
-  main_thread_loop->PostTask(FROM_HERE, [this, client = std::move(client)]() mutable {
-    if (!buffer_.Init(std::move(client))) {
-      FXL_LOG(ERROR) << "Error waiting for data.";
-      debug_ipc::MessageLoop::Current()->QuitNow();
-      return;
-    }
-
-    // Route data from the router_buffer -> RemoteAPIAdapter -> DebugAgent.
-    agent_ = std::make_unique<debug_agent::DebugAgent>(&buffer_.stream(), services_);
-    adapter_ = std::make_unique<debug_agent::RemoteAPIAdapter>(agent_.get(), &buffer_.stream());
-
-    buffer_.set_data_available_callback(
-        [adapter = adapter_.get()]() { adapter->OnStreamReadable(); });
-
-    // Exit the message loop on error.
-    buffer_.set_error_callback([]() {
-      DEBUG_LOG(Agent) << "Connection lost.";
-      debug_ipc::MessageLoop::Current()->QuitNow();
-    });
-  });
-
-  printf("Accepted connection.\n");
-  return true;
-}
-
-// SocketServer ------------------------------------------------------------------------------------
-//
-// Listens for connections on a socket. Only one connection is supported at a
-// time. It waits for connections in a blocking fashion, and then runs the
-// message loop on that connection.
-//
-// IMPORTANT: This class is being used to accept connections on a background thread in order to let
-//            the message loop run. But a lot of code (from the DebugAgent down) assumes that it's
-//            running on the main thread, so it's important to know on which thread each call is
-//            made.
-//
-//            The criteria is as follows:
-//
-//            Only call Run on background thread.
-//            All other must be called on the main thread.
-//
-// NOTE: No synchronization is needed because all the connection/agent management occurs on the
-//       main thread. The only thing that's done on the background thread is accepting the
-//       connection. After that, the actual agent creation is posted to the message loop.
-class SocketServer {
- public:
-  SocketServer() = default;
-
-  // IMPORTANT: Only this can be called on another thread.
-  //            We use |main_thread_loop| to post a task that actually creates the debug agent on
-  //            the main thread after the connection has been made. This is because the agent has a
-  //            lot of assumptions of being run on the thread of the message loop.
-  void Run(debug_ipc::MessageLoop* main_thread_loop, int port,
-           std::shared_ptr<sys::ServiceDirectory> services);
-
-  // IMPORTANT: All others can only be called on the main thread.
-
-  bool Init(uint16_t port);
-  // Call before consecutive calls to |Run|.
-  void Reset();
-
-  bool connected() const { return !!connection_; }
-  const DebugAgent* GetDebugAgent() const;
-
- private:
-  fxl::UniqueFD server_socket_;
-  std::unique_ptr<SocketConnection> connection_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(SocketServer);
-};
-
-const DebugAgent* SocketServer::GetDebugAgent() const {
-  if (!connected())
-    return nullptr;
-  return connection_->agent();
-}
-
-bool SocketServer::Init(uint16_t port) {
-  server_socket_.reset(socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP));
-  if (!server_socket_.is_valid()) {
-    FXL_LOG(ERROR) << "Could not create socket.";
-    return false;
-  }
-
-  // Bind to local address.
-  struct sockaddr_in6 addr;
-  memset(&addr, 0, sizeof(addr));
-  addr.sin6_family = AF_INET6;
-  addr.sin6_addr = in6addr_any;
-  addr.sin6_port = htons(port);
-  if (bind(server_socket_.get(), reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
-    FXL_LOG(ERROR) << "Could not bind socket.";
-    return false;
-  }
-
-  if (listen(server_socket_.get(), 1) < 0)
-    return false;
-
-  return true;
-}
-
-void SocketServer::Run(debug_ipc::MessageLoop* main_thread_loop, int port,
-                       std::shared_ptr<sys::ServiceDirectory> services) {
-  // Wait for one connection.
-  printf("Waiting on port %d for zxdb connection...\n", port);
-  fflush(stdout);
-  connection_ = std::make_unique<SocketConnection>(services);
-  if (!connection_->Accept(main_thread_loop, server_socket_.get()))
-    return;
-
-  printf("Connection established.\n");
-}
-
-void SocketServer::Reset() { connection_.reset(); }
-
 }  // namespace
 }  // namespace debug_agent
 
-// main ------------------------------------------------------------------------
+// main --------------------------------------------------------------------------------------------
 
 int main(int argc, const char* argv[]) {
   debug_agent::CommandLineOptions options;
