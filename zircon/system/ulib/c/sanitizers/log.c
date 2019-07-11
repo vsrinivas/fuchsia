@@ -7,6 +7,6 @@
 #include "dynlink.h"
 
 void __sanitizer_log_write(const char *buffer, size_t len) {
-    _dl_log_unlogged();
-    _dl_log_write(buffer, len);
+  _dl_log_unlogged();
+  _dl_log_write(buffer, len);
 }

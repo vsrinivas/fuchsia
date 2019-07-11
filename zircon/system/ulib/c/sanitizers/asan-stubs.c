@@ -28,10 +28,10 @@ __WEAK const int __asan_option_detect_stack_use_after_return = 0;
 // sanitizer runtime does.  Generated code calls these.  In practice,
 // almost certainly nothing in the the startup path needs them, but
 // defining them properly is barely more than defining trap stubs.
-#define ASAN_SET_SHADOW_XX(xx)                                          \
-    __WEAK void __asan_set_shadow_##xx(uintptr_t addr, uintptr_t size) { \
-        __unsanitized_memset((void*)addr, 0x##xx, size);                \
-    }
+#define ASAN_SET_SHADOW_XX(xx)                                         \
+  __WEAK void __asan_set_shadow_##xx(uintptr_t addr, uintptr_t size) { \
+    __unsanitized_memset((void*)addr, 0x##xx, size);                   \
+  }
 
 ASAN_SET_SHADOW_XX(00)
 ASAN_SET_SHADOW_XX(f1)
@@ -42,7 +42,8 @@ ASAN_SET_SHADOW_XX(f8)
 
 // Everything else is trap stubs.  They should never be called.
 
-#define TRAP_STUB(decl) __WEAK decl { __builtin_trap(); }
+#define TRAP_STUB(decl) \
+  __WEAK decl { __builtin_trap(); }
 
 // These are only called when a bug is found.  So unless there's
 // an actual bug in code that's on the dynamic linker startup path,
@@ -51,11 +52,11 @@ ASAN_SET_SHADOW_XX(f8)
 // This is the same macro used in compiler-rt/lib/asan/asan_rtl.cc,
 // where it makes use of the is_write argument.  The list of invocations
 // of this macro below is taken verbatim from that file.
-#define ASAN_REPORT_ERROR(type, is_write, size)                         \
-    TRAP_STUB(void __asan_report_##type##size(uintptr_t addr))          \
-    TRAP_STUB(void __asan_report_exp_##type##size(uintptr_t addr,       \
-                                                  uint32_t exp))        \
-    TRAP_STUB(void __asan_report_##type##size##_noabort(uintptr_t addr))
+#define ASAN_REPORT_ERROR(type, is_write, size)                          \
+  TRAP_STUB(void __asan_report_##type##size(uintptr_t addr))             \
+  TRAP_STUB(                                                             \
+      void __asan_report_exp_##type##size(uintptr_t addr, uint32_t exp)) \
+  TRAP_STUB(void __asan_report_##type##size##_noabort(uintptr_t addr))
 
 ASAN_REPORT_ERROR(load, false, 1)
 ASAN_REPORT_ERROR(load, false, 2)
@@ -84,9 +85,9 @@ TRAP_STUB(void __asan_report_exp_store_n(uintptr_t addr, size_t size,
 
 TRAP_STUB(void __asan_handle_no_return(void))
 
-#define DEFINE_STACK_MALLOC_FREE_WITH_CLASS_ID(class_id)                \
-    TRAP_STUB(uintptr_t __asan_stack_malloc_##class_id(uintptr_t size)) \
-    TRAP_STUB(void __asan_stack_free_##class_id(uintptr_t ptr, size_t size))
+#define DEFINE_STACK_MALLOC_FREE_WITH_CLASS_ID(class_id)              \
+  TRAP_STUB(uintptr_t __asan_stack_malloc_##class_id(uintptr_t size)) \
+  TRAP_STUB(void __asan_stack_free_##class_id(uintptr_t ptr, size_t size))
 
 DEFINE_STACK_MALLOC_FREE_WITH_CLASS_ID(0)
 DEFINE_STACK_MALLOC_FREE_WITH_CLASS_ID(1)
@@ -115,10 +116,9 @@ TRAP_STUB(void __asan_version_mismatch_check_v8(void))
 
 TRAP_STUB(void __asan_register_globals(uintptr_t globals, size_t n))
 TRAP_STUB(void __asan_unregister_globals(uintptr_t globals, size_t n))
-TRAP_STUB(void __asan_register_elf_globals(uintptr_t flag,
-                                           uintptr_t start, uintptr_t stop))
-TRAP_STUB(void __asan_unregister_elf_globals(uintptr_t flag,
-                                             uintptr_t start, uintptr_t stop))
+TRAP_STUB(void __asan_register_elf_globals(uintptr_t flag, uintptr_t start,
+                                           uintptr_t stop))
+TRAP_STUB(void __asan_unregister_elf_globals(uintptr_t flag, uintptr_t start,
+                                             uintptr_t stop))
 
-
-#endif // __has_feature(address_sanitizer)
+#endif  // __has_feature(address_sanitizer)

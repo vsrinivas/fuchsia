@@ -17,16 +17,15 @@
 
 #if __has_feature(undefined_behavior_sanitizer)
 
-#define STUB_HANDLER(name, ...)                                        \
-    [[gnu::weak]] extern "C" void __ubsan_handle_##name(__VA_ARGS__) { \
-        __builtin_trap();                                              \
-    }
+#define STUB_HANDLER(name, ...)                                      \
+  [[gnu::weak]] extern "C" void __ubsan_handle_##name(__VA_ARGS__) { \
+    __builtin_trap();                                                \
+  }
 
-#define UNRECOVERABLE(name, ...) \
-    STUB_HANDLER(name)
+#define UNRECOVERABLE(name, ...) STUB_HANDLER(name)
 #define RECOVERABLE(name, ...) \
-    STUB_HANDLER(name)         \
-    STUB_HANDLER(name##_abort)
+  STUB_HANDLER(name)           \
+  STUB_HANDLER(name##_abort)
 
 // Culled from compiler-rt/lib/ubsan/ubsan_handlers.h:
 
@@ -54,22 +53,23 @@ RECOVERABLE(add_overflow, OverflowData* Data, ValueHandle LHS, ValueHandle RHS)
 RECOVERABLE(sub_overflow, OverflowData* Data, ValueHandle LHS, ValueHandle RHS)
 RECOVERABLE(mul_overflow, OverflowData* Data, ValueHandle LHS, ValueHandle RHS)
 RECOVERABLE(negate_overflow, OverflowData* Data, ValueHandle OldVal)
-RECOVERABLE(divrem_overflow, OverflowData* Data,
-            ValueHandle LHS, ValueHandle RHS)
-RECOVERABLE(shift_out_of_bounds, ShiftOutOfBoundsData* Data,
-            ValueHandle LHS, ValueHandle RHS)
+RECOVERABLE(divrem_overflow, OverflowData* Data, ValueHandle LHS,
+            ValueHandle RHS)
+RECOVERABLE(shift_out_of_bounds, ShiftOutOfBoundsData* Data, ValueHandle LHS,
+            ValueHandle RHS)
 RECOVERABLE(out_of_bounds, OutOfBoundsData* Data, ValueHandle Index)
 UNRECOVERABLE(builtin_unreachable, UnreachableData* Data)
 UNRECOVERABLE(missing_return, UnreachableData* Data)
 RECOVERABLE(vla_bound_not_positive, VLABoundData* Data, ValueHandle Bound)
 RECOVERABLE(float_cast_overflow, void* Data, ValueHandle From)
 RECOVERABLE(load_invalid_value, InvalidValueData* Data, ValueHandle Val)
-RECOVERABLE(implicit_conversion, ImplicitConversionData* Data,
-            ValueHandle Src, ValueHandle Dst)
+RECOVERABLE(implicit_conversion, ImplicitConversionData* Data, ValueHandle Src,
+            ValueHandle Dst)
 RECOVERABLE(invalid_builtin, InvalidBuiltinData* Data)
 RECOVERABLE(function_type_mismatch, ValueHandle Function)
 RECOVERABLE(nonnull_return_v1, NonNullReturnData* Data, SourceLocation* Loc)
-RECOVERABLE(nullability_return_v1, NonNullReturnData* Data, SourceLocation* Loc)
+RECOVERABLE(nullability_return_v1, NonNullReturnData* Data,
+            SourceLocation* Loc)
 RECOVERABLE(nonnull_arg, NonNullArgData* Data)
 RECOVERABLE(nullability_arg, NonNullArgData* Data)
 RECOVERABLE(pointer_overflow, PointerOverflowData* Data, ValueHandle Base,
@@ -79,4 +79,4 @@ RECOVERABLE(cfi_check_fail, CFICheckFailData* Data, ValueHandle Function,
 UNRECOVERABLE(cfi_bad_type, CFICheckFailData* Data, ValueHandle Vtable,
               bool ValidVtable, ReportOptions Opts)
 
-#endif // __has_feature(undefined_behavior_sanitizer)
+#endif  // __has_feature(undefined_behavior_sanitizer)

@@ -5,5 +5,5 @@
 #include "crt1.h"
 
 [[noreturn]] void _start(zx_handle_t bootstrap) {
-    __libc_start_main(bootstrap, &main);
+  __libc_start_main(bootstrap, &main);
 }

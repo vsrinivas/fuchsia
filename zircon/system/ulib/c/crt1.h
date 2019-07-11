@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_C_CRT1_H_
+#define ZIRCON_SYSTEM_ULIB_C_CRT1_H_
 
-#include <zircon/types.h>               // zx_handle_t
+#include <zircon/types.h>  // zx_handle_t
 
 extern "C" {
 
@@ -21,5 +22,6 @@ using main_t = decltype(main)*;
 // TODO(mcgrathr): Convert the impl. to C++, have the impl. use this header.
 // Probably do as part of bootstrap protocol cleanup.
 [[noreturn]] void __libc_start_main(zx_handle_t, main_t);
-
 }
+
+#endif  // ZIRCON_SYSTEM_ULIB_C_CRT1_H_

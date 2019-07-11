@@ -22,7 +22,7 @@
 // loaded before any module initializers get called.
 [[gnu::weak]] extern "C" void __sanitizer_cov_trace_pc_guard_init(uint32_t*,
                                                                   uint32_t*) {
-    __builtin_trap();
+  __builtin_trap();
 }
 
 // This is called only from __asan_early_init, which is the only thing
@@ -31,16 +31,16 @@
 // short-circuits before calling here.  Just sanity-check that we
 // aren't getting here after module initializers have run.
 [[gnu::weak]] extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t* guard) {
-    if (*guard != 0) {
-        __builtin_trap();
-    }
+  if (*guard != 0) {
+    __builtin_trap();
+  }
 }
 
 // There are many hooks that are called a lot but can always safely
 // just do nothing.
 
 #define SANCOV_STUB(name) \
-    [[gnu::weak]] extern "C" void __sanitizer_cov_##name() {}
+  [[gnu::weak]] extern "C" void __sanitizer_cov_##name() {}
 
 SANCOV_NOOP_STUBS
 
