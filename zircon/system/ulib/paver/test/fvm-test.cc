@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/paver/paver.h>
+#include "paver.h"
 
 #include <fs-management/fvm.h>
 #include <lib/devmgr-integration-test/fixture.h>
