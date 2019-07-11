@@ -22,6 +22,7 @@ source_set("lib") {
   sources = [
     "data_generator.cc",
     "data_generator.h",
+    "dispatcher_checker.h",
     "fake_disk_cleanup_manager.h",
     "get_page_ensure_initialized.cc",
     "get_page_ensure_initialized.h",
@@ -161,6 +162,7 @@ source_set("unittests") {
 
   sources = [
     "blocking_callback_waiter_unittest.cc",
+    "dispatcher_checker_unittest.cc",
     "ledger_matcher_unittest.cc",
     "ledger_memory_usage_unittest.cc",
   ]
