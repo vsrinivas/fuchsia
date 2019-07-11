@@ -24,10 +24,11 @@
  * @{
  */
 
+#include "kernel/event.h"
+
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
-#include <kernel/event.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>

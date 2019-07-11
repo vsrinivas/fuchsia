@@ -3,11 +3,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
+#include "arch/x86/idle_states.h"
 
 #include <assert.h>
 
 #include <arch/x86/feature.h>
-#include <arch/x86/idle_states.h>
 
 const x86_idle_states_t* x86_get_idle_states() {
     return &x86_get_microarch_config()->idle_states;

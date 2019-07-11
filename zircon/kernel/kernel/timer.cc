@@ -18,6 +18,8 @@
  *
  * @{
  */
+#include "kernel/timer.h"
+
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
@@ -30,7 +32,6 @@
 #include <kernel/spinlock.h>
 #include <kernel/stats.h>
 #include <kernel/thread.h>
-#include <kernel/timer.h>
 #include <lib/counters.h>
 #include <list.h>
 #include <malloc.h>

@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <kernel/fair_scheduler.h>
+#include "kernel/fair_scheduler.h"
 
 #include <assert.h>
 #include <debug.h>

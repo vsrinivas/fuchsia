@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <object/diagnostics.h>
+#include "object/diagnostics.h"
 
 #include <inttypes.h>
 #include <stdio.h>

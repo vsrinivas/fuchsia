@@ -5,10 +5,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
+#include "arch/x86/descriptor.h"
 
 #include <arch/arch_ops.h>
 #include <arch/x86.h>
-#include <arch/x86/descriptor.h>
 #include <arch/x86/idt.h>
 #include <arch/x86/interrupts.h>
 #include <arch/x86/mp.h>

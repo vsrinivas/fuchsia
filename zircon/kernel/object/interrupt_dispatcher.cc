@@ -4,8 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "object/interrupt_dispatcher.h"
+
 #include <dev/interrupt.h>
-#include <object/interrupt_dispatcher.h>
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <platform.h>

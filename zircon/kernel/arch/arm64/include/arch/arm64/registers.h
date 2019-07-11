@@ -228,6 +228,7 @@ typedef struct arm64_debug_state {
 } arm64_debug_state_t;
 
 /* Enable/disable the HW debug functionalities for the current thread. */
+struct thread;
 void arm64_set_debug_state_for_thread(thread*, bool active);
 /* Enable/disable mdscr_el1 */
 void arm64_set_debug_state_for_cpu(bool active);

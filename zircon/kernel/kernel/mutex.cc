@@ -14,7 +14,7 @@
  * @{
  */
 
-#include <kernel/mutex.h>
+#include "kernel/mutex.h"
 
 #include <assert.h>
 #include <debug.h>

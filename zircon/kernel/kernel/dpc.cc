@@ -4,12 +4,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "kernel/dpc.h"
+
 #include <assert.h>
 #include <err.h>
 #include <list.h>
 #include <trace.h>
 
-#include <kernel/dpc.h>
 #include <kernel/event.h>
 #include <kernel/percpu.h>
 #include <kernel/spinlock.h>

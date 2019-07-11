@@ -3,10 +3,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
+#include "arch/x86/tsc.h"
 
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
-#include <arch/x86/tsc.h>
 
 #define X86_MSR_IA32_TIME_STAMP_COUNTER 0x10
 

@@ -3,6 +3,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
+#include "arch/x86/user_copy.h"
 
 #include <assert.h>
 #include <string.h>
@@ -11,7 +12,6 @@
 #include <arch/user_copy.h>
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
-#include <arch/x86/user_copy.h>
 #include <kernel/thread.h>
 #include <lib/code_patching.h>
 #include <vm/vm.h>

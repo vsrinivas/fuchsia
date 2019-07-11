@@ -10,8 +10,9 @@
  * a init hook that is called at increasing init levels as the system is
  * initialized.
  */
+#include "lk/init.h"
+
 #include <arch/ops.h>
-#include <lk/init.h>
 
 #include <assert.h>
 #include <debug.h>

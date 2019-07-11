@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <object/message_packet.h>
+#include "object/message_packet.h"
 
 #include <err.h>
 #include <fbl/algorithm.h>

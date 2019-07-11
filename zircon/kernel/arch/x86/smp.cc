@@ -3,6 +3,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
+#include "arch/x86/mp.h"
 
 #include <assert.h>
 #include <stdint.h>
@@ -14,7 +15,6 @@
 #include <arch/x86/bootstrap16.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/mmu_mem_types.h>
-#include <arch/x86/mp.h>
 #include <err.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>

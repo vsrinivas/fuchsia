@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <object/vcpu_dispatcher.h>
+#include "object/vcpu_dispatcher.h"
 
 #include <arch/hypervisor.h>
 #include <fbl/alloc_checker.h>

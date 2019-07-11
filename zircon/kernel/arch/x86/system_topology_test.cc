@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <arch/x86/system_topology.h>
+#include "arch/x86/system_topology.h"
 
 #include <initializer_list>
 #include <stdio.h>

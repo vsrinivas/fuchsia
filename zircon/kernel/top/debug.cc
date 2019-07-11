@@ -5,9 +5,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "debug.h"
+
 #include <arch/ops.h>
 #include <ctype.h>
-#include <debug.h>
 #include <dev/hw_rng.h>
 #include <kernel/spinlock.h>
 #include <list.h>

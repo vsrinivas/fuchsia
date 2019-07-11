@@ -4,8 +4,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
-
-#include <vm/page.h>
+#include "vm/page.h"
 
 #include <err.h>
 #include <inttypes.h>

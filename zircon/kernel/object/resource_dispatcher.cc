@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <object/resource_dispatcher.h>
+#include "object/resource_dispatcher.h"
 
 #include <fbl/alloc_checker.h>
 #include <inttypes.h>

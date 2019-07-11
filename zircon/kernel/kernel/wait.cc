@@ -5,8 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <kernel/wait.h>
-#include <kernel/wait_queue_internal.h>
+#include "kernel/wait.h"
+#include "kernel/wait_queue_internal.h"
 
 #include <err.h>
 #include <kernel/owned_wait_queue.h>

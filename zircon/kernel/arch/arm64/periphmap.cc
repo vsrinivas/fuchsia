@@ -3,9 +3,9 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
+#include "arch/arm64/periphmap.h"
 
 #include <arch/arm64/mmu.h>
-#include <arch/arm64/periphmap.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 

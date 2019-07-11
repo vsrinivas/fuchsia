@@ -6,7 +6,7 @@
 
 #if WITH_KERNEL_PCIE
 
-#include <object/pci_device_dispatcher.h>
+#include "object/pci_device_dispatcher.h"
 
 #include <kernel/auto_lock.h>
 #include <zircon/rights.h>

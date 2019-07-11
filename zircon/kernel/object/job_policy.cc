@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <object/job_policy.h>
+#include "object/job_policy.h"
 
 #include <assert.h>
 #include <err.h>

@@ -3,11 +3,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
+#include "arch/x86/pvclock.h"
 
 #include <arch/ops.h>
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
-#include <arch/x86/pvclock.h>
 #include <kernel/atomic.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>

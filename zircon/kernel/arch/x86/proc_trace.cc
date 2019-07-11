@@ -25,13 +25,13 @@
 // to IPT_TRACE_CPUS: supporting this requires flushing trace state from all
 // threads which is a bit of work. For now it's easy enough to just require
 // the user to reboot. ZX-892
+#include "arch/x86/proc_trace.h"
 
 #include <arch/arch_ops.h>
 #include <arch/mmu.h>
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mmu.h>
-#include <arch/x86/proc_trace.h>
 #include <err.h>
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>

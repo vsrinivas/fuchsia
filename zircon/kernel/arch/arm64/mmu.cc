@@ -4,9 +4,9 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
+#include "arch/arm64/mmu.h"
 
 #include <arch/arm64/hypervisor/el2_state.h>
-#include <arch/arm64/mmu.h>
 #include <arch/aspace.h>
 #include <arch/mmu.h>
 #include <assert.h>

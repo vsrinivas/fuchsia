@@ -3,8 +3,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
-
-#include <vm/vm_page_list.h>
+#include "vm/vm_page_list.h"
 
 #include <err.h>
 #include <fbl/alloc_checker.h>

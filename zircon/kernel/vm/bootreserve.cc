@@ -3,6 +3,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
+#include "vm/bootreserve.h"
 
 #include <inttypes.h>
 #include <sys/types.h>
@@ -10,7 +11,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/function.h>
 #include <trace.h>
-#include <vm/bootreserve.h>
 #include <vm/pmm.h>
 
 #include "vm_priv.h"

@@ -14,7 +14,7 @@
  * @defgroup thread Threads
  * @{
  */
-#include <kernel/thread.h>
+#include "kernel/thread.h"
 
 #include <arch/exception.h>
 #include <assert.h>

@@ -4,10 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "arch/x86/bootstrap16.h"
+
 #include <arch/mmu.h>
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
-#include <arch/x86/bootstrap16.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/mp.h>

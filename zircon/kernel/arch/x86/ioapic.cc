@@ -3,10 +3,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
+#include "arch/x86/apic.h"
 
 #include <assert.h>
 
-#include <arch/x86/apic.h>
 #include <arch/x86/interrupts.h>
 #include <err.h>
 #include <fbl/array.h>

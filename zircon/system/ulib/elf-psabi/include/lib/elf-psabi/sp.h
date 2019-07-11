@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
 
 // Given the base and size of the stack block, compute the appropriate

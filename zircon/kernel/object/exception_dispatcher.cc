@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <object/exception_dispatcher.h>
+#include "object/exception_dispatcher.h"
 
 #include <assert.h>
 #include <object/process_dispatcher.h>

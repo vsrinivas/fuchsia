@@ -4,11 +4,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "object/resource.h"
+
 #include <fbl/ref_ptr.h>
 #include <kernel/range_check.h>
 #include <object/process_dispatcher.h>
 #include <object/resource_dispatcher.h>
-#include <object/resource.h>
 #include <zircon/syscalls/resource.h>
 #include <trace.h>
 

@@ -22,6 +22,7 @@
 // can continue to emit the delta into the trace buffer) - assuming the write
 // to memory is faster than the wrmsr which is apparently true.
 // TODO(dje): rdpmc
+#include "arch/x86/perf_mon.h"
 
 #include <arch/arch_ops.h>
 #include <arch/mmu.h>
@@ -29,7 +30,6 @@
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mmu.h>
-#include <arch/x86/perf_mon.h>
 #include <assert.h>
 #include <err.h>
 #include <fbl/algorithm.h>

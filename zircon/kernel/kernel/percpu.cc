@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <kernel/percpu.h>
+#include "kernel/percpu.h"
 
 #include <arch/ops.h>
 #include <kernel/align.h>

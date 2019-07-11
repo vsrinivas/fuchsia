@@ -9,7 +9,7 @@
  * Main entry point to the OS. Initializes modules in order and creates
  * the default thread.
  */
-#include <lk/main.h>
+#include "lk/main.h"
 
 #include <arch.h>
 #include <debug.h>

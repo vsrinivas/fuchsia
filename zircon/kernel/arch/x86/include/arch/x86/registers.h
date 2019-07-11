@@ -198,8 +198,9 @@
 
 #ifndef __ASSEMBLER__
 
-#include <zircon/compiler.h>
+#include <stdbool.h>
 #include <sys/types.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 

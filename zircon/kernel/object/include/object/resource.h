@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <fbl/ref_ptr.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
@@ -19,6 +20,7 @@
 zx_status_t validate_resource(zx_handle_t handle, uint32_t kind);
 
 // Validates a resource based on type and low/high range.
+class ResourceDispatcher;
 zx_status_t validate_ranged_resource(fbl::RefPtr<ResourceDispatcher> resource, uint32_t kind,
                                      uint64_t base, size_t len);
 zx_status_t validate_ranged_resource(zx_handle_t handle, uint32_t kind, uint64_t base, size_t len);

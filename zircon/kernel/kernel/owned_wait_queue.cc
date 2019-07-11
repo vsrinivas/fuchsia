@@ -4,11 +4,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "kernel/owned_wait_queue.h"
+
 #include <arch/mp.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <kernel/owned_wait_queue.h>
 #include <kernel/sched.h>
 #include <kernel/wait_queue_internal.h>
 #include <ktl/popcount.h>

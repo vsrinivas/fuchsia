@@ -18,13 +18,13 @@
  * 5) none (will not save any extended registers, will not allow enabling
  *          features that use extended registers.)
  ****************************************************************************/
+#include "arch/x86/registers.h"
 
 #include <arch/ops.h>
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mp.h>
 #include <arch/x86/proc_trace.h>
-#include <arch/x86/registers.h>
 #include <fbl/auto_call.h>
 #include <inttypes.h>
 #include <kernel/auto_lock.h>

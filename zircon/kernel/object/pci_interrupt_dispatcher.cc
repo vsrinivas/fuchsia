@@ -6,7 +6,7 @@
 
 #if WITH_KERNEL_PCIE
 
-#include <object/pci_interrupt_dispatcher.h>
+#include "object/pci_interrupt_dispatcher.h"
 
 #include <fbl/alloc_checker.h>
 #include <kernel/auto_lock.h>
