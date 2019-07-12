@@ -823,10 +823,18 @@ func (ios *iostate) Connect(sockaddr []uint8) (int16, error) {
 	}
 	if l := len(addr.Addr); l > 0 {
 		if ios.netProto == ipv4.ProtocolNumber && l != header.IPv4AddressSize {
+			syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: unsupported address %s", ios, addr.Addr)
 			return C.EAFNOSUPPORT, nil
 		}
 	}
 	if err := ios.ep.Connect(addr); err != nil {
+		if err == tcpip.ErrConnectStarted {
+			localAddr, err := ios.ep.GetLocalAddress()
+			if err != nil {
+				panic(err)
+			}
+			syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: started, local=%+v, addr=%+v", ios, localAddr, addr)
+		}
 		return tcpipErrorToCode(err), nil
 	}
 
