@@ -5,8 +5,9 @@
 
 ### start fuchsia in aemu
 
-## usage: fx aemu [-a <mode>] [-N [-I <ifname>]] [-u <path>] [-g <port> [-r <fps>] [-t <cmd>]] [-x <port> [-X <directory>]] [-e <directory>] [-w <size>] [--audio] [--headless] [--software-gpu] [--debugger]
+## usage: fx aemu [-a <mode>] [-c <text>] [-N [-I <ifname>]] [-u <path>] [-g <port> [-r <fps>] [-t <cmd>]] [-x <port> [-X <directory>]] [-e <directory>] [-w <size>] [--audio] [--headless] [--software-gpu] [--debugger]
 ##   -a <mode> acceleration mode (auto, off, kvm, hvf, hax), default is auto
+##   -c <text> add item to kernel command line
 ##   -N run with emulated nic via tun/tap
 ##   -I <ifname> uses the tun/tap interface named ifname
 ##   -u <path> execute aemu if-up script, default is no script
@@ -47,6 +48,14 @@ GPU="host"
 VULKAN=1
 HTTP=0
 GRPCWEBPROXY_DIR=""
+CMDLINE=""
+
+# Propagate our TERM environment variable as a kernel command line
+# argument.  This is first so that an explicit -c TERM=foo argument
+# goes into CMDLINE later and overrides this.
+if [[ -n $TERM ]]; then
+    CMDLINE+="TERM=$TERM "
+fi
 
 while [[ $# -ge 1 ]]; do
   case "$1" in
@@ -57,6 +66,10 @@ while [[ $# -ge 1 ]]; do
   -a)
     shift
     ACCEL="$1"
+    ;;
+  -c)
+    shift
+    CMDLINE+="$1 "
     ;;
   -N)
     NET=1
@@ -263,21 +276,6 @@ if [[ -n "$IMAGE_FVM_RAW" ]]; then
   ARGS+=("-device" "ich9-ahci,id=ahci" "-device" "ide-drive,drive=mydisk,bus=ahci.0")
 fi
 
-# construct the kernel cmd line for aemu
-CMDLINE="kernel.serial=legacy "
-# Propagate our TERM environment variable as a kernel command line
-# argument.  This is first so that an explicit -c TERM=foo argument
-# goes into CMDLINE later and overrides this.
-if [[ -n $TERM ]]; then
-  CMDLINE+="TERM=$TERM "
-fi
-
-# Add entropy to the kernel
-CMDLINE+="kernel.entropy-mixin=$(head -c 32 /dev/urandom | shasum -a 256 | awk '{ print $1 }') "
-
-# Don't 'reboot' the emulator if the kernel crashes
-CMDLINE+="kernel.halt-on-panic=true "
-
 # Start gRPC web proxy if HTTP port is set
 if (( $HTTP )); then
   "${GRPCWEBPROXY_DIR}/grpcwebproxy" \
@@ -285,6 +283,15 @@ if (( $HTTP )); then
       --backend_tls=false --run_tls_server=false --allow_all_origins &
   GRPCWEBPROXY_PID=$!
 fi
+
+# construct the kernel cmd line for aemu
+CMDLINE+="kernel.serial=legacy "
+
+# Add entropy to the kernel
+CMDLINE+="kernel.entropy-mixin=$(head -c 32 /dev/urandom | shasum -a 256 | awk '{ print $1 }') "
+
+# Don't 'reboot' the emulator if the kernel crashes
+CMDLINE+="kernel.halt-on-panic=true "
 
 # run aemu
 set -x
