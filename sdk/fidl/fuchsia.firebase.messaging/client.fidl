@@ -1,0 +1,34 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.firebase.messaging;
+
+/// Client protocol created for a messaging client. This client is registered
+/// and connected.
+protocol Client {
+    /// Sends an upstream message to the service.
+    Send(Message message) -> (Error? error);
+
+    /// Tells FCM backend to send connectivity events for this instance back to
+    /// the service. While FCM is always aware of connectivity events, the
+    /// service handling this device will only be notified if the events are
+    /// enabled and the service is signed up for them.
+    NotifyConnectivityEvents(ConnectivityEvent events);
+
+    // The following events will also be sent on this channel:
+
+    /// Wait for next message. Returns immediately if a message is waiting to be
+    /// consumed.
+    NextMessage() -> (DownstreamMessage message);
+
+    /// Blocks until an error is received. Returns exactly once for each error.
+    /// This includes errors specific to this particular app and service-wide
+    /// errors in the client multiplexer.
+    WaitForError() -> (Error error);
+
+    /// Returns on connection setup/reset. Connections are automatically
+    /// restarted on internal errors (eg. missing heartbeat ack, unexpected
+    /// login response). This call is just informational.
+    WaitForConnectionReset() -> ();
+};

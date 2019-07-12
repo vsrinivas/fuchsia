@@ -1,0 +1,136 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.firebase.messaging;
+
+/// From FIRMessagingError at
+/// https://github.com/firebase/firebase-ios-sdk/blob/master/Firebase/Messaging/Public/FIRMessaging.h
+enum MessagingErrorCode {
+    /// Couldn't validate request from this client.
+    AUTHENTICATION = 1;
+
+    /// InstanceID service cannot be accessed.
+    NO_ACCESS = 2;
+
+    /// Request to InstanceID backend timed out.
+    TIMEOUT = 3;
+
+    /// No network available to reach the servers.
+    NETWORK = 4;
+
+    /// Another similar operation in progress, bailing this one.
+    OPERATION_IN_PROGRESS = 5;
+
+    /// Some parameters of the request were invalid.
+    INVALID_REQUEST = 7;
+
+    /// Topic name is invalid for subscription/unsubscription.
+    INVALID_TOPIC_NAME = 8;
+};
+
+
+/// From https://github.com/grpc/grpc/blob/master/doc/statuscodes.md.
+enum CoreErrorCode {
+    /// Not an error; returned on success.
+    OK = 0;
+
+    /// The operation was cancelled, typically by the caller.
+    CANCELLED = 1;
+
+    /// Unknown error. For example, this error may be returned when a Status
+    /// value received from another address space belongs to an error space that
+    /// is not known in this address space. Also errors raised by APIs that do
+    /// not return enough error information may be converted to this error.
+    UNKNOWN = 2;
+
+    /// The client specified an invalid argument. Note that this differs from
+    /// FAILED_PRECONDITION. INVALID_ARGUMENT indicates arguments that are
+    /// problematic regardless of the state of the system (e.g., a malformed
+    /// file name).
+    INVALID_ARGUMENT = 3;
+
+    /// The deadline expired before the operation could complete. For operations
+    /// that change the state of the system, this error may be returned even if
+    /// the operation has completed successfully. For example, a successful
+    /// response from a server could have been delayed long enough for the
+    /// deadline to expire.
+    DEADLINE_EXCEEDED = 4;
+
+    /// Some requested entity (e.g., file or directory) was not found.
+    NOT_FOUND = 5;
+
+    /// The entity that a client attempted to create (e.g., file or directory)
+    /// already exists.
+    ALREADY_EXISTS = 6;
+
+    /// The caller does not have permission to execute the specified operation.
+    /// This error code does not imply the request is valid or the requested
+    /// entity exists or satisfies other pre-conditions.
+    PERMISSION_DENIED = 7;
+
+    /// The request does not have valid authentication credentials for the
+    /// operation.
+    UNAUTHENTICATED = 16;
+
+    /// Some resource has been exhausted, perhaps a per-user quota, or perhaps
+    /// the entire file system is out of space.
+    RESOURCE_EXHAUSTED = 8;
+
+    /// The operation was rejected because the system is not in a state required
+    /// for the operation's execution. For example, the directory to be deleted
+    /// is non-empty, an rmdir operation is applied to a non-directory, etc.
+    FAILED_PRECONDITION = 9;
+
+    /// The operation was aborted, typically due to a concurrency issue such as
+    /// a sequencer check failure or transaction abort.
+    ABORTED = 10;
+
+    /// The operation was attempted past the valid range. E.g., seeking or
+    /// reading past end-of-file. Unlike INVALID_ARGUMENT, this error indicates
+    /// a problem that may be fixed if the system state changes. For example, a
+    /// 32-bit file system will generate INVALID_ARGUMENT if asked to read at an
+    /// offset that is not in the range [0,2^32-1], but it will generate
+    /// OUT_OF_RANGE if asked to read from an offset past the current file size.
+    OUT_OF_RANGE = 11;
+
+    /// The operation is not implemented or is not supported/enabled in this
+    /// service.
+    UNIMPLEMENTED = 12;
+
+    /// Internal errors. This means that some invariants expected by the
+    /// underlying system have been broken. This error code is reserved for
+    /// serious errors.
+    INTERNAL = 13;
+
+    /// The service is currently unavailable. This is most likely a transient
+    /// condition, which can be corrected by retrying with a backoff. Note that
+    /// it is not always safe to retry non-idempotent operations.
+    UNAVAILABLE = 14;
+
+    /// Unrecoverable data loss or corruption.
+    DATA_LOSS = 15;
+};
+
+struct ServiceError {
+    string domain;
+    string code;
+    string? message;
+};
+
+xunion ErrorValue {
+    MessagingErrorCode messaging;
+    CoreErrorCode core;
+    uint32 http;
+    ServiceError service;
+};
+
+struct Error {
+    ErrorValue error;
+
+    /// This error may be caused by an error in the local infrastructure,
+    /// reachability, firebase service, the backend service, or any other layer
+    /// of the operation. In this case, a higher layer may wrap a lower level
+    /// error with its own error to provide more information.
+    Error? inner;
+};

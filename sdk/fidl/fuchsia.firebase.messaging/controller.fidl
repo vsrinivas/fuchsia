@@ -1,0 +1,14 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.firebase.messaging;
+
+[Discoverable]
+protocol Controller {
+    /// Registers the app with the FCM backend and binds a handle for app
+    /// specific operations.
+    /// On error, client is left unbound.
+    CreateClient(Application application, request<Client> client)
+        -> (string? token, Error? error);
+};
