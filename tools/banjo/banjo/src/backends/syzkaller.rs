@@ -7,6 +7,7 @@ use {
     crate::backends::util::{to_c_name, ValuedAttributes},
     crate::backends::Backend,
     failure::{format_err, Error},
+    std::collections::HashMap,
     std::io,
 };
 
@@ -50,23 +51,34 @@ fn get_in_params(
     ast: &BanjoAst,
     arg_types: &ValuedAttributes,
 ) -> Result<Vec<String>, Error> {
+    let mut size_to_buffer: HashMap<String, String> = HashMap::new();
     m.in_params
         .iter()
         .map(|(name, ty)| {
             let direction = arg_types.get_arg(name);
             match ty {
+                ast::Ty::USize => {
+                    match size_to_buffer.get(name) {
+                        // TODO(SEC-327): should be bytesize for voidptr array
+                        Some(assoc_buffer) => Ok(format!("{} len[{}]", name, assoc_buffer)),
+                        None => Ok(format!("{} {}", name, ty_to_syzkaller_str(ast, ty).unwrap())),
+                    }
+                }
                 ast::Ty::Str { size, nullable } => {
-                    // TODO(SEC-327): handle string length dependency
                     if *nullable {
                         panic!("string cannot be nullable");
                     }
                     match size {
-                        Some(_sz) => {
+                        Some(size) => {
                             if !direction.is_empty() {
-                                let resolved_type = format!(
-                                    "ptr[{}, string]",
-                                    to_c_name(&direction)
-                                );
+                                let resolved_type = match size.to_string().as_str() {
+                                    "1" | "N" => panic!(
+                                        "unsupported length argument {:?} for string",
+                                        size.to_string().as_str()
+                                    ),
+                                    _ => format!("ptr[{}, string]", to_c_name(&direction)),
+                                };
+                                size_to_buffer.insert(size.to_string(), name.to_string());
                                 Ok(format!("{} {}", to_c_name(name), resolved_type))
                             } else {
                                 panic!("missing 'arg_type' attribute: string direction must be specified")
@@ -75,14 +87,23 @@ fn get_in_params(
                         None => panic!("string must have fixed length"),
                     }
                 }
-                ast::Ty::Array { ty, size: _ } => {
-                    // TODO(SEC-327): handle array length dependency
+                ast::Ty::Array { ty, size } => {
                     if !direction.is_empty() {
-                        let resolved_type = format!(
-                            "ptr[{}, array[{}]]",
-                            to_c_name(&direction),
-                            ty_to_syzkaller_str(ast, ty).unwrap()
-                        );
+                        let resolved_type = match size.to_string().as_str() {
+                            "1" => format!(
+                                "ptr[{}, {}]", to_c_name(&direction),
+                                ty_to_syzkaller_str(ast, ty).unwrap()
+                            ),
+                            // TODO(SEC-327): Add support for dynamic arrays
+                            "N" => panic!("dynamic arrays not supported"),
+                            _ => {
+                                size_to_buffer.insert(size.to_string(), name.to_string());
+                                format!(
+                                    "ptr[{}, array[{}]]",
+                                    to_c_name(&direction), ty_to_syzkaller_str(ast, ty).unwrap()
+                                )
+                            }
+                        };
                         Ok(format!("{} {}", to_c_name(name), resolved_type))
                     } else {
                         panic!("missing 'arg_type' attribute: array direction must be specified")

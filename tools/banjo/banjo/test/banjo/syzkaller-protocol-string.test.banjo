@@ -6,7 +6,7 @@ library banjo.examples.syzkaller.protocol.string;
 
 protocol Api {
     [argtype="str IN"]
-    String(string:1 str) -> (zx.status st);
+    String(string:str_len str, usize str_len) -> (zx.status st);
     [argtype="str OUT"]
-    String(string:1 str) -> (zx.status st);
+    String(string:str_len str, usize str_len) -> (zx.status st);
 };
