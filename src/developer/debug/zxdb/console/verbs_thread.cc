@@ -72,8 +72,16 @@ Err GetConsoleFormatOptions(const Command& cmd, ConsoleFormatOptions* options) {
   options->pointer_expand_depth = 1;
   options->max_depth = 16;
 
-  // All current users of this want the expanded form.
-  options->wrapping = ConsoleFormatOptions::Wrapping::kExpanded;
+  // All current users of this want the smart form.
+  //
+  // This keeps the default wrap columns at 80. We can consider querying the actual console width.
+  // But very long lines start putting many struct members on the same line which gets increasingly
+  // difficult to read. 80 columns feels reasonably close to how much you can take in at once.
+  //
+  // Note also that this doesn't stricly wrap the output to 80 columns. Long type names or values
+  // will still use the full width and will be wrapped by the console. This wrapping only affects
+  // the splitting of items across lines.
+  options->wrapping = ConsoleFormatOptions::Wrapping::kSmart;
 
   // Verbosity.
   if (cmd.HasSwitch(kForceAllTypes))

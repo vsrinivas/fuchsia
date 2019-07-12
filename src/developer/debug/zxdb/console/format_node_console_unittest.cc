@@ -132,7 +132,7 @@ TEST(FormatNodeConsole, Collection) {
       "  This_is::a::VeryLongBaseClass<which, should, be, e… = {}\n"
       "  a = 42\n"
       "  b = 3.14159\n"
-      "}\n",
+      "}",
       out.AsString());
 }
 
@@ -368,7 +368,7 @@ TEST_F(FormatValueConsoleTest, NestingLimits) {
   EXPECT_EQ("{c = {b = (*)0x2200 🡺 {a = (*)0x1100 🡺 12}}}", SyncFormatValue(c_value, opts));
 }
 
-TEST_F(FormatValueConsoleTest, ExpandedPrinting) {
+TEST_F(FormatValueConsoleTest, Wrapping) {
   // struct Nested {
   //   int32 variable1;
   //   int32 variable2;
@@ -401,6 +401,7 @@ TEST_F(FormatValueConsoleTest, ExpandedPrinting) {
   opts.pointer_expand_depth = 1000;
   opts.max_depth = 1000;
   opts.wrapping = ConsoleFormatOptions::Wrapping::kNone;
+
   EXPECT_EQ("{nested = (*)0x1100 🡺 {variable1 = 12, variable2 = 34}, empty = {}}",
             SyncFormatValue(outer_value, opts));
 
@@ -413,7 +414,46 @@ TEST_F(FormatValueConsoleTest, ExpandedPrinting) {
       "    variable2 = 34\n"
       "  }\n"
       "  empty = {}\n"
-      "}\n",
+      "}",
+      SyncFormatValue(outer_value, opts));
+
+  // Smart mode. First give it a really wide limit, everything should be one line.
+  opts.wrapping = ConsoleFormatOptions::Wrapping::kSmart;
+  opts.smart_indent_cols = 1000;
+  EXPECT_EQ("{nested = (*)0x1100 🡺 {variable1 = 12, variable2 = 34}, empty = {}}",
+            SyncFormatValue(outer_value, opts));
+
+  // Super narrow limit should force an expansion of everything.
+  opts.smart_indent_cols = 2;
+  EXPECT_EQ(
+      "{\n"
+      "  nested = (*)0x1100 🡺 {\n"
+      "    variable1 = 12\n"
+      "    variable2 = 34\n"
+      "  }\n"
+      "  empty = {}\n"
+      "}",
+      SyncFormatValue(outer_value, opts));
+
+  // Intermediate state where "nested" fits in one line but the outer part doesn't.
+  opts.smart_indent_cols = 55;
+  EXPECT_EQ(
+      "{\n"
+      "  nested = (*)0x1100 🡺 {variable1 = 12, variable2 = 34}\n"  // 55-char line.
+      "  empty = {}\n"
+      "}",
+      SyncFormatValue(outer_value, opts));
+
+  // Test the boundary condition one below the previous.
+  opts.smart_indent_cols = 54;
+  EXPECT_EQ(
+      "{\n"
+      "  nested = (*)0x1100 🡺 {\n"
+      "    variable1 = 12\n"
+      "    variable2 = 34\n"
+      "  }\n"
+      "  empty = {}\n"
+      "}",
       SyncFormatValue(outer_value, opts));
 }
 

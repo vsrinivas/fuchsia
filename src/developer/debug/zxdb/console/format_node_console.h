@@ -34,11 +34,13 @@ struct ConsoleFormatOptions : public FormatOptions {
   Verbosity verbosity = Verbosity::kMedium;
 
   enum class Wrapping {
-    kNone,     // No linebreaks or whitespace will be inserted.
-    kExpanded  // Every member will be on a separate line and indented.
+    kNone,      // No linebreaks or whitespace will be inserted.
+    kExpanded,  // Every member will be on a separate line and indented.
+    kSmart      // Use single-line if it first in smart_indent_cols, multiline otherwise.
   };
   Wrapping wrapping = Wrapping::kNone;
-  int indent_amount = 2;  // Number of spaces to indent when using expanded formatting.
+  int indent_amount = 2;       // Number of spaces to indent when using expanded formatting.
+  int smart_indent_cols = 80;  // Wrapping threshold for "kSmart" wrapping mode.
 
   // The number of pointers to resolve to values recursively.
   //
@@ -62,13 +64,14 @@ struct ConsoleFormatOptions : public FormatOptions {
 void DescribeFormatNodeForConsole(FormatNode* node, const ConsoleFormatOptions& options,
                                   fxl::RefPtr<EvalContext> context, fit::deferred_callback cb);
 
-// Formats the given FormatNode for the console.
+// Formats the given FormatNode for the console. The string will not be followed by a newline.
 //
 // This assumes the node has been evaluated and described as desired by the caller so the result
 // can be synchronously formatted and returned.
 OutputBuffer FormatNodeForConsole(const FormatNode& node, const ConsoleFormatOptions& options);
 
-// Describes and formats the given ExprValue and returns it as an async output buffer.
+// Describes and formats the given ExprValue and returns it as an async output buffer. The result
+// will not be followed by a newline.
 //
 // If the value_name is given, it will be printed with that name, otherwise it will have no name.
 fxl::RefPtr<AsyncOutputBuffer> FormatValueForConsole(ExprValue value,
