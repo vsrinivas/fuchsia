@@ -252,6 +252,21 @@ public:
         }
     }
 
+    // Create a VectorProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        VectorProtocolClient* result) {
+        vector_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_VECTOR, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = VectorProtocolClient(&proto);
+        return ZX_OK;
+    }
+
     void GetProto(vector_protocol_t* proto) const {
         proto->ctx = ctx_;
         proto->ops = ops_;
@@ -404,6 +419,21 @@ public:
         }
     }
 
+    // Create a Vector2ProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        Vector2ProtocolClient* result) {
+        vector2_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_VECTOR2, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = Vector2ProtocolClient(&proto);
+        return ZX_OK;
+    }
+
     void GetProto(vector2_protocol_t* proto) const {
         proto->ctx = ctx_;
         proto->ops = ops_;
@@ -554,6 +584,21 @@ public:
             ops_ = nullptr;
             ctx_ = nullptr;
         }
+    }
+
+    // Create a VectorOfVectorsProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        VectorOfVectorsProtocolClient* result) {
+        vector_of_vectors_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_VECTOR_OF_VECTORS, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = VectorOfVectorsProtocolClient(&proto);
+        return ZX_OK;
     }
 
     void GetProto(vector_of_vectors_protocol_t* proto) const {

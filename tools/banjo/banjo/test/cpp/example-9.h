@@ -129,6 +129,21 @@ public:
         }
     }
 
+    // Create a EchoProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        EchoProtocolClient* result) {
+        echo_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_ECHO, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = EchoProtocolClient(&proto);
+        return ZX_OK;
+    }
+
     void GetProto(echo_protocol_t* proto) const {
         proto->ctx = ctx_;
         proto->ops = ops_;

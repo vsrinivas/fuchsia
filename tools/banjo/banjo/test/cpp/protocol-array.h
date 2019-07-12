@@ -252,6 +252,21 @@ public:
         }
     }
 
+    // Create a ArrayProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        ArrayProtocolClient* result) {
+        array_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_ARRAY, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = ArrayProtocolClient(&proto);
+        return ZX_OK;
+    }
+
     void GetProto(array_protocol_t* proto) const {
         proto->ctx = ctx_;
         proto->ops = ops_;
@@ -404,6 +419,21 @@ public:
         }
     }
 
+    // Create a Array2ProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        Array2ProtocolClient* result) {
+        array2_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_ARRAY2, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = Array2ProtocolClient(&proto);
+        return ZX_OK;
+    }
+
     void GetProto(array2_protocol_t* proto) const {
         proto->ctx = ctx_;
         proto->ops = ops_;
@@ -554,6 +584,21 @@ public:
             ops_ = nullptr;
             ctx_ = nullptr;
         }
+    }
+
+    // Create a ArrayofArraysProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        ArrayofArraysProtocolClient* result) {
+        arrayof_arrays_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_ARRAYOF_ARRAYS, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = ArrayofArraysProtocolClient(&proto);
+        return ZX_OK;
     }
 
     void GetProto(arrayof_arrays_protocol_t* proto) const {

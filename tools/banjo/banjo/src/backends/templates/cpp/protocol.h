@@ -32,6 +32,21 @@ public:
         }}
     }}
 
+    // Create a {protocol_name}ProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        {protocol_name}ProtocolClient* result) {{
+        {protocol_name_snake}_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_{protocol_name_uppercase}, &proto);
+        if (status != ZX_OK) {{
+            return status;
+        }}
+        *result = {protocol_name}ProtocolClient(&proto);
+        return ZX_OK;
+    }}
+
     void GetProto({protocol_name_snake}_protocol_t* proto) const {{
         proto->ctx = ctx_;
         proto->ops = ops_;

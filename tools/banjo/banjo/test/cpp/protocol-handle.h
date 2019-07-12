@@ -342,6 +342,21 @@ public:
         }
     }
 
+    // Create a SynchronousHandleProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        SynchronousHandleProtocolClient* result) {
+        synchronous_handle_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_SYNCHRONOUS_HANDLE, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = SynchronousHandleProtocolClient(&proto);
+        return ZX_OK;
+    }
+
     void GetProto(synchronous_handle_protocol_t* proto) const {
         proto->ctx = ctx_;
         proto->ops = ops_;
@@ -540,6 +555,21 @@ public:
             ops_ = nullptr;
             ctx_ = nullptr;
         }
+    }
+
+    // Create a AsyncHandleProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        AsyncHandleProtocolClient* result) {
+        async_handle_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_ASYNC_HANDLE, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = AsyncHandleProtocolClient(&proto);
+        return ZX_OK;
     }
 
     void GetProto(async_handle_protocol_t* proto) const {

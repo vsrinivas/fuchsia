@@ -257,6 +257,21 @@ public:
         }
     }
 
+    // Create a OtherTypesProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        OtherTypesProtocolClient* result) {
+        other_types_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_OTHER_TYPES, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = OtherTypesProtocolClient(&proto);
+        return ZX_OK;
+    }
+
     void GetProto(other_types_protocol_t* proto) const {
         proto->ctx = ctx_;
         proto->ops = ops_;
@@ -361,6 +376,21 @@ public:
         }
     }
 
+    // Create a OtherTypesAsyncProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        OtherTypesAsyncProtocolClient* result) {
+        other_types_async_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_OTHER_TYPES_ASYNC, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = OtherTypesAsyncProtocolClient(&proto);
+        return ZX_OK;
+    }
+
     void GetProto(other_types_async_protocol_t* proto) const {
         proto->ctx = ctx_;
         proto->ops = ops_;
@@ -461,6 +491,21 @@ public:
         }
     }
 
+    // Create a OtherTypesReferenceProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        OtherTypesReferenceProtocolClient* result) {
+        other_types_reference_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_OTHER_TYPES_REFERENCE, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = OtherTypesReferenceProtocolClient(&proto);
+        return ZX_OK;
+    }
+
     void GetProto(other_types_reference_protocol_t* proto) const {
         proto->ctx = ctx_;
         proto->ops = ops_;
@@ -557,6 +602,21 @@ public:
         }
     }
 
+    // Create a OtherTypesAsyncReferenceProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        OtherTypesAsyncReferenceProtocolClient* result) {
+        other_types_async_reference_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_OTHER_TYPES_ASYNC_REFERENCE, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = OtherTypesAsyncReferenceProtocolClient(&proto);
+        return ZX_OK;
+    }
+
     void GetProto(other_types_async_reference_protocol_t* proto) const {
         proto->ctx = ctx_;
         proto->ops = ops_;
@@ -647,6 +707,21 @@ public:
             ops_ = nullptr;
             ctx_ = nullptr;
         }
+    }
+
+    // Create a InterfaceProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        InterfaceProtocolClient* result) {
+        interface_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_INTERFACE, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = InterfaceProtocolClient(&proto);
+        return ZX_OK;
     }
 
     void GetProto(interface_protocol_t* proto) const {

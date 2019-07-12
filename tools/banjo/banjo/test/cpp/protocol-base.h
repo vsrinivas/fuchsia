@@ -189,6 +189,21 @@ public:
         }
     }
 
+    // Create a SynchronousBaseProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        SynchronousBaseProtocolClient* result) {
+        synchronous_base_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_SYNCHRONOUS_BASE, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = SynchronousBaseProtocolClient(&proto);
+        return ZX_OK;
+    }
+
     void GetProto(synchronous_base_protocol_t* proto) const {
         proto->ctx = ctx_;
         proto->ops = ops_;
@@ -315,6 +330,21 @@ public:
             ops_ = nullptr;
             ctx_ = nullptr;
         }
+    }
+
+    // Create a AsyncBaseProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        AsyncBaseProtocolClient* result) {
+        async_base_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_ASYNC_BASE, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = AsyncBaseProtocolClient(&proto);
+        return ZX_OK;
     }
 
     void GetProto(async_base_protocol_t* proto) const {

@@ -172,6 +172,21 @@ public:
         }
     }
 
+    // Create a BakerProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        BakerProtocolClient* result) {
+        baker_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_BAKER, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = BakerProtocolClient(&proto);
+        return ZX_OK;
+    }
+
     void GetProto(baker_protocol_t* proto) const {
         proto->ctx = ctx_;
         proto->ops = ops_;

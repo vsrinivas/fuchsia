@@ -90,6 +90,21 @@ public:
         }
     }
 
+    // Create a InterfaceProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        InterfaceProtocolClient* result) {
+        interface_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_INTERFACE, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = InterfaceProtocolClient(&proto);
+        return ZX_OK;
+    }
+
     void GetProto(interface_protocol_t* proto) const {
         proto->ctx = ctx_;
         proto->ops = ops_;
