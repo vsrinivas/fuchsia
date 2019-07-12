@@ -13,6 +13,7 @@
 #include <intel-hda/utils/intel-audio-dsp-ipc.h>
 #include <intel-hda/utils/intel-hda-registers.h>
 #include <intel-hda/utils/nhlt.h>
+#include <intel-hda/utils/status.h>
 #include <intel-hda/utils/utils.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <limits.h>
@@ -36,7 +37,7 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   IntelDsp(IntelHDAController* controller, hda_pp_registers_t* pp_regs);
   ~IntelDsp();
 
-  zx_status_t Init(zx_device_t* dsp_dev);
+  Status Init(zx_device_t* dsp_dev);
 
   const char* log_prefix() const { return log_prefix_; }
 
@@ -69,8 +70,8 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   adsp_registers_t* regs() const;
   adsp_fw_registers_t* fw_regs() const;
 
-  zx_status_t SetupDspDevice();
-  zx_status_t ParseNhlt();
+  Status SetupDspDevice();
+  Status ParseNhlt();
 
   int InitThread();
 

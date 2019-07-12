@@ -29,7 +29,7 @@ zx_status_t RealtekCodec::Create(void* ctx, zx_device_t* parent) {
 }
 
 zx_status_t RealtekCodec::Init(zx_device_t* codec_dev) {
-  zx_status_t res = Bind(codec_dev, "realtek-codec");
+  zx_status_t res = Bind(codec_dev, "realtek-codec").code();
   if (res != ZX_OK)
     return res;
 

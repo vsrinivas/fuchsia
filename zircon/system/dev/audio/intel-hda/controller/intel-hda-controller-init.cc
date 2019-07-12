@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <hw/arch_ops.h>
+#include <intel-hda/utils/status.h>
 #include <limits.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -526,10 +527,11 @@ zx_status_t IntelHDAController::ProbeAudioDSP(zx_device_t* dsp_dev) {
     LOG(ERROR, "Out of memory attempting to allocate DSP device\n");
     return ZX_ERR_NO_MEMORY;
   }
-  zx_status_t res = dsp_->Init(dsp_dev);
-  if (res != ZX_OK) {
-    LOG(ERROR, "Failed to initialize DSP device (res = %d)\n", res);
-    return res;
+
+  Status result = dsp_->Init(dsp_dev);
+  if (!result.ok()) {
+    LOG(ERROR, "Failed to initialize DSP device: %s\n", result.ToString().c_str());
+    return result.code();
   }
 
   return ZX_OK;

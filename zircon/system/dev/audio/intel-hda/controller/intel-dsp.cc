@@ -7,6 +7,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <fbl/string_printf.h>
 #include <string.h>
 
 #include <utility>
@@ -68,20 +69,20 @@ IntelDsp::~IntelDsp() {
   }
 }
 
-zx_status_t IntelDsp::Init(zx_device_t* dsp_dev) {
-  zx_status_t res = Bind(dsp_dev, "intel-sst-dsp");
-  if (res != ZX_OK) {
-    return res;
+Status IntelDsp::Init(zx_device_t* dsp_dev) {
+  Status result = Bind(dsp_dev, "intel-sst-dsp");
+  if (!result.ok()) {
+    return PrependMessage("Error binding DSP device", result);
   }
 
-  res = SetupDspDevice();
-  if (res != ZX_OK) {
-    return res;
+  result = SetupDspDevice();
+  if (!result.ok()) {
+    return PrependMessage("Error setting up DSP", result);
   }
 
-  res = ParseNhlt();
-  if (res != ZX_OK) {
-    return res;
+  result = ParseNhlt();
+  if (!result.ok()) {
+    return PrependMessage("Error parsing NHLT", result);
   }
 
   // Perform hardware initialization in a thread.
@@ -89,12 +90,12 @@ zx_status_t IntelDsp::Init(zx_device_t* dsp_dev) {
   int c11_res = thrd_create(
       &init_thread_, [](void* ctx) { return static_cast<IntelDsp*>(ctx)->InitThread(); }, this);
   if (c11_res < 0) {
-    LOG(ERROR, "Failed to create init thread (res = %d)\n", c11_res);
     state_ = State::ERROR;
-    return ZX_ERR_INTERNAL;
+    return Status(ZX_ERR_INTERNAL,
+                  fbl::StringPrintf("Failed to create init thread (res = %d)\n", c11_res));
   }
 
-  return ZX_OK;
+  return OkStatus();
 }
 
 adsp_registers_t* IntelDsp::regs() const {
@@ -352,7 +353,7 @@ zx_status_t IntelDsp::ProcessSetStreamFmt(dispatcher::Channel* channel,
   return res;
 }
 
-zx_status_t IntelDsp::SetupDspDevice() {
+Status IntelDsp::SetupDspDevice() {
   const zx_pcie_device_info_t& hda_dev_info = controller_->dev_info();
   snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP %02x:%02x.%01x", hda_dev_info.bus_id,
            hda_dev_info.dev_id, hda_dev_info.func_id);
@@ -364,13 +365,13 @@ zx_status_t IntelDsp::SetupDspDevice() {
   zx_status_t res = GetMmio(bar_vmo.reset_and_get_address(), &bar_size);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to fetch DSP register VMO (err %u)\n", res);
-    return res;
+    return Status(res);
   }
 
   if (bar_size != sizeof(adsp_registers_t)) {
     LOG(ERROR, "Bad register window size (expected 0x%zx got 0x%zx)\n", sizeof(adsp_registers_t),
         bar_size);
-    return res;
+    return Status(res);
   }
 
   // Since this VMO provides access to our registers, make sure to set the
@@ -378,7 +379,7 @@ zx_status_t IntelDsp::SetupDspDevice() {
   res = bar_vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED_DEVICE);
   if (res != ZX_OK) {
     LOG(ERROR, "Error attempting to set cache policy for PCI registers (res %d)\n", res);
-    return res;
+    return Status(res);
   }
 
   // Map the VMO in, make sure to put it in the same VMAR as the rest of our
@@ -387,7 +388,7 @@ zx_status_t IntelDsp::SetupDspDevice() {
   res = mapped_regs_.Map(bar_vmo, 0, bar_size, CPU_MAP_FLAGS);
   if (res != ZX_OK) {
     LOG(ERROR, "Error attempting to map registers (res %d)\n", res);
-    return res;
+    return Status(res);
   }
 
   // Initialize mailboxes
@@ -399,33 +400,32 @@ zx_status_t IntelDsp::SetupDspDevice() {
 
   // Enable HDA interrupt. Interrupts are still masked at the DSP level.
   IrqEnable();
-  return ZX_OK;
+
+  return OkStatus();
 }
 
-zx_status_t IntelDsp::ParseNhlt() {
+Status IntelDsp::ParseNhlt() {
   size_t size = 0;
   zx_status_t res =
       device_get_metadata(codec_device(), *reinterpret_cast<const uint32_t*>(ACPI_NHLT_SIGNATURE),
                           nhlt_buf_, sizeof(nhlt_buf_), &size);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to fetch NHLT (res %d)\n", res);
-    return res;
+    return Status(res);
   }
 
   nhlt_table_t* nhlt = reinterpret_cast<nhlt_table_t*>(nhlt_buf_);
 
   // Sanity check
   if (size < sizeof(*nhlt)) {
-    LOG(ERROR, "NHLT too small (%zu bytes)\n", size);
-    return ZX_ERR_INTERNAL;
+    return Status(ZX_ERR_INTERNAL, fbl::StringPrintf("NHLT too small (%zu bytes)\n", size));
   }
 
   static_assert(sizeof(nhlt->header.signature) >= ACPI_NAME_SIZE, "");
   static_assert(sizeof(ACPI_NHLT_SIGNATURE) >= ACPI_NAME_SIZE, "");
 
   if (memcmp(nhlt->header.signature, ACPI_NHLT_SIGNATURE, ACPI_NAME_SIZE) != 0) {
-    LOG(ERROR, "Invalid NHLT signature\n");
-    return ZX_ERR_INTERNAL;
+    return Status(ZX_ERR_INTERNAL, "Invalid NHLT signature");
   }
 
   uint8_t count = nhlt->endpoint_desc_count;
@@ -445,14 +445,12 @@ zx_status_t IntelDsp::ParseNhlt() {
 
     // Sanity check
     if ((desc_offset + desc->length) > size) {
-      LOG(ERROR, "NHLT endpoint descriptor out of bounds\n");
-      return ZX_ERR_INTERNAL;
+      return Status(ZX_ERR_INTERNAL, "NHLT endpoint descriptor out of bounds");
     }
 
     size_t length = static_cast<size_t>(desc->length);
     if (length < sizeof(*desc)) {
-      LOG(ERROR, "Short NHLT descriptor\n");
-      return ZX_ERR_INTERNAL;
+      return Status(ZX_ERR_INTERNAL, "Short NHLT descriptor");
     }
     length -= sizeof(*desc);
 
@@ -463,8 +461,8 @@ zx_status_t IntelDsp::ParseNhlt() {
 
     // Make sure there is enough room for formats_configs
     if (length < desc->config.capabilities_size + sizeof(formats_config_t)) {
-      LOG(ERROR, "NHLT endpoint descriptor too short (specific_config too long)\n");
-      return ZX_ERR_INTERNAL;
+      return Status(ZX_ERR_INTERNAL,
+                    "NHLT endpoint descriptor too short (specific_config too long)");
     }
     length -= desc->config.capabilities_size + sizeof(formats_config_t);
 
@@ -480,16 +478,14 @@ zx_status_t IntelDsp::ParseNhlt() {
     for (uint8_t j = 0; j < formats->format_config_count; j++) {
       size_t format_length = sizeof(*format) + format->config.capabilities_size;
       if (length < format_length) {
-        LOG(ERROR, "Invalid NHLT endpoint desciptor format too short\n");
-        return ZX_ERR_INTERNAL;
+        return Status(ZX_ERR_INTERNAL, "Invalid NHLT endpoint desciptor format too short");
       }
       length -= format_length;
       format = reinterpret_cast<const format_config_t*>(reinterpret_cast<const uint8_t*>(format) +
                                                         format_length);
     }
     if (length != 0) {
-      LOG(ERROR, "Invalid NHLT endpoint descriptor length\n");
-      return ZX_ERR_INTERNAL;
+      return Status(ZX_ERR_INTERNAL, "Invalid NHLT endpoint descriptor length");
     }
 
     i2s_configs_[i++] = {desc->virtual_bus_id, desc->direction, formats};
@@ -498,8 +494,7 @@ zx_status_t IntelDsp::ParseNhlt() {
   }
 
   LOG(TRACE, "parse success, found %zu formats\n", i);
-
-  return ZX_OK;
+  return OkStatus();
 }
 
 void IntelDsp::DeviceShutdown() {

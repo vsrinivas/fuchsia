@@ -14,6 +14,7 @@
 #include <fbl/ref_ptr.h>
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/intel-hda-proto.h>
+#include <intel-hda/utils/status.h>
 #include <lib/zx/handle.h>
 
 namespace audio {
@@ -51,7 +52,7 @@ class IntelHDACodecDriverBase : public fbl::RefCounted<IntelHDACodecDriverBase> 
   // Bind should only ever be called exactly once (during driver
   // instantiation).  Drivers must make sure that no other methods are in
   // flight during a call to Bind.
-  zx_status_t Bind(zx_device_t* codec_dev, const char* name);
+  Status Bind(zx_device_t* codec_dev, const char* name);
 
   // Send a codec command to our codec device.
   zx_status_t SendCodecCommand(uint16_t nid, CodecVerb verb, bool no_ack);
