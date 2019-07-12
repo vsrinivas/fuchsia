@@ -40,8 +40,7 @@ STATIC_MSG_STRUCT(kMsgTest, "test");
 // + a helper thread.
 // The macros below are used to assert that methods on
 // the sandbox class are called on the proper thread
-#define ASSERT_DISPATCHER(disp) \
-  ZX_ASSERT((disp) == async_get_default_dispatcher())
+#define ASSERT_DISPATCHER(disp) ZX_ASSERT((disp) == async_get_default_dispatcher())
 #define ASSERT_MAIN_DISPATCHER ASSERT_DISPATCHER(main_dispatcher_)
 #define ASSERT_HELPER_DISPATCHER ASSERT_DISPATCHER(helper_loop_->dispatcher())
 
@@ -49,9 +48,8 @@ Sandbox::Sandbox(SandboxArgs args) : env_config_(std::move(args.config)) {
   auto services = sys::ServiceDirectory::CreateFromNamespace();
   services->Connect(parent_env_.NewRequest());
   services->Connect(loader_.NewRequest());
-  parent_env_.set_error_handler([](zx_status_t err) {
-    FXL_LOG(ERROR) << "Lost connection to parent environment";
-  });
+  parent_env_.set_error_handler(
+      [](zx_status_t err) { FXL_LOG(ERROR) << "Lost connection to parent environment"; });
 }
 
 Sandbox::~Sandbox() {
@@ -73,30 +71,24 @@ void Sandbox::Start(async_dispatcher_t* dispatcher) {
   test_spawned_ = false;
 
   if (!parent_env_ || !loader_) {
-    Terminate(SandboxResult::Status::INTERNAL_ERROR,
-              "Missing parent environment or loader");
+    Terminate(SandboxResult::Status::INTERNAL_ERROR, "Missing parent environment or loader");
     return;
   } else if (env_config_.disabled()) {
     Terminate(SandboxResult::Status::SUCCESS, "Test is disabled");
     return;
   }
 
-  helper_loop_ =
-      std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+  helper_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
   if (helper_loop_->StartThread("helper-thread") != ZX_OK) {
-    Terminate(SandboxResult::Status::INTERNAL_ERROR,
-              "Can't start config thread");
+    Terminate(SandboxResult::Status::INTERNAL_ERROR, "Can't start config thread");
     return;
   }
-  helper_executor_ =
-      std::make_unique<async::Executor>(helper_loop_->dispatcher());
+  helper_executor_ = std::make_unique<async::Executor>(helper_loop_->dispatcher());
 
   SandboxEnv::Events global_events;
-  global_events.service_terminated = [this](const std::string& service,
-                                            int64_t exit_code,
+  global_events.service_terminated = [this](const std::string& service, int64_t exit_code,
                                             TerminationReason reason) {
-    if (helper_loop_ &&
-        (reason != TerminationReason::EXITED || exit_code != 0)) {
+    if (helper_loop_ && (reason != TerminationReason::EXITED || exit_code != 0)) {
       async::PostTask(helper_loop_->dispatcher(), [this, service]() {
         std::stringstream ss;
         ss << service << " terminated prematurely";
@@ -115,8 +107,8 @@ void Sandbox::Start(async_dispatcher_t* dispatcher) {
     }
   };
 
-  sandbox_env_ = std::make_shared<SandboxEnv>(
-      sys::ServiceDirectory::CreateFromNamespace(), std::move(global_events));
+  sandbox_env_ = std::make_shared<SandboxEnv>(sys::ServiceDirectory::CreateFromNamespace(),
+                                              std::move(global_events));
   sandbox_env_->set_default_name(env_config_.default_url());
   sandbox_env_->set_devfs_enabled(true);
 
@@ -138,16 +130,13 @@ void Sandbox::Terminate(SandboxResult result) {
     helper_loop_ = nullptr;
   }
 
-  if (!result.is_success() ||
-      env_config_.capture() == config::CaptureMode::ALWAYS) {
+  if (!result.is_success() || env_config_.capture() == config::CaptureMode::ALWAYS) {
     // check if any of the network dumps have data, and just dump them to
     // stdout:
     if (net_dumps_ && net_dumps_->HasData()) {
-      std::cout << "PCAP dump for all network data ==================="
-                << std::endl;
+      std::cout << "PCAP dump for all network data ===================" << std::endl;
       net_dumps_->dump().DumpHex(&std::cout);
-      std::cout << "================================================"
-                << std::endl;
+      std::cout << "================================================" << std::endl;
     }
   }
 
@@ -156,8 +145,7 @@ void Sandbox::Terminate(SandboxResult result) {
   }
 }
 
-void Sandbox::Terminate(netemul::SandboxResult::Status status,
-                        std::string description) {
+void Sandbox::Terminate(netemul::SandboxResult::Status status, std::string description) {
   Terminate(SandboxResult(status, std::move(description)));
 }
 
@@ -166,13 +154,10 @@ void Sandbox::PostTerminate(SandboxResult result) {
   // kill all component controllers before posting termination
   procs_.clear();
   async::PostTask(main_dispatcher_,
-                  [this, result = std::move(result)]() mutable {
-                    Terminate(std::move(result));
-                  });
+                  [this, result = std::move(result)]() mutable { Terminate(std::move(result)); });
 }
 
-void Sandbox::PostTerminate(netemul::SandboxResult::Status status,
-                            std::string description) {
+void Sandbox::PostTerminate(netemul::SandboxResult::Status status, std::string description) {
   PostTerminate(SandboxResult(status, std::move(description)));
 }
 
@@ -181,8 +166,7 @@ void Sandbox::StartEnvironments() {
 
   async::PostTask(helper_loop_->dispatcher(), [this]() {
     if (!ConfigureNetworks()) {
-      PostTerminate(
-          SandboxResult(SandboxResult::Status::NETWORK_CONFIG_FAILED));
+      PostTerminate(SandboxResult(SandboxResult::Status::NETWORK_CONFIG_FAILED));
       return;
     }
 
@@ -193,22 +177,18 @@ void Sandbox::StartEnvironments() {
       return;
     }
 
-    async::PostTask(main_dispatcher_,
-                    [this, root_options = std::move(root_options)]() mutable {
-                      ASSERT_MAIN_DISPATCHER;
-                      root_ = ManagedEnvironment::CreateRoot(
-                          parent_env_, sandbox_env_, std::move(root_options));
-                      root_->SetRunningCallback([this]() {
-                        if (root_environment_created_callback_) {
-                          root_environment_created_callback_(root_.get());
-                        }
+    async::PostTask(main_dispatcher_, [this, root_options = std::move(root_options)]() mutable {
+      ASSERT_MAIN_DISPATCHER;
+      root_ = ManagedEnvironment::CreateRoot(parent_env_, sandbox_env_, std::move(root_options));
+      root_->SetRunningCallback([this]() {
+        if (root_environment_created_callback_) {
+          root_environment_created_callback_(root_.get());
+        }
 
-                        // configure root environment:
-                        async::PostTask(helper_loop_->dispatcher(), [this]() {
-                          ConfigureRootEnvironment();
-                        });
-                      });
-                    });
+        // configure root environment:
+        async::PostTask(helper_loop_->dispatcher(), [this]() { ConfigureRootEnvironment(); });
+      });
+    });
   });
 }
 
@@ -239,8 +219,8 @@ bool Sandbox::ConfigureNetworks() {
   for (const auto& net_cfg : env_config_.networks()) {
     zx_status_t status;
     fidl::InterfaceHandle<network::Network> network_h;
-    if (net_manager->CreateNetwork(net_cfg.name(), network::NetworkConfig(),
-                                   &status, &network_h) != ZX_OK ||
+    if (net_manager->CreateNetwork(net_cfg.name(), network::NetworkConfig(), &status, &network_h) !=
+            ZX_OK ||
         status != ZX_OK) {
       FXL_LOG(ERROR) << "Create network failed";
       return false;
@@ -264,13 +244,12 @@ bool Sandbox::ConfigureNetworks() {
       fidl_config.backing = network::EndpointBacking::ETHERTAP;
       fidl_config.mtu = endp_cfg.mtu();
       if (endp_cfg.mac()) {
-        fidl_config.mac =
-            std::make_unique<fuchsia::hardware::ethernet::MacAddress>();
+        fidl_config.mac = std::make_unique<fuchsia::hardware::ethernet::MacAddress>();
         memcpy(&fidl_config.mac->octets[0], endp_cfg.mac()->d, 6);
       }
 
-      if (endp_manager->CreateEndpoint(endp_cfg.name(), std::move(fidl_config),
-                                       &status, &endp_h) != ZX_OK ||
+      if (endp_manager->CreateEndpoint(endp_cfg.name(), std::move(fidl_config), &status, &endp_h) !=
+              ZX_OK ||
           status != ZX_OK) {
         FXL_LOG(ERROR) << "Create endpoint failed";
         return false;
@@ -286,10 +265,9 @@ bool Sandbox::ConfigureNetworks() {
       }
 
       // add endpoint to network:
-      if (network->AttachEndpoint(endp_cfg.name(), &status) != ZX_OK ||
-          status != ZX_OK) {
-        FXL_LOG(ERROR) << "Attaching endpoint " << endp_cfg.name()
-                       << " to network " << net_cfg.name() << " failed";
+      if (network->AttachEndpoint(endp_cfg.name(), &status) != ZX_OK || status != ZX_OK) {
+        FXL_LOG(ERROR) << "Attaching endpoint " << endp_cfg.name() << " to network "
+                       << net_cfg.name() << " failed";
         return false;
       }
 
@@ -324,8 +302,7 @@ bool Sandbox::CreateEnvironmentOptions(const config::Environment& config,
 
       fidl::InterfaceHandle<network::Endpoint> endp_h;
       if (epm->GetEndpoint(device, &endp_h) != ZX_OK) {
-        FXL_LOG(ERROR) << "Can't find endpoint " << device
-                       << " on endpoint manager";
+        FXL_LOG(ERROR) << "Can't find endpoint " << device << " on endpoint manager";
         return false;
       }
 
@@ -337,8 +314,7 @@ bool Sandbox::CreateEnvironmentOptions(const config::Environment& config,
     }
   }
 
-  std::vector<environment::LaunchService>* services =
-      options->mutable_services();
+  std::vector<environment::LaunchService>* services = options->mutable_services();
   for (const auto& svc : config.services()) {
     auto& ns = services->emplace_back();
     ns.name = svc.name();
@@ -348,16 +324,13 @@ bool Sandbox::CreateEnvironmentOptions(const config::Environment& config,
   }
 
   // Logger options
-  fuchsia::netemul::environment::LoggerOptions* logger_options =
-      options->mutable_logger_options();
+  fuchsia::netemul::environment::LoggerOptions* logger_options = options->mutable_logger_options();
   const config::LoggerOptions& config_logger_options = config.logger_options();
   logger_options->set_enabled(config_logger_options.enabled());
   logger_options->set_klogs_enabled(config_logger_options.klogs_enabled());
 
-  fuchsia::logger::LogFilterOptions* log_filter_options =
-      logger_options->mutable_filter_options();
-  const config::LoggerFilterOptions& config_logger_filter_options =
-      config_logger_options.filters();
+  fuchsia::logger::LogFilterOptions* log_filter_options = logger_options->mutable_filter_options();
+  const config::LoggerFilterOptions& config_logger_filter_options = config_logger_options.filters();
   log_filter_options->verbosity = config_logger_filter_options.verbosity();
   log_filter_options->tags = config_logger_filter_options.tags();
 
@@ -370,36 +343,29 @@ void Sandbox::ConfigureRootEnvironment() {
   auto svc = std::make_shared<environment::ManagedEnvironmentSyncPtr>();
   auto req = svc->NewRequest();
 
-  async::PostTask(main_dispatcher_, [this, req = std::move(req)]() mutable {
-    root_->Bind(std::move(req));
-  });
+  async::PostTask(main_dispatcher_,
+                  [this, req = std::move(req)]() mutable { root_->Bind(std::move(req)); });
 
   fit::schedule_for_consumer(
       helper_executor_.get(),
       ConfigureEnvironment(std::move(svc), &env_config_.environment(), true)
-          .or_else([this](SandboxResult& result) {
-            PostTerminate(std::move(result));
-          }));
+          .or_else([this](SandboxResult& result) { PostTerminate(std::move(result)); }));
 }
 
-Sandbox::Promise Sandbox::StartChildEnvironment(
-    ConfiguringEnvironmentPtr parent, const config::Environment* config) {
+Sandbox::Promise Sandbox::StartChildEnvironment(ConfiguringEnvironmentPtr parent,
+                                                const config::Environment* config) {
   ASSERT_HELPER_DISPATCHER;
 
   return fit::make_promise(
-             [this, parent, config]()
-                 -> fit::result<ConfiguringEnvironmentPtr, SandboxResult> {
+             [this, parent, config]() -> fit::result<ConfiguringEnvironmentPtr, SandboxResult> {
                ManagedEnvironment::Options options;
                if (!CreateEnvironmentOptions(*config, &options)) {
-                 return fit::error(SandboxResult(
-                     SandboxResult::Status::ENVIRONMENT_CONFIG_FAILED));
+                 return fit::error(SandboxResult(SandboxResult::Status::ENVIRONMENT_CONFIG_FAILED));
                }
-               auto child_env =
-                   std::make_shared<environment::ManagedEnvironmentSyncPtr>();
-               if ((*parent)->CreateChildEnvironment(
-                       child_env->NewRequest(), std::move(options)) != ZX_OK) {
-                 return fit::error(SandboxResult(
-                     SandboxResult::Status::ENVIRONMENT_CONFIG_FAILED));
+               auto child_env = std::make_shared<environment::ManagedEnvironmentSyncPtr>();
+               if ((*parent)->CreateChildEnvironment(child_env->NewRequest(), std::move(options)) !=
+                   ZX_OK) {
+                 return fit::error(SandboxResult(SandboxResult::Status::ENVIRONMENT_CONFIG_FAILED));
                }
 
                return fit::ok(std::move(child_env));
@@ -409,17 +375,15 @@ Sandbox::Promise Sandbox::StartChildEnvironment(
       });
 }
 
-Sandbox::Promise Sandbox::StartEnvironmentSetup(
-    const config::Environment* config,
-    ConfiguringEnvironmentLauncher launcher) {
+Sandbox::Promise Sandbox::StartEnvironmentSetup(const config::Environment* config,
+                                                ConfiguringEnvironmentLauncher launcher) {
   return fit::make_promise([this, config, launcher = std::move(launcher)] {
     auto prom = fit::make_result_promise(PromiseResult(fit::ok())).box();
     for (const auto& setup : config->setup()) {
       prom = prom.and_then([this, setup = &setup, launcher]() {
-                   return LaunchSetup(
-                       launcher.get(),
-                       setup->GetUrlOrDefault(sandbox_env_->default_name()),
-                       setup->arguments());
+                   return LaunchSetup(launcher.get(),
+                                      setup->GetUrlOrDefault(sandbox_env_->default_name()),
+                                      setup->arguments());
                  })
                  .box();
     }
@@ -430,46 +394,40 @@ Sandbox::Promise Sandbox::StartEnvironmentSetup(
 Sandbox::Promise Sandbox::StartEnvironmentAppsAndTests(
     const netemul::config::Environment* config,
     netemul::Sandbox::ConfiguringEnvironmentLauncher launcher) {
-  return fit::make_promise(
-      [this, config, launcher = std::move(launcher)]() -> PromiseResult {
-        for (const auto& app : config->apps()) {
-          auto& url = app.GetUrlOrDefault(sandbox_env_->default_name());
-          if (!LaunchProcess<kMsgApp>(launcher.get(), url, app.arguments(),
-                                      false)) {
-            std::stringstream ss;
-            ss << "Failed to launch app " << url;
-            return fit::error(
-                SandboxResult(SandboxResult::Status::INTERNAL_ERROR, ss.str()));
-          }
-        }
+  return fit::make_promise([this, config, launcher = std::move(launcher)]() -> PromiseResult {
+    for (const auto& app : config->apps()) {
+      auto& url = app.GetUrlOrDefault(sandbox_env_->default_name());
+      if (!LaunchProcess<kMsgApp>(launcher.get(), url, app.arguments(), false)) {
+        std::stringstream ss;
+        ss << "Failed to launch app " << url;
+        return fit::error(SandboxResult(SandboxResult::Status::INTERNAL_ERROR, ss.str()));
+      }
+    }
 
-        for (const auto& test : config->test()) {
-          auto& url = test.GetUrlOrDefault(sandbox_env_->default_name());
-          if (!LaunchProcess<kMsgTest>(launcher.get(), url, test.arguments(),
-                                       true)) {
-            std::stringstream ss;
-            ss << "Failed to launch test " << url;
-            return fit::error(
-                SandboxResult(SandboxResult::Status::INTERNAL_ERROR, ss.str()));
-          }
-          // save that at least one test was spawned.
-          test_spawned_ = true;
-        }
+    for (const auto& test : config->test()) {
+      auto& url = test.GetUrlOrDefault(sandbox_env_->default_name());
+      if (!LaunchProcess<kMsgTest>(launcher.get(), url, test.arguments(), true)) {
+        std::stringstream ss;
+        ss << "Failed to launch test " << url;
+        return fit::error(SandboxResult(SandboxResult::Status::INTERNAL_ERROR, ss.str()));
+      }
+      // save that at least one test was spawned.
+      test_spawned_ = true;
+    }
 
-        return fit::ok();
-      });
+    return fit::ok();
+  });
 }
 
-Sandbox::Promise Sandbox::StartEnvironmentInner(
-    ConfiguringEnvironmentPtr env, const config::Environment* config) {
+Sandbox::Promise Sandbox::StartEnvironmentInner(ConfiguringEnvironmentPtr env,
+                                                const config::Environment* config) {
   ASSERT_HELPER_DISPATCHER;
   auto launcher = std::make_shared<fuchsia::sys::LauncherSyncPtr>();
   return fit::make_promise([launcher, env]() -> PromiseResult {
            // get launcher
            if ((*env)->GetLauncher(launcher->NewRequest()) != ZX_OK) {
-             return fit::error(
-                 SandboxResult(SandboxResult::Status::INTERNAL_ERROR,
-                               "Can't get environment launcher"));
+             return fit::error(SandboxResult(SandboxResult::Status::INTERNAL_ERROR,
+                                             "Can't get environment launcher"));
            }
            return fit::ok();
          })
@@ -477,9 +435,8 @@ Sandbox::Promise Sandbox::StartEnvironmentInner(
       .and_then(StartEnvironmentAppsAndTests(config, launcher));
 }
 
-Sandbox::Promise Sandbox::ConfigureEnvironment(
-    ConfiguringEnvironmentPtr env, const config::Environment* config,
-    bool root) {
+Sandbox::Promise Sandbox::ConfigureEnvironment(ConfiguringEnvironmentPtr env,
+                                               const config::Environment* config, bool root) {
   ASSERT_HELPER_DISPATCHER;
 
   std::vector<Sandbox::Promise> promises;
@@ -491,42 +448,31 @@ Sandbox::Promise Sandbox::ConfigureEnvironment(
   }
 
   // start this processes inside this environment
-  auto self_start = StartEnvironmentInner(env, config);
-  if (root) {
-    // if root, after everything is set up, enable observing
-    // test returns.
-    promises.emplace_back(self_start.and_then([this]() -> PromiseResult {
-      EnableTestObservation();
-      return fit::ok();
-    }));
-  } else {
-    promises.emplace_back(std::move(self_start));
-  }
+  promises.emplace_back(StartEnvironmentInner(env, config));
 
   return fit::join_promise_vector(std::move(promises))
-      .then(
-          [](fit::result<std::vector<PromiseResult>>& result) -> PromiseResult {
-            auto results = result.take_value();
-            for (auto& r : results) {
-              if (r.is_error()) {
-                return r;
-              }
-            }
-            return fit::ok();
-          });
+      .then([this, root](fit::result<std::vector<PromiseResult>>& result) -> PromiseResult {
+        auto results = result.take_value();
+        for (auto& r : results) {
+          if (r.is_error()) {
+            return r;
+          }
+        }
+        if (root) {
+          EnableTestObservation();
+        }
+        return fit::ok();
+      });
 }
 
 template <typename T>
-bool Sandbox::LaunchProcess(fuchsia::sys::LauncherSyncPtr* launcher,
-                            const std::string& url,
-                            const std::vector<std::string>& arguments,
-                            bool is_test) {
+bool Sandbox::LaunchProcess(fuchsia::sys::LauncherSyncPtr* launcher, const std::string& url,
+                            const std::vector<std::string>& arguments, bool is_test) {
   ASSERT_HELPER_DISPATCHER;
 
   fuchsia::sys::LaunchInfo linfo;
   linfo.url = url;
-  linfo.arguments->insert(linfo.arguments->end(), arguments.begin(),
-                          arguments.end());
+  linfo.arguments->insert(linfo.arguments->end(), arguments.begin(), arguments.end());
 
   auto ticket = procs_.size();
   auto& proc = procs_.emplace_back();
@@ -537,17 +483,15 @@ bool Sandbox::LaunchProcess(fuchsia::sys::LauncherSyncPtr* launcher,
 
   proc.set_error_handler([this, url](zx_status_t status) {
     std::stringstream ss;
-    ss << "Component controller for " << url << " reported error "
-       << zx_status_get_string(status);
+    ss << "Component controller for " << url << " reported error " << zx_status_get_string(status);
     PostTerminate(SandboxResult::Status::COMPONENT_FAILURE, ss.str());
   });
 
   // we observe test processes return code
-  proc.events().OnTerminated = [url, this, is_test, ticket](
-                                   int64_t code, TerminationReason reason) {
+  proc.events().OnTerminated = [url, this, is_test, ticket](int64_t code,
+                                                            TerminationReason reason) {
     FXL_LOG(INFO) << T::msg << " " << url << " terminated with (" << code
-                  << ") reason: "
-                  << sys::HumanReadableTerminationReason(reason);
+                  << ") reason: " << sys::HumanReadableTerminationReason(reason);
     // remove the error handler:
     procs_[ticket].set_error_handler(nullptr);
     if (is_test) {
@@ -568,8 +512,7 @@ bool Sandbox::LaunchProcess(fuchsia::sys::LauncherSyncPtr* launcher,
     }
   };
 
-  if ((*launcher)->CreateComponent(std::move(linfo), proc.NewRequest()) !=
-      ZX_OK) {
+  if ((*launcher)->CreateComponent(std::move(linfo), proc.NewRequest()) != ZX_OK) {
     FXL_LOG(ERROR) << "couldn't launch " << T::msg << ": " << url;
     return false;
   }
@@ -577,27 +520,24 @@ bool Sandbox::LaunchProcess(fuchsia::sys::LauncherSyncPtr* launcher,
   return true;
 }
 
-Sandbox::Promise Sandbox::LaunchSetup(
-    fuchsia::sys::LauncherSyncPtr* launcher, const std::string& url,
-    const std::vector<std::string>& arguments) {
+Sandbox::Promise Sandbox::LaunchSetup(fuchsia::sys::LauncherSyncPtr* launcher,
+                                      const std::string& url,
+                                      const std::vector<std::string>& arguments) {
   ASSERT_HELPER_DISPATCHER;
 
   fit::bridge<void, SandboxResult> bridge;
 
   fuchsia::sys::LaunchInfo linfo;
   linfo.url = url;
-  linfo.arguments->insert(linfo.arguments->end(), arguments.begin(),
-                          arguments.end());
+  linfo.arguments->insert(linfo.arguments->end(), arguments.begin(), arguments.end());
 
   auto ticket = procs_.size();
   auto& proc = procs_.emplace_back();
 
-  if ((*launcher)->CreateComponent(std::move(linfo), proc.NewRequest()) !=
-      ZX_OK) {
+  if ((*launcher)->CreateComponent(std::move(linfo), proc.NewRequest()) != ZX_OK) {
     std::stringstream ss;
     ss << "Failed to launch setup " << url;
-    bridge.completer.complete_error(
-        SandboxResult(SandboxResult::Status::INTERNAL_ERROR, ss.str()));
+    bridge.completer.complete_error(SandboxResult(SandboxResult::Status::INTERNAL_ERROR, ss.str()));
   } else {
     proc.set_error_handler([this, url](zx_status_t status) {
       std::stringstream ss;
@@ -607,21 +547,18 @@ Sandbox::Promise Sandbox::LaunchSetup(
     });
 
     // we observe test processes return code
-    proc.events().OnTerminated =
-        [url, this, ticket, completer = std::move(bridge.completer)](
-            int64_t code, TerminationReason reason) mutable {
-          FXL_LOG(INFO) << "Setup " << url << " terminated with (" << code
-                        << ") reason: "
-                        << sys::HumanReadableTerminationReason(reason);
-          // remove the error handler:
-          procs_[ticket].set_error_handler(nullptr);
-          if (code == 0 && reason == TerminationReason::EXITED) {
-            completer.complete_ok();
-          } else {
-            completer.complete_error(
-                SandboxResult(SandboxResult::Status::SETUP_FAILED, url));
-          }
-        };
+    proc.events().OnTerminated = [url, this, ticket, completer = std::move(bridge.completer)](
+                                     int64_t code, TerminationReason reason) mutable {
+      FXL_LOG(INFO) << "Setup " << url << " terminated with (" << code
+                    << ") reason: " << sys::HumanReadableTerminationReason(reason);
+      // remove the error handler:
+      procs_[ticket].set_error_handler(nullptr);
+      if (code == 0 && reason == TerminationReason::EXITED) {
+        completer.complete_ok();
+      } else {
+        completer.complete_error(SandboxResult(SandboxResult::Status::SETUP_FAILED, url));
+      }
+    };
   }
 
   return bridge.consumer.promise();
@@ -674,11 +611,9 @@ void Sandbox::UnregisterTest(size_t ticket) {
   }
 }
 
-bool SandboxArgs::ParseFromJSON(const rapidjson::Value& facet,
-                                json::JSONParser* json_parser) {
+bool SandboxArgs::ParseFromJSON(const rapidjson::Value& facet, json::JSONParser* json_parser) {
   if (!config.ParseFromJSON(facet, json_parser)) {
-    FXL_LOG(ERROR) << "netemul facet failed to parse: "
-                   << json_parser->error_str();
+    FXL_LOG(ERROR) << "netemul facet failed to parse: " << json_parser->error_str();
     return false;
   }
   return true;
@@ -688,8 +623,7 @@ bool SandboxArgs::ParseFromString(const std::string& config) {
   json::JSONParser json_parser;
   auto facet = json_parser.ParseFromString(config, "fuchsia.netemul facet");
   if (json_parser.HasError()) {
-    FXL_LOG(ERROR) << "netemul facet failed to parse: "
-                   << json_parser.error_str();
+    FXL_LOG(ERROR) << "netemul facet failed to parse: " << json_parser.error_str();
     return false;
   }
 

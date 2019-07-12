@@ -47,12 +47,9 @@ class SandboxTest : public ::gtest::RealLoopFixture {
         fidl::InterfaceHandle<fuchsia::logger::LogListener> listener;
         log_listener_ = std::make_unique<TestListener>(listener.NewRequest());
         log_listener_->SetObserver(
-            [this](const fuchsia::logger::LogMessage& msg) {
-              log_event_(msg);
-            });
+            [this](const fuchsia::logger::LogMessage& msg) { log_event_(msg); });
         fidl::InterfacePtr<fuchsia::logger::Log> log;
-        env->ConnectToService(fuchsia::logger::Log::Name_,
-                              log.NewRequest().TakeChannel());
+        env->ConnectToService(fuchsia::logger::Log::Name_, log.NewRequest().TakeChannel());
         log->Listen(std::move(listener), nullptr);
       }
     });
@@ -74,8 +71,7 @@ class SandboxTest : public ::gtest::RealLoopFixture {
 
     sandbox.Start(dispatcher());
 
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&done]() { return done; },
-                                          zx::sec(kTimeoutSecs)));
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&done]() { return done; }, zx::sec(kTimeoutSecs)));
 
     // We quit the loop when sandbox terminates,
     // but because some of the tests will look at services in the sandbox when
@@ -107,16 +103,14 @@ class SandboxTest : public ::gtest::RealLoopFixture {
 
   void EnableEventCollection() { collect_events_ = true; }
   void EnableNetworkService() { connect_to_network_ = true; }
-  void EnableLogCapture(
-      fit::function<void(const fuchsia::logger::LogMessage&)> callback) {
+  void EnableLogCapture(fit::function<void(const fuchsia::logger::LogMessage&)> callback) {
     log_event_ = std::move(callback);
   }
 
   void CheckEvents(const std::vector<int32_t>& check) {
     for (const auto& v : check) {
       auto f = collected_codes_.find(v);
-      EXPECT_FALSE(f == collected_codes_.end())
-          << "Couldn't find event code " << v;
+      EXPECT_FALSE(f == collected_codes_.end()) << "Couldn't find event code " << v;
     }
   }
 
@@ -138,9 +132,7 @@ class SandboxTest : public ::gtest::RealLoopFixture {
     return detached_clients_.find(client) != detached_clients_.end();
   }
 
-  void SetOnEvent(fit::function<void(EventType)> on_event) {
-    on_event_ = std::move(on_event);
-  }
+  void SetOnEvent(fit::function<void(EventType)> on_event) { on_event_ = std::move(on_event); }
 
   const std::unordered_set<int32_t>& events() { return collected_codes_; }
 
@@ -155,8 +147,7 @@ class SandboxTest : public ::gtest::RealLoopFixture {
  private:
   void ConnectToNetwork(Sandbox* sandbox) {
     std::cout << "Connected to network" << std::endl;
-    sandbox->sandbox_environment()->network_context().GetHandler()(
-        net_ctx_.NewRequest());
+    sandbox->sandbox_environment()->network_context().GetHandler()(net_ctx_.NewRequest());
     net_ctx_->GetNetworkManager(net_manager_.NewRequest());
     net_ctx_->GetEndpointManager(endp_manager_.NewRequest());
   }
@@ -164,8 +155,7 @@ class SandboxTest : public ::gtest::RealLoopFixture {
   void InstallEventCollection(Sandbox* sandbox) {
     // connect to bus manager:
     sync::SyncManagerPtr syncManager;
-    sandbox->sandbox_environment()->sync_manager().GetHandler()(
-        syncManager.NewRequest());
+    sandbox->sandbox_environment()->sync_manager().GetHandler()(syncManager.NewRequest());
     syncManager->BusSubscribe(kBusName, kBusClientName, bus_.NewRequest());
     bus_.events().OnBusData = [this](sync::Event event) {
       if (!event.has_code()) {
@@ -493,6 +483,49 @@ TEST_F(SandboxTest, SetupRunsBeforeTest) {
   CheckEvents({1, 2, 3});
 }
 
+TEST_F(SandboxTest, SetupRunsBeforeTestOnChildren) {
+  // Tests that empty root environments with children that requires
+  // setup and tests will succeed. This is basically the same test setup
+  // as "SetupRunsBeforeTest" but with an empty root environment.
+  SetCmx(R"(
+  {
+    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+    "environment" : {
+      "children": [{
+        "setup" : [
+          {"arguments" : ["-p", "1", "-n", "setup1", "-w", "2"]}
+        ],
+        "test" : [
+          {"arguments" : ["-p", "3", "-n", "test1"]},
+          {"arguments" : ["-p", "2"]}
+        ]
+      }]
+    }
+  }
+  )");
+  int counter = 0;
+  SetOnEvent([this, &counter](EventType type) {
+    if (type != EventType::Event) {
+      return;
+    }
+    counter++;
+    switch (counter) {
+      case 1:
+        EXPECT_TRUE(ObservedClient("setup1"));
+        CheckEvents({1});
+        EXPECT_FALSE(ObservedClient("test1"));
+        EXPECT_FALSE(ObservedClient("root"));
+        break;
+      default:
+        EXPECT_TRUE(ClientDetached("setup1"));
+        break;
+    }
+  });
+  EnableEventCollection();
+  RunSandboxSuccess();
+  CheckEvents({1, 2, 3});
+}
+
 TEST_F(SandboxTest, DuplicateNetworkNameFails) {
   SetCmx(R"(
   {
@@ -584,15 +617,13 @@ TEST_F(SandboxTest, ValidNetworkSetup) {
   // it can recur.
   // Plus, it'll keep a reference to the iterators
   // so it runs all the checks over network, endpoint, and attachment
-  check = [&nets, &eps, &networks, &endpoints, &attach, &attachments, &check,
-           &found_nets, this]() {
+  check = [&nets, &eps, &networks, &endpoints, &attach, &attachments, &check, &found_nets, this]() {
     if (nets != networks.end()) {
       // iterate over networks and check they're there
       auto lookup = *nets++;
       std::cout << "checking network " << lookup << std::endl;
       network_manager()->GetNetwork(
-          lookup,
-          [&check, &found_nets](fidl::InterfaceHandle<network::Network> net) {
+          lookup, [&check, &found_nets](fidl::InterfaceHandle<network::Network> net) {
             ASSERT_TRUE(net.is_valid());
             // keep network for attachments check
             found_nets.emplace_back(net.Bind());
@@ -602,21 +633,19 @@ TEST_F(SandboxTest, ValidNetworkSetup) {
       // iterate over endpoints and check they're there
       auto lookup = *eps++;
       std::cout << "checking endpoint " << lookup << std::endl;
-      endpoint_manager()->GetEndpoint(
-          lookup, [&check](fidl::InterfaceHandle<network::Endpoint> ep) {
-            ASSERT_TRUE(ep.is_valid());
-            check();
-          });
+      endpoint_manager()->GetEndpoint(lookup,
+                                      [&check](fidl::InterfaceHandle<network::Endpoint> ep) {
+                                        ASSERT_TRUE(ep.is_valid());
+                                        check();
+                                      });
     } else if (attach != attachments.end()) {
       // iterate over attachments and check they're there
       auto& a = *attach++;
-      std::cout << "checking endpoint " << a.second << " is in network"
-                << std::endl;
-      found_nets[a.first]->AttachEndpoint(
-          a.second, [&check](zx_status_t status) {
-            ASSERT_EQ(status, ZX_ERR_ALREADY_EXISTS);
-            check();
-          });
+      std::cout << "checking endpoint " << a.second << " is in network" << std::endl;
+      found_nets[a.first]->AttachEndpoint(a.second, [&check](zx_status_t status) {
+        ASSERT_EQ(status, ZX_ERR_ALREADY_EXISTS);
+        check();
+      });
     } else {
       sync::Event event;
       event.set_code(100);
@@ -789,8 +818,7 @@ TEST_F(SandboxTest, DestructorRunsCleanly) {
 }
 )");
   auto sandbox = std::make_unique<Sandbox>(TakeArgs());
-  sandbox->SetTerminationCallback(
-      [](SandboxResult result) { FAIL() << "Shouldn't exit"; });
+  sandbox->SetTerminationCallback([](SandboxResult result) { FAIL() << "Shouldn't exit"; });
   sandbox->Start(dispatcher());
   // Give enough time for the process to actually open the file:
   RunLoopWithTimeout(zx::msec(15));
@@ -838,16 +866,14 @@ TEST_F(SandboxTest, SyslogWithNoKlog) {
          false);
   EnableEventCollection();
   EnableLogCapture([this](const fuchsia::logger::LogMessage& msg) {
-    if (std::find(msg.tags.begin(), msg.tags.end(), "dummy-proc") !=
-        msg.tags.end()) {
+    if (std::find(msg.tags.begin(), msg.tags.end(), "dummy-proc") != msg.tags.end()) {
       FXL_LOG(INFO) << "Got log tagged with 'dummy-proc'! Sending event...";
       sync::Event evt;
       evt.set_code(100);
       bus()->Publish(std::move(evt));
       FXL_LOG(INFO) << "Published event!";
     } else {
-      FAIL() << "Got log unexpected log message tags:"
-             << fxl::JoinStrings(msg.tags);
+      FAIL() << "Got log unexpected log message tags:" << fxl::JoinStrings(msg.tags);
     }
   });
   RunSandboxSuccess();
@@ -871,17 +897,14 @@ TEST_F(SandboxTest, SyslogWithKlog) {
   EnableEventCollection();
   int klog_count = 0;
   EnableLogCapture([this, &klog_count](const fuchsia::logger::LogMessage& msg) {
-    if (std::find(msg.tags.begin(), msg.tags.end(), "dummy-proc") !=
-        msg.tags.end()) {
+    if (std::find(msg.tags.begin(), msg.tags.end(), "dummy-proc") != msg.tags.end()) {
       sync::Event evt;
       evt.set_code(100);
       bus()->Publish(std::move(evt));
-    } else if (std::find(msg.tags.begin(), msg.tags.end(), "klog") !=
-               msg.tags.end()) {
+    } else if (std::find(msg.tags.begin(), msg.tags.end(), "klog") != msg.tags.end()) {
       klog_count++;
     } else {
-      FAIL() << "Got log unexpected log message tags:"
-             << fxl::JoinStrings(msg.tags);
+      FAIL() << "Got log unexpected log message tags:" << fxl::JoinStrings(msg.tags);
     }
   });
   RunSandboxSuccess();
