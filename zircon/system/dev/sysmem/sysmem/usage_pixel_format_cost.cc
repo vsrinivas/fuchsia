@@ -94,6 +94,8 @@ const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = {
         },
         // .required_buffer_usage_bits
         {
+            // .none
+            0,
             // .cpu
             0,
             // .vulkan
@@ -118,6 +120,8 @@ const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = {
         },
         // .required_buffer_usage_bits
         {
+            // .none
+            0,
             // .cpu
             0,
             // .vulkan
@@ -142,6 +146,8 @@ const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = {
         },
         // .required_buffer_usage_bits
         {
+            // .none
+            0,
             // .cpu
             0,
             // .vulkan
@@ -166,6 +172,8 @@ const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = {
         },
         // .required_buffer_usage_bits
         {
+            // .none
+            0,
             // .cpu
             0,
             // .vulkan
@@ -201,6 +209,8 @@ const std::list<const UsagePixelFormatCostEntry> kAmlogic_Generic_Cost_Entries =
             },
             // .required_buffer_usage_bits
             {
+                // .none
+                0,
                 // .cpu
                 0,
                 // .vulkan

@@ -107,6 +107,8 @@ constexpr uint32_t videoUsageHwEncoder = 2u;
 
 constexpr uint32_t videoUsageHwDecoder = 1u;
 
+constexpr uint32_t noneUsage = 1u;
+
 constexpr uint32_t displayUsageLayer = 1u;
 
 constexpr uint32_t displayUsageCursor = 2u;
@@ -2762,9 +2764,11 @@ class BufferCollectionEvents final {
 struct BufferUsage {
   static constexpr const fidl_type_t* Type = nullptr;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySize = 20;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+
+  uint32_t none{};
 
   uint32_t cpu{};
 
@@ -2783,7 +2787,7 @@ extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionConstraintsTable;
 struct BufferCollectionConstraints {
   static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionConstraintsTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 7752;
+  static constexpr uint32_t PrimarySize = 7760;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
@@ -2944,7 +2948,7 @@ class BufferCollection final {
 
     static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionSetConstraintsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 7776;
+    static constexpr uint32_t PrimarySize = 7784;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
 
@@ -4296,25 +4300,26 @@ static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionEvents::OnAlloc
 template <>
 struct IsFidlType<::llcpp::fuchsia::sysmem::BufferUsage> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::BufferUsage>);
-static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferUsage, cpu) == 0);
-static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferUsage, vulkan) == 4);
-static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferUsage, display) == 8);
-static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferUsage, video) == 12);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferUsage, none) == 0);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferUsage, cpu) == 4);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferUsage, vulkan) == 8);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferUsage, display) == 12);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferUsage, video) == 16);
 static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferUsage) == ::llcpp::fuchsia::sysmem::BufferUsage::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::sysmem::BufferCollectionConstraints> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::BufferCollectionConstraints>);
 static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, usage) == 0);
-static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, min_buffer_count_for_camping) == 16);
-static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, min_buffer_count_for_dedicated_slack) == 20);
-static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, min_buffer_count_for_shared_slack) == 24);
-static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, min_buffer_count) == 28);
-static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, max_buffer_count) == 32);
-static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, has_buffer_memory_constraints) == 36);
-static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, buffer_memory_constraints) == 40);
-static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, image_format_constraints_count) == 320);
-static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, image_format_constraints) == 328);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, min_buffer_count_for_camping) == 20);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, min_buffer_count_for_dedicated_slack) == 24);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, min_buffer_count_for_shared_slack) == 28);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, min_buffer_count) == 32);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, max_buffer_count) == 36);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, has_buffer_memory_constraints) == 40);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, buffer_memory_constraints) == 48);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, image_format_constraints_count) == 328);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, image_format_constraints) == 336);
 static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints) == ::llcpp::fuchsia::sysmem::BufferCollectionConstraints::PrimarySize);
 
 template <>

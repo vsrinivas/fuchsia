@@ -103,7 +103,8 @@ private:
     bool CombineConstraints();
 
     bool CheckSanitizeBufferCollectionConstraints(
-        fuchsia_sysmem_BufferCollectionConstraints* constraints);
+        fuchsia_sysmem_BufferCollectionConstraints* constraints,
+        bool is_aggregated);
 
     bool CheckSanitizeBufferMemoryConstraints(
         fuchsia_sysmem_BufferMemoryConstraints* constraints);

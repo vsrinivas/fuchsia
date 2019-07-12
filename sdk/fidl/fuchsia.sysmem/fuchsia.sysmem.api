@@ -9,5 +9,5 @@
   "fidl/fuchsia.sysmem/heap.fidl": "8d9ba262f16874fe5b434830764cff6c",
   "fidl/fuchsia.sysmem/image_formats.fidl": "2181f95c19931c4354e5b3c474a08cbd",
   "fidl/fuchsia.sysmem/image_formats_deprecated.fidl": "87c5d0c8a3357b38f106fe3225c81d78",
-  "fidl/fuchsia.sysmem/usages.fidl": "8d4b8abe0df716aab87e7e4af35a2765"
+  "fidl/fuchsia.sysmem/usages.fidl": "d8b591cc9cfb4b31085cd303cd260f67"
 }

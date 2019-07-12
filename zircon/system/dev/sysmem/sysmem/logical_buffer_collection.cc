@@ -505,7 +505,7 @@ bool LogicalBufferCollection::CombineConstraints() {
         return false;
     }
 
-    if (!CheckSanitizeBufferCollectionConstraints(iter->get())) {
+    if (!CheckSanitizeBufferCollectionConstraints(iter->get(), false)) {
         return false;
     }
 
@@ -517,7 +517,7 @@ bool LogicalBufferCollection::CombineConstraints() {
         if (!iter->get()) {
             continue;
         }
-        if (!CheckSanitizeBufferCollectionConstraints(iter->get())) {
+        if (!CheckSanitizeBufferCollectionConstraints(iter->get(), false)) {
             return false;
         }
         if (!AccumulateConstraintBufferCollection(result.get(),
@@ -528,7 +528,7 @@ bool LogicalBufferCollection::CombineConstraints() {
         }
     }
 
-    if (!CheckSanitizeBufferCollectionConstraints(result.get())) {
+    if (!CheckSanitizeBufferCollectionConstraints(result.get(), true)) {
       return false;
     }
 
@@ -542,18 +542,37 @@ bool LogicalBufferCollection::CombineConstraints() {
 // constraint checks that are present under Accumulate* are commented explaining
 // why it's ok for them to be there.
 bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
-    fuchsia_sysmem_BufferCollectionConstraints* constraints) {
+    fuchsia_sysmem_BufferCollectionConstraints* constraints,
+    bool is_aggregated) {
     FieldDefaultMax(&constraints->max_buffer_count);
     if (constraints->min_buffer_count > constraints->max_buffer_count) {
         LogError("min_buffer_count > max_buffer_count");
         return false;
     }
-    // At least one usage bit must be specified by any participant that
-    // specifies constraints.
-    if (constraints->usage.cpu == 0 && constraints->usage.vulkan == 0 &&
-        constraints->usage.display == 0 && constraints->usage.video == 0) {
-        LogError("At least one usage bit must be set.");
-        return false;
+    if (!is_aggregated) {
+        // At least one usage bit must be specified by any participant that
+        // specifies constraints.  The "none" usage bit can be set by a participant
+        // that doesn't directly use the buffers, so we know that the participant
+        // didn't forget to set usage.
+        if (constraints->usage.none == 0 && constraints->usage.cpu == 0 &&
+            constraints->usage.vulkan == 0 && constraints->usage.display == 0 &&
+            constraints->usage.video == 0) {
+            LogError("At least one usage bit must be set by a participant.");
+            return false;
+        }
+        if (constraints->usage.none != 0) {
+            if (constraints->usage.cpu != 0 || constraints->usage.vulkan != 0 ||
+                constraints->usage.display != 0 || constraints->usage.video != 0) {
+                LogError("A participant indicating 'none' usage can't specify any other usage.");
+                return false;
+            }
+        }
+    } else {
+        if (constraints->usage.cpu == 0 && constraints->usage.vulkan == 0 &&
+            constraints->usage.display == 0 && constraints->usage.video == 0) {
+            LogError("At least one non-'none' usage bit must be set across all participants.");
+            return false;
+        }
     }
     if (!constraints->has_buffer_memory_constraints) {
         // The CheckSanitizeBufferMemoryConstraints() further down will help fill out
@@ -787,6 +806,9 @@ LogicalBufferCollection::ImageFormatConstraintsClone(
 bool LogicalBufferCollection::AccumulateConstraintBufferCollection(
     fuchsia_sysmem_BufferCollectionConstraints* acc,
     const fuchsia_sysmem_BufferCollectionConstraints* c) {
+    // We accumulate "none" usage just like other usages, to make aggregation
+    // and CheckSanitize consistent/uniform.
+    acc->usage.none |= c->usage.none;
     acc->usage.cpu |= c->usage.cpu;
     acc->usage.vulkan |= c->usage.vulkan;
     acc->usage.display |= c->usage.display;

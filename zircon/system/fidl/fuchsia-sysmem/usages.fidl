@@ -7,11 +7,18 @@ library fuchsia.sysmem;
 // Describes how a client will access the contents of a buffer.
 // TODO(ZX-2260): change struct to table
 struct BufferUsage {
+    uint32 none;
     uint32 cpu;
     uint32 vulkan;
     uint32 display;
     uint32 video;
 };
+
+// Flag for "none" usage.
+//
+// This bit indicates that there is no direct usage from the participant, and
+// that the participant hasn't forgotten to set usage.
+const uint32 noneUsage = 1;
 
 // Flags for "cpu" usage.
 // The "often" variants prefer cacheable memory.

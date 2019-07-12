@@ -17,6 +17,7 @@
 #include <lib/zx/vmo.h>
 
 #include <limits>
+#include <zircon/errors.h>
 
 // We assume one sysmem since boot, for now.
 const char* kSysmemDevicePath = "/dev/class/sysmem/000";
@@ -1384,6 +1385,265 @@ extern "C" bool test_sysmem_protected_ram_is_uncached(void) {
     END_TEST;
 }
 
+extern "C" bool test_sysmem_only_none_usage_fails(void) {
+    BEGIN_TEST;
+
+    zx_status_t status;
+    zx::channel allocator_client;
+    status = connect_to_sysmem_driver(&allocator_client);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel token_client;
+    zx::channel token_server;
+    status = zx::channel::create(0, &token_client, &token_server);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator_client.get(),
+                                                              token_server.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel collection_client;
+    zx::channel collection_server;
+    status = zx::channel::create(0, &collection_client, &collection_server);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    ASSERT_NE(token_client.get(), ZX_HANDLE_INVALID, "");
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
+        allocator_client.get(), token_client.release(), collection_server.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
+    constraints->usage.none = fuchsia_sysmem_noneUsage;
+    constraints->min_buffer_count_for_camping = 3;
+    constraints->min_buffer_count = 5;
+    constraints->has_buffer_memory_constraints = true;
+    constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
+        .min_size_bytes = 64 * 1024,
+        .max_size_bytes = 128 * 1024,
+        .physically_contiguous_required = false,
+        .secure_required = false,
+        .ram_domain_supported = false,
+        .cpu_domain_supported = true,
+        .inaccessible_domain_supported = false,
+        .heap_permitted_count = 0,
+        .heap_permitted = {},
+    };
+    ZX_DEBUG_ASSERT(constraints->image_format_constraints_count == 0);
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
+                                                           constraints.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx_status_t allocation_status{};
+    BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
+    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client.get(), &allocation_status, buffer_collection_info.get());
+    // This is the first round-trip to/from sysmem.  A failure here can be due
+    // to any step above failing async.
+    //
+    // If the aggregate usage only has "none" usage, allocation should fail.
+    // Because we weren't waiting at the time that allocation failed, we don't
+    // necessarily get a response from the wait.
+    //
+    // TODO(dustingreen): Once we're able to issue async client requests using
+    // llcpp, put the wait in flight before the SetConstraints() so we can
+    // verify that the wait succeeds but the allocation_status is
+    // ZX_ERR_NOT_SUPPORTED.
+    ASSERT_TRUE(status == ZX_ERR_PEER_CLOSED || allocation_status == ZX_ERR_NOT_SUPPORTED);
+
+    END_TEST;
+}
+
+extern "C" bool test_sysmem_none_usage_and_other_usage_from_single_participant_fails(void) {
+    BEGIN_TEST;
+
+    zx_status_t status;
+    zx::channel allocator_client;
+    status = connect_to_sysmem_driver(&allocator_client);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel token_client;
+    zx::channel token_server;
+    status = zx::channel::create(0, &token_client, &token_server);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator_client.get(),
+                                                              token_server.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel collection_client;
+    zx::channel collection_server;
+    status = zx::channel::create(0, &collection_client, &collection_server);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    ASSERT_NE(token_client.get(), ZX_HANDLE_INVALID, "");
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
+        allocator_client.get(), token_client.release(), collection_server.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
+    // Specify both "none" and "cpu" usage from a single participant, which will
+    // cause allocation failure.
+    constraints->usage.none = fuchsia_sysmem_noneUsage;
+    constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften;
+    constraints->min_buffer_count_for_camping = 3;
+    constraints->min_buffer_count = 5;
+    constraints->has_buffer_memory_constraints = true;
+    constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
+        .min_size_bytes = 64 * 1024,
+        .max_size_bytes = 128 * 1024,
+        .physically_contiguous_required = false,
+        .secure_required = false,
+        .ram_domain_supported = false,
+        .cpu_domain_supported = true,
+        .inaccessible_domain_supported = false,
+        .heap_permitted_count = 0,
+        .heap_permitted = {},
+    };
+    ZX_DEBUG_ASSERT(constraints->image_format_constraints_count == 0);
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
+                                                           constraints.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx_status_t allocation_status;
+    BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
+    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client.get(), &allocation_status, buffer_collection_info.get());
+    // This is the first round-trip to/from sysmem.  A failure here can be due
+    // to any step above failing async.
+    //
+    // If the aggregate usage has both "none" usage and "cpu" usage from a
+    // single participant, allocation should fail.
+    //
+    // TODO(dustingreen): Once we're able to issue async client requests using
+    // llcpp, put the wait in flight before the SetConstraints() so we can
+    // verify that the wait succeeds but the allocation_status is
+    // ZX_ERR_NOT_SUPPORTED.
+    ASSERT_TRUE(status == ZX_ERR_PEER_CLOSED || allocation_status == ZX_ERR_NOT_SUPPORTED);
+
+    END_TEST;
+}
+
+extern "C" bool test_sysmem_none_usage_with_separate_other_usage_succeeds(void) {
+    BEGIN_TEST;
+
+    zx_status_t status;
+    zx::channel allocator2_client_1;
+    status = connect_to_sysmem_driver(&allocator2_client_1);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel token_client_1;
+    zx::channel token_server_1;
+    status = zx::channel::create(0, &token_client_1, &token_server_1);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    // Client 1 creates a token and new LogicalBufferCollection using
+    // AllocateSharedCollection().
+    status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator2_client_1.get(),
+                                                               token_server_1.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel token_client_2;
+    zx::channel token_server_2;
+    status = zx::channel::create(0, &token_client_2, &token_server_2);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    // Client 1 duplicates its token and gives the duplicate to client 2 (this
+    // test is single proc, so both clients are coming from this client
+    // process - normally the two clients would be in separate processes with
+    // token_client_2 transferred to another participant).
+    status = fuchsia_sysmem_BufferCollectionTokenDuplicate(
+        token_client_1.get(), std::numeric_limits<uint32_t>::max(), token_server_2.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel collection_client_1;
+    zx::channel collection_server_1;
+    status = zx::channel::create(0, &collection_client_1, &collection_server_1);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    ASSERT_NE(token_client_1.get(), ZX_HANDLE_INVALID, "");
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
+        allocator2_client_1.get(), token_client_1.release(), collection_server_1.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    BufferCollectionConstraints constraints_1(BufferCollectionConstraints::Default);
+    constraints_1->usage.none = fuchsia_sysmem_noneUsage;
+    constraints_1->min_buffer_count_for_camping = 3;
+    constraints_1->has_buffer_memory_constraints = true;
+    constraints_1->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
+        // This min_size_bytes is intentionally too small to hold the min_coded_width and
+        // min_coded_height in NV12
+        // format.
+        .min_size_bytes = 64 * 1024,
+        // Allow a max that's just large enough to accomodate the size implied
+        // by the min frame size and PixelFormat.
+        .max_size_bytes = (512 * 512) * 3 / 2,
+        .physically_contiguous_required = false,
+        .secure_required = false,
+        .ram_domain_supported = false,
+        .cpu_domain_supported = true,
+        .inaccessible_domain_supported = false,
+        .heap_permitted_count = 0,
+        .heap_permitted = {},
+    };
+
+    // Start with constraints_2 a copy of constraints_1.  There are no handles
+    // in the constraints struct so a struct copy instead of clone is fine here.
+    BufferCollectionConstraints constraints_2(*constraints_1.get());
+    // Modify constraints_2 to set non-"none" usage.
+    constraints_2->usage.none = 0;
+    constraints_2->usage.vulkan = fuchsia_sysmem_vulkanUsageTransferDst;
+
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_1.get(), true,
+                                                           constraints_1.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    // Client 2 connects to sysmem separately.
+    zx::channel allocator2_client_2;
+    status = connect_to_sysmem_driver(&allocator2_client_2);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel collection_client_2;
+    zx::channel collection_server_2;
+    status = zx::channel::create(0, &collection_client_2, &collection_server_2);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    // Just because we can, perform this sync as late as possible, just before
+    // the BindSharedCollection() via allocator2_client_2.  Without this Sync(),
+    // the BindSharedCollection() might arrive at the server before the
+    // Duplicate() that delivered the server end of token_client_2 to sysmem,
+    // which would cause sysmem to not recognize the token.
+    status = fuchsia_sysmem_BufferCollectionSync(collection_client_1.get());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    ASSERT_NE(token_client_2.get(), ZX_HANDLE_INVALID, "");
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
+        allocator2_client_2.get(), token_client_2.release(), collection_server_2.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_2.get(), true,
+                                                           constraints_2.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    //
+    // Only after both participants (both clients) have SetConstraints() will
+    // the allocation be successful.
+    //
+
+    zx_status_t allocation_status;
+    BufferCollectionInfo buffer_collection_info_1(BufferCollectionInfo::Default);
+    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client_1.get(), &allocation_status, buffer_collection_info_1.get());
+    // This is the first round-trip to/from sysmem.  A failure here can be due
+    // to any step above failing async.
+    ASSERT_EQ(status, ZX_OK, "");
+
+    // Success when at least one participant specifies "none" usage and at least
+    // one participant specifies a usage other than "none".
+    ASSERT_EQ(allocation_status, ZX_OK, "");
+
+    END_TEST;
+}
+
 // TODO(dustingreen): Add tests to cover more failure cases.
 
 // clang-format off
@@ -1402,5 +1662,8 @@ BEGIN_TEST_CASE(sysmem_tests)
     RUN_TEST(test_sysmem_cpu_usage_and_no_buffer_memory_constraints)
     RUN_TEST(test_sysmem_contiguous_system_ram_is_cached)
     RUN_TEST(test_sysmem_protected_ram_is_uncached)
+    RUN_TEST(test_sysmem_only_none_usage_fails)
+    RUN_TEST(test_sysmem_none_usage_and_other_usage_from_single_participant_fails)
+    RUN_TEST(test_sysmem_none_usage_with_separate_other_usage_succeeds)
 END_TEST_CASE(sysmem_tests)
 // clang-format on

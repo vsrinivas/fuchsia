@@ -48,7 +48,7 @@ pub const BUFFER_MEMORY_CONSTRAINTS_DEFAULT: BufferMemoryConstraints = BufferMem
 
 pub const BUFFER_COLLECTION_CONSTRAINTS_DEFAULT: BufferCollectionConstraints =
     BufferCollectionConstraints {
-        usage: BufferUsage { cpu: 1, vulkan: 0, display: 0, video: 1 },
+        usage: BufferUsage { none: 0, cpu: 1, vulkan: 0, display: 0, video: 1 },
         min_buffer_count_for_camping: 0,
         min_buffer_count_for_dedicated_slack: 0,
         min_buffer_count_for_shared_slack: 0,
