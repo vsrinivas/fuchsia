@@ -523,7 +523,7 @@ mod tests {
 
     #[test]
     fn test_parse_serialize_full_tcp() {
-        use crate::wire::testdata::tls_client_hello::*;
+        use crate::wire::testdata::tls_client_hello_v4::*;
 
         let mut buf = &ETHERNET_FRAME_BYTES[..];
         let frame = buf.parse::<EthernetFrame<_>>().unwrap();
@@ -555,7 +555,7 @@ mod tests {
 
     #[test]
     fn test_parse_serialize_full_udp() {
-        use crate::wire::testdata::dns_request::*;
+        use crate::wire::testdata::dns_request_v4::*;
 
         let mut buf = &ETHERNET_FRAME_BYTES[..];
         let frame = buf.parse::<EthernetFrame<_>>().unwrap();

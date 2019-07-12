@@ -433,6 +433,7 @@ mod tests {
     use crate::ip::{IpProto, Ipv4Addr, Ipv6Addr};
     use crate::wire::ethernet::EthernetFrame;
     use crate::wire::ipv4::Ipv4Packet;
+    use crate::wire::ipv6::Ipv6Packet;
 
     const TEST_SRC_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
     const TEST_DST_IPV4: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
@@ -442,8 +443,8 @@ mod tests {
         Ipv6Addr::new([17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]);
 
     #[test]
-    fn test_parse_serialize_full() {
-        use crate::wire::testdata::tls_client_hello::*;
+    fn test_parse_serialize_full_ipv4() {
+        use crate::wire::testdata::tls_client_hello_v4::*;
 
         let mut buf = &ETHERNET_FRAME_BYTES[..];
         let frame = buf.parse::<EthernetFrame<_>>().unwrap();
@@ -463,6 +464,46 @@ mod tests {
         assert_eq!(packet.ttl(), IP_TTL);
         assert_eq!(packet.src_ip(), IP_SRC_IP);
         assert_eq!(packet.dst_ip(), IP_DST_IP);
+
+        let mut body = packet.body();
+        let segment = body
+            .parse_with::<_, TcpSegment<_>>(TcpParseArgs::new(packet.src_ip(), packet.dst_ip()))
+            .unwrap();
+        assert_eq!(segment.src_port().get(), TCP_SRC_PORT);
+        assert_eq!(segment.dst_port().get(), TCP_DST_PORT);
+        assert_eq!(segment.ack_num().is_some(), TCP_ACK_FLAG);
+        assert_eq!(segment.fin(), TCP_FIN_FLAG);
+        assert_eq!(segment.syn(), TCP_SYN_FLAG);
+        assert_eq!(segment.iter_options().collect::<Vec<_>>().as_slice(), TCP_OPTIONS);
+        assert_eq!(segment.body(), TCP_BODY);
+
+        // TODO(joshlf): Uncomment once we support serializing options
+        // let buffer = segment.body()
+        //     .encapsulate(segment.builder(packet.src_ip(), packet.dst_ip()))
+        //     .encapsulate(packet.builder())
+        //     .encapsulate(frame.builder())
+        //     .serialize_outer().unwrap();
+        // assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
+    }
+
+    #[test]
+    fn test_parse_serialize_full_ipv6() {
+        use crate::wire::testdata::syn_v6::*;
+
+        let mut buf = &ETHERNET_FRAME_BYTES[..];
+        let frame = buf.parse::<EthernetFrame<_>>().unwrap();
+        assert_eq!(frame.src_mac(), ETHERNET_SRC_MAC);
+        assert_eq!(frame.dst_mac(), ETHERNET_DST_MAC);
+        assert_eq!(frame.ethertype(), Some(EtherType::Ipv6));
+
+        let mut body = frame.body();
+        let packet = body.parse::<Ipv6Packet<_>>().unwrap();
+        assert_eq!(packet.ds(), IPV6_DS);
+        assert_eq!(packet.ecn(), IPV6_ECN);
+        assert_eq!(packet.flowlabel(), IPV6_FLOWLABEL);
+        assert_eq!(packet.hop_limit(), IPV6_HOP_LIMIT);
+        assert_eq!(packet.src_ip(), IPV6_SRC_IP);
+        assert_eq!(packet.dst_ip(), IPV6_DST_IP);
 
         let mut body = packet.body();
         let segment = body
@@ -659,7 +700,7 @@ mod benchmarks {
 
     #[bench]
     fn bench_parse(b: &mut Bencher) {
-        use crate::wire::testdata::tls_client_hello::*;
+        use crate::wire::testdata::tls_client_hello_v4::*;
         let bytes = parse_ip_packet_in_ethernet_frame::<Ipv4>(ETHERNET_FRAME_BYTES).unwrap().0;
 
         b.iter(|| {
@@ -674,7 +715,7 @@ mod benchmarks {
 
     #[bench]
     fn bench_serialize(b: &mut Bencher) {
-        use crate::wire::testdata::tls_client_hello::*;
+        use crate::wire::testdata::tls_client_hello_v4::*;
 
         let builder = TcpSegmentBuilder::new(
             IP_SRC_IP,

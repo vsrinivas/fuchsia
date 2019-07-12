@@ -628,14 +628,70 @@ mod tests {
 
     use super::ext_hdrs::*;
     use super::*;
+    use crate::device::ethernet::EtherType;
     use crate::ip::Ipv6ExtHdrType;
+    use crate::wire::ethernet::EthernetFrame;
 
     const DEFAULT_SRC_IP: Ipv6Addr =
         Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
     const DEFAULT_DST_IP: Ipv6Addr =
         Ipv6Addr::new([17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]);
 
-    // TODO(tkilbourn): add IPv6 versions of TCP and UDP parsing
+    #[test]
+    fn test_parse_serialize_full_tcp() {
+        use crate::wire::testdata::syn_v6::*;
+
+        let mut buf = &ETHERNET_FRAME_BYTES[..];
+        let frame = buf.parse::<EthernetFrame<_>>().unwrap();
+        assert_eq!(frame.src_mac(), ETHERNET_SRC_MAC);
+        assert_eq!(frame.dst_mac(), ETHERNET_DST_MAC);
+        assert_eq!(frame.ethertype(), Some(EtherType::Ipv6));
+
+        let mut body = frame.body();
+        let packet = body.parse::<Ipv6Packet<_>>().unwrap();
+        assert_eq!(packet.ds(), IPV6_DS);
+        assert_eq!(packet.ecn(), IPV6_ECN);
+        assert_eq!(packet.flowlabel(), IPV6_FLOWLABEL);
+        assert_eq!(packet.hop_limit(), IPV6_HOP_LIMIT);
+        assert_eq!(packet.src_ip(), IPV6_SRC_IP);
+        assert_eq!(packet.dst_ip(), IPV6_DST_IP);
+
+        let buffer = packet
+            .body()
+            .encapsulate(packet.builder())
+            .encapsulate(frame.builder())
+            .serialize_outer()
+            .unwrap();
+        assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
+    }
+
+    #[test]
+    fn test_parse_serialize_full_udp() {
+        use crate::wire::testdata::dns_request_v6::*;
+
+        let mut buf = &ETHERNET_FRAME_BYTES[..];
+        let frame = buf.parse::<EthernetFrame<_>>().unwrap();
+        assert_eq!(frame.src_mac(), ETHERNET_SRC_MAC);
+        assert_eq!(frame.dst_mac(), ETHERNET_DST_MAC);
+        assert_eq!(frame.ethertype(), Some(EtherType::Ipv6));
+
+        let mut body = frame.body();
+        let packet = body.parse::<Ipv6Packet<_>>().unwrap();
+        assert_eq!(packet.ds(), IPV6_DS);
+        assert_eq!(packet.ecn(), IPV6_ECN);
+        assert_eq!(packet.flowlabel(), IPV6_FLOWLABEL);
+        assert_eq!(packet.hop_limit(), IPV6_HOP_LIMIT);
+        assert_eq!(packet.src_ip(), IPV6_SRC_IP);
+        assert_eq!(packet.dst_ip(), IPV6_DST_IP);
+
+        let buffer = packet
+            .body()
+            .encapsulate(packet.builder())
+            .encapsulate(frame.builder())
+            .serialize_outer()
+            .unwrap();
+        assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
+    }
 
     fn fixed_hdr_to_bytes(fixed_hdr: FixedHeader) -> [u8; IPV6_FIXED_HDR_LEN] {
         let mut bytes = [0; IPV6_FIXED_HDR_LEN];

@@ -1120,7 +1120,7 @@ mod tests {
 
     #[test]
     fn test_parse_ip_packet_in_ethernet_frame() {
-        use crate::wire::testdata::tls_client_hello::*;
+        use crate::wire::testdata::tls_client_hello_v4::*;
         let (body, src_mac, dst_mac, src_ip, dst_ip, proto) =
             parse_ip_packet_in_ethernet_frame::<Ipv4>(ETHERNET_FRAME_BYTES).unwrap();
         assert_eq!(body, &(ETHERNET_FRAME_BYTES[ETHERNET_BODY_RANGE])[IP_BODY_RANGE]);
