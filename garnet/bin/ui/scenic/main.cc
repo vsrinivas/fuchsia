@@ -4,7 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fsl/syslogger/init.h>
-#include <lib/inspect/inspect.h>
+#include <lib/inspect_deprecated/inspect.h>
 #include <lib/sys/cpp/component_context.h>
 #include <trace-provider/provider.h>
 
@@ -26,14 +26,14 @@ int main(int argc, const char** argv) {
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<sys::ComponentContext> app_context(sys::ComponentContext::Create());
 
-  // Set up an inspect::Node to inject into the App.
+  // Set up an inspect_deprecated::Node to inject into the App.
   auto object_dir = component::ObjectDir(component::Object::Make("objects"));
   fidl::BindingSet<fuchsia::inspect::Inspect> inspect_bindings;
   app_context->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
       fuchsia::inspect::Inspect::Name_,
       std::make_unique<vfs::Service>(inspect_bindings.GetHandler(object_dir.object().get())));
 
-  scenic_impl::App app(app_context.get(), inspect::Node(std::move(object_dir)),
+  scenic_impl::App app(app_context.get(), inspect_deprecated::Node(std::move(object_dir)),
                        [&loop] { loop.Quit(); });
 
   loop.Run();

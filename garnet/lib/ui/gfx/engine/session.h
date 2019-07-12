@@ -7,7 +7,7 @@
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/inspect/inspect.h>
+#include <lib/inspect_deprecated/inspect.h>
 
 #include <vector>
 
@@ -51,7 +51,7 @@ class Session {
   Session(SessionId id, SessionContext context,
           EventReporter* event_reporter = EventReporter::Default(),
           ErrorReporter* error_reporter = ErrorReporter::Default(),
-          inspect::Node inspect_node = inspect::Node());
+          inspect_deprecated::Node inspect_node = inspect_deprecated::Node());
   virtual ~Session();
 
   // Apply the operation to the current session state.  Return true if
@@ -174,11 +174,11 @@ class Session {
   uint64_t scheduled_update_count_ = 0;
   uint64_t applied_update_count_ = 0;
 
-  inspect::Node inspect_node_;
-  inspect::UIntMetric inspect_resource_count_;
-  inspect::UIntMetric inspect_last_applied_target_presentation_time_;
-  inspect::UIntMetric inspect_last_applied_requested_presentation_time_;
-  inspect::UIntMetric inspect_last_requested_presentation_time_;
+  inspect_deprecated::Node inspect_node_;
+  inspect_deprecated::UIntMetric inspect_resource_count_;
+  inspect_deprecated::UIntMetric inspect_last_applied_target_presentation_time_;
+  inspect_deprecated::UIntMetric inspect_last_applied_requested_presentation_time_;
+  inspect_deprecated::UIntMetric inspect_last_requested_presentation_time_;
 
   fxl::WeakPtrFactory<Session> weak_factory_;  // must be last
 };

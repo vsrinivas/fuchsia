@@ -10,9 +10,9 @@
 #include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
 #include <lib/gtest/real_loop_fixture.h>
-#include <lib/inspect/inspect.h>
-#include <lib/inspect/reader.h>
-#include <lib/inspect/testing/inspect.h>
+#include <lib/inspect_deprecated/inspect.h>
+#include <lib/inspect_deprecated/reader.h>
+#include <lib/inspect_deprecated/testing/inspect.h>
 #include <lib/ui/gfx/tests/mocks.h>
 
 #include <thread>
@@ -25,13 +25,13 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-using inspect::Node;
-using inspect::ObjectHierarchy;
+using inspect_deprecated::Node;
+using inspect_deprecated::ObjectHierarchy;
 using testing::AllOf;
 using testing::IsEmpty;
 using testing::SizeIs;
 using testing::UnorderedElementsAre;
-using namespace inspect::testing;
+using namespace inspect_deprecated::testing;
 
 constexpr char kFrameStatsNodeName[] = "FrameStatsTest";
 
@@ -67,11 +67,12 @@ class FrameStatsTest : public gtest::RealLoopFixture {
 
   // Helper function for test boiler plate.
   fit::result<fuchsia::inspect::Object> ReadInspectVmo() {
-    inspect::ObjectReader reader(std::move(client_));
+    inspect_deprecated::ObjectReader reader(std::move(client_));
     fit::result<fuchsia::inspect::Object> result;
     SchedulePromise(
         reader.OpenChild(kFrameStatsNodeName)
-            .and_then([](inspect::ObjectReader& child_reader) { return child_reader.Read(); })
+            .and_then(
+                [](inspect_deprecated::ObjectReader& child_reader) { return child_reader.Read(); })
             .then([&](fit::result<fuchsia::inspect::Object>& res) { result = std::move(res); }));
     RunLoopUntil([&] { return !!result; });
 
@@ -80,7 +81,7 @@ class FrameStatsTest : public gtest::RealLoopFixture {
 
  protected:
   std::shared_ptr<component::Object> object_;
-  inspect::Node root_object_;
+  inspect_deprecated::Node root_object_;
   fidl::InterfaceHandle<fuchsia::inspect::Inspect> client_;
 
  private:
@@ -94,7 +95,7 @@ TEST_F(FrameStatsTest, SmokeTest_TriggerLazyStringProperties) {
 
   fit::result<fuchsia::inspect::Object> result = ReadInspectVmo();
 
-  EXPECT_THAT(inspect::ReadFromFidlObject(result.take_value()),
+  EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(result.take_value()),
               NodeMatches(AllOf(NameMatches(kFrameStatsNodeName), MetricList(IsEmpty()),
                                 PropertyList(SizeIs(1)))));
 }
@@ -158,7 +159,7 @@ TEST_F(FrameStatsTest, SmokeTest_DummyFrameTimings) {
 
   fit::result<fuchsia::inspect::Object> result = ReadInspectVmo();
 
-  EXPECT_THAT(inspect::ReadFromFidlObject(result.take_value()),
+  EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(result.take_value()),
               NodeMatches(AllOf(NameMatches(kFrameStatsNodeName), MetricList(IsEmpty()),
                                 PropertyList(SizeIs(1)))));
 }

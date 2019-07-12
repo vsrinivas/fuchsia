@@ -7,7 +7,7 @@
 
 #include <fbl/ref_ptr.h>
 #include <lib/fit/function.h>
-#include <lib/inspect/inspect.h>
+#include <lib/inspect_deprecated/inspect.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <set>
@@ -57,7 +57,7 @@ class Engine : public FrameRenderer {
  public:
   Engine(sys::ComponentContext* component_context,
          const std::shared_ptr<FrameScheduler>& frame_scheduler, DisplayManager* display_manager,
-         escher::EscherWeakPtr escher, inspect::Node inspect_node);
+         escher::EscherWeakPtr escher, inspect_deprecated::Node inspect_node);
 
   // Only used for testing.
   Engine(sys::ComponentContext* component_context,
@@ -111,7 +111,7 @@ class Engine : public FrameRenderer {
   bool RenderFrame(const FrameTimingsPtr& frame, zx_time_t presentation_time) override;
 
  private:
-  // Initialize all inspect::Nodes, so that the Engine state can be observed.
+  // Initialize all inspect_deprecated::Nodes, so that the Engine state can be observed.
   void InitializeInspectObjects();
 
   // Takes care of cleanup between frames.
@@ -165,8 +165,8 @@ class Engine : public FrameRenderer {
 
   bool render_continuously_ = false;
 
-  inspect::Node inspect_node_;
-  inspect::LazyStringProperty inspect_scene_dump_;
+  inspect_deprecated::Node inspect_node_;
+  inspect_deprecated::LazyStringProperty inspect_scene_dump_;
 
   fxl::WeakPtrFactory<Engine> weak_factory_;  // must be last
 

@@ -12,7 +12,8 @@
 namespace scenic_impl {
 namespace gfx {
 
-FrameStats::FrameStats(inspect::Node inspect_node) : inspect_node_(std::move(inspect_node)) {
+FrameStats::FrameStats(inspect_deprecated::Node inspect_node)
+    : inspect_node_(std::move(inspect_node)) {
   inspect_frame_stats_dump_ = inspect_node_.CreateLazyStringProperty("Aggregate Stats", [this] {
     std::ostringstream output;
     output << std::endl;

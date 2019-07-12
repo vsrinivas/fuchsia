@@ -25,7 +25,7 @@ source_set("mocks") {
   public_deps = [
     ":util",
     "//garnet/lib/ui/gfx",
-    "//garnet/public/lib/inspect",
+    "//garnet/public/lib/inspect_deprecated",
   ]
 }
 
@@ -53,9 +53,9 @@ source_set("testing_deps") {
     "//garnet/public/lib/async_promise",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/inspect",
-    "//garnet/public/lib/inspect:reader",
-    "//garnet/public/lib/inspect/testing",
+    "//garnet/public/lib/inspect_deprecated",
+    "//garnet/public/lib/inspect_deprecated:reader",
+    "//garnet/public/lib/inspect_deprecated/testing",
     "//garnet/public/lib/ui/input/cpp",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.scenic",

@@ -21,7 +21,7 @@ executable("scenic") {
 
   deps = [
     "//garnet/bin/ui/scenic:base_deps",
-    "//garnet/public/lib/inspect",
+    "//garnet/public/lib/inspect_deprecated",
   ]
   defines = []
 

@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_SESSION_MANAGER_H_
 #define GARNET_LIB_UI_GFX_ENGINE_SESSION_MANAGER_H_
 
-#include <lib/inspect/inspect.h>
+#include <lib/inspect_deprecated/inspect.h>
 
 #include <unordered_map>
 
@@ -29,7 +29,7 @@ class SessionHandler;
 // particular presentation time.
 class SessionManager {
  public:
-  explicit SessionManager(inspect::Node inspect_node = inspect::Node());
+  explicit SessionManager(inspect_deprecated::Node inspect_node = inspect_deprecated::Node());
 
   virtual ~SessionManager() = default;
 
@@ -61,7 +61,7 @@ class SessionManager {
   std::unordered_map<SessionId, SessionHandler*> session_handlers_;
   size_t session_count_ = 0;
 
-  inspect::Node inspect_node_;
+  inspect_deprecated::Node inspect_node_;
 };
 
 }  // namespace gfx

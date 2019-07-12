@@ -221,7 +221,7 @@ source_set("gfx") {
     ":object_linker",
     "//garnet/lib/ui/gfx:validate_eventpair",
     "//garnet/lib/ui/scenic/util",
-    "//garnet/public/lib/inspect",
+    "//garnet/public/lib/inspect_deprecated",
     "//garnet/public/lib/ui/scenic/cpp",
     "//src/ui/lib/escher/util:check_vulkan_support",
     "//zircon/public/fidl/fuchsia-sysmem",
@@ -294,7 +294,7 @@ source_set("frame_scheduler") {
   deps = [
     ":display",
     ":util",
-    "//garnet/public/lib/inspect",
+    "//garnet/public/lib/inspect_deprecated",
     "//sdk/fidl/fuchsia.images",
     "//src/lib/fxl",
 

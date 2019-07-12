@@ -37,7 +37,7 @@ namespace {
 }  // anonymous namespace
 
 Session::Session(SessionId id, SessionContext session_context, EventReporter* event_reporter,
-                 ErrorReporter* error_reporter, inspect::Node inspect_node)
+                 ErrorReporter* error_reporter, inspect_deprecated::Node inspect_node)
     : id_(id),
       error_reporter_(error_reporter),
       event_reporter_(event_reporter),

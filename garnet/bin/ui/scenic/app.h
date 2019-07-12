@@ -15,7 +15,7 @@ namespace scenic_impl {
 
 class App {
  public:
-  explicit App(sys::ComponentContext* app_context, inspect::Node inspect_node,
+  explicit App(sys::ComponentContext* app_context, inspect_deprecated::Node inspect_node,
                fit::closure quit_callback);
 
  private:

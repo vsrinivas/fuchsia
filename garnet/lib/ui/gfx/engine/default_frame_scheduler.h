@@ -7,7 +7,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
-#include <lib/inspect/inspect.h>
+#include <lib/inspect_deprecated/inspect.h>
 #include <lib/zx/time.h>
 
 #include <queue>
@@ -28,8 +28,9 @@ class Display;
 // scheduler should be added to it as well.
 class DefaultFrameScheduler : public FrameScheduler {
  public:
-  explicit DefaultFrameScheduler(const Display* display, std::unique_ptr<FramePredictor> predictor,
-                                 inspect::Node inspect_node = inspect::Node());
+  explicit DefaultFrameScheduler(
+      const Display* display, std::unique_ptr<FramePredictor> predictor,
+      inspect_deprecated::Node inspect_node = inspect_deprecated::Node());
   ~DefaultFrameScheduler();
 
   // |FrameScheduler|
@@ -169,10 +170,10 @@ class DefaultFrameScheduler : public FrameScheduler {
   async::TaskMethod<DefaultFrameScheduler, &DefaultFrameScheduler::MaybeRenderFrame>
       frame_render_task_{this};
 
-  inspect::Node inspect_node_;
-  inspect::UIntMetric inspect_frame_number_;
-  inspect::UIntMetric inspect_last_successful_update_start_time_;
-  inspect::UIntMetric inspect_last_successful_render_start_time_;
+  inspect_deprecated::Node inspect_node_;
+  inspect_deprecated::UIntMetric inspect_frame_number_;
+  inspect_deprecated::UIntMetric inspect_last_successful_update_start_time_;
+  inspect_deprecated::UIntMetric inspect_last_successful_render_start_time_;
 
   FrameStats stats_;
 

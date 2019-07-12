@@ -14,7 +14,8 @@ namespace gfx {
 
 SessionHandler::SessionHandler(CommandDispatcherContext dispatcher_context,
                                SessionContext session_context, EventReporter* event_reporter,
-                               ErrorReporter* error_reporter, inspect::Node inspect_object)
+                               ErrorReporter* error_reporter,
+                               inspect_deprecated::Node inspect_object)
     : TempSessionDelegate(std::move(dispatcher_context)),
 
       session_(std::make_unique<Session>(command_dispatcher_context()->session_id(),

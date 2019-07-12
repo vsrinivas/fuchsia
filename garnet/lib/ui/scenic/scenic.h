@@ -7,7 +7,7 @@
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <lib/inspect/inspect.h>
+#include <lib/inspect_deprecated/inspect.h>
 
 #include <set>
 
@@ -25,7 +25,7 @@ class Clock;
 //   - provide a host environment for Services
 class Scenic : public fuchsia::ui::scenic::Scenic {
  public:
-  explicit Scenic(sys::ComponentContext* app_context, inspect::Node inspect_node,
+  explicit Scenic(sys::ComponentContext* app_context, inspect_deprecated::Node inspect_node,
                   fit::closure quit_callback);
   ~Scenic();
 
@@ -71,7 +71,7 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
 
   sys::ComponentContext* const app_context_;
   fit::closure quit_callback_;
-  inspect::Node inspect_node_;
+  inspect_deprecated::Node inspect_node_;
 
   // Registered systems, indexed by their TypeId. These slots could be null,
   // indicating the System is not available or supported.

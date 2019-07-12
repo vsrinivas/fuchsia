@@ -32,7 +32,7 @@ namespace gfx {
 Engine::Engine(sys::ComponentContext* component_context,
                const std::shared_ptr<FrameScheduler>& frame_scheduler,
                DisplayManager* display_manager, escher::EscherWeakPtr weak_escher,
-               inspect::Node inspect_node)
+               inspect_deprecated::Node inspect_node)
     : display_manager_(display_manager),
       escher_(std::move(weak_escher)),
       engine_renderer_(std::make_unique<EngineRenderer>(

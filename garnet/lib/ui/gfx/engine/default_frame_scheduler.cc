@@ -20,7 +20,7 @@ namespace gfx {
 
 DefaultFrameScheduler::DefaultFrameScheduler(const Display* display,
                                              std::unique_ptr<FramePredictor> predictor,
-                                             inspect::Node inspect_node)
+                                             inspect_deprecated::Node inspect_node)
     : dispatcher_(async_get_default_dispatcher()),
       display_(display),
       frame_predictor_(std::move(predictor)),
