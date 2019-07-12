@@ -5,7 +5,6 @@
 #define SRC_DEVELOPER_CRASHPAD_AGENT_CRASHPAD_AGENT_H_
 
 #include <fuchsia/crash/cpp/fidl.h>
-#include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/async_promise/executor.h>
@@ -16,13 +15,11 @@
 #include <lib/zx/thread.h>
 #include <stdint.h>
 
-#include <map>
 #include <string>
 #include <utility>
 
 #include "src/developer/crashpad_agent/config.h"
 #include "src/developer/crashpad_agent/crash_server.h"
-#include "src/developer/crashpad_agent/feedback_data_provider_ptr.h"
 #include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/util/misc/uuid.h"
@@ -64,10 +61,6 @@ class CrashpadAgent : public Analyzer {
                                                ManagedRuntimeException exception);
   fit::promise<void> OnKernelPanicCrashLog(fuchsia::mem::Buffer crash_log);
 
-  // Makes a new connection to fuchsia.feedback.DataProvider and requests asynchronously the
-  // feedback data.
-  fit::promise<fuchsia::feedback::Data> GetFeedbackData();
-
   // Uploads local crash report of ID |local_report_id|, attaching either the passed |annotations|
   // or reading the annotations from its minidump.
   //
@@ -87,9 +80,6 @@ class CrashpadAgent : public Analyzer {
   const Config config_;
   const std::unique_ptr<crashpad::CrashReportDatabase> database_;
   const std::unique_ptr<CrashServer> crash_server_;
-
-  uint64_t next_feedback_data_provider_id_ = 0;
-  std::map<uint64_t, std::unique_ptr<FeedbackDataProvider>> feedback_data_providers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashpadAgent);
 };

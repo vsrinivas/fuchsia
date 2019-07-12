@@ -14,7 +14,6 @@
 #include <memory>
 
 #include "src/developer/feedback_agent/config.h"
-#include "src/developer/feedback_agent/scenic_ptr.h"
 
 namespace fuchsia {
 namespace feedback {
@@ -41,9 +40,6 @@ class DataProviderImpl : public DataProvider {
   async::Executor executor_;
   const std::shared_ptr<::sys::ServiceDirectory> services_;
   const Config config_;
-
-  uint64_t next_scenic_id_ = 0;
-  std::map<uint64_t, std::unique_ptr<Scenic>> scenics_;
 };
 
 }  // namespace feedback

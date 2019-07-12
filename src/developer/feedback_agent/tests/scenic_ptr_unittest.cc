@@ -13,6 +13,7 @@
 #include <zircon/errors.h>
 
 #include <memory>
+#include <vector>
 
 #include "src/developer/feedback_agent/tests/stub_scenic.h"
 #include "src/lib/fxl/logging.h"
@@ -27,9 +28,9 @@ using fuchsia::ui::scenic::ScreenshotData;
 
 constexpr bool kSuccess = true;
 
-class ScenicTest : public gtest::RealLoopFixture {
+class TakeScreenshotTest : public gtest::RealLoopFixture {
  public:
-  ScenicTest() : executor_(dispatcher()), service_directory_provider_(dispatcher()) {}
+  TakeScreenshotTest() : executor_(dispatcher()), service_directory_provider_(dispatcher()) {}
 
  protected:
   void ResetScenic(std::unique_ptr<StubScenic> stub_scenic) {
@@ -40,10 +41,11 @@ class ScenicTest : public gtest::RealLoopFixture {
   }
 
   fit::result<ScreenshotData> TakeScreenshot(const zx::duration timeout = zx::sec(1)) {
-    Scenic scenic(dispatcher(), service_directory_provider_.service_directory());
     fit::result<ScreenshotData> result;
-    executor_.schedule_task(scenic.TakeScreenshot(timeout).then(
-        [&result](fit::result<ScreenshotData>& res) { result = std::move(res); }));
+    executor_.schedule_task(
+        fuchsia::feedback::TakeScreenshot(dispatcher(),
+                                          service_directory_provider_.service_directory(), timeout)
+            .then([&result](fit::result<ScreenshotData>& res) { result = std::move(res); }));
     RunLoopUntil([&result] { return !!result; });
     return result;
   }
@@ -55,7 +57,7 @@ class ScenicTest : public gtest::RealLoopFixture {
   std::unique_ptr<StubScenic> stub_scenic_;
 };
 
-TEST_F(ScenicTest, Succeed_CheckerboardScreenshot) {
+TEST_F(TakeScreenshotTest, Succeed_CheckerboardScreenshot) {
   const size_t image_dim_in_px = 100;
   std::vector<TakeScreenshotResponse> scenic_responses;
   scenic_responses.emplace_back(CreateCheckerboardScreenshot(image_dim_in_px), kSuccess);
@@ -74,7 +76,7 @@ TEST_F(ScenicTest, Succeed_CheckerboardScreenshot) {
   EXPECT_EQ(screenshot.info.pixel_format, fuchsia::images::PixelFormat::BGRA_8);
 }
 
-TEST_F(ScenicTest, Fail_ScenicNotAvailable) {
+TEST_F(TakeScreenshotTest, Fail_ScenicNotAvailable) {
   ResetScenic(nullptr);
 
   fit::result<ScreenshotData> result = TakeScreenshot();
@@ -82,7 +84,7 @@ TEST_F(ScenicTest, Fail_ScenicNotAvailable) {
   ASSERT_TRUE(result.is_error());
 }
 
-TEST_F(ScenicTest, Fail_ScenicReturningFalse) {
+TEST_F(TakeScreenshotTest, Fail_ScenicReturningFalse) {
   ResetScenic(std::make_unique<StubScenicAlwaysReturnsFalse>());
 
   fit::result<ScreenshotData> result = TakeScreenshot();
@@ -90,7 +92,7 @@ TEST_F(ScenicTest, Fail_ScenicReturningFalse) {
   ASSERT_TRUE(result.is_error());
 }
 
-TEST_F(ScenicTest, Fail_ScenicClosesConnection) {
+TEST_F(TakeScreenshotTest, Fail_ScenicClosesConnection) {
   ResetScenic(std::make_unique<StubScenicClosesConnection>());
 
   fit::result<ScreenshotData> result = TakeScreenshot();
@@ -98,7 +100,7 @@ TEST_F(ScenicTest, Fail_ScenicClosesConnection) {
   ASSERT_TRUE(result.is_error());
 }
 
-TEST_F(ScenicTest, Fail_ScenicNeverReturns) {
+TEST_F(TakeScreenshotTest, Fail_ScenicNeverReturns) {
   ResetScenic(std::make_unique<StubScenicNeverReturns>());
 
   fit::result<ScreenshotData> result = TakeScreenshot(/*timeout=*/zx::msec(10));

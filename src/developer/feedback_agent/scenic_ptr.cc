@@ -11,6 +11,18 @@
 namespace fuchsia {
 namespace feedback {
 
+fit::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot(
+    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
+    zx::duration timeout) {
+  std::unique_ptr<Scenic> scenic = std::make_unique<Scenic>(dispatcher, services);
+
+  // We move |scenic| in a subsequent chained promise to guarantee its lifetime.
+  return scenic->TakeScreenshot(timeout).then(
+      [scenic = std::move(scenic)](fit::result<fuchsia::ui::scenic::ScreenshotData>& result) {
+        return std::move(result);
+      });
+}
+
 Scenic::Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services)
     : dispatcher_(dispatcher), services_(services) {}
 

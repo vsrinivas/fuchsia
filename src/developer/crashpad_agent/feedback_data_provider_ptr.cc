@@ -11,6 +11,18 @@
 namespace fuchsia {
 namespace crash {
 
+fit::promise<fuchsia::feedback::Data> GetFeedbackData(
+    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
+    zx::duration timeout) {
+  std::unique_ptr<FeedbackDataProvider> feedback_data_provider =
+      std::make_unique<FeedbackDataProvider>(dispatcher, services);
+
+  // We move |feedback_data_provider| in a subsequent chained promise to guarantee its lifetime.
+  return feedback_data_provider->GetData(timeout).then(
+      [feedback_data_provider = std::move(feedback_data_provider)](
+          fit::result<fuchsia::feedback::Data>& result) { return std::move(result); });
+}
+
 FeedbackDataProvider::FeedbackDataProvider(async_dispatcher_t* dispatcher,
                                            std::shared_ptr<::sys::ServiceDirectory> services)
     : dispatcher_(dispatcher), services_(services) {}
@@ -38,8 +50,7 @@ fit::promise<fuchsia::feedback::Data> FeedbackDataProvider::GetData(zx::duration
       dispatcher_, [cb = done_after_timeout_.callback()] { cb(); }, timeout);
   if (post_status != ZX_OK) {
     FX_PLOGS(ERROR, post_status) << "Failed to post delayed task";
-    FX_LOGS(ERROR) << "Skipping Feedback data collection as it is not safe "
-                      "without a timeout";
+    FX_LOGS(ERROR) << "Skipping Feedback data collection as it is not safe without a timeout";
     return fit::make_result_promise<fuchsia::feedback::Data>(fit::error());
   }
 

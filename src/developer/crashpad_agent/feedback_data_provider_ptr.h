@@ -19,6 +19,13 @@
 namespace fuchsia {
 namespace crash {
 
+// Retrieves the feedback data.
+//
+// fuchsia::feedback::DataProvider is expected to be in |services|.
+fit::promise<fuchsia::feedback::Data> GetFeedbackData(
+    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
+    zx::duration timeout);
+
 // Wraps around fuchsia::feedback::DataProviderPtr to handle establishing the connection, losing the
 // connection, waiting for the callback, enforcing a timeout, etc.
 class FeedbackDataProvider {

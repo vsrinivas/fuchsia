@@ -22,6 +22,7 @@
 
 #include "src/developer/crashpad_agent/config.h"
 #include "src/developer/crashpad_agent/crash_server.h"
+#include "src/developer/crashpad_agent/feedback_data_provider_ptr.h"
 #include "src/developer/crashpad_agent/report_annotations.h"
 #include "src/developer/crashpad_agent/report_attachments.h"
 #include "src/developer/crashpad_agent/scoped_unlink.h"
@@ -209,20 +210,6 @@ void CrashpadAgent::OnKernelPanicCrashLog(fuchsia::mem::Buffer crash_log,
   executor_.schedule_task(std::move(promise));
 }
 
-fit::promise<Data> CrashpadAgent::GetFeedbackData() {
-  const uint64_t id = next_feedback_data_provider_id_++;
-  feedback_data_providers_[id] = std::make_unique<FeedbackDataProvider>(dispatcher_, services_);
-  return feedback_data_providers_[id]
-      ->GetData(zx::msec(config_.feedback_data_collection_timeout_in_milliseconds))
-      .then([this, id](fit::result<Data>& result) {
-        // We close the connection to the feedback data provider and then forward the result.
-        if (feedback_data_providers_.erase(id) == 0) {
-          FX_LOGS(ERROR) << "No fuchsia.feedback.DataProvider connection to close with id " << id;
-        }
-        return std::move(result);
-      });
-}
-
 namespace {
 
 std::map<std::string, fuchsia::mem::Buffer> MakeAttachments(Data* feedback_data) {
@@ -242,46 +229,49 @@ fit::promise<void> CrashpadAgent::OnNativeException(zx::process process, zx::thr
   FX_LOGS(INFO) << "generating crash report for exception thrown by " << process_name;
 
   // Prepare annotations and attachments.
-  return GetFeedbackData().then([this, process = std::move(process), thread = std::move(thread),
-                                 process_name](
-                                    fit::result<Data>& result) mutable -> fit::result<void> {
-    Data feedback_data;
-    if (result.is_ok()) {
-      feedback_data = result.take_value();
-    }
-    const std::map<std::string, std::string> annotations =
-        MakeDefaultAnnotations(feedback_data, process_name);
-    const std::map<std::string, fuchsia::mem::Buffer> attachments = MakeAttachments(&feedback_data);
+  return GetFeedbackData(dispatcher_, services_,
+                         zx::msec(config_.feedback_data_collection_timeout_in_milliseconds))
+      .then([this, process = std::move(process), thread = std::move(thread),
+             process_name](fit::result<Data>& result) mutable -> fit::result<void> {
+        Data feedback_data;
+        if (result.is_ok()) {
+          feedback_data = result.take_value();
+        }
+        const std::map<std::string, std::string> annotations =
+            MakeDefaultAnnotations(feedback_data, process_name);
+        const std::map<std::string, fuchsia::mem::Buffer> attachments =
+            MakeAttachments(&feedback_data);
 
-    // Set minidump and create local crash report.
-    //   * The annotations will be stored in the minidump of the report and augmented with modules'
-    //     annotations.
-    //   * The attachments will be stored in the report.
-    // We don't pass an upload_thread so we can do the upload ourselves synchronously.
-    crashpad::CrashReportExceptionHandler exception_handler(
-        database_.get(), /*upload_thread=*/nullptr, &annotations, &attachments,
-        /*user_stream_data_sources=*/nullptr);
-    crashpad::UUID local_report_id;
-    if (!exception_handler.HandleException(process, thread, &local_report_id)) {
-      // TODO(DX-1659): remove bogus call (no report has been created so attempting to skip its
-      // upload results in a failure) once we can test this code path.
-      database_->SkipReportUpload(local_report_id,
-                                  crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
-      // TODO(DX-1654): attempt to generate a crash report without a minidump instead of just
-      // bailing.
-      FX_LOGS(ERROR) << "error writing local crash report";
-      return fit::error();
-    }
+        // Set minidump and create local crash report.
+        //   * The annotations will be stored in the minidump of the report and augmented with
+        //   modules'
+        //     annotations.
+        //   * The attachments will be stored in the report.
+        // We don't pass an upload_thread so we can do the upload ourselves synchronously.
+        crashpad::CrashReportExceptionHandler exception_handler(
+            database_.get(), /*upload_thread=*/nullptr, &annotations, &attachments,
+            /*user_stream_data_sources=*/nullptr);
+        crashpad::UUID local_report_id;
+        if (!exception_handler.HandleException(process, thread, &local_report_id)) {
+          // TODO(DX-1659): remove bogus call (no report has been created so attempting to skip its
+          // upload results in a failure) once we can test this code path.
+          database_->SkipReportUpload(
+              local_report_id, crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
+          // TODO(DX-1654): attempt to generate a crash report without a minidump instead of just
+          // bailing.
+          FX_LOGS(ERROR) << "error writing local crash report";
+          return fit::error();
+        }
 
-    // For userspace, we read back the annotations from the minidump instead of passing them as
-    // argument like for kernel crashes because the Crashpad handler augmented them with the
-    // modules' annotations.
-    if (!UploadReport(local_report_id, /*annotations=*/nullptr,
-                      /*read_annotations_from_minidump=*/true)) {
-      return fit::error();
-    }
-    return fit::ok();
-  });
+        // For userspace, we read back the annotations from the minidump instead of passing them as
+        // argument like for kernel crashes because the Crashpad handler augmented them with the
+        // modules' annotations.
+        if (!UploadReport(local_report_id, /*annotations=*/nullptr,
+                          /*read_annotations_from_minidump=*/true)) {
+          return fit::error();
+        }
+        return fit::ok();
+      });
 }
 
 fit::promise<void> CrashpadAgent::OnManagedRuntimeException(std::string component_url,
@@ -298,9 +288,10 @@ fit::promise<void> CrashpadAgent::OnManagedRuntimeException(std::string componen
   }
 
   // Prepare annotations and attachments.
-  return GetFeedbackData().then(
-      [this, component_url, exception = std::move(exception),
-       report = std::move(report)](fit::result<Data>& result) mutable -> fit::result<void> {
+  return GetFeedbackData(dispatcher_, services_,
+                         zx::msec(config_.feedback_data_collection_timeout_in_milliseconds))
+      .then([this, component_url, exception = std::move(exception),
+             report = std::move(report)](fit::result<Data>& result) mutable -> fit::result<void> {
         Data feedback_data;
         if (result.is_ok()) {
           feedback_data = result.take_value();
@@ -339,9 +330,10 @@ fit::promise<void> CrashpadAgent::OnKernelPanicCrashLog(fuchsia::mem::Buffer cra
   }
 
   // Prepare annotations and attachments.
-  return GetFeedbackData().then(
-      [this, crash_log = std::move(crash_log),
-       report = std::move(report)](fit::result<Data>& result) mutable -> fit::result<void> {
+  return GetFeedbackData(dispatcher_, services_,
+                         zx::msec(config_.feedback_data_collection_timeout_in_milliseconds))
+      .then([this, crash_log = std::move(crash_log),
+             report = std::move(report)](fit::result<Data>& result) mutable -> fit::result<void> {
         Data feedback_data;
         if (result.is_ok()) {
           feedback_data = result.take_value();
