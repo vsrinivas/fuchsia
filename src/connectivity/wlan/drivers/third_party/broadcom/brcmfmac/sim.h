@@ -26,6 +26,7 @@
 struct brcmf_simdev {
     struct brcmf_device dev = {};
     struct brcmf_bus bus_if;
+    struct brcmf_mp_device* settings;
 
     std::unique_ptr<SimFirmware> sim_fw;
 };

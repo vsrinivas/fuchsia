@@ -3474,7 +3474,7 @@ static zx_status_t brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
     }
 
     sdiodev->settings =
-        brcmf_get_module_param(&sdiodev->dev, BRCMF_BUSTYPE_SDIO, bus->ci->chip, bus->ci->chiprev);
+        brcmf_get_module_param(&sdiodev->dev, BRCMF_BUS_TYPE_SDIO, bus->ci->chip, bus->ci->chiprev);
     if (!sdiodev->settings) {
         BRCMF_ERR("Failed to get device parameters\n");
 	err = ZX_ERR_INTERNAL;

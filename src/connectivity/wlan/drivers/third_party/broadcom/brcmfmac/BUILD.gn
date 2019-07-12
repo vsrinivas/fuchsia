@@ -92,7 +92,6 @@ source_set("core") {
     "feature.h",
     "fweh.cc",
     "fwil.cc",
-    "fwil.h",
     "fwsignal.cc",
     "fwsignal.h",
     "of.cc",
@@ -116,6 +115,7 @@ source_set("core") {
     "core.h",
     "device.h",
     "fweh.h",
+    "fwil.h",
     "fwil_types.h",
     "soc.h",
   ]
@@ -192,7 +192,7 @@ config("config_sim") {
 
 source_set("sim") {
   sources = [
-    "sim-fw/chip_info.cc",
+    "sim-fw/sim_fw.cc",
     "sim.cc",
   ]
   public = [
@@ -202,6 +202,7 @@ source_set("sim") {
   deps = [
     ":core",
     ":debug",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//zircon/public/lib/ddk",
     "//zircon/system/public",
   ]

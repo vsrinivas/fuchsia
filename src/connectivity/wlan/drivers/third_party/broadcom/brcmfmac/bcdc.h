@@ -20,6 +20,14 @@
 #include "device.h"
 #include "netbuf.h"
 
+struct brcmf_proto_bcdc_dcmd {
+    uint32_t cmd;       /* dongle command value */
+    uint32_t len;       /* lower 16: output buflen;
+                         * upper 16: input buflen (excludes header) */
+    uint32_t flags;     /* flag defns given below */
+    int32_t status;     /* status code returned from the device */
+};
+
 zx_status_t brcmf_proto_bcdc_attach(struct brcmf_pub* drvr);
 void brcmf_proto_bcdc_detach(struct brcmf_pub* drvr);
 void brcmf_proto_bcdc_txflowblock(struct brcmf_device* dev, bool state);

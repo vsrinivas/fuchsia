@@ -19,9 +19,25 @@
 
 #include <stdint.h>
 
+#include <sys/types.h>
+#include <zircon/types.h>
+
 class SimFirmware {
  public:
-  void getChipInfo(uint32_t* chip, uint32_t* chiprev);
+  void GetChipInfo(uint32_t* chip, uint32_t* chiprev);
+
+  // Bus operations
+  zx_status_t BusPreinit();
+  void BusStop();
+  zx_status_t BusTxData(struct brcmf_netbuf* netbuf);
+  zx_status_t BusTxCtl(unsigned char* msg, uint len);
+  zx_status_t BusRxCtl(unsigned char* msg, uint len, int* rxlen_out);
+  struct pktq* BusGetTxQueue();
+  void BusWowlConfig(bool enabled);
+  size_t BusGetRamsize();
+  zx_status_t BusGetMemdump(void* data, size_t len);
+  zx_status_t BusGetFwName(uint chip, uint chiprev, unsigned char* fw_name);
+  zx_status_t BusGetBootloaderMacAddr(uint8_t* mac_addr);
 };
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_FW_SIM_FW_H_

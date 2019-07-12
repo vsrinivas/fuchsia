@@ -268,8 +268,6 @@ enum nl80211_key_type {
     NL80211_KEYTYPE_PAIRWISE,
 };
 
-enum brcmf_bus_type { BRCMF_BUSTYPE_SDIO, BRCMF_BUSTYPE_USB, BRCMF_BUSTYPE_PCIE };
-
 #define TP_PROTO(args...) args
 #define MODULE_FIRMWARE(a)
 #define MODULE_AUTHOR(a)

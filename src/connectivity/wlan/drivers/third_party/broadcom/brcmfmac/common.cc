@@ -444,7 +444,7 @@ struct brcmf_mp_device* brcmf_get_module_param(struct brcmf_device* dev,
     settings->ignore_probe_fail = !!brcmf_ignore_probe_fail;
 #endif  // !defined(NDEBUG)
 
-    if (bus_type == BRCMF_BUSTYPE_SDIO) {
+    if (bus_type == BRCMF_BUS_TYPE_SDIO) {
         // TODO(cphoenix): Do we really want to use default? (If so, delete =0 lines because calloc)
         settings->bus.sdio.sd_sgentry_align = 0; // Use default
         settings->bus.sdio.sd_head_align = 0; // Use default
@@ -476,7 +476,7 @@ struct brcmfmac_pd_device {
                     ((device_pd->rev == (int32_t)chiprev) || (device_pd->rev == -1))) {
                 BRCMF_DBG(INFO, "Platform data for device found\n");
                 settings->country_codes = device_pd->country_codes;
-                if (device_pd->bus_type == BRCMF_BUSTYPE_SDIO) {
+                if (device_pd->bus_type == BRCMF_BUS_TYPE_SDIO) {
                     memcpy(&settings->bus.sdio, &device_pd->bus.sdio, sizeof(settings->bus.sdio));
                 }
                 found = true;
