@@ -12,6 +12,7 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
+import 'package:pedantic/pedantic.dart';
 
 import 'dump.dart';
 import 'exceptions.dart';
@@ -124,9 +125,7 @@ class Sl4f {
       // TODO(mesch): It seems as if we could just await this ssh()
       // call, but if we do this, we hang. Observed in
       // screen_navigation_test on workstation.
-      //
-      // ignore: unawaited_futures
-      ssh('run -d $_sl4fComponentUrl');
+      unawaited(ssh('run -d $_sl4fComponentUrl'));
 
       if (await _isRunning(tries: 3, delay: Duration(seconds: 2))) {
         _log.info('SL4F has started.');
@@ -253,25 +252,33 @@ class Sl4f {
 
   Future<void> _dumpDiagnostic(String cmd, String dumpName, Dump dump) async {
     final proc = await sshProcess(cmd);
-    if (await proc.exitCode != 0) {
-      _log
-        ..warning('$cmd; exit code: $exitCode')
-        ..warning(await systemEncoding.decodeStream(proc.stdout))
-        ..warning(await systemEncoding.decodeStream(proc.stderr));
-      return null;
-    }
+
+    unawaited(proc.stdin.close());
+
     final sink = dump.openForWrite(dumpName, 'txt');
-    await Future.wait([
-      sink.addStream(proc.stdout).then((_) => sink
-        ..flush()
-        ..close()),
-      proc.stdin.close()
-    ]).timeout(_diagnosticTimeout, onTimeout: () async {
+    Future<dynamic> dumpFuture;
+    if (sink != null) {
+      dumpFuture = Future(() async {
+        await sink.addStream(proc.stdout);
+        await sink.flush();
+        await sink.close();
+      });
+    }
+
+    final exitCode =
+        await proc.exitCode.timeout(_diagnosticTimeout, onTimeout: () {
       _log.warning('$cmd; did not complete after $_diagnosticTimeout');
       proc.kill();
-      await sink.close();
-      return null;
+      return 0;
     });
+
+    if (exitCode != 0) {
+      _log
+        ..warning('$cmd; exit code: $exitCode')
+        ..warning(await systemEncoding.decodeStream(proc.stderr));
+    }
+
+    await dumpFuture; // (maybe null)
   }
 
   /// Sends an empty http request to the server to verify if it's listening on
