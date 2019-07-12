@@ -872,6 +872,9 @@ zx_status_t devhost_get_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t t
     }
     return call_status;
   }
+  if (length > buflen) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
 
   memcpy(buf, data, length);
   if (actual != nullptr) {

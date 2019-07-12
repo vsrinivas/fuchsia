@@ -65,9 +65,26 @@ static bool test_publish_metadata(void) {
     END_TEST;
 }
 
+static bool test_get_metadata_would_overflow(void) {
+    char buffer[32] = {};
+    zx_status_t status;
+    size_t actual;
+
+    BEGIN_TEST;
+    status = device_publish_metadata(ddk_test_dev, "/dev/test/test/ddk-test", 2, TEST_STRING,
+                                     strlen(TEST_STRING) + 1);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    status = device_get_metadata(ddk_test_dev, 2, buffer, 1, &actual);
+    ASSERT_EQ(status, ZX_ERR_BUFFER_TOO_SMALL, "device_get_metadata overflowed buffer");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(metadata_tests)
 RUN_TEST(test_add_metadata)
 RUN_TEST(test_publish_metadata)
+RUN_TEST(test_get_metadata_would_overflow)
 END_TEST_CASE(metadata_tests)
 
 struct test_case_element* test_case_ddk_metadata = TEST_CASE_ELEMENT(metadata_tests);
