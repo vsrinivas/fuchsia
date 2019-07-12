@@ -90,6 +90,8 @@ static const gpio_pin_t gpio_pins[] = {
     { GPIO_VOLUME_DOWN },
     { GPIO_VOLUME_BOTH },
     { GPIO_MIC_PRIVACY },
+    // For SDIO.
+    { GPIO_SD_EMMC_RESET },
 };
 
 static const pbus_metadata_t gpio_metadata[] = {

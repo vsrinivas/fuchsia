@@ -8,8 +8,8 @@ driver("aml-sd-emmc") {
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.block",
+    "$zx/system/banjo/ddk.protocol.composite",
     "$zx/system/banjo/ddk.protocol.gpio",
-    "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.sdmmc",
     "$zx/system/dev/lib/amlogic",
@@ -33,8 +33,8 @@ test("aml-sd-emmc-test") {
     "aml-sd-emmc.cc",
   ]
   deps = [
+    "$zx/system/banjo/ddk.protocol.composite",
     "$zx/system/banjo/ddk.protocol.gpio",
-    "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.sdmmc",
     "$zx/system/dev/lib/amlogic",

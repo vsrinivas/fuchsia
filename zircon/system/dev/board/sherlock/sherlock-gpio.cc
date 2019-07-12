@@ -92,6 +92,10 @@ static const gpio_pin_t gpio_pins[] = {
     {GPIO_VOLUME_DOWN},
     {GPIO_VOLUME_BOTH},
     {GPIO_MIC_PRIVACY},
+    // For eMMC.
+    {T931_EMMC_RST},
+    // For SDIO.
+    {T931_WIFI_REG_ON},
 };
 
 static const pbus_metadata_t gpio_metadata[] = {

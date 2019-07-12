@@ -20,5 +20,6 @@ namespace astro {
 #define GPIO_VOLUME_DOWN        S905D2_GPIOZ(6)
 #define GPIO_VOLUME_BOTH        S905D2_GPIOAO(10)
 #define GPIO_MIC_PRIVACY        S905D2_GPIOZ(2)
+#define GPIO_SD_EMMC_RESET      S905D2_GPIOX(6)
 
 } // namespace astro

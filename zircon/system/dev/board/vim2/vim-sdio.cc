@@ -41,12 +41,6 @@ static const pbus_bti_t aml_sd_emmc_btis[] = {
     },
 };
 
-static const pbus_gpio_t aml_sd_emmc_gpios[] = {
-    {
-        .gpio = S912_GPIOX(6),
-    },
-};
-
 static aml_sd_emmc_config_t config = {
     .supports_dma = true,
     .min_freq = 400000,
@@ -82,8 +76,6 @@ static const pbus_dev_t aml_sd_emmc_dev = []() {
     dev.mmio_count = countof(aml_sd_emmc_mmios);
     dev.irq_list = aml_sd_emmc_irqs;
     dev.irq_count = countof(aml_sd_emmc_irqs);
-    dev.gpio_list = aml_sd_emmc_gpios;
-    dev.gpio_count = countof(aml_sd_emmc_gpios);
     dev.bti_list = aml_sd_emmc_btis;
     dev.bti_count = countof(aml_sd_emmc_btis);
     dev.metadata_list = aml_sd_emmc_metadata;
@@ -135,11 +127,24 @@ static const device_component_part_t debug_gpio_component[] = {
     { fbl::count_of(root_match), root_match },
     { fbl::count_of(debug_gpio_match), debug_gpio_match },
 };
-static const device_component_t wifi_composite[] = {
+static const device_component_t wifi_components[] = {
     { fbl::count_of(sdio_fn1_component), sdio_fn1_component },
     { fbl::count_of(sdio_fn2_component), sdio_fn2_component },
     { fbl::count_of(oob_gpio_component), oob_gpio_component },
     { fbl::count_of(debug_gpio_component), debug_gpio_component },
+};
+
+// Composite binding rules for SDIO.
+static const zx_bind_inst_t wifi_pwren_gpio_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_WIFI_PWREN),
+};
+static const device_component_part_t wifi_pwren_gpio_component[] = {
+    { fbl::count_of(root_match), root_match },
+    { fbl::count_of(wifi_pwren_gpio_match), wifi_pwren_gpio_match },
+};
+static const device_component_t sdio_components[] = {
+    { fbl::count_of(wifi_pwren_gpio_component), wifi_pwren_gpio_component },
 };
 
 zx_status_t Vim::SdioInit() {
@@ -153,7 +158,9 @@ zx_status_t Vim::SdioInit() {
     gpio_impl_.SetAltFunction(S912_WIFI_SDIO_CMD, S912_WIFI_SDIO_CMD_FN);
     gpio_impl_.SetAltFunction(S912_WIFI_SDIO_WAKE_HOST, S912_WIFI_SDIO_WAKE_HOST_FN);
 
-    if ((status = pbus_.DeviceAdd(&aml_sd_emmc_dev)) != ZX_OK) {
+    status = pbus_.CompositeDeviceAdd(&aml_sd_emmc_dev, sdio_components,
+                                      fbl::count_of(sdio_components), UINT32_MAX);
+    if (status != ZX_OK) {
         zxlogf(ERROR, "SdioInit could not add aml_sd_emmc_dev: %d\n", status);
         return status;
     }
@@ -165,8 +172,8 @@ zx_status_t Vim::SdioInit() {
         { BIND_PLATFORM_DEV_DID, 0, PDEV_DID_BCM_WIFI },
     };
 
-    status = DdkAddComposite("wifi", props, fbl::count_of(props), wifi_composite,
-                             fbl::count_of(wifi_composite), 0);
+    status = DdkAddComposite("wifi", props, fbl::count_of(props), wifi_components,
+                             fbl::count_of(wifi_components), 0);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: device_add_composite failed: %d\n", __func__, status);
         return status;

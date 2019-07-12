@@ -14,6 +14,7 @@
 #include <wifi/wifi-config.h>
 
 #include "astro.h"
+#include "astro-gpios.h"
 
 namespace astro {
 
@@ -53,12 +54,6 @@ static const pbus_bti_t sd_emmc_btis[] = {
     },
 };
 
-static const pbus_gpio_t sd_emmc_gpios[] = {
-    {
-        .gpio = S905D2_GPIOX(6),
-    },
-};
-
 static aml_sd_emmc_config_t config = {
     .supports_dma = true,
     .min_freq = 400000,
@@ -94,8 +89,6 @@ static const pbus_dev_t sd_emmc_dev = []() {
     dev.irq_count = countof(sd_emmc_irqs);
     dev.bti_list = sd_emmc_btis;
     dev.bti_count = countof(sd_emmc_btis);
-    dev.gpio_list = sd_emmc_gpios;
-    dev.gpio_count = countof(sd_emmc_gpios);
     dev.metadata_list = sd_emmc_metadata;
     dev.metadata_count = countof(sd_emmc_metadata);
     dev.boot_metadata_list = wifi_boot_metadata;
@@ -141,6 +134,19 @@ static const device_component_t wifi_composite[] = {
     { countof(sdio_fn1_component), sdio_fn1_component },
     { countof(sdio_fn2_component), sdio_fn2_component },
     { countof(oob_gpio_component), oob_gpio_component },
+};
+
+// Composite binding rules for SDIO.
+static const zx_bind_inst_t wifi_pwren_gpio_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SD_EMMC_RESET),
+};
+static const device_component_part_t wifi_pwren_gpio_component[] = {
+    { countof(root_match), root_match },
+    { countof(wifi_pwren_gpio_match), wifi_pwren_gpio_match },
+};
+static const device_component_t sdio_components[] = {
+    { countof(wifi_pwren_gpio_component), wifi_pwren_gpio_component },
 };
 
 zx_status_t Astro::SdEmmcConfigurePortB() {
@@ -229,8 +235,10 @@ zx_status_t Astro::SdioInit() {
 
     SdEmmcConfigurePortB();
 
-    if ((status = pbus_.DeviceAdd(&sd_emmc_dev)) != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd sd_emmc failed: %d\n",
+    status = pbus_.CompositeDeviceAdd(&sd_emmc_dev, sdio_components,
+                                      countof(sdio_components), UINT32_MAX);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: CompositeDeviceAdd sd_emmc failed: %d\n",
                __func__, status);
         return status;
     }
@@ -245,7 +253,7 @@ zx_status_t Astro::SdioInit() {
     status = DdkAddComposite("wifi", props, countof(props), wifi_composite,
                              countof(wifi_composite), 0);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd_composite failed: %d\n",
+        zxlogf(ERROR, "%s: DdkAddComposite failed: %d\n",
                __func__, status);
         return status;
     }

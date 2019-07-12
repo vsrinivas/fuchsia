@@ -53,12 +53,6 @@ constexpr pbus_bti_t sd_emmc_btis[] = {
     },
 };
 
-constexpr pbus_gpio_t sd_emmc_gpios[] = {
-    {
-        .gpio = T931_WIFI_REG_ON,
-    },
-};
-
 constexpr aml_sd_emmc_config_t sd_emmc_config = {
     .supports_dma = false,
     .min_freq = 500000,   // 500KHz
@@ -94,8 +88,6 @@ const pbus_dev_t sdio_dev = []() {
     dev.bti_count = countof(sd_emmc_btis);
     dev.irq_list = sd_emmc_irqs;
     dev.irq_count = countof(sd_emmc_irqs);
-    dev.gpio_list = sd_emmc_gpios,
-    dev.gpio_count = countof(sd_emmc_gpios);
     dev.metadata_list = sd_emmc_metadata;
     dev.metadata_count = countof(sd_emmc_metadata);
     dev.boot_metadata_list = wifi_boot_metadata;
@@ -141,6 +133,19 @@ constexpr device_component_t wifi_composite[] = {
     { fbl::count_of(sdio_fn1_component), sdio_fn1_component },
     { fbl::count_of(sdio_fn2_component), sdio_fn2_component },
     { fbl::count_of(oob_gpio_component), oob_gpio_component },
+};
+
+// Composite binding rules for SDIO.
+constexpr zx_bind_inst_t wifi_pwren_gpio_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, T931_WIFI_REG_ON),
+};
+constexpr device_component_part_t wifi_pwren_gpio_component[] = {
+    { fbl::count_of(root_match), root_match },
+    { fbl::count_of(wifi_pwren_gpio_match), wifi_pwren_gpio_match },
+};
+constexpr device_component_t sdio_components[] = {
+    { fbl::count_of(wifi_pwren_gpio_component), wifi_pwren_gpio_component },
 };
 
 } // namespace
@@ -202,9 +207,10 @@ zx_status_t Sherlock::SdioInit() {
         return status;
     }
 
-    status = pbus_.DeviceAdd(&sdio_dev);
+    status = pbus_.CompositeDeviceAdd(&sdio_dev, sdio_components,
+                                      fbl::count_of(sdio_components), UINT32_MAX);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd() error: %d\n", __func__, status);
+        zxlogf(ERROR, "%s: CompositeDeviceAdd() error: %d\n", __func__, status);
         return status;
     }
 

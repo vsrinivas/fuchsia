@@ -97,6 +97,10 @@ static const gpio_pin_t gpio_pins[] = {
     { GPIO_DISPLAY_HPD },
     // For gpio-light
     { GPIO_SYS_LED, },
+    // For eMMC.
+    { S912_EMMC_RST },
+    // For Wifi.
+    { GPIO_WIFI_PWREN },
 };
 
 static const pbus_metadata_t gpio_metadata[] = {

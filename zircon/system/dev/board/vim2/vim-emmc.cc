@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
@@ -40,12 +41,6 @@ static const pbus_bti_t emmc_btis[] = {
     },
 };
 
-static const pbus_gpio_t emmc_gpios[] = {
-    {
-        .gpio = S912_EMMC_RST,
-    },
-};
-
 static aml_sd_emmc_config_t config = {
     //As per AMlogic, on S912 chipset, HS400 mode can be operated at 125MHZ or low.
     .supports_dma = true,
@@ -68,6 +63,21 @@ static const pbus_boot_metadata_t emmc_boot_metadata[] = {
     },
 };
 
+static const zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+static const zx_bind_inst_t gpio_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, S912_EMMC_RST),
+};
+static const device_component_part_t gpio_component[] = {
+    { countof(root_match), root_match },
+    { countof(gpio_match), gpio_match },
+};
+static const device_component_t components[] = {
+    { countof(gpio_component), gpio_component },
+};
+
 zx_status_t Vim::EmmcInit() {
     zx_status_t status;
 
@@ -80,8 +90,6 @@ zx_status_t Vim::EmmcInit() {
     emmc_dev.mmio_count = countof(emmc_mmios);
     emmc_dev.irq_list = emmc_irqs;
     emmc_dev.irq_count = countof(emmc_irqs);
-    emmc_dev.gpio_list = emmc_gpios;
-    emmc_dev.gpio_count = countof(emmc_gpios);
     emmc_dev.bti_list = emmc_btis;
     emmc_dev.bti_count = countof(emmc_btis);
     emmc_dev.metadata_list = emmc_metadata;
@@ -103,7 +111,8 @@ zx_status_t Vim::EmmcInit() {
     gpio_impl_.SetAltFunction(S912_EMMC_CMD, S912_EMMC_CMD_FN);
     gpio_impl_.SetAltFunction(S912_EMMC_DS, S912_EMMC_DS_FN);
 
-    if ((status = pbus_.DeviceAdd(&emmc_dev)) != ZX_OK) {
+    status = pbus_.CompositeDeviceAdd(&emmc_dev, components, countof(components), UINT32_MAX);
+    if (status != ZX_OK) {
         zxlogf(ERROR, "SdEmmcInit could not add emmc_dev: %d\n", status);
         return status;
     }

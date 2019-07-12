@@ -53,6 +53,12 @@ protected:
     // Visible for tests
     zx_status_t Bind();
 private:
+    enum {
+        COMPONENT_PDEV,
+        COMPONENT_GPIO_RESET,
+        COMPONENT_COUNT,
+    };
+
     void DumpRegs();
     void DumpSdmmcStatus(uint32_t status) const;
     void DumpSdmmcCfg(uint32_t config) const;

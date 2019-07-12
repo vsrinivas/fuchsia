@@ -17,9 +17,9 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio.h>
 #include <lib/device-protocol/platform-device.h>
-#include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sdmmc.h>
+#include <ddktl/protocol/composite.h>
 #include <lib/device-protocol/pdev.h>
 
 #include <fbl/auto_call.h>
@@ -898,7 +898,22 @@ zx_status_t AmlSdEmmc::Bind() {
 zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
     zx_status_t status = ZX_OK;
 
-    ddk::PDev pdev(parent);
+    ddk::CompositeProtocolClient composite(parent);
+    if (!composite.is_valid()) {
+        zxlogf(ERROR, "AmlSdEmmc::Could not get composite protocol\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    zx_device_t* components[COMPONENT_COUNT];
+    size_t component_count;
+    composite.GetComponents(components, fbl::count_of(components), &component_count);
+    // Only pdev component is required.
+    if (component_count < 1) {
+        zxlogf(ERROR, "AmlSdEmmc: Could not get components\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    ddk::PDev pdev(components[COMPONENT_PDEV]);
     if (!pdev.is_valid()) {
         zxlogf(ERROR, "AmlSdEmmc::Create: Could not get pdev: %d\n", status);
         return ZX_ERR_NO_RESOURCES;
@@ -948,8 +963,8 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
     }
 
     ddk::GpioProtocolClient reset_gpio;
-    if (dev_info.gpio_count > 0) {
-        reset_gpio = pdev.GetGpio(0);
+    if (component_count > COMPONENT_GPIO_RESET) {
+        reset_gpio = components[COMPONENT_GPIO_RESET];
         if (!reset_gpio.is_valid()) {
             zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get GPIO\n");
             return ZX_ERR_NO_RESOURCES;
@@ -994,7 +1009,7 @@ static constexpr zx_driver_ops_t aml_sd_emmc_driver_ops = []() {
 } // namespace sdmmc
 
 ZIRCON_DRIVER_BEGIN(aml_sd_emmc, sdmmc::aml_sd_emmc_driver_ops, "zircon", "0.1", 5)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_SD_EMMC_A),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_SD_EMMC_B),

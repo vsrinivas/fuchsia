@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -39,12 +40,6 @@ constexpr pbus_bti_t emmc_btis[] = {
     {
         .iommu_index = 0,
         .bti_id = BTI_EMMC,
-    },
-};
-
-static const pbus_gpio_t emmc_gpios[] = {
-    {
-        .gpio = T931_EMMC_RST,
     },
 };
 
@@ -95,14 +90,27 @@ static pbus_dev_t emmc_dev = [](){
     dev.irq_count = countof(emmc_irqs);
     dev.bti_list = emmc_btis;
     dev.bti_count = countof(emmc_btis);
-    dev.gpio_list = emmc_gpios;
-    dev.gpio_count = countof(emmc_gpios);
     dev.metadata_list = emmc_metadata;
     dev.metadata_count = countof(emmc_metadata);
     dev.boot_metadata_list = emmc_boot_metadata;
     dev.boot_metadata_count = countof(emmc_boot_metadata);
     return dev;
 }();
+
+static const zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+static const zx_bind_inst_t gpio_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, T931_EMMC_RST),
+};
+static const device_component_part_t gpio_component[] = {
+    { countof(root_match), root_match },
+    { countof(gpio_match), gpio_match },
+};
+static const device_component_t components[] = {
+    { countof(gpio_component), gpio_component },
+};
 
 } // namespace
 
@@ -121,9 +129,9 @@ zx_status_t Sherlock::EmmcInit() {
     gpio_impl_.SetAltFunction(T931_EMMC_CMD, T931_EMMC_CMD_FN);
     gpio_impl_.SetAltFunction(T931_EMMC_DS, T931_EMMC_DS_FN);
 
-    auto status = pbus_.DeviceAdd(&emmc_dev);
+    auto status = pbus_.CompositeDeviceAdd(&emmc_dev, components, countof(components), UINT32_MAX);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
+        zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d\n", __func__, status);
         return status;
     }
 
