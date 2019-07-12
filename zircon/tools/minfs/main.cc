@@ -704,7 +704,7 @@ zx_status_t MinfsCreator::GenerateBcache(fbl::unique_ptr<minfs::Bcache>* out) {
     int dupfd = dup(fd_.get());
 
     fbl::unique_ptr<minfs::Bcache> bc;
-    if (minfs::Bcache::Create(&bc, std::move(fd_), block_count) < 0) {
+    if (minfs::Bcache::Create(std::move(fd_), block_count, &bc) != ZX_OK) {
         fprintf(stderr, "error: cannot create block cache\n");
         return ZX_ERR_IO;
     }

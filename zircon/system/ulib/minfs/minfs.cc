@@ -1342,10 +1342,9 @@ zx_status_t CreateBcacheFromFd(fbl::unique_fd fd, off_t start, off_t end,
 
     size_t size = (end - start) / minfs::kMinfsBlockSize;
 
-    zx_status_t status;
     fbl::unique_ptr<minfs::Bcache> bc;
-    if ((status = minfs::Bcache::Create(&bc, std::move(fd), static_cast<uint32_t>(size))) !=
-        ZX_OK) {
+    zx_status_t status = minfs::Bcache::Create(std::move(fd), static_cast<uint32_t>(size), &bc);
+    if (status != ZX_OK) {
         FS_TRACE_ERROR("error: cannot create block cache: %d\n", status);
         return status;
     }

@@ -202,7 +202,7 @@ int main(int argc, char** argv) {
     size_t block_count = device_size / minfs::kMinfsBlockSize;
 
     fbl::unique_ptr<minfs::Bcache> bc;
-    if (minfs::Bcache::Create(&bc, std::move(fd), static_cast<uint32_t>(block_count)) < 0) {
+    if (minfs::Bcache::Create(std::move(fd), static_cast<uint32_t>(block_count), &bc) !=  ZX_OK) {
         fprintf(stderr, "minfs: error: cannot create block cache\n");
         return -1;
     }

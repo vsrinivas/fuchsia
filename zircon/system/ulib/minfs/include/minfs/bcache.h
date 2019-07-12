@@ -10,16 +10,7 @@
 #include <errno.h>
 #include <inttypes.h>
 
-#ifdef __Fuchsia__
-#include <block-client/cpp/client.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
-#include <fvm/client.h>
-#include <lib/fzl/fdio.h>
-#include <lib/zx/vmo.h>
-#else
-#include <fbl/vector.h>
-#endif
+#include <atomic>
 
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
@@ -32,14 +23,26 @@
 #include <fs/vnode.h>
 #include <minfs/format.h>
 
-#include <atomic>
+#ifdef __Fuchsia__
+#include <block-client/cpp/block-device.h>
+#include <block-client/cpp/client.h>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <fvm/client.h>
+#include <lib/fzl/fdio.h>
+#include <lib/zx/vmo.h>
+#else
+#include <fbl/vector.h>
+#endif
 
 namespace minfs {
 
 class Bcache : public fs::TransactionHandler {
-public:
+  public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Bcache);
     friend class BlockNode;
+
+    ~Bcache() {}
 
     ////////////////
     // fs::TransactionHandler interface.
@@ -57,7 +60,7 @@ public:
     uint32_t DeviceBlockSize() const final;
 
     zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
-        return fifo_client_.Transaction(requests, count);
+        return device_->FifoTransaction(requests, count);
     }
 #endif // __Fuchsia__
     // Raw block read functions.
@@ -70,12 +73,11 @@ public:
     ////////////////
     // Other methods.
 
-    static zx_status_t Create(fbl::unique_ptr<Bcache>* out, fbl::unique_fd fd,
-                              uint32_t blockmax);
+    static zx_status_t Create(fbl::unique_fd fd, uint32_t max_blocks, std::unique_ptr<Bcache>* out);
 
     // Returns the maximum number of available blocks,
     // assuming the filesystem is non-resizable.
-    uint32_t Maxblk() const { return blockmax_; }
+    uint32_t Maxblk() const { return max_blocks_; }
 
 #ifdef __Fuchsia__
     zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len);
@@ -104,6 +106,9 @@ public:
         return fvm::ResetAllSlices(zx::unowned_channel(caller.borrow_channel()));
     }
 
+    block_client::BlockDevice* device() { return device_.get(); }
+    const block_client::BlockDevice* device() const { return device_.get(); }
+
 #else
     // Lengths of each extent (in bytes)
     fbl::Array<size_t> extent_lengths_;
@@ -117,20 +122,22 @@ public:
 
     int Sync();
 
-    ~Bcache();
-
-private:
-    Bcache(fbl::unique_fd fd, uint32_t blockmax);
-
-    const fbl::unique_fd fd_{};
-    uint32_t blockmax_{};
+  private:
 #ifdef __Fuchsia__
-    const fzl::UnownedFdioCaller caller_{};
-    block_client::Client fifo_client_{}; // Fast path to interact with block device
-    fuchsia_hardware_block_BlockInfo info_{};
-    std::atomic<groupid_t> next_group_ = {};
+    Bcache(fbl::unique_fd fd, std::unique_ptr<block_client::BlockDevice> device,
+           uint32_t max_blocks);
 #else
-    off_t offset_{};
+    Bcache(fbl::unique_fd fd, uint32_t max_blocks);
+#endif
+
+    const fbl::unique_fd fd_;
+    uint32_t max_blocks_;
+#ifdef __Fuchsia__
+    fuchsia_hardware_block_BlockInfo info_ = {};
+    std::atomic<groupid_t> next_group_ = 0;
+    std::unique_ptr<block_client::BlockDevice> device_;
+#else
+    off_t offset_ = 0;
 #endif
 };
 

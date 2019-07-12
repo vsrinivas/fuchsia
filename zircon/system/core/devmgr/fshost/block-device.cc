@@ -259,9 +259,9 @@ zx_status_t BlockDevice::CheckFilesystem() {
         printf("fshost: fsck of %s started\n", disk_format_string_[format_]);
         uint64_t device_size = info.block_size * info.block_count / minfs::kMinfsBlockSize;
         std::unique_ptr<minfs::Bcache> bc;
-        zx_status_t status;
-        if ((status = minfs::Bcache::Create(&bc, fd_.duplicate(),
-                                            static_cast<uint32_t>(device_size))) != ZX_OK) {
+        zx_status_t status =
+                minfs::Bcache::Create(fd_.duplicate(), static_cast<uint32_t>(device_size), &bc);
+        if (status != ZX_OK) {
             fprintf(stderr, "fshost: Could not initialize minfs bcache.\n");
             return status;
         }
@@ -311,9 +311,9 @@ zx_status_t BlockDevice::FormatFilesystem() {
         fprintf(stderr, "fshost: Formatting minfs.\n");
         uint64_t blocks = info.block_size * info.block_count / minfs::kMinfsBlockSize;
         std::unique_ptr<minfs::Bcache> bc;
-        zx_status_t status;
-        if ((status = minfs::Bcache::Create(&bc, fd_.duplicate(),
-                                            static_cast<uint32_t>(blocks))) != ZX_OK) {
+        zx_status_t status =
+                minfs::Bcache::Create(fd_.duplicate(), static_cast<uint32_t>(blocks), &bc);
+        if (status != ZX_OK) {
             fprintf(stderr, "fshost: Could not initialize minfs bcache.\n");
             return status;
         }

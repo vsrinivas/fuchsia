@@ -66,48 +66,53 @@ int Bcache::Sync() {
     return sync_txn.Transact();
 }
 
-zx_status_t Bcache::Create(fbl::unique_ptr<Bcache>* out, fbl::unique_fd fd, uint32_t blockmax) {
+// Static.
+zx_status_t Bcache::Create(fbl::unique_fd fd, uint32_t max_blocks, std::unique_ptr<Bcache>* out) {
+#ifdef __Fuchsia__
+    zx::channel channel, server;
+    zx_status_t status = zx::channel::create(0, &channel, &server);
+    if (status != ZX_OK) {
+        return status;
+    }
+    fzl::UnownedFdioCaller caller(fd.get());
+    uint32_t flags = ZX_FS_FLAG_CLONE_SAME_RIGHTS;
+    status = fuchsia_io_NodeClone(caller.borrow_channel(), flags, server.release());
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    std::unique_ptr<block_client::RemoteBlockDevice> device;
+    status = block_client::RemoteBlockDevice::Create(std::move(channel), &device);
+    if (status != ZX_OK) {
+        FS_TRACE_ERROR("minfs: cannot create block device: %d\n", status);
+        return status;
+    }
+
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Bcache> bc(new (&ac) Bcache(std::move(fd), blockmax));
+    fbl::unique_ptr<Bcache> bc(new (&ac) Bcache(std::move(fd), std::move(device), max_blocks));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-#ifdef __Fuchsia__
-    zx::fifo fifo;
 
-    zx_status_t io_status, status;
-    io_status = fuchsia_hardware_block_BlockGetInfo(bc->caller_.borrow_channel(), &status,
-                                                    &bc->info_);
-    if (io_status != ZX_OK) {
-        status = io_status;
-    }
+    status = bc->device_->BlockGetInfo(&bc->info_);
     if (status != ZX_OK) {
-        FS_TRACE_ERROR("minfs: cannot acquire block device information: %d\n", status);
+        FS_TRACE_ERROR("minfs: cannot get block device information: %d\n", status);
         return status;
     }
+
     if (kMinfsBlockSize % bc->info_.block_size != 0) {
         FS_TRACE_ERROR("minfs: minfs Block size not multiple of underlying block size: %d\n",
                        bc->info_.block_size);
         return ZX_ERR_BAD_STATE;
     }
 
-    io_status = fuchsia_hardware_block_BlockGetFifo(bc->caller_.borrow_channel(), &status,
-                                                    fifo.reset_and_get_address());
-    if (io_status != ZX_OK) {
-        status = io_status;
-    }
-    if (status != ZX_OK) {
-        FS_TRACE_ERROR("minfs: cannot acquire block device fifo: %d\n", status);
-        return status;
-    }
-    if ((status = block_client::Client::Create(std::move(fifo), &bc->fifo_client_)) != ZX_OK) {
-        FS_TRACE_ERROR("minfs: cannot create block client: %d\n", status);
-        return status;
-    }
-#endif
-
     *out = std::move(bc);
     return ZX_OK;
+
+#else  //  __Fuchsia__
+    out->reset(new Bcache(std::move(fd), max_blocks));
+    return ZX_OK;
+#endif
 }
 
 #ifdef __Fuchsia__
@@ -123,24 +128,7 @@ uint32_t Bcache::DeviceBlockSize() const {
 }
 
 zx_status_t Bcache::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) {
-    if (buffer_len == 0) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
-    zx_status_t call_status;
-    zx_status_t status = fuchsia_device_ControllerGetTopologicalPath(caller_.borrow_channel(),
-                                                                     &call_status, out_name,
-                                                                     buffer_len - 1, out_len);
-    if (status == ZX_OK) {
-        status = call_status;
-    }
-    if (status != ZX_OK) {
-        return status;
-    }
-    // Ensure null-terminated
-    out_name[*out_len] = 0;
-    // Account for the null byte in the length, since callers expect it.
-    (*out_len)++;
-    return ZX_OK;
+    return device_->GetDevicePath(buffer_len, out_name, out_len);
 }
 
 zx_status_t Bcache::AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoID* out) const {
@@ -149,83 +137,36 @@ zx_status_t Bcache::AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoID* 
     if (status != ZX_OK) {
         return status;
     }
-    zx_status_t io_status = fuchsia_hardware_block_BlockAttachVmo(caller_.borrow_channel(),
-                                                                  xfer_vmo.release(), &status,
-                                                                  out);
-    if (io_status != ZX_OK) {
-        status = io_status;
-    }
-    return status;
+    return device_->BlockAttachVmo(std::move(xfer_vmo), out);
 }
 
 zx_status_t Bcache::FVMQuery(fuchsia_hardware_block_volume_VolumeInfo* info) const {
-    // Querying may be used to confirm if the underlying connection is capable of
-    // communicating the FVM protocol. Clone the connection, since if the block
-    // device does NOT speak the Volume protocol, the connection is terminated.
-    zx::channel connection(fdio_service_clone(caller_.borrow_channel()));
-
-    zx_status_t io_status, status;
-    io_status = fuchsia_hardware_block_volume_VolumeQuery(connection.get(), &status, info);
-    if (io_status != ZX_OK) {
-        status = io_status;
-    }
-    return status;
+    return device_->VolumeQuery(info);
 }
 
-zx_status_t Bcache::FVMVsliceQuery(
-        const query_request_t* request,
-        fuchsia_hardware_block_volume_VsliceRange out_response[16],
-        size_t* out_count) const {
-    zx_status_t io_status, status;
-    io_status = fuchsia_hardware_block_volume_VolumeQuerySlices(caller_.borrow_channel(),
-                                                                request->vslice_start,
-                                                                request->count, &status,
-                                                                out_response, out_count);
-    if (io_status != ZX_OK) {
-        return io_status;
-    }
-    return status;
+zx_status_t Bcache::FVMVsliceQuery(const query_request_t* request,
+                                   fuchsia_hardware_block_volume_VsliceRange out_response[16],
+                                   size_t* out_count) const {
+    return device_->VolumeQuerySlices(request->vslice_start, request->count,
+                                      out_response, out_count);
 }
 
 zx_status_t Bcache::FVMExtend(const extend_request_t* request) {
-    zx_status_t io_status, status;
-    io_status = fuchsia_hardware_block_volume_VolumeExtend(caller_.borrow_channel(),
-                                                           request->offset, request->length,
-                                                           &status);
-    if (io_status != ZX_OK) {
-        return io_status;
-    }
-    return status;
+    return device_->VolumeExtend(request->offset, request->length);
 }
 
 zx_status_t Bcache::FVMShrink(const extend_request_t* request) {
-    zx_status_t io_status, status;
-    io_status = fuchsia_hardware_block_volume_VolumeShrink(caller_.borrow_channel(),
-                                                           request->offset, request->length,
-                                                           &status);
-    if (io_status != ZX_OK) {
-        return io_status;
-    }
-    return status;
+    return device_->VolumeShrink(request->offset, request->length);
 }
 
-#endif
+Bcache::Bcache(fbl::unique_fd fd, std::unique_ptr<block_client::BlockDevice> device, uint32_t max_blocks)
+        : fd_(std::move(fd)), max_blocks_(max_blocks), device_(std::move(device)) {}
 
-Bcache::Bcache(fbl::unique_fd fd, uint32_t blockmax) :
-    fd_(std::move(fd)), blockmax_(blockmax)
-#ifdef __Fuchsia__
-    , caller_(fd_.get())
-#endif
-    {}
+#else // __Fuchsia__
 
-Bcache::~Bcache() {
-#ifdef __Fuchsia__
-    if (caller_) {
-        zx_status_t status;
-        fuchsia_hardware_block_BlockCloseFifo(caller_.borrow_channel(), &status);
-    }
+Bcache::Bcache(fbl::unique_fd fd, uint32_t max_blocks) : fd_(std::move(fd)), max_blocks_(max_blocks) {}
+
 #endif
-}
 
 #ifndef __Fuchsia__
 zx_status_t Bcache::SetOffset(off_t offset) {

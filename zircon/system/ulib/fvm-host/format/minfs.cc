@@ -42,7 +42,7 @@ MinfsFormat::MinfsFormat(fbl::unique_fd fd, const char* type)
 
     off_t size = s.st_size / minfs::kMinfsBlockSize;
 
-    if (minfs::Bcache::Create(&bc_, std::move(fd), (uint32_t)size) < 0) {
+    if (minfs::Bcache::Create(std::move(fd), (uint32_t)size, &bc_) != ZX_OK) {
         fprintf(stderr, "error: cannot create block cache\n");
         exit(-1);
     }
