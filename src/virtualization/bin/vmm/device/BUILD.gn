@@ -240,15 +240,15 @@ package("virtio_magma") {
   binary = "virtio_magma"
   deps = [
     ":virtio_magma_bin",
-    "//third_party/mesa/src/intel/vulkan:vulkan_intel_linux(//build/toolchain:linux_x64-shared)",
+    "//third_party/mesa/src/intel/vulkan:vulkan_intel(//build/toolchain:linux_x64-shared)",
   ]
 
   # TODO(MA-520): don't hard-code the driver
   resources = [
     {
       path = rebase_path(
-              "${root_build_dir}/linux_x64-shared/libvulkan_intel_linux.so")
-      dest = "drivers/libvulkan_intel_linux.so"
+              "${root_build_dir}/linux_x64-shared/libvulkan_intel.so")
+      dest = "drivers/libvulkan_intel.so"
     },
   ]
   meta = [

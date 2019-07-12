@@ -92,12 +92,12 @@ action("extras") {
   deps = [
     "//garnet/lib/magma/tests_linux/unit_tests:virtmagma_unit_tests_linux(//build/toolchain:linux_x64)",
     "//garnet/lib/magma/tests_linux/unit_tests:virtmagma_vulkan_unit_tests(//build/toolchain:linux_x64)",
-    "//third_party/mesa/src/intel/vulkan:vulkan_intel_linux(//build/toolchain:linux_x64-shared)",
+    "//third_party/mesa/src/intel/vulkan:vulkan_intel(//build/toolchain:linux_x64-shared)",
   ]
 
   args = [
     rebase_path(extras_image),
-    rebase_path("${lib_path}/libvulkan_intel_linux.so"),  # Intel Vulkan ICD
+    rebase_path("${lib_path}/libvulkan_intel.so"),  # Intel Vulkan ICD
     rebase_path("${lib_path}/libvulkan.so"),  # Vulkan Loader
     rebase_path("${exe_path}/virtmagma_unit_tests_linux"),
     rebase_path("${exe_path}/virtmagma_vulkan_unit_tests"),
