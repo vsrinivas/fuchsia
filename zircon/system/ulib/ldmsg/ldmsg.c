@@ -54,7 +54,10 @@ zx_status_t ldmsg_req_encode(ldmsg_req_t* req, size_t* req_len_out,
     req->common.string.data = (char*) FIDL_ALLOC_PRESENT;
     memcpy(req->data + offset, data, len);
 
-    *req_len_out = FidlAlign(sizeof(fidl_message_header_t) + offset + len);
+    // Make sure to zero out the extra bytes required by alignment constraints.
+    size_t req_len_unaligned = sizeof(fidl_message_header_t) + offset + len;
+    *req_len_out = FidlAlign(req_len_unaligned);
+    memset((char*)req + req_len_unaligned, 0, *req_len_out - req_len_unaligned);
     return ZX_OK;
 }
 
