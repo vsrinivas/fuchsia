@@ -29,6 +29,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fvm.s
 source "${FUCHSIA_DIR}/buildtools/vars.sh"
 
 readonly PREBUILT_AEMU_DIR="prebuilt/third_party/aemu/${BUILDTOOLS_PLATFORM}"
+readonly PREBUILT_GRPCWEBPROXY_DIR="prebuilt/third_party/grpcwebproxy/${BUILDTOOLS_PLATFORM%-x64}"
 
 ACCEL="auto"
 NET=0
@@ -128,12 +129,8 @@ if [[ -z "$AEMU_DIR" && -d "$PREBUILT_AEMU_DIR" ]]; then
   AEMU_DIR="$PREBUILT_AEMU_DIR"
 fi
 
-if [[ -z "$GRPCWEBPROXY_DIR" && -d "${FUCHSIA_DIR}/prebuilt/third_party/grpcwebproxy" ]]; then
-  if [[ "$(uname -s)" == "Darwin" ]]; then
-    GRPCWEBPROXY_DIR="${FUCHSIA_DIR}/prebuilt/third_party/grpcwebproxy/mac/"
-  else
-    GRPCWEBPROXY_DIR="${FUCHSIA_DIR}/prebuilt/third_party/grpcwebproxy/linux/"
-  fi
+if [[ -z "$GRPCWEBPROXY_DIR" && -d "$PREBUILT_GRPCWEBPROXY_DIR" ]]; then
+  GRPCWEBPROXY_DIR="$PREBUILT_GRPCWEBPROXY_DIR"
 fi
 
 # construct the args for aemu
@@ -283,7 +280,7 @@ CMDLINE+="kernel.halt-on-panic=true "
 
 # Start gRPC web proxy if HTTP port is set
 if (( $HTTP )); then
-  "${GRPCWEBPROXY_DIR}"grpcwebproxy \
+  "${GRPCWEBPROXY_DIR}/grpcwebproxy" \
       --backend_addr localhost:"$GRPC" --server_http_debug_port "$HTTP" \
       --backend_tls=false --run_tls_server=false --allow_all_origins &
   GRPCWEBPROXY_PID=$!
