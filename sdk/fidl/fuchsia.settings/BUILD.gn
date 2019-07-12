@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.settings") {
   sources = [
+    "accessibility.fidl",
     "display.fidl",
     "intl.fidl",
     "settings.fidl",

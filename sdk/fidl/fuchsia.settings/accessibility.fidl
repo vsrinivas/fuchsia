@@ -1,0 +1,155 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.settings;
+
+/// Modify or watch accessibility settings that are persisted.
+[Discoverable]
+protocol Accessibility {
+    /// Gets the current value of all accessibility settings. Returns
+    /// immediately on first call; subsequent calls return when any of the
+    /// values change.
+    ///
+    /// - `settings` all current values of the accessibility settings.
+    /// * see [`AccessibilitySettings`] for their meaning.
+    Watch() -> (AccessibilitySettings settings);
+
+    /// Enables or disables audio description.
+    ///
+    /// * see [`AccessibilitySettings.audio_description`]
+    SetAudioDescription(bool audio_description) -> ();
+
+    /// Enables or disables the screen reader.
+    ///
+    /// * see [`AccessibilitySettings.screen_reader`]
+    SetScreenReader(bool screen_reader) -> ();
+
+    /// Enables or disables color inversion.
+    ///
+    /// * see [`AccessibilitySettings.color_inversion`]
+    SetColorInversion(bool color_inversion) -> ();
+
+    /// Enables or disables magnification by triple-tapping the display.
+    ///
+    /// * see [`AccessibilitySettings.enable_magnification`]
+    SetEnableMagnification(bool enable_magnification) -> ();
+
+    /// Sets the specific color correction to use, or none.
+    ///
+    /// * see [`AccessibilitySettings.color_correction`]
+    SetColorCorrection(ColorBlindnessType color_correction) -> ();
+
+    /// Updates closed captions settings.
+    ///
+    /// + `settings` fields to update. Only values explicitly set are changed.
+    /// * see [`ClosedCaptionsSettings`] for their meaning.
+    SetClosedCaptionsSettings(ClosedCaptionsSettings settings) -> ();
+};
+
+/// Supported accessibility settings.
+table AccessibilitySettings {
+    /// For videos, use an alternative audio track (akin to changing languages)
+    /// that explains what is happening visually while there is no dialogue.
+    1: bool audio_description;
+
+    /// Read aloud elements of the screen selected by the user.
+    2: bool screen_reader;
+
+    /// Invert colors on the screen.
+    3: bool color_inversion;
+
+    /// Interpret triple-tap on the touchscreen as a command to zoom in.
+    4: bool enable_magnification;
+
+    /// What type of color-blindness, if any, to correct for.
+    5: ColorBlindnessType color_correction;
+
+    /// What kind of sources get closed captions, and how they look.
+    6: ClosedCaptionsSettings closed_captions_settings;
+};
+
+enum ColorBlindnessType {
+    /// No color blindness.
+    NONE = 0;
+
+    /// Red-green color blindness due to reduced sensitivity to red light.
+    PROTANOMALY = 1;
+
+    /// Red-green color blindness due to reduced sensitivity to green light.
+    DEUTERANOMALY = 2;
+
+    /// Blue-yellow color blindness. It is due to reduced sensitivity to blue
+    /// light.
+    TRITANOMALY = 3;
+};
+
+table ClosedCaptionsSettings {
+    /// Closed captions enabled for media sources of audio.
+    1: bool for_media;
+
+    /// Closed captions enabled for Text-To-Speech sources of audio.
+    2: bool for_tts;
+
+    /// Font style and color used for the closed captions text.
+    3: FontStyle font_style;
+
+    /// Border color used around the closed captions window.
+    4: Color window_color;
+
+    /// Background color of the closed captions window.
+    5: Color background_color;
+};
+
+table FontStyle {
+    1: GenericFontFamily family;
+    2: Color color;
+    /// Size of closed captions text relative to the default captions size. A
+    /// range of [0.5, 2] is guaranteed to be supported.
+    3: float32 relative_size;
+    4: EdgeStyle char_edge_style;
+};
+
+/// Font family group.
+// TODO: Transition to using `fuchsia.fonts/GenericFontFamily` instead. It
+// cannot represent all the values here, so the transition involves first
+// reconciling both enums and the components using each.
+enum GenericFontFamily {
+    UNKNOWN = 0;
+    MONOSPACED_SERIF = 1;
+    PROPORTIONAL_SERIF = 2;
+    MONOSPACED_SANS_SERIF = 3;
+    PROPORTIONAL_SANS_SERIF = 4;
+    CASUAL = 5;
+    CURSIVE = 6;
+    SMALL_CAPITALS = 7;
+};
+
+/// 32-bit RGBA color. Color channels have not been premultiplied by `alpha`.
+// TODO: Consider extracting common types out of `fuchsia.ui.gfx` into a shared
+// library, to use `fuchsia.ui.gfx/ColorRgba` here without bringing a big
+// dependency.
+struct Color {
+    uint8 red;
+    uint8 green;
+    uint8 blue;
+    uint8 alpha;
+};
+
+/// Font edge style, for better visibility against the background.
+enum EdgeStyle {
+    /// No border around characters.
+    NONE = 0;
+
+    /// A shadow "behind" and slightly offset from each character.
+    DROP_SHADOW = 1;
+
+    /// A bevel that mimics a 3D raised effect.
+    RAISED = 2;
+
+    /// A bevel that mimics a 3D depressed effect.
+    DEPRESSED = 3;
+
+    /// A plain border around each character.
+    OUTLINE = 4;
+};
