@@ -437,6 +437,8 @@ private:
     // assumes target is uninitialized
     template <typename Callable>
     void initialize_target(Callable target) {
+        static_assert(std::alignment_of<Callable>::value <= std::alignment_of<storage_type>::value,
+                      "Alignment of Callable must be <= alignment of max_align_t.");
         static_assert(!require_inline || sizeof(Callable) <= inline_target_size,
                       "Callable too large to store inline as requested.");
         if (is_null(target)) {

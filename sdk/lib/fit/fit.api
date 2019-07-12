@@ -5,7 +5,7 @@
   "pkg/fit/include/lib/fit/constructors_internal.h": "ee100712abe214efc35fb73559f17bb2",
   "pkg/fit/include/lib/fit/defer.h": "7cf5f9e48786ef7f966acfc3dad1c6a5",
   "pkg/fit/include/lib/fit/function.h": "6d6915e610869e4704117cafa2bd4381",
-  "pkg/fit/include/lib/fit/function_internal.h": "4114136767d899cce9be4d062c6ecac2",
+  "pkg/fit/include/lib/fit/function_internal.h": "f260716ad963b52a288c9fedd0caa54a",
   "pkg/fit/include/lib/fit/function_traits.h": "f89d0c53c0acb5b8496724f4dae9c2b5",
   "pkg/fit/include/lib/fit/in_place_internal.h": "d2c45bc903d36d7b55d5d362c674599e",
   "pkg/fit/include/lib/fit/nullable.h": "1e504b17830bc84abd95468a5e0dce48",

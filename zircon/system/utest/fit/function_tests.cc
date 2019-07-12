@@ -27,6 +27,11 @@ using BuildableFromIntGenerator = BuildableFromInt();
 struct Big {
     int data[64]{};
 };
+// An object with a very large alignment requirement that cannot be placed in a
+// fit::inline_function.
+struct alignas(64) BigAlignment {
+    int data[64]{};
+};
 constexpr size_t HugeCallableSize = sizeof(Big) + sizeof(void*) * 4;
 
 // An object that looks like an "empty" std::function.
@@ -543,6 +548,16 @@ bool inline_function_size_bounds() {
     END_TEST;
 }
 
+bool inline_function_alignment_check() {
+    BEGIN_TEST;
+// These statements do not compile because the alignment is too large.
+#if 0
+    auto big = [big = BigAlignment()] { };
+    fit::inline_function<Closure, sizeof(big)> fbig(std::move(big));
+#endif
+    END_TEST;
+}
+
 bool move_only_argument_and_result() {
     BEGIN_TEST;
 
@@ -966,6 +981,7 @@ RUN_TEST((closure<fit::inline_function<Closure, HugeCallableSize>>))
 RUN_TEST((binary_op<fit::inline_function<BinaryOp, HugeCallableSize>>))
 RUN_TEST(sized_function_size_bounds)
 RUN_TEST(inline_function_size_bounds)
+RUN_TEST(inline_function_alignment_check)
 RUN_TEST(move_only_argument_and_result)
 RUN_TEST(implicit_construction)
 RUN_TEST(overload_resolution)
