@@ -4,9 +4,11 @@
 
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/directory.h>
 #include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
+#include <zircon/device/vfs.h>
 
 #include <iostream>
 
@@ -30,6 +32,8 @@ Options:
                                      /boot/driver/test/sysdev.so
    --wait_for=[device]: wait for isolated manager to have |device| exposed before serving any
                         requests. May be informed multiple times.
+   --add_namespace=[ns]: make the namespace 'ns' from this component available to the devmgr
+                         under the same path.
    --help: displays this help page.
 
 Note: isolated_devmgr runs as a component, so all paths must be relative to the component's
@@ -63,6 +67,7 @@ int main(int argc, const char** argv) {
 
   std::string svc_name = "fuchsia.io.Directory";
   std::vector<std::string> wait;
+  std::vector<std::string> namespaces;
 
   // load options from command line
   auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -77,6 +82,8 @@ int main(int argc, const char** argv) {
       args.sys_device_driver = opt.value.c_str();
     } else if (opt.name == "wait_for") {
       wait.push_back(opt.value);
+    } else if (opt.name == "add_namespace") {
+      namespaces.push_back(opt.value);
     } else if (opt.name == "help") {
       Usage();
       return 0;
@@ -84,6 +91,24 @@ int main(int argc, const char** argv) {
       Usage();
       return 1;
     }
+  }
+
+  // Pass-through any additional namespaces that we want to provide to the devmgr. These are
+  // exposed to devmgr under the same local path. Ex: if you share '/pkg', you could provide a
+  // driver as '/pkg/data/my_driver.so'.
+  for (const auto& ns : namespaces) {
+    zx::channel client, server;
+    zx_status_t status = zx::channel::create(0, &client, &server);
+    if (status != ZX_OK) {
+      FXL_PLOG(ERROR, status) << "Failed to create channel";
+      return 1;
+    }
+    status = fdio_open(ns.c_str(), ZX_FS_RIGHT_READABLE, server.release());
+    if (status != ZX_OK) {
+      FXL_PLOG(ERROR, status) << "Failed to open namespace " << ns;
+      return 1;
+    }
+    args.flat_namespace.push_back({ns.c_str(), std::move(client)});
   }
 
   auto devmgr = IsolatedDevmgr::Create(std::move(args), loop.dispatcher());

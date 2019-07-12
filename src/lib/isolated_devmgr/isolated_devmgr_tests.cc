@@ -5,10 +5,12 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/ethertap/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
+#include <zircon/device/vfs.h>
 
 #include "isolated_devmgr.h"
 
@@ -55,6 +57,17 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
       device = nullptr;
     }
     return device;
+  }
+
+  void EnableVirtualAudio(const zx::channel& devfs) {
+    fuchsia::virtualaudio::ForwarderPtr virtualaudio;
+    fdio_service_connect_at(devfs.get(), "test/virtual_audio",
+                            virtualaudio.NewRequest().TakeChannel().release());
+
+    // Perform a simple RPC with a reply to sanity check we're talking to the driver.
+    fidl::SynchronousInterfacePtr<fuchsia::virtualaudio::Control> control_sync_ptr;
+    virtualaudio->SendControl(control_sync_ptr.NewRequest());
+    ASSERT_EQ(ZX_OK, control_sync_ptr->Enable());
   }
 };
 
@@ -111,6 +124,32 @@ TEST_F(DevmgrTest, ExposedThroughComponent) {
 
   auto tap = CreateTapDevice(devfs);
   ASSERT_TRUE(tap);
+}
+
+TEST_F(DevmgrTest, ExposeDriverFromComponentNamespace) {
+  auto ctx = sys::ComponentContext::Create();
+  fidl::InterfacePtr<fuchsia::sys::Launcher> launcher;
+  ctx->svc()->Connect(launcher.NewRequest());
+
+  zx::channel req;
+  auto services = sys::ServiceDirectory::CreateWithRequest(&req);
+
+  fuchsia::sys::LaunchInfo info;
+  info.directory_request = std::move(req);
+  info.url =
+      "fuchsia-pkg://fuchsia.com/isolated_devmgr_tests#meta/"
+      "isolated_devmgr_virtual_audio.cmx";
+  fidl::InterfacePtr<fuchsia::sys::ComponentController> ctlr;
+
+  launcher->CreateComponent(std::move(info), ctlr.NewRequest());
+  ctlr.set_error_handler(
+      [](zx_status_t err) { FAIL() << "Controller shouldn't exit"; });
+
+  zx::channel devfs_req, devfs;
+  zx::channel::create(0, &devfs_req, &devfs);
+  services->Connect("fuchsia.example.IsolatedDevmgr", std::move(devfs_req));
+
+  EnableVirtualAudio(devfs);
 }
 
 }  // namespace testing

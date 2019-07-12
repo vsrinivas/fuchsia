@@ -63,6 +63,7 @@ executable("test_bin") {
     "//garnet/public/lib/async_promise",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.virtualaudio",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/fidl/fuchsia-hardware-ethertap",
@@ -84,6 +85,7 @@ package("isolated_devmgr_tests") {
     ":devmgr-manifest",
     ":isolated_devmgr",
     ":test_bin",
+    "//src/media/audio/drivers/virtual_audio:virtual_audio_driver",
   ]
 
   extra = [ "$target_gen_dir/devmgr.manifest" ]
@@ -103,6 +105,17 @@ package("isolated_devmgr_tests") {
       dest = "isolated_devmgr.cmx"
       path = dest
     },
+    {
+      dest = "isolated_devmgr_virtual_audio.cmx"
+      path = dest
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("${root_build_dir}/virtual_audio_driver.so")
+      dest = "virtual_audio_driver.so"
+    }
   ]
 
   tests = [
