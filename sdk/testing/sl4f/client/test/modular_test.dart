@@ -24,7 +24,7 @@ void main(List<String> args) {
   test('call RestartSession facade with no params', () {
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
-      final body = jsonDecode(await req.transform(utf8.decoder).join());
+      final body = jsonDecode(await utf8.decoder.bind(req).join());
       expect(body['method'], 'basemgr_facade.RestartSession');
       expect(body['params'], null);
       req.response.write(

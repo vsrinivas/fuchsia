@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
@@ -18,7 +19,7 @@ void main(List<String> args) {
     final sl4f = MockSl4f();
     final file = MockFile();
     when(file.readAsBytes()).thenAnswer((_) => Future.value(
-        [0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x77, 0x6f, 0x72, 0x6c, 0x64]));
+        Uint8List.fromList(<int>[0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x77, 0x6f, 0x72, 0x6c, 0x64])));
     when(sl4f.request('file_facade.WriteFile'))
         .thenAnswer((_) => Future.value('Success'));
 
