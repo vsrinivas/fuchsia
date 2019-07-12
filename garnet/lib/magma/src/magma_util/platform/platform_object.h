@@ -10,19 +10,19 @@
 namespace magma {
 
 class PlatformObject {
-public:
-    enum Type { SEMAPHORE = 10 };
+ public:
+  enum Type { SEMAPHORE = 10 };
 
-    // returns a unique, immutable id for the underlying object
-    virtual uint64_t id() = 0;
+  // returns a unique, immutable id for the underlying object
+  virtual uint64_t id() = 0;
 
-    // on success, duplicate of the underlying handle which is owned by the caller
-    virtual bool duplicate_handle(uint32_t* handle_out) = 0;
+  // on success, duplicate of the underlying handle which is owned by the caller
+  virtual bool duplicate_handle(uint32_t* handle_out) = 0;
 
-    // Returns the id for the given handle
-    static bool IdFromHandle(uint32_t handle, uint64_t* id_out);
+  // Returns the id for the given handle
+  static bool IdFromHandle(uint32_t handle, uint64_t* id_out);
 };
 
-} // namespace magma
+}  // namespace magma
 
-#endif // PLATFORM_OBJECT_H
+#endif  // PLATFORM_OBJECT_H

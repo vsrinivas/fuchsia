@@ -10,4 +10,4 @@ RegisterIo::RegisterIo(std::unique_ptr<magma::PlatformMmio> mmio) : mmio_(std::m
 
 RegisterIo::Hook::~Hook() {}
 
-} // namespace magma
+}  // namespace magma

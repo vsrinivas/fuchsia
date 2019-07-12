@@ -5,42 +5,40 @@
 #ifndef ZIRCON_PLATFORM_DEVICE_H
 #define ZIRCON_PLATFORM_DEVICE_H
 
-#include "platform_device.h"
-
 #include <ddk/device.h>
 #include <ddk/protocol/platform/device.h>
+
+#include "platform_device.h"
 
 namespace magma {
 
 class ZirconPlatformDevice : public PlatformDevice {
-public:
-    ZirconPlatformDevice(zx_device_t* zx_device, pdev_protocol_t pdev)
-        : zx_device_(zx_device), pdev_(pdev)
-    {
-    }
+ public:
+  ZirconPlatformDevice(zx_device_t* zx_device, pdev_protocol_t pdev)
+      : zx_device_(zx_device), pdev_(pdev) {}
 
-    void* GetDeviceHandle() override { return zx_device(); }
+  void* GetDeviceHandle() override { return zx_device(); }
 
-    std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() const override;
+  std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() const override;
 
-    std::unique_ptr<PlatformHandle> GetSchedulerProfile(Priority priority,
-                                                        const char* name) const override;
+  std::unique_ptr<PlatformHandle> GetSchedulerProfile(Priority priority,
+                                                      const char* name) const override;
 
-    Status LoadFirmware(const char* filename, std::unique_ptr<PlatformBuffer>* firmware_out,
-                        uint64_t* size_out) const override;
+  Status LoadFirmware(const char* filename, std::unique_ptr<PlatformBuffer>* firmware_out,
+                      uint64_t* size_out) const override;
 
-    std::unique_ptr<PlatformMmio> CpuMapMmio(unsigned int index,
-                                             PlatformMmio::CachePolicy cache_policy) override;
+  std::unique_ptr<PlatformMmio> CpuMapMmio(unsigned int index,
+                                           PlatformMmio::CachePolicy cache_policy) override;
 
-    std::unique_ptr<PlatformInterrupt> RegisterInterrupt(unsigned int index) override;
+  std::unique_ptr<PlatformInterrupt> RegisterInterrupt(unsigned int index) override;
 
-private:
-    zx_device_t* zx_device() const { return zx_device_; }
+ private:
+  zx_device_t* zx_device() const { return zx_device_; }
 
-    zx_device_t* zx_device_;
-    pdev_protocol_t pdev_;
+  zx_device_t* zx_device_;
+  pdev_protocol_t pdev_;
 };
 
-} // namespace magma
+}  // namespace magma
 
-#endif // ZIRCON_PLATFORM_DEVICE_H
+#endif  // ZIRCON_PLATFORM_DEVICE_H

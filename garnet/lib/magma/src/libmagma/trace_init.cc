@@ -5,11 +5,10 @@
 #include "platform_trace.h"
 
 class PlatformTraceInit {
-public:
-    PlatformTraceInit()
-    {
-        if (magma::PlatformTrace::Get()) {
-            magma::PlatformTrace::Get()->Initialize();
-        }
+ public:
+  PlatformTraceInit() {
+    if (magma::PlatformTrace::Get()) {
+      magma::PlatformTrace::Get()->Initialize();
     }
+  }
 } init_platform_trace;

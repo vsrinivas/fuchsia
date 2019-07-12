@@ -8,4 +8,4 @@ namespace magma {
 
 bool PlatformThreadHelper::SetProfile(PlatformHandle* profile) { return false; }
 
-} // namespace magma
+}  // namespace magma

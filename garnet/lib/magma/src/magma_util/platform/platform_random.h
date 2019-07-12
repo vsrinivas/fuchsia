@@ -5,15 +5,16 @@
 #ifndef PLATFORM_RANDOM_H
 #define PLATFORM_RANDOM_H
 
-#include <cstddef>
 #include <stdint.h>
+
+#include <cstddef>
 
 namespace magma {
 
 // Deprecated
 // Returns |size| random bytes at the location specified by |buffer|.
 void GetSecureRandomBytes(void* buffer, size_t size);
-} // namespace magma
+}  // namespace magma
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,4 +27,4 @@ void magma_platform_GetSecureRandomBytes(void* buffer, uint64_t size);
 }
 #endif
 
-#endif // PLATFORM_RANDOM_H
+#endif  // PLATFORM_RANDOM_H

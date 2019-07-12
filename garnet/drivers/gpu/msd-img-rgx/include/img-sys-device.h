@@ -7,10 +7,10 @@
 #include <zircon/types.h>
 
 class ImgSysDevice {
-public:
-    virtual zx_status_t PowerUp() = 0;
-    virtual zx_status_t PowerDown() = 0;
-    virtual void* device() = 0;
+ public:
+  virtual zx_status_t PowerUp() = 0;
+  virtual zx_status_t PowerDown() = 0;
+  virtual void* device() = 0;
 };
 
-#endif // GARNET_DRIVERS_GPU_MSD_IMG_RGX_INCLUDE_IMG_SYS_DEVICE_H_
+#endif  // GARNET_DRIVERS_GPU_MSD_IMG_RGX_INCLUDE_IMG_SYS_DEVICE_H_

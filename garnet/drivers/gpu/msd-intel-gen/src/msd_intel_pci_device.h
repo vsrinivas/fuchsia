@@ -11,16 +11,16 @@
 #include "platform_semaphore.h"
 
 class MsdIntelPciDevice : public magma::PlatformPciDevice {
-public:
-    std::unique_ptr<magma::PlatformInterrupt> RegisterInterrupt() override { return nullptr; }
+ public:
+  std::unique_ptr<magma::PlatformInterrupt> RegisterInterrupt() override { return nullptr; }
 
-    // Additional core device implmementation that may reside inside a separate core driver.
-    virtual bool RegisterInterruptCallback(InterruptManager::InterruptCallback callback, void* data,
-                                           uint32_t interrupt_mask) = 0;
-    virtual void UnregisterInterruptCallback() = 0;
-    virtual Gtt* GetGtt() = 0;
+  // Additional core device implmementation that may reside inside a separate core driver.
+  virtual bool RegisterInterruptCallback(InterruptManager::InterruptCallback callback, void* data,
+                                         uint32_t interrupt_mask) = 0;
+  virtual void UnregisterInterruptCallback() = 0;
+  virtual Gtt* GetGtt() = 0;
 
-    static std::unique_ptr<MsdIntelPciDevice> CreateShim(void* platform_device_handle);
+  static std::unique_ptr<MsdIntelPciDevice> CreateShim(void* platform_device_handle);
 };
 
-#endif // MSD_INTEL_PCI_DEVICE_H
+#endif  // MSD_INTEL_PCI_DEVICE_H

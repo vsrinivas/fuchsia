@@ -5,51 +5,48 @@
 #ifndef ZIRCON_PLATFORM_DEVICE_H
 #define ZIRCON_PLATFORM_DEVICE_H
 
-#include "platform_device.h"
+#include <magma_util/macros.h>
 
 #include "linux_platform_mmio.h"
-#include <magma_util/macros.h>
+#include "platform_device.h"
 
 namespace magma {
 
 class LinuxPlatformDevice : public PlatformDevice {
-public:
-    LinuxPlatformDevice(int file_descriptor) : fd_(file_descriptor) {}
+ public:
+  LinuxPlatformDevice(int file_descriptor) : fd_(file_descriptor) {}
 
-    void* GetDeviceHandle() override { return reinterpret_cast<void*>(static_cast<intptr_t>(fd_)); }
+  void* GetDeviceHandle() override { return reinterpret_cast<void*>(static_cast<intptr_t>(fd_)); }
 
-    std::unique_ptr<PlatformHandle> GetSchedulerProfile(Priority priority,
-                                                        const char* name) const override
-    {
-        return DRETP(nullptr, "GetSchedulerProfile not implemented");
-    }
+  std::unique_ptr<PlatformHandle> GetSchedulerProfile(Priority priority,
+                                                      const char* name) const override {
+    return DRETP(nullptr, "GetSchedulerProfile not implemented");
+  }
 
-    std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() const override { return nullptr; }
+  std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() const override { return nullptr; }
 
-    Status LoadFirmware(const char* filename, std::unique_ptr<PlatformBuffer>* firmware_out,
-                        uint64_t* size_out) const override
-    {
-        return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "LoadFirmware not implemented");
-    }
+  Status LoadFirmware(const char* filename, std::unique_ptr<PlatformBuffer>* firmware_out,
+                      uint64_t* size_out) const override {
+    return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "LoadFirmware not implemented");
+  }
 
-    std::unique_ptr<PlatformMmio> CpuMapMmio(unsigned int index,
-                                             PlatformMmio::CachePolicy cache_policy) override;
+  std::unique_ptr<PlatformMmio> CpuMapMmio(unsigned int index,
+                                           PlatformMmio::CachePolicy cache_policy) override;
 
-    std::unique_ptr<PlatformInterrupt> RegisterInterrupt(unsigned int index) override
-    {
-        return DRETP(nullptr, "RegisterInterrupt not implemented");
-    }
+  std::unique_ptr<PlatformInterrupt> RegisterInterrupt(unsigned int index) override {
+    return DRETP(nullptr, "RegisterInterrupt not implemented");
+  }
 
-private:
-    enum class MagmaGetParamKey {
-        kRegisterSize = 10,
-    };
+ private:
+  enum class MagmaGetParamKey {
+    kRegisterSize = 10,
+  };
 
-    bool MagmaGetParam(MagmaGetParamKey key, uint64_t* value_out);
+  bool MagmaGetParam(MagmaGetParamKey key, uint64_t* value_out);
 
-    int fd_;
+  int fd_;
 };
 
-} // namespace magma
+}  // namespace magma
 
-#endif // ZIRCON_PLATFORM_DEVICE_H
+#endif  // ZIRCON_PLATFORM_DEVICE_H

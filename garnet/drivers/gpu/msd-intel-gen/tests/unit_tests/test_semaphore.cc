@@ -2,35 +2,35 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <thread>
+
+#include "gtest/gtest.h"
 #include "magma_util/dlog.h"
 #include "msd_intel_semaphore.h"
-#include "gtest/gtest.h"
-#include <thread>
 
 namespace {
 
 class TestMsdIntelSemaphore {
-public:
-    static void Test()
-    {
-        std::shared_ptr<magma::PlatformSemaphore> semaphore(magma::PlatformSemaphore::Create());
-        ASSERT_NE(semaphore, nullptr);
+ public:
+  static void Test() {
+    std::shared_ptr<magma::PlatformSemaphore> semaphore(magma::PlatformSemaphore::Create());
+    ASSERT_NE(semaphore, nullptr);
 
-        auto abi_semaphore = std::make_shared<MsdIntelAbiSemaphore>(semaphore);
+    auto abi_semaphore = std::make_shared<MsdIntelAbiSemaphore>(semaphore);
 
-        EXPECT_EQ(abi_semaphore->ptr()->id(), semaphore->id());
-        EXPECT_EQ(2, semaphore.use_count());
+    EXPECT_EQ(abi_semaphore->ptr()->id(), semaphore->id());
+    EXPECT_EQ(2, semaphore.use_count());
 
-        EXPECT_FALSE(abi_semaphore->ptr()->Wait(100));
+    EXPECT_FALSE(abi_semaphore->ptr()->Wait(100));
 
-        semaphore->Signal();
-        EXPECT_TRUE(abi_semaphore->ptr()->Wait(100));
+    semaphore->Signal();
+    EXPECT_TRUE(abi_semaphore->ptr()->Wait(100));
 
-        abi_semaphore.reset();
+    abi_semaphore.reset();
 
-        EXPECT_EQ(1, semaphore.use_count());
-    }
+    EXPECT_EQ(1, semaphore.use_count());
+  }
 };
-} // namespace
+}  // namespace
 
 TEST(MsdIntelSemaphore, Test) { TestMsdIntelSemaphore::Test(); }

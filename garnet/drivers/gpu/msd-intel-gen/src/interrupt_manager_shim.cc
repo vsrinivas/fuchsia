@@ -6,33 +6,30 @@
 #include "msd_intel_pci_device.h"
 
 class InterruptManagerShim : public InterruptManager {
-public:
-    InterruptManagerShim(Owner* owner) : owner_(owner) {}
+ public:
+  InterruptManagerShim(Owner* owner) : owner_(owner) {}
 
-    ~InterruptManagerShim();
+  ~InterruptManagerShim();
 
-    bool RegisterCallback(InterruptCallback callback, void* data, uint32_t interrupt_mask) override;
+  bool RegisterCallback(InterruptCallback callback, void* data, uint32_t interrupt_mask) override;
 
-private:
-    MsdIntelPciDevice* pci_device()
-    {
-        return static_cast<MsdIntelPciDevice*>(owner_->platform_device());
-    }
+ private:
+  MsdIntelPciDevice* pci_device() {
+    return static_cast<MsdIntelPciDevice*>(owner_->platform_device());
+  }
 
-    Owner* owner_;
+  Owner* owner_;
 };
 
 InterruptManagerShim::~InterruptManagerShim() { pci_device()->UnregisterInterruptCallback(); }
 
 bool InterruptManagerShim::RegisterCallback(InterruptCallback callback, void* data,
-                                            uint32_t interrupt_mask)
-{
-    return pci_device()->RegisterInterruptCallback(callback, data, interrupt_mask);
+                                            uint32_t interrupt_mask) {
+  return pci_device()->RegisterInterruptCallback(callback, data, interrupt_mask);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-std::unique_ptr<InterruptManager> InterruptManager::CreateShim(Owner* owner)
-{
-    return std::make_unique<InterruptManagerShim>(owner);
+std::unique_ptr<InterruptManager> InterruptManager::CreateShim(Owner* owner) {
+  return std::make_unique<InterruptManagerShim>(owner);
 }

@@ -14,46 +14,42 @@
 namespace magma {
 
 class ZirconPlatformSemaphore : public PlatformSemaphore {
-public:
-    ZirconPlatformSemaphore(zx::event event, uint64_t koid) : event_(std::move(event)), koid_(koid)
-    {
-    }
+ public:
+  ZirconPlatformSemaphore(zx::event event, uint64_t koid) : event_(std::move(event)), koid_(koid) {}
 
-    uint64_t id() override { return koid_; }
+  uint64_t id() override { return koid_; }
 
-    bool duplicate_handle(uint32_t* handle_out) override;
+  bool duplicate_handle(uint32_t* handle_out) override;
 
-    void Reset() override
-    {
-        event_.signal(zx_signal(), 0);
-        TRACE_DURATION("magma:sync", "semaphore reset", "id", koid_);
-        TRACE_FLOW_END("magma:sync", "semaphore signal", koid_);
-        TRACE_FLOW_END("magma:sync", "semaphore wait async", koid_);
-    }
+  void Reset() override {
+    event_.signal(zx_signal(), 0);
+    TRACE_DURATION("magma:sync", "semaphore reset", "id", koid_);
+    TRACE_FLOW_END("magma:sync", "semaphore signal", koid_);
+    TRACE_FLOW_END("magma:sync", "semaphore wait async", koid_);
+  }
 
-    void Signal() override
-    {
-        TRACE_FLOW_BEGIN("gfx", "event_signal", koid_);
-        TRACE_DURATION("magma:sync", "semaphore signal", "id", koid_);
-        TRACE_FLOW_BEGIN("magma:sync", "semaphore signal", koid_);
-        zx_status_t status = event_.signal(0u, zx_signal());
-        DASSERT(status == ZX_OK);
-    }
+  void Signal() override {
+    TRACE_FLOW_BEGIN("gfx", "event_signal", koid_);
+    TRACE_DURATION("magma:sync", "semaphore signal", "id", koid_);
+    TRACE_FLOW_BEGIN("magma:sync", "semaphore signal", koid_);
+    zx_status_t status = event_.signal(0u, zx_signal());
+    DASSERT(status == ZX_OK);
+  }
 
-    magma::Status WaitNoReset(uint64_t timeout_ms) override;
-    magma::Status Wait(uint64_t timeout_ms) override;
+  magma::Status WaitNoReset(uint64_t timeout_ms) override;
+  magma::Status Wait(uint64_t timeout_ms) override;
 
-    bool WaitAsync(PlatformPort* platform_port) override;
+  bool WaitAsync(PlatformPort* platform_port) override;
 
-    zx_handle_t zx_handle() const { return event_.get(); }
+  zx_handle_t zx_handle() const { return event_.get(); }
 
-    zx_signals_t zx_signal() const { return ZX_EVENT_SIGNALED; }
+  zx_signals_t zx_signal() const { return ZX_EVENT_SIGNALED; }
 
-private:
-    zx::event event_;
-    uint64_t koid_;
+ private:
+  zx::event event_;
+  uint64_t koid_;
 };
 
-} // namespace magma
+}  // namespace magma
 
-#endif // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_ZIRCON_ZIRCON_PLATFORM_SEMAPHORE_H_
+#endif  // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_ZIRCON_ZIRCON_PLATFORM_SEMAPHORE_H_

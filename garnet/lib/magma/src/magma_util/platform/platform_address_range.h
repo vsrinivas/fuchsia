@@ -11,15 +11,15 @@
 namespace magma {
 
 class PlatformAddressRange {
-public:
-    static std::unique_ptr<PlatformAddressRange> Create(uint64_t size);
+ public:
+  static std::unique_ptr<PlatformAddressRange> Create(uint64_t size);
 
-    virtual ~PlatformAddressRange() {}
+  virtual ~PlatformAddressRange() {}
 
-    virtual uint64_t address() = 0;
-    virtual uint64_t size() = 0;
+  virtual uint64_t address() = 0;
+  virtual uint64_t size() = 0;
 };
 
-} // namespace magma
+}  // namespace magma
 
-#endif // PLATFORM_ADDRESS_RANGE_H
+#endif  // PLATFORM_ADDRESS_RANGE_H

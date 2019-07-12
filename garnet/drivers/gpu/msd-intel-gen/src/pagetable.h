@@ -5,8 +5,9 @@
 #ifndef PAGETABLE_H
 #define PAGETABLE_H
 
+#include <limits.h>  // PAGE_SIZE
+
 #include "types.h"
-#include <limits.h> // PAGE_SIZE
 
 #ifndef PAGE_SHIFT
 
@@ -25,4 +26,4 @@
 #define PAGE_PCD (1 << 4)
 #define PAGE_PAT (1 << 7)
 
-#endif // PAGETABLE_H
+#endif  // PAGETABLE_H

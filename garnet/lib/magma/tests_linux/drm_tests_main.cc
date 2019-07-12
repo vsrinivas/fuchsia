@@ -6,24 +6,23 @@
 #include <gtest/gtest.h>
 #include <helper/platform_device_helper.h>
 
-int main(int argc, char** argv)
-{
-    int fd = open("/dev/dri/renderD128", O_RDONLY);
-    if (fd < 0) {
-        fprintf(stderr, "Failed to open gpu device\n");
-        return -1;
-    }
+int main(int argc, char** argv) {
+  int fd = open("/dev/dri/renderD128", O_RDONLY);
+  if (fd < 0) {
+    fprintf(stderr, "Failed to open gpu device\n");
+    return -1;
+  }
 
-    void* device = reinterpret_cast<void*>(fd);
+  void* device = reinterpret_cast<void*>(fd);
 
-    TestPlatformDevice::SetInstance(magma::PlatformDevice::Create(device));
-    SetTestDeviceHandle(device);
+  TestPlatformDevice::SetInstance(magma::PlatformDevice::Create(device));
+  SetTestDeviceHandle(device);
 
-    testing::InitGoogleTest(&argc, argv);
+  testing::InitGoogleTest(&argc, argv);
 
-    int ret = RUN_ALL_TESTS();
+  int ret = RUN_ALL_TESTS();
 
-    close(fd);
+  close(fd);
 
-    return ret;
+  return ret;
 }

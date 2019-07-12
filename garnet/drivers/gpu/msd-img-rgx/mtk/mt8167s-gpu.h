@@ -20,6 +20,7 @@
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/mmio/mmio.h>
+
 #include <memory>
 #include <mutex>
 
@@ -54,7 +55,7 @@ constexpr uint32_t kInfraTopAxiSi1WayEnMfg2d = (1 << 7);
 constexpr uint32_t kPwrStatus = 0x60c;
 constexpr uint32_t kPwrStatus2nd = 0x610;
 
-} // namespace
+}  // namespace
 
 class Mt8167sGpu;
 
@@ -63,56 +64,56 @@ using DeviceType = ddk::Device<Mt8167sGpu, ddk::Messageable>;
 class Mt8167sGpu : public DeviceType,
                    public ddk::EmptyProtocol<ZX_PROTOCOL_GPU>,
                    public ImgSysDevice {
-public:
-    Mt8167sGpu(zx_device_t* parent) : DeviceType(parent) {}
+ public:
+  Mt8167sGpu(zx_device_t* parent) : DeviceType(parent) {}
 
-    virtual ~Mt8167sGpu();
+  virtual ~Mt8167sGpu();
 
-    zx_status_t Bind();
-    void DdkRelease();
+  zx_status_t Bind();
+  void DdkRelease();
 
-    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
-    zx_status_t Query(uint64_t query_id, fidl_txn_t* transaction);
-    zx_status_t QueryReturnsBuffer(uint64_t query_id, fidl_txn_t* transaction);
-    zx_status_t Connect(uint64_t client_id, fidl_txn_t* transaction);
-    zx_status_t DumpState(uint32_t dump_type);
-    zx_status_t Restart();
+  zx_status_t Query(uint64_t query_id, fidl_txn_t* transaction);
+  zx_status_t QueryReturnsBuffer(uint64_t query_id, fidl_txn_t* transaction);
+  zx_status_t Connect(uint64_t client_id, fidl_txn_t* transaction);
+  zx_status_t DumpState(uint32_t dump_type);
+  zx_status_t Restart();
 
-    zx_status_t PowerUp() override;
-    zx_status_t PowerDown() override;
-    void* device() override { return parent(); }
+  zx_status_t PowerUp() override;
+  zx_status_t PowerDown() override;
+  void* device() override { return parent(); }
 
-private:
-    friend class Mt8167GpuTest;
+ private:
+  friend class Mt8167GpuTest;
 
-    bool StartMagma() MAGMA_REQUIRES(magma_mutex_);
-    void StopMagma() MAGMA_REQUIRES(magma_mutex_);
+  bool StartMagma() MAGMA_REQUIRES(magma_mutex_);
+  void StopMagma() MAGMA_REQUIRES(magma_mutex_);
 
-    // MFG is Mediatek's name for their graphics subsystem.
-    zx_status_t PowerOnMfgAsync();
-    zx_status_t PowerOnMfg2d();
-    zx_status_t PowerOnMfg();
-    zx_status_t PowerDownMfgAsync();
-    zx_status_t PowerDownMfg2d();
-    zx_status_t PowerDownMfg();
+  // MFG is Mediatek's name for their graphics subsystem.
+  zx_status_t PowerOnMfgAsync();
+  zx_status_t PowerOnMfg2d();
+  zx_status_t PowerOnMfg();
+  zx_status_t PowerDownMfgAsync();
+  zx_status_t PowerDownMfg2d();
+  zx_status_t PowerDownMfg();
 
-    void EnableMfgHwApm();
+  void EnableMfgHwApm();
 
-    ddk::ClockProtocolClient clks_[kClockCount];
-    // MFG TOP MMIO - Controls mediatek's gpu-related power- and
-    // clock-management hardware.
-    std::optional<ddk::MmioBuffer> gpu_buffer_;
-    // MFG MMIO (corresponds to the IMG GPU's registers)
-    std::optional<ddk::MmioBuffer> real_gpu_buffer_;
-    std::optional<ddk::MmioBuffer> power_gpu_buffer_; // SCPSYS MMIO
-    std::optional<ddk::MmioBuffer> clock_gpu_buffer_; // XO MMIO
+  ddk::ClockProtocolClient clks_[kClockCount];
+  // MFG TOP MMIO - Controls mediatek's gpu-related power- and
+  // clock-management hardware.
+  std::optional<ddk::MmioBuffer> gpu_buffer_;
+  // MFG MMIO (corresponds to the IMG GPU's registers)
+  std::optional<ddk::MmioBuffer> real_gpu_buffer_;
+  std::optional<ddk::MmioBuffer> power_gpu_buffer_;  // SCPSYS MMIO
+  std::optional<ddk::MmioBuffer> clock_gpu_buffer_;  // XO MMIO
 
-    bool logged_gpu_info_ = false;
+  bool logged_gpu_info_ = false;
 
-    std::mutex magma_mutex_;
-    std::unique_ptr<MagmaDriver> magma_driver_ MAGMA_GUARDED(magma_mutex_);
-    std::shared_ptr<MagmaSystemDevice> magma_system_device_ MAGMA_GUARDED(magma_mutex_);
+  std::mutex magma_mutex_;
+  std::unique_ptr<MagmaDriver> magma_driver_ MAGMA_GUARDED(magma_mutex_);
+  std::shared_ptr<MagmaSystemDevice> magma_system_device_ MAGMA_GUARDED(magma_mutex_);
 };
 
-#endif // GARNET_DRIVERS_GPU_MSD_IMG_RGX_MTK_MT8167S_GPU_H_
+#endif  // GARNET_DRIVERS_GPU_MSD_IMG_RGX_MTK_MT8167S_GPU_H_

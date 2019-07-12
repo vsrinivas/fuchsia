@@ -8,8 +8,8 @@
 #include "gtest/gtest.h"
 
 class IcdLoadTest {
-public:
-    static void LoadIcd();
+ public:
+  static void LoadIcd();
 };
 
-#endif // GARNET_LIB_MAGMA_TESTS_ICD_LOAD_ICD_LOAD_H_
+#endif  // GARNET_LIB_MAGMA_TESTS_ICD_LOAD_ICD_LOAD_H_

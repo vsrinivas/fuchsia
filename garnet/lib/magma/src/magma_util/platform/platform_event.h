@@ -14,20 +14,20 @@ namespace magma {
 // PlatformEvent is a one-shot event: initial state is unsignaled;
 // after signaling, state is forever signaled.
 class PlatformEvent {
-public:
-    static std::unique_ptr<PlatformEvent> Create();
+ public:
+  static std::unique_ptr<PlatformEvent> Create();
 
-    virtual ~PlatformEvent() {}
+  virtual ~PlatformEvent() {}
 
-    virtual void Signal() = 0;
+  virtual void Signal() = 0;
 
-    // Returns MAGMA_STATUS_OK if the event is signaled before the
-    // timeout expires.
-    virtual magma::Status Wait(uint64_t timeout_ms) = 0;
+  // Returns MAGMA_STATUS_OK if the event is signaled before the
+  // timeout expires.
+  virtual magma::Status Wait(uint64_t timeout_ms) = 0;
 
-    magma::Status Wait() { return Wait(UINT64_MAX); }
+  magma::Status Wait() { return Wait(UINT64_MAX); }
 };
 
-} // namespace magma
+}  // namespace magma
 
-#endif // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_PLATFORM_EVENT_H_
+#endif  // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_PLATFORM_EVENT_H_

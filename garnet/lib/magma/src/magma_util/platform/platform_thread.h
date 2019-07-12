@@ -14,35 +14,35 @@ namespace magma {
 
 // Use std::thread except for ids.
 class PlatformThreadId {
-public:
-    PlatformThreadId() { SetToCurrent(); }
+ public:
+  PlatformThreadId() { SetToCurrent(); }
 
-    uint64_t id() { return id_; }
+  uint64_t id() { return id_; }
 
-    void SetToCurrent() { id_ = GetCurrentThreadId(); }
+  void SetToCurrent() { id_ = GetCurrentThreadId(); }
 
-    bool IsCurrent() { return id_ == GetCurrentThreadId(); }
+  bool IsCurrent() { return id_ == GetCurrentThreadId(); }
 
-private:
-    static uint64_t GetCurrentThreadId();
+ private:
+  static uint64_t GetCurrentThreadId();
 
-    uint64_t id_ = 0;
+  uint64_t id_ = 0;
 };
 
 class PlatformThreadHelper {
-public:
-    static void SetCurrentThreadName(const std::string& name);
-    static std::string GetCurrentThreadName();
+ public:
+  static void SetCurrentThreadName(const std::string& name);
+  static std::string GetCurrentThreadName();
 
-    static bool SetProfile(PlatformHandle* profile);
+  static bool SetProfile(PlatformHandle* profile);
 };
 
 class PlatformProcessHelper {
-public:
-    static std::string GetCurrentProcessName();
-    static uint64_t GetCurrentProcessId();
+ public:
+  static std::string GetCurrentProcessName();
+  static uint64_t GetCurrentProcessId();
 };
 
-} // namespace magma
+}  // namespace magma
 
-#endif // PLATFORM_THREAD_H
+#endif  // PLATFORM_THREAD_H

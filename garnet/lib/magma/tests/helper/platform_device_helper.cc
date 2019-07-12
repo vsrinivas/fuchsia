@@ -12,10 +12,9 @@ std::unique_ptr<magma::PlatformDevice> TestPlatformDevice::g_instance;
 
 void SetTestDeviceHandle(void* handle) { driver_device_s = handle; }
 
-void* GetTestDeviceHandle()
-{
-    if (!driver_device_s) {
-        return DRETP(nullptr, "no platform device found");
-    }
-    return driver_device_s;
+void* GetTestDeviceHandle() {
+  if (!driver_device_s) {
+    return DRETP(nullptr, "no platform device found");
+  }
+  return driver_device_s;
 }

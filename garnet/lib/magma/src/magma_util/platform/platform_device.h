@@ -5,58 +5,57 @@
 #ifndef PLATFORM_DEVICE_H
 #define PLATFORM_DEVICE_H
 
+#include <memory>
+
 #include "magma_util/dlog.h"
 #include "magma_util/status.h"
 #include "platform_buffer.h"
 #include "platform_handle.h"
 #include "platform_interrupt.h"
 #include "platform_mmio.h"
-#include <memory>
 
 namespace magma {
 
 class PlatformDevice {
-public:
-    // See zircon/syscalls/profile.h
-    enum Priority {
-        kPriorityLowest = 0,
-        kPriorityLow = 8,
-        kPriorityDefault = 16,
-        kPriorityHigher = 20,
-        kPriorityHigh = 24,
-        kPriorityHighest = 31
-    };
+ public:
+  // See zircon/syscalls/profile.h
+  enum Priority {
+    kPriorityLowest = 0,
+    kPriorityLow = 8,
+    kPriorityDefault = 16,
+    kPriorityHigher = 20,
+    kPriorityHigh = 24,
+    kPriorityHighest = 31
+  };
 
-    virtual ~PlatformDevice() { DLOG("PlatformDevice dtor"); }
+  virtual ~PlatformDevice() { DLOG("PlatformDevice dtor"); }
 
-    virtual void* GetDeviceHandle() = 0;
+  virtual void* GetDeviceHandle() = 0;
 
-    virtual std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() const = 0;
+  virtual std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() const = 0;
 
-    virtual std::unique_ptr<PlatformHandle> GetSchedulerProfile(Priority priority,
-                                                                const char* name) const = 0;
+  virtual std::unique_ptr<PlatformHandle> GetSchedulerProfile(Priority priority,
+                                                              const char* name) const = 0;
 
-    virtual Status LoadFirmware(const char* filename, std::unique_ptr<PlatformBuffer>* firmware_out,
-                                uint64_t* size_out) const = 0;
+  virtual Status LoadFirmware(const char* filename, std::unique_ptr<PlatformBuffer>* firmware_out,
+                              uint64_t* size_out) const = 0;
 
-    // Map an MMIO listed at |index| in the MDI for this device.
-    virtual std::unique_ptr<PlatformMmio> CpuMapMmio(unsigned int index,
-                                                     PlatformMmio::CachePolicy cache_policy)
-    {
-        DLOG("CpuMapMmio unimplemented");
-        return nullptr;
-    }
+  // Map an MMIO listed at |index| in the MDI for this device.
+  virtual std::unique_ptr<PlatformMmio> CpuMapMmio(unsigned int index,
+                                                   PlatformMmio::CachePolicy cache_policy) {
+    DLOG("CpuMapMmio unimplemented");
+    return nullptr;
+  }
 
-    // Register an interrupt listed at |index| in the MDI for this device.
-    virtual std::unique_ptr<PlatformInterrupt> RegisterInterrupt(unsigned int index)
-    {
-        DLOG("RegisterInterrupt unimplemented");
-        return nullptr;
-    }
+  // Register an interrupt listed at |index| in the MDI for this device.
+  virtual std::unique_ptr<PlatformInterrupt> RegisterInterrupt(unsigned int index) {
+    DLOG("RegisterInterrupt unimplemented");
+    return nullptr;
+  }
 
-    static std::unique_ptr<PlatformDevice> Create(void* device_handle);
+  static std::unique_ptr<PlatformDevice> Create(void* device_handle);
 };
 
-} // namespace magma
+}  // namespace magma
 
-#endif // PLATFORM_DEVICE_H
+#endif  // PLATFORM_DEVICE_H

@@ -9,4 +9,4 @@
 
 bool test_magma_abi_from_c(void);
 
-#endif // TEST_MAGMA_ABI_H
+#endif  // TEST_MAGMA_ABI_H

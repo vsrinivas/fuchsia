@@ -11,19 +11,19 @@ namespace magma {
 
 // Created from a PlatformPciDevice.
 class PlatformInterrupt {
-public:
-    PlatformInterrupt() {}
+ public:
+  PlatformInterrupt() {}
 
-    virtual ~PlatformInterrupt() {}
+  virtual ~PlatformInterrupt() {}
 
-    virtual void Signal() = 0;
-    virtual bool Wait() = 0;
-    virtual void Complete() = 0;
+  virtual void Signal() = 0;
+  virtual bool Wait() = 0;
+  virtual void Complete() = 0;
 
-private:
-    DISALLOW_COPY_AND_ASSIGN(PlatformInterrupt);
+ private:
+  DISALLOW_COPY_AND_ASSIGN(PlatformInterrupt);
 };
 
-} // namespace magma
+}  // namespace magma
 
-#endif // PLATFORM_INTERRUPT_H
+#endif  // PLATFORM_INTERRUPT_H

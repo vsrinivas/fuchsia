@@ -5,28 +5,28 @@
 #ifndef INTERRUPT_MANAGER_H
 #define INTERRUPT_MANAGER_H
 
+#include <type_traits>
+
 #include "magma_util/register_io.h"
 #include "platform_interrupt.h"
 #include "platform_pci_device.h"
-#include <type_traits>
 
 class InterruptManager {
-public:
-    class Owner {
-    public:
-        virtual magma::RegisterIo* register_io_for_interrupt() = 0;
-        virtual magma::PlatformPciDevice* platform_device() = 0;
-    };
+ public:
+  class Owner {
+   public:
+    virtual magma::RegisterIo* register_io_for_interrupt() = 0;
+    virtual magma::PlatformPciDevice* platform_device() = 0;
+  };
 
-    virtual ~InterruptManager() {}
+  virtual ~InterruptManager() {}
 
-    using InterruptCallback =
-        std::add_pointer_t<void(void* data, uint32_t master_interrupt_control)>;
+  using InterruptCallback = std::add_pointer_t<void(void* data, uint32_t master_interrupt_control)>;
 
-    virtual bool RegisterCallback(InterruptCallback callback, void* data,
-                                  uint32_t interrupt_mask) = 0;
+  virtual bool RegisterCallback(InterruptCallback callback, void* data,
+                                uint32_t interrupt_mask) = 0;
 
-    static std::unique_ptr<InterruptManager> CreateShim(Owner* owner);
+  static std::unique_ptr<InterruptManager> CreateShim(Owner* owner);
 };
 
-#endif // INTERRUPT_MANAGER_H
+#endif  // INTERRUPT_MANAGER_H

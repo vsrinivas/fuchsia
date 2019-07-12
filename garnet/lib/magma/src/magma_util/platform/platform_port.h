@@ -5,27 +5,28 @@
 #ifndef PLATFORM_PORT_H
 #define PLATFORM_PORT_H
 
-#include "magma_util/status.h"
 #include <memory>
+
+#include "magma_util/status.h"
 
 namespace magma {
 
 class PlatformPort {
-public:
-    static std::unique_ptr<PlatformPort> Create();
+ public:
+  static std::unique_ptr<PlatformPort> Create();
 
-    virtual ~PlatformPort() {}
+  virtual ~PlatformPort() {}
 
-    // Closes the port. This will cause any thread blocked in Wait to return an error.
-    virtual void Close() = 0;
+  // Closes the port. This will cause any thread blocked in Wait to return an error.
+  virtual void Close() = 0;
 
-    // Waits for a port to return a packet.
-    // If a packet is available before the time timeout expires, |key_out| will be set.
-    virtual Status Wait(uint64_t* key_out, uint64_t timeout_ms) = 0;
+  // Waits for a port to return a packet.
+  // If a packet is available before the time timeout expires, |key_out| will be set.
+  virtual Status Wait(uint64_t* key_out, uint64_t timeout_ms) = 0;
 
-    Status Wait(uint64_t* key_out) { return Wait(key_out, UINT64_MAX); }
+  Status Wait(uint64_t* key_out) { return Wait(key_out, UINT64_MAX); }
 };
 
-} // namespace magma
+}  // namespace magma
 
-#endif // PLATFORM_PORT_H
+#endif  // PLATFORM_PORT_H

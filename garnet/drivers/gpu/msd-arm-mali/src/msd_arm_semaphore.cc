@@ -7,19 +7,17 @@
 #include "magma_util/macros.h"
 #include "msd.h"
 
-magma_status_t msd_semaphore_import(uint32_t handle, msd_semaphore_t** semaphore_out)
-{
-    auto semaphore = magma::PlatformSemaphore::Import(handle);
-    if (!semaphore)
-        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "couldn't import semaphore handle");
+magma_status_t msd_semaphore_import(uint32_t handle, msd_semaphore_t** semaphore_out) {
+  auto semaphore = magma::PlatformSemaphore::Import(handle);
+  if (!semaphore)
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "couldn't import semaphore handle");
 
-    *semaphore_out =
-        new MsdArmAbiSemaphore(std::shared_ptr<magma::PlatformSemaphore>(std::move(semaphore)));
+  *semaphore_out =
+      new MsdArmAbiSemaphore(std::shared_ptr<magma::PlatformSemaphore>(std::move(semaphore)));
 
-    return MAGMA_STATUS_OK;
+  return MAGMA_STATUS_OK;
 }
 
-void msd_semaphore_release(msd_semaphore_t* semaphore)
-{
-    delete MsdArmAbiSemaphore::cast(semaphore);
+void msd_semaphore_release(msd_semaphore_t* semaphore) {
+  delete MsdArmAbiSemaphore::cast(semaphore);
 }

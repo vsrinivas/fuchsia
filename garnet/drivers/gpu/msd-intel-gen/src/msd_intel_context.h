@@ -5,6 +5,11 @@
 #ifndef MSD_INTEL_CONTEXT_H
 #define MSD_INTEL_CONTEXT_H
 
+#include <map>
+#include <memory>
+#include <queue>
+#include <thread>
+
 #include "command_buffer.h"
 #include "magma_util/semaphore_port.h"
 #include "magma_util/status.h"
@@ -13,141 +18,125 @@
 #include "ppgtt.h"
 #include "ringbuffer.h"
 #include "types.h"
-#include <map>
-#include <memory>
-#include <queue>
-#include <thread>
 
 class MsdIntelConnection;
 
 // Abstract base context.
 class MsdIntelContext {
-public:
-    MsdIntelContext(std::shared_ptr<AddressSpace> address_space) : address_space_(address_space)
-    {
-        DASSERT(address_space_);
+ public:
+  MsdIntelContext(std::shared_ptr<AddressSpace> address_space) : address_space_(address_space) {
+    DASSERT(address_space_);
+  }
+
+  virtual ~MsdIntelContext() {}
+
+  void SetEngineState(EngineCommandStreamerId id, std::unique_ptr<MsdIntelBuffer> context_buffer,
+                      std::unique_ptr<Ringbuffer> ringbuffer);
+
+  virtual bool Map(std::shared_ptr<AddressSpace> address_space, EngineCommandStreamerId id);
+  virtual bool Unmap(EngineCommandStreamerId id);
+
+  virtual std::weak_ptr<MsdIntelConnection> connection() {
+    return std::weak_ptr<MsdIntelConnection>();
+  }
+
+  virtual bool killed() { return false; }
+
+  virtual void Kill() { magma::log(magma::LOG_WARNING, "Attemping to kill the global context"); }
+
+  // Gets the gpu address of the context buffer if mapped.
+  bool GetGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr_out);
+  bool GetRingbufferGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr_out);
+
+  MsdIntelBuffer* get_context_buffer(EngineCommandStreamerId id) {
+    auto iter = state_map_.find(id);
+    return iter == state_map_.end() ? nullptr : iter->second.context_buffer.get();
+  }
+
+  void* GetCachedContextBufferCpuAddr(EngineCommandStreamerId id) {
+    auto iter = state_map_.find(id);
+    if (iter == state_map_.end())
+      return nullptr;
+    if (!iter->second.context_buffer_cpu_addr) {
+      MsdIntelBuffer* context_buffer = iter->second.context_buffer.get();
+      if (!context_buffer)
+        return nullptr;
+      if (!context_buffer->platform_buffer()->MapCpu(&iter->second.context_buffer_cpu_addr))
+        return DRETP(nullptr, "Failed to map context buffer");
     }
+    return iter->second.context_buffer_cpu_addr;
+  }
 
-    virtual ~MsdIntelContext() {}
+  Ringbuffer* get_ringbuffer(EngineCommandStreamerId id) {
+    auto iter = state_map_.find(id);
+    return iter == state_map_.end() ? nullptr : iter->second.ringbuffer.get();
+  }
 
-    void SetEngineState(EngineCommandStreamerId id, std::unique_ptr<MsdIntelBuffer> context_buffer,
-                        std::unique_ptr<Ringbuffer> ringbuffer);
+  bool IsInitializedForEngine(EngineCommandStreamerId id) {
+    return state_map_.find(id) != state_map_.end();
+  }
 
-    virtual bool Map(std::shared_ptr<AddressSpace> address_space, EngineCommandStreamerId id);
-    virtual bool Unmap(EngineCommandStreamerId id);
+  std::queue<std::unique_ptr<MappedBatch>>& pending_batch_queue() { return pending_batch_queue_; }
 
-    virtual std::weak_ptr<MsdIntelConnection> connection()
-    {
-        return std::weak_ptr<MsdIntelConnection>();
-    }
+  std::shared_ptr<AddressSpace> exec_address_space() { return address_space_; }
 
-    virtual bool killed() { return false; }
+ private:
+  struct PerEngineState {
+    std::shared_ptr<MsdIntelBuffer> context_buffer;
+    std::unique_ptr<GpuMapping> context_mapping;
+    std::unique_ptr<Ringbuffer> ringbuffer;
+    void* context_buffer_cpu_addr = nullptr;
+  };
 
-    virtual void Kill() { magma::log(magma::LOG_WARNING, "Attemping to kill the global context"); }
+  std::map<EngineCommandStreamerId, PerEngineState> state_map_;
+  std::queue<std::unique_ptr<MappedBatch>> pending_batch_queue_;
+  std::shared_ptr<AddressSpace> address_space_;
 
-    // Gets the gpu address of the context buffer if mapped.
-    bool GetGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr_out);
-    bool GetRingbufferGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr_out);
-
-    MsdIntelBuffer* get_context_buffer(EngineCommandStreamerId id)
-    {
-        auto iter = state_map_.find(id);
-        return iter == state_map_.end() ? nullptr : iter->second.context_buffer.get();
-    }
-
-    void* GetCachedContextBufferCpuAddr(EngineCommandStreamerId id)
-    {
-        auto iter = state_map_.find(id);
-        if (iter == state_map_.end())
-            return nullptr;
-        if (!iter->second.context_buffer_cpu_addr) {
-            MsdIntelBuffer* context_buffer = iter->second.context_buffer.get();
-            if (!context_buffer)
-                return nullptr;
-            if (!context_buffer->platform_buffer()->MapCpu(&iter->second.context_buffer_cpu_addr))
-                return DRETP(nullptr, "Failed to map context buffer");
-        }
-        return iter->second.context_buffer_cpu_addr;
-    }
-
-    Ringbuffer* get_ringbuffer(EngineCommandStreamerId id)
-    {
-        auto iter = state_map_.find(id);
-        return iter == state_map_.end() ? nullptr : iter->second.ringbuffer.get();
-    }
-
-    bool IsInitializedForEngine(EngineCommandStreamerId id)
-    {
-        return state_map_.find(id) != state_map_.end();
-    }
-
-    std::queue<std::unique_ptr<MappedBatch>>& pending_batch_queue() { return pending_batch_queue_; }
-
-    std::shared_ptr<AddressSpace> exec_address_space() { return address_space_; }
-
-private:
-    struct PerEngineState {
-        std::shared_ptr<MsdIntelBuffer> context_buffer;
-        std::unique_ptr<GpuMapping> context_mapping;
-        std::unique_ptr<Ringbuffer> ringbuffer;
-        void* context_buffer_cpu_addr = nullptr;
-    };
-
-    std::map<EngineCommandStreamerId, PerEngineState> state_map_;
-    std::queue<std::unique_ptr<MappedBatch>> pending_batch_queue_;
-    std::shared_ptr<AddressSpace> address_space_;
-
-    friend class TestContext;
+  friend class TestContext;
 };
 
 class ClientContext : public MsdIntelContext {
-public:
-    ClientContext(std::weak_ptr<MsdIntelConnection> connection,
-                  std::shared_ptr<AddressSpace> address_space)
-        : MsdIntelContext(std::move(address_space)), connection_(connection)
-    {
-    }
+ public:
+  ClientContext(std::weak_ptr<MsdIntelConnection> connection,
+                std::shared_ptr<AddressSpace> address_space)
+      : MsdIntelContext(std::move(address_space)), connection_(connection) {}
 
-    ~ClientContext();
+  ~ClientContext();
 
-    magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf);
-    void Shutdown();
+  magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf);
+  void Shutdown();
 
-    std::weak_ptr<MsdIntelConnection> connection() override { return connection_; }
+  std::weak_ptr<MsdIntelConnection> connection() override { return connection_; }
 
-    bool killed() override { return killed_; }
+  bool killed() override { return killed_; }
 
-    void Kill() override;
+  void Kill() override;
 
-private:
-    magma::Status SubmitPendingCommandBuffer(bool have_lock);
+ private:
+  magma::Status SubmitPendingCommandBuffer(bool have_lock);
 
-    std::weak_ptr<MsdIntelConnection> connection_;
-    std::unique_ptr<magma::SemaphorePort> semaphore_port_;
-    std::thread wait_thread_;
-    std::mutex pending_command_buffer_mutex_;
-    std::queue<std::unique_ptr<CommandBuffer>> pending_command_buffer_queue_;
-    bool killed_ = false;
+  std::weak_ptr<MsdIntelConnection> connection_;
+  std::unique_ptr<magma::SemaphorePort> semaphore_port_;
+  std::thread wait_thread_;
+  std::mutex pending_command_buffer_mutex_;
+  std::queue<std::unique_ptr<CommandBuffer>> pending_command_buffer_queue_;
+  bool killed_ = false;
 };
 
 class MsdIntelAbiContext : public msd_context_t {
-public:
-    MsdIntelAbiContext(std::shared_ptr<ClientContext> ptr) : ptr_(std::move(ptr))
-    {
-        magic_ = kMagic;
-    }
+ public:
+  MsdIntelAbiContext(std::shared_ptr<ClientContext> ptr) : ptr_(std::move(ptr)) { magic_ = kMagic; }
 
-    static MsdIntelAbiContext* cast(msd_context_t* context)
-    {
-        DASSERT(context);
-        DASSERT(context->magic_ == kMagic);
-        return static_cast<MsdIntelAbiContext*>(context);
-    }
-    std::shared_ptr<ClientContext> ptr() { return ptr_; }
+  static MsdIntelAbiContext* cast(msd_context_t* context) {
+    DASSERT(context);
+    DASSERT(context->magic_ == kMagic);
+    return static_cast<MsdIntelAbiContext*>(context);
+  }
+  std::shared_ptr<ClientContext> ptr() { return ptr_; }
 
-private:
-    std::shared_ptr<ClientContext> ptr_;
-    static const uint32_t kMagic = 0x63747874; // "ctxt"
+ private:
+  std::shared_ptr<ClientContext> ptr_;
+  static const uint32_t kMagic = 0x63747874;  // "ctxt"
 };
 
-#endif // MSD_INTEL_CONTEXT_H
+#endif  // MSD_INTEL_CONTEXT_H

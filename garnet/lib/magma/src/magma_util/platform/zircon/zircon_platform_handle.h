@@ -13,23 +13,22 @@
 namespace magma {
 
 class ZirconPlatformHandle : public PlatformHandle {
-public:
-    ZirconPlatformHandle(zx::handle handle) : handle_(std::move(handle))
-    {
-        DASSERT(handle_ != ZX_HANDLE_INVALID);
-    }
+ public:
+  ZirconPlatformHandle(zx::handle handle) : handle_(std::move(handle)) {
+    DASSERT(handle_ != ZX_HANDLE_INVALID);
+  }
 
-    bool GetCount(uint32_t* count_out) override;
+  bool GetCount(uint32_t* count_out) override;
 
-    uint32_t release() override { return handle_.release(); }
+  uint32_t release() override { return handle_.release(); }
 
-    zx_handle_t get() { return handle_.get(); }
+  zx_handle_t get() { return handle_.get(); }
 
-private:
-    zx::handle handle_;
-    static_assert(sizeof(handle_) == sizeof(uint32_t), "zx handle is not 32 bits");
+ private:
+  zx::handle handle_;
+  static_assert(sizeof(handle_) == sizeof(uint32_t), "zx handle is not 32 bits");
 };
 
-} // namespace magma
+}  // namespace magma
 
-#endif // ZIRCON_PLATFORM_HANDLE_H
+#endif  // ZIRCON_PLATFORM_HANDLE_H

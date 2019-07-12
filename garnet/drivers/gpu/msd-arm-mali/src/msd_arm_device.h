@@ -33,196 +33,190 @@ class MsdArmDevice : public msd_device_t,
                      public MsdArmConnection::Owner,
                      public AddressManager::Owner,
                      public PerformanceCounters::Owner {
-public:
-    // Creates a device for the given |device_handle| and returns ownership.
-    // If |start_device_thread| is false, then StartDeviceThread should be called
-    // to enable device request processing.
-    static std::unique_ptr<MsdArmDevice> Create(void* device_handle, bool start_device_thread);
+ public:
+  // Creates a device for the given |device_handle| and returns ownership.
+  // If |start_device_thread| is false, then StartDeviceThread should be called
+  // to enable device request processing.
+  static std::unique_ptr<MsdArmDevice> Create(void* device_handle, bool start_device_thread);
 
-    MsdArmDevice();
+  MsdArmDevice();
 
-    virtual ~MsdArmDevice();
+  virtual ~MsdArmDevice();
 
-    static MsdArmDevice* cast(msd_device_t* dev)
-    {
-        DASSERT(dev);
-        DASSERT(dev->magic_ == kMagic);
-        return static_cast<MsdArmDevice*>(dev);
-    }
+  static MsdArmDevice* cast(msd_device_t* dev) {
+    DASSERT(dev);
+    DASSERT(dev->magic_ == kMagic);
+    return static_cast<MsdArmDevice*>(dev);
+  }
 
-    bool Init(void* device_handle);
-    std::shared_ptr<MsdArmConnection> Open(msd_client_id_t client_id);
+  bool Init(void* device_handle);
+  std::shared_ptr<MsdArmConnection> Open(msd_client_id_t client_id);
 
-    struct DumpState {
-        struct CorePowerState {
-            const char* core_type;
-            const char* status_type;
-            uint64_t bitmask;
-        };
-        std::vector<CorePowerState> power_states;
-        // Only accounts for recent past.
-        uint64_t total_time_ms;
-        uint64_t active_time_ms;
-
-        uint32_t gpu_fault_status;
-        uint64_t gpu_fault_address;
-        uint32_t gpu_status;
-        uint64_t cycle_count;
-        uint64_t timestamp;
-
-        struct JobSlotStatus {
-            uint32_t status;
-            uint64_t head;
-            uint64_t tail;
-            uint32_t config;
-        };
-
-        std::vector<JobSlotStatus> job_slot_status;
-        struct AddressSpaceStatus {
-            uint32_t status;
-            uint32_t fault_status;
-            uint64_t fault_address;
-        };
-        std::vector<AddressSpaceStatus> address_space_status;
+  struct DumpState {
+    struct CorePowerState {
+      const char* core_type;
+      const char* status_type;
+      uint64_t bitmask;
     };
-    static void DumpRegisters(const GpuFeatures& features, magma::RegisterIo* io,
-                              DumpState* dump_state);
-    void Dump(DumpState* dump_state, bool from_device_thread);
-    void DumpToString(std::string& dump_string, bool from_device_thread);
-    void FormatDump(DumpState& dump_state, std::string& dump_string);
-    void DumpStatusToLog();
+    std::vector<CorePowerState> power_states;
+    // Only accounts for recent past.
+    uint64_t total_time_ms;
+    uint64_t active_time_ms;
 
-    // MsdArmConnection::Owner implementation.
-    void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) override;
-    void CancelAtoms(std::shared_ptr<MsdArmConnection> connection) override;
-    AddressSpaceObserver* GetAddressSpaceObserver() override { return address_manager_.get(); }
-    ArmMaliCacheCoherencyStatus cache_coherency_status() override
-    {
-        return cache_coherency_status_;
-    }
-    magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_.get(); }
-    bool IsProtectedModeSupported() override;
-    void DeregisterConnection() override;
+    uint32_t gpu_fault_status;
+    uint64_t gpu_fault_address;
+    uint32_t gpu_status;
+    uint64_t cycle_count;
+    uint64_t timestamp;
 
-    magma_status_t QueryInfo(uint64_t id, uint64_t* value_out);
-    magma_status_t QueryReturnsBuffer(uint64_t id, uint32_t* buffer_out);
+    struct JobSlotStatus {
+      uint32_t status;
+      uint64_t head;
+      uint64_t tail;
+      uint32_t config;
+    };
 
-    void RequestPerfCounterOperation(uint32_t type);
+    std::vector<JobSlotStatus> job_slot_status;
+    struct AddressSpaceStatus {
+      uint32_t status;
+      uint32_t fault_status;
+      uint64_t fault_address;
+    };
+    std::vector<AddressSpaceStatus> address_space_status;
+  };
+  static void DumpRegisters(const GpuFeatures& features, magma::RegisterIo* io,
+                            DumpState* dump_state);
+  void Dump(DumpState* dump_state, bool from_device_thread);
+  void DumpToString(std::string& dump_string, bool from_device_thread);
+  void FormatDump(DumpState& dump_state, std::string& dump_string);
+  void DumpStatusToLog();
 
-    // PerformanceCounters::Owner implementation.
-    AddressManager* address_manager() override { return address_manager_.get(); }
-    MsdArmConnection::Owner* connection_owner() override { return this; }
+  // MsdArmConnection::Owner implementation.
+  void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) override;
+  void CancelAtoms(std::shared_ptr<MsdArmConnection> connection) override;
+  AddressSpaceObserver* GetAddressSpaceObserver() override { return address_manager_.get(); }
+  ArmMaliCacheCoherencyStatus cache_coherency_status() override { return cache_coherency_status_; }
+  magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_.get(); }
+  bool IsProtectedModeSupported() override;
+  void DeregisterConnection() override;
 
-private:
-#define CHECK_THREAD_IS_CURRENT(x)                                                                 \
-    if (x)                                                                                         \
-    DASSERT(magma::ThreadIdCheck::IsCurrent(*x))
+  magma_status_t QueryInfo(uint64_t id, uint64_t* value_out);
+  magma_status_t QueryReturnsBuffer(uint64_t id, uint32_t* buffer_out);
 
-#define CHECK_THREAD_NOT_CURRENT(x)                                                                \
-    if (x)                                                                                         \
-    DASSERT(!magma::ThreadIdCheck::IsCurrent(*x))
+  void RequestPerfCounterOperation(uint32_t type);
 
-    friend class TestMsdArmDevice;
+  // PerformanceCounters::Owner implementation.
+  AddressManager* address_manager() override { return address_manager_.get(); }
+  MsdArmConnection::Owner* connection_owner() override { return this; }
 
-    class DumpRequest;
-    class PerfCounterSampleCompletedRequest;
-    class JobInterruptRequest;
-    class MmuInterruptRequest;
-    class ScheduleAtomRequest;
-    class CancelAtomsRequest;
-    class PerfCounterRequest;
+ private:
+#define CHECK_THREAD_IS_CURRENT(x) \
+  if (x)                           \
+  DASSERT(magma::ThreadIdCheck::IsCurrent(*x))
 
-    magma::RegisterIo* register_io() override
-    {
-        DASSERT(register_io_);
-        return register_io_.get();
-    }
+#define CHECK_THREAD_NOT_CURRENT(x) \
+  if (x)                            \
+  DASSERT(!magma::ThreadIdCheck::IsCurrent(*x))
 
-    void set_register_io(std::unique_ptr<magma::RegisterIo> register_io)
-    {
-        register_io_ = std::move(register_io);
-    }
+  friend class TestMsdArmDevice;
 
-    void Destroy();
-    void StartDeviceThread();
-    int DeviceThreadLoop();
-    int GpuInterruptThreadLoop();
-    int JobInterruptThreadLoop();
-    int MmuInterruptThreadLoop();
-    bool InitializeInterrupts();
-    void EnableInterrupts();
-    void DisableInterrupts();
-    bool InitializeHardware();
-    void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
-    static void InitializeHardwareQuirks(GpuFeatures* features, magma::RegisterIo* registers);
-    bool PowerDownL2();
-    bool ResetDevice();
+  class DumpRequest;
+  class PerfCounterSampleCompletedRequest;
+  class JobInterruptRequest;
+  class MmuInterruptRequest;
+  class ScheduleAtomRequest;
+  class CancelAtomsRequest;
+  class PerfCounterRequest;
 
-    magma::Status ProcessDumpStatusToLog();
-    magma::Status ProcessPerfCounterSampleCompleted();
-    magma::Status ProcessJobInterrupt();
-    magma::Status ProcessMmuInterrupt();
-    magma::Status ProcessScheduleAtoms();
-    magma::Status ProcessCancelAtoms(std::weak_ptr<MsdArmConnection> connection);
-    magma::Status ProcessPerfCounterRequest(uint32_t type);
+  magma::RegisterIo* register_io() override {
+    DASSERT(register_io_);
+    return register_io_.get();
+  }
 
-    void ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* registers);
+  void set_register_io(std::unique_ptr<magma::RegisterIo> register_io) {
+    register_io_ = std::move(register_io);
+  }
 
-    // JobScheduler::Owner implementation.
-    void RunAtom(MsdArmAtom* atom) override;
-    void AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result) override;
-    void HardStopAtom(MsdArmAtom* atom) override;
-    void SoftStopAtom(MsdArmAtom* atom) override;
-    void ReleaseMappingsForAtom(MsdArmAtom* atom) override;
-    magma::PlatformPort* GetPlatformPort() override;
-    void UpdateGpuActive(bool active) override;
-    void EnterProtectedMode() override;
-    bool ExitProtectedMode() override;
-    bool IsInProtectedMode() override;
-    void OutputHangMessage() override;
+  void Destroy();
+  void StartDeviceThread();
+  int DeviceThreadLoop();
+  int GpuInterruptThreadLoop();
+  int JobInterruptThreadLoop();
+  int MmuInterruptThreadLoop();
+  bool InitializeInterrupts();
+  void EnableInterrupts();
+  void DisableInterrupts();
+  bool InitializeHardware();
+  void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
+  static void InitializeHardwareQuirks(GpuFeatures* features, magma::RegisterIo* registers);
+  bool PowerDownL2();
+  bool ResetDevice();
 
-    static const uint32_t kMagic = 0x64657669; //"devi"
+  magma::Status ProcessDumpStatusToLog();
+  magma::Status ProcessPerfCounterSampleCompleted();
+  magma::Status ProcessJobInterrupt();
+  magma::Status ProcessMmuInterrupt();
+  magma::Status ProcessScheduleAtoms();
+  magma::Status ProcessCancelAtoms(std::weak_ptr<MsdArmConnection> connection);
+  magma::Status ProcessPerfCounterRequest(uint32_t type);
 
-    std::thread device_thread_;
-    std::unique_ptr<magma::PlatformThreadId> device_thread_id_;
-    std::atomic_bool device_thread_quit_flag_{false};
+  void ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* registers);
 
-    std::atomic_bool interrupt_thread_quit_flag_{false};
-    std::thread gpu_interrupt_thread_;
-    std::thread job_interrupt_thread_;
-    std::thread mmu_interrupt_thread_;
+  // JobScheduler::Owner implementation.
+  void RunAtom(MsdArmAtom* atom) override;
+  void AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result) override;
+  void HardStopAtom(MsdArmAtom* atom) override;
+  void SoftStopAtom(MsdArmAtom* atom) override;
+  void ReleaseMappingsForAtom(MsdArmAtom* atom) override;
+  magma::PlatformPort* GetPlatformPort() override;
+  void UpdateGpuActive(bool active) override;
+  void EnterProtectedMode() override;
+  bool ExitProtectedMode() override;
+  bool IsInProtectedMode() override;
+  void OutputHangMessage() override;
 
-    std::unique_ptr<magma::PlatformSemaphore> device_request_semaphore_;
-    std::unique_ptr<magma::PlatformPort> device_port_;
-    std::mutex device_request_mutex_;
-    std::list<std::unique_ptr<DeviceRequest>> device_request_list_;
+  static const uint32_t kMagic = 0x64657669;  //"devi"
 
-    // Triggered on device reset.
-    std::unique_ptr<magma::PlatformSemaphore> reset_semaphore_;
+  std::thread device_thread_;
+  std::unique_ptr<magma::PlatformThreadId> device_thread_id_;
+  std::atomic_bool device_thread_quit_flag_{false};
 
-    std::mutex schedule_mutex_;
-    __TA_GUARDED(schedule_mutex_) std::vector<std::shared_ptr<MsdArmAtom>> atoms_to_schedule_;
+  std::atomic_bool interrupt_thread_quit_flag_{false};
+  std::thread gpu_interrupt_thread_;
+  std::thread job_interrupt_thread_;
+  std::thread mmu_interrupt_thread_;
 
-    std::unique_ptr<magma::PlatformDevice> platform_device_;
-    std::unique_ptr<magma::RegisterIo> register_io_;
-    std::unique_ptr<magma::PlatformInterrupt> gpu_interrupt_;
-    std::unique_ptr<magma::PlatformInterrupt> job_interrupt_;
-    std::unique_ptr<magma::PlatformInterrupt> mmu_interrupt_;
+  std::unique_ptr<magma::PlatformSemaphore> device_request_semaphore_;
+  std::unique_ptr<magma::PlatformPort> device_port_;
+  std::mutex device_request_mutex_;
+  std::list<std::unique_ptr<DeviceRequest>> device_request_list_;
 
-    GpuFeatures gpu_features_;
-    ArmMaliCacheCoherencyStatus cache_coherency_status_ = kArmMaliCacheCoherencyNone;
+  // Triggered on device reset.
+  std::unique_ptr<magma::PlatformSemaphore> reset_semaphore_;
 
-    std::unique_ptr<PowerManager> power_manager_;
-    std::unique_ptr<AddressManager> address_manager_;
-    std::unique_ptr<JobScheduler> scheduler_;
-    std::unique_ptr<magma::PlatformBusMapper> bus_mapper_;
-    uint64_t cycle_counter_refcount_ = 0;
+  std::mutex schedule_mutex_;
+  __TA_GUARDED(schedule_mutex_) std::vector<std::shared_ptr<MsdArmAtom>> atoms_to_schedule_;
 
-    std::unique_ptr<PerformanceCounters> perf_counters_;
+  std::unique_ptr<magma::PlatformDevice> platform_device_;
+  std::unique_ptr<magma::RegisterIo> register_io_;
+  std::unique_ptr<magma::PlatformInterrupt> gpu_interrupt_;
+  std::unique_ptr<magma::PlatformInterrupt> job_interrupt_;
+  std::unique_ptr<magma::PlatformInterrupt> mmu_interrupt_;
 
-    std::mutex connection_list_mutex_;
-    MAGMA_GUARDED(connection_list_mutex_)
-    std::vector<std::weak_ptr<MsdArmConnection>> connection_list_;
+  GpuFeatures gpu_features_;
+  ArmMaliCacheCoherencyStatus cache_coherency_status_ = kArmMaliCacheCoherencyNone;
+
+  std::unique_ptr<PowerManager> power_manager_;
+  std::unique_ptr<AddressManager> address_manager_;
+  std::unique_ptr<JobScheduler> scheduler_;
+  std::unique_ptr<magma::PlatformBusMapper> bus_mapper_;
+  uint64_t cycle_counter_refcount_ = 0;
+
+  std::unique_ptr<PerformanceCounters> perf_counters_;
+
+  std::mutex connection_list_mutex_;
+  MAGMA_GUARDED(connection_list_mutex_)
+  std::vector<std::weak_ptr<MsdArmConnection>> connection_list_;
 };
 
-#endif // MSD_ARM_DEVICE_H
+#endif  // MSD_ARM_DEVICE_H

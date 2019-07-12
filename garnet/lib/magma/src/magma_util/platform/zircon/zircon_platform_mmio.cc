@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "zircon_platform_mmio.h"
+
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 
@@ -20,26 +21,22 @@ static_assert(ZX_CACHE_POLICY_WRITE_COMBINING ==
               "enum mismatch");
 
 ZirconPlatformMmio::ZirconPlatformMmio(mmio_buffer_t mmio)
-    : PlatformMmio(mmio.vaddr, mmio.size), mmio_(mmio)
-{
-}
+    : PlatformMmio(mmio.vaddr, mmio.size), mmio_(mmio) {}
 
-bool ZirconPlatformMmio::Pin(zx_handle_t bti)
-{
-    zx_status_t status = mmio_buffer_pin(&mmio_, bti, &pinned_mmio_);
-    if (status != ZX_OK) {
-        return DRETF(false, "Failed to pin mmio: %d\n", status);
-    }
-    return true;
+bool ZirconPlatformMmio::Pin(zx_handle_t bti) {
+  zx_status_t status = mmio_buffer_pin(&mmio_, bti, &pinned_mmio_);
+  if (status != ZX_OK) {
+    return DRETF(false, "Failed to pin mmio: %d\n", status);
+  }
+  return true;
 }
 
 uint64_t ZirconPlatformMmio::physical_address() { return pinned_mmio_.paddr; }
 
-ZirconPlatformMmio::~ZirconPlatformMmio()
-{
-    DLOG("ZirconPlatformMmio dtor");
-    mmio_buffer_unpin(&pinned_mmio_);
-    mmio_buffer_release(&mmio_);
+ZirconPlatformMmio::~ZirconPlatformMmio() {
+  DLOG("ZirconPlatformMmio dtor");
+  mmio_buffer_unpin(&pinned_mmio_);
+  mmio_buffer_release(&mmio_);
 }
 
-} // namespace magma
+}  // namespace magma

@@ -234,4 +234,4 @@ extern PFN_vkGetPhysicalDeviceMagmaPresentationSupportKHR
 }
 #endif
 
-#endif // VULKAN_WRAPPER_H
+#endif  // VULKAN_WRAPPER_H

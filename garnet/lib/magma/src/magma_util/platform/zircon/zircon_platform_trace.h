@@ -13,40 +13,41 @@
 #include <trace/observer.h>
 #endif
 
-#include "platform_trace.h"
 #include <memory>
 #include <vector>
+
+#include "platform_trace.h"
 
 namespace magma {
 
 #if MAGMA_ENABLE_TRACING
 class ZirconPlatformTrace : public PlatformTrace {
-public:
-    ZirconPlatformTrace();
+ public:
+  ZirconPlatformTrace();
 
-    bool Initialize() override;
+  bool Initialize() override;
 
-private:
-    async::Loop loop_;
-    trace::TraceProviderWithFdio trace_provider_;
+ private:
+  async::Loop loop_;
+  trace::TraceProviderWithFdio trace_provider_;
 };
 
 class ZirconPlatformTraceObserver : public PlatformTraceObserver {
-public:
-    ZirconPlatformTraceObserver();
+ public:
+  ZirconPlatformTraceObserver();
 
-    bool Initialize() override;
+  bool Initialize() override;
 
-    // Can only have one observer
-    void SetObserver(fit::function<void(bool)> callback) override;
+  // Can only have one observer
+  void SetObserver(fit::function<void(bool)> callback) override;
 
-private:
-    async::Loop loop_;
-    trace::TraceObserver observer_;
-    bool enabled_;
+ private:
+  async::Loop loop_;
+  trace::TraceObserver observer_;
+  bool enabled_;
 };
 #endif
 
-} // namespace magma
+}  // namespace magma
 
-#endif // ZIRCON_PLATFORM_TRACE_H
+#endif  // ZIRCON_PLATFORM_TRACE_H

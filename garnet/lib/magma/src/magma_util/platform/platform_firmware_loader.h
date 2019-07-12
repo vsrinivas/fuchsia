@@ -14,15 +14,15 @@
 namespace magma {
 
 class PlatformFirmwareLoader {
-public:
-    virtual ~PlatformFirmwareLoader() {}
+ public:
+  virtual ~PlatformFirmwareLoader() {}
 
-    virtual Status LoadFirmware(const char* filename, std::unique_ptr<PlatformBuffer>* firmware_out,
-                                uint64_t* size_out) = 0;
+  virtual Status LoadFirmware(const char* filename, std::unique_ptr<PlatformBuffer>* firmware_out,
+                              uint64_t* size_out) = 0;
 
-    static std::unique_ptr<PlatformFirmwareLoader> Create(void* device_handle);
+  static std::unique_ptr<PlatformFirmwareLoader> Create(void* device_handle);
 };
 
-} // namespace magma
+}  // namespace magma
 
-#endif // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_PLATFORM_FIRMWARE_LOADER_H_
+#endif  // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_PLATFORM_FIRMWARE_LOADER_H_

@@ -6,49 +6,43 @@
 #include "msd_intel_pci_device.h"
 
 class GttShim : public Gtt {
-public:
-    GttShim(Owner* owner) : Gtt(owner), owner_(owner) {}
+ public:
+  GttShim(Owner* owner) : Gtt(owner), owner_(owner) {}
 
-    uint64_t Size() const override { return pci_device()->GetGtt()->Size(); }
+  uint64_t Size() const override { return pci_device()->GetGtt()->Size(); }
 
-    // Init only on core gtt
-    bool Init(uint64_t gtt_size) override
-    {
-        DASSERT(false);
-        return false;
-    }
+  // Init only on core gtt
+  bool Init(uint64_t gtt_size) override {
+    DASSERT(false);
+    return false;
+  }
 
-private:
-    // AddressSpace overrides
-    bool AllocLocked(size_t size, uint8_t align_pow2, uint64_t* addr_out) override
-    {
-        return pci_device()->GetGtt()->Alloc(size, align_pow2, addr_out);
-    }
-    bool FreeLocked(uint64_t addr) override { return pci_device()->GetGtt()->Free(addr); }
+ private:
+  // AddressSpace overrides
+  bool AllocLocked(size_t size, uint8_t align_pow2, uint64_t* addr_out) override {
+    return pci_device()->GetGtt()->Alloc(size, align_pow2, addr_out);
+  }
+  bool FreeLocked(uint64_t addr) override { return pci_device()->GetGtt()->Free(addr); }
 
-    bool ClearLocked(uint64_t addr, uint64_t page_count) override
-    {
-        return pci_device()->GetGtt()->Clear(addr, page_count);
-    }
+  bool ClearLocked(uint64_t addr, uint64_t page_count) override {
+    return pci_device()->GetGtt()->Clear(addr, page_count);
+  }
 
-    bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override
-    {
-        DASSERT(false);
-        return false;
-    }
+  bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override {
+    DASSERT(false);
+    return false;
+  }
 
-    bool GlobalGttInsertLocked(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t page_offset,
-                               uint64_t page_count) override
-    {
-        return pci_device()->GetGtt()->GlobalGttInsert(addr, buffer, page_offset, page_count);
-    }
+  bool GlobalGttInsertLocked(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t page_offset,
+                             uint64_t page_count) override {
+    return pci_device()->GetGtt()->GlobalGttInsert(addr, buffer, page_offset, page_count);
+  }
 
-    MsdIntelPciDevice* pci_device() const
-    {
-        return static_cast<MsdIntelPciDevice*>(owner_->platform_device());
-    }
+  MsdIntelPciDevice* pci_device() const {
+    return static_cast<MsdIntelPciDevice*>(owner_->platform_device());
+  }
 
-    Owner* owner_;
+  Owner* owner_;
 };
 
 std::unique_ptr<Gtt> Gtt::CreateShim(Owner* owner) { return std::make_unique<GttShim>(owner); }

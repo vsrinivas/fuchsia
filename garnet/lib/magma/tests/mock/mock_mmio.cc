@@ -3,19 +3,19 @@
 // found in the LICENSE file.
 
 #include "mock/mock_mmio.h"
-#include "magma_util/dlog.h"
+
 #include <stdlib.h>
 
-std::unique_ptr<MockMmio> MockMmio::Create(uint64_t size)
-{
-    void* addr = calloc(size, 1);
-    return std::unique_ptr<MockMmio>(new MockMmio(addr, size));
+#include "magma_util/dlog.h"
+
+std::unique_ptr<MockMmio> MockMmio::Create(uint64_t size) {
+  void* addr = calloc(size, 1);
+  return std::unique_ptr<MockMmio>(new MockMmio(addr, size));
 }
 
 MockMmio::MockMmio(void* addr, uint64_t size) : magma::PlatformMmio(addr, size) {}
 
-MockMmio::~MockMmio()
-{
-    DLOG("MockMmio dtor");
-    free(addr());
+MockMmio::~MockMmio() {
+  DLOG("MockMmio dtor");
+  free(addr());
 }

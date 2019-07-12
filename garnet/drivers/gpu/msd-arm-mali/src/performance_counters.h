@@ -10,48 +10,46 @@
 #include "msd_arm_connection.h"
 
 class PerformanceCounters {
-public:
-    class Owner {
-    public:
-        virtual magma::RegisterIo* register_io() = 0;
-        virtual AddressManager* address_manager() = 0;
-        virtual MsdArmConnection::Owner* connection_owner() = 0;
-    };
+ public:
+  class Owner {
+   public:
+    virtual magma::RegisterIo* register_io() = 0;
+    virtual AddressManager* address_manager() = 0;
+    virtual MsdArmConnection::Owner* connection_owner() = 0;
+  };
 
-    PerformanceCounters(Owner* owner) : owner_(owner) {}
+  PerformanceCounters(Owner* owner) : owner_(owner) {}
 
-    bool Enable();
-    bool TriggerRead(bool keep_enabled);
-    std::vector<uint32_t> ReadCompleted(uint64_t* duration_ms_out);
+  bool Enable();
+  bool TriggerRead(bool keep_enabled);
+  std::vector<uint32_t> ReadCompleted(uint64_t* duration_ms_out);
 
-    void ForceDisable()
-    {
-        counter_state_ = PerformanceCounterState::kDisabled;
-        address_mapping_.reset();
-    }
+  void ForceDisable() {
+    counter_state_ = PerformanceCounterState::kDisabled;
+    address_mapping_.reset();
+  }
 
-    bool running() const
-    {
-        return counter_state_ == PerformanceCounterState::kEnabled ||
-               counter_state_ == PerformanceCounterState::kTriggered;
-    }
+  bool running() const {
+    return counter_state_ == PerformanceCounterState::kEnabled ||
+           counter_state_ == PerformanceCounterState::kTriggered;
+  }
 
-private:
-    friend class PerformanceCounterTest;
-    enum class PerformanceCounterState {
-        kDisabled,
-        kEnabled,
-        kTriggered,
-    };
+ private:
+  friend class PerformanceCounterTest;
+  enum class PerformanceCounterState {
+    kDisabled,
+    kEnabled,
+    kTriggered,
+  };
 
-    Owner* owner_;
-    PerformanceCounterState counter_state_ = PerformanceCounterState::kDisabled;
-    std::shared_ptr<MsdArmConnection> connection_;
-    std::shared_ptr<MsdArmBuffer> buffer_;
-    std::shared_ptr<AddressSlotMapping> address_mapping_;
-    uint64_t last_perf_base_ = 0;
-    std::chrono::steady_clock::time_point enable_time_;
-    bool enable_after_read_ = false;
+  Owner* owner_;
+  PerformanceCounterState counter_state_ = PerformanceCounterState::kDisabled;
+  std::shared_ptr<MsdArmConnection> connection_;
+  std::shared_ptr<MsdArmBuffer> buffer_;
+  std::shared_ptr<AddressSlotMapping> address_mapping_;
+  uint64_t last_perf_base_ = 0;
+  std::chrono::steady_clock::time_point enable_time_;
+  bool enable_after_read_ = false;
 };
 
-#endif // PERFORMANCE_COUNTERS_H_
+#endif  // GARNET_DRIVERS_GPU_MSD_ARM_MALI_SRC_PERFORMANCE_COUNTERS_H_

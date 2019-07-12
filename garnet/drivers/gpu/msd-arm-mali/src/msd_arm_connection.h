@@ -27,115 +27,109 @@ struct magma_arm_mali_atom;
 class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
                          public GpuMapping::Owner,
                          public AddressSpace::Owner {
-public:
-    class Owner {
-    public:
-        virtual void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) = 0;
-        virtual void CancelAtoms(std::shared_ptr<MsdArmConnection> connection) = 0;
-        virtual AddressSpaceObserver* GetAddressSpaceObserver() = 0;
-        virtual ArmMaliCacheCoherencyStatus cache_coherency_status()
-        {
-            return kArmMaliCacheCoherencyNone;
-        }
-        virtual magma::PlatformBusMapper* GetBusMapper() = 0;
-        virtual bool IsProtectedModeSupported() { return false; }
-        // Called after the connection's destructor has been called, so the
-        // refcount should be 0.
-        virtual void DeregisterConnection() {}
-    };
-
-    static std::shared_ptr<MsdArmConnection> Create(msd_client_id_t client_id, Owner* owner);
-
-    virtual ~MsdArmConnection();
-
-    msd_client_id_t client_id() { return client_id_; }
-
-    AddressSpace* address_space_for_testing() __TA_NO_THREAD_SAFETY_ANALYSIS
-    {
-        return address_space_.get();
+ public:
+  class Owner {
+   public:
+    virtual void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) = 0;
+    virtual void CancelAtoms(std::shared_ptr<MsdArmConnection> connection) = 0;
+    virtual AddressSpaceObserver* GetAddressSpaceObserver() = 0;
+    virtual ArmMaliCacheCoherencyStatus cache_coherency_status() {
+      return kArmMaliCacheCoherencyNone;
     }
-    const AddressSpace* const_address_space() const __TA_NO_THREAD_SAFETY_ANALYSIS
-    {
-        return address_space_.get();
-    }
+    virtual magma::PlatformBusMapper* GetBusMapper() = 0;
+    virtual bool IsProtectedModeSupported() { return false; }
+    // Called after the connection's destructor has been called, so the
+    // refcount should be 0.
+    virtual void DeregisterConnection() {}
+  };
 
-    // GpuMapping::Owner implementation.
-    bool RemoveMapping(uint64_t gpu_va) override;
-    bool UpdateCommittedMemory(GpuMapping* mapping) override;
+  static std::shared_ptr<MsdArmConnection> Create(msd_client_id_t client_id, Owner* owner);
 
-    bool AddMapping(std::unique_ptr<GpuMapping> mapping);
-    // If |atom| is a soft atom, then the first element from
-    // |signal_semaphores| will be removed and used for it.
-    bool ExecuteAtom(volatile magma_arm_mali_atom* atom,
-                     std::deque<std::shared_ptr<magma::PlatformSemaphore>>* signal_semaphores);
+  virtual ~MsdArmConnection();
 
-    void SetNotificationCallback(msd_connection_notification_callback_t callback, void* token);
-    void SendNotificationData(MsdArmAtom* atom, ArmMaliResultCode result_code);
-    void MarkDestroyed();
+  msd_client_id_t client_id() { return client_id_; }
 
-    // Called only on device thread.
-    void set_address_space_lost() { address_space_lost_ = true; }
-    bool address_space_lost() const { return address_space_lost_; }
+  AddressSpace* address_space_for_testing() __TA_NO_THREAD_SAFETY_ANALYSIS {
+    return address_space_.get();
+  }
+  const AddressSpace* const_address_space() const __TA_NO_THREAD_SAFETY_ANALYSIS {
+    return address_space_.get();
+  }
 
-    AddressSpaceObserver* GetAddressSpaceObserver() override
-    {
-        return owner_->GetAddressSpaceObserver();
-    }
-    std::shared_ptr<AddressSpace::Owner> GetSharedPtr() override { return shared_from_this(); }
+  // GpuMapping::Owner implementation.
+  bool RemoveMapping(uint64_t gpu_va) override;
+  bool UpdateCommittedMemory(GpuMapping* mapping) override;
 
-    bool PageInMemory(uint64_t address);
-    bool CommitMemoryForBuffer(MsdArmBuffer* buffer, uint64_t page_offset, uint64_t page_count);
+  bool AddMapping(std::unique_ptr<GpuMapping> mapping);
+  // If |atom| is a soft atom, then the first element from
+  // |signal_semaphores| will be removed and used for it.
+  bool ExecuteAtom(volatile magma_arm_mali_atom* atom,
+                   std::deque<std::shared_ptr<magma::PlatformSemaphore>>* signal_semaphores);
 
-    // This is slow because it iterates over all pages for all mappings. It should be used only
-    // rarely.
-    bool GetVirtualAddressFromPhysical(uint64_t address, uint64_t* virtual_address_out);
+  void SetNotificationCallback(msd_connection_notification_callback_t callback, void* token);
+  void SendNotificationData(MsdArmAtom* atom, ArmMaliResultCode result_code);
+  void MarkDestroyed();
 
-private:
-    static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
+  // Called only on device thread.
+  void set_address_space_lost() { address_space_lost_ = true; }
+  bool address_space_lost() const { return address_space_lost_; }
 
-    MsdArmConnection(msd_client_id_t client_id, Owner* owner);
+  AddressSpaceObserver* GetAddressSpaceObserver() override {
+    return owner_->GetAddressSpaceObserver();
+  }
+  std::shared_ptr<AddressSpace::Owner> GetSharedPtr() override { return shared_from_this(); }
 
-    bool Init();
+  bool PageInMemory(uint64_t address);
+  bool CommitMemoryForBuffer(MsdArmBuffer* buffer, uint64_t page_offset, uint64_t page_count);
 
-    magma::PlatformBusMapper* GetBusMapper() override { return owner_->GetBusMapper(); }
+  // This is slow because it iterates over all pages for all mappings. It should be used only
+  // rarely.
+  bool GetVirtualAddressFromPhysical(uint64_t address, uint64_t* virtual_address_out);
 
-    msd_client_id_t client_id_;
-    std::mutex address_lock_;
-    __THREAD_ANNOTATION(__pt_guarded_by__(address_lock_))
-    std::unique_ptr<AddressSpace> address_space_;
-    // Map GPU va to a mapping.
-    __TA_GUARDED(address_lock_) std::map<uint64_t, std::unique_ptr<GpuMapping>> gpu_mappings_;
+ private:
+  static const uint32_t kMagic = 0x636f6e6e;  // "conn" (Connection)
 
-    Owner* owner_;
+  MsdArmConnection(msd_client_id_t client_id, Owner* owner);
 
-    // Modified and accessed only from device thread.
-    bool address_space_lost_ = false;
+  bool Init();
 
-    std::mutex callback_lock_;
-    msd_connection_notification_callback_t callback_;
-    void* token_ = {};
-    std::shared_ptr<MsdArmAtom> outstanding_atoms_[256];
+  magma::PlatformBusMapper* GetBusMapper() override { return owner_->GetBusMapper(); }
+
+  msd_client_id_t client_id_;
+  std::mutex address_lock_;
+  __THREAD_ANNOTATION(__pt_guarded_by__(address_lock_))
+  std::unique_ptr<AddressSpace> address_space_;
+  // Map GPU va to a mapping.
+  __TA_GUARDED(address_lock_) std::map<uint64_t, std::unique_ptr<GpuMapping>> gpu_mappings_;
+
+  Owner* owner_;
+
+  // Modified and accessed only from device thread.
+  bool address_space_lost_ = false;
+
+  std::mutex callback_lock_;
+  msd_connection_notification_callback_t callback_;
+  void* token_ = {};
+  std::shared_ptr<MsdArmAtom> outstanding_atoms_[256];
 };
 
 class MsdArmAbiConnection : public msd_connection_t {
-public:
-    MsdArmAbiConnection(std::shared_ptr<MsdArmConnection> ptr) : ptr_(std::move(ptr))
-    {
-        magic_ = kMagic;
-    }
+ public:
+  MsdArmAbiConnection(std::shared_ptr<MsdArmConnection> ptr) : ptr_(std::move(ptr)) {
+    magic_ = kMagic;
+  }
 
-    static MsdArmAbiConnection* cast(msd_connection_t* connection)
-    {
-        DASSERT(connection);
-        DASSERT(connection->magic_ == kMagic);
-        return static_cast<MsdArmAbiConnection*>(connection);
-    }
+  static MsdArmAbiConnection* cast(msd_connection_t* connection) {
+    DASSERT(connection);
+    DASSERT(connection->magic_ == kMagic);
+    return static_cast<MsdArmAbiConnection*>(connection);
+  }
 
-    std::shared_ptr<MsdArmConnection> ptr() { return ptr_; }
+  std::shared_ptr<MsdArmConnection> ptr() { return ptr_; }
 
-private:
-    std::shared_ptr<MsdArmConnection> ptr_;
-    static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
+ private:
+  std::shared_ptr<MsdArmConnection> ptr_;
+  static const uint32_t kMagic = 0x636f6e6e;  // "conn" (Connection)
 };
 
-#endif // MSD_ARM_CONNECTION_H
+#endif  // MSD_ARM_CONNECTION_H

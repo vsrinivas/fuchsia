@@ -10,19 +10,19 @@
 namespace magma {
 
 class Status {
-public:
-    Status(magma_status_t status) : status_(status) {}
+ public:
+  Status(magma_status_t status) : status_(status) {}
 
-    magma_status_t get() const { return status_; }
+  magma_status_t get() const { return status_; }
 
-    bool ok() const { return status_ == MAGMA_STATUS_OK; }
+  bool ok() const { return status_ == MAGMA_STATUS_OK; }
 
-    explicit operator bool() const { return ok(); }
-    bool operator==(const magma_status_t status) const { return status_ == status; }
+  explicit operator bool() const { return ok(); }
+  bool operator==(const magma_status_t status) const { return status_ == status; }
 
-private:
-    magma_status_t status_;
+ private:
+  magma_status_t status_;
 };
-} // namespace magma
+}  // namespace magma
 
-#endif // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_STATUS_H_
+#endif  // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_STATUS_H_

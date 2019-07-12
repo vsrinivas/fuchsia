@@ -2,85 +2,82 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "gtest/gtest.h"
 #include "mock/mock_address_space.h"
 #include "mock/mock_bus_mapper.h"
 #include "mock/mock_mapped_batch.h"
 #include "msd_intel_context.h"
 #include "scheduler.h"
-#include "gtest/gtest.h"
 
 class TestScheduler {
-public:
-    static constexpr uint32_t kNumContext = 3;
+ public:
+  static constexpr uint32_t kNumContext = 3;
 
-    class AddressSpaceOwner : public AddressSpace::Owner {
-    public:
-        virtual ~AddressSpaceOwner() = default;
-        magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
+  class AddressSpaceOwner : public AddressSpace::Owner {
+   public:
+    virtual ~AddressSpaceOwner() = default;
+    magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
 
-    private:
-        MockBusMapper bus_mapper_;
-    };
+   private:
+    MockBusMapper bus_mapper_;
+  };
 
-    TestScheduler()
-    {
-        auto owner = std::make_unique<AddressSpaceOwner>();
-        auto address_space = std::make_shared<MockAddressSpace>(owner.get(), 0, PAGE_SIZE);
-        for (uint32_t i = 0; i < kNumContext; i++) {
-            context_[i] = std::make_shared<ClientContext>(connection_, address_space);
-        }
+  TestScheduler() {
+    auto owner = std::make_unique<AddressSpaceOwner>();
+    auto address_space = std::make_shared<MockAddressSpace>(owner.get(), 0, PAGE_SIZE);
+    for (uint32_t i = 0; i < kNumContext; i++) {
+      context_[i] = std::make_shared<ClientContext>(connection_, address_space);
     }
+  }
 
-    void Fifo()
-    {
-        auto scheduler = Scheduler::CreateFifoScheduler();
+  void Fifo() {
+    auto scheduler = Scheduler::CreateFifoScheduler();
 
-        auto context = scheduler->ScheduleContext();
-        EXPECT_EQ(nullptr, context);
+    auto context = scheduler->ScheduleContext();
+    EXPECT_EQ(nullptr, context);
 
-        context_[0]->pending_batch_queue().push(std::make_unique<MockMappedBatch>());
-        scheduler->CommandBufferQueued(context_[0]);
+    context_[0]->pending_batch_queue().push(std::make_unique<MockMappedBatch>());
+    scheduler->CommandBufferQueued(context_[0]);
 
-        context = scheduler->ScheduleContext();
-        EXPECT_EQ(context, context_[0]);
+    context = scheduler->ScheduleContext();
+    EXPECT_EQ(context, context_[0]);
 
-        context_[1]->pending_batch_queue().push(std::make_unique<MockMappedBatch>());
-        scheduler->CommandBufferQueued(context_[1]);
+    context_[1]->pending_batch_queue().push(std::make_unique<MockMappedBatch>());
+    scheduler->CommandBufferQueued(context_[1]);
 
-        // 0 is still current
-        context = scheduler->ScheduleContext();
-        EXPECT_EQ(nullptr, context);
+    // 0 is still current
+    context = scheduler->ScheduleContext();
+    EXPECT_EQ(nullptr, context);
 
-        context_[2]->pending_batch_queue().push(std::make_unique<MockMappedBatch>());
-        scheduler->CommandBufferQueued(context_[2]);
+    context_[2]->pending_batch_queue().push(std::make_unique<MockMappedBatch>());
+    scheduler->CommandBufferQueued(context_[2]);
 
-        // 0 is still current
-        context = scheduler->ScheduleContext();
-        EXPECT_EQ(nullptr, context);
+    // 0 is still current
+    context = scheduler->ScheduleContext();
+    EXPECT_EQ(nullptr, context);
 
-        scheduler->CommandBufferCompleted(context_[0]);
+    scheduler->CommandBufferCompleted(context_[0]);
 
-        context = scheduler->ScheduleContext();
-        EXPECT_EQ(context_[1], context);
+    context = scheduler->ScheduleContext();
+    EXPECT_EQ(context_[1], context);
 
-        scheduler->CommandBufferCompleted(context_[1]);
+    scheduler->CommandBufferCompleted(context_[1]);
 
-        context = scheduler->ScheduleContext();
-        EXPECT_EQ(context_[2], context);
+    context = scheduler->ScheduleContext();
+    EXPECT_EQ(context_[2], context);
 
-        scheduler->CommandBufferCompleted(context_[2]);
+    scheduler->CommandBufferCompleted(context_[2]);
 
-        context = scheduler->ScheduleContext();
-        EXPECT_EQ(nullptr, context);
-    }
+    context = scheduler->ScheduleContext();
+    EXPECT_EQ(nullptr, context);
+  }
 
-private:
-    std::weak_ptr<MsdIntelConnection> connection_;
-    std::shared_ptr<MsdIntelContext> context_[kNumContext];
+ private:
+  std::weak_ptr<MsdIntelConnection> connection_;
+  std::shared_ptr<MsdIntelContext> context_[kNumContext];
 };
 
-TEST(Scheduler, Fifo)
-{
-    TestScheduler test;
-    test.Fifo();
+TEST(Scheduler, Fifo) {
+  TestScheduler test;
+  test.Fifo();
 }

@@ -4,6 +4,9 @@
 
 #include "zircon_platform_pci_device.h"
 
+#include <ddk/device.h>
+#include <ddk/driver.h>
+
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "platform_mmio.h"
@@ -11,96 +14,88 @@
 #include "zircon_platform_interrupt.h"
 #include "zircon_platform_mmio.h"
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
-
 namespace magma {
 
-std::unique_ptr<PlatformMmio>
-ZirconPlatformPciDevice::CpuMapPciMmio(unsigned int pci_bar, PlatformMmio::CachePolicy cache_policy)
-{
-    DLOG("CpuMapPciMmio bar %d", pci_bar);
+std::unique_ptr<PlatformMmio> ZirconPlatformPciDevice::CpuMapPciMmio(
+    unsigned int pci_bar, PlatformMmio::CachePolicy cache_policy) {
+  DLOG("CpuMapPciMmio bar %d", pci_bar);
 
-    zx_pci_bar_t bar;
-    zx_status_t status = pci_get_bar(&pci(), pci_bar, &bar);
-    if (status != ZX_OK)
-        return DRETP(nullptr, "map_resource failed");
+  zx_pci_bar_t bar;
+  zx_status_t status = pci_get_bar(&pci(), pci_bar, &bar);
+  if (status != ZX_OK)
+    return DRETP(nullptr, "map_resource failed");
 
-    DASSERT(bar.type == ZX_PCI_BAR_TYPE_MMIO);
-    mmio_buffer_t mmio_buffer;
-    mmio_buffer_init(&mmio_buffer, 0, bar.size, bar.handle, cache_policy);
+  DASSERT(bar.type == ZX_PCI_BAR_TYPE_MMIO);
+  mmio_buffer_t mmio_buffer;
+  mmio_buffer_init(&mmio_buffer, 0, bar.size, bar.handle, cache_policy);
 
-    std::unique_ptr<ZirconPlatformMmio> mmio(new ZirconPlatformMmio(mmio_buffer));
+  std::unique_ptr<ZirconPlatformMmio> mmio(new ZirconPlatformMmio(mmio_buffer));
 
-    DLOG("map_mmio bar %d cache_policy %d returned: 0x%x", pci_bar, static_cast<int>(cache_policy),
-         mmio_buffer.vmo);
+  DLOG("map_mmio bar %d cache_policy %d returned: 0x%x", pci_bar, static_cast<int>(cache_policy),
+       mmio_buffer.vmo);
 
-    return mmio;
+  return mmio;
 }
 
-bool ZirconPlatformPciDevice::ReadPciConfig16(uint64_t addr, uint16_t* value)
-{
-    if (!value)
-        return DRETF(false, "bad value");
+bool ZirconPlatformPciDevice::ReadPciConfig16(uint64_t addr, uint16_t* value) {
+  if (!value)
+    return DRETF(false, "bad value");
 
-    zx_status_t status = pci_config_read16(&pci(), addr, value);
-    if (status != ZX_OK)
-        return DRETF(false, "failed to read config: %d\n", status);
+  zx_status_t status = pci_config_read16(&pci(), addr, value);
+  if (status != ZX_OK)
+    return DRETF(false, "failed to read config: %d\n", status);
 
-    return true;
+  return true;
 }
 
-std::unique_ptr<PlatformHandle> ZirconPlatformPciDevice::GetBusTransactionInitiator()
-{
-    zx_handle_t bti_handle;
-    zx_status_t status = pci_get_bti(&pci(), 0, &bti_handle);
-    if (status != ZX_OK)
-        return DRETP(nullptr, "failed to get bus transaction initiator");
+std::unique_ptr<PlatformHandle> ZirconPlatformPciDevice::GetBusTransactionInitiator() {
+  zx_handle_t bti_handle;
+  zx_status_t status = pci_get_bti(&pci(), 0, &bti_handle);
+  if (status != ZX_OK)
+    return DRETP(nullptr, "failed to get bus transaction initiator");
 
-    return std::make_unique<ZirconPlatformHandle>(zx::handle(bti_handle));
+  return std::make_unique<ZirconPlatformHandle>(zx::handle(bti_handle));
 }
 
-std::unique_ptr<PlatformInterrupt> ZirconPlatformPciDevice::RegisterInterrupt()
-{
-    uint32_t max_irqs;
-    zx_status_t status = pci_query_irq_mode(&pci(), ZX_PCIE_IRQ_MODE_LEGACY, &max_irqs);
-    if (status != ZX_OK)
-        return DRETP(nullptr, "query_irq_mode_caps failed (%d)", status);
+std::unique_ptr<PlatformInterrupt> ZirconPlatformPciDevice::RegisterInterrupt() {
+  uint32_t max_irqs;
+  zx_status_t status = pci_query_irq_mode(&pci(), ZX_PCIE_IRQ_MODE_LEGACY, &max_irqs);
+  if (status != ZX_OK)
+    return DRETP(nullptr, "query_irq_mode_caps failed (%d)", status);
 
-    if (max_irqs == 0)
-        return DRETP(nullptr, "max_irqs is zero");
+  if (max_irqs == 0)
+    return DRETP(nullptr, "max_irqs is zero");
 
-    // Mode must be Disabled before we can request Legacy
-    status = pci_set_irq_mode(&pci(), ZX_PCIE_IRQ_MODE_DISABLED, 0);
-    if (status != ZX_OK)
-        return DRETP(nullptr, "set_irq_mode(DISABLED) failed (%d)", status);
+  // Mode must be Disabled before we can request Legacy
+  status = pci_set_irq_mode(&pci(), ZX_PCIE_IRQ_MODE_DISABLED, 0);
+  if (status != ZX_OK)
+    return DRETP(nullptr, "set_irq_mode(DISABLED) failed (%d)", status);
 
-    status = pci_set_irq_mode(&pci(), ZX_PCIE_IRQ_MODE_LEGACY, 1);
-    if (status != ZX_OK)
-        return DRETP(nullptr, "set_irq_mode(LEGACY) failed (%d)", status);
+  status = pci_set_irq_mode(&pci(), ZX_PCIE_IRQ_MODE_LEGACY, 1);
+  if (status != ZX_OK)
+    return DRETP(nullptr, "set_irq_mode(LEGACY) failed (%d)", status);
 
-    zx_handle_t interrupt_handle;
-    status = pci_map_interrupt(&pci(), 0, &interrupt_handle);
-    if (status < 0)
-        return DRETP(nullptr, "map_interrupt failed (%d)", status);
+  zx_handle_t interrupt_handle;
+  status = pci_map_interrupt(&pci(), 0, &interrupt_handle);
+  if (status < 0)
+    return DRETP(nullptr, "map_interrupt failed (%d)", status);
 
-    return std::make_unique<ZirconPlatformInterrupt>(zx::handle(interrupt_handle));
+  return std::make_unique<ZirconPlatformInterrupt>(zx::handle(interrupt_handle));
 }
 
 ZirconPlatformPciDevice::~ZirconPlatformPciDevice() {}
 
-std::unique_ptr<PlatformPciDevice> PlatformPciDevice::Create(void* device_handle)
-{
-    if (!device_handle)
-        return DRETP(nullptr, "device_handle is null, cannot create PlatformPciDevice");
+std::unique_ptr<PlatformPciDevice> PlatformPciDevice::Create(void* device_handle) {
+  if (!device_handle)
+    return DRETP(nullptr, "device_handle is null, cannot create PlatformPciDevice");
 
-    pci_protocol_t pci;
-    zx_device_t* zx_device = reinterpret_cast<zx_device_t*>(device_handle);
-    zx_status_t status = device_get_protocol(zx_device, ZX_PROTOCOL_PCI, &pci);
-    if (status != ZX_OK)
-        return DRETP(nullptr, "pci protocol is null, cannot create PlatformPciDevice");
+  pci_protocol_t pci;
+  zx_device_t* zx_device = reinterpret_cast<zx_device_t*>(device_handle);
+  zx_status_t status = device_get_protocol(zx_device, ZX_PROTOCOL_PCI, &pci);
+  if (status != ZX_OK)
+    return DRETP(nullptr, "pci protocol is null, cannot create PlatformPciDevice");
 
-    return std::unique_ptr<PlatformPciDevice>(new ZirconPlatformPciDevice(zx_device, pci));
+  return std::unique_ptr<PlatformPciDevice>(new ZirconPlatformPciDevice(zx_device, pci));
 }
 
-} // namespace magma
+}  // namespace magma

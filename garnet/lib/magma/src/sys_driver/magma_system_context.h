@@ -15,36 +15,33 @@
 
 using msd_context_unique_ptr_t = std::unique_ptr<msd_context_t, decltype(&msd_context_destroy)>;
 
-static inline msd_context_unique_ptr_t MsdContextUniquePtr(msd_context_t* context)
-{
-    return msd_context_unique_ptr_t(context, &msd_context_destroy);
+static inline msd_context_unique_ptr_t MsdContextUniquePtr(msd_context_t* context) {
+  return msd_context_unique_ptr_t(context, &msd_context_destroy);
 }
 
 class MagmaSystemContext {
-public:
-    class Owner {
-    public:
-        virtual std::shared_ptr<MagmaSystemBuffer> LookupBufferForContext(uint64_t id) = 0;
-        virtual std::shared_ptr<MagmaSystemSemaphore> LookupSemaphoreForContext(uint64_t id) = 0;
-    };
+ public:
+  class Owner {
+   public:
+    virtual std::shared_ptr<MagmaSystemBuffer> LookupBufferForContext(uint64_t id) = 0;
+    virtual std::shared_ptr<MagmaSystemSemaphore> LookupSemaphoreForContext(uint64_t id) = 0;
+  };
 
-    MagmaSystemContext(Owner* owner, msd_context_unique_ptr_t msd_ctx)
-        : owner_(owner), msd_ctx_(std::move(msd_ctx))
-    {
-    }
+  MagmaSystemContext(Owner* owner, msd_context_unique_ptr_t msd_ctx)
+      : owner_(owner), msd_ctx_(std::move(msd_ctx)) {}
 
-    magma::Status ExecuteCommandBuffer(std::unique_ptr<magma::PlatformBuffer> command_buffer);
-    magma::Status ExecuteImmediateCommands(uint64_t commands_size, void* commands,
-                                           uint64_t semaphore_count, uint64_t* semaphore_ids);
+  magma::Status ExecuteCommandBuffer(std::unique_ptr<magma::PlatformBuffer> command_buffer);
+  magma::Status ExecuteImmediateCommands(uint64_t commands_size, void* commands,
+                                         uint64_t semaphore_count, uint64_t* semaphore_ids);
 
-private:
-    msd_context_t* msd_ctx() { return msd_ctx_.get(); }
+ private:
+  msd_context_t* msd_ctx() { return msd_ctx_.get(); }
 
-    Owner* owner_;
+  Owner* owner_;
 
-    msd_context_unique_ptr_t msd_ctx_;
+  msd_context_unique_ptr_t msd_ctx_;
 
-    friend class CommandBufferHelper;
+  friend class CommandBufferHelper;
 };
 
-#endif // GARNET_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_SYSTEM_CONTEXT_H_
+#endif  // GARNET_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_SYSTEM_CONTEXT_H_

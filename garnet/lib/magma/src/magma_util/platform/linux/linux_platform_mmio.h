@@ -5,19 +5,18 @@
 #ifndef LINUX_PLATFORM_MMIO_H
 #define LINUX_PLATFORM_MMIO_H
 
-#include "platform_mmio.h"
-
 #include "magma_util/macros.h"
+#include "platform_mmio.h"
 
 namespace magma {
 
 class LinuxPlatformMmio : public PlatformMmio {
-public:
-    LinuxPlatformMmio(void* addr, uint64_t size) : PlatformMmio(addr, size) {}
+ public:
+  LinuxPlatformMmio(void* addr, uint64_t size) : PlatformMmio(addr, size) {}
 
-    uint64_t physical_address() override { return 0; }
+  uint64_t physical_address() override { return 0; }
 };
 
-} // namespace magma
+}  // namespace magma
 
-#endif // LINUX_PLATFORM_MMIO_H
+#endif  // LINUX_PLATFORM_MMIO_H
