@@ -31,18 +31,6 @@ zx_status_t brcmf_bus_register(zx_device_t* zxdev) {
   }
 #endif  // CONFIG_BRCMFMAC_SDIO
 
-#if CONFIG_BRCMFMAC_USB
-  {
-    extern zx_status_t brcmf_usb_register(zx_device_t * zxdev);
-    const zx_status_t result = brcmf_usb_register(zxdev);
-    if (result != ZX_OK) {
-      BRCMF_DBG(INFO, "USB registration failed: %d\n", result);
-    } else {
-      return ZX_OK;
-    }
-  }
-#endif  // CONFIG_BRCMFMAC_USB
-
 #if CONFIG_BRCMFMAC_SIM
   {
     extern zx_status_t brcmf_sim_register(zx_device_t * zxdev);
@@ -62,11 +50,6 @@ void brcmf_bus_exit(void) {
 #if CONFIG_BRCMFMAC_SDIO
   extern void brcmf_sdio_exit(void);
   brcmf_sdio_exit();
-#endif
-
-#if CONFIG_BRCMFMAC_USB
-  extern void brcmf_usb_exit(void);
-  brcmf_usb_exit();
 #endif
 
 #if CONFIG_BRCMFMAC_SIM

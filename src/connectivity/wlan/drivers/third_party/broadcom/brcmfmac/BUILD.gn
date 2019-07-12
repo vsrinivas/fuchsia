@@ -21,20 +21,18 @@ import("//build/package.gni")
 visibility = [ "./*" ]
 
 # The brcmfmac driver can be built with support for different system buses
-# (USB, SDIO, and simulated-firmware), and different configurations will require
+# (SDIO, and simulated-firmware), and different configurations will require
 # different support.  To facilitate consolidating all the potentially messy
 # conditional compilation in one place, "bus.cc" is conditionally compiled based
 # on the values of the preprocessor #defines:
 #
 # * CONFIG_BRCMFMAC_SDIO
-# * CONFIG_BRCMFMAC_USB
 # * CONFIG_BRCMFMAC_SIM
 #
 # These #defines are applied as public_configs entries on the targets,
 # respectively:
 #
 # * :sdio
-# * :usb
 # * :sim
 #
 # Thus a target that depends on one of the above targets, can include "bus.cc"
@@ -188,34 +186,6 @@ source_set("sdio") {
   public_configs = [ ":config_sdio" ]
 }
 
-config("config_usb") {
-  defines = [ "CONFIG_BRCMFMAC_USB=1" ]
-}
-
-source_set("usb") {
-  sources = [
-    "usb.cc",
-  ]
-  public = [
-    "usb.h",
-  ]
-  deps = [
-    ":debug",
-    ":firmware",
-    "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",  # fxb/BLD-522
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/usb",
-  ]
-  public_deps = [
-    ":core",
-    ":linuxisms",
-    "//zircon/public/banjo/ddk.protocol.usb",
-    "//zircon/system/public",
-  ]
-  public_configs = [ ":config_usb" ]
-}
-
 config("config_sim") {
   defines = [ "CONFIG_BRCMFMAC_SIM=1" ]
 }
@@ -252,7 +222,6 @@ driver_module("driver_module") {
     ":core",
     ":debug",
     ":sdio",
-    ":usb",
     "//zircon/public/lib/driver",
   ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
