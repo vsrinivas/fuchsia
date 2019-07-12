@@ -48,6 +48,7 @@ if (current_cpu != "") {
       "$zx/system/dev/clk/amlogic-clk:amlogic-clk-test",
       "$zx/system/dev/clk/msm8x53-clk:msm8x53-clk-test",
       "$zx/system/dev/clk/syn-clk:syn-clk-test",
+      "$zx/system/dev/codec/alc5663:test",
       "$zx/system/dev/display/display/test",
       "$zx/system/dev/display/mt8167s-display:tests",
       "$zx/system/dev/ethernet/ethernet:ethernet-unittest",

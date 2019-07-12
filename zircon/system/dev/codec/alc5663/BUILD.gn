@@ -1,0 +1,51 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("alc5663") {
+  sources = [
+    "alc5663.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.i2c",
+    "$zx/system/banjo/ddk.protocol.pci",
+    "$zx/system/dev/lib/device-protocol-i2c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+}
+
+test("alc5663_test") {
+  testonly = true
+  output_name = "alc5663-test"
+  sources = [
+    "alc5663.cc",
+    "alc5663_test.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.i2c",
+    "$zx/system/banjo/ddk.protocol.pci",
+    "$zx/system/dev/lib/device-protocol-i2c",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/lib/mock-i2c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+group("test") {
+  testonly = true
+  deps = [
+    ":alc5663",
+    ":alc5663_test",
+  ]
+}
