@@ -66,12 +66,11 @@ TEST(MockFunction, WithMatcher) {
   MockFunction<int, int> mock_function_int;
   MockFunction<void, int> mock_function_void;
 
-  mock_function_int.ExpectCallWithMatcher(42, [](int actual) {
+  mock_function_int.ExpectCallWithMatcher([](int actual) {
     EXPECT_EQ(actual, 138);
+    return 42;
   });
-  mock_function_void.ExpectCallWithMatcher([](int actual) {
-    EXPECT_EQ(actual, 159);
-  });
+  mock_function_void.ExpectCallWithMatcher([](int actual) { EXPECT_EQ(actual, 159); });
 
   EXPECT_EQ(mock_function_int.Call(138), 42);
   mock_function_void.Call(159);
