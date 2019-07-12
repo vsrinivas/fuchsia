@@ -20,6 +20,11 @@ namespace {
 // well as creating handles.
 //
 // In each test, closing the handles is done implicitly by destructors.
+//
+// Ideally we would cover zx_process_create() here (which creates process
+// and VMAR handles), but it is not usable in contexts where the process
+// does not have a job handle that allows creating process objects, such as
+// when the test is run over SSH.
 
 bool ChannelCreateTest(perftest::RepeatState* state) {
     state->DeclareStep("create");
@@ -82,23 +87,6 @@ bool PortCreateTest(perftest::RepeatState* state) {
     return true;
 }
 
-// Note that this only creates a Zircon process object.  It does not start
-// the process.
-bool ProcessCreateTest(perftest::RepeatState* state) {
-    state->DeclareStep("create");
-    state->DeclareStep("close");
-    while (state->KeepRunning()) {
-        zx::process process;
-        zx::vmar root_vmar;
-        static const char kName[] = "perftest-process";
-        ZX_ASSERT(zx::process::create(
-                      *zx::job::default_job(), kName, sizeof(kName) - 1, 0,
-                      &process, &root_vmar) == ZX_OK);
-        state->NextStep();
-    }
-    return true;
-}
-
 // Note that this only creates a Zircon thread object.  It does not start
 // the thread.
 bool ThreadCreateTest(perftest::RepeatState* state) {
@@ -106,7 +94,7 @@ bool ThreadCreateTest(perftest::RepeatState* state) {
     state->DeclareStep("close");
     while (state->KeepRunning()) {
         zx::thread handle;
-        static const char kName[] = "perftest-process";
+        static const char kName[] = "perftest-thread";
         ZX_ASSERT(zx::thread::create(*zx::process::self(), kName,
                                      sizeof(kName) - 1, 0, &handle) == ZX_OK);
         state->NextStep();
@@ -132,7 +120,6 @@ void RegisterTests() {
     perftest::RegisterTest("HandleCreate_EventPair", EventPairCreateTest);
     perftest::RegisterTest("HandleCreate_Fifo", FifoCreateTest);
     perftest::RegisterTest("HandleCreate_Port", PortCreateTest);
-    perftest::RegisterTest("HandleCreate_Process", ProcessCreateTest);
     perftest::RegisterTest("HandleCreate_Thread", ThreadCreateTest);
     perftest::RegisterTest("HandleCreate_Vmo", VmoCreateTest);
 }
