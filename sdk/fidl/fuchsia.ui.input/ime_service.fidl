@@ -4,6 +4,8 @@
 
 library fuchsia.ui.input;
 
+using fuchsia.ui.input2;
+
 /// The service provided by an IME
 [Discoverable]
 protocol ImeService {
@@ -14,7 +16,10 @@ protocol ImeService {
                          request<InputMethodEditor> editor);
     ShowKeyboard();
     HideKeyboard();
+    // DEPRECATED: Will be replaced with DispatchKey (TEXT-64)
     InjectInput(InputEvent event);
+
+    DispatchKey(fuchsia.ui.input2.KeyEvent event) -> (bool handled);
 };
 
 /// Onscreen keyboard containers connect to this to know when a keyboard

@@ -197,6 +197,9 @@ impl ImeService {
                         uii::ImeServiceRequest::InjectInput { event, .. } => {
                             await!(self_clone.inject_input(event));
                         }
+                        uii::ImeServiceRequest::DispatchKey { responder, .. } => {
+                            responder.send(false).context("error responding to DispatchKey")?;
+                        }
                     }
                 }
                 Ok(())
