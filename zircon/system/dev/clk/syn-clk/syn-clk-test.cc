@@ -74,7 +74,7 @@ TEST(ClkSynTest, AvpllSetRateBad) {
     ddk_mock::MockMmioRegRegion audio_region(audio_regs.get(), 4, as370::kAudioGlobalSize/4);
     SynClkTest test(global_region, audio_region);
 
-    EXPECT_NOT_OK(test.ClockImplSetRate(0, 3'200'000'001)); // Too high.
+    EXPECT_NOT_OK(test.ClockImplSetRate(0, 800'000'001)); // Too high.
 }
 
 TEST(ClkSynTest, AvpllSetRateGood) {
@@ -88,9 +88,8 @@ TEST(ClkSynTest, AvpllSetRateGood) {
     audio_regs[0x0018/4].ExpectRead(0x00000000).ExpectWrite(0x00000001); // Bypass.
     audio_regs[0x0014/4].ExpectRead(0x00000000).ExpectWrite(0x01000000); // Power down DP.
 
-    // 800 MHz = 25 MHz * 32 so dn = 32 and dm = 1.
-    audio_regs[0x0008/4].ExpectRead(0x00000000).ExpectWrite(0x00002004); // dn 32 dm 1.
-    audio_regs[0x0014/4].ExpectRead(0x00000000).ExpectWrite(0x02000000); // dp 1.
+    audio_regs[0x0008/4].ExpectRead(0x00000000).ExpectWrite(0x0000e004); // dn 224 dm 1.
+    audio_regs[0x0014/4].ExpectRead(0x00000000).ExpectWrite(0x0e000000); // dp 7.
 
     audio_regs[0x0014/4].ExpectRead(0xffffffff).ExpectWrite(0xfeffffff); // Power up DP.
     audio_regs[0x0018/4].ExpectRead(0xffffffff).ExpectWrite(0xfffffffe); // Remove bypass.
@@ -101,7 +100,7 @@ TEST(ClkSynTest, AvpllSetRateGood) {
     audio_region.VerifyAll();
 }
 
-TEST(ClkSynTest, AvpllSetRateMax) {
+TEST(ClkSynTest, AvpllSetRateFractionalFor48KHz) {
     auto global_regs = std::make_unique<ddk_mock::MockMmioReg[]>(as370::kGlobalSize/4);
     auto audio_regs = std::make_unique<ddk_mock::MockMmioReg[]>(as370::kAudioGlobalSize/4);
     ddk_mock::MockMmioRegRegion global_region(global_regs.get(), 4, as370::kGlobalSize/4);
@@ -112,41 +111,45 @@ TEST(ClkSynTest, AvpllSetRateMax) {
     audio_regs[0x0018/4].ExpectRead(0x00000000).ExpectWrite(0x00000001); // Bypass.
     audio_regs[0x0014/4].ExpectRead(0x00000000).ExpectWrite(0x01000000); // Power down DP.
 
-    // 3200 MHz.
-    audio_regs[0x0008/4].ExpectRead(0x00000000).ExpectWrite(0x00008004); // dn, dm.
-    audio_regs[0x0014/4].ExpectRead(0x00000000).ExpectWrite(0x02000000); // dp.
-
-    audio_regs[0x0014/4].ExpectRead(0xffffffff).ExpectWrite(0xfeffffff); // Power up DP.
-    audio_regs[0x0018/4].ExpectRead(0xffffffff).ExpectWrite(0xfffffffe); // Remove bypass.
-    audio_regs[0x0044/4].ExpectRead(0x00000000).ExpectWrite(0x00000004); // Clock enable.
-
-    EXPECT_OK(test.ClockImplSetRate(0, 3'200'000'000));
-
-    audio_region.VerifyAll();
-}
-
-TEST(ClkSynTest, AvpllSetRateFractional) {
-    auto global_regs = std::make_unique<ddk_mock::MockMmioReg[]>(as370::kGlobalSize/4);
-    auto audio_regs = std::make_unique<ddk_mock::MockMmioReg[]>(as370::kAudioGlobalSize/4);
-    ddk_mock::MockMmioRegRegion global_region(global_regs.get(), 4, as370::kGlobalSize/4);
-    ddk_mock::MockMmioRegRegion audio_region(audio_regs.get(), 4, as370::kAudioGlobalSize/4);
-    SynClkTest test(global_region, audio_region);
-
-    audio_regs[0x0044/4].ExpectRead(0xffffffff).ExpectWrite(0xfffffffb); // Clock disable.
-    audio_regs[0x0018/4].ExpectRead(0x00000000).ExpectWrite(0x00000001); // Bypass.
-    audio_regs[0x0014/4].ExpectRead(0x00000000).ExpectWrite(0x01000000); // Power down DP.
 
     audio_regs[0x0008/4].ExpectRead(0xffffffff).ExpectWrite(0xfffffffd); // Reset.
-    audio_regs[0x000c/4].ExpectRead(0x00000000).ExpectWrite(0x005c28f6); // Fractional.
-    audio_regs[0x0008/4].ExpectRead(0x00000000).ExpectWrite(0x00005404); // dn, dm.
-    audio_regs[0x0014/4].ExpectRead(0x00000000).ExpectWrite(0x02000000); // dp.
+    audio_regs[0x000c/4].ExpectRead(0x00000000).ExpectWrite(0x000cdc87); // Fractional.
+    audio_regs[0x0008/4].ExpectRead(0x00000000).ExpectWrite(0x00003704); // dn 55 dm 1.
+    audio_regs[0x0014/4].ExpectRead(0x00000000).ExpectWrite(0x0e000000); // dp 7.
     audio_regs[0x0008/4].ExpectRead(0x00000000).ExpectWrite(0x00000002); // Not reset.
 
     audio_regs[0x0014/4].ExpectRead(0xffffffff).ExpectWrite(0xfeffffff); // Power up DP.
     audio_regs[0x0018/4].ExpectRead(0xffffffff).ExpectWrite(0xfffffffe); // Remove bypass.
     audio_regs[0x0044/4].ExpectRead(0x00000000).ExpectWrite(0x00000004); // Clock enable.
 
-    EXPECT_OK(test.ClockImplSetRate(0, 2'123'000'000));
+    EXPECT_OK(test.ClockImplSetRate(0, 196'608'000));
+
+    audio_region.VerifyAll();
+}
+
+TEST(ClkSynTest, AvpllSetRateFractionalFor44100Hz) {
+    auto global_regs = std::make_unique<ddk_mock::MockMmioReg[]>(as370::kGlobalSize/4);
+    auto audio_regs = std::make_unique<ddk_mock::MockMmioReg[]>(as370::kAudioGlobalSize/4);
+    ddk_mock::MockMmioRegRegion global_region(global_regs.get(), 4, as370::kGlobalSize/4);
+    ddk_mock::MockMmioRegRegion audio_region(audio_regs.get(), 4, as370::kAudioGlobalSize/4);
+    SynClkTest test(global_region, audio_region);
+
+    audio_regs[0x0044/4].ExpectRead(0xffffffff).ExpectWrite(0xfffffffb); // Clock disable.
+    audio_regs[0x0018/4].ExpectRead(0x00000000).ExpectWrite(0x00000001); // Bypass.
+    audio_regs[0x0014/4].ExpectRead(0x00000000).ExpectWrite(0x01000000); // Power down DP.
+
+
+    audio_regs[0x0008/4].ExpectRead(0xffffffff).ExpectWrite(0xfffffffd); // Reset.
+    audio_regs[0x000c/4].ExpectRead(0x00000000).ExpectWrite(0x0093d102); // Fractional.
+    audio_regs[0x0008/4].ExpectRead(0x00000000).ExpectWrite(0x00003204); // dn 50 dm 1.
+    audio_regs[0x0014/4].ExpectRead(0x00000000).ExpectWrite(0x0e000000); // dp 7.
+    audio_regs[0x0008/4].ExpectRead(0x00000000).ExpectWrite(0x00000002); // Not reset.
+
+    audio_regs[0x0014/4].ExpectRead(0xffffffff).ExpectWrite(0xfeffffff); // Power up DP.
+    audio_regs[0x0018/4].ExpectRead(0xffffffff).ExpectWrite(0xfffffffe); // Remove bypass.
+    audio_regs[0x0044/4].ExpectRead(0x00000000).ExpectWrite(0x00000004); // Clock enable.
+
+    EXPECT_OK(test.ClockImplSetRate(0, 180'633'600));
 
     audio_region.VerifyAll();
 }
@@ -162,9 +165,8 @@ TEST(ClkSynTest, AvpllSetRatePll1) {
     audio_regs[0x0038/4].ExpectRead(0x00000000).ExpectWrite(0x00000001); // Bypass.
     audio_regs[0x0034/4].ExpectRead(0x00000000).ExpectWrite(0x01000000); // Power down DP.
 
-    // 800 MHz = 25 MHz * 32 so dn = 32 and dm = 1.
-    audio_regs[0x0028/4].ExpectRead(0x00000000).ExpectWrite(0x00002004); // dn 32 dm 1.
-    audio_regs[0x0034/4].ExpectRead(0x00000000).ExpectWrite(0x02000000); // dp 1.
+    audio_regs[0x0028/4].ExpectRead(0x00000000).ExpectWrite(0x0000e004); // dn 224 dm 1.
+    audio_regs[0x0034/4].ExpectRead(0x00000000).ExpectWrite(0x0e000000); // dp 7.
 
     audio_regs[0x0034/4].ExpectRead(0xffffffff).ExpectWrite(0xfeffffff); // Power up DP.
     audio_regs[0x0038/4].ExpectRead(0xffffffff).ExpectWrite(0xfffffffe); // Remove bypass.

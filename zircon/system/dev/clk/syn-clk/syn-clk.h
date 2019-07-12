@@ -46,7 +46,7 @@ protected:
 private:
     zx_status_t RegisterClockProtocol();
     zx_status_t AvpllClkEnable(bool avpll0, bool enable);
-    zx_status_t AvpllSetRate(bool avpll0, uint32_t rate);
+    zx_status_t AvpllSetRate(bool avpll0, uint64_t rate);
 
     fbl::Mutex lock_;
     ddk::MmioBuffer global_mmio_ TA_GUARDED(lock_);

@@ -104,48 +104,47 @@ zx_status_t SynClk::AvpllClkEnable(bool avpll0, bool enable) {
     return ZX_OK;
 }
 
-zx_status_t SynClk::AvpllSetRate(bool avpll0, uint32_t rate) {
-    constexpr uint32_t min_rate = 800'000'000;
-    constexpr uint32_t max_rate = 3'200'000'000;
+zx_status_t SynClk::AvpllSetRate(bool avpll0, uint64_t rate) {
+    // rate = (frac / (max_frac+1) + dn) * ref_clk / dm / dp.
+    // frac = (rate * dp * dm / ref_clk - dn) * (max_frac+1).
+
+    // For 48KHz we need APLL = 196.608MHz.
+    // 196.608MHz / 8 = 24.576MHz (MCLK) / 8 = 3.072MHz (BCLK) / 64 = 48KHz (FSYNC).
+    // APLL rate = [frac (842887) / 16777216 + dn (55)] * ref_clk (25MHz) / dp (7) = 196.608MHz.
+
+    // For 44.1KHz we need APLL = 180.633600MHz.
+    // 180.633600MHz / 8 = 22.579200MHz (MCLK) / 8 = 2.822400MHz (BCLK) / 64 = 44.1KHz (FSYNC).
+    // APLL rate = [frac (9687298) / 16777216 + dn (50)] * ref_clk (25MHz) / dp (7) = 180.6336MHz.
+
     uint32_t id = avpll0 ? 0 : 1;
 
+    constexpr uint64_t max_rate = 800'000'000; // HW envelope limit.
     if (rate > max_rate) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    // All rates are converted to MHz.
-    rate /= 1'000'000;
-    // OSC at 25 MHz, TODO(andresoportus): Make rate setting relative to parent.
-    constexpr uint32_t parent_rate = 25'000'000 / 1'000'000;
-
-    uint32_t dp = 1;
-    constexpr uint32_t max_dp = 0x7;
-    if (rate < min_rate / 1'000'000) {
-        dp = min_rate / 1'000'000 / rate + 1;
-        if (dp > max_dp) {
-            return ZX_ERR_INTERNAL;
-        }
-        rate = rate * dp;
-    }
-
-    uint32_t div = std::gcd(rate, parent_rate);
-    uint32_t dn = rate / div;
-    uint32_t dm = parent_rate / div;
-    uint32_t frac = 0;
+    // TODO(andresoportus): Make relative to parent once available in clock framework.
+    constexpr uint64_t parent_rate = 25'000'000; // Main oscilator at 25MHz.
     constexpr uint32_t max_dn = 0x7ff;
-    constexpr uint32_t max_dm = 0x3f;
-
-    if ((dm > max_dm) || (dn > max_dn)) {
-        // Fractional mode.
-        dn /= dm;
-        if (dn > max_dn) {
-            return ZX_ERR_INTERNAL;
-        }
-        frac = dn % dm;
-        frac = (frac << 24) / dm + 1;
-        dm = 1;
+    constexpr uint32_t max_frac = 0xffffff;
+    constexpr uint32_t dp = 7;
+    constexpr uint32_t dm = 1;
+    uint32_t dn = static_cast<uint32_t>(rate * dm * dp / parent_rate);
+    if (dn > max_dn) {
+        return ZX_ERR_INTERNAL; // Should not happen.
     }
-    zxlogf(TRACE, "%s: frac %u  dn %u  dm %u  dp %u\n", __FILE__, frac, dn, dm, dp);
+
+    // It is ok for this calculation to be slow, only done once per PLL.
+    uint32_t frac = static_cast<uint32_t>(
+        ((static_cast<double>(rate) * dp * dm / parent_rate) - dn) * (max_frac + 1));
+    if  (frac > max_frac) {
+        return ZX_ERR_INTERNAL; // Should not happen.
+    }
+
+    zxlogf(TRACE, "%s frac %u  dn %u  dm %u  dp %u\n", __FILE__, frac, dn, dm, dp);
+    zxlogf(TRACE, "%s requested: %fMHz  expected: %fMHz\n", __FILE__,
+           static_cast<double>(rate) / 1'000'000.,
+           ((static_cast<double>(frac) / (max_frac + 1)) + dn) * 25. / dp / dm);
 
     fbl::AutoLock lock(&lock_);
 
@@ -249,9 +248,9 @@ zx_status_t SynClk::ClockImplGetRate(uint32_t id, uint64_t* out_current_rate) {
 zx_status_t SynClk::ClockImplSetRate(uint32_t index, uint64_t hz) {
     switch (index) {
     case as370::kClkAvpll0:
-        return AvpllSetRate(true, static_cast<uint32_t>(hz));
+        return AvpllSetRate(true, hz);
     case as370::kClkAvpll1:
-        return AvpllSetRate(false, static_cast<uint32_t>(hz));
+        return AvpllSetRate(false, hz);
     }
     return ZX_ERR_NOT_SUPPORTED;
 }
@@ -286,7 +285,7 @@ zx_status_t SynClk::RegisterClockProtocol() {
 //#define TEST_DAI_CLOCKS
 #ifdef TEST_DAI_CLOCKS
     ClockImplEnable(as370::kClkAvpll0);
-    ClockImplSetRate(as370::kClkAvpll0, static_cast<uint32_t>(48000) * 64 * 512);
+    ClockImplSetRate(as370::kClkAvpll0, static_cast<uint32_t>(48000) * 64 * 8);
 #endif
 
     auto status = pbus.RegisterProtocol(ZX_PROTOCOL_CLOCK_IMPL, &clk_proto, sizeof(clk_proto));
