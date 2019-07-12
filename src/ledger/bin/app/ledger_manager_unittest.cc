@@ -37,6 +37,7 @@
 #include "src/ledger/bin/storage/public/ledger_storage.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
+#include "src/ledger/bin/sync_coordinator/testing/fake_ledger_sync.h"
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
 #include "src/ledger/bin/testing/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
@@ -224,24 +225,6 @@ class FakeLedgerStorage : public storage::LedgerStorage, public DelayingCallback
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerStorage);
 };
 
-class FakeLedgerSync : public sync_coordinator::LedgerSync {
- public:
-  FakeLedgerSync() {}
-  ~FakeLedgerSync() override {}
-
-  std::unique_ptr<sync_coordinator::PageSync> CreatePageSync(
-      storage::PageStorage* /*page_storage*/,
-      storage::PageSyncClient* /*page_sync_client*/) override {
-    called = true;
-    return nullptr;
-  }
-
-  bool called = false;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerSync);
-};
-
 class LedgerManagerTest : public TestWithEnvironment {
  public:
   LedgerManagerTest() {}
@@ -253,7 +236,8 @@ class LedgerManagerTest : public TestWithEnvironment {
     TestWithEnvironment::SetUp();
     std::unique_ptr<FakeLedgerStorage> storage = std::make_unique<FakeLedgerStorage>(&environment_);
     storage_ptr = storage.get();
-    std::unique_ptr<FakeLedgerSync> sync = std::make_unique<FakeLedgerSync>();
+    std::unique_ptr<sync_coordinator::FakeLedgerSync> sync =
+        std::make_unique<sync_coordinator::FakeLedgerSync>();
     sync_ptr = sync.get();
     top_level_node_ = inspect_deprecated::Node(kTestTopLevelNodeName.ToString());
     disk_cleanup_manager_ = std::make_unique<FakeDiskCleanupManager>();
@@ -269,7 +253,7 @@ class LedgerManagerTest : public TestWithEnvironment {
 
  protected:
   FakeLedgerStorage* storage_ptr;
-  FakeLedgerSync* sync_ptr;
+  sync_coordinator::FakeLedgerSync* sync_ptr;
   inspect_deprecated::Node top_level_node_;
   std::unique_ptr<FakeDiskCleanupManager> disk_cleanup_manager_;
   std::unique_ptr<LedgerManager> ledger_manager_;
@@ -756,7 +740,7 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   EXPECT_TRUE(called);
   EXPECT_EQ(ZX_ERR_IO, status);
   EXPECT_FALSE(ledger_);
-  EXPECT_FALSE(sync_ptr->called);
+  EXPECT_FALSE(sync_ptr->IsCalled());
 
   page.Unbind();
   ResetLedgerPtr();
@@ -770,7 +754,7 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   EXPECT_TRUE(called);
   EXPECT_EQ(ZX_ERR_IO, status);
   EXPECT_FALSE(ledger_);
-  EXPECT_FALSE(sync_ptr->called);
+  EXPECT_FALSE(sync_ptr->IsCalled());
 
   page.Unbind();
   ResetLedgerPtr();
@@ -784,7 +768,7 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   EXPECT_TRUE(called);
   EXPECT_EQ(ZX_ERR_IO, status);
   EXPECT_FALSE(ledger_);
-  EXPECT_FALSE(sync_ptr->called);
+  EXPECT_FALSE(sync_ptr->IsCalled());
 }
 
 TEST_F(LedgerManagerTest, OnPageOpenedClosedCalls) {
@@ -1043,7 +1027,8 @@ TEST_F(LedgerManagerTest, GetPageDisconnect) {
   // Setup
   std::unique_ptr<DelayingLedgerStorage> storage = std::make_unique<DelayingLedgerStorage>();
   auto storage_ptr = storage.get();
-  std::unique_ptr<FakeLedgerSync> sync = std::make_unique<FakeLedgerSync>();
+  std::unique_ptr<sync_coordinator::FakeLedgerSync> sync =
+      std::make_unique<sync_coordinator::FakeLedgerSync>();
   auto disk_cleanup_manager = std::make_unique<FakeDiskCleanupManager>();
   auto ledger_manager = std::make_unique<LedgerManager>(
       &environment_, kLedgerName.ToString(),
@@ -1115,7 +1100,8 @@ class LedgerManagerWithRealStorageTest : public TestWithEnvironment {
     auto ledger_storage = std::make_unique<storage::LedgerStorageImpl>(
         &environment_, encryption_service.get(), db_factory_.get(), DetachedPath(tmpfs_.root_fd()),
         storage::CommitPruningPolicy::NEVER);
-    std::unique_ptr<FakeLedgerSync> sync = std::make_unique<FakeLedgerSync>();
+    std::unique_ptr<sync_coordinator::FakeLedgerSync> sync =
+        std::make_unique<sync_coordinator::FakeLedgerSync>();
     top_level_node_ = inspect_deprecated::Node(kTestTopLevelNodeName.ToString());
     attachment_node_ =
         top_level_node_.CreateChild(kSystemUnderTestAttachmentPointPathComponent.ToString());

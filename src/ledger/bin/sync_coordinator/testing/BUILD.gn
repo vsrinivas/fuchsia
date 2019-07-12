@@ -8,6 +8,8 @@ source_set("testing") {
   testonly = true
 
   sources = [
+    "fake_ledger_sync.cc",
+    "fake_ledger_sync.h",
     "page_sync_empty_impl.cc",
     "page_sync_empty_impl.h",
   ]

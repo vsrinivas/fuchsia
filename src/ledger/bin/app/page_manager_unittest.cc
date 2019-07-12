@@ -30,6 +30,7 @@
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
 #include "src/ledger/bin/storage/public/ledger_storage.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
+#include "src/ledger/bin/sync_coordinator/testing/fake_ledger_sync.h"
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/fxl/macros.h"
@@ -194,24 +195,6 @@ class FakeLedgerStorage : public storage::LedgerStorage, public DelayingCallback
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerStorage);
 };
 
-class FakeLedgerSync : public sync_coordinator::LedgerSync {
- public:
-  FakeLedgerSync() {}
-  ~FakeLedgerSync() override {}
-
-  std::unique_ptr<sync_coordinator::PageSync> CreatePageSync(
-      storage::PageStorage* /*page_storage*/,
-      storage::PageSyncClient* /*page_sync_client*/) override {
-    called = true;
-    return nullptr;
-  }
-
-  bool called = false;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerSync);
-};
-
 class PageManagerTest : public TestWithEnvironment {
  public:
   PageManagerTest() {}
@@ -224,7 +207,7 @@ class PageManagerTest : public TestWithEnvironment {
     page_id_ = RandomId();
     ledger_merge_manager_ = std::make_unique<LedgerMergeManager>(&environment_);
     storage_ = std::make_unique<FakeLedgerStorage>(&environment_);
-    sync_ = std::make_unique<FakeLedgerSync>();
+    sync_ = std::make_unique<sync_coordinator::FakeLedgerSync>();
     disk_cleanup_manager_ = std::make_unique<FakeDiskCleanupManager>();
     page_manager_ = std::make_unique<PageManager>(
         &environment_, kLedgerName, convert::ToString(page_id_.id), disk_cleanup_manager_.get(),
@@ -239,7 +222,7 @@ class PageManagerTest : public TestWithEnvironment {
 
  protected:
   std::unique_ptr<FakeLedgerStorage> storage_;
-  std::unique_ptr<FakeLedgerSync> sync_;
+  std::unique_ptr<sync_coordinator::FakeLedgerSync> sync_;
   std::unique_ptr<LedgerMergeManager> ledger_merge_manager_;
   std::unique_ptr<FakeDiskCleanupManager> disk_cleanup_manager_;
   std::unique_ptr<PageManager> page_manager_;
