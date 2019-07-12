@@ -107,6 +107,13 @@ where
     }
 
     async fn do_system_update_check(&self, initiator: Initiator) -> Result<(), Error> {
+        fx_log_info!(
+            "starting update check (requested by {})",
+            match initiator {
+                Initiator::Automatic => "service",
+                Initiator::Manual => "user",
+            }
+        );
         match await!(self.update_checker.check()).context("check_for_system_update failed")? {
             SystemUpdateStatus::UpToDate { system_image } => {
                 fx_log_info!("current system_image merkle: {}", system_image);
@@ -236,12 +243,12 @@ impl UpdateApplier for RealUpdateApplier {
 }
 
 #[cfg(test)]
-pub(crate) mod test {
+pub(crate) mod tests {
     use super::*;
     use futures::channel::mpsc::{channel, Receiver, Sender};
     use futures::channel::oneshot;
     use matches::assert_matches;
-    use std::sync::atomic::AtomicU64;
+    use std::sync::atomic::{AtomicU64, Ordering};
 
     pub const CALLBACK_CHANNEL_SIZE: usize = 20;
     pub const CURRENT_SYSTEM_IMAGE: &str =
@@ -252,30 +259,47 @@ pub(crate) mod test {
     #[derive(Clone)]
     pub struct FakeUpdateChecker {
         result: Result<SystemUpdateStatus, crate::errors::ErrorKind>,
+        call_count: Arc<AtomicU64>,
     }
     impl FakeUpdateChecker {
+        fn new(result: Result<SystemUpdateStatus, crate::errors::ErrorKind>) -> Self {
+            Self { result, call_count: Arc::new(AtomicU64::new(0)) }
+        }
         pub fn new_up_to_date() -> Self {
-            Self {
-                result: Ok(SystemUpdateStatus::UpToDate {
-                    system_image: CURRENT_SYSTEM_IMAGE.parse().expect("valid merkle"),
-                }),
-            }
+            Self::new(Ok(SystemUpdateStatus::UpToDate {
+                system_image: CURRENT_SYSTEM_IMAGE.parse().expect("valid merkle"),
+            }))
         }
         pub fn new_update_available() -> Self {
-            Self {
-                result: Ok(SystemUpdateStatus::UpdateAvailable {
-                    current_system_image: CURRENT_SYSTEM_IMAGE.parse().expect("valid merkle"),
-                    latest_system_image: LATEST_SYSTEM_IMAGE.parse().expect("valid merkle"),
-                }),
-            }
+            Self::new(Ok(SystemUpdateStatus::UpdateAvailable {
+                current_system_image: CURRENT_SYSTEM_IMAGE.parse().expect("valid merkle"),
+                latest_system_image: LATEST_SYSTEM_IMAGE.parse().expect("valid merkle"),
+            }))
         }
         pub fn new_error() -> Self {
-            Self { result: Err(crate::errors::ErrorKind::ResolveUpdatePackage) }
+            Self::new(Err(crate::errors::ErrorKind::ResolveUpdatePackage))
+        }
+        pub fn call_count(&self) -> u64 {
+            self.call_count.load(Ordering::SeqCst)
         }
     }
     impl UpdateChecker for FakeUpdateChecker {
         fn check(&self) -> BoxFuture<Result<SystemUpdateStatus, crate::errors::Error>> {
+            self.call_count.fetch_add(1, Ordering::SeqCst);
             future::ready(self.result.clone().map_err(|e| e.into())).boxed()
+        }
+    }
+
+    #[derive(Clone)]
+    pub struct UnreachableUpdateApplier;
+    impl UpdateApplier for UnreachableUpdateApplier {
+        fn apply(
+            &self,
+            _current_system_image: Hash,
+            _latest_system_image: Hash,
+            _initiator: Initiator,
+        ) -> BoxFuture<Result<(), crate::errors::Error>> {
+            unreachable!();
         }
     }
 
@@ -307,6 +331,33 @@ pub(crate) mod test {
         ) -> BoxFuture<Result<(), crate::errors::Error>> {
             self.call_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             future::ready(self.result.clone().map_err(|e| e.into())).boxed()
+        }
+    }
+
+    #[derive(Clone)]
+    pub struct UnreachableStateChangeCallback;
+    impl StateChangeCallback for UnreachableStateChangeCallback {
+        fn on_state_change(&self, _new_state: State) -> Result<(), Error> {
+            unreachable!();
+        }
+    }
+
+    #[derive(Clone)]
+    pub struct StateChangeCollector {
+        states: Arc<Mutex<Vec<State>>>,
+    }
+    impl StateChangeCollector {
+        pub fn new() -> Self {
+            Self { states: Arc::new(Mutex::new(vec![])) }
+        }
+        pub fn take_states(&self) -> Vec<State> {
+            std::mem::replace(&mut self.states.lock(), vec![])
+        }
+    }
+    impl StateChangeCallback for StateChangeCollector {
+        fn on_state_change(&self, new_state: State) -> Result<(), Error> {
+            self.states.lock().push(new_state);
+            Ok(())
         }
     }
 

@@ -6,19 +6,22 @@
 
 mod apply;
 mod check;
+mod config;
 mod errors;
 mod info_handler;
 mod manager_manager;
 mod manager_service;
+mod poller;
 
-
+use crate::config::Config;
 use crate::info_handler::InfoHandler;
 use crate::manager_service::RealManagerService;
+use crate::poller::run_periodic_update_check;
 use failure::{Error, ResultExt};
 use fidl_fuchsia_update::{InfoRequestStream, ManagerRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
-use fuchsia_syslog::fx_log_err;
+use fuchsia_syslog::{fx_log_err, fx_log_warn};
 use futures::prelude::*;
 
 const MAX_CONCURRENT_CONNECTIONS: usize = 100;
@@ -28,8 +31,12 @@ fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["system-update-checker"]).context("syslog init failed")?;
     let mut executor = fasync::Executor::new().context("executor creation failed")?;
 
-    // TODO(PKG-768) use _manager_manager
-    let (_manager_manager, manager_service) = RealManagerService::new_manager_and_service();
+    let config = Config::load_from_config_data_or_default();
+    if let Some(url) = config.update_package_url() {
+        fx_log_warn!("Ignoring custom update package url: {}", url);
+    }
+
+    let (manager_manager, manager_service) = RealManagerService::new_manager_and_service();
     let info_handler = InfoHandler::default();
 
     let mut fs = ServiceFs::new();
@@ -42,7 +49,9 @@ fn main() -> Result<(), Error> {
             .unwrap_or_else(|e| fx_log_err!("error handling client connection: {}", e))
     });
 
-    executor.run(fidl_fut, SERVER_THREADS);
+    let cron_fut = run_periodic_update_check(manager_manager.clone(), &config);
+
+    executor.run(future::join(fidl_fut, cron_fut), SERVER_THREADS);
     Ok(())
 }
 

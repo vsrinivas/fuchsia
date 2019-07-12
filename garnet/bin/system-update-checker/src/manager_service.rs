@@ -143,7 +143,7 @@ impl StateChangeCallback for MonitorControlHandle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::manager_manager::test::{
+    use crate::manager_manager::tests::{
         BlockingUpdateChecker, FakeUpdateApplier, FakeUpdateChecker,
     };
     use fidl::endpoints::create_proxy_and_stream;
