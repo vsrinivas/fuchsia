@@ -13,7 +13,7 @@ use std::time::Duration;
 
 use byteorder::{ByteOrder, NativeEndian};
 use log::debug;
-use packet::{ParsablePacket, ParseBuffer};
+use packet::{Buf, ParsablePacket, ParseBuffer, Serializer};
 use rand::SeedableRng;
 use rand_xorshift::XorShiftRng;
 
@@ -638,7 +638,7 @@ impl DummyEventDispatcher {
         F: Fn(DeviceId) -> DeviceId,
     {
         for (device_id, mut data) in self.frames_sent.drain(..) {
-            crate::receive_frame(other, mapper(device_id), &mut data);
+            crate::receive_frame(other, mapper(device_id), Buf::new(&mut data, ..));
         }
     }
 
@@ -667,8 +667,10 @@ impl IcmpEventDispatcher for DummyEventDispatcher {
 impl IpLayerEventDispatcher for DummyEventDispatcher {}
 
 impl DeviceLayerEventDispatcher for DummyEventDispatcher {
-    fn send_frame(&mut self, device: DeviceId, frame: &[u8]) {
-        self.frames_sent.push((device, frame.to_vec()));
+    fn send_frame<S: Serializer>(&mut self, device: DeviceId, frame: S) -> Result<(), S> {
+        let frame = frame.serialize_outer().map_err(|(_, ser)| ser)?;
+        self.frames_sent.push((device, frame.as_ref().to_vec()));
+        Ok(())
     }
 }
 
@@ -897,7 +899,7 @@ where
             crate::receive_frame(
                 self.context(frame.dst_context),
                 frame.dst_device,
-                &mut frame.data,
+                Buf::new(&mut frame.data, ..),
             );
             ret.frames_sent += 1;
         }

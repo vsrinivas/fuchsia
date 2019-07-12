@@ -10,7 +10,7 @@ use std::hash::Hash;
 use std::time::Duration;
 
 use log::{debug, error};
-use packet::{BufferMut, InnerSerializer, MtuError, Serializer};
+use packet::{BufferMut, InnerSerializer, Serializer};
 
 use crate::device::ethernet::EthernetArpDevice;
 use crate::device::DeviceLayerTimerId;
@@ -113,7 +113,7 @@ pub(crate) trait ArpDevice<P: PType + Eq + Hash>: Sized {
         device_id: usize,
         dst: Self::HardwareAddr,
         body: S,
-    ) -> Result<(), MtuError<S::InnerError>>;
+    ) -> Result<(), S>;
 
     /// Get a mutable reference to a device's ARP state.
     fn get_arp_state<D: EventDispatcher>(
@@ -574,7 +574,7 @@ impl<H, P: Hash + Eq> Default for ArpTable<H, P> {
 
 #[cfg(test)]
 mod tests {
-    use packet::ParseBuffer;
+    use packet::{BufferSerializer, ParseBuffer};
 
     use super::*;
     use crate::device::ethernet::{set_ip_addr_subnet, EtherType, Mac};
@@ -886,7 +886,7 @@ mod tests {
         use crate::device::ethernet::EthernetArpDevice;
         use crate::ip::{send_ip_packet_from_device, IpProto, Ipv4};
         use crate::wire::icmp::{IcmpEchoRequest, IcmpPacketBuilder, IcmpUnusedCode};
-        use packet::{serialize::BufferSerializer, Buf};
+        use packet::Buf;
 
         set_logger_for_test();
 

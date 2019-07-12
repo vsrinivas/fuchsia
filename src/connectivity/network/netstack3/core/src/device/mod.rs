@@ -11,7 +11,7 @@ pub(crate) mod ndp;
 use std::fmt::{self, Debug, Display, Formatter};
 
 use log::debug;
-use packet::{MtuError, Serializer};
+use packet::{BufferMut, Serializer};
 
 use crate::data_structures::{IdMap, IdMapCollectionKey};
 use crate::device::ethernet::{EthernetDeviceState, Mac};
@@ -144,7 +144,12 @@ pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: Devic
 /// See the `EventDispatcher` trait in the crate root for more details.
 pub trait DeviceLayerEventDispatcher {
     /// Send a frame to a device driver.
-    fn send_frame(&mut self, device: DeviceId, frame: &[u8]);
+    ///
+    /// If there was an MTU error while attempting to serialize the frame, the
+    /// original serializer is returned in the `Err` variant. All other errors
+    /// (for example, errors in allocating a buffer) are silently ignored and
+    /// reported as succeess.
+    fn send_frame<S: Serializer>(&mut self, device: DeviceId, frame: S) -> Result<(), S>;
 }
 
 /// Send an IP packet in a device layer frame.
@@ -157,7 +162,7 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A, S>(
     device: DeviceId,
     local_addr: A,
     body: S,
-) -> Result<(), (MtuError<S::InnerError>, S)>
+) -> Result<(), S>
 where
     A: IpAddress,
     S: Serializer,
@@ -168,9 +173,13 @@ where
 }
 
 /// Receive a device layer frame from the network.
-pub fn receive_frame<D: EventDispatcher>(ctx: &mut Context<D>, device: DeviceId, bytes: &mut [u8]) {
+pub fn receive_frame<D: EventDispatcher, B: BufferMut>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    buffer: B,
+) {
     match device.protocol {
-        DeviceProtocol::Ethernet => self::ethernet::receive_frame(ctx, device.id, bytes),
+        DeviceProtocol::Ethernet => self::ethernet::receive_frame(ctx, device.id, buffer),
     }
 }
 

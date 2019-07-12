@@ -7,7 +7,7 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use log::debug;
-use packet::{Buf, MtuError, ParseBuffer, Serializer};
+use packet::{Buf, BufferMut, BufferSerializer, EncapsulatingSerializer, Serializer};
 use specialize_ip_macro::specialize_ip_address;
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
@@ -237,7 +237,7 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
     device_id: usize,
     local_addr: A,
     body: S,
-) -> Result<(), (MtuError<S::InnerError>, S)> {
+) -> Result<(), S> {
     let state = get_device_state_mut(ctx.state_mut(), device_id);
     let (local_mac, mtu) = (state.mac, state.mtu);
 
@@ -258,33 +258,37 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
     };
 
     match dst_mac {
-        Ok(dst_mac) => {
-            let buffer = body
-                .with_mtu(mtu as usize)
-                .encapsulate(EthernetFrameBuilder::new(local_mac, dst_mac, A::Version::ETHER_TYPE))
-                .serialize_outer()
-                .map_err(|(err, ser)| (err, ser.into_serializer().into_serializer()))?;
-            ctx.dispatcher_mut().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
-        }
+        Ok(dst_mac) => ctx
+            .dispatcher_mut()
+            .send_frame(
+                DeviceId::new_ethernet(device_id),
+                body.with_mtu(mtu as usize).encapsulate(EthernetFrameBuilder::new(
+                    local_mac,
+                    dst_mac,
+                    A::Version::ETHER_TYPE,
+                )),
+            )
+            .map_err(|ser| ser.into_serializer().into_serializer()),
         Err(local_addr) => {
             let state = get_device_state_mut(ctx.state_mut(), device_id);
             let dropped = state.add_pending_frame(
                 local_addr,
-                body.with_mtu(mtu as usize)
-                    .serialize_outer()
-                    .map_err(|(err, ser)| (err, ser.into_serializer()))?
-                    .as_ref()
-                    .to_vec(),
+                AsRef::<[u8]>::as_ref(
+                    &body
+                        .with_mtu(mtu as usize)
+                        .serialize_outer()
+                        .map_err(|ser| ser.1.into_serializer())?,
+                )
+                .to_vec(),
             );
             if let Some(dropped) = dropped {
                 // TODO(brunodalbo): Is it ok to silently just let this drop? Or
                 //  should the IP layer be notified in any way?
                 log_unimplemented!((), "Ethernet dropped frame because ran out of allowable space");
             }
+            Ok(())
         }
     }
-
-    Ok(())
 }
 
 impl<'a, A: IpAddress> From<&'a MulticastAddr<A>> for Mac {
@@ -323,12 +327,11 @@ impl<'a, A: IpAddress> From<&'a MulticastAddr<A>> for Mac {
 }
 
 /// Receive an Ethernet frame from the network.
-pub(crate) fn receive_frame<D: EventDispatcher>(
+pub(crate) fn receive_frame<D: EventDispatcher, B: BufferMut>(
     ctx: &mut Context<D>,
     device_id: usize,
-    bytes: &mut [u8],
+    mut buffer: B,
 ) {
-    let mut buffer = Buf::new(bytes, ..);
     let frame = if let Ok(frame) = buffer.parse::<EthernetFrame<_>>() {
         frame
     } else {
@@ -364,10 +367,10 @@ pub(crate) fn receive_frame<D: EventDispatcher>(
             }
         }
         Some(EtherType::Ipv4) => {
-            crate::ip::receive_ip_packet::<D, _, Ipv4>(ctx, device, frame_dst, buffer)
+            crate::ip::receive_ip_packet::<_, _, Ipv4>(ctx, device, frame_dst, buffer)
         }
         Some(EtherType::Ipv6) => {
-            crate::ip::receive_ip_packet::<D, _, Ipv6>(ctx, device, frame_dst, buffer)
+            crate::ip::receive_ip_packet::<_, _, Ipv6>(ctx, device, frame_dst, buffer)
         }
         Some(EtherType::Other(_)) | None => {} // TODO(joshlf)
     }
@@ -533,14 +536,14 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
         device_id: usize,
         dst: Self::HardwareAddr,
         body: S,
-    ) -> Result<(), MtuError<S::InnerError>> {
+    ) -> Result<(), S> {
         let src = get_device_state(ctx.state_mut(), device_id).mac;
-        let buffer = body
-            .encapsulate(EthernetFrameBuilder::new(src, dst, EtherType::Arp))
-            .serialize_outer()
-            .map_err(|(err, _)| err)?;
-        ctx.dispatcher_mut().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
-        Ok(())
+        ctx.dispatcher_mut()
+            .send_frame(
+                DeviceId::new_ethernet(device_id),
+                body.encapsulate(EthernetFrameBuilder::new(src, dst, EtherType::Arp)),
+            )
+            .map_err(EncapsulatingSerializer::into_serializer)
     }
 
     fn get_arp_state<D: EventDispatcher>(
@@ -629,14 +632,14 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         device_id: usize,
         dst: Mac,
         body: S,
-    ) -> Result<(), MtuError<S::InnerError>> {
+    ) -> Result<(), S> {
         let src = get_device_state(ctx.state(), device_id).mac;
-        let buffer = body
-            .encapsulate(EthernetFrameBuilder::new(src, dst, EtherType::Ipv6))
-            .serialize_outer()
-            .map_err(|(err, _)| err)?;
-        ctx.dispatcher_mut().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
-        Ok(())
+        ctx.dispatcher_mut()
+            .send_frame(
+                DeviceId::new_ethernet(device_id),
+                body.encapsulate(EthernetFrameBuilder::new(src, dst, EtherType::Ipv6)),
+            )
+            .map_err(EncapsulatingSerializer::into_serializer)
     }
 
     fn send_ipv6_frame<D: EventDispatcher, S: Serializer>(
@@ -644,8 +647,8 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         device_id: usize,
         next_hop: Ipv6Addr,
         body: S,
-    ) -> Result<(), MtuError<S::InnerError>> {
-        send_ip_frame(ctx, device_id, next_hop, body).map_err(|e| e.0)
+    ) -> Result<(), S> {
+        send_ip_frame(ctx, device_id, next_hop, body)
     }
 
     fn get_device_id(id: usize) -> DeviceId {
@@ -697,14 +700,14 @@ fn mac_resolved<D: EventDispatcher>(
             //  but that's fine (as it stands right now) because the MTU
             //  is guaranteed to be larger than an Ethernet minimum frame
             //  body size.
-            let serialized = frame
-                .encapsulate(EthernetFrameBuilder::new(src_mac, dst_mac, ether_type))
-                .serialize_outer()
-                .map_err(|(err, _)| err);
-
-            match serialized {
-                Ok(buffer) => ctx.dispatcher_mut().send_frame(device_id, buffer.as_ref()),
-                Err(e) => debug!("Failed to serialize pending frame {:?}", e),
+            let res = ctx.dispatcher_mut().send_frame(
+                device_id,
+                BufferSerializer::new_vec(Buf::new(frame, ..))
+                    .encapsulate(EthernetFrameBuilder::new(src_mac, dst_mac, ether_type)),
+            );
+            if let Err(_) = res {
+                // TODO(joshlf): Do we want to handle this differently?
+                debug!("Failed to send pending frame; MTU changed since frame was queued");
             }
         }
     }

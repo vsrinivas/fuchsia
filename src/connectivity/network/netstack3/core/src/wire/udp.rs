@@ -264,11 +264,9 @@ impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
             }
         });
         packet.header.length = U16::new(len_field);
-        // NetworkEndian::write_u16(&mut packet.header.length, len_field);
         // Initialize the checksum to 0 so that we will get the correct
         // value when we compute it below.
         packet.header.checksum = U16::ZERO;
-        // NetworkEndian::write_u16(&mut packet.header.checksum, 0);
 
         // NOTE: We stop using packet at this point so that it no longer borrows
         // the buffer, and we can use the buffer directly.

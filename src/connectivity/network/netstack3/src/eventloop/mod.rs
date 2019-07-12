@@ -109,6 +109,7 @@ use futures::{select, TryFutureExt, TryStreamExt};
 #[cfg(test)]
 use integration_tests::TestEvent;
 use log::{debug, error, info, trace};
+use packet::{Buf, Serializer};
 use std::convert::TryInto;
 use util::{CoreCompatible, FidlCompatible};
 
@@ -315,7 +316,7 @@ impl EventLoop {
                         #[cfg(test)]
                         self.ctx
                             .dispatcher_mut()
-                            .send_test_event(TestEvent::DeviceStatusChanged { id: id, status });
+                            .send_test_event(TestEvent::DeviceStatusChanged { id, status });
                     }
                 }
             }
@@ -323,7 +324,7 @@ impl EventLoop {
                 // TODO(wesleyac): Check flags
                 let len = rx.read(buf);
                 if let Some(id) = self.ctx.dispatcher().devices.get_core_id(id) {
-                    receive_frame(&mut self.ctx, id, &mut buf[..len]);
+                    receive_frame(&mut self.ctx, id, Buf::new(&mut buf[..len], ..));
                 } else {
                     debug!("Received ethernet frame on disabled device: {}", id);
                 }
@@ -828,14 +829,16 @@ impl EventDispatcher for EventLoopInner {
 }
 
 impl DeviceLayerEventDispatcher for EventLoopInner {
-    fn send_frame(&mut self, device: DeviceId, frame: &[u8]) {
+    fn send_frame<S: Serializer>(&mut self, device: DeviceId, frame: S) -> Result<(), S> {
         // TODO(wesleyac): Error handling
+        let frame = frame.serialize_outer().map_err(|(_, ser)| ser)?;
         match self.devices.get_core_device_mut(device) {
             Some(dev) => {
-                dev.client_mut().send(&frame);
+                dev.client_mut().send(frame.as_ref());
             }
             None => error!("Tried to send frame on device that is not listed: {:?}", device),
         }
+        Ok(())
     }
 }
 

@@ -22,7 +22,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use log::debug;
-use packet::{MtuError, Serializer};
+use packet::Serializer;
 use zerocopy::ByteSlice;
 
 use crate::device::ethernet::EthernetNdpDevice;
@@ -113,7 +113,7 @@ pub(crate) trait NdpDevice: Sized {
         device_id: usize,
         dst: Self::LinkAddress,
         body: S,
-    ) -> Result<(), MtuError<S::InnerError>>;
+    ) -> Result<(), S>;
 
     /// Send a packet in a device layer frame.
     ///
@@ -125,7 +125,7 @@ pub(crate) trait NdpDevice: Sized {
         device_id: usize,
         next_hop: Ipv6Addr,
         body: S,
-    ) -> Result<(), MtuError<S::InnerError>>;
+    ) -> Result<(), S>;
 
     /// Retrieves the complete `DeviceId` for a given `id`.
     fn get_device_id(id: usize) -> DeviceId;
@@ -399,7 +399,7 @@ fn send_neighbor_advertisement<D: EventDispatcher, ND: NdpDevice>(
         ))
         .encapsulate(Ipv6PacketBuilder::new(device_addr, dst_ip, 1, IpProto::Icmpv6));
     ND::send_ipv6_frame(ctx, device_id, dst_ip, body)
-        .unwrap_or_else(|e| debug!("Failed to send neighbor advertisement: {:?}", e));
+        .unwrap_or_else(|_| debug!("Failed to send neighbor advertisement: MTU exceeded"));
 }
 
 /// Helper function to send ndp packet over an NdpDevice
@@ -564,6 +564,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use packet::{Buf, BufferSerializer};
+
     use super::*;
     use crate::device::ethernet::{EthernetNdpDevice, Mac};
     use crate::ip::IPV6_MIN_MTU;
@@ -572,7 +574,6 @@ mod tests {
     };
     use crate::wire::icmp::IcmpEchoRequest;
     use crate::StackState;
-    use packet::{Buf, BufferSerializer};
 
     const TEST_LOCAL_MAC: Mac = Mac::new([0, 1, 2, 3, 4, 5]);
     const TEST_REMOTE_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);

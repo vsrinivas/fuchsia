@@ -22,8 +22,7 @@ use log::{debug, trace};
 use std::mem;
 
 use packet::{
-    Buf, BufferMut, BufferSerializer, MtuError, ParsablePacket, ParseBufferMut, ParseMetadata,
-    Serializer,
+    Buf, BufferMut, BufferSerializer, ParsablePacket, ParseBufferMut, ParseMetadata, Serializer,
 };
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
@@ -507,7 +506,7 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
 
             packet.set_ttl(ttl - 1);
             let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
-            if let Err((err, ser)) = crate::device::send_ip_frame(
+            if let Err(ser) = crate::device::send_ip_frame(
                 ctx,
                 dest.device,
                 dest.next_hop,
@@ -539,30 +538,28 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
                     );
                 }
 
-                debug!("failed to forward IP packet: {:?}", err);
-                if err.is_mtu() {
-                    trace!("receive_ip_packet: Sending ICMPv6 Packet Too Big");
-                    // TODO(joshlf): Increment the TTL since we just decremented
-                    // it. The fact that we don't do this is technically a
-                    // violation of the ICMP spec (we're not encapsulating the
-                    // original packet that caused the issue, but a slightly
-                    // modified version of it), but it's not that big of a deal
-                    // because it won't affect the sender's ability to figure
-                    // out the minimum path MTU. This may break other logic,
-                    // though, so we should still fix it eventually.
-                    let mtu = crate::device::get_mtu(ctx, device);
-                    send_packet_too_big(
-                        ctx,
-                        device,
-                        frame_dst,
-                        src_ip,
-                        dst_ip,
-                        proto,
-                        mtu,
-                        ser.into_buffer(),
-                        meta.header_len(),
-                    );
-                }
+                debug!("failed to forward IP packet: MTU exceeded");
+                trace!("receive_ip_packet: Sending ICMPv6 Packet Too Big");
+                // TODO(joshlf): Increment the TTL since we just decremented it.
+                // The fact that we don't do this is technically a violation of
+                // the ICMP spec (we're not encapsulating the original packet
+                // that caused the issue, but a slightly modified version of
+                // it), but it's not that big of a deal because it won't affect
+                // the sender's ability to figure out the minimum path MTU. This
+                // may break other logic, though, so we should still fix it
+                // eventually.
+                let mtu = crate::device::get_mtu(ctx, device);
+                send_packet_too_big(
+                    ctx,
+                    device,
+                    frame_dst,
+                    src_ip,
+                    dst_ip,
+                    proto,
+                    mtu,
+                    ser.into_buffer(),
+                    meta.header_len(),
+                );
             }
         } else {
             // TTL is 0 or would become 0 after decrement; see "TTL" section,
@@ -845,7 +842,7 @@ pub(crate) fn send_ip_packet<D: EventDispatcher, A, S, F>(
     dst_ip: A,
     proto: IpProto,
     get_body: F,
-) -> Result<(), (MtuError<S::InnerError>, S)>
+) -> Result<(), S>
 where
     A: IpAddress,
     S: Serializer,
@@ -862,9 +859,8 @@ where
         // TODO(joshlf): Currently, we serialize using the normal Serializer
         // functionality. I wonder if, in the case of delivering to loopback, we
         // can do something more efficient?
-        let mut buffer = get_body(A::Version::LOOPBACK_ADDRESS)
-            .serialize_outer()
-            .map_err(|(err, ser)| (err.into(), ser))?;
+        let mut buffer =
+            get_body(A::Version::LOOPBACK_ADDRESS).serialize_outer().map_err(|(_, ser)| ser)?;
         // TODO(joshlf): Respond with some kind of error if we don't have a
         // handler for that protocol? Maybe simulate what would have happened
         // (w.r.t ICMP) if this were a remote host?
@@ -929,7 +925,7 @@ pub(crate) fn send_ip_packet_from<D: EventDispatcher, A, S>(
     dst_ip: A,
     proto: IpProto,
     body: S,
-) -> Result<(), (MtuError<S::InnerError>, S)>
+) -> Result<(), S>
 where
     A: IpAddress,
     S: Serializer,
@@ -962,7 +958,7 @@ pub(crate) fn send_ip_packet_from_device<D: EventDispatcher, A, S>(
     proto: IpProto,
     body: S,
     mtu: Option<u32>,
-) -> Result<(), (MtuError<S::InnerError>, S)>
+) -> Result<(), S>
 where
     A: IpAddress,
     S: Serializer,
@@ -976,10 +972,10 @@ where
     if let Some(mtu) = mtu {
         let body = body.with_mtu(mtu as usize);
         crate::device::send_ip_frame(ctx, device, next_hop, body)
-            .map_err(|(err, ser)| (err, ser.into_serializer().into_serializer()))
+            .map_err(|ser| ser.into_serializer().into_serializer())
     } else {
         crate::device::send_ip_frame(ctx, device, next_hop, body)
-            .map_err(|(err, ser)| (err, ser.into_serializer()))
+            .map_err(|ser| ser.into_serializer())
     }
 }
 
@@ -999,7 +995,7 @@ fn send_icmp_response<D: EventDispatcher, A, S, F>(
     proto: IpProto,
     get_body: F,
     ip_mtu: Option<u32>,
-) -> Result<(), (MtuError<S::InnerError>, S)>
+) -> Result<(), S>
 where
     A: IpAddress,
     S: Serializer,
