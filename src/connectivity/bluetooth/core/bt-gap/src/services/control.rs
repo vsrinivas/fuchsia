@@ -76,7 +76,6 @@ async fn handler(
             responder.send(&mut status_response(result))
         }
         ControlRequest::Disconnect { device_id, responder } => {
-            // TODO work with classic as well
             let result = await!(hd.disconnect(device_id));
             responder.send(&mut status_response(result))
         }

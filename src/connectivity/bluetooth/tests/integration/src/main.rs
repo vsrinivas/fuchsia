@@ -13,7 +13,7 @@ use crate::{
             test_add_bonded_devices_duplicate_entry, test_add_bonded_devices_invalid_entry,
             test_add_bonded_devices_no_ltk_fails, test_add_bonded_devices_success,
         },
-        control::set_active_host,
+        control::{disconnect, set_active_host},
         host_driver::{
             disconnect_connected_device, disconnect_unconnected_device, disconnect_unknown_device,
             test_bd_addr, test_close, test_connect, test_discoverable, test_discovery, test_forget,
@@ -69,6 +69,7 @@ fn main() -> Result<(), Error> {
         run_test!(test_add_bonded_devices_invalid_entry),
         // Control tests
         run_test!(set_active_host),
+        run_test!(disconnect),
         // le.Central tests
         run_test!(enable_scan),
         run_test!(enable_and_disable_scan),

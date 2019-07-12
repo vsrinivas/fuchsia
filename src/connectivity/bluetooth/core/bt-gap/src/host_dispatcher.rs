@@ -384,10 +384,16 @@ impl HostDispatcher {
         }
     }
 
+    // Attempt to disconnect peer with id `peer_id` from all transports
     pub async fn disconnect(&mut self, peer_id: String) -> types::Result<()> {
         let host = await!(self.get_active_adapter());
         match host {
-            Some(host) => await!(host.write().rm_gatt(peer_id)),
+            Some(host) => {
+                // Suppress the error from `rm_gatt`, as the peer not having a GATT entry
+                // (i.e. not using LE) is not a failure condition
+                let _ = await!(host.write().rm_gatt(peer_id.clone()));
+                await!(host.write().disconnect(peer_id))
+            }
             None => Err(types::Error::no_host()),
         }
     }

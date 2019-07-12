@@ -89,6 +89,10 @@ impl HostDevice {
         self.host.connect(&device_id).map(from_fidl_status)
     }
 
+    pub fn disconnect(&mut self, device_id: String) -> impl Future<Output = types::Result<()>> {
+        self.host.disconnect(&device_id).map(from_fidl_status)
+    }
+
     pub fn forget(&mut self, peer_id: String) -> impl Future<Output = types::Result<()>> {
         self.host.forget(&peer_id).map(from_fidl_status)
     }

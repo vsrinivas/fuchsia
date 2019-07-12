@@ -6,6 +6,7 @@ use {
     failure::Error,
     fuchsia_bluetooth::{
         expectation::{
+            self,
             asynchronous::{ExpectableState, ExpectableStateExt},
             Predicate,
         },
@@ -14,8 +15,13 @@ use {
 };
 
 use crate::harness::control::{
-    control_expectation, control_timeout, ControlHarness, ControlState, FAKE_HCI_ADDRESS,
+    activate_fake_host, control_expectation, control_timeout, ControlHarness, ControlState,
+    FAKE_HCI_ADDRESS,
 };
+
+// TODO(BT-229): Currently these tests rely on fakes that are hard-coded in the fake
+// HCI driver. Remove these once it is possible to set up mock devices programmatically.
+const FAKE_LE_DEVICE_ADDR: &str = "00:00:00:00:00:01";
 
 pub async fn set_active_host(control: ControlHarness) -> Result<(), Error> {
     let initial_hosts: Vec<String> = control.read().hosts.keys().cloned().collect();
@@ -59,5 +65,28 @@ pub async fn set_active_host(control: ControlHarness) -> Result<(), Error> {
         )?;
     }
 
+    Ok(())
+}
+
+pub async fn disconnect(control: ControlHarness) -> Result<(), Error> {
+    let (_host, _hci) = await!(activate_fake_host(control.clone(), "bt-hci-integration"))?;
+
+    await!(control.aux().request_discovery(true))?;
+    let state = await!(control.when_satisfied(
+        control_expectation::peer_exists(expectation::peer::address(FAKE_LE_DEVICE_ADDR)),
+        control_timeout()
+    ))?;
+
+    // We can safely unwrap here as this is guarded by the previous expectation
+    let peer = state.peers.iter().find(|(_, d)| &d.address == FAKE_LE_DEVICE_ADDR).unwrap().0;
+
+    await!(control.aux().connect(peer))?;
+    await!(
+        control.when_satisfied(control_expectation::peer_connected(peer, true), control_timeout())
+    )?;
+    await!(control.aux().disconnect(peer))?;
+    await!(
+        control.when_satisfied(control_expectation::peer_connected(peer, false), control_timeout())
+    )?;
     Ok(())
 }

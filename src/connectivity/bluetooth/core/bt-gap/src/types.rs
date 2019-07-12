@@ -80,7 +80,7 @@ impl From<fidl::Error> for Error {
 pub fn from_fidl_status(r: fidl::Result<bt::Status>) -> Result<()> {
     match r {
         Ok(status) => status.as_result(),
-        Err(e) => Err(Error::from(e))
+        Err(e) => Err(Error::from(e)),
     }
 }
 

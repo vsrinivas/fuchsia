@@ -131,7 +131,8 @@ impl TestHarness for ControlHarness {
 
 pub mod control_expectation {
     use crate::harness::control::ControlState;
-    use fuchsia_bluetooth::expectation::Predicate;
+    use fidl_fuchsia_bluetooth_control::RemoteDevice;
+    use fuchsia_bluetooth::expectation::{peer, Predicate};
 
     pub fn active_host_is(id: String) -> Predicate<ControlState> {
         let msg = format!("active bt-host is {}", id);
@@ -146,6 +147,18 @@ pub mod control_expectation {
         let msg = format!("bt-host {} is no longer present", id);
         Predicate::new(move |state: &ControlState| !state.hosts.contains_key(&id), Some(&msg))
     }
+
+    pub fn peer_exists(p: Predicate<RemoteDevice>) -> Predicate<ControlState> {
+        let msg = format!("Peer exists satisfying {}", p.describe());
+        Predicate::new(
+            move |state: &ControlState| state.peers.iter().any(|(_, d)| p.satisfied(d)),
+            Some(&msg),
+        )
+    }
+
+    pub fn peer_connected(id: &str, connected: bool) -> Predicate<ControlState> {
+        peer_exists(peer::identifier(id).and(peer::connected(connected)))
+    }
 }
 
 /// An activated fake host.
@@ -159,36 +172,47 @@ pub struct ActivatedFakeHost {
 // All Fake HCI Devices have this address
 pub const FAKE_HCI_ADDRESS: &'static str = "00:00:00:00:00:00";
 
+pub async fn activate_fake_host(
+    control: ControlHarness,
+    name: &str,
+) -> Result<(String, Emulator), Error> {
+    let initial_hosts: Vec<String> = control.read().hosts.keys().cloned().collect();
+    let initial_hosts_ = initial_hosts.clone();
+
+    let hci = await!(Emulator::create_and_publish(name))?;
+
+    let state = await!(control.when_satisfied(
+        Predicate::<ControlState>::new(
+            move |control| {
+                let added_fake_hosts = control.hosts.iter().filter(|(id, host)| {
+                    host.address == FAKE_HCI_ADDRESS && !initial_hosts_.contains(id)
+                });
+                added_fake_hosts.count() > 0
+            },
+            Some("Fake Host Added")
+        ),
+        control_timeout()
+    ))?;
+
+    let host = state
+        .hosts
+        .iter()
+        .find(|(id, host)| host.address == FAKE_HCI_ADDRESS && !initial_hosts.contains(id))
+        .unwrap()
+        .1
+        .identifier
+        .to_string(); // We can safely unwrap here as this is guarded by the previous expectation
+
+    await!(control.aux().set_active_adapter(&host))?;
+    await!(control
+        .when_satisfied(control_expectation::active_host_is(host.clone()), control_timeout()))?;
+    Ok((host, hci))
+}
+
 impl ActivatedFakeHost {
     pub async fn new(name: &str) -> Result<ActivatedFakeHost, Error> {
         let control = await!(new_control_harness())?;
-        let initial_hosts: Vec<String> = control.read().hosts.keys().cloned().collect();
-        let initial_hosts_ = initial_hosts.clone();
-
-        let hci = await!(Emulator::create_and_publish(name))?;
-
-        let control_state = await!(control.when_satisfied(
-            Predicate::<ControlState>::new(
-                move |control| control
-                    .hosts
-                    .iter()
-                    .any(|(id, host)| host.address == FAKE_HCI_ADDRESS
-                        && !initial_hosts_.contains(id)),
-                Some("At least one fake bt-host device added"),
-            ),
-            control_timeout()
-        ))?;
-        let host = control_state
-            .hosts
-            .iter()
-            .find(|(id, host)| host.address == FAKE_HCI_ADDRESS && !initial_hosts.contains(id))
-            .unwrap()
-            .1
-            .identifier
-            .to_string(); // We can safely unwrap here as this is guarded by the previous expectation
-        await!(control.aux().set_active_adapter(&host))?;
-        await!(control
-            .when_satisfied(control_expectation::active_host_is(host.clone()), control_timeout()))?;
+        let (host, hci) = await!(activate_fake_host(control.clone(), name))?;
         Ok(ActivatedFakeHost { control, host, hci: Some(hci) })
     }
 
