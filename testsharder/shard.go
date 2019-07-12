@@ -76,8 +76,7 @@ func MakeShards(specs []TestSpec, mode Mode, tags []string) []*Shard {
 
 // MultiplyShards appends new shards to shards where each new shard contains one test
 // repeated multiple times according to the specifications in multipliers.
-func MultiplyShards(shards []*Shard, multipliers []TestModifier) ([]*Shard, error) {
-	multipliersFound := make(map[TestModifier]bool)
+func MultiplyShards(shards []*Shard, multipliers []TestModifier) []*Shard {
 	for _, shard := range shards {
 		for _, multiplier := range multipliers {
 			for _, test := range shard.Tests {
@@ -87,15 +86,11 @@ func MultiplyShards(shards []*Shard, multipliers []TestModifier) ([]*Shard, erro
 						Tests: multiplyTest(test, multiplier.TotalRuns),
 						Env:   shard.Env,
 					})
-					multipliersFound[multiplier] = true
 				}
 			}
 		}
 	}
-	if len(multipliersFound) != len(multipliers) {
-		return nil, fmt.Errorf("Not all of the multiplier targets were found in the test manifest. Make sure the targets appear in $root_build_dir/tests.json")
-	}
-	return shards, nil
+	return shards
 }
 
 func min(a, b int) int {
@@ -106,7 +101,7 @@ func min(a, b int) int {
 }
 
 func divRoundUp(a, b int) int {
-	if a % b == 0 {
+	if a%b == 0 {
 		return a / b
 	}
 	return (a / b) + 1

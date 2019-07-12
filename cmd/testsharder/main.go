@@ -81,10 +81,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		shards, err = testsharder.MultiplyShards(shards, multipliers)
-		if err != nil {
-			log.Fatal(err)
-		}
+		shards = testsharder.MultiplyShards(shards, multipliers)
 	}
 	shards = testsharder.WithMaxSize(shards, maxShardSize)
 	f := os.Stdout

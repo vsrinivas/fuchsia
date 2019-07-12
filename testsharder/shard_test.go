@@ -243,13 +243,10 @@ func TestMultiplyShards(t *testing.T) {
 			makeTestModifier(1, Fuchsia, 2),
 			makeTestModifier(3, Linux, 3),
 		}
-		actual, err := MultiplyShards(
+		actual := MultiplyShards(
 			shards,
 			multipliers,
 		)
-		if err != nil {
-			t.Fatalf("failed with errmsg: %v", err)
-		}
 		expected := append(
 			shards,
 			multShard(env1, Fuchsia, 1, 2),
@@ -257,25 +254,6 @@ func TestMultiplyShards(t *testing.T) {
 			multShard(env3, Linux, 3, 3),
 		)
 		assertEqual(t, expected, actual)
-	})
-
-	t.Run("fail to multiply shards with invalid multipliers", func(t *testing.T) {
-		shards := []*Shard{
-			shard(env1, Fuchsia, 1),
-			shard(env2, Fuchsia, 1, 2),
-			shard(env3, Linux, 3),
-		}
-		multipliers := []TestModifier{
-			makeTestModifier(1, Linux, 2),
-			makeTestModifier(3, Linux, 3),
-		}
-		_, err := MultiplyShards(
-			shards,
-			multipliers,
-		)
-		if err == nil {
-			t.Fatalf("did not fail for invalid multipliers")
-		}
 	})
 }
 
