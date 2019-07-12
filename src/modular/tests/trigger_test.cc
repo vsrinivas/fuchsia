@@ -62,7 +62,6 @@ TEST_F(TriggerTest, AgentWakesUpOnNewMessage) {
   fuchsia::modular::TaskInfo task_info;
   task_info.task_id = "message_queue_message";
   task_info.trigger_condition.set_message_on_queue("Trigger Queue");
-  task_info.persistent = true;
 
   bool schedule_task_complete = false;
   fake_agent_->agent_context()->ScheduleTaskWithCompletion(
@@ -116,7 +115,6 @@ TEST_F(TriggerTest, AgentWakesUpOnExplicitMessageQueueDelete) {
     fuchsia::modular::TaskInfo task_info;
     task_info.task_id = token;
     task_info.trigger_condition.set_queue_deleted(token);
-    task_info.persistent = true;
     fake_agent_->agent_context()->ScheduleTaskWithCompletion(
         std::move(task_info), [&](bool finished) { schedule_task_complete = finished; });
   });
@@ -165,7 +163,6 @@ TEST_F(TriggerTest, AgentWakesUpOnImplicitMessageQueueDelete) {
     fuchsia::modular::TaskInfo task_info;
     task_info.task_id = token;
     task_info.trigger_condition.set_queue_deleted(token);
-    task_info.persistent = true;
     fake_agent_->agent_context()->ScheduleTaskWithCompletion(
         std::move(task_info), [&](bool finished) { schedule_task_complete = finished; });
   });
