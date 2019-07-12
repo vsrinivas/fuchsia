@@ -4,7 +4,7 @@
 
 //! The Ethernet protocol.
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use log::debug;
 use packet::{Buf, MtuError, ParseBuffer, Serializer};
@@ -130,6 +130,8 @@ pub(crate) struct EthernetDeviceState {
     mtu: u32,
     ipv4_addr_sub: Option<AddrSubnet<Ipv4Addr>>,
     ipv6_addr_sub: Option<AddrSubnet<Ipv6Addr>>,
+    ipv4_multicast_groups: HashSet<MulticastAddr<Ipv4Addr>>,
+    ipv6_multicast_groups: HashSet<MulticastAddr<Ipv6Addr>>,
     ipv4_arp: ArpState<Ipv4Addr, EthernetArpDevice>,
     ndp: ndp::NdpState<EthernetNdpDevice>,
     // pending_frames stores a list of serialized frames indexed by their
@@ -158,11 +160,25 @@ impl EthernetDeviceState {
         //  - How do we wire error information back up the call stack? Should
         //  this just return a Result or something?
 
+        let mut ipv6_multicast_groups = HashSet::new();
+
+        // We know the call to `unwrap` will not panic because
+        // `to_solicited_node_address` returns a multicast address,
+        // so `new` will not return `None`.
+        ipv6_multicast_groups.insert(
+            MulticastAddr::new(mac.to_ipv6_link_local(None).to_solicited_node_address()).unwrap(),
+        );
+
+        // TODO(ghanan): Perform NDP's DAD on the link local address BEFORE receiving
+        //               packets destined to it.
+
         EthernetDeviceState {
             mac,
             mtu,
             ipv4_addr_sub: None,
             ipv6_addr_sub: None,
+            ipv4_multicast_groups: HashSet::new(),
+            ipv6_multicast_groups,
             ipv4_arp: ArpState::default(),
             ndp: NdpState::default(),
             pending_frames: HashMap::new(),
@@ -395,6 +411,58 @@ pub(crate) fn set_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     get_device_state_mut(ctx.state_mut(), device_id).ipv4_addr_sub = Some(addr_sub);
     #[ipv6addr]
     get_device_state_mut(ctx.state_mut(), device_id).ipv6_addr_sub = Some(addr_sub);
+}
+
+/// Add `device` to a multicast group `multicast_addr`.
+///
+/// If `device` is already in the multicast group `multicast_addr`,
+/// `join_ip_multicast` does nothing.
+#[specialize_ip_address]
+pub(crate) fn join_ip_multicast<D: EventDispatcher, A: IpAddress>(
+    ctx: &mut Context<D>,
+    device_id: usize,
+    multicast_addr: MulticastAddr<A>,
+) {
+    #[ipv4addr]
+    get_device_state_mut(ctx.state_mut(), device_id).ipv4_multicast_groups.insert(multicast_addr);
+
+    #[ipv6addr]
+    get_device_state_mut(ctx.state_mut(), device_id).ipv6_multicast_groups.insert(multicast_addr);
+}
+
+/// Remove `device` from a multicast group `multicast_addr`.
+///
+/// If `device` is not in the multicast group `multicast_addr`,
+/// `leave_ip_multicast` does nothing.
+#[specialize_ip_address]
+pub(crate) fn leave_ip_multicast<D: EventDispatcher, A: IpAddress>(
+    ctx: &mut Context<D>,
+    device_id: usize,
+    multicast_addr: MulticastAddr<A>,
+) {
+    #[ipv4addr]
+    get_device_state_mut(ctx.state_mut(), device_id).ipv4_multicast_groups.remove(&multicast_addr);
+
+    #[ipv6addr]
+    get_device_state_mut(ctx.state_mut(), device_id).ipv6_multicast_groups.remove(&multicast_addr);
+}
+
+/// Is `device` in the IP multicast group `multicast_addr`?
+#[specialize_ip_address]
+pub(crate) fn is_in_ip_multicast<D: EventDispatcher, A: IpAddress>(
+    ctx: &Context<D>,
+    device_id: usize,
+    multicast_addr: MulticastAddr<A>,
+) -> bool {
+    #[ipv4addr]
+    return get_device_state(ctx.state(), device_id)
+        .ipv4_multicast_groups
+        .contains(&multicast_addr);
+
+    #[ipv6addr]
+    return get_device_state(ctx.state(), device_id)
+        .ipv6_multicast_groups
+        .contains(&multicast_addr);
 }
 
 /// Get the MTU associated with this device.

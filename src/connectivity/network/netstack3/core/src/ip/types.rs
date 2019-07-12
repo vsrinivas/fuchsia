@@ -526,15 +526,6 @@ mod internal {
             ])
         }
 
-        /// Checks if packages addressed to the IPv6 address in `dst` should
-        /// be delivered to hosts with this IP.
-        ///
-        /// Checks if `dst` equals to `self` or the Solicited Node Address
-        /// version of `self`.
-        pub(crate) fn destination_matches(&self, dst: &Self) -> bool {
-            self == dst || self.to_solicited_node_address() == *dst
-        }
-
         /// Checks whether `self` is a link local IPv6 address, as defined
         /// in [RFC 4291 section 2.5.6].
         ///
@@ -1319,8 +1310,6 @@ mod internal {
                 0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0xff, 0xb5, 0x5a, 0xa0,
             ]);
             assert_eq!(addr.to_solicited_node_address(), solicited);
-            assert!(addr.destination_matches(&addr));
-            assert!(addr.destination_matches(&solicited));
         }
 
         #[test]

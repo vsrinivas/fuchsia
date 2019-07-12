@@ -38,6 +38,7 @@ use crate::ip::reassembly::{
     handle_reassembly_timeout, process_fragment, reassemble_packet, FragmentCacheKeyEither,
     FragmentProcessingState, IpLayerFragmentCache,
 };
+use crate::types::MulticastAddr;
 use crate::wire::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
 use crate::{Context, EventDispatcher, TimerId, TimerIdInner};
 use icmp::{
@@ -691,6 +692,7 @@ fn handle_parse_error<D: EventDispatcher, I: Ip, B: BufferMut>(
 // - dst_ip is equal to the address set on the device
 // - dst_ip is equal to the broadcast address of the subnet set on the device
 // - dst_ip is equal to the global broadcast address
+// - dst_ip is equal to a mutlicast group that `device` joined
 #[specialize_ip_address]
 fn deliver<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
@@ -707,7 +709,11 @@ fn deliver<D: EventDispatcher, A: IpAddress>(
     return crate::device::get_ip_addr_subnet(ctx, device)
         .map(AddrSubnet::into_addr_subnet)
         .map(|(addr, subnet)| dst_ip == addr || dst_ip == subnet.broadcast())
-        .unwrap_or(dst_ip.is_global_broadcast());
+        .unwrap_or(dst_ip.is_global_broadcast())
+        || MulticastAddr::new(dst_ip)
+            .map(|a| crate::device::is_in_ip_multicast(ctx, device, a))
+            .unwrap_or(false);
+
     // TODO(brunodalbo):
     // Along with the host model described above, we need to be able to have
     // multiple IPs per interface, it becomes imperative for IPv6.
@@ -717,10 +723,13 @@ fn deliver<D: EventDispatcher, A: IpAddress>(
     #[ipv6addr]
     return crate::device::get_ip_addr_subnet(ctx, device)
         .map(AddrSubnet::into_addr_subnet)
-        .map(|(addr, _): (Ipv6Addr, _)| addr.destination_matches(&dst_ip))
+        .map(|(addr, _): (Ipv6Addr, _)| dst_ip == addr)
         .unwrap_or(false)
-        || crate::device::get_ipv6_link_local_addr(ctx, device).destination_matches(&dst_ip)
-        || dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS;
+        || crate::device::get_ipv6_link_local_addr(ctx, device) == dst_ip
+        || dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS
+        || MulticastAddr::new(dst_ip)
+            .map(|a| crate::device::is_in_ip_multicast(ctx, device, a))
+            .unwrap_or(false);
 }
 
 // Should we forward this packet, and if so, to whom?
@@ -1059,6 +1068,7 @@ mod tests {
     use crate::device::FrameDestination;
     use crate::ip::path_mtu::{get_pmtu, min_mtu};
     use crate::testutil::*;
+    use crate::types::MulticastAddr;
     use crate::wire::ethernet::EthernetFrame;
     use crate::wire::icmp::{
         IcmpDestUnreachable, IcmpEchoRequest, IcmpIpExt, IcmpPacketBuilder, IcmpParseArgs,
@@ -2141,5 +2151,63 @@ mod tests {
             )
             .unwrap();
         assert_eq!(code, Icmpv4DestUnreachableCode::DestProtocolUnreachable);
+    }
+
+    fn test_joining_leaving_ip_multicast_group<I: Ip>() {
+        #[specialize_ip_address]
+        fn get_multicast_addr<A: IpAddress>() -> A {
+            #[ipv4addr]
+            return Ipv4Addr::new([224, 0, 0, 1]);
+
+            #[ipv6addr]
+            return Ipv6Addr::new([255, 17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+        }
+
+        let config = get_dummy_config::<I::Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
+            .build::<DummyEventDispatcher>();
+        let device = DeviceId::new_ethernet(0);
+        let frame_dst = FrameDestination::Unicast;
+        let multi_addr = get_multicast_addr::<I::Addr>();
+        let buf = BufferSerializer::new_vec(Buf::new(vec![0; 10], ..))
+            .encapsulate(<I as IpExt>::PacketBuilder::new(
+                config.remote_ip,
+                multi_addr,
+                64,
+                IpProto::Tcp,
+            ))
+            .serialize_outer()
+            .ok()
+            .unwrap()
+            .into_inner();
+
+        let multi_addr = MulticastAddr::new(multi_addr).unwrap();
+        // Should not have dispatched the packet since we are not in the
+        // multicast group `multi_addr`.
+        assert!(!crate::device::is_in_ip_multicast(&ctx, device, multi_addr));
+        receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
+
+        // Join the multicast group and receive the packet, we should dispatch it.
+        crate::device::join_ip_multicast(&mut ctx, device, multi_addr);
+        assert!(crate::device::is_in_ip_multicast(&ctx, device, multi_addr));
+        receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+
+        // Leave the multicast group and receive the packet, we should not dispatch it.
+        crate::device::leave_ip_multicast(&mut ctx, device, multi_addr);
+        assert!(!crate::device::is_in_ip_multicast(&ctx, device, multi_addr));
+        receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+    }
+
+    #[test]
+    fn test_joining_leaving_ipv4_multicast_groups() {
+        test_joining_leaving_ip_multicast_group::<Ipv4>();
+    }
+
+    #[test]
+    fn test_joining_leaving_ipv6_multicast_groups() {
+        test_joining_leaving_ip_multicast_group::<Ipv6>();
     }
 }

@@ -16,6 +16,7 @@ use packet::{MtuError, Serializer};
 use crate::data_structures::{IdMap, IdMapCollectionKey};
 use crate::device::ethernet::{EthernetDeviceState, Mac};
 use crate::ip::{ext, AddrSubnet, IpAddress, Ipv4Addr, Ipv6Addr};
+use crate::types::MulticastAddr;
 use crate::{Context, EventDispatcher};
 
 /// An ID identifying a device.
@@ -191,6 +192,51 @@ pub fn set_ip_addr_subnet<D: EventDispatcher, A: ext::IpAddress>(
 ) {
     match device.protocol {
         DeviceProtocol::Ethernet => self::ethernet::set_ip_addr_subnet(ctx, device.id, addr_sub),
+    }
+}
+
+/// Add `device` to a multicast group `multicast_addr`.
+///
+/// If `device` is already in the multicast group `multicast_addr`,
+/// `join_ip_multicast` does nothing.
+pub(crate) fn join_ip_multicast<D: EventDispatcher, A: ext::IpAddress>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    multicast_addr: MulticastAddr<A>,
+) {
+    match device.protocol {
+        DeviceProtocol::Ethernet => {
+            self::ethernet::join_ip_multicast(ctx, device.id, multicast_addr)
+        }
+    }
+}
+
+/// Remove `device` from a multicast group `multicast_addr`.
+///
+/// If `device` is not in the multicast group `multicast_addr`,
+/// `leave_ip_multicast` does nothing.
+pub(crate) fn leave_ip_multicast<D: EventDispatcher, A: ext::IpAddress>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    multicast_addr: MulticastAddr<A>,
+) {
+    match device.protocol {
+        DeviceProtocol::Ethernet => {
+            self::ethernet::leave_ip_multicast(ctx, device.id, multicast_addr)
+        }
+    }
+}
+
+/// Is `device` part of the IP multicast group `multicast_addr`.
+pub(crate) fn is_in_ip_multicast<D: EventDispatcher, A: ext::IpAddress>(
+    ctx: &Context<D>,
+    device: DeviceId,
+    multicast_addr: MulticastAddr<A>,
+) -> bool {
+    match device.protocol {
+        DeviceProtocol::Ethernet => {
+            self::ethernet::is_in_ip_multicast(ctx, device.id, multicast_addr)
+        }
     }
 }
 
