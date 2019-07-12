@@ -10,6 +10,7 @@
 #include <lib/media/codec_impl/codec_impl.h>
 #include <threads.h>
 
+#include "lib/media/codec_impl/closure_queue.h"
 #include "lib/syslog/cpp/logger.h"
 
 // "is_bound_checks" - In several lambdas that just send a message, we check
@@ -106,6 +107,7 @@ CodecImpl::CodecImpl(
       codec_admission_(std::move(codec_admission)),
       shared_fidl_dispatcher_(shared_fidl_dispatcher),
       shared_fidl_thread_(shared_fidl_thread),
+      shared_fidl_queue_(shared_fidl_dispatcher, shared_fidl_thread),
       decoder_params_(std::move(decoder_params)),
       encoder_params_(std::move(encoder_params)),
       tmp_sysmem_(std::move(sysmem)),
@@ -138,38 +140,57 @@ CodecImpl::CodecImpl(
 
 CodecImpl::~CodecImpl() {
   // We need ~binding_ to run on fidl_thread() else it's not safe to
-  // un-bind unilaterally.  Unless not ever bound in the first place.
+  // un-bind unilaterally.  We could potentially relax this if BindAsync() was
+  // never called, but for now we just require this always.
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
 
-  ZX_DEBUG_ASSERT(was_unbind_started_ && was_unbind_completed_ ||
-                  !was_logically_bound_);
+  if (was_logically_bound_) {
+    // Ensure that StreamControl is told to stop, which also stops InputData by
+    // calling EnsureStreamClosed() as needed.
+    Unbind();
 
-  // Ensure the CodecAdmission is deleted entirely after ~this, including after
-  // any relevant base class destructors have run.  This posted work may only
-  // get deleted, not run, since some environments will Quit() their
-  // async::Loop shortly after ~CodecImpl.  So to avoid depending on the
-  // destruction order of captures of a lambda, we use a fit::defer which will
-  // run it's lambda when deleted.  In this lambda we can force ~CodecAdmission
-  // before ~zx::channel, and we know this lambda will run, whether the lambda
-  // furhter down runs or is just deleted.
+    // Wait for StreamControl to be done.
+    {  // scope lock
+      std::unique_lock<std::mutex> lock(lock_);
+      // Normally the fidl_thread() waiting for the StreamControl thread to do anything would be
+      // bad, because the fidl_thread() is non-blocking and the StreamControl thread can block on
+      // stuff, but StreamControl thread behavior after was_unbind_started_ = true and
+      // wake_stream_control_condition_.notify_all() does not block and does not wait on
+      // fidl_thread().  So in this case it's ok to wait here.
+      while (!is_stream_control_done_) {
+        stream_control_done_condition_.wait(lock);
+      }
+    }  // ~lock
+
+    EnsureUnbindCompleted();
+  }
+
+  // Ensure the CodecAdmission is deleted entirely after ~this, including after any relevant base
+  // class destructors have run.  This posted work may only get deleted, not run, since some
+  // environments will Quit() their async::Loop shortly after ~CodecImpl.  So to avoid depending on
+  // the destruction order of captures of a lambda, we use a fit::defer which will run it's lambda
+  // when deleted.  In this lambda we can force ~CodecAdmission before ~zx::channel, and we know
+  // this lambda will run, whether the lambda further down runs or is just deleted.
   auto run_when_deleted = fit::defer([
     codec_admission = std::move(codec_admission_),
     codec_to_close = std::move(codec_to_close_)]() mutable {
-      // Ensure codec_to_close is destructed only after the
-      // codec_admission is destructed.  We have to be fairly explicit
-      // about this since the order of lambda members is explicitly
-      // unspecified in C++, so their destruction order is also
-      // unspecified.
+      // Ensure codec_to_close is destructed only after the codec_admission is destructed.  We have
+      // to be fairly explicit about this since the order of lambda members is explicitly
+      // unspecified in C++, so their destruction order is also unspecified.
+      //
+      // We care about the order because a client is fairly likely to immediately retry on seeing
+      // the channel close, and we don't want that to ever bounce off the CodecAdmission for the
+      // instance associated with that same channel.
       codec_admission.reset();
 
       // ~codec_to_close (after ~CodecAdmission above).
     });
+  // We intentionally don't use shared_fidl_queue_ here.
   PostSerial(shared_fidl_dispatcher_,
              [run_when_deleted = std::move(run_when_deleted)]{
-               // ~run_when_deleted will run the lambda above, whether run at
-               // the end of this lambda, or when this lambda is deleted without
-               // ever having run during ~async::Loop or
-               // async::Loop::Shutdown().
+               // ~run_when_deleted will run the lambda above, whether run at the end of this
+               // lambda, or when this lambda is deleted without ever having run during ~async::Loop
+               // or async::Loop::Shutdown().
              });
 }
 
@@ -201,8 +222,10 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
     PostToSharedFidl(std::move(error_handler));
     return;
   }
+  stream_control_queue_.SetDispatcher(stream_control_loop_.dispatcher(), stream_control_thread_);
 
-  // From here on, we'll only fail the CodecImpl via UnbindLocked().
+  // From here on, we'll only fail the CodecImpl via UnbindLocked(), or by
+  // just calling ~CodecImpl on the FIDL thread.
   was_logically_bound_ = true;
 
   // This doesn't really need to be set until the start of the posted lambda
@@ -606,6 +629,10 @@ void CodecImpl::Sync(SyncCallback callback) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
   // By posting to StreamControl ordering domain, we sync both Output ordering
   // domain (on fidl_thread()) and the StreamControl ordering domain.
+  //
+  // If the posted task doesn't run because stream_control_queue_.StopAndClear()
+  // happened/happens, it doesn't matter because the whole channel will be
+  // closing before long.
   PostToStreamControl([this, callback = std::move(callback)]() mutable {
     Sync_StreamControl(std::move(callback));
   });
@@ -1143,6 +1170,8 @@ void CodecImpl::UnbindLocked() {
     // be blocked waiting for the first caller's unbind to be done.
     return;
   }
+
+  // Tell StreamControl to not start any more work.
   was_unbind_started_ = true;
   wake_stream_control_condition_.notify_all();
 
@@ -1151,15 +1180,14 @@ void CodecImpl::UnbindLocked() {
   // Regardless of what thread UnbindLocked() is called on, "this" will remain
   // allocated at least until the caller of UnbindLocked() releases lock_.
   //
-  // The shutdown sequence here is meant to be general enough to accommodate
-  // code changes without being super brittle.  Not all the potential cases
-  // accounted for in this sequence can necessarily happen currently, but it
-  // seems good to stop all activity in a way that'll hold up even if a change
-  // posts another lambda or similar.
-  //
   // In all cases, this posted lambda runs after BindAsync()'s work that's
   // posted to StreamControl, because any/all calls to UnbindLocked() happen
   // after BindAsync() has posted to StreamControl.
+  //
+  // We know the stream_control_queue_ isn't stopped yet, because the present
+  // method is idempotent and the lambda being posted just below has the only
+  // call to stream_control_queue_.StopAndClear().
+  ZX_DEBUG_ASSERT(!stream_control_queue_.is_stopped());
   PostToStreamControl([this] {
     // At this point we know that no more streams will be started by
     // StreamControl ordering domain (thanks to was_unbind_started_ /
@@ -1167,13 +1195,6 @@ void CodecImpl::UnbindLocked() {
     // ordering domain (by the fidl_thread() or by core codec) may still
     // be creating other activity such as posting lambdas to StreamControl or
     // fidl_thread().
-    //
-    // There are two purposes to this lock acquire, one of which is subtle.
-    //
-    // This lock acquire also delays execution here until the caller of
-    // UnbindLocked() has released lock_.  This delay is nice to do on the
-    // stream control thread instead of later on the fidl_thread(), and
-    // we need the lock here to call EnsureStreamClosed() anyway.
     {  // scope lock
       std::unique_lock<std::mutex> lock(lock_);
       // Stop core codec associated with this CodecImpl, partly to make sure it
@@ -1198,112 +1219,90 @@ void CodecImpl::UnbindLocked() {
       if (is_core_codec_init_called_) {
         EnsureStreamClosed(lock);
       }
+
+      // Because the current path is the only path that sets this bool to true,
+      // and the current path is run-once.
+      ZX_DEBUG_ASSERT(!is_stream_control_done_);
+      // Because stream_control_done_ is false, and ~CodecImpl waits for
+      // is_stream_control_done_ true before shared_fidl_queue_.StopAndClear().
+      ZX_DEBUG_ASSERT(!shared_fidl_queue_.is_stopped());
+
+      // We do this from here so we know that this thread won't run any more
+      // tasks after the currently-running task.
+      //
+      // The currently-running StreamControl task (this method) still gets to
+      // run to completion.
+      //
+      // TODO(dustingreen): We probably could lean more heavily on this Quit()
+      // and do less checking of IsStoppingLocked() in StreamControl tasks.
+      // This TODO is not meant to imply that all current checking of
+      // IsStoppingLocked() is ok to remove (less, not none).
+      stream_control_loop_.Quit();
+
+      // This deletes any further tasks already queued to StreamControl, and will immediately
+      // delete any additional tasks that try to queue to StreamControl.  We also need to ensure the
+      // first time stream_control_queue_.StopAndClear() runs is on stream_control_thread_, per
+      // ClosureQueue's usage rules.
+      stream_control_queue_.StopAndClear();
+
+      // We're ready to let EnsureUnbindCompleted() and ~CodecImpl do the rest.
+      //
+      // The core codec has been stopped, so it has no current stream.  The core codec is required
+      // to be delete-able when it has no current stream, and required not to asynchronously post
+      // more work to the CodecImpl (because calling onCoreCodec... methods is not allowed when
+      // there is no current stream).
+      //
+      // The binding_.Unbind() will run during EnsureUnbindCompleted() on the FIDL thread, so no
+      // more FIDL dispatching to this CodecImpl after that.
+      //
+      // The stream_control_loop_.JoinThreads() will run during ~CodecImpl, so no more activity from
+      // stream_control_thread_ after that.
+      //
+      // Anything posted using PostToSharedFidl() can be deleted instead of run since the whole
+      // CodecImpl is going away, and shared_fidl_queue_ makes it safe for ~CodecImpl to complete
+      // without needing to wait/fence past previously-posted labmdas to FIDL thread.
+      is_stream_control_done_ = true;
+      // Must notify_all() under lock_ in this case since ~CodecImpl can run as soon as
+      // stream_control_done_ = true just above.
+      stream_control_done_condition_.notify_all();
+
+      // If we're not running from ~CodecImpl, we need to run the owner_error_handler_ on the FIDL
+      // thread, which will in turn call ~CodecImpl.  If we are running from ~CodecImpl, then we're
+      // already on the FIDL thread, and this posted work won't run thanks to shared_fidl_queue_
+      // just deleting the posted task instead, in which case the owner_error_handler_ just gets
+      // deleted instead of running (the usual semantics in response to unsolicited destruction).
+      //
+      // Must post under lock_ in this case else ~CodecImpl can have already finished as soon as
+      // stream_control_done_ = true above.
+      PostToSharedFidl(
+                  [this,
+                   client_error_handler = std::move(owner_error_handler_)] {
+                    ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
+                    // We go ahead and finish up the un-binding aspects (because we can free up
+                    // resources prior to the client code potentially running ~CodecImpl async
+                    // later).
+                    //
+                    // However, this doesn't finish up aspects related to ordering release of
+                    // resources before acquisition of new resources.  In particular, this call
+                    // unbinds the channel, but intentionally doesn't close the channel itself until
+                    // after ~CodecImpl and after ~CodecAdmission.  The intent is to prevent the
+                    // possibility that overly-agressive client retries on channel closure by the
+                    // server could build up many CodecImpl instances, even if different instances
+                    // happen to use different FIDL threads (also potentially different than FIDL
+                    // thread on which a new CodecAdmission is created). By only closing the channel
+                    // itself as the last thing after all other cleanup is fully done, we don't
+                    // trigger the client to create a new CodecImpl while the old one still exists.
+                    EnsureUnbindCompleted();
+                    // This call is expected to run ~CodecImpl, either synchronously during this
+                    // call or shortly later async.
+                    client_error_handler();
+                  });
     }  // ~lock
 
-    PostToSharedFidl([this] {
-      ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
-      // If not being called from binding_'s error handler, unbind from the
-      // channel so we won't see any more incoming FIDL messages.  This binding
-      // doesn't own "this".
-      //
-      // The Unbind() stops any additional FIDL dispatching re. this CodecImpl,
-      // but it doesn't stop lambdas re. this CodecImpl from being queued to
-      // fidl_thread().  Potentially such lambdas can be coming from
-      // StreamControl domain still at this point (even after the Unbind()).
-      // Those which are sending a FIDL message can omit their send if binding_
-      // is no longer bound, but they need binding_ to still be allocated when
-      // they run.
-      //
-      // We close the Codec channel only after ~CodecAdmission has freed up the
-      // concurrency tally, so that a client that re-tries on channel closure
-      // can retry immediately without potentially bouncing off still-existing
-      // old CodecAdmission.
-      if (binding_.is_bound()) {
-        codec_to_close_ = binding_.Unbind().TakeChannel();
-      }
-
-      // We need to shut down the StreamControl thread, which can be shut down
-      // quickly (it's not waiting any significant duration on anything) thanks
-      // to was_unbind_started_ and wake_stream_control_condition_.  Normally
-      // the fidl_thread() waiting for the StreamControl thread to do
-      // anything would be bad, because the fidl_thread() is non-blocking
-      // and the StreamControl thread can block on stuff, but StreamControl
-      // thread behavior after was_unbind_started_ = true and
-      // wake_stream_control_condition_.notify_all() does not block and does not
-      // wait on fidl_thread().  So in this case it's ok to wait here.
-      stream_control_loop_.Quit();
-      stream_control_loop_.JoinThreads();
-      // This is when we first know that StreamControl can't be queueing any
-      // more lambdas re. this CodecImpl toward fidl_thread().  (We
-      // already know the core codec isn't queuing any more).  If any lambdas
-      // are queued to StreamControl at/beyond this point, we rely on those
-      // being safe to just delete.
-      stream_control_loop_.Shutdown();
-
-      {  // scope lock
-        std::lock_guard<std::mutex> lock(lock_);
-        // This unbinds any BufferCollection bindings.  This is effectively part
-        // of the overall unbind of anything generating activity on FIDL thread
-        // based on incoming channel messages.
-        if (port_settings_[kInputPort] &&
-            port_settings_[kInputPort]->is_partial_settings()) {
-          port_settings_[kInputPort]->UnbindBufferCollection();
-        }
-        if (port_settings_[kOutputPort] &&
-            port_settings_[kOutputPort]->is_partial_settings()) {
-          port_settings_[kOutputPort]->UnbindBufferCollection();
-        }
-        // Unbind the sysmem_ fuchsia::sysmem::Allocator connection - this also
-        // ensures that any in-flight requests' completions will not run.
-        sysmem_.Unbind();
-      }  // ~lock
-
-      // Before calling the owner_error_handler_, we declare that unbind is
-      // done so that during the destructor we can check that unbind is done.
-      was_unbind_completed_ = true;
-
-      // This post ensures that any other items posted to the
-      // fidl_thread() for this CodecImpl run before "delete this". By
-      // the time we post here, we know that no further lambdas will be posted
-      // to fidl_thread() regarding this CodecImpl other than this post
-      // itself - specifically:
-      //   * The core codec has been stopped, in the sense that it has no
-      //     current stream.  The core codec is required to be delete-able when
-      //     it has no current stream, and required not to asynchronously post
-      //     more work to the CodecImpl (because calling onCoreCodec... methods
-      //     is not allowed when there is no current stream).
-      //   * The binding_.Unbind() has run, so no more FIDL dispatching to this
-      //     CodecImpl.
-      //   * The stream_control_loop_.JoinThreads() has run, so no more posting
-      //     from the stream_control_thread_ since it's no longer running.
-      //   * The previous bullets are the complete list of sources of items
-      //     posted to the fidl_thread() regarding this CodecImpl.
-      //
-      // By posting to run _after_ any of the above sources, we know that by the
-      // time this posted lambda runs, the "delete this" in this lambda will be
-      // after any other posted lambdas.
-      //
-      // For example, any lambdas previously posted to send a message via
-      // this->binding_ (which is soon to be deleted) will run before the lambda
-      // posted here.
-      //
-      // This relies on other previously-posted _lambdas_ running on
-      // fidl_thread() re. this CodecImpl to not re-post to the fidl_thread().
-      // In contrast, it is ok if a FIDL dispatch (on FIDL thread) re-posts to
-      // the fidl_thread(); this is ok because we've already stopped any more
-      // FIDL dispatching by binding_.Unbind() above.  It's also ok if a posted
-      // lambda starts a FIDL request that will complete async on the FIDL
-      // thread since the unbind above will prevent the completion from
-      // running.
-      PostSerial(shared_fidl_dispatcher_,
-                 [client_error_handler = std::move(owner_error_handler_)] {
-                   // This call deletes the CodecImpl.
-                   client_error_handler();
-                 });
-      // "this" will be deleted shortly async when lambda posted just above
-      // runs.
-      return;
-    });
+    // "this" will be deleted shortly async when lambda posted just above runs, or we're returning
+    // back to rest of ~CodecImpl, or ~CodecImpl is racing/running separately and completing
+    // immediately after ~lock just above.  Regardless, done here.
+    return;
   });
   // "this" remains allocated until caller releases lock_.
 }
@@ -1315,6 +1314,65 @@ void CodecImpl::Unbind() {
   //
   // "this" may be deleted very shortly after ~lock, depending on what thread
   // Unbind() is called from.
+}
+
+void CodecImpl::EnsureUnbindCompleted() {
+  ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
+  ZX_DEBUG_ASSERT(was_logically_bound_);
+  if (was_unbind_completed_) {
+    return;
+  }
+  // Or will be, before this method returns.
+  was_unbind_completed_ = true;
+
+  // Unbind from the channel so we won't see any more incoming FIDL messages. This binding doesn't
+  // own "this".
+  //
+  // The Unbind() stops any additional FIDL dispatching re. this CodecImpl.
+  if (binding_.is_bound()) {
+    codec_to_close_ = binding_.Unbind().TakeChannel();
+  }
+
+  // This isn't strictly necessary, but since we can potentially delete a queued
+  // task here (before a client-called ~CodecImpl), we go ahead and do that now.
+  //
+  // This is partly a very minor potential resource deletion, and partly so we
+  // get a nicer stack if anything should go wrong during that deletion; partly
+  // so we get a nicer stack if somehow the JoinThreads() gets stuck (it
+  // shouldn't since Quit() already happened).
+  stream_control_loop_.JoinThreads();
+  stream_control_loop_.Shutdown();
+
+  {  // scope lock
+    std::lock_guard<std::mutex> lock(lock_);
+    // This unbinds any BufferCollection bindings.  This is effectively part
+    // of the overall unbind of anything generating activity on FIDL thread
+    // based on incoming channel messages.
+    if (port_settings_[kInputPort] &&
+        port_settings_[kInputPort]->is_partial_settings()) {
+      port_settings_[kInputPort]->UnbindBufferCollection();
+    }
+    if (port_settings_[kOutputPort] &&
+        port_settings_[kOutputPort]->is_partial_settings()) {
+      port_settings_[kOutputPort]->UnbindBufferCollection();
+    }
+    // Unbind the sysmem_ fuchsia::sysmem::Allocator connection - this also
+    // ensures that any in-flight requests' completions will not run.
+    sysmem_.Unbind();
+  }  // ~lock
+
+  // Any previously-posted tasks via shared_fidl_queue_ are deleted here without running.
+  //
+  // If we're shutting down because UnbindLocked() was run first upon discovery of an
+  // internally-noticed error, then previously-queued sending of FIDL messages on the FIDL thread
+  // already ran before the EnsureUnbindCompleted(), which was posted after the sends.
+  //
+  // If we're running ~CodecImpl because the client code is just deleting CodecImpl for whatever
+  // client-initiated reason, then previously queueud sending of FIDL messages can be just deleted
+  // here without the sends actually occurring, which is fine since in that case the client code
+  // has no particular expectation that any particular messages were sent before deletion vs. not
+  // getting sent due to deletion.
+  shared_fidl_queue_.StopAndClear();
 }
 
 bool CodecImpl::IsStreamActiveLocked() {
@@ -1516,9 +1574,7 @@ void CodecImpl::SetBufferSettingsCommon(
       return;
     }
     // For output, the only reason we re-post here is to share the lock
-    // acquisition code with input.  Because we're presently on a FIDL handler
-    // it's ok to re-post back to the FIDL thread, so for output we pass true
-    // for promise_not_on_previously_posted_fidl_thread_lambda.
+    // acquisition code with input.
     PostToSharedFidl(
         [this, port, buffer_lifetime_ordinal = buffer_lifetime_ordinal_[port],
          token = std::move(token),
@@ -1566,8 +1622,7 @@ void CodecImpl::SetBufferSettingsCommon(
                 OnBufferCollectionInfo(port, buffer_lifetime_ordinal, status,
                                        std::move(buffer_collection_info));
               });
-        },
-        port == kOutputPort);
+        });
   } else {
     // This path probably won't stick around for very long, and involves a
     // substantial amount of simulation of the new way based on old settings. To
@@ -3001,23 +3056,38 @@ void CodecImpl::PostSerial(async_dispatcher_t* async, fit::closure to_run) {
   ZX_ASSERT(result == ZX_OK);
 }
 
-void CodecImpl::PostToSharedFidl(
-    fit::closure to_run,
-    bool promise_not_on_previously_posted_fidl_thread_lambda) {
-  // Re-posting to fidl_thread() is potentially problematic because of
-  // how CodecImpl::UnbindLocked() relies on re-posting itself to run "delete
-  // this" after any other work posted to fidl_thread() previously - that
-  // only works if re-posts to the fidl_thread() aren't allowed.
-  // TODO(dustingreen): Avoid the need for
-  // promise_not_on_previously_posted_fidl_thread_lambda; make enforcement
-  // self-contained while still permitting FIDL dispatch to lambda self-post.
-  ZX_DEBUG_ASSERT(promise_not_on_previously_posted_fidl_thread_lambda ||
-                  (thrd_current() != fidl_thread()));
-  PostSerial(shared_fidl_dispatcher_, std::move(to_run));
+// The implementation of PostToSharedFidl() permits queuing lambdas that use
+// "this", despite the fact that the client can call ~CodecImpl at any time
+// using the fidl_thread().  If ~CodecImpl is called before the lambda runs, the
+// lambda will be deleted instead of run, and the deletion will occur during
+// ~CodecImpl while essentially all of CodecImpl is still valid (in case ~lambda
+// itself touches any of CodecImpl).
+void CodecImpl::PostToSharedFidl(fit::closure to_run) {
+  // If shared_fidl_queue_.is_stopped(), then to_run will just be deleted here.
+  shared_fidl_queue_.Enqueue(std::move(to_run));
 }
 
+// The implementation of PostToStreamControl() doesn't strongly need to guard
+// against ~CodecImpl because ~CodecImpl will do
+// stream_control_loop_.Shutdown(), which deletes any tasks that haven't already
+// run on StreamControl.  We use a ClosureQueue anyway, for at least a couple
+// reasons.
+//
+// Not very importantly, by using a ClosureQueue here, we eliminate a window
+// between is_stream_control_done_ = true and the lambda posted to FIDL thread
+// shortly after that, during which hypothetically many FIDL dispatches could
+// queue to StreamControl without them being consumed by StreamControl.
+//
+// More importantly, assuming we add an over-full threshold detection to
+// ClosureQueue, that can help avoid the server being overwhelmed by a
+// badly-behaving client that queues more messages than make any sense given the
+// StreamProcessor protocol (which overall limits the number of concurrent
+// messages that are allowed / make any sense, but any given message isn't
+// necessarily checked for making sense until we're on StreamControl).
 void CodecImpl::PostToStreamControl(fit::closure to_run) {
-  PostSerial(stream_control_loop_.dispatcher(), std::move(to_run));
+  // If stream_control_queue_.is_stopped(), then to_run will just be deleted
+  // here.
+  stream_control_queue_.Enqueue(std::move(to_run));
 }
 
 bool CodecImpl::IsStoppingLocked() { return was_unbind_started_; }
@@ -3353,7 +3423,7 @@ void CodecImpl::onCoreCodecOutputEndOfStream(bool error_detected_before) {
     ZX_DEBUG_ASSERT(!stream_->is_mid_stream_output_constraints_change_active());
     stream_->SetOutputEndOfStream();
     output_end_of_stream_seen_.notify_all();
-    PostSerial(shared_fidl_dispatcher_,
+    PostToSharedFidl(
                [this, stream_lifetime_ordinal = stream_lifetime_ordinal_,
                 error_detected_before] {
                  // See "is_bound_checks" comment up top.

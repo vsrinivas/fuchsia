@@ -19,6 +19,7 @@ source_set("fourcc") {
 
 source_set("codec_impl") {
   sources = [
+    "closure_queue.cc",
     "codec_adapter.cc",
     "codec_adapter_events.cc",
     "codec_admission_control.cc",
@@ -49,5 +50,12 @@ source_set("codec_impl") {
     "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/fidl/cpp",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "unit_tests",
   ]
 }

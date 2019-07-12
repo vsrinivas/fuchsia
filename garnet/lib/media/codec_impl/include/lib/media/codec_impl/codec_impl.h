@@ -15,6 +15,7 @@
 #include <list>
 #include <queue>
 
+#include "closure_queue.h"
 #include "codec_adapter.h"
 #include "codec_adapter_events.h"
 #include "codec_admission_control.h"
@@ -105,28 +106,32 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
 
   // BindAsync()
   //
-  // This enables serving Codec (soon).  Up to the start of this call,
-  // ~CodecImpl() is fine to just call.  After the start of this call, Unbind()
-  // must fully complete before ~CodecImpl.
+  // This enables serving Codec (soon).
+  //
+  // Must be called on shared_fidl_thread.
+  //
+  // It remains permitted to cause ~CodecImpl (on shared_fidl_thread) after this
+  // call.
   //
   // The core codec initialization and actual binding occur shortly later async
   // after the start of this call, possibly after this call has returned.  This
   // is to avoid core codec initialization slowing down the shared_fidl_thread()
   // which may be handling other stream data for a different CodecImpl instance.
   //
-  // TODO(dustingreen): If stuff like the previous paragraph becomes too onerous
-  // we can potentially switch to not sharing one FIDL thread across CodecImpl
-  // instances - for now it still seems plausible enough, but we'll want to
-  // re-visit this choice when we have this class working and can run a couple
-  // decodes concurrently and see how well it runs.  There are of course core
-  // codec sharing aspects also such as switching the decoder HW between two
-  // streams - if those aspects tend to be even longer interference intervals
-  // than having a single shared_fidl_thread() causes, then sharing one
-  // shared_fidl_thread() is probably fine for now.
-  //
   // Any error, including those encountered before binding is fully complete,
   // will call error_handler on a clean stack on shared_fidl_thread(), after
-  // this call (also on shared_fidl_thread()) returns.
+  // this call (also on shared_fidl_thread()) returns.  If the client code runs
+  // ~CodecImpl on shared_fidl_thread instead (before error_handler has run on
+  // shared_fidl_thread), the error_handler will be deleted without being run.
+  //
+  // The error_handler is expected to trigger ~CodecImpl to run, either
+  // synchronously during error_handler(), or shortly after async.  In other
+  // words it's the responsibility of client code to delete the CodecImpl in a
+  // timely manner during or soon after error_handler().  Until ~CodecImpl, the
+  // CodecAdmission won't be released, and the channel itself won't be closed
+  // (intentionally, to ensure the old instance is cleaned up before a new
+  // instance is created based on a client retry triggered by server channel
+  // closure).
   void BindAsync(fit::closure error_handler);
 
   //
@@ -387,6 +392,12 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
 
   async_dispatcher_t* shared_fidl_dispatcher_;
   thrd_t shared_fidl_thread_;
+  // Nearly every task we post to shared_fidl_dispatcher_ is actually posted via
+  // this ClosureQueue, which is how we avoid running previously-queued lambdas
+  // that capture "this" or part of "this" after "this" is already gone.  The
+  // ~CodecImpl ensures that task deletion occurs _before_ most of ~CodecImpl by
+  // calling shared_fidl_queue_.StopAndClear().
+  ClosureQueue shared_fidl_queue_;
 
   // Parts of CodecImpl are accessed from shared_fidl_thread(),
   // stream_control_thread_, and decoder thread(s) such as interrupt handling
@@ -413,7 +424,9 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   //
 
   // This starts unbinding.  When unbinding is done and CodecImpl is ready to
-  // be destructed, client_error_handler_ is called.
+  // be destructed, client_error_handler_ is called, unless this is being called
+  // during ~CodecImpl in which case client_error_handler_ is deleted without
+  // running instead.
   //
   // UnbindLocked() can be called in response to a channel error (in which case
   // the binding_ itself is already unbound), or can be called in response to a
@@ -421,20 +434,20 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   //
   // On the caller's release of lock_ after this call, "this" may be
   // deallocated, if UnbindLocked() was called on a thread other than
-  // shared_fidl_thread().  For consistency and simplicity, all callers should
+  // fidl_thread().  For consistency and simplicity, all callers should
   // avoid touching any part of "this" after return from this method other than
   // releasing lock_.
   //
-  // All calls to UnbindLocked() are some form of error; the
-  // client_error_handler_ will eventually run async later at some time after
-  // the start of this call.
-  //
-  // Most potential callers probably want Fail() or FailLocked() instead, which
-  // report an error before calling UnbindLocked() at the end..
+  // If the reason for un-binding is a failure, call Fail() or FailLocked()
+  // instead, which will log an error before calling UnbindLocked() at the end.
   void UnbindLocked();
   // Like UnbindLocked(), but acquires the lock so the caller doesn't have to.
-  // On return from this method, "this" can be deallocated.
+  // On return from this method, "this" may already have been deleted.
   void Unbind();
+  // Part of the implementation of UnbindLocked() and ~CodecImpl, which ensures
+  // that all relevant FIDL bindings are un-bound.  Calls to this method must
+  // only occur on the FIDL thread.
+  void EnsureUnbindCompleted();
 
   // The CodecAdapter is owned by the CodecImpl, and is listed near the top of
   // the local variables in CodecImpl so that it gets deleted near the end of
@@ -503,10 +516,13 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   bool was_logically_bound_ = false;
   async::Loop stream_control_loop_;
   thrd_t stream_control_thread_ = 0;
+  ClosureQueue stream_control_queue_;
   fit::closure owner_error_handler_;
   bool was_unbind_started_ = false;
+  bool is_stream_control_done_ = false;
   bool was_unbind_completed_ = false;
   std::condition_variable wake_stream_control_condition_;
+  std::condition_variable stream_control_done_condition_;
 
   //
   // Codec protocol aspects.
@@ -887,9 +903,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // If |promise_not_on_previously_posted_fidl_thread_lambda| is true, the
   // caller is promising that it's not running in a lambda that was posted to
   // the fidl thread (running in a FIDL dispatch is fine).
-  void PostToSharedFidl(
-      fit::closure to_run,
-      bool promise_not_on_previously_posted_fidl_thread_lambda = false);
+  void PostToSharedFidl(fit::closure to_run);
   void PostToStreamControl(fit::closure to_run);
   __WARN_UNUSED_RESULT bool IsStoppingLocked();
   __WARN_UNUSED_RESULT bool IsStopping();

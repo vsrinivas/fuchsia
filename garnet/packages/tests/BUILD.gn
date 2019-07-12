@@ -804,6 +804,7 @@ group("media") {
   public_deps = [
     ":virtual_audio",
     "//garnet/bin/media/codecs:tests",
+    "//garnet/lib/media/codec_impl:tests",
     "//sdk/lib/media/cpp:media_lib_timeline_tests",
     "//src/media:tests",
     "//src/media/playback/mediaplayer:tests",

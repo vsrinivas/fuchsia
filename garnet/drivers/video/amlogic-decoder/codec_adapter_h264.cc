@@ -110,7 +110,6 @@ CodecAdapterH264::CodecAdapterH264(std::mutex& lock,
 }
 
 CodecAdapterH264::~CodecAdapterH264() {
-  // TODO(dustingreen): Remove the printfs or switch them to VLOG.
   input_processing_loop_.Quit();
   input_processing_loop_.JoinThreads();
   input_processing_loop_.Shutdown();
