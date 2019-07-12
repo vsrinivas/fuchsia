@@ -177,7 +177,7 @@ executable("inspect_exe") {
   ]
 
   deps = [
-    "//garnet/public/lib/inspect:component",
+    "//garnet/public/lib/inspect_deprecated:component",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
