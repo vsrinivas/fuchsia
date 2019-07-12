@@ -11,8 +11,10 @@
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
+#include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 
 namespace zxdb {
@@ -455,6 +457,63 @@ TEST_F(FormatValueConsoleTest, Wrapping) {
       "  empty = {}\n"
       "}",
       SyncFormatValue(outer_value, opts));
+}
+
+// Tests the naming of Rust collections since we have complicated rules depending on verbosity.
+TEST_F(FormatValueConsoleTest, RustCollectionName) {
+  // Namespace for the structs. Making the root compilation unit a Rust one will mark all types in
+  // this unit as Rust.
+  auto ns = fxl::MakeRefCounted<Namespace>("my_ns");
+  ns->set_parent(LazySymbol(MakeRustUnit()));
+
+  // Make a simple type in the namespace with no templates.
+  auto simple_type = MakeCollectionType(DwarfTag::kStructureType, "MyStruct", {});
+  simple_type->set_parent(LazySymbol(ns));
+
+  ExprValue simple_value(simple_type, {});
+
+  // Minimal verbosity shows only the last name. Note that empty Rust structs don't use {}.
+  ConsoleFormatOptions minimal;
+  minimal.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
+  EXPECT_EQ("MyStruct", SyncFormatValue(simple_value, minimal));
+
+  // Higher verbosity shows the namespace.
+  ConsoleFormatOptions medium;
+  medium.verbosity = ConsoleFormatOptions::Verbosity::kMedium;
+  EXPECT_EQ("my_ns::MyStruct", SyncFormatValue(simple_value, medium));
+
+  // Full type information should be the same, it shouldn't duplicate the type.
+  ConsoleFormatOptions all_types;
+  all_types.verbosity = ConsoleFormatOptions::Verbosity::kAllTypes;
+  EXPECT_EQ("my_ns::MyStruct", SyncFormatValue(simple_value, all_types));
+
+  // Make a long template name for a collection with a member.
+  auto template_type = MakeCollectionType(
+      DwarfTag::kStructureType,
+      "HashMap<alloc::string::String, &str, std::collections::hash::map::RandomState>",
+      {{"a", MakeInt32Type()}});
+  template_type->set_parent(LazySymbol(ns));
+  ExprValue template_value(template_type, {123, 0, 0, 0});
+
+  // Minimal verbosity elides the template and omits the namespace.
+  EXPECT_EQ("HashMap<alloc::string::String, &s…>{a = 123}",
+            SyncFormatValue(template_value, minimal));
+
+  // Minimal verbosity in expanded mode shows more but still elides.
+  ConsoleFormatOptions minimal_expanded = minimal;
+  minimal_expanded.wrapping = ConsoleFormatOptions::Wrapping::kExpanded;
+  minimal.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
+  EXPECT_EQ(
+      "HashMap<alloc::string::String, &str, std::collections::has…>{\n"
+      "  a = 123\n"
+      "}",
+      SyncFormatValue(template_value, minimal_expanded));
+
+  // Medium verbosity shows everything.
+  EXPECT_EQ(
+      "my_ns::HashMap<alloc::string::String, &str, std::collections::hash::map::RandomState>{a = "
+      "123}",
+      SyncFormatValue(template_value, medium));
 }
 
 }  // namespace zxdb

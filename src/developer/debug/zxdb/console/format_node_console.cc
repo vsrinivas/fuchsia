@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/console/format_node_console.h"
 
 #include "src/developer/debug/zxdb/common/ref_ptr_to.h"
+#include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/expr/format.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
 #include "src/lib/fxl/memory/ref_counted.h"
@@ -130,6 +131,12 @@ void RecursiveDescribeFormatNode(FormatNode* node, fxl::RefPtr<EvalContext> cont
       }));
 }
 
+bool IsRust(const FormatNode* node) {
+  if (!node->value().type())
+    return false;
+  return node->value().type()->GetLanguage() == DwarfLang::kRust;
+}
+
 // Forward decls, see the implementation for comments.
 OutputBuffer DoFormatNode(const FormatNode* node, const RecursiveState& state, int line_start_char);
 OutputBuffer DoFormatNodeOneWay(const FormatNode* node, const RecursiveState& state,
@@ -156,6 +163,50 @@ std::string GetElidedTypeName(const RecursiveState& state, const std::string& na
   return name.substr(0, elide_to) + "…";
 }
 
+// Rust collections (structs) normally have the type name before the bracket like "MyStruct{...}".
+// This function appends this name.
+//
+// For some struct types including common standard containers the names can get very long. As a
+// result in "minimal" verbosity mode we never show the namespaces and also elide template
+// parameters when the template is long.
+void AppendRustCollectionName(const FormatNode* node, const RecursiveState& state,
+                              OutputBuffer* out) {
+  if (!IsRust(node) || !node->value().type())
+    return;
+
+  if (state.options.verbosity != ConsoleFormatOptions::Verbosity::kMinimal) {
+    // Use the full identifier name in the more verbose modes.
+    out->Append(FormatIdentifier(node->value().type()->GetIdentifier(), false));
+    return;
+  }
+
+  // In minimal mode, extract just the last component of the identifier.
+  const Identifier& ident = node->value().type()->GetIdentifier();
+  if (ident.empty())
+    return;
+  ParsedIdentifier parsed =
+      ToParsedIdentifier(Identifier(IdentifierQualification::kRelative, ident.components().back()));
+
+  if (parsed.components()[0].has_template()) {
+    // Some containers have very long template names. Since Rust structs always have the name, the
+    // lengths can get a little bit nuts. Elide the template contents when too long by converting
+    // all template parameters to one string and eliding.
+    const auto& template_contents = parsed.components()[0].template_contents();
+    std::string template_string;
+    for (size_t i = 0; i < template_contents.size(); i++) {
+      if (i > 0)
+        template_string += ", ";
+      template_string += template_contents[i];
+    }
+
+    // Replace the template parameters with our single string, elided if necessary.
+    parsed.components()[0] = ParsedIdentifierComponent(parsed.components()[0].name(),
+                                                       {GetElidedTypeName(state, template_string)});
+  }
+
+  out->Append(FormatIdentifier(parsed, false));
+}
+
 // Writes the suffix for when there are multiple items in a collection or an array.
 void AppendItemSuffix(const RecursiveState& state, bool last_item, OutputBuffer* out) {
   if (state.ShouldExpand())
@@ -166,7 +217,10 @@ void AppendItemSuffix(const RecursiveState& state, bool last_item, OutputBuffer*
 
 // Appends the formatted name and "=" as needed by this node.
 void AppendNodeNameAndType(const FormatNode* node, const RecursiveState& state, OutputBuffer* out) {
-  if (state.TypeForcedOn())
+  // Type name when forced on. Never show types here for Rust collections since those are always
+  // printed as part of the colelction printing code after the name ("foo = StructName{...}").
+  if (state.TypeForcedOn() &&
+      !(node->description_kind() == FormatNode::kCollection && IsRust(node)))
     out->Append(Syntax::kComment, "(" + node->type() + ") ");
 
   if (!state.inhibit_one_name && !node->name().empty()) {
@@ -214,14 +268,23 @@ OutputBuffer DoFormatArrayNode(const FormatNode* node, const RecursiveState& sta
 }
 
 OutputBuffer DoFormatCollectionNode(const FormatNode* node, const RecursiveState& state) {
-  // Special-case the empty array because we never want wrapping.
-  if (node->children().empty())
-    return OutputBuffer("{}");
+  OutputBuffer out;
+
+  // Rust structs are always prefixed with the struct name. This does nothing for non-Rust.
+  AppendRustCollectionName(node, state, &out);
+
+  // Special-case empty collections because we never want wrapping.
+  if (node->children().empty()) {
+    // Rust empty structs have no brackets.
+    if (!IsRust(node))
+      out.Append("{}");
+    return out;
+  }
 
   RecursiveState child_state = state.Advance();
   int child_indent = child_state.GetIndentAmount();
 
-  OutputBuffer out("{");
+  out.Append("{");
   if (state.ShouldExpand())
     out.Append("\n");
 
