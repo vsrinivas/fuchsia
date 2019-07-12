@@ -13,7 +13,7 @@ class OlderSimpleTable;
 class NewerSimpleTable;
 class EmptyTable;
 
-class SimpleTable  {
+class SimpleTable final {
  public:
   static const fidl_type_t* FidlType;
   // Returns if any table field is set;
@@ -124,7 +124,7 @@ class SimpleTable  {
 
 using SimpleTablePtr = ::std::unique_ptr<SimpleTable>;
 
-class OlderSimpleTable  {
+class OlderSimpleTable final {
  public:
   static const fidl_type_t* FidlType;
   // Returns if any table field is set;
@@ -195,7 +195,7 @@ class OlderSimpleTable  {
 
 using OlderSimpleTablePtr = ::std::unique_ptr<OlderSimpleTable>;
 
-class NewerSimpleTable  {
+class NewerSimpleTable final {
  public:
   static const fidl_type_t* FidlType;
   // Returns if any table field is set;
@@ -346,7 +346,7 @@ class NewerSimpleTable  {
 
 using NewerSimpleTablePtr = ::std::unique_ptr<NewerSimpleTable>;
 
-class EmptyTable  {
+class EmptyTable final {
  public:
   static const fidl_type_t* FidlType;
   // Returns if any table field is set;

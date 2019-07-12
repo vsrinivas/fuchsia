@@ -52,7 +52,7 @@ class SwitchingOrdinals_Sync {
   virtual zx_status_t OnlyGeneratedOrdinal() = 0;
 };
 
-class SwitchingOrdinals_Proxy : public ::fidl::internal::Proxy, public SwitchingOrdinals {
+class SwitchingOrdinals_Proxy final : public ::fidl::internal::Proxy, public SwitchingOrdinals {
  public:
   explicit SwitchingOrdinals_Proxy(::fidl::internal::ProxyController* controller);
   ~SwitchingOrdinals_Proxy() override;
@@ -70,7 +70,7 @@ class SwitchingOrdinals_Proxy : public ::fidl::internal::Proxy, public Switching
   ::fidl::internal::ProxyController* controller_;
 };
 
-class SwitchingOrdinals_Stub : public ::fidl::internal::Stub, public SwitchingOrdinals_EventSender {
+class SwitchingOrdinals_Stub final : public ::fidl::internal::Stub, public SwitchingOrdinals_EventSender {
  public:
   typedef class ::test::name::SwitchingOrdinals SwitchingOrdinals_clazz;
   explicit SwitchingOrdinals_Stub(SwitchingOrdinals_clazz* impl);

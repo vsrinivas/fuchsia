@@ -13,7 +13,7 @@ class {{ .Name }};
 {{range .DocComments}}
 //{{ . }}
 {{- end}}
-class {{ .Name }} {
+class {{ .Name }} final {
  public:
   {{ .Name }}();
   ~{{ .Name }}();

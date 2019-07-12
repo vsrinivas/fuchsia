@@ -48,7 +48,7 @@ zx_status_t Parent_Proxy::Dispatch_(::fidl::Message message) {
 
 namespace {
 
-class Parent_GetChild_ResponseHandler : public ::fidl::internal::MessageHandler {
+class Parent_GetChild_ResponseHandler final : public ::fidl::internal::MessageHandler {
  public:
   Parent_GetChild_ResponseHandler(Parent::GetChildCallback callback)
       : callback_(std::move(callback)) {
@@ -83,7 +83,7 @@ void Parent_Proxy::GetChild(GetChildCallback callback) {
 }
 namespace {
 
-class Parent_GetChildRequest_ResponseHandler : public ::fidl::internal::MessageHandler {
+class Parent_GetChildRequest_ResponseHandler final : public ::fidl::internal::MessageHandler {
  public:
   Parent_GetChildRequest_ResponseHandler(Parent::GetChildRequestCallback callback)
       : callback_(std::move(callback)) {
@@ -137,7 +137,7 @@ Parent_Stub::~Parent_Stub() = default;
 
 namespace {
 
-class Parent_GetChild_Responder {
+class Parent_GetChild_Responder final {
  public:
   Parent_GetChild_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
@@ -154,7 +154,7 @@ class Parent_GetChild_Responder {
   uint64_t ordinal_;
 };
 
-class Parent_GetChildRequest_Responder {
+class Parent_GetChildRequest_Responder final {
  public:
   Parent_GetChildRequest_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}

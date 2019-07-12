@@ -10,7 +10,7 @@ namespace name {
 
 class Union;
 
-class Union {
+class Union final {
  public:
   Union();
   ~Union();

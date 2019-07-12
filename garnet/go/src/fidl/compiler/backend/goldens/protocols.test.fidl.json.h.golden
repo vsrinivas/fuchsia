@@ -84,7 +84,7 @@ using WithErrorSyntaxSyncPtr = ::fidl::SynchronousInterfacePtr<WithErrorSyntax>;
 class WithErrorSyntax_SyncProxy;
 #endif // __Fuchsia__
 
-class WithErrorSyntax_ErrorAsPrimitive_Response  {
+class WithErrorSyntax_ErrorAsPrimitive_Response final {
  public:
   static const fidl_type_t* FidlType;
   
@@ -104,7 +104,7 @@ inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Re
 
 using WithErrorSyntax_ErrorAsPrimitive_ResponsePtr = ::std::unique_ptr<WithErrorSyntax_ErrorAsPrimitive_Response>;
 
-class WithErrorSyntax_ErrorAsPrimitive_Result {
+class WithErrorSyntax_ErrorAsPrimitive_Result final {
  public:
   WithErrorSyntax_ErrorAsPrimitive_Result();
   ~WithErrorSyntax_ErrorAsPrimitive_Result();
@@ -172,7 +172,7 @@ inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Re
 
 using WithErrorSyntax_ErrorAsPrimitive_ResultPtr = ::std::unique_ptr<WithErrorSyntax_ErrorAsPrimitive_Result>;
 
-class WithErrorSyntax_ErrorAsEnum_Response  {
+class WithErrorSyntax_ErrorAsEnum_Response final {
  public:
   static const fidl_type_t* FidlType;
   
@@ -229,7 +229,7 @@ class KitchenSink_Sync {
   virtual zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) = 0;
 };
 
-class KitchenSink_Proxy : public ::fidl::internal::Proxy, public KitchenSink {
+class KitchenSink_Proxy final : public ::fidl::internal::Proxy, public KitchenSink {
  public:
   explicit KitchenSink_Proxy(::fidl::internal::ProxyController* controller);
   ~KitchenSink_Proxy() override;
@@ -247,7 +247,7 @@ class KitchenSink_Proxy : public ::fidl::internal::Proxy, public KitchenSink {
   ::fidl::internal::ProxyController* controller_;
 };
 
-class KitchenSink_Stub : public ::fidl::internal::Stub, public KitchenSink_EventSender {
+class KitchenSink_Stub final : public ::fidl::internal::Stub, public KitchenSink_EventSender {
  public:
   typedef class ::test::name::KitchenSink KitchenSink_clazz;
   explicit KitchenSink_Stub(KitchenSink_clazz* impl);
@@ -312,7 +312,7 @@ class KitchenSink_Sync {
   virtual zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) = 0;
 };
 
-class KitchenSink_Proxy : public ::fidl::internal::Proxy, public KitchenSink {
+class KitchenSink_Proxy final : public ::fidl::internal::Proxy, public KitchenSink {
  public:
   explicit KitchenSink_Proxy(::fidl::internal::ProxyController* controller);
   ~KitchenSink_Proxy() override;
@@ -330,7 +330,7 @@ class KitchenSink_Proxy : public ::fidl::internal::Proxy, public KitchenSink {
   ::fidl::internal::ProxyController* controller_;
 };
 
-class KitchenSink_Stub : public ::fidl::internal::Stub, public KitchenSink_EventSender {
+class KitchenSink_Stub final : public ::fidl::internal::Stub, public KitchenSink_EventSender {
  public:
   typedef class ::test::name::KitchenSink KitchenSink_clazz;
   explicit KitchenSink_Stub(KitchenSink_clazz* impl);
@@ -395,7 +395,7 @@ class ChannelProtocol_Sync {
   virtual zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) = 0;
 };
 
-class ChannelProtocol_Proxy : public ::fidl::internal::Proxy, public ChannelProtocol {
+class ChannelProtocol_Proxy final : public ::fidl::internal::Proxy, public ChannelProtocol {
  public:
   explicit ChannelProtocol_Proxy(::fidl::internal::ProxyController* controller);
   ~ChannelProtocol_Proxy() override;
@@ -413,7 +413,7 @@ class ChannelProtocol_Proxy : public ::fidl::internal::Proxy, public ChannelProt
   ::fidl::internal::ProxyController* controller_;
 };
 
-class ChannelProtocol_Stub : public ::fidl::internal::Stub, public ChannelProtocol_EventSender {
+class ChannelProtocol_Stub final : public ::fidl::internal::Stub, public ChannelProtocol_EventSender {
  public:
   typedef class ::test::name::ChannelProtocol ChannelProtocol_clazz;
   explicit ChannelProtocol_Stub(ChannelProtocol_clazz* impl);
@@ -478,7 +478,7 @@ class SocketControlProtocol_Sync {
   virtual zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) = 0;
 };
 
-class SocketControlProtocol_Proxy : public ::fidl::internal::Proxy, public SocketControlProtocol {
+class SocketControlProtocol_Proxy final : public ::fidl::internal::Proxy, public SocketControlProtocol {
  public:
   explicit SocketControlProtocol_Proxy(::fidl::internal::ProxyController* controller);
   ~SocketControlProtocol_Proxy() override;
@@ -496,7 +496,7 @@ class SocketControlProtocol_Proxy : public ::fidl::internal::Proxy, public Socke
   ::fidl::internal::ProxyController* controller_;
 };
 
-class SocketControlProtocol_Stub : public ::fidl::internal::Stub, public SocketControlProtocol_EventSender {
+class SocketControlProtocol_Stub final : public ::fidl::internal::Stub, public SocketControlProtocol_EventSender {
  public:
   typedef class ::test::name::SocketControlProtocol SocketControlProtocol_clazz;
   explicit SocketControlProtocol_Stub(SocketControlProtocol_clazz* impl);
@@ -577,7 +577,7 @@ class WithAndWithoutRequestResponse_Sync {
   virtual zx_status_t WithRequestWithResponse(::std::string arg, ::std::string* out_ret) = 0;
 };
 
-class WithAndWithoutRequestResponse_Proxy : public ::fidl::internal::Proxy, public WithAndWithoutRequestResponse {
+class WithAndWithoutRequestResponse_Proxy final : public ::fidl::internal::Proxy, public WithAndWithoutRequestResponse {
  public:
   explicit WithAndWithoutRequestResponse_Proxy(::fidl::internal::ProxyController* controller);
   ~WithAndWithoutRequestResponse_Proxy() override;
@@ -599,7 +599,7 @@ class WithAndWithoutRequestResponse_Proxy : public ::fidl::internal::Proxy, publ
   ::fidl::internal::ProxyController* controller_;
 };
 
-class WithAndWithoutRequestResponse_Stub : public ::fidl::internal::Stub, public WithAndWithoutRequestResponse_EventSender {
+class WithAndWithoutRequestResponse_Stub final : public ::fidl::internal::Stub, public WithAndWithoutRequestResponse_EventSender {
  public:
   typedef class ::test::name::WithAndWithoutRequestResponse WithAndWithoutRequestResponse_clazz;
   explicit WithAndWithoutRequestResponse_Stub(WithAndWithoutRequestResponse_clazz* impl);
@@ -631,7 +631,7 @@ class WithAndWithoutRequestResponse_SyncProxy : public WithAndWithoutRequestResp
 };
 #endif // __Fuchsia__
 
-class WithErrorSyntax_ErrorAsEnum_Result {
+class WithErrorSyntax_ErrorAsEnum_Result final {
  public:
   WithErrorSyntax_ErrorAsEnum_Result();
   ~WithErrorSyntax_ErrorAsEnum_Result();
@@ -730,7 +730,7 @@ class WithErrorSyntax_Sync {
   virtual zx_status_t ErrorAsEnum(WithErrorSyntax_ErrorAsEnum_Result* out_result) = 0;
 };
 
-class WithErrorSyntax_Proxy : public ::fidl::internal::Proxy, public WithErrorSyntax {
+class WithErrorSyntax_Proxy final : public ::fidl::internal::Proxy, public WithErrorSyntax {
  public:
   explicit WithErrorSyntax_Proxy(::fidl::internal::ProxyController* controller);
   ~WithErrorSyntax_Proxy() override;
@@ -746,7 +746,7 @@ class WithErrorSyntax_Proxy : public ::fidl::internal::Proxy, public WithErrorSy
   ::fidl::internal::ProxyController* controller_;
 };
 
-class WithErrorSyntax_Stub : public ::fidl::internal::Stub, public WithErrorSyntax_EventSender {
+class WithErrorSyntax_Stub final : public ::fidl::internal::Stub, public WithErrorSyntax_EventSender {
  public:
   typedef class ::test::name::WithErrorSyntax WithErrorSyntax_clazz;
   explicit WithErrorSyntax_Stub(WithErrorSyntax_clazz* impl);

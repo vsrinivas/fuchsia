@@ -115,7 +115,7 @@ class {{ .SyncName }} {
   {{- end }}
 };
 
-class {{ .ProxyName }} : public ::fidl::internal::Proxy, public {{ .Name }} {
+class {{ .ProxyName }} final : public ::fidl::internal::Proxy, public {{ .Name }} {
  public:
   explicit {{ .ProxyName }}(::fidl::internal::ProxyController* controller);
   ~{{ .ProxyName }}() override;
@@ -137,7 +137,7 @@ class {{ .ProxyName }} : public ::fidl::internal::Proxy, public {{ .Name }} {
   ::fidl::internal::ProxyController* controller_;
 };
 
-class {{ .StubName }} : public ::fidl::internal::Stub, public {{ .EventSenderName }} {
+class {{ .StubName }} final : public ::fidl::internal::Stub, public {{ .EventSenderName }} {
  public:
   typedef class {{ .Namespace }}::{{ .Name }} {{ .ClassName }};
   explicit {{ .StubName }}({{ .ClassName }}* impl);
@@ -260,7 +260,7 @@ zx_status_t {{ .ProxyName }}::Dispatch_(::fidl::Message message) {
     {{- if .HasResponse }}
 namespace {
 
-class {{ .ResponseHandlerType }} : public ::fidl::internal::MessageHandler {
+class {{ .ResponseHandlerType }} final : public ::fidl::internal::MessageHandler {
  public:
   {{ .ResponseHandlerType }}({{ $.Name }}::{{ .CallbackType }} callback)
       : callback_(std::move(callback)) {
@@ -326,7 +326,7 @@ namespace {
   {{- if .HasRequest }}
     {{- if .HasResponse }}
 
-class {{ .ResponderType }} {
+class {{ .ResponderType }} final {
  public:
   {{ .ResponderType }}(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}

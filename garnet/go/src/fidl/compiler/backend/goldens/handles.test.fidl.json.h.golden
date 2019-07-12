@@ -10,7 +10,7 @@ namespace name {
 
 class Handles;
 
-class Handles  {
+class Handles final {
  public:
   static const fidl_type_t* FidlType;
   

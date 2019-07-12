@@ -11,7 +11,7 @@ namespace name {
 class OlderSimpleUnion;
 class NewerSimpleUnion;
 
-class OlderSimpleUnion {
+class OlderSimpleUnion final {
  public:
  static const fidl_type_t* FidlType;
 
@@ -106,7 +106,7 @@ inline zx_status_t Clone(const ::test::name::OlderSimpleUnion& value,
 
 using OlderSimpleUnionPtr = ::std::unique_ptr<OlderSimpleUnion>;
 
-class NewerSimpleUnion {
+class NewerSimpleUnion final {
  public:
  static const fidl_type_t* FidlType;
 

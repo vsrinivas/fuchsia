@@ -25,7 +25,7 @@ class Interface_SyncProxy;
 // union comment #1
 //
 // union comment #3
-class Union {
+class Union final {
  public:
   Union();
   ~Union();
@@ -89,7 +89,7 @@ using UnionPtr = ::std::unique_ptr<Union>;
 // table comment #1
 //
 // table comment #3
-class Table  {
+class Table final {
  public:
   static const fidl_type_t* FidlType;
   // Returns if any table field is set;
@@ -169,7 +169,7 @@ using TablePtr = ::std::unique_ptr<Table>;
 // struct comment #1
 //
 // struct comment #3
-class Struct  {
+class Struct final {
  public:
   static const fidl_type_t* FidlType;
   
@@ -225,7 +225,7 @@ class Interface_Sync {
   virtual zx_status_t Method() = 0;
 };
 
-class Interface_Proxy : public ::fidl::internal::Proxy, public Interface {
+class Interface_Proxy final : public ::fidl::internal::Proxy, public Interface {
  public:
   explicit Interface_Proxy(::fidl::internal::ProxyController* controller);
   ~Interface_Proxy() override;
@@ -241,7 +241,7 @@ class Interface_Proxy : public ::fidl::internal::Proxy, public Interface {
   ::fidl::internal::ProxyController* controller_;
 };
 
-class Interface_Stub : public ::fidl::internal::Stub, public Interface_EventSender {
+class Interface_Stub final : public ::fidl::internal::Stub, public Interface_EventSender {
  public:
   typedef class ::test::name::Interface Interface_clazz;
   explicit Interface_Stub(Interface_clazz* impl);

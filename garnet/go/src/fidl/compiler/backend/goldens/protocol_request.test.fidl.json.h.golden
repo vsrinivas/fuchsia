@@ -66,7 +66,7 @@ class Parent_Sync {
   virtual zx_status_t TakeChildRequest(::fidl::InterfaceRequest<Child> r) = 0;
 };
 
-class Parent_Proxy : public ::fidl::internal::Proxy, public Parent {
+class Parent_Proxy final : public ::fidl::internal::Proxy, public Parent {
  public:
   explicit Parent_Proxy(::fidl::internal::ProxyController* controller);
   ~Parent_Proxy() override;
@@ -84,7 +84,7 @@ class Parent_Proxy : public ::fidl::internal::Proxy, public Parent {
   ::fidl::internal::ProxyController* controller_;
 };
 
-class Parent_Stub : public ::fidl::internal::Stub, public Parent_EventSender {
+class Parent_Stub final : public ::fidl::internal::Stub, public Parent_EventSender {
  public:
   typedef class ::test::name::Parent Parent_clazz;
   explicit Parent_Stub(Parent_clazz* impl);
@@ -133,7 +133,7 @@ class Child_Sync {
   virtual ~Child_Sync();
 };
 
-class Child_Proxy : public ::fidl::internal::Proxy, public Child {
+class Child_Proxy final : public ::fidl::internal::Proxy, public Child {
  public:
   explicit Child_Proxy(::fidl::internal::ProxyController* controller);
   ~Child_Proxy() override;
@@ -147,7 +147,7 @@ class Child_Proxy : public ::fidl::internal::Proxy, public Child {
   ::fidl::internal::ProxyController* controller_;
 };
 
-class Child_Stub : public ::fidl::internal::Stub, public Child_EventSender {
+class Child_Stub final : public ::fidl::internal::Stub, public Child_EventSender {
  public:
   typedef class ::test::name::Child Child_clazz;
   explicit Child_Stub(Child_clazz* impl);

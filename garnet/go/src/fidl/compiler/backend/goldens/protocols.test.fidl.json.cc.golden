@@ -195,7 +195,7 @@ void KitchenSink_Proxy::MethodA(int64_t a, int64_t b) {
 }
 namespace {
 
-class KitchenSink_MethodB_ResponseHandler : public ::fidl::internal::MessageHandler {
+class KitchenSink_MethodB_ResponseHandler final : public ::fidl::internal::MessageHandler {
  public:
   KitchenSink_MethodB_ResponseHandler(KitchenSink::MethodBCallback callback)
       : callback_(std::move(callback)) {
@@ -233,7 +233,7 @@ void KitchenSink_Proxy::MethodB(int64_t a, int64_t b, MethodBCallback callback) 
 }
 namespace {
 
-class KitchenSink_MutateSocket_ResponseHandler : public ::fidl::internal::MessageHandler {
+class KitchenSink_MutateSocket_ResponseHandler final : public ::fidl::internal::MessageHandler {
  public:
   KitchenSink_MutateSocket_ResponseHandler(KitchenSink::MutateSocketCallback callback)
       : callback_(std::move(callback)) {
@@ -277,7 +277,7 @@ KitchenSink_Stub::~KitchenSink_Stub() = default;
 
 namespace {
 
-class KitchenSink_MethodB_Responder {
+class KitchenSink_MethodB_Responder final {
  public:
   KitchenSink_MethodB_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
@@ -294,7 +294,7 @@ class KitchenSink_MethodB_Responder {
   uint64_t ordinal_;
 };
 
-class KitchenSink_MutateSocket_Responder {
+class KitchenSink_MutateSocket_Responder final {
  public:
   KitchenSink_MutateSocket_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
@@ -491,7 +491,7 @@ void KitchenSink_Proxy::MethodA(int64_t a, int64_t b) {
 }
 namespace {
 
-class KitchenSink_MethodB_ResponseHandler : public ::fidl::internal::MessageHandler {
+class KitchenSink_MethodB_ResponseHandler final : public ::fidl::internal::MessageHandler {
  public:
   KitchenSink_MethodB_ResponseHandler(KitchenSink::MethodBCallback callback)
       : callback_(std::move(callback)) {
@@ -529,7 +529,7 @@ void KitchenSink_Proxy::MethodB(int64_t a, int64_t b, MethodBCallback callback) 
 }
 namespace {
 
-class KitchenSink_MutateSocket_ResponseHandler : public ::fidl::internal::MessageHandler {
+class KitchenSink_MutateSocket_ResponseHandler final : public ::fidl::internal::MessageHandler {
  public:
   KitchenSink_MutateSocket_ResponseHandler(KitchenSink::MutateSocketCallback callback)
       : callback_(std::move(callback)) {
@@ -573,7 +573,7 @@ KitchenSink_Stub::~KitchenSink_Stub() = default;
 
 namespace {
 
-class KitchenSink_MethodB_Responder {
+class KitchenSink_MethodB_Responder final {
  public:
   KitchenSink_MethodB_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
@@ -590,7 +590,7 @@ class KitchenSink_MethodB_Responder {
   uint64_t ordinal_;
 };
 
-class KitchenSink_MutateSocket_Responder {
+class KitchenSink_MutateSocket_Responder final {
  public:
   KitchenSink_MutateSocket_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
@@ -787,7 +787,7 @@ void ChannelProtocol_Proxy::MethodA(int64_t a, int64_t b) {
 }
 namespace {
 
-class ChannelProtocol_MethodB_ResponseHandler : public ::fidl::internal::MessageHandler {
+class ChannelProtocol_MethodB_ResponseHandler final : public ::fidl::internal::MessageHandler {
  public:
   ChannelProtocol_MethodB_ResponseHandler(ChannelProtocol::MethodBCallback callback)
       : callback_(std::move(callback)) {
@@ -825,7 +825,7 @@ void ChannelProtocol_Proxy::MethodB(int64_t a, int64_t b, MethodBCallback callba
 }
 namespace {
 
-class ChannelProtocol_MutateSocket_ResponseHandler : public ::fidl::internal::MessageHandler {
+class ChannelProtocol_MutateSocket_ResponseHandler final : public ::fidl::internal::MessageHandler {
  public:
   ChannelProtocol_MutateSocket_ResponseHandler(ChannelProtocol::MutateSocketCallback callback)
       : callback_(std::move(callback)) {
@@ -869,7 +869,7 @@ ChannelProtocol_Stub::~ChannelProtocol_Stub() = default;
 
 namespace {
 
-class ChannelProtocol_MethodB_Responder {
+class ChannelProtocol_MethodB_Responder final {
  public:
   ChannelProtocol_MethodB_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
@@ -886,7 +886,7 @@ class ChannelProtocol_MethodB_Responder {
   uint64_t ordinal_;
 };
 
-class ChannelProtocol_MutateSocket_Responder {
+class ChannelProtocol_MutateSocket_Responder final {
  public:
   ChannelProtocol_MutateSocket_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
@@ -1083,7 +1083,7 @@ void SocketControlProtocol_Proxy::MethodA(int64_t a, int64_t b) {
 }
 namespace {
 
-class SocketControlProtocol_MethodB_ResponseHandler : public ::fidl::internal::MessageHandler {
+class SocketControlProtocol_MethodB_ResponseHandler final : public ::fidl::internal::MessageHandler {
  public:
   SocketControlProtocol_MethodB_ResponseHandler(SocketControlProtocol::MethodBCallback callback)
       : callback_(std::move(callback)) {
@@ -1121,7 +1121,7 @@ void SocketControlProtocol_Proxy::MethodB(int64_t a, int64_t b, MethodBCallback 
 }
 namespace {
 
-class SocketControlProtocol_MutateSocket_ResponseHandler : public ::fidl::internal::MessageHandler {
+class SocketControlProtocol_MutateSocket_ResponseHandler final : public ::fidl::internal::MessageHandler {
  public:
   SocketControlProtocol_MutateSocket_ResponseHandler(SocketControlProtocol::MutateSocketCallback callback)
       : callback_(std::move(callback)) {
@@ -1165,7 +1165,7 @@ SocketControlProtocol_Stub::~SocketControlProtocol_Stub() = default;
 
 namespace {
 
-class SocketControlProtocol_MethodB_Responder {
+class SocketControlProtocol_MethodB_Responder final {
  public:
   SocketControlProtocol_MethodB_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
@@ -1182,7 +1182,7 @@ class SocketControlProtocol_MethodB_Responder {
   uint64_t ordinal_;
 };
 
-class SocketControlProtocol_MutateSocket_Responder {
+class SocketControlProtocol_MutateSocket_Responder final {
  public:
   SocketControlProtocol_MutateSocket_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
@@ -1400,7 +1400,7 @@ void WithAndWithoutRequestResponse_Proxy::NoRequestNoResponse() {
 }
 namespace {
 
-class WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler : public ::fidl::internal::MessageHandler {
+class WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler final : public ::fidl::internal::MessageHandler {
  public:
   WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler(WithAndWithoutRequestResponse::NoRequestEmptyResponseCallback callback)
       : callback_(std::move(callback)) {
@@ -1433,7 +1433,7 @@ void WithAndWithoutRequestResponse_Proxy::NoRequestEmptyResponse(NoRequestEmptyR
 }
 namespace {
 
-class WithAndWithoutRequestResponse_NoRequestWithResponse_ResponseHandler : public ::fidl::internal::MessageHandler {
+class WithAndWithoutRequestResponse_NoRequestWithResponse_ResponseHandler final : public ::fidl::internal::MessageHandler {
  public:
   WithAndWithoutRequestResponse_NoRequestWithResponse_ResponseHandler(WithAndWithoutRequestResponse::NoRequestWithResponseCallback callback)
       : callback_(std::move(callback)) {
@@ -1474,7 +1474,7 @@ void WithAndWithoutRequestResponse_Proxy::WithRequestNoResponse(::std::string ar
 }
 namespace {
 
-class WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler : public ::fidl::internal::MessageHandler {
+class WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler final : public ::fidl::internal::MessageHandler {
  public:
   WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler(WithAndWithoutRequestResponse::WithRequestEmptyResponseCallback callback)
       : callback_(std::move(callback)) {
@@ -1509,7 +1509,7 @@ void WithAndWithoutRequestResponse_Proxy::WithRequestEmptyResponse(::std::string
 }
 namespace {
 
-class WithAndWithoutRequestResponse_WithRequestWithResponse_ResponseHandler : public ::fidl::internal::MessageHandler {
+class WithAndWithoutRequestResponse_WithRequestWithResponse_ResponseHandler final : public ::fidl::internal::MessageHandler {
  public:
   WithAndWithoutRequestResponse_WithRequestWithResponse_ResponseHandler(WithAndWithoutRequestResponse::WithRequestWithResponseCallback callback)
       : callback_(std::move(callback)) {
@@ -1553,7 +1553,7 @@ WithAndWithoutRequestResponse_Stub::~WithAndWithoutRequestResponse_Stub() = defa
 
 namespace {
 
-class WithAndWithoutRequestResponse_NoRequestEmptyResponse_Responder {
+class WithAndWithoutRequestResponse_NoRequestEmptyResponse_Responder final {
  public:
   WithAndWithoutRequestResponse_NoRequestEmptyResponse_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
@@ -1568,7 +1568,7 @@ class WithAndWithoutRequestResponse_NoRequestEmptyResponse_Responder {
   uint64_t ordinal_;
 };
 
-class WithAndWithoutRequestResponse_NoRequestWithResponse_Responder {
+class WithAndWithoutRequestResponse_NoRequestWithResponse_Responder final {
  public:
   WithAndWithoutRequestResponse_NoRequestWithResponse_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
@@ -1585,7 +1585,7 @@ class WithAndWithoutRequestResponse_NoRequestWithResponse_Responder {
   uint64_t ordinal_;
 };
 
-class WithAndWithoutRequestResponse_WithRequestEmptyResponse_Responder {
+class WithAndWithoutRequestResponse_WithRequestEmptyResponse_Responder final {
  public:
   WithAndWithoutRequestResponse_WithRequestEmptyResponse_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
@@ -1600,7 +1600,7 @@ class WithAndWithoutRequestResponse_WithRequestEmptyResponse_Responder {
   uint64_t ordinal_;
 };
 
-class WithAndWithoutRequestResponse_WithRequestWithResponse_Responder {
+class WithAndWithoutRequestResponse_WithRequestWithResponse_Responder final {
  public:
   WithAndWithoutRequestResponse_WithRequestWithResponse_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
@@ -1918,7 +1918,7 @@ zx_status_t WithErrorSyntax_Proxy::Dispatch_(::fidl::Message message) {
 
 namespace {
 
-class WithErrorSyntax_ErrorAsPrimitive_ResponseHandler : public ::fidl::internal::MessageHandler {
+class WithErrorSyntax_ErrorAsPrimitive_ResponseHandler final : public ::fidl::internal::MessageHandler {
  public:
   WithErrorSyntax_ErrorAsPrimitive_ResponseHandler(WithErrorSyntax::ErrorAsPrimitiveCallback callback)
       : callback_(std::move(callback)) {
@@ -1953,7 +1953,7 @@ void WithErrorSyntax_Proxy::ErrorAsPrimitive(ErrorAsPrimitiveCallback callback) 
 }
 namespace {
 
-class WithErrorSyntax_ErrorAsEnum_ResponseHandler : public ::fidl::internal::MessageHandler {
+class WithErrorSyntax_ErrorAsEnum_ResponseHandler final : public ::fidl::internal::MessageHandler {
  public:
   WithErrorSyntax_ErrorAsEnum_ResponseHandler(WithErrorSyntax::ErrorAsEnumCallback callback)
       : callback_(std::move(callback)) {
@@ -1995,7 +1995,7 @@ WithErrorSyntax_Stub::~WithErrorSyntax_Stub() = default;
 
 namespace {
 
-class WithErrorSyntax_ErrorAsPrimitive_Responder {
+class WithErrorSyntax_ErrorAsPrimitive_Responder final {
  public:
   WithErrorSyntax_ErrorAsPrimitive_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
@@ -2012,7 +2012,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Responder {
   uint64_t ordinal_;
 };
 
-class WithErrorSyntax_ErrorAsEnum_Responder {
+class WithErrorSyntax_ErrorAsEnum_Responder final {
  public:
   WithErrorSyntax_ErrorAsEnum_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}

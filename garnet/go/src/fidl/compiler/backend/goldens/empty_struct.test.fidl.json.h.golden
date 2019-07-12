@@ -10,7 +10,7 @@ namespace name {
 
 class Empty;
 
-class Empty  {
+class Empty final {
  public:
   static const fidl_type_t* FidlType;
   
