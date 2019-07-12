@@ -9,6 +9,8 @@ source_set("gesture") {
   sources = [
     "gesture.cc",
     "gesture.h",
+    "gesture_detector.cc",
+    "gesture_detector.h",
   ]
 
   public_deps = [
@@ -16,6 +18,10 @@ source_set("gesture") {
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
+  ]
+
+  deps = [
+    "//garnet/public/lib/syslog/cpp",
   ]
 }
 
@@ -43,11 +49,13 @@ executable("gesture_tests") {
   testonly = true
 
   sources = [
+    "gesture_detector_tests.cc",
     "gesture_tests.cc",
   ]
 
   deps = [
     ":gesture",
+    "//garnet/public/lib/syslog/cpp",
     "//third_party/googletest:gtest",
     "//third_party/googletest:gtest_main",
   ]

@@ -17,7 +17,8 @@ namespace input {
 // as suggested by touch point updates.
 //
 // This class does not handle tapping or threshold-based classification of
-// gestures, which can be handled by the caller.
+// gestures, which can be handled by the caller. |GestureDetector| is an
+// implementation of such a higher level facility.
 class Gesture {
  public:
   using PointerId = uint32_t;
@@ -43,8 +44,7 @@ class Gesture {
   const fuchsia::ui::gfx::vec2& centroid() const { return centroid_; }
 
   void AddPointer(PointerId pointer_id, const fuchsia::ui::gfx::vec2& position);
-  Delta UpdatePointer(PointerId pointer_id,
-                      const fuchsia::ui::gfx::vec2& position);
+  Delta UpdatePointer(PointerId pointer_id, const fuchsia::ui::gfx::vec2& position);
   void RemovePointer(PointerId pointer_id);
 
  private:
