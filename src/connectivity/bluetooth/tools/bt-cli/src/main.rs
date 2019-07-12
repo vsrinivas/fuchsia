@@ -10,7 +10,7 @@ use {
         ControlEvent, ControlEventStream, ControlMarker, ControlProxy,
     },
     fuchsia_async::{self as fasync, futures::select},
-    fuchsia_bluetooth::types::Status,
+    fuchsia_bluetooth::types::{AdapterInfo, Peer, Status},
     fuchsia_component::client::connect_to_service,
     futures::{
         channel::mpsc::{channel, SendError},
@@ -25,7 +25,7 @@ use {
 
 use crate::{
     commands::{Cmd, CmdHelper, ReplControl},
-    types::{AdapterInfo, DeviceClass, MajorClass, MinorClass, RemoteDevice, TryInto},
+    types::{DeviceClass, MajorClass, MinorClass, TryInto},
 };
 
 mod commands;
@@ -112,24 +112,24 @@ async fn set_adapter_device_class<'a>(
     }
 }
 
-fn get_devices(state: &Mutex<State>) -> String {
+fn get_peers(state: &Mutex<State>) -> String {
     let state = state.lock();
-    if state.devices.is_empty() {
-        String::from("No known remote devices")
+    if state.peers.is_empty() {
+        String::from("No known peers")
     } else {
-        String::from_iter(state.devices.values().map(|device| device.to_string()))
+        String::from_iter(state.peers.values().map(|peer| peer.to_string()))
     }
 }
 
-/// Get the string representation of a device from either an identifier or address
-fn get_device<'a>(args: &'a [&'a str], state: &Mutex<State>) -> String {
+/// Get the string representation of a peer from either an identifier or address
+fn get_peer<'a>(args: &'a [&'a str], state: &Mutex<State>) -> String {
     if args.len() != 1 {
-        return format!("usage: {}", Cmd::GetDevice.cmd_help());
+        return format!("usage: {}", Cmd::GetPeer.cmd_help());
     }
 
     to_identifier(state, args[0])
-        .and_then(|id| state.lock().devices.get(&id).map(|device| device.to_string()))
-        .unwrap_or_else(|| String::from("No known device"))
+        .and_then(|id| state.lock().peers.get(&id).map(|peer| peer.to_string()))
+        .unwrap_or_else(|| String::from("No known peer"))
 }
 
 async fn set_discovery(discovery: bool, control_svc: &ControlProxy) -> Result<String, Error> {
@@ -142,9 +142,9 @@ async fn set_discovery(discovery: bool, control_svc: &ControlProxy) -> Result<St
     }
 }
 
-// Find the identifier for a `RemoteDevice` based on a `key` that is either an identifier or an
+// Find the identifier for a `Peer` based on a `key` that is either an identifier or an
 // address.
-// Returns `None` if the given address does not belong to a known device.
+// Returns `None` if the given address does not belong to a known peer.
 fn to_identifier(state: &Mutex<State>, key: &str) -> Option<String> {
     // Compile regex inline because it is not ever expected to be a bottleneck
     let address_pattern = Regex::new(r"^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$")
@@ -152,10 +152,10 @@ fn to_identifier(state: &Mutex<State>, key: &str) -> Option<String> {
     if address_pattern.is_match(key) {
         state
             .lock()
-            .devices
+            .peers
             .values()
-            .find(|device| device.0.address == key)
-            .map(|device| device.0.identifier.to_string())
+            .find(|peer| peer.address == key)
+            .map(|peer| peer.identifier.clone())
     } else {
         Some(key.to_string())
     }
@@ -169,7 +169,7 @@ async fn connect<'a>(
     if args.len() != 1 {
         return Ok(format!("usage: {}", Cmd::Connect.cmd_help()));
     }
-    // `args[0]` is the identifier of the remote device to connect to
+    // `args[0]` is the identifier of the peer to connect to
     let id = match to_identifier(state, args[0]) {
         Some(id) => id,
         None => return Ok(format!("Unable to connect: Unknown address {}", args[0])),
@@ -215,35 +215,35 @@ async fn run_listeners(mut stream: ControlEventStream, state: &Mutex<State>) -> 
                 println!("Adapter {} removed", identifier);
             }
             ControlEvent::OnDeviceUpdated { device } => {
-                let device = RemoteDevice::from(device);
-                print_peer_state_updates(&state.lock(), &device);
-                state.lock().devices.insert(device.0.identifier.clone(), device);
+                let peer = Peer::from(device);
+                print_peer_state_updates(&state.lock(), &peer);
+                state.lock().peers.insert(peer.identifier.clone(), peer);
             }
             ControlEvent::OnDeviceRemoved { identifier } => {
-                state.lock().devices.remove(&identifier);
+                state.lock().peers.remove(&identifier);
             }
         }
     }
     Ok(())
 }
 
-fn print_peer_state_updates(state: &State, device: &RemoteDevice) {
-    if let Some(msg) = peer_state_updates(state, device) {
-        println!("{} {} {}", device.0.identifier, device.0.address, msg)
+fn print_peer_state_updates(state: &State, peer: &Peer) {
+    if let Some(msg) = peer_state_updates(state, peer) {
+        println!("{} {} {}", peer.identifier, peer.address, msg)
     }
 }
 
-fn peer_state_updates(state: &State, device: &RemoteDevice) -> Option<String> {
-    let previous = state.devices.get(&device.0.identifier);
-    let was_connected = previous.map_or(false, |d| d.0.connected);
-    let was_bonded = previous.map_or(false, |d| d.0.bonded);
+fn peer_state_updates(state: &State, peer: &Peer) -> Option<String> {
+    let previous = state.peers.get(&peer.identifier);
+    let was_connected = previous.map_or(false, |p| p.connected);
+    let was_bonded = previous.map_or(false, |p| p.bonded);
 
-    let conn_str = match (was_connected, device.0.connected) {
+    let conn_str = match (was_connected, peer.connected) {
         (false, true) => Some("[connected]"),
         (true, false) => Some("[disconnected]"),
         _ => None,
     };
-    let bond_str = match (was_bonded, device.0.bonded) {
+    let bond_str = match (was_bonded, peer.bonded) {
         (false, true) => Some("[bonded]"),
         (true, false) => Some("[unbonded]"),
         _ => None,
@@ -258,14 +258,14 @@ fn peer_state_updates(state: &State, device: &RemoteDevice) -> Option<String> {
 
 /// Tracks all state local to the command line tool.
 pub struct State {
-    pub devices: HashMap<String, RemoteDevice>,
+    pub peers: HashMap<String, Peer>,
 }
 
 impl State {
     pub fn new(devs: Vec<fidl_fuchsia_bluetooth_control::RemoteDevice>) -> Arc<Mutex<State>> {
-        let devices: HashMap<_, _> =
-            devs.into_iter().map(|d| (d.identifier.clone(), RemoteDevice(d))).collect();
-        Arc::new(Mutex::new(State { devices }))
+        let peers: HashMap<_, _> =
+            devs.into_iter().map(|d| (d.identifier.clone(), Peer::from(d))).collect();
+        Arc::new(Mutex::new(State { peers }))
     }
 }
 
@@ -285,8 +285,8 @@ async fn handle_cmd(
             Ok(Cmd::StopDiscovery) => await!(set_discovery(false, &bt_svc)),
             Ok(Cmd::Discoverable) => await!(set_discoverable(true, &bt_svc)),
             Ok(Cmd::NotDiscoverable) => await!(set_discoverable(false, &bt_svc)),
-            Ok(Cmd::GetDevices) => Ok(get_devices(&state)),
-            Ok(Cmd::GetDevice) => Ok(get_device(args, &state)),
+            Ok(Cmd::GetPeers) => Ok(get_peers(&state)),
+            Ok(Cmd::GetPeer) => Ok(get_peer(args, &state)),
             Ok(Cmd::GetAdapters) => await!(get_adapters(&bt_svc)),
             Ok(Cmd::SetActiveAdapter) => await!(set_active_adapter(args, &bt_svc)),
             Ok(Cmd::SetAdapterName) => await!(set_adapter_name(args, &bt_svc)),
@@ -412,9 +412,9 @@ mod tests {
     use super::*;
     use fidl_fuchsia_bluetooth_control as control;
 
-    fn device(connected: bool, bonded: bool) -> RemoteDevice {
-        RemoteDevice(control::RemoteDevice {
-            identifier: "device".to_string(),
+    fn peer(connected: bool, bonded: bool) -> Peer {
+        control::RemoteDevice {
+            identifier: "peer".to_string(),
             address: "00:00:00:00:00:01".to_string(),
             technology: control::TechnologyType::LowEnergy,
             name: None,
@@ -424,20 +424,20 @@ mod tests {
             connected,
             bonded,
             service_uuids: vec![],
-        })
+        }.into()
     }
 
-    fn state_with(d: RemoteDevice) -> State {
-        let mut devices = HashMap::new();
-        devices.insert(d.0.identifier.clone(), d);
-        State { devices }
+    fn state_with(p: Peer) -> State {
+        let mut peers = HashMap::new();
+        peers.insert(p.identifier.clone(), p);
+        State { peers }
     }
 
     #[test]
     fn test_peer_updates() {
         // Expected Value Table
         // each row lists:
-        //   (current device conn/bond state, new device conn/bond state, expected string)
+        //   (current peer conn/bond state, new peer conn/bond state, expected string)
         let test_cases = vec![
             // missing
             (None, (true, false), Some("[connected]")),
@@ -469,11 +469,11 @@ mod tests {
         for case in test_cases {
             let (prev, (connected, bonded), expected) = case;
             let state = match prev {
-                Some((c, b)) => state_with(device(c, b)),
-                None => State { devices: HashMap::new() },
+                Some((c, b)) => state_with(peer(c, b)),
+                None => State { peers: HashMap::new() },
             };
             assert_eq!(
-                peer_state_updates(&state, &device(connected, bonded)),
+                peer_state_updates(&state, &peer(connected, bonded)),
                 expected.map(|s| s.to_string())
             );
         }

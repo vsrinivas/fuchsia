@@ -211,7 +211,7 @@ impl Completer for CmdHelper {
             let mut candidates = vec![];
             if command == "key" {
                 // connect and device have 'id|addr' arguments
-                // can match against remote device identifier or address
+                // can match against peer identifier or address
                 for key in AVC_COMMAND_LONG_VARIANTS {
                     if key.starts_with(partial_argument) {
                         candidates.push(format!("{} {}", command, key));

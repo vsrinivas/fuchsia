@@ -8,11 +8,11 @@
 use {
     failure::Error,
     fidl::endpoints,
-    fidl_fuchsia_bluetooth_le::{CentralEvent, CentralProxy, RemoteDevice},
-    fuchsia_bluetooth::error::Error as BTError,
+    fidl_fuchsia_bluetooth_le::{CentralEvent, CentralProxy},
+    fuchsia_bluetooth::{error::Error as BTError, types::le::RemoteDevice},
     futures::prelude::*,
     parking_lot::RwLock,
-    std::{fmt, process::exit, sync::Arc},
+    std::{process::exit, sync::Arc},
 };
 
 use crate::gatt::repl::start_gatt_loop;
@@ -71,10 +71,10 @@ pub async fn listen_central_events(state: CentralStatePtr) {
                 Ok(())
             }
             CentralEvent::OnDeviceDiscovered { device } => {
+                let device = RemoteDevice::from(device);
                 let id = device.identifier.clone();
-                let connectable = device.connectable;
 
-                eprintln!(" {}", RemoteDeviceWrapper(device));
+                eprintln!(" {}", device);
 
                 let mut central = state.write();
                 if central.decrement_scan_count() {
@@ -88,7 +88,7 @@ pub async fn listen_central_events(state: CentralStatePtr) {
                     // TODO(armansito): kill the channel here instead
                     exit(0);
                     Ok(())
-                } else if central.connect && connectable {
+                } else if central.connect && device.connectable {
                     // Drop lock so it isn't held during await!
                     drop(central);
                     match await!(connect_peripheral(state, id)) {
@@ -145,26 +145,4 @@ async fn connect_peripheral(state: &CentralStatePtr, mut id: String) -> Result<(
 
     await!(start_gatt_loop(proxy))?;
     Ok(())
-}
-
-struct RemoteDeviceWrapper(RemoteDevice);
-
-impl fmt::Display for RemoteDeviceWrapper {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let connectable = if self.0.connectable { "connectable" } else { "non-connectable" };
-
-        write!(f, "[device({}), ", connectable)?;
-
-        if let Some(ref rssi) = self.0.rssi {
-            write!(f, "rssi: {}, ", rssi.value)?;
-        }
-
-        if let Some(ref ad) = self.0.advertising_data {
-            if let Some(ref name) = ad.name {
-                write!(f, "{}, ", name)?;
-            }
-        }
-
-        write!(f, "id: {}]", self.0.identifier)
-    }
 }

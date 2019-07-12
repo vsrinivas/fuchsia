@@ -5,12 +5,12 @@
 #![allow(warnings)]
 use {fidl_fuchsia_bluetooth, std::fmt};
 
-pub use {adapter_info::*, bonding_data::*, remote_device::*};
+pub use {adapter_info::*, bonding_data::*, peer::*};
 mod adapter_info;
 mod bonding_data;
 /// Bluetooth LowEnergy types
 pub mod le;
-mod remote_device;
+mod peer;
 
 macro_rules! bt_fidl_wrap {
     ($x:ident) => {

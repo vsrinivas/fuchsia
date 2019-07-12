@@ -60,7 +60,7 @@ async fn send_passthrough<'a>(
         return Ok(String::from("invalid avc command"));
     }
 
-    // `args[0]` is the identifier of the remote device to connect to
+    // `args[0]` is the identifier of the peer to connect to
     match await!(controller.send_command(cmd.unwrap()))? {
         Ok(_) => Ok(String::from("")),
         Err(e) => Ok(format!("Error sending AVC Command: {:?}", e)),

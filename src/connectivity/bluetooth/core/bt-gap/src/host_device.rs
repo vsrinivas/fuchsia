@@ -5,13 +5,13 @@
 use {
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_bluetooth_control::{
-        self as control, AdapterInfo, DeviceClass, HostData, InputCapabilityType,
-        OutputCapabilityType, PairingDelegateMarker, RemoteDevice,
+        self as control, DeviceClass, HostData, InputCapabilityType, OutputCapabilityType,
+        PairingDelegateMarker,
     },
     fidl_fuchsia_bluetooth_gatt::ClientProxy,
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
     fidl_fuchsia_bluetooth_le::CentralProxy,
-    fuchsia_bluetooth::types::BondingData,
+    fuchsia_bluetooth::types::{AdapterInfo, BondingData, Peer},
     fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::{Future, FutureExt, StreamExt},
     parking_lot::RwLock,
@@ -136,7 +136,7 @@ impl HostDevice {
 }
 
 pub trait HostListener {
-    fn on_peer_updated(&mut self, device: RemoteDevice);
+    fn on_peer_updated(&mut self, peer: Peer);
     fn on_peer_removed(&mut self, identifier: String);
     fn on_new_host_bond(&mut self, data: BondingData) -> Result<(), failure::Error>;
 }
@@ -151,10 +151,12 @@ pub async fn handle_events<H: HostListener>(
         let host_ = host.clone();
         match event? {
             HostEvent::OnAdapterStateChanged { ref state } => {
-                host_.write().info.state = Some(Box::new(clone_host_state(&state)));
+                host_.write().info.update_state(Some(clone_host_state(&state)));
             }
             // TODO(NET-968): Add integration test for this.
-            HostEvent::OnDeviceUpdated { device } => listener.on_peer_updated(device),
+            HostEvent::OnDeviceUpdated { device } => {
+                listener.on_peer_updated(Peer::from(device))
+            }
             // TODO(NET-1038): Add integration test for this.
             HostEvent::OnDeviceRemoved { identifier } => listener.on_peer_removed(identifier),
             HostEvent::OnNewBondingData { data } => {

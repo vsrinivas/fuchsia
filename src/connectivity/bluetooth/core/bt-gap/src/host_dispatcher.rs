@@ -11,8 +11,8 @@ use {
     fidl_fuchsia_bluetooth::{Error as FidlError, ErrorCode},
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_control::{
-        AdapterInfo, ControlControlHandle, DeviceClass, HostData, InputCapabilityType, LocalKey,
-        OutputCapabilityType, PairingDelegateProxy, RemoteDevice,
+        self as control, ControlControlHandle, DeviceClass, HostData, InputCapabilityType,
+        LocalKey, OutputCapabilityType, PairingDelegateProxy,
     },
     fidl_fuchsia_bluetooth_gatt::Server_Marker,
     fidl_fuchsia_bluetooth_host::HostProxy,
@@ -20,8 +20,7 @@ use {
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
         self as bt,
-        types::BondingData,
-        util::{clone_host_info, clone_remote_device},
+        types::{AdapterInfo, BondingData, Peer},
     },
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon::{self as zx, Duration},
@@ -109,7 +108,7 @@ struct HostDispatcherState {
     discoverable: Option<Weak<DiscoverableRequestToken>>,
     pub input: InputCapabilityType,
     pub output: OutputCapabilityType,
-    remote_devices: HashMap<DeviceId, RemoteDevice>,
+    peers: HashMap<DeviceId, Peer>,
 
     pub pairing_delegate: Option<PairingDelegateProxy>,
     pub event_listeners: Vec<Weak<ControlControlHandle>>,
@@ -206,12 +205,13 @@ impl HostDispatcherState {
 
     fn add_host(&mut self, id: String, host: Arc<RwLock<HostDevice>>) {
         fx_log_info!("Host added: {:?}", host.read().get_info().identifier);
-        let info = clone_host_info(host.read().get_info());
-        self.host_devices.insert(id, host);
+        self.host_devices.insert(id, host.clone());
 
         // Notify Control interface clients about the new device.
         self.notify_event_listeners(|l| {
-            let _res = l.send_on_adapter_updated(&mut clone_host_info(&info));
+            let _res = l.send_on_adapter_updated(&mut control::AdapterInfo::from(
+                host.read().get_info().clone(),
+            ));
         });
 
         // Resolve pending adapter futures.
@@ -222,15 +222,17 @@ impl HostDispatcherState {
     fn set_active_id(&mut self, id: Option<String>) {
         fx_log_info!("New active adapter: {:?}", id);
         self.active_id = id;
-        if let Some(ref mut adapter_info) = self.get_active_adapter_info() {
+        if let Some(adapter_info) = self.get_active_adapter_info() {
+            let mut adapter_info = control::AdapterInfo::from(adapter_info);
             self.notify_event_listeners(|listener| {
-                let _res = listener.send_on_active_adapter_changed(Some(OutOfLine(adapter_info)));
+                let _res =
+                    listener.send_on_active_adapter_changed(Some(OutOfLine(&mut adapter_info)));
             })
         }
     }
 
     pub fn get_active_adapter_info(&mut self) -> Option<AdapterInfo> {
-        self.get_active_host().map(|host| clone_host_info(host.read().get_info()))
+        self.get_active_host().map(|host| host.read().get_info().clone())
     }
 
     pub fn notify_event_listeners<F>(&mut self, mut f: F)
@@ -260,7 +262,7 @@ impl HostDispatcher {
             name: DEFAULT_NAME.to_string(),
             input: InputCapabilityType::None,
             output: OutputCapabilityType::None,
-            remote_devices: HashMap::new(),
+            peers: HashMap::new(),
             stash: stash,
             discovery: None,
             discoverable: None,
@@ -344,7 +346,7 @@ impl HostDispatcher {
 
     pub async fn forget(&mut self, peer_id: String) -> types::Result<()> {
         // Try to delete from each adapter, even if it might not have the peer.
-        // remote_devices will be updated by the disconnection(s).
+        // peers will be updated by the disconnection(s).
         let adapters = await!(self.get_all_adapters());
         if adapters.is_empty() {
             return Err(types::Error::no_host());
@@ -411,7 +413,7 @@ impl HostDispatcher {
 
     pub async fn get_adapters(&self) -> Vec<AdapterInfo> {
         let hosts = self.state.read();
-        hosts.host_devices.values().map(|host| clone_host_info(host.read().get_info())).collect()
+        hosts.host_devices.values().map(|host| host.read().get_info().clone()).collect()
     }
 
     pub async fn request_host_service(mut self, chan: fasync::Channel, service: HostService) {
@@ -469,20 +471,21 @@ impl HostDispatcher {
         self.state.write().stash.store_bond(bond_data)
     }
 
-    pub fn on_device_updated(&self, mut device: RemoteDevice) {
+    pub fn on_device_updated(&self, peer: Peer) {
         // TODO(NET-1297): generic method for this pattern
+        let mut d = control::RemoteDevice::from(peer.clone());
         self.notify_event_listeners(|listener| {
             let _res = listener
-                .send_on_device_updated(&mut device)
+                .send_on_device_updated(&mut d)
                 .map_err(|e| fx_log_err!("Failed to send device updated event: {:?}", e));
         });
 
         let _drop_old_value =
-            self.state.write().remote_devices.insert(device.identifier.clone(), device);
+            self.state.write().peers.insert(peer.identifier.clone(), peer);
     }
 
     pub fn on_device_removed(&self, identifier: String) {
-        self.state.write().remote_devices.remove(&identifier);
+        self.state.write().peers.remove(&identifier);
         self.notify_event_listeners(|listener| {
             let _res = listener
                 .send_on_device_removed(&identifier)
@@ -490,8 +493,8 @@ impl HostDispatcher {
         })
     }
 
-    pub fn get_remote_devices(&self) -> Vec<RemoteDevice> {
-        self.state.read().remote_devices.values().map(clone_remote_device).collect()
+    pub fn get_peers(&self) -> Vec<Peer> {
+        self.state.read().peers.values().cloned().collect()
     }
 
     /// Adds an adapter to the host dispatcher. Called by the watch_hosts device
@@ -580,8 +583,8 @@ impl HostDispatcher {
 }
 
 impl HostListener for HostDispatcher {
-    fn on_peer_updated(&mut self, device: RemoteDevice) {
-        self.on_device_updated(device)
+    fn on_peer_updated(&mut self, peer: Peer) {
+        self.on_device_updated(peer)
     }
     fn on_peer_removed(&mut self, identifier: String) {
         self.on_device_removed(identifier)
@@ -658,8 +661,9 @@ async fn init_host(path: &Path) -> Result<Arc<RwLock<HostDevice>>, Error> {
     let host = HostProxy::new(handle);
 
     // Obtain basic information and create and entry in the disptacher's map.
-    let adapter_info =
-        await!(host.get_info()).map_err(|_| err_msg("failed to obtain bt-host information"))?;
+    let adapter_info = await!(host.get_info())
+        .map(AdapterInfo::from)
+        .map_err(|_| err_msg("failed to obtain bt-host information"))?;
     Ok(Arc::new(RwLock::new(HostDevice::new(path.to_path_buf(), host, adapter_info))))
 }
 

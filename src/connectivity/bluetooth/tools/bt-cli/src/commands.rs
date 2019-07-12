@@ -87,14 +87,14 @@ macro_rules! gen_commands {
 // `Cmd` is the declarative specification of all commands that bt-cli accepts.
 gen_commands! {
     Cmd {
-        Connect = ("connect", ["id|addr"], "connect to a remote device"),
+        Connect = ("connect", ["id|addr"], "connect to a peer"),
         ActiveAdapter = ("adapter", [], "Show the Active Adapter"),
         SetActiveAdapter = ("set-adapter", ["id"], "Set the Active Adapter"),
         SetAdapterName = ("set-local-name", ["name"], "Set the name of the Active Adapter"),
         SetAdapterDeviceClass = ("set-device-class", ["Major Class", "Minor Class", "Service Classes..."], "Set the device class of the Active Adapter"),
         GetAdapters = ("list-adapters", [], "Show all known bluetooth adapters"),
-        GetDevices = ("list-devices", [], "Show all known remote devices"),
-        GetDevice = ("device", ["id|addr"], "Show details for a known remote device"),
+        GetPeers = ("list-peers", [], "Show all known peers"),
+        GetPeer = ("peer", ["id|addr"], "Show details for a known peer"),
         StartDiscovery = ("start-discovery", [], "Start Discovery"),
         StopDiscovery = ("stop-discovery", [], "Stop Discovery"),
         Discoverable = ("discoverable", [], "Set this device to be discoverable"),
@@ -132,13 +132,13 @@ impl Completer for CmdHelper {
         if should_complete_arguments {
             let command = components[0].trim();
             let partial_argument = components.get(1).unwrap_or(&"");
-            let devices = &self.state.lock().devices;
+            let peers = &self.state.lock().peers;
             let mut candidates = vec![];
-            if command == "connect" || command == "device" {
-                // connect and device have 'id|addr' arguments
-                // can match against remote device identifier or address
-                for device in devices.values() {
-                    for key in &[&device.0.identifier, &device.0.address] {
+            if command == "connect" || command == "peer" {
+                // connect and peer have 'id|addr' arguments
+                // can match against peer identifier or address
+                for peer in peers.values() {
+                    for key in &[&peer.identifier, &peer.address] {
                         if key.starts_with(partial_argument) {
                             candidates.push(format!("{} {}", command, key));
                         }
@@ -200,13 +200,13 @@ mod tests {
     #[test]
     fn test_gen_commands_macro() {
         assert!(Cmd::variants().contains(&"connect".to_string()));
-        assert_eq!(Cmd::GetDevice.arguments(), "<id|addr> ");
+        assert_eq!(Cmd::GetPeer.arguments(), "<id|addr> ");
         assert!(Cmd::help_msg().starts_with("Commands:\n"));
     }
 
     #[test]
     fn test_completer() {
-        let state = Arc::new(Mutex::new(State { devices: HashMap::new() }));
+        let state = Arc::new(Mutex::new(State { peers: HashMap::new() }));
         let cmdhelper = CmdHelper::new(state);
         assert!(cmdhelper.complete("he", 0).unwrap().1.contains(&"help".to_string()));
         assert!(cmdhelper.complete("dis", 0).unwrap().1.contains(&"discoverable".to_string()));

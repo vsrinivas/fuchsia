@@ -18,7 +18,7 @@
 //!   }
 //! ```
 
-use fidl_fuchsia_bluetooth_le as fidl;
+use {fidl_fuchsia_bluetooth_le as fidl, std::fmt};
 
 #[derive(Clone)]
 pub struct RemoteDevice {
@@ -122,5 +122,25 @@ impl From<fidl::ServiceDataEntry> for ServiceDataEntry {
 impl From<fidl::ManufacturerSpecificDataEntry> for ManufacturerSpecificDataEntry {
     fn from(src: fidl::ManufacturerSpecificDataEntry) -> ManufacturerSpecificDataEntry {
         ManufacturerSpecificDataEntry { company_id: src.company_id, data: src.data }
+    }
+}
+
+impl fmt::Display for RemoteDevice {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let connectable = if self.connectable { "connectable" } else { "non-connectable" };
+
+        write!(f, "[device({}), ", connectable)?;
+
+        if let Some(rssi) = &self.rssi {
+            write!(f, "rssi: {}, ", rssi)?;
+        }
+
+        if let Some(ad) = &self.advertising_data {
+            if let Some(name) = &ad.name {
+                write!(f, "{}, ", name)?;
+            }
+        }
+
+        write!(f, "id: {}]", self.identifier)
     }
 }

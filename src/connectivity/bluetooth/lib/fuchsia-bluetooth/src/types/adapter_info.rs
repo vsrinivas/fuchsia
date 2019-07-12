@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_bluetooth_control as control;
+use {fidl_fuchsia_bluetooth_control as control, std::fmt};
 
 /// `AdapterState` is derived from deltas sent over the Control fidl protocol.
 /// Fields that are set to `None` indicate that the field is in an unknown state because the host
@@ -39,6 +39,21 @@ impl From<AdapterState> for control::AdapterState {
     }
 }
 
+impl fmt::Display for AdapterState {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(local_name) = &self.local_name {
+            writeln!(fmt, "Local Name:\t{}", local_name)?;
+        }
+        if let Some(discoverable) = &self.discoverable {
+            writeln!(fmt, "Discoverable:\t{}", discoverable)?;
+        }
+        if let Some(discovering) = &self.discovering {
+            writeln!(fmt, "Discovering:\t{}", discovering)?;
+        }
+        writeln!(fmt, "Local UUIDs:\t{:#?}", self.local_service_uuids)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct AdapterInfo {
     pub identifier: String,
@@ -69,7 +84,30 @@ impl From<AdapterInfo> for control::AdapterInfo {
     }
 }
 
+impl fmt::Display for AdapterInfo {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(fmt, "Adapter:")?;
+        writeln!(fmt, "\tIdentifier:\t{}", self.identifier)?;
+        writeln!(fmt, "\tAddress:\t{}", self.address)?;
+        writeln!(fmt, "\tTechnology:\t{:?}", self.technology)?;
+        if let Some(state) = &self.state {
+            for line in AdapterState::from(state.clone()).to_string().lines() {
+                writeln!(fmt, "\t{}", line)?;
+            }
+        }
+        Ok(())
+    }
+}
+
 impl AdapterInfo {
+    pub fn new(
+        identifier: String,
+        technology: control::TechnologyType,
+        address: String,
+        state: Option<AdapterState>,
+    ) -> AdapterInfo {
+        AdapterInfo { identifier, technology, address, state }
+    }
     pub fn update_state(&mut self, state: Option<control::AdapterState>) {
         if let Some(current) = &mut self.state {
             if let Some(delta) = state {

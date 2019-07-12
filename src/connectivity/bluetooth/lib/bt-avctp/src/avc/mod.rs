@@ -180,7 +180,7 @@ impl Peer {
         }
     }
 
-    /// Takes the command stream for incoming commands from the remote device.
+    /// Takes the command stream for incoming commands from the remote peer.
     pub fn take_command_stream(&self) -> CommandStream {
         self.inner
             .take_command_stream()
