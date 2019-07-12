@@ -146,15 +146,31 @@ async fn read_long_characteristic(
 async fn write_characteristic(
     svc: &RemoteServiceProxy,
     id: u64,
-    offset: u16,
     value: Vec<u8>,
 ) -> Result<(), Error> {
-    let status = await!(svc.write_characteristic(id, offset, &mut value.into_iter()))
+    let status = await!(svc.write_characteristic(id, &mut value.into_iter()))
         .map_err(|_| BTError::new("Failed to send message"))?;
 
     match status.error {
         Some(e) => println!("Failed to write to characteristic: {}", BTError::from(*e)),
-        None => println!("(id = {}]) done", id),
+        None => println!("(id = {}) done", id),
+    }
+
+    Ok(())
+}
+
+async fn write_long_characteristic(
+    svc: &RemoteServiceProxy,
+    id: u64,
+    offset: u16,
+    value: Vec<u8>,
+) -> Result<(), Error> {
+    let status = await!(svc.write_long_characteristic(id, offset, &mut value.into_iter()))
+        .map_err(|_| BTError::new("Failed to send message"))?;
+
+    match status.error {
+        Some(e) => println!("Failed to write long characteristic: {}", BTError::from(*e)),
+        None => println!("(id = {}, offset = {}) done", id, offset),
     }
 
     Ok(())
@@ -194,18 +210,30 @@ async fn read_long_descriptor(
     Ok(())
 }
 
-async fn write_descriptor(
+async fn write_descriptor(svc: &RemoteServiceProxy, id: u64, value: Vec<u8>) -> Result<(), Error> {
+    let status = await!(svc.write_descriptor(id, &mut value.into_iter()))
+        .map_err(|_| BTError::new("Failed to send message"))?;
+
+    match status.error {
+        Some(e) => println!("Failed to write to descriptor: {}", BTError::from(*e)),
+        None => println!("(id = {}) done", id),
+    }
+
+    Ok(())
+}
+
+async fn write_long_descriptor(
     svc: &RemoteServiceProxy,
     id: u64,
     offset: u16,
     value: Vec<u8>,
 ) -> Result<(), Error> {
-    let status = await!(svc.write_descriptor(id, offset, &mut value.into_iter()))
+    let status = await!(svc.write_long_descriptor(id, offset, &mut value.into_iter()))
         .map_err(|_| BTError::new("Failed to send message"))?;
 
     match status.error {
-        Some(e) => println!("Failed to write to descriptor: {}", BTError::from(*e)),
-        None => println!("(id = {}]) done", id),
+        Some(e) => println!("Failed to write long descriptor: {}", BTError::from(*e)),
+        None => println!("(id = {}, offset = {}) done", id, offset),
     }
 
     Ok(())
@@ -324,14 +352,54 @@ async fn do_read_long_chr<'a>(args: &'a [&'a str], client: &'a GattClientPtr) ->
 }
 
 async fn do_write_chr<'a>(mut args: Vec<&'a str>, client: &'a GattClientPtr) -> Result<(), Error> {
-    if args.len() < 3 {
-        println!("usage: write-chr [-w] <id> <offset> <value>");
+    if args.len() < 2 {
+        println!("usage: write-chr [-w] <id> <value>");
         return Ok(());
     }
 
     let without_response: bool = args[0] == "-w";
     if without_response {
         args.remove(0);
+    }
+
+    let id: u64 = match args[0].parse() {
+        Err(_) => {
+            println!("invalid id: {}", args[0]);
+            return Ok(());
+        }
+        Ok(i) => i,
+    };
+
+    let value: Result<Vec<u8>, _> = args[1..].iter().map(|arg| arg.parse()).collect();
+
+    match value {
+        Err(_) => {
+            println!("invalid value");
+            Ok(())
+        }
+        Ok(v) => match &client.read().active_proxy {
+            Some(svc) => {
+                if without_response {
+                    write_without_response(svc, id, v)
+                } else {
+                    await!(write_characteristic(svc, id, v))
+                }
+            }
+            None => {
+                println!("no service connected");
+                Ok(())
+            }
+        },
+    }
+}
+
+async fn do_write_long_chr<'a>(
+    args: &'a [&'a str],
+    client: &'a GattClientPtr,
+) -> Result<(), Error> {
+    if args.len() < 3 {
+        println!("usage: {}", Cmd::WriteLongDesc.cmd_help());
+        return Ok(());
     }
 
     let id: u64 = match args[0].parse() {
@@ -358,13 +426,7 @@ async fn do_write_chr<'a>(mut args: Vec<&'a str>, client: &'a GattClientPtr) -> 
             Ok(())
         }
         Ok(v) => match &client.read().active_proxy {
-            Some(svc) => {
-                if without_response {
-                    write_without_response(svc, id, v)
-                } else {
-                    await!(write_characteristic(svc, id, offset, v))
-                }
-            }
+            Some(svc) => await!(write_long_characteristic(svc, id, offset, v)),
             None => {
                 println!("no service connected");
                 Ok(())
@@ -439,8 +501,42 @@ async fn do_read_long_desc<'a>(
 }
 
 async fn do_write_desc<'a>(args: Vec<&'a str>, client: &'a GattClientPtr) -> Result<(), Error> {
-    if args.len() < 3 {
+    if args.len() < 2 {
         println!("usage: {}", Cmd::WriteDesc.cmd_help());
+        return Ok(());
+    }
+
+    let id: u64 = match args[0].parse() {
+        Err(_) => {
+            println!("invalid id: {}", args[0]);
+            return Ok(());
+        }
+        Ok(i) => i,
+    };
+
+    let value: Result<Vec<u8>, _> = args[1..].iter().map(|arg| arg.parse()).collect();
+
+    match value {
+        Err(_) => {
+            println!("invalid value");
+            Ok(())
+        }
+        Ok(v) => match &client.read().active_proxy {
+            Some(svc) => await!(write_descriptor(svc, id, v)),
+            None => {
+                println!("no service connected");
+                Ok(())
+            }
+        },
+    }
+}
+
+async fn do_write_long_desc<'a>(
+    args: &'a [&'a str],
+    client: &'a GattClientPtr,
+) -> Result<(), Error> {
+    if args.len() < 3 {
+        println!("usage: {}", Cmd::WriteLongDesc.cmd_help());
         return Ok(());
     }
 
@@ -468,7 +564,7 @@ async fn do_write_desc<'a>(args: Vec<&'a str>, client: &'a GattClientPtr) -> Res
             Ok(())
         }
         Ok(v) => match &client.read().active_proxy {
-            Some(svc) => await!(write_descriptor(svc, id, offset, v)),
+            Some(svc) => await!(write_long_descriptor(svc, id, offset, v)),
             None => {
                 println!("no service connected");
                 Ok(())
@@ -497,7 +593,7 @@ async fn do_enable_notify<'a>(args: &'a [&'a str], client: &'a GattClientPtr) ->
                 .map_err(|_| BTError::new("Failed to send message"))?;
             match status.error {
                 Some(e) => println!("Failed to enable notifications: {}", BTError::from(*e)),
-                None => println!("(id = {}]) done", id),
+                None => println!("(id = {}) done", id),
             }
             Ok(())
         }
@@ -531,7 +627,7 @@ async fn do_disable_notify<'a>(
                 .map_err(|_| BTError::new("Failed to send message"))?;
             match status.error {
                 Some(e) => println!("Failed to disable notifications: {}", BTError::from(*e)),
-                None => println!("(id = {}]) done", id),
+                None => println!("(id = {}) done", id),
             }
             Ok(())
         }

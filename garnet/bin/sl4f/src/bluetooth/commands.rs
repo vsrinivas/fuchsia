@@ -307,10 +307,15 @@ pub async fn gatt_client_method_to_fidl(
         }
         BluetoothMethod::GattcWriteCharacteristicById => {
             let id = parse_u64_identifier(args.clone())?;
+            let value = parse_write_value(args)?;
+            await!(gattc_write_char_by_id_async(&facade, id, value))
+        }
+        BluetoothMethod::GattcWriteLongCharacteristicById => {
+            let id = parse_u64_identifier(args.clone())?;
             let offset_as_u64 = parse_offset(args.clone())?;
             let offset = offset_as_u64 as u16;
             let value = parse_write_value(args)?;
-            await!(gattc_write_char_by_id_async(&facade, id, offset, value))
+            await!(gattc_write_long_char_by_id_async(&facade, id, offset, value))
         }
         BluetoothMethod::GattcWriteCharacteristicByIdWithoutResponse => {
             let id = parse_u64_identifier(args.clone())?;
@@ -347,10 +352,15 @@ pub async fn gatt_client_method_to_fidl(
         }
         BluetoothMethod::GattcWriteDescriptorById => {
             let id = parse_u64_identifier(args.clone())?;
+            let value = parse_write_value(args)?;
+            await!(gattc_write_desc_by_id_async(&facade, id, value))
+        }
+        BluetoothMethod::GattcWriteLongDescriptorById => {
+            let id = parse_u64_identifier(args.clone())?;
             let offset_as_u64 = parse_offset(args.clone())?;
             let offset = offset_as_u64 as u16;
             let value = parse_write_value(args)?;
-            await!(gattc_write_desc_by_id_async(&facade, id, offset, value))
+            await!(gattc_write_long_desc_by_id_async(&facade, id, offset, value))
         }
         BluetoothMethod::GattcReadDescriptorById => {
             let id = parse_u64_identifier(args.clone())?;
@@ -449,10 +459,19 @@ async fn gattc_discover_characteristics_async(facade: &GattClientFacade) -> Resu
 async fn gattc_write_char_by_id_async(
     facade: &GattClientFacade,
     id: u64,
+    write_value: Vec<u8>,
+) -> Result<Value, Error> {
+    let write_char_status = await!(facade.gattc_write_char_by_id(id, write_value))?;
+    Ok(to_value(write_char_status)?)
+}
+
+async fn gattc_write_long_char_by_id_async(
+    facade: &GattClientFacade,
+    id: u64,
     offset: u16,
     write_value: Vec<u8>,
 ) -> Result<Value, Error> {
-    let write_char_status = await!(facade.gattc_write_char_by_id(id, offset, write_value))?;
+    let write_char_status = await!(facade.gattc_write_long_char_by_id(id, offset, write_value))?;
     Ok(to_value(write_char_status)?)
 }
 
@@ -499,10 +518,19 @@ async fn gattc_read_desc_by_id_async(facade: &GattClientFacade, id: u64) -> Resu
 async fn gattc_write_desc_by_id_async(
     facade: &GattClientFacade,
     id: u64,
+    write_value: Vec<u8>,
+) -> Result<Value, Error> {
+    let write_desc_status = await!(facade.gattc_write_desc_by_id(id, write_value))?;
+    Ok(to_value(write_desc_status)?)
+}
+
+async fn gattc_write_long_desc_by_id_async(
+    facade: &GattClientFacade,
+    id: u64,
     offset: u16,
     write_value: Vec<u8>,
 ) -> Result<Value, Error> {
-    let write_desc_status = await!(facade.gattc_write_desc_by_id(id, offset, write_value))?;
+    let write_desc_status = await!(facade.gattc_write_long_desc_by_id(id, offset, write_value))?;
     Ok(to_value(write_desc_status)?)
 }
 

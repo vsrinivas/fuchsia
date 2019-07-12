@@ -42,6 +42,7 @@ pub enum BluetoothMethod {
     GattcConnectToService,
     GattcDiscoverCharacteristics,
     GattcWriteCharacteristicById,
+    GattcWriteLongCharacteristicById,
     GattcWriteCharacteristicByIdWithoutResponse,
     GattcEnableNotifyCharacteristic,
     GattcDisableNotifyCharacteristic,
@@ -50,6 +51,7 @@ pub enum BluetoothMethod {
     GattcReadLongDescriptorById,
     GattcReadDescriptorById,
     GattcWriteDescriptorById,
+    GattcWriteLongDescriptorById,
     GattServerCloseServer,
     GattServerPublishServer,
 }
@@ -81,6 +83,7 @@ impl BluetoothMethod {
             "GattcDiscoverCharacteristics" => BluetoothMethod::GattcDiscoverCharacteristics,
             "GattcListServices" => BluetoothMethod::GattcListServices,
             "GattcWriteCharacteristicById" => BluetoothMethod::GattcWriteCharacteristicById,
+            "GattcWriteLongCharacteristicById" => BluetoothMethod::GattcWriteLongCharacteristicById,
             "GattcWriteCharacteristicByIdWithoutResponse" => {
                 BluetoothMethod::GattcWriteCharacteristicByIdWithoutResponse
             }
@@ -91,6 +94,7 @@ impl BluetoothMethod {
             "GattcReadLongDescriptorById" => BluetoothMethod::GattcReadLongDescriptorById,
             "GattcReadDescriptorById" => BluetoothMethod::GattcReadDescriptorById,
             "GattcWriteDescriptorById" => BluetoothMethod::GattcWriteDescriptorById,
+            "GattcWriteLongDescriptorById" => BluetoothMethod::GattcWriteLongDescriptorById,
             "GattServerCloseServer" => BluetoothMethod::GattServerCloseServer,
             "GattServerPublishServer" => BluetoothMethod::GattServerPublishServer,
 

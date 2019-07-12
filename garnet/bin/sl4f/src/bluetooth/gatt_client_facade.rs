@@ -125,16 +125,11 @@ impl GattClientFacade {
         Ok(chrcs)
     }
 
-    pub async fn gattc_write_char_by_id(
-        &self,
-        id: u64,
-        offset: u16,
-        write_value: Vec<u8>,
-    ) -> Result<(), Error> {
+    pub async fn gattc_write_char_by_id(&self, id: u64, write_value: Vec<u8>) -> Result<(), Error> {
         let tag = "GattClientFacade::gattc_write_char_by_id";
 
         let write_characteristic = match &self.inner.read().active_proxy {
-            Some(proxy) => proxy.write_characteristic(id, offset, &mut write_value.into_iter()),
+            Some(proxy) => proxy.write_characteristic(id, &mut write_value.into_iter()),
             None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
         };
 
@@ -144,6 +139,33 @@ impl GattClientFacade {
         match status.error {
             Some(e) => {
                 let err_msg = format!("Failed to write to characteristic: {}", BTError::from(*e));
+                fx_err_and_bail!(&with_line!(tag), err_msg)
+            }
+            None => Ok(()),
+        }
+    }
+
+    pub async fn gattc_write_long_char_by_id(
+        &self,
+        id: u64,
+        offset: u16,
+        write_value: Vec<u8>,
+    ) -> Result<(), Error> {
+        let tag = "GattClientFacade::gattc_write_long_char_by_id";
+
+        let write_long_characteristic = match &self.inner.read().active_proxy {
+            Some(proxy) => {
+                proxy.write_long_characteristic(id, offset, &mut write_value.into_iter())
+            }
+            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
+        };
+
+        let status =
+            await!(write_long_characteristic).map_err(|_| BTError::new("Failed to send message"))?;
+
+        match status.error {
+            Some(e) => {
+                let err_msg = format!("Failed to write long characteristic: {}", BTError::from(*e));
                 fx_err_and_bail!(&with_line!(tag), err_msg)
             }
             None => Ok(()),
@@ -203,7 +225,7 @@ impl GattClientFacade {
 
         match status.error {
             Some(e) => {
-                let err_msg = format!("Failed to read characteristic: {}", BTError::from(*e));
+                let err_msg = format!("Failed to read long characteristic: {}", BTError::from(*e));
                 fx_err_and_bail!(&with_line!(tag), err_msg)
             }
             None => Ok(value),
@@ -253,16 +275,11 @@ impl GattClientFacade {
         }
     }
 
-    pub async fn gattc_write_desc_by_id(
-        &self,
-        id: u64,
-        offset: u16,
-        write_value: Vec<u8>,
-    ) -> Result<(), Error> {
+    pub async fn gattc_write_desc_by_id(&self, id: u64, write_value: Vec<u8>) -> Result<(), Error> {
         let tag = "GattClientFacade::gattc_write_desc_by_id";
 
         let write_descriptor = match &self.inner.read().active_proxy {
-            Some(proxy) => proxy.write_descriptor(id, offset, &mut write_value.into_iter()),
+            Some(proxy) => proxy.write_descriptor(id, &mut write_value.into_iter()),
             None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
         };
 
@@ -272,6 +289,31 @@ impl GattClientFacade {
         match status.error {
             Some(e) => {
                 let err_msg = format!("Failed to write to descriptor: {}", BTError::from(*e));
+                fx_err_and_bail!(&with_line!(tag), err_msg)
+            }
+            None => Ok(()),
+        }
+    }
+
+    pub async fn gattc_write_long_desc_by_id(
+        &self,
+        id: u64,
+        offset: u16,
+        write_value: Vec<u8>,
+    ) -> Result<(), Error> {
+        let tag = "GattClientFacade::gattc_write_long_desc_by_id";
+
+        let write_long_descriptor = match &self.inner.read().active_proxy {
+            Some(proxy) => proxy.write_long_descriptor(id, offset, &mut write_value.into_iter()),
+            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
+        };
+
+        let status =
+            await!(write_long_descriptor).map_err(|_| BTError::new("Failed to send message"))?;
+
+        match status.error {
+            Some(e) => {
+                let err_msg = format!("Failed to write long descriptor: {}", BTError::from(*e));
                 fx_err_and_bail!(&with_line!(tag), err_msg)
             }
             None => Ok(()),

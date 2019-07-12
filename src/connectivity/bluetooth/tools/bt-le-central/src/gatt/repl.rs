@@ -18,7 +18,8 @@ use {
 use super::{
     commands::{Cmd, CmdHelper},
     do_connect, do_disable_notify, do_enable_notify, do_list, do_read_chr, do_read_desc,
-    do_read_long_chr, do_read_long_desc, do_write_chr, do_write_desc, GattClient, GattClientPtr,
+    do_read_long_chr, do_read_long_desc, do_write_chr, do_write_desc, do_write_long_chr,
+    do_write_long_desc, GattClient, GattClientPtr,
 };
 
 const PROMPT: &str = "GATT> ";
@@ -138,9 +139,11 @@ async fn handle_cmd(line: String, client: &GattClientPtr) -> Result<(), Error> {
         Some(Ok(Cmd::ReadChr)) => await!(do_read_chr(&args, client)),
         Some(Ok(Cmd::ReadLongChr)) => await!(do_read_long_chr(&args, client)),
         Some(Ok(Cmd::WriteChr)) => await!(do_write_chr(args, client)),
+        Some(Ok(Cmd::WriteLongChr)) => await!(do_write_long_chr(&args, client)),
         Some(Ok(Cmd::ReadDesc)) => await!(do_read_desc(&args, client)),
         Some(Ok(Cmd::ReadLongDesc)) => await!(do_read_long_desc(&args, client)),
         Some(Ok(Cmd::WriteDesc)) => await!(do_write_desc(args, client)),
+        Some(Ok(Cmd::WriteLongDesc)) => await!(do_write_long_desc(&args, client)),
         Some(Ok(Cmd::EnableNotify)) => await!(do_enable_notify(&args, client)),
         Some(Ok(Cmd::DisableNotify)) => await!(do_disable_notify(&args, client)),
         Some(Err(e)) => {
