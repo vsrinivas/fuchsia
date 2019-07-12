@@ -6,9 +6,10 @@ use crate::{
     clock,
     common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
     configuration::Config,
-    http_request::HttpRequest,
-    installer::{Installer, Plan},
-    policy::{CheckDecision, PolicyEngine, UpdateDecision},
+    http_request::{HttpRequest, StubHttpRequest},
+    installer::{stub::StubInstaller, Installer, Plan},
+    metrics::{Metrics, MetricsReporter, StubMetricsReporter},
+    policy::{CheckDecision, PolicyEngine, StubPolicyEngine, UpdateDecision},
     protocol::{
         self,
         request::{Event, EventErrorCode, EventResult, EventType, InstallSource},
@@ -25,7 +26,7 @@ use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 use std::str::Utf8Error;
-use std::time::SystemTime;
+use std::time::{Instant, SystemTime};
 
 pub mod update_check;
 
@@ -38,12 +39,13 @@ pub use timer::Timer;
 /// This is the core state machine for a client's update check.  It is instantiated and used to
 /// perform a single update check process.
 #[derive(Debug)]
-pub struct StateMachine<PE, HR, IN, TM>
+pub struct StateMachine<PE, HR, IN, TM, MR>
 where
     PE: PolicyEngine,
     HR: HttpRequest,
     IN: Installer,
     TM: Timer,
+    MR: MetricsReporter,
 {
     /// The immutable configuration of the client itself.
     client_config: Config,
@@ -55,6 +57,8 @@ where
     installer: IN,
 
     timer: TM,
+
+    metrics_reporter: MR,
 
     /// Context for update check.
     context: update_check::Context,
@@ -167,20 +171,29 @@ pub enum UpdateCheckError {
     InstallPlan(failure::Error),
 }
 
-impl<PE, HR, IN, TM> StateMachine<PE, HR, IN, TM>
+impl<PE, HR, IN, TM, MR> StateMachine<PE, HR, IN, TM, MR>
 where
     PE: PolicyEngine,
     HR: HttpRequest,
     IN: Installer,
     TM: Timer,
+    MR: MetricsReporter,
 {
-    pub fn new(policy_engine: PE, http: HR, installer: IN, config: &Config, timer: TM) -> Self {
+    pub fn new(
+        policy_engine: PE,
+        http: HR,
+        installer: IN,
+        config: &Config,
+        timer: TM,
+        metrics_reporter: MR,
+    ) -> Self {
         StateMachine {
             client_config: config.clone(),
             policy_engine,
             http,
             installer,
             timer,
+            metrics_reporter,
             context: Self::load_context(),
             state: State::Idle,
             state_callback: None,
@@ -356,6 +369,7 @@ where
             request_builder = request_builder.add_update_check(app);
         }
 
+        let update_check_start_time = Instant::now();
         let (_parts, data) = match await!(Self::do_omaha_request(&mut self.http, request_builder)) {
             Ok(res) => res,
             Err(OmahaRequestError::Json(e)) => {
@@ -381,6 +395,8 @@ where
                 return Err(UpdateCheckError::OmahaRequest(e.into()));
             }
         };
+
+        self.report_metrics(Metrics::UpdateCheckResponseTime(update_check_start_time.elapsed()));
 
         let response = match Self::parse_omaha_response(&data) {
             Ok(res) => res,
@@ -614,6 +630,28 @@ where
     pub fn set_state_callback(&mut self, callback: impl StateCallback) {
         self.state_callback = Some(Box::new(callback));
     }
+
+    fn report_metrics(&mut self, metrics: Metrics) {
+        if let Err(err) = self.metrics_reporter.report_metrics(metrics) {
+            warn!("Unable to report metrics: {:?}", err);
+        }
+    }
+}
+
+impl
+    StateMachine<StubPolicyEngine, StubHttpRequest, StubInstaller, StubTimer, StubMetricsReporter>
+{
+    /// Create a new StateMachine with stub implementations.
+    pub fn new_stub(config: &Config) -> Self {
+        Self::new(
+            StubPolicyEngine,
+            StubHttpRequest,
+            StubInstaller::default(),
+            config,
+            StubTimer,
+            StubMetricsReporter,
+        )
+    }
 }
 
 #[cfg(test)]
@@ -625,6 +663,7 @@ mod tests {
         configuration::test_support::config_generator,
         http_request::{mock::MockHttpRequest, StubHttpRequest},
         installer::stub::StubInstaller,
+        metrics::{MockMetricsReporter, StubMetricsReporter},
         policy::{MockPolicyEngine, StubPolicyEngine},
         protocol::Cohort,
     };
@@ -635,14 +674,15 @@ mod tests {
     use serde_json::json;
     use std::time::{Duration, SystemTime};
 
-    async fn do_update_check<'a, PE, HR, IN, TM>(
-        state_machine: &'a mut StateMachine<PE, HR, IN, TM>,
+    async fn do_update_check<PE, HR, IN, TM, MR>(
+        state_machine: &mut StateMachine<PE, HR, IN, TM, MR>,
     ) -> Result<update_check::Response, UpdateCheckError>
     where
         PE: PolicyEngine,
         HR: HttpRequest,
         IN: Installer,
         TM: Timer,
+        MR: MetricsReporter,
     {
         let options = CheckOptions::default();
 
@@ -702,6 +742,7 @@ mod tests {
                 StubInstaller::default(),
                 &config,
                 StubTimer,
+                StubMetricsReporter,
             );
             await!(do_update_check(&mut state_machine)).unwrap();
 
@@ -735,6 +776,7 @@ mod tests {
                 StubInstaller::default(),
                 &config,
                 StubTimer,
+                StubMetricsReporter,
             );
             let response = await!(do_update_check(&mut state_machine)).unwrap();
             assert_eq!("{00000000-0000-0000-0000-000000000001}", response.app_responses[0].app_id);
@@ -757,6 +799,7 @@ mod tests {
                 StubInstaller::default(),
                 &config,
                 StubTimer,
+                StubMetricsReporter,
             );
             match await!(do_update_check(&mut state_machine)) {
                 Err(UpdateCheckError::ResponseParser(_)) => {} // expected
@@ -803,6 +846,7 @@ mod tests {
                 StubInstaller::default(),
                 &config,
                 StubTimer,
+                StubMetricsReporter,
             );
             match await!(do_update_check(&mut state_machine)) {
                 Err(UpdateCheckError::InstallPlan(_)) => {} // expected
@@ -852,6 +896,7 @@ mod tests {
                 StubInstaller { should_fail: true },
                 &config,
                 StubTimer,
+                StubMetricsReporter,
             );
             let response = await!(do_update_check(&mut state_machine)).unwrap();
             assert_eq!(Action::InstallPlanExecutionError, response.app_responses[0].result);
@@ -898,6 +943,7 @@ mod tests {
                 StubInstaller::default(),
                 &config,
                 StubTimer,
+                StubMetricsReporter,
             );
             let response = await!(do_update_check(&mut state_machine)).unwrap();
             assert_eq!(Action::DeferredByPolicy, response.app_responses[0].result);
@@ -943,6 +989,7 @@ mod tests {
                 StubInstaller::default(),
                 &config,
                 StubTimer,
+                StubMetricsReporter,
             );
             let response = await!(do_update_check(&mut state_machine)).unwrap();
             assert_eq!(Action::DeniedByPolicy, response.app_responses[0].result);
@@ -963,7 +1010,6 @@ mod tests {
     #[test]
     fn test_wait_timer() {
         let config = config_generator();
-        let http = StubHttpRequest;
         let mut timer = MockTimer::new();
         timer.expect(Duration::from_secs(111));
         let next_update_time = clock::now() + Duration::from_secs(111);
@@ -976,8 +1022,14 @@ mod tests {
             ..MockPolicyEngine::default()
         };
 
-        let mut state_machine =
-            StateMachine::new(policy_engine, http, StubInstaller::default(), &config, timer);
+        let mut state_machine = StateMachine::new(
+            policy_engine,
+            StubHttpRequest,
+            StubInstaller::default(),
+            &config,
+            timer,
+            StubMetricsReporter,
+        );
         state_machine.add_apps(make_test_apps());
         let state_machine = Rc::new(RefCell::new(state_machine));
 
@@ -1023,8 +1075,14 @@ mod tests {
             ..MockPolicyEngine::default()
         };
 
-        let mut state_machine =
-            StateMachine::new(policy_engine, http, StubInstaller::default(), &config, timer);
+        let mut state_machine = StateMachine::new(
+            policy_engine,
+            http,
+            StubInstaller::default(),
+            &config,
+            timer,
+            StubMetricsReporter,
+        );
         state_machine.add_apps(make_test_apps());
         let state_machine = Rc::new(RefCell::new(state_machine));
 
@@ -1080,6 +1138,7 @@ mod tests {
                 StubInstaller::default(),
                 &config,
                 StubTimer,
+                StubMetricsReporter,
             );
             let response = await!(do_update_check(&mut state_machine)).unwrap();
 
@@ -1093,13 +1152,7 @@ mod tests {
     #[test]
     fn test_add_apps() {
         let config = config_generator();
-        let mut state_machine = StateMachine::new(
-            StubPolicyEngine,
-            StubHttpRequest,
-            StubInstaller::default(),
-            &config,
-            StubTimer,
-        );
+        let mut state_machine = StateMachine::new_stub(&config);
         state_machine.add_apps(make_test_apps());
         assert_eq!(state_machine.apps, make_test_apps());
     }
@@ -1107,13 +1160,7 @@ mod tests {
     #[test]
     fn test_state_callback() {
         let config = config_generator();
-        let mut state_machine = StateMachine::new(
-            StubPolicyEngine,
-            StubHttpRequest,
-            StubInstaller::default(),
-            &config,
-            StubTimer,
-        );
+        let mut state_machine = StateMachine::new_stub(&config);
         state_machine.add_apps(make_test_apps());
         let actual_states = Vec::new();
         let actual_states = Rc::new(RefCell::new(actual_states));
@@ -1130,4 +1177,27 @@ mod tests {
         let expected_states = vec![State::CheckingForUpdates, State::EncounteredError, State::Idle];
         assert_eq!(*actual_states, expected_states);
     }
+
+    #[test]
+    fn test_metrics_report_update_check_response_time() {
+        block_on(async {
+            let config = config_generator();
+            let mut state_machine = StateMachine::new(
+                StubPolicyEngine,
+                StubHttpRequest,
+                StubInstaller::default(),
+                &config,
+                StubTimer,
+                MockMetricsReporter::new(false),
+            );
+            let _result = await!(do_update_check(&mut state_machine));
+
+            assert!(!state_machine.metrics_reporter.metrics.is_empty());
+            match &state_machine.metrics_reporter.metrics[0] {
+                Metrics::UpdateCheckResponseTime(_) => {} // expected
+                metric => panic!("Unexpected metric {:?}", metric),
+            }
+        });
+    }
+
 }

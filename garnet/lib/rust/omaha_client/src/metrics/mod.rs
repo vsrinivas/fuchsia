@@ -6,7 +6,11 @@ use failure::Error;
 use std::time::Duration;
 
 #[cfg(test)]
+mod mock;
+#[cfg(test)]
+pub use mock::MockMetricsReporter;
 mod stub;
+pub use stub::StubMetricsReporter;
 
 /// The list of metrics that can be reported.
 #[derive(Debug)]

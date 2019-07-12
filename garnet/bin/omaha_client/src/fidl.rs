@@ -19,6 +19,7 @@ use omaha_client::{
     common::CheckOptions,
     http_request::HttpRequest,
     installer::Installer,
+    metrics::MetricsReporter,
     policy::PolicyEngine,
     protocol::request::InstallSource,
     state_machine::{self, StateMachine, Timer},
@@ -26,14 +27,15 @@ use omaha_client::{
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub struct FidlServer<PE, HR, IN, TM>
+pub struct FidlServer<PE, HR, IN, TM, MR>
 where
     PE: PolicyEngine,
     HR: HttpRequest,
     IN: Installer,
     TM: Timer,
+    MR: MetricsReporter,
 {
-    state_machine_ref: Rc<RefCell<StateMachine<PE, HR, IN, TM>>>,
+    state_machine_ref: Rc<RefCell<StateMachine<PE, HR, IN, TM, MR>>>,
 
     // The current State table, defined in fuchsia.update.fidl.
     state: State,
@@ -51,14 +53,15 @@ pub enum IncomingServices {
     OmahaClientConfiguration(OmahaClientConfigurationRequestStream),
 }
 
-impl<PE, HR, IN, TM> FidlServer<PE, HR, IN, TM>
+impl<PE, HR, IN, TM, MR> FidlServer<PE, HR, IN, TM, MR>
 where
     PE: PolicyEngine + 'static,
     HR: HttpRequest + 'static,
     IN: Installer + 'static,
     TM: Timer + 'static,
+    MR: MetricsReporter + 'static,
 {
-    pub fn new(state_machine_ref: Rc<RefCell<StateMachine<PE, HR, IN, TM>>>) -> Self {
+    pub fn new(state_machine_ref: Rc<RefCell<StateMachine<PE, HR, IN, TM, MR>>>) -> Self {
         FidlServer {
             state_machine_ref,
             state: State { state: Some(ManagerState::Idle), version_available: None },
@@ -250,20 +253,15 @@ mod tests {
     use fidl::endpoints::{create_proxy, create_proxy_and_stream};
     use fidl_fuchsia_update::{ManagerMarker, MonitorEvent, MonitorMarker, Options};
     use omaha_client::{
-        http_request::StubHttpRequest, installer::stub::StubInstaller, policy::StubPolicyEngine,
-        state_machine::StubTimer,
+        http_request::StubHttpRequest, installer::stub::StubInstaller,
+        metrics::StubMetricsReporter, policy::StubPolicyEngine, state_machine::StubTimer,
     };
 
-    fn new_fidl_server() -> FidlServer<StubPolicyEngine, StubHttpRequest, StubInstaller, StubTimer>
+    fn new_fidl_server(
+    ) -> FidlServer<StubPolicyEngine, StubHttpRequest, StubInstaller, StubTimer, StubMetricsReporter>
     {
         let config = configuration::get_config();
-        let state_machine = StateMachine::new(
-            StubPolicyEngine,
-            StubHttpRequest,
-            StubInstaller::default(),
-            &config,
-            StubTimer,
-        );
+        let state_machine = StateMachine::new_stub(&config);
 
         FidlServer::new(Rc::new(RefCell::new(state_machine)))
     }

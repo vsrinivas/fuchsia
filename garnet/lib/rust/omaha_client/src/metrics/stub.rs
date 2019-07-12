@@ -7,6 +7,7 @@ use failure::Error;
 use log::info;
 
 /// A stub implementation of MetricsReporter which only log metrics.
+#[derive(Debug)]
 pub struct StubMetricsReporter;
 
 impl MetricsReporter for StubMetricsReporter {

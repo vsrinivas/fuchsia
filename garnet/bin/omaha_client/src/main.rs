@@ -36,7 +36,7 @@ fn main() -> Result<(), Error> {
         let config = configuration::get_config();
         info!("Update config: {:?}", config);
 
-        let (_metrics_reporter, cobalt_fut) = metrics::CobaltMetricsReporter::new();
+        let (metrics_reporter, cobalt_fut) = metrics::CobaltMetricsReporter::new();
 
         let http = FuchsiaHyperHttpRequest::new();
         let installer = temp_installer::FuchsiaInstaller::new()?;
@@ -46,6 +46,7 @@ fn main() -> Result<(), Error> {
             installer,
             &config,
             timer::FuchsiaTimer,
+            metrics_reporter,
         );
         state_machine.add_apps(apps);
         let state_machine_ref = Rc::new(RefCell::new(state_machine));
