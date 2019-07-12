@@ -35,3 +35,162 @@ impl Appendable for FixedSizedTestBuffer {
         self.0.len() + bytes <= self.0.capacity()
     }
 }
+
+/// Macro to assert a value matches a variant.
+/// This macro is particularly useful when partially matching a variant.
+///
+/// Example:
+/// ```
+/// // Basic matching:
+/// let foo = Foo::B(42);
+/// assert_variant!(foo, Foo::B(_)); // Success
+/// assert_variant!(foo, Foo::A); // Panics: "unexpected variant: B(42)"
+///
+/// // Multiple variants matching:
+/// let foo = Foo::B(42);
+/// assert_variant!(foo, Foo::A | Foo::B(_)); // Success
+/// assert_variant!(foo, Foo::A | Foo::C); // Panics: "unexpected variant: B(42)"
+///
+/// // Advanced matching:
+/// let foo: Result<Option<u8>, u8> = Result::Ok(Some(5));
+/// assert_variant!(foo, Result::Ok(Some(1...5))); // Success
+/// assert_variant!(foo, Result::Ok(Some(1...4))); // Panics: "unexpected variant: Ok(Some(5))"
+///
+/// // Custom message
+/// let foo = Foo::B(42);
+/// // Panics: "expected Foo::A, actual: B(42)"
+/// assert_variant!(foo, Foo::A, "expected Foo::A, actual: {:?}", foo);
+///
+/// // Optional expression:
+/// let foo = Foo::B(...);
+/// assert_variant!(foo, Foo::B(v) => {
+///     assert_eq!(v.id, 5);
+///     ...
+/// });
+///
+/// // Unwrapping partially matched variant:
+/// let foo = Foo::B(...);
+/// let bar = assert_variant!(foo, Foo::B(bar) => bar);
+/// let xyz = bar.foo_bar(...);
+/// assert_eq!(xyz, ...);
+/// ```
+#[macro_export]
+macro_rules! assert_variant {
+    // Use custom formatting when panicing.
+    ($test:expr, $variant:pat $( | $others:pat)* => $e:expr, $fmt:expr $(, $args:tt)*) => {
+        match $test {
+            $variant $(| $others)* => $e,
+            _ => panic!($fmt, $($args)*),
+        }
+    };
+    // Use default message when panicing.
+    ($test:expr, $variant:pat $( | $others:pat)* => $e:expr) => {
+        match $test {
+            $variant $(| $others)* => $e,
+            other => panic!("unexpected variant: {:?}", other),
+        }
+    };
+    // Custom error message.
+    ($test:expr, $variant:pat $( | $others:pat)* , $fmt:expr $(, $args:tt)*) => {
+        assert_variant!($test, $variant $( | $others)* => {}, $fmt $(, $args)*);
+    };
+    // Custom expression and custom error message.
+    ($test:expr, $variant:pat $( | $others:pat)* => $e:expr, $fmt:expr $(, $args:tt)*) => {
+        assert_variant!($test, $variant $( | $others)* => { $e }, $fmt $(, $args)*);
+    };
+    // Default error message.
+    ($test:expr, $variant:pat $( | $others:pat)*) => {
+        assert_variant!($test, $variant $( | $others)* => {});
+    };
+    // Optional trailing comma after expression.
+    ($test:expr, $variant:pat $( | $others:pat)* => $e:expr,) => {
+        assert_variant!($test, $variant $( | $others)* => { $e });
+    };
+}
+
+#[cfg(test)]
+mod tests {
+    use std::panic;
+
+    #[derive(Debug)]
+    enum Foo {
+        A(u8),
+        B { named: u8, bar: u16 },
+        C,
+    }
+
+    #[test]
+    fn assert_variant_full_match() {
+        // Success:
+        assert_variant!(Foo::A(8), Foo::A(8));
+
+        // Check same variant with different value:
+        let result = panic::catch_unwind(|| {
+            assert_variant!(Foo::A(8), Foo::A(7));
+        });
+        assert!(result.is_err());
+
+        // Check different variant:
+        let result = panic::catch_unwind(|| {
+            assert_variant!(Foo::A(8), Foo::C);
+        });
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn assert_variant_multi_variant() {
+        // Success:
+        assert_variant!(Foo::A(8), Foo::A(8) | Foo::C);
+        assert_variant!(Foo::C, Foo::A(8) | Foo::C);
+
+        // Failure:
+        let result = panic::catch_unwind(|| {
+            assert_variant!(Foo::C, Foo::A(_) | Foo::B { .. });
+        });
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn assert_variant_partial_match() {
+        // Success:
+        assert_variant!(Foo::A(8), Foo::A(_));
+        assert_variant!(Foo::B { named: 7, bar: 8 }, Foo::B { .. });
+        assert_variant!(Foo::B { named: 7, bar: 8 }, Foo::B { named: 7, .. });
+
+        // Failure:
+        let result = panic::catch_unwind(|| {
+            assert_variant!(Foo::A(8), Foo::B { .. });
+        });
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn assert_variant_block_expr() {
+        assert_variant!(Foo::A(8), Foo::A(value) => {
+            assert_eq!(value, 8);
+        });
+        assert_variant!(Foo::B { named: 7, bar: 8 }, Foo::B { named, .. } => {
+            assert_eq!(named, 7);
+        });
+
+        let named = assert_variant!(Foo::B { named: 7, bar: 8 }, Foo::B { named, .. } => named);
+        assert_eq!(named, 7);
+
+        assert_variant!(Foo::B { named: 7, bar: 8 }, Foo::B { .. } => (), "custom error message");
+    }
+
+    #[test]
+    fn assert_variant_custom_message() {
+        // Success:
+        assert_variant!(Foo::A(8), Foo::A(_), "custom error message");
+
+        // Failure:
+        let result = panic::catch_unwind(|| {
+            assert_variant!(Foo::A(8), Foo::B { .. }, "custom error message");
+        });
+        let error = result.unwrap_err();
+        assert_variant!(error.downcast_ref::<&'static str>(), Some(message) => {
+            assert_eq!(message, &"custom error message")
+        });
+    }
+}
