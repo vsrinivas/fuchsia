@@ -4,7 +4,7 @@
 
 #include "gather_inspectable.h"
 
-#include <lib/inspect/query/discover.h>
+#include <lib/inspect_deprecated/query/discover.h>
 #include <zircon/status.h>
 
 #include "harvester.h"
@@ -17,7 +17,7 @@ void GatherInspectable::Gather() {
   // Gather a list of components that contain inspect data.
   const std::string path = "/hub";
   StringSampleList string_sample_list;
-  for (auto& location : inspect::SyncFindPaths(path)) {
+  for (auto& location : inspect_deprecated::SyncFindPaths(path)) {
     std::ostringstream label;
     label << "inspectable:" << location.AbsoluteFilePath();
     string_sample_list.emplace_back(label.str(), location.file_name);
