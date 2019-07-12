@@ -1,0 +1,11 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Whether we are building from SPIRV-Tools' repository.
+# MUST be set to false in other projects.
+spirv_tools_standalone = false
+
+# The path to SPIRV-Tools' dependencies
+spirv_tools_googletest_dir = "//third_party/googletest"
+spirv_tools_spirv_headers_dir = "//third_party/spirv-headers"
