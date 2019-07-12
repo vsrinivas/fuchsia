@@ -138,7 +138,7 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
 // it. After that, the first connection re-uploads the same value, but with an
 // EAGER priority. When the second connection receives the changes, we verify
 // that the object is fully present on disk and can be retrieved by calling Get.
-TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
+TEST_P(SyncIntegrationTest, DISABLED_LazyToEagerTransition) {
   auto instance1 = NewLedgerAppInstance();
   auto instance2 = NewLedgerAppInstance();
 
@@ -186,6 +186,7 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
   // Fetch only a small part.
   snapshot->FetchPartial(convert::ToArray("Hello"), 0, 10,
                          callback::Capture(loop_waiter->GetCallback(), &fetch_result));
+  // TODO(LE-812): this assertion is flaky. Re-enable this test once fixed.
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   EXPECT_THAT(fetch_result, MatchesString(SizeIs(10)));
 
