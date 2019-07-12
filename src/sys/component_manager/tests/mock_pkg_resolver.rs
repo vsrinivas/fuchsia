@@ -32,7 +32,7 @@ fn main() -> Result<(), Error> {
         let packages_to_mock = packages_to_mock.clone();
         fasync::spawn_local(async move {
             await!(run_resolver_service(stream, packages_to_mock))
-                .expect("failed to run echo service")
+                .expect("failed to run resolver service")
         });
     });
     fs.take_and_serve_directory_handle()?;

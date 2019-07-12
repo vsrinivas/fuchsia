@@ -127,7 +127,7 @@ mod tests {
         crate::model::testing::{mocks, routing_test_helpers::default_component_decl, test_utils},
         cm_rust::{
             CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeServiceDecl, ExposeSource,
-            UseDecl, UseDirectoryDecl, UseServiceDecl, UseSource,
+            UseDecl, UseDirectoryDecl, UseServiceDecl, UseSource, UseStorageDecl,
         },
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
@@ -135,7 +135,10 @@ mod tests {
         fuchsia_async as fasync,
         fuchsia_vfs_pseudo_fs::directory::{self, entry::DirectoryEntry},
         fuchsia_zircon as zx,
-        std::{convert::TryFrom, iter},
+        std::{
+            convert::TryFrom,
+            iter,
+        },
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -161,6 +164,7 @@ mod tests {
                 UseDecl::Storage(UseStorageDecl::Cache(
                     CapabilityPath::try_from("/in/data/cache").unwrap(),
                 )),
+                UseDecl::Storage(UseStorageDecl::Meta),
             ],
             ..default_component_decl()
         };

@@ -49,7 +49,7 @@ pub async fn route_use_capability<'a>(
     abs_moniker: AbsoluteMoniker,
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
-    if let Capability::Storage(type_) = use_decl.clone().into() {
+    if let Capability::Storage(type_, _) = use_decl.clone().into() {
         return await!(route_and_open_storage_capability(
             model,
             type_.clone(),
@@ -159,7 +159,7 @@ async fn route_and_open_storage_capability(
         }
     };
     let mut pos = WalkPosition {
-        capability: Capability::Storage(type_.clone()),
+        capability: Capability::Storage(type_.clone(), None),
         last_child_moniker: use_abs_moniker.path().last().map(|c| c.clone()),
         moniker: parent_moniker,
     };

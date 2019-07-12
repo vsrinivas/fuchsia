@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/memfs",
+    },
+    "use": [
+        { "service": "/svc/fuchsia.logger.LogSink" },
+    ],
+    "expose": [
+        {
+            "directory": "/memfs",
+            "from": "self",
+        }
+    ],
+}

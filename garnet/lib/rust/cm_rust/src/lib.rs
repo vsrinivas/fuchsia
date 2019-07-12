@@ -240,7 +240,7 @@ impl ComponentDecl {
             (Capability::Directory(p), OfferDecl::Directory(d)) => {
                 Self::is_capability_match(child_name, collection, p, &d.target, &d.target_path)
             }
-            (Capability::Storage(type_), OfferDecl::Storage(s)) => {
+            (Capability::Storage(type_, _), OfferDecl::Storage(s)) => {
                 // The types must match
                 &s.type_() == type_ &&
                     // and the child/collection names must match
@@ -498,7 +498,7 @@ fn from_fidl_dict(dict: fdata::Dictionary) -> HashMap<String, Value> {
 pub enum Capability {
     Service(CapabilityPath),
     Directory(CapabilityPath),
-    Storage(fsys::StorageType),
+    Storage(fsys::StorageType, Option<CapabilityPath>),
 }
 
 impl Capability {
@@ -506,7 +506,7 @@ impl Capability {
         match self {
             Capability::Service(s) => Some(s),
             Capability::Directory(d) => Some(d),
-            Capability::Storage(_) => None,
+            Capability::Storage(_, p) => p.as_ref(),
         }
     }
 }
@@ -516,9 +516,9 @@ impl fmt::Display for Capability {
         match self {
             Capability::Service(s) => write!(f, "service at {}", s),
             Capability::Directory(d) => write!(f, "directory at {}", d),
-            Capability::Storage(fsys::StorageType::Data) => write!(f, "data storage"),
-            Capability::Storage(fsys::StorageType::Cache) => write!(f, "cache storage"),
-            Capability::Storage(fsys::StorageType::Meta) => write!(f, "meta storage"),
+            Capability::Storage(fsys::StorageType::Data, p) => write!(f, "data storage at {:?}", p),
+            Capability::Storage(fsys::StorageType::Cache, p) => write!(f, "cache storage at {:?}", p),
+            Capability::Storage(fsys::StorageType::Meta, _) => write!(f, "meta storage"),
         }
     }
 }
@@ -547,7 +547,7 @@ impl From<UseDirectoryDecl> for Capability {
 
 impl From<UseStorageDecl> for Capability {
     fn from(d: UseStorageDecl) -> Self {
-        Capability::Storage(d.type_())
+        Capability::Storage(d.type_(), d.path().cloned())
     }
 }
 
@@ -596,7 +596,8 @@ impl From<OfferDirectoryDecl> for Capability {
 
 impl From<OfferStorageDecl> for Capability {
     fn from(d: OfferStorageDecl) -> Self {
-        Capability::Storage(d.type_())
+        // Storage capabilities are not offered at a specific path
+        Capability::Storage(d.type_(), None)
     }
 }
 
@@ -640,11 +641,19 @@ impl NativeIntoFidl<fsys::UseStorageDecl> for UseStorageDecl {
 }
 
 impl UseStorageDecl {
-    fn type_(&self) -> fsys::StorageType {
+    pub fn type_(&self) -> fsys::StorageType {
         match self {
             UseStorageDecl::Data(_) => fsys::StorageType::Data,
             UseStorageDecl::Cache(_) => fsys::StorageType::Cache,
             UseStorageDecl::Meta => fsys::StorageType::Meta,
+        }
+    }
+
+    pub fn path<'a>(&'a self) -> Option<&'a CapabilityPath> {
+        match self {
+            UseStorageDecl::Data(p) => Some(p),
+            UseStorageDecl::Cache(p) => Some(p),
+            UseStorageDecl::Meta => None,
         }
     }
 }
@@ -1359,7 +1368,7 @@ mod tests {
             result = vec![
                 Capability::Service(CapabilityPath::try_from("/foo/bar").unwrap()),
                 Capability::Directory(CapabilityPath::try_from("/foo/bar").unwrap()),
-                Capability::Storage(fsys::StorageType::Cache),
+                Capability::Storage(fsys::StorageType::Cache, Some("/blah".try_into().unwrap())),
             ],
         },
         from_expose_capability => {
@@ -1404,7 +1413,7 @@ mod tests {
             result = vec![
                 Capability::Service(CapabilityPath::try_from("/foo/bar").unwrap()),
                 Capability::Directory(CapabilityPath::try_from("/foo/bar").unwrap()),
-                Capability::Storage(fsys::StorageType::Cache),
+                Capability::Storage(fsys::StorageType::Cache, None),
             ],
         },
     }

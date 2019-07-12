@@ -59,7 +59,7 @@ fn new_proxy_routing_fn(capability: Capability) -> RoutingFn {
                         }
                     });
                 }
-                Capability::Directory(_) | Capability::Storage(_) => {
+                Capability::Directory(_) | Capability::Storage(_, _) => {
                     let mut sub_dir = directory::simple::empty();
                     sub_dir
                         .add_entry("hello", { read_only(move || Ok(b"friend".to_vec())) })

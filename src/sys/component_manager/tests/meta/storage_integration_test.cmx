@@ -1,0 +1,18 @@
+{
+    "program": {
+        "binary": "test/storage_integration_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.logger.LogSink"
+        ]
+    },
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.pkg.PackageResolver": "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/mock_pkg_resolver.cmx"
+            }
+        }
+    }
+}

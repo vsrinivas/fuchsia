@@ -246,7 +246,7 @@ impl RoutingTest {
                     should_succeed
                 ));
             }
-            Capability::Storage(_) => panic!("storage capabilities are not supported"),
+            Capability::Storage(_, _) => panic!("storage capabilities cannot be exposed"),
         }
     }
 

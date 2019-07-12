@@ -8,7 +8,9 @@ use {
     cm_rust::CapabilityPath,
     failure::format_err,
     fidl::endpoints::{Proxy, ServerEnd},
-    fidl_fuchsia_io::{DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE},
+    fidl_fuchsia_io::{
+        DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+    },
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
         future::{join_all, BoxFuture, FutureObj},
@@ -162,7 +164,7 @@ impl Model {
                     realm.abs_moniker
                 )))?
                 .exposed_dir;
-            let flags = OPEN_RIGHT_READABLE;
+            let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
             await!(exposed_dir.root_dir.open(flags, MODE_TYPE_DIRECTORY, vec![], server_end))
                 .expect("failed to send open message");
             eager_children

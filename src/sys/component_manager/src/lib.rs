@@ -6,6 +6,7 @@
 // This is needed for the pseudo_directory nesting in crate::model::tests
 #![recursion_limit = "256"]
 
+pub mod directory_broker;
 pub mod elf_runner;
 pub mod framework_services;
 pub mod fuchsia_boot_resolver;
@@ -15,5 +16,4 @@ pub mod model;
 pub mod startup;
 
 mod constants;
-mod directory_broker;
 mod process_launcher;

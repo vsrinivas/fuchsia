@@ -94,7 +94,10 @@ impl RealFrameworkServiceHost {
         let collection = child.collection;
         let child_moniker = ChildMoniker::new(child_name, collection);
         await!(realm.resolve_decl()).map_err(|e| match e {
-            ModelError::ResolverError { .. } => fsys::Error::InstanceCannotResolve,
+            ModelError::ResolverError { err } => {
+                debug!("failed to resolve: {:?}", err);
+                fsys::Error::InstanceCannotResolve
+            }
             e => {
                 error!("resolve_decl() failed: {}", e);
                 fsys::Error::Internal
@@ -106,8 +109,14 @@ impl RealFrameworkServiceHost {
                 model.bind_instance_open_exposed(child_realm.clone(), exposed_dir.into_channel())
             )
             .map_err(|e| match e {
-                ModelError::ResolverError { .. } => fsys::Error::InstanceCannotResolve,
-                ModelError::RunnerError { .. } => fsys::Error::InstanceCannotStart,
+                ModelError::ResolverError { err } => {
+                    debug!("failed to resolve child: {:?}", err);
+                    fsys::Error::InstanceCannotResolve
+                }
+                ModelError::RunnerError { err } => {
+                    debug!("failed to start child: {:?}", err);
+                    fsys::Error::InstanceCannotStart
+                }
                 e => {
                     error!("bind_instance_open_exposed() failed: {}", e);
                     fsys::Error::Internal

@@ -1,0 +1,43 @@
+{
+    "program": {
+        "binary": "bin/storage_realm",
+    },
+    "use": [
+        { "service": "/svc/fuchsia.logger.LogSink" },
+        { "service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
+    ],
+    "storage": [
+        {
+            "name": "mystorage",
+            "from": "#memfs",
+            "path": "/memfs",
+        },
+    ],
+    "offer": [
+        {
+            "storage": "data",
+            "from": "#mystorage",
+            "to": [
+                { "dest": "#storage_user" },
+            ],
+        },
+        {
+            "service": "/svc/fuchsia.logger.LogSink",
+            "from": "realm",
+            "to": [
+                { "dest": "#storage_user" },
+                { "dest": "#memfs" },
+            ]
+        },
+    ],
+    "children": [
+        {
+            "name": "memfs",
+            "url": "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/memfs.cm",
+        },
+        {
+            "name": "storage_user",
+            "url": "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/storage_user.cm",
+        },
+    ],
+}

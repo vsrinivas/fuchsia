@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/storage_user",
+    },
+    "use": [
+        { "storage": "data" },
+        { "service": "/svc/fuchsia.logger.LogSink" },
+    ],
+    "expose": [
+        {
+            "directory": "/data",
+            "from": "self",
+        }
+    ],
+}

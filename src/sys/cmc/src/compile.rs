@@ -372,6 +372,12 @@ where
             Some(p.clone())
         } else if let Some(p) = in_obj.directory() {
             Some(p.clone())
+        } else if let Some(type_) = in_obj.storage() {
+            match type_.as_str() {
+                "data" => Some("/data".to_string()),
+                "cache" => Some("/cache".to_string()),
+                _ => None
+            }
         } else {
             None
         }

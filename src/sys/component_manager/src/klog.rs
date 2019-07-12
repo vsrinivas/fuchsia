@@ -11,6 +11,8 @@ use {
 };
 
 const MAX_LOG_LEVEL: log::Level = log::Level::Info;
+/// The largest message that can be written into a debuglog
+const MAX_LOG_MSG_SIZE: usize = 224;
 
 /// KernelLogger is a logger implementation for the log crate. It attempts to use the kernel
 /// debuglog facility and automatically falls back to stderr if that fails.
@@ -63,13 +65,17 @@ impl KernelLogger {
     }
 
     fn log_helper(&self, level: &str, args: &fmt::Arguments) {
-        let msg = format!("[component_manager] {}: {}", level, args);
+        let mut msg = format!("[component_manager] {}: {}", level, args);
 
-        // TODO(ZX-3187): zx_debuglog_write also accepts options and the possible options include
-        // log levels, but they seem to be mostly unused and not displayed today, so we don't pass
-        // along log level yet.
-        if let Err(s) = self.debuglog.write(msg.as_bytes()) {
-            eprintln!("failed to write log ({}): {}", s, msg);
+        while msg.len() > 0 {
+            // TODO(ZX-3187): zx_debuglog_write also accepts options and the possible options include
+            // log levels, but they seem to be mostly unused and not displayed today, so we don't pass
+            // along log level yet.
+            if let Err(s) = self.debuglog.write(msg.as_bytes()) {
+                eprintln!("failed to write log ({}): {}", s, msg);
+            }
+            let num_to_drain = std::cmp::min(msg.len(), MAX_LOG_MSG_SIZE);
+            msg.drain(..num_to_drain);
         }
     }
 }
