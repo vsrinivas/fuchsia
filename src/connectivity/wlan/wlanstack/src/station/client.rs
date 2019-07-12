@@ -5,7 +5,7 @@
 use failure::bail;
 use fidl::{endpoints::RequestStream, endpoints::ServerEnd};
 use fidl_fuchsia_wlan_common as fidl_common;
-use fidl_fuchsia_wlan_mlme::{MlmeEventStream, MlmeProxy};
+use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeRequest};
 use fuchsia_zircon as zx;
 use futures::channel::mpsc;
@@ -17,8 +17,7 @@ use std::sync::{Arc, Mutex};
 use void::Void;
 use wlan_inspect;
 use wlan_sme::client::{
-    BssInfo, ConnectResult, ConnectionAttemptId, DiscoveryError, EssDiscoveryResult, EssInfo,
-    InfoEvent, ScanTxnId,
+    BssInfo, ConnectResult, ConnectionAttemptId, EssDiscoveryResult, EssInfo, InfoEvent, ScanTxnId,
 };
 use wlan_sme::{self as sme, client as client_sme, DeviceInfo, InfoStream};
 
@@ -147,7 +146,7 @@ async fn scan(
 ) -> Result<(), failure::Error> {
     let handle = txn.into_stream()?.control_handle();
     let receiver = sme.lock().unwrap().on_scan_command(scan_type);
-    let result = await!(receiver).unwrap_or(Err(DiscoveryError::InternalError));
+    let result = await!(receiver).unwrap_or(Err(fidl_mlme::ScanResultCodes::InternalError));
     let send_result = send_scan_results(handle, result);
     filter_out_peer_closed(send_result)?;
     Ok(())
@@ -294,12 +293,15 @@ fn send_scan_results(
             handle.send_on_finished()?;
         }
         Err(e) => {
-            let mut fidl_err = fidl_sme::ScanError {
-                code: match e {
-                    DiscoveryError::NotSupported => fidl_sme::ScanErrorCode::NotSupported,
-                    DiscoveryError::InternalError => fidl_sme::ScanErrorCode::InternalError,
+            let mut fidl_err = match e {
+                fidl_mlme::ScanResultCodes::NotSupported => fidl_sme::ScanError {
+                    code: fidl_sme::ScanErrorCode::NotSupported,
+                    message: "Scanning not supported by device".to_string(),
                 },
-                message: e.to_string(),
+                _ => fidl_sme::ScanError {
+                    code: fidl_sme::ScanErrorCode::InternalError,
+                    message: "Internal error occurred".to_string(),
+                },
             };
             handle.send_on_error(&mut fidl_err)?;
         }

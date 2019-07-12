@@ -435,8 +435,7 @@ impl State {
 
     pub fn connect(self, cmd: ConnectCommand, context: &mut Context) -> Self {
         let start_state = self.state_name();
-        let cfg = self.cfg().clone();
-        self.disconnect_internal(context);
+        let cfg = self.disconnect_internal(context);
 
         let mut selected_bss = clone_bss_desc(&cmd.bss);
         let (phy_to_use, cbw_to_use) =
@@ -465,12 +464,11 @@ impl State {
             to: IDLE_STATE,
             ctx: "disconnect command",
         });
-        let cfg = self.cfg().clone();
-        self.disconnect_internal(context);
-        State::Idle { cfg }
+        State::Idle { cfg: self.disconnect_internal(context) }
     }
 
-    fn disconnect_internal(self, context: &Context) {
+    fn disconnect_internal(self, context: &Context) -> ClientConfig {
+        let cfg = self.cfg().clone();
         match self {
             State::Idle { .. } => {}
             State::Joining { cmd, .. } | State::Authenticating { cmd, .. } => {
@@ -483,6 +481,30 @@ impl State {
             State::Associated { bss, .. } => {
                 send_deauthenticate_request(bss, &context.mlme_sink);
             }
+        }
+        cfg
+    }
+
+    // Cancel any connect that is in progress. No-op if client is already idle or connected.
+    pub fn cancel_ongoing_connect(self, context: &Context) -> Self {
+        // Only move to idle if client is not already connected. Technically, SME being in
+        // transition state does not necessarily mean that a (manual) connect attempt is
+        // in progress (since DisassociateInd moves SME to transition state). However, the
+        // main thing we are concerned about is that we don't disconnect from an already
+        // connected state until the new connect attempt succeeds in selecting BSS.
+        if self.in_transition_state() {
+            State::Idle { cfg: self.disconnect_internal(context) }
+        } else {
+            self
+        }
+    }
+
+    fn in_transition_state(&self) -> bool {
+        match self {
+            State::Idle { .. } | State::Associated { link_state: LinkState::LinkUp { .. }, .. } => {
+                false
+            }
+            _ => true,
         }
     }
 

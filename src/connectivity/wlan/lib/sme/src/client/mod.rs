@@ -31,7 +31,7 @@ use super::{DeviceInfo, InfoStream, MlmeRequest, MlmeStream, Ssid};
 use self::bss::{get_channel_map, get_standard_map};
 use self::event::Event;
 use self::rsn::get_rsna;
-use self::scan::{DiscoveryScan, JoinScan, JoinScanFailure, ScanResult, ScanScheduler};
+use self::scan::{DiscoveryScan, JoinScan, ScanResult, ScanScheduler};
 use self::state::{ConnectCommand, Protection, State};
 
 use crate::clone_utils::clone_bss_desc;
@@ -40,7 +40,6 @@ use crate::sink::{InfoSink, MlmeSink};
 use crate::timer::{self, TimedEvent};
 
 pub use self::bss::{BssInfo, ClientConfig, EssInfo};
-pub use self::scan::DiscoveryError;
 
 // This is necessary to trick the private-in-public checker.
 // A private module is not allowed to include private types in its interface,
@@ -107,7 +106,7 @@ pub enum ConnectFailure {
     EstablishRsna,
 }
 
-pub type EssDiscoveryResult = Result<Vec<EssInfo>, DiscoveryError>;
+pub type EssDiscoveryResult = Result<Vec<EssInfo>, fidl_mlme::ScanResultCodes>;
 
 #[derive(Debug, PartialEq)]
 pub enum InfoEvent {
@@ -193,7 +192,9 @@ impl ClientSme {
         req: fidl_sme::ConnectRequest,
     ) -> oneshot::Receiver<ConnectResult> {
         let (responder, receiver) = Responder::new();
-        self.context.info_sink.send(InfoEvent::ConnectStarted);
+        // Cancel any ongoing connect attempt
+        self.state = self.state.take().map(|state| state.cancel_ongoing_connect(&self.context));
+
         let (canceled_token, req) = self.scan_sched.enqueue_scan_to_join(JoinScan {
             ssid: req.ssid,
             token: ConnectConfig {
@@ -207,6 +208,8 @@ impl ClientSme {
         if let Some(token) = canceled_token {
             report_connect_finished(Some(token.responder), &self.context, ConnectResult::Canceled);
         }
+
+        self.context.info_sink.send(InfoEvent::ConnectStarted);
         self.send_scan_request(req);
         receiver
     }
@@ -334,12 +337,7 @@ impl super::Station for ClientSme {
                             scan_failure: format!("{:?}", e),
                         );
                         error!("cannot join network because scan failed: {:?}", e);
-                        let result = match e {
-                            JoinScanFailure::Canceled => ConnectResult::Canceled,
-                            JoinScanFailure::ScanFailed(code) => {
-                                ConnectResult::Failed(ConnectFailure::ScanFailure(code))
-                            }
-                        };
+                        let result = ConnectResult::Failed(ConnectFailure::ScanFailure(e));
                         report_connect_finished(Some(token.responder), &self.context, result);
                         state
                     }
@@ -563,21 +561,9 @@ mod tests {
             sme.status()
         );
 
-        // Even if we scheduled a scan to connect to another network "bar", we should
-        // still report that we are connecting to "foo".
+        // As soon as connect command is issued for "bar", the status changes immediately
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let _recv2 = sme.on_connect_command(connect_req(b"bar".to_vec(), credential));
-        assert_eq!(
-            Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
-            sme.status()
-        );
-
-        // Simulate that joining "foo" failed. We should now be connecting to "bar".
-        sme.on_mlme_event(MlmeEvent::JoinConf {
-            resp: fidl_mlme::JoinConfirm {
-                result_code: fidl_mlme::JoinResultCodes::JoinFailureTimeout,
-            },
-        });
         assert_eq!(
             Status { connected_to: None, connecting_to: Some(b"bar".to_vec()) },
             sme.status()
@@ -876,6 +862,39 @@ mod tests {
 
         expect_info_event(&mut info_stream, InfoEvent::MlmeScanEnd { txn_id: 1 });
         expect_info_event(&mut info_stream, InfoEvent::AssociationStarted { att_id: 1 });
+    }
+
+    #[test]
+    fn new_connect_attempt_cancels_pending_connect() {
+        let (mut sme, _mlme_stream, _info_stream, _time_stream) = create_sme();
+
+        let req = connect_req(b"foo".to_vec(), fidl_sme::Credential::None(fidl_sme::Empty));
+        let mut connect_fut1 = sme.on_connect_command(req);
+
+        let req2 = connect_req(b"foo".to_vec(), fidl_sme::Credential::None(fidl_sme::Empty));
+        let mut connect_fut2 = sme.on_connect_command(req2);
+
+        // User should get a message that first connection attempt is canceled
+        assert_connect_result(&mut connect_fut1, ConnectResult::Canceled);
+        // Report scan result to transition second connection attempt past scan. This is to verify
+        // that connection attempt will be canceled even in the middle of joining the network
+        report_fake_scan_result(&mut sme, fake_unprotected_bss_description(b"foo".to_vec()));
+
+        let req3 = connect_req(b"foo".to_vec(), fidl_sme::Credential::None(fidl_sme::Empty));
+        let mut _connect_fut3 = sme.on_connect_command(req3);
+
+        // Verify that second connection attempt is canceled as new connect request comes in
+        assert_connect_result(&mut connect_fut2, ConnectResult::Canceled);
+    }
+
+    fn assert_connect_result(
+        connect_result_receiver: &mut oneshot::Receiver<ConnectResult>,
+        expected: ConnectResult,
+    ) {
+        match connect_result_receiver.try_recv() {
+            Ok(Some(actual)) => assert_eq!(expected, actual),
+            other => panic!("expect {:?}, got {:?}", expected, other),
+        }
     }
 
     fn assert_connect_result_failed(connect_fut: &mut oneshot::Receiver<ConnectResult>) {

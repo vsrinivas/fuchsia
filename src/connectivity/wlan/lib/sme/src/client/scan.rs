@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Fail;
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, ScanRequest, ScanResultCodes};
-use log::error;
 use std::collections::HashSet;
 use std::mem;
 use std::sync::Arc;
@@ -71,16 +69,11 @@ pub struct ScanScheduler<D, J> {
 #[derive(Debug, PartialEq)]
 enum ScanState<D, J> {
     NotScanning,
+    // Join scan is canceled, but we are still waiting for it to complete. This state is to make
+    // sure that we don't schedule another scan until the lower layer finishes scanning.
+    StaleJoinScan { mlme_txn_id: u64 },
     ScanningToJoin { cmd: JoinScan<J>, mlme_txn_id: u64, bss_list: Vec<BssDescription> },
     ScanningToDiscover { cmd: DiscoveryScan<D>, mlme_txn_id: u64, bss_list: Vec<BssDescription> },
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum JoinScanFailure {
-    // MLME returned an error code
-    ScanFailed(ScanResultCodes),
-    // Scan was canceled or superseded by another request
-    Canceled,
 }
 
 // A reaction to MLME's ScanConfirm event
@@ -90,21 +83,10 @@ pub enum ScanResult<D, J> {
     None,
     // "Join" scan has finished, either successfully or not.
     // The SME state machine can now send a JoinRequest to MLME if it desires so.
-    JoinScanFinished { token: J, result: JoinScanResult },
+    JoinScanFinished { token: J, result: Result<Vec<BssDescription>, ScanResultCodes> },
     // "Discovery" scan has finished, either successfully or not.
     // SME is expected to forward the result to the user.
-    DiscoveryFinished { tokens: Vec<D>, result: DiscoveryResult },
-}
-
-pub type JoinScanResult = Result<Vec<BssDescription>, JoinScanFailure>;
-pub type DiscoveryResult = Result<Vec<BssDescription>, DiscoveryError>;
-
-#[derive(Clone, Debug, Fail)]
-pub enum DiscoveryError {
-    #[fail(display = "Scanning not supported by device")]
-    NotSupported,
-    #[fail(display = "Internal error occurred")]
-    InternalError,
+    DiscoveryFinished { tokens: Vec<D>, result: Result<Vec<BssDescription>, ScanResultCodes> },
 }
 
 impl<D, J> ScanScheduler<D, J> {
@@ -128,8 +110,25 @@ impl<D, J> ScanScheduler<D, J> {
     // The scan might or might not begin immediately.
     // If a ScanRequest is returned, the caller is responsible for forwarding it to MLME.
     pub fn enqueue_scan_to_join(&mut self, s: JoinScan<J>) -> (Option<J>, Option<ScanRequest>) {
-        let old_token = mem::replace(&mut self.pending_join, Some(s)).map(|p| p.token);
+        let old_ongoing_token = self.mark_stale_ongoing_join_scan();
+        let old_pending_token = mem::replace(&mut self.pending_join, Some(s)).map(|p| p.token);
+        // There should never be both old ongoing token and pending token. This is because if
+        // a JoinScan is in pending slot, then either there's no ongoing scan or the ongoing
+        // scan was already marked stale previously
+        let old_token = old_ongoing_token.or(old_pending_token);
         (old_token, self.start_next_scan())
+    }
+
+    // Mark a join scan as stale. This is effectively a "cancel" operation when it comes to scan
+    // scheduler's internal state (though no cancel scan request is forwarded to lower layer)
+    fn mark_stale_ongoing_join_scan(&mut self) -> Option<J> {
+        if let ScanState::ScanningToJoin { mlme_txn_id, .. } = self.current {
+            let old = mem::replace(&mut self.current, ScanState::StaleJoinScan { mlme_txn_id });
+            if let ScanState::ScanningToJoin { cmd, .. } = old {
+                return Some(cmd.token);
+            }
+        }
+        None
     }
 
     // Initiate a "discovery" scan. The scan might or might not begin immediately.
@@ -156,7 +155,7 @@ impl<D, J> ScanScheduler<D, J> {
             return;
         }
         match &mut self.current {
-            ScanState::NotScanning => {}
+            ScanState::NotScanning | ScanState::StaleJoinScan { .. } => {}
             ScanState::ScanningToJoin { cmd, bss_list, .. } => {
                 if cmd.ssid == msg.bss.ssid {
                     bss_list.push(msg.bss)
@@ -178,22 +177,20 @@ impl<D, J> ScanScheduler<D, J> {
         }
         let old_state = mem::replace(&mut self.current, ScanState::NotScanning);
         let result = match old_state {
-            ScanState::NotScanning => ScanResult::None,
+            ScanState::NotScanning | ScanState::StaleJoinScan { .. } => ScanResult::None,
             ScanState::ScanningToJoin { cmd, bss_list, .. } => {
-                let result = if self.pending_join.is_some() {
-                    // The scan that just finished was superseded by a newer join scan request
-                    Err(JoinScanFailure::Canceled)
-                } else {
-                    match msg.code {
-                        ScanResultCodes::Success => Ok(bss_list),
-                        other => Err(JoinScanFailure::ScanFailed(other)),
-                    }
+                let result = match msg.code {
+                    ScanResultCodes::Success => Ok(bss_list),
+                    other => Err(other),
                 };
                 ScanResult::JoinScanFinished { token: cmd.token, result }
             }
             ScanState::ScanningToDiscover { cmd, bss_list, .. } => ScanResult::DiscoveryFinished {
                 tokens: cmd.tokens,
-                result: convert_discovery_result(msg, bss_list),
+                result: match msg.code {
+                    ScanResultCodes::Success => Ok(bss_list),
+                    other => Err(other),
+                },
             },
         };
         let request = self.start_next_scan();
@@ -214,7 +211,8 @@ impl<D, J> ScanScheduler<D, J> {
     fn matching_mlme_txn_id(&self, incoming_txn_id: u64) -> bool {
         match &self.current {
             ScanState::NotScanning => false,
-            ScanState::ScanningToJoin { mlme_txn_id, .. }
+            ScanState::StaleJoinScan { mlme_txn_id }
+            | ScanState::ScanningToJoin { mlme_txn_id, .. }
             | ScanState::ScanningToDiscover { mlme_txn_id, .. } => *mlme_txn_id == incoming_txn_id,
         }
     }
@@ -301,21 +299,6 @@ fn new_discovery_scan_request<T>(
     device_info: &DeviceInfo,
 ) -> ScanRequest {
     new_scan_request(mlme_txn_id, discovery_scan.scan_type, vec![], device_info)
-}
-
-fn convert_discovery_result(
-    msg: fidl_mlme::ScanEnd,
-    bss_list: Vec<BssDescription>,
-) -> DiscoveryResult {
-    match msg.code {
-        ScanResultCodes::Success => Ok(bss_list),
-        ScanResultCodes::NotSupported => Err(DiscoveryError::NotSupported),
-        ScanResultCodes::InvalidArgs => {
-            error!("Scan returned INVALID_ARGS");
-            Err(DiscoveryError::InternalError)
-        }
-        ScanResultCodes::InternalError => Err(DiscoveryError::InternalError),
-    }
 }
 
 /// Get channels to scan depending on device's capability and scan type. If scan type is passive,
@@ -600,6 +583,41 @@ mod tests {
         };
     }
 
+    #[test]
+    fn test_stale_join_scan() {
+        let mut sched = create_sched();
+        let (_discarded_token, req) = sched.enqueue_scan_to_join(JoinScan {
+            ssid: b"foo".to_vec(),
+            token: 10,
+            scan_type: fidl_common::ScanType::Passive,
+        });
+        let txn_id = req.expect("expected a ScanRequest").txn_id;
+
+        // Schedule a new one, which should make the existing one stale
+        let (discarded_token, req) = sched.enqueue_scan_to_join(JoinScan {
+            ssid: b"bar".to_vec(),
+            token: 20,
+            scan_type: fidl_common::ScanType::Passive,
+        });
+        // Verify that token for existing scan is discarded (which indicates it's marked stale)
+        assert!(discarded_token.is_some());
+        // Although we have marked previous scan stale, we cannot send out a new scan request
+        // yet since previous scan is still ongoing in lower layer
+        assert!(req.is_none());
+
+        // When stale scan finishes, the new one is ready to be sent
+        let (stale_scan_result, next_req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
+            txn_id,
+            code: fidl_mlme::ScanResultCodes::Success,
+        });
+        match stale_scan_result {
+            ScanResult::None => (), // expected path
+            _ => panic!("expected ScanResult::None"),
+        }
+        assert!(next_req.is_some());
+        assert_eq!(next_req.unwrap().ssid, b"bar".to_vec());
+    }
+
     fn passive_join_scan(ssid: Vec<u8>, token: i32) -> JoinScan<i32> {
         JoinScan { ssid, token, scan_type: fidl_common::ScanType::Passive }
     }
@@ -652,14 +670,7 @@ mod tests {
         sched.enqueue_scan_to_join(passive_join_scan(b"bar".to_vec(), 20));
         // Again, make sure the state is what we expect. "Foo" should still be the current request,
         // while "bar" should be pending
-        assert_eq!(
-            ScanState::ScanningToJoin {
-                cmd: passive_join_scan(b"foo".to_vec(), 10),
-                mlme_txn_id: 1,
-                bss_list: vec![],
-            },
-            sched.current
-        );
+        assert_eq!(ScanState::StaleJoinScan { mlme_txn_id: 1 }, sched.current);
         assert_eq!(Some(passive_join_scan(b"bar".to_vec(), 20)), sched.pending_join);
 
         // Expect the pending request to be returned since the current one will be discarded
