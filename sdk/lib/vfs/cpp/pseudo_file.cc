@@ -13,8 +13,7 @@
 
 namespace vfs {
 
-PseudoFile::PseudoFile(size_t max_file_size, ReadHandler read_handler,
-                       WriteHandler write_handler)
+PseudoFile::PseudoFile(size_t max_file_size, ReadHandler read_handler, WriteHandler write_handler)
     : read_handler_(std::move(read_handler)),
       write_handler_(std::move(write_handler)),
       max_file_size_(max_file_size) {
@@ -23,8 +22,8 @@ PseudoFile::PseudoFile(size_t max_file_size, ReadHandler read_handler,
 
 PseudoFile::~PseudoFile() = default;
 
-zx_status_t PseudoFile::CreateConnection(
-    uint32_t flags, std::unique_ptr<vfs::internal::Connection>* connection) {
+zx_status_t PseudoFile::CreateConnection(uint32_t flags,
+                                         std::unique_ptr<vfs::internal::Connection>* connection) {
   std::vector<uint8_t> output;
   if (Flags::IsReadable(flags)) {
     zx_status_t status = read_handler_(&output, max_file_size_);
@@ -35,13 +34,11 @@ zx_status_t PseudoFile::CreateConnection(
       return ZX_ERR_FILE_BIG;
     }
   }
-  *connection =
-      std::make_unique<PseudoFile::Content>(this, flags, std::move(output));
+  *connection = std::make_unique<PseudoFile::Content>(this, flags, std::move(output));
   return ZX_OK;
 }
 
-zx_status_t PseudoFile::GetAttr(
-    fuchsia::io::NodeAttributes* out_attributes) const {
+zx_status_t PseudoFile::GetAttr(fuchsia::io::NodeAttributes* out_attributes) const {
   out_attributes->mode = fuchsia::io::MODE_TYPE_FILE;
   if (read_handler_ != nullptr)
     out_attributes->mode |= V_IRUSR;
@@ -78,12 +75,8 @@ size_t PseudoFile::GetCapacity() {
   return max_file_size_;
 }
 
-PseudoFile::Content::Content(PseudoFile* file, uint32_t flags,
-                             std::vector<uint8_t> content)
-    : Connection(flags),
-      file_(file),
-      buffer_(std::move(content)),
-      flags_(flags) {
+PseudoFile::Content::Content(PseudoFile* file, uint32_t flags, std::vector<uint8_t> content)
+    : Connection(flags), file_(file), buffer_(std::move(content)), flags_(flags) {
   SetInputLength(buffer_.size());
 }
 
@@ -97,9 +90,7 @@ zx_status_t PseudoFile::Content::TryFlushIfRequired() {
   return file_->write_handler_(std::move(buffer_));
 }
 
-zx_status_t PseudoFile::Content::PreClose(Connection* connection) {
-  return TryFlushIfRequired();
-}
+zx_status_t PseudoFile::Content::PreClose(Connection* connection) { return TryFlushIfRequired(); }
 
 NodeKind::Type PseudoFile::Content::GetKind() const { return file_->GetKind(); }
 
@@ -114,13 +105,15 @@ zx_status_t PseudoFile::Content::ReadAt(uint64_t count, uint64_t offset,
   return ZX_OK;
 }
 
-zx_status_t PseudoFile::Content::GetAttr(
-    fuchsia::io::NodeAttributes* out_attributes) const {
-  return file_->GetAttr(out_attributes);
+zx_status_t PseudoFile::Content::GetAttr(fuchsia::io::NodeAttributes* out_attributes) const {
+  auto status = file_->GetAttr(out_attributes);
+  if (status == ZX_OK) {
+    out_attributes->content_size = buffer_.size();
+  }
+  return status;
 }
 
-zx_status_t PseudoFile::Content::WriteAt(std::vector<uint8_t> data,
-                                         uint64_t offset,
+zx_status_t PseudoFile::Content::WriteAt(std::vector<uint8_t> data, uint64_t offset,
                                          uint64_t* out_actual) {
   if (offset >= file_->max_file_size_) {
     *out_actual = 0u;
@@ -158,14 +151,12 @@ uint64_t PseudoFile::Content::GetLength() { return buffer_.size(); }
 size_t PseudoFile::Content::GetCapacity() { return file_->max_file_size_; }
 
 void PseudoFile::Content::SetInputLength(size_t length) {
-  ZX_ASSERT_MSG(length <= file_->max_file_size_,
-                "Should not happen. Please report a bug.");
+  ZX_ASSERT_MSG(length <= file_->max_file_size_, "Should not happen. Please report a bug.");
 
   buffer_.resize(length);
 }
 
-zx_status_t PseudoFile::Content::BindInternal(zx::channel request,
-                                              async_dispatcher_t* dispatcher) {
+zx_status_t PseudoFile::Content::BindInternal(zx::channel request, async_dispatcher_t* dispatcher) {
   std::unique_ptr<Connection> connection;
   zx_status_t status = CreateConnection(flags_, &connection);
   if (status != ZX_OK) {
@@ -182,14 +173,12 @@ zx_status_t PseudoFile::Content::BindInternal(zx::channel request,
   return status;
 }
 
-std::unique_ptr<vfs::internal::Connection> PseudoFile::Content::Close(
-    Connection* connection) {
+std::unique_ptr<vfs::internal::Connection> PseudoFile::Content::Close(Connection* connection) {
   File::Close(connection);
   return file_->Close(this);
 }
 
-void PseudoFile::Content::Clone(uint32_t flags, uint32_t parent_flags,
-                                zx::channel request,
+void PseudoFile::Content::Clone(uint32_t flags, uint32_t parent_flags, zx::channel request,
                                 async_dispatcher_t* dispatcher) {
   file_->Clone(flags, parent_flags, std::move(request), dispatcher);
 }
