@@ -122,10 +122,9 @@ group("system_deprecated_data_allowlist") {
     "//garnet/bin/sysmgr",
     "//garnet/bin/sysmgr/integration_tests",
     "//peridot/bin/module_resolver",
-    "//src/experiences/bin/simple_browser",
+    "//src/experiences/bin/simple_browser:simple_browser_pkg",
     "//src/connectivity/wlan/wlanstack",
     "//topaz/bin/datetime_settings",
-    "//topaz/bin/settings",
     "//topaz/public/dart/fuchsia_webview_flutter/examples/webview_mod:webview_mod_pkg",
   ]
 }
