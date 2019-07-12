@@ -15,4 +15,5 @@ protocol Api {
     Uint16(uint16 u16) -> (zx.status st, uint16 u16_1);
     Uint32(uint32 u32) -> (zx.status st, uint32 u32_1);
     Uint64(uint64 u64) -> (zx.status st, uint64 u64_1);
+    Handle(handle h) -> (zx.status st, handle h_1);
 };

@@ -441,4 +441,11 @@ mod syzkaller {
         "syzkaller/syzkaller-protocol-multiple-returns.txt"
     );
 
+    codegen_test!(
+        syzkaller_protocol_resource,
+        SyzkallerBackend,
+        ["../zx.banjo", "banjo/syzkaller-protocol-resource.test.banjo"],
+        "syzkaller/syzkaller-protocol-resource.txt"
+    );
+
 }

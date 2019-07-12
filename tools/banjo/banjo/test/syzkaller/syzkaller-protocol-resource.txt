@@ -1,0 +1,130 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
+# Generated from the banjo.examples.syzkaller.protocol.resources banjo file
+
+resource zx_handle[int32]: ZX_HANDLE_INVALID
+resource zx_process[int32]: ZX_HANDLE_INVALID
+resource zx_thread[int32]: ZX_HANDLE_INVALID
+resource zx_vmo[int32]: ZX_HANDLE_INVALID
+resource zx_channel[int32]: ZX_HANDLE_INVALID
+resource zx_event[int32]: ZX_HANDLE_INVALID
+resource zx_port[int32]: ZX_HANDLE_INVALID
+resource zx_interrupt[int32]: ZX_HANDLE_INVALID
+resource zx_log[int32]: ZX_HANDLE_INVALID
+resource zx_socket[int32]: ZX_HANDLE_INVALID
+resource zx_resource[int32]: ZX_HANDLE_INVALID
+resource zx_eventpair[int32]: ZX_HANDLE_INVALID
+resource zx_job[int32]: ZX_HANDLE_INVALID
+resource zx_vmar[int32]: ZX_HANDLE_INVALID
+resource zx_fifo[int32]: ZX_HANDLE_INVALID
+resource zx_guest[int32]: ZX_HANDLE_INVALID
+resource zx_timer[int32]: ZX_HANDLE_INVALID
+resource zx_bti[int32]: ZX_HANDLE_INVALID
+resource zx_profile[int32]: ZX_HANDLE_INVALID
+resource zx_debuglog[int32]: ZX_HANDLE_INVALID
+resource zx_vcpu[int32]: ZX_HANDLE_INVALID
+resource zx_iommu[int32]: ZX_HANDLE_INVALID
+resource zx_pager[int32]: ZX_HANDLE_INVALID
+resource zx_pmt[int32]: ZX_HANDLE_INVALID
+resource zx_clock[int32]
+resource zx_duration[int64]
+resource zx_gpaddr[int64]
+resource zx_koid[int64]: 0
+resource zx_off[int64]
+resource zx_paddr[int64]
+resource zx_paddr32[int32]
+resource zx_rights[int32]
+resource zx_signals[int32]
+resource zx_time[int64]: 0, ZX_TIME_INFINITE
+resource zx_vaddr[int64]
+resource zx_vm_option[int32]
+
+producer(options int32, out ptr[out, zx_handle])
+consumer(h zx_handle)
+producer(options int32, out ptr[out, zx_process])
+consumer(h zx_process)
+producer(options int32, out ptr[out, zx_thread])
+consumer(h zx_thread)
+producer(options int32, out ptr[out, zx_vmo])
+consumer(h zx_vmo)
+producer(options int32, out ptr[out, zx_channel])
+consumer(h zx_channel)
+producer(options int32, out ptr[out, zx_event])
+consumer(h zx_event)
+producer(options int32, out ptr[out, zx_port])
+consumer(h zx_port)
+producer(options int32, out ptr[out, zx_interrupt])
+consumer(h zx_interrupt)
+producer(options int32, out ptr[out, zx_log])
+consumer(h zx_log)
+producer(options int32, out ptr[out, zx_socket])
+consumer(h zx_socket)
+producer(options int32, out ptr[out, zx_resource])
+consumer(h zx_resource)
+producer(options int32, out ptr[out, zx_eventpair])
+consumer(h zx_eventpair)
+producer(options int32, out ptr[out, zx_job])
+consumer(h zx_job)
+producer(options int32, out ptr[out, zx_vmar])
+consumer(h zx_vmar)
+producer(options int32, out ptr[out, zx_fifo])
+consumer(h zx_fifo)
+producer(options int32, out ptr[out, zx_guest])
+consumer(h zx_guest)
+producer(options int32, out ptr[out, zx_guest])
+consumer(h zx_guest)
+producer(options int32, out ptr[out, zx_timer])
+consumer(h zx_timer)
+producer(options int32, out ptr[out, zx_bti])
+consumer(h zx_bti)
+producer(options int32, out ptr[out, zx_profile])
+consumer(h zx_profile)
+producer(options int32, out ptr[out, zx_debuglog])
+consumer(h zx_debuglog)
+producer(options int32, out ptr[out, zx_vcpu])
+consumer(h zx_vcpu)
+producer(options int32, out ptr[out, zx_iommu])
+consumer(h zx_iommu)
+producer(options int32, out ptr[out, zx_pager])
+consumer(h zx_pager)
+producer(options int32, out ptr[out, zx_pmt])
+consumer(h zx_pmt)
+producer(h zx_handle) zx_time
+producer2(h zx_handle, out ptr[out, zx_time])
+consumer(t zx_time)
+producer(h zx_handle) zx_duration
+producer2(h zx_handle, out ptr[out, zx_duration])
+consumer(d zx_duration)
+producer(h zx_handle) zx_clock
+producer2(h zx_handle, out ptr[out, zx_clock])
+consumer(cid zx_clock)
+producer(h zx_handle) zx_koid
+producer2(h zx_handle, out ptr[out, zx_koid])
+consumer(id zx_koid)
+producer(h zx_handle) zx_vaddr
+producer2(h zx_handle, out ptr[out, zx_vaddr])
+consumer(va zx_vaddr)
+producer(h zx_handle) zx_paddr
+producer2(h zx_handle, out ptr[out, zx_paddr])
+consumer(pa zx_paddr)
+producer(h zx_handle) zx_paddr32
+producer2(h zx_handle, out ptr[out, zx_paddr32])
+consumer(pa32 zx_paddr32)
+producer(h zx_handle) zx_gpaddr
+producer2(h zx_handle, out ptr[out, zx_gpaddr])
+consumer(gpa zx_gpaddr)
+producer(h zx_handle) zx_off
+producer2(h zx_handle, out ptr[out, zx_off])
+consumer(o zx_off)
+producer(h zx_handle) zx_rights
+producer2(h zx_handle, out ptr[out, zx_rights])
+consumer(r zx_rights)
+producer(h zx_handle) zx_signals
+producer2(h zx_handle, out ptr[out, zx_signals])
+consumer(s zx_signals)
+producer(h zx_handle) zx_vm_option
+producer2(h zx_handle, out ptr[out, zx_vm_option])
+consumer(op zx_vm_option)

@@ -21,6 +21,7 @@ impl<'a, W: io::Write> SyzkallerBackend<'a, W> {
     }
 }
 
+/// Translates to Syzkaller-string for all types(including resources)
 fn ty_to_syzkaller_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
     match ty {
         ast::Ty::Bool => Ok(String::from("bool")),
@@ -42,7 +43,56 @@ fn ty_to_syzkaller_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Erro
                 Err(format_err!("unsupported ident_type in ty_to_syzkaller_str {:?}", id))
             }
         }
+        ast::Ty::Handle { .. } => Ok(String::from("int32")),
         t => Err(format_err!("unknown type in ty_to_syzkaller_str {:?}", t)),
+    }
+}
+
+/// Translates to resource-string if resource, otherwise calls ty_to_syzkaller_str()
+fn ty_to_resource_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
+    if !ast.is_resource(ty) {
+        ty_to_syzkaller_str(ast, ty)
+    } else {
+        match ty {
+            ast::Ty::Identifier { id, .. } => {
+                if id.is_base_type() {
+                    let (_ns, name) = id.fq();
+                    Ok(format!("zx_{name}", name = name))
+                } else {
+                    Err(format_err!("unsupported ident_type in ident_to_resource_str {:?}", id))
+                }
+            }
+            ast::Ty::Handle { ty, .. } => {
+                let handle_ty_str = match ty {
+                    ast::HandleTy::Handle => "zx_handle",
+                    ast::HandleTy::Process => "zx_process",
+                    ast::HandleTy::Thread => "zx_thread",
+                    ast::HandleTy::Vmo => "zx_vmo",
+                    ast::HandleTy::Channel => "zx_channel",
+                    ast::HandleTy::Event => "zx_event",
+                    ast::HandleTy::Port => "zx_port",
+                    ast::HandleTy::Interrupt => "zx_interrupt",
+                    ast::HandleTy::Log => "zx_log",
+                    ast::HandleTy::Socket => "zx_socket",
+                    ast::HandleTy::Resource => "zx_resource",
+                    ast::HandleTy::EventPair => "zx_eventpair",
+                    ast::HandleTy::Job => "zx_job",
+                    ast::HandleTy::Vmar => "zx_vmar",
+                    ast::HandleTy::Fifo => "zx_fifo",
+                    ast::HandleTy::Guest => "zx_guest",
+                    ast::HandleTy::Timer => "zx_timer",
+                    ast::HandleTy::Bti => "zx_bti",
+                    ast::HandleTy::Profile => "zx_profile",
+                    ast::HandleTy::DebugLog => "zx_debuglog",
+                    ast::HandleTy::VCpu => "zx_vcpu",
+                    ast::HandleTy::IoMmu => "zx_iommu",
+                    ast::HandleTy::Pager => "zx_pager",
+                    ast::HandleTy::Pmt => "zx_pmt",
+                };
+                Ok(String::from(handle_ty_str))
+            },
+            t => Err(format_err!("undeclared resource in ty_to_resource_str {:?}", t)),
+        }
     }
 }
 
@@ -61,7 +111,7 @@ fn get_in_params(
                     match size_to_buffer.get(name) {
                         // TODO(SEC-327): should be bytesize for voidptr array
                         Some(assoc_buffer) => Ok(format!("{} len[{}]", name, assoc_buffer)),
-                        None => Ok(format!("{} {}", name, ty_to_syzkaller_str(ast, ty).unwrap())),
+                        None => Ok(format!("{} {}", name, ty_to_resource_str(ast, ty).unwrap())),
                     }
                 }
                 ast::Ty::Str { size, nullable } => {
@@ -109,21 +159,16 @@ fn get_in_params(
                         panic!("missing 'arg_type' attribute: array direction must be specified")
                     }
                 }
-                _ => Ok(format!("{} {}", to_c_name(name), ty_to_syzkaller_str(ast, ty).unwrap())),
+                _ => Ok(format!("{} {}", to_c_name(name), ty_to_resource_str(ast, ty).unwrap())),
             }
         })
         .collect()
 }
 
-fn is_resource(_ty: &ast::Ty) -> bool {
-    // TODO(SEC-333): Add support for syzkaller resources
-    false
-}
-
 fn get_first_param(ast: &BanjoAst, method: &ast::Method) -> Result<(bool, String), Error> {
-    if method.out_params.get(0).map_or(false, |p| p.1.is_primitive(&ast) && is_resource(&p.1)) {
+    if method.out_params.get(0).map_or(false, |p| p.1.is_primitive(&ast) && ast.is_resource(&p.1)) {
         // Return parameter if a primitive type and a resource.
-        Ok((true, ty_to_syzkaller_str(ast, &method.out_params[0].1)?))
+        Ok((true, ty_to_resource_str(ast, &method.out_params[0].1)?))
     } else if method.out_params.get(0).map_or(false, |p| p.1.is_primitive(&ast)) {
         // primitive but not a resource
         Ok((true, String::default()))
@@ -144,7 +189,7 @@ fn get_out_params(m: &ast::Method, ast: &BanjoAst) -> Result<(Vec<String>, Strin
                 let resolved_type = format!(
                     "ptr[{}, {}]",
                     String::from("out"),
-                    ty_to_syzkaller_str(ast, ty).unwrap()
+                    ty_to_resource_str(ast, ty).unwrap()
                 );
                 format!("{} {}", to_c_name(name), resolved_type)
             })
@@ -154,6 +199,83 @@ fn get_out_params(m: &ast::Method, ast: &BanjoAst) -> Result<(Vec<String>, Strin
 }
 
 impl<'a, W: io::Write> SyzkallerBackend<'a, W> {
+    fn codegen_resource_def(
+        &self,
+        ty: &ast::Ty,
+        values: &Vec<ast::Constant>,
+        ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        let mut special_values = String::new();
+        if !values.is_empty() {
+            special_values.push_str(": ");
+            special_values.push_str(
+                values
+                    .iter()
+                    .map(|cons| match cons {
+                        ast::Constant(val) => val.to_owned(),
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ")
+                    .as_str(),
+            );
+        }
+        let mut accum = String::default();
+        match ty {
+            ast::Ty::Handle { .. } => {
+                let handle_types = vec![
+                    ast::HandleTy::Handle,
+                    ast::HandleTy::Process,
+                    ast::HandleTy::Thread,
+                    ast::HandleTy::Vmo,
+                    ast::HandleTy::Channel,
+                    ast::HandleTy::Event,
+                    ast::HandleTy::Port,
+                    ast::HandleTy::Interrupt,
+                    ast::HandleTy::Log,
+                    ast::HandleTy::Socket,
+                    ast::HandleTy::Resource,
+                    ast::HandleTy::EventPair,
+                    ast::HandleTy::Job,
+                    ast::HandleTy::Vmar,
+                    ast::HandleTy::Fifo,
+                    ast::HandleTy::Guest,
+                    ast::HandleTy::Timer,
+                    ast::HandleTy::Bti,
+                    ast::HandleTy::Profile,
+                    ast::HandleTy::DebugLog,
+                    ast::HandleTy::VCpu,
+                    ast::HandleTy::IoMmu,
+                    ast::HandleTy::Pager,
+                    ast::HandleTy::Pmt,
+                ];
+                let handle_resources = handle_types
+                    .into_iter()
+                    .map(|handle_type| {
+                        let ty = ast::Ty::Handle { ty: handle_type, reference: false };
+                        format!(
+                            "resource {identifier}[{underlying_type}]{values}",
+                            identifier = ty_to_resource_str(ast, &ty).unwrap(),
+                            underlying_type = ty_to_syzkaller_str(ast, &ty).unwrap(),
+                            values = special_values
+                        )
+                    })
+                    .collect::<Vec<String>>()
+                    .join("\n");
+                accum.push_str(handle_resources.as_str());
+            }
+            _ => accum.push_str(
+                format!(
+                    "resource {identifier}[{underlying_type}]{values}",
+                    identifier = ty_to_resource_str(ast, ty).unwrap(),
+                    underlying_type = ty_to_syzkaller_str(ast, ty).unwrap(),
+                    values = special_values
+                )
+                .as_str(),
+            ),
+        }
+        Ok(accum)
+    }
+
     fn codegen_protocol_def(
         &self,
         methods: &Vec<ast::Method>,
@@ -196,7 +318,18 @@ impl<'a, W: io::Write> Backend<'a, W> for SyzkallerBackend<'a, W> {
 
         let decl_order = ast.validate_declaration_deps()?;
 
-        let definitions = decl_order
+        let resource_definitions = decl_order
+            .iter()
+            .filter_map(|decl| match decl {
+                Decl::Resource { attributes: _, ty, values } => {
+                    Some(self.codegen_resource_def(ty, values, &ast))
+                }
+                _ => None,
+            })
+            .collect::<Result<Vec<_>, Error>>()?
+            .join("\n");
+
+        let protocol_definitions = decl_order
             .iter()
             .filter_map(|decl| match decl {
                 Decl::Protocol { attributes: _, name, methods } => {
@@ -210,7 +343,11 @@ impl<'a, W: io::Write> Backend<'a, W> for SyzkallerBackend<'a, W> {
             .collect::<Result<Vec<_>, Error>>()?
             .join("\n");
 
-        write!(&mut self.w, "{}", definitions)?;
+        if resource_definitions.is_empty() {
+            write!(&mut self.w, "{}", protocol_definitions)?;
+        } else {
+            write!(&mut self.w, "{}\n\n{}", resource_definitions, protocol_definitions)?;
+        }
         Ok(())
     }
 }

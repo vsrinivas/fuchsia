@@ -105,4 +105,13 @@ protocol Api {
     [argtype="u64 OUT"]
     Uint64(array<uint64>:u64_len u64, usize u64_len) -> (zx.status st);
 
+    [argtype="h IN"]
+    Handle(array<handle>:1 h) -> (zx.status st);
+    [argtype="h OUT"]
+    Handle(array<handle>:1 h) -> (zx.status st);
+    [argtype="h IN"]
+    Handle(array<handle>:h_len h, usize h_len) -> (zx.status st);
+    [argtype="h OUT"]
+    Handle(array<handle>:h_len h, usize h_len) -> (zx.status st);
+
 };

@@ -868,6 +868,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
                     Some(self.codegen_protocol_decl(attributes, name, methods, &ast))
                 }
                 Decl::Alias(_to, _from) => None,
+                Decl::Resource { .. } => None,
             })
             .collect::<Result<Vec<_>, Error>>()?
             .join("\n");
@@ -887,6 +888,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
                     Some(self.codegen_protocol_def(attributes, name, methods, &ast))
                 }
                 Decl::Alias(_to, _from) => None,
+                Decl::Resource { .. } => None,
             })
             .collect::<Result<Vec<_>, Error>>()?
             .join("\n");
