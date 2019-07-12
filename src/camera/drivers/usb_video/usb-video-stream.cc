@@ -649,8 +649,9 @@ zx_status_t UsbVideoStream::ParsePayloadHeaderLocked(
     auto buffer = buffers_.LockBufferForWrite();
     if (!buffer) {
       zxlogf(ERROR, "no available frames, dropping frame #%u\n", num_frames_);
+    } else {
+      current_buffer_ = std::move(*buffer);
     }
-    current_buffer_ = std::move(*buffer);
   }
 
   cur_frame_state_.eof = header.bmHeaderInfo & USB_VIDEO_VS_PAYLOAD_HEADER_EOF;
