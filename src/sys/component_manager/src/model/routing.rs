@@ -142,7 +142,7 @@ async fn open_framework_capability(
     Ok(())
 }
 
-async fn route_and_open_storage_capability(
+pub async fn route_and_open_storage_capability(
     model: &Model,
     type_: fsys::StorageType,
     open_mode: u32,

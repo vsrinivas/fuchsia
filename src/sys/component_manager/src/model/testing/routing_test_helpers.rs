@@ -204,6 +204,20 @@ impl RoutingTest {
                     should_succeed
                 ))
             }
+            CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation } => {
+                await!(capability_util::write_file_to_meta_storage(
+                    &self.model,
+                    moniker,
+                    storage_relation.is_some(),
+                ));
+                if let Some(relative_moniker) = storage_relation {
+                    await!(capability_util::check_file_in_storage(
+                        fsys::StorageType::Meta,
+                        relative_moniker,
+                        &self.memfs
+                    ));
+                }
+            }
             CheckUse::Storage { type_, storage_relation } => {
                 await!(capability_util::write_file_to_storage(
                     "/storage".try_into().unwrap(),
@@ -266,14 +280,12 @@ impl RoutingTest {
         let expected_paths_hs: HashSet<String> = decl
             .uses
             .into_iter()
-            .map(|u| match u {
-                UseDecl::Directory(d) => d.target_path.to_string(),
-                UseDecl::Service(s) => s.target_path.dirname,
-                UseDecl::Storage(UseStorageDecl::Data(p)) => p.to_string(),
-                UseDecl::Storage(UseStorageDecl::Cache(p)) => p.to_string(),
-                UseDecl::Storage(UseStorageDecl::Meta) => {
-                    panic!("meta storage currently unsupported")
-                }
+            .filter_map(|u| match u {
+                UseDecl::Directory(d) => Some(d.target_path.to_string()),
+                UseDecl::Service(s) => Some(s.target_path.dirname),
+                UseDecl::Storage(UseStorageDecl::Data(p)) => Some(p.to_string()),
+                UseDecl::Storage(UseStorageDecl::Cache(p)) => Some(p.to_string()),
+                UseDecl::Storage(UseStorageDecl::Meta) => None,
             })
             .collect();
         let mut expected_paths = vec![];
@@ -405,6 +417,25 @@ mod capability_util {
         let dir_string = path.to_string();
         let dir_proxy =
             await!(get_dir_from_namespace(dir_string.as_str(), resolved_url, namespaces));
+        await!(write_hippo_file_to_directory(&dir_proxy, should_succeed));
+    }
+
+    pub async fn write_file_to_meta_storage(
+        model: &Model,
+        moniker: AbsoluteMoniker,
+        should_succeed: bool,
+    ) {
+        let realm = await!(model.look_up_realm(&moniker)).expect("failed to look up realm");
+        let meta_dir = await!(realm.resolve_meta_dir(model)).expect("failed to resolve meta dir");
+        match (meta_dir, should_succeed) {
+            (Some(meta_dir), true) => await!(write_hippo_file_to_directory(&meta_dir, true)),
+            (None, false) => (),
+            (Some(_), false) => panic!("meta dir present when usage was expected to fail"),
+            (None, true) => panic!("meta dir missing when usage was expected to succeed"),
+        }
+    }
+
+    async fn write_hippo_file_to_directory(dir_proxy: &DirectoryProxy, should_succeed: bool) {
         let (file_proxy, server_end) = create_proxy::<FileMarker>().unwrap();
         let flags = OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE;
         dir_proxy

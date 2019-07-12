@@ -167,8 +167,9 @@ impl IncomingNamespace {
                 UseStorageDecl::Data(p) => p.to_string(),
                 UseStorageDecl::Cache(p) => p.to_string(),
                 UseStorageDecl::Meta => {
-                    error!("meta is currently unsupported!");
-                    return Err(ModelError::unsupported("meta storage capabilities"));
+                    // Meta storage capabilities are handled in model::model, as these are capabilities
+                    // used by the framework itself and not given to components directly.
+                    return Ok(());
                 }
             },
             _ => {

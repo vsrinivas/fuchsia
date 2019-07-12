@@ -4,10 +4,13 @@
 
 use {
     crate::model::*,
-    cm_rust::{self, ChildDecl, ComponentDecl},
-    fidl_fuchsia_io::DirectoryProxy,
-    fidl_fuchsia_sys2 as fsys,
+    cm_rust::{self, ChildDecl, ComponentDecl, UseDecl, UseStorageDecl},
+    fidl::endpoints::Proxy,
+    fidl_fuchsia_io::{DirectoryProxy, MODE_TYPE_DIRECTORY},
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::future::BoxFuture,
     futures::lock::Mutex,
+    log::*,
     std::convert::TryInto,
     std::{collections::HashMap, sync::Arc},
 };
@@ -45,6 +48,53 @@ impl Realm {
             state.populate_decl(component.decl, &self)?;
         }
         Ok(())
+    }
+
+    /// Resolves and populates this component's meta directory handle if it has not been done so
+    /// already, and returns a reference to the handle. If this component does not use meta storage
+    /// or if meta storage routing fails, Ok(None) will be returned.
+    pub async fn resolve_meta_dir<'a>(
+        &'a self,
+        model: &'a Model,
+    ) -> Result<Option<Arc<DirectoryProxy>>, ModelError> {
+        let state = await!(self.state.lock());
+        if state.meta_dir.is_some() {
+            return Ok(Some(state.meta_dir.as_ref().unwrap().clone()));
+        }
+        if state
+            .decl
+            .as_ref()
+            .map(|decl| {
+                decl.uses.iter().find(|u| u == &&UseDecl::Storage(UseStorageDecl::Meta)).is_none()
+            })
+            .unwrap_or(false)
+        {
+            return Ok(None);
+        }
+
+        // Don't hold the state lock while performing routing for the meta storage capability, as
+        // the routing logic may want to acquire the lock for this component's state.
+        drop(state);
+
+        let (meta_client_chan, server_chan) =
+            zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
+        let res =
+            await!(route_and_open_meta_capability(model, self.abs_moniker.clone(), server_chan));
+
+        // All other capability types don't cause realm loading or binding to fail when they're set
+        // up incorrectly, so storage capabilities shouldn't either. Log errors here and proceed if
+        // routing and binding fails.
+        match res {
+            Ok(()) => {
+                let mut state = await!(self.state.lock());
+                state.meta_dir = Some(Arc::new(DirectoryProxy::from_channel(
+                    fasync::Channel::from_channel(meta_client_chan).unwrap(),
+                )));
+                return Ok(Some(state.meta_dir.as_ref().unwrap().clone()));
+            }
+            Err(e) => warn!("failed to route and bind to meta storage: {:?}", e),
+        }
+        Ok(None)
     }
 
     /// Adds the dynamic child defined by `child_decl` to the given `collection_name`. Once
@@ -107,7 +157,12 @@ impl Realm {
             abs_moniker: abs_moniker,
             component_url: child.url.clone(),
             startup: child.startup,
-            state: Mutex::new(RealmState { execution: None, child_realms: None, decl: None }),
+            state: Mutex::new(RealmState {
+                execution: None,
+                child_realms: None,
+                decl: None,
+                meta_dir: None,
+            }),
         });
         (child_moniker, realm)
     }
@@ -120,6 +175,25 @@ impl Realm {
         }
         child_realms
     }
+}
+
+/// Finds the backing directory for the meta capability used by the provided moniker, and binds
+/// to the providing component, connecting the provided channel to the appropriate meta
+/// directory. Moved into a separate function to break async cycles.
+fn route_and_open_meta_capability<'a>(
+    model: &'a Model,
+    moniker: AbsoluteMoniker,
+    server_chan: zx::Channel,
+) -> BoxFuture<'a, Result<(), ModelError>> {
+    Box::pin(async move {
+        await!(routing::route_and_open_storage_capability(
+            &model,
+            fsys::StorageType::Meta,
+            MODE_TYPE_DIRECTORY,
+            moniker,
+            server_chan
+        ))
+    })
 }
 
 impl RealmState {
@@ -153,6 +227,8 @@ pub struct RealmState {
     pub child_realms: Option<ChildRealmMap>,
     /// The component's validated declaration. Evaluated on demand.
     pub decl: Option<ComponentDecl>,
+    /// The component's meta directory. Evaluated on demand by the `resolve_meta_dir` getter.
+    pub meta_dir: Option<Arc<DirectoryProxy>>,
 }
 
 /// The execution state for a component instance that has started running.

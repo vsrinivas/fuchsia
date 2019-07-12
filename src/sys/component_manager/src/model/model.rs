@@ -4,8 +4,7 @@
 
 use {
     crate::model::*,
-    cm_rust::data,
-    cm_rust::CapabilityPath,
+    cm_rust::{data, CapabilityPath},
     failure::format_err,
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_io::{
@@ -83,7 +82,12 @@ impl Model {
                 component_url: params.root_component_url,
                 // Started by main().
                 startup: fsys::StartupMode::Lazy,
-                state: Mutex::new(RealmState { execution: None, child_realms: None, decl: None }),
+                state: Mutex::new(RealmState {
+                    execution: None,
+                    child_realms: None,
+                    decl: None,
+                    meta_dir: None,
+                }),
             }),
             hooks: Arc::new(params.hooks),
         }

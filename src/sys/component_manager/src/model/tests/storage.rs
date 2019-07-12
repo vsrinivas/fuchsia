@@ -67,6 +67,55 @@ async fn storage_and_dir_from_parent() {
 ///   a
 ///    \
 ///     b
+///
+/// a: has storage decl with name "mystorage" with a source of self at path /data
+/// a: offers meta storage to b from "mystorage"
+/// b: uses meta storage
+#[fuchsia_async::run_singlethreaded(test)]
+async fn meta_storage_and_dir_from_parent() {
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                offers: vec![OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
+                    source: OfferStorageSource::Storage("mystorage".to_string()),
+                    target: OfferTarget::Child("b".to_string()),
+                }))],
+                children: vec![ChildDecl {
+                    name: "b".to_string(),
+                    url: "test:///b".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                storage: vec![StorageDecl {
+                    name: "mystorage".to_string(),
+                    source_path: "/data".try_into().unwrap(),
+                    source: OfferDirectorySource::Self_,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                uses: vec![UseDecl::Storage(UseStorageDecl::Meta)],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
+    await!(test.check_use(
+        vec!["b"].into(),
+        CheckUse::Storage {
+            type_: fsys::StorageType::Meta,
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["b".into()])),
+        }
+    ));
+}
+
+///   a
+///    \
+///     b
 ///      \
 ///       c
 ///
@@ -201,6 +250,73 @@ async fn storage_and_dir_from_grandparent() {
 }
 
 ///   a
+///    \
+///     b
+///      \
+///       c
+///
+/// a: has storage decl with name "mystorage" with a source of self at path /data
+/// a: offers meta storage to b from "mystorage"
+/// b: offers meta storage to c from realm
+/// c: uses meta storage
+#[fuchsia_async::run_singlethreaded(test)]
+async fn meta_storage_and_dir_from_grandparent() {
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                offers: vec![OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
+                    source: OfferStorageSource::Storage("mystorage".to_string()),
+                    target: OfferTarget::Child("b".to_string()),
+                }))],
+                children: vec![ChildDecl {
+                    name: "b".to_string(),
+                    url: "test:///b".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                storage: vec![StorageDecl {
+                    name: "mystorage".to_string(),
+                    source_path: "/data".try_into().unwrap(),
+                    source: OfferDirectorySource::Self_,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                offers: vec![OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
+                    source: OfferStorageSource::Realm,
+                    target: OfferTarget::Child("c".to_string()),
+                }))],
+                children: vec![ChildDecl {
+                    name: "c".to_string(),
+                    url: "test:///c".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "c",
+            ComponentDecl {
+                uses: vec![UseDecl::Storage(UseStorageDecl::Meta)],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
+    await!(test.check_use(
+        vec!["b", "c"].into(),
+        CheckUse::Storage {
+            type_: fsys::StorageType::Meta,
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["b".into(), "c".into()])),
+        }
+    ));
+}
+
+///   a
 ///  / \
 /// b   c
 ///
@@ -276,10 +392,10 @@ async fn storage_from_parent_dir_from_sibling() {
 ///
 /// b: exposes directory /data as /minfs
 /// a: has storage decl with name "mystorage" with a source of child b at path /minfs
-/// a: offers data and cache storage to c from "mystorage"
-/// c: uses cache storage as /storage
-/// c: offers data storage to d
-/// d: uses data storage
+/// a: offers data, cache, and meta storage to c from "mystorage"
+/// c: uses cache and meta storage as /storage
+/// c: offers data and meta storage to d
+/// d: uses data and meta storage
 #[fuchsia_async::run_singlethreaded(test)]
 async fn storage_multiple_types() {
     let components = vec![
@@ -297,6 +413,10 @@ async fn storage_multiple_types() {
                         target: OfferTarget::Child("c".to_string()),
                     })),
                     OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
+                        source: OfferStorageSource::Storage("mystorage".to_string()),
+                        target: OfferTarget::Child("c".to_string()),
+                    })),
+                    OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
                         source: OfferStorageSource::Storage("mystorage".to_string()),
                         target: OfferTarget::Child("c".to_string()),
                     })),
@@ -330,11 +450,20 @@ async fn storage_multiple_types() {
         (
             "c",
             ComponentDecl {
-                offers: vec![OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
-                    source: OfferStorageSource::Realm,
-                    target: OfferTarget::Child("d".to_string()),
-                }))],
-                uses: vec![UseDecl::Storage(UseStorageDecl::Cache("/storage".try_into().unwrap()))],
+                offers: vec![
+                    OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
+                        source: OfferStorageSource::Realm,
+                        target: OfferTarget::Child("d".to_string()),
+                    })),
+                    OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
+                        source: OfferStorageSource::Realm,
+                        target: OfferTarget::Child("d".to_string()),
+                    })),
+                ],
+                uses: vec![
+                    UseDecl::Storage(UseStorageDecl::Cache("/storage".try_into().unwrap())),
+                    UseDecl::Storage(UseStorageDecl::Meta),
+                ],
                 children: vec![ChildDecl {
                     name: "d".to_string(),
                     url: "test:///d".to_string(),
@@ -346,7 +475,10 @@ async fn storage_multiple_types() {
         (
             "d",
             ComponentDecl {
-                uses: vec![UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap()))],
+                uses: vec![
+                    UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())),
+                    UseDecl::Storage(UseStorageDecl::Meta),
+                ],
                 ..default_component_decl()
             },
         ),
@@ -361,9 +493,23 @@ async fn storage_multiple_types() {
         }
     ));
     await!(test.check_use(
+        vec!["c"].into(),
+        CheckUse::Storage {
+            type_: fsys::StorageType::Meta,
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["c".into()])),
+        }
+    ));
+    await!(test.check_use(
         vec!["c", "d"].into(),
         CheckUse::Storage {
             type_: fsys::StorageType::Data,
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["c".into(), "d".into()])),
+        }
+    ));
+    await!(test.check_use(
+        vec!["c", "d"].into(),
+        CheckUse::Storage {
+            type_: fsys::StorageType::Meta,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c".into(), "d".into()])),
         }
     ));
@@ -376,6 +522,7 @@ async fn storage_multiple_types() {
 /// a: has storage decl with name "mystorage" with a source of self at path /storage
 /// a: offers cache storage to b from "mystorage"
 /// b: uses data storage as /storage, fails to since data != cache
+/// b: uses meta storage, fails to since meta != cache
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_the_wrong_type_of_storage() {
     let components = vec![
@@ -402,7 +549,10 @@ async fn use_the_wrong_type_of_storage() {
         (
             "b",
             ComponentDecl {
-                uses: vec![UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap()))],
+                uses: vec![
+                    UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())),
+                    UseDecl::Storage(UseStorageDecl::Meta),
+                ],
                 ..default_component_decl()
             },
         ),
@@ -413,6 +563,10 @@ async fn use_the_wrong_type_of_storage() {
         vec!["b"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Cache, storage_relation: None }
     ));
+    await!(test.check_use(
+        vec!["b"].into(),
+        CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation: None }
+    ));
 }
 
 ///   a
@@ -421,7 +575,7 @@ async fn use_the_wrong_type_of_storage() {
 ///
 /// a: has storage decl with name "mystorage" with a source of self at path /data
 /// a: does not offer any storage to b
-/// b: uses data storage as /storage, fails to since it was not offered
+/// b: uses meta storage and data storage as /storage, fails to since it was not offered either
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_storage_when_not_offered() {
     let components = vec![
@@ -444,7 +598,10 @@ async fn use_storage_when_not_offered() {
         (
             "b",
             ComponentDecl {
-                uses: vec![UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap()))],
+                uses: vec![
+                    UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())),
+                    UseDecl::Storage(UseStorageDecl::Meta),
+                ],
                 ..default_component_decl()
             },
         ),
@@ -454,6 +611,10 @@ async fn use_storage_when_not_offered() {
     await!(test.check_use(
         vec!["b"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Cache, storage_relation: None }
+    ));
+    await!(test.check_use(
+        vec!["b"].into(),
+        CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation: None }
     ));
 }
 
@@ -465,8 +626,8 @@ async fn use_storage_when_not_offered() {
 ///
 /// a: offers directory /data to b as /minfs, but a is non-executable
 /// b: has storage decl with name "mystorage" with a source of realm at path /minfs
-/// b: offers data storage to b from "mystorage"
-/// c: uses data storage as /storage
+/// b: offers data and meta storage to b from "mystorage"
+/// c: uses meta and data storage as /storage, fails to since a is non-executable
 #[fuchsia_async::run_singlethreaded(test)]
 async fn dir_offered_from_nonexecutable() {
     let components = vec![
@@ -491,10 +652,16 @@ async fn dir_offered_from_nonexecutable() {
         (
             "b",
             ComponentDecl {
-                offers: vec![OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
-                    source: OfferStorageSource::Storage("mystorage".to_string()),
-                    target: OfferTarget::Child("c".to_string()),
-                }))],
+                offers: vec![
+                    OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
+                        source: OfferStorageSource::Storage("mystorage".to_string()),
+                        target: OfferTarget::Child("c".to_string()),
+                    })),
+                    OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
+                        source: OfferStorageSource::Storage("mystorage".to_string()),
+                        target: OfferTarget::Child("c".to_string()),
+                    })),
+                ],
                 children: vec![ChildDecl {
                     name: "c".to_string(),
                     url: "test:///c".to_string(),
@@ -511,7 +678,10 @@ async fn dir_offered_from_nonexecutable() {
         (
             "c",
             ComponentDecl {
-                uses: vec![UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap()))],
+                uses: vec![
+                    UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())),
+                    UseDecl::Storage(UseStorageDecl::Meta),
+                ],
                 ..default_component_decl()
             },
         ),
@@ -521,5 +691,9 @@ async fn dir_offered_from_nonexecutable() {
     await!(test.check_use(
         vec!["b", "c"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Data, storage_relation: None }
+    ));
+    await!(test.check_use(
+        vec!["b", "c"].into(),
+        CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation: None }
     ));
 }
