@@ -42,6 +42,7 @@
     }                                                                             \
   } while (0)
 
+constexpr size_t kMaxHexDumpBytes = 4096; // point at which output will be truncated
 #define BRCMF_DBG_HEX_DUMP(condition, data, length, fmt, ...)                     \
   do {                                                                            \
     if (condition) {                                                              \
@@ -50,6 +51,7 @@
     }                                                                             \
   } while (0)
 
+constexpr size_t kMaxStringDumpBytes = 256; // point at which output will be truncated
 #define BRCMF_DBG_STRING_DUMP(condition, data, length, fmt, ...)                  \
   do {                                                                            \
     if (condition) {                                                              \

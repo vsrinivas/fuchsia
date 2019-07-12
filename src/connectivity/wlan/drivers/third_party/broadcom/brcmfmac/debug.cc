@@ -43,16 +43,15 @@ bool Debug::IsFilterOn(Filter filter) {
 
 // static
 void Debug::PrintHexDump(uint32_t flag, const void* data, size_t length) {
-  constexpr size_t kValuesPerLine = 64;
-  constexpr size_t kMaxBytesDumpedCount = 4096;
+  constexpr size_t kValuesPerLine = 16;
 
   if (zxlog_level_enabled_etc(flag)) {
     driver_printf(flag, "%p:\n", data);
 
     const char* bytes = reinterpret_cast<const char*>(data);
-    const size_t new_length = std::min<size_t>(length, kMaxBytesDumpedCount);
+    const size_t new_length = std::min<size_t>(length, kMaxHexDumpBytes);
     for (size_t i = 0; i < new_length; i += kValuesPerLine) {
-      char buffer[3 * kValuesPerLine];
+      char buffer[3 * kValuesPerLine + 1];
       char* next = buffer;
       size_t line_width = std::min(kValuesPerLine, new_length - i);
       for (size_t j = 0; j < line_width; ++j) {
@@ -60,8 +59,8 @@ void Debug::PrintHexDump(uint32_t flag, const void* data, size_t length) {
       }
       driver_printf(flag, "%04zx: %s\n", i, buffer);
     }
-    if (length > kMaxBytesDumpedCount) {
-      driver_printf(flag, "%04zx: ...\n", kMaxBytesDumpedCount);
+    if (length > kMaxHexDumpBytes) {
+      driver_printf(flag, "%04zx: ...\n", kMaxHexDumpBytes);
     }
   }
 }
@@ -69,22 +68,21 @@ void Debug::PrintHexDump(uint32_t flag, const void* data, size_t length) {
 // static
 void Debug::PrintStringDump(uint32_t flag, const void* data, size_t length) {
   constexpr size_t kValuesPerLine = 64;
-  constexpr size_t kMaxBytesDumpedCount = 256;
 
   if (zxlog_level_enabled_etc(flag)) {
     driver_printf(flag, "%p:\n", data);
 
     const char* bytes = reinterpret_cast<const char*>(data);
-    const size_t new_length = std::min<size_t>(length, kMaxBytesDumpedCount);
+    const size_t new_length = std::min<size_t>(length, kMaxStringDumpBytes);
     for (size_t i = 0; i < new_length; i += kValuesPerLine) {
-      char buffer[kValuesPerLine];
+      char buffer[kValuesPerLine + 1];
       size_t line_width = std::min(kValuesPerLine, new_length - i);
       std::transform(bytes + i, bytes + i + line_width, buffer,
                      [](char c) { return std::isprint(c) ? c : '.'; });
       driver_printf(flag, "%04zx: %s\n", i, buffer);
     }
-    if (length > kMaxBytesDumpedCount) {
-      driver_printf(flag, "%04zx: ...\n", kMaxBytesDumpedCount);
+    if (length > kMaxStringDumpBytes) {
+      driver_printf(flag, "%04zx: ...\n", kMaxStringDumpBytes);
     }
   }
 }

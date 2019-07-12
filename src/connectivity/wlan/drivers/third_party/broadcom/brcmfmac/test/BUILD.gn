@@ -16,6 +16,19 @@ import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+executable("debug_test") {
+  output_name = "debug_test"
+  testonly = true
+  sources = [
+    "debug_test.cc",
+  ]
+  deps = [
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fake_ddk",
+  ]
+}
+
 executable("lifecycle_test") {
   output_name = "lifecycle_test"
   testonly = true
@@ -85,6 +98,7 @@ unittest_package("brcmfmac_test") {
   package_name = "brcmfmac_test"
 
   deps = [
+    ":debug_test",
     ":lifecycle_test",
     ":netbuf_test",
     ":sdio_test",
@@ -92,6 +106,10 @@ unittest_package("brcmfmac_test") {
   ]
 
   tests = [
+    {
+      name = "debug_test"
+      environments = basic_envs
+    },
     {
       name = "lifecycle_test"
       environments = basic_envs
