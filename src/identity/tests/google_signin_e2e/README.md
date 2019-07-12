@@ -1,4 +1,4 @@
-# Google Auth E2E Test
+# Google Signin E2E Test
 
 ## Overview
 
@@ -23,16 +23,16 @@ login flow, and a test suite that runs host side and drives the login flow.
 All commands should be executed on the host machine.
 
 * Run fx set using the workstation product and include the
-//src/identity/tests/login_e2e:test target
+//src/identity/tests/google_signin_e2e:test target
 * fx build
 * Download the latest version of Chromedriver from the
 [Chromium website](http://chromedriver.chromium.org/downloads).
 * Ensure fx serve is running
-* Run the `run-auth-e2e` script, passing in the path to the downloaded
+* Run the `run-signin-e2e` script, passing in the path to the downloaded
 Chromedriver binary and authentication credentials.  __Do not use your Google
 account credentials!  Only use Owned Test Account credentials!__
 ```
-./run-auth-e2e --chromedriver <path-to-chromedriver> \
+./run-signin-e2e --chromedriver <path-to-chromedriver> \
     --test-account-email <test account email> \
     --test-account-password <test account password>
 ```

@@ -1,10 +1,10 @@
 #!/bin/bash
 
-### run Google authentication e2e tests
-## Usage: run-auth-e2e --chromedriver <chromedriver> --test-account-email <email>
+### run Google signin e2e tests
+## Usage: run-signin-e2e --chromedriver <chromedriver> --test-account-email <email>
 ## --test-account-password <pass>
 ##
-## Runs the authentication e2e test.
+## Runs the Google signin e2e test.
 ## WARNING: This should only be run using credentials for
 ## Owned Test Accounts!
 
@@ -49,8 +49,8 @@ if [[ -z "$FUCHSIA_IPV4_ADDR" ]]; then
 fi
 export FUCHSIA_SSH_KEY="${FUCHSIA_DIR}/.ssh/pkey"
 
-RUNTIME_DEPS=${FUCHSIA_OUT_DIR}/default/gen/src/identity/tests/login_e2e/runtime_deps
+RUNTIME_DEPS=${FUCHSIA_OUT_DIR}/default/gen/src/identity/tests/google_signin_e2e/runtime_deps
 mkdir ${RUNTIME_DEPS} -p
 cp -n $chromedriver ${RUNTIME_DEPS}/chromedriver
 
-"${FUCHSIA_OUT_DIR}/default/google_auth_e2e_test"
+"${FUCHSIA_OUT_DIR}/default/google_signin_e2e_test"

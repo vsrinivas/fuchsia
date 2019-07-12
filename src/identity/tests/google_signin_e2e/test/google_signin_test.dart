@@ -14,8 +14,8 @@ import 'package:webdriver/support/async.dart';
 
 /// URL for the tester mod.
 const _testerUrl =
-    'fuchsia-pkg://fuchsia.com/login_e2e_tester#meta/login_e2e_tester.cmx';
-const _testerComponent = 'login_e2e_tester.cmx';
+    'fuchsia-pkg://fuchsia.com/google_signin_e2e_tester#meta/google_signin_e2e_tester.cmx';
+const _testerComponent = 'google_signin_e2e_tester.cmx';
 
 /// Flags to pass to the auth tester mod.
 const _testerFlags = [];
