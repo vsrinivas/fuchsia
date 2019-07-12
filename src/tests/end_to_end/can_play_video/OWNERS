@@ -1,0 +1,9 @@
+# End-to-end tests can be written for different parts of the Fuchsia stack and
+# stored in this directory. When creating a new end-to-end test, add your own
+# OWNERS file in your directory so we can tell who is responsible for those
+# tests.
+#
+# People listed below often have to make changes to multiple end-to-end tests
+# and can offer advice for your own test.
+perley@google.com
+dustingreen@google.com
