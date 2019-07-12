@@ -14,12 +14,14 @@
             ],
         },
     ],
-    // Two children: a server and client. "echo_client" has "eager" startup so it
-    // will be started along with the realm.
+    // Two children: a server and client. "echo_client" and "echo_server" have "eager"
+    // startup so they will be started along with the realm and we can inspect their
+    // exec/ directories in the hub.
     "children": [
         {
             "name": "echo_server",
             "url": "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/echo_server.cm",
+            "startup": "eager",
         },
         {
             "name": "echo_client",

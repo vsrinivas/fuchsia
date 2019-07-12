@@ -162,13 +162,11 @@ impl Hub {
     fn add_resolved_url_file(
         execution_directory: &mut directory::controlled::Controlled<'static>,
         resolved_url: String,
-        abs_moniker: &model::AbsoluteMoniker
+        abs_moniker: &model::AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         execution_directory.add_node(
             "resolved_url",
-            {
-                read_only(move || Ok(resolved_url.clone().into_bytes()))
-            },
+            { read_only(move || Ok(resolved_url.clone().into_bytes())) },
             &abs_moniker,
         )?;
         Ok(())
@@ -177,8 +175,8 @@ impl Hub {
     fn add_in_directory(
         execution_directory: &mut directory::controlled::Controlled<'static>,
         realm_state: &model::RealmState,
-        routing_facade: model::RoutingFacade,
-        abs_moniker: &model::AbsoluteMoniker
+        routing_facade: &model::RoutingFacade,
+        abs_moniker: &model::AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let execution = realm_state.execution.as_ref().unwrap();
         let decl = realm_state.decl.as_ref().expect("ComponentDecl unavailable.");
@@ -201,10 +199,29 @@ impl Hub {
         Ok(())
     }
 
+    fn add_expose_directory(
+        execution_directory: &mut directory::controlled::Controlled<'static>,
+        realm_state: &model::RealmState,
+        routing_facade: &model::RoutingFacade,
+        abs_moniker: &model::AbsoluteMoniker,
+    ) -> Result<(), ModelError> {
+        let decl = realm_state.decl.as_ref().expect("ComponentDecl unavailable.");
+        let tree = model::DirTree::build_from_exposes(
+            routing_facade.route_expose_fn_factory(),
+            &abs_moniker,
+            decl.clone(),
+        );
+        let mut expose_dir = directory::simple::empty();
+        tree.install(&abs_moniker, &mut expose_dir)?;
+        execution_directory.add_node("expose", expose_dir, &abs_moniker)?;
+        Ok(())
+    }
+
     fn add_out_directory(
         execution_directory: &mut directory::controlled::Controlled<'static>,
         execution: &model::Execution,
-        abs_moniker: &model::AbsoluteMoniker) -> Result<(), ModelError> {
+        abs_moniker: &model::AbsoluteMoniker,
+    ) -> Result<(), ModelError> {
         if let Some(out_dir) = Self::clone_dir(execution.outgoing_dir.as_ref()) {
             execution_directory.add_node(
                 "out",
@@ -218,7 +235,8 @@ impl Hub {
     fn add_runtime_directory(
         execution_directory: &mut directory::controlled::Controlled<'static>,
         execution: &model::Execution,
-        abs_moniker: &model::AbsoluteMoniker) -> Result<(), ModelError> {
+        abs_moniker: &model::AbsoluteMoniker,
+    ) -> Result<(), ModelError> {
         if let Some(runtime_dir) = Self::clone_dir(execution.runtime_dir.as_ref()) {
             execution_directory.add_node(
                 "runtime",
@@ -251,32 +269,39 @@ impl Hub {
 
         // If we haven't already created an execution directory, create one now.
         if instance.execution.is_none() {
-            let (execution_controller, mut execution_controlled) =
-                directory::controlled::controlled(directory::simple::empty());
-
             if let Some(execution) = realm_state.execution.as_ref() {
+                let (execution_controller, mut execution_controlled) =
+                    directory::controlled::controlled(directory::simple::empty());
+
                 let exec = Execution {
                     resolved_url: execution.resolved_url.clone(),
                     directory: execution_controller,
                 };
                 instance.execution = Some(exec);
 
-                Self::add_resolved_url_file(&mut execution_controlled,
-                                            execution.resolved_url.clone(),
-                                            &abs_moniker)?;
+                Self::add_resolved_url_file(
+                    &mut execution_controlled,
+                    execution.resolved_url.clone(),
+                    &abs_moniker,
+                )?;
 
-                Self::add_in_directory(&mut execution_controlled,
-                                       realm_state,
-                                       routing_facade,
-                                       &abs_moniker)?;
+                Self::add_in_directory(
+                    &mut execution_controlled,
+                    realm_state,
+                    &routing_facade,
+                    &abs_moniker,
+                )?;
 
-                Self::add_out_directory(&mut execution_controlled,
-                                        execution,
-                                        &abs_moniker)?;
+                Self::add_expose_directory(
+                    &mut execution_controlled,
+                    realm_state,
+                    &routing_facade,
+                    &abs_moniker,
+                )?;
 
-                Self::add_runtime_directory(&mut execution_controlled,
-                                            execution,
-                                            &abs_moniker)?;
+                Self::add_out_directory(&mut execution_controlled, execution, &abs_moniker)?;
+
+                Self::add_runtime_directory(&mut execution_controlled, execution, &abs_moniker)?;
 
                 await!(instance.directory.add_node("exec", execution_controlled, &abs_moniker))?;
             }
@@ -332,8 +357,8 @@ mod tests {
             },
         },
         cm_rust::{
-            self, CapabilityPath, ChildDecl, ComponentDecl, UseDecl, UseDirectoryDecl,
-            UseServiceDecl, UseSource,
+            self, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeServiceDecl,
+            ExposeDirectoryDecl, ExposeSource, UseDecl, UseDirectoryDecl,UseServiceDecl, UseSource,
         },
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_io::{
@@ -596,6 +621,50 @@ mod tests {
         assert_eq!(
             vec!["data/bar", "data/hippo", "svc/hippo"],
             await!(list_directory_recursive(&in_dir))
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn hub_expose_directory() {
+        let root_component_url = "test:///root".to_string();
+        let (_model, hub_proxy) = await!(start_component_manager_with_hub(
+            root_component_url.clone(),
+            vec![ComponentDescriptor {
+                name: "root".to_string(),
+                decl: ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "a".to_string(),
+                        url: "test:///a".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    exposes: vec![
+                        ExposeDecl::Service(ExposeServiceDecl {
+                            source: ExposeSource::Self_,
+                            source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                            target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                        }),
+                        ExposeDecl::Directory(ExposeDirectoryDecl {
+                            source: ExposeSource::Self_,
+                            source_path: CapabilityPath::try_from("/data/baz").unwrap(),
+                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        }),
+                    ],
+                    ..default_component_decl()
+                },
+                host_fn: None,
+                runtime_host_fn: None,
+            }]
+        ));
+
+        let expose_dir = io_util::open_directory(
+            &hub_proxy,
+            &Path::new("self/exec/expose"),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .expect("Failed to open directory");
+        assert_eq!(
+            vec!["data/hippo", "svc/bar"],
+            await!(list_directory_recursive(&expose_dir))
         );
     }
 }
