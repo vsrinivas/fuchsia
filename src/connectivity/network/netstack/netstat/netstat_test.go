@@ -14,7 +14,7 @@ import (
 )
 
 func TestOutput(t *testing.T) {
-	out, err := exec.Command("/bin/netstat", "-s").CombinedOutput()
+	out, err := exec.Command("/pkg/bin/netstat", "-s").CombinedOutput()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,11 +91,11 @@ func TestOutput(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := exec.Command("/boot/bin/ping", "-c", "1", "localhost").Run(); err != nil {
+		if err := exec.Command("/pkg/bin/ping", "-c", "1", "localhost").Run(); err != nil {
 			t.Fatal(err)
 		}
 
-		out, err := exec.Command("/bin/netstat", "-s").CombinedOutput()
+		out, err := exec.Command("/pkg/bin/netstat", "-s").CombinedOutput()
 		if err != nil {
 			t.Fatal(err)
 		}

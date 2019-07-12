@@ -8,6 +8,7 @@ import("//build/go/toolchain.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//build/config/fuchsia/zircon_images.gni")
 
 package("netstack") {
   deps = [
@@ -47,10 +48,22 @@ package("netstack_tools") {
   ]
 }
 
+# A dep on a zircon_extras_manifest rule is only usable from within a package()
+# target, so we declare netstack_netstat_test's manifest here and depend on it
+# from netstack_netstat_test's enclosing test_package, `netstack_gotests`.
+zircon_extras_manifest("netstack_netstat_test_zircon_deps.manifest") {
+  visibility = [ ":*" ]
+  manifest = "image"
+  patterns = [
+    "bin/ping",
+  ]
+}
+
 test_package("netstack_gotests") {
   deprecated_shell = "//build"
 
   deps = [
+    ":netstack_netstat_test_zircon_deps.manifest",
     ":netstack_connectivity_test",
     ":netstack_fidlconv_test",
     ":netstack_filter_test",
@@ -58,13 +71,19 @@ test_package("netstack_gotests") {
     ":netstack_test",
     "ifconfig:netstack_ifconfig_test",
     "netstack_service_test",
+    "netstat",
     "netstat:netstack_netstat_test",
     "util:netstack_util_test",
   ]
 
+  extra = get_target_outputs(":netstack_netstat_test_zircon_deps.manifest")
+
   binaries = [
     {
       name = "netstack_service_test"
+    },
+    {
+      name = "netstat"
     },
   ]
 
