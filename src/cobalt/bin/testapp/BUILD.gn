@@ -19,6 +19,7 @@ metrics_registry("testapp_metrics_registry") {
   # https://cobalt-analytics.googlesource.com/config/+/refs/heads/master/projects.yaml
   project_name = "test_app2"
   namespace = "cobalt_registry"
+  for_testing = true
   generate_cc = true
   generate_binarypb = false
 }
@@ -28,6 +29,7 @@ metrics_registry("prober_metrics_registry") {
   # https://cobalt-analytics.googlesource.com/config/+/refs/heads/master/projects.yaml
   project_name = "prober"
   namespace = "cobalt_prober_registry"
+  for_testing = true
   generate_cc = true
   generate_binarypb = false
 }

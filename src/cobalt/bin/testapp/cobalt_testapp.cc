@@ -75,14 +75,9 @@ bool CobaltTestApp::RunTests() {
   TRY_TEST(TestLogCobaltEvent(&logger_));
   TRY_TEST(DoChannelFilteringTests());
 
-  // TODO(pesk): Count generated observations only for reports in the test
-  // registry and turn local aggregation tests back on. (Currently these tests
-  // are failing due to observations generated for cobalt-internal reports.)
-  /*
   if (!DoLocalAggregationTests(kEventAggregatorBackfillDays)) {
     return false;
   }
-  */
 
   return true;
 }

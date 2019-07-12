@@ -32,7 +32,7 @@ protocol Controller {
     // may possibly prove useful in production also.
     GetNumSendAttempts() -> (uint32 num);
     GetFailedSendAttempts() -> (uint32 num);
-    GetNumObservationsAdded() -> (uint32 num);
+    GetNumObservationsAdded() -> (uint64 num_obs);
 
     // Triggers Cobalt to generate Observations based on locally aggregated
     // event data and write them to the local ObservationStore. In a non-test
@@ -44,6 +44,11 @@ protocol Controller {
     // `day_index` The index of the day for which locally aggregated
     //             Observations should be generated.
     //
-    // Returns the number of Observations which were generated.
-    GenerateAggregatedObservations(uint32 day_index) -> (int64 num);
+    // |report_ids| A vector of report IDs.
+    //
+    // Returns a vector whose k-th element is the number of observations
+    // generated for the k-th element of |report_ids|. If |report_ids|
+    // is the empty vector, then an empty vector is returned.
+    GenerateAggregatedObservations(uint32 day_index, vector<uint32> report_ids)
+    -> (vector<uint64> num_obs);
 };

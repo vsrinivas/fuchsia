@@ -7,6 +7,8 @@
 
 #include <string>
 
+#include "src/cobalt/bin/testapp/testapp_metrics_registry.cb.h"
+
 namespace cobalt {
 namespace testapp {
 
@@ -70,17 +72,26 @@ const std::string kStreamingTimeComponentNames[] = {"ModuleA", "ModuleB",
                                                     "ModuleC"};
 const int kStreamingTimeNumWindowSizes = 2;
 
+// The report IDs of the locally aggregated reports in the testapp project.
+const std::vector<uint32_t> kAggregatedReportIds = {
+    cobalt_registry::kFeaturesActiveUniqueDevicesReportId,
+    cobalt_registry::kConnectionAttemptsPerDeviceCountReportId,
+    cobalt_registry::kStreamingTimePerDeviceTotalReportId};
+
 // The number of locally aggregated observations that should be generated for
-// the test_app2 project for a day, assuming that no events were logged for
-// locally aggregated metrics on that day.
+// each locally aggregated report in the test_app2 project for a day, assuming
+// that no events were logged for locally aggregated reports on that day.
 //
-// This number is calculated as follows:
+// These numbers are calculated as follows:
 //
-// features_active: 20 UniqueActivesObservations
+// features_active_unique_devices: 20 UniqueActivesObservations
 //                  (10 event codes * 2 window sizes)
-// connection_attempts: 1 ReportParticipationObservation
-// streaming_time: 1 ReportParticipationObservation
-const int64_t kNumAggregatedObservations = 22;
+// connection_attempts_per_device_count: 1 ReportParticipationObservation
+// streaming_time_per_device_total: 1 ReportParticipationObservation
+const std::map<uint32_t, uint64_t> kNumAggregatedObservations = {
+    {cobalt_registry::kFeaturesActiveUniqueDevicesReportId, 20},
+    {cobalt_registry::kConnectionAttemptsPerDeviceCountReportId, 1},
+    {cobalt_registry::kStreamingTimePerDeviceTotalReportId, 1}};
 
 const size_t kNumBackfillDays = 2;
 

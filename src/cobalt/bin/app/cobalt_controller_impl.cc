@@ -111,11 +111,17 @@ void CobaltControllerImpl::GetNumObservationsAdded(
 }
 
 void CobaltControllerImpl::GenerateAggregatedObservations(
-    uint32_t day_index, GenerateAggregatedObservationsCallback callback) {
-  size_t num_obs_before = observation_store_->num_observations_added();
+    uint32_t day_index, std::vector<uint32_t> report_ids,
+    GenerateAggregatedObservationsCallback callback) {
+  std::vector<uint64_t> num_obs_before =
+      observation_store_->num_observations_added_for_reports(report_ids);
   event_aggregator_->GenerateObservationsNoWorker(day_index);
-  size_t num_new_obs =
-      observation_store_->num_observations_added() - num_obs_before;
+  std::vector<uint64_t> num_obs_after =
+      observation_store_->num_observations_added_for_reports(report_ids);
+  std::vector<uint64_t> num_new_obs;
+  for (size_t i = 0; i < report_ids.size(); i++) {
+    num_new_obs.push_back(num_obs_after[i] - num_obs_before[i]);
+  }
   callback(num_new_obs);
 }
 
