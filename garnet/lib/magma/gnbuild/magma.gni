@@ -68,10 +68,14 @@ arm_gpu_envs = [
 magma_hardware_envs = intel_gpu_envs + arm_gpu_envs
 
 magma_libvulkan_hardware_envs = intel_gpu_envs
+
+magma_libvulkan_arm_hardware_envs = []
 if (build_libvulkan_arm_mali != [] || have_prebuilt_libvulkan_arm ||
     board_has_libvulkan_arm_mali) {
-  magma_libvulkan_hardware_envs += arm_gpu_envs
+  magma_libvulkan_arm_hardware_envs += arm_gpu_envs
 }
+
+magma_libvulkan_hardware_envs += magma_libvulkan_arm_hardware_envs
 
 template("magma_pci_entry") {
   source_set(target_name) {

@@ -27,6 +27,7 @@ source_set("tests_not_requiring_hardware") {
     "test_connection.cc",
     "test_job_scheduler.cc",
     "test_performance_counters.cc",
+    "test_power_manager.cc",
   ]
 
   deps = [
@@ -43,7 +44,6 @@ source_set("tests_requiring_hardware") {
   sources = [
     "test_command_buffer.cc",
     "test_device.cc",
-    "test_power_manager.cc",
   ]
 
   deps = [

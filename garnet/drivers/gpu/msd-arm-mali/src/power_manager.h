@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef POWER_MANAGER_H_
-#define POWER_MANAGER_H_
+#ifndef GARNET_DRIVERS_GPU_MSD_ARM_MALI_SRC_POWER_MANAGER_H_
+#define GARNET_DRIVERS_GPU_MSD_ARM_MALI_SRC_POWER_MANAGER_H_
 
 #include <chrono>
 #include <deque>
@@ -37,6 +37,7 @@ public:
     // 100 ms or so) the GPU was actively processing commands.
     void GetGpuActiveInfo(std::chrono::steady_clock::duration* total_time_out,
                           std::chrono::steady_clock::duration* active_time_out);
+    bool GetTotalTime(uint32_t* buffer_out);
 
     void DisableL2(magma::RegisterIo* io);
     bool WaitForL2Disable(magma::RegisterIo* io);
@@ -52,6 +53,8 @@ private:
         std::chrono::steady_clock::duration active_time;
     };
 
+    // Called to update timekeeping and possible update the gpu activity info.
+    void UpdateGpuActiveLocked(bool active) MAGMA_REQUIRES(active_time_mutex_);
     std::deque<TimePeriod>& time_periods() { return time_periods_; }
 
     mutable std::mutex ready_status_mutex_;
@@ -60,9 +63,13 @@ private:
 
     std::unique_ptr<magma::PlatformSemaphore> power_state_semaphore_;
 
-    std::deque<TimePeriod> time_periods_;
-    bool gpu_active_ = false;
-    std::chrono::steady_clock::time_point last_check_time_;
+    std::mutex active_time_mutex_;
+    MAGMA_GUARDED(active_time_mutex_) std::deque<TimePeriod> time_periods_;
+    // |gpu_active_| is true if the GPU is currently processing work.
+    MAGMA_GUARDED(active_time_mutex_) bool gpu_active_ = false;
+    MAGMA_GUARDED(active_time_mutex_) std::chrono::steady_clock::time_point last_check_time_;
+
+    MAGMA_GUARDED(active_time_mutex_) uint64_t total_active_time_ = 0u;
 };
 
-#endif // POWER_MANAGER_H_
+#endif // GARNET_DRIVERS_GPU_MSD_ARM_MALI_SRC_POWER_MANAGER_H_

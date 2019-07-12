@@ -6,6 +6,7 @@
 
 #include "fbl/algorithm.h"
 #include "mock/mock_mmio.h"
+#include "platform_buffer.h"
 #include "power_manager.h"
 #include "registers.h"
 #include "gtest/gtest.h"
@@ -79,6 +80,30 @@ TEST(PowerManager, TimeAccumulation)
     power_manager.GetGpuActiveInfo(&total_time, &active_time);
     EXPECT_LE(100u, std::chrono::duration_cast<std::chrono::milliseconds>(total_time).count());
     EXPECT_EQ(total_time, active_time);
+
+    usleep(150 * 1000);
+
+    uint64_t before_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                  std::chrono::steady_clock::now().time_since_epoch())
+                                  .count();
+    uint32_t time_buffer;
+    EXPECT_TRUE(power_manager.GetTotalTime(&time_buffer));
+    magma_total_time_query_result result;
+    uint64_t after_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                 std::chrono::steady_clock::now().time_since_epoch())
+                                 .count();
+
+    auto buffer = magma::PlatformBuffer::Import(time_buffer);
+    EXPECT_TRUE(buffer);
+    EXPECT_TRUE(buffer->Read(&result, 0, sizeof(result)));
+
+    EXPECT_LE(before_time_ns, result.monotonic_time_ns);
+    EXPECT_LE(result.monotonic_time_ns, after_time_ns);
+
+    // GetGpuActiveInfo should throw away old information, but the GetTotalTime count should be able
+    // to go higher. We slept a total of 300ms above, so the time should be well over 250ms.
+    constexpr uint32_t k250MsInNs = 250'000'000;
+    EXPECT_LE(k250MsInNs, result.gpu_time_ns);
 }
 
 TEST(PowerManager, TimeCoalesce)

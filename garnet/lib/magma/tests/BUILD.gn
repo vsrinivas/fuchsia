@@ -79,6 +79,7 @@ test_package("vulkan-tests") {
     deps = [
       "benchmark",
       "icd_load",
+      "vk_timer_query",
       "vkext",
       "vkloop",
       "vkpriority",
@@ -120,6 +121,10 @@ test_package("vulkan-tests") {
 
         # No available hardware to run it on; cannot run with an Intel GPU.
         disabled = true
+      },
+      {
+        name = "vk_timer_query_tests"
+        environments = magma_libvulkan_arm_hardware_envs
       },
     ]
 

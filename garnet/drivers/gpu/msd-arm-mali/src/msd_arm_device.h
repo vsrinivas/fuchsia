@@ -105,6 +105,7 @@ public:
     void DeregisterConnection() override;
 
     magma_status_t QueryInfo(uint64_t id, uint64_t* value_out);
+    magma_status_t QueryReturnsBuffer(uint64_t id, uint32_t* buffer_out);
 
     void RequestPerfCounterOperation(uint32_t type);
 

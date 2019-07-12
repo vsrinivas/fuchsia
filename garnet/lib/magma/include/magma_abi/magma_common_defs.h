@@ -11,11 +11,19 @@
 extern "C" {
 #endif
 
+// This is a list of vendor-neutral queries that can be passed to magma_query.
 #define MAGMA_QUERY_DEVICE_ID 1
 // TODO(MA-518): remove this
 #define MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED 2
+#define MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED 3
 
+// All vendor-specific queries IDs that can be passed to magma_query must be >=
+// MAGMA_QUERY_VENDOR_PARAM_0.
 #define MAGMA_QUERY_VENDOR_PARAM_0 10000
+
+// This is a list of vendor-neutral queries that can be passed to
+// magma_query_returns_buffer.
+#define MAGMA_QUERY_TOTAL_TIME 500
 
 // reserved ID to represent an invalid object
 #define MAGMA_INVALID_OBJECT_ID 0ull
@@ -128,6 +136,11 @@ struct magma_inline_command_buffer {
     uint64_t size;
     uint64_t* semaphore_ids;
     uint32_t semaphore_count;
+};
+
+struct magma_total_time_query_result {
+    uint64_t gpu_time_ns;       // GPU time in ns since driver start.
+    uint64_t monotonic_time_ns; // monotonic clock time measured at same time CPU time was.
 };
 
 // The top 16 bits are reserved for vendor-specific flags.

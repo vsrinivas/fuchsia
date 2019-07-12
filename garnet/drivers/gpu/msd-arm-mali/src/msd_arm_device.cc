@@ -983,6 +983,10 @@ magma_status_t MsdArmDevice::QueryInfo(uint64_t id, uint64_t* value_out)
             *value_out = gpu_features_.gpu_id.reg_value();
             return MAGMA_STATUS_OK;
 
+        case MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED:
+            *value_out = 1;
+            return MAGMA_STATUS_OK;
+
         case kMsdArmVendorQueryL2Present:
             *value_out = gpu_features_.l2_present;
             return MAGMA_STATUS_OK;
@@ -1035,6 +1039,17 @@ magma_status_t MsdArmDevice::QueryInfo(uint64_t id, uint64_t* value_out)
             *value_out = IsProtectedModeSupported();
             return MAGMA_STATUS_OK;
 
+        default:
+            return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
+    }
+}
+
+magma_status_t MsdArmDevice::QueryReturnsBuffer(uint64_t id, uint32_t* buffer_out)
+{
+    switch (id) {
+        case MAGMA_QUERY_TOTAL_TIME:
+            return power_manager_->GetTotalTime(buffer_out) ? MAGMA_STATUS_OK
+                                                            : MAGMA_STATUS_INTERNAL_ERROR;
         default:
             return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
     }
@@ -1176,7 +1191,7 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* val
 magma_status_t msd_device_query_returns_buffer(msd_device_t* device, uint64_t id,
                                                uint32_t* buffer_out)
 {
-    return MAGMA_STATUS_UNIMPLEMENTED;
+    return MsdArmDevice::cast(device)->QueryReturnsBuffer(id, buffer_out);
 }
 
 void msd_device_dump_status(msd_device_t* device, uint32_t dump_type)

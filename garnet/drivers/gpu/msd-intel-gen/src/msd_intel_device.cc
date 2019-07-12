@@ -658,6 +658,10 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* val
             *value_out = MsdIntelDevice::cast(device)->device_id();
             return MAGMA_STATUS_OK;
 
+        case MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED:
+            *value_out = 0;
+            return MAGMA_STATUS_OK;
+
         case kMsdIntelGenQuerySubsliceAndEuTotal:
             *value_out = MsdIntelDevice::cast(device)->subslice_total();
             *value_out = (*value_out << 32) | MsdIntelDevice::cast(device)->eu_total();

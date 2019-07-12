@@ -221,6 +221,10 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* val
         case MAGMA_QUERY_DEVICE_ID:
             *value_out = MsdVslDevice::cast(device)->device_id();
             return MAGMA_STATUS_OK;
+
+        case MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED:
+            *value_out = 0;
+            return MAGMA_STATUS_OK;
     }
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
 }

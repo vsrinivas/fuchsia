@@ -4,6 +4,7 @@
 
 #include "power_manager.h"
 
+#include "platform_buffer.h"
 #include "registers.h"
 
 PowerManager::PowerManager(magma::RegisterIo* io)
@@ -90,10 +91,21 @@ void PowerManager::ReceivedPowerInterrupt(magma::RegisterIo* io)
 
 void PowerManager::UpdateGpuActive(bool active)
 {
+    std::lock_guard<std::mutex> lock(active_time_mutex_);
+    UpdateGpuActiveLocked(active);
+}
+
+void PowerManager::UpdateGpuActiveLocked(bool active)
+{
     auto now = std::chrono::steady_clock::now();
     std::chrono::steady_clock::duration total_time = now - last_check_time_;
     constexpr uint32_t kMemoryMilliseconds = 100;
     std::chrono::milliseconds memory_duration(kMemoryMilliseconds);
+
+    if (active) {
+        total_active_time_ +=
+            std::chrono::duration_cast<std::chrono::nanoseconds>(total_time).count();
+    }
 
     // Ignore long periods of inactive time.
     if (total_time > memory_duration)
@@ -128,7 +140,8 @@ void PowerManager::UpdateGpuActive(bool active)
 void PowerManager::GetGpuActiveInfo(std::chrono::steady_clock::duration* total_time_out,
                                     std::chrono::steady_clock::duration* active_time_out)
 {
-    UpdateGpuActive(gpu_active_);
+    std::lock_guard<std::mutex> lock(active_time_mutex_);
+    UpdateGpuActiveLocked(gpu_active_);
 
     std::chrono::steady_clock::duration total_time_accumulate(0);
     std::chrono::steady_clock::duration active_time_accumulate(0);
@@ -139,4 +152,26 @@ void PowerManager::GetGpuActiveInfo(std::chrono::steady_clock::duration* total_t
 
     *total_time_out = total_time_accumulate;
     *active_time_out = active_time_accumulate;
+}
+
+bool PowerManager::GetTotalTime(uint32_t* buffer_out)
+{
+    magma_total_time_query_result result;
+    {
+        std::lock_guard<std::mutex> lock(active_time_mutex_);
+        // Accumulate time since last update.
+        UpdateGpuActiveLocked(gpu_active_);
+        result.monotonic_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                       last_check_time_.time_since_epoch())
+                                       .count();
+        result.gpu_time_ns = total_active_time_;
+    }
+
+    std::unique_ptr<magma::PlatformBuffer> buffer =
+        magma::PlatformBuffer::Create(sizeof(result), "time_query");
+    if (!buffer)
+        return DRETF(false, "Failed to allocate buffer");
+    if (!buffer->Write(&result, 0, sizeof(result)))
+        return DRETF(false, "Failed to write result to buffer");
+    return DRETF(buffer->duplicate_handle(buffer_out), "Failed to duplicate handle");
 }
