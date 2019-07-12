@@ -4,6 +4,7 @@
 
 #include <limits.h>
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -128,29 +129,6 @@ zx_status_t Mt8167::Msdc2Init() {
         }
     };
 
-    static const pbus_gpio_t msdc2_ref_gpios[] = {
-        {
-            .gpio = MT8167_GPIO_MT7668_PMU_EN
-        }
-    };
-
-    static const pbus_gpio_t msdc2_cleo_gpios[] = {
-        {
-            .gpio = MT8167_GPIO_MT7668_PMU_EN
-        },
-        {
-            .gpio = MT8167_CLEO_GPIO_HUB_PWR_EN
-        }
-    };
-
-    const pbus_gpio_t* msdc2_gpios = msdc2_ref_gpios;
-    size_t msdc2_gpio_count = countof(msdc2_ref_gpios);
-
-    if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_CLEO) {
-        msdc2_gpios = msdc2_cleo_gpios;
-        msdc2_gpio_count = countof(msdc2_cleo_gpios);
-    }
-
     pbus_dev_t msdc2_dev = {};
     msdc2_dev.name = "sdio";
     msdc2_dev.vid = PDEV_VID_MEDIATEK;
@@ -163,8 +141,6 @@ zx_status_t Mt8167::Msdc2Init() {
     msdc2_dev.metadata_count = countof(msdc2_metadata);
     msdc2_dev.irq_list = msdc2_irqs;
     msdc2_dev.irq_count = countof(msdc2_irqs);
-    msdc2_dev.gpio_list = msdc2_gpios;
-    msdc2_dev.gpio_count = msdc2_gpio_count;
 
     // Please do not use get_root_resource() in new code. See ZX-1467.
     zx::unowned_resource root_resource(get_root_resource());
@@ -221,8 +197,46 @@ zx_status_t Mt8167::Msdc2Init() {
         .set_gpio70_mode(kGpioModeMsdc2)
         .WriteTo(&(*gpio_mmio));
 
-    if ((status = pbus_.DeviceAdd(&msdc2_dev)) != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd MSDC2 failed: %d\n", __FUNCTION__, status);
+    static constexpr zx_bind_inst_t root_match[] = {
+        BI_MATCH(),
+    };
+
+    static constexpr zx_bind_inst_t reset_gpio_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+        BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO_MT7668_PMU_EN),
+    };
+    static constexpr zx_bind_inst_t power_en_gpio_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+        BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_CLEO_GPIO_HUB_PWR_EN),
+    };
+
+    static const device_component_part_t reset_gpio_component[] = {
+        { fbl::count_of(root_match), root_match },
+        { fbl::count_of(reset_gpio_match), reset_gpio_match },
+    };
+    static const device_component_part_t power_en_gpio_component[] = {
+        { fbl::count_of(root_match), root_match },
+        { fbl::count_of(power_en_gpio_match), power_en_gpio_match },
+    };
+
+    static const device_component_t ref_components[] = {
+        { fbl::count_of(reset_gpio_component), reset_gpio_component },
+    };
+    static const device_component_t cleo_components[] = {
+        { fbl::count_of(reset_gpio_component), reset_gpio_component },
+        { fbl::count_of(power_en_gpio_component), power_en_gpio_component },
+    };
+
+    if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_CLEO) {
+        status = pbus_.CompositeDeviceAdd(&msdc2_dev, cleo_components,
+            fbl::count_of(cleo_components), UINT32_MAX);
+    } else {
+        status = pbus_.CompositeDeviceAdd(&msdc2_dev, ref_components, fbl::count_of(ref_components),
+            UINT32_MAX);
+    }
+
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: CompositeDeviceAdd MSDC2 failed: %d\n", __FUNCTION__, status);
     }
 
     return status;

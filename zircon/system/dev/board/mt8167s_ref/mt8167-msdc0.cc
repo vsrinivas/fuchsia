@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -120,12 +121,6 @@ zx_status_t Mt8167::Msdc0Init() {
         }
     };
 
-    static const pbus_gpio_t msdc0_gpios[] = {
-        {
-            .gpio = MT8167_GPIO_MSDC0_RST
-        }
-    };
-
     pbus_dev_t msdc0_dev = {};
     msdc0_dev.name = "emmc";
     msdc0_dev.vid = PDEV_VID_MEDIATEK;
@@ -138,8 +133,6 @@ zx_status_t Mt8167::Msdc0Init() {
     msdc0_dev.metadata_count = countof(msdc0_metadata);
     msdc0_dev.irq_list = msdc0_irqs;
     msdc0_dev.irq_count = countof(msdc0_irqs);
-    msdc0_dev.gpio_list = msdc0_gpios;
-    msdc0_dev.gpio_count = countof(msdc0_gpios);
 
     // TODO(bradenkell): Have the clock driver do this once muxing is supported.
     // Please do not use get_root_resource() in new code. See ZX-1467.
@@ -177,8 +170,25 @@ zx_status_t Mt8167::Msdc0Init() {
         .set_msdc0_mux_sel(ClkMuxSel0::kClkMmPllDiv2)
         .WriteTo(&(*clk_mmio));
 
-    if ((status = pbus_.DeviceAdd(&msdc0_dev)) != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd MSDC0 failed: %d\n", __FUNCTION__, status);
+    static constexpr zx_bind_inst_t root_match[] = {
+        BI_MATCH(),
+    };
+    static constexpr zx_bind_inst_t reset_gpio_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+        BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO_MSDC0_RST),
+    };
+    static const device_component_part_t reset_gpio_component[] = {
+        { fbl::count_of(root_match), root_match },
+        { fbl::count_of(reset_gpio_match), reset_gpio_match },
+    };
+    static const device_component_t components[] = {
+        { fbl::count_of(reset_gpio_component), reset_gpio_component },
+    };
+
+    status = pbus_.CompositeDeviceAdd(&msdc0_dev, components, fbl::count_of(components),
+        UINT32_MAX);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: CompositeDeviceAdd MSDC0 failed: %d\n", __FUNCTION__, status);
     }
 
     return status;

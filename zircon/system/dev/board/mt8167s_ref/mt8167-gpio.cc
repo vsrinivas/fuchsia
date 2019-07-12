@@ -67,6 +67,12 @@ zx_status_t Mt8167::GpioInit() {
         { MT8167_GPIO53_SCL1 },
         { MT8167_GPIO60_SDA2 },
         { MT8167_GPIO61_SCL2 },
+        // For eMMC.
+        { MT8167_GPIO_MSDC0_RST },
+        // For WiFi/Bluetooth.
+        { MT8167_GPIO_MT7668_PMU_EN },
+        // For WiFi/Bluetooth on Cleo.
+        { MT8167_CLEO_GPIO_HUB_PWR_EN },
     };
 
     const pbus_metadata_t cleo_gpio_metadata[] = {

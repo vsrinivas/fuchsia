@@ -11,6 +11,7 @@
 #include <ddk/io-buffer.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
+#include <ddktl/protocol/composite.h>
 #include <lib/device-protocol/pdev.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
@@ -25,6 +26,13 @@
 #include "dma_descriptors.h"
 
 namespace {
+
+enum {
+    COMPONENT_PDEV,
+    COMPONENT_RESET_GPIO,
+    COMPONENT_POWER_EN_GPIO,
+    COMPONENT_COUNT
+};
 
 constexpr uint32_t kIdentificationModeBusFreq = 400000;
 constexpr int kTuningDelayIterations = 4;
@@ -90,7 +98,21 @@ namespace sdmmc {
 zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
     zx_status_t status;
 
-    ddk::PDev pdev(parent);
+    ddk::CompositeProtocolClient composite(parent);
+    if (!composite.is_valid()) {
+        zxlogf(ERROR, "%s: Failed to get composite protocol\n", __FILE__);
+        return ZX_ERR_NO_RESOURCES;
+    }
+
+    zx_device_t* components[COMPONENT_COUNT] = {};
+    size_t component_count = 0;
+    composite.GetComponents(components, COMPONENT_COUNT, &component_count);
+    if (component_count <= COMPONENT_PDEV) {
+        zxlogf(ERROR, "%s: Failed to get components\n", __FILE__);
+        return ZX_ERR_NO_RESOURCES;
+    }
+
+    ddk::PDev pdev(components[COMPONENT_PDEV]);
     if (!pdev.is_valid()) {
         zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __FILE__);
         return ZX_ERR_NO_RESOURCES;
@@ -141,8 +163,8 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
     }
 
     ddk::GpioProtocolClient reset_gpio;
-    if (dev_info.gpio_count > 0) {
-        reset_gpio = pdev.GetGpio(0);
+    if (component_count > COMPONENT_RESET_GPIO) {
+        reset_gpio = ddk::GpioProtocolClient(components[COMPONENT_RESET_GPIO]);
         if (!reset_gpio.is_valid()) {
             zxlogf(ERROR, "%s: Failed to get reset GPIO\n", __FILE__);
             return ZX_ERR_NO_RESOURCES;
@@ -150,8 +172,8 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
     }
 
     ddk::GpioProtocolClient power_en_gpio;
-    if (dev_info.gpio_count > 1) {
-        power_en_gpio = pdev.GetGpio(1);
+    if (component_count > COMPONENT_POWER_EN_GPIO) {
+        power_en_gpio = ddk::GpioProtocolClient(components[COMPONENT_POWER_EN_GPIO]);
         if (!power_en_gpio.is_valid()) {
             zxlogf(ERROR, "%s: Failed to get power enable GPIO\n", __FILE__);
             return ZX_ERR_NO_RESOURCES;
@@ -912,7 +934,7 @@ static constexpr zx_driver_ops_t mtk_sdmmc_driver_ops = []() -> zx_driver_ops_t 
 }();
 
 ZIRCON_DRIVER_BEGIN(mtk_sdmmc, mtk_sdmmc_driver_ops, "zircon", "0.1", 5)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_MSDC0),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_MSDC1),
