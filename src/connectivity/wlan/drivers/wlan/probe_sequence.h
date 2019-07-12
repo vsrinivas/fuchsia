@@ -14,8 +14,7 @@ class ProbeSequence {
  public:
   static constexpr uint8_t kNumProbeSequece = 8;
   static constexpr tx_vec_idx_t kSequenceLength = 1 + kMaxValidIdx - kStartIdx;
-  using ProbeTable =
-      std::array<std::array<tx_vec_idx_t, kSequenceLength>, kNumProbeSequece>;
+  using ProbeTable = std::array<std::array<tx_vec_idx_t, kSequenceLength>, kNumProbeSequece>;
 
   class Entry {
    private:
@@ -24,9 +23,7 @@ class ProbeSequence {
     tx_vec_idx_t probe_idx = kSequenceLength - 1;
   };
 
-  static ProbeSequence RandomSequence() {
-    return ProbeSequence(RandomProbeTable());
-  }
+  static ProbeSequence RandomSequence() { return ProbeSequence(RandomProbeTable()); }
   ProbeSequence(ProbeTable&& table) : probe_table(std::move(table)) {}
 
   // returns true if probe_idx has wrapped around, which means we have probed

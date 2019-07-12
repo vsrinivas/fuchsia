@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_CONVERT_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_CONVERT_H_
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/protocol/if-impl.h>
@@ -12,8 +13,10 @@ namespace wlanif {
 uint8_t ConvertBSSType(::fuchsia::wlan::mlme::BSSTypes bss_type);
 uint8_t ConvertScanType(::fuchsia::wlan::mlme::ScanTypes scan_type);
 uint8_t ConvertCBW(::fuchsia::wlan::common::CBW cbw);
-void ConvertWlanChan(wlan_channel_t* wlanif_chan, const ::fuchsia::wlan::common::WlanChan& fidl_chan);
-void ConvertWlanChan(::fuchsia::wlan::common::WlanChan* fidl_chan, const wlan_channel_t& wlanif_chan);
+void ConvertWlanChan(wlan_channel_t* wlanif_chan,
+                     const ::fuchsia::wlan::common::WlanChan& fidl_chan);
+void ConvertWlanChan(::fuchsia::wlan::common::WlanChan* fidl_chan,
+                     const wlan_channel_t& wlanif_chan);
 void CopySSID(const ::std::vector<uint8_t>& in_ssid, wlanif_ssid_t* out_ssid);
 void CopyRSNE(const ::std::vector<uint8_t>& in_rsne, uint8_t* out_rsne, size_t* out_rsne_len);
 void ConvertBSSDescription(wlanif_bss_description_t* wlanif_bss_desc,
@@ -52,3 +55,5 @@ void ConvertRateSets(::std::vector<uint8_t>* basic, ::std::vector<uint8_t>* op,
                      const wlanif_bss_description_t& wlanif_desc);
 
 }  // namespace wlanif
+
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_CONVERT_H_

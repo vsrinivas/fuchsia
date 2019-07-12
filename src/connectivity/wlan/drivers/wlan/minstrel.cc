@@ -29,21 +29,17 @@ zx::duration PayloadTxTimeErp(SupportedRate rate) {
   uint16_t bits_per_symbol = rate.rate() * 2;
   constexpr int kTxTimePerSymbol = 4000;  // nanoseconds.
 
-  uint32_t total_time =
-      kTxTimePerSymbol * 8 * kMinstrelFrameLength / bits_per_symbol;
+  uint32_t total_time = kTxTimePerSymbol * 8 * kMinstrelFrameLength / bits_per_symbol;
   return zx::nsec(total_time);
 }
 
-zx::duration TxTimeErp(SupportedRate rate) {
-  return HeaderTxTimeErp() + PayloadTxTimeErp(rate);
-}
+zx::duration TxTimeErp(SupportedRate rate) { return HeaderTxTimeErp() + PayloadTxTimeErp(rate); }
 
-void EmplaceErp(std::unordered_map<tx_vec_idx_t, TxStats>* map,
-                tx_vec_idx_t idx, SupportedRate rate) {
+void EmplaceErp(std::unordered_map<tx_vec_idx_t, TxStats>* map, tx_vec_idx_t idx,
+                SupportedRate rate) {
   zx::duration time = TxTimeErp(rate);
   ZX_DEBUG_ASSERT(time.to_nsecs() != 0);
-  debugmstl("%s, tx_time %lu nsec\n", debug::Describe(idx).c_str(),
-            time.to_nsecs());
+  debugmstl("%s, tx_time %lu nsec\n", debug::Describe(idx).c_str(), time.to_nsecs());
   TxStats tx_stats{
       .tx_vector_idx = idx,
       .perfect_tx_time = time,
@@ -81,8 +77,7 @@ std::unordered_set<tx_vec_idx_t> AddSupportedErp(
   return basic_rates;
 }
 
-bool AddMissingErp(std::unordered_map<tx_vec_idx_t, TxStats>* map,
-                   tx_vec_idx_t idx) {
+bool AddMissingErp(std::unordered_map<tx_vec_idx_t, TxStats>* map, tx_vec_idx_t idx) {
   auto erp_rate = TxVectorIdxToErpRate(idx);
   if (!erp_rate.has_value()) {
     ZX_DEBUG_ASSERT(0);
@@ -126,12 +121,10 @@ zx::duration PayloadTxTimeHt(CBW cbw, GI gi, size_t mcs_idx) {
   constexpr int kTxTimePerSymbolGi800 = 4000;  // nanoseconds.
   constexpr int kTxTimePerSymbolGi400 = 3600;  // nanoseconds.
   // Perform multiplication before division to prevent precision loss
-  uint32_t total_time = kTxTimePerSymbolGi800 * 8 * kMinstrelFrameLength /
-                        (nss * bits_per_symbol);
+  uint32_t total_time = kTxTimePerSymbolGi800 * 8 * kMinstrelFrameLength / (nss * bits_per_symbol);
 
   if (gi == WLAN_GI_400NS) {
-    total_time = 800 + (kTxTimePerSymbolGi400 * 8 * kMinstrelFrameLength /
-                        (nss * bits_per_symbol));
+    total_time = 800 + (kTxTimePerSymbolGi400 * 8 * kMinstrelFrameLength / (nss * bits_per_symbol));
   }
   return zx::nsec(total_time);
 }
@@ -142,8 +135,8 @@ zx::duration TxTimeHt(CBW cbw, GI gi, uint8_t relative_mcs_idx) {
 
 // SupportedMcsRx is 78 bit long in IEEE802.11-2016, Figure 9-334
 // In reality, devices implement MCS 0-31, sometimes 32, almost never beyond 32.
-void AddSupportedHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
-                    CBW cbw, GI gi, const SupportedMcsRxMcsHead& mcs_set) {
+void AddSupportedHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map, CBW cbw, GI gi,
+                    const SupportedMcsRxMcsHead& mcs_set) {
   size_t tx_stats_added = 0;
   for (uint8_t mcs_idx = 0; mcs_idx < kHtNumMcs; ++mcs_idx) {
     // Skip if this mcs is not supported
@@ -172,8 +165,8 @@ void AddSupportedHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
     tx_stats_map->emplace(tx_vector_idx, tx_stats);
     ++tx_stats_added;
   }
-  debugmstl("%zu HT added with cbw=%s, gi=%s\n", tx_stats_added,
-            ::wlan::common::CbwStr(cbw), debug::Describe(gi).c_str());
+  debugmstl("%zu HT added with cbw=%s, gi=%s\n", tx_stats_added, ::wlan::common::CbwStr(cbw),
+            debug::Describe(gi).c_str());
 }
 
 MinstrelRateSelector::MinstrelRateSelector(fbl::unique_ptr<Timer>&& timer,
@@ -183,20 +176,18 @@ MinstrelRateSelector::MinstrelRateSelector(fbl::unique_ptr<Timer>&& timer,
       probe_sequence_(std::move(probe_sequence)),
       update_interval_(update_interval) {}
 
-std::unordered_set<tx_vec_idx_t> AddErp(
-    std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
-    const wlan_assoc_ctx_t& assoc_ctx) {
+std::unordered_set<tx_vec_idx_t> AddErp(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
+                                        const wlan_assoc_ctx_t& assoc_ctx) {
   std::vector<SupportedRate> rates(assoc_ctx.rates_cnt);
 
-  std::transform(assoc_ctx.rates, assoc_ctx.rates + assoc_ctx.rates_cnt,
-                 rates.begin(), SupportedRate::raw);
+  std::transform(assoc_ctx.rates, assoc_ctx.rates + assoc_ctx.rates_cnt, rates.begin(),
+                 SupportedRate::raw);
 
   debugmstl("Supported rates: %s\n", debug::Describe(rates).c_str());
   return AddSupportedErp(tx_stats_map, rates);
 }
 
-void AddHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
-           const HtCapabilities& ht_cap) {
+void AddHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map, const HtCapabilities& ht_cap) {
   tx_vec_idx_t max_size = kHtNumMcs;
   // TODO(NET-1726): Enable CBW40 support once its information is available from
   // AssocCtx
@@ -220,18 +211,14 @@ void AddHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
 
   tx_stats_map->reserve(max_size);
 
-  AddSupportedHt(tx_stats_map, CBW20, WLAN_GI_800NS,
-                 ht_cap.mcs_set.rx_mcs_head);
+  AddSupportedHt(tx_stats_map, CBW20, WLAN_GI_800NS, ht_cap.mcs_set.rx_mcs_head);
   if (sgi_20) {
-    AddSupportedHt(tx_stats_map, CBW20, WLAN_GI_400NS,
-                   ht_cap.mcs_set.rx_mcs_head);
+    AddSupportedHt(tx_stats_map, CBW20, WLAN_GI_400NS, ht_cap.mcs_set.rx_mcs_head);
   }
   if (assoc_chan_width == CBW40) {
-    AddSupportedHt(tx_stats_map, CBW40, WLAN_GI_800NS,
-                   ht_cap.mcs_set.rx_mcs_head);
+    AddSupportedHt(tx_stats_map, CBW40, WLAN_GI_800NS, ht_cap.mcs_set.rx_mcs_head);
     if (sgi_40) {
-      AddSupportedHt(tx_stats_map, CBW40, WLAN_GI_400NS,
-                     ht_cap.mcs_set.rx_mcs_head);
+      AddSupportedHt(tx_stats_map, CBW40, WLAN_GI_400NS, ht_cap.mcs_set.rx_mcs_head);
     }
   }
   debugmstl("tx_stats_map size: %zu.\n", tx_stats_map->size());
@@ -267,8 +254,7 @@ void MinstrelRateSelector::AddPeer(const wlan_assoc_ctx_t& assoc_ctx) {
     if (assoc_ctx.rates_cnt > 0) {
       peer.basic_rates = AddErp(&peer.tx_stats_map, assoc_ctx);
       if (peer.basic_rates.size() > 0) {
-        peer.basic_highest = *std::max_element(peer.basic_rates.cbegin(),
-                                               peer.basic_rates.cend());
+        peer.basic_highest = *std::max_element(peer.basic_rates.cbegin(), peer.basic_rates.cend());
       }
     }
     debugmstl("tx_stats_map populated. size: %zu.\n", peer.tx_stats_map.size());
@@ -284,8 +270,7 @@ void MinstrelRateSelector::AddPeer(const wlan_assoc_ctx_t& assoc_ctx) {
     ZX_DEBUG_ASSERT(next_update_ == TimeoutId{});
     timer_mgr_.Schedule(timer_mgr_.Now() + update_interval_, {}, &next_update_);
   } else if (GetPeer(addr) != nullptr) {
-    warnf("Peer %s already exists. Forgot to clean up?\n",
-          addr.ToString().c_str());
+    warnf("Peer %s already exists. Forgot to clean up?\n", addr.ToString().c_str());
   }
   peer_map_.emplace(addr, std::move(peer));
   outdated_peers_.emplace(addr);
@@ -309,8 +294,7 @@ void MinstrelRateSelector::RemovePeer(const common::MacAddr& addr) {
   debugmstl("peer %s removed.\n", addr.ToString().c_str());
 }
 
-void MinstrelRateSelector::HandleTxStatusReport(
-    const wlan_tx_status_t& tx_status) {
+void MinstrelRateSelector::HandleTxStatusReport(const wlan_tx_status_t& tx_status) {
   auto peer_addr = common::MacAddr(tx_status.peer_addr);
   auto peer = GetPeer(peer_addr);
   if (peer == nullptr) {
@@ -345,8 +329,7 @@ void MinstrelRateSelector::HandleTxStatusReport(
   outdated_peers_.emplace(peer_addr);
 }
 
-inline constexpr bool TxStats::PhyPreferredOver(
-    const wlan::TxStats& other) const {
+inline constexpr bool TxStats::PhyPreferredOver(const wlan::TxStats& other) const {
   // based on experiment, If HT is supported, it is better not to use ERP for
   // data frames. With ralink RT5592 and Netgear Nighthawk X10, approximately 80
   // feet away, HT/ERP tx throughput < 1 Mbps, HT only tx 4-8 Mbps
@@ -354,14 +337,11 @@ inline constexpr bool TxStats::PhyPreferredOver(
   return IsHt(tx_vector_idx) && !IsHt(other.tx_vector_idx);
 }
 
-inline constexpr bool TxStats::ThroughputHigherThan(
-    const TxStats& other) const {
-  return cur_tp > other.cur_tp ||
-         (cur_tp == other.cur_tp && probability > other.probability);
+inline constexpr bool TxStats::ThroughputHigherThan(const TxStats& other) const {
+  return cur_tp > other.cur_tp || (cur_tp == other.cur_tp && probability > other.probability);
 }
 
-inline constexpr bool TxStats::ProbabilityHigherThan(
-    const TxStats& other) const {
+inline constexpr bool TxStats::ProbabilityHigherThan(const TxStats& other) const {
   if (probability >= kMinstrelProbabilityThreshold &&
       other.probability >= kMinstrelProbabilityThreshold) {
     // When probability is "high enough", consider throughput instead.
@@ -383,12 +363,11 @@ void UpdateStatsPeer(Peer* peer) {
       if (stats.attempts_total == 0) {
         stats.probability = prob;
       } else {
-        stats.probability = stats.probability * kMinstrelExpWeight +
-                            prob * (1 - kMinstrelExpWeight);
+        stats.probability =
+            stats.probability * kMinstrelExpWeight + prob * (1 - kMinstrelExpWeight);
       }
 
-      if (stats.attempts_total + stats.attempts_cur <
-          stats.attempts_total) {  // overflow
+      if (stats.attempts_total + stats.attempts_cur < stats.attempts_total) {  // overflow
         stats.attempts_total = stats.attempts_cur;
         stats.success_total = stats.success_cur;
       } else {
@@ -404,8 +383,7 @@ void UpdateStatsPeer(Peer* peer) {
     constexpr float kNanoSecondsPerSecond = 1e9;
     // perfect_tx_time is always non-zero as guaranteed by AddSupportedHt and
     // AddSupportedErp
-    stats.cur_tp = kNanoSecondsPerSecond / stats.perfect_tx_time.to_nsecs() *
-                   stats.probability;
+    stats.cur_tp = kNanoSecondsPerSecond / stats.perfect_tx_time.to_nsecs() * stats.probability;
   }
 
   const auto& ctsm = tsm;
@@ -421,13 +399,11 @@ void UpdateStatsPeer(Peer* peer) {
         stats.ThroughputHigherThan(ctsm.at(max_tp))) {
       max_tp = idx;
     }
-    if ((!IsTxUnlikely(stats) &&
-         stats.PhyPreferredOver(ctsm.at(max_probability))) ||
+    if ((!IsTxUnlikely(stats) && stats.PhyPreferredOver(ctsm.at(max_probability))) ||
         stats.ProbabilityHigherThan(ctsm.at(max_probability))) {
       max_probability = idx;
     }
-    if (brs.count(idx) != 0 &&
-        stats.ProbabilityHigherThan(ctsm.at(basic_max_probability))) {
+    if (brs.count(idx) != 0 && stats.ProbabilityHigherThan(ctsm.at(basic_max_probability))) {
       basic_max_probability = idx;
     }
   }
@@ -452,8 +428,7 @@ bool MinstrelRateSelector::HandleTimeout() {
 tx_vec_idx_t GetNextProbe(Peer* peer, const ProbeSequence& probe_sequence) {
   std::lock_guard<std::mutex> gaurd(*peer->update_lock);
   tx_vec_idx_t probe_idx = kInvalidTxVectorIdx;
-  zx::duration baseline_tx_time =
-      peer->tx_stats_map[peer->max_probability].perfect_tx_time;
+  zx::duration baseline_tx_time = peer->tx_stats_map[peer->max_probability].perfect_tx_time;
   auto potential_probes = peer->tx_stats_map.size();
   if (potential_probes == 1) {
     return peer->max_tp;
@@ -464,14 +439,12 @@ tx_vec_idx_t GetNextProbe(Peer* peer, const ProbeSequence& probe_sequence) {
       if (probe_sequence.Next(&peer->probe_entry, &probe_idx)) {
         ++peer->num_probe_cycles_done;
       }
-    } while (peer->tx_stats_map.count(probe_idx) ==
-             0);  // not supported, keep looking
+    } while (peer->tx_stats_map.count(probe_idx) == 0);  // not supported, keep looking
     const TxStats& tx_stats = peer->tx_stats_map[probe_idx];
     const bool skip =
         // These are used by default so no probing needed
-        probe_idx == peer->basic_max_probability ||
-        probe_idx == peer->basic_highest || probe_idx == peer->max_tp ||
-        probe_idx == peer->max_probability ||
+        probe_idx == peer->basic_max_probability || probe_idx == peer->basic_highest ||
+        probe_idx == peer->max_tp || probe_idx == peer->max_probability ||
         // It has been probed more than anyone else
         (tx_stats.attempts_cur > peer->num_probe_cycles_done) ||
         // It will not provide higher throughput, minimum probing is enough
@@ -479,8 +452,7 @@ tx_vec_idx_t GetNextProbe(Peer* peer, const ProbeSequence& probe_sequence) {
          (tx_stats.attempts_cur >= kMaxSlowProbe)) ||
         // It is almost guaranteed to fail, defer until enough cycles pass
         (IsTxUnlikely(tx_stats) &&
-         (tx_stats.probe_cycles_skipped < kDeadProbeCycleCount ||
-          tx_stats.attempts_cur > 0));
+         (tx_stats.probe_cycles_skipped < kDeadProbeCycleCount || tx_stats.attempts_cur > 0));
     if (!skip) {
       break;
     }
@@ -493,8 +465,7 @@ tx_vec_idx_t GetNextProbe(Peer* peer, const ProbeSequence& probe_sequence) {
   return probe_idx;
 }
 
-tx_vec_idx_t GetTxVector(Peer* peer, bool needs_reliability,
-                         const ProbeSequence& probe_sequence) {
+tx_vec_idx_t GetTxVector(Peer* peer, bool needs_reliability, const ProbeSequence& probe_sequence) {
   if (needs_reliability) {
     return peer->max_probability;
   }
@@ -506,8 +477,9 @@ tx_vec_idx_t GetTxVector(Peer* peer, bool needs_reliability,
   return GetNextProbe(peer, probe_sequence);
 }
 
-tx_vec_idx_t MinstrelRateSelector::GetTxVectorIdx(
-    const FrameControl& fc, const common::MacAddr& peer_addr, uint32_t flags) {
+tx_vec_idx_t MinstrelRateSelector::GetTxVectorIdx(const FrameControl& fc,
+                                                  const common::MacAddr& peer_addr,
+                                                  uint32_t flags) {
   Peer* peer = GetPeer(peer_addr);
   if (peer == nullptr) {
     return kErpStartIdx + kErpNumTxVector - 1;
@@ -515,8 +487,7 @@ tx_vec_idx_t MinstrelRateSelector::GetTxVectorIdx(
   if (!fc.IsData()) {
     return peer->basic_max_probability;
   }
-  const bool needs_reliability =
-      (flags & WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY) != 0;
+  const bool needs_reliability = (flags & WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY) != 0;
   return GetTxVector(peer, needs_reliability, probe_sequence_);
 }
 
@@ -548,8 +519,7 @@ const Peer* MinstrelRateSelector::GetPeer(const common::MacAddr& addr) const {
   return nullptr;
 }
 
-zx_status_t MinstrelRateSelector::GetListToFidl(
-    wlan_minstrel::Peers* peers_fidl) const {
+zx_status_t MinstrelRateSelector::GetListToFidl(wlan_minstrel::Peers* peers_fidl) const {
   peers_fidl->peers.resize(peer_map_.size());
   size_t idx = 0;
   for (const auto& iter : peer_map_) {
@@ -575,8 +545,8 @@ wlan_minstrel::StatsEntry TxStats::ToFidl() const {
   };
 }
 
-zx_status_t MinstrelRateSelector::GetStatsToFidl(
-    const common::MacAddr& peer_addr, wlan_minstrel::Peer* peer_fidl) const {
+zx_status_t MinstrelRateSelector::GetStatsToFidl(const common::MacAddr& peer_addr,
+                                                 wlan_minstrel::Peer* peer_fidl) const {
   const auto* peer = GetPeer(peer_addr);
   if (peer == nullptr) {
     return ZX_ERR_NOT_FOUND;
@@ -600,9 +570,7 @@ zx_status_t MinstrelRateSelector::GetStatsToFidl(
   return ZX_OK;
 }
 
-bool MinstrelRateSelector::IsActive() const {
-  return next_update_ != TimeoutId{};
-}
+bool MinstrelRateSelector::IsActive() const { return next_update_ != TimeoutId{}; }
 
 namespace debug {
 // This macro requires char buf[] and size_t offset variable definitions

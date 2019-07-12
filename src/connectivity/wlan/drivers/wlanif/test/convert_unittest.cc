@@ -20,8 +20,7 @@ zx_status_t ValidateMessage(T* msg) {
   auto encoded = enc.GetMessage();
   auto msg_body = encoded.payload();
   const char* err_msg = nullptr;
-  return fidl_validate(T::FidlType, msg_body.data(), msg_body.size(), 0,
-                       &err_msg);
+  return fidl_validate(T::FidlType, msg_body.data(), msg_body.size(), 0, &err_msg);
 }
 
 wlanif_bss_description_t FakeBssWithSsidLen(uint8_t ssid_len) {
@@ -70,8 +69,10 @@ TEST(ConvertTest, ToVectorRateSets_InvalidRateCount) {
 
   bss_desc.num_rates = WLAN_MAC_MAX_RATES + 1;
   for (unsigned i = 0; i < WLAN_MAC_MAX_RATES; i++) {
-      bss_desc.rates[i] = i;
-      if (i & kBasicRateMask) { basic_rate_count++; }
+    bss_desc.rates[i] = i;
+    if (i & kBasicRateMask) {
+      basic_rate_count++;
+    }
   }
   std::vector<uint8_t> basic_rates;
   std::vector<uint8_t> op_rates;

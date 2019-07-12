@@ -17,14 +17,12 @@ ProbeSequence::ProbeTable ProbeSequence::RandomProbeTable() {
     for (tx_vec_idx_t j = kStartIdx; j <= kMaxValidIdx; ++j) {
       sequence_table[i][j - kStartIdx] = j;
     }
-    std::shuffle(sequence_table[i].begin(), sequence_table[i].end(),
-                 random_generator);
+    std::shuffle(sequence_table[i].begin(), sequence_table[i].end(), random_generator);
   }
   return sequence_table;
 }
 
-bool ProbeSequence::Next(wlan::ProbeSequence::Entry* entry,
-                         tx_vec_idx_t* idx) const {
+bool ProbeSequence::Next(wlan::ProbeSequence::Entry* entry, tx_vec_idx_t* idx) const {
   bool ret = false;
   entry->probe_idx = (entry->probe_idx + 1) % kSequenceLength;
   if (entry->probe_idx == 0) {

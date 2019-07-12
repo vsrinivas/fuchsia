@@ -12,38 +12,36 @@
 #include "device.h"
 
 zx_status_t wlanif_bind(void* ctx, zx_device_t* device) {
-    zxlogf(INFO, "%s\n", __func__);
+  zxlogf(INFO, "%s\n", __func__);
 
-    wlanif_impl_protocol_t wlanif_impl_proto;
-    zx_status_t status;
-    status = device_get_protocol(device, ZX_PROTOCOL_WLANIF_IMPL,
-                                 static_cast<void*>(&wlanif_impl_proto));
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "wlanif: bind: no wlanif_impl protocol (%s)\n",
-               zx_status_get_string(status));
-        return ZX_ERR_INTERNAL;
-    }
+  wlanif_impl_protocol_t wlanif_impl_proto;
+  zx_status_t status;
+  status =
+      device_get_protocol(device, ZX_PROTOCOL_WLANIF_IMPL, static_cast<void*>(&wlanif_impl_proto));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "wlanif: bind: no wlanif_impl protocol (%s)\n", zx_status_get_string(status));
+    return ZX_ERR_INTERNAL;
+  }
 
-    auto wlanif_dev = std::make_unique<wlanif::Device>(device, wlanif_impl_proto);
+  auto wlanif_dev = std::make_unique<wlanif::Device>(device, wlanif_impl_proto);
 
-    status = wlanif_dev->Bind();
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "wlanif: could not bind: %s\n", zx_status_get_string(status));
-    } else {
-        // devhost is now responsible for the memory used by wlandev. It will be
-        // cleaned up in the Device::Release() method.
-        wlanif_dev.release();
-    }
-    return status;
+  status = wlanif_dev->Bind();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "wlanif: could not bind: %s\n", zx_status_get_string(status));
+  } else {
+    // devhost is now responsible for the memory used by wlandev. It will be
+    // cleaned up in the Device::Release() method.
+    wlanif_dev.release();
+  }
+  return status;
 }
 
 static constexpr zx_driver_ops_t wlanif_driver_ops = []() {
-    zx_driver_ops_t ops = {};
-    ops.version = DRIVER_OPS_VERSION;
-    ops.bind = wlanif_bind;
-    return ops;
+  zx_driver_ops_t ops = {};
+  ops.version = DRIVER_OPS_VERSION;
+  ops.bind = wlanif_bind;
+  return ops;
 }();
 
 ZIRCON_DRIVER_BEGIN(wlan, wlanif_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_WLANIF_IMPL),
-ZIRCON_DRIVER_END(wlan)
+BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_WLANIF_IMPL), ZIRCON_DRIVER_END(wlan)

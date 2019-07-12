@@ -61,8 +61,7 @@ struct Peer {
   bool is_vht = false;
 
   std::unique_ptr<std::mutex> update_lock = std::make_unique<std::mutex>();
-  std::unordered_map<tx_vec_idx_t, TxStats> tx_stats_map
-      __TA_GUARDED(*update_lock);
+  std::unordered_map<tx_vec_idx_t, TxStats> tx_stats_map __TA_GUARDED(*update_lock);
   std::unordered_set<tx_vec_idx_t> basic_rates;
 
   // will be replaced when assoc_ctx is parsed.
@@ -84,8 +83,7 @@ struct Peer {
 
 class MinstrelRateSelector {
  public:
-  MinstrelRateSelector(fbl::unique_ptr<Timer>&& timer,
-                       ProbeSequence&& probe_sequence,
+  MinstrelRateSelector(fbl::unique_ptr<Timer>&& timer, ProbeSequence&& probe_sequence,
                        zx::duration update_interval);
   void AddPeer(const wlan_assoc_ctx_t& assoc_ctx);
   void RemovePeer(const common::MacAddr& addr);
@@ -93,8 +91,8 @@ class MinstrelRateSelector {
   void HandleTxStatusReport(const wlan_tx_status_t& tx_status);
   bool HandleTimeout();
 
-  tx_vec_idx_t GetTxVectorIdx(const FrameControl& fc,
-                              const common::MacAddr& peer_addr, uint32_t flags);
+  tx_vec_idx_t GetTxVectorIdx(const FrameControl& fc, const common::MacAddr& peer_addr,
+                              uint32_t flags);
   zx_status_t GetListToFidl(::fuchsia::wlan::minstrel::Peers* peers_fidl) const;
   zx_status_t GetStatsToFidl(const common::MacAddr& peer_addr,
                              ::fuchsia::wlan::minstrel::Peer* peer_fidl) const;

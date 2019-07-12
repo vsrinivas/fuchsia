@@ -15,8 +15,7 @@ zx_status_t wlan_bind(void* ctx, zx_device_t* device) {
   std::printf("%s\n", __func__);
 
   wlanmac_protocol_t wlanmac_proto;
-  if (device_get_protocol(device, ZX_PROTOCOL_WLANMAC,
-                          reinterpret_cast<void*>(&wlanmac_proto))) {
+  if (device_get_protocol(device, ZX_PROTOCOL_WLANMAC, reinterpret_cast<void*>(&wlanmac_proto))) {
     std::printf("wlan: bind: no wlanmac protocol\n");
     return ZX_ERR_INTERNAL;
   }
@@ -34,10 +33,10 @@ zx_status_t wlan_bind(void* ctx, zx_device_t* device) {
 }
 
 static constexpr zx_driver_ops_t wlan_driver_ops = []() {
-    zx_driver_ops_t ops = {};
-    ops.version = DRIVER_OPS_VERSION;
-    ops.bind = wlan_bind;
-    return ops;
+  zx_driver_ops_t ops = {};
+  ops.version = DRIVER_OPS_VERSION;
+  ops.bind = wlan_bind;
+  return ops;
 }();
 
 // clang-format off
