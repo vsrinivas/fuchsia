@@ -5,7 +5,7 @@
 
 ### start fuchsia in aemu
 
-## usage: fx aemu [-a <mode>] [-c <text>] [-N [-I <ifname>]] [-u <path>] [-g <port> [-r <fps>] [-t <cmd>]] [-x <port> [-X <directory>]] [-e <directory>] [-w <size>] [--audio] [--headless] [--software-gpu] [--debugger]
+## usage: fx aemu [-a <mode>] [-c <text>] [-N [-I <ifname>]] [-u <path>] [-g <port> [-r <fps>] [-t <cmd>]] [-x <port> [-X <directory>]] [-e <directory>] [-w <size>] [-s <cpus>] [--audio] [--headless] [--software-gpu] [--debugger]
 ##   -a <mode> acceleration mode (auto, off, kvm, hvf, hax), default is auto
 ##   -c <text> add item to kernel command line
 ##   -N run with emulated nic via tun/tap
@@ -18,6 +18,7 @@
 ##   -x <port> enable WebRTC HTTP service on port
 ##   -X <directory> location of grpcwebproxy, defaults to looking in prebuilt/third_party/grpcwebproxy
 ##   -w <size> window size, default is 1280x800
+##   -s <cpus> number of cpus, 1 for uniprocessor, default is 4
 ##   --audio run with audio hardware added to the virtual machine
 ##   --headless run in headless mode
 ##   --software-gpu run without host GPU acceleration
@@ -49,6 +50,7 @@ VULKAN=1
 HTTP=0
 GRPCWEBPROXY_DIR=""
 CMDLINE=""
+SMP=4
 
 # Propagate our TERM environment variable as a kernel command line
 # argument.  This is first so that an explicit -c TERM=foo argument
@@ -110,6 +112,10 @@ while [[ $# -ge 1 ]]; do
     shift
     WINDOW_SIZE="$1"
     ;;
+  -s)
+    shift
+    SMP="$1"
+    ;;
   --audio)
     AUDIO=1
     ;;
@@ -150,12 +156,15 @@ fi
 ARGS=()
 ARGS+=("-m" "2048")
 ARGS+=("-serial" "stdio")
-ARGS+=("-smp" "4,threads=2")
 ARGS+=("-vga" "none")
 ARGS+=("-machine" "q35")
 ARGS+=("-device" "isa-debug-exit,iobase=0xf4,iosize=0x04")
 ARGS+=("-device" "virtio-keyboard-pci")
 ARGS+=("-device" "virtio_input_multi_touch_pci_1")
+
+if [[ $SMP != 1 ]]; then
+  ARGS+=("-smp" "${SMP},threads=2")
+fi
 
 if (( $AUDIO )); then
   ARGS+=("-soundhw" "hda")
