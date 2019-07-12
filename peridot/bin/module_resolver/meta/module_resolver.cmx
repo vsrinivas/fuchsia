@@ -12,7 +12,7 @@
             "fuchsia.net.oldhttp.HttpService"
         ],
         "system": [
-            "data/initial_module_packages"
+            "deprecated-data/initial_module_packages"
         ]
     }
 }
