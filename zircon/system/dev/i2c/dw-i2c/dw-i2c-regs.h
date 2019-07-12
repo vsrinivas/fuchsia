@@ -4,10 +4,13 @@
 
 #pragma once
 
+// clang-format off
 #define I2C_DW_COMP_TYPE_NUM    0x44570140
 #define I2C_DW_MAX_TRANSFER     64 // Local buffer for transfer and receive. Matches FIFO size
 #define I2C_ERROR_SIGNAL        ZX_USER_SIGNAL_0
 #define I2C_TXN_COMPLETE_SIGNAL ZX_USER_SIGNAL_1
+#define I2C_ALL_SIGNALS         I2C_ERROR_SIGNAL | I2C_TXN_COMPLETE_SIGNAL
+
 
 #define I2C_DW_READ32(a)        readl(dev->regs_iobuff.vaddr + a)
 #define I2C_DW_WRITE32(a, v)    writel(v, dev->regs_iobuff.vaddr + a)
@@ -29,6 +32,31 @@
 #define I2C_7BIT_ADDR       0
 #define I2C_10BIT_ADDR      0
 #define I2C_ACTIVE          1
+
+/* Timing values */
+
+#define DW_I2C_CLK_RATE_KHZ     100000
+#define DW_I2C_SS_THD_STA       4000    // SCL hold time for start signal in ns
+#define DW_I2C_SS_TLOW          4700    // SCL low time in ns
+#define DW_I2C_FS_THD_STA       600     // SCL hold time for start signal in ns
+#define DW_I2C_FS_TLOW          1300    // SCL low time in ns
+#define DW_I2C_SCL_TF           205     // SCL Falling time in ns
+#define DW_I2C_SDA_TF           425     // SDA Falling time in ns
+#define DW_I2C_SDA_HOLD_TIME    449     // SDA Hold time in ns
+#define DW_I2C_SDA_HOLD_RX_MASK (1 << 16)
+
+// IC_[FS]S_SCL_HCNT + 3 >= IC_CLK * (tHD;STA + tf)
+#define DW_I2C_SS_SCL_HCNT_VALUE ((DW_I2C_CLK_RATE_KHZ * \
+                                    (DW_I2C_SS_THD_STA + DW_I2C_SDA_TF)) + 500000) / 1000000 - 3
+#define DW_I2C_FS_SCL_HCNT_VALUE ((DW_I2C_CLK_RATE_KHZ * \
+                                    (DW_I2C_FS_THD_STA + DW_I2C_SDA_TF)) + 500000) / 1000000 - 3
+// IC_[FS]S_SCL_LCNT + 1 >= IC_CLK * (tLOW + tf)
+#define DW_I2C_SS_SCL_LCNT_VALUE ((DW_I2C_CLK_RATE_KHZ * \
+                                    (DW_I2C_SS_TLOW + DW_I2C_SCL_TF)) + 500000) / 1000000 - 1
+#define DW_I2C_FS_SCL_LCNT_VALUE ((DW_I2C_CLK_RATE_KHZ * \
+                                    (DW_I2C_FS_TLOW + DW_I2C_SCL_TF)) + 500000) / 1000000 - 1
+// IC_SDA_HOLD = (IC_CLK * tSDA;Hold + 500000 / 1000000)
+#define DW_I2C_SDA_HOLD_VALUE ((DW_I2C_CLK_RATE_KHZ * DW_I2C_SDA_HOLD_TIME) + 500000) / 1000000
 
 /* DesignWare I2C Resiter Offset*/
 #define DW_I2C_CON                                  0x0     /* I2C Control */
@@ -140,6 +168,10 @@
 #define DW_I2C_FS_SCL_LCNT_START                    0
 #define DW_I2C_FS_SCL_LCNT_BITS                     16
 
+/* DW_I2C_SDA_HOLD Bit Definitions */
+#define DW_I2C_SDA_HOLD_START                       0
+#define DW_I2C_SDA_HOLD_BITS                        18
+
 /* DW_I2C_INTR Bit Definitions */
 #define DW_I2C_INTR_SCL_STUCK_LOW                   (0x4000)
 #define DW_I2C_INTR_MSTR_ON_HOLD                    (0x2000)
@@ -188,3 +220,4 @@
 #define DW_I2C_COMP_PARAM_1_RXFIFOSZ_BITS           8
 #define DW_I2C_COMP_PARAM_1_TXFIFOSZ_START          16
 #define DW_I2C_COMP_PARAM_1_TXFIFOSZ_BITS           8
+// clang-format on

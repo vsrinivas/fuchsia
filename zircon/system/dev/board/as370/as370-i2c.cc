@@ -28,6 +28,12 @@ zx_status_t As370::I2cInit() {
     };
 
     ddk::GpioImplProtocolClient gpio(parent());
+
+    if (!gpio.is_valid()) {
+        zxlogf(ERROR, "%s: Failed to create GPIO protocol client\n", __func__);
+        return ZX_ERR_INTERNAL;
+    }
+
     for (uint32_t i = 0; i < countof(i2c_gpios); i++) {
         status = gpio.SetAltFunction(i2c_gpios[i], 1); // 1 == SDA/SCL pinmux setting.
         if (status != ZX_OK) {
