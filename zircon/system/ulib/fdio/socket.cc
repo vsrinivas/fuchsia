@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/net/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -22,13 +21,14 @@
 #include "private.h"
 #include "unistd.h"
 
+namespace fsocket = ::llcpp::fuchsia::posix::socket;
+
 static inline zxio_socket_t* fdio_get_zxio_socket(fdio_t* io) {
     return reinterpret_cast<zxio_socket_t*>(fdio_get_zxio(io));
 }
 
 static ssize_t zxsio_recvfrom(fdio_t* io, void* data, size_t len, int flags,
-                              struct sockaddr* __restrict addr,
-                              socklen_t* __restrict addrlen) {
+                              struct sockaddr* __restrict addr, socklen_t* __restrict addrlen) {
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
     size_t addr_actual = 0u;
     size_t actual = 0u;
@@ -91,19 +91,13 @@ static ssize_t zxsio_sendmsg_stream(fdio_t* io, const struct msghdr* msg, int fl
 }
 
 static zx_status_t zxsio_clone(fdio_t* io, zx_handle_t* out_handle) {
-    zx::socket out_socket;
-    zx_status_t status = fdio_get_zxio_socket(io)->socket.socket.duplicate(
-        ZX_RIGHT_SAME_RIGHTS, &out_socket);
-    if (status != ZX_OK) {
-        return status;
-    }
-    *out_handle = out_socket.release();
-    return ZX_OK;
+    zxio_t* z = fdio_get_zxio(io);
+    return zxio_clone(z, out_handle);
 }
 
 static zx_status_t zxsio_unwrap(fdio_t* io, zx_handle_t* out_handle) {
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    *out_handle = sio->socket.socket.get();
+    *out_handle = sio->socket.control.channel().get();
     return ZX_OK;
 }
 
@@ -187,23 +181,23 @@ static void zxsio_wait_end_stream(fdio_t* io, zx_signals_t signals, uint32_t* _e
 static zx_status_t zxsio_posix_ioctl_stream(fdio_t* io, int req, va_list va) {
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
     switch (req) {
-    case FIONREAD: {
-        zx_info_socket_t info;
-        zx_status_t status = sio->socket.socket.get_info(
-            ZX_INFO_SOCKET, &info, sizeof(info), NULL, NULL);
-        if (status != ZX_OK) {
-            return status;
+        case FIONREAD: {
+            zx_info_socket_t info;
+            zx_status_t status =
+                sio->socket.socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), NULL, NULL);
+            if (status != ZX_OK) {
+                return status;
+            }
+            size_t available = info.rx_buf_available;
+            if (available > INT_MAX) {
+                available = INT_MAX;
+            }
+            int* actual = va_arg(va, int*);
+            *actual = static_cast<int>(available);
+            return ZX_OK;
         }
-        size_t available = info.rx_buf_available;
-        if (available > INT_MAX) {
-            available = INT_MAX;
-        }
-        int* actual = va_arg(va, int*);
-        *actual = static_cast<int>(available);
-        return ZX_OK;
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
+        default:
+            return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
@@ -274,22 +268,27 @@ static zx_status_t zxsio_close(fdio_t* io) {
     return zxs_close(std::move(sio->socket));
 }
 
-static ssize_t zxsio_ioctl(fdio_t* io, uint32_t op, const void* in_buf,
-                           size_t in_len, void* out_buf, size_t out_len) {
-    zxio_socket_t* sio = fdio_get_zxio_socket(io);
+static ssize_t zxsio_ioctl(fdio_t* io, uint32_t op, const void* in_buf, size_t in_len,
+                           void* out_buf, size_t out_len) {
+    uint8_t request_buffer[fidl::MaxSizeInChannel<fsocket::Control::IoctlPOSIXRequest>()];
+    uint8_t response_buffer[fidl::MaxSizeInChannel<fsocket::Control::IoctlPOSIXResponse>()];
     int16_t out_code;
-    size_t actual;
-    zx_status_t status = fuchsia_net_SocketControlIoctl(
-        sio->socket.socket.get(), static_cast<uint16_t>(op),
-        static_cast<const uint8_t*>(in_buf), in_len, &out_code,
-        static_cast<uint8_t*>(out_buf), out_len, &actual);
-    if (status != ZX_OK) {
-        return status;
+    fidl::VectorView<uint8_t> out;
+    fidl::DecodeResult result = fdio_get_zxio_socket(io)->socket.control.IoctlPOSIX(
+        fidl::BytePart::WrapEmpty(request_buffer), static_cast<uint16_t>(op),
+        fidl::VectorView(in_len, const_cast<uint8_t*>(static_cast<const uint8_t*>(in_buf))),
+        fidl::BytePart::WrapEmpty(response_buffer), &out_code, &out);
+    if (result.status != ZX_OK) {
+        return result.status;
     }
     if (out_code) {
         return errno_to_fdio_status(out_code);
     }
-    return static_cast<ssize_t>(actual);
+    if (out.count() > out_len) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    memcpy(out_buf, out.data(), out.count());
+    return static_cast<ssize_t>(out.count());
 }
 
 static zx_status_t fdio_socket_shutdown(fdio_t* io, int how) {
@@ -299,15 +298,15 @@ static zx_status_t fdio_socket_shutdown(fdio_t* io, int how) {
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
     uint32_t options = 0;
     switch (how) {
-    case SHUT_RD:
-        options = ZX_SOCKET_SHUTDOWN_READ;
-        break;
-    case SHUT_WR:
-        options = ZX_SOCKET_SHUTDOWN_WRITE;
-        break;
-    case SHUT_RDWR:
-        options = ZX_SOCKET_SHUTDOWN_READ | ZX_SOCKET_SHUTDOWN_WRITE;
-        break;
+        case SHUT_RD:
+            options = ZX_SOCKET_SHUTDOWN_READ;
+            break;
+        case SHUT_WR:
+            options = ZX_SOCKET_SHUTDOWN_WRITE;
+            break;
+        case SHUT_RDWR:
+            options = ZX_SOCKET_SHUTDOWN_READ | ZX_SOCKET_SHUTDOWN_WRITE;
+            break;
     }
     return sio->socket.socket.shutdown(options);
 }
@@ -353,7 +352,7 @@ static fdio_ops_t fdio_socket_dgram_ops = {
     .wait_begin = zxsio_wait_begin_dgram,
     .wait_end = zxsio_wait_end_dgram,
     .ioctl = zxsio_ioctl,
-    .posix_ioctl = fdio_default_posix_ioctl, // not supported
+    .posix_ioctl = fdio_default_posix_ioctl,  // not supported
     .get_vmo = fdio_default_get_vmo,
     .get_token = fdio_default_get_token,
     .get_attr = fdio_default_get_attr,
@@ -374,23 +373,31 @@ static fdio_ops_t fdio_socket_dgram_ops = {
     .get_rcvtimeo = fdio_socket_get_rcvtimeo,
 };
 
-fdio_t* fdio_socket_create(zx::socket socket, zx_info_socket_t info) {
+zx_status_t fdio_socket_create(fsocket::Control::SyncClient control, zx::socket socket,
+                               fdio_t** out_io) {
+    zx_info_socket_t info;
+    zx_status_t status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), NULL, NULL);
+    if (status != ZX_OK) {
+        return status;
+    }
     fdio_t* io = fdio_alloc(
         info.options & ZX_SOCKET_DATAGRAM ? &fdio_socket_dgram_ops : &fdio_socket_stream_ops);
     if (io == NULL) {
-        return NULL;
+        return ZX_ERR_NO_RESOURCES;
     }
-    zx_status_t status = zxio_socket_init(
+    status = zxio_socket_init(
         fdio_get_zxio_storage(io),
         {
+            .control = std::move(control),
             .socket = std::move(socket),
             .flags = info.options & ZX_SOCKET_DATAGRAM ? ZXS_FLAG_DATAGRAM : 0u,
             .rcvtimeo = zx::duration::infinite(),
         });
     if (status != ZX_OK) {
-        return NULL;
+        return status;
     }
-    return io;
+    *out_io = io;
+    return ZX_OK;
 }
 
 bool fdio_is_socket(fdio_t* io) {

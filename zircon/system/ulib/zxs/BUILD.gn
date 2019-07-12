@@ -12,8 +12,12 @@ library("zxs") {
     "zxs.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  public_deps = [
+    # <lib/zxs/zxs.h> has #include <fuchsia/posix/socket/llcpp/fidl.h>.
+    "$zx/system/fidl/fuchsia-posix-socket:llcpp.headers",
+  ]
   deps = [
-    "$zx/system/fidl/fuchsia-net:c",
+    "$zx/system/fidl/fuchsia-posix-socket:llcpp",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]

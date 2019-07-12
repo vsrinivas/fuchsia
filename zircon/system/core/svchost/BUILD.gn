@@ -33,6 +33,7 @@ executable("svchost") {
     "$zx/system/fidl/fuchsia-mem:c",
     "$zx/system/fidl/fuchsia-net:llcpp",
     "$zx/system/fidl/fuchsia-paver:c",
+    "$zx/system/fidl/fuchsia-posix-socket:llcpp",
     "$zx/system/fidl/fuchsia-process:c",
     "$zx/system/fidl/fuchsia-scheduler:c",
     "$zx/system/fidl/fuchsia-sysmem:c",
