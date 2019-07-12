@@ -20,8 +20,6 @@
 #include "fwil_types.h"
 #include "linuxisms.h"
 
-extern const uint8_t ALLFFMAC[ETH_ALEN];
-
 #define BRCMF_FW_ALTPATH_LEN 256
 #define BRCMF_FW_NAME_LEN 320
 
