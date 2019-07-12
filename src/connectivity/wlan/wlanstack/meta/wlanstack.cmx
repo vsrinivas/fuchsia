@@ -11,7 +11,7 @@
             "fuchsia.cobalt.LoggerFactory"
         ],
         "system": [
-            "data/wlanstack"
+            "deprecated-data/wlanstack"
         ]
     }
 }

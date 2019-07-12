@@ -64,6 +64,8 @@ rustc_binary("bin") {
 }
 
 package("wlanstack") {
+  system_deprecated_data = "//build"
+
   deps = [
     ":bin",
     ":wlan_metrics_registry",
