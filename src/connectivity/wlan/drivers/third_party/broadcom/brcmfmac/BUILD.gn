@@ -193,6 +193,8 @@ config("config_sim") {
 source_set("sim") {
   sources = [
     "sim-fw/sim_fw.cc",
+    "sim-fw/sim_hw.cc",
+    "sim-fw/sim_hw.h",
     "sim.cc",
   ]
   public = [

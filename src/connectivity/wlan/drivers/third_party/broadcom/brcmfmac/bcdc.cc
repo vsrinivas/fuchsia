@@ -33,33 +33,6 @@
 #include "netbuf.h"
 #include "proto.h"
 
-// clang-format off
-
-/* BCDC flag definitions */
-#define BCDC_DCMD_ERROR     0x00000001       /* 1=cmd failed */
-#define BCDC_DCMD_SET       0x00000002       /* 0=get, 1=set cmd */
-#define BCDC_DCMD_IF_MASK   0x0000F000       /* I/F index */
-#define BCDC_DCMD_IF_SHIFT  12
-#define BCDC_DCMD_ID_MASK   0xFFFF0000       /* id an cmd pairing */
-#define BCDC_DCMD_ID_SHIFT  16               /* ID Mask shift bits */
-#define BCDC_DCMD_ID(flags) (((flags)&BCDC_DCMD_ID_MASK) >> BCDC_DCMD_ID_SHIFT)
-
-/*
- * BCDC header - Broadcom specific extension of CDC.
- * Used on data packets to convey priority across USB.
- */
-#define BCDC_HEADER_LEN 4
-#define BCDC_PROTO_VER 2          /* Protocol version */
-#define BCDC_FLAG_VER_MASK   0xf0   /* Protocol version mask */
-#define BCDC_FLAG_VER_SHIFT  4     /* Protocol version shift */
-#define BCDC_FLAG_SUM_GOOD   0x04   /* Good RX checksums */
-#define BCDC_FLAG_SUM_NEEDED 0x08 /* Dongle needs to do TX checksums */
-#define BCDC_PRIORITY_MASK   0x07
-#define BCDC_FLAG2_IF_MASK   0x0f /* packet rx interface in APSTA */
-#define BCDC_FLAG2_IF_SHIFT  0
-
-// clang-format on
-
 #define BCDC_GET_IF_IDX(hdr) ((int)((((hdr)->flags2) & BCDC_FLAG2_IF_MASK) >> BCDC_FLAG2_IF_SHIFT))
 #define BCDC_SET_IF_IDX(hdr, idx) \
     ((hdr)->flags2 = (((hdr)->flags2 & ~BCDC_FLAG2_IF_MASK) | ((idx) << BCDC_FLAG2_IF_SHIFT)))
