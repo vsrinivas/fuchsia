@@ -1,223 +1,483 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #pragma once
 
-// clang-format off
-#define I2C_DW_COMP_TYPE_NUM    0x44570140
-#define I2C_DW_MAX_TRANSFER     64 // Local buffer for transfer and receive. Matches FIFO size
-#define I2C_ERROR_SIGNAL        ZX_USER_SIGNAL_0
-#define I2C_TXN_COMPLETE_SIGNAL ZX_USER_SIGNAL_1
-#define I2C_ALL_SIGNALS         I2C_ERROR_SIGNAL | I2C_TXN_COMPLETE_SIGNAL
+#include <hwreg/bitfields.h>
 
+namespace dw_i2c {
 
-#define I2C_DW_READ32(a)        readl(dev->regs_iobuff.vaddr + a)
-#define I2C_DW_WRITE32(a, v)    writel(v, dev->regs_iobuff.vaddr + a)
+/* I2C Control */
+class ControlReg : public hwreg::RegisterBase<ControlReg, uint32_t> {
+ public:
+  DEF_BIT(7, tx_empty_ctrl);
+  DEF_BIT(6, slave_disable);
+  DEF_BIT(5, restart_en);
+  DEF_BIT(4, master_10bitaddr);
+  DEF_BIT(3, slave_10bitaddr);
+  DEF_FIELD(2, 1, max_speed_mode);
+  DEF_BIT(0, master_mode);
+  static auto Get() { return hwreg::RegisterAddr<ControlReg>(0x00); }
+};
 
-#define I2C_DW_MASK(start, count) (((1 << (count)) - 1) << (start))
-#define I2C_DW_GET_BITS32(src, start, count) ((I2C_DW_READ32(src) & I2C_DW_MASK(start, count)) >> (start))
-#define I2C_DW_SET_BITS32(dest, start, count, value) \
-            I2C_DW_WRITE32(dest, (I2C_DW_READ32(dest) & ~I2C_DW_MASK(start, count)) | \
-                                (((value) << (start)) & I2C_DW_MASK(start, count)))
-#define I2C_DW_SET_MASK(mask, start, count, value) \
-                        ((mask & ~I2C_DW_MASK(start, count)) | \
-                                (((value) << (start)) & I2C_DW_MASK(start, count)))
+/* I2C Target Address */
+class TargetAddressReg : public hwreg::RegisterBase<TargetAddressReg, uint32_t> {
+ public:
+  DEF_BIT(12, master_10bitaddr);
+  DEF_BIT(11, special);
+  DEF_BIT(10, gc_or_start);
+  DEF_FIELD(9, 0, target_address);
+  static auto Get() { return hwreg::RegisterAddr<TargetAddressReg>(0x04); }
+};
 
-#define I2C_DISABLE         0
-#define I2C_ENABLE          1
-#define I2C_STD_MODE        1
-#define I2C_FAST_MODE       2
-#define I2C_HS_MODE         3
-#define I2C_7BIT_ADDR       0
-#define I2C_10BIT_ADDR      0
-#define I2C_ACTIVE          1
+/* I2C Slave Address */
+class SlaveAddressReg : public hwreg::RegisterBase<SlaveAddressReg, uint32_t> {
+ public:
+  DEF_FIELD(9, 0, slave_address);
+  static auto Get() { return hwreg::RegisterAddr<SlaveAddressReg>(0x08); }
+};
 
-/* Timing values */
+/* I2C HS Master Mode Code Address */
+class HSMasterAddrReg : public hwreg::RegisterBase<HSMasterAddrReg, uint32_t> {
+ public:
+  DEF_FIELD(2, 0, hs_master_code);
+  static auto Get() { return hwreg::RegisterAddr<HSMasterAddrReg>(0x0c); }
+};
 
-#define DW_I2C_CLK_RATE_KHZ     100000
-#define DW_I2C_SS_THD_STA       4000    // SCL hold time for start signal in ns
-#define DW_I2C_SS_TLOW          4700    // SCL low time in ns
-#define DW_I2C_FS_THD_STA       600     // SCL hold time for start signal in ns
-#define DW_I2C_FS_TLOW          1300    // SCL low time in ns
-#define DW_I2C_SCL_TF           205     // SCL Falling time in ns
-#define DW_I2C_SDA_TF           425     // SDA Falling time in ns
-#define DW_I2C_SDA_HOLD_TIME    449     // SDA Hold time in ns
-#define DW_I2C_SDA_HOLD_RX_MASK (1 << 16)
+/* I2C Rx/Tx Data Buffer and Command */
+class DataCommandReg : public hwreg::RegisterBase<DataCommandReg, uint32_t> {
+ public:
+  DEF_BIT(10, start);
+  DEF_BIT(9, stop);
+  DEF_BIT(8, command);
+  DEF_FIELD(7, 0, data);
+  static auto Get() { return hwreg::RegisterAddr<DataCommandReg>(0x10); }
+};
 
-// IC_[FS]S_SCL_HCNT + 3 >= IC_CLK * (tHD;STA + tf)
-#define DW_I2C_SS_SCL_HCNT_VALUE ((DW_I2C_CLK_RATE_KHZ * \
-                                    (DW_I2C_SS_THD_STA + DW_I2C_SDA_TF)) + 500000) / 1000000 - 3
-#define DW_I2C_FS_SCL_HCNT_VALUE ((DW_I2C_CLK_RATE_KHZ * \
-                                    (DW_I2C_FS_THD_STA + DW_I2C_SDA_TF)) + 500000) / 1000000 - 3
-// IC_[FS]S_SCL_LCNT + 1 >= IC_CLK * (tLOW + tf)
-#define DW_I2C_SS_SCL_LCNT_VALUE ((DW_I2C_CLK_RATE_KHZ * \
-                                    (DW_I2C_SS_TLOW + DW_I2C_SCL_TF)) + 500000) / 1000000 - 1
-#define DW_I2C_FS_SCL_LCNT_VALUE ((DW_I2C_CLK_RATE_KHZ * \
-                                    (DW_I2C_FS_TLOW + DW_I2C_SCL_TF)) + 500000) / 1000000 - 1
-// IC_SDA_HOLD = (IC_CLK * tSDA;Hold + 500000 / 1000000)
-#define DW_I2C_SDA_HOLD_VALUE ((DW_I2C_CLK_RATE_KHZ * DW_I2C_SDA_HOLD_TIME) + 500000) / 1000000
+/* SS I2C Clock SCL High Count */
+class StandardSpeedSclHighCountReg
+    : public hwreg::RegisterBase<StandardSpeedSclHighCountReg, uint32_t> {
+ public:
+  DEF_FIELD(15, 0, ss_scl_hcnt);
+  static auto Get() { return hwreg::RegisterAddr<StandardSpeedSclHighCountReg>(0x14); }
+};
 
-/* DesignWare I2C Resiter Offset*/
-#define DW_I2C_CON                                  0x0     /* I2C Control */
-#define DW_I2C_TAR                                  0x4     /* I2C Target Address */
-#define DW_I2C_SAR                                  0x8     /* I2C Slave Address */
-#define DW_I2C_HS_MADDR                             0xc     /* I2C HS Master Mode Code Address */
-#define DW_I2C_DATA_CMD                             0x10    /* I2C Rx/Tx Data Buffer and Command */
-#define DW_I2C_SS_SCL_HCNT                          0x14    /* SS I2C Clock SCL High Count */
-#define DW_I2C_UFM_SCL_HCNT                         0x14    /* UFS I2C Clock SCL High Count */
-#define DW_I2C_SS_SCL_LCNT                          0x18    /* SS I2C Clock SCL Low Count */
-#define DW_I2C_UFM_SCL_LCNT                         0x18    /* UFS I2C Clock SCL Low Count */
-#define DW_I2C_FS_SCL_HCNT                          0x1c    /* Fast Mode I2C Clock SCL High Cnt */
-#define DW_I2C_UFM_TBUF_CNT                         0x1c    /* UFS mode TBuf Idle Count */
-#define DW_I2C_FS_SCL_LCNT                          0x20    /* Fast Mode I2C Clock SCL Low Cnt */
-#define DW_I2C_HS_SCL_HCNT                          0x24    /* High Speed I2C Clock SCL High Cnt */
-#define DW_I2C_HS_SCL_LCNT                          0x28    /* High Speed I2C Clock SCL Low Cnt */
-#define DW_I2C_INTR_STAT                            0x2c    /* I2C Interrupt Status */
-#define DW_I2C_INTR_MASK                            0x30    /* I2C Interrupt Mask */
-#define DW_I2C_RAW_INTR_STAT                        0x34    /* I2C Raw Interrupt Status */
-#define DW_I2C_RX_TL                                0x38    /* I2C Receive FIFO Threshold */
-#define DW_I2C_TX_TL                                0x3c    /* I2C Transmit FIFO Threshold */
-#define DW_I2C_CLR_INTR                             0x40    /* Clear Combined and Individual Intr */
-#define DW_I2C_CLR_RX_UNDER                         0x44    /* Clear RX_UNDER Interrupt */
-#define DW_I2C_CLR_RX_OVER                          0x48    /* Clear RX_OVER Interrupt */
-#define DW_I2C_CLR_TX_OVER                          0x4c    /* Clear TX_OVER Interrupt */
-#define DW_I2C_CLR_RD_REQ                           0x50    /* Clear RD_REQ Interrupt */
-#define DW_I2C_CLR_TX_ABRT                          0x54    /* Clear TX_ABRT Interrupt */
-#define DW_I2C_CLR_RX_DONE                          0x58    /* Clear RX_DONE Interrupt */
-#define DW_I2C_CLR_ACTIVITY                         0x5c    /* Clear ACTIVITY Interrupt */
-#define DW_I2C_CLR_STOP_DET                         0x60    /* Clear STOP_DET Interrupt */
-#define DW_I2C_CLR_START_DET                        0x64    /* Clear START_DET Interrupt */
-#define DW_I2C_CLR_GEN_CALL                         0x68    /* Clear GEN_CALL Interrupt */
-#define DW_I2C_ENABLE                               0x6c    /* I2C Enable */
-#define DW_I2C_STATUS                               0x70    /* I2C Status */
-#define DW_I2C_TXFLR                                0x74    /* I2C Transmit FIFO Level */
-#define DW_I2C_RXFLR                                0x78    /* I2C Receive FIFO Level */
-#define DW_I2C_SDA_HOLD                             0x7c    /* I2C SDA Hold Time Length */
-#define DW_I2C_TX_ABRT_SOURCE                       0x80    /* I2C Transmit Abort Source */
-#define DW_I2C_SLV_DATA_NACK_ONLY                   0x84    /* Generate Slave Data NACK */
-#define DW_I2C_DMA_CR                               0x88    /* DMA Control */
-#define DW_I2C_DMA_TDLR                             0x8c    /* DMA Transmit Data Level */
-#define DW_I2C_DMA_RDLR                             0x90    /* I2C Receive Data Level */
-#define DW_I2C_SDA_SETUP                            0x94    /* I2C SDA Setup */
-#define DW_I2C_ACK_GENERAL_CALL                     0x98    /* I2C ACK General Call */
-#define DW_I2C_ENABLE_STATUS                        0x9c    /* I2C Enable Status */
-#define DW_I2C_FS_SPKLEN                            0xa0    /* I2C SS, FS spike suppression limit */
-#define DW_I2C_UFM_SPKLEN                           0xa0    /* I2C UFM spike suppression limit */
-#define DW_I2C_HS_SPKLEN                            0xa4    /* I2C HS spike suppression limit */
-#define DW_I2C_CLR_RESTART_DET                      0xa8    /* Clear RESTART_DET Interrupt */
-#define DW_I2C_SCL_STUCK_AT_LOW_TIMEOUT             0xac    /* I2C SCL Stuck at Low Timeout */
-#define DW_I2C_SDA_STUCK_AT_LOW_TIMEOUT             0xb0    /* I2C SDA Stuck at Low Timeout */
-#define DW_I2C_CLR_SCL_STUCK_DET                    0xb4    /* Clear SCL Stuck at Low Detect Intr */
-#define DW_I2C_DEVICE_ID                            0xb8    /* I2C Device-ID */
-#define DW_I2C_SMBUS_CLK_LOW_SEXT                   0xbc    /* SMBus Slave Clock Extend Timeout */
-#define DW_I2C_SMBUS_CLK_LOW_MEXT                   0xc0    /* SMBus Master Clock Extend Timeout */
-#define DW_I2C_SMBUS_THIGH_MAX_IDLE_COUNT           0xc4    /* SMBus Master High MAX Bus-idle cnt */
-#define DW_I2C_SMBUS_INTR_STAT                      0xc8    /* SMBUS Interrupt Status */
-#define DW_I2C_SMBUS_INTR_MASK                      0xcc    /* SMBus Interrupt Mask */
-#define DW_I2C_SMBUS_RAW_INTR_STAT                  0xd0    /* SMBus Raw Interrupt Status */
-#define DW_I2C_CLR_SMBUS_INTR                       0xd4    /* SMBus Clear Interrupt */
-#define DW_I2C_OPTIONAL_SAR                         0xd8    /* I2C Optional Slave Address */
-#define DW_I2C_SMBUS_UDID_LSB                       0xdc    /* SMBUS ARP UDID LSB */
-#define DW_I2C_COMP_PARAM_1                         0xf4    /* Component Parameter */
-#define DW_I2C_COMP_VERSION                         0xf8    /* I2C Component Version */
-#define DW_I2C_COMP_TYPE                            0xfc
+/* SS I2C Clock SCL Low Count */
+class StandardSpeedSclLowCountReg
+    : public hwreg::RegisterBase<StandardSpeedSclLowCountReg, uint32_t> {
+ public:
+  DEF_FIELD(15, 0, ss_scl_lcnt);
+  static auto Get() { return hwreg::RegisterAddr<StandardSpeedSclLowCountReg>(0x18); }
+};
 
+/* Fast Mode I2C Clock SCL High Count */
+class FastSpeedSclHighCountReg : public hwreg::RegisterBase<FastSpeedSclHighCountReg, uint32_t> {
+ public:
+  DEF_FIELD(15, 0, fs_scl_hcnt);
+  static auto Get() { return hwreg::RegisterAddr<FastSpeedSclHighCountReg>(0x1c); }
+};
 
-/* DW_I2C_CON Bit Definitions */
-#define DW_I2C_CON_MASTER_MODE_START                0
-#define DW_I2C_CON_MASTER_MODE_BITS                 1
-#define DW_I2C_CON_SPEED_START                      1
-#define DW_I2C_CON_SPEED_BITS                       2
-#define DW_I2C_CON_10BITADDRSLAVE_START             3
-#define DW_I2C_CON_10BITADDRSLAVE_BITS              1
-#define DW_I2C_CON_10BITADDRMASTER_START            4
-#define DW_I2C_CON_10BITADDRMASTER_BITS             1
-#define DW_I2C_CON_RESTART_EN_START                 5
-#define DW_I2C_CON_RESTART_EN_BITS                  1
-#define DW_I2C_CON_SLAVE_DIS_START                  6
-#define DW_I2C_CON_SLAVE_DIS_BITS                   1
-#define DW_I2C_CON_TX_EMPTY_CTRL_START              8
-#define DW_I2C_CON_TX_EMPTY_CTRL_BITS               1
+/* Fast Mode I2C Clock SCL Low Count */
+class FastSpeedSclLowCountReg : public hwreg::RegisterBase<FastSpeedSclLowCountReg, uint32_t> {
+ public:
+  DEF_FIELD(15, 0, fs_scl_lcnt);
+  static auto Get() { return hwreg::RegisterAddr<FastSpeedSclLowCountReg>(0x20); }
+};
 
-/* DW_I2C_TAR Bit Definitions */
-#define DW_I2C_TAR_TAR_START                        0
-#define DW_I2C_TAR_TAR_BITS                         10
-#define DW_I2C_TAR_10BIT_START                      12
-#define DW_I2C_TAR_10BIT_BITS                       1
+/* High Speed I2C Clock SCL High Count */
+class HighSpeedSclHighCountReg : public hwreg::RegisterBase<HighSpeedSclHighCountReg, uint32_t> {
+ public:
+  DEF_FIELD(15, 0, hs_scl_hcnt);
+  static auto Get() { return hwreg::RegisterAddr<HighSpeedSclHighCountReg>(0x24); }
+};
 
-/* DW_I2C_DATA_CMD_DAT Bit Definitions */
-#define DW_I2C_DATA_CMD_DAT_START                   0
-#define DW_I2C_DATA_CMD_DAT_BITS                    8
-#define DW_I2C_DATA_CMD_CMD_START                   8
-#define DW_I2C_DATA_CMD_CMD_BITS                    1
-#define DW_I2C_DATA_CMD_STOP_START                  9
-#define DW_I2C_DATA_CMD_STOP_BITS                   1
-#define DW_I2C_DATA_CMD_RESTART_START               10
-#define DW_I2C_DATA_CMD_RESTART_BITS                1
-#define DW_I2C_DATA_CMD_FRST_DAT_BYTE_START         11
-#define DW_I2C_DATA_CMD_FRST_DAT_BYTE_BITS          1
+/* High Speed I2C Clock SCL Low Count */
+class HighSpeedSclLowCountReg : public hwreg::RegisterBase<HighSpeedSclLowCountReg, uint32_t> {
+ public:
+  DEF_FIELD(15, 0, hs_scl_lcnt);
+  static auto Get() { return hwreg::RegisterAddr<HighSpeedSclLowCountReg>(0x28); }
+};
 
-/* DW_I2C_SS/FS_SCL Bit Definitions */
-#define DW_I2C_SS_SCL_HCNT_START                    0
-#define DW_I2C_SS_SCL_HCNT_BITS                     16
-#define DW_I2C_SS_SCL_LCNT_START                    0
-#define DW_I2C_SS_SCL_LCNT_BITS                     16
-#define DW_I2C_FS_SCL_HCNT_START                    0
-#define DW_I2C_FS_SCL_HCNT_BITS                     16
-#define DW_I2C_FS_SCL_LCNT_START                    0
-#define DW_I2C_FS_SCL_LCNT_BITS                     16
+/* I2C Interrupt Status */
+class InterruptStatusReg : public hwreg::RegisterBase<InterruptStatusReg, uint32_t> {
+ public:
+  DEF_BIT(14, scl_stuck_low);
+  DEF_BIT(13, mstr_on_hold);
+  DEF_BIT(12, restart_det);
+  DEF_BIT(11, gen_call);
+  DEF_BIT(10, start_det);
+  DEF_BIT(9, stop_det);
+  DEF_BIT(8, activity);
+  DEF_BIT(7, rx_done);
+  DEF_BIT(6, tx_abrt);
+  DEF_BIT(5, rd_req);
+  DEF_BIT(4, tx_empty);
+  DEF_BIT(3, tx_over);
+  DEF_BIT(2, rx_full);
+  DEF_BIT(1, rx_over);
+  DEF_BIT(0, rx_under);
+  static auto Get() { return hwreg::RegisterAddr<InterruptStatusReg>(0x2c); }
+};
 
-/* DW_I2C_SDA_HOLD Bit Definitions */
-#define DW_I2C_SDA_HOLD_START                       0
-#define DW_I2C_SDA_HOLD_BITS                        18
+/* I2C Interrupt Mask */
+class InterruptMaskReg : public hwreg::RegisterBase<InterruptMaskReg, uint32_t> {
+ public:
+  DEF_BIT(14, scl_stuck_low);
+  DEF_BIT(13, mstr_on_hold);
+  DEF_BIT(12, restart_det);
+  DEF_BIT(11, gen_call);
+  DEF_BIT(10, start_det);
+  DEF_BIT(9, stop_det);
+  DEF_BIT(8, activity);
+  DEF_BIT(7, rx_done);
+  DEF_BIT(6, tx_abrt);
+  DEF_BIT(5, rd_req);
+  DEF_BIT(4, tx_empty);
+  DEF_BIT(3, tx_over);
+  DEF_BIT(2, rx_full);
+  DEF_BIT(1, rx_over);
+  DEF_BIT(0, rx_under);
+  static auto Get() { return hwreg::RegisterAddr<InterruptMaskReg>(0x30); }
+};
 
-/* DW_I2C_INTR Bit Definitions */
-#define DW_I2C_INTR_SCL_STUCK_LOW                   (0x4000)
-#define DW_I2C_INTR_MSTR_ON_HOLD                    (0x2000)
-#define DW_I2C_INTR_RESTART_DET                     (0x1000)
-#define DW_I2C_INTR_GEN_CALL                        (0x0800)
-#define DW_I2C_INTR_START_DET                       (0x0400)
-#define DW_I2C_INTR_STOP_DET                        (0x0200)
-#define DW_I2C_INTR_ACTIVITY                        (0x0100)
-#define DW_I2C_INTR_RX_DONE                         (0x0080)
-#define DW_I2C_INTR_TX_ABRT                         (0x0040)
-#define DW_I2C_INTR_RD_REQ                          (0x0020)
-#define DW_I2C_INTR_TX_EMPTY                        (0x0010)
-#define DW_I2C_INTR_TX_OVER                         (0x0008)
-#define DW_I2C_INTR_RX_FULL                         (0x0004)
-#define DW_I2C_INTR_RX_OVER                         (0x0002)
-#define DW_I2C_INTR_RX_UNDER                        (0x0001)
-#define DW_I2C_INTR_DEFAULT_INTR_MASK               (DW_I2C_INTR_RX_FULL | \
-                                                    DW_I2C_INTR_TX_ABRT | \
-                                                    DW_I2C_INTR_STOP_DET | \
-                                                    DW_I2C_INTR_TX_EMPTY)
+/* I2C Raw Interrupt Status */
+class RawInterruptStatusReg : public hwreg::RegisterBase<RawInterruptStatusReg, uint32_t> {
+ public:
+  DEF_BIT(14, scl_stuck_low);
+  DEF_BIT(13, mstr_on_hold);
+  DEF_BIT(12, restart_det);
+  DEF_BIT(11, gen_call);
+  DEF_BIT(10, start_det);
+  DEF_BIT(9, stop_det);
+  DEF_BIT(8, activity);
+  DEF_BIT(7, rx_done);
+  DEF_BIT(6, tx_abrt);
+  DEF_BIT(5, rd_req);
+  DEF_BIT(4, tx_empty);
+  DEF_BIT(3, tx_over);
+  DEF_BIT(2, rx_full);
+  DEF_BIT(1, rx_over);
+  DEF_BIT(0, rx_under);
+  static auto Get() { return hwreg::RegisterAddr<RawInterruptStatusReg>(0x34); }
+};
 
-#define DW_I2C_INTR_READ_INTR_MASK                  (DW_I2C_INTR_RX_FULL | \
-                                                    DW_I2C_INTR_TX_ABRT | \
-                                                    DW_I2C_INTR_STOP_DET )
+/* I2C Receive FIFO Threshold */
+class RxFifoThresholdReg : public hwreg::RegisterBase<RxFifoThresholdReg, uint32_t> {
+ public:
+  DEF_FIELD(7, 0, rx_threshold_level);
+  static auto Get() { return hwreg::RegisterAddr<RxFifoThresholdReg>(0x38); }
+};
 
-/* DW_I2C_RX/TX_TL Bit Definitions */
-#define DW_I2C_RX_TL_START                          0
-#define DW_I2C_RX_TL_BITS                           8
-#define DW_I2C_TX_TL_START                          0
-#define DW_I2C_TX_TL_BITS                           8
+/* I2C Transmit FIFO Threshold */
+class TxFifoThresholdReg : public hwreg::RegisterBase<TxFifoThresholdReg, uint32_t> {
+ public:
+  DEF_FIELD(7, 0, tx_threshold_level);
+  static auto Get() { return hwreg::RegisterAddr<TxFifoThresholdReg>(0x3c); }
+};
 
-/* DW_I2C_ENABLE Bit Definitions */
-#define DW_I2C_ENABLE_ENABLE_START                  0
-#define DW_I2C_ENABLE_ENABLE_BITS                   1
+/* Read this registers to clear the interrupt*/
+class ClearInterruptReg : public hwreg::RegisterBase<ClearInterruptReg, uint32_t> {
+ public:
+  DEF_BIT(0, clr_intr);
+  static auto Get() { return hwreg::RegisterAddr<ClearInterruptReg>(0x40); }
+};
 
-/* DW_I2C_STATUS Bit Definitions */
-#define DW_I2C_STATUS_ACTIVITY_START                0
-#define DW_I2C_STATUS_ACTIVITY_BITS                 1
+/* Read these registers to clear the corresponding bit in interrupt*/
+class ClearRxUnderReg : public hwreg::RegisterBase<ClearRxUnderReg, uint32_t> {
+ public:
+  DEF_BIT(0, clr_rx_under);
+  static auto Get() { return hwreg::RegisterAddr<ClearRxUnderReg>(0x44); }
+};
 
-/* DW_I2C_ENABLE_STATUS Bit Definitions */
-#define DW_I2C_ENABLE_STATUS_EN_START               0
-#define DW_I2C_ENABLE_STATUS_EN_BITS                1
+class ClearRxOverReg : public hwreg::RegisterBase<ClearRxOverReg, uint32_t> {
+ public:
+  DEF_BIT(0, clr_rx_over);
+  static auto Get() { return hwreg::RegisterAddr<ClearRxOverReg>(0x48); }
+};
 
-/* DW_I2C_COMP_PARAM_1 Bit Definitions */
-#define DW_I2C_COMP_PARAM_1_RXFIFOSZ_START          8
-#define DW_I2C_COMP_PARAM_1_RXFIFOSZ_BITS           8
-#define DW_I2C_COMP_PARAM_1_TXFIFOSZ_START          16
-#define DW_I2C_COMP_PARAM_1_TXFIFOSZ_BITS           8
-// clang-format on
+class ClearTxOverReg : public hwreg::RegisterBase<ClearTxOverReg, uint32_t> {
+ public:
+  DEF_BIT(0, clr_tx_over);
+  static auto Get() { return hwreg::RegisterAddr<ClearTxOverReg>(0x4c); }
+};
+
+class ClearRdReqReg : public hwreg::RegisterBase<ClearRdReqReg, uint32_t> {
+ public:
+  DEF_BIT(0, clr_rd_req);
+  static auto Get() { return hwreg::RegisterAddr<ClearRdReqReg>(0x50); }
+};
+
+class ClearTxAbrtReg : public hwreg::RegisterBase<ClearTxAbrtReg, uint32_t> {
+ public:
+  DEF_BIT(0, clr_tx_abrt);
+  static auto Get() { return hwreg::RegisterAddr<ClearTxAbrtReg>(0x54); }
+};
+
+class ClearRxDoneReg : public hwreg::RegisterBase<ClearRxDoneReg, uint32_t> {
+ public:
+  DEF_BIT(0, clr_rx_done);
+  static auto Get() { return hwreg::RegisterAddr<ClearRxDoneReg>(0x58); }
+};
+
+class ClearActivityReg : public hwreg::RegisterBase<ClearActivityReg, uint32_t> {
+ public:
+  DEF_BIT(0, clr_activity);
+  static auto Get() { return hwreg::RegisterAddr<ClearActivityReg>(0x5c); }
+};
+
+class ClearStopDetReg : public hwreg::RegisterBase<ClearStopDetReg, uint32_t> {
+ public:
+  DEF_BIT(0, clr_stop_det);
+  static auto Get() { return hwreg::RegisterAddr<ClearStopDetReg>(0x60); }
+};
+
+class ClearStartDetReg : public hwreg::RegisterBase<ClearStartDetReg, uint32_t> {
+ public:
+  DEF_BIT(0, clr_start_det);
+  static auto Get() { return hwreg::RegisterAddr<ClearStartDetReg>(0x64); }
+};
+
+class ClearGenCallReg : public hwreg::RegisterBase<ClearGenCallReg, uint32_t> {
+ public:
+  DEF_BIT(0, clr_gen_call);
+  static auto Get() { return hwreg::RegisterAddr<ClearGenCallReg>(0x68); }
+};
+
+/* I2C Enable */
+class EnableReg : public hwreg::RegisterBase<EnableReg, uint32_t> {
+ public:
+  DEF_BIT(0, enable);
+  static auto Get() { return hwreg::RegisterAddr<EnableReg>(0x6c); }
+};
+
+/* I2C Status */
+class StatusReg : public hwreg::RegisterBase<StatusReg, uint32_t> {
+ public:
+  DEF_BIT(6, slave_activity);
+  DEF_BIT(5, master_activity);
+  DEF_BIT(4, rx_fifo_full);
+  DEF_BIT(3, rx_fifo_not_empty);
+  DEF_BIT(2, tx_fifo_empty);
+  DEF_BIT(1, tx_fifo_not_full);
+  DEF_BIT(0, activity);
+  static auto Get() { return hwreg::RegisterAddr<StatusReg>(0x70); }
+};
+
+/* I2C Transmit FIFO Level */
+class TxFifoLevelReg : public hwreg::RegisterBase<TxFifoLevelReg, uint32_t> {
+ public:
+  DEF_FIELD(7, 0, tx_fifo_level);
+  static auto Get() { return hwreg::RegisterAddr<TxFifoLevelReg>(0x74); }
+};
+
+/* I2C Receive FIFO Level */
+class RxFifoLevelReg : public hwreg::RegisterBase<RxFifoLevelReg, uint32_t> {
+ public:
+  DEF_FIELD(7, 0, rx_fifo_level);
+  static auto Get() { return hwreg::RegisterAddr<RxFifoLevelReg>(0x78); }
+};
+
+/* I2C SDA Hold Time Length */
+class SdaHoldReg : public hwreg::RegisterBase<SdaHoldReg, uint32_t> {
+ public:
+  DEF_FIELD(15, 0, sda_hold_time_tx);
+  DEF_FIELD(23, 16, sda_hold_time_rx);
+  static auto Get() { return hwreg::RegisterAddr<SdaHoldReg>(0x7C); }
+};
+
+/* I2C Transmit Abort Source */
+class TxAbrtSourceReg : public hwreg::RegisterBase<TxAbrtSourceReg, uint32_t> {
+ public:
+  DEF_BIT(15, abrt_slvrd_intx);
+  DEF_BIT(14, abrt_slv_arblost);
+  DEF_BIT(13, abrt_slvflush_txfifo);
+  DEF_BIT(12, abrt_lost);
+  DEF_BIT(11, abrt_master_dis);
+  DEF_BIT(10, abrt_10b_rd_norstrt);
+  DEF_BIT(9, abrt_sbyte_norstrt);
+  DEF_BIT(8, abrt_hs_norstrt);
+  DEF_BIT(7, abrt_sbyte_ackdet);
+  DEF_BIT(6, abrt_hs_ackdet);
+  DEF_BIT(5, abrt_gcall_read);
+  DEF_BIT(4, abrt_gcall_noack);
+  DEF_BIT(3, abrt_txdata_noack);
+  DEF_BIT(2, abrt_10addr2_noack);
+  DEF_BIT(1, abrt_10addr1_noack);
+  DEF_BIT(0, abrt_7b_addr_noack);
+  static auto Get() { return hwreg::RegisterAddr<TxAbrtSourceReg>(0x80); }
+};
+
+/* Generate Slave Data NACK */
+class SlaveDataNackReg : public hwreg::RegisterBase<SlaveDataNackReg, uint32_t> {
+ public:
+  DEF_BIT(0, nack);
+  static auto Get() { return hwreg::RegisterAddr<SlaveDataNackReg>(0x84); }
+};
+
+/* DMA COntrol */
+class DMAControlReg : public hwreg::RegisterBase<DMAControlReg, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<DMAControlReg>(0x88); }
+};
+
+/* DMA Transmit Data Level */
+class DMATxDataLevelReg : public hwreg::RegisterBase<DMATxDataLevelReg, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<DMATxDataLevelReg>(0x8c); }
+};
+
+/* DMA Receive Data Level */
+class DMARxDataLevelReg : public hwreg::RegisterBase<DMARxDataLevelReg, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<DMARxDataLevelReg>(0x90); }
+};
+
+/* I2C SDA Setup */
+class SdaSetupReg : public hwreg::RegisterBase<SdaSetupReg, uint32_t> {
+ public:
+  DEF_BIT(0, sda_setup);
+  static auto Get() { return hwreg::RegisterAddr<SdaSetupReg>(0x94); }
+};
+
+/* I2C ACK General Call */
+class AckGeneralCallReg : public hwreg::RegisterBase<AckGeneralCallReg, uint32_t> {
+ public:
+  DEF_BIT(0, ack_gen_call);
+  static auto Get() { return hwreg::RegisterAddr<AckGeneralCallReg>(0x98); }
+};
+
+/* I2C Enable Status */
+class EnableStatusReg : public hwreg::RegisterBase<EnableStatusReg, uint32_t> {
+ public:
+  DEF_BIT(2, slv_fifo_filled_and_flushed);
+  DEF_BIT(1, slv_rx_aborted);
+  DEF_BIT(0, enable);
+  static auto Get() { return hwreg::RegisterAddr<EnableStatusReg>(0x9c); }
+};
+
+/* I2C FS Spike Suppression Limit Register*/
+class FSSpikeLengthReg : public hwreg::RegisterBase<FSSpikeLengthReg, uint32_t> {
+ public:
+  DEF_FIELD(7, 0, fs_spklen);
+  static auto Get() { return hwreg::RegisterAddr<FSSpikeLengthReg>(0xA0); }
+};
+
+/* I2C HS Spike Suppression Limit Register*/
+class HSSpikeLengthReg : public hwreg::RegisterBase<HSSpikeLengthReg, uint32_t> {
+ public:
+  DEF_FIELD(7, 0, hs_spklen);
+  static auto Get() { return hwreg::RegisterAddr<HSSpikeLengthReg>(0xA4); }
+};
+
+/* Clear RESTART_DET Interrupt */
+class ClearRestartDetReg : public hwreg::RegisterBase<ClearRestartDetReg, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<ClearRestartDetReg>(0xa8); }
+};
+
+/* I2C SCL Stuck at Low Timeout */
+class SclStuckAtLowTimeoutReg : public hwreg::RegisterBase<SclStuckAtLowTimeoutReg, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<SclStuckAtLowTimeoutReg>(0xac); }
+};
+
+/* I2C SDA Stuck at Low Timeout */
+class SdaStuckAtLowTimeoutReg : public hwreg::RegisterBase<SdaStuckAtLowTimeoutReg, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<SdaStuckAtLowTimeoutReg>(0xb0); }
+};
+
+/* Clear SCL Stuck at Low Detect Intr */
+class ClearSclStuckDetReg : public hwreg::RegisterBase<ClearSclStuckDetReg, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<ClearSclStuckDetReg>(0xb4); }
+};
+
+/* I2C Device-ID */
+class DeviceIDReg : public hwreg::RegisterBase<DeviceIDReg, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<DeviceIDReg>(0xb8); }
+};
+
+/* SMBus Slave Clock Extend Timeout */
+class SMBusClkLowSextReg : public hwreg::RegisterBase<SMBusClkLowSextReg, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<SMBusClkLowSextReg>(0xbc); }
+};
+
+/* SMBus Master Clock Extend Timeout */
+class SMBusClkLowMextReg : public hwreg::RegisterBase<SMBusClkLowMextReg, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<SMBusClkLowMextReg>(0xc0); }
+};
+
+/* SMBus Master High MAX Bus-idle cnt */
+class SMBusTHighMaxIdleCountReg : public hwreg::RegisterBase<SMBusTHighMaxIdleCountReg, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<SMBusTHighMaxIdleCountReg>(0xc4); }
+};
+
+/* SMBUS Interrupt Status */
+class SMBusIntrStatReg : public hwreg::RegisterBase<SMBusIntrStatReg, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<SMBusIntrStatReg>(0xc8); }
+};
+
+/* SMBus Interrupt Mask */
+class SMBusIntrMaskReg : public hwreg::RegisterBase<SMBusIntrMaskReg, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<SMBusIntrMaskReg>(0xcc); }
+};
+
+/* SMBus Raw Interrupt Status */
+class SMBusRawIntrStatReg : public hwreg::RegisterBase<SMBusRawIntrStatReg, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<SMBusRawIntrStatReg>(0xd0); }
+};
+
+/* SMBus Clear Interrupt */
+class ClearSMBusIntrReg : public hwreg::RegisterBase<ClearSMBusIntrReg, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<ClearSMBusIntrReg>(0xd4); }
+};
+
+/* I2C Optional Slave Address */
+class OptionalSARReg : public hwreg::RegisterBase<OptionalSARReg, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<OptionalSARReg>(0xd8); }
+};
+
+/* SMBUS ARP UDID LSB */
+class SMBusUdidLsbReg : public hwreg::RegisterBase<SMBusUdidLsbReg, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<SMBusUdidLsbReg>(0xdc); }
+};
+
+/* Component Parameter */
+class CompParam1Reg : public hwreg::RegisterBase<CompParam1Reg, uint32_t> {
+ public:
+  DEF_FIELD(23, 16, tx_buffer_depth);
+  DEF_FIELD(15, 8, rx_buffer_depth);
+  DEF_BIT(7, add_encoded_params);
+  DEF_BIT(6, has_dma);
+  DEF_BIT(5, intr_io);
+  DEF_BIT(4, hc_count_values);
+  DEF_FIELD(3, 2, max_speed_mode);
+  DEF_FIELD(1, 0, apb_data_width);
+  static auto Get() { return hwreg::RegisterAddr<CompParam1Reg>(0xf4); }
+};
+
+/* I2C Component Version */
+class CompVersionReg : public hwreg::RegisterBase<CompVersionReg, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<CompVersionReg>(0xf8); }
+};
+
+/* I2C Component Type */
+class CompTypeReg : public hwreg::RegisterBase<CompTypeReg, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<CompTypeReg>(0xfc); }
+};
+
+}  // namespace dw_i2c

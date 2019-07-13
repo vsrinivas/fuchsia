@@ -4,15 +4,46 @@
 
 driver("dw-i2c") {
   sources = [
-    "dw-i2c.c",
+    "dw-i2c.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/banjo/ddk.protocol.i2cimpl",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/device-protocol-platform-device",
+    "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/hwreg",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+  ]
+}
+
+test("dw-i2c-test") {
+  output_name = "dw-i2c-test"
+  sources = [
+    "dw-i2c-test.cc",
+    "dw-i2c.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.i2c",
+    "$zx/system/banjo/ddk.protocol.i2cimpl",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/dev/lib/device-protocol-pdev",
+    "$zx/system/dev/lib/device-protocol-platform-device",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/lib/mock-mmio-reg",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/mock-function",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }
