@@ -12,8 +12,8 @@
 // Client Get State Machine Test Cases
 //
 // 1. Client requests a file that does not exist on the server.
-// 2. Client requests a file smaller than the fragmentation size.
-// 3. Client requests a file larger than the fragmentation size.
+// 2. Client requests a file that is sent unfragmented.
+// 3. Client requests a file that is sent as multiple fragments.
 // 4. Client fails to open the copy of the file.
 // 5. Client fails to write to the copy of the file.
 // 6. Server immediately hangs up on client at start of transfer.
@@ -311,6 +311,264 @@ TEST_F(AsyncEndToEndTest, GrpcFailure) {
   // Client finishes and deletes itself.
   client_cq_->Next(&tag, &cq_status);
   client_call_data->Proceed(cq_status);
+
+  // The client sets the operation status in the callback.
+  ASSERT_EQ(operation_status, OperationStatus::GRPC_FAILURE);
+}
+
+// Client Put State Machine Test Cases
+//
+// 1. Client fails to read from the open file.
+// 2. The file to be pushed is sent in a single fragment.
+// 3. The file to be pushed is sent in multiple fragments.
+// 4. gRPC fails while the client is transferring the file.
+
+TEST_F(AsyncEndToEndTest, PutReadFails) {
+  ResetStub();
+  // Accounting bits for managing CompletionQueue state.
+  void* tag;
+  bool cq_status;
+
+  // Create a service that can accept incoming Get requests.
+  OperationStatus operation_status;
+  grpc::ServerContext srv_ctx;
+  grpc::ServerAsyncReader<PutResponse, PutRequest> request_reader(&srv_ctx);
+
+  service_->RequestPut(&srv_ctx, &request_reader, server_cq_.get(), server_cq_.get(), this);
+
+  // Create components required to perform a client Put request.
+  int32_t fake_fd = 0;
+  PutCallData<FakePlatform>* client_call_data = new PutCallData<FakePlatform>(
+      fake_fd, "/some/dest",
+      [&operation_status](OperationStatus status) { operation_status = status; });
+
+  client_call_data->writer_ =
+      stub_->AsyncPut(&(client_call_data->ctx_), &(client_call_data->response_), client_cq_.get(),
+                      client_call_data);
+
+  // Server should get the client request.
+  server_cq_->Next(&tag, &cq_status);
+  PutRequest put_request;
+  request_reader.Read(&put_request, nullptr);
+
+  // Set the mock up to inform the client that the source file exists but
+  // fails to open.
+  client_call_data->platform_interface_.SetFileExistsReturn(true);
+  client_call_data->platform_interface_.SetOpenFileReturn(1);
+  client_call_data->platform_interface_.SetReadFileReturn(-1);
+
+  // Wait for the request to go out.
+  client_cq_->Next(&tag, &cq_status);
+  client_call_data->Proceed(cq_status);
+
+  // Server CompletionQueue should get the client's finish message.
+  server_cq_->Next(&tag, &cq_status);
+  ASSERT_FALSE(cq_status);
+
+  PutResponse put_response;
+  put_response.set_status(OperationStatus::OK);
+  request_reader.Finish(put_response, grpc::Status::OK, nullptr);
+
+  // Client should get the server's finish message and delete itself.
+  client_cq_->Next(&tag, &cq_status);
+  client_call_data->Proceed(cq_status);
+
+  client_cq_->Next(&tag, &cq_status);
+  client_call_data->Proceed(cq_status);
+
+  // The client sets the operation status in the callback.
+  ASSERT_EQ(operation_status, OperationStatus::CLIENT_FILE_READ_FAILURE);
+}
+
+TEST_F(AsyncEndToEndTest, PutOneFragment) {
+  ResetStub();
+  // Accounting bits for managing CompletionQueue state.
+  void* tag;
+  bool cq_status;
+
+  // Create a service that can accept incoming Get requests.
+  OperationStatus operation_status;
+  grpc::ServerContext srv_ctx;
+  grpc::ServerAsyncReader<PutResponse, PutRequest> request_reader(&srv_ctx);
+
+  service_->RequestPut(&srv_ctx, &request_reader, server_cq_.get(), server_cq_.get(), this);
+
+  // Create components required to perform a client Put request.
+  int32_t fake_fd = 0;
+  PutCallData<FakePlatform>* client_call_data = new PutCallData<FakePlatform>(
+      fake_fd, "/some/dest",
+      [&operation_status](OperationStatus status) { operation_status = status; });
+
+  client_call_data->writer_ =
+      stub_->AsyncPut(&(client_call_data->ctx_), &(client_call_data->response_), client_cq_.get(),
+                      client_call_data);
+
+  // Server should get the client request.
+  server_cq_->Next(&tag, &cq_status);
+  PutRequest put_request;
+  request_reader.Read(&put_request, nullptr);
+
+  // Set the mock up to inform the client that the source file exists but
+  // fails to open.
+  client_call_data->platform_interface_.SetFileExistsReturn(true);
+  client_call_data->platform_interface_.SetOpenFileReturn(1);
+  client_call_data->platform_interface_.SetReadFileContents("test");
+
+  // Wait for the request to go out.
+  client_cq_->Next(&tag, &cq_status);
+  client_call_data->Proceed(cq_status);
+
+  // Server CompletionQueue should get the client's message and request another
+  // file fragment.
+  server_cq_->Next(&tag, &cq_status);
+  ASSERT_TRUE(cq_status);
+  request_reader.Read(&put_request, nullptr);
+
+  // Client hits the end of the file and finishes.
+  client_call_data->platform_interface_.SetReadFileContents("");
+  client_cq_->Next(&tag, &cq_status);
+  client_call_data->Proceed(cq_status);
+
+  // Server gets the finish and finishes with the client.
+  server_cq_->Next(&tag, &cq_status);
+  ASSERT_FALSE(cq_status);
+  PutResponse put_response;
+  put_response.set_status(OperationStatus::OK);
+  request_reader.Finish(put_response, grpc::Status::OK, nullptr);
+
+  // Client should get the server's finish message and delete itself.
+  client_cq_->Next(&tag, &cq_status);
+  client_call_data->Proceed(cq_status);
+
+  client_cq_->Next(&tag, &cq_status);
+  client_call_data->Proceed(cq_status);
+
+  // The client sets the operation status in the callback.
+  ASSERT_EQ(operation_status, OperationStatus::OK);
+}
+
+TEST_F(AsyncEndToEndTest, PutMultipleFragments) {
+  ResetStub();
+  // Accounting bits for managing CompletionQueue state.
+  void* tag;
+  bool cq_status;
+
+  // Create a service that can accept incoming Get requests.
+  OperationStatus operation_status;
+  grpc::ServerContext srv_ctx;
+  grpc::ServerAsyncReader<PutResponse, PutRequest> request_reader(&srv_ctx);
+
+  service_->RequestPut(&srv_ctx, &request_reader, server_cq_.get(), server_cq_.get(), this);
+
+  // Create components required to perform a client Put request.
+  int32_t fake_fd = 0;
+  PutCallData<FakePlatform>* client_call_data = new PutCallData<FakePlatform>(
+      fake_fd, "/some/dest",
+      [&operation_status](OperationStatus status) { operation_status = status; });
+
+  client_call_data->writer_ =
+      stub_->AsyncPut(&(client_call_data->ctx_), &(client_call_data->response_), client_cq_.get(),
+                      client_call_data);
+
+  // Server should get the client request.
+  server_cq_->Next(&tag, &cq_status);
+  PutRequest put_request;
+  request_reader.Read(&put_request, nullptr);
+
+  // Set the mock up to inform the client that the source file exists but
+  // fails to open.
+  client_call_data->platform_interface_.SetFileExistsReturn(true);
+  client_call_data->platform_interface_.SetOpenFileReturn(1);
+  client_call_data->platform_interface_.SetReadFileContents("test");
+
+  // Wait for the request to go out.
+  client_cq_->Next(&tag, &cq_status);
+  client_call_data->Proceed(cq_status);
+
+  // Server CompletionQueue should get the client's message and request another
+  // file fragment.
+  server_cq_->Next(&tag, &cq_status);
+  ASSERT_TRUE(cq_status);
+  request_reader.Read(&put_request, nullptr);
+
+  // Send a second file fragment.
+  client_cq_->Next(&tag, &cq_status);
+  client_call_data->Proceed(cq_status);
+
+  // Server CompletionQueue should get the client's message and request another
+  // file fragment.
+  server_cq_->Next(&tag, &cq_status);
+  ASSERT_TRUE(cq_status);
+  request_reader.Read(&put_request, nullptr);
+
+  // Client hits the end of the file and writes done.
+  client_call_data->platform_interface_.SetReadFileContents("");
+  client_cq_->Next(&tag, &cq_status);
+  client_call_data->Proceed(cq_status);
+
+  // Server gets the finish and finishes with the client.
+  server_cq_->Next(&tag, &cq_status);
+  ASSERT_FALSE(cq_status);
+  PutResponse put_response;
+  put_response.set_status(OperationStatus::OK);
+  request_reader.Finish(put_response, grpc::Status::OK, nullptr);
+
+  // Client should get the server's finish message and delete itself.
+  client_cq_->Next(&tag, &cq_status);
+  client_call_data->Proceed(cq_status);
+
+  client_cq_->Next(&tag, &cq_status);
+  client_call_data->Proceed(cq_status);
+
+  // The client sets the operation status in the callback.
+  ASSERT_EQ(operation_status, OperationStatus::OK);
+}
+
+TEST_F(AsyncEndToEndTest, PutGrpcFailure) {
+  ResetStub();
+  // Accounting bits for managing CompletionQueue state.
+  void* tag;
+  bool cq_status;
+
+  // Create a service that can accept incoming Get requests.
+  OperationStatus operation_status;
+  grpc::ServerContext srv_ctx;
+  grpc::ServerAsyncReader<PutResponse, PutRequest> request_reader(&srv_ctx);
+
+  service_->RequestPut(&srv_ctx, &request_reader, server_cq_.get(), server_cq_.get(), this);
+
+  // Create components required to perform a client Put request.
+  int32_t fake_fd = 0;
+  PutCallData<FakePlatform>* client_call_data = new PutCallData<FakePlatform>(
+      fake_fd, "/some/dest",
+      [&operation_status](OperationStatus status) { operation_status = status; });
+
+  client_call_data->writer_ =
+      stub_->AsyncPut(&(client_call_data->ctx_), &(client_call_data->response_), client_cq_.get(),
+                      client_call_data);
+
+  // Server should get the client request.
+  server_cq_->Next(&tag, &cq_status);
+  PutRequest put_request;
+  request_reader.Read(&put_request, nullptr);
+
+  // Set the mock up to inform the client that the source file exists but
+  // fails to open.
+  client_call_data->platform_interface_.SetFileExistsReturn(true);
+  client_call_data->platform_interface_.SetOpenFileReturn(1);
+  client_call_data->platform_interface_.SetReadFileContents("test");
+
+  // Wait for the request to go out.
+  client_cq_->Next(&tag, &cq_status);
+  client_call_data->Proceed(cq_status);
+
+  // Server CompletionQueue should get the client's message.
+  server_cq_->Next(&tag, &cq_status);
+  request_reader.Read(&put_request, nullptr);
+
+  // Inject a gRPC failure into the client procedure.
+  client_cq_->Next(&tag, &cq_status);
+  client_call_data->Proceed(false);
 
   // The client sets the operation status in the callback.
   ASSERT_EQ(operation_status, OperationStatus::GRPC_FAILURE);

@@ -9,6 +9,8 @@
 #include <grpc/support/log.h>
 #include <src/lib/fxl/logging.h>
 
+#include <filesystem>
+
 #include "src/virtualization/lib/guest_interaction/common.h"
 #include "src/virtualization/lib/guest_interaction/platform_interface/platform_interface.h"
 #include "src/virtualization/lib/guest_interaction/proto/guest_interaction.grpc.pb.h"
@@ -150,6 +152,109 @@ void GetCallData<T>::Finish() {
     platform_interface_.CloseFile(fd_);
   }
   delete this;
+}
+
+template <class T>
+class PutCallData final : public CallData {
+ public:
+  PutCallData(GuestInteractionService::AsyncService* service, grpc::ServerCompletionQueue* cq)
+      : service_(service), cq_(cq), reader_(&ctx_), status_(CREATE), fd_(0) {
+    Proceed(true);
+  }
+  void Proceed(bool ok);
+
+  T platform_interface_;
+
+ private:
+  // Attempt to read the latest message from the client and write it into
+  // the output file.  If the output file stream has gone into a bad state
+  // or the client has sent a final empty byte
+  void TryWrite();
+  void SendFinalStatus(OperationStatus status);
+
+  // gRPC async boilerplate
+  GuestInteractionService::AsyncService* service_;
+  grpc::ServerCompletionQueue* cq_;
+  grpc::ServerContext ctx_;
+  grpc::ServerAsyncReader<PutResponse, PutRequest> reader_;
+
+  enum CallStatus { CREATE, INITIATE_TRANSFER, TRANSFER, FINISH };
+  CallStatus status_;
+  int32_t fd_;
+
+  // File transfer bits
+  PutRequest new_request_;
+};
+
+template <class T>
+void PutCallData<T>::Proceed(bool ok) {
+  switch (status_) {
+    case CREATE:
+      status_ = INITIATE_TRANSFER;
+      service_->RequestPut(&ctx_, &reader_, cq_, cq_, this);
+      return;
+    case INITIATE_TRANSFER:
+      // Allow new PutRequest streams to be handled.
+      new PutCallData(service_, cq_);
+      reader_.Read(&new_request_, this);
+      status_ = TRANSFER;
+      return;
+    case TRANSFER:
+      if (!ok) {
+        SendFinalStatus(OperationStatus::OK);
+        return;
+      }
+      TryWrite();
+      return;
+    case FINISH:
+      if (fd_ > 0) {
+        platform_interface_.CloseFile(fd_);
+      }
+      delete this;
+      return;
+  }
+}
+
+template <class T>
+void PutCallData<T>::SendFinalStatus(OperationStatus status) {
+  PutResponse put_response;
+  put_response.set_status(status);
+  reader_.Finish(put_response, grpc::Status::OK, this);
+  status_ = FINISH;
+}
+
+template <class T>
+void PutCallData<T>::TryWrite() {
+  if (fd_ == 0) {
+    std::string destination = new_request_.destination();
+    std::filesystem::path outpath = destination;
+    if (platform_interface_.DirectoryExists(destination) ||
+        (destination.length() > 0 && destination[destination.length() - 1] == '/')) {
+      // If the client provides the path to a directory, return a failure.
+      SendFinalStatus(OperationStatus::SERVER_CREATE_FILE_FAILURE);
+      return;
+    } else if (!platform_interface_.DirectoryExists(outpath.parent_path().string())) {
+      // If the client wants to send the file to a nonexistent directory,
+      // create it for them.
+      if (!platform_interface_.CreateDirectory(outpath.parent_path().string())) {
+        SendFinalStatus(OperationStatus::SERVER_CREATE_FILE_FAILURE);
+        return;
+      }
+    }
+
+    fd_ = platform_interface_.OpenFile(destination, WRITE);
+  }
+
+  if (fd_ < 0) {
+    SendFinalStatus(OperationStatus::SERVER_FILE_WRITE_FAILURE);
+    return;
+  }
+
+  if (platform_interface_.WriteFile(fd_, new_request_.data().c_str(),
+                                    new_request_.data().length()) < 0) {
+    SendFinalStatus(OperationStatus::SERVER_FILE_WRITE_FAILURE);
+  }
+  reader_.Read(&new_request_, this);
 }
 
 #endif  // SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_SERVER_SERVER_OPERATION_STATE_H_

@@ -60,6 +60,7 @@ source_set("client_lib") {
     ":common",
     ":proto",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
     "//third_party/grpc:grpc++",
   ]
 }
@@ -98,6 +99,7 @@ executable("client_operation_test") {
     ":proto",
     ":test_lib",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest_main",
     "//third_party/grpc:grpc++",
   ]

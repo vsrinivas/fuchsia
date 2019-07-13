@@ -110,4 +110,98 @@ void GetCallData<T>::Proceed(bool ok) {
   }
 }
 
+template <class T>
+class PutCallData final : public CallData {
+ public:
+  PutCallData(int32_t fd, std::string destination, TransferCallback callback)
+      : status_(TRANSFER),
+        destination_(destination),
+        callback_(std::move(callback)),
+        exit_status_(OperationStatus::OK),
+        fd_(fd) {}
+
+  void Proceed(bool ok);
+
+  grpc::ClientContext ctx_;
+  std::unique_ptr<grpc::ClientAsyncWriterInterface<PutRequest>> writer_;
+  PutResponse response_;
+  T platform_interface_;
+
+ private:
+  void Finish();
+
+  enum CallStatus { TRANSFER, END_TRANSFER, FINISH };
+  CallStatus status_;
+
+  std::string destination_;
+  TransferCallback callback_;
+  OperationStatus exit_status_;
+  int32_t fd_;
+  grpc::Status finish_status_;
+};
+
+template <class T>
+void PutCallData<T>::Proceed(bool ok) {
+  // If the client gets a bad status while performing a streaming write, then
+  // the call is dead and no future messages will be sent.
+  if (!ok) {
+    exit_status_ = OperationStatus::GRPC_FAILURE;
+    Finish();
+    return;
+  }
+
+  PutRequest req;
+  req.set_destination(destination_);
+  char read_buf[CHUNK_SIZE];
+  int32_t data_read;
+
+  switch (status_) {
+    case TRANSFER:
+      data_read = platform_interface_.ReadFile(fd_, read_buf, CHUNK_SIZE);
+
+      if (data_read < 0) {
+        if (data_read != -EAGAIN && data_read != -EWOULDBLOCK) {
+          // Read failed.
+          exit_status_ = OperationStatus::CLIENT_FILE_READ_FAILURE;
+          status_ = END_TRANSFER;
+          writer_->WritesDone(this);
+          return;
+        }
+        // Read would have caused to block, send empty data.
+        req.clear_data();
+        writer_->Write(req, this);
+        return;
+      } else if (data_read == 0) {
+        // Read hit EOF.
+        status_ = END_TRANSFER;
+        req.clear_data();
+        writer_->WritesDone(this);
+        return;
+      } else {
+        req.set_data(read_buf, data_read);
+        writer_->Write(req, this);
+        return;
+      }
+    case END_TRANSFER:
+      writer_->Finish(&finish_status_, this);
+      status_ = FINISH;
+      return;
+    case FINISH:
+      if (response_.status() != OperationStatus::OK) {
+        exit_status_ = response_.status();
+      }
+      Finish();
+      return;
+  }
+}
+
+template <class T>
+void PutCallData<T>::Finish() {
+  if (fd_ > 0) {
+    platform_interface_.CloseFile(fd_);
+  }
+  callback_(exit_status_);
+  delete this;
+}
+
 #endif  // SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_CLIENT_CLIENT_OPERATION_STATE_H_

@@ -6,6 +6,7 @@ syntax = "proto3";
 
 service GuestInteractionService {
   rpc Get(GetRequest) returns (stream GetResponse);
+  rpc Put(stream PutRequest) returns (PutResponse);
 }
 
 enum OperationStatus {
@@ -30,4 +31,13 @@ message GetRequest {
 message GetResponse {
   OperationStatus status = 1;
   bytes data = 2;
+}
+
+message PutRequest {
+  string destination = 1;
+  bytes data = 2;
+}
+
+message PutResponse {
+  OperationStatus status = 1;
 }
