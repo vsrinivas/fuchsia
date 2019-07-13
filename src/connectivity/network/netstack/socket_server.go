@@ -360,6 +360,10 @@ func (ios *iostate) loopControl() error {
 		} else if code != 0 {
 			syslog.Errorf("SocketControl.Close failed: %s", syscall.Errno(code))
 		}
+
+		if err := ios.dataHandle.Close(); err != nil {
+			syslog.Errorf("dataHandle.Close() failed: %s", err)
+		}
 	}()
 
 	stub := net.SocketControlStub{Impl: ios}
@@ -742,6 +746,10 @@ func (s *socketImpl) close() {
 		if err := s.peer.Close(); err != nil {
 			panic(err)
 		}
+
+		if err := s.iostate.dataHandle.Close(); err != nil {
+			panic(err)
+		}
 	}
 
 	removed := s.controlService.Remove(s.bindingKey)
@@ -1053,13 +1061,7 @@ func (ios *iostate) close() {
 		}
 
 		// This has to happen after loopWrite exits because ios.ep is used there.
-		defer func() {
-			ios.ep.Close()
-
-			if err := ios.dataHandle.Close(); err != nil {
-				syslog.Errorf("dataHandle.Close() failed: %s", err)
-			}
-		}()
+		defer ios.ep.Close()
 
 		// NB: we can't wait for loopRead to finish here because the dataHandle
 		// may be full, and loopRead will never exit.
