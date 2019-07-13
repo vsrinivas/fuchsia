@@ -16,7 +16,9 @@ VmoPool::Buffer::Buffer(VmoPool::Buffer&& other)
 }
 
 VmoPool::Buffer& VmoPool::Buffer::operator=(VmoPool::Buffer&& other) {
-    Release();
+    if (valid()) {
+        Release();
+    }
     pool_ = other.pool_;
     index_ = other.index_;
     other.pool_ = nullptr;

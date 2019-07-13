@@ -291,4 +291,14 @@ TEST_F(VmoPoolTester, Reinit) {
     CheckAccounting(0);
 }
 
+TEST_F(VmoPoolTester, StdMove) {
+    Init();
+    fzl::VmoPool::Buffer source;
+    fzl::VmoPool::Buffer destination;
+
+    destination = std::move(source);
+
+    CheckAccounting(0);
+}
+
 } // namespace
