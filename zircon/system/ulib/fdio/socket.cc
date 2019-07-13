@@ -96,9 +96,8 @@ static zx_status_t zxsio_clone(fdio_t* io, zx_handle_t* out_handle) {
 }
 
 static zx_status_t zxsio_unwrap(fdio_t* io, zx_handle_t* out_handle) {
-  zxio_socket_t* sio = fdio_get_zxio_socket(io);
-  *out_handle = sio->socket.control.channel().get();
-  return ZX_OK;
+  zxio_t* z = fdio_get_zxio(io);
+  return zxio_release(z, out_handle);
 }
 
 static void zxsio_wait_begin_stream(fdio_t* io, uint32_t events, zx_handle_t* handle,

@@ -108,6 +108,35 @@ static void set_nonblocking_io(int fd) {
   EXPECT_EQ(fcntl(fd, F_SETFL, flags | O_NONBLOCK), 0, "%s", strerror(errno));
 }
 
+TEST(SocketTest, CloseZXSocketOnTransfer) {
+  zx::channel client_channel, server_channel;
+  ASSERT_OK(zx::channel::create(0, &client_channel, &server_channel));
+
+  zx::socket client_socket, server_socket;
+  ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &client_socket, &server_socket));
+
+  int fd;
+  {
+    // We need a functioning server to create the file descriptor. Since the server retains one end
+    // of the socket, we need to destroy the server before asserting that the socket's peer is
+    // closed.
+    Server server(std::move(client_socket));
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &server));
+    ASSERT_OK(loop.StartThread("fake-socket-server"));
+
+    ASSERT_OK(fdio_fd_create(client_channel.release(), &fd));
+  }
+
+  zx_signals_t observed;
+  ASSERT_OK(server_socket.wait_one(ZX_SOCKET_WRITABLE, zx::time::infinite_past(), &observed));
+
+  zx_handle_t handle;
+  ASSERT_OK(fdio_fd_transfer(fd, &handle));
+
+  ASSERT_OK(server_socket.wait_one(ZX_SOCKET_PEER_CLOSED, zx::time::infinite_past(), &observed));
+}
+
 // Verify scenario, where multi-segment recvmsg is requested, but the socket has
 // just enough data to *completely* fill one segment.
 // In this scenario, an attempt to read data for the next segment immediately
@@ -120,7 +149,7 @@ TEST(SocketTest, RecvmsgNonblockBoundary) {
   zx::socket client_socket, server_socket;
   ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &client_socket, &server_socket));
 
-  Server server(std::move(server_socket));
+  Server server(std::move(client_socket));
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
   ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &server));
   ASSERT_OK(loop.StartThread("fake-socket-server"));
@@ -133,7 +162,7 @@ TEST(SocketTest, RecvmsgNonblockBoundary) {
   // Write 4 bytes of data to socket.
   size_t actual;
   const uint32_t data_out = 0x12345678;
-  EXPECT_OK(client_socket.write(0, &data_out, sizeof(data_out), &actual), "Socket write failed");
+  EXPECT_OK(server_socket.write(0, &data_out, sizeof(data_out), &actual), "Socket write failed");
   EXPECT_EQ(sizeof(data_out), actual, "Socket write length mismatch");
 
   uint32_t data_in1, data_in2;
@@ -175,7 +204,7 @@ TEST(SocketTest, SendmsgNonblockBoundary) {
   zx::socket client_socket, server_socket;
   ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &client_socket, &server_socket));
 
-  Server server(std::move(server_socket));
+  Server server(std::move(client_socket));
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
   ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &server));
   ASSERT_OK(loop.StartThread("fake-socket-server"));
@@ -186,12 +215,12 @@ TEST(SocketTest, SendmsgNonblockBoundary) {
   set_nonblocking_io(fd);
 
   const size_t memlength = 65536;
-  void* memchunk = malloc(memlength);
+  std::unique_ptr<uint8_t[]> memchunk(new uint8_t[memlength]);
 
   struct iovec iov[2];
-  iov[0].iov_base = memchunk;
+  iov[0].iov_base = memchunk.get();
   iov[0].iov_len = memlength;
-  iov[1].iov_base = memchunk;
+  iov[1].iov_base = memchunk.get();
   iov[1].iov_len = memlength;
 
   struct msghdr msg;
@@ -216,7 +245,7 @@ TEST(SocketTest, SendmsgNonblockBoundary) {
 
   // 2. Consume one segment of the data
   size_t actual = 0;
-  zx_status_t status = client_socket.read(0, memchunk, memlength, &actual);
+  zx_status_t status = server_socket.read(0, memchunk.get(), memlength, &actual);
   EXPECT_EQ(memlength, actual);
   EXPECT_OK(status);
 
@@ -224,7 +253,6 @@ TEST(SocketTest, SendmsgNonblockBoundary) {
   EXPECT_EQ((ssize_t)memlength, sendmsg(fd, &msg, 0));
 
   close(fd);
-  free(memchunk);
 }
 
 }  // namespace

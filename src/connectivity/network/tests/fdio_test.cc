@@ -114,3 +114,41 @@ TEST(NetStreamTest, RaceClose) {
 
   std::for_each(workers.begin(), workers.end(), std::mem_fn(&std::thread::join));
 }
+
+TEST(SocketTest, CloseZXSocketOnClose) {
+  int fd;
+  ASSERT_GE(fd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
+
+  zx_handle_t handle;
+  zx_status_t status;
+  ASSERT_EQ(status = fdio_fd_transfer(fd, &handle), ZX_OK) << zx_status_get_string(status);
+
+  fuchsia::posix::socket::Control_SyncProxy control((zx::channel(handle)));
+
+  fuchsia::io::NodeInfo node_info;
+  ASSERT_EQ(status = control.Describe(&node_info), ZX_OK) << zx_status_get_string(status);
+  ASSERT_EQ(node_info.Which(), fuchsia::io::NodeInfo::Tag::kSocket);
+
+  zx_signals_t observed;
+  ASSERT_EQ(status = zx::unowned_channel(handle)->wait_one(ZX_CHANNEL_WRITABLE,
+                                                           zx::time::infinite_past(), &observed),
+            ZX_OK)
+      << zx_status_get_string(status);
+  ASSERT_EQ(status = node_info.socket().socket.wait_one(ZX_SOCKET_WRITABLE,
+                                                        zx::time::infinite_past(), &observed),
+            ZX_OK)
+      << zx_status_get_string(status);
+
+  zx_status_t io_status;
+  ASSERT_EQ(io_status = control.Close(&status), ZX_OK) << zx_status_get_string(status);
+  ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+
+  ASSERT_EQ(status = zx::unowned_channel(handle)->wait_one(ZX_CHANNEL_PEER_CLOSED,
+                                                           zx::time::infinite_past(), &observed),
+            ZX_OK)
+      << zx_status_get_string(status);
+  ASSERT_EQ(status = node_info.socket().socket.wait_one(ZX_SOCKET_PEER_CLOSED,
+                                                        zx::time::infinite_past(), &observed),
+            ZX_OK)
+      << zx_status_get_string(status);
+}

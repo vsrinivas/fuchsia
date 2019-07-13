@@ -15,7 +15,8 @@ static zx_status_t zxio_socket_close(zxio_t* io) {
 }
 
 static zx_status_t zxio_socket_release(zxio_t* io, zx_handle_t* out_handle) {
-  *out_handle = reinterpret_cast<zxio_socket_t*>(io)->socket.control.mutable_channel()->release();
+  zxs_socket_t socket = std::move(reinterpret_cast<zxio_socket_t*>(io)->socket);
+  *out_handle = socket.control.mutable_channel()->release();
   return ZX_OK;
 }
 
