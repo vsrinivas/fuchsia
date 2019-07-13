@@ -6,6 +6,13 @@ library fidl.test.spaceship;
 
 using zx;
 
+// Having a service should not break C bindings.
+service Galaxy {
+    AstrometricsListener astrometrics_listener;
+    SpaceShip ship1;
+    UssEnterprise ship2;
+};
+
 // StarData is 16 bytes, all inline.
 struct StarData {
     array<uint8>:16 data;

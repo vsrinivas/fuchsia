@@ -82,6 +82,7 @@ struct Simple {
   "const_declarations": [],
   "enum_declarations": [],
   "interface_declarations": [],
+  "service_declarations": [],
   "struct_declarations": [
     {
       "name": "fidl.test.json/Simple",
@@ -318,6 +319,7 @@ protocol EmptyProtocol {
       ]
     }
   ],
+  "service_declarations": [],
   "struct_declarations": [
     {
       "name": "fidl.test.json/Empty",
@@ -377,6 +379,7 @@ table Simple {
   "const_declarations": [],
   "enum_declarations": [],
   "interface_declarations": [],
+  "service_declarations": [],
   "struct_declarations": [],
   "table_declarations": [
     {
@@ -485,6 +488,7 @@ union PizzaOrPasta {
   "const_declarations": [],
   "enum_declarations": [],
   "interface_declarations": [],
+  "service_declarations": [],
   "struct_declarations": [
     {
       "name": "fidl.test.json/Pizza",
@@ -656,6 +660,7 @@ strict xunion StrictFoo {
   "const_declarations": [],
   "enum_declarations": [],
   "interface_declarations": [],
+  "service_declarations": [],
   "struct_declarations": [],
   "table_declarations": [],
   "union_declarations": [],
@@ -943,6 +948,7 @@ protocol sub {
       ]
     }
   ],
+  "service_declarations": [],
   "struct_declarations": [],
   "table_declarations": [],
   "union_declarations": [],
@@ -1123,6 +1129,7 @@ protocol Child {
       ]
     }
   ],
+  "service_declarations": [],
   "struct_declarations": [],
   "table_declarations": [],
   "union_declarations": [],
@@ -1231,6 +1238,7 @@ protocol Example {
       ]
     }
   ],
+  "service_declarations": [],
   "struct_declarations": [
     {
       "name": "fidl.test.json/Example_foo_Response",
@@ -1363,6 +1371,7 @@ struct ByteAndBytes {
   "const_declarations": [],
   "enum_declarations": [],
   "interface_declarations": [],
+  "service_declarations": [],
   "struct_declarations": [
     {
       "name": "example/ByteAndBytes",
@@ -1549,6 +1558,7 @@ bits Bits : uint64 {
   "const_declarations": [],
   "enum_declarations": [],
   "interface_declarations": [],
+  "service_declarations": [],
   "struct_declarations": [],
   "table_declarations": [],
   "union_declarations": [],
@@ -1928,6 +1938,7 @@ struct Struct {
     }
   ],
   "interface_declarations": [],
+  "service_declarations": [],
   "struct_declarations": [
     {
       "name": "values/Struct",
@@ -2124,6 +2135,7 @@ struct Baz {
   "const_declarations": [],
   "enum_declarations": [],
   "interface_declarations": [],
+  "service_declarations": [],
   "struct_declarations": [
     {
       "name": "top/Baz",
@@ -2299,6 +2311,7 @@ protocol Top {
       ]
     }
   ],
+  "service_declarations": [],
   "struct_declarations": [],
   "table_declarations": [],
   "union_declarations": [],
@@ -2575,6 +2588,7 @@ xunion ExampleXUnion {
       ]
     }
   ],
+  "service_declarations": [],
   "struct_declarations": [
     {
       "name": "example/ExampleStruct",
@@ -2830,6 +2844,7 @@ using channel = handle<channel>;
   "const_declarations": [],
   "enum_declarations": [],
   "interface_declarations": [],
+  "service_declarations": [],
   "struct_declarations": [],
   "table_declarations": [],
   "union_declarations": [],
@@ -2951,6 +2966,111 @@ using channel = handle<channel>;
   END_TEST;
 }
 
+bool json_generator_service() {
+  BEGIN_TEST;
+
+  for (int i = 0; i < kRepeatTestCount; i++) {
+    EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+library example;
+
+protocol SomeProtocol {};
+
+service AnEmptyService {};
+
+service SomeService {
+    SomeProtocol member1;
+    SomeProtocol member2;
+};
+
+)FIDL",
+                                   R"JSON(
+{
+  "version": "0.0.1",
+  "name": "example",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "example/SomeProtocol",
+      "location": {
+        "filename": "json.fidl",
+        "line": 4,
+        "column": 10
+      },
+      "methods": []
+    }
+  ],
+  "service_declarations": [
+    {
+      "name": "example/AnEmptyService",
+      "location": {
+        "filename": "json.fidl",
+        "line": 6,
+        "column": 9
+      },
+      "members": []
+    },
+    {
+      "name": "example/SomeService",
+      "location": {
+        "filename": "json.fidl",
+        "line": 8,
+        "column": 9
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "example/SomeProtocol",
+            "nullable": false
+          },
+          "name": "member1",
+          "location": {
+            "filename": "json.fidl",
+            "line": 9,
+            "column": 18
+          }
+        },
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "example/SomeProtocol",
+            "nullable": false
+          },
+          "name": "member2",
+          "location": {
+            "filename": "json.fidl",
+            "line": 10,
+            "column": 18
+          }
+        }
+      ]
+    }
+  ],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "example/SomeService",
+    "example/SomeProtocol",
+    "example/AnEmptyService"
+  ],
+  "declarations": {
+    "example/SomeProtocol": "interface",
+    "example/AnEmptyService": "service",
+    "example/SomeService": "service"
+  }
+}
+)JSON"));
+  }
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(json_generator_tests)
@@ -2970,4 +3090,5 @@ RUN_TEST(json_generator_transitive_dependencies)
 RUN_TEST(json_generator_transitive_dependencies_compose)
 RUN_TEST(json_generator_placement_of_attributes)
 RUN_TEST(json_generator_type_aliases)
+RUN_TEST(json_generator_service)
 END_TEST_CASE(json_generator_tests)

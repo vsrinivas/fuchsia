@@ -131,6 +131,17 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     TreeVisitor::OnComposeProtocol(element);
   }
 
+  virtual void OnServiceDeclaration(std::unique_ptr<ServiceDeclaration> const& element) override {
+    OnBlankLineRequiringNode();
+    TreeVisitor::OnServiceDeclaration(element);
+  }
+
+  virtual void OnServiceMember(std::unique_ptr<ServiceMember> const& element) override {
+    OnBlankLineRespectingNode();
+    ScopedBool mem(is_member_decl_);
+    TreeVisitor::OnServiceMember(element);
+  }
+
   virtual void OnStructDeclaration(std::unique_ptr<StructDeclaration> const& element) override {
     OnBlankLineRequiringNode();
     TreeVisitor::OnStructDeclaration(element);

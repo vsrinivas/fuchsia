@@ -55,10 +55,10 @@ std::string LibraryName(const Library* library, std::string_view separator);
 // struct name).
 struct Name final {
   Name(const Library* library, const SourceLocation name)
-     : library_(library), name_(name) {}
+      : library_(library), name_(name) {}
 
   Name(const Library* library, const std::string& name)
-     : library_(library), name_(name) {}
+      : library_(library), name_(name) {}
 
   Name(Name&&) = default;
   Name& operator=(Name&&) = default;
@@ -429,6 +429,7 @@ struct Decl {
     kConst,
     kEnum,
     kProtocol,
+    kService,
     kStruct,
     kTable,
     kUnion,
@@ -602,7 +603,7 @@ struct PrimitiveType final : public Type {
 
   static TypeShape Shape(types::PrimitiveSubtype subtype);
 
-private:
+ private:
   static uint32_t SubtypeSize(types::PrimitiveSubtype subtype);
 };
 
@@ -720,6 +721,26 @@ struct Bits final : public TypeDecl {
 
   // Set during compilation.
   uint64_t mask = 0;
+};
+
+struct Service final : public TypeDecl {
+  struct Member {
+    Member(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
+           std::unique_ptr<raw::AttributeList> attributes)
+        : type_ctor(std::move(type_ctor)),
+          name(std::move(name)),
+          attributes(std::move(attributes)) {}
+
+    std::unique_ptr<TypeConstructor> type_ctor;
+    SourceLocation name;
+    std::unique_ptr<raw::AttributeList> attributes;
+  };
+
+  Service(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
+      : TypeDecl(Kind::kService, std::move(attributes), std::move(name)),
+        members(std::move(members)) {}
+
+  std::vector<Member> members;
 };
 
 struct Struct final : public TypeDecl {
@@ -877,7 +898,7 @@ struct Protocol final : public TypeDecl {
   // are owned by the corresponding composed_protocols.
   struct MethodWithInfo {
     MethodWithInfo(const Method* method, bool is_composed)
-      : method(method), is_composed(is_composed) {}
+        : method(method), is_composed(is_composed) {}
     const Method* method;
     const bool is_composed;
   };
@@ -1011,6 +1032,8 @@ class AttributeSchema {
     kProtocolDecl,
     kLibrary,
     kMethod,
+    kServiceDecl,
+    kServiceMember,
     kStructDecl,
     kStructMember,
     kTableDecl,
@@ -1174,6 +1197,7 @@ class Library {
                             bool anonymous, Struct** out_struct_decl);
   bool CreateMethodResult(const Name& protocol_name, raw::ProtocolMethod* method,
                           Struct* in_response, Struct** out_response);
+  bool ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl);
   bool ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration);
   bool ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration);
   bool ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration);
@@ -1200,6 +1224,7 @@ class Library {
   bool CompileConst(Const* const_declaration);
   bool CompileEnum(Enum* enum_declaration);
   bool CompileProtocol(Protocol* protocol_declaration);
+  bool CompileService(Service* service_decl);
   bool CompileStruct(Struct* struct_declaration);
   bool CompileTable(Table* table_declaration);
   bool CompileUnion(Union* union_declaration);
@@ -1249,6 +1274,7 @@ class Library {
   std::vector<std::unique_ptr<Const>> const_declarations_;
   std::vector<std::unique_ptr<Enum>> enum_declarations_;
   std::vector<std::unique_ptr<Protocol>> protocol_declarations_;
+  std::vector<std::unique_ptr<Service>> service_declarations_;
   std::vector<std::unique_ptr<Struct>> struct_declarations_;
   std::vector<std::unique_ptr<Table>> table_declarations_;
   std::vector<std::unique_ptr<Union>> union_declarations_;

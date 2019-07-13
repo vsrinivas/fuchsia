@@ -434,6 +434,40 @@ class ProtocolDeclaration final : public SourceElement {
   std::vector<std::unique_ptr<ProtocolMethod>> methods;
 };
 
+class ServiceMember final : public SourceElement {
+ public:
+  ServiceMember(SourceElement const& element, std::unique_ptr<TypeConstructor> type_ctor,
+                std::unique_ptr<Identifier> identifier,
+                std::unique_ptr<AttributeList> attributes)
+      : SourceElement(element),
+        type_ctor(std::move(type_ctor)),
+        identifier(std::move(identifier)),
+        attributes(std::move(attributes)) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  std::unique_ptr<TypeConstructor> type_ctor;
+  std::unique_ptr<Identifier> identifier;
+  std::unique_ptr<AttributeList> attributes;
+};
+
+class ServiceDeclaration final : public SourceElement {
+ public:
+  ServiceDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
+                     std::unique_ptr<Identifier> identifier,
+                     std::vector<std::unique_ptr<ServiceMember>> members)
+      : SourceElement(element),
+        attributes(std::move(attributes)),
+        identifier(std::move(identifier)),
+        members(std::move(members)) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  std::unique_ptr<AttributeList> attributes;
+  std::unique_ptr<Identifier> identifier;
+  std::vector<std::unique_ptr<ServiceMember>> members;
+};
+
 class StructMember final : public SourceElement {
  public:
   StructMember(SourceElement const& element, std::unique_ptr<TypeConstructor> type_ctor,
@@ -598,6 +632,7 @@ class File final : public SourceElement {
        std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list,
        std::vector<std::unique_ptr<EnumDeclaration>> enum_declaration_list,
        std::vector<std::unique_ptr<ProtocolDeclaration>> protocol_declaration_list,
+       std::vector<std::unique_ptr<ServiceDeclaration>> service_declaration_list,
        std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list,
        std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list,
        std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list,
@@ -610,6 +645,7 @@ class File final : public SourceElement {
         const_declaration_list(std::move(const_declaration_list)),
         enum_declaration_list(std::move(enum_declaration_list)),
         protocol_declaration_list(std::move(protocol_declaration_list)),
+        service_declaration_list(std::move(service_declaration_list)),
         struct_declaration_list(std::move(struct_declaration_list)),
         table_declaration_list(std::move(table_declaration_list)),
         union_declaration_list(std::move(union_declaration_list)),
@@ -625,6 +661,7 @@ class File final : public SourceElement {
   std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list;
   std::vector<std::unique_ptr<EnumDeclaration>> enum_declaration_list;
   std::vector<std::unique_ptr<ProtocolDeclaration>> protocol_declaration_list;
+  std::vector<std::unique_ptr<ServiceDeclaration>> service_declaration_list;
   std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list;
   std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list;
   std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list;

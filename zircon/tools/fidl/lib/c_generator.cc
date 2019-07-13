@@ -117,6 +117,7 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
     case flat::Type::Kind::kIdentifier:
       switch (member.decl_kind) {
         case flat::Decl::Kind::kConst:
+        case flat::Decl::Kind::kService:
         case flat::Decl::Kind::kTypeAlias:
           assert(false && "bad decl kind for member");
           break;
@@ -169,6 +170,7 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
     case flat::Type::Kind::kIdentifier:
       switch (member.decl_kind) {
         case flat::Decl::Kind::kConst:
+        case flat::Decl::Kind::kService:
         case flat::Decl::Kind::kTypeAlias:
           assert(false && "bad decl kind for member");
           break;
@@ -367,6 +369,7 @@ void EmitLinearizeMessage(std::ostream* file, std::string_view receiver, std::st
       case flat::Type::Kind::kIdentifier:
         switch (member.decl_kind) {
           case flat::Decl::Kind::kConst:
+          case flat::Decl::Kind::kService:
           case flat::Decl::Kind::kTypeAlias:
             assert(false && "bad decl kind for member");
             break;
@@ -1267,6 +1270,7 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
           case flat::Type::Kind::kIdentifier:
             switch (member.decl_kind) {
               case flat::Decl::Kind::kConst:
+              case flat::Decl::Kind::kService:
               case flat::Decl::Kind::kTypeAlias:
                 assert(false && "bad decl kind for member");
                 break;
@@ -1394,6 +1398,7 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
         case flat::Type::Kind::kIdentifier:
           switch (member.decl_kind) {
             case flat::Decl::Kind::kConst:
+            case flat::Decl::Kind::kService:
             case flat::Decl::Kind::kTypeAlias:
               assert(false && "bad decl kind for member");
               break;
@@ -1544,6 +1549,9 @@ std::ostringstream CGenerator::ProduceHeader() {
         }
         break;
       }
+      case flat::Decl::Kind::kService:
+        // Do nothing.
+        break;
       case flat::Decl::Kind::kStruct: {
         auto iter = named_structs.find(decl);
         if (iter != named_structs.end()) {
@@ -1585,6 +1593,7 @@ std::ostringstream CGenerator::ProduceHeader() {
       case flat::Decl::Kind::kBits:
       case flat::Decl::Kind::kConst:
       case flat::Decl::Kind::kEnum:
+      case flat::Decl::Kind::kService:
       case flat::Decl::Kind::kStruct:
       case flat::Decl::Kind::kTable:
       case flat::Decl::Kind::kTypeAlias:
@@ -1628,6 +1637,9 @@ std::ostringstream CGenerator::ProduceHeader() {
         }
         break;
       }
+      case flat::Decl::Kind::kService:
+        // Do nothing.
+        break;
       case flat::Decl::Kind::kStruct: {
         auto iter = named_structs.find(decl);
         if (iter != named_structs.end()) {
@@ -1666,6 +1678,7 @@ std::ostringstream CGenerator::ProduceHeader() {
       case flat::Decl::Kind::kBits:
       case flat::Decl::Kind::kConst:
       case flat::Decl::Kind::kEnum:
+      case flat::Decl::Kind::kService:
       case flat::Decl::Kind::kStruct:
       case flat::Decl::Kind::kTable:
       case flat::Decl::Kind::kTypeAlias:
@@ -1708,6 +1721,7 @@ std::ostringstream CGenerator::ProduceClient() {
       case flat::Decl::Kind::kBits:
       case flat::Decl::Kind::kConst:
       case flat::Decl::Kind::kEnum:
+      case flat::Decl::Kind::kService:
       case flat::Decl::Kind::kStruct:
       case flat::Decl::Kind::kTable:
       case flat::Decl::Kind::kTypeAlias:
@@ -1746,6 +1760,7 @@ std::ostringstream CGenerator::ProduceServer() {
       case flat::Decl::Kind::kBits:
       case flat::Decl::Kind::kConst:
       case flat::Decl::Kind::kEnum:
+      case flat::Decl::Kind::kService:
       case flat::Decl::Kind::kStruct:
       case flat::Decl::Kind::kTable:
       case flat::Decl::Kind::kTypeAlias:

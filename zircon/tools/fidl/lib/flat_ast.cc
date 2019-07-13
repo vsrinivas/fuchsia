@@ -681,6 +681,9 @@ class TypeDeclTypeTemplate : public TypeTemplate {
     }
     auto typeshape = type_decl_->typeshape;
     switch (type_decl_->kind) {
+      case Decl::Kind::kService:
+        return Fail(maybe_location, "cannot use services in other declarations");
+
       case Decl::Kind::kProtocol:
         typeshape = HandleType::Shape();
         break;
@@ -1440,6 +1443,9 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
     case Decl::Kind::kProtocol:
       StoreDecl(decl_ptr, &protocol_declarations_);
       break;
+    case Decl::Kind::kService:
+      StoreDecl(decl_ptr, &service_declarations_);
+      break;
     case Decl::Kind::kStruct:
       StoreDecl(decl_ptr, &struct_declarations_);
       break;
@@ -1478,6 +1484,7 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
   switch (kind) {
     case Decl::Kind::kBits:
     case Decl::Kind::kEnum:
+    case Decl::Kind::kService:
     case Decl::Kind::kStruct:
     case Decl::Kind::kTable:
     case Decl::Kind::kUnion:
@@ -1822,6 +1829,24 @@ bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList
   return true;
 }
 
+bool Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl) {
+  auto attributes = std::move(service_decl->attributes);
+  auto name = Name(this, service_decl->identifier->location());
+
+  std::vector<Service::Member> members;
+  for (auto& member : service_decl->members) {
+    std::unique_ptr<TypeConstructor> type_ctor;
+    auto location = member->identifier->location();
+    if (!ConsumeTypeConstructor(std::move(member->type_ctor), location, &type_ctor))
+      return false;
+    members.emplace_back(std::move(type_ctor), member->identifier->location(),
+                         std::move(member->attributes));
+  }
+
+  return RegisterDecl(
+      std::make_unique<Service>(std::move(attributes), std::move(name), std::move(members)));
+}
+
 bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration) {
   auto attributes = std::move(struct_declaration->attributes);
   auto name = Name(this, struct_declaration->identifier->location());
@@ -1988,6 +2013,13 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
   auto protocol_declaration_list = std::move(file->protocol_declaration_list);
   for (auto& protocol_declaration : protocol_declaration_list) {
     if (!ConsumeProtocolDeclaration(std::move(protocol_declaration))) {
+      return false;
+    }
+  }
+
+  auto service_declaration_list = std::move(file->service_declaration_list);
+  for (auto& service_declaration : service_declaration_list) {
+    if (!ConsumeServiceDeclaration(std::move(service_declaration))) {
       return false;
     }
   }
@@ -2480,6 +2512,13 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
       }
       break;
     }
+    case Decl::Kind::kService: {
+      auto service_decl = static_cast<const Service*>(decl);
+      for (const auto& member : service_decl->members) {
+        maybe_add_decl(member.type_ctor.get());
+      }
+      break;
+    }
     case Decl::Kind::kStruct: {
       auto struct_decl = static_cast<const Struct*>(decl);
       for (const auto& member : struct_decl->members) {
@@ -2632,6 +2671,12 @@ bool Library::CompileDecl(Decl* decl) {
         return false;
       break;
     }
+    case Decl::Kind::kService: {
+      auto service_decl = static_cast<Service*>(decl);
+      if (!CompileService(service_decl))
+        return false;
+      break;
+    }
     case Decl::Kind::kStruct: {
       auto struct_decl = static_cast<Struct*>(decl);
       if (!CompileStruct(struct_decl))
@@ -2731,6 +2776,21 @@ bool Library::VerifyDeclAttributes(Decl* decl) {
             ValidateAttributesConstraints(method.maybe_response, method.attributes.get());
           }
         }
+      }
+      break;
+    }
+    case Decl::Kind::kService: {
+      auto service_decl = static_cast<Service*>(decl);
+      // Attributes: check placement.
+      ValidateAttributesPlacement(AttributeSchema::Placement::kServiceDecl,
+                                  service_decl->attributes.get());
+      for (const auto& member : service_decl->members) {
+        ValidateAttributesPlacement(AttributeSchema::Placement::kServiceMember,
+                                    member.attributes.get());
+      }
+      if (placement_ok.NoNewErrors()) {
+        // Attributes: check constraint.
+        ValidateAttributesConstraints(service_decl, service_decl->attributes.get());
       }
       break;
     }
@@ -3031,6 +3091,26 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
     }
   }
 
+  return true;
+}
+
+bool Library::CompileService(Service* service_decl) {
+  Scope<std::string_view> scope;
+  for (auto& member : service_decl->members) {
+    auto name_result = scope.Insert(member.name.data(), member.name);
+    if (!name_result.ok())
+      return Fail(member.name, "multiple service members with the same name; previous was at " +
+                                   name_result.previous_occurrence().position_str());
+    if (!CompileTypeConstructor(member.type_ctor.get(), nullptr /* out_typeshape */))
+      return false;
+    if (member.type_ctor->type->kind != Type::Kind::kIdentifier)
+      return Fail(member.name, "only protocol members are allowed");
+    auto member_identifier_type = static_cast<const IdentifierType*>(member.type_ctor->type);
+    if (member_identifier_type->type_decl->kind != Decl::Kind::kProtocol)
+        return Fail(member.name, "only protocol members are allowed");
+    if (member.type_ctor->nullability != types::Nullability::kNonnullable)
+      return Fail(member.name, "service members cannot be nullable");
+  }
   return true;
 }
 

@@ -194,6 +194,26 @@ void ProtocolDeclaration::Accept(TreeVisitor* visitor) const {
   }
 }
 
+void ServiceMember::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  if (attributes != nullptr) {
+    visitor->OnAttributeList(attributes);
+  }
+  visitor->OnTypeConstructor(type_ctor);
+  visitor->OnIdentifier(identifier);
+}
+
+void ServiceDeclaration::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  if (attributes != nullptr) {
+    visitor->OnAttributeList(attributes);
+  }
+  visitor->OnIdentifier(identifier);
+  for (auto member = members.begin(); member != members.end(); ++member) {
+    visitor->OnServiceMember(*member);
+  }
+}
+
 void StructMember::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   if (attributes != nullptr) {

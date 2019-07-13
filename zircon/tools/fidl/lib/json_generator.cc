@@ -331,6 +331,26 @@ void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struc
   GenerateObjectMember(prefix + "_has_padding", value.typeshape.HasPadding());
 }
 
+void JSONGenerator::Generate(const flat::Service& value) {
+  GenerateObject([&]() {
+    GenerateObjectMember("name", value.name, Position::kFirst);
+    GenerateObjectMember("location", NameLocation(value.name));
+    if (value.attributes)
+      GenerateObjectMember("maybe_attributes", value.attributes);
+    GenerateObjectMember("members", value.members);
+  });
+}
+
+void JSONGenerator::Generate(const flat::Service::Member& value) {
+  GenerateObject([&]() {
+    GenerateObjectMember("type", value.type_ctor->type, Position::kFirst);
+    GenerateObjectMember("name", value.name);
+    GenerateObjectMember("location", NameLocation(value.name));
+    if (value.attributes)
+      GenerateObjectMember("maybe_attributes", value.attributes);
+  });
+}
+
 void JSONGenerator::Generate(const flat::Struct& value) {
   GenerateObject([&]() {
     GenerateObjectMember("name", value.name, Position::kFirst);
@@ -535,6 +555,9 @@ void JSONGenerator::GenerateDeclarationsMember(const flat::Library* library, Pos
     for (const auto& decl : library->protocol_declarations_)
       GenerateDeclarationsEntry(count++, decl->name, "interface");
 
+    for (const auto& decl : library->service_declarations_)
+      GenerateDeclarationsEntry(count++, decl->name, "service");
+
     for (const auto& decl : library->struct_declarations_) {
       if (decl->anonymous)
         continue;
@@ -601,6 +624,7 @@ std::ostringstream JSONGenerator::Produce() {
     GenerateObjectMember("const_declarations", library_->const_declarations_);
     GenerateObjectMember("enum_declarations", library_->enum_declarations_);
     GenerateObjectMember("interface_declarations", library_->protocol_declarations_);
+    GenerateObjectMember("service_declarations", library_->service_declarations_);
     GenerateObjectMember("struct_declarations", library_->struct_declarations_);
     GenerateObjectMember("table_declarations", library_->table_declarations_);
     GenerateObjectMember("union_declarations", library_->union_declarations_);

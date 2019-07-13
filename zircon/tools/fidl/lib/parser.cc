@@ -773,6 +773,60 @@ std::unique_ptr<raw::ProtocolDeclaration> Parser::ParseProtocolDeclaration(
       std::move(composed_protocols), std::move(methods));
 }
 
+std::unique_ptr<raw::ServiceMember> Parser::ParseServiceMember() {
+  ASTScope scope(this);
+  auto attributes = MaybeParseAttributeList();
+  if (!Ok())
+    return Fail();
+  auto type_ctor = ParseTypeConstructor();
+  if (!Ok())
+    return Fail();
+  auto identifier = ParseIdentifier();
+  if (!Ok())
+    return Fail();
+
+  return std::make_unique<raw::ServiceMember>(scope.GetSourceElement(), std::move(type_ctor),
+                                              std::move(identifier), std::move(attributes));
+}
+
+std::unique_ptr<raw::ServiceDeclaration> Parser::ParseServiceDeclaration(
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
+  std::vector<std::unique_ptr<raw::ServiceMember>> members;
+
+  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kService));
+  if (!Ok())
+    return Fail();
+  auto identifier = ParseIdentifier();
+  if (!Ok())
+    return Fail();
+  ConsumeToken(OfKind(Token::Kind::kLeftCurly));
+  if (!Ok())
+    return Fail();
+
+  auto parse_member = [&]() {
+    if (Peek().kind() == Token::Kind::kRightCurly) {
+      ConsumeToken(OfKind(Token::Kind::kRightCurly));
+      return Done;
+    } else {
+      members.emplace_back(ParseServiceMember());
+      return More;
+    }
+  };
+
+  while (parse_member() == More) {
+    if (!Ok())
+      Fail();
+    ConsumeToken(OfKind(Token::Kind::kSemicolon));
+    if (!Ok())
+      return Fail();
+  }
+  if (!Ok())
+    Fail();
+
+  return std::make_unique<raw::ServiceDeclaration>(scope.GetSourceElement(), std::move(attributes),
+                                                   std::move(identifier), std::move(members));
+}
+
 std::unique_ptr<raw::StructMember> Parser::ParseStructMember() {
   ASTScope scope(this);
   auto attributes = MaybeParseAttributeList();
@@ -1054,6 +1108,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
   std::vector<std::unique_ptr<raw::ConstDeclaration>> const_declaration_list;
   std::vector<std::unique_ptr<raw::EnumDeclaration>> enum_declaration_list;
   std::vector<std::unique_ptr<raw::ProtocolDeclaration>> protocol_declaration_list;
+  std::vector<std::unique_ptr<raw::ServiceDeclaration>> service_declaration_list;
   std::vector<std::unique_ptr<raw::StructDeclaration>> struct_declaration_list;
   std::vector<std::unique_ptr<raw::TableDeclaration>> table_declaration_list;
   std::vector<std::unique_ptr<raw::UnionDeclaration>> union_declaration_list;
@@ -1073,7 +1128,8 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
     return Fail();
 
   auto parse_declaration = [&bits_declaration_list, &const_declaration_list, &enum_declaration_list,
-                            &protocol_declaration_list, &struct_declaration_list,
+                            &protocol_declaration_list, &service_declaration_list,
+                            &struct_declaration_list,
                             &done_with_library_imports, &using_list, &table_declaration_list,
                             &union_declaration_list, &xunion_declaration_list, this]() {
     ASTScope scope(this);
@@ -1104,6 +1160,12 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         done_with_library_imports = true;
         protocol_declaration_list.emplace_back(
             ParseProtocolDeclaration(std::move(attributes), scope));
+        return More;
+
+      case CASE_IDENTIFIER(Token::Subkind::kService):
+        done_with_library_imports = true;
+        service_declaration_list.emplace_back(
+          ParseServiceDeclaration(std::move(attributes), scope));
         return More;
 
       case CASE_IDENTIFIER(Token::Subkind::kStruct):
@@ -1176,6 +1238,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       scope.GetSourceElement(), end, std::move(attributes), std::move(library_name),
       std::move(using_list), std::move(bits_declaration_list), std::move(const_declaration_list),
       std::move(enum_declaration_list), std::move(protocol_declaration_list),
+      std::move(service_declaration_list),
       std::move(struct_declaration_list), std::move(table_declaration_list),
       std::move(union_declaration_list), std::move(xunion_declaration_list));
 }

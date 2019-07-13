@@ -52,6 +52,12 @@ protocol ExampleProtocol {
     Method(exampleusing.Empty arg);
 };
 
+[OnService]
+service ExampleService {
+    [OnServiceMember]
+    ExampleProtocol member;
+};
+
 [OnStruct]
 struct ExampleStruct {
     [OnStructMember]
@@ -104,6 +110,11 @@ xunion ExampleXUnion {
   ASSERT_NONNULL(example_protocol);
   EXPECT_TRUE(example_protocol->attributes->HasAttribute("OnProtocol"));
   EXPECT_TRUE(example_protocol->methods.front().attributes->HasAttribute("OnMethod"));
+
+  auto example_service = library.LookupService("ExampleService");
+  ASSERT_NONNULL(example_service);
+  EXPECT_TRUE(example_service->attributes->HasAttribute("OnService"));
+  EXPECT_TRUE(example_service->members.front().attributes->HasAttribute("OnServiceMember"));
 
   auto example_struct = library.LookupStruct("ExampleStruct");
   ASSERT_NONNULL(example_struct);

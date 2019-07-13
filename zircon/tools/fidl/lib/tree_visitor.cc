@@ -23,6 +23,7 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
   auto const_decls_it = element->const_declaration_list.begin();
   auto enum_decls_it = element->enum_declaration_list.begin();
   auto protocol_decls_it = element->protocol_declaration_list.begin();
+  auto service_decls_it = element->service_declaration_list.begin();
   auto struct_decls_it = element->struct_declaration_list.begin();
   auto table_decls_it = element->table_declaration_list.begin();
   auto union_decls_it = element->union_declaration_list.begin();
@@ -34,6 +35,7 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
     const_t,
     enum_t,
     protocol_t,
+    service_t,
     struct_t,
     table_t,
     union_t,
@@ -67,6 +69,9 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
       } else {
         m[(*protocol_decls_it)->start_.previous_end().data().data()] = protocol_t;
       }
+    }
+    if (service_decls_it != element->service_declaration_list.end()) {
+      m[(*service_decls_it)->start_.previous_end().data().data()] = service_t;
     }
     if (struct_decls_it != element->struct_declaration_list.end()) {
       m[(*struct_decls_it)->start_.previous_end().data().data()] = struct_t;
@@ -103,6 +108,10 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
       case protocol_t:
         OnProtocolDeclaration(*protocol_decls_it);
         ++protocol_decls_it;
+        break;
+      case service_t:
+        OnServiceDeclaration(*service_decls_it);
+        ++service_decls_it;
         break;
       case struct_t:
         OnStructDeclaration(*struct_decls_it);

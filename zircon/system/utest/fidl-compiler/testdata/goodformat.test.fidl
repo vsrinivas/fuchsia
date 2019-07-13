@@ -60,6 +60,13 @@ struct Foo {
     vector<handle<channel>> drahvin;
 };
 
+/// Cool new service
+// align me too
+service SomeService {
+    [ShouldNotCareAboutTypeAtParsingStage]
+    vector<handle<channel>> drahvin;
+};
+
 table Table1 {
     1: int64 x;
     2: int64 y;

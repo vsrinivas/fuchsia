@@ -148,6 +148,15 @@ class TestLibrary final {
     return nullptr;
   }
 
+  const fidl::flat::Service* LookupService(const std::string& name) {
+    for (const auto& service_decl : library_->service_declarations_) {
+      if (service_decl->GetName() == name) {
+        return service_decl.get();
+      }
+    }
+    return nullptr;
+  }
+
   const fidl::flat::Struct* LookupStruct(const std::string& name) {
     for (const auto& struct_decl : library_->struct_declarations_) {
       if (struct_decl->GetName() == name) {

@@ -64,6 +64,7 @@ if (current_toolchain == default_toolchain) {
       "ordinals_tests.cc",
       "parsing_tests.cc",
       "protocol_tests.cc",
+      "service_tests.cc",
       "strictness_tests.cc",
       "table_tests.cc",
       "type_alias_tests.cc",

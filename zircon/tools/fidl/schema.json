@@ -9,6 +9,7 @@
         "const_declarations",
         "enum_declarations",
         "interface_declarations",
+        "service_declarations",
         "struct_declarations",
         "table_declarations",
         "union_declarations",
@@ -53,6 +54,13 @@
             "type": "array",
             "items": {
                 "$ref": "#/definitions/interface"
+            }
+        },
+        "service_declarations": {
+            "description": "List of services",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/service"
             }
         },
         "struct_declarations": {
@@ -410,6 +418,63 @@
                 "offset": {
                     "description": "Offset of the parameter or return",
                     "$ref": "#/definitions/count"
+                }
+            }
+        },
+        "service": {
+            "description": "Definition of a service declaration",
+            "type": "object",
+            "required": [
+                "name",
+                "location",
+                "members"
+            ],
+            "properties": {
+                "name": {
+                    "description": "Name of service",
+                    "$ref": "#/definitions/compound-identifier"
+                },
+                "location": {
+                    "description": "Source location of the declaration",
+                    "$ref": "#/definitions/location"
+                },
+                "members": {
+                    "description": "List of service members",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/service-member"
+                    }
+                },
+                "maybe_attributes": {
+                    "description": "Optional list of attributes of the service declaration",
+                    "$ref": "#/definitions/attributes-list"
+                }
+            }
+        },
+        "service-member": {
+            "description": "Definition of a service member",
+            "type": "object",
+            "required": [
+                "type",
+                "name",
+                "location"
+            ],
+            "properties": {
+                "type": {
+                    "description": "Type of the service member",
+                    "$ref": "#/definitions/type"
+                },
+                "name": {
+                    "description": "Name of the service member",
+                    "$ref": "#/definitions/identifier"
+                },
+                "location": {
+                    "description": "Source location of the declaration",
+                    "$ref": "#/definitions/location"
+                },
+                "maybe_attributes": {
+                    "description": "Optional list of service member attributes",
+                    "$ref": "#/definitions/attributes-list"
                 }
             }
         },
