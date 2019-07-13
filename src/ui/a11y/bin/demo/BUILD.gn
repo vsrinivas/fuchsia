@@ -1,0 +1,26 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//topaz/runtime/flutter_runner/flutter_app.gni")
+
+flutter_app("a11y_demo") {
+  main_dart = "lib/main.dart"
+
+  manifest = "pubspec.yaml"
+
+  meta = [
+    {
+      path = rebase_path("meta/a11y_demo.cmx")
+      dest = "a11y_demo.cmx"
+    },
+  ]
+
+  sources = [
+    "a11y_demo.dart",
+  ]
+
+  deps = [
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+  ]
+}
