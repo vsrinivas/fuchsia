@@ -78,6 +78,8 @@ source_set("core") {
   sources = [
     # "bus.cc" is not included here; see top-of-file comment.
     "bcdc.cc",
+    "bits.cc",
+    "bits.h",
     "brcmu_d11.h",
     "btcoex.cc",
     "btcoex.h",

@@ -16,6 +16,8 @@
 
 #include "device.h"
 
+#include <lib/async/time.h>     // for async_now()
+
 #include "debug.h"
 
 pthread_mutex_t irq_callback_lock;
@@ -66,86 +68,4 @@ void brcmf_timer_stop(brcmf_timer_info_t* timer) {
     if (result != ZX_OK) {
         sync_completion_wait(&timer->finished, ZX_TIME_INFINITE);
     }
-}
-
-struct net_device* brcmf_allocate_net_device(size_t priv_size, const char* name) {
-    struct net_device* dev = static_cast<decltype(dev)>(calloc(1, sizeof(*dev)));
-    if (dev == NULL) {
-        return NULL;
-    }
-    dev->priv = static_cast<decltype(dev->priv)>(calloc(1, priv_size));
-    if (dev->priv == NULL) {
-        free(dev);
-        return NULL;
-    }
-    strlcpy(dev->name, name, sizeof(dev->name));
-    return dev;
-}
-
-void brcmf_free_net_device(struct net_device* dev) {
-    if (dev != NULL) {
-        free(dev->priv);
-    }
-    free(dev);
-}
-
-void brcmf_enable_tx(struct net_device* dev) {
-    BRCMF_DBG(INFO, " * * NOTE: brcmf_enable_tx called. Enable TX. (Was netif_wake_queue)");
-}
-
-// This is a kill-flies-with-sledgehammers, just-get-it-working version; TODO(WLAN-730) for
-// efficiency.
-
-bool brcmf_test_and_set_bit_in_array(size_t bit_number, std::atomic<unsigned long>* addr) {
-    size_t index = bit_number >> 6;
-    uint64_t bit = 1 << (bit_number & 0x3f);
-    return !!(addr[index].fetch_or(bit) & bit);
-}
-
-bool brcmf_test_and_clear_bit_in_array(size_t bit_number, std::atomic<unsigned long>* addr) {
-    uint32_t index = bit_number >> 6;
-    uint64_t bit = 1 << (bit_number & 0x3f);
-    return !!(addr[index].fetch_and(~bit) & bit);
-}
-
-bool brcmf_test_bit_in_array(size_t bit_number, std::atomic<unsigned long>* addr) {
-    uint32_t index = bit_number >> 6;
-    uint64_t bit = 1 << (bit_number & 0x3f);
-    return !!(addr[index].load() & bit);
-}
-
-void brcmf_clear_bit_in_array(size_t bit_number, std::atomic<unsigned long>* addr) {
-    (void)brcmf_test_and_clear_bit_in_array(bit_number, addr);
-}
-
-void brcmf_set_bit_in_array(size_t bit_number, std::atomic<unsigned long>* addr) {
-    (void)brcmf_test_and_set_bit_in_array(bit_number, addr);
-}
-
-// TODO(jeffbrown): Once we have an equivalent of debugfs, implement / connect these.
-zx_status_t brcmf_debugfs_create_directory(const char *name, zx_handle_t parent,
-                                           zx_handle_t* new_directory_out) {
-    if (new_directory_out) {
-        *new_directory_out = ZX_HANDLE_INVALID;
-    }
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t brcmf_debugfs_create_sequential_file(void* dev, const char* fn, zx_handle_t parent,
-                                                 zx_status_t (*read_fn)(struct seq_file* seq,
-                                                                        void* data),
-                                                 zx_handle_t* new_file_out) {
-    if (new_file_out) {
-        *new_file_out = ZX_HANDLE_INVALID;
-    }
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t brcmf_debugfs_rm_recursive(zx_handle_t dir) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t brcmf_debugfs_create_u32_file(const char* name, uint32_t permissions,
-                                          zx_handle_t parent, uint32_t* data_to_access) {
-    return ZX_ERR_NOT_SUPPORTED;
 }

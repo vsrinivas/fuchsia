@@ -60,6 +60,16 @@
 
 #define NDOL_MAX_ENTRIES 8
 
+static inline bool address_is_multicast(const uint8_t* address) {
+    return 1 & *address;
+}
+
+static inline bool address_is_broadcast(const uint8_t* address) {
+    static uint8_t all_ones[] = {255, 255, 255, 255, 255, 255};
+    static_assert(ETH_ALEN == 6, "Oops");
+    return !memcmp(address, all_ones, ETH_ALEN);
+}
+
 /**
  * struct brcmf_ampdu_rx_reorder - AMPDU receive reorder info
  *
@@ -211,7 +221,11 @@ struct brcmf_if {
     uint8_t ipv6addr_idx;
 };
 
+struct net_device* brcmf_allocate_net_device(size_t priv_size, const char* name);
+void brcmf_free_net_device(struct net_device* dev);
+void brcmf_enable_tx(struct net_device* dev);
 void brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp);
+void brcmf_netdev_start_xmit(struct net_device* ndev, ethernet_netbuf_t* netbuf);
 
 /* Return pointer to interface name */
 const char* brcmf_ifname(struct brcmf_if* ifp);
@@ -228,6 +242,37 @@ void brcmf_netif_rx(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf);
 void brcmf_net_setcarrier(struct brcmf_if* ifp, bool on);
 zx_status_t brcmf_core_init(zx_device_t* dev);
 void brcmf_core_exit(void);
-void brcmf_netdev_start_xmit(struct net_device* ndev, ethernet_netbuf_t* netbuf);
+
+// Used in net_device.flags to indicate interface is up.
+#define IFF_UP 1
+
+struct net_device {
+    struct wireless_dev* ieee80211_ptr;
+    bool initialized_for_ap;
+    bool scan_busy;
+    bool multicast_promisc;
+    uint64_t scan_txn_id;
+    wlanif_impl_ifc_t* if_callbacks;
+    void* if_callback_cookie;
+    uint8_t dev_addr[ETH_ALEN];
+    char name[123];
+    void* priv;
+    uint32_t flags;
+    struct {
+        int tx_dropped;
+        int tx_packets;
+        int tx_bytes;
+        int rx_packets;
+        int rx_bytes;
+        int multicast;
+        int rx_errors;
+        int tx_errors;
+    } stats;
+    uint32_t features;
+    uint32_t needed_headroom;
+    void (*priv_destructor)(net_device*);
+    int reg_state;
+    int needs_free_net_device;
+};
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CORE_H_

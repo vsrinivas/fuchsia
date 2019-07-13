@@ -19,7 +19,6 @@
 #include <lib/sync/completion.h>
 
 #include "core.h"
-#include "device.h"
 #include "fwil_types.h"
 #include "linuxisms.h"
 #include "workqueue.h"
@@ -117,7 +116,6 @@ struct afx_hdl {
  * @dev_addr: P2P device address.
  * @int_addr: P2P interface address.
  * @bss_idx: informate for P2P bss types.
- * @listen_timer: timer for @WL_P2P_DISC_ST_LISTEN discover state.
  * @listen_channel: channel for @WL_P2P_DISC_ST_LISTEN discover state.
  * @remain_on_channel: contains copy of struct used by cfg80211.
  * @remain_on_channel_cookie: cookie counter for remain on channel cmd
@@ -137,7 +135,6 @@ struct brcmf_p2p_info {
     uint8_t dev_addr[ETH_ALEN];
     uint8_t int_addr[ETH_ALEN];
     struct p2p_bss bss_idx[P2PAPI_BSSCFG_MAX];
-    brcmf_timer_info_t listen_timer;
     uint8_t listen_channel;
     struct ieee80211_channel remain_on_channel;
     uint32_t remain_on_channel_cookie;
@@ -156,9 +153,6 @@ zx_status_t brcmf_p2p_ifchange(struct brcmf_cfg80211_info* cfg,
                                enum brcmf_fil_p2p_if_types if_type);
 zx_status_t brcmf_p2p_start_device(struct wiphy* wiphy, struct wireless_dev* wdev);
 void brcmf_p2p_stop_device(struct wiphy* wiphy, struct wireless_dev* wdev);
-zx_status_t brcmf_p2p_remain_on_channel(struct wiphy* wiphy, struct wireless_dev* wdev,
-                                        struct ieee80211_channel* channel, unsigned int duration,
-                                        uint64_t* cookie);
 bool brcmf_p2p_scan_finding_common_channel(struct brcmf_cfg80211_info* cfg,
                                            struct brcmf_bss_info_le* bi);
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_P2P_H_

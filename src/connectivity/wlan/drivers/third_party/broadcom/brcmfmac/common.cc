@@ -94,22 +94,6 @@ void brcmf_c_set_joinpref_default(struct brcmf_if* ifp) {
     }
 }
 
-static zx_status_t brcmf_c_download(struct brcmf_if* ifp, uint16_t flag,
-                                    struct brcmf_dload_data_le* dload_buf, uint32_t len) {
-    zx_status_t err;
-
-    flag |= (DLOAD_HANDLER_VER << DLOAD_FLAG_VER_SHIFT);
-    dload_buf->flag = flag;
-    dload_buf->dload_type = DL_TYPE_CLM;
-    dload_buf->len = len;
-    dload_buf->crc = 0;
-    len = sizeof(*dload_buf) + len - 1;
-
-    err = brcmf_fil_iovar_data_set(ifp, "clmload", dload_buf, len, nullptr);
-
-    return err;
-}
-
 static zx_status_t brcmf_c_get_clm_name(struct brcmf_if* ifp, uint8_t* clm_name) {
     struct brcmf_bus* bus = ifp->drvr->bus_if;
     struct brcmf_rev_info* ri = &ifp->drvr->revinfo;
@@ -144,17 +128,8 @@ done:
 }
 
 static zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
-    //struct brcmf_device* dev = ifp->drvr->bus_if->dev;
-    struct brcmf_dload_data_le* chunk_buf;
-    const struct brcmf_firmware* clm = NULL;
     uint8_t clm_name[BRCMF_FW_NAME_LEN];
-    uint32_t chunk_len;
-    uint32_t datalen;
-    uint32_t cumulative_len;
-    uint16_t dl_flag = DL_BEGIN;
-    uint32_t status;
     zx_status_t err;
-    int32_t fw_err = 0;
 
     BRCMF_DBG(TRACE, "Enter\n");
 
@@ -166,56 +141,7 @@ static zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
     }
 
     BRCMF_DBG(TEMP, "* * Would have requested firmware name %s", clm_name);
-    err = ZX_ERR_INTERNAL;
-//    err = request_firmware(&clm, clm_name, dev);
-    if (err != ZX_OK) {
-        BRCMF_DBG(INFO,
-                  "no clm_blob available(err=%d), device may have limited channels available\n",
-                  err);
-        return ZX_OK;
-    }
-
-    chunk_buf = static_cast<decltype(chunk_buf)>(calloc(1, sizeof(*chunk_buf) + MAX_CHUNK_LEN - 1));
-    if (!chunk_buf) {
-        err = ZX_ERR_NO_MEMORY;
-        goto done;
-    }
-
-    datalen = clm->size;
-    cumulative_len = 0;
-    do {
-        if (datalen > MAX_CHUNK_LEN) {
-            chunk_len = MAX_CHUNK_LEN;
-        } else {
-            chunk_len = datalen;
-            dl_flag |= DL_END;
-        }
-        memcpy(chunk_buf->data, static_cast<char*>(clm->data) + cumulative_len, chunk_len);
-
-        err = brcmf_c_download(ifp, dl_flag, chunk_buf, chunk_len);
-
-        dl_flag &= ~DL_BEGIN;
-
-        cumulative_len += chunk_len;
-        datalen -= chunk_len;
-    } while ((datalen > 0) && (err == ZX_OK));
-
-    if (err != ZX_OK) {
-        BRCMF_ERR("clmload (%zu byte file) failed (%d); ", clm->size, err);
-        /* Retrieve clmload_status and print */
-        err = brcmf_fil_iovar_int_get(ifp, "clmload_status", &status, &fw_err);
-        if (err != ZX_OK) {
-            BRCMF_ERR("get clmload_status failed: %s, fw err %s\n", zx_status_get_string(err),
-                      brcmf_fil_get_errstr(fw_err));
-        } else {
-            BRCMF_DBG(INFO, "clmload_status=%d\n", status);
-        }
-        err = ZX_ERR_IO;
-    }
-
-    free(chunk_buf);
-done:
-    return err;
+    return ZX_OK;
 }
 
 static void brcmf_gen_random_mac_addr(uint8_t* mac_addr) {

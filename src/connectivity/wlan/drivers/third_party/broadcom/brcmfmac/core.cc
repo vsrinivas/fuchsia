@@ -964,6 +964,30 @@ static int brcmf_get_pend_8021x_cnt(struct brcmf_if* ifp) {
     return ifp->pend_8021x_cnt.load();
 }
 
+struct net_device* brcmf_allocate_net_device(size_t priv_size, const char* name) {
+    struct net_device* dev = static_cast<decltype(dev)>(calloc(1, sizeof(*dev)));
+    if (dev == NULL) {
+        return NULL;
+    }
+    dev->priv = static_cast<decltype(dev->priv)>(calloc(1, priv_size));
+    if (dev->priv == NULL) {
+        free(dev);
+        return NULL;
+    }
+    strlcpy(dev->name, name, sizeof(dev->name));
+    return dev;
+}
+
+void brcmf_free_net_device(struct net_device* dev) {
+    if (dev != NULL) {
+        free(dev->priv);
+    }
+    free(dev);
+}
+
+void brcmf_enable_tx(struct net_device* dev) {
+    BRCMF_DBG(INFO, " * * NOTE: brcmf_enable_tx called. Enable TX. (Was netif_wake_queue)");
+}
 void brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp) {
     zx_status_t result;
 

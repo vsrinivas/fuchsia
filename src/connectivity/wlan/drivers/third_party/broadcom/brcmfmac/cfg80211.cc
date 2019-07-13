@@ -27,6 +27,7 @@
 
 #include <threads.h>
 
+#include "bits.h"
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
 #include "btcoex.h"
@@ -154,6 +155,10 @@ struct parsed_vndr_ies {
     uint32_t count;
     struct parsed_vndr_ie_info ie_info[VNDR_IE_PARSE_LIMIT];
 };
+
+static inline void fill_with_broadcast_addr(uint8_t* address) {
+    memset(address, 0xff, ETH_ALEN);
+}
 
 uint16_t channel_to_chanspec(struct brcmu_d11inf* d11inf, wlan_channel_t* ch) {
     struct brcmu_chan ch_inf;

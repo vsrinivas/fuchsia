@@ -319,6 +319,9 @@ struct rte_console {
 #define MAX_KSO_ATTEMPTS (PMU_MAX_TRANSITION_DLY_USEC / KSO_WAIT_US)
 #define BRCMF_SDIO_MAX_ACCESS_ERRORS 5
 
+#define BC_CORE_POWER_CONTROL_RELOAD 0x2
+#define BC_CORE_POWER_CONTROL_SHIFT 13
+
 /*
  * Conversion of 802.1D priority to precedence level
  */

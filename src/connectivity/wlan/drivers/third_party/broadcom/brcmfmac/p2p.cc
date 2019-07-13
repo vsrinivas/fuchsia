@@ -18,6 +18,7 @@
 
 #include <threads.h>
 
+#include "bits.h"
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
 #include "cfg80211.h"
@@ -284,110 +285,6 @@ static zx_status_t brcmf_p2p_enable_discovery(struct brcmf_p2p_info* p2p) {
     brcmf_set_bit_in_array(BRCMF_P2P_STATUS_ENABLED, &p2p->status);
 exit:
     return ret;
-}
-
-/**
- * brcmf_p2p_discover_listen() - set firmware to discover listen state.
- *
- * @p2p: p2p device.
- * @channel: channel nr for discover listen.
- * @duration: time in ms to stay on channel.
- *
- */
-static zx_status_t brcmf_p2p_discover_listen(struct brcmf_p2p_info* p2p, uint16_t channel,
-                                             uint32_t duration) {
-    struct brcmf_cfg80211_vif* vif;
-    struct brcmu_chan ch;
-    zx_status_t err = ZX_OK;
-
-    vif = p2p->bss_idx[P2PAPI_BSSCFG_DEVICE].vif;
-    if (!vif) {
-        BRCMF_ERR("Discovery is not set, so we have nothing to do\n");
-        err = ZX_ERR_UNAVAILABLE;
-        goto exit;
-    }
-
-    if (brcmf_test_bit_in_array(BRCMF_P2P_STATUS_DISCOVER_LISTEN, &p2p->status)) {
-        BRCMF_ERR("Previous LISTEN is not completed yet\n");
-        /* WAR: prevent cookie mismatch in wpa_supplicant return OK */
-        goto exit;
-    }
-
-    ch.chnum = channel;
-    ch.bw = BRCMU_CHAN_BW_20;
-    p2p->cfg->d11inf.encchspec(&ch);
-    err = brcmf_p2p_set_discover_state(vif->ifp, WL_P2P_DISC_ST_LISTEN, ch.chspec,
-                                       (uint16_t)duration);
-    if (err == ZX_OK) {
-        brcmf_set_bit_in_array(BRCMF_P2P_STATUS_DISCOVER_LISTEN, &p2p->status);
-        p2p->remain_on_channel_cookie++;
-    }
-exit:
-    return err;
-}
-
-/**
- * brcmf_p2p_remain_on_channel() - put device on channel and stay there.
- *
- * @wiphy: wiphy device.
- * @channel: channel to stay on.
- * @duration: time in ms to remain on channel.
- *
- */
-zx_status_t brcmf_p2p_remain_on_channel(struct wiphy* wiphy, struct wireless_dev* wdev,
-                                        struct ieee80211_channel* channel, unsigned int duration,
-                                        uint64_t* cookie) {
-    struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
-    struct brcmf_p2p_info* p2p = &cfg->p2p;
-    zx_status_t err;
-    uint16_t channel_nr;
-
-    channel_nr = ieee80211_frequency_to_channel(channel->center_freq);
-    BRCMF_DBG(TRACE, "Enter, channel: %d, duration ms (%d)\n", channel_nr, duration);
-
-    err = brcmf_p2p_enable_discovery(p2p);
-    if (err != ZX_OK) {
-        goto exit;
-    }
-    err = brcmf_p2p_discover_listen(p2p, channel_nr, duration);
-    if (err != ZX_OK) {
-        goto exit;
-    }
-
-    memcpy(&p2p->remain_on_channel, channel, sizeof(*channel));
-    *cookie = p2p->remain_on_channel_cookie;
-    cfg80211_ready_on_channel(wdev, *cookie, channel, duration);
-
-exit:
-    return err;
-}
-
-/**
- * brcmf_p2p_notify_listen_complete() - p2p listen has completed.
- *
- * @ifp: interface control.
- * @e: event message. Not used, to make it usable for fweh event dispatcher.
- * @data: payload of message. Not used.
- *
- */
-zx_status_t brcmf_p2p_notify_listen_complete(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
-                                             void* data) {
-    struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
-    struct brcmf_p2p_info* p2p = &cfg->p2p;
-
-    BRCMF_DBG(TRACE, "Enter\n");
-    if (brcmf_test_and_clear_bit_in_array(BRCMF_P2P_STATUS_DISCOVER_LISTEN, &p2p->status)) {
-        if (brcmf_test_and_clear_bit_in_array(BRCMF_P2P_STATUS_WAITING_NEXT_AF_LISTEN,
-                &p2p->status)) {
-            brcmf_clear_bit_in_array(BRCMF_P2P_STATUS_WAITING_NEXT_ACT_FRAME, &p2p->status);
-            BRCMF_DBG(INFO, "Listen DONE, wake up wait_next_af\n");
-            sync_completion_signal(&p2p->wait_next_af);
-        }
-
-        cfg80211_remain_on_channel_expired(&ifp->vif->wdev, p2p->remain_on_channel_cookie,
-                                           &p2p->remain_on_channel);
-    }
-    return ZX_OK;
 }
 
 /**

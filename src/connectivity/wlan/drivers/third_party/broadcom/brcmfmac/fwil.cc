@@ -89,6 +89,8 @@ static const char* const brcmf_fil_errstr[] = {
     "BCME_IE_NOTFOUND",
 };
 
+#define BRCMF_ERR_FIRMWARE_UNSUPPORTED (-23)
+
 const char* brcmf_fil_get_errstr(int32_t err) {
     uint32_t err_ndx = (uint32_t)-err;
     if (err_ndx >= countof(brcmf_fil_errstr)) {

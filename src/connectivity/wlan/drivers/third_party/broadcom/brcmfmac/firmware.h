@@ -31,6 +31,11 @@
 
 #define BRCMF_FW_DEFAULT_PATH ""
 
+struct brcmf_firmware {
+    size_t size;
+    void* data;
+};
+
 /**
  * struct brcmf_firmware_mapping - Used to map chipid/revmask to firmware
  *  filename and nvram filename. Each bus type implementation should create

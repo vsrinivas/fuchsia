@@ -20,6 +20,7 @@
 #include <atomic>
 
 #include <ddk/device.h>
+#include <ddk/driver.h>
 
 #include "netbuf.h"
 
