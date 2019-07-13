@@ -17,7 +17,7 @@ void Test::Run() {
   if (driver_->Continue()) {
     TestBody();
   }
-  // Even if errors ocurred, we might want to clean any resources.
+  // Even if errors occurred, we might want to clean any resources.
   TearDown();
 }
 

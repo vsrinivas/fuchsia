@@ -51,7 +51,7 @@ constexpr char kUsageMsg[] = R"(
     --help[-h]                         Prints this message.
     --gtest_filter[-f] PATTERN         Runner will consider only registered
                                        tests that match PATTERN.
-    --gtest_list_tests[-l] BOOL        Runner will list all registed tests
+    --gtest_list_tests[-l] BOOL        Runner will list all registered tests
                                        that would be executed.
     --gtest_shuffle[-s] BOOL           Runner will shuffle test and test case
                                        execution order.

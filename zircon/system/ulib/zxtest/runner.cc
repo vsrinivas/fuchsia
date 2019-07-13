@@ -219,7 +219,7 @@ bool MatchPatterns(fbl::StringPiece pattern, fbl::StringPiece str) {
   static constexpr auto match_pattern = [](const char* pattern, const char* str) -> bool {
     auto advance = [](const char* pattern, const char* str, auto& self) -> bool {
       switch (*pattern) {
-        // Single characeter matching for gTest
+        // Single character matching for gTest
         case '?':
           return *str != '\0' && self(pattern + 1, str + 1, self);
         // Wild card matches anything.

@@ -43,7 +43,7 @@ In this example return_val is 0 on success and non-zero on error. ``RUN_ALL_TEST
 
 ## Writing a Test
 The following example will add a test named `FooIsBar` to a test case named `FooTestCase`.
-Both test case and test names are case sentitive,
+Both test case and test names are case sensitive,
 meaning that `FooTestCase` and `FOoTestCase` are two different test cases.
 
 The test case name and the test name for a tuple which represents a unique identifier for each test. This identifier must be unique within an entire binary.

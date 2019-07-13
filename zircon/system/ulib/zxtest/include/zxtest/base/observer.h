@@ -15,7 +15,7 @@ class TestInfo;
 // Allows user to listen for lifecycle events. This allows injecting code at specific
 // instants, for example when there is a global set up and tear down for a library,
 // that is done at process start up.
-// This interface mimicks gTest EventObserver, all methods are stubbed with empty body,
+// This interface mimics gTest EventObserver, all methods are stubbed with empty body,
 // so implementing classes, only override those they are interested in.
 //
 // Note: This interface will be expanded incrementally in a series of patches,

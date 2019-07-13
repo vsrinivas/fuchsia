@@ -26,14 +26,14 @@ bool Compare(const Actual& actual, const Expected& expected, const Comparer& com
   }
 }
 
-// Alternative when there exists an implicit convertion to pointer, which allows
+// Alternative when there exists an implicit conversion to pointer, which allows
 // VLAs to be compared.
 template <typename Actual, typename Expected, typename Comparer>
 bool Compare(const Actual* a, const Expected* e, const Comparer& compare) {
   return compare(a, e);
 }
 
-// Evaluates a condition and returns true if it is satiefied. If it is not, will create an assertion
+// Evaluates a condition and returns true if it is satisfied. If it is not, will create an assertion
 // and notify the global runner instance.
 template <typename Actual, typename Expected, typename CompareOp, typename PrintActual,
           typename PrintExpected, typename DescGenerator>

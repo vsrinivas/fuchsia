@@ -11,8 +11,8 @@
 
 // Sanity check that looks for bugs in C macro implementation of ASSERT_*/EXPECT_*. This forces
 // the text replacement and allows the compiler to find errors. Otherwise is left to the user
-// to find errors once the macro is first used. Also we validate the the assertions return
-// and expects dont.
+// to find errors once the macro is first used. Also we validate that the assertions return
+// and expects don't.
 // Tests will fail because we are verifying they actually work as intended, though the
 // pass/fail behavior is decided based on Verify functions.
 namespace {
@@ -34,7 +34,7 @@ TEST(ZxTestAssertionTest, AssertTrueAndFalse) {
 
 TEST(ZxTestAssertionTest, AssertTrueAndFalseFailure) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT/ASSERT_TRUE/FALSE returned on success.");
-  EXPECT_TRUE(false, "EXPECT_TRUE suceed");
+  EXPECT_TRUE(false, "EXPECT_TRUE succeed");
   EXPECT_FALSE(true, "EXPECT_FALSE succeed.");
   TEST_CHECKPOINT();
 }
@@ -98,8 +98,8 @@ TEST(ZxTestAssertionTest, AssertNEFailure) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT_NE aborted test execution.");
   int a = 1;
 
-  EXPECT_NE(1, 1, "EXPECT_NE equality detection suceeded.");
-  EXPECT_NE(a, a, "EXPECT_NE equality detection suceeded.");
+  EXPECT_NE(1, 1, "EXPECT_NE equality detection succeeded.");
+  EXPECT_NE(a, a, "EXPECT_NE equality detection succeeded.");
   TEST_CHECKPOINT();
 }
 
@@ -1018,8 +1018,8 @@ TEST(ZxTestAssertionsTest, AssertNotStatusFailure) {
   zx_status_t a = ZX_OK;
 
   EXPECT_NOT_STATUS(ZX_ERR_BAD_STATE, ZX_ERR_BAD_STATE,
-                    "EXPECT_NOT_STATUS equality detection suceeded.");
-  EXPECT_NOT_STATUS(a, a, "EXPECT_NOT_STATUS equality detection suceeded.");
+                    "EXPECT_NOT_STATUS equality detection succeeded.");
+  EXPECT_NOT_STATUS(a, a, "EXPECT_NOT_STATUS equality detection succeeded.");
   TEST_CHECKPOINT();
 }
 

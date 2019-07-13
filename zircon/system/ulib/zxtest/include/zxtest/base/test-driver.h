@@ -10,7 +10,7 @@
 namespace zxtest {
 namespace internal {
 
-// Teest Status.
+// Test Status.
 enum class TestStatus : std::uint8_t {
   kRunning,
   kPassed,

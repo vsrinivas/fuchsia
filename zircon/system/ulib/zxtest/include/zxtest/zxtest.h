@@ -17,7 +17,7 @@
 //  * Custom messages are taken as arguments to the macro, not using stream operator.
 //    ASSERT_EQ(a, b, "a + b is %d", a + b);
 //    Where the first argument is a printf format string and must be a string literal.
-//  * Additional QoL macros for commom use case in Fuchsia platform:
+//  * Additional QoL macros for common use case in Fuchsia platform:
 //    ASSERT/EXPECT_STATUS
 //    ASSERT/EXPECT_NOT_STATUS
 //    ASSERT/EXPECT_OK
@@ -242,7 +242,7 @@
                           "Unexpected exception was raised.", ##__VA_ARGS__)
 #endif
 
-// Evaluates to true if the curent test has any kind of EXPECT or ASSERT failures.
+// Evaluates to true if the current test has any kind of EXPECT or ASSERT failures.
 #define CURRENT_TEST_HAS_FAILURES() _ZXTEST_TEST_HAS_ERRORS
 
 // Evaluates to true if the current test has ASSERT failures only.

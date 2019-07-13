@@ -101,7 +101,7 @@ fbl::String PrintVolatile(volatile const void* ptr, size_t size);
 // Specializations exist for primitive types, pointers and |fbl::String|.
 template <typename T>
 fbl::String PrintValue(const T& value) {
-  // TODO(gevalentino): By default generate a hex represetation of the memory contents of value.
+  // TODO(gevalentino): By default generate a hex representation of the memory contents of value.
   return internal::ToHex(&value, sizeof(value));
 }
 

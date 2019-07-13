@@ -193,7 +193,7 @@ class Runner {
     environments_.push_back(std::move(environment));
   }
 
-  // Provides an entry point for asertions. The runner will propagate the assertion to the
+  // Provides an entry point for assertions. The runner will propagate the assertion to the
   // interested parties. This is needed in a global scope, because helper methods do not have
   // access to a |Test| instance and legacy tests are not part of a Fixture, but wrapped by one.
   // If this is called without any test running, it will have no effect.
