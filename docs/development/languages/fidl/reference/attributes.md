@@ -36,13 +36,12 @@ Attributes may include multiple values, and multiple attributes may be
 specified in the same element, for example:
 
 ```fidl
-[Layout = "Simple", Transport = "SocketControl, OvernetEmbedded"]
+[Layout = "Simple", Transport = "OvernetEmbedded"]
 ```
 
 Illustrates both aspects:
 * there are two attributes, `Layout` and `Transport`, and
-* the `Transport` attribute has two values, `SocketControl` and
-  `OvernetEmbedded`.
+* the `Transport` attribute takes a value from the list enumerated below.
 
 ## `[Deprecated]` {#deprecated}
 
@@ -196,8 +195,6 @@ Allows you to select a transport.
 Provide a comma-separated list of values, selected from:
 
 * `Channel` &mdash; use a [Zircon channel][channel].
-* `SocketControl` &mdash; use [**zx_socket_write()**][socketwrite] (note:
-  no handles allowed for such protocols).
 * `OvernetEmbedded` &mdash; uses a transport that makes Overnet available on
   a variety of operating systems by embedding the Overnet runtime as a C++
   library and providing a C++ API for remotable handles.
@@ -208,8 +205,8 @@ Provide a comma-separated list of values, selected from:
 
 The default is `Channel` if none specified.
 If you do specify a value or values, then only those values are used (e.g.,
-specifying `[Transport="SocketControl"]` disables `Channel` and uses only
-`SocketControl`).
+specifying `[Transport="Foo"]` disables `Channel` and uses only
+`Foo`).
 
 <!-- xrefs -->
 [channel]: /zircon/docs/objects/channel.md

@@ -20,8 +20,6 @@ class KitchenSink_Stub;
       
   
       
-  
-      
         
 class OvernetInternalProtocol;
 class OvernetInternalProtocol_Proxy;
@@ -88,8 +86,6 @@ class KitchenSink_Stub : public ::overnet::FidlStream, public KitchenSink {
       
   
       
-  
-      
         
 
 class OvernetInternalProtocol {
@@ -148,8 +144,6 @@ class OvernetInternalProtocol_Stub : public ::overnet::FidlStream, public Overne
   
       
         
-      
-  
       
   
       

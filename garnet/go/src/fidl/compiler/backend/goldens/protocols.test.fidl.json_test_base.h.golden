@@ -39,22 +39,6 @@ class ChannelProtocol_TestBase : public ChannelProtocol {
 
 };
 
-class SocketControlProtocol_TestBase : public SocketControlProtocol {
-  public:
-  virtual ~SocketControlProtocol_TestBase() { }
-  virtual void NotImplemented_(const std::string& name) = 0;
-  void MethodA(int64_t a, int64_t b) override {
-    NotImplemented_("MethodA");
-  }
-  void MethodB(int64_t a, int64_t b, MethodBCallback callback) override {
-    NotImplemented_("MethodB");
-  }
-  void MutateSocket(::zx::socket a, MutateSocketCallback callback) override {
-    NotImplemented_("MutateSocket");
-  }
-
-};
-
 class OvernetInternalProtocol_TestBase : public OvernetInternalProtocol {
   public:
   virtual ~OvernetInternalProtocol_TestBase() { }

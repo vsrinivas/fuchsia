@@ -131,8 +131,8 @@ static void zxsio_wait_begin_stream(fdio_t* io, uint32_t events, zx_handle_t* ha
     if (events & POLLIN) {
       // signal when a listening socket gets an incoming connection
       // or a connecting socket gets connected and receives data
-      signals |= ZXSIO_SIGNAL_INCOMING | ZX_SOCKET_ACCEPT | ZX_SOCKET_READABLE |
-                 ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED;
+      signals |= ZXSIO_SIGNAL_INCOMING | ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED |
+                 ZX_SOCKET_PEER_CLOSED;
     }
     if (events & POLLOUT) {
       // signal when connect() operation is finished
@@ -162,7 +162,7 @@ static void zxsio_wait_end_stream(fdio_t* io, zx_signals_t signals, uint32_t* _e
       events |= POLLOUT;
     }
   } else {
-    if (signals & (ZXSIO_SIGNAL_INCOMING | ZX_SOCKET_ACCEPT | ZX_SOCKET_PEER_CLOSED)) {
+    if (signals & (ZXSIO_SIGNAL_INCOMING | ZX_SOCKET_PEER_CLOSED)) {
       events |= POLLIN;
     }
     if (signals & ZXSIO_SIGNAL_OUTGOING) {

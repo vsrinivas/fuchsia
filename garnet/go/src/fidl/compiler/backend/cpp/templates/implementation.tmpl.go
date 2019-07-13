@@ -34,7 +34,7 @@ namespace {{ . }} {
 
 {{- define "DispatchInterfaceDefinition" -}}
 {{- range $transport, $_ := .Transports }}
-{{- if eq $transport "Channel" "SocketControl" -}}{{ template "InterfaceDefinition" $ }}{{- end }}
+{{- if eq $transport "Channel" -}}{{ template "InterfaceDefinition" $ }}{{- end }}
 {{- end }}
 {{- end -}}
 `

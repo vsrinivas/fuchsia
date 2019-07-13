@@ -21,7 +21,7 @@ protocol WithErrorSyntax {
     ErrorAsEnum() -> () error ErrorEnun;
 };
 
-[Transport="OvernetInternal"]
+[Transport = "OvernetInternal"]
 protocol OvernetInternalProtocol {
     MethodA(int64 a, int64 b);
     -> EventA(int64 a, int64 b);
@@ -29,15 +29,7 @@ protocol OvernetInternalProtocol {
     MutateSocket(handle<socket> a) -> (handle<socket> b);
 };
 
-[Transport="SocketControl"]
-protocol SocketControlProtocol {
-    MethodA(int64 a, int64 b);
-    -> EventA(int64 a, int64 b);
-    MethodB(int64 a, int64 b) -> (int64 result);
-    MutateSocket(handle<socket> a) -> (handle<socket> b);
-};
-
-[Transport="Channel"]
+[Transport = "Channel"]
 protocol ChannelProtocol {
     MethodA(int64 a, int64 b);
     -> EventA(int64 a, int64 b);
@@ -46,7 +38,7 @@ protocol ChannelProtocol {
 };
 
 // This is not expected to generate code that could be built.
-[Transport="Channel, SocketControl, OvernetInternal"]
+[Transport = "Channel, OvernetInternal"]
 protocol KitchenSink {
     MethodA(int64 a, int64 b);
     -> EventA(int64 a, int64 b);

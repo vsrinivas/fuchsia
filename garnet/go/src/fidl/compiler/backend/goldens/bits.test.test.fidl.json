@@ -5,6 +5,11 @@
   "bits_declarations": [
     {
       "name": "test.name/MyBits",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/bits.test.test.fidl",
+        "line": 2,
+        "column": 6
+      },
       "type": {
         "kind": "primitive",
         "subtype": "uint32"
@@ -13,6 +18,11 @@
       "members": [
         {
           "name": "MY_FIRST_BIT",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/bits.test.test.fidl",
+            "line": 3,
+            "column": 5
+          },
           "value": {
             "kind": "literal",
             "literal": {
@@ -24,6 +34,11 @@
         },
         {
           "name": "MY_OTHER_BIT",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/bits.test.test.fidl",
+            "line": 4,
+            "column": 5
+          },
           "value": {
             "kind": "literal",
             "literal": {
