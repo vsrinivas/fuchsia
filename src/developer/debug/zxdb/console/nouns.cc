@@ -116,6 +116,10 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   context->SetActiveTarget(cmd.target());
 
   ConsoleFormatOptions options;
+  options.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
+  options.pointer_expand_depth = 1;
+  options.max_depth = 4;
+
   Console::get()->Output(FormatFrameLong(cmd.frame(), cmd.HasSwitch(kForceTypes), options));
   return true;
 }

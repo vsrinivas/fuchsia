@@ -59,8 +59,8 @@ class FormatTest : public TestWithLoop {
     return node;
   }
 
-  // Recursively describes all nodes in the given tree. If update_value is set,
-  // the value of the node will also be refreshed.
+  // Recursively describes all nodes in the given tree. If update_value is set, the value of the
+  // node will also be refreshed.
   void RecursiveSyncDescribe(FormatNode* node, bool update_value, const FormatOptions& opts) {
     if (update_value)
       SyncFormat(node, opts);
@@ -71,8 +71,7 @@ class FormatTest : public TestWithLoop {
       RecursiveSyncDescribe(c.get(), update_value, opts);
   }
 
-  // Returns "<type>, <description>" for the given formatted node. Errors
-  // are also output.
+  // Returns "<type>, <description>" for the given formatted node. Errors are also output.
   std::string GetTypeDesc(const FormatNode* node) {
     if (node->err().has_error())
       return "Err: " + node->err().msg();
@@ -86,11 +85,10 @@ class FormatTest : public TestWithLoop {
     return GetTypeDesc(node.get());
   }
 
-  // Recursively formats the values until everything is described and
-  // outputs a hierarchical tree structure, each level indented two spaces.
+  // Recursively formats the values until everything is described and outputs a hierarchical tree
+  // structure, each level indented two spaces.
   //
-  // Note that normally the root name will be empty so it will start with
-  // " = <type>, <description>"
+  // Note that normally the root name will be empty so it will start with " = <type>, <description>"
   //
   // <name> = <type>, <description>
   //   <child name> = <child type>, <child description>
@@ -256,8 +254,8 @@ TEST_F(FormatTest, Structs) {
 
   auto int32_type = MakeInt32Type();
 
-  // Make an int reference. Reference type printing combined with struct type
-  // printing can get complicated.
+  // Make an int reference. Reference type printing combined with struct type printing can get
+  // complicated.
   auto int_ref =
       fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType, LazySymbol(int32_type));
 
@@ -265,8 +263,7 @@ TEST_F(FormatTest, Structs) {
   constexpr uint64_t kAddress = 0x1100;
   provider()->AddMemory(kAddress, {0x12, 0, 0, 0});
 
-  // Struct with two values, an int and a int&, and a pair of two of those
-  // structs.
+  // Struct with two values, an int and a int&, and a pair of two of those structs.
   auto foo =
       MakeCollectionType(DwarfTag::kStructureType, "Foo", {{"a", int32_type}, {"b", int_ref}});
   auto pair =
@@ -277,8 +274,7 @@ TEST_F(FormatTest, Structs) {
                               0x33, 0x00, 0x33, 0x00,                            // (int32) a
                               0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});  // (int32&) b
 
-  // The references when not printing all types are printed after the
-  // struct member name.
+  // The references when not printing all types are printed after the struct member name.
   EXPECT_EQ(
       " = Pair, \n"
       "  first = Foo, \n"
@@ -293,8 +289,8 @@ TEST_F(FormatTest, Structs) {
 }
 
 TEST_F(FormatTest, Struct_Anon) {
-  // Test an anonymous struct. Clang will generate structs with no names for
-  // things like closures. This struct has no members.
+  // Test an anonymous struct. Clang will generate structs with no names for things like closures.
+  // This struct has no members.
   auto anon_struct = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType);
   auto anon_struct_ptr =
       fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(anon_struct));
@@ -306,8 +302,7 @@ TEST_F(FormatTest, Struct_Anon) {
       SyncTreeTypeDesc(anon_value, FormatOptions()));
 }
 
-// Structure members can be marked as "artifical" by the compiler. We shouldn't
-// print these.
+// Structure members can be marked as "artifical" by the compiler. We shouldn't print these.
 TEST_F(FormatTest, Struct_Artificial) {
   auto int32_type = MakeInt32Type();
   auto foo_type = MakeCollectionType(DwarfTag::kStructureType, "Foo",
@@ -332,8 +327,8 @@ TEST_F(FormatTest, Struct_Artificial) {
       SyncTreeTypeDesc(value, FormatOptions()));
 }
 
-// GDB and LLDB both print all members of a union and accept the possibility
-// that sometimes one of them might be garbage, we do the same.
+// GDB and LLDB both print all members of a union and accept the possibility that sometimes one of
+// them might be garbage, we do the same.
 TEST_F(FormatTest, Union) {
   FormatOptions opts;
 
@@ -394,8 +389,7 @@ TEST_F(FormatTest, DerivedClasses) {
                             kCValue, 0, 0, 0,    // (int32) Derived.c
                             kDValue, 0, 0, 0});  // (int32) Derived.d
 
-  // Only the Base should be printed, EmptyBase should be omitted because it
-  // has no data.
+  // Only the Base should be printed, EmptyBase should be omitted because it has no data.
   FormatOptions opts;
   EXPECT_EQ(
       " = Derived, \n"
@@ -518,10 +512,9 @@ TEST_F(FormatTest, GoodStrings) {
   EXPECT_EQ(" = char[12], " + expected_desc_string + "\n" + expected_members_with_null,
             SyncTreeTypeDesc(ExprValue(array_type, data), opts));
 
-  // This type is a "const array of const char". I don't know how to type this
-  // in C (most related things end up as "const pointer to const char") and the
-  // type name looks wrong but GCC will generate this for the type of
-  // compiler-generated variables like __func__.
+  // This type is a "const array of const char". I don't know how to type this in C (most related
+  // things end up as "const pointer to const char") and the type name looks wrong but GCC will
+  // generate this for the type of compiler-generated variables like __func__.
   auto char_type = MakeSignedChar8Type();
   auto const_char = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, LazySymbol(char_type));
   auto array_const_char = fxl::MakeRefCounted<ArrayType>(const_char, 12);
@@ -555,8 +548,8 @@ TEST_F(FormatTest, TruncatedString) {
   // Little-endian version of kAddress.
   std::vector<uint8_t> address_data = {0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-  // This string doesn't end in a null terminator but rather invalid memory.
-  // We should print as much as we have.
+  // This string doesn't end in a null terminator but rather invalid memory. We should print as much
+  // as we have.
   auto ptr_type = MakeCharPointerType();
   EXPECT_EQ(
       " = char*, \"ABCDEF\"\n"
@@ -583,12 +576,15 @@ TEST_F(FormatTest, TruncatedString) {
 TEST_F(FormatTest, RustEnum) {
   auto rust_enum = MakeTestRustEnum();
 
-  // Since "none" is the default, random disciminant values (here, the 32-bit
-  // "100" value) will match it.
+  // Since "none" is the default, random disciminant values (here, the 32-bit "100" value) will
+  // match it. It has no value, so the expectation has an awkward ", " at the end.
   ExprValue none_value(rust_enum, {100, 0, 0, 0,              // Discriminant
                                    0, 0, 0, 0, 0, 0, 0, 0});  // Unused
   FormatOptions opts;
-  EXPECT_EQ(" = RustEnum, None\n", SyncTreeTypeDesc(none_value, opts));
+  EXPECT_EQ(
+      " = RustEnum, None\n"
+      "  None = None, \n",
+      SyncTreeTypeDesc(none_value, opts));
 
   // Scalar value.
   ExprValue scalar_value(rust_enum, {0, 0, 0, 0,    // Discriminant
@@ -762,9 +758,8 @@ TEST_F(FormatTest, TruncatedArray) {
 
 // Tests printing nullptr_t which is defined as "typedef decltype(nullptr) nullptr_t;".
 TEST_F(FormatTest, NullptrT) {
-  // Clang and GCC currently defined "decltype(nullptr)" as an "unspecified"
-  // type. Our decoder will force these to be the size of a pointer (the
-  // symbols don't seem to define a size).
+  // Clang and GCC currently defined "decltype(nullptr)" as an "unspecified" type. Our decoder will
+  // force these to be the size of a pointer (the symbols don't seem to define a size).
   auto underlying_type = fxl::MakeRefCounted<Type>(DwarfTag::kUnspecifiedType);
   underlying_type->set_assigned_name("decltype(nullptr_t)");
   underlying_type->set_byte_size(8);
@@ -816,18 +811,16 @@ TEST_F(FormatTest, FunctionPtr) {
   ExprValue good_ptr(func_ptr_type, {0x34, 0x12, 0, 0, 0, 0, 0, 0});
   EXPECT_EQ(" = void (*)(), &MyFunc\n", SyncTreeTypeDesc(good_ptr, opts));
 
-  // Member function pointer. The type naming of function pointers is tested by
-  // the MemberPtr class, and otherwise the code paths are the same, so here
-  // we only need to verify things are hooked up.
+  // Member function pointer. The type naming of function pointers is tested by the MemberPtr class,
+  // and otherwise the code paths are the same, so here we only need to verify things are hooked up.
   auto containing = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType, "MyClass");
 
   auto member_func = fxl::MakeRefCounted<MemberPtr>(LazySymbol(containing), LazySymbol(func_type));
   ExprValue null_member_func_ptr(member_func, {0, 0, 0, 0, 0, 0, 0, 0});
   EXPECT_EQ(" = void (MyClass::*)(), 0x0\n", SyncTreeTypeDesc(null_member_func_ptr, opts));
 
-  // Member function to a known symbol. This doesn't resolve to something that
-  // looks like a class member, but that's OK, wherever the address points to
-  // is what we print.
+  // Member function to a known symbol. This doesn't resolve to something that looks like a class
+  // member, but that's OK, wherever the address points to is what we print.
   ExprValue good_member_func_ptr(member_func, {0x34, 0x12, 0, 0, 0, 0, 0, 0});
   EXPECT_EQ(" = void (MyClass::*)(), &MyFunc\n", SyncTreeTypeDesc(good_member_func_ptr, opts));
 

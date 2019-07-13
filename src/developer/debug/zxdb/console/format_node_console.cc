@@ -63,6 +63,9 @@ struct RecursiveState {
   // Returns the string to indent a node at the given level.
   std::string GetIndentString() const { return std::string(GetIndentAmount(), ' '); }
 
+  // Returns true if items at this level should be elided because the printing depth is too deep.
+  bool DepthTooDeep() const { return tree_depth >= options.max_depth; }
+
   const ConsoleFormatOptions options;
 
   // Forces various information off for exactly one level of printing. Use for array printing, for
@@ -215,12 +218,30 @@ void AppendItemSuffix(const RecursiveState& state, bool last_item, OutputBuffer*
     out->Append(", ");  // Get commas for everything but the last.
 }
 
+// Returns true if type information should be displayed before the variable name, as in
+//   <TYPE> name = value
+bool ShouldPrependTypeNameBeforeName(const FormatNode* node, const RecursiveState& state) {
+  if (!state.TypeForcedOn())
+    return false;  // Never show types unless requested.
+
+  if ((node->description_kind() == FormatNode::kCollection && IsRust(node)) ||
+      node->description_kind() == FormatNode::kRustTuple ||
+      node->description_kind() == FormatNode::kRustTupleStruct) {
+    // Rust structs and tuple structs are special. They encode the type after the variable, so:
+    // "foo = StructName{...}" and we don't want to prepend it before "foo". But this doesn't happen
+    // for tuples.
+    //
+    // Rust tuples don't have the name shown ever. The individual members will have their types
+    // displayed which will encode the type of the tuple.
+    return false;
+  }
+
+  return true;
+}
+
 // Appends the formatted name and "=" as needed by this node.
 void AppendNodeNameAndType(const FormatNode* node, const RecursiveState& state, OutputBuffer* out) {
-  // Type name when forced on. Never show types here for Rust collections since those are always
-  // printed as part of the colelction printing code after the name ("foo = StructName{...}").
-  if (state.TypeForcedOn() &&
-      !(node->description_kind() == FormatNode::kCollection && IsRust(node)))
+  if (ShouldPrependTypeNameBeforeName(node, state))
     out->Append(Syntax::kComment, "(" + node->type() + ") ");
 
   if (!state.inhibit_one_name && !node->name().empty()) {
@@ -232,38 +253,95 @@ void AppendNodeNameAndType(const FormatNode* node, const RecursiveState& state, 
       // Normal variable-style node name.
       out->Append(Syntax::kVariable, node->name());
     }
-    out->Append(" = ");
+
+    // Rust uses colons for most things, while C uses equals. The exception for Rust is local
+    // variables which "=" to better match how the variables are declared.
+    if (IsRust(node) && node->child_kind() != FormatNode::kVariable)
+      out->Append(": ");
+    else
+      out->Append(" = ");
   }
 }
 
-OutputBuffer DoFormatArrayNode(const FormatNode* node, const RecursiveState& state) {
-  // Special-case the empty struct because we never want wrapping.
-  if (node->children().empty())
-    return OutputBuffer("{}");
+// Writes the node's children. The caller sets up how it wants the children to be formatted by
+// passing bothe the recursive state for the node, and the state it wants to use for the children.
+//
+// The opening and closing character are used to wrap the contents, e.g. '{' and '}'.
+void AppendNodeChildren(const FormatNode* node, const RecursiveState& node_state, char opening_char,
+                        char closing_char, const RecursiveState& child_state, OutputBuffer* out) {
+  out->Append(std::string(1, opening_char));
+
+  if (child_state.DepthTooDeep()) {
+    // Don't print the child names if those children will be elided. Otherwise this prints a
+    // whole struct out with no data: "{foo=…, bar=…, baz=…}" which is wasteful of space and not
+    // helpful.
+    out->Append(Syntax::kComment, "…");
+    out->Append(std::string(1, closing_char));
+    return;
+  }
+
+  // Special-case empty ones because we never want wrapping.
+  if (node->children().empty()) {
+    out->Append(std::string(1, closing_char));
+    return;
+  }
+
+  if (node_state.ShouldExpand())
+    out->Append("\n");
+
+  int child_indent = child_state.GetIndentAmount();
+  for (size_t i = 0; i < node->children().size(); i++) {
+    const FormatNode* child = node->children()[i].get();
+
+    if (child->state() == FormatNode::kEmpty) {
+      // Arrays can have "empty" nodes which use the name to indicate clipping ("...").
+      if (!child->name().empty())
+        out->Append(Syntax::kComment, child->name());
+    } else {
+      out->Append(DoFormatNode(child, child_state, child_indent));
+    }
+
+    // Separator (comma or newline).
+    AppendItemSuffix(node_state, i + 1 == node->children().size(), out);
+  }
+
+  out->Append(node_state.GetIndentString() + closing_char);
+}
+
+OutputBuffer DoFormatArrayOrTupleNode(const FormatNode* node, const RecursiveState& state) {
+  OutputBuffer out;
 
   RecursiveState child_state = state.Advance();
   // In multiline mode, show the names of the array indices ("[0] = ...").
   child_state.inhibit_one_name = !state.ShouldExpand();
-  child_state.inhibit_one_type = true;  // Don't show the type for every child.
-  int child_indent = child_state.GetIndentAmount();
 
-  OutputBuffer out("{");
-  if (state.ShouldExpand())
-    out.Append("\n");
+  if (node->description_kind() == FormatNode::kArray) {
+    // Arrays all have the same type so don't show the type for every child.
+    child_state.inhibit_one_type = true;
 
-  for (size_t i = 0; i < node->children().size(); i++) {
-    const FormatNode* child = node->children()[i].get();
+    AppendNodeChildren(node, state, '{', '}', child_state, &out);
+  } else {
+    // Rust tuple or tuple struct. These should not be empty.
+    if (node->description_kind() == FormatNode::kRustTupleStruct) {
+      // Tuple structs get the name, regular tuples have none.
+      AppendRustCollectionName(node, state, &out);
+    }
 
-    // Arrays can have "empty" nodes which use the name to indicate clipping ("...").
-    if (child->state() == FormatNode::kEmpty)
-      out.Append(Syntax::kComment, child->name());
-    else
-      out.Append(DoFormatNode(child, child_state, child_indent));
+    // Tuples of length 1 never show the child names, even in expanded mode because it's not
+    // helpful and looks weird.o
+    //
+    // We show the indices of tuple members in expanded mode for larger tuples even though
+    // Rust wouldn't do that because highly nested data structures can get very difficult to
+    // follow. Something like a closure or a generator can go on for >100 lines and have many
+    // tuple members (>10). Without these indices the structure is not interpretable. This doesn't
+    // come up when using println in the language very often because normally these types of
+    // tuples are not printed.
+    if (node->children().size() == 1)
+      child_state.inhibit_one_name = true;
 
-    // Separator (comma or newline).
-    AppendItemSuffix(state, i + 1 == node->children().size(), &out);
+    AppendNodeChildren(node, state, '(', ')', child_state, &out);
   }
-  out.Append(state.GetIndentString() + "}");
+
   return out;
 }
 
@@ -281,20 +359,7 @@ OutputBuffer DoFormatCollectionNode(const FormatNode* node, const RecursiveState
     return out;
   }
 
-  RecursiveState child_state = state.Advance();
-  int child_indent = child_state.GetIndentAmount();
-
-  out.Append("{");
-  if (state.ShouldExpand())
-    out.Append("\n");
-
-  for (size_t i = 0; i < node->children().size(); i++) {
-    out.Append(DoFormatNode(node->children()[i].get(), child_state, child_indent));
-
-    // Separator (comma or newline).
-    AppendItemSuffix(state, i + 1 == node->children().size(), &out);
-  }
-  out.Append(state.GetIndentString() + "}");
+  AppendNodeChildren(node, state, '{', '}', state.Advance(), &out);
   return out;
 }
 
@@ -351,6 +416,28 @@ OutputBuffer DoFormatReferenceNode(const FormatNode* node, const RecursiveState&
   return DoFormatNodeOneWay(node->children()[0].get(), child_state, 0);
 }
 
+// A Rust enum is currently like a reference in that is has a child that's the resolved type.
+// A resolved enum type will be a TupleStruct (unnamed members) or a Struct (named members). Enums
+// with no members are encoded as empty structs which the struct printing code will handle.
+OutputBuffer DoFormatRustEnum(const FormatNode* node, const RecursiveState& state) {
+  if (node->children().empty()) {
+    // The caller should have expanded the enum if it wants it to be shown. If not, display the
+    // description which will generally be the short name of the enum.
+    return OutputBuffer(Syntax::kComment, node->description());
+  }
+
+  // Have the pointed-to data, just show the value. We do not want to indent another level. The
+  // type is also hidden because it will be a generated type. If requested, the type of the overall
+  // enum will have already been printed.
+  RecursiveState child_state = state.AdvanceNoIndent();
+  child_state.inhibit_one_name = true;
+  child_state.inhibit_one_type = true;
+
+  // Use the "one way" version to propagate our formatting mode. This node can't get different
+  // formatting than its child.
+  return DoFormatNodeOneWay(node->children()[0].get(), child_state, 0);
+}
+
 // Appends the description for a normal node (number or whatever).
 OutputBuffer DoFormatStandardNode(const FormatNode* node, const RecursiveState& state) {
   return OutputBuffer(node->description());
@@ -371,7 +458,7 @@ OutputBuffer DoFormatNodeOneWay(const FormatNode* node, const RecursiveState& st
     out.Append(std::string(indent_amount, ' '));
 
   AppendNodeNameAndType(node, state, &out);
-  if (state.tree_depth == state.options.max_depth) {
+  if (state.DepthTooDeep() || node->state() != FormatNode::kDescribed) {
     // Hit max depth, give up.
     out.Append(Syntax::kComment, "…");
   } else if (node->err().has_error()) {
@@ -389,7 +476,9 @@ OutputBuffer DoFormatNodeOneWay(const FormatNode* node, const RecursiveState& st
         out.Append(DoFormatStandardNode(node, state));
         break;
       case FormatNode::kArray:
-        out.Append(DoFormatArrayNode(node, state));
+      case FormatNode::kRustTuple:
+      case FormatNode::kRustTupleStruct:
+        out.Append(DoFormatArrayOrTupleNode(node, state));
         break;
       case FormatNode::kCollection:
         out.Append(DoFormatCollectionNode(node, state));
@@ -401,9 +490,7 @@ OutputBuffer DoFormatNodeOneWay(const FormatNode* node, const RecursiveState& st
         out.Append(DoFormatReferenceNode(node, state));
         break;
       case FormatNode::kRustEnum:
-      case FormatNode::kRustTuple:
-        // TODO(brettw): need more specific formatting. For now just output the default.
-        out.Append(DoFormatStandardNode(node, state));
+        out.Append(DoFormatRustEnum(node, state));
         break;
     }
   }
@@ -424,7 +511,11 @@ OutputBuffer DoFormatNode(const FormatNode* node, const RecursiveState& state, i
   if (state.options.wrapping != ConsoleFormatOptions::Wrapping::kSmart)
     return DoFormatNodeOneWay(node, state, indent_amount);  // Nothing fancy to do.
 
-  if (state.smart_indent_is_expanded) {
+  // Nodes with few children we try to fit on one line if possible in smart mode. Generally
+  // structures with more than 4 children will always spill over to multiline mode, so this check is
+  // more of an optimization to avoid trying and failing to format the whole thing as a single line
+  // first. Even if it fits, many members on a line are not readable.
+  if (state.smart_indent_is_expanded && node->children().size() <= 4) {
     // The previous node was in an expanded state. First try to format this one as non-expanded.
     // to see if it fits.
     RecursiveState one_line_state = state;
@@ -458,6 +549,8 @@ fxl::RefPtr<AsyncOutputBuffer> FormatValueForConsole(ExprValue value,
                                                      fxl::RefPtr<EvalContext> context,
                                                      const std::string& value_name) {
   auto node = std::make_unique<FormatNode>(value_name, std::move(value));
+  node->set_child_kind(FormatNode::kVariable);
+
   FormatNode* node_ptr = node.get();
 
   auto out = fxl::MakeRefCounted<AsyncOutputBuffer>();

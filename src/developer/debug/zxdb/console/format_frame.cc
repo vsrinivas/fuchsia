@@ -34,7 +34,7 @@ fxl::RefPtr<AsyncOutputBuffer> ListCompletedFrames(Thread* thread, bool include_
   ConsoleFormatOptions format_options;
   format_options.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
   format_options.pointer_expand_depth = 1;
-  format_options.max_depth = 4;
+  format_options.max_depth = 3;
 
   // This doesn't use table output since the format of the stack frames is usually so unpredictable.
   const Stack& stack = thread->GetStack();

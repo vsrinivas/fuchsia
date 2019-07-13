@@ -30,8 +30,10 @@ class FormatValueConsoleTest : public TestWithLoop {
   MockSymbolDataProvider* provider() { return eval_context_->data_provider(); }
 
   // Synchronously calls FormatExprValue, returning the result.
-  std::string SyncFormatValue(const ExprValue& value, const ConsoleFormatOptions& opts) {
-    return LoopUntilAsyncOutputBufferComplete(FormatValueForConsole(value, opts, eval_context_))
+  std::string SyncFormatValue(const ExprValue& value, const ConsoleFormatOptions& opts,
+                              const std::string& name = std::string()) {
+    return LoopUntilAsyncOutputBufferComplete(
+               FormatValueForConsole(value, opts, eval_context_, name))
         .AsString();
   }
 
@@ -357,17 +359,26 @@ TEST_F(FormatValueConsoleTest, NestingLimits) {
   opts.max_depth = 0;
   EXPECT_EQ("…", SyncFormatValue(c_value, opts));
   opts.max_depth = 1;
-  EXPECT_EQ("{c = …}", SyncFormatValue(c_value, opts));
+  EXPECT_EQ("{…}", SyncFormatValue(c_value, opts));
   opts.max_depth = 2;
-  EXPECT_EQ("{c = {b = …}}", SyncFormatValue(c_value, opts));
+  EXPECT_EQ("{c = {…}}", SyncFormatValue(c_value, opts));
   opts.max_depth = 3;
   EXPECT_EQ("{c = {b = (*)0x2200}}", SyncFormatValue(c_value, opts));
   opts.max_depth = 4;
-  EXPECT_EQ("{c = {b = (*)0x2200 🡺 {a = …}}}", SyncFormatValue(c_value, opts));
+  EXPECT_EQ("{c = {b = (*)0x2200 🡺 {…}}}", SyncFormatValue(c_value, opts));
   opts.max_depth = 5;
   EXPECT_EQ("{c = {b = (*)0x2200 🡺 {a = (*)0x1100}}}", SyncFormatValue(c_value, opts));
   opts.max_depth = 6;
   EXPECT_EQ("{c = {b = (*)0x2200 🡺 {a = (*)0x1100 🡺 12}}}", SyncFormatValue(c_value, opts));
+
+  // Tests max recursion for the expanded case. The elided structs should not be expanded.
+  opts.max_depth = 2;
+  opts.wrapping = ConsoleFormatOptions::Wrapping::kExpanded;
+  EXPECT_EQ(
+      "{\n"
+      "  c = {…}\n"
+      "}",
+      SyncFormatValue(c_value, opts));
 }
 
 TEST_F(FormatValueConsoleTest, Wrapping) {
@@ -461,6 +472,9 @@ TEST_F(FormatValueConsoleTest, Wrapping) {
 
 // Tests the naming of Rust collections since we have complicated rules depending on verbosity.
 TEST_F(FormatValueConsoleTest, RustCollectionName) {
+  auto int32_type = MakeInt32Type();  // Won't be named like Rust's ints but doesn't matter.
+  int32_type->set_parent(LazySymbol(MakeRustUnit()));  // Mark as Rust.
+
   // Namespace for the structs. Making the root compilation unit a Rust one will mark all types in
   // this unit as Rust.
   auto ns = fxl::MakeRefCounted<Namespace>("my_ns");
@@ -491,12 +505,12 @@ TEST_F(FormatValueConsoleTest, RustCollectionName) {
   auto template_type = MakeCollectionType(
       DwarfTag::kStructureType,
       "HashMap<alloc::string::String, &str, std::collections::hash::map::RandomState>",
-      {{"a", MakeInt32Type()}});
+      {{"a", int32_type}});
   template_type->set_parent(LazySymbol(ns));
   ExprValue template_value(template_type, {123, 0, 0, 0});
 
   // Minimal verbosity elides the template and omits the namespace.
-  EXPECT_EQ("HashMap<alloc::string::String, &s…>{a = 123}",
+  EXPECT_EQ("HashMap<alloc::string::String, &s…>{a: 123}",
             SyncFormatValue(template_value, minimal));
 
   // Minimal verbosity in expanded mode shows more but still elides.
@@ -505,15 +519,114 @@ TEST_F(FormatValueConsoleTest, RustCollectionName) {
   minimal.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
   EXPECT_EQ(
       "HashMap<alloc::string::String, &str, std::collections::has…>{\n"
-      "  a = 123\n"
+      "  a: 123\n"
       "}",
       SyncFormatValue(template_value, minimal_expanded));
 
   // Medium verbosity shows everything.
   EXPECT_EQ(
-      "my_ns::HashMap<alloc::string::String, &str, std::collections::hash::map::RandomState>{a = "
+      "my_ns::HashMap<alloc::string::String, &str, std::collections::hash::map::RandomState>{a: "
       "123}",
       SyncFormatValue(template_value, medium));
+
+  // Assign a name to a toplevel thing that's printed. This will print using " = " even in Rust
+  // to match how local variables are printed.
+  EXPECT_EQ("some_value = MyStruct", SyncFormatValue(simple_value, minimal, "some_value"));
+}
+
+// Tests Rust tuples and tuple structs.
+TEST_F(FormatValueConsoleTest, RustTuple) {
+  auto int32_type = MakeInt32Type();  // Won't be named like Rust's ints but doesn't matter.
+  int32_type->set_parent(LazySymbol(MakeRustUnit()));  // Mark as Rust.
+  auto tuple_type = MakeTestRustTuple("(int32_t, int32_t)", {int32_type, int32_type});
+  auto tuple_struct_type = MakeTestRustTuple("MyTupleStruct", {int32_type, int32_type});
+
+  // Data encoding 2 32-bit ints: 1 & 2.
+  std::vector<uint8_t> data{1, 0, 0, 0, 2, 0, 0, 0};
+
+  ExprValue tuple_value(tuple_type, data);
+  ExprValue tuple_struct_value(tuple_struct_type, data);
+
+  // Minimal one-line mode.
+  ConsoleFormatOptions minimal;
+  minimal.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
+  EXPECT_EQ("(1, 2)", SyncFormatValue(tuple_value, minimal));
+  EXPECT_EQ("MyTupleStruct(1, 2)", SyncFormatValue(tuple_struct_value, minimal));
+
+  // Expanded one-line mode.
+  ConsoleFormatOptions minimal_expanded = minimal;
+  minimal_expanded.wrapping = ConsoleFormatOptions::Wrapping::kExpanded;
+  EXPECT_EQ(
+      "(\n"
+      "  0: 1\n"
+      "  1: 2\n"
+      ")",
+      SyncFormatValue(tuple_value, minimal_expanded));
+  EXPECT_EQ(
+      "MyTupleStruct(\n"
+      "  0: 1\n"
+      "  1: 2\n"
+      ")",
+      SyncFormatValue(tuple_struct_value, minimal_expanded));
+
+  // With full type information. We should the type information for the members but not the tuple
+  // itself. These are redundant and look confusing. Currently our full type information looks like
+  // C and we may want to revisit this in the future.
+  ConsoleFormatOptions full_types = minimal_expanded;
+  full_types.verbosity = ConsoleFormatOptions::Verbosity::kAllTypes;
+  EXPECT_EQ(
+      "(\n"
+      "  (int32_t) 0: 1\n"
+      "  (int32_t) 1: 2\n"
+      ")",
+      SyncFormatValue(tuple_value, full_types));
+  EXPECT_EQ(
+      "MyTupleStruct(\n"
+      "  (int32_t) 0: 1\n"
+      "  (int32_t) 1: 2\n"
+      ")",
+      SyncFormatValue(tuple_struct_value, full_types));
+}
+
+TEST_F(FormatValueConsoleTest, RustEnum) {
+  auto int32_type = MakeInt32Type();  // Won't be named like Rust's ints but doesn't matter.
+
+  auto enum_type = MakeTestRustEnum();
+
+  // "None" is the default so any discriminant value (first 4 bytes) other than 0 or 1 should match.
+  // Pad out to 12 bytes, the rest are unused. Note that Rust doesn't actually use the default
+  // discriminant feature of DWARF.
+  ExprValue none_value(enum_type, {0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
+
+  // Scalar(123): a single 32-bit value following the 32-bit disciminant of 0.
+  ExprValue scalar_value(enum_type, {0, 0, 0, 0, 123, 0, 0, 0, 0, 0, 0, 0});
+
+  // Point{x:12, y:13}: two 32-bit values following the 32-bit disciminant of 1.
+  ExprValue point_value(enum_type, {1, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0});
+
+  // Minimal single-line formatting.
+  ConsoleFormatOptions minimal;
+  minimal.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
+  EXPECT_EQ("None", SyncFormatValue(none_value, minimal));
+  EXPECT_EQ("Scalar(123)", SyncFormatValue(scalar_value, minimal));
+  EXPECT_EQ("Point{x: 12, y: 13}", SyncFormatValue(point_value, minimal));
+
+  // Expanded with type info.
+  ConsoleFormatOptions expanded_all_types;
+  expanded_all_types.verbosity = ConsoleFormatOptions::Verbosity::kAllTypes;
+  expanded_all_types.wrapping = ConsoleFormatOptions::Wrapping::kExpanded;
+  EXPECT_EQ("(RustEnum) None", SyncFormatValue(none_value, expanded_all_types));
+  EXPECT_EQ(
+      "(RustEnum) Scalar(\n"
+      "  (int32_t) 123\n"  // Note: no index for single-element tuples.
+      ")",
+      SyncFormatValue(scalar_value, expanded_all_types));
+  EXPECT_EQ(
+      "(RustEnum) Point{\n"
+      "  (int32_t) x: 12\n"
+      "  (int32_t) y: 13\n"
+      "}",
+      SyncFormatValue(point_value, expanded_all_types));
 }
 
 }  // namespace zxdb

@@ -243,7 +243,9 @@ void FormatEnum(FormatNode* node, const Enumeration* enum_type, const FormatOpti
   FormatNumeric(node, modified_opts);
 }
 
-// Rust enums are formatted with the enum name in the description.
+// Rust enums will resolve to a different type. We put the resolved type in a child of this node.
+// As with references, this is not the best presentation for a GUI. See FormatReference() for
+// some thoughts on how this could be improved.
 //
 // The active variant will have a set of data members of which only one will be used. It will refer
 // to a collection which will have the set of members. This structure will vary according to the
@@ -294,15 +296,8 @@ void FormatRustEnum(FormatNode* node, const Collection* coll, const FormatOption
       // the error associated with it.
       node->children().push_back(std::make_unique<FormatNode>(member->GetAssignedName(), err));
     } else {
-      // Only append as a child if the variant has "stuff". The case here is to skip adding children
-      // for enums with no data like "Optional<Foo>::None" which will have a struct called "None"
-      // with no members.
-      auto member_type = member_value.GetConcreteType(eval_context.get());
-      const Collection* member_coll_type = member_type->AsCollection();
-      if (!member_coll_type || !member_coll_type->data_members().empty()) {
-        node->children().push_back(
-            std::make_unique<FormatNode>(member->GetAssignedName(), std::move(member_value)));
-      }
+      node->children().push_back(
+          std::make_unique<FormatNode>(member->GetAssignedName(), std::move(member_value)));
     }
   }
 
@@ -310,9 +305,10 @@ void FormatRustEnum(FormatNode* node, const Collection* coll, const FormatOption
   node->set_description(enum_name);
 }
 
-void FormatRustTuple(FormatNode* node, const Collection* coll, const FormatOptions& options,
-                     fxl::RefPtr<EvalContext> eval_context) {
-  node->set_description_kind(FormatNode::kRustTuple);
+// Handles both tuples and tuple structs. The "kind" differentiates these.
+void FormatRustTuple(FormatNode* node, const Collection* coll, FormatNode::DescriptionKind kind,
+                     const FormatOptions& options, fxl::RefPtr<EvalContext> eval_context) {
+  node->set_description_kind(kind);
 
   // Rust tuple (and tuple struct) symbols have the tuple members encoded as "__0", "__1", etc.
   for (const auto& lazy_member : coll->data_members()) {
@@ -357,8 +353,10 @@ void FormatCollection(FormatNode* node, const Collection* coll, const FormatOpti
       FormatRustEnum(node, coll, options, std::move(eval_context));
       return;
     case Collection::kRustTuple:
+      FormatRustTuple(node, coll, FormatNode::kRustTuple, options, std::move(eval_context));
+      return;
     case Collection::kRustTupleStruct:
-      FormatRustTuple(node, coll, options, std::move(eval_context));
+      FormatRustTuple(node, coll, FormatNode::kRustTupleStruct, options, std::move(eval_context));
       return;
   }
 
@@ -459,6 +457,10 @@ void FormatPointer(FormatNode* node, const FormatOptions& options,
 // If this is put into a GUI, we'll want the reference value to be in the main description and not
 // have any children. Visual Studio shows references the same as if it was a value which is probably
 // the correct behavior.
+//
+// To do this we'll likely want to add another ExprValue to the FormatNode (maybe it's in a
+// std::optional?) that contains the "resolved value" of the node. This would also be useful for
+// Rust enums.
 void FormatReference(FormatNode* node, const FormatOptions& options,
                      fxl::RefPtr<EvalContext> eval_context) {
   node->set_description_kind(FormatNode::kReference);

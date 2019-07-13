@@ -132,7 +132,7 @@ fxl::RefPtr<Variant> MakeRustVariant(const std::string& name, std::optional<uint
 
   auto var =
       fxl::MakeRefCounted<Variant>(discriminant, std::vector<LazySymbol>{LazySymbol(variant_data)});
-  var->set_parent(LazySymbol(MakeRustUnit()));
+  var->set_parent(LazySymbol(unit));
   return var;
 }
 
@@ -174,9 +174,14 @@ fxl::RefPtr<Collection> MakeTestRustEnum() {
   const uint64_t kScalarDiscriminant = 0;
   const uint64_t kPointDiscriminant = 1;
 
+  // Set as parent to indicate this is a Rust value.
+  auto unit = MakeRustUnit();
+
   // This 4-byte value encodes the discriminant value which indicates which
   // variant is valid. It's at offset 0 in the struct,
   auto uint32_type = MakeInt32Type();
+  uint32_type->set_parent(LazySymbol(unit));
+
   auto discriminant = fxl::MakeRefCounted<DataMember>(std::string(), LazySymbol(uint32_type), 0);
 
   // None variant.

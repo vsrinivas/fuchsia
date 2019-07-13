@@ -93,18 +93,35 @@ class FormatNode {
     kOther,            // Unknown or stuff that doesn't fit into other categories.
     kPointer,
     kReference,
-    kRustEnum,   // Rust-style enum (can have values associated with enums).
-    kRustTuple,  // Includes TupleStructs (check the type).
+    kRustEnum,         // Rust-style enum (can have values associated with enums).
+    kRustTuple,        // Unnamed tuple.
+    kRustTupleStruct,  // Named tuple.
     kString,
   };
 
   // What this node means to its parent. This is not based on the value in any way and can only
   // be computed by the parent.
   enum ChildKind {
-    kNormalChild = 0,   // No special meaning.
-    kBaseClass,         // The base class of a collection. Normally a collection itself.
-    kArrayItem,         // One member of an array.
-    kPointerExpansion,  // The child of a pointer node that represents the thing it points to.
+    kNormalChild = 0,  // No special meaning.
+
+    // The base class of a collection. Normally a collection itself.
+    kBaseClass,
+
+    // One member of an array.
+    kArrayItem,
+
+    // The child of a pointer, reference, or some other node that represents the thing it points or
+    // otherwise expands to.
+    kPointerExpansion,
+
+    // This type indicates that the node represents a toplevel global or local variable.
+    //
+    // Some languages format variables (function or global scope) differently than members of
+    // structs or other hierarchical things. For example, Rust and Go both use colons to initialize
+    // struct members, but equals signs for assignments to locals:
+    //
+    //   let p = Person{FirstName: "Buzz", LastName: "Lightyear", Age: 25}
+    kVariable,
   };
 
   // See the class comment above about the lifecycle.
