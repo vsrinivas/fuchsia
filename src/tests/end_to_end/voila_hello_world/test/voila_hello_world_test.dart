@@ -35,14 +35,17 @@ void main() {
   });
 
   tearDown(() async {
+    // ignore: deprecated_member_use
     await sl4fDriver.ssh('tiles_ctl quit');
     await sl4fDriver.stopServer();
     sl4fDriver.close();
   });
 
   test('test shell is displayed', () async {
+    // ignore: deprecated_member_use
     await sl4fDriver.ssh('tiles_ctl start');
     await Future.delayed(_delay);
+    // ignore: deprecated_member_use
     await sl4fDriver.ssh(_runVoilaCommand.join(' '));
     await Future.delayed(_delay);
     final screen = await scenicDriver.takeScreenshot(dumpName: 'screen');
