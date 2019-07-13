@@ -26,6 +26,8 @@ allowed_deps = [
     # The follow entries are temporarily allowed universally, but should be
     # moved to //sdk or //src/lib:
     # Code libraries
+    '//garnet/lib/rust',
+    '//garnet/public/go/third_party',
     '//garnet/public/lib',
     '//garnet/public/rust',
     '//zircon/public/lib',
@@ -34,17 +36,22 @@ allowed_deps = [
     '//zircon/system/public',
 
     # Tools
-    '//garnet/go/src/pm:pm_bin(//build/toolchain:host_x64)',
-    '//garnet/bin/cmc:cmc(//build/toolchain:host_x64)',
-    '//zircon/public/tool',
+    '//tools',
+    # Will move to //tools or //sdk:
     '//garnet/go/src/fidl:fidlgen(//build/toolchain:host_x64)',
     '//garnet/go/src/fidl:fidlgen_llcpp(//build/toolchain:host_x64)',
     '//garnet/go/src/fidlmerge:fidlmerge(//build/toolchain:host_x64)',
+    '//garnet/go/src/pm:pm_bin(//build/toolchain:host_x64)',
+    '//topaz/bin/fidlgen_dart:fidlgen_dart(//build/toolchain:host_x64)',
+    '//zircon/public/tool',
+    # Will move to //tools (CF-895):
+    '//src/sys/cmc:cmc(//build/toolchain:host_x64)',
 
     # This is currently implicitly generated as a dependency on any C++
     # generation of a FIDL target.
     # TODO(ctiller): File an issue for cleaning this up.
     '//src/connectivity/overnet/lib/protocol:fidl_stream',
+    '//src/connectivity/overnet/lib/embedded:runtime',
 ]
 
 target_types_to_check = [
