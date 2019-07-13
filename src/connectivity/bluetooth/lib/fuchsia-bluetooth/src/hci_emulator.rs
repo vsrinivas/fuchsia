@@ -10,14 +10,15 @@ use {
     },
     failure::{bail, format_err, Error},
     fidl_fuchsia_bluetooth_test::{EmulatorSettings, HciEmulatorProxy},
-    fidl_fuchsia_device::ControllerSynchronousProxy,
+    fidl_fuchsia_device::ControllerProxy,
     fidl_fuchsia_device_test::{
-        DeviceSynchronousProxy, RootDeviceSynchronousProxy, CONTROL_DEVICE, MAX_DEVICE_NAME_LEN,
+        DeviceSynchronousProxy, RootDeviceProxy, CONTROL_DEVICE, MAX_DEVICE_NAME_LEN,
     },
     fidl_fuchsia_hardware_bluetooth::EmulatorProxy,
-    fuchsia_async as fasync,
+    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_syslog::fx_log_err,
-    fuchsia_zircon as zx,
+    fuchsia_zircon::{self as zx, DurationNum},
+    futures::TryFutureExt,
     std::{fs::File, path::PathBuf},
 };
 
@@ -51,7 +52,7 @@ impl Emulator {
     /// will be published; to do so it must be explicitly configured and created with a call to
     /// `publish()`
     pub async fn create(name: &str) -> Result<Emulator, Error> {
-        let dev = TestDevice::create(name)?;
+        let dev = await!(TestDevice::create(name))?;
         let emulator = await!(dev.bind())?;
         Ok(Emulator { dev: dev, emulator: emulator })
     }
@@ -101,7 +102,7 @@ impl TestDevice {
     // Creates a new device as a child of the root test device. This device will act as the parent
     // of our fake HCI device. If successful, `name` will act as the final fragment of the device
     // path, for example "/dev/test/test/{name}".
-    fn create(name: &str) -> Result<TestDevice, Error> {
+    async fn create(name: &str) -> Result<TestDevice, Error> {
         if name.len() > (MAX_DEVICE_NAME_LEN as usize) {
             bail!(
                 "Device name '{}' too long (must be {} or fewer chars)",
@@ -112,10 +113,16 @@ impl TestDevice {
 
         // Connect to the test control device and obtain a channel to the RootDevice capability.
         let control_dev = open_rdwr(CONTROL_DEVICE)?;
-        let mut root_device = RootDeviceSynchronousProxy::new(fdio::clone_channel(&control_dev)?);
+        let root_device = RootDeviceProxy::new(fasync::Channel::from_channel(
+            fdio::clone_channel(&control_dev)?,
+        )?);
 
         // Create a device with the requested name.
-        let (status, path) = root_device.create_device(name, zx::Time::INFINITE)?;
+        let (status, path) =
+            await!(root_device.create_device(name).map_err(Error::from).on_timeout(
+                10.seconds().after_now(),
+                || Err(format_err!("timed out waiting to create bt-hci-emulator device {}", name))
+            ))?;
         zx::Status::ok(status)?;
         let path = path.ok_or(format_err!("RootDevice.CreateDevice returned null path"))?;
 
@@ -133,12 +140,15 @@ impl TestDevice {
     // Bind the bt-hci-emulator driver and obtain the HciEmulator protocol channel.
     async fn bind(&self) -> Result<HciEmulatorProxy, Error> {
         let channel = fdio::clone_channel(&self.0)?;
-        let mut controller = ControllerSynchronousProxy::new(channel);
+        let controller = ControllerProxy::new(fasync::Channel::from_channel(channel)?);
 
-        // Create a watcher for the emulator device before binding the driver so that we can watch
-        // for addition events.
-        let status = controller.bind(EMULATOR_DRIVER_PATH, zx::Time::INFINITE)?;
-        zx::Status::ok(status)?;
+        let _ = await!(controller.bind(EMULATOR_DRIVER_PATH).map_err(Error::from).on_timeout(
+            10.seconds().after_now(),
+            || Err(format_err!(
+                "timed out waiting for emulator to bind bt-hci-fake device {:?}",
+                self.0
+            ))
+        ))?;
 
         // Wait until a bt-emulator device gets published under our test device.
         let topo_path = PathBuf::from(fdio::device_get_topo_path(&self.0)?);
