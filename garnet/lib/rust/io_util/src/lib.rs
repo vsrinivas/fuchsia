@@ -34,7 +34,14 @@ pub fn open_node<'a>(
     flags: u32,
     mode: u32,
 ) -> Result<NodeProxy, Error> {
-    let path = path.to_str().ok_or(err_msg("path is invalid"))?;
+    if path.is_absolute() {
+        return Err(err_msg("path must be relative"));
+    }
+    let path = path.to_str().ok_or(err_msg("path contains invalid UTF-8"))?;
+    if path.is_empty() {
+        return Err(err_msg("path must not be empty"));
+    }
+
     let (new_node, server_end) = create_proxy()?;
     dir.open(flags, mode, path, server_end)?;
     Ok(new_node)
@@ -182,6 +189,9 @@ pub fn clone_directory(dir: &DirectoryProxy, flags: u32) -> Result<DirectoryProx
 /// canonicalize_path will remove a leading `/` if it exists, since it's always unnecessary and in
 /// some cases disallowed (US-569).
 pub fn canonicalize_path(path: &str) -> &str {
+    if path == "/" {
+        return ".";
+    }
     if path.starts_with('/') {
         return &path[1..];
     }
@@ -218,6 +228,30 @@ mod tests {
         let file = open_file(&dir, &path, OPEN_RIGHT_READABLE).expect("could not open file");
         let contents = await!(read_file(&file)).expect("could not read file");
         assert_eq!(&contents, &data, "File contents did not match");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn open_checks_path_validity() {
+        let dir =
+            open_directory_in_namespace("/pkg", OPEN_RIGHT_READABLE).expect("could not open /pkg");
+
+        assert!(open_file(&dir, Path::new(""), OPEN_RIGHT_READABLE).is_err());
+        assert!(open_file(&dir, Path::new("/"), OPEN_RIGHT_READABLE).is_err());
+        assert!(open_file(&dir, Path::new("/foo"), OPEN_RIGHT_READABLE).is_err());
+        assert!(open_directory(&dir, Path::new(""), OPEN_RIGHT_READABLE).is_err());
+        assert!(open_directory(&dir, Path::new("/"), OPEN_RIGHT_READABLE).is_err());
+        assert!(open_directory(&dir, Path::new("/foo"), OPEN_RIGHT_READABLE).is_err());
+    }
+
+    #[test]
+    fn test_canonicalize_path() {
+        assert_eq!(canonicalize_path("/"), ".");
+        assert_eq!(canonicalize_path("/foo"), "foo");
+        assert_eq!(canonicalize_path("/foo/bar/"), "foo/bar/");
+
+        assert_eq!(canonicalize_path("."), ".");
+        assert_eq!(canonicalize_path("./"), "./");
+        assert_eq!(canonicalize_path("foo/bar/"), "foo/bar/");
     }
 
     #[fasync::run_until_stalled(test)]

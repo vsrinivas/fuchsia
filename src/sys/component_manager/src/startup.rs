@@ -19,6 +19,7 @@ use {
     fuchsia_vfs_pseudo_fs::directory::{self, entry::DirectoryEntry},
     fuchsia_zircon as zx,
     futures::prelude::*,
+    log::*,
     std::{iter, path::PathBuf, sync::Arc},
 };
 
@@ -94,10 +95,16 @@ impl Arguments {
 /// process.
 pub fn available_resolvers() -> Result<ResolverRegistry, Error> {
     let mut resolver_registry = ResolverRegistry::new();
-    resolver_registry
-        .register(fuchsia_boot_resolver::SCHEME.to_string(), Box::new(FuchsiaBootResolver::new()));
 
-    // Add the fuchsia-pkg resolver to the registry if it's available.
+    // Either the fuchsia-boot or fuchsia-pkg resolver may be unavailable in certain contexts.
+    let boot_resolver = FuchsiaBootResolver::new().context("Failed to create boot resolver")?;
+    match boot_resolver {
+        None => info!("No /boot directory in namespace, fuchsia-boot resolver unavailable"),
+        Some(r) => {
+            resolver_registry.register(fuchsia_boot_resolver::SCHEME.to_string(), Box::new(r));
+        }
+    };
+
     if let Some(pkg_resolver) = connect_pkg_resolver()? {
         resolver_registry.register(
             fuchsia_pkg_resolver::SCHEME.to_string(),

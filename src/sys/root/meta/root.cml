@@ -2,7 +2,7 @@
   "children": [
     {
       "name": "devcoordinator",
-      "url": "fuchsia-boot:///boot#meta/devcoordinator.cm",
+      "url": "fuchsia-boot:///#meta/devcoordinator.cm",
       "startup": "eager",
     },
   ],

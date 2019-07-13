@@ -5,24 +5,52 @@
 use {
     crate::model::{Resolver, ResolverError},
     cm_fidl_translator::translate,
+    failure::Error,
     fidl::endpoints::ClientEnd,
+    fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys,
     fuchsia_url::boot_url::BootUrl,
     futures::future::FutureObj,
-    std::path::PathBuf,
+    std::path::Path,
 };
 
 pub static SCHEME: &str = "fuchsia-boot";
 
-/// Resolves component URLs with the "fuchsia-boot" scheme.
+/// Resolves component URLs with the "fuchsia-boot" scheme, which supports loading components from
+/// the /boot directory in component_manager's namespace.
+///
+/// On a typical system, this /boot directory is the bootfs served from the contents of the
+/// 'ZBI_TYPE_STORAGE_BOOTFS' ZBI item by bootsvc, the process which starts component_manager.
 ///
 /// URL syntax:
-/// - fuchsia-boot:///directory#meta/component.cm
-pub struct FuchsiaBootResolver {}
+/// - fuchsia-boot:///path/within/bootfs#meta/component.cm
+pub struct FuchsiaBootResolver {
+    boot_proxy: DirectoryProxy,
+}
 
 impl FuchsiaBootResolver {
-    pub fn new() -> FuchsiaBootResolver {
-        FuchsiaBootResolver {}
+    /// Create a new FuchsiaBootResolver. This first checks whether a /boot directory is present in
+    /// the namespace, and returns Ok(None) if not present. This is generally the case in unit and
+    /// integration tests where this resolver is unused.
+    pub fn new() -> Result<Option<FuchsiaBootResolver>, Error> {
+        // Note that this check is synchronous. The async executor also likely is not being polled
+        // yet, since this is called during startup.
+        let bootfs_dir = Path::new("/boot");
+        if !bootfs_dir.exists() {
+            return Ok(None);
+        }
+
+        let proxy = io_util::open_directory_in_namespace(
+            bootfs_dir.to_str().unwrap(),
+            io_util::OPEN_RIGHT_READABLE,
+        )?;
+        Ok(Some(Self::new_from_directory(proxy)))
+    }
+
+    /// Create a new FuchsiaBootResolver that resolves URLs within the given directory. Used for
+    /// injection in unit tests.
+    fn new_from_directory(proxy: DirectoryProxy) -> FuchsiaBootResolver {
+        FuchsiaBootResolver { boot_proxy: proxy }
     }
 
     async fn resolve_async<'a>(
@@ -32,13 +60,14 @@ impl FuchsiaBootResolver {
         // Parse URL.
         let url = BootUrl::parse(component_url)
             .map_err(|e| ResolverError::component_not_available(component_url, e))?;
+        // Package path is 'canonicalized' to ensure that it is relative, since absolute paths will
+        // be (inconsistently) rejected by fuchsia.io methods.
+        let package_path = Path::new(io_util::canonicalize_path(url.path()));
         let res = url.resource().ok_or(ResolverError::url_missing_resource_error(component_url))?;
-        let res_path = PathBuf::from(url.path()).join(PathBuf::from(res));
-        let res_path_str =
-            res_path.to_str().ok_or(ResolverError::url_missing_resource_error(component_url))?;
+        let res_path = package_path.join(res);
 
         // Read component manifest from resource into a component decl.
-        let cm_file = io_util::open_file_in_namespace(&res_path_str, io_util::OPEN_RIGHT_READABLE)
+        let cm_file = io_util::open_file(&self.boot_proxy, &res_path, io_util::OPEN_RIGHT_READABLE)
             .map_err(|e| ResolverError::component_not_available(component_url, e))?;
         let cm_str = await!(io_util::read_file(&cm_file))
             .map_err(|e| ResolverError::component_not_available(component_url, e))?;
@@ -46,9 +75,8 @@ impl FuchsiaBootResolver {
             .map_err(|e| ResolverError::component_not_available(component_url, e))?;
 
         // Set up the fuchsia-boot path as the component's "package" namespace.
-        let package_path = url.path();
         let path_proxy =
-            io_util::open_directory_in_namespace(&package_path, io_util::OPEN_RIGHT_READABLE)
+            io_util::open_directory(&self.boot_proxy, package_path, io_util::OPEN_RIGHT_READABLE)
                 .map_err(|e| ResolverError::component_not_available(component_url, e))?;
         let package = fsys::Package {
             package_url: Some(url.root_url().to_string()),
@@ -75,40 +103,75 @@ impl Resolver for FuchsiaBootResolver {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fidl_fuchsia_data as fdata, fidl_fuchsia_sys2::ComponentDecl,
+        super::*,
+        fidl::endpoints,
+        fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
+        fidl_fuchsia_sys2::ComponentDecl,
         fuchsia_async as fasync,
+        fuchsia_vfs_pseudo_fs::{
+            directory::entry::DirectoryEntry, file::simple::read_only, pseudo_directory,
+        },
     };
 
-    #[test]
-    fn hello_world_test() {
-        let mut executor = fasync::Executor::new().unwrap();
-        executor.run_singlethreaded(async {
-            let resolver = FuchsiaBootResolver::new();
-            let component = await!(resolver
-                .resolve_async("fuchsia-boot:///pkg#meta/component_manager_tests_hello_world.cm"))
-            .unwrap();
-            assert_eq!(
-                "fuchsia-boot:///pkg#meta/component_manager_tests_hello_world.cm",
-                component.resolved_url.unwrap()
+    #[fasync::run_singlethreaded(test)]
+    async fn hello_world_test() -> Result<(), Error> {
+        // We inject a fake /boot for this test. We could alternatively install the dir as /boot in
+        // the test's namespace, but that modifies global process state and thus might interact
+        // poorly with other tests.
+        // TODO: Switch this test to use a hardcoded manifest string & consider removing this test
+        // manifest from the test package completely (after cleaning up other test dependencies).
+        let cm_path = Path::new("/pkg/meta/component_manager_tests_hello_world.cm");
+        let cm_bytes = std::fs::read(cm_path)?;
+        let (proxy, server_end) = endpoints::create_proxy::<fio::NodeMarker>()?;
+        fasync::spawn(async move {
+            let mut dir = pseudo_directory! {
+                "packages" => pseudo_directory! {
+                    "hello_world" => pseudo_directory! {
+                        "meta" => pseudo_directory! {
+                            "component_manager_tests_hello_world.cm" =>
+                                read_only(|| Ok(cm_bytes.clone())),
+                        },
+                    },
+                },
+            };
+            dir.open(
+                fio::OPEN_RIGHT_READABLE,
+                fio::MODE_TYPE_DIRECTORY,
+                &mut std::iter::empty(),
+                server_end,
             );
-            let program = fdata::Dictionary {
-                entries: vec![fdata::Entry {
-                    key: "binary".to_string(),
-                    value: Some(Box::new(fdata::Value::Str("bin/hello_world".to_string()))),
-                }],
-            };
-            let component_decl = ComponentDecl {
-                program: Some(program),
-                uses: None,
-                exposes: None,
-                offers: None,
-                facets: None,
-                children: None,
-                collections: None,
-                storage: None,
-            };
-            assert_eq!(component_decl, component.decl.unwrap());
-            assert_eq!("fuchsia-boot:///pkg", component.package.unwrap().package_url.unwrap());
+            await!(dir);
+            panic!("Pseudo dir stopped serving!");
         });
+        let proxy = io_util::node_to_directory(proxy)?;
+        let resolver = FuchsiaBootResolver::new_from_directory(proxy);
+
+        let url =
+            "fuchsia-boot:///packages/hello_world#meta/component_manager_tests_hello_world.cm";
+        let component = await!(resolver.resolve_async(url))?;
+        assert_eq!(url, component.resolved_url.unwrap());
+
+        let program = fdata::Dictionary {
+            entries: vec![fdata::Entry {
+                key: "binary".to_string(),
+                value: Some(Box::new(fdata::Value::Str("bin/hello_world".to_string()))),
+            }],
+        };
+        let component_decl = ComponentDecl {
+            program: Some(program),
+            uses: None,
+            exposes: None,
+            offers: None,
+            facets: None,
+            children: None,
+            collections: None,
+            storage: None,
+        };
+        assert_eq!(component_decl, component.decl.unwrap());
+        assert_eq!(
+            "fuchsia-boot:///packages/hello_world",
+            component.package.unwrap().package_url.unwrap()
+        );
+        Ok(())
     }
 }

@@ -33,18 +33,15 @@ impl BootUrl {
 
         let path = url.path().to_string();
 
-        let mut path_clone = path.as_str().clone();
+        // Validate that all path segments are valid.
         // Since host must be empty, first character of path must be '/'. Trim it.
-        path_clone = &path_clone[1..];
-        if !path_clone.is_empty() {
-            let mut iter = path_clone.split('/').fuse();
-            if let Some(s) = iter.next() {
+        let check_path = &path[1..];
+        if !check_path.is_empty() {
+            let mut iter = check_path.split('/');
+            while let Some(s) = iter.next() {
                 if !is_name(s) {
                     return Err(ParseError::InvalidPath);
                 }
-            }
-            if let Some(_) = iter.next() {
-                return Err(ParseError::ExtraPathSegments);
             }
         }
 
@@ -196,6 +193,16 @@ mod tests {
             path = "/package".to_string(),
             resource = None,
         }
+        test_parse_multiple_path_segments => {
+            url = "fuchsia-boot:///package/foo",
+            path = "/package/foo".to_string(),
+            resource = None,
+        }
+        test_parse_more_path_segments => {
+            url = "fuchsia-boot:///package/foo/bar/baz",
+            path = "/package/foo/bar/baz".to_string(),
+            resource = None,
+        }
         test_parse_root => {
             url = "fuchsia-boot:///",
             path = "/".to_string(),
@@ -209,6 +216,11 @@ mod tests {
         test_parse_resource => {
             url = "fuchsia-boot:///package#resource",
             path = "/package".to_string(),
+            resource = Some("resource".to_string()),
+        }
+        test_parse_resource_with_path_segments => {
+            url = "fuchsia-boot:///package/foo#resource",
+            path = "/package/foo".to_string(),
             resource = Some("resource".to_string()),
         }
         test_parse_empty_resource => {
@@ -242,11 +254,11 @@ mod tests {
             ],
             err = ParseError::InvalidPath,
         }
-        test_parse_extra_path => {
+        test_parse_invalid_path_segment => {
             urls = [
-                "fuchsia-boot:///path/to",
+                "fuchsia-boot:///path/foo$bar/baz",
             ],
-            err = ParseError::ExtraPathSegments,
+            err = ParseError::InvalidPath,
         }
         test_parse_path_cannot_be_longer_than_100_chars => {
             urls = [
