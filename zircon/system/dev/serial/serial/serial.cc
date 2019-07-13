@@ -112,7 +112,7 @@ zx_status_t SerialDevice::WorkerThread() {
 
         if (items[WAIT_ITEM_EVENT].pending & kEventReadableSignal) {
             size_t length;
-            status = serial_.Read(in_buffer + in_buffer_count,
+            status = serial_.Read(in_buffer + in_buffer_offset + in_buffer_count,
                                   sizeof(in_buffer) - in_buffer_count, &length);
 
             if (status != ZX_OK) {
@@ -124,7 +124,7 @@ zx_status_t SerialDevice::WorkerThread() {
 
         if (items[WAIT_ITEM_SOCKET].pending & ZX_SOCKET_READABLE) {
             size_t length;
-            status = socket_.read(0, out_buffer + out_buffer_count,
+            status = socket_.read(0, out_buffer + out_buffer_offset + out_buffer_count,
                                   sizeof(out_buffer) - out_buffer_count, &length);
             if (status != ZX_OK) {
                 zxlogf(ERROR, "serial_out_thread: zx::socket::read returned %d\n", status);
