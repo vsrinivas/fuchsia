@@ -26,18 +26,18 @@ typedef uint32_t zxs_flags_t;
 
 // A socket.
 typedef struct zxs_socket {
-    // The control plane.
-    llcpp::fuchsia::posix::socket::Control::SyncClient control;
+  // The control plane.
+  llcpp::fuchsia::posix::socket::Control::SyncClient control;
 
-    // The data plane.
-    zx::socket socket;
+  // The data plane.
+  zx::socket socket;
 
-    // Flags that describe how the |zxs| library will interact with the kernel
-    // socket object.
-    zxs_flags_t flags;
+  // Flags that describe how the |zxs| library will interact with the kernel
+  // socket object.
+  zxs_flags_t flags;
 
-    // Used to implement SO_RCVTIMEO. See `man 7 socket` for details.
-    zx::duration rcvtimeo;
+  // Used to implement SO_RCVTIMEO. See `man 7 socket` for details.
+  zx::duration rcvtimeo;
 } zxs_socket_t;
 
 // Closes a |zxs_socket_t|.
