@@ -179,6 +179,8 @@ void KitchenSink_Stub::EventA(int64_t a, int64_t b) {
       
   
       
+  
+      
         
 namespace {
 

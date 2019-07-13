@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"syscall/zx"
 	"syscall/zx/fidl"
 	"syscall/zx/mxnet"
@@ -21,6 +22,7 @@ import (
 	"syslog"
 
 	"fidl/fuchsia/io"
+	"fidl/fuchsia/net"
 	"fidl/fuchsia/posix/socket"
 
 	"github.com/google/netstack/tcpip"
@@ -42,6 +44,8 @@ import (
 import "C"
 
 const localSignalClosing = zx.SignalUser5
+
+var _ net.SocketControl = (*iostate)(nil)
 
 type iostate struct {
 	wq *waiter.Queue
@@ -349,22 +353,155 @@ func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 	}
 }
 
-func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, controlService *socket.ControlService) (socket.ControlInterface, error) {
-	var flags uint32
+func (ios *iostate) loopControl() error {
+	defer func() {
+		if code, err := ios.Close(); err != nil {
+			syslog.Errorf("SocketControl.Close failed: %s", err)
+		} else if code != 0 {
+			syslog.Errorf("SocketControl.Close failed: %s", syscall.Errno(code))
+		}
+	}()
+
+	stub := net.SocketControlStub{Impl: ios}
+	var respb [zx.ChannelMaxMessageBytes]byte
+	for {
+		nb, err := ios.dataHandle.Read(respb[:], zx.SocketControl)
+		if err != nil {
+			if err, ok := err.(*zx.Error); ok {
+				switch err.Status {
+				case zx.ErrBadState:
+					return nil // This side of the socket is closed.
+				case zx.ErrPeerClosed:
+					return nil
+				case zx.ErrShouldWait:
+					obs, err := zxwait.Wait(zx.Handle(ios.dataHandle),
+						zx.SignalSocketControlReadable|zx.SignalSocketPeerClosed|localSignalClosing,
+						zx.TimensecInfinite)
+					if err != nil {
+						if err, ok := err.(*zx.Error); ok {
+							switch err.Status {
+							case zx.ErrCanceled:
+								return nil
+							}
+						}
+						panic(err)
+					}
+					switch {
+					case obs&zx.SignalSocketControlReadable != 0:
+						continue
+					case obs&localSignalClosing != 0:
+						return nil
+					case obs&zx.SignalSocketPeerClosed != 0:
+						return nil
+					}
+				}
+			}
+			panic(err)
+		}
+
+		msg := respb[:nb]
+		var header fidl.MessageHeader
+		if _, _, err := fidl.Unmarshal(msg, nil, &header); err != nil {
+			return err
+		}
+
+		{
+			verbosity := syslog.DebugVerbosity
+			var method string
+			switch header.Ordinal {
+			case net.SocketControlBindOrdinal:
+				method = "Bind"
+			case net.SocketControlConnectOrdinal:
+				method = "Connect"
+			case net.SocketControlListenOrdinal:
+				method = "Listen"
+			case net.SocketControlAcceptOrdinal:
+				method = "Accept"
+			case net.SocketControlCloseOrdinal:
+				method = "Close"
+			case net.SocketControlGetSockNameOrdinal:
+				method = "GetSockName"
+				// This gets called much more often than the others.
+				verbosity = syslog.TraceVerbosity
+			case net.SocketControlGetPeerNameOrdinal:
+				method = "GetPeerName"
+			case net.SocketControlSetSockOptOrdinal:
+				method = "SetSockOpt"
+			case net.SocketControlGetSockOptOrdinal:
+				method = "GetSockOpt"
+			case net.SocketControlIoctlOrdinal:
+				method = "Ioctl"
+			default:
+				panic(fmt.Sprintf("unknown ordinal %b", header.Ordinal))
+			}
+			if len(method) > 0 {
+				syslog.VLogTf(verbosity, method, "%p", ios)
+			}
+		}
+
+		// TODO(FIDL-672): Use headerSize as returned by Unmarshal.
+		p, err := stub.Dispatch(header.Ordinal, msg[16:], nil)
+		if err != nil {
+			return err
+		}
+		cnb, _, err := fidl.MarshalHeaderThenMessage(&header, p, respb[:], nil)
+		if err != nil {
+			return err
+		}
+		respb := respb[:cnb]
+		for {
+			n, err := ios.dataHandle.Write(respb, zx.SocketControl)
+			if err != nil {
+				if err, ok := err.(*zx.Error); ok {
+					switch err.Status {
+					case zx.ErrBadState:
+						return nil // This side of the socket is closed.
+					case zx.ErrPeerClosed:
+						return nil
+					case zx.ErrShouldWait:
+						obs, err := zxwait.Wait(zx.Handle(ios.dataHandle),
+							zx.SignalSocketControlWriteable|zx.SignalSocketPeerClosed|localSignalClosing,
+							zx.TimensecInfinite)
+						if err != nil {
+							if err, ok := err.(*zx.Error); ok {
+								switch err.Status {
+								case zx.ErrCanceled:
+									return nil
+								}
+							}
+							panic(err)
+						}
+						switch {
+						case obs&zx.SignalSocketControlWriteable != 0:
+							continue
+						case obs&localSignalClosing != 0:
+							return nil
+						case obs&zx.SignalSocketPeerClosed != 0:
+							return nil
+						}
+					}
+				}
+				panic(err)
+			}
+			if l := len(respb); n < l {
+				panic(fmt.Sprintf("writes to the control plane are never short: %d/%d", n, l))
+			}
+			break
+		}
+	}
+}
+
+func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, flags uint32) (*iostate, zx.Socket) {
 	if transProto == tcp.ProtocolNumber {
 		flags |= zx.SocketStream
 	} else {
 		flags |= zx.SocketDatagram
+		flags &^= zx.SocketHasAccept
 	}
 	localS, peerS, err := zx.NewSocket(flags)
 	if err != nil {
-		return socket.ControlInterface{}, err
+		panic(err)
 	}
-	localC, peerC, err := zx.NewChannel(0)
-	if err != nil {
-		return socket.ControlInterface{}, err
-	}
-
 	ios := &iostate{
 		netProto:      netProto,
 		transProto:    transProto,
@@ -376,11 +513,18 @@ func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto t
 		closing:       make(chan struct{}),
 	}
 
-	// This must be registered before returning to prevent a race
+	// This must be registered before loopControl starts to prevent a race
 	// condition.
 	inEntry, inCh := waiter.NewChannelEntry(nil)
 	ios.wq.EventRegister(&inEntry, waiter.EventIn)
 
+	if flags&zx.SocketHasControl != 0 {
+		go func() {
+			if err := ios.loopControl(); err != nil {
+				syslog.Errorf("%p: loopControl: %s", ios, err)
+			}
+		}()
+	}
 	go func() {
 		defer ios.wq.EventUnregister(&inEntry)
 
@@ -416,15 +560,7 @@ func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto t
 
 	syslog.VLogTf(syslog.DebugVerbosity, "socket", "%p", ios)
 
-	if err := (&socketImpl{
-		iostate:        ios,
-		peer:           peerS,
-		controlService: controlService,
-	}).Clone(0, io.NodeInterfaceRequest{Channel: localC}); err != nil {
-		ios.close()
-		return socket.ControlInterface{}, err
-	}
-	return socket.ControlInterface{Channel: peerC}, nil
+	return ios, peerS
 }
 
 func (ios *iostate) buildIfInfos() *C.netc_get_if_info_t {
@@ -657,36 +793,26 @@ func (s *socketImpl) IoctlPosix(req int16, in []uint8) (int16, []uint8, error) {
 }
 
 func (s *socketImpl) Accept(flags int16) (int16, socket.ControlInterface, error) {
-	ep, wq, err := s.iostate.ep.Accept()
-	// NB: we need to do this before checking the error, or the incoming signal
-	// will never be cleared.
-	//
-	// We lock here to ensure that no incoming connection changes readiness
-	// while we clear the signal.
-	s.iostate.incomingAssertedMu.Lock()
-	if s.iostate.ep.Readiness(waiter.EventIn) == 0 {
-		if err := s.iostate.dataHandle.Handle().SignalPeer(mxnet.MXSIO_SIGNAL_INCOMING, 0); err != nil {
-			panic(err)
-		}
-	}
-	s.iostate.incomingAssertedMu.Unlock()
+	code, peer, ios, err := s.iostate.accept(flags, 0)
 	if err != nil {
-		return tcpipErrorToCode(err), socket.ControlInterface{}, nil
+		return 0, socket.ControlInterface{}, err
 	}
-
-	localAddr, err := ep.GetLocalAddress()
-	if err != nil {
-		panic(err)
+	if code != 0 {
+		return code, socket.ControlInterface{}, nil
 	}
-	remoteAddr, err := ep.GetRemoteAddress()
-	if err != nil {
-		panic(err)
-	}
-	syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: local=%+v, remote=%+v", s.iostate, localAddr, remoteAddr)
-
 	{
-		controlInterface, err := newIostate(s.iostate.ns, s.iostate.netProto, s.iostate.transProto, wq, ep, s.controlService)
-		return 0, controlInterface, err
+		h0, h1, err := zx.NewChannel(0)
+		if err != nil {
+			return 0, socket.ControlInterface{}, err
+		}
+		if err := (&socketImpl{
+			iostate:        ios,
+			peer:           peer,
+			controlService: s.controlService,
+		}).Clone(0, io.NodeInterfaceRequest{Channel: h0}); err != nil {
+			return 0, socket.ControlInterface{}, err
+		}
+		return 0, socket.ControlInterface{Channel: h1}, nil
 	}
 }
 
@@ -755,6 +881,49 @@ func (ios *iostate) Listen(backlog int16) (int16, error) {
 	syslog.VLogTf(syslog.DebugVerbosity, "listen", "%p: backlog=%d", ios, backlog)
 
 	return 0, nil
+}
+
+func (ios *iostate) Accept(flags int16) (int16, error) {
+	code, socket, _, err := ios.accept(flags, zx.SocketHasControl)
+	if code == 0 && err == nil {
+		if err := ios.dataHandle.Share(zx.Handle(socket)); err != nil {
+			panic(err)
+		}
+	}
+	return code, err
+}
+
+func (ios *iostate) accept(flags int16, socketFlags uint32) (int16, zx.Socket, *iostate, error) {
+	ep, wq, err := ios.ep.Accept()
+	// NB: we need to do this before checking the error, or the incoming signal
+	// will never be cleared.
+	//
+	// We lock here to ensure that no incoming connection changes readiness
+	// while we clear the signal.
+	ios.incomingAssertedMu.Lock()
+	if ios.ep.Readiness(waiter.EventIn) == 0 {
+		if err := ios.dataHandle.Handle().SignalPeer(mxnet.MXSIO_SIGNAL_INCOMING, 0); err != nil {
+			panic(err)
+		}
+	}
+	ios.incomingAssertedMu.Unlock()
+	if err != nil {
+		return tcpipErrorToCode(err), zx.Socket(zx.HandleInvalid), nil, nil
+	}
+
+	localAddr, err := ep.GetLocalAddress()
+	if err != nil {
+		panic(err)
+	}
+	remoteAddr, err := ep.GetRemoteAddress()
+	if err != nil {
+		panic(err)
+	}
+	syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: local=%+v, remote=%+v", ios, localAddr, remoteAddr)
+
+	ios, socket := newIostate(ios.ns, ios.netProto, ios.transProto, wq, ep, socketFlags)
+
+	return 0, socket, ios, nil
 }
 
 func (ios *iostate) GetSockOpt(level, optName int16) (int16, []uint8, error) {
@@ -888,7 +1057,7 @@ func (ios *iostate) close() {
 			ios.ep.Close()
 
 			if err := ios.dataHandle.Close(); err != nil {
-				panic(err)
+				syslog.Errorf("dataHandle.Close() failed: %s", err)
 			}
 		}()
 

@@ -56,6 +56,9 @@ CGenerator::Member EmptyStructMember() {
 }
 
 CGenerator::Transport ParseTransport(std::string_view view) {
+  if (view == "SocketControl") {
+    return CGenerator::Transport::SocketControl;
+  }
   return CGenerator::Transport::Channel;
 }
 
@@ -629,6 +632,8 @@ uint32_t CGenerator::GetMaxHandlesFor(Transport transport, const TypeShape& type
   switch (transport) {
     case Transport::Channel:
       return std::min(ZX_CHANNEL_MAX_MSG_HANDLES, typeshape.MaxHandles());
+    case Transport::SocketControl:
+      return 0u;
   }
   assert(false && "what transport?");
   return 0u;
@@ -792,6 +797,7 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
     if (protocol_info->HasAttribute("Discoverable")) {
       named_protocol.discoverable_name = NameDiscoverable(*protocol_info);
     }
+    // TODO: Transport::SocketControl should imply NoHandles.
     named_protocol.transport = ParseTransport(protocol_info->GetAttribute("Transport"));
     for (const auto& method_with_info : protocol_info->all_methods) {
       assert(method_with_info.method != nullptr);
@@ -1127,6 +1133,10 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
                   << "return zx_channel_write(_channel, 0u, _wr_bytes, _wr_num_bytes, NULL, 0);\n";
           }
           break;
+        case Transport::SocketControl:
+          file_ << kIndent
+                << "return fidl_socket_write_control(_channel, _wr_bytes, _wr_num_bytes);\n";
+          break;
       }
     } else {
       file_ << kIndent << "uint32_t _rd_num_bytes = sizeof(" << method_info.response->c_name << ")";
@@ -1162,6 +1172,16 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
           }
           file_ << "_status = zx_channel_call(_channel, 0u, ZX_TIME_INFINITE, &_args, "
                    "&_actual_num_bytes, &_actual_num_handles);\n";
+          break;
+        case Transport::SocketControl:
+          file_ << kIndent << "size_t _actual_num_bytes = 0u;\n";
+          if (encode_request) {
+            file_ << kIndent;
+          } else {
+            file_ << kIndent << "zx_status_t ";
+          }
+          file_ << "_status = fidl_socket_call_control(_channel, _wr_bytes, _wr_num_bytes, "
+                   "_rd_bytes, _rd_num_bytes, &_actual_num_bytes);\n";
           break;
       }
       file_ << kIndent << "if (_status != ZX_OK)\n";
@@ -1212,6 +1232,10 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
             file_ << kIndent << "_status = fidl_decode(&" << method_info.response->coded_name
                   << ", _rd_bytes, _actual_num_bytes, " << handles_value
                   << ", _actual_num_handles, NULL);\n";
+            break;
+          case Transport::SocketControl:
+            file_ << kIndent << "_status = fidl_decode(&" << method_info.response->coded_name
+                  << ", _rd_bytes, _actual_num_bytes, NULL, 0, NULL);\n";
             break;
         }
         file_ << kIndent << "if (_status != ZX_OK)\n";
@@ -1683,6 +1707,7 @@ std::ostringstream CGenerator::ProduceHeader() {
 std::ostringstream CGenerator::ProduceClient() {
   EmitFileComment(&file_);
   EmitIncludeHeader(&file_, "<lib/fidl/coding.h>");
+  EmitIncludeHeader(&file_, "<lib/fidl/transport.h>");
   EmitIncludeHeader(&file_, "<string.h>");
   EmitIncludeHeader(&file_, "<zircon/syscalls.h>");
   EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(library_->name()) + ">");

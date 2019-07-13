@@ -67,7 +67,8 @@ static zx_status_t zxio_pipe_read(zxio_t* io, void* buffer, size_t capacity,
     // bytes.
     //
     // If we see |ZX_ERR_BAD_STATE|, that implies reading has been disabled for
-    // this endpoint.
+    // this endpoint because the only other case that generates that error is
+    // passing |ZX_SOCKET_CONTROL|, which we don't do above.
     if (status == ZX_ERR_PEER_CLOSED || status == ZX_ERR_BAD_STATE) {
         *out_actual = 0u;
         return ZX_OK;

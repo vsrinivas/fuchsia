@@ -22,6 +22,16 @@ using KitchenSinkSyncPtr = ::fidl::SynchronousInterfacePtr<KitchenSink>;
 class KitchenSink_SyncProxy;
 #endif // __Fuchsia__
 #ifdef __Fuchsia__
+class KitchenSink;
+using KitchenSinkPtr = ::fidl::InterfacePtr<KitchenSink>;
+class KitchenSink_Proxy;
+class KitchenSink_Stub;
+class KitchenSink_EventSender;
+class KitchenSink_Sync;
+using KitchenSinkSyncPtr = ::fidl::SynchronousInterfacePtr<KitchenSink>;
+class KitchenSink_SyncProxy;
+#endif // __Fuchsia__
+#ifdef __Fuchsia__
 class ChannelProtocol;
 using ChannelProtocolPtr = ::fidl::InterfacePtr<ChannelProtocol>;
 class ChannelProtocol_Proxy;
@@ -30,6 +40,16 @@ class ChannelProtocol_EventSender;
 class ChannelProtocol_Sync;
 using ChannelProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<ChannelProtocol>;
 class ChannelProtocol_SyncProxy;
+#endif // __Fuchsia__
+#ifdef __Fuchsia__
+class SocketControlProtocol;
+using SocketControlProtocolPtr = ::fidl::InterfacePtr<SocketControlProtocol>;
+class SocketControlProtocol_Proxy;
+class SocketControlProtocol_Stub;
+class SocketControlProtocol_EventSender;
+class SocketControlProtocol_Sync;
+using SocketControlProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<SocketControlProtocol>;
+class SocketControlProtocol_SyncProxy;
 #endif // __Fuchsia__
 #ifdef __Fuchsia__
 class WithAndWithoutRequestResponse;
@@ -256,6 +276,89 @@ class KitchenSink_SyncProxy : public KitchenSink_Sync {
 #endif // __Fuchsia__
 #ifdef __Fuchsia__
 
+class KitchenSink {
+ public:
+  using Proxy_ = KitchenSink_Proxy;
+  using Stub_ = KitchenSink_Stub;
+  using EventSender_ = KitchenSink_EventSender;
+  using Sync_ = KitchenSink_Sync;
+  virtual ~KitchenSink();
+      
+  virtual void MethodA(int64_t a, int64_t b) = 0;
+  using EventACallback =
+      fit::function<void(int64_t, int64_t)>;
+  using MethodBCallback =
+      fit::function<void(int64_t)>;
+      
+  virtual void MethodB(int64_t a, int64_t b, MethodBCallback callback) = 0;
+  using MutateSocketCallback =
+      fit::function<void(::zx::socket)>;
+      
+  virtual void MutateSocket(::zx::socket a, MutateSocketCallback callback) = 0;
+};
+
+class KitchenSink_EventSender {
+ public:
+  virtual ~KitchenSink_EventSender();
+  virtual void EventA(int64_t a, int64_t b) = 0;
+};
+
+class KitchenSink_Sync {
+ public:
+  using Proxy_ = KitchenSink_SyncProxy;
+  virtual ~KitchenSink_Sync();
+  virtual zx_status_t MethodA(int64_t a, int64_t b) = 0;
+  virtual zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) = 0;
+  virtual zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) = 0;
+};
+
+class KitchenSink_Proxy final : public ::fidl::internal::Proxy, public KitchenSink {
+ public:
+  explicit KitchenSink_Proxy(::fidl::internal::ProxyController* controller);
+  ~KitchenSink_Proxy() override;
+
+  zx_status_t Dispatch_(::fidl::Message message) override;
+  void MethodA(int64_t a, int64_t b) override;
+  EventACallback EventA;
+  void MethodB(int64_t a, int64_t b, MethodBCallback callback) override;
+  void MutateSocket(::zx::socket a, MutateSocketCallback callback) override;
+
+ private:
+  KitchenSink_Proxy(const KitchenSink_Proxy&) = delete;
+  KitchenSink_Proxy& operator=(const KitchenSink_Proxy&) = delete;
+
+  ::fidl::internal::ProxyController* controller_;
+};
+
+class KitchenSink_Stub final : public ::fidl::internal::Stub, public KitchenSink_EventSender {
+ public:
+  typedef class ::test::name::KitchenSink KitchenSink_clazz;
+  explicit KitchenSink_Stub(KitchenSink_clazz* impl);
+  ~KitchenSink_Stub() override;
+
+  zx_status_t Dispatch_(::fidl::Message message,
+                        ::fidl::internal::PendingResponse response) override;
+  void EventA(int64_t a, int64_t b) override;
+
+ private:
+  KitchenSink_clazz* impl_;
+};
+
+class KitchenSink_SyncProxy : public KitchenSink_Sync {
+ public:
+  explicit KitchenSink_SyncProxy(::zx::channel channel);
+  ~KitchenSink_SyncProxy() override;
+  zx_status_t MethodA(int64_t a, int64_t b) override;
+  zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) override;
+  zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) override;
+
+  private:
+  ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<KitchenSink>;
+};
+#endif // __Fuchsia__
+#ifdef __Fuchsia__
+
 class ChannelProtocol {
  public:
   using Proxy_ = ChannelProtocol_Proxy;
@@ -335,6 +438,89 @@ class ChannelProtocol_SyncProxy : public ChannelProtocol_Sync {
   private:
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<ChannelProtocol>;
+};
+#endif // __Fuchsia__
+#ifdef __Fuchsia__
+
+class SocketControlProtocol {
+ public:
+  using Proxy_ = SocketControlProtocol_Proxy;
+  using Stub_ = SocketControlProtocol_Stub;
+  using EventSender_ = SocketControlProtocol_EventSender;
+  using Sync_ = SocketControlProtocol_Sync;
+  virtual ~SocketControlProtocol();
+      
+  virtual void MethodA(int64_t a, int64_t b) = 0;
+  using EventACallback =
+      fit::function<void(int64_t, int64_t)>;
+  using MethodBCallback =
+      fit::function<void(int64_t)>;
+      
+  virtual void MethodB(int64_t a, int64_t b, MethodBCallback callback) = 0;
+  using MutateSocketCallback =
+      fit::function<void(::zx::socket)>;
+      
+  virtual void MutateSocket(::zx::socket a, MutateSocketCallback callback) = 0;
+};
+
+class SocketControlProtocol_EventSender {
+ public:
+  virtual ~SocketControlProtocol_EventSender();
+  virtual void EventA(int64_t a, int64_t b) = 0;
+};
+
+class SocketControlProtocol_Sync {
+ public:
+  using Proxy_ = SocketControlProtocol_SyncProxy;
+  virtual ~SocketControlProtocol_Sync();
+  virtual zx_status_t MethodA(int64_t a, int64_t b) = 0;
+  virtual zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) = 0;
+  virtual zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) = 0;
+};
+
+class SocketControlProtocol_Proxy final : public ::fidl::internal::Proxy, public SocketControlProtocol {
+ public:
+  explicit SocketControlProtocol_Proxy(::fidl::internal::ProxyController* controller);
+  ~SocketControlProtocol_Proxy() override;
+
+  zx_status_t Dispatch_(::fidl::Message message) override;
+  void MethodA(int64_t a, int64_t b) override;
+  EventACallback EventA;
+  void MethodB(int64_t a, int64_t b, MethodBCallback callback) override;
+  void MutateSocket(::zx::socket a, MutateSocketCallback callback) override;
+
+ private:
+  SocketControlProtocol_Proxy(const SocketControlProtocol_Proxy&) = delete;
+  SocketControlProtocol_Proxy& operator=(const SocketControlProtocol_Proxy&) = delete;
+
+  ::fidl::internal::ProxyController* controller_;
+};
+
+class SocketControlProtocol_Stub final : public ::fidl::internal::Stub, public SocketControlProtocol_EventSender {
+ public:
+  typedef class ::test::name::SocketControlProtocol SocketControlProtocol_clazz;
+  explicit SocketControlProtocol_Stub(SocketControlProtocol_clazz* impl);
+  ~SocketControlProtocol_Stub() override;
+
+  zx_status_t Dispatch_(::fidl::Message message,
+                        ::fidl::internal::PendingResponse response) override;
+  void EventA(int64_t a, int64_t b) override;
+
+ private:
+  SocketControlProtocol_clazz* impl_;
+};
+
+class SocketControlProtocol_SyncProxy : public SocketControlProtocol_Sync {
+ public:
+  explicit SocketControlProtocol_SyncProxy(::zx::channel channel);
+  ~SocketControlProtocol_SyncProxy() override;
+  zx_status_t MethodA(int64_t a, int64_t b) override;
+  zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) override;
+  zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) override;
+
+  private:
+  ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<SocketControlProtocol>;
 };
 #endif // __Fuchsia__
 #ifdef __Fuchsia__

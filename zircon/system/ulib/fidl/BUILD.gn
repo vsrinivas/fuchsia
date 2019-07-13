@@ -43,10 +43,14 @@ library("fidl_base") {
 library("fidl") {
   sdk = "source"
   sdk_publishable = true
-  sdk_headers = [ "lib/fidl/epitaph.h" ]
+  sdk_headers = [
+    "lib/fidl/epitaph.h",
+    "lib/fidl/transport.h",
+  ]
   sources = [
     "epitaph.c",
     "handle_closing.cc",
+    "transport.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

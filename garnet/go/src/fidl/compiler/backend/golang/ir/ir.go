@@ -988,10 +988,9 @@ func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val 
 }
 
 func (c *compiler) compileInterface(val types.Interface) Interface {
-	var proxyType string
-	switch val.Attributes.GetAttribute("Transport").Value {
-	case "", "Channel":
-		proxyType = "ChannelProxy"
+	proxyType := "ChannelProxy"
+	if val.Attributes.GetAttribute("Transport").Value == "SocketControl" {
+		proxyType = "SocketControlProxy"
 	}
 	r := Interface{
 		Attributes:           val.Attributes,
