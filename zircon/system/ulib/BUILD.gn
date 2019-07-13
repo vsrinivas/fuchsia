@@ -138,6 +138,7 @@ group("ulib") {
     "trace-vthread",
     "trace-vthread:trace-vthread-with-static-engine",
     "unittest",
+    "usb-virtual-bus-launcher",
     "utf_conversion",
     "virtio",
     "xdc-host-utils",

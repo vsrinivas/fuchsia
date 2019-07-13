@@ -36,6 +36,7 @@ test("usb-virtual-bus-ums") {
     "$zx/system/ulib/launchpad",
     "$zx/system/ulib/ramdevice-client",
     "$zx/system/ulib/sync",
+    "$zx/system/ulib/usb-virtual-bus-launcher",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
@@ -63,6 +64,7 @@ test("usb-virtual-bus-hid") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/hid",
     "$zx/system/ulib/sync",
+    "$zx/system/ulib/usb-virtual-bus-launcher",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
@@ -89,6 +91,7 @@ test("usb-virtual-bus-ftdi") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/hid",
     "$zx/system/ulib/sync",
+    "$zx/system/ulib/usb-virtual-bus-launcher",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
@@ -98,7 +101,6 @@ test("usb-virtual-bus-ftdi") {
 source_set("main") {
   testonly = true
   sources = [
-    "helper.cc",
     "main.cc",
     "usb-virtual-bus.cc",
   ]
@@ -116,6 +118,7 @@ source_set("main") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/launchpad",
     "$zx/system/ulib/sync",
+    "$zx/system/ulib/usb-virtual-bus-launcher",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",

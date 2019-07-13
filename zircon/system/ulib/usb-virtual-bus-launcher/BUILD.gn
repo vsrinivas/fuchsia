@@ -1,0 +1,36 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("usb-virtual-bus-launcher") {
+  sdk = "source"
+  sdk_headers = [
+    "usb-virtual-bus-launcher/usb-virtual-bus-launcher.h",
+    "usb-virtual-bus-launcher-helper/usb-virtual-bus-launcher-helper.h",
+  ]
+  testonly = true
+  shared = true
+  sources = [
+    "usb-virtual-bus-launcher-helper.cc",
+    "usb-virtual-bus-launcher.cc",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-hardware-usb-peripheral:c",
+    "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:c",
+    "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/devmgr-integration-test",
+    "$zx/system/ulib/devmgr-launcher",
+    "$zx/system/ulib/driver-integration-test",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl-async",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/launchpad",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}

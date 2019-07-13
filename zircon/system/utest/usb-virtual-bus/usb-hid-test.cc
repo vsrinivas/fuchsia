@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "usb-virtual-bus.h"
-#include "helper.h"
-
 #include <ddk/platform-defs.h>
 #include <dirent.h>
 #include <endian.h>
@@ -33,56 +30,58 @@
 #include <zircon/syscalls.h>
 #include <zxtest/zxtest.h>
 
+#include "usb-virtual-bus.h"
+
 namespace {
 
 class UsbHidTest : public zxtest::Test {
-public:
-    void SetUp() override {
-        ASSERT_NO_FATAL_FAILURES(bus_.InitUsbHid(&devpath_));
-        bus_.GetHandles(&peripheral_, &virtual_bus_handle_);
-    }
+ public:
+  void SetUp() override {
+    ASSERT_NO_FATAL_FAILURES(bus_.InitUsbHid(&devpath_));
+    bus_.GetHandles(&peripheral_, &virtual_bus_handle_);
+  }
 
-    void TearDown() override {
-        ASSERT_EQ(ZX_OK, FidlCall(fuchsia_hardware_usb_peripheral_DeviceClearFunctions,
-                                  peripheral_->get()));
-        ASSERT_EQ(ZX_OK, FidlCall(fuchsia_hardware_usb_virtual_bus_BusDisable,
-                                  virtual_bus_handle_->get()));
-    }
+  void TearDown() override {
+    ASSERT_EQ(ZX_OK,
+              FidlCall(fuchsia_hardware_usb_peripheral_DeviceClearFunctions, peripheral_->get()));
+    ASSERT_EQ(ZX_OK,
+              FidlCall(fuchsia_hardware_usb_virtual_bus_BusDisable, virtual_bus_handle_->get()));
+  }
 
-protected:
-    usb_virtual_bus::USBVirtualBus bus_;
-    fbl::String devpath_;
-    zx::unowned_channel peripheral_;
-    zx::unowned_channel virtual_bus_handle_;
+ protected:
+  usb_virtual_bus::USBVirtualBus bus_;
+  fbl::String devpath_;
+  zx::unowned_channel peripheral_;
+  zx::unowned_channel virtual_bus_handle_;
 };
 
 TEST_F(UsbHidTest, SetAndGetReport) {
-    fbl::unique_fd fd_input(openat(bus_.GetRootFd(), devpath_.c_str(), O_RDWR));
-    ASSERT_GT(fd_input.get(), 0);
+  fbl::unique_fd fd_input(openat(bus_.GetRootFd(), devpath_.c_str(), O_RDWR));
+  ASSERT_GT(fd_input.get(), 0);
 
-    fzl::FdioCaller input_fdio_caller_;
-    input_fdio_caller_.reset(std::move(fd_input));
+  fzl::FdioCaller input_fdio_caller_;
+  input_fdio_caller_.reset(std::move(fd_input));
 
-    uint8_t buf[sizeof(hid_boot_mouse_report_t)] = {0xab, 0xbc, 0xde};
-    zx_status_t out_stat;
-    size_t out_report_count;
+  uint8_t buf[sizeof(hid_boot_mouse_report_t)] = {0xab, 0xbc, 0xde};
+  zx_status_t out_stat;
+  size_t out_report_count;
 
-    zx_status_t status = fuchsia_hardware_input_DeviceSetReport(
-        input_fdio_caller_.borrow_channel(), fuchsia_hardware_input_ReportType_INPUT, 0,
-        buf, sizeof(buf), &out_stat);
-    ASSERT_EQ(status, ZX_OK);
-    ASSERT_EQ(out_stat, ZX_OK);
+  zx_status_t status = fuchsia_hardware_input_DeviceSetReport(
+      input_fdio_caller_.borrow_channel(), fuchsia_hardware_input_ReportType_INPUT, 0, buf,
+      sizeof(buf), &out_stat);
+  ASSERT_EQ(status, ZX_OK);
+  ASSERT_EQ(out_stat, ZX_OK);
 
-    status = fuchsia_hardware_input_DeviceGetReport(
-        input_fdio_caller_.borrow_channel(), fuchsia_hardware_input_ReportType_INPUT, 0, &out_stat,
-        buf, sizeof(buf), &out_report_count);
-    ASSERT_EQ(status, ZX_OK);
-    ASSERT_EQ(out_stat, ZX_OK);
+  status = fuchsia_hardware_input_DeviceGetReport(input_fdio_caller_.borrow_channel(),
+                                                  fuchsia_hardware_input_ReportType_INPUT, 0,
+                                                  &out_stat, buf, sizeof(buf), &out_report_count);
+  ASSERT_EQ(status, ZX_OK);
+  ASSERT_EQ(out_stat, ZX_OK);
 
-    ASSERT_EQ(out_report_count, sizeof(hid_boot_mouse_report_t));
-    ASSERT_EQ(0xab, buf[0]);
-    ASSERT_EQ(0xbc, buf[1]);
-    ASSERT_EQ(0xde, buf[2]);
+  ASSERT_EQ(out_report_count, sizeof(hid_boot_mouse_report_t));
+  ASSERT_EQ(0xab, buf[0]);
+  ASSERT_EQ(0xbc, buf[1]);
+  ASSERT_EQ(0xde, buf[2]);
 }
 
-} // namespace
+}  // namespace
