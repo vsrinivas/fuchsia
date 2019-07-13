@@ -130,12 +130,12 @@ TEST(SocketTest, CloseZXSocketOnClose) {
   ASSERT_EQ(node_info.Which(), fuchsia::io::NodeInfo::Tag::kSocket);
 
   zx_signals_t observed;
-  ASSERT_EQ(status = zx::unowned_channel(handle)->wait_one(ZX_CHANNEL_WRITABLE,
-                                                           zx::time::infinite_past(), &observed),
-            ZX_OK)
-      << zx_status_get_string(status);
   ASSERT_EQ(status = node_info.socket().socket.wait_one(ZX_SOCKET_WRITABLE,
                                                         zx::time::infinite_past(), &observed),
+            ZX_OK)
+      << zx_status_get_string(status);
+  ASSERT_EQ(status = zx::unowned_channel(handle)->wait_one(ZX_CHANNEL_WRITABLE,
+                                                           zx::time::infinite_past(), &observed),
             ZX_OK)
       << zx_status_get_string(status);
 
@@ -143,12 +143,15 @@ TEST(SocketTest, CloseZXSocketOnClose) {
   ASSERT_EQ(io_status = control.Close(&status), ZX_OK) << zx_status_get_string(status);
   ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
 
-  ASSERT_EQ(status = zx::unowned_channel(handle)->wait_one(ZX_CHANNEL_PEER_CLOSED,
-                                                           zx::time::infinite_past(), &observed),
-            ZX_OK)
-      << zx_status_get_string(status);
   ASSERT_EQ(status = node_info.socket().socket.wait_one(ZX_SOCKET_PEER_CLOSED,
                                                         zx::time::infinite_past(), &observed),
+            ZX_OK)
+      << zx_status_get_string(status);
+  // Give a generous timeout for the channel to close; the channel closing is inherently
+  // asynchronous with respect to the `Close` FIDL call above (since its return must come over the
+  // channel).
+  ASSERT_EQ(status = zx::unowned_channel(handle)->wait_one(
+                ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(zx::sec(5)), &observed),
             ZX_OK)
       << zx_status_get_string(status);
 }
