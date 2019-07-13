@@ -6,6 +6,7 @@ package source
 
 import (
 	"fidl/fuchsia/amber"
+	"fidl/fuchsia/pkg"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -50,7 +51,7 @@ func TestAutoWatch(t *testing.T) {
 	src, err := NewSource(d, &amber.SourceConfig{
 		Id: "test-source",
 		RootKeys: []amber.KeyConfig{
-			amber.KeyConfig{
+			{
 				Type:  "ed25519",
 				Value: "c32663b84cb8ffa39b436096b535133524bf00a863b35722b7c0e33d061af5cf",
 			},
@@ -98,4 +99,58 @@ func TestAutoWatch(t *testing.T) {
 	// Let the server shutdown the connections to the client
 	serverStop.Done()
 	w.Wait()
+}
+
+func TestConvertRepositoryConfig(t *testing.T) {
+	config := &pkg.RepositoryConfig{
+		Mirrors: []pkg.MirrorConfig{
+			{
+				MirrorUrl:        "http://example.com:8083/",
+				MirrorUrlPresent: true,
+				Subscribe:        true,
+				SubscribePresent: true,
+			},
+		},
+	}
+	result, err := convertRepositoryConfig(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if result.RepoUrl != "http://example.com:8083/" {
+		t.Fatalf("bad RepoUrl; want %q got %q", "http://example.com:8083/", result.RepoUrl)
+	}
+	if result.StatusConfig.Enabled == false {
+		t.Fatal("resulting source config should be enabled.")
+	}
+	if result.Auto == false {
+		t.Fatal("resulting source config should have auto enabled.")
+	}
+	if result.RatePeriod != 60 {
+		t.Fatalf("bad RatePeriod; want 60 got %v", result.RatePeriod)
+	}
+}
+
+func TestConvertRepositoryConfig_noSubscribe(t *testing.T) {
+	config := &pkg.RepositoryConfig{
+		Mirrors: []pkg.MirrorConfig{
+			{
+				MirrorUrl:        "http://example.com:8083/",
+				MirrorUrlPresent: true,
+				Subscribe:        false,
+				SubscribePresent: true,
+			},
+		},
+	}
+	result, err := convertRepositoryConfig(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if result.Auto == true {
+		t.Fatal("resulting source config should not have auto enabled.")
+	}
+	if result.RatePeriod != 0 {
+		t.Fatalf("bad RatePeriod; want 0 got %v", result.RatePeriod)
+	}
 }

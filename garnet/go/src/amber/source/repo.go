@@ -19,21 +19,20 @@ type Repository struct {
 	installer *packageInstaller
 }
 
-func OpenRepository(config *pkg.RepositoryConfig, pkgfs PkgfsDir) (Repository, error) {
-	result := Repository{source: nil}
+func convertRepositoryConfig(config *pkg.RepositoryConfig) (*amber.SourceConfig, error) {
 	if len(config.Mirrors) == 0 {
-		return result, errors.New("There must be at least one mirror")
+		return nil, errors.New("There must be at least one mirror")
 	}
 	// Hard code using the first mirror
 	var mirrorConfig *pkg.MirrorConfig = &config.Mirrors[0]
 	if !mirrorConfig.HasMirrorUrl() {
-		return result, errors.New("mirror_url is required")
+		return nil, errors.New("mirror_url is required")
 	}
 	var repoUrl string = mirrorConfig.MirrorUrl
 	var rootKeys []amber.KeyConfig
 	for _, key := range config.RootKeys {
 		if key.Which() != pkg.RepositoryKeyConfigEd25519Key {
-			return result, errors.New("Only ed25519 root keys are supported")
+			return nil, errors.New("Only ed25519 root keys are supported")
 		}
 		rootKeys = append(rootKeys, amber.KeyConfig{Type: "ed25519", Value: hex.EncodeToString(key.Ed25519Key)})
 		log.Printf("DEBUG: added keys: %v", rootKeys)
@@ -42,11 +41,11 @@ func OpenRepository(config *pkg.RepositoryConfig, pkgfs PkgfsDir) (Repository, e
 	var blobKey *amber.BlobEncryptionKey
 	if mirrorConfig.HasBlobKey() {
 		if mirrorConfig.BlobKey.Which() != pkg.RepositoryBlobKeyAesKey {
-			return result, errors.New("Only aes blob keys are supported")
+			return nil, errors.New("Only aes blob keys are supported")
 		}
 		data := mirrorConfig.BlobKey.AesKey
 		if len(data) != 32 {
-			return result, errors.New("Blob keys must be exactly 32 bytes long")
+			return nil, errors.New("Blob keys must be exactly 32 bytes long")
 		}
 		var arr [32]uint8
 		copy(arr[:], data)
@@ -55,14 +54,29 @@ func OpenRepository(config *pkg.RepositoryConfig, pkgfs PkgfsDir) (Repository, e
 		}
 	}
 
+	var ratePeriod int32
+	if mirrorConfig.Subscribe {
+		ratePeriod = 60
+	}
+
 	cfg := &amber.SourceConfig{
 		RepoUrl:      repoUrl,
 		RootKeys:     rootKeys,
 		StatusConfig: &amber.StatusConfig{Enabled: true},
 		Auto:         mirrorConfig.Subscribe,
 		BlobKey:      blobKey,
+		RatePeriod:   ratePeriod,
 	}
-	var err error
+	return cfg, nil
+}
+
+func OpenRepository(config *pkg.RepositoryConfig, pkgfs PkgfsDir) (Repository, error) {
+	result := Repository{source: nil}
+
+	cfg, err := convertRepositoryConfig(config)
+	if err != nil {
+		return result, err
+	}
 	result.source, err = openTemporarySource(cfg)
 	if err != nil {
 		return result, err
