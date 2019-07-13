@@ -239,14 +239,6 @@ class {{ .Name }} final {
     {{- end }} {{ template "SyncRequestCallerAllocateMethodSignature" . }};
 {{ "" }}
       {{- end }}
-      {{- if or .Request .Response }}
-        {{- range .DocComments }}
-    //{{ . }}
-        {{- end }}
-    // Messages are encoded and decoded in-place.
-    {{ if .Response }}::fidl::DecodeResult<{{ .Name }}Response>{{ else }}zx_status_t{{ end }} {{ template "SyncRequestInPlaceMethodSignature" . }};
-{{ "" }}
-      {{- end }}
     {{- end }}
     {{- if .HasEvents }}
     // Handle all possible events defined in this protocol.
@@ -300,14 +292,6 @@ class {{ .Name }} final {
     {{- end }} {{ template "StaticCallSyncRequestCallerAllocateMethodSignature" . }};
 {{ "" }}
       {{- end }}
-      {{- if or .Request .Response }}
-        {{- range .DocComments }}
-    //{{ . }}
-        {{- end }}
-    // Messages are encoded and decoded in-place.
-    static {{ if .Response }}::fidl::DecodeResult<{{ .Name }}Response>{{ else }}zx_status_t{{ end }} {{ template "StaticCallSyncRequestInPlaceMethodSignature" . }};
-{{ "" }}
-      {{- end }}
     {{- end }}
     {{- if .HasEvents }}
     // Handle all possible events defined in this protocol.
@@ -315,6 +299,24 @@ class {{ .Name }} final {
     // defined in |EventHandlers|. The return status of the handler function is folded with any
     // transport-level errors and returned.
     static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
+    {{- end }}
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+{{ "" }}
+    {{- range FilterMethodsWithoutReqs .Methods -}}
+      {{- range .DocComments }}
+    //{{ . }}
+      {{- end }}
+    static {{ if .HasResponse -}}
+    ::fidl::DecodeResult<{{ .Name }}Response>
+    {{- else -}}
+    ::fidl::internal::StatusAndError
+    {{- end }} {{ template "StaticCallSyncRequestInPlaceMethodSignature" . }};
+{{ "" }}
     {{- end }}
   };
 
@@ -500,12 +502,8 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 {{ "" }}
     {{- template "StaticCallSyncRequestCallerAllocateMethodDefinition" . }}
   {{- end }}
-  {{- if or .Request .Response }}
 {{ "" }}
-    {{- template "SyncRequestInPlaceMethodDefinition" . }}
-{{ "" }}
-    {{- template "StaticCallSyncRequestInPlaceMethodDefinition" . }}
-  {{- end }}
+  {{- template "StaticCallSyncRequestInPlaceMethodDefinition" . }}
 {{ "" }}
 {{- end }}
 

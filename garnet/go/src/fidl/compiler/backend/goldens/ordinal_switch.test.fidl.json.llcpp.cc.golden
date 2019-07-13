@@ -27,22 +27,10 @@ SwitchingOrdinals::ResultOf::OrdinalFive_Impl::OrdinalFive_Impl(zx::unowned_chan
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, OrdinalFiveRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<OrdinalFiveRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kSwitchingOrdinals_OrdinalFive_Ordinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(OrdinalFiveRequest));
   ::fidl::DecodedMessage<OrdinalFiveRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  zx_status_t _write_status =
-      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
-  Super::status_ = _write_status;
-  if (_write_status != ZX_OK) {
-    Super::error_ = ::fidl::internal::kErrorWriteFailed;
-  }
+  Super::operator=(
+      SwitchingOrdinals::InPlace::OrdinalFive(std::move(_client_end)));
 }
 
 SwitchingOrdinals::ResultOf::OrdinalFive SwitchingOrdinals::SyncClient::OrdinalFive() {
@@ -71,6 +59,28 @@ zx_status_t SwitchingOrdinals::Call::OrdinalFive_Deprecated(zx::unowned_channel 
   return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
+::fidl::internal::StatusAndError SwitchingOrdinals::InPlace::OrdinalFive(zx::unowned_channel _client_end) {
+  constexpr uint32_t _write_num_bytes = sizeof(OrdinalFiveRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<OrdinalFiveRequest> params(std::move(_request_buffer));
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kSwitchingOrdinals_OrdinalFive_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::internal::StatusAndError::FromFailure(
+        std::move(_encode_request_result));
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  if (_write_status != ZX_OK) {
+    return ::fidl::internal::StatusAndError(_write_status, ::fidl::internal::kErrorWriteFailed);
+  } else {
+    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
+  }
+}
+
 
 SwitchingOrdinals::ResultOf::OnlyGeneratedOrdinal_Impl::OnlyGeneratedOrdinal_Impl(zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnlyGeneratedOrdinalRequest>();
@@ -78,22 +88,10 @@ SwitchingOrdinals::ResultOf::OnlyGeneratedOrdinal_Impl::OnlyGeneratedOrdinal_Imp
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, OnlyGeneratedOrdinalRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<OnlyGeneratedOrdinalRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kSwitchingOrdinals_OnlyGeneratedOrdinal_Ordinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(OnlyGeneratedOrdinalRequest));
   ::fidl::DecodedMessage<OnlyGeneratedOrdinalRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  zx_status_t _write_status =
-      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
-  Super::status_ = _write_status;
-  if (_write_status != ZX_OK) {
-    Super::error_ = ::fidl::internal::kErrorWriteFailed;
-  }
+  Super::operator=(
+      SwitchingOrdinals::InPlace::OnlyGeneratedOrdinal(std::move(_client_end)));
 }
 
 SwitchingOrdinals::ResultOf::OnlyGeneratedOrdinal SwitchingOrdinals::SyncClient::OnlyGeneratedOrdinal() {
@@ -120,6 +118,28 @@ zx_status_t SwitchingOrdinals::Call::OnlyGeneratedOrdinal_Deprecated(zx::unowned
     return _encode_request_result.status;
   }
   return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+}
+
+::fidl::internal::StatusAndError SwitchingOrdinals::InPlace::OnlyGeneratedOrdinal(zx::unowned_channel _client_end) {
+  constexpr uint32_t _write_num_bytes = sizeof(OnlyGeneratedOrdinalRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<OnlyGeneratedOrdinalRequest> params(std::move(_request_buffer));
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kSwitchingOrdinals_OnlyGeneratedOrdinal_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::internal::StatusAndError::FromFailure(
+        std::move(_encode_request_result));
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  if (_write_status != ZX_OK) {
+    return ::fidl::internal::StatusAndError(_write_status, ::fidl::internal::kErrorWriteFailed);
+  } else {
+    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
+  }
 }
 
 zx_status_t SwitchingOrdinals::SyncClient::HandleEvents(SwitchingOrdinals::EventHandlers handlers) {

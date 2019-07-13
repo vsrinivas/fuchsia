@@ -97,9 +97,10 @@ struct ResponseStorage<FidlType,
 // Class representing the result of a one-way FIDL call.
 // status() returns the encoding and transport level status.
 // If status() is not ZX_OK, error() contains a human-readable string for debugging purposes.
-class StatusAndError {
+class StatusAndError : public FromFailureMixin<StatusAndError> {
  public:
   StatusAndError() = default;
+  StatusAndError(zx_status_t status, const char* error) : status_(status), error_(error) {}
 
   StatusAndError(const StatusAndError&) = delete;
   StatusAndError& operator=(const StatusAndError&) = delete;

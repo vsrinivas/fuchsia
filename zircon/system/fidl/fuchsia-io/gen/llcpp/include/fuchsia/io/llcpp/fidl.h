@@ -234,9 +234,6 @@ class DirectoryWatcher final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t OnEvent_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> events);
 
-    // Messages are encoded and decoded in-place.
-    zx_status_t OnEvent_Deprecated(::fidl::DecodedMessage<OnEventRequest> params);
-
    private:
     ::zx::channel channel_;
   };
@@ -255,8 +252,14 @@ class DirectoryWatcher final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t OnEvent_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> events);
 
-    // Messages are encoded and decoded in-place.
-    static zx_status_t OnEvent_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OnEventRequest> params);
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    static ::fidl::internal::StatusAndError OnEvent(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OnEventRequest> params);
 
   };
 
@@ -1216,25 +1219,6 @@ class Node final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t Clone_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
-    // Create another connection to the same remote object.
-    //
-    // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
-    //
-    // All other flags are ignored.
-    //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
-    // cloned object.
-    // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
-    // Messages are encoded and decoded in-place.
-    zx_status_t Clone_Deprecated(::fidl::DecodedMessage<CloneRequest> params);
-
     // Terminates connection with object.
     //
     // This method does not require any rights.
@@ -1257,12 +1241,6 @@ class Node final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<CloseResponse> Close_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Terminates connection with object.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<CloseResponse> Close_Deprecated(::fidl::BytePart response_buffer);
 
     // Returns extra information about the type of the object.
     // If the `Describe` operation fails, the connection is closed.
@@ -1291,13 +1269,6 @@ class Node final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<DescribeResponse> Describe_Deprecated(::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
-    // Returns extra information about the type of the object.
-    // If the `Describe` operation fails, the connection is closed.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<DescribeResponse> Describe_Deprecated(::fidl::BytePart response_buffer);
-
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
@@ -1321,12 +1292,6 @@ class Node final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Synchronizes updates to the node to the underlying media, if it exists.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(::fidl::BytePart response_buffer);
-
     // Acquires information about the node.
     //
     // This method does not require any rights.
@@ -1349,12 +1314,6 @@ class Node final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
-
-    // Acquires information about the node.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(::fidl::BytePart response_buffer);
 
     // Updates information about the node.
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
@@ -1383,13 +1342,6 @@ class Node final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
-
     // Deprecated. Only for use with compatibility with devhost.
     ResultOf::Ioctl Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
 
@@ -1402,10 +1354,6 @@ class Node final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
@@ -1494,25 +1442,6 @@ class Node final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t Clone_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
-    // Create another connection to the same remote object.
-    //
-    // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
-    //
-    // All other flags are ignored.
-    //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
-    // cloned object.
-    // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
-    // Messages are encoded and decoded in-place.
-    static zx_status_t Clone_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
-
     // Terminates connection with object.
     //
     // This method does not require any rights.
@@ -1535,12 +1464,6 @@ class Node final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<CloseResponse> Close_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Terminates connection with object.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<CloseResponse> Close_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Returns extra information about the type of the object.
     // If the `Describe` operation fails, the connection is closed.
@@ -1569,13 +1492,6 @@ class Node final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<DescribeResponse> Describe_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
-    // Returns extra information about the type of the object.
-    // If the `Describe` operation fails, the connection is closed.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<DescribeResponse> Describe_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
@@ -1599,12 +1515,6 @@ class Node final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Synchronizes updates to the node to the underlying media, if it exists.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     // Acquires information about the node.
     //
     // This method does not require any rights.
@@ -1627,12 +1537,6 @@ class Node final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
-
-    // Acquires information about the node.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Updates information about the node.
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
@@ -1661,13 +1565,6 @@ class Node final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
-
     // Deprecated. Only for use with compatibility with devhost.
     static ResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
 
@@ -1681,15 +1578,66 @@ class Node final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
 
-    // Deprecated. Only for use with compatibility with devhost.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
-
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
     // transport-level errors and returned.
     static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    // Create another connection to the same remote object.
+    //
+    // `flags` may be any of:
+    // - OPEN_RIGHT_*
+    // - OPEN_FLAG_APPEND
+    // - OPEN_FLAG_NO_REMOTE
+    // - OPEN_FLAG_DESCRIBE
+    // - CLONE_FLAG_SAME_RIGHTS
+    //
+    // All other flags are ignored.
+    //
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // cloned object.
+    // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    static ::fidl::internal::StatusAndError Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
+
+    // Terminates connection with object.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<CloseResponse> Close(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Returns extra information about the type of the object.
+    // If the `Describe` operation fails, the connection is closed.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<DescribeResponse> Describe(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Synchronizes updates to the node to the underlying media, if it exists.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<SyncResponse> Sync(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Acquires information about the node.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<GetAttrResponse> GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Updates information about the node.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    //
+    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
+
+    // Deprecated. Only for use with compatibility with devhost.
+    static ::fidl::DecodeResult<IoctlResponse> Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
+
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -2707,25 +2655,6 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t Clone_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
-    // Create another connection to the same remote object.
-    //
-    // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
-    //
-    // All other flags are ignored.
-    //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
-    // cloned object.
-    // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
-    // Messages are encoded and decoded in-place.
-    zx_status_t Clone_Deprecated(::fidl::DecodedMessage<CloneRequest> params);
-
     // Terminates connection with object.
     //
     // This method does not require any rights.
@@ -2748,12 +2677,6 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<CloseResponse> Close_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Terminates connection with object.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<CloseResponse> Close_Deprecated(::fidl::BytePart response_buffer);
 
     // Returns extra information about the type of the object.
     // If the `Describe` operation fails, the connection is closed.
@@ -2782,13 +2705,6 @@ class File final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<DescribeResponse> Describe_Deprecated(::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
-    // Returns extra information about the type of the object.
-    // If the `Describe` operation fails, the connection is closed.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<DescribeResponse> Describe_Deprecated(::fidl::BytePart response_buffer);
-
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
@@ -2812,12 +2728,6 @@ class File final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Synchronizes updates to the node to the underlying media, if it exists.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(::fidl::BytePart response_buffer);
-
     // Acquires information about the node.
     //
     // This method does not require any rights.
@@ -2840,12 +2750,6 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
-
-    // Acquires information about the node.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(::fidl::BytePart response_buffer);
 
     // Updates information about the node.
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
@@ -2874,13 +2778,6 @@ class File final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
-
     // Deprecated. Only for use with compatibility with devhost.
     ResultOf::Ioctl Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
 
@@ -2893,10 +2790,6 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
 
     // Reads 'count' bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
@@ -2920,13 +2813,6 @@ class File final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<ReadResponse> Read_Deprecated(::fidl::BytePart _request_buffer, uint64_t count, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_data);
 
-    // Reads 'count' bytes at the seek offset.
-    // The seek offset is moved forward by the number of bytes read.
-    //
-    // This method requires following rights: OPEN_RIGHT_READABLE.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<ReadResponse> Read_Deprecated(::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer);
-
     // Reads 'count' bytes at the provided offset.
     // Does not affect the seek offset.
     //
@@ -2948,13 +2834,6 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<ReadAtResponse> ReadAt_Deprecated(::fidl::BytePart _request_buffer, uint64_t count, uint64_t offset, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_data);
-
-    // Reads 'count' bytes at the provided offset.
-    // Does not affect the seek offset.
-    //
-    // This method requires following rights: OPEN_RIGHT_READABLE.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<ReadAtResponse> ReadAt_Deprecated(::fidl::DecodedMessage<ReadAtRequest> params, ::fidl::BytePart response_buffer);
 
     // Writes data at the seek offset.
     // The seek offset is moved forward by the number of bytes written.
@@ -2983,13 +2862,6 @@ class File final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<WriteResponse> Write_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_actual);
 
-    // Writes data at the seek offset.
-    // The seek offset is moved forward by the number of bytes written.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<WriteResponse> Write_Deprecated(::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer);
-
     // Writes data to the provided offset.
     // Does not affect the seek offset.
     //
@@ -3016,13 +2888,6 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<WriteAtResponse> WriteAt_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, uint64_t offset, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_actual);
-
-    // Writes data to the provided offset.
-    // Does not affect the seek offset.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<WriteAtResponse> WriteAt_Deprecated(::fidl::DecodedMessage<WriteAtRequest> params, ::fidl::BytePart response_buffer);
 
     // Moves the offset at which the next invocation of `Read()` or `Write()` will
     // occur.
@@ -3051,13 +2916,6 @@ class File final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SeekResponse> Seek_Deprecated(::fidl::BytePart _request_buffer, int64_t offset, SeekOrigin start, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_offset);
 
-    // Moves the offset at which the next invocation of `Read()` or `Write()` will
-    // occur.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SeekResponse> Seek_Deprecated(::fidl::DecodedMessage<SeekRequest> params, ::fidl::BytePart response_buffer);
-
     // Shrinks the file size to 'length' bytes.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
@@ -3081,12 +2939,6 @@ class File final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<TruncateResponse> Truncate_Deprecated(::fidl::BytePart _request_buffer, uint64_t length, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Shrinks the file size to 'length' bytes.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<TruncateResponse> Truncate_Deprecated(::fidl::DecodedMessage<TruncateRequest> params, ::fidl::BytePart response_buffer);
-
     // Acquires the Directory::Open rights and flags used to access this file.
     //
     // This method does not require any rights.
@@ -3109,12 +2961,6 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetFlagsResponse> GetFlags_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, uint32_t* out_flags);
-
-    // Acquires the Directory::Open rights and flags used to access this file.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetFlagsResponse> GetFlags_Deprecated(::fidl::BytePart response_buffer);
 
     // Changes the Directory::Open flags used to access the file.
     // Supported flags which can be turned on / off:
@@ -3146,14 +2992,6 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SetFlagsResponse> SetFlags_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Changes the Directory::Open flags used to access the file.
-    // Supported flags which can be turned on / off:
-    // - OPEN_FLAG_APPEND
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SetFlagsResponse> SetFlags_Deprecated(::fidl::DecodedMessage<SetFlagsRequest> params, ::fidl::BytePart response_buffer);
 
     // Acquires a buffer representing this file, if there is one, with the
     // requested access rights.
@@ -3188,17 +3026,6 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetBufferResponse> GetBuffer_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s, ::llcpp::fuchsia::mem::Buffer** out_buffer);
-
-    // Acquires a buffer representing this file, if there is one, with the
-    // requested access rights.
-    //
-    // `flags` may be any of VMO_FLAG_*.
-    //
-    // This method requires following rights:
-    // - OPEN_RIGHT_WRITABLE if `flags` includes VMO_FLAG_WRITE.
-    // - OPEN_RIGHT_READABLE if `flags` includes VMO_FLAG_READ or VMO_FLAG_EXEC.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetBufferResponse> GetBuffer_Deprecated(::fidl::DecodedMessage<GetBufferRequest> params, ::fidl::BytePart response_buffer);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
@@ -3287,25 +3114,6 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t Clone_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
-    // Create another connection to the same remote object.
-    //
-    // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
-    //
-    // All other flags are ignored.
-    //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
-    // cloned object.
-    // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
-    // Messages are encoded and decoded in-place.
-    static zx_status_t Clone_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
-
     // Terminates connection with object.
     //
     // This method does not require any rights.
@@ -3328,12 +3136,6 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<CloseResponse> Close_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Terminates connection with object.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<CloseResponse> Close_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Returns extra information about the type of the object.
     // If the `Describe` operation fails, the connection is closed.
@@ -3362,13 +3164,6 @@ class File final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<DescribeResponse> Describe_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
-    // Returns extra information about the type of the object.
-    // If the `Describe` operation fails, the connection is closed.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<DescribeResponse> Describe_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
@@ -3392,12 +3187,6 @@ class File final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Synchronizes updates to the node to the underlying media, if it exists.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     // Acquires information about the node.
     //
     // This method does not require any rights.
@@ -3420,12 +3209,6 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
-
-    // Acquires information about the node.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Updates information about the node.
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
@@ -3454,13 +3237,6 @@ class File final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
-
     // Deprecated. Only for use with compatibility with devhost.
     static ResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
 
@@ -3473,10 +3249,6 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
 
     // Reads 'count' bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
@@ -3500,13 +3272,6 @@ class File final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<ReadResponse> Read_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t count, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_data);
 
-    // Reads 'count' bytes at the seek offset.
-    // The seek offset is moved forward by the number of bytes read.
-    //
-    // This method requires following rights: OPEN_RIGHT_READABLE.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<ReadResponse> Read_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer);
-
     // Reads 'count' bytes at the provided offset.
     // Does not affect the seek offset.
     //
@@ -3528,13 +3293,6 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<ReadAtResponse> ReadAt_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t count, uint64_t offset, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_data);
-
-    // Reads 'count' bytes at the provided offset.
-    // Does not affect the seek offset.
-    //
-    // This method requires following rights: OPEN_RIGHT_READABLE.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<ReadAtResponse> ReadAt_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadAtRequest> params, ::fidl::BytePart response_buffer);
 
     // Writes data at the seek offset.
     // The seek offset is moved forward by the number of bytes written.
@@ -3563,13 +3321,6 @@ class File final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<WriteResponse> Write_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_actual);
 
-    // Writes data at the seek offset.
-    // The seek offset is moved forward by the number of bytes written.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<WriteResponse> Write_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer);
-
     // Writes data to the provided offset.
     // Does not affect the seek offset.
     //
@@ -3596,13 +3347,6 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<WriteAtResponse> WriteAt_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, uint64_t offset, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_actual);
-
-    // Writes data to the provided offset.
-    // Does not affect the seek offset.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<WriteAtResponse> WriteAt_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteAtRequest> params, ::fidl::BytePart response_buffer);
 
     // Moves the offset at which the next invocation of `Read()` or `Write()` will
     // occur.
@@ -3631,13 +3375,6 @@ class File final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SeekResponse> Seek_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t offset, SeekOrigin start, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_offset);
 
-    // Moves the offset at which the next invocation of `Read()` or `Write()` will
-    // occur.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SeekResponse> Seek_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SeekRequest> params, ::fidl::BytePart response_buffer);
-
     // Shrinks the file size to 'length' bytes.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
@@ -3661,12 +3398,6 @@ class File final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<TruncateResponse> Truncate_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t length, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Shrinks the file size to 'length' bytes.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<TruncateResponse> Truncate_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<TruncateRequest> params, ::fidl::BytePart response_buffer);
-
     // Acquires the Directory::Open rights and flags used to access this file.
     //
     // This method does not require any rights.
@@ -3689,12 +3420,6 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetFlagsResponse> GetFlags_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, uint32_t* out_flags);
-
-    // Acquires the Directory::Open rights and flags used to access this file.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetFlagsResponse> GetFlags_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Changes the Directory::Open flags used to access the file.
     // Supported flags which can be turned on / off:
@@ -3726,14 +3451,6 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SetFlagsResponse> SetFlags_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Changes the Directory::Open flags used to access the file.
-    // Supported flags which can be turned on / off:
-    // - OPEN_FLAG_APPEND
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SetFlagsResponse> SetFlags_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetFlagsRequest> params, ::fidl::BytePart response_buffer);
 
     // Acquires a buffer representing this file, if there is one, with the
     // requested access rights.
@@ -3769,6 +3486,113 @@ class File final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetBufferResponse> GetBuffer_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s, ::llcpp::fuchsia::mem::Buffer** out_buffer);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    // Create another connection to the same remote object.
+    //
+    // `flags` may be any of:
+    // - OPEN_RIGHT_*
+    // - OPEN_FLAG_APPEND
+    // - OPEN_FLAG_NO_REMOTE
+    // - OPEN_FLAG_DESCRIBE
+    // - CLONE_FLAG_SAME_RIGHTS
+    //
+    // All other flags are ignored.
+    //
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // cloned object.
+    // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    static ::fidl::internal::StatusAndError Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
+
+    // Terminates connection with object.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<CloseResponse> Close(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Returns extra information about the type of the object.
+    // If the `Describe` operation fails, the connection is closed.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<DescribeResponse> Describe(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Synchronizes updates to the node to the underlying media, if it exists.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<SyncResponse> Sync(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Acquires information about the node.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<GetAttrResponse> GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Updates information about the node.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    //
+    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
+
+    // Deprecated. Only for use with compatibility with devhost.
+    static ::fidl::DecodeResult<IoctlResponse> Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
+
+    // Reads 'count' bytes at the seek offset.
+    // The seek offset is moved forward by the number of bytes read.
+    //
+    // This method requires following rights: OPEN_RIGHT_READABLE.
+    static ::fidl::DecodeResult<ReadResponse> Read(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer);
+
+    // Reads 'count' bytes at the provided offset.
+    // Does not affect the seek offset.
+    //
+    // This method requires following rights: OPEN_RIGHT_READABLE.
+    static ::fidl::DecodeResult<ReadAtResponse> ReadAt(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadAtRequest> params, ::fidl::BytePart response_buffer);
+
+    // Writes data at the seek offset.
+    // The seek offset is moved forward by the number of bytes written.
+    //
+    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    static ::fidl::DecodeResult<WriteResponse> Write(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer);
+
+    // Writes data to the provided offset.
+    // Does not affect the seek offset.
+    //
+    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    static ::fidl::DecodeResult<WriteAtResponse> WriteAt(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteAtRequest> params, ::fidl::BytePart response_buffer);
+
+    // Moves the offset at which the next invocation of `Read()` or `Write()` will
+    // occur.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<SeekResponse> Seek(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SeekRequest> params, ::fidl::BytePart response_buffer);
+
+    // Shrinks the file size to 'length' bytes.
+    //
+    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    static ::fidl::DecodeResult<TruncateResponse> Truncate(zx::unowned_channel _client_end, ::fidl::DecodedMessage<TruncateRequest> params, ::fidl::BytePart response_buffer);
+
+    // Acquires the Directory::Open rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<GetFlagsResponse> GetFlags(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Changes the Directory::Open flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - OPEN_FLAG_APPEND
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<SetFlagsResponse> SetFlags(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetFlagsRequest> params, ::fidl::BytePart response_buffer);
+
     // Acquires a buffer representing this file, if there is one, with the
     // requested access rights.
     //
@@ -3777,14 +3601,8 @@ class File final {
     // This method requires following rights:
     // - OPEN_RIGHT_WRITABLE if `flags` includes VMO_FLAG_WRITE.
     // - OPEN_RIGHT_READABLE if `flags` includes VMO_FLAG_READ or VMO_FLAG_EXEC.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetBufferResponse> GetBuffer_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetBufferRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetBufferResponse> GetBuffer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetBufferRequest> params, ::fidl::BytePart response_buffer);
 
-    // Handle all possible events defined in this protocol.
-    // Blocks to consume exactly one message from the channel, then call the corresponding handler
-    // defined in |EventHandlers|. The return status of the handler function is folded with any
-    // transport-level errors and returned.
-    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -4855,25 +4673,6 @@ class Directory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t Clone_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
-    // Create another connection to the same remote object.
-    //
-    // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
-    //
-    // All other flags are ignored.
-    //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
-    // cloned object.
-    // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
-    // Messages are encoded and decoded in-place.
-    zx_status_t Clone_Deprecated(::fidl::DecodedMessage<CloneRequest> params);
-
     // Terminates connection with object.
     //
     // This method does not require any rights.
@@ -4896,12 +4695,6 @@ class Directory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<CloseResponse> Close_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Terminates connection with object.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<CloseResponse> Close_Deprecated(::fidl::BytePart response_buffer);
 
     // Returns extra information about the type of the object.
     // If the `Describe` operation fails, the connection is closed.
@@ -4930,13 +4723,6 @@ class Directory final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<DescribeResponse> Describe_Deprecated(::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
-    // Returns extra information about the type of the object.
-    // If the `Describe` operation fails, the connection is closed.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<DescribeResponse> Describe_Deprecated(::fidl::BytePart response_buffer);
-
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
@@ -4960,12 +4746,6 @@ class Directory final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Synchronizes updates to the node to the underlying media, if it exists.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(::fidl::BytePart response_buffer);
-
     // Acquires information about the node.
     //
     // This method does not require any rights.
@@ -4988,12 +4768,6 @@ class Directory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
-
-    // Acquires information about the node.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(::fidl::BytePart response_buffer);
 
     // Updates information about the node.
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
@@ -5022,13 +4796,6 @@ class Directory final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
-
     // Deprecated. Only for use with compatibility with devhost.
     ResultOf::Ioctl Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
 
@@ -5041,10 +4808,6 @@ class Directory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
 
     // Opens a new object relative to this directory object.
     //
@@ -5143,31 +4906,6 @@ class Directory final {
     // the OPEN_FLAG_NODE_REFERENCE flag.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t Open_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
-
-    // Opens a new object relative to this directory object.
-    //
-    // `path` may contain multiple segments, separated by "/" characters,
-    // and should never be empty i.e. "" is an invalid path.
-    //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
-    // on the `object` handle, indicating the type of object opened.
-    //
-    // If an unknown value is sent for either flags or mode, the connection should
-    // be closed.
-    //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
-    // which will be connected to the opened entity.
-    //
-    // Rights are never increased. When you open a nested entity within a directory, you may only
-    // request the same rights as what the directory connection already has, or a subset of those.
-    // Exceeding those rights causes an access denied error to be transmitted in the
-    // `OnOpen` event if applicable, and the `object` connection closed.
-    //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
-    // Messages are encoded and decoded in-place.
-    zx_status_t Open_Deprecated(::fidl::DecodedMessage<OpenRequest> params);
 
     // Detaches an object from this directory object.
     //
@@ -5288,36 +5026,6 @@ class Directory final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<UnlinkResponse> Unlink_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Detaches an object from this directory object.
-    //
-    // The underlying object may or may not be deleted after this method
-    // completes: although the link will be removed from the containing directory,
-    // objects with multiple references (such as files which are still open)
-    // will not actually be destroyed until all references are removed.
-    //
-    // If a directory is unlinked while it still has an open reference,
-    // it must become read-only, preventing new entries from being created
-    // until all references close and the directory is destroyed.
-    //
-    // `path` identifies the file which should be detached.
-    // If `path` contains multiple segments, separated by "/" characters,
-    // then the directory is traversed, one segment at a time, relative to the
-    // originally accessed Directory.
-    //
-    // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
-    //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
-    //
-    // Other errors may be returned for filesystem-specific reasons.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<UnlinkResponse> Unlink_Deprecated(::fidl::DecodedMessage<UnlinkRequest> params, ::fidl::BytePart response_buffer);
-
     // Reads a collection of variably sized dirents into a buffer.
     // The number of dirents in a directory may be very large: akin to
     // calling read multiple times on a file, directories have a seek
@@ -5388,29 +5096,6 @@ class Directory final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<ReadDirentsResponse> ReadDirents_Deprecated(::fidl::BytePart _request_buffer, uint64_t max_bytes, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_dirents);
 
-    // Reads a collection of variably sized dirents into a buffer.
-    // The number of dirents in a directory may be very large: akin to
-    // calling read multiple times on a file, directories have a seek
-    // offset which is updated on subsequent calls to ReadDirents.
-    //
-    // These dirents are of the form:
-    // struct dirent {
-    //   // Describes the inode of the entry.
-    //   uint64 ino;
-    //   // Describes the length of the dirent name.
-    //   uint8 size;
-    //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use DIRENT_TYPE_* constants.
-    //   uint8 type;
-    //   // Unterminated name of entry.
-    //   char name[0];
-    // }
-    //
-    // This method does not require any rights, since one could always probe for
-    // directory contents by triggering name conflicts during file creation.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<ReadDirentsResponse> ReadDirents_Deprecated(::fidl::DecodedMessage<ReadDirentsRequest> params, ::fidl::BytePart response_buffer);
-
     // Resets the directory seek offset.
     //
     // This method does not require any rights, similar to ReadDirents.
@@ -5433,12 +5118,6 @@ class Directory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<RewindResponse> Rewind_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Resets the directory seek offset.
-    //
-    // This method does not require any rights, similar to ReadDirents.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<RewindResponse> Rewind_Deprecated(::fidl::BytePart response_buffer);
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
@@ -5466,13 +5145,6 @@ class Directory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetTokenResponse> GetToken_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::handle* out_token);
-
-    // Acquires a token to a Directory which can be used to identify
-    // access to it at a later point in time.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetTokenResponse> GetToken_Deprecated(::fidl::BytePart response_buffer);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
@@ -5516,17 +5188,6 @@ class Directory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<RenameResponse> Rename_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Renames an object named src to the name dst, in a directory represented by token.
-    //
-    // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
-    // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<RenameResponse> Rename_Deprecated(::fidl::DecodedMessage<RenameRequest> params, ::fidl::BytePart response_buffer);
 
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
@@ -5578,19 +5239,6 @@ class Directory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<LinkResponse> Link_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Creates a link to an object named src by the name dst, within a directory represented by
-    // token.
-    //
-    // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
-    //
-    // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<LinkResponse> Link_Deprecated(::fidl::DecodedMessage<LinkRequest> params, ::fidl::BytePart response_buffer);
 
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
@@ -5670,26 +5318,6 @@ class Directory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<WatchResponse> Watch_Deprecated(::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Watches a directory, receiving events of added messages on the
-    // watcher request channel.
-    //
-    // The "watcher" handle will send messages of the form:
-    // struct {
-    //   uint8 event;
-    //   uint8 len;
-    //   char name[];
-    // };
-    // Where names are NOT null-terminated.
-    //
-    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
-    //
-    // Mask specifies a bitmask of events to observe.
-    // Options must be zero; it is reserved.
-    //
-    // This method does not require any rights, similar to ReadDirents.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<WatchResponse> Watch_Deprecated(::fidl::DecodedMessage<WatchRequest> params, ::fidl::BytePart response_buffer);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
@@ -5778,25 +5406,6 @@ class Directory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t Clone_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
-    // Create another connection to the same remote object.
-    //
-    // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
-    //
-    // All other flags are ignored.
-    //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
-    // cloned object.
-    // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
-    // Messages are encoded and decoded in-place.
-    static zx_status_t Clone_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
-
     // Terminates connection with object.
     //
     // This method does not require any rights.
@@ -5819,12 +5428,6 @@ class Directory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<CloseResponse> Close_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Terminates connection with object.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<CloseResponse> Close_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Returns extra information about the type of the object.
     // If the `Describe` operation fails, the connection is closed.
@@ -5853,13 +5456,6 @@ class Directory final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<DescribeResponse> Describe_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
-    // Returns extra information about the type of the object.
-    // If the `Describe` operation fails, the connection is closed.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<DescribeResponse> Describe_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
@@ -5883,12 +5479,6 @@ class Directory final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Synchronizes updates to the node to the underlying media, if it exists.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     // Acquires information about the node.
     //
     // This method does not require any rights.
@@ -5911,12 +5501,6 @@ class Directory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
-
-    // Acquires information about the node.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Updates information about the node.
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
@@ -5945,13 +5529,6 @@ class Directory final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
-
     // Deprecated. Only for use with compatibility with devhost.
     static ResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
 
@@ -5964,10 +5541,6 @@ class Directory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
 
     // Opens a new object relative to this directory object.
     //
@@ -6066,31 +5639,6 @@ class Directory final {
     // the OPEN_FLAG_NODE_REFERENCE flag.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t Open_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
-
-    // Opens a new object relative to this directory object.
-    //
-    // `path` may contain multiple segments, separated by "/" characters,
-    // and should never be empty i.e. "" is an invalid path.
-    //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
-    // on the `object` handle, indicating the type of object opened.
-    //
-    // If an unknown value is sent for either flags or mode, the connection should
-    // be closed.
-    //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
-    // which will be connected to the opened entity.
-    //
-    // Rights are never increased. When you open a nested entity within a directory, you may only
-    // request the same rights as what the directory connection already has, or a subset of those.
-    // Exceeding those rights causes an access denied error to be transmitted in the
-    // `OnOpen` event if applicable, and the `object` connection closed.
-    //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
-    // Messages are encoded and decoded in-place.
-    static zx_status_t Open_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenRequest> params);
 
     // Detaches an object from this directory object.
     //
@@ -6211,36 +5759,6 @@ class Directory final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<UnlinkResponse> Unlink_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Detaches an object from this directory object.
-    //
-    // The underlying object may or may not be deleted after this method
-    // completes: although the link will be removed from the containing directory,
-    // objects with multiple references (such as files which are still open)
-    // will not actually be destroyed until all references are removed.
-    //
-    // If a directory is unlinked while it still has an open reference,
-    // it must become read-only, preventing new entries from being created
-    // until all references close and the directory is destroyed.
-    //
-    // `path` identifies the file which should be detached.
-    // If `path` contains multiple segments, separated by "/" characters,
-    // then the directory is traversed, one segment at a time, relative to the
-    // originally accessed Directory.
-    //
-    // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
-    //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
-    //
-    // Other errors may be returned for filesystem-specific reasons.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<UnlinkResponse> Unlink_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnlinkRequest> params, ::fidl::BytePart response_buffer);
-
     // Reads a collection of variably sized dirents into a buffer.
     // The number of dirents in a directory may be very large: akin to
     // calling read multiple times on a file, directories have a seek
@@ -6311,29 +5829,6 @@ class Directory final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<ReadDirentsResponse> ReadDirents_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t max_bytes, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_dirents);
 
-    // Reads a collection of variably sized dirents into a buffer.
-    // The number of dirents in a directory may be very large: akin to
-    // calling read multiple times on a file, directories have a seek
-    // offset which is updated on subsequent calls to ReadDirents.
-    //
-    // These dirents are of the form:
-    // struct dirent {
-    //   // Describes the inode of the entry.
-    //   uint64 ino;
-    //   // Describes the length of the dirent name.
-    //   uint8 size;
-    //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use DIRENT_TYPE_* constants.
-    //   uint8 type;
-    //   // Unterminated name of entry.
-    //   char name[0];
-    // }
-    //
-    // This method does not require any rights, since one could always probe for
-    // directory contents by triggering name conflicts during file creation.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<ReadDirentsResponse> ReadDirents_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadDirentsRequest> params, ::fidl::BytePart response_buffer);
-
     // Resets the directory seek offset.
     //
     // This method does not require any rights, similar to ReadDirents.
@@ -6356,12 +5851,6 @@ class Directory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<RewindResponse> Rewind_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Resets the directory seek offset.
-    //
-    // This method does not require any rights, similar to ReadDirents.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<RewindResponse> Rewind_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
@@ -6389,13 +5878,6 @@ class Directory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetTokenResponse> GetToken_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::handle* out_token);
-
-    // Acquires a token to a Directory which can be used to identify
-    // access to it at a later point in time.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetTokenResponse> GetToken_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
@@ -6439,17 +5921,6 @@ class Directory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<RenameResponse> Rename_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Renames an object named src to the name dst, in a directory represented by token.
-    //
-    // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
-    // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<RenameResponse> Rename_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RenameRequest> params, ::fidl::BytePart response_buffer);
 
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
@@ -6501,19 +5972,6 @@ class Directory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<LinkResponse> Link_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Creates a link to an object named src by the name dst, within a directory represented by
-    // token.
-    //
-    // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
-    //
-    // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<LinkResponse> Link_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LinkRequest> params, ::fidl::BytePart response_buffer);
 
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
@@ -6594,6 +6052,174 @@ class Directory final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<WatchResponse> Watch_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    // Create another connection to the same remote object.
+    //
+    // `flags` may be any of:
+    // - OPEN_RIGHT_*
+    // - OPEN_FLAG_APPEND
+    // - OPEN_FLAG_NO_REMOTE
+    // - OPEN_FLAG_DESCRIBE
+    // - CLONE_FLAG_SAME_RIGHTS
+    //
+    // All other flags are ignored.
+    //
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // cloned object.
+    // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    static ::fidl::internal::StatusAndError Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
+
+    // Terminates connection with object.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<CloseResponse> Close(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Returns extra information about the type of the object.
+    // If the `Describe` operation fails, the connection is closed.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<DescribeResponse> Describe(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Synchronizes updates to the node to the underlying media, if it exists.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<SyncResponse> Sync(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Acquires information about the node.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<GetAttrResponse> GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Updates information about the node.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    //
+    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
+
+    // Deprecated. Only for use with compatibility with devhost.
+    static ::fidl::DecodeResult<IoctlResponse> Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
+
+    // Opens a new object relative to this directory object.
+    //
+    // `path` may contain multiple segments, separated by "/" characters,
+    // and should never be empty i.e. "" is an invalid path.
+    //
+    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
+    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // on the `object` handle, indicating the type of object opened.
+    //
+    // If an unknown value is sent for either flags or mode, the connection should
+    // be closed.
+    //
+    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
+    // which will be connected to the opened entity.
+    //
+    // Rights are never increased. When you open a nested entity within a directory, you may only
+    // request the same rights as what the directory connection already has, or a subset of those.
+    // Exceeding those rights causes an access denied error to be transmitted in the
+    // `OnOpen` event if applicable, and the `object` connection closed.
+    //
+    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
+    // the OPEN_FLAG_NODE_REFERENCE flag.
+    static ::fidl::internal::StatusAndError Open(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenRequest> params);
+
+    // Detaches an object from this directory object.
+    //
+    // The underlying object may or may not be deleted after this method
+    // completes: although the link will be removed from the containing directory,
+    // objects with multiple references (such as files which are still open)
+    // will not actually be destroyed until all references are removed.
+    //
+    // If a directory is unlinked while it still has an open reference,
+    // it must become read-only, preventing new entries from being created
+    // until all references close and the directory is destroyed.
+    //
+    // `path` identifies the file which should be detached.
+    // If `path` contains multiple segments, separated by "/" characters,
+    // then the directory is traversed, one segment at a time, relative to the
+    // originally accessed Directory.
+    //
+    // Returns:
+    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
+    //     allow writable access.
+    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
+    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
+    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
+    //   ZX_ERR_UNAVAILABLE if `path` is ".".
+    //
+    // Other errors may be returned for filesystem-specific reasons.
+    //
+    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    static ::fidl::DecodeResult<UnlinkResponse> Unlink(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnlinkRequest> params, ::fidl::BytePart response_buffer);
+
+    // Reads a collection of variably sized dirents into a buffer.
+    // The number of dirents in a directory may be very large: akin to
+    // calling read multiple times on a file, directories have a seek
+    // offset which is updated on subsequent calls to ReadDirents.
+    //
+    // These dirents are of the form:
+    // struct dirent {
+    //   // Describes the inode of the entry.
+    //   uint64 ino;
+    //   // Describes the length of the dirent name.
+    //   uint8 size;
+    //   // Describes the type of the entry. Aligned with the
+    //   /// POSIX d_type values. Use DIRENT_TYPE_* constants.
+    //   uint8 type;
+    //   // Unterminated name of entry.
+    //   char name[0];
+    // }
+    //
+    // This method does not require any rights, since one could always probe for
+    // directory contents by triggering name conflicts during file creation.
+    static ::fidl::DecodeResult<ReadDirentsResponse> ReadDirents(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadDirentsRequest> params, ::fidl::BytePart response_buffer);
+
+    // Resets the directory seek offset.
+    //
+    // This method does not require any rights, similar to ReadDirents.
+    static ::fidl::DecodeResult<RewindResponse> Rewind(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Acquires a token to a Directory which can be used to identify
+    // access to it at a later point in time.
+    //
+    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    static ::fidl::DecodeResult<GetTokenResponse> GetToken(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Renames an object named src to the name dst, in a directory represented by token.
+    //
+    // `src/dst` must be resolved object names. Including "/" in any position
+    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
+    // Returning "/" at the end of either string implies that it must be a
+    // directory, or else ZX_ERR_NOT_DIR should be returned.
+    //
+    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    static ::fidl::DecodeResult<RenameResponse> Rename(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RenameRequest> params, ::fidl::BytePart response_buffer);
+
+    // Creates a link to an object named src by the name dst, within a directory represented by
+    // token.
+    //
+    // `src` must be a resolved object name. Including "/" in the string will
+    // return ZX_ERR_INVALID_ARGS.
+    //
+    // `dst` must be a resolved object name. Including "/" in the string will
+    // return ZX_ERR_INVALID_ARGS.
+    //
+    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    static ::fidl::DecodeResult<LinkResponse> Link(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LinkRequest> params, ::fidl::BytePart response_buffer);
+
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
     //
@@ -6611,14 +6237,8 @@ class Directory final {
     // Options must be zero; it is reserved.
     //
     // This method does not require any rights, similar to ReadDirents.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<WatchResponse> Watch_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WatchRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<WatchResponse> Watch(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WatchRequest> params, ::fidl::BytePart response_buffer);
 
-    // Handle all possible events defined in this protocol.
-    // Blocks to consume exactly one message from the channel, then call the corresponding handler
-    // defined in |EventHandlers|. The return status of the handler function is folded with any
-    // transport-level errors and returned.
-    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -7927,25 +7547,6 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t Clone_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
-    // Create another connection to the same remote object.
-    //
-    // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
-    //
-    // All other flags are ignored.
-    //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
-    // cloned object.
-    // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
-    // Messages are encoded and decoded in-place.
-    zx_status_t Clone_Deprecated(::fidl::DecodedMessage<CloneRequest> params);
-
     // Terminates connection with object.
     //
     // This method does not require any rights.
@@ -7968,12 +7569,6 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<CloseResponse> Close_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Terminates connection with object.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<CloseResponse> Close_Deprecated(::fidl::BytePart response_buffer);
 
     // Returns extra information about the type of the object.
     // If the `Describe` operation fails, the connection is closed.
@@ -8002,13 +7597,6 @@ class DirectoryAdmin final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<DescribeResponse> Describe_Deprecated(::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
-    // Returns extra information about the type of the object.
-    // If the `Describe` operation fails, the connection is closed.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<DescribeResponse> Describe_Deprecated(::fidl::BytePart response_buffer);
-
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
@@ -8032,12 +7620,6 @@ class DirectoryAdmin final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Synchronizes updates to the node to the underlying media, if it exists.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(::fidl::BytePart response_buffer);
-
     // Acquires information about the node.
     //
     // This method does not require any rights.
@@ -8060,12 +7642,6 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
-
-    // Acquires information about the node.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(::fidl::BytePart response_buffer);
 
     // Updates information about the node.
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
@@ -8094,13 +7670,6 @@ class DirectoryAdmin final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
-
     // Deprecated. Only for use with compatibility with devhost.
     ResultOf::Ioctl Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
 
@@ -8113,10 +7682,6 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
 
     // Opens a new object relative to this directory object.
     //
@@ -8215,31 +7780,6 @@ class DirectoryAdmin final {
     // the OPEN_FLAG_NODE_REFERENCE flag.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t Open_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
-
-    // Opens a new object relative to this directory object.
-    //
-    // `path` may contain multiple segments, separated by "/" characters,
-    // and should never be empty i.e. "" is an invalid path.
-    //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
-    // on the `object` handle, indicating the type of object opened.
-    //
-    // If an unknown value is sent for either flags or mode, the connection should
-    // be closed.
-    //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
-    // which will be connected to the opened entity.
-    //
-    // Rights are never increased. When you open a nested entity within a directory, you may only
-    // request the same rights as what the directory connection already has, or a subset of those.
-    // Exceeding those rights causes an access denied error to be transmitted in the
-    // `OnOpen` event if applicable, and the `object` connection closed.
-    //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
-    // Messages are encoded and decoded in-place.
-    zx_status_t Open_Deprecated(::fidl::DecodedMessage<OpenRequest> params);
 
     // Detaches an object from this directory object.
     //
@@ -8360,36 +7900,6 @@ class DirectoryAdmin final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<UnlinkResponse> Unlink_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Detaches an object from this directory object.
-    //
-    // The underlying object may or may not be deleted after this method
-    // completes: although the link will be removed from the containing directory,
-    // objects with multiple references (such as files which are still open)
-    // will not actually be destroyed until all references are removed.
-    //
-    // If a directory is unlinked while it still has an open reference,
-    // it must become read-only, preventing new entries from being created
-    // until all references close and the directory is destroyed.
-    //
-    // `path` identifies the file which should be detached.
-    // If `path` contains multiple segments, separated by "/" characters,
-    // then the directory is traversed, one segment at a time, relative to the
-    // originally accessed Directory.
-    //
-    // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
-    //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
-    //
-    // Other errors may be returned for filesystem-specific reasons.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<UnlinkResponse> Unlink_Deprecated(::fidl::DecodedMessage<UnlinkRequest> params, ::fidl::BytePart response_buffer);
-
     // Reads a collection of variably sized dirents into a buffer.
     // The number of dirents in a directory may be very large: akin to
     // calling read multiple times on a file, directories have a seek
@@ -8460,29 +7970,6 @@ class DirectoryAdmin final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<ReadDirentsResponse> ReadDirents_Deprecated(::fidl::BytePart _request_buffer, uint64_t max_bytes, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_dirents);
 
-    // Reads a collection of variably sized dirents into a buffer.
-    // The number of dirents in a directory may be very large: akin to
-    // calling read multiple times on a file, directories have a seek
-    // offset which is updated on subsequent calls to ReadDirents.
-    //
-    // These dirents are of the form:
-    // struct dirent {
-    //   // Describes the inode of the entry.
-    //   uint64 ino;
-    //   // Describes the length of the dirent name.
-    //   uint8 size;
-    //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use DIRENT_TYPE_* constants.
-    //   uint8 type;
-    //   // Unterminated name of entry.
-    //   char name[0];
-    // }
-    //
-    // This method does not require any rights, since one could always probe for
-    // directory contents by triggering name conflicts during file creation.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<ReadDirentsResponse> ReadDirents_Deprecated(::fidl::DecodedMessage<ReadDirentsRequest> params, ::fidl::BytePart response_buffer);
-
     // Resets the directory seek offset.
     //
     // This method does not require any rights, similar to ReadDirents.
@@ -8505,12 +7992,6 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<RewindResponse> Rewind_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Resets the directory seek offset.
-    //
-    // This method does not require any rights, similar to ReadDirents.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<RewindResponse> Rewind_Deprecated(::fidl::BytePart response_buffer);
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
@@ -8538,13 +8019,6 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetTokenResponse> GetToken_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::handle* out_token);
-
-    // Acquires a token to a Directory which can be used to identify
-    // access to it at a later point in time.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetTokenResponse> GetToken_Deprecated(::fidl::BytePart response_buffer);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
@@ -8588,17 +8062,6 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<RenameResponse> Rename_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Renames an object named src to the name dst, in a directory represented by token.
-    //
-    // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
-    // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<RenameResponse> Rename_Deprecated(::fidl::DecodedMessage<RenameRequest> params, ::fidl::BytePart response_buffer);
 
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
@@ -8650,19 +8113,6 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<LinkResponse> Link_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Creates a link to an object named src by the name dst, within a directory represented by
-    // token.
-    //
-    // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
-    //
-    // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<LinkResponse> Link_Deprecated(::fidl::DecodedMessage<LinkRequest> params, ::fidl::BytePart response_buffer);
 
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
@@ -8743,26 +8193,6 @@ class DirectoryAdmin final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<WatchResponse> Watch_Deprecated(::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Watches a directory, receiving events of added messages on the
-    // watcher request channel.
-    //
-    // The "watcher" handle will send messages of the form:
-    // struct {
-    //   uint8 event;
-    //   uint8 len;
-    //   char name[];
-    // };
-    // Where names are NOT null-terminated.
-    //
-    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
-    //
-    // Mask specifies a bitmask of events to observe.
-    // Options must be zero; it is reserved.
-    //
-    // This method does not require any rights, similar to ReadDirents.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<WatchResponse> Watch_Deprecated(::fidl::DecodedMessage<WatchRequest> params, ::fidl::BytePart response_buffer);
-
     // Mount a channel representing a remote filesystem onto this directory.
     // All future requests to this node will be forwarded to the remote filesystem.
     // To re-open a node without forwarding to the remote target, the node
@@ -8790,13 +8220,6 @@ class DirectoryAdmin final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<MountResponse> Mount_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel remote, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Mount a channel representing a remote filesystem onto this directory.
-    // All future requests to this node will be forwarded to the remote filesystem.
-    // To re-open a node without forwarding to the remote target, the node
-    // should be opened with OPEN_FLAG_NO_REMOTE.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<MountResponse> Mount_Deprecated(::fidl::DecodedMessage<MountRequest> params, ::fidl::BytePart response_buffer);
-
     // Atomically create a directory with a provided path, and mount the
     // remote handle to the newly created directory.
     ResultOf::MountAndCreate MountAndCreate(::zx::channel remote, ::fidl::StringView name, uint32_t flags);
@@ -8815,11 +8238,6 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<MountAndCreateResponse> MountAndCreate_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel remote, ::fidl::StringView name, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Atomically create a directory with a provided path, and mount the
-    // remote handle to the newly created directory.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<MountAndCreateResponse> MountAndCreate_Deprecated(::fidl::DecodedMessage<MountAndCreateRequest> params, ::fidl::BytePart response_buffer);
 
     // Unmount this filesystem. After this function returns successfully,
     // all connections to the filesystem will be terminated.
@@ -8840,11 +8258,6 @@ class DirectoryAdmin final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<UnmountResponse> Unmount_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Unmount this filesystem. After this function returns successfully,
-    // all connections to the filesystem will be terminated.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<UnmountResponse> Unmount_Deprecated(::fidl::BytePart response_buffer);
-
     // Detach a node which was previously attached to this directory
     // with Mount.
     ResultOf::UnmountNode UnmountNode();
@@ -8864,11 +8277,6 @@ class DirectoryAdmin final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<UnmountNodeResponse> UnmountNode_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::channel* out_remote);
 
-    // Detach a node which was previously attached to this directory
-    // with Mount.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<UnmountNodeResponse> UnmountNode_Deprecated(::fidl::BytePart response_buffer);
-
     // Query the filesystem for filesystem-specific information.
     ResultOf::QueryFilesystem QueryFilesystem();
 
@@ -8882,10 +8290,6 @@ class DirectoryAdmin final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<QueryFilesystemResponse> QueryFilesystem_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, FilesystemInfo** out_info);
 
-    // Query the filesystem for filesystem-specific information.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<QueryFilesystemResponse> QueryFilesystem_Deprecated(::fidl::BytePart response_buffer);
-
     // Acquire the path to the device backing this filesystem, if there is one.
     ResultOf::GetDevicePath GetDevicePath();
 
@@ -8898,10 +8302,6 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetDevicePathResponse> GetDevicePath_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::StringView* out_path);
-
-    // Acquire the path to the device backing this filesystem, if there is one.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetDevicePathResponse> GetDevicePath_Deprecated(::fidl::BytePart response_buffer);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
@@ -8990,25 +8390,6 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t Clone_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
-    // Create another connection to the same remote object.
-    //
-    // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
-    //
-    // All other flags are ignored.
-    //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
-    // cloned object.
-    // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
-    // Messages are encoded and decoded in-place.
-    static zx_status_t Clone_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
-
     // Terminates connection with object.
     //
     // This method does not require any rights.
@@ -9031,12 +8412,6 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<CloseResponse> Close_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Terminates connection with object.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<CloseResponse> Close_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Returns extra information about the type of the object.
     // If the `Describe` operation fails, the connection is closed.
@@ -9065,13 +8440,6 @@ class DirectoryAdmin final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<DescribeResponse> Describe_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
-    // Returns extra information about the type of the object.
-    // If the `Describe` operation fails, the connection is closed.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<DescribeResponse> Describe_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
@@ -9095,12 +8463,6 @@ class DirectoryAdmin final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Synchronizes updates to the node to the underlying media, if it exists.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     // Acquires information about the node.
     //
     // This method does not require any rights.
@@ -9123,12 +8485,6 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
-
-    // Acquires information about the node.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Updates information about the node.
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
@@ -9157,13 +8513,6 @@ class DirectoryAdmin final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
-
     // Deprecated. Only for use with compatibility with devhost.
     static ResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
 
@@ -9176,10 +8525,6 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
 
     // Opens a new object relative to this directory object.
     //
@@ -9278,31 +8623,6 @@ class DirectoryAdmin final {
     // the OPEN_FLAG_NODE_REFERENCE flag.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t Open_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
-
-    // Opens a new object relative to this directory object.
-    //
-    // `path` may contain multiple segments, separated by "/" characters,
-    // and should never be empty i.e. "" is an invalid path.
-    //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
-    // on the `object` handle, indicating the type of object opened.
-    //
-    // If an unknown value is sent for either flags or mode, the connection should
-    // be closed.
-    //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
-    // which will be connected to the opened entity.
-    //
-    // Rights are never increased. When you open a nested entity within a directory, you may only
-    // request the same rights as what the directory connection already has, or a subset of those.
-    // Exceeding those rights causes an access denied error to be transmitted in the
-    // `OnOpen` event if applicable, and the `object` connection closed.
-    //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
-    // Messages are encoded and decoded in-place.
-    static zx_status_t Open_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenRequest> params);
 
     // Detaches an object from this directory object.
     //
@@ -9423,36 +8743,6 @@ class DirectoryAdmin final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<UnlinkResponse> Unlink_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Detaches an object from this directory object.
-    //
-    // The underlying object may or may not be deleted after this method
-    // completes: although the link will be removed from the containing directory,
-    // objects with multiple references (such as files which are still open)
-    // will not actually be destroyed until all references are removed.
-    //
-    // If a directory is unlinked while it still has an open reference,
-    // it must become read-only, preventing new entries from being created
-    // until all references close and the directory is destroyed.
-    //
-    // `path` identifies the file which should be detached.
-    // If `path` contains multiple segments, separated by "/" characters,
-    // then the directory is traversed, one segment at a time, relative to the
-    // originally accessed Directory.
-    //
-    // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
-    //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
-    //
-    // Other errors may be returned for filesystem-specific reasons.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<UnlinkResponse> Unlink_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnlinkRequest> params, ::fidl::BytePart response_buffer);
-
     // Reads a collection of variably sized dirents into a buffer.
     // The number of dirents in a directory may be very large: akin to
     // calling read multiple times on a file, directories have a seek
@@ -9523,29 +8813,6 @@ class DirectoryAdmin final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<ReadDirentsResponse> ReadDirents_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t max_bytes, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_dirents);
 
-    // Reads a collection of variably sized dirents into a buffer.
-    // The number of dirents in a directory may be very large: akin to
-    // calling read multiple times on a file, directories have a seek
-    // offset which is updated on subsequent calls to ReadDirents.
-    //
-    // These dirents are of the form:
-    // struct dirent {
-    //   // Describes the inode of the entry.
-    //   uint64 ino;
-    //   // Describes the length of the dirent name.
-    //   uint8 size;
-    //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use DIRENT_TYPE_* constants.
-    //   uint8 type;
-    //   // Unterminated name of entry.
-    //   char name[0];
-    // }
-    //
-    // This method does not require any rights, since one could always probe for
-    // directory contents by triggering name conflicts during file creation.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<ReadDirentsResponse> ReadDirents_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadDirentsRequest> params, ::fidl::BytePart response_buffer);
-
     // Resets the directory seek offset.
     //
     // This method does not require any rights, similar to ReadDirents.
@@ -9568,12 +8835,6 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<RewindResponse> Rewind_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Resets the directory seek offset.
-    //
-    // This method does not require any rights, similar to ReadDirents.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<RewindResponse> Rewind_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
@@ -9601,13 +8862,6 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetTokenResponse> GetToken_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::handle* out_token);
-
-    // Acquires a token to a Directory which can be used to identify
-    // access to it at a later point in time.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetTokenResponse> GetToken_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
@@ -9651,17 +8905,6 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<RenameResponse> Rename_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Renames an object named src to the name dst, in a directory represented by token.
-    //
-    // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
-    // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<RenameResponse> Rename_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RenameRequest> params, ::fidl::BytePart response_buffer);
 
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
@@ -9713,19 +8956,6 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<LinkResponse> Link_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Creates a link to an object named src by the name dst, within a directory represented by
-    // token.
-    //
-    // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
-    //
-    // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<LinkResponse> Link_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LinkRequest> params, ::fidl::BytePart response_buffer);
 
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
@@ -9806,26 +9036,6 @@ class DirectoryAdmin final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<WatchResponse> Watch_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Watches a directory, receiving events of added messages on the
-    // watcher request channel.
-    //
-    // The "watcher" handle will send messages of the form:
-    // struct {
-    //   uint8 event;
-    //   uint8 len;
-    //   char name[];
-    // };
-    // Where names are NOT null-terminated.
-    //
-    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
-    //
-    // Mask specifies a bitmask of events to observe.
-    // Options must be zero; it is reserved.
-    //
-    // This method does not require any rights, similar to ReadDirents.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<WatchResponse> Watch_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WatchRequest> params, ::fidl::BytePart response_buffer);
-
     // Mount a channel representing a remote filesystem onto this directory.
     // All future requests to this node will be forwarded to the remote filesystem.
     // To re-open a node without forwarding to the remote target, the node
@@ -9853,13 +9063,6 @@ class DirectoryAdmin final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<MountResponse> Mount_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel remote, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Mount a channel representing a remote filesystem onto this directory.
-    // All future requests to this node will be forwarded to the remote filesystem.
-    // To re-open a node without forwarding to the remote target, the node
-    // should be opened with OPEN_FLAG_NO_REMOTE.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<MountResponse> Mount_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MountRequest> params, ::fidl::BytePart response_buffer);
-
     // Atomically create a directory with a provided path, and mount the
     // remote handle to the newly created directory.
     static ResultOf::MountAndCreate MountAndCreate(zx::unowned_channel _client_end, ::zx::channel remote, ::fidl::StringView name, uint32_t flags);
@@ -9878,11 +9081,6 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<MountAndCreateResponse> MountAndCreate_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel remote, ::fidl::StringView name, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Atomically create a directory with a provided path, and mount the
-    // remote handle to the newly created directory.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<MountAndCreateResponse> MountAndCreate_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MountAndCreateRequest> params, ::fidl::BytePart response_buffer);
 
     // Unmount this filesystem. After this function returns successfully,
     // all connections to the filesystem will be terminated.
@@ -9903,11 +9101,6 @@ class DirectoryAdmin final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<UnmountResponse> Unmount_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Unmount this filesystem. After this function returns successfully,
-    // all connections to the filesystem will be terminated.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<UnmountResponse> Unmount_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     // Detach a node which was previously attached to this directory
     // with Mount.
     static ResultOf::UnmountNode UnmountNode(zx::unowned_channel _client_end);
@@ -9927,11 +9120,6 @@ class DirectoryAdmin final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<UnmountNodeResponse> UnmountNode_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::channel* out_remote);
 
-    // Detach a node which was previously attached to this directory
-    // with Mount.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<UnmountNodeResponse> UnmountNode_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     // Query the filesystem for filesystem-specific information.
     static ResultOf::QueryFilesystem QueryFilesystem(zx::unowned_channel _client_end);
 
@@ -9944,10 +9132,6 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<QueryFilesystemResponse> QueryFilesystem_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, FilesystemInfo** out_info);
-
-    // Query the filesystem for filesystem-specific information.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<QueryFilesystemResponse> QueryFilesystem_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Acquire the path to the device backing this filesystem, if there is one.
     static ResultOf::GetDevicePath GetDevicePath(zx::unowned_channel _client_end);
@@ -9962,15 +9146,217 @@ class DirectoryAdmin final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetDevicePathResponse> GetDevicePath_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::StringView* out_path);
 
-    // Acquire the path to the device backing this filesystem, if there is one.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetDevicePathResponse> GetDevicePath_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
     // transport-level errors and returned.
     static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    // Create another connection to the same remote object.
+    //
+    // `flags` may be any of:
+    // - OPEN_RIGHT_*
+    // - OPEN_FLAG_APPEND
+    // - OPEN_FLAG_NO_REMOTE
+    // - OPEN_FLAG_DESCRIBE
+    // - CLONE_FLAG_SAME_RIGHTS
+    //
+    // All other flags are ignored.
+    //
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // cloned object.
+    // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    static ::fidl::internal::StatusAndError Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
+
+    // Terminates connection with object.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<CloseResponse> Close(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Returns extra information about the type of the object.
+    // If the `Describe` operation fails, the connection is closed.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<DescribeResponse> Describe(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Synchronizes updates to the node to the underlying media, if it exists.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<SyncResponse> Sync(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Acquires information about the node.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<GetAttrResponse> GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Updates information about the node.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    //
+    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
+
+    // Deprecated. Only for use with compatibility with devhost.
+    static ::fidl::DecodeResult<IoctlResponse> Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
+
+    // Opens a new object relative to this directory object.
+    //
+    // `path` may contain multiple segments, separated by "/" characters,
+    // and should never be empty i.e. "" is an invalid path.
+    //
+    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
+    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // on the `object` handle, indicating the type of object opened.
+    //
+    // If an unknown value is sent for either flags or mode, the connection should
+    // be closed.
+    //
+    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
+    // which will be connected to the opened entity.
+    //
+    // Rights are never increased. When you open a nested entity within a directory, you may only
+    // request the same rights as what the directory connection already has, or a subset of those.
+    // Exceeding those rights causes an access denied error to be transmitted in the
+    // `OnOpen` event if applicable, and the `object` connection closed.
+    //
+    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
+    // the OPEN_FLAG_NODE_REFERENCE flag.
+    static ::fidl::internal::StatusAndError Open(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenRequest> params);
+
+    // Detaches an object from this directory object.
+    //
+    // The underlying object may or may not be deleted after this method
+    // completes: although the link will be removed from the containing directory,
+    // objects with multiple references (such as files which are still open)
+    // will not actually be destroyed until all references are removed.
+    //
+    // If a directory is unlinked while it still has an open reference,
+    // it must become read-only, preventing new entries from being created
+    // until all references close and the directory is destroyed.
+    //
+    // `path` identifies the file which should be detached.
+    // If `path` contains multiple segments, separated by "/" characters,
+    // then the directory is traversed, one segment at a time, relative to the
+    // originally accessed Directory.
+    //
+    // Returns:
+    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
+    //     allow writable access.
+    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
+    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
+    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
+    //   ZX_ERR_UNAVAILABLE if `path` is ".".
+    //
+    // Other errors may be returned for filesystem-specific reasons.
+    //
+    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    static ::fidl::DecodeResult<UnlinkResponse> Unlink(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnlinkRequest> params, ::fidl::BytePart response_buffer);
+
+    // Reads a collection of variably sized dirents into a buffer.
+    // The number of dirents in a directory may be very large: akin to
+    // calling read multiple times on a file, directories have a seek
+    // offset which is updated on subsequent calls to ReadDirents.
+    //
+    // These dirents are of the form:
+    // struct dirent {
+    //   // Describes the inode of the entry.
+    //   uint64 ino;
+    //   // Describes the length of the dirent name.
+    //   uint8 size;
+    //   // Describes the type of the entry. Aligned with the
+    //   /// POSIX d_type values. Use DIRENT_TYPE_* constants.
+    //   uint8 type;
+    //   // Unterminated name of entry.
+    //   char name[0];
+    // }
+    //
+    // This method does not require any rights, since one could always probe for
+    // directory contents by triggering name conflicts during file creation.
+    static ::fidl::DecodeResult<ReadDirentsResponse> ReadDirents(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadDirentsRequest> params, ::fidl::BytePart response_buffer);
+
+    // Resets the directory seek offset.
+    //
+    // This method does not require any rights, similar to ReadDirents.
+    static ::fidl::DecodeResult<RewindResponse> Rewind(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Acquires a token to a Directory which can be used to identify
+    // access to it at a later point in time.
+    //
+    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    static ::fidl::DecodeResult<GetTokenResponse> GetToken(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Renames an object named src to the name dst, in a directory represented by token.
+    //
+    // `src/dst` must be resolved object names. Including "/" in any position
+    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
+    // Returning "/" at the end of either string implies that it must be a
+    // directory, or else ZX_ERR_NOT_DIR should be returned.
+    //
+    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    static ::fidl::DecodeResult<RenameResponse> Rename(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RenameRequest> params, ::fidl::BytePart response_buffer);
+
+    // Creates a link to an object named src by the name dst, within a directory represented by
+    // token.
+    //
+    // `src` must be a resolved object name. Including "/" in the string will
+    // return ZX_ERR_INVALID_ARGS.
+    //
+    // `dst` must be a resolved object name. Including "/" in the string will
+    // return ZX_ERR_INVALID_ARGS.
+    //
+    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    static ::fidl::DecodeResult<LinkResponse> Link(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LinkRequest> params, ::fidl::BytePart response_buffer);
+
+    // Watches a directory, receiving events of added messages on the
+    // watcher request channel.
+    //
+    // The "watcher" handle will send messages of the form:
+    // struct {
+    //   uint8 event;
+    //   uint8 len;
+    //   char name[];
+    // };
+    // Where names are NOT null-terminated.
+    //
+    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
+    //
+    // Mask specifies a bitmask of events to observe.
+    // Options must be zero; it is reserved.
+    //
+    // This method does not require any rights, similar to ReadDirents.
+    static ::fidl::DecodeResult<WatchResponse> Watch(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WatchRequest> params, ::fidl::BytePart response_buffer);
+
+    // Mount a channel representing a remote filesystem onto this directory.
+    // All future requests to this node will be forwarded to the remote filesystem.
+    // To re-open a node without forwarding to the remote target, the node
+    // should be opened with OPEN_FLAG_NO_REMOTE.
+    static ::fidl::DecodeResult<MountResponse> Mount(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MountRequest> params, ::fidl::BytePart response_buffer);
+
+    // Atomically create a directory with a provided path, and mount the
+    // remote handle to the newly created directory.
+    static ::fidl::DecodeResult<MountAndCreateResponse> MountAndCreate(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MountAndCreateRequest> params, ::fidl::BytePart response_buffer);
+
+    // Unmount this filesystem. After this function returns successfully,
+    // all connections to the filesystem will be terminated.
+    static ::fidl::DecodeResult<UnmountResponse> Unmount(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Detach a node which was previously attached to this directory
+    // with Mount.
+    static ::fidl::DecodeResult<UnmountNodeResponse> UnmountNode(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Query the filesystem for filesystem-specific information.
+    static ::fidl::DecodeResult<QueryFilesystemResponse> QueryFilesystem(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Acquire the path to the device backing this filesystem, if there is one.
+    static ::fidl::DecodeResult<GetDevicePathResponse> GetDevicePath(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
   };
 
   // Pure-virtual interface to be implemented by a server.

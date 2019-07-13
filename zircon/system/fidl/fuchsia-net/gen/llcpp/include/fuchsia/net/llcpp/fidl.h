@@ -192,6 +192,13 @@ class Connectivity final {
     static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
   };
 
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+  };
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:
@@ -749,12 +756,6 @@ class NameLookup final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<LookupIpResponse> LookupIp_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView hostname, LookupIpOptions options, ::fidl::BytePart _response_buffer, NameLookup_LookupIp_Result* out_result);
 
-    // Look up a list of IP addresses by hostname.
-    //
-    // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<LookupIpResponse> LookupIp_Deprecated(::fidl::DecodedMessage<LookupIpRequest> params, ::fidl::BytePart response_buffer);
-
     // Look up a hostname by IP address.
     ResultOf::LookupHostname LookupHostname(IpAddress addr);
 
@@ -767,10 +768,6 @@ class NameLookup final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<LookupHostnameResponse> LookupHostname_Deprecated(::fidl::BytePart _request_buffer, IpAddress addr, ::fidl::BytePart _response_buffer, NameLookup_LookupHostname_Result* out_result);
-
-    // Look up a hostname by IP address.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<LookupHostnameResponse> LookupHostname_Deprecated(::fidl::DecodedMessage<LookupHostnameRequest> params, ::fidl::BytePart response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -799,12 +796,6 @@ class NameLookup final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<LookupIpResponse> LookupIp_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView hostname, LookupIpOptions options, ::fidl::BytePart _response_buffer, NameLookup_LookupIp_Result* out_result);
 
-    // Look up a list of IP addresses by hostname.
-    //
-    // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<LookupIpResponse> LookupIp_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupIpRequest> params, ::fidl::BytePart response_buffer);
-
     // Look up a hostname by IP address.
     static ResultOf::LookupHostname LookupHostname(zx::unowned_channel _client_end, IpAddress addr);
 
@@ -818,9 +809,20 @@ class NameLookup final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<LookupHostnameResponse> LookupHostname_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, IpAddress addr, ::fidl::BytePart _response_buffer, NameLookup_LookupHostname_Result* out_result);
 
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    // Look up a list of IP addresses by hostname.
+    //
+    // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
+    static ::fidl::DecodeResult<LookupIpResponse> LookupIp(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupIpRequest> params, ::fidl::BytePart response_buffer);
+
     // Look up a hostname by IP address.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<LookupHostnameResponse> LookupHostname_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupHostnameRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LookupHostnameResponse> LookupHostname(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupHostnameRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1043,11 +1045,6 @@ class SocketProvider final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetAddrInfoResponse> GetAddrInfo_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView node, ::fidl::StringView service, AddrInfoHints* hints, ::fidl::BytePart _response_buffer, AddrInfoStatus* out_status, uint32_t* out_nres, ::fidl::Array<AddrInfo, 4>* out_res);
 
-    // Retrieves information about the address of a node and/or service. The number of valid
-    // results in `res` is given by the `count` return value.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetAddrInfoResponse> GetAddrInfo_Deprecated(::fidl::DecodedMessage<GetAddrInfoRequest> params, ::fidl::BytePart response_buffer);
-
    private:
     ::zx::channel channel_;
   };
@@ -1075,10 +1072,16 @@ class SocketProvider final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetAddrInfoResponse> GetAddrInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView node, ::fidl::StringView service, AddrInfoHints* hints, ::fidl::BytePart _response_buffer, AddrInfoStatus* out_status, uint32_t* out_nres, ::fidl::Array<AddrInfo, 4>* out_res);
 
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
     // Retrieves information about the address of a node and/or service. The number of valid
     // results in `res` is given by the `count` return value.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetAddrInfoResponse> GetAddrInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetAddrInfoRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetAddrInfoResponse> GetAddrInfo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetAddrInfoRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

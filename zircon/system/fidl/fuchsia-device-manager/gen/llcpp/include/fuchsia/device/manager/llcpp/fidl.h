@@ -306,10 +306,6 @@ class DebugDumper final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<DumpTreeResponse> DumpTree_Deprecated(::fidl::BytePart _request_buffer, ::zx::vmo output, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_written, uint64_t* out_available);
 
-    // Print device tree into `output`, returns bytes `written` and bytes `available` to write.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<DumpTreeResponse> DumpTree_Deprecated(::fidl::DecodedMessage<DumpTreeRequest> params, ::fidl::BytePart response_buffer);
-
     // Print information about all drivers into `output`, returns bytes `written` and bytes `available` to write.
     ResultOf::DumpDrivers DumpDrivers(::zx::vmo output);
 
@@ -324,10 +320,6 @@ class DebugDumper final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<DumpDriversResponse> DumpDrivers_Deprecated(::fidl::BytePart _request_buffer, ::zx::vmo output, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_written, uint64_t* out_available);
-
-    // Print information about all drivers into `output`, returns bytes `written` and bytes `available` to write.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<DumpDriversResponse> DumpDrivers_Deprecated(::fidl::DecodedMessage<DumpDriversRequest> params, ::fidl::BytePart response_buffer);
 
     // Print all devices and their binding properties into `output`, returns bytes `written`
     // and bytes `available` to write.
@@ -347,11 +339,6 @@ class DebugDumper final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<DumpBindingPropertiesResponse> DumpBindingProperties_Deprecated(::fidl::BytePart _request_buffer, ::zx::vmo output, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_written, uint64_t* out_available);
-
-    // Print all devices and their binding properties into `output`, returns bytes `written`
-    // and bytes `available` to write.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<DumpBindingPropertiesResponse> DumpBindingProperties_Deprecated(::fidl::DecodedMessage<DumpBindingPropertiesRequest> params, ::fidl::BytePart response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -376,10 +363,6 @@ class DebugDumper final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<DumpTreeResponse> DumpTree_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo output, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_written, uint64_t* out_available);
 
-    // Print device tree into `output`, returns bytes `written` and bytes `available` to write.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<DumpTreeResponse> DumpTree_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DumpTreeRequest> params, ::fidl::BytePart response_buffer);
-
     // Print information about all drivers into `output`, returns bytes `written` and bytes `available` to write.
     static ResultOf::DumpDrivers DumpDrivers(zx::unowned_channel _client_end, ::zx::vmo output);
 
@@ -394,10 +377,6 @@ class DebugDumper final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<DumpDriversResponse> DumpDrivers_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo output, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_written, uint64_t* out_available);
-
-    // Print information about all drivers into `output`, returns bytes `written` and bytes `available` to write.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<DumpDriversResponse> DumpDrivers_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DumpDriversRequest> params, ::fidl::BytePart response_buffer);
 
     // Print all devices and their binding properties into `output`, returns bytes `written`
     // and bytes `available` to write.
@@ -418,10 +397,22 @@ class DebugDumper final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<DumpBindingPropertiesResponse> DumpBindingProperties_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo output, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_written, uint64_t* out_available);
 
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    // Print device tree into `output`, returns bytes `written` and bytes `available` to write.
+    static ::fidl::DecodeResult<DumpTreeResponse> DumpTree(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DumpTreeRequest> params, ::fidl::BytePart response_buffer);
+
+    // Print information about all drivers into `output`, returns bytes `written` and bytes `available` to write.
+    static ::fidl::DecodeResult<DumpDriversResponse> DumpDrivers(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DumpDriversRequest> params, ::fidl::BytePart response_buffer);
+
     // Print all devices and their binding properties into `output`, returns bytes `written`
     // and bytes `available` to write.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<DumpBindingPropertiesResponse> DumpBindingProperties_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DumpBindingPropertiesRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<DumpBindingPropertiesResponse> DumpBindingProperties(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DumpBindingPropertiesRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -599,11 +590,6 @@ class Administrator final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SuspendResponse> Suspend_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
-    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SuspendResponse> Suspend_Deprecated(::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
-
    private:
     ::zx::channel channel_;
   };
@@ -631,10 +617,16 @@ class Administrator final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SuspendResponse> Suspend_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
     // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
     // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SuspendResponse> Suspend_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SuspendResponse> Suspend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -875,12 +867,6 @@ class DevhostController final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t CreateDeviceStub_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel rpc, uint32_t protocol_id, uint64_t local_device_id);
 
-    // Create a device in the devhost that only implements the device protocol
-    // and claims to support the given `protocol_id`.  This device will communicate
-    // with the devcoordinator via `rpc`.
-    // Messages are encoded and decoded in-place.
-    zx_status_t CreateDeviceStub_Deprecated(::fidl::DecodedMessage<CreateDeviceStubRequest> params);
-
     // Create a device in the devhost representing the shadowed half of device
     // in another devhost.  This new device will communicate with the devcoordinator
     // via `rpc`, and with its other half via `parent_proxy`.
@@ -947,23 +933,6 @@ class DevhostController final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t CreateDevice_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id);
 
-    // Create a device in the devhost representing the shadowed half of device
-    // in another devhost.  This new device will communicate with the devcoordinator
-    // via `rpc`, and with its other half via `parent_proxy`.
-    //
-    // The new device will have the given driver responsible for running its half
-    // of the driver's cross-process protocol.  It's create() method will be invoked,
-    // giving it access to `parent_proxy` and `proxy_args`.
-    //
-    // parent_proxy, if present, will usually be a channel to the upper half of
-    // a shadowed device.  The one exception is when this method is used
-    // to create the Platform Bus, in which case it will be a channel to a
-    // fuchsia.boot.Items protocol.
-    //
-    // `local_device_id` will be a unique value within the device's devhost
-    // Messages are encoded and decoded in-place.
-    zx_status_t CreateDevice_Deprecated(::fidl::DecodedMessage<CreateDeviceRequest> params);
-
     // Introduce a composite device that has the given name and properties.
     // `components` will be a list of all of the composite's components,
     // described using devhost local device ids.  The order of the components
@@ -1007,17 +976,6 @@ class DevhostController final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<CreateCompositeDeviceResponse> CreateCompositeDevice_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Introduce a composite device that has the given name and properties.
-    // `components` will be a list of all of the composite's components,
-    // described using devhost local device ids.  The order of the components
-    // will match the original composite creation request.  The new device will
-    // communicate with devcoordinator via `rpc`.
-    //
-    // `local_device_id` will be a unique value within the device's devhost, identifying
-    // the resulting composite device.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<CreateCompositeDeviceResponse> CreateCompositeDevice_Deprecated(::fidl::DecodedMessage<CreateCompositeDeviceRequest> params, ::fidl::BytePart response_buffer);
-
    private:
     ::zx::channel channel_;
   };
@@ -1047,12 +1005,6 @@ class DevhostController final {
     // with the devcoordinator via `rpc`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t CreateDeviceStub_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, uint32_t protocol_id, uint64_t local_device_id);
-
-    // Create a device in the devhost that only implements the device protocol
-    // and claims to support the given `protocol_id`.  This device will communicate
-    // with the devcoordinator via `rpc`.
-    // Messages are encoded and decoded in-place.
-    static zx_status_t CreateDeviceStub_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateDeviceStubRequest> params);
 
     // Create a device in the devhost representing the shadowed half of device
     // in another devhost.  This new device will communicate with the devcoordinator
@@ -1120,23 +1072,6 @@ class DevhostController final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t CreateDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id);
 
-    // Create a device in the devhost representing the shadowed half of device
-    // in another devhost.  This new device will communicate with the devcoordinator
-    // via `rpc`, and with its other half via `parent_proxy`.
-    //
-    // The new device will have the given driver responsible for running its half
-    // of the driver's cross-process protocol.  It's create() method will be invoked,
-    // giving it access to `parent_proxy` and `proxy_args`.
-    //
-    // parent_proxy, if present, will usually be a channel to the upper half of
-    // a shadowed device.  The one exception is when this method is used
-    // to create the Platform Bus, in which case it will be a channel to a
-    // fuchsia.boot.Items protocol.
-    //
-    // `local_device_id` will be a unique value within the device's devhost
-    // Messages are encoded and decoded in-place.
-    static zx_status_t CreateDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateDeviceRequest> params);
-
     // Introduce a composite device that has the given name and properties.
     // `components` will be a list of all of the composite's components,
     // described using devhost local device ids.  The order of the components
@@ -1180,6 +1115,34 @@ class DevhostController final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<CreateCompositeDeviceResponse> CreateCompositeDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    // Create a device in the devhost that only implements the device protocol
+    // and claims to support the given `protocol_id`.  This device will communicate
+    // with the devcoordinator via `rpc`.
+    static ::fidl::internal::StatusAndError CreateDeviceStub(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateDeviceStubRequest> params);
+
+    // Create a device in the devhost representing the shadowed half of device
+    // in another devhost.  This new device will communicate with the devcoordinator
+    // via `rpc`, and with its other half via `parent_proxy`.
+    //
+    // The new device will have the given driver responsible for running its half
+    // of the driver's cross-process protocol.  It's create() method will be invoked,
+    // giving it access to `parent_proxy` and `proxy_args`.
+    //
+    // parent_proxy, if present, will usually be a channel to the upper half of
+    // a shadowed device.  The one exception is when this method is used
+    // to create the Platform Bus, in which case it will be a channel to a
+    // fuchsia.boot.Items protocol.
+    //
+    // `local_device_id` will be a unique value within the device's devhost
+    static ::fidl::internal::StatusAndError CreateDevice(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateDeviceRequest> params);
+
     // Introduce a composite device that has the given name and properties.
     // `components` will be a list of all of the composite's components,
     // described using devhost local device ids.  The order of the components
@@ -1188,8 +1151,7 @@ class DevhostController final {
     //
     // `local_device_id` will be a unique value within the device's devhost, identifying
     // the resulting composite device.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<CreateCompositeDeviceResponse> CreateCompositeDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateCompositeDeviceRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<CreateCompositeDeviceResponse> CreateCompositeDevice(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateCompositeDeviceRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1569,15 +1531,6 @@ class DeviceController final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<BindDriverResponse> BindDriver_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::zx::vmo driver, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::channel* out_test_output);
 
-    // Bind the requested driver to this device.  `driver_path` is informational,
-    // but all calls to BindDriver/CreateDevice should use the same `driver_path`
-    // each time they use a `driver` VMO with the same contents. Returns a `status`
-    // and optionally a channel to the driver's test output. `test_output` will be
-    // not present unless the driver is configured to run its run_unit_tests hook, in
-    // which case the other end of the channel will have been passed to the driver.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<BindDriverResponse> BindDriver_Deprecated(::fidl::DecodedMessage<BindDriverRequest> params, ::fidl::BytePart response_buffer);
-
     // Give this device a channel to its shadow in another process.
     ResultOf::ConnectProxy ConnectProxy(::zx::channel shadow);
 
@@ -1591,10 +1544,6 @@ class DeviceController final {
     // Give this device a channel to its shadow in another process.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t ConnectProxy_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel shadow);
-
-    // Give this device a channel to its shadow in another process.
-    // Messages are encoded and decoded in-place.
-    zx_status_t ConnectProxy_Deprecated(::fidl::DecodedMessage<ConnectProxyRequest> params);
 
     // Ask devhost to unbind this device. On success, the remote end of this
     // interface channel will close instead of returning a result.
@@ -1640,10 +1589,6 @@ class DeviceController final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SuspendResponse> Suspend_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Ask devhost to suspend this device, using the target state indicated by `flags`.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SuspendResponse> Suspend_Deprecated(::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
-
     // Inform devhost about the compatibility test status when compatibility tests
     // fail or complete successfully.
     ResultOf::CompleteCompatibilityTests CompleteCompatibilityTests(CompatibilityTestStatus status);
@@ -1661,11 +1606,6 @@ class DeviceController final {
     // fail or complete successfully.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t CompleteCompatibilityTests_Deprecated(::fidl::BytePart _request_buffer, CompatibilityTestStatus status);
-
-    // Inform devhost about the compatibility test status when compatibility tests
-    // fail or complete successfully.
-    // Messages are encoded and decoded in-place.
-    zx_status_t CompleteCompatibilityTests_Deprecated(::fidl::DecodedMessage<CompleteCompatibilityTestsRequest> params);
 
    private:
     ::zx::channel channel_;
@@ -1710,15 +1650,6 @@ class DeviceController final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<BindDriverResponse> BindDriver_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::zx::vmo driver, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::channel* out_test_output);
 
-    // Bind the requested driver to this device.  `driver_path` is informational,
-    // but all calls to BindDriver/CreateDevice should use the same `driver_path`
-    // each time they use a `driver` VMO with the same contents. Returns a `status`
-    // and optionally a channel to the driver's test output. `test_output` will be
-    // not present unless the driver is configured to run its run_unit_tests hook, in
-    // which case the other end of the channel will have been passed to the driver.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<BindDriverResponse> BindDriver_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindDriverRequest> params, ::fidl::BytePart response_buffer);
-
     // Give this device a channel to its shadow in another process.
     static ResultOf::ConnectProxy ConnectProxy(zx::unowned_channel _client_end, ::zx::channel shadow);
 
@@ -1732,10 +1663,6 @@ class DeviceController final {
     // Give this device a channel to its shadow in another process.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t ConnectProxy_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel shadow);
-
-    // Give this device a channel to its shadow in another process.
-    // Messages are encoded and decoded in-place.
-    static zx_status_t ConnectProxy_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectProxyRequest> params);
 
     // Ask devhost to unbind this device. On success, the remote end of this
     // interface channel will close instead of returning a result.
@@ -1781,10 +1708,6 @@ class DeviceController final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SuspendResponse> Suspend_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Ask devhost to suspend this device, using the target state indicated by `flags`.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SuspendResponse> Suspend_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
-
     // Inform devhost about the compatibility test status when compatibility tests
     // fail or complete successfully.
     static ResultOf::CompleteCompatibilityTests CompleteCompatibilityTests(zx::unowned_channel _client_end, CompatibilityTestStatus status);
@@ -1803,10 +1726,43 @@ class DeviceController final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t CompleteCompatibilityTests_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, CompatibilityTestStatus status);
 
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    // Bind the requested driver to this device.  `driver_path` is informational,
+    // but all calls to BindDriver/CreateDevice should use the same `driver_path`
+    // each time they use a `driver` VMO with the same contents. Returns a `status`
+    // and optionally a channel to the driver's test output. `test_output` will be
+    // not present unless the driver is configured to run its run_unit_tests hook, in
+    // which case the other end of the channel will have been passed to the driver.
+    static ::fidl::DecodeResult<BindDriverResponse> BindDriver(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindDriverRequest> params, ::fidl::BytePart response_buffer);
+
+    // Give this device a channel to its shadow in another process.
+    static ::fidl::internal::StatusAndError ConnectProxy(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectProxyRequest> params);
+
+    // Ask devhost to unbind this device. On success, the remote end of this
+    // interface channel will close instead of returning a result.
+    static ::fidl::internal::StatusAndError Unbind(zx::unowned_channel _client_end);
+
+    // Ask the devhost to complete the removal of this device, which previously had
+    // invoked |ScheduleRemove|. This is a special case that can be removed
+    // once |device_remove| invokes |unbind|.
+    static ::fidl::internal::StatusAndError CompleteRemoval(zx::unowned_channel _client_end);
+
+    // Ask the devhost to remove this device.  On success, the remote end of
+    // this interface channel will close instead of returning a result.
+    static ::fidl::internal::StatusAndError RemoveDevice(zx::unowned_channel _client_end);
+
+    // Ask devhost to suspend this device, using the target state indicated by `flags`.
+    static ::fidl::DecodeResult<SuspendResponse> Suspend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
+
     // Inform devhost about the compatibility test status when compatibility tests
     // fail or complete successfully.
-    // Messages are encoded and decoded in-place.
-    static zx_status_t CompleteCompatibilityTests_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CompleteCompatibilityTestsRequest> params);
+    static ::fidl::internal::StatusAndError CompleteCompatibilityTests(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CompleteCompatibilityTestsRequest> params);
 
   };
 
@@ -2735,16 +2691,6 @@ class Coordinator final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<AddDeviceResponse> AddDevice_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_local_device_id);
 
-    // Record the addition of a new device that can be communicated with via `rpc`.
-    // For binding purposes, it is has properties `props`. `name` and `driver_path`
-    // are informational and used for debugging.  The device will have `protocol_id`
-    // as its primary protocol id.  `args` should only be used for shadowed devices,
-    // and will be forwarded to the shadow device. `client_remote`, if present,
-    // will be passed to the device as an open connection for the client.
-    // On success, the returned `local_device_id` is the identifier assigned by devmgr.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<AddDeviceResponse> AddDevice_Deprecated(::fidl::DecodedMessage<AddDeviceRequest> params, ::fidl::BytePart response_buffer);
-
     // Behaves as AddDevice, but marks the device as initially invisible.  This means
     // that it will not be visible to other devices or the devfs until it is later marked
     // visible (via MakeVisible).
@@ -2767,12 +2713,6 @@ class Coordinator final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<AddDeviceInvisibleResponse> AddDeviceInvisible_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_local_device_id);
-
-    // Behaves as AddDevice, but marks the device as initially invisible.  This means
-    // that it will not be visible to other devices or the devfs until it is later marked
-    // visible (via MakeVisible).
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<AddDeviceInvisibleResponse> AddDeviceInvisible_Deprecated(::fidl::DecodedMessage<AddDeviceInvisibleRequest> params, ::fidl::BytePart response_buffer);
 
     // Requests the devcoordinator schedule the removal of this device,
     // and the unbinding of its children.
@@ -2805,10 +2745,6 @@ class Coordinator final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<RemoveDeviceResponse> RemoveDevice_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Record the removal of this device.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<RemoveDeviceResponse> RemoveDevice_Deprecated(::fidl::BytePart response_buffer);
-
     // Mark this device as visible.
     ResultOf::MakeVisible MakeVisible();
 
@@ -2823,10 +2759,6 @@ class Coordinator final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<MakeVisibleResponse> MakeVisible_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
-
-    // Mark this device as visible.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<MakeVisibleResponse> MakeVisible_Deprecated(::fidl::BytePart response_buffer);
 
     // Attempt to bind a driver against this device.  If `driver_path` is null,
     // this will initiate the driver matching algorithm.
@@ -2855,13 +2787,6 @@ class Coordinator final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<BindDeviceResponse> BindDevice_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Attempt to bind a driver against this device.  If `driver_path` is null,
-    // this will initiate the driver matching algorithm.
-    // TODO(teisenbe): Specify the behavior of invoking this multiple times.  I believe
-    // the current behavior is a bug.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<BindDeviceResponse> BindDevice_Deprecated(::fidl::DecodedMessage<BindDeviceRequest> params, ::fidl::BytePart response_buffer);
-
     // Returns the topological path of this device.
     ResultOf::GetTopologicalPath GetTopologicalPath();
 
@@ -2874,10 +2799,6 @@ class Coordinator final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetTopologicalPathResponse> GetTopologicalPath_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_path);
-
-    // Returns the topological path of this device.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetTopologicalPathResponse> GetTopologicalPath_Deprecated(::fidl::BytePart response_buffer);
 
     // Requests that the firmware at the given path be loaded and returned.
     ResultOf::LoadFirmware LoadFirmware(::fidl::StringView fw_path);
@@ -2894,10 +2815,6 @@ class Coordinator final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<LoadFirmwareResponse> LoadFirmware_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView fw_path, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::vmo* out_vmo, uint64_t* out_size);
 
-    // Requests that the firmware at the given path be loaded and returned.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<LoadFirmwareResponse> LoadFirmware_Deprecated(::fidl::DecodedMessage<LoadFirmwareRequest> params, ::fidl::BytePart response_buffer);
-
     // Retrieve the metadata blob associated with this device and the given key.
     ResultOf::GetMetadata GetMetadata(uint32_t key);
 
@@ -2910,10 +2827,6 @@ class Coordinator final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetMetadataResponse> GetMetadata_Deprecated(::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::VectorView<uint8_t>* out_data);
-
-    // Retrieve the metadata blob associated with this device and the given key.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetMetadataResponse> GetMetadata_Deprecated(::fidl::DecodedMessage<GetMetadataRequest> params, ::fidl::BytePart response_buffer);
 
     // Retrieve the metadata size associated with this device and the given key.
     ResultOf::GetMetadataSize GetMetadataSize(uint32_t key);
@@ -2929,10 +2842,6 @@ class Coordinator final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetMetadataSizeResponse> GetMetadataSize_Deprecated(::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_size);
-
-    // Retrieve the metadata size associated with this device and the given key.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetMetadataSizeResponse> GetMetadataSize_Deprecated(::fidl::DecodedMessage<GetMetadataSizeRequest> params, ::fidl::BytePart response_buffer);
 
     // Add metadata blob associated with this device and the given key.
     // TODO(teisenbe): Document the behavior of calling this twice with the same
@@ -2960,13 +2869,6 @@ class Coordinator final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<AddMetadataResponse> AddMetadata_Deprecated(::fidl::BytePart _request_buffer, uint32_t key, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
-    // Add metadata blob associated with this device and the given key.
-    // TODO(teisenbe): Document the behavior of calling this twice with the same
-    // key.  I believe the current behavior results in inaccessible data that is
-    // kept around for the lifetime of the device.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<AddMetadataResponse> AddMetadata_Deprecated(::fidl::DecodedMessage<AddMetadataRequest> params, ::fidl::BytePart response_buffer);
 
     // Behaves like AddMetadata, but instead of associating it with the
     // requesting device, associates it with the device at `device_path`.  If
@@ -2999,14 +2901,6 @@ class Coordinator final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<PublishMetadataResponse> PublishMetadata_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView device_path, uint32_t key, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Behaves like AddMetadata, but instead of associating it with the
-    // requesting device, associates it with the device at `device_path`.  If
-    // the device at `device_path` is not a child of the requesting device AND
-    // the requesting device is not running in the sys devhost, then this will
-    // fail.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<PublishMetadataResponse> PublishMetadata_Deprecated(::fidl::DecodedMessage<PublishMetadataRequest> params, ::fidl::BytePart response_buffer);
-
     // Adds the given composite device.  This causes the devcoordinator to try to match the
     // components against the existing device tree, and to monitor all new device additions
     // in order to find the components as they are created.
@@ -3030,12 +2924,6 @@ class Coordinator final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<AddCompositeDeviceResponse> AddCompositeDevice_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::Array<DeviceComponent, 8> components, uint32_t components_count, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Adds the given composite device.  This causes the devcoordinator to try to match the
-    // components against the existing device tree, and to monitor all new device additions
-    // in order to find the components as they are created.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<AddCompositeDeviceResponse> AddCompositeDevice_Deprecated(::fidl::DecodedMessage<AddCompositeDeviceRequest> params, ::fidl::BytePart response_buffer);
-
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
     // See fuchsia.io.Directory for more information.
@@ -3058,12 +2946,6 @@ class Coordinator final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<DirectoryWatchResponse> DirectoryWatch_Deprecated(::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Watches a directory, receiving events of added messages on the
-    // watcher request channel.
-    // See fuchsia.io.Directory for more information.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<DirectoryWatchResponse> DirectoryWatch_Deprecated(::fidl::DecodedMessage<DirectoryWatchRequest> params, ::fidl::BytePart response_buffer);
 
     // Run Compatibility tests for the driver that binds to this device.
     // The hook_wait_time is the time that the driver expects to take for
@@ -3095,14 +2977,6 @@ class Coordinator final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<RunCompatibilityTestsResponse> RunCompatibilityTests_Deprecated(::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
-    // Run Compatibility tests for the driver that binds to this device.
-    // The hook_wait_time is the time that the driver expects to take for
-    // each device hook in nanoseconds.
-    // Returns whether the compatibility tests started, and does not convey
-    // anything about the status of the test.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<RunCompatibilityTestsResponse> RunCompatibilityTests_Deprecated(::fidl::DecodedMessage<RunCompatibilityTestsRequest> params, ::fidl::BytePart response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -3151,16 +3025,6 @@ class Coordinator final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<AddDeviceResponse> AddDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_local_device_id);
 
-    // Record the addition of a new device that can be communicated with via `rpc`.
-    // For binding purposes, it is has properties `props`. `name` and `driver_path`
-    // are informational and used for debugging.  The device will have `protocol_id`
-    // as its primary protocol id.  `args` should only be used for shadowed devices,
-    // and will be forwarded to the shadow device. `client_remote`, if present,
-    // will be passed to the device as an open connection for the client.
-    // On success, the returned `local_device_id` is the identifier assigned by devmgr.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<AddDeviceResponse> AddDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddDeviceRequest> params, ::fidl::BytePart response_buffer);
-
     // Behaves as AddDevice, but marks the device as initially invisible.  This means
     // that it will not be visible to other devices or the devfs until it is later marked
     // visible (via MakeVisible).
@@ -3183,12 +3047,6 @@ class Coordinator final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<AddDeviceInvisibleResponse> AddDeviceInvisible_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_local_device_id);
-
-    // Behaves as AddDevice, but marks the device as initially invisible.  This means
-    // that it will not be visible to other devices or the devfs until it is later marked
-    // visible (via MakeVisible).
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<AddDeviceInvisibleResponse> AddDeviceInvisible_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddDeviceInvisibleRequest> params, ::fidl::BytePart response_buffer);
 
     // Requests the devcoordinator schedule the removal of this device,
     // and the unbinding of its children.
@@ -3221,10 +3079,6 @@ class Coordinator final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<RemoveDeviceResponse> RemoveDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Record the removal of this device.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<RemoveDeviceResponse> RemoveDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     // Mark this device as visible.
     static ResultOf::MakeVisible MakeVisible(zx::unowned_channel _client_end);
 
@@ -3239,10 +3093,6 @@ class Coordinator final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<MakeVisibleResponse> MakeVisible_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
-    // Mark this device as visible.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<MakeVisibleResponse> MakeVisible_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Attempt to bind a driver against this device.  If `driver_path` is null,
     // this will initiate the driver matching algorithm.
@@ -3271,13 +3121,6 @@ class Coordinator final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<BindDeviceResponse> BindDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Attempt to bind a driver against this device.  If `driver_path` is null,
-    // this will initiate the driver matching algorithm.
-    // TODO(teisenbe): Specify the behavior of invoking this multiple times.  I believe
-    // the current behavior is a bug.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<BindDeviceResponse> BindDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindDeviceRequest> params, ::fidl::BytePart response_buffer);
-
     // Returns the topological path of this device.
     static ResultOf::GetTopologicalPath GetTopologicalPath(zx::unowned_channel _client_end);
 
@@ -3290,10 +3133,6 @@ class Coordinator final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetTopologicalPathResponse> GetTopologicalPath_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_path);
-
-    // Returns the topological path of this device.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetTopologicalPathResponse> GetTopologicalPath_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Requests that the firmware at the given path be loaded and returned.
     static ResultOf::LoadFirmware LoadFirmware(zx::unowned_channel _client_end, ::fidl::StringView fw_path);
@@ -3310,10 +3149,6 @@ class Coordinator final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<LoadFirmwareResponse> LoadFirmware_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView fw_path, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::vmo* out_vmo, uint64_t* out_size);
 
-    // Requests that the firmware at the given path be loaded and returned.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<LoadFirmwareResponse> LoadFirmware_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LoadFirmwareRequest> params, ::fidl::BytePart response_buffer);
-
     // Retrieve the metadata blob associated with this device and the given key.
     static ResultOf::GetMetadata GetMetadata(zx::unowned_channel _client_end, uint32_t key);
 
@@ -3326,10 +3161,6 @@ class Coordinator final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetMetadataResponse> GetMetadata_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::VectorView<uint8_t>* out_data);
-
-    // Retrieve the metadata blob associated with this device and the given key.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetMetadataResponse> GetMetadata_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetMetadataRequest> params, ::fidl::BytePart response_buffer);
 
     // Retrieve the metadata size associated with this device and the given key.
     static ResultOf::GetMetadataSize GetMetadataSize(zx::unowned_channel _client_end, uint32_t key);
@@ -3345,10 +3176,6 @@ class Coordinator final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetMetadataSizeResponse> GetMetadataSize_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_size);
-
-    // Retrieve the metadata size associated with this device and the given key.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetMetadataSizeResponse> GetMetadataSize_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetMetadataSizeRequest> params, ::fidl::BytePart response_buffer);
 
     // Add metadata blob associated with this device and the given key.
     // TODO(teisenbe): Document the behavior of calling this twice with the same
@@ -3376,13 +3203,6 @@ class Coordinator final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<AddMetadataResponse> AddMetadata_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t key, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
-    // Add metadata blob associated with this device and the given key.
-    // TODO(teisenbe): Document the behavior of calling this twice with the same
-    // key.  I believe the current behavior results in inaccessible data that is
-    // kept around for the lifetime of the device.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<AddMetadataResponse> AddMetadata_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddMetadataRequest> params, ::fidl::BytePart response_buffer);
 
     // Behaves like AddMetadata, but instead of associating it with the
     // requesting device, associates it with the device at `device_path`.  If
@@ -3415,14 +3235,6 @@ class Coordinator final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<PublishMetadataResponse> PublishMetadata_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView device_path, uint32_t key, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Behaves like AddMetadata, but instead of associating it with the
-    // requesting device, associates it with the device at `device_path`.  If
-    // the device at `device_path` is not a child of the requesting device AND
-    // the requesting device is not running in the sys devhost, then this will
-    // fail.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<PublishMetadataResponse> PublishMetadata_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<PublishMetadataRequest> params, ::fidl::BytePart response_buffer);
-
     // Adds the given composite device.  This causes the devcoordinator to try to match the
     // components against the existing device tree, and to monitor all new device additions
     // in order to find the components as they are created.
@@ -3446,12 +3258,6 @@ class Coordinator final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<AddCompositeDeviceResponse> AddCompositeDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::Array<DeviceComponent, 8> components, uint32_t components_count, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Adds the given composite device.  This causes the devcoordinator to try to match the
-    // components against the existing device tree, and to monitor all new device additions
-    // in order to find the components as they are created.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<AddCompositeDeviceResponse> AddCompositeDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddCompositeDeviceRequest> params, ::fidl::BytePart response_buffer);
-
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
     // See fuchsia.io.Directory for more information.
@@ -3474,12 +3280,6 @@ class Coordinator final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<DirectoryWatchResponse> DirectoryWatch_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Watches a directory, receiving events of added messages on the
-    // watcher request channel.
-    // See fuchsia.io.Directory for more information.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<DirectoryWatchResponse> DirectoryWatch_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DirectoryWatchRequest> params, ::fidl::BytePart response_buffer);
 
     // Run Compatibility tests for the driver that binds to this device.
     // The hook_wait_time is the time that the driver expects to take for
@@ -3512,13 +3312,87 @@ class Coordinator final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<RunCompatibilityTestsResponse> RunCompatibilityTests_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    // Record the addition of a new device that can be communicated with via `rpc`.
+    // For binding purposes, it is has properties `props`. `name` and `driver_path`
+    // are informational and used for debugging.  The device will have `protocol_id`
+    // as its primary protocol id.  `args` should only be used for shadowed devices,
+    // and will be forwarded to the shadow device. `client_remote`, if present,
+    // will be passed to the device as an open connection for the client.
+    // On success, the returned `local_device_id` is the identifier assigned by devmgr.
+    static ::fidl::DecodeResult<AddDeviceResponse> AddDevice(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddDeviceRequest> params, ::fidl::BytePart response_buffer);
+
+    // Behaves as AddDevice, but marks the device as initially invisible.  This means
+    // that it will not be visible to other devices or the devfs until it is later marked
+    // visible (via MakeVisible).
+    static ::fidl::DecodeResult<AddDeviceInvisibleResponse> AddDeviceInvisible(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddDeviceInvisibleRequest> params, ::fidl::BytePart response_buffer);
+
+    // Requests the devcoordinator schedule the removal of this device,
+    // and the unbinding of its children.
+    static ::fidl::internal::StatusAndError ScheduleRemove(zx::unowned_channel _client_end);
+
+    // Sent as the response to |Unbind| or |CompleteRemoval|.
+    static ::fidl::internal::StatusAndError UnbindDone(zx::unowned_channel _client_end);
+
+    // Record the removal of this device.
+    static ::fidl::DecodeResult<RemoveDeviceResponse> RemoveDevice(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Mark this device as visible.
+    static ::fidl::DecodeResult<MakeVisibleResponse> MakeVisible(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Attempt to bind a driver against this device.  If `driver_path` is null,
+    // this will initiate the driver matching algorithm.
+    // TODO(teisenbe): Specify the behavior of invoking this multiple times.  I believe
+    // the current behavior is a bug.
+    static ::fidl::DecodeResult<BindDeviceResponse> BindDevice(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindDeviceRequest> params, ::fidl::BytePart response_buffer);
+
+    // Returns the topological path of this device.
+    static ::fidl::DecodeResult<GetTopologicalPathResponse> GetTopologicalPath(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Requests that the firmware at the given path be loaded and returned.
+    static ::fidl::DecodeResult<LoadFirmwareResponse> LoadFirmware(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LoadFirmwareRequest> params, ::fidl::BytePart response_buffer);
+
+    // Retrieve the metadata blob associated with this device and the given key.
+    static ::fidl::DecodeResult<GetMetadataResponse> GetMetadata(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetMetadataRequest> params, ::fidl::BytePart response_buffer);
+
+    // Retrieve the metadata size associated with this device and the given key.
+    static ::fidl::DecodeResult<GetMetadataSizeResponse> GetMetadataSize(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetMetadataSizeRequest> params, ::fidl::BytePart response_buffer);
+
+    // Add metadata blob associated with this device and the given key.
+    // TODO(teisenbe): Document the behavior of calling this twice with the same
+    // key.  I believe the current behavior results in inaccessible data that is
+    // kept around for the lifetime of the device.
+    static ::fidl::DecodeResult<AddMetadataResponse> AddMetadata(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddMetadataRequest> params, ::fidl::BytePart response_buffer);
+
+    // Behaves like AddMetadata, but instead of associating it with the
+    // requesting device, associates it with the device at `device_path`.  If
+    // the device at `device_path` is not a child of the requesting device AND
+    // the requesting device is not running in the sys devhost, then this will
+    // fail.
+    static ::fidl::DecodeResult<PublishMetadataResponse> PublishMetadata(zx::unowned_channel _client_end, ::fidl::DecodedMessage<PublishMetadataRequest> params, ::fidl::BytePart response_buffer);
+
+    // Adds the given composite device.  This causes the devcoordinator to try to match the
+    // components against the existing device tree, and to monitor all new device additions
+    // in order to find the components as they are created.
+    static ::fidl::DecodeResult<AddCompositeDeviceResponse> AddCompositeDevice(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddCompositeDeviceRequest> params, ::fidl::BytePart response_buffer);
+
+    // Watches a directory, receiving events of added messages on the
+    // watcher request channel.
+    // See fuchsia.io.Directory for more information.
+    static ::fidl::DecodeResult<DirectoryWatchResponse> DirectoryWatch(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DirectoryWatchRequest> params, ::fidl::BytePart response_buffer);
+
     // Run Compatibility tests for the driver that binds to this device.
     // The hook_wait_time is the time that the driver expects to take for
     // each device hook in nanoseconds.
     // Returns whether the compatibility tests started, and does not convey
     // anything about the status of the test.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<RunCompatibilityTestsResponse> RunCompatibilityTests_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RunCompatibilityTestsRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<RunCompatibilityTestsResponse> RunCompatibilityTests(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RunCompatibilityTestsRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

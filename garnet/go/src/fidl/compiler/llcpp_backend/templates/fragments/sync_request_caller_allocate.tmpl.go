@@ -30,11 +30,11 @@ const SyncRequestCallerAllocate = `
 {{- end }}
 
 {{- define "SyncRequestCallerAllocateMethodArgumentsNew" -}}
-{{ template "CallerBufferParams" .Request }}{{ if .Response }}{{ if .Request }}, {{ end }}::fidl::BytePart _response_buffer{{ end }}
+{{ template "CallerBufferParams" .Request }}{{ if .HasResponse }}{{ if .Request }}, {{ end }}::fidl::BytePart _response_buffer{{ end }}
 {{- end }}
 
 {{- define "StaticCallSyncRequestCallerAllocateMethodArgumentsNew" -}}
-zx::unowned_channel _client_end{{ if .Request }}, {{ end }}{{ template "CallerBufferParams" .Request }}{{ if .Response }}, ::fidl::BytePart _response_buffer{{ end }}
+zx::unowned_channel _client_end{{ if .Request }}, {{ end }}{{ template "CallerBufferParams" .Request }}{{ if .HasResponse }}, ::fidl::BytePart _response_buffer{{ end }}
 {{- end }}
 
 {{- define "SyncRequestCallerAllocateMethodDefinition" }}
@@ -154,9 +154,10 @@ zx::unowned_channel _client_end{{ if .Request }}, {{ end }}{{ template "CallerBu
   {{ .Name }}Request _request = {};
   {{- else }}
   memset(_request_buffer.data(), 0, {{ .Name }}Request::PrimarySize);
+    {{- if .Request }}
   auto& _request = *reinterpret_cast<{{ .Name }}Request*>(_request_buffer.data());
+    {{- end }}
   {{- end }}
-  _request._hdr.ordinal = {{ .Ordinals.Write.Name }};
   {{- template "FillRequestStructMembers" .Request -}}
 
   {{- if .LLProps.LinearizeRequest }}
@@ -170,31 +171,17 @@ zx::unowned_channel _client_end{{ if .Request }}, {{ end }}{{ template "CallerBu
   _request_buffer.set_actual(sizeof({{ .Name }}Request));
   ::fidl::DecodedMessage<{{ .Name }}Request> _decoded_request(std::move(_request_buffer));
   {{- end }}
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
+
   {{- if .HasResponse }}
-    {{- if not .Response }}
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<{{ .Name }}Response>();
-  ::fidl::internal::AlignedBuffer<_kReadAllocSize> _read_bytes;
-  auto _response_buffer = _read_bytes.view();
-    {{- end }}
-  auto _call_result = ::fidl::Call<{{ .Name }}Request, {{ .Name }}Response>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      {{ .LLProps.InterfaceName }}::InPlace::{{ .Name }}(std::move(_client_end)
+      {{- if .Request }}, std::move(_decoded_request){{ end -}}
+      , std::move(_response_buffer)));
   {{- else }}
-  zx_status_t _write_status =
-      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
-  Super::status_ = _write_status;
-  if (_write_status != ZX_OK) {
-    Super::error_ = ::fidl::internal::kErrorWriteFailed;
-  }
+  Super::operator=(
+      {{ .LLProps.InterfaceName }}::InPlace::{{ .Name }}(std::move(_client_end)
+      {{- if .Request }}, std::move(_decoded_request){{ end -}}
+  ));
   {{- end }}
 }
 
@@ -204,7 +191,7 @@ zx::unowned_channel _client_end{{ if .Request }}, {{ end }}{{ template "CallerBu
     {{- if .Request -}}
       , std::move(_request_buffer), {{ template "SyncClientMoveParams" .Request }}
     {{- end }}
-    {{- if .Response -}}
+    {{- if .HasResponse -}}
       , std::move(_response_buffer)
     {{- end -}}
   );
@@ -218,7 +205,7 @@ zx::unowned_channel _client_end{{ if .Request }}, {{ end }}{{ template "CallerBu
     {{- if .Request -}}
       , std::move(_request_buffer), {{ template "SyncClientMoveParams" .Request }}
     {{- end }}
-    {{- if .Response -}}
+    {{- if .HasResponse -}}
       , std::move(_response_buffer)
     {{- end -}});
 }

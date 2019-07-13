@@ -220,10 +220,6 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<TransmitResponse> Transmit_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<TransmitResponse> Transmit_Deprecated(::fidl::DecodedMessage<TransmitRequest> params, ::fidl::BytePart response_buffer);
-
     // Half-duplex receive data from a SPI device; always reads the full size requested.
     ResultOf::Receive Receive(uint32_t size);
 
@@ -236,10 +232,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<ReceiveResponse> Receive_Deprecated(::fidl::BytePart _request_buffer, uint32_t size, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::VectorView<uint8_t>* out_data);
-
-    // Half-duplex receive data from a SPI device; always reads the full size requested.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<ReceiveResponse> Receive_Deprecated(::fidl::DecodedMessage<ReceiveRequest> params, ::fidl::BytePart response_buffer);
 
     // Full-duplex SPI transaction. Received data will exactly equal the length of the transmit
     // buffer.
@@ -256,11 +248,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<ExchangeResponse> Exchange_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> txdata, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::VectorView<uint8_t>* out_rxdata);
-
-    // Full-duplex SPI transaction. Received data will exactly equal the length of the transmit
-    // buffer.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<ExchangeResponse> Exchange_Deprecated(::fidl::DecodedMessage<ExchangeRequest> params, ::fidl::BytePart response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -285,10 +272,6 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<TransmitResponse> Transmit_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<TransmitResponse> Transmit_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<TransmitRequest> params, ::fidl::BytePart response_buffer);
-
     // Half-duplex receive data from a SPI device; always reads the full size requested.
     static ResultOf::Receive Receive(zx::unowned_channel _client_end, uint32_t size);
 
@@ -301,10 +284,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<ReceiveResponse> Receive_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t size, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::VectorView<uint8_t>* out_data);
-
-    // Half-duplex receive data from a SPI device; always reads the full size requested.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<ReceiveResponse> Receive_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReceiveRequest> params, ::fidl::BytePart response_buffer);
 
     // Full-duplex SPI transaction. Received data will exactly equal the length of the transmit
     // buffer.
@@ -322,10 +301,22 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<ExchangeResponse> Exchange_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> txdata, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::VectorView<uint8_t>* out_rxdata);
 
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    // Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
+    static ::fidl::DecodeResult<TransmitResponse> Transmit(zx::unowned_channel _client_end, ::fidl::DecodedMessage<TransmitRequest> params, ::fidl::BytePart response_buffer);
+
+    // Half-duplex receive data from a SPI device; always reads the full size requested.
+    static ::fidl::DecodeResult<ReceiveResponse> Receive(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReceiveRequest> params, ::fidl::BytePart response_buffer);
+
     // Full-duplex SPI transaction. Received data will exactly equal the length of the transmit
     // buffer.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<ExchangeResponse> Exchange_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ExchangeRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ExchangeResponse> Exchange(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ExchangeRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

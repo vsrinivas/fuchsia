@@ -22,6 +22,17 @@ namespace internal {
 constexpr char kErrorRequestBufferTooSmall[] = "request buffer too small";
 constexpr char kErrorWriteFailed[] = "failed writing to the underlying transport";
 
+template <typename Sub>
+struct FromFailureMixin {
+  // Initialize ourself from one of EncodeResult, DecodeResult, LinearizeResult, in the case of
+  // error hence there is no message.
+  template <typename SomeResult>
+  static Sub FromFailure(SomeResult failure) {
+    ZX_DEBUG_ASSERT(failure.status != ZX_OK);
+    return Sub(failure.status, failure.error);
+  }
+};
+
 }  // namespace internal
 
 // The request/response type of any FIDL method with zero in/out parameters.
@@ -46,7 +57,7 @@ struct IsFidlMessage<AnyZeroArgMessage> : public std::true_type {};
 // If |status| is ZX_OK, |message| contains a valid decoded message of type FidlType.
 // Otherwise, |error| contains a human-readable string for debugging purposes.
 template <typename FidlType>
-struct DecodeResult final {
+struct DecodeResult final : internal::FromFailureMixin<DecodeResult<FidlType>> {
   zx_status_t status = ZX_ERR_INTERNAL;
   const char* error = nullptr;
   DecodedMessage<FidlType> message;
@@ -73,7 +84,7 @@ struct DecodeResult final {
 // If |status| is ZX_OK, |message| contains a valid encoded message of type FidlType.
 // Otherwise, |error| contains a human-readable string for debugging purposes.
 template <typename FidlType>
-struct EncodeResult final {
+struct EncodeResult final : internal::FromFailureMixin<EncodeResult<FidlType>> {
   zx_status_t status = ZX_ERR_INTERNAL;
   const char* error = nullptr;
   EncodedMessage<FidlType> message;
@@ -91,12 +102,18 @@ struct EncodeResult final {
 // If |status| is ZX_OK, |message| contains a valid message in decoded form, of type FidlType.
 // Otherwise, |error| contains a human-readable string for debugging purposes.
 template <typename FidlType>
-struct LinearizeResult final {
+struct LinearizeResult final : internal::FromFailureMixin<LinearizeResult<FidlType>> {
   zx_status_t status = ZX_ERR_INTERNAL;
   const char* error = nullptr;
   DecodedMessage<FidlType> message;
 
   LinearizeResult() = default;
+
+  LinearizeResult(zx_status_t status, const char* error,
+               DecodedMessage<FidlType> message = DecodedMessage<FidlType>())
+      : status(status), error(error), message(std::move(message)) {
+    ZX_DEBUG_ASSERT(status != ZX_OK || this->message.is_valid());
+  }
 };
 
 // Consumes an encoded message object containing FIDL encoded bytes and handles.

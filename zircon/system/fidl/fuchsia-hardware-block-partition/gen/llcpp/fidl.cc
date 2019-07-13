@@ -50,23 +50,10 @@ Partition::ResultOf::GetInfo_Impl<Partition::GetInfoResponse>::GetInfo_Impl(zx::
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, GetInfoRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<GetInfoRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kPartition_GetInfo_Ordinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetInfoRequest));
   ::fidl::DecodedMessage<GetInfoRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetInfoRequest, GetInfoResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Partition::InPlace::GetInfo(std::move(_client_end), Super::response_buffer()));
 }
 
 Partition::ResultOf::GetInfo Partition::SyncClient::GetInfo() {
@@ -82,22 +69,10 @@ Partition::UnownedResultOf::GetInfo_Impl<Partition::GetInfoResponse>::GetInfo_Im
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetInfoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetInfoRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<GetInfoRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kPartition_GetInfo_Ordinal;
   _request_buffer.set_actual(sizeof(GetInfoRequest));
   ::fidl::DecodedMessage<GetInfoRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetInfoRequest, GetInfoResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Partition::InPlace::GetInfo(std::move(_client_end), std::move(_response_buffer)));
 }
 
 Partition::UnownedResultOf::GetInfo Partition::SyncClient::GetInfo(::fidl::BytePart _response_buffer) {
@@ -138,31 +113,24 @@ Partition::UnownedResultOf::GetInfo Partition::Call::GetInfo(zx::unowned_channel
   return _decode_result;
 }
 
-::fidl::DecodeResult<Partition::GetInfoResponse> Partition::SyncClient::GetInfo_Deprecated(::fidl::BytePart response_buffer) {
-  return Partition::Call::GetInfo_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Partition::GetInfoResponse> Partition::Call::GetInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetInfoRequest)] = {};
+::fidl::DecodeResult<Partition::GetInfoResponse> Partition::InPlace::GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetInfoRequest);
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetInfoRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kPartition_GetInfo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Partition::GetInfoResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Partition::GetInfoResponse>());
+    return ::fidl::DecodeResult<Partition::GetInfoResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<GetInfoRequest, GetInfoResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Partition::GetInfoResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Partition::GetInfoResponse>());
+    return ::fidl::DecodeResult<Partition::GetInfoResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -175,23 +143,11 @@ Partition::ResultOf::GetStats_Impl<Partition::GetStatsResponse>::GetStats_Impl(z
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, GetStatsRequest::PrimarySize);
   auto& _request = *reinterpret_cast<GetStatsRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kPartition_GetStats_Ordinal;
   _request.clear = std::move(clear);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetStatsRequest));
   ::fidl::DecodedMessage<GetStatsRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetStatsRequest, GetStatsResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Partition::InPlace::GetStats(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
 Partition::ResultOf::GetStats Partition::SyncClient::GetStats(bool clear) {
@@ -210,22 +166,11 @@ Partition::UnownedResultOf::GetStats_Impl<Partition::GetStatsResponse>::GetStats
   }
   memset(_request_buffer.data(), 0, GetStatsRequest::PrimarySize);
   auto& _request = *reinterpret_cast<GetStatsRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kPartition_GetStats_Ordinal;
   _request.clear = std::move(clear);
   _request_buffer.set_actual(sizeof(GetStatsRequest));
   ::fidl::DecodedMessage<GetStatsRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetStatsRequest, GetStatsResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Partition::InPlace::GetStats(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
 Partition::UnownedResultOf::GetStats Partition::SyncClient::GetStats(::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer) {
@@ -268,27 +213,19 @@ Partition::UnownedResultOf::GetStats Partition::Call::GetStats(zx::unowned_chann
   return _decode_result;
 }
 
-::fidl::DecodeResult<Partition::GetStatsResponse> Partition::SyncClient::GetStats_Deprecated(::fidl::DecodedMessage<GetStatsRequest> params, ::fidl::BytePart response_buffer) {
-  return Partition::Call::GetStats_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Partition::GetStatsResponse> Partition::Call::GetStats_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetStatsRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Partition::GetStatsResponse> Partition::InPlace::GetStats(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetStatsRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kPartition_GetStats_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Partition::GetStatsResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Partition::GetStatsResponse>());
+    return ::fidl::DecodeResult<Partition::GetStatsResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<GetStatsRequest, GetStatsResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Partition::GetStatsResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Partition::GetStatsResponse>());
+    return ::fidl::DecodeResult<Partition::GetStatsResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -300,23 +237,10 @@ Partition::ResultOf::GetFifo_Impl<Partition::GetFifoResponse>::GetFifo_Impl(zx::
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, GetFifoRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<GetFifoRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kPartition_GetFifo_Ordinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetFifoRequest));
   ::fidl::DecodedMessage<GetFifoRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetFifoRequest, GetFifoResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Partition::InPlace::GetFifo(std::move(_client_end), Super::response_buffer()));
 }
 
 Partition::ResultOf::GetFifo Partition::SyncClient::GetFifo() {
@@ -332,22 +256,10 @@ Partition::UnownedResultOf::GetFifo_Impl<Partition::GetFifoResponse>::GetFifo_Im
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetFifoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetFifoRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<GetFifoRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kPartition_GetFifo_Ordinal;
   _request_buffer.set_actual(sizeof(GetFifoRequest));
   ::fidl::DecodedMessage<GetFifoRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetFifoRequest, GetFifoResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Partition::InPlace::GetFifo(std::move(_client_end), std::move(_response_buffer)));
 }
 
 Partition::UnownedResultOf::GetFifo Partition::SyncClient::GetFifo(::fidl::BytePart _response_buffer) {
@@ -421,31 +333,24 @@ zx_status_t Partition::Call::GetFifo_Deprecated(zx::unowned_channel _client_end,
   return _decode_result;
 }
 
-::fidl::DecodeResult<Partition::GetFifoResponse> Partition::SyncClient::GetFifo_Deprecated(::fidl::BytePart response_buffer) {
-  return Partition::Call::GetFifo_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Partition::GetFifoResponse> Partition::Call::GetFifo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetFifoRequest)] = {};
+::fidl::DecodeResult<Partition::GetFifoResponse> Partition::InPlace::GetFifo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetFifoRequest);
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetFifoRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kPartition_GetFifo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Partition::GetFifoResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Partition::GetFifoResponse>());
+    return ::fidl::DecodeResult<Partition::GetFifoResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<GetFifoRequest, GetFifoResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Partition::GetFifoResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Partition::GetFifoResponse>());
+    return ::fidl::DecodeResult<Partition::GetFifoResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -458,23 +363,11 @@ Partition::ResultOf::AttachVmo_Impl<Partition::AttachVmoResponse>::AttachVmo_Imp
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, AttachVmoRequest::PrimarySize);
   auto& _request = *reinterpret_cast<AttachVmoRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kPartition_AttachVmo_Ordinal;
   _request.vmo = std::move(vmo);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(AttachVmoRequest));
   ::fidl::DecodedMessage<AttachVmoRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<AttachVmoRequest, AttachVmoResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Partition::InPlace::AttachVmo(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
 Partition::ResultOf::AttachVmo Partition::SyncClient::AttachVmo(::zx::vmo vmo) {
@@ -493,22 +386,11 @@ Partition::UnownedResultOf::AttachVmo_Impl<Partition::AttachVmoResponse>::Attach
   }
   memset(_request_buffer.data(), 0, AttachVmoRequest::PrimarySize);
   auto& _request = *reinterpret_cast<AttachVmoRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kPartition_AttachVmo_Ordinal;
   _request.vmo = std::move(vmo);
   _request_buffer.set_actual(sizeof(AttachVmoRequest));
   ::fidl::DecodedMessage<AttachVmoRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<AttachVmoRequest, AttachVmoResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Partition::InPlace::AttachVmo(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
 Partition::UnownedResultOf::AttachVmo Partition::SyncClient::AttachVmo(::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer) {
@@ -551,27 +433,19 @@ Partition::UnownedResultOf::AttachVmo Partition::Call::AttachVmo(zx::unowned_cha
   return _decode_result;
 }
 
-::fidl::DecodeResult<Partition::AttachVmoResponse> Partition::SyncClient::AttachVmo_Deprecated(::fidl::DecodedMessage<AttachVmoRequest> params, ::fidl::BytePart response_buffer) {
-  return Partition::Call::AttachVmo_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Partition::AttachVmoResponse> Partition::Call::AttachVmo_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AttachVmoRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Partition::AttachVmoResponse> Partition::InPlace::AttachVmo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AttachVmoRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kPartition_AttachVmo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Partition::AttachVmoResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Partition::AttachVmoResponse>());
+    return ::fidl::DecodeResult<Partition::AttachVmoResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<AttachVmoRequest, AttachVmoResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Partition::AttachVmoResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Partition::AttachVmoResponse>());
+    return ::fidl::DecodeResult<Partition::AttachVmoResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -583,23 +457,10 @@ Partition::ResultOf::CloseFifo_Impl<Partition::CloseFifoResponse>::CloseFifo_Imp
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, CloseFifoRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<CloseFifoRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kPartition_CloseFifo_Ordinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(CloseFifoRequest));
   ::fidl::DecodedMessage<CloseFifoRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<CloseFifoRequest, CloseFifoResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Partition::InPlace::CloseFifo(std::move(_client_end), Super::response_buffer()));
 }
 
 Partition::ResultOf::CloseFifo Partition::SyncClient::CloseFifo() {
@@ -615,22 +476,10 @@ Partition::UnownedResultOf::CloseFifo_Impl<Partition::CloseFifoResponse>::CloseF
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(CloseFifoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, CloseFifoRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<CloseFifoRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kPartition_CloseFifo_Ordinal;
   _request_buffer.set_actual(sizeof(CloseFifoRequest));
   ::fidl::DecodedMessage<CloseFifoRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<CloseFifoRequest, CloseFifoResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Partition::InPlace::CloseFifo(std::move(_client_end), std::move(_response_buffer)));
 }
 
 Partition::UnownedResultOf::CloseFifo Partition::SyncClient::CloseFifo(::fidl::BytePart _response_buffer) {
@@ -702,31 +551,24 @@ zx_status_t Partition::Call::CloseFifo_Deprecated(zx::unowned_channel _client_en
   return _decode_result;
 }
 
-::fidl::DecodeResult<Partition::CloseFifoResponse> Partition::SyncClient::CloseFifo_Deprecated(::fidl::BytePart response_buffer) {
-  return Partition::Call::CloseFifo_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Partition::CloseFifoResponse> Partition::Call::CloseFifo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(CloseFifoRequest)] = {};
+::fidl::DecodeResult<Partition::CloseFifoResponse> Partition::InPlace::CloseFifo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(CloseFifoRequest);
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<CloseFifoRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kPartition_CloseFifo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Partition::CloseFifoResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Partition::CloseFifoResponse>());
+    return ::fidl::DecodeResult<Partition::CloseFifoResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<CloseFifoRequest, CloseFifoResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Partition::CloseFifoResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Partition::CloseFifoResponse>());
+    return ::fidl::DecodeResult<Partition::CloseFifoResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -738,23 +580,10 @@ Partition::ResultOf::RebindDevice_Impl<Partition::RebindDeviceResponse>::RebindD
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, RebindDeviceRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<RebindDeviceRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kPartition_RebindDevice_Ordinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(RebindDeviceRequest));
   ::fidl::DecodedMessage<RebindDeviceRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<RebindDeviceRequest, RebindDeviceResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Partition::InPlace::RebindDevice(std::move(_client_end), Super::response_buffer()));
 }
 
 Partition::ResultOf::RebindDevice Partition::SyncClient::RebindDevice() {
@@ -770,22 +599,10 @@ Partition::UnownedResultOf::RebindDevice_Impl<Partition::RebindDeviceResponse>::
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(RebindDeviceRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, RebindDeviceRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<RebindDeviceRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kPartition_RebindDevice_Ordinal;
   _request_buffer.set_actual(sizeof(RebindDeviceRequest));
   ::fidl::DecodedMessage<RebindDeviceRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<RebindDeviceRequest, RebindDeviceResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Partition::InPlace::RebindDevice(std::move(_client_end), std::move(_response_buffer)));
 }
 
 Partition::UnownedResultOf::RebindDevice Partition::SyncClient::RebindDevice(::fidl::BytePart _response_buffer) {
@@ -857,31 +674,24 @@ zx_status_t Partition::Call::RebindDevice_Deprecated(zx::unowned_channel _client
   return _decode_result;
 }
 
-::fidl::DecodeResult<Partition::RebindDeviceResponse> Partition::SyncClient::RebindDevice_Deprecated(::fidl::BytePart response_buffer) {
-  return Partition::Call::RebindDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Partition::RebindDeviceResponse> Partition::Call::RebindDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(RebindDeviceRequest)] = {};
+::fidl::DecodeResult<Partition::RebindDeviceResponse> Partition::InPlace::RebindDevice(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(RebindDeviceRequest);
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<RebindDeviceRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kPartition_RebindDevice_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Partition::RebindDeviceResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Partition::RebindDeviceResponse>());
+    return ::fidl::DecodeResult<Partition::RebindDeviceResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<RebindDeviceRequest, RebindDeviceResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Partition::RebindDeviceResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Partition::RebindDeviceResponse>());
+    return ::fidl::DecodeResult<Partition::RebindDeviceResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -893,23 +703,10 @@ Partition::ResultOf::GetTypeGuid_Impl<Partition::GetTypeGuidResponse>::GetTypeGu
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, GetTypeGuidRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<GetTypeGuidRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kPartition_GetTypeGuid_Ordinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetTypeGuidRequest));
   ::fidl::DecodedMessage<GetTypeGuidRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetTypeGuidRequest, GetTypeGuidResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Partition::InPlace::GetTypeGuid(std::move(_client_end), Super::response_buffer()));
 }
 
 Partition::ResultOf::GetTypeGuid Partition::SyncClient::GetTypeGuid() {
@@ -925,22 +722,10 @@ Partition::UnownedResultOf::GetTypeGuid_Impl<Partition::GetTypeGuidResponse>::Ge
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetTypeGuidRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetTypeGuidRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<GetTypeGuidRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kPartition_GetTypeGuid_Ordinal;
   _request_buffer.set_actual(sizeof(GetTypeGuidRequest));
   ::fidl::DecodedMessage<GetTypeGuidRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetTypeGuidRequest, GetTypeGuidResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Partition::InPlace::GetTypeGuid(std::move(_client_end), std::move(_response_buffer)));
 }
 
 Partition::UnownedResultOf::GetTypeGuid Partition::SyncClient::GetTypeGuid(::fidl::BytePart _response_buffer) {
@@ -981,31 +766,24 @@ Partition::UnownedResultOf::GetTypeGuid Partition::Call::GetTypeGuid(zx::unowned
   return _decode_result;
 }
 
-::fidl::DecodeResult<Partition::GetTypeGuidResponse> Partition::SyncClient::GetTypeGuid_Deprecated(::fidl::BytePart response_buffer) {
-  return Partition::Call::GetTypeGuid_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Partition::GetTypeGuidResponse> Partition::Call::GetTypeGuid_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetTypeGuidRequest)] = {};
+::fidl::DecodeResult<Partition::GetTypeGuidResponse> Partition::InPlace::GetTypeGuid(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetTypeGuidRequest);
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetTypeGuidRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kPartition_GetTypeGuid_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Partition::GetTypeGuidResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Partition::GetTypeGuidResponse>());
+    return ::fidl::DecodeResult<Partition::GetTypeGuidResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<GetTypeGuidRequest, GetTypeGuidResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Partition::GetTypeGuidResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Partition::GetTypeGuidResponse>());
+    return ::fidl::DecodeResult<Partition::GetTypeGuidResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -1017,23 +795,10 @@ Partition::ResultOf::GetInstanceGuid_Impl<Partition::GetInstanceGuidResponse>::G
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, GetInstanceGuidRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<GetInstanceGuidRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kPartition_GetInstanceGuid_Ordinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetInstanceGuidRequest));
   ::fidl::DecodedMessage<GetInstanceGuidRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetInstanceGuidRequest, GetInstanceGuidResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Partition::InPlace::GetInstanceGuid(std::move(_client_end), Super::response_buffer()));
 }
 
 Partition::ResultOf::GetInstanceGuid Partition::SyncClient::GetInstanceGuid() {
@@ -1049,22 +814,10 @@ Partition::UnownedResultOf::GetInstanceGuid_Impl<Partition::GetInstanceGuidRespo
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetInstanceGuidRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetInstanceGuidRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<GetInstanceGuidRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kPartition_GetInstanceGuid_Ordinal;
   _request_buffer.set_actual(sizeof(GetInstanceGuidRequest));
   ::fidl::DecodedMessage<GetInstanceGuidRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetInstanceGuidRequest, GetInstanceGuidResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Partition::InPlace::GetInstanceGuid(std::move(_client_end), std::move(_response_buffer)));
 }
 
 Partition::UnownedResultOf::GetInstanceGuid Partition::SyncClient::GetInstanceGuid(::fidl::BytePart _response_buffer) {
@@ -1105,31 +858,24 @@ Partition::UnownedResultOf::GetInstanceGuid Partition::Call::GetInstanceGuid(zx:
   return _decode_result;
 }
 
-::fidl::DecodeResult<Partition::GetInstanceGuidResponse> Partition::SyncClient::GetInstanceGuid_Deprecated(::fidl::BytePart response_buffer) {
-  return Partition::Call::GetInstanceGuid_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Partition::GetInstanceGuidResponse> Partition::Call::GetInstanceGuid_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetInstanceGuidRequest)] = {};
+::fidl::DecodeResult<Partition::GetInstanceGuidResponse> Partition::InPlace::GetInstanceGuid(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetInstanceGuidRequest);
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetInstanceGuidRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kPartition_GetInstanceGuid_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Partition::GetInstanceGuidResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Partition::GetInstanceGuidResponse>());
+    return ::fidl::DecodeResult<Partition::GetInstanceGuidResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<GetInstanceGuidRequest, GetInstanceGuidResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Partition::GetInstanceGuidResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Partition::GetInstanceGuidResponse>());
+    return ::fidl::DecodeResult<Partition::GetInstanceGuidResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -1141,23 +887,10 @@ Partition::ResultOf::GetName_Impl<Partition::GetNameResponse>::GetName_Impl(zx::
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, GetNameRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<GetNameRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kPartition_GetName_Ordinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetNameRequest));
   ::fidl::DecodedMessage<GetNameRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetNameRequest, GetNameResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Partition::InPlace::GetName(std::move(_client_end), Super::response_buffer()));
 }
 
 Partition::ResultOf::GetName Partition::SyncClient::GetName() {
@@ -1173,22 +906,10 @@ Partition::UnownedResultOf::GetName_Impl<Partition::GetNameResponse>::GetName_Im
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetNameRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetNameRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<GetNameRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kPartition_GetName_Ordinal;
   _request_buffer.set_actual(sizeof(GetNameRequest));
   ::fidl::DecodedMessage<GetNameRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetNameRequest, GetNameResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Partition::InPlace::GetName(std::move(_client_end), std::move(_response_buffer)));
 }
 
 Partition::UnownedResultOf::GetName Partition::SyncClient::GetName(::fidl::BytePart _response_buffer) {
@@ -1229,31 +950,24 @@ Partition::UnownedResultOf::GetName Partition::Call::GetName(zx::unowned_channel
   return _decode_result;
 }
 
-::fidl::DecodeResult<Partition::GetNameResponse> Partition::SyncClient::GetName_Deprecated(::fidl::BytePart response_buffer) {
-  return Partition::Call::GetName_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Partition::GetNameResponse> Partition::Call::GetName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetNameRequest)] = {};
+::fidl::DecodeResult<Partition::GetNameResponse> Partition::InPlace::GetName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetNameRequest);
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetNameRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kPartition_GetName_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Partition::GetNameResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Partition::GetNameResponse>());
+    return ::fidl::DecodeResult<Partition::GetNameResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<GetNameRequest, GetNameResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Partition::GetNameResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Partition::GetNameResponse>());
+    return ::fidl::DecodeResult<Partition::GetNameResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }

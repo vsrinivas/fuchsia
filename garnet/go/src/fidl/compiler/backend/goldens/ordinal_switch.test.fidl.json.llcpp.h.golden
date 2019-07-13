@@ -151,6 +151,17 @@ class SwitchingOrdinals final {
     static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
   };
 
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    static ::fidl::internal::StatusAndError OrdinalFive(zx::unowned_channel _client_end);
+
+    static ::fidl::internal::StatusAndError OnlyGeneratedOrdinal(zx::unowned_channel _client_end);
+
+  };
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:

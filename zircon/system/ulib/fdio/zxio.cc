@@ -310,17 +310,9 @@ static void fdio_zxio_remote_wait_end(fdio_t* io, zx_signals_t signals, uint32_t
 
 static zx_status_t fdio_zxio_remote_get_vmo(fdio_t* io, int flags, zx_handle_t* out_vmo) {
     zxio_remote_t* rio = fdio_get_zxio_remote(io);
-    uint8_t request_buffer[fidl::MaxSizeInChannel<fio::File::GetBufferRequest>()];
-    fidl::DecodedMessage<fio::File::GetBufferRequest> request(
-        fidl::BytePart::WrapFull(request_buffer));
-    uint8_t response_buffer[fidl::MaxSizeInChannel<fio::File::GetBufferResponse>()];
-    request.message()->flags = flags;
-    fidl::DecodeResult result = fio::File::Call::GetBuffer_Deprecated(
-        zx::unowned_channel(rio->control),
-        std::move(request),
-        fidl::BytePart::WrapEmpty(response_buffer));
-    if (result.status != ZX_OK) {
-        return result.status;
+    auto result = fio::File::Call::GetBuffer(zx::unowned_channel(rio->control), flags);
+    if (result.status() != ZX_OK) {
+        return result.status();
     }
     fio::File::GetBufferResponse* response = result.Unwrap();
     if (response->s != ZX_OK) {
@@ -358,7 +350,7 @@ static zx_status_t fdio_zxio_remote_readdir(fdio_t* io, void* ptr, size_t max, s
         fidl::BytePart::WrapFull(request_buffer));
     uint8_t response_buffer[fidl::MaxSizeInChannel<fio::Directory::ReadDirentsResponse>()];
     request.message()->max_bytes = max;
-    fidl::DecodeResult result = fio::Directory::Call::ReadDirents_Deprecated(
+    fidl::DecodeResult result = fio::Directory::InPlace::ReadDirents(
         zx::unowned_channel(rio->control),
         std::move(request),
         fidl::BytePart::WrapEmpty(response_buffer));

@@ -5,74 +5,52 @@
 package fragments
 
 const SyncRequestInPlace = `
-{{- define "SyncRequestInPlaceMethodSignature" -}}
-{{ .Name }}_Deprecated({{ if .Request }}::fidl::DecodedMessage<{{ .Name }}Request> params{{ if .Response }}, {{ end }}{{ end }}{{ if .Response }}::fidl::BytePart response_buffer{{ end }})
-{{- end }}
-
 {{- define "StaticCallSyncRequestInPlaceMethodSignature" -}}
-{{ .Name }}_Deprecated(zx::unowned_channel _client_end, {{ if .Request }}::fidl::DecodedMessage<{{ .Name }}Request> params{{ if .Response }}, {{ end }}{{ end }}{{ if .Response }}::fidl::BytePart response_buffer{{ end }})
-{{- end }}
-
-{{- define "SyncRequestInPlaceMethodDefinition" }}
-{{- $interface_name := .LLProps.InterfaceName }}
-{{ if .Response }}::fidl::DecodeResult<{{ $interface_name }}::{{ .Name }}Response>{{ else }}zx_status_t{{ end }} {{ $interface_name }}::SyncClient::{{ template "SyncRequestInPlaceMethodSignature" . }} {
-  return {{ .LLProps.InterfaceName }}::Call::{{ .Name }}_Deprecated(zx::unowned_channel(this->channel_)
-    {{- if or .Request .Response }}, {{ end }}
-    {{- if .Request }}std::move(params){{ end -}}
-    {{- if and .Request .Response }}, {{ end -}}
-    {{- if .Response }}std::move(response_buffer){{ end -}}
-  );
-}
+{{ .Name }}(zx::unowned_channel _client_end{{ if .Request }}, ::fidl::DecodedMessage<{{ .Name }}Request> params{{ end }}{{ if .HasResponse }}, ::fidl::BytePart response_buffer{{ end }})
 {{- end }}
 
 {{- define "StaticCallSyncRequestInPlaceMethodDefinition" }}
 {{- $interface_name := .LLProps.InterfaceName }}
-{{ if .Response }}::fidl::DecodeResult<{{ $interface_name }}::{{ .Name }}Response>{{ else }}zx_status_t{{ end }} {{ $interface_name }}::Call::{{ template "StaticCallSyncRequestInPlaceMethodSignature" . }} {
+{{ if .HasResponse -}}
+::fidl::DecodeResult<{{ $interface_name }}::{{ .Name }}Response>
+{{- else -}}
+::fidl::internal::StatusAndError
+{{- end }} {{ $interface_name }}::InPlace::{{ template "StaticCallSyncRequestInPlaceMethodSignature" . }} {
   {{- if not .Request }}
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof({{ .Name }}Request)] = {};
   constexpr uint32_t _write_num_bytes = sizeof({{ .Name }}Request);
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<{{ .Name }}Request> params(std::move(_request_buffer));
   {{- end }}
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = {{ .Ordinals.Write.Name }};
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-  {{- if .Response }}
-    return ::fidl::DecodeResult<{{ $interface_name }}::{{ .Name }}Response>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<{{ $interface_name }}::{{ .Name }}Response>());
+  {{- if .HasResponse }}
+    return ::fidl::DecodeResult<{{ $interface_name }}::{{ .Name }}Response>::FromFailure(
+        std::move(_encode_request_result));
   {{- else }}
-    return _encode_request_result.status;
+    return ::fidl::internal::StatusAndError::FromFailure(
+        std::move(_encode_request_result));
   {{- end }}
   }
   {{- if .HasResponse }}
-    {{- if not .Response }}
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<{{ .Name }}Response>();
-  FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
-  ::fidl::BytePart response_buffer(_read_bytes, sizeof(_read_bytes));
-    {{- end }}
   auto _call_result = ::fidl::Call<{{ .Name }}Request, {{ .Name }}Response>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    {{- if .Response }}
-    return ::fidl::DecodeResult<{{ $interface_name }}::{{ .Name }}Response>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<{{ $interface_name }}::{{ .Name }}Response>());
-    {{- else }}
-    return _call_result.status;
-    {{- end }}
+    return ::fidl::DecodeResult<{{ $interface_name }}::{{ .Name }}Response>::FromFailure(
+        std::move(_call_result));
   }
-    {{- if .Response }}
   return ::fidl::Decode(std::move(_call_result.message));
-    {{- else }}
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  return _decode_result.status;
-    {{- end }}
   {{- else }}
-  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  if (_write_status != ZX_OK) {
+    return ::fidl::internal::StatusAndError(_write_status, ::fidl::internal::kErrorWriteFailed);
+  } else {
+    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
+  }
   {{- end }}
 }
 {{- end }}

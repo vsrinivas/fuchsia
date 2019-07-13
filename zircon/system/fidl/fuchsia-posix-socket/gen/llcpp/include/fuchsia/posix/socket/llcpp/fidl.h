@@ -131,11 +131,6 @@ class Provider final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SocketResponse> Socket_Deprecated(::fidl::BytePart _request_buffer, int16_t domain, int16_t type, int16_t protocol, ::fidl::BytePart _response_buffer, int16_t* out_code, ::zx::channel* out_s);
 
-    // Requests a socket with the specified parameters. Values for `code` are defined in
-    // errno.h.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SocketResponse> Socket_Deprecated(::fidl::DecodedMessage<SocketRequest> params, ::fidl::BytePart response_buffer);
-
    private:
     ::zx::channel channel_;
   };
@@ -163,10 +158,16 @@ class Provider final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SocketResponse> Socket_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t domain, int16_t type, int16_t protocol, ::fidl::BytePart _response_buffer, int16_t* out_code, ::zx::channel* out_s);
 
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
     // Requests a socket with the specified parameters. Values for `code` are defined in
     // errno.h.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SocketResponse> Socket_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SocketRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SocketResponse> Socket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SocketRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1083,25 +1084,6 @@ class Control final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t Clone_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
-    // Create another connection to the same remote object.
-    //
-    // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
-    //
-    // All other flags are ignored.
-    //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
-    // cloned object.
-    // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
-    // Messages are encoded and decoded in-place.
-    zx_status_t Clone_Deprecated(::fidl::DecodedMessage<CloneRequest> params);
-
     // Terminates connection with object.
     //
     // This method does not require any rights.
@@ -1124,12 +1106,6 @@ class Control final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<CloseResponse> Close_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Terminates connection with object.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<CloseResponse> Close_Deprecated(::fidl::BytePart response_buffer);
 
     // Returns extra information about the type of the object.
     // If the `Describe` operation fails, the connection is closed.
@@ -1158,13 +1134,6 @@ class Control final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<DescribeResponse> Describe_Deprecated(::fidl::BytePart _response_buffer, ::llcpp::fuchsia::io::NodeInfo* out_info);
 
-    // Returns extra information about the type of the object.
-    // If the `Describe` operation fails, the connection is closed.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<DescribeResponse> Describe_Deprecated(::fidl::BytePart response_buffer);
-
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
@@ -1188,12 +1157,6 @@ class Control final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Synchronizes updates to the node to the underlying media, if it exists.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(::fidl::BytePart response_buffer);
-
     // Acquires information about the node.
     //
     // This method does not require any rights.
@@ -1216,12 +1179,6 @@ class Control final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, ::llcpp::fuchsia::io::NodeAttributes* out_attributes);
-
-    // Acquires information about the node.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(::fidl::BytePart response_buffer);
 
     // Updates information about the node.
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
@@ -1250,13 +1207,6 @@ class Control final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
-
     // Deprecated. Only for use with compatibility with devhost.
     ResultOf::Ioctl Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
 
@@ -1269,10 +1219,6 @@ class Control final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
 
     // Sets the local address used for the socket.
     ResultOf::Bind Bind(::fidl::VectorView<uint8_t> addr);
@@ -1289,10 +1235,6 @@ class Control final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<BindResponse> Bind_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer, int16_t* out_code);
 
-    // Sets the local address used for the socket.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<BindResponse> Bind_Deprecated(::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer);
-
     // Initiates a connection to a network endpoint.
     ResultOf::Connect Connect(::fidl::VectorView<uint8_t> addr);
 
@@ -1307,10 +1249,6 @@ class Control final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<ConnectResponse> Connect_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer, int16_t* out_code);
-
-    // Initiates a connection to a network endpoint.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<ConnectResponse> Connect_Deprecated(::fidl::DecodedMessage<ConnectRequest> params, ::fidl::BytePart response_buffer);
 
     // Begin listening for new connections from network endpoints. At most `backlog` connections
     // will be buffered.
@@ -1331,11 +1269,6 @@ class Control final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<ListenResponse> Listen_Deprecated(::fidl::BytePart _request_buffer, int16_t backlog, ::fidl::BytePart _response_buffer, int16_t* out_code);
 
-    // Begin listening for new connections from network endpoints. At most `backlog` connections
-    // will be buffered.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<ListenResponse> Listen_Deprecated(::fidl::DecodedMessage<ListenRequest> params, ::fidl::BytePart response_buffer);
-
     // Accepts an incoming connection from a network endpoint.
     ResultOf::Accept Accept(int16_t flags);
 
@@ -1351,10 +1284,6 @@ class Control final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<AcceptResponse> Accept_Deprecated(::fidl::BytePart _request_buffer, int16_t flags, ::fidl::BytePart _response_buffer, int16_t* out_code, ::zx::channel* out_s);
 
-    // Accepts an incoming connection from a network endpoint.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<AcceptResponse> Accept_Deprecated(::fidl::DecodedMessage<AcceptRequest> params, ::fidl::BytePart response_buffer);
-
     // Retrieves the local socket address.
     ResultOf::GetSockName GetSockName();
 
@@ -1368,10 +1297,6 @@ class Control final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetSockNameResponse> GetSockName_Deprecated(::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_addr);
 
-    // Retrieves the local socket address.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetSockNameResponse> GetSockName_Deprecated(::fidl::BytePart response_buffer);
-
     // Retrieves the remote socket address.
     ResultOf::GetPeerName GetPeerName();
 
@@ -1384,10 +1309,6 @@ class Control final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetPeerNameResponse> GetPeerName_Deprecated(::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_addr);
-
-    // Retrieves the remote socket address.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetPeerNameResponse> GetPeerName_Deprecated(::fidl::BytePart response_buffer);
 
     // Sets a socket option. TODO(NET-1699): link to description of supported socket options.
     ResultOf::SetSockOpt SetSockOpt(int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval);
@@ -1404,10 +1325,6 @@ class Control final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SetSockOptResponse> SetSockOpt_Deprecated(::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval, ::fidl::BytePart _response_buffer, int16_t* out_code);
 
-    // Sets a socket option. TODO(NET-1699): link to description of supported socket options.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SetSockOptResponse> SetSockOpt_Deprecated(::fidl::DecodedMessage<SetSockOptRequest> params, ::fidl::BytePart response_buffer);
-
     // Retrieves the current value of a socket option.
     ResultOf::GetSockOpt GetSockOpt(int16_t level, int16_t optname);
 
@@ -1421,10 +1338,6 @@ class Control final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetSockOptResponse> GetSockOpt_Deprecated(::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_optval);
 
-    // Retrieves the current value of a socket option.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetSockOptResponse> GetSockOpt_Deprecated(::fidl::DecodedMessage<GetSockOptRequest> params, ::fidl::BytePart response_buffer);
-
     // Runs operations (e.g., get the receive timestamp of the last packet) on the socket.
     ResultOf::IoctlPOSIX IoctlPOSIX(int16_t req, ::fidl::VectorView<uint8_t> in);
 
@@ -1437,10 +1350,6 @@ class Control final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<IoctlPOSIXResponse> IoctlPOSIX_Deprecated(::fidl::BytePart _request_buffer, int16_t req, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_out);
-
-    // Runs operations (e.g., get the receive timestamp of the last packet) on the socket.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<IoctlPOSIXResponse> IoctlPOSIX_Deprecated(::fidl::DecodedMessage<IoctlPOSIXRequest> params, ::fidl::BytePart response_buffer);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
@@ -1529,25 +1438,6 @@ class Control final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t Clone_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
-    // Create another connection to the same remote object.
-    //
-    // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
-    //
-    // All other flags are ignored.
-    //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
-    // cloned object.
-    // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
-    // Messages are encoded and decoded in-place.
-    static zx_status_t Clone_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
-
     // Terminates connection with object.
     //
     // This method does not require any rights.
@@ -1570,12 +1460,6 @@ class Control final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<CloseResponse> Close_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Terminates connection with object.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<CloseResponse> Close_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Returns extra information about the type of the object.
     // If the `Describe` operation fails, the connection is closed.
@@ -1604,13 +1488,6 @@ class Control final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<DescribeResponse> Describe_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::llcpp::fuchsia::io::NodeInfo* out_info);
 
-    // Returns extra information about the type of the object.
-    // If the `Describe` operation fails, the connection is closed.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<DescribeResponse> Describe_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
@@ -1634,12 +1511,6 @@ class Control final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Synchronizes updates to the node to the underlying media, if it exists.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     // Acquires information about the node.
     //
     // This method does not require any rights.
@@ -1662,12 +1533,6 @@ class Control final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, ::llcpp::fuchsia::io::NodeAttributes* out_attributes);
-
-    // Acquires information about the node.
-    //
-    // This method does not require any rights.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Updates information about the node.
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
@@ -1696,13 +1561,6 @@ class Control final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
-    //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
-
     // Deprecated. Only for use with compatibility with devhost.
     static ResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
 
@@ -1715,10 +1573,6 @@ class Control final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
 
     // Sets the local address used for the socket.
     static ResultOf::Bind Bind(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> addr);
@@ -1735,10 +1589,6 @@ class Control final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<BindResponse> Bind_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer, int16_t* out_code);
 
-    // Sets the local address used for the socket.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<BindResponse> Bind_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer);
-
     // Initiates a connection to a network endpoint.
     static ResultOf::Connect Connect(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> addr);
 
@@ -1753,10 +1603,6 @@ class Control final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<ConnectResponse> Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer, int16_t* out_code);
-
-    // Initiates a connection to a network endpoint.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<ConnectResponse> Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectRequest> params, ::fidl::BytePart response_buffer);
 
     // Begin listening for new connections from network endpoints. At most `backlog` connections
     // will be buffered.
@@ -1777,11 +1623,6 @@ class Control final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<ListenResponse> Listen_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t backlog, ::fidl::BytePart _response_buffer, int16_t* out_code);
 
-    // Begin listening for new connections from network endpoints. At most `backlog` connections
-    // will be buffered.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<ListenResponse> Listen_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ListenRequest> params, ::fidl::BytePart response_buffer);
-
     // Accepts an incoming connection from a network endpoint.
     static ResultOf::Accept Accept(zx::unowned_channel _client_end, int16_t flags);
 
@@ -1797,10 +1638,6 @@ class Control final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<AcceptResponse> Accept_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t flags, ::fidl::BytePart _response_buffer, int16_t* out_code, ::zx::channel* out_s);
 
-    // Accepts an incoming connection from a network endpoint.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<AcceptResponse> Accept_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AcceptRequest> params, ::fidl::BytePart response_buffer);
-
     // Retrieves the local socket address.
     static ResultOf::GetSockName GetSockName(zx::unowned_channel _client_end);
 
@@ -1814,10 +1651,6 @@ class Control final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetSockNameResponse> GetSockName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_addr);
 
-    // Retrieves the local socket address.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetSockNameResponse> GetSockName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     // Retrieves the remote socket address.
     static ResultOf::GetPeerName GetPeerName(zx::unowned_channel _client_end);
 
@@ -1830,10 +1663,6 @@ class Control final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetPeerNameResponse> GetPeerName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_addr);
-
-    // Retrieves the remote socket address.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetPeerNameResponse> GetPeerName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Sets a socket option. TODO(NET-1699): link to description of supported socket options.
     static ResultOf::SetSockOpt SetSockOpt(zx::unowned_channel _client_end, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval);
@@ -1850,10 +1679,6 @@ class Control final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SetSockOptResponse> SetSockOpt_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval, ::fidl::BytePart _response_buffer, int16_t* out_code);
 
-    // Sets a socket option. TODO(NET-1699): link to description of supported socket options.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SetSockOptResponse> SetSockOpt_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetSockOptRequest> params, ::fidl::BytePart response_buffer);
-
     // Retrieves the current value of a socket option.
     static ResultOf::GetSockOpt GetSockOpt(zx::unowned_channel _client_end, int16_t level, int16_t optname);
 
@@ -1866,10 +1691,6 @@ class Control final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetSockOptResponse> GetSockOpt_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_optval);
-
-    // Retrieves the current value of a socket option.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetSockOptResponse> GetSockOpt_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSockOptRequest> params, ::fidl::BytePart response_buffer);
 
     // Runs operations (e.g., get the receive timestamp of the last packet) on the socket.
     static ResultOf::IoctlPOSIX IoctlPOSIX(zx::unowned_channel _client_end, int16_t req, ::fidl::VectorView<uint8_t> in);
@@ -1884,15 +1705,94 @@ class Control final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<IoctlPOSIXResponse> IoctlPOSIX_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t req, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_out);
 
-    // Runs operations (e.g., get the receive timestamp of the last packet) on the socket.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<IoctlPOSIXResponse> IoctlPOSIX_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlPOSIXRequest> params, ::fidl::BytePart response_buffer);
-
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
     // transport-level errors and returned.
     static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    // Create another connection to the same remote object.
+    //
+    // `flags` may be any of:
+    // - OPEN_RIGHT_*
+    // - OPEN_FLAG_APPEND
+    // - OPEN_FLAG_NO_REMOTE
+    // - OPEN_FLAG_DESCRIBE
+    // - CLONE_FLAG_SAME_RIGHTS
+    //
+    // All other flags are ignored.
+    //
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // cloned object.
+    // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    static ::fidl::internal::StatusAndError Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
+
+    // Terminates connection with object.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<CloseResponse> Close(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Returns extra information about the type of the object.
+    // If the `Describe` operation fails, the connection is closed.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<DescribeResponse> Describe(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Synchronizes updates to the node to the underlying media, if it exists.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<SyncResponse> Sync(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Acquires information about the node.
+    //
+    // This method does not require any rights.
+    static ::fidl::DecodeResult<GetAttrResponse> GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Updates information about the node.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    //
+    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
+
+    // Deprecated. Only for use with compatibility with devhost.
+    static ::fidl::DecodeResult<IoctlResponse> Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
+
+    // Sets the local address used for the socket.
+    static ::fidl::DecodeResult<BindResponse> Bind(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer);
+
+    // Initiates a connection to a network endpoint.
+    static ::fidl::DecodeResult<ConnectResponse> Connect(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectRequest> params, ::fidl::BytePart response_buffer);
+
+    // Begin listening for new connections from network endpoints. At most `backlog` connections
+    // will be buffered.
+    static ::fidl::DecodeResult<ListenResponse> Listen(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ListenRequest> params, ::fidl::BytePart response_buffer);
+
+    // Accepts an incoming connection from a network endpoint.
+    static ::fidl::DecodeResult<AcceptResponse> Accept(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AcceptRequest> params, ::fidl::BytePart response_buffer);
+
+    // Retrieves the local socket address.
+    static ::fidl::DecodeResult<GetSockNameResponse> GetSockName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Retrieves the remote socket address.
+    static ::fidl::DecodeResult<GetPeerNameResponse> GetPeerName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Sets a socket option. TODO(NET-1699): link to description of supported socket options.
+    static ::fidl::DecodeResult<SetSockOptResponse> SetSockOpt(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetSockOptRequest> params, ::fidl::BytePart response_buffer);
+
+    // Retrieves the current value of a socket option.
+    static ::fidl::DecodeResult<GetSockOptResponse> GetSockOpt(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSockOptRequest> params, ::fidl::BytePart response_buffer);
+
+    // Runs operations (e.g., get the receive timestamp of the last packet) on the socket.
+    static ::fidl::DecodeResult<IoctlPOSIXResponse> IoctlPOSIX(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlPOSIXRequest> params, ::fidl::BytePart response_buffer);
+
   };
 
   // Pure-virtual interface to be implemented by a server.

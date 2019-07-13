@@ -222,9 +222,6 @@ class Bus final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<EnableResponse> Enable_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<EnableResponse> Enable_Deprecated(::fidl::BytePart response_buffer);
-
     ResultOf::Disable Disable();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -235,9 +232,6 @@ class Bus final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<DisableResponse> Disable_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<DisableResponse> Disable_Deprecated(::fidl::BytePart response_buffer);
 
     ResultOf::Connect Connect();
 
@@ -250,9 +244,6 @@ class Bus final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<ConnectResponse> Connect_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<ConnectResponse> Connect_Deprecated(::fidl::BytePart response_buffer);
-
     ResultOf::Disconnect Disconnect();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -263,9 +254,6 @@ class Bus final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<DisconnectResponse> Disconnect_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<DisconnectResponse> Disconnect_Deprecated(::fidl::BytePart response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -286,9 +274,6 @@ class Bus final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<EnableResponse> Enable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<EnableResponse> Enable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     static ResultOf::Disable Disable(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -299,9 +284,6 @@ class Bus final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<DisableResponse> Disable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<DisableResponse> Disable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     static ResultOf::Connect Connect(zx::unowned_channel _client_end);
 
@@ -314,9 +296,6 @@ class Bus final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<ConnectResponse> Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<ConnectResponse> Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     static ResultOf::Disconnect Disconnect(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -328,8 +307,20 @@ class Bus final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<DisconnectResponse> Disconnect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<DisconnectResponse> Disconnect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    static ::fidl::DecodeResult<EnableResponse> Enable(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    static ::fidl::DecodeResult<DisableResponse> Disable(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    static ::fidl::DecodeResult<ConnectResponse> Connect(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    static ::fidl::DecodeResult<DisconnectResponse> Disconnect(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

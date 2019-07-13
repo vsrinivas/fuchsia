@@ -275,11 +275,6 @@ class TestInterface final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct_Deprecated(::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer, int32_t* out_status, int32_t* out_field);
 
-    // Verifies that all the handles are valid channels, then returns
-    // ZX_OK and loops back the field member. Otherwise, returns an error.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct_Deprecated(::fidl::DecodedMessage<ConsumeSimpleStructRequest> params, ::fidl::BytePart response_buffer);
-
     // Loops back the field which is set, along with its index.
     ResultOf::ConsumeSimpleUnion ConsumeSimpleUnion(SimpleUnion arg);
 
@@ -294,10 +289,6 @@ class TestInterface final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<ConsumeSimpleUnionResponse> ConsumeSimpleUnion_Deprecated(::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer, uint32_t* out_index, int32_t* out_field);
-
-    // Loops back the field which is set, along with its index.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<ConsumeSimpleUnionResponse> ConsumeSimpleUnion_Deprecated(::fidl::DecodedMessage<ConsumeSimpleUnionRequest> params, ::fidl::BytePart response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -326,11 +317,6 @@ class TestInterface final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer, int32_t* out_status, int32_t* out_field);
 
-    // Verifies that all the handles are valid channels, then returns
-    // ZX_OK and loops back the field member. Otherwise, returns an error.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeSimpleStructRequest> params, ::fidl::BytePart response_buffer);
-
     // Loops back the field which is set, along with its index.
     static ResultOf::ConsumeSimpleUnion ConsumeSimpleUnion(zx::unowned_channel _client_end, SimpleUnion arg);
 
@@ -346,9 +332,19 @@ class TestInterface final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<ConsumeSimpleUnionResponse> ConsumeSimpleUnion_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer, uint32_t* out_index, int32_t* out_field);
 
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    // Verifies that all the handles are valid channels, then returns
+    // ZX_OK and loops back the field member. Otherwise, returns an error.
+    static ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeSimpleStructRequest> params, ::fidl::BytePart response_buffer);
+
     // Loops back the field which is set, along with its index.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<ConsumeSimpleUnionResponse> ConsumeSimpleUnion_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeSimpleUnionRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ConsumeSimpleUnionResponse> ConsumeSimpleUnion(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeSimpleUnionRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

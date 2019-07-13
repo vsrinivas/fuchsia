@@ -2472,13 +2472,10 @@ static int fs_stat(int fd, struct statfs* buf) {
         fdio_release(io);
         return ERRNO(ENOTSUP);
     }
-    uint8_t response_buffer[fidl::MaxSizeInChannel<fio::DirectoryAdmin::QueryFilesystemResponse>()];
-    fidl::DecodeResult result = fio::DirectoryAdmin::Call::QueryFilesystem_Deprecated(
-        zx::unowned_channel(handle),
-        fidl::BytePart::WrapEmpty(response_buffer));
+    auto result = fio::DirectoryAdmin::Call::QueryFilesystem(zx::unowned_channel(handle));
     fdio_release(io);
-    if (result.status != ZX_OK) {
-        return ERROR(result.status);
+    if (result.status() != ZX_OK) {
+        return ERROR(result.status());
     }
     fio::DirectoryAdmin::QueryFilesystemResponse* response = result.Unwrap();
     if (response->s != ZX_OK) {

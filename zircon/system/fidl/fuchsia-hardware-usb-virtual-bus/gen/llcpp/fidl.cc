@@ -34,23 +34,10 @@ Bus::ResultOf::Enable_Impl<Bus::EnableResponse>::Enable_Impl(zx::unowned_channel
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, EnableRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<EnableRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kBus_Enable_Ordinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(EnableRequest));
   ::fidl::DecodedMessage<EnableRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<EnableRequest, EnableResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Bus::InPlace::Enable(std::move(_client_end), Super::response_buffer()));
 }
 
 Bus::ResultOf::Enable Bus::SyncClient::Enable() {
@@ -66,22 +53,10 @@ Bus::UnownedResultOf::Enable_Impl<Bus::EnableResponse>::Enable_Impl(zx::unowned_
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(EnableRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, EnableRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<EnableRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kBus_Enable_Ordinal;
   _request_buffer.set_actual(sizeof(EnableRequest));
   ::fidl::DecodedMessage<EnableRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<EnableRequest, EnableResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Bus::InPlace::Enable(std::move(_client_end), std::move(_response_buffer)));
 }
 
 Bus::UnownedResultOf::Enable Bus::SyncClient::Enable(::fidl::BytePart _response_buffer) {
@@ -153,31 +128,24 @@ zx_status_t Bus::Call::Enable_Deprecated(zx::unowned_channel _client_end, int32_
   return _decode_result;
 }
 
-::fidl::DecodeResult<Bus::EnableResponse> Bus::SyncClient::Enable_Deprecated(::fidl::BytePart response_buffer) {
-  return Bus::Call::Enable_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Bus::EnableResponse> Bus::Call::Enable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(EnableRequest)] = {};
+::fidl::DecodeResult<Bus::EnableResponse> Bus::InPlace::Enable(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(EnableRequest);
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<EnableRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kBus_Enable_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Bus::EnableResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Bus::EnableResponse>());
+    return ::fidl::DecodeResult<Bus::EnableResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<EnableRequest, EnableResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Bus::EnableResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Bus::EnableResponse>());
+    return ::fidl::DecodeResult<Bus::EnableResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -189,23 +157,10 @@ Bus::ResultOf::Disable_Impl<Bus::DisableResponse>::Disable_Impl(zx::unowned_chan
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, DisableRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<DisableRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kBus_Disable_Ordinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(DisableRequest));
   ::fidl::DecodedMessage<DisableRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<DisableRequest, DisableResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Bus::InPlace::Disable(std::move(_client_end), Super::response_buffer()));
 }
 
 Bus::ResultOf::Disable Bus::SyncClient::Disable() {
@@ -221,22 +176,10 @@ Bus::UnownedResultOf::Disable_Impl<Bus::DisableResponse>::Disable_Impl(zx::unown
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DisableRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, DisableRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<DisableRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kBus_Disable_Ordinal;
   _request_buffer.set_actual(sizeof(DisableRequest));
   ::fidl::DecodedMessage<DisableRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<DisableRequest, DisableResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Bus::InPlace::Disable(std::move(_client_end), std::move(_response_buffer)));
 }
 
 Bus::UnownedResultOf::Disable Bus::SyncClient::Disable(::fidl::BytePart _response_buffer) {
@@ -308,31 +251,24 @@ zx_status_t Bus::Call::Disable_Deprecated(zx::unowned_channel _client_end, int32
   return _decode_result;
 }
 
-::fidl::DecodeResult<Bus::DisableResponse> Bus::SyncClient::Disable_Deprecated(::fidl::BytePart response_buffer) {
-  return Bus::Call::Disable_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Bus::DisableResponse> Bus::Call::Disable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DisableRequest)] = {};
+::fidl::DecodeResult<Bus::DisableResponse> Bus::InPlace::Disable(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(DisableRequest);
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<DisableRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kBus_Disable_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Bus::DisableResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Bus::DisableResponse>());
+    return ::fidl::DecodeResult<Bus::DisableResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<DisableRequest, DisableResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Bus::DisableResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Bus::DisableResponse>());
+    return ::fidl::DecodeResult<Bus::DisableResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -344,23 +280,10 @@ Bus::ResultOf::Connect_Impl<Bus::ConnectResponse>::Connect_Impl(zx::unowned_chan
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, ConnectRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<ConnectRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kBus_Connect_Ordinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ConnectRequest));
   ::fidl::DecodedMessage<ConnectRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<ConnectRequest, ConnectResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Bus::InPlace::Connect(std::move(_client_end), Super::response_buffer()));
 }
 
 Bus::ResultOf::Connect Bus::SyncClient::Connect() {
@@ -376,22 +299,10 @@ Bus::UnownedResultOf::Connect_Impl<Bus::ConnectResponse>::Connect_Impl(zx::unown
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ConnectRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, ConnectRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<ConnectRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kBus_Connect_Ordinal;
   _request_buffer.set_actual(sizeof(ConnectRequest));
   ::fidl::DecodedMessage<ConnectRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<ConnectRequest, ConnectResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Bus::InPlace::Connect(std::move(_client_end), std::move(_response_buffer)));
 }
 
 Bus::UnownedResultOf::Connect Bus::SyncClient::Connect(::fidl::BytePart _response_buffer) {
@@ -463,31 +374,24 @@ zx_status_t Bus::Call::Connect_Deprecated(zx::unowned_channel _client_end, int32
   return _decode_result;
 }
 
-::fidl::DecodeResult<Bus::ConnectResponse> Bus::SyncClient::Connect_Deprecated(::fidl::BytePart response_buffer) {
-  return Bus::Call::Connect_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Bus::ConnectResponse> Bus::Call::Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ConnectRequest)] = {};
+::fidl::DecodeResult<Bus::ConnectResponse> Bus::InPlace::Connect(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(ConnectRequest);
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<ConnectRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kBus_Connect_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Bus::ConnectResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Bus::ConnectResponse>());
+    return ::fidl::DecodeResult<Bus::ConnectResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<ConnectRequest, ConnectResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Bus::ConnectResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Bus::ConnectResponse>());
+    return ::fidl::DecodeResult<Bus::ConnectResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -499,23 +403,10 @@ Bus::ResultOf::Disconnect_Impl<Bus::DisconnectResponse>::Disconnect_Impl(zx::uno
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, DisconnectRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<DisconnectRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kBus_Disconnect_Ordinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(DisconnectRequest));
   ::fidl::DecodedMessage<DisconnectRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<DisconnectRequest, DisconnectResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Bus::InPlace::Disconnect(std::move(_client_end), Super::response_buffer()));
 }
 
 Bus::ResultOf::Disconnect Bus::SyncClient::Disconnect() {
@@ -531,22 +422,10 @@ Bus::UnownedResultOf::Disconnect_Impl<Bus::DisconnectResponse>::Disconnect_Impl(
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DisconnectRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, DisconnectRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<DisconnectRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kBus_Disconnect_Ordinal;
   _request_buffer.set_actual(sizeof(DisconnectRequest));
   ::fidl::DecodedMessage<DisconnectRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<DisconnectRequest, DisconnectResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Bus::InPlace::Disconnect(std::move(_client_end), std::move(_response_buffer)));
 }
 
 Bus::UnownedResultOf::Disconnect Bus::SyncClient::Disconnect(::fidl::BytePart _response_buffer) {
@@ -618,31 +497,24 @@ zx_status_t Bus::Call::Disconnect_Deprecated(zx::unowned_channel _client_end, in
   return _decode_result;
 }
 
-::fidl::DecodeResult<Bus::DisconnectResponse> Bus::SyncClient::Disconnect_Deprecated(::fidl::BytePart response_buffer) {
-  return Bus::Call::Disconnect_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Bus::DisconnectResponse> Bus::Call::Disconnect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DisconnectRequest)] = {};
+::fidl::DecodeResult<Bus::DisconnectResponse> Bus::InPlace::Disconnect(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(DisconnectRequest);
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<DisconnectRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kBus_Disconnect_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Bus::DisconnectResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Bus::DisconnectResponse>());
+    return ::fidl::DecodeResult<Bus::DisconnectResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<DisconnectRequest, DisconnectResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Bus::DisconnectResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Bus::DisconnectResponse>());
+    return ::fidl::DecodeResult<Bus::DisconnectResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }

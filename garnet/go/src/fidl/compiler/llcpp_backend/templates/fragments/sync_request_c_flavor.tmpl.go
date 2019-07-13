@@ -148,10 +148,10 @@ zx_status_t {{ .LLProps.InterfaceName }}::Call::{{ template "StaticCallSyncReque
   {{- else }}
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, {{ .Name }}Request::PrimarySize);
+    {{- if .Request }}
   auto& _request = *reinterpret_cast<{{ .Name }}Request*>(_write_bytes);
+    {{- end }}
   {{- end }}
-  _request._hdr = {};
-  _request._hdr.ordinal = {{ .Ordinals.Write.Name }};
   {{- template "FillRequestStructMembers" .Request -}}
 
   {{- if .LLProps.LinearizeRequest }}
@@ -165,27 +165,17 @@ zx_status_t {{ .LLProps.InterfaceName }}::Call::{{ template "StaticCallSyncReque
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof({{ .Name }}Request));
   ::fidl::DecodedMessage<{{ .Name }}Request> _decoded_request(std::move(_request_bytes));
   {{- end }}
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
 
   {{- if .HasResponse }}
-  auto _call_result = ::fidl::Call<{{ .Name }}Request, {{ .Name }}Response>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      {{ .LLProps.InterfaceName }}::InPlace::{{ .Name }}(std::move(_client_end)
+      {{- if .Request }}, std::move(_decoded_request){{ end -}}
+      , Super::response_buffer()));
   {{- else }}
-  zx_status_t _write_status =
-      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
-  Super::status_ = _write_status;
-  if (_write_status != ZX_OK) {
-    Super::error_ = ::fidl::internal::kErrorWriteFailed;
-  }
+  Super::operator=(
+      {{ .LLProps.InterfaceName }}::InPlace::{{ .Name }}(std::move(_client_end)
+      {{- if .Request }}, std::move(_decoded_request){{ end -}}
+  ));
   {{- end }}
 }
 

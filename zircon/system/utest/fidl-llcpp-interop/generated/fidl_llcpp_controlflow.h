@@ -189,13 +189,6 @@ class ControlFlow final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<MustSendAccessDeniedEpitaphResponse> MustSendAccessDeniedEpitaph_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_reply);
 
-    // Despite the fact that a reply was defined in the method signature,
-    // Calling this method generates no reply and a epitaph with error set to
-    // `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
-    // This tests sending an epitaph from a normal (two-way) method call handler.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<MustSendAccessDeniedEpitaphResponse> MustSendAccessDeniedEpitaph_Deprecated(::fidl::BytePart response_buffer);
-
    private:
     ::zx::channel channel_;
   };
@@ -251,12 +244,27 @@ class ControlFlow final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<MustSendAccessDeniedEpitaphResponse> MustSendAccessDeniedEpitaph_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_reply);
 
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    // Shutdown the server without a reply.
+    // The server should unbind the channel from the dispatch loop, closing it.
+    static ::fidl::internal::StatusAndError Shutdown(zx::unowned_channel _client_end);
+
+    // Calling this method generates no reply and a epitaph with error set to
+    // `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
+    // This tests sending an epitaph from the one-way method call handler.
+    static ::fidl::internal::StatusAndError NoReplyMustSendAccessDeniedEpitaph(zx::unowned_channel _client_end);
+
     // Despite the fact that a reply was defined in the method signature,
     // Calling this method generates no reply and a epitaph with error set to
     // `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
     // This tests sending an epitaph from a normal (two-way) method call handler.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<MustSendAccessDeniedEpitaphResponse> MustSendAccessDeniedEpitaph_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<MustSendAccessDeniedEpitaphResponse> MustSendAccessDeniedEpitaph(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

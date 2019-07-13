@@ -315,11 +315,10 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
     fsocket::Control::SyncClient control(std::move(accepted));
 
     if (len) {
-        uint8_t response_buffer[fidl::MaxSizeInChannel<fsocket::Control::GetPeerNameResponse>()];
-        fidl::DecodeResult result = control.GetPeerName_Deprecated(fidl::BytePart::WrapEmpty(response_buffer));
-        if (result.status != ZX_OK) {
+        auto result = control.GetPeerName();
+        if (result.status() != ZX_OK) {
             fdio_release_reserved(nfd);
-            return ERROR(result.status);
+            return ERROR(result.status());
         }
         fsocket::Control::GetPeerNameResponse* response = result.Unwrap();
         if (response->code) {
@@ -540,12 +539,11 @@ int getsockname(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
         return ERRNO(EBADF);
     }
 
-    uint8_t response_buffer[fidl::MaxSizeInChannel<fsocket::Control::GetSockNameResponse>()];
-    fidl::DecodeResult result =
-        socket->control.GetSockName_Deprecated(fidl::BytePart::WrapEmpty(response_buffer));
+    auto result =
+        socket->control.GetSockName();
     fdio_release(io);
-    if (result.status != ZX_OK) {
-        return ERROR(result.status);
+    if (result.status() != ZX_OK) {
+        return ERROR(result.status());
     }
     fsocket::Control::GetSockNameResponse* response = result.Unwrap();
     if (response->code) {
@@ -568,12 +566,10 @@ int getpeername(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
         return ERRNO(EBADF);
     }
 
-    uint8_t response_buffer[fidl::MaxSizeInChannel<fsocket::Control::GetPeerNameResponse>()];
-    fidl::DecodeResult result =
-        socket->control.GetPeerName_Deprecated(fidl::BytePart::WrapEmpty(response_buffer));
+    auto result = socket->control.GetPeerName();
     fdio_release(io);
-    if (result.status != ZX_OK) {
-        return ERROR(result.status);
+    if (result.status() != ZX_OK) {
+        return ERROR(result.status());
     }
     fsocket::Control::GetPeerNameResponse* response = result.Unwrap();
     if (response->code) {
@@ -610,17 +606,11 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
         return 0;
     }
 
-    uint8_t request_buffer[fidl::MaxSizeInChannel<fsocket::Control::GetSockOptRequest>()];
-    fidl::DecodedMessage<fsocket::Control::GetSockOptRequest> request(
-        fidl::BytePart::WrapFull(request_buffer));
-    uint8_t response_buffer[fidl::MaxSizeInChannel<fsocket::Control::GetSockOptResponse>()];
-    request.message()->level = static_cast<int16_t>(level);
-    request.message()->optname = static_cast<int16_t>(optname);
-    fidl::DecodeResult result =
-        socket->control.GetSockOpt_Deprecated(std::move(request), fidl::BytePart::WrapEmpty(response_buffer));
+    auto result = socket->control.GetSockOpt(static_cast<int16_t>(level),
+                                             static_cast<int16_t>(optname));
     fdio_release(io);
-    if (result.status != ZX_OK) {
-        return ERROR(result.status);
+    if (result.status() != ZX_OK) {
+        return ERROR(result.status());
     }
     fsocket::Control::GetSockOptResponse* response = result.Unwrap();
     if (response->code) {

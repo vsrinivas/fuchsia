@@ -93,15 +93,14 @@ zx_status_t zxio_remote_attr_set(zxio_t* io, uint32_t flags, const zxio_node_att
 
 zx_status_t zxio_remote_read_once(const Remote& rio, uint8_t* buffer,
                                   size_t capacity, size_t* out_actual) {
-    uint8_t request_buffer[fidl::MaxSizeInChannel<fio::File::ReadRequest>()] = {};
+    uint8_t request_buffer[fidl::MaxSizeInChannel<fio::File::ReadRequest>()];
     uint8_t response_buffer[fidl::MaxSizeInChannel<fio::File::ReadResponse>()];
-    fidl::DecodedMessage<fio::File::ReadRequest> request(fidl::BytePart::WrapFull(request_buffer));
-    request.message()->count = capacity;
-    auto result = fio::File::Call::Read_Deprecated(rio.control(),
-                                        std::move(request),
+    auto result = fio::File::Call::Read(rio.control(),
+                                        fidl::BytePart::WrapEmpty(request_buffer),
+                                        capacity,
                                         fidl::BytePart::WrapEmpty(response_buffer));
-    if (result.status != ZX_OK) {
-        return result.status;
+    if (result.status() != ZX_OK) {
+        return result.status();
     }
     fio::File::ReadResponse* response = result.Unwrap();
     if (response->s != ZX_OK) {
@@ -142,17 +141,15 @@ zx_status_t zxio_remote_read(zxio_t* io, void* data, size_t capacity,
 zx_status_t zxio_remote_read_once_at(const Remote& rio, size_t offset,
                                      uint8_t* buffer, size_t capacity,
                                      size_t* out_actual) {
-    uint8_t request_buffer[fidl::MaxSizeInChannel<fio::File::ReadAtRequest>()] = {};
+    uint8_t request_buffer[fidl::MaxSizeInChannel<fio::File::ReadAtRequest>()];
     uint8_t response_buffer[fidl::MaxSizeInChannel<fio::File::ReadAtResponse>()];
-    fidl::DecodedMessage<fio::File::ReadAtRequest> request(
-        fidl::BytePart::WrapFull(request_buffer));
-    request.message()->count = capacity;
-    request.message()->offset = offset;
-    auto result = fio::File::Call::ReadAt_Deprecated(rio.control(),
-                                          std::move(request),
+    auto result = fio::File::Call::ReadAt(rio.control(),
+                                          fidl::BytePart::WrapEmpty(request_buffer),
+                                          capacity,
+                                          offset,
                                           fidl::BytePart::WrapEmpty(response_buffer));
-    if (result.status != ZX_OK) {
-        return result.status;
+    if (result.status() != ZX_OK) {
+        return result.status();
     }
     fio::File::ReadAtResponse* response = result.Unwrap();
     if (response->s != ZX_OK) {
@@ -334,16 +331,14 @@ zx_status_t zxio_remote_vmo_get(zxio_t* io,
                                 zx_handle_t* out_vmo,
                                 size_t* out_size) {
     Remote rio(io);
-    uint8_t request_buffer[fidl::MaxSizeInChannel<fio::File::GetBufferRequest>()] = {};
+    uint8_t request_buffer[fidl::MaxSizeInChannel<fio::File::GetBufferRequest>()];
     uint8_t response_buffer[fidl::MaxSizeInChannel<fio::File::GetBufferResponse>()];
-    fidl::DecodedMessage<fio::File::GetBufferRequest> request(
-        fidl::BytePart::WrapFull(request_buffer));
-    request.message()->flags = flags;
-    auto result = fio::File::Call::GetBuffer_Deprecated(rio.control(),
-                                             std::move(request),
+    auto result = fio::File::Call::GetBuffer(rio.control(),
+                                             fidl::BytePart::WrapEmpty(request_buffer),
+                                             flags,
                                              fidl::BytePart::WrapEmpty(response_buffer));
-    if (result.status != ZX_OK) {
-        return result.status;
+    if (result.status() != ZX_OK) {
+        return result.status();
     }
     fio::File::GetBufferResponse* response = result.Unwrap();
     if (response->s != ZX_OK) {
@@ -428,16 +423,14 @@ zx_status_t zxio_remote_readdir(zxio_t* io,
                                 size_t capacity,
                                 size_t* out_actual) {
     Remote rio(io);
-    uint8_t request_buffer[fidl::MaxSizeInChannel<fio::Directory::ReadDirentsRequest>()] = {};
+    uint8_t request_buffer[fidl::MaxSizeInChannel<fio::Directory::ReadDirentsRequest>()];
     uint8_t response_buffer[fidl::MaxSizeInChannel<fio::Directory::ReadDirentsResponse>()];
-    fidl::DecodedMessage<fio::Directory::ReadDirentsRequest> request(
-        fidl::BytePart::WrapFull(request_buffer));
-    request.message()->max_bytes = capacity;
-    auto result = fio::Directory::Call::ReadDirents_Deprecated(rio.control(),
-                                                    std::move(request),
+    auto result = fio::Directory::Call::ReadDirents(rio.control(),
+                                                    fidl::BytePart::WrapEmpty(request_buffer),
+                                                    capacity,
                                                     fidl::BytePart::WrapEmpty(response_buffer));
-    if (result.status != ZX_OK) {
-        return result.status;
+    if (result.status() != ZX_OK) {
+        return result.status();
     }
     fio::Directory::ReadDirentsResponse* response = result.Unwrap();
     if (response->s != ZX_OK) {

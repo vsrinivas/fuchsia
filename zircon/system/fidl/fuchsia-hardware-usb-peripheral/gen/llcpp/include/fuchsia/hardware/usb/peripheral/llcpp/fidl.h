@@ -61,7 +61,7 @@ class Events final {
     class FunctionRegistered_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      FunctionRegistered_Impl(zx::unowned_channel _client_end);
+      FunctionRegistered_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~FunctionRegistered_Impl() = default;
       FunctionRegistered_Impl(FunctionRegistered_Impl&& other) = default;
       FunctionRegistered_Impl& operator=(FunctionRegistered_Impl&& other) = default;
@@ -102,6 +102,15 @@ class Events final {
 
 
     static zx_status_t FunctionRegistered_Deprecated(zx::unowned_channel _client_end);
+
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    static ::fidl::DecodeResult<FunctionRegisteredResponse> FunctionRegistered(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 
@@ -592,9 +601,6 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SetDeviceDescriptorResponse> SetDeviceDescriptor_Deprecated(::fidl::BytePart _request_buffer, DeviceDescriptor desc, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SetDeviceDescriptorResponse> SetDeviceDescriptor_Deprecated(::fidl::DecodedMessage<SetDeviceDescriptorRequest> params, ::fidl::BytePart response_buffer);
-
     ResultOf::AllocStringDesc AllocStringDesc(::fidl::StringView name);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -605,9 +611,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<AllocStringDescResponse> AllocStringDesc_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer, int32_t* out_s, uint8_t* out_index);
-
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<AllocStringDescResponse> AllocStringDesc_Deprecated(::fidl::DecodedMessage<AllocStringDescRequest> params, ::fidl::BytePart response_buffer);
 
     ResultOf::AddFunction AddFunction(FunctionDescriptor desc);
 
@@ -620,9 +623,6 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<AddFunctionResponse> AddFunction_Deprecated(::fidl::BytePart _request_buffer, FunctionDescriptor desc, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<AddFunctionResponse> AddFunction_Deprecated(::fidl::DecodedMessage<AddFunctionRequest> params, ::fidl::BytePart response_buffer);
-
     ResultOf::BindFunctions BindFunctions();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -633,9 +633,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<BindFunctionsResponse> BindFunctions_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<BindFunctionsResponse> BindFunctions_Deprecated(::fidl::BytePart response_buffer);
 
     ResultOf::ClearFunctions ClearFunctions();
 
@@ -648,9 +645,6 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<ClearFunctionsResponse> ClearFunctions_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<ClearFunctionsResponse> ClearFunctions_Deprecated(::fidl::BytePart response_buffer);
-
     ResultOf::GetMode GetMode();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -661,9 +655,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetModeResponse> GetMode_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, uint32_t* out_mode);
-
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetModeResponse> GetMode_Deprecated(::fidl::BytePart response_buffer);
 
     ResultOf::SetMode SetMode(uint32_t mode);
 
@@ -676,9 +667,6 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SetModeResponse> SetMode_Deprecated(::fidl::BytePart _request_buffer, uint32_t mode, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SetModeResponse> SetMode_Deprecated(::fidl::DecodedMessage<SetModeRequest> params, ::fidl::BytePart response_buffer);
-
     ResultOf::SetStateChangeListener SetStateChangeListener(::zx::channel listener);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -688,9 +676,6 @@ class Device final {
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t SetStateChangeListener_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel listener);
-
-    // Messages are encoded and decoded in-place.
-    zx_status_t SetStateChangeListener_Deprecated(::fidl::DecodedMessage<SetStateChangeListenerRequest> params);
 
    private:
     ::zx::channel channel_;
@@ -711,9 +696,6 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SetDeviceDescriptorResponse> SetDeviceDescriptor_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DeviceDescriptor desc, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SetDeviceDescriptorResponse> SetDeviceDescriptor_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDeviceDescriptorRequest> params, ::fidl::BytePart response_buffer);
-
     static ResultOf::AllocStringDesc AllocStringDesc(zx::unowned_channel _client_end, ::fidl::StringView name);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -724,9 +706,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<AllocStringDescResponse> AllocStringDesc_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer, int32_t* out_s, uint8_t* out_index);
-
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<AllocStringDescResponse> AllocStringDesc_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocStringDescRequest> params, ::fidl::BytePart response_buffer);
 
     static ResultOf::AddFunction AddFunction(zx::unowned_channel _client_end, FunctionDescriptor desc);
 
@@ -739,9 +718,6 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<AddFunctionResponse> AddFunction_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, FunctionDescriptor desc, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<AddFunctionResponse> AddFunction_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddFunctionRequest> params, ::fidl::BytePart response_buffer);
-
     static ResultOf::BindFunctions BindFunctions(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -752,9 +728,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<BindFunctionsResponse> BindFunctions_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
-
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<BindFunctionsResponse> BindFunctions_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     static ResultOf::ClearFunctions ClearFunctions(zx::unowned_channel _client_end);
 
@@ -767,9 +740,6 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<ClearFunctionsResponse> ClearFunctions_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<ClearFunctionsResponse> ClearFunctions_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     static ResultOf::GetMode GetMode(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -780,9 +750,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetModeResponse> GetMode_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, uint32_t* out_mode);
-
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetModeResponse> GetMode_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     static ResultOf::SetMode SetMode(zx::unowned_channel _client_end, uint32_t mode);
 
@@ -795,9 +762,6 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SetModeResponse> SetMode_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mode, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SetModeResponse> SetMode_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetModeRequest> params, ::fidl::BytePart response_buffer);
-
     static ResultOf::SetStateChangeListener SetStateChangeListener(zx::unowned_channel _client_end, ::zx::channel listener);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -808,8 +772,28 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t SetStateChangeListener_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel listener);
 
-    // Messages are encoded and decoded in-place.
-    static zx_status_t SetStateChangeListener_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetStateChangeListenerRequest> params);
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    static ::fidl::DecodeResult<SetDeviceDescriptorResponse> SetDeviceDescriptor(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDeviceDescriptorRequest> params, ::fidl::BytePart response_buffer);
+
+    static ::fidl::DecodeResult<AllocStringDescResponse> AllocStringDesc(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocStringDescRequest> params, ::fidl::BytePart response_buffer);
+
+    static ::fidl::DecodeResult<AddFunctionResponse> AddFunction(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddFunctionRequest> params, ::fidl::BytePart response_buffer);
+
+    static ::fidl::DecodeResult<BindFunctionsResponse> BindFunctions(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    static ::fidl::DecodeResult<ClearFunctionsResponse> ClearFunctions(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    static ::fidl::DecodeResult<GetModeResponse> GetMode(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    static ::fidl::DecodeResult<SetModeResponse> SetMode(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetModeRequest> params, ::fidl::BytePart response_buffer);
+
+    static ::fidl::internal::StatusAndError SetStateChangeListener(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetStateChangeListenerRequest> params);
 
   };
 

@@ -25,25 +25,13 @@ Provider::ResultOf::Socket_Impl<Provider::SocketResponse>::Socket_Impl(zx::unown
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, SocketRequest::PrimarySize);
   auto& _request = *reinterpret_cast<SocketRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kProvider_Socket_Ordinal;
   _request.domain = std::move(domain);
   _request.type = std::move(type);
   _request.protocol = std::move(protocol);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SocketRequest));
   ::fidl::DecodedMessage<SocketRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<SocketRequest, SocketResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Provider::InPlace::Socket(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
 Provider::ResultOf::Socket Provider::SyncClient::Socket(int16_t domain, int16_t type, int16_t protocol) {
@@ -62,24 +50,13 @@ Provider::UnownedResultOf::Socket_Impl<Provider::SocketResponse>::Socket_Impl(zx
   }
   memset(_request_buffer.data(), 0, SocketRequest::PrimarySize);
   auto& _request = *reinterpret_cast<SocketRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kProvider_Socket_Ordinal;
   _request.domain = std::move(domain);
   _request.type = std::move(type);
   _request.protocol = std::move(protocol);
   _request_buffer.set_actual(sizeof(SocketRequest));
   ::fidl::DecodedMessage<SocketRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<SocketRequest, SocketResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Provider::InPlace::Socket(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
 Provider::UnownedResultOf::Socket Provider::SyncClient::Socket(::fidl::BytePart _request_buffer, int16_t domain, int16_t type, int16_t protocol, ::fidl::BytePart _response_buffer) {
@@ -160,27 +137,19 @@ zx_status_t Provider::Call::Socket_Deprecated(zx::unowned_channel _client_end, i
   return _decode_result;
 }
 
-::fidl::DecodeResult<Provider::SocketResponse> Provider::SyncClient::Socket_Deprecated(::fidl::DecodedMessage<SocketRequest> params, ::fidl::BytePart response_buffer) {
-  return Provider::Call::Socket_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Provider::SocketResponse> Provider::Call::Socket_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SocketRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Provider::SocketResponse> Provider::InPlace::Socket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SocketRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kProvider_Socket_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Provider::SocketResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Provider::SocketResponse>());
+    return ::fidl::DecodeResult<Provider::SocketResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<SocketRequest, SocketResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Provider::SocketResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Provider::SocketResponse>());
+    return ::fidl::DecodeResult<Provider::SocketResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -325,23 +294,12 @@ Control::ResultOf::Clone_Impl::Clone_Impl(zx::unowned_channel _client_end, uint3
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, CloneRequest::PrimarySize);
   auto& _request = *reinterpret_cast<CloneRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kControl_Clone_Ordinal;
   _request.flags = std::move(flags);
   _request.object = std::move(object);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(CloneRequest));
   ::fidl::DecodedMessage<CloneRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  zx_status_t _write_status =
-      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
-  Super::status_ = _write_status;
-  if (_write_status != ZX_OK) {
-    Super::error_ = ::fidl::internal::kErrorWriteFailed;
-  }
+  Super::operator=(
+      Control::InPlace::Clone(std::move(_client_end), std::move(_decoded_request)));
 }
 
 Control::ResultOf::Clone Control::SyncClient::Clone(uint32_t flags, ::zx::channel object) {
@@ -361,22 +319,12 @@ Control::UnownedResultOf::Clone_Impl::Clone_Impl(zx::unowned_channel _client_end
   }
   memset(_request_buffer.data(), 0, CloneRequest::PrimarySize);
   auto& _request = *reinterpret_cast<CloneRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kControl_Clone_Ordinal;
   _request.flags = std::move(flags);
   _request.object = std::move(object);
   _request_buffer.set_actual(sizeof(CloneRequest));
   ::fidl::DecodedMessage<CloneRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  zx_status_t _write_status =
-      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
-  Super::status_ = _write_status;
-  if (_write_status != ZX_OK) {
-    Super::error_ = ::fidl::internal::kErrorWriteFailed;
-  }
+  Super::operator=(
+      Control::InPlace::Clone(std::move(_client_end), std::move(_decoded_request)));
 }
 
 Control::UnownedResultOf::Clone Control::SyncClient::Clone(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object) {
@@ -428,18 +376,21 @@ zx_status_t Control::Call::Clone_Deprecated(zx::unowned_channel _client_end, ::f
   return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
-zx_status_t Control::SyncClient::Clone_Deprecated(::fidl::DecodedMessage<CloneRequest> params) {
-  return Control::Call::Clone_Deprecated(zx::unowned_channel(this->channel_), std::move(params));
-}
-
-zx_status_t Control::Call::Clone_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params) {
+::fidl::internal::StatusAndError Control::InPlace::Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_Clone_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
+    return ::fidl::internal::StatusAndError::FromFailure(
+        std::move(_encode_request_result));
   }
-  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  if (_write_status != ZX_OK) {
+    return ::fidl::internal::StatusAndError(_write_status, ::fidl::internal::kErrorWriteFailed);
+  } else {
+    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
+  }
 }
 
 template <>
@@ -449,23 +400,10 @@ Control::ResultOf::Close_Impl<Control::CloseResponse>::Close_Impl(zx::unowned_ch
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, CloseRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<CloseRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kControl_Close_Ordinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(CloseRequest));
   ::fidl::DecodedMessage<CloseRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<CloseRequest, CloseResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::Close(std::move(_client_end), Super::response_buffer()));
 }
 
 Control::ResultOf::Close Control::SyncClient::Close() {
@@ -481,22 +419,10 @@ Control::UnownedResultOf::Close_Impl<Control::CloseResponse>::Close_Impl(zx::uno
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(CloseRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, CloseRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<CloseRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kControl_Close_Ordinal;
   _request_buffer.set_actual(sizeof(CloseRequest));
   ::fidl::DecodedMessage<CloseRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<CloseRequest, CloseResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::Close(std::move(_client_end), std::move(_response_buffer)));
 }
 
 Control::UnownedResultOf::Close Control::SyncClient::Close(::fidl::BytePart _response_buffer) {
@@ -568,31 +494,24 @@ zx_status_t Control::Call::Close_Deprecated(zx::unowned_channel _client_end, int
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::CloseResponse> Control::SyncClient::Close_Deprecated(::fidl::BytePart response_buffer) {
-  return Control::Call::Close_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Control::CloseResponse> Control::Call::Close_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(CloseRequest)] = {};
+::fidl::DecodeResult<Control::CloseResponse> Control::InPlace::Close(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(CloseRequest);
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<CloseRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_Close_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::CloseResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Control::CloseResponse>());
+    return ::fidl::DecodeResult<Control::CloseResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<CloseRequest, CloseResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::CloseResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Control::CloseResponse>());
+    return ::fidl::DecodeResult<Control::CloseResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -604,23 +523,10 @@ Control::ResultOf::Describe_Impl<Control::DescribeResponse>::Describe_Impl(zx::u
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, DescribeRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<DescribeRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kControl_Describe_Ordinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(DescribeRequest));
   ::fidl::DecodedMessage<DescribeRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<DescribeRequest, DescribeResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::Describe(std::move(_client_end), Super::response_buffer()));
 }
 
 Control::ResultOf::Describe Control::SyncClient::Describe() {
@@ -636,22 +542,10 @@ Control::UnownedResultOf::Describe_Impl<Control::DescribeResponse>::Describe_Imp
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DescribeRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, DescribeRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<DescribeRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kControl_Describe_Ordinal;
   _request_buffer.set_actual(sizeof(DescribeRequest));
   ::fidl::DecodedMessage<DescribeRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<DescribeRequest, DescribeResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::Describe(std::move(_client_end), std::move(_response_buffer)));
 }
 
 Control::UnownedResultOf::Describe Control::SyncClient::Describe(::fidl::BytePart _response_buffer) {
@@ -723,31 +617,24 @@ zx_status_t Control::Call::Describe_Deprecated(zx::unowned_channel _client_end, 
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::DescribeResponse> Control::SyncClient::Describe_Deprecated(::fidl::BytePart response_buffer) {
-  return Control::Call::Describe_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Control::DescribeResponse> Control::Call::Describe_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DescribeRequest)] = {};
+::fidl::DecodeResult<Control::DescribeResponse> Control::InPlace::Describe(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(DescribeRequest);
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<DescribeRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_Describe_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::DescribeResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Control::DescribeResponse>());
+    return ::fidl::DecodeResult<Control::DescribeResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<DescribeRequest, DescribeResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::DescribeResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Control::DescribeResponse>());
+    return ::fidl::DecodeResult<Control::DescribeResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -759,23 +646,10 @@ Control::ResultOf::Sync_Impl<Control::SyncResponse>::Sync_Impl(zx::unowned_chann
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, SyncRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<SyncRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kControl_Sync_Ordinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SyncRequest));
   ::fidl::DecodedMessage<SyncRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<SyncRequest, SyncResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::Sync(std::move(_client_end), Super::response_buffer()));
 }
 
 Control::ResultOf::Sync Control::SyncClient::Sync() {
@@ -791,22 +665,10 @@ Control::UnownedResultOf::Sync_Impl<Control::SyncResponse>::Sync_Impl(zx::unowne
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(SyncRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, SyncRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<SyncRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kControl_Sync_Ordinal;
   _request_buffer.set_actual(sizeof(SyncRequest));
   ::fidl::DecodedMessage<SyncRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<SyncRequest, SyncResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::Sync(std::move(_client_end), std::move(_response_buffer)));
 }
 
 Control::UnownedResultOf::Sync Control::SyncClient::Sync(::fidl::BytePart _response_buffer) {
@@ -878,31 +740,24 @@ zx_status_t Control::Call::Sync_Deprecated(zx::unowned_channel _client_end, int3
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::SyncResponse> Control::SyncClient::Sync_Deprecated(::fidl::BytePart response_buffer) {
-  return Control::Call::Sync_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Control::SyncResponse> Control::Call::Sync_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(SyncRequest)] = {};
+::fidl::DecodeResult<Control::SyncResponse> Control::InPlace::Sync(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(SyncRequest);
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<SyncRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_Sync_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::SyncResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Control::SyncResponse>());
+    return ::fidl::DecodeResult<Control::SyncResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<SyncRequest, SyncResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::SyncResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Control::SyncResponse>());
+    return ::fidl::DecodeResult<Control::SyncResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -914,23 +769,10 @@ Control::ResultOf::GetAttr_Impl<Control::GetAttrResponse>::GetAttr_Impl(zx::unow
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, GetAttrRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<GetAttrRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kControl_GetAttr_Ordinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetAttrRequest));
   ::fidl::DecodedMessage<GetAttrRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetAttrRequest, GetAttrResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::GetAttr(std::move(_client_end), Super::response_buffer()));
 }
 
 Control::ResultOf::GetAttr Control::SyncClient::GetAttr() {
@@ -946,22 +788,10 @@ Control::UnownedResultOf::GetAttr_Impl<Control::GetAttrResponse>::GetAttr_Impl(z
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetAttrRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetAttrRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<GetAttrRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kControl_GetAttr_Ordinal;
   _request_buffer.set_actual(sizeof(GetAttrRequest));
   ::fidl::DecodedMessage<GetAttrRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetAttrRequest, GetAttrResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::GetAttr(std::move(_client_end), std::move(_response_buffer)));
 }
 
 Control::UnownedResultOf::GetAttr Control::SyncClient::GetAttr(::fidl::BytePart _response_buffer) {
@@ -1035,31 +865,24 @@ zx_status_t Control::Call::GetAttr_Deprecated(zx::unowned_channel _client_end, i
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::GetAttrResponse> Control::SyncClient::GetAttr_Deprecated(::fidl::BytePart response_buffer) {
-  return Control::Call::GetAttr_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Control::GetAttrResponse> Control::Call::GetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetAttrRequest)] = {};
+::fidl::DecodeResult<Control::GetAttrResponse> Control::InPlace::GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetAttrRequest);
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetAttrRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_GetAttr_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::GetAttrResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Control::GetAttrResponse>());
+    return ::fidl::DecodeResult<Control::GetAttrResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<GetAttrRequest, GetAttrResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::GetAttrResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Control::GetAttrResponse>());
+    return ::fidl::DecodeResult<Control::GetAttrResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -1072,24 +895,12 @@ Control::ResultOf::SetAttr_Impl<Control::SetAttrResponse>::SetAttr_Impl(zx::unow
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, SetAttrRequest::PrimarySize);
   auto& _request = *reinterpret_cast<SetAttrRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kControl_SetAttr_Ordinal;
   _request.flags = std::move(flags);
   _request.attributes = std::move(attributes);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetAttrRequest));
   ::fidl::DecodedMessage<SetAttrRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<SetAttrRequest, SetAttrResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::SetAttr(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
 Control::ResultOf::SetAttr Control::SyncClient::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes) {
@@ -1108,23 +919,12 @@ Control::UnownedResultOf::SetAttr_Impl<Control::SetAttrResponse>::SetAttr_Impl(z
   }
   memset(_request_buffer.data(), 0, SetAttrRequest::PrimarySize);
   auto& _request = *reinterpret_cast<SetAttrRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kControl_SetAttr_Ordinal;
   _request.flags = std::move(flags);
   _request.attributes = std::move(attributes);
   _request_buffer.set_actual(sizeof(SetAttrRequest));
   ::fidl::DecodedMessage<SetAttrRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<SetAttrRequest, SetAttrResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::SetAttr(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
 Control::UnownedResultOf::SetAttr Control::SyncClient::SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
@@ -1201,27 +1001,19 @@ zx_status_t Control::Call::SetAttr_Deprecated(zx::unowned_channel _client_end, u
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::SetAttrResponse> Control::SyncClient::SetAttr_Deprecated(::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer) {
-  return Control::Call::SetAttr_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Control::SetAttrResponse> Control::Call::SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::SetAttrResponse> Control::InPlace::SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_SetAttr_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::SetAttrResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Control::SetAttrResponse>());
+    return ::fidl::DecodeResult<Control::SetAttrResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<SetAttrRequest, SetAttrResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::SetAttrResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Control::SetAttrResponse>());
+    return ::fidl::DecodeResult<Control::SetAttrResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -1232,8 +1024,6 @@ Control::ResultOf::Ioctl_Impl<Control::IoctlResponse>::Ioctl_Impl(zx::unowned_ch
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
   IoctlRequest _request = {};
-  _request._hdr = {};
-  _request._hdr.ordinal = kControl_Ioctl_Ordinal;
   _request.opcode = std::move(opcode);
   _request.max_out = std::move(max_out);
   _request.handles = std::move(handles);
@@ -1244,18 +1034,8 @@ Control::ResultOf::Ioctl_Impl<Control::IoctlResponse>::Ioctl_Impl(zx::unowned_ch
     return;
   }
   ::fidl::DecodedMessage<IoctlRequest> _decoded_request = std::move(_linearize_result.message);
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<IoctlRequest, IoctlResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::Ioctl(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
 Control::ResultOf::Ioctl Control::SyncClient::Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in) {
@@ -1273,7 +1053,6 @@ Control::UnownedResultOf::Ioctl_Impl<Control::IoctlResponse>::Ioctl_Impl(zx::uno
     return;
   }
   IoctlRequest _request = {};
-  _request._hdr.ordinal = kControl_Ioctl_Ordinal;
   _request.opcode = std::move(opcode);
   _request.max_out = std::move(max_out);
   _request.handles = std::move(handles);
@@ -1284,18 +1063,8 @@ Control::UnownedResultOf::Ioctl_Impl<Control::IoctlResponse>::Ioctl_Impl(zx::uno
     return;
   }
   ::fidl::DecodedMessage<IoctlRequest> _decoded_request = std::move(_linearize_result.message);
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<IoctlRequest, IoctlResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::Ioctl(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
 Control::UnownedResultOf::Ioctl Control::SyncClient::Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer) {
@@ -1345,27 +1114,19 @@ Control::UnownedResultOf::Ioctl Control::Call::Ioctl(zx::unowned_channel _client
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::IoctlResponse> Control::SyncClient::Ioctl_Deprecated(::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer) {
-  return Control::Call::Ioctl_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Control::IoctlResponse> Control::Call::Ioctl_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::IoctlResponse> Control::InPlace::Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_Ioctl_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::IoctlResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Control::IoctlResponse>());
+    return ::fidl::DecodeResult<Control::IoctlResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<IoctlRequest, IoctlResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::IoctlResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Control::IoctlResponse>());
+    return ::fidl::DecodeResult<Control::IoctlResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -1376,8 +1137,6 @@ Control::ResultOf::Bind_Impl<Control::BindResponse>::Bind_Impl(zx::unowned_chann
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
   BindRequest _request = {};
-  _request._hdr = {};
-  _request._hdr.ordinal = kControl_Bind_Ordinal;
   _request.addr = std::move(addr);
   auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
   if (_linearize_result.status != ZX_OK) {
@@ -1385,18 +1144,8 @@ Control::ResultOf::Bind_Impl<Control::BindResponse>::Bind_Impl(zx::unowned_chann
     return;
   }
   ::fidl::DecodedMessage<BindRequest> _decoded_request = std::move(_linearize_result.message);
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<BindRequest, BindResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::Bind(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
 Control::ResultOf::Bind Control::SyncClient::Bind(::fidl::VectorView<uint8_t> addr) {
@@ -1414,7 +1163,6 @@ Control::UnownedResultOf::Bind_Impl<Control::BindResponse>::Bind_Impl(zx::unowne
     return;
   }
   BindRequest _request = {};
-  _request._hdr.ordinal = kControl_Bind_Ordinal;
   _request.addr = std::move(addr);
   auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -1422,18 +1170,8 @@ Control::UnownedResultOf::Bind_Impl<Control::BindResponse>::Bind_Impl(zx::unowne
     return;
   }
   ::fidl::DecodedMessage<BindRequest> _decoded_request = std::move(_linearize_result.message);
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<BindRequest, BindResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::Bind(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
 Control::UnownedResultOf::Bind Control::SyncClient::Bind(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer) {
@@ -1516,27 +1254,19 @@ zx_status_t Control::Call::Bind_Deprecated(zx::unowned_channel _client_end, ::fi
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::BindResponse> Control::SyncClient::Bind_Deprecated(::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer) {
-  return Control::Call::Bind_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Control::BindResponse> Control::Call::Bind_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::BindResponse> Control::InPlace::Bind(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_Bind_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::BindResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Control::BindResponse>());
+    return ::fidl::DecodeResult<Control::BindResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<BindRequest, BindResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::BindResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Control::BindResponse>());
+    return ::fidl::DecodeResult<Control::BindResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -1547,8 +1277,6 @@ Control::ResultOf::Connect_Impl<Control::ConnectResponse>::Connect_Impl(zx::unow
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
   ConnectRequest _request = {};
-  _request._hdr = {};
-  _request._hdr.ordinal = kControl_Connect_Ordinal;
   _request.addr = std::move(addr);
   auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
   if (_linearize_result.status != ZX_OK) {
@@ -1556,18 +1284,8 @@ Control::ResultOf::Connect_Impl<Control::ConnectResponse>::Connect_Impl(zx::unow
     return;
   }
   ::fidl::DecodedMessage<ConnectRequest> _decoded_request = std::move(_linearize_result.message);
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<ConnectRequest, ConnectResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::Connect(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
 Control::ResultOf::Connect Control::SyncClient::Connect(::fidl::VectorView<uint8_t> addr) {
@@ -1585,7 +1303,6 @@ Control::UnownedResultOf::Connect_Impl<Control::ConnectResponse>::Connect_Impl(z
     return;
   }
   ConnectRequest _request = {};
-  _request._hdr.ordinal = kControl_Connect_Ordinal;
   _request.addr = std::move(addr);
   auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -1593,18 +1310,8 @@ Control::UnownedResultOf::Connect_Impl<Control::ConnectResponse>::Connect_Impl(z
     return;
   }
   ::fidl::DecodedMessage<ConnectRequest> _decoded_request = std::move(_linearize_result.message);
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<ConnectRequest, ConnectResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::Connect(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
 Control::UnownedResultOf::Connect Control::SyncClient::Connect(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer) {
@@ -1687,27 +1394,19 @@ zx_status_t Control::Call::Connect_Deprecated(zx::unowned_channel _client_end, :
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::ConnectResponse> Control::SyncClient::Connect_Deprecated(::fidl::DecodedMessage<ConnectRequest> params, ::fidl::BytePart response_buffer) {
-  return Control::Call::Connect_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Control::ConnectResponse> Control::Call::Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::ConnectResponse> Control::InPlace::Connect(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_Connect_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::ConnectResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Control::ConnectResponse>());
+    return ::fidl::DecodeResult<Control::ConnectResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<ConnectRequest, ConnectResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::ConnectResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Control::ConnectResponse>());
+    return ::fidl::DecodeResult<Control::ConnectResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -1720,23 +1419,11 @@ Control::ResultOf::Listen_Impl<Control::ListenResponse>::Listen_Impl(zx::unowned
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, ListenRequest::PrimarySize);
   auto& _request = *reinterpret_cast<ListenRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kControl_Listen_Ordinal;
   _request.backlog = std::move(backlog);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ListenRequest));
   ::fidl::DecodedMessage<ListenRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<ListenRequest, ListenResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::Listen(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
 Control::ResultOf::Listen Control::SyncClient::Listen(int16_t backlog) {
@@ -1755,22 +1442,11 @@ Control::UnownedResultOf::Listen_Impl<Control::ListenResponse>::Listen_Impl(zx::
   }
   memset(_request_buffer.data(), 0, ListenRequest::PrimarySize);
   auto& _request = *reinterpret_cast<ListenRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kControl_Listen_Ordinal;
   _request.backlog = std::move(backlog);
   _request_buffer.set_actual(sizeof(ListenRequest));
   ::fidl::DecodedMessage<ListenRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<ListenRequest, ListenResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::Listen(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
 Control::UnownedResultOf::Listen Control::SyncClient::Listen(::fidl::BytePart _request_buffer, int16_t backlog, ::fidl::BytePart _response_buffer) {
@@ -1845,27 +1521,19 @@ zx_status_t Control::Call::Listen_Deprecated(zx::unowned_channel _client_end, in
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::ListenResponse> Control::SyncClient::Listen_Deprecated(::fidl::DecodedMessage<ListenRequest> params, ::fidl::BytePart response_buffer) {
-  return Control::Call::Listen_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Control::ListenResponse> Control::Call::Listen_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ListenRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::ListenResponse> Control::InPlace::Listen(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ListenRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_Listen_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::ListenResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Control::ListenResponse>());
+    return ::fidl::DecodeResult<Control::ListenResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<ListenRequest, ListenResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::ListenResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Control::ListenResponse>());
+    return ::fidl::DecodeResult<Control::ListenResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -1878,23 +1546,11 @@ Control::ResultOf::Accept_Impl<Control::AcceptResponse>::Accept_Impl(zx::unowned
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, AcceptRequest::PrimarySize);
   auto& _request = *reinterpret_cast<AcceptRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kControl_Accept_Ordinal;
   _request.flags = std::move(flags);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(AcceptRequest));
   ::fidl::DecodedMessage<AcceptRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<AcceptRequest, AcceptResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::Accept(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
 Control::ResultOf::Accept Control::SyncClient::Accept(int16_t flags) {
@@ -1913,22 +1569,11 @@ Control::UnownedResultOf::Accept_Impl<Control::AcceptResponse>::Accept_Impl(zx::
   }
   memset(_request_buffer.data(), 0, AcceptRequest::PrimarySize);
   auto& _request = *reinterpret_cast<AcceptRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kControl_Accept_Ordinal;
   _request.flags = std::move(flags);
   _request_buffer.set_actual(sizeof(AcceptRequest));
   ::fidl::DecodedMessage<AcceptRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<AcceptRequest, AcceptResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::Accept(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
 Control::UnownedResultOf::Accept Control::SyncClient::Accept(::fidl::BytePart _request_buffer, int16_t flags, ::fidl::BytePart _response_buffer) {
@@ -2005,27 +1650,19 @@ zx_status_t Control::Call::Accept_Deprecated(zx::unowned_channel _client_end, in
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::AcceptResponse> Control::SyncClient::Accept_Deprecated(::fidl::DecodedMessage<AcceptRequest> params, ::fidl::BytePart response_buffer) {
-  return Control::Call::Accept_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Control::AcceptResponse> Control::Call::Accept_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AcceptRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::AcceptResponse> Control::InPlace::Accept(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AcceptRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_Accept_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::AcceptResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Control::AcceptResponse>());
+    return ::fidl::DecodeResult<Control::AcceptResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<AcceptRequest, AcceptResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::AcceptResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Control::AcceptResponse>());
+    return ::fidl::DecodeResult<Control::AcceptResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -2037,23 +1674,10 @@ Control::ResultOf::GetSockName_Impl<Control::GetSockNameResponse>::GetSockName_I
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, GetSockNameRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<GetSockNameRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kControl_GetSockName_Ordinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetSockNameRequest));
   ::fidl::DecodedMessage<GetSockNameRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetSockNameRequest, GetSockNameResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::GetSockName(std::move(_client_end), Super::response_buffer()));
 }
 
 Control::ResultOf::GetSockName Control::SyncClient::GetSockName() {
@@ -2069,22 +1693,10 @@ Control::UnownedResultOf::GetSockName_Impl<Control::GetSockNameResponse>::GetSoc
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetSockNameRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetSockNameRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<GetSockNameRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kControl_GetSockName_Ordinal;
   _request_buffer.set_actual(sizeof(GetSockNameRequest));
   ::fidl::DecodedMessage<GetSockNameRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetSockNameRequest, GetSockNameResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::GetSockName(std::move(_client_end), std::move(_response_buffer)));
 }
 
 Control::UnownedResultOf::GetSockName Control::SyncClient::GetSockName(::fidl::BytePart _response_buffer) {
@@ -2125,31 +1737,24 @@ Control::UnownedResultOf::GetSockName Control::Call::GetSockName(zx::unowned_cha
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::GetSockNameResponse> Control::SyncClient::GetSockName_Deprecated(::fidl::BytePart response_buffer) {
-  return Control::Call::GetSockName_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Control::GetSockNameResponse> Control::Call::GetSockName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetSockNameRequest)] = {};
+::fidl::DecodeResult<Control::GetSockNameResponse> Control::InPlace::GetSockName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetSockNameRequest);
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetSockNameRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_GetSockName_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::GetSockNameResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Control::GetSockNameResponse>());
+    return ::fidl::DecodeResult<Control::GetSockNameResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<GetSockNameRequest, GetSockNameResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::GetSockNameResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Control::GetSockNameResponse>());
+    return ::fidl::DecodeResult<Control::GetSockNameResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -2161,23 +1766,10 @@ Control::ResultOf::GetPeerName_Impl<Control::GetPeerNameResponse>::GetPeerName_I
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, GetPeerNameRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<GetPeerNameRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kControl_GetPeerName_Ordinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetPeerNameRequest));
   ::fidl::DecodedMessage<GetPeerNameRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetPeerNameRequest, GetPeerNameResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::GetPeerName(std::move(_client_end), Super::response_buffer()));
 }
 
 Control::ResultOf::GetPeerName Control::SyncClient::GetPeerName() {
@@ -2193,22 +1785,10 @@ Control::UnownedResultOf::GetPeerName_Impl<Control::GetPeerNameResponse>::GetPee
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetPeerNameRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetPeerNameRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<GetPeerNameRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kControl_GetPeerName_Ordinal;
   _request_buffer.set_actual(sizeof(GetPeerNameRequest));
   ::fidl::DecodedMessage<GetPeerNameRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetPeerNameRequest, GetPeerNameResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::GetPeerName(std::move(_client_end), std::move(_response_buffer)));
 }
 
 Control::UnownedResultOf::GetPeerName Control::SyncClient::GetPeerName(::fidl::BytePart _response_buffer) {
@@ -2249,31 +1829,24 @@ Control::UnownedResultOf::GetPeerName Control::Call::GetPeerName(zx::unowned_cha
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::GetPeerNameResponse> Control::SyncClient::GetPeerName_Deprecated(::fidl::BytePart response_buffer) {
-  return Control::Call::GetPeerName_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Control::GetPeerNameResponse> Control::Call::GetPeerName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetPeerNameRequest)] = {};
+::fidl::DecodeResult<Control::GetPeerNameResponse> Control::InPlace::GetPeerName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetPeerNameRequest);
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetPeerNameRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_GetPeerName_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::GetPeerNameResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Control::GetPeerNameResponse>());
+    return ::fidl::DecodeResult<Control::GetPeerNameResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<GetPeerNameRequest, GetPeerNameResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::GetPeerNameResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Control::GetPeerNameResponse>());
+    return ::fidl::DecodeResult<Control::GetPeerNameResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -2284,8 +1857,6 @@ Control::ResultOf::SetSockOpt_Impl<Control::SetSockOptResponse>::SetSockOpt_Impl
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
   SetSockOptRequest _request = {};
-  _request._hdr = {};
-  _request._hdr.ordinal = kControl_SetSockOpt_Ordinal;
   _request.level = std::move(level);
   _request.optname = std::move(optname);
   _request.optval = std::move(optval);
@@ -2295,18 +1866,8 @@ Control::ResultOf::SetSockOpt_Impl<Control::SetSockOptResponse>::SetSockOpt_Impl
     return;
   }
   ::fidl::DecodedMessage<SetSockOptRequest> _decoded_request = std::move(_linearize_result.message);
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<SetSockOptRequest, SetSockOptResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::SetSockOpt(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
 Control::ResultOf::SetSockOpt Control::SyncClient::SetSockOpt(int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval) {
@@ -2324,7 +1885,6 @@ Control::UnownedResultOf::SetSockOpt_Impl<Control::SetSockOptResponse>::SetSockO
     return;
   }
   SetSockOptRequest _request = {};
-  _request._hdr.ordinal = kControl_SetSockOpt_Ordinal;
   _request.level = std::move(level);
   _request.optname = std::move(optname);
   _request.optval = std::move(optval);
@@ -2334,18 +1894,8 @@ Control::UnownedResultOf::SetSockOpt_Impl<Control::SetSockOptResponse>::SetSockO
     return;
   }
   ::fidl::DecodedMessage<SetSockOptRequest> _decoded_request = std::move(_linearize_result.message);
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<SetSockOptRequest, SetSockOptResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::SetSockOpt(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
 Control::UnownedResultOf::SetSockOpt Control::SyncClient::SetSockOpt(::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval, ::fidl::BytePart _response_buffer) {
@@ -2432,27 +1982,19 @@ zx_status_t Control::Call::SetSockOpt_Deprecated(zx::unowned_channel _client_end
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::SetSockOptResponse> Control::SyncClient::SetSockOpt_Deprecated(::fidl::DecodedMessage<SetSockOptRequest> params, ::fidl::BytePart response_buffer) {
-  return Control::Call::SetSockOpt_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Control::SetSockOptResponse> Control::Call::SetSockOpt_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetSockOptRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::SetSockOptResponse> Control::InPlace::SetSockOpt(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetSockOptRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_SetSockOpt_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::SetSockOptResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Control::SetSockOptResponse>());
+    return ::fidl::DecodeResult<Control::SetSockOptResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<SetSockOptRequest, SetSockOptResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::SetSockOptResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Control::SetSockOptResponse>());
+    return ::fidl::DecodeResult<Control::SetSockOptResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -2465,24 +2007,12 @@ Control::ResultOf::GetSockOpt_Impl<Control::GetSockOptResponse>::GetSockOpt_Impl
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, GetSockOptRequest::PrimarySize);
   auto& _request = *reinterpret_cast<GetSockOptRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kControl_GetSockOpt_Ordinal;
   _request.level = std::move(level);
   _request.optname = std::move(optname);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetSockOptRequest));
   ::fidl::DecodedMessage<GetSockOptRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetSockOptRequest, GetSockOptResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::GetSockOpt(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
 Control::ResultOf::GetSockOpt Control::SyncClient::GetSockOpt(int16_t level, int16_t optname) {
@@ -2501,23 +2031,12 @@ Control::UnownedResultOf::GetSockOpt_Impl<Control::GetSockOptResponse>::GetSockO
   }
   memset(_request_buffer.data(), 0, GetSockOptRequest::PrimarySize);
   auto& _request = *reinterpret_cast<GetSockOptRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kControl_GetSockOpt_Ordinal;
   _request.level = std::move(level);
   _request.optname = std::move(optname);
   _request_buffer.set_actual(sizeof(GetSockOptRequest));
   ::fidl::DecodedMessage<GetSockOptRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetSockOptRequest, GetSockOptResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::GetSockOpt(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
 Control::UnownedResultOf::GetSockOpt Control::SyncClient::GetSockOpt(::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::BytePart _response_buffer) {
@@ -2561,27 +2080,19 @@ Control::UnownedResultOf::GetSockOpt Control::Call::GetSockOpt(zx::unowned_chann
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::GetSockOptResponse> Control::SyncClient::GetSockOpt_Deprecated(::fidl::DecodedMessage<GetSockOptRequest> params, ::fidl::BytePart response_buffer) {
-  return Control::Call::GetSockOpt_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Control::GetSockOptResponse> Control::Call::GetSockOpt_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSockOptRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::GetSockOptResponse> Control::InPlace::GetSockOpt(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSockOptRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_GetSockOpt_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::GetSockOptResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Control::GetSockOptResponse>());
+    return ::fidl::DecodeResult<Control::GetSockOptResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<GetSockOptRequest, GetSockOptResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::GetSockOptResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Control::GetSockOptResponse>());
+    return ::fidl::DecodeResult<Control::GetSockOptResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -2592,8 +2103,6 @@ Control::ResultOf::IoctlPOSIX_Impl<Control::IoctlPOSIXResponse>::IoctlPOSIX_Impl
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
   IoctlPOSIXRequest _request = {};
-  _request._hdr = {};
-  _request._hdr.ordinal = kControl_IoctlPOSIX_Ordinal;
   _request.req = std::move(req);
   _request.in = std::move(in);
   auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
@@ -2602,18 +2111,8 @@ Control::ResultOf::IoctlPOSIX_Impl<Control::IoctlPOSIXResponse>::IoctlPOSIX_Impl
     return;
   }
   ::fidl::DecodedMessage<IoctlPOSIXRequest> _decoded_request = std::move(_linearize_result.message);
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<IoctlPOSIXRequest, IoctlPOSIXResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::IoctlPOSIX(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
 Control::ResultOf::IoctlPOSIX Control::SyncClient::IoctlPOSIX(int16_t req, ::fidl::VectorView<uint8_t> in) {
@@ -2631,7 +2130,6 @@ Control::UnownedResultOf::IoctlPOSIX_Impl<Control::IoctlPOSIXResponse>::IoctlPOS
     return;
   }
   IoctlPOSIXRequest _request = {};
-  _request._hdr.ordinal = kControl_IoctlPOSIX_Ordinal;
   _request.req = std::move(req);
   _request.in = std::move(in);
   auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
@@ -2640,18 +2138,8 @@ Control::UnownedResultOf::IoctlPOSIX_Impl<Control::IoctlPOSIXResponse>::IoctlPOS
     return;
   }
   ::fidl::DecodedMessage<IoctlPOSIXRequest> _decoded_request = std::move(_linearize_result.message);
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<IoctlPOSIXRequest, IoctlPOSIXResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      Control::InPlace::IoctlPOSIX(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
 Control::UnownedResultOf::IoctlPOSIX Control::SyncClient::IoctlPOSIX(::fidl::BytePart _request_buffer, int16_t req, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer) {
@@ -2698,27 +2186,19 @@ Control::UnownedResultOf::IoctlPOSIX Control::Call::IoctlPOSIX(zx::unowned_chann
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::IoctlPOSIXResponse> Control::SyncClient::IoctlPOSIX_Deprecated(::fidl::DecodedMessage<IoctlPOSIXRequest> params, ::fidl::BytePart response_buffer) {
-  return Control::Call::IoctlPOSIX_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Control::IoctlPOSIXResponse> Control::Call::IoctlPOSIX_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlPOSIXRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::IoctlPOSIXResponse> Control::InPlace::IoctlPOSIX(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlPOSIXRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_IoctlPOSIX_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::IoctlPOSIXResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<Control::IoctlPOSIXResponse>());
+    return ::fidl::DecodeResult<Control::IoctlPOSIXResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<IoctlPOSIXRequest, IoctlPOSIXResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::IoctlPOSIXResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<Control::IoctlPOSIXResponse>());
+    return ::fidl::DecodeResult<Control::IoctlPOSIXResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }

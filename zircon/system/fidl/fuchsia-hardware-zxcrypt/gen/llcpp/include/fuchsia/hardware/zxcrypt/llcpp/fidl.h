@@ -196,18 +196,6 @@ class DeviceManager final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<UnsealResponse> Unseal_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> key, uint8_t slot, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Attempts to unseal the device by using the provided master key to unwrap
-    // the data key wrapped in the specified key slot.  If the key provided was
-    // the correct key for this slot, then the device node responding to this
-    // protocol will create an unsealed zxcrypt device as a child of itself in
-    // the device tree before returning success.
-    // Returns ZX_ERR_INVALID_ARGS if `slot` is invalid.
-    // Returns ZX_ERR_BAD_STATE and keeps the device open if the device is already unsealed.
-    // Returns other errors if operations on the underlying block device return errors.
-    // Returns ZX_OK on success.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<UnsealResponse> Unseal_Deprecated(::fidl::DecodedMessage<UnsealRequest> params, ::fidl::BytePart response_buffer);
-
     // Seals the device, causing any previously-created child zxcrypt Device to
     // be removed some time later.  (Someday we'd like this to only return once
     // the unsealed child device is removed, but that's not straightforward today.)
@@ -238,14 +226,6 @@ class DeviceManager final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SealResponse> Seal_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
-
-    // Seals the device, causing any previously-created child zxcrypt Device to
-    // be removed some time later.  (Someday we'd like this to only return once
-    // the unsealed child device is removed, but that's not straightforward today.)
-    // Returns ZX_ERR_BAD_STATE if the device is already sealed.
-    // Returns ZX_OK on success.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SealResponse> Seal_Deprecated(::fidl::BytePart response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -302,18 +282,6 @@ class DeviceManager final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<UnsealResponse> Unseal_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> key, uint8_t slot, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Attempts to unseal the device by using the provided master key to unwrap
-    // the data key wrapped in the specified key slot.  If the key provided was
-    // the correct key for this slot, then the device node responding to this
-    // protocol will create an unsealed zxcrypt device as a child of itself in
-    // the device tree before returning success.
-    // Returns ZX_ERR_INVALID_ARGS if `slot` is invalid.
-    // Returns ZX_ERR_BAD_STATE and keeps the device open if the device is already unsealed.
-    // Returns other errors if operations on the underlying block device return errors.
-    // Returns ZX_OK on success.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<UnsealResponse> Unseal_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnsealRequest> params, ::fidl::BytePart response_buffer);
-
     // Seals the device, causing any previously-created child zxcrypt Device to
     // be removed some time later.  (Someday we'd like this to only return once
     // the unsealed child device is removed, but that's not straightforward today.)
@@ -345,13 +313,30 @@ class DeviceManager final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SealResponse> Seal_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    // Attempts to unseal the device by using the provided master key to unwrap
+    // the data key wrapped in the specified key slot.  If the key provided was
+    // the correct key for this slot, then the device node responding to this
+    // protocol will create an unsealed zxcrypt device as a child of itself in
+    // the device tree before returning success.
+    // Returns ZX_ERR_INVALID_ARGS if `slot` is invalid.
+    // Returns ZX_ERR_BAD_STATE and keeps the device open if the device is already unsealed.
+    // Returns other errors if operations on the underlying block device return errors.
+    // Returns ZX_OK on success.
+    static ::fidl::DecodeResult<UnsealResponse> Unseal(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnsealRequest> params, ::fidl::BytePart response_buffer);
+
     // Seals the device, causing any previously-created child zxcrypt Device to
     // be removed some time later.  (Someday we'd like this to only return once
     // the unsealed child device is removed, but that's not straightforward today.)
     // Returns ZX_ERR_BAD_STATE if the device is already sealed.
     // Returns ZX_OK on success.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SealResponse> Seal_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SealResponse> Seal(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

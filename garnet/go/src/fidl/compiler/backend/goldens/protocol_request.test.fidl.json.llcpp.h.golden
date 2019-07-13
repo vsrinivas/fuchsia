@@ -210,9 +210,6 @@ class Parent final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetChildResponse> GetChild_Deprecated(::fidl::BytePart _response_buffer, ::zx::channel* out_c);
 
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetChildResponse> GetChild_Deprecated(::fidl::BytePart response_buffer);
-
     ResultOf::GetChildRequest GetChildRequest();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -224,9 +221,6 @@ class Parent final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetChildRequestResponse> GetChildRequest_Deprecated(::fidl::BytePart _response_buffer, ::zx::channel* out_r);
 
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetChildRequestResponse> GetChildRequest_Deprecated(::fidl::BytePart response_buffer);
-
     ResultOf::TakeChild TakeChild(::zx::channel c);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -237,9 +231,6 @@ class Parent final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t TakeChild_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel c);
 
-    // Messages are encoded and decoded in-place.
-    zx_status_t TakeChild_Deprecated(::fidl::DecodedMessage<TakeChildRequest> params);
-
     ResultOf::TakeChildRequest TakeChildRequest(::zx::channel r);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -249,9 +240,6 @@ class Parent final {
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t TakeChildRequest_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel r);
-
-    // Messages are encoded and decoded in-place.
-    zx_status_t TakeChildRequest_Deprecated(::fidl::DecodedMessage<TakeChildRequestRequest> params);
 
    private:
     ::zx::channel channel_;
@@ -272,9 +260,6 @@ class Parent final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetChildResponse> GetChild_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::zx::channel* out_c);
 
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetChildResponse> GetChild_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     static ResultOf::GetChildRequest GetChildRequest(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -286,9 +271,6 @@ class Parent final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetChildRequestResponse> GetChildRequest_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::zx::channel* out_r);
 
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetChildRequestResponse> GetChildRequest_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     static ResultOf::TakeChild TakeChild(zx::unowned_channel _client_end, ::zx::channel c);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -298,9 +280,6 @@ class Parent final {
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t TakeChild_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel c);
-
-    // Messages are encoded and decoded in-place.
-    static zx_status_t TakeChild_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<TakeChildRequest> params);
 
     static ResultOf::TakeChildRequest TakeChildRequest(zx::unowned_channel _client_end, ::zx::channel r);
 
@@ -312,8 +291,20 @@ class Parent final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t TakeChildRequest_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel r);
 
-    // Messages are encoded and decoded in-place.
-    static zx_status_t TakeChildRequest_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<TakeChildRequestRequest> params);
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    static ::fidl::DecodeResult<GetChildResponse> GetChild(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    static ::fidl::DecodeResult<GetChildRequestResponse> GetChildRequest(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    static ::fidl::internal::StatusAndError TakeChild(zx::unowned_channel _client_end, ::fidl::DecodedMessage<TakeChildRequest> params);
+
+    static ::fidl::internal::StatusAndError TakeChildRequest(zx::unowned_channel _client_end, ::fidl::DecodedMessage<TakeChildRequestRequest> params);
 
   };
 
@@ -419,6 +410,13 @@ class Child final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+   public:
+
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
    public:
 
   };

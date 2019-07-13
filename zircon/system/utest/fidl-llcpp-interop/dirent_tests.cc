@@ -581,7 +581,8 @@ void InPlaceReadDir() {
   // Stress test server-linearizing dirents
   for (uint64_t iter = 0; iter < kNumIterations; iter++) {
     std::unique_ptr<uint8_t[]> response_buf(new uint8_t[ZX_CHANNEL_MAX_MSG_BYTES]);
-    auto result = client.ReadDir_Deprecated(
+    auto result = gen::DirEntTestInterface::InPlace::ReadDir(
+        zx::unowned_channel(client.channel()),
         fidl::BytePart(response_buf.get(), ZX_CHANNEL_MAX_MSG_BYTES));
     ASSERT_OK(result.status);
     const auto& dirents = result.message.message()->dirents;
@@ -623,8 +624,10 @@ void CallerAllocateConsumeDirectories() {
 
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 0);
   std::unique_ptr<uint8_t[]> request_buf(new uint8_t[ZX_CHANNEL_MAX_MSG_BYTES]);
+  std::unique_ptr<uint8_t[]> response_buf(new uint8_t[ZX_CHANNEL_MAX_MSG_BYTES]);
   auto result = client.ConsumeDirectories(
-      fidl::BytePart(request_buf.get(), ZX_CHANNEL_MAX_MSG_BYTES), golden_dirents);
+      fidl::BytePart(request_buf.get(), ZX_CHANNEL_MAX_MSG_BYTES), golden_dirents,
+      fidl::BytePart(response_buf.get(), ZX_CHANNEL_MAX_MSG_BYTES));
   ASSERT_OK(result.status());
   ASSERT_NULL(result.error(), "%s", result.error());
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 1);
@@ -640,12 +643,16 @@ void InPlaceConsumeDirectories() {
 
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 0);
   std::unique_ptr<uint8_t[]> request_buf(new uint8_t[ZX_CHANNEL_MAX_MSG_BYTES]);
+  std::unique_ptr<uint8_t[]> response_buf(new uint8_t[ZX_CHANNEL_MAX_MSG_BYTES]);
   gen::DirEntTestInterface::ConsumeDirectoriesRequest request = {};
   request.dirents = golden_dirents;
   auto linearize_result =
       fidl::Linearize(&request, fidl::BytePart(request_buf.get(), ZX_CHANNEL_MAX_MSG_BYTES));
   ASSERT_OK(linearize_result.status);
-  ASSERT_OK(client.ConsumeDirectories_Deprecated(std::move(linearize_result.message)));
+  ASSERT_OK(gen::DirEntTestInterface::InPlace::ConsumeDirectories(
+      zx::unowned_channel(client.channel()),
+      std::move(linearize_result.message),
+      fidl::BytePart(response_buf.get(), ZX_CHANNEL_MAX_MSG_BYTES)).status);
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 1);
 }
 
@@ -708,7 +715,9 @@ void InPlaceOneWayDirents() {
     auto linearize_result =
         fidl::Linearize(&request, fidl::BytePart(request_buf.get(), ZX_CHANNEL_MAX_MSG_BYTES));
     ASSERT_OK(linearize_result.status);
-    ASSERT_OK(client.OneWayDirents_Deprecated(std::move(linearize_result.message)));
+    ASSERT_OK(gen::DirEntTestInterface::InPlace::OneWayDirents(
+        zx::unowned_channel(client.channel()),
+        std::move(linearize_result.message)).status());
     zx_signals_t signals = 0;
     client_ep.wait_one(ZX_EVENTPAIR_SIGNALED, zx::time::infinite(), &signals);
     ASSERT_EQ(signals & ZX_EVENTPAIR_SIGNALED, ZX_EVENTPAIR_SIGNALED);

@@ -310,10 +310,6 @@ class PayloadStream final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<RegisterVmoResponse> RegisterVmo_Deprecated(::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Registers a VMO to stream into.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<RegisterVmoResponse> RegisterVmo_Deprecated(::fidl::DecodedMessage<RegisterVmoRequest> params, ::fidl::BytePart response_buffer);
-
     // Reads data into the pre-registered vmo.
     ResultOf::ReadData ReadData();
 
@@ -328,10 +324,6 @@ class PayloadStream final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<ReadDataResponse> ReadData_Deprecated(::fidl::BytePart _response_buffer, ReadResult* out_result);
-
-    // Reads data into the pre-registered vmo.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<ReadDataResponse> ReadData_Deprecated(::fidl::BytePart response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -356,10 +348,6 @@ class PayloadStream final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<RegisterVmoResponse> RegisterVmo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Registers a VMO to stream into.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<RegisterVmoResponse> RegisterVmo_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RegisterVmoRequest> params, ::fidl::BytePart response_buffer);
-
     // Reads data into the pre-registered vmo.
     static ResultOf::ReadData ReadData(zx::unowned_channel _client_end);
 
@@ -375,9 +363,18 @@ class PayloadStream final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<ReadDataResponse> ReadData_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ReadResult* out_result);
 
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    // Registers a VMO to stream into.
+    static ::fidl::DecodeResult<RegisterVmoResponse> RegisterVmo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RegisterVmoRequest> params, ::fidl::BytePart response_buffer);
+
     // Reads data into the pre-registered vmo.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<ReadDataResponse> ReadData_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ReadDataResponse> ReadData(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 
@@ -990,10 +987,6 @@ class Paver final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<QueryActiveConfigurationResponse> QueryActiveConfiguration_Deprecated(::fidl::BytePart _response_buffer, Paver_QueryActiveConfiguration_Result* out_result);
 
-    // Queries active configuration.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<QueryActiveConfigurationResponse> QueryActiveConfiguration_Deprecated(::fidl::BytePart response_buffer);
-
     // Updates persistent metadata identifying which configuration should be selected as 'primary'
     // for booting purposes. Should only be called after `KERNEL` as well as optional
     // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
@@ -1016,12 +1009,6 @@ class Paver final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SetActiveConfigurationResponse> SetActiveConfiguration_Deprecated(::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
-    // Updates persistent metadata identifying which configuration should be selected as 'primary'
-    // for booting purposes. Should only be called after `KERNEL` as well as optional
-    // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SetActiveConfigurationResponse> SetActiveConfiguration_Deprecated(::fidl::DecodedMessage<SetActiveConfigurationRequest> params, ::fidl::BytePart response_buffer);
 
     // Updates persistent metadata identifying that active configuration is stable. Used to signal
     // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
@@ -1046,12 +1033,6 @@ class Paver final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<MarkActiveConfigurationSuccessfulResponse> MarkActiveConfigurationSuccessful_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Updates persistent metadata identifying that active configuration is stable. Used to signal
-    // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
-    // boot attempt after `SetActiveConfiguration` was called.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<MarkActiveConfigurationSuccessfulResponse> MarkActiveConfigurationSuccessful_Deprecated(::fidl::BytePart response_buffer);
-
     // Force the next reboot to boot into the recovery configuration. Does not persist between
     // subsequent boots.
     ResultOf::ForceRecoveryConfiguration ForceRecoveryConfiguration();
@@ -1070,11 +1051,6 @@ class Paver final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<ForceRecoveryConfigurationResponse> ForceRecoveryConfiguration_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
-
-    // Force the next reboot to boot into the recovery configuration. Does not persist between
-    // subsequent boots.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<ForceRecoveryConfigurationResponse> ForceRecoveryConfiguration_Deprecated(::fidl::BytePart response_buffer);
 
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
     // Will zero out rest of the partition if `payload` is smaller than the size of the partition
@@ -1107,14 +1083,6 @@ class Paver final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<WriteAssetResponse> WriteAsset_Deprecated(::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
-    // Will zero out rest of the partition if `payload` is smaller than the size of the partition
-    // being written.
-    //
-    // Returns ZX_ERR_INVALID_ARGS if `configuration` specifies active configuration.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<WriteAssetResponse> WriteAsset_Deprecated(::fidl::DecodedMessage<WriteAssetRequest> params, ::fidl::BytePart response_buffer);
-
     // Writes FVM with data from streamed via `payload`. This potentially affects all
     // configurations.
     ResultOf::WriteVolumes WriteVolumes(::zx::channel payload);
@@ -1134,11 +1102,6 @@ class Paver final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<WriteVolumesResponse> WriteVolumes_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Writes FVM with data from streamed via `payload`. This potentially affects all
-    // configurations.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<WriteVolumesResponse> WriteVolumes_Deprecated(::fidl::DecodedMessage<WriteVolumesRequest> params, ::fidl::BytePart response_buffer);
-
     // Writes bootloader partition with data from `payload`.
     ResultOf::WriteBootloader WriteBootloader(::llcpp::fuchsia::mem::Buffer payload);
 
@@ -1154,10 +1117,6 @@ class Paver final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<WriteBootloaderResponse> WriteBootloader_Deprecated(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Writes bootloader partition with data from `payload`.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<WriteBootloaderResponse> WriteBootloader_Deprecated(::fidl::DecodedMessage<WriteBootloaderRequest> params, ::fidl::BytePart response_buffer);
-
     // Writes /data/`filename` with data from `payload`. Overwrites file if it already exists.
     ResultOf::WriteDataFile WriteDataFile(::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload);
 
@@ -1172,10 +1131,6 @@ class Paver final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<WriteDataFileResponse> WriteDataFile_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
-    // Writes /data/`filename` with data from `payload`. Overwrites file if it already exists.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<WriteDataFileResponse> WriteDataFile_Deprecated(::fidl::DecodedMessage<WriteDataFileRequest> params, ::fidl::BytePart response_buffer);
 
     // Wipes the FVM partition from the device. Should not be confused with factory reset, which
     // is less intrusive.
@@ -1208,14 +1163,6 @@ class Paver final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<WipeVolumesResponse> WipeVolumes_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Wipes the FVM partition from the device. Should not be confused with factory reset, which
-    // is less intrusive.
-    //
-    // Notable use cases include recovering from corrupted FVM as well as setting device to a
-    // "clean" state for automation.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<WipeVolumesResponse> WipeVolumes_Deprecated(::fidl::BytePart response_buffer);
-
    private:
     ::zx::channel channel_;
   };
@@ -1238,10 +1185,6 @@ class Paver final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<QueryActiveConfigurationResponse> QueryActiveConfiguration_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, Paver_QueryActiveConfiguration_Result* out_result);
-
-    // Queries active configuration.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<QueryActiveConfigurationResponse> QueryActiveConfiguration_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Updates persistent metadata identifying which configuration should be selected as 'primary'
     // for booting purposes. Should only be called after `KERNEL` as well as optional
@@ -1266,12 +1209,6 @@ class Paver final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SetActiveConfigurationResponse> SetActiveConfiguration_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Updates persistent metadata identifying which configuration should be selected as 'primary'
-    // for booting purposes. Should only be called after `KERNEL` as well as optional
-    // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SetActiveConfigurationResponse> SetActiveConfiguration_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetActiveConfigurationRequest> params, ::fidl::BytePart response_buffer);
-
     // Updates persistent metadata identifying that active configuration is stable. Used to signal
     // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
     // boot attempt after `SetActiveConfiguration` was called.
@@ -1295,12 +1232,6 @@ class Paver final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<MarkActiveConfigurationSuccessfulResponse> MarkActiveConfigurationSuccessful_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Updates persistent metadata identifying that active configuration is stable. Used to signal
-    // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
-    // boot attempt after `SetActiveConfiguration` was called.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<MarkActiveConfigurationSuccessfulResponse> MarkActiveConfigurationSuccessful_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     // Force the next reboot to boot into the recovery configuration. Does not persist between
     // subsequent boots.
     static ResultOf::ForceRecoveryConfiguration ForceRecoveryConfiguration(zx::unowned_channel _client_end);
@@ -1319,11 +1250,6 @@ class Paver final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<ForceRecoveryConfigurationResponse> ForceRecoveryConfiguration_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
-    // Force the next reboot to boot into the recovery configuration. Does not persist between
-    // subsequent boots.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<ForceRecoveryConfigurationResponse> ForceRecoveryConfiguration_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
     // Will zero out rest of the partition if `payload` is smaller than the size of the partition
@@ -1356,14 +1282,6 @@ class Paver final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<WriteAssetResponse> WriteAsset_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
-    // Will zero out rest of the partition if `payload` is smaller than the size of the partition
-    // being written.
-    //
-    // Returns ZX_ERR_INVALID_ARGS if `configuration` specifies active configuration.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<WriteAssetResponse> WriteAsset_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteAssetRequest> params, ::fidl::BytePart response_buffer);
-
     // Writes FVM with data from streamed via `payload`. This potentially affects all
     // configurations.
     static ResultOf::WriteVolumes WriteVolumes(zx::unowned_channel _client_end, ::zx::channel payload);
@@ -1383,11 +1301,6 @@ class Paver final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<WriteVolumesResponse> WriteVolumes_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Writes FVM with data from streamed via `payload`. This potentially affects all
-    // configurations.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<WriteVolumesResponse> WriteVolumes_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteVolumesRequest> params, ::fidl::BytePart response_buffer);
-
     // Writes bootloader partition with data from `payload`.
     static ResultOf::WriteBootloader WriteBootloader(zx::unowned_channel _client_end, ::llcpp::fuchsia::mem::Buffer payload);
 
@@ -1403,10 +1316,6 @@ class Paver final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<WriteBootloaderResponse> WriteBootloader_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
-    // Writes bootloader partition with data from `payload`.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<WriteBootloaderResponse> WriteBootloader_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteBootloaderRequest> params, ::fidl::BytePart response_buffer);
-
     // Writes /data/`filename` with data from `payload`. Overwrites file if it already exists.
     static ResultOf::WriteDataFile WriteDataFile(zx::unowned_channel _client_end, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload);
 
@@ -1421,10 +1330,6 @@ class Paver final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<WriteDataFileResponse> WriteDataFile_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
-    // Writes /data/`filename` with data from `payload`. Overwrites file if it already exists.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<WriteDataFileResponse> WriteDataFile_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteDataFileRequest> params, ::fidl::BytePart response_buffer);
 
     // Wipes the FVM partition from the device. Should not be confused with factory reset, which
     // is less intrusive.
@@ -1457,13 +1362,53 @@ class Paver final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<WipeVolumesResponse> WipeVolumes_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    // Queries active configuration.
+    static ::fidl::DecodeResult<QueryActiveConfigurationResponse> QueryActiveConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Updates persistent metadata identifying which configuration should be selected as 'primary'
+    // for booting purposes. Should only be called after `KERNEL` as well as optional
+    // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
+    static ::fidl::DecodeResult<SetActiveConfigurationResponse> SetActiveConfiguration(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetActiveConfigurationRequest> params, ::fidl::BytePart response_buffer);
+
+    // Updates persistent metadata identifying that active configuration is stable. Used to signal
+    // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
+    // boot attempt after `SetActiveConfiguration` was called.
+    static ::fidl::DecodeResult<MarkActiveConfigurationSuccessfulResponse> MarkActiveConfigurationSuccessful(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Force the next reboot to boot into the recovery configuration. Does not persist between
+    // subsequent boots.
+    static ::fidl::DecodeResult<ForceRecoveryConfigurationResponse> ForceRecoveryConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
+    // Will zero out rest of the partition if `payload` is smaller than the size of the partition
+    // being written.
+    //
+    // Returns ZX_ERR_INVALID_ARGS if `configuration` specifies active configuration.
+    static ::fidl::DecodeResult<WriteAssetResponse> WriteAsset(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteAssetRequest> params, ::fidl::BytePart response_buffer);
+
+    // Writes FVM with data from streamed via `payload`. This potentially affects all
+    // configurations.
+    static ::fidl::DecodeResult<WriteVolumesResponse> WriteVolumes(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteVolumesRequest> params, ::fidl::BytePart response_buffer);
+
+    // Writes bootloader partition with data from `payload`.
+    static ::fidl::DecodeResult<WriteBootloaderResponse> WriteBootloader(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteBootloaderRequest> params, ::fidl::BytePart response_buffer);
+
+    // Writes /data/`filename` with data from `payload`. Overwrites file if it already exists.
+    static ::fidl::DecodeResult<WriteDataFileResponse> WriteDataFile(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteDataFileRequest> params, ::fidl::BytePart response_buffer);
+
     // Wipes the FVM partition from the device. Should not be confused with factory reset, which
     // is less intrusive.
     //
     // Notable use cases include recovering from corrupted FVM as well as setting device to a
     // "clean" state for automation.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<WipeVolumesResponse> WipeVolumes_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<WipeVolumesResponse> WipeVolumes(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

@@ -346,8 +346,6 @@ NameLookup::ResultOf::LookupIp_Impl<NameLookup::LookupIpResponse>::LookupIp_Impl
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   LookupIpRequest _request = {};
-  _request._hdr = {};
-  _request._hdr.ordinal = kNameLookup_LookupIp_Ordinal;
   _request.hostname = std::move(hostname);
   _request.options = std::move(options);
   auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
@@ -356,18 +354,8 @@ NameLookup::ResultOf::LookupIp_Impl<NameLookup::LookupIpResponse>::LookupIp_Impl
     return;
   }
   ::fidl::DecodedMessage<LookupIpRequest> _decoded_request = std::move(_linearize_result.message);
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<LookupIpRequest, LookupIpResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      NameLookup::InPlace::LookupIp(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
 NameLookup::ResultOf::LookupIp NameLookup::SyncClient::LookupIp(::fidl::StringView hostname, LookupIpOptions options) {
@@ -385,7 +373,6 @@ NameLookup::UnownedResultOf::LookupIp_Impl<NameLookup::LookupIpResponse>::Lookup
     return;
   }
   LookupIpRequest _request = {};
-  _request._hdr.ordinal = kNameLookup_LookupIp_Ordinal;
   _request.hostname = std::move(hostname);
   _request.options = std::move(options);
   auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
@@ -394,18 +381,8 @@ NameLookup::UnownedResultOf::LookupIp_Impl<NameLookup::LookupIpResponse>::Lookup
     return;
   }
   ::fidl::DecodedMessage<LookupIpRequest> _decoded_request = std::move(_linearize_result.message);
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<LookupIpRequest, LookupIpResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      NameLookup::InPlace::LookupIp(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
 NameLookup::UnownedResultOf::LookupIp NameLookup::SyncClient::LookupIp(::fidl::BytePart _request_buffer, ::fidl::StringView hostname, LookupIpOptions options, ::fidl::BytePart _response_buffer) {
@@ -451,27 +428,19 @@ NameLookup::UnownedResultOf::LookupIp NameLookup::Call::LookupIp(zx::unowned_cha
   return _decode_result;
 }
 
-::fidl::DecodeResult<NameLookup::LookupIpResponse> NameLookup::SyncClient::LookupIp_Deprecated(::fidl::DecodedMessage<LookupIpRequest> params, ::fidl::BytePart response_buffer) {
-  return NameLookup::Call::LookupIp_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<NameLookup::LookupIpResponse> NameLookup::Call::LookupIp_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupIpRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<NameLookup::LookupIpResponse> NameLookup::InPlace::LookupIp(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupIpRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kNameLookup_LookupIp_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<NameLookup::LookupIpResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<NameLookup::LookupIpResponse>());
+    return ::fidl::DecodeResult<NameLookup::LookupIpResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<LookupIpRequest, LookupIpResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<NameLookup::LookupIpResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<NameLookup::LookupIpResponse>());
+    return ::fidl::DecodeResult<NameLookup::LookupIpResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -484,23 +453,11 @@ NameLookup::ResultOf::LookupHostname_Impl<NameLookup::LookupHostnameResponse>::L
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, LookupHostnameRequest::PrimarySize);
   auto& _request = *reinterpret_cast<LookupHostnameRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kNameLookup_LookupHostname_Ordinal;
   _request.addr = std::move(addr);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(LookupHostnameRequest));
   ::fidl::DecodedMessage<LookupHostnameRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<LookupHostnameRequest, LookupHostnameResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      NameLookup::InPlace::LookupHostname(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
 NameLookup::ResultOf::LookupHostname NameLookup::SyncClient::LookupHostname(IpAddress addr) {
@@ -519,22 +476,11 @@ NameLookup::UnownedResultOf::LookupHostname_Impl<NameLookup::LookupHostnameRespo
   }
   memset(_request_buffer.data(), 0, LookupHostnameRequest::PrimarySize);
   auto& _request = *reinterpret_cast<LookupHostnameRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kNameLookup_LookupHostname_Ordinal;
   _request.addr = std::move(addr);
   _request_buffer.set_actual(sizeof(LookupHostnameRequest));
   ::fidl::DecodedMessage<LookupHostnameRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<LookupHostnameRequest, LookupHostnameResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      NameLookup::InPlace::LookupHostname(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
 NameLookup::UnownedResultOf::LookupHostname NameLookup::SyncClient::LookupHostname(::fidl::BytePart _request_buffer, IpAddress addr, ::fidl::BytePart _response_buffer) {
@@ -576,27 +522,19 @@ NameLookup::UnownedResultOf::LookupHostname NameLookup::Call::LookupHostname(zx:
   return _decode_result;
 }
 
-::fidl::DecodeResult<NameLookup::LookupHostnameResponse> NameLookup::SyncClient::LookupHostname_Deprecated(::fidl::DecodedMessage<LookupHostnameRequest> params, ::fidl::BytePart response_buffer) {
-  return NameLookup::Call::LookupHostname_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<NameLookup::LookupHostnameResponse> NameLookup::Call::LookupHostname_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupHostnameRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<NameLookup::LookupHostnameResponse> NameLookup::InPlace::LookupHostname(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupHostnameRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kNameLookup_LookupHostname_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<NameLookup::LookupHostnameResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<NameLookup::LookupHostnameResponse>());
+    return ::fidl::DecodeResult<NameLookup::LookupHostnameResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<LookupHostnameRequest, LookupHostnameResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<NameLookup::LookupHostnameResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<NameLookup::LookupHostnameResponse>());
+    return ::fidl::DecodeResult<NameLookup::LookupHostnameResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -741,8 +679,6 @@ SocketProvider::ResultOf::GetAddrInfo_Impl<SocketProvider::GetAddrInfoResponse>:
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
   GetAddrInfoRequest _request = {};
-  _request._hdr = {};
-  _request._hdr.ordinal = kSocketProvider_GetAddrInfo_Ordinal;
   _request.node = std::move(node);
   _request.service = std::move(service);
   _request.hints = std::move(hints);
@@ -752,18 +688,8 @@ SocketProvider::ResultOf::GetAddrInfo_Impl<SocketProvider::GetAddrInfoResponse>:
     return;
   }
   ::fidl::DecodedMessage<GetAddrInfoRequest> _decoded_request = std::move(_linearize_result.message);
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetAddrInfoRequest, GetAddrInfoResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      SocketProvider::InPlace::GetAddrInfo(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
 SocketProvider::ResultOf::GetAddrInfo SocketProvider::SyncClient::GetAddrInfo(::fidl::StringView node, ::fidl::StringView service, AddrInfoHints* hints) {
@@ -781,7 +707,6 @@ SocketProvider::UnownedResultOf::GetAddrInfo_Impl<SocketProvider::GetAddrInfoRes
     return;
   }
   GetAddrInfoRequest _request = {};
-  _request._hdr.ordinal = kSocketProvider_GetAddrInfo_Ordinal;
   _request.node = std::move(node);
   _request.service = std::move(service);
   _request.hints = std::move(hints);
@@ -791,18 +716,8 @@ SocketProvider::UnownedResultOf::GetAddrInfo_Impl<SocketProvider::GetAddrInfoRes
     return;
   }
   ::fidl::DecodedMessage<GetAddrInfoRequest> _decoded_request = std::move(_linearize_result.message);
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<GetAddrInfoRequest, GetAddrInfoResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      SocketProvider::InPlace::GetAddrInfo(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
 SocketProvider::UnownedResultOf::GetAddrInfo SocketProvider::SyncClient::GetAddrInfo(::fidl::BytePart _request_buffer, ::fidl::StringView node, ::fidl::StringView service, AddrInfoHints* hints, ::fidl::BytePart _response_buffer) {
@@ -893,27 +808,19 @@ zx_status_t SocketProvider::Call::GetAddrInfo_Deprecated(zx::unowned_channel _cl
   return _decode_result;
 }
 
-::fidl::DecodeResult<SocketProvider::GetAddrInfoResponse> SocketProvider::SyncClient::GetAddrInfo_Deprecated(::fidl::DecodedMessage<GetAddrInfoRequest> params, ::fidl::BytePart response_buffer) {
-  return SocketProvider::Call::GetAddrInfo_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<SocketProvider::GetAddrInfoResponse> SocketProvider::Call::GetAddrInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetAddrInfoRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<SocketProvider::GetAddrInfoResponse> SocketProvider::InPlace::GetAddrInfo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetAddrInfoRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kSocketProvider_GetAddrInfo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<SocketProvider::GetAddrInfoResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<SocketProvider::GetAddrInfoResponse>());
+    return ::fidl::DecodeResult<SocketProvider::GetAddrInfoResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<GetAddrInfoRequest, GetAddrInfoResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<SocketProvider::GetAddrInfoResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<SocketProvider::GetAddrInfoResponse>());
+    return ::fidl::DecodeResult<SocketProvider::GetAddrInfoResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }

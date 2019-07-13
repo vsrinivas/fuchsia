@@ -252,10 +252,6 @@ class Stream final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t ReleaseFrame_Deprecated(::fidl::BytePart _request_buffer, uint32_t buffer_id);
 
-    // Unlocks the specified frame, allowing the driver to reuse the memory.
-    // Messages are encoded and decoded in-place.
-    zx_status_t ReleaseFrame_Deprecated(::fidl::DecodedMessage<ReleaseFrameRequest> params);
-
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
@@ -297,15 +293,27 @@ class Stream final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t ReleaseFrame_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t buffer_id);
 
-    // Unlocks the specified frame, allowing the driver to reuse the memory.
-    // Messages are encoded and decoded in-place.
-    static zx_status_t ReleaseFrame_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseFrameRequest> params);
-
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
     // transport-level errors and returned.
     static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    // Starts the streaming of frames.
+    static ::fidl::internal::StatusAndError Start(zx::unowned_channel _client_end);
+
+    // Stops the streaming of frames.
+    static ::fidl::internal::StatusAndError Stop(zx::unowned_channel _client_end);
+
+    // Unlocks the specified frame, allowing the driver to reuse the memory.
+    static ::fidl::internal::StatusAndError ReleaseFrame(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseFrameRequest> params);
+
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -608,11 +616,6 @@ class VirtualCameraFactory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t CreateDevice_Deprecated(::fidl::BytePart _request_buffer, VirtualCameraConfig config);
 
-    // Creates a new VirtualCameraDevice based on the configuration passed in.
-    // `config`: a VirtualCameraConfig defining how the new device should behave.
-    // Messages are encoded and decoded in-place.
-    zx_status_t CreateDevice_Deprecated(::fidl::DecodedMessage<CreateDeviceRequest> params);
-
    private:
     ::zx::channel channel_;
   };
@@ -639,10 +642,16 @@ class VirtualCameraFactory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t CreateDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, VirtualCameraConfig config);
 
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
     // Creates a new VirtualCameraDevice based on the configuration passed in.
     // `config`: a VirtualCameraConfig defining how the new device should behave.
-    // Messages are encoded and decoded in-place.
-    static zx_status_t CreateDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateDeviceRequest> params);
+    static ::fidl::internal::StatusAndError CreateDevice(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateDeviceRequest> params);
 
   };
 

@@ -83,23 +83,11 @@ TestInterface::ResultOf::ConsumeSimpleStruct_Impl<TestInterface::ConsumeSimpleSt
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, ConsumeSimpleStructRequest::PrimarySize);
   auto& _request = *reinterpret_cast<ConsumeSimpleStructRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kTestInterface_ConsumeSimpleStruct_Ordinal;
   _request.arg = std::move(arg);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ConsumeSimpleStructRequest));
   ::fidl::DecodedMessage<ConsumeSimpleStructRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<ConsumeSimpleStructRequest, ConsumeSimpleStructResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      TestInterface::InPlace::ConsumeSimpleStruct(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
 TestInterface::ResultOf::ConsumeSimpleStruct TestInterface::SyncClient::ConsumeSimpleStruct(SimpleStruct arg) {
@@ -118,22 +106,11 @@ TestInterface::UnownedResultOf::ConsumeSimpleStruct_Impl<TestInterface::ConsumeS
   }
   memset(_request_buffer.data(), 0, ConsumeSimpleStructRequest::PrimarySize);
   auto& _request = *reinterpret_cast<ConsumeSimpleStructRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kTestInterface_ConsumeSimpleStruct_Ordinal;
   _request.arg = std::move(arg);
   _request_buffer.set_actual(sizeof(ConsumeSimpleStructRequest));
   ::fidl::DecodedMessage<ConsumeSimpleStructRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<ConsumeSimpleStructRequest, ConsumeSimpleStructResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      TestInterface::InPlace::ConsumeSimpleStruct(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
 TestInterface::UnownedResultOf::ConsumeSimpleStruct TestInterface::SyncClient::ConsumeSimpleStruct(::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer) {
@@ -210,27 +187,19 @@ zx_status_t TestInterface::Call::ConsumeSimpleStruct_Deprecated(zx::unowned_chan
   return _decode_result;
 }
 
-::fidl::DecodeResult<TestInterface::ConsumeSimpleStructResponse> TestInterface::SyncClient::ConsumeSimpleStruct_Deprecated(::fidl::DecodedMessage<ConsumeSimpleStructRequest> params, ::fidl::BytePart response_buffer) {
-  return TestInterface::Call::ConsumeSimpleStruct_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<TestInterface::ConsumeSimpleStructResponse> TestInterface::Call::ConsumeSimpleStruct_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeSimpleStructRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<TestInterface::ConsumeSimpleStructResponse> TestInterface::InPlace::ConsumeSimpleStruct(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeSimpleStructRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kTestInterface_ConsumeSimpleStruct_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<TestInterface::ConsumeSimpleStructResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<TestInterface::ConsumeSimpleStructResponse>());
+    return ::fidl::DecodeResult<TestInterface::ConsumeSimpleStructResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<ConsumeSimpleStructRequest, ConsumeSimpleStructResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<TestInterface::ConsumeSimpleStructResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<TestInterface::ConsumeSimpleStructResponse>());
+    return ::fidl::DecodeResult<TestInterface::ConsumeSimpleStructResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
@@ -243,23 +212,11 @@ TestInterface::ResultOf::ConsumeSimpleUnion_Impl<TestInterface::ConsumeSimpleUni
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, ConsumeSimpleUnionRequest::PrimarySize);
   auto& _request = *reinterpret_cast<ConsumeSimpleUnionRequest*>(_write_bytes);
-  _request._hdr = {};
-  _request._hdr.ordinal = kTestInterface_ConsumeSimpleUnion_Ordinal;
   _request.arg = std::move(arg);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ConsumeSimpleUnionRequest));
   ::fidl::DecodedMessage<ConsumeSimpleUnionRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<ConsumeSimpleUnionRequest, ConsumeSimpleUnionResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      TestInterface::InPlace::ConsumeSimpleUnion(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
 TestInterface::ResultOf::ConsumeSimpleUnion TestInterface::SyncClient::ConsumeSimpleUnion(SimpleUnion arg) {
@@ -278,22 +235,11 @@ TestInterface::UnownedResultOf::ConsumeSimpleUnion_Impl<TestInterface::ConsumeSi
   }
   memset(_request_buffer.data(), 0, ConsumeSimpleUnionRequest::PrimarySize);
   auto& _request = *reinterpret_cast<ConsumeSimpleUnionRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kTestInterface_ConsumeSimpleUnion_Ordinal;
   _request.arg = std::move(arg);
   _request_buffer.set_actual(sizeof(ConsumeSimpleUnionRequest));
   ::fidl::DecodedMessage<ConsumeSimpleUnionRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_request_result));
-    return;
-  }
-  auto _call_result = ::fidl::Call<ConsumeSimpleUnionRequest, ConsumeSimpleUnionResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_call_result));
-    return;
-  }
-  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+  Super::SetResult(
+      TestInterface::InPlace::ConsumeSimpleUnion(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
 TestInterface::UnownedResultOf::ConsumeSimpleUnion TestInterface::SyncClient::ConsumeSimpleUnion(::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer) {
@@ -370,27 +316,19 @@ zx_status_t TestInterface::Call::ConsumeSimpleUnion_Deprecated(zx::unowned_chann
   return _decode_result;
 }
 
-::fidl::DecodeResult<TestInterface::ConsumeSimpleUnionResponse> TestInterface::SyncClient::ConsumeSimpleUnion_Deprecated(::fidl::DecodedMessage<ConsumeSimpleUnionRequest> params, ::fidl::BytePart response_buffer) {
-  return TestInterface::Call::ConsumeSimpleUnion_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
-}
-
-::fidl::DecodeResult<TestInterface::ConsumeSimpleUnionResponse> TestInterface::Call::ConsumeSimpleUnion_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeSimpleUnionRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<TestInterface::ConsumeSimpleUnionResponse> TestInterface::InPlace::ConsumeSimpleUnion(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeSimpleUnionRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kTestInterface_ConsumeSimpleUnion_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<TestInterface::ConsumeSimpleUnionResponse>(
-      _encode_request_result.status,
-      _encode_request_result.error,
-      ::fidl::DecodedMessage<TestInterface::ConsumeSimpleUnionResponse>());
+    return ::fidl::DecodeResult<TestInterface::ConsumeSimpleUnionResponse>::FromFailure(
+        std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<ConsumeSimpleUnionRequest, ConsumeSimpleUnionResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<TestInterface::ConsumeSimpleUnionResponse>(
-      _call_result.status,
-      _call_result.error,
-      ::fidl::DecodedMessage<TestInterface::ConsumeSimpleUnionResponse>());
+    return ::fidl::DecodeResult<TestInterface::ConsumeSimpleUnionResponse>::FromFailure(
+        std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
