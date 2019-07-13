@@ -53,7 +53,7 @@ class VideoDisplay {
   // The number of buffers to allocate while setting up the camera stream.
   // This number has to be at least 2, since scenic will hold onto one buffer
   // at all times.
-  static constexpr uint16_t kNumberOfBuffers = 8;
+  static constexpr uint16_t kNumberOfBuffers = 16;
 
   // Image pipe to send to display
   fuchsia::images::ImagePipePtr image_pipe_;
