@@ -120,7 +120,7 @@ class WebDriverConnector {
             'ssh',
             [
               '-i',
-              _sl4f.sshKeyPath,
+              _sl4f.ssh.sshKeyPath,
               '-N',
               '-o',
               'UserKnownHostsFile=/dev/null',

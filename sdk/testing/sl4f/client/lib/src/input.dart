@@ -5,6 +5,7 @@
 import 'dart:math';
 
 import 'sl4f_client.dart';
+import 'ssh.dart';
 
 /// Clockwise rotation of the screen.
 enum Rotation {
@@ -15,22 +16,23 @@ enum Rotation {
 }
 
 class Input {
-  final Sl4f _sl4f;
+  final Ssh ssh;
   final Rotation _screenRotation;
 
   /// Construct an [Input] object.
   ///
   /// You can change the default [screenRotation] to compensate for.
-  Input(this._sl4f, [this._screenRotation = Rotation.degrees0]);
+  Input(Sl4f sl4f, [this._screenRotation = Rotation.degrees0]) : ssh = sl4f.ssh;
 
   /// Taps on the screen at coordinates ([coord.x], [coord.y]).
   ///
   /// Coordinates must be in the range of [0, 1000] and are scaled to the screen
   /// size on the device, and they are rotated to compensate for the clockwise
   /// [screenRotation].
-  Future<bool> tap(Point<int> coord, {Rotation screenRotation}) {
+  Future<bool> tap(Point<int> coord, {Rotation screenRotation}) async {
     var tcoord = _rotate(coord, screenRotation ?? _screenRotation);
-    return _sl4f.ssh('input tap ${tcoord.x} ${tcoord.y}');
+    final result = await ssh.run('input tap ${tcoord.x} ${tcoord.y}');
+    return result.exitCode == 0;
   }
 
   /// Swipes on the screen from coordinates ([from.x], [from.y]) to ([to.x],
@@ -42,11 +44,12 @@ class Input {
   /// [duration].
   Future<bool> swipe(Point<int> from, Point<int> to,
       {Duration duration = const Duration(milliseconds: 300),
-      Rotation screenRotation}) {
+      Rotation screenRotation}) async {
     var tfrom = _rotate(from, screenRotation);
     var tto = _rotate(to, screenRotation);
-    return _sl4f.ssh('input --duration=${duration.inMilliseconds} '
+    final result = await ssh.run('input --duration=${duration.inMilliseconds} '
         'swipe ${tfrom.x} ${tfrom.y} ${tto.x} ${tto.y}');
+    return result.exitCode == 0;
   }
 
   /// Compensates for the given [screenRotation].

@@ -22,6 +22,7 @@ dart_library("client") {
     "src/scenic.dart",
     "src/setui.dart",
     "src/sl4f_client.dart",
+    "src/ssh.dart",
     "src/storage.dart",
     "src/webdriver.dart",
   ]

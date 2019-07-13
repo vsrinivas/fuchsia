@@ -78,7 +78,7 @@ void main() {
     // for recording. And stopping recording does proper teardown so that the
     // driver is capable of starting recording the second time.
     String fileNameOne = 't1';
-    final proc1 = await sl4fDriver.sshProcess(
+    final proc1 = await sl4fDriver.ssh.start(
         'audio -r 48000 -c 2 -b 16 record ${_fileNameToTargetPath(fileNameOne)} 2');
     await proc1.stdout.transform(utf8.decoder).join();
     File fileOne =
@@ -86,7 +86,7 @@ void main() {
     _validateFile(fileOne);
 
     String fileNameTwo = 't2';
-    final proc2 = await sl4fDriver.sshProcess(
+    final proc2 = await sl4fDriver.ssh.start(
         'audio -r 48000 -c 2 -b 16 record ${_fileNameToTargetPath(fileNameTwo)} 2');
     await proc2.stdout.transform(utf8.decoder).join();
     File fileTwo =

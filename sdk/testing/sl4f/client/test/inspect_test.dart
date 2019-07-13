@@ -5,21 +5,18 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:mockito/mockito.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 
 const _iqueryFindCommand = 'iquery --find /hub';
 const _iqueryRecursiveInspectCommandPrefix = 'iquery --format=json --recursive';
 
-class MockProcess extends Mock implements Process {}
-
 void main(List<String> args) {
   test('inspectComponentRoot returns json decoded stdout', () async {
     const componentName = 'foo';
     const contentsRoot = {'faz': 'bear'};
 
-    final inspect = Inspect(_createSshProcessFactory(
+    final inspect = Inspect(FakeSsh(
         findCommandStdOut: 'one\n$componentName\nthree\n',
         inspectCommandContentsRoot: [
           {
@@ -38,7 +35,7 @@ void main(List<String> args) {
     const componentName = 'foo';
     const contentsRoot = {'faz': 'bear'};
 
-    final inspect = Inspect(_createSshProcessFactory(
+    final inspect = Inspect(FakeSsh(
         findCommandStdOut: 'one\n$componentName\n$componentName\n',
         inspectCommandContentsRoot: [
           {
@@ -100,7 +97,7 @@ void main(List<String> args) {
       shouldFailDueToInspect: true,
       inspectCommandExitCode: [-1, -1, -1, -1]);
 
-  _testRetry('inspectComponentRoot should succeed dispite multiple failures',
+  _testRetry('inspectComponentRoot should succeed despite multiple failures',
       shouldFailDueToFind: false,
       shouldFailDueToInspect: false,
       findCommandExitCode: [-1, -1, -1, 0],
@@ -126,7 +123,7 @@ void _testRetry(
     }
 
     final inspect = Inspect(
-      _createSshProcessFactory(
+      FakeSsh(
           findCommandStdOut: 'one\n$componentName\n',
           inspectCommandContentsRoot: [
             {
@@ -178,42 +175,44 @@ void _testRetry(
   });
 }
 
-Function _createSshProcessFactory({
-  String findCommandStdOut,
-  String expectedInspectSuffix,
-  dynamic inspectCommandContentsRoot,
-  List<int> findCommandExitCode = const <int>[0],
-  List<int> inspectCommandExitCode = const <int>[0],
-}) {
+class FakeSsh implements Ssh {
   int findCommandCount = 0;
   int inspectCommandCount = 0;
-  return (String command) async {
-    final process = MockProcess();
+
+  String findCommandStdOut;
+  String expectedInspectSuffix;
+  dynamic inspectCommandContentsRoot;
+  List<int> findCommandExitCode;
+  List<int> inspectCommandExitCode;
+
+  FakeSsh({
+    this.findCommandStdOut,
+    this.expectedInspectSuffix,
+    this.inspectCommandContentsRoot,
+    this.findCommandExitCode = const <int>[0],
+    this.inspectCommandExitCode = const <int>[0],
+  });
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnsupportedError(invocation.toString());
+
+  @override
+  Future<ProcessResult> run(String command, {String stdin}) async {
+    int exitCode;
+    String stdout;
+
     if (command.trim() == _iqueryFindCommand) {
-      when(process.exitCode).thenAnswer((_) async {
-        final result = findCommandExitCode[findCommandCount];
-        findCommandCount++;
-        return result;
-      });
-      when(process.stdout).thenAnswer(
-          (_) => Stream.fromIterable([utf8.encode(findCommandStdOut)]));
-      when(process.stderr).thenAnswer((_) => Stream.empty());
+      exitCode = findCommandExitCode[findCommandCount++];
+      stdout = findCommandStdOut;
     } else if (command.trim() ==
         '$_iqueryRecursiveInspectCommandPrefix $expectedInspectSuffix') {
-      when(process.exitCode).thenAnswer((_) async {
-        final result = inspectCommandExitCode[inspectCommandCount];
-        inspectCommandCount++;
-        return result;
-      });
-      when(process.stdout).thenAnswer((_) => Stream.fromIterable(
-          [utf8.encode(json.encode(inspectCommandContentsRoot))]));
-      when(process.stderr).thenAnswer((_) => Stream.empty());
+      exitCode = inspectCommandExitCode[inspectCommandCount++];
+      stdout = json.encode(inspectCommandContentsRoot);
     } else {
       print('got unknown command $command');
-      when(process.exitCode).thenAnswer((_) async => -1);
-      when(process.stdout).thenAnswer((_) => Stream.empty());
-      when(process.stderr).thenAnswer((_) => Stream.empty());
+      exitCode = -1;
     }
-    return process;
-  };
+    return ProcessResult(0, exitCode, stdout, '');
+  }
 }

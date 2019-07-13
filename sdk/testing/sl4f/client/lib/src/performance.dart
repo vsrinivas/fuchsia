@@ -63,7 +63,7 @@ class Performance {
       String categories,
       int bufferSize,
       bool binary = false,
-      bool compress = false}) {
+      bool compress = false}) async {
     // Invoke `/bin/trace record --duration=$duration --categories=$categories
     // --output-file=$outputFile --buffer-size=$bufferSize` on the target
     // device via ssh.
@@ -87,7 +87,8 @@ class Performance {
     if (outputFile != null) {
       command += ' --output-file=$outputFile';
     }
-    return _sl4f.ssh(command);
+    final result = await _sl4f.ssh.run(command);
+    return result.exitCode == 0;
   }
 
   /// Copies the trace file specified by [traceName] off of the target device,

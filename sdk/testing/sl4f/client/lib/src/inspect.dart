@@ -3,22 +3,21 @@
 // found in the LICENSE file.
 
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:logging/logging.dart';
+
+import 'ssh.dart';
 
 final _log = Logger('inspect');
 
 Future<dynamic> _defaultSleep(Duration delay) => Future.delayed(delay);
 
 class Inspect {
-  final Future<Process> Function(String) createSshProcess;
+  final Ssh ssh;
   final Future<dynamic> Function(Duration) sleep;
 
   /// Construct an [Inspect] object.
-  ///
-  /// [createSshProcess] should typically be sl4f's sshProcess function.
-  Inspect(this.createSshProcess, {this.sleep = _defaultSleep});
+  Inspect(this.ssh, {this.sleep = _defaultSleep});
 
   /// Obtains the root inspect object for a component whose path includes
   /// [componentName].
@@ -93,21 +92,8 @@ class Inspect {
       {int retries = 3,
       Duration initialDelay = const Duration(seconds: 1)}) async {
     Future<String> attempt() async {
-      final process = await createSshProcess(command);
-      final exitCode = await process.exitCode;
-      final stdout = await process.stdout.transform(utf8.decoder).join();
-      if (exitCode != 0) {
-        final stderr = await process.stderr.transform(utf8.decoder).join();
-        _log.severe('Command "$command" failed with exit code $exitCode');
-        if (stdout.isNotEmpty) {
-          _log.severe('stdout: $stdout');
-        }
-        if (stderr.isNotEmpty) {
-          _log.severe('stderr: $stderr');
-        }
-        return null;
-      }
-      return stdout;
+      final process = await ssh.run(command);
+      return process.exitCode != 0 ? null : process.stdout;
     }
 
     final result = await attempt();

@@ -8,6 +8,8 @@ import 'package:webdriver/sync_core.dart';
 
 import 'package:sl4f/sl4f.dart';
 
+class MockSsh extends Mock implements Ssh {}
+
 class MockSl4f extends Mock implements Sl4f {}
 
 class MockProcessHelper extends Mock implements ProcessHelper {}
@@ -24,6 +26,7 @@ void main(List<String> args) {
 
   setUp(() {
     sl4f = MockSl4f();
+    when(sl4f.ssh).thenReturn(MockSsh());
     processHelper = MockProcessHelper();
     webDriverHelper = MockWebDriverHelper();
     webDriverConnector = WebDriverConnector('path/to/chromedriver', sl4f,

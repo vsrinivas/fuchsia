@@ -17,6 +17,7 @@ import 'package:pedantic/pedantic.dart';
 import 'dump.dart';
 import 'exceptions.dart';
 import 'inspect.dart';
+import 'ssh.dart';
 
 final _log = Logger('sl4f_client');
 
@@ -26,35 +27,30 @@ const _diagnosticTimeout = Duration(minutes: 2);
 
 /// Handles the SL4F server and communication with it.
 class Sl4f {
-  final _client = http.Client();
-
-  static const _sshUser = 'fuchsia';
   static const _sl4fComponentUrl =
       'fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cmx';
   static const _sl4fComponentName = 'sl4f.cmx';
 
+  final _client = http.Client();
+
   /// Authority (IP, hostname, etc.) of the device under test.
   final String target;
-
-  /// Path to an SSH key file. For in-tree Fuchsia development, this can be
-  /// the resolved path of `//.ssh/pkey`.
-  final String sshKeyPath;
+  final Ssh ssh;
 
   /// This lives here for a soft API transition and should be removed in the future.
   Inspect _inspect;
 
-  Sl4f(this.target, this.sshKeyPath)
-      : assert(target != null && target.isNotEmpty),
-        assert(sshKeyPath != null && sshKeyPath.isNotEmpty) {
-    _inspect = Inspect(sshProcess);
-    _log..info('Target device: $target')..info('SSH key path: $sshKeyPath');
+  Sl4f(this.target, this.ssh) : assert(target != null && target.isNotEmpty) {
+    _inspect = Inspect(ssh);
+    _log.info('Target device: $target');
   }
 
   /// Constructs an SL4F client from the `FUCHSIA_IPV4_ADDR` and
   /// `FUCHSIA_SSH_KEY` environment variables.
-  Sl4f.fromEnvironment()
-      : this(Platform.environment['FUCHSIA_IPV4_ADDR'],
-            Platform.environment['FUCHSIA_SSH_KEY']);
+  factory Sl4f.fromEnvironment() {
+    final target = Platform.environment['FUCHSIA_IPV4_ADDR'];
+    return Sl4f(target, Ssh(target, Platform.environment['FUCHSIA_SSH_KEY']));
+  }
 
   /// Closes the underlying HTTP client.
   ///
@@ -125,7 +121,7 @@ class Sl4f {
       // TODO(mesch): It seems as if we could just await this ssh()
       // call, but if we do this, we hang. Observed in
       // screen_navigation_test on workstation.
-      unawaited(ssh('run -d $_sl4fComponentUrl'));
+      unawaited(ssh.run('run -d $_sl4fComponentUrl'));
 
       if (await _isRunning(tries: 3, delay: Duration(seconds: 2))) {
         _log.info('SL4F has started.');
@@ -139,70 +135,16 @@ class Sl4f {
   ///
   /// If no ssh key path is given, it's taken from the FUCHSIA_SSH_KEY env var.
   Future<void> stopServer() async {
-    if (!await ssh('killall $_sl4fComponentName')) {
+    if ((await ssh.run('killall $_sl4fComponentName')).exitCode != 0) {
       _log.warning('Could not stop sl4f. Continuing.');
     }
   }
 
   /// Starts an ssh [Process], sending [cmd] to the target using ssh.
+  @Deprecated('Use `ssh.start` instead.')
   Future<Process> sshProcess(String cmd,
-      {ProcessStartMode mode = ProcessStartMode.normal}) {
-    _log.fine('Running over ssh: $cmd');
-    return Process.start(
-        'ssh',
-        [
-          // Private key file path.
-          '-i', sshKeyPath,
-          // Don't check known_hosts.
-          '-o', 'UserKnownHostsFile=/dev/null',
-          // Auto add the fingerprint of remote host.
-          '-o', 'StrictHostKeyChecking=no',
-          // Timeout to connect, keeping it short makes the logs more sensical.
-          '-o', 'ConnectTimeout=2',
-          // These five arguments allow ssh to reuse its connection.
-          '-o', 'ControlPersist=yes',
-          '-o', 'ControlMaster=auto',
-          '-o', 'ControlPath=/tmp/fuchsia--%r@%h:%p',
-          '-o', 'ServerAliveInterval=1',
-          '-o', 'ServerAliveCountMax=1',
-          // These two arguments determine the connection timeout,
-          // in the case the ssh connection gets lost.
-          // They say if the target doesn't respond within 10 seconds, six
-          // times in a row, terminate the connection.
-          '-o', 'ServerAliveInterval=10',
-          '-o', 'ServerAliveCountMax=6',
-          '$_sshUser@$target',
-          cmd
-        ],
-        // If not run in a shell it doesn't seem like the PATH is searched.
-        runInShell: true,
-        mode: mode);
-  }
-
-  /// Runs the command given by [cmd] on the target using ssh.
-  ///
-  /// It can optionally send input via [stdin].
-  Future<bool> ssh(String cmd, {String stdin}) async {
-    final process = await sshProcess(cmd);
-    if (stdin != null) {
-      process.stdin.write(stdin);
-      await process.stdin.flush();
-    }
-    await process.stdin.close();
-    final exitCode = await process.exitCode;
-    if (exitCode != 0) {
-      _log
-        ..warning('$cmd; exit code: $exitCode')
-        ..warning(await systemEncoding.decodeStream(process.stdout))
-        ..warning(await systemEncoding.decodeStream(process.stderr));
-      return false;
-    }
-
-    // We must read all data otherwise the program might hang.
-    await Future.wait([process.stdout.drain(), process.stderr.drain()]);
-
-    return true;
-  }
+          {ProcessStartMode mode = ProcessStartMode.normal}) =>
+      ssh.start(cmd, mode: mode);
 
   /// Obtains the root inspect object for a component whose path includes
   /// [componentName].
@@ -232,7 +174,7 @@ class Sl4f {
     await stopServer();
     // Issue a reboot command and wait.
     // TODO(DNO-621): trap errors
-    await ssh('dm reboot');
+    await ssh.run('dm reboot');
     await Future.delayed(Duration(seconds: 20));
 
     // Try to restart SL4F
@@ -251,7 +193,7 @@ class Sl4f {
   }
 
   Future<void> _dumpDiagnostic(String cmd, String dumpName, Dump dump) async {
-    final proc = await sshProcess(cmd);
+    final proc = await ssh.start(cmd);
 
     unawaited(proc.stdin.close());
 

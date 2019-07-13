@@ -16,9 +16,9 @@ void main() {
 
   setUpAll(() async {
     Logger.root
-        ..level = Level.ALL
-        ..onRecord.listen(
-            (LogRecord rec) => print('[${rec.level}]: ${rec.message}'));
+      ..level = Level.ALL
+      ..onRecord
+          .listen((LogRecord rec) => print('[${rec.level}]: ${rec.message}'));
 
     sl4fDriver = sl4f.Sl4f.fromEnvironment();
     await sl4fDriver.startServer();
@@ -45,7 +45,10 @@ void main() {
     test('reads from path', () async {
       String timestampName =
           'read-test-${DateTime.now().millisecondsSinceEpoch}';
-      if (!await sl4fDriver.ssh('echo -n "!d1r3w 0ll3h" > /tmp/$timestampName')) {
+      if ((await sl4fDriver.ssh
+                  .run('echo -n "!d1r3w 0ll3h" > /tmp/$timestampName'))
+              .exitCode !=
+          0) {
         fail('failed to create file to test read.');
       }
 
@@ -56,7 +59,9 @@ void main() {
     test('deletes file in path', () async {
       String timestampName =
           'delete-test-${DateTime.now().millisecondsSinceEpoch}';
-      if (!await sl4fDriver.ssh('echo "exists" > /tmp/$timestampName')) {
+      if ((await sl4fDriver.ssh.run('echo "exists" > /tmp/$timestampName'))
+              .exitCode !=
+          0) {
         fail('failed to create file to test delete.');
       }
 
@@ -115,7 +120,7 @@ void main() {
 }
 
 Future<List<String>> listDir(sl4f.Sl4f sl4f, String dir) async {
-  final process = await sl4f.sshProcess('ls $dir');
+  final process = await sl4f.ssh.start('ls $dir');
   if (await process.exitCode != 0) {
     fail('unable to run ls under $dir');
   }
