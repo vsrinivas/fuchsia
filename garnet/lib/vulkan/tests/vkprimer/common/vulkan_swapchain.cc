@@ -13,16 +13,15 @@
 
 namespace {
 
-static VkSurfaceFormatKHR ChooseSwapSurfaceFormat(
-    const std::vector<VkSurfaceFormatKHR>& available_formats) {
-  if (available_formats.size() == 1 &&
-      available_formats[0].format == VK_FORMAT_UNDEFINED) {
-    return {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
+static vk::SurfaceFormatKHR ChooseSwapSurfaceFormat(
+    const std::vector<vk::SurfaceFormatKHR>& available_formats) {
+  if (available_formats.size() == 1 && available_formats[0].format == vk::Format::eUndefined) {
+    return {vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear};
   }
 
   for (const auto& available_format : available_formats) {
-    if (available_format.format == VK_FORMAT_B8G8R8A8_UNORM &&
-        available_format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+    if (available_format.format == vk::Format::eB8G8R8A8Unorm &&
+        available_format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
       return available_format;
     }
   }
@@ -30,92 +29,75 @@ static VkSurfaceFormatKHR ChooseSwapSurfaceFormat(
   return available_formats[0];
 }
 
-static VkPresentModeKHR ChooseSwapPresentMode(
-    const std::vector<VkPresentModeKHR>& available_present_modes) {
-  std::unordered_map<VkPresentModeKHR, int> kPresentModePriorities = {
-      {VK_PRESENT_MODE_FIFO_KHR, 0},
-      {VK_PRESENT_MODE_MAILBOX_KHR, 1},
-      {VK_PRESENT_MODE_IMMEDIATE_KHR, 2},
-      {VK_PRESENT_MODE_MAX_ENUM_KHR, 3},
+static vk::PresentModeKHR ChooseSwapPresentMode(
+    const std::vector<vk::PresentModeKHR>& available_present_modes) {
+  std::unordered_map<vk::PresentModeKHR, int> kPresentModePriorities = {
+      {vk::PresentModeKHR::eFifo, 0},
+      {vk::PresentModeKHR::eMailbox, 1},
+      {vk::PresentModeKHR::eImmediate, 2},
+      {vk::PresentModeKHR::eFifoRelaxed, 3},
   };
 
-  VkPresentModeKHR best_mode = VK_PRESENT_MODE_MAX_ENUM_KHR;
+  const vk::PresentModeKHR kLastPresentMode = vk::PresentModeKHR::eFifoRelaxed;
+  vk::PresentModeKHR best_mode = kLastPresentMode;
   for (const auto& present_mode : available_present_modes) {
-    if (kPresentModePriorities[present_mode] <
-        kPresentModePriorities[best_mode]) {
+    if (kPresentModePriorities[present_mode] < kPresentModePriorities[best_mode]) {
       best_mode = present_mode;
     }
   }
 
-  if (best_mode == VK_PRESENT_MODE_MAX_ENUM_KHR) {
+  if (best_mode == kLastPresentMode) {
     RTN_MSG(best_mode, "Unable to find usable VkPresentMode.\n");
   }
 
   return best_mode;
 }
 
-static VkExtent2D ChooseSwapExtent(
-    const VkSurfaceCapabilitiesKHR& capabilities) {
-  if (capabilities.currentExtent.width !=
-      std::numeric_limits<uint32_t>::max()) {
+static vk::Extent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
+  if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
     return capabilities.currentExtent;
   } else {
-    VkExtent2D extent = {1024, 768};
-    extent.width =
-        std::max(capabilities.minImageExtent.width,
-                 std::min(capabilities.maxImageExtent.width, extent.width));
-    extent.height =
-        std::max(capabilities.minImageExtent.height,
-                 std::min(capabilities.maxImageExtent.height, extent.height));
+    vk::Extent2D extent = {1024, 768};
+    extent.width = std::max(capabilities.minImageExtent.width,
+                            std::min(capabilities.maxImageExtent.width, extent.width));
+    extent.height = std::max(capabilities.minImageExtent.height,
+                             std::min(capabilities.maxImageExtent.height, extent.height));
 
     return extent;
   }
 }
 
-static bool CreateImageViews(const VkDevice device,
-                             const VkFormat& image_format,
-                             const std::vector<VkImage> images,
-                             std::vector<VkImageView>* image_views) {
-  image_views->resize(images.size());
+static bool CreateImageViews(const vk::Device device, const vk::Format& image_format,
+                             const std::vector<vk::Image> images,
+                             std::vector<vk::UniqueImageView>* image_views) {
+  vk::ImageSubresourceRange range;
+  range.aspectMask = vk::ImageAspectFlagBits::eColor;
+  range.layerCount = 1;
+  range.levelCount = 1;
 
-  for (size_t i = 0; i < images.size(); i++) {
-    VkImageViewCreateInfo create_info = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        .components =
-            {
-                .r = VK_COMPONENT_SWIZZLE_IDENTITY,
-                .g = VK_COMPONENT_SWIZZLE_IDENTITY,
-                .b = VK_COMPONENT_SWIZZLE_IDENTITY,
-                .a = VK_COMPONENT_SWIZZLE_IDENTITY,
-            },
-        .format = image_format,
-        .image = images[i],
-        .subresourceRange =
-            {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .baseArrayLayer = 0,
-                .baseMipLevel = 0,
-                .layerCount = 1,
-                .levelCount = 1,
-            },
-        .viewType = VK_IMAGE_VIEW_TYPE_2D,
-    };
+  vk::ImageViewCreateInfo info;
+  info.format = image_format;
+  info.subresourceRange = range;
+  info.viewType = vk::ImageViewType::e2D;
+  for (const auto& image : images) {
+    info.image = image;
 
-    if (vkCreateImageView(device, &create_info, nullptr,
-                          (image_views->data() + i)) != VK_SUCCESS) {
-      RTN_MSG(false, "%s", "Failed to create image views.\n");
+    auto rv = device.createImageViewUnique(info);
+    if (vk::Result::eSuccess != rv.result) {
+      RTN_MSG(false, "VK Error: 0x%x - Failed to create image view.", rv.result);
     }
+    image_views->emplace_back(std::move(rv.value));
   }
   return true;
 }
 
 }  // namespace
 
-VulkanSwapchain::VulkanSwapchain(const VkPhysicalDevice& phys_device,
+VulkanSwapchain::VulkanSwapchain(const vk::PhysicalDevice phys_device,
                                  std::shared_ptr<VulkanLogicalDevice> device,
-                                 const VkSurfaceKHR& surface)
-    : initialized_(false), device_(device) {
-  params_ = std::make_unique<SurfacePhysDeviceParams>(phys_device, surface);
+                                 std::shared_ptr<VulkanSurface> surface)
+    : initialized_(false), device_(device), surface_(surface) {
+  phys_device_ = std::make_unique<vk::PhysicalDevice>(phys_device);
 }
 
 bool VulkanSwapchain::Init() {
@@ -124,95 +106,71 @@ bool VulkanSwapchain::Init() {
   }
 
   VulkanSwapchain::Info info;
-  QuerySwapchainSupport(params_->phys_device_, params_->surface_, &info);
-  VkSurfaceFormatKHR surface_format = ChooseSwapSurfaceFormat(info.formats);
-  VkPresentModeKHR present_mode = ChooseSwapPresentMode(info.present_modes);
+  QuerySwapchainSupport(*phys_device_, surface_->surface(), &info);
+  vk::SurfaceFormatKHR surface_format = ChooseSwapSurfaceFormat(info.formats);
+  vk::PresentModeKHR present_mode = ChooseSwapPresentMode(info.present_modes);
   extent_ = ChooseSwapExtent(info.capabilities);
 
   uint32_t num_images = info.capabilities.minImageCount + 1;
-  if (info.capabilities.maxImageCount > 0 &&
-      num_images > info.capabilities.maxImageCount) {
+  if (info.capabilities.maxImageCount > 0 && num_images > info.capabilities.maxImageCount) {
     num_images = info.capabilities.maxImageCount;
   }
 
-  VkSwapchainCreateInfoKHR create_info = {
-      .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-      .clipped = VK_TRUE,
-      .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-      .minImageCount = num_images,
-      .imageArrayLayers = 1,
-      .imageColorSpace = surface_format.colorSpace,
-      .imageExtent = extent_,
-      .imageFormat = surface_format.format,
-      .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
-      .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-      .oldSwapchain = VK_NULL_HANDLE,
-      .presentMode = present_mode,
-      .preTransform = info.capabilities.currentTransform,
-      .surface = params_->surface_,
-  };
+  vk::SwapchainCreateInfoKHR create_info;
+  create_info.clipped = VK_TRUE;
+  create_info.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
+  create_info.minImageCount = num_images;
+  create_info.imageArrayLayers = 1;
+  create_info.imageColorSpace = surface_format.colorSpace;
+  create_info.imageExtent = extent_;
+  create_info.imageFormat = surface_format.format;
+  create_info.imageSharingMode = vk::SharingMode::eExclusive;
+  create_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
+  create_info.presentMode = present_mode;
+  create_info.preTransform = info.capabilities.currentTransform;
+  create_info.surface = surface_->surface();
 
-  auto err = vkCreateSwapchainKHR(device_->device(), &create_info, nullptr,
-                                  &swap_chain_);
-  if (VK_SUCCESS != err) {
-    RTN_MSG(false, "VK Error: 0x%x - Failed to create swap chain.\n", err);
+  auto rv = device_->device()->createSwapchainKHRUnique(create_info);
+  if (vk::Result::eSuccess != rv.result) {
+    RTN_MSG(false, "VK Error: 0x%x - Failed to create swap chain.", rv.result);
   }
+  swap_chain_ = std::move(rv.value);
 
-  vkGetSwapchainImagesKHR(device_->device(), swap_chain_, &num_images, nullptr);
-  std::vector<VkImage> images(num_images);
-  vkGetSwapchainImagesKHR(device_->device(), swap_chain_, &num_images,
-                          images.data());
+  auto rv_images = device_->device()->getSwapchainImagesKHR(*swap_chain_);
+  if (vk::Result::eSuccess != rv_images.result) {
+    RTN_MSG(false, "VK Error: 0x%x - Failed to get swap chain images.", rv_images.result);
+  }
+  auto images = rv_images.value;
 
   image_format_ = surface_format.format;
 
-  if (!CreateImageViews(device_->device(), image_format_, images,
-                        &image_views_)) {
+  if (!CreateImageViews(*device_->device(), image_format_, images, &image_views_)) {
     RTN_MSG(false, "Failed to create image views.\n");
   }
 
-  params_.reset();
+  phys_device_.reset();
   initialized_ = true;
   return initialized_;
 }
 
-VulkanSwapchain::~VulkanSwapchain() {
-  if (initialized_) {
-    vkDestroySwapchainKHR(device_->device(), swap_chain_, nullptr);
-    for (size_t i = 0; i < image_views_.size(); i++) {
-      vkDestroyImageView(device_->device(), image_views_[i], nullptr);
-    }
-  }
-}
-
-bool VulkanSwapchain::QuerySwapchainSupport(VkPhysicalDevice phys_device,
-                                            VkSurfaceKHR surface,
+bool VulkanSwapchain::QuerySwapchainSupport(vk::PhysicalDevice phys_device, VkSurfaceKHR surface,
                                             VulkanSwapchain::Info* info) {
-  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phys_device, surface,
-                                            &info->capabilities);
-
-  uint32_t num_formats;
-  vkGetPhysicalDeviceSurfaceFormatsKHR(phys_device, surface, &num_formats,
-                                       nullptr);
-
-  if (num_formats != 0) {
-    info->formats.resize(num_formats);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(phys_device, surface, &num_formats,
-                                         info->formats.data());
-  } else {
-    RTN_MSG(false, "%s", "No surface formats.\n");
+  auto result = phys_device.getSurfaceCapabilitiesKHR(surface, &info->capabilities);
+  if (vk::Result::eSuccess != result) {
+    RTN_MSG(false, "VK Error: 0x%x - Failed to get surface capabilities.", result);
   }
 
-  uint32_t num_present_modes;
-  vkGetPhysicalDeviceSurfacePresentModesKHR(phys_device, surface,
-                                            &num_present_modes, nullptr);
-
-  if (num_present_modes != 0) {
-    info->present_modes.resize(num_present_modes);
-    vkGetPhysicalDeviceSurfacePresentModesKHR(
-        phys_device, surface, &num_present_modes, info->present_modes.data());
-  } else {
-    RTN_MSG(false, "%s", "No present modes.\n");
+  auto rv = phys_device.getSurfaceFormatsKHR(surface);
+  if (vk::Result::eSuccess != rv.result) {
+    RTN_MSG(false, "VK Error: 0x%x - Failed to get surface formats.", rv.result);
   }
+  info->formats = rv.value;
+
+  auto rv_present = phys_device.getSurfacePresentModesKHR(surface);
+  if (vk::Result::eSuccess != rv_present.result) {
+    RTN_MSG(false, "VK Error: 0x%x - Failed to get present modes.", rv_present.result);
+  }
+  info->present_modes = rv_present.value;
 
   return true;
 }

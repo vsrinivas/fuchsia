@@ -6,21 +6,18 @@
 #define GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_COMMAND_POOL_H_
 
 #include <src/lib/fxl/macros.h>
+#include <vulkan/vulkan.hpp>
 
 #include "surface_phys_device_params.h"
-#include "vulkan/vulkan.h"
 #include "vulkan_logical_device.h"
 
 class VulkanCommandPool {
  public:
   VulkanCommandPool(std::shared_ptr<VulkanLogicalDevice> device,
-                    const VkPhysicalDevice phys_device,
-                    const VkSurfaceKHR &surface);
-  ~VulkanCommandPool();
+                    const vk::PhysicalDevice phys_device, const VkSurfaceKHR &surface);
 
   bool Init();
-
-  VkCommandPool command_pool() const { return command_pool_; }
+  const vk::UniqueCommandPool &command_pool() const { return command_pool_; }
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(VulkanCommandPool);
@@ -28,7 +25,8 @@ class VulkanCommandPool {
   bool initialized_;
   std::shared_ptr<VulkanLogicalDevice> device_;
   std::unique_ptr<SurfacePhysDeviceParams> params_;
-  VkCommandPool command_pool_;
+
+  vk::UniqueCommandPool command_pool_;
 };
 
 #endif  // GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_COMMAND_POOL_H_

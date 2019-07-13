@@ -11,7 +11,7 @@ VulkanSurface::VulkanSurface(std::shared_ptr<VulkanInstance> instance)
 
 VulkanSurface::~VulkanSurface() {
   if (initialized_) {
-    vkDestroySurfaceKHR(instance_->instance(), surface_, nullptr);
+    vkDestroySurfaceKHR(*instance_->instance(), surface_, nullptr);
   }
 }
 
@@ -20,13 +20,13 @@ bool VulkanSurface::Init() {
     RTN_MSG(false, "VulkanSurface is already initialized.\n");
   }
 
+  // TODO(MA-647): Move to scenic (public) surface.
   VkImagePipeSurfaceCreateInfoFUCHSIA info = {
       .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
       .pNext = nullptr,
   };
 
-  auto rv = vkCreateImagePipeSurfaceFUCHSIA(instance_->instance(), &info,
-                                            nullptr, &surface_);
+  auto rv = vkCreateImagePipeSurfaceFUCHSIA(*instance_->instance(), &info, nullptr, &surface_);
 
   if (rv != VK_SUCCESS) {
     RTN_MSG(false, "Surface creation failed.\n");

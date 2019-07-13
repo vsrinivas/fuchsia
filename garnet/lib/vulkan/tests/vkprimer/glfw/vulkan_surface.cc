@@ -6,19 +6,17 @@
 
 #include "utils.h"
 
-VulkanSurface::VulkanSurface(std::shared_ptr<VulkanInstance> instance,
-                             GLFWwindow *window)
+VulkanSurface::VulkanSurface(std::shared_ptr<VulkanInstance> instance, GLFWwindow *window)
     : initialized_(false), instance_(instance), window_(window) {}
 
 VulkanSurface::~VulkanSurface() {
   if (initialized_) {
-    vkDestroySurfaceKHR(instance_->instance(), surface_, nullptr);
+    vkDestroySurfaceKHR(*instance_->instance(), surface_, nullptr);
   }
 }
 
 bool VulkanSurface::Init() {
-  auto rv = glfwCreateWindowSurface(instance_->instance(), window_, nullptr,
-                                    &surface_);
+  auto rv = glfwCreateWindowSurface(*instance_->instance(), window_, nullptr, &surface_);
 
   if (rv != VK_SUCCESS) {
     RTN_MSG(false, "GLFW surface creation failed.\n");

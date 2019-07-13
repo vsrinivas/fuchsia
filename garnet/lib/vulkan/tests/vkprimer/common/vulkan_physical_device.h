@@ -5,21 +5,19 @@
 #ifndef GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_PHYSICAL_DEVICE_H_
 #define GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_PHYSICAL_DEVICE_H_
 
-#include <src/lib/fxl/macros.h>
-
 #include <memory>
+#include <src/lib/fxl/macros.h>
 #include <vector>
+#include <vulkan/vulkan.hpp>
 
-#include "vulkan/vulkan.h"
 #include "vulkan_instance.h"
 
 class VulkanPhysicalDevice {
  public:
-  VulkanPhysicalDevice(std::shared_ptr<VulkanInstance> instance,
-                       const VkSurfaceKHR &surface);
+  VulkanPhysicalDevice(std::shared_ptr<VulkanInstance> instance, const VkSurfaceKHR &surface);
 
   bool Init();
-  VkPhysicalDevice phys_device() const;
+  vk::PhysicalDevice phys_device() const;
 
   static void AppendRequiredPhysDeviceExts(std::vector<const char *> *exts);
 
@@ -36,7 +34,7 @@ class VulkanPhysicalDevice {
   };
   std::unique_ptr<InitParams> params_;
 
-  VkPhysicalDevice phys_device_;
+  vk::PhysicalDevice phys_device_;
 };
 
 #endif  // GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_PHYSICAL_DEVICE_H_

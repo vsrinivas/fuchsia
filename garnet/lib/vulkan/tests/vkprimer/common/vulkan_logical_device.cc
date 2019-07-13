@@ -7,24 +7,12 @@
 #include "utils.h"
 #include "vulkan_layer.h"
 #include "vulkan_physical_device.h"
-#include "vulkan_queue.h"
 #include "vulkan_swapchain.h"
 
-VulkanLogicalDevice::VulkanLogicalDevice(const VkPhysicalDevice &phys_device,
-                                         const VkSurfaceKHR &surface,
-                                         const bool enable_validation)
-    : initialized_(false),
-      device_(VK_NULL_HANDLE),
-      enable_validation_(enable_validation),
-      queue_(nullptr) {
+VulkanLogicalDevice::VulkanLogicalDevice(const vk::PhysicalDevice &phys_device,
+                                         const VkSurfaceKHR &surface, const bool enable_validation)
+    : initialized_(false), enable_validation_(enable_validation), queue_(nullptr) {
   params_ = std::make_unique<SurfacePhysDeviceParams>(phys_device, surface);
-}
-
-VulkanLogicalDevice::~VulkanLogicalDevice() {
-  if (initialized_) {
-    vkDestroyDevice(device_, nullptr);
-    initialized_ = false;
-  }
 }
 
 bool VulkanLogicalDevice::Init() {
@@ -33,61 +21,55 @@ bool VulkanLogicalDevice::Init() {
   }
 
   std::vector<uint32_t> indices;
-  if (!VulkanQueue::FindGraphicsQueueFamilies(params_->phys_device_,
-                                              params_->surface_, &indices)) {
+  if (!vkp::FindGraphicsQueueFamilies(params_->phys_device_, params_->surface_, &indices)) {
     return false;
   }
 
   float queue_priority = 1.0f;
-  VkDeviceQueueCreateInfo queue_create_info = {
-      .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-      .queueCount = 1,
-      .queueFamilyIndex = indices[0],
-      .pQueuePriorities = &queue_priority,
-  };
-
-  VkPhysicalDeviceFeatures device_features = {};
+  vk::DeviceQueueCreateInfo queue_info;
+  queue_info.queueCount = 1;
+  queue_info.queueFamilyIndex = indices[0];
+  queue_info.pQueuePriorities = &queue_priority;
 
   std::vector<const char *> exts;
   VulkanPhysicalDevice::AppendRequiredPhysDeviceExts(&exts);
 
-  VkDeviceCreateInfo device_create_info = {
-      .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-      .enabledExtensionCount = static_cast<uint32_t>(exts.size()),
-      .pQueueCreateInfos = &queue_create_info,
-      .pEnabledFeatures = &device_features,
-      .ppEnabledExtensionNames = exts.data(),
-      .queueCreateInfoCount = 1,
-  };
+  vk::PhysicalDeviceFeatures device_features;
+  vk::DeviceCreateInfo device_info;
+  device_info.setEnabledExtensionCount(static_cast<uint32_t>(exts.size()));
+  device_info.queueCreateInfoCount = 1;
+  device_info.pQueueCreateInfos = &queue_info;
+  device_info.pEnabledFeatures = &device_features;
+  device_info.setPpEnabledExtensionNames(exts.data());
 
   if (enable_validation_) {
     VulkanLayer::AppendRequiredDeviceLayers(&layers_);
-    device_create_info.enabledLayerCount = layers_.size();
+    device_info.setEnabledLayerCount(layers_.size());
   } else {
-    device_create_info.enabledLayerCount = 0;
+    device_info.enabledLayerCount = 0;
   }
 
-  auto err = vkCreateDevice(params_->phys_device_, &device_create_info, nullptr,
-                            &device_);
-  if (VK_SUCCESS != err) {
-    RTN_MSG(false, "VK Error: 0x%x - Failed to create device.\n", err);
+  auto rv = params_->phys_device_.createDeviceUnique(device_info);
+  device_ = std::move(rv.value);
+  if (vk::Result::eSuccess != rv.result) {
+    RTN_MSG(false, "VK Error: 0x%x - Failed to create logical device.\n", rv.result);
   }
 
-  vkGetDeviceQueue(device_, indices[0], 0, &queue_);
+  queue_ = device_->getQueue(indices[0], 0);
   params_.reset();
   initialized_ = true;
 
   return true;
 }
 
-VkDevice VulkanLogicalDevice::device() const {
+const vk::UniqueDevice &VulkanLogicalDevice::device() const {
   if (!initialized_) {
     RTN_MSG(device_, "Can't retrieve device.  Not initialized.\n");
   }
   return device_;
 }
 
-VkQueue VulkanLogicalDevice::queue() const {
+vk::Queue VulkanLogicalDevice::queue() const {
   if (!initialized_) {
     RTN_MSG(queue_, "Can't retrieve queue.  Not initialized.\n");
   }

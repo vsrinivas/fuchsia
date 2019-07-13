@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_SURFACE_PHYS_DEVICE_PARAMS_H_
 #define GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_SURFACE_PHYS_DEVICE_PARAMS_H_
 
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 /**
  * SurfacePhysDeviceParams serves as InitParams for several classes that
@@ -13,11 +13,10 @@
  * to later use then release these at Init() time.
  */
 struct SurfacePhysDeviceParams {
-  SurfacePhysDeviceParams(const VkPhysicalDevice &phys_device,
-                          const VkSurfaceKHR &surface)
+  SurfacePhysDeviceParams(const vk::PhysicalDevice &phys_device, const VkSurfaceKHR &surface)
       : phys_device_(phys_device), surface_(surface) {}
 
-  const VkPhysicalDevice phys_device_;
+  const vk::PhysicalDevice phys_device_;
   const VkSurfaceKHR surface_;
 };
 

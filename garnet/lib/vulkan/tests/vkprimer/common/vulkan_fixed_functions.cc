@@ -4,14 +4,32 @@
 
 #include "vulkan_fixed_functions.h"
 
-VulkanFixedFunctions::VulkanFixedFunctions(const VkExtent2D &extent)
-    : extent_(extent) {
-  scissor_ = {
-      .extent = extent_,
-  };
+VulkanFixedFunctions::VulkanFixedFunctions(const vk::Extent2D &extent) : extent_(extent) {
+  color_blend_attachment_info_.setColorWriteMask(
+      vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
+      vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA);
 
-  viewport_ = {
-      .height = static_cast<float>(extent_.height),
-      .width = static_cast<float>(extent_.width),
-  };
+  color_blending_info_.attachmentCount = 1;
+  color_blending_info_.pAttachments = &color_blend_attachment_info_;
+  color_blending_info_.logicOp = vk::LogicOp::eCopy;
+
+  input_assembly_info_.topology = vk::PrimitiveTopology::eTriangleList;
+
+  multisample_info_.rasterizationSamples = vk::SampleCountFlagBits::e1;
+
+  rasterizer_info_.cullMode = vk::CullModeFlagBits::eBack;
+  rasterizer_info_.frontFace = vk::FrontFace::eClockwise;
+  rasterizer_info_.lineWidth = 1.0f;
+  rasterizer_info_.polygonMode = vk::PolygonMode::eFill;
+
+  scissor_.extent = extent_;
+
+  viewport_.maxDepth = 1.0f;
+  viewport_.setHeight(static_cast<float>(extent_.height));
+  viewport_.setWidth(static_cast<float>(extent_.width));
+
+  viewport_info_.scissorCount = 1;
+  viewport_info_.pScissors = &scissor_;
+  viewport_info_.viewportCount = 1;
+  viewport_info_.pViewports = &viewport_;
 };

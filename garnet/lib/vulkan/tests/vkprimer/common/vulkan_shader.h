@@ -6,16 +6,16 @@
 #define GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_SHADER_H_
 
 #include <src/lib/fxl/macros.h>
+#include <vulkan/vulkan.hpp>
 
 #include <string>
 #include <vector>
 
-#include "vulkan/vulkan.h"
 
 class VulkanShader {
  public:
-  static bool CreateShaderModule(VkDevice device, const std::vector<char>& code,
-                                 VkShaderModule* shader_module);
+  static vk::ResultValue<vk::UniqueShaderModule> CreateShaderModule(vk::Device device,
+                                                                    const std::vector<char>& code);
   static bool ReadFile(const std::string& file_name, std::vector<char>* buffer);
 
  private:

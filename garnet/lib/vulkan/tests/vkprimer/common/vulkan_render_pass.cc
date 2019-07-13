@@ -7,57 +7,44 @@
 #include "utils.h"
 
 VulkanRenderPass::VulkanRenderPass(std::shared_ptr<VulkanLogicalDevice> device,
-                                   const VkFormat &swapchain_image_format)
-    : initialized_(false),
-      device_(device),
-      swapchain_image_format_(swapchain_image_format) {}
-
-VulkanRenderPass::~VulkanRenderPass() {
-  if (initialized_) {
-    vkDestroyRenderPass(device_->device(), render_pass_, nullptr);
-  }
-}
+                                   const vk::Format &swapchain_image_format)
+    : initialized_(false), device_(device), swapchain_image_format_(swapchain_image_format) {}
 
 bool VulkanRenderPass::Init() {
   if (initialized_) {
     RTN_MSG(false, "VulkanRenderPass is already initialized.\n");
   }
 
-  VkAttachmentDescription color_attachment = {
-      .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-      .format = swapchain_image_format_,
-      .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-      .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-      .samples = VK_SAMPLE_COUNT_1_BIT,
-      .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-      .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-      .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-  };
+  vk::AttachmentDescription color_attachment;
+  color_attachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
+  color_attachment.format = swapchain_image_format_;
+  color_attachment.initialLayout = vk::ImageLayout::eUndefined;
+  color_attachment.loadOp = vk::AttachmentLoadOp::eClear;
+  color_attachment.samples = vk::SampleCountFlagBits::e1;
+  color_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+  color_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+  color_attachment.storeOp = vk::AttachmentStoreOp::eStore;
 
-  VkAttachmentReference color_attachment_ref = {
-      .attachment = 0,
-      .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-  };
+  vk::AttachmentReference color_attachment_ref;
+  color_attachment_ref.attachment = 0;
+  color_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
 
-  VkSubpassDescription subpass = {
-      .colorAttachmentCount = 1,
-      .pColorAttachments = &color_attachment_ref,
-      .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-  };
+  vk::SubpassDescription subpass;
+  subpass.colorAttachmentCount = 1;
+  subpass.pColorAttachments = &color_attachment_ref;
+  subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
 
-  VkRenderPassCreateInfo render_pass_info = {
-      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-      .attachmentCount = 1,
-      .pAttachments = &color_attachment,
-      .pSubpasses = &subpass,
-      .subpassCount = 1,
-  };
+  vk::RenderPassCreateInfo render_pass_info;
+  render_pass_info.attachmentCount = 1;
+  render_pass_info.pAttachments = &color_attachment;
+  render_pass_info.pSubpasses = &subpass;
+  render_pass_info.subpassCount = 1;
 
-  auto err = vkCreateRenderPass(device_->device(), &render_pass_info, nullptr,
-                                &render_pass_);
-  if (VK_SUCCESS != err) {
-    RTN_MSG(false, "VK Error: 0x%x - Failed to create render pass.\n", err);
+  auto rv = device_->device()->createRenderPassUnique(render_pass_info);
+  if (vk::Result::eSuccess != rv.result) {
+    RTN_MSG(false, "VK Error: 0x%x - Failed to create render pass.", rv.result);
   }
+  render_pass_ = std::move(rv.value);
 
   initialized_ = true;
   return true;

@@ -5,10 +5,9 @@
 #ifndef GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_UTILS_H_
 #define GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_UTILS_H_
 
-#include <vulkan/vulkan.h>
-
 #include <string>
 #include <vector>
+#include <vulkan/vulkan.hpp>
 
 #define RTN_MSG(err, ...)                          \
   {                                                \
@@ -17,11 +16,9 @@
     return err;                                    \
   }
 
-enum SearchProp {
-  INSTANCE_EXT_PROP,
-  INSTANCE_LAYER_PROP,
-  PHYS_DEVICE_EXT_PROP
-};
+namespace vkp {
+
+enum SearchProp { INSTANCE_EXT_PROP, INSTANCE_LAYER_PROP, PHYS_DEVICE_EXT_PROP };
 
 //
 // Using the vkEnumerate* entrypoints, search for all elements of
@@ -33,14 +30,19 @@ enum SearchProp {
 // The type of enumeration entrypoint used is selected using the
 // |search_prop| parameter.  Those 3 selectable entrypoints are:
 //
-//   vkEnumerateInstanceExtensionProperties
-//   vkEnumerateInstanceLayerProperties
-//   vkEnumerateDeviceExtensionProperties
+//   vk::enumerateInstanceExtensionProperties
+//   vk::enumerateInstanceLayerProperties
+//   vk::enumerateDeviceExtensionProperties
 //
-bool FindMatchingProperties(const std::vector<const char *> &desired_props,
-                            SearchProp search_prop,
-                            const VkPhysicalDevice *phys_device,
-                            const char *layer,
+bool FindMatchingProperties(const std::vector<const char *> &desired_props, SearchProp search_prop,
+                            const vk::PhysicalDevice *phys_device, const char *layer,
                             std::vector<std::string> *missing_propss_out);
+
+// Find graphics queue families for |surface|.  Populate |queue_family_indices|
+// if it is non-null.  Returns true if a graphics queue family is found.
+bool FindGraphicsQueueFamilies(vk::PhysicalDevice phys_device, VkSurfaceKHR surface,
+                               std::vector<uint32_t> *queue_family_indices);
+
+}  // namespace vkp
 
 #endif  // GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_UTILS_H_

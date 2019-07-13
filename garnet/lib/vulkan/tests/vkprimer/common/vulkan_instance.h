@@ -5,15 +5,16 @@
 #ifndef GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_INSTANCE_H_
 #define GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_INSTANCE_H_
 
-#include <src/lib/fxl/macros.h>
-#include <vulkan/vulkan.h>
-
 #include <vector>
+#include <vulkan/vulkan.hpp>
+
+#include <src/lib/fxl/macros.h>
 
 #if USE_GLFW
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #endif
+
 
 class VulkanInstance {
  public:
@@ -26,7 +27,7 @@ class VulkanInstance {
   bool Init(bool enable_validation);
 #endif
 
-  const VkInstance &instance() const { return instance_; }
+  const vk::UniqueInstance &instance() const;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(VulkanInstance);
@@ -38,9 +39,10 @@ class VulkanInstance {
 #endif
 
   bool initialized_;
-  VkInstance instance_;
   std::vector<const char *> extensions_;
   std::vector<const char *> layers_;
+
+  vk::UniqueInstance instance_;
 };
 
 #endif  // GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_INSTANCE_H_

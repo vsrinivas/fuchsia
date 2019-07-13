@@ -12,22 +12,10 @@
 #include "vulkan_fixed_functions.h"
 #include "vulkan_shader.h"
 
-VulkanGraphicsPipeline::VulkanGraphicsPipeline(
-    std::shared_ptr<VulkanLogicalDevice> device, const VkExtent2D &extent,
-    const VkRenderPass &render_pass)
-    : initialized_(false), device_(device), extent_(extent) {
-  params_ = std::make_unique<InitParams>(render_pass);
-}
-
-VulkanGraphicsPipeline::~VulkanGraphicsPipeline() {
-  if (initialized_) {
-    vkDestroyPipelineLayout(device_->device(), pipeline_layout_, nullptr);
-    vkDestroyPipeline(device_->device(), graphics_pipeline_, nullptr);
-  }
-}
-
-VulkanGraphicsPipeline::InitParams::InitParams(const VkRenderPass &render_pass)
-    : render_pass_(render_pass) {}
+VulkanGraphicsPipeline::VulkanGraphicsPipeline(std::shared_ptr<VulkanLogicalDevice> device,
+                                               const vk::Extent2D &extent,
+                                               std::shared_ptr<VulkanRenderPass> render_pass)
+    : initialized_(false), device_(device), extent_(extent), render_pass_(render_pass) {}
 
 bool VulkanGraphicsPipeline::Init() {
   if (initialized_) {
@@ -46,11 +34,9 @@ bool VulkanGraphicsPipeline::Init() {
     RTN_MSG(false, "Can't get current working directory.\n");
   }
   char vert_shader[PATH_MAX];
-  snprintf(vert_shader, PATH_MAX,
-           "%s/host_x64/obj/garnet/lib/vulkan/tests/vkprimer/vert.spv", cwd);
+  snprintf(vert_shader, PATH_MAX, "%s/host_x64/obj/garnet/lib/vulkan/tests/vkprimer/vert.spv", cwd);
   char frag_shader[PATH_MAX];
-  snprintf(frag_shader, PATH_MAX,
-           "%s/host_x64/obj/garnet/lib/vulkan/tests/vkprimer/frag.spv", cwd);
+  snprintf(frag_shader, PATH_MAX, "%s/host_x64/obj/garnet/lib/vulkan/tests/vkprimer/frag.spv", cwd);
 #endif
 
   if (!VulkanShader::ReadFile(vert_shader, &vert_shader_buffer)) {
@@ -60,84 +46,60 @@ bool VulkanGraphicsPipeline::Init() {
     RTN_MSG(false, "Can't read fragment spv file.\n");
   }
 
-  const VkDevice &device = device_->device();
+  const vk::Device &device = *device_->device();
 
-  VkShaderModule vert_shader_module;
-  if (!VulkanShader::CreateShaderModule(device, vert_shader_buffer,
-                                        &vert_shader_module)) {
-    RTN_MSG(false, "Can't create vertex shader module.\n");
+  auto rv = VulkanShader::CreateShaderModule(device, vert_shader_buffer);
+  if (vk::Result::eSuccess != rv.result) {
+    RTN_MSG(false, "VK Error: 0x%x - Failed to create vtx shader module.\n", rv.result);
   }
+  vk::UniqueShaderModule vert_shader_module = std::move(rv.value);
 
-  VkShaderModule frag_shader_module;
-  if (!VulkanShader::CreateShaderModule(device, frag_shader_buffer,
-                                        &frag_shader_module)) {
-    RTN_MSG(false, "Can't create fragment shader module.\n");
+  rv = VulkanShader::CreateShaderModule(device, frag_shader_buffer);
+  if (vk::Result::eSuccess != rv.result) {
+    RTN_MSG(false, "VK Error: 0x%x - Failed to create frag shader module.\n", rv.result);
   }
+  vk::UniqueShaderModule frag_shader_module = std::move(rv.value);
 
-  VkPipelineShaderStageCreateInfo vert_stage_create_info = {
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-      .stage = VK_SHADER_STAGE_VERTEX_BIT,
-      .module = vert_shader_module,
-      .pName = "main",
-  };
-
-  VkPipelineShaderStageCreateInfo frag_stage_create_info = {
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-      .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-      .module = frag_shader_module,
-      .pName = "main",
-  };
-
-  VkPipelineShaderStageCreateInfo shader_stages[] = {
-      vert_stage_create_info,
-      frag_stage_create_info,
-  };
+  vk::PipelineShaderStageCreateInfo shader_stages[2];
+  shader_stages[0].module = *vert_shader_module;
+  shader_stages[0].pName = "main";
+  shader_stages[1].module = *frag_shader_module;
+  shader_stages[1].stage = vk::ShaderStageFlagBits::eFragment;
+  shader_stages[1].pName = "main";
 
   VulkanFixedFunctions fixed_functions(extent_);
 
-  VkPipelineLayoutCreateInfo pipeline_layout_info = {
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-      .pushConstantRangeCount = 0,
-      .setLayoutCount = 0,
-  };
-
-  auto err = vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr,
-                                    &pipeline_layout_);
-  if (VK_SUCCESS != err) {
-    RTN_MSG(false, "VK Error: 0x%x - Failed to create pipeline layout.\n", err);
+  vk::PipelineLayoutCreateInfo pipeline_layout_info;
+  auto rv_layout = device.createPipelineLayoutUnique(pipeline_layout_info);
+  if (vk::Result::eSuccess != rv_layout.result) {
+    RTN_MSG(false, "VK Error: 0x%x - Failed to create pipeline layout.\n", rv_layout.result);
   }
+  pipeline_layout_ = std::move(rv_layout.value);
 
-  VkGraphicsPipelineCreateInfo pipeline_info = {
-      .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-      .basePipelineIndex = -1,
-      .basePipelineHandle = VK_NULL_HANDLE,
-      .pColorBlendState = &fixed_functions.color_blending_info(),
-      .pDepthStencilState = nullptr,  // optional
-      .pDynamicState = nullptr,       // optional
-      .pInputAssemblyState = &fixed_functions.input_assembly_info(),
-      .layout = pipeline_layout_,
-      .pMultisampleState = &fixed_functions.multisample_info(),
-      .pRasterizationState = &fixed_functions.rasterizer_info(),
-      .renderPass = params_->render_pass_,
-      .stageCount = 2,
-      .pStages = shader_stages,
-      .subpass = 0,
-      .pVertexInputState = &fixed_functions.vertex_input_info(),
-      .pViewportState = &fixed_functions.viewport_info(),
-  };
-
-  err = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_info,
-                                  nullptr, &graphics_pipeline_);
-  if (VK_SUCCESS != err) {
-    RTN_MSG(false, "VK Error: 0x%x - Failed to create graphics pipeline.\n",
-            err);
+  VulkanFixedFunctions &ff = fixed_functions;
+  vk::GraphicsPipelineCreateInfo pipeline_info;
+  pipeline_info.stageCount = 2;
+  pipeline_info.pStages = shader_stages;
+  pipeline_info.setPVertexInputState(&ff.vertex_input_info());
+  pipeline_info.setPInputAssemblyState(&ff.input_assembly_info());
+  pipeline_info.setPViewportState(&ff.viewport_info());
+  pipeline_info.setPRasterizationState(&ff.rasterizer_info());
+  pipeline_info.setPMultisampleState(&ff.multisample_info());
+  pipeline_info.setPColorBlendState(&ff.color_blending_info());
+  pipeline_info.layout = *pipeline_layout_;
+  pipeline_info.renderPass = *render_pass_->render_pass();
+  pipeline_info.basePipelineIndex = -1;
+  auto rv_pipelines = device.createGraphicsPipelinesUnique(vk::PipelineCache(), {pipeline_info});
+  if (vk::Result::eSuccess != rv_pipelines.result) {
+    RTN_MSG(false, "VK Error: 0x%x - Failed to create pipelines.\n", rv_pipelines.result);
   }
+  graphics_pipeline_ = std::move(rv_pipelines.value[0]);
 
-  vkDestroyShaderModule(device, frag_shader_module, nullptr);
-  vkDestroyShaderModule(device, vert_shader_module, nullptr);
-
-  params_.reset();
   initialized_ = true;
 
   return true;
+}
+
+const vk::UniquePipeline &VulkanGraphicsPipeline::graphics_pipeline() const {
+  return graphics_pipeline_;
 }

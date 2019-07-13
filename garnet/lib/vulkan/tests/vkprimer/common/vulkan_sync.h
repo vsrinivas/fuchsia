@@ -6,23 +6,20 @@
 #define GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_SYNC_H_
 
 #include <src/lib/fxl/macros.h>
-
 #include <vector>
+#include <vulkan/vulkan.hpp>
 
-#include "vulkan/vulkan.h"
 #include "vulkan_logical_device.h"
 
 class VulkanSync {
  public:
-  VulkanSync(std::shared_ptr<VulkanLogicalDevice> device,
-             const int max_frames_in_flight);
-  ~VulkanSync();
+  VulkanSync(std::shared_ptr<VulkanLogicalDevice> device, const int max_frames_in_flight);
 
   bool Init();
 
-  const std::vector<VkSemaphore>& image_available_semaphores() const;
-  const std::vector<VkFence>& in_flight_fences() const;
-  const std::vector<VkSemaphore>& render_finished_semaphores() const;
+  const std::vector<vk::UniqueSemaphore>& image_available_semaphores() const;
+  const std::vector<vk::UniqueFence>& in_flight_fences() const;
+  const std::vector<vk::UniqueSemaphore>& render_finished_semaphores() const;
   int max_frames_in_flight() const { return max_frames_in_flight_; }
 
  private:
@@ -32,9 +29,9 @@ class VulkanSync {
   std::shared_ptr<VulkanLogicalDevice> device_;
   const uint32_t max_frames_in_flight_;
 
-  std::vector<VkSemaphore> image_available_semaphores_;
-  std::vector<VkSemaphore> render_finished_semaphores_;
-  std::vector<VkFence> in_flight_fences_;
+  std::vector<vk::UniqueSemaphore> image_available_semaphores_;
+  std::vector<vk::UniqueSemaphore> render_finished_semaphores_;
+  std::vector<vk::UniqueFence> in_flight_fences_;
 };
 
 #endif  // GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_SYNC_H_

@@ -27,8 +27,6 @@ common_files = [
   "vulkan_logical_device.h",
   "vulkan_physical_device.cc",
   "vulkan_physical_device.h",
-  "vulkan_queue.cc",
-  "vulkan_queue.h",
   "vulkan_render_pass.cc",
   "vulkan_render_pass.h",
   "vulkan_shader.cc",

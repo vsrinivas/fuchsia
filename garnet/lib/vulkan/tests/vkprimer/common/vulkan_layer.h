@@ -5,24 +5,22 @@
 #ifndef GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_LAYER_H_
 #define GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_LAYER_H_
 
-#include <src/lib/fxl/macros.h>
-
 #include <memory>
 #include <vector>
+#include <vulkan/vulkan.hpp>
 
-#include "vulkan/vulkan.h"
+#include <src/lib/fxl/macros.h>
+
 #include "vulkan_instance.h"
 
 class VulkanLayer {
  public:
   VulkanLayer(std::shared_ptr<VulkanInstance> instance);
-  ~VulkanLayer();
 
   bool Init();
 
   static bool CheckInstanceLayerSupport();
-  static void AppendRequiredInstanceExtensions(
-      std::vector<const char *> *extensions);
+  static void AppendRequiredInstanceExtensions(std::vector<const char *> *extensions);
   static void AppendRequiredInstanceLayers(std::vector<const char *> *layers);
   static void AppendRequiredDeviceLayers(std::vector<const char *> *layers);
 
@@ -33,7 +31,8 @@ class VulkanLayer {
 
   bool initialized_;
   std::shared_ptr<VulkanInstance> instance_;
-  VkDebugUtilsMessengerEXT callback_;
+  vk::UniqueHandle<vk::DebugUtilsMessengerEXT, vk::DispatchLoaderDynamic> debug_messenger_;
+  vk::DispatchLoaderDynamic dispatch_loader_;
 };
 
 #endif  // GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_LAYER_H_

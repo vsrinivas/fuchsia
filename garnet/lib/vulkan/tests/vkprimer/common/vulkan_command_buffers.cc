@@ -6,31 +6,24 @@
 
 #include "utils.h"
 
-VulkanCommandBuffers::VulkanCommandBuffers(
-    std::shared_ptr<VulkanLogicalDevice> device,
-    std::shared_ptr<VulkanCommandPool> command_pool,
-    const std::vector<VkFramebuffer> &framebuffers, const VkExtent2D &extent,
-    const VkRenderPass &render_pass, const VkPipeline &graphics_pipeline)
+VulkanCommandBuffers::VulkanCommandBuffers(std::shared_ptr<VulkanLogicalDevice> device,
+                                           std::shared_ptr<VulkanCommandPool> command_pool,
+                                           const VulkanFramebuffer &framebuffer,
+                                           const vk::Extent2D &extent,
+                                           const vk::RenderPass &render_pass,
+                                           const vk::Pipeline &graphics_pipeline)
     : initialized_(false),
       device_(device),
       command_pool_(command_pool),
-      command_buffers_(framebuffers.size()) {
-  params_ = std::make_unique<InitParams>(framebuffers, extent, render_pass,
-                                         graphics_pipeline);
+      command_buffers_(framebuffer.framebuffers().size()) {
+  params_ = std::make_unique<InitParams>(framebuffer, extent, render_pass, graphics_pipeline);
 }
 
-VulkanCommandBuffers::~VulkanCommandBuffers() {
-  if (initialized_) {
-    vkFreeCommandBuffers(device_->device(), command_pool_->command_pool(),
-                         (uint32_t)command_buffers_.size(),
-                         command_buffers_.data());
-  }
-}
-
-VulkanCommandBuffers::InitParams::InitParams(
-    const std::vector<VkFramebuffer> &framebuffers, const VkExtent2D &extent,
-    const VkRenderPass &render_pass, const VkPipeline &graphics_pipeline)
-    : framebuffers_(framebuffers),
+VulkanCommandBuffers::InitParams::InitParams(const VulkanFramebuffer &framebuffer,
+                                             const vk::Extent2D &extent,
+                                             const vk::RenderPass &render_pass,
+                                             const vk::Pipeline &graphics_pipeline)
+    : framebuffer_(framebuffer),
       extent_(extent),
       render_pass_(render_pass),
       graphics_pipeline_(graphics_pipeline) {}
@@ -40,68 +33,56 @@ bool VulkanCommandBuffers::Init() {
     RTN_MSG(false, "VulkanCommandBuffers already initialized.\n");
   }
 
-  VkCommandBufferAllocateInfo alloc_info = {
-      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-      .commandBufferCount = (uint32_t)command_buffers_.size(),
-      .commandPool = command_pool_->command_pool(),
-      .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-  };
+  vk::CommandBufferAllocateInfo alloc_info;
+  alloc_info.setCommandBufferCount(static_cast<uint32_t>(command_buffers_.size()));
+  alloc_info.setCommandPool(*command_pool_->command_pool());
+  alloc_info.level = vk::CommandBufferLevel::ePrimary;
 
-  auto err = vkAllocateCommandBuffers(device_->device(), &alloc_info,
-                                      command_buffers_.data());
-  if (VK_SUCCESS != err) {
-    RTN_MSG(false, "VK Error: 0x%x - Failed to allocate command buffers.\n",
-            err);
+  auto rv_alloc = device_->device()->allocateCommandBuffersUnique(alloc_info);
+  if (vk::Result::eSuccess != rv_alloc.result) {
+    RTN_MSG(false, "VK Error: 0x%x - Failed to allocate command buffers.", rv_alloc.result);
   }
+  command_buffers_ = std::move(rv_alloc.value);
 
-  const VkClearValue kClearColor = {
-      .color = {.float32 = {0.5f, 0.0f, 0.5f, 1.0f}}};
+  vk::ClearValue clear_color;
+  clear_color.setColor(std::array<float, 4>({0.5f, 0.0f, 0.5f, 1.0f}));
 
-  for (size_t i = 0; i < command_buffers_.size(); i++) {
-    const VkCommandBuffer &command_buffer = command_buffers_[i];
+  auto framebuffer_iter = params_->framebuffer_.framebuffers().begin();
+  for (const auto &command_buffer : command_buffers_) {
+    const auto &framebuffer = *(framebuffer_iter++);
 
-    VkCommandBufferBeginInfo begin_info = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
-    };
+    vk::CommandBufferBeginInfo begin_info(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 
-    err = vkBeginCommandBuffer(command_buffer, &begin_info);
-    if (VK_SUCCESS != err) {
-      RTN_MSG(false,
-              "VK Error: 0x%x - Failed to begin recording command buffer.\n",
-              err);
+    auto result = command_buffer->begin(&begin_info);
+    if (vk::Result::eSuccess != result) {
+      RTN_MSG(false, "VK Error: 0x%x - Failed to begin command buffer.", result);
     }
 
-    VkRenderPassBeginInfo render_pass_info = {
-        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-        .renderPass = params_->render_pass_,
-        .framebuffer = params_->framebuffers_[i],
-        .renderArea.offset = {0, 0},
-        .renderArea.extent = params_->extent_,
-        .clearValueCount = 1,
-        .pClearValues = &kClearColor,
-    };
+    vk::Rect2D render_area;
+    render_area.extent = params_->extent_;
 
-    // Record commands to render pass with vkCmd* calls.
-    vkCmdBeginRenderPass(command_buffer, &render_pass_info,
-                         VK_SUBPASS_CONTENTS_INLINE);
+    vk::RenderPassBeginInfo render_pass_info;
+    render_pass_info.renderPass = params_->render_pass_;
+    render_pass_info.framebuffer = *framebuffer;
+    render_pass_info.renderArea = render_area;
+    render_pass_info.clearValueCount = 1;
+    render_pass_info.pClearValues = &clear_color;
 
-    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      params_->graphics_pipeline_);
+    // Record commands to render pass.
+    command_buffer->beginRenderPass(&render_pass_info, vk::SubpassContents::eInline);
+    command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, params_->graphics_pipeline_);
+    command_buffer->draw(3 /* vertexCount */, 1 /* instanceCount */, 0 /* firstVertex */,
+                         0 /* firstInstance */);
+    command_buffer->endRenderPass();
 
-    vkCmdDraw(command_buffer, 3 /* vertexCount */, 1 /* instanceCount */,
-              0 /* firstVertex */, 0 /* firstInstance */);
-
-    vkCmdEndRenderPass(command_buffer);
-
-    err = vkEndCommandBuffer(command_buffer);
-    if (VK_SUCCESS != err) {
-      RTN_MSG(false, "VK Error: 0x%x - Failed to record command buffer.\n",
-              err);
-    }
+    command_buffer->end();
   }
 
   params_.reset();
   initialized_ = true;
   return true;
+}
+
+const std::vector<vk::UniqueCommandBuffer> &VulkanCommandBuffers::command_buffers() const {
+  return command_buffers_;
 }
