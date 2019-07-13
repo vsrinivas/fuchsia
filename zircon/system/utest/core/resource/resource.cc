@@ -99,7 +99,7 @@ static bool TestBasicActions(void) {
     END_TEST;
 }
 
-// This test covers every path that returns ZX_ERR_INVALID_ARGS from the the syscall.
+// This test covers every path that returns ZX_ERR_INVALID_ARGS from the syscall.
 static bool TestInvalidArgs(void) {
     BEGIN_TEST;
     zx::resource temp;
@@ -325,7 +325,7 @@ static bool TestCreateResourceSlice() {
         EXPECT_EQ(ZX_ERR_ACCESS_DENIED,
                   zx_vmo_create_physical(smaller_mmio.get(), mmio_test_base, PAGE_SIZE,
                                          vmo.reset_and_get_address()));
-        // Trying to create VMO that fits in the resource will succeeed.
+        // Trying to create VMO that fits in the resource will succeed.
         EXPECT_EQ(ZX_OK,
                   zx_vmo_create_physical(smaller_mmio.get(), mmio_test_base, size,
                                          vmo.reset_and_get_address()));

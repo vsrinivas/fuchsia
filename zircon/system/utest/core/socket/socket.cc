@@ -195,7 +195,7 @@ TEST(SocketTest, SetThreshholdsAndCheckSignals) {
 
     /*
      * In the code below, we are going to trigger the READ threshold
-     * signal as soon as 101 bytes are available to read, and triger
+     * signal as soon as 101 bytes are available to read, and trigger
      * the WRITE threshold as long as we have 103 bytes we can write/
      */
 

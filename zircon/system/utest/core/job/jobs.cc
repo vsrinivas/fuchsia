@@ -238,12 +238,12 @@ static bool policy_timer_slack_valid() {
     ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1), ZX_OK,
               "");
 
-    // Raise the minimium.
+    // Raise the minimum.
     policy = {ZX_SEC(10), ZX_TIMER_SLACK_LATE};
     ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1), ZX_OK,
               "");
 
-    // Try to lower the minimium, no error.
+    // Try to lower the minimum, no error.
     policy = {ZX_USEC(5), ZX_TIMER_SLACK_CENTER};
     ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1), ZX_OK,
               "");

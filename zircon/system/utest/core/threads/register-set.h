@@ -61,7 +61,7 @@ void spin_with_fp_regs(zx_thread_state_fp_regs_t* regs);
 void spin_with_vector_regs(zx_thread_state_vector_regs_t* regs);
 void spin_with_debug_regs(zx_thread_state_debug_regs_t* regs);
 
-// These assembly code routine saves the registers into a the corresponding
+// These assembly code routine saves the registers into a corresponding
 // structure pointed to by the stack pointer, and then calls zx_thread_exit().
 void save_general_regs_and_exit_thread();
 void save_fp_regs_and_exit_thread();

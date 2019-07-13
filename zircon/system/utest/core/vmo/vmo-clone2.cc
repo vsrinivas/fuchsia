@@ -364,7 +364,7 @@ TEST(VmoClone2TestCase, ObjMemAccounting) {
 
     ASSERT_EQ(VmoCommittedBytes(vmo), 2 * ZX_PAGE_SIZE);
 
-    // Create a clone and check the initialze committed stats.
+    // Create a clone and check the initialize committed stats.
     zx::vmo clone;
     ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, 2 * ZX_PAGE_SIZE, &clone));
 
@@ -376,7 +376,7 @@ TEST(VmoClone2TestCase, ObjMemAccounting) {
     ASSERT_EQ(VmoCommittedBytes(vmo), 2 * ZX_PAGE_SIZE);
     ASSERT_EQ(VmoCommittedBytes(clone), ZX_PAGE_SIZE);
 
-    // Write to the orignal and check that that forks a page into the clone.
+    // Write to the original and check that that forks a page into the clone.
     ASSERT_NO_FATAL_FAILURES(VmoWrite(clone, 2, ZX_PAGE_SIZE));
     ASSERT_EQ(VmoCommittedBytes(vmo), 2 * ZX_PAGE_SIZE);
     ASSERT_EQ(VmoCommittedBytes(clone), 2 * ZX_PAGE_SIZE);
@@ -407,7 +407,7 @@ TEST_F(VmoClone2TestCase, KmemAccounting) {
     ASSERT_NO_FATAL_FAILURES(VmoWrite(vmo, 1, 0));
     ASSERT_NO_FATAL_FAILURES(VmoWrite(vmo, 1, ZX_PAGE_SIZE));
 
-    // Check that the two pages were comitted.
+    // Check that the two pages were committed.
     ASSERT_EQ(start_size + 2 * ZX_PAGE_SIZE, KmemVmoMemUsage());
 
     zx::vmo clone;
@@ -655,7 +655,7 @@ TEST_F(VmoClone2TestCase, OffsetProgressiveWrite) {
 }
 
 // Tests that a clone of a clone which overflows its parent properly interacts with
-// both of its ancestors (i.e. the orignal vmo and the first clone).
+// both of its ancestors (i.e. the original vmo and the first clone).
 TEST_F(VmoClone2TestCase, Overflow) {
     const uint64_t original = KmemVmoMemUsage();
 
@@ -905,7 +905,7 @@ TEST_F(VmoClone2TestCase, DisjointCloneTest2) {
         zx::vmo vmo;
         ASSERT_NO_FATAL_FAILURES(InitPageTaggedVmo(4, &vmo));
 
-        // Create a disjoint clone for each page in the orignal vmo: 2 direct and 2 through another
+        // Create a disjoint clone for each page in the original vmo: 2 direct and 2 through another
         // intermediate COW clone.
         zx::vmo clone;
         ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2,
@@ -1098,12 +1098,12 @@ class VmoCloneResizeTests : public KmemStatsFixture {
             ASSERT_EQ(original + 4 * ZX_PAGE_SIZE, KmemVmoMemUsage());
         }
 
-        // Check that closing the non-resized vmo frees the the inaccessible pages.
+        // Check that closing the non-resized vmo frees the inaccessible pages.
         if (contiguous) {
             ASSERT_NO_FATAL_FAILURES(CheckContigState<4>(bti, vmo));
         }
 
-        // Check that closing the non-resized VMO frees the the inaccessible pages.
+        // Check that closing the non-resized VMO frees the inaccessible pages.
         if (resize_child) {
             vmo.reset();
         } else {
@@ -1455,7 +1455,7 @@ struct ProgressiveCloneDiscardTests : public KmemStatsFixture {
             ASSERT_EQ(original + kNumClones * ZX_PAGE_SIZE, KmemVmoMemUsage());
         }
 
-        // Repeatedly clone the vmo while simultaniously changing it. Then check the total memory
+        // Repeatedly clone the vmo while simultaneously changing it. Then check the total memory
         // consumption. This must consume less pages than manually duplicating the vmo, but the
         // precise amount consumed and the amount blamed to each vmo is implementation dependent.
         // Furthermore, the amount blamed should match the amount allocated.

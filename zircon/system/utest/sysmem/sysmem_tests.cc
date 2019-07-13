@@ -516,7 +516,7 @@ extern "C" bool test_sysmem_multiple_participants(void) {
         // min_coded_height in NV12
         // format.
         .min_size_bytes = 64 * 1024,
-        // Allow a max that's just large enough to accomodate the size implied
+        // Allow a max that's just large enough to accommodate the size implied
         // by the min frame size and PixelFormat.
         .max_size_bytes = (512 * 512) * 3 / 2,
         .physically_contiguous_required = false,

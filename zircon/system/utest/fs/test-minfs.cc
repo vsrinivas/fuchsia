@@ -85,7 +85,7 @@ bool VerifyQueryInfo(const ExpectedQueryInfo& expected) {
     END_HELPER;
 }
 
-// Verify intial conditions on a filesystem, and validate that filesystem
+// Verify initial conditions on a filesystem, and validate that filesystem
 // modifications adjust the query info accordingly.
 bool TestQueryInfo() {
     BEGIN_TEST;

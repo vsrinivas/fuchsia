@@ -1237,7 +1237,7 @@ TEST(ChannelTest, NestingIsOk) {
     ASSERT_TRUE(local[0].is_valid());
     ASSERT_TRUE(remote[0].is_valid());
 
-    // Close the handles and for detructions.
+    // Close the handles and for destructions.
     local[0].reset();
     remote[0].reset();
 }

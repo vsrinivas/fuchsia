@@ -55,7 +55,7 @@ bool TestDirectoryFilenameMax(void) {
     END_TEST;
 }
 
-// Hopefuly not pushing against any 'max file length' boundaries, but large
+// Hopefully not pushing against any 'max file length' boundaries, but large
 // enough to fill a directory quickly.
 #define LARGE_PATH_LENGTH 128
 

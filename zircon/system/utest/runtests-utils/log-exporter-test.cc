@@ -18,7 +18,7 @@ namespace {
 
 // This class is the helper class which will encapsulate a LogMessage and then
 // fill default values for fidl log message object. It also helps in determining
-// the lenght of fidl message required to encode this msg object.
+// the length of fidl message required to encode this msg object.
 class LogMessage {
 public:
     LogMessage(fbl::String msg, std::initializer_list<fbl::String> tags,
