@@ -132,9 +132,16 @@ modular_config() target in the product's base packages.
   - A list of fuchsia component urls that specify which agents to launch at
     startup with PuppetMaster and FocusProvider services.
 - `component_args`: **array** _(optional)_
-  - A map of component URI to arguments list for that component. Presence in
-    this list results in the given arguments passed to the component as its
-    argv at launch.
+  - A list of key/value pairs to construct a map from component URI to
+    arguments list for that component. Presence in this list results in the
+    given arguments passed to the component as its argv at launch.
     - `uri`: The component's uri.
     - `args`: A list of arguments to be passed to the component specified by
       `uri`. Arguments must be prefixed with --.
+- `agent_service_index`: **array** _(optional)_
+  - A list of key/value pairs to construct a map from service name to the
+    serving agent's URL. Service names must be unique, so only one agent can
+    provide a given named service.
+    - `service_name`: The name of a service offered by a session agent.
+    - `agent_url`: A fuchsia component url that specifies which agent will
+      provide the named service.
