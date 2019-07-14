@@ -124,7 +124,7 @@ group("system_deprecated_data_allowlist") {
     "//peridot/bin/module_resolver",
     "//src/experiences/bin/simple_browser:simple_browser_pkg",
     "//src/connectivity/wlan/wlanstack",
-    "//topaz/bin/datetime_settings",
+    "//topaz/bin/datetime_settings:datetime_settings_pkg",
     "//topaz/public/dart/fuchsia_webview_flutter/examples/webview_mod:webview_mod_pkg",
   ]
 }
