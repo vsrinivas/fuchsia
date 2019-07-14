@@ -805,7 +805,7 @@ impl EventDispatcher for EventLoopInner {
 impl DeviceLayerEventDispatcher for EventLoopInner {
     fn send_frame<S: Serializer>(&mut self, device: DeviceId, frame: S) -> Result<(), S> {
         // TODO(wesleyac): Error handling
-        let frame = frame.serialize_outer().map_err(|(_, ser)| ser)?;
+        let frame = frame.serialize_vec_outer().map_err(|(_, ser)| ser)?;
         match self.devices.get_core_device_mut(device) {
             Some(dev) => {
                 dev.client_mut().send(frame.as_ref());

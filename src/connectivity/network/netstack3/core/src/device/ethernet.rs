@@ -10,7 +10,7 @@ use log::debug;
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{BroadcastAddress, MulticastAddr, MulticastAddress, UnicastAddress};
-use packet::{Buf, BufferMut, BufferSerializer, Nested, Serializer};
+use packet::{Buf, BufferMut, Nested, Serializer};
 use specialize_ip_macro::specialize_ip_address;
 
 use crate::device::arp::{self, ArpDevice, ArpHardwareType, ArpState};
@@ -211,13 +211,11 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
             let state = get_device_state_mut(ctx.state_mut(), device_id);
             let dropped = state.add_pending_frame(
                 local_addr,
-                AsRef::<[u8]>::as_ref(
-                    &body
-                        .with_mtu(mtu as usize)
-                        .serialize_outer()
-                        .map_err(|ser| ser.1.into_inner())?,
-                )
-                .to_vec(),
+                body.with_mtu(mtu as usize)
+                    .serialize_vec_outer()
+                    .map_err(|ser| ser.1.into_inner())?
+                    .as_ref()
+                    .to_vec(),
             );
             if let Some(dropped) = dropped {
                 // TODO(brunodalbo): Is it ok to silently just let this drop? Or
@@ -603,7 +601,7 @@ fn mac_resolved<D: EventDispatcher>(
             //  body size.
             let res = ctx.dispatcher_mut().send_frame(
                 device_id,
-                BufferSerializer::new_vec(Buf::new(frame, ..))
+                Buf::new(frame, ..)
                     .encapsulate(EthernetFrameBuilder::new(src_mac, dst_mac, ether_type)),
             );
             if let Err(_) = res {
@@ -641,7 +639,7 @@ fn mac_resolution_failed<D: EventDispatcher>(
 
 #[cfg(test)]
 mod tests {
-    use packet::{Buf, BufferSerializer};
+    use packet::Buf;
 
     use super::*;
     use crate::testutil::{DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4};
@@ -654,12 +652,7 @@ mod tests {
         fn test(size: usize, expect_frames_sent: usize) {
             let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
                 .build::<DummyEventDispatcher>();
-            send_ip_frame(
-                &mut ctx,
-                0,
-                DUMMY_CONFIG_V4.remote_ip,
-                BufferSerializer::new_vec(Buf::new(&mut vec![0; size], ..)),
-            );
+            send_ip_frame(&mut ctx, 0, DUMMY_CONFIG_V4.remote_ip, Buf::new(&mut vec![0; size], ..));
             assert_eq!(ctx.dispatcher().frames_sent().len(), expect_frames_sent);
         }
 

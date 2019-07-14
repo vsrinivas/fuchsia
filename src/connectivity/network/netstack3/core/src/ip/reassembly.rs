@@ -781,7 +781,7 @@ impl Ord for PacketBodyFragment {
 #[cfg(test)]
 mod tests {
     use net_types::ip::{IpAddress, Ipv4, Ipv6};
-    use packet::{Buf, BufferSerializer, ParseBuffer, Serializer};
+    use packet::{Buf, ParseBuffer, Serializer};
     use specialize_ip_macro::specialize_ip;
 
     use super::*;
@@ -924,10 +924,7 @@ mod tests {
                 ..body_offset + fragment_offset * FRAGMENT_BLOCK_SIZE + FRAGMENT_BLOCK_SIZE,
         );
 
-        let mut buffer = BufferSerializer::new_vec(Buf::new(body, ..))
-            .encapsulate(builder)
-            .serialize_outer()
-            .unwrap();
+        let mut buffer = Buf::new(body, ..).encapsulate(builder).serialize_vec_outer().unwrap();
         let packet = buffer.parse::<Ipv4Packet<_>>().unwrap();
 
         match expected_result {
@@ -1044,10 +1041,8 @@ mod tests {
         //
 
         let builder = get_ipv4_builder();
-        let mut buffer = BufferSerializer::new_vec(Buf::new(vec![1, 2, 3, 4, 5], ..))
-            .encapsulate(builder)
-            .serialize_outer()
-            .unwrap();
+        let mut buffer =
+            Buf::new(vec![1, 2, 3, 4, 5], ..).encapsulate(builder).serialize_vec_outer().unwrap();
         let packet = buffer.parse::<Ipv4Packet<_>>().unwrap();
         process_fragment::<&[u8], _, Ipv4>(&mut ctx, packet);
     }
@@ -1064,10 +1059,8 @@ mod tests {
         //
 
         let builder = get_ipv6_builder();
-        let mut buffer = BufferSerializer::new_vec(Buf::new(vec![1, 2, 3, 4, 5], ..))
-            .encapsulate(builder)
-            .serialize_outer()
-            .unwrap();
+        let mut buffer =
+            Buf::new(vec![1, 2, 3, 4, 5], ..).encapsulate(builder).serialize_vec_outer().unwrap();
         let packet = buffer.parse::<Ipv6Packet<_>>().unwrap();
         process_fragment::<&[u8], _, Ipv6>(&mut ctx, packet);
     }
@@ -1250,10 +1243,7 @@ mod tests {
         // of `FRAGMENT_BLOCK_SIZE`.
         let mut body: Vec<u8> = Vec::new();
         body.extend(FRAGMENT_BLOCK_SIZE..FRAGMENT_BLOCK_SIZE * 2 - 1);
-        let mut buffer = BufferSerializer::new_vec(Buf::new(body, ..))
-            .encapsulate(builder)
-            .serialize_outer()
-            .unwrap();
+        let mut buffer = Buf::new(body, ..).encapsulate(builder).serialize_vec_outer().unwrap();
         let packet = buffer.parse::<Ipv4Packet<_>>().unwrap();
         assert_frag_proc_state_invalid!(process_fragment::<&[u8], _, Ipv4>(&mut ctx, packet));
 
@@ -1268,10 +1258,7 @@ mod tests {
         // of `FRAGMENT_BLOCK_SIZE`.
         let mut body: Vec<u8> = Vec::new();
         body.extend(FRAGMENT_BLOCK_SIZE..FRAGMENT_BLOCK_SIZE * 2 - 1);
-        let mut buffer = BufferSerializer::new_vec(Buf::new(body, ..))
-            .encapsulate(builder)
-            .serialize_outer()
-            .unwrap();
+        let mut buffer = Buf::new(body, ..).encapsulate(builder).serialize_vec_outer().unwrap();
         let packet = buffer.parse::<Ipv4Packet<_>>().unwrap();
         let (key, packet_len) = assert_frag_proc_state_ready!(
             process_fragment::<&[u8], _, Ipv4>(&mut ctx, packet),

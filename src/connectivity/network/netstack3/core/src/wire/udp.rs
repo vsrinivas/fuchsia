@@ -297,7 +297,7 @@ impl<B> Debug for UdpPacket<B> {
 #[cfg(test)]
 mod tests {
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6Addr};
-    use packet::{Buf, BufferSerializer, InnerPacketBuilder, ParseBuffer, Serializer};
+    use packet::{Buf, InnerPacketBuilder, ParseBuffer, Serializer};
     use std::num::NonZeroU16;
 
     use super::*;
@@ -354,7 +354,7 @@ mod tests {
             .encapsulate(udp_packet.builder(ip_packet.src_ip(), ip_packet.dst_ip()))
             .encapsulate(ip_packet.builder())
             .encapsulate(frame.builder())
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
     }
@@ -392,7 +392,7 @@ mod tests {
             .encapsulate(datagram.builder(packet.src_ip(), packet.dst_ip()))
             .encapsulate(packet.builder())
             .encapsulate(frame.builder())
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
     }
@@ -430,7 +430,7 @@ mod tests {
                 NonZeroU16::new(1),
                 NonZeroU16::new(2).unwrap(),
             ))
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         assert_eq!(buf.as_ref(), [0, 1, 0, 2, 0, 8, 239, 199]);
         let packet = buf
@@ -448,24 +448,24 @@ mod tests {
         // Test that UdpPacket::serialize properly zeroes memory before serializing
         // the header.
         let mut buf_0 = [0; HEADER_BYTES];
-        BufferSerializer::new_vec(Buf::new(&mut buf_0[..], HEADER_BYTES..))
+        Buf::new(&mut buf_0[..], HEADER_BYTES..)
             .encapsulate(UdpPacketBuilder::new(
                 TEST_SRC_IPV4,
                 TEST_DST_IPV4,
                 NonZeroU16::new(1),
                 NonZeroU16::new(2).unwrap(),
             ))
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         let mut buf_1 = [0xFF; HEADER_BYTES];
-        BufferSerializer::new_vec(Buf::new(&mut buf_1[..], HEADER_BYTES..))
+        Buf::new(&mut buf_1[..], HEADER_BYTES..)
             .encapsulate(UdpPacketBuilder::new(
                 TEST_SRC_IPV4,
                 TEST_DST_IPV4,
                 NonZeroU16::new(1),
                 NonZeroU16::new(2).unwrap(),
             ))
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         assert_eq!(buf_0, buf_1);
     }
@@ -540,7 +540,7 @@ mod tests {
                 None,
                 NonZeroU16::new(1).unwrap(),
             ))
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
     }
 
@@ -562,7 +562,7 @@ mod tests {
     //             None,
     //             NonZeroU16::new(1).unwrap(),
     //         ))
-    //         .serialize_outer()
+    //         .serialize_vec_outer()
     //         .unwrap();
     // }
 
@@ -605,8 +605,9 @@ mod tests {
         b.iter(|| {
             black_box(
                 black_box((&mut buf[..]).into_serializer().encapsulate(builder.clone()))
-                    .serialize_outer(),
-            );
+                    .serialize_no_alloc_outer(),
+            )
+            .unwrap();
         })
     }
 

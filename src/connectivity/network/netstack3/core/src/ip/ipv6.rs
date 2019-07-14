@@ -199,7 +199,7 @@ mod tests {
     use crate::ip::IpProto;
     use crate::testutil::{DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V6};
     use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
-    use packet::serialize::{Buf, BufferSerializer, Serializer};
+    use packet::serialize::{Buf, Serializer};
     use packet::ParseBuffer;
 
     #[test]
@@ -218,10 +218,8 @@ mod tests {
         );
         let device_id = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;
-        let mut buffer = BufferSerializer::new_vec(Buf::new(vec![1, 2, 3, 4, 5], ..))
-            .encapsulate(builder)
-            .serialize_outer()
-            .unwrap();
+        let mut buffer =
+            Buf::new(vec![1, 2, 3, 4, 5], ..).encapsulate(builder).serialize_vec_outer().unwrap();
         let mut packet = buffer.parse::<Ipv6Packet<_>>().unwrap();
 
         assert_eq!(

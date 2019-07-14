@@ -568,7 +568,7 @@ where
 #[cfg(test)]
 mod tests {
     use net_types::ethernet::Mac;
-    use packet::{Buf, BufferSerializer};
+    use packet::Buf;
 
     use super::*;
     use crate::device::ethernet::EthernetNdpDevice;
@@ -638,7 +638,7 @@ mod tests {
         // let's try to ping the remote device from the local device:
         let req = IcmpEchoRequest::new(0, 0);
         let req_body = &[1, 2, 3, 4];
-        let body = BufferSerializer::new_vec(Buf::new(req_body.to_vec(), ..)).encapsulate(
+        let body = Buf::new(req_body.to_vec(), ..).encapsulate(
             IcmpPacketBuilder::<Ipv6, &[u8], _>::new(local_ip(), remote_ip(), IcmpUnusedCode, req),
         );
         crate::ip::send_ip_packet_from_device(

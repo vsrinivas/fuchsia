@@ -419,6 +419,7 @@ use std::cmp;
 use std::mem;
 use std::ops::{Bound, Range, RangeBounds};
 
+use never::Never;
 use zerocopy::{ByteSlice, ByteSliceMut, LayoutVerified, Unaligned};
 
 /// A byte buffer used for parsing.
@@ -820,6 +821,42 @@ pub trait BufferMut: Buffer + ParseBufferMut {
         builder.serialize(&mut SerializeBuffer { buf: self.as_mut(), body });
     }
 }
+
+impl ParseBuffer for Never {
+    fn shrink_front(&mut self, _n: usize) {}
+    fn shrink_back(&mut self, _n: usize) {}
+    fn parse_with<'a, ParseArgs, P: ParsablePacket<&'a [u8], ParseArgs>>(
+        &'a mut self,
+        _args: ParseArgs,
+    ) -> Result<P, P::Error> {
+        match *self {}
+    }
+    fn as_buf(&self) -> Buf<&[u8]> {
+        match *self {}
+    }
+}
+impl ParseBufferMut for Never {
+    fn parse_with_mut<'a, ParseArgs, P: ParsablePacket<&'a mut [u8], ParseArgs>>(
+        &'a mut self,
+        _args: ParseArgs,
+    ) -> Result<P, P::Error> {
+        match *self {}
+    }
+    fn as_buf_mut(&mut self) -> Buf<&mut [u8]> {
+        match *self {}
+    }
+}
+impl Buffer for Never {
+    fn prefix_len(&self) -> usize {
+        match *self {}
+    }
+    fn suffix_len(&self) -> usize {
+        match *self {}
+    }
+    fn grow_front(&mut self, _n: usize) {}
+    fn grow_back(&mut self, _n: usize) {}
+}
+impl BufferMut for Never {}
 
 /// A view into a `Buffer`.
 ///

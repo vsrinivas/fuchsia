@@ -8,7 +8,7 @@ use std::hash::Hash;
 use std::num::NonZeroU16;
 
 use net_types::ip::{Ip, IpAddress, Ipv4Addr, Ipv6Addr};
-use packet::{BufferMut, BufferSerializer, ParsablePacket, Serializer};
+use packet::{BufferMut, ParsablePacket, Serializer};
 use specialize_ip_macro::specialize_ip_address;
 use zerocopy::ByteSlice;
 
@@ -210,7 +210,7 @@ pub(crate) fn send_udp_conn<D: EventDispatcher, I: Ip, B: BufferMut>(
         local_addr,
         remote_addr,
         IpProto::Udp,
-        BufferSerializer::new_vec(body).encapsulate(UdpPacketBuilder::new(
+        body.encapsulate(UdpPacketBuilder::new(
             local_addr,
             remote_addr,
             Some(local_port),
@@ -279,7 +279,7 @@ pub(crate) fn send_udp_listener<D: EventDispatcher, A: IpAddress, B: BufferMut>(
         local_addr,
         remote_addr,
         IpProto::Udp,
-        BufferSerializer::new_vec(body).encapsulate(UdpPacketBuilder::new(
+        body.encapsulate(UdpPacketBuilder::new(
             local_addr,
             remote_addr,
             Some(local_port),

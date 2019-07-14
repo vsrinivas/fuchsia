@@ -11,7 +11,7 @@ use byteorder::{ByteOrder, NetworkEndian};
 use log::trace;
 use net_types::ip::{Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::MulticastAddress;
-use packet::{BufferMut, BufferSerializer, Serializer, TruncateDirection};
+use packet::{BufferMut, Serializer, TruncateDirection, TruncatingSerializer};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
 use crate::device::{ndp, DeviceId, FrameDestination};
@@ -144,9 +144,12 @@ pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
                 // TODO(joshlf): Do something if send_ip_packet returns an
                 // error?
                 send_ip_packet(ctx, dst_ip, IpProto::Icmp, |src_ip| {
-                    BufferSerializer::new_vec(buffer).encapsulate(
-                        IcmpPacketBuilder::<Ipv4, &[u8], _>::new(src_ip, dst_ip, code, req.reply()),
-                    )
+                    buffer.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
+                        src_ip,
+                        dst_ip,
+                        code,
+                        req.reply(),
+                    ))
                 });
             }
             Icmpv4Packet::EchoReply(echo_reply) => {
@@ -238,9 +241,12 @@ pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
                 // TODO(joshlf): Do something if send_ip_packet returns an
                 // error?
                 send_ip_packet(ctx, dst_ip, IpProto::Icmpv6, |src_ip| {
-                    BufferSerializer::new_vec(buffer).encapsulate(
-                        IcmpPacketBuilder::<Ipv6, &[u8], _>::new(src_ip, dst_ip, code, req.reply()),
-                    )
+                    buffer.encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                        src_ip,
+                        dst_ip,
+                        code,
+                        req.reply(),
+                    ))
                 });
             }
             Icmpv6Packet::EchoReply(echo_reply) => {
@@ -507,11 +513,7 @@ pub(crate) fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddress, B: BufferM
             dst_ip,
             IpProto::Icmp,
             |local_ip| {
-                BufferSerializer::new_vec(original_packet).encapsulate(IcmpPacketBuilder::<
-                    Ipv4,
-                    &[u8],
-                    _,
-                >::new(
+                original_packet.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
                     local_ip,
                     src_ip,
                     Icmpv4TimeExceededCode::TtlExpired,
@@ -540,7 +542,7 @@ pub(crate) fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddress, B: BufferM
 
                 // Per RFC 4443, body contains as much of the original body as
                 // possible without exceeding IPv6 minimum MTU.
-                BufferSerializer::new_vec_truncate(original_packet, TruncateDirection::DiscardBack)
+                TruncatingSerializer::new(original_packet, TruncateDirection::DiscardBack)
                     .encapsulate(icmp_builder)
             },
             Some(IPV6_MIN_MTU),
@@ -604,7 +606,7 @@ pub(crate) fn send_icmpv6_packet_too_big<D: EventDispatcher, B: BufferMut>(
             //
             // The final IP packet must fit within the MTU, so we shrink the original packet to
             // the MTU minus the IPv6 and ICMP header sizes.
-            BufferSerializer::new_vec_truncate(original_packet, TruncateDirection::DiscardBack)
+            TruncatingSerializer::new(original_packet, TruncateDirection::DiscardBack)
                 .encapsulate(icmp_builder)
         },
         Some(IPV6_MIN_MTU),
@@ -634,11 +636,7 @@ pub(crate) fn send_icmpv4_parameter_problem<D: EventDispatcher, B: BufferMut>(
         dst_ip,
         IpProto::Icmp,
         |local_ip| {
-            BufferSerializer::new_vec(original_packet).encapsulate(IcmpPacketBuilder::<
-                Ipv4,
-                &[u8],
-                _,
-            >::new(
+            original_packet.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
                 local_ip,
                 src_ip,
                 code,
@@ -674,7 +672,7 @@ pub(crate) fn send_icmpv6_parameter_problem<D: EventDispatcher, B: BufferMut>(
 
             // Per RFC 4443, body contains as much of the original body as
             // possible without exceeding IPv6 minimum MTU.
-            BufferSerializer::new_vec_truncate(original_packet, TruncateDirection::DiscardBack)
+            TruncatingSerializer::new(original_packet, TruncateDirection::DiscardBack)
                 .encapsulate(icmp_builder)
         },
         Some(IPV6_MIN_MTU),
@@ -703,11 +701,7 @@ fn send_icmpv4_dest_unreachable<D: EventDispatcher, B: BufferMut>(
         dst_ip,
         IpProto::Icmp,
         |local_ip| {
-            BufferSerializer::new_vec(original_packet).encapsulate(IcmpPacketBuilder::<
-                Ipv4,
-                &[u8],
-                _,
-            >::new(
+            original_packet.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
                 local_ip,
                 src_ip,
                 code,
@@ -743,7 +737,7 @@ fn send_icmpv6_dest_unreachable<D: EventDispatcher, B: BufferMut>(
 
             // Per RFC 4443, body contains as much of the original body as
             // possible without exceeding IPv6 minimum MTU.
-            BufferSerializer::new_vec_truncate(original_packet, TruncateDirection::DiscardBack)
+            TruncatingSerializer::new(original_packet, TruncateDirection::DiscardBack)
                 .encapsulate(icmp_builder)
         },
         Some(IPV6_MIN_MTU),
@@ -934,12 +928,7 @@ pub fn send_icmp_echo_request<D: EventDispatcher, I: Ip, B: BufferMut>(
     //  to a local address and sending this request out will be done
     //  differently.
     crate::ip::send_ip_packet(ctx, remote_addr, proto, |a| {
-        BufferSerializer::new_vec(body).encapsulate(IcmpPacketBuilder::<I, &[u8], _>::new(
-            a,
-            remote_addr,
-            IcmpUnusedCode,
-            req,
-        ))
+        body.encapsulate(IcmpPacketBuilder::<I, &[u8], _>::new(a, remote_addr, IcmpUnusedCode, req))
     });
 }
 
@@ -981,12 +970,11 @@ fn get_conns<D: EventDispatcher, A: IpAddress>(
 
 #[cfg(test)]
 mod tests {
+    use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+    use packet::{Buf, Serializer};
+    use std::fmt::Debug;
     #[cfg(feature = "udp-icmp-port-unreachable")]
     use std::num::NonZeroU16;
-
-    use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-    use packet::{Buf, BufferSerializer, Serializer};
-    use std::fmt::Debug;
 
     use super::*;
     use crate::device::{DeviceId, FrameDestination};
@@ -1026,14 +1014,14 @@ mod tests {
         f: F,
     ) {
         crate::testutil::set_logger_for_test();
-        let buffer = BufferSerializer::new_vec(Buf::new(body, ..))
+        let buffer = Buf::new(body, ..)
             .encapsulate(<Ipv4 as IpExt>::PacketBuilder::new(
                 DUMMY_CONFIG_V4.remote_ip,
                 dst_ip,
                 ttl,
                 proto,
             ))
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
 
         let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
@@ -1073,14 +1061,14 @@ mod tests {
 
         let req = IcmpEchoRequest::new(0, 0);
         let req_body = &[1, 2, 3, 4];
-        let mut buffer = BufferSerializer::new_vec(Buf::new(req_body.to_vec(), ..))
+        let mut buffer = Buf::new(req_body.to_vec(), ..)
             .encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
                 DUMMY_CONFIG_V4.remote_ip,
                 DUMMY_CONFIG_V4.local_ip,
                 IcmpUnusedCode,
                 req,
             ))
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         test_receive_ip_packet(
             buffer.as_mut(),
@@ -1128,14 +1116,14 @@ mod tests {
         //   networks.
         // - Perform the same check for TCP once the logic is implemented
         let mut buf = [0u8; 128];
-        let mut buffer = BufferSerializer::new_vec(Buf::new(&mut buf[..], ..))
+        let mut buffer = Buf::new(&mut buf[..], ..)
             .encapsulate(UdpPacketBuilder::new(
                 DUMMY_CONFIG_V4.remote_ip,
                 DUMMY_CONFIG_V4.local_ip,
                 None,
                 NonZeroU16::new(1234).unwrap(),
             ))
-            .serialize_outer();
+            .serialize_vec_outer();
         test_receive_ip_packet(
             buffer.as_mut(),
             DUMMY_CONFIG_V4.local_ip,

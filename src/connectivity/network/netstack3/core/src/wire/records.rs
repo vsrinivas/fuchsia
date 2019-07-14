@@ -1634,7 +1634,7 @@ pub(crate) mod options {
                 .collect::<Vec<<DummyOptionsImpl as OptionsSerializerImpl>::Option>>();
             let ser = OptionsSerializer::<DummyOptionsImpl, _, _>::new(collected.iter());
 
-            let serialized = ser.into_serializer().serialize_outer().unwrap().as_ref().to_vec();
+            let serialized = ser.into_serializer().serialize_vec_outer().unwrap().as_ref().to_vec();
 
             assert_eq!(serialized, bytes);
         }
@@ -1657,7 +1657,7 @@ pub(crate) mod options {
                 .collect::<Vec<<DummyNdpOptionsImpl as OptionsSerializerImpl>::Option>>();
             let ser = OptionsSerializer::<DummyNdpOptionsImpl, _, _>::new(collected.iter());
 
-            let serialized = ser.into_serializer().serialize_outer().unwrap().as_ref().to_vec();
+            let serialized = ser.into_serializer().serialize_vec_outer().unwrap().as_ref().to_vec();
 
             assert_eq!(serialized, bytes);
         }

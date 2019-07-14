@@ -541,7 +541,7 @@ impl<B> Debug for TcpSegment<B> {
 #[cfg(test)]
 mod tests {
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6Addr};
-    use packet::{Buf, BufferSerializer, InnerPacketBuilder, ParseBuffer, Serializer};
+    use packet::{Buf, InnerPacketBuilder, ParseBuffer, Serializer};
     use std::num::NonZeroU16;
 
     use super::*;
@@ -599,7 +599,7 @@ mod tests {
         //     .encapsulate(segment.builder(packet.src_ip(), packet.dst_ip()))
         //     .encapsulate(packet.builder())
         //     .encapsulate(frame.builder())
-        //     .serialize_outer().unwrap();
+        //     .serialize_vec_outer().unwrap();
         // assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
     }
 
@@ -742,7 +742,7 @@ mod tests {
         let mut buf = (&[0, 1, 2, 3, 3, 4, 5, 7, 8, 9])
             .into_serializer()
             .encapsulate(builder)
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         // assert that we get the literal bytes we expected
         assert_eq!(
@@ -770,14 +770,14 @@ mod tests {
         // Test that TcpSegmentBuilder::serialize properly zeroes memory before
         // serializing the header.
         let mut buf_0 = [0; HDR_PREFIX_LEN];
-        BufferSerializer::new_vec(Buf::new(&mut buf_0[..], HDR_PREFIX_LEN..))
+        Buf::new(&mut buf_0[..], HDR_PREFIX_LEN..)
             .encapsulate(new_builder(TEST_SRC_IPV4, TEST_DST_IPV4))
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         let mut buf_1 = [0xFF; HDR_PREFIX_LEN];
-        BufferSerializer::new_vec(Buf::new(&mut buf_1[..], HDR_PREFIX_LEN..))
+        Buf::new(&mut buf_1[..], HDR_PREFIX_LEN..)
             .encapsulate(new_builder(TEST_SRC_IPV4, TEST_DST_IPV4))
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         assert_eq!(&buf_0[..], &buf_1[..]);
     }
@@ -787,9 +787,9 @@ mod tests {
     fn test_serialize_panic_segment_too_long_ipv4() {
         // Test that a segment length which overflows u16 is rejected because it
         // can't fit in the length field in the IPv4 pseudo-header.
-        BufferSerializer::new_vec(Buf::new(&mut [0; (1 << 16) - HDR_PREFIX_LEN][..], ..))
+        Buf::new(&mut [0; (1 << 16) - HDR_PREFIX_LEN][..], ..)
             .encapsulate(new_builder(TEST_SRC_IPV4, TEST_DST_IPV4))
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
     }
 
@@ -800,9 +800,9 @@ mod tests {
     fn test_serialize_panic_segment_too_long_ipv6() {
         // Test that a segment length which overflows u32 is rejected because it
         // can't fit in the length field in the IPv4 pseudo-header.
-        BufferSerializer::new_vec(Buf::new(&mut [0; (1 << 32) - HDR_PREFIX_LEN][..], ..))
+        Buf::new(&mut [0; (1 << 32) - HDR_PREFIX_LEN][..], ..)
             .encapsulate(new_builder(TEST_SRC_IPV6, TEST_DST_IPV6))
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
     }
 
@@ -917,8 +917,9 @@ mod tests {
         b.iter(|| {
             black_box(
                 black_box((&mut buf[..]).into_serializer().encapsulate(builder.clone()))
-                    .serialize_outer(),
-            );
+                    .serialize_no_alloc_outer(),
+            )
+            .unwrap();
         })
     }
 

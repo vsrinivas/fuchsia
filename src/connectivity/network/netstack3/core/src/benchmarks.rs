@@ -38,7 +38,7 @@ impl TransportLayerEventDispatcher for BenchmarkEventDispatcher {}
 
 impl DeviceLayerEventDispatcher for BenchmarkEventDispatcher {
     fn send_frame<S: Serializer>(&mut self, device: DeviceId, frame: S) -> Result<(), S> {
-        black_box(frame.serialize_outer()).map_err(|(_, ser)| ser)?;
+        black_box(frame.serialize_no_alloc_outer()).map_err(|(_, ser)| ser)?;
         Ok(())
     }
 }
@@ -109,7 +109,7 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
             DUMMY_CONFIG_V4.local_mac,
             EtherType::Ipv4,
         ))
-        .serialize_outer()
+        .serialize_vec_outer()
         .unwrap();
 
     let device = DeviceId::new_ethernet(0);

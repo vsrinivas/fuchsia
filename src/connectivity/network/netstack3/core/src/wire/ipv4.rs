@@ -590,7 +590,7 @@ mod options {
 mod tests {
     use net_types::ethernet::Mac;
     use net_types::ip::Ipv4;
-    use packet::{Buf, BufferSerializer, InnerPacketBuilder, ParseBuffer, Serializer};
+    use packet::{Buf, InnerPacketBuilder, ParseBuffer, Serializer};
 
     use super::*;
     use crate::device::ethernet::EtherType;
@@ -630,7 +630,7 @@ mod tests {
             .into_serializer()
             .encapsulate(packet.builder())
             .encapsulate(frame.builder())
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
     }
@@ -663,7 +663,7 @@ mod tests {
             .into_serializer()
             .encapsulate(packet.builder())
             .encapsulate(frame.builder())
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
     }
@@ -707,7 +707,7 @@ mod tests {
     #[test]
     fn test_parse_padding() {
         // Test that we properly discard post-packet padding.
-        let mut buffer = BufferSerializer::new_vec(Buf::new(vec![], ..))
+        let mut buffer = Buf::new(vec![], ..)
             .encapsulate(<Ipv4 as IpExt>::PacketBuilder::new(
                 DEFAULT_DST_IP,
                 DEFAULT_DST_IP,
@@ -719,7 +719,7 @@ mod tests {
                 DEFAULT_DST_MAC,
                 EtherType::Ipv4,
             ))
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         buffer.parse::<EthernetFrame<_>>().unwrap();
         // Test that the Ethernet body is the minimum length, which far exceeds
@@ -782,7 +782,7 @@ mod tests {
         let mut buf = (&[0, 1, 2, 3, 3, 4, 5, 7, 8, 9])
             .into_serializer()
             .encapsulate(builder)
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         assert_eq!(
             buf.as_ref(),
@@ -805,14 +805,14 @@ mod tests {
         // Test that Ipv4PacketBuilder::serialize properly zeroes memory before
         // serializing the header.
         let mut buf_0 = [0; IPV4_MIN_HDR_LEN];
-        BufferSerializer::new_vec(Buf::new(&mut buf_0[..], IPV4_MIN_HDR_LEN..))
+        Buf::new(&mut buf_0[..], IPV4_MIN_HDR_LEN..)
             .encapsulate(new_builder())
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         let mut buf_1 = [0xFF; IPV4_MIN_HDR_LEN];
-        BufferSerializer::new_vec(Buf::new(&mut buf_1[..], IPV4_MIN_HDR_LEN..))
+        Buf::new(&mut buf_1[..], IPV4_MIN_HDR_LEN..)
             .encapsulate(new_builder())
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         assert_eq!(buf_0, buf_1);
     }
@@ -821,9 +821,9 @@ mod tests {
     #[should_panic]
     fn test_serialize_panic_packet_length() {
         // Test that a packet which is longer than 2^16 - 1 bytes is rejected.
-        BufferSerializer::new_vec(Buf::new(&mut [0; (1 << 16) - IPV4_MIN_HDR_LEN][..], ..))
+        Buf::new(&mut [0; (1 << 16) - IPV4_MIN_HDR_LEN][..], ..)
             .encapsulate(new_builder())
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
     }
 

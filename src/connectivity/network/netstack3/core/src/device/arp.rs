@@ -577,7 +577,7 @@ impl<H, P: Hash + Eq> Default for ArpTable<H, P> {
 mod tests {
     use net_types::ethernet::Mac;
     use net_types::ip::{AddrSubnet, Ipv4, Ipv4Addr, Subnet};
-    use packet::{Buf, BufferSerializer, ParseBuffer};
+    use packet::{Buf, ParseBuffer};
 
     use super::*;
     use crate::device::ethernet::{set_ip_addr_subnet, EtherType, EthernetArpDevice};
@@ -607,7 +607,7 @@ mod tests {
     ) {
         let mut buf = ArpPacketBuilder::new(op, sender_mac, sender_ipv4, target_mac, target_ipv4)
             .into_serializer()
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         let (hw, proto) = peek_arp_types(buf.as_ref()).unwrap();
         assert_eq!(hw, ArpHardwareType::Ethernet);
@@ -923,7 +923,7 @@ mod tests {
         // let's try to ping the remote device from the local device:
         let req = IcmpEchoRequest::new(0, 0);
         let req_body = &[1, 2, 3, 4];
-        let body = BufferSerializer::new_vec(Buf::new(req_body.to_vec(), ..)).encapsulate(
+        let body = Buf::new(req_body.to_vec(), ..).encapsulate(
             IcmpPacketBuilder::<Ipv4, &[u8], _>::new(local_ip, remote_ip, IcmpUnusedCode, req),
         );
         send_ip_packet_from_device(

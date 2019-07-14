@@ -5,7 +5,6 @@
 //! Serialization.
 
 use std::cmp;
-use std::fmt::{self, Debug, Formatter};
 use std::ops::{Range, RangeBounds};
 
 use never::Never;
@@ -36,6 +35,28 @@ impl<A> Either<A, A> {
         match self {
             Either::A(x) => x,
             Either::B(x) => x,
+        }
+    }
+}
+
+impl<A> Either<A, Never> {
+    /// Return the `A` value in an `Either<A, Never>`.
+    #[inline]
+    pub fn into_a(self) -> A {
+        match self {
+            Either::A(a) => a,
+            Either::B(never) => match never {},
+        }
+    }
+}
+
+impl<B> Either<Never, B> {
+    /// Return the `B` value in an `Either<Never, B>`.
+    #[inline]
+    pub fn into_b(self) -> B {
+        match self {
+            Either::A(never) => match never {},
+            Either::B(b) => b,
         }
     }
 }
@@ -158,18 +179,6 @@ impl<A: AsRef<[u8]>, B: AsRef<[u8]>> AsRef<[u8]> for Either<A, B> {
 impl<A: AsMut<[u8]>, B: AsMut<[u8]>> AsMut<[u8]> for Either<A, B> {
     fn as_mut(&mut self) -> &mut [u8] {
         call_method_on_either!(self, as_mut)
-    }
-}
-
-impl<A, B> AsRef<Either<A, B>> for Either<A, B> {
-    fn as_ref(&self) -> &Either<A, B> {
-        self
-    }
-}
-
-impl<A, B> AsMut<Either<A, B>> for Either<A, B> {
-    fn as_mut(&mut self) -> &mut Either<A, B> {
-        self
     }
 }
 
@@ -840,8 +849,8 @@ impl<'a, PB: NestedPacketBuilder> NestedPacketBuilder for RefNestedPacketBuilder
 
 /// A `PacketBuilder` with a specific MTU constraint.
 ///
-/// `MtuPacketBuilder`s are constructed using the [`PacketBuilder::with_mtu`]
-/// method.
+/// `MtuPacketBuilder`s are constructed using the
+/// [`NestedPacketBuilder::with_mtu`] method.
 #[derive(Copy, Clone, Debug)]
 pub struct MtuPacketBuilder<B> {
     mtu: usize,
@@ -967,35 +976,34 @@ impl<'a> InnerPacketBuilder for Vec<u8> {
     }
 }
 
-/// An error that could be due to an exceeded maximum transmission unit (MTU).
+/// An error in serializing a packet.
 ///
-/// `MtuError<E>` is an error that can either be the error `E` or an MTU-related
-/// error.
+/// `SerializeError` is the type of errors returned from methods on the
+/// [`Serializer`] trait. The `Alloc` variant indicates that a new buffer could
+/// not be allocated, while the `Mtu` variant indicates that an MTU constraint
+/// was exceeded.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum MtuError<E> {
-    Err(E),
+pub enum SerializeError<A> {
+    Alloc(A),
     Mtu,
 }
 
-impl<E> MtuError<E> {
-    /// Is this an MTU error?
-    ///
-    /// `is_mtu` returns true if `self` is `MtuError::Mtu`.
-    #[inline]
-    pub fn is_mtu(&self) -> bool {
-        match self {
-            MtuError::Mtu => true,
-            _ => false,
-        }
+impl<A> From<A> for SerializeError<A> {
+    fn from(a: A) -> SerializeError<A> {
+        SerializeError::Alloc(a)
     }
 }
 
-impl<E> From<E> for MtuError<E> {
-    #[inline]
-    fn from(err: E) -> MtuError<E> {
-        MtuError::Err(err)
-    }
-}
+/// The error returned when a buffer is too short to hold a serialized packet,
+/// and the [`BufferProvider`] is incapable of allocating a new one.
+///
+/// `BufferTooShortError` is returned by the [`Serializer`] methods
+/// [`serialize_no_alloc`] and [`serialize_no_alloc_outer`].
+///
+/// [`serialize_no_alloc`]: crate::serialize::Serializer::serialize_no_alloc
+/// [`serialize_no_alloc_outer`]: crate::serialize::Serializer::serialize_no_alloc_outer
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct BufferTooShortError;
 
 /// An object capable of providing buffers which satisfy certain constraints.
 ///
@@ -1257,61 +1265,135 @@ impl<B: BufferMut, A: BufferAlloc<B>> BufferProvider<B, B> for A {
 }
 
 pub trait Serializer: Sized {
+    // TODO(joshlf): Remove this bound once implied bounds (#44491) are
+    // implemented, so that a downstream crate can do something like:
+    //   trait Serializer: packet::Serializer where Self::Buffer: BufferMut {}
+    //   impl<S: packet::Serializer> Serializer for S where Self::Buffer: BufferMut {}
+
     /// The type of buffers returned from serialization methods on this trait.
     type Buffer: BufferMut;
-    /// The type of errors returned from serialization methods on this trait.
-    type Error;
 
     /// Serialize this `Serializer`, producing a buffer.
     ///
-    /// `serialize` accepts a [`PacketBuilder`], and produces a buffer which
-    /// contains the contents of this `Serializer` encapsulated in the header
-    /// and footer described by the `PacketBuilder`.
-    fn serialize<PB: NestedPacketBuilder>(
+    /// `serialize` accepts a [`PacketBuilder`] and a [`BufferProvider`], and
+    /// produces a buffer which contains the contents of this `Serializer`
+    /// encapsulated in the header and footer described by the `PacketBuilder`.
+    ///
+    /// As `Serializer`s can be nested using the [`Nested`] type (constructed
+    /// using the [`encapsulate`] method), the `serialize` method is recursive -
+    /// calling it on a `Nested` will recurse into the inner `Serializer`, which
+    /// might itself be a `Nested`, and so on. When the innermost `Serializer`
+    /// is reached, the contained buffer is passed to the `provider`, allowing
+    /// it to decide how to produce a buffer which is large enough to fit the
+    /// entire packet - either by reusing the existing buffer, or by discarding
+    /// it and allocating a new one.
+    ///
+    /// [`encapsulate`]: crate::serialize::Serializer::encapsulate
+    fn serialize<B: BufferMut, PB: NestedPacketBuilder, P: BufferProvider<Self::Buffer, B>>(
         self,
         outer: PB,
-    ) -> Result<Self::Buffer, (MtuError<Self::Error>, Self)>;
+        provider: P,
+    ) -> Result<B, (SerializeError<P::Error>, Self)>;
+
+    /// Serialize this `Serializer`, allocating a [`Buf<Vec<u8>>`] if the
+    /// contained buffer isn't large enough.
+    ///
+    /// `serialize_vec` is like [`serialize`], except that, if the contained
+    /// buffer isn't large enough to contain the packet, a new `Vec<u8>` is
+    /// allocated and wrapped in a `Buf`. If the buffer is large enough, but the
+    /// body is too far forwards or backwards to fit the encapsulating headers
+    /// or footers, the body will be moved within the buffer (this is linear in
+    /// the size of the body).
+    ///
+    /// `serialize_vec` is equivalent to calling `serialize` with
+    /// [`new_buf_vec`] as the [`BufferProvider`].
+    ///
+    /// [`Buf<Vec<u8>>`]: crate::serialize::Buf
+    /// [`serialize`]: crate::serialize::Serializer::serialize
+    #[inline]
+    fn serialize_vec<PB: NestedPacketBuilder>(
+        self,
+        outer: PB,
+    ) -> Result<Either<Self::Buffer, Buf<Vec<u8>>>, (SerializeError<Never>, Self)> {
+        self.serialize(outer, new_buf_vec)
+    }
+
+    /// Serialize this `Serializer`, failing if the existing buffer is not large
+    /// enough.
+    ///
+    /// `serialize_no_alloc` is like [`serialize`], except that it will fail if
+    /// the existing buffer isn't large enough. If the buffer is large enough,
+    /// but the body is too far forwards or backwards to fit the encapsulating
+    /// headers or footers, the body will be moved within the buffer (this is
+    /// linear in the size of the body).
+    ///
+    /// `serialize_no_alloc` is equivalent to calling `serialize` with a
+    /// `BufferProvider` which cannot allocate a new buffer (such as `()`).
+    ///
+    /// [`serialize`]: crate::serialize::Serializer::serialize
+    #[inline]
+    fn serialize_no_alloc<PB: NestedPacketBuilder>(
+        self,
+        outer: PB,
+    ) -> Result<Self::Buffer, (SerializeError<BufferTooShortError>, Self)> {
+        self.serialize(outer, ()).map(Either::into_a).map_err(|(err, slf)| {
+            (
+                match err {
+                    SerializeError::Alloc(()) => BufferTooShortError.into(),
+                    SerializeError::Mtu => SerializeError::Mtu,
+                },
+                slf,
+            )
+        })
+    }
 
     /// Serialize this `Serializer` as the outermost packet.
     ///
-    /// `serialize_outer` is like `serialize`, except that it is called when
+    /// `serialize_outer` is like [`serialize`], except that it is called when
     /// this `Serializer` describes the outermost packet, not encapsulated in
     /// any other packets. It is equivalent to calling `serialize` with an empty
     /// [`PacketBuilder`] (such as `()`).
+    ///
+    /// [`serialize`]: crate::serialize::Serializer::serialize
     #[inline]
-    fn serialize_outer(self) -> Result<Self::Buffer, (MtuError<Self::Error>, Self)> {
-        self.serialize(())
+    fn serialize_outer<B: BufferMut, P: BufferProvider<Self::Buffer, B>>(
+        self,
+        provider: P,
+    ) -> Result<B, (SerializeError<P::Error>, Self)> {
+        self.serialize((), provider)
     }
 
-    /// Serialize this `Serializer` with a maximum transmission unit (MTU)
-    /// constraint.
+    /// Serialize this `Serializer` as the outermost packet, allocating a
+    /// [`Buf<Vec<u8>>`] if the contained buffer isn't large enough.
     ///
-    /// `serialize_mtu` is like `serialize`, except that it accepts an MTU
-    /// constraint. If the total length of the buffer that would be produced
-    /// (including prefix and suffix length) would exceed the MTU, then an error
-    /// is returned instead of a buffer.
+    /// `serialize_vec_outer` is like [`serialize_vec`], except that it is
+    /// called when this `Serializer` describes the outermost packet, not
+    /// encapsulated in any other packets. It is equivalent to calling
+    /// `serialize_vec` with an empty [`PacketBuilder`] (such as `()`).
+    ///
+    /// [`Buf<Vec<u8>>`]: crate::serialize::Buf
+    /// [`serialize_vec`]: crate::serialize::Serializer::serialize_vec
     #[inline]
-    fn serialize_mtu<PB: NestedPacketBuilder>(
+    fn serialize_vec_outer(
         self,
-        mtu: usize,
-        outer: PB,
-    ) -> Result<Self::Buffer, (MtuError<Self::Error>, Self)> {
-        self.with_mtu(mtu).serialize(outer).map_err(|(err, ser)| (err, ser.into_inner()))
+    ) -> Result<Either<Self::Buffer, Buf<Vec<u8>>>, (SerializeError<Never>, Self)> {
+        self.serialize_vec(())
     }
 
-    /// Serialize this `Serializer` with a maximum transmission unit (MTU)
-    /// constraint as the outermost packet.
+    /// Serialize this `Serializer` as the outermost packet, failing if the
+    /// existing buffer is not large enough.
     ///
-    /// `serialize_mtu_outer` is like `serialize_mtu`, except that it is called
-    /// when this `Serializer` describes the outermost packet, not encapsulated
-    /// in any other packets. It is equivalent to calling `serialize_mtu` with
-    /// an empty [`PacketBuilder`] (such as `()`).
+    /// `serialize_no_alloc_outer` is like [`serialize_no_alloc`], except that
+    /// it is called when this `Serializer` describes the outermost packet, not
+    /// encapsulated in any other packets. It is equivalent to calling
+    /// `serialize_no_alloc` with an empty [`PacketBuilder`] (such as `()`).
+    ///
+    /// [`serialize_no_alloc`]: crate::serialize::Serializer::serialize_no_alloc
     #[inline]
-    fn serialize_mtu_outer(
+    fn serialize_no_alloc_outer(
         self,
-        mtu: usize,
-    ) -> Result<Self::Buffer, (MtuError<Self::Error>, Self)> {
-        self.serialize_mtu(mtu, ())
+    ) -> Result<Self::Buffer, (SerializeError<BufferTooShortError>, Self)> {
+        self.serialize_no_alloc(())
     }
 
     /// Encapsulate this `Serializer` in another packet, producing a new
@@ -1319,7 +1401,7 @@ pub trait Serializer: Sized {
     ///
     /// `encapsulate` consumes this `Serializer` and a [`PacketBuilder`], and
     /// produces a new `Serializer` which describes encapsulating this one in
-    /// the packet described by `builder`.
+    /// the packet described by `outer`.
     #[inline]
     fn encapsulate<B: NestedPacketBuilder>(self, outer: B) -> Nested<Self, B> {
         Nested { inner: self, outer }
@@ -1352,14 +1434,15 @@ pub trait Serializer: Sized {
 pub struct InnerSerializer<I>(I);
 
 impl<B: InnerPacketBuilder> Serializer for InnerSerializer<B> {
+    // TODO(joshlf): Change this to an empty buffer type once we introduce one.
     type Buffer = Buf<Vec<u8>>;
-    type Error = Never;
 
     #[inline]
-    fn serialize<PB: NestedPacketBuilder>(
+    fn serialize<BB: BufferMut, PB: NestedPacketBuilder, P: BufferProvider<Buf<Vec<u8>>, BB>>(
         self,
         outer: PB,
-    ) -> Result<Buf<Vec<u8>>, (MtuError<Never>, InnerSerializer<B>)> {
+        provider: P,
+    ) -> Result<BB, (SerializeError<P::Error>, InnerSerializer<B>)> {
         // A wrapper for InnerPacketBuilders which implements PacketBuilder by
         // treating the entire InnerPacketBuilder as the header of the
         // PacketBuilder. This allows us to compose our InnerPacketBuilder with
@@ -1384,16 +1467,31 @@ impl<B: InnerPacketBuilder> Serializer for InnerSerializer<B> {
         }
 
         let pb = InnerPacketBuilderWrapper(self.0);
-        match BufferSerializer::new_vec(Buf::new(vec![], ..)).encapsulate(&pb).serialize(outer) {
-            Ok(buf) => Ok(buf.into_inner()),
+        match Buf::new(vec![], ..).encapsulate(&pb).serialize(outer, provider) {
+            Ok(buf) => Ok(buf),
             Err((err, _)) => Err((err, InnerSerializer(pb.0))),
         }
     }
 }
 
+impl<B: BufferMut> Serializer for B {
+    type Buffer = B;
+
+    #[inline]
+    fn serialize<BB: BufferMut, PB: NestedPacketBuilder, P: BufferProvider<Self::Buffer, BB>>(
+        self,
+        outer: PB,
+        provider: P,
+    ) -> Result<BB, (SerializeError<P::Error>, Self)> {
+        TruncatingSerializer::new(self, TruncateDirection::NoTruncating)
+            .serialize(outer, provider)
+            .map_err(|(err, ser)| (err, ser.buffer))
+    }
+}
+
 /// The direction a buffer's body should be truncated from to force
 /// it to fit within a MTU.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum TruncateDirection {
     /// If a buffer cannot fit within an MTU, discard bytes from the
     /// front of the body.
@@ -1405,191 +1503,104 @@ pub enum TruncateDirection {
     NoTruncating,
 }
 
-/// A [`Serializer`] which returns a packet already serialized into an existing
-/// buffer.
+/// A [`Serializer`] that truncates its body if it would exceed an MTU
+/// constraint.
 ///
-/// A `BufferSerializer` wraps an existing buffer, and implements the
-/// `Serializer` trait, treating the body of the buffer as the packet to be
-/// serialized. In the fast path, when the buffer already satisfies the
-/// constraints passed to [`Serializer::serialize`], the buffer itself is
-/// returned. In the slow path, a function is used to produce a buffer which
-/// satisfies the constraints, and the body is copied from the original buffer
-/// to the new one.
+/// `TruncatingSerializer` wraps a [`BufferMut`], and implements `Serializer`.
+/// Unlike the blanket impl of `Serializer` for `B: BufferMut`, if the buffer's
+/// body exceeds the MTU constraint passed to `Serializer::serialize`, the body
+/// is truncated to fit.
 ///
-/// `BufferSerializer`s are useful as performance optimization in order to avoid
-/// unnecessary allocation when a buffer already exists during serialization.
-/// This can happen, for example, when a buffer is used to store an incoming
-/// packet, and then that buffer can be reused to serialize an outgoing packet
-/// sent in response.
-#[derive(Copy, Clone)]
-pub struct BufferSerializer<B, F> {
-    buf: B,
-    get_buf: F,
+/// Note that this does not guarantee that MTU errors will not occur. The MTU
+/// may be small enough that the encapsulating headers alone exceed the MTU.
+/// There may also be a minimum body length constraint which is larger than the
+/// MTU.
+#[derive(Copy, Clone, Debug)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
+pub struct TruncatingSerializer<B> {
+    buffer: B,
     direction: TruncateDirection,
 }
 
-impl<B, F> BufferSerializer<B, F> {
-    /// Constructs a new `BufferSerializer`.
-    ///
-    /// `new` is equivalent to `new_truncate` with
-    /// `TruncateDirection::NoTruncating` given as the `direction` argument.
-    #[inline]
-    pub fn new(buffer: B, get_buf: F) -> BufferSerializer<B, F> {
-        BufferSerializer { buf: buffer, get_buf, direction: TruncateDirection::NoTruncating }
-    }
-
-    /// Constructs a new `BufferSerializer` that may truncate a buffer.
-    ///
-    /// `new_truncate` accepts a buffer and a `get_buf` function, which produces
-    /// a buffer. When `serialize` is called, if the existing buffer satisfies
-    /// the constraints, it is returned. Otherwise, `get_buf` is used to
-    /// produce a buffer which satisfies the constraints, and the body is
-    /// copied from the original buffer into the new one before it is
-    /// returned. `direction` configures the `BufferSerializer`'s buffer
-    /// truncating options when it will not fit within an MTU when serializing
-    /// (see [`BufferSerializer::serialize`]).
-    ///
-    /// `get_buf` accepts a `usize`, and produces a buffer of that length.
-    #[inline]
-    pub fn new_truncate(
-        buffer: B,
-        get_buf: F,
-        direction: TruncateDirection,
-    ) -> BufferSerializer<B, F> {
-        BufferSerializer { buf: buffer, get_buf, direction }
-    }
-
-    /// Consume this `BufferSerializer` and return the encapsulated buffer.
-    #[inline]
-    pub fn into_buffer(self) -> B {
-        self.buf
+impl<B> TruncatingSerializer<B> {
+    /// Constructs a new `TruncatingSerializer`.
+    pub fn new(buffer: B, direction: TruncateDirection) -> TruncatingSerializer<B> {
+        TruncatingSerializer { buffer, direction }
     }
 }
 
-impl<B> BufferSerializer<B, ()> {
-    /// Constructs a new `BufferSerializer` which allocates a new `Vec` in the
-    /// fallback path.
-    ///
-    /// `new_vec` is like `new_vec_truncate` with
-    /// `TruncateDirection::NoTruncating` given as the `direction` argument.
-    #[inline]
-    pub fn new_vec(
-        buffer: B,
-    ) -> BufferSerializer<B, impl FnOnce(usize) -> Buf<Vec<u8>> + Copy + Clone> {
-        BufferSerializer::new(buffer, |n| Buf::new(vec![0; n], ..))
-    }
+impl<B: BufferMut> Serializer for TruncatingSerializer<B> {
+    type Buffer = B;
 
-    /// Constructs a new `BufferSerializer` which allocates a new `Vec` in the
-    /// fallback path and may truncate a buffer.
-    ///
-    /// `new_vec_truncate` is like [`BufferSerializer::new_truncate`] except that
-    /// its `get_buf` function is automatically set to allocate a new `Vec`
-    /// on the heap.
-    #[inline]
-    pub fn new_vec_truncate(
-        buffer: B,
-        direction: TruncateDirection,
-    ) -> BufferSerializer<B, impl FnOnce(usize) -> Buf<Vec<u8>> + Copy + Clone> {
-        BufferSerializer::new_truncate(buffer, |n| Buf::new(vec![0; n], ..), direction)
-    }
-}
-
-impl<B: BufferMut, O: BufferMut, F: FnOnce(usize) -> O> BufferSerializer<B, F> {
-    fn serialize_inner(
-        buf: B,
-        get_buf: F,
-        c: PacketConstraints,
-        body_and_padding: usize,
-        total_len: usize,
-    ) -> Either<B, O> {
-        if buf.prefix_len() >= c.header_len
-            && buf.len() + buf.suffix_len() >= body_and_padding + c.footer_len
-        {
-            // The buffer satisfies the requirements, so there's no work to do.
-            Either::A(buf)
-        // } else if buf.cap() >= total_len {
-        //     // The buffer is large enough, but the body is currently too far
-        //     // forward or too far backwards to satisfy the prefix or suffix
-        //     // requirements, so we need to move the body within the buffer.
-        //     unimplemented!()
-        } else {
-            // The buffer is too small, so we need to allocate a new one.
-            let mut new_buf = get_buf(total_len);
-            new_buf.shrink(c.header_len..(c.header_len + buf.len()));
-            new_buf.as_mut().copy_from_slice(buf.as_ref());
-            Either::B(new_buf)
-        }
-    }
-}
-
-impl<B: Debug, F> Debug for BufferSerializer<B, F> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        f.debug_struct("BufferSerializer").field("buf", &self.buf).finish()
-    }
-}
-
-impl<B: BufferMut, O: BufferMut, F: FnOnce(usize) -> O> Serializer for BufferSerializer<B, F> {
-    type Buffer = Either<B, O>;
-    type Error = Never;
-
-    /// Attempt to serialize a buffer inside of a `PacketBuilder`. If the buffer
-    /// as is will not fit within the `PacketBuilder`'s maximum body length
-    /// constraint, the buffer may be truncated from either the front, the back,
-    /// or not at all, depending on the value of `BufferSerializer`'s
-    /// `direction` value.
-    #[inline]
-    fn serialize<PB: NestedPacketBuilder>(
+    fn serialize<BB: BufferMut, PB: NestedPacketBuilder, P: BufferProvider<B, BB>>(
         mut self,
         outer: PB,
-    ) -> Result<Either<B, O>, (MtuError<Never>, Self)> {
+        provider: P,
+    ) -> Result<BB, (SerializeError<P::Error>, Self)> {
         let c = match outer.try_constraints() {
             Some(c) => c,
-            None => return Err((MtuError::Mtu, self)),
+            None => return Err((SerializeError::Mtu, self)),
         };
-
-        // Check if `buf` won't fit in the MTU.
-        if let Some(excess_bytes) = self.buf.len().checked_sub(c.max_body_len()) {
-            if excess_bytes > 0 {
-                // Body does not fit in MTU.
-                //
-                // Attempt to truncate if configured to do so.
-                match self.direction {
-                    TruncateDirection::NoTruncating => return Err((MtuError::Mtu, self)),
-                    TruncateDirection::DiscardFront => self.buf.shrink_front(excess_bytes),
-                    TruncateDirection::DiscardBack => self.buf.shrink_back(excess_bytes),
-                };
+        let original_len = self.buffer.len();
+        let excess_bytes =
+            if original_len > c.max_body_len { Some(original_len - c.max_body_len) } else { None };
+        if let Some(excess_bytes) = excess_bytes {
+            match self.direction {
+                TruncateDirection::DiscardFront => self.buffer.shrink_front(excess_bytes),
+                TruncateDirection::DiscardBack => self.buffer.shrink_back(excess_bytes),
+                TruncateDirection::NoTruncating => return Err((SerializeError::Mtu, self)),
             }
         }
 
-        let body_and_padding = cmp::max(c.min_body_len(), self.buf.len());
+        let padding = c.min_body_len().saturating_sub(self.buffer.len());
 
-        // At this point, the body and padding MUST fit within the MTU.
-        assert!(body_and_padding <= c.max_body_len());
+        // At this point, the body and padding MUST fit within the MTU. Note
+        // that PacketConstraints guarantees that min_body_len <= max_body_len,
+        // so the padding can't cause this assertion to fail.
+        debug_assert!(self.buffer.len() + padding <= c.max_body_len());
+        match provider.reuse_or_realloc(self.buffer, c.header_len(), padding + c.footer_len()) {
+            Ok(mut buffer) => {
+                outer.serialize_into(&mut buffer);
+                Ok(buffer)
+            }
+            Err((err, mut buffer)) => {
+                // Undo the effects of shrinking the buffer so that the buffer
+                // we return is unmodified from its original (which is required
+                // by the contract of this method).
+                if let Some(excess_bytes) = excess_bytes {
+                    match self.direction {
+                        TruncateDirection::DiscardFront => buffer.grow_front(excess_bytes),
+                        TruncateDirection::DiscardBack => buffer.grow_back(excess_bytes),
+                        TruncateDirection::NoTruncating => unreachable!(),
+                    }
+                }
 
-        let total_len = c.header_len + body_and_padding + c.footer_len;
-        let mut buf = Self::serialize_inner(self.buf, self.get_buf, c, body_and_padding, total_len);
-        outer.serialize_into(&mut buf);
-        Ok(buf)
+                Err((
+                    SerializeError::Alloc(err),
+                    TruncatingSerializer { buffer, direction: self.direction },
+                ))
+            }
+        }
     }
 }
 
 impl<I: Serializer, O: NestedPacketBuilder> Serializer for Nested<I, O> {
     type Buffer = I::Buffer;
-    type Error = I::Error;
 
     #[inline]
-    fn serialize<PB: NestedPacketBuilder>(
+    fn serialize<B: BufferMut, PB: NestedPacketBuilder, P: BufferProvider<I::Buffer, B>>(
         self,
         outer: PB,
-    ) -> Result<Self::Buffer, (MtuError<I::Error>, Self)> {
+        provider: P,
+    ) -> Result<B, (SerializeError<P::Error>, Self)> {
         // We use `RefNestedPacketBuilder` here so that the call to `serialize`
         // doesn't consume `self.outer` by value. If it did, we'd have to way of
         // getting it back in the event of an error (when we need to reconstruct
         // `self` to return).
-        match self
-            .inner
-            .serialize(NestedPacketBuilder::encapsulate(RefNestedPacketBuilder(&self.outer), outer))
-        {
+        match self.inner.serialize(
+            NestedPacketBuilder::encapsulate(RefNestedPacketBuilder(&self.outer), outer),
+            provider,
+        ) {
             Ok(buf) => Ok(buf),
             Err((err, inner)) => Err((err, inner.encapsulate(self.outer))),
         }
@@ -1782,14 +1793,14 @@ mod tests {
         }
 
         // Sanity check.
-        let buf = INNER.into_serializer().serialize(()).unwrap();
+        let buf = INNER.into_serializer().serialize_vec(()).unwrap();
         assert_eq!(buf.as_ref(), INNER);
 
         // A larger minimum body length requirement will cause padding to be
         // added.
         let buf = INNER
             .into_serializer()
-            .serialize(DummyPacketBuilder::new(0, 0, 20, MAX_USIZE))
+            .serialize_vec(DummyPacketBuilder::new(0, 0, 20, MAX_USIZE))
             .unwrap();
         assert_eq!(buf.as_ref(), concat(&[INNER, vec![0; 10].as_ref()]).as_slice());
 
@@ -1798,7 +1809,7 @@ mod tests {
         // 0xFE).
         let buf = INNER
             .into_serializer()
-            .serialize(DummyPacketBuilder::new(10, 10, 0, MAX_USIZE))
+            .serialize_vec(DummyPacketBuilder::new(10, 10, 0, MAX_USIZE))
             .unwrap();
         assert_eq!(
             buf.as_ref(),
@@ -1807,8 +1818,12 @@ mod tests {
 
         // An exceeded maximum body size is rejected.
         assert_eq!(
-            INNER.into_serializer().serialize(DummyPacketBuilder::new(0, 0, 0, 9)).unwrap_err().0,
-            MtuError::Mtu
+            INNER
+                .into_serializer()
+                .serialize_vec(DummyPacketBuilder::new(0, 0, 0, 9))
+                .unwrap_err()
+                .0,
+            SerializeError::Mtu
         );
     }
 
@@ -1817,7 +1832,7 @@ mod tests {
 
     #[test]
     fn test_buffer_serializer_and_inner_serializer() {
-        fn verify_buffer_serializer<B: BufferMut + Debug>(
+        fn verify_buffer_serializer<B: BufferMut + std::fmt::Debug>(
             buffer: B,
             header_len: usize,
             footer_len: usize,
@@ -1829,8 +1844,13 @@ mod tests {
                 buffer, header_len, footer_len, min_body_len,
             );
 
-            let buffer = BufferSerializer::new_vec(buffer)
-                .serialize(DummyPacketBuilder::new(header_len, footer_len, min_body_len, MAX_USIZE))
+            let buffer = buffer
+                .serialize_vec(DummyPacketBuilder::new(
+                    header_len,
+                    footer_len,
+                    min_body_len,
+                    MAX_USIZE,
+                ))
                 .unwrap();
             verify(buffer, &old_body, header_len, footer_len, min_body_len);
         }
@@ -1843,7 +1863,12 @@ mod tests {
         ) {
             let buffer = body
                 .into_serializer()
-                .serialize(DummyPacketBuilder::new(header_len, footer_len, min_body_len, MAX_USIZE))
+                .serialize_vec(DummyPacketBuilder::new(
+                    header_len,
+                    footer_len,
+                    min_body_len,
+                    MAX_USIZE,
+                ))
                 .unwrap();
             verify(buffer, body, header_len, footer_len, min_body_len);
         }
@@ -1931,39 +1956,48 @@ mod tests {
 
             let pb = DummyPacketBuilder::new(1, 1, 0, MAX_USIZE);
 
-            // Test that an MTU of 3 is OK.
-            assert!(ser.clone().encapsulate(pb).serialize_mtu_outer(3).is_ok());
+            // Test that an MTU of 3 is OK. Note that this is an important test
+            // since it tests the case when the MTU is exactly sufficient. A
+            // previous version of this code had a bug where a packet which fit
+            // the MTU exactly would be rejected.
+            assert!(ser.clone().encapsulate(pb).with_mtu(3).serialize_vec_outer().is_ok());
+            // Test that a more-than-large-enough MTU of 4 is OK.
+            assert!(ser.clone().encapsulate(pb).with_mtu(4).serialize_vec_outer().is_ok());
             // Test that the inner MTU of 1 only applies to the inner
             // serializer, and so is still OK even though the outer serializer
             // consumes 3 bytes total.
-            assert!(ser.clone().with_mtu(1).encapsulate(pb).serialize_mtu_outer(3).is_ok());
+            assert!(ser
+                .clone()
+                .with_mtu(1)
+                .encapsulate(pb)
+                .with_mtu(3)
+                .serialize_vec_outer()
+                .is_ok());
             // Test that the inner MTU of 0 is exceeded by the inner
             // serializer's 1 byte length.
-            assert!(ser.clone().with_mtu(0).encapsulate(pb).serialize_outer().is_err());
+            assert!(ser.clone().with_mtu(0).encapsulate(pb).serialize_vec_outer().is_err());
             // Test that an MTU which would be exceeded by the encapsulating
             // layer is rejected by Nested's implementation. If this doesn't
             // work properly, then the MTU should underflow, resulting in a
             // panic (see the Nested implementation of Serialize).
-            assert!(ser.clone().encapsulate(pb).serialize_mtu_outer(1).is_err());
+            assert!(ser.clone().encapsulate(pb).with_mtu(1).serialize_vec_outer().is_err());
         }
 
         // We use this as an InnerPacketBuilder which consumes 1 byte of body.
         test(DummyPacketBuilder::new(1, 0, 0, MAX_USIZE).into_serializer());
-        test(BufferSerializer::new_vec(Buf::new(vec![0], ..)));
+        test(Buf::new(vec![0], ..));
     }
 
     #[test]
-    fn test_truncating_buffer_serializer() {
+    fn test_truncating_serializer() {
         //
         // Test truncate front.
         //
 
         let body = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-        let ser = BufferSerializer::new_vec_truncate(
-            Buf::new(body.clone(), ..),
-            TruncateDirection::DiscardFront,
-        );
-        let buf = ser.serialize_mtu_outer(4).unwrap();
+        let ser =
+            TruncatingSerializer::new(Buf::new(body.clone(), ..), TruncateDirection::DiscardFront);
+        let buf = ser.with_mtu(4).serialize_vec_outer().unwrap();
         let buf: &[u8] = buf.as_ref();
         assert_eq!(buf, &[6, 7, 8, 9][..]);
 
@@ -1971,11 +2005,9 @@ mod tests {
         // Test truncate back.
         //
 
-        let ser = BufferSerializer::new_vec_truncate(
-            Buf::new(body.clone(), ..),
-            TruncateDirection::DiscardBack,
-        );
-        let buf = ser.serialize_mtu_outer(7).unwrap();
+        let ser =
+            TruncatingSerializer::new(Buf::new(body.clone(), ..), TruncateDirection::DiscardBack);
+        let buf = ser.with_mtu(7).serialize_vec_outer().unwrap();
         let buf: &[u8] = buf.as_ref();
         assert_eq!(buf, &[0, 1, 2, 3, 4, 5, 6][..]);
 
@@ -1983,13 +2015,49 @@ mod tests {
         // Test no truncating (default/original case).
         //
 
-        let ser = BufferSerializer::new_vec_truncate(
-            Buf::new(body.clone(), ..),
-            TruncateDirection::NoTruncating,
+        let ser =
+            TruncatingSerializer::new(Buf::new(body.clone(), ..), TruncateDirection::NoTruncating);
+        assert!(ser.with_mtu(5).serialize_vec_outer().is_err());
+        let ser =
+            TruncatingSerializer::new(Buf::new(body.clone(), ..), TruncateDirection::NoTruncating);
+        assert!(ser.with_mtu(5).serialize_vec_outer().is_err());
+
+        //
+        // Test that, when serialization fails, any truncation is undone.
+        //
+
+        // `ser` has a body of `[1, 2]` and no prefix or suffix
+        fn test_serialization_failure<B: BufferMut + Clone + Eq + std::fmt::Debug>(
+            ser: TruncatingSerializer<B>,
+            err: SerializeError<BufferTooShortError>,
+        ) {
+            // Serialize with a PacketBuilder with an MTU of 1 so that the body
+            // (of length 2) is too large. If `ser` is configured not to
+            // truncate, it should result in an MTU error. If it is configured
+            // to truncate, the 2 + 2 = 4 combined bytes of header and footer
+            // will cause allocating a new buffer to fail, and it should result
+            // in an allocation failure. Even if the body was truncated, it
+            // should be returned to its original un-truncated state before
+            // being returned from `serialize`.
+            let (e, new_ser) =
+                ser.clone().serialize_no_alloc(DummyPacketBuilder::new(2, 2, 0, 1)).unwrap_err();
+            assert_eq!(err, e);
+            assert_eq!(new_ser, ser);
+        }
+
+        let body = Buf::new(vec![1, 2], ..);
+        test_serialization_failure(
+            TruncatingSerializer::new(body.clone(), TruncateDirection::DiscardFront),
+            SerializeError::Alloc(BufferTooShortError),
         );
-        assert!(ser.serialize_mtu_outer(5).is_err());
-        let ser = BufferSerializer::new_vec(Buf::new(body.clone(), ..));
-        assert!(ser.serialize_mtu_outer(5).is_err());
+        test_serialization_failure(
+            TruncatingSerializer::new(body.clone(), TruncateDirection::DiscardFront),
+            SerializeError::Alloc(BufferTooShortError),
+        );
+        test_serialization_failure(
+            TruncatingSerializer::new(body.clone(), TruncateDirection::NoTruncating),
+            SerializeError::Mtu,
+        );
     }
 
     #[test]

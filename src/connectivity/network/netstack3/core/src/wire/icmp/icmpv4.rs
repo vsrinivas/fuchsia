@@ -254,7 +254,7 @@ mod tests {
             .into_serializer()
             .encapsulate(icmp.builder(src_ip, dst_ip))
             .encapsulate(builder)
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap()
             .as_ref()
             .to_vec()

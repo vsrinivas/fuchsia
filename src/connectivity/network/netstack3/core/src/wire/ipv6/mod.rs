@@ -690,7 +690,7 @@ mod tests {
     use std::ops::Deref;
 
     use byteorder::{ByteOrder, NetworkEndian};
-    use packet::{Buf, BufferSerializer, InnerPacketBuilder, ParseBuffer, Serializer};
+    use packet::{Buf, InnerPacketBuilder, ParseBuffer, Serializer};
 
     use super::ext_hdrs::*;
     use super::*;
@@ -727,7 +727,7 @@ mod tests {
             .into_serializer()
             .encapsulate(packet.builder())
             .encapsulate(frame.builder())
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
     }
@@ -756,7 +756,7 @@ mod tests {
             .into_serializer()
             .encapsulate(packet.builder())
             .encapsulate(frame.builder())
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
     }
@@ -1125,7 +1125,7 @@ mod tests {
         let mut buf = (&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
             .into_serializer()
             .encapsulate(builder)
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         // assert that we get the literal bytes we expected
         assert_eq!(
@@ -1150,14 +1150,14 @@ mod tests {
         // Test that Ipv6PacketBuilder::serialize properly zeroes memory before
         // serializing the header.
         let mut buf_0 = [0; IPV6_FIXED_HDR_LEN];
-        BufferSerializer::new_vec(Buf::new(&mut buf_0[..], IPV6_FIXED_HDR_LEN..))
+        Buf::new(&mut buf_0[..], IPV6_FIXED_HDR_LEN..)
             .encapsulate(new_builder())
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         let mut buf_1 = [0xFF; IPV6_FIXED_HDR_LEN];
-        BufferSerializer::new_vec(Buf::new(&mut buf_1[..], IPV6_FIXED_HDR_LEN..))
+        Buf::new(&mut buf_1[..], IPV6_FIXED_HDR_LEN..)
             .encapsulate(new_builder())
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         assert_eq!(&buf_0[..], &buf_1[..]);
     }
@@ -1167,9 +1167,9 @@ mod tests {
     fn test_serialize_panic_packet_length() {
         // Test that a packet whose payload is longer than 2^16 - 1 bytes is
         // rejected.
-        BufferSerializer::new_vec(Buf::new(&mut [0; 1 << 16][..], ..))
+        Buf::new(&mut [0; 1 << 16][..], ..)
             .encapsulate(new_builder())
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
     }
 

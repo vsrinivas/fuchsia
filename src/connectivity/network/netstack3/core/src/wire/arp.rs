@@ -387,8 +387,12 @@ mod tests {
         assert_eq!(arp.operation(), ArpOp::Request);
         assert_eq!(frame.src_mac(), arp.sender_hardware_address());
 
-        let frame_bytes =
-            arp.builder().into_serializer().encapsulate(frame.builder()).serialize_outer().unwrap();
+        let frame_bytes = arp
+            .builder()
+            .into_serializer()
+            .encapsulate(frame.builder())
+            .serialize_vec_outer()
+            .unwrap();
         assert_eq!(frame_bytes.as_ref(), ARP_REQUEST);
     }
 
@@ -456,7 +460,7 @@ mod tests {
             TEST_TARGET_IPV4,
         )
         .into_serializer()
-        .serialize_outer()
+        .serialize_vec_outer()
         .unwrap();
         assert_eq!(
             AsRef::<[u8]>::as_ref(&buf),

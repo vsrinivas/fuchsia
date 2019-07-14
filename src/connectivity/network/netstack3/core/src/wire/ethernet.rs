@@ -234,9 +234,7 @@ impl PacketBuilder for EthernetFrameBuilder {
 
 #[cfg(test)]
 mod tests {
-    use packet::{
-        Buf, BufferSerializer, InnerPacketBuilder, ParseBuffer, SerializeBuffer, Serializer,
-    };
+    use packet::{Buf, InnerPacketBuilder, ParseBuffer, SerializeBuffer, Serializer};
 
     use super::*;
 
@@ -339,7 +337,7 @@ mod tests {
                 DEFAULT_SRC_MAC,
                 EtherType::Arp,
             ))
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         assert_eq!(
             &buf.as_ref()[..ETHERNET_HDR_LEN_NO_TAG],
@@ -353,23 +351,23 @@ mod tests {
         // serializing the header.
         let mut buf_0 = [0; ETHERNET_MIN_FRAME_LEN];
 
-        BufferSerializer::new_vec(Buf::new(&mut buf_0[..], ETHERNET_HDR_LEN_NO_TAG..))
+        Buf::new(&mut buf_0[..], ETHERNET_HDR_LEN_NO_TAG..)
             .encapsulate(EthernetFrameBuilder::new(
                 DEFAULT_SRC_MAC,
                 DEFAULT_DST_MAC,
                 EtherType::Arp,
             ))
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         let mut buf_1 = [0; ETHERNET_MIN_FRAME_LEN];
         (&mut buf_1[..ETHERNET_HDR_LEN_NO_TAG]).copy_from_slice(&[0xFF; ETHERNET_HDR_LEN_NO_TAG]);
-        BufferSerializer::new_vec(Buf::new(&mut buf_1[..], ETHERNET_HDR_LEN_NO_TAG..))
+        Buf::new(&mut buf_1[..], ETHERNET_HDR_LEN_NO_TAG..)
             .encapsulate(EthernetFrameBuilder::new(
                 DEFAULT_SRC_MAC,
                 DEFAULT_DST_MAC,
                 EtherType::Arp,
             ))
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         assert_eq!(&buf_0[..], &buf_1[..]);
     }

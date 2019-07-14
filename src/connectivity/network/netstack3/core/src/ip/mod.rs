@@ -23,9 +23,7 @@ use std::mem;
 use log::{debug, trace};
 use net_types::ip::{AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
 use net_types::MulticastAddr;
-use packet::{
-    Buf, BufferMut, BufferSerializer, ParsablePacket, ParseBufferMut, ParseMetadata, Serializer,
-};
+use packet::{Buf, BufferMut, ParsablePacket, ParseBufferMut, ParseMetadata, Serializer};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
 use crate::data_structures::IdMap;
@@ -538,12 +536,9 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
 
             packet.set_ttl(ttl - 1);
             let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
-            if let Err(ser) = crate::device::send_ip_frame(
-                ctx,
-                dest.device,
-                dest.next_hop,
-                BufferSerializer::new_vec(buffer),
-            ) {
+            if let Err(buffer) =
+                crate::device::send_ip_frame(ctx, dest.device, dest.next_hop, buffer)
+            {
                 #[specialize_ip_address]
                 fn send_packet_too_big<D: EventDispatcher, A: IpAddress, B: BufferMut>(
                     ctx: &mut Context<D>,
@@ -589,7 +584,7 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
                     dst_ip,
                     proto,
                     mtu,
-                    ser.into_buffer(),
+                    buffer,
                     meta.header_len(),
                 );
             }
@@ -892,7 +887,7 @@ where
         // functionality. I wonder if, in the case of delivering to loopback, we
         // can do something more efficient?
         let mut buffer =
-            get_body(A::Version::LOOPBACK_ADDRESS).serialize_outer().map_err(|(_, ser)| ser)?;
+            get_body(A::Version::LOOPBACK_ADDRESS).serialize_vec_outer().map_err(|(_, ser)| ser)?;
         // TODO(joshlf): Respond with some kind of error if we don't have a
         // handler for that protocol? Maybe simulate what would have happened
         // (w.r.t ICMP) if this were a remote host?
@@ -1266,10 +1261,7 @@ mod tests {
         builder.mf_flag(m_flag);
         let mut body: Vec<u8> = Vec::new();
         body.extend(fragment_offset * 8..fragment_offset * 8 + 8);
-        let mut buffer = BufferSerializer::new_vec(Buf::new(body, ..))
-            .encapsulate(builder)
-            .serialize_outer()
-            .unwrap();
+        let mut buffer = Buf::new(body, ..).encapsulate(builder).serialize_vec_outer().unwrap();
         receive_ip_packet::<_, _, Ipv4>(ctx, device, FrameDestination::Unicast, buffer);
     }
 
@@ -1780,9 +1772,9 @@ mod tests {
         let mut body: Vec<u8> = std::iter::repeat_with(|| rng.gen()).take(5000).collect();
 
         // Ip packet from some node destined to a remote on this network, arriving locally.
-        let mut ipv6_packet_buf = BufferSerializer::new_vec(Buf::new(body.clone(), ..))
+        let mut ipv6_packet_buf = Buf::new(body.clone(), ..)
             .encapsulate(Ipv6PacketBuilder::new(extra_ip, dummy_config.remote_ip, 64, IpProto::Tcp))
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
         // Receive the IP packet.
         receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, ipv6_packet_buf.clone());
@@ -1835,20 +1827,19 @@ mod tests {
                 None => IcmpDestUnreachable::default(),
             };
 
-            BufferSerializer::new_vec(body)
-                .encapsulate(IcmpPacketBuilder::<Ipv4, &mut [u8], IcmpDestUnreachable>::new(
-                    dst_ip,
-                    src_ip,
-                    Icmpv4DestUnreachableCode::FragmentationRequired,
-                    msg,
-                ))
-                .encapsulate(Ipv4PacketBuilder::new(src_ip, dst_ip, 64, IpProto::Icmp))
-                .serialize_outer()
-                .unwrap()
+            body.encapsulate(IcmpPacketBuilder::<Ipv4, &mut [u8], IcmpDestUnreachable>::new(
+                dst_ip,
+                src_ip,
+                Icmpv4DestUnreachableCode::FragmentationRequired,
+                msg,
+            ))
+            .encapsulate(Ipv4PacketBuilder::new(src_ip, dst_ip, 64, IpProto::Icmp))
+            .serialize_vec_outer()
+            .unwrap()
         };
 
         #[ipv6addr]
-        let ret = BufferSerializer::new_vec(body)
+        let ret = body
             .encapsulate(IcmpPacketBuilder::<Ipv6, &mut [u8], Icmpv6PacketTooBig>::new(
                 dst_ip,
                 src_ip,
@@ -1856,7 +1847,7 @@ mod tests {
                 Icmpv6PacketTooBig::new(u32::from(mtu)),
             ))
             .encapsulate(Ipv6PacketBuilder::new(src_ip, dst_ip, 64, IpProto::Icmpv6))
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
 
         ret.into_inner()
@@ -2010,9 +2001,9 @@ mod tests {
     /// Create buffer to be used as the ICMPv4 message body
     /// where the original packet's body  length is `body_len`.
     fn create_orig_packet_buf(src_ip: Ipv4Addr, dst_ip: Ipv4Addr, body_len: usize) -> Buf<Vec<u8>> {
-        BufferSerializer::new_vec(Buf::new(vec![0; body_len], ..))
+        Buf::new(vec![0; body_len], ..)
             .encapsulate(Ipv4PacketBuilder::new(src_ip, dst_ip, 64, IpProto::Tcp))
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap()
             .into_inner()
     }
@@ -2140,10 +2131,10 @@ mod tests {
         let ip_builder =
             Ipv6PacketBuilder::new(ip_config.remote_ip, ip_config.local_ip, 64, IpProto::Icmp);
 
-        let mut buf = BufferSerializer::new_vec(Buf::new(Vec::new(), ..))
+        let mut buf = Buf::new(Vec::new(), ..)
             .encapsulate(icmp_builder)
             .encapsulate(ip_builder)
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
 
         receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
@@ -2178,10 +2169,10 @@ mod tests {
         let ip_builder =
             Ipv4PacketBuilder::new(ip_config.remote_ip, ip_config.local_ip, 64, IpProto::Icmpv6);
 
-        let mut buf = BufferSerializer::new_vec(Buf::new(Vec::new(), ..))
+        let mut buf = Buf::new(Vec::new(), ..)
             .encapsulate(icmp_builder)
             .encapsulate(ip_builder)
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap();
 
         receive_ip_packet::<_, _, Ipv4>(&mut ctx, device, frame_dst, buf);
@@ -2216,14 +2207,14 @@ mod tests {
         let device = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;
         let multi_addr = get_multicast_addr::<I::Addr>();
-        let buf = BufferSerializer::new_vec(Buf::new(vec![0; 10], ..))
+        let buf = Buf::new(vec![0; 10], ..)
             .encapsulate(<I as IpExt>::PacketBuilder::new(
                 config.remote_ip,
                 multi_addr,
                 64,
                 IpProto::Tcp,
             ))
-            .serialize_outer()
+            .serialize_vec_outer()
             .ok()
             .unwrap()
             .into_inner();

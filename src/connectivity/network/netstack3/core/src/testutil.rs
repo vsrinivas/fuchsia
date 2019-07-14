@@ -697,7 +697,7 @@ impl IpLayerEventDispatcher for DummyEventDispatcher {}
 
 impl DeviceLayerEventDispatcher for DummyEventDispatcher {
     fn send_frame<S: Serializer>(&mut self, device: DeviceId, frame: S) -> Result<(), S> {
-        let frame = frame.serialize_outer().map_err(|(_, ser)| ser)?;
+        let frame = frame.serialize_vec_outer().map_err(|(_, ser)| ser)?;
         self.frames_sent.push((device, frame.as_ref().to_vec()));
         Ok(())
     }
@@ -1111,7 +1111,7 @@ where
 #[cfg(test)]
 mod tests {
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-    use packet::{Buf, BufferSerializer, Serializer};
+    use packet::{Buf, Serializer};
     use std::time::Duration;
 
     use super::*;
@@ -1207,7 +1207,7 @@ mod tests {
             |_| {
                 let req = IcmpEchoRequest::new(0, 0);
                 let req_body = &[1, 2, 3, 4];
-                BufferSerializer::new_vec(Buf::new(req_body.to_vec(), ..)).encapsulate(
+                Buf::new(req_body.to_vec(), ..).encapsulate(
                     IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
                         DUMMY_CONFIG_V4.local_ip,
                         DUMMY_CONFIG_V4.remote_ip,
@@ -1353,7 +1353,7 @@ mod tests {
             |_| {
                 let req = IcmpEchoRequest::new(0, 0);
                 let req_body = &[1, 2, 3, 4];
-                BufferSerializer::new_vec(Buf::new(req_body.to_vec(), ..)).encapsulate(
+                Buf::new(req_body.to_vec(), ..).encapsulate(
                     IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
                         DUMMY_CONFIG_V4.local_ip,
                         DUMMY_CONFIG_V4.remote_ip,

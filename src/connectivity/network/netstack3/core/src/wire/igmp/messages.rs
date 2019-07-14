@@ -530,7 +530,7 @@ mod tests {
         M::body_bytes(&igmp.body)
             .into_serializer()
             .encapsulate(igmp.builder())
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap()
             .as_ref()
             .to_vec()

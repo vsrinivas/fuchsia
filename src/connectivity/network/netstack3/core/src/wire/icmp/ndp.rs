@@ -319,7 +319,7 @@ mod tests {
                 *icmp.message(),
             ))
             .encapsulate(ip_builder)
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap()
             .as_ref()
             .to_vec();
@@ -350,7 +350,7 @@ mod tests {
                 *icmp.message(),
             ))
             .encapsulate(ip_builder)
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap()
             .as_ref()
             .to_vec();
@@ -400,7 +400,7 @@ mod tests {
                 *icmp.message(),
             ))
             .encapsulate(ip_builder)
-            .serialize_outer()
+            .serialize_vec_outer()
             .unwrap()
             .as_ref()
             .to_vec();
