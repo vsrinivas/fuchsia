@@ -35,15 +35,14 @@ static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
     zx_handle_t vmo = file->vmo;
     mtx_unlock(&file->lock);
 
-    zx_status_t io_status, status;
-    if ((io_status = fio::File::Call::Seek_Deprecated(zx::unowned_channel(control),
-                                           seek,
-                                           fio::SeekOrigin::START,
-                                           &status,
-                                           &seek)) != ZX_OK) {
+    auto result = fio::File::Call::Seek(zx::unowned_channel(control),
+                                        seek,
+                                        fio::SeekOrigin::START);
+    if (result.status() != ZX_OK) {
         return ZX_ERR_BAD_STATE;
     }
-    if (status != ZX_OK) {
+    auto response = result.Unwrap();
+    if (response->s != ZX_OK) {
         return ZX_ERR_BAD_STATE;
     }
 
@@ -64,11 +63,11 @@ static zx_status_t zxio_vmofile_clone(zxio_t* io, zx_handle_t* out_handle) {
     if (status != ZX_OK) {
         return status;
     }
-    status = fio::Node::Call::Clone_Deprecated(zx::unowned_channel(file->control),
-                                    fio::CLONE_FLAG_SAME_RIGHTS,
-                                    std::move(remote));
-    if (status != ZX_OK) {
-        return status;
+    auto result = fio::Node::Call::Clone(zx::unowned_channel(file->control),
+                                         fio::CLONE_FLAG_SAME_RIGHTS,
+                                         std::move(remote));
+    if (result.status() != ZX_OK) {
+        return result.status();
     }
     *out_handle = local.release();
     return ZX_OK;
