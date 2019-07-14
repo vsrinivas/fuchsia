@@ -97,6 +97,14 @@ void arm64_sync_exception(arm64_iframe_t* iframe, uint exception_flags, uint32_t
 void platform_irq(iframe_short_t* frame);
 void platform_fiq(iframe_short_t* frame);
 
+/* Local per-cpu cache flush routines.
+ * These routines clean or invalidate the cache from the point of view
+ * of a single cpu to the point of coherence.
+ */
+void arm64_local_invalidate_cache_all();
+void arm64_local_clean_invalidate_cache_all();
+void arm64_local_clean_cache_all();
+
 /* fpu routines */
 void arm64_fpu_exception(arm64_iframe_t* iframe, uint exception_flags);
 void arm64_fpu_context_switch(struct thread* oldthread, struct thread* newthread);

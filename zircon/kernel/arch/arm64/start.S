@@ -52,7 +52,7 @@ FUNCTION(_start)
 .Lno_save_bootinfo:
 
     bl      arm64_elX_to_el1
-    bl      arch_invalidate_cache_all
+    bl      arm64_local_invalidate_cache_all
 
     /* enable caches so atomics and spinlocks work */
     mrs     tmp, sctlr_el1
