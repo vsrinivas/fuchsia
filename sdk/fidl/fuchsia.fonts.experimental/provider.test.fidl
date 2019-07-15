@@ -11,7 +11,7 @@ using fuchsia.intl;
 
 /// The maximum number of font families that can be returned in a
 /// `TypefaceInfoResponse`.
-const uint32 MAX_TYPEFACE_RESULTS = 50;
+const uint32 MAX_TYPEFACE_RESULTS = 16;
 
 enum Error {
     NOT_FOUND = 1;
@@ -33,12 +33,12 @@ protocol Provider {
     /// Eventually this should probably be folded into `GetTypeface`.
     GetTypefaceById(uint32 id) -> (ff.TypefaceResponse response) error Error;
 
-    /// Returns a list of `TypefaceInfo` for all typefaces that match
-    /// the request, or an empty vector if no matches are found.
+    /// Creates a `ListTypefacesIterator` instance that will return a paginated
+    /// list of fonts matching `request`.
     ///
     /// Possible errors:
     /// `INTERNAL` if something bad happens.
-    ListTypefaces(ListTypefacesRequest request) -> (TypefaceInfoResponse response) error Error;
+    ListTypefaces(ListTypefacesRequest request, request<ListTypefacesIterator> iterator) -> () error Error;
 
     /// Returns a `TypefaceInfo` for each font in the requested `family`. The
     /// results' `family` fields will hold the canonical family name, even if
@@ -51,6 +51,13 @@ protocol Provider {
     /// Possible errors:
     /// `NOT_FOUND` if no family name or alias matches the requested `family`.
     GetTypefacesByFamily(ff.FamilyName family) -> (TypefaceInfoResponse response) error Error;
+};
+
+protocol ListTypefacesIterator {
+    /// Returns the next chunk of `TypefaceInfo` for all typefaces that match
+    /// the bound `ListTypefacesRequest`. If `response.results` is empty, no
+    /// results remain.
+    GetNext() -> (TypefaceInfoResponse response);
 };
 
 table ListTypefacesRequest {
@@ -68,7 +75,7 @@ table ListTypefacesRequest {
     3: ListTypefacesRequestFlags flags;
 };
 
-bits ListTypefacesRequestFlags:uint32 {
+bits ListTypefacesRequestFlags : uint32 {
     /// Match only families whose name or alias exactly matches the requested
     /// `FamilyName`.
     EXACT_FAMILY = 0x00000001;

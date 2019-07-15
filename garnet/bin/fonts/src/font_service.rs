@@ -9,11 +9,15 @@ use {
         font_info, manifest,
     },
     failure::{format_err, Error, ResultExt},
-    fdio, fidl,
-    fidl::encoding::{Decodable, OutOfLine},
+    fdio,
+    fidl::{
+        self,
+        encoding::{Decodable, OutOfLine},
+        endpoints::ServerEnd,
+    },
     fidl_fuchsia_fonts as fonts, fidl_fuchsia_fonts_experimental as fonts_exp,
     fidl_fuchsia_fonts_ext::{FontFamilyInfoExt, RequestExt, TypefaceResponseExt},
-    fidl_fuchsia_intl as intl, fidl_fuchsia_mem as mem,
+    fidl_fuchsia_intl as intl, fidl_fuchsia_mem as mem, fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
     futures::prelude::*,
     itertools::Itertools,
@@ -485,16 +489,11 @@ impl FontService {
             .map_or_else(|| get_all_families(), |f| filter_families(f.name.clone()))
     }
 
-    fn list_typefaces(
+    fn list_typefaces_inner(
         &self,
         request: fonts_exp::ListTypefacesRequest,
-    ) -> Result<fonts_exp::TypefaceInfoResponse, fonts_exp::Error> {
+    ) -> Result<Vec<fonts_exp::TypefaceInfo>, fonts_exp::Error> {
         let query = request.query.as_ref();
-        // Must be >0 and <=MAX_TYPEFACE_RESULTS
-        let max_results = request
-            .max_results
-            .filter(|x| (1..fonts_exp::MAX_TYPEFACE_RESULTS).contains(x))
-            .unwrap_or(fonts_exp::MAX_TYPEFACE_RESULTS);
         let flags = request.flags.unwrap_or(fonts_exp::ListTypefacesRequestFlags::new_empty());
 
         let matched_families = self.list_typefaces_match_families(flags, query);
@@ -562,14 +561,41 @@ impl FontService {
         };
 
         // Filter
-        let matched_faces = matched_faces
-            .filter(total_predicate)
-            .take(max_results as usize) // TODO(seancuff): Paginate instead
-            .map(|f| f.into())
-            .collect();
+        let matched_faces = matched_faces.filter(total_predicate).map(|f| f.into()).collect();
 
-        let response = fonts_exp::TypefaceInfoResponse { results: Some(matched_faces) };
-        Ok(response)
+        Ok(matched_faces)
+    }
+
+    fn list_typefaces(
+        &self,
+        request: fonts_exp::ListTypefacesRequest,
+        iterator: ServerEnd<fonts_exp::ListTypefacesIteratorMarker>,
+    ) -> Result<(), fonts_exp::Error> {
+        let mut results = self.list_typefaces_inner(request)?;
+
+        fasync::spawn(
+            async move {
+                let mut stream = iterator.into_stream()?;
+                while let Some(request) = await!(stream.try_next())? {
+                    match request {
+                        fonts_exp::ListTypefacesIteratorRequest::GetNext { responder } => {
+                            let split_at =
+                                (fonts_exp::MAX_TYPEFACE_RESULTS as usize).min(results.len());
+                            // Return results in order
+                            let chunk = results.drain(..split_at).collect_vec();
+                            let response = fonts_exp::TypefaceInfoResponse { results: Some(chunk) };
+                            responder.send(response)?;
+                        }
+                    }
+                }
+                Ok(())
+            }
+                .unwrap_or_else(|e: Error| {
+                    fx_log_err!("Error while running ListTypefacesIterator: {:?}", e)
+                }),
+        );
+
+        Ok(())
     }
 
     async fn handle_font_provider_request(
@@ -602,7 +628,6 @@ impl FontService {
         }
     }
 
-    #[allow(unused_variables)]
     async fn handle_experimental_request(
         &self,
         request: fonts_exp::ProviderRequest,
@@ -616,8 +641,8 @@ impl FontService {
                 let mut response = self.get_typefaces_by_family(family);
                 Ok(responder.send(&mut response)?)
             }
-            fonts_exp::ProviderRequest::ListTypefaces { request, responder } => {
-                let mut response = self.list_typefaces(request);
+            fonts_exp::ProviderRequest::ListTypefaces { request, iterator, responder } => {
+                let mut response = self.list_typefaces(request, iterator);
                 Ok(responder.send(&mut response)?)
             }
         }

@@ -124,6 +124,10 @@ test_package("font_provider_tests") {
       path = rebase_path("tests/test_manifest.json")
       dest = "testdata/test_fonts/manifest.json"
     },
+    {
+      path = rebase_path("tests/all_fonts_manifest.json")
+      dest = "testdata/test_fonts/all_fonts_manifest.json"
+    },
   ]
 
   # TODO(sergeyu): Noto CJK fonts are not included in the default fonts package
@@ -131,8 +135,41 @@ test_package("font_provider_tests") {
   # implemented it will be possible to customize set of fonts on higher levels,
   # which will allow to include these fonts in the default font package.
   fonts = [
+    "material/MaterialIcons-Regular.ttf",
     "noto-cjk/NotoSansCJK-Regular.ttc",
     "noto-cjk/NotoSerifCJK-Regular.ttc",
+    "roboto/Roboto-Black.ttf",
+    "roboto/Roboto-BlackItalic.ttf",
+    "roboto/Roboto-Bold.ttf",
+    "roboto/Roboto-BoldItalic.ttf",
+    "roboto/Roboto-Italic.ttf",
+    "roboto/Roboto-Light.ttf",
+    "roboto/Roboto-LightItalic.ttf",
+    "roboto/Roboto-Medium.ttf",
+    "roboto/Roboto-MediumItalic.ttf",
+    "roboto/Roboto-Regular.ttf",
+    "roboto/Roboto-Thin.ttf",
+    "roboto/Roboto-ThinItalic.ttf",
+    "robotocondensed/RobotoCondensed-Bold.ttf",
+    "robotocondensed/RobotoCondensed-BoldItalic.ttf",
+    "robotocondensed/RobotoCondensed-Italic.ttf",
+    "robotocondensed/RobotoCondensed-Light.ttf",
+    "robotocondensed/RobotoCondensed-LightItalic.ttf",
+    "robotocondensed/RobotoCondensed-Regular.ttf",
+    "robotomono/RobotoMono-Bold.ttf",
+    "robotomono/RobotoMono-BoldItalic.ttf",
+    "robotomono/RobotoMono-Italic.ttf",
+    "robotomono/RobotoMono-Light.ttf",
+    "robotomono/RobotoMono-LightItalic.ttf",
+    "robotomono/RobotoMono-Medium.ttf",
+    "robotomono/RobotoMono-MediumItalic.ttf",
+    "robotomono/RobotoMono-Regular.ttf",
+    "robotomono/RobotoMono-Thin.ttf",
+    "robotomono/RobotoMono-ThinItalic.ttf",
+    "robotoslab/RobotoSlab-Bold.ttf",
+    "robotoslab/RobotoSlab-Light.ttf",
+    "robotoslab/RobotoSlab-Regular.ttf",
+    "robotoslab/RobotoSlab-Thin.ttf",
   ]
   foreach(font, fonts) {
     resources += [

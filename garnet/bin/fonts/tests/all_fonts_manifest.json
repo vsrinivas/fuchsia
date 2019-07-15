@@ -1,0 +1,272 @@
+{
+  "families": [
+    {
+      "family": "Material Icons",
+      "aliases": [
+        "MaterialIcons"
+      ],
+      "fallback": false,
+      "fonts": [
+        {
+          "asset": "MaterialIcons-Regular.ttf"
+        }
+      ]
+    },
+    {
+      "family": "Noto Serif CJK",
+      "aliases": [
+        "NotoSerifCJK"
+      ],
+      "generic_family": "serif",
+      "fallback": true,
+      "fonts": [
+        {
+          "asset": "NotoSerifCJK-Regular.ttc",
+          "index": 0,
+          "languages": [
+            "ja"
+          ]
+        },
+        {
+          "asset": "NotoSerifCJK-Regular.ttc",
+          "index": 1,
+          "languages": [
+            "ko"
+          ]
+        },
+        {
+          "asset": "NotoSerifCJK-Regular.ttc",
+          "index": 2,
+          "languages": [
+            "zh-Hans"
+          ]
+        },
+        {
+          "asset": "NotoSerifCJK-Regular.ttc",
+          "index": 3,
+          "languages": [
+            "zh-Hant",
+            "zh-Bopo"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Noto Sans CJK",
+      "aliases": [
+        "NotoSansCJK"
+      ],
+      "generic_family": "sans-serif",
+      "fallback": true,
+      "fonts": [
+        {
+          "asset": "NotoSansCJK-Regular.ttc",
+          "index": 0,
+          "languages": [
+            "ja"
+          ]
+        },
+        {
+          "asset": "NotoSansCJK-Regular.ttc",
+          "index": 1,
+          "languages": [
+            "ko"
+          ]
+        },
+        {
+          "asset": "NotoSansCJK-Regular.ttc",
+          "index": 2,
+          "languages": [
+            "zh-Hans"
+          ]
+        },
+        {
+          "asset": "NotoSansCJK-Regular.ttc",
+          "index": 3,
+          "languages": [
+            "zh-Hant",
+            "zh-Bopo"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Roboto",
+      "fallback": true,
+      "generic_family": "sans-serif",
+      "fonts": [
+        {
+          "asset": "Roboto-Black.ttf",
+          "weight": 900
+        },
+        {
+          "asset": "Roboto-BlackItalic.ttf",
+          "slant": "italic",
+          "weight": 900
+        },
+        {
+          "asset": "Roboto-Bold.ttf",
+          "weight": 700
+        },
+        {
+          "asset": "Roboto-BoldItalic.ttf",
+          "slant": "italic",
+          "weight": 700
+        },
+        {
+          "asset": "Roboto-Medium.ttf",
+          "weight": 500
+        },
+        {
+          "asset": "Roboto-MediumItalic.ttf",
+          "slant": "italic",
+          "weight": 500
+        },
+        {
+          "asset": "Roboto-Regular.ttf"
+        },
+        {
+          "asset": "Roboto-Italic.ttf",
+          "slant": "italic"
+        },
+        {
+          "asset": "Roboto-Light.ttf",
+          "weight": 300
+        },
+        {
+          "asset": "Roboto-LightItalic.ttf",
+          "slant": "italic",
+          "weight": 300
+        },
+        {
+          "asset": "Roboto-Thin.ttf",
+          "weight": 100
+        },
+        {
+          "asset": "Roboto-ThinItalic.ttf",
+          "slant": "italic",
+          "weight": 100
+        }
+      ]
+    },
+    {
+      "family": "Roboto Condensed",
+      "aliases": [
+        "RobotoCondensed"
+      ],
+      "fallback": true,
+      "generic_family": "sans-serif",
+      "fonts": [
+        {
+          "asset": "RobotoCondensed-Bold.ttf",
+          "weight": 700,
+          "width": "condensed"
+        },
+        {
+          "asset": "RobotoCondensed-BoldItalic.ttf",
+          "slant": "italic",
+          "weight": 700,
+          "width": "condensed"
+        },
+        {
+          "asset": "RobotoCondensed-Regular.ttf",
+          "width": "condensed"
+        },
+        {
+          "asset": "RobotoCondensed-Italic.ttf",
+          "slant": "italic",
+          "width": "condensed"
+        },
+        {
+          "asset": "RobotoCondensed-Light.ttf",
+          "weight": 300,
+          "width": "condensed"
+        },
+        {
+          "asset": "RobotoCondensed-LightItalic.ttf",
+          "slant": "italic",
+          "weight": 300,
+          "width": "condensed"
+        }
+      ]
+    },
+    {
+      "family": "Roboto Mono",
+      "aliases": [
+        "RobotoMono"
+      ],
+      "fallback": true,
+      "generic_family": "monospace",
+      "fonts": [
+        {
+          "asset": "RobotoMono-Bold.ttf",
+          "weight": 700
+        },
+        {
+          "asset": "RobotoMono-BoldItalic.ttf",
+          "slant": "italic",
+          "weight": 700
+        },
+        {
+          "asset": "RobotoMono-Medium.ttf",
+          "weight": 500
+        },
+        {
+          "asset": "RobotoMono-MediumItalic.ttf",
+          "slant": "italic",
+          "weight": 500
+        },
+        {
+          "asset": "RobotoMono-Regular.ttf"
+        },
+        {
+          "asset": "RobotoMono-Italic.ttf",
+          "slant": "italic"
+        },
+        {
+          "asset": "RobotoMono-Light.ttf",
+          "weight": 300
+        },
+        {
+          "asset": "RobotoMono-LightItalic.ttf",
+          "slant": "italic",
+          "weight": 300
+        },
+        {
+          "asset": "RobotoMono-Thin.ttf",
+          "weight": 100
+        },
+        {
+          "asset": "RobotoMono-ThinItalic.ttf",
+          "slant": "italic",
+          "weight": 100
+        }
+      ]
+    },
+    {
+      "family": "Roboto Slab",
+      "aliases": [
+        "RobotoSlab"
+      ],
+      "fallback": true,
+      "generic_family": "serif",
+      "fonts": [
+        {
+          "asset": "RobotoSlab-Bold.ttf",
+          "weight": 700
+        },
+        {
+          "asset": "RobotoSlab-Regular.ttf"
+        },
+        {
+          "asset": "RobotoSlab-Light.ttf",
+          "weight": 300
+        },
+        {
+          "asset": "RobotoSlab-Thin.ttf",
+          "weight": 100
+        }
+      ]
+    }
+  ]
+}
