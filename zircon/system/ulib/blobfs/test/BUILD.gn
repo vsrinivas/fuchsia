@@ -2,11 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/fuzzer.gni")
 group("test") {
   testonly = true
   deps = [
     ":blobfs-integration",
     ":blobfs-unit",
+    ":zstd-fuzzer",
   ]
 }
 
@@ -75,4 +77,13 @@ test("blobfs-integration") {
     "$zx/system/ulib/memfs",
     "$zx/system/ulib/zxtest",
   ]
+}
+
+fuzzer("zstd-fuzzer"){
+   sources = [
+      "zstd-fuzzer.cc",
+   ]
+   deps = [
+      "$zx/system/ulib/blobfs",
+   ]
 }
