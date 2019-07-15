@@ -1,0 +1,39 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("packet") {
+  # TODO(joshlf): Rename to "packet" once the old
+  # packet crate has been removed (having them both
+  # at the same time causes a build resource name
+  # collision between the .rlib files created by
+  # each crate).
+  name = "packet_new"
+  version = "0.1.0"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/lib/rust/never",
+    "//garnet/public/rust/zerocopy",
+  ]
+}
+
+unittest_package("tests") {
+  package_name = "packet-tests"
+
+  deps = [
+    ":packet_test",
+  ]
+
+  tests = [
+    {
+      name = "packet_new_lib_test"
+      environments = basic_envs
+    },
+  ]
+}
