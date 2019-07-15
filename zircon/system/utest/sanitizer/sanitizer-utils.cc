@@ -9,6 +9,7 @@
 #include <lib/zx/vmo.h>
 #include <limits.h>
 #include <loader-service/loader-service.h>
+#include <pthread.h>
 #include <zircon/dlfcn.h>
 #include <zircon/processargs.h>
 #include <zircon/sanitizer.h>
@@ -183,7 +184,36 @@ TEST(SanitzerUtilsTest, DebugConfig) {
 }
 
 #if __has_feature(address_sanitizer)
+
+// Touch every page in the region to make sure it's been COW'd.
+__attribute__((no_sanitize("all"))) static void PrefaultPages(uintptr_t start, uintptr_t end) {
+  while (start < end) {
+    auto ptr = reinterpret_cast<volatile uintptr_t*>(start);
+    *ptr = *ptr;
+    start += PAGE_SIZE;
+  }
+}
+
 TEST(SanitzerUtilsTest, FillShadow) {
+  pthread_attr_t attr;
+  ASSERT_EQ(pthread_getattr_np(pthread_self(), &attr), 0);
+
+  void* stackaddr;
+  size_t stacksize;
+  ASSERT_EQ(pthread_attr_getstack(&attr, &stackaddr, &stacksize), 0);
+
+  uintptr_t stackstart = reinterpret_cast<uintptr_t>(stackaddr);
+  uintptr_t stackend = reinterpret_cast<uintptr_t>(stackaddr) + stacksize;
+
+  // Prefault all stack pages to make sure this doesn't happen later while collecting samples.
+  PrefaultPages(stackstart, stackend);
+  // We also need to prefault all stack shadow pages.
+  size_t shadow_scale;
+  size_t shadow_offset;
+  __asan_get_shadow_mapping(&shadow_scale, &shadow_offset);
+  PrefaultPages((stackstart >> shadow_scale) + shadow_offset,
+                (stackend >> shadow_scale) + shadow_offset);
+
   zx_info_task_stats_t task_stats;
 
   // Snapshot the memory use at the beginning.
@@ -192,7 +222,7 @@ TEST(SanitzerUtilsTest, FillShadow) {
 
   size_t init_mem_use = task_stats.mem_private_bytes;
 
-  const size_t len = 32 * PAGE_SIZE;
+  constexpr size_t len = 32 * PAGE_SIZE;
 
   // Allocate some memory...
   zx::vmo vmo;
