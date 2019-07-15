@@ -9,6 +9,7 @@ use crate::oauth::{
     build_request_with_auth_code, parse_auth_code_from_redirect, parse_response_with_refresh_token,
     AccessToken, AuthCode, RefreshToken,
 };
+use crate::openid::{build_user_info_request, parse_user_info_response};
 use crate::web::StandaloneWebFrame;
 use failure::Error;
 use fidl;
@@ -268,21 +269,19 @@ where
         &self,
         auth_code: AuthCode,
     ) -> AuthProviderResult<(RefreshToken, AccessToken)> {
-        let request = build_request_with_auth_code(auth_code)
-            .auth_provider_status(AuthProviderStatus::UnknownError)?;
-
+        let request = build_request_with_auth_code(auth_code)?;
         let (response_body, status_code) = await!(self.http_client.request(request))?;
-
         parse_response_with_refresh_token(response_body, status_code)
     }
 
     /// Use an access token to retrieve profile information.
     async fn get_user_profile_info(
         &self,
-        _access_token: AccessToken,
+        access_token: AccessToken,
     ) -> AuthProviderResult<UserProfileInfo> {
-        // TODO(satukiu): implement
-        Err(AuthProviderError::new(AuthProviderStatus::InternalError))
+        let request = build_user_info_request(access_token)?;
+        let (response_body, status_code) = await!(self.http_client.request(request))?;
+        parse_user_info_response(response_body, status_code)
     }
 }
 
@@ -505,6 +504,11 @@ mod tests {
         provider_proxy
     }
 
+    /// Construct an `AccessToken` from a str reference.
+    fn access_token(token: &str) -> AccessToken {
+        AccessToken(token.to_string())
+    }
+
     /// Construct an `AuthCode` from a str reference.
     fn auth_code(code: &str) -> AuthCode {
         AuthCode(code.to_string())
@@ -557,8 +561,53 @@ mod tests {
         let auth_provider = GoogleAuthProvider::new(TestWebFrameSupplier::new(), mock_http);
         let result = await!(auth_provider.exchange_auth_code(auth_code("auth-code")));
         assert_eq!(result.unwrap_err().status, AuthProviderStatus::NetworkError);
+        Ok(())
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_user_info_success() -> Result<(), Error> {
+        let mock_http = TestHttpClient::with_response(
+            Some(
+                "{\"sub\": \"test-id\", \"name\": \"Bill\", \"profile\": \"profile-url\", \
+                 \"picture\": \"picture-url\"}",
+            ),
+            StatusCode::OK,
+        );
+        let auth_provider = GoogleAuthProvider::new(TestWebFrameSupplier::new(), mock_http);
+
+        let user_info = await!(auth_provider.get_user_profile_info(access_token("access-token")))?;
+        assert_eq!(
+            user_info,
+            UserProfileInfo {
+                id: "test-id".to_string(),
+                display_name: Some("Bill".to_string()),
+                url: Some("profile-url".to_string()),
+                image_url: Some("picture-url".to_string()),
+            }
+        );
 
         Ok(())
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_user_info_failures() {
+        // Server side error
+        let mock_http = TestHttpClient::with_response(None, StatusCode::INTERNAL_SERVER_ERROR);
+        let auth_provider = GoogleAuthProvider::new(TestWebFrameSupplier::new(), mock_http);
+        let result = await!(auth_provider.get_user_profile_info(access_token("access-token")));
+        assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
+
+        // Malformed response
+        let mock_http = TestHttpClient::with_response(Some("malformed response"), StatusCode::OK);
+        let auth_provider = GoogleAuthProvider::new(TestWebFrameSupplier::new(), mock_http);
+        let result = await!(auth_provider.get_user_profile_info(access_token("access-token")));
+        assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
+
+        // Network error
+        let mock_http = TestHttpClient::with_error(AuthProviderStatus::NetworkError);
+        let auth_provider = GoogleAuthProvider::new(TestWebFrameSupplier::new(), mock_http);
+        let result = await!(auth_provider.get_user_profile_info(access_token("access-token")));
+        assert_eq!(result.unwrap_err().status, AuthProviderStatus::NetworkError);
     }
 
     #[fasync::run_until_stalled(test)]

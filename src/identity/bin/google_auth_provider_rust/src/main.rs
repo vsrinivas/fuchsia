@@ -16,6 +16,7 @@ mod constants;
 mod error;
 mod http;
 mod oauth;
+mod openid;
 mod web;
 
 use crate::auth_provider_factory::GoogleAuthProviderFactory;
