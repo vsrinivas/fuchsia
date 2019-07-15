@@ -416,15 +416,17 @@ mod test_real_service_connector {
 mod test_real_component_runner {
     use super::*;
 
-    const EXIT_WITH_CODE_RESOURCE_URL: &str =
-        "fuchsia-pkg://fuchsia.com/system-update-checker-tests/0#meta/exit-with-code.cmx";
+    const TEST_SHELL_COMMAND_RESOURCE_URL: &str =
+        "fuchsia-pkg://fuchsia.com/system-update-checker-tests/0#meta/test-shell-command.cmx";
 
     #[fasync::run_singlethreaded(test)]
     async fn test_run_a_component_that_exits_0() {
         let launcher_proxy = connect_to_service::<LauncherMarker>().expect("connect to launcher");
         let mut runner = RealComponentRunner { launcher_proxy };
-        let run_res = await!(runner
-            .run_until_exit(EXIT_WITH_CODE_RESOURCE_URL.to_string(), Some(vec!["0".to_string()])));
+        let run_res = await!(runner.run_until_exit(
+            TEST_SHELL_COMMAND_RESOURCE_URL.to_string(),
+            Some(vec!["!".to_string()])
+        ));
         assert!(run_res.is_ok(), "{:?}", run_res.err().unwrap());
     }
 
@@ -432,8 +434,9 @@ mod test_real_component_runner {
     async fn test_run_a_component_that_exits_1() {
         let launcher_proxy = connect_to_service::<LauncherMarker>().expect("connect to launcher");
         let mut runner = RealComponentRunner { launcher_proxy };
-        let run_res = await!(runner
-            .run_until_exit(EXIT_WITH_CODE_RESOURCE_URL.to_string(), Some(vec!["1".to_string()])));
+        let run_res = await!(
+            runner.run_until_exit(TEST_SHELL_COMMAND_RESOURCE_URL.to_string(), Some(vec![]))
+        );
         assert_eq!(run_res.err().expect("run should fail").kind(), ErrorKind::SystemUpdaterFailed);
     }
 }

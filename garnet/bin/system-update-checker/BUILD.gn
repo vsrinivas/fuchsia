@@ -64,6 +64,7 @@ package("system-update-checker") {
 test_package("system-update-checker-tests") {
   deps = [
     ":bin_test",
+    "//third_party/sbase:test_bin",
   ]
   tests = [
     {
@@ -74,16 +75,15 @@ test_package("system-update-checker-tests") {
   ]
   binaries = [
     {
-      name = "exit-with-code"
-      source = rebase_path(
-              "//garnet/bin/system-update-checker/test/exit-with-code.sh")
+      name = "test-shell-command"
+      source = "test"
     },
   ]
   meta = [
     {
       path = rebase_path(
-              "//garnet/bin/system-update-checker/meta/exit-with-code.cmx")
-      dest = "exit-with-code.cmx"
+              "//garnet/bin/system-update-checker/meta/test-shell-command.cmx")
+      dest = "test-shell-command.cmx"
     },
   ]
 }
