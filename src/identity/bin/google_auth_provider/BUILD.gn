@@ -51,7 +51,6 @@ executable("google_auth_provider_unittests") {
 
 source_set("unittests") {
   testonly = true
-  output_name = "google_auth_provider_unittests"
 
   sources = [
     "factory_impl_unittest.cc",
