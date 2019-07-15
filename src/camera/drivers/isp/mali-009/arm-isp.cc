@@ -484,9 +484,7 @@ zx_status_t ArmIspDevice::Create(void* ctx, zx_device_t* parent) {
   // isp_device->StartStreaming();
 
   zx_device_prop_t props[] = {
-      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_ARM},
-      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_ISP},
-      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_ARM_MALI_IV009},
+      {BIND_PLATFORM_PROTO, 0, ZX_PROTOCOL_ISP},
   };
 
   status = isp_device->DdkAdd("arm-isp", 0, props, countof(props));
