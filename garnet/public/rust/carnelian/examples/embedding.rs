@@ -80,14 +80,14 @@ impl EmbeddingViewAssistant {
         let view_provider = self.app.connect_to_service::<ViewProviderMarker>()?;
         view_provider.create_view(token_pair.view_token.value, None, None)?;
 
-        let holder_node = EntityNode::new(context.session.clone());
+        let holder_node = EntityNode::new(context.session().clone());
         let view_holder = ViewHolder::new(
-            context.session.clone(),
+            context.session().clone(),
             token_pair.view_holder_token,
             Some(String::from("Carnelian Embedded View")),
         );
         holder_node.attach(&view_holder);
-        context.root_node.add_child(&holder_node);
+        context.root_node().add_child(&holder_node);
 
         let view_data = ViewData::new(holder_node, view_holder);
         self.views.insert(view_data.host_view_holder.id(), view_data);
@@ -142,11 +142,11 @@ impl EmbeddingViewAssistant {
 impl ViewAssistant for EmbeddingViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
         set_node_color(
-            context.session,
+            context.session(),
             &self.background_node,
             &Color { r: 0x00, g: 0xc0, b: 0x00, a: 0xff },
         );
-        context.root_node.add_child(&self.background_node);
+        context.root_node().add_child(&self.background_node);
 
         for _ in 1..5 {
             self.create_and_setup_view(&context)?;
@@ -161,7 +161,7 @@ impl ViewAssistant for EmbeddingViewAssistant {
         let center_x = self.size.width * 0.5;
         let center_y = self.size.height * 0.5;
         self.background_node.set_shape(&Rectangle::new(
-            context.session.clone(),
+            context.session().clone(),
             self.size.width,
             self.size.height,
         ));

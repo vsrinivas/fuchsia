@@ -197,24 +197,24 @@ impl VoilaViewAssistant {
 impl ViewAssistant for VoilaViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
         set_node_color(
-            context.session,
+            context.session(),
             &self.background_node,
             &Color { r: 0x00, g: 0x00, b: 0xff, a: 0xff },
         );
-        context.root_node.add_child(&self.background_node);
+        context.root_node().add_child(&self.background_node);
 
         set_node_color(
-            context.session,
+            context.session(),
             &self.circle_node,
             &Color { r: 0xff, g: 0x00, b: 0xff, a: 0xff },
         );
-        context.root_node.add_child(&self.circle_node);
+        context.root_node().add_child(&self.circle_node);
 
         let profile_random_number = rand::thread_rng().gen_range(1, 1000000);
         let profile_id = format!("voila-p{}", profile_random_number.to_string());
 
         for _x in 0..self.options.replica_count {
-            self.create_replica(&profile_id, context.session, context.root_node)?;
+            self.create_replica(&profile_id, context.session(), context.root_node())?;
         }
 
         Ok(())
@@ -224,19 +224,19 @@ impl ViewAssistant for VoilaViewAssistant {
         let center_x = context.size.width * 0.5;
         let center_y = context.size.height * 0.5;
         self.background_node.set_shape(&Rectangle::new(
-            context.session.clone(),
+            context.session().clone(),
             context.size.width,
             context.size.height,
         ));
         self.background_node.set_translation(center_x, center_y, BACKGROUND_Z);
 
         let circle_radius = context.size.width.min(context.size.height) * 0.25;
-        self.circle_node.set_shape(&Circle::new(context.session.clone(), circle_radius));
+        self.circle_node.set_shape(&Circle::new(context.session().clone(), circle_radius));
         self.circle_node.set_translation(center_x, center_y, CIRCLE_Z);
 
         let mut views: Vec<&mut ChildViewData> =
             self.replicas.iter_mut().map(|(_key, child_session)| &mut child_session.view).collect();
-        layout(&mut views, &context.size, &context.session)?;
+        layout(&mut views, &context.size, &context.session())?;
         Ok(())
     }
 

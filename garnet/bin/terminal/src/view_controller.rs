@@ -155,9 +155,9 @@ impl ViewController {
         {
             let guard = self.image_cycler.acquire(info).expect("failed to allocate buffer");
             let mut face = self.face.lock();
-            let mut canvas = Canvas::<MappingPixelSink>::new(
+            let mut canvas = Canvas::new(
                 IntSize::new(physical_width as i32, physical_height as i32),
-                guard.image().mapping().clone(),
+                MappingPixelSink::new(&guard.image().mapping()),
                 stride,
                 4,
             );

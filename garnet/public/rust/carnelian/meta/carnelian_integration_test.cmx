@@ -1,0 +1,24 @@
+{
+    "program": {
+        "binary": "test/carnelian_integration_test"
+    },
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx",
+                "fuchsia.ui.policy.Presenter": "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",
+                "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
+                "fuchsia.vulkan.loader.Loader": "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"
+            }
+        }
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.scenic.Scenic"
+        ]
+    }
+}

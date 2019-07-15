@@ -20,7 +20,7 @@ mod scenic_utils;
 mod view;
 
 pub use crate::{
-    app::{App, AppAssistant},
+    app::{App, AppAssistant, ViewMode},
     canvas::{
         measure_text, Canvas, Color, FontDescription, FontFace, MappingPixelSink, Paint, PixelSink,
     },

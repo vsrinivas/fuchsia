@@ -12,21 +12,17 @@ use fidl_fuchsia_hardware_display::{
     ProviderSynchronousProxy,
 };
 use fuchsia_async as fasync;
-use fuchsia_runtime::vmar_root_self;
 use fuchsia_zircon::{
     self as zx,
-    sys::{
-        zx_cache_flush, zx_cache_policy_t::ZX_CACHE_POLICY_WRITE_COMBINING,
-        ZX_CACHE_FLUSH_DATA, ZX_TIME_INFINITE,
-    },
-    VmarFlags, Vmo,
+    sys::{zx_cache_policy_t::ZX_CACHE_POLICY_WRITE_COMBINING, ZX_TIME_INFINITE},
+    HandleBased, Rights, Vmo,
 };
 use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
-use shared_buffer::SharedBuffer;
+use mapped_vmo::Mapping;
 use std::cell::RefCell;
 use std::fs::OpenOptions;
 use std::rc::Rc;
-use std::{thread, time};
+use std::{sync::Arc, thread, time};
 
 #[allow(non_camel_case_types, non_upper_case_globals)]
 const ZX_PIXEL_FORMAT_NONE: u32 = 0;
@@ -122,9 +118,9 @@ impl Config {
 
 pub struct Frame {
     config: Config,
+    vmo: Vmo,
     image_id: u64,
-    pixel_buffer_addr: usize,
-    pixel_buffer: SharedBuffer,
+    pub mapping: Arc<Mapping>,
 }
 
 impl Frame {
@@ -200,33 +196,30 @@ impl Frame {
     pub fn new(framebuffer: &FrameBuffer, executor: &mut fasync::Executor) -> Result<Frame, Error> {
         let image_vmo = Self::allocate_image_vmo(framebuffer, executor)
             .context("Frame::new() allocate_image_vmo")?;
-
         image_vmo
             .set_cache_policy(ZX_CACHE_POLICY_WRITE_COMBINING)
             .unwrap_or_else(|_err| println!("set_cache_policy failed"));
 
-        // map image VMO
-        let pixel_buffer_addr = vmar_root_self().map(
-            0,
+        let mapping = Mapping::create_from_vmo(
             &image_vmo,
-            0,
             framebuffer.byte_size(),
-            VmarFlags::PERM_READ | VmarFlags::PERM_WRITE,
-        )?;
+            zx::VmarFlags::PERM_READ
+                | zx::VmarFlags::PERM_WRITE
+                | zx::VmarFlags::MAP_RANGE
+                | zx::VmarFlags::REQUIRE_NON_RESIZABLE,
+        )
+        .context("Frame::new() Mapping::create_from_vmo failed")?;
 
         // import image VMO
-        let image_id = Self::import_image_vmo(framebuffer, executor, image_vmo)
+        let imported_image_vmo = image_vmo.duplicate_handle(Rights::SAME_RIGHTS)?;
+        let image_id = Self::import_image_vmo(framebuffer, executor, imported_image_vmo)
             .context("Frame::new() import_image_vmo")?;
 
-        // construct frame
-        let frame_buffer_pixel_ptr = pixel_buffer_addr as *mut u8;
         Ok(Frame {
             config: framebuffer.get_config(),
             image_id: image_id,
-            pixel_buffer_addr,
-            pixel_buffer: unsafe {
-                SharedBuffer::new(frame_buffer_pixel_ptr, framebuffer.byte_size())
-            },
+            vmo: image_vmo,
+            mapping: Arc::new(mapping),
         })
     }
 
@@ -239,7 +232,7 @@ impl Frame {
     }
 
     pub fn write_pixel_at_offset(&mut self, offset: usize, value: &[u8]) {
-        self.pixel_buffer.write_at(offset, value);
+        self.mapping.write_at(offset, value);
     }
 
     pub fn fill_rectangle(&mut self, x: u32, y: u32, width: u32, height: u32, value: &[u8]) {
@@ -255,14 +248,6 @@ impl Frame {
     }
 
     pub fn present(&self, framebuffer: &FrameBuffer) -> Result<(), Error> {
-        // TODO: This explicitly violates the safety constraints of SharedBuffer.
-        let frame_buffer_pixel_ptr = self.pixel_buffer_addr as *mut u8;
-        let result = unsafe {
-            zx_cache_flush(frame_buffer_pixel_ptr, self.byte_size(), ZX_CACHE_FLUSH_DATA)
-        };
-        if result != 0 {
-            return Err(format_err!("zx_cache_flush failed: {}", result));
-        }
         framebuffer
             .controller
             .set_layer_image(framebuffer.layer_id, self.image_id, 0, 0)
@@ -281,15 +266,6 @@ impl Frame {
 
     pub fn pixel_size_bytes(&self) -> usize {
         self.config.pixel_size_bytes as usize
-    }
-}
-
-impl Drop for Frame {
-    fn drop(&mut self) {
-        unsafe {
-            let (ptr, len) = self.pixel_buffer.as_ptr_len();
-            vmar_root_self().unmap(ptr as usize, len).unwrap();
-        }
     }
 }
 

@@ -5,13 +5,15 @@
 #![feature(async_await, await_macro)]
 #![deny(warnings)]
 
-use carnelian::{Canvas, Color, Coord, IntSize, PixelSink, Point, Rect, Size};
-use failure::{bail, Error, ResultExt};
-use fuchsia_async::{self as fasync, Interval};
-use fuchsia_framebuffer::{Frame, FrameBuffer, PixelFormat};
-use fuchsia_zircon::{ClockId, Duration, Time};
-use futures::{channel::oneshot::Canceled, prelude::*};
+use carnelian::{
+    AnimationMode, App, AppAssistant, Canvas, Color, Coord, MappingPixelSink, Point, Rect, Size,
+    ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
+};
+use euclid::rect;
+use failure::Error;
+use fuchsia_zircon::{ClockId, Time};
 use std::{
+    env,
     f32::consts::PI,
     io::{self, Read},
     thread,
@@ -19,32 +21,42 @@ use std::{
 
 /// Convenience function that can be called from main and causes the Fuchsia process being
 /// run over ssh to be terminated when the user hits control-C.
-pub fn wait_for_close() -> impl Future<Output = ()> {
-    let (sender, receiver) = futures::channel::oneshot::channel();
+pub fn wait_for_close() {
+    if let Some(argument) = env::args().next() {
+        if !argument.starts_with("/tmp") {
+            return;
+        }
+    }
+
     thread::spawn(move || loop {
         let mut input = [0; 1];
         match io::stdin().read_exact(&mut input) {
             Ok(()) => {}
             Err(_) => {
-                let _ = sender.send(());
-                break;
+                std::process::exit(0);
             }
         }
     });
-    receiver.map(|_: Result<(), Canceled>| ())
 }
 
-struct FramePixelSink {
-    frame: Frame,
-}
+struct DrawingAppAssistant;
 
-impl PixelSink for FramePixelSink {
-    fn write_pixel_at_offset(&mut self, offset: usize, value: &[u8]) {
-        self.frame.write_pixel_at_offset(offset, &value);
+impl AppAssistant for DrawingAppAssistant {
+    fn setup(&mut self) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn create_view_assistant_canvas(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
+        let r = rect(0.0, 0.0, 0.0, 0.0);
+        Ok(Box::new(DrawingViewAssistant::new(r)?))
+    }
+
+    fn get_mode(&self) -> ViewMode {
+        ViewMode::Canvas
     }
 }
 
-struct DrawingExample {
+struct DrawingViewAssistant {
     bounds: Rect,
     start: Time,
     bg_color: Color,
@@ -56,8 +68,8 @@ struct DrawingExample {
     last_radius: Option<Coord>,
 }
 
-impl DrawingExample {
-    pub fn new(bounds: Rect) -> Result<DrawingExample, Error> {
+impl DrawingViewAssistant {
+    pub fn new(bounds: Rect) -> Result<DrawingViewAssistant, Error> {
         let bg_color = Color::from_hash_code("#EBD5B3")?;
         let color1 = Color::from_hash_code("#B7410E")?;
         let color2 = Color::from_hash_code("#008080")?;
@@ -65,7 +77,7 @@ impl DrawingExample {
         let color4 = Color::from_hash_code("#00008B")?;
         let color5 = Color::from_hash_code("#7B68EE")?;
 
-        let example = DrawingExample {
+        Ok(DrawingViewAssistant {
             bounds,
             start: Time::get(ClockId::Monotonic),
             bg_color,
@@ -75,13 +87,30 @@ impl DrawingExample {
             color4,
             color5,
             last_radius: None,
-        };
-        Ok(example)
+        })
     }
 
-    pub fn update<T: PixelSink>(&mut self, canvas: &mut Canvas<T>) {
+    pub fn inval_circle(pt: &Point, radius: Coord, canvas: &mut Canvas<MappingPixelSink>) {
+        let diameter = radius * 2.0;
+        let top_left = *pt - Point::new(radius, radius);
+        let circle_bounds = Rect::new(top_left.to_point(), Size::new(diameter, diameter));
+        canvas.add_to_update_area(&circle_bounds);
+    }
+}
+
+impl ViewAssistant for DrawingViewAssistant {
+    fn setup(&mut self, _: &ViewAssistantContext) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
         const SPEED: f32 = 0.25;
         const SECONDS_PER_NANOSECOND: f32 = 1e-9;
+
+        let canvas = &mut context.canvas.as_ref().unwrap().borrow_mut();
+
+        let new_bounds = Rect::new(Point::zero(), context.size);
+        self.bounds = new_bounds;
 
         let min_dimension = self.bounds.size.width.min(self.bounds.size.height);
         let grid_size = min_dimension / 8.0;
@@ -131,52 +160,18 @@ impl DrawingExample {
         canvas.fill_roundrect(&r_clipped2, grid_size / 5.0, self.color5);
 
         canvas.reset_update_area();
+
+        Ok(())
     }
 
-    pub fn inval_circle<T: PixelSink>(pt: &Point, radius: Coord, canvas: &mut Canvas<T>) {
-        let diameter = radius * 2.0;
-        let top_left = *pt - Point::new(radius, radius);
-        let circle_bounds = Rect::new(top_left.to_point(), Size::new(diameter, diameter));
-        canvas.add_to_update_area(&circle_bounds);
+    fn initial_animation_mode(&mut self) -> AnimationMode {
+        return AnimationMode::EveryFrame;
     }
 }
 
 fn main() -> Result<(), Error> {
     println!("drawing: started");
-    let close = wait_for_close();
-    let mut executor = fasync::Executor::new().context("Failed to create executor")?;
-    let fb = FrameBuffer::new(None, &mut executor).context("Failed to create framebuffer")?;
-    let config = fb.get_config();
-    if config.format != PixelFormat::Argb8888 && config.format != PixelFormat::Rgb565 {
-        bail!("Unsupported pixel format {:#?}", config.format);
-    }
-
-    let display_size = IntSize::new(config.width as i32, config.height as i32);
-
-    let frame = fb.new_frame(&mut executor)?;
-
-    frame.present(&fb)?;
-
-    let sink = FramePixelSink { frame };
-    let mut canvas = Canvas::new_with_sink(
-        display_size,
-        sink,
-        config.linear_stride_bytes() as u32,
-        config.pixel_size_bytes,
-    );
-
-    let r = Rect::new(Point::new(0.0, 0.0), Size::new(config.width as f32, config.height as f32));
-    let timer = Interval::new(Duration::from_millis(1000 / 60));
-    let mut example = DrawingExample::new(r)?;
-    example.update(&mut canvas);
-    let f = timer
-        .map(move |_| {
-            example.update(&mut canvas);
-        })
-        .collect::<()>();
-    fasync::spawn_local(f);
-
-    executor.run_singlethreaded(close);
-
-    Ok(())
+    wait_for_close();
+    let assistant = DrawingAppAssistant {};
+    App::run(Box::new(assistant))
 }

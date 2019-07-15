@@ -44,8 +44,8 @@ impl RainbowViewAssistant {}
 impl ViewAssistant for RainbowViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
         for _ in 0..BAND_COUNT {
-            let node = ShapeNode::new(context.session.clone());
-            context.root_node.add_child(&node);
+            let node = ShapeNode::new(context.session().clone());
+            context.root_node().add_child(&node);
             self.colors.push(node);
         }
 
@@ -63,13 +63,13 @@ impl ViewAssistant for RainbowViewAssistant {
             let color_index = index % COLOR_CODES.len();
             let center_x = context.size.width * 0.5;
             let center_y = context.size.height * 0.5;
-            band.set_shape(&Rectangle::new(context.session.clone(), width, height));
+            band.set_shape(&Rectangle::new(context.session().clone(), width, height));
             band.set_translation(center_x, center_y, z);
             z -= 0.01;
             width -= band_width;
             height -= band_height;
             set_node_color(
-                context.session,
+                context.session(),
                 &band,
                 &Color::from_hash_code(COLOR_CODES[color_index])?,
             );

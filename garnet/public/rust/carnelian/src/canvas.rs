@@ -13,11 +13,14 @@ use std::sync::Arc;
 
 /// Struct representing an RGBA color value
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
-#[allow(missing_docs)]
 pub struct Color {
+    /// Red
     pub r: u8,
+    /// Green
     pub g: u8,
+    /// Blue
     pub b: u8,
+    /// Alpha
     pub a: u8,
 }
 
@@ -30,24 +33,22 @@ pub fn to_565(pixel: &[u8; 4]) -> [u8; 2] {
     [b2, b1]
 }
 
-#[allow(missing_docs)]
 impl Color {
+    /// Create a new color set to black with full alpha
     pub fn new() -> Color {
         Color { r: 0, g: 0, b: 0, a: 255 }
     }
 
+    /// Create a new color set to white with full alpha
     pub fn white() -> Color {
         Color { r: 255, g: 255, b: 255, a: 255 }
     }
 
-    pub fn extract_hex_slice(hash_code: &str, start_index: usize) -> Result<u8, Error> {
+    fn extract_hex_slice(hash_code: &str, start_index: usize) -> Result<u8, Error> {
         Ok(u8::from_str_radix(&hash_code[start_index..start_index + 2], 16)?)
     }
 
-    pub fn to_float_color_component(component: u8) -> f64 {
-        (component as f64 * 100.0 / 255.0).round() / 100.0
-    }
-
+    /// Create a color from a six hexadecimal digit string like '#EBD5B3'
     pub fn from_hash_code(hash_code: &str) -> Result<Color, Error> {
         let mut new_color = Color::new();
         new_color.r = Color::extract_hex_slice(&hash_code, 1)?;
@@ -56,10 +57,12 @@ impl Color {
         Ok(new_color)
     }
 
+    /// Create a Scenic-compatible [`ColorRgba`]
     pub fn make_color_rgba(&self) -> ColorRgba {
         ColorRgba { red: self.r, green: self.g, blue: self.b, alpha: self.a }
     }
 
+    /// Create a 565 array for this color
     pub fn to_565(&self) -> [u8; 2] {
         let pixel = [self.r, self.g, self.b, self.a];
         to_565(&pixel)
@@ -68,14 +71,15 @@ impl Color {
 
 /// Struct combining a foreground and background color.
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
-#[allow(missing_docs)]
 pub struct Paint {
+    /// Color for foreground painting
     pub fg: Color,
+    /// Color for background painting
     pub bg: Color,
 }
 
 impl Paint {
-    #[allow(missing_docs)]
+    /// Create a paint from a pair of hash codes
     pub fn from_hash_codes(fg: &str, bg: &str) -> Result<Paint, Error> {
         Ok(Paint { fg: Color::from_hash_code(fg)?, bg: Color::from_hash_code(bg)? })
     }
@@ -111,23 +115,6 @@ impl<'a> FontFace<'a> {
         let collection = FontCollection::from_bytes(data as &[u8])?;
         let font = collection.into_font()?;
         Ok(FontFace { font: font })
-    }
-}
-
-/// Trait abstracting a target to which pixels can be written.
-pub trait PixelSink {
-    /// Write an RGBA pixel at a byte offset within the sink.
-    fn write_pixel_at_offset(&mut self, offset: usize, value: &[u8]);
-}
-
-/// Pixel sink targeting a shared buffer.
-pub struct MappingPixelSink {
-    mapping: Arc<Mapping>,
-}
-
-impl PixelSink for MappingPixelSink {
-    fn write_pixel_at_offset(&mut self, offset: usize, value: &[u8]) {
-        self.mapping.write_at(offset, &value);
     }
 }
 
@@ -382,6 +369,31 @@ mod update_area_tests {
 
 }
 
+/// Trait abstracting a target to which pixels can be written. Only used currently
+/// for testing.
+pub trait PixelSink {
+    /// Write an RGBA pixel at a byte offset within the sink.
+    fn write_pixel_at_offset(&mut self, offset: usize, value: &[u8]);
+}
+
+/// Pixel sink targeting a shared buffer.
+pub struct MappingPixelSink {
+    mapping: Arc<Mapping>,
+}
+
+impl MappingPixelSink {
+    /// Make a new MappingPixelSink for the mapped VMO.
+    pub fn new(mapping: &Arc<Mapping>) -> MappingPixelSink {
+        MappingPixelSink { mapping: mapping.clone() }
+    }
+}
+
+impl PixelSink for MappingPixelSink {
+    fn write_pixel_at_offset(&mut self, offset: usize, value: &[u8]) {
+        self.mapping.write_at(offset, &value);
+    }
+}
+
 /// Canvas is used to do simple graphics and text rendering into a
 /// SharedBuffer that can then be displayed using Scenic or
 /// Display Manager.
@@ -397,38 +409,13 @@ pub struct Canvas<T: PixelSink> {
 
 impl<T: PixelSink> Canvas<T> {
     /// Create a canvas targeting a shared buffer with stride.
-    pub fn new(
-        size: IntSize,
-        mapping: Arc<Mapping>,
-        row_stride: u32,
-        col_stride: u32,
-    ) -> Canvas<MappingPixelSink> {
-        let pixel_sink = MappingPixelSink { mapping };
+    pub fn new(size: IntSize, pixel_sink: T, row_stride: u32, col_stride: u32) -> Self {
         let bounds = IntRect::new(IntPoint::zero(), size);
         Canvas {
             pixel_sink,
             row_stride,
             col_stride,
             bounds: bounds,
-            current_clip: None,
-            update_area: UpdateArea::new_with_bounds_patch(&bounds),
-        }
-    }
-
-    /// Create a canvas targeting a particular pixel sink and
-    /// with a specific row stride in bytes.
-    pub fn new_with_sink(
-        size: IntSize,
-        pixel_sink: T,
-        row_stride: u32,
-        col_stride: u32,
-    ) -> Canvas<T> {
-        let bounds = IntRect::new(IntPoint::zero(), size);
-        Canvas {
-            pixel_sink,
-            row_stride,
-            col_stride,
-            bounds,
             current_clip: None,
             update_area: UpdateArea::new_with_bounds_patch(&bounds),
         }
@@ -755,12 +742,7 @@ mod tests {
             pixel_size_bytes: 4,
         };
         let sink = TestPixelSink::new(size);
-        Canvas::new_with_sink(
-            size,
-            sink,
-            config.linear_stride_bytes() as u32,
-            config.pixel_size_bytes,
-        )
+        Canvas::new(size, sink, config.linear_stride_bytes() as u32, config.pixel_size_bytes)
     }
 
     #[test]
@@ -769,7 +751,7 @@ mod tests {
         let r = Rect::new(Point::new(0.0, 0.0), Size::new(0.0, 0.0));
         let color = Color::from_hash_code("#EBD5B3").expect("color failed to parse");
         canvas.fill_rect(&r, color);
-        assert!(canvas.pixel_sink.touched_offsets.is_empty(), "Expected no pixles touched");
+        assert!(canvas.pixel_sink.touched_offsets.is_empty(), "Expected no pixels touched");
     }
 
     #[test]
@@ -777,15 +759,12 @@ mod tests {
         let mut canvas = make_test_canvas(test_canvas_size());
         let color = Color::from_hash_code("#EBD5B3").expect("color failed to parse");
         let r = Rect::new(Point::new(10000.0, 10000.0), Size::new(20.0, 20.0));
-        println!("### about to do fill_roundrect");
         canvas.fill_roundrect(&r, 4.0, color);
-        println!("### about to do fill_circle");
         canvas.fill_circle(&Point::new(20000.0, -10000.0), 204.0, color);
-        assert!(canvas.pixel_sink.touched_offsets.is_empty(), "Expected no pixles touched");
+        assert!(canvas.pixel_sink.touched_offsets.is_empty(), "Expected no pixels touched");
         let r = Rect::new(Point::new(-10.0, -10.0), Size::new(20.0, 20.0));
-        println!("### about to do fill_rect");
         canvas.fill_rect(&r, color);
-        assert!(canvas.pixel_sink.touched_offsets.len() > 0, "Expected some pixles touched");
+        assert!(canvas.pixel_sink.touched_offsets.len() > 0, "Expected some pixels touched");
     }
 
     #[test]

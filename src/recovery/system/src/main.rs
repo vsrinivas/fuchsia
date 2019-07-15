@@ -6,12 +6,12 @@
 #![deny(warnings)]
 
 use carnelian::{
-    measure_text, Canvas, Color, FontDescription, FontFace, IntSize, Paint, PixelSink, Point, Rect,
-    Size,
+    measure_text, Canvas, Color, FontDescription, FontFace, IntSize, MappingPixelSink, Paint,
+    PixelSink, Point, Rect, Size,
 };
 use failure::{bail, Error, ResultExt};
 use fuchsia_async as fasync;
-use fuchsia_framebuffer::{Config, Frame, FrameBuffer, PixelFormat};
+use fuchsia_framebuffer::{Config, FrameBuffer, PixelFormat};
 use futures::StreamExt;
 
 mod setup;
@@ -65,17 +65,7 @@ impl<'a, T: PixelSink> RecoveryUI<'a, T> {
     }
 }
 
-struct FramePixelSink {
-    frame: Frame,
-}
-
-impl PixelSink for FramePixelSink {
-    fn write_pixel_at_offset(&mut self, offset: usize, value: &[u8]) {
-        self.frame.write_pixel_at_offset(offset, &value);
-    }
-}
-
-async fn run<'a, T: PixelSink>(ui: &'a mut RecoveryUI<'a, T>) -> Result<(), Error> {
+async fn run<'a>(ui: &'a mut RecoveryUI<'a, MappingPixelSink>) -> Result<(), Error> {
     ui.draw("Fuchsia System Recovery", "Waiting...");
 
     let mut receiver = setup::start_server()?;
@@ -103,10 +93,9 @@ fn main() -> Result<(), Error> {
 
     let face = FontFace::new(FONT_DATA).unwrap();
 
-    let sink = FramePixelSink { frame };
-    let canvas = Canvas::new_with_sink(
+    let canvas = Canvas::new(
         display_size,
-        sink,
+        MappingPixelSink::new(&frame.mapping),
         config.linear_stride_bytes() as u32,
         config.pixel_size_bytes,
     );
@@ -143,7 +132,7 @@ mod tests {
             format: PixelFormat::Argb8888,
             pixel_size_bytes: 4,
         };
-        let canvas = Canvas::new_with_sink(
+        let canvas = Canvas::new(
             IntSize::new(WIDTH, HEIGHT),
             sink,
             config.linear_stride_bytes() as u32,

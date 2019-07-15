@@ -133,15 +133,15 @@ const STATES: &[&str] = &[
 
 impl ViewAssistant for TextScrollViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        context.root_node.add_child(&self.container);
+        context.root_node().add_child(&self.container);
         self.container.add_child(&self.background_node);
-        set_node_color(context.session, &self.background_node, &self.bg_color);
+        set_node_color(context.session(), &self.background_node, &self.bg_color);
 
         const AESTHETICALLY_PLEASING_INITAL_Y: f32 = 10.0;
         let mut y = AESTHETICALLY_PLEASING_INITAL_Y;
         for line in STATES.iter() {
             if line.len() > 0 {
-                let label = Label::new(context.session, line)?;
+                let label = Label::new(context.session(), line)?;
                 let size = label.dimensions(LINE_FONT_SIZE);
                 y += size.height;
                 const AESTHETICALLY_PLEASING_LINE_PADDING: f32 = 4.0;
@@ -162,7 +162,7 @@ impl ViewAssistant for TextScrollViewAssistant {
         let center_x = context.size.width * 0.5;
         let center_y = context.size.height * 0.5;
         self.background_node.set_shape(&Rectangle::new(
-            context.session.clone(),
+            context.session().clone(),
             context.size.width,
             context.size.height,
         ));

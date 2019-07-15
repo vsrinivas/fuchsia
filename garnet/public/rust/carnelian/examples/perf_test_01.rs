@@ -101,7 +101,7 @@ impl TouchHandler {
             _ => ShapeType::Circle,
         };
         let mut t = TouchHandler {
-            shape: ShapeNode::new(context.session.clone()),
+            shape: ShapeNode::new(context.session().clone()),
             size: Size::new(60.0, 60.0),
             shape_type,
         };
@@ -110,11 +110,11 @@ impl TouchHandler {
     }
 
     fn setup(&mut self, context: &mut ViewAssistantContext) {
-        set_node_color(context.session, &self.shape, &random_color());
+        set_node_color(context.session(), &self.shape, &random_color());
         match self.shape_type {
             ShapeType::Rectangle => {
                 self.shape.set_shape(&Rectangle::new(
-                    context.session.clone(),
+                    context.session().clone(),
                     self.size.width,
                     self.size.height,
                 ));
@@ -123,7 +123,7 @@ impl TouchHandler {
             ShapeType::RoundedRectangle => {
                 let corner_radius = (self.size.width / 8.0).ceil();
                 self.shape.set_shape(&RoundedRectangle::new(
-                    context.session.clone(),
+                    context.session().clone(),
                     self.size.width,
                     self.size.height,
                     corner_radius,
@@ -134,10 +134,11 @@ impl TouchHandler {
             }
 
             ShapeType::Circle => {
-                self.shape.set_shape(&Circle::new(context.session.clone(), self.size.width / 2.0));
+                self.shape
+                    .set_shape(&Circle::new(context.session().clone(), self.size.width / 2.0));
             }
         }
-        context.root_node.add_child(&self.shape);
+        context.root_node().add_child(&self.shape);
     }
 
     fn update(&mut self, context: &mut ViewAssistantContext, pointer_event: &PointerEvent) {
@@ -216,9 +217,13 @@ impl ShapeDropViewAssistant {
 
 impl ViewAssistant for ShapeDropViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        context.root_node.add_child(&self.background_node);
+        context.root_node().add_child(&self.background_node);
 
-        set_node_color(context.session, &self.background_node, &Color::from_hash_code("#2F4F4F")?);
+        set_node_color(
+            context.session(),
+            &self.background_node,
+            &Color::from_hash_code("#2F4F4F")?,
+        );
 
         Ok(())
     }
@@ -227,7 +232,7 @@ impl ViewAssistant for ShapeDropViewAssistant {
         let center_x = context.size.width * 0.5;
         let center_y = context.size.height * 0.5;
         self.background_node.set_shape(&Rectangle::new(
-            context.session.clone(),
+            context.session().clone(),
             context.size.width,
             context.size.height,
         ));

@@ -67,9 +67,9 @@ impl Label {
             let guard = self.image_cycler.acquire(info).context("failed to allocate buffer")?;
 
             // Create a canvas to render into the buffer
-            let mut canvas = Canvas::<MappingPixelSink>::new(
+            let mut canvas = Canvas::new(
                 IntSize::new(w, h),
-                guard.image().mapping().clone(),
+                MappingPixelSink::new(&guard.image().mapping()),
                 stride,
                 4,
             );

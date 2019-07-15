@@ -55,7 +55,7 @@ impl ClockViewAssistant {
         let center_x = context.size.width * 0.5;
         let center_y = context.size.height * 0.5;
         node.set_shape(&RoundedRectangle::new(
-            context.session.clone(),
+            context.session().clone(),
             hand_width,
             hand_height,
             radius,
@@ -71,18 +71,22 @@ impl ClockViewAssistant {
 
 impl ViewAssistant for ClockViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        context.root_node.add_child(&self.background_node);
-        set_node_color(context.session, &self.background_node, &Color::from_hash_code("#B31B1B")?);
+        context.root_node().add_child(&self.background_node);
+        set_node_color(
+            context.session(),
+            &self.background_node,
+            &Color::from_hash_code("#B31B1B")?,
+        );
 
         let hand_color = Color::from_hash_code("#A9A9A9")?;
-        context.root_node.add_child(&self.hour_hand_node);
-        set_node_color(context.session, &self.hour_hand_node, &hand_color);
+        context.root_node().add_child(&self.hour_hand_node);
+        set_node_color(context.session(), &self.hour_hand_node, &hand_color);
 
-        context.root_node.add_child(&self.minute_hand_node);
-        set_node_color(context.session, &self.minute_hand_node, &hand_color);
+        context.root_node().add_child(&self.minute_hand_node);
+        set_node_color(context.session(), &self.minute_hand_node, &hand_color);
 
-        context.root_node.add_child(&self.second_hand_node);
-        set_node_color(context.session, &self.second_hand_node, &hand_color);
+        context.root_node().add_child(&self.second_hand_node);
+        set_node_color(context.session(), &self.second_hand_node, &hand_color);
 
         Ok(())
     }
@@ -108,7 +112,7 @@ impl ViewAssistant for ClockViewAssistant {
         let center_x = context.size.width * 0.5;
         let center_y = context.size.height * 0.5;
         self.background_node.set_shape(&Rectangle::new(
-            context.session.clone(),
+            context.session().clone(),
             context.size.width,
             context.size.height,
         ));
@@ -144,7 +148,7 @@ impl ViewAssistant for ClockViewAssistant {
         let hand_width = min_size * MIN_SEC_HAND_FACTOR;
         let hand_height = hand_width * 0.02;
         self.second_hand_node.set_shape(&RoundedRectangle::new(
-            context.session.clone(),
+            context.session().clone(),
             hand_width,
             hand_height,
             radius,

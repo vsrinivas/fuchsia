@@ -95,11 +95,11 @@ impl SessionShellViewAssistant {
 
 impl ViewAssistant for SessionShellViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        set_node_color(context.session, &self.background_node, &Color::from_hash_code("#0D0208")?);
-        context.root_node.add_child(&self.background_node);
-        context.root_node.add_child(self.label.node());
-        set_node_color(context.session, &self.indicator_node, &Color::from_hash_code("#00FF41")?);
-        context.root_node.add_child(&self.indicator_node);
+        set_node_color(context.session(), &self.background_node, &Color::from_hash_code("#0D0208")?);
+        context.root_node().add_child(&self.background_node);
+        context.root_node().add_child(self.label.node());
+        set_node_color(context.session(), &self.indicator_node, &Color::from_hash_code("#00FF41")?);
+        context.root_node().add_child(&self.indicator_node);
         Ok(())
     }
 
@@ -113,7 +113,7 @@ impl ViewAssistant for SessionShellViewAssistant {
         let center_x = context.size.width * 0.5;
         let center_y = context.size.height * 0.5;
         self.background_node.set_shape(&Rectangle::new(
-            context.session.clone(),
+            context.session().clone(),
             context.size.width,
             context.size.height,
         ));
@@ -129,7 +129,7 @@ impl ViewAssistant for SessionShellViewAssistant {
 
         // Update and position the indicator.
         let circle_radius = context.size.width.min(context.size.height) * 0.25;
-        self.indicator_node.set_shape(&Circle::new(context.session.clone(), circle_radius));
+        self.indicator_node.set_shape(&Circle::new(context.session().clone(), circle_radius));
         self.indicator_node.set_translation(center_x, center_y, INDICATOR_Z);
 
         Ok(())

@@ -1302,6 +1302,7 @@ group("unicode_utils") {
 group("carnelian") {
   testonly = true
   public_deps = [
+    "//garnet/public/rust/carnelian:carnelian_integration_test",
     "//garnet/public/rust/carnelian:carnelian_tests",
   ]
 }

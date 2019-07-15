@@ -113,7 +113,7 @@ impl Button {
         let padding = (min_dimension / 20.0).ceil().max(8.0);
         self.container.set_translation(center_x, center_y, BUTTON_Z);
 
-        set_node_color(context.session, &self.background_node, &paint.bg);
+        set_node_color(context.session(), &self.background_node, &paint.bg);
 
         // calculate button size based on label's text size
         // plus padding.
@@ -129,7 +129,7 @@ impl Button {
         .round_out();
 
         self.background_node.set_shape(&Rectangle::new(
-            context.session.clone(),
+            context.session().clone(),
             self.bounds.size.width,
             self.bounds.size.height,
         ));
@@ -210,10 +210,14 @@ impl ViewAssistant for ButtonViewAssistant {
     // Called once by Carnelian when the view is first created. Good for setup
     // that isn't concerned with the size of the view.
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        set_node_color(context.session, &self.background_node, &Color::from_hash_code("#EBD5B3")?);
-        context.root_node.add_child(&self.background_node);
-        context.root_node.add_child(&self.indicator);
-        context.root_node.add_child(self.button.node());
+        set_node_color(
+            context.session(),
+            &self.background_node,
+            &Color::from_hash_code("#EBD5B3")?,
+        );
+        context.root_node().add_child(&self.background_node);
+        context.root_node().add_child(&self.indicator);
+        context.root_node().add_child(self.button.node());
 
         Ok(())
     }
@@ -225,7 +229,7 @@ impl ViewAssistant for ButtonViewAssistant {
         let center_x = context.size.width * 0.5;
         let center_y = context.size.height * 0.5;
         self.background_node.set_shape(&Rectangle::new(
-            context.session.clone(),
+            context.session().clone(),
             context.size.width,
             context.size.height,
         ));
@@ -235,7 +239,7 @@ impl ViewAssistant for ButtonViewAssistant {
         let indicator_y = context.size.height / 5.0;
         let indicator_size = context.size.height.min(context.size.width) / 8.0;
         self.indicator.set_shape(&Rectangle::new(
-            context.session.clone(),
+            context.session().clone(),
             indicator_size,
             indicator_size,
         ));
@@ -247,7 +251,7 @@ impl ViewAssistant for ButtonViewAssistant {
             Color::from_hash_code("#00ff00")?
         };
 
-        set_node_color(context.session, &self.indicator, &indicator_color);
+        set_node_color(context.session(), &self.indicator, &indicator_color);
 
         // Update and position the button
         self.button.update(context)?;

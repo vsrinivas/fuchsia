@@ -29,6 +29,7 @@ rustc_library("carnelian") {
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
     "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
     "//third_party/rust_crates:chrono",
@@ -164,7 +165,10 @@ rustc_binary("drawing") {
     "//garnet/public/rust/carnelian",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-framebuffer",
+    "//garnet/public/rust/fuchsia-scenic",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
+    "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
   ]
@@ -339,6 +343,34 @@ unittest_package("carnelian_tests") {
     {
       name = "carnelian_lib_test"
       environments = basic_envs
+    },
+  ]
+}
+
+rustc_binary("carnelian_integration_test_bin") {
+  name = "carnelian_integration_test"
+  edition = "2018"
+  source_root = "tests/carnelian_integration_test.rs"
+  deps = [
+    "//garnet/public/rust/carnelian",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-framebuffer",
+    "//garnet/public/rust/fuchsia-scenic",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+  ]
+}
+
+test_package("carnelian_integration_test") {
+  deps = [
+    ":carnelian_integration_test_bin",
+  ]
+
+  tests = [
+    {
+      name = "carnelian_integration_test"
+      environments = [ nuc_env ]
     },
   ]
 }
