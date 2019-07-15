@@ -61,6 +61,7 @@ class PaperDrawCallFactory final {
    public:
     static SortKey NewOpaque(Hash pipeline_hash, Hash draw_hash, float depth);
     static SortKey NewTranslucent(Hash pipeline_hash, Hash draw_hash, float depth);
+    static SortKey NewWireframe(Hash pipeline_hash, Hash draw_hash, float depth);
     SortKey(const SortKey& other) : key_(other.key_) {}
 
     uint64_t key() const { return key_; }

@@ -479,10 +479,18 @@ void PaperRenderer::GenerateCommandsForNoShadows(uint32_t camera_index) {
     PaperRenderQueueContext context;
     context.set_draw_mode(PaperRendererDrawMode::kAmbient);
 
+    // Render wireframe.
+    context.set_shader_program(no_lighting_program_);
+    cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kWireframe);
+    render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kWireframe);
+
+    // Render opaque.
     context.set_shader_program(ambient_light_program_);
+    cmd_buf->SetWireframe(false);
     cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
     render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kOpaque);
 
+    // Render translucent.
     context.set_shader_program(no_lighting_program_);
     cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kTranslucent);
     render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kTranslucent);
@@ -524,8 +532,16 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
         .eye_index = cam_data.eye_index,
     });
 
+    context.set_shader_program(no_lighting_program_);
     context.set_draw_mode(PaperRendererDrawMode::kAmbient);
+
+    // Render wireframe.
+    cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kWireframe);
+    render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kWireframe);
+
+    // Render opaque.
     context.set_shader_program(ambient_light_program_);
+    cmd_buf->SetWireframe(false);
     cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
 
     render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kOpaque);

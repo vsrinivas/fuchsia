@@ -87,7 +87,7 @@ void PaperDemoScene1::Init(escher::PaperScene* scene) {
   {
     translucent_ = fxl::MakeRefCounted<escher::Material>();
     translucent_->set_color(vec4(0.2f, 0.8f, 0.5f, 0.7f));
-    translucent_->set_opaque(false);
+    translucent_->set_type(escher::Material::Type::kTranslucent);
 
     const float big_radius = 200.f;
     const float tiny_radius = 30.f;

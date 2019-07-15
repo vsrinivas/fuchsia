@@ -35,6 +35,33 @@ TexturePtr CreateWhiteTexture(Escher* escher) {
   return escher->NewTexture(std::move(image), vk::Filter::eNearest);
 }
 
+PaperDrawCallFactory::SortKey GetSortKey(const Material& mat, Hash pipeline_hash, Hash draw_hash,
+                                         float depth) {
+  auto type = mat.type();
+  switch (type) {
+    case Material::Type::kTranslucent:
+      return PaperDrawCallFactory::SortKey::NewTranslucent(pipeline_hash, draw_hash, depth);
+    case Material::Type::kWireframe:
+      return PaperDrawCallFactory::SortKey::NewWireframe(pipeline_hash, draw_hash, depth);
+    case Material::Type::kOpaque:
+    default:
+      return PaperDrawCallFactory::SortKey::NewOpaque(pipeline_hash, draw_hash, depth);
+  }
+}
+
+PaperRenderQueueFlagBits GetRenderQueueFlagBits(const Material& mat) {
+  auto type = mat.type();
+  switch (type) {
+    case Material::Type::kTranslucent:
+      return PaperRenderQueueFlagBits::kTranslucent;
+    case Material::Type::kWireframe:
+      return PaperRenderQueueFlagBits::kWireframe;
+    case Material::Type::kOpaque:
+    default:
+      return PaperRenderQueueFlagBits::kOpaque;
+  }
+}
+
 }  // anonymous namespace
 
 PaperDrawCallFactory::PaperDrawCallFactory(EscherWeakPtr weak_escher,
@@ -170,12 +197,8 @@ void PaperDrawCallFactory::EnqueueDrawCalls(const PaperShapeCacheEntry& cache_en
   float depth = glm::dot(vec3(transform[3]) - camera_pos_, camera_dir_);
 #endif
 
-  auto sort_key = material.opaque()
-                      ? SortKey::NewOpaque(pipeline_hash, mesh_hash, depth).key()
-                      : SortKey::NewTranslucent(pipeline_hash, mesh_hash, depth).key();
-
-  auto queue_flags = material.opaque() ? PaperRenderQueueFlagBits::kOpaque
-                                       : PaperRenderQueueFlagBits::kTranslucent;
+  auto sort_key = GetSortKey(material, pipeline_hash, mesh_hash, depth).key();
+  auto queue_flags = GetRenderQueueFlagBits(material);
 
   render_queue_->PushDrawCall(
       {.render_queue_item = {.sort_key = sort_key,
@@ -253,6 +276,13 @@ PaperDrawCallFactory::SortKey PaperDrawCallFactory::SortKey::NewTranslucent(Hash
   // Prioritize back-to-front order over state changes.
   uint64_t depth_key(glm::floatBitsToUint(depth) ^ 0xffffffffu);
   return SortKey((depth_key << 32) | (pipeline_hash.val & 0xffff0000u) | (draw_hash.val & 0xffffu));
+}
+
+PaperDrawCallFactory::SortKey PaperDrawCallFactory::SortKey::NewWireframe(Hash pipeline_hash,
+                                                                          Hash draw_hash,
+                                                                          float depth) {
+  // Simply use opaque function for now, we may want to do this differently in the future.
+  return NewOpaque(pipeline_hash, draw_hash, depth);
 }
 
 }  // namespace escher

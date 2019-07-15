@@ -19,6 +19,8 @@ using MaterialPtr = fxl::RefPtr<Material>;
 
 class Material : public fxl::RefCountedThreadSafe<Material> {
  public:
+  enum class Type { kOpaque, kTranslucent, kWireframe };
+
   explicit Material();
   ~Material();
 
@@ -33,8 +35,9 @@ class Material : public fxl::RefCountedThreadSafe<Material> {
   void set_color(vec3 color) { color_ = vec4(color, 1); }
   void SetTexture(TexturePtr texture);
 
-  bool opaque() const { return opaque_; }
-  void set_opaque(bool opaque) { opaque_ = opaque; }
+  Type type() const { return type_; }
+  void set_type(Type type) { type_ = type; }
+  bool opaque() const { return type_ == Type::kOpaque; }
 
  protected:
   TexturePtr texture_;
@@ -44,7 +47,7 @@ class Material : public fxl::RefCountedThreadSafe<Material> {
   vk::Sampler sampler_;
 
   vec4 color_ = vec4(1, 1, 1, 1);
-  bool opaque_ = true;
+  Type type_ = Type::kOpaque;
 };
 
 }  // namespace escher

@@ -23,6 +23,18 @@ TEST(PaperDrawCallFactory, OpaqueSortKeyBits) {
   EXPECT_EQ(depth, glm::uintBitsToFloat((key.key() >> 16) & 0xffffffff));
 }
 
+TEST(PaperDrawCallFactory, WireframeSortKeyBits) {
+  Hash dddd, bbbb;
+  dddd.val = 0xdddddddddddddddd;
+  bbbb.val = 0xbbbbbbbbbbbbbbbb;
+  float depth = 11.2345f;
+
+  auto key = PaperDrawCallFactory::SortKey::NewWireframe(dddd, bbbb, depth);
+
+  EXPECT_EQ(0xdddd00000000bbbb, key.key() & 0xffff00000000ffff);
+  EXPECT_EQ(depth, glm::uintBitsToFloat((key.key() >> 16) & 0xffffffff));
+}
+
 TEST(PaperDrawCallFactory, TranslucentSortKeyBits) {
   Hash dddd, bbbb;
   dddd.val = 0xdddddddddddddddd;

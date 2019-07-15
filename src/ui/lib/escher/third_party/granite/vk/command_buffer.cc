@@ -595,6 +595,10 @@ void CommandBuffer::SetToDefaultState(DefaultState default_state) {
 
   // These states differ between the various supported defaults.
   switch (default_state) {
+    case DefaultState::kWireframe: {
+      static_state->wireframe = true;
+      static_state->blend_enable = false;
+    } break;
     case DefaultState::kOpaque: {
       static_state->blend_enable = false;
     } break;

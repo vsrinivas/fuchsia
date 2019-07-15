@@ -14,8 +14,9 @@ namespace escher {
 enum class PaperRenderQueueFlagBits : uint8_t {
   kOpaque = 1U << 0,
   kTranslucent = 1U << 1,
+  kWireframe = 1U << 2,
 
-  kAllFlags = 0x3u,
+  kAllFlags = 0x7u,
 };
 ESCHER_DECLARE_ENUM_FLAGS(PaperRenderQueueFlags, PaperRenderQueueFlagBits);
 

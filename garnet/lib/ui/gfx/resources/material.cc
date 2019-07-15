@@ -51,7 +51,8 @@ void Material::SetColor(float red, float green, float blue, float alpha) {
   // TODO(rosswang): This and related affordances are not enough to allow
   // transparent textures to work on opaque materials. It may be worthwhile to
   // surface the |opaque| flag on the Scenic client API to support this.
-  escher_material_->set_opaque(alpha == 1);
+  escher_material_->set_type(alpha == 1 ? escher::Material::Type::kOpaque
+                                        : escher::Material::Type::kTranslucent);
 }
 
 void Material::SetTexture(ImageBasePtr texture_image) { texture_ = std::move(texture_image); }

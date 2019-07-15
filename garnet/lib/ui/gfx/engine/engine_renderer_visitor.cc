@@ -111,7 +111,7 @@ void EngineRendererVisitor::Visit(ShapeNode* r) {
     glm::vec4 color = escher_material->color();
     color.a *= opacity_;
     escher_material = escher::Material::New(color, escher_material->texture());
-    escher_material->set_opaque(false);
+    escher_material->set_type(escher::Material::Type::kTranslucent);
   }
 
   escher::PaperDrawableFlags flags{};

@@ -38,6 +38,7 @@ class PaperRenderQueue final {
  private:
   RenderQueue opaque_;
   RenderQueue translucent_;
+  RenderQueue wireframe_;
 };
 
 }  // namespace escher

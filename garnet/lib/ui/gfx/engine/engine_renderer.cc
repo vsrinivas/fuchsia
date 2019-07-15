@@ -82,7 +82,8 @@ void EngineRenderer::RenderLayers(const escher::FramePtr& frame, zx_time_t targe
       texture->image()->SetWaitSemaphore(std::move(semaphore));
 
       auto material = escher::Material::New(layer->color(), std::move(texture));
-      material->set_opaque(layer->opaque());
+      material->set_type(layer->opaque() ? escher::Material::Type::kOpaque
+                                         : escher::Material::Type::kTranslucent);
 
       overlay_objects.push_back(
           escher::Object::NewRect(escher::Transform(layer->translation()), std::move(material)));

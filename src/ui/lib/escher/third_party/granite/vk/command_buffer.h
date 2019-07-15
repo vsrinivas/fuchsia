@@ -208,7 +208,8 @@ class CommandBuffer : public Reffable {
     // We express this with the following blend-factors:
     //   src_alpha_blend == ONE
     //   dst_alpha_blend == ONE_MINUS_SRC_ALPHA
-    kTranslucent
+    kTranslucent,
+    kWireframe
   };
   void SetToDefaultState(DefaultState state);
 
