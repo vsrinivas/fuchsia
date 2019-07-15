@@ -26,3 +26,34 @@ source_set("fcs-test") {
     "//zircon/public/lib/zxtest",
   ]
 }
+
+source_set("frame") {
+  sources = [
+    "frame.cc",
+    "frame.h",
+  ]
+
+  include_dirs = [ "//src/connectivity/ppp" ]
+
+  deps = [
+    ":fcs",
+    "//src/connectivity/ppp/lib/common",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+source_set("frame-test") {
+  testonly = true
+
+  sources = [
+    "frame-test.cc",
+  ]
+
+  include_dirs = [ "//src/connectivity/ppp" ]
+
+  deps = [
+    ":frame",
+    "//zircon/public/lib/zxtest",
+  ]
+}
