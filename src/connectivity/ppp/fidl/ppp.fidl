@@ -1,0 +1,41 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.ppp;
+
+using zx;
+
+/// Information about PPP Device configuration.
+struct Info {
+    uint16 mtu; // bytes
+};
+
+/// The type of protocol being transmitted or received.
+enum ProtocolType {
+    Control = 0;
+    IPV4 = 1;
+    IPV6 = 2;
+};
+
+/// Experimental PPP Device interface.
+protocol Device {
+    /// Receive data.
+    Rx(ProtocolType protocol) -> (bytes data) error zx.status;
+
+    /// Transmit data. When this call returns, it is guaranteed that the data
+    /// has either been written or that the write failed and the caller may
+    /// attempt to retransmit.
+    Tx(ProtocolType protocol, bytes data) -> () error zx.status;
+
+    /// Obtain information about device configuration.
+    GetInfo() -> (Info info);
+
+    /// Obtain status of a given protocol. If a protocol is `up`, `Rx` and `Tx`
+    /// may be called with the same protocol to send and receive PPP frames.
+    GetStatus(ProtocolType protocol) -> (bool up);
+
+    /// Set status of a given protocol. If a protocol is `up`, `Rx` and `Tx`
+    /// may be called with the same protocol to send and receive PPP frames.
+    SetStatus(ProtocolType protocol, bool up) -> () error zx.status;
+};
