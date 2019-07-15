@@ -6,15 +6,20 @@
 
 #include <lib/fit/function.h>
 
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/fxl/logging.h"
 
 namespace sync_coordinator {
 
 class FakeLedgerSync::FakePageSync : public PageSync {
  public:
+  FakePageSync(storage::PageId page_id, std::map<storage::PageId, int>* sync_page_calls)
+      : page_id_(page_id), sync_page_calls_(sync_page_calls) {}
+
   // PageSync:
   void Start() override {
     started_ = true;
+    ++(*sync_page_calls_)[page_id_];
 
     if (on_backlog_downloaded_) {
       on_backlog_downloaded_();
@@ -48,6 +53,10 @@ class FakeLedgerSync::FakePageSync : public PageSync {
   fit::closure on_idle_;
   fit::closure on_backlog_downloaded_;
   bool started_ = false;
+  storage::PageId page_id_;
+  // Pointer to the storage with counters of sync calls to be updated when the Start() method is
+  // called for the given page.
+  std::map<storage::PageId, int>* sync_page_calls_;
   sync_coordinator::SyncStateWatcher* watcher_ = nullptr;
 };
 
@@ -57,10 +66,15 @@ FakeLedgerSync::~FakeLedgerSync() = default;
 
 bool FakeLedgerSync::IsCalled() { return called_; }
 
+int FakeLedgerSync::GetSyncCallsCount(const storage::PageId& page_id) {
+  return sync_page_start_calls_[page_id];
+}
+
 std::unique_ptr<sync_coordinator::PageSync> FakeLedgerSync::CreatePageSync(
-    storage::PageStorage* /*page_storage*/, storage::PageSyncClient* /*page_sync_client*/) {
+    storage::PageStorage* page_storage, storage::PageSyncClient* /*page_sync_client*/) {
   called_ = true;
-  return std::make_unique<FakeLedgerSync::FakePageSync>();
+  return std::make_unique<FakeLedgerSync::FakePageSync>(page_storage->GetId(),
+                                                        &sync_page_start_calls_);
 }
 
 }  // namespace sync_coordinator

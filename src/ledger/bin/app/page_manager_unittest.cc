@@ -770,5 +770,60 @@ TEST_F(PageManagerTest, DeletePageStorageWhenPageOpenFails) {
   EXPECT_EQ(Status::ILLEGAL_STATE, storage_status);
 }
 
+// Verify that the PageManager opens a closed page and triggers the synchronization with the cloud
+// for it.
+TEST_F(PageManagerTest, StartPageSyncCheckSyncCalled) {
+  bool get_page_callback_called;
+  Status get_page_status;
+
+  storage_->should_get_page_fail = false;
+  PagePtr page;
+  storage::PageId storage_page_id = convert::ExtendedStringView(page_id_.id).ToString();
+
+  // Opens the page and starts the sync with the cloud for the first time.
+  page_manager_->GetPage(
+      LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(get_page_callback_called);
+  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_EQ(1, sync_->GetSyncCallsCount(storage_page_id));
+
+  page.Unbind();
+  RunLoopUntilIdle();
+
+  // Reopens closed page and starts the sync.
+  page_manager_->StartPageSync();
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(2, sync_->GetSyncCallsCount(storage_page_id));
+}
+
+// Verify that the PageManager does not trigger the synchronization with the cloud for the currently
+// opened page.
+TEST_F(PageManagerTest, StartPageSyncCheckWithOpenedPage) {
+  bool get_page_callback_called;
+  Status get_page_status;
+
+  storage_->should_get_page_fail = false;
+  PagePtr page;
+  storage::PageId storage_page_id = convert::ExtendedStringView(page_id_.id).ToString();
+
+  // Opens the page and starts the sync with the cloud for the first time.
+  page_manager_->GetPage(
+      LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(get_page_callback_called);
+  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_EQ(1, sync_->GetSyncCallsCount(storage_page_id));
+
+  // Tries to reopen the already-opened page to start the sync.
+  page_manager_->StartPageSync();
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(1, sync_->GetSyncCallsCount(storage_page_id));
+}
+
 }  // namespace
 }  // namespace ledger

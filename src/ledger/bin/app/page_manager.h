@@ -67,6 +67,9 @@ class PageManager {
                fidl::InterfaceRequest<Page> page_request,
                fit::function<void(storage::Status)> callback);
 
+  // Starts syncing the given page with the cloud if it is not currently open.
+  void StartPageSync();
+
   // Registers "interest" in this |PageManager| for which this |PageManager|
   // will remain non-empty and returns a closure that when called will
   // deregister the "interest" in this |PageManager| (and potentially cause this

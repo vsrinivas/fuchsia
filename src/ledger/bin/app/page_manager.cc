@@ -124,6 +124,24 @@ void PageManager::GetPage(LedgerImpl::Delegate::PageState page_state,
                                  });
 }
 
+void PageManager::StartPageSync() {
+  // If the active page manager container is open, just return as the sync should have been already
+  // triggered.
+  if (active_page_manager_container_) {
+    return;
+  }
+
+  // Create the container and set up an active page manager to start sync with the cloud.
+  ActivePageManagerContainer* container = CreateActivePageManagerContainer();
+  InitActivePageManagerContainer(container, [container](storage::Status status) {
+    // InitActivePageManager does not handle the case of PAGE_NOT_FOUND errors to allow creation of
+    // a new page, but no creation is required here, so status is merely propagated.
+    if (status == storage::Status::PAGE_NOT_FOUND) {
+      container->SetActivePageManager(status, nullptr);
+    }
+  });
+}
+
 void PageManager::InitActivePageManagerContainer(ActivePageManagerContainer* container,
                                                  fit::function<void(storage::Status)> callback) {
   page_availability_manager_.OnPageAvailable(
