@@ -395,7 +395,7 @@ Location ModuleSymbolsImpl::LocationForVariable(const SymbolContext& symbol_cont
 
   // Need one unique location.
   if (variable->location().locations().size() != 1)
-    return Location(symbol_context, LazySymbol(std::move(variable)));
+    return Location(symbol_context, std::move(variable));
 
   auto global_data_provider = fxl::MakeRefCounted<GlobalSymbolDataProvider>();
   DwarfExprEval eval;
@@ -405,12 +405,12 @@ Location ModuleSymbolsImpl::LocationForVariable(const SymbolContext& symbol_cont
   // Only evaluate synchronous outputs that result in a pointer.
   if (!eval.is_complete() || !eval.is_success() ||
       eval.GetResultType() != DwarfExprEval::ResultType::kPointer)
-    return Location(symbol_context, LazySymbol(std::move(variable)));
+    return Location(symbol_context, std::move(variable));
 
   // TODO(brettw) in all of the return cases we could in the future fill in the file/line of the
   // definition of the variable. Currently Variables don't provide that (even though it's usually in
   // the DWARF symbols).
-  return Location(eval.GetResult(), FileLine(), 0, symbol_context, LazySymbol(std::move(variable)));
+  return Location(eval.GetResult(), FileLine(), 0, symbol_context, std::move(variable));
 }
 
 // To a first approximation we just look up the line in the line table for each compilation unit

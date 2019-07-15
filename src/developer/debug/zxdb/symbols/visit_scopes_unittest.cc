@@ -37,15 +37,15 @@ TEST(VisitScopes, ClassHierarchy) {
   uint64_t mid1_offset = 8;
   uint64_t mid2_offset = 0;
   uint64_t base1_offset = 32;
-  auto mid1_inh = fxl::MakeRefCounted<InheritedFrom>(LazySymbol(mid1), mid1_offset);
-  auto mid2_inh = fxl::MakeRefCounted<InheritedFrom>(LazySymbol(mid2), mid2_offset);
-  auto base1_inh = fxl::MakeRefCounted<InheritedFrom>(LazySymbol(base1), base1_offset);
+  auto mid1_inh = fxl::MakeRefCounted<InheritedFrom>(mid1, mid1_offset);
+  auto mid2_inh = fxl::MakeRefCounted<InheritedFrom>(mid2, mid2_offset);
+  auto base1_inh = fxl::MakeRefCounted<InheritedFrom>(base1, base1_offset);
   derived->set_inherited_from({LazySymbol(mid1_inh), LazySymbol(mid2_inh)});
   mid1->set_inherited_from({LazySymbol(base1_inh)});
 
-  // Visit all of those, they're visited in depth-first-search order (the
-  // ordering was most convenient for the implementation, it can be changed
-  // in the future if there's a reason for a specific different order).
+  // Visit all of those, they're visited in depth-first-search order (the ordering was most
+  // convenient for the implementation, it can be changed in the future if there's a reason for a
+  // specific different order).
   visited = VisitLog();
   result = VisitClassHierarchy(derived.get(), [&visited](const Collection* c, uint64_t o) {
     visited.emplace_back(c, o);

@@ -26,12 +26,11 @@ class MockStackDelegate : public Stack::Delegate {
  public:
   void set_stack(Stack* s) { stack_ = s; }
 
-  // Adds the given location to the list of things returned by
-  // GetSymbolizedLocationForStackFrame().
+  // Adds the given location to the list of things returned by GetSymbolizedLocationForStackFrame().
   void AddLocation(const Location& loc) { locations_[loc.address()] = loc; }
 
-  // Sets the asynchronous resource to SyncFramesForStack(). Since this
-  // transfers ownership, it will only affect the next call.
+  // Sets the asynchronous resource to SyncFramesForStack(). Since this transfers ownership, it will
+  // only affect the next call.
   void SetAsyncFrames(std::vector<std::unique_ptr<Frame>> frames) {
     async_frames_ = std::move(frames);
   }
@@ -86,8 +85,8 @@ std::vector<std::unique_ptr<Frame>> MakeInlineStackFrames() {
 
   std::vector<std::unique_ptr<Frame>> frames;
 
-  // Top frame has two inline functions expanded on top of it. This uses the
-  // same Location object for simplicity, in real life these will be different.
+  // Top frame has two inline functions expanded on top of it. This uses the same Location object
+  // for simplicity, in real life these will be different.
   frames.push_back(std::make_unique<MockFrame>(nullptr, nullptr, top_location, kTopSP, kMiddleSP,
                                                std::vector<Register>(), kTopSP, phys_top.get()));
   frames.push_back(std::make_unique<MockFrame>(nullptr, nullptr, top_location, kTopSP, kMiddleSP,
@@ -117,8 +116,8 @@ TEST_F(StackTest, InlineFingerprint) {
   delegate.set_stack(&stack);
   stack.SetFramesForTest(MakeInlineStackFrames(), true);
 
-  // The top frames (physical and inline) have the middle frame's SP as their
-  // fingerprint, along with the inline count.
+  // The top frames (physical and inline) have the middle frame's SP as their fingerprint, along
+  // with the inline count.
   EXPECT_EQ(FrameFingerprint(kMiddleSP, 2), stack.GetFrameFingerprint(0));
   EXPECT_EQ(2u, stack.InlineDepthForIndex(0));
   EXPECT_EQ(FrameFingerprint(kMiddleSP, 1), stack.GetFrameFingerprint(1));
@@ -137,15 +136,13 @@ TEST_F(StackTest, InlineFingerprint) {
   EXPECT_EQ(0u, stack.InlineDepthForIndex(5));
 }
 
-// Tests that stack frames inside inline functions are expanded so that the
-// inline functions have their own "inline" frames.
+// Tests that stack frames inside inline functions are expanded so that the inline functions have
+// their own "inline" frames.
 //
-// This tests a bottom function calling an inline function which calls a top
-// function. The tricky part is the IP of the bottom frame is actually in a
-// different inline function (the "ambiguous" one) because the address in the
-// bottom frame is immediately following the TopFunc() call and this happens
-// to fall in range of an inlined function. This should be omitted from the
-// stack.
+// This tests a bottom function calling an inline function which calls a top function. The tricky
+// part is the IP of the bottom frame is actually in a different inline function (the "ambiguous"
+// one) because the address in the bottom frame is immediately following the TopFunc() call and this
+// happens to fall in range of an inlined function. This should be omitted from the stack.
 //
 //   void TopFunc() {
 //     ...                          // <- top_line
@@ -183,11 +180,11 @@ TEST_F(StackTest, InlineExpansion) {
   // Non-inline location for the top stack frame.
   auto top_func = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   top_func->set_assigned_name("Top");
-  Location top_location(kTopAddr, top_line, 0, symbol_context, LazySymbol(top_func));
+  Location top_location(kTopAddr, top_line, 0, symbol_context, top_func);
   delegate.AddLocation(top_location);
 
-  // Bottom stack frame has a real function, an inline function, and an
-  // ambiguous inline location (at the start of an inline range).
+  // Bottom stack frame has a real function, an inline function, and an ambiguous inline location
+  // (at the start of an inline range).
   auto bottom_ambig_inline_func = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
   bottom_ambig_inline_func->set_assigned_name("Inline");
   // Must start exactly at kBottomAddr for the location to be ambiguous.
@@ -206,13 +203,13 @@ TEST_F(StackTest, InlineExpansion) {
   bottom_func->set_assigned_name("Bottom");
   bottom_func->set_code_ranges(AddressRanges(AddressRange(kBottomAddr - 8, kBottomAddr + 16)));
 
-  bottom_ambig_inline_func->set_containing_block(LazySymbol(bottom_inline_func));
-  bottom_inline_func->set_containing_block(LazySymbol(bottom_func));
+  bottom_ambig_inline_func->set_containing_block(bottom_inline_func);
+  bottom_inline_func->set_containing_block(bottom_func);
 
-  // The location returned by the symbol function will have the file/line
-  // inside the inline function.
+  // The location returned by the symbol function will have the file/line inside the inline
+  // function.
   Location bottom_location(kBottomAddr, inline_exec_line, 0, symbol_context,
-                           LazySymbol(bottom_ambig_inline_func));
+                           bottom_ambig_inline_func);
   delegate.AddLocation(bottom_location);
 
   Stack stack(&delegate);
@@ -226,8 +223,8 @@ TEST_F(StackTest, InlineExpansion) {
                   {debug_ipc::StackFrame(kTopAddr, kTopSP, kBottomSP),
                    debug_ipc::StackFrame(kBottomAddr, kBottomSP, 0)});
 
-  // This should expand to tree stack entries, the one in the middle should
-  // be the inline function expanded from the "bottom".
+  // This should expand to tree stack entries, the one in the middle should be the inline function
+  // expanded from the "bottom".
   EXPECT_EQ(3u, stack.size());
 
   // Bottom stack frame should be the non-inline bottom function.
@@ -239,10 +236,9 @@ TEST_F(StackTest, InlineExpansion) {
   EXPECT_EQ(inline_call_line, loc.file_line());
   EXPECT_EQ(bottom_func.get(), loc.symbol().Get()->AsFunction());
 
-  // Middle stack frame should be the inline bottom function, referencing the
-  // bottom one as the physical frame. The location should be the call line
-  // of the ambiguous inline function because it's next, even though that
-  // function was omitted from the stack.
+  // Middle stack frame should be the inline bottom function, referencing the bottom one as the
+  // physical frame. The location should be the call line of the ambiguous inline function because
+  // it's next, even though that function was omitted from the stack.
   EXPECT_TRUE(stack[1]->IsInline());
   EXPECT_EQ(stack[2], stack[1]->GetPhysicalFrame());
   EXPECT_EQ(kBottomAddr, stack[1]->GetAddress());
@@ -251,9 +247,8 @@ TEST_F(StackTest, InlineExpansion) {
   EXPECT_EQ(inline_ambig_call_line, loc.file_line());
   EXPECT_EQ(bottom_inline_func.get(), loc.symbol().Get()->AsFunction());
 
-  // The bottom_ambig_inline_func should be skipped because it's at the
-  // beginning of an inline call and it's not at the top physical frame of the
-  // stack.
+  // The bottom_ambig_inline_func should be skipped because it's at the beginning of an inline call
+  // and it's not at the top physical frame of the stack.
 
   // Top stack frame.
   EXPECT_FALSE(stack[0]->IsInline());
@@ -299,8 +294,7 @@ TEST_F(StackTest, InlineHiding) {
   // With no frames, there should be no inline frames.
   EXPECT_EQ(0u, stack.GetAmbiguousInlineFrameCount());
 
-  // Setting the frames should give the two inline ones, followed by two
-  // physical ones.
+  // Setting the frames should give the two inline ones, followed by two physical ones.
   stack.SetFramesForTest(std::move(frames), true);
   EXPECT_EQ(4u, stack.size());
   EXPECT_EQ(2u, stack.GetAmbiguousInlineFrameCount());
@@ -311,8 +305,8 @@ TEST_F(StackTest, InlineHiding) {
   EXPECT_EQ(2u, stack.GetAmbiguousInlineFrameCount());
 }
 
-// Appends stack items to an already existing stack via SetFrames(). The
-// existing frames and the inline hide count should be unchanged.
+// Appends stack items to an already existing stack via SetFrames(). The existing frames and the
+// inline hide count should be unchanged.
 TEST_F(StackTest, UpdateExisting) {
   MockStackDelegate delegate;
   Stack stack(&delegate);
@@ -336,15 +330,14 @@ TEST_F(StackTest, UpdateExisting) {
   input_frames.push_back(std::move(phys_top));
   stack.SetFramesForTest(std::move(input_frames), true);
 
-  // The ambiguous inline frame is hidden so we can check later this is
-  // preserved across updates.
+  // The ambiguous inline frame is hidden so we can check later this is preserved across updates.
   ASSERT_EQ(2u, stack.size());
   ASSERT_EQ(1u, stack.GetAmbiguousInlineFrameCount());
   stack.SetHideAmbiguousInlineFrameCount(1);
 
-  // Synthesize a frame update. The first physical frame matches the first
-  // physical frame from above. This uses the non-test update flow which should
-  // preserve the frame objects that haven't changed.
+  // Synthesize a frame update. The first physical frame matches the first physical frame from
+  // above. This uses the non-test update flow which should preserve the frame objects that haven't
+  // changed.
   std::vector<debug_ipc::StackFrame> raw_frames;
   debug_ipc::StackFrame phys_top_record(0x1000, kTopSP, kBottomSP);
   raw_frames.push_back(phys_top_record);
@@ -353,9 +346,8 @@ TEST_F(StackTest, UpdateExisting) {
 
   stack.SetFrames(debug_ipc::ThreadRecord::StackAmount::kFull, raw_frames);
 
-  // The update should have left the existing top physical frame and the inline
-  // frame expanded on top of it, and add the additional physical frame below
-  // it.
+  // The update should have left the existing top physical frame and the inline frame expanded on
+  // top of it, and add the additional physical frame below it.
   EXPECT_EQ(1u, stack.GetAmbiguousInlineFrameCount());
   // Now that we checked it, reset the hidden frame count so we can see them.
   stack.SetHideAmbiguousInlineFrameCount(0);
@@ -364,14 +356,14 @@ TEST_F(StackTest, UpdateExisting) {
   EXPECT_EQ(frame1, stack[1]);
   EXPECT_EQ(phys_bottom_record.ip, stack[2]->GetAddress());
 
-  // Now supply a slightly different stack, it should be replaced and the
-  // hidden inline frame count reset.
+  // Now supply a slightly different stack, it should be replaced and the hidden inline frame count
+  // reset.
   stack.SetHideAmbiguousInlineFrameCount(0);  // So we can test for reset.
   raw_frames[0].sp++;                         // Modify frame.
   stack.SetFrames(debug_ipc::ThreadRecord::StackAmount::kFull, raw_frames);
 
-  // The inline frame at the top should have gone away because we didn't
-  // provide any inline information for the Stack to expand it.
+  // The inline frame at the top should have gone away because we didn't provide any inline
+  // information for the Stack to expand it.
   ASSERT_EQ(2u, stack.size());
   EXPECT_EQ(0u, stack.GetAmbiguousInlineFrameCount());
   EXPECT_EQ(raw_frames[0].ip, stack[0]->GetAddress());

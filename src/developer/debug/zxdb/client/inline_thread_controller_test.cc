@@ -26,8 +26,8 @@ const uint64_t InlineThreadControllerTest::kTopSP = 0x2010;
 const uint64_t InlineThreadControllerTest::kMiddleSP = 0x2020;
 const uint64_t InlineThreadControllerTest::kBottomSP = 0x2040;
 
-// These address ranges must all be inside the symbolized module address so
-// tests can mock symbols and line lookups inside of them.
+// These address ranges must all be inside the symbolized module address so tests can mock symbols
+// and line lookups inside of them.
 const AddressRange InlineThreadControllerTest::kTopFunctionRange(kSymbolizedModuleAddress + 0x30000,
                                                                  kSymbolizedModuleAddress +
                                                                      0x40000);
@@ -43,11 +43,10 @@ const AddressRange InlineThreadControllerTest::kMiddleInline1FunctionRange(
 const AddressRange InlineThreadControllerTest::kMiddleInline2FunctionRange(
     kSymbolizedModuleAddress + 0x10100, kSymbolizedModuleAddress + 0x10110);
 
-// Note that the Stack object currently treats the location of caller of an
-// inline frame to be the inline call site, while for physical frames this will
-// be the following line. The reason for the difference is that inline
-// functions don't necessarily have a clear return address, and the actual call
-// is the easiest thing to compute.
+// Note that the Stack object currently treats the location of caller of an inline frame to be the
+// inline call site, while for physical frames this will be the following line. The reason for the
+// difference is that inline functions don't necessarily have a clear return address, and the actual
+// call is the easiest thing to compute.
 const FileLine InlineThreadControllerTest::kTopInlineFileLine("file.cc", 11);
 const FileLine InlineThreadControllerTest::kTopFileLine("file.cc", 15);
 const FileLine InlineThreadControllerTest::kMiddleInline2FileLine("file.cc", 22);
@@ -82,31 +81,31 @@ fxl::RefPtr<Function> InlineThreadControllerTest::GetMiddleInline2Function() {
 // static
 Location InlineThreadControllerTest::GetTopLocation(uint64_t address) {
   return Location(address, kTopFileLine, 0, SymbolContext::ForRelativeAddresses(),
-                  LazySymbol(GetTopFunction()));
+                  GetTopFunction());
 }
 
 // static
 Location InlineThreadControllerTest::GetTopInlineLocation(uint64_t address) {
   return Location(address, kTopInlineFileLine, 0, SymbolContext::ForRelativeAddresses(),
-                  LazySymbol(GetTopInlineFunction()));
+                  GetTopInlineFunction());
 }
 
 // static
 Location InlineThreadControllerTest::GetMiddleLocation(uint64_t address) {
   return Location(address, kMiddleFileLine, 0, SymbolContext::ForRelativeAddresses(),
-                  LazySymbol(GetMiddleFunction()));
+                  GetMiddleFunction());
 }
 
 // static
 Location InlineThreadControllerTest::GetMiddleInline1Location(uint64_t address) {
   return Location(address, kMiddleInline1FileLine, 0, SymbolContext::ForRelativeAddresses(),
-                  LazySymbol(GetMiddleInline1Function()));
+                  GetMiddleInline1Function());
 }
 
 // static
 Location InlineThreadControllerTest::GetMiddleInline2Location(uint64_t address) {
   return Location(address, kMiddleInline2FileLine, 0, SymbolContext::ForRelativeAddresses(),
-                  LazySymbol(GetMiddleInline2Function()));
+                  GetMiddleInline2Function());
 }
 
 // static
@@ -162,10 +161,9 @@ std::vector<std::unique_ptr<MockFrame>> InlineThreadControllerTest::GetStack() {
   std::vector<std::unique_ptr<MockFrame>> frames;
   frames.push_back(GetTopInlineFrame(top_inline_range.begin(), top_frame.get()));
   frames.push_back(std::move(top_frame));
-  // These inlined functions in the middle of the stack must not be ambiguous
-  // because the stack will never generate ambiguous inlined functions for
-  // anything but the top frame. To do this, the address bust be after the
-  // beginning of the code range.
+  // These inlined functions in the middle of the stack must not be ambiguous because the stack will
+  // never generate ambiguous inlined functions for anything but the top frame. To do this, the
+  // address bust be after the beginning of the code range.
   frames.push_back(GetMiddleInline2Frame(top_middle_inline2_range.begin() + 1, middle_frame.get()));
   frames.push_back(GetMiddleInline1Frame(top_middle_inline2_range.begin() + 1, middle_frame.get()));
   frames.push_back(std::move(middle_frame));

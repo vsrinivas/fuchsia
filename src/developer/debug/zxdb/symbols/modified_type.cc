@@ -12,16 +12,15 @@ namespace zxdb {
 
 namespace {
 
-// Returns true if this tag is a modified type that is transparent with respect
-// to the data stored in it.
+// Returns true if this tag is a modified type that is transparent with respect to the data stored
+// in it.
 bool IsTransparentTag(DwarfTag tag) {
   return tag == DwarfTag::kConstType || tag == DwarfTag::kVolatileType ||
          tag == DwarfTag::kTypedef || tag == DwarfTag::kRestrictType ||
          tag == DwarfTag::kImportedDeclaration;
 }
 
-// Returns true if this modified holds some kind of pointer to the modified
-// type.
+// Returns true if this modified holds some kind of pointer to the modified type.
 bool IsPointerTag(DwarfTag tag) {
   return tag == DwarfTag::kPointerType || tag == DwarfTag::kReferenceType ||
          tag == DwarfTag::kRvalueReferenceType;
@@ -54,16 +53,15 @@ const Type* ModifiedType::StripCVT() const {
 }
 
 bool ModifiedType::ModifiesVoid() const {
-  // Void can be represented two ways, via a null modified type, or via a
-  // base type that's a "none" type.
+  // Void can be represented two ways, via a null modified type, or via a base type that's a "none"
+  // type.
   if (!modified_)
     return true;
 
   const Type* type = modified_.Get()->AsType();
   if (!type) {
-    // Corrupted symbols as this references a non-type or there was an error
-    // decoding. Say it's non-void for the caller to handle when it tries to
-    // figure out what the type is.
+    // Corrupted symbols as this references a non-type or there was an error decoding. Say it's
+    // non-void for the caller to handle when it tries to figure out what the type is.
     return false;
   }
 
@@ -75,8 +73,8 @@ bool ModifiedType::ModifiesVoid() const {
 std::string ModifiedType::ComputeFullName() const {
   static const char kUnknown[] = "<unknown>";
 
-  // Typedefs are special and just use the assigned name. Every other modifier
-  // below is based on the underlying type name.
+  // Typedefs are special and just use the assigned name. Every other modifier below is based on the
+  // underlying type name.
   if (tag() == DwarfTag::kTypedef)
     return GetIdentifier().GetFullName();
 
@@ -89,8 +87,7 @@ std::string ModifiedType::ComputeFullName() const {
     if (auto func_type = modified().Get()->AsFunctionType();
         func_type && tag() == DwarfTag::kPointerType) {
       // Special-case pointer-to-funcion which has unusual syntax.
-      // TODO(DX-683) this doesn't handle pointers of references to
-      // pointers-to-member functions
+      // TODO(DX-683) this doesn't handle pointers of references to pointers-to-member functions
       return func_type->ComputeFullNameForFunctionPtr(std::string());
     } else if ((modified_type = modified().Get()->AsType())) {
       // All other types.
@@ -104,13 +101,12 @@ std::string ModifiedType::ComputeFullName() const {
   switch (tag()) {
     case DwarfTag::kConstType:
       if (modified_type && modified_type->AsModifiedType()) {
-        // When the underlying type is another modifier, add it to the end,
-        // e.g. a "constant pointer to a nonconstant int" is "int* const".
+        // When the underlying type is another modifier, add it to the end, e.g. a "constant pointer
+        // to a nonconstant int" is "int* const".
         return modified_name + " const";
       } else {
-        // Though the above formatting is always valid, most people write a
-        // "constant int" / "pointer to a constant int" as either "const int" /
-        // "const int*" so special-case.
+        // Though the above formatting is always valid, most people write a "constant int" /
+        // "pointer to a constant int" as either "const int" / "const int*" so special-case.
         return "const " + modified_name;
       }
     case DwarfTag::kPointerType:
@@ -124,16 +120,13 @@ std::string ModifiedType::ComputeFullName() const {
     case DwarfTag::kVolatileType:
       return "volatile " + modified_name;
     case DwarfTag::kImportedDeclaration:
-      // Using statements. This is use the kind that moves stuff between
-      // namespaces like "using std::vector;" -- the renaming type is encoded
-      // as a typedef.
+      // Using statements. This is use the kind that moves stuff between namespaces like "using
+      // std::vector;" -- the renaming type is encoded as a typedef.
       //
-      // TODO(brettw) this is probably wrong because we need to strip
-      // namespaces from the modified type and instead use the namespaces from
-      // the using statement. Currently we don't encounter these as Clang
-      // follows the using statement when defining types of variables so we
-      // only see the underlying type. When we support type lookup by name,
-      // these will matter.
+      // TODO(brettw) this is probably wrong because we need to strip namespaces from the modified
+      // type and instead use the namespaces from the using statement. Currently we don't encounter
+      // these as Clang follows the using statement when defining types of variables so we only see
+      // the underlying type. When we support type lookup by name, these will matter.
       return modified_name;
     default:
       return kUnknown;
@@ -145,8 +138,7 @@ Identifier ModifiedType::ComputeIdentifier() const {
   if (tag() == DwarfTag::kTypedef)
     return Symbol::ComputeIdentifier();
 
-  // Every other modifier has decorations around it that means it can't have an
-  // identifier.
+  // Every other modifier has decorations around it that means it can't have an identifier.
   return Identifier();
 }
 

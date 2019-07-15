@@ -278,17 +278,15 @@ TEST_F(FormatValueConsoleTest, Collection) {
 
   auto int32_type = MakeInt32Type();
 
-  // Make an int reference. Reference type printing combined with struct type
-  // printing can get complicated.
-  auto int_ref =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType, LazySymbol(int32_type));
+  // Make an int reference. Reference type printing combined with struct type printing can get
+  // complicated.
+  auto int_ref = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType, int32_type);
 
   // The references point to this data.
   constexpr uint64_t kAddress = 0x1100;
   provider()->AddMemory(kAddress, {0x12, 0, 0, 0});
 
-  // Struct with two values, an int and a int&, and a pair of two of those
-  // structs.
+  // Struct with two values, an int and a int&, and a pair of two of those structs.
   auto foo =
       MakeCollectionType(DwarfTag::kStructureType, "Foo", {{"a", int32_type}, {"b", int_ref}});
   auto pair =
@@ -325,8 +323,7 @@ TEST_F(FormatValueConsoleTest, NestingLimits) {
   constexpr uint64_t kIntAddress = 0x1100;
   provider()->AddMemory(kIntAddress, {12, 0, 0, 0});
 
-  auto int_ptr_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(int32_type));
+  auto int_ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, int32_type);
 
   // Structure contains one member which is a pointer to the integer.
   auto a_type = MakeCollectionType(DwarfTag::kStructureType, "A", {{"a", int_ptr_type}});
@@ -334,7 +331,7 @@ TEST_F(FormatValueConsoleTest, NestingLimits) {
   provider()->AddMemory(kIntPtrAddress, {0, 0x11, 0, 0, 0, 0, 0, 0});  // kIntAddress.
 
   // Declare A* type.
-  auto a_ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(a_type));
+  auto a_ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, a_type);
 
   // This structure contains one member that's a pointer to the previous structure.
   auto b_type = MakeCollectionType(DwarfTag::kStructureType, "B", {{"b", a_ptr_type}});
@@ -391,8 +388,7 @@ TEST_F(FormatValueConsoleTest, Wrapping) {
       DwarfTag::kStructureType, "Nested", {{"variable1", int32_type}, {"variable2", int32_type}});
 
   // nested_ptr = &Nested{ variable1 = 12, variable2 = 34 };
-  auto nested_ptr =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(nested_collection));
+  auto nested_ptr = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, nested_collection);
   constexpr uint64_t kNestedAddress = 0x1100;
   provider()->AddMemory(kNestedAddress, {12, 0, 0, 0, 34, 0, 0, 0});
 
@@ -478,11 +474,11 @@ TEST_F(FormatValueConsoleTest, RustCollectionName) {
   // Namespace for the structs. Making the root compilation unit a Rust one will mark all types in
   // this unit as Rust.
   auto ns = fxl::MakeRefCounted<Namespace>("my_ns");
-  ns->set_parent(LazySymbol(MakeRustUnit()));
+  ns->set_parent(MakeRustUnit());
 
   // Make a simple type in the namespace with no templates.
   auto simple_type = MakeCollectionType(DwarfTag::kStructureType, "MyStruct", {});
-  simple_type->set_parent(LazySymbol(ns));
+  simple_type->set_parent(ns);
 
   ExprValue simple_value(simple_type, {});
 
@@ -506,7 +502,7 @@ TEST_F(FormatValueConsoleTest, RustCollectionName) {
       DwarfTag::kStructureType,
       "HashMap<alloc::string::String, &str, std::collections::hash::map::RandomState>",
       {{"a", int32_type}});
-  template_type->set_parent(LazySymbol(ns));
+  template_type->set_parent(ns);
   ExprValue template_value(template_type, {123, 0, 0, 0});
 
   // Minimal verbosity elides the template and omits the namespace.

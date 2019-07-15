@@ -78,8 +78,7 @@ class FormatTest : public TestWithLoop {
     return node->type() + ", " + node->description();
   }
 
-  // Returns "<type>, <description>" for the given formatting.
-  // On error, returns "Err: <msg>".
+  // Returns "<type>, <description>" for the given formatting. On error, returns "Err: <msg>".
   std::string SyncTypeDesc(const ExprValue& value, const FormatOptions& opts) {
     auto node = GetDescribedNode(value, opts);
     return GetTypeDesc(node.get());
@@ -256,8 +255,7 @@ TEST_F(FormatTest, Structs) {
 
   // Make an int reference. Reference type printing combined with struct type printing can get
   // complicated.
-  auto int_ref =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType, LazySymbol(int32_type));
+  auto int_ref = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType, int32_type);
 
   // The references point to this data.
   constexpr uint64_t kAddress = 0x1100;
@@ -292,8 +290,7 @@ TEST_F(FormatTest, Struct_Anon) {
   // Test an anonymous struct. Clang will generate structs with no names for things like closures.
   // This struct has no members.
   auto anon_struct = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType);
-  auto anon_struct_ptr =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(anon_struct));
+  auto anon_struct_ptr = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, anon_struct);
   ExprValue anon_value(anon_struct_ptr, {0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
 
   EXPECT_EQ(
@@ -342,15 +339,15 @@ TEST_F(FormatTest, Union) {
 
   auto member_1 = fxl::MakeRefCounted<DataMember>();
   member_1->set_assigned_name("a");
-  member_1->set_type(LazySymbol(int32_type));
+  member_1->set_type(int32_type);
   member_1->set_member_location(0);
-  data_members.push_back(LazySymbol(member_1));
+  data_members.push_back(member_1);
 
   auto member_2 = fxl::MakeRefCounted<DataMember>();
   member_2->set_assigned_name("b");
-  member_2->set_type(LazySymbol(int32_type));
+  member_2->set_type(int32_type);
   member_2->set_member_location(0);
-  data_members.push_back(LazySymbol(member_2));
+  data_members.push_back(member_2);
 
   union_type->set_data_members(std::move(data_members));
 
@@ -376,8 +373,8 @@ TEST_F(FormatTest, DerivedClasses) {
       MakeCollectionTypeWithOffset(DwarfTag::kStructureType, "Derived", base->byte_size(),
                                    {{"c", int32_type}, {"d", int32_type}});
 
-  auto inherited = fxl::MakeRefCounted<InheritedFrom>(LazySymbol(base), 0);
-  auto empty_inherited = fxl::MakeRefCounted<InheritedFrom>(LazySymbol(empty_base), 0);
+  auto inherited = fxl::MakeRefCounted<InheritedFrom>(base, 0);
+  auto empty_inherited = fxl::MakeRefCounted<InheritedFrom>(empty_base, 0);
   derived->set_inherited_from({LazySymbol(inherited), LazySymbol(empty_inherited)});
 
   uint8_t kAValue = 1;
@@ -405,7 +402,7 @@ TEST_F(FormatTest, Pointer) {
   FormatOptions opts;
 
   auto base_type = MakeInt32Type();
-  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(base_type));
+  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, base_type);
 
   std::vector<uint8_t> data = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
   ExprValue value(ptr_type, data);
@@ -437,8 +434,7 @@ TEST_F(FormatTest, Reference) {
   FormatOptions opts;
 
   auto base_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 1, "int");
-  auto ref_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType, LazySymbol(base_type));
+  auto ref_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType, base_type);
   constexpr uint64_t kAddress = 0x1100;
   provider()->AddMemory(kAddress, {123, 0, 0, 0, 0, 0, 0, 0});
 
@@ -458,10 +454,10 @@ TEST_F(FormatTest, Reference) {
       "   = Err: Invalid pointer 0x2200\n",
       SyncTreeTypeDesc(value, opts));
 
-  // Test an rvalue reference. This is treated the same as a regular reference
-  // from an interpretation and printing perspective.
+  // Test an rvalue reference. This is treated the same as a regular reference from an
+  // interpretation and printing perspective.
   auto rvalue_ref_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kRvalueReferenceType, LazySymbol(base_type));
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kRvalueReferenceType, base_type);
   value = ExprValue(rvalue_ref_type, data);
   EXPECT_EQ(
       " = int&&, 0x1100\n"
@@ -506,8 +502,8 @@ TEST_F(FormatTest, GoodStrings) {
   EXPECT_EQ(" = char*, " + expected_desc_string + "\n" + expected_members_no_null,
             SyncTreeTypeDesc(ExprValue(ptr_type, address_data), opts));
 
-  // This string has the same data but is type encoded as char[12], it should
-  // give the same output (except for type info).
+  // This string has the same data but is type encoded as char[12], it should give the same output
+  // (except for type info).
   auto array_type = fxl::MakeRefCounted<ArrayType>(MakeSignedChar8Type(), 12);
   EXPECT_EQ(" = char[12], " + expected_desc_string + "\n" + expected_members_with_null,
             SyncTreeTypeDesc(ExprValue(array_type, data), opts));
@@ -516,10 +512,10 @@ TEST_F(FormatTest, GoodStrings) {
   // things end up as "const pointer to const char") and the type name looks wrong but GCC will
   // generate this for the type of compiler-generated variables like __func__.
   auto char_type = MakeSignedChar8Type();
-  auto const_char = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, LazySymbol(char_type));
+  auto const_char = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, char_type);
   auto array_const_char = fxl::MakeRefCounted<ArrayType>(const_char, 12);
   auto const_array_const_char =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, LazySymbol(array_const_char));
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, array_const_char);
   EXPECT_EQ(std::string(" = const const char[12], ") + expected_desc_string + "\n" +
                 expected_members_with_null,
             SyncTreeTypeDesc(ExprValue(const_array_const_char, data), opts));
@@ -684,8 +680,7 @@ TEST_F(FormatTest, ZxStatusT) {
   // Types in the global namespace named "zx_status_t" of the right size should get the enum name
   // expanded (Zircon special-case).
   auto int32_type = MakeInt32Type();
-  auto status_t_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kTypedef, LazySymbol(int32_type));
+  auto status_t_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kTypedef, int32_type);
   status_t_type->set_assigned_name("zx_status_t");
 
   ExprValue status_ok(status_t_type, {0, 0, 0, 0});
@@ -765,8 +760,7 @@ TEST_F(FormatTest, NullptrT) {
   underlying_type->set_byte_size(8);
 
   // The nullptr_t is defined as a typedef for the above.
-  auto nullptr_t_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kTypedef, LazySymbol(underlying_type));
+  auto nullptr_t_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kTypedef, underlying_type);
   nullptr_t_type->set_assigned_name("nullptr_t");
 
   ExprValue null_value(nullptr_t_type, {0, 0, 0, 0, 0, 0, 0, 0});
@@ -781,8 +775,7 @@ TEST_F(FormatTest, FunctionPtr) {
   auto func_type = fxl::MakeRefCounted<FunctionType>(LazySymbol(), std::vector<LazySymbol>());
 
   // This type is "void (*)()"
-  auto func_ptr_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(func_type));
+  auto func_ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, func_type);
 
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
@@ -791,8 +784,8 @@ TEST_F(FormatTest, FunctionPtr) {
 
   // Map the address to point to the function.
   constexpr uint64_t kAddress = 0x1234;
-  eval_context()->AddLocation(kAddress, Location(kAddress, FileLine("file.cc", 21), 0,
-                                                 symbol_context, LazySymbol(function)));
+  eval_context()->AddLocation(
+      kAddress, Location(kAddress, FileLine("file.cc", 21), 0, symbol_context, function));
 
   // Function.
   FormatOptions opts;
@@ -815,7 +808,7 @@ TEST_F(FormatTest, FunctionPtr) {
   // and otherwise the code paths are the same, so here we only need to verify things are hooked up.
   auto containing = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType, "MyClass");
 
-  auto member_func = fxl::MakeRefCounted<MemberPtr>(LazySymbol(containing), LazySymbol(func_type));
+  auto member_func = fxl::MakeRefCounted<MemberPtr>(containing, func_type);
   ExprValue null_member_func_ptr(member_func, {0, 0, 0, 0, 0, 0, 0, 0});
   EXPECT_EQ(" = void (MyClass::*)(), 0x0\n", SyncTreeTypeDesc(null_member_func_ptr, opts));
 
@@ -835,8 +828,7 @@ TEST_F(FormatTest, MemberPtr) {
   auto containing = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType, "MyClass");
 
   auto int32_type = MakeInt32Type();
-  auto member_int32 =
-      fxl::MakeRefCounted<MemberPtr>(LazySymbol(containing), LazySymbol(int32_type));
+  auto member_int32 = fxl::MakeRefCounted<MemberPtr>(containing, int32_type);
 
   // Null pointer.
   FormatOptions opts;

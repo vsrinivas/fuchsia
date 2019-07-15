@@ -15,37 +15,37 @@ namespace zxdb {
 
 TEST(Collection, GetSpecialType) {
   // This DataMember encodes a name of __0 which is used for Rust tuples.
-  auto zero_member = fxl::MakeRefCounted<DataMember>("__0", LazySymbol(MakeInt32Type()), 0);
+  auto zero_member = fxl::MakeRefCounted<DataMember>("__0", MakeInt32Type(), 0);
 
-  // Regular C struct. Give it a member of "__0" to make sure we're checking
-  // the language properly (in this case the language is unset).
+  // Regular C struct. Give it a member of "__0" to make sure we're checking the language properly
+  // (in this case the language is unset).
   auto regular_c = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, "RegularC");
   regular_c->set_data_members({LazySymbol(zero_member)});
   EXPECT_EQ(Collection::kNotSpecial, regular_c->GetSpecialType());
 
   // A regular Rust structure with no members.
   auto regular_rust = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, "RegularRust");
-  regular_rust->set_parent(LazySymbol(MakeRustUnit()));
+  regular_rust->set_parent(MakeRustUnit());
   EXPECT_EQ(Collection::kNotSpecial, regular_rust->GetSpecialType());
 
   // A Rust tuple struct which has a normal name and a member named __0.
   auto rust_tuple_struct = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, "TupleStruct");
-  rust_tuple_struct->set_parent(LazySymbol(MakeRustUnit()));
+  rust_tuple_struct->set_parent(MakeRustUnit());
   rust_tuple_struct->set_data_members({LazySymbol(zero_member)});
   EXPECT_EQ(Collection::kRustTupleStruct, rust_tuple_struct->GetSpecialType());
 
   // A Rust typle which has a name with "(...)" and a member named __0.
   auto rust_tuple = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, "(i32, i32)");
-  rust_tuple->set_parent(LazySymbol(MakeRustUnit()));
+  rust_tuple->set_parent(MakeRustUnit());
   rust_tuple->set_data_members({LazySymbol(zero_member)});
   EXPECT_EQ(Collection::kRustTuple, rust_tuple->GetSpecialType());
 
   // A Rust Enum has a variant part. This makes a mostly empty one but is
   // // good enough.
   auto rust_enum = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, "Foo");
-  rust_enum->set_parent(LazySymbol(MakeRustUnit()));
+  rust_enum->set_parent(MakeRustUnit());
   rust_enum->set_variant_part(
-      LazySymbol(fxl::MakeRefCounted<VariantPart>(LazySymbol(), std::vector<LazySymbol>())));
+      fxl::MakeRefCounted<VariantPart>(LazySymbol(), std::vector<LazySymbol>()));
   EXPECT_EQ(Collection::kRustEnum, rust_enum->GetSpecialType());
 }
 

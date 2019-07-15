@@ -81,7 +81,7 @@ TEST(FindName, FindLocalVariable) {
   uint64_t kFunctionBeginAddr = 0x1000;
   uint64_t kFunctionEndAddr = 0x2000;
   function->set_code_ranges(AddressRanges(AddressRange(kFunctionBeginAddr, kFunctionEndAddr)));
-  function->set_parent(LazySymbol(ns));
+  function->set_parent(ns);
 
   // Function parameters.
   auto param_value =
@@ -103,7 +103,7 @@ TEST(FindName, FindLocalVariable) {
   uint64_t kBlockEndAddr = 0x1200;
   auto block = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
   block->set_code_ranges(AddressRanges(AddressRange(kBlockBeginAddr, kBlockEndAddr)));
-  block->set_parent(LazySymbol(function));
+  block->set_parent(function);
   function->set_inner_blocks({LazySymbol(block)});
 
   // Inner block variables.
@@ -367,8 +367,7 @@ TEST(FindName, FindTypeName) {
   // overlap the function. This means we can never compute its value, but since
   // it's syntactically in-scope, we should still be able to use its type
   // to resolve type names on the current class.
-  auto global_type_ptr =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(global_type));
+  auto global_type_ptr = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, global_type);
   auto this_var = MakeVariableForTest("this", global_type_ptr, 0x9000, 0x9001,
                                       {llvm::dwarf::DW_OP_reg0, llvm::dwarf::DW_OP_stack_value});
 
@@ -378,7 +377,7 @@ TEST(FindName, FindTypeName) {
   uint64_t kFunctionBeginAddr = 0x1000;
   uint64_t kFunctionEndAddr = 0x2000;
   function->set_code_ranges(AddressRanges(AddressRange(kFunctionBeginAddr, kFunctionEndAddr)));
-  function->set_object_pointer(LazySymbol(this_var));
+  function->set_object_pointer(this_var);
 
   // This context declares a target and a block but no current module, which
   // means the block and all modules should be searched with no particular

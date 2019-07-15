@@ -80,9 +80,9 @@ class MockThread : public Thread, public Stack::Delegate {
 
 // Tests asynchronous evaluation and callbacks for evaluating the base pointer.
 //
-// This test uses the RemoteAPITest harness which normally creates ThreadImpls.
-// But to get the stack frames the way they're needed, it creates its own
-// thread implementation rather than relying on the ThreadImpl.
+// This test uses the RemoteAPITest harness which normally creates ThreadImpls.  But to get the
+// stack frames the way they're needed, it creates its own thread implementation rather than relying
+// on the ThreadImpl.
 TEST_F(FrameImplTest, AsyncBasePointer) {
   // Make a process for notifying about.
   constexpr uint64_t kProcessKoid = 1234;
@@ -103,15 +103,15 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
   memcpy(&mem_value[0], &kMemoryValue, sizeof(kMemoryValue));
   mock_remote_api()->AddMemory(kAddress, mem_value);
 
-  // This describes the frame base location for the function. This encodes
-  // the memory pointed to by register 0.
+  // This describes the frame base location for the function. This encodes the memory pointed to by
+  // register 0.
   const uint8_t kSelectRegRef[2] = {llvm::dwarf::DW_OP_reg0, llvm::dwarf::DW_OP_deref};
   VariableLocation frame_base(kSelectRegRef, 2);
 
   auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   function->set_frame_base(frame_base);
 
-  Location location(stack.ip, FileLine("file.cc", 12), 0, symbol_context, LazySymbol(function));
+  Location location(stack.ip, FileLine("file.cc", 12), 0, symbol_context, function);
 
   MockThread thread(process);
   thread.register_contents().set_arch(debug_ipc::Arch::kX64);
@@ -121,8 +121,8 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
   Frame* frame = frames[0].get();
   thread.GetStack().SetFramesForTest(std::move(frames), true);
 
-  // This should not be able to complete synchronously because the memory isn't
-  // available synchronously.
+  // This should not be able to complete synchronously because the memory isn't available
+  // synchronously.
   auto optional_base = frame->GetBasePointer();
   EXPECT_FALSE(optional_base);
 
@@ -132,8 +132,7 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
     debug_ipc::MessageLoop::Current()->QuitNow();
   });
 
-  // The base pointer should have picked up our register0 value for the base
-  // pointer.
+  // The base pointer should have picked up our register0 value for the base pointer.
   debug_ipc::MessageLoop::Current()->Run();
   EXPECT_EQ(kMemoryValue, result_base);
 }

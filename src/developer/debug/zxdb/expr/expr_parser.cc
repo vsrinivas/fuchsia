@@ -14,12 +14,10 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-// The parser is a Pratt parser. The basic idea there is to have the
-// precedences (and associativities) encoded relative to each other and only
-// parse up until you hit something of that precedence. There's a dispatch
-// table in kDispatchInfo that describes how each token dispatches if it's seen
-// as either a prefix or infix operator, and if it's infix, what its precedence
-// is.
+// The parser is a Pratt parser. The basic idea there is to have the precedences (and
+// associativities) encoded relative to each other and only parse up until you hit something of that
+// precedence. There's a dispatch table in kDispatchInfo that describes how each token dispatches if
+// it's seen as either a prefix or infix operator, and if it's infix, what its precedence is.
 //
 // References:
 // http://javascript.crockford.com/tdop/tdop.html
@@ -29,33 +27,30 @@ namespace zxdb {
 
 namespace {
 
-// An infix operator is one that combines two sides of things and it modifies
-// both, like "a + b" ("a" is the "left" and "+" is the token in the params).
+// An infix operator is one that combines two sides of things and it modifies both, like "a + b"
+// ("a" is the "left" and "+" is the token in the params).
 //
-// Other things are infix like "[" which combines the expression on the left
-// with some expression to the right of it.
+// Other things are infix like "[" which combines the expression on the left with some expression to
+// the right of it.
 //
-// A prefix operator are binary operators like "!" in C that only apply to the
-// thing on the right and don't require anything on the left. Standalone
-// numbers and names are also considered prefix since they represent themselves
-// (not requiring anything on the left).
+// A prefix operator are binary operators like "!" in C that only apply to the thing on the right
+// and don't require anything on the left. Standalone numbers and names are also considered prefix
+// since they represent themselves (not requiring anything on the left).
 //
-// Some things can be both prefix and infix. An example in C is "(" which is
-// prefix when used in casts and math expressions: "(a + b)" "a + (b + c)" but
-// infix when used for function calls: "foo(bar)".
+// Some things can be both prefix and infix. An example in C is "(" which is prefix when used in
+// casts and math expressions: "(a + b)" "a + (b + c)" but infix when used for function calls:
+// "foo(bar)".
 using PrefixFunc = fxl::RefPtr<ExprNode> (ExprParser::*)(const ExprToken&);
 using InfixFunc = fxl::RefPtr<ExprNode> (ExprParser::*)(fxl::RefPtr<ExprNode> left,
                                                         const ExprToken& token);
 
-// Precedence constants used in DispatchInfo. Note that these aren't
-// contiguous. At least need to do every-other-one to handle the possible
-// "precedence - 1" that occurs when evaluating right-associative operators. We
-// don't want that operation to push the precedence into a completely other
-// category, rather, it should only affect comparisons that would otherwise be
+// Precedence constants used in DispatchInfo. Note that these aren't contiguous. At least need to do
+// every-other-one to handle the possible "precedence - 1" that occurs when evaluating
+// right-associative operators. We don't want that operation to push the precedence into a
+// completely other category, rather, it should only affect comparisons that would otherwise be
 // equal.
 //
-// This should match the C operator precedence for the subset of operations
-// that we support:
+// This should match the C operator precedence for the subset of operations that we support:
 //   https://en.cppreference.com/w/cpp/language/operator_precedence
 // The commented-out values are ones we don't currently implement.
 
@@ -136,9 +131,8 @@ ExprParser::ExprParser(std::vector<ExprToken> tokens, NameLookupCallback name_lo
 fxl::RefPtr<ExprNode> ExprParser::Parse() {
   auto result = ParseExpression(0);
 
-  // That should have consumed everything, as we don't support multiple
-  // expressions being next to each other (probably the user forgot an operator
-  // and wrote something like "foo 5"
+  // That should have consumed everything, as we don't support multiple expressions being next to
+  // each other (probably the user forgot an operator and wrote something like "foo 5"
   if (!has_error() && !at_end()) {
     SetError(cur_token(), "Unexpected input, did you forget an operator?");
     return nullptr;
@@ -212,9 +206,9 @@ fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence) {
 }
 
 ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
-  // Grammar we support. Note "identifier" in this context is a single token
-  // of type "name" (more like how the C++ spec uses it), while our Identifier
-  // class represents a whole name with scopes and templates.
+  // Grammar we support. Note "identifier" in this context is a single token of type "name" (more
+  // like how the C++ spec uses it), while our Identifier class represents a whole name with scopes
+  // and templates.
   //
   //   name := type-name | other-identifier
   //
@@ -224,17 +218,15 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
   //
   //   scope-name := ( namespace-name | type-name )
   //
-  // The thing that differentiates type names, namespace names, and other
-  // identifiers is the symbol lookup function rather than something in the
-  // grammar.
+  // The thing that differentiates type names, namespace names, and other identifiers is the symbol
+  // lookup function rather than something in the grammar.
   //
   // The thing this doesn't handle is templatized functions, for example:
   //   auto foo = &MyClass::MyFunc<int>;
-  // To handle this we will need the type lookup function to be able to tell
-  // us "MyClass::MyFunc" is a thing that has a template so we know to parse
-  // the following "<" as part of the name and not as a comparison. Note that
-  // when we need to parse function names, there is special handling required
-  // for operators.
+  // To handle this we will need the type lookup function to be able to tell us "MyClass::MyFunc" is
+  // a thing that has a template so we know to parse the following "<" as part of the name and not
+  // as a comparison. Note that when we need to parse function names, there is special handling
+  // required for operators.
 
   // The mode of the state machine.
   enum Mode {
@@ -280,16 +272,15 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
           return ParseNameResult();
         }
         if (mode != kTemplate && mode != kAnything) {
-          // "<" after anything but a template means the end of the name. In
-          // "anything" mode we assume "<" means a template since this is used
-          // to parse random identifiers and function names.
+          // "<" after anything but a template means the end of the name. In "anything" mode we
+          // assume "<" means a template since this is used to parse random identifiers and function
+          // names.
           return result;
         }
         if (result.ident.components().back().has_template()) {
-          // Got a "<" after a template parameter list was already defined
-          // (this will happen in "anything" mode since we don't know what it
-          // is for sure). That means this is a comparison operator which will
-          // be handled by the outer parser.
+          // Got a "<" after a template parameter list was already defined (this will happen in
+          // "anything" mode since we don't know what it is for sure). That means this is a
+          // comparison operator which will be handled by the outer parser.
           return result;
         }
 
@@ -305,8 +296,8 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
         if (has_error())
           return ParseNameResult();
 
-        // Construct a replacement for the last component of the identifier
-        // with the template arguments added.
+        // Construct a replacement for the last component of the identifier with the template
+        // arguments added.
         ParsedIdentifierComponent& back = result.ident.components().back();
         back = ParsedIdentifierComponent(back.name(), std::move(list));
 
@@ -321,8 +312,8 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
               break;
             case FoundName::kNamespace:
             case FoundName::kTemplate:
-              // The lookup shouldn't tell us a template name or namespace for
-              // something that has template parameters.
+              // The lookup shouldn't tell us a template name or namespace for something that has
+              // template parameters.
               FXL_NOTREACHED();
               // Fall through to "other" case for fallback.
             case FoundName::kVariable:
@@ -341,8 +332,7 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
       case ExprTokenType::kName: {
         // Names can only follow nothing or "::".
         if (mode == kType) {
-          // Normally in C++ a name can follow a type, so make a special error
-          // for this case.
+          // Normally in C++ a name can follow a type, so make a special error for this case.
           SetError(token, "This looks like a declaration which is not supported.");
           return ParseNameResult();
         } else if (mode == kBegin) {
@@ -385,8 +375,7 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
       }
 
       default: {
-        // Any other token type means we're done. The outer parser will figure
-        // out what it means.
+        // Any other token type means we're done. The outer parser will figure out what it means.
         if (expand_types && result.type) {
           // When we found a type, add on any trailing modifiers like "*".
           result.type = ParseType(std::move(result.type));
@@ -432,12 +421,11 @@ fxl::RefPtr<Type> ExprParser::ParseType(fxl::RefPtr<Type> optional_base) {
   //
   //   type-id := cv-qualifier type-name cv-qualifier [ ptr-operator ] *
   //
-  // Our logic is much more permissive than C++. This is both because it makes
-  // the code simpler, and because certain constructs may be used by other
-  // languages. For example, this allows references to references and
-  // "int & const" while C++ says you can't apply const to the reference itself
-  // (it permits only "const int&" or "int const &" which are the same). It
-  // also allows "restrict" to be used in invalid places.
+  // Our logic is much more permissive than C++. This is both because it makes the code simpler, and
+  // because certain constructs may be used by other languages. For example, this allows references
+  // to references and "int & const" while C++ says you can't apply const to the reference itself
+  // (it permits only "const int&" or "int const &" which are the same). It also allows "restrict"
+  // to be used in invalid places.
 
   fxl::RefPtr<Type> type;
   std::vector<DwarfTag> type_qual;
@@ -468,8 +456,8 @@ fxl::RefPtr<Type> ExprParser::ParseType(fxl::RefPtr<Type> optional_base) {
     type = std::move(parse_result.type);
   }
 
-  // Read "const" etc. that comes after the type name. These apply the same
-  // as the ones that come before it so get appended and can't duplicate them.
+  // Read "const" etc. that comes after the type name. These apply the same as the ones that come
+  // before it so get appended and can't duplicate them.
   ConsumeCVQualifier(&type_qual);
   if (has_error())
     return nullptr;
@@ -480,13 +468,11 @@ fxl::RefPtr<Type> ExprParser::ParseType(fxl::RefPtr<Type> optional_base) {
     // Read the operator.
     const ExprToken& token = cur_token();
     if (token.type() == ExprTokenType::kStar) {
-      type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(std::move(type)));
+      type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, std::move(type));
     } else if (token.type() == ExprTokenType::kAmpersand) {
-      type =
-          fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType, LazySymbol(std::move(type)));
+      type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType, std::move(type));
     } else if (token.type() == ExprTokenType::kDoubleAnd) {
-      type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kRvalueReferenceType,
-                                               LazySymbol(std::move(type)));
+      type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kRvalueReferenceType, std::move(type));
     } else {
       // Done with the ptr-operators.
       break;
@@ -504,8 +490,8 @@ fxl::RefPtr<Type> ExprParser::ParseType(fxl::RefPtr<Type> optional_base) {
   return type;
 }
 
-// A list is any sequence of comma-separated types. We don't parse the types
-// (this is hard) but instead skip over them.
+// A list is any sequence of comma-separated types. We don't parse the types (this is hard) but
+// instead skip over them.
 std::vector<std::string> ExprParser::ParseTemplateList(ExprTokenType stop_before) {
   std::vector<std::string> result;
 
@@ -539,10 +525,9 @@ std::vector<std::string> ExprParser::ParseTemplateList(ExprTokenType stop_before
   return result;
 }
 
-// This function is called in contexts where we expect a comma-separated list.
-// Currently these are all known in advance so this simple manual parsing will
-// do. A more general approach would implement a comma infix which constructs a
-// new type of ExprNode.
+// This function is called in contexts where we expect a comma-separated list.  Currently these are
+// all known in advance so this simple manual parsing will do. A more general approach would
+// implement a comma infix which constructs a new type of ExprNode.
 std::vector<fxl::RefPtr<ExprNode>> ExprParser::ParseExpressionList(ExprTokenType stop_before) {
   std::vector<fxl::RefPtr<ExprNode>> result;
 
@@ -601,19 +586,17 @@ fxl::RefPtr<ExprNode> ExprParser::DotOrArrowInfix(fxl::RefPtr<ExprNode> left,
     return nullptr;
   }
 
-  // Use the name from the right-hand-side identifier, we don't need a full
-  // expression for that. If we add function calls it will be necessary.
+  // Use the name from the right-hand-side identifier, we don't need a full expression for that. If
+  // we add function calls it will be necessary.
   return fxl::MakeRefCounted<MemberAccessExprNode>(std::move(left), token,
                                                    right->AsIdentifier()->ident());
 }
 
 fxl::RefPtr<ExprNode> ExprParser::LeftParenPrefix(const ExprToken& token) {
-  // "(" as a prefix is a grouping or cast: "a + (b + c)" or "(Foo)bar" where
-  // it doesn't modify the thing on the left. Evaluate the thing inside the
-  // () and return it.
+  // "(" as a prefix is a grouping or cast: "a + (b + c)" or "(Foo)bar" where it doesn't modify the
+  // thing on the left. Evaluate the thing inside the () and return it.
   //
-  // Currently there's no infix version of "(" which would be something like
-  // a function call.
+  // Currently there's no infix version of "(" which would be something like a function call.
   auto expr = ParseExpression(0);
   if (!has_error() && !expr)
     SetError(token, "Expected expression inside '('.");
@@ -623,10 +606,9 @@ fxl::RefPtr<ExprNode> ExprParser::LeftParenPrefix(const ExprToken& token) {
     return nullptr;
 
   if (const TypeExprNode* type_expr = expr->AsType()) {
-    // Convert "(TypeName)..." into a cast. Note the "-1" here which converts
-    // to right-associative. With variable names, () is left-associative in
-    // that "(foo)(bar)[baz]" means to execute left-to-right. But when "(foo)"
-    // is a C-style cast, this means "(bar)[baz]" is a unit.
+    // Convert "(TypeName)..." into a cast. Note the "-1" here which converts to right-associative.
+    // With variable names, () is left-associative in that "(foo)(bar)[baz]" means to execute
+    // left-to-right. But when "(foo)" is a C-style cast, this means "(bar)[baz]" is a unit.
     auto cast_expr = ParseExpression(kPrecedenceCallAccess - 1);
     if (has_error())
       return nullptr;
@@ -641,15 +623,15 @@ fxl::RefPtr<ExprNode> ExprParser::LeftParenPrefix(const ExprToken& token) {
 
 fxl::RefPtr<ExprNode> ExprParser::LeftParenInfix(fxl::RefPtr<ExprNode> left,
                                                  const ExprToken& token) {
-  // "(" as an infix is a function call. In this case, expect the thing on the
-  // left to be an identifier which is the name of the function.
+  // "(" as an infix is a function call. In this case, expect the thing on the left to be an
+  // identifier which is the name of the function.
   const IdentifierExprNode* left_ident_node = left->AsIdentifier();
   if (!left_ident_node) {
     SetError(token, "Unexpected '('.");
     return nullptr;
   }
-  // Const cast is required because the type conversions only have const
-  // versions, although our object is not const.
+  // Const cast is required because the type conversions only have const versions, although our
+  // object is not const.
   ParsedIdentifier name = const_cast<IdentifierExprNode*>(left_ident_node)->TakeIdentifier();
 
   // Read the function parameters.
@@ -690,9 +672,8 @@ fxl::RefPtr<ExprNode> ExprParser::GreaterInfix(fxl::RefPtr<ExprNode> left, const
 }
 
 fxl::RefPtr<ExprNode> ExprParser::MinusPrefix(const ExprToken& token) {
-  // Currently we only implement "-" as a prefix which is for unary "-" when
-  // you type "-5" or "-foo[6]". An infix version would be needed to parse the
-  // binary operator for "a - 6".
+  // Currently we only implement "-" as a prefix which is for unary "-" when you type "-5" or
+  // "-foo[6]". An infix version would be needed to parse the binary operator for "a - 6".
   auto inner = ParseExpression(kPrecedenceUnary);
   if (!has_error() && !inner)
     SetError(token, "Expected expression for '-'.");
@@ -702,12 +683,11 @@ fxl::RefPtr<ExprNode> ExprParser::MinusPrefix(const ExprToken& token) {
 }
 
 fxl::RefPtr<ExprNode> ExprParser::NamePrefix(const ExprToken& token) {
-  // Handles names and "::" which precedes names. This could be a typename
-  // ("int", or "::std::vector<int>") or a variable name ("i",
-  // "std::basic_string<char>::npos").
+  // Handles names and "::" which precedes names. This could be a typename ("int", or
+  // "::std::vector<int>") or a variable name ("i", "std::basic_string<char>::npos").
 
-  // Back up so the current token is the first component of the name so we
-  // can hand-off to the specialized name parser.
+  // Back up so the current token is the first component of the name so we can hand-off to the
+  // specialized name parser.
   FXL_DCHECK(cur_ > 0);
   cur_--;
 
@@ -854,10 +834,9 @@ fxl::RefPtr<Type> ExprParser::ApplyQualifiers(fxl::RefPtr<Type> input,
                                               const std::vector<DwarfTag>& qual) {
   fxl::RefPtr<Type> type = std::move(input);
 
-  // Apply the qualifiers in reverse order so the rightmost one is applied
-  // first.
+  // Apply the qualifiers in reverse order so the rightmost one is applied first.
   for (auto iter = qual.rbegin(); iter != qual.rend(); ++iter) {
-    type = fxl::MakeRefCounted<ModifiedType>(*iter, LazySymbol(std::move(type)));
+    type = fxl::MakeRefCounted<ModifiedType>(*iter, std::move(type));
   }
   return type;
 }

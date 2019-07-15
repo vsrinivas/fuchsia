@@ -32,9 +32,8 @@ const char kPassRValueRefName[] = "PassRValueRef";
 const char kCallInlineMemberName[] = "CallInlineMember";
 const char kCallInlineName[] = "CallInline";
 
-// Returns the function symbol with the given name. The name is assumed to
-// exit as this function will EXPECT_* it to be valid. Returns empty refptr on
-// failure.
+// Returns the function symbol with the given name. The name is assumed to exit as this function
+// will EXPECT_* it to be valid. Returns empty refptr on failure.
 fxl::RefPtr<const Function> GetFunctionWithName(ModuleSymbolsImpl& module,
                                                 const std::string& name) {
   DwarfSymbolFactory* factory = module.symbol_factory();
@@ -78,9 +77,9 @@ TEST(DwarfSymbolFactory, Function) {
   // Unmangled name.
   EXPECT_EQ(kGetIntPtrName, function->GetAssignedName());
 
-  // Mangled name. This tries not to depend on the exact name mangling rules
-  // while validating that it's reasonable. The mangled name shouldn't be
-  // exactly the same as the unmangled name, but should at least contain it.
+  // Mangled name. This tries not to depend on the exact name mangling rules while validating that
+  // it's reasonable. The mangled name shouldn't be exactly the same as the unmangled name, but
+  // should at least contain it.
   EXPECT_NE(kGetIntPtrName, function->linkage_name());
   EXPECT_NE(std::string::npos, function->linkage_name().find(kGetIntPtrName));
 
@@ -102,13 +101,13 @@ TEST(DwarfSymbolFactory, PtrToMemberFunction) {
   fxl::RefPtr<const Function> get_function = GetFunctionWithName(module, kGetStructMemberPtrName);
   ASSERT_TRUE(get_function);
 
-  // Get the return type, this is a typedef (because functions can't return
-  // pointers to member functions).
+  // Get the return type, this is a typedef (because functions can't return pointers to member
+  // functions).
   auto return_typedef = get_function->return_type().Get()->AsModifiedType();
   ASSERT_TRUE(return_typedef);
 
-  // The typedef references the member pointer. The type name encapsulates all
-  // return values and parameters so this tests everything at once.
+  // The typedef references the member pointer. The type name encapsulates all return values and
+  // parameters so this tests everything at once.
   const Symbol* member = return_typedef->modified().Get();
   EXPECT_EQ("int (my_ns::Struct::*)(my_ns::Struct*, char)", member->GetFullName());
 }
@@ -139,11 +138,10 @@ TEST(DwarfSymbolFactory, InlinedMemberFunction) {
   ASSERT_TRUE(param_param);
   EXPECT_EQ("param", param_param->GetAssignedName());
 
-  // The object pointer on the function should refer to the "this" pointer
-  // retrieved above. This is tricky because normally the object pointer is
-  // on the "abstract origin" of the inlined routine, and will refer to a
-  // "this" parameter specified on the abstract origin. We need to correlate
-  // it to the one on the inlined instance to get the location correct.
+  // The object pointer on the function should refer to the "this" pointer retrieved above. This is
+  // tricky because normally the object pointer is on the "abstract origin" of the inlined routine,
+  // and will refer to a "this" parameter specified on the abstract origin. We need to correlate it
+  // to the one on the inlined instance to get the location correct.
   EXPECT_EQ(this_param, inline_func->GetObjectPointerVariable());
 }
 
@@ -162,13 +160,13 @@ TEST(DwarfSymbolFactory, InlinedFunction) {
   ASSERT_TRUE(inline_func);
   EXPECT_EQ(DwarfTag::kInlinedSubroutine, inline_func->tag());
 
-  // Parameter decoding is tested by the InlinedMemberFunction test above. Here
-  // we care that the enclosing namespace is correct because of the different
-  // ways these inlined routines are declared.
+  // Parameter decoding is tested by the InlinedMemberFunction test above. Here we care that the
+  // enclosing namespace is correct because of the different ways these inlined routines are
+  // declared.
   EXPECT_EQ("my_ns::InlinedFunction", inline_func->GetFullName());
 
-  // The containing block of the inline function should be the calling
-  // function. Note that the objects may not be the same.
+  // The containing block of the inline function should be the calling function. Note that the
+  // objects may not be the same.
   ASSERT_TRUE(inline_func->containing_block());
   auto containing_func = inline_func->containing_block().Get()->AsFunction();
   ASSERT_TRUE(containing_func);
@@ -327,9 +325,8 @@ TEST(DwarfSymbolFactory, Collection) {
   EXPECT_EQ("my_ns::Base1", base1_type->GetFullName());
   EXPECT_EQ(0u, base1->offset());
 
-  // It should be followed by Base2. To allow flexibility in packing without
-  // breaking this test, all offsets below check only that the offset is
-  // greater than the previous one and a multiple of 4.
+  // It should be followed by Base2. To allow flexibility in packing without breaking this test, all
+  // offsets below check only that the offset is greater than the previous one and a multiple of 4.
   auto* base2 = struct_type->inherited_from()[1].Get()->AsInheritedFrom();
   ASSERT_TRUE(base2);
   auto* base2_type = base2->from().Get()->AsType();
@@ -353,8 +350,8 @@ TEST(DwarfSymbolFactory, Collection) {
   EXPECT_LT(member_a->member_location(), member_b->member_location());
   EXPECT_TRUE(member_b->member_location() % 4 == 0);
 
-  // The third data member is "const void* v". Void is weird because it will
-  // be represented as a modified pointer type of nothing.
+  // The third data member is "const void* v". Void is weird because it will be represented as a
+  // modified pointer type of nothing.
   auto* member_v = struct_type->data_members()[2].Get()->AsDataMember();
   ASSERT_TRUE(member_v);
   auto* member_v_type = member_v->type().Get()->AsType();
@@ -388,9 +385,8 @@ TEST(DwarfSymbolFactory, Enum) {
   EXPECT_EQ("StructWithEnums::RegularEnum", regular_enum->GetFullName());
   EXPECT_TRUE(regular_enum->values().empty());
 
-  // Second is an anonymous signed enum with two values. We don't bother to
-  // test the enumerator values on this one since some aspects will be
-  // compiler-dependent.
+  // Second is an anonymous signed enum with two values. We don't bother to test the enumerator
+  // values on this one since some aspects will be compiler-dependent.
   auto anon_enum =
       struct_type->data_members()[1].Get()->AsDataMember()->type().Get()->AsEnumeration();
   ASSERT_TRUE(anon_enum);
@@ -407,8 +403,8 @@ TEST(DwarfSymbolFactory, Enum) {
   ASSERT_EQ(2u, typed_enum->values().size());
   EXPECT_EQ(1u, typed_enum->byte_size());
 
-  // Since this is typed, the values should be known. The map contains the
-  // signed values casted to an unsigned int.
+  // Since this is typed, the values should be known. The map contains the signed values casted to
+  // an unsigned int.
   auto first_value = *typed_enum->values().begin();
   auto second_value = *(++typed_enum->values().begin());
   EXPECT_EQ(1u, first_value.first);
@@ -440,8 +436,8 @@ TEST(DwarfSymbolFactory, CodeBlocks) {
       int_arg = cur_var;
   }
 
-  // Both args should have valid locations with non-empty expressions. This
-  // doesn't test the actual programs because that could vary by build.
+  // Both args should have valid locations with non-empty expressions. This doesn't test the actual
+  // programs because that could vary by build.
   ASSERT_FALSE(struct_arg->location().is_null());
   EXPECT_FALSE(struct_arg->location().locations()[0].expression.empty());
   ASSERT_FALSE(int_arg->location().is_null());
@@ -509,9 +505,9 @@ TEST(DwarfSymbolFactory, NullPtrTTypedef) {
   ASSERT_TRUE(underlying);
   EXPECT_EQ("decltype(nullptr)", underlying->GetFullName());
 
-  // Currently Clang defines this as an "unspecified" type. Since this isn't
-  // specified, it's possible this may change in the future, but if it does we
-  // need to check to make sure everything works properly.
+  // Currently Clang defines this as an "unspecified" type. Since this isn't specified, it's
+  // possible this may change in the future, but if it does we need to check to make sure everything
+  // works properly.
   EXPECT_EQ(DwarfTag::kUnspecifiedType, underlying->tag());
 
   // The decoder should have forced the size to be the size of a pointer.

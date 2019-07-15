@@ -26,7 +26,7 @@ TEST(ResolveVariant, TwoValues) {
 
   // 8-bit disciminant.
   auto u8_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "u8");
-  auto discr = fxl::MakeRefCounted<DataMember>(std::string(), LazySymbol(u8_type), 0);
+  auto discr = fxl::MakeRefCounted<DataMember>(std::string(), u8_type, 0);
 
   auto rust_enum = MakeRustEnum("RustEnum", discr, {a, b});
   auto variant_part = rust_enum->variant_part().Get()->AsVariantPart();
@@ -60,7 +60,7 @@ TEST(ResolveVariant, DefaultValue) {
 
   // 8-bit disciminant.
   auto u8_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "u8");
-  auto discr = fxl::MakeRefCounted<DataMember>(std::string(), LazySymbol(u8_type), 0);
+  auto discr = fxl::MakeRefCounted<DataMember>(std::string(), u8_type, 0);
 
   auto rust_enum = MakeRustEnum("RustEnum", discr, {a, b});
   auto variant_part = rust_enum->variant_part().Get()->AsVariantPart();

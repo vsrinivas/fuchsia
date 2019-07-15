@@ -41,8 +41,7 @@ fxl::RefPtr<BaseType> MakeSignedChar8Type() {
 }
 
 fxl::RefPtr<ModifiedType> MakeCharPointerType() {
-  return fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType,
-                                           LazySymbol(MakeSignedChar8Type()));
+  return fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, MakeSignedChar8Type());
 }
 
 fxl::RefPtr<Collection> MakeCollectionType(DwarfTag type_tag, const std::string& type_name,
@@ -61,7 +60,7 @@ fxl::RefPtr<Collection> MakeCollectionTypeWithOffset(DwarfTag type_tag,
   for (const auto& [name, type] : members) {
     auto member = fxl::MakeRefCounted<DataMember>();
     member->set_assigned_name(name);
-    member->set_type(LazySymbol(type));
+    member->set_type(type);
     member->set_member_location(offset);
     data_members.emplace_back(member);
 
@@ -83,8 +82,7 @@ fxl::RefPtr<Collection> MakeDerivedClassPair(DwarfTag type_tag, const std::strin
   auto derived = MakeCollectionTypeWithOffset(type_tag, derived_name, base->byte_size(),
                                               std::move(derived_members));
 
-  derived->set_inherited_from(
-      {LazySymbol(fxl::MakeRefCounted<InheritedFrom>(LazySymbol(base), 0))});
+  derived->set_inherited_from({LazySymbol(fxl::MakeRefCounted<InheritedFrom>(base, 0))});
   return derived;
 }
 
@@ -96,10 +94,9 @@ fxl::RefPtr<CompileUnit> MakeRustUnit() {
 
 fxl::RefPtr<Variant> MakeRustVariant(const std::string& name, std::optional<uint64_t> discriminant,
                                      const std::vector<fxl::RefPtr<DataMember>>& members) {
-  // For Rust triggering to happen the compilation unit must be set. The
-  // easiest way to do this is to set the compilation unit as the parent.
-  // This doesn't produce a strictly valid structure since the parents won't
-  // be "right" when traversing the symbol hierarcy upward, but that's not
+  // For Rust triggering to happen the compilation unit must be set. The easiest way to do this is
+  // to set the compilation unit as the parent.  This doesn't produce a strictly valid structure
+  // since the parents won't be "right" when traversing the symbol hierarcy upward, but that's not
   // been necessary so far.
   //
   // TODO(brettw) have a better way to set the language for symbols.
@@ -112,27 +109,27 @@ fxl::RefPtr<Variant> MakeRustVariant(const std::string& name, std::optional<uint
         members.back()->member_location() + members.back()->type().Get()->AsType()->byte_size();
   }
 
-  // The single member of the variant has a type name of the variant name.
-  // This type holds all the members passed in.
+  // The single member of the variant has a type name of the variant name.  This type holds all the
+  // members passed in.
   auto variant_member_type = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, name);
-  variant_member_type->set_parent(LazySymbol(unit));
+  variant_member_type->set_parent(unit);
   variant_member_type->set_byte_size(byte_size);
 
   std::vector<LazySymbol> lazy_members;
   for (const auto& member : members) {
-    member->set_parent(LazySymbol(unit));
+    member->set_parent(unit);
     lazy_members.emplace_back(member);
   }
   variant_member_type->set_data_members(std::move(lazy_members));
 
-  // This data member in the variant contains the structure above. We assume it
-  // starts at offset 0 in the containing struct.
-  auto variant_data = fxl::MakeRefCounted<DataMember>(name, LazySymbol(variant_member_type), 0);
-  variant_data->set_parent(LazySymbol(unit));
+  // This data member in the variant contains the structure above. We assume it starts at offset 0
+  // in the containing struct.
+  auto variant_data = fxl::MakeRefCounted<DataMember>(name, variant_member_type, 0);
+  variant_data->set_parent(unit);
 
   auto var =
       fxl::MakeRefCounted<Variant>(discriminant, std::vector<LazySymbol>{LazySymbol(variant_data)});
-  var->set_parent(LazySymbol(unit));
+  var->set_parent(unit);
   return var;
 }
 
@@ -156,21 +153,20 @@ fxl::RefPtr<Collection> MakeRustEnum(const std::string& name, fxl::RefPtr<DataMe
     lazy_variants.emplace_back(var);
   }
 
-  auto variant_part =
-      fxl::MakeRefCounted<VariantPart>(LazySymbol(discriminant), std::move(lazy_variants));
-  variant_part->set_parent(LazySymbol(unit));
+  auto variant_part = fxl::MakeRefCounted<VariantPart>(discriminant, std::move(lazy_variants));
+  variant_part->set_parent(unit);
 
   auto collection = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, name);
-  collection->set_variant_part(LazySymbol(variant_part));
+  collection->set_variant_part(variant_part);
   collection->set_byte_size(byte_size);
-  collection->set_parent(LazySymbol(unit));
+  collection->set_parent(unit);
 
   return collection;
 }
 
 fxl::RefPtr<Collection> MakeTestRustEnum() {
-  // Say "None is the default variant so has no discriminant (anything other
-  // than these values will match "none".
+  // Say "None is the default variant so has no discriminant (anything other than these values will
+  // match "none".
   const uint64_t kScalarDiscriminant = 0;
   const uint64_t kPointDiscriminant = 1;
 
@@ -180,43 +176,42 @@ fxl::RefPtr<Collection> MakeTestRustEnum() {
   // This 4-byte value encodes the discriminant value which indicates which
   // variant is valid. It's at offset 0 in the struct,
   auto uint32_type = MakeInt32Type();
-  uint32_type->set_parent(LazySymbol(unit));
+  uint32_type->set_parent(unit);
 
-  auto discriminant = fxl::MakeRefCounted<DataMember>(std::string(), LazySymbol(uint32_type), 0);
+  auto discriminant = fxl::MakeRefCounted<DataMember>(std::string(), uint32_type, 0);
 
   // None variant.
   auto none_variant = MakeRustVariant("None", std::nullopt, {});
 
-  // Scalar variant. The member is named with "__0" like Rust does. All the
-  // members must start after the discriminant above (4 bytes).
-  auto scalar_data = fxl::MakeRefCounted<DataMember>("__0", LazySymbol(uint32_type), 4);
+  // Scalar variant. The member is named with "__0" like Rust does. All the members must start after
+  // the discriminant above (4 bytes).
+  auto scalar_data = fxl::MakeRefCounted<DataMember>("__0", uint32_type, 4);
   auto scalar_variant = MakeRustVariant("Scalar", kScalarDiscriminant,
                                         std::vector<fxl::RefPtr<DataMember>>{scalar_data});
 
   // Point variant. The two members start after the disciminant (4 bytes).
-  auto x_data = fxl::MakeRefCounted<DataMember>("x", LazySymbol(uint32_type), 4);
-  auto y_data = fxl::MakeRefCounted<DataMember>("y", LazySymbol(uint32_type), 8);
+  auto x_data = fxl::MakeRefCounted<DataMember>("x", uint32_type, 4);
+  auto y_data = fxl::MakeRefCounted<DataMember>("y", uint32_type, 8);
   auto point_variant = MakeRustVariant("Point", kPointDiscriminant,
                                        std::vector<fxl::RefPtr<DataMember>>{x_data, y_data});
 
   // Structure that contains the variants. It has a variant_part and no data.
   auto rust_enum =
       MakeRustEnum("RustEnum", discriminant, {none_variant, scalar_variant, point_variant});
-  rust_enum->set_parent(LazySymbol(MakeRustUnit()));
+  rust_enum->set_parent(MakeRustUnit());
   return rust_enum;
 }
 
 fxl::RefPtr<Collection> MakeTestRustTuple(const std::string& name,
                                           const std::vector<fxl::RefPtr<Type>>& members) {
   auto coll = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, name);
-  coll->set_parent(LazySymbol(MakeRustUnit()));
+  coll->set_parent(MakeRustUnit());
 
   uint32_t offset = 0;
   std::vector<LazySymbol> data_members;
   for (size_t i = 0; i < members.size(); i++) {
     auto& type = members[i];
-    auto data =
-        fxl::MakeRefCounted<DataMember>(fxl::StringPrintf("__%zu", i), LazySymbol(type), offset);
+    auto data = fxl::MakeRefCounted<DataMember>(fxl::StringPrintf("__%zu", i), type, offset);
 
     data_members.emplace_back(std::move(data));
     offset += type->byte_size();

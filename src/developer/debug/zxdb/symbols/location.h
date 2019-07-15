@@ -19,36 +19,33 @@ class Function;
 // Represents all the symbol information for a code location.
 class Location {
  public:
-  // A location can be invalid (has no address), can have an address that we
-  // haven't tried to symbolize, and a symbolized address. The latter two
-  // states allow symbolizing on demand without having additional types.
+  // A location can be invalid (has no address), can have an address that we haven't tried to
+  // symbolize, and a symbolized address. The latter two states allow symbolizing on demand without
+  // having additional types.
   //
-  // The "symbolized" state doesn't necessarily mean there are symbols, it
-  // just means we tried to symbolize it.
+  // The "symbolized" state doesn't necessarily mean there are symbols, it just means we tried to
+  // symbolize it.
   enum class State {
     // There is no address or data for this location.
     kInvalid,
 
-    // There is an address for this location but we haven't tried to symbolize
-    // it.
+    // There is an address for this location but we haven't tried to symbolize it.
     kAddress,
 
-    // There is an address for the location and we tried to symbolize it. This
-    // doesn't mean that symbolization succeeded, so the symbol() and file/line
-    // could still be empty.
+    // There is an address for the location and we tried to symbolize it. This doesn't mean that
+    // symbolization succeeded, so the symbol() and file/line could still be empty.
     kSymbolized,
 
-    // The symbol corresponds to a Variable, but its location has not been
-    // computed so it will have a null address.
+    // The symbol corresponds to a Variable, but its location has not been computed so it will have
+    // a null address.
     //
-    // Some global variables actually need to be evaluated asynchronously
-    // based on the current CPU state. For example, TLS values are located
-    // relative to the CPU register that indicates the TLS base. When
-    // resolving a symbolic name, we can encounter these which can't be
-    // evaluated in the global context of the synbol system.
+    // Some global variables actually need to be evaluated asynchronously based on the current CPU
+    // state. For example, TLS values are located relative to the CPU register that indicates the
+    // TLS base. When resolving a symbolic name, we can encounter these which can't be evaluated in
+    // the global context of the synbol system.
     //
-    // Currently these aren't handled in most places. But if a caller is in a
-    // position to evaluate this it can fill out the address from the symbol.
+    // Currently these aren't handled in most places. But if a caller is in a position to evaluate
+    // this it can fill out the address from the symbol.
     kUnlocatedVariable,
   };
 
@@ -66,10 +63,9 @@ class Location {
 
   bool is_valid() const { return state_ != State::kInvalid; }
 
-  // The different between "symbolized" and "has_symbols" is that the former
-  // means we tried to symbolize it, and the latter means we actually
-  // succeeded to symbolize EITHER the line or the function. One or the other
-  // could be missing, however.
+  // The different between "symbolized" and "has_symbols" is that the former means we tried to
+  // symbolize it, and the latter means we actually succeeded to symbolize EITHER the line or the
+  // function. One or the other could be missing, however.
   bool is_symbolized() const { return state_ == State::kSymbolized; }
   bool has_symbols() const { return file_line_.is_valid() || symbol_; }
 
@@ -79,33 +75,28 @@ class Location {
   const FileLine& file_line() const { return file_line_; }
   int column() const { return column_; }
 
-  // The symbol associated with this address, if any. In the case of code this
-  // will be a Function. It will not be the code block inside the function
-  // (code wanting lexical blocks can look inside the function's children as
-  // needed). It could also be a variable symbol corresponding to a global or
-  // static variable.
+  // The symbol associated with this address, if any. In the case of code this will be a Function.
+  // It will not be the code block inside the function (code wanting lexical blocks can look inside
+  // the function's children as needed). It could also be a variable symbol corresponding to a
+  // global or static variable.
   //
-  // When looking up code locations from the symbol system, this will be the
-  // most specific FUNCTION covering the code in question (the innermost
-  // inlined function if there is one). But Locations may be generated (e.g. by
-  // the stack unwinder) for any of the other inlined functions that may cover
-  // the same address.
+  // When looking up code locations from the symbol system, this will be the most specific FUNCTION
+  // covering the code in question (the innermost inlined function if there is one). But Locations
+  // may be generated (e.g. by the stack unwinder) for any of the other inlined functions that may
+  // cover the same address.
   //
-  // A function can have different scopes inside of it. To get the current
-  // lexical scope inside the function, use GetMostSpecificChild() on it.
+  // A function can have different scopes inside of it. To get the current lexical scope inside the
+  // function, use GetMostSpecificChild() on it.
   //
-  // This isn't necessarily valid, even if the State == kSymbolized. It could
-  // be the symbol table indicates file/line info for this address but could
-  // lack a function record for it.
+  // This isn't necessarily valid, even if the State == kSymbolized. It could be the symbol table
+  // indicates file/line info for this address but could lack a function record for it.
   const LazySymbol& symbol() const { return symbol_; }
 
-  // Symbolized locations will have a valid symbol context for converting
-  // addresses.
+  // Symbolized locations will have a valid symbol context for converting addresses.
   const SymbolContext& symbol_context() const { return symbol_context_; }
 
-  // Offsets the code addresses in this by adding an amount. This is used to
-  // convert module-relative addresses to global ones by adding the module
-  // load address.
+  // Offsets the code addresses in this by adding an amount. This is used to convert module-relative
+  // addresses to global ones by adding the module load address.
   void AddAddressOffset(uint64_t offset);
 
  private:

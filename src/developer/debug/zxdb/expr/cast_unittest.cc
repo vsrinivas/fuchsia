@@ -41,8 +41,7 @@ TEST(Cast, Implicit) {
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(int32_one, result);
 
-  // Signed/unsigned conversion, should just copy the bits (end up with
-  // 0xffffffff),
+  // Signed/unsigned conversion, should just copy the bits (end up with 0xffffffff),
   err =
       CastExprValue(eval_context.get(), CastType::kImplicit, int32_minus_one, uint32_type, &result);
   EXPECT_FALSE(err.has_error());
@@ -115,8 +114,7 @@ TEST(Cast, Implicit) {
   EXPECT_EQ(-2.0f, result.GetAs<float>());
 
   // Pointer to integer with truncation.
-  auto ptr_to_double_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(double_type));
+  auto ptr_to_double_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, double_type);
   ExprValue ptr_value(ptr_to_double_type, {0xf0, 0xde, 0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12});
   err = CastExprValue(eval_context.get(), CastType::kImplicit, ptr_value, uint32_type, &result);
   EXPECT_FALSE(err.has_error());
@@ -145,7 +143,7 @@ TEST(Cast, Enum) {
 
   // An explicitly-typed 8-bit signed enum
   auto char_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSignedChar, 1, "char");
-  auto typed = fxl::MakeRefCounted<Enumeration>("Untyped", LazySymbol(char_type), 1, true, values);
+  auto typed = fxl::MakeRefCounted<Enumeration>("Untyped", char_type, 1, true, values);
 
   ExprValue untyped_value(untyped, {1, 0, 0, 0});
   ExprValue typed_value(typed, {1});
@@ -216,8 +214,8 @@ TEST(Cast, ImplicitDerived) {
                       &result);
   EXPECT_TRUE(err.has_error());
 
-  // Pointer casting: should be able to implicit cast derived ptr to base ptr
-  // type. This data matches kDerivedAddr in 64-bit little endian.
+  // Pointer casting: should be able to implicit cast derived ptr to base ptr type. This data
+  // matches kDerivedAddr in 64-bit little endian.
   err = CastExprValue(eval_context.get(), CastType::kImplicit, d.derived_ptr_value,
                       d.base2_ptr_type, &result);
   EXPECT_FALSE(err.has_error()) << err.msg();
@@ -257,8 +255,7 @@ TEST(Cast, Reinterpret) {
   auto bool_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeBoolean, 1, "bool");
   auto double_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "double");
 
-  auto ptr_to_int32_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(int32_type));
+  auto ptr_to_int32_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, int32_type);
   auto ptr_to_void_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol());
 
   ExprValue int32_minus_one(int32_type, {0xff, 0xff, 0xff, 0xff});
@@ -274,9 +271,8 @@ TEST(Cast, Reinterpret) {
   EXPECT_EQ(0x0102030405060708u, result.GetAs<uint64_t>());
   EXPECT_EQ(ptr_to_int32_type.get(), result.type());
 
-  // Conversion from int to void*. C++ would prohibit this case because the
-  // integer is 32 bits and the pointer is 64, but the debugger allows it.
-  // This should not be sign extended.
+  // Conversion from int to void*. C++ would prohibit this case because the integer is 32 bits and
+  // the pointer is 64, but the debugger allows it.  This should not be sign extended.
   err = CastExprValue(eval_context.get(), CastType::kReinterpret, int32_minus_one, ptr_to_void_type,
                       &result);
   EXPECT_FALSE(err.has_error());
@@ -289,37 +285,33 @@ TEST(Cast, Reinterpret) {
   EXPECT_EQ(4u, result.data().size());
   EXPECT_EQ(0x05060708u, result.GetAs<uint32_t>());
 
-  // Prohibit conversions between a double and a pointer:
-  // reinterpret_cast<void*>(3.14159265258979);
+  // Prohibit conversions between a double and a pointer: reinterpret_cast<void*>(3.14159265258979);
   err = CastExprValue(eval_context.get(), CastType::kReinterpret, double_pi, ptr_to_void_type,
                       &result);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ("Can't cast from a 'double'.", err.msg());
 }
 
-// Static cast is mostly implement as implicit cast. This only tests the
-// additional behavior.
+// Static cast is mostly implement as implicit cast. This only tests the additional behavior.
 TEST(Cast, Static) {
   auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
 
   DerivedClassTestSetup d;
 
-  // Should NOT be able to static cast from Base2 to Derived.
-  // This is "static_cast<Derived>(base);"
+  // Should NOT be able to static cast from Base2 to Derived.  This is "static_cast<Derived>(base);"
   ExprValue result;
   Err err =
       CastExprValue(eval_context.get(), CastType::kStatic, d.base2_value, d.derived_type, &result);
   EXPECT_TRUE(err.has_error());
 
-  // Cast a derived class reference to a base class reference.
-  // This is "static_cast<Base&>(derived_reference);
+  // Cast a derived class reference to a base class reference.  This is
+  // "static_cast<Base&>(derived_reference);
   err = CastExprValue(eval_context.get(), CastType::kStatic, d.derived_ref_value, d.base2_ref_type,
                       &result);
   EXPECT_FALSE(err.has_error()) << err.msg();
   EXPECT_EQ(d.base2_ref_value, result);
 
-  // Should be able to go from base->derived with pointers.
-  // This is "static_cast<Derived*>(&base);"
+  // Should be able to go from base->derived with pointers.  This is "static_cast<Derived*>(&base);"
   err = CastExprValue(eval_context.get(), CastType::kStatic, d.base2_ptr_value, d.derived_ptr_type,
                       &result);
   EXPECT_FALSE(err.has_error()) << err.msg();
@@ -333,7 +325,7 @@ TEST(Cast, Static) {
 
   // Allow conversion of rvalue references and regular references.
   auto derived_rvalue_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kRvalueReferenceType, LazySymbol(d.derived_type));
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kRvalueReferenceType, d.derived_type);
   ExprValue derived_rvalue_value(derived_rvalue_type, d.derived_ref_value.data());
   err = CastExprValue(eval_context.get(), CastType::kStatic, derived_rvalue_value, d.base2_ref_type,
                       &result);
@@ -354,8 +346,7 @@ TEST(Cast, C) {
 
   DerivedClassTestSetup d;
 
-  // A C-style cast should be like a static cast when casting between
-  // related types.
+  // A C-style cast should be like a static cast when casting between related types.
   ExprValue result;
   Err err = CastExprValue(eval_context.get(), CastType::kC, d.derived_ref_value, d.base2_ref_type,
                           &result);
@@ -364,14 +355,12 @@ TEST(Cast, C) {
 
   // When there are unrelated pointers, it should fall back to reinterpret.
   auto double_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "double");
-  auto ptr_to_double_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(double_type));
+  auto ptr_to_double_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, double_type);
   ExprValue ptr_value(ptr_to_double_type, {0xf0, 0xde, 0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12});
   err = CastExprValue(eval_context.get(), CastType::kC, ptr_value, d.base2_ptr_type, &result);
   EXPECT_FALSE(err.has_error());
 
-  // For the reinterpret cast, the type should be the new one, with the data
-  // being the original.
+  // For the reinterpret cast, the type should be the new one, with the data being the original.
   EXPECT_EQ(d.base2_ptr_type.get(), result.type());
   EXPECT_EQ(ptr_value.data(), result.data());
 

@@ -9,8 +9,8 @@
 
 namespace zxdb {
 
-// Represents a data member in a class. Not to be confused with function
-// parameters and local variables which are represented by a Variable.
+// Represents a data member in a class. Not to be confused with function parameters and local
+// variables which are represented by a Variable.
 //
 // The type and name come from the Value base class.
 class DataMember final : public Value {

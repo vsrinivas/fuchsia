@@ -24,7 +24,6 @@ LazySymbol::LazySymbol(fxl::RefPtr<SymbolFactory> factory, void* factory_data_pt
     : factory_(std::move(factory)),
       factory_data_ptr_(factory_data_ptr),
       factory_data_offset_(factory_data_offset) {}
-LazySymbol::LazySymbol(fxl::RefPtr<Symbol> symbol) : symbol_(symbol) {}
 LazySymbol::LazySymbol(const Symbol* symbol) : symbol_(RefPtrTo(symbol)) {}
 LazySymbol::~LazySymbol() = default;
 
@@ -36,8 +35,8 @@ const Symbol* LazySymbol::Get() const {
     if (is_valid()) {
       symbol_ = factory_->CreateSymbol(factory_data_ptr_, factory_data_offset_);
     } else {
-      // Return the null symbol. Don't populate symbol_ for this case because
-      // it will mean is_valid() will always return true.
+      // Return the null symbol. Don't populate symbol_ for this case because it will mean
+      // is_valid() will always return true.
       if (!null_symbol)
         null_symbol = fxl::MakeRefCounted<Symbol>();
       return null_symbol.get();

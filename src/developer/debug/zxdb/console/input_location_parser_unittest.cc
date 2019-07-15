@@ -118,8 +118,8 @@ TEST(InputLocation, ResolveInputLocation) {
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(expected.address(), output.address());
 
-  // Resolve to lots of locations, it should give suggestions. Even though we
-  // didn't request symbols, the result should be symbolized.
+  // Resolve to lots of locations, it should give suggestions. Even though we didn't request
+  // symbols, the result should be symbolized.
   std::vector<Location> expected_locations;
   for (int i = 0; i < 15; i++) {
     // The address and line numbers count up for each match.
@@ -141,9 +141,8 @@ TEST(InputLocation, ResolveInputLocation) {
     EXPECT_FALSE(output_locations[i].has_symbols());
   }
 
-  // Try to resolve one of them. Since there are many this will fail. We
-  // requested no symbolization but the error message should still be
-  // symbolized.
+  // Try to resolve one of them. Since there are many this will fail. We requested no symbolization
+  // but the error message should still be symbolized.
   err = ResolveUniqueInputLocation(&symbols.process(), nullptr, "Foo", false, &output);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ(R"(This resolves to more than one location. Could be:
@@ -162,8 +161,8 @@ TEST(InputLocation, ResolveInputLocation) {
             err.msg());
 }
 
-// Most of the prefix searching is tested by the FindName tests. This just
-// tests the integration of that with the InputLocation completion.
+// Most of the prefix searching is tested by the FindName tests. This just tests the integration of
+// that with the InputLocation completion.
 TEST(InputLocation, CompleteInputLocation) {
   ProcessSymbolsTestSetup symbols;
   auto owning_mod_sym = std::make_unique<MockModuleSymbols>("mod.so");
@@ -187,7 +186,7 @@ TEST(InputLocation, CompleteInputLocation) {
   // Class inside the namespace.
   const char kClassName[] = "Class";
   auto global_type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
-  global_type->set_parent(LazySymbol(ns));
+  global_type->set_parent(ns);
   global_type->set_assigned_name(kClassName);
   TestIndexedSymbol indexed_type(mod, indexed_ns.index_node, kClassName, global_type);
 
@@ -195,11 +194,11 @@ TEST(InputLocation, CompleteInputLocation) {
   const char kMemberName[] = "MemberFunction";
   auto member_func = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   member_func->set_assigned_name(kMemberName);
-  member_func->set_parent(LazySymbol(global_type));
+  member_func->set_parent(global_type);
   TestIndexedSymbol indexed_member(mod, indexed_type.index_node, kMemberName, member_func);
 
-  // TODO(brettw) make a test setup helper for a whole session / target /
-  // process / thread / frame + symbols.
+  // TODO(brettw) make a test setup helper for a whole session / target / process / thread / frame +
+  // symbols.
   Session session;
   MockTarget target(&session);
   target.set_symbols(&symbols.target());
@@ -216,19 +215,18 @@ TEST(InputLocation, CompleteInputLocation) {
   command.set_target(&target);
   command.set_frame(&frame);
 
-  // TEST CODE -----------------------------------------------------------------
+  // TEST CODE -------------------------------------------------------------------------------------
 
-  // "a" should complete to both "aNamespace" and "aGlobalFunction" (in that
-  // order).
+  // "a" should complete to both "aNamespace" and "aGlobalFunction" (in that order).
   std::vector<std::string> found;
   CompleteInputLocation(command, "a", &found);
   ASSERT_EQ(2u, found.size());
   EXPECT_EQ("aNamespace::", found[0]);  // Namespaces get "::" appended.
   EXPECT_EQ(kGlobalName, found[1]);
 
-  // "aNamespace::" doesn't complete to anything. It might be nice to have this
-  // complete to all functions in the namespace, but we don't implement that
-  // yet. In the meantime, at least test this does what we currently expect.
+  // "aNamespace::" doesn't complete to anything. It might be nice to have this complete to all
+  // functions in the namespace, but we don't implement that yet. In the meantime, at least test
+  // this does what we currently expect.
   found.clear();
   CompleteInputLocation(command, "aNamespace::", &found);
   ASSERT_TRUE(found.empty());

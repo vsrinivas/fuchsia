@@ -42,8 +42,7 @@ TEST_F(ResolvePtrRefTest, NotPointer) {
   EXPECT_EQ("Attempting to dereference 'int32_t' which is not a pointer.", out_err.msg());
 
   // Pointer with incorrectly sized data.
-  auto int32_ptr_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(int32_type));
+  auto int32_ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, int32_type);
   ExprValue int32_ptr_value(int32_ptr_type, {0x00, 0x00, 0x00, 0x00});
 
   called = false;
@@ -124,9 +123,8 @@ TEST_F(ResolvePtrRefTest, NotRef) {
   EXPECT_EQ(value, out_value);
 }
 
-// Tests EnsureResolveReference when the value is a const ref. The const should
-// get ignored, the ref should be stripped, and the pointed-to value should be
-// the result.
+// Tests EnsureResolveReference when the value is a const ref. The const should get ignored, the ref
+// should be stripped, and the pointed-to value should be the result.
 TEST_F(ResolvePtrRefTest, ConstRef) {
   auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
 
@@ -135,15 +133,14 @@ TEST_F(ResolvePtrRefTest, ConstRef) {
   std::vector<uint8_t> int_value = {0x04, 0x03, 0x02, 0x01};
   eval_context->data_provider()->AddMemory(kAddress, int_value);
 
-  // Make "volatile const int32_t&". This tests modifies on both sides of the
-  // reference (volatile on the outside, const on the inside).
+  // Make "volatile const int32_t&". This tests modifies on both sides of the reference (volatile on
+  // the outside, const on the inside).
   auto int32_type = MakeInt32Type();
-  auto const_int32_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, LazySymbol(int32_type));
+  auto const_int32_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, int32_type);
   auto const_int32_ref_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType, LazySymbol(const_int32_type));
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType, const_int32_type);
   auto volatile_const_int32_ref_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kVolatileType, LazySymbol(const_int32_ref_type));
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kVolatileType, const_int32_ref_type);
 
   ExprValue value(volatile_const_int32_ref_type, {0x20, 0x00, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00});
 
@@ -207,7 +204,7 @@ TEST_F(ResolvePtrRefTest, GetPointedToType_Good) {
   auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
 
   auto int32_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 4, "int32_t");
-  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(int32_type));
+  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, int32_type);
 
   fxl::RefPtr<Type> pointed_to;
   Err err = GetPointedToType(eval_context, ptr_type.get(), &pointed_to);

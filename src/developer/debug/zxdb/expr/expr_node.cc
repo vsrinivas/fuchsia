@@ -40,16 +40,15 @@ bool BaseTypeCanBeArrayIndex(const BaseType* type) {
 
 void EvalUnaryOperator(const ExprToken& op_token, const ExprValue& value,
                        ExprNode::EvalCallback cb) {
-  // This manually extracts the value rather than calling PromoteTo64() so
-  // that the result type is exactly the same as the input type.
+  // This manually extracts the value rather than calling PromoteTo64() so that the result type is
+  // exactly the same as the input type.
   //
-  // TODO(brettw) when we add more mathematical operations we'll want a
-  // more flexible system for getting the results out.
+  // TODO(brettw) when we add more mathematical operations we'll want a more flexible system for
+  // getting the results out.
   if (op_token.type() == ExprTokenType::kMinus) {
-    // Currently "-" is the only unary operator.  Since this is a debugger
-    // primarily for C-like languages, use the C rules for negating values: the
-    // result type is the same as the input, and negating an unsigned value
-    // gives the two's compliment (C++11 standard section 5.3.1).
+    // Currently "-" is the only unary operator.  Since this is a debugger primarily for C-like
+    // languages, use the C rules for negating values: the result type is the same as the input, and
+    // negating an unsigned value gives the two's compliment (C++11 standard section 5.3.1).
     switch (value.GetBaseType()) {
       case BaseType::kBaseTypeSigned:
         switch (value.data().size()) {
@@ -114,8 +113,7 @@ void AddressOfExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) 
       cb(Err("Can't take the address of a temporary."), ExprValue());
     } else {
       // Construct a pointer type to the variable.
-      auto ptr_type =
-          fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(value.type_ref()));
+      auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, value.type_ref());
 
       std::vector<uint8_t> contents;
       contents.resize(kTargetPointerSize);
@@ -174,8 +172,8 @@ Err ArrayAccessExprNode::InnerValueToOffset(fxl::RefPtr<EvalContext> context,
   if (!base_type || !BaseTypeCanBeArrayIndex(base_type))
     return Err("Bad type for array index.");
 
-  // This uses signed integers to explicitly allow negative indexing which the
-  // user may want to do for some reason.
+  // This uses signed integers to explicitly allow negative indexing which the user may want to do
+  // for some reason.
   Err promote_err = inner.PromoteTo64(offset);
   if (promote_err.has_error())
     return promote_err;
@@ -235,8 +233,8 @@ void CastExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const
 
   from_->Eval(context, [context, cast_type = cast_type_, to_type = to_type_->type(),
                         exec_cast = std::move(exec_cast)](const Err& err, ExprValue value) {
-    // This lambda optionally follows the reference on the value according
-    // to the requirements of the cast.
+    // This lambda optionally follows the reference on the value according to the requirements of
+    // the cast.
     if (err.has_error() || !CastShouldFollowReferences(context.get(), cast_type, value, to_type)) {
       exec_cast(err, value);  // Also handles the error cases.
     } else {
@@ -343,9 +341,9 @@ void SizeofExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) con
     // Types just get used directly.
     SizeofType(context, type_node->type().get(), std::move(cb));
   } else {
-    // Everything else gets evaluated. Strictly C++ won't do this because it's
-    // statically typed, but our expression system is not. This doesn't need to
-    // follow references because we only need the type and the
+    // Everything else gets evaluated. Strictly C++ won't do this because it's statically typed, but
+    // our expression system is not. This doesn't need to follow references because we only need the
+    // type and the
     expr_->Eval(context, [context, cb = std::move(cb)](const Err& err, ExprValue value) {
       if (err.has_error())
         cb(err, ExprValue());
@@ -387,8 +385,8 @@ void SizeofExprNode::SizeofType(fxl::RefPtr<EvalContext> context, const Type* in
 }
 
 void TypeExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
-  // Doesn't make sense to evaluate a type, callers like casts that expect a
-  // type name will look into the node themselves.
+  // Doesn't make sense to evaluate a type, callers like casts that expect a type name will look
+  // into the node themselves.
   cb(Err("Can not evaluate a type name."), ExprValue());
 }
 

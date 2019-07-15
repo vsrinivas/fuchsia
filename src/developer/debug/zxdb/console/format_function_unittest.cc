@@ -33,8 +33,8 @@ TEST(FormatFunction, Regular) {
   EXPECT_EQ("Function(…)", FormatFunctionName(function.get(), false).AsString());
   EXPECT_EQ("Function(int32_t, int32_t)", FormatFunctionName(function.get(), true).AsString());
 
-  // Put in a namespace and add some templates. This needs a new function
-  // because the name will be cached above.
+  // Put in a namespace and add some templates. This needs a new function because the name will be
+  // cached above.
   function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   function->set_assigned_name("Function<int>");
   function->set_parameters({LazySymbol(param_value), LazySymbol(param_other)});
@@ -57,7 +57,7 @@ TEST(FormatFunction, ClangLambda) {
   auto closure = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   function->set_assigned_name("operator()");
-  function->set_parent(LazySymbol(closure));
+  function->set_parent(closure);
 
   EXPECT_EQ("λ()", FormatFunctionName(function.get(), false).AsString());
 }
@@ -68,7 +68,7 @@ TEST(FormatFunction, GCCLambda) {
   closure->set_assigned_name("<lambda()>");
   auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   function->set_assigned_name("operator()");
-  function->set_parent(LazySymbol(closure));
+  function->set_parent(closure);
 
   EXPECT_EQ("λ()", FormatFunctionName(function.get(), false).AsString());
 }
@@ -84,7 +84,7 @@ TEST(FormatFunction, RustClosure) {
 
   auto closure = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   closure->set_assigned_name("{{closure}}<()>");
-  closure->set_parent(LazySymbol(enclosing));
+  closure->set_parent(enclosing);
 
   EXPECT_EQ("λ()", FormatFunctionName(closure.get(), false).AsString());
 }

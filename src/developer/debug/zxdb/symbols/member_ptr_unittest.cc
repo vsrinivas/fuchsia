@@ -17,8 +17,7 @@ namespace zxdb {
 TEST(MemberPtr, Function) {
   // This type is "void (*)()"
   auto standalone = fxl::MakeRefCounted<FunctionType>(LazySymbol(), std::vector<LazySymbol>());
-  auto standalone_ptr =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(standalone));
+  auto standalone_ptr = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, standalone);
 
   // Class to be the containing class for the pointer to member func.
   auto containing = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
@@ -27,21 +26,19 @@ TEST(MemberPtr, Function) {
   // A parameter type.
   auto int32_type = MakeInt32Type();
 
-  // Make a function pointer ("int32_t (*)(void (*)(), int32_t)". This
-  // specified names for the variables which we don't use, but ensures the
-  // behavior about named parameters in function pointers is consistent.
-  std::vector<LazySymbol> params{
-      LazySymbol(fxl::MakeRefCounted<Variable>(DwarfTag::kFormalParameter, "val1",
-                                               LazySymbol(standalone_ptr), VariableLocation())),
-      LazySymbol(fxl::MakeRefCounted<Variable>(DwarfTag::kFormalParameter, "val2",
-                                               LazySymbol(int32_type), VariableLocation()))};
-  auto function = fxl::MakeRefCounted<FunctionType>(LazySymbol(int32_type), params);
-  auto function_ptr =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(function));
+  // Make a function pointer ("int32_t (*)(void (*)(), int32_t)". This specified names for the
+  // variables which we don't use, but ensures the behavior about named parameters in function
+  // pointers is consistent.
+  std::vector<LazySymbol> params{fxl::MakeRefCounted<Variable>(DwarfTag::kFormalParameter, "val1",
+                                                               standalone_ptr, VariableLocation()),
+                                 fxl::MakeRefCounted<Variable>(DwarfTag::kFormalParameter, "val2",
+                                                               int32_type, VariableLocation())};
+  auto function = fxl::MakeRefCounted<FunctionType>(int32_type, params);
+  auto function_ptr = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, function);
   EXPECT_EQ("int32_t (*)(void (*)(), int32_t)", function_ptr->GetFullName());
 
   // Make that function pointer a member pointer.
-  auto member_ptr = fxl::MakeRefCounted<MemberPtr>(LazySymbol(containing), LazySymbol(function));
+  auto member_ptr = fxl::MakeRefCounted<MemberPtr>(containing, function);
   EXPECT_EQ("int32_t (MyClass::*)(void (*)(), int32_t)", member_ptr->GetFullName());
 }
 
@@ -53,11 +50,11 @@ TEST(MemberPtr, Data) {
   auto int32_type = MakeInt32Type();
 
   // MyClass member of int.
-  auto int_ptr = fxl::MakeRefCounted<MemberPtr>(LazySymbol(containing), LazySymbol(int32_type));
+  auto int_ptr = fxl::MakeRefCounted<MemberPtr>(containing, int32_type);
   EXPECT_EQ("int32_t MyClass::*", int_ptr->GetFullName());
 
   // MyClass member of MyClass.
-  auto class_ptr = fxl::MakeRefCounted<MemberPtr>(LazySymbol(containing), LazySymbol(containing));
+  auto class_ptr = fxl::MakeRefCounted<MemberPtr>(containing, containing);
   EXPECT_EQ("MyClass MyClass::*", class_ptr->GetFullName());
 }
 

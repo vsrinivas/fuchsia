@@ -32,21 +32,18 @@ const Identifier& Symbol::GetIdentifier() const {
 }
 
 const CompileUnit* Symbol::GetCompileUnit() const {
-  // Currently we don't use compile units very often. This implementation walks
-  // up the symbol hierarchy until we find one. This has the disadvantage that
-  // it decodes the tree of DIEs up to here which is potentially slow, and if
-  // anything fails the path will get lost (even when we can get at the unit
-  // via other means).
+  // Currently we don't use compile units very often. This implementation walks up the symbol
+  // hierarchy until we find one. This has the disadvantage that it decodes the tree of DIEs up to
+  // here which is potentially slow, and if anything fails the path will get lost (even when we can
+  // get at the unit via other means).
   //
-  // The compile unit is known at the time of decode and we could just stash
-  // a pointer on each symbol. This would make them larger, however, and we
-  // should take steps to ensure that the unit objects are re-used so we don't
-  // get them created all over.
+  // The compile unit is known at the time of decode and we could just stash a pointer on each
+  // symbol. This would make them larger, however, and we should take steps to ensure that the unit
+  // objects are re-used so we don't get them created all over.
   //
-  // Each LazySymbol also has an offset of the compile unit. But symbols don't
-  // have a LazySymbol for their *own* symbol. Perhaps they should? In that
-  // case we would add a new function to the symbol factory to get the unit for
-  // a LazySymbol.
+  // Each LazySymbol also has an offset of the compile unit. But symbols don't have a LazySymbol for
+  // their *own* symbol. Perhaps they should? In that case we would add a new function to the symbol
+  // factory to get the unit for a LazySymbol.
   const Symbol* cur = this;
   for (;;) {
     if (const CompileUnit* unit = cur->AsCompileUnit())
@@ -87,14 +84,13 @@ std::string Symbol::ComputeFullName() const { return GetIdentifier().GetFullName
 Identifier Symbol::ComputeIdentifier() const {
   const std::string& assigned_name = GetAssignedName();
   if (assigned_name.empty()) {
-    // When a thing doesn't have a name, don't try to qualify it, since
-    // returning "foo::" for the name of something like a lexical block is
-    // actively confusing.
+    // When a thing doesn't have a name, don't try to qualify it, since returning "foo::" for the
+    // name of something like a lexical block is actively confusing.
     return Identifier();
   }
 
-  // This base type class just uses the qualified name for the full name.
-  // Derived classes will override this function to apply modifiers.
+  // This base type class just uses the qualified name for the full name.  Derived classes will
+  // override this function to apply modifiers.
   Identifier result = GetSymbolScopePrefix(this);
   result.AppendComponent(IdentifierComponent(assigned_name));
   return result;

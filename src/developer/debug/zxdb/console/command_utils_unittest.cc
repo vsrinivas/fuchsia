@@ -218,19 +218,17 @@ TEST(CommandUtils, FormatLocation) {
   fxl::RefPtr<Function> function(fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram));
   function->set_assigned_name("Func");
   function->set_code_ranges(AddressRanges(AddressRange(0x1200, 0x1300)));
-  EXPECT_EQ(
-      "Func() + 0x34 (no line info)",
-      FormatLocation(nullptr, Location(0x1234, FileLine(), 0, symbol_context, LazySymbol(function)),
-                     false, false)
-          .AsString());
+  EXPECT_EQ("Func() + 0x34 (no line info)",
+            FormatLocation(nullptr, Location(0x1234, FileLine(), 0, symbol_context, function),
+                           false, false)
+                .AsString());
 
-  // Same as above but location is before the function address (probably
-  // something is corrupt). It should omit the offset.
-  EXPECT_EQ(
-      "Func()",
-      FormatLocation(nullptr, Location(0x1100, FileLine(), 0, symbol_context, LazySymbol(function)),
-                     false, false)
-          .AsString());
+  // Same as above but location is before the function address (probably something is corrupt). It
+  // should omit the offset.
+  EXPECT_EQ("Func()",
+            FormatLocation(nullptr, Location(0x1100, FileLine(), 0, symbol_context, function),
+                           false, false)
+                .AsString());
 
   // File/line-only location.
   EXPECT_EQ(
@@ -240,7 +238,7 @@ TEST(CommandUtils, FormatLocation) {
           .AsString());
 
   // Full location.
-  Location loc(0x1234, FileLine("/path/foo.cc", 21), 0, symbol_context, LazySymbol(function));
+  Location loc(0x1234, FileLine("/path/foo.cc", 21), 0, symbol_context, function);
   EXPECT_EQ("0x1234, Func() • /path/foo.cc:21",
             FormatLocation(nullptr, loc, true, false).AsString());
   EXPECT_EQ("Func() • /path/foo.cc:21", FormatLocation(nullptr, loc, false, false).AsString());
@@ -256,9 +254,8 @@ TEST(CommandUtils, DescribeFileLine) {
   // Missing both.
   EXPECT_EQ("?:?", DescribeFileLine(nullptr, FileLine()));
 
-  // Pass an TargetSymbols to trigger path shortening. Since the TargetSymbols
-  // has no files to match, the name will be unique and we'll get just the name
-  // part.
+  // Pass an TargetSymbols to trigger path shortening. Since the TargetSymbols has no files to
+  // match, the name will be unique and we'll get just the name part.
   ProcessSymbolsTestSetup setup;
   EXPECT_EQ("foo.cc:21", DescribeFileLine(&setup.target(), fl));
 }

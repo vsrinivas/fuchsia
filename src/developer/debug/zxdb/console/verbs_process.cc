@@ -811,7 +811,7 @@ Err DoPastBacktrace(ConsoleContext* context, const Command& cmd) {
 
   auto* backtrace_cache = process->GetBacktraceCacheFromKoid(thread->GetKoid());
   if (!backtrace_cache)
-    return Err("No backtrace cache for thread (koid: %lu)", thread->GetKoid());
+    return Err("No backtrace cache for thread (koid: %" PRIu64 ")", thread->GetKoid());
 
   auto& backtraces = backtrace_cache->backtraces();
   if (backtraces.empty())

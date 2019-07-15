@@ -60,10 +60,9 @@ TEST(FormatFrame, Inline) {
   auto function = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
   function->set_assigned_name("Function");
 
-  MockFrame inline_frame(
-      nullptr, nullptr,
-      Location(0x12345678, FileLine("file.cc", 22), 0, symbol_context, LazySymbol(function)),
-      0x567890, 0, std::vector<Register>(), 0xdeadbeef, &physical_frame);
+  MockFrame inline_frame(nullptr, nullptr,
+                         Location(0x12345678, FileLine("file.cc", 22), 0, symbol_context, function),
+                         0x567890, 0, std::vector<Register>(), 0xdeadbeef, &physical_frame);
 
   EXPECT_EQ(
       "Function() • file.cc:22 (inline)\n"

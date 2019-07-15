@@ -19,7 +19,7 @@ fxl::RefPtr<Variable> MakeVariableForTest(const std::string& name, fxl::RefPtr<T
   entry.end = end_ip_range;
   entry.expression = std::move(location_expression);
   variable->set_location(VariableLocation({entry}));
-  variable->set_type(LazySymbol(std::move(type)));
+  variable->set_type(std::move(type));
 
   return variable;
 }

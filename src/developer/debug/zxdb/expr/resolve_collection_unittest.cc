@@ -61,8 +61,8 @@ TEST_F(ResolveCollectionTest, GoodMemberAccess) {
   auto sc = GetTestClassType(&a_data, &b_data);
 
   // Make this const volatile to add extra layers.
-  auto vol_sc = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kVolatileType, LazySymbol(sc));
-  auto const_vol_sc = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, LazySymbol(vol_sc));
+  auto vol_sc = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kVolatileType, sc);
+  auto const_vol_sc = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, vol_sc);
 
   // This struct has the values 1 and 2 in it.
   constexpr uint64_t kBaseAddr = 0x11000;
@@ -124,8 +124,7 @@ TEST_F(ResolveCollectionTest, ForwardDefinitionPtr) {
   forward_decl->set_is_declaration(true);
 
   // Pointer to the forward declared type.
-  auto forward_decl_ptr =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(forward_decl));
+  auto forward_decl_ptr = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, forward_decl);
 
   // Make a definition for the type and index it. It has one 32-bit data member.
   auto int32_type = MakeInt32Type();
@@ -213,7 +212,7 @@ TEST_F(ResolveCollectionTest, BadMemberAccess) {
   // Lookup by a DataMember that references outside of the struct (in this case, by one byte).
   auto bad_member = fxl::MakeRefCounted<DataMember>();
   bad_member->set_assigned_name("c");
-  bad_member->set_type(LazySymbol(MakeInt32Type()));
+  bad_member->set_type(MakeInt32Type());
   bad_member->set_member_location(5);
 
   out = ExprValue();
@@ -233,7 +232,7 @@ TEST_F(ResolveCollectionTest, DerivedClass) {
   auto derived = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
 
   uint32_t base_offset = 4;  // Offset in derived of base.
-  auto inherited = fxl::MakeRefCounted<InheritedFrom>(LazySymbol(base), base_offset);
+  auto inherited = fxl::MakeRefCounted<InheritedFrom>(base, base_offset);
   derived->set_inherited_from({LazySymbol(inherited)});
 
   // This struct has the values 1 and 2 in it, offset by 4 bytes (the offset within "derived" of

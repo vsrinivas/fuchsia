@@ -98,7 +98,7 @@ LazySymbol MockModuleSymbols::IndexDieRefToSymbol(const IndexNode::DieRef& die_r
   auto found = die_refs_.find(die_ref.offset());
   if (found == die_refs_.end())
     return LazySymbol();
-  return LazySymbol(found->second);
+  return found->second;
 }
 
 bool MockModuleSymbols::HasBinary() const { return false; }

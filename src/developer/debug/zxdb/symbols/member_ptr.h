@@ -11,8 +11,7 @@ namespace zxdb {
 
 // Represents both pointers to member functions:
 //    int (Foo::*)(double)
-// (in which case the member_type() is a FunctionType), or a pointers to
-// data members:
+// (in which case the member_type() is a FunctionType), or a pointers to data members:
 //    int Foo::*
 // (in which case the pointer_type() is a some other type like "int").
 class MemberPtr final : public Type {

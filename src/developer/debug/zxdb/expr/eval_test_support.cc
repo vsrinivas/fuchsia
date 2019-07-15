@@ -19,24 +19,18 @@ DerivedClassTestSetup::DerivedClassTestSetup() {
   derived_type =
       MakeCollectionTypeWithOffset(DwarfTag::kStructureType, "Derived", 6, {{"d", int32_type}});
   derived_type->set_inherited_from(
-      {LazySymbol(fxl::MakeRefCounted<InheritedFrom>(LazySymbol(base1_type), kBase1Offset)),
-       LazySymbol(fxl::MakeRefCounted<InheritedFrom>(LazySymbol(base2_type), kBase2Offset))});
+      {LazySymbol(fxl::MakeRefCounted<InheritedFrom>(base1_type, kBase1Offset)),
+       LazySymbol(fxl::MakeRefCounted<InheritedFrom>(base2_type, kBase2Offset))});
 
   // Pointer variants.
-  base1_ptr_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(base1_type));
-  base2_ptr_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(base2_type));
-  derived_ptr_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(derived_type));
+  base1_ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, base1_type);
+  base2_ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, base2_type);
+  derived_ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, derived_type);
 
   // Reference types.
-  base1_ref_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType, LazySymbol(base1_type));
-  base2_ref_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType, LazySymbol(base2_type));
-  derived_ref_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType, LazySymbol(derived_type));
+  base1_ref_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType, base1_type);
+  base2_ref_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType, base2_type);
+  derived_ref_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType, derived_type);
 
   // Values.
   constexpr uint8_t kB1Value = 32;

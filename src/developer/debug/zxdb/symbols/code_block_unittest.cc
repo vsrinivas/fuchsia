@@ -46,8 +46,8 @@ TEST(CodeBlock, GetMostSpecificChild) {
   outer->set_code_ranges(AddressRanges(
       AddressRanges::kCanonical, {AddressRange(0x1000, 0x2000), AddressRange(0x3000, 0x3001)}));
 
-  // There are two inner blocks, one covers partially the first range, the
-  // other covers exactly the second range.
+  // There are two inner blocks, one covers partially the first range, the other covers exactly the
+  // second range.
   auto first_child = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
   first_child->set_code_ranges(AddressRanges(AddressRange(0x1000, 0x2000)));
 

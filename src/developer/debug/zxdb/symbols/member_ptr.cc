@@ -29,8 +29,7 @@ std::string MemberPtr::ComputeFullName() const {
   if (const Type* container = container_type_.Get()->AsType()) {
     container_name = container->GetFullName();
   } else {
-    // Can still compute function description from the type when the container
-    // is bad.
+    // Can still compute function description from the type when the container is bad.
     container_name = "<invalid>";
   }
 

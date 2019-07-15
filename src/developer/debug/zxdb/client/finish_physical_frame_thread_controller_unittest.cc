@@ -7,8 +7,8 @@
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/client/inline_thread_controller_test.h"
 #include "src/developer/debug/zxdb/client/process.h"
-#include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/test_thread_observer.h"
+#include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 
@@ -24,8 +24,7 @@ constexpr uint64_t kBottomBase = kReturnBase + 0x10;
 
 class FinishPhysicalFrameThreadControllerTest : public InlineThreadControllerTest {
  public:
-  // Creates a break notification with two stack frames using the constants
-  // above.
+  // Creates a break notification with two stack frames using the constants above.
   debug_ipc::NotifyException MakeBreakNotification() {
     debug_ipc::NotifyException n;
 
@@ -51,10 +50,9 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, Finish) {
 
   debug_ipc::StackFrame bottom_frame(kReturnAddress, kBottomBase, kBottomBase + 0x10);
 
-  // Supply three frames for when the thread requests them: the top one (of the
-  // stop above), the one we'll return to, and the one before that (so the
-  // fingerprint of the one to return to can be computed). This stack value
-  // should be larger than above (stack grows downward).
+  // Supply three frames for when the thread requests them: the top one (of the stop above), the one
+  // we'll return to, and the one before that (so the fingerprint of the one to return to can be
+  // computed). This stack value should be larger than above (stack grows downward).
   debug_ipc::ThreadStatusReply expected_reply;
   // Copy previous frames and add to it.
   expected_reply.record = break_notification.thread;
@@ -75,42 +73,40 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, Finish) {
 
   TestThreadObserver thread_observer(thread());
 
-  // Finish should have added a temporary breakpoint at the return address.
-  // The particulars of this may change with the implementation, but it's worth
-  // testing to make sure the breakpoints are all hooked up to the stepping
-  // properly.
+  // Finish should have added a temporary breakpoint at the return address.  The particulars of this
+  // may change with the implementation, but it's worth testing to make sure the breakpoints are all
+  // hooked up to the stepping properly.
   ASSERT_EQ(1, mock_remote_api()->breakpoint_add_count());
   ASSERT_EQ(kReturnAddress, mock_remote_api()->last_breakpoint_address());
   ASSERT_EQ(0, mock_remote_api()->breakpoint_remove_count());
 
-  // Simulate a hit of the breakpoint. This stack frame is a recursive call
-  // above the frame we're returning to so it should not trigger.
+  // Simulate a hit of the breakpoint. This stack frame is a recursive call above the frame we're
+  // returning to so it should not trigger.
   break_frames.emplace(break_frames.begin(), kReturnAddress, kInitialBase - 0x100, kInitialBase);
   break_notification.hit_breakpoints.emplace_back();
   break_notification.hit_breakpoints[0].id = mock_remote_api()->last_breakpoint_id();
   InjectException(break_notification);
   EXPECT_FALSE(thread_observer.got_stopped());
 
-  // Simulate a breakpoint hit with a lower BP (erase the two top ones = the
-  // recursive call and the old top one).
+  // Simulate a breakpoint hit with a lower BP (erase the two top ones = the recursive call and the
+  // old top one).
   break_frames.erase(break_frames.begin(), break_frames.begin() + 2);
   InjectException(break_notification);
   EXPECT_TRUE(thread_observer.got_stopped());
   EXPECT_EQ(1, mock_remote_api()->breakpoint_remove_count());
 }
 
-// Tests "finish" at the bottom stack frame. Normally there's a stack frame
-// with an IP of 0 below the last "real" stack frame.
+// Tests "finish" at the bottom stack frame. Normally there's a stack frame with an IP of 0 below
+// the last "real" stack frame.
 TEST_F(FinishPhysicalFrameThreadControllerTest, BottomStackFrame) {
-  // Notify of thread stop. Here we have the 0th frame of the current
-  // location, and a null frame.
+  // Notify of thread stop. Here we have the 0th frame of the current location, and a null frame.
   auto break_notification = MakeBreakNotification();
   break_notification.thread.frames[0].cfa = 0;
   break_notification.thread.frames[1] = debug_ipc::StackFrame(0, 0, 0);
   InjectException(break_notification);
 
-  // The backtrace reply gives the same two frames since that's all there is
-  // (the Thread doesn't know until it requests them).
+  // The backtrace reply gives the same two frames since that's all there is (the Thread doesn't
+  // know until it requests them).
   debug_ipc::ThreadStatusReply expected_reply;
   expected_reply.record = break_notification.thread;
   expected_reply.record.stack_amount = debug_ipc::ThreadRecord::StackAmount::kFull;
@@ -129,20 +125,18 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, BottomStackFrame) {
 
   TestThreadObserver thread_observer(thread());
 
-  // Since the return address is null, we should not have attempted to create
-  // a breakpoint, and the thread should have been resumed.
+  // Since the return address is null, we should not have attempted to create a breakpoint, and the
+  // thread should have been resumed.
   ASSERT_EQ(0, mock_remote_api()->breakpoint_add_count());
   ASSERT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 }
 
-// Finishing a physical frame should leave the stack at the calling frame. But
-// the instruction after the function call being finished could be the first
-// instruction of an inlined function (an ambiguous location -- see discussions
-// in Stack class).
+// Finishing a physical frame should leave the stack at the calling frame. But the instruction after
+// the function call being finished could be the first instruction of an inlined function (an
+// ambiguous location -- see discussions in Stack class).
 //
-// In the case of ambiguity, the finish controller should leave the frame at
-// the one that called the function being finished, not an inline frame that
-// starts right atfer the call.
+// In the case of ambiguity, the finish controller should leave the frame at the one that called the
+// function being finished, not an inline frame that starts right atfer the call.
 
 TEST_F(FinishPhysicalFrameThreadControllerTest, FinishToInline) {
   auto mock_frames = GetStack();
@@ -177,11 +171,11 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, FinishToInline) {
   second_inline_func->set_code_ranges(AddressRanges(second_inline_range));
 
   Location second_inline_loc(second_inline_range.begin(), FileLine("file.cc", 21), 0,
-                             SymbolContext::ForRelativeAddresses(), LazySymbol(second_inline_func));
+                             SymbolContext::ForRelativeAddresses(), second_inline_func);
 
-  // Construct the stack of the address after the call. In this case the frame
-  // being returned to immediately calls an inline subroutine, so execution
-  // will be in a new inline function off of the returned-to frame.
+  // Construct the stack of the address after the call. In this case the frame being returned to
+  // immediately calls an inline subroutine, so execution will be in a new inline function off of
+  // the returned-to frame.
   mock_frames = GetStack();
   mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 2);
   mock_frames.insert(mock_frames.begin(),

@@ -215,7 +215,7 @@ TEST_F(EvalContextImplTest, FoundThis) {
       MakeDerivedClassPair(DwarfTag::kClassType, "Base", {{"b1", int32_type}, {"b2", int32_type}},
                            "Derived", {{"d1", int32_type}, {"d2", int32_type}});
 
-  auto derived_ptr = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(derived));
+  auto derived_ptr = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, derived);
 
   // Make the storage for the class in memory.
   constexpr uint64_t kObjectAddr = 0x3000;
@@ -238,7 +238,7 @@ TEST_F(EvalContextImplTest, FoundThis) {
   // function on Derived).
   auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   function->set_parameters({LazySymbol(this_var)});
-  function->set_object_pointer(LazySymbol(this_var));
+  function->set_object_pointer(this_var);
 
   auto context = MakeEvalContext(function);
 
@@ -317,7 +317,7 @@ TEST_F(EvalContextImplTest, IntOnStack) {
   constexpr uint8_t kOffset = 8;
   auto type = MakeInt32Type();
   auto var = MakeUint64VariableForTest("i", 0, 0, {llvm::dwarf::DW_OP_fbreg, kOffset});
-  var->set_type(LazySymbol(type));
+  var->set_type(type);
 
   constexpr uint64_t kBp = 0x1000;
   provider()->set_bp(kBp);
@@ -452,8 +452,7 @@ TEST_F(EvalContextImplTest, GetConcreteType) {
   forward_decl->set_is_declaration(true);
 
   // A const modification of the forward declaration.
-  auto const_forward_decl =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, LazySymbol(forward_decl));
+  auto const_forward_decl = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, forward_decl);
 
   // Make a symbol context.
   auto context = fxl::MakeRefCounted<EvalContextImpl>(setup.process().GetWeakPtr(), symbol_context,

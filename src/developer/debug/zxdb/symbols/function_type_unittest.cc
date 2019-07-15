@@ -13,32 +13,29 @@
 
 namespace zxdb {
 
-// Note: The variants of ComputeFullNameForFunctionPtr() with a parameter are
-// tested by the MemberPtr unit test.
+// Note: The variants of ComputeFullNameForFunctionPtr() with a parameter are tested by the
+// MemberPtr unit test.
 
 TEST(FunctionType, ComputeFullName) {
-  // Everything empty. This is the not-technically-valid-C++ case of having
-  // a direct reference to a function.
+  // Everything empty. This is the not-technically-valid-C++ case of having a direct reference to a
+  // function.
   auto standalone = fxl::MakeRefCounted<FunctionType>(LazySymbol(), std::vector<LazySymbol>());
   EXPECT_EQ("void()", standalone->GetFullName());
 
   // One with args and a return value.
   auto int32_type = MakeInt32Type();
   std::vector<LazySymbol> params{
-      LazySymbol(fxl::MakeRefCounted<Variable>(DwarfTag::kFormalParameter, "",
-                                               LazySymbol(int32_type), VariableLocation())),
-      LazySymbol(fxl::MakeRefCounted<Variable>(DwarfTag::kFormalParameter, "",
-                                               LazySymbol(int32_type), VariableLocation()))};
-  auto with_stuff = fxl::MakeRefCounted<FunctionType>(LazySymbol(int32_type), params);
+      fxl::MakeRefCounted<Variable>(DwarfTag::kFormalParameter, "", int32_type, VariableLocation()),
+      fxl::MakeRefCounted<Variable>(DwarfTag::kFormalParameter, "", int32_type,
+                                    VariableLocation())};
+  auto with_stuff = fxl::MakeRefCounted<FunctionType>(int32_type, params);
   EXPECT_EQ("int32_t(int32_t, int32_t)", with_stuff->GetFullName());
 
   // A regular pointer to the functions above.
-  auto standalone_ptr =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(standalone));
+  auto standalone_ptr = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, standalone);
   EXPECT_EQ("void (*)()", standalone_ptr->GetFullName());
 
-  auto with_stuff_ptr =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(with_stuff));
+  auto with_stuff_ptr = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, with_stuff);
   EXPECT_EQ("int32_t (*)(int32_t, int32_t)", with_stuff_ptr->GetFullName());
 
   // Member function pointers are tested by the MemberPtr test.

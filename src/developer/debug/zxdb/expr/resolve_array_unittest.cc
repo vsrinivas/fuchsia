@@ -67,11 +67,11 @@ TEST_F(ResolveArrayTest, ResolvePointer) {
   // Array holds 3 uint16_t.
   constexpr uint32_t kTypeSize = 2;
   auto elt_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, kTypeSize, "uint16_t");
-  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(elt_type));
+  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, elt_type);
 
-  // Create memory with two values 0x3344, 0x5566. Note that these are offset
-  // one value from the beginning of the array so the requested address of the
-  // kBeginIndex'th element matches this address.
+  // Create memory with two values 0x3344, 0x5566. Note that these are offset one value from the
+  // beginning of the array so the requested address of the kBeginIndex'th element matches this
+  // address.
   constexpr uint64_t kBeginAddress = kBaseAddress + kBeginIndex * kTypeSize;
   eval_context->data_provider()->AddMemory(kBeginAddress, {0x44, 0x33, 0x66, 0x55});
 
@@ -94,8 +94,7 @@ TEST_F(ResolveArrayTest, ResolvePointer) {
   loop().Run();
   EXPECT_TRUE(called);
 
-  // Should have returned two values (the overlap of the array and the
-  // requested range).
+  // Should have returned two values (the overlap of the array and the requested range).
   ASSERT_EQ(2u, result.size());
 
   EXPECT_EQ(elt_type.get(), result[0].type());
