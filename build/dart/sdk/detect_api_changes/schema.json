@@ -1,0 +1,437 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "$id": "http://fuchsia.com/build/dart/sdk/analyze/diff_api_schema.json",
+  "description": "The public API structure for a Dart package",
+
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "type": {
+      "enum": [ "package" ]
+    },
+    "files": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/definitions/file"}
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "type",
+    "files"
+  ],
+
+
+  "definitions": {
+    "file": {
+      "description": "Information about a single dart file",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [ "file" ]
+        },
+        "ClassDeclarationImpl": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/definitions/ClassDeclarationImpl"}
+        },
+        "VariableDeclarationImpl": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/definitions/VariableDeclarationImpl"}
+        },
+        "FunctionDeclarationImpl": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/definitions/FunctionDeclarationImpl"}
+        },
+        "required": [
+          "name",
+          "type"
+        ]
+      }
+    },
+
+    "ClassDeclarationImpl": {
+      "description": "Information about a single dart class",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [ "ClassDeclarationImpl" ]
+        },
+        "returnType": {
+          "type": "string"
+        },
+        "isAbstract": {
+          "type": "boolean"
+        },
+        "isGetter": {
+          "type": "boolean"
+        },
+        "isOperator": {
+          "type": "boolean"
+        },
+        "isSetter": {
+          "type": "boolean"
+        },
+        "isStatic": {
+          "type": "boolean"
+        },
+        "ImplementsClauseImpl": {
+          "type": "object"
+        },
+        "MixinDeclarationImpl": {
+          "type": "object"
+        },
+        "ConstructorDeclarationImpl": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/definitions/ConstructorDeclarationImpl"}
+        },
+        "MethodDeclarationImpl": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/definitions/MethodDeclarationImpl"}
+        },
+        "VariableDeclarationImpl": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/definitions/VariableDeclarationImpl"}
+        },
+        "TypeParameterListImpl": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/definitions/TypeParameterListImpl"}
+        },
+        "ExtendsClause": {
+          "$ref": "#/definitions/ExtendsClause"
+        },
+        "ImplementsClause": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/definitions/ImplementsClause"}
+        },
+        "WithClause": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/definitions/WithClause"}
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type"
+        ]
+    },
+
+    "ConstructorDeclarationImpl": {
+      "description": "Constructor information for a given dart class",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [ "ConstructorDeclarationImpl" ]
+        },
+        "SimpleFormalParameterImpl": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/definitions/SimpleFormalParameterImpl"}
+        },
+        "FieldFormalParameterImpl": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/definitions/FieldFormalParameterImpl"}
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type"
+      ]
+    },
+
+    "MethodDeclarationImpl": {
+      "description": "Information about a single dart method",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [ "MethodDeclarationImpl" ]
+        },
+        "isAbstract": {
+          "type": "boolean"
+        },
+        "isGetter": {
+          "type": "boolean"
+        },
+        "isOperator": {
+          "type": "boolean"
+        },
+        "isSetter": {
+          "type": "boolean"
+        },
+        "isStatic": {
+          "type": "boolean"
+        },
+        "returnType": {
+          "type": "string"
+        },
+        "SimpleFormalParameterImpl": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/definitions/SimpleFormalParameterImpl"}
+        },
+        "TypeParameterListImpl": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/definitions/TypeParameterListImpl"}
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type",
+        "isAbstract",
+        "isGetter",
+        "isSetter",
+        "isStatic",
+        "isOperator"
+      ]
+    },
+
+    "FunctionDeclarationImpl": {
+      "description": "Information about functions defined outside of dart classes",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [ "FunctionDeclarationImpl" ]
+        },
+        "returnType": {
+          "type": "string"
+        },
+        "isGetter": {
+          "type": "boolean"
+        },
+        "isSetter": {
+          "type": "boolean"
+        },
+        "SimpleFormalParameterImpl": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/definitions/SimpleFormalParameterImpl"}
+        },
+        "TypeParameterListImpl": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/definitions/TypeParameterListImpl"}
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type",
+        "returnType",
+        "isGetter",
+        "isSetter"
+      ]
+    },
+
+    "SimpleFormalParameterImpl": {
+      "description": "Normal parameters defined for methods and functions",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [ "SimpleFormalParameterImpl" ]
+        },
+        "varType": {
+          "type": "string"
+        },
+        "isConst": {
+          "type": "boolean"
+        },
+        "isFinal": {
+          "type": "boolean"
+        },
+        "isOptional": {
+          "type": "boolean"
+        },
+        "isOptionalNamed": {
+          "type": "boolean"
+        },
+        "isOptionalPositional": {
+          "type": "boolean"
+        },
+        "isPositional": {
+          "type": "boolean"
+        },
+        "isRequired": {
+          "type": "boolean"
+        },
+        "isRequiredNamed": {
+          "type": "boolean"
+        },
+        "isRequiredPositional": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type",
+        "varType",
+        "isConst",
+        "isFinal",
+        "isOptional",
+        "isOptionalNamed",
+        "isOptionalPositional",
+        "isPositional",
+        "isRequired",
+        "isRequiredNamed",
+        "isRequiredPositional"
+      ]
+    },
+
+    "FieldFormalParameterImpl": {
+      "description": "Formal fields are 'this.<fieldname> parameters in dart constructors",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [ "FieldFormalParameterImpl" ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type"
+      ]
+    },
+
+    "VariableDeclarationImpl": {
+      "description": "Information about a variable declaration inside a given dart file or class (publicly visible)",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [ "VariableDeclarationImpl" ]
+        },
+        "isConst": {
+          "type": "boolean"
+        },
+        "isFinal": {
+          "type": "boolean"
+        },
+        "isLate": {
+          "type": "boolean"
+        },
+        "varType": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type"
+      ]
+    },
+
+    "TypeParameterListImpl": {
+      "description": "List of type parameters",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [ "TypeParameterListImpl" ]
+        },
+        "TypeParameterImpl": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/definitions/TypeParameterImpl"}
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type"
+      ]
+    },
+
+    "TypeParameterImpl": {
+      "description": "Type parameter information for a given class / method / function / parameter",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [ "TypeParameterImpl" ]
+        }      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type"
+      ]
+    },
+
+    "ExtendsClause": {
+      "description": "Extends statement on a given class",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [ "extends" ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type"
+      ]
+    },
+
+    "ImplementsClause": {
+      "description": "Implements statement & list of interfaces on a given class",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [ "interface" ]
+        }      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type"
+      ]
+    },
+
+    "WithClause": {
+      "description": "With statement & list of mixins on a given class",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [ "mixin" ]
+        }      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type"
+      ]
+    }
+  }
+}
+

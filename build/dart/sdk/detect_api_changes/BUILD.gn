@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_library.gni")
+import("//build/dart/dart_tool.gni")
+import("//build/dart/test.gni")
+
+dart_tool("detect_api_changes") {
+  package_name = "detect_api_changes"
+  main_dart = "bin/main.dart"
+  output_name = "detect_api_changes"
+
+  sources = [
+              "analyze.dart",
+              "diff.dart",
+              "src/visitor.dart",
+            ]
+
+  deps = [
+    "//third_party/dart-pkg/pub/analyzer",
+    "//third_party/dart-pkg/pub/args",
+    "//third_party/dart-pkg/pub/path",
+  ]
+}
+
+dart_test("test") {
+  sources = [
+    "analyze_test.dart",
+    "diff_test.dart",
+  ]
+
+  deps = [
+    ":detect_api_changes",
+    "//third_party/dart-pkg/pub/test",
+  ]
+}
