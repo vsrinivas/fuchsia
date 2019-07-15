@@ -9,8 +9,7 @@ namespace testing {
 
 FakeModule::FakeModule() = default;
 
-FakeModule::FakeModule(
-    fit::function<void(fuchsia::modular::Intent)> on_intent_handled)
+FakeModule::FakeModule(fit::function<void(fuchsia::modular::Intent)> on_intent_handled)
     : on_intent_handled_(std::move(on_intent_handled)) {}
 
 FakeModule::~FakeModule() = default;
@@ -20,13 +19,10 @@ void FakeModule::OnCreate(fuchsia::sys::StartupInfo startup_info) {
   component_context()->svc()->Connect(component_context_.NewRequest());
   component_context()->svc()->Connect(module_context_.NewRequest());
 
-  component_context()
-      ->outgoing()
-      ->AddPublicService<fuchsia::modular::IntentHandler>(
-          [this](
-              fidl::InterfaceRequest<fuchsia::modular::IntentHandler> request) {
-            bindings_.AddBinding(this, std::move(request));
-          });
+  component_context()->outgoing()->AddPublicService<fuchsia::modular::IntentHandler>(
+      [this](fidl::InterfaceRequest<fuchsia::modular::IntentHandler> request) {
+        bindings_.AddBinding(this, std::move(request));
+      });
 }
 
 std::vector<std::string> FakeModule::GetSandboxServices() {

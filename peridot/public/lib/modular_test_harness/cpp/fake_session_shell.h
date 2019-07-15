@@ -34,23 +34,19 @@ namespace testing {
 // RunLoopUntil([&] { return fake_session_shell.is_running(); });
 class FakeSessionShell : public modular::testing::FakeComponent {
  public:
-  fuchsia::modular::StoryProvider* story_provider() {
-    return story_provider_.get();
-  }
+  fuchsia::modular::StoryProvider* story_provider() { return story_provider_.get(); }
 
   fuchsia::modular::SessionShellContext* session_shell_context() {
     return session_shell_context_.get();
   }
 
   // See modular::testing::SessionShellImpl implementation.
-  void set_on_attach_view(
-      fit::function<void(fuchsia::modular::ViewIdentifier view_id)> callback) {
+  void set_on_attach_view(fit::function<void(fuchsia::modular::ViewIdentifier view_id)> callback) {
     session_shell_impl_.set_on_attach_view(std::move(callback));
   }
 
   // See modular::testing::SessionShellImpl implementation.
-  void set_on_detach_view(
-      fit::function<void(fuchsia::modular::ViewIdentifier view_id)> callback) {
+  void set_on_detach_view(fit::function<void(fuchsia::modular::ViewIdentifier view_id)> callback) {
     session_shell_impl_.set_on_detach_view(std::move(callback));
   }
 
@@ -84,19 +80,16 @@ class FakeSessionShell : public modular::testing::FakeComponent {
 // });
 // watcher.Watch(fake_session_shell.story_provider(),
 //                /*on_get_stories=*/nullptr);
-class SimpleStoryProviderWatcher
-    : public fuchsia::modular::StoryProviderWatcher {
+class SimpleStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher {
  public:
   SimpleStoryProviderWatcher() : binding_(this) {}
   ~SimpleStoryProviderWatcher() override = default;
 
-  using OnChangeFunction = fit::function<void(
-      fuchsia::modular::StoryInfo, fuchsia::modular::StoryState,
-      fuchsia::modular::StoryVisibilityState)>;
+  using OnChangeFunction =
+      fit::function<void(fuchsia::modular::StoryInfo, fuchsia::modular::StoryState,
+                         fuchsia::modular::StoryVisibilityState)>;
 
-  void set_on_change(OnChangeFunction on_change) {
-    on_change_ = std::move(on_change);
-  }
+  void set_on_change(OnChangeFunction on_change) { on_change_ = std::move(on_change); }
 
   // Start watching for story state changes in the given story_provider. Takes
   // a lambda that allows the caller to do something with the StoryInfo data
@@ -104,21 +97,17 @@ class SimpleStoryProviderWatcher
   // any existing stories when watching starts).
   void Watch(
       fuchsia::modular::StoryProvider* story_provider,
-      fit::function<void(std::vector<fuchsia::modular::StoryInfo> stories)>*
-          on_get_stories) {
+      fit::function<void(std::vector<fuchsia::modular::StoryInfo> stories)>* on_get_stories) {
     story_provider->GetStories(
-        binding_.NewBinding(),
-        on_get_stories != nullptr
-            ? std::move(*on_get_stories)
-            : [](std::vector<fuchsia::modular::StoryInfo>) {});
+        binding_.NewBinding(), on_get_stories != nullptr
+                                   ? std::move(*on_get_stories)
+                                   : [](std::vector<fuchsia::modular::StoryInfo>) {});
   }
 
  private:
   // |fuchsia::modular::StoryProviderWatcher|
-  void OnChange(
-      fuchsia::modular::StoryInfo story_info,
-      fuchsia::modular::StoryState story_state,
-      fuchsia::modular::StoryVisibilityState story_visibility_state) override {
+  void OnChange(fuchsia::modular::StoryInfo story_info, fuchsia::modular::StoryState story_state,
+                fuchsia::modular::StoryVisibilityState story_visibility_state) override {
     on_change_(std::move(story_info), story_state, story_visibility_state);
   }
 
@@ -128,8 +117,7 @@ class SimpleStoryProviderWatcher
   // Optional user-provided lambda that will run with each OnChange(). Defaults
   // to doing nothing.
   OnChangeFunction on_change_ =
-      [](fuchsia::modular::StoryInfo story_info,
-         fuchsia::modular::StoryState story_state,
+      [](fuchsia::modular::StoryInfo story_info, fuchsia::modular::StoryState story_state,
          fuchsia::modular::StoryVisibilityState story_visibility_state) {};
   fidl::Binding<fuchsia::modular::StoryProviderWatcher> binding_;
 };

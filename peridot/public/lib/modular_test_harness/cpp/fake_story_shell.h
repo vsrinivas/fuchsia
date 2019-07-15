@@ -28,26 +28,21 @@ namespace testing {
 //
 // // Wait for the session shell to be intercepted.
 // RunLoopUntil([&] { return fake_story_shell.is_running(); });
-class FakeStoryShell : public modular::testing::FakeComponent,
-                       fuchsia::modular::StoryShell {
+class FakeStoryShell : public modular::testing::FakeComponent, fuchsia::modular::StoryShell {
  public:
   ~FakeStoryShell() override = default;
 
   bool is_initialized() const { return !!story_shell_context_; }
 
-  void set_on_destroy(fit::function<void()> on_destroy) {
-    on_destroy_ = std::move(on_destroy);
-  }
+  void set_on_destroy(fit::function<void()> on_destroy) { on_destroy_ = std::move(on_destroy); }
 
-  void set_on_add_surface(fit::function<void(fuchsia::modular::ViewConnection,
-                                             fuchsia::modular::SurfaceInfo)>
-                              on_add_surface) {
+  void set_on_add_surface(
+      fit::function<void(fuchsia::modular::ViewConnection, fuchsia::modular::SurfaceInfo)>
+          on_add_surface) {
     on_add_surface_ = std::move(on_add_surface);
   }
 
-  fuchsia::modular::StoryShellContext* story_shell_context() {
-    return story_shell_context_.get();
-  }
+  fuchsia::modular::StoryShellContext* story_shell_context() { return story_shell_context_.get(); }
 
   // Produces a handler function that can be used in the outgoing service
   // provider.
@@ -61,8 +56,8 @@ class FakeStoryShell : public modular::testing::FakeComponent,
   void OnDestroy() override;
 
   // |fuchsia::modular::StoryShell|
-  void Initialize(fidl::InterfaceHandle<fuchsia::modular::StoryShellContext>
-                      story_shell_context) override;
+  void Initialize(
+      fidl::InterfaceHandle<fuchsia::modular::StoryShellContext> story_shell_context) override;
 
   // |fuchsia::modular::StoryShell|
   void AddSurface(fuchsia::modular::ViewConnection view_connection,
@@ -77,35 +72,30 @@ class FakeStoryShell : public modular::testing::FakeComponent,
   void FocusSurface(std::string /* surface_id */) override {}
 
   // |fuchsia::modular::StoryShell|
-  void DefocusSurface(std::string /* surface_id */,
-                      DefocusSurfaceCallback callback) override {
+  void DefocusSurface(std::string /* surface_id */, DefocusSurfaceCallback callback) override {
     callback();
   }
 
   // |fuchsia::modular::StoryShell|
-  void AddContainer(
-      std::string /* container_name */, fidl::StringPtr /* parent_id */,
-      fuchsia::modular::SurfaceRelation /* relation */,
-      std::vector<fuchsia::modular::ContainerLayout> /* layout */,
-      std::vector<fuchsia::modular::ContainerRelationEntry> /* relationships */,
-      std::vector<fuchsia::modular::ContainerView> /* views */) override {}
+  void AddContainer(std::string /* container_name */, fidl::StringPtr /* parent_id */,
+                    fuchsia::modular::SurfaceRelation /* relation */,
+                    std::vector<fuchsia::modular::ContainerLayout> /* layout */,
+                    std::vector<fuchsia::modular::ContainerRelationEntry> /* relationships */,
+                    std::vector<fuchsia::modular::ContainerView> /* views */) override {}
 
   // |fuchsia::modular::StoryShell|
   void RemoveSurface(std::string /* surface_id */) override {}
 
   // |fuchsia::modular::StoryShell|
-  void ReconnectView(
-      fuchsia::modular::ViewConnection view_connection) override {}
+  void ReconnectView(fuchsia::modular::ViewConnection view_connection) override {}
 
   // |fuchsia::modular::StoryShell|
-  void UpdateSurface(
-      fuchsia::modular::ViewConnection view_connection,
-      fuchsia::modular::SurfaceInfo /* surface_info */) override {}
+  void UpdateSurface(fuchsia::modular::ViewConnection view_connection,
+                     fuchsia::modular::SurfaceInfo /* surface_info */) override {}
 
   fuchsia::modular::StoryShellContextPtr story_shell_context_;
   fidl::BindingSet<fuchsia::modular::StoryShell> bindings_;
-  fit::function<void(fuchsia::modular::ViewConnection,
-                     fuchsia::modular::SurfaceInfo)>
+  fit::function<void(fuchsia::modular::ViewConnection, fuchsia::modular::SurfaceInfo)>
       on_add_surface_;
   fit::function<void()> on_destroy_;
 };

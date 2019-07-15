@@ -27,8 +27,7 @@ namespace testing {
 //     .sandbox_services = fake_module->GetSandboxServices() });
 //
 // ...
-class FakeModule : public modular::testing::FakeComponent,
-                   fuchsia::modular::IntentHandler {
+class FakeModule : public modular::testing::FakeComponent, fuchsia::modular::IntentHandler {
  public:
   FakeModule();
 
@@ -42,9 +41,7 @@ class FakeModule : public modular::testing::FakeComponent,
   }
 
   // Returns the module's |module_context_|
-  fuchsia::modular::ModuleContext* module_context() {
-    return module_context_.get();
-  }
+  fuchsia::modular::ModuleContext* module_context() { return module_context_.get(); }
 
   static std::vector<std::string> GetSandboxServices();
 

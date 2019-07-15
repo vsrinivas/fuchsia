@@ -27,8 +27,7 @@ TEST_F(TestHarnessFixtureTest, CanLaunchModular) {
   bool intercepted = false;
   builder.InterceptBaseShell(
       [&](fuchsia::sys::StartupInfo startup_info,
-          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
-              component) {
+          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
         ASSERT_EQ(kFakeBaseShellUrl, startup_info.launch_info.url);
         intercepted = true;
       },
@@ -40,15 +39,11 @@ TEST_F(TestHarnessFixtureTest, CanLaunchModular) {
 
 class TestComponent : public modular::testing::FakeComponent {
  public:
-  TestComponent(fit::function<void()> on_created,
-                fit::function<void()> on_destroyed)
-      : on_created_(std::move(on_created)),
-        on_destroyed_(std::move(on_destroyed)) {}
+  TestComponent(fit::function<void()> on_created, fit::function<void()> on_destroyed)
+      : on_created_(std::move(on_created)), on_destroyed_(std::move(on_destroyed)) {}
 
  protected:
-  void OnCreate(fuchsia::sys::StartupInfo startup_info) override {
-    on_created_();
-  }
+  void OnCreate(fuchsia::sys::StartupInfo startup_info) override { on_created_(); }
 
   void OnDestroy() override { on_destroyed_(); }
 
@@ -62,20 +57,17 @@ TEST_F(TestHarnessFixtureTest, FakeComponentLifecycle_KilledByParent) {
   modular::testing::TestHarnessBuilder builder;
 
   bool running = false;
-  TestComponent session_shell([&] { running = true; },
-                              [&] { running = false; });
-  builder.InterceptSessionShell(
-      session_shell.GetOnCreateHandler(),
-      {.url = modular::testing::GenerateFakeUrl(),
-       .sandbox_services = {"fuchsia.modular.SessionShellContext"}});
+  TestComponent session_shell([&] { running = true; }, [&] { running = false; });
+  builder.InterceptSessionShell(session_shell.GetOnCreateHandler(),
+                                {.url = modular::testing::GenerateFakeUrl(),
+                                 .sandbox_services = {"fuchsia.modular.SessionShellContext"}});
   builder.BuildAndRun(test_harness());
 
   RunLoopUntil([&] { return session_shell.is_running(); });
   EXPECT_TRUE(running);
 
   fuchsia::modular::SessionShellContextPtr session_shell_context;
-  session_shell.component_context()->svc()->Connect(
-      session_shell_context.NewRequest());
+  session_shell.component_context()->svc()->Connect(session_shell_context.NewRequest());
   session_shell_context->Logout();
 
   RunLoopUntil([&] { return !session_shell.is_running(); });
@@ -103,8 +95,7 @@ TEST_F(TestHarnessFixtureTest, FakeComponentLifecycle_KilledBySelf) {
 
 // Tests that FakeComponent receives lifecycle events when it is killed
 // using fuchsia.modular.Lifecycle that is published in its outgoing directory.
-TEST_F(TestHarnessFixtureTest,
-       FakeComponentLifecycle_KilledByLifecycleService) {
+TEST_F(TestHarnessFixtureTest, FakeComponentLifecycle_KilledByLifecycleService) {
   modular::testing::TestHarnessBuilder builder;
 
   bool running = false;
@@ -123,8 +114,7 @@ TEST_F(TestHarnessFixtureTest,
   sys::ServiceDirectory svc(std::move(svc_dir));
 
   fuchsia::modular::LifecyclePtr lifecycle;
-  ASSERT_EQ(ZX_OK, svc.Connect(lifecycle.NewRequest(),
-                               "svc/fuchsia.modular.Lifecycle"));
+  ASSERT_EQ(ZX_OK, svc.Connect(lifecycle.NewRequest(), "svc/fuchsia.modular.Lifecycle"));
   lifecycle->Terminate();
   RunLoopUntil([&] { return !base_shell.is_running(); });
   EXPECT_FALSE(running);
@@ -146,8 +136,7 @@ TEST_F(TestHarnessFixtureTest, AddModToStory) {
   RunLoopUntil([&] { return mod.is_running(); });
 }
 
-class TestFixtureForTestingCleanup
-    : public modular::testing::TestHarnessFixture {
+class TestFixtureForTestingCleanup : public modular::testing::TestHarnessFixture {
  public:
   // Runs the test harness and calls |on_running| once the base shell starts
   // running.

@@ -11,8 +11,7 @@ void FakeSessionShell::OnCreate(fuchsia::sys::StartupInfo startup_info) {
   component_context()->svc()->Connect(session_shell_context_.NewRequest());
   session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
-  component_context()->outgoing()->AddPublicService(
-      session_shell_impl_.GetHandler());
+  component_context()->outgoing()->AddPublicService(session_shell_impl_.GetHandler());
 }
 
 }  // namespace testing

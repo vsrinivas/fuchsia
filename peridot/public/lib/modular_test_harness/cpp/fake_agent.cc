@@ -9,8 +9,7 @@ namespace testing {
 
 FakeAgent::FakeAgent() = default;
 
-FakeAgent::FakeAgent(
-    fit::function<void(std::string client_url)> connect_callback)
+FakeAgent::FakeAgent(fit::function<void(std::string client_url)> connect_callback)
     : on_connect_(std::move(connect_callback)) {}
 
 FakeAgent::~FakeAgent() = default;
@@ -25,15 +24,13 @@ void FakeAgent::OnCreate(fuchsia::sys::StartupInfo startup_info) {
 }
 
 void FakeAgent::set_on_run_task(
-    fit::function<void(std::string task_id, RunTaskCallback callback)>
-        on_run_task) {
+    fit::function<void(std::string task_id, RunTaskCallback callback)> on_run_task) {
   on_run_task_ = std::move(on_run_task);
 }
 
 // |fuchsia::modular::Agent|
-void FakeAgent::Connect(
-    std::string requestor_url,
-    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services_request) {
+void FakeAgent::Connect(std::string requestor_url,
+                        fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services_request) {
   services_.AddBinding(std::move(services_request));
   if (on_connect_) {
     on_connect_(requestor_url);

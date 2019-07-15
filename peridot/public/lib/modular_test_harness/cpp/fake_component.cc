@@ -34,23 +34,20 @@ std::unique_ptr<sys::ComponentContext> CreateComponentContext(
 FakeComponent::~FakeComponent() = default;
 
 TestHarnessBuilder::OnNewComponentHandler FakeComponent::GetOnCreateHandler() {
-  return
-      [this](
-          fuchsia::sys::StartupInfo startup_info,
-          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
-              intercepted_component) {
-        intercepted_component_ptr_ = intercepted_component.Bind();
-        intercepted_component_ptr_.events().OnKill = [this] {
-          component_context_.reset();
-          OnDestroy();
-        };
+  return [this](fuchsia::sys::StartupInfo startup_info,
+                fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
+                    intercepted_component) {
+    intercepted_component_ptr_ = intercepted_component.Bind();
+    intercepted_component_ptr_.events().OnKill = [this] {
+      component_context_.reset();
+      OnDestroy();
+    };
 
-        component_context_ = CreateComponentContext(&startup_info);
-        component_context_->outgoing()->AddPublicService(
-            lifecycle_bindings_.GetHandler(this));
+    component_context_ = CreateComponentContext(&startup_info);
+    component_context_->outgoing()->AddPublicService(lifecycle_bindings_.GetHandler(this));
 
-        OnCreate(std::move(startup_info));
-      };
+    OnCreate(std::move(startup_info));
+  };
 }
 
 bool FakeComponent::is_running() const { return !!component_context_; }
@@ -60,15 +57,12 @@ sys::ComponentContext* FakeComponent::component_context() {
   return component_context_.get();
 }
 
-void FakeComponent::Exit(int64_t exit_code,
-                         fuchsia::sys::TerminationReason reason) {
+void FakeComponent::Exit(int64_t exit_code, fuchsia::sys::TerminationReason reason) {
   ZX_ASSERT(is_running());
   intercepted_component_ptr_->Exit(exit_code, reason);
 }
 
-void FakeComponent::Terminate() {
-  Exit(0);
-}
+void FakeComponent::Terminate() { Exit(0); }
 
 }  // namespace testing
 }  // namespace modular

@@ -8,13 +8,10 @@ namespace modular {
 namespace testing {
 
 TestHarnessFixture::TestHarnessFixture()
-    : test_harness_launcher_(
-          real_services()->Connect<fuchsia::sys::Launcher>()) {}
+    : test_harness_launcher_(real_services()->Connect<fuchsia::sys::Launcher>()) {}
 
-void AddModToStory(
-    const fuchsia::modular::testing::TestHarnessPtr& test_harness,
-    std::string story_name, std::string mod_name,
-    fuchsia::modular::Intent intent) {
+void AddModToStory(const fuchsia::modular::testing::TestHarnessPtr& test_harness,
+                   std::string story_name, std::string mod_name, fuchsia::modular::Intent intent) {
   fuchsia::modular::AddMod add_mod;
   add_mod.mod_name_transitional = {mod_name};
   add_mod.intent = std::move(intent);

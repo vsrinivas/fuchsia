@@ -72,20 +72,17 @@ class TestHarnessImpl final : fuchsia::modular::testing::TestHarness {
     // the component alive:
     std::unique_ptr<sys::ComponentContext> component_context;
     std::unique_ptr<sys::testing::InterceptedComponent> intercepted_component;
-    std::unique_ptr<::modular::AgentDriver<InterceptedSessionAgent>>
-        agent_driver;
+    std::unique_ptr<::modular::AgentDriver<InterceptedSessionAgent>> agent_driver;
   };
 
   // |fuchsia::modular::testing::TestHarness|
   void Run(fuchsia::modular::testing::TestHarnessSpec spec) override;
 
   // |fuchsia::modular::testing::TestHarness|
-  void ConnectToModularService(
-      fuchsia::modular::testing::ModularService service) override;
+  void ConnectToModularService(fuchsia::modular::testing::ModularService service) override;
 
   // |fuchsia::modular::testing::TestHarness|
-  void ConnectToEnvironmentService(std::string service_name,
-                                   zx::channel request) override;
+  void ConnectToEnvironmentService(std::string service_name, zx::channel request) override;
 
   // |fuchsia::modular::testing::TestHarness|
   void ParseConfig(std::string config, std::string config_path,
@@ -95,10 +92,8 @@ class TestHarnessImpl final : fuchsia::modular::testing::TestHarness {
       const fuchsia::modular::testing::TestHarnessSpec& spec);
 
   // Helper class
-  fuchsia::modular::testing::InterceptedComponentPtr
-  AddInterceptedComponentBinding(
-      std::unique_ptr<sys::testing::InterceptedComponent>
-          intercepted_component);
+  fuchsia::modular::testing::InterceptedComponentPtr AddInterceptedComponentBinding(
+      std::unique_ptr<sys::testing::InterceptedComponent> intercepted_component);
 
   // Use this helper method for checking fatal errors.
   //
@@ -122,9 +117,8 @@ class TestHarnessImpl final : fuchsia::modular::testing::TestHarness {
   //
   // |default_injected_services| maps service name => component URL which serves
   // it.
-  void InjectServicesIntoEnvironment(
-      sys::testing::EnvironmentServices* env_services,
-      std::map<std::string, std::string>* default_injected_services);
+  void InjectServicesIntoEnvironment(sys::testing::EnvironmentServices* env_services,
+                                     std::map<std::string, std::string>* default_injected_services);
 
   // Buffers service request from |GetService()|.
   // FlushBufferedSessionAgentServices() processes these services once the
@@ -132,8 +126,8 @@ class TestHarnessImpl final : fuchsia::modular::testing::TestHarness {
   template <typename Interface>
   void BufferSessionAgentService(fidl::InterfaceRequest<Interface> request) {
     intercepted_session_agent_info_.buffered_service_requests.push_back(
-        InterceptedSessionAgentInfo::BufferedServiceRequest{
-            Interface::Name_, request.TakeChannel()});
+        InterceptedSessionAgentInfo::BufferedServiceRequest{Interface::Name_,
+                                                            request.TakeChannel()});
 
     FlushBufferedSessionAgentServices();
   }
@@ -143,25 +137,22 @@ class TestHarnessImpl final : fuchsia::modular::testing::TestHarness {
 
   // Populates the test harness environment with services described by
   // |spec_.env_services|.
-  zx_status_t PopulateEnvServices(
-      sys::testing::EnvironmentServices* env_services);
+  zx_status_t PopulateEnvServices(sys::testing::EnvironmentServices* env_services);
 
   // Injects services into the test harness environment according to
   // |spec_.env_services.services_from_components| and
   // |spec_.env_services_to_inject|.
   //
   // Injected service names are inserted into |added_svcs|.
-  zx_status_t PopulateEnvServicesWithComponents(
-      sys::testing::EnvironmentServices* env_services,
-      std::set<std::string>* added_svcs);
+  zx_status_t PopulateEnvServicesWithComponents(sys::testing::EnvironmentServices* env_services,
+                                                std::set<std::string>* added_svcs);
 
   // Injects services into the test harness environment according to
   // |spec_.env_services.service_dir|.
   //
   // Injected service names are inserted into |added_svcs|.
-  zx_status_t PopulateEnvServicesWithServiceDir(
-      sys::testing::EnvironmentServices* env_services,
-      std::set<std::string>* added_svcs);
+  zx_status_t PopulateEnvServicesWithServiceDir(sys::testing::EnvironmentServices* env_services,
+                                                std::set<std::string>* added_svcs);
 
   // The test harness environment is a child of |parent_env_|.
   const fuchsia::sys::EnvironmentPtr& parent_env_;  // Not owned.

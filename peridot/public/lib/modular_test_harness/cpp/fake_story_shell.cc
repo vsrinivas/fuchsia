@@ -16,27 +16,23 @@ void FakeStoryShell::OnDestroy() {
     on_destroy_();
 }
 
-fidl::InterfaceRequestHandler<fuchsia::modular::StoryShell>
-FakeStoryShell::GetHandler() {
+fidl::InterfaceRequestHandler<fuchsia::modular::StoryShell> FakeStoryShell::GetHandler() {
   return bindings_.GetHandler(this);
 }
 
 void FakeStoryShell::Initialize(
-    fidl::InterfaceHandle<fuchsia::modular::StoryShellContext>
-        story_shell_context) {
+    fidl::InterfaceHandle<fuchsia::modular::StoryShellContext> story_shell_context) {
   story_shell_context_ = story_shell_context.Bind();
 }
 
-void FakeStoryShell::AddSurface(
-    fuchsia::modular::ViewConnection view_connection,
-    fuchsia::modular::SurfaceInfo surface_info) {
+void FakeStoryShell::AddSurface(fuchsia::modular::ViewConnection view_connection,
+                                fuchsia::modular::SurfaceInfo surface_info) {
   if (on_add_surface_)
     on_add_surface_(std::move(view_connection), std::move(surface_info));
 }
 
-void FakeStoryShell::AddSurface2(
-    fuchsia::modular::ViewConnection2 view_connection,
-    fuchsia::modular::SurfaceInfo surface_info) {
+void FakeStoryShell::AddSurface2(fuchsia::modular::ViewConnection2 view_connection,
+                                 fuchsia::modular::SurfaceInfo surface_info) {
   AddSurface(
       fuchsia::modular::ViewConnection{
           .surface_id = view_connection.surface_id,

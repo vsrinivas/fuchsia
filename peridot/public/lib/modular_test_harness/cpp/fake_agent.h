@@ -17,8 +17,7 @@ namespace testing {
 // An Agent implementation which provides access to
 // |fuchsia::modular::AgentContext|, implements boilerplate for exposing
 // services, and exposes task running callback registration.
-class FakeAgent : public modular::testing::FakeComponent,
-                  fuchsia::modular::Agent {
+class FakeAgent : public modular::testing::FakeComponent, fuchsia::modular::Agent {
  public:
   // Returns a vector of services names which are expected to be provided to the
   // agent.
@@ -29,8 +28,7 @@ class FakeAgent : public modular::testing::FakeComponent,
   // Constructs a FakeAgent which calls |connect_callback| whenever a connection
   // is initiated by the modular framework. |client_url| is the url of the
   // connecting component.
-  explicit FakeAgent(
-      fit::function<void(std::string client_url)> connect_callback);
+  explicit FakeAgent(fit::function<void(std::string client_url)> connect_callback);
 
   ~FakeAgent();
 
@@ -40,23 +38,19 @@ class FakeAgent : public modular::testing::FakeComponent,
   }
 
   // Returns the agent's |fuchsia::modular::AgentContext|.
-  fuchsia::modular::AgentContext* agent_context() {
-    return agent_context_.get();
-  }
+  fuchsia::modular::AgentContext* agent_context() { return agent_context_.get(); }
 
   // Adds a service to the service namespace which is exposed to clients
   // connecting to the agent.
   template <typename ServiceType>
-  void AddService(
-      fidl::InterfaceRequestHandler<ServiceType> connection_handler) {
+  void AddService(fidl::InterfaceRequestHandler<ServiceType> connection_handler) {
     services_.AddService<ServiceType>(std::move(connection_handler));
   }
 
   // Sets a callback which will be called when a
   // |fuchsia::modular::modular::Agent/RunTask| is received.
   void set_on_run_task(
-      fit::function<void(std::string task_id, RunTaskCallback callback)>
-          on_run_task);
+      fit::function<void(std::string task_id, RunTaskCallback callback)> on_run_task);
 
  private:
   // |FakeComponent|
@@ -64,16 +58,14 @@ class FakeAgent : public modular::testing::FakeComponent,
 
   // |fuchsia::modular::Agent|
   void Connect(std::string requestor_url,
-               fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
-                   services_request) override;
+               fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services_request) override;
 
   // |fuchsia::modular::Agent|
   void RunTask(std::string task_id, RunTaskCallback callback) override;
 
   // The callback which is called when the modular framework tells the agent to
   // trigger a task.
-  fit::function<void(std::string task_id, RunTaskCallback callback)>
-      on_run_task_;
+  fit::function<void(std::string task_id, RunTaskCallback callback)> on_run_task_;
 
   // The callback which is called when the modular framework connects to the
   // agent.
