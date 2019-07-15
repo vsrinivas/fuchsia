@@ -3,8 +3,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
-#include "vm/vm_object_paged.h"
-
 #include <arch/ops.h>
 #include <assert.h>
 #include <err.h>
@@ -24,6 +22,7 @@
 #include <vm/vm_address_region.h>
 #include <zircon/types.h>
 
+#include "vm/vm_object_paged.h"
 #include "vm_priv.h"
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
@@ -1654,6 +1653,10 @@ zx_status_t VmObjectPaged::DecommitRangeLocked(uint64_t offset, uint64_t len,
     return [parent, &free_list, len](uint64_t offset) TA_NO_THREAD_SAFETY_ANALYSIS -> zx_status_t {
       return parent->DecommitRangeLocked(offset, len, free_list);
     }(offset + parent_offset);
+  }
+
+  if (parent_ || GetRootPageSourceLocked()) {
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
   // trim the size

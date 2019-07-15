@@ -40,11 +40,6 @@ public:
         return OpRange(ZX_VMO_OP_COMMIT, page_offset, page_count);
     }
 
-    // Decommits the specified pages in this vmo.
-    bool Decommit(uint64_t page_offset, uint64_t page_count) {
-        return OpRange(ZX_VMO_OP_DECOMMIT, page_offset, page_count);
-    }
-
     uint64_t GetKey() const { return base_val_; }
     uintptr_t GetBaseAddr() const { return base_addr_; }
     const zx::vmo& vmo() const { return vmo_; }

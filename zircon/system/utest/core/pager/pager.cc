@@ -1193,29 +1193,6 @@ bool clone_split_commit_test() {
     END_TEST;
 }
 
-// Tests that decommit on clone doesn't decommit the parent.
-bool clone_decommit_test() {
-    BEGIN_TEST;
-
-    UserPager pager;
-
-    ASSERT_TRUE(pager.Init());
-
-    Vmo* vmo;
-    ASSERT_TRUE(pager.CreateVmo(1, &vmo));
-    auto clone = vmo->Clone();
-    ASSERT_NOT_NULL(clone);
-
-    ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
-    ASSERT_TRUE(check_buffer(clone.get(), 0, 1, true));
-
-    ASSERT_TRUE(clone->Decommit(0, 1));
-
-    ASSERT_TRUE(check_buffer(clone.get(), 0, 1, true));
-
-    END_TEST;
-}
-
 // Tests that a commit properly populates the whole range.
 bool simple_commit_test() {
     BEGIN_TEST;
@@ -1445,37 +1422,6 @@ bool commit_redundant_supply_test() {
     for (unsigned i = 1; i <= kNumPages; i++) {
         ASSERT_TRUE(pager.SupplyPages(vmo, 0, i));
     }
-
-    ASSERT_TRUE(t.Wait());
-
-    END_TEST;
-}
-
-// Tests that decommitting during a supply doesn't break things.
-bool supply_decommit_test() {
-    BEGIN_TEST;
-
-    UserPager pager;
-
-    ASSERT_TRUE(pager.Init());
-
-    constexpr uint64_t kNumPages = 4;
-    Vmo* vmo;
-    ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
-
-    TestThread t([vmo]() -> bool {
-        return vmo->Commit(0, kNumPages);
-    });
-
-    ASSERT_TRUE(t.Start());
-
-    ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
-    ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
-    ASSERT_TRUE(vmo->Decommit(0, 1));
-    ASSERT_TRUE(pager.SupplyPages(vmo, 1, kNumPages - 1));
-
-    ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
-    ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
 
     ASSERT_TRUE(t.Wait());
 
@@ -1832,6 +1778,30 @@ bool resize_nonresizable_vmo() {
     END_TEST;
 }
 
+// Tests that decommiting a clone fails
+bool decommit_test() {
+    BEGIN_TEST;
+
+    zx::pager pager;
+    ASSERT_EQ(zx::pager::create(0, &pager), ZX_OK);
+
+    zx::port port;
+    ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
+
+    zx::vmo vmo;
+
+    ASSERT_EQ(pager.create_vmo(0, port, 0, ZX_PAGE_SIZE, &vmo), ZX_OK);
+
+    ASSERT_EQ(vmo.op_range(ZX_VMO_OP_DECOMMIT, 0, ZX_PAGE_SIZE, nullptr, 0), ZX_ERR_NOT_SUPPORTED);
+
+    zx::vmo child;
+    ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, ZX_PAGE_SIZE, &child), ZX_OK);
+
+    ASSERT_EQ(child.op_range(ZX_VMO_OP_DECOMMIT, 0, ZX_PAGE_SIZE, nullptr, 0), ZX_ERR_NOT_SUPPORTED);
+
+    END_TEST;
+}
+
 // Tests focused on reading a paged vmo.
 
 #define DEFINE_VMO_VMAR_TEST(fn_name) \
@@ -1917,7 +1887,6 @@ RUN_TEST(clone_write_to_clone_test);
 RUN_TEST(clone_detach_test);
 RUN_TEST(clone_commit_test);
 RUN_TEST(clone_split_commit_test);
-RUN_TEST(clone_decommit_test);
 END_TEST_CASE(clone_tests)
 
 // Tests focused on commit/decommit.
@@ -1930,7 +1899,6 @@ RUN_TEST(overlap_commit_supply_test);
 RUN_TEST(multisupply_commit_test);
 RUN_TEST(multicommit_supply_test);
 RUN_TEST(commit_redundant_supply_test);
-RUN_TEST(supply_decommit_test);
 RUN_TEST(resize_commit_test);
 RUN_TEST(suspend_commit_test);
 END_TEST_CASE(commit_tests)
@@ -1943,6 +1911,7 @@ RUN_TEST(invalid_pager_create_vmo);
 RUN_TEST(invalid_pager_detach_vmo);
 RUN_TEST(invalid_pager_supply_pages);
 RUN_TEST(resize_nonresizable_vmo);
+RUN_TEST(decommit_test);
 END_TEST_CASE(api_violations)
 
 } // namespace pager_tests

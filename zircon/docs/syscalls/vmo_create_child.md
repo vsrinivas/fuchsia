@@ -83,20 +83,14 @@ to become inactive. Only when the last child is destroyed and no mappings
 of those child into address spaces exist, will **ZX_VMO_ZERO_CHILDREN** become
 active again.
 
-### ZX_VMO_CHILD_COPY_ON_WRITE
+Non-slice child vmos will interact with the VMO syscalls in the following ways:
 
-VMOs produced by this mode will interact with the VMO syscalls in the following
-ways:
-
-- The DECOMMIT and COMMIT modes of [`zx_vmo_op_range()`] on a clone will only affect pages
-  allocated to the clone, never its parent.
-- If a page in a clone is decommitted (e.g. with [`zx_vmo_op_range()`]), the parent's page will
-  become visible once again, still with copy-on-write semantics.
-- If a page is committed to a clone using the [`zx_vmo_op_range()`] COMMIT mode, a
-  the new page will have the same contents as the parent's corresponding page
-  (or zero-filled if no such page exists).
-- If the [`zx_vmo_op_range()`] LOOKUP mode is used, the parent's pages will be visible
-  where the clone has not modified them.
+- The COMMIT mode of [`zx_vmo_op_range()`] on a child will commit pages into the child that
+  have the same content as its parent's corresponding pages. If those pages are supplied by a
+  pager, this operation will also commit those pages in the parent. Otherwise, if those pages
+  are not comitted in the parent, zero-filled pages will be comitted directly into
+  child, without affecting the parent.
+- The DECOMMIT mode of [`zx_vmo_op_range()`] is not supported.
 
 ## RIGHTS
 

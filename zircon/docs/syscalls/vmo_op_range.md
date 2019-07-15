@@ -37,8 +37,10 @@ zx_status_t zx_vmo_op_range(zx_handle_t handle,
 More information can be found in the [vm object documentation](../objects/vm_object.md).
 Requires the **ZX_RIGHT_WRITE** right.
 
-**ZX_VMO_OP_DECOMMIT** - Release a range of pages previously committed to the VMO from *offset* to *offset*+*size*.
-Requires the **ZX_RIGHT_WRITE** right.
+**ZX_VMO_OP_DECOMMIT** - Release a range of pages previously committed to the VMO from *offset*
+to *offset*+*size*, which resets that range's bytes to 0. Requires the **ZX_RIGHT_WRITE** right.
+This is only supported for vmos created from [`zx_vmo_create()`] which do not have non-slice
+children, and for slice children of such vmos.
 
 **ZX_VMO_OP_LOCK** - Presently unsupported.
 

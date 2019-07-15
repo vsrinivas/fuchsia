@@ -232,63 +232,30 @@ TEST(VmoCloneTestCase, Test3) {
 TEST(VmoCloneTestCase, Decommit) {
     zx_handle_t vmo;
     zx_handle_t clone_vmo;
-    uintptr_t ptr;
-    uintptr_t clone_ptr;
-    volatile uint32_t *p;
-    volatile uint32_t *cp;
 
     // create a vmo
     const size_t size = PAGE_SIZE * 4;
     EXPECT_OK(zx_vmo_create(size, 0, &vmo), "vm_object_create");
 
-    // map it
-    EXPECT_EQ(ZX_OK,
-            zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ|ZX_VM_PERM_WRITE, 0, vmo, 0, size, &ptr),
-            "map");
-    EXPECT_NE(ptr, 0, "map address");
-    p = (volatile uint32_t *)ptr;
-
     // clone it and map that
     clone_vmo = ZX_HANDLE_INVALID;
-    EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo), "vm_clone");
+    EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE2, 0, size, &clone_vmo), "vm_clone");
     EXPECT_NE(ZX_HANDLE_INVALID, clone_vmo, "vm_clone_handle");
-    EXPECT_EQ(ZX_OK,
-            zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ|ZX_VM_PERM_WRITE, 0, clone_vmo, 0, size, &clone_ptr),
-            "map");
-    EXPECT_NE(clone_ptr, 0, "map address");
-    cp = (volatile uint32_t *)clone_ptr;
 
-    // write to parent and make sure clone sees it
-    p[0] = 99;
-    EXPECT_EQ(99, p[0], "wrote to original");
-    EXPECT_EQ(99, cp[0], "read back from clone");
+    // decommit is not supported on clones or plain vmos which have children
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED,
+              zx_vmo_op_range(clone_vmo, ZX_VMO_OP_DECOMMIT, 0, PAGE_SIZE, NULL, 0));
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED,
+              zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, 0, PAGE_SIZE, NULL, 0));
 
-    // write to clone to get a different state
-    cp[0] = 100;
-    EXPECT_EQ(100, cp[0], "read back from clone");
-    EXPECT_EQ(99, p[0], "read back from original");
+    // close the clone handle
+    EXPECT_EQ(ZX_OK, zx_handle_close(clone_vmo), "handle_close");
 
-    EXPECT_OK(zx_vmo_op_range(clone_vmo, ZX_VMO_OP_DECOMMIT, 0, PAGE_SIZE, NULL, 0));
-
-    // make sure that clone reverted to original, and that parent is unaffected
-    // by the decommit
-    EXPECT_EQ(99, cp[0], "read back from clone");
-    EXPECT_EQ(99, p[0], "read back from original");
-
-    // make sure the decommitted page still has COW semantics
-    cp[0] = 100;
-    EXPECT_EQ(100, cp[0], "read back from clone");
-    EXPECT_EQ(99, p[0], "read back from original");
+    // Once the clone is closed, decommit should work
+    EXPECT_EQ(ZX_OK, zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, 0, PAGE_SIZE, NULL, 0));
 
     // close the original handle
     EXPECT_OK(zx_handle_close(vmo), "handle_close");
-
-    // close the clone handle
-    EXPECT_OK(zx_handle_close(clone_vmo), "handle_close");
-
-    // unmap
-    EXPECT_OK(zx_vmar_unmap(zx_vmar_root_self(), ptr, size), "unmap");
-    EXPECT_OK(zx_vmar_unmap(zx_vmar_root_self(), clone_ptr, size), "unmap");
 }
 
 // verify the affect of commit on a clone
@@ -337,11 +304,6 @@ TEST(VmoCloneTestCase, Commit) {
     // write to clone and make sure parent doesn't see it
     cp[0] = 0;
     EXPECT_EQ(0, cp[0], "wrote to clone");
-    EXPECT_EQ(0x99999999, p[0], "read back from original");
-
-    EXPECT_OK(zx_vmo_op_range(clone_vmo, ZX_VMO_OP_DECOMMIT, 0, PAGE_SIZE, NULL, 0));
-
-    EXPECT_EQ(0x99999999, cp[0], "clone should match orig again");
     EXPECT_EQ(0x99999999, p[0], "read back from original");
 
     // close the original handle
