@@ -16,25 +16,6 @@ namespace test {
 
 using WatcherUnitTest = gtest::RealLoopFixture;
 
-class CaptureSupplier {
- public:
-  explicit CaptureSupplier(std::vector<CaptureTemplate> templates)
-      : templates_(templates), index_(0) {}
-
-  zx_status_t GetCapture(Capture& capture, CaptureLevel level) {
-    auto& t = templates_.at(index_);
-    t.time = index_++;
-    TestUtils::CreateCapture(capture, t);
-    return ZX_OK;
-  }
-
-  bool empty() const { return index_ == templates_.size(); }
-
- private:
-  std::vector<CaptureTemplate> templates_;
-  size_t index_;
-};
-
 TEST_F(WatcherUnitTest, Initial) {
   // Confirms the basic case, that we get an initial high water memory
   // mark, and that we get the process and vmo details.
@@ -54,8 +35,7 @@ TEST_F(WatcherUnitTest, Initial) {
       zx::duration(ZX_MSEC(1)), 100, dispatcher(),
       [&cs](Capture& c, CaptureLevel l) { return cs.GetCapture(c, l); },
       [&high_waters](const Capture& c) { high_waters.push_back(c); });
-  w.Run();
-  ASSERT_EQ(1U, high_waters.size());
+  RunLoopUntil([&cs] { return cs.empty(); }, zx::duration::infinite());
   ASSERT_EQ(1U, high_waters.size());
   auto const& c = high_waters.at(0);
   EXPECT_EQ(1U, c.time());
@@ -89,7 +69,6 @@ TEST_F(WatcherUnitTest, TwoHighs) {
       zx::duration(ZX_MSEC(1)), 100, dispatcher(),
       [&cs](Capture& c, CaptureLevel l) { return cs.GetCapture(c, l); },
       [&high_waters](const Capture& c) { high_waters.push_back(c); });
-  w.Run();
   RunLoopUntil([&cs] { return cs.empty(); }, zx::duration::infinite());
   ASSERT_EQ(2U, high_waters.size());
   EXPECT_EQ(200U, high_waters.at(0).kmem().free_bytes);

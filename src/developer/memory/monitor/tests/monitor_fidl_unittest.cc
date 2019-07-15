@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/memory/monitor/monitor.h"
-
 #include <gtest/gtest.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+
+#include "src/developer/memory/monitor/monitor.h"
 
 namespace monitor {
 namespace test {
@@ -15,9 +15,9 @@ using namespace fuchsia::memory;
 using namespace memory;
 using namespace monitor;
 
-class MonitorUnitTest : public gtest::TestLoopFixture {
+class MonitorFidlUnitTest : public gtest::TestLoopFixture {
  protected:
-  MonitorUnitTest()
+  MonitorFidlUnitTest()
       : monitor_(std::make_unique<Monitor>(context_provider_.TakeContext(), fxl::CommandLine{},
                                            dispatcher())) {}
 
@@ -37,7 +37,7 @@ class MonitorUnitTest : public gtest::TestLoopFixture {
   std::unique_ptr<Monitor> monitor_;
 };
 
-class WatcherForTest : public Watcher {
+class WatcherForTest : public fuchsia::memory::Watcher {
  public:
   WatcherForTest(fit::function<void(uint64_t free_bytes)> on_change)
       : on_change_(std::move(on_change)) {}
@@ -53,7 +53,7 @@ class WatcherForTest : public Watcher {
   fit::function<void(uint64_t free_bytes)> on_change_;
 };
 
-TEST_F(MonitorUnitTest, FreeBytes) {
+TEST_F(MonitorFidlUnitTest, FreeBytes) {
   bool got_free = false;
   WatcherForTest watcher([&got_free](uint64_t free_bytes) { got_free = true; });
   WatcherPtr watcher_ptr;

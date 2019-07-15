@@ -112,6 +112,9 @@ class PropertyListMatcher : public ::testing::MatcherInterface<const hierarchy::
 ::testing::Matcher<const hierarchy::Property&> StringPropertyIs(const std::string& name,
                                                                 const std::string& value);
 
+// Matches a particular StringProperty with the given name, irrespective of value.
+::testing::Matcher<const hierarchy::Property&> StringPropertyExists(const std::string& name);
+
 // Matches a particular ByteVectorProperty with the given name and value.
 ::testing::Matcher<const hierarchy::Property&> ByteVectorPropertyIs(const std::string& name,
                                                                     const VectorValue& value);

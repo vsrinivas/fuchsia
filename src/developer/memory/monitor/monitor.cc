@@ -13,49 +13,60 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/inspect_deprecated/inspect.h>
+#include <lib/vfs/cpp/internal/file.h>
+#include <lib/vfs/cpp/pseudo_file.h>
+#include <lib/zx/time.h>
+#include <lib/zx/vmo.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
 #include <string.h>
 #include <trace/event.h>
 #include <zircon/status.h>
+#include <zircon/types.h>
 
 #include <iostream>
+
+#include "src/developer/memory/metrics/capture.h"
+#include "src/developer/memory/metrics/printer.h"
+#include "src/developer/memory/monitor/high_water.h"
 
 namespace monitor {
 
 using namespace memory;
 
-namespace {
-
-constexpr char kKstatsPathComponent[] = "kstats";
-
-}  // namespace
-
 const char Monitor::kTraceName[] = "memory_monitor";
+
+namespace {
+const zx::duration kPollFrequency = zx::sec(10);
+const uint64_t kThreshold = 256 * 1024;
+}  // namespace
 
 Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
                  const fxl::CommandLine& command_line, async_dispatcher_t* dispatcher)
-    : prealloc_size_(0),
+    : high_water_(
+          "/cache", kPollFrequency, kThreshold, dispatcher,
+          [this](Capture& c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); }),
+      prealloc_size_(0),
       logging_(command_line.HasOption("log")),
       tracing_(false),
       delay_(zx::sec(1)),
       dispatcher_(dispatcher),
-      component_context_(std::move(context)),
-      root_object_(component::ObjectDir::Make("root")) {
+      component_context_(std::move(context)) {
   auto s = Capture::GetCaptureState(capture_state_);
   if (s != ZX_OK) {
     FXL_LOG(ERROR) << "Error getting capture state: " << zx_status_get_string(s);
     exit(EXIT_FAILURE);
   }
 
+  vfs::PseudoDir* dir = component_context_->outgoing()->GetOrCreateDirectory("objects");
+  auto capture_file = std::make_unique<vfs::PseudoFile>(
+      1024 * 1024, [this](std::vector<uint8_t>* output, size_t max_bytes) {
+        return Inspect(output, max_bytes);
+      });
+  dir->AddEntry("root.inspect", std::move(capture_file));
   component_context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
-  root_object_.set_children_callback(
-      {kKstatsPathComponent},
-      [this](component::Object::ObjectVector* out_children) { Inspect(out_children); });
-  component_context_->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
-      fuchsia::inspect::Inspect::Name_,
-      std::make_unique<vfs::Service>(inspect_bindings_.GetHandler(root_object_.object().get())));
 
   if (command_line.HasOption("help")) {
     PrintHelp();
@@ -116,7 +127,7 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
 
 Monitor::~Monitor() {
   // TODO(CF-257).
-  root_object_.set_children_callback({kKstatsPathComponent}, nullptr);
+  root_object_.set_children_callback(nullptr);
 }
 
 void Monitor::Watch(fidl::InterfaceHandle<fuchsia::memory::Watcher> watcher) {
@@ -159,24 +170,38 @@ void Monitor::PrintHelp() {
   std::cout << "  --delay=msecs" << std::endl;
 }
 
-void Monitor::Inspect(component::Object::ObjectVector* out_children) {
-  auto kstats = component::ObjectDir::Make(kKstatsPathComponent);
-  Capture capture;
-  auto s = Capture::GetCapture(capture, capture_state_, KMEM);
-  if (s != ZX_OK) {
-    FXL_LOG(ERROR) << "Error getting capture: " << zx_status_get_string(s);
-  }
-  auto const& kmem = capture.kmem();
+zx_status_t Monitor::Inspect(std::vector<uint8_t>* output, size_t max_bytes) {
+  inspect_deprecated::Inspector inspector;
+  auto tree = inspector.CreateTree(
+      "root", inspect_deprecated::TreeSettings{.initial_size = 4096, .maximum_size = 1024 * 1024});
+  auto& root = tree.GetRoot();
+  Capture c;
+  Capture::GetCapture(c, capture_state_, VMO);
+  Summary s(c);
+  std::ostringstream oss;
+  Printer p(oss);
+  p.PrintSummary(c, VMO, SORTED);
 
-  kstats.set_metric("total_bytes", component::UIntMetric(kmem.total_bytes));
-  kstats.set_metric("free_bytes", component::UIntMetric(kmem.free_bytes));
-  kstats.set_metric("wired_bytes", component::UIntMetric(kmem.wired_bytes));
-  kstats.set_metric("total_heap_bytes", component::UIntMetric(kmem.total_heap_bytes));
-  kstats.set_metric("vmo_bytes", component::UIntMetric(kmem.vmo_bytes));
-  kstats.set_metric("mmu_overhead_bytes", component::UIntMetric(kmem.mmu_overhead_bytes));
-  kstats.set_metric("ipc_bytes", component::UIntMetric(kmem.ipc_bytes));
-  kstats.set_metric("other_bytes", component::UIntMetric(kmem.other_bytes));
-  out_children->push_back(kstats.object());
+  auto current_string = oss.str();
+  auto high_water_string = high_water_.GetHighWater();
+  auto previous_high_water_string = high_water_.GetPreviousHighWater();
+  inspect_deprecated::StringProperty current, high_water, previous_high_water;
+
+  if (!current_string.empty()) {
+    current = root.CreateStringProperty("current", current_string);
+  }
+  if (!high_water_string.empty()) {
+    high_water = root.CreateStringProperty("high_water", high_water_string);
+  }
+  if (!previous_high_water_string.empty()) {
+    previous_high_water =
+        root.CreateStringProperty("high_water_previous_boot", previous_high_water_string);
+  }
+
+  size_t size;
+  tree.GetVmo().get_size(&size);
+  output->resize(size);
+  return tree.GetVmo().read(output->data(), 0, size);
 }
 
 void Monitor::SampleAndPost() {

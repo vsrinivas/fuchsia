@@ -18,8 +18,13 @@
 #include <memory>
 
 #include "src/developer/memory/metrics/capture.h"
+#include "src/developer/memory/monitor/high_water.h"
 
 namespace monitor {
+
+namespace test {
+class MonitorUnitTest;
+}
 
 class Monitor : public fuchsia::memory::Monitor {
  public:
@@ -37,14 +42,15 @@ class Monitor : public fuchsia::memory::Monitor {
 
   void SampleAndPost();
   void PrintHelp();
-  void Inspect(component::Object::ObjectVector* out_children);
+  zx_status_t Inspect(std::vector<uint8_t>* output, size_t max_bytes);
 
   // Destroys a watcher proxy (called upon a connection error).
   void ReleaseWatcher(fuchsia::memory::Watcher* watcher);
   // Alerts all watchers when an update has occurred.
   void NotifyWatchers(const zx_info_kmem_stats_t& stats);
 
-  ::memory::CaptureState capture_state_;
+  memory::CaptureState capture_state_;
+  HighWater high_water_;
   uint64_t prealloc_size_;
   zx::vmo prealloc_vmo_;
   bool logging_;
@@ -57,8 +63,8 @@ class Monitor : public fuchsia::memory::Monitor {
   std::vector<fuchsia::memory::WatcherPtr> watchers_;
   trace::TraceObserver trace_observer_;
   component::ObjectDir root_object_;
-  fidl::BindingSet<fuchsia::inspect::Inspect> inspect_bindings_;
 
+  friend class test::MonitorUnitTest;
   FXL_DISALLOW_COPY_AND_ASSIGN(Monitor);
 };
 

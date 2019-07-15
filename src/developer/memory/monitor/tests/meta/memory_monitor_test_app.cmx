@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/memory_monitor_test_app"
     },
     "sandbox": {
         "dev": [

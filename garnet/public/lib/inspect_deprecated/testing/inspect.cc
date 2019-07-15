@@ -147,6 +147,12 @@ void internal::PropertyListMatcher::DescribeNegationTo(::std::ostream* os) const
                                                                   ::testing::StrEq(value))));
 }
 
+::testing::Matcher<const Property&> StringPropertyExists(const std::string& name) {
+  return ::testing::AllOf(
+      ::testing::Property(&Property::name, ::testing::StrEq(name)),
+      ::testing::Property(&Property::format, hierarchy::PropertyFormat::STRING));
+}
+
 ::testing::Matcher<const Property&> ByteVectorPropertyIs(const std::string& name,
                                                          const VectorValue& value) {
   return ::testing::AllOf(

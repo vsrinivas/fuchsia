@@ -7,6 +7,8 @@ import("//build/package.gni")
 
 source_set("lib") {
   sources = [
+    "high_water.cc",
+    "high_water.h",
     "monitor.cc",
     "monitor.h",
   ]

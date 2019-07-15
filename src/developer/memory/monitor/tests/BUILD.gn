@@ -8,6 +8,7 @@ import("//build/testing/environments.gni")
 group("test") {
   testonly = true
   deps = [
+    ":memory_monitor_inspect_integration_tests",
     ":memory_monitor_tests",
   ]
 }
@@ -15,15 +16,19 @@ group("test") {
 executable("memory_monitor_unittests") {
   testonly = true
   output_name = "memory_monitor_unittests"
+
   sources = [
-    "monitor_unittest.cc",
+    "high_water_unittest.cc",
+    "monitor_fidl_unittest.cc",
   ]
 
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//src/developer/memory/metrics/tests:utils",
     "//src/developer/memory/monitor:lib",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/memfs",
   ]
 }
 
@@ -35,6 +40,68 @@ test_package("memory_monitor_tests") {
   tests = [
     {
       name = "memory_monitor_unittests"
+      environments = basic_envs
+    },
+  ]
+}
+
+executable("bin-monitor") {
+  output_name = "memory_monitor_test_app"
+
+  sources = [
+    "monitor_test_app.cc",
+  ]
+
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/developer/memory/monitor:lib",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("test-inspect") {
+  testonly = true
+  output_name = "memory_monitor_inspect_integration_tests"
+
+  sources = [
+    "monitor_inspect_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/inspect_deprecated:reader",
+    "//garnet/public/lib/inspect_deprecated/testing",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+test_package("memory_monitor_inspect_integration_tests") {
+  deprecated_shell = "//build"
+
+  deps = [
+    ":bin-monitor",
+    ":test-inspect",
+  ]
+
+  binaries = [
+    {
+      name = "memory_monitor_test_app"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/memory_monitor_test_app.cmx")
+      dest = "memory_monitor_test_app.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "memory_monitor_inspect_integration_tests"
       environments = basic_envs
     },
   ]

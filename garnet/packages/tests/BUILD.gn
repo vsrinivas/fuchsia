@@ -537,7 +537,7 @@ group("memory_metrics") {
   testonly = true
   public_deps = [
     "//src/developer/memory/metrics/tests:memory_metrics_tests",
-    "//src/developer/memory/monitor/tests:memory_monitor_tests",
+    "//src/developer/memory/monitor/tests:test",
   ]
 }
 

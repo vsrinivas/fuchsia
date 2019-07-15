@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "test/memory_monitor_inspect_integration_tests"
+    },
+    "sandbox": {
+        "features": [
+            "deprecated-shell"
+        ],
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}
