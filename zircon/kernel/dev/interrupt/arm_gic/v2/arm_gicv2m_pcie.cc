@@ -21,70 +21,64 @@
 #include <zircon/types.h>
 
 class ArmGicV2PciePlatformSupport : public PciePlatformInterface {
-public:
-    ArmGicV2PciePlatformSupport(bool has_msi_gic)
-        : PciePlatformInterface(has_msi_gic ? MsiSupportLevel::MSI_WITH_MASKING
-                                            : MsiSupportLevel::NONE) {}
+ public:
+  ArmGicV2PciePlatformSupport(bool has_msi_gic)
+      : PciePlatformInterface(has_msi_gic ? MsiSupportLevel::MSI_WITH_MASKING
+                                          : MsiSupportLevel::NONE) {}
 
-    zx_status_t AllocMsiBlock(uint requested_irqs,
-                              bool can_target_64bit,
-                              bool is_msix,
-                              msi_block_t* out_block) override {
-        return arm_gicv2m_msi_alloc_block(requested_irqs, can_target_64bit, is_msix, out_block);
-    }
+  zx_status_t AllocMsiBlock(uint requested_irqs, bool can_target_64bit, bool is_msix,
+                            msi_block_t* out_block) override {
+    return arm_gicv2m_msi_alloc_block(requested_irqs, can_target_64bit, is_msix, out_block);
+  }
 
-    void FreeMsiBlock(msi_block_t* block) override {
-        arm_gicv2m_msi_free_block(block);
-    }
+  void FreeMsiBlock(msi_block_t* block) override { arm_gicv2m_msi_free_block(block); }
 
-    void RegisterMsiHandler(const msi_block_t* block,
-                            uint msi_id,
-                            int_handler handler,
-                            void* ctx) override {
-        arm_gicv2m_msi_register_handler(block, msi_id, handler, ctx);
-    }
+  void RegisterMsiHandler(const msi_block_t* block, uint msi_id, int_handler handler,
+                          void* ctx) override {
+    arm_gicv2m_msi_register_handler(block, msi_id, handler, ctx);
+  }
 
-    void MaskUnmaskMsi(const msi_block_t* block,
-                       uint msi_id,
-                       bool mask) override {
-        arm_gicv2m_msi_mask_unmask(block, msi_id, mask);
-    }
+  void MaskUnmaskMsi(const msi_block_t* block, uint msi_id, bool mask) override {
+    arm_gicv2m_msi_mask_unmask(block, msi_id, mask);
+  }
 };
 
 static void arm_gicv2_pcie_init(const void* driver_data, uint32_t length) {
-    ASSERT(length >= sizeof(dcfg_arm_gicv2_driver_t));
-    const dcfg_arm_gicv2_driver_t* driver =
-        reinterpret_cast<const dcfg_arm_gicv2_driver_t*>(driver_data);
+  ASSERT(length >= sizeof(dcfg_arm_gicv2_driver_t));
+  const dcfg_arm_gicv2_driver_t* driver =
+      reinterpret_cast<const dcfg_arm_gicv2_driver_t*>(driver_data);
 
-    // based on whether or not ZBI says we support MSI, initialize the v2m allocator
-    zx_status_t res;
-    bool use_msi;
-    if (driver->use_msi) {
-        dprintf(SPEW, "GICv2 MSI init\n");
+  // based on whether or not ZBI says we support MSI, initialize the v2m allocator
+  zx_status_t res;
+  bool use_msi;
+  if (driver->use_msi) {
+    dprintf(SPEW, "GICv2 MSI init\n");
 
-        // Initialize the MSI allocator
-        res = arm_gicv2m_msi_init();
-        if (res != ZX_OK) {
-            TRACEF("Failed to initialize MSI allocator (res = %d).  PCI will be "
-                   "restricted to legacy IRQ mode.\n",
-                   res);
-        }
-        use_msi = (res == ZX_OK);
-    } else {
-        use_msi = false;
-    }
-
-    // Initialize the PCI platform supported based on whether or not we support MSI
-    static ArmGicV2PciePlatformSupport platform_pcie_support(use_msi);
-
-    res = PcieBusDriver::InitializeDriver(platform_pcie_support);
+    // Initialize the MSI allocator
+    res = arm_gicv2m_msi_init();
     if (res != ZX_OK) {
-        TRACEF("Failed to initialize PCI bus driver (res %d).  "
-               "PCI will be non-functional.\n",
-               res);
+      TRACEF(
+          "Failed to initialize MSI allocator (res = %d).  PCI will be "
+          "restricted to legacy IRQ mode.\n",
+          res);
     }
+    use_msi = (res == ZX_OK);
+  } else {
+    use_msi = false;
+  }
+
+  // Initialize the PCI platform supported based on whether or not we support MSI
+  static ArmGicV2PciePlatformSupport platform_pcie_support(use_msi);
+
+  res = PcieBusDriver::InitializeDriver(platform_pcie_support);
+  if (res != ZX_OK) {
+    TRACEF(
+        "Failed to initialize PCI bus driver (res %d).  "
+        "PCI will be non-functional.\n",
+        res);
+  }
 }
 
 LK_PDEV_INIT(arm_gicv2_pcie_init, KDRV_ARM_GIC_V2, arm_gicv2_pcie_init, LK_INIT_LEVEL_PLATFORM)
 
-#endif // if WITH_KERNEL_PCIE
+#endif  // if WITH_KERNEL_PCIE

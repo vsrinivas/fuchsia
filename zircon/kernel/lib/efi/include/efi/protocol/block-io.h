@@ -2,14 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_BLOCK_IO_H_
+#define ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_BLOCK_IO_H_
 
-#include <efi/types.h>
 #include <efi/boot-services.h>
 #include <efi/runtime-services.h>
+#include <efi/types.h>
 
-#define EFI_BLOCK_IO_PROTOCOL_GUID \
-    {0x964e5b21, 0x6459, 0x11d2, {0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b}}
+#define EFI_BLOCK_IO_PROTOCOL_GUID                                                 \
+  {                                                                                \
+    0x964e5b21, 0x6459, 0x11d2, { 0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b } \
+  }
 
 extern efi_guid BlockIoProtocol;
 
@@ -20,37 +23,34 @@ typedef struct efi_block_io_media efi_block_io_media;
 typedef struct efi_block_io_protocol efi_block_io_protocol;
 
 struct efi_block_io_protocol {
-    uint64_t Revision;
-    efi_block_io_media* Media;
-    efi_status (*Reset)(efi_block_io_protocol* self,
-                        bool ExtendedVerification) EFIAPI;
-    efi_status (*ReadBlocks)(efi_block_io_protocol* self,
-                             uint32_t MediaId, uint64_t LBA,
-                             uint64_t BufferSize, void* Buffer) EFIAPI;
-    efi_status (*WriteBlocks)(efi_block_io_protocol* self,
-                              uint32_t MediaId, uint64_t LBA,
-                              uint64_t BufferSize, const void* Buffer) EFIAPI;
-    efi_status (*FlushBlocks)(efi_block_io_protocol* self);
-
-
+  uint64_t Revision;
+  efi_block_io_media* Media;
+  efi_status (*Reset)(efi_block_io_protocol* self, bool ExtendedVerification) EFIAPI;
+  efi_status (*ReadBlocks)(efi_block_io_protocol* self, uint32_t MediaId, uint64_t LBA,
+                           uint64_t BufferSize, void* Buffer) EFIAPI;
+  efi_status (*WriteBlocks)(efi_block_io_protocol* self, uint32_t MediaId, uint64_t LBA,
+                            uint64_t BufferSize, const void* Buffer) EFIAPI;
+  efi_status (*FlushBlocks)(efi_block_io_protocol* self);
 };
 
 struct efi_block_io_media {
-    // present in rev1
-    uint32_t MediaId;
-    bool RemovableMedia;
-    bool MediaPresent;
-    bool LogicalPartition;
-    bool ReadOnly;
-    bool WriteCaching;
-    uint32_t BlockSize;
-    uint32_t IoAlign;
-    uint64_t LastBlock;
+  // present in rev1
+  uint32_t MediaId;
+  bool RemovableMedia;
+  bool MediaPresent;
+  bool LogicalPartition;
+  bool ReadOnly;
+  bool WriteCaching;
+  uint32_t BlockSize;
+  uint32_t IoAlign;
+  uint64_t LastBlock;
 
-    // present in rev2
-    uint64_t LowestAlignedLba;
-    uint32_t LogicalBlocksPerPhysicalBlock;
+  // present in rev2
+  uint64_t LowestAlignedLba;
+  uint32_t LogicalBlocksPerPhysicalBlock;
 
-    // present in rev3
-    uint32_t OptimalTransferLengthGranularity;
+  // present in rev3
+  uint32_t OptimalTransferLengthGranularity;
 };
+
+#endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_BLOCK_IO_H_

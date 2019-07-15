@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_PLATFORM_PC_PLATFORM_P_H_
+#define ZIRCON_KERNEL_PLATFORM_PC_PLATFORM_P_H_
 
 #include <lib/cbuf.h>
 #include <sys/types.h>
@@ -41,3 +42,5 @@ typedef void (*enumerate_e820_callback)(uint64_t base, uint64_t size, bool is_me
 zx_status_t enumerate_e820(enumerate_e820_callback callback, void* ctx);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_PLATFORM_PC_PLATFORM_P_H_

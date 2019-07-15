@@ -5,11 +5,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_LIBC_INCLUDE_PRINTF_H_
+#define ZIRCON_KERNEL_LIB_LIBC_INCLUDE_PRINTF_H_
 
 #include <stdarg.h>
-#include <zircon/compiler.h>
 #include <stddef.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
@@ -28,6 +29,9 @@ typedef int (*_printf_engine_output_func)(const char *str, size_t len, void *sta
 #define PRINTF_CALL(name) name
 #endif
 
-PRINTF_DECL(_printf_engine)(_printf_engine_output_func out, void *state, const char *fmt, va_list ap);
+PRINTF_DECL(_printf_engine)
+(_printf_engine_output_func out, void *state, const char *fmt, va_list ap);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_LIB_LIBC_INCLUDE_PRINTF_H_

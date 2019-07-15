@@ -12,208 +12,202 @@
 #include <platform.h>
 #include <zircon/syscalls/port.h>
 
-InterruptDispatcher::InterruptDispatcher()
-    : timestamp_(0), state_(InterruptState::IDLE) {
-    event_init(&event_, false, EVENT_FLAG_AUTOUNSIGNAL);
+InterruptDispatcher::InterruptDispatcher() : timestamp_(0), state_(InterruptState::IDLE) {
+  event_init(&event_, false, EVENT_FLAG_AUTOUNSIGNAL);
 }
 
 zx_status_t InterruptDispatcher::WaitForInterrupt(zx_time_t* out_timestamp) {
-    while (true) {
-        {
-            Guard<SpinLock, IrqSave> guard{&spinlock_};
-            if (port_dispatcher_ || HasVcpu()) {
-                return ZX_ERR_BAD_STATE;
-            }
-            switch (state_) {
-            case InterruptState::DESTROYED:
-                return ZX_ERR_CANCELED;
-            case InterruptState::TRIGGERED:
-                state_ = InterruptState::NEEDACK;
-                *out_timestamp = timestamp_;
-                timestamp_ = 0;
-                return event_unsignal(&event_);
-            case InterruptState::NEEDACK:
-                if (flags_ & INTERRUPT_UNMASK_PREWAIT) {
-                    UnmaskInterrupt();
-                }
-                break;
-            case InterruptState::IDLE:
-                break;
-            default:
-                return ZX_ERR_BAD_STATE;
-            }
-            state_ = InterruptState::WAITING;
-        }
-
-        {
-            ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::INTERRUPT);
-            zx_status_t status = event_wait_deadline(&event_, ZX_TIME_INFINITE, true);
-            if (status != ZX_OK) {
-                // The event_wait call was interrupted and we need to retry
-                // but before we retry we will set the interrupt state
-                // back to IDLE if we are still in the WAITING state
-                Guard<SpinLock, IrqSave> guard{&spinlock_};
-                if (state_ == InterruptState::WAITING) {
-                    state_ = InterruptState::IDLE;
-                }
-                return status;
-            }
-        }
+  while (true) {
+    {
+      Guard<SpinLock, IrqSave> guard{&spinlock_};
+      if (port_dispatcher_ || HasVcpu()) {
+        return ZX_ERR_BAD_STATE;
+      }
+      switch (state_) {
+        case InterruptState::DESTROYED:
+          return ZX_ERR_CANCELED;
+        case InterruptState::TRIGGERED:
+          state_ = InterruptState::NEEDACK;
+          *out_timestamp = timestamp_;
+          timestamp_ = 0;
+          return event_unsignal(&event_);
+        case InterruptState::NEEDACK:
+          if (flags_ & INTERRUPT_UNMASK_PREWAIT) {
+            UnmaskInterrupt();
+          }
+          break;
+        case InterruptState::IDLE:
+          break;
+        default:
+          return ZX_ERR_BAD_STATE;
+      }
+      state_ = InterruptState::WAITING;
     }
+
+    {
+      ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::INTERRUPT);
+      zx_status_t status = event_wait_deadline(&event_, ZX_TIME_INFINITE, true);
+      if (status != ZX_OK) {
+        // The event_wait call was interrupted and we need to retry
+        // but before we retry we will set the interrupt state
+        // back to IDLE if we are still in the WAITING state
+        Guard<SpinLock, IrqSave> guard{&spinlock_};
+        if (state_ == InterruptState::WAITING) {
+          state_ = InterruptState::IDLE;
+        }
+        return status;
+      }
+    }
+  }
 }
 
 bool InterruptDispatcher::SendPacketLocked(zx_time_t timestamp) {
-    bool status = port_dispatcher_->QueueInterruptPacket(&port_packet_, timestamp);
-    if (flags_ & INTERRUPT_MASK_POSTWAIT) {
-        MaskInterrupt();
-    }
-    timestamp_ = 0;
-    return status;
+  bool status = port_dispatcher_->QueueInterruptPacket(&port_packet_, timestamp);
+  if (flags_ & INTERRUPT_MASK_POSTWAIT) {
+    MaskInterrupt();
+  }
+  timestamp_ = 0;
+  return status;
 }
 
 zx_status_t InterruptDispatcher::Trigger(zx_time_t timestamp) {
+  if (!(flags_ & INTERRUPT_VIRTUAL))
+    return ZX_ERR_BAD_STATE;
 
-    if (!(flags_ & INTERRUPT_VIRTUAL))
-        return ZX_ERR_BAD_STATE;
+  // Using AutoReschedDisable is necessary for correctness to prevent
+  // context-switching to the woken thread while holding spinlock_.
+  AutoReschedDisable resched_disable;
+  resched_disable.Disable();
+  Guard<SpinLock, IrqSave> guard{&spinlock_};
 
-    // Using AutoReschedDisable is necessary for correctness to prevent
-    // context-switching to the woken thread while holding spinlock_.
-    AutoReschedDisable resched_disable;
-    resched_disable.Disable();
-    Guard<SpinLock, IrqSave> guard{&spinlock_};
-
+  // only record timestamp if this is the first signal since we started waiting
+  if (!timestamp_) {
+    timestamp_ = timestamp;
+  }
+  if (state_ == InterruptState::DESTROYED) {
+    return ZX_ERR_CANCELED;
+  }
+  if (state_ == InterruptState::NEEDACK && port_dispatcher_) {
+    // Cannot trigger a interrupt without ACK
     // only record timestamp if this is the first signal since we started waiting
-    if (!timestamp_) {
-        timestamp_ = timestamp;
-    }
-    if (state_ == InterruptState::DESTROYED) {
-        return ZX_ERR_CANCELED;
-    }
-    if (state_ == InterruptState::NEEDACK && port_dispatcher_) {
-        // Cannot trigger a interrupt without ACK
-        // only record timestamp if this is the first signal since we started waiting
-        return ZX_OK;
-    }
-
-    if (port_dispatcher_) {
-        SendPacketLocked(timestamp);
-        state_ = InterruptState::NEEDACK;
-    } else {
-        Signal();
-        state_ = InterruptState::TRIGGERED;
-    }
     return ZX_OK;
+  }
+
+  if (port_dispatcher_) {
+    SendPacketLocked(timestamp);
+    state_ = InterruptState::NEEDACK;
+  } else {
+    Signal();
+    state_ = InterruptState::TRIGGERED;
+  }
+  return ZX_OK;
 }
 
 void InterruptDispatcher::InterruptHandler() {
-    // Using AutoReschedDisable is not necessary for correctness, since we should
-    // be in an interrupt context with preemption disabled, but we re-disable anyway
-    // for clarity and robustness.
-    AutoReschedDisable resched_disable;
-    resched_disable.Disable();
-    Guard<SpinLock, IrqSave> guard{&spinlock_};
+  // Using AutoReschedDisable is not necessary for correctness, since we should
+  // be in an interrupt context with preemption disabled, but we re-disable anyway
+  // for clarity and robustness.
+  AutoReschedDisable resched_disable;
+  resched_disable.Disable();
+  Guard<SpinLock, IrqSave> guard{&spinlock_};
 
-    // only record timestamp if this is the first IRQ since we started waiting
-    if (!timestamp_) {
-        timestamp_ = current_time();
+  // only record timestamp if this is the first IRQ since we started waiting
+  if (!timestamp_) {
+    timestamp_ = current_time();
+  }
+  if (state_ == InterruptState::NEEDACK && port_dispatcher_) {
+    return;
+  }
+  if (port_dispatcher_) {
+    SendPacketLocked(timestamp_);
+    state_ = InterruptState::NEEDACK;
+  } else {
+    if (flags_ & INTERRUPT_MASK_POSTWAIT) {
+      MaskInterrupt();
     }
-    if (state_ == InterruptState::NEEDACK && port_dispatcher_) {
-        return;
-    }
-    if (port_dispatcher_) {
-        SendPacketLocked(timestamp_);
-        state_ = InterruptState::NEEDACK;
-    } else {
-        if (flags_ & INTERRUPT_MASK_POSTWAIT) {
-            MaskInterrupt();
-        }
-        Signal();
-        state_ = InterruptState::TRIGGERED;
-    }
+    Signal();
+    state_ = InterruptState::TRIGGERED;
+  }
 }
 
 zx_status_t InterruptDispatcher::Destroy() {
-    // The interrupt may presently have been fired and we could already be about to acquire the
-    // spinlock_ in InterruptHandler. If we were to call UnregisterInterruptHandler whilst holding
-    // the spinlock_ then we risk a deadlock scenario where the platform interrupt code may have
-    // taken a lock to call InterruptHandler, and it might take the same lock when we call
-    // UnregisterInterruptHandler.
-    MaskInterrupt();
-    UnregisterInterruptHandler();
+  // The interrupt may presently have been fired and we could already be about to acquire the
+  // spinlock_ in InterruptHandler. If we were to call UnregisterInterruptHandler whilst holding
+  // the spinlock_ then we risk a deadlock scenario where the platform interrupt code may have
+  // taken a lock to call InterruptHandler, and it might take the same lock when we call
+  // UnregisterInterruptHandler.
+  MaskInterrupt();
+  UnregisterInterruptHandler();
 
-    // Using AutoReschedDisable is necessary for correctness to prevent
-    // context-switching to the woken thread while holding spinlock_.
-    AutoReschedDisable resched_disable;
-    resched_disable.Disable();
-    Guard<SpinLock, IrqSave> guard{&spinlock_};
+  // Using AutoReschedDisable is necessary for correctness to prevent
+  // context-switching to the woken thread while holding spinlock_.
+  AutoReschedDisable resched_disable;
+  resched_disable.Disable();
+  Guard<SpinLock, IrqSave> guard{&spinlock_};
 
-    if (port_dispatcher_) {
-        bool packet_was_in_queue = port_dispatcher_->RemoveInterruptPacket(&port_packet_);
-        if ((state_ == InterruptState::NEEDACK) &&
-            !packet_was_in_queue) {
-            state_ = InterruptState::DESTROYED;
-            return ZX_ERR_NOT_FOUND;
-        }
-        if ((state_ == InterruptState::IDLE) ||
-            ((state_ == InterruptState::NEEDACK) &&
-             packet_was_in_queue)) {
-            state_ = InterruptState::DESTROYED;
-            return ZX_OK;
-        }
-    } else {
-        state_ = InterruptState::DESTROYED;
-        Signal();
+  if (port_dispatcher_) {
+    bool packet_was_in_queue = port_dispatcher_->RemoveInterruptPacket(&port_packet_);
+    if ((state_ == InterruptState::NEEDACK) && !packet_was_in_queue) {
+      state_ = InterruptState::DESTROYED;
+      return ZX_ERR_NOT_FOUND;
     }
-    return ZX_OK;
+    if ((state_ == InterruptState::IDLE) ||
+        ((state_ == InterruptState::NEEDACK) && packet_was_in_queue)) {
+      state_ = InterruptState::DESTROYED;
+      return ZX_OK;
+    }
+  } else {
+    state_ = InterruptState::DESTROYED;
+    Signal();
+  }
+  return ZX_OK;
 }
 
 zx_status_t InterruptDispatcher::Bind(fbl::RefPtr<PortDispatcher> port_dispatcher, uint64_t key) {
-    Guard<SpinLock, IrqSave> guard{&spinlock_};
-    if (state_ == InterruptState::DESTROYED) {
-        return ZX_ERR_CANCELED;
-    } else if (state_ == InterruptState::WAITING) {
-        return ZX_ERR_BAD_STATE;
-    } else if (port_dispatcher_ || HasVcpu()) {
-        return ZX_ERR_ALREADY_BOUND;
-    }
+  Guard<SpinLock, IrqSave> guard{&spinlock_};
+  if (state_ == InterruptState::DESTROYED) {
+    return ZX_ERR_CANCELED;
+  } else if (state_ == InterruptState::WAITING) {
+    return ZX_ERR_BAD_STATE;
+  } else if (port_dispatcher_ || HasVcpu()) {
+    return ZX_ERR_ALREADY_BOUND;
+  }
 
-    port_dispatcher_ = ktl::move(port_dispatcher);
-    port_packet_.key = key;
-    return ZX_OK;
+  port_dispatcher_ = ktl::move(port_dispatcher);
+  port_packet_.key = key;
+  return ZX_OK;
 }
 
 zx_status_t InterruptDispatcher::Ack() {
-    // Using AutoReschedDisable is necessary for correctness to prevent
-    // context-switching to the woken thread while holding spinlock_.
-    AutoReschedDisable resched_disable;
-    resched_disable.Disable();
-    Guard<SpinLock, IrqSave> guard{&spinlock_};
-    if (port_dispatcher_ == nullptr) {
+  // Using AutoReschedDisable is necessary for correctness to prevent
+  // context-switching to the woken thread while holding spinlock_.
+  AutoReschedDisable resched_disable;
+  resched_disable.Disable();
+  Guard<SpinLock, IrqSave> guard{&spinlock_};
+  if (port_dispatcher_ == nullptr) {
+    return ZX_ERR_BAD_STATE;
+  }
+  if (state_ == InterruptState::DESTROYED) {
+    return ZX_ERR_CANCELED;
+  }
+  if (state_ == InterruptState::NEEDACK) {
+    if (flags_ & INTERRUPT_UNMASK_PREWAIT) {
+      UnmaskInterrupt();
+    }
+    if (timestamp_) {
+      if (!SendPacketLocked(timestamp_)) {
+        // We cannot queue another packet here.
+        // If we reach here it means that the
+        // interrupt packet has not been processed,
+        // another interrupt has occurred & then the
+        // interrupt was ACK'd
         return ZX_ERR_BAD_STATE;
+      }
+    } else {
+      state_ = InterruptState::IDLE;
     }
-    if (state_ == InterruptState::DESTROYED) {
-        return ZX_ERR_CANCELED;
-    }
-    if (state_ == InterruptState::NEEDACK) {
-        if (flags_ & INTERRUPT_UNMASK_PREWAIT) {
-            UnmaskInterrupt();
-        }
-        if (timestamp_) {
-            if (!SendPacketLocked(timestamp_)) {
-                // We cannot queue another packet here.
-                // If we reach here it means that the
-                // interrupt packet has not been processed,
-                // another interrupt has occurred & then the
-                // interrupt was ACK'd
-                return ZX_ERR_BAD_STATE;
-            }
-        } else {
-            state_ = InterruptState::IDLE;
-        }
-    }
-    return ZX_OK;
+  }
+  return ZX_OK;
 }
 
-void InterruptDispatcher::on_zero_handles() {
-    Destroy();
-}
+void InterruptDispatcher::on_zero_handles() { Destroy(); }

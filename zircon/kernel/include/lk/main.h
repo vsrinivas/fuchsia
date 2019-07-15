@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_LK_MAIN_H_
+#define ZIRCON_KERNEL_INCLUDE_LK_MAIN_H_
 
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -18,3 +19,5 @@ void lk_secondary_cpu_entry(void);
 void lk_init_secondary_cpus(uint secondary_cpu_count);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_INCLUDE_LK_MAIN_H_

@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_PHYSMAP_H_
+#define ZIRCON_KERNEL_VM_INCLUDE_VM_PHYSMAP_H_
 
 #include <arch/defines.h>
 
@@ -30,32 +31,33 @@ __BEGIN_CDECLS
 
 // check to see if an address is in the physmap virtually and physically
 static inline bool is_physmap_addr(const void* addr) {
-    return ((uintptr_t)addr >= PHYSMAP_BASE &&
-            (uintptr_t)addr - PHYSMAP_BASE < PHYSMAP_SIZE);
+  return ((uintptr_t)addr >= PHYSMAP_BASE && (uintptr_t)addr - PHYSMAP_BASE < PHYSMAP_SIZE);
 }
 
 static inline bool is_physmap_phys_addr(paddr_t pa) {
-    return (
+  return (
 #if PHYSMAP_BASE_PHYS != 0
-        pa >= PHYSMAP_BASE_PHYS &&
+      pa >= PHYSMAP_BASE_PHYS &&
 #endif
-        pa - PHYSMAP_BASE_PHYS < PHYSMAP_SIZE);
+      pa - PHYSMAP_BASE_PHYS < PHYSMAP_SIZE);
 }
 
 // physical to virtual, returning pointer in the big kernel map
 static inline void* paddr_to_physmap(paddr_t pa) {
-    DEBUG_ASSERT_MSG(is_physmap_phys_addr(pa), "paddr %#" PRIxPTR "\n", pa);
+  DEBUG_ASSERT_MSG(is_physmap_phys_addr(pa), "paddr %#" PRIxPTR "\n", pa);
 
-    return (void*)(pa - PHYSMAP_BASE_PHYS + PHYSMAP_BASE);
+  return (void*)(pa - PHYSMAP_BASE_PHYS + PHYSMAP_BASE);
 }
 
 // given a pointer into the physmap, reverse back to a physical address
 static inline paddr_t physmap_to_paddr(const void* addr) {
-    DEBUG_ASSERT_MSG(is_physmap_addr(addr), "vaddr %p\n", addr);
+  DEBUG_ASSERT_MSG(is_physmap_addr(addr), "vaddr %p\n", addr);
 
-    return (uintptr_t)addr - PHYSMAP_BASE + PHYSMAP_BASE_PHYS;
+  return (uintptr_t)addr - PHYSMAP_BASE + PHYSMAP_BASE_PHYS;
 }
 
 __END_CDECLS
 
-#endif // !__ASSEMBLER__
+#endif  // !__ASSEMBLER__
+
+#endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_PHYSMAP_H_

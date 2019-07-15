@@ -4,12 +4,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_DIAGNOSTICS_H_
+#define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_DIAGNOSTICS_H_
 
+#include <fbl/ref_ptr.h>
 #include <lib/user_copy/user_ptr.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
-#include <fbl/ref_ptr.h>
 
 class ProcessDispatcher;
 class VmAspace;
@@ -20,9 +21,8 @@ class VmAspace;
 // been written is returned via |available|.
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-zx_status_t GetVmAspaceMaps(fbl::RefPtr<VmAspace> aspace,
-                            user_out_ptr<zx_info_maps_t> maps, size_t max,
-                            size_t* actual, size_t* available);
+zx_status_t GetVmAspaceMaps(fbl::RefPtr<VmAspace> aspace, user_out_ptr<zx_info_maps_t> maps,
+                            size_t max, size_t* actual, size_t* available);
 
 // Walks the VmAspace and writes entries that describe its mapped VMOs into
 // |vmos|, which must point to enough memory for |max| entries. The number of
@@ -30,9 +30,8 @@ zx_status_t GetVmAspaceMaps(fbl::RefPtr<VmAspace> aspace,
 // have been written is returned via |available|.
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-zx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> aspace,
-                            user_out_ptr<zx_info_vmo_t> vmos, size_t max,
-                            size_t* actual, size_t* available);
+zx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> aspace, user_out_ptr<zx_info_vmo_t> vmos,
+                            size_t max, size_t* actual, size_t* available);
 
 // For every VMO in the process's handle table, writes an entry into |vmos|,
 // which must point to enough memory for |max| entries. The number of entries
@@ -40,11 +39,12 @@ zx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> aspace,
 // been written is returned via |available|.
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-zx_status_t GetProcessVmosViaHandles(ProcessDispatcher* process,
-                                     user_out_ptr<zx_info_vmo_t> vmos, size_t max,
-                                     size_t* actual, size_t* available);
+zx_status_t GetProcessVmosViaHandles(ProcessDispatcher* process, user_out_ptr<zx_info_vmo_t> vmos,
+                                     size_t max, size_t* actual, size_t* available);
 
 // Prints (with the supplied prefix) the number of mapped, committed bytes for
 // each process in the system whose page count > |min_pages|. Does not take
 // sharing into account, and does not count unmapped VMOs.
 void DumpProcessMemoryUsage(const char* prefix, size_t min_pages);
+
+#endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_DIAGNOSTICS_H_

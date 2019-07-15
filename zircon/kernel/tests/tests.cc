@@ -7,15 +7,13 @@
 
 #include "tests.h"
 
-#include <debug.h>
-#include <zircon/compiler.h>
-
-#include <lib/console.h>
-
 #include <assert.h>
+#include <debug.h>
 #include <err.h>
-#include <platform.h>
+#include <lib/console.h>
 #include <lib/unittest/unittest.h>
+#include <platform.h>
+#include <zircon/compiler.h>
 
 STATIC_COMMAND_START
 STATIC_COMMAND("thread_tests", "test the scheduler", &thread_tests)

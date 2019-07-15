@@ -15,160 +15,164 @@
 
 #ifdef __x86_64__
 #include <arch/x86/mmu.h>
-#define PGTABLE_L1_SHIFT    PDP_SHIFT
-#define PGTABLE_L2_SHIFT    PD_SHIFT
+#define PGTABLE_L1_SHIFT PDP_SHIFT
+#define PGTABLE_L2_SHIFT PD_SHIFT
 #else
-#define PGTABLE_L1_SHIFT    MMU_LX_X(MMU_KERNEL_PAGE_SIZE_SHIFT, 1)
-#define PGTABLE_L2_SHIFT    MMU_LX_X(MMU_KERNEL_PAGE_SIZE_SHIFT, 2)
+#define PGTABLE_L1_SHIFT MMU_LX_X(MMU_KERNEL_PAGE_SIZE_SHIFT, 1)
+#define PGTABLE_L2_SHIFT MMU_LX_X(MMU_KERNEL_PAGE_SIZE_SHIFT, 2)
 #endif
 
 static bool test_large_unaligned_region() {
-    BEGIN_TEST;
-        ArchVmAspace aspace;
-        vaddr_t base = 1UL << 20;
-        size_t size = (1UL << 47) - base - (1UL << 20);
-        zx_status_t err = aspace.Init(1UL << 20, size, 0);
-        EXPECT_EQ(err, ZX_OK, "init aspace");
+  BEGIN_TEST;
+  ArchVmAspace aspace;
+  vaddr_t base = 1UL << 20;
+  size_t size = (1UL << 47) - base - (1UL << 20);
+  zx_status_t err = aspace.Init(1UL << 20, size, 0);
+  EXPECT_EQ(err, ZX_OK, "init aspace");
 
-        const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+  const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
 
-        // We want our region to be misaligned by at least a page, and for
-        // it to straddle the PDP.
-        vaddr_t va = (1UL << PGTABLE_L1_SHIFT) - (1UL << PGTABLE_L2_SHIFT) + 2 * PAGE_SIZE;
-        // Make sure alloc_size is less than 1 PD page, to exercise the
-        // non-terminal code path.
-        static const size_t alloc_size = (1UL << PGTABLE_L2_SHIFT) - PAGE_SIZE;
+  // We want our region to be misaligned by at least a page, and for
+  // it to straddle the PDP.
+  vaddr_t va = (1UL << PGTABLE_L1_SHIFT) - (1UL << PGTABLE_L2_SHIFT) + 2 * PAGE_SIZE;
+  // Make sure alloc_size is less than 1 PD page, to exercise the
+  // non-terminal code path.
+  static const size_t alloc_size = (1UL << PGTABLE_L2_SHIFT) - PAGE_SIZE;
 
-        // Map a single page to force the lower PDP of the target region
-        // to be created
-        size_t mapped;
-        err = aspace.MapContiguous(va - 3 * PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
-        EXPECT_EQ(err, ZX_OK, "map single page");
-        EXPECT_EQ(mapped, 1u, "map single page");
+  // Map a single page to force the lower PDP of the target region
+  // to be created
+  size_t mapped;
+  err = aspace.MapContiguous(va - 3 * PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
+  EXPECT_EQ(err, ZX_OK, "map single page");
+  EXPECT_EQ(mapped, 1u, "map single page");
 
-        // Map the last page of the region
-        err = aspace.MapContiguous(va + alloc_size - PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
-        EXPECT_EQ(err, ZX_OK, "map last page");
-        EXPECT_EQ(mapped, 1u, "map single page");
+  // Map the last page of the region
+  err = aspace.MapContiguous(va + alloc_size - PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
+  EXPECT_EQ(err, ZX_OK, "map last page");
+  EXPECT_EQ(mapped, 1u, "map single page");
 
-        paddr_t pa;
-        uint flags;
-        err = aspace.Query(va + alloc_size - PAGE_SIZE, &pa, &flags);
-        EXPECT_EQ(err, ZX_OK, "last entry is mapped");
+  paddr_t pa;
+  uint flags;
+  err = aspace.Query(va + alloc_size - PAGE_SIZE, &pa, &flags);
+  EXPECT_EQ(err, ZX_OK, "last entry is mapped");
 
-        // Attempt to unmap the target region (analogous to unmapping a demand
-        // paged region that has only had its last page touched)
-        size_t unmapped;
-        err = aspace.Unmap(va, alloc_size / PAGE_SIZE, &unmapped);
-        EXPECT_EQ(err, ZX_OK, "unmap unallocated region");
-        EXPECT_EQ(unmapped, alloc_size / PAGE_SIZE, "unmap unallocated region");
+  // Attempt to unmap the target region (analogous to unmapping a demand
+  // paged region that has only had its last page touched)
+  size_t unmapped;
+  err = aspace.Unmap(va, alloc_size / PAGE_SIZE, &unmapped);
+  EXPECT_EQ(err, ZX_OK, "unmap unallocated region");
+  EXPECT_EQ(unmapped, alloc_size / PAGE_SIZE, "unmap unallocated region");
 
-        err = aspace.Query(va + alloc_size - PAGE_SIZE, &pa, &flags);
-        EXPECT_EQ(err, ZX_ERR_NOT_FOUND, "last entry is not mapped anymore");
+  err = aspace.Query(va + alloc_size - PAGE_SIZE, &pa, &flags);
+  EXPECT_EQ(err, ZX_ERR_NOT_FOUND, "last entry is not mapped anymore");
 
-        // Unmap the single page from earlier
-        err = aspace.Unmap(va - 3 * PAGE_SIZE, 1, &unmapped);
-        EXPECT_EQ(err, ZX_OK, "unmap single page");
-        EXPECT_EQ(unmapped, 1u, "unmap unallocated region");
+  // Unmap the single page from earlier
+  err = aspace.Unmap(va - 3 * PAGE_SIZE, 1, &unmapped);
+  EXPECT_EQ(err, ZX_OK, "unmap single page");
+  EXPECT_EQ(unmapped, 1u, "unmap unallocated region");
 
-        err = aspace.Destroy();
-        EXPECT_EQ(err, ZX_OK, "destroy aspace");
+  err = aspace.Destroy();
+  EXPECT_EQ(err, ZX_OK, "destroy aspace");
 
-    END_TEST;
+  END_TEST;
 }
 
 static bool test_large_unaligned_region_without_map() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    {
-        ArchVmAspace aspace;
-        vaddr_t base = 1UL << 20;
-        size_t size = (1UL << 47) - base - (1UL << 20);
-        zx_status_t err = aspace.Init(1UL << 20, size, 0);
-        EXPECT_EQ(err, ZX_OK, "init aspace");
+  {
+    ArchVmAspace aspace;
+    vaddr_t base = 1UL << 20;
+    size_t size = (1UL << 47) - base - (1UL << 20);
+    zx_status_t err = aspace.Init(1UL << 20, size, 0);
+    EXPECT_EQ(err, ZX_OK, "init aspace");
 
-        const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+    const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
 
-        // We want our region to be misaligned by a page, and for it to
-        // straddle the PDP
-        vaddr_t va = (1UL << PGTABLE_L1_SHIFT) - (1UL << PGTABLE_L2_SHIFT) + PAGE_SIZE;
-        // Make sure alloc_size is bigger than 1 PD page, to exercise the
-        // non-terminal code path.
-        static const size_t alloc_size = 3UL << PGTABLE_L2_SHIFT;
+    // We want our region to be misaligned by a page, and for it to
+    // straddle the PDP
+    vaddr_t va = (1UL << PGTABLE_L1_SHIFT) - (1UL << PGTABLE_L2_SHIFT) + PAGE_SIZE;
+    // Make sure alloc_size is bigger than 1 PD page, to exercise the
+    // non-terminal code path.
+    static const size_t alloc_size = 3UL << PGTABLE_L2_SHIFT;
 
-        // Map a single page to force the lower PDP of the target region
-        // to be created
-        size_t mapped;
-        err = aspace.MapContiguous(va - 2 * PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
-        EXPECT_EQ(err, ZX_OK, "map single page");
-        EXPECT_EQ(mapped, 1u, "map single page");
+    // Map a single page to force the lower PDP of the target region
+    // to be created
+    size_t mapped;
+    err = aspace.MapContiguous(va - 2 * PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
+    EXPECT_EQ(err, ZX_OK, "map single page");
+    EXPECT_EQ(mapped, 1u, "map single page");
 
-        // Attempt to unmap the target region (analogous to unmapping a demand
-        // paged region that has not been touched)
-        size_t unmapped;
-        err = aspace.Unmap(va, alloc_size / PAGE_SIZE, &unmapped);
-        EXPECT_EQ(err, ZX_OK, "unmap unallocated region");
-        EXPECT_EQ(unmapped, alloc_size / PAGE_SIZE, "unmap unallocated region");
+    // Attempt to unmap the target region (analogous to unmapping a demand
+    // paged region that has not been touched)
+    size_t unmapped;
+    err = aspace.Unmap(va, alloc_size / PAGE_SIZE, &unmapped);
+    EXPECT_EQ(err, ZX_OK, "unmap unallocated region");
+    EXPECT_EQ(unmapped, alloc_size / PAGE_SIZE, "unmap unallocated region");
 
-        // Unmap the single page from earlier
-        err = aspace.Unmap(va - 2 * PAGE_SIZE, 1, &unmapped);
-        EXPECT_EQ(err, ZX_OK, "unmap single page");
-        EXPECT_EQ(unmapped, 1u, "unmap single page");
+    // Unmap the single page from earlier
+    err = aspace.Unmap(va - 2 * PAGE_SIZE, 1, &unmapped);
+    EXPECT_EQ(err, ZX_OK, "unmap single page");
+    EXPECT_EQ(unmapped, 1u, "unmap single page");
 
-        err = aspace.Destroy();
-        EXPECT_EQ(err, ZX_OK, "destroy aspace");
-    }
+    err = aspace.Destroy();
+    EXPECT_EQ(err, ZX_OK, "destroy aspace");
+  }
 
-    END_TEST;
+  END_TEST;
 }
 
 static bool test_large_region_protect() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    static const vaddr_t va = 1UL << PGTABLE_L1_SHIFT;
-    // Force a large page.
-    static const size_t alloc_size = 1UL << PGTABLE_L2_SHIFT;
-    static const vaddr_t alloc_end = va + alloc_size;
+  static const vaddr_t va = 1UL << PGTABLE_L1_SHIFT;
+  // Force a large page.
+  static const size_t alloc_size = 1UL << PGTABLE_L2_SHIFT;
+  static const vaddr_t alloc_end = va + alloc_size;
 
-    vaddr_t target_vaddrs[] = {
-        va, va + PAGE_SIZE, va + 2 * PAGE_SIZE,
-        alloc_end - 3 * PAGE_SIZE, alloc_end - 2 * PAGE_SIZE, alloc_end - PAGE_SIZE,
-    };
+  vaddr_t target_vaddrs[] = {
+      va,
+      va + PAGE_SIZE,
+      va + 2 * PAGE_SIZE,
+      alloc_end - 3 * PAGE_SIZE,
+      alloc_end - 2 * PAGE_SIZE,
+      alloc_end - PAGE_SIZE,
+  };
 
-    for (unsigned i = 0; i < fbl::count_of(target_vaddrs); i++) {
-        ArchVmAspace aspace;
-        vaddr_t base = 1UL << 20;
-        size_t size = (1UL << 47) - base - (1UL << 20);
-        zx_status_t err = aspace.Init(1UL << 20, size, 0);
-        EXPECT_EQ(err, ZX_OK, "init aspace");
+  for (unsigned i = 0; i < fbl::count_of(target_vaddrs); i++) {
+    ArchVmAspace aspace;
+    vaddr_t base = 1UL << 20;
+    size_t size = (1UL << 47) - base - (1UL << 20);
+    zx_status_t err = aspace.Init(1UL << 20, size, 0);
+    EXPECT_EQ(err, ZX_OK, "init aspace");
 
-        const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+    const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
 
-        size_t mapped;
-        err = aspace.MapContiguous(va, 0, alloc_size / PAGE_SIZE, arch_rw_flags, &mapped);
-        EXPECT_EQ(err, ZX_OK, "map large page");
-        EXPECT_EQ(mapped, 512u, "map large page");
+    size_t mapped;
+    err = aspace.MapContiguous(va, 0, alloc_size / PAGE_SIZE, arch_rw_flags, &mapped);
+    EXPECT_EQ(err, ZX_OK, "map large page");
+    EXPECT_EQ(mapped, 512u, "map large page");
 
-        err = aspace.Protect(target_vaddrs[i], 1, ARCH_MMU_FLAG_PERM_READ);
-        EXPECT_EQ(err, ZX_OK, "protect single page");
+    err = aspace.Protect(target_vaddrs[i], 1, ARCH_MMU_FLAG_PERM_READ);
+    EXPECT_EQ(err, ZX_OK, "protect single page");
 
-        for (unsigned j = 0; j < fbl::count_of(target_vaddrs); j++) {
-            uint retrieved_flags = 0;
-            paddr_t pa;
-            EXPECT_EQ(ZX_OK, aspace.Query(target_vaddrs[j], &pa, &retrieved_flags), "");
-            EXPECT_EQ(target_vaddrs[j] - va, pa, "");
+    for (unsigned j = 0; j < fbl::count_of(target_vaddrs); j++) {
+      uint retrieved_flags = 0;
+      paddr_t pa;
+      EXPECT_EQ(ZX_OK, aspace.Query(target_vaddrs[j], &pa, &retrieved_flags), "");
+      EXPECT_EQ(target_vaddrs[j] - va, pa, "");
 
-            EXPECT_EQ(i == j ? ARCH_MMU_FLAG_PERM_READ : arch_rw_flags, retrieved_flags, "");
-        }
-
-        err = aspace.Unmap(va, alloc_size / PAGE_SIZE, &mapped);
-        EXPECT_EQ(err, ZX_OK, "unmap large page");
-        EXPECT_EQ(mapped, 512u, "unmap large page");
-        err = aspace.Destroy();
-        EXPECT_EQ(err, ZX_OK, "destroy aspace");
+      EXPECT_EQ(i == j ? ARCH_MMU_FLAG_PERM_READ : arch_rw_flags, retrieved_flags, "");
     }
 
-    END_TEST;
+    err = aspace.Unmap(va, alloc_size / PAGE_SIZE, &mapped);
+    EXPECT_EQ(err, ZX_OK, "unmap large page");
+    EXPECT_EQ(mapped, 512u, "unmap large page");
+    err = aspace.Destroy();
+    EXPECT_EQ(err, ZX_OK, "destroy aspace");
+  }
+
+  END_TEST;
 }
 
 UNITTEST_START_TESTCASE(mmu_tests)

@@ -5,10 +5,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_TARGET_H_
+#define ZIRCON_KERNEL_INCLUDE_TARGET_H_
 
-#include <zircon/compiler.h>
 #include <stdbool.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
@@ -31,3 +32,5 @@ void target_set_debug_led(unsigned int led, bool on);
 #endif
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_INCLUDE_TARGET_H_

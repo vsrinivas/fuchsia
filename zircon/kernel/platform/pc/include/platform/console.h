@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_CONSOLE_H_
+#define ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_CONSOLE_H_
 
 #include <zircon/compiler.h>
 
@@ -64,3 +65,5 @@ int printf_xy(int x, int y, char attr, char* fmt, ...) __PRINTFLIKE(4, 5);
 #define WHITE 15
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_CONSOLE_H_

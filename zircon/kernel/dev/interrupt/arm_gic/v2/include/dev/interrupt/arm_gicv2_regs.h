@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_V2_INCLUDE_DEV_INTERRUPT_ARM_GICV2_REGS_H_
+#define ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_V2_INCLUDE_DEV_INTERRUPT_ARM_GICV2_REGS_H_
 #include <reg.h>
 
 extern uint64_t arm_gicv2_gic_base;
@@ -75,3 +76,5 @@ extern uint64_t arm_gicv2_gicv_offset;
 #define GICV_ADDRESS (GICV_OFFSET + arm_gicv2_gic_base)
 
 #define MAX_INT 1024
+
+#endif  // ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_V2_INCLUDE_DEV_INTERRUPT_ARM_GICV2_REGS_H_

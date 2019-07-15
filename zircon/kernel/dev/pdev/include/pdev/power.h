@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_POWER_H_
+#define ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_POWER_H_
 
 #include <dev/power.h>
 #include <zircon/compiler.h>
@@ -13,10 +14,12 @@ __BEGIN_CDECLS
 
 // power interface
 struct pdev_power_ops {
-    void (*reboot)(enum reboot_flags flags);
-    void (*shutdown)(void);
+  void (*reboot)(enum reboot_flags flags);
+  void (*shutdown)(void);
 };
 
 void pdev_register_power(const struct pdev_power_ops* ops);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_POWER_H_

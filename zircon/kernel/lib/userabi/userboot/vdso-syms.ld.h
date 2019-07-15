@@ -12,6 +12,6 @@
 // the userboot binary having simple PC-relative calls to addresses outside
 // its own image, to where the vDSO will be found at runtime.
 #define FUNCTION(name, address, size) \
-    PROVIDE_HIDDEN(name = ALIGN(_end, CONSTANT(MAXPAGESIZE)) + address);
+  PROVIDE_HIDDEN(name = ALIGN(_end, CONSTANT(MAXPAGESIZE)) + address);
 
 #define WEAK_FUNCTION(name, address, size) FUNCTION(name, address, size)

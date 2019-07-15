@@ -4,9 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <lib/crypto/entropy/hw_rng_collector.h>
-
 #include <dev/hw_rng.h>
+#include <lib/crypto/entropy/hw_rng_collector.h>
 #include <zircon/errors.h>
 
 namespace crypto {
@@ -15,31 +14,29 @@ namespace entropy {
 
 zx_status_t HwRngCollector::GetInstance(Collector** ptr) {
 #if ARCH_X86
-    static HwRngCollector instance;
-    *ptr = &instance;
-    return ZX_OK;
+  static HwRngCollector instance;
+  *ptr = &instance;
+  return ZX_OK;
 #else
-    *ptr = nullptr;
-    return ZX_ERR_NOT_SUPPORTED;
+  *ptr = nullptr;
+  return ZX_ERR_NOT_SUPPORTED;
 #endif
 }
 
-HwRngCollector::HwRngCollector()
-    : Collector("hw_rng", /* entropy_per_1000_bytes */ 8000) {
-}
+HwRngCollector::HwRngCollector() : Collector("hw_rng", /* entropy_per_1000_bytes */ 8000) {}
 
 size_t HwRngCollector::DrawEntropy(uint8_t* buf, size_t len) {
-    // Especially on systems that have RdRand but not RdSeed, avoid parallel
-    // accesses. Per the Intel documentation, properly using RdRand to seed a
-    // CPRNG requires careful access patterns, to avoid multiple RNG draws from
-    // the same physical seed (see ZX-983).
-    Guard<Mutex> guard(&lock_);
+  // Especially on systems that have RdRand but not RdSeed, avoid parallel
+  // accesses. Per the Intel documentation, properly using RdRand to seed a
+  // CPRNG requires careful access patterns, to avoid multiple RNG draws from
+  // the same physical seed (see ZX-983).
+  Guard<Mutex> guard(&lock_);
 
-    // TODO(andrewkrieger): Remove the dev/hw_rng API and move the relevant code
-    // directly into this class.
-    return hw_rng_get_entropy(buf, len, /* block */ true);
+  // TODO(andrewkrieger): Remove the dev/hw_rng API and move the relevant code
+  // directly into this class.
+  return hw_rng_get_entropy(buf, len, /* block */ true);
 }
 
-} // namespace entropy
+}  // namespace entropy
 
-} // namespace crypto
+}  // namespace crypto

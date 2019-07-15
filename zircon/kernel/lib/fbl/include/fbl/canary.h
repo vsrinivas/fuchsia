@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FBL_CANARY_H_
-#define FBL_CANARY_H_
+#ifndef ZIRCON_KERNEL_LIB_FBL_INCLUDE_FBL_CANARY_H_
+#define ZIRCON_KERNEL_LIB_FBL_INCLUDE_FBL_CANARY_H_
 
 #include <stdint.h>
-
 #include <zircon/assert.h>
 
 namespace fbl {
@@ -14,25 +13,20 @@ namespace fbl {
 namespace internal {
 
 static constexpr bool magic_validate(const char* str) {
-    return
-            str[0] != '\0' &&
-            str[1] != '\0' &&
-            str[2] != '\0' &&
-            str[3] != '\0' &&
-            str[4] == '\0';
+  return str[0] != '\0' && str[1] != '\0' && str[2] != '\0' && str[3] != '\0' && str[4] == '\0';
 }
 
-} // namespace internal
+}  // namespace internal
 
 // Function for generating canary magic values from strings
 static constexpr uint32_t magic(const char* str) {
-    if (!internal::magic_validate(str))
-        return UINT32_MAX;
-    uint32_t res = 0;
-    for (size_t i = 0; i < 4; ++i) {
-        res = (res << 8) + str[i];
-    }
-    return res;
+  if (!internal::magic_validate(str))
+    return UINT32_MAX;
+  uint32_t res = 0;
+  for (size_t i = 0; i < 4; ++i) {
+    res = (res << 8) + str[i];
+  }
+  return res;
 }
 
 // An embeddable structure guard.  To use this, choose a 4-byte guard value.
@@ -53,26 +47,25 @@ static constexpr uint32_t magic(const char* str) {
 // on destruction and can be manually asserted against.
 template <uint32_t magic>
 class Canary {
-public:
-    static_assert(magic < UINT32_MAX, "Invalid canary value, must not be UINT32_MAX");
+ public:
+  static_assert(magic < UINT32_MAX, "Invalid canary value, must not be UINT32_MAX");
 
-    constexpr Canary() : magic_(magic) { }
+  constexpr Canary() : magic_(magic) {}
 
-    ~Canary() {
-        Assert();
-        magic_ = 0;
-    }
+  ~Canary() {
+    Assert();
+    magic_ = 0;
+  }
 
-    void Assert() const {
-        ZX_DEBUG_ASSERT_MSG(magic_ == magic,
-                            "Invalid canary (expt: %08x, got: %08x)\n",
-                            static_cast<uint32_t>(magic), magic_);
-    }
+  void Assert() const {
+    ZX_DEBUG_ASSERT_MSG(magic_ == magic, "Invalid canary (expt: %08x, got: %08x)\n",
+                        static_cast<uint32_t>(magic), magic_);
+  }
 
-private:
-     volatile uint32_t magic_;
+ private:
+  volatile uint32_t magic_;
 };
 
 }  // namespace fbl
 
-#endif  // FBL_CANARY_H_
+#endif  // ZIRCON_KERNEL_LIB_FBL_INCLUDE_FBL_CANARY_H_

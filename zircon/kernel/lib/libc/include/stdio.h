@@ -5,12 +5,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_LIBC_INCLUDE_STDIO_H_
+#define ZIRCON_KERNEL_LIB_LIBC_INCLUDE_STDIO_H_
 
-#include <zircon/compiler.h>
+#include <lib/io.h>
 #include <printf.h>
 #include <sys/types.h>
-#include <lib/io.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
@@ -34,5 +35,6 @@ int _vprintf(const char *fmt, va_list ap);
 int snprintf(char *str, size_t len, const char *fmt, ...) __PRINTFLIKE(3, 4);
 int vsnprintf(char *str, size_t len, const char *fmt, va_list ap);
 
-
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_LIB_LIBC_INCLUDE_STDIO_H_

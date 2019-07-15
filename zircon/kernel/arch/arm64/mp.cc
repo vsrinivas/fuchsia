@@ -21,14 +21,14 @@ namespace {
 constexpr uint64_t kMpidAffMask = 0xFF00FFFFFF;
 
 struct MpidCpuidPair {
-    uint64_t mpid;
-    uint cpu_id;
+  uint64_t mpid;
+  uint cpu_id;
 };
 
 MpidCpuidPair arm64_cpu_list[SMP_MAX_CPUS];
 size_t arm64_cpu_list_count = 0;
 
-} // namespace
+}  // namespace
 
 // cpu id to cluster and id within cluster map
 uint arm64_cpu_cluster_ids[SMP_MAX_CPUS] = {0};
@@ -41,89 +41,87 @@ uint arm_num_cpus = 1;
 arm64_percpu arm64_percpu_array[SMP_MAX_CPUS];
 
 void arch_register_mpid(uint cpu_id, uint64_t mpid) {
-    // TODO(ZX-3068) transition off of these maps to the topology.
-    arm64_cpu_cluster_ids[cpu_id] = (mpid & 0xFF00) >> MPIDR_AFF1_SHIFT; // "cluster" here is AFF1.
-    arm64_cpu_cpu_ids[cpu_id] = mpid & 0xFF; // "cpu" here is AFF0.
+  // TODO(ZX-3068) transition off of these maps to the topology.
+  arm64_cpu_cluster_ids[cpu_id] = (mpid & 0xFF00) >> MPIDR_AFF1_SHIFT;  // "cluster" here is AFF1.
+  arm64_cpu_cpu_ids[cpu_id] = mpid & 0xFF;                              // "cpu" here is AFF0.
 
-    arm64_percpu_array[cpu_id].cpu_num = cpu_id;
+  arm64_percpu_array[cpu_id].cpu_num = cpu_id;
 
-    arm64_cpu_list[arm64_cpu_list_count++] = {.mpid = mpid, .cpu_id = cpu_id};
+  arm64_cpu_list[arm64_cpu_list_count++] = {.mpid = mpid, .cpu_id = cpu_id};
 }
 
 // do the 'slow' lookup by mpidr to cpu number
 static uint arch_curr_cpu_num_slow() {
-    uint64_t mpidr = __arm_rsr64("mpidr_el1");
-    mpidr &= kMpidAffMask;
+  uint64_t mpidr = __arm_rsr64("mpidr_el1");
+  mpidr &= kMpidAffMask;
 
-    for (size_t i = 0; i < arm64_cpu_list_count; ++i) {
-        if (arm64_cpu_list[i].mpid == mpidr) {
-            return arm64_cpu_list[i].cpu_id;
-        }
+  for (size_t i = 0; i < arm64_cpu_list_count; ++i) {
+    if (arm64_cpu_list[i].mpid == mpidr) {
+      return arm64_cpu_list[i].cpu_id;
     }
+  }
 
-    // The only time we shouldn't find a cpu is when the list isn't
-    // defined yet during early boot, in this case the only processor up is 0
-    // so returning 0 is correct.
-    DEBUG_ASSERT(arm64_cpu_list_count == 0);
+  // The only time we shouldn't find a cpu is when the list isn't
+  // defined yet during early boot, in this case the only processor up is 0
+  // so returning 0 is correct.
+  DEBUG_ASSERT(arm64_cpu_list_count == 0);
 
-    return 0;
+  return 0;
 }
 
 void arch_prepare_current_cpu_idle_state(bool idle) {
-    // no-op
+  // no-op
 }
 
 zx_status_t arch_mp_reschedule(cpu_mask_t mask) {
-    return arch_mp_send_ipi(MP_IPI_TARGET_MASK, mask, MP_IPI_RESCHEDULE);
+  return arch_mp_send_ipi(MP_IPI_TARGET_MASK, mask, MP_IPI_RESCHEDULE);
 }
 
 zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t ipi) {
-    LTRACEF("target %d mask %#x, ipi %d\n", target, mask, ipi);
+  LTRACEF("target %d mask %#x, ipi %d\n", target, mask, ipi);
 
-    // translate the high level target + mask mechanism into just a mask
-    switch (target) {
+  // translate the high level target + mask mechanism into just a mask
+  switch (target) {
     case MP_IPI_TARGET_ALL:
-        mask = (1ul << SMP_MAX_CPUS) - 1;
-        break;
+      mask = (1ul << SMP_MAX_CPUS) - 1;
+      break;
     case MP_IPI_TARGET_ALL_BUT_LOCAL:
-        mask = (1ul << SMP_MAX_CPUS) - 1;
-        mask &= ~cpu_num_to_mask(arch_curr_cpu_num());
-        break;
+      mask = (1ul << SMP_MAX_CPUS) - 1;
+      mask &= ~cpu_num_to_mask(arch_curr_cpu_num());
+      break;
     case MP_IPI_TARGET_MASK:;
-    }
+  }
 
-    return interrupt_send_ipi(mask, ipi);
+  return interrupt_send_ipi(mask, ipi);
 }
 
 void arm64_init_percpu_early(void) {
-    // slow lookup the current cpu id and setup the percpu structure
-    uint cpu = arch_curr_cpu_num_slow();
+  // slow lookup the current cpu id and setup the percpu structure
+  uint cpu = arch_curr_cpu_num_slow();
 
-    arm64_write_percpu_ptr(&arm64_percpu_array[cpu]);
+  arm64_write_percpu_ptr(&arm64_percpu_array[cpu]);
 }
 
-void arch_mp_init_percpu(void) {
-    interrupt_init_percpu();
-}
+void arch_mp_init_percpu(void) { interrupt_init_percpu(); }
 
 void arch_flush_state_and_halt(event_t* flush_done) {
-    DEBUG_ASSERT(arch_ints_disabled());
-    event_signal(flush_done, false);
-    platform_halt_cpu();
-    panic("control should never reach here\n");
+  DEBUG_ASSERT(arch_ints_disabled());
+  event_signal(flush_done, false);
+  platform_halt_cpu();
+  panic("control should never reach here\n");
 }
 
 zx_status_t arch_mp_prep_cpu_unplug(uint cpu_id) {
-    if (cpu_id == 0 || cpu_id >= arm_num_cpus) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    return ZX_OK;
+  if (cpu_id == 0 || cpu_id >= arm_num_cpus) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return ZX_OK;
 }
 
 zx_status_t arch_mp_cpu_unplug(uint cpu_id) {
-    // we do not allow unplugging the bootstrap processor
-    if (cpu_id == 0 || cpu_id >= arm_num_cpus) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    return ZX_OK;
+  // we do not allow unplugging the bootstrap processor
+  if (cpu_id == 0 || cpu_id >= arm_num_cpus) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return ZX_OK;
 }

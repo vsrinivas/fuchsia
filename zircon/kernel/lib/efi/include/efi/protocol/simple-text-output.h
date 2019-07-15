@@ -2,21 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_SIMPLE_TEXT_OUTPUT_H_
+#define ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_SIMPLE_TEXT_OUTPUT_H_
 
 #include <efi/types.h>
 
-#define EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_GUID \
-    {0x387477c2, 0x69c7, 0x11d2, {0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b}}
+#define EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_GUID                                       \
+  {                                                                                \
+    0x387477c2, 0x69c7, 0x11d2, { 0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b } \
+  }
 extern efi_guid SimpleTextOutputProtocol;
 
 typedef struct {
-    int32_t MaxMode;
-    int32_t Mode;
-    int32_t Attribute;
-    int32_t CursorColumn;
-    int32_t CursorRow;
-    bool CursorVisible;
+  int32_t MaxMode;
+  int32_t Mode;
+  int32_t Attribute;
+  int32_t CursorColumn;
+  int32_t CursorRow;
+  bool CursorVisible;
 } simple_text_output_mode;
 
 //*******************************************************
@@ -113,31 +116,28 @@ typedef struct {
 #define EFI_BACKGROUND_LIGHTGRAY 0x70
 
 typedef struct efi_simple_text_output_protocol {
-    efi_status (*Reset) (struct efi_simple_text_output_protocol* self,
-                         bool extended_verification) EFIAPI;
+  efi_status (*Reset)(struct efi_simple_text_output_protocol* self,
+                      bool extended_verification) EFIAPI;
 
-    efi_status (*OutputString) (struct efi_simple_text_output_protocol* self,
-                                char16_t* string) EFIAPI;
+  efi_status (*OutputString)(struct efi_simple_text_output_protocol* self, char16_t* string) EFIAPI;
 
-    efi_status (*TestString) (struct efi_simple_text_output_protocol* self,
-                              char16_t* string) EFIAPI;
+  efi_status (*TestString)(struct efi_simple_text_output_protocol* self, char16_t* string) EFIAPI;
 
-    efi_status (*QueryMode) (struct efi_simple_text_output_protocol* self,
-                             size_t mode_num, size_t* cols, size_t* rows) EFIAPI;
+  efi_status (*QueryMode)(struct efi_simple_text_output_protocol* self, size_t mode_num,
+                          size_t* cols, size_t* rows) EFIAPI;
 
-    efi_status (*SetMode) (struct efi_simple_text_output_protocol* self,
-                           size_t mode_num) EFIAPI;
+  efi_status (*SetMode)(struct efi_simple_text_output_protocol* self, size_t mode_num) EFIAPI;
 
-    efi_status (*SetAttribute) (struct efi_simple_text_output_protocol* self,
-                                size_t attribute) EFIAPI;
+  efi_status (*SetAttribute)(struct efi_simple_text_output_protocol* self, size_t attribute) EFIAPI;
 
-    efi_status (*ClearScreen) (struct efi_simple_text_output_protocol* self) EFIAPI;
+  efi_status (*ClearScreen)(struct efi_simple_text_output_protocol* self) EFIAPI;
 
-    efi_status (*SetCursorPosition) (struct efi_simple_text_output_protocol* self,
-                                     size_t col, size_t row) EFIAPI;
+  efi_status (*SetCursorPosition)(struct efi_simple_text_output_protocol* self, size_t col,
+                                  size_t row) EFIAPI;
 
-    efi_status (*EnableCursor) (struct efi_simple_text_output_protocol* self,
-                                bool visible) EFIAPI;
+  efi_status (*EnableCursor)(struct efi_simple_text_output_protocol* self, bool visible) EFIAPI;
 
-    simple_text_output_mode* Mode;
+  simple_text_output_mode* Mode;
 } efi_simple_text_output_protocol;
+
+#endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_SIMPLE_TEXT_OUTPUT_H_

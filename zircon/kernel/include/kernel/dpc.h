@@ -3,7 +3,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_DPC_H_
+#define ZIRCON_KERNEL_INCLUDE_KERNEL_DPC_H_
 
 #include <kernel/thread.h>
 #include <list.h>
@@ -24,18 +25,14 @@ struct dpc;
 typedef void (*dpc_func_t)(struct dpc*);
 
 typedef struct dpc {
-    struct list_node node;
+  struct list_node node;
 
-    dpc_func_t func;
-    void* arg;
+  dpc_func_t func;
+  void* arg;
 } dpc_t;
 
-#define DPC_INITIAL_VALUE                   \
-    {                                       \
-        .node = LIST_INITIAL_CLEARED_VALUE, \
-        .func = 0,                          \
-        .arg = 0,                           \
-    }
+#define DPC_INITIAL_VALUE \
+  { .node = LIST_INITIAL_CLEARED_VALUE, .func = 0, .arg = 0, }
 
 // initializes dpc for the current cpu
 void dpc_init_for_cpu(void);
@@ -77,3 +74,5 @@ void dpc_shutdown(uint cpu);
 void dpc_shutdown_transition_off_cpu(uint cpu);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_DPC_H_

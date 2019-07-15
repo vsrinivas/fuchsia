@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_ALIGN_H_
+#define ZIRCON_KERNEL_INCLUDE_KERNEL_ALIGN_H_
 
 #include <arch/defines.h>
 #include <zircon/compiler.h>
@@ -15,3 +16,5 @@
 // Similar to above, but put in a special section to make sure no other
 // variable shares the same cache line.
 #define __CPU_ALIGN_EXCLUSIVE __CPU_ALIGN __SECTION(".data.cpu_align_exclusive")
+
+#endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_ALIGN_H_

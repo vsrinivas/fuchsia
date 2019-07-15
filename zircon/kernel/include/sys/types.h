@@ -5,11 +5,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_SYS_TYPES_H_
+#define ZIRCON_KERNEL_INCLUDE_SYS_TYPES_H_
 
 #include <limits.h>
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 typedef unsigned char uchar;
 typedef unsigned short ushort;
@@ -30,3 +31,5 @@ typedef intptr_t ssize_t;
 #define KB (1024UL)
 #define MB (1024UL * KB)
 #define GB (1024UL * MB)
+
+#endif  // ZIRCON_KERNEL_INCLUDE_SYS_TYPES_H_

@@ -4,28 +4,29 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
-
-#include <zircon/rights.h>
-#include <zircon/types.h>
+#ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_EVENT_DISPATCHER_H_
+#define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_EVENT_DISPATCHER_H_
 
 #include <fbl/canary.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>
-
 #include <sys/types.h>
+#include <zircon/rights.h>
+#include <zircon/types.h>
 
-class EventDispatcher final :
-    public SoloDispatcher<EventDispatcher, ZX_DEFAULT_EVENT_RIGHTS, ZX_EVENT_SIGNALED> {
-public:
-    static zx_status_t Create(uint32_t options, KernelHandle<EventDispatcher>* handle,
-                              zx_rights_t* rights);
+class EventDispatcher final
+    : public SoloDispatcher<EventDispatcher, ZX_DEFAULT_EVENT_RIGHTS, ZX_EVENT_SIGNALED> {
+ public:
+  static zx_status_t Create(uint32_t options, KernelHandle<EventDispatcher>* handle,
+                            zx_rights_t* rights);
 
-    ~EventDispatcher() final;
-    zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_EVENT; }
+  ~EventDispatcher() final;
+  zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_EVENT; }
 
-private:
-    explicit EventDispatcher(uint32_t options);
+ private:
+  explicit EventDispatcher(uint32_t options);
 };
 
 fbl::RefPtr<EventDispatcher> GetLowMemEvent();
+
+#endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_EVENT_DISPATCHER_H_

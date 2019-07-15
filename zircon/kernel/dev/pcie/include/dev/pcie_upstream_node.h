@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_UPSTREAM_NODE_H_
+#define ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_UPSTREAM_NODE_H_
 
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
@@ -15,8 +16,8 @@
 #include <sys/types.h>
 
 struct pcie_config_t;
-class  RegionAllocator;
-class  PciConfig;
+class RegionAllocator;
+class PciConfig;
 
 // PcieUpstreamNode
 //
@@ -25,51 +26,50 @@ class  PciConfig;
 // not instantiated directly, instead they serve as the base class of
 // PcieBridges and PcieRoots.
 class PcieUpstreamNode {
-public:
-    enum class Type { ROOT, BRIDGE };
-    virtual ~PcieUpstreamNode();
+ public:
+  enum class Type { ROOT, BRIDGE };
+  virtual ~PcieUpstreamNode();
 
-    // Disallow copying, assigning and moving.
-    DISALLOW_COPY_ASSIGN_AND_MOVE(PcieUpstreamNode);
+  // Disallow copying, assigning and moving.
+  DISALLOW_COPY_ASSIGN_AND_MOVE(PcieUpstreamNode);
 
-    // Require that derived classes implement ref counting.
-    PCIE_REQUIRE_REFCOUNTED;
+  // Require that derived classes implement ref counting.
+  PCIE_REQUIRE_REFCOUNTED;
 
-    fbl::RefPtr<PcieDevice> GetDownstream(uint ndx) { return bus_drv_.GetDownstream(*this, ndx); }
-    PcieBusDriver& driver() { return bus_drv_; }
+  fbl::RefPtr<PcieDevice> GetDownstream(uint ndx) { return bus_drv_.GetDownstream(*this, ndx); }
+  PcieBusDriver& driver() { return bus_drv_; }
 
-    Type type()           const { return type_; }
-    uint managed_bus_id() const { return managed_bus_id_; }
+  Type type() const { return type_; }
+  uint managed_bus_id() const { return managed_bus_id_; }
 
-    virtual RegionAllocator& pf_mmio_regions() = 0;
-    virtual RegionAllocator& mmio_lo_regions() = 0;
-    virtual RegionAllocator& mmio_hi_regions() = 0;
-    virtual RegionAllocator& pio_regions() = 0;
+  virtual RegionAllocator& pf_mmio_regions() = 0;
+  virtual RegionAllocator& mmio_lo_regions() = 0;
+  virtual RegionAllocator& mmio_hi_regions() = 0;
+  virtual RegionAllocator& pio_regions() = 0;
 
-protected:
-    friend class PcieBusDriver;
-    PcieUpstreamNode(PcieBusDriver& bus_drv, Type type, uint mbus_id)
-        : bus_drv_(bus_drv),
-          type_(type),
-          managed_bus_id_(mbus_id) { }
+ protected:
+  friend class PcieBusDriver;
+  PcieUpstreamNode(PcieBusDriver& bus_drv, Type type, uint mbus_id)
+      : bus_drv_(bus_drv), type_(type), managed_bus_id_(mbus_id) {}
 
-    void AllocateDownstreamBars();
-    void DisableDownstream();
-    void ScanDownstream();
-    void UnplugDownstream();
+  void AllocateDownstreamBars();
+  void DisableDownstream();
+  void ScanDownstream();
+  void UnplugDownstream();
 
-    fbl::RefPtr<PcieDevice> ScanDevice(const PciConfig* cfg, uint dev_id, uint func_id);
+  fbl::RefPtr<PcieDevice> ScanDevice(const PciConfig* cfg, uint dev_id, uint func_id);
 
-private:
+ private:
+  PcieBusDriver& bus_drv_;  // TODO(johngro) : Eliminate this, see ZX-325
+  const Type type_;
+  const uint managed_bus_id_;  // The ID of the downstream bus which this node manages.
 
-    PcieBusDriver& bus_drv_;         // TODO(johngro) : Eliminate this, see ZX-325
-    const Type     type_;
-    const uint     managed_bus_id_;  // The ID of the downstream bus which this node manages.
-
-    // An array of pointers for all the possible functions which exist on the
-    // downstream bus of this node.
-    //
-    // TODO(johngro): Consider making this into a WAVLTree, indexed by the
-    // concatenation of device and function ID instead of an array.
-    fbl::RefPtr<PcieDevice> downstream_[PCIE_MAX_FUNCTIONS_PER_BUS];
+  // An array of pointers for all the possible functions which exist on the
+  // downstream bus of this node.
+  //
+  // TODO(johngro): Consider making this into a WAVLTree, indexed by the
+  // concatenation of device and function ID instead of an array.
+  fbl::RefPtr<PcieDevice> downstream_[PCIE_MAX_FUNCTIONS_PER_BUS];
 };
+
+#endif  // ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_UPSTREAM_NODE_H_

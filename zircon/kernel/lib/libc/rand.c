@@ -5,27 +5,22 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <rand.h>
-
 #include <kernel/atomic.h>
+#include <rand.h>
 #include <sys/types.h>
 
 static uint64_t randseed;
 
-void srand(unsigned int seed) {
-    atomic_store_u64_relaxed(&randseed, seed - 1);
-}
+void srand(unsigned int seed) { atomic_store_u64_relaxed(&randseed, seed - 1); }
 
 int rand_r(uint64_t* seed) {
-    for (;;) {
-        uint64_t old_seed = atomic_load_u64_relaxed(seed);
-        uint64_t new_seed = 6364136223846793005ULL * old_seed + 1;
-        if (atomic_cmpxchg_u64_relaxed(seed, &old_seed, new_seed)) {
-            return new_seed >> 33;
-        }
+  for (;;) {
+    uint64_t old_seed = atomic_load_u64_relaxed(seed);
+    uint64_t new_seed = 6364136223846793005ULL * old_seed + 1;
+    if (atomic_cmpxchg_u64_relaxed(seed, &old_seed, new_seed)) {
+      return new_seed >> 33;
     }
+  }
 }
 
-int rand(void) {
-    return rand_r(&randseed);
-}
+int rand(void) { return rand_r(&randseed); }

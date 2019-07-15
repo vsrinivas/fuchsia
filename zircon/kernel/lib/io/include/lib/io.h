@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_IO_INCLUDE_LIB_IO_H_
+#define ZIRCON_KERNEL_LIB_IO_INCLUDE_LIB_IO_H_
 
 #include <list.h>
 #include <sys/types.h>
@@ -17,9 +18,9 @@ __BEGIN_CDECLS
 
 typedef struct __print_callback print_callback_t;
 struct __print_callback {
-    struct list_node entry;
-    void (*print)(print_callback_t* cb, const char* str, size_t len);
-    void* context;
+  struct list_node entry;
+  void (*print)(print_callback_t* cb, const char* str, size_t len);
+  void* context;
 };
 
 /* register callback to receive debug prints */
@@ -34,3 +35,5 @@ void __kernel_console_write(const char* str, size_t len);
 int __printf_output_func(const char* s, size_t len, void* state);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_LIB_IO_INCLUDE_LIB_IO_H_

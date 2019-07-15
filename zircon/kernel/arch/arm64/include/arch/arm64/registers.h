@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_REGISTERS_H_
+#define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_REGISTERS_H_
 
 // MDSCR_EL1
 // Monitor Debug System Control Register. It's the main control register fot the debug
@@ -41,17 +42,17 @@
 // Debug Feature Register 0. This register is used to query the system for the debug
 // capabilites present within the chip.
 
-#define ARM64_ID_AADFR0_EL1_DEBUG_VER   0x0000000000000Flu
-#define ARM64_ID_AADFR0_EL1_TRACE_VER   0x000000000000F0lu
-#define ARM64_ID_AADFR0_EL1_PMU_VER `   0x00000000000F00lu
+#define ARM64_ID_AADFR0_EL1_DEBUG_VER 0x0000000000000Flu
+#define ARM64_ID_AADFR0_EL1_TRACE_VER 0x000000000000F0lu
+#define ARM64_ID_AADFR0_EL1_PMU_VER ` 0x00000000000F00lu
 // Defines the amount of HW breakpoints.
-#define ARM64_ID_AADFR0_EL1_BRPS        0x0000000000F000lu
-#define ARM64_ID_AADFR0_EL1_BRPS_SHIFT  12lu
+#define ARM64_ID_AADFR0_EL1_BRPS 0x0000000000F000lu
+#define ARM64_ID_AADFR0_EL1_BRPS_SHIFT 12lu
 // Defines the amount of HW data watchpoints.
-#define ARM64_ID_AADFR0_EL1_WRPS        0x00000000F00000lu
-#define ARM64_ID_AADFR0_EL1_WRPS_SHIFT  20lu
-#define ARM64_ID_AADFR0_EL1_CTX_CMP     0x000000F0000000lu
-#define ARM64_ID_AADFR0_EL1_PMS_VER     0x00000F00000000lu
+#define ARM64_ID_AADFR0_EL1_WRPS 0x00000000F00000lu
+#define ARM64_ID_AADFR0_EL1_WRPS_SHIFT 20lu
+#define ARM64_ID_AADFR0_EL1_CTX_CMP 0x000000F0000000lu
+#define ARM64_ID_AADFR0_EL1_PMS_VER 0x00000F00000000lu
 
 // ARM64 Hardware Debug Resources
 // ================================================================================================
@@ -74,27 +75,27 @@
 // will compare against.
 
 // Enable/disable the breakpoint.
-#define ARM64_DBGBCR_E          (1u << 0)
-#define ARM64_DBGBCE_E_SHIFT    0u
+#define ARM64_DBGBCR_E (1u << 0)
+#define ARM64_DBGBCE_E_SHIFT 0u
 // PMC, HMC, SSC define the environment where the breakpoint will trigger.
-#define ARM64_DBGBCR_PMC        (0b11u << 1)    // Bits 1-2.
-#define ARM64_DBGBCR_PMC_SHIFT  1u
+#define ARM64_DBGBCR_PMC (0b11u << 1)  // Bits 1-2.
+#define ARM64_DBGBCR_PMC_SHIFT 1u
 // Byte Address Select. Defines which half-words triggers the breakpoint.
 // In AArch64 implementations (which zircon targets), is res1.
-#define ARM64_DBGBCR_BAS        (0b1111u << 5)  // Bits 5-8.
-#define ARM64_DBGGCR_BAS_SHIFT  5u
+#define ARM64_DBGBCR_BAS (0b1111u << 5)  // Bits 5-8.
+#define ARM64_DBGGCR_BAS_SHIFT 5u
 // PMC, HMC, SSC define the environment where the breakpoint will trigger.
-#define ARM64_DBGBCR_HMC        (1u << 13)
-#define ARM64_DBGBCR_HMC_SHIFT  13u
+#define ARM64_DBGBCR_HMC (1u << 13)
+#define ARM64_DBGBCR_HMC_SHIFT 13u
 // PMC, HMC, SSC define the environment where the breakpoint will trigger.
-#define ARM64_DBGBCR_SSC        (0b111u << 14)  // Bits 14-15.
-#define ARM64_DBGBCR_SSC_SHIFT  14u
+#define ARM64_DBGBCR_SSC (0b111u << 14)  // Bits 14-15.
+#define ARM64_DBGBCR_SSC_SHIFT 14u
 // Linked Breakpoint Number. Zircon doesn't use this feature. Always zero.
-#define ARM64_DBGBCR_LBN        (0b1111u << 16) // Bits 16-19.
-#define ARM64_DBGBCR_LBN_SHIFT  16u
+#define ARM64_DBGBCR_LBN (0b1111u << 16)  // Bits 16-19.
+#define ARM64_DBGBCR_LBN_SHIFT 16u
 // Breakpoint Type. Zircon only uses unlinked address match (zero).
-#define ARM64_DBGBCR_BT         (0b1111u << 20) // Bits 20-23.
-#define ARM64_DBGBCR_BY_SHIFT   20u
+#define ARM64_DBGBCR_BT (0b1111u << 20)  // Bits 20-23.
+#define ARM64_DBGBCR_BY_SHIFT 20u
 
 // The user can only activate/deactivate breakpoints.
 #define ARM64_DBGBCR_USER_MASK (ARM64_DBGBCR_E)
@@ -110,9 +111,8 @@
 // SSC [0]
 // LBN [0]: No breakpoint linking.
 // BT  [0]: Unliked instruction address match.
-#define ARM64_DBGBCR_ACTIVE_MASK (ARM64_DBGBCR_E |                    \
-                                  (0b10u << ARM64_DBGBCR_PMC_SHIFT) | \
-                                  ARM64_DBGBCR_BAS)
+#define ARM64_DBGBCR_ACTIVE_MASK \
+  (ARM64_DBGBCR_E | (0b10u << ARM64_DBGBCR_PMC_SHIFT) | ARM64_DBGBCR_BAS)
 
 // The actual addresses bits that we will allow the user to write for a hw breakpoint.
 #define ARM64_DBGBVR_USER_MASK (0xfffffffffffcu)
@@ -134,19 +134,19 @@
 // associated control register.
 
 // Enable/disable the watchpoint.
-#define ARM64_DBGWCR_E          (1u << 0)
-#define ARM64_DBGWCR_E_SHIFT    0u
+#define ARM64_DBGWCR_E (1u << 0)
+#define ARM64_DBGWCR_E_SHIFT 0u
 // PAC, SSC, HMC define the environment where the watchpoint will trigger.
-#define ARM64_DBGWCR_PAC        (0b11u << 1)        // Bits 1-2.
-#define ARM64_DBGWCR_PAC_SHIFT  1u
+#define ARM64_DBGWCR_PAC (0b11u << 1)  // Bits 1-2.
+#define ARM64_DBGWCR_PAC_SHIFT 1u
 // Load/Store Control.
 //
 // On what event the watchpoint trigger:
 // 01: Read from address.
 // 10: Write to address.
 // 11: Read/Write to address.
-#define ARM64_DBGWCR_LSC        (0b11u << 3)        // Bits 3-4.
-#define ARM64_DBGWCR_LSC_SHIFT  3u
+#define ARM64_DBGWCR_LSC (0b11u << 3)  // Bits 3-4.
+#define ARM64_DBGWCR_LSC_SHIFT 3u
 // Byte Address Select.
 //
 // Each bit defines what bytes to match onto:
@@ -158,25 +158,25 @@
 // 0bxx1x'xxxx: Match DBGWVR<n> + 5
 // 0bx1xx'xxxx: Match DBGWVR<n> + 6
 // 0b1xxx'xxxx: Match DBGWVR<n> + 7
-#define ARM64_DBGWCR_BAS        (0b11111111u << 5)  // Bits 5-12.
-#define ARM64_DBGWCR_BAS_SHIFT  5u
+#define ARM64_DBGWCR_BAS (0b11111111u << 5)  // Bits 5-12.
+#define ARM64_DBGWCR_BAS_SHIFT 5u
 // PAC, SSC, HMC define the environment where the watchpoint will trigger.
-#define ARM64_DBGWCR_HMC        (1u << 13)          // Bit 13.
-#define ARM64_DBGWCR_HMC_SHIFT  13u
+#define ARM64_DBGWCR_HMC (1u << 13)  // Bit 13.
+#define ARM64_DBGWCR_HMC_SHIFT 13u
 // PAC, SSC, HMC define the environment where the watchpoint will trigger.
-#define ARM64_DBGWCR_SSC        (0b11u << 14)       // Bits 14-15.
-#define ARM64_DBGWCR_SSC_SHIFT  14u
+#define ARM64_DBGWCR_SSC (0b11u << 14)  // Bits 14-15.
+#define ARM64_DBGWCR_SSC_SHIFT 14u
 // Linked Breakpoint Number. Zircon doesn't use this feature. Always zero.
-#define ARM64_DBGWCR_LBN        (0b1111u << 16)     // Bits 16-19.
-#define ARM64_DBGWCR_LBN_SHIFT  16u
+#define ARM64_DBGWCR_LBN (0b1111u << 16)  // Bits 16-19.
+#define ARM64_DBGWCR_LBN_SHIFT 16u
 // Watchpoint Type. Zircon always use unlinked (0).
-#define ARM64_DBGWCR_WT         (1u << 20)          // Bit 20.
-#define ARM64_DBGWCR_WT_SHIFT   20u
+#define ARM64_DBGWCR_WT (1u << 20)  // Bit 20.
+#define ARM64_DBGWCR_WT_SHIFT 20u
 // Mask. How many address bits to mask.
 // This permits the watchpoint to track up to 2G worth of addresses.
 // TODO(donosoc): Initially the debugger is going for parity with x64, which only permits 8 bytes.
 //                Eventually expose the ability to track bigger ranges.
-#define ARM64_DBGWCR_MASK       (0b11111u << 24)    // Bits 24-28.
+#define ARM64_DBGWCR_MASK (0b11111u << 24)  // Bits 24-28.
 #define ARM64_DBGWCR_MASK_SHIFT 24u
 
 // The user can only activate/deactivate watchpoints.
@@ -193,19 +193,15 @@
 // SSC [0b01]
 // LBN [0]: No breakpoint linking.
 // WT  [0]: Unliked instruction address match.
-#define ARM64_DBGWCR_ACTIVE_MASK (ARM64_DBGWCR_E |                    \
-                                  (0b10u << ARM64_DBGWCR_PAC_SHIFT) | \
-                                  (0b10u << ARM64_DBGWCR_LSC_SHIFT) | \
-                                  (0b10u << ARM64_DBGWCR_BAS_SHIFT) | \
-                                  ARM64_DBGWCR_BAS |                  \
-                                  (0b01u << ARM64_DBGWCR_SSC_SHIFT))
+#define ARM64_DBGWCR_ACTIVE_MASK                                                            \
+  (ARM64_DBGWCR_E | (0b10u << ARM64_DBGWCR_PAC_SHIFT) | (0b10u << ARM64_DBGWCR_LSC_SHIFT) | \
+   (0b10u << ARM64_DBGWCR_BAS_SHIFT) | ARM64_DBGWCR_BAS | (0b01u << ARM64_DBGWCR_SSC_SHIFT))
 
 // The actual addresses bits that we will allow the user to write for a hw watchpoint.
 #define ARM64_DBGWVR_USER_MASK (0xfffffffffffcu)
 
-
-#include <zircon/compiler.h>
 #include <sys/types.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
@@ -216,14 +212,14 @@ __BEGIN_CDECLS
  * breakpoints available, it will fill from the lower index up to correct amount.
  * The other indices should never be accessed. */
 typedef struct arm64_debug_state {
-    struct {
-        uint32_t dbgbcr;
-        uint64_t dbgbvr;
-    } hw_bps[ARM64_MAX_HW_BREAKPOINTS];
-    struct {
-        uint32_t dbgwcr;
-        uint64_t dbgwvr;
-    } hw_wps[ARM64_MAX_HW_WATCHPOINTS];
+  struct {
+    uint32_t dbgbcr;
+    uint64_t dbgbvr;
+  } hw_bps[ARM64_MAX_HW_BREAKPOINTS];
+  struct {
+    uint32_t dbgwcr;
+    uint64_t dbgwvr;
+  } hw_wps[ARM64_MAX_HW_WATCHPOINTS];
   uint32_t esr;
 } arm64_debug_state_t;
 
@@ -249,8 +245,7 @@ void arm64_set_debug_state_for_cpu(bool active);
  * If returning true, |active_breakpoints| will be the number of activated breakpoints within
  * set given |debug_state|.
  * */
-bool arm64_validate_debug_state(arm64_debug_state_t* debug_state,
-                                uint32_t* active_breakpoints,
+bool arm64_validate_debug_state(arm64_debug_state_t* debug_state, uint32_t* active_breakpoints,
                                 uint32_t* active_watchpoints);
 
 /* Returns the amount of HW breakpoints present in this CPU. */
@@ -279,3 +274,5 @@ void arm64_print_debug_registers(const arm64_debug_state_t*);
 void arm64_print_mdscr();
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_REGISTERS_H_

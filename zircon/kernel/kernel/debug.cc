@@ -23,14 +23,13 @@
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
 #include <kernel/timer.h>
+#include <lib/console.h>
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>
 #include <vm/vm.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
-
-#include <lib/console.h>
 
 static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_threadstats(int argc, const cmd_args* argv, uint32_t flags);
@@ -48,270 +47,269 @@ STATIC_COMMAND_END(kernel)
 
 #if LK_DEBUGLEVEL > 1
 static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {
+  if (argc < 2) {
+  notenoughargs:
+    printf("not enough arguments\n");
+  usage:
+    printf("%s bt <thread pointer or id>\n", argv[0].str);
+    printf("%s dump <thread pointer or id>\n", argv[0].str);
+    printf("%s list\n", argv[0].str);
+    printf("%s list_full\n", argv[0].str);
+    return -1;
+  }
 
-    if (argc < 2) {
-    notenoughargs:
-        printf("not enough arguments\n");
-    usage:
-        printf("%s bt <thread pointer or id>\n", argv[0].str);
-        printf("%s dump <thread pointer or id>\n", argv[0].str);
-        printf("%s list\n", argv[0].str);
-        printf("%s list_full\n", argv[0].str);
-        return -1;
+  if (!strcmp(argv[1].str, "bt")) {
+    if (argc < 3) {
+      goto notenoughargs;
     }
 
-    if (!strcmp(argv[1].str, "bt")) {
-        if (argc < 3) {
-            goto notenoughargs;
-        }
-
-        thread_t* t = NULL;
-        if (is_kernel_address(argv[2].u)) {
-            t = (thread_t*)argv[2].u;
-        } else {
-            t = thread_id_to_thread_slow(argv[2].u);
-        }
-        if (t) {
-            thread_print_backtrace(t);
-        }
-    } else if (!strcmp(argv[1].str, "dump")) {
-        if (argc < 3) {
-            goto notenoughargs;
-        }
-
-        thread_t* t = NULL;
-        if (is_kernel_address(argv[2].u)) {
-            t = (thread_t*)argv[2].u;
-            dump_thread(t, true);
-        } else {
-            if (flags & CMD_FLAG_PANIC) {
-                dump_thread_user_tid_during_panic(argv[2].u, true);
-            } else {
-                dump_thread_user_tid(argv[2].u, true);
-            }
-        }
-    } else if (!strcmp(argv[1].str, "list")) {
-        printf("thread list:\n");
-        if (flags & CMD_FLAG_PANIC) {
-            dump_all_threads_during_panic(false);
-        } else {
-            dump_all_threads(false);
-        }
-    } else if (!strcmp(argv[1].str, "list_full")) {
-        printf("thread list:\n");
-        if (flags & CMD_FLAG_PANIC) {
-            dump_all_threads_during_panic(true);
-        } else {
-            dump_all_threads(true);
-        }
+    thread_t* t = NULL;
+    if (is_kernel_address(argv[2].u)) {
+      t = (thread_t*)argv[2].u;
     } else {
-        printf("invalid args\n");
-        goto usage;
+      t = thread_id_to_thread_slow(argv[2].u);
+    }
+    if (t) {
+      thread_print_backtrace(t);
+    }
+  } else if (!strcmp(argv[1].str, "dump")) {
+    if (argc < 3) {
+      goto notenoughargs;
     }
 
-    // reschedule to let debuglog potentially run
-    if (!(flags & CMD_FLAG_PANIC)) {
-        thread_reschedule();
+    thread_t* t = NULL;
+    if (is_kernel_address(argv[2].u)) {
+      t = (thread_t*)argv[2].u;
+      dump_thread(t, true);
+    } else {
+      if (flags & CMD_FLAG_PANIC) {
+        dump_thread_user_tid_during_panic(argv[2].u, true);
+      } else {
+        dump_thread_user_tid(argv[2].u, true);
+      }
     }
+  } else if (!strcmp(argv[1].str, "list")) {
+    printf("thread list:\n");
+    if (flags & CMD_FLAG_PANIC) {
+      dump_all_threads_during_panic(false);
+    } else {
+      dump_all_threads(false);
+    }
+  } else if (!strcmp(argv[1].str, "list_full")) {
+    printf("thread list:\n");
+    if (flags & CMD_FLAG_PANIC) {
+      dump_all_threads_during_panic(true);
+    } else {
+      dump_all_threads(true);
+    }
+  } else {
+    printf("invalid args\n");
+    goto usage;
+  }
 
-    return 0;
+  // reschedule to let debuglog potentially run
+  if (!(flags & CMD_FLAG_PANIC)) {
+    thread_reschedule();
+  }
+
+  return 0;
 }
 #endif
 
 static int cmd_threadstats(int argc, const cmd_args* argv, uint32_t flags) {
-    for (uint i = 0; i < percpu::processor_count(); i++) {
-        if (!mp_is_cpu_active(i)) {
-            continue;
-        }
-        const auto& percpu = percpu::Get(i);
-
-        printf("thread stats (cpu %u):\n", i);
-        printf("\ttotal idle time: %" PRIi64 "\n", percpu.stats.idle_time);
-        printf("\ttotal busy time: %" PRIi64 "\n",
-               zx_time_sub_duration(current_time(), percpu.stats.idle_time));
-        printf("\treschedules: %lu\n", percpu.stats.reschedules);
-        printf("\treschedule_ipis: %lu\n", percpu.stats.reschedule_ipis);
-        printf("\tcontext_switches: %lu\n", percpu.stats.context_switches);
-        printf("\tpreempts: %lu\n", percpu.stats.preempts);
-        printf("\tyields: %lu\n", percpu.stats.yields);
-        printf("\ttimer interrupts: %lu\n", percpu.stats.timer_ints);
-        printf("\ttimers: %lu\n", percpu.stats.timers);
-#if WITH_FAIR_SCHEDULER
-        printf("\ttotal weight: %" PRIi64 "\n", percpu.fair_runqueue.GetTotalWeight().raw_value());
-        printf("\trunnable tasks: %zu\n", percpu.fair_runqueue.GetRunnableTasks());
-#endif
+  for (uint i = 0; i < percpu::processor_count(); i++) {
+    if (!mp_is_cpu_active(i)) {
+      continue;
     }
+    const auto& percpu = percpu::Get(i);
 
-    return 0;
+    printf("thread stats (cpu %u):\n", i);
+    printf("\ttotal idle time: %" PRIi64 "\n", percpu.stats.idle_time);
+    printf("\ttotal busy time: %" PRIi64 "\n",
+           zx_time_sub_duration(current_time(), percpu.stats.idle_time));
+    printf("\treschedules: %lu\n", percpu.stats.reschedules);
+    printf("\treschedule_ipis: %lu\n", percpu.stats.reschedule_ipis);
+    printf("\tcontext_switches: %lu\n", percpu.stats.context_switches);
+    printf("\tpreempts: %lu\n", percpu.stats.preempts);
+    printf("\tyields: %lu\n", percpu.stats.yields);
+    printf("\ttimer interrupts: %lu\n", percpu.stats.timer_ints);
+    printf("\ttimers: %lu\n", percpu.stats.timers);
+#if WITH_FAIR_SCHEDULER
+    printf("\ttotal weight: %" PRIi64 "\n", percpu.fair_runqueue.GetTotalWeight().raw_value());
+    printf("\trunnable tasks: %zu\n", percpu.fair_runqueue.GetRunnableTasks());
+#endif
+  }
+
+  return 0;
 }
 
 namespace {
 
 class RecurringCallback {
-public:
-    typedef void (*CallbackFunc)();
+ public:
+  typedef void (*CallbackFunc)();
 
-    RecurringCallback(CallbackFunc callback)
-        : func_(callback) {}
+  RecurringCallback(CallbackFunc callback) : func_(callback) {}
 
-    void Toggle();
+  void Toggle();
 
-private:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(RecurringCallback);
+ private:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(RecurringCallback);
 
-    static void CallbackWrapper(timer_t* t, zx_time_t now, void* arg);
+  static void CallbackWrapper(timer_t* t, zx_time_t now, void* arg);
 
-    DECLARE_SPINLOCK(SpinLock) lock_;
-    timer_t timer_ = TIMER_INITIAL_VALUE(timer_t);
-    bool started_ = false;
-    CallbackFunc func_ = nullptr;
+  DECLARE_SPINLOCK(SpinLock) lock_;
+  timer_t timer_ = TIMER_INITIAL_VALUE(timer_t);
+  bool started_ = false;
+  CallbackFunc func_ = nullptr;
 };
 
 static constexpr TimerSlack kSlack{ZX_MSEC(10), TIMER_SLACK_CENTER};
 
 void RecurringCallback::CallbackWrapper(timer_t* t, zx_time_t now, void* arg) {
-    auto cb = static_cast<RecurringCallback*>(arg);
-    cb->func_();
+  auto cb = static_cast<RecurringCallback*>(arg);
+  cb->func_();
 
-    {
-        Guard<SpinLock, IrqSave> guard{&cb->lock_};
+  {
+    Guard<SpinLock, IrqSave> guard{&cb->lock_};
 
-        if (cb->started_) {
-            const Deadline deadline(zx_time_add_duration(now, ZX_SEC(1)), kSlack);
-            timer_set(t, deadline, CallbackWrapper, arg);
-        }
+    if (cb->started_) {
+      const Deadline deadline(zx_time_add_duration(now, ZX_SEC(1)), kSlack);
+      timer_set(t, deadline, CallbackWrapper, arg);
     }
+  }
 
-    // reschedule to give the debuglog a chance to run
-    thread_preempt_set_pending();
+  // reschedule to give the debuglog a chance to run
+  thread_preempt_set_pending();
 }
 
 void RecurringCallback::Toggle() {
-    Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<SpinLock, IrqSave> guard{&lock_};
 
-    if (!started_) {
-        const Deadline deadline(zx_time_add_duration(current_time(), ZX_SEC(1)), kSlack);
-        // start the timer
-        timer_set(&timer_, deadline, CallbackWrapper, static_cast<void*>(this));
-        started_ = true;
-    } else {
-        timer_cancel(&timer_);
-        started_ = false;
-    }
+  if (!started_) {
+    const Deadline deadline(zx_time_add_duration(current_time(), ZX_SEC(1)), kSlack);
+    // start the timer
+    timer_set(&timer_, deadline, CallbackWrapper, static_cast<void*>(this));
+    started_ = true;
+  } else {
+    timer_cancel(&timer_);
+    started_ = false;
+  }
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
-    static RecurringCallback cb([]() {
-        static struct cpu_stats old_stats[SMP_MAX_CPUS];
-        static zx_duration_t last_idle_time[SMP_MAX_CPUS];
+  static RecurringCallback cb([]() {
+    static struct cpu_stats old_stats[SMP_MAX_CPUS];
+    static zx_duration_t last_idle_time[SMP_MAX_CPUS];
 
-        printf("cpu    load"
-               " sched (cs ylds pmpts irq_pmpts)"
-               "  sysc"
-               " ints (hw  tmr tmr_cb)"
-               " ipi (rs  gen)\n");
-        for (uint i = 0; i < percpu::processor_count(); i++) {
-            Guard<spin_lock_t, NoIrqSave> thread_lock_guard{ThreadLock::Get()};
+    printf(
+        "cpu    load"
+        " sched (cs ylds pmpts irq_pmpts)"
+        "  sysc"
+        " ints (hw  tmr tmr_cb)"
+        " ipi (rs  gen)\n");
+    for (uint i = 0; i < percpu::processor_count(); i++) {
+      Guard<spin_lock_t, NoIrqSave> thread_lock_guard{ThreadLock::Get()};
 
-            // dont display time for inactive cpus
-            if (!mp_is_cpu_active(i)) {
-                continue;
-            }
-            const auto& percpu = percpu::Get(i);
+      // dont display time for inactive cpus
+      if (!mp_is_cpu_active(i)) {
+        continue;
+      }
+      const auto& percpu = percpu::Get(i);
 
-            zx_duration_t idle_time = percpu.stats.idle_time;
+      zx_duration_t idle_time = percpu.stats.idle_time;
 
-            // if the cpu is currently idle, add the time since it went idle up until now to the idle counter
-            bool is_idle = !!mp_is_cpu_idle(i);
-            if (is_idle) {
-                zx_duration_t recent_idle_time =
-                    zx_time_sub_time(current_time(), percpu.idle_thread.last_started_running);
-                idle_time = zx_duration_add_duration(idle_time, recent_idle_time);
-            }
+      // if the cpu is currently idle, add the time since it went idle up until now to the idle
+      // counter
+      bool is_idle = !!mp_is_cpu_idle(i);
+      if (is_idle) {
+        zx_duration_t recent_idle_time =
+            zx_time_sub_time(current_time(), percpu.idle_thread.last_started_running);
+        idle_time = zx_duration_add_duration(idle_time, recent_idle_time);
+      }
 
-            zx_duration_t delta_time = zx_duration_sub_duration(idle_time, last_idle_time[i]);
-            zx_duration_t busy_time;
-            if (ZX_SEC(1) > delta_time) {
-                busy_time = zx_duration_sub_duration(ZX_SEC(1), delta_time);
-            } else {
-                busy_time = 0;
-            }
-            zx_duration_t busypercent = zx_duration_mul_int64(busy_time, 10000) / ZX_SEC(1);
+      zx_duration_t delta_time = zx_duration_sub_duration(idle_time, last_idle_time[i]);
+      zx_duration_t busy_time;
+      if (ZX_SEC(1) > delta_time) {
+        busy_time = zx_duration_sub_duration(ZX_SEC(1), delta_time);
+      } else {
+        busy_time = 0;
+      }
+      zx_duration_t busypercent = zx_duration_mul_int64(busy_time, 10000) / ZX_SEC(1);
 
-            printf("%3u"
-                   " %3u.%02u%%"
-                   " %9lu %4lu %5lu %9lu"
-                   " %5lu"
-                   " %8lu %4lu %6lu"
-                   " %8lu %4lu"
-                   "\n",
-                   i,
-                   static_cast<uint>(busypercent / 100), static_cast<uint>(busypercent % 100),
-                   percpu.stats.context_switches - old_stats[i].context_switches,
-                   percpu.stats.yields - old_stats[i].yields,
-                   percpu.stats.preempts - old_stats[i].preempts,
-                   percpu.stats.irq_preempts - old_stats[i].irq_preempts,
-                   percpu.stats.syscalls - old_stats[i].syscalls,
-                   percpu.stats.interrupts - old_stats[i].interrupts,
-                   percpu.stats.timer_ints - old_stats[i].timer_ints,
-                   percpu.stats.timers - old_stats[i].timers,
-                   percpu.stats.reschedule_ipis - old_stats[i].reschedule_ipis,
-                   percpu.stats.generic_ipis - old_stats[i].generic_ipis);
+      printf(
+          "%3u"
+          " %3u.%02u%%"
+          " %9lu %4lu %5lu %9lu"
+          " %5lu"
+          " %8lu %4lu %6lu"
+          " %8lu %4lu"
+          "\n",
+          i, static_cast<uint>(busypercent / 100), static_cast<uint>(busypercent % 100),
+          percpu.stats.context_switches - old_stats[i].context_switches,
+          percpu.stats.yields - old_stats[i].yields, percpu.stats.preempts - old_stats[i].preempts,
+          percpu.stats.irq_preempts - old_stats[i].irq_preempts,
+          percpu.stats.syscalls - old_stats[i].syscalls,
+          percpu.stats.interrupts - old_stats[i].interrupts,
+          percpu.stats.timer_ints - old_stats[i].timer_ints,
+          percpu.stats.timers - old_stats[i].timers,
+          percpu.stats.reschedule_ipis - old_stats[i].reschedule_ipis,
+          percpu.stats.generic_ipis - old_stats[i].generic_ipis);
 
-            old_stats[i] = percpu.stats;
-            last_idle_time[i] = idle_time;
-        }
-    });
+      old_stats[i] = percpu.stats;
+      last_idle_time[i] = idle_time;
+    }
+  });
 
-    cb.Toggle();
+  cb.Toggle();
 
-    return 0;
+  return 0;
 }
 
 #if WITH_FAIR_SCHEDULER
 static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
-    static RecurringCallback callback([]() {
-        printf("----------------------------------------------------\n");
-        for (uint i = 0; i < percpu::processor_count(); i++) {
-            Guard<spin_lock_t, NoIrqSave> thread_lock_guard{ThreadLock::Get()};
+  static RecurringCallback callback([]() {
+    printf("----------------------------------------------------\n");
+    for (uint i = 0; i < percpu::processor_count(); i++) {
+      Guard<spin_lock_t, NoIrqSave> thread_lock_guard{ThreadLock::Get()};
 
-            if (!mp_is_cpu_active(i)) {
-                continue;
-            }
+      if (!mp_is_cpu_active(i)) {
+        continue;
+      }
 
-            printf("thread queue cpu %2u:\n", i);
-            percpu::Get(i).fair_runqueue.Dump();
-        }
-        printf("\n");
-    });
+      printf("thread queue cpu %2u:\n", i);
+      percpu::Get(i).fair_runqueue.Dump();
+    }
+    printf("\n");
+  });
 
-    callback.Toggle();
+  callback.Toggle();
 
-    return 0;
+  return 0;
 }
 #else
 static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
-    static RecurringCallback cb([]() {
-        for (uint i = 0; i < percpu::processor_count(); i++) {
-            Guard<spin_lock_t, NoIrqSave> thread_lock_guard{ThreadLock::Get()};
+  static RecurringCallback cb([]() {
+    for (uint i = 0; i < percpu::processor_count(); i++) {
+      Guard<spin_lock_t, NoIrqSave> thread_lock_guard{ThreadLock::Get()};
 
-            // dont display time for inactive cpus
-            if (!mp_is_cpu_active(i)) {
-                continue;
-            }
+      // dont display time for inactive cpus
+      if (!mp_is_cpu_active(i)) {
+        continue;
+      }
 
-            printf("cpu %2u:", i);
-            for (uint p = 0; p < NUM_PRIORITIES; p++) {
-                printf(" %2zu", list_length(&percpu::Get(i).run_queue[p]));
-            }
-            printf("\n");
-        }
-    });
+      printf("cpu %2u:", i);
+      for (uint p = 0; p < NUM_PRIORITIES; p++) {
+        printf(" %2zu", list_length(&percpu::Get(i).run_queue[p]));
+      }
+      printf("\n");
+    }
+  });
 
-    cb.Toggle();
+  cb.Toggle();
 
-    return 0;
+  return 0;
 }
 #endif

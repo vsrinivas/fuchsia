@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_HPET_H_
+#define ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_HPET_H_
 
 #include <lib/acpi_tables.h>
 #include <zircon/compiler.h>
@@ -15,8 +16,8 @@ __BEGIN_CDECLS
 bool hpet_is_present(void);
 
 static uint64_t hpet_ticks_per_ms(void) {
-    extern uint64_t _hpet_ticks_per_ms;
-    return _hpet_ticks_per_ms;
+  extern uint64_t _hpet_ticks_per_ms;
+  return _hpet_ticks_per_ms;
 }
 
 uint64_t hpet_get_value(void);
@@ -33,3 +34,5 @@ void hpet_disable(void);
 void hpet_wait_ms(uint16_t ms);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_HPET_H_

@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_VM_H_
+#define ZIRCON_KERNEL_VM_INCLUDE_VM_VM_H_
 
 #include <arch.h>
 #include <assert.h>
@@ -23,21 +24,19 @@
 static_assert(KERNEL_ASPACE_BASE + (KERNEL_ASPACE_SIZE - 1) > KERNEL_ASPACE_BASE, "");
 
 static inline bool is_kernel_address(vaddr_t va) {
-    return (va >= (vaddr_t)KERNEL_ASPACE_BASE &&
-            va - (vaddr_t)KERNEL_ASPACE_BASE < (vaddr_t)KERNEL_ASPACE_SIZE);
+  return (va >= (vaddr_t)KERNEL_ASPACE_BASE &&
+          va - (vaddr_t)KERNEL_ASPACE_BASE < (vaddr_t)KERNEL_ASPACE_SIZE);
 }
 
 // user address space, defaults to below kernel space with a 16MB guard gap on either side
 static_assert(USER_ASPACE_BASE + (USER_ASPACE_SIZE - 1) > USER_ASPACE_BASE, "");
 
 static inline bool is_user_address(vaddr_t va) {
-    return (va >= USER_ASPACE_BASE && va <= (USER_ASPACE_BASE + (USER_ASPACE_SIZE - 1)));
+  return (va >= USER_ASPACE_BASE && va <= (USER_ASPACE_BASE + (USER_ASPACE_SIZE - 1)));
 }
 
 static inline bool is_user_address_range(vaddr_t va, size_t len) {
-    return va + len >= va &&
-           is_user_address(va) &&
-           (len == 0 || is_user_address(va + len - 1));
+  return va + len >= va && is_user_address(va) && (len == 0 || is_user_address(va + len - 1));
 }
 
 // linker script provided variables for various virtual kernel addresses
@@ -52,14 +51,12 @@ extern char _end[];
 
 // return the physical address corresponding to _start
 static inline paddr_t get_kernel_base_phys(void) {
-    extern paddr_t kernel_base_phys;
+  extern paddr_t kernel_base_phys;
 
-    return kernel_base_phys;
+  return kernel_base_phys;
 }
 
-static size_t get_kernel_size(void) {
-    return _end - __code_start;
-}
+static size_t get_kernel_size(void) { return _end - __code_start; }
 
 __BEGIN_CDECLS
 
@@ -81,3 +78,5 @@ void vmm_set_active_aspace(vmm_aspace_t* aspace);
 void vmm_set_active_aspace_locked(vmm_aspace_t* aspace);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_VM_H_

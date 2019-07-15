@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_PDEV_H_
+#define ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_PDEV_H_
 
 #include <zircon/boot/image.h>
 #include <zircon/compiler.h>
@@ -16,3 +17,5 @@ __BEGIN_CDECLS
 void pdev_init(const zbi_header_t* zbi);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_PDEV_H_

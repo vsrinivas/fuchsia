@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_CPU_H_
+#define ZIRCON_KERNEL_INCLUDE_KERNEL_CPU_H_
 
 #include <assert.h>
 #include <stdint.h>
@@ -19,30 +20,30 @@ static_assert(SMP_MAX_CPUS <= sizeof(cpu_mask_t) * CHAR_BIT, "");
 #define INVALID_CPU ((cpu_num_t)-1)
 #define CPU_MASK_ALL ((cpu_mask_t)-1)
 
-static inline bool is_valid_cpu_num(cpu_num_t num) {
-    return (num < SMP_MAX_CPUS);
-}
+static inline bool is_valid_cpu_num(cpu_num_t num) { return (num < SMP_MAX_CPUS); }
 
 static inline cpu_mask_t cpu_num_to_mask(cpu_num_t num) {
-    if (!is_valid_cpu_num(num)) {
-        return 0;
-    }
+  if (!is_valid_cpu_num(num)) {
+    return 0;
+  }
 
-    return ((cpu_mask_t)1u << num);
+  return ((cpu_mask_t)1u << num);
 }
 
 static inline cpu_num_t highest_cpu_set(cpu_mask_t mask) {
-    if (mask == 0) {
-        return 0;
-    }
+  if (mask == 0) {
+    return 0;
+  }
 
-    return (cpu_num_t)(sizeof(cpu_mask_t) * CHAR_BIT - 1) - __builtin_clz(mask);
+  return (cpu_num_t)(sizeof(cpu_mask_t) * CHAR_BIT - 1) - __builtin_clz(mask);
 }
 
 static inline cpu_num_t lowest_cpu_set(cpu_mask_t mask) {
-    if (mask == 0) {
-        return 0;
-    }
+  if (mask == 0) {
+    return 0;
+  }
 
-    return (cpu_num_t)(__builtin_ctz(mask));
+  return (cpu_num_t)(__builtin_ctz(mask));
 }
+
+#endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_CPU_H_

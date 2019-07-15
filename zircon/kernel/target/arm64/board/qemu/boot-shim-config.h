@@ -14,7 +14,7 @@ static const zbi_mem_range_t mem_config[] = {
     {
         .type = ZBI_MEM_RANGE_RAM,
         .paddr = 0x40000000,
-        .length = 0x08000000, // assume 512MB, FDT will provide the real number
+        .length = 0x08000000,  // assume 512MB, FDT will provide the real number
     },
     {
         .type = ZBI_MEM_RANGE_PERIPHERAL,
@@ -64,76 +64,72 @@ static const zbi_platform_id_t platform_id = {
 
 static int saved_gic_version = -1;
 
-static void set_gic_version(int gic_version) {
-    saved_gic_version = gic_version;
-}
+static void set_gic_version(int gic_version) { saved_gic_version = gic_version; }
 
 static void add_cpu_topology(zbi_header_t* zbi) {
-    zbi_topology_node_t nodes[MAX_CPU_COUNT];
+  zbi_topology_node_t nodes[MAX_CPU_COUNT];
 
-    // clamp to the max cpu
-    if (cpu_count > MAX_CPU_COUNT) {
-        cpu_count = MAX_CPU_COUNT;
-    }
+  // clamp to the max cpu
+  if (cpu_count > MAX_CPU_COUNT) {
+    cpu_count = MAX_CPU_COUNT;
+  }
 
-    for (size_t index = 0; index < cpu_count; index++) {
-        nodes[index] = (zbi_topology_node_t){
-            .entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR,
-            .parent_index = ZBI_TOPOLOGY_NO_PARENT,
-            .entity = {
-                .processor = {
-                    .logical_ids = {index},
-                    .logical_id_count = 1,
-                    .flags = (index == 0) ? ZBI_TOPOLOGY_PROCESSOR_PRIMARY : 0,
-                    .architecture = ZBI_TOPOLOGY_ARCH_ARM,
-                    .architecture_info = {
-                        .arm = {
-                            // qemu seems to put 16 cores per aff0 level, max 32 cores.
-                            .cluster_1_id = (index / 16),
-                            .cpu_id = (index % 16),
-                            .gic_id = index,
-                        }}}}};
-    }
+  for (size_t index = 0; index < cpu_count; index++) {
+    nodes[index] = (zbi_topology_node_t){
+        .entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR,
+        .parent_index = ZBI_TOPOLOGY_NO_PARENT,
+        .entity = {.processor = {.logical_ids = {index},
+                                 .logical_id_count = 1,
+                                 .flags = (index == 0) ? ZBI_TOPOLOGY_PROCESSOR_PRIMARY : 0,
+                                 .architecture = ZBI_TOPOLOGY_ARCH_ARM,
+                                 .architecture_info = {
+                                     .arm = {
+                                         // qemu seems to put 16 cores per aff0 level, max 32 cores.
+                                         .cluster_1_id = (index / 16),
+                                         .cpu_id = (index % 16),
+                                         .gic_id = index,
+                                     }}}}};
+  }
 
-    append_boot_item(zbi, ZBI_TYPE_CPU_TOPOLOGY,
-                     sizeof(zbi_topology_node_t), // Extra
-                     &nodes, sizeof(zbi_topology_node_t) * cpu_count);
+  append_boot_item(zbi, ZBI_TYPE_CPU_TOPOLOGY,
+                   sizeof(zbi_topology_node_t),  // Extra
+                   &nodes, sizeof(zbi_topology_node_t) * cpu_count);
 }
 
 static void append_board_boot_item(zbi_header_t* bootdata) {
-    add_cpu_topology(bootdata);
+  add_cpu_topology(bootdata);
 
-    // add memory configuration
-    append_boot_item(bootdata, ZBI_TYPE_MEM_CONFIG, 0, &mem_config,
-                     sizeof(zbi_mem_range_t) * countof(mem_config));
+  // add memory configuration
+  append_boot_item(bootdata, ZBI_TYPE_MEM_CONFIG, 0, &mem_config,
+                   sizeof(zbi_mem_range_t) * countof(mem_config));
 
-    // add kernel drivers
-    append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_PL011_UART, &uart_driver,
-                     sizeof(uart_driver));
+  // add kernel drivers
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_PL011_UART, &uart_driver,
+                   sizeof(uart_driver));
 
-    // append the gic information from the specific gic version we detected from the
-    // device tree.
-    if (saved_gic_version == 2) {
-        append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2, &gicv2_driver,
-                         sizeof(gicv2_driver));
-    } else if (saved_gic_version >= 3) {
-        append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3, &gicv3_driver,
-                         sizeof(gicv3_driver));
-    } else {
-        fail("failed to detect gic version from device tree\n");
-    }
+  // append the gic information from the specific gic version we detected from the
+  // device tree.
+  if (saved_gic_version == 2) {
+    append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2, &gicv2_driver,
+                     sizeof(gicv2_driver));
+  } else if (saved_gic_version >= 3) {
+    append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3, &gicv3_driver,
+                     sizeof(gicv3_driver));
+  } else {
+    fail("failed to detect gic version from device tree\n");
+  }
 
-    append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_PSCI, &psci_driver,
-                     sizeof(psci_driver));
-    append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GENERIC_TIMER, &timer_driver,
-                     sizeof(timer_driver));
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_PSCI, &psci_driver,
+                   sizeof(psci_driver));
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GENERIC_TIMER, &timer_driver,
+                   sizeof(timer_driver));
 
-    // add platform ID
-    append_boot_item(bootdata, ZBI_TYPE_PLATFORM_ID, 0, &platform_id, sizeof(platform_id));
+  // add platform ID
+  append_boot_item(bootdata, ZBI_TYPE_PLATFORM_ID, 0, &platform_id, sizeof(platform_id));
 }
 
 static void set_cpu_count(uint32_t new_count) {
-    if (new_count > 0) {
-        cpu_count = new_count;
-    }
+  if (new_count > 0) {
+    cpu_count = new_count;
+  }
 }

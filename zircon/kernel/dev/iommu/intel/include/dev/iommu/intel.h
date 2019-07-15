@@ -4,14 +4,17 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_DEV_IOMMU_INTEL_INCLUDE_DEV_IOMMU_INTEL_H_
+#define ZIRCON_KERNEL_DEV_IOMMU_INTEL_INCLUDE_DEV_IOMMU_INTEL_H_
 
 #include <dev/iommu.h>
 #include <fbl/ref_ptr.h>
 #include <zircon/syscalls/iommu.h>
 
 class IntelIommu {
-public:
-    static zx_status_t Create(ktl::unique_ptr<const uint8_t[]> desc, size_t desc_len,
-                              fbl::RefPtr<Iommu>* out);
+ public:
+  static zx_status_t Create(ktl::unique_ptr<const uint8_t[]> desc, size_t desc_len,
+                            fbl::RefPtr<Iommu>* out);
 };
+
+#endif  // ZIRCON_KERNEL_DEV_IOMMU_INTEL_INCLUDE_DEV_IOMMU_INTEL_H_

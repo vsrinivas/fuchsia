@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_DEV_TIMER_ARM_GENERIC_INCLUDE_DEV_TIMER_ARM_GENERIC_H_
+#define ZIRCON_KERNEL_DEV_TIMER_ARM_GENERIC_INCLUDE_DEV_TIMER_ARM_GENERIC_H_
 
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -16,3 +17,5 @@ __BEGIN_CDECLS
 zx_time_t cntpct_to_zx_time(uint64_t cntpct);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_DEV_TIMER_ARM_GENERIC_INCLUDE_DEV_TIMER_ARM_GENERIC_H_

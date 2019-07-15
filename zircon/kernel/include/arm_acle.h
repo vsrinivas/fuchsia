@@ -4,20 +4,19 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_ARM_ACLE_H_
+#define ZIRCON_KERNEL_INCLUDE_ARM_ACLE_H_
 
 // ARM C Language Extensions header for Zircon.
 // This header includes the toolchain-provided ACLE implementation and fills in the missing pieces.
 
 // Include arm_acle.h from the toolchain headers.
 #include_next <arm_acle.h>
-
 #include <stdint.h>
 
 #ifndef __clang__
 
 // GCC's arm_acle.h is missing implementations of the following ARM-standard APIs.
-
 
 // From ARM ACLE spec, 8.3 Memory Barriers
 //   "Memory barriers ensure specific ordering properties between memory accesses. ... The
@@ -35,12 +34,11 @@
 // the contents of memory. This option acts as an atomic_signal_fence() (compiler barrier).
 
 // Data Memory Barrier.
-#define __dmb(mb)   __asm__ volatile("dmb %0" :: "i"(mb) : "memory")
+#define __dmb(mb) __asm__ volatile("dmb %0" ::"i"(mb) : "memory")
 // Data Synchronization Barrier.
-#define __dsb(mb)   __asm__ volatile("dsb %0" :: "i"(mb) : "memory")
+#define __dsb(mb) __asm__ volatile("dsb %0" ::"i"(mb) : "memory")
 // Instruction Synchronization Barrier.
-#define __isb(mb)   __asm__ volatile("isb %0" :: "i"(mb) : "memory")
-
+#define __isb(mb) __asm__ volatile("isb %0" ::"i"(mb) : "memory")
 
 // From ARM ACLE spec, 8.4 Hints
 //   "The intrinsics in this section are available for all targets. They may be no-ops (i.e.
@@ -52,16 +50,15 @@
 // This option acts as an atomic_signal_fence() (compiler barrier).
 
 // Set Event.
-#define __sev()     __asm__ volatile("sev" ::: "memory")
+#define __sev() __asm__ volatile("sev" ::: "memory")
 // Set Event Local.
-#define __sevl()    __asm__ volatile("sevl" ::: "memory")
+#define __sevl() __asm__ volatile("sevl" ::: "memory")
 // Wait For Event.
-#define __wfe()     __asm__ volatile("wfe" ::: "memory")
+#define __wfe() __asm__ volatile("wfe" ::: "memory")
 // Wait For Interrupt.
-#define __wfi()     __asm__ volatile("wfi" ::: "memory")
+#define __wfi() __asm__ volatile("wfi" ::: "memory")
 // Yield.
-#define __yield()   __asm__ volatile("yield" ::: "memory")
-
+#define __yield() __asm__ volatile("yield" ::: "memory")
 
 // Read (MRS) or write (MSR) a system register.
 // Registers may be referenced with a symbolic name string, such as "tpidrro_el0" or by the
@@ -75,33 +72,35 @@
 // Call __isb() after one or more __arm_wsr() calls.
 
 // Read 64-bit system register.
-#define __arm_rsr64(reg) \
-    ({                                                \
-        uint64_t _val;                                \
-        __asm__ volatile("mrs %0," reg : "=r"(_val)); \
-        _val;                                         \
-    })
+#define __arm_rsr64(reg)                          \
+  ({                                              \
+    uint64_t _val;                                \
+    __asm__ volatile("mrs %0," reg : "=r"(_val)); \
+    _val;                                         \
+  })
 
 // Read 32-bit system register.
-#define __arm_rsr(reg) \
-    ({                                                \
-        uint32_t _val;                                \
-        __asm__ volatile("mrs %0," reg : "=r"(_val)); \
-        _val;                                         \
-    })
+#define __arm_rsr(reg)                            \
+  ({                                              \
+    uint32_t _val;                                \
+    __asm__ volatile("mrs %0," reg : "=r"(_val)); \
+    _val;                                         \
+  })
 
 // Write 64-bit system register.
-#define __arm_wsr64(reg, val) \
-    ({                                                    \
-        uint64_t _val = (val);                            \
-        __asm__ volatile("msr " reg ", %0" :: "r"(_val)); \
-    })
+#define __arm_wsr64(reg, val)                        \
+  ({                                                 \
+    uint64_t _val = (val);                           \
+    __asm__ volatile("msr " reg ", %0" ::"r"(_val)); \
+  })
 
 // Write 32-bit system register.
-#define __arm_wsr(reg, val) \
-    ({                                                    \
-        uint32_t _val = (val);                            \
-        __asm__ volatile("msr " reg ", %0" :: "r"(_val)); \
-    })
+#define __arm_wsr(reg, val)                          \
+  ({                                                 \
+    uint32_t _val = (val);                           \
+    __asm__ volatile("msr " reg ", %0" ::"r"(_val)); \
+  })
 
-#endif // !__clang__
+#endif  // !__clang__
+
+#endif  // ZIRCON_KERNEL_INCLUDE_ARM_ACLE_H_

@@ -5,11 +5,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_ARCH_MP_H_
+#define ZIRCON_KERNEL_INCLUDE_ARCH_MP_H_
 
-#include <sys/types.h>
 #include <kernel/cpu.h>
 #include <kernel/mp.h>
+#include <sys/types.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS
@@ -51,3 +52,5 @@ zx_status_t arch_mp_cpu_unplug(cpu_num_t cpu_id);
 void arch_mp_init_percpu(void);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_INCLUDE_ARCH_MP_H_

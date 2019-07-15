@@ -4,7 +4,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_SCHED_H_
+#define ZIRCON_KERNEL_INCLUDE_KERNEL_SCHED_H_
 
 #include <kernel/thread.h>
 #include <list.h>
@@ -30,10 +31,8 @@ void sched_migrate(thread_t* t) TA_REQ(thread_lock);
 // the local CPU (if needed) as well as any other CPUs.  This allows callers to
 // bacth update the state of several threads in a priority inheritance chain
 // before finally rescheduling.
-void sched_inherit_priority(thread_t* t,
-                            int pri,
-                            bool* local_resched,
-                            cpu_mask_t* accum_cpu_mask) TA_REQ(thread_lock);
+void sched_inherit_priority(thread_t* t, int pri, bool* local_resched, cpu_mask_t* accum_cpu_mask)
+    TA_REQ(thread_lock);
 
 // set the priority of a thread and reset the boost value. This function might reschedule.
 // pri should be 0 <= to <= MAX_PRIORITY.
@@ -57,3 +56,5 @@ void sched_preempt_timer_tick(zx_time_t now);
 #endif
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_SCHED_H_

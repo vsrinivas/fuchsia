@@ -5,10 +5,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_LIBC_INCLUDE_RAND_H_
+#define ZIRCON_KERNEL_LIB_LIBC_INCLUDE_RAND_H_
 
-#include <zircon/compiler.h>
 #include <sys/types.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
@@ -23,3 +24,5 @@ void srand(unsigned int seed);
 int rand_r(uint64_t* seed);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_LIB_LIBC_INCLUDE_RAND_H_

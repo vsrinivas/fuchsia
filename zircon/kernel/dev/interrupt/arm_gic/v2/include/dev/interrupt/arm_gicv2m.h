@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_V2_INCLUDE_DEV_INTERRUPT_ARM_GICV2M_H_
+#define ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_V2_INCLUDE_DEV_INTERRUPT_ARM_GICV2M_H_
 
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -16,10 +17,10 @@
  * @see arm_gicv2m_get_frame_info
  */
 typedef struct arm_gicv2m_frame_info {
-    uint start_spi_id; /** The first valid SPI ID in the frame */
-    uint end_spi_id;   /** The last valid SPI ID in the frame */
-    paddr_t doorbell;  /** The physical address of the doorbell register */
-    uint32_t iid;      /** The value of the Interface ID register */
+  uint start_spi_id; /** The first valid SPI ID in the frame */
+  uint end_spi_id;   /** The last valid SPI ID in the frame */
+  paddr_t doorbell;  /** The physical address of the doorbell register */
+  uint32_t iid;      /** The value of the Interface ID register */
 } arm_gicv2m_frame_info_t;
 
 /**
@@ -31,7 +32,8 @@ typedef struct arm_gicv2m_frame_info {
  * array must be alive for the lifetime of the system.
  * @param reg_frame_count The number of entries in the reg_frames array.
  */
-void arm_gicv2m_init(const paddr_t* reg_frames, const vaddr_t* reg_frames_virt, uint reg_frame_count);
+void arm_gicv2m_init(const paddr_t* reg_frames, const vaddr_t* reg_frames_virt,
+                     uint reg_frame_count);
 
 /**
  * Fetch info about a specific GICv2m register frame
@@ -47,3 +49,5 @@ void arm_gicv2m_init(const paddr_t* reg_frames, const vaddr_t* reg_frames_virt, 
  *     appear to be corrupt or invalid (internal error)
  */
 zx_status_t arm_gicv2m_get_frame_info(uint frame_ndx, arm_gicv2m_frame_info_t* out_info);
+
+#endif  // ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_V2_INCLUDE_DEV_INTERRUPT_ARM_GICV2M_H_

@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_ARCH_DEBUGGER_H_
+#define ZIRCON_KERNEL_INCLUDE_ARCH_DEBUGGER_H_
 
 #include <stdbool.h>
 #include <sys/types.h>
@@ -42,3 +43,5 @@ zx_status_t arch_get_x86_register_gs(struct thread* thread, uint64_t* out);
 zx_status_t arch_set_x86_register_gs(struct thread* thread, const uint64_t* in);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_INCLUDE_ARCH_DEBUGGER_H_

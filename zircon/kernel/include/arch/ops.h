@@ -5,23 +5,24 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_ARCH_OPS_H_
+#define ZIRCON_KERNEL_INCLUDE_ARCH_OPS_H_
 
 /* #defines for the cache routines below */
 #define ICACHE 1
 #define DCACHE 2
-#define UCACHE (ICACHE|DCACHE)
+#define UCACHE (ICACHE | DCACHE)
 
 #ifndef __ASSEMBLER__
 
 #include <arch/defines.h>
 #include <kernel/atomic.h>
 #include <kernel/cpu.h>
-#include <zircon/compiler.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <sys/types.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
@@ -54,7 +55,7 @@ void arch_sync_cache_range(addr_t start, size_t len);
 typedef struct event event_t;
 void arch_flush_state_and_halt(event_t *flush_done) __NO_RETURN;
 
-int arch_idle_thread_routine(void*) __NO_RETURN;
+int arch_idle_thread_routine(void *) __NO_RETURN;
 
 /* function to call in spinloops to idle */
 static void arch_spinloop_pause(void);
@@ -73,17 +74,17 @@ void arch_zero_page(void *);
  * arch_blocking_disallowed() should only be true when interrupts are
  * disabled. */
 static inline bool arch_blocking_disallowed(void) {
-    return READ_PERCPU_FIELD32(blocking_disallowed);
+  return READ_PERCPU_FIELD32(blocking_disallowed);
 }
 
 static inline void arch_set_blocking_disallowed(bool value) {
-    WRITE_PERCPU_FIELD32(blocking_disallowed, value);
+  WRITE_PERCPU_FIELD32(blocking_disallowed, value);
 }
 
-static inline uint32_t arch_num_spinlocks_held(void) {
-    return READ_PERCPU_FIELD32(num_spinlocks);
-}
+static inline uint32_t arch_num_spinlocks_held(void) { return READ_PERCPU_FIELD32(num_spinlocks); }
 
 __END_CDECLS
 
-#endif // !__ASSEMBLER__
+#endif  // !__ASSEMBLER__
+
+#endif  // ZIRCON_KERNEL_INCLUDE_ARCH_OPS_H_

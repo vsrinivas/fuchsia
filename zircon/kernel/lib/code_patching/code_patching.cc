@@ -12,12 +12,11 @@ extern const CodePatchInfo __start_code_patch_table[];
 extern const CodePatchInfo __stop_code_patch_table[];
 
 static void apply_startup_code_patches(uint level) {
-    for (const CodePatchInfo* patch = __start_code_patch_table;
-         patch < __stop_code_patch_table; ++patch) {
-        patch->apply_func(patch);
-        arch_sync_cache_range((addr_t)patch->dest_addr, patch->dest_size);
-    }
+  for (const CodePatchInfo* patch = __start_code_patch_table; patch < __stop_code_patch_table;
+       ++patch) {
+    patch->apply_func(patch);
+    arch_sync_cache_range((addr_t)patch->dest_addr, patch->dest_size);
+  }
 }
 
-LK_INIT_HOOK(code_patching, apply_startup_code_patches,
-             LK_INIT_LEVEL_ARCH_EARLY)
+LK_INIT_HOOK(code_patching, apply_startup_code_patches, LK_INIT_LEVEL_ARCH_EARLY)

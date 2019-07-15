@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_EVENT_H_
+#define ZIRCON_KERNEL_INCLUDE_KERNEL_EVENT_H_
 
 #include <err.h>
 #include <kernel/thread.h>
@@ -16,24 +17,22 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#define EVENT_MAGIC (0x65766E74) // "evnt"
+#define EVENT_MAGIC (0x65766E74)  // "evnt"
 
 typedef struct event {
-    int magic;
-    bool signaled;
-    uint flags;
-    wait_queue_t wait;
+  int magic;
+  bool signaled;
+  uint flags;
+  wait_queue_t wait;
 } event_t;
 
 #define EVENT_FLAG_AUTOUNSIGNAL 1
 
-#define EVENT_INITIAL_VALUE(e, initial, _flags)     \
-    {                                               \
-        .magic = EVENT_MAGIC,                       \
-        .signaled = initial,                        \
-        .flags = _flags,                            \
-        .wait = WAIT_QUEUE_INITIAL_VALUE((e).wait), \
-    }
+#define EVENT_INITIAL_VALUE(e, initial, _flags)                 \
+  {                                                             \
+    .magic = EVENT_MAGIC, .signaled = initial, .flags = _flags, \
+    .wait = WAIT_QUEUE_INITIAL_VALUE((e).wait),                 \
+  }
 
 // Rules for Events:
 // - Events may be signaled from interrupt context *but* the reschedule
@@ -51,7 +50,7 @@ typedef struct event {
 //     event_unsignal() is called.
 
 static inline void event_init(event_t* e, bool initial, uint flags) {
-    *e = (event_t)EVENT_INITIAL_VALUE(*e, initial, flags);
+  *e = (event_t)EVENT_INITIAL_VALUE(*e, initial, flags);
 }
 void event_destroy(event_t*);
 
@@ -65,7 +64,7 @@ zx_status_t event_wait_interruptable(event_t* e, const Deadline& deadline);
 
 // no deadline, non interruptable version of the above.
 static inline zx_status_t event_wait(event_t* e) {
-    return event_wait_deadline(e, ZX_TIME_INFINITE, false);
+  return event_wait_deadline(e, ZX_TIME_INFINITE, false);
 }
 
 // Version of event_wait_deadline that ignores existing signals in
@@ -77,58 +76,41 @@ int event_signal(event_t*, bool reschedule);
 int event_signal_thread_locked(event_t*) TA_REQ(thread_lock);
 zx_status_t event_unsignal(event_t*);
 
-static inline bool event_initialized(const event_t* e) {
-    return e->magic == EVENT_MAGIC;
-}
+static inline bool event_initialized(const event_t* e) { return e->magic == EVENT_MAGIC; }
 
-static inline bool event_signaled(const event_t* e) {
-    return e->signaled;
-}
+static inline bool event_signaled(const event_t* e) { return e->signaled; }
 
 // C++ wrapper. This should be waited on from only a single thread, but may be
 // signaled from many threads (Signal() is thread-safe).
 class Event {
-public:
-    constexpr explicit Event(uint32_t opts = 0)
-        : event_(EVENT_INITIAL_VALUE(event_, false, opts)) {}
-    ~Event() {
-        event_destroy(&event_);
-    }
+ public:
+  constexpr explicit Event(uint32_t opts = 0) : event_(EVENT_INITIAL_VALUE(event_, false, opts)) {}
+  ~Event() { event_destroy(&event_); }
 
-    Event(const Event&) = delete;
-    Event& operator=(const Event&) = delete;
+  Event(const Event&) = delete;
+  Event& operator=(const Event&) = delete;
 
-    // Returns:
-    // ZX_OK - signaled
-    // ZX_ERR_TIMED_OUT - time out expired
-    // ZX_ERR_INTERNAL_INTR_KILLED - thread killed
-    // ZX_ERR_INTERNAL_INTR_RETRY - thread is suspended
-    // Or the |status| which the caller specified in Event::Signal(status)
-    zx_status_t Wait(const Deadline& deadline) {
-        return event_wait_interruptable(&event_, deadline);
-    }
+  // Returns:
+  // ZX_OK - signaled
+  // ZX_ERR_TIMED_OUT - time out expired
+  // ZX_ERR_INTERNAL_INTR_KILLED - thread killed
+  // ZX_ERR_INTERNAL_INTR_RETRY - thread is suspended
+  // Or the |status| which the caller specified in Event::Signal(status)
+  zx_status_t Wait(const Deadline& deadline) { return event_wait_interruptable(&event_, deadline); }
 
-    // Same as Wait() but waits forever and gives a mask of signals to ignore.
-    zx_status_t WaitWithMask(uint signal_mask) {
-        return event_wait_with_mask(&event_, signal_mask);
-    }
+  // Same as Wait() but waits forever and gives a mask of signals to ignore.
+  zx_status_t WaitWithMask(uint signal_mask) { return event_wait_with_mask(&event_, signal_mask); }
 
-    void Signal(zx_status_t status = ZX_OK) {
-        event_signal_etc(&event_, true, status);
-    }
+  void Signal(zx_status_t status = ZX_OK) { event_signal_etc(&event_, true, status); }
 
-    void SignalThreadLocked() TA_REQ(thread_lock) {
-        event_signal_thread_locked(&event_);
-    }
+  void SignalThreadLocked() TA_REQ(thread_lock) { event_signal_thread_locked(&event_); }
 
-    void SignalNoResched() {
-        event_signal(&event_, false);
-    }
+  void SignalNoResched() { event_signal(&event_, false); }
 
-    zx_status_t Unsignal() {
-        return event_unsignal(&event_);
-    }
+  zx_status_t Unsignal() { return event_unsignal(&event_); }
 
-private:
-    event_t event_;
+ private:
+  event_t event_;
 };
+
+#endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_EVENT_H_

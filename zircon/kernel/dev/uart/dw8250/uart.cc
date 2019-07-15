@@ -94,140 +94,136 @@ static uint32_t uart_irq = 0;
 
 static cbuf_t uart_rx_buf;
 static bool uart_tx_irq_enabled = false;
-static event_t uart_dputc_event = EVENT_INITIAL_VALUE(uart_dputc_event,
-                                                      true,
-                                                      EVENT_FLAG_AUTOUNSIGNAL);
+static event_t uart_dputc_event =
+    EVENT_INITIAL_VALUE(uart_dputc_event, true, EVENT_FLAG_AUTOUNSIGNAL);
 static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 #define UARTREG(reg) (*(volatile uint32_t*)((uart_base) + (reg)))
 
 static interrupt_eoi dw8250_uart_irq(void* arg) {
-    // read interrupt status and mask
-    while (UARTREG(UART_LSR) & UART_LSR_DR) {
-        if (cbuf_space_avail(&uart_rx_buf) == 0) {
-            break;
-        }
-        char c = UARTREG(UART_RBR) & 0xFF;
-        cbuf_write_char(&uart_rx_buf, c);
+  // read interrupt status and mask
+  while (UARTREG(UART_LSR) & UART_LSR_DR) {
+    if (cbuf_space_avail(&uart_rx_buf) == 0) {
+      break;
     }
+    char c = UARTREG(UART_RBR) & 0xFF;
+    cbuf_write_char(&uart_rx_buf, c);
+  }
 
-    // Signal if anyone is waiting to TX
-    if (UARTREG(UART_LSR) & UART_LSR_THRE) {
-        UARTREG(UART_IER) &= ~UART_IER_ETBEI; // Disable TX interrupt
-        spin_lock(&uart_spinlock);
-        // TODO(andresoportus): Revisit all UART drivers usage of events, from event.h:
-        // 1. The reschedule flag is not supposed to be true in interrupt context.
-        // 2. FLAG_AUTOUNSIGNAL only wakes up one thread.
-        event_signal(&uart_dputc_event, true);
-        spin_unlock(&uart_spinlock);
-    }
+  // Signal if anyone is waiting to TX
+  if (UARTREG(UART_LSR) & UART_LSR_THRE) {
+    UARTREG(UART_IER) &= ~UART_IER_ETBEI;  // Disable TX interrupt
+    spin_lock(&uart_spinlock);
+    // TODO(andresoportus): Revisit all UART drivers usage of events, from event.h:
+    // 1. The reschedule flag is not supposed to be true in interrupt context.
+    // 2. FLAG_AUTOUNSIGNAL only wakes up one thread.
+    event_signal(&uart_dputc_event, true);
+    spin_unlock(&uart_spinlock);
+  }
 
-    return IRQ_EOI_DEACTIVATE;
+  return IRQ_EOI_DEACTIVATE;
 }
 
 /* panic-time getc/putc */
 static int dw8250_uart_pputc(char c) {
-    if (!uart_base) {
-        return -1;
-    }
+  if (!uart_base) {
+    return -1;
+  }
 
-    // spin while fifo is full
-    while (!(UARTREG(UART_LSR) & UART_LSR_THRE))
-        ;
-    UARTREG(UART_THR) = c;
+  // spin while fifo is full
+  while (!(UARTREG(UART_LSR) & UART_LSR_THRE))
+    ;
+  UARTREG(UART_THR) = c;
 
-    return 1;
+  return 1;
 }
 
 static int dw8250_uart_pgetc() {
-    if (!uart_base) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+  if (!uart_base) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
-    // spin while fifo is empty
-    while (!(UARTREG(UART_LSR) & UART_LSR_DR))
-        ;
-    return UARTREG(UART_RBR);
+  // spin while fifo is empty
+  while (!(UARTREG(UART_LSR) & UART_LSR_DR))
+    ;
+  return UARTREG(UART_RBR);
 }
 
 static int dw8250_uart_getc(bool wait) {
-    if (!uart_base) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+  if (!uart_base) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
-    if (initialized) {
-        char c;
-        if (cbuf_read_char(&uart_rx_buf, &c, wait) == 1) {
-            return c;
-        }
-        return ZX_ERR_INTERNAL;
-    } else {
-        // Interrupts are not enabled yet. Use panic calls for now
-        return dw8250_uart_pgetc();
+  if (initialized) {
+    char c;
+    if (cbuf_read_char(&uart_rx_buf, &c, wait) == 1) {
+      return c;
     }
+    return ZX_ERR_INTERNAL;
+  } else {
+    // Interrupts are not enabled yet. Use panic calls for now
+    return dw8250_uart_pgetc();
+  }
 }
 
-static void dw8250_dputs(const char* str, size_t len,
-                        bool block, bool map_NL) {
-    spin_lock_saved_state_t state;
-    bool copied_CR = false;
+static void dw8250_dputs(const char* str, size_t len, bool block, bool map_NL) {
+  spin_lock_saved_state_t state;
+  bool copied_CR = false;
 
-    if (!uart_base) {
-        return;
-    }
-    if (!uart_tx_irq_enabled) {
-        block = false;
-    }
-    spin_lock_irqsave(&uart_spinlock, state);
+  if (!uart_base) {
+    return;
+  }
+  if (!uart_tx_irq_enabled) {
+    block = false;
+  }
+  spin_lock_irqsave(&uart_spinlock, state);
 
-    while (len > 0) {
-        // is FIFO full?
-        while (!(UARTREG(UART_LSR) & UART_LSR_THRE)) {
-            spin_unlock_irqrestore(&uart_spinlock, state);
-            if (block) {
-                UARTREG(UART_IER) |= UART_IER_ETBEI; // Enable TX interrupt.
-                event_wait(&uart_dputc_event);
-            } else {
-                arch_spinloop_pause();
-            }
-            spin_lock_irqsave(&uart_spinlock, state);
-        }
-        if (*str == '\n' && map_NL && !copied_CR) {
-            copied_CR = true;
-            dw8250_uart_pputc('\r');
-        } else {
-            copied_CR = false;
-            dw8250_uart_pputc(*str++);
-            len--;
-        }
+  while (len > 0) {
+    // is FIFO full?
+    while (!(UARTREG(UART_LSR) & UART_LSR_THRE)) {
+      spin_unlock_irqrestore(&uart_spinlock, state);
+      if (block) {
+        UARTREG(UART_IER) |= UART_IER_ETBEI;  // Enable TX interrupt.
+        event_wait(&uart_dputc_event);
+      } else {
+        arch_spinloop_pause();
+      }
+      spin_lock_irqsave(&uart_spinlock, state);
     }
-    spin_unlock_irqrestore(&uart_spinlock, state);
+    if (*str == '\n' && map_NL && !copied_CR) {
+      copied_CR = true;
+      dw8250_uart_pputc('\r');
+    } else {
+      copied_CR = false;
+      dw8250_uart_pputc(*str++);
+      len--;
+    }
+  }
+  spin_unlock_irqrestore(&uart_spinlock, state);
 }
 
 static void dw8250_uart_init(const void* driver_data, uint32_t length) {
-    return;
-    // create circular buffer to hold received data
-    cbuf_initialize(&uart_rx_buf, RXBUF_SIZE);
+  return;
+  // create circular buffer to hold received data
+  cbuf_initialize(&uart_rx_buf, RXBUF_SIZE);
 
-    if (dlog_bypass() == true) {
-        uart_tx_irq_enabled = false;
-        return;
-    }
-    zx_status_t status = register_int_handler(uart_irq, &dw8250_uart_irq, NULL);
-    DEBUG_ASSERT(status == ZX_OK);
-
-    // enable interrupt
-    unmask_interrupt(uart_irq);
-
-    UARTREG(UART_IER) |= UART_IER_ERBFI; // Enable RX interrupt.
-    initialized = true;
-
-    // Start up tx driven output.
-    uart_tx_irq_enabled = true;
-}
-
-static void dw8250_start_panic() {
+  if (dlog_bypass() == true) {
     uart_tx_irq_enabled = false;
+    return;
+  }
+  zx_status_t status = register_int_handler(uart_irq, &dw8250_uart_irq, NULL);
+  DEBUG_ASSERT(status == ZX_OK);
+
+  // enable interrupt
+  unmask_interrupt(uart_irq);
+
+  UARTREG(UART_IER) |= UART_IER_ERBFI;  // Enable RX interrupt.
+  initialized = true;
+
+  // Start up tx driven output.
+  uart_tx_irq_enabled = true;
 }
+
+static void dw8250_start_panic() { uart_tx_irq_enabled = false; }
 
 static const struct pdev_uart_ops uart_ops = {
     .getc = dw8250_uart_getc,
@@ -239,16 +235,17 @@ static const struct pdev_uart_ops uart_ops = {
 
 extern "C" void uart_mark(unsigned char x);
 static void dw8250_uart_init_early(const void* driver_data, uint32_t length) {
-    ASSERT(length >= sizeof(dcfg_simple_t));
-    auto driver = static_cast<const dcfg_simple_t*>(driver_data);
-    ASSERT(driver->mmio_phys && driver->irq);
+  ASSERT(length >= sizeof(dcfg_simple_t));
+  auto driver = static_cast<const dcfg_simple_t*>(driver_data);
+  ASSERT(driver->mmio_phys && driver->irq);
 
-    uart_base = periph_paddr_to_vaddr(driver->mmio_phys);
-    ASSERT(uart_base);
-    uart_irq = driver->irq;
+  uart_base = periph_paddr_to_vaddr(driver->mmio_phys);
+  ASSERT(uart_base);
+  uart_irq = driver->irq;
 
-    pdev_register_uart(&uart_ops);
+  pdev_register_uart(&uart_ops);
 }
 
-LK_PDEV_INIT(dw8250_uart_init_early, KDRV_DW8250_UART, dw8250_uart_init_early, LK_INIT_LEVEL_PLATFORM_EARLY)
+LK_PDEV_INIT(dw8250_uart_init_early, KDRV_DW8250_UART, dw8250_uart_init_early,
+             LK_INIT_LEVEL_PLATFORM_EARLY)
 LK_PDEV_INIT(dw8250_uart_init, KDRV_DW8250_UART, dw8250_uart_init, LK_INIT_LEVEL_PLATFORM)

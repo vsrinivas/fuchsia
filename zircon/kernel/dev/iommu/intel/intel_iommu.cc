@@ -11,5 +11,5 @@
 
 zx_status_t IntelIommu::Create(ktl::unique_ptr<const uint8_t[]> desc, size_t desc_len,
                                fbl::RefPtr<Iommu>* out) {
-    return intel_iommu::IommuImpl::Create(ktl::move(desc), desc_len, out);
+  return intel_iommu::IommuImpl::Create(ktl::move(desc), desc_len, out);
 }

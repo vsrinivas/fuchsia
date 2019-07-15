@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_VIRTUAL_INTERRUPT_DISPATCHER_H_
+#define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_VIRTUAL_INTERRUPT_DISPATCHER_H_
 
 #include <fbl/ref_ptr.h>
 #include <object/handle.h>
@@ -13,21 +14,22 @@
 #include <zircon/types.h>
 
 class VirtualInterruptDispatcher final : public InterruptDispatcher {
-public:
-    static zx_status_t Create(KernelHandle<InterruptDispatcher>* handle,
-                              zx_rights_t* rights,
-                              uint32_t options);
+ public:
+  static zx_status_t Create(KernelHandle<InterruptDispatcher>* handle, zx_rights_t* rights,
+                            uint32_t options);
 
-    ~VirtualInterruptDispatcher() final;
+  ~VirtualInterruptDispatcher() final;
 
-    VirtualInterruptDispatcher(const InterruptDispatcher &) = delete;
-    VirtualInterruptDispatcher& operator=(const InterruptDispatcher &) = delete;
+  VirtualInterruptDispatcher(const InterruptDispatcher&) = delete;
+  VirtualInterruptDispatcher& operator=(const InterruptDispatcher&) = delete;
 
-protected:
-    void MaskInterrupt() final;
-    void UnmaskInterrupt() final;
-    void UnregisterInterruptHandler() final;
+ protected:
+  void MaskInterrupt() final;
+  void UnmaskInterrupt() final;
+  void UnregisterInterruptHandler() final;
 
-private:
-    VirtualInterruptDispatcher();
+ private:
+  VirtualInterruptDispatcher();
 };
+
+#endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_VIRTUAL_INTERRUPT_DISPATCHER_H_

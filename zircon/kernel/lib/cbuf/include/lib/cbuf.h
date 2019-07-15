@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_CBUF_INCLUDE_LIB_CBUF_H_
+#define ZIRCON_KERNEL_LIB_CBUF_INCLUDE_LIB_CBUF_H_
 
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
@@ -15,12 +16,12 @@
 __BEGIN_CDECLS
 
 typedef struct cbuf {
-    uint head;
-    uint tail;
-    uint len_pow2;
-    char* buf;
-    event_t event;
-    spin_lock_t lock;
+  uint head;
+  uint tail;
+  uint len_pow2;
+  char* buf;
+  event_t event;
+  spin_lock_t lock;
 } cbuf_t;
 
 /**
@@ -60,3 +61,5 @@ size_t cbuf_read_char(cbuf_t* cbuf, char* c, bool block);
 size_t cbuf_write_char(cbuf_t* cbuf, char c);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_LIB_CBUF_INCLUDE_LIB_CBUF_H_

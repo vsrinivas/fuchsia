@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_REG_H_
+#define ZIRCON_KERNEL_INCLUDE_REG_H_
 
 #include <stdint.h>
 
@@ -15,10 +16,14 @@
 #define REG16(addr) ((volatile uint16_t *)(uintptr_t)(addr))
 #define REG8(addr) ((volatile uint8_t *)(uintptr_t)(addr))
 
-#define RMWREG64(addr, startbit, width, val) *REG64(addr) = (*REG64(addr) & ~(((1<<(width)) - 1) << (startbit))) | ((val) << (startbit))
-#define RMWREG32(addr, startbit, width, val) *REG32(addr) = (*REG32(addr) & ~(((1<<(width)) - 1) << (startbit))) | ((val) << (startbit))
-#define RMWREG16(addr, startbit, width, val) *REG16(addr) = (*REG16(addr) & ~(((1<<(width)) - 1) << (startbit))) | ((val) << (startbit))
-#define RMWREG8(addr, startbit, width, val) *REG8(addr) = (*REG8(addr) & ~(((1<<(width)) - 1) << (startbit))) | ((val) << (startbit))
+#define RMWREG64(addr, startbit, width, val) \
+  *REG64(addr) = (*REG64(addr) & ~(((1 << (width)) - 1) << (startbit))) | ((val) << (startbit))
+#define RMWREG32(addr, startbit, width, val) \
+  *REG32(addr) = (*REG32(addr) & ~(((1 << (width)) - 1) << (startbit))) | ((val) << (startbit))
+#define RMWREG16(addr, startbit, width, val) \
+  *REG16(addr) = (*REG16(addr) & ~(((1 << (width)) - 1) << (startbit))) | ((val) << (startbit))
+#define RMWREG8(addr, startbit, width, val) \
+  *REG8(addr) = (*REG8(addr) & ~(((1 << (width)) - 1) << (startbit))) | ((val) << (startbit))
 
 #define writell(v, a) (*REG64(a) = (v))
 #define readll(a) (*REG64(a))
@@ -28,3 +33,5 @@
 #define readw(a) (*REG16(a))
 #define writeb(v, a) (*REG8(a) = (v))
 #define readb(a) (*REG8(a))
+
+#endif  // ZIRCON_KERNEL_INCLUDE_REG_H_

@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_BOOTALLOC_H_
+#define ZIRCON_KERNEL_VM_INCLUDE_VM_BOOTALLOC_H_
 
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -21,4 +22,6 @@ paddr_t boot_alloc_page_phys();
 extern paddr_t boot_alloc_start;
 extern paddr_t boot_alloc_end;
 
-} // extern "C"
+}  // extern "C"
+
+#endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_BOOTALLOC_H_

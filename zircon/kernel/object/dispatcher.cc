@@ -6,16 +6,13 @@
 
 #include "object/dispatcher.h"
 
-#include <inttypes.h>
-
 #include <arch/ops.h>
-#include <lib/ktrace.h>
-#include <lib/counters.h>
 #include <fbl/mutex.h>
+#include <inttypes.h>
 #include <ktl/atomic.h>
-
+#include <lib/counters.h>
+#include <lib/ktrace.h>
 #include <object/tls_slots.h>
-
 
 // kernel counters. The following counters never decrease.
 // counts the number of times a dispatcher has been created and destroyed.
@@ -32,52 +29,49 @@ namespace {
 ktl::atomic<zx_koid_t> global_koid(ZX_KOID_FIRST);
 
 zx_koid_t GenerateKernelObjectId() {
-    return global_koid.fetch_add(1ULL, ktl::memory_order_relaxed);
+  return global_koid.fetch_add(1ULL, ktl::memory_order_relaxed);
 }
 
 // Helper class that safely allows deleting Dispatchers without
 // risk of blowing up the kernel stack. It uses one TLS slot to
 // unwind the recursion.
 class SafeDeleter {
-public:
-    static void Delete(Dispatcher* kobj) {
-        auto deleter = reinterpret_cast<SafeDeleter*>(tls_get(TLS_ENTRY_KOBJ_DELETER));
-        if (deleter) {
-            // Delete() was called recursively.
-            deleter->pending_.push_front(kobj);
-        } else {
-            SafeDeleter deleter;
-            tls_set(TLS_ENTRY_KOBJ_DELETER, &deleter);
+ public:
+  static void Delete(Dispatcher* kobj) {
+    auto deleter = reinterpret_cast<SafeDeleter*>(tls_get(TLS_ENTRY_KOBJ_DELETER));
+    if (deleter) {
+      // Delete() was called recursively.
+      deleter->pending_.push_front(kobj);
+    } else {
+      SafeDeleter deleter;
+      tls_set(TLS_ENTRY_KOBJ_DELETER, &deleter);
 
-            do {
-                // This delete call can cause recursive calls to
-                // Dispatcher::fbl_recycle() and hence to Delete().
-                delete kobj;
+      do {
+        // This delete call can cause recursive calls to
+        // Dispatcher::fbl_recycle() and hence to Delete().
+        delete kobj;
 
-                kobj = deleter.pending_.pop_front();
-            } while (kobj);
+        kobj = deleter.pending_.pop_front();
+      } while (kobj);
 
-            tls_set(TLS_ENTRY_KOBJ_DELETER, nullptr);
-        }
+      tls_set(TLS_ENTRY_KOBJ_DELETER, nullptr);
     }
+  }
 
-private:
-    fbl::SinglyLinkedList<Dispatcher*, Dispatcher::DeleterListTraits> pending_;
+ private:
+  fbl::SinglyLinkedList<Dispatcher*, Dispatcher::DeleterListTraits> pending_;
 };
 
 }  // namespace
 
 Dispatcher::Dispatcher(zx_signals_t signals)
-    : koid_(GenerateKernelObjectId()),
-      handle_count_(0u),
-      signals_(signals) {
-
-    kcounter_add(dispatcher_create_count, 1);
+    : koid_(GenerateKernelObjectId()), handle_count_(0u), signals_(signals) {
+  kcounter_add(dispatcher_create_count, 1);
 }
 
 Dispatcher::~Dispatcher() {
-    ktrace(TAG_OBJECT_DELETE, (uint32_t)koid_, 0, 0, 0);
-    kcounter_add(dispatcher_destroy_count, 1);
+  ktrace(TAG_OBJECT_DELETE, (uint32_t)koid_, 0, 0, 0);
+  kcounter_add(dispatcher_destroy_count, 1);
 }
 
 // The refcount of this object has reached zero: delete self
@@ -87,9 +81,9 @@ Dispatcher::~Dispatcher() {
 // can control the lifetime of others. For example events do
 // not fall in this category.
 void Dispatcher::fbl_recycle() {
-    canary_.Assert();
+  canary_.Assert();
 
-    SafeDeleter::Delete(this);
+  SafeDeleter::Delete(this);
 }
 
 namespace {
@@ -97,27 +91,27 @@ namespace {
 template <typename Func, typename LockType>
 StateObserver::Flags CancelWithFunc(Dispatcher::ObserverList* observers,
                                     Lock<LockType>* observer_lock, Func f) {
-    StateObserver::Flags flags = 0;
+  StateObserver::Flags flags = 0;
 
-    {
-        Guard<LockType> guard{observer_lock};
-        for (auto it = observers->begin(); it != observers->end();) {
-            StateObserver::Flags it_flags = f(it.CopyPointer());
-            flags |= it_flags;
-            if (it_flags & StateObserver::kNeedRemoval) {
-                auto to_remove = it;
-                ++it;
-                observers->erase(to_remove);
-                to_remove->OnRemoved();
-                kcounter_add(dispatcher_cancel_count, 1);
-            } else {
-                ++it;
-            }
-        }
+  {
+    Guard<LockType> guard{observer_lock};
+    for (auto it = observers->begin(); it != observers->end();) {
+      StateObserver::Flags it_flags = f(it.CopyPointer());
+      flags |= it_flags;
+      if (it_flags & StateObserver::kNeedRemoval) {
+        auto to_remove = it;
+        ++it;
+        observers->erase(to_remove);
+        to_remove->OnRemoved();
+        kcounter_add(dispatcher_cancel_count, 1);
+      } else {
+        ++it;
+      }
     }
+  }
 
-    // We've processed the removal flag, so strip it
-    return flags & (~StateObserver::kNeedRemoval);
+  // We've processed the removal flag, so strip it
+  return flags & (~StateObserver::kNeedRemoval);
 }
 
 }  // namespace
@@ -127,87 +121,84 @@ StateObserver::Flags CancelWithFunc(Dispatcher::ObserverList* observers,
 // safety analysis is unable to prove that the accesses to |signals_|
 // and to |observers_| are always protected.
 template <typename LockType>
-void Dispatcher::AddObserverHelper(StateObserver* observer,
-                                   const StateObserver::CountInfo* cinfo,
+void Dispatcher::AddObserverHelper(StateObserver* observer, const StateObserver::CountInfo* cinfo,
                                    Lock<LockType>* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
-    canary_.Assert();
-    ZX_DEBUG_ASSERT(is_waitable());
-    DEBUG_ASSERT(observer != nullptr);
+  canary_.Assert();
+  ZX_DEBUG_ASSERT(is_waitable());
+  DEBUG_ASSERT(observer != nullptr);
 
-    StateObserver::Flags flags;
-    {
-        Guard<LockType> guard{lock};
+  StateObserver::Flags flags;
+  {
+    Guard<LockType> guard{lock};
 
-        flags = observer->OnInitialize(signals_, cinfo);
-        if (flags & StateObserver::kNeedRemoval) {
-            observer->OnRemoved();
-        } else {
-            observers_.push_front(observer);
-        }
+    flags = observer->OnInitialize(signals_, cinfo);
+    if (flags & StateObserver::kNeedRemoval) {
+      observer->OnRemoved();
+    } else {
+      observers_.push_front(observer);
     }
+  }
 
-    kcounter_add(dispatcher_observe_count, 1);
+  kcounter_add(dispatcher_observe_count, 1);
 }
 
 void Dispatcher::AddObserverLocked(StateObserver* observer, const StateObserver::CountInfo* cinfo) {
-    canary_.Assert();
+  canary_.Assert();
 
-    // Type tag and local NullLock to make lockdep happy.
-    struct DispatcherAddObserverLocked {};
-    DECLARE_LOCK(DispatcherAddObserverLocked, fbl::NullLock) lock;
+  // Type tag and local NullLock to make lockdep happy.
+  struct DispatcherAddObserverLocked {};
+  DECLARE_LOCK(DispatcherAddObserverLocked, fbl::NullLock) lock;
 
-    AddObserverHelper(observer, cinfo, &lock);
+  AddObserverHelper(observer, cinfo, &lock);
 }
 
 zx_status_t Dispatcher::AddObserver(StateObserver* observer) {
-    canary_.Assert();
+  canary_.Assert();
 
-    if (!is_waitable())
-        return ZX_ERR_NOT_SUPPORTED;
-    AddObserverHelper(observer, nullptr, get_lock());
-    return ZX_OK;
+  if (!is_waitable())
+    return ZX_ERR_NOT_SUPPORTED;
+  AddObserverHelper(observer, nullptr, get_lock());
+  return ZX_OK;
 }
 
 bool Dispatcher::RemoveObserver(StateObserver* observer) {
-    canary_.Assert();
-    ZX_DEBUG_ASSERT(is_waitable());
-    DEBUG_ASSERT(observer != nullptr);
+  canary_.Assert();
+  ZX_DEBUG_ASSERT(is_waitable());
+  DEBUG_ASSERT(observer != nullptr);
 
-    Guard<fbl::Mutex> guard{get_lock()};
+  Guard<fbl::Mutex> guard{get_lock()};
 
-    if (StateObserver::ObserverListTraits::node_state(*observer).InContainer()) {
-        observers_.erase(*observer);
-        return true;
-    }
+  if (StateObserver::ObserverListTraits::node_state(*observer).InContainer()) {
+    observers_.erase(*observer);
+    return true;
+  }
 
-    return false;
+  return false;
 }
 
 void Dispatcher::Cancel(const Handle* handle) {
-    canary_.Assert();
-    ZX_DEBUG_ASSERT(is_waitable());
+  canary_.Assert();
+  ZX_DEBUG_ASSERT(is_waitable());
 
-    CancelWithFunc(&observers_, get_lock(), [handle](StateObserver* obs) {
-        return obs->OnCancel(handle);
-    });
+  CancelWithFunc(&observers_, get_lock(),
+                 [handle](StateObserver* obs) { return obs->OnCancel(handle); });
 }
 
 bool Dispatcher::CancelByKey(const Handle* handle, const void* port, uint64_t key) {
-    canary_.Assert();
-    ZX_DEBUG_ASSERT(is_waitable());
+  canary_.Assert();
+  ZX_DEBUG_ASSERT(is_waitable());
 
-    StateObserver::Flags flags = CancelWithFunc(&observers_, get_lock(),
-                                                [handle, port, key](StateObserver* obs) {
-        return obs->OnCancelByKey(handle, port, key);
-    });
+  StateObserver::Flags flags = CancelWithFunc(
+      &observers_, get_lock(),
+      [handle, port, key](StateObserver* obs) { return obs->OnCancelByKey(handle, port, key); });
 
-    if (flags & StateObserver::kHandled) {
-        kcounter_add(dispatcher_cancel_bk_count, 1);
-        return true;
-    }
+  if (flags & StateObserver::kHandled) {
+    kcounter_add(dispatcher_cancel_bk_count, 1);
+    return true;
+  }
 
-    kcounter_add(dispatcher_cancel_bk_nh_count, 1);
-    return false;
+  kcounter_add(dispatcher_cancel_bk_nh_count, 1);
+  return false;
 }
 
 // Since this conditionally takes the dispatcher's |lock_|, based on
@@ -215,50 +206,46 @@ bool Dispatcher::CancelByKey(const Handle* handle, const void* port, uint64_t ke
 // safety analysis is unable to prove that the accesses to |signals_|
 // are always protected.
 template <typename LockType>
-void Dispatcher::UpdateStateHelper(zx_signals_t clear_mask,
-                                   zx_signals_t set_mask,
+void Dispatcher::UpdateStateHelper(zx_signals_t clear_mask, zx_signals_t set_mask,
                                    Lock<LockType>* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
-    canary_.Assert();
-    ZX_DEBUG_ASSERT(is_waitable());
+  canary_.Assert();
+  ZX_DEBUG_ASSERT(is_waitable());
 
-    {
-        Guard<LockType> guard{lock};
+  {
+    Guard<LockType> guard{lock};
 
-        auto previous_signals = signals_;
-        signals_ &= ~clear_mask;
-        signals_ |= set_mask;
+    auto previous_signals = signals_;
+    signals_ &= ~clear_mask;
+    signals_ |= set_mask;
 
-        if (previous_signals == signals_)
-            return;
+    if (previous_signals == signals_)
+      return;
 
-        for (auto it = observers_.begin(); it != observers_.end();) {
-            StateObserver::Flags it_flags = it->OnStateChange(signals_);
-            if (it_flags & StateObserver::kNeedRemoval) {
-                auto to_remove = it;
-                ++it;
-                observers_.erase(to_remove);
-                to_remove->OnRemoved();
-            } else {
-                ++it;
-            }
-        }
+    for (auto it = observers_.begin(); it != observers_.end();) {
+      StateObserver::Flags it_flags = it->OnStateChange(signals_);
+      if (it_flags & StateObserver::kNeedRemoval) {
+        auto to_remove = it;
+        ++it;
+        observers_.erase(to_remove);
+        to_remove->OnRemoved();
+      } else {
+        ++it;
+      }
     }
-
+  }
 }
 
-void Dispatcher::UpdateState(zx_signals_t clear_mask,
-                             zx_signals_t set_mask) {
-    canary_.Assert();
+void Dispatcher::UpdateState(zx_signals_t clear_mask, zx_signals_t set_mask) {
+  canary_.Assert();
 
-    UpdateStateHelper(clear_mask, set_mask, get_lock());
+  UpdateStateHelper(clear_mask, set_mask, get_lock());
 }
 
-void Dispatcher::UpdateStateLocked(zx_signals_t clear_mask,
-                                   zx_signals_t set_mask) {
-    canary_.Assert();
+void Dispatcher::UpdateStateLocked(zx_signals_t clear_mask, zx_signals_t set_mask) {
+  canary_.Assert();
 
-    // Type tag and local NullLock to make lockdep happy.
-    struct DispatcherUpdateStateLocked {};
-    DECLARE_LOCK(DispatcherUpdateStateLocked, fbl::NullLock) lock;
-    UpdateStateHelper(clear_mask, set_mask, &lock);
+  // Type tag and local NullLock to make lockdep happy.
+  struct DispatcherUpdateStateLocked {};
+  DECLARE_LOCK(DispatcherUpdateStateLocked, fbl::NullLock) lock;
+  UpdateStateHelper(clear_mask, set_mask, &lock);
 }

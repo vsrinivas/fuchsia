@@ -16,28 +16,28 @@
 // static
 zx_status_t PinnedVmObject::Create(fbl::RefPtr<VmObject> vmo, size_t offset, size_t size,
                                    PinnedVmObject* out_pinned_vmo) {
-    DEBUG_ASSERT(vmo != nullptr);
-    DEBUG_ASSERT(IS_PAGE_ALIGNED(offset) && IS_PAGE_ALIGNED(size));
-    DEBUG_ASSERT(out_pinned_vmo != nullptr);
+  DEBUG_ASSERT(vmo != nullptr);
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset) && IS_PAGE_ALIGNED(size));
+  DEBUG_ASSERT(out_pinned_vmo != nullptr);
 
-    if (vmo->is_paged()) {
-        zx_status_t status = vmo->CommitRange(offset, size);
-        if (status != ZX_OK) {
-            LTRACEF("vmo->CommitRange failed: %d\n", status);
-            return status;
-        }
-        status = vmo->Pin(offset, size);
-        if (status != ZX_OK) {
-            LTRACEF("vmo->Pin failed: %d\n", status);
-            return status;
-        }
+  if (vmo->is_paged()) {
+    zx_status_t status = vmo->CommitRange(offset, size);
+    if (status != ZX_OK) {
+      LTRACEF("vmo->CommitRange failed: %d\n", status);
+      return status;
     }
+    status = vmo->Pin(offset, size);
+    if (status != ZX_OK) {
+      LTRACEF("vmo->Pin failed: %d\n", status);
+      return status;
+    }
+  }
 
-    out_pinned_vmo->vmo_ = ktl::move(vmo);
-    out_pinned_vmo->offset_ = offset;
-    out_pinned_vmo->size_ = size;
+  out_pinned_vmo->vmo_ = ktl::move(vmo);
+  out_pinned_vmo->offset_ = offset;
+  out_pinned_vmo->size_ = size;
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
 PinnedVmObject::PinnedVmObject() = default;
@@ -47,7 +47,7 @@ PinnedVmObject::PinnedVmObject(PinnedVmObject&&) = default;
 PinnedVmObject& PinnedVmObject::operator=(PinnedVmObject&&) = default;
 
 PinnedVmObject::~PinnedVmObject() {
-    if (vmo_ && vmo_->is_paged()) {
-        vmo_->Unpin(offset_, size_);
-    }
+  if (vmo_ && vmo_->is_paged()) {
+    vmo_->Unpin(offset_, size_);
+  }
 }

@@ -4,7 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_CODE_PATCHING_INCLUDE_LIB_CODE_PATCHING_H_
+#define ZIRCON_KERNEL_LIB_CODE_PATCHING_INCLUDE_LIB_CODE_PATCHING_H_
+
+// clang-format off
 
 #if defined(__ASSEMBLER__)
 
@@ -14,13 +17,13 @@
 // version of the code may be used before patching takes place.  This is
 // needed, for example, for memcpy and memset.
 #define APPLY_CODE_PATCH_FUNC_WITH_DEFAULT(patch_func, loc, size_in_bytes) \
-    /* Add "struct CodePatchInfo" entry to the code_patch_table array. */  \
-    .pushsection code_patch_table,"a",%progbits;                           \
-    .balign 8;                                                             \
-    .quad patch_func; /* apply_func field */                               \
-    .quad loc; /* dest_addr field */                                       \
-    .quad size_in_bytes; /* dest_size field */                             \
-    .popsection
+  /* Add "struct CodePatchInfo" entry to the code_patch_table array. */  \
+  .pushsection code_patch_table,"a",%progbits;                           \
+  .balign 8;                                                             \
+  .quad patch_func; /* apply_func field */                               \
+  .quad loc; /* dest_addr field */                                       \
+  .quad size_in_bytes; /* dest_size field */                             \
+  .popsection
 
 // This is used in assembly code to specify a code fragment that will get
 // filled in by the given function, patch_func(), when the kernel starts
@@ -39,9 +42,9 @@
 #include <stdint.h>
 
 struct CodePatchInfo {
-    void (*apply_func)(const CodePatchInfo* patch);
-    uint8_t* dest_addr; // Destination code address to patch.
-    uint64_t dest_size; // Size of placeholder code.
+  void (*apply_func)(const CodePatchInfo* patch);
+  uint8_t* dest_addr; // Destination code address to patch.
+  uint64_t dest_size; // Size of placeholder code.
 };
 
 // CODE_TEMPLATE(kVar, "asm...") assembles the given assembly code and
@@ -49,14 +52,16 @@ struct CodePatchInfo {
 // specifies the end address of kVar, allowing the size of the code
 // fragment to be calculated.
 #define CODE_TEMPLATE(name, asm_code)                              \
-    extern const uint8_t name[];                                   \
-    extern const uint8_t name##End[];                              \
-    __asm__(".pushsection .rodata.code_template,\"a\",%progbits\n" \
-            ".global " #name "\n"                                  \
-            ".global " #name "End\n"                               \
-            #name ":\n"                                            \
-            asm_code "\n"                                          \
-            #name "End:\n"                                         \
-            ".popsection");
+  extern const uint8_t name[];                                   \
+  extern const uint8_t name##End[];                              \
+  __asm__(".pushsection .rodata.code_template,\"a\",%progbits\n" \
+          ".global " #name "\n"                                  \
+          ".global " #name "End\n"                               \
+          #name ":\n"                                            \
+          asm_code "\n"                                          \
+          #name "End:\n"                                         \
+          ".popsection");
 
 #endif
+
+#endif  // ZIRCON_KERNEL_LIB_CODE_PATCHING_INCLUDE_LIB_CODE_PATCHING_H_

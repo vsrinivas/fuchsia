@@ -10,8 +10,8 @@
 #include <kernel/range_check.h>
 #include <object/process_dispatcher.h>
 #include <object/resource_dispatcher.h>
-#include <zircon/syscalls/resource.h>
 #include <trace.h>
+#include <zircon/syscalls/resource.h>
 
 #define LOCAL_TRACE 0
 
@@ -24,56 +24,53 @@
 // ++ ZX_ERR_ACCESS_DENIED: |handle| is not the right |kind| of handle.
 // ++ ZX_ERR_WRONG_TYPE: |handle| is not a valid handle.
 zx_status_t validate_resource(zx_handle_t handle, uint32_t kind) {
-    auto up = ProcessDispatcher::GetCurrent();
-    fbl::RefPtr<ResourceDispatcher> resource;
-    auto status = up->GetDispatcher(handle, &resource);
-    if (status != ZX_OK) {
-        return status;
-    }
+  auto up = ProcessDispatcher::GetCurrent();
+  fbl::RefPtr<ResourceDispatcher> resource;
+  auto status = up->GetDispatcher(handle, &resource);
+  if (status != ZX_OK) {
+    return status;
+  }
 
-    auto res_kind = resource->get_kind();
-    if (res_kind == kind || res_kind == ZX_RSRC_KIND_ROOT) {
-        return ZX_OK;
-    }
+  auto res_kind = resource->get_kind();
+  if (res_kind == kind || res_kind == ZX_RSRC_KIND_ROOT) {
+    return ZX_OK;
+  }
 
-    return ZX_ERR_WRONG_TYPE;
+  return ZX_ERR_WRONG_TYPE;
 }
 
-zx_status_t validate_ranged_resource(fbl::RefPtr<ResourceDispatcher> resource,
-                                     uint32_t kind,
-                                     uintptr_t base,
-                                     size_t size) {
-    // Root gets access to everything and has no region to match against
-    if (resource->get_kind() == ZX_RSRC_KIND_ROOT) {
-        return ZX_OK;
-    }
-
-    if (resource->get_kind() != kind) {
-        return ZX_ERR_WRONG_TYPE;
-    }
-
-    uint64_t rbase = resource->get_base();
-    size_t rsize = resource->get_size();
-    // In the specific case of MMIO, everything is rounded to PAGE_SIZE units
-    // because it's the smallest unit we can operate at with the MMU.
-    if (resource->get_kind() == ZX_RSRC_KIND_MMIO) {
-        const uint64_t aligned_rbase = ROUNDDOWN(rbase, PAGE_SIZE);
-        rsize = PAGE_ALIGN((rbase - aligned_rbase) + rsize);
-        rbase = aligned_rbase;
-    }
-    LTRACEF("req [base %#lx size %#lx] and resource [base %#lx size %#lx]\n", base, size, rbase, rsize);
-
-    // Check for intersection and make sure the requested base+size fits within
-    // the resource's address space  allocation.
-    uintptr_t ibase;
-    size_t isize;
-    if (!GetIntersect(base, size, rbase, rsize, &ibase, &isize) ||
-            isize != size ||
-            ibase != base) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
+zx_status_t validate_ranged_resource(fbl::RefPtr<ResourceDispatcher> resource, uint32_t kind,
+                                     uintptr_t base, size_t size) {
+  // Root gets access to everything and has no region to match against
+  if (resource->get_kind() == ZX_RSRC_KIND_ROOT) {
     return ZX_OK;
+  }
+
+  if (resource->get_kind() != kind) {
+    return ZX_ERR_WRONG_TYPE;
+  }
+
+  uint64_t rbase = resource->get_base();
+  size_t rsize = resource->get_size();
+  // In the specific case of MMIO, everything is rounded to PAGE_SIZE units
+  // because it's the smallest unit we can operate at with the MMU.
+  if (resource->get_kind() == ZX_RSRC_KIND_MMIO) {
+    const uint64_t aligned_rbase = ROUNDDOWN(rbase, PAGE_SIZE);
+    rsize = PAGE_ALIGN((rbase - aligned_rbase) + rsize);
+    rbase = aligned_rbase;
+  }
+  LTRACEF("req [base %#lx size %#lx] and resource [base %#lx size %#lx]\n", base, size, rbase,
+          rsize);
+
+  // Check for intersection and make sure the requested base+size fits within
+  // the resource's address space  allocation.
+  uintptr_t ibase;
+  size_t isize;
+  if (!GetIntersect(base, size, rbase, rsize, &ibase, &isize) || isize != size || ibase != base) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  return ZX_OK;
 }
 
 // Check if the resource referenced by |handle| is of kind |kind|, or ZX_RSRC_KIND_ROOT. If
@@ -88,13 +85,12 @@ zx_status_t validate_ranged_resource(fbl::RefPtr<ResourceDispatcher> resource,
 // resource.
 zx_status_t validate_ranged_resource(zx_handle_t handle, uint32_t kind, uintptr_t base,
                                      size_t size) {
-    auto up = ProcessDispatcher::GetCurrent();
-    fbl::RefPtr<ResourceDispatcher> resource;
-    auto status = up->GetDispatcher(handle, &resource);
-    if (status != ZX_OK) {
-        return status;
-    }
+  auto up = ProcessDispatcher::GetCurrent();
+  fbl::RefPtr<ResourceDispatcher> resource;
+  auto status = up->GetDispatcher(handle, &resource);
+  if (status != ZX_OK) {
+    return status;
+  }
 
-    return validate_ranged_resource(resource, kind, base, size);
+  return validate_ranged_resource(resource, kind, base, size);
 }
-

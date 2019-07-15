@@ -5,14 +5,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_POW2_RANGE_ALLOCATOR_INCLUDE_LIB_POW2_RANGE_ALLOCATOR_H_
+#define ZIRCON_KERNEL_LIB_POW2_RANGE_ALLOCATOR_INCLUDE_LIB_POW2_RANGE_ALLOCATOR_H_
 
 #include <err.h>
 #include <kernel/mutex.h>
 #include <list.h>
-#include <zircon/types.h>
 #include <sys/types.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -30,12 +30,12 @@ __BEGIN_CDECLS
  */
 
 typedef struct p2ra_state {
-    DECLARE_MUTEX(p2ra_state) lock;
-    struct list_node  ranges;
-    struct list_node  unused_blocks;
-    struct list_node  allocated_blocks;
-    struct list_node* free_block_buckets;
-    uint              bucket_count;
+  DECLARE_MUTEX(p2ra_state) lock;
+  struct list_node ranges;
+  struct list_node unused_blocks;
+  struct list_node allocated_blocks;
+  struct list_node* free_block_buckets;
+  uint bucket_count;
 } p2ra_state_t;
 
 /**
@@ -109,3 +109,5 @@ zx_status_t p2ra_allocate_range(p2ra_state_t* state, uint size, uint* out_range_
 void p2ra_free_range(p2ra_state_t* state, uint range_start, uint size);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_LIB_POW2_RANGE_ALLOCATOR_INCLUDE_LIB_POW2_RANGE_ALLOCATOR_H_

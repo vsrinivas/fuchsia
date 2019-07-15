@@ -6,7 +6,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_ARCH_OPS_H_
+#define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_ARCH_OPS_H_
 
 #include <zircon/compiler.h>
 
@@ -19,47 +20,36 @@
 __BEGIN_CDECLS
 
 /* override of some routines */
-static inline void arch_enable_ints(void)
-{
-    atomic_signal_fence();
-    __asm__ volatile("sti");
+static inline void arch_enable_ints(void) {
+  atomic_signal_fence();
+  __asm__ volatile("sti");
 }
 
-static inline void arch_disable_ints(void)
-{
-    __asm__ volatile("cli");
-    atomic_signal_fence();
+static inline void arch_disable_ints(void) {
+  __asm__ volatile("cli");
+  atomic_signal_fence();
 }
 
-static inline bool arch_ints_disabled(void)
-{
-    x86_flags_t state;
+static inline bool arch_ints_disabled(void) {
+  x86_flags_t state;
 
-    __asm__ volatile(
-        "pushfq;"
-        "popq %%rax"
-        : "=a" (state)
-        :: "memory");
+  __asm__ volatile(
+      "pushfq;"
+      "popq %%rax"
+      : "=a"(state)::"memory");
 
-    return !(state & (1<<9));
+  return !(state & (1 << 9));
 }
 
-static inline uint64_t arch_cycle_count(void)
-{
-    return rdtsc();
-}
+static inline uint64_t arch_cycle_count(void) { return rdtsc(); }
 
-static inline void arch_spinloop_pause(void)
-{
-    __asm__ volatile("pause" ::: "memory");
-}
+static inline void arch_spinloop_pause(void) { __asm__ volatile("pause" ::: "memory"); }
 
-#define mb()        __asm__ volatile ("mfence" ::: "memory")
-#define smp_mb()    mb()
+#define mb() __asm__ volatile("mfence" ::: "memory")
+#define smp_mb() mb()
 
-static inline uint32_t arch_cpu_features(void)
-{
-    return 0; // Use cpuid instead.
+static inline uint32_t arch_cpu_features(void) {
+  return 0;  // Use cpuid instead.
 }
 
 uint32_t arch_dcache_line_size(void);
@@ -74,15 +64,18 @@ void arch_trace_process_create(uint64_t pid, paddr_t pt_phys);
 static inline bool arch_cas_16_acquire(volatile unsigned __int128* dst,
                                        volatile unsigned __int128* expected,
                                        unsigned __int128 desired) {
-    bool result;
-    __asm__ volatile("lock cmpxchg16b %[dest];"
-                     "setz %[result]"
-                     : [ dest ] "+m"(*dst), [ result ] "=q"(result), "+A"(*expected)
-                     : "b"((uint64_t)(desired)), "c"((uint64_t)(desired >> 64))
-                     : "cc", "memory");
-    return result;
+  bool result;
+  __asm__ volatile(
+      "lock cmpxchg16b %[dest];"
+      "setz %[result]"
+      : [ dest ] "+m"(*dst), [ result ] "=q"(result), "+A"(*expected)
+      : "b"((uint64_t)(desired)), "c"((uint64_t)(desired >> 64))
+      : "cc", "memory");
+  return result;
 }
 
 __END_CDECLS
 
-#endif // !__ASSEMBLER__
+#endif  // !__ASSEMBLER__
+
+#endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_ARCH_OPS_H_

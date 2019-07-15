@@ -20,8 +20,8 @@
 
 #include "acpi.h"
 
-#define _COMPONENT          ACPI_OS_SERVICES
-ACPI_MODULE_NAME    ("oszircon")
+#define _COMPONENT ACPI_OS_SERVICES
+ACPI_MODULE_NAME("oszircon")
 
 #define LOCAL_TRACE 0
 
@@ -33,9 +33,7 @@ ACPI_MODULE_NAME    ("oszircon")
  *
  * @return Initialization status
  */
-ACPI_STATUS AcpiOsInitialize() {
-    return AE_OK;
-}
+ACPI_STATUS AcpiOsInitialize() { return AE_OK; }
 
 /**
  * @brief Terminate the OSL subsystem.
@@ -45,9 +43,7 @@ ACPI_STATUS AcpiOsInitialize() {
  *
  * @return Termination status
  */
-ACPI_STATUS AcpiOsTerminate() {
-    return AE_OK;
-}
+ACPI_STATUS AcpiOsTerminate() { return AE_OK; }
 
 /**
  * @brief Obtain the Root ACPI table pointer (RSDP).
@@ -55,17 +51,17 @@ ACPI_STATUS AcpiOsTerminate() {
  * @return The physical address of the RSDP
  */
 ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
-    if (bootloader.acpi_rsdp) {
-        return bootloader.acpi_rsdp;
-    } else {
-        ACPI_PHYSICAL_ADDRESS TableAddress = 0;
-        ACPI_STATUS status = AcpiFindRootPointer(&TableAddress);
+  if (bootloader.acpi_rsdp) {
+    return bootloader.acpi_rsdp;
+  } else {
+    ACPI_PHYSICAL_ADDRESS TableAddress = 0;
+    ACPI_STATUS status = AcpiFindRootPointer(&TableAddress);
 
-        if (status != AE_OK) {
-            return 0;
-        }
-        return TableAddress;
+    if (status != AE_OK) {
+      return 0;
     }
+    return TableAddress;
+  }
 }
 
 /**
@@ -78,11 +74,10 @@ ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
  *
  * @return Exception code that indicates success or reason for failure.
  */
-ACPI_STATUS AcpiOsPredefinedOverride(
-        const ACPI_PREDEFINED_NAMES *PredefinedObject,
-        ACPI_STRING *NewValue) {
-    *NewValue = NULL;
-    return AE_OK;
+ACPI_STATUS AcpiOsPredefinedOverride(const ACPI_PREDEFINED_NAMES *PredefinedObject,
+                                     ACPI_STRING *NewValue) {
+  *NewValue = NULL;
+  return AE_OK;
 }
 
 /**
@@ -95,11 +90,9 @@ ACPI_STATUS AcpiOsPredefinedOverride(
  *
  * @return Exception code that indicates success or reason for failure.
  */
-ACPI_STATUS AcpiOsTableOverride(
-        ACPI_TABLE_HEADER *ExistingTable,
-        ACPI_TABLE_HEADER **NewTable) {
-    *NewTable = NULL;
-    return AE_OK;
+ACPI_STATUS AcpiOsTableOverride(ACPI_TABLE_HEADER *ExistingTable, ACPI_TABLE_HEADER **NewTable) {
+  *NewTable = NULL;
+  return AE_OK;
 }
 
 /**
@@ -113,12 +106,10 @@ ACPI_STATUS AcpiOsTableOverride(
  *
  * @return Exception code that indicates success or reason for failure.
  */
-ACPI_STATUS AcpiOsPhysicalTableOverride(
-        ACPI_TABLE_HEADER *ExistingTable,
-        ACPI_PHYSICAL_ADDRESS *NewAddress,
-        UINT32 *NewTableLength) {
-    *NewAddress = 0;
-    return AE_OK;
+ACPI_STATUS AcpiOsPhysicalTableOverride(ACPI_TABLE_HEADER *ExistingTable,
+                                        ACPI_PHYSICAL_ADDRESS *NewAddress, UINT32 *NewTableLength) {
+  *NewAddress = 0;
+  return AE_OK;
 }
 
 /**
@@ -131,31 +122,23 @@ ACPI_STATUS AcpiOsPhysicalTableOverride(
  *
  * @return Logical pointer to the mapped memory. A NULL pointer indicated failures.
  */
-void *AcpiOsMapMemory(
-        ACPI_PHYSICAL_ADDRESS PhysicalAddress,
-        ACPI_SIZE Length) {
+void *AcpiOsMapMemory(ACPI_PHYSICAL_ADDRESS PhysicalAddress, ACPI_SIZE Length) {
+  // Caution: PhysicalAddress might not be page-aligned, Length might not
+  // be a page multiple.
 
-    // Caution: PhysicalAddress might not be page-aligned, Length might not
-    // be a page multiple.
+  ACPI_PHYSICAL_ADDRESS aligned_address = ROUNDDOWN(PhysicalAddress, PAGE_SIZE);
+  ACPI_PHYSICAL_ADDRESS end = ROUNDUP(PhysicalAddress + Length, PAGE_SIZE);
 
-    ACPI_PHYSICAL_ADDRESS aligned_address = ROUNDDOWN(PhysicalAddress, PAGE_SIZE);
-    ACPI_PHYSICAL_ADDRESS end = ROUNDUP(PhysicalAddress + Length, PAGE_SIZE);
-
-    void *vaddr = NULL;
-    zx_status_t status = VmAspace::kernel_aspace()->AllocPhysical(
-            "acpi_mapping",
-            end - aligned_address,
-            &vaddr,
-            PAGE_SIZE_SHIFT,
-            aligned_address,
-            0,
-            ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
-    if (status != ZX_OK) {
-        return NULL;
-    }
-    const uintptr_t real_addr =
-            reinterpret_cast<uintptr_t>(vaddr) + (PhysicalAddress - aligned_address);
-    return reinterpret_cast<void*>(real_addr);
+  void *vaddr = NULL;
+  zx_status_t status = VmAspace::kernel_aspace()->AllocPhysical(
+      "acpi_mapping", end - aligned_address, &vaddr, PAGE_SIZE_SHIFT, aligned_address, 0,
+      ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
+  if (status != ZX_OK) {
+    return NULL;
+  }
+  const uintptr_t real_addr =
+      reinterpret_cast<uintptr_t>(vaddr) + (PhysicalAddress - aligned_address);
+  return reinterpret_cast<void *>(real_addr);
 }
 
 /**
@@ -167,12 +150,12 @@ void *AcpiOsMapMemory(
  *        identical to the value used in the call to AcpiOsMapMemory.
  */
 void AcpiOsUnmapMemory(void *LogicalAddress, ACPI_SIZE Length) {
-    zx_status_t status = VmAspace::kernel_aspace()->FreeRegion(
-            reinterpret_cast<vaddr_t>(LogicalAddress));
-    if (status != ZX_OK) {
-        TRACEF("WARNING: ACPI failed to free region %p, size %" PRIu64 "\n",
-               LogicalAddress, (uint64_t)Length);
-    }
+  zx_status_t status =
+      VmAspace::kernel_aspace()->FreeRegion(reinterpret_cast<vaddr_t>(LogicalAddress));
+  if (status != ZX_OK) {
+    TRACEF("WARNING: ACPI failed to free region %p, size %" PRIu64 "\n", LogicalAddress,
+           (uint64_t)Length);
+  }
 }
 
 /**
@@ -184,12 +167,8 @@ void AcpiOsUnmapMemory(void *LogicalAddress, ACPI_SIZE Length) {
  *
  * @return Exception code that indicates success or reason for failure.
  */
-ACPI_STATUS AcpiOsReadMemory(
-        ACPI_PHYSICAL_ADDRESS Address,
-        UINT64 *Value,
-        UINT32 Width) {
-
-    PANIC_UNIMPLEMENTED;
+ACPI_STATUS AcpiOsReadMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 *Value, UINT32 Width) {
+  PANIC_UNIMPLEMENTED;
 }
 
 /**
@@ -201,12 +180,8 @@ ACPI_STATUS AcpiOsReadMemory(
  *
  * @return Exception code that indicates success or reason for failure.
  */
-ACPI_STATUS AcpiOsWriteMemory(
-        ACPI_PHYSICAL_ADDRESS Address,
-        UINT64 Value,
-        UINT32 Width) {
-
-    PANIC_UNIMPLEMENTED;
+ACPI_STATUS AcpiOsWriteMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 Value, UINT32 Width) {
+  PANIC_UNIMPLEMENTED;
 }
 
 /**
@@ -216,9 +191,7 @@ ACPI_STATUS AcpiOsWriteMemory(
  *
  * @param Microseconds The amount of time to delay, in microseconds.
  */
-void AcpiOsStall(UINT32 Microseconds) {
-    spin(Microseconds);
-}
+void AcpiOsStall(UINT32 Microseconds) { spin(Microseconds); }
 
 /**
  * @brief Read a value from an input port.
@@ -229,28 +202,25 @@ void AcpiOsStall(UINT32 Microseconds) {
  *
  * @return Exception code that indicates success or reason for failure.
  */
-ACPI_STATUS AcpiOsReadPort(
-        ACPI_IO_ADDRESS Address,
-        UINT32 *Value,
-        UINT32 Width) {
-    if (Address > 0xffff) {
-        return AE_BAD_PARAMETER;
-    }
+ACPI_STATUS AcpiOsReadPort(ACPI_IO_ADDRESS Address, UINT32 *Value, UINT32 Width) {
+  if (Address > 0xffff) {
+    return AE_BAD_PARAMETER;
+  }
 
-    switch (Width) {
-        case 8:
-            *Value = inp((uint16_t)Address);
-            break;
-        case 16:
-            *Value = inpw((uint16_t)Address);
-            break;
-        case 32:
-            *Value = inpd((uint16_t)Address);
-            break;
-        default:
-            return AE_BAD_PARAMETER;
-    }
-    return AE_OK;
+  switch (Width) {
+    case 8:
+      *Value = inp((uint16_t)Address);
+      break;
+    case 16:
+      *Value = inpw((uint16_t)Address);
+      break;
+    case 32:
+      *Value = inpd((uint16_t)Address);
+      break;
+    default:
+      return AE_BAD_PARAMETER;
+  }
+  return AE_OK;
 }
 
 /**
@@ -262,28 +232,25 @@ ACPI_STATUS AcpiOsReadPort(
  *
  * @return Exception code that indicates success or reason for failure.
  */
-ACPI_STATUS AcpiOsWritePort(
-        ACPI_IO_ADDRESS Address,
-        UINT32 Value,
-        UINT32 Width) {
-    if (Address > 0xffff) {
-        return AE_BAD_PARAMETER;
-    }
+ACPI_STATUS AcpiOsWritePort(ACPI_IO_ADDRESS Address, UINT32 Value, UINT32 Width) {
+  if (Address > 0xffff) {
+    return AE_BAD_PARAMETER;
+  }
 
-    switch (Width) {
-        case 8:
-            outp((uint16_t)Address, (uint8_t)Value);
-            break;
-        case 16:
-            outpw((uint16_t)Address, (uint16_t)Value);
-            break;
-        case 32:
-            outpd((uint16_t)Address, (uint32_t)Value);
-            break;
-        default:
-            return AE_BAD_PARAMETER;
-    }
-    return AE_OK;
+  switch (Width) {
+    case 8:
+      outp((uint16_t)Address, (uint8_t)Value);
+      break;
+    case 16:
+      outpw((uint16_t)Address, (uint16_t)Value);
+      break;
+    case 32:
+      outpd((uint16_t)Address, (uint32_t)Value);
+      break;
+    default:
+      return AE_BAD_PARAMETER;
+  }
+  return AE_OK;
 }
 
 /**
@@ -294,18 +261,14 @@ ACPI_STATUS AcpiOsWritePort(
  * @return A pointer to the allocated memory. A NULL pointer is returned on
  *         error.
  */
-void *AcpiOsAllocate(ACPI_SIZE Size) {
-    return malloc(Size);
-}
+void *AcpiOsAllocate(ACPI_SIZE Size) { return malloc(Size); }
 
 /**
  * @brief Free previously allocated memory.
  *
  * @param Memory A pointer to the memory to be freed.
  */
-void AcpiOsFree(void *Memory) {
-    free(Memory);
-}
+void AcpiOsFree(void *Memory) { free(Memory); }
 
 /**
  * @brief Formatted stream output.
@@ -314,10 +277,10 @@ void AcpiOsFree(void *Memory) {
  * @param ...
  */
 void ACPI_INTERNAL_VAR_XFACE AcpiOsPrintf(const char *Format, ...) {
-    va_list argp;
-    va_start(argp, Format);
-    AcpiOsVprintf(Format, argp);
-    va_end(argp);
+  va_list argp;
+  va_start(argp, Format);
+  AcpiOsVprintf(Format, argp);
+  va_end(argp);
 }
 
 /**
@@ -326,5 +289,4 @@ void ACPI_INTERNAL_VAR_XFACE AcpiOsPrintf(const char *Format, ...) {
  * @param Format A standard print format string.
  * @param Args A variable parameter list
  */
-void AcpiOsVprintf(const char *Format, va_list Args) {
-}
+void AcpiOsVprintf(const char *Format, va_list Args) {}

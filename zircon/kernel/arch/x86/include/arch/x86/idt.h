@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_IDT_H_
+#define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_IDT_H_
 
 #include <assert.h>
 #include <zircon/compiler.h>
@@ -12,32 +13,32 @@
 __BEGIN_CDECLS
 
 struct idt_entry {
-    uint32_t w0, w1;
-    uint32_t w2, w3;
+  uint32_t w0, w1;
+  uint32_t w2, w3;
 };
 
 struct idt {
-    struct idt_entry entries[256];
+  struct idt_entry entries[256];
 };
 
 static_assert(sizeof(struct idt_entry) == 16, "");
 static_assert(sizeof(struct idt) == 16 * 256, "");
 
 struct idtr {
-    uint16_t limit;
-    uintptr_t address;
+  uint16_t limit;
+  uintptr_t address;
 } __PACKED;
 
 enum idt_entry_type {
-    IDT_INTERRUPT_GATE64 = 0xe,
-    IDT_TRAP_GATE64 = 0xf,
+  IDT_INTERRUPT_GATE64 = 0xe,
+  IDT_TRAP_GATE64 = 0xf,
 };
 
 enum idt_dpl {
-    IDT_DPL0 = 0,
-    IDT_DPL1 = 1,
-    IDT_DPL2 = 2,
-    IDT_DPL3 = 3,
+  IDT_DPL0 = 0,
+  IDT_DPL1 = 1,
+  IDT_DPL2 = 2,
+  IDT_DPL3 = 3,
 };
 
 /*
@@ -54,13 +55,8 @@ enum idt_dpl {
  * @param dpl The desired privilege level of the handler.
  * @param typ The type of interrupt handler
  */
-void idt_set_vector(
-        struct idt *idt,
-        uint8_t vec,
-        uint16_t code_segment_sel,
-        uintptr_t entry_point_offset,
-        enum idt_dpl dpl,
-        enum idt_entry_type typ);
+void idt_set_vector(struct idt *idt, uint8_t vec, uint16_t code_segment_sel,
+                    uintptr_t entry_point_offset, enum idt_dpl dpl, enum idt_entry_type typ);
 
 /*
  * @brief Set the Interrupt Stack Table index to use
@@ -90,18 +86,20 @@ void idt_setup_readonly(void);
  * @param idt Pointer to the IDT
  */
 static void idt_load(struct idt *idt) {
-    // After VM exit IDT limit is always set to 0xffff, so in order to avoid
-    // calling LIDT in hypervisor to restore the proper IDT limit after every
-    // VM exit in hypervisor we decided to use 0xffff all the time. There is
-    // no harm in doing that because IDT limit is only relevant if it's smaller
-    // than sizeof(struct idt) - 1 and doesn't affect anything otherwise.
-    struct idtr idtr = { .limit = 0xffff, .address = (uintptr_t)idt };
-    x86_lidt((uintptr_t)&idtr);
+  // After VM exit IDT limit is always set to 0xffff, so in order to avoid
+  // calling LIDT in hypervisor to restore the proper IDT limit after every
+  // VM exit in hypervisor we decided to use 0xffff all the time. There is
+  // no harm in doing that because IDT limit is only relevant if it's smaller
+  // than sizeof(struct idt) - 1 and doesn't affect anything otherwise.
+  struct idtr idtr = {.limit = 0xffff, .address = (uintptr_t)idt};
+  x86_lidt((uintptr_t)&idtr);
 }
 
 /*
  * @brief Get the read-only IDT.
  */
-struct idt * idt_get_readonly(void);
+struct idt *idt_get_readonly(void);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_IDT_H_

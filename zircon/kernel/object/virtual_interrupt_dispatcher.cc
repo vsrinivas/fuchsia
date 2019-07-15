@@ -19,39 +19,37 @@ KCOUNTER(dispatcher_virtual_interrupt_create_count, "dispatcher.virtual_interrup
 KCOUNTER(dispatcher_virtual_interrupt_destroy_count, "dispatcher.virtual_interrupt.destroy")
 
 zx_status_t VirtualInterruptDispatcher::Create(KernelHandle<InterruptDispatcher>* handle,
-                                               zx_rights_t* rights,
-                                               uint32_t options) {
+                                               zx_rights_t* rights, uint32_t options) {
+  if (options != ZX_INTERRUPT_VIRTUAL)
+    return ZX_ERR_INVALID_ARGS;
 
-    if (options != ZX_INTERRUPT_VIRTUAL)
-        return ZX_ERR_INVALID_ARGS;
+  // Attempt to construct the dispatcher.
+  fbl::AllocChecker ac;
+  KernelHandle new_handle(fbl::AdoptRef(new (&ac) VirtualInterruptDispatcher()));
+  if (!ac.check())
+    return ZX_ERR_NO_MEMORY;
 
-    // Attempt to construct the dispatcher.
-    fbl::AllocChecker ac;
-    KernelHandle new_handle(fbl::AdoptRef(new (&ac) VirtualInterruptDispatcher()));
-    if (!ac.check())
-        return ZX_ERR_NO_MEMORY;
+  new_handle.dispatcher()->set_flags(INTERRUPT_VIRTUAL);
 
-    new_handle.dispatcher()->set_flags(INTERRUPT_VIRTUAL);
+  // Transfer control of the new dispatcher to the creator and we are done.
+  *rights = default_rights();
+  *handle = ktl::move(new_handle);
 
-    // Transfer control of the new dispatcher to the creator and we are done.
-    *rights = default_rights();
-    *handle = ktl::move(new_handle);
-
-    return ZX_OK;
+  return ZX_OK;
 }
 
-//void VirtualInterruptDispatcher::IrqHandler(void* ctx) { }
+// void VirtualInterruptDispatcher::IrqHandler(void* ctx) { }
 
-void VirtualInterruptDispatcher::MaskInterrupt() { }
+void VirtualInterruptDispatcher::MaskInterrupt() {}
 
-void VirtualInterruptDispatcher::UnmaskInterrupt() { }
+void VirtualInterruptDispatcher::UnmaskInterrupt() {}
 
-void VirtualInterruptDispatcher::UnregisterInterruptHandler() { }
+void VirtualInterruptDispatcher::UnregisterInterruptHandler() {}
 
 VirtualInterruptDispatcher::VirtualInterruptDispatcher() {
-    kcounter_add(dispatcher_virtual_interrupt_create_count, 1);
+  kcounter_add(dispatcher_virtual_interrupt_create_count, 1);
 }
 
 VirtualInterruptDispatcher::~VirtualInterruptDispatcher() {
-    kcounter_add(dispatcher_virtual_interrupt_destroy_count, 1);
+  kcounter_add(dispatcher_virtual_interrupt_destroy_count, 1);
 }

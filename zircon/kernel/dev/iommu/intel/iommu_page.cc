@@ -11,43 +11,37 @@
 
 namespace intel_iommu {
 
-IommuPage::IommuPage(vm_page_t* page, uintptr_t virt) : page_(page), virt_(virt) {
-}
+IommuPage::IommuPage(vm_page_t* page, uintptr_t virt) : page_(page), virt_(virt) {}
 
 IommuPage::~IommuPage() {
-    if (page_) {
-        VmAspace::kernel_aspace()->FreeRegion(reinterpret_cast<vaddr_t>(virt_));
-        pmm_free_page(page_);
-    }
+  if (page_) {
+    VmAspace::kernel_aspace()->FreeRegion(reinterpret_cast<vaddr_t>(virt_));
+    pmm_free_page(page_);
+  }
 }
 
 zx_status_t IommuPage::AllocatePage(IommuPage* out) {
-    vm_page_t* page;
-    zx_status_t status = pmm_alloc_page(0, &page);
-    if (status != ZX_OK) {
-        return status;
-    }
-    page->set_state(VM_PAGE_STATE_IOMMU);
+  vm_page_t* page;
+  zx_status_t status = pmm_alloc_page(0, &page);
+  if (status != ZX_OK) {
+    return status;
+  }
+  page->set_state(VM_PAGE_STATE_IOMMU);
 
-    void* vaddr;
-    auto kernel_aspace = VmAspace::kernel_aspace();
-    status = kernel_aspace->AllocPhysical(
-            "iommu_ctx_tbl",
-            PAGE_SIZE,
-            &vaddr,
-            PAGE_SIZE_SHIFT,
-            page->paddr(),
-            0,
-            ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
-    if (status != ZX_OK) {
-        pmm_free_page(page);
-        return status;
-    }
+  void* vaddr;
+  auto kernel_aspace = VmAspace::kernel_aspace();
+  status = kernel_aspace->AllocPhysical("iommu_ctx_tbl", PAGE_SIZE, &vaddr, PAGE_SIZE_SHIFT,
+                                        page->paddr(), 0,
+                                        ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
+  if (status != ZX_OK) {
+    pmm_free_page(page);
+    return status;
+  }
 
-    arch_zero_page(vaddr);
+  arch_zero_page(vaddr);
 
-    *out = IommuPage(page, reinterpret_cast<uintptr_t>(vaddr));
-    return ZX_OK;
+  *out = IommuPage(page, reinterpret_cast<uintptr_t>(vaddr));
+  return ZX_OK;
 }
 
-} // namespace intel_iommu
+}  // namespace intel_iommu

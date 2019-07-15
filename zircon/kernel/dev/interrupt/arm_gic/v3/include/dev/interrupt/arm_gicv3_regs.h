@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_V3_INCLUDE_DEV_INTERRUPT_ARM_GICV3_REGS_H_
+#define ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_V3_INCLUDE_DEV_INTERRUPT_ARM_GICV3_REGS_H_
 #include <arch/arm64.h>
 #include <reg.h>
 
@@ -105,51 +106,53 @@ extern uint64_t arm_gicv3_gicr_stride;
 #define GICR_NSACR(i) (GICR_SGI_OFFSET + GICR_STRIDE * (i) + 0x0e00)
 
 static inline void gic_write_ctlr(uint32_t val) {
-    __asm__ volatile("msr " ICC_CTLR_EL1 ", %0" :: "r"((uint64_t)val));
-    __isb(ARM_MB_SY);
+  __asm__ volatile("msr " ICC_CTLR_EL1 ", %0" ::"r"((uint64_t)val));
+  __isb(ARM_MB_SY);
 }
 
 static inline void gic_write_pmr(uint32_t val) {
-    __asm__ volatile("msr " ICC_PMR_EL1 ", %0" :: "r"((uint64_t)val));
-    __isb(ARM_MB_SY);
-    __dsb(ARM_MB_SY);
+  __asm__ volatile("msr " ICC_PMR_EL1 ", %0" ::"r"((uint64_t)val));
+  __isb(ARM_MB_SY);
+  __dsb(ARM_MB_SY);
 }
 
 static inline void gic_write_igrpen(uint32_t val) {
-    __asm__ volatile("msr " ICC_IGRPEN1_EL1 ", %0" :: "r"((uint64_t)val));
-    __isb(ARM_MB_SY);
+  __asm__ volatile("msr " ICC_IGRPEN1_EL1 ", %0" ::"r"((uint64_t)val));
+  __isb(ARM_MB_SY);
 }
 
 static inline uint32_t gic_read_sre(void) {
-    uint64_t temp;
-    __asm__ volatile("mrs %0, " ICC_SRE_EL1 : "=r"(temp));
-    return (uint32_t)temp;
+  uint64_t temp;
+  __asm__ volatile("mrs %0, " ICC_SRE_EL1 : "=r"(temp));
+  return (uint32_t)temp;
 }
 
 static inline void gic_write_sre(uint32_t val) {
-    __asm__ volatile("msr " ICC_SRE_EL1 ", %0" :: "r"((uint64_t)val));
-    __isb(ARM_MB_SY);
+  __asm__ volatile("msr " ICC_SRE_EL1 ", %0" ::"r"((uint64_t)val));
+  __isb(ARM_MB_SY);
 }
 
 static inline void gic_write_eoir(uint32_t val) {
-    __asm__ volatile("msr " ICC_EOIR1_EL1 ", %0" :: "r"((uint64_t)val));
-    __isb(ARM_MB_SY);
+  __asm__ volatile("msr " ICC_EOIR1_EL1 ", %0" ::"r"((uint64_t)val));
+  __isb(ARM_MB_SY);
 }
 
 static inline void gic_write_dir(uint32_t val) {
-    __asm__ volatile("msr " ICC_DIR_EL1 ", %0" :: "r"((uint64_t)val));
-    __isb(ARM_MB_SY);
+  __asm__ volatile("msr " ICC_DIR_EL1 ", %0" ::"r"((uint64_t)val));
+  __isb(ARM_MB_SY);
 }
 
 static inline uint32_t gic_read_iar() {
-    uint64_t temp;
-    __asm__ volatile("mrs %0, " ICC_IAR1_EL1 : "=r"(temp));
-    __dsb(ARM_MB_SY);
-    return (uint32_t)temp;
+  uint64_t temp;
+  __asm__ volatile("mrs %0, " ICC_IAR1_EL1 : "=r"(temp));
+  __dsb(ARM_MB_SY);
+  return (uint32_t)temp;
 }
 
 static inline void gic_write_sgi1r(uint64_t val) {
-    __asm__ volatile("msr " ICC_SGI1R_EL1 ", %0" :: "r"((uint64_t)val));
-    __isb(ARM_MB_SY);
-    __dsb(ARM_MB_SY);
+  __asm__ volatile("msr " ICC_SGI1R_EL1 ", %0" ::"r"((uint64_t)val));
+  __isb(ARM_MB_SY);
+  __dsb(ARM_MB_SY);
 }
+
+#endif  // ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_V3_INCLUDE_DEV_INTERRUPT_ARM_GICV3_REGS_H_

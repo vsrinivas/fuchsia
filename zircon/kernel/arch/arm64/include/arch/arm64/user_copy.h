@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_USER_COPY_H_
+#define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_USER_COPY_H_
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -16,10 +17,8 @@ __BEGIN_CDECLS
 // temporarily stores the fault recovery PC for bad page faults to user
 // addresses during the call.  arch_copy_from_user and arch_copy_to_user
 // should be the only callers of this.
-zx_status_t _arm64_user_copy(
-    void* dst,
-    const void* src,
-    size_t len,
-    void** fault_return);
+zx_status_t _arm64_user_copy(void* dst, const void* src, size_t len, void** fault_return);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_USER_COPY_H_

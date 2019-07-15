@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_MMU_H_
+#define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_MMU_H_
 
 #include <arch/defines.h>
 
@@ -392,17 +393,17 @@ typedef uint64_t pte_t;
 
 __BEGIN_CDECLS
 
-#define ARM64_TLBI_NOADDR(op)            \
-    ({                                   \
-        __asm__ volatile("tlbi " #op::); \
-        __isb(ARM_MB_SY);                             \
-    })
+#define ARM64_TLBI_NOADDR(op)        \
+  ({                                 \
+    __asm__ volatile("tlbi " #op::); \
+    __isb(ARM_MB_SY);                \
+  })
 
-#define ARM64_TLBI(op, val)                                          \
-    ({                                                               \
-        __asm__ volatile("tlbi " #op ", %0" ::"r"((uint64_t)(val))); \
-        __isb(ARM_MB_SY);                                                         \
-    })
+#define ARM64_TLBI(op, val)                                      \
+  ({                                                             \
+    __asm__ volatile("tlbi " #op ", %0" ::"r"((uint64_t)(val))); \
+    __isb(ARM_MB_SY);                                            \
+  })
 
 const size_t MMU_ARM64_ASID_BITS = 16;
 const uint16_t MMU_ARM64_GLOBAL_ASID = (1u << MMU_ARM64_ASID_BITS) - 1;
@@ -412,9 +413,7 @@ const uint16_t MMU_ARM64_MAX_USER_ASID = MMU_ARM64_GLOBAL_ASID - 1;
 
 pte_t* arm64_get_kernel_ptable();
 
-zx_status_t arm64_boot_map_v(const vaddr_t vaddr,
-                             const paddr_t paddr,
-                             const size_t len,
+zx_status_t arm64_boot_map_v(const vaddr_t vaddr, const paddr_t paddr, const size_t len,
                              const pte_t flags);
 
 // use built-in virtual to physical translation instructions to query
@@ -423,3 +422,5 @@ zx_status_t arm64_mmu_translate(vaddr_t va, paddr_t* pa, bool user, bool write);
 
 __END_CDECLS
 #endif /* __ASSEMBLER__ */
+
+#endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_MMU_H_

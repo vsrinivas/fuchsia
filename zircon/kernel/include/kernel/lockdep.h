@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_LOCKDEP_H_
+#define ZIRCON_KERNEL_INCLUDE_KERNEL_LOCKDEP_H_
 
 #include <lockdep/guard.h>
 #include <lockdep/guard_multiple.h>
@@ -48,4 +49,6 @@ using lockdep::LockFlagsTrackingDisabled;
 //      // ...
 //  }
 #define DECLARE_SINGLETON_LOCK_WRAPPER(name, global_lock, ...) \
-    LOCK_DEP_SINGLETON_LOCK_WRAPPER(name, global_lock, ##__VA_ARGS__)
+  LOCK_DEP_SINGLETON_LOCK_WRAPPER(name, global_lock, ##__VA_ARGS__)
+
+#endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_LOCKDEP_H_

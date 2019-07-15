@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_KTL_TYPE_TRAITS_H_
+#define ZIRCON_KERNEL_INCLUDE_KTL_TYPE_TRAITS_H_
 
 #include <type_traits>
 
@@ -29,4 +30,6 @@ using std::remove_const_t;
 using std::remove_reference;
 using std::remove_reference_t;
 
-} // namespace ktl
+}  // namespace ktl
+
+#endif  // ZIRCON_KERNEL_INCLUDE_KTL_TYPE_TRAITS_H_

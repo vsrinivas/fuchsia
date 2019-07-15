@@ -18,6 +18,6 @@ namespace x86 {
 zx_status_t GenerateFlatTopology(const cpu_id::CpuId& cpuid, const AcpiTables& acpi_tables,
                                  fbl::Vector<zbi_topology_node_t>* topology);
 
-} // namespace x86
+}  // namespace x86
 
-#endif // ARCH_X86_SYSTEM_TOPOLOGY_H
+#endif  // ARCH_X86_SYSTEM_TOPOLOGY_H

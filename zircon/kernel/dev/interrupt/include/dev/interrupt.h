@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_DEV_INTERRUPT_INCLUDE_DEV_INTERRUPT_H_
+#define ZIRCON_KERNEL_DEV_INTERRUPT_INCLUDE_DEV_INTERRUPT_H_
 
 #include <kernel/mp.h>
 #include <stdbool.h>
@@ -17,13 +18,13 @@ __BEGIN_CDECLS
 #define MAX_MSI_IRQS 32u
 
 enum interrupt_trigger_mode {
-    IRQ_TRIGGER_MODE_EDGE = 0,
-    IRQ_TRIGGER_MODE_LEVEL = 1,
+  IRQ_TRIGGER_MODE_EDGE = 0,
+  IRQ_TRIGGER_MODE_LEVEL = 1,
 };
 
 enum interrupt_polarity {
-    IRQ_POLARITY_ACTIVE_HIGH = 0,
-    IRQ_POLARITY_ACTIVE_LOW = 1,
+  IRQ_POLARITY_ACTIVE_HIGH = 0,
+  IRQ_POLARITY_ACTIVE_LOW = 1,
 };
 
 zx_status_t mask_interrupt(unsigned int vector);
@@ -38,12 +39,10 @@ void shutdown_interrupts_curr_cpu(void);
 
 // Configure the specified interrupt vector.  If it is invoked, it muust be
 // invoked prior to interrupt registration
-zx_status_t configure_interrupt(unsigned int vector,
-                                enum interrupt_trigger_mode tm,
+zx_status_t configure_interrupt(unsigned int vector, enum interrupt_trigger_mode tm,
                                 enum interrupt_polarity pol);
 
-zx_status_t get_interrupt_config(unsigned int vector,
-                                 enum interrupt_trigger_mode* tm,
+zx_status_t get_interrupt_config(unsigned int vector, enum interrupt_trigger_mode* tm,
                                  enum interrupt_polarity* pol);
 
 typedef interrupt_eoi (*int_handler)(void* arg);
@@ -68,16 +67,16 @@ void interrupt_init_percpu(void);
 // A structure which holds the state of a block of IRQs allocated by the
 // platform to be used for delivering MSI or MSI-X interrupts.
 typedef struct msi_block {
-    void*    platform_ctx; // Allocation context owned by the platform
-    uint64_t tgt_addr;     // The target write transaction physical address
-    bool     allocated;    // Whether or not this block has been allocated
-    uint     base_irq_id;  // The first IRQ id in the allocated block
-    uint     num_irq;      // The number of irqs in the allocated block
+  void* platform_ctx;  // Allocation context owned by the platform
+  uint64_t tgt_addr;   // The target write transaction physical address
+  bool allocated;      // Whether or not this block has been allocated
+  uint base_irq_id;    // The first IRQ id in the allocated block
+  uint num_irq;        // The number of irqs in the allocated block
 
-    // The data which the device should write when triggering an IRQ.  Note,
-    // only the lower 16 bits are used when the block has been allocated for MSI
-    // instead of MSI-X
-    uint32_t tgt_data;
+  // The data which the device should write when triggering an IRQ.  Note,
+  // only the lower 16 bits are used when the block has been allocated for MSI
+  // instead of MSI-X
+  uint32_t tgt_data;
 } msi_block_t;
 
 // Methods used to determine if a platform supports MSI or not, and if so,
@@ -106,9 +105,7 @@ void msi_mask_unmask(const msi_block_t* block, uint msi_id, bool mask);
 //        upon successful allocation of the requested block of IRQs.
 //
 // @return A status code indicating the success or failure of the operation.
-zx_status_t msi_alloc_block(uint requested_irqs,
-                            bool can_target_64bit,
-                            bool is_msix,
+zx_status_t msi_alloc_block(uint requested_irqs, bool can_target_64bit, bool is_msix,
                             msi_block_t* out_block);
 
 // Method used to free a block of MSI IRQs previously allocated by msi_alloc_block().
@@ -120,5 +117,7 @@ void msi_free_block(msi_block_t* block);
 // Register a handler function for a given msi_id within an msi_block_t. Passing a
 // NULL handler will effectively unregister a handler for a given msi_id within the
 // block.
-void msi_register_handler(const msi_block_t* block, uint msi_id, int_handler handler, void *ctx);
+void msi_register_handler(const msi_block_t* block, uint msi_id, int_handler handler, void* ctx);
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_DEV_INTERRUPT_INCLUDE_DEV_INTERRUPT_H_

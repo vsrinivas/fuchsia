@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_PLATFORM_H_
+#define ZIRCON_KERNEL_INCLUDE_PLATFORM_H_
 
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -16,17 +17,17 @@ __BEGIN_CDECLS
 #define BOOT_CPU_ID 0
 
 typedef enum {
-    HALT_ACTION_HALT = 0,           // Spin forever.
-    HALT_ACTION_REBOOT,             // Reset the CPU.
-    HALT_ACTION_REBOOT_BOOTLOADER,  // Reboot into the bootloader.
-    HALT_ACTION_REBOOT_RECOVERY,    // Reboot into the recovery partition.
-    HALT_ACTION_SHUTDOWN,           // Shutdown and power off.
+  HALT_ACTION_HALT = 0,           // Spin forever.
+  HALT_ACTION_REBOOT,             // Reset the CPU.
+  HALT_ACTION_REBOOT_BOOTLOADER,  // Reboot into the bootloader.
+  HALT_ACTION_REBOOT_RECOVERY,    // Reboot into the recovery partition.
+  HALT_ACTION_SHUTDOWN,           // Shutdown and power off.
 } platform_halt_action;
 
 typedef enum {
-    HALT_REASON_UNKNOWN = 0,
-    HALT_REASON_SW_RESET,       // Generic Software Initiated Reboot
-    HALT_REASON_SW_PANIC,       // Reboot triggered by a SW panic or ASSERT
+  HALT_REASON_UNKNOWN = 0,
+  HALT_REASON_SW_RESET,  // Generic Software Initiated Reboot
+  HALT_REASON_SW_PANIC,  // Reboot triggered by a SW panic or ASSERT
 } platform_halt_reason;
 
 /* current time in nanoseconds */
@@ -51,7 +52,6 @@ void platform_init_mmu_mappings(void);
  * it to applications with this function.  */
 platform_halt_reason platform_get_reboot_reason(void);
 
-
 /* platform_panic_start informs the system that a panic message is about
  * to be printed and that platform_halt will be called shortly.  The
  * platform should stop other CPUs if possible and do whatever is necessary
@@ -67,8 +67,7 @@ void platform_panic_start(void);
  *
  * There is no returning from this function.
  */
-void platform_halt(platform_halt_action suggested_action,
-                   platform_halt_reason reason) __NO_RETURN;
+void platform_halt(platform_halt_action suggested_action, platform_halt_reason reason) __NO_RETURN;
 
 /* optionally stop the current cpu in a way the platform finds appropriate */
 void platform_halt_cpu(void);
@@ -88,7 +87,7 @@ void platform_quiesce(void);
 /* returns pointer to ramdisk image, or NULL if none.
  * Sets size to ramdisk size or zero if none.
  */
-void *platform_get_ramdisk(size_t *size);
+void* platform_get_ramdisk(size_t* size);
 
 /* Stash the crashlog somewhere platform-specific that allows
  * for recovery after reboot.  This will only be called out
@@ -112,7 +111,8 @@ size_t platform_stow_crashlog(void* log, size_t len);
  * storage model.
  */
 size_t platform_recover_crashlog(size_t len, void* cookie,
-                                 void (*func)(const void* data, size_t off, size_t len, void* cookie));
+                                 void (*func)(const void* data, size_t off, size_t len,
+                                              void* cookie));
 
 // Called just before initiating a system suspend to give the platform layer a
 // chance to save state.  Must be called with interrupts disabled.
@@ -129,3 +129,5 @@ bool platform_serial_enabled(void);
 bool platform_early_console_enabled(void);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_INCLUDE_PLATFORM_H_

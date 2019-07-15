@@ -5,11 +5,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_LIBC_INCLUDE_MALLOC_H_
+#define ZIRCON_KERNEL_LIB_LIBC_INCLUDE_MALLOC_H_
 
+#include <stddef.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
-#include <stddef.h>
 
 /* lib/heap provides malloc/free definitions */
 #include <lib/heap.h>
+
+#endif  // ZIRCON_KERNEL_LIB_LIBC_INCLUDE_MALLOC_H_

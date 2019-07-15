@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "debug.h"
 #include "util.h"
 
+#include "debug.h"
+
 void fail(const char* message) {
-    uart_puts(message);
-    while (1) {}
+  uart_puts(message);
+  while (1) {
+  }
 }

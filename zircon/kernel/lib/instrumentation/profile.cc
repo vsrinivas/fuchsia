@@ -24,8 +24,7 @@ extern "C" {
 // This is sometimes emitted by the compiler with a different value.
 // The header is expected to use whichever value this had at link time.
 // This supplies the default value when the compiler doesn't supply it.
-[[gnu::weak]] extern const uint64_t INSTR_PROF_RAW_VERSION_VAR =
-    INSTR_PROF_RAW_VERSION;
+[[gnu::weak]] extern const uint64_t INSTR_PROF_RAW_VERSION_VAR = INSTR_PROF_RAW_VERSION;
 
 // The compiler emits phantom references to this as a way to ensure
 // that the runtime is linked in.
@@ -43,17 +42,13 @@ extern const char PROF_NAME_START[], PROF_NAME_STOP[];
 #define PROF_CNTS_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_CNTS_COMMON)
 extern const uint64_t PROF_CNTS_START[], PROF_CNTS_STOP[];
 
-} // extern "C"
+}  // extern "C"
 
 // These are used by the INSTR_PROF_RAW_HEADER initializers.
 
-constexpr uint64_t __llvm_profile_get_magic() {
-    return INSTR_PROF_RAW_MAGIC_64;
-}
+constexpr uint64_t __llvm_profile_get_magic() { return INSTR_PROF_RAW_MAGIC_64; }
 
-uint64_t __llvm_profile_get_version() {
-    return INSTR_PROF_RAW_VERSION_VAR;
-}
+uint64_t __llvm_profile_get_version() { return INSTR_PROF_RAW_VERSION_VAR; }
 
 #define DataSize (PROF_DATA_STOP - PROF_DATA_START)
 #define CountersSize (PROF_CNTS_STOP - PROF_CNTS_START)
@@ -64,9 +59,8 @@ uint64_t __llvm_profile_get_version() {
 // The linker script places this at the start of a page-aligned region
 // where it's followed by the compiler-generated sections.
 [[gnu::section("__llvm_profile_header"), gnu::used]] struct {
-#define INSTR_PROF_RAW_HEADER(Type, Name, Initializer) \
-    Type Name##_ = Initializer;
+#define INSTR_PROF_RAW_HEADER(Type, Name, Initializer) Type Name##_ = Initializer;
 #include <llvm/ProfileData/InstrProfData.inc>
 } __llvm_profile_header;
 
-} // namespace
+}  // namespace

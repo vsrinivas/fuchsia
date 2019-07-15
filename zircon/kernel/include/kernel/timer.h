@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_TIMER_H_
+#define ZIRCON_KERNEL_INCLUDE_KERNEL_TIMER_H_
 
 #include <kernel/deadline.h>
 #include <kernel/spinlock.h>
@@ -21,33 +22,27 @@ void timer_queue_init(void);
 struct timer;
 typedef void (*timer_callback)(struct timer*, zx_time_t now, void* arg);
 
-#define TIMER_MAGIC (0x74696D72) //'timr'
+#define TIMER_MAGIC (0x74696D72)  //'timr'
 
 typedef struct timer {
-    int magic;
-    struct list_node node;
+  int magic;
+  struct list_node node;
 
-    zx_time_t scheduled_time;
-    zx_duration_t slack; // Stores the applied slack adjustment from
-    //                      the ideal scheduled_time.
-    timer_callback callback;
-    void* arg;
+  zx_time_t scheduled_time;
+  zx_duration_t slack;  // Stores the applied slack adjustment from
+  //                      the ideal scheduled_time.
+  timer_callback callback;
+  void* arg;
 
-    volatile int active_cpu; // <0 if inactive
-    volatile bool cancel;    // true if cancel is pending
+  volatile int active_cpu;  // <0 if inactive
+  volatile bool cancel;     // true if cancel is pending
 } timer_t;
 
-#define TIMER_INITIAL_VALUE(t)              \
-    {                                       \
-        .magic = TIMER_MAGIC,               \
-        .node = LIST_INITIAL_CLEARED_VALUE, \
-        .scheduled_time = 0,                \
-        .slack = 0,                         \
-        .callback = NULL,                   \
-        .arg = NULL,                        \
-        .active_cpu = -1,                   \
-        .cancel = false,                    \
-    }
+#define TIMER_INITIAL_VALUE(t)                                                                 \
+  {                                                                                            \
+    .magic = TIMER_MAGIC, .node = LIST_INITIAL_CLEARED_VALUE, .scheduled_time = 0, .slack = 0, \
+    .callback = NULL, .arg = NULL, .active_cpu = -1, .cancel = false,                          \
+  }
 
 // Rules for Timers:
 // - Timer callbacks occur from interrupt context
@@ -84,9 +79,9 @@ void timer_set(timer_t* timer, const Deadline& deadline, timer_callback callback
 bool timer_cancel(timer_t*);
 
 // Equivalent to timer_set with no slack
-static inline void timer_set_oneshot(
-    timer_t* timer, zx_time_t deadline, timer_callback callback, void* arg) {
-    return timer_set(timer, Deadline::no_slack(deadline), callback, arg);
+static inline void timer_set_oneshot(timer_t* timer, zx_time_t deadline, timer_callback callback,
+                                     void* arg) {
+  return timer_set(timer, Deadline::no_slack(deadline), callback, arg);
 }
 
 // Preemption Timers
@@ -127,3 +122,5 @@ void timer_thaw_percpu(void);
 zx_status_t timer_trylock_or_cancel(timer_t* t, spin_lock_t* lock) TA_TRY_ACQ(false, lock);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_TIMER_H_

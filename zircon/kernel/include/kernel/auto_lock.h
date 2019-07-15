@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_AUTO_LOCK_H_
+#define ZIRCON_KERNEL_INCLUDE_KERNEL_AUTO_LOCK_H_
 
 #include <fbl/macros.h>
 #include <kernel/mutex.h>
@@ -13,52 +14,51 @@
 // Various lock guard wrappers for kernel only locks
 
 class TA_SCOPED_CAP AutoSpinLockNoIrqSave {
-public:
-    explicit AutoSpinLockNoIrqSave(spin_lock_t* lock) TA_ACQ(lock)
-        : spinlock_(lock) {
-        DEBUG_ASSERT(lock);
-        spin_lock(spinlock_);
+ public:
+  explicit AutoSpinLockNoIrqSave(spin_lock_t* lock) TA_ACQ(lock) : spinlock_(lock) {
+    DEBUG_ASSERT(lock);
+    spin_lock(spinlock_);
+  }
+  explicit AutoSpinLockNoIrqSave(SpinLock* lock) TA_ACQ(lock)
+      : AutoSpinLockNoIrqSave(lock->GetInternal()) {}
+  ~AutoSpinLockNoIrqSave() TA_REL() { release(); }
+
+  void release() TA_REL() {
+    if (spinlock_) {
+      spin_unlock(spinlock_);
+      spinlock_ = nullptr;
     }
-    explicit AutoSpinLockNoIrqSave(SpinLock* lock) TA_ACQ(lock)
-        : AutoSpinLockNoIrqSave(lock->GetInternal()) {}
-    ~AutoSpinLockNoIrqSave() TA_REL() { release(); }
+  }
 
-    void release() TA_REL() {
-        if (spinlock_) {
-            spin_unlock(spinlock_);
-            spinlock_ = nullptr;
-        }
-    }
+  // suppress default constructors
+  DISALLOW_COPY_ASSIGN_AND_MOVE(AutoSpinLockNoIrqSave);
 
-    // suppress default constructors
-    DISALLOW_COPY_ASSIGN_AND_MOVE(AutoSpinLockNoIrqSave);
-
-private:
-    spin_lock_t* spinlock_;
+ private:
+  spin_lock_t* spinlock_;
 };
 
 class TA_SCOPED_CAP AutoSpinLock {
-public:
-    explicit AutoSpinLock(spin_lock_t* lock) TA_ACQ(lock)
-        : spinlock_(lock) {
-        DEBUG_ASSERT(lock);
-        spin_lock_irqsave(spinlock_, state_);
+ public:
+  explicit AutoSpinLock(spin_lock_t* lock) TA_ACQ(lock) : spinlock_(lock) {
+    DEBUG_ASSERT(lock);
+    spin_lock_irqsave(spinlock_, state_);
+  }
+  explicit AutoSpinLock(SpinLock* lock) TA_ACQ(lock) : AutoSpinLock(lock->GetInternal()) {}
+  ~AutoSpinLock() TA_REL() { release(); }
+
+  void release() TA_REL() {
+    if (spinlock_) {
+      spin_unlock_irqrestore(spinlock_, state_);
+      spinlock_ = nullptr;
     }
-    explicit AutoSpinLock(SpinLock* lock) TA_ACQ(lock)
-        : AutoSpinLock(lock->GetInternal()) {}
-    ~AutoSpinLock() TA_REL() { release(); }
+  }
 
-    void release() TA_REL() {
-        if (spinlock_) {
-            spin_unlock_irqrestore(spinlock_, state_);
-            spinlock_ = nullptr;
-        }
-    }
+  // suppress default constructors
+  DISALLOW_COPY_ASSIGN_AND_MOVE(AutoSpinLock);
 
-    // suppress default constructors
-    DISALLOW_COPY_ASSIGN_AND_MOVE(AutoSpinLock);
-
-private:
-    spin_lock_t* spinlock_;
-    spin_lock_saved_state_t state_;
+ private:
+  spin_lock_t* spinlock_;
+  spin_lock_saved_state_t state_;
 };
+
+#endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_AUTO_LOCK_H_

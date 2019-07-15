@@ -4,10 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_CRYPTO_INCLUDE_LIB_CRYPTO_ENTROPY_QUALITY_TEST_H_
+#define ZIRCON_KERNEL_LIB_CRYPTO_INCLUDE_LIB_CRYPTO_ENTROPY_QUALITY_TEST_H_
 
-#include <vm/vm_object.h>
 #include <fbl/ref_ptr.h>
+#include <vm/vm_object.h>
 
 namespace crypto {
 
@@ -25,6 +26,8 @@ extern bool entropy_was_lost;
 // this function runs the early boot test. Otherwise, it does nothing.
 void EarlyBootTest();
 
-} // namespace entropy
+}  // namespace entropy
 
-} // namespace crypto
+}  // namespace crypto
+
+#endif  // ZIRCON_KERNEL_LIB_CRYPTO_INCLUDE_LIB_CRYPTO_ENTROPY_QUALITY_TEST_H_

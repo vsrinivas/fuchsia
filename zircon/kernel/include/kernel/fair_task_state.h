@@ -3,14 +3,14 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
-#pragma once
-
-#include <stddef.h>
-#include <stdint.h>
-#include <zircon/types.h>
+#ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_FAIR_TASK_STATE_H_
+#define ZIRCON_KERNEL_INCLUDE_KERNEL_FAIR_TASK_STATE_H_
 
 #include <fbl/intrusive_wavl_tree.h>
 #include <ffl/fixed.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <zircon/types.h>
 
 #include <utility>
 
@@ -42,92 +42,91 @@ using SchedTime = ffl::Fixed<zx_time_t, 0>;
 // time units in terms of system time units (nanoseconds).
 template <typename T>
 constexpr auto SchedNs(T nanoseconds) {
-    return ffl::FromInteger(ZX_NSEC(nanoseconds));
+  return ffl::FromInteger(ZX_NSEC(nanoseconds));
 }
 template <typename T>
 constexpr auto SchedUs(T microseconds) {
-    return ffl::FromInteger(ZX_USEC(microseconds));
+  return ffl::FromInteger(ZX_USEC(microseconds));
 }
 template <typename T>
 constexpr auto SchedMs(T milliseconds) {
-    return ffl::FromInteger(ZX_MSEC(milliseconds));
+  return ffl::FromInteger(ZX_MSEC(milliseconds));
 }
 
 // Per-thread state used by FairScheduler.
 class FairTaskState {
-public:
-    // The key type of this node operated on by WAVLTree.
-    using KeyType = std::pair<SchedTime, uint64_t>;
+ public:
+  // The key type of this node operated on by WAVLTree.
+  using KeyType = std::pair<SchedTime, uint64_t>;
 
-    FairTaskState() = default;
+  FairTaskState() = default;
 
-    explicit FairTaskState(SchedWeight weight)
-        : weight_{weight} {}
+  explicit FairTaskState(SchedWeight weight) : weight_{weight} {}
 
-    FairTaskState(const FairTaskState&) = delete;
-    FairTaskState& operator=(const FairTaskState&) = delete;
+  FairTaskState(const FairTaskState&) = delete;
+  FairTaskState& operator=(const FairTaskState&) = delete;
 
-    SchedWeight weight() const { return weight_; }
+  SchedWeight weight() const { return weight_; }
 
-    // Returns the key used to order the run queue.
-    KeyType key() const { return {virtual_finish_time_, generation_}; }
+  // Returns the key used to order the run queue.
+  KeyType key() const { return {virtual_finish_time_, generation_}; }
 
-    // Returns true of the task state is currently enqueued in the runnable tree.
-    bool InQueue() const {
-        return run_queue_node_.InContainer();
-    }
+  // Returns true of the task state is currently enqueued in the runnable tree.
+  bool InQueue() const { return run_queue_node_.InContainer(); }
 
-    // Returns true if the task is active (queued or running) on a run queue.
-    bool active() const { return active_; }
+  // Returns true if the task is active (queued or running) on a run queue.
+  bool active() const { return active_; }
 
-    // Sets the task state to active (on a run queue). Returns true if the task
-    // was not previously active.
-    bool OnInsert() {
-        const bool was_active = active_;
-        active_ = true;
-        return !was_active;
-    }
+  // Sets the task state to active (on a run queue). Returns true if the task
+  // was not previously active.
+  bool OnInsert() {
+    const bool was_active = active_;
+    active_ = true;
+    return !was_active;
+  }
 
-    // Sets the task state to inactive (not on a run queue). Returns true if the
-    // task was previously active.
-    bool OnRemove() {
-        const bool was_active = active_;
-        active_ = false;
-        return was_active;
-    }
+  // Sets the task state to inactive (not on a run queue). Returns true if the
+  // task was previously active.
+  bool OnRemove() {
+    const bool was_active = active_;
+    active_ = false;
+    return was_active;
+  }
 
-    // Returns the generation count from the last time the thread was enqueued
-    // in the runnable tree.
-    uint64_t generation() const { return generation_; }
+  // Returns the generation count from the last time the thread was enqueued
+  // in the runnable tree.
+  uint64_t generation() const { return generation_; }
 
-private:
-    friend class FairScheduler;
+ private:
+  friend class FairScheduler;
 
-    // WAVLTree node state.
-    fbl::WAVLTreeNodeState<thread_t*> run_queue_node_;
+  // WAVLTree node state.
+  fbl::WAVLTreeNodeState<thread_t*> run_queue_node_;
 
-    // The current weight of the thread.
-    SchedWeight weight_{0};
+  // The current weight of the thread.
+  SchedWeight weight_{0};
 
-    // Flag indicating whether this thread is associated with a runqueue.
-    bool active_{false};
+  // Flag indicating whether this thread is associated with a runqueue.
+  bool active_{false};
 
-    // TODO(eieio): Some of the values below are only relevant when running,
-    // while others only while ready. Consider using a union to save space.
+  // TODO(eieio): Some of the values below are only relevant when running,
+  // while others only while ready. Consider using a union to save space.
 
-    // The virtual time of the thread's current bandwidth request.
-    SchedTime virtual_start_time_{0};
+  // The virtual time of the thread's current bandwidth request.
+  SchedTime virtual_start_time_{0};
 
-    // The virtual finish time of the thread's current bandwidth request.
-    SchedTime virtual_finish_time_{0};
+  // The virtual finish time of the thread's current bandwidth request.
+  SchedTime virtual_finish_time_{0};
 
-    // The current timeslice allocated to the thread.
-    SchedDuration time_slice_ns_{0};
+  // The current timeslice allocated to the thread.
+  SchedDuration time_slice_ns_{0};
 
-    // The remainder of timeslice allocated to the thread when it blocked.
-    SchedDuration lag_time_ns_{0};
+  // The remainder of timeslice allocated to the thread when it blocked.
+  SchedDuration lag_time_ns_{0};
 
-    // Takes the value of FairScheduler::generation_count_ + 1 at the time this
-    // node is added to the run queue.
-    uint64_t generation_{0};
+  // Takes the value of FairScheduler::generation_count_ + 1 at the time this
+  // node is added to the run queue.
+  uint64_t generation_{0};
 };
+
+#endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_FAIR_TASK_STATE_H_

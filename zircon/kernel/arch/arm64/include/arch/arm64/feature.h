@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_FEATURE_H_
+#define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_FEATURE_H_
 
 #include <arch/arm64.h>
 #include <stdint.h>
@@ -15,10 +16,7 @@ __BEGIN_CDECLS
 
 extern uint32_t arm64_features;
 
-static inline bool arm64_feature_test(uint32_t feature) {
-
-    return arm64_features & feature;
-}
+static inline bool arm64_feature_test(uint32_t feature) { return arm64_features & feature; }
 
 /* block size of the dc zva instruction, dcache cache line and icache cache line */
 extern uint32_t arm64_zva_size;
@@ -35,3 +33,5 @@ void arm64_get_cache_info(arm64_cache_info_t* info);
 void arm64_dump_cache_info(uint32_t cpu);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_FEATURE_H_

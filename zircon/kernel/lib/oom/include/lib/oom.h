@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_OOM_INCLUDE_LIB_OOM_H_
+#define ZIRCON_KERNEL_LIB_OOM_INCLUDE_LIB_OOM_H_
 
 #include <sys/types.h>
 
@@ -21,3 +22,5 @@ typedef void(oom_lowmem_callback_t)(size_t shortfall_bytes);
 // TODO(dbort): Add a programmatic way to start/stop the thread.
 void oom_init(bool enable, uint64_t sleep_duration_ns, size_t redline_bytes,
               oom_lowmem_callback_t* lowmem_callback);
+
+#endif  // ZIRCON_KERNEL_LIB_OOM_INCLUDE_LIB_OOM_H_

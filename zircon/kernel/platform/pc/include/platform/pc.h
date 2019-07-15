@@ -6,7 +6,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_H_
+#define ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_H_
 
 #include <arch/x86/interrupts.h>
 #include <platform/pc/iomap.h>
@@ -28,3 +29,5 @@
 /* PIC remap bases */
 #define PIC1_BASE X86_INT_PLATFORM_BASE
 #define PIC2_BASE (PIC1_BASE + 8)
+
+#endif  // ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_H_

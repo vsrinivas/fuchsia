@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_CONSOLE_INCLUDE_LIB_CONSOLE_H_
+#define ZIRCON_KERNEL_LIB_CONSOLE_INCLUDE_LIB_CONSOLE_H_
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -16,11 +17,11 @@ __BEGIN_CDECLS
 
 /* command args */
 typedef struct {
-    const char* str;
-    unsigned long u;
-    void* p;
-    long i;
-    bool b;
+  const char* str;
+  unsigned long u;
+  void* p;
+  long i;
+  bool b;
 } cmd_args;
 
 typedef int console_cmd(int argc, const cmd_args* argv, uint32_t flags);
@@ -34,10 +35,10 @@ typedef int console_cmd(int argc, const cmd_args* argv, uint32_t flags);
 
 /* a block of commands to register */
 typedef struct {
-    const char* cmd_str;
-    const char* help_str;
-    console_cmd* cmd_callback;
-    uint8_t availability_mask;
+  const char* cmd_str;
+  const char* help_str;
+  console_cmd* cmd_callback;
+  uint8_t availability_mask;
 } cmd;
 
 /* register a static block of commands at init time */
@@ -48,18 +49,18 @@ typedef struct {
 #endif
 
 #define STATIC_COMMAND_START \
-    __USED __SECTION(".data.rel.ro.commands") static const cmd _cmd_list[] = {
-
+  __USED __SECTION(".data.rel.ro.commands") static const cmd _cmd_list[] = {
 #define STATIC_COMMAND_END(name) \
-    }                            \
-    ;
+  }                              \
+  ;
 
 #define STATIC_COMMAND(command_str, help_str, func) {command_str, help_str, func, CMD_AVAIL_NORMAL},
-#define STATIC_COMMAND_MASKED(command_str, help_str, func, availability_mask) {command_str, help_str, func, availability_mask},
+#define STATIC_COMMAND_MASKED(command_str, help_str, func, availability_mask) \
+  {command_str, help_str, func, availability_mask},
 
 /* external api */
 int console_run_script(const char* string);
-int console_run_script_locked(const char* string); // special case from inside a command
+int console_run_script_locked(const char* string);  // special case from inside a command
 console_cmd* console_get_command_handler(const char* command);
 void console_abort_script(void);
 
@@ -69,3 +70,5 @@ void panic_shell_start(void);
 extern int lastresult;
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_LIB_CONSOLE_INCLUDE_LIB_CONSOLE_H_

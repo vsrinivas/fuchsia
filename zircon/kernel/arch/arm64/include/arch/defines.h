@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_DEFINES_H_
+#define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_DEFINES_H_
 
 #define SHIFT_4K (12)
 #define SHIFT_16K (14)
@@ -50,3 +51,5 @@
 #else
 #define ARCH_PHYSMAP_SIZE (0x1 << 39)
 #endif
+
+#endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_DEFINES_H_

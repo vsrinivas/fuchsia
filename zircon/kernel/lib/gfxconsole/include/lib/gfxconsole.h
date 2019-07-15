@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_GFXCONSOLE_INCLUDE_LIB_GFXCONSOLE_H_
+#define ZIRCON_KERNEL_LIB_GFXCONSOLE_INCLUDE_LIB_GFXCONSOLE_H_
 
 #include <lib/gfx.h>
 #include <zircon/compiler.h>
@@ -20,3 +21,5 @@ void gfxconsole_putpixel(unsigned x, unsigned y, unsigned color);
 void gfxconsole_flush(void);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_LIB_GFXCONSOLE_INCLUDE_LIB_GFXCONSOLE_H_

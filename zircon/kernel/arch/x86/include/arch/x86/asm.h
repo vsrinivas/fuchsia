@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_ASM_H_
+#define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_ASM_H_
 
 #include <asm.h>
 
@@ -12,4 +13,6 @@
 
 #define PHYS_LOAD_ADDRESS (KERNEL_LOAD_OFFSET)
 #define PHYS_ADDR_DELTA (KERNEL_BASE - PHYS_LOAD_ADDRESS)
-#define PHYS(x) ((x) - PHYS_ADDR_DELTA)
+#define PHYS(x) ((x)-PHYS_ADDR_DELTA)
+
+#endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_ASM_H_

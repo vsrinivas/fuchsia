@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_IOMAP_H_
+#define ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_IOMAP_H_
 
 /* i8253/i8254 programmable interval timer registers */
 #define I8253_CONTROL_REG 0x43
@@ -24,3 +25,5 @@
 #define ISA_IOPORT_SERIAL1_BASE 0x3f8
 #define ISA_IOPORT_SERIAL2_BASE 0x2f8
 #define ISA_IOPORT_PRINTER1_BASE 0x278
+
+#endif  // ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_IOMAP_H_

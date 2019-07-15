@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_X86INTRIN_H_
+#define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_X86INTRIN_H_
 
 // TODO(mcgrathr): As of GCC 6.3.0, these other files included by
 // <x86intrin.h> are incompatible with -mno-sse.
@@ -23,3 +24,5 @@
 #define _XOPMMINTRIN_H_INCLUDED
 #endif
 #include <x86intrin.h>
+
+#endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_X86INTRIN_H_

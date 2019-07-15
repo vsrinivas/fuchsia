@@ -4,14 +4,15 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_DEBUGLOG_INCLUDE_LIB_DEBUGLOG_H_
+#define ZIRCON_KERNEL_LIB_DEBUGLOG_INCLUDE_LIB_DEBUGLOG_H_
 
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 #include <kernel/event.h>
 #include <kernel/mutex.h>
 #include <list.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 struct dlog;
 typedef struct dlog dlog_t;
@@ -20,37 +21,36 @@ typedef struct dlog_record dlog_record_t;
 typedef struct dlog_reader dlog_reader_t;
 
 struct dlog_reader {
-    struct list_node node;
+  struct list_node node;
 
-    dlog_t* log;
-    size_t tail;
+  dlog_t* log;
+  size_t tail;
 
-    void (*notify)(void* cookie);
-    void *cookie;
+  void (*notify)(void* cookie);
+  void* cookie;
 };
 
-#define DLOG_HDR_SET(fifosize, readsize) \
-    ((((readsize) & 0xFFF) << 12) | ((fifosize) & 0xFFF))
+#define DLOG_HDR_SET(fifosize, readsize) ((((readsize)&0xFFF) << 12) | ((fifosize)&0xFFF))
 
-#define DLOG_HDR_GET_FIFOLEN(n)   ((n) & 0xFFF)
-#define DLOG_HDR_GET_READLEN(n)  (((n) >> 12) & 0xFFF)
+#define DLOG_HDR_GET_FIFOLEN(n) ((n)&0xFFF)
+#define DLOG_HDR_GET_READLEN(n) (((n) >> 12) & 0xFFF)
 
-#define DLOG_MIN_RECORD          (32u)
-#define DLOG_MAX_DATA            (224u)
-#define DLOG_MAX_RECORD          (DLOG_MIN_RECORD + DLOG_MAX_DATA)
+#define DLOG_MIN_RECORD (32u)
+#define DLOG_MAX_DATA (224u)
+#define DLOG_MAX_RECORD (DLOG_MIN_RECORD + DLOG_MAX_DATA)
 
 struct dlog_header {
-    uint32_t header;
-    uint16_t datalen;
-    uint16_t flags;
-    uint64_t timestamp;
-    uint64_t pid;
-    uint64_t tid;
+  uint32_t header;
+  uint16_t datalen;
+  uint16_t flags;
+  uint64_t timestamp;
+  uint64_t pid;
+  uint64_t tid;
 };
 
 struct dlog_record {
-    dlog_header_t hdr;
-    char data[DLOG_MAX_DATA];
+  dlog_header_t hdr;
+  char data[DLOG_MAX_DATA];
 };
 
 static_assert(sizeof(dlog_header_t) == DLOG_MIN_RECORD, "");
@@ -82,3 +82,5 @@ void dlog_shutdown(void);
 void dlog_bypass_init_early(void);
 void dlog_bypass_init(void);
 bool dlog_bypass(void);
+
+#endif  // ZIRCON_KERNEL_LIB_DEBUGLOG_INCLUDE_LIB_DEBUGLOG_H_

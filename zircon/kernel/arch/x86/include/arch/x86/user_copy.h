@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_USER_COPY_H_
+#define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_USER_COPY_H_
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -15,10 +16,8 @@ __BEGIN_CDECLS
  * It should not be called anywhere except in the x86 usercopy
  * implementation. */
 
-zx_status_t _x86_copy_to_or_from_user(
-        void *dst,
-        const void *src,
-        size_t len,
-        void **fault_return);
+zx_status_t _x86_copy_to_or_from_user(void *dst, const void *src, size_t len, void **fault_return);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_USER_COPY_H_

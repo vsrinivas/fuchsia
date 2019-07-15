@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_WAIT_QUEUE_INTERNAL_H_
+#define ZIRCON_KERNEL_INCLUDE_KERNEL_WAIT_QUEUE_INTERNAL_H_
 
 #include <kernel/sched.h>
 #include <kernel/thread.h>
@@ -28,19 +29,17 @@ bool wait_queue_waiters_priority_changed(wait_queue_t* wq, int old_prio) TA_REQ(
 
 // Remove a thread from a wait queue, maintain the wait queue's internal count,
 // and update the wait_queue specific bookkeeping in the thread in the process.
-inline void wait_queue_dequeue_thread_internal(
-        wait_queue_t* wait,
-        thread_t* t,
-        zx_status_t wait_queue_error) TA_REQ(thread_lock) {
-    DEBUG_ASSERT(t != nullptr);
-    DEBUG_ASSERT(list_in_list(&t->queue_node));
-    DEBUG_ASSERT(t->state == THREAD_BLOCKED || t->state == THREAD_BLOCKED_READ_LOCK);
-    DEBUG_ASSERT(t->blocking_wait_queue == wait);
+inline void wait_queue_dequeue_thread_internal(wait_queue_t* wait, thread_t* t,
+                                               zx_status_t wait_queue_error) TA_REQ(thread_lock) {
+  DEBUG_ASSERT(t != nullptr);
+  DEBUG_ASSERT(list_in_list(&t->queue_node));
+  DEBUG_ASSERT(t->state == THREAD_BLOCKED || t->state == THREAD_BLOCKED_READ_LOCK);
+  DEBUG_ASSERT(t->blocking_wait_queue == wait);
 
-    wait_queue_remove_thread(t);
-    wait->count--;
-    t->blocked_status = wait_queue_error;
-    t->blocking_wait_queue = NULL;
+  wait_queue_remove_thread(t);
+  wait->count--;
+  t->blocked_status = wait_queue_error;
+  t->blocking_wait_queue = NULL;
 }
 
 // Notes for wait_queue_block_etc_(pre|post).
@@ -73,59 +72,58 @@ inline void wait_queue_dequeue_thread_internal(
 // wait_queue_block_etc/wait_queue_block (or the WaitQueue wrappers of the
 // same), or OwnedWaitQueue::BlockAndAssignOwner instead.
 //
-inline zx_status_t wait_queue_block_etc_pre(wait_queue_t* wait,
-                                            const Deadline& deadline,
-                                            uint signal_mask,
-                                            ResourceOwnership reason) TA_REQ(thread_lock) {
-    thread_t* current_thread = get_current_thread();
+inline zx_status_t wait_queue_block_etc_pre(wait_queue_t* wait, const Deadline& deadline,
+                                            uint signal_mask, ResourceOwnership reason)
+    TA_REQ(thread_lock) {
+  thread_t* current_thread = get_current_thread();
 
-    if (deadline.when() != ZX_TIME_INFINITE && deadline.when() <= current_time()) {
-        return ZX_ERR_TIMED_OUT;
+  if (deadline.when() != ZX_TIME_INFINITE && deadline.when() <= current_time()) {
+    return ZX_ERR_TIMED_OUT;
+  }
+
+  if (current_thread->interruptable && (unlikely(current_thread->signals & ~signal_mask))) {
+    if (current_thread->signals & THREAD_SIGNAL_KILL) {
+      return ZX_ERR_INTERNAL_INTR_KILLED;
+    } else if (current_thread->signals & THREAD_SIGNAL_SUSPEND) {
+      return ZX_ERR_INTERNAL_INTR_RETRY;
     }
+  }
 
-    if (current_thread->interruptable &&
-        (unlikely(current_thread->signals & ~signal_mask))) {
-        if (current_thread->signals & THREAD_SIGNAL_KILL) {
-            return ZX_ERR_INTERNAL_INTR_KILLED;
-        } else if (current_thread->signals & THREAD_SIGNAL_SUSPEND) {
-            return ZX_ERR_INTERNAL_INTR_RETRY;
-        }
-    }
+  wait_queue_insert(wait, current_thread);
+  wait->count++;
+  current_thread->state =
+      (reason == ResourceOwnership::Normal) ? THREAD_BLOCKED : THREAD_BLOCKED_READ_LOCK;
+  current_thread->blocking_wait_queue = wait;
+  current_thread->blocked_status = ZX_OK;
 
-    wait_queue_insert(wait, current_thread);
-    wait->count++;
-    current_thread->state = (reason == ResourceOwnership::Normal)
-                          ? THREAD_BLOCKED
-                          : THREAD_BLOCKED_READ_LOCK;
-    current_thread->blocking_wait_queue = wait;
-    current_thread->blocked_status = ZX_OK;
-
-    return ZX_OK;
+  return ZX_OK;
 }
 
-inline zx_status_t wait_queue_block_etc_post(wait_queue_t* wait,
-                                             const Deadline& deadline) TA_REQ(thread_lock) {
-    thread_t* current_thread = get_current_thread();
-    timer_t timer;
+inline zx_status_t wait_queue_block_etc_post(wait_queue_t* wait, const Deadline& deadline)
+    TA_REQ(thread_lock) {
+  thread_t* current_thread = get_current_thread();
+  timer_t timer;
 
-    // if the deadline is nonzero or noninfinite, set a callback to yank us out of the queue
-    if (deadline.when() != ZX_TIME_INFINITE) {
-        timer_init(&timer);
-        timer_set(&timer, deadline, wait_queue_timeout_handler, (void*)current_thread);
-    }
+  // if the deadline is nonzero or noninfinite, set a callback to yank us out of the queue
+  if (deadline.when() != ZX_TIME_INFINITE) {
+    timer_init(&timer);
+    timer_set(&timer, deadline, wait_queue_timeout_handler, (void*)current_thread);
+  }
 
-    ktrace_ptr(TAG_KWAIT_BLOCK, wait, 0, 0);
+  ktrace_ptr(TAG_KWAIT_BLOCK, wait, 0, 0);
 
-    sched_block();
+  sched_block();
 
-    ktrace_ptr(TAG_KWAIT_UNBLOCK, wait, current_thread->blocked_status, 0);
+  ktrace_ptr(TAG_KWAIT_UNBLOCK, wait, current_thread->blocked_status, 0);
 
-    // we don't really know if the timer fired or not, so it's better safe to try to cancel it
-    if (deadline.when() != ZX_TIME_INFINITE) {
-        timer_cancel(&timer);
-    }
+  // we don't really know if the timer fired or not, so it's better safe to try to cancel it
+  if (deadline.when() != ZX_TIME_INFINITE) {
+    timer_cancel(&timer);
+  }
 
-    return current_thread->blocked_status;
+  return current_thread->blocked_status;
 }
 
 }  // namespace internal
+
+#endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_WAIT_QUEUE_INTERNAL_H_

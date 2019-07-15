@@ -5,22 +5,24 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_LIBC_INCLUDE_IOVEC_H_
+#define ZIRCON_KERNEL_LIB_LIBC_INCLUDE_IOVEC_H_
 
-#include <zircon/compiler.h>
 #include <stddef.h>
 #include <sys/types.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
 typedef struct iovec {
-    void *iov_base;
-    size_t iov_len;
+  void *iov_base;
+  size_t iov_len;
 } iovec_t;
 
 ssize_t iovec_size(const iovec_t *iov, uint iov_cnt);
 
-ssize_t iovec_to_membuf(uint8_t *buf, uint buf_len,
-                        const iovec_t *iov, uint iov_cnt, uint iov_pos);
+ssize_t iovec_to_membuf(uint8_t *buf, uint buf_len, const iovec_t *iov, uint iov_cnt, uint iov_pos);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_LIB_LIBC_INCLUDE_IOVEC_H_

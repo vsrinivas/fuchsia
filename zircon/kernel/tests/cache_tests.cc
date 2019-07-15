@@ -5,8 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "tests.h"
-
 #include <arch.h>
 #include <arch/ops.h>
 #include <inttypes.h>
@@ -18,54 +16,56 @@
 #include <string.h>
 #include <zircon/types.h>
 
+#include "tests.h"
+
 static void bench_cache(size_t bufsize, uint8_t* buf) {
-    zx_time_t t;
-    bool do_free;
+  zx_time_t t;
+  bool do_free;
 
-    printf("cache line size %" PRIu32 "\n", arch_dcache_line_size());
+  printf("cache line size %" PRIu32 "\n", arch_dcache_line_size());
 
-    if (buf == 0) {
-        buf = (uint8_t*)memalign(arch_dcache_line_size(), bufsize);
-        do_free = true;
-    } else {
-        do_free = false;
-    }
+  if (buf == 0) {
+    buf = (uint8_t*)memalign(arch_dcache_line_size(), bufsize);
+    do_free = true;
+  } else {
+    do_free = false;
+  }
 
-    printf("buf %p, size %zu\n", buf, bufsize);
+  printf("buf %p, size %zu\n", buf, bufsize);
 
-    if (!buf)
-        return;
+  if (!buf)
+    return;
 
-    t = current_time();
-    arch_clean_cache_range((addr_t)buf, bufsize);
-    zx_duration_t duration = current_time() - t;
+  t = current_time();
+  arch_clean_cache_range((addr_t)buf, bufsize);
+  zx_duration_t duration = current_time() - t;
 
-    printf("took %" PRIi64 " nsecs to clean %zu bytes (cold)\n", duration, bufsize);
+  printf("took %" PRIi64 " nsecs to clean %zu bytes (cold)\n", duration, bufsize);
 
-    memset(buf, 0x99, bufsize);
+  memset(buf, 0x99, bufsize);
 
-    t = current_time();
-    arch_clean_cache_range((addr_t)buf, bufsize);
-    duration = current_time() - t;
+  t = current_time();
+  arch_clean_cache_range((addr_t)buf, bufsize);
+  duration = current_time() - t;
 
-    if (do_free)
-        free(buf);
+  if (do_free)
+    free(buf);
 
-    printf("took %" PRIi64 " nsecs to clean %zu bytes (hot)\n", duration, bufsize);
+  printf("took %" PRIi64 " nsecs to clean %zu bytes (hot)\n", duration, bufsize);
 }
 
 static int cache_tests(int argc, const cmd_args* argv, uint32_t flags) {
-    uint8_t* buf;
-    buf = (uint8_t*)((argc > 1) ? argv[1].u : 0UL);
+  uint8_t* buf;
+  buf = (uint8_t*)((argc > 1) ? argv[1].u : 0UL);
 
-    printf("testing cache\n");
+  printf("testing cache\n");
 
-    bench_cache(2 * 1024, buf);
-    bench_cache(64 * 1024, buf);
-    bench_cache(256 * 1024, buf);
-    bench_cache(1 * 1024 * 1024, buf);
-    bench_cache(8 * 1024 * 1024, buf);
-    return 0;
+  bench_cache(2 * 1024, buf);
+  bench_cache(64 * 1024, buf);
+  bench_cache(256 * 1024, buf);
+  bench_cache(1 * 1024 * 1024, buf);
+  bench_cache(8 * 1024 * 1024, buf);
+  return 0;
 }
 
 STATIC_COMMAND_START

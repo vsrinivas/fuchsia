@@ -5,7 +5,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <fbl/name.h>
-
 #include <lib/unittest/unittest.h>
 
 namespace {
@@ -13,184 +12,183 @@ namespace {
 constexpr char fill = 0x7f;
 
 bool buffer_invariants_hold(const char* buf, size_t size) {
-    // The buffer should start with zero or more non-NUL bytes followed
-    // by a NUL.
-    unsigned int idx = 0;
-    while (buf[idx] != 0) {
-        idx++;
-        if (idx == size) {
-            unittest_printf("No NUL byte found\n");
-            return false;
-        }
+  // The buffer should start with zero or more non-NUL bytes followed
+  // by a NUL.
+  unsigned int idx = 0;
+  while (buf[idx] != 0) {
+    idx++;
+    if (idx == size) {
+      unittest_printf("No NUL byte found\n");
+      return false;
     }
-    idx++; // Skip the NUL
-    // The rest of the buffer should be filled with the NUL byte
-    // to ensure stale data isn't leaked.
-    while (idx < size) {
-        if (buf[idx] != '\0') {
-            unsigned int byte = buf[idx];
-            unittest_printf(
-                "buf[%u] 0x%02x != 0x00\n", idx, byte);
-            return false;
-        }
-        idx++;
+  }
+  idx++;  // Skip the NUL
+  // The rest of the buffer should be filled with the NUL byte
+  // to ensure stale data isn't leaked.
+  while (idx < size) {
+    if (buf[idx] != '\0') {
+      unsigned int byte = buf[idx];
+      unittest_printf("buf[%u] 0x%02x != 0x00\n", idx, byte);
+      return false;
     }
-    return true;
+    idx++;
+  }
+  return true;
 }
 
 template <size_t Size>
 bool empty_ctor() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    // Note on |out| sizes: most tests use Size * 2 to ensure the out buffer is
-    // more than big enough to read the entire name with room to spare.
-    char out[Size * 2];
-    memset(out, fill, sizeof(out));
+  // Note on |out| sizes: most tests use Size * 2 to ensure the out buffer is
+  // more than big enough to read the entire name with room to spare.
+  char out[Size * 2];
+  memset(out, fill, sizeof(out));
 
-    fbl::Name<Size> name;
-    name.get(sizeof(out), out);
+  fbl::Name<Size> name;
+  name.get(sizeof(out), out);
 
-    EXPECT_EQ(out[0], 0, "");
-    EXPECT_TRUE(buffer_invariants_hold(out, sizeof(out)), "");
+  EXPECT_EQ(out[0], 0, "");
+  EXPECT_TRUE(buffer_invariants_hold(out, sizeof(out)), "");
 
-    END_TEST;
+  END_TEST;
 }
 
 template <size_t Size>
 bool named_ctor_empty() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    char out[Size * 2];
-    memset(out, fill, sizeof(out));
+  char out[Size * 2];
+  memset(out, fill, sizeof(out));
 
-    fbl::Name<Size> name("", 1);
-    name.get(sizeof(out), out);
+  fbl::Name<Size> name("", 1);
+  name.get(sizeof(out), out);
 
-    EXPECT_EQ(out[0], 0, "");
-    EXPECT_TRUE(buffer_invariants_hold(out, sizeof(out)), "");
+  EXPECT_EQ(out[0], 0, "");
+  EXPECT_TRUE(buffer_invariants_hold(out, sizeof(out)), "");
 
-    END_TEST;
+  END_TEST;
 }
 
 template <size_t Size>
 bool named_ctor_small() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    char out[Size * 2];
-    memset(out, fill, sizeof(out));
+  char out[Size * 2];
+  memset(out, fill, sizeof(out));
 
-    fbl::Name<Size> name("a", 2);
-    name.get(sizeof(out), out);
+  fbl::Name<Size> name("a", 2);
+  name.get(sizeof(out), out);
 
-    EXPECT_EQ(out[0], 'a', "");
-    EXPECT_EQ(out[1], 0, "");
-    EXPECT_TRUE(buffer_invariants_hold(out, sizeof(out)), "");
+  EXPECT_EQ(out[0], 'a', "");
+  EXPECT_EQ(out[1], 0, "");
+  EXPECT_TRUE(buffer_invariants_hold(out, sizeof(out)), "");
 
-    END_TEST;
+  END_TEST;
 }
 
 template <size_t Size>
 bool named_ctor_exact() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    char out[Size * 2];
-    memset(out, fill, sizeof(out));
+  char out[Size * 2];
+  memset(out, fill, sizeof(out));
 
-    char expected_name[Size];
-    memset(expected_name, 'z', Size - 1);
-    expected_name[Size - 1] = 0;
+  char expected_name[Size];
+  memset(expected_name, 'z', Size - 1);
+  expected_name[Size - 1] = 0;
 
-    fbl::Name<Size> name(expected_name, Size);
-    name.get(sizeof(out), out);
+  fbl::Name<Size> name(expected_name, Size);
+  name.get(sizeof(out), out);
 
-    for (size_t idx = 0; idx < Size - 1; ++idx) {
-        EXPECT_EQ(out[idx], 'z', "");
-    }
-    EXPECT_EQ(out[Size - 1], 0, "");
-    EXPECT_TRUE(buffer_invariants_hold(out, sizeof(out)), "");
+  for (size_t idx = 0; idx < Size - 1; ++idx) {
+    EXPECT_EQ(out[idx], 'z', "");
+  }
+  EXPECT_EQ(out[Size - 1], 0, "");
+  EXPECT_TRUE(buffer_invariants_hold(out, sizeof(out)), "");
 
-    END_TEST;
+  END_TEST;
 }
 
 template <size_t Size>
 bool named_ctor_overflow() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    constexpr size_t overflow_size = 2 * Size;
+  constexpr size_t overflow_size = 2 * Size;
 
-    char out[overflow_size * 2];
-    memset(out, fill, sizeof(out));
+  char out[overflow_size * 2];
+  memset(out, fill, sizeof(out));
 
-    char expected_name[overflow_size];
-    memset(expected_name, 'z', overflow_size - 1);
-    expected_name[overflow_size - 1] = 0;
+  char expected_name[overflow_size];
+  memset(expected_name, 'z', overflow_size - 1);
+  expected_name[overflow_size - 1] = 0;
 
-    fbl::Name<Size> name(expected_name, overflow_size);
-    name.get(sizeof(out), out);
+  fbl::Name<Size> name(expected_name, overflow_size);
+  name.get(sizeof(out), out);
 
-    for (size_t idx = 0; idx < Size - 1; ++idx) {
-        EXPECT_EQ(out[idx], 'z', "");
-    }
-    EXPECT_EQ(out[Size - 1], 0, "");
-    EXPECT_TRUE(buffer_invariants_hold(out, sizeof(out)), "");
+  for (size_t idx = 0; idx < Size - 1; ++idx) {
+    EXPECT_EQ(out[idx], 'z', "");
+  }
+  EXPECT_EQ(out[Size - 1], 0, "");
+  EXPECT_TRUE(buffer_invariants_hold(out, sizeof(out)), "");
 
-    END_TEST;
+  END_TEST;
 }
 
 template <size_t Size>
 bool zero_sized_output_buffer() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    // Neither of these bytes should be touched.
-    char out[2] = {fill, fill};
+  // Neither of these bytes should be touched.
+  char out[2] = {fill, fill};
 
-    fbl::Name<Size> name("a", 2);
-    name.get(0, out);
+  fbl::Name<Size> name("a", 2);
+  name.get(0, out);
 
-    EXPECT_EQ(out[0], fill, "");
-    EXPECT_EQ(out[1], fill, "");
+  EXPECT_EQ(out[0], fill, "");
+  EXPECT_EQ(out[1], fill, "");
 
-    END_TEST;
+  END_TEST;
 }
 
 template <size_t NameSize, size_t OutSize>
 bool output_buffer_size() {
-    static_assert(OutSize > 0, ""); // |OutSize - 1| below would fail.
+  static_assert(OutSize > 0, "");  // |OutSize - 1| below would fail.
 
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    // Longest name possible.
-    char expected_name[NameSize];
-    memset(expected_name, 'z', NameSize - 1);
-    expected_name[NameSize - 1] = 0;
+  // Longest name possible.
+  char expected_name[NameSize];
+  memset(expected_name, 'z', NameSize - 1);
+  expected_name[NameSize - 1] = 0;
 
-    char out[OutSize + 2]; // Extra fill at the end.
-    memset(out, fill, sizeof(out));
+  char out[OutSize + 2];  // Extra fill at the end.
+  memset(out, fill, sizeof(out));
 
-    fbl::Name<NameSize> name(expected_name, sizeof(expected_name));
-    name.get(OutSize, out);
+  fbl::Name<NameSize> name(expected_name, sizeof(expected_name));
+  name.get(OutSize, out);
 
-    // Check that the name fits in the size we passed to Name::get().
-    for (size_t idx = 0; idx < OutSize - 1; ++idx) {
-        char msg[32];
-        snprintf(msg, sizeof(msg), "idx=%zu", idx);
-        EXPECT_EQ(out[idx], 'z', msg);
-    }
-    EXPECT_EQ(out[OutSize - 1], 0, "");
+  // Check that the name fits in the size we passed to Name::get().
+  for (size_t idx = 0; idx < OutSize - 1; ++idx) {
+    char msg[32];
+    snprintf(msg, sizeof(msg), "idx=%zu", idx);
+    EXPECT_EQ(out[idx], 'z', msg);
+  }
+  EXPECT_EQ(out[OutSize - 1], 0, "");
 
-    // Check that the extra fill is intact.
-    EXPECT_TRUE(buffer_invariants_hold(out, OutSize), "");
-    EXPECT_EQ(out[OutSize], fill, "");
-    EXPECT_EQ(out[OutSize+1], fill, "");
+  // Check that the extra fill is intact.
+  EXPECT_TRUE(buffer_invariants_hold(out, OutSize), "");
+  EXPECT_EQ(out[OutSize], fill, "");
+  EXPECT_EQ(out[OutSize + 1], fill, "");
 
-    END_TEST;
+  END_TEST;
 }
 
 // Test the smallest size and a typical size.
 constexpr size_t kSmallestNameSize = 2;
 constexpr size_t kTypicalNameSize = 32;
 
-} // namespace
+}  // namespace
 
 #define NAME_UNITTEST(fname) UNITTEST(#fname, fname)
 

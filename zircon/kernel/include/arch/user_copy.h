@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_ARCH_USER_COPY_H_
+#define ZIRCON_KERNEL_INCLUDE_ARCH_USER_COPY_H_
 
 #include <err.h>
 #include <zircon/compiler.h>
@@ -41,3 +42,5 @@ zx_status_t arch_copy_from_user(void *dst, const void *src, size_t len);
 zx_status_t arch_copy_to_user(void *dst, const void *src, size_t len);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_INCLUDE_ARCH_USER_COPY_H_

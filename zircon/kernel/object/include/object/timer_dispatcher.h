@@ -4,47 +4,46 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
-
-#include <kernel/dpc.h>
-#include <kernel/timer.h>
-
-#include <zircon/rights.h>
-#include <zircon/types.h>
+#ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_TIMER_DISPATCHER_H_
+#define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_TIMER_DISPATCHER_H_
 
 #include <fbl/canary.h>
 #include <fbl/mutex.h>
+#include <kernel/dpc.h>
+#include <kernel/timer.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>
-
 #include <sys/types.h>
+#include <zircon/rights.h>
+#include <zircon/types.h>
 
 class TimerDispatcher final : public SoloDispatcher<TimerDispatcher, ZX_DEFAULT_TIMER_RIGHTS> {
-public:
-    static zx_status_t Create(uint32_t options,
-                              KernelHandle<TimerDispatcher>* handle,
-                              zx_rights_t* rights);
+ public:
+  static zx_status_t Create(uint32_t options, KernelHandle<TimerDispatcher>* handle,
+                            zx_rights_t* rights);
 
-    ~TimerDispatcher() final;
-    zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_TIMER; }
-    void on_zero_handles() final;
+  ~TimerDispatcher() final;
+  zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_TIMER; }
+  void on_zero_handles() final;
 
-    // Timer specific ops.
-    zx_status_t Set(zx_time_t deadline, zx_duration_t slack_amount);
-    zx_status_t Cancel();
+  // Timer specific ops.
+  zx_status_t Set(zx_time_t deadline, zx_duration_t slack_amount);
+  zx_status_t Cancel();
 
-    // Timer callback.
-    void OnTimerFired();
+  // Timer callback.
+  void OnTimerFired();
 
-private:
-    explicit TimerDispatcher(slack_mode slack_mode);
-    void SetTimerLocked(bool cancel_first) TA_REQ(get_lock());
-    bool CancelTimerLocked() TA_REQ(get_lock());
+ private:
+  explicit TimerDispatcher(slack_mode slack_mode);
+  void SetTimerLocked(bool cancel_first) TA_REQ(get_lock());
+  bool CancelTimerLocked() TA_REQ(get_lock());
 
-    const slack_mode slack_mode_;
-    dpc_t timer_dpc_;
-    zx_time_t deadline_ TA_GUARDED(get_lock());
-    zx_duration_t slack_amount_ TA_GUARDED(get_lock());
-    bool cancel_pending_ TA_GUARDED(get_lock());
-    timer_t timer_ TA_GUARDED(get_lock());
+  const slack_mode slack_mode_;
+  dpc_t timer_dpc_;
+  zx_time_t deadline_ TA_GUARDED(get_lock());
+  zx_duration_t slack_amount_ TA_GUARDED(get_lock());
+  bool cancel_pending_ TA_GUARDED(get_lock());
+  timer_t timer_ TA_GUARDED(get_lock());
 };
+
+#endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_TIMER_DISPATCHER_H_

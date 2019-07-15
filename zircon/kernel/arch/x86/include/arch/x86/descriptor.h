@@ -6,45 +6,46 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_DESCRIPTOR_H_
+#define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_DESCRIPTOR_H_
 
 /*
  * System Selectors
  */
-#define NULL_SELECTOR           0x00
+#define NULL_SELECTOR 0x00
 
 /********* kernel selectors *********/
-#define CODE_SELECTOR           0x08
-#define CODE_64_SELECTOR        0x10
-#define DATA_SELECTOR           0x18
+#define CODE_SELECTOR 0x08
+#define CODE_64_SELECTOR 0x10
+#define DATA_SELECTOR 0x18
 
 /********* user selectors *********/
-#define USER_CODE_SELECTOR      (0x20 | 3)
-#define USER_DATA_SELECTOR      (0x28 | 3)
-#define USER_CODE_64_SELECTOR   (0x30 | 3)
+#define USER_CODE_SELECTOR (0x20 | 3)
+#define USER_DATA_SELECTOR (0x28 | 3)
+#define USER_CODE_64_SELECTOR (0x30 | 3)
 
-#define TSS_SELECTOR(i)            ((uint16_t)(0x38 + 16 * (i)))
+#define TSS_SELECTOR(i) ((uint16_t)(0x38 + 16 * (i)))
 /* 0x40 is used by the second half of the first TSS descriptor */
 
 /* selector priviledge level */
-#define SELECTOR_PL(s) ((s) & 0x3)
+#define SELECTOR_PL(s) ((s)&0x3)
 
 /*
  * Descriptor Types
  */
-#define SEG_TYPE_TSS        0x9
-#define SEG_TYPE_TSS_BUSY   0xb
-#define SEG_TYPE_TASK_GATE  0x5
-#define SEG_TYPE_INT_GATE   0xe     /* 32 bit */
-#define SEG_TYPE_DATA_RW    0x2
-#define SEG_TYPE_CODE_RW    0xa
+#define SEG_TYPE_TSS 0x9
+#define SEG_TYPE_TSS_BUSY 0xb
+#define SEG_TYPE_TASK_GATE 0x5
+#define SEG_TYPE_INT_GATE 0xe /* 32 bit */
+#define SEG_TYPE_DATA_RW 0x2
+#define SEG_TYPE_CODE_RW 0xa
 
 #ifndef __ASSEMBLER__
 
 #include <arch/aspace.h>
-#include <zircon/compiler.h>
 #include <reg.h>
 #include <sys/types.h>
+#include <zircon/compiler.h>
 
 #ifdef __cplusplus
 #include <arch/x86/ioport.h>
@@ -52,16 +53,15 @@
 void x86_set_tss_io_bitmap(IoBitmap& bitmap);
 void x86_clear_tss_io_bitmap(IoBitmap& bitmap);
 void x86_reset_tss_io_bitmap(void);
-#endif // __cplusplus
+#endif  // __cplusplus
 
 __BEGIN_CDECLS
 
 typedef uint16_t seg_sel_t;
 
 /* fill in a descriptor in the GDT */
-void set_global_desc_64(seg_sel_t sel, uint64_t base, uint32_t limit,
-                        uint8_t present, uint8_t ring, uint8_t sys,
-                        uint8_t type, uint8_t gran, uint8_t bits);
+void set_global_desc_64(seg_sel_t sel, uint64_t base, uint32_t limit, uint8_t present, uint8_t ring,
+                        uint8_t sys, uint8_t type, uint8_t gran, uint8_t bits);
 
 /* tss stuff */
 void x86_initialize_percpu_tss(void);
@@ -70,17 +70,17 @@ void x86_set_tss_sp(vaddr_t sp);
 void x86_clear_tss_busy(seg_sel_t sel);
 
 static inline void gdt_load(uintptr_t base) {
-    struct gdtr {
-        uint16_t limit;
-        uintptr_t address;
-    } __PACKED;
-    // During VM exit GDTR limit is always set to 0xffff and instead of
-    // trying to maintain the limit aligned with the actual GDT size we
-    // decided to just keep it 0xffff all the time and instead of relying
-    // on the limit just map GDT in the way that accesses beyond GDT cause
-    // page faults. This allows us to avoid calling LGDT on every VM exit.
-    struct gdtr gdtr = { .limit = 0xffff, .address = base };
-    x86_lgdt((uintptr_t)&gdtr);
+  struct gdtr {
+    uint16_t limit;
+    uintptr_t address;
+  } __PACKED;
+  // During VM exit GDTR limit is always set to 0xffff and instead of
+  // trying to maintain the limit aligned with the actual GDT size we
+  // decided to just keep it 0xffff all the time and instead of relying
+  // on the limit just map GDT in the way that accesses beyond GDT cause
+  // page faults. This allows us to avoid calling LGDT on every VM exit.
+  struct gdtr gdtr = {.limit = 0xffff, .address = base};
+  x86_lgdt((uintptr_t)&gdtr);
 }
 
 void gdt_setup(void);
@@ -89,3 +89,5 @@ uintptr_t gdt_get(void);
 __END_CDECLS
 
 #endif
+
+#endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_DESCRIPTOR_H_

@@ -4,36 +4,38 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_BOOTLOADER_H_
+#define ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_BOOTLOADER_H_
 
 #include <stdint.h>
-
 #include <zircon/boot/image.h>
 
 // Data passed in by the bootloader
 // Used by various bits of pc platform init
 
 typedef struct pc_bootloader_info {
-    uint64_t acpi_rsdp;
-    uint64_t smbios;
+  uint64_t acpi_rsdp;
+  uint64_t smbios;
 
-    void* efi_system_table;
+  void* efi_system_table;
 
-    void* efi_mmap;
-    size_t efi_mmap_size;
+  void* efi_mmap;
+  size_t efi_mmap_size;
 
-    void* e820_table;
-    size_t e820_count;
+  void* e820_table;
+  size_t e820_count;
 
-    uint64_t ramdisk_base;
-    size_t ramdisk_size;
+  uint64_t ramdisk_base;
+  size_t ramdisk_size;
 
-    zbi_swfb_t fb;
-    zbi_uart_t uart;
-    zbi_nvram_t nvram;
+  zbi_swfb_t fb;
+  zbi_uart_t uart;
+  zbi_nvram_t nvram;
 
-    uint64_t platform_id_size;
-    zbi_platform_id_t platform_id;
+  uint64_t platform_id_size;
+  zbi_platform_id_t platform_id;
 } pc_bootloader_info_t;
 
 extern pc_bootloader_info_t bootloader;
+
+#endif  // ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_BOOTLOADER_H_

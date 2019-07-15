@@ -13,11 +13,11 @@
 uint64_t tsc_adj = 0;
 
 void x86_tsc_adjust(void) {
-    if (x86_feature_test(X86_FEATURE_TSC_ADJUST))
-        write_msr(X86_MSR_IA32_TSC_ADJUST, tsc_adj);
+  if (x86_feature_test(X86_FEATURE_TSC_ADJUST))
+    write_msr(X86_MSR_IA32_TSC_ADJUST, tsc_adj);
 }
 
 void x86_tsc_store_adjustment(void) {
-    if (x86_feature_test(X86_FEATURE_TSC_ADJUST))
-        tsc_adj = read_msr(X86_MSR_IA32_TIME_STAMP_COUNTER);
+  if (x86_feature_test(X86_FEATURE_TSC_ADJUST))
+    tsc_adj = read_msr(X86_MSR_IA32_TIME_STAMP_COUNTER);
 }

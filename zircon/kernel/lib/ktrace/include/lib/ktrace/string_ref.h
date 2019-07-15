@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_KTRACE_INCLUDE_LIB_KTRACE_STRING_REF_H_
+#define ZIRCON_KERNEL_LIB_KTRACE_INCLUDE_LIB_KTRACE_STRING_REF_H_
 
 #include <ktl/atomic.h>
 #include <zircon/types.h>
@@ -14,30 +15,30 @@
 // constructors or a destructor and contains trivially constructible members so
 // that it may be aggregate-initialized to avoid static initializers and guards.
 struct StringRef {
-    static constexpr int kInvalidId = -1;
+  static constexpr int kInvalidId = -1;
 
-    const char* string{nullptr};
-    ktl::atomic<int> id{kInvalidId};
-    StringRef* next{nullptr};
+  const char* string{nullptr};
+  ktl::atomic<int> id{kInvalidId};
+  StringRef* next{nullptr};
 
-    // Returns the numeric id for this string ref. If this is the first runtime
-    // encounter with this string ref a new id is generated and the string ref
-    // is added to the global linked list.
-    int GetId() {
-        const int ref_id = id.load(ktl::memory_order_relaxed);
-        return ref_id == kInvalidId ? Register(this) : ref_id;
-    }
+  // Returns the numeric id for this string ref. If this is the first runtime
+  // encounter with this string ref a new id is generated and the string ref
+  // is added to the global linked list.
+  int GetId() {
+    const int ref_id = id.load(ktl::memory_order_relaxed);
+    return ref_id == kInvalidId ? Register(this) : ref_id;
+  }
 
-    // Returns the head of the global string ref linked list.
-    static StringRef* head() { return head_.load(ktl::memory_order_acquire); }
+  // Returns the head of the global string ref linked list.
+  static StringRef* head() { return head_.load(ktl::memory_order_acquire); }
 
-private:
-    // TODO(ZX-3498): Replace runtime lock-free linked list with comdat linker
-    // sections once the toolchain supports it.
-    static int Register(StringRef* string_ref);
+ private:
+  // TODO(ZX-3498): Replace runtime lock-free linked list with comdat linker
+  // sections once the toolchain supports it.
+  static int Register(StringRef* string_ref);
 
-    static ktl::atomic<int> id_counter_;
-    static ktl::atomic<StringRef*> head_;
+  static ktl::atomic<int> id_counter_;
+  static ktl::atomic<StringRef*> head_;
 };
 
 // String literal template operator that generates a unique StringRef instance
@@ -59,8 +60,9 @@ private:
 //
 template <typename T, T... chars>
 inline StringRef* operator""_stringref() {
-    static const char storage[] = {chars..., '\0'};
-    static StringRef string_ref{storage};
-    return &string_ref;
+  static const char storage[] = {chars..., '\0'};
+  static StringRef string_ref{storage};
+  return &string_ref;
 }
 
+#endif  // ZIRCON_KERNEL_LIB_KTRACE_INCLUDE_LIB_KTRACE_STRING_REF_H_

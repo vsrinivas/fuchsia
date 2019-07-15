@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_KEYBOARD_H_
+#define ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_KEYBOARD_H_
 
 #include <lib/cbuf.h>
 
@@ -15,3 +16,5 @@ int platform_read_key(char* c);
 
 // Reboot the system via the keyboard, returns on failure.
 void pc_keyboard_reboot(void);
+
+#endif  // ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_KEYBOARD_H_

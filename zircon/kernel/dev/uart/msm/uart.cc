@@ -121,204 +121,193 @@ static event_t uart_txemt_event =
 
 static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 
-static inline uint32_t uart_read(int offset) {
-    return readl(uart_base + offset);
-}
+static inline uint32_t uart_read(int offset) { return readl(uart_base + offset); }
 
-static inline void uart_write(uint32_t val, int offset) {
-    writel(val, uart_base + offset);
-}
+static inline void uart_write(uint32_t val, int offset) { writel(val, uart_base + offset); }
 
-static inline void yield(void)
-{
-    __asm__ volatile("yield" ::: "memory");
-}
+static inline void yield(void) { __asm__ volatile("yield" ::: "memory"); }
 
 // panic-time getc/putc
 static int msm_pputc(char c) {
-    if (!uart_base) {
-        return -1;
-    }
+  if (!uart_base) {
+    return -1;
+  }
 
-    // spin while fifo is full
-    while (!(uart_read(UART_DM_SR) & UART_DM_SR_TXEMT)) {
-        yield();
-    }
-    uart_write(UART_DM_CR_CMD_RESET_TX_READY, UART_DM_N0_CHARS_FOR_TX);
-    uart_write(1, UART_DM_N0_CHARS_FOR_TX);
-    uart_read(UART_DM_N0_CHARS_FOR_TX);
+  // spin while fifo is full
+  while (!(uart_read(UART_DM_SR) & UART_DM_SR_TXEMT)) {
+    yield();
+  }
+  uart_write(UART_DM_CR_CMD_RESET_TX_READY, UART_DM_N0_CHARS_FOR_TX);
+  uart_write(1, UART_DM_N0_CHARS_FOR_TX);
+  uart_read(UART_DM_N0_CHARS_FOR_TX);
 
-    // wait for TX ready
-    while (!(uart_read(UART_DM_SR) & UART_DM_SR_TXRDY)) {
-        yield();
-    }
+  // wait for TX ready
+  while (!(uart_read(UART_DM_SR) & UART_DM_SR_TXRDY)) {
+    yield();
+  }
 
-    uart_write(c, UART_DM_TF);
+  uart_write(c, UART_DM_TF);
 
-    return 1;
+  return 1;
 }
 
-static int msm_pgetc(void)
-{
-    cbuf_t* rxbuf = &uart_rx_buf;
+static int msm_pgetc(void) {
+  cbuf_t* rxbuf = &uart_rx_buf;
 
-    char c;
-    int count = 0;
-    uint32_t val, rxfs, sr;
-    char* bytes;
+  char c;
+  int count = 0;
+  uint32_t val, rxfs, sr;
+  char* bytes;
 
-    // see if we have chars left from previous read
-    if (cbuf_read_char(rxbuf, &c, false) == 1) {
-        return c;
-    }
-
-    if ((uart_read(UART_DM_SR) & UART_DM_SR_OVERRUN)) {
-        uart_write(UART_DM_CR_CMD_RESET_ERR, UART_DM_CR);
-    }
-
-    do {
-        rxfs = uart_read(UART_DM_RXFS);
-        sr = uart_read(UART_DM_SR);
-        count = UART_DM_RXFS_RX_BUFFER_STATE(rxfs);
-        if (!(sr & UART_DM_SR_RXRDY) && !count) {
-            return -1;
-        }
-    } while (count == 0);
-
-    uart_write(UART_DM_CR_CMD_FORCE_STALE, UART_DM_CR);
-    val = uart_read(UART_DM_RF(0));
-    uart_read(UART_DM_RF(1));
-
-    uart_write(UART_DM_CR_CMD_RESET_STALE_INT, UART_DM_CR);
-    uart_write(0xffffff, UART_DM_DMRX);
-
-    bytes = (char*)&val;
-    c = bytes[0];
-
-    // save remaining chars for next call
-    for (int i = 1; i < count; i++) {
-        cbuf_write_char(rxbuf, bytes[i]);
-    }
-
+  // see if we have chars left from previous read
+  if (cbuf_read_char(rxbuf, &c, false) == 1) {
     return c;
+  }
+
+  if ((uart_read(UART_DM_SR) & UART_DM_SR_OVERRUN)) {
+    uart_write(UART_DM_CR_CMD_RESET_ERR, UART_DM_CR);
+  }
+
+  do {
+    rxfs = uart_read(UART_DM_RXFS);
+    sr = uart_read(UART_DM_SR);
+    count = UART_DM_RXFS_RX_BUFFER_STATE(rxfs);
+    if (!(sr & UART_DM_SR_RXRDY) && !count) {
+      return -1;
+    }
+  } while (count == 0);
+
+  uart_write(UART_DM_CR_CMD_FORCE_STALE, UART_DM_CR);
+  val = uart_read(UART_DM_RF(0));
+  uart_read(UART_DM_RF(1));
+
+  uart_write(UART_DM_CR_CMD_RESET_STALE_INT, UART_DM_CR);
+  uart_write(0xffffff, UART_DM_DMRX);
+
+  bytes = (char*)&val;
+  c = bytes[0];
+
+  // save remaining chars for next call
+  for (int i = 1; i < count; i++) {
+    cbuf_write_char(rxbuf, bytes[i]);
+  }
+
+  return c;
 }
 
 static interrupt_eoi uart_irq_handler(void* arg) {
-    uint32_t misr = uart_read(UART_DM_MISR);
-    if (misr & UART_IRQ_TX_READY) {
-        event_signal(&uart_txemt_event, false);
-        uart_write(UART_DM_CR_CMD_RESET_TX_READY, UART_DM_CR);
+  uint32_t misr = uart_read(UART_DM_MISR);
+  if (misr & UART_IRQ_TX_READY) {
+    event_signal(&uart_txemt_event, false);
+    uart_write(UART_DM_CR_CMD_RESET_TX_READY, UART_DM_CR);
+  }
+  if (misr & UART_IRQ_RXSTALE) {
+    while (uart_read(UART_DM_SR) & UART_DM_SR_RXRDY) {
+      uint32_t rxfs = uart_read(UART_DM_RXFS);
+      // count is number of words in RX fifo that have data
+      int count = UART_DM_RXFS_FIFO_STATE(rxfs);
+
+      for (int i = 0; i < count; i++) {
+        uint32_t val = uart_read(UART_DM_RF(0));
+        char* bytes = (char*)&val;
+
+        for (int j = 0; j < 4; j++) {
+          // Unfortunately there is no documented way to get number of bytes in each word
+          // so we just need to ignore zero bytes here.
+          // Apparently this problem doesn't exist in DMA mode.
+          char ch = bytes[j];
+          if (ch) {
+            cbuf_write_char(&uart_rx_buf, ch);
+          } else {
+            break;
+          }
+        }
+      }
     }
+
     if (misr & UART_IRQ_RXSTALE) {
-        while (uart_read(UART_DM_SR) & UART_DM_SR_RXRDY) {
-            uint32_t rxfs = uart_read(UART_DM_RXFS);
-            // count is number of words in RX fifo that have data
-            int count = UART_DM_RXFS_FIFO_STATE(rxfs);
-
-            for (int i = 0; i < count; i++) {
-                uint32_t val = uart_read(UART_DM_RF(0));
-                char* bytes = (char*)&val;
-
-                for (int j = 0; j < 4; j++) {
-                    // Unfortunately there is no documented way to get number of bytes in each word
-                    // so we just need to ignore zero bytes here.
-                    // Apparently this problem doesn't exist in DMA mode.
-                    char ch = bytes[j];
-                    if (ch) {
-                        cbuf_write_char(&uart_rx_buf, ch);
-                    } else {
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (misr & UART_IRQ_RXSTALE) {
-            uart_write(UART_DM_CR_CMD_RESET_STALE_INT, UART_DM_CR);
-        }
-
-        // ask to receive more
-        uart_write(0xFFFFFF, UART_DM_DMRX);
-        uart_write(UART_DM_CR_CMD_ENABLE_STALE_EVENT, UART_DM_CR);
+      uart_write(UART_DM_CR_CMD_RESET_STALE_INT, UART_DM_CR);
     }
-    return IRQ_EOI_DEACTIVATE;
+
+    // ask to receive more
+    uart_write(0xFFFFFF, UART_DM_DMRX);
+    uart_write(UART_DM_CR_CMD_ENABLE_STALE_EVENT, UART_DM_CR);
+  }
+  return IRQ_EOI_DEACTIVATE;
 }
 
 static void msm_uart_init(const void* driver_data, uint32_t length) {
-    uint32_t temp;
+  uint32_t temp;
 
-    // disable interrupts
-    uart_write(0, UART_DM_IMR);
+  // disable interrupts
+  uart_write(0, UART_DM_IMR);
 
-    uart_write(UART_DM_CR_TX_EN | UART_DM_CR_RX_EN, UART_DM_CR);
-    uart_write(UART_DM_CR_CMD_RESET_TX, UART_DM_CR);
-    uart_write(UART_DM_CR_CMD_RESET_RX, UART_DM_CR);
-    uart_write(UART_DM_CR_CMD_RESET_ERR, UART_DM_CR);
-    uart_write(UART_DM_CR_CMD_RESET_BRK_CHG_INT, UART_DM_CR);
-    uart_write(UART_DM_CR_CMD_RESET_CTS_N, UART_DM_CR);
-    uart_write(UART_DM_CR_CMD_SET_RFR, UART_DM_CR);
-    uart_write(UART_DM_CR_CMD_CLEAR_TX_DONE, UART_DM_CR);
+  uart_write(UART_DM_CR_TX_EN | UART_DM_CR_RX_EN, UART_DM_CR);
+  uart_write(UART_DM_CR_CMD_RESET_TX, UART_DM_CR);
+  uart_write(UART_DM_CR_CMD_RESET_RX, UART_DM_CR);
+  uart_write(UART_DM_CR_CMD_RESET_ERR, UART_DM_CR);
+  uart_write(UART_DM_CR_CMD_RESET_BRK_CHG_INT, UART_DM_CR);
+  uart_write(UART_DM_CR_CMD_RESET_CTS_N, UART_DM_CR);
+  uart_write(UART_DM_CR_CMD_SET_RFR, UART_DM_CR);
+  uart_write(UART_DM_CR_CMD_CLEAR_TX_DONE, UART_DM_CR);
 
-    uart_write(0xFFFFFF, UART_DM_DMRX);
-    uart_write(UART_DM_CR_CMD_ENABLE_STALE_EVENT, UART_DM_CR);
+  uart_write(0xFFFFFF, UART_DM_DMRX);
+  uart_write(UART_DM_CR_CMD_ENABLE_STALE_EVENT, UART_DM_CR);
 
-    temp = uart_read(UART_MR1);
-    temp |= UART_MR1_RX_RDY_CTL;
-    uart_write(temp, UART_MR1);
+  temp = uart_read(UART_MR1);
+  temp |= UART_MR1_RX_RDY_CTL;
+  uart_write(temp, UART_MR1);
 
-    cbuf_initialize(&uart_rx_buf, RXBUF_SIZE);
+  cbuf_initialize(&uart_rx_buf, RXBUF_SIZE);
 
-    // enable RX and TX interrupts
-    uart_write(UART_IRQ_RXSTALE | UART_IRQ_TX_READY, UART_DM_IMR);
+  // enable RX and TX interrupts
+  uart_write(UART_IRQ_RXSTALE | UART_IRQ_TX_READY, UART_DM_IMR);
 
-    register_int_handler(uart_irq, &uart_irq_handler, nullptr);
-    unmask_interrupt(uart_irq);
+  register_int_handler(uart_irq, &uart_irq_handler, nullptr);
+  unmask_interrupt(uart_irq);
 }
 
 static int msm_getc(bool wait) {
-    char ch;
-    size_t count = cbuf_read_char(&uart_rx_buf, &ch, wait);
-    return (count == 1 ? ch : -1);
+  char ch;
+  size_t count = cbuf_read_char(&uart_rx_buf, &ch, wait);
+  return (count == 1 ? ch : -1);
 }
 
-static void msm_start_panic(void) {
-    uart_tx_irq_enabled = false;
-}
+static void msm_start_panic(void) { uart_tx_irq_enabled = false; }
 
-static void msm_dputs(const char* str, size_t len,
-                         bool block, bool map_NL) {
-    spin_lock_saved_state_t state;
-    bool copied_CR = false;
+static void msm_dputs(const char* str, size_t len, bool block, bool map_NL) {
+  spin_lock_saved_state_t state;
+  bool copied_CR = false;
 
-    if (!uart_base) {
-        return;
-    }
-    if (!uart_tx_irq_enabled) {
-        block = false;
-    }
-    spin_lock_irqsave(&uart_spinlock, state);
+  if (!uart_base) {
+    return;
+  }
+  if (!uart_tx_irq_enabled) {
+    block = false;
+  }
+  spin_lock_irqsave(&uart_spinlock, state);
 
-    while (len > 0) {
-        // is FIFO full?
-        while (!(uart_read(UART_DM_SR) & UART_DM_SR_TXRDY)) {
-            spin_unlock_irqrestore(&uart_spinlock, state);
-            if (block) {
-                event_wait(&uart_dputc_event);
-            } else {
-                event_wait(&uart_txemt_event);
-            }
-            spin_lock_irqsave(&uart_spinlock, state);
-        }
-        if (*str == '\n' && map_NL && !copied_CR) {
-            copied_CR = true;
-            msm_pputc('\r');
-        } else {
-            copied_CR = false;
-            msm_pputc(*str++);
-            len--;
-        }
+  while (len > 0) {
+    // is FIFO full?
+    while (!(uart_read(UART_DM_SR) & UART_DM_SR_TXRDY)) {
+      spin_unlock_irqrestore(&uart_spinlock, state);
+      if (block) {
+        event_wait(&uart_dputc_event);
+      } else {
+        event_wait(&uart_txemt_event);
+      }
+      spin_lock_irqsave(&uart_spinlock, state);
     }
-    spin_unlock_irqrestore(&uart_spinlock, state);
+    if (*str == '\n' && map_NL && !copied_CR) {
+      copied_CR = true;
+      msm_pputc('\r');
+    } else {
+      copied_CR = false;
+      msm_pputc(*str++);
+      len--;
+    }
+  }
+  spin_unlock_irqrestore(&uart_spinlock, state);
 }
 
 static const struct pdev_uart_ops uart_ops = {
@@ -330,14 +319,14 @@ static const struct pdev_uart_ops uart_ops = {
 };
 
 static void msm_uart_init_early(const void* driver_data, uint32_t length) {
-    ASSERT(length >= sizeof(dcfg_simple_t));
-    auto driver = static_cast<const dcfg_simple_t*>(driver_data);
-    uart_base = periph_paddr_to_vaddr(driver->mmio_phys);
-    uart_irq = driver->irq;
-    ASSERT(uart_base);
-    ASSERT(uart_irq);
+  ASSERT(length >= sizeof(dcfg_simple_t));
+  auto driver = static_cast<const dcfg_simple_t*>(driver_data);
+  uart_base = periph_paddr_to_vaddr(driver->mmio_phys);
+  uart_irq = driver->irq;
+  ASSERT(uart_base);
+  ASSERT(uart_irq);
 
-    pdev_register_uart(&uart_ops);
+  pdev_register_uart(&uart_ops);
 }
 
 LK_PDEV_INIT(msm_uart_init_early, KDRV_MSM_UART, msm_uart_init_early, LK_INIT_LEVEL_PLATFORM_EARLY)
@@ -345,14 +334,14 @@ LK_PDEV_INIT(msm_uart_init, KDRV_MSM_UART, msm_uart_init, LK_INIT_LEVEL_PLATFORM
 
 // boot time hacked version to directly print
 #if 0
-#define UART_DM_N0_CHARS_FOR_TX             0x0040
-#define UART_DM_CR_CMD_RESET_TX_READY       (3 << 8)
+#define UART_DM_N0_CHARS_FOR_TX 0x0040
+#define UART_DM_CR_CMD_RESET_TX_READY (3 << 8)
 
-#define UART_DM_SR                          0x00A4
-#define UART_DM_SR_TXRDY                    (1 << 2)
-#define UART_DM_SR_TXEMT                    (1 << 3)
+#define UART_DM_SR 0x00A4
+#define UART_DM_SR_TXRDY (1 << 2)
+#define UART_DM_SR_TXEMT (1 << 3)
 
-#define UART_DM_TF                          0x0100
+#define UART_DM_TF 0x0100
 
 #define UARTREG(reg) (*(volatile uint32_t*)(0x078af000 + (reg)))
 
@@ -384,4 +373,4 @@ extern "C" void msm_print_hex(uint64_t value) {
 
     msm_putc(' ');
 }
-#endif // boot hack
+#endif  // boot hack

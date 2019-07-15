@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_CRYPTO_INCLUDE_LIB_CRYPTO_GLOBAL_PRNG_H_
+#define ZIRCON_KERNEL_LIB_CRYPTO_INCLUDE_LIB_CRYPTO_GLOBAL_PRNG_H_
 
 #include <lib/crypto/prng.h>
 
@@ -16,6 +17,8 @@ namespace GlobalPRNG {
 // guaranteed to be non-null.
 PRNG* GetInstance();
 
-} //namespace GlobalPRNG
+}  // namespace GlobalPRNG
 
-} // namespace crypto
+}  // namespace crypto
+
+#endif  // ZIRCON_KERNEL_LIB_CRYPTO_INCLUDE_LIB_CRYPTO_GLOBAL_PRNG_H_

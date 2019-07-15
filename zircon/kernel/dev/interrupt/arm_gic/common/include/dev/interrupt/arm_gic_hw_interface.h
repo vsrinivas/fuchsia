@@ -5,29 +5,30 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_COMMON_INCLUDE_DEV_INTERRUPT_ARM_GIC_HW_INTERFACE_H_
+#define ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_COMMON_INCLUDE_DEV_INTERRUPT_ARM_GIC_HW_INTERFACE_H_
 
 #include <sys/types.h>
 
 enum class InterruptState : uint8_t {
-    INACTIVE = 0,
-    PENDING = 1,
-    ACTIVE = 2,
-    PENDING_AND_ACTIVE = 3,
+  INACTIVE = 0,
+  PENDING = 1,
+  ACTIVE = 2,
+  PENDING_AND_ACTIVE = 3,
 };
 
 struct IchState;
 
 // GIC HW interface
 struct arm_gic_hw_interface_ops {
-    zx_status_t (*get_gicv)(paddr_t* gicv_paddr);
-    void (*read_gich_state)(IchState* state);
-    void (*write_gich_state)(IchState* state, uint32_t hcr);
-    uint32_t (*default_gich_vmcr)();
-    uint64_t (*get_lr_from_vector)(bool hw, uint8_t prio, InterruptState state, uint32_t vector);
-    uint32_t (*get_vector_from_lr)(uint64_t lr, InterruptState* state);
-    uint8_t (*get_num_pres)();
-    uint8_t (*get_num_lrs)();
+  zx_status_t (*get_gicv)(paddr_t* gicv_paddr);
+  void (*read_gich_state)(IchState* state);
+  void (*write_gich_state)(IchState* state, uint32_t hcr);
+  uint32_t (*default_gich_vmcr)();
+  uint64_t (*get_lr_from_vector)(bool hw, uint8_t prio, InterruptState state, uint32_t vector);
+  uint32_t (*get_vector_from_lr)(uint64_t lr, InterruptState* state);
+  uint8_t (*get_num_pres)();
+  uint8_t (*get_num_lrs)();
 };
 
 // Get the GICV physical address.
@@ -59,3 +60,5 @@ void arm_gic_hw_interface_register(const struct arm_gic_hw_interface_ops* ops);
 
 // Returns whether the GIC driver has been registered.
 bool arm_gic_is_registered();
+
+#endif  // ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_COMMON_INCLUDE_DEV_INTERRUPT_ARM_GIC_HW_INTERFACE_H_

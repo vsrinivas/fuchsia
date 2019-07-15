@@ -5,18 +5,17 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <libc/string.h>
 #include <libc/ctype.h>
+#include <libc/string.h>
 
-void *memscan(void *addr, int c, size_t size)
-{
-    unsigned char *p = (unsigned char *)addr;
+void *memscan(void *addr, int c, size_t size) {
+  unsigned char *p = (unsigned char *)addr;
 
-    while (size) {
-        if (*p == c)
-            return (void *)p;
-        p++;
-        size--;
-    }
-    return (void *)p;
+  while (size) {
+    if (*p == c)
+      return (void *)p;
+    p++;
+    size--;
+  }
+  return (void *)p;
 }

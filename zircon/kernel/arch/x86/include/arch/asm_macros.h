@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_ASM_MACROS_H_
+#define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_ASM_MACROS_H_
 
 // clang-format off
 
@@ -89,3 +90,5 @@ add $\value, %rsp
   .cfi_undefined %r13 ; \
   .cfi_undefined %r14 ; \
   .cfi_undefined %r15
+
+#endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_ASM_MACROS_H_

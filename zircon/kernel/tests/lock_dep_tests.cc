@@ -4,14 +4,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "tests.h"
-
 #include <kernel/mutex.h>
 #include <lib/unittest/unittest.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <lockdep/guard_multiple.h>
 #include <lockdep/lockdep.h>
 #include <stdint.h>
-#include <lib/zircon-internal/thread_annotations.h>
+
+#include "tests.h"
 
 #if WITH_LOCK_DEP_TESTS
 
@@ -22,29 +22,29 @@ bool g_try_lock_succeeds = true;
 
 // Define some proxy types to simulate different kinds of locks.
 struct Spinlock : Mutex {
-    using Mutex::Mutex;
+  using Mutex::Mutex;
 
-    bool AcquireIrqSave(uint64_t* flags) TA_ACQ() {
-        (void)flags;
-        Acquire();
-        return true;
-    }
-    void ReleaseIrqRestore(uint64_t flags) TA_REL() {
-        (void)flags;
-        Release();
-    }
+  bool AcquireIrqSave(uint64_t* flags) TA_ACQ() {
+    (void)flags;
+    Acquire();
+    return true;
+  }
+  void ReleaseIrqRestore(uint64_t flags) TA_REL() {
+    (void)flags;
+    Release();
+  }
 
-    bool TryAcquire() TA_TRY_ACQ(true) {
-        if (g_try_lock_succeeds)
-            Acquire();
-        return g_try_lock_succeeds;
-    }
-    bool TryAcquireIrqSave(uint64_t* flags) TA_TRY_ACQ(true) {
-        (void)flags;
-        if (g_try_lock_succeeds)
-            Acquire();
-        return g_try_lock_succeeds;
-    }
+  bool TryAcquire() TA_TRY_ACQ(true) {
+    if (g_try_lock_succeeds)
+      Acquire();
+    return g_try_lock_succeeds;
+  }
+  bool TryAcquireIrqSave(uint64_t* flags) TA_TRY_ACQ(true) {
+    (void)flags;
+    if (g_try_lock_succeeds)
+      Acquire();
+    return g_try_lock_succeeds;
+  }
 };
 LOCK_DEP_TRAITS(Spinlock, lockdep::LockFlagsIrqSafe);
 
@@ -54,14 +54,10 @@ LOCK_DEP_TRAITS(spinlock_t, lockdep::LockFlagsIrqSafe);
 
 void spinlock_lock(spinlock_t* /*lock*/) {}
 void spinlock_unlock(spinlock_t* /*lock*/) {}
-bool spinlock_try_lock(spinlock_t* /*lock*/) {
-    return true;
-}
+bool spinlock_try_lock(spinlock_t* /*lock*/) { return true; }
 void spinlock_lock_irqsave(spinlock_t* /*lock*/, uint64_t* /*flags*/) {}
 void spinlock_unlock_irqrestore(spinlock_t* /*lock*/, uint64_t /*flags*/) {}
-bool spinlock_try_lock_irqsave(spinlock_t* /*lock*/, uint64_t* /*flags*/) {
-    return true;
-}
+bool spinlock_try_lock_irqsave(spinlock_t* /*lock*/, uint64_t* /*flags*/) { return true; }
 
 // Type tags to select Guard<> lock policies for Spinlock and spinlock_t.
 struct IrqSave {};
@@ -70,800 +66,780 @@ struct TryIrqSave {};
 struct TryNoIrqSave {};
 
 struct SpinlockNoIrqSave {
-    struct State {};
+  struct State {};
 
-    static bool Acquire(Spinlock* lock, State*) TA_ACQ(lock) {
-        lock->Acquire();
-        return true;
-    }
-    static void Release(Spinlock* lock, State*) TA_REL(lock) {
-        lock->Release();
-    }
+  static bool Acquire(Spinlock* lock, State*) TA_ACQ(lock) {
+    lock->Acquire();
+    return true;
+  }
+  static void Release(Spinlock* lock, State*) TA_REL(lock) { lock->Release(); }
 };
 LOCK_DEP_POLICY_OPTION(Spinlock, NoIrqSave, SpinlockNoIrqSave);
 
 struct SpinlockIrqSave {
-    struct State {
-        State() {}
-        uint64_t flags;
-    };
+  struct State {
+    State() {}
+    uint64_t flags;
+  };
 
-    static bool Acquire(Spinlock* lock, State* state) TA_ACQ(lock) {
-        lock->AcquireIrqSave(&state->flags);
-        return true;
-    }
-    static void Release(Spinlock* lock, State* state) TA_REL(lock) {
-        lock->ReleaseIrqRestore(state->flags);
-    }
+  static bool Acquire(Spinlock* lock, State* state) TA_ACQ(lock) {
+    lock->AcquireIrqSave(&state->flags);
+    return true;
+  }
+  static void Release(Spinlock* lock, State* state) TA_REL(lock) {
+    lock->ReleaseIrqRestore(state->flags);
+  }
 };
 LOCK_DEP_POLICY_OPTION(Spinlock, IrqSave, SpinlockIrqSave);
 
 struct SpinlockTryNoIrqSave {
-    struct State {};
+  struct State {};
 
-    static bool Acquire(Spinlock* lock, State*) TA_TRY_ACQ(true, lock) {
-        return lock->TryAcquire();
-    }
-    static void Release(Spinlock* lock, State*) TA_REL(lock) {
-        lock->Release();
-    }
+  static bool Acquire(Spinlock* lock, State*) TA_TRY_ACQ(true, lock) { return lock->TryAcquire(); }
+  static void Release(Spinlock* lock, State*) TA_REL(lock) { lock->Release(); }
 };
 LOCK_DEP_POLICY_OPTION(Spinlock, TryNoIrqSave, SpinlockTryNoIrqSave);
 
 struct SpinlockTryIrqSave {
-    struct State {
-        State() {}
-        uint64_t flags;
-    };
+  struct State {
+    State() {}
+    uint64_t flags;
+  };
 
-    static bool Acquire(Spinlock* lock, State* state) TA_TRY_ACQ(true, lock) {
-        return lock->TryAcquireIrqSave(&state->flags);
-    }
-    static void Release(Spinlock* lock, State* state) TA_REL(lock) {
-        lock->ReleaseIrqRestore(state->flags);
-    }
+  static bool Acquire(Spinlock* lock, State* state) TA_TRY_ACQ(true, lock) {
+    return lock->TryAcquireIrqSave(&state->flags);
+  }
+  static void Release(Spinlock* lock, State* state) TA_REL(lock) {
+    lock->ReleaseIrqRestore(state->flags);
+  }
 };
 LOCK_DEP_POLICY_OPTION(Spinlock, TryIrqSave, SpinlockTryIrqSave);
 
 struct spinlock_t_NoIrqSave {
-    struct State {};
+  struct State {};
 
-    static bool Acquire(spinlock_t* lock, State*) {
-        spinlock_lock(lock);
-        return true;
-    }
-    static void Release(spinlock_t* lock, State*) {
-        spinlock_unlock(lock);
-    }
+  static bool Acquire(spinlock_t* lock, State*) {
+    spinlock_lock(lock);
+    return true;
+  }
+  static void Release(spinlock_t* lock, State*) { spinlock_unlock(lock); }
 };
 LOCK_DEP_POLICY_OPTION(spinlock_t, NoIrqSave, spinlock_t_NoIrqSave);
 
 struct spinlock_t_IrqSave {
-    struct State {
-        State() {}
-        uint64_t flags;
-    };
+  struct State {
+    State() {}
+    uint64_t flags;
+  };
 
-    static bool Acquire(spinlock_t* lock, State* state) {
-        spinlock_lock_irqsave(lock, &state->flags);
-        return true;
-    }
-    static void Release(spinlock_t* lock, State* state) {
-        spinlock_unlock_irqrestore(lock, state->flags);
-    }
+  static bool Acquire(spinlock_t* lock, State* state) {
+    spinlock_lock_irqsave(lock, &state->flags);
+    return true;
+  }
+  static void Release(spinlock_t* lock, State* state) {
+    spinlock_unlock_irqrestore(lock, state->flags);
+  }
 };
 LOCK_DEP_POLICY_OPTION(spinlock_t, IrqSave, spinlock_t_IrqSave);
 
 struct spinlock_t_TryNoIrqSave {
-    struct State {};
+  struct State {};
 
-    static bool Acquire(spinlock_t* lock, State*) {
-        spinlock_lock(lock);
-        return g_try_lock_succeeds;
-    }
-    static void Release(spinlock_t* lock, State*) {
-        spinlock_unlock(lock);
-    }
+  static bool Acquire(spinlock_t* lock, State*) {
+    spinlock_lock(lock);
+    return g_try_lock_succeeds;
+  }
+  static void Release(spinlock_t* lock, State*) { spinlock_unlock(lock); }
 };
 LOCK_DEP_POLICY_OPTION(spinlock_t, TryNoIrqSave, spinlock_t_TryNoIrqSave);
 
 struct spinlock_t_TryIrqSave {
-    struct State {
-        State() {}
-        uint64_t flags;
-    };
+  struct State {
+    State() {}
+    uint64_t flags;
+  };
 
-    static bool Acquire(spinlock_t* lock, State* state) {
-        spinlock_lock_irqsave(lock, &state->flags);
-        return g_try_lock_succeeds;
-    }
-    static void Release(spinlock_t* lock, State* state) {
-        spinlock_unlock_irqrestore(lock, state->flags);
-    }
+  static bool Acquire(spinlock_t* lock, State* state) {
+    spinlock_lock_irqsave(lock, &state->flags);
+    return g_try_lock_succeeds;
+  }
+  static void Release(spinlock_t* lock, State* state) {
+    spinlock_unlock_irqrestore(lock, state->flags);
+  }
 };
 LOCK_DEP_POLICY_OPTION(spinlock_t, TryIrqSave, spinlock_t_TryIrqSave);
 
 struct Mutex : ::Mutex {
-    using ::Mutex::Mutex;
+  using ::Mutex::Mutex;
 };
 // Uses the default traits: fbl::LockClassState::None.
 
 struct Nestable : ::Mutex {
-    using ::Mutex::Mutex;
+  using ::Mutex::Mutex;
 };
 LOCK_DEP_TRAITS(Nestable, lockdep::LockFlagsNestable);
 
 struct TA_CAP("mutex") ReadWriteLock {
-    bool AcquireWrite() TA_ACQ() {
-        return true;
-    }
-    bool AcquireRead() TA_ACQ_SHARED() {
-        return true;
-    }
-    void Release() TA_REL() {}
+  bool AcquireWrite() TA_ACQ() { return true; }
+  bool AcquireRead() TA_ACQ_SHARED() { return true; }
+  void Release() TA_REL() {}
 
-    struct Read {
-        struct State {};
-        struct Shared {};
-        static bool Acquire(ReadWriteLock* lock, State*) TA_ACQ_SHARED(lock) {
-            return lock->AcquireRead();
-        }
-        static void Release(ReadWriteLock* lock, State*) TA_REL(lock) {
-            lock->Release();
-        }
-    };
+  struct Read {
+    struct State {};
+    struct Shared {};
+    static bool Acquire(ReadWriteLock* lock, State*) TA_ACQ_SHARED(lock) {
+      return lock->AcquireRead();
+    }
+    static void Release(ReadWriteLock* lock, State*) TA_REL(lock) { lock->Release(); }
+  };
 
-    struct Write {
-        struct State {};
-        static bool Acquire(ReadWriteLock* lock, State*) TA_ACQ(lock) {
-            return lock->AcquireWrite();
-        }
-        static void Release(ReadWriteLock* lock, State*) TA_REL(lock) {
-            lock->Release();
-        }
-    };
+  struct Write {
+    struct State {};
+    static bool Acquire(ReadWriteLock* lock, State*) TA_ACQ(lock) { return lock->AcquireWrite(); }
+    static void Release(ReadWriteLock* lock, State*) TA_REL(lock) { lock->Release(); }
+  };
 };
 LOCK_DEP_POLICY_OPTION(ReadWriteLock, ReadWriteLock::Read, ReadWriteLock::Read);
 LOCK_DEP_POLICY_OPTION(ReadWriteLock, ReadWriteLock::Write, ReadWriteLock::Write);
 
 struct Foo {
-    LOCK_DEP_INSTRUMENT(Foo, Mutex) lock;
+  LOCK_DEP_INSTRUMENT(Foo, Mutex) lock;
 
-    void TestRequire() TA_REQ(lock) {}
-    void TestExclude() TA_EXCL(lock) {}
+  void TestRequire() TA_REQ(lock) {}
+  void TestExclude() TA_EXCL(lock) {}
 };
 
 struct Bar {
-    LOCK_DEP_INSTRUMENT(Bar, Mutex) lock;
+  LOCK_DEP_INSTRUMENT(Bar, Mutex) lock;
 
-    void TestRequire() TA_REQ(lock) {}
-    void TestExclude() TA_EXCL(lock) {}
+  void TestRequire() TA_REQ(lock) {}
+  void TestExclude() TA_EXCL(lock) {}
 };
 
 template <typename LockType>
 struct Baz {
-    LOCK_DEP_INSTRUMENT(Baz, LockType) lock;
+  LOCK_DEP_INSTRUMENT(Baz, LockType) lock;
 
-    void TestRequire() TA_REQ(lock) {}
-    void TestExclude() TA_EXCL(lock) {}
-    void TestShared() TA_REQ_SHARED(lock) {}
+  void TestRequire() TA_REQ(lock) {}
+  void TestExclude() TA_EXCL(lock) {}
+  void TestShared() TA_REQ_SHARED(lock) {}
 };
 
 struct MultipleLocks {
-    LOCK_DEP_INSTRUMENT(MultipleLocks, Mutex) lock_a;
-    LOCK_DEP_INSTRUMENT(MultipleLocks, Mutex) lock_b;
+  LOCK_DEP_INSTRUMENT(MultipleLocks, Mutex) lock_a;
+  LOCK_DEP_INSTRUMENT(MultipleLocks, Mutex) lock_b;
 
-    void TestRequireLockA() TA_REQ(lock_a) {}
-    void TestExcludeLockA() TA_EXCL(lock_a) {}
-    void TestRequireLockB() TA_REQ(lock_b) {}
-    void TestExcludeLockB() TA_EXCL(lock_b) {}
+  void TestRequireLockA() TA_REQ(lock_a) {}
+  void TestExcludeLockA() TA_EXCL(lock_a) {}
+  void TestRequireLockB() TA_REQ(lock_b) {}
+  void TestExcludeLockB() TA_EXCL(lock_b) {}
 };
 
 template <size_t Index>
 struct Number {
-    LOCK_DEP_INSTRUMENT(Number, Mutex) lock;
+  LOCK_DEP_INSTRUMENT(Number, Mutex) lock;
 
-    void TestRequire() TA_REQ(lock) {}
-    void TestExclude() TA_EXCL(lock) {}
+  void TestRequire() TA_REQ(lock) {}
+  void TestExclude() TA_EXCL(lock) {}
 };
 
 lockdep::LockResult GetLastResult() {
 #if WITH_LOCK_DEP
-    lockdep::ThreadLockState* state = lockdep::ThreadLockState::Get();
-    return state->last_result();
+  lockdep::ThreadLockState* state = lockdep::ThreadLockState::Get();
+  return state->last_result();
 #else
-    return lockdep::LockResult::Success;
+  return lockdep::LockResult::Success;
 #endif
 }
 
 void ResetTrackingState() {
 #if WITH_LOCK_DEP
-    for (auto& state : lockdep::LockClassState::Iter())
-        state.Reset();
+  for (auto& state : lockdep::LockClassState::Iter())
+    state.Reset();
 #endif
 }
 
-} // namespace test
+}  // namespace test
 
 static bool lock_dep_dynamic_analysis_tests() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    using lockdep::Guard;
-    using lockdep::GuardMultiple;
-    using lockdep::LockClassState;
-    using lockdep::LockResult;
-    using lockdep::ThreadLockState;
-    using test::Bar;
-    using test::Baz;
-    using test::Foo;
-    using test::GetLastResult;
-    using test::IrqSave;
-    using test::MultipleLocks;
-    using test::Mutex;
-    using test::Nestable;
-    using test::NoIrqSave;
-    using test::Number;
-    using test::ReadWriteLock;
-    using test::Spinlock;
-    using test::spinlock_t;
-    using test::TryIrqSave;
-    using test::TryNoIrqSave;
+  using lockdep::Guard;
+  using lockdep::GuardMultiple;
+  using lockdep::LockClassState;
+  using lockdep::LockResult;
+  using lockdep::ThreadLockState;
+  using test::Bar;
+  using test::Baz;
+  using test::Foo;
+  using test::GetLastResult;
+  using test::IrqSave;
+  using test::MultipleLocks;
+  using test::Mutex;
+  using test::Nestable;
+  using test::NoIrqSave;
+  using test::Number;
+  using test::ReadWriteLock;
+  using test::Spinlock;
+  using test::spinlock_t;
+  using test::TryIrqSave;
+  using test::TryNoIrqSave;
 
-    // Reset the tracking state before each test run.
-    test::ResetTrackingState();
+  // Reset the tracking state before each test run.
+  test::ResetTrackingState();
 
-    // Single lock.
+  // Single lock.
+  {
+    Foo a{};
+
+    Guard<Mutex> guard_a{&a.lock};
+    EXPECT_TRUE(guard_a, "");
+    EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+  }
+
+  // Single lock.
+  {
+    Bar a{};
+
+    Guard<Mutex> guard_a{&a.lock};
+    EXPECT_TRUE(guard_a, "");
+    EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+  }
+
+  // Test order invariant.
+  {
+    Foo a{};
+    Foo b{};
+
+    Guard<Mutex> guard_a{&a.lock};
+    EXPECT_TRUE(guard_a, "");
+    EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+
+    Guard<Mutex> guard_b{&b.lock};
+    EXPECT_TRUE(guard_b, "");
+    EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(), "");
+  }
+
+  // Test order invariant with a different lock class.
+  {
+    Bar a{};
+    Bar b{};
+
+    Guard<Mutex> guard_a{&a.lock};
+    EXPECT_TRUE(guard_a, "");
+    EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+
+    Guard<Mutex> guard_b{&b.lock};
+    EXPECT_TRUE(guard_b, "");
+    EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(), "");
+  }
+
+  // Test address order invariant.
+  {
+    Foo a{};
+    Foo b{};
+
     {
-        Foo a{};
-
-        Guard<Mutex> guard_a{&a.lock};
-        EXPECT_TRUE(guard_a, "");
-        EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+      GuardMultiple<2, Mutex> guard_all{&a.lock, &b.lock};
+      EXPECT_TRUE(guard_all, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
     }
 
-    // Single lock.
     {
-        Bar a{};
+      GuardMultiple<2, Mutex> guard_all{&b.lock, &a.lock};
+      EXPECT_TRUE(guard_all, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+    }
+  }
 
-        Guard<Mutex> guard_a{&a.lock};
-        EXPECT_TRUE(guard_a, "");
-        EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+  // Test address order invariant with a different lock class.
+  {
+    Bar a{};
+    Bar b{};
+
+    {
+      GuardMultiple<2, Mutex> guard_all{&a.lock, &b.lock};
+      EXPECT_TRUE(guard_all, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
     }
 
-    // Test order invariant.
     {
-        Foo a{};
-        Foo b{};
+      GuardMultiple<2, Mutex> guard_all{&b.lock, &a.lock};
+      EXPECT_TRUE(guard_all, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+    }
+  }
 
-        Guard<Mutex> guard_a{&a.lock};
-        EXPECT_TRUE(guard_a, "");
-        EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+  // Test address order invariant with spinlocks.
+  {
+    Baz<Spinlock> a{};
+    Baz<Spinlock> b{};
 
-        Guard<Mutex> guard_b{&b.lock};
-        EXPECT_TRUE(guard_b, "");
-        EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(), "");
+    {
+      GuardMultiple<2, Spinlock, NoIrqSave> guard_all{&a.lock, &b.lock};
+      EXPECT_TRUE(guard_all, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
     }
 
-    // Test order invariant with a different lock class.
     {
-        Bar a{};
-        Bar b{};
-
-        Guard<Mutex> guard_a{&a.lock};
-        EXPECT_TRUE(guard_a, "");
-        EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-
-        Guard<Mutex> guard_b{&b.lock};
-        EXPECT_TRUE(guard_b, "");
-        EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(), "");
+      GuardMultiple<2, Spinlock, NoIrqSave> guard_all{&b.lock, &a.lock};
+      EXPECT_TRUE(guard_all, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
     }
 
-    // Test address order invariant.
     {
-        Foo a{};
-        Foo b{};
-
-        {
-            GuardMultiple<2, Mutex> guard_all{&a.lock, &b.lock};
-            EXPECT_TRUE(guard_all, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-        }
-
-        {
-            GuardMultiple<2, Mutex> guard_all{&b.lock, &a.lock};
-            EXPECT_TRUE(guard_all, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-        }
+      test::g_try_lock_succeeds = true;
+      GuardMultiple<2, Spinlock, TryNoIrqSave> guard_all{&a.lock, &b.lock};
+      EXPECT_TRUE(guard_all, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
     }
 
-    // Test address order invariant with a different lock class.
     {
-        Bar a{};
-        Bar b{};
-
-        {
-            GuardMultiple<2, Mutex> guard_all{&a.lock, &b.lock};
-            EXPECT_TRUE(guard_all, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-        }
-
-        {
-            GuardMultiple<2, Mutex> guard_all{&b.lock, &a.lock};
-            EXPECT_TRUE(guard_all, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-        }
+      test::g_try_lock_succeeds = true;
+      GuardMultiple<2, Spinlock, TryNoIrqSave> guard_all{&b.lock, &a.lock};
+      EXPECT_TRUE(guard_all, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
     }
 
-    // Test address order invariant with spinlocks.
     {
-        Baz<Spinlock> a{};
-        Baz<Spinlock> b{};
-
-        {
-            GuardMultiple<2, Spinlock, NoIrqSave> guard_all{&a.lock, &b.lock};
-            EXPECT_TRUE(guard_all, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-        }
-
-        {
-            GuardMultiple<2, Spinlock, NoIrqSave> guard_all{&b.lock, &a.lock};
-            EXPECT_TRUE(guard_all, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-        }
-
-        {
-            test::g_try_lock_succeeds = true;
-            GuardMultiple<2, Spinlock, TryNoIrqSave> guard_all{&a.lock, &b.lock};
-            EXPECT_TRUE(guard_all, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-        }
-
-        {
-            test::g_try_lock_succeeds = true;
-            GuardMultiple<2, Spinlock, TryNoIrqSave> guard_all{&b.lock, &a.lock};
-            EXPECT_TRUE(guard_all, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-        }
-
-        {
-            test::g_try_lock_succeeds = false;
-            GuardMultiple<2, Spinlock, TryNoIrqSave> guard_all{&a.lock, &b.lock};
-            EXPECT_FALSE(guard_all, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-        }
-
-        {
-            test::g_try_lock_succeeds = false;
-            GuardMultiple<2, Spinlock, TryNoIrqSave> guard_all{&b.lock, &a.lock};
-            EXPECT_FALSE(guard_all, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-        }
+      test::g_try_lock_succeeds = false;
+      GuardMultiple<2, Spinlock, TryNoIrqSave> guard_all{&a.lock, &b.lock};
+      EXPECT_FALSE(guard_all, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
     }
 
-    // Foo -> Bar -- establish order.
     {
-        Foo a{};
-        Bar b{};
+      test::g_try_lock_succeeds = false;
+      GuardMultiple<2, Spinlock, TryNoIrqSave> guard_all{&b.lock, &a.lock};
+      EXPECT_FALSE(guard_all, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+    }
+  }
 
-        Guard<Mutex> guard_a{&a.lock};
-        EXPECT_TRUE(guard_a, "");
-        EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+  // Foo -> Bar -- establish order.
+  {
+    Foo a{};
+    Bar b{};
 
-        Guard<Mutex> guard_b{&b.lock};
-        EXPECT_TRUE(guard_b, "");
-        EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+    Guard<Mutex> guard_a{&a.lock};
+    EXPECT_TRUE(guard_a, "");
+    EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+
+    Guard<Mutex> guard_b{&b.lock};
+    EXPECT_TRUE(guard_b, "");
+    EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+  }
+
+  // Bar -> Foo -- check order invariant.
+  {
+    Foo a{};
+    Bar b{};
+
+    Guard<Mutex> guard_b{&b.lock};
+    EXPECT_TRUE(guard_b, "");
+    EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+
+    Guard<Mutex> guard_a{&a.lock};
+    EXPECT_TRUE(guard_a, "");
+    EXPECT_EQ(LockResult::OutOfOrder, test::GetLastResult(), "");
+  }
+
+  // Test external order invariant.
+  {
+    Baz<Nestable> baz1;
+    Baz<Nestable> baz2;
+
+    {
+      Guard<Nestable> auto_baz1{&baz1.lock, 0};
+      EXPECT_TRUE(auto_baz1, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+
+      Guard<Nestable> auto_baz2{&baz2.lock, 1};
+      EXPECT_TRUE(auto_baz2, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
     }
 
-    // Bar -> Foo -- check order invariant.
     {
-        Foo a{};
-        Bar b{};
+      Guard<Nestable> auto_baz2{&baz2.lock, 0};
+      EXPECT_TRUE(auto_baz2, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
 
-        Guard<Mutex> guard_b{&b.lock};
-        EXPECT_TRUE(guard_b, "");
-        EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-
-        Guard<Mutex> guard_a{&a.lock};
-        EXPECT_TRUE(guard_a, "");
-        EXPECT_EQ(LockResult::OutOfOrder, test::GetLastResult(), "");
+      Guard<Nestable> auto_baz1{&baz1.lock, 1};
+      EXPECT_TRUE(auto_baz1, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
     }
 
-    // Test external order invariant.
     {
-        Baz<Nestable> baz1;
-        Baz<Nestable> baz2;
+      Guard<Nestable> auto_baz2{&baz2.lock, 1};
+      EXPECT_TRUE(auto_baz2, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
 
-        {
-            Guard<Nestable> auto_baz1{&baz1.lock, 0};
-            EXPECT_TRUE(auto_baz1, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+      Guard<Nestable> auto_baz1{&baz1.lock, 0};
+      EXPECT_TRUE(auto_baz1, "");
+      EXPECT_EQ(LockResult::InvalidNesting, test::GetLastResult(), "");
+    }
+  }
 
-            Guard<Nestable> auto_baz2{&baz2.lock, 1};
-            EXPECT_TRUE(auto_baz2, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-        }
+  // Test irq-safety invariant.
+  {
+    Baz<Mutex> baz1;
+    Baz<Spinlock> baz2;
 
-        {
-            Guard<Nestable> auto_baz2{&baz2.lock, 0};
-            EXPECT_TRUE(auto_baz2, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+    {
+      Guard<Mutex> auto_baz1{&baz1.lock};
+      EXPECT_TRUE(auto_baz1, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
 
-            Guard<Nestable> auto_baz1{&baz1.lock, 1};
-            EXPECT_TRUE(auto_baz1, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-        }
-
-        {
-            Guard<Nestable> auto_baz2{&baz2.lock, 1};
-            EXPECT_TRUE(auto_baz2, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-
-            Guard<Nestable> auto_baz1{&baz1.lock, 0};
-            EXPECT_TRUE(auto_baz1, "");
-            EXPECT_EQ(LockResult::InvalidNesting, test::GetLastResult(), "");
-        }
+      Guard<Spinlock, NoIrqSave> auto_baz2{&baz2.lock};
+      EXPECT_TRUE(auto_baz2, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
     }
 
-    // Test irq-safety invariant.
     {
-        Baz<Mutex> baz1;
-        Baz<Spinlock> baz2;
+      Guard<Spinlock, NoIrqSave> auto_baz2{&baz2.lock};
+      EXPECT_TRUE(auto_baz2, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
 
-        {
-            Guard<Mutex> auto_baz1{&baz1.lock};
-            EXPECT_TRUE(auto_baz1, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+      Guard<Mutex> auto_baz1{&baz1.lock};
+      EXPECT_TRUE(auto_baz1, "");
+      EXPECT_EQ(LockResult::InvalidIrqSafety, test::GetLastResult(), "");
+    }
+  }
 
-            Guard<Spinlock, NoIrqSave> auto_baz2{&baz2.lock};
-            EXPECT_TRUE(auto_baz2, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-        }
+  // Test spinlock options compile and basic guard functions.
+  // TODO(eieio): Add Guard<>::state() accessor and check state values.
+  {
+    Baz<Spinlock> baz1;
+    Baz<spinlock_t> baz2;
 
-        {
-            Guard<Spinlock, NoIrqSave> auto_baz2{&baz2.lock};
-            EXPECT_TRUE(auto_baz2, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-
-            Guard<Mutex> auto_baz1{&baz1.lock};
-            EXPECT_TRUE(auto_baz1, "");
-            EXPECT_EQ(LockResult::InvalidIrqSafety, test::GetLastResult(), "");
-        }
+    {
+      Guard<Spinlock, NoIrqSave> guard{&baz1.lock};
+      EXPECT_TRUE(guard, "");
+      guard.Release();
+      EXPECT_FALSE(guard, "");
     }
 
-    // Test spinlock options compile and basic guard functions.
-    // TODO(eieio): Add Guard<>::state() accessor and check state values.
     {
-        Baz<Spinlock> baz1;
-        Baz<spinlock_t> baz2;
+      Guard<Spinlock, IrqSave> guard{&baz1.lock};
+      EXPECT_TRUE(guard, "");
+      guard.Release();
+      EXPECT_FALSE(guard, "");
+    }
 
-        {
-            Guard<Spinlock, NoIrqSave> guard{&baz1.lock};
-            EXPECT_TRUE(guard, "");
-            guard.Release();
-            EXPECT_FALSE(guard, "");
-        }
+    {
+      Guard<spinlock_t, NoIrqSave> guard{&baz2.lock};
+      EXPECT_TRUE(guard, "");
+      guard.Release();
+      EXPECT_FALSE(guard, "");
+    }
 
-        {
-            Guard<Spinlock, IrqSave> guard{&baz1.lock};
-            EXPECT_TRUE(guard, "");
-            guard.Release();
-            EXPECT_FALSE(guard, "");
-        }
+    {
+      Guard<spinlock_t, IrqSave> guard{&baz2.lock};
+      EXPECT_TRUE(guard, "");
+      guard.Release();
+      EXPECT_FALSE(guard, "");
+    }
 
-        {
-            Guard<spinlock_t, NoIrqSave> guard{&baz2.lock};
-            EXPECT_TRUE(guard, "");
-            guard.Release();
-            EXPECT_FALSE(guard, "");
-        }
+    {
+      test::g_try_lock_succeeds = true;
+      Guard<Spinlock, TryNoIrqSave> guard{&baz1.lock};
+      EXPECT_TRUE(guard, "");
+      guard.Release();
+      EXPECT_FALSE(guard, "");
+    }
 
-        {
-            Guard<spinlock_t, IrqSave> guard{&baz2.lock};
-            EXPECT_TRUE(guard, "");
-            guard.Release();
-            EXPECT_FALSE(guard, "");
-        }
+    {
+      test::g_try_lock_succeeds = true;
+      Guard<Spinlock, TryIrqSave> guard{&baz1.lock};
+      EXPECT_TRUE(guard, "");
+      guard.Release();
+      EXPECT_FALSE(guard, "");
+    }
 
-        {
-            test::g_try_lock_succeeds = true;
-            Guard<Spinlock, TryNoIrqSave> guard{&baz1.lock};
-            EXPECT_TRUE(guard, "");
-            guard.Release();
-            EXPECT_FALSE(guard, "");
-        }
+    {
+      test::g_try_lock_succeeds = false;
+      Guard<spinlock_t, TryNoIrqSave> guard{&baz2.lock};
+      EXPECT_FALSE(guard, "");
+      guard.Release();
+      EXPECT_FALSE(guard, "");
+    }
 
-        {
-            test::g_try_lock_succeeds = true;
-            Guard<Spinlock, TryIrqSave> guard{&baz1.lock};
-            EXPECT_TRUE(guard, "");
-            guard.Release();
-            EXPECT_FALSE(guard, "");
-        }
+    {
+      test::g_try_lock_succeeds = false;
+      Guard<spinlock_t, TryIrqSave> guard{&baz2.lock};
+      EXPECT_FALSE(guard, "");
+      guard.Release();
+      EXPECT_FALSE(guard, "");
+    }
 
-        {
-            test::g_try_lock_succeeds = false;
-            Guard<spinlock_t, TryNoIrqSave> guard{&baz2.lock};
-            EXPECT_FALSE(guard, "");
-            guard.Release();
-            EXPECT_FALSE(guard, "");
-        }
-
-        {
-            test::g_try_lock_succeeds = false;
-            Guard<spinlock_t, TryIrqSave> guard{&baz2.lock};
-            EXPECT_FALSE(guard, "");
-            guard.Release();
-            EXPECT_FALSE(guard, "");
-        }
-
-        // Test that Guard<LockType, Option> fails to compile when Option is
-        // required by the policy config but not specified.
-        {
+    // Test that Guard<LockType, Option> fails to compile when Option is
+    // required by the policy config but not specified.
+    {
 #if TEST_WILL_NOT_COMPILE || 0
-            Guard<Spinlock> guard1{&baz1.lock};
-            Guard<spinlock_t> guard2{&baz2.lock};
+      Guard<Spinlock> guard1{&baz1.lock};
+      Guard<spinlock_t> guard2{&baz2.lock};
 #endif
-        }
     }
+  }
 
-    // Test read/write lock compiles and basic guard options.
+  // Test read/write lock compiles and basic guard options.
+  {
+    Baz<ReadWriteLock> a{};
+    Baz<ReadWriteLock> b{};
+
     {
-        Baz<ReadWriteLock> a{};
-        Baz<ReadWriteLock> b{};
-
-        {
-            Guard<ReadWriteLock, ReadWriteLock::Read> guard{&a.lock};
-            EXPECT_TRUE(guard, "");
-            guard.Release();
-            EXPECT_FALSE(guard, "");
-        }
-
-        {
-            Guard<ReadWriteLock, ReadWriteLock::Read> guard{&b.lock};
-            EXPECT_TRUE(guard, "");
-            guard.Release();
-            EXPECT_FALSE(guard, "");
-        }
-
-        {
-            Guard<ReadWriteLock, ReadWriteLock::Write> guard{&a.lock};
-            EXPECT_TRUE(guard, "");
-            guard.Release();
-            EXPECT_FALSE(guard, "");
-        }
-
-        {
-            Guard<ReadWriteLock, ReadWriteLock::Write> guard{&b.lock};
-            EXPECT_TRUE(guard, "");
-            guard.Release();
-            EXPECT_FALSE(guard, "");
-        }
+      Guard<ReadWriteLock, ReadWriteLock::Read> guard{&a.lock};
+      EXPECT_TRUE(guard, "");
+      guard.Release();
+      EXPECT_FALSE(guard, "");
     }
 
-    // Test read/write lock order invariants.
     {
-        Baz<ReadWriteLock> a{};
-        Baz<ReadWriteLock> b{};
-
-        {
-            Guard<ReadWriteLock, ReadWriteLock::Read> guard_a{&a.lock};
-            EXPECT_TRUE(guard_a, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-
-            Guard<ReadWriteLock, ReadWriteLock::Read> guard_b{&b.lock};
-            EXPECT_TRUE(guard_b, "");
-            EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(), "");
-        }
-
-        {
-            Guard<ReadWriteLock, ReadWriteLock::Read> guard_a{&a.lock};
-            EXPECT_TRUE(guard_a, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-
-            Guard<ReadWriteLock, ReadWriteLock::Write> guard_b{&b.lock};
-            EXPECT_TRUE(guard_b, "");
-            EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(), "");
-        }
-
-        {
-            Guard<ReadWriteLock, ReadWriteLock::Write> guard_a{&a.lock};
-            EXPECT_TRUE(guard_a, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-
-            Guard<ReadWriteLock, ReadWriteLock::Read> guard_b{&b.lock};
-            EXPECT_TRUE(guard_b, "");
-            EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(), "");
-        }
-
-        {
-            Guard<ReadWriteLock, ReadWriteLock::Write> guard_a{&a.lock};
-            EXPECT_TRUE(guard_a, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-
-            Guard<ReadWriteLock, ReadWriteLock::Write> guard_b{&b.lock};
-            EXPECT_TRUE(guard_b, "");
-            EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(), "");
-        }
-
-        {
-            GuardMultiple<2, ReadWriteLock, ReadWriteLock::Read> guard{&a.lock, &b.lock};
-            EXPECT_TRUE(guard, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-        }
-
-        {
-            GuardMultiple<2, ReadWriteLock, ReadWriteLock::Write> guard{&a.lock, &b.lock};
-            EXPECT_TRUE(guard, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-        }
+      Guard<ReadWriteLock, ReadWriteLock::Read> guard{&b.lock};
+      EXPECT_TRUE(guard, "");
+      guard.Release();
+      EXPECT_FALSE(guard, "");
     }
 
-    // Test that each lock in a structure behaves as an individual lock class.
     {
-        MultipleLocks value{};
-
-        {
-            Guard<Mutex> guard_a{&value.lock_a};
-            EXPECT_TRUE(guard_a, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-
-            Guard<Mutex> guard_b{&value.lock_b};
-            EXPECT_TRUE(guard_b, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-        }
-
-        {
-            Guard<Mutex> guard_b{&value.lock_b};
-            EXPECT_TRUE(guard_b, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-
-            Guard<Mutex> guard_a{&value.lock_a};
-            EXPECT_TRUE(guard_a, "");
-            EXPECT_EQ(LockResult::OutOfOrder, test::GetLastResult(), "");
-        }
+      Guard<ReadWriteLock, ReadWriteLock::Write> guard{&a.lock};
+      EXPECT_TRUE(guard, "");
+      guard.Release();
+      EXPECT_FALSE(guard, "");
     }
 
-    // Test circular dependency detection.
     {
-        Number<1> a{}; // Node A.
-        Number<2> b{}; // Node B.
-        Number<3> c{}; // Node C.
-        Number<4> d{}; // Node D.
+      Guard<ReadWriteLock, ReadWriteLock::Write> guard{&b.lock};
+      EXPECT_TRUE(guard, "");
+      guard.Release();
+      EXPECT_FALSE(guard, "");
+    }
+  }
 
-        // A -> B
-        {
-            Guard<Mutex> guard_a{&a.lock};
-            EXPECT_TRUE(guard_a, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+  // Test read/write lock order invariants.
+  {
+    Baz<ReadWriteLock> a{};
+    Baz<ReadWriteLock> b{};
 
-            Guard<Mutex> guard_b{&b.lock};
-            EXPECT_TRUE(guard_b, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-        }
+    {
+      Guard<ReadWriteLock, ReadWriteLock::Read> guard_a{&a.lock};
+      EXPECT_TRUE(guard_a, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
 
-        // B -> C
-        {
-            Guard<Mutex> guard_b{&b.lock};
-            EXPECT_TRUE(guard_b, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-
-            Guard<Mutex> guard_c{&c.lock};
-            EXPECT_TRUE(guard_c, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-        }
-
-        // C -> A -- cycle in (A, B, C)
-        {
-            Guard<Mutex> guard_c{&c.lock};
-            EXPECT_TRUE(guard_c, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-
-            Guard<Mutex> guard_a{&a.lock};
-            EXPECT_TRUE(guard_a, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-        }
-
-        // C -> D
-        {
-            Guard<Mutex> guard_c{&c.lock};
-            EXPECT_TRUE(guard_c, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-
-            Guard<Mutex> guard_d{&d.lock};
-            EXPECT_TRUE(guard_d, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-        }
-
-        // D -> A -- cycle in (A, B, C, D)
-        {
-            Guard<Mutex> guard_d{&d.lock};
-            EXPECT_TRUE(guard_d, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-
-            Guard<Mutex> guard_a{&a.lock};
-            EXPECT_TRUE(guard_a, "");
-            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
-        }
+      Guard<ReadWriteLock, ReadWriteLock::Read> guard_b{&b.lock};
+      EXPECT_TRUE(guard_b, "");
+      EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(), "");
     }
 
-    END_TEST;
+    {
+      Guard<ReadWriteLock, ReadWriteLock::Read> guard_a{&a.lock};
+      EXPECT_TRUE(guard_a, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+
+      Guard<ReadWriteLock, ReadWriteLock::Write> guard_b{&b.lock};
+      EXPECT_TRUE(guard_b, "");
+      EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(), "");
+    }
+
+    {
+      Guard<ReadWriteLock, ReadWriteLock::Write> guard_a{&a.lock};
+      EXPECT_TRUE(guard_a, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+
+      Guard<ReadWriteLock, ReadWriteLock::Read> guard_b{&b.lock};
+      EXPECT_TRUE(guard_b, "");
+      EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(), "");
+    }
+
+    {
+      Guard<ReadWriteLock, ReadWriteLock::Write> guard_a{&a.lock};
+      EXPECT_TRUE(guard_a, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+
+      Guard<ReadWriteLock, ReadWriteLock::Write> guard_b{&b.lock};
+      EXPECT_TRUE(guard_b, "");
+      EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(), "");
+    }
+
+    {
+      GuardMultiple<2, ReadWriteLock, ReadWriteLock::Read> guard{&a.lock, &b.lock};
+      EXPECT_TRUE(guard, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+    }
+
+    {
+      GuardMultiple<2, ReadWriteLock, ReadWriteLock::Write> guard{&a.lock, &b.lock};
+      EXPECT_TRUE(guard, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+    }
+  }
+
+  // Test that each lock in a structure behaves as an individual lock class.
+  {
+    MultipleLocks value{};
+
+    {
+      Guard<Mutex> guard_a{&value.lock_a};
+      EXPECT_TRUE(guard_a, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+
+      Guard<Mutex> guard_b{&value.lock_b};
+      EXPECT_TRUE(guard_b, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+    }
+
+    {
+      Guard<Mutex> guard_b{&value.lock_b};
+      EXPECT_TRUE(guard_b, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+
+      Guard<Mutex> guard_a{&value.lock_a};
+      EXPECT_TRUE(guard_a, "");
+      EXPECT_EQ(LockResult::OutOfOrder, test::GetLastResult(), "");
+    }
+  }
+
+  // Test circular dependency detection.
+  {
+    Number<1> a{};  // Node A.
+    Number<2> b{};  // Node B.
+    Number<3> c{};  // Node C.
+    Number<4> d{};  // Node D.
+
+    // A -> B
+    {
+      Guard<Mutex> guard_a{&a.lock};
+      EXPECT_TRUE(guard_a, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+
+      Guard<Mutex> guard_b{&b.lock};
+      EXPECT_TRUE(guard_b, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+    }
+
+    // B -> C
+    {
+      Guard<Mutex> guard_b{&b.lock};
+      EXPECT_TRUE(guard_b, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+
+      Guard<Mutex> guard_c{&c.lock};
+      EXPECT_TRUE(guard_c, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+    }
+
+    // C -> A -- cycle in (A, B, C)
+    {
+      Guard<Mutex> guard_c{&c.lock};
+      EXPECT_TRUE(guard_c, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+
+      Guard<Mutex> guard_a{&a.lock};
+      EXPECT_TRUE(guard_a, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+    }
+
+    // C -> D
+    {
+      Guard<Mutex> guard_c{&c.lock};
+      EXPECT_TRUE(guard_c, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+
+      Guard<Mutex> guard_d{&d.lock};
+      EXPECT_TRUE(guard_d, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+    }
+
+    // D -> A -- cycle in (A, B, C, D)
+    {
+      Guard<Mutex> guard_d{&d.lock};
+      EXPECT_TRUE(guard_d, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+
+      Guard<Mutex> guard_a{&a.lock};
+      EXPECT_TRUE(guard_a, "");
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+    }
+  }
+
+  END_TEST;
 }
 
 // Basic compile-time tests of lockdep clang lock annotations.
 static bool lock_dep_static_analysis_tests() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    using lockdep::Guard;
-    using lockdep::GuardMultiple;
-    using lockdep::LockResult;
-    using lockdep::ThreadLockState;
-    using test::Bar;
-    using test::Baz;
-    using test::Foo;
-    using test::MultipleLocks;
-    using test::Mutex;
-    using test::Nestable;
-    using test::Number;
-    using test::ReadWriteLock;
-    using test::Spinlock;
-    using test::TryNoIrqSave;
+  using lockdep::Guard;
+  using lockdep::GuardMultiple;
+  using lockdep::LockResult;
+  using lockdep::ThreadLockState;
+  using test::Bar;
+  using test::Baz;
+  using test::Foo;
+  using test::MultipleLocks;
+  using test::Mutex;
+  using test::Nestable;
+  using test::Number;
+  using test::ReadWriteLock;
+  using test::Spinlock;
+  using test::TryNoIrqSave;
 
-    // Test require and exclude annotations.
-    {
-        Foo a{};
+  // Test require and exclude annotations.
+  {
+    Foo a{};
 
-        Guard<Mutex> guard_a{&a.lock};
-        a.TestRequire();
+    Guard<Mutex> guard_a{&a.lock};
+    a.TestRequire();
 #if TEST_WILL_NOT_COMPILE || 0
-        a.TestExclude();
+    a.TestExclude();
 #endif
 
-        guard_a.Release();
+    guard_a.Release();
 #if TEST_WILL_NOT_COMPILE || 0
-        a.TestRequire();
+    a.TestRequire();
 #endif
-        a.TestExclude();
-    }
+    a.TestExclude();
+  }
 
-    // Test multiple acquire.
-    {
-        Foo a{};
+  // Test multiple acquire.
+  {
+    Foo a{};
 
-        Guard<Mutex> guard_a{&a.lock};
+    Guard<Mutex> guard_a{&a.lock};
 #if TEST_WILL_NOT_COMPILE || 0
-        Guard<Mutex> guard_b{&a.lock};
+    Guard<Mutex> guard_b{&a.lock};
 #endif
-    }
+  }
 
-    // Test sequential acquire/release.
-    {
-        Foo a{};
+  // Test sequential acquire/release.
+  {
+    Foo a{};
 
-        Guard<Mutex> guard_a{&a.lock};
-        guard_a.Release();
-        Guard<Mutex> guard_b{&a.lock};
-    }
+    Guard<Mutex> guard_a{&a.lock};
+    guard_a.Release();
+    Guard<Mutex> guard_b{&a.lock};
+  }
 
-    // Test shared.
-    {
-        Baz<ReadWriteLock> a{};
+  // Test shared.
+  {
+    Baz<ReadWriteLock> a{};
 
-        Guard<ReadWriteLock, ReadWriteLock::Read> guard_a{&a.lock};
-        a.TestShared();
+    Guard<ReadWriteLock, ReadWriteLock::Read> guard_a{&a.lock};
+    a.TestShared();
 #if TEST_WILL_NOT_COMPILE || 0
-        a.TestRequire();
+    a.TestRequire();
 #endif
-    }
+  }
 
-    {
-        Baz<ReadWriteLock> a{};
+  {
+    Baz<ReadWriteLock> a{};
 
-        Guard<ReadWriteLock, ReadWriteLock::Write> guard_a{&a.lock};
-        a.TestShared();
-        a.TestRequire();
-    }
+    Guard<ReadWriteLock, ReadWriteLock::Write> guard_a{&a.lock};
+    a.TestShared();
+    a.TestRequire();
+  }
 
-    END_TEST;
+  END_TEST;
 }
 
 UNITTEST_START_TESTCASE(lock_dep_tests)

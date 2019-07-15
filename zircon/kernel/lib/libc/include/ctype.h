@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_LIBC_INCLUDE_CTYPE_H_
+#define ZIRCON_KERNEL_LIB_LIBC_INCLUDE_CTYPE_H_
 
 #include <zircon/compiler.h>
 
@@ -28,3 +29,5 @@ int tolower(int c);
 int toupper(int c);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_LIB_LIBC_INCLUDE_CTYPE_H_

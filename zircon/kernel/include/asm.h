@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_ASM_H_
+#define ZIRCON_KERNEL_INCLUDE_ASM_H_
 
 #ifndef __ASSEMBLER__
 #error for assembly files only
@@ -42,3 +43,5 @@
 // We want .debug_frame not .eh_frame.
 // WARNING: This is a subtle side-effect of including this file. Heads up!
 .cfi_sections .debug_frame
+
+#endif  // ZIRCON_KERNEL_INCLUDE_ASM_H_

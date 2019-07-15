@@ -4,91 +4,87 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "tests.h"
-
 #include <err.h>
 #include <inttypes.h>
-#include <platform.h>
-
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 #include <lib/unittest/unittest.h>
-
+#include <platform.h>
 #include <zircon/types.h>
 
+#include "tests.h"
+
 static int resume_cpu_test_thread(void* arg) {
-    *reinterpret_cast<uint*>(arg) = arch_curr_cpu_num();
-    return 0;
+  *reinterpret_cast<uint*>(arg) = arch_curr_cpu_num();
+  return 0;
 }
 
 // "Unplug" online secondary (non-BOOT) cores
 static zx_status_t unplug_all_cores(thread_t** leaked_threads) {
-    cpu_mask_t cpumask = mp_get_online_mask() & ~cpu_num_to_mask(BOOT_CPU_ID);
-    return mp_unplug_cpu_mask(cpumask, leaked_threads);
+  cpu_mask_t cpumask = mp_get_online_mask() & ~cpu_num_to_mask(BOOT_CPU_ID);
+  return mp_unplug_cpu_mask(cpumask, leaked_threads);
 }
 
 static zx_status_t hotplug_core(uint i) {
-    cpu_mask_t cpumask = cpu_num_to_mask(i);
-    return mp_hotplug_cpu_mask(cpumask);
+  cpu_mask_t cpumask = cpu_num_to_mask(i);
+  return mp_hotplug_cpu_mask(cpumask);
 }
 
 static unsigned get_num_cpus_online() {
-    unsigned count = 0;
-    cpu_mask_t online = mp_get_online_mask();
-    while (online) {
-        online >>= 1;
-        ++count;
-    }
-    return count;
+  unsigned count = 0;
+  cpu_mask_t online = mp_get_online_mask();
+  while (online) {
+    online >>= 1;
+    ++count;
+  }
+  return count;
 }
 
 // Unplug all cores (except for Boot core), then hotplug
 // the cores one by one and make sure that we can schedule
 // tasks on that core.
 static bool mp_hotplug_test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
 // Hotplug is only implemented for x64.
 #if !defined(__x86_64__)
-    printf("skipping test mp_hotplug, hotplug only suported on x64\n");
-    END_TEST;
+  printf("skipping test mp_hotplug, hotplug only suported on x64\n");
+  END_TEST;
 #endif
-    uint num_cores = get_num_cpus_online();
-    if (num_cores < 2) {
-        printf("skipping test mp_hotplug, not enough online cpus\n");
-        END_TEST;
-    }
-    thread_migrate_to_cpu(BOOT_CPU_ID);
-    // "Unplug" online secondary (non-BOOT) cores
-    thread_t* leaked_threads[SMP_MAX_CPUS] = {};
-    ASSERT_EQ(unplug_all_cores(leaked_threads), ZX_OK, "unplugging all cores failed");
-    for (uint i = 0; i < num_cores; i++) {
-        if (i == BOOT_CPU_ID) {
-            continue;
-        }
-        // hotplug this core.
-        ASSERT_EQ(hotplug_core(i), ZX_OK, "hotplugging core failed");
-        // Create a thread, affine it to the core just hotplugged
-        // and make sure the thread does get scheduled there.
-        uint running_core;
-        thread_t* nt = thread_create("resume-test-thread",
-                                     resume_cpu_test_thread, &running_core,
-                                     DEFAULT_PRIORITY);
-        ASSERT_NE(nullptr, nt, "Thread create failed");
-        thread_set_cpu_affinity(nt, cpu_num_to_mask(i));
-        thread_resume(nt);
-        ASSERT_EQ(thread_join(nt, nullptr, ZX_TIME_INFINITE), ZX_OK,
-                  "thread join failed");
-        ASSERT_EQ(i, running_core, "Thread not running on hotplugged core");
-    }
-
-    for (unsigned i = 0; i < fbl::count_of(leaked_threads); i++) {
-        if (leaked_threads[i]) {
-            thread_forget(leaked_threads[i]);
-        }
-    }
-
+  uint num_cores = get_num_cpus_online();
+  if (num_cores < 2) {
+    printf("skipping test mp_hotplug, not enough online cpus\n");
     END_TEST;
+  }
+  thread_migrate_to_cpu(BOOT_CPU_ID);
+  // "Unplug" online secondary (non-BOOT) cores
+  thread_t* leaked_threads[SMP_MAX_CPUS] = {};
+  ASSERT_EQ(unplug_all_cores(leaked_threads), ZX_OK, "unplugging all cores failed");
+  for (uint i = 0; i < num_cores; i++) {
+    if (i == BOOT_CPU_ID) {
+      continue;
+    }
+    // hotplug this core.
+    ASSERT_EQ(hotplug_core(i), ZX_OK, "hotplugging core failed");
+    // Create a thread, affine it to the core just hotplugged
+    // and make sure the thread does get scheduled there.
+    uint running_core;
+    thread_t* nt = thread_create("resume-test-thread", resume_cpu_test_thread, &running_core,
+                                 DEFAULT_PRIORITY);
+    ASSERT_NE(nullptr, nt, "Thread create failed");
+    thread_set_cpu_affinity(nt, cpu_num_to_mask(i));
+    thread_resume(nt);
+    ASSERT_EQ(thread_join(nt, nullptr, ZX_TIME_INFINITE), ZX_OK, "thread join failed");
+    ASSERT_EQ(i, running_core, "Thread not running on hotplugged core");
+  }
+
+  for (unsigned i = 0; i < fbl::count_of(leaked_threads); i++) {
+    if (leaked_threads[i]) {
+      thread_forget(leaked_threads[i]);
+    }
+  }
+
+  END_TEST;
 }
 
 // The call to x86_bootstrap16_acquire() from the mp_hotplug_cpu_mask()

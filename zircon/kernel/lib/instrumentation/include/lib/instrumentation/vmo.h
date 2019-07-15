@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_INSTRUMENTATION_INCLUDE_LIB_INSTRUMENTATION_VMO_H_
+#define ZIRCON_KERNEL_LIB_INSTRUMENTATION_INCLUDE_LIB_INSTRUMENTATION_VMO_H_
+
+#include <zircon/types.h>
 
 #include <cstdint>
-#include <zircon/types.h>
 
 // The header is also used in userboot just for vmo_count().
 #ifdef _KERNEL
@@ -17,38 +19,36 @@ class Handle;
 class VmObject;
 
 class InstrumentationData {
-public:
-    static constexpr uint32_t vmo_count() {
-        return kVmoCount;
-    }
+ public:
+  static constexpr uint32_t vmo_count() { return kVmoCount; }
 
-    static zx_status_t GetVmos(Handle* handles[]);
+  static zx_status_t GetVmos(Handle* handles[]);
 
-private:
-    enum Vmo : uint32_t {
-        kLlvmProfileVmo,
-        kVmoCount,
-    };
+ private:
+  enum Vmo : uint32_t {
+    kLlvmProfileVmo,
+    kVmoCount,
+  };
 
 #ifdef _KERNEL
-    // These live forever to keep a permanent reference to the VMO so that the
-    // memory always remains valid, even if userspace closes the last handle.
-    static ktl::array<InstrumentationData, kVmoCount> instances_;
-    fbl::RefPtr<VmObject> vmo_;
+  // These live forever to keep a permanent reference to the VMO so that the
+  // memory always remains valid, even if userspace closes the last handle.
+  static ktl::array<InstrumentationData, kVmoCount> instances_;
+  fbl::RefPtr<VmObject> vmo_;
 
-    // The only instances possible are the static ones.
-    InstrumentationData() = default;
-    friend decltype(instances_); // Let (only) it call the constructor.
+  // The only instances possible are the static ones.
+  InstrumentationData() = default;
+  friend decltype(instances_);  // Let (only) it call the constructor.
 
-    InstrumentationData(const InstrumentationData&) = delete;
-    InstrumentationData& operator=(const InstrumentationData&) = delete;
+  InstrumentationData(const InstrumentationData&) = delete;
+  InstrumentationData& operator=(const InstrumentationData&) = delete;
 
-    Vmo which() const {
-        return static_cast<Vmo>(this - &instances_[0]);
-    }
+  Vmo which() const { return static_cast<Vmo>(this - &instances_[0]); }
 
-    zx_status_t Create();
-    void Publish();
-    zx_status_t GetVmo(Handle**);
+  zx_status_t Create();
+  void Publish();
+  zx_status_t GetVmo(Handle**);
 #endif
 };
+
+#endif  // ZIRCON_KERNEL_LIB_INSTRUMENTATION_INCLUDE_LIB_INSTRUMENTATION_VMO_H_

@@ -3,7 +3,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
-#pragma once
+#ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_KSTACK_H_
+#define ZIRCON_KERNEL_VM_INCLUDE_VM_KSTACK_H_
 
 #include <err.h>
 #include <sys/types.h>
@@ -14,19 +15,19 @@ __BEGIN_CDECLS
 //
 // kstack must be a C struct because it is embedded in thread_t.
 typedef struct kstack {
-    vaddr_t base;
-    size_t size;
-    vaddr_t top;
+  vaddr_t base;
+  size_t size;
+  vaddr_t top;
 
-    // When non-null, |vmar| (and, if safe-stack is enabled, |unsafe_vmar|) points to a ref-counted
-    // VmAddressRegion that must be freed via |vm_free_kstack|.
-    //
-    // Note, the type is void* rather than |fbl::RefPtr| because this struct is used by C code.
-    void* vmar;
+  // When non-null, |vmar| (and, if safe-stack is enabled, |unsafe_vmar|) points to a ref-counted
+  // VmAddressRegion that must be freed via |vm_free_kstack|.
+  //
+  // Note, the type is void* rather than |fbl::RefPtr| because this struct is used by C code.
+  void* vmar;
 #if __has_feature(safe_stack)
-    vaddr_t unsafe_base;
-    // See comment for |vmar|.
-    void* unsafe_vmar;
+  vaddr_t unsafe_base;
+  // See comment for |vmar|.
+  void* unsafe_vmar;
 #endif
 } kstack_t;
 
@@ -39,3 +40,5 @@ zx_status_t vm_allocate_kstack(kstack_t* stack);
 zx_status_t vm_free_kstack(kstack_t* stack);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_KSTACK_H_

@@ -5,10 +5,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_ARCH_H_
+#define ZIRCON_KERNEL_INCLUDE_ARCH_H_
 
-#include <zircon/compiler.h>
 #include <sys/types.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
@@ -28,9 +29,8 @@ void arch_resume(void);
 // The rest of the current thread's state must already have been
 // appropriately initialized (as viewable from a debugger at the
 // ZX_EXCP_THREAD_STARTING exception).
-void arch_setup_uspace_iframe(iframe_t* iframe,
-                              uintptr_t entry_point, uintptr_t sp,
-                              uintptr_t arg1, uintptr_t arg2);
+void arch_setup_uspace_iframe(iframe_t* iframe, uintptr_t entry_point, uintptr_t sp, uintptr_t arg1,
+                              uintptr_t arg2);
 
 // Enter userspace.
 // |iframe| is generally initialized with |arch_setup_uspace_iframe()|.
@@ -40,3 +40,5 @@ __END_CDECLS
 
 /* arch specific bits */
 #include <arch/defines.h>
+
+#endif  // ZIRCON_KERNEL_INCLUDE_ARCH_H_

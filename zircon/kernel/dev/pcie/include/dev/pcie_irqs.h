@@ -5,18 +5,18 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-
-#pragma once
+#ifndef ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_IRQS_H_
+#define ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_IRQS_H_
 
 #include <assert.h>
 #include <dev/interrupt.h>
 #include <dev/pcie_platform.h>
 #include <err.h>
-#include <kernel/spinlock.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <kernel/spinlock.h>
 #include <region-alloc/region-alloc.h>
 #include <sys/types.h>
 
@@ -50,11 +50,11 @@ class PcieDevice;
  *    exclusively, resources permitting.
  */
 typedef enum pcie_irq_mode {
-    PCIE_IRQ_MODE_DISABLED = 0,
-    PCIE_IRQ_MODE_LEGACY   = 1,
-    PCIE_IRQ_MODE_MSI      = 2,
-    PCIE_IRQ_MODE_MSI_X    = 3,
-    PCIE_IRQ_MODE_COUNT    = 4,
+  PCIE_IRQ_MODE_DISABLED = 0,
+  PCIE_IRQ_MODE_LEGACY = 1,
+  PCIE_IRQ_MODE_MSI = 2,
+  PCIE_IRQ_MODE_MSI_X = 3,
+  PCIE_IRQ_MODE_COUNT = 4,
 } pcie_irq_mode_t;
 
 /**
@@ -62,12 +62,12 @@ typedef enum pcie_irq_mode {
  * pcie_query_irq_mode_capabilities
  */
 typedef struct pcie_irq_mode_caps {
-    uint max_irqs;  /** The maximum number of IRQ supported by the selected mode */
-    /**
-     * For MSI or MSI-X, indicates whether or not per-vector-masking has been
-     * implemented by the hardware.
-     */
-    bool per_vector_masking_supported;
+  uint max_irqs; /** The maximum number of IRQ supported by the selected mode */
+  /**
+   * For MSI or MSI-X, indicates whether or not per-vector-masking has been
+   * implemented by the hardware.
+   */
+  bool per_vector_masking_supported;
 } pcie_irq_mode_caps_t;
 
 /**
@@ -80,8 +80,8 @@ typedef struct pcie_irq_mode_caps {
  *    Mask the IRQ if (and only if) per vector masking is supported.
  */
 typedef enum pcie_irq_handler_retval {
-    PCIE_IRQRET_NO_ACTION        = 0x0,
-    PCIE_IRQRET_MASK             = 0x1,
+  PCIE_IRQRET_NO_ACTION = 0x0,
+  PCIE_IRQRET_MASK = 0x1,
 } pcie_irq_handler_retval_t;
 
 /**
@@ -89,9 +89,9 @@ typedef enum pcie_irq_handler_retval {
  * of a device.  Used in conjunction with pcie_get_irq_mode.
  */
 typedef struct pcie_irq_mode_info {
-   pcie_irq_mode_t          mode;                 /// The currently configured mode.
-   uint                     max_handlers;         /// The max number of handlers for the mode.
-   uint                     registered_handlers;  /// The current number of registered handlers.
+  pcie_irq_mode_t mode;      /// The currently configured mode.
+  uint max_handlers;         /// The max number of handlers for the mode.
+  uint registered_handlers;  /// The current number of registered handlers.
 } pcie_irq_mode_info_t;
 
 /**
@@ -108,21 +108,19 @@ typedef struct pcie_irq_mode_info {
  * @param irq_id The 0-indexed ID of the IRQ which occurred.
  * @param ctx The context pointer registered when registering the handler.
  */
-typedef pcie_irq_handler_retval_t (*pcie_irq_handler_fn_t)(
-        const PcieDevice& dev,
-        uint irq_id,
-        void* ctx);
+typedef pcie_irq_handler_retval_t (*pcie_irq_handler_fn_t)(const PcieDevice& dev, uint irq_id,
+                                                           void* ctx);
 
 /**
  * Structure used internally to hold the state of a registered handler.
  */
 struct pcie_irq_handler_state_t {
-    SpinLock              lock;
-    pcie_irq_handler_fn_t handler = nullptr;
-    void*                 ctx = nullptr;
-    PcieDevice*           dev = nullptr;
-    uint                  pci_irq_id;
-    bool                  masked;
+  SpinLock lock;
+  pcie_irq_handler_fn_t handler = nullptr;
+  void* ctx = nullptr;
+  PcieDevice* dev = nullptr;
+  uint pci_irq_id;
+  bool masked;
 };
 
 /**
@@ -132,31 +130,32 @@ struct pcie_irq_handler_state_t {
 class SharedLegacyIrqHandler
     : public fbl::SinglyLinkedListable<fbl::RefPtr<SharedLegacyIrqHandler>>,
       public fbl::RefCounted<SharedLegacyIrqHandler> {
-public:
-    static fbl::RefPtr<SharedLegacyIrqHandler> Create(uint irq_id);
-    ~SharedLegacyIrqHandler();
+ public:
+  static fbl::RefPtr<SharedLegacyIrqHandler> Create(uint irq_id);
+  ~SharedLegacyIrqHandler();
 
-    void AddDevice(PcieDevice& dev);
-    void RemoveDevice(PcieDevice& dev);
+  void AddDevice(PcieDevice& dev);
+  void RemoveDevice(PcieDevice& dev);
 
-    uint irq_id() const { return irq_id_; }
+  uint irq_id() const { return irq_id_; }
 
-    // Disallow copying, assigning and moving.
-    DISALLOW_COPY_ASSIGN_AND_MOVE(SharedLegacyIrqHandler);
+  // Disallow copying, assigning and moving.
+  DISALLOW_COPY_ASSIGN_AND_MOVE(SharedLegacyIrqHandler);
 
-private:
-    explicit SharedLegacyIrqHandler(uint irq_id);
+ private:
+  explicit SharedLegacyIrqHandler(uint irq_id);
 
-    static interrupt_eoi HandlerThunk(void *arg) {
-        DEBUG_ASSERT(arg);
-        reinterpret_cast<SharedLegacyIrqHandler*>(arg)->Handler();
-        return IRQ_EOI_DEACTIVATE;
-    }
+  static interrupt_eoi HandlerThunk(void* arg) {
+    DEBUG_ASSERT(arg);
+    reinterpret_cast<SharedLegacyIrqHandler*>(arg)->Handler();
+    return IRQ_EOI_DEACTIVATE;
+  }
 
-    void Handler();
+  void Handler();
 
-    struct list_node  device_handler_list_;
-    SpinLock          device_handler_list_lock_;
-    const uint        irq_id_;
+  struct list_node device_handler_list_;
+  SpinLock device_handler_list_lock_;
+  const uint irq_id_;
 };
 
+#endif  // ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_IRQS_H_

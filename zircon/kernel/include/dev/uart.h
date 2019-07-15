@@ -5,11 +5,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_DEV_UART_H_
+#define ZIRCON_KERNEL_INCLUDE_DEV_UART_H_
 
-#include <zircon/compiler.h>
 #include <stdbool.h>
 #include <sys/types.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
@@ -31,3 +32,5 @@ int uart_pputc(char c);
 int uart_pgetc(void);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_INCLUDE_DEV_UART_H_

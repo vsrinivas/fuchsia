@@ -5,11 +5,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_REF_COUNTED_H_
+#define ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_REF_COUNTED_H_
 
 #include <assert.h>
-#include <zircon/compiler.h>
 #include <fbl/ref_counted.h>
+#include <zircon/compiler.h>
 
 /**
  * Notes on class hierarchy and RefCounting
@@ -120,28 +121,32 @@
 
 #if (DEBUG_ASSERT_IMPLEMENTED)
 #define __PCIE_REQUIRE_ADOPT virtual void Adopt() = 0
-#else   // if (DEBUG_ASSERT_IMPLEMENTED)
+#else  // if (DEBUG_ASSERT_IMPLEMENTED)
 #define __PCIE_REQUIRE_ADOPT \
-     inline void Adopt() { } \
-    using __force_semicolon = int
+  inline void Adopt() {}     \
+  using __force_semicolon = int
 #endif  // if (DEBUG_ASSERT_IMPLEMENTED)
 
 #define PCIE_REQUIRE_REFCOUNTED \
-    __PCIE_REQUIRE_ADOPT; \
-    virtual void AddRef()  = 0; \
-    virtual bool Release() = 0 \
+  __PCIE_REQUIRE_ADOPT;         \
+  virtual void AddRef() = 0;    \
+  virtual bool Release() = 0
 
 #if (DEBUG_ASSERT_IMPLEMENTED)
-#define __PCIE_IMPLEMENT_ADOPT void Adopt() final { ref_count_impl_.Adopt(); }
-#else   // if (DEBUG_ASSERT_IMPLEMENTED)
+#define __PCIE_IMPLEMENT_ADOPT \
+  void Adopt() final { ref_count_impl_.Adopt(); }
+#else  // if (DEBUG_ASSERT_IMPLEMENTED)
 #define __PCIE_IMPLEMENT_ADOPT
 #endif  // if (DEBUG_ASSERT_IMPLEMENTED)
 
-#define PCIE_IMPLEMENT_REFCOUNTED \
-private: \
-    fbl::RefCounted<void> ref_count_impl_; \
-public: \
-    __PCIE_IMPLEMENT_ADOPT \
-    void AddRef() final { ref_count_impl_.AddRef(); } \
-    bool Release() final __WARN_UNUSED_RESULT { return ref_count_impl_.Release(); } \
-    using __force_semicolon = int
+#define PCIE_IMPLEMENT_REFCOUNTED                                                 \
+ private:                                                                         \
+  fbl::RefCounted<void> ref_count_impl_;                                          \
+                                                                                  \
+ public:                                                                          \
+  __PCIE_IMPLEMENT_ADOPT                                                          \
+  void AddRef() final { ref_count_impl_.AddRef(); }                               \
+  bool Release() final __WARN_UNUSED_RESULT { return ref_count_impl_.Release(); } \
+  using __force_semicolon = int
+
+#endif  // ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_REF_COUNTED_H_

@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_CRASHLOG_INCLUDE_LIB_CRASHLOG_H_
+#define ZIRCON_KERNEL_LIB_CRASHLOG_INCLUDE_LIB_CRASHLOG_H_
 
 #if defined(__aarch64__)
 
@@ -17,11 +18,13 @@
 #endif
 
 typedef struct {
-    uintptr_t base_address;
-    iframe_t* iframe;
+  uintptr_t base_address;
+  iframe_t* iframe;
 } crashlog_t;
 
 extern crashlog_t crashlog;
 
 // Serialize the crashlog to string in `out' up to `len' characters.
 size_t crashlog_to_string(char* out, size_t len);
+
+#endif  // ZIRCON_KERNEL_LIB_CRASHLOG_INCLUDE_LIB_CRASHLOG_H_

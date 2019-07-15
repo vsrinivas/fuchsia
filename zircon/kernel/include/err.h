@@ -5,10 +5,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_ERR_H_
+#define ZIRCON_KERNEL_INCLUDE_ERR_H_
 
 #ifndef __ASSEMBLER__
-#include <zircon/types.h> // for zx_status_t
+#include <zircon/types.h>  // for zx_status_t
 #endif
 
 #include <zircon/errors.h>
@@ -19,3 +20,5 @@
 
 // MOVE to kernel internal used for thread teardown
 #define ZX_ERR_INTERNAL_INTR_KILLED (-502)
+
+#endif  // ZIRCON_KERNEL_INCLUDE_ERR_H_

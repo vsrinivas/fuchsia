@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_TESTS_TESTS_H_
+#define ZIRCON_KERNEL_TESTS_TESTS_H_
 
 #include <lib/console.h>
 #include <zircon/compiler.h>
@@ -22,3 +23,5 @@ console_cmd cpu_resume_tests, semaphore_tests;
 void unittests(void);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_TESTS_TESTS_H_

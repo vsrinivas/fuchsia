@@ -11,29 +11,17 @@
 
 #include <cstdlib>
 
-void operator delete(void* p) {
-    free(p);
-}
+void operator delete(void* p) { free(p); }
 
-void operator delete[](void* p) {
-    free(p);
-}
+void operator delete[](void* p) { free(p); }
 
-void operator delete(void* p, size_t s) {
-    free(p);
-}
+void operator delete(void* p, size_t s) { free(p); }
 
-void operator delete[](void* p, size_t s) {
-    free(p);
-}
+void operator delete[](void* p, size_t s) { free(p); }
 
-void operator delete(void* p, std::align_val_t align) {
-    free(p);
-}
+void operator delete(void* p, std::align_val_t align) { free(p); }
 
-void operator delete(void* p, std::size_t s, std::align_val_t align) {
-    free(p);
-}
+void operator delete(void* p, std::size_t s, std::align_val_t align) { free(p); }
 
 // These are the mangled names of all the functions above.  Because these
 // functions are magical in the language, the compiler insists on making

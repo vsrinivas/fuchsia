@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_BOOTRESERVE_H_
+#define ZIRCON_KERNEL_VM_INCLUDE_VM_BOOTRESERVE_H_
 
 #include <fbl/function.h>
 #include <sys/types.h>
@@ -27,8 +28,8 @@ void boot_reserve_wire();
 zx_status_t boot_reserve_add_range(paddr_t pa, size_t len);
 
 typedef struct {
-    paddr_t pa;
-    size_t len;
+  paddr_t pa;
+  size_t len;
 } reserve_range_t;
 
 // Given a range, allocate a subrange within it of size alloc_len that does not intersect with
@@ -39,7 +40,6 @@ typedef struct {
 zx_status_t boot_reserve_range_search(paddr_t range_pa, size_t range_len, size_t alloc_len,
                                       reserve_range_t* alloc_range);
 
-
 // Call |cb| for each reserve range registered. Exit if the callback returns false. This
 // function does not lock the region structure.
 //
@@ -48,3 +48,5 @@ bool boot_reserve_foreach(const fbl::Function<bool(reserve_range_t)>& cb);
 
 // Unwires |page| and leaves it in an ALLOC state.
 void boot_reserve_unwire_page(struct vm_page* page);
+
+#endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_BOOTRESERVE_H_

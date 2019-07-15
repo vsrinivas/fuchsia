@@ -4,25 +4,23 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
-
-#include <object/dispatcher.h>
-#include <object/excp_port.h>
-#include <object/handle.h>
-#include <object/state_observer.h>
-
-#include <zircon/rights.h>
-#include <kernel/semaphore.h>
-#include <zircon/syscalls/port.h>
-#include <zircon/types.h>
+#ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PORT_DISPATCHER_H_
+#define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PORT_DISPATCHER_H_
 
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
-#include <ktl/unique_ptr.h>
+#include <kernel/semaphore.h>
 #include <kernel/spinlock.h>
-
+#include <ktl/unique_ptr.h>
+#include <object/dispatcher.h>
+#include <object/excp_port.h>
+#include <object/handle.h>
+#include <object/state_observer.h>
 #include <sys/types.h>
+#include <zircon/rights.h>
+#include <zircon/syscalls/port.h>
+#include <zircon/types.h>
 
 // Important pointers diagram for PortObserver
 //
@@ -88,85 +86,83 @@ class PortObserver;
 struct PortPacket;
 
 struct PortAllocator {
-    virtual ~PortAllocator() = default;
+  virtual ~PortAllocator() = default;
 
-    virtual PortPacket* Alloc() = 0;
-    virtual void Free(PortPacket* port_packet) = 0;
+  virtual PortPacket* Alloc() = 0;
+  virtual void Free(PortPacket* port_packet) = 0;
 };
 
 struct PortPacket final : public fbl::DoublyLinkedListable<PortPacket*> {
-    zx_port_packet_t packet;
-    const void* const handle;
-    ktl::unique_ptr<const PortObserver> observer;
-    PortAllocator* const allocator;
+  zx_port_packet_t packet;
+  const void* const handle;
+  ktl::unique_ptr<const PortObserver> observer;
+  PortAllocator* const allocator;
 
-    PortPacket(const void* handle, PortAllocator* allocator);
-    PortPacket(const PortPacket&) = delete;
-    void operator=(PortPacket) = delete;
+  PortPacket(const void* handle, PortAllocator* allocator);
+  PortPacket(const PortPacket&) = delete;
+  void operator=(PortPacket) = delete;
 
-    uint64_t key() const { return packet.key; }
-    bool is_ephemeral() const { return allocator != nullptr; }
-    void Free() { allocator->Free(this); }
+  uint64_t key() const { return packet.key; }
+  bool is_ephemeral() const { return allocator != nullptr; }
+  void Free() { allocator->Free(this); }
 };
 
 struct PortInterruptPacket final : public fbl::DoublyLinkedListable<PortInterruptPacket*> {
-    zx_time_t timestamp;
-    uint64_t key;
+  zx_time_t timestamp;
+  uint64_t key;
 };
 
 // Observers are weakly contained in Dispatchers until their OnInitialize(), OnStateChange() or
 // OnCancel() callbacks return StateObserver::kNeedRemoval.
 class PortObserver final : public StateObserver {
-public:
-    using ListNodeState = fbl::DoublyLinkedListNodeState<PortObserver*>;
+ public:
+  using ListNodeState = fbl::DoublyLinkedListNodeState<PortObserver*>;
 
-    // ListTraits allows PortObservers to be placed on a PortObserver::List.
-    struct ListTraits {
-        static ListNodeState& node_state(PortObserver& obj) {
-            return obj.observer_list_node_state_;
-        }
-    };
+  // ListTraits allows PortObservers to be placed on a PortObserver::List.
+  struct ListTraits {
+    static ListNodeState& node_state(PortObserver& obj) { return obj.observer_list_node_state_; }
+  };
 
-    using List = fbl::DoublyLinkedList<PortObserver*, PortObserver::ListTraits>;
+  using List = fbl::DoublyLinkedList<PortObserver*, PortObserver::ListTraits>;
 
-    PortObserver(uint32_t options, const Handle* handle, fbl::RefPtr<PortDispatcher> port,
-                 Lock<fbl::Mutex>* port_lock, uint64_t key, zx_signals_t signals);
+  PortObserver(uint32_t options, const Handle* handle, fbl::RefPtr<PortDispatcher> port,
+               Lock<fbl::Mutex>* port_lock, uint64_t key, zx_signals_t signals);
 
-    ~PortObserver() = default;
+  ~PortObserver() = default;
 
-    // May only be called while holding PortDispatcher lock.
-    fbl::RefPtr<Dispatcher> UnlinkDispatcherLocked() {
-        DEBUG_ASSERT(port_lock_->lock().IsHeld());
-        return ktl::move(dispatcher_);
-    }
+  // May only be called while holding PortDispatcher lock.
+  fbl::RefPtr<Dispatcher> UnlinkDispatcherLocked() {
+    DEBUG_ASSERT(port_lock_->lock().IsHeld());
+    return ktl::move(dispatcher_);
+  }
 
-private:
-    PortObserver(const PortObserver&) = delete;
-    PortObserver& operator=(const PortObserver&) = delete;
+ private:
+  PortObserver(const PortObserver&) = delete;
+  PortObserver& operator=(const PortObserver&) = delete;
 
-    // StateObserver overrides.
-    Flags OnInitialize(zx_signals_t initial_state, const StateObserver::CountInfo* cinfo) final;
-    Flags OnStateChange(zx_signals_t new_state) final;
-    Flags OnCancel(const Handle* handle) final;
-    Flags OnCancelByKey(const Handle* handle, const void* port, uint64_t key) final;
-    void OnRemoved() final;
+  // StateObserver overrides.
+  Flags OnInitialize(zx_signals_t initial_state, const StateObserver::CountInfo* cinfo) final;
+  Flags OnStateChange(zx_signals_t new_state) final;
+  Flags OnCancel(const Handle* handle) final;
+  Flags OnCancelByKey(const Handle* handle, const void* port, uint64_t key) final;
+  void OnRemoved() final;
 
-    // The following method can only be called from
-    // OnInitialize(), OnStateChange() and OnCancel().
-    Flags MaybeQueue(zx_signals_t new_state, uint64_t count);
+  // The following method can only be called from
+  // OnInitialize(), OnStateChange() and OnCancel().
+  Flags MaybeQueue(zx_signals_t new_state, uint64_t count);
 
-    const uint32_t options_;
-    const zx_signals_t trigger_;
-    PortPacket packet_;
+  const uint32_t options_;
+  const zx_signals_t trigger_;
+  PortPacket packet_;
 
-    fbl::RefPtr<PortDispatcher> const port_;
-    Lock<fbl::Mutex>* const port_lock_;
+  fbl::RefPtr<PortDispatcher> const port_;
+  Lock<fbl::Mutex>* const port_lock_;
 
-    // Guarded by port_lock_;
-    ListNodeState observer_list_node_state_;
+  // Guarded by port_lock_;
+  ListNodeState observer_list_node_state_;
 
-    // Guarded by port_lock_;
-    fbl::RefPtr<Dispatcher> dispatcher_;
+  // Guarded by port_lock_;
+  fbl::RefPtr<Dispatcher> dispatcher_;
 };
 
 // The PortDispatcher implements the port kernel object which is the cornerstone
@@ -191,74 +187,76 @@ private:
 // and manage the waiting threads.
 
 class PortDispatcher final : public SoloDispatcher<PortDispatcher, ZX_DEFAULT_PORT_RIGHTS> {
-public:
-    static void Init();
-    static PortAllocator* DefaultPortAllocator();
-    static zx_status_t Create(uint32_t options, KernelHandle<PortDispatcher>* handle,
-                              zx_rights_t* rights);
+ public:
+  static void Init();
+  static PortAllocator* DefaultPortAllocator();
+  static zx_status_t Create(uint32_t options, KernelHandle<PortDispatcher>* handle,
+                            zx_rights_t* rights);
 
-    ~PortDispatcher() final;
-    zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_PORT; }
+  ~PortDispatcher() final;
+  zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_PORT; }
 
-    bool can_bind_to_interrupt() const { return options_ & ZX_PORT_BIND_TO_INTERRUPT; }
-    void on_zero_handles() final;
+  bool can_bind_to_interrupt() const { return options_ & ZX_PORT_BIND_TO_INTERRUPT; }
+  void on_zero_handles() final;
 
-    zx_status_t Queue(PortPacket* port_packet, zx_signals_t observed, uint64_t count);
-    zx_status_t QueueUser(const zx_port_packet_t& packet);
-    bool QueueInterruptPacket(PortInterruptPacket* port_packet, zx_time_t timestamp);
-    zx_status_t Dequeue(const Deadline& deadline, zx_port_packet_t* packet);
-    bool RemoveInterruptPacket(PortInterruptPacket* port_packet);
+  zx_status_t Queue(PortPacket* port_packet, zx_signals_t observed, uint64_t count);
+  zx_status_t QueueUser(const zx_port_packet_t& packet);
+  bool QueueInterruptPacket(PortInterruptPacket* port_packet, zx_time_t timestamp);
+  zx_status_t Dequeue(const Deadline& deadline, zx_port_packet_t* packet);
+  bool RemoveInterruptPacket(PortInterruptPacket* port_packet);
 
-    // This method determines the observer's fate. Upon return, one of the following will have
-    // occurred:
-    //
-    // 1. The observer is destroyed.
-    //
-    // 2. The observer is linked to an alreadyed queued packet and will be destroyed when the packet
-    // is destroyed (Queued or CancelQueued).
-    //
-    // 3. The observer is left for on_zero_handles to destroyed.
-    void MaybeReap(PortObserver* observer, PortPacket* port_packet);
+  // This method determines the observer's fate. Upon return, one of the following will have
+  // occurred:
+  //
+  // 1. The observer is destroyed.
+  //
+  // 2. The observer is linked to an alreadyed queued packet and will be destroyed when the packet
+  // is destroyed (Queued or CancelQueued).
+  //
+  // 3. The observer is left for on_zero_handles to destroyed.
+  void MaybeReap(PortObserver* observer, PortPacket* port_packet);
 
-    // Called under the handle table lock.
-    zx_status_t MakeObserver(uint32_t options, Handle* handle, uint64_t key, zx_signals_t signals);
+  // Called under the handle table lock.
+  zx_status_t MakeObserver(uint32_t options, Handle* handle, uint64_t key, zx_signals_t signals);
 
-    // Returns true if at least one packet was removed from the queue.
-    // Called under the handle table lock when |handle| is not null.
-    // When |handle| is null, ephemeral PortPackets are removed from the queue but not freed.
-    bool CancelQueued(const void* handle, uint64_t key);
+  // Returns true if at least one packet was removed from the queue.
+  // Called under the handle table lock when |handle| is not null.
+  // When |handle| is null, ephemeral PortPackets are removed from the queue but not freed.
+  bool CancelQueued(const void* handle, uint64_t key);
 
-    // Removes |port_packet| from this port's queue. Returns false if the packet was
-    // not in this queue. It is undefined to call this with a packet queued in another port.
-    bool CancelQueued(PortPacket* port_packet);
+  // Removes |port_packet| from this port's queue. Returns false if the packet was
+  // not in this queue. It is undefined to call this with a packet queued in another port.
+  bool CancelQueued(PortPacket* port_packet);
 
-private:
-    friend ExceptionPort;
+ private:
+  friend ExceptionPort;
 
-    explicit PortDispatcher(uint32_t options);
+  explicit PortDispatcher(uint32_t options);
 
-    // Adopts a RefPtr to |eport|, and adds it to |eports_|.
-    // Called by ExceptionPort under |eport|'s lock.
-    void LinkExceptionPortEportLocked(ExceptionPort* eport) TA_REQ(eport->lock_);
+  // Adopts a RefPtr to |eport|, and adds it to |eports_|.
+  // Called by ExceptionPort under |eport|'s lock.
+  void LinkExceptionPortEportLocked(ExceptionPort* eport) TA_REQ(eport->lock_);
 
-    // Removes |eport| from |eports_|, dropping its RefPtr.
-    // Does nothing if |eport| is not on the list.
-    // Called by ExceptionPort under |eport|'s lock.
-    void UnlinkExceptionPortEportLocked(ExceptionPort* eport) TA_REQ(eport->lock_);
+  // Removes |eport| from |eports_|, dropping its RefPtr.
+  // Does nothing if |eport| is not on the list.
+  // Called by ExceptionPort under |eport|'s lock.
+  void UnlinkExceptionPortEportLocked(ExceptionPort* eport) TA_REQ(eport->lock_);
 
-    const uint32_t options_;
-    Semaphore sema_;
-    bool zero_handles_ TA_GUARDED(get_lock());
+  const uint32_t options_;
+  Semaphore sema_;
+  bool zero_handles_ TA_GUARDED(get_lock());
 
-    // Next three members handle the object, manual and exception notifications.
-    size_t num_ephemeral_packets_ TA_GUARDED(get_lock());
-    fbl::DoublyLinkedList<PortPacket*> packets_ TA_GUARDED(get_lock());
-    fbl::DoublyLinkedList<fbl::RefPtr<ExceptionPort>> eports_ TA_GUARDED(get_lock());
-    // Next two members handle the interrupt notifications.
-    DECLARE_SPINLOCK(PortDispatcher) spinlock_;
-    fbl::DoublyLinkedList<PortInterruptPacket*> interrupt_packets_ TA_GUARDED(spinlock_);
+  // Next three members handle the object, manual and exception notifications.
+  size_t num_ephemeral_packets_ TA_GUARDED(get_lock());
+  fbl::DoublyLinkedList<PortPacket*> packets_ TA_GUARDED(get_lock());
+  fbl::DoublyLinkedList<fbl::RefPtr<ExceptionPort>> eports_ TA_GUARDED(get_lock());
+  // Next two members handle the interrupt notifications.
+  DECLARE_SPINLOCK(PortDispatcher) spinlock_;
+  fbl::DoublyLinkedList<PortInterruptPacket*> interrupt_packets_ TA_GUARDED(spinlock_);
 
-    // Keeps track of outstanding observers so they can be removed from dispatchers once handle
-    // count drops to zero.
-    PortObserver::List observers_ TA_GUARDED(get_lock());
+  // Keeps track of outstanding observers so they can be removed from dispatchers once handle
+  // count drops to zero.
+  PortObserver::List observers_ TA_GUARDED(get_lock());
 };
+
+#endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PORT_DISPATCHER_H_

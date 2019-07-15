@@ -5,10 +5,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <target.h>
-
 #include <debug.h>
 #include <err.h>
+#include <target.h>
 #include <zircon/compiler.h>
 
 /*
@@ -16,11 +15,8 @@
  * chooses not to implement.
  */
 
-__WEAK void target_early_init() {
-}
+__WEAK void target_early_init() {}
 
-__WEAK void target_init() {
-}
+__WEAK void target_init() {}
 
-__WEAK void target_quiesce() {
-}
+__WEAK void target_quiesce() {}

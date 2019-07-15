@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_HEAP_INCLUDE_LIB_HEAP_H_
+#define ZIRCON_KERNEL_LIB_HEAP_INCLUDE_LIB_HEAP_H_
 
 #include <stddef.h>
 #include <sys/types.h>
@@ -32,18 +33,18 @@ void* memalign_debug_caller_(size_t size, size_t align, void* caller);
 
 // alternate version of malloc where the caller is passed in
 __MALLOC static inline void* malloc_debug_caller(size_t size, void* caller) {
-    if (HEAP_COLLECT_STATS) {
-        return malloc_debug_caller_(size, caller);
-    } else {
-        return malloc(size);
-    }
+  if (HEAP_COLLECT_STATS) {
+    return malloc_debug_caller_(size, caller);
+  } else {
+    return malloc(size);
+  }
 }
 __MALLOC static inline void* memalign_debug_caller(size_t size, size_t align, void* caller) {
-    if (HEAP_COLLECT_STATS) {
-        return memalign_debug_caller_(size, align, caller);
-    } else {
-        return memalign(align, size);
-    }
+  if (HEAP_COLLECT_STATS) {
+    return memalign_debug_caller_(size, align, caller);
+  } else {
+    return memalign(align, size);
+  }
 }
 // tell the heap to return any free pages it can find
 void heap_trim(void);
@@ -60,3 +61,5 @@ void heap_get_info(size_t* size_bytes, size_t* free_bytes);
 void heap_init(void);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_LIB_HEAP_INCLUDE_LIB_HEAP_H_

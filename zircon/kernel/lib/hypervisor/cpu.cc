@@ -14,47 +14,44 @@
 namespace {
 
 struct percpu_state {
-    ktl::atomic<cpu_mask_t> cpu_mask;
-    hypervisor::percpu_task_t task;
-    void* context;
+  ktl::atomic<cpu_mask_t> cpu_mask;
+  hypervisor::percpu_task_t task;
+  void* context;
 
-    percpu_state(hypervisor::percpu_task_t _task, void* _context)
-        : cpu_mask(0), task(_task), context(_context) {}
+  percpu_state(hypervisor::percpu_task_t _task, void* _context)
+      : cpu_mask(0), task(_task), context(_context) {}
 };
 
-} // namespace
+}  // namespace
 
 namespace hypervisor {
 
 static void percpu_task(void* arg) {
-    auto state = static_cast<percpu_state*>(arg);
-    cpu_num_t cpu_num = arch_curr_cpu_num();
-    zx_status_t status = state->task(state->context, cpu_num);
-    if (status == ZX_OK)
-        state->cpu_mask.fetch_or(cpu_num_to_mask(cpu_num));
+  auto state = static_cast<percpu_state*>(arg);
+  cpu_num_t cpu_num = arch_curr_cpu_num();
+  zx_status_t status = state->task(state->context, cpu_num);
+  if (status == ZX_OK)
+    state->cpu_mask.fetch_or(cpu_num_to_mask(cpu_num));
 }
 
 cpu_mask_t percpu_exec(percpu_task_t task, void* context) {
-    percpu_state state(task, context);
-    mp_sync_exec(MP_IPI_TARGET_ALL, 0, percpu_task, &state);
-    return state.cpu_mask.load();
+  percpu_state state(task, context);
+  mp_sync_exec(MP_IPI_TARGET_ALL, 0, percpu_task, &state);
+  return state.cpu_mask.load();
 }
 
-cpu_num_t cpu_of(uint16_t vpid) {
-    return (vpid - 1) % arch_max_num_cpus();
-}
+cpu_num_t cpu_of(uint16_t vpid) { return (vpid - 1) % arch_max_num_cpus(); }
 
 thread_t* pin_thread(uint16_t vpid) {
-    thread_t* thread = get_current_thread();
-    thread_set_cpu_affinity(thread, cpu_num_to_mask(cpu_of(vpid)));
-    return thread;
+  thread_t* thread = get_current_thread();
+  thread_set_cpu_affinity(thread, cpu_num_to_mask(cpu_of(vpid)));
+  return thread;
 }
 
 bool check_pinned_cpu_invariant(uint16_t vpid, const thread_t* thread) {
-    cpu_num_t cpu = cpu_of(vpid);
-    return thread == get_current_thread() &&
-           thread->cpu_affinity & cpu_num_to_mask(cpu) &&
-           arch_curr_cpu_num() == cpu;
+  cpu_num_t cpu = cpu_of(vpid);
+  return thread == get_current_thread() && thread->cpu_affinity & cpu_num_to_mask(cpu) &&
+         arch_curr_cpu_num() == cpu;
 }
 
-} // namespace hypervisor
+}  // namespace hypervisor

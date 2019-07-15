@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_CMDLINE_H_
+#define ZIRCON_KERNEL_INCLUDE_KERNEL_CMDLINE_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -42,3 +43,5 @@ extern size_t __kernel_cmdline_size;
 extern size_t __kernel_cmdline_count;
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_CMDLINE_H_

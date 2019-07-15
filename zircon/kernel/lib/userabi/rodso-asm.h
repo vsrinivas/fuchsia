@@ -4,10 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_USERABI_RODSO_ASM_H_
+#define ZIRCON_KERNEL_LIB_USERABI_RODSO_ASM_H_
 
-#include <asm.h>
 #include <arch/defines.h>
+#include <asm.h>
 
 // clang-format off
 
@@ -32,3 +33,5 @@
   DATA(name##_image) \
   .incbin NAME##_FILENAME, 0, NAME##_##CODE_or_DATA##_END; \
   END_DATA(name##_image)
+
+#endif  // ZIRCON_KERNEL_LIB_USERABI_RODSO_ASM_H_

@@ -11,6 +11,7 @@
 #include <debug.h>
 #include <kernel/cmdline.h>
 #include <kernel/thread.h>
+#include <lib/console.h>
 #include <list.h>
 #include <platform.h>
 #include <platform/debug.h>
@@ -20,9 +21,6 @@
 #include <vm/pmm.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
-
-#include <lib/console.h>
-
 
 static int cmd_display_mem(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_modify_mem(int argc, const cmd_args *argv, uint32_t flags);
@@ -58,319 +56,307 @@ STATIC_COMMAND("sleep", "sleep number of seconds", &cmd_sleep)
 STATIC_COMMAND("sleepm", "sleep number of milliseconds", &cmd_sleep)
 STATIC_COMMAND_END(mem)
 
-static int cmd_display_mem(int argc, const cmd_args *argv, uint32_t flags)
-{
-    /* save the last address and len so we can continue where we left off */
-    static unsigned long address;
-    static size_t len;
+static int cmd_display_mem(int argc, const cmd_args *argv, uint32_t flags) {
+  /* save the last address and len so we can continue where we left off */
+  static unsigned long address;
+  static size_t len;
 
-    if (argc < 3 && len == 0) {
-        printf("not enough arguments\n");
-        printf("%s [-l] [-b] [address] [length]\n", argv[0].str);
-        return -1;
-    }
+  if (argc < 3 && len == 0) {
+    printf("not enough arguments\n");
+    printf("%s [-l] [-b] [address] [length]\n", argv[0].str);
+    return -1;
+  }
 
-    int size;
-    if (strcmp(argv[0].str, "dw") == 0) {
-        size = 4;
-    } else if (strcmp(argv[0].str, "dh") == 0) {
-        size = 2;
+  int size;
+  if (strcmp(argv[0].str, "dw") == 0) {
+    size = 4;
+  } else if (strcmp(argv[0].str, "dh") == 0) {
+    size = 2;
+  } else {
+    size = 1;
+  }
+
+  uint byte_order = BYTE_ORDER;
+  int argindex = 1;
+  bool read_address = false;
+  while (argc > argindex) {
+    if (!strcmp(argv[argindex].str, "-l")) {
+      byte_order = LITTLE_ENDIAN;
+    } else if (!strcmp(argv[argindex].str, "-b")) {
+      byte_order = BIG_ENDIAN;
+    } else if (!read_address) {
+      address = argv[argindex].u;
+      read_address = true;
     } else {
-        size = 1;
+      len = argv[argindex].u;
     }
 
-    uint byte_order = BYTE_ORDER;
-    int argindex = 1;
-    bool read_address = false;
-    while (argc > argindex) {
-        if (!strcmp(argv[argindex].str, "-l")) {
-            byte_order = LITTLE_ENDIAN;
-        } else if (!strcmp(argv[argindex].str, "-b")) {
-            byte_order = BIG_ENDIAN;
-        } else if (!read_address) {
-            address = argv[argindex].u;
-            read_address = true;
-        } else {
-            len = argv[argindex].u;
-        }
+    argindex++;
+  }
 
-        argindex++;
-    }
+  unsigned long stop = address + len;
+  int count = 0;
 
-    unsigned long stop = address + len;
-    int count = 0;
+  if ((address & (size - 1)) != 0) {
+    printf("unaligned address, cannot display\n");
+    return -1;
+  }
 
-    if ((address & (size - 1)) != 0) {
-        printf("unaligned address, cannot display\n");
-        return -1;
-    }
+  /* preflight the start address to see if it's mapped */
+  if (vaddr_to_paddr((void *)address) == 0) {
+    printf("ERROR: address 0x%lx is unmapped\n", address);
+    return -1;
+  }
 
-    /* preflight the start address to see if it's mapped */
-    if (vaddr_to_paddr((void *)address) == 0) {
-        printf("ERROR: address 0x%lx is unmapped\n", address);
-        return -1;
-    }
-
-    for ( ; address < stop; address += size) {
-        if (count == 0)
-            printf("0x%08lx: ", address);
-        switch (size) {
-            case 4: {
-                uint32_t val = (byte_order != BYTE_ORDER) ?
-                               SWAP_32(*(uint32_t *)address) :
-                               *(uint32_t *)address;
-                printf("%08x ", val);
-                break;
-            }
-            case 2: {
-                uint16_t val = (byte_order != BYTE_ORDER) ?
-                               SWAP_16(*(uint16_t *)address) :
-                               *(uint16_t *)address;
-                printf("%04hx ", val);
-                break;
-            }
-            case 1:
-                printf("%02hhx ", *(uint8_t *)address);
-                break;
-        }
-        count += size;
-        if (count == 16) {
-            printf("\n");
-            count = 0;
-        }
-    }
-
-    if (count != 0)
-        printf("\n");
-
-    return 0;
-}
-
-static int cmd_modify_mem(int argc, const cmd_args *argv, uint32_t flags)
-{
-    int size;
-
-    if (argc < 3) {
-        printf("not enough arguments\n");
-        printf("%s <address> <val>\n", argv[0].str);
-        return -1;
-    }
-
-    if (strcmp(argv[0].str, "mw") == 0) {
-        size = 4;
-    } else if (strcmp(argv[0].str, "mh") == 0) {
-        size = 2;
-    } else {
-        size = 1;
-    }
-
-    unsigned long address = argv[1].u;
-    unsigned long val = argv[2].u;
-
-    if ((address & (size - 1)) != 0) {
-        printf("unaligned address, cannot modify\n");
-        return -1;
-    }
-
+  for (; address < stop; address += size) {
+    if (count == 0)
+      printf("0x%08lx: ", address);
     switch (size) {
-        case 4:
-            *(uint32_t *)address = (uint32_t)val;
-            break;
-        case 2:
-            *(uint16_t *)address = (uint16_t)val;
-            break;
-        case 1:
-            *(uint8_t *)address = (uint8_t)val;
-            break;
+      case 4: {
+        uint32_t val =
+            (byte_order != BYTE_ORDER) ? SWAP_32(*(uint32_t *)address) : *(uint32_t *)address;
+        printf("%08x ", val);
+        break;
+      }
+      case 2: {
+        uint16_t val =
+            (byte_order != BYTE_ORDER) ? SWAP_16(*(uint16_t *)address) : *(uint16_t *)address;
+        printf("%04hx ", val);
+        break;
+      }
+      case 1:
+        printf("%02hhx ", *(uint8_t *)address);
+        break;
     }
+    count += size;
+    if (count == 16) {
+      printf("\n");
+      count = 0;
+    }
+  }
 
-    return 0;
+  if (count != 0)
+    printf("\n");
+
+  return 0;
 }
 
-static int cmd_fill_mem(int argc, const cmd_args *argv, uint32_t flags)
-{
-    int size;
+static int cmd_modify_mem(int argc, const cmd_args *argv, uint32_t flags) {
+  int size;
 
-    if (argc < 4) {
-        printf("not enough arguments\n");
-        printf("%s <address> <len> <val>\n", argv[0].str);
-        return -1;
-    }
+  if (argc < 3) {
+    printf("not enough arguments\n");
+    printf("%s <address> <val>\n", argv[0].str);
+    return -1;
+  }
 
-    if (strcmp(argv[0].str, "fw") == 0) {
-        size = 4;
-    } else if (strcmp(argv[0].str, "fh") == 0) {
-        size = 2;
-    } else {
-        size = 1;
-    }
+  if (strcmp(argv[0].str, "mw") == 0) {
+    size = 4;
+  } else if (strcmp(argv[0].str, "mh") == 0) {
+    size = 2;
+  } else {
+    size = 1;
+  }
 
-    unsigned long address = argv[1].u;
-    unsigned long len = argv[2].u;
-    unsigned long stop = address + len;
-    unsigned long val = argv[3].u;
+  unsigned long address = argv[1].u;
+  unsigned long val = argv[2].u;
 
-    if ((address & (size - 1)) != 0) {
-        printf("unaligned address, cannot modify\n");
-        return -1;
-    }
+  if ((address & (size - 1)) != 0) {
+    printf("unaligned address, cannot modify\n");
+    return -1;
+  }
 
-    for ( ; address < stop; address += size) {
-        switch (size) {
-            case 4:
-                *(uint32_t *)address = (uint32_t)val;
-                break;
-            case 2:
-                *(uint16_t *)address = (uint16_t)val;
-                break;
-            case 1:
-                *(uint8_t *)address = (uint8_t)val;
-                break;
-        }
-    }
+  switch (size) {
+    case 4:
+      *(uint32_t *)address = (uint32_t)val;
+      break;
+    case 2:
+      *(uint16_t *)address = (uint16_t)val;
+      break;
+    case 1:
+      *(uint8_t *)address = (uint8_t)val;
+      break;
+  }
 
-    return 0;
+  return 0;
 }
 
-static int cmd_copy_mem(int argc, const cmd_args *argv, uint32_t flags)
-{
-    if (argc < 4) {
-        printf("not enough arguments\n");
-        printf("%s <source address> <target address> <len>\n", argv[0].str);
-        return -1;
+static int cmd_fill_mem(int argc, const cmd_args *argv, uint32_t flags) {
+  int size;
+
+  if (argc < 4) {
+    printf("not enough arguments\n");
+    printf("%s <address> <len> <val>\n", argv[0].str);
+    return -1;
+  }
+
+  if (strcmp(argv[0].str, "fw") == 0) {
+    size = 4;
+  } else if (strcmp(argv[0].str, "fh") == 0) {
+    size = 2;
+  } else {
+    size = 1;
+  }
+
+  unsigned long address = argv[1].u;
+  unsigned long len = argv[2].u;
+  unsigned long stop = address + len;
+  unsigned long val = argv[3].u;
+
+  if ((address & (size - 1)) != 0) {
+    printf("unaligned address, cannot modify\n");
+    return -1;
+  }
+
+  for (; address < stop; address += size) {
+    switch (size) {
+      case 4:
+        *(uint32_t *)address = (uint32_t)val;
+        break;
+      case 2:
+        *(uint16_t *)address = (uint16_t)val;
+        break;
+      case 1:
+        *(uint8_t *)address = (uint8_t)val;
+        break;
     }
+  }
 
-    addr_t source = argv[1].u;
-    addr_t target = argv[2].u;
-    size_t len = argv[3].u;
-
-    memcpy((void *)target, (const void *)source, len);
-
-    return 0;
+  return 0;
 }
 
-static int cmd_memtest(int argc, const cmd_args *argv, uint32_t flags)
-{
-    if (argc < 3) {
-        printf("not enough arguments\n");
-        printf("%s <base> <len>\n", argv[0].str);
-        return -1;
-    }
+static int cmd_copy_mem(int argc, const cmd_args *argv, uint32_t flags) {
+  if (argc < 4) {
+    printf("not enough arguments\n");
+    printf("%s <source address> <target address> <len>\n", argv[0].str);
+    return -1;
+  }
 
-    uint32_t *ptr;
-    size_t len;
+  addr_t source = argv[1].u;
+  addr_t target = argv[2].u;
+  size_t len = argv[3].u;
 
-    ptr = (uint32_t *)argv[1].u;
-    len = (size_t)argv[2].u;
+  memcpy((void *)target, (const void *)source, len);
 
-    size_t i;
-    // write out
-    printf("writing first pass...");
-    for (i = 0; i < len / 4; i++) {
-        ptr[i] = static_cast<uint32_t>(i);
-    }
-    printf("done\n");
-
-    // verify
-    printf("verifying...");
-    for (i = 0; i < len / 4; i++) {
-        if (ptr[i] != i)
-            printf("error at %p\n", &ptr[i]);
-    }
-    printf("done\n");
-
-    return 0;
+  return 0;
 }
 
-static int cmd_sleep(int argc, const cmd_args *argv, uint32_t flags)
-{
-    zx_duration_t t = ZX_SEC(1); /* default to 1 second */
+static int cmd_memtest(int argc, const cmd_args *argv, uint32_t flags) {
+  if (argc < 3) {
+    printf("not enough arguments\n");
+    printf("%s <base> <len>\n", argv[0].str);
+    return -1;
+  }
 
-    if (argc >= 2) {
-        t = ZX_MSEC(argv[1].u);
-        if (!strcmp(argv[0].str, "sleep"))
-            t = zx_duration_mul_int64(t, 1000);
-    }
+  uint32_t *ptr;
+  size_t len;
 
-    thread_sleep_relative(t);
+  ptr = (uint32_t *)argv[1].u;
+  len = (size_t)argv[2].u;
 
-    return 0;
+  size_t i;
+  // write out
+  printf("writing first pass...");
+  for (i = 0; i < len / 4; i++) {
+    ptr[i] = static_cast<uint32_t>(i);
+  }
+  printf("done\n");
+
+  // verify
+  printf("verifying...");
+  for (i = 0; i < len / 4; i++) {
+    if (ptr[i] != i)
+      printf("error at %p\n", &ptr[i]);
+  }
+  printf("done\n");
+
+  return 0;
 }
 
-static int crash_thread(void *)
-{
-    /* should crash */
-    volatile uint32_t *ptr = (volatile uint32_t *)1u;
-    *ptr = 1;
+static int cmd_sleep(int argc, const cmd_args *argv, uint32_t flags) {
+  zx_duration_t t = ZX_SEC(1); /* default to 1 second */
 
-    return 0;
+  if (argc >= 2) {
+    t = ZX_MSEC(argv[1].u);
+    if (!strcmp(argv[0].str, "sleep"))
+      t = zx_duration_mul_int64(t, 1000);
+  }
+
+  thread_sleep_relative(t);
+
+  return 0;
 }
 
-static int cmd_crash(int argc, const cmd_args *argv, uint32_t flags)
-{
-    if (argc > 1) {
-        if (!strcmp(argv[1].str, "thread")) {
-            thread_t *t = thread_create("crasher", &crash_thread, NULL, DEFAULT_PRIORITY);
-            thread_resume(t);
+static int crash_thread(void *) {
+  /* should crash */
+  volatile uint32_t *ptr = (volatile uint32_t *)1u;
+  *ptr = 1;
 
-            thread_join(t, NULL, ZX_TIME_INFINITE);
-            return 0;
-        }
+  return 0;
+}
+
+static int cmd_crash(int argc, const cmd_args *argv, uint32_t flags) {
+  if (argc > 1) {
+    if (!strcmp(argv[1].str, "thread")) {
+      thread_t *t = thread_create("crasher", &crash_thread, NULL, DEFAULT_PRIORITY);
+      thread_resume(t);
+
+      thread_join(t, NULL, ZX_TIME_INFINITE);
+      return 0;
     }
+  }
 
-    crash_thread(nullptr);
+  crash_thread(nullptr);
 
-    /* if it didn't, panic the system */
-    panic("crash");
+  /* if it didn't, panic the system */
+  panic("crash");
 
-    return 0;
+  return 0;
 }
 
 __attribute__((noinline)) static void stomp_stack(size_t size) {
-    // -Wvla prevents VLAs but not explicit alloca.
-    // Neither is allowed anywhere in the kernel outside this test code.
-    void* death = __builtin_alloca(size); // OK in test-only code.
-    memset(death, 0xaa, size);
-    thread_sleep_relative(ZX_USEC(1));
+  // -Wvla prevents VLAs but not explicit alloca.
+  // Neither is allowed anywhere in the kernel outside this test code.
+  void *death = __builtin_alloca(size);  // OK in test-only code.
+  memset(death, 0xaa, size);
+  thread_sleep_relative(ZX_USEC(1));
 }
 
-static int cmd_stackstomp(int argc, const cmd_args *argv, uint32_t flags)
-{
-    for (size_t i = 0; i < DEFAULT_STACK_SIZE * 2; i++)
-        stomp_stack(i);
+static int cmd_stackstomp(int argc, const cmd_args *argv, uint32_t flags) {
+  for (size_t i = 0; i < DEFAULT_STACK_SIZE * 2; i++)
+    stomp_stack(i);
 
-    printf("survived.\n");
+  printf("survived.\n");
 
-    return 0;
+  return 0;
 }
 
 #define DEBUG_CMDLINE_MAX 1024
-static int cmd_cmdline(int argc, const cmd_args *argv, uint32_t flags)
-{
-    if (argc == 1) {
-        char cmdline_buf[DEBUG_CMDLINE_MAX];
-        memset(cmdline_buf, 0, DEBUG_CMDLINE_MAX);
-        const char* cmdline = cmdline_get(NULL);
-        for (size_t i = 0; i < DEBUG_CMDLINE_MAX; i++) {
-            if (cmdline[i] == '\0') {
-                if (cmdline[i+1] == '\0') {
-                    break;
-                }
-                cmdline_buf[i] = ' ';
-            } else {
-                cmdline_buf[i] = cmdline[i];
-            }
+static int cmd_cmdline(int argc, const cmd_args *argv, uint32_t flags) {
+  if (argc == 1) {
+    char cmdline_buf[DEBUG_CMDLINE_MAX];
+    memset(cmdline_buf, 0, DEBUG_CMDLINE_MAX);
+    const char *cmdline = cmdline_get(NULL);
+    for (size_t i = 0; i < DEBUG_CMDLINE_MAX; i++) {
+      if (cmdline[i] == '\0') {
+        if (cmdline[i + 1] == '\0') {
+          break;
         }
-        printf("cmdline: %s\n", cmdline_buf);
-    } else {
-        const char* key = argv[1].str;
-        const char* val = cmdline_get(key);
-        if (!val) {
-            printf("cmdline: %s not found\n", key);
-        } else {
-            printf("cmdline: %s=%s\n", key, val);
-        }
+        cmdline_buf[i] = ' ';
+      } else {
+        cmdline_buf[i] = cmdline[i];
+      }
     }
+    printf("cmdline: %s\n", cmdline_buf);
+  } else {
+    const char *key = argv[1].str;
+    const char *val = cmdline_get(key);
+    if (!val) {
+      printf("cmdline: %s not found\n", key);
+    } else {
+      printf("cmdline: %s=%s\n", key, val);
+    }
+  }
 
-    return 0;
+  return 0;
 }

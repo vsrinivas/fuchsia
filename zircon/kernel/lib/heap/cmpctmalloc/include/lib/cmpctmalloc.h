@@ -5,14 +5,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_LIB_HEAP_CMPCTMALLOC_INCLUDE_LIB_CMPCTMALLOC_H_
+#define ZIRCON_KERNEL_LIB_HEAP_CMPCTMALLOC_INCLUDE_LIB_CMPCTMALLOC_H_
 
 #include <kernel/mutex.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <stdbool.h>
 #include <stddef.h>
-
 #include <zircon/compiler.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 DECLARE_SINGLETON_MUTEX(TheHeapLock);
 
@@ -26,3 +26,5 @@ void cmpct_dump(bool panic_time) TA_EXCL(TheHeapLock::Get());
 void cmpct_get_info(size_t* size_bytes, size_t* free_bytes) TA_EXCL(TheHeapLock::Get());
 void cmpct_test(void) TA_EXCL(TheHeapLock::Get());
 void cmpct_trim(void) TA_EXCL(TheHeapLock::Get());
+
+#endif  // ZIRCON_KERNEL_LIB_HEAP_CMPCTMALLOC_INCLUDE_LIB_CMPCTMALLOC_H_

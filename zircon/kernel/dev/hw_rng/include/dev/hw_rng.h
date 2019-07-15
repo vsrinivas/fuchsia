@@ -5,16 +5,19 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_DEV_HW_RNG_INCLUDE_DEV_HW_RNG_H_
+#define ZIRCON_KERNEL_DEV_HW_RNG_INCLUDE_DEV_HW_RNG_H_
 
 #include <assert.h>
-#include <zircon/compiler.h>
 #include <debug.h>
 #include <err.h>
 #include <sys/types.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
 size_t hw_rng_get_entropy(void* buf, size_t len, bool block);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_DEV_HW_RNG_INCLUDE_DEV_HW_RNG_H_

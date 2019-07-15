@@ -11,11 +11,13 @@
 // be included in C++ source files. In particular this header must not be
 // included in kernel/wait.h or kernel/thread.h until the conversion is done.
 
-#pragma once
+#ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_THREAD_LOCK_H_
+#define ZIRCON_KERNEL_INCLUDE_KERNEL_THREAD_LOCK_H_
 
 #include <kernel/lockdep.h>
 #include <kernel/thread.h>
 
 DECLARE_SINGLETON_LOCK_WRAPPER(ThreadLock, thread_lock,
-                               (LockFlagsReportingDisabled |
-                                LockFlagsTrackingDisabled));
+                               (LockFlagsReportingDisabled | LockFlagsTrackingDisabled));
+
+#endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_THREAD_LOCK_H_

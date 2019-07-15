@@ -7,4 +7,3 @@
 extern __WEAK const PcieBusDriver::QuirkHandler pcie_quirk_handlers[] = {
     nullptr,
 };
-

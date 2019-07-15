@@ -4,12 +4,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
-
-#include <zircon/compiler.h>
-#include <zircon/types.h>
+#ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_APIC_H_
+#define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_APIC_H_
 
 #include <dev/interrupt.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -32,38 +32,31 @@ __BEGIN_CDECLS
 // clang-format on
 
 enum apic_interrupt_delivery_mode {
-    // Unless you know what you're doing, you want FIXED.
-    DELIVERY_MODE_FIXED = 0,
-    DELIVERY_MODE_LOWEST_PRI = 1,
-    DELIVERY_MODE_SMI = 2,
-    DELIVERY_MODE_NMI = 4,
-    DELIVERY_MODE_INIT = 5,
-    DELIVERY_MODE_STARTUP = 6,
-    DELIVERY_MODE_EXT_INT = 7,
+  // Unless you know what you're doing, you want FIXED.
+  DELIVERY_MODE_FIXED = 0,
+  DELIVERY_MODE_LOWEST_PRI = 1,
+  DELIVERY_MODE_SMI = 2,
+  DELIVERY_MODE_NMI = 4,
+  DELIVERY_MODE_INIT = 5,
+  DELIVERY_MODE_STARTUP = 6,
+  DELIVERY_MODE_EXT_INT = 7,
 };
 
 enum apic_interrupt_dst_mode {
-    DST_MODE_PHYSICAL = 0,
-    DST_MODE_LOGICAL = 1,
+  DST_MODE_PHYSICAL = 0,
+  DST_MODE_LOGICAL = 1,
 };
 
 // Functionality provided by the local APIC
 void apic_vm_init(void);
 void apic_local_init(void);
 uint8_t apic_local_id(void);
-uint8_t apic_bsp_id(void); // The APIC ID of the bootstrap processor
+uint8_t apic_bsp_id(void);  // The APIC ID of the bootstrap processor
 void apic_irq_set(unsigned int vector, bool enable);
-void apic_send_ipi(
-    uint8_t vector,
-    uint32_t dst_apic_id,
-    enum apic_interrupt_delivery_mode dm);
+void apic_send_ipi(uint8_t vector, uint32_t dst_apic_id, enum apic_interrupt_delivery_mode dm);
 void apic_send_self_ipi(uint8_t vector, enum apic_interrupt_delivery_mode dm);
-void apic_send_broadcast_ipi(
-    uint8_t vector,
-    enum apic_interrupt_delivery_mode dm);
-void apic_send_broadcast_self_ipi(
-    uint8_t vector,
-    enum apic_interrupt_delivery_mode dm);
+void apic_send_broadcast_ipi(uint8_t vector, enum apic_interrupt_delivery_mode dm);
+void apic_send_broadcast_self_ipi(uint8_t vector, enum apic_interrupt_delivery_mode dm);
 void apic_issue_eoi(void);
 
 zx_status_t apic_timer_set_oneshot(uint32_t count, uint8_t divisor, bool masked);
@@ -85,22 +78,22 @@ void platform_handle_apic_timer_tick(void);
 
 // Information about the system IO APICs
 struct io_apic_descriptor {
-    uint8_t apic_id;
-    // virtual IRQ base for ACPI
-    uint32_t global_irq_base;
-    // Physical address of the base of this IOAPIC's MMIO
-    paddr_t paddr;
+  uint8_t apic_id;
+  // virtual IRQ base for ACPI
+  uint32_t global_irq_base;
+  // Physical address of the base of this IOAPIC's MMIO
+  paddr_t paddr;
 };
 
 // Information describing an ISA override.  An override can change the
 // global IRQ number and/or change bus signaling characteristics
 // for the specified ISA IRQ.
 struct io_apic_isa_override {
-    uint8_t isa_irq;
-    bool remapped;
-    enum interrupt_trigger_mode tm;
-    enum interrupt_polarity pol;
-    uint32_t global_irq;
+  uint8_t isa_irq;
+  bool remapped;
+  enum interrupt_trigger_mode tm;
+  enum interrupt_polarity pol;
+  uint32_t global_irq;
 };
 
 // Functionality provided by the IO APICs
@@ -114,42 +107,26 @@ struct io_apic_isa_override {
 #define IO_APIC_IRQ_UNMASK  false
 // clang-format on
 
-void apic_io_init(
-    struct io_apic_descriptor* io_apics_descs,
-    unsigned int num_io_apics,
-    struct io_apic_isa_override* overrides,
-    unsigned int num_overrides);
+void apic_io_init(struct io_apic_descriptor* io_apics_descs, unsigned int num_io_apics,
+                  struct io_apic_isa_override* overrides, unsigned int num_overrides);
 bool apic_io_is_valid_irq(uint32_t global_irq);
 void apic_io_mask_irq(uint32_t global_irq, bool mask);
-void apic_io_configure_irq(
-    uint32_t global_irq,
-    enum interrupt_trigger_mode trig_mode,
-    enum interrupt_polarity polarity,
-    enum apic_interrupt_delivery_mode del_mode,
-    bool mask,
-    enum apic_interrupt_dst_mode dst_mode,
-    uint8_t dst,
-    uint8_t vector);
-zx_status_t apic_io_fetch_irq_config(
-    uint32_t global_irq,
-    enum interrupt_trigger_mode* trig_mode,
-    enum interrupt_polarity* polarity);
-void apic_io_configure_irq_vector(
-    uint32_t global_irq,
-    uint8_t vector);
+void apic_io_configure_irq(uint32_t global_irq, enum interrupt_trigger_mode trig_mode,
+                           enum interrupt_polarity polarity,
+                           enum apic_interrupt_delivery_mode del_mode, bool mask,
+                           enum apic_interrupt_dst_mode dst_mode, uint8_t dst, uint8_t vector);
+zx_status_t apic_io_fetch_irq_config(uint32_t global_irq, enum interrupt_trigger_mode* trig_mode,
+                                     enum interrupt_polarity* polarity);
+void apic_io_configure_irq_vector(uint32_t global_irq, uint8_t vector);
 uint8_t apic_io_fetch_irq_vector(uint32_t global_irq);
 
 void apic_io_mask_isa_irq(uint8_t isa_irq, bool mask);
 // For ISA configuration, we don't need to specify the trigger mode
 // and polarity since we initialize these to match the ISA bus or
 // any overrides we've been told about.
-void apic_io_configure_isa_irq(
-    uint8_t isa_irq,
-    enum apic_interrupt_delivery_mode del_mode,
-    bool mask,
-    enum apic_interrupt_dst_mode dst_mode,
-    uint8_t dst,
-    uint8_t vector);
+void apic_io_configure_isa_irq(uint8_t isa_irq, enum apic_interrupt_delivery_mode del_mode,
+                               bool mask, enum apic_interrupt_dst_mode dst_mode, uint8_t dst,
+                               uint8_t vector);
 void apic_io_issue_eoi(uint32_t global_irq, uint8_t vec);
 uint32_t apic_io_isa_to_global(uint8_t isa_irq);
 
@@ -163,3 +140,5 @@ void apic_local_debug(void);
 void apic_io_debug(void);
 
 __END_CDECLS
+
+#endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_APIC_H_
