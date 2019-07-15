@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
@@ -37,9 +38,16 @@ rustc_test("driver") {
   ]
 }
 
+rustc_binary("fake-install-disk-image") {
+  name = "fake_install_disk_image"
+  edition = "2018"
+  source_root = "src/bin/install-disk-image.rs"
+}
+
 test_package("systemupdater-tests") {
   deps = [
     ":driver",
+    ":fake-install-disk-image",
     "//garnet/go/src/grand_unified_binary",
   ]
 
@@ -50,8 +58,7 @@ test_package("systemupdater-tests") {
     },
     {
       name = "install-disk-image"
-      source =
-          rebase_path("//garnet/tests/system_updater/install-disk-image.sh")
+      source = "fake_install_disk_image"
     },
   ]
 
