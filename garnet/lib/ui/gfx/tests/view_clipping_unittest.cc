@@ -114,6 +114,52 @@ VK_TEST_F(ViewClippingTest, DISABLED_ClipSettingTest) {
   }
 }
 
+// This first unit test checks to see if a view holder
+// is properly having its bounds set by the
+// "SetViewPropertiesCmd" and if the correct clipping
+// planes are being generated as a result.
+#if SCENIC_ENFORCE_VIEW_BOUND_CLIPPING
+VK_TEST_F(ViewClippingTest, InsetsTest) {
+#else
+VK_TEST_F(ViewClippingTest, DISABLED_InsetsTest) {
+#endif
+  uint32_t scene_id = 5;
+  uint32_t view_id = 15;
+  uint32_t view_holder_id = 30;
+
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
+  Apply(scenic::NewCreateSceneCmd(scene_id));
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token), "ViewHolder"));
+  Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "View"));
+
+  ViewHolder* view_holder = FindResource<ViewHolder>(view_holder_id).get();
+  EXPECT_TRUE(view_holder);
+
+  // Set view bounding box properties.
+  const float bbox_min[3] = {0, 0, -100};
+  const float bbox_max[3] = {500, 500, 0};
+  const float inset_min[3] = {10, 20, 30};
+  const float inset_max[3] = {40, 50, 60};
+  Apply(scenic::NewSetViewPropertiesCmd(view_holder_id, bbox_min, bbox_max, inset_min, inset_max));
+
+  // Test to make sure the bounding boxes are the same.
+  BoundingBox test_bbox(vec3(10, 20, -70), vec3(460, 450, -60));
+  const BoundingBox view_bounding_box = view_holder->GetLocalBoundingBox();
+  EXPECT_EQ(test_bbox, view_bounding_box);
+
+  // Test to make sure the view planes are the same.
+  const std::vector<plane3>& view_planes = view_holder->clip_planes();
+  std::vector<plane3> test_planes = test_bbox.CreatePlanes();
+  EXPECT_EQ(view_planes.size(), test_planes.size());
+  for (uint32_t p = 0; p < view_planes.size(); p++) {
+    plane3 test_plane = test_planes[p];
+    plane3 view_plane = view_planes[p];
+    EXPECT_EQ(test_plane.dir(), view_plane.dir());
+    EXPECT_EQ(test_plane.dist(), view_plane.dist());
+  }
+}
+
 // Run a single test case on a view that's added to a ViewHolder after its
 // properties are set to make sure that it still clips.
 #if SCENIC_ENFORCE_VIEW_BOUND_CLIPPING

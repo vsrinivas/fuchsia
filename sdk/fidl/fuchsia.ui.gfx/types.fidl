@@ -212,7 +212,7 @@ struct BoundingBox {
 // Represents the properties for a View.
 struct ViewProperties {
     // The View's bounding box extents can be defined as:
-    //    { bounding_box.min - inset_from_min, bounding_box.max + inset_from_max }
+    //    { bounding_box.min + inset_from_min, bounding_box.max - inset_from_max }
     // Content contained within the View is clipped to this bounding box.
     //
     // TODO(SCN-819): should we just have a vec3 extent instead of a bounding box

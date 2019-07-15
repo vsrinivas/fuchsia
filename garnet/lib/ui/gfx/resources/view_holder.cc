@@ -7,8 +7,8 @@
 #include <lib/async/default.h>
 
 #include "garnet/lib/ui/gfx/engine/session.h"
+#include "garnet/lib/ui/gfx/util/unwrap.h"
 #include "src/lib/fxl/logging.h"
-#include "src/ui/lib/escher/geometry/bounding_box.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -64,14 +64,12 @@ void ViewHolder::LinkDisconnected() {
 // Generates an escher::BoundingBox from the given view properties.
 // TODO(SCN-1495) Create internal ViewProperties type.
 escher::BoundingBox ViewHolder::GetLocalBoundingBox() const {
-  fuchsia::ui::gfx::BoundingBox bbox = view_properties_.bounding_box;
-  fuchsia::ui::gfx::vec3 min = bbox.min;
-  fuchsia::ui::gfx::vec3 max = bbox.max;
-
-  glm::vec3 glm_min(min.x, min.y, min.z);
-  glm::vec3 glm_max(max.x, max.y, max.z);
-
-  return escher::BoundingBox(glm_min, glm_max);
+  escher::vec3 min =
+      Unwrap(view_properties_.bounding_box.min) + Unwrap(view_properties_.inset_from_min);
+  escher::vec3 max =
+      Unwrap(view_properties_.bounding_box.max) - Unwrap(view_properties_.inset_from_max);
+  FXL_DCHECK(glm::all(glm::lessThan(min, max)));
+  return escher::BoundingBox(min, max);
 }
 
 // Returns the world-space bounding box.
