@@ -18,6 +18,7 @@ core_tests = [
   "fifo",
   "futex",
   "handle-close",
+  "handle-dup",
   "handle-info",
   "handle-transfer",
   "handle-wait",

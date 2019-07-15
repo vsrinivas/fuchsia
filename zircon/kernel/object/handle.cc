@@ -144,7 +144,7 @@ HandleOwner Handle::Make(KernelHandle<Dispatcher> kernel_handle,
 // Called only by Make.
 Handle::Handle(fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights,
                uint32_t base_value)
-    : process_id_(0u),
+    : process_id_(ZX_KOID_INVALID),
       dispatcher_(ktl::move(dispatcher)),
       rights_(rights),
       base_value_(base_value) {
@@ -162,7 +162,10 @@ HandleOwner Handle::Dup(Handle* source, zx_rights_t rights) {
 
 // Called only by Dup.
 Handle::Handle(Handle* rhs, zx_rights_t rights, uint32_t base_value)
-    : process_id_(rhs->process_id()),
+      // Although this handle is intended to become owned by rhs->process_id at the point of
+      // creation it is stacked owned and may be destroyed without actually being assigned to the
+      // process. If this happens the assert in TearDown would get triggered.
+    : process_id_(ZX_KOID_INVALID),
       dispatcher_(rhs->dispatcher_),
       rights_(rights),
       base_value_(base_value) {
@@ -177,7 +180,7 @@ void Handle::TearDown() TA_EXCL(ArenaLock::Get()) {
     // There may be stale pointers to this slot and they will look at process_id. We expect
     // process_id to already have been cleared by the process dispatcher before the handle got to
     // this point.
-    DEBUG_ASSERT(process_id() == 0);
+    DEBUG_ASSERT(process_id() == ZX_KOID_INVALID);
 
     // Explicitly reset the dispatcher to drop the reference, if this deletes the dispatcher then
     // many things could ultimately happen and so it is important that this be outside the lock.
