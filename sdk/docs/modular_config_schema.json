@@ -105,7 +105,7 @@
     },
     "component_args": {
       "type": "object",
-      "items": {
+      "properties": {
         "uri": {
           "type": "string",
           "pattern": "w+:(/?/?)[^s]+"
