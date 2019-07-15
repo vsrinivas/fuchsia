@@ -156,7 +156,7 @@ pub(crate) enum FragmentProcessingState<B: ByteSlice, I: Ip> {
     ///  1) Body is not a multiple of `FRAGMENT_BLOCK_SIZE` and  it is not the
     ///     last fragment (last fragment of a packet, not last fragment received
     ///     for a packet).
-    ///  2) Overlaps with an existing fragment. This is explcitly not allowed for
+    ///  2) Overlaps with an existing fragment. This is explicitly not allowed for
     ///     IPv6 as per RFC 8200 section 4.5 (more details in RFC 5722). We choose
     ///     the same behaviour for IPv4 for the same reasons.
     ///  3) Packet's fragment offset + # of fragment blocks > `MAX_FRAGMENT_BLOCKS`.
@@ -579,7 +579,7 @@ impl<I: Ip, D: EventDispatcher> IpLayerFragmentCache<I, D> {
 
     /// Gets or creates a new entry in the cache for a given `key`.
     ///
-    /// When a new entry is created, a ressembly timeout is scheduled.
+    /// When a new entry is created, a re-assembly timeout is scheduled.
     fn get_or_create(
         &mut self,
         key: &FragmentCacheKey<I::Addr>,
@@ -871,7 +871,7 @@ mod tests {
     }
 
     /// Process an IP fragment depending on the `Ip` `process_ip_fragment` is
-    /// sepcialized with.
+    /// specialized with.
     ///
     /// See [`process_ipv4_fragment`] and [`process_ipv6_fragment`] which will be
     /// called when `process_ip_fragment` is specialized for `Ipv4` and `Ipv6`,
@@ -1211,7 +1211,7 @@ mod tests {
         // Process fragment #0
         process_ip_fragment::<I, _>(&mut ctx, fragment_id, 0, 3, ExpectedResult::NeedMore);
 
-        // Process fragment #0 (overlaps original fragment #0 completly)
+        // Process fragment #0 (overlaps original fragment #0 completely)
         process_ip_fragment::<I, _>(&mut ctx, fragment_id, 0, 3, ExpectedResult::Invalid);
     }
 

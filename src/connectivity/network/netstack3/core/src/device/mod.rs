@@ -148,7 +148,7 @@ pub trait DeviceLayerEventDispatcher {
     /// If there was an MTU error while attempting to serialize the frame, the
     /// original serializer is returned in the `Err` variant. All other errors
     /// (for example, errors in allocating a buffer) are silently ignored and
-    /// reported as succeess.
+    /// reported as success.
     fn send_frame<S: Serializer>(&mut self, device: DeviceId, frame: S) -> Result<(), S>;
 }
 

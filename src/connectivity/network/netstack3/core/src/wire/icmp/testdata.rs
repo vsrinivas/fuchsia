@@ -42,7 +42,7 @@ pub(crate) mod ndp_router {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     ];
 
-    /// Options in the Advertisment packet.
+    /// Options in the Advertisement packet.
     pub(crate) const HOP_LIMIT: u8 = 64;
     pub(crate) const LIFETIME: u16 = 3600;
     pub(crate) const REACHABLE_TIME: u32 = 0;

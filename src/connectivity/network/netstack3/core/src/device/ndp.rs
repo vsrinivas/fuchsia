@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! The Neighboor Discovery Protocol (NDP).
+//! The Neighbor Discovery Protocol (NDP).
 //!
-//! Neighboor Discovery for IPv6 as defined in [RFC 4861] defines mechanisms for
+//! Neighbor Discovery for IPv6 as defined in [RFC 4861] defines mechanisms for
 //! solving the following problems:
 //! - Router Discovery
 //! - Prefix Discovery
@@ -36,7 +36,7 @@ use crate::wire::icmp::{IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode, Icmpv6Pa
 use crate::wire::ipv6::Ipv6PacketBuilder;
 use crate::{Context, EventDispatcher, StackState, TimerId, TimerIdInner};
 
-/// The the default value for *RetransTimer* as defined in
+/// The default value for *RetransTimer* as defined in
 /// [RFC 4861 section 10].
 ///
 /// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
@@ -55,7 +55,7 @@ pub(crate) trait LinkLayerAddress: Copy + Clone {
 
     /// Returns the underlying bytes of a `LinkLayerAddress`
     fn bytes(&self) -> &[u8];
-    /// Attemps to construct a `LinkLayerAddress` from the provided bytes.
+    /// Attempts to construct a `LinkLayerAddress` from the provided bytes.
     ///
     /// `bytes` is guaranteed to be **exactly** `BYTES_LENGTH` long.
     fn from_bytes(bytes: &[u8]) -> Self;
@@ -264,7 +264,7 @@ pub(crate) fn lookup<D: EventDispatcher, ND: NdpDevice>(
     }
 }
 
-/// Insert a neighbor to the known neihbors table.
+/// Insert a neighbor to the known neighbors table.
 pub(crate) fn insert_neighbor<D: EventDispatcher, ND: NdpDevice>(
     ctx: &mut Context<D>,
     device_id: usize,
@@ -596,7 +596,7 @@ mod tests {
 
         lookup::<DummyEventDispatcher, EthernetNdpDevice>(&mut ctx, dev_id.id(), remote_ip());
 
-        // Check that we send the original neighboor solicitation,
+        // Check that we send the original neighbor solicitation,
         // then resend a few times if we don't receive a response.
         for packet_num in 0..MAX_MULTICAST_SOLICIT {
             assert_eq!(ctx.dispatcher.frames_sent().len(), packet_num + 1);

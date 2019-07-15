@@ -135,7 +135,7 @@ pub(crate) struct EthernetDeviceState {
     ipv4_arp: ArpState<Ipv4Addr, EthernetArpDevice>,
     ndp: ndp::NdpState<EthernetNdpDevice>,
     // pending_frames stores a list of serialized frames indexed by their
-    // desintation IP addresses. The frames contain an entire EthernetFrame
+    // destination IP addresses. The frames contain an entire EthernetFrame
     // body and the MTU check is performed before queueing them here.
     pending_frames: HashMap<IpAddr, VecDeque<Vec<u8>>>,
 }

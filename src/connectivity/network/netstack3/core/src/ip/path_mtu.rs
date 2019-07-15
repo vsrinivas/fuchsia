@@ -15,7 +15,7 @@ use crate::ip::{Ip, IpAddress, IpLayerTimerId, IpVersion};
 use crate::{Context, EventDispatcher, Instant, TimerId};
 
 /// [RFC 791 section 3.2] requires that an IPv4 node be able to forward
-/// datagrams of up to 68 octets without furthur fragmentation. That is,
+/// datagrams of up to 68 octets without further fragmentation. That is,
 /// the minimum MTU of an IPv4 path must be 68 bytes. This is because
 /// an IPv4 header may be up to 60 octets, and the minimum fragment is
 /// 8 octets.
@@ -479,7 +479,7 @@ mod tests {
         // Make sure the update worked.
         // PMTU should be updated to `new_mtu1` and last updated instant
         // should be updated to the start of the test + 1s (when the
-        // update occured.
+        // update occurred.
         assert_eq!(
             get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
             new_mtu1
@@ -510,7 +510,7 @@ mod tests {
         // Make sure the update worked.
         // PMTU should be updated to `new_mtu2` and last updated instant
         // should be updated to the start of the test + 3s (when the
-        // update occured).
+        // update occurred).
         assert_eq!(
             get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
             new_mtu2
@@ -541,7 +541,7 @@ mod tests {
         // Make sure the update worked.
         // PMTU should be updated to `new_mtu3` and last updated instant
         // should be updated to the start of the test + 5s (when the
-        // update occured).
+        // update occurred).
         assert_eq!(
             get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
             new_mtu3
@@ -660,7 +660,7 @@ mod tests {
         // Make sure the update worked.
         // PMTU should be updated to `new_mtu1` and last updated instant
         // should be updated to the start of the test + 1s (when the
-        // update occured.
+        // update occurred.
         assert_eq!(
             get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
             new_mtu1
@@ -688,7 +688,7 @@ mod tests {
         // Make sure the update worked.
         // PMTU should be updated to `new_mtu2` and last updated instant
         // should be updated to the start of the test + 30mins + 2s (when the
-        // update occured.
+        // update occurred.
         assert_eq!(get_pmtu(&mut ctx, dummy_config.local_ip, other_ip).unwrap(), new_mtu2);
         assert_eq!(
             get_pmtu_last_updated(&mut ctx, dummy_config.local_ip, other_ip).unwrap(),

@@ -83,7 +83,7 @@ pub(crate) fn peek_message_type<MessageType: TryFrom<u8>>(
 
 /// An extension trait adding ICMP-related associated types to `Ipv4` and `Ipv6`.
 ///
-/// This trait is kept seperate from `IcmpIpExt` to not require a type parameter
+/// This trait is kept separate from `IcmpIpExt` to not require a type parameter
 /// that implements `ByteSlice`.
 pub(crate) trait IcmpIpTypes: Ip {
     /// The type of an ICMP parameter problem code.
@@ -326,7 +326,7 @@ pub(crate) trait IcmpMessage<I: IcmpIpExt<B>, B: ByteSlice>:
     ///
     /// The ICMP header includes an 8-bit "code" field. For a given message
     /// type, different values of this field carry different meanings. Not all
-    /// code values are used - some may be invalid. This type representents a
+    /// code values are used - some may be invalid. This type represents a
     /// parsed code. For example, for TODO, it is the TODO type.
     type Code: Into<u8> + Copy + Debug;
 

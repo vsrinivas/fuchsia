@@ -476,7 +476,7 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
                 // guaranteed that it will not panic for an IPv6 packet because the fragment data
                 // is in an (optional) fragment extension header which we attempt to handle by calling
                 // `ipv6::handle_extension_headers`. We will only end up here if its return value is
-                // `Ipv6PacketAction::ProcessFragment` which is only posisble when the packet has
+                // `Ipv6PacketAction::ProcessFragment` which is only possible when the packet has
                 // the fragment extension header (even if the fragment data has values that implies
                 // that the packet is not fragmented).
                 //
@@ -1177,7 +1177,7 @@ mod tests {
     }
 
     /// Process an IP fragment depending on the `Ip` `process_ip_fragment` is
-    /// sepcialized with.
+    /// specialized with.
     #[specialize_ip]
     fn process_ip_fragment<I: Ip, D: EventDispatcher>(
         ctx: &mut Context<D>,
@@ -1724,7 +1724,7 @@ mod tests {
         let frame_dst = FrameDestination::Unicast;
 
         // Construct an IPv6 packet that is too big for our MTU (MTU = 1280; body itself is 5000).
-        // Note, the final packet will be largr because of IP header data.
+        // Note, the final packet will be larger because of IP header data.
         let mut rng = new_rng(70812476915813);
         let mut body: Vec<u8> = std::iter::repeat_with(|| rng.gen()).take(5000).collect();
 
@@ -1745,7 +1745,7 @@ mod tests {
 
         // Received packet should be a Packet Too Big ICMP error message.
         let mut buf = &ctx.dispatcher.frames_sent()[0].1[..];
-        // The original packet's TTL gets decremented so we decerement here
+        // The original packet's TTL gets decremented so we decrement here
         // to validate the rest of the icmp message body.
         let ipv6_packet_buf_mut: &mut [u8] = ipv6_packet_buf.as_mut();
         ipv6_packet_buf_mut[7] -= 1;
@@ -2101,7 +2101,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
 
         // In IPv6, the next header value (ICMP(v4)) would have been considered
-        // unrecognized so an ICMP paramter problem response SHOULD be sent, but
+        // unrecognized so an ICMP parameter problem response SHOULD be sent, but
         // the netstack chooses to just drop the packet since we are not
         // required to send the ICMP response.
         assert_eq!(ctx.dispatcher.frames_sent().len(), 0);

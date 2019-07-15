@@ -131,7 +131,7 @@ pub(crate) trait ArpDevice<P: PType + Eq + Hash>: Sized {
     ) -> Self::HardwareAddr;
 
     /// Notifies the device layer that the hardware address `hw_addr`
-    /// was resolved for a the given protocol address `proto_addr`.
+    /// was resolved for the given protocol address `proto_addr`.
     fn address_resolved<D: EventDispatcher>(
         ctx: &mut Context<D>,
         device_id: usize,
@@ -140,7 +140,7 @@ pub(crate) trait ArpDevice<P: PType + Eq + Hash>: Sized {
     );
 
     /// Notifies the device layer that the hardware address resolution for
-    /// the the given protocol address `proto_addr` failed.
+    /// the given protocol address `proto_addr` failed.
     fn address_resolution_failed<D: EventDispatcher>(
         ctx: &mut Context<D>,
         device_id: usize,
@@ -398,7 +398,7 @@ pub(crate) fn lookup<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>
 ) -> Option<AD::HardwareAddr> {
     // TODO(joshlf): Figure out what to do if a frame can't be sent right now
     // because it needs to wait for an ARP reply. Where do we put those frames?
-    // How do we associate them with the right ARP reply? How do we retreive
+    // How do we associate them with the right ARP reply? How do we retrieve
     // them when we get that ARP reply? How do we time out so we don't hold onto
     // a stale frame forever?
     let result = AD::get_arp_state(ctx.state_mut(), device_id).table.lookup(lookup_addr).cloned();
@@ -782,7 +782,7 @@ mod tests {
         let request_retry_timer_id =
             ArpTimerId::new_request_retry_timer_id(device_id, TEST_REMOTE_IPV4);
 
-        // The above loopup sent one arp request already.
+        // The above lookup sent one arp request already.
         let mut num_requests_sent: usize = 1;
 
         let mut cur_frame_num: usize = 0;

@@ -37,7 +37,7 @@ pub(crate) enum Ipv6PacketAction {
 
 /// Handle IPv6 extension headers.
 ///
-/// What this function does depents on whether or not the `at_destination` flag
+/// What this function does depends on whether or not the `at_destination` flag
 /// is set. If it is `true`, then we will attempt to process all the extension
 /// headers in `packet`. Otherwise, we will only attempt to process the hop-by-hop
 /// extension header (which MUST be the first extension header if present) as

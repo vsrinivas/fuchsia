@@ -109,7 +109,7 @@ impl MembershipQueryData {
     const S_FLAG: u8 = (1 << 3);
     const QRV_MSK: u8 = 0x07;
 
-    /// The default querier robutstness variable, as defined in
+    /// The default querier robustness variable, as defined in
     /// [RFC 3376 section 8.1].
     ///
     /// [RFC 3376 section 8.1]: https://tools.ietf.org/html/rfc3376#section-8.1

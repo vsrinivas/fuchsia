@@ -28,7 +28,7 @@
 /// ```
 ///
 /// This way, calling `foo()` with different IP versions for the different
-/// paramaters is impossible, since such a program would not typecheck.
+/// parameters is impossible, since such a program would not typecheck.
 ///
 /// We provide the following types:
 ///
@@ -42,7 +42,7 @@
 ///
 /// # Subnets
 ///
-/// * `Subnet`: A v4 or v6 subnet, as specificed by the type parameter.
+/// * `Subnet`: A v4 or v6 subnet, as specified by the type parameter.
 /// * `SubnetEither`: An enum of either a v4 subnet or a v6 subnet.
 ///
 /// # Forwarding Entries
@@ -52,7 +52,7 @@
 ///
 /// # Address + Subnet Pairs:
 ///
-/// * `AddrSubnet`: A v4 or v6 subnet + address pair, as specificed by the type
+/// * `AddrSubnet`: A v4 or v6 subnet + address pair, as specified by the type
 ///   parameter.
 /// * `AddrSubnetEither`: An enum of either a v4 or a v6 subnet + address pair.
 ///

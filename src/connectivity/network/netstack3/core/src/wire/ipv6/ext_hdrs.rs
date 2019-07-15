@@ -533,7 +533,7 @@ pub(crate) struct ExtensionHeaderOptionContext<C: Sized + Clone> {
     // Counter for number of options parsed.
     options_parsed: usize,
 
-    // Byte count of succesfully parsed options.
+    // Byte count of successfully parsed options.
     bytes_parsed: usize,
 
     // Extension header specific context data.
@@ -571,7 +571,7 @@ pub(crate) trait ExtensionHeaderOptionDataImpl<'a>:
     /// Parse an option of a given `kind` from `data`.
     ///
     /// When `kind` is recognized returns `Ok(o)` where `o` is a successfully parsed
-    /// option. When `kind` is not recognized, returnd `None` if `allow_unrecognized`
+    /// option. When `kind` is not recognized, returned `None` if `allow_unrecognized`
     /// is `false`. If `kind` is not recognized but `allow_unrecognized` is `true`,
     /// returns an `Ok(o)` where `o` holds option data without actually parsing it
     /// (i.e. an unrecognized type that simply keeps track of the `kind` and `data`
@@ -711,7 +711,7 @@ pub(crate) enum ExtensionHeaderOptionParsingError {
 /// Action to take when an unrecognized option type is encountered.
 ///
 /// `ExtensionHeaderOptionAction` is an action that MUST be taken (according
-/// to RFC 8200 section 4.2) when an an IPv6 processing node does not
+/// to RFC 8200 section 4.2) when an IPv6 processing node does not
 /// recognize an option's type.
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum ExtensionHeaderOptionAction {
@@ -1195,7 +1195,7 @@ mod tests {
         ];
         let error =
             Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
-                .expect_err("Parsed succesfully when the next header was invalid");
+                .expect_err("Parsed successfully when the next header was invalid");
         if let Ipv6ExtensionHeaderParsingError::UnrecognizedNextHeader {
             pointer,
             must_send_icmp,
@@ -1221,7 +1221,7 @@ mod tests {
         ];
         let error =
             Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
-                .expect_err("Parsed succesfully with an unrecognized option type");
+                .expect_err("Parsed successfully with an unrecognized option type");
         if let Ipv6ExtensionHeaderParsingError::UnrecognizedOption {
             pointer,
             must_send_icmp,
@@ -1249,7 +1249,7 @@ mod tests {
         ];
         let error =
             Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
-                .expect_err("Parsed succesfully with an unrecognized option type");
+                .expect_err("Parsed successfully with an unrecognized option type");
         if let Ipv6ExtensionHeaderParsingError::UnrecognizedOption {
             pointer,
             must_send_icmp,
@@ -1278,7 +1278,7 @@ mod tests {
         ];
         let error =
             Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
-                .expect_err("Parsed succesfully with an unrecognized option type");
+                .expect_err("Parsed successfully with an unrecognized option type");
         if let Ipv6ExtensionHeaderParsingError::UnrecognizedOption {
             pointer,
             must_send_icmp,
@@ -1336,7 +1336,7 @@ mod tests {
         ];
         let error =
             Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
-                .expect_err("Parsed succesfully when the routing type was set to 0");
+                .expect_err("Parsed successfully when the routing type was set to 0");
         if let Ipv6ExtensionHeaderParsingError::ErroneousHeaderField {
             pointer,
             must_send_icmp,
@@ -1366,7 +1366,7 @@ mod tests {
         ];
         let error =
             Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
-                .expect_err("Parsed succesfully when the next header was invalid");
+                .expect_err("Parsed successfully when the next header was invalid");
         if let Ipv6ExtensionHeaderParsingError::UnrecognizedNextHeader {
             pointer,
             must_send_icmp,
@@ -1396,7 +1396,7 @@ mod tests {
         ];
         let error =
             Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
-                .expect_err("Parsed succesfully with an unrecognized routing type");
+                .expect_err("Parsed successfully with an unrecognized routing type");
         if let Ipv6ExtensionHeaderParsingError::ErroneousHeaderField {
             pointer,
             must_send_icmp,
@@ -1468,7 +1468,7 @@ mod tests {
         ];
         let error =
             Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
-                .expect_err("Parsed succesfully when the next header was invalid");
+                .expect_err("Parsed successfully when the next header was invalid");
         if let Ipv6ExtensionHeaderParsingError::UnrecognizedNextHeader {
             pointer,
             must_send_icmp,
@@ -1539,7 +1539,7 @@ mod tests {
         ];
         let error =
             Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
-                .expect_err("Parsed succesfully when the next header was invalid");
+                .expect_err("Parsed successfully when the next header was invalid");
         if let Ipv6ExtensionHeaderParsingError::UnrecognizedNextHeader {
             pointer,
             must_send_icmp,
@@ -1565,7 +1565,7 @@ mod tests {
         ];
         let error =
             Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
-                .expect_err("Parsed succesfully with an unrecognized option type");
+                .expect_err("Parsed successfully with an unrecognized option type");
         if let Ipv6ExtensionHeaderParsingError::UnrecognizedOption {
             pointer,
             must_send_icmp,
@@ -1593,7 +1593,7 @@ mod tests {
         ];
         let error =
             Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
-                .expect_err("Parsed succesfully with an unrecognized option type");
+                .expect_err("Parsed successfully with an unrecognized option type");
         if let Ipv6ExtensionHeaderParsingError::UnrecognizedOption {
             pointer,
             must_send_icmp,
@@ -1622,7 +1622,7 @@ mod tests {
         ];
         let error =
             Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
-                .expect_err("Parsed succesfully with an unrecognized option type");
+                .expect_err("Parsed successfully with an unrecognized option type");
         if let Ipv6ExtensionHeaderParsingError::UnrecognizedOption {
             pointer,
             must_send_icmp,
@@ -1738,7 +1738,7 @@ mod tests {
         ];
         let error =
             Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
-                .expect_err("Parsed succesfully when the next header was invalid");
+                .expect_err("Parsed successfully when the next header was invalid");
         if let Ipv6ExtensionHeaderParsingError::UnrecognizedNextHeader {
             pointer,
             must_send_icmp,
@@ -1784,7 +1784,7 @@ mod tests {
         ];
         let error =
             Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
-                .expect_err("Parsed succesfully when a hop by hop extension header was not the fist extension header");
+                .expect_err("Parsed successfully when a hop by hop extension header was not the fist extension header");
         if let Ipv6ExtensionHeaderParsingError::UnrecognizedNextHeader {
             pointer,
             must_send_icmp,
@@ -1821,7 +1821,7 @@ mod tests {
         ];
         let error =
             Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
-                .expect_err("Parsed succesfully with an unrecognized destination option type");
+                .expect_err("Parsed successfully with an unrecognized destination option type");
         if let Ipv6ExtensionHeaderParsingError::UnrecognizedOption {
             pointer,
             must_send_icmp,

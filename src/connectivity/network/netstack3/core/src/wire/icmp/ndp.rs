@@ -37,7 +37,7 @@ pub(crate) struct RouterSolicitation {
 
 impl_icmp_message!(Ipv6, RouterSolicitation, RouterSolicitation, IcmpUnusedCode, Options<B>);
 
-/// An NDP Router Advertisment.
+/// An NDP Router Advertisement.
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 pub(crate) struct RouterAdvertisment {
@@ -87,7 +87,7 @@ impl NeighborSolicitation {
     }
 }
 
-/// An NDP Neighbor Advertisment.
+/// An NDP Neighbor Advertisement.
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 pub(crate) struct NeighborAdvertisment {

@@ -21,7 +21,7 @@ impl From<std::num::TryFromIntError> for IgmpError {
     }
 }
 
-/// Thin wrapper around `u8` that provides maximum respose time parsing
+/// Thin wrapper around `u8` that provides maximum response time parsing
 /// for IGMP v2.
 ///
 /// Provides conversions to and from `Duration` for parsing and

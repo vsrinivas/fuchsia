@@ -43,7 +43,7 @@ pub(crate) trait RecordsContext: Sized + Clone {
     /// `clone_for_iter` is useful for cloning a context to be
     /// used by `RecordsIter`. Since `Records::parse_with_context`
     /// will do a full pass over all the records to check for errors,
-    /// a `RecordsIter` should never error. Thereforce, instead of doing
+    /// a `RecordsIter` should never error. Therefore, instead of doing
     /// checks when iterating (if a context was used for checks), a
     /// clone of a context can be made specifically for iterator purposes
     /// that does not do checks (which may be expensive).
@@ -87,7 +87,7 @@ pub(crate) trait RecordsImpl<'a>: RecordsImplLayout {
     /// Parse a record with some context.
     ///
     /// `parse_with_context` takes a variable-length `data` and a `context` to
-    /// maintain state, and returns `Ok(Some(Some(o)))` if the the record is
+    /// maintain state, and returns `Ok(Some(Some(o)))` if the record is
     /// successfully parsed as `o`, `Ok(Some(None))` if data is not malformed
     /// but the implementer can't extract a concrete object (e.g. record is an
     /// unimplemented enumeration, but we can still safely "skip" it), Ok(None)

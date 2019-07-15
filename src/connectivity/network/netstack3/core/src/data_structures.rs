@@ -7,10 +7,10 @@
 pub(crate) use id_map::IdMap;
 pub use id_map_collection::{IdMapCollection, IdMapCollectionKey};
 
-/// Identifer map data structure.
+/// Identifier map data structure.
 ///
 /// Defines the [`IdMap`] data structure: A generic container mapped keyed
-/// by an internally managed pool of identifiers kept densily packed.
+/// by an internally managed pool of identifiers kept densely packed.
 pub(crate) mod id_map {
 
     type Key = usize;
@@ -39,7 +39,7 @@ pub(crate) mod id_map {
         /// Returns `true` if there are no items in [`IdMap`].
         pub(crate) fn is_empty(&self) -> bool {
             // invariant: the only way to remove items from IdMap is through
-            // the remove method, which compresses the unverlying vec getting
+            // the remove method, which compresses the underlying vec getting
             // rid of unused items, so IdMap should only be empty if
             // data is empty.
             self.data.is_empty()

@@ -281,7 +281,7 @@ where
 }
 
 /// Get a DummyEventDispatcherConfig depending on the `IpAddress`
-/// `get_dummy_config` is specialied with.
+/// `get_dummy_config` is specialized with.
 #[specialize_ip_address]
 pub(crate) fn get_dummy_config<A: IpAddress>() -> DummyEventDispatcherConfig<A> {
     #[ipv4addr]

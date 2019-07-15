@@ -157,7 +157,7 @@ impl<B: ByteSlice> UdpPacket<B> {
     /// Did this packet have a checksum?
     ///
     /// On IPv4, the sender may optionally omit the checksum. If this function
-    /// returns false, the sender ommitted the checksum, and `parse` will not
+    /// returns false, the sender omitted the checksum, and `parse` will not
     /// have validated it.
     ///
     /// On IPv6, it is guaranteed that `checksummed` will return true because
@@ -472,7 +472,7 @@ mod tests {
 
     #[test]
     fn test_parse_fail() {
-        // Test thact while a given byte pattern optionally succeeds, zeroing out
+        // Test that while a given byte pattern optionally succeeds, zeroing out
         // certain bytes causes failure. `zero` is a list of byte indices to
         // zero out that should cause failure.
         fn test_zero<I: IpAddress>(

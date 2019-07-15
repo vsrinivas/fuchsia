@@ -145,7 +145,7 @@ impl<L: Eq + Hash, A: Eq + Hash> Default for ListenerAddrMap<L, A> {
 /// A bidirectional map between connections and addresses.
 ///
 /// A `ConnAddrMap` maps a connection object (`C`) to an address object (`A`).
-/// It allows for constant-time addres -> connection and connection -> address
+/// It allows for constant-time address -> connection and connection -> address
 /// lookup, and insertion and deletion based on connection.
 ///
 /// It differs from a `ListenerAddrMap` in that only a single address per
