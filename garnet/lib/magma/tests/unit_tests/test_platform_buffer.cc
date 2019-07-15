@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/zx/vmar.h>
-#include <zircon/rights.h>
-#include <zircon/syscalls.h>
-
 #include <vector>
 
 #include "gtest/gtest.h"
 #include "magma_util/macros.h"
 #include "platform_buffer.h"
+
+#if defined(__Fuchsia__)
+
+#include <lib/zx/vmar.h>
+#include <zircon/rights.h>
+#include <zircon/syscalls.h>
 
 static uint32_t GetVmarHandle(uint64_t size) {
   zx::vmar test_vmar;
@@ -25,21 +27,24 @@ static uint32_t GetVmarHandle(uint64_t size) {
   return test_vmar.release();
 }
 
+#endif
+
 class TestPlatformBuffer {
  public:
   static void Basic(uint64_t size) {
     std::unique_ptr<magma::PlatformBuffer> buffer = magma::PlatformBuffer::Create(size, "test");
     if (size == 0) {
-      EXPECT_EQ(buffer, nullptr);
+      EXPECT_FALSE(buffer);
       return;
     }
 
-    EXPECT_NE(buffer, nullptr);
+    ASSERT_TRUE(buffer);
+    ASSERT_TRUE(buffer->size() % magma::page_size() == 0);
     EXPECT_GE(buffer->size(), size);
 
     void* virt_addr = nullptr;
     EXPECT_TRUE(buffer->MapCpu(&virt_addr));
-    EXPECT_NE(virt_addr, nullptr);
+    ASSERT_TRUE(virt_addr);
 
     // write first word
     static const uint32_t first_word = 0xdeadbeef;
@@ -49,47 +54,43 @@ class TestPlatformBuffer {
     *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(virt_addr) + buffer->size() - 4) =
         last_word;
 
-    uint32_t num_pages = buffer->size() / PAGE_SIZE;
-
     EXPECT_TRUE(buffer->UnmapCpu());
-
     // remap and check
-    EXPECT_TRUE(buffer->MapCpu(&virt_addr));
+    ASSERT_TRUE(buffer->MapCpu(&virt_addr));
     EXPECT_EQ(first_word, *reinterpret_cast<uint32_t*>(virt_addr));
     EXPECT_EQ(last_word, *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(virt_addr) +
                                                       buffer->size() - 4));
     EXPECT_TRUE(buffer->UnmapCpu());
 
-    EXPECT_TRUE(buffer->CommitPages(0, num_pages));
-
     // check again
-    EXPECT_TRUE(buffer->MapCpu(&virt_addr));
+    ASSERT_TRUE(buffer->MapCpu(&virt_addr));
     EXPECT_EQ(first_word, *reinterpret_cast<uint32_t*>(virt_addr));
     EXPECT_EQ(last_word, *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(virt_addr) +
                                                       buffer->size() - 4));
     EXPECT_TRUE(buffer->UnmapCpu());
   }
 
+#if defined(__Fuchsia__)
   static void MapSpecific() {
     std::unique_ptr<magma::PlatformBuffer> buffer =
-        magma::PlatformBuffer::Create(PAGE_SIZE * 2, "test");
+        magma::PlatformBuffer::Create(magma::page_size() * 2, "test");
     // Unaligned
-    EXPECT_FALSE(buffer->MapAtCpuAddr(0x1000001, 0, PAGE_SIZE));
+    EXPECT_FALSE(buffer->MapAtCpuAddr(0x1000001, 0, magma::page_size()));
 
     // Below bottom of root vmar
-    EXPECT_FALSE(buffer->MapAtCpuAddr(PAGE_SIZE, 0, PAGE_SIZE));
+    EXPECT_FALSE(buffer->MapAtCpuAddr(magma::page_size(), 0, magma::page_size()));
     uint64_t addr = 0x10000000;
     uint32_t i;
     // Try multiple times in case something is already mapped there.
     for (i = 0; i < 100; i++) {
-      addr += PAGE_SIZE * 100;
+      addr += magma::page_size() * 100;
       // Can't map portions outside the buffer.
-      ASSERT_FALSE(buffer->MapAtCpuAddr(addr, PAGE_SIZE, PAGE_SIZE * 2));
+      ASSERT_FALSE(buffer->MapAtCpuAddr(addr, magma::page_size(), magma::page_size() * 2));
     }
 
     for (i = 0; i < 100; i++) {
-      addr += PAGE_SIZE * 100;
-      if (buffer->MapAtCpuAddr(addr, 0, PAGE_SIZE))
+      addr += magma::page_size() * 100;
+      if (buffer->MapAtCpuAddr(addr, 0, magma::page_size()))
         break;
     }
 
@@ -101,16 +102,16 @@ class TestPlatformBuffer {
 
     // Should fail, because it's already mapped.
     for (i = 0; i < 100; i++) {
-      addr += PAGE_SIZE * 100;
-      if (buffer->MapAtCpuAddr(addr, 0, PAGE_SIZE))
+      addr += magma::page_size() * 100;
+      if (buffer->MapAtCpuAddr(addr, 0, magma::page_size()))
         break;
     }
     EXPECT_EQ(100u, i);
     EXPECT_TRUE(buffer->UnmapCpu());
     EXPECT_TRUE(buffer->UnmapCpu());
     for (i = 0; i < 100; i++) {
-      addr += PAGE_SIZE * 100;
-      if (buffer->MapAtCpuAddr(addr, 0, PAGE_SIZE))
+      addr += magma::page_size() * 100;
+      if (buffer->MapAtCpuAddr(addr, 0, magma::page_size()))
         break;
     }
 
@@ -126,7 +127,7 @@ class TestPlatformBuffer {
 
   static void MapWithFlags(CreateConfig create_config, ParentVmarConfig parent_vmar_config) {
     std::unique_ptr<magma::PlatformBuffer> buffer =
-        magma::PlatformBuffer::Create(PAGE_SIZE * 2, "test");
+        magma::PlatformBuffer::Create(magma::page_size() * 2, "test");
 
     if (create_config == CreateConfig::kImport) {
       uint32_t duplicate_handle;
@@ -137,7 +138,7 @@ class TestPlatformBuffer {
     std::unique_ptr<magma::PlatformBuffer::MappingAddressRange> address_range;
 
     if (parent_vmar_config == ParentVmarConfig::kWithParentVmar) {
-      uint32_t vmar_handle = GetVmarHandle(PAGE_SIZE * 100);
+      uint32_t vmar_handle = GetVmarHandle(magma::page_size() * 100);
       uint32_t dupe_vmar_handle;
       ASSERT_TRUE(magma::PlatformHandle::duplicate_handle(vmar_handle, &dupe_vmar_handle));
 
@@ -154,13 +155,14 @@ class TestPlatformBuffer {
     std::unique_ptr<magma::PlatformBuffer::Mapping> read_only;
     std::unique_ptr<magma::PlatformBuffer::Mapping> partial;
     std::unique_ptr<magma::PlatformBuffer::Mapping> entire;
-    EXPECT_TRUE(buffer->MapCpuWithFlags(0, PAGE_SIZE, magma::PlatformBuffer::kMapRead, &read_only));
+    EXPECT_TRUE(buffer->MapCpuWithFlags(0, magma::page_size(), magma::PlatformBuffer::kMapRead,
+                                        &read_only));
     EXPECT_TRUE(buffer->MapCpuWithFlags(
-        PAGE_SIZE, PAGE_SIZE, magma::PlatformBuffer::kMapWrite | magma::PlatformBuffer::kMapRead,
-        &partial));
+        magma::page_size(), magma::page_size(),
+        magma::PlatformBuffer::kMapWrite | magma::PlatformBuffer::kMapRead, &partial));
     EXPECT_TRUE(buffer->MapCpuWithFlags(
-        0, 2 * PAGE_SIZE, magma::PlatformBuffer::kMapWrite | magma::PlatformBuffer::kMapRead,
-        &entire));
+        0, 2 * magma::page_size(),
+        magma::PlatformBuffer::kMapWrite | magma::PlatformBuffer::kMapRead, &entire));
 
     EXPECT_TRUE(reinterpret_cast<uintptr_t>(read_only->address()) >= address_range->Base() &&
                 reinterpret_cast<uintptr_t>(read_only->address()) <
@@ -175,7 +177,7 @@ class TestPlatformBuffer {
     // Try reading/writing at different locations in the partial/full maps.
     uint32_t temp_data = 5;
     memcpy(partial->address(), &temp_data, sizeof(temp_data));
-    memcpy(&temp_data, reinterpret_cast<uint8_t*>(entire->address()) + PAGE_SIZE,
+    memcpy(&temp_data, reinterpret_cast<uint8_t*>(entire->address()) + magma::page_size(),
            sizeof(temp_data));
     EXPECT_EQ(5u, temp_data);
     memcpy(entire->address(), &temp_data, sizeof(temp_data));
@@ -184,16 +186,20 @@ class TestPlatformBuffer {
 
     std::unique_ptr<magma::PlatformBuffer::Mapping> bad;
     // Try mapping with bad offsets or flags.
-    EXPECT_FALSE(buffer->MapCpuWithFlags(1u, PAGE_SIZE, magma::PlatformBuffer::kMapRead, &bad));
-    EXPECT_FALSE(buffer->MapCpuWithFlags(0u, PAGE_SIZE + 1, magma::PlatformBuffer::kMapRead, &bad));
     EXPECT_FALSE(
-        buffer->MapCpuWithFlags(PAGE_SIZE, 2 * PAGE_SIZE, magma::PlatformBuffer::kMapRead, &bad));
-    EXPECT_FALSE(buffer->MapCpuWithFlags(0u, PAGE_SIZE, magma::PlatformBuffer::kMapWrite, &bad));
+        buffer->MapCpuWithFlags(1u, magma::page_size(), magma::PlatformBuffer::kMapRead, &bad));
+    EXPECT_FALSE(
+        buffer->MapCpuWithFlags(0u, magma::page_size() + 1, magma::PlatformBuffer::kMapRead, &bad));
+    EXPECT_FALSE(buffer->MapCpuWithFlags(magma::page_size(), 2 * magma::page_size(),
+                                         magma::PlatformBuffer::kMapRead, &bad));
+    EXPECT_FALSE(
+        buffer->MapCpuWithFlags(0u, magma::page_size(), magma::PlatformBuffer::kMapWrite, &bad));
   }
+#endif
 
   static void CachePolicy() {
     std::unique_ptr<magma::PlatformBuffer> buffer =
-        magma::PlatformBuffer::Create(PAGE_SIZE, "test");
+        magma::PlatformBuffer::Create(magma::page_size(), "test");
     EXPECT_FALSE(buffer->SetCachePolicy(100));
 
     uint32_t duplicate_handle;
@@ -268,7 +274,7 @@ class TestPlatformBuffer {
   // static void PinRanges(uint32_t num_pages)
   // {
   //     std::unique_ptr<magma::PlatformBuffer> buffer =
-  //         magma::PlatformBuffer::Create(num_pages * PAGE_SIZE, "test");
+  //         magma::PlatformBuffer::Create(num_pages * magma::page_size(), "test");
 
   //     for (uint32_t i = 0; i < num_pages; i++) {
   //         uint64_t phys_addr = 0;
@@ -346,7 +352,7 @@ class TestPlatformBuffer {
 
   static void CommitPages(uint32_t num_pages) {
     std::unique_ptr<magma::PlatformBuffer> buffer =
-        magma::PlatformBuffer::Create(num_pages * PAGE_SIZE, "test");
+        magma::PlatformBuffer::Create(num_pages * magma::page_size(), "test");
 
     // start of range invalid
     EXPECT_FALSE(buffer->CommitPages(num_pages, 1));
@@ -362,13 +368,13 @@ class TestPlatformBuffer {
 
   static void MapAligned(uint32_t num_pages) {
     std::unique_ptr<magma::PlatformBuffer> buffer =
-        magma::PlatformBuffer::Create(num_pages * PAGE_SIZE, "test");
+        magma::PlatformBuffer::Create(num_pages * magma::page_size(), "test");
 
     void* address;
     // Alignment not page-aligned.
     EXPECT_FALSE(buffer->MapCpu(&address, 2048));
     // Alignment isn't a power of 2.
-    EXPECT_FALSE(buffer->MapCpu(&address, PAGE_SIZE * 3));
+    EXPECT_FALSE(buffer->MapCpu(&address, magma::page_size() * 3));
 
     constexpr uintptr_t kAlignment = (1 << 24);
     EXPECT_TRUE(buffer->MapCpu(&address, kAlignment));
@@ -378,7 +384,7 @@ class TestPlatformBuffer {
 
   static void CleanCache(bool mapped, bool invalidate) {
     const uint64_t kNumPages = 100;
-    const uint64_t kBufferSize = kNumPages * PAGE_SIZE;
+    const uint64_t kBufferSize = kNumPages * magma::page_size();
     std::unique_ptr<magma::PlatformBuffer> buffer =
         magma::PlatformBuffer::Create(kBufferSize, "test");
     void* address;
@@ -397,6 +403,7 @@ class TestPlatformBuffer {
     EXPECT_TRUE(buffer->CleanCache(0, kBufferSize, invalidate));
   }
 
+#if defined(__Fuchsia__)
   static void NotMappable() {
     const uint64_t kNumPages = 100;
     const uint64_t kBufferSize = kNumPages * magma::page_size();
@@ -422,6 +429,7 @@ class TestPlatformBuffer {
       }
     }
   }
+#endif
 
   static void CheckAddressRegionSize() {
 #if __x86_64__
@@ -439,10 +447,11 @@ class TestPlatformBuffer {
 #endif
   }
 
+#if defined(__Fuchsia__)
   static void MappingAddressRange() {
-    constexpr uint64_t kVmarLength = PAGE_SIZE * 100;
+    const uint64_t kVmarLength = magma::page_size() * 100;
     std::unique_ptr<magma::PlatformBuffer> buffer =
-        magma::PlatformBuffer::Create(PAGE_SIZE, "test");
+        magma::PlatformBuffer::Create(magma::page_size(), "test");
 
     EXPECT_TRUE(buffer->SetMappingAddressRange(
         magma::PlatformBuffer::MappingAddressRange::CreateDefault()));
@@ -466,17 +475,18 @@ class TestPlatformBuffer {
     EXPECT_TRUE(buffer->SetMappingAddressRange(magma::PlatformBuffer::MappingAddressRange::Create(
         magma::PlatformHandle::Create(GetVmarHandle(kVmarLength)))));
   }
+#endif
 
   static void ReadWrite() {
     std::unique_ptr<magma::PlatformBuffer> buffer =
-        magma::PlatformBuffer::Create(PAGE_SIZE, "test");
+        magma::PlatformBuffer::Create(magma::page_size(), "test");
     constexpr uint32_t kValue = 0xdeadbeef;
     constexpr uint32_t kOffset = 1;
     EXPECT_TRUE(buffer->Write(&kValue, kOffset, sizeof(kValue)));
-    EXPECT_FALSE(buffer->Write(&kValue, PAGE_SIZE - 3, sizeof(kValue)));
+    EXPECT_FALSE(buffer->Write(&kValue, magma::page_size() - 3, sizeof(kValue)));
 
     uint32_t value_out;
-    EXPECT_FALSE(buffer->Read(&value_out, PAGE_SIZE - 3, sizeof(value_out)));
+    EXPECT_FALSE(buffer->Read(&value_out, magma::page_size() - 3, sizeof(value_out)));
 
     EXPECT_TRUE(buffer->Read(&value_out, kOffset, sizeof(value_out)));
     EXPECT_EQ(kValue, value_out);
@@ -487,7 +497,7 @@ class TestPlatformBuffer {
               *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(virt_addr) + kOffset));
 
     std::unique_ptr<magma::PlatformBuffer> wc_buffer =
-        magma::PlatformBuffer::Create(PAGE_SIZE, "test-wc");
+        magma::PlatformBuffer::Create(magma::page_size(), "test-wc");
     EXPECT_TRUE(wc_buffer->SetCachePolicy(MAGMA_CACHE_POLICY_WRITE_COMBINING));
 
     // Read and write are expected to fail on write-combining or uncached
@@ -503,28 +513,10 @@ TEST(PlatformBuffer, Basic) {
   TestPlatformBuffer::Basic(4095);
   TestPlatformBuffer::Basic(4096);
   TestPlatformBuffer::Basic(4097);
-  TestPlatformBuffer::Basic(20 * PAGE_SIZE);
+  TestPlatformBuffer::Basic(20 * magma::page_size());
   TestPlatformBuffer::Basic(10 * 1024 * 1024);
 }
 
-TEST(PlatformBuffer, CreateAndMapWithFlags) {
-  TestPlatformBuffer::MapWithFlags(TestPlatformBuffer::CreateConfig::kCreate,
-                                   TestPlatformBuffer::ParentVmarConfig::kNoParentVmar);
-}
-TEST(PlatformBuffer, ImportAndMapWithFlags) {
-  TestPlatformBuffer::MapWithFlags(TestPlatformBuffer::CreateConfig::kImport,
-                                   TestPlatformBuffer::ParentVmarConfig::kNoParentVmar);
-}
-TEST(PlatformBuffer_ParentVmar, CreateAndMapWithFlags) {
-  TestPlatformBuffer::MapWithFlags(TestPlatformBuffer::CreateConfig::kCreate,
-                                   TestPlatformBuffer::ParentVmarConfig::kWithParentVmar);
-}
-TEST(PlatformBuffer_ParentVmar, ImportAndMapWithFlags) {
-  TestPlatformBuffer::MapWithFlags(TestPlatformBuffer::CreateConfig::kImport,
-                                   TestPlatformBuffer::ParentVmarConfig::kWithParentVmar);
-}
-
-TEST(PlatformBuffer, MapSpecific) { TestPlatformBuffer::MapSpecific(); }
 TEST(PlatformBuffer, CachePolicy) { TestPlatformBuffer::CachePolicy(); }
 
 TEST(PlatformBuffer, BufferPassing) { TestPlatformBuffer::BufferPassing(); }
@@ -551,10 +543,32 @@ TEST(PlatformBuffer, CleanCacheMapped) {
   TestPlatformBuffer::CleanCache(true, true);
 }
 
+TEST(PlatformBuffer, ReadWrite) { TestPlatformBuffer::ReadWrite(); }
+
+#if defined(__Fuchsia__)
+
+TEST(PlatformBuffer, CreateAndMapWithFlags) {
+  TestPlatformBuffer::MapWithFlags(TestPlatformBuffer::CreateConfig::kCreate,
+                                   TestPlatformBuffer::ParentVmarConfig::kNoParentVmar);
+}
+TEST(PlatformBuffer, ImportAndMapWithFlags) {
+  TestPlatformBuffer::MapWithFlags(TestPlatformBuffer::CreateConfig::kImport,
+                                   TestPlatformBuffer::ParentVmarConfig::kNoParentVmar);
+}
+TEST(PlatformBuffer_ParentVmar, CreateAndMapWithFlags) {
+  TestPlatformBuffer::MapWithFlags(TestPlatformBuffer::CreateConfig::kCreate,
+                                   TestPlatformBuffer::ParentVmarConfig::kWithParentVmar);
+}
+TEST(PlatformBuffer_ParentVmar, ImportAndMapWithFlags) {
+  TestPlatformBuffer::MapWithFlags(TestPlatformBuffer::CreateConfig::kImport,
+                                   TestPlatformBuffer::ParentVmarConfig::kWithParentVmar);
+}
+
+TEST(PlatformBuffer, MapSpecific) { TestPlatformBuffer::MapSpecific(); }
+
 TEST(PlatformBuffer, NotMappable) { TestPlatformBuffer::NotMappable(); }
 
 TEST(PlatformBuffer, AddressRegionSize) { TestPlatformBuffer::CheckAddressRegionSize(); }
 
 TEST(PlatformBuffer, MappingAddressRange) { TestPlatformBuffer::MappingAddressRange(); }
-
-TEST(PlatformBuffer, ReadWrite) { TestPlatformBuffer::ReadWrite(); }
+#endif

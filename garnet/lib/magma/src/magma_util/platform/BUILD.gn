@@ -66,7 +66,24 @@ source_set("buffer") {
     deps = [
       "zircon:buffer",
     ]
+  } else {
+    deps = [
+      "linux:buffer",
+    ]
   }
+}
+
+source_set("bus_mapper_header") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    ":buffer_header",
+    ":handle",
+  ]
+
+  sources = [
+    "platform_bus_mapper.h",
+  ]
 }
 
 source_set("bus_mapper") {
@@ -74,19 +91,20 @@ source_set("bus_mapper") {
 
   public_deps = [
     ":buffer",
+    ":bus_mapper_header",
     ":handle",
     "$magma_build_root/src/magma_util:common",
   ]
 
-  sources = [
-    "platform_bus_mapper.h",
-  ]
-
-  deps = [
-    "zircon:bus_mapper",
-  ]
-
-  allow_circular_includes_from = [ "zircon:bus_mapper" ]
+  if (is_fuchsia) {
+    deps = [
+      "zircon:bus_mapper",
+    ]
+  } else {
+    deps = [
+      "linux:bus_mapper",
+    ]
+  }
 }
 
 source_set("handle_header") {
@@ -162,9 +180,14 @@ source_set("device") {
 source_set("firmware_loader_header") {
   public_configs = [ ":platform_include_config" ]
 
+  public_deps = [
+    "$magma_build_root/src/magma_util",
+  ]
+
   sources = [
     "platform_firmware_loader.h",
   ]
+
   deps = [
     ":buffer_header",
   ]
@@ -180,9 +203,15 @@ source_set("firmware_loader") {
     "$magma_build_root/src/magma_util:common",
   ]
 
-  deps = [
-    "zircon:firmware_loader",
-  ]
+  if (is_fuchsia) {
+    deps = [
+      "zircon:firmware_loader",
+    ]
+  } else {
+    deps = [
+      "linux:firmware_loader",
+    ]
+  }
 }
 
 source_set("random_header") {

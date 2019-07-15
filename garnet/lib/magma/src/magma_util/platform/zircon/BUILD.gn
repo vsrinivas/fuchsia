@@ -49,6 +49,7 @@ source_set("bus_mapper") {
 
   public_deps = [
     ":buffer",
+    "//garnet/lib/magma/src/magma_util/platform:bus_mapper_header",
   ]
 
   deps = [

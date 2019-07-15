@@ -12,7 +12,7 @@ class TestPlatformBusMapper {
  public:
   static void Basic(magma::PlatformBusMapper* mapper, uint32_t page_count) {
     std::unique_ptr<magma::PlatformBuffer> buffer =
-        magma::PlatformBuffer::Create(page_count * PAGE_SIZE, "test");
+        magma::PlatformBuffer::Create(page_count * magma::page_size(), "test");
 
     std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping;
 
@@ -39,7 +39,7 @@ class TestPlatformBusMapper {
 
   static void Overlapped(magma::PlatformBusMapper* mapper, uint32_t page_count) {
     std::unique_ptr<magma::PlatformBuffer> buffer =
-        magma::PlatformBuffer::Create(page_count * PAGE_SIZE, "test");
+        magma::PlatformBuffer::Create(page_count * magma::page_size(), "test");
 
     std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> mappings;
 
@@ -81,13 +81,13 @@ class TestPlatformBusMapper {
   static void Contiguous(magma::PlatformBusMapper* mapper) {
     constexpr uint32_t kPageCount = 5;
     std::unique_ptr<magma::PlatformBuffer> buffer =
-        mapper->CreateContiguousBuffer(kPageCount * PAGE_SIZE, 12u, "test");
+        mapper->CreateContiguousBuffer(kPageCount * magma::page_size(), 12u, "test");
     EXPECT_NE(nullptr, buffer.get());
 
     auto bus_mapping = mapper->MapPageRangeBus(buffer.get(), 0, kPageCount);
     ASSERT_NE(nullptr, bus_mapping.get());
     for (uint32_t i = 1; i < kPageCount; ++i) {
-      EXPECT_EQ(bus_mapping->Get()[i - 1] + PAGE_SIZE, bus_mapping->Get()[i]);
+      EXPECT_EQ(bus_mapping->Get()[i - 1] + magma::page_size(), bus_mapping->Get()[i]);
     }
   }
 };

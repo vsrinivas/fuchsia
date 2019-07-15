@@ -81,6 +81,6 @@ executable("drm_unit_tests") {
 
   deps = [
     "..:drm_test_runner",
-    "../../tests/unit_tests:magma_platform_device_test",
+    "//garnet/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
   ]
 }

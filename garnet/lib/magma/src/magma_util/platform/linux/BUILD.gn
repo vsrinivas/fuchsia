@@ -4,6 +4,34 @@
 
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
+source_set("buffer") {
+  configs += [ "..:platform_include_config" ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util",
+    "..:buffer_header",
+  ]
+
+  sources = [
+    "linux_platform_buffer.cc",
+    "linux_platform_buffer.h",
+  ]
+}
+
+source_set("bus_mapper") {
+  configs += [ "..:platform_include_config" ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util",
+    "..:buffer",
+    "..:bus_mapper_header",
+  ]
+
+  sources = [
+    "linux_platform_bus_mapper.cc",
+  ]
+}
+
 source_set("device") {
   configs += [ "..:platform_include_config" ]
 
@@ -16,6 +44,18 @@ source_set("device") {
     "linux_platform_device.cc",
     "linux_platform_device.h",
     "linux_platform_mmio.h",
+  ]
+}
+
+source_set("firmware_loader") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "linux_platform_firmware_loader.cc",
+  ]
+
+  deps = [
+    "..:firmware_loader_header",
   ]
 }
 

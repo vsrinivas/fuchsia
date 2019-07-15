@@ -7,7 +7,6 @@
 
 #include <memory>
 
-#include "magma_util/dlog.h"
 #include "magma_util/status.h"
 #include "platform_buffer.h"
 

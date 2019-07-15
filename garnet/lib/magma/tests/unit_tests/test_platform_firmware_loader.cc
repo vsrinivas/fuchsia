@@ -19,7 +19,8 @@ TEST(MagmaUtil, PlatformFirmwareLoader) {
   }
 
   auto firmware_loader = magma::PlatformFirmwareLoader::Create(platform_device->GetDeviceHandle());
-  EXPECT_NE(nullptr, firmware_loader.get());
+  ASSERT_TRUE(firmware_loader);
+
   std::unique_ptr<magma::PlatformBuffer> buffer;
   uint64_t size;
   EXPECT_EQ(MAGMA_STATUS_OK,
