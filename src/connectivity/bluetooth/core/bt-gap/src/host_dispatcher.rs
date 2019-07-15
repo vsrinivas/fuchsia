@@ -20,8 +20,10 @@ use {
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
         self as bt,
+        inspect::{DebugExt, Inspectable, ToProperty},
         types::{AdapterInfo, BondingData, Peer},
     },
+    fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon::{self as zx, Duration},
     futures::{
@@ -90,6 +92,42 @@ impl Drop for DiscoverableRequestToken {
     }
 }
 
+struct HostDispatcherInspect {
+    _inspect: inspect::Node,
+    peers: inspect::Node,
+    hosts: inspect::Node,
+    host_count: inspect::UintProperty,
+    device_class: inspect::StringProperty,
+    peer_count: inspect::UintProperty,
+    input_capability: inspect::StringProperty,
+    output_capability: inspect::StringProperty,
+    has_pairing_delegate: inspect::UintProperty,
+}
+
+impl HostDispatcherInspect {
+    pub fn new(inspect: inspect::Node) -> HostDispatcherInspect {
+        HostDispatcherInspect {
+            host_count: inspect.create_uint("host_count", 0),
+            peer_count: inspect.create_uint("peer_count", 0),
+            device_class: inspect.create_string("device_class", "default"),
+            input_capability: inspect.create_string("input_capability", "unknown"),
+            output_capability: inspect.create_string("output_capability", "unknown"),
+            has_pairing_delegate: inspect.create_uint("has_pairing_delegate", 0),
+            peers: inspect.create_child("peers"),
+            hosts: inspect.create_child("hosts"),
+            _inspect: inspect,
+        }
+    }
+
+    pub fn peers(&self) -> &inspect::Node {
+        &self.peers
+    }
+
+    pub fn hosts(&self) -> &inspect::Node {
+        &self.hosts
+    }
+}
+
 type DeviceId = String;
 
 /// The HostDispatcher acts as a proxy aggregating multiple HostAdapters
@@ -108,13 +146,15 @@ struct HostDispatcherState {
     discoverable: Option<Weak<DiscoverableRequestToken>>,
     pub input: InputCapabilityType,
     pub output: OutputCapabilityType,
-    peers: HashMap<DeviceId, Peer>,
+    peers: HashMap<DeviceId, Inspectable<Peer>>,
 
     pub pairing_delegate: Option<PairingDelegateProxy>,
     pub event_listeners: Vec<Weak<ControlControlHandle>>,
 
     // Pending requests to obtain a Host.
     host_requests: Slab<Waker>,
+
+    inspect: HostDispatcherInspect,
 }
 
 impl HostDispatcherState {
@@ -141,6 +181,7 @@ impl HostDispatcherState {
     /// host it will fail. It checks if the existing stored connection is closed, and will
     /// overwrite it if so.
     pub fn set_pairing_delegate(&mut self, delegate: Option<PairingDelegateProxy>) -> bool {
+        self.inspect.has_pairing_delegate.set(delegate.is_some().to_property());
         match delegate {
             Some(delegate) => {
                 let assign = match self.pairing_delegate {
@@ -164,10 +205,19 @@ impl HostDispatcherState {
     pub fn pairing_delegate(&mut self) -> Option<PairingDelegateProxy> {
         if let Some(delegate) = &self.pairing_delegate {
             if delegate.is_closed() {
+                self.inspect.has_pairing_delegate.set(false.to_property());
                 self.pairing_delegate = None;
             }
         }
         self.pairing_delegate.clone()
+    }
+
+    /// Set the IO capabilities of the system
+    pub fn set_io_capability(&mut self, input: InputCapabilityType, output: OutputCapabilityType) {
+        self.input = input;
+        self.output = output;
+        self.inspect.input_capability.set(&input.debug());
+        self.inspect.output_capability.set(&output.debug());
     }
 
     /// Return the active id. If the ID is currently not set,
@@ -206,6 +256,9 @@ impl HostDispatcherState {
     fn add_host(&mut self, id: String, host: Arc<RwLock<HostDevice>>) {
         fx_log_info!("Host added: {:?}", host.read().get_info().identifier);
         self.host_devices.insert(id, host.clone());
+
+        // Update inspect state
+        self.inspect.host_count.set(self.host_devices.len() as u64);
 
         // Notify Control interface clients about the new device.
         self.notify_event_listeners(|l| {
@@ -255,7 +308,7 @@ pub struct HostDispatcher {
 }
 
 impl HostDispatcher {
-    pub fn new(stash: Stash) -> HostDispatcher {
+    pub fn new(stash: Stash, inspect: inspect::Node) -> HostDispatcher {
         let hd = HostDispatcherState {
             active_id: None,
             host_devices: HashMap::new(),
@@ -269,6 +322,7 @@ impl HostDispatcher {
             pairing_delegate: None,
             event_listeners: vec![],
             host_requests: Slab::new(),
+            inspect: HostDispatcherInspect::new(inspect),
         };
         HostDispatcher { state: Arc::new(RwLock::new(hd)) }
     }
@@ -291,10 +345,17 @@ impl HostDispatcher {
     }
 
     pub async fn set_device_class(&mut self, class: DeviceClass) -> types::Result<()> {
-        match await!(self.get_active_adapter()) {
+        let class_repr = class.debug();
+        let res = match await!(self.get_active_adapter()) {
             Some(adapter) => await!(adapter.write().set_device_class(class)),
             None => Err(types::Error::no_host()),
+        };
+
+        // Update Inspect state
+        if res.is_ok() {
+            self.state.read().inspect.device_class.set(&class_repr);
         }
+        res
     }
 
     /// Set the active adapter for this HostDispatcher
@@ -445,9 +506,7 @@ impl HostDispatcher {
     }
 
     pub fn set_io_capability(&self, input: InputCapabilityType, output: OutputCapabilityType) {
-        let mut state = self.state.write();
-        state.input = input;
-        state.output = output;
+        self.state.write().set_io_capability(input, output);
     }
 
     pub fn add_event_listener(&self, handle: Weak<ControlControlHandle>) {
@@ -480,12 +539,19 @@ impl HostDispatcher {
                 .map_err(|e| fx_log_err!("Failed to send device updated event: {:?}", e));
         });
 
-        let _drop_old_value =
-            self.state.write().peers.insert(peer.identifier.clone(), peer);
+        let mut state = self.state.write();
+        let node = state.inspect.peers().create_child(format!("peer {}", peer.identifier));
+        let peer = Inspectable::new(peer, node);
+        let _drop_old_value = state.peers.insert(peer.identifier.clone(), peer);
+        state.inspect.peer_count.set(state.peers.len() as u64);
     }
 
     pub fn on_device_removed(&self, identifier: String) {
-        self.state.write().peers.remove(&identifier);
+        {
+            let mut state = self.state.write();
+            state.peers.remove(&identifier);
+            state.inspect.peer_count.set(state.peers.len() as u64)
+        }
         self.notify_event_listeners(|listener| {
             let _res = listener
                 .send_on_device_removed(&identifier)
@@ -494,16 +560,22 @@ impl HostDispatcher {
     }
 
     pub fn get_peers(&self) -> Vec<Peer> {
-        self.state.read().peers.values().cloned().collect()
+        self.state.read().peers.values().map(|p| (*p).clone()).collect()
     }
 
     /// Adds an adapter to the host dispatcher. Called by the watch_hosts device
     /// watcher
     pub async fn add_adapter(self, host_path: &Path) -> Result<(), Error> {
+        let node = self
+            .state
+            .read()
+            .inspect
+            .hosts()
+            .create_child(format!("device {}", host_path.display()));
         let host_dev = bt::util::open_rdwr(host_path)?;
         let device_topo = fdio::device_get_topo_path(&host_dev)?;
         fx_log_info!("Adding Adapter: {:?} (topology: {:?})", host_path, device_topo);
-        let host_device = await!(init_host(host_path))?;
+        let host_device = await!(init_host(host_path, node))?;
 
         // TODO(armansito): Make sure that the bt-host device is left in a well-known state if any
         // of these operations fails.
@@ -653,7 +725,7 @@ impl Future for WhenHostsFound {
 }
 
 /// Initialize a HostDevice
-async fn init_host(path: &Path) -> Result<Arc<RwLock<HostDevice>>, Error> {
+async fn init_host(path: &Path, node: inspect::Node) -> Result<Arc<RwLock<HostDevice>>, Error> {
     // Connect to the host device.
     let host = File::open(path).map_err(|_| err_msg("failed to open bt-host device"))?;
     let handle = bt::host::open_host_channel(&host)?;
@@ -662,7 +734,7 @@ async fn init_host(path: &Path) -> Result<Arc<RwLock<HostDevice>>, Error> {
 
     // Obtain basic information and create and entry in the disptacher's map.
     let adapter_info = await!(host.get_info())
-        .map(AdapterInfo::from)
+        .map(|info| Inspectable::new(AdapterInfo::from(info), node))
         .map_err(|_| err_msg("failed to obtain bt-host information"))?;
     Ok(Arc::new(RwLock::new(HostDevice::new(path.to_path_buf(), host, adapter_info))))
 }
@@ -739,4 +811,69 @@ fn start_pairing_delegate(
             .unwrap_or_else(|e| eprintln!("Failed to spawn {:?}", e)),
     );
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::store::stash::Stash;
+    use fuchsia_async as fasync;
+    use fuchsia_bluetooth::types::Peer;
+    use fuchsia_inspect::{self as inspect, assert_inspect_tree};
+
+    fn peer(id: &str) -> Peer {
+        Peer {
+            identifier: id.into(),
+            address: "12:34:56:78:90:AB".into(),
+            technology: control::TechnologyType::LowEnergy,
+            name: Some("Peer Name".into()),
+            appearance: control::Appearance::Unknown,
+            rssi: None,
+            tx_power: None,
+            connected: false,
+            bonded: false,
+            service_uuids: vec![],
+        }
+    }
+
+    #[test]
+    fn on_device_changed_inspect_state() {
+        // test setup
+        let _executor = fasync::Executor::new();
+        let stash = Stash::stub().expect("Create stash stub");
+        let inspector = inspect::Inspector::new();
+        let system_inspect = inspector.root().create_child("system");
+        let dispatcher = HostDispatcher::new(stash, system_inspect);
+        let peer_id = "id".to_string();
+
+        // assert inspect tree is in clean state
+        assert_inspect_tree!(inspector, root: {
+            system: contains {
+                peer_count: 0u64,
+                peers: {}
+            }
+        });
+
+        // add new peer and assert inspect tree is updated
+        dispatcher.on_device_updated(peer(&peer_id));
+        assert_inspect_tree!(inspector, root: {
+            system: contains {
+                peer_count: 1u64,
+                peers: {
+                    "peer id": contains {
+                        technology: "LowEnergy"
+                    }
+                }
+            }
+        });
+
+        // remove peer and assert inspect tree is updated
+        dispatcher.on_device_removed(peer_id);
+        assert_inspect_tree!(inspector, root: {
+            system: contains {
+                peer_count: 0u64,
+                peers: { }
+            }
+        });
+    }
 }

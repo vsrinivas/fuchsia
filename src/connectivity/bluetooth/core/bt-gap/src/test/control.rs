@@ -6,6 +6,7 @@ use {
     failure::{format_err, Error},
     fidl_fuchsia_bluetooth_control::ControlMarker,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
+    fuchsia_bluetooth::inspect::placeholder_node,
     fuchsia_zircon::DurationNum,
     futures::FutureExt,
 };
@@ -21,7 +22,7 @@ use crate::{
 async fn close_channel_when_client_dropped() -> Result<(), Error> {
     let (client, server) = create_fidl_endpoints::<ControlMarker>()?;
 
-    let hd = HostDispatcher::new(Stash::stub()?);
+    let hd = HostDispatcher::new(Stash::stub()?, placeholder_node());
     let serve_until_done = start_control_service(hd, server);
 
     // Send a FIDL request

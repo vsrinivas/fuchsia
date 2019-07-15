@@ -18,6 +18,8 @@ pub mod expectation;
 pub mod hci_emulator;
 /// Bluetooth host API
 pub mod host;
+/// Extension traits and functions for interfacing with the Inspect API
+pub mod inspect;
 /// Common Bluetooth type extensions
 pub mod types;
 /// Frequently Used Functions

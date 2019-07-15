@@ -16,10 +16,10 @@ use {
     fidl_fuchsia_bluetooth_gatt::Server_Marker,
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
     fuchsia_async as fasync,
-    fuchsia_bluetooth::util,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info, fx_log_warn},
     futures::{future::try_join, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
+    pin_utils::pin_mut,
 };
 
 use crate::{
@@ -50,11 +50,13 @@ fn main() -> Result<(), Error> {
 
 fn run() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let inspect = fuchsia_inspect::Inspector::new();
+    let stash_inspect = inspect.root().create_child("persistent");
     let stash = executor
-        .run_singlethreaded(store::stash::init_stash(BT_GAP_COMPONENT_ID))
+        .run_singlethreaded(store::stash::init_stash(BT_GAP_COMPONENT_ID, stash_inspect))
         .context("Error initializing Stash service")?;
 
-    let hd = HostDispatcher::new(stash);
+    let hd = HostDispatcher::new(stash, inspect.root().create_child("system"));
     let watch_hd = hd.clone();
     let central_hd = hd.clone();
     let control_hd = hd.clone();
@@ -62,26 +64,29 @@ fn run() -> Result<(), Error> {
     let profile_hd = hd.clone();
     let gatt_hd = hd.clone();
 
-    let host_watcher = watch_hosts().try_for_each(move |msg| {
-        let hd = watch_hd.clone();
-        async {
+    let host_watcher = async {
+        let stream = watch_hosts();
+        pin_mut!(stream);
+        while let Some(msg) = await!(stream.try_next())? {
+            let hd = watch_hd.clone();
             match msg {
                 AdapterAdded(device_path) => {
                     let result = await!(hd.add_adapter(&device_path));
                     if let Err(e) = &result {
                         fx_log_warn!("Error adding bt-host device '{:?}': {:?}", device_path, e);
                     }
-                    result
+                    result?
                 }
                 AdapterRemoved(device_path) => {
                     hd.rm_adapter(&device_path);
-                    Ok(())
                 }
             }
         }
-    });
+        Ok(())
+    };
 
     let mut fs = ServiceFs::new();
+    inspect.export(&mut fs);
     fs.dir("svc")
         .add_fidl_service(move |s| control_service(control_hd.clone(), s))
         .add_service_at(CentralMarker::NAME, move |chan| {

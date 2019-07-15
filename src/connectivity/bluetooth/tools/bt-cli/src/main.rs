@@ -424,7 +424,8 @@ mod tests {
             connected,
             bonded,
             service_uuids: vec![],
-        }.into()
+        }
+        .into()
     }
 
     fn state_with(p: Peer) -> State {

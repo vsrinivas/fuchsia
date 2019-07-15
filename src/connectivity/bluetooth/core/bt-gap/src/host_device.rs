@@ -11,7 +11,10 @@ use {
     fidl_fuchsia_bluetooth_gatt::ClientProxy,
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
     fidl_fuchsia_bluetooth_le::CentralProxy,
-    fuchsia_bluetooth::types::{AdapterInfo, BondingData, Peer},
+    fuchsia_bluetooth::{
+        inspect::Inspectable,
+        types::{AdapterInfo, BondingData, Peer},
+    },
     fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::{Future, FutureExt, StreamExt},
     parking_lot::RwLock,
@@ -20,15 +23,12 @@ use {
     std::sync::Arc,
 };
 
-use crate::{
-    types::{self, from_fidl_status, Error},
-    util::clone_host_state,
-};
+use crate::types::{self, from_fidl_status, Error};
 
 pub struct HostDevice {
     pub path: PathBuf,
     host: HostProxy,
-    info: AdapterInfo,
+    info: Inspectable<AdapterInfo>,
     gatt: HashMap<String, (CentralProxy, ClientProxy)>,
 }
 
@@ -38,7 +38,7 @@ pub struct HostDevice {
 // If they were instead declared async, the function body would not be executed until the first time
 // the future was polled.
 impl HostDevice {
-    pub fn new(path: PathBuf, host: HostProxy, info: AdapterInfo) -> Self {
+    pub fn new(path: PathBuf, host: HostProxy, info: Inspectable<AdapterInfo>) -> Self {
         HostDevice { path, host, info, gatt: HashMap::new() }
     }
 
@@ -151,12 +151,10 @@ pub async fn handle_events<H: HostListener>(
         let host_ = host.clone();
         match event? {
             HostEvent::OnAdapterStateChanged { ref state } => {
-                host_.write().info.update_state(Some(clone_host_state(&state)));
+                host_.write().info.update_state(Some(state.into()));
             }
             // TODO(NET-968): Add integration test for this.
-            HostEvent::OnDeviceUpdated { device } => {
-                listener.on_peer_updated(Peer::from(device))
-            }
+            HostEvent::OnDeviceUpdated { device } => listener.on_peer_updated(Peer::from(device)),
             // TODO(NET-1038): Add integration test for this.
             HostEvent::OnDeviceRemoved { identifier } => listener.on_peer_removed(identifier),
             HostEvent::OnNewBondingData { data } => {

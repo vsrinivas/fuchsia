@@ -9,7 +9,8 @@ use {
     fidl_fuchsia_stash::{
         GetIteratorMarker, StoreAccessorMarker, StoreAccessorProxy, StoreMarker, Value,
     },
-    fuchsia_bluetooth::{error::Error as BtError, types::BondingData},
+    fuchsia_bluetooth::{error::Error as BtError, inspect::Inspectable, types::BondingData},
+    fuchsia_inspect,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     serde_json,
     std::collections::HashMap,
@@ -58,24 +59,29 @@ use crate::store::{
 /// "host-data:01:02:03:04:05:06").
 #[derive(Debug)]
 pub struct Stash {
-    // The proxy to the Fuchsia stash service. This is assumed to have been initialized as a
-    // read/write capable accessor with the identity of the current component.
+    /// The proxy to the Fuchsia stash service. This is assumed to have been initialized as a
+    /// read/write capable accessor with the identity of the current component.
     proxy: StoreAccessorProxy,
 
-    // In-memory state of the bonding data stash. Each entry is hierarchically indexed by a
-    // local Bluetooth host identity and a peer device identifier.
-    bonding_data: HashMap<String, HashMap<String, BondingData>>,
+    /// In-memory state of the bonding data stash. Each entry is hierarchically indexed by a
+    /// local Bluetooth host identity and a peer device identifier.
+    bonding_data: HashMap<String, HashMap<String, Inspectable<BondingData>>>,
 
-    // Persisted data for a particular local Bluetooth host, indexed by local Bluetooth host
-    // identity.
+    /// Persisted data for a particular local Bluetooth host, indexed by local Bluetooth host
+    /// identity.
     // TODO(armansito): Introduce a concrete type for DeviceAddress instead of String.
     host_data: HashMap<String, HostData>,
+
+    /// Handle to inspect data
+    inspect: fuchsia_inspect::Node,
 }
 
 impl Stash {
     /// Updates the bonding data for a given device. Creates a new entry if one matching this
     /// device does not exist.
     pub fn store_bond(&mut self, data: BondingData) -> Result<(), Error> {
+        let node = self.inspect.create_child(format!("bond {}", data.identifier));
+        let data = Inspectable::new(data, node);
         fx_log_info!("store_bond (id: {})", data.identifier);
 
         // Persist the serialized blob.
@@ -94,7 +100,13 @@ impl Stash {
     /// Returns an iterator over the bonding data entries for the local adapter with the given
     /// `address`. Returns None if no such data exists.
     pub fn list_bonds(&self, local_address: &str) -> Option<impl Iterator<Item = &BondingData>> {
-        Some(self.bonding_data.get(local_address)?.values().into_iter())
+        Some(
+            self.bonding_data
+                .get(local_address)?
+                .values()
+                .into_iter()
+                .map(|bd| -> &BondingData { &*bd }),
+        )
     }
 
     /// Removes persisted bond for a peer and removes its information from any adapters that have
@@ -132,15 +144,19 @@ impl Stash {
 
     // Initializes the stash using the given `accessor`. This asynchronously loads existing
     // stash data. Returns an error in case of failure.
-    async fn new(accessor: StoreAccessorProxy) -> Result<Stash, Error> {
-        let bonding_data = await!(Stash::load_bonds(&accessor))?;
+    async fn new(
+        accessor: StoreAccessorProxy,
+        inspect: fuchsia_inspect::Node,
+    ) -> Result<Stash, Error> {
+        let bonding_data = await!(Stash::load_bonds(&accessor, &inspect))?;
         let host_data = await!(Stash::load_host_data(&accessor))?;
-        Ok(Stash { proxy: accessor, bonding_data: bonding_data, host_data: host_data })
+        Ok(Stash { proxy: accessor, bonding_data, host_data, inspect })
     }
 
-    async fn load_bonds(
-        accessor: &StoreAccessorProxy,
-    ) -> Result<HashMap<String, HashMap<String, BondingData>>, Error> {
+    async fn load_bonds<'a>(
+        accessor: &'a StoreAccessorProxy,
+        inspect: &'a fuchsia_inspect::Node,
+    ) -> Result<HashMap<String, HashMap<String, Inspectable<BondingData>>>, Error> {
         // Obtain a list iterator for all cached bonding data.
         let (iter, server_end) = create_proxy::<GetIteratorMarker>()?;
         accessor.get_prefix(BONDING_DATA_PREFIX, server_end)?;
@@ -155,6 +171,8 @@ impl Stash {
                 if let Value::Stringval(json) = key_value.val {
                     let bonding_data: BondingDataDeserializer = serde_json::from_str(&json)?;
                     let bonding_data = BondingData::from(bonding_data.contents());
+                    let node = inspect.create_child(format!("bond {}", bonding_data.identifier));
+                    let bonding_data = Inspectable::new(bonding_data, node);
                     let local_address_entries = bonding_map
                         .entry(bonding_data.local_address.clone())
                         .or_insert(HashMap::new());
@@ -201,20 +219,24 @@ impl Stash {
         let (proxy, _server) = zx::Channel::create()?;
         let proxy = fasync::Channel::from_channel(proxy)?;
         let proxy = StoreAccessorProxy::from_channel(proxy);
-        Ok(Stash { proxy, bonding_data: HashMap::new(), host_data: HashMap::new() })
+        let inspect = fuchsia_inspect::Inspector::new().root().create_child("stub inspect");
+        Ok(Stash { proxy, bonding_data: HashMap::new(), host_data: HashMap::new(), inspect })
     }
 }
 
 /// Connects to the stash service and initializes a Stash object. This function obtains
 /// read/write capability to the component-specific storage identified by `component_id`.
-pub async fn init_stash(component_id: &str) -> Result<Stash, Error> {
+pub async fn init_stash(
+    component_id: &str,
+    inspect: fuchsia_inspect::Node,
+) -> Result<Stash, Error> {
     let stash_svc = fuchsia_component::client::connect_to_service::<StoreMarker>()?;
     stash_svc.identify(component_id)?;
 
     let (proxy, server_end) = create_proxy::<StoreAccessorMarker>()?;
     stash_svc.create_accessor(false, server_end)?;
 
-    await!(Stash::new(proxy))
+    await!(Stash::new(proxy, inspect))
 }
 
 // These tests access stash in a hermetic envionment and thus it's ok for state to leak between
@@ -252,10 +274,12 @@ mod tests {
     fn new_stash_succeeds_with_empty_values() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
+        let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
+
         // Create a Stash service interface.
         let accessor_proxy = create_stash_accessor("new_stash_succeeds_with_empty_values")
             .expect("failed to create StashAccessor");
-        let stash_new_future = Stash::new(accessor_proxy);
+        let stash_new_future = Stash::new(accessor_proxy, inspect);
         pin_mut!(stash_new_future);
 
         // The stash should be initialized with no data.
@@ -270,6 +294,8 @@ mod tests {
     fn new_stash_fails_with_malformed_key_value_entry() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
+        let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
+
         // Create a Stash service interface.
         let accessor_proxy =
             create_stash_accessor("new_stash_fails_with_malformed_key_value_entry")
@@ -282,13 +308,15 @@ mod tests {
         accessor_proxy.commit().expect("failed to commit a bonding data value");
 
         // The stash should fail to initialize.
-        let stash_new_future = Stash::new(accessor_proxy);
+        let stash_new_future = Stash::new(accessor_proxy, inspect);
         assert!(exec.run_singlethreaded(stash_new_future).is_err());
     }
 
     #[test]
     fn new_stash_fails_with_malformed_json() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
+
+        let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
 
         // Create a mock Stash service interface.
         let accessor_proxy = create_stash_accessor("new_stash_fails_with_malformed_json")
@@ -301,13 +329,15 @@ mod tests {
         accessor_proxy.commit().expect("failed to commit a bonding data value");
 
         // The stash should fail to initialize.
-        let stash_new_future = Stash::new(accessor_proxy);
+        let stash_new_future = Stash::new(accessor_proxy, inspect);
         assert!(exec.run_singlethreaded(stash_new_future).is_err());
     }
 
     #[test]
     fn new_stash_succeeds_with_values() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
+
+        let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
 
         // Create a Stash service interface.
         let accessor_proxy = create_stash_accessor("new_stash_succeeds_with_values")
@@ -365,7 +395,7 @@ mod tests {
         accessor_proxy.commit().expect("failed to commit bonding data values");
 
         // The stash should initialize with bonding data stored in stash
-        let stash_new_future = Stash::new(accessor_proxy);
+        let stash_new_future = Stash::new(accessor_proxy, inspect);
         let stash = exec.run_singlethreaded(stash_new_future).expect("stash failed to initialize");
 
         // There should be devices registered for two local addresses.
@@ -377,6 +407,7 @@ mod tests {
             .get("00:00:00:00:00:01")
             .expect("could not find local address entries");
         assert_eq!(2, local.len());
+        let bond: &BondingData = &*local.get("id-1").expect("could not find device");
         assert_eq!(
             &BondingData {
                 identifier: "id-1".to_string(),
@@ -385,8 +416,9 @@ mod tests {
                 le: None,
                 bredr: None,
             },
-            local.get("id-1").expect("could not find device")
+            bond
         );
+        let bond: &BondingData = &*local.get("id-2").expect("could not find device");
         assert_eq!(
             &BondingData {
                 identifier: "id-2".to_string(),
@@ -395,7 +427,7 @@ mod tests {
                 le: None,
                 bredr: None,
             },
-            local.get("id-2").expect("could not find device")
+            bond
         );
 
         // The second local address should have one device associated with it.
@@ -404,6 +436,7 @@ mod tests {
             .get("00:00:00:00:00:02")
             .expect("could not find local address entries");
         assert_eq!(1, local.len());
+        let bond: &BondingData = &*local.get("id-3").expect("could not find device");
         assert_eq!(
             &BondingData {
                 identifier: "id-3".to_string(),
@@ -412,17 +445,18 @@ mod tests {
                 le: None,
                 bredr: None,
             },
-            local.get("id-3").expect("could not find device")
+            bond
         );
     }
 
     #[test]
     fn store_bond_commits_entry() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
         let accessor_proxy = create_stash_accessor("store_bond_commits_entry")
             .expect("failed to create StashAccessor");
         let mut stash = exec
-            .run_singlethreaded(Stash::new(accessor_proxy.clone()))
+            .run_singlethreaded(Stash::new(accessor_proxy.clone(), inspect))
             .expect("stash failed to initialize");
 
         let bonding_data = BondingData {
@@ -436,6 +470,8 @@ mod tests {
 
         // Make sure that the in-memory cache has been updated.
         assert_eq!(1, stash.bonding_data.len());
+        let bond: &BondingData =
+            &*stash.bonding_data.get("00:00:00:00:00:01").unwrap().get("id-1").unwrap();
         assert_eq!(
             &BondingData {
                 identifier: "id-1".to_string(),
@@ -444,7 +480,7 @@ mod tests {
                 le: None,
                 bredr: None,
             },
-            stash.bonding_data.get("00:00:00:00:00:01").unwrap().get("id-1").unwrap()
+            bond
         );
 
         // The new data should be accessible over FIDL.
@@ -463,6 +499,7 @@ mod tests {
     #[test]
     fn list_bonds() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
         let accessor_proxy =
             create_stash_accessor("list_bonds").expect("failed to create StashAccessor");
 
@@ -502,7 +539,7 @@ mod tests {
         accessor_proxy.commit().expect("failed to initialize bonding data for testing");
 
         let stash = exec
-            .run_singlethreaded(Stash::new(accessor_proxy))
+            .run_singlethreaded(Stash::new(accessor_proxy, inspect))
             .expect("stash failed to initialize");
 
         // Should return None for unknown address.
@@ -519,6 +556,7 @@ mod tests {
     #[test]
     fn get_host_data() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
         let accessor_proxy =
             create_stash_accessor("list_host_data").expect("failed to create StashAccessor");
 
@@ -550,7 +588,7 @@ mod tests {
         accessor_proxy.commit().expect("failed to initialize host data for testing");
 
         let stash = exec
-            .run_singlethreaded(Stash::new(accessor_proxy))
+            .run_singlethreaded(Stash::new(accessor_proxy, inspect))
             .expect("stash failed to initialize");
 
         // Should return None for unknown identity address.
@@ -575,6 +613,7 @@ mod tests {
     #[test]
     fn rm_peer() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
         let accessor_proxy =
             create_stash_accessor("rm_peer").expect("failed to create StashAccessor");
 
@@ -614,7 +653,7 @@ mod tests {
         accessor_proxy.commit().expect("failed to initialize bonding data for testing");
 
         let mut stash = exec
-            .run_singlethreaded(Stash::new(accessor_proxy))
+            .run_singlethreaded(Stash::new(accessor_proxy, inspect))
             .expect("stash failed to initialize");
 
         // OK to remove some unknown peer...
@@ -629,6 +668,7 @@ mod tests {
             .expect("could not find local address entries");
         assert_eq!(1, local.len());
         assert!(local.get("id-1").is_none());
+        let bond: &BondingData = &*(local.get("id-2").expect("could not find device"));
         assert_eq!(
             &BondingData {
                 identifier: "id-2".to_string(),
@@ -637,17 +677,18 @@ mod tests {
                 le: None,
                 bredr: None,
             },
-            local.get("id-2").expect("could not find device")
+            bond,
         );
     }
 
     #[test]
     fn store_host_data() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
         let accessor_proxy =
             create_stash_accessor("store_local_irk").expect("failed to create StashAccessor");
         let mut stash = exec
-            .run_singlethreaded(Stash::new(accessor_proxy.clone()))
+            .run_singlethreaded(Stash::new(accessor_proxy.clone(), inspect))
             .expect("stash failed to initialize");
 
         let host_data = HostData {

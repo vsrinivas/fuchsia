@@ -10,6 +10,7 @@ use {
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
         bt_fidl_status,
+        inspect::{placeholder_node, Inspectable},
         types::{AdapterInfo, BondingData, Peer},
     },
     fuchsia_zircon::DurationNum,
@@ -46,6 +47,7 @@ async fn host_device_set_local_name() -> Result<(), Error> {
         "00:00:00:00:00:00".to_string(),
         None,
     );
+    let info = Inspectable::new(info, placeholder_node());
     let host = Arc::new(RwLock::new(HostDevice::new(
         PathBuf::from("/dev/class/bt-host/test"),
         client,

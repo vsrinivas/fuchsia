@@ -3,10 +3,35 @@
 // found in the LICENSE file.
 
 use {
-    crate::assigned_numbers::find_service_uuid,
-    fidl_fuchsia_bluetooth_control as control,
+    crate::{assigned_numbers::find_service_uuid, inspect::*},
+    fidl_fuchsia_bluetooth_control as control, fuchsia_inspect as inspect,
+    fuchsia_inspect_contrib::nodes::ManagedNode,
     std::fmt::{self, Write},
 };
+
+impl ImmutableDataInspect<Peer> for ImmutableDataInspectManager {
+    fn new(data: &Peer, mut manager: ManagedNode) -> ImmutableDataInspectManager {
+        let mut writer = manager.writer();
+        writer.create_string("technology", &data.technology.debug());
+        writer.create_string("appearance", &data.appearance.debug());
+        if let Some(rssi) = data.rssi {
+            writer.create_int("rssi", rssi as i64);
+        }
+        if let Some(tx_power) = data.tx_power {
+            writer.create_int("tx_power", tx_power as i64);
+        }
+        writer.create_uint("connected", data.connected.to_property());
+        writer.create_uint("bonded", data.bonded.to_property());
+        if !data.service_uuids.is_empty() {
+            writer.create_string("service_uuids", &data.service_uuids.to_property());
+        }
+        Self { _manager: manager }
+    }
+}
+
+impl IsInspectable for Peer {
+    type I = ImmutableDataInspectManager;
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Peer {
