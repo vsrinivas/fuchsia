@@ -7,8 +7,8 @@ component-ize, package, and run these tests.
 This document is targeted towards developers working inside of `fuchsia.git`,
 and the workflow described is unlikely to work for SDK consumers.
 
-An example setup of a test component in Rust is available at
-`//examples/hello_world/rust`.
+The source code for this tutorial is available at
+[`//examples/hello_world/rust`][example-src].
 
 ## Unit tests
 
@@ -19,34 +19,19 @@ Fuchsia as it does outside, and can be easily accomplished by dropping the
 following snippet into the bottom of whatever test you want to write:
 
 ```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        assert_eq!(true, true);
-    }
-}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/hello_world/rust/src/main.rs" region_tag="test_mod" adjust_indentation="auto" %}
 ```
 
 This will cause a new mod named `tests` to be created, and this mod will only be
 included when building unit tests. Any functions annotated with `#[test]` will
 be run as a test, and if the function successfully returns then the test passes.
 
-If a test is going to be exercising asynchronous code, the test could instead be
-annotated with `#[fasync::run_until_stalled(test)]` to prevent needing to
-manually create and use an asynchronous executor.
+For tests exercising asynchronous code, use the
+`#[fasync::run_until_stalled(test)]` annotation as an alternative to
+using an asynchronous executor.
 
 ```rust
-use fuchsia_async as fasync;
-
-#[fasync::run_until_stalled(test)]
-async fn my_test() {
-    let some_future = async { 4 };
-    assert_eq!(await!(some_future), 4);
-}
-
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/hello_world/rust/src/main.rs" region_tag="async_test" adjust_indentation="auto" %}
 ```
 
 ### Building tests
@@ -55,20 +40,12 @@ These tests can be automatically built by the `rustc_binary` GN template by
 setting `with_unit_tests = true`. This would typically go in a `BUILD.gn` file
 next to the `src` directory containing the rust code.
 
-```GN
+```gn
 import("//build/rust/rustc_binary.gni")
+```
 
-rustc_binary("bin") {
-  # The `name` field is optional, and will default to the target name
-  name = "hello_world_rust"
-
-  with_unit_tests = true
-  edition = "2018"
-
-  deps = [
-    "//garnet/public/rust/fuchsia-async",
-  ]
-}
+```gn
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/hello_world/rust/BUILD.gn" region_tag="rustc_tests" adjust_indentation="auto" %}
 ```
 
 Setting `with_unit_tests = true` causes this build rule to generate two
@@ -79,7 +56,27 @@ to the provided name. In our example here, that means that one executable named
 
 ### Packaging and running tests
 
+For the Hello world example, the test package needs to reference the generated
+targets, `bin_test` and `hello_world_rust_bin_test`:
+
+```gn
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/hello_world/rust/BUILD.gn" indented_block="^test_package\(\"hello_world_rust_tests\"\) {" %}
+```
+
+To run the tests run:
+
+```sh
+fx run-test hello_world_rust_tests
+```
+
+Note: that in order to use `fx run-test`, you can't override
+`package_name="..."` in your `package`  or `test_package` declaration. This
+issue is tracked by BLD-338.
+
+
 For information on packaging and running tests, please refer to the
 [documentation on running tests as components][component_tests].
 
-[component_tests]:../../testing/running_tests_as_components.md
+
+[component_tests]:/docs/development/testing/running_tests_as_components.md
+[example-src]: /examples/hello_world/rust
