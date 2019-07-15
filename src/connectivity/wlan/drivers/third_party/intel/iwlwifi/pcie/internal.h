@@ -464,6 +464,7 @@ struct cont_rec {
  * @rxq: all the RX queue data
  * @rx_pool: initial pool of iwl_rx_mem_buffer for all the queues
  * @global_table: table mapping received VID from hw to rxb
+ * @bti: bus transaction initiator handle
  * @rba: allocator for RX replenishing
  * @ctxt_info: context information for FW self init
  * @ctxt_info_gen3: context information for gen3 devices
@@ -516,6 +517,7 @@ struct iwl_trans_pcie {
   struct iwl_rxq* rxq;
   struct iwl_rx_mem_buffer rx_pool[RX_POOL_SIZE];
   struct iwl_rx_mem_buffer* global_table[RX_POOL_SIZE];
+  zx_handle_t bti;
   struct iwl_rb_allocator rba;
   union {
     struct iwl_context_info* ctxt_info;

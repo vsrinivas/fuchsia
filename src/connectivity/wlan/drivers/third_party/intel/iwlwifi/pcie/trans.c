@@ -1831,8 +1831,9 @@ static void iwl_trans_pcie_configure(struct iwl_trans* trans,
 }
 
 void iwl_trans_pcie_free(struct iwl_trans* trans) {
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  zx_handle_close(trans_pcie->bti);
 #if 0   // NEEDS_PORTING
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     int i;
 
     iwl_pcie_synchronize_irqs(trans);
@@ -3233,7 +3234,13 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci, const struct i
   memcpy(&trans_pcie->pci, &pci, sizeof(trans_pcie->pci));
   status = pci_enable_bus_master(trans_pcie->pci, true);
   if (status != ZX_OK) {
-    IWL_ERR(trans, "Failed to enabled bus mastering: %s\n", zx_status_get_string(status));
+    IWL_ERR(trans, "Failed to enable bus mastering: %s\n", zx_status_get_string(status));
+    goto out_no_pci;
+  }
+
+  status = pci_get_bti(trans_pcie->pci, /*index*/ 0, &trans_pcie->bti);
+  if (status != ZX_OK) {
+    IWL_ERR(trans, "Failed to get BTI: %s\n", zx_status_get_string(status));
     goto out_no_pci;
   }
 
