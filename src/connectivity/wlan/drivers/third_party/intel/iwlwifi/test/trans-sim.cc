@@ -20,6 +20,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/wlanphyimpl.h>
+#include <lib/fake_ddk/fake_ddk.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/status.h>
 
@@ -27,17 +28,18 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 }
 
 static zx_status_t iwl_trans_sim_start_hw(struct iwl_trans* iwl_trans, bool low_power) {
-  return ZX_ERR_NOT_SUPPORTED;
+  return ZX_OK;
 }
 
 static void iwl_trans_sim_op_mode_leave(struct iwl_trans* iwl_trans) {}
 
 static zx_status_t iwl_trans_sim_start_fw(struct iwl_trans* trans, const struct fw_img* fw,
                                           bool run_in_rfkill) {
-  return ZX_ERR_NOT_SUPPORTED;
+  return ZX_OK;
 }
 
 static void iwl_trans_sim_fw_alive(struct iwl_trans* trans, uint32_t scd_addr) {}
@@ -202,7 +204,7 @@ static zx_status_t transport_sim_bind(void* ctx, zx_device_t* dev) {
   struct iwl_trans* iwl_trans = iwl_trans_transport_sim_alloc(cfg);
   zx_status_t status;
 
-  if (iwl_trans != nullptr) {
+  if (!iwl_trans) {
     return ZX_ERR_INTERNAL;
   }
 
@@ -219,15 +221,36 @@ static zx_status_t transport_sim_bind(void* ctx, zx_device_t* dev) {
   status = device_add(dev, &args, &iwl_trans->zxdev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to create device: %s\n", zx_status_get_string(status));
-    free(iwl_trans);
-    return status;
+    goto free_iwl_trans;
+  }
+
+  status = iwl_drv_init();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to init driver: %s\n", zx_status_get_string(status));
+    goto remove_dev;
   }
 
   status = iwl_drv_start(iwl_trans);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to start driver: %s\n", zx_status_get_string(status));
-    device_remove(iwl_trans->zxdev);
+    goto remove_dev;
   }
+
+  // Manually add the driver to the MVM opmode so that iwl_mvm_init() can call the
+  // corresponding start function (iwl_op_mode_mvm_start()).
+  iwl_drv_add_to_mvm_opmode(iwl_trans->drv);
+  status = iwl_mvm_init();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to init MVM: %s\n", zx_status_get_string(status));
+    goto remove_dev;
+  }
+
+  return status;
+
+remove_dev:
+  device_remove(iwl_trans->zxdev);
+free_iwl_trans:
+  free(iwl_trans);
 
   return status;
 }
@@ -235,9 +258,9 @@ static zx_status_t transport_sim_bind(void* ctx, zx_device_t* dev) {
 namespace wlan {
 namespace testing {
 
-TransportSim::TransportSim(SimulatedEnvironment* env) : SimulatedFirmware(env) {
-  // 'ctx' and 'dev' are not used in the simulated firmware yet.
-  transport_sim_bind(nullptr, nullptr);
+zx_status_t TransportSim::Init() {
+  // 'ctx' is not used in the simulated firmware yet.
+  return transport_sim_bind(nullptr, fake_ddk::kFakeParent);
 }
 
 }  // namespace testing

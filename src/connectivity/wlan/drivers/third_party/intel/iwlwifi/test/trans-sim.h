@@ -24,8 +24,11 @@ namespace testing {
 
 class TransportSim : public SimulatedFirmware {
  public:
-  TransportSim(SimulatedEnvironment* env);
+  TransportSim(SimulatedEnvironment* env) : SimulatedFirmware(env) {}
   ~TransportSim() {}
+
+  // This function must be called before starting using other functions.
+  zx_status_t Init();
 };
 
 }  // namespace testing

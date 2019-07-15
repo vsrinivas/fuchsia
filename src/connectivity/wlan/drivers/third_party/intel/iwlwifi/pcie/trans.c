@@ -691,7 +691,7 @@ static zx_status_t iwl_pcie_load_section(struct iwl_trans* trans, uint8_t sectio
   // Allocate a VMO space.
   // TODO(WLAN-1194): rx and tx code also needs bti as well. Refactor this to used the saved one
   //                  once the rx and tx code is merged.
-  size_t vmo_size = round_up(chunk_sz, ZX_PAGE_SIZE);
+  size_t vmo_size = ROUND_UP(chunk_sz, ZX_PAGE_SIZE);
   ret = pci_get_bti(IWL_TRANS_GET_PCIE_TRANS(trans)->pci, /*index*/ 0, &bti);
   if (ret != ZX_OK) {
     return ret;

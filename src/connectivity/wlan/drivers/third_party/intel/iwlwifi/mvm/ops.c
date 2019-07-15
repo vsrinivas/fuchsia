@@ -914,22 +914,24 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
     goto out_free;
   }
 
-  mtx_lock(&mvm->mutex);
-  iwl_mvm_ref(mvm, IWL_MVM_REF_INIT_UCODE);
-  err = iwl_run_init_mvm_ucode(mvm, true);
+  if (trans->to_load_firmware) {
+    mtx_lock(&mvm->mutex);
+    iwl_mvm_ref(mvm, IWL_MVM_REF_INIT_UCODE);
+    err = iwl_run_init_mvm_ucode(mvm, true);
 #if 0   // NEEDS_PORTING
     if (test_bit(IWL_FWRT_STATUS_WAIT_ALIVE, &mvm->fwrt.status)) {
         iwl_fw_alive_error_dump(&mvm->fwrt);
     }
 #endif  // NEEDS_PORTING
-  if (!iwlmvm_mod_params.init_dbg || !err) {
-    iwl_mvm_stop_device(mvm);
-  }
-  iwl_mvm_unref(mvm, IWL_MVM_REF_INIT_UCODE);
-  mtx_unlock(&mvm->mutex);
-  if (err < 0) {
-    IWL_ERR(mvm, "Failed to run INIT ucode: %d\n", err);
-    goto out_free;
+    if (!iwlmvm_mod_params.init_dbg || !err) {
+      iwl_mvm_stop_device(mvm);
+    }
+    iwl_mvm_unref(mvm, IWL_MVM_REF_INIT_UCODE);
+    mtx_unlock(&mvm->mutex);
+    if (err < 0) {
+      IWL_ERR(mvm, "Failed to run INIT ucode: %d\n", err);
+      goto out_free;
+    }
   }
 
   scan_size = iwl_mvm_scan_size(mvm);

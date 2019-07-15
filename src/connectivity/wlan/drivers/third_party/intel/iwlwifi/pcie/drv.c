@@ -1045,6 +1045,8 @@ static zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
     return ZX_ERR_BAD_STATE;
   }
 
+  iwl_trans->to_load_firmware = true;  // indicate to load firmware in the later code.
+
   /*
    * special-case 7265D, it has the same PCI IDs.
    *
@@ -1108,6 +1110,12 @@ static zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
     IWL_ERR(iwl_trans, "Failed to create device: %s\n", zx_status_get_string(status));
     free(iwl_trans);
     return status;
+  }
+
+  status = iwl_drv_init();
+  if (status != ZX_OK) {
+    IWL_ERR(iwl_trans, "Failed to init driver: %s\n", zx_status_get_string(status));
+    goto fail_remove_device;
   }
 
   status = iwl_drv_start(iwl_trans);

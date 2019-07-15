@@ -17,7 +17,10 @@ namespace testing {
 //
 class SingleApTest : public ::testing::Test {
  public:
-  SingleApTest() : ap_(kApAddr, kSsid, kSsidLen, kChannel), fw_(&env_) { env_.AddAp(&ap_); }
+  SingleApTest() : ap_(kApAddr, kSsid, kSsidLen, kChannel), fw_(&env_) {
+    assert(ZX_OK == fw_.Init());
+    env_.AddAp(&ap_);
+  }
   ~SingleApTest() {}
 
  protected:

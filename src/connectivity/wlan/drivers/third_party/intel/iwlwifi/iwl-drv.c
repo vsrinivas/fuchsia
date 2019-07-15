@@ -143,6 +143,13 @@ static struct iwlwifi_opmode_table {
 #endif
 };
 
+void iwl_drv_add_to_mvm_opmode(struct iwl_drv* drv) {
+  struct iwlwifi_opmode_table* op = &iwlwifi_opmode_table[MVM_OP_MODE];
+
+  /* add this device to the list of devices using this op_mode */
+  list_add_tail(&op->drv, &drv->list);
+}
+
 #if IS_ENABLED(CPTCFG_IWLXVT)
 /* kernel object for a device dedicated
  * folder in the sysfs */
@@ -480,18 +487,11 @@ static zx_status_t iwl_request_firmware(struct iwl_drv* drv, bool first) {
   struct firmware firmware;
   zx_status_t status;
 
-#ifdef CONFIG_TEST_SIM
-  // In the test environment, there is no load_firmware() function, which is
-  // provided by zircon. This can be mocked up with another function if we want
-  // to test the zx_vmar_map() below.
-  status = ZX_OK;
-#else
   status = load_firmware(drv->zxdev, drv->firmware_name, &firmware.vmo, &firmware.size);
   if (status != ZX_OK) {
     IWL_ERR(drv, "Failed to load firmware: %s\n", zx_status_get_string(status));
     return status;
   }
-#endif
 
   uintptr_t vaddr;
   status =
@@ -1719,7 +1719,7 @@ static void iwl_req_fw_callback(struct firmware* ucode_raw, struct iwl_drv* drv)
   IWL_INFO(drv, "loaded firmware version %s op_mode %s\n", drv->fw.fw_version, op->name);
 
   /* add this device to the list of devices using this op_mode */
-  list_add_tail(&drv->list, &op->drv);
+  list_add_tail(&op->drv, &drv->list);
 
   if (op->ops) {
     drv->op_mode = _iwl_op_mode_start(drv, op);
@@ -1777,7 +1777,7 @@ free:
 
 zx_status_t iwl_drv_start(struct iwl_trans* trans) {
   struct iwl_drv* drv;
-  zx_status_t status;
+  zx_status_t status = ZX_OK;
 
   drv = calloc(1, sizeof(*drv));
   if (!drv) {
@@ -1823,10 +1823,12 @@ zx_status_t iwl_drv_start(struct iwl_trans* trans) {
   iwl_tm_gnl_add(drv->trans);
 #endif
 
-  status = iwl_request_firmware(drv, true);
-  if (status != ZX_OK) {
-    IWL_ERR(trans, "Couldn't request the fw\n");
-    goto err_fw;
+  if (trans->to_load_firmware) {
+    status = iwl_request_firmware(drv, true);
+    if (status != ZX_OK) {
+      IWL_ERR(trans, "Couldn't request the fw\n");
+      goto err_fw;
+    }
   }
 
 #if IS_ENABLED(CPTCFG_IWLXVT)
@@ -1920,9 +1922,13 @@ zx_status_t iwl_opmode_register(const char* name, const struct iwl_op_mode_ops* 
       continue;
     }
     op->ops = ops;
-    /* TODO: need to handle exceptional case */
+
     list_for_every_entry (&op->drv, drv, struct iwl_drv, list) {
       drv->op_mode = _iwl_op_mode_start(drv, op);
+      if (!drv->op_mode) {
+        mtx_unlock(&iwlwifi_opmode_table_mtx);
+        return ZX_ERR_INTERNAL;
+      }
     }
 
     mtx_unlock(&iwlwifi_opmode_table_mtx);
@@ -1955,45 +1961,47 @@ void iwl_opmode_deregister(const char* name) {
 #endif  // NEEDS_PORTING
 }
 
-#if 0  // NEEDS_PORTING
-static int __init iwl_drv_init(void) {
-    int i;
+zx_status_t iwl_drv_init(void) {
+  size_t i;
 
-    mutex_init(&iwlwifi_opmode_table_mtx);
+  mtx_init(&iwlwifi_opmode_table_mtx, mtx_plain);
 
-    for (i = 0; i < ARRAY_SIZE(iwlwifi_opmode_table); i++) {
-        INIT_LIST_HEAD(&iwlwifi_opmode_table[i].drv);
-    }
+  for (i = 0; i < ARRAY_SIZE(iwlwifi_opmode_table); i++) {
+    list_initialize(&iwlwifi_opmode_table[i].drv);
+  }
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-    if (iwl_tm_gnl_init()) {
-        return -EFAULT;
-    }
+  if (iwl_tm_gnl_init()) {
+    return -EFAULT;
+  }
 #endif
 
 #if IS_ENABLED(CPTCFG_IWLXVT)
-    iwl_kobj = kobject_create_and_add("devices", &THIS_MODULE->mkobj.kobj);
-    if (!iwl_kobj) {
-        return -ENOMEM;
-    }
+  iwl_kobj = kobject_create_and_add("devices", &THIS_MODULE->mkobj.kobj);
+  if (!iwl_kobj) {
+    return -ENOMEM;
+  }
 #endif
 
-    pr_info(DRV_DESCRIPTION "\n");
-    pr_info(DRV_COPYRIGHT "\n");
+  IWL_INFO(nullptr, DRV_DESCRIPTION "\n");
+  IWL_INFO(nullptr, DRV_COPYRIGHT "\n");
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
-    /* Create the root of iwlwifi debugfs subsystem. */
-    iwl_dbgfs_root = debugfs_create_dir(DRV_NAME, NULL);
+  /* Create the root of iwlwifi debugfs subsystem. */
+  iwl_dbgfs_root = debugfs_create_dir(DRV_NAME, NULL);
 
-    if (!iwl_dbgfs_root) {
-        return -EFAULT;
-    }
+  if (!iwl_dbgfs_root) {
+    return -EFAULT;
+  }
 #endif
 
+#if 0   // NEEDS_PORTING
     return iwl_pci_register_driver();
+#endif  // NEEDS_PORTING
+  return ZX_OK;
 }
-module_init(iwl_drv_init);
 
+#if 0  // NEEDS_PORTING
 static void __exit iwl_drv_exit(void) {
     iwl_pci_unregister_driver();
 

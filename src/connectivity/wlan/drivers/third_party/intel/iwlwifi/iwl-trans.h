@@ -690,6 +690,7 @@ struct iwl_dram_data {
  * @rx_mpdu_cmd_hdr_size: used for tracing, amount of data before the
  *  start of the 802.11 header in the @rx_mpdu_cmd
  * @dflt_pwr_limit: default power limit fetched from the platform (ACPI)
+ * @to_load_firmware: this trans has firmware to load. For sim-trans, this should be false.
  * @dbg_dest_tlv: points to the destination TLV for debug
  * @dbg_conf_tlv: array of pointers to configuration TLVs for debug
  * @dbg_trigger_tlv: array of pointers to triggers TLVs for debug
@@ -746,6 +747,7 @@ struct iwl_trans {
 
   bool external_ini_loaded;
   bool ini_valid;
+  bool to_load_firmware;
 
   const struct iwl_fw_dbg_dest_tlv_v1* dbg_dest_tlv;
   const struct iwl_fw_dbg_conf_tlv* dbg_conf_tlv[FW_DBG_CONF_MAX];
