@@ -318,6 +318,39 @@ Dump loaded successfully.
 Now the thread, stack, and memory commands can be used to inspect the state of
 the program. Use "disconnect" to close the dump.
 
+For in-tree users, the `fx debug` command can take the path to a core file as an argument.
+
+```
+fx debug -c upload_file_minidump-e71256ba30163a0.dmp
+```
+
+#### Downloading symbols
+
+You can tell `zxdb` to look for debug symbols for your core dump in a GCS bucket and download them
+automatically. You'll need to run with a few command-line options:
+
+```
+zxdb --symbol-cache $HOME --symbol-server gs://my-bucket-name
+```
+
+In-tree users will automatically have these options set, with the server pointed to a bucket
+containing symbols for all release builds.
+
+The first time you use the symbol server, you will have to authenticate using the `auth` command.
+The authentication flow will require you to complete part of the authentication in your browser.
+
+```
+[zxdb] auth
+To authenticate, please supply an authentication token. You can retrieve a token from:
+
+https://accounts.google.com/o/oauth2/v2/< very long URL omitted >
+
+Once you've retrieved a token, run 'auth <token>'
+
+[zxdb] auth 4/hAF-pASODIFUASDIFUASODIUFSADF329827349872V6
+Successfully authenticated with gs://fuchsia-infra-debug-symbols
+```
+
 ### Debugging multiple processes
 
 You can debug many arbitrary processes at the same time. When you start, one
