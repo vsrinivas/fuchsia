@@ -60,7 +60,6 @@ class SemanticsManagerTest : public gtest::TestLoopFixture {
  public:
   void SetUp() override {
     TestLoopFixture::SetUp();
-    syslog::InitLogger();
 
     zx::eventpair a, b;
     zx::eventpair::create(0u, &a, &b);

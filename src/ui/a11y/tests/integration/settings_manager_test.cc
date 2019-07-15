@@ -5,7 +5,6 @@
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
-#include <lib/syslog/cpp/logger.h>
 #include <src/lib/fxl/logging.h>
 
 #include "gtest/gtest.h"
