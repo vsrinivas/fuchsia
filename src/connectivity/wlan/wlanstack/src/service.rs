@@ -423,6 +423,7 @@ mod tests {
     use futures::task::Poll;
     use pin_utils::pin_mut;
     use wlan_common::{
+        assert_variant,
         channel::{Cbw, Phy},
         RadioConfig,
     };
@@ -477,10 +478,9 @@ mod tests {
 
         // The call above should trigger a Query message to the phy.
         // Pretend that we are the phy and read the message from the other side.
-        let responder = match exec.run_until_stalled(&mut phy_stream.next()) {
-            Poll::Ready(Some(Ok(PhyRequest::Query { responder }))) => responder,
-            _ => panic!("phy_stream returned unexpected result"),
-        };
+        let responder = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(PhyRequest::Query { responder }))) => responder
+        );
 
         // Reply with a fake phy info
         responder
@@ -491,10 +491,9 @@ mod tests {
             .expect("failed to send QueryResponse");
 
         // Our original future should complete now, and return the same phy info
-        let response = match exec.run_until_stalled(&mut query_fut) {
-            Poll::Ready(Ok(response)) => response,
-            other => panic!("query_fut returned unexpected result: {:?}", other),
-        };
+        let response = assert_variant!(exec.run_until_stalled(&mut query_fut),
+            Poll::Ready(Ok(response)) => response
+        );
         assert_eq!(fake_phy_info(), response.info);
     }
 
@@ -557,10 +556,9 @@ mod tests {
         pin_mut!(destroy_fut);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut destroy_fut));
 
-        let (req, responder) = match exec.run_until_stalled(&mut phy_stream.next()) {
-            Poll::Ready(Some(Ok(PhyRequest::DestroyIface { req, responder }))) => (req, responder),
-            _ => panic!("phy_stream returned unexpected result"),
-        };
+        let (req, responder) = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(PhyRequest::DestroyIface { req, responder }))) => (req, responder)
+        );
 
         // Verify the destroy iface request to the corresponding PHY is correct.
         assert_eq!(13, req.id);
@@ -571,9 +569,7 @@ mod tests {
         assert_eq!(Poll::Ready(Ok(())), exec.run_until_stalled(&mut destroy_fut));
 
         // Verify iface was removed from available ifaces.
-        if let Some(_) = iface_map.get(&42u16) {
-            panic!("iface expected to be deleted")
-        }
+        assert!(iface_map.get(&42u16).is_none(), "iface expected to be deleted");
     }
 
     #[test]
@@ -587,10 +583,9 @@ mod tests {
         pin_mut!(destroy_fut);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut destroy_fut));
 
-        let (req, responder) = match exec.run_until_stalled(&mut phy_stream.next()) {
-            Poll::Ready(Some(Ok(PhyRequest::DestroyIface { req, responder }))) => (req, responder),
-            _ => panic!("phy_stream returned unexpected result"),
-        };
+        let (req, responder) = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(PhyRequest::DestroyIface { req, responder }))) => (req, responder)
+        );
 
         // Verify the destroy iface request to the corresponding PHY is correct.
         assert_eq!(13, req.id);
@@ -604,9 +599,7 @@ mod tests {
         );
 
         // Verify iface was not removed from available ifaces.
-        if let None = iface_map.get(&42u16) {
-            panic!("iface expected to not be deleted")
-        }
+        assert!(iface_map.get(&42u16).is_some(), "iface expected to not be deleted");
     }
 
     #[test]
@@ -660,17 +653,14 @@ mod tests {
             fidl_svc::CreateIfaceRequest { phy_id: 10, role: fidl_wlan_dev::MacRole::Client },
         );
         pin_mut!(create_fut);
-        match exec.run_until_stalled(&mut create_fut) {
-            Poll::Pending => (),
-            other => panic!("expected pending iface creation: {:?}", other),
-        };
+        let fut_result = exec.run_until_stalled(&mut create_fut);
+        assert_variant!(fut_result, Poll::Pending);
 
         // TODO(WLAN-927): SME Channel transition requires querying PHY for driver feature
         // support. Remove once feature landed.
-        let responder = match exec.run_until_stalled(&mut phy_stream.next()) {
-            Poll::Ready(Some(Ok(PhyRequest::Query { responder }))) => responder,
-            other => panic!("phy_stream returned unexpected result: {:?}", other),
-        };
+        let responder = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(PhyRequest::Query { responder }))) => responder
+        );
         responder
             .send(&mut fidl_wlan_dev::QueryResponse {
                 status: zx::sys::ZX_OK,
@@ -682,15 +672,13 @@ mod tests {
             .expect("failed to send QueryResponse");
 
         // Continue running create iface request.
-        match exec.run_until_stalled(&mut create_fut) {
-            Poll::Pending => (),
-            other => panic!("expected pending iface creation: {:?}", other),
-        };
 
-        let (req, responder) = match exec.run_until_stalled(&mut phy_stream.next()) {
-            Poll::Ready(Some(Ok(PhyRequest::CreateIface { req, responder }))) => (req, responder),
-            other => panic!("phy_stream returned unexpected result: {:?}", other),
-        };
+        let fut_result = exec.run_until_stalled(&mut create_fut);
+        assert_variant!(fut_result, Poll::Pending);
+
+        let (req, responder) = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(PhyRequest::CreateIface { req, responder }))) => (req, responder)
+        );
 
         // Since we requested the Client role, the request to the phy should also have
         // the Client role
@@ -702,20 +690,16 @@ mod tests {
             .expect("failed to send CreateIfaceResponse");
 
         // The original future should resolve into a response.
-        let response = match exec.run_until_stalled(&mut create_fut) {
-            Poll::Ready(Ok(response)) => response,
-            other => panic!("create_fut returned unexpected result: {:?}", other),
-        };
+        let response = assert_variant!(exec.run_until_stalled(&mut create_fut),
+            Poll::Ready(Ok(response)) => response
+        );
 
         assert_eq!(5, response.id);
         assert_eq!(
             device::PhyOwnership { phy_id: 10, phy_assigned_id: 123 },
             response.phy_ownership
         );
-        match response.mlme_channel {
-            DirectMlmeChannel::Supported(_) => (),
-            other => panic!("expected SME Channel to be available: {:?}", other),
-        };
+        assert_variant!(response.mlme_channel, DirectMlmeChannel::Supported(_));
     }
 
     #[test]
@@ -736,17 +720,15 @@ mod tests {
             fidl_svc::CreateIfaceRequest { phy_id: 10, role: fidl_wlan_dev::MacRole::Client },
         );
         pin_mut!(create_fut);
-        match exec.run_until_stalled(&mut create_fut) {
-            Poll::Pending => (),
-            _ => panic!("expected pending iface creation"),
-        };
+
+        let fut_result = exec.run_until_stalled(&mut create_fut);
+        assert_variant!(fut_result, Poll::Pending);
 
         // TODO(WLAN-927): SME Channel transition requires querying PHY for driver feature
         // support. Remove once feature landed.
-        let responder = match exec.run_until_stalled(&mut phy_stream.next()) {
-            Poll::Ready(Some(Ok(PhyRequest::Query { responder }))) => responder,
-            _ => panic!("phy_stream returned unexpected result"),
-        };
+        let responder = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(PhyRequest::Query { responder }))) => responder
+        );
         responder
             .send(&mut fidl_wlan_dev::QueryResponse {
                 status: zx::sys::ZX_OK,
@@ -755,15 +737,12 @@ mod tests {
             .expect("failed to send QueryResponse");
 
         // Continue running create iface request.
-        match exec.run_until_stalled(&mut create_fut) {
-            Poll::Pending => (),
-            _ => panic!("expected pending iface creation"),
-        };
+        let fut_result = exec.run_until_stalled(&mut create_fut);
+        assert_variant!(fut_result, Poll::Pending);
 
-        let (req, responder) = match exec.run_until_stalled(&mut phy_stream.next()) {
-            Poll::Ready(Some(Ok(PhyRequest::CreateIface { req, responder }))) => (req, responder),
-            _ => panic!("phy_stream returned unexpected result"),
-        };
+        let (req, responder) = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(PhyRequest::CreateIface { req, responder }))) => (req, responder)
+        );
 
         // Since we requested the Client role, the request to the phy should also have
         // the Client role
@@ -775,10 +754,9 @@ mod tests {
             .expect("failed to send CreateIfaceResponse");
 
         // Now, our original future should resolve into a response
-        let response = match exec.run_until_stalled(&mut create_fut) {
-            Poll::Ready(Ok(response)) => response,
-            other => panic!("create_fut returned unexpected result: {:?}", other),
-        };
+        let response = assert_variant!(exec.run_until_stalled(&mut create_fut),
+            Poll::Ready(Ok(response)) => response
+        );
         // This assertion likely needs to change once we figure out a solution
         // to the iface id problem.
         assert_eq!(123, response.phy_ownership.phy_assigned_id);
@@ -797,10 +775,11 @@ mod tests {
             fidl_svc::CreateIfaceRequest { phy_id: 10, role: fidl_wlan_dev::MacRole::Client },
         );
         pin_mut!(fut);
-        match exec.run_until_stalled(&mut fut) {
-            Poll::Ready(Err(zx::Status::NOT_FOUND)) => (),
-            _ => panic!("expected error creating iface on invalid phy"),
-        }
+        assert_variant!(
+            exec.run_until_stalled(&mut fut),
+            Poll::Ready(Err(zx::Status::NOT_FOUND)),
+            "expected failure on invalid PHY"
+        );
     }
 
     #[test]
@@ -828,11 +807,11 @@ mod tests {
             create_proxy().expect("failed to create a pair of scan txn endpoints");
         proxy.scan(&mut fake_scan_request(), scan_txn).expect("failed to send a scan request");
 
-        let req = match exec.run_until_stalled(&mut sme_stream.next()) {
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan { req, .. }))) => req,
-            _ => panic!("sme_stream returned unexpected result"),
-        };
-        assert_eq!(fake_scan_request(), req);
+        assert_variant!(exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan { req, .. }))) => {
+                assert_eq!(fake_scan_request(), req)
+            }
+        );
     }
 
     #[test]
@@ -881,19 +860,17 @@ mod tests {
         // Verify that `proxy` is indeed connected to `sme_stream`
         let mut fut = fidl_sme::ApSmeProxyInterface::start(&proxy, &mut fake_ap_config());
 
-        match exec.run_until_stalled(&mut sme_stream.next()) {
+        assert_variant!(exec.run_until_stalled(&mut sme_stream.next()),
             Poll::Ready(Some(Ok(fidl_sme::ApSmeRequest::Start { config, responder }))) => {
                 assert_eq!(fake_ap_config(), config);
                 responder
                     .send(fidl_sme::StartApResultCode::Success)
                     .expect("failed to send response");
             }
-            _ => panic!("sme_stream returned unexpected result"),
-        };
-        match exec.run_until_stalled(&mut fut) {
-            Poll::Ready(Ok(fidl_sme::StartApResultCode::Success)) => {}
-            other => panic!("expected a successful response, got {:?}", other),
-        }
+        );
+
+        let fut_result = exec.run_until_stalled(&mut fut);
+        assert_variant!(fut_result, Poll::Ready(Ok(fidl_sme::StartApResultCode::Success)));
     }
 
     #[test]
@@ -938,22 +915,17 @@ mod tests {
         pin_mut!(req_fut);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
 
-        let (req, responder) = match exec.run_until_stalled(&mut phy_stream.next()) {
-            Poll::Ready(Some(Ok(PhyRequest::SetCountry { req, responder }))) => (req, responder),
-            _ => panic!("phy_stream returned unexpected result"),
-        };
-        assert_eq!(req.alpha2, alpha2.clone());
-
-        // Pretend to be a WLAN PHY to return the result.
-        let resp = zx::Status::OK.into_raw();
-        responder.send(resp).expect("failed to send the response to SetCountry");
+        assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(PhyRequest::SetCountry { req, responder }))) => {
+                assert_eq!(req.alpha2, alpha2.clone());
+                // Pretend to be a WLAN PHY to return the result.
+                responder.send(zx::Status::OK.into_raw())
+                    .expect("failed to send the response to SetCountry");
+            }
+        );
 
         // req_fut should have completed by now. Test the result.
-        let status = match exec.run_until_stalled(&mut req_fut) {
-            Poll::Ready(status) => status,
-            other => panic!("req_fut returned unexpected result: {:?}", other),
-        };
-        assert_eq!(status, zx::Status::OK);
+        assert_eq!(exec.run_until_stalled(&mut req_fut), Poll::Ready(zx::Status::OK));
     }
 
     #[test]
@@ -975,29 +947,19 @@ mod tests {
         pin_mut!(req_fut);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
 
-        let (req, responder) = match exec.run_until_stalled(&mut phy_stream.next()) {
-            Poll::Ready(Some(Ok(PhyRequest::SetCountry { req, responder }))) => (req, responder),
-            _ => panic!("phy_stream returned unexpected result"),
-        };
+        let (req, responder) = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(PhyRequest::SetCountry { req, responder }))) => (req, responder)
+        );
         assert_eq!(req.alpha2, alpha2.clone());
 
         // Failure case #1: WLAN PHY not responding
-        let _ = match exec.run_until_stalled(&mut req_fut) {
-            Poll::Ready(status) => {
-                panic!("responder did not respond. Not supposed to receive a status: {:?}", status);
-            }
-            _ => (),
-        };
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
 
         // Failure case #2: WLAN PHY has not implemented the feature.
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
         let resp = zx::Status::NOT_SUPPORTED.into_raw();
         responder.send(resp).expect("failed to send the response to SetCountry");
-        let status = match exec.run_until_stalled(&mut req_fut) {
-            Poll::Ready(status) => status,
-            other => panic!("req_fut returned unexpected result: {:?}", other),
-        };
-        assert_eq!(status, zx::Status::NOT_SUPPORTED);
+        assert_eq!(Poll::Ready(zx::Status::NOT_SUPPORTED), exec.run_until_stalled(&mut req_fut));
     }
 
     fn fake_destroy_iface_env(phy_map: &mut PhyMap, iface_map: &mut IfaceMap) -> PhyRequestStream {

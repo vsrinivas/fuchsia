@@ -97,7 +97,10 @@ pub fn write_snap_llc_hdr<B: Appendable>(w: &mut B, protocol_id: u16) -> Result<
 mod tests {
     use {
         super::*,
-        crate::{buffer_writer::BufferWriter, mac::FrameType, mac::HtControl, mac::QosControl},
+        crate::{
+            assert_variant, buffer_writer::BufferWriter, mac::FrameType, mac::HtControl,
+            mac::QosControl,
+        },
     };
 
     #[test]
@@ -392,16 +395,12 @@ mod tests {
     }
 
     fn assert_invalid_data(r: Result<(), FrameWriteError>, msg_part: &str) {
-        match r {
-            Err(FrameWriteError::InvalidData { debug_message }) => {
-                if !debug_message.contains(msg_part) {
-                    panic!(
-                        "expected the error message `{}` to contain `{}` as a substring",
-                        debug_message, msg_part
-                    );
-                }
-            }
-            other => panic!("expected Err(FrameWriteError::InvalidData), got {:?}", other),
-        }
+        assert_variant!(r, Err(FrameWriteError::InvalidData { debug_message }) => {
+            assert!(
+                debug_message.contains(msg_part),
+                "expected the error message `{}` to contain `{}` as a substring",
+                debug_message, msg_part
+            );
+        });
     }
 }

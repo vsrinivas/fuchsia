@@ -438,10 +438,10 @@ mod tests {
 
         env.send_msg3_to_supplicant_capture_updates(msg3.keyframe(), 13, &mut update_sink);
         let msg4 = test_util::expect_eapol_resp(&update_sink[..]);
+
         for update in update_sink {
-            match update {
-                SecAssocUpdate::Key(_) => panic!("reinstalled key"),
-                _ => (),
+            if let SecAssocUpdate::Key(_) = update {
+                 panic!("reinstalled key");
             }
         }
 

@@ -100,7 +100,10 @@ impl<B: ByteSlice> MsduIterator<B> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::test_utils::fake_frames::*};
+    use {
+        super::*,
+        crate::{assert_variant, test_utils::fake_frames::*},
+    };
 
     #[test]
     fn msdu_iterator_single_llc() {
@@ -109,9 +112,7 @@ mod tests {
         assert!(msdus.is_some());
         let mut found_msdu = false;
         for Msdu { dst_addr, src_addr, llc_frame } in msdus.unwrap() {
-            if found_msdu {
-                panic!("unexpected MSDU: {:x?}", llc_frame.body);
-            }
+            assert!(!found_msdu, "unexpected MSDU: {:x?}", llc_frame.body);
             assert_eq!(dst_addr, [3; 6]);
             assert_eq!(src_addr, [4; 6]);
             assert_eq!(llc_frame.hdr.protocol_id.to_native(), 9 << 8 | 10);
@@ -128,9 +129,7 @@ mod tests {
         assert!(msdus.is_some());
         let mut found_msdu = false;
         for Msdu { dst_addr, src_addr, llc_frame } in msdus.unwrap() {
-            if found_msdu {
-                panic!("unexpected MSDU: {:x?}", llc_frame.body);
-            }
+            assert!(!found_msdu, "unexpected MSDU: {:x?}", llc_frame.body);
             assert_eq!(dst_addr, [3; 6]);
             assert_eq!(src_addr, [4; 6]);
             assert_eq!(llc_frame.hdr.protocol_id.to_native(), 9 << 8 | 10);
@@ -143,7 +142,8 @@ mod tests {
     #[test]
     fn parse_llc_with_addr4_ht_ctrl() {
         let bytes = make_data_frame_single_llc(Some([1, 2, 3, 4, 5, 6]), Some([4, 3, 2, 1]));
-        match MacFrame::parse(&bytes[..], false) {
+        assert_variant!(
+            MacFrame::parse(&bytes[..], false),
             Some(MacFrame::Data { body, .. }) => {
                 let llc = LlcFrame::parse(body).expect("LLC frame too short");
                 assert_eq!(7, llc.hdr.dsap);
@@ -153,8 +153,8 @@ mod tests {
                 assert_eq!([9, 10], llc.hdr.protocol_id.0);
                 assert_eq!(0x090A, llc.hdr.protocol_id.to_native());
                 assert_eq!(&[11, 11, 11], llc.body);
-            }
-            _ => panic!("failed parsing data frame"),
-        };
+            },
+            "expected data frame"
+        );
     }
 }

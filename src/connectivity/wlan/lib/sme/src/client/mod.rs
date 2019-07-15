@@ -442,7 +442,7 @@ mod tests {
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use fuchsia_inspect as finspect;
     use std::error::Error;
-    use wlan_common::RadioConfig;
+    use wlan_common::{assert_variant, RadioConfig};
 
     use super::test_utils::{
         expect_info_event, fake_protected_bss_description, fake_unprotected_bss_description,
@@ -470,10 +470,8 @@ mod tests {
         // Open network without credentials:
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let bss = fake_unprotected_bss_description(b"unprotected".to_vec());
-        match get_protection(&dev_info, &credential, &bss) {
-            Ok(Protection::Open) => (),
-            other => panic!("expected open network found: {:?}", other),
-        }
+        let protection = get_protection(&dev_info, &credential, &bss);
+        assert_variant!(protection, Ok(Protection::Open));
 
         // Open network with credentials:
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
@@ -484,18 +482,14 @@ mod tests {
         // RSN with user entered password:
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
         let bss = fake_protected_bss_description(b"rsn".to_vec());
-        match get_protection(&dev_info, &credential, &bss) {
-            Ok(Protection::Rsna(_)) => (),
-            other => panic!("expected RSN found: {:?}", other),
-        }
+        let protection = get_protection(&dev_info, &credential, &bss);
+        assert_variant!(protection, Ok(Protection::Rsna(_)));
 
         // RSN with user entered PSK:
         let credential = fidl_sme::Credential::Psk(vec![0xAC; 32]);
         let bss = fake_protected_bss_description(b"rsn".to_vec());
-        match get_protection(&dev_info, &credential, &bss) {
-            Ok(Protection::Rsna(_)) => (),
-            other => panic!("expected RSN found: {:?}", other),
-        }
+        let protection = get_protection(&dev_info, &credential, &bss);
+        assert_variant!(protection, Ok(Protection::Rsna(_)));
 
         // RSN without credentials:
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
@@ -511,18 +505,14 @@ mod tests {
         // WEP-40 with credentials:
         let credential = fidl_sme::Credential::Password(b"wep40".to_vec());
         let bss = fake_wep_bss_description(b"wep40".to_vec());
-        match get_protection(&dev_info, &credential, &bss) {
-            Ok(Protection::Wep(_)) => (),
-            other => panic!("expected WEP found: {:?}", other),
-        }
+        let protection = get_protection(&dev_info, &credential, &bss);
+        assert_variant!(protection, Ok(Protection::Wep(_)));
 
         // WEP-104 with credentials:
         let credential = fidl_sme::Credential::Password(b"superinsecure".to_vec());
         let bss = fake_wep_bss_description(b"wep104".to_vec());
-        match get_protection(&dev_info, &credential, &bss) {
-            Ok(Protection::Wep(_)) => (),
-            other => panic!("expected WEP found: {:?}", other),
-        }
+        let protection = get_protection(&dev_info, &credential, &bss);
+        assert_variant!(protection, Ok(Protection::Wep(_)));
 
         // WEP without credentials:
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
@@ -592,11 +582,7 @@ mod tests {
             sme.status()
         );
 
-        if let Ok(Some(MlmeRequest::Scan(..))) = mlme_stream.try_next() {
-            // expected path; nothing to do
-        } else {
-            panic!("expect scan request to MLME");
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Scan(..))));
 
         // Simulate scan end and verify that underlying state machine's status is changed,
         // and a join request is sent to MLME.
@@ -607,11 +593,7 @@ mod tests {
             sme.status()
         );
 
-        if let Ok(Some(MlmeRequest::Join(..))) = mlme_stream.try_next() {
-            // expected path; nothing to do
-        } else {
-            panic!("expect join request to MLME");
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
     }
 
     #[test]
@@ -630,11 +612,7 @@ mod tests {
             sme.status()
         );
 
-        if let Ok(Some(MlmeRequest::Scan(..))) = mlme_stream.try_next() {
-            // expected path; nothing to do
-        } else {
-            panic!("expect scan request to MLME");
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Scan(..))));
 
         // Simulate scan end and verify that underlying state machine's status is not changed,
         report_fake_scan_result(&mut sme, fake_wep_bss_description(b"foo".to_vec()));
@@ -658,11 +636,7 @@ mod tests {
             sme.status()
         );
 
-        if let Ok(Some(MlmeRequest::Scan(..))) = mlme_stream.try_next() {
-            // expected path; nothing to do
-        } else {
-            panic!("expect scan request to MLME");
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Scan(..))));
 
         // Simulate scan end and verify that underlying state machine's status is changed,
         // and a join request is sent to MLME.
@@ -673,11 +647,7 @@ mod tests {
             sme.status()
         );
 
-        if let Ok(Some(MlmeRequest::Join(..))) = mlme_stream.try_next() {
-            // expected path; nothing to do
-        } else {
-            panic!("expect join request to MLME");
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
     }
 
     #[test]
@@ -706,11 +676,7 @@ mod tests {
             sme.status()
         );
 
-        if let Ok(Some(MlmeRequest::Scan(..))) = mlme_stream.try_next() {
-            // expected path; nothing to do
-        } else {
-            panic!("expect scan request to MLME");
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Scan(..))));
 
         // Simulate scan end and verify that underlying state machine's status is changed,
         // and a join request is sent to MLME.
@@ -721,11 +687,7 @@ mod tests {
             sme.status()
         );
 
-        if let Ok(Some(MlmeRequest::Join(..))) = mlme_stream.try_next() {
-            // expected path; nothing to do
-        } else {
-            panic!("expect join request to MLME");
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
     }
 
     #[test]
@@ -898,10 +860,7 @@ mod tests {
     }
 
     fn assert_connect_result_failed(connect_fut: &mut oneshot::Receiver<ConnectResult>) {
-        match connect_fut.try_recv() {
-            Ok(Some(ConnectResult::Failed(..))) => (), // expected path
-            other => panic!("expect ConnectResult::Failed, got {:?}", other),
-        }
+        assert_variant!(connect_fut.try_recv(), Ok(Some(ConnectResult::Failed(..))));
     }
 
     fn connect_req(ssid: Ssid, credential: fidl_sme::Credential) -> fidl_sme::ConnectRequest {

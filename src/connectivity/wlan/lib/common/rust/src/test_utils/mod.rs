@@ -106,6 +106,13 @@ macro_rules! assert_variant {
     ($test:expr, $variant:pat $( | $others:pat)* => $e:expr,) => {
         assert_variant!($test, $variant $( | $others)* => { $e });
     };
+    // Optional trailing comma.
+    ($test:expr, $variant:pat $( | $others:pat)* => $b:block,) => {
+        assert_variant!($test, $variant $( | $others)* => $b);
+    };
+    ($test:expr, $variant:pat $( | $others:pat)* => $b:expr,) => {
+        assert_variant!($test, $variant $( | $others)* => { $b });
+    };
 }
 
 #[cfg(test)]

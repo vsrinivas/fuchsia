@@ -69,7 +69,10 @@ pub fn write_mgmt_hdr<B: Appendable>(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::buffer_writer::BufferWriter};
+    use {
+        super::*,
+        crate::{assert_variant, buffer_writer::BufferWriter},
+    };
 
     #[test]
     fn client_to_ap() {
@@ -238,16 +241,12 @@ mod tests {
     }
 
     fn assert_invalid_data(r: Result<(), FrameWriteError>, msg_part: &str) {
-        match r {
-            Err(FrameWriteError::InvalidData { debug_message }) => {
-                if !debug_message.contains(msg_part) {
-                    panic!(
-                        "expected the error message `{}` to contain `{}` as a substring",
-                        debug_message, msg_part
-                    );
-                }
-            }
-            other => panic!("expected Err(FrameWriteError::InvalidData), got {:?}", other),
-        }
+        assert_variant!(r, Err(FrameWriteError::InvalidData { debug_message }) => {
+            assert!(
+                debug_message.contains(msg_part),
+                "expected the error message `{}` to contain `{}` as a substring",
+                debug_message, msg_part
+            );
+        });
     }
 }

@@ -234,7 +234,7 @@ impl<A: Appendable> Writer<A> {
 mod tests {
     use super::*;
     use crate::key_data::extract_elements;
-    use wlan_common::test_utils::FixedSizedTestBuffer;
+    use wlan_common::{assert_variant, test_utils::FixedSizedTestBuffer};
 
     fn write_and_extract_padding(gtk_len: usize) -> Vec<u8> {
         let mut w = Writer::new(vec![]);
@@ -317,18 +317,11 @@ mod tests {
         let mut elements = result.unwrap();
         assert_eq!(elements.len(), 2);
 
-        match elements.remove(0) {
-            Element::Gtk(hdr, kde) => {
-                assert_eq!(hdr, Header { type_: 0xDD, len: 11, oui: Oui::DOT11, data_type: 1 });
-                assert_eq!(kde, Gtk { info: GtkInfo(6), gtk: vec![24; 5] });
-            }
-            other => panic!("unexpected KDE: {:?}", other),
-        }
-
-        match elements.remove(0) {
-            Element::Padding => (),
-            other => panic!("unexpected KDE: {:?}", other),
-        }
+        assert_variant!(elements.remove(0), Element::Gtk(hdr, kde) => {
+            assert_eq!(hdr, Header { type_: 0xDD, len: 11, oui: Oui::DOT11, data_type: 1 });
+            assert_eq!(kde, Gtk { info: GtkInfo(6), gtk: vec![24; 5] });
+        });
+        assert_variant!(elements.remove(0), Element::Padding);
     }
 
     #[test]

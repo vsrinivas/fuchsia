@@ -404,6 +404,7 @@ mod tests {
     use futures::{stream::StreamFuture, task::Poll};
     use std::path::Path;
     use tempfile;
+    use wlan_common::assert_variant;
 
     #[test]
     fn scans_only_requested_with_saved_networks() {
@@ -603,13 +604,10 @@ mod tests {
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
 
         // Expect the state machine to start connecting to the network immediately.
-        let _connect_txn = match poll_sme_req(&mut exec, &mut next_sme_req) {
-            Poll::Ready(ClientSmeRequest::Connect { req, txn, .. }) => {
-                assert_eq!(b"foo", &req.ssid[..]);
-                txn
-            }
-            _ => panic!("expected a Connect request"),
-        };
+        let (req, _connect_txn) = assert_variant!(poll_sme_req(&mut exec, &mut next_sme_req),
+            Poll::Ready(ClientSmeRequest::Connect { req, txn, .. }) => (req, txn)
+        );
+        assert_eq!(b"foo", &req.ssid[..]);
 
         // Send another connect request without waiting for the first one to complete
         let mut receiver_two = send_manual_connect_request(&client, b"bar");
@@ -727,10 +725,10 @@ mod tests {
 
         // State machine should be in the auto-connect state now and is expected to
         // start scanning immediately
-        match poll_sme_req(&mut exec, &mut next_sme_req) {
-            Poll::Ready(ClientSmeRequest::Scan { .. }) => {}
-            _ => panic!("expected a Scan request"),
-        };
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut next_sme_req),
+            Poll::Ready(ClientSmeRequest::Scan { .. })
+        );
 
         // Expect a response to the user's request
         assert_eq!(
@@ -870,10 +868,8 @@ mod tests {
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
 
         // Expect the connect transaction to be dropped by us
-        match exec.run_until_stalled(&mut connect_txn.next()) {
-            Poll::Ready(None) => {}
-            _ => panic!("expected connect_txn channel to be closed by the state machine"),
-        }
+        let fut_result = exec.run_until_stalled(&mut connect_txn.next());
+        assert_variant!(fut_result, Poll::Ready(None));
 
         // Expect a disconnect request to the SME
         let _disconnect_responder = expect_disconnect_req_to_sme(&mut exec, &mut next_sme_req);
@@ -960,11 +956,9 @@ mod tests {
         next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
         ssids: &[&[u8]],
     ) {
-        let txn = match poll_sme_req(exec, next_sme_req) {
-            Poll::Ready(ClientSmeRequest::Scan { txn, .. }) => txn,
-            Poll::Pending => panic!("expected a request to be available"),
-            _ => panic!("expected a Scan request"),
-        };
+        let txn = assert_variant!(poll_sme_req(exec, next_sme_req),
+            Poll::Ready(ClientSmeRequest::Scan { txn, .. }) => txn
+        );
         let txn = txn.into_stream().expect("failed to create a scan txn stream").control_handle();
         let mut results = Vec::new();
         for ssid in ssids {
@@ -980,11 +974,9 @@ mod tests {
         connected_to: Option<Box<fidl_sme::BssInfo>>,
         connecting_to_ssid: Vec<u8>,
     ) {
-        let responder = match poll_sme_req(exec, next_sme_req) {
-            Poll::Ready(ClientSmeRequest::Status { responder }) => responder,
-            Poll::Pending => panic!("expected a request to be available"),
-            _ => panic!("expected a Status request"),
-        };
+        let responder = assert_variant!(poll_sme_req(exec, next_sme_req),
+            Poll::Ready(ClientSmeRequest::Status { responder }) => responder
+        );
         let mut response = fidl_sme::ClientStatusResponse { connected_to, connecting_to_ssid };
         responder.send(&mut response).expect("failed to send status response");
     }
@@ -1000,12 +992,9 @@ mod tests {
 
     fn expect_status_req_to_sme(
         exec: &mut fasync::Executor,
-        next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
+        next_req: &mut StreamFuture<ClientSmeRequestStream>,
     ) {
-        match poll_sme_req(exec, next_sme_req) {
-            Poll::Ready(ClientSmeRequest::Status { .. }) => (),
-            _ => panic!("expected a Status request"),
-        }
+        assert_variant!(poll_sme_req(exec, next_req), Poll::Ready(ClientSmeRequest::Status { .. }));
     }
 
     fn exchange_connect_with_sme(
@@ -1027,21 +1016,16 @@ mod tests {
         expected_ssid: &[u8],
         expected_password: &[u8],
     ) -> fidl_sme::ConnectTransactionRequestStream {
-        match poll_sme_req(exec, next_sme_req) {
-            Poll::Ready(ClientSmeRequest::Connect { req, txn, .. }) => {
-                assert_eq!(expected_ssid, &req.ssid[..]);
-                match &req.credential {
-                    fidl_sme::Credential::Password(password) => {
-                        assert_eq!(&expected_password[..], &password[..]);
-                    }
-                    _ => panic!("expected password"),
-                }
-                txn.expect("expected a Connect transaction channel")
-                    .into_stream()
-                    .expect("failed to create a connect txn stream")
-            }
-            _ => panic!("expected a Connect request"),
-        }
+        let (req, txn) = assert_variant!(poll_sme_req(exec, next_sme_req),
+            Poll::Ready(ClientSmeRequest::Connect { req, txn, .. }) => (req, txn)
+        );
+        assert_eq!(expected_ssid, &req.ssid[..]);
+        assert_variant!(&req.credential, fidl_sme::Credential::Password(password) => {
+            assert_eq!(&expected_password[..], &password[..]);
+        });
+        txn.expect("expected a Connect transaction channel")
+            .into_stream()
+            .expect("failed to create a connect txn stream")
     }
 
     fn exchange_disconnect_with_sme(
@@ -1054,12 +1038,13 @@ mod tests {
 
     fn expect_disconnect_req_to_sme(
         exec: &mut fasync::Executor,
-        next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
+        next_req: &mut StreamFuture<ClientSmeRequestStream>,
     ) -> fidl_sme::ClientSmeDisconnectResponder {
-        match poll_sme_req(exec, next_sme_req) {
-            Poll::Ready(ClientSmeRequest::Disconnect { responder }) => responder,
-            _ => panic!("expected a Disconnect request"),
-        }
+        let responder = assert_variant!(
+            poll_sme_req(exec, next_req),
+            Poll::Ready(ClientSmeRequest::Disconnect { responder }) => responder
+        );
+        responder
     }
 
     fn create_ess_store(path: &Path) -> Arc<KnownEssStore> {

@@ -392,7 +392,7 @@ mod tests {
     use super::*;
     extern crate test;
     use test::{black_box, Bencher};
-    use wlan_common::buffer_writer::BufferWriter;
+    use wlan_common::{assert_variant, buffer_writer::BufferWriter};
 
     #[bench]
     fn bench_key_frame_from_bytes(b: &mut Bencher) {
@@ -438,13 +438,7 @@ mod tests {
             0x00,
         ];
         let result = KeyFrameRx::parse(16, &frame[..]);
-        match result {
-            Err(error) => match error {
-                Error::WrongEapolFrame => (),
-                e => panic!("parsing a non-keyframe as a keyframe had wrong failure: {:?}", e),
-            },
-            _ => panic!("parsing a non-keyframe as a keyframe unexpectedly passed"),
-        }
+        assert_variant!(result, Err(Error::WrongEapolFrame));
     }
 
     #[test]
@@ -460,13 +454,7 @@ mod tests {
             0x03, 0x01, 0x02, 0x03, 0x04,
         ];
         let result = KeyFrameRx::parse(16, &frame[..]);
-        match result {
-            Err(error) => match error {
-                Error::FramePadded => (),
-                e => panic!("parsing a too-long keyframe had wrong failure: {:?}", e),
-            },
-            _ => panic!("parsing a too-long keyframe unexpectedly passed"),
-        }
+        assert_variant!(result, Err(Error::FramePadded));
     }
 
     #[test]
@@ -482,13 +470,7 @@ mod tests {
             0x03, 0x01,
         ];
         let result = KeyFrameRx::parse(16, &frame[..]);
-        match result {
-            Err(error) => match error {
-                Error::FrameTruncated => (),
-                e => panic!("parsing a too-short keyframe had wrong failure: {:?}", e),
-            },
-            _ => panic!("parsing a too-short keyframe unexpectedly passed"),
-        }
+        assert_variant!(result, Err(Error::FrameTruncated));
     }
 
     #[test]
@@ -504,13 +486,7 @@ mod tests {
             0x03, 0x01, 0x02, 0x03,
         ];
         let result = KeyFrameRx::parse(16, &frame[..]);
-        match result {
-            Err(error) => match error {
-                Error::WrongPacketBodyLength(0xff, 0x62) => (),
-                e => panic!("parsing a bad packet body length had wrong error: {:?}", e),
-            },
-            _ => panic!("parsing a bad packet body length unexpectedly passed"),
-        }
+        assert_variant!(result, Err(Error::WrongPacketBodyLength(0xff, 0x62)));
     }
 
     #[test]
@@ -526,11 +502,7 @@ mod tests {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x03, 0x01, 0x02, 0x03,
         ];
-        let result = KeyFrameRx::parse(32, &frame[..]);
-        match result {
-            Err(e) => panic!("parsing keyframe failed: {}", e),
-            Ok(_) => (),
-        }
+        KeyFrameRx::parse(32, &frame[..]).expect("parsing keyframe failed");
     }
 
     #[test]
@@ -545,11 +517,7 @@ mod tests {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x03, 0x01, 0x02, 0x03,
         ];
-        let result = KeyFrameRx::parse(16, &frame[..]);
-        let keyframe = match result {
-            Err(e) => panic!("parsing keyframe failed: {}", e),
-            Ok(keyframe) => keyframe,
-        };
+        let keyframe = KeyFrameRx::parse(16, &frame[..]).expect("parsing keyframe failed");
         verify_as_bytes_result(keyframe, false, &frame[..]);
     }
 
@@ -566,11 +534,7 @@ mod tests {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x03, 0x01, 0x02, 0x03,
         ];
-        let result = KeyFrameRx::parse(32, &frame[..]);
-        let keyframe = match result {
-            Err(e) => panic!("parsing keyframe failed: {}", e),
-            Ok(keyframe) => keyframe,
-        };
+        let keyframe = KeyFrameRx::parse(32, &frame[..]).expect("parsing keyframe failed");
         verify_as_bytes_result(keyframe, false, &frame[..]);
     }
 
@@ -587,20 +551,11 @@ mod tests {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x03, 0x01, 0x02, 0x03,
         ];
-        let result = KeyFrameRx::parse(32, &frame[..]);
-        let keyframe = match result {
-            Err(e) => panic!("parsing keyframe failed: {}", e),
-            Ok(keyframe) => keyframe,
-        };
+        let keyframe = KeyFrameRx::parse(32, &frame[..]).expect("parsing keyframe failed");
         let mut buf = [0u8; 40];
         let mut writer = BufferWriter::new(&mut buf[..]);
-        match keyframe.write_into(true, &mut writer) {
-            Err(error) => match error {
-                Error::BufferTooShort => (),
-                e => panic!("writing frame into too-small buffer had wrong error: {:?}", e),
-            },
-            _ => panic!("writing frame into too-small buffer unexpectedly passed"),
-        }
+        let result = keyframe.write_into(true, &mut writer);
+        assert_variant!(result, Err(Error::BufferTooShort));
     }
 
     #[test]
@@ -618,11 +573,7 @@ mod tests {
                 0x0F, 0x10,
                 0x00, 0x03, 0x01, 0x02, 0x03,
             ];
-        let result = KeyFrameRx::parse(16, &frame[..]);
-        let keyframe = match result {
-            Err(e) => panic!("parsing keyframe failed: {}", e),
-            Ok(keyframe) => keyframe,
-        };
+        let keyframe = KeyFrameRx::parse(16, &frame[..]).expect("parsing keyframe failed");
 
         #[rustfmt::skip]
             let expected: Vec<u8> = vec![
@@ -662,10 +613,7 @@ mod tests {
             0x03, 0x01, 0x02, 0x03,
         ];
         let result = KeyFrameRx::parse(16, &frame[..]);
-        let keyframe = match result {
-            Err(e) => panic!("parsing keyframe failed: {}", e),
-            Ok(keyframe) => keyframe,
-        };
+        let keyframe = result.expect("parsing keyframe failed");
         assert_eq!({ keyframe.eapol_fields.version }, ProtocolVersion::IEEE802DOT1X2001);
         assert_eq!({ keyframe.eapol_fields.packet_type }, PacketType::KEY);
         assert_eq!(keyframe.eapol_fields.packet_body_len.to_native(), 98);

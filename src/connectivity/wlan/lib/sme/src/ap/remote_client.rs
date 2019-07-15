@@ -216,6 +216,7 @@ mod tests {
             error::Error,
             sync::{Arc, Mutex},
         },
+        wlan_common::assert_variant,
     };
 
     const AP_ADDR: MacAddr = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66];
@@ -234,14 +235,11 @@ mod tests {
 
         // Verify that remote client sent out an EAPOL.request for the EAPOL frame returned by the
         // Authenticator
-        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
-            MlmeRequest::Eapol(eapol_req) => {
-                assert_eq!(eapol_req.src_addr, AP_ADDR);
-                assert_eq!(eapol_req.dst_addr, CLIENT_ADDR);
-                assert_eq!(eapol_req.data, Vec::<u8>::from(test_utils::eapol_key_frame()));
-            }
-            _ => panic!("expect eapol response sent to MLME"),
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Eapol(eapol_req))) => {
+            assert_eq!(eapol_req.src_addr, AP_ADDR);
+            assert_eq!(eapol_req.dst_addr, CLIENT_ADDR);
+            assert_eq!(eapol_req.data, Vec::<u8>::from(test_utils::eapol_key_frame()));
+        });
 
         // On handling EAPOL indication, authenticator derives some keys and signal that it's done
         let ptk_update = SecAssocUpdate::Key(Key::Ptk(test_utils::ptk()));
@@ -258,44 +256,38 @@ mod tests {
             .expect("expect handle_eapol_ind to succeed");
 
         // Verify that remote client then send out request to set those keys
-        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
-            MlmeRequest::SetKeys(set_keys_req) => {
-                assert_eq!(set_keys_req.keylist.len(), 1);
-                let k = set_keys_req.keylist.get(0).expect("expect key descriptor");
-                assert_eq!(k.key, vec![0xCCu8; test_utils::cipher().tk_bytes().unwrap()]);
-                assert_eq!(k.key_id, 0);
-                assert_eq!(k.key_type, fidl_mlme::KeyType::Pairwise);
-                assert_eq!(k.address, CLIENT_ADDR);
-                assert_eq!(k.rsc, 0);
-                assert_eq!(k.cipher_suite_oui, [0x00, 0x0F, 0xAC]);
-                assert_eq!(k.cipher_suite_type, 4);
-            }
-            _ => panic!("expect set keys req to MLME"),
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::SetKeys(set_keys_req))) => {
+            assert_eq!(set_keys_req.keylist.len(), 1);
+            let k = set_keys_req.keylist.get(0).expect("expect key descriptor");
+            assert_eq!(k.key, vec![0xCCu8; test_utils::cipher().tk_bytes().unwrap()]);
+            assert_eq!(k.key_id, 0);
+            assert_eq!(k.key_type, fidl_mlme::KeyType::Pairwise);
+            assert_eq!(k.address, CLIENT_ADDR);
+            assert_eq!(k.rsc, 0);
+            assert_eq!(k.cipher_suite_oui, [0x00, 0x0F, 0xAC]);
+            assert_eq!(k.cipher_suite_type, 4);
+        });
 
-        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
-            MlmeRequest::SetKeys(set_keys_req) => {
-                assert_eq!(set_keys_req.keylist.len(), 1);
-                let k = set_keys_req.keylist.get(0).expect("expect key descriptor");
-                assert_eq!(k.key, test_utils::gtk_bytes());
-                assert_eq!(k.key_id, 2);
-                assert_eq!(k.key_type, fidl_mlme::KeyType::Group);
-                assert_eq!(k.address, [0xFFu8; 6]);
-                assert_eq!(k.rsc, 0);
-                assert_eq!(k.cipher_suite_oui, [0x00, 0x0F, 0xAC]);
-                assert_eq!(k.cipher_suite_type, 4);
-            }
-            _ => panic!("expect set keys req to MLME"),
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::SetKeys(set_keys_req))) => {
+            assert_eq!(set_keys_req.keylist.len(), 1);
+            let k = set_keys_req.keylist.get(0).expect("expect key descriptor");
+            assert_eq!(k.key, test_utils::gtk_bytes());
+            assert_eq!(k.key_id, 2);
+            assert_eq!(k.key_type, fidl_mlme::KeyType::Group);
+            assert_eq!(k.address, [0xFFu8; 6]);
+            assert_eq!(k.rsc, 0);
+            assert_eq!(k.cipher_suite_oui, [0x00, 0x0F, 0xAC]);
+            assert_eq!(k.cipher_suite_type, 4);
+        });
 
         // Verify that remote client tells MLME to open controlled port
-        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
-            MlmeRequest::SetCtrlPort(set_ctrl_port_req) => {
+        assert_variant!(
+            mlme_stream.try_next(),
+            Ok(Some(MlmeRequest::SetCtrlPort(set_ctrl_port_req))) => {
                 assert_eq!(set_ctrl_port_req.peer_sta_address, CLIENT_ADDR);
                 assert_eq!(set_ctrl_port_req.state, fidl_mlme::ControlledPortState::Open);
             }
-            _ => panic!("expect set ctrl port req to MLME"),
-        }
+        );
     }
 
     #[test]
@@ -307,37 +299,28 @@ mod tests {
         mock_auth.set_initiate_results(vec![update]);
         remote_client.initiate_key_exchange(&mut ctx, 1);
 
-        for i in 1..=4 {
-            match mlme_stream.try_next().unwrap().expect("expect mlme message") {
-                MlmeRequest::Eapol(eapol_req) => {
-                    assert_eq!(eapol_req.src_addr, AP_ADDR);
-                    assert_eq!(eapol_req.dst_addr, CLIENT_ADDR);
-                    assert_eq!(eapol_req.data, Vec::<u8>::from(test_utils::eapol_key_frame()));
-                }
-                _ => panic!("expect eapol response sent to MLME - attempt {}", i),
-            }
+        for _ in 1..=4 {
+            assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Eapol(eapol_req))) => {
+                assert_eq!(eapol_req.src_addr, AP_ADDR);
+                assert_eq!(eapol_req.dst_addr, CLIENT_ADDR);
+                assert_eq!(eapol_req.data, Vec::<u8>::from(test_utils::eapol_key_frame()));
+            });
 
             // Verify timed event was scheduled and use it to trigger timeout
             let (_, timed_event) = time_stream.try_next().unwrap().expect("expect timed event");
-            match timed_event.event {
-                Event::Client { addr, event } => {
-                    assert_eq!(addr, CLIENT_ADDR);
-                    let update = SecAssocUpdate::TxEapolKeyFrame(test_utils::eapol_key_frame());
-                    mock_auth.set_initiate_results(vec![update]);
-                    remote_client.handle_timeout(timed_event.id, event, &mut ctx);
-                }
-                _ => panic!("expect client timed event"),
-            }
+            assert_variant!(timed_event.event, Event::Client { addr, event } => {
+                assert_eq!(addr, CLIENT_ADDR);
+                let update = SecAssocUpdate::TxEapolKeyFrame(test_utils::eapol_key_frame());
+                mock_auth.set_initiate_results(vec![update]);
+                remote_client.handle_timeout(timed_event.id, event, &mut ctx);
+            });
         }
 
         // On the 4th timeout, remote client sends out a deauth request instead
-        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
-            MlmeRequest::Deauthenticate(deauth_req) => {
-                assert_eq!(deauth_req.peer_sta_address, CLIENT_ADDR);
-                assert_eq!(deauth_req.reason_code, fidl_mlme::ReasonCode::FourwayHandshakeTimeout);
-            }
-            _ => panic!("expect deauth req to MLME"),
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Deauthenticate(deauth_req))) => {
+            assert_eq!(deauth_req.peer_sta_address, CLIENT_ADDR);
+            assert_eq!(deauth_req.reason_code, fidl_mlme::ReasonCode::FourwayHandshakeTimeout);
+        });
     }
 
     #[test]
@@ -350,27 +333,20 @@ mod tests {
         remote_client.initiate_key_exchange(&mut ctx, 1);
 
         // Clear out the SetCtrlPort request
-        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
-            MlmeRequest::SetCtrlPort(..) => (), // expected path
-            _ => panic!("expect set ctrl port req to MLME"),
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::SetCtrlPort(_))));
 
         // Verify timed event was scheduled and use it to try to trigger timeout
         let (_, timed_event) = time_stream.try_next().unwrap().expect("expect timed event");
-        match timed_event.event {
-            Event::Client { event, .. } => {
-                let update = SecAssocUpdate::TxEapolKeyFrame(test_utils::eapol_key_frame());
-                mock_auth.set_initiate_results(vec![update]);
-                remote_client.handle_timeout(timed_event.id, event, &mut ctx);
-            }
-            _ => panic!("expect client timed event"),
-        }
+        assert_variant!(timed_event.event, Event::Client { event, .. } => {
+            let update = SecAssocUpdate::TxEapolKeyFrame(test_utils::eapol_key_frame());
+            mock_auth.set_initiate_results(vec![update]);
+            remote_client.handle_timeout(timed_event.id, event, &mut ctx);
+        });
 
         // Since EssSa was already established, timeout did not trigger.
-        match mlme_stream.try_next() {
-            Err(e) => assert_eq!(e.description(), "receiver channel is empty"),
-            _ => panic!("unexpected event in mlme stream"),
-        }
+        assert_variant!(mlme_stream.try_next(), Err(e) => {
+            assert_eq!(e.description(), "receiver channel is empty")
+        });
     }
 
     #[test]
@@ -383,10 +359,9 @@ mod tests {
             dst_addr: AP_ADDR,
             data: vec![0x66u8, 20],
         };
-        match remote_client.handle_eapol_ind(eapol_ind, &mut ctx) {
-            Err(e) => assert_eq!(format!("{}", e), "error parsing EAPoL key frame"),
-            _ => panic!("expect handle_eapol_ind to fail"),
-        }
+        assert_variant!(remote_client.handle_eapol_ind(eapol_ind, &mut ctx), Err(e) => {
+            assert_eq!(format!("{}", e), "error parsing EAPoL key frame")
+        });
     }
 
     #[test]

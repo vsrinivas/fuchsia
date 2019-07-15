@@ -70,6 +70,7 @@ mod tests {
     use super::*;
     use fuchsia_zircon::prelude::DurationNum;
     use std::error::Error;
+    use wlan_common::assert_variant;
 
     type Event = u32;
     impl TimeoutDuration for Event {
@@ -96,10 +97,9 @@ mod tests {
         assert_eq!(event2.id, 1);
         assert_eq!(event2.event, 9);
 
-        match time_stream.try_next() {
-            Err(e) => assert_eq!(e.description(), "receiver channel is empty"),
-            _ => panic!("unexpected event in time stream"),
-        }
+        assert_variant!(time_stream.try_next(), Err(e) => {
+            assert_eq!(e.description(), "receiver channel is empty")
+        });
     }
 
     #[test]

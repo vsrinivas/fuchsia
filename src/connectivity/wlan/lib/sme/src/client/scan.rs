@@ -357,6 +357,7 @@ mod tests {
     use crate::client::test_utils::{fake_bss_with_bssid, fake_unprotected_bss_description};
     use crate::clone_utils::clone_bss_desc;
     use crate::test_utils;
+    use wlan_common::assert_variant;
 
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 
@@ -388,13 +389,11 @@ mod tests {
             code: fidl_mlme::ScanResultCodes::Success,
         });
         assert!(req.is_none());
-        let result = match result {
-            ScanResult::DiscoveryFinished { tokens, result } => {
-                assert_eq!(vec![10], tokens);
-                result
-            }
-            _ => panic!("expected ScanResult::DiscoveryFinished"),
-        };
+        let (tokens, result) = assert_variant!(result,
+            ScanResult::DiscoveryFinished { tokens, result } => (tokens, result),
+            "expected discovery scan to be completed"
+        );
+        assert_eq!(vec![10], tokens);
         let mut ssid_list = result
             .expect("expected a successful scan result")
             .into_iter()
@@ -526,13 +525,11 @@ mod tests {
         expected_tokens: Vec<i32>,
         expected_ssids: Vec<Vec<u8>>,
     ) {
-        let result = match result {
-            ScanResult::DiscoveryFinished { tokens, result } => {
-                assert_eq!(tokens, expected_tokens);
-                result
-            }
-            _ => panic!("expected ScanResult::DiscoveryFinished"),
-        };
+        let (tokens, result) = assert_variant!(result,
+            ScanResult::DiscoveryFinished { tokens, result } => (tokens, result),
+            "expected discovery scan to be completed"
+        );
+        assert_eq!(tokens, expected_tokens);
         let mut ssid_list = result
             .expect("expected a successful scan result")
             .into_iter()
@@ -574,13 +571,13 @@ mod tests {
             code: fidl_mlme::ScanResultCodes::Success,
         });
         assert!(req.is_none());
-        match result {
-            ScanResult::JoinScanFinished { token, result } => {
-                assert_eq!(10, token);
+        assert_variant!(
+            result,
+            ScanResult::JoinScanFinished { token: 10, result } => {
                 assert_eq!(result, Ok(vec![bss1, bss4]));
-            }
-            _ => panic!("expected ScanResult::ReadyToJoin"),
-        };
+            },
+            "expected join scan to be completed"
+        );
     }
 
     #[test]

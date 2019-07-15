@@ -103,8 +103,7 @@ mod tests {
         let always_pending = stream::poll_fn(|_lw| Poll::Pending::<Option<Result<(), Void>>>);
         let mut group_available = always_pending.group_available();
         let mut fut = group_available.try_next();
-        let a = exec.run_until_stalled(&mut fut);
-        assert!(a.is_pending());
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
     }
 
     #[test]

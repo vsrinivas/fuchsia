@@ -525,6 +525,7 @@ mod tests {
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use std::error::Error;
     use wlan_common::{
+        assert_variant,
         channel::{Cbw, Phy},
         RadioConfig,
     };
@@ -589,10 +590,9 @@ mod tests {
         let client = Client::default();
         sme.on_mlme_event(client.create_auth_ind(fidl_mlme::AuthenticationTypes::OpenSystem));
 
-        match mlme_stream.try_next() {
-            Err(e) => assert_eq!(e.description(), "receiver channel is empty"),
-            _ => panic!("unexpected event in mlme stream"),
-        }
+        assert_variant!(mlme_stream.try_next(), Err(e) => {
+            assert_eq!(e.description(), "receiver channel is empty");
+        });
     }
 
     #[test]
@@ -600,8 +600,7 @@ mod tests {
         let (mut sme, mut mlme_stream, _) = create_sme();
         let mut receiver = sme.on_start_command(unprotected_config());
 
-        let msg = mlme_stream.try_next().unwrap().expect("expect mlme message");
-        if let MlmeRequest::Start(start_req) = msg {
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Start(start_req))) => {
             assert_eq!(start_req.ssid, SSID.to_vec());
             assert_eq!(start_req.bss_type, fidl_mlme::BssTypes::Infrastructure);
             assert_ne!(start_req.beacon_period, 0);
@@ -611,9 +610,7 @@ mod tests {
                 unprotected_config().radio_cfg.primary_chan.expect("invalid config")
             );
             assert!(start_req.rsne.is_none());
-        } else {
-            panic!("expect start AP request to MLME");
-        }
+        });
 
         assert_eq!(Ok(None), receiver.try_recv());
         sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCodes::Success));
@@ -675,10 +672,9 @@ mod tests {
         let (mut sme, mut mlme_stream, _) = start_unprotected_ap();
         let mut receiver = sme.on_stop_command();
 
-        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
-            MlmeRequest::Stop(stop_req) => assert_eq!(stop_req.ssid, SSID.to_vec()),
-            _ => panic!("expect stop AP request to MLME"),
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Stop(stop_req))) => {
+            assert_eq!(stop_req.ssid, SSID.to_vec());
+        });
         assert_eq!(Ok(Some(())), receiver.try_recv());
     }
 
@@ -752,10 +748,9 @@ mod tests {
             let mut fake_event = event.clone();
             fake_event.id += 1;
             sme.on_timeout(fake_event);
-            match mlme_stream.try_next() {
-                Err(e) => assert_eq!(e.description(), "receiver channel is empty"),
-                _ => panic!("unexpected event in mlme stream"),
-            }
+            assert_variant!(mlme_stream.try_next(), Err(e) => {
+                assert_eq!(e.description(), "receiver channel is empty")
+            });
             sme.on_timeout(event);
         }
 
@@ -925,13 +920,7 @@ mod tests {
             mlme_stream: &mut crate::MlmeStream,
         ) {
             sme.on_mlme_event(self.create_auth_ind(fidl_mlme::AuthenticationTypes::OpenSystem));
-
-            let msg = mlme_stream.try_next().unwrap().expect("expect mlme message");
-            if let MlmeRequest::AuthResponse(..) = msg {
-                // expected path
-            } else {
-                panic!("expect auth response to MLME");
-            }
+            assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::AuthResponse(..))));
         }
 
         fn associate_and_drain_mlme(
@@ -941,13 +930,7 @@ mod tests {
             rsne: Option<Vec<u8>>,
         ) {
             sme.on_mlme_event(self.create_assoc_ind(rsne));
-
-            let msg = mlme_stream.try_next().unwrap().expect("expect mlme message");
-            if let MlmeRequest::AssocResponse(..) = msg {
-                // expected path
-            } else {
-                panic!("expect auth response to MLME");
-            }
+            assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::AssocResponse(..))));
         }
 
         fn create_auth_ind(&self, auth_type: fidl_mlme::AuthenticationTypes) -> MlmeEvent {
@@ -972,13 +955,11 @@ mod tests {
             mlme_stream: &mut MlmeStream,
             result_code: fidl_mlme::AuthenticateResultCodes,
         ) {
-            let msg = mlme_stream.try_next().unwrap().expect("expect mlme message");
-            if let MlmeRequest::AuthResponse(auth_resp) = msg {
+            let msg = mlme_stream.try_next();
+            assert_variant!(msg, Ok(Some(MlmeRequest::AuthResponse(auth_resp))) => {
                 assert_eq!(auth_resp.peer_sta_address, self.addr);
                 assert_eq!(auth_resp.result_code, result_code);
-            } else {
-                panic!("expect auth response to MLME");
-            }
+            });
         }
 
         fn verify_assoc_resp(
@@ -987,25 +968,20 @@ mod tests {
             aid: AssociationId,
             result_code: fidl_mlme::AssociateResultCodes,
         ) {
-            let msg = mlme_stream.try_next().unwrap().expect("expect mlme message");
-            if let MlmeRequest::AssocResponse(assoc_resp) = msg {
+            let msg = mlme_stream.try_next();
+            assert_variant!(msg, Ok(Some(MlmeRequest::AssocResponse(assoc_resp))) => {
                 assert_eq!(assoc_resp.peer_sta_address, self.addr);
                 assert_eq!(assoc_resp.association_id, aid);
                 assert_eq!(assoc_resp.result_code, result_code);
-            } else {
-                panic!("expect assoc response to MLME");
-            }
+            });
         }
 
         fn verify_eapol_req(&self, mlme_stream: &mut MlmeStream) {
-            let msg = mlme_stream.try_next().unwrap().expect("expect mlme message");
-            if let MlmeRequest::Eapol(eapol_req) = msg {
+            assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Eapol(eapol_req))) => {
                 assert_eq!(eapol_req.src_addr, AP_ADDR);
                 assert_eq!(eapol_req.dst_addr, self.addr);
                 assert!(eapol_req.data.len() > 0);
-            } else {
-                panic!("expect eapol request to MLME");
-            }
+            });
         }
 
         fn verify_deauth_req(
@@ -1013,13 +989,11 @@ mod tests {
             mlme_stream: &mut MlmeStream,
             reason_code: fidl_mlme::ReasonCode,
         ) {
-            let msg = mlme_stream.try_next().unwrap().expect("expect mlme message");
-            if let MlmeRequest::Deauthenticate(deauth_req) = msg {
+            let msg = mlme_stream.try_next();
+            assert_variant!(msg, Ok(Some(MlmeRequest::Deauthenticate(deauth_req))) => {
                 assert_eq!(deauth_req.peer_sta_address, self.addr);
                 assert_eq!(deauth_req.reason_code, reason_code);
-            } else {
-                panic!("expect deauthenticate request to MLME");
-            }
+            });
         }
     }
 
@@ -1035,10 +1009,7 @@ mod tests {
         let (mut sme, mut mlme_stream, mut time_stream) = create_sme();
         let config = if protected { protected_config() } else { unprotected_config() };
         let mut receiver = sme.on_start_command(config);
-        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
-            MlmeRequest::Start(..) => {} // expected path
-            _ => panic!("expect start AP to MLME"),
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Start(..))));
         // drain time stream
         while let Ok(..) = time_stream.try_next() {}
         sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCodes::Success));

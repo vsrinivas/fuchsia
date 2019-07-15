@@ -17,6 +17,7 @@ pub mod tests {
         hex,
         std::panic,
         wlan_common::{
+            assert_variant,
             channel::{Cbw, Phy},
             mac, RadioConfig,
         },
@@ -100,15 +101,14 @@ pub mod tests {
                 if let Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) =
                     mac::MacFrame::parse(&args.packet.data[..], false)
                 {
-                    match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
+                    assert_variant!(
+                        mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body),
                         Some(mac::MgmtBody::Authentication { auth_hdr, .. }) => {
                             assert_eq!({ auth_hdr.status_code }, mac::StatusCode::SUCCESS);
                             sender.try_send(()).unwrap();
-                        }
-                        other => {
-                            panic!("expected authentication frame, got {:?}", other);
-                        }
-                    }
+                        },
+                        "expected authentication frame"
+                    );
                 }
             }
             _ => {}
@@ -161,15 +161,15 @@ pub mod tests {
         device_watch_stream: &mut fidl_wlan_service::DeviceWatcherEventStream,
     ) -> u16 {
         loop {
-            match await!(device_watch_stream.next()) {
+            assert_variant!(
+                await!(device_watch_stream.next()),
                 Some(Ok(event)) => match event {
                     fidl_wlan_service::DeviceWatcherEvent::OnIfaceAdded { iface_id } => {
                         return iface_id;
                     }
                     _ => (),
-                },
-                _ => panic!("failed to get watch stream event"),
-            }
+                }
+            );
         }
     }
 

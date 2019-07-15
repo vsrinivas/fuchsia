@@ -222,6 +222,7 @@ pub fn parse_vendor_ie<B: ByteSlice>(raw_body: B) -> FrameParseResult<VendorIe<B
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::assert_variant;
 
     #[test]
     pub fn ssid_ok() {
@@ -928,12 +929,9 @@ mod tests {
             0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 AKM: PSK
         ];
         let wpa_ie = parse_vendor_ie(&raw_body[..]).expect("failed to parse wpa vendor ie");
-        match wpa_ie {
-            VendorIe::MsftLegacyWpa(wpa_body) => {
-                parse_wpa_ie(&wpa_body[..]).expect("failed to parse wpa vendor ie")
-            }
-            _ => panic!("parsed wpa ie as wrong type"),
-        };
+        assert_variant!(wpa_ie, VendorIe::MsftLegacyWpa(wpa_body) => {
+            parse_wpa_ie(&wpa_body[..]).expect("failed to parse wpa vendor ie")
+        });
     }
 
     #[test]
@@ -947,12 +945,9 @@ mod tests {
         // parse_vendor_ie does not validate the actual wpa ie body, so this
         // succeeds.
         let wpa_ie = parse_vendor_ie(&raw_body[..]).expect("failed to parse wpa vendor ie");
-        match wpa_ie {
-            VendorIe::MsftLegacyWpa(wpa_body) => {
-                parse_wpa_ie(&wpa_body[..]).expect_err("parsed truncated wpa ie")
-            }
-            _ => panic!("parsed wpa ie as wrong type"),
-        };
+        assert_variant!(wpa_ie, VendorIe::MsftLegacyWpa(wpa_body) => {
+            parse_wpa_ie(&wpa_body[..]).expect_err("parsed truncated wpa ie")
+        });
     }
 
     #[test]
@@ -965,19 +960,13 @@ mod tests {
             0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 AKM: PSK
         ];
         let ie = parse_vendor_ie(&raw_body[..]).expect("failed to parse ie");
-        match ie {
-            VendorIe::Unknown { .. } => (),
-            _ => panic!("parsed unknown msft as wrong type"),
-        }
+        assert_variant!(ie, VendorIe::Unknown { .. });
     }
 
     #[test]
     fn parse_unknown_vendor_ie() {
         let raw_body: Vec<u8> = vec![0x00, 0x12, 0x34]; // Made up OUI
         let ie = parse_vendor_ie(&raw_body[..]).expect("failed to parse wpa vendor ie");
-        match ie {
-            VendorIe::Unknown { .. } => (),
-            _ => panic!("parsed unknown msft as wrong type"),
-        }
+        assert_variant!(ie, VendorIe::Unknown { .. });
     }
 }

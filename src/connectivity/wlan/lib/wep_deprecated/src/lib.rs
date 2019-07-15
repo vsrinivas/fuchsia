@@ -10,7 +10,7 @@ use {
     wlan_common::ie::rsn::{cipher, suite_selector::OUI},
 };
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Fail, PartialEq)]
 pub enum Error {
     #[fail(display = "error deriving WEP key from given hex input: {}", _0)]
     InvalidHexInput(#[cause] hex::FromHexError),
@@ -18,7 +18,7 @@ pub enum Error {
     InvalidInputLength,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Key {
     Bits40([u8; 5]),
     Bits104([u8; 13]),
@@ -109,28 +109,16 @@ mod tests {
         derive_key(&[1; 3]).expect_err("expected failure for invalid WEP key");
 
         // WEP-40 ASCII:
-        match derive_key(&[1; 5]) {
-            Ok(Key::Bits40(key)) => assert_eq!(key, [1; 5]),
-            other => panic!("expected WEP-40 key, got: {:?}", other),
-        };
+        assert_eq!(derive_key(&[1; 5]), Ok(Key::Bits40([1; 5])));
 
         // WEP-104 ASCII:
-        match derive_key(&[1; 13]) {
-            Ok(Key::Bits104(key)) => assert_eq!(key, [1; 13]),
-            other => panic!("expected WEP-104 key, got: {:?}", other),
-        };
+        assert_eq!(derive_key(&[1; 13]), Ok(Key::Bits104([1; 13])));
 
         // WEP-40 HEX:
-        match derive_key(&[65; 10]) {
-            Ok(Key::Bits40(key)) => assert_eq!(key, [0xAA; 5]),
-            other => panic!("expected WEP-40 key, got: {:?}", other),
-        };
+        assert_eq!(derive_key(&[65; 10]), Ok(Key::Bits40([0xAA; 5])));
 
         // WEP-104 HEX:
-        match derive_key(&[65; 26]) {
-            Ok(Key::Bits104(key)) => assert_eq!(key, [0xAA; 13]),
-            other => panic!("expected WEP-104 key, got: {:?}", other),
-        };
+        assert_eq!(derive_key(&[65; 26]), Ok(Key::Bits104([0xAA; 13])));
 
         // Invalid HEX characters:
         derive_key(&[75; 26]).expect_err("cannot derive WEP key from invalid hex string");

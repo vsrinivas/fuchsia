@@ -103,6 +103,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use wlan_common::assert_variant;
 
     #[test]
     fn insert_remove_get() {
@@ -136,34 +137,19 @@ mod tests {
     fn events() {
         let (map, mut recv) = WatchableMap::new();
         map.insert(3u16, "foo");
-        match recv.try_next() {
-            Ok(Some(MapEvent::KeyInserted(3u16))) => {}
-            other => panic!("expected KeyInserted(3), got {:?}", other),
-        }
+        assert_variant!(recv.try_next(), Ok(Some(MapEvent::KeyInserted(3u16))));
 
         map.request_snapshot();
-        let snapshot_one = match recv.try_next() {
-            Ok(Some(MapEvent::Snapshot(s))) => s,
-            other => panic!("expected Snapshot, got {:?}", other),
-        };
+        let snapshot_one = assert_variant!(recv.try_next(), Ok(Some(MapEvent::Snapshot(s))) => s);
 
         map.remove(&3u16);
-        match recv.try_next() {
-            Ok(Some(MapEvent::KeyRemoved(3u16))) => {}
-            other => panic!("expected KeyRemoved(3), got {:?}", other),
-        }
+        assert_variant!(recv.try_next(), Ok(Some(MapEvent::KeyRemoved(3u16))));
 
         map.insert(4u16, "bar");
-        match recv.try_next() {
-            Ok(Some(MapEvent::KeyInserted(4u16))) => {}
-            other => panic!("expected KeyInserted(4), got {:?}", other),
-        }
+        assert_variant!(recv.try_next(), Ok(Some(MapEvent::KeyInserted(4u16))));
 
         map.request_snapshot();
-        let snapshot_two = match recv.try_next() {
-            Ok(Some(MapEvent::Snapshot(s))) => s,
-            other => panic!("expected Snapshot, got {:?}", other),
-        };
+        let snapshot_two = assert_variant!(recv.try_next(), Ok(Some(MapEvent::Snapshot(s))) => s);
 
         assert!(recv.try_next().is_err());
 

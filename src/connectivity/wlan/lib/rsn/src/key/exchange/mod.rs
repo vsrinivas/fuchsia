@@ -132,7 +132,7 @@ pub fn compute_mic<B: ByteSlice>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wlan_common::ie::rsn::akm::PSK;
+    use wlan_common::{assert_variant, ie::rsn::akm::PSK};
 
     fn fake_key_frame(mic_len: usize) -> eapol::KeyFrameTx {
         let key_info = eapol::KeyInformation(0).with_key_mic(true);
@@ -159,12 +159,8 @@ mod tests {
             .serialize()
             .finalize_with_mic(&[0u8; 16][..])
             .expect("failed to create fake key frame");
-        let err = compute_mic(&KCK[..], &Akm::new_dot11(200), &frame.keyframe())
-            .expect_err("expected failure with unsupported AKM");
-        match err {
-            Error::UnsupportedAkmSuite => (),
-            other => panic!("received unexpected error type: {}", other),
-        }
+        let result = compute_mic(&KCK[..], &Akm::new_dot11(200), &frame.keyframe());
+        assert_variant!(result, Err(Error::UnsupportedAkmSuite));
     }
 
     #[test]
@@ -174,12 +170,8 @@ mod tests {
         frame.key_frame_fields.set_key_info(eapol::KeyInformation(0));
         let frame =
             frame.serialize().finalize_without_mic().expect("failed to create fake key frame");
-        let err = compute_mic(&KCK[..], &Akm::new_dot11(PSK), &frame.keyframe())
-            .expect_err("expected failure with MIC bit not being set");
-        match err {
-            Error::ComputingMicForUnprotectedFrame => (),
-            other => panic!("received unexpected error type: {}", other),
-        }
+        let result = compute_mic(&KCK[..], &Akm::new_dot11(PSK), &frame.keyframe());
+        assert_variant!(result, Err(Error::ComputingMicForUnprotectedFrame));
     }
 
     #[test]
@@ -189,12 +181,8 @@ mod tests {
             .serialize()
             .finalize_with_mic(&[][..])
             .expect("failed to create fake key frame");
-        let err = compute_mic(&KCK[..], &Akm::new_dot11(PSK), &frame.keyframe())
-            .expect_err("expected failure with different MIC sizes");
-        match err {
-            Error::MicSizesDiffer(0, 16) => (),
-            other => panic!("received unexpected error type: {}", other),
-        }
+        let result = compute_mic(&KCK[..], &Akm::new_dot11(PSK), &frame.keyframe());
+        assert_variant!(result, Err(Error::MicSizesDiffer(0, 16)));
     }
 
     #[test]

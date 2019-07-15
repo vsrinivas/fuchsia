@@ -430,7 +430,7 @@ pub type UpdateSink = Vec<SecAssocUpdate>;
 mod tests {
     use super::*;
     use crate::rsna::{test_util, NegotiatedProtection, Role};
-    use wlan_common::ie::rsn::{akm, cipher, rsne::Rsne, suite_selector::OUI};
+    use wlan_common::{assert_variant, ie::rsn::{akm, cipher, rsne::Rsne, suite_selector::OUI}};
 
     #[test]
     fn test_negotiated_protection_from_rsne() {
@@ -505,10 +505,9 @@ mod tests {
         let negotiated_protection = NegotiatedProtection::from_rsne(&rsne)
             .expect("error, could not create negotiated RSNE")
             .to_full_protection();
-        match negotiated_protection {
-            ProtectionInfo::Rsne(negotiated_protection) => assert_eq!(negotiated_protection, rsne),
-            _ => panic!("error, negotiated RSNE turned into a different protection type"),
-        }
+        assert_variant!(negotiated_protection, ProtectionInfo::Rsne(actual_protection) => {
+            assert_eq!(actual_protection, rsne);
+        });
     }
 
     #[test]
@@ -517,12 +516,9 @@ mod tests {
         let negotiated_protection = NegotiatedProtection::from_legacy_wpa(&wpa_ie)
             .expect("error, could not create negotiated WPA")
             .to_full_protection();
-        match negotiated_protection {
-            ProtectionInfo::LegacyWpa(negotiated_protection) => {
-                assert_eq!(negotiated_protection, wpa_ie)
-            }
-            _ => panic!("error, negotiated WPA turned into a different protection type"),
-        }
+        assert_variant!(negotiated_protection, ProtectionInfo::LegacyWpa(actual_protection) => {
+            assert_eq!(actual_protection, wpa_ie);
+        });
     }
 
     fn make_cipher(suite_type: u8) -> cipher::Cipher {

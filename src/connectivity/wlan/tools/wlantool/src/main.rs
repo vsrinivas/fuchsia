@@ -86,7 +86,8 @@ async fn do_phy(cmd: opts::PhyCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
             let mut alpha2 = [0u8; 2];
             alpha2.copy_from_slice(country.as_bytes());
             let mut req = wlan_service::SetCountryRequest { phy_id, alpha2 };
-            let response = await!(wlan_svc.set_country(&mut req)).context("error setting country")?;
+            let response =
+                await!(wlan_svc.set_country(&mut req)).context("error setting country")?;
             println!("response: {:?}", zx::Status::from_raw(response));
         }
     }
@@ -631,7 +632,10 @@ fn print_minstrel_stats(mut peer: Box<Peer>) {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fidl::endpoints::create_proxy, futures::task::Poll, pin_utils::pin_mut};
+    use {
+        super::*, fidl::endpoints::create_proxy, futures::task::Poll, pin_utils::pin_mut,
+        wlan_common::assert_variant,
+    };
 
     #[test]
     fn format_bssid() {
@@ -689,22 +693,16 @@ mod tests {
         let del_fut = do_iface(IfaceCmd::Delete { iface_id: 5 }, wlansvc_local);
         pin_mut!(del_fut);
 
-        match exec.run_until_stalled(&mut del_fut) {
-            Poll::Pending => (),
-            _ => panic!("expected pending iface destruction"),
-        };
-
-        let responder = match exec.run_until_stalled(&mut wlansvc_stream.next()) {
+        assert_variant!(exec.run_until_stalled(&mut del_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut wlansvc_stream.next()),
             Poll::Ready(Some(Ok(wlan_service::DeviceServiceRequest::DestroyIface {
-                req,
-                responder,
+                req, responder
             }))) => {
                 assert_eq!(req.iface_id, 5);
-                responder
+                responder.send(zx::Status::OK.into_raw()).expect("failed to send response");
             }
-            _ => panic!("wlansvc_stream returned unexpected result"),
-        };
-        responder.send(zx::Status::OK.into_raw()).expect("failed to send response");
+        );
     }
 
     #[test]
@@ -725,26 +723,20 @@ mod tests {
         let (wlansvc_local, wlansvc_remote) =
             create_proxy::<DeviceServiceMarker>().expect("failed to create DeviceService service");
         let mut wlansvc_stream = wlansvc_remote.into_stream().expect("failed to create stream");
-        let fut = do_phy(PhyCmd::SetCountry { phy_id: 45, country: "RS".to_string() },
-                         wlansvc_local);
+        let fut =
+            do_phy(PhyCmd::SetCountry { phy_id: 45, country: "RS".to_string() }, wlansvc_local);
         pin_mut!(fut);
 
-        match exec.run_until_stalled(&mut fut) {
-            Poll::Pending => (),
-            _ => panic!("expected pending set_country"),
-        };
-
-        let responder = match exec.run_until_stalled(&mut wlansvc_stream.next()) {
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut wlansvc_stream.next()),
             Poll::Ready(Some(Ok(wlan_service::DeviceServiceRequest::SetCountry {
-                                    req,
-                                    responder,
-                                }))) => {
+                req, responder,
+            }))) => {
                 assert_eq!(req.phy_id, 45);
                 assert_eq!(req.alpha2, "RS".as_bytes());
-                responder
+                responder.send(zx::Status::OK.into_raw()).expect("failed to send response");
             }
-            _ => panic!("wlansvc_stream returned unexpected result"),
-        };
-        responder.send(zx::Status::OK.into_raw()).expect("failed to send response");
+        );
     }
 }

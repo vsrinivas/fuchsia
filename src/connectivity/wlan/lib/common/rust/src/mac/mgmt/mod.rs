@@ -48,7 +48,7 @@ impl<B: ByteSlice> MgmtBody<B> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::mac::*};
+    use {super::*, crate::assert_variant, crate::mac::*};
 
     #[test]
     fn mgmt_hdr_len() {
@@ -65,14 +65,15 @@ mod tests {
             3,3, // capabilities
             0,5,1,2,3,4,5 // SSID IE: "12345"
         ];
-        match MgmtBody::parse(MgmtSubtype::BEACON, &bytes[..]) {
+        assert_variant!(
+            MgmtBody::parse(MgmtSubtype::BEACON, &bytes[..]),
             Some(MgmtBody::Beacon { bcn_hdr, elements }) => {
                 assert_eq!(0x0101010101010101, { bcn_hdr.timestamp });
                 assert_eq!(0x0202, { bcn_hdr.beacon_interval });
                 assert_eq!(0x0303, { bcn_hdr.capabilities.0 });
                 assert_eq!(&[0, 5, 1, 2, 3, 4, 5], &elements[..]);
-            }
-            _ => panic!("failed parsing beacon frame"),
-        };
+            },
+            "expected beacon frame"
+        );
     }
 }

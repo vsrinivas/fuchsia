@@ -9,7 +9,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
 };
-use wlan_common::ie::rsn::rsne::RsnCapabilities;
+use wlan_common::{assert_variant, ie::rsn::rsne::RsnCapabilities};
 use wlan_rsn::rsna::UpdateSink;
 
 use crate::{
@@ -96,11 +96,7 @@ pub fn fake_chan(primary: u8) -> fidl_common::WlanChan {
 }
 
 pub fn expect_info_event(info_stream: &mut InfoStream, expected_event: InfoEvent) {
-    if let Ok(Some(e)) = info_stream.try_next() {
-        assert_eq!(e, expected_event);
-    } else {
-        panic!("expect event to InfoSink");
-    }
+    assert_variant!(info_stream.try_next(), Ok(Some(e)) => assert_eq!(e, expected_event));
 }
 
 pub fn mock_supplicant() -> (MockSupplicant, MockSupplicantController) {

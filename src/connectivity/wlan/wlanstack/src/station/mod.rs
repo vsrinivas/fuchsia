@@ -151,6 +151,7 @@ mod tests {
         futures::channel::mpsc::{self, UnboundedSender},
         futures::Poll,
         pin_utils::pin_mut,
+        wlan_common::assert_variant,
     };
 
     type Event = u32;
@@ -169,10 +170,8 @@ mod tests {
 
             let mut events = vec![];
             for _ in 0u32..4 {
-                match await!(timeout_stream.next()) {
-                    Some(event) => events.push(event.event),
-                    None => panic!("timer terminates prematurely"),
-                }
+                let event = await!(timeout_stream.next()).expect("timer terminated prematurely");
+                events.push(event.event);
             }
             events
         };
@@ -181,10 +180,10 @@ mod tests {
             assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
             assert!(exec.wake_next_timer().is_some());
         }
-        match exec.run_until_stalled(&mut fut) {
+        assert_variant!(
+            exec.run_until_stalled(&mut fut),
             Poll::Ready(events) => assert_eq!(events, vec![1, 2, 3, 0]),
-            Poll::Pending => panic!("expect future to complete"),
-        }
+        );
     }
 
     fn schedule(timer: &UnboundedSender<TimeEntry<Event>>, deadline: zx::Time, event: Event) {

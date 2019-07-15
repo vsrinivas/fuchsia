@@ -128,12 +128,16 @@ fn round_up<T: Unsigned + Copy>(value: T, multiple: T) -> T {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::test_utils::fake_frames::*};
+    use {
+        super::*,
+        crate::{assert_variant, test_utils::fake_frames::*},
+    };
 
     #[test]
     fn parse_mgmt_frame() {
         let bytes = make_mgmt_frame(false);
-        match MacFrame::parse(&bytes[..], false) {
+        assert_variant!(
+            MacFrame::parse(&bytes[..], false),
             Some(MacFrame::Mgmt { mgmt_hdr, ht_ctrl, body }) => {
                 assert_eq!(0x0101, { mgmt_hdr.frame_ctrl.0 });
                 assert_eq!(0x0202, { mgmt_hdr.duration });
@@ -143,9 +147,9 @@ mod tests {
                 assert_eq!(0x0606, { mgmt_hdr.seq_ctrl.0 });
                 assert!(ht_ctrl.is_none());
                 assert_eq!(&body[..], &[9, 9, 9]);
-            }
-            _ => panic!("failed parsing mgmt frame"),
-        };
+            },
+            "expected management frame"
+        );
     }
 
     #[test]
@@ -154,16 +158,18 @@ mod tests {
         assert!(MacFrame::parse(&[0; 22][..], false).is_none());
 
         // Unsupported frame type.
-        match MacFrame::parse(&[0xFF; 24][..], false) {
+        assert_variant!(
+            MacFrame::parse(&[0xFF; 24][..], false),
             Some(MacFrame::Unsupported { type_ }) => assert_eq!(3, type_.0),
-            _ => panic!("didn't detect unsupported frame"),
-        };
+            "expected unsupported frame type"
+        );
     }
 
     #[test]
     fn parse_data_frame() {
         let bytes = make_data_frame_single_llc(None, None);
-        match MacFrame::parse(&bytes[..], false) {
+        assert_variant!(
+            MacFrame::parse(&bytes[..], false),
             Some(MacFrame::Data { fixed_fields, addr4, qos_ctrl, ht_ctrl, body }) => {
                 assert_eq!(0b00000000_10001000, { fixed_fields.frame_ctrl.0 });
                 assert_eq!(0x0202, { fixed_fields.duration });
@@ -172,17 +178,12 @@ mod tests {
                 assert_eq!([5, 5, 5, 5, 5, 5], fixed_fields.addr3);
                 assert_eq!(0x0606, { fixed_fields.seq_ctrl.0 });
                 assert!(addr4.is_none());
-                match qos_ctrl {
-                    None => panic!("qos_ctrl expected to be present"),
-                    Some(qos_ctrl) => {
-                        assert_eq!(0x0101, qos_ctrl.get().0);
-                    }
-                };
+                assert_eq!(0x0101, qos_ctrl.expect("qos_ctrl not present").get().0);
                 assert!(ht_ctrl.is_none());
                 assert_eq!(&body[..], &[7, 7, 7, 8, 8, 8, 9, 10, 11, 11, 11]);
-            }
-            _ => panic!("failed parsing data frame"),
-        };
+            },
+            "expected management frame"
+        );
     }
 
     #[test]

@@ -853,7 +853,7 @@ mod tests {
     use futures::channel::{mpsc, oneshot};
     use std::error::Error;
     use std::sync::Arc;
-    use wlan_common::{ie::rsn::rsne::RsnCapabilities, RadioConfig};
+    use wlan_common::{assert_variant, ie::rsn::rsne::RsnCapabilities, RadioConfig};
     use wlan_rsn::{rsna::UpdateSink, NegotiatedProtection};
 
     use crate::client::test_utils::{
@@ -927,13 +927,12 @@ mod tests {
         // (sme->mlme) Expect an SetKeysRequest
         expect_set_wep_key(&mut h.mlme_stream, bssid, vec![3; 5]);
         // (sme->mlme) Expect an AuthenticateRequest
-        match &mut h.mlme_stream.try_next().unwrap() {
-            Some(MlmeRequest::Authenticate(req)) => {
+        assert_variant!(&mut h.mlme_stream.try_next(),
+            Ok(Some(MlmeRequest::Authenticate(req))) => {
                 assert_eq!(fidl_mlme::AuthenticationTypes::SharedKey, req.auth_type);
                 assert_eq!(bssid, req.peer_sta_address);
             }
-            other => panic!("expected an Authenticate request, got {:?}", other),
-        }
+        );
 
         // (mlme->sme) Send an AuthenticateConf as a response
         let auth_conf =
@@ -1171,17 +1170,10 @@ mod tests {
 
         // (mlme->sme) Send an EapolInd with bad eapol data
         let eapol_ind = create_eapol_ind(bssid.clone(), vec![1, 2, 3, 4]);
-        let state = state.on_mlme_event(eapol_ind, &mut h.context);
+        let s = state.on_mlme_event(eapol_ind, &mut h.context);
 
         assert_eq!(Ok(None), receiver.try_recv());
-
-        match state {
-            State::Associated { link_state, .. } => match link_state {
-                LinkState::EstablishingRsna { .. } => (), // expected path
-                _ => panic!("expect link state to still be establishing RSNA"),
-            },
-            _ => panic!("expect state to still be associated"),
-        }
+        assert_variant!(s, State::Associated { link_state: LinkState::EstablishingRsna { .. }, .. });
 
         expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
         expect_stream_empty(&mut h.info_stream, "unexpected event in info stream");
@@ -1199,17 +1191,10 @@ mod tests {
 
         // (mlme->sme) Send an EapolInd
         let eapol_ind = create_eapol_ind(bssid.clone(), test_utils::eapol_key_frame().into());
-        let state = state.on_mlme_event(eapol_ind, &mut h.context);
+        let s = state.on_mlme_event(eapol_ind, &mut h.context);
 
         assert_eq!(Ok(None), receiver.try_recv());
-
-        match state {
-            State::Associated { link_state, .. } => match link_state {
-                LinkState::EstablishingRsna { .. } => (), // expected path
-                _ => panic!("expect link state to still be establishing RSNA"),
-            },
-            _ => panic!("expect state to still be associated"),
-        }
+        assert_variant!(s, State::Associated { link_state: LinkState::EstablishingRsna { .. }, .. });
 
         expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
         expect_stream_empty(&mut h.info_stream, "unexpected event in info stream");
@@ -1229,13 +1214,10 @@ mod tests {
         let state = state.on_mlme_event(eapol_ind, &mut h.context);
 
         // Verify state did not change.
-        match state {
-            State::Associated { link_state, .. } => match link_state {
-                LinkState::LinkUp { protection: Protection::Rsna(_) } => (), // expected path
-                _ => panic!("expected unchanged link state"),
-            },
-            _ => panic!("not associated anymore"),
-        }
+        assert_variant!(state, State::Associated {
+            link_state: LinkState::LinkUp { protection: Protection::Rsna(_) },
+            ..
+        });
     }
 
     #[test]
@@ -1269,10 +1251,7 @@ mod tests {
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
 
         let (_, timed_event) = h.time_stream.try_next().unwrap().expect("expect timed event");
-        match timed_event.event {
-            Event::EstablishingRsnaTimeout => (), // expected path
-            _ => panic!("expect EstablishingRsnaTimeout timeout event"),
-        }
+        assert_variant!(timed_event.event, Event::EstablishingRsnaTimeout);
 
         expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
 
@@ -1300,10 +1279,9 @@ mod tests {
             expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
 
             let (_, timed_event) = h.time_stream.try_next().unwrap().expect("expect timed event");
-            match timed_event.event {
-                Event::KeyFrameExchangeTimeout { attempt, .. } => assert_eq!(attempt, i),
-                _ => panic!("expect EstablishingRsnaTimeout timeout event"),
-            }
+            assert_variant!(timed_event.event, Event::KeyFrameExchangeTimeout { attempt, .. } => {
+                assert_eq!(attempt, i)
+            });
             state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
         }
 
@@ -1327,18 +1305,12 @@ mod tests {
         expect_eapol_req(&mut h.mlme_stream, bssid);
         expect_set_gtk(&mut h.mlme_stream);
         expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
-        match state {
-            State::Associated { link_state: LinkState::LinkUp { .. }, .. } => (), // expected
-            _ => panic!("expect still in link-up state"),
-        }
+        assert_variant!(state, State::Associated { link_state: LinkState::LinkUp { .. }, .. });
 
         // Any timeout is ignored
         let (_, timed_event) = h.time_stream.try_next().unwrap().expect("expect timed event");
         state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
-        match state {
-            State::Associated { link_state: LinkState::LinkUp { .. }, .. } => (), // expected
-            _ => panic!("expect still in link-up state"),
-        }
+        assert_variant!(state, State::Associated { link_state: LinkState::LinkUp { .. }, .. });
     }
 
     #[test]
@@ -1512,12 +1484,9 @@ mod tests {
 
     fn exchange_deauth(state: State, h: &mut TestHelper) -> State {
         // (sme->mlme) Expect a DeauthenticateRequest
-        match h.mlme_stream.try_next().unwrap() {
-            Some(MlmeRequest::Deauthenticate(req)) => {
-                assert_eq!(connect_command_one().0.bss.bssid, req.peer_sta_address);
-            }
-            other => panic!("expected a Deauthenticate request, got {:?}", other),
-        }
+        assert_variant!(h.mlme_stream.try_next(), Ok(Some(MlmeRequest::Deauthenticate(req))) => {
+            assert_eq!(connect_command_one().0.bss.bssid, req.peer_sta_address);
+        });
 
         // (mlme->sme) Send a DeauthenticateConf as a response
         let deauth_conf = MlmeEvent::DeauthenticateConf {
@@ -1530,10 +1499,9 @@ mod tests {
 
     fn expect_join_request(mlme_stream: &mut MlmeStream, ssid: &[u8]) {
         // (sme->mlme) Expect a JoinRequest
-        match mlme_stream.try_next().unwrap() {
-            Some(MlmeRequest::Join(req)) => assert_eq!(ssid, &req.selected_bss.ssid[..]),
-            other => panic!("expect join req to MLME, got {:?}", other),
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(req))) => {
+            assert_eq!(ssid, &req.selected_bss.ssid[..])
+        });
     }
 
     fn expect_set_ctrl_port(
@@ -1541,21 +1509,17 @@ mod tests {
         bssid: [u8; 6],
         state: fidl_mlme::ControlledPortState,
     ) {
-        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
-            MlmeRequest::SetCtrlPort(req) => {
-                assert_eq!(req.peer_sta_address, bssid);
-                assert_eq!(req.state, state);
-            }
-            other => panic!("expected a Join request, got {:?}", other),
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::SetCtrlPort(req))) => {
+            assert_eq!(req.peer_sta_address, bssid);
+            assert_eq!(req.state, state);
+        });
     }
 
     fn expect_auth_req(mlme_stream: &mut MlmeStream, bssid: [u8; 6]) {
         // (sme->mlme) Expect an AuthenticateRequest
-        match mlme_stream.try_next().unwrap() {
-            Some(MlmeRequest::Authenticate(req)) => assert_eq!(bssid, req.peer_sta_address),
-            other => panic!("expected an Authenticate request, got {:?}", other),
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Authenticate(req))) => {
+            assert_eq!(bssid, req.peer_sta_address)
+        });
     }
 
     fn expect_deauth_req(
@@ -1564,82 +1528,66 @@ mod tests {
         reason_code: fidl_mlme::ReasonCode,
     ) {
         // (sme->mlme) Expect a DeauthenticateRequest
-        match mlme_stream.try_next().unwrap() {
-            Some(MlmeRequest::Deauthenticate(req)) => {
-                assert_eq!(bssid, req.peer_sta_address);
-                assert_eq!(reason_code, req.reason_code);
-            }
-            other => panic!("expected an Deauthenticate request, got {:?}", other),
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Deauthenticate(req))) => {
+            assert_eq!(bssid, req.peer_sta_address);
+            assert_eq!(reason_code, req.reason_code);
+        });
     }
 
     fn expect_assoc_req(mlme_stream: &mut MlmeStream, bssid: [u8; 6]) {
-        match mlme_stream.try_next().unwrap() {
-            Some(MlmeRequest::Associate(req)) => assert_eq!(bssid, req.peer_sta_address),
-            other => panic!("expected an Associate request, got {:?}", other),
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Associate(req))) => {
+            assert_eq!(bssid, req.peer_sta_address);
+        });
     }
 
     fn expect_eapol_req(mlme_stream: &mut MlmeStream, bssid: [u8; 6]) {
-        match mlme_stream.try_next().unwrap() {
-            Some(MlmeRequest::Eapol(req)) => {
-                assert_eq!(req.src_addr, fake_device_info().addr);
-                assert_eq!(req.dst_addr, bssid);
-                assert_eq!(req.data, Vec::<u8>::from(test_utils::eapol_key_frame()));
-            }
-            other => panic!("expected an Eapol request, got {:?}", other),
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Eapol(req))) => {
+            assert_eq!(req.src_addr, fake_device_info().addr);
+            assert_eq!(req.dst_addr, bssid);
+            assert_eq!(req.data, Vec::<u8>::from(test_utils::eapol_key_frame()));
+        });
     }
 
     fn expect_set_ptk(mlme_stream: &mut MlmeStream, bssid: [u8; 6]) {
-        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
-            MlmeRequest::SetKeys(set_keys_req) => {
-                assert_eq!(set_keys_req.keylist.len(), 1);
-                let k = set_keys_req.keylist.get(0).expect("expect key descriptor");
-                assert_eq!(k.key, vec![0xCCu8; test_utils::cipher().tk_bytes().unwrap()]);
-                assert_eq!(k.key_id, 0);
-                assert_eq!(k.key_type, fidl_mlme::KeyType::Pairwise);
-                assert_eq!(k.address, bssid);
-                assert_eq!(k.rsc, 0);
-                assert_eq!(k.cipher_suite_oui, [0x00, 0x0F, 0xAC]);
-                assert_eq!(k.cipher_suite_type, 4);
-            }
-            _ => panic!("expect set keys req to MLME"),
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::SetKeys(set_keys_req))) => {
+            assert_eq!(set_keys_req.keylist.len(), 1);
+            let k = set_keys_req.keylist.get(0).expect("expect key descriptor");
+            assert_eq!(k.key, vec![0xCCu8; test_utils::cipher().tk_bytes().unwrap()]);
+            assert_eq!(k.key_id, 0);
+            assert_eq!(k.key_type, fidl_mlme::KeyType::Pairwise);
+            assert_eq!(k.address, bssid);
+            assert_eq!(k.rsc, 0);
+            assert_eq!(k.cipher_suite_oui, [0x00, 0x0F, 0xAC]);
+            assert_eq!(k.cipher_suite_type, 4);
+        });
     }
 
     fn expect_set_gtk(mlme_stream: &mut MlmeStream) {
-        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
-            MlmeRequest::SetKeys(set_keys_req) => {
-                assert_eq!(set_keys_req.keylist.len(), 1);
-                let k = set_keys_req.keylist.get(0).expect("expect key descriptor");
-                assert_eq!(k.key, test_utils::gtk_bytes());
-                assert_eq!(k.key_id, 2);
-                assert_eq!(k.key_type, fidl_mlme::KeyType::Group);
-                assert_eq!(k.address, [0xFFu8; 6]);
-                assert_eq!(k.rsc, 0);
-                assert_eq!(k.cipher_suite_oui, [0x00, 0x0F, 0xAC]);
-                assert_eq!(k.cipher_suite_type, 4);
-            }
-            _ => panic!("expect set keys req to MLME"),
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::SetKeys(set_keys_req))) => {
+            assert_eq!(set_keys_req.keylist.len(), 1);
+            let k = set_keys_req.keylist.get(0).expect("expect key descriptor");
+            assert_eq!(k.key, test_utils::gtk_bytes());
+            assert_eq!(k.key_id, 2);
+            assert_eq!(k.key_type, fidl_mlme::KeyType::Group);
+            assert_eq!(k.address, [0xFFu8; 6]);
+            assert_eq!(k.rsc, 0);
+            assert_eq!(k.cipher_suite_oui, [0x00, 0x0F, 0xAC]);
+            assert_eq!(k.cipher_suite_type, 4);
+        });
     }
 
     fn expect_set_wep_key(mlme_stream: &mut MlmeStream, bssid: [u8; 6], key_bytes: Vec<u8>) {
-        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
-            MlmeRequest::SetKeys(set_keys_req) => {
-                assert_eq!(set_keys_req.keylist.len(), 1);
-                let k = set_keys_req.keylist.get(0).expect("expect key descriptor");
-                assert_eq!(k.key, &key_bytes[..]);
-                assert_eq!(k.key_id, 0);
-                assert_eq!(k.key_type, fidl_mlme::KeyType::Pairwise);
-                assert_eq!(k.address, bssid);
-                assert_eq!(k.rsc, 0);
-                assert_eq!(k.cipher_suite_oui, [0x00, 0x0F, 0xAC]);
-                assert_eq!(k.cipher_suite_type, 1);
-            }
-            _ => panic!("expect set keys req to MLME"),
-        }
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::SetKeys(set_keys_req))) => {
+            assert_eq!(set_keys_req.keylist.len(), 1);
+            let k = set_keys_req.keylist.get(0).expect("expect key descriptor");
+            assert_eq!(k.key, &key_bytes[..]);
+            assert_eq!(k.key_id, 0);
+            assert_eq!(k.key_type, fidl_mlme::KeyType::Pairwise);
+            assert_eq!(k.address, bssid);
+            assert_eq!(k.rsc, 0);
+            assert_eq!(k.cipher_suite_oui, [0x00, 0x0F, 0xAC]);
+            assert_eq!(k.cipher_suite_type, 1);
+        });
     }
 
     fn expect_result<T>(mut receiver: oneshot::Receiver<T>, expected_result: T)
@@ -1650,10 +1598,11 @@ mod tests {
     }
 
     fn expect_stream_empty<T>(stream: &mut mpsc::UnboundedReceiver<T>, error_msg: &str) {
-        match stream.try_next() {
-            Err(e) => assert_eq!(e.description(), "receiver channel is empty"),
-            _ => panic!("{}", error_msg),
-        }
+        assert_variant!(stream.try_next(), Err(e) => {
+                assert_eq!(e.description(), "receiver channel is empty")
+            },
+            format!("error, receiver not empty: {}", error_msg)
+        );
     }
 
     fn connect_command_one() -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
@@ -1713,10 +1662,7 @@ mod tests {
     }
 
     fn assert_idle(state: State) {
-        match &state {
-            State::Idle { cfg } => assert_eq!(state.cfg(), cfg),
-            other => panic!("Expected an Idle state, got {:?}", other),
-        }
+        assert_variant!(&state, State::Idle { cfg } => { assert_eq!(state.cfg(), cfg) });
     }
 
     fn joining_state(cmd: ConnectCommand) -> State {
@@ -1724,13 +1670,10 @@ mod tests {
     }
 
     fn assert_joining(state: State, bss: &BssDescription) {
-        match &state {
-            State::Joining { cfg, cmd } => {
-                assert_eq!(cfg, state.cfg());
-                assert_eq!(cmd.bss.as_ref(), bss);
-            }
-            other => panic!("Expected a Joining state, got {:?}", other),
-        }
+        assert_variant!(&state, State::Joining { cfg, cmd } => {
+            assert_eq!(cfg, state.cfg());
+            assert_eq!(cmd.bss.as_ref(), bss);
+        });
     }
 
     fn authenticating_state(cmd: ConnectCommand) -> State {
@@ -1742,20 +1685,14 @@ mod tests {
     }
 
     fn assert_associating(state: State, bss: &BssDescription) {
-        match &state {
-            State::Associating { cfg, cmd } => {
-                assert_eq!(cfg, state.cfg());
-                assert_eq!(cmd.bss.as_ref(), bss);
-            }
-            other => panic!("Expected an Associating state, got {:?}", other),
-        }
+        assert_variant!(&state, State::Associating { cfg, cmd } => {
+            assert_eq!(cfg, state.cfg());
+            assert_eq!(cmd.bss.as_ref(), bss);
+        });
     }
 
     fn establishing_rsna_state(cmd: ConnectCommand) -> State {
-        let rsna = match cmd.protection {
-            Protection::Rsna(rsna) => rsna,
-            _ => panic!("expect rsna for establishing_rsna_state"),
-        };
+        let rsna = assert_variant!(cmd.protection, Protection::Rsna(rsna) => rsna);
         State::Associated {
             cfg: ClientConfig::default(),
             bss: cmd.bss,

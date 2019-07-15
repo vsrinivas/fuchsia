@@ -63,15 +63,13 @@ mod tests {
         let (sender, receiver) = mpsc::unbounded();
         let mut state_machine = sum_state(0, receiver).into_state_machine();
 
-        let r = exec.run_until_stalled(&mut state_machine);
-        assert_eq!(Poll::Pending, r);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut state_machine));
 
         sender.unbounded_send(2).unwrap();
         sender.unbounded_send(3).unwrap();
         mem::drop(sender);
 
-        let r = exec.run_until_stalled(&mut state_machine);
-        assert_eq!(Poll::Ready(Err(5)), r);
+        assert_eq!(Poll::Ready(Err(5)), exec.run_until_stalled(&mut state_machine));
     }
 
     async fn sum_state(

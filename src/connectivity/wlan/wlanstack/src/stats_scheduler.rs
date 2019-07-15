@@ -60,6 +60,7 @@ mod tests {
     use fidl_fuchsia_wlan_stats::{Counter, DispatcherStats, IfaceStats, PacketCounter};
     use fuchsia_async as fasync;
     use futures::task::Poll;
+    use wlan_common::assert_variant;
 
     #[test]
     fn schedule() {
@@ -76,28 +77,23 @@ mod tests {
         });
         let _ = exec.run_until_stalled(&mut server);
 
-        let res1 = exec.run_until_stalled(&mut fut1);
-        match res1 {
-            Poll::Ready(Ok(r)) => assert_eq!(fake_iface_stats(100), *r.lock()),
-            Poll::Ready(Err(e)) => panic!("request future 1 returned an error: {:?}", e),
-            Poll::Pending => panic!("request future 1 returned 'Pending'"),
-        }
+        assert_variant!(
+            exec.run_until_stalled(&mut fut1),
+            Poll::Ready(Ok(r)) => assert_eq!(fake_iface_stats(100), *r.lock())
+        );
 
-        let res2 = exec.run_until_stalled(&mut fut2);
-        match res2 {
-            Poll::Ready(Ok(r)) => assert_eq!(fake_iface_stats(100), *r.lock()),
-            Poll::Ready(Err(e)) => panic!("request future 2 returned an error: {:?}", e),
-            Poll::Pending => panic!("request future 2 returned 'Pending'"),
-        }
+
+        assert_variant!(
+            exec.run_until_stalled(&mut fut2),
+            Poll::Ready(Ok(r)) => assert_eq!(fake_iface_stats(100), *r.lock())
+        );
 
         let mut fut3 = sched.get_stats();
         let _ = exec.run_until_stalled(&mut server);
-        let res3 = exec.run_until_stalled(&mut fut3);
-        match res3 {
-            Poll::Ready(Ok(r)) => assert_eq!(fake_iface_stats(200), *r.lock()),
-            Poll::Ready(Err(e)) => panic!("request future 3 returned an error: {:?}", e),
-            Poll::Pending => panic!("request future 3 returned 'Pending'"),
-        }
+        assert_variant!(
+            exec.run_until_stalled(&mut fut3),
+            Poll::Ready(Ok(r)) => assert_eq!(fake_iface_stats(200), *r.lock())
+        );
     }
 
     #[test]
@@ -108,13 +104,8 @@ mod tests {
         let mut fut = sched.get_stats();
 
         ::std::mem::drop(req_stream);
-
-        let res = exec.run_until_stalled(&mut fut);
-        if let Poll::Ready(Err(zx::Status::CANCELED)) = res {
-            // OK
-        } else {
-            panic!("canceled error not found");
-        }
+        let fut_result = exec.run_until_stalled(&mut fut);
+        assert_variant!(fut_result, Poll::Ready(Err(zx::Status::CANCELED)));
     }
 
     #[test]
@@ -125,13 +116,8 @@ mod tests {
         ::std::mem::drop(req_stream);
 
         let mut fut = sched.get_stats();
-
-        let res = exec.run_until_stalled(&mut fut);
-        if let Poll::Ready(Err(zx::Status::CANCELED)) = res {
-            // OK
-        } else {
-            panic!("no cancelled error");
-        }
+        let fut_result = exec.run_until_stalled(&mut fut);
+        assert_variant!(fut_result, Poll::Ready(Err(zx::Status::CANCELED)));
     }
 
     fn fake_iface_stats(count: u64) -> IfaceStats {

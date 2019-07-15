@@ -327,6 +327,7 @@ mod tests {
         futures::sink::SinkExt,
         futures::task::Poll,
         pin_utils::pin_mut,
+        wlan_common::assert_variant,
     };
 
     fn fake_device_info() -> DeviceInfo {
@@ -362,44 +363,35 @@ mod tests {
         );
         pin_mut!(serve_fut);
         // Progress to cause query request.
-        match exec.run_until_stalled(&mut serve_fut) {
-            Poll::Pending => (),
-            _ => panic!("expected pending iface creation"),
-        };
+        let fut_result = exec.run_until_stalled(&mut serve_fut);
+        assert_variant!(fut_result, Poll::Pending, "expected pending iface creation");
 
         // The call above should trigger a Query message to the iface.
-        let responder = match exec.run_until_stalled(&mut mlme_stream.next()) {
+        assert_variant!(exec.run_until_stalled(&mut mlme_stream.next()),
             Poll::Ready(Some(Ok(fidl_mlme::MlmeRequest::QueryDeviceInfo { responder }))) => {
-                responder
+                // Respond with query message.
+                responder.send(&mut fake_device_info()).expect("failed to send QueryResponse");
             }
-            _ => panic!("phy_stream returned unexpected result"),
-        };
-
-        // Respond with query message.
-        responder.send(&mut fake_device_info()).expect("failed to send QueryResponse");
+        );
 
         // Progress to cause SME creation and serving.
         assert!(iface_map.get(&5).is_none());
-        match exec.run_until_stalled(&mut serve_fut) {
-            Poll::Pending => (),
-            _ => panic!("expected pending SME serving"),
-        };
+        let fut_result = exec.run_until_stalled(&mut serve_fut);
+        assert_variant!(fut_result, Poll::Pending, "expected pending SME serving");
 
         // Retrieve SME instance and close SME (iface must be acquired).
         let mut iface = iface_map.get(&5).expect("expected iface");
         iface_map.remove(&5);
         let mut_iface = Arc::get_mut(&mut iface).expect("error yielding iface");
-        match mut_iface.sme_server {
-            SmeServer::Client(ref mut sme) => {
-                let close_fut = sme.close();
-                pin_mut!(close_fut);
-                match exec.run_until_stalled(&mut close_fut) {
-                    Poll::Ready(_) => (),
-                    _ => panic!("expected closing SME to succeed"),
-                };
-            }
-            _ => panic!("expected Client SME to be spawned"),
-        };
+        let sme = assert_variant!(
+            mut_iface.sme_server,
+            SmeServer::Client(ref mut sme) => sme,
+            "expected Client SME to be spawned"
+        );
+        let close_fut = sme.close();
+        pin_mut!(close_fut);
+        let fut_result = exec.run_until_stalled(&mut close_fut);
+        assert_variant!(fut_result, Poll::Ready(_), "expected closing SME to succeed");
 
         // Insert iface back into map.
         let (mlme_proxy, _) = create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
@@ -419,10 +411,8 @@ mod tests {
         iface_map.get(&5).expect("expected iface");
 
         // Progress SME serving to completion and verify iface was deleted
-        match exec.run_until_stalled(&mut serve_fut) {
-            Poll::Ready(_) => (),
-            _ => panic!("expected SME serving to be terminated"),
-        };
+        let fut_result = exec.run_until_stalled(&mut serve_fut);
+        assert_variant!(fut_result, Poll::Ready(_), "expected SME serving to be terminated");
         assert!(iface_map.get(&5).is_none());
     }
 }
