@@ -192,6 +192,30 @@ mountpoints exist?” can only be answered on a filesystem-specific basis -- an
 arbitrary filesystem may not have access to the information about what
 mountpoints exist elsewhere.
 
+### Filesystem Management
+
+There are a collection of filesystem operations which are considered related to
+"administration", including "unmounting the current filesystem", "querying for
+the underlying block device path", etc. These operations are defined by the
+DirectoryAdmin interface within [io.fidl](/zircon/system/fidl/fuchsia-io/io.fidl).
+A connection to this interface allows access to "filesystem-wide" state, and is
+restricted by an access flag `ZX_FS_RIGHT_ADMIN`. This access right must be
+requested explicitly, and is not granted when requested on a connection lacking
+`ZX_FS_RIGHT_ADMIN`. This right is provided to the root connection of a
+filesystem once it is mounted - a reasonable bootstrapping point for
+administration - but must be preserved by the mounting tools to propagate this
+access, or must be dropped when vending connections from the filesystem to less
+privileged clients.
+
+This `ZX_FS_RIGHT_ADMIN` mechanism (occasionally referred to as `O_ADMIN`, for
+the POSIX interop declaration) will be superceded by an explicit service for
+filesystem administration. Rather than existing as an "implicit right" attached
+silently to limited directory connections, it will be a separate interface
+exposed by filesystem components. This will (in the abstract) allow filesystems
+to expose a "root directory" handle and an "administraction" handle separately,
+rather than overloading them on the same connection. Once this transition has
+occurred, the `ZX_FS_RIGHT_ADMIN` (and `O_ADMIN`) flags will be deprecated.
+
 ## Current Filesystems
 
 Due to the modular nature of Fuchsia’s architecture, it is straightforward to
