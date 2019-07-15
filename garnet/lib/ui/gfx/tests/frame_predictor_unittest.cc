@@ -189,9 +189,12 @@ TEST_F(FramePredictorTest, MissedPresentRequest_ShouldTargetNextVsync) {
   EXPECT_GE(prediction.latch_point_time, prediction.presentation_time - vsync_interval);
 }
 
+// The following two tests test the behavior of kHardcodedMargin. We want to be able to
+// schedule close to it, but not too aggressively. If the constant changes these tests
+// will likely need to change as well.
 TEST_F(FramePredictorTest, AttemptsToBeLowLatency_ShouldBePossible) {
-  const zx::duration update_duration = zx::msec(1);
-  const zx::duration render_duration = zx::msec(3);
+  const zx::duration update_duration = zx::msec(2);
+  const zx::duration render_duration = zx::msec(5);
 
   // Fill the window size.
   for (int i = 0; i < 10; ++i) {
@@ -199,10 +202,10 @@ TEST_F(FramePredictorTest, AttemptsToBeLowLatency_ShouldBePossible) {
     predictor_->ReportUpdateDuration(update_duration);
   }
 
-  const zx::duration vsync_interval = zx::msec(10);
-  zx::time last_vsync_time = ms_to_time(10);
+  const zx::duration vsync_interval = zx::msec(15);
+  zx::time last_vsync_time = ms_to_time(15);
   zx::time requested_present = last_vsync_time + vsync_interval;
-  zx::time now = requested_present - update_duration - render_duration - zx::usec(1500);
+  zx::time now = requested_present - update_duration - render_duration - zx::usec(3500);
   EXPECT_GT(now, last_vsync_time);
 
   PredictionRequest request = {.now = now,
@@ -214,6 +217,36 @@ TEST_F(FramePredictorTest, AttemptsToBeLowLatency_ShouldBePossible) {
   // The prediction should be for the next vsync.
   EXPECT_LE(prediction.presentation_time.get(), last_vsync_time.get() + vsync_interval.get());
   EXPECT_GE(prediction.latch_point_time.get(), now.get());
+}
+
+TEST_F(FramePredictorTest, AttemptsToBeTooAggressive_ShouldNotBePossible) {
+  const zx::duration update_duration = zx::msec(1);
+  const zx::duration render_duration = zx::msec(2);
+
+  // Fill the window size.
+  for (int i = 0; i < 10; ++i) {
+    predictor_->ReportRenderDuration(render_duration);
+    predictor_->ReportUpdateDuration(update_duration);
+  }
+
+  const zx::duration vsync_interval = zx::msec(15);
+  zx::time last_vsync_time = ms_to_time(15);
+  zx::time requested_present = last_vsync_time + vsync_interval;
+  zx::time now = requested_present - update_duration - render_duration - zx::usec(2000);
+  EXPECT_GT(now, last_vsync_time);
+
+  PredictionRequest request = {.now = now,
+                               .requested_presentation_time = requested_present,
+                               .last_vsync_time = last_vsync_time,
+                               .vsync_interval = vsync_interval};
+  auto prediction = predictor_->GetPrediction(request);
+
+  // The prediction should be for the vsync after the next one (we skip one).
+  EXPECT_GT(prediction.presentation_time.get(), last_vsync_time.get() + vsync_interval.get());
+  EXPECT_LE(prediction.presentation_time.get(), last_vsync_time.get() + 2 * vsync_interval.get());
+
+  // We should not have been able to schedule the frame for this vsync.
+  EXPECT_LE(prediction.latch_point_time.get(), now.get() + vsync_interval.get());
 }
 
 }  // namespace test

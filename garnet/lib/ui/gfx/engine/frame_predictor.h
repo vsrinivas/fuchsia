@@ -71,7 +71,7 @@ class FramePredictor {
   // Safety margin added to prediction time to reduce impact of noise and
   // misprediction. Unfortunately this means minimum possible latency is
   // increased by the same amount.
-  const zx::duration kHardcodedMargin = zx::msec(1);  // 1ms
+  const zx::duration kHardcodedMargin = zx::msec(3);  // 3ms
 
   // Rarely, it is possible for abnormally long GPU contexts to occur, and
   // when they occur we do not want them to mess up future predictions by
