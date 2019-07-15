@@ -144,8 +144,12 @@ static const device_component_t isp_components[] = {
     {countof(camera_sensor_component), camera_sensor_component},
 };
 
-// Composite binding rules for IMX227 Sensor.
+// Composite binding rules for GDC
+static const device_component_t gdc_components[] = {
+    {countof(camera_sensor_component), camera_sensor_component},
+};
 
+// Composite binding rules for IMX227 Sensor.
 static const zx_bind_inst_t i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
     BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_3),
@@ -291,14 +295,21 @@ zx_status_t Sherlock::CameraInit() {
         return status;
     }
 
-    status = pbus_.DeviceAdd(&gdc_dev);
+    // Add a composite device for GDC because we want to keep it in the same devhost
+    // as the ISP driver.
+    status =  pbus_.CompositeDeviceAdd(&gdc_dev, gdc_components, countof(gdc_components), 1);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: GDC DeviceAdd failed %d\n", __func__, status);
         return status;
     }
 
     // Add a composite device for ARM ISP
-    return pbus_.CompositeDeviceAdd(&isp_dev, isp_components, countof(isp_components), 1);
+    status =  pbus_.CompositeDeviceAdd(&isp_dev, isp_components, countof(isp_components), 1);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: ISP DeviceAdd failed %d\n", __func__, status);
+        return status;
+    }
+    return status;
 }
 
 } // namespace sherlock
