@@ -24,8 +24,8 @@ class GfxSystem : public TempSystemDelegate, public SessionUpdater {
   static constexpr TypeId kTypeId = kGfx;
   static const char* kName;
 
-  GfxSystem(SystemContext context, std::unique_ptr<DisplayManager> display_manager);
-  ~GfxSystem();
+  GfxSystem(SystemContext context, std::unique_ptr<DisplayManager> display_manager,
+            escher::EscherWeakPtr escher);
 
   CommandDispatcherUniquePtr CreateCommandDispatcher(CommandDispatcherContext context) override;
 
@@ -52,19 +52,19 @@ class GfxSystem : public TempSystemDelegate, public SessionUpdater {
   // For tests.
   SessionManager* session_manager() { return session_manager_.get(); }
 
+  static escher::EscherUniquePtr CreateEscher(sys::ComponentContext* app_context);
+
  protected:
   // Protected so test classes can expose.
   //
   // TODO(SCN-1491): Replace with dependency injection.
   virtual std::unique_ptr<SessionManager> InitializeSessionManager();
-  virtual std::unique_ptr<escher::Escher> InitializeEscher();
   virtual std::unique_ptr<Engine> InitializeEngine();
 
   std::shared_ptr<FrameScheduler> frame_scheduler_;
   std::unique_ptr<SessionManager> session_manager_;
   std::unique_ptr<Engine> engine_;
   std::unique_ptr<DisplayManager> display_manager_;
-  std::unique_ptr<escher::Escher> escher_;
 
  private:
   fit::closure DelayedInitClosure();
@@ -75,32 +75,19 @@ class GfxSystem : public TempSystemDelegate, public SessionUpdater {
   void GetDisplayOwnershipEventImmediately(
       fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback);
 
-  // Redirect to instance method.
-  static VkBool32 RedirectDebugReport(VkDebugReportFlagsEXT flags,
-                                      VkDebugReportObjectTypeEXT objectType, uint64_t object,
-                                      size_t location, int32_t messageCode,
-                                      const char* pLayerPrefix, const char* pMessage,
-                                      void* pUserData) {
-    return reinterpret_cast<GfxSystem*>(pUserData)->HandleDebugReport(
-        flags, objectType, object, location, messageCode, pLayerPrefix, pMessage);
-  }
-
-  VkBool32 HandleDebugReport(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType,
-                             uint64_t object, size_t location, int32_t messageCode,
-                             const char* pLayerPrefix, const char* pMessage);
+  static VkBool32 HandleDebugReport(VkDebugReportFlagsEXT flags,
+                                    VkDebugReportObjectTypeEXT objectType, uint64_t object,
+                                    size_t location, int32_t messageCode, const char* pLayerPrefix,
+                                    const char* pMessage, void* pUserData);
 
   void DumpSessionMapResources(std::ostream& output,
                                std::unordered_set<GlobalId, GlobalId::Hash>* visited_resources);
 
+  escher::EscherWeakPtr escher_;
+
   // TODO(SCN-452): Remove this when we externalize Displays.
   bool initialized_ = false;
   std::vector<fit::closure> run_after_initialized_;
-
-  escher::VulkanInstancePtr vulkan_instance_;
-  escher::VulkanDeviceQueuesPtr vulkan_device_queues_;
-  vk::SurfaceKHR surface_;
-
-  VkDebugReportCallbackEXT debug_report_callback_;
 
   std::optional<CommandContext> command_context_;
 

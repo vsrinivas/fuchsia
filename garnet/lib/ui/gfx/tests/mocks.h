@@ -53,25 +53,14 @@ class GfxSystemForTest : public GfxSystem {
   static constexpr TypeId kTypeId = GfxSystem::kTypeId;
 
   explicit GfxSystemForTest(SystemContext context, std::unique_ptr<DisplayManager> display_manager,
-                            escher::impl::CommandBufferSequencer* command_buffer_sequencer)
-      : GfxSystem(std::move(context), std::move(display_manager)),
-        command_buffer_sequencer_(command_buffer_sequencer) {}
+                            escher::impl::CommandBufferSequencer* command_buffer_sequencer);
 
   Engine* engine() { return engine_.get(); }
 
  private:
-  std::unique_ptr<SessionManager> InitializeSessionManager() override {
-    return std::make_unique<SessionManagerForTest>();
-  }
+  std::unique_ptr<SessionManager> InitializeSessionManager() override;
 
-  std::unique_ptr<gfx::Engine> InitializeEngine() override {
-    return std::make_unique<Engine>(
-        context()->app_context(), frame_scheduler_, display_manager_.get(),
-        std::make_unique<ReleaseFenceSignallerForTest>(command_buffer_sequencer_),
-        escher_ ? escher_->GetWeakPtr() : escher::EscherWeakPtr());
-  }
-
-  std::unique_ptr<escher::Escher> InitializeEscher() override { return nullptr; }
+  std::unique_ptr<gfx::Engine> InitializeEngine() override;
 
   escher::impl::CommandBufferSequencer* command_buffer_sequencer_;
 };

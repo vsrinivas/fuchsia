@@ -34,6 +34,13 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   template <typename SystemT, typename... Args>
   SystemT* RegisterSystem(Args&&... args);
 
+  // Scenic will wait on this system before fully initializing, without adding this system to the
+  // list of registered systems (e.g., for command dispatch purposes). It does not take ownership of
+  // the system; it must outlive the Scenic instance.
+  //
+  // TODO(SCN-1506): Find a better way to represent this other than creating an entire dummy system.
+  void RegisterDependency(System* system);
+
   // Called by Session when it needs to close itself.
   void CloseSession(Session* session);
 
@@ -106,9 +113,7 @@ SystemT* Scenic::RegisterSystem(Args&&... args) {
 
   // Listen for System to be initialized if it isn't already.
   if (!system->initialized()) {
-    uninitialized_systems_.insert(system);
-    system->set_on_initialized_callback(
-        [this](System* system) { Scenic::OnSystemInitialized(system); });
+    RegisterDependency(system);
   }
   return system;
 }

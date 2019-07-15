@@ -39,6 +39,13 @@ void Scenic::OnSystemInitialized(System* system) {
   }
 }
 
+void Scenic::RegisterDependency(System* system) {
+  FXL_CHECK(!system->initialized());
+  uninitialized_systems_.insert(system);
+  system->set_on_initialized_callback(
+      [this](System* system) { Scenic::OnSystemInitialized(system); });
+}
+
 void Scenic::CloseSession(Session* session) {
   for (auto& binding : session_bindings_.bindings()) {
     // It's possible that this is called by BindingSet::CloseAndCheckForEmpty.

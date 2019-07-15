@@ -15,6 +15,7 @@ DummySystem::DummySystem(SystemContext context, bool initialized_after_construct
 DummySystem::~DummySystem() = default;
 
 CommandDispatcherUniquePtr DummySystem::CreateCommandDispatcher(CommandDispatcherContext context) {
+  ++num_dispatchers_;
   return CommandDispatcherUniquePtr(new DummyCommandDispatcher(std::move(context)),
                                     // Custom deleter.
                                     [](CommandDispatcher* cd) { delete cd; });

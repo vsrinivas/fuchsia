@@ -189,6 +189,8 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   FXL_DISALLOW_COPY_AND_ASSIGN(Escher);
 };
 
+using EscherUniquePtr = std::unique_ptr<Escher, std::function<void(Escher*)>>;
+
 }  // namespace escher
 
 #endif  // SRC_UI_LIB_ESCHER_ESCHER_H_

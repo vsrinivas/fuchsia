@@ -20,7 +20,10 @@ class DummySystem : public System {
 
   CommandDispatcherUniquePtr CreateCommandDispatcher(CommandDispatcherContext context) override;
 
+  uint32_t GetNumDispatchers() { return num_dispatchers_; }
+
  private:
+  uint32_t num_dispatchers_ = 0;
 };
 
 class DummyCommandDispatcher : public CommandDispatcher {

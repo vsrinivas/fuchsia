@@ -6,10 +6,12 @@
 #define GARNET_BIN_UI_SCENIC_APP_H_
 
 #include <lib/fit/function.h>
+#include <lib/fsl/io/device_watcher.h>
 
 #include <memory>
 
 #include "garnet/lib/ui/scenic/scenic.h"
+#include "src/ui/lib/escher/escher.h"
 
 namespace scenic_impl {
 
@@ -19,7 +21,9 @@ class App {
                fit::closure quit_callback);
 
  private:
+  escher::EscherUniquePtr escher_;
   std::unique_ptr<Scenic> scenic_;
+  std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
 };
 
 }  // namespace scenic_impl

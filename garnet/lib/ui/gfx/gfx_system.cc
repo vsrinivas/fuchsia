@@ -26,9 +26,11 @@ namespace gfx {
 static const uint32_t kDumpScenesBufferCapacity = 1024 * 64;
 const char* GfxSystem::kName = "GfxSystem";
 
-GfxSystem::GfxSystem(SystemContext context, std::unique_ptr<DisplayManager> display_manager)
+GfxSystem::GfxSystem(SystemContext context, std::unique_ptr<DisplayManager> display_manager,
+                     escher::EscherWeakPtr escher)
     : TempSystemDelegate(std::move(context), false),
       display_manager_(std::move(display_manager)),
+      escher_(std::move(escher)),
       weak_factory_(this) {
   // TODO(SCN-1111): what are the intended implications of there being a test
   // display?  In this case, could we make DisplayManager signal that the
@@ -40,18 +42,6 @@ GfxSystem::GfxSystem(SystemContext context, std::unique_ptr<DisplayManager> disp
   }
 
   display_manager_->WaitForDefaultDisplayController(DelayedInitClosure());
-}
-
-GfxSystem::~GfxSystem() {
-  if (escher_) {
-    // It's possible that |escher_| never got created (and therefore
-    // escher::GlslangInitializeProcess() was never called).
-    escher::GlslangFinalizeProcess();
-  }
-  if (vulkan_instance_) {
-    vulkan_instance_->proc_addrs().DestroyDebugReportCallbackEXT(vulkan_instance_->vk_instance(),
-                                                                 debug_report_callback_, nullptr);
-  }
 }
 
 CommandDispatcherUniquePtr GfxSystem::CreateCommandDispatcher(CommandDispatcherContext context) {
@@ -68,22 +58,12 @@ std::unique_ptr<Engine> GfxSystem::InitializeEngine() {
                                   context()->inspect_node()->CreateChild("Engine"));
 }
 
-std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
+escher::EscherUniquePtr GfxSystem::CreateEscher(sys::ComponentContext* app_context) {
   // TODO(SCN-1109): VulkanIsSupported() should not be used in production.
   // It tries to create a VkInstance and VkDevice, and immediately deletes them
   // regardless of success/failure.
   if (!escher::VulkanIsSupported()) {
     return nullptr;
-  }
-
-  if (!display_manager_->is_initialized()) {
-    FXL_LOG(ERROR) << "No sysmem allocator available";
-    return nullptr;
-  }
-
-  if (vulkan_instance_) {
-    FXL_LOG(WARNING) << "GfxSystem::InitializeEscher called twice, previous "
-                        "Vulkan instance will be deleted.";
   }
 
   // Initialize Vulkan.
@@ -103,8 +83,7 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
 #if !defined(NDEBUG)
   instance_params.layer_names.insert("VK_LAYER_LUNARG_standard_validation");
 #endif
-  FXL_DCHECK(!vulkan_instance_);
-  vulkan_instance_ = escher::VulkanInstance::New(std::move(instance_params));
+  auto vulkan_instance = escher::VulkanInstance::New(std::move(instance_params));
 
   // Tell Escher not to filter out queues that don't support presentation.
   // The display manager only supports a single connection, so none of the
@@ -125,30 +104,15 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
        {
            VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME,
        },
-       surface_,
+       vk::SurfaceKHR(),
        escher::VulkanDeviceQueues::Params::kDisableQueueFilteringForPresent});
 
-  FXL_DCHECK(!vulkan_device_queues_);
-  vulkan_device_queues_ = escher::VulkanDeviceQueues::New(vulkan_instance_, device_queues_params);
-
-  {
-    VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
-    dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-    dbgCreateInfo.pNext = NULL;
-    dbgCreateInfo.pfnCallback = RedirectDebugReport;
-    dbgCreateInfo.pUserData = this;
-    dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT |
-                          VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
-
-    // We use the C API here due to dynamically loading the extension function.
-    VkResult result = vulkan_instance_->proc_addrs().CreateDebugReportCallbackEXT(
-        vulkan_instance_->vk_instance(), &dbgCreateInfo, nullptr, &debug_report_callback_);
-    FXL_CHECK(result == VK_SUCCESS);
-  }
+  auto vulkan_device_queues =
+      escher::VulkanDeviceQueues::New(vulkan_instance, device_queues_params);
 
   // Provide a PseudoDir where the gfx system can register debugging services.
   auto debug_dir = std::make_shared<vfs::PseudoDir>();
-  context()->app_context()->outgoing()->debug_dir()->AddSharedEntry("gfx", debug_dir);
+  app_context->outgoing()->debug_dir()->AddSharedEntry("gfx", debug_dir);
   auto shader_fs = escher::HackFilesystem::New(debug_dir);
   {
     bool success = shader_fs->InitializeWithRealFiles(
@@ -165,9 +129,35 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
     FXL_DCHECK(success) << "Failed to init shader files.";
   }
 
+  VkDebugReportCallbackEXT debug_report_callback;
+  {
+    VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
+    dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+    dbgCreateInfo.pNext = NULL;
+    dbgCreateInfo.pfnCallback = HandleDebugReport;
+    dbgCreateInfo.pUserData = NULL;
+    dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT |
+                          VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+
+    // We use the C API here due to dynamically loading the extension function.
+    VkResult result = vulkan_instance->proc_addrs().CreateDebugReportCallbackEXT(
+        vulkan_instance->vk_instance(), &dbgCreateInfo, nullptr, &debug_report_callback);
+    FXL_CHECK(result == VK_SUCCESS);
+  }
+
   // Initialize Escher.
   escher::GlslangInitializeProcess();
-  return std::make_unique<escher::Escher>(vulkan_device_queues_, std::move(shader_fs));
+  return escher::EscherUniquePtr(new escher::Escher(vulkan_device_queues, std::move(shader_fs)),
+                                 // Custom deleter.
+                                 // The vulkan instance is a stack variable, but it is a
+                                 // fxl::RefPtr, so we can store by value.
+                                 [=](escher::Escher* escher) {
+                                   escher::GlslangFinalizeProcess();
+                                   vulkan_instance->proc_addrs().DestroyDebugReportCallbackEXT(
+                                       vulkan_instance->vk_instance(), debug_report_callback,
+                                       nullptr);
+                                   delete escher;
+                                 });
 }
 
 fit::closure GfxSystem::DelayedInitClosure() {
@@ -205,9 +195,6 @@ void GfxSystem::Initialize() {
   FXL_DCHECK(!session_manager_);
   session_manager_ = InitializeSessionManager();
 
-  // This is virtual, allowing tests to avoid instantiating an Escher.
-  FXL_DCHECK(!escher_);
-  escher_ = InitializeEscher();
   if (!escher_ || !escher_->device()) {
     if (display->is_test_display()) {
       FXL_LOG(INFO) << "No Vulkan found, but using a test-only \"display\".";
@@ -457,7 +444,8 @@ void GfxSystem::PrepareFrame(zx_time_t presentation_time, uint64_t trace_id) {
 VkBool32 GfxSystem::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
                                       VkDebugReportObjectTypeEXT object_type_in, uint64_t object,
                                       size_t location, int32_t message_code,
-                                      const char* pLayerPrefix, const char* pMessage) {
+                                      const char* pLayerPrefix, const char* pMessage,
+                                      void* pUserData) {
   vk::DebugReportFlagsEXT flags(static_cast<vk::DebugReportFlagBitsEXT>(flags_in));
   vk::DebugReportObjectTypeEXT object_type(
       static_cast<vk::DebugReportObjectTypeEXT>(object_type_in));

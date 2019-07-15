@@ -82,7 +82,7 @@ class System {
     on_initialized_callback_ = std::move(callback);
   }
 
-  // Marks this system as initialized and invokes callback if it's set (for tests).
+  // Marks this system as initialized and invokes callback if it's set.
   void SetToInitialized();
 
  protected:
