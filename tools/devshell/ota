@@ -21,7 +21,7 @@ fx-config-read
 
 function needs-update {
   local system_image_merkle="${FUCHSIA_BUILD_DIR}"/obj/build/images/system_image.meta/meta.far.merkle
-  [[ $(fx-command-run shell cat system/meta) != $(<"${system_image_merkle}") ]]
+  [[ $(fx-command-run shell 'read ver < /system/meta;echo $ver') != $(<"${system_image_merkle}") ]]
 }
 
 function main {
