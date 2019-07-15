@@ -56,13 +56,6 @@ group("fonts") {
   ]
 }
 
-group("libinet") {
-  testonly = true
-  public_deps = [
-    "//garnet/lib/inet:libinet_tests",
-  ]
-}
-
 group("tracing") {
   testonly = true
   public_deps = [
@@ -392,7 +385,6 @@ group("all") {
     ":kms",
     ":lib",
     ":libc",
-    ":libinet",
     ":libinspect_integration_tests",
     ":linux_runner",
     ":log_listener",

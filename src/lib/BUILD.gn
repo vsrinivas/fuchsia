@@ -11,6 +11,7 @@ group("lib") {
     "fidl_table_validation",
     "files",
     "icu_data",
+    "inet",
     "isolated_devmgr",
     "pkg_url",
     "ui",

@@ -9,10 +9,10 @@
 
 #include <memory>
 
-#include "garnet/lib/inet/socket_address.h"
 #include "src/connectivity/network/mdns/service/dns_message.h"
 #include "src/connectivity/network/mdns/service/mdns_addresses.h"
 #include "src/lib/fxl/time/time_point.h"
+#include "src/lib/inet/socket_address.h"
 
 namespace mdns {
 

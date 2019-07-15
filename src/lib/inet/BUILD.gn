@@ -23,7 +23,7 @@ static_library("inet") {
   ]
 }
 
-test("tests") {
+test("tests_bin") {
   output_name = "libinet_tests"
 
   sources = [
@@ -38,7 +38,7 @@ test("tests") {
 
 test_package("libinet_tests") {
   deps = [
-    ":tests",
+    ":tests_bin",
   ]
 
   tests = [
@@ -46,5 +46,13 @@ test_package("libinet_tests") {
       name = "libinet_tests"
       environments = basic_envs
     },
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":libinet_tests",
   ]
 }

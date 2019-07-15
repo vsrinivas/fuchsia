@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/inet/socket_address.h"
+#include "src/lib/inet/socket_address.h"
 
 #include <endian.h>
 
@@ -15,8 +15,7 @@ const SocketAddress SocketAddress::kInvalid;
 
 SocketAddress::SocketAddress() { std::memset(&v6_, 0, sizeof(v6_)); }
 
-SocketAddress::SocketAddress(uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3,
-                             IpPort port) {
+SocketAddress::SocketAddress(uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3, IpPort port) {
   std::memset(&v4_, 0, sizeof(v4_));
   v4_.sin_family = AF_INET;
   v4_.sin_port = port.as_in_port_t();
@@ -39,9 +38,8 @@ SocketAddress::SocketAddress(const sockaddr_in& addr) {
   v4_ = addr;
 }
 
-SocketAddress::SocketAddress(uint16_t w0, uint16_t w1, uint16_t w2, uint16_t w3,
-                             uint16_t w4, uint16_t w5, uint16_t w6, uint16_t w7,
-                             IpPort port) {
+SocketAddress::SocketAddress(uint16_t w0, uint16_t w1, uint16_t w2, uint16_t w3, uint16_t w4,
+                             uint16_t w5, uint16_t w6, uint16_t w7, IpPort port) {
   std::memset(&v6_, 0, sizeof(v6_));
   v6_.sin6_family = AF_INET6;
   v6_.sin6_port = port.as_in_port_t();
@@ -111,8 +109,7 @@ SocketAddress::SocketAddress(const fuchsia::netstack::SocketAddress* addr)
 }
 
 SocketAddress::SocketAddress(const fuchsia::net::Endpoint* endpoint)
-    : SocketAddress(IpAddress(&endpoint->addr),
-                    IpPort::From_uint16_t(endpoint->port)) {
+    : SocketAddress(IpAddress(&endpoint->addr), IpPort::From_uint16_t(endpoint->port)) {
   FXL_DCHECK(endpoint != nullptr);
 }
 

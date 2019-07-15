@@ -23,9 +23,6 @@ exceptions = {
         '//garnet/go/src/grand_unified_binary:grand_unified_binary',
         '//src/connectivity/network/testing/netemul/lib/',
     ],
-    '//src/connectivity/network/mdns': [
-        '//garnet/lib/inet',
-    ],
     '//src/connectivity/network/netstack3': [
         '//src/connectivity/network/testing/netemul/lib/',
     ],
@@ -120,7 +117,6 @@ exceptions = {
         '//src/graphics/lib/vulkan',
     ],
     '//src/virtualization': [
-        '//garnet/lib/inet',
         '//garnet/lib/magma',
         '//garnet/packages/experimental:debian_guest',
         '//garnet/packages/experimental:zircon_guest',

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_INET_SOCKET_ADDRESS_H_
-#define GARNET_LIB_INET_SOCKET_ADDRESS_H_
+#ifndef SRC_LIB_INET_SOCKET_ADDRESS_H_
+#define SRC_LIB_INET_SOCKET_ADDRESS_H_
 
 #include <arpa/inet.h>
 #include <fuchsia/net/cpp/fidl.h>
@@ -12,9 +12,9 @@
 
 #include <ostream>
 
-#include "garnet/lib/inet/ip_address.h"
-#include "garnet/lib/inet/ip_port.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/inet/ip_address.h"
+#include "src/lib/inet/ip_port.h"
 
 namespace inet {
 
@@ -36,8 +36,8 @@ class SocketAddress {
   explicit SocketAddress(const sockaddr_in& addr);
 
   // Creates an IPV6 socket address from eight address words and an IpPort.
-  SocketAddress(uint16_t w0, uint16_t w1, uint16_t w2, uint16_t w3, uint16_t w4,
-                uint16_t w5, uint16_t w6, uint16_t w7, IpPort port);
+  SocketAddress(uint16_t w0, uint16_t w1, uint16_t w2, uint16_t w3, uint16_t w4, uint16_t w5,
+                uint16_t w6, uint16_t w7, IpPort port);
 
   // Creates an IPV6 socket address from two address words and an IpPort.
   SocketAddress(uint16_t w0, uint16_t w7, IpPort port);
@@ -68,9 +68,7 @@ class SocketAddress {
 
   bool is_v6() const { return family() == AF_INET6; }
 
-  IpAddress address() const {
-    return is_v4() ? IpAddress(v4_.sin_addr) : IpAddress(v6_.sin6_addr);
-  }
+  IpAddress address() const { return is_v4() ? IpAddress(v4_.sin_addr) : IpAddress(v6_.sin6_addr); }
 
   IpPort port() const { return IpPort::From_in_port_t(v4_.sin_port); }
 
@@ -84,9 +82,7 @@ class SocketAddress {
     return v6_;
   }
 
-  const sockaddr* as_sockaddr() const {
-    return reinterpret_cast<const sockaddr*>(&v4_);
-  }
+  const sockaddr* as_sockaddr() const { return reinterpret_cast<const sockaddr*>(&v4_); }
 
   socklen_t socklen() const { return is_v4() ? sizeof(v4_) : sizeof(v6_); }
 
@@ -99,9 +95,7 @@ class SocketAddress {
            std::memcmp(as_sockaddr(), other.as_sockaddr(), socklen()) == 0;
   }
 
-  bool operator!=(const SocketAddress& other) const {
-    return !(*this == other);
-  }
+  bool operator!=(const SocketAddress& other) const { return !(*this == other); }
 
  private:
   union {
@@ -122,4 +116,4 @@ struct std::hash<inet::SocketAddress> {
   }
 };
 
-#endif  // GARNET_LIB_INET_SOCKET_ADDRESS_H_
+#endif  // SRC_LIB_INET_SOCKET_ADDRESS_H_

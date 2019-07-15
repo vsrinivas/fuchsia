@@ -43,11 +43,11 @@ source_set("guest_console") {
     "socket.h",
   ]
   deps = [
-    "//garnet/lib/inet",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.virtualization",
     "//src/lib/fxl",
+    "//src/lib/inet",
     "//zircon/public/lib/fbl",
   ]
   public_deps = [
@@ -99,7 +99,6 @@ executable("bin") {
 
   deps = [
     ":guest_console",
-    "//garnet/lib/inet",
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
@@ -110,6 +109,7 @@ executable("bin") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
+    "//src/lib/inet",
     "//src/virtualization/bin/vmm/device",
     "//src/virtualization/bin/vmm/device:qcow_test_data",
     "//third_party/googletest:gmock",

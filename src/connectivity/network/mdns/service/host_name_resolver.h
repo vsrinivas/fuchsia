@@ -8,10 +8,10 @@
 #include <memory>
 #include <string>
 
-#include "garnet/lib/inet/ip_address.h"
 #include "src/connectivity/network/mdns/service/mdns.h"
 #include "src/connectivity/network/mdns/service/mdns_agent.h"
 #include "src/lib/fxl/time/time_point.h"
+#include "src/lib/inet/ip_address.h"
 
 namespace mdns {
 

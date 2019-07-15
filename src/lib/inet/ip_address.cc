@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/inet/ip_address.h"
+#include "src/lib/inet/ip_address.h"
 
 #include <arpa/inet.h>
 #include <endian.h>
@@ -38,8 +38,7 @@ class Parser {
   bool MatchDecDigit(uint8_t* out) {
     FXL_DCHECK(out);
 
-    if (pos_ == str_.length() ||
-        !std::isdigit(static_cast<unsigned char>(str_[pos_]))) {
+    if (pos_ == str_.length() || !std::isdigit(static_cast<unsigned char>(str_[pos_]))) {
       return false;
     }
 
@@ -53,8 +52,7 @@ class Parser {
   bool MatchLowerHexDigit(uint8_t* out) {
     FXL_DCHECK(out);
 
-    if (pos_ == str_.length() ||
-        !std::isxdigit(static_cast<unsigned char>(str_[pos_]))) {
+    if (pos_ == str_.length() || !std::isxdigit(static_cast<unsigned char>(str_[pos_]))) {
       return false;
     }
 
@@ -133,10 +131,8 @@ class Parser {
 
     size_t old_pos = pos_;
     uint8_t b0, b1, b2, b3;
-    if (MatchMax3DigitDecByte(&b0) && Match('.') &&
-        MatchMax3DigitDecByte(&b1) && Match('.') &&
-        MatchMax3DigitDecByte(&b2) && Match('.') &&
-        MatchMax3DigitDecByte(&b3)) {
+    if (MatchMax3DigitDecByte(&b0) && Match('.') && MatchMax3DigitDecByte(&b1) && Match('.') &&
+        MatchMax3DigitDecByte(&b2) && Match('.') && MatchMax3DigitDecByte(&b3)) {
       *address_out = IpAddress(b0, b1, b2, b3);
       return true;
     }
@@ -206,8 +202,8 @@ class Parser {
           }
         }
 
-        *address_out = IpAddress(words[0], words[1], words[2], words[3],
-                                 words[4], words[5], words[6], words[7]);
+        *address_out = IpAddress(words[0], words[1], words[2], words[3], words[4], words[5],
+                                 words[6], words[7]);
         return true;
       }
     }
@@ -231,14 +227,12 @@ const IpAddress IpAddress::kV4Loopback(127, 0, 0, 1);
 const IpAddress IpAddress::kV6Loopback(0, 0, 0, 0, 0, 0, 0, 1);
 
 // static
-IpAddress IpAddress::FromString(const std::string address_string,
-                                sa_family_t family) {
+IpAddress IpAddress::FromString(const std::string address_string, sa_family_t family) {
   FXL_DCHECK(family == AF_UNSPEC || family == AF_INET || family == AF_INET6);
 
   Parser parser(address_string);
   IpAddress address;
-  if ((parser.MatchIpV4Address(&address) ||
-       parser.MatchIpV6Address(&address)) &&
+  if ((parser.MatchIpV4Address(&address) || parser.MatchIpV6Address(&address)) &&
       parser.MatchEnd()) {
     return address;
   }
@@ -270,8 +264,8 @@ IpAddress::IpAddress(const in_addr& addr) {
   v4_ = addr;
 }
 
-IpAddress::IpAddress(uint16_t w0, uint16_t w1, uint16_t w2, uint16_t w3,
-                     uint16_t w4, uint16_t w5, uint16_t w6, uint16_t w7) {
+IpAddress::IpAddress(uint16_t w0, uint16_t w1, uint16_t w2, uint16_t w3, uint16_t w4, uint16_t w5,
+                     uint16_t w6, uint16_t w7) {
   family_ = AF_INET6;
   uint16_t* words = v6_.s6_addr16;
   words[0] = htobe16(w0);
@@ -319,13 +313,13 @@ IpAddress::IpAddress(const sockaddr_storage& addr) {
   switch (addr.ss_family) {
     case AF_INET:
       family_ = AF_INET;
-      v4_ = *reinterpret_cast<const in_addr*>(
-          reinterpret_cast<const uint8_t*>(&addr) + sizeof(sa_family_t));
+      v4_ = *reinterpret_cast<const in_addr*>(reinterpret_cast<const uint8_t*>(&addr) +
+                                              sizeof(sa_family_t));
       break;
     case AF_INET6:
       family_ = AF_INET6;
-      v6_ = *reinterpret_cast<const in6_addr*>(
-          reinterpret_cast<const uint8_t*>(&addr) + sizeof(sa_family_t));
+      v6_ = *reinterpret_cast<const in6_addr*>(reinterpret_cast<const uint8_t*>(&addr) +
+                                               sizeof(sa_family_t));
       break;
     default:
       family_ = AF_UNSPEC;
@@ -387,9 +381,8 @@ std::ostream& operator<<(std::ostream& os, const IpAddress& value) {
 
   if (value.is_v4()) {
     const uint8_t* bytes = value.as_bytes();
-    return os << static_cast<int>(bytes[0]) << '.' << static_cast<int>(bytes[1])
-              << '.' << static_cast<int>(bytes[2]) << '.'
-              << static_cast<int>(bytes[3]);
+    return os << static_cast<int>(bytes[0]) << '.' << static_cast<int>(bytes[1]) << '.'
+              << static_cast<int>(bytes[2]) << '.' << static_cast<int>(bytes[3]);
   } else {
     // IPV6 text representation per RFC 5952:
     // 1) Suppress leading zeros in hex representation of words.
@@ -429,8 +422,7 @@ std::ostream& operator<<(std::ostream& os, const IpAddress& value) {
 
     os << std::hex;
     for (uint8_t i = 0; i < 8; ++i) {
-      if (i < start_of_best_zeros ||
-          i >= start_of_best_zeros + best_zeros_seen) {
+      if (i < start_of_best_zeros || i >= start_of_best_zeros + best_zeros_seen) {
         os << betoh16(words[i]);
         if (i != 7) {
           os << ":";

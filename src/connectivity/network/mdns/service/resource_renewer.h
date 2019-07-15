@@ -11,8 +11,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include "garnet/lib/inet/ip_port.h"
 #include "src/connectivity/network/mdns/service/mdns_agent.h"
+#include "src/lib/inet/ip_port.h"
 
 namespace mdns {
 

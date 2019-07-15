@@ -15,12 +15,12 @@
 #include <unordered_map>
 #include <vector>
 
-#include "garnet/lib/inet/socket_address.h"
 #include "src/connectivity/network/mdns/service/dns_message.h"
 #include "src/connectivity/network/mdns/service/mdns_agent.h"
 #include "src/connectivity/network/mdns/service/mdns_transceiver.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/time/time_point.h"
+#include "src/lib/inet/socket_address.h"
 
 namespace mdns {
 

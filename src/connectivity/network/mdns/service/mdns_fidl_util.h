@@ -7,8 +7,8 @@
 
 #include <fuchsia/net/mdns/cpp/fidl.h>
 
-#include "garnet/lib/inet/socket_address.h"
 #include "src/connectivity/network/mdns/service/mdns.h"
+#include "src/lib/inet/socket_address.h"
 
 namespace mdns {
 

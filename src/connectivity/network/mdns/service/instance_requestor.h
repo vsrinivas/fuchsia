@@ -10,10 +10,10 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "garnet/lib/inet/socket_address.h"
 #include "src/connectivity/network/mdns/service/mdns.h"
 #include "src/connectivity/network/mdns/service/mdns_agent.h"
 #include "src/lib/fxl/time/time_delta.h"
+#include "src/lib/inet/socket_address.h"
 
 namespace mdns {
 

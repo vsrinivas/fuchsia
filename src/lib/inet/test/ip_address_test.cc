@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/inet/ip_address.h"
+#include "src/lib/inet/ip_address.h"
 
 #include "gtest/gtest.h"
 
@@ -44,8 +44,7 @@ TEST(IpAddressTest, V4) {
 
 // Tests the properties of a V6 address.
 TEST(IpAddressTest, V6) {
-  IpAddress under_test(0x0001, 0x0203, 0x0405, 0x0607, 0x0809, 0x0a0b, 0x0c0d,
-                       0x0e0f);
+  IpAddress under_test(0x0001, 0x0203, 0x0405, 0x0607, 0x0809, 0x0a0b, 0x0c0d, 0x0e0f);
   EXPECT_TRUE(under_test.is_valid());
   EXPECT_EQ(AF_INET6, under_test.family());
   EXPECT_FALSE(under_test.is_v4());
@@ -74,8 +73,8 @@ TEST(IpAddressTest, Constructors) {
   EXPECT_EQ(v4, IpAddress(v4.as_in_addr_t()));
   EXPECT_EQ(v4, IpAddress(v4.as_in_addr()));
   sockaddr_storage sockaddr_v4{.ss_family = AF_INET};
-  memcpy(reinterpret_cast<uint8_t*>(&sockaddr_v4) + sizeof(sa_family_t),
-         v4.as_bytes(), v4.byte_count());
+  memcpy(reinterpret_cast<uint8_t*>(&sockaddr_v4) + sizeof(sa_family_t), v4.as_bytes(),
+         v4.byte_count());
   EXPECT_EQ(v4, IpAddress(reinterpret_cast<sockaddr*>(&sockaddr_v4)));
   EXPECT_EQ(v4, IpAddress(sockaddr_v4));
   fuchsia::net::IpAddress fn_ip_address_v4;
@@ -85,8 +84,8 @@ TEST(IpAddressTest, Constructors) {
   EXPECT_EQ(v6, IpAddress(0x1234, 0x5678));
   EXPECT_EQ(v6, IpAddress(v6.as_in6_addr()));
   sockaddr_storage sockaddr_v6{.ss_family = AF_INET6};
-  memcpy(reinterpret_cast<uint8_t*>(&sockaddr_v6) + sizeof(sa_family_t),
-         v6.as_bytes(), v6.byte_count());
+  memcpy(reinterpret_cast<uint8_t*>(&sockaddr_v6) + sizeof(sa_family_t), v6.as_bytes(),
+         v6.byte_count());
   EXPECT_EQ(v6, IpAddress(reinterpret_cast<sockaddr*>(&sockaddr_v6)));
   EXPECT_EQ(v6, IpAddress(sockaddr_v6));
   fuchsia::net::IpAddress fn_ip_address_v6;
@@ -109,8 +108,7 @@ TEST(IpAddressTest, FromString) {
   EXPECT_EQ(IpAddress(1, 2, 3, 4), IpAddress::FromString("1.2.3.4"));
   EXPECT_EQ(IpAddress(1, 2, 3, 4), IpAddress::FromString("001.002.003.004"));
   EXPECT_EQ(IpAddress(0, 0, 0, 0), IpAddress::FromString("0.0.0.0"));
-  EXPECT_EQ(IpAddress(255, 255, 255, 255),
-            IpAddress::FromString("255.255.255.255"));
+  EXPECT_EQ(IpAddress(255, 255, 255, 255), IpAddress::FromString("255.255.255.255"));
 
   EXPECT_EQ(IpAddress::kInvalid, IpAddress::FromString("1"));
   EXPECT_EQ(IpAddress::kInvalid, IpAddress::FromString("1.2"));
@@ -140,44 +138,31 @@ TEST(IpAddressTest, FromString) {
             IpAddress::FromString("1:2:3:4:5:6::8"));
   EXPECT_EQ(IpAddress(0x01, 0, 0, 0x04, 0x05, 0x06, 0x07, 0x08),
             IpAddress::FromString("1::4:5:6:7:8"));
-  EXPECT_EQ(IpAddress(0x01, 0, 0, 0, 0x05, 0x06, 0x07, 0x08),
-            IpAddress::FromString("1::5:6:7:8"));
-  EXPECT_EQ(IpAddress(0x01, 0, 0, 0, 0, 0x06, 0x07, 0x08),
-            IpAddress::FromString("1::6:7:8"));
-  EXPECT_EQ(IpAddress(0x01, 0, 0, 0, 0, 0, 0x07, 0x08),
-            IpAddress::FromString("1::7:8"));
-  EXPECT_EQ(IpAddress(0x01, 0, 0, 0, 0, 0, 0, 0x08),
-            IpAddress::FromString("1::8"));
+  EXPECT_EQ(IpAddress(0x01, 0, 0, 0, 0x05, 0x06, 0x07, 0x08), IpAddress::FromString("1::5:6:7:8"));
+  EXPECT_EQ(IpAddress(0x01, 0, 0, 0, 0, 0x06, 0x07, 0x08), IpAddress::FromString("1::6:7:8"));
+  EXPECT_EQ(IpAddress(0x01, 0, 0, 0, 0, 0, 0x07, 0x08), IpAddress::FromString("1::7:8"));
+  EXPECT_EQ(IpAddress(0x01, 0, 0, 0, 0, 0, 0, 0x08), IpAddress::FromString("1::8"));
   EXPECT_EQ(IpAddress(0x01, 0x02, 0, 0, 0x05, 0x06, 0x07, 0x08),
             IpAddress::FromString("1:2::5:6:7:8"));
-  EXPECT_EQ(IpAddress(0x01, 0x02, 0, 0, 0, 0x06, 0x07, 0x08),
-            IpAddress::FromString("1:2::6:7:8"));
-  EXPECT_EQ(IpAddress(0x01, 0x02, 0, 0, 0, 0, 0x07, 0x08),
-            IpAddress::FromString("1:2::7:8"));
-  EXPECT_EQ(IpAddress(0x01, 0x02, 0, 0, 0, 0, 0, 0x08),
-            IpAddress::FromString("1:2::8"));
+  EXPECT_EQ(IpAddress(0x01, 0x02, 0, 0, 0, 0x06, 0x07, 0x08), IpAddress::FromString("1:2::6:7:8"));
+  EXPECT_EQ(IpAddress(0x01, 0x02, 0, 0, 0, 0, 0x07, 0x08), IpAddress::FromString("1:2::7:8"));
+  EXPECT_EQ(IpAddress(0x01, 0x02, 0, 0, 0, 0, 0, 0x08), IpAddress::FromString("1:2::8"));
   EXPECT_EQ(IpAddress(0x01, 0x02, 0x03, 0, 0, 0x06, 0x07, 0x08),
             IpAddress::FromString("1:2:3::6:7:8"));
-  EXPECT_EQ(IpAddress(0x01, 0x02, 0x03, 0, 0, 0, 0x07, 0x08),
-            IpAddress::FromString("1:2:3::7:8"));
-  EXPECT_EQ(IpAddress(0x01, 0x02, 0x03, 0, 0, 0, 0, 0x08),
-            IpAddress::FromString("1:2:3::8"));
+  EXPECT_EQ(IpAddress(0x01, 0x02, 0x03, 0, 0, 0, 0x07, 0x08), IpAddress::FromString("1:2:3::7:8"));
+  EXPECT_EQ(IpAddress(0x01, 0x02, 0x03, 0, 0, 0, 0, 0x08), IpAddress::FromString("1:2:3::8"));
   EXPECT_EQ(IpAddress(0x01, 0x02, 0x03, 0x04, 0, 0, 0x07, 0x08),
             IpAddress::FromString("1:2:3:4::7:8"));
-  EXPECT_EQ(IpAddress(0x01, 0x02, 0x03, 0x04, 0, 0, 0, 0x08),
-            IpAddress::FromString("1:2:3:4::8"));
+  EXPECT_EQ(IpAddress(0x01, 0x02, 0x03, 0x04, 0, 0, 0, 0x08), IpAddress::FromString("1:2:3:4::8"));
   EXPECT_EQ(IpAddress(0x01, 0x02, 0x03, 0x04, 0, 0, 0x07, 0x08),
             IpAddress::FromString("1:2:3:4::7:8"));
-  EXPECT_EQ(IpAddress(0x01, 0x02, 0x03, 0x04, 0, 0, 0, 0x08),
-            IpAddress::FromString("1:2:3:4::8"));
+  EXPECT_EQ(IpAddress(0x01, 0x02, 0x03, 0x04, 0, 0, 0, 0x08), IpAddress::FromString("1:2:3:4::8"));
   EXPECT_EQ(IpAddress(0x01, 0x02, 0x03, 0x04, 0x05, 0, 0, 0x08),
             IpAddress::FromString("1:2:3:4:5::8"));
-  EXPECT_EQ(
-      IpAddress(0x1234, 0x5678, 0x9abc, 0xdef0, 0x0fed, 0xcba9, 0x8765, 0x4321),
-      IpAddress::FromString("1234:5678:9abc:def0:0fed:cba9:8765:4321"));
-  EXPECT_EQ(
-      IpAddress(0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff),
-      IpAddress::FromString("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"));
+  EXPECT_EQ(IpAddress(0x1234, 0x5678, 0x9abc, 0xdef0, 0x0fed, 0xcba9, 0x8765, 0x4321),
+            IpAddress::FromString("1234:5678:9abc:def0:0fed:cba9:8765:4321"));
+  EXPECT_EQ(IpAddress(0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff),
+            IpAddress::FromString("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"));
 
   EXPECT_EQ(IpAddress::kInvalid, IpAddress::FromString("::1"));
   EXPECT_EQ(IpAddress::kInvalid, IpAddress::FromString("1::"));

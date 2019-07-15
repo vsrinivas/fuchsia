@@ -98,7 +98,6 @@ source_set("source_set") {
   ]
 
   public_deps = [
-    "//garnet/lib/inet",
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/json",
@@ -108,6 +107,7 @@ source_set("source_set") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/lib/inet",
     "//third_party/rapidjson",
     "//zircon/public/fidl/fuchsia-net",
     "//zircon/public/lib/fit",
@@ -195,8 +195,8 @@ fuzzer("packet_reader_fuzzer") {
     "packet_reader_fuzzer.cc",
   ]
   deps = [
-    "//garnet/lib/inet",
     "//src/lib/fxl",
+    "//src/lib/inet",
   ]
 }
 

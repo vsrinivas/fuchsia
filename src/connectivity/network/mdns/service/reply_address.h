@@ -10,8 +10,8 @@
 
 #include <ostream>
 
-#include "garnet/lib/inet/socket_address.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/inet/socket_address.h"
 
 namespace mdns {
 

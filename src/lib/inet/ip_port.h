@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_INET_IP_PORT_H_
-#define GARNET_LIB_INET_IP_PORT_H_
-
-#include <ostream>
+#ifndef SRC_LIB_INET_IP_PORT_H_
+#define SRC_LIB_INET_IP_PORT_H_
 
 #include <arpa/inet.h>
 #include <endian.h>
+
+#include <ostream>
 
 namespace inet {
 
@@ -64,13 +64,9 @@ class IpPort {
 
   explicit operator bool() const { return is_valid(); }
 
-  bool operator==(const IpPort& other) const {
-    return as_in_port_t() == other.as_in_port_t();
-  }
+  bool operator==(const IpPort& other) const { return as_in_port_t() == other.as_in_port_t(); }
 
-  bool operator!=(const IpPort& other) const {
-    return as_in_port_t() != other.as_in_port_t();
-  }
+  bool operator!=(const IpPort& other) const { return as_in_port_t() != other.as_in_port_t(); }
 
  private:
   explicit IpPort(in_port_t port) : value_(port) {}
@@ -82,4 +78,4 @@ std::ostream& operator<<(std::ostream& os, IpPort value);
 
 }  // namespace inet
 
-#endif  // GARNET_LIB_INET_IP_PORT_H_
+#endif  // SRC_LIB_INET_IP_PORT_H_

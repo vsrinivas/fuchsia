@@ -9,8 +9,8 @@
 #include <string>
 #include <vector>
 
-#include "garnet/lib/inet/ip_address.h"
-#include "garnet/lib/inet/ip_port.h"
+#include "src/lib/inet/ip_address.h"
+#include "src/lib/inet/ip_port.h"
 
 namespace mdns {
 

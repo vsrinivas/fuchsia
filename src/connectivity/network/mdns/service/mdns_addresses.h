@@ -5,8 +5,8 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_MDNS_ADDRESSES_H_
 #define SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_MDNS_ADDRESSES_H_
 
-#include "garnet/lib/inet/socket_address.h"
 #include "src/connectivity/network/mdns/service/reply_address.h"
+#include "src/lib/inet/socket_address.h"
 
 namespace mdns {
 
