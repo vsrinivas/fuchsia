@@ -4,38 +4,46 @@
 
 library fuchsia.router.config;
 
-using fuchsia.net;
-
-enum MacFilterMode {
-    DISABLED = 0;
-    DROP = 1;
-    ALLOW = 2;
+enum ChannelWidth {
+    AUTO = 0;
+    WIDTH_20_MHZ = 1;
+    WIDTH_40_MHZ = 2;
+    WIDTH_80_MHZ = 3;
+    WIDTH_160_MHZ = 4;
+};
+bits Band:uint8 {
+    BAND_2400_MHZ = 1;
+    BAND_5000_MHZ = 2;
 };
 
-enum Band {
-    DISABLED = 0;
-    Band24 = 1;
-    Band5 = 2;
+xunion ChannelNumber {
+    uint32 number;
+    Band auto_band;
 };
 
-enum ChannelBw {
-     BW20 = 0;
-     BW40 = 1;
-     BW80 = 2;
+struct Channel {
+    /// [0] is primary channel, [1] (if provided) is secondary for HT/VHT.
+    vector<ChannelNumber>:2 ch;
+    ChannelWidth width;
 };
 
-struct MacFilter {
+struct Radio {
+    Id element;
+    uint32 phy;
+    Channel channel;
+};
+
+// TODO(guzt): Add mesh related information.
+
+struct WlanNetwork {
+    Id element;
     string name;
-    fuchsia.net.MacAddress mac;
+    string psk;
+    vector<Id> radio_phys;
+    bool enable_band_steering;
 };
 
-table Wireless {
-    1: Band band;
-    2: string ssid;
-    3: bool hide_ssid;
-    4: ChannelBw bandwidth;
-    5: uint32 channel;
-    //AuthenticationMethod authenticationMethod;
-    6: MacFilterMode mode;
-    7: vector<MacFilter> mac_list;
+struct Regulatory {
+    Id element;
+    string county_code;
 };

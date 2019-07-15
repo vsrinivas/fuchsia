@@ -44,10 +44,10 @@ protocol RouterAdmin {
     // DNS resolver configuration.
     SetDnsResolver(DnsResolverConfig config) -> (Id? id, Error? error);
     // DNS forwarder configuration.
-    SetDnsForwarder(DnsForwarderConfig config)  -> (Error? error);
+    SetDnsForwarder(DnsForwarderConfig config) -> (Error? error);
     // Local names to be served by the DNS forwarder.
-    AddDnsEntry(DnsForwarderEntry entry)  -> (Id? entry_id, Error? error);
-    DeleteDnsEntry(Id entry_id)  -> (Error? error);
+    AddDnsEntry(DnsForwarderEntry entry) -> (Id? entry_id, Error? error);
+    DeleteDnsEntry(Id entry_id) -> (Error? error);
 
     // Static routes.
     SetRoute(Route route) -> (Id? id, Error? error);
@@ -71,12 +71,15 @@ protocol RouterAdmin {
 
     SetDmzHost(DmzHost rule) -> (Id? rule_id, Error? error);
     DeleteDmzHost(Id rule_id) -> (Error? error);
+
+    CreateWlanNetwork(WlanNetwork network) -> (Id? iface, Error? error);
+    DeleteWlanNetwork(Id network_id) -> (Error? error);
 };
 
 /// RouterSystem provides APIs for managing features that are considered crytical for the system.
-/// For example, setting filter rules that com into effect on startup.
+/// For example, setting filter rules that come into effect on startup.
 [Discoverable]
-protocol RoutercwSystemAdmin {
+protocol RouterSystem {
     SetAcl(SystemAcl rule) -> (Id? acl_id, Error? error);
     DeleteAcl(Id acl_id) -> (Error? error);
     GetAcl(Id acl_id) -> (SystemAcl acl, Error? error);
@@ -94,6 +97,8 @@ protocol RouterState {
     GetLanPorts(Id lan_id) -> (vector<uint32> port_ids, Error? error);
     GetPort(uint32 port_id) -> (Port? port, Error? error);
     GetPorts() -> (vector<Port> ports);
+
+    GetWlanNetworks() -> (vector<WlanNetwork> networks);
 
     // WAN parameters, such as connection type, ip address aquisition method.
     GetWanProperties(Id wan_id) -> (WanProperties properties, Error? error);
@@ -127,6 +132,7 @@ protocol RouterState {
     // Device information.
     GetDevice() -> (Device device);
     GetSystemConfig() -> (SystemConfig config);
+    GetRadios() -> (vector<Radio> radios);
 
     -> OnChange(vector<Event> events);
 };
