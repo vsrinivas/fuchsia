@@ -59,6 +59,7 @@ if (current_cpu != "") {
       "$zx/system/dev/i2c/mt8167-i2c:mt8167-i2c-test",
       "$zx/system/dev/input/bma253:bma253-test",
       "$zx/system/dev/input/hid-buttons:hid-buttons-test",
+      "$zx/system/dev/input/i2c-hid:i2c-hid-test",
       "$zx/system/dev/lib/as370:syn-dhub-test",
       "$zx/system/dev/lib/fake-bti/test:fake-bti",
       "$zx/system/dev/lib/mt8167:mt8167-audio-lib-test",
