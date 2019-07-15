@@ -4,6 +4,7 @@
 
 #include <fbl/ref_ptr.h>
 #include <fbl/string_printf.h>
+#include <lib/inspect_deprecated/deprecated/exposed_object.h>
 #include <perftest/perftest.h>
 #include <src/lib/fxl/strings/string_printf.h>
 #include <zircon/syscalls.h>
@@ -12,8 +13,6 @@
 #include <random>
 #include <sstream>
 #include <vector>
-
-#include "lib/inspect/deprecated/exposed_object.h"
 
 namespace {
 
