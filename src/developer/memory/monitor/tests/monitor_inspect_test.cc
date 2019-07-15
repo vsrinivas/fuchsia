@@ -12,6 +12,8 @@
 #include <src/lib/files/file.h>
 #include <src/lib/files/glob.h>
 #include <src/lib/fxl/strings/substitute.h>
+#include <stdlib.h>
+#include <string.h>
 
 namespace component {
 namespace {
@@ -93,8 +95,13 @@ class InspectTest : public sys::testing::TestWithEnvironment {
     if (buf.first == nullptr) {
       return fit::error();
     }
-    // fbl::Array takes ownership of buf.
-    return inspect_deprecated::ReadFromBuffer(fbl::Array(buf.first, buf.second));
+    // fbl::Array takes ownership of the file path, but uses delete[] instead of
+    // delete.  To avoid the error ASan would give us if we simply transferred
+    // ownership, we copy the array to something that can use delete[].
+    uint8_t* new_buf = new uint8_t[buf.second];
+    memcpy(new_buf, buf.first, buf.second);
+    free(buf.first);
+    return inspect_deprecated::ReadFromBuffer(fbl::Array(new_buf, buf.second));
   }
 
  private:
