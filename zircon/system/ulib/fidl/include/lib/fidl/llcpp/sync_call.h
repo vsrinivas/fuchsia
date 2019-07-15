@@ -272,6 +272,18 @@ template <typename ResponseType>
 using UnownedSyncCallBase = SyncCallBase<ResponseType>;
 
 }  // namespace internal
+
+// An buffer holding data inline, sized specifically for |FidlType|.
+// It can be used to allocate request/response buffers when using the caller-allocate or in-place
+// flavor. For example:
+//
+//     fidl::Buffer<mylib::FooRequest> request_buffer;
+//     fidl::Buffer<mylib::FooResponse> response_buffer;
+//     auto result = mylib::Call::Foo(channel, request_buffer.view(), args, response_buffer.view());
+//
+template <typename FidlType>
+using Buffer = internal::AlignedBuffer<MaxSizeInChannel<FidlType>()>;
+
 }  // namespace fidl
 
 #endif  // LIB_FIDL_LLCPP_SYNC_CALL_H_
