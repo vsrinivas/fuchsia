@@ -15,22 +15,16 @@ class FocusHandler : fuchsia::modular::FocusProvider {
  public:
   FocusHandler() {}
 
-  void AddProviderBinding(
-      fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
+  void AddProviderBinding(fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
     provider_bindings_.AddBinding(this, std::move(request));
   };
 
-  std::string request_called_with_story_id() {
-    return request_called_with_story_id_;
-  }
+  std::string request_called_with_story_id() { return request_called_with_story_id_; }
 
   // |fuchsia::modular::FocusProvider|
-  void Request(fidl::StringPtr story_id) override {
-    request_called_with_story_id_ = story_id;
-  };
+  void Request(fidl::StringPtr story_id) override { request_called_with_story_id_ = story_id; };
   void Query(QueryCallback callback) override{};
-  void Watch(
-      fidl::InterfaceHandle<fuchsia::modular::FocusWatcher> watcher) override{};
+  void Watch(fidl::InterfaceHandle<fuchsia::modular::FocusWatcher> watcher) override{};
 
  private:
   std::string request_called_with_story_id_;
@@ -42,8 +36,7 @@ class SetFocusStateCommandRunnerTest : public gtest::TestLoopFixture {
   void SetUp() override {
     fidl::InterfacePtr<fuchsia::modular::FocusProvider> focus_provider;
     focus_handler_.AddProviderBinding(focus_provider.NewRequest());
-    runner_ =
-        std::make_unique<SetFocusStateCommandRunner>(std::move(focus_provider));
+    runner_ = std::make_unique<SetFocusStateCommandRunner>(std::move(focus_provider));
   }
 
  protected:
@@ -59,8 +52,7 @@ TEST_F(SetFocusStateCommandRunnerTest, Focus) {
 
   runner_->Execute("story1", nullptr /* story_storage */, std::move(command),
                    [&](fuchsia::modular::ExecuteResult result) {
-                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK,
-                               result.status);
+                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
                    });
 
   RunLoopUntilIdle();
@@ -73,11 +65,10 @@ TEST_F(SetFocusStateCommandRunnerTest, Unfocus) {
   fuchsia::modular::StoryCommand command;
   command.set_set_focus_state(std::move(set_focus_state));
 
-  runner_->Execute(
-      nullptr /* story_id */, nullptr /* story_storage */, std::move(command),
-      [&](fuchsia::modular::ExecuteResult result) {
-        EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
-      });
+  runner_->Execute(nullptr /* story_id */, nullptr /* story_storage */, std::move(command),
+                   [&](fuchsia::modular::ExecuteResult result) {
+                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
+                   });
 
   RunLoopUntilIdle();
   EXPECT_TRUE(focus_handler_.request_called_with_story_id().empty());

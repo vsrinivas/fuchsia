@@ -19,14 +19,12 @@ namespace modular {
 // An implementation of |AgentRunnerStorage| that persists data in the ledger.
 class AgentRunnerStorageImpl : public AgentRunnerStorage, PageClient {
  public:
-  explicit AgentRunnerStorageImpl(LedgerClient* ledger_client,
-                                  fuchsia::ledger::PageId page_id);
+  explicit AgentRunnerStorageImpl(LedgerClient* ledger_client, fuchsia::ledger::PageId page_id);
   ~AgentRunnerStorageImpl() override;
 
  private:
   // |AgentRunnerStorage|
-  void Initialize(NotificationDelegate* delegate,
-                  fit::function<void()> done) override;
+  void Initialize(NotificationDelegate* delegate, fit::function<void()> done) override;
 
   // |AgentRunnerStorage|
   void WriteTask(const std::string& agent_url, TriggerInfo data,

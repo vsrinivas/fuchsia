@@ -22,8 +22,7 @@ class AgentServiceIndex {
   //
   // |AgentServiceIndex| does not perform any validation that |service_name|
   // will be provided to all clients who request it of the returned handler.
-  virtual fit::optional<std::string> FindAgentForService(
-      std::string service_name) = 0;
+  virtual fit::optional<std::string> FindAgentForService(std::string service_name) = 0;
 };
 
 }  // namespace modular

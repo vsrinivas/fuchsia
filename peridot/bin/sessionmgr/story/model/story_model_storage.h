@@ -34,9 +34,7 @@ class StoryModelStorage {
   // Registers a callback that is called when Observe() is called by
   // implementers.
   void SetObserveCallback(
-      fit::function<
-          void(std::vector<fuchsia::modular::storymodel::StoryModelMutation>)>
-          callback);
+      fit::function<void(std::vector<fuchsia::modular::storymodel::StoryModelMutation>)> callback);
 
   // Returns a task that, when executed, loads existing data in storage and
   // calls Observe() with mutations that will update a default-initialized
@@ -55,8 +53,7 @@ class StoryModelStorage {
   // However, in the case of conflict resolution or a similar process, the set
   // of observed mutations may be different.
   virtual fit::promise<> Execute(
-      std::vector<fuchsia::modular::storymodel::StoryModelMutation>
-          commands) = 0;
+      std::vector<fuchsia::modular::storymodel::StoryModelMutation> commands) = 0;
 
  protected:
   // Calls to Observe() must always be made from the same thread: ordering
@@ -64,8 +61,7 @@ class StoryModelStorage {
   void Observe(std::vector<fuchsia::modular::storymodel::StoryModelMutation>);
 
  private:
-  fit::function<void(
-      std::vector<fuchsia::modular::storymodel::StoryModelMutation>)>
+  fit::function<void(std::vector<fuchsia::modular::storymodel::StoryModelMutation>)>
       observe_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryModelStorage);

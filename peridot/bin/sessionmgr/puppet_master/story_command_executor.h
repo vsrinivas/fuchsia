@@ -5,14 +5,14 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_PUPPET_MASTER_STORY_COMMAND_EXECUTOR_H_
 #define PERIDOT_BIN_SESSIONMGR_PUPPET_MASTER_STORY_COMMAND_EXECUTOR_H_
 
-#include <functional>
-#include <list>
-#include <vector>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
+
+#include <functional>
+#include <list>
+#include <vector>
 
 namespace modular {
 
@@ -30,14 +30,13 @@ class StoryCommandExecutor {
   //
   // On success fuchsia::modular::ExecuteResult.status will be set to
   // fuchsia::modular::ExecuteStatus.OK.
-  void ExecuteCommands(
-      fidl::StringPtr story_id,
-      std::vector<fuchsia::modular::StoryCommand> commands,
-      fit::function<void(fuchsia::modular::ExecuteResult)> done);
+  void ExecuteCommands(fidl::StringPtr story_id,
+                       std::vector<fuchsia::modular::StoryCommand> commands,
+                       fit::function<void(fuchsia::modular::ExecuteResult)> done);
 
-  using ListenerCallback = fit::function<void(
-      const std::vector<fuchsia::modular::StoryCommand>& commands,
-      fuchsia::modular::ExecuteResult result)>;
+  using ListenerCallback =
+      fit::function<void(const std::vector<fuchsia::modular::StoryCommand>& commands,
+                         fuchsia::modular::ExecuteResult result)>;
   using ListenerAutoCancel = fit::deferred_action<fit::function<void()>>;
 
   // Calls |listener| whenever StoryCommands are executed with the commands and
@@ -48,8 +47,7 @@ class StoryCommandExecutor {
 
  private:
   virtual void ExecuteCommandsInternal(
-      fidl::StringPtr story_id,
-      std::vector<fuchsia::modular::StoryCommand> commands,
+      fidl::StringPtr story_id, std::vector<fuchsia::modular::StoryCommand> commands,
       fit::function<void(fuchsia::modular::ExecuteResult)> done) = 0;
 
   std::list<ListenerCallback> listeners_;

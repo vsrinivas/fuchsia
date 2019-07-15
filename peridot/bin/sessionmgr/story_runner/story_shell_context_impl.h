@@ -16,21 +16,17 @@ class StoryProviderImpl;
 
 class StoryShellContextImpl : fuchsia::modular::StoryShellContext {
  public:
-  StoryShellContextImpl(fidl::StringPtr story_id,
-                        StoryProviderImpl* story_provider_impl,
+  StoryShellContextImpl(fidl::StringPtr story_id, StoryProviderImpl* story_provider_impl,
                         StoryControllerImpl* story_controller_impl);
   ~StoryShellContextImpl() override;
 
-  void Connect(
-      fidl::InterfaceRequest<fuchsia::modular::StoryShellContext> request);
+  void Connect(fidl::InterfaceRequest<fuchsia::modular::StoryShellContext> request);
 
  private:
   // |fuchsia::modular::StoryShellContext|
-  void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                           request) override;
+  void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
   void WatchVisualState(
-      fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher)
-      override;
+      fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher) override;
   void GetLink(fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
   void RequestView(std::string surface_id) override;
   void OnSurfaceOffScreen(std::string surface_id) override;

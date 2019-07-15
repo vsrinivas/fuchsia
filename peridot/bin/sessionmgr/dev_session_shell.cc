@@ -33,8 +33,7 @@ namespace {
 class Settings {
  public:
   explicit Settings(const fxl::CommandLine& command_line) {
-    root_module =
-        command_line.GetOptionValueWithDefault("root_module", "example_recipe");
+    root_module = command_line.GetOptionValueWithDefault("root_module", "example_recipe");
     root_link = command_line.GetOptionValueWithDefault("root_link", "");
     story_id = command_line.GetOptionValueWithDefault("story_id", "story");
   }
@@ -48,20 +47,15 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
                            fuchsia::modular::SessionShell,
                            public modular::ViewApp {
  public:
-  explicit DevSessionShellApp(sys::ComponentContext* const component_context,
-                              Settings settings)
-      : ViewApp(component_context),
-        settings_(std::move(settings)),
-        story_watcher_binding_(this) {
+  explicit DevSessionShellApp(sys::ComponentContext* const component_context, Settings settings)
+      : ViewApp(component_context), settings_(std::move(settings)), story_watcher_binding_(this) {
     component_context->svc()->Connect(puppet_master_.NewRequest());
     component_context->svc()->Connect(session_shell_context_.NewRequest());
     session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
     session_shell_context_->GetFocusController(focus_controller_.NewRequest());
-    session_shell_context_->GetVisibleStoriesController(
-        visible_stories_controller_.NewRequest());
+    session_shell_context_->GetVisibleStoriesController(visible_stories_controller_.NewRequest());
 
-    component_context->outgoing()->AddPublicService(
-        session_shell_bindings_.GetHandler(this));
+    component_context->outgoing()->AddPublicService(session_shell_bindings_.GetHandler(this));
 
     startup_context_ = component::StartupContext::CreateFromStartupInfo();
   }
@@ -72,10 +66,8 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
   // |ViewApp|
   void CreateView(
       zx::eventpair view_token,
-      fidl::InterfaceRequest<
-          fuchsia::sys::ServiceProvider> /*incoming_services*/,
-      fidl::InterfaceHandle<
-          fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*incoming_services*/,
+      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {
     view_token_.value = std::move(view_token);
 
     Connect();
@@ -88,8 +80,7 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
     FXL_LOG(INFO) << "DevSessionShell START " << settings_.root_module << " "
                   << settings_.root_link;
 
-    auto scenic =
-        component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+    auto scenic = component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic::ViewContext context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
@@ -99,8 +90,7 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
 
     view_ = std::make_unique<modular::ViewHost>(std::move(context));
 
-    puppet_master_->ControlStory(settings_.story_id,
-                                 story_puppet_master_.NewRequest());
+    puppet_master_->ControlStory(settings_.story_id, story_puppet_master_.NewRequest());
 
     std::vector<fuchsia::modular::StoryCommand> commands;
     fuchsia::modular::AddMod add_mod;
@@ -114,9 +104,7 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
 
     story_puppet_master_->Enqueue(std::move(commands));
     story_puppet_master_->Execute(
-        [this](fuchsia::modular::ExecuteResult result) {
-          StartStoryById(settings_.story_id);
-        });
+        [this](fuchsia::modular::ExecuteResult result) { StartStoryById(settings_.story_id); });
   }
 
   void StartStoryById(const fidl::StringPtr& story_id) {
@@ -150,23 +138,20 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
   }
 
   // |SessionShell|
-  void AttachView(
-      fuchsia::modular::ViewIdentifier view_id,
-      fuchsia::ui::views::ViewHolderToken view_holder_token) override {
+  void AttachView(fuchsia::modular::ViewIdentifier view_id,
+                  fuchsia::ui::views::ViewHolderToken view_holder_token) override {
     FXL_LOG(INFO) << "DevSessionShell AttachView(): " << view_id.story_id;
     view_->ConnectView(std::move(view_holder_token));
   }
 
   // |SessionShell|
-  void AttachView2(
-      fuchsia::modular::ViewIdentifier view_id,
-      fuchsia::ui::views::ViewHolderToken view_holder_token) override {
+  void AttachView2(fuchsia::modular::ViewIdentifier view_id,
+                   fuchsia::ui::views::ViewHolderToken view_holder_token) override {
     AttachView(view_id, std::move(view_holder_token));
   }
 
   // |SessionShell|
-  void DetachView(fuchsia::modular::ViewIdentifier view_id,
-                  fit::function<void()> done) override {
+  void DetachView(fuchsia::modular::ViewIdentifier view_id, fit::function<void()> done) override {
     FXL_LOG(INFO) << "DevSessionShell DetachView(): " << view_id.story_id;
     done();
   }
@@ -214,8 +199,7 @@ int main(int argc, const char** argv) {
 
   auto context = sys::ComponentContext::Create();
   modular::AppDriver<DevSessionShellApp> driver(
-      context->outgoing(),
-      std::make_unique<DevSessionShellApp>(context.get(), std::move(settings)),
+      context->outgoing(), std::make_unique<DevSessionShellApp>(context.get(), std::move(settings)),
       [&loop] { loop.Quit(); });
 
   loop.Run();

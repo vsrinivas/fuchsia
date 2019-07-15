@@ -34,17 +34,16 @@ class RemoveModCall : public Operation<fuchsia::modular::ExecuteResult> {
     // Set the module data stopped to true, this should notify story
     // controller and perform module teardown.
     story_storage_
-        ->UpdateModuleData(
-            mod_name,
-            [this, flow](fuchsia::modular::ModuleDataPtr* module_data) {
-              if (!(*module_data)) {
-                result_.status = fuchsia::modular::ExecuteStatus::INVALID_MOD;
-                result_.error_message = "No module data for given name.";
-                return;
-              }
-              (*module_data)->module_deleted = true;
-              result_.status = fuchsia::modular::ExecuteStatus::OK;
-            })
+        ->UpdateModuleData(mod_name,
+                           [this, flow](fuchsia::modular::ModuleDataPtr* module_data) {
+                             if (!(*module_data)) {
+                               result_.status = fuchsia::modular::ExecuteStatus::INVALID_MOD;
+                               result_.error_message = "No module data for given name.";
+                               return;
+                             }
+                             (*module_data)->module_deleted = true;
+                             result_.status = fuchsia::modular::ExecuteStatus::OK;
+                           })
         ->Then([flow] {});
   }
 
@@ -59,15 +58,13 @@ class RemoveModCall : public Operation<fuchsia::modular::ExecuteResult> {
 RemoveModCommandRunner::RemoveModCommandRunner() = default;
 RemoveModCommandRunner::~RemoveModCommandRunner() = default;
 
-void RemoveModCommandRunner::Execute(
-    fidl::StringPtr story_id, StoryStorage* const story_storage,
-    fuchsia::modular::StoryCommand command,
-    fit::function<void(fuchsia::modular::ExecuteResult)> done) {
+void RemoveModCommandRunner::Execute(fidl::StringPtr story_id, StoryStorage* const story_storage,
+                                     fuchsia::modular::StoryCommand command,
+                                     fit::function<void(fuchsia::modular::ExecuteResult)> done) {
   FXL_CHECK(command.is_remove_mod());
 
   operation_queue_.Add(std::make_unique<RemoveModCall>(
-      story_storage, std::move(story_id), std::move(command.remove_mod()),
-      std::move(done)));
+      story_storage, std::move(story_id), std::move(command.remove_mod()), std::move(done)));
 }
 
 }  // namespace modular

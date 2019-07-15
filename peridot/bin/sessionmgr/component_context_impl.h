@@ -42,57 +42,46 @@ class ComponentContextImpl : public fuchsia::modular::ComponentContext {
   //   the agent URL.
   // * A component URL is the origin from which the executable associated with
   //   the component was fetched from.
-  explicit ComponentContextImpl(const ComponentContextInfo& info,
-                                std::string component_namespace,
-                                std::string component_instance_id,
-                                std::string component_url);
+  explicit ComponentContextImpl(const ComponentContextInfo& info, std::string component_namespace,
+                                std::string component_instance_id, std::string component_url);
 
   ~ComponentContextImpl() override;
 
   const std::string& component_instance_id() { return component_instance_id_; }
 
-  void Connect(
-      fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request);
+  void Connect(fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request);
   fuchsia::modular::ComponentContextPtr NewBinding();
 
  private:
   // |fuchsia::modular::ComponentContext|
-  void GetLedger(
-      fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) override;
+  void GetLedger(fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) override;
 
   // |fuchsia::modular::ComponentContext|
-  void ConnectToAgent(std::string url,
-                      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
-                          incoming_services_request,
-                      fidl::InterfaceRequest<fuchsia::modular::AgentController>
-                          agent_controller_request) override;
+  void ConnectToAgent(
+      std::string url,
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services_request,
+      fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request) override;
 
   // |fuchsia::modular::ComponentContext|
-  void ConnectToAgentService(
-      fuchsia::modular::AgentServiceRequest request) override;
+  void ConnectToAgentService(fuchsia::modular::AgentServiceRequest request) override;
 
   // |fuchsia::modular::ComponentContext|
-  void ObtainMessageQueue(
-      std::string name,
-      fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request) override;
+  void ObtainMessageQueue(std::string name,
+                          fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request) override;
 
   // |fuchsia::modular::ComponentContext|
   void DeleteMessageQueue(std::string name) override;
 
   // |fuchsia::modular::ComponentContext|
-  void GetMessageSender(
-      std::string queue_token,
-      fidl::InterfaceRequest<fuchsia::modular::MessageSender> request) override;
+  void GetMessageSender(std::string queue_token,
+                        fidl::InterfaceRequest<fuchsia::modular::MessageSender> request) override;
 
   // |fuchsia::modular::ComponentContext|
-  void GetEntityResolver(
-      fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request)
-      override;
+  void GetEntityResolver(fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request) override;
 
   // |fuchsia::modular::ComponentContext|
-  void CreateEntityWithData(
-      std::vector<fuchsia::modular::TypeToDataEntry> type_to_data,
-      CreateEntityWithDataCallback result) override;
+  void CreateEntityWithData(std::vector<fuchsia::modular::TypeToDataEntry> type_to_data,
+                            CreateEntityWithDataCallback result) override;
 
   // |fuchsia::modular::ComponentContext|
   void GetPackageName(GetPackageNameCallback result) override;

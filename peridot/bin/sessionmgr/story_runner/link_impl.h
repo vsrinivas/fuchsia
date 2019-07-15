@@ -5,9 +5,6 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_STORY_RUNNER_LINK_IMPL_H_
 #define PERIDOT_BIN_SESSIONMGR_STORY_RUNNER_LINK_IMPL_H_
 
-#include <set>
-#include <vector>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
@@ -18,6 +15,9 @@
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <src/lib/fxl/macros.h>
+
+#include <set>
+#include <vector>
 
 #include "peridot/bin/sessionmgr/storage/story_storage.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
@@ -35,8 +35,7 @@ class StoryStorage;
 
 // Use the CrtAllocator and not the pool allocator so that merging doesn't
 // require deep copying.
-using CrtJsonDoc =
-    rapidjson::GenericDocument<rapidjson::UTF8<>, rapidjson::CrtAllocator>;
+using CrtJsonDoc = rapidjson::GenericDocument<rapidjson::UTF8<>, rapidjson::CrtAllocator>;
 using CrtJsonValue = CrtJsonDoc::ValueType;
 using CrtJsonPointer = rapidjson::GenericPointer<CrtJsonValue>;
 
@@ -63,8 +62,7 @@ class LinkImpl : public Link {
 
   ~LinkImpl() override;
 
-  void Set(fidl::VectorPtr<std::string> path,
-           fuchsia::mem::Buffer json) override;
+  void Set(fidl::VectorPtr<std::string> path, fuchsia::mem::Buffer json) override;
   void Get(fidl::VectorPtr<std::string> path, GetCallback callback) override;
   void Erase(std::vector<std::string> path) override;
   void GetEntity(GetEntityCallback callback) override;

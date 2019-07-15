@@ -24,8 +24,7 @@ StoryCommandExecutor::StoryCommandExecutor() : weak_factory_(this) {}
 StoryCommandExecutor::~StoryCommandExecutor() = default;
 
 void StoryCommandExecutor::ExecuteCommands(
-    fidl::StringPtr story_id,
-    std::vector<fuchsia::modular::StoryCommand> commands,
+    fidl::StringPtr story_id, std::vector<fuchsia::modular::StoryCommand> commands,
     fit::function<void(fuchsia::modular::ExecuteResult)> done) {
   // TODO(thatguy): Cloning the commands here is unforunate. We will want to
   // create a shared datastructure at some point, such as a
@@ -35,22 +34,20 @@ void StoryCommandExecutor::ExecuteCommands(
   //
   // For now, we make a copy.
   auto commands_copy = CloneCommands(commands);
-  auto on_execute_done =
-      [weak_this = weak_factory_.GetWeakPtr(),
-       commands_copy = std::move(commands_copy),
-       done = std::move(done)](fuchsia::modular::ExecuteResult result) {
-        if (!weak_this)
-          return;
+  auto on_execute_done = [weak_this = weak_factory_.GetWeakPtr(),
+                          commands_copy = std::move(commands_copy),
+                          done = std::move(done)](fuchsia::modular::ExecuteResult result) {
+    if (!weak_this)
+      return;
 
-        for (auto& listener : weak_this->listeners_) {
-          listener(commands_copy, result);
-        }
+    for (auto& listener : weak_this->listeners_) {
+      listener(commands_copy, result);
+    }
 
-        done(result);
-      };
+    done(result);
+  };
 
-  ExecuteCommandsInternal(std::move(story_id), std::move(commands),
-                          std::move(on_execute_done));
+  ExecuteCommandsInternal(std::move(story_id), std::move(commands), std::move(on_execute_done));
 }
 
 StoryCommandExecutor::ListenerAutoCancel StoryCommandExecutor::AddListener(

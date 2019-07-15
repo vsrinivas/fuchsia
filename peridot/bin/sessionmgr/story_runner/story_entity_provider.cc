@@ -5,6 +5,7 @@
 #include "peridot/bin/sessionmgr/story_runner/story_entity_provider.h"
 
 #include <utility>
+
 #include "src/lib/uuid/uuid.h"
 
 namespace modular {
@@ -14,13 +15,11 @@ StoryEntityProvider::StoryEntityProvider(StoryStorage* story_storage)
 
 StoryEntityProvider::~StoryEntityProvider() = default;
 
-void StoryEntityProvider::CreateEntity(
-    const std::string& type, fuchsia::mem::Buffer data,
-    fit::function<void(std::string /* cookie */)> callback) {
+void StoryEntityProvider::CreateEntity(const std::string& type, fuchsia::mem::Buffer data,
+                                       fit::function<void(std::string /* cookie */)> callback) {
   const std::string cookie = uuid::Generate();
   story_storage_->SetEntityData(cookie, type, std::move(data))
-      ->Then([cookie,
-              callback = std::move(callback)](StoryStorage::Status status) {
+      ->Then([cookie, callback = std::move(callback)](StoryStorage::Status status) {
         if (status == StoryStorage::Status::OK) {
           callback(cookie);
         } else {
@@ -34,19 +33,16 @@ void StoryEntityProvider::Connect(
   provider_bindings_.AddBinding(this, std::move(provider_request));
 }
 
-void StoryEntityProvider::GetTypes(std::string cookie,
-                                   GetTypesCallback callback) {
+void StoryEntityProvider::GetTypes(std::string cookie, GetTypesCallback callback) {
   story_storage_->GetEntityType(cookie)->Then(
-      [callback = std::move(callback)](StoryStorage::Status status,
-                                       std::string type) {
+      [callback = std::move(callback)](StoryStorage::Status status, std::string type) {
         std::vector<std::string> types;
         types.push_back(type);
         callback(std::move(types));
       });
 }
 
-void StoryEntityProvider::GetData(std::string cookie, std::string type,
-                                  GetDataCallback callback) {
+void StoryEntityProvider::GetData(std::string cookie, std::string type, GetDataCallback callback) {
   story_storage_->GetEntityData(cookie, type)
       ->Then([callback = std::move(callback)](StoryStorage::Status status,
                                               fuchsia::mem::BufferPtr data) {
@@ -54,8 +50,7 @@ void StoryEntityProvider::GetData(std::string cookie, std::string type,
       });
 }
 
-void StoryEntityProvider::WriteData(std::string cookie, std::string type,
-                                    fuchsia::mem::Buffer data,
+void StoryEntityProvider::WriteData(std::string cookie, std::string type, fuchsia::mem::Buffer data,
                                     WriteDataCallback callback) {
   story_storage_->SetEntityData(cookie, type, std::move(data))
       ->Then([callback = std::move(callback)](StoryStorage::Status status) {
@@ -76,9 +71,8 @@ void StoryEntityProvider::WriteData(std::string cookie, std::string type,
       });
 }
 
-void StoryEntityProvider::Watch(
-    std::string cookie, std::string type,
-    fidl::InterfaceHandle<fuchsia::modular::EntityWatcher> watcher) {
+void StoryEntityProvider::Watch(std::string cookie, std::string type,
+                                fidl::InterfaceHandle<fuchsia::modular::EntityWatcher> watcher) {
   fuchsia::modular::EntityWatcherPtr entity_watcher = watcher.Bind();
   story_storage_->WatchEntity(cookie, type, std::move(entity_watcher));
 }

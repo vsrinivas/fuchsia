@@ -13,9 +13,8 @@ namespace modular {
 
 class OngoingActivityImpl : public fuchsia::modular::OngoingActivity {
  public:
-  OngoingActivityImpl(
-      fuchsia::modular::OngoingActivityType ongoing_activity_type,
-      fit::closure on_destroy);
+  OngoingActivityImpl(fuchsia::modular::OngoingActivityType ongoing_activity_type,
+                      fit::closure on_destroy);
 
   ~OngoingActivityImpl() override;
 

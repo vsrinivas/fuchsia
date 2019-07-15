@@ -8,9 +8,8 @@
 
 namespace modular {
 
-IntelligenceServicesImpl::IntelligenceServicesImpl(
-    fuchsia::modular::ComponentScope scope,
-    fuchsia::modular::ContextEngine* context_engine)
+IntelligenceServicesImpl::IntelligenceServicesImpl(fuchsia::modular::ComponentScope scope,
+                                                   fuchsia::modular::ContextEngine* context_engine)
     : scope_(std::move(scope)), context_engine_(context_engine) {}
 
 fuchsia::modular::ComponentScope IntelligenceServicesImpl::CloneScope() {

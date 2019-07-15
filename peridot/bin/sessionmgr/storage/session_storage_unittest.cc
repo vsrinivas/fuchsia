@@ -21,24 +21,21 @@ namespace {
 class SessionStorageTest : public testing::TestWithLedger {
  protected:
   std::unique_ptr<SessionStorage> CreateStorage(std::string page_id) {
-    return std::make_unique<SessionStorage>(ledger_client(),
-                                            MakePageId(page_id));
+    return std::make_unique<SessionStorage>(ledger_client(), MakePageId(page_id));
   }
 
   // Convenience method to create a story for the test cases where
   // we're not testing CreateStory().
-  fidl::StringPtr CreateStory(
-      SessionStorage* storage,
-      fuchsia::modular::StoryOptions story_options = {}) {
-    auto future_story = storage->CreateStory(
-        nullptr /* name */, nullptr /* extra */, std::move(story_options));
+  fidl::StringPtr CreateStory(SessionStorage* storage,
+                              fuchsia::modular::StoryOptions story_options = {}) {
+    auto future_story =
+        storage->CreateStory(nullptr /* name */, nullptr /* extra */, std::move(story_options));
     bool done{};
     fidl::StringPtr story_name;
-    future_story->Then(
-        [&](fidl::StringPtr name, fuchsia::ledger::PageId page_id) {
-          done = true;
-          story_name = std::move(name);
-        });
+    future_story->Then([&](fidl::StringPtr name, fuchsia::ledger::PageId page_id) {
+      done = true;
+      story_name = std::move(name);
+    });
     RunLoopUntil([&] { return done; });
 
     return story_name;
@@ -62,8 +59,8 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
 
   fuchsia::modular::StoryOptions story_options;
   story_options.kind_of_proto_story = true;
-  auto future_story = storage->CreateStory(
-      "story_name", std::move(extra_entries), std::move(story_options));
+  auto future_story =
+      storage->CreateStory("story_name", std::move(extra_entries), std::move(story_options));
   bool done{};
   fidl::StringPtr story_name;
   fuchsia::ledger::PageId page_id;
@@ -112,10 +109,9 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
   // Verify that GetAllStoryData() also returns the same information.
   fidl::VectorPtr<fuchsia::modular::internal::StoryData> all_data;
   auto future_all_data = storage->GetAllStoryData();
-  future_all_data->Then(
-      [&](std::vector<fuchsia::modular::internal::StoryData> data) {
-        all_data.reset(std::move(data));
-      });
+  future_all_data->Then([&](std::vector<fuchsia::modular::internal::StoryData> data) {
+    all_data.reset(std::move(data));
+  });
   RunLoopUntil([&] { return !!all_data; });
 
   EXPECT_EQ(1u, all_data->size());
@@ -129,22 +125,20 @@ TEST_F(SessionStorageTest, CreateGetAllDelete) {
   // Pipeline all the calls such to show that we data consistency based on call
   // order.
   auto storage = CreateStorage("page");
-  auto future_story = storage->CreateStory(
-      "story_name", nullptr /* extra_info */, {} /* options */);
+  auto future_story =
+      storage->CreateStory("story_name", nullptr /* extra_info */, {} /* options */);
 
   // Immediately after creation is complete, delete it.
   FuturePtr<> delete_done;
-  future_story->Then(
-      [&](fidl::StringPtr story_name, fuchsia::ledger::PageId page_id) {
-        delete_done = storage->DeleteStory(story_name);
-      });
+  future_story->Then([&](fidl::StringPtr story_name, fuchsia::ledger::PageId page_id) {
+    delete_done = storage->DeleteStory(story_name);
+  });
 
   auto future_all_data = storage->GetAllStoryData();
   fidl::VectorPtr<fuchsia::modular::internal::StoryData> all_data;
-  future_all_data->Then(
-      [&](std::vector<fuchsia::modular::internal::StoryData> data) {
-        all_data.reset(std::move(data));
-      });
+  future_all_data->Then([&](std::vector<fuchsia::modular::internal::StoryData> data) {
+    all_data.reset(std::move(data));
+  });
 
   RunLoopUntil([&] { return !!all_data; });
 
@@ -154,10 +148,9 @@ TEST_F(SessionStorageTest, CreateGetAllDelete) {
   // But if we get all data again, we should see no stories.
   future_all_data = storage->GetAllStoryData();
   all_data.reset();
-  future_all_data->Then(
-      [&](std::vector<fuchsia::modular::internal::StoryData> data) {
-        all_data.reset(std::move(data));
-      });
+  future_all_data->Then([&](std::vector<fuchsia::modular::internal::StoryData> data) {
+    all_data.reset(std::move(data));
+  });
   RunLoopUntil([&] { return !!all_data; });
   EXPECT_EQ(0u, all_data->size());
 }
@@ -170,18 +163,15 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
   // * If we GetAllStoryData() we should see both of them.
   auto storage = CreateStorage("page");
 
-  auto future_story1 = storage->CreateStory("story1", nullptr /* extra_info */,
-                                            {} /* options */);
-  auto future_story2 =
-      storage->CreateStory("story2", nullptr /* extra_info */, {} /* options*/);
+  auto future_story1 = storage->CreateStory("story1", nullptr /* extra_info */, {} /* options */);
+  auto future_story2 = storage->CreateStory("story2", nullptr /* extra_info */, {} /* options*/);
 
   fidl::StringPtr story1_name;
   fuchsia::ledger::PageId story1_pageid;
   fidl::StringPtr story2_name;
   fuchsia::ledger::PageId story2_pageid;
   bool done = false;
-  Wait("SessionStorageTest.CreateMultipleAndDeleteOne.wait",
-       {future_story1, future_story2})
+  Wait("SessionStorageTest.CreateMultipleAndDeleteOne.wait", {future_story1, future_story2})
       ->Then([&](auto results) {
         story1_name = std::move(std::get<0>(results[0]));
         story1_pageid = std::move(std::get<1>(results[0]));
@@ -196,10 +186,9 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
 
   auto future_all_data = storage->GetAllStoryData();
   fidl::VectorPtr<fuchsia::modular::internal::StoryData> all_data;
-  future_all_data->Then(
-      [&](std::vector<fuchsia::modular::internal::StoryData> data) {
-        all_data.reset(std::move(data));
-      });
+  future_all_data->Then([&](std::vector<fuchsia::modular::internal::StoryData> data) {
+    all_data.reset(std::move(data));
+  });
   RunLoopUntil([&] { return !!all_data; });
 
   EXPECT_EQ(2u, all_data->size());
@@ -211,10 +200,9 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
 
   future_all_data = storage->GetAllStoryData();
   all_data.reset();
-  future_all_data->Then(
-      [&](std::vector<fuchsia::modular::internal::StoryData> data) {
-        all_data.reset(std::move(data));
-      });
+  future_all_data->Then([&](std::vector<fuchsia::modular::internal::StoryData> data) {
+    all_data.reset(std::move(data));
+  });
   RunLoopUntil([&] { return !!all_data; });
 
   EXPECT_TRUE(delete_done);
@@ -248,8 +236,8 @@ TEST_F(SessionStorageTest, DISABLED_DeleteStoryDeletesStoryPage) {
   // When we call DeleteStory, we expect the story's page to be completely
   // emptied.
   auto storage = CreateStorage("page");
-  auto future_story = storage->CreateStory(
-      "story_name", nullptr /* extra_info */, {} /* options */);
+  auto future_story =
+      storage->CreateStory("story_name", nullptr /* extra_info */, {} /* options */);
 
   bool done{false};
   auto story_page_id = fuchsia::ledger::PageId::New();
@@ -262,11 +250,9 @@ TEST_F(SessionStorageTest, DISABLED_DeleteStoryDeletesStoryPage) {
   // Add some fake content to the story's page, so that we can show that
   // it is deleted when we instruct SessionStorage to delete the story.
   fuchsia::ledger::PagePtr story_page;
-  story_page.set_error_handler([](zx_status_t status) {
-    FAIL() << "Unexpected disconnection on page, status: " << status;
-  });
-  ledger_client()->ledger()->GetPage(std::move(story_page_id),
-                                     story_page.NewRequest());
+  story_page.set_error_handler(
+      [](zx_status_t status) { FAIL() << "Unexpected disconnection on page, status: " << status; });
+  ledger_client()->ledger()->GetPage(std::move(story_page_id), story_page.NewRequest());
   done = false;
   story_page->Put(to_array("key"), to_array("value"));
   story_page->Sync([&] { done = true; });
@@ -279,16 +265,15 @@ TEST_F(SessionStorageTest, DISABLED_DeleteStoryDeletesStoryPage) {
 
   // Show that the underlying page is now empty.
   fuchsia::ledger::PageSnapshotPtr snapshot;
-  story_page->GetSnapshot(snapshot.NewRequest(), to_array("") /* prefix */,
-                          nullptr /* watcher */);
+  story_page->GetSnapshot(snapshot.NewRequest(), to_array("") /* prefix */, nullptr /* watcher */);
   done = false;
-  snapshot->GetEntries(to_array("") /* key_start */, nullptr /* token */,
-                       [&](std::vector<fuchsia::ledger::Entry> entries,
-                           fuchsia::ledger::TokenPtr next_token) {
-                         EXPECT_EQ(nullptr, next_token);
-                         EXPECT_TRUE(entries.empty());
-                         done = true;
-                       });
+  snapshot->GetEntries(
+      to_array("") /* key_start */, nullptr /* token */,
+      [&](std::vector<fuchsia::ledger::Entry> entries, fuchsia::ledger::TokenPtr next_token) {
+        EXPECT_EQ(nullptr, next_token);
+        EXPECT_TRUE(entries.empty());
+        done = true;
+      });
   RunLoopUntil([&] { return done; });
 }
 
@@ -313,8 +298,7 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete_Local) {
   fidl::StringPtr updated_story_name;
   fuchsia::modular::internal::StoryData updated_story_data;
   storage->set_on_story_updated(
-      [&](fidl::StringPtr story_name,
-          fuchsia::modular::internal::StoryData story_data) {
+      [&](fidl::StringPtr story_name, fuchsia::modular::internal::StoryData story_data) {
         updated_story_name = std::move(story_name);
         updated_story_data = std::move(story_data);
         updated = true;
@@ -366,8 +350,7 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete_Remote) {
   fidl::StringPtr updated_story_name;
   fuchsia::modular::internal::StoryData updated_story_data;
   storage->set_on_story_updated(
-      [&](fidl::StringPtr story_name,
-          fuchsia::modular::internal::StoryData story_data) {
+      [&](fidl::StringPtr story_name, fuchsia::modular::internal::StoryData story_data) {
         updated_story_name = std::move(story_name);
         updated_story_data = std::move(story_data);
         updated = true;
@@ -396,8 +379,7 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete_Remote) {
   updated = false;
   fuchsia::modular::StoryOptions story_options;
   story_options.kind_of_proto_story = true;
-  remote_storage->UpdateStoryOptions(created_story_name,
-                                     std::move(story_options));
+  remote_storage->UpdateStoryOptions(created_story_name, std::move(story_options));
   RunLoopUntil([&] { return updated; });
   EXPECT_EQ(created_story_name, updated_story_name);
   EXPECT_EQ(created_story_name, updated_story_data.story_info().id);
@@ -417,36 +399,30 @@ TEST_F(SessionStorageTest, UpdateStoryOptions) {
   // Start by setting an option.
   fuchsia::modular::StoryOptions story_options;
   story_options.kind_of_proto_story = true;
-  storage->UpdateStoryOptions(story_name, std::move(story_options))->Then([&] {
-    done = true;
-  });
+  storage->UpdateStoryOptions(story_name, std::move(story_options))->Then([&] { done = true; });
   RunLoopUntil([&] { return done; });
 
   // Read the options (we should only see 1 even when we added 2 since it's the
   // same).
   done = false;
-  storage->GetStoryData(story_name)
-      ->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-        EXPECT_TRUE(data->story_options().kind_of_proto_story);
-        done = true;
-      });
+  storage->GetStoryData(story_name)->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
+    EXPECT_TRUE(data->story_options().kind_of_proto_story);
+    done = true;
+  });
   RunLoopUntil([&] { return done; });
 
   // Update the option again.
   fuchsia::modular::StoryOptions story_options2;
   story_options.kind_of_proto_story = false;
-  storage->UpdateStoryOptions(story_name, std::move(story_options2))->Then([&] {
-    done = true;
-  });
+  storage->UpdateStoryOptions(story_name, std::move(story_options2))->Then([&] { done = true; });
   RunLoopUntil([&] { return done; });
 
   // We should see the last value we set.
   done = false;
-  storage->GetStoryData(story_name)
-      ->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-        EXPECT_FALSE(data->story_options().kind_of_proto_story);
-        done = true;
-      });
+  storage->GetStoryData(story_name)->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
+    EXPECT_FALSE(data->story_options().kind_of_proto_story);
+    done = true;
+  });
   RunLoopUntil([&] { return done; });
 }
 
@@ -487,18 +463,16 @@ TEST_F(SessionStorageTest, ReadSnapshot) {
 
   fsl::SizedVmo snapshot;
   fsl::VmoFromString(kSnapshotData, &snapshot);
-  storage->WriteSnapshot(story_name, std::move(snapshot).ToTransport())
-      ->Then([&] { done = true; });
+  storage->WriteSnapshot(story_name, std::move(snapshot).ToTransport())->Then([&] { done = true; });
   RunLoopUntil([&] { return done; });
 
   done = false;
-  storage->ReadSnapshot(story_name)
-      ->Then([&](fuchsia::mem::BufferPtr snapshot_ptr) {
-        std::string snapshot_string;
-        fsl::StringFromVmo(*snapshot_ptr.get(), &snapshot_string);
-        EXPECT_EQ(kSnapshotData, snapshot_string);
-        done = true;
-      });
+  storage->ReadSnapshot(story_name)->Then([&](fuchsia::mem::BufferPtr snapshot_ptr) {
+    std::string snapshot_string;
+    fsl::StringFromVmo(*snapshot_ptr.get(), &snapshot_string);
+    EXPECT_EQ(kSnapshotData, snapshot_string);
+    done = true;
+  });
   RunLoopUntil([&] { return done; });
 }
 
@@ -511,8 +485,7 @@ TEST_F(SessionStorageTest, DeleteStory_DeletesSnapshot) {
 
   fsl::SizedVmo snapshot;
   fsl::VmoFromString(kSnapshotData, &snapshot);
-  storage->WriteSnapshot(story_name, std::move(snapshot).ToTransport())
-      ->Then([&] { done = true; });
+  storage->WriteSnapshot(story_name, std::move(snapshot).ToTransport())->Then([&] { done = true; });
   RunLoopUntil([&] { return done; });
 
   // Deleting the story should delete the snapshot.
@@ -520,11 +493,10 @@ TEST_F(SessionStorageTest, DeleteStory_DeletesSnapshot) {
   RunLoopUntil([&] { return done; });
 
   done = false;
-  storage->ReadSnapshot(story_name)
-      ->Then([&](fuchsia::mem::BufferPtr snapshot_ptr) {
-        EXPECT_TRUE(snapshot_ptr == nullptr);
-        done = true;
-      });
+  storage->ReadSnapshot(story_name)->Then([&](fuchsia::mem::BufferPtr snapshot_ptr) {
+    EXPECT_TRUE(snapshot_ptr == nullptr);
+    done = true;
+  });
   RunLoopUntil([&] { return done; });
 }
 

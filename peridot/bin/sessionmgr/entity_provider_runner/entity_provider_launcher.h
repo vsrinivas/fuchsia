@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_ENTITY_PROVIDER_RUNNER_ENTITY_PROVIDER_LAUNCHER_H_
 #define PERIDOT_BIN_SESSIONMGR_ENTITY_PROVIDER_RUNNER_ENTITY_PROVIDER_LAUNCHER_H_
 
-#include <string>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <src/lib/fxl/macros.h>
+
+#include <string>
 
 namespace modular {
 
@@ -24,10 +24,8 @@ class EntityProviderLauncher {
   // the agent may be killed and the entity provider will thus be dropped.
   virtual void ConnectToEntityProvider(
       const std::string& provider_uri,
-      fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
-          entity_provider_request,
-      fidl::InterfaceRequest<fuchsia::modular::AgentController>
-          agent_controller_request) = 0;
+      fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request,
+      fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request) = 0;
 
   // Connets to the entity provider service for the story with the given
   // |story_id|.
@@ -35,8 +33,7 @@ class EntityProviderLauncher {
   // If no such story is found, the request is dropped.
   virtual void ConnectToStoryEntityProvider(
       const std::string& provider_uri,
-      fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
-          entity_provider_request) = 0;
+      fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request) = 0;
 
  protected:
   virtual ~EntityProviderLauncher();

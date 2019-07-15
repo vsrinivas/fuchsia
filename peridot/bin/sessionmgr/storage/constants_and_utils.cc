@@ -4,10 +4,10 @@
 
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
 
+#include <src/lib/fxl/strings/join_strings.h>
+
 #include <string>
 #include <vector>
-
-#include <src/lib/fxl/strings/join_strings.h>
 
 #include "peridot/lib/util/string_escape.h"
 
@@ -51,8 +51,7 @@ std::string EncodeModulePath(const std::vector<std::string>& module_path) {
   std::vector<std::string> segments;
   segments.reserve(module_path.size());
   for (const auto& module_path_part : module_path) {
-    segments.emplace_back(
-        StringEscape(module_path_part, kCharsToEscape, kEscaper));
+    segments.emplace_back(StringEscape(module_path_part, kCharsToEscape, kEscaper));
   }
   return fxl::JoinStrings(segments, kSubSeparator);
 }
@@ -61,8 +60,7 @@ std::string EncodeLinkPath(const fuchsia::modular::LinkPath& link_path) {
   std::string output;
   output.append(EncodeModulePath(link_path.module_path));
   output.append(kSeparator);
-  output.append(
-      StringEscape(link_path.link_name.get(), kCharsToEscape, kEscaper));
+  output.append(StringEscape(link_path.link_name.get(), kCharsToEscape, kEscaper));
   return output;
 }
 
@@ -72,8 +70,7 @@ std::string EncodeModuleComponentNamespace(const std::string& story_id) {
   return "story:" + story_id;
 }
 
-std::string MakeTriggerKey(const std::string& agent_url,
-                           const std::string& task_id) {
+std::string MakeTriggerKey(const std::string& agent_url, const std::string& task_id) {
   std::string key{kTriggerKeyPrefix};
   key.append(StringEscape(agent_url, kCharsToEscape, kEscaper));
   key.append(kSeparator);

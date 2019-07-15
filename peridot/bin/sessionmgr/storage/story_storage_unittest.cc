@@ -4,10 +4,10 @@
 
 #include "peridot/bin/sessionmgr/storage/story_storage.h"
 
-#include <memory>
-
 #include <lib/async/cpp/future.h>
 #include <lib/fsl/vmo/strings.h>
+
+#include <memory>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/entity/entity_watcher_impl.h"
@@ -68,8 +68,7 @@ TEST_F(StoryStorageTest, WriteReadModuleData) {
   auto storage = CreateStorage("page");
 
   int notification_count{0};
-  storage->set_on_module_data_updated(
-      [&](ModuleData) { notification_count++; });
+  storage->set_on_module_data_updated([&](ModuleData) { notification_count++; });
 
   ModuleData module_data1;
   module_data1.module_url = "url1";
@@ -86,21 +85,19 @@ TEST_F(StoryStorageTest, WriteReadModuleData) {
   // WriteModuleData() action is finished only once the data has been written.
   ModuleData read_data1;
   bool read1_done{};
-  storage->ReadModuleData(module_data1.module_path)
-      ->Then([&](ModuleDataPtr data) {
-        read1_done = true;
-        ASSERT_TRUE(data);
-        read_data1 = std::move(*data);
-      });
+  storage->ReadModuleData(module_data1.module_path)->Then([&](ModuleDataPtr data) {
+    read1_done = true;
+    ASSERT_TRUE(data);
+    read_data1 = std::move(*data);
+  });
 
   ModuleData read_data2;
   bool read2_done{};
-  storage->ReadModuleData(module_data2.module_path)
-      ->Then([&](ModuleDataPtr data) {
-        read2_done = true;
-        ASSERT_TRUE(data);
-        read_data2 = std::move(*data);
-      });
+  storage->ReadModuleData(module_data2.module_path)->Then([&](ModuleDataPtr data) {
+    read2_done = true;
+    ASSERT_TRUE(data);
+    read_data2 = std::move(*data);
+  });
 
   RunLoopUntil([&] { return read1_done && read2_done; });
   EXPECT_TRUE(fidl::Equals(module_data1, read_data1));
@@ -108,9 +105,8 @@ TEST_F(StoryStorageTest, WriteReadModuleData) {
 
   // Read the same data back with ReadAllModuleData().
   fidl::VectorPtr<ModuleData> all_module_data;
-  storage->ReadAllModuleData()->Then([&](std::vector<ModuleData> data) {
-    all_module_data.reset(std::move(data));
-  });
+  storage->ReadAllModuleData()->Then(
+      [&](std::vector<ModuleData> data) { all_module_data.reset(std::move(data)); });
   RunLoopUntil([&] { return !!all_module_data; });
   EXPECT_EQ(2u, all_module_data->size());
   EXPECT_TRUE(fidl::Equals(module_data1, all_module_data->at(0)));
@@ -139,9 +135,9 @@ TEST_F(StoryStorageTest, UpdateModuleData) {
 
   // Case 1: Don't mutate anything.
   bool update_done{};
-  storage
-      ->UpdateModuleData(path, [](ModuleDataPtr* ptr) { EXPECT_FALSE(*ptr); })
-      ->Then([&] { update_done = true; });
+  storage->UpdateModuleData(path, [](ModuleDataPtr* ptr) { EXPECT_FALSE(*ptr); })->Then([&] {
+    update_done = true;
+  });
   RunLoopUntil([&] { return update_done; });
 
   bool read_done{};
@@ -182,8 +178,7 @@ TEST_F(StoryStorageTest, UpdateModuleData) {
 
   // Case 3: Leave alone an existing record.
   got_notification = false;
-  storage->UpdateModuleData(path,
-                            [&](ModuleDataPtr* ptr) { EXPECT_TRUE(*ptr); });
+  storage->UpdateModuleData(path, [&](ModuleDataPtr* ptr) { EXPECT_TRUE(*ptr); });
 
   read_done = false;
   storage->ReadModuleData(path)->Then([&](ModuleDataPtr data) {
@@ -291,17 +286,15 @@ TEST_F(StoryStorageTest, WatchingLink_IgnoresOthers) {
 
   // We'll be watching "foo", but updating "bar".
   int notified_count{0};
-  auto cancel =
-      storage->WatchLink(MakeLinkPath("foo"),
-                         [&](const fidl::StringPtr& value,
-                             const void* /* context */) { ++notified_count; });
+  auto cancel = storage->WatchLink(
+      MakeLinkPath("foo"),
+      [&](const fidl::StringPtr& value, const void* /* context */) { ++notified_count; });
 
   bool mutate_done{};
   int context;
   storage
       ->UpdateLinkValue(
-          MakeLinkPath("bar"), [](fidl::StringPtr* value) { *value = "10"; },
-          &context)
+          MakeLinkPath("bar"), [](fidl::StringPtr* value) { *value = "10"; }, &context)
       ->Then([&](StoryStorage::Status status) { mutate_done = true; });
   RunLoopUntil([&] { return mutate_done; });
   EXPECT_EQ(0, notified_count);
@@ -312,17 +305,15 @@ TEST_F(StoryStorageTest, WatchingLink_IgnoresNoopUpdates) {
   auto storage = CreateStorage("page");
 
   int notified_count{0};
-  auto cancel =
-      storage->WatchLink(MakeLinkPath("foo"),
-                         [&](const fidl::StringPtr& value,
-                             const void* /* context */) { ++notified_count; });
+  auto cancel = storage->WatchLink(
+      MakeLinkPath("foo"),
+      [&](const fidl::StringPtr& value, const void* /* context */) { ++notified_count; });
 
   bool mutate_done{};
   int context;
   storage
       ->UpdateLinkValue(
-          MakeLinkPath("foo"), [](fidl::StringPtr* value) { /* do nothing */ },
-          &context)
+          MakeLinkPath("foo"), [](fidl::StringPtr* value) { /* do nothing */ }, &context)
       ->Then([&](StoryStorage::Status status) { mutate_done = true; });
   RunLoopUntil([&] { return mutate_done; });
   EXPECT_EQ(0, notified_count);
@@ -339,21 +330,19 @@ TEST_F(StoryStorageTest, WatchingLink_SeesUpdates) {
   int notified_count{0};
   fidl::StringPtr notified_value;
   const void* notified_context;
-  auto watch_cancel = storage->WatchLink(
-      MakeLinkPath("bar"),
-      [&](const fidl::StringPtr& value, const void* context) {
-        ++notified_count;
-        notified_value = value;
-        notified_context = context;
-      });
+  auto watch_cancel = storage->WatchLink(MakeLinkPath("bar"),
+                                         [&](const fidl::StringPtr& value, const void* context) {
+                                           ++notified_count;
+                                           notified_value = value;
+                                           notified_context = context;
+                                         });
 
   // Change "bar"'s value to "10".
   bool mutate_done{};
   int context;
   storage
       ->UpdateLinkValue(
-          MakeLinkPath("bar"), [](fidl::StringPtr* value) { *value = "10"; },
-          &context)
+          MakeLinkPath("bar"), [](fidl::StringPtr* value) { *value = "10"; }, &context)
       ->Then([&](StoryStorage::Status status) { mutate_done = true; });
   RunLoopUntil([&] { return mutate_done; });
   EXPECT_EQ(1, notified_count);
@@ -364,8 +353,7 @@ TEST_F(StoryStorageTest, WatchingLink_SeesUpdates) {
   // not the second because we are going to cancel our watcher.
   storage
       ->UpdateLinkValue(
-          MakeLinkPath("bar"), [](fidl::StringPtr* value) { *value = "20"; },
-          &context)
+          MakeLinkPath("bar"), [](fidl::StringPtr* value) { *value = "20"; }, &context)
       ->Then([&](StoryStorage::Status status) {
         watch_cancel.call();  // Remove the watcher for bar.
       });
@@ -373,8 +361,7 @@ TEST_F(StoryStorageTest, WatchingLink_SeesUpdates) {
   mutate_done = false;
   storage
       ->UpdateLinkValue(
-          MakeLinkPath("bar"), [](fidl::StringPtr* value) { *value = "30"; },
-          &context)
+          MakeLinkPath("bar"), [](fidl::StringPtr* value) { *value = "30"; }, &context)
       ->Then([&](StoryStorage::Status status) { mutate_done = true; });
   RunLoopUntil([&] { return mutate_done; });
 
@@ -394,8 +381,7 @@ TEST_F(StoryStorageTest, WatchingOtherStorageInstance) {
   fidl::StringPtr notified_value;
   const void* notified_context;
   auto watch_cancel = other_storage->WatchLink(
-      MakeLinkPath("foo"),
-      [&](const fidl::StringPtr& value, const void* context) {
+      MakeLinkPath("foo"), [&](const fidl::StringPtr& value, const void* context) {
         ++notified_count;
         notified_value = value;
         notified_context = context;
@@ -403,8 +389,7 @@ TEST_F(StoryStorageTest, WatchingOtherStorageInstance) {
 
   int context;
   storage->UpdateLinkValue(
-      MakeLinkPath("foo"), [](fidl::StringPtr* value) { *value = "10"; },
-      &context);
+      MakeLinkPath("foo"), [](fidl::StringPtr* value) { *value = "10"; }, &context);
 
   RunLoopUntil([&] { return notified_count > 0; });
   EXPECT_EQ(1, notified_count);
@@ -432,11 +417,10 @@ TEST_F(StoryStorageTest, CreateAndReadEntity) {
   RunLoopUntil([&] { return created_entity; });
 
   bool read_entity_type{};
-  storage->GetEntityType(cookie)->Then(
-      [&](StoryStorage::Status status, std::string type) {
-        EXPECT_EQ(type, expected_type);
-        read_entity_type = true;
-      });
+  storage->GetEntityType(cookie)->Then([&](StoryStorage::Status status, std::string type) {
+    EXPECT_EQ(type, expected_type);
+    read_entity_type = true;
+  });
   RunLoopUntil([&] { return read_entity_type; });
 
   bool read_entity_data{};
@@ -576,11 +560,10 @@ TEST_F(StoryStorageTest, WriteEntityDataWithIncorrectType) {
 
   // Verify that the second write didn't mess up the data or type.
   bool read_entity_type{};
-  storage->GetEntityType(cookie)->Then(
-      [&](StoryStorage::Status status, std::string type) {
-        EXPECT_EQ(type, expected_type);
-        read_entity_type = true;
-      });
+  storage->GetEntityType(cookie)->Then([&](StoryStorage::Status status, std::string type) {
+    EXPECT_EQ(type, expected_type);
+    read_entity_type = true;
+  });
   RunLoopUntil([&] { return read_entity_type; });
 
   bool read_entity_data{};
@@ -628,11 +611,10 @@ TEST_F(StoryStorageTest, WriteToEntityTwice) {
 
   // Verify that the second write successfully updated the data.
   bool read_entity_type{};
-  storage->GetEntityType(cookie)->Then(
-      [&](StoryStorage::Status status, std::string type) {
-        EXPECT_EQ(type, expected_type);
-        read_entity_type = true;
-      });
+  storage->GetEntityType(cookie)->Then([&](StoryStorage::Status status, std::string type) {
+    EXPECT_EQ(type, expected_type);
+    read_entity_type = true;
+  });
   RunLoopUntil([&] { return read_entity_type; });
 
   bool read_entity_data{};
@@ -660,23 +642,22 @@ TEST_F(StoryStorageTest, WatchEntityData) {
 
   bool saw_entity_update{};
   bool saw_entity_update_with_no_data{};
-  auto watcher_impl =
-      EntityWatcherImpl([&](std::unique_ptr<fuchsia::mem::Buffer> value) {
-        // Verify that the first callback is called with no data, since the
-        // entity data has yet to be set.
-        if (!value && !saw_entity_update_with_no_data) {
-          saw_entity_update_with_no_data = true;
-          return;
-        }
+  auto watcher_impl = EntityWatcherImpl([&](std::unique_ptr<fuchsia::mem::Buffer> value) {
+    // Verify that the first callback is called with no data, since the
+    // entity data has yet to be set.
+    if (!value && !saw_entity_update_with_no_data) {
+      saw_entity_update_with_no_data = true;
+      return;
+    }
 
-        ASSERT_TRUE(value) << "Saw multiple empty entity updates.";
+    ASSERT_TRUE(value) << "Saw multiple empty entity updates.";
 
-        std::string read_data;
-        EXPECT_TRUE(fsl::StringFromVmo(*value, &read_data));
-        EXPECT_EQ(read_data, data_string);
+    std::string read_data;
+    EXPECT_TRUE(fsl::StringFromVmo(*value, &read_data));
+    EXPECT_EQ(read_data, data_string);
 
-        saw_entity_update = true;
-      });
+    saw_entity_update = true;
+  });
 
   fuchsia::modular::EntityWatcherPtr watcher_ptr;
   watcher_impl.Connect(watcher_ptr.NewRequest());
@@ -706,43 +687,40 @@ TEST_F(StoryStorageTest, WatchEntityDataMultipleWatchers) {
   FXL_CHECK(fsl::VmoFromString(data_string, &buffer));
 
   bool saw_entity_update{};
-  auto watcher_impl =
-      EntityWatcherImpl([&](std::unique_ptr<fuchsia::mem::Buffer> value) {
-        if (!value) {
-          // The first update may not contain any data, so skip it.
-          return;
-        }
+  auto watcher_impl = EntityWatcherImpl([&](std::unique_ptr<fuchsia::mem::Buffer> value) {
+    if (!value) {
+      // The first update may not contain any data, so skip it.
+      return;
+    }
 
-        std::string read_data;
-        EXPECT_TRUE(fsl::StringFromVmo(*value, &read_data));
-        EXPECT_EQ(read_data, data_string);
+    std::string read_data;
+    EXPECT_TRUE(fsl::StringFromVmo(*value, &read_data));
+    EXPECT_EQ(read_data, data_string);
 
-        saw_entity_update = true;
-      });
+    saw_entity_update = true;
+  });
 
   fuchsia::modular::EntityWatcherPtr watcher_ptr;
   watcher_impl.Connect(watcher_ptr.NewRequest());
   storage->WatchEntity(expected_cookie, expected_type, std::move(watcher_ptr));
 
   bool saw_entity_update_too{};
-  auto second_watcher_impl =
-      EntityWatcherImpl([&](std::unique_ptr<fuchsia::mem::Buffer> value) {
-        if (!value) {
-          // The first update may not contain any data, so skip it.
-          return;
-        }
+  auto second_watcher_impl = EntityWatcherImpl([&](std::unique_ptr<fuchsia::mem::Buffer> value) {
+    if (!value) {
+      // The first update may not contain any data, so skip it.
+      return;
+    }
 
-        std::string read_data;
-        EXPECT_TRUE(fsl::StringFromVmo(*value, &read_data));
-        EXPECT_EQ(read_data, data_string);
+    std::string read_data;
+    EXPECT_TRUE(fsl::StringFromVmo(*value, &read_data));
+    EXPECT_EQ(read_data, data_string);
 
-        saw_entity_update_too = true;
-      });
+    saw_entity_update_too = true;
+  });
 
   fuchsia::modular::EntityWatcherPtr second_watcher_ptr;
   second_watcher_impl.Connect(second_watcher_ptr.NewRequest());
-  storage->WatchEntity(expected_cookie, expected_type,
-                       std::move(second_watcher_ptr));
+  storage->WatchEntity(expected_cookie, expected_type, std::move(second_watcher_ptr));
 
   bool created_entity{};
   storage->SetEntityData(expected_cookie, expected_type, std::move(buffer))

@@ -13,8 +13,8 @@ namespace modular {
 class EntityProviderController::EntityImpl : fuchsia::modular::Entity {
  public:
   EntityImpl(EntityProviderController* const entity_provider_controller,
-             fuchsia::modular::EntityProvider* const entity_provider,
-             const std::string& cookie, const std::string& entity_reference)
+             fuchsia::modular::EntityProvider* const entity_provider, const std::string& cookie,
+             const std::string& entity_reference)
       : entity_provider_controller_(entity_provider_controller),
         entity_provider_(entity_provider),
         cookie_(cookie),
@@ -43,21 +43,16 @@ class EntityProviderController::EntityImpl : fuchsia::modular::Entity {
   }
 
   // |fuchsia::modular::Entity|
-  void WriteData(std::string type, fuchsia::mem::Buffer data,
-                 WriteDataCallback callback) override {
-    entity_provider_->WriteData(cookie_, type, std::move(data),
-                                std::move(callback));
+  void WriteData(std::string type, fuchsia::mem::Buffer data, WriteDataCallback callback) override {
+    entity_provider_->WriteData(cookie_, type, std::move(data), std::move(callback));
   }
 
   // |fuchsia::modular::Entity|
-  void GetReference(GetReferenceCallback callback) override {
-    callback(entity_reference_);
-  }
+  void GetReference(GetReferenceCallback callback) override { callback(entity_reference_); }
 
   // |fuchsia::modular::Entity|
-  void Watch(
-      std::string type,
-      fidl::InterfaceHandle<fuchsia::modular::EntityWatcher> watcher) override {
+  void Watch(std::string type,
+             fidl::InterfaceHandle<fuchsia::modular::EntityWatcher> watcher) override {
     entity_provider_->Watch(cookie_, type, std::move(watcher));
   }
 
@@ -72,8 +67,7 @@ class EntityProviderController::EntityImpl : fuchsia::modular::Entity {
 
 EntityProviderController::EntityProviderController(
     fuchsia::modular::EntityProviderPtr entity_provider,
-    fuchsia::modular::AgentControllerPtr agent_controller,
-    fit::function<void()> done)
+    fuchsia::modular::AgentControllerPtr agent_controller, fit::function<void()> done)
     : entity_provider_(std::move(entity_provider)),
       agent_controller_(std::move(agent_controller)),
       done_(std::move(done)) {
@@ -95,8 +89,8 @@ void EntityProviderController::ProvideEntity(
   if (it == entity_impls_.end()) {
     bool inserted;
     std::tie(it, inserted) = entity_impls_.insert(std::make_pair(
-        cookie, std::make_unique<EntityImpl>(this, entity_provider_.get(),
-                                             cookie, entity_reference)));
+        cookie,
+        std::make_unique<EntityImpl>(this, entity_provider_.get(), cookie, entity_reference)));
     FXL_DCHECK(inserted);
   }
   // When there are no more |fuchsia::modular::Entity|s being serviced for this

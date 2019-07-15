@@ -13,15 +13,12 @@ namespace modular {
 
 class FocusModCommandRunner : public CommandRunner {
  public:
-  FocusModCommandRunner(
-      fit::function<void(std::string, std::vector<std::string>)>
-          module_focuser);
+  FocusModCommandRunner(fit::function<void(std::string, std::vector<std::string>)> module_focuser);
   ~FocusModCommandRunner();
 
-  void Execute(
-      fidl::StringPtr story_id, StoryStorage* story_storage,
-      fuchsia::modular::StoryCommand command,
-      fit::function<void(fuchsia::modular::ExecuteResult)> done) override;
+  void Execute(fidl::StringPtr story_id, StoryStorage* story_storage,
+               fuchsia::modular::StoryCommand command,
+               fit::function<void(fuchsia::modular::ExecuteResult)> done) override;
 
  private:
   fit::function<void(std::string, std::vector<std::string>)> module_focuser_;

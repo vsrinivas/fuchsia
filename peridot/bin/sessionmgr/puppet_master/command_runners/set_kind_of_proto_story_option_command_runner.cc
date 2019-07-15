@@ -6,14 +6,11 @@
 
 namespace modular {
 
-class SetKindOfProtoStoryOptionCall
-    : public Operation<fuchsia::modular::ExecuteResult> {
+class SetKindOfProtoStoryOptionCall : public Operation<fuchsia::modular::ExecuteResult> {
  public:
-  SetKindOfProtoStoryOptionCall(SessionStorage* const session_storage,
-                                fidl::StringPtr story_id, bool value,
-                                ResultCall done)
-      : Operation("SetKindOfProtoStoryOption::SetKindOfProtoStoryOptionCall",
-                  std::move(done)),
+  SetKindOfProtoStoryOptionCall(SessionStorage* const session_storage, fidl::StringPtr story_id,
+                                bool value, ResultCall done)
+      : Operation("SetKindOfProtoStoryOption::SetKindOfProtoStoryOptionCall", std::move(done)),
         session_storage_(session_storage),
         story_id_(story_id),
         value_(value) {}
@@ -35,8 +32,8 @@ class SetKindOfProtoStoryOptionCall
 
   void UpdateOptions(FlowToken flow) {
     options_.kind_of_proto_story = value_;
-    session_storage_->UpdateStoryOptions(story_id_, std::move(options_))
-        ->Then([flow]() {});  // Operation finishes when flow goes out of scope.
+    session_storage_->UpdateStoryOptions(story_id_, std::move(options_))->Then([flow]() {
+    });  // Operation finishes when flow goes out of scope.
   }
 
   SessionStorage* const session_storage_;
@@ -52,8 +49,7 @@ SetKindOfProtoStoryOptionCommandRunner::SetKindOfProtoStoryOptionCommandRunner(
   FXL_DCHECK(session_storage_);
 }
 
-SetKindOfProtoStoryOptionCommandRunner::
-    ~SetKindOfProtoStoryOptionCommandRunner() = default;
+SetKindOfProtoStoryOptionCommandRunner::~SetKindOfProtoStoryOptionCommandRunner() = default;
 
 void SetKindOfProtoStoryOptionCommandRunner::Execute(
     fidl::StringPtr story_id, StoryStorage* const story_storage,
@@ -62,8 +58,7 @@ void SetKindOfProtoStoryOptionCommandRunner::Execute(
   FXL_CHECK(command.is_set_kind_of_proto_story_option());
 
   operation_queue_.Add(std::make_unique<SetKindOfProtoStoryOptionCall>(
-      session_storage_, story_id,
-      command.set_kind_of_proto_story_option().value, std::move(done)));
+      session_storage_, story_id, command.set_kind_of_proto_story_option().value, std::move(done)));
 }
 
 }  // namespace modular

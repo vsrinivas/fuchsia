@@ -5,8 +5,6 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_STORY_RUNNER_MODULE_CONTROLLER_IMPL_H_
 #define PERIDOT_BIN_SESSIONMGR_STORY_RUNNER_MODULE_CONTROLLER_IMPL_H_
 
-#include <vector>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
@@ -16,6 +14,8 @@
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <src/lib/fxl/macros.h>
+
+#include <vector>
 
 #include "peridot/lib/fidl/app_client.h"
 
@@ -30,16 +30,14 @@ class StoryControllerImpl;
 // ModuleContextImpl instance.
 class ModuleControllerImpl : fuchsia::modular::ModuleController {
  public:
-  ModuleControllerImpl(StoryControllerImpl* story_controller_impl,
-                       fuchsia::sys::Launcher* launcher,
+  ModuleControllerImpl(StoryControllerImpl* story_controller_impl, fuchsia::sys::Launcher* launcher,
                        fuchsia::modular::AppConfig module_config,
                        const fuchsia::modular::ModuleData* module_data,
                        fuchsia::sys::ServiceListPtr service_list,
                        fuchsia::ui::views::ViewToken view_token);
   ~ModuleControllerImpl() override;
 
-  void Connect(
-      fidl::InterfaceRequest<fuchsia::modular::ModuleController> request);
+  void Connect(fidl::InterfaceRequest<fuchsia::modular::ModuleController> request);
 
   // Notifies of a state change of the module.
   void SetState(fuchsia::modular::ModuleState new_state);
@@ -79,8 +77,7 @@ class ModuleControllerImpl : fuchsia::modular::ModuleController {
   const fuchsia::modular::ModuleData* const module_data_;
 
   // The service provided here.
-  fidl::BindingSet<fuchsia::modular::ModuleController>
-      module_controller_bindings_;
+  fidl::BindingSet<fuchsia::modular::ModuleController> module_controller_bindings_;
 
   // The state of this Module instance. Stored here to notify through events
   // when it changes.

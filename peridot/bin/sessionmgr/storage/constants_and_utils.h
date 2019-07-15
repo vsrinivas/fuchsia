@@ -7,10 +7,10 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_STORAGE_CONSTANTS_AND_UTILS_H_
 #define PERIDOT_BIN_SESSIONMGR_STORAGE_CONSTANTS_AND_UTILS_H_
 
-#include <string>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/string.h>
+
+#include <string>
 
 namespace modular {
 
@@ -72,8 +72,7 @@ std::string MakeMessageQueueTokenKey(const std::string& component_namespace,
                                      const std::string& component_instance_id,
                                      const std::string& queue_name);
 std::string MakeMessageQueueKey(const std::string& queue_token);
-std::string MakeTriggerKey(const std::string& agent_url,
-                           const std::string& task_id);
+std::string MakeTriggerKey(const std::string& agent_url, const std::string& task_id);
 std::string MakeLinkKey(const fuchsia::modular::LinkPathPtr& link_path);
 std::string MakeLinkKey(const fuchsia::modular::LinkPath& link_path);
 std::string MakeModuleKey(const std::vector<std::string>& module_path);

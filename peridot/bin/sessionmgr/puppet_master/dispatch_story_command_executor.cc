@@ -4,10 +4,10 @@
 
 #include "peridot/bin/sessionmgr/puppet_master/dispatch_story_command_executor.h"
 
-#include <map>
-
 #include <lib/async/cpp/future.h>
 #include <lib/async/cpp/operation.h>
+
+#include <map>
 
 namespace modular {
 
@@ -15,10 +15,8 @@ namespace {
 
 class RunStoryCommandCall : public Operation<fuchsia::modular::ExecuteResult> {
  public:
-  RunStoryCommandCall(const char* const command_name,
-                      CommandRunner* const runner,
-                      StoryStorage* const story_storage,
-                      fidl::StringPtr story_id,
+  RunStoryCommandCall(const char* const command_name, CommandRunner* const runner,
+                      StoryStorage* const story_storage, fidl::StringPtr story_id,
                       fuchsia::modular::StoryCommand command, ResultCall done)
       : Operation(command_name, std::move(done), ""),
         command_(std::move(command)),
@@ -29,11 +27,8 @@ class RunStoryCommandCall : public Operation<fuchsia::modular::ExecuteResult> {
  private:
   // |OperationBase|
   void Run() override {
-    auto done = [this](fuchsia::modular::ExecuteResult result) {
-      Done(std::move(result));
-    };
-    runner_->Execute(story_id_, story_storage_, std::move(command_),
-                     std::move(done));
+    auto done = [this](fuchsia::modular::ExecuteResult result) { Done(std::move(result)); };
+    runner_->Execute(story_id_, story_storage_, std::move(command_), std::move(done));
   }
 
   fuchsia::modular::StoryCommand command_;
@@ -47,10 +42,8 @@ class RunStoryCommandCall : public Operation<fuchsia::modular::ExecuteResult> {
 class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
     : public Operation<fuchsia::modular::ExecuteResult> {
  public:
-  ExecuteStoryCommandsCall(DispatchStoryCommandExecutor* const executor,
-                           fidl::StringPtr story_id,
-                           std::vector<fuchsia::modular::StoryCommand> commands,
-                           ResultCall done)
+  ExecuteStoryCommandsCall(DispatchStoryCommandExecutor* const executor, fidl::StringPtr story_id,
+                           std::vector<fuchsia::modular::StoryCommand> commands, ResultCall done)
       : Operation("ExecuteStoryCommandsCall", std::move(done)),
         executor_(executor),
         story_id_(std::move(story_id)),
@@ -83,8 +76,7 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
     did_execute_commands.reserve(commands_.size());
 
     for (auto& command : commands_) {
-      auto tag_string_it =
-          executor_->story_command_tag_strings_.find(command.Which());
+      auto tag_string_it = executor_->story_command_tag_strings_.find(command.Which());
       FXL_CHECK(tag_string_it != executor_->story_command_tag_strings_.end())
           << "No fuchsia::modular::StoryCommand::Tag string for tag "
           << static_cast<int>(command.Which());
@@ -100,15 +92,14 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
       // |this| goes out of scope, |queue_| will be deleted, and the callbacks
       // on |queue_| will not run.
 
-      auto did_execute_command =
-          Future<fuchsia::modular::ExecuteResult>::Create(
-              "DispatchStoryCommandExecutor.ExecuteStoryCommandsCall.Run.did_"
-              "execute_command");
+      auto did_execute_command = Future<fuchsia::modular::ExecuteResult>::Create(
+          "DispatchStoryCommandExecutor.ExecuteStoryCommandsCall.Run.did_"
+          "execute_command");
       queue_.Add(std::make_unique<RunStoryCommandCall>(
-          tag_string, command_runner, story_storage_.get(), story_id_,
-          std::move(command), did_execute_command->Completer()));
-      auto did_execute_command_callback = did_execute_command->Then(
-          [this](fuchsia::modular::ExecuteResult result) {
+          tag_string, command_runner, story_storage_.get(), story_id_, std::move(command),
+          did_execute_command->Completer()));
+      auto did_execute_command_callback =
+          did_execute_command->Then([this](fuchsia::modular::ExecuteResult result) {
             // Check for error for this command. If there was an error, abort
             // early. All of the remaining operations (if any) in queue_ will
             // not be run.
@@ -119,8 +110,7 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
       did_execute_commands.emplace_back(did_execute_command_callback);
     }
 
-    Wait("DispatchStoryCommandExecutor.ExecuteStoryCommandsCall.Run.Wait",
-         did_execute_commands)
+    Wait("DispatchStoryCommandExecutor.ExecuteStoryCommandsCall.Run.Wait", did_execute_commands)
         ->Then([this] {
           fuchsia::modular::ExecuteResult result;
           result.status = fuchsia::modular::ExecuteStatus::OK;
@@ -141,22 +131,15 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
 
 DispatchStoryCommandExecutor::DispatchStoryCommandExecutor(
     SessionStorage* const session_storage,
-    std::map<fuchsia::modular::StoryCommand::Tag,
-             std::unique_ptr<CommandRunner>>
-        command_runners)
+    std::map<fuchsia::modular::StoryCommand::Tag, std::unique_ptr<CommandRunner>> command_runners)
     : session_storage_(session_storage),
       command_runners_(std::move(command_runners)),
       story_command_tag_strings_{
-          {fuchsia::modular::StoryCommand::Tag::kAddMod,
-           "StoryCommand::AddMod"},
-          {fuchsia::modular::StoryCommand::Tag::kFocusMod,
-           "StoryCommand::FocusMod"},
-          {fuchsia::modular::StoryCommand::Tag::kRemoveMod,
-           "StoryCommand::RemoveMod"},
-          {fuchsia::modular::StoryCommand::Tag::kSetLinkValue,
-           "StoryCommand::SetLinkValue"},
-          {fuchsia::modular::StoryCommand::Tag::kSetFocusState,
-           "StoryCommand::SetFocusState"},
+          {fuchsia::modular::StoryCommand::Tag::kAddMod, "StoryCommand::AddMod"},
+          {fuchsia::modular::StoryCommand::Tag::kFocusMod, "StoryCommand::FocusMod"},
+          {fuchsia::modular::StoryCommand::Tag::kRemoveMod, "StoryCommand::RemoveMod"},
+          {fuchsia::modular::StoryCommand::Tag::kSetLinkValue, "StoryCommand::SetLinkValue"},
+          {fuchsia::modular::StoryCommand::Tag::kSetFocusState, "StoryCommand::SetFocusState"},
           {fuchsia::modular::StoryCommand::Tag::kSetKindOfProtoStoryOption,
            "StoryCommand::SetKindOfProtoStoryOption"}} {
   FXL_DCHECK(session_storage_ != nullptr);
@@ -165,8 +148,7 @@ DispatchStoryCommandExecutor::DispatchStoryCommandExecutor(
 DispatchStoryCommandExecutor::~DispatchStoryCommandExecutor() {}
 
 void DispatchStoryCommandExecutor::ExecuteCommandsInternal(
-    fidl::StringPtr story_id,
-    std::vector<fuchsia::modular::StoryCommand> commands,
+    fidl::StringPtr story_id, std::vector<fuchsia::modular::StoryCommand> commands,
     fit::function<void(fuchsia::modular::ExecuteResult)> done) {
   operation_queues_[story_id].Add(std::make_unique<ExecuteStoryCommandsCall>(
       this, std::move(story_id), std::move(commands), std::move(done)));

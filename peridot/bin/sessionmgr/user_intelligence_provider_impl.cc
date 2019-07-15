@@ -22,11 +22,9 @@ using cobalt_registry::SessionAgentEventsMetricDimensionEventType;
 namespace {
 
 constexpr char kKronkUrl[] = "kronk";
-static constexpr modular::RateLimitedRetry::Threshold kSessionAgentRetryLimit =
-    {3, zx::sec(45)};
+static constexpr modular::RateLimitedRetry::Threshold kSessionAgentRetryLimit = {3, zx::sec(45)};
 
-fuchsia::modular::ComponentScope CloneScope(
-    const fuchsia::modular::ComponentScope& scope) {
+fuchsia::modular::ComponentScope CloneScope(const fuchsia::modular::ComponentScope& scope) {
   fuchsia::modular::ComponentScope result;
   fidl::Clone(scope, &result);
   return result;
@@ -35,16 +33,16 @@ fuchsia::modular::ComponentScope CloneScope(
 }  // namespace
 
 template <class Interface>
-UserIntelligenceProviderImpl::SessionAgentData::DeferredInterfaceRequest::
-    DeferredInterfaceRequest(fidl::InterfaceRequest<Interface> request)
+UserIntelligenceProviderImpl::SessionAgentData::DeferredInterfaceRequest::DeferredInterfaceRequest(
+    fidl::InterfaceRequest<Interface> request)
     : name(Interface::Name_), channel(request.TakeChannel()) {}
 
 UserIntelligenceProviderImpl::SessionAgentData::SessionAgentData()
     : restart(kSessionAgentRetryLimit) {}
 
 template <class Interface>
-void UserIntelligenceProviderImpl::SessionAgentData::
-    ConnectOrQueueServiceRequest(fidl::InterfaceRequest<Interface> request) {
+void UserIntelligenceProviderImpl::SessionAgentData::ConnectOrQueueServiceRequest(
+    fidl::InterfaceRequest<Interface> request) {
   if (services) {
     component::ConnectToService(services.get(), std::move(request));
   } else {
@@ -54,8 +52,7 @@ void UserIntelligenceProviderImpl::SessionAgentData::
 
 UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
     sys::ComponentContext* const context,
-    fidl::InterfaceHandle<fuchsia::modular::ContextEngine>
-        context_engine_handle,
+    fidl::InterfaceHandle<fuchsia::modular::ContextEngine> context_engine_handle,
     fit::function<void(fidl::InterfaceRequest<fuchsia::modular::StoryProvider>)>
         story_provider_connector,
     fit::function<void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>
@@ -72,8 +69,7 @@ void UserIntelligenceProviderImpl::GetComponentIntelligenceServices(
     fuchsia::modular::ComponentScope scope,
     fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request) {
   intelligence_services_bindings_.AddBinding(
-      std::make_unique<IntelligenceServicesImpl>(std::move(scope),
-                                                 context_engine_.get()),
+      std::make_unique<IntelligenceServicesImpl>(std::move(scope), context_engine_.get()),
       std::move(request));
 }
 
@@ -88,10 +84,8 @@ void UserIntelligenceProviderImpl::GetSpeechToText(
 }
 
 void UserIntelligenceProviderImpl::StartAgents(
-    fidl::InterfaceHandle<fuchsia::modular::ComponentContext>
-        component_context_handle,
-    std::vector<std::string> session_agents,
-    std::vector<std::string> startup_agents) {
+    fidl::InterfaceHandle<fuchsia::modular::ComponentContext> component_context_handle,
+    std::vector<std::string> session_agents, std::vector<std::string> startup_agents) {
   component_context_.Bind(std::move(component_context_handle));
 
   FXL_LOG(INFO) << "Starting session_agents:";
@@ -107,8 +101,8 @@ void UserIntelligenceProviderImpl::StartAgents(
   }
 }
 
-void UserIntelligenceProviderImpl::GetServicesForAgent(
-    std::string url, GetServicesForAgentCallback callback) {
+void UserIntelligenceProviderImpl::GetServicesForAgent(std::string url,
+                                                       GetServicesForAgentCallback callback) {
   fuchsia::sys::ServiceList service_list;
   agent_namespaces_.emplace_back(service_list.provider.NewRequest());
   auto* agent_host = &agent_namespaces_.back();
@@ -119,8 +113,7 @@ void UserIntelligenceProviderImpl::GetServicesForAgent(
 void UserIntelligenceProviderImpl::StartAgent(const std::string& url) {
   fuchsia::modular::AgentControllerPtr controller;
   fuchsia::sys::ServiceProviderPtr services;
-  component_context_->ConnectToAgent(url, services.NewRequest(),
-                                     controller.NewRequest());
+  component_context_->ConnectToAgent(url, services.NewRequest(), controller.NewRequest());
   agent_controllers_.push_back(std::move(controller));
 }
 
@@ -132,8 +125,7 @@ void UserIntelligenceProviderImpl::StartSessionAgent(const std::string& url) {
 
   // complete any pending connection requests
   for (auto& request : agent_data->pending_service_requests) {
-    agent_data->services->ConnectToService(request.name,
-                                           std::move(request.channel));
+    agent_data->services->ConnectToService(request.name, std::move(request.channel));
   }
   agent_data->pending_service_requests.clear();
 
@@ -156,24 +148,19 @@ void UserIntelligenceProviderImpl::StartSessionAgent(const std::string& url) {
   // connection requests until we can restart.
   agent_data->controller.set_error_handler([this, url](zx_status_t status) {
     auto it = session_agents_.find(url);
-    FXL_DCHECK(it != session_agents_.end())
-        << "Controller and services not registered for " << url;
+    FXL_DCHECK(it != session_agents_.end()) << "Controller and services not registered for " << url;
     auto& agent_data = it->second;
     agent_data.services.Unbind();
     agent_data.controller.Unbind();
-    ReportSessionAgentEvent(url,
-                            SessionAgentEventsMetricDimensionEventType::Crash);
+    ReportSessionAgentEvent(url, SessionAgentEventsMetricDimensionEventType::Crash);
 
     if (agent_data.restart.ShouldRetry()) {
       FXL_LOG(INFO) << "Restarting " << url << "...";
       StartSessionAgent(url);
     } else {
-      FXL_LOG(WARNING) << url << " failed to restart more than "
-                       << kSessionAgentRetryLimit.count << " times in "
-                       << kSessionAgentRetryLimit.period.to_secs()
-                       << " seconds.";
-      ReportSessionAgentEvent(
-          url, SessionAgentEventsMetricDimensionEventType::CrashLimitExceeded);
+      FXL_LOG(WARNING) << url << " failed to restart more than " << kSessionAgentRetryLimit.count
+                       << " times in " << kSessionAgentRetryLimit.period.to_secs() << " seconds.";
+      ReportSessionAgentEvent(url, SessionAgentEventsMetricDimensionEventType::CrashLimitExceeded);
       // Erase so that incoming connection requests fail fast rather than
       // enqueue forever.
       session_agents_.erase(it);
@@ -206,10 +193,8 @@ std::vector<std::string> UserIntelligenceProviderImpl::AddAgentServices(
   service_names.push_back(fuchsia::modular::IntelligenceServices::Name_);
   agent_host->AddService<fuchsia::modular::IntelligenceServices>(
       [this, client_info = CloneScope(agent_info),
-       url](fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices>
-                request) {
-        this->GetComponentIntelligenceServices(CloneScope(client_info),
-                                               std::move(request));
+       url](fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request) {
+        this->GetComponentIntelligenceServices(CloneScope(client_info), std::move(request));
       });
 
   if (session_agents_.find(url) != session_agents_.end()) {
@@ -222,8 +207,7 @@ std::vector<std::string> UserIntelligenceProviderImpl::AddAgentServices(
 
     service_names.push_back(fuchsia::modular::FocusProvider::Name_);
     agent_host->AddService<fuchsia::modular::FocusProvider>(
-        [this,
-         url](fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
+        [this, url](fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
           focus_provider_connector_(std::move(request));
         });
   }

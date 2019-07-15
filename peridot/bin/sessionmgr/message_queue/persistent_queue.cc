@@ -4,17 +4,16 @@
 
 #include "peridot/bin/sessionmgr/message_queue/persistent_queue.h"
 
-#include <utility>
-
-#include "src/lib/files/file.h"
 #include <src/lib/fxl/logging.h>
 
+#include <utility>
+
 #include "peridot/lib/rapidjson/rapidjson.h"
+#include "src/lib/files/file.h"
 
 namespace modular {
 
-PersistentQueue::PersistentQueue(std::string file_name)
-    : file_name_(std::move(file_name)) {
+PersistentQueue::PersistentQueue(std::string file_name) : file_name_(std::move(file_name)) {
   std::string contents;
   if (files::ReadFileToString(file_name_, &contents)) {
     rapidjson::Document document;
@@ -23,8 +22,7 @@ PersistentQueue::PersistentQueue(std::string file_name)
       FXL_LOG(ERROR) << "Expected " << file_name_ << " to contain a JSON array";
       return;
     }
-    for (rapidjson::Value::ConstValueIterator it = document.Begin();
-         it != document.End(); ++it) {
+    for (rapidjson::Value::ConstValueIterator it = document.Begin(); it != document.End(); ++it) {
       if (!it->IsString()) {
         FXL_LOG(ERROR) << "Expected a string but got: " << it;
         continue;

@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_MESSAGE_QUEUE_PERSISTENT_QUEUE_H_
 #define PERIDOT_BIN_SESSIONMGR_MESSAGE_QUEUE_PERSISTENT_QUEUE_H_
 
+#include <src/lib/fxl/logging.h>
+
 #include <deque>
 #include <string>
-
-#include <src/lib/fxl/logging.h>
 
 namespace modular {
 

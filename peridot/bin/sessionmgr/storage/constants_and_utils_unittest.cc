@@ -4,10 +4,10 @@
 
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
 
+#include <src/lib/fxl/strings/string_view.h>
+
 #include <string>
 #include <vector>
-
-#include <src/lib/fxl/strings/string_view.h>
 
 #include "gtest/gtest.h"
 

@@ -40,8 +40,7 @@ class SessionStorage : public PageClient {
   //
   // a) The story being deleted on another device.
   // b) The story having been deleted locally with DeleteStory().
-  void set_on_story_deleted(
-      fit::function<void(fidl::StringPtr story_id)> callback) {
+  void set_on_story_deleted(fit::function<void(fidl::StringPtr story_id)> callback) {
     on_story_deleted_ = std::move(callback);
   }
 
@@ -51,10 +50,9 @@ class SessionStorage : public PageClient {
   //
   // The update could be the result of a local modification (ie, through
   // Update*()) or a modification on another device.
-  void set_on_story_updated(
-      fit::function<void(fidl::StringPtr story_id,
-                         fuchsia::modular::internal::StoryData story_data)>
-          callback) {
+  void set_on_story_updated(fit::function<void(fidl::StringPtr story_id,
+                                               fuchsia::modular::internal::StoryData story_data)>
+                                callback) {
     on_story_updated_ = std::move(callback);
   }
 
@@ -73,8 +71,7 @@ class SessionStorage : public PageClient {
   // SessionStorage, or if they should be exposed to the story runtime
   // architecture.
   FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> CreateStory(
-      fidl::StringPtr story_name,
-      fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
+      fidl::StringPtr story_name, fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
       fuchsia::modular::StoryOptions story_options);
 
   // Same as above, but defaults |story_name| to nullptr.
@@ -104,23 +101,20 @@ class SessionStorage : public PageClient {
 
   // Returns a Future StoryDataPtr for |story_id|. If |story_id| is not a valid
   // story, the returned StoryDataPtr will be null.
-  FuturePtr<fuchsia::modular::internal::StoryDataPtr> GetStoryData(
-      fidl::StringPtr story_id);
+  FuturePtr<fuchsia::modular::internal::StoryDataPtr> GetStoryData(fidl::StringPtr story_id);
 
   // Returns a Future vector of StoryData for all stories in this session.
   //
   // TODO(thatguy): If the return value grows large, an dispatcher stream would
   // be a more appropriate return value.
-  FuturePtr<std::vector<fuchsia::modular::internal::StoryData>>
-  GetAllStoryData();
+  FuturePtr<std::vector<fuchsia::modular::internal::StoryData>> GetAllStoryData();
 
   FuturePtr<> UpdateStoryOptions(fidl::StringPtr story_id,
                                  fuchsia::modular::StoryOptions story_options);
 
   // Gets the StoryStorage for the story with the given |story_id| to perform
   // operations on the story such as adding modules, updating links, etc.
-  FuturePtr<std::unique_ptr<StoryStorage>> GetStoryStorage(
-      fidl::StringPtr story_id);
+  FuturePtr<std::unique_ptr<StoryStorage>> GetStoryStorage(fidl::StringPtr story_id);
 
   // Returns the snapshot for the story. If there is no snapshot for the story
   // or the read operation failed, the return value of |fuchsia::mem::BufferPtr|
@@ -130,8 +124,7 @@ class SessionStorage : public PageClient {
   // Writes the given |snapshot| to storage. The returned future will resolve
   // when the |snapshot| has been written to storage or when it has failed to
   // write to storage.
-  FuturePtr<> WriteSnapshot(fidl::StringPtr story_id,
-                            fuchsia::mem::Buffer snapshot);
+  FuturePtr<> WriteSnapshot(fidl::StringPtr story_id, fuchsia::mem::Buffer snapshot);
 
  private:
   // |PageClient|
@@ -144,8 +137,7 @@ class SessionStorage : public PageClient {
   OperationQueue operation_queue_;
 
   fit::function<void(fidl::StringPtr story_id)> on_story_deleted_;
-  fit::function<void(fidl::StringPtr story_id,
-                     fuchsia::modular::internal::StoryData story_data)>
+  fit::function<void(fidl::StringPtr story_id, fuchsia::modular::internal::StoryData story_data)>
       on_story_updated_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionStorage);

@@ -39,8 +39,7 @@ class StoryModelOwner {
   // Uses |executor| to schedule internal mutation tasks. Delegates mutation
   // commands to and reacts to observation of applied mutations from
   // |model_storage|.
-  explicit StoryModelOwner(const std::string& story_name,
-                           fit::executor* executor,
+  explicit StoryModelOwner(const std::string& story_name, fit::executor* executor,
                            std::unique_ptr<StoryModelStorage> model_storage);
   ~StoryModelOwner();
 
@@ -86,8 +85,7 @@ class StoryModelOwner {
   //
   // Called by instances of Observer.
   fit::deferred_action<fit::function<void()>> RegisterListener(
-      fit::function<void(const fuchsia::modular::storymodel::StoryModel&)>
-          listener);
+      fit::function<void(const fuchsia::modular::storymodel::StoryModel&)> listener);
 
   // Calls |model_storage_| to execute |commands|.
   //
@@ -117,9 +115,7 @@ class StoryModelOwner {
 
   // A list<> so that we can get stable iterators for cleanup purposes. See
   // RegisterListener().
-  std::list<
-      fit::function<void(const fuchsia::modular::storymodel::StoryModel&)>>
-      listeners_;
+  std::list<fit::function<void(const fuchsia::modular::storymodel::StoryModel&)>> listeners_;
 
   fit::executor* executor_;  // Not owned.
 

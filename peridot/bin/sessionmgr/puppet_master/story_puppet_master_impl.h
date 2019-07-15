@@ -5,12 +5,12 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_PUPPET_MASTER_STORY_PUPPET_MASTER_IMPL_H_
 #define PERIDOT_BIN_SESSIONMGR_PUPPET_MASTER_STORY_PUPPET_MASTER_IMPL_H_
 
-#include <memory>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
+
+#include <memory>
 
 #include "peridot/bin/sessionmgr/puppet_master/story_command_executor.h"
 
@@ -24,8 +24,7 @@ class StoryCommandExecutor;
 class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
  public:
   StoryPuppetMasterImpl(std::string story_name, OperationContainer* operations,
-                        SessionStorage* session_storage,
-                        StoryCommandExecutor* executor);
+                        SessionStorage* session_storage, StoryCommandExecutor* executor);
   ~StoryPuppetMasterImpl() override;
 
  private:
@@ -39,9 +38,8 @@ class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
   void SetCreateOptions(fuchsia::modular::StoryOptions story_options) override;
 
   // |StoryPuppetMaster|
-  void SetStoryInfoExtra(
-      std::vector<fuchsia::modular::StoryInfoExtraEntry> story_info_extra,
-      SetStoryInfoExtraCallback callback) override;
+  void SetStoryInfoExtra(std::vector<fuchsia::modular::StoryInfoExtraEntry> story_info_extra,
+                         SetStoryInfoExtraCallback callback) override;
 
   std::string story_name_;
   SessionStorage* const session_storage_;  // Not owned.

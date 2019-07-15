@@ -4,17 +4,17 @@
 
 #include "peridot/bin/sessionmgr/puppet_master/dispatch_story_command_executor.h"
 
-#include <map>
-#include <memory>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/string.h>
-#include "peridot/lib/testing/test_with_ledger.h"
+
+#include <map>
+#include <memory>
 
 #include "gtest/gtest.h"
+#include "peridot/lib/testing/test_with_ledger.h"
 
 namespace modular {
 namespace {
@@ -27,45 +27,39 @@ class TestCommandRunner : public CommandRunner {
       : func_(std::move(func)), delay_done_(delay_done) {}
   ~TestCommandRunner() override = default;
 
-  void Execute(
-      fidl::StringPtr story_id, StoryStorage* const story_storage,
-      fuchsia::modular::StoryCommand command,
-      fit::function<void(fuchsia::modular::ExecuteResult)> done) override {
+  void Execute(fidl::StringPtr story_id, StoryStorage* const story_storage,
+               fuchsia::modular::StoryCommand command,
+               fit::function<void(fuchsia::modular::ExecuteResult)> done) override {
     // Post the task on the dispatcher loop to simulate a long-running task.
-    async::PostTask(async_get_default_dispatcher(),
-                    [this, story_id, command = std::move(command),
-                     done = std::move(done)]() mutable {
-                      auto status = func_(story_id, std::move(command));
-                      fuchsia::modular::ExecuteResult result;
-                      result.status = status;
-                      if (delay_done_) {
-                        async::PostTask(async_get_default_dispatcher(),
-                                        [result = std::move(result),
-                                         done = std::move(done)]() {
-                                          done(std::move(result));
-                                        });
-                      } else {
-                        done(std::move(result));
-                      }
-                    });
+    async::PostTask(async_get_default_dispatcher(), [this, story_id, command = std::move(command),
+                                                     done = std::move(done)]() mutable {
+      auto status = func_(story_id, std::move(command));
+      fuchsia::modular::ExecuteResult result;
+      result.status = status;
+      if (delay_done_) {
+        async::PostTask(
+            async_get_default_dispatcher(),
+            [result = std::move(result), done = std::move(done)]() { done(std::move(result)); });
+      } else {
+        done(std::move(result));
+      }
+    });
   }
 
   ExecuteFunc func_;
   bool delay_done_;
 };
 
-class DispatchStoryCommandExecutorTest
-    : public modular::testing::TestWithLedger {
+class DispatchStoryCommandExecutorTest : public modular::testing::TestWithLedger {
  protected:
   void SetUp() override {
     TestWithLedger::SetUp();
-    session_storage_ =
-        std::make_unique<SessionStorage>(ledger_client(), LedgerPageId());
+    session_storage_ = std::make_unique<SessionStorage>(ledger_client(), LedgerPageId());
   }
 
   void Reset() {
-    executor_ = std::make_unique<DispatchStoryCommandExecutor>(
-        session_storage_.get(), std::move(command_runners_));
+    executor_ = std::make_unique<DispatchStoryCommandExecutor>(session_storage_.get(),
+                                                               std::move(command_runners_));
   }
 
   fidl::StringPtr CreateStory() {
@@ -82,16 +76,13 @@ class DispatchStoryCommandExecutorTest
   }
 
   void AddCommandRunner(fuchsia::modular::StoryCommand::Tag tag,
-                        TestCommandRunner::ExecuteFunc func,
-                        bool delay_done = false) {
-    command_runners_.emplace(
-        tag, new TestCommandRunner(std::move(func), delay_done));
+                        TestCommandRunner::ExecuteFunc func, bool delay_done = false) {
+    command_runners_.emplace(tag, new TestCommandRunner(std::move(func), delay_done));
   }
 
   std::unique_ptr<SessionStorage> session_storage_;
   std::unique_ptr<StoryCommandExecutor> executor_;
-  std::map<fuchsia::modular::StoryCommand::Tag, std::unique_ptr<CommandRunner>>
-      command_runners_;
+  std::map<fuchsia::modular::StoryCommand::Tag, std::unique_ptr<CommandRunner>> command_runners_;
 };
 
 TEST_F(DispatchStoryCommandExecutorTest, InvalidStory) {
@@ -100,11 +91,10 @@ TEST_F(DispatchStoryCommandExecutorTest, InvalidStory) {
   std::vector<fuchsia::modular::StoryCommand> commands;
   fuchsia::modular::ExecuteResult result;
   bool done{false};
-  executor_->ExecuteCommands("id", std::move(commands),
-                             [&](fuchsia::modular::ExecuteResult r) {
-                               done = true;
-                               result = std::move(r);
-                             });
+  executor_->ExecuteCommands("id", std::move(commands), [&](fuchsia::modular::ExecuteResult r) {
+    done = true;
+    result = std::move(r);
+  });
 
   RunLoopUntil([&]() { return done; });
   EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_STORY_ID, result.status);
@@ -121,8 +111,7 @@ TEST_F(DispatchStoryCommandExecutorTest, Dispatching) {
                    fuchsia::modular::StoryCommand::Tag::kSetLinkValue,
                    fuchsia::modular::StoryCommand::Tag::kSetFocusState}) {
     AddCommandRunner(tag, [tag, &actual_execute_count, expected_story_id](
-                              fidl::StringPtr story_id,
-                              fuchsia::modular::StoryCommand command) {
+                              fidl::StringPtr story_id, fuchsia::modular::StoryCommand command) {
       ++actual_execute_count;
       EXPECT_EQ(tag, command.Which());
       EXPECT_EQ(expected_story_id, story_id);
@@ -170,12 +159,11 @@ TEST_F(DispatchStoryCommandExecutorTest, Sequential) {
         return fuchsia::modular::ExecuteStatus::OK;
       },
       true /* delay_done */);
-  AddCommandRunner(
-      fuchsia::modular::StoryCommand::Tag::kRemoveMod,
-      [&](fidl::StringPtr story_id, fuchsia::modular::StoryCommand command) {
-        names.push_back(command.remove_mod().mod_name_transitional);
-        return fuchsia::modular::ExecuteStatus::OK;
-      });
+  AddCommandRunner(fuchsia::modular::StoryCommand::Tag::kRemoveMod,
+                   [&](fidl::StringPtr story_id, fuchsia::modular::StoryCommand command) {
+                     names.push_back(command.remove_mod().mod_name_transitional);
+                     return fuchsia::modular::ExecuteStatus::OK;
+                   });
 
   Reset();
 
@@ -189,9 +177,8 @@ TEST_F(DispatchStoryCommandExecutorTest, Sequential) {
   commands[1].set_remove_mod(std::move(remove_mod));
 
   bool done{false};
-  executor_->ExecuteCommands(
-      story_id, std::move(commands),
-      [&](fuchsia::modular::ExecuteResult) { done = true; });
+  executor_->ExecuteCommands(story_id, std::move(commands),
+                             [&](fuchsia::modular::ExecuteResult) { done = true; });
   RunLoopUntil([&]() { return done; });
 
   EXPECT_EQ(2u, names.size());
@@ -205,17 +192,15 @@ TEST_F(DispatchStoryCommandExecutorTest, ErrorsAbortEarly) {
   // Commands after those that report an error don't run. The reported error
   // code is returned.
   bool second_command_ran{false};
-  AddCommandRunner(
-      fuchsia::modular::StoryCommand::Tag::kAddMod,
-      [](fidl::StringPtr story_id, fuchsia::modular::StoryCommand command) {
-        return fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
-      });
-  AddCommandRunner(
-      fuchsia::modular::StoryCommand::Tag::kRemoveMod,
-      [&](fidl::StringPtr story_id, fuchsia::modular::StoryCommand command) {
-        second_command_ran = true;
-        return fuchsia::modular::ExecuteStatus::OK;
-      });
+  AddCommandRunner(fuchsia::modular::StoryCommand::Tag::kAddMod,
+                   [](fidl::StringPtr story_id, fuchsia::modular::StoryCommand command) {
+                     return fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
+                   });
+  AddCommandRunner(fuchsia::modular::StoryCommand::Tag::kRemoveMod,
+                   [&](fidl::StringPtr story_id, fuchsia::modular::StoryCommand command) {
+                     second_command_ran = true;
+                     return fuchsia::modular::ExecuteStatus::OK;
+                   });
 
   Reset();
 
@@ -226,11 +211,10 @@ TEST_F(DispatchStoryCommandExecutorTest, ErrorsAbortEarly) {
 
   bool done{false};
   fuchsia::modular::ExecuteResult result;
-  executor_->ExecuteCommands(story_id, std::move(commands),
-                             [&](fuchsia::modular::ExecuteResult r) {
-                               done = true;
-                               result = std::move(r);
-                             });
+  executor_->ExecuteCommands(story_id, std::move(commands), [&](fuchsia::modular::ExecuteResult r) {
+    done = true;
+    result = std::move(r);
+  });
   RunLoopUntil([&]() { return done; });
 
   EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_COMMAND, result.status);

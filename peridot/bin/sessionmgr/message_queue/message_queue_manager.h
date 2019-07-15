@@ -5,13 +5,6 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_MESSAGE_QUEUE_MESSAGE_QUEUE_MANAGER_H_
 #define PERIDOT_BIN_SESSIONMGR_MESSAGE_QUEUE_MESSAGE_QUEUE_MANAGER_H_
 
-#include <functional>
-#include <map>
-#include <memory>
-#include <queue>
-#include <string>
-#include <utility>
-
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
@@ -19,6 +12,13 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/string.h>
 #include <src/lib/fxl/macros.h>
+
+#include <functional>
+#include <map>
+#include <memory>
+#include <queue>
+#include <string>
+#include <utility>
 
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
@@ -36,8 +36,8 @@ struct MessageQueueInfo;
 // message queues it has created, otherwise they are persisted.
 class MessageQueueManager : PageClient {
  public:
-  MessageQueueManager(LedgerClient* ledger_client,
-                      fuchsia::ledger::PageId page_id, std::string local_path);
+  MessageQueueManager(LedgerClient* ledger_client, fuchsia::ledger::PageId page_id,
+                      std::string local_path);
   ~MessageQueueManager() override;
 
   // An enum describing the types of events that can be watched via
@@ -49,21 +49,17 @@ class MessageQueueManager : PageClient {
     QUEUE_DELETED,
   };
 
-  void ObtainMessageQueue(
-      const std::string& component_namespace,
-      const std::string& component_instance_id, const std::string& queue_name,
-      fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request);
+  void ObtainMessageQueue(const std::string& component_namespace,
+                          const std::string& component_instance_id, const std::string& queue_name,
+                          fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request);
 
   void DeleteMessageQueue(const std::string& component_namespace,
-                          const std::string& component_instance_id,
-                          const std::string& queue_name);
+                          const std::string& component_instance_id, const std::string& queue_name);
 
-  void DeleteNamespace(const std::string& component_namespace,
-                       fit::function<void()> done);
+  void DeleteNamespace(const std::string& component_namespace, fit::function<void()> done);
 
-  void GetMessageSender(
-      const std::string& queue_token,
-      fidl::InterfaceRequest<fuchsia::modular::MessageSender> request);
+  void GetMessageSender(const std::string& queue_token,
+                        fidl::InterfaceRequest<fuchsia::modular::MessageSender> request);
 
   // Registers a watcher that will be called when there is a new message on a
   // queue corresponding to |component_namespace| x |component_instance_id| x
@@ -79,8 +75,7 @@ class MessageQueueManager : PageClient {
   // new one will remove any existing watcher.
   void RegisterMessageWatcher(const std::string& component_namespace,
                               const std::string& component_instance_id,
-                              const std::string& queue_name,
-                              fit::function<void()> watcher);
+                              const std::string& queue_name, fit::function<void()> watcher);
 
   // Registers a watcher that gets notified when a message queue with
   // |queue_token| is deleted.
@@ -99,32 +94,28 @@ class MessageQueueManager : PageClient {
   // in namespace, instance ids, and queue name directly describe the queue.
   void RegisterDeletionWatcher(const std::string& component_namespace,
                                const std::string& component_instance_id,
-                               const std::string& queue_token,
-                               fit::function<void()> watcher);
+                               const std::string& queue_token, fit::function<void()> watcher);
 
   // Drops the watcher for |component_namespace| x |component_instance_id| x
   // |queue_name|.
   void DropMessageWatcher(const std::string& component_namespace,
-                          const std::string& component_instance_id,
-                          const std::string& queue_name);
+                          const std::string& component_instance_id, const std::string& queue_name);
 
   // Drops the watcher described by |queue_info| from watching for the
   // deletion of the queue with |queue_token|.
   void DropDeletionWatcher(const std::string& watcher_namespace,
-                           const std::string& watcher_instance_id,
-                           const std::string& queue_token);
+                           const std::string& watcher_instance_id, const std::string& queue_token);
 
  private:
   using ComponentNamespace = std::string;
   using ComponentInstanceId = std::string;
   using ComponentQueueName = std::string;
   template <typename Value>
-  using ComponentQueueNameMap = std::map<
-      ComponentNamespace,
-      std::map<ComponentInstanceId, std::map<ComponentQueueName, Value>>>;
+  using ComponentQueueNameMap =
+      std::map<ComponentNamespace,
+               std::map<ComponentInstanceId, std::map<ComponentQueueName, Value>>>;
 
-  using DeletionWatchers =
-      std::map<std::string, std::map<std::string, fit::function<void()>>>;
+  using DeletionWatchers = std::map<std::string, std::map<std::string, fit::function<void()>>>;
 
   // Returns the |MessageQueueStorage| for the queue_token. Creates it
   // if it doesn't exist yet.
@@ -145,8 +136,7 @@ class MessageQueueManager : PageClient {
   // |ReMoveByQueueName()|.
   template <typename ValueType>
   typename std::map<std::string, ValueType>* FindComponentQueues(
-      ComponentQueueNameMap<ValueType>& queue_map,
-      const MessageQueueInfo& info);
+      ComponentQueueNameMap<ValueType>& queue_map, const MessageQueueInfo& info);
 
   // If the given message queue |info| is found, the stored pointer value, or
   // nullptr otherwise.
@@ -160,14 +150,12 @@ class MessageQueueManager : PageClient {
   // overkill to add the complexity of conditional template resolution.
   template <typename Callable>
   fit::function<Callable> ReMoveByQueueName(
-      ComponentQueueNameMap<fit::function<Callable>>& queue_map,
-      const MessageQueueInfo& info);
+      ComponentQueueNameMap<fit::function<Callable>>& queue_map, const MessageQueueInfo& info);
 
   // Erases the |ValueType| stored under the provided |info|.
   // Implementation is in the .cc.
   template <typename ValueType>
-  void EraseQueueName(ComponentQueueNameMap<ValueType>& queue_map,
-                      const MessageQueueInfo& info);
+  void EraseQueueName(ComponentQueueNameMap<ValueType>& queue_map, const MessageQueueInfo& info);
   // Erases all |ValueType|s under the provided namespace.
   // Implementation is in the .cc.
   template <typename ValueType>

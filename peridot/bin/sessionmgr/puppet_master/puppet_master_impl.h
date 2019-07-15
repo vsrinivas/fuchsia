@@ -5,12 +5,12 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_PUPPET_MASTER_PUPPET_MASTER_IMPL_H_
 #define PERIDOT_BIN_SESSIONMGR_PUPPET_MASTER_PUPPET_MASTER_IMPL_H_
 
-#include <memory>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
+
+#include <memory>
 
 namespace modular {
 
@@ -23,8 +23,7 @@ class StoryPuppetMasterImpl;
 class PuppetMasterImpl : public fuchsia::modular::PuppetMaster {
  public:
   // Does not take ownership of |session_storage| or |executor|.
-  explicit PuppetMasterImpl(SessionStorage* session_storage,
-                            StoryCommandExecutor* executor);
+  explicit PuppetMasterImpl(SessionStorage* session_storage, StoryCommandExecutor* executor);
   ~PuppetMasterImpl() override;
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request);
@@ -32,8 +31,7 @@ class PuppetMasterImpl : public fuchsia::modular::PuppetMaster {
  private:
   // |PuppetMaster|
   void ControlStory(std::string story_name,
-                    fidl::InterfaceRequest<fuchsia::modular::StoryPuppetMaster>
-                        request) override;
+                    fidl::InterfaceRequest<fuchsia::modular::StoryPuppetMaster> request) override;
 
   // |PuppetMaster|
   void DeleteStory(std::string story_name, DeleteStoryCallback done) override;
@@ -47,8 +45,7 @@ class PuppetMasterImpl : public fuchsia::modular::PuppetMaster {
   fidl::BindingSet<fuchsia::modular::PuppetMaster> bindings_;
   // There is a one-impl-per-connection relationship between
   // fuchsia::modular::StoryPuppetMaster and its bindings.
-  fidl::BindingSet<fuchsia::modular::StoryPuppetMaster,
-                   std::unique_ptr<StoryPuppetMasterImpl>>
+  fidl::BindingSet<fuchsia::modular::StoryPuppetMaster, std::unique_ptr<StoryPuppetMasterImpl>>
       story_puppet_masters_;
 
   OperationCollection operations_;

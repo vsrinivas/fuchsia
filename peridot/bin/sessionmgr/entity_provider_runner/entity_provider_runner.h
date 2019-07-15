@@ -5,13 +5,13 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_ENTITY_PROVIDER_RUNNER_ENTITY_PROVIDER_RUNNER_H_
 #define PERIDOT_BIN_SESSIONMGR_ENTITY_PROVIDER_RUNNER_ENTITY_PROVIDER_RUNNER_H_
 
-#include <map>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/string.h>
 #include <src/lib/fxl/macros.h>
+
+#include <map>
 
 namespace modular {
 
@@ -40,19 +40,16 @@ class EntityProviderRunner : public fuchsia::modular::EntityResolver {
   // Connects to the entity resolver service. The resolver service can resolve
   // any references, regardless if they are backed by an agent or a story entity
   // provider.
-  void ConnectEntityResolver(
-      fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request);
+  void ConnectEntityResolver(fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request);
 
   // Creates an entity reference for the given |cookie| associated with the
   // specified |story_id|.
-  std::string CreateStoryEntityReference(const std::string& story_id,
-                                         const std::string& cookie);
+  std::string CreateStoryEntityReference(const std::string& story_id, const std::string& cookie);
 
   // Given a map of entity type -> entity data, creates an entity reference for
   // it. This data is encoded into the entity reference, and must be within
   // 16KB. If successful, a non-null value is returned.
-  std::string CreateReferenceFromData(
-      std::map<std::string, std::string> type_to_data);
+  std::string CreateReferenceFromData(std::map<std::string, std::string> type_to_data);
 
   // Called by a DataEntity when it has no more |fuchsia::modular::Entity|s it
   // needs to serve for a particular |entity_reference|.
@@ -69,19 +66,15 @@ class EntityProviderRunner : public fuchsia::modular::EntityResolver {
   // |cookie| The cookie identifying the entity.
   // |callback| The callback which is called with the constructed entity
   //   reference.
-  void CreateReference(
-      const std::string& agent_url, const std::string& cookie,
-      fuchsia::modular::EntityReferenceFactory::CreateReferenceCallback
-          callback);
+  void CreateReference(const std::string& agent_url, const std::string& cookie,
+                       fuchsia::modular::EntityReferenceFactory::CreateReferenceCallback callback);
 
   // |fuchsia::modular::EntityResolver|
-  void ResolveEntity(
-      std::string entity_reference,
-      fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request) override;
+  void ResolveEntity(std::string entity_reference,
+                     fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request) override;
 
-  void ResolveDataEntity(
-      fidl::StringPtr entity_reference,
-      fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request);
+  void ResolveDataEntity(fidl::StringPtr entity_reference,
+                         fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request);
 
   // Performs the cleanup required when the entity provider at the provided
   // agent_url finished.
@@ -101,8 +94,7 @@ class EntityProviderRunner : public fuchsia::modular::EntityResolver {
 
   // These are the running entity providers.
   // component id -> EntityProviderController.
-  std::map<std::string, std::unique_ptr<EntityProviderController>>
-      entity_provider_controllers_;
+  std::map<std::string, std::unique_ptr<EntityProviderController>> entity_provider_controllers_;
 
   // entity reference -> |fuchsia::modular::Entity| implementation.
   std::map<std::string, std::unique_ptr<DataEntity>> data_entities_;

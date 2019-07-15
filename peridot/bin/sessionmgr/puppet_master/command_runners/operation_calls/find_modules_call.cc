@@ -17,14 +17,12 @@ namespace modular {
 namespace {
 
 class FindModulesCall
-    : public Operation<fuchsia::modular::ExecuteResult,
-                       fuchsia::modular::FindModulesResponse> {
+    : public Operation<fuchsia::modular::ExecuteResult, fuchsia::modular::FindModulesResponse> {
  public:
   FindModulesCall(fuchsia::modular::ModuleResolver* const module_resolver,
                   fuchsia::modular::EntityResolver* const entity_resolver,
                   fuchsia::modular::IntentPtr intent,
-                  std::vector<std::string> requesting_module_path,
-                  ResultCall result_call)
+                  std::vector<std::string> requesting_module_path, ResultCall result_call)
       : Operation("FindModulesCall", std::move(result_call)),
         module_resolver_(module_resolver),
         entity_resolver_(entity_resolver),
@@ -62,47 +60,44 @@ class FindModulesCall
         param.name = "";
       }
 
-      constraint_futs_.push_back(
-          GetTypesFromIntentParameter(std::move(param.data), param.name)
-              ->Map([name = param.name](std::vector<std::string> types) {
-                fuchsia::modular::FindModulesParameterConstraint constraint;
-                constraint.param_name = name;
-                constraint.param_types = std::move(types);
-                return constraint;
-              }));
+      constraint_futs_.push_back(GetTypesFromIntentParameter(std::move(param.data), param.name)
+                                     ->Map([name = param.name](std::vector<std::string> types) {
+                                       fuchsia::modular::FindModulesParameterConstraint constraint;
+                                       constraint.param_name = name;
+                                       constraint.param_types = std::move(types);
+                                       return constraint;
+                                     }));
     }
 
     Wait("FindModulesCall.Run.Wait", constraint_futs_)
-        ->Then([this, flow](
-                   std::vector<fuchsia::modular::FindModulesParameterConstraint>
-                       constraint_params) {
-          if (result_.status != fuchsia::modular::ExecuteStatus::OK) {
-            // Operation finishes since |flow| goes out of scope.
-            return;
-          }
-          resolver_query_.parameter_constraints = std::move(constraint_params);
-          module_resolver_->FindModules(
-              std::move(resolver_query_),
-              [this, flow](fuchsia::modular::FindModulesResponse response) {
-                response_ = std::move(response);
-                // At this point, the only remaining |flow| is the one captured
-                // in this lambda. This operation should end once |flow| goes
-                // out of scope here.
-              });
-        });
+        ->Then(
+            [this, flow](
+                std::vector<fuchsia::modular::FindModulesParameterConstraint> constraint_params) {
+              if (result_.status != fuchsia::modular::ExecuteStatus::OK) {
+                // Operation finishes since |flow| goes out of scope.
+                return;
+              }
+              resolver_query_.parameter_constraints = std::move(constraint_params);
+              module_resolver_->FindModules(
+                  std::move(resolver_query_),
+                  [this, flow](fuchsia::modular::FindModulesResponse response) {
+                    response_ = std::move(response);
+                    // At this point, the only remaining |flow| is the one captured
+                    // in this lambda. This operation should end once |flow| goes
+                    // out of scope here.
+                  });
+            });
   }
 
   // To avoid deadlocks, this function must not depend on anything that executes
   // on the story controller's operation queue.
   FuturePtr<std::vector<std::string>> GetTypesFromIntentParameter(
-      fuchsia::modular::IntentParameterData input,
-      const fidl::StringPtr& param_name) {
+      fuchsia::modular::IntentParameterData input, const fidl::StringPtr& param_name) {
     auto fut = Future<std::vector<std::string>>::Create(
         "AddModCommandRunner::GetTypesFromIntentParameter");
     switch (input.Which()) {
       case fuchsia::modular::IntentParameterData::Tag::kEntityReference: {
-        AddGetTypesFromEntityOperation(&operations_, entity_resolver_,
-                                       input.entity_reference(),
+        AddGetTypesFromEntityOperation(&operations_, entity_resolver_, input.entity_reference(),
                                        fut->Completer());
         break;
       }
@@ -136,8 +131,7 @@ class FindModulesCall
     return fut;
   }
 
-  std::optional<std::vector<std::string>> GetTypesFromJson(
-      const fidl::StringPtr& input) {
+  std::optional<std::vector<std::string>> GetTypesFromJson(const fidl::StringPtr& input) {
     std::vector<std::string> types;
     if (ExtractEntityTypesFromJson(input, &types)) {
       return types;
@@ -151,8 +145,7 @@ class FindModulesCall
   const std::vector<std::string> requesting_module_path_;
 
   fuchsia::modular::FindModulesQuery resolver_query_;
-  std::vector<FuturePtr<fuchsia::modular::FindModulesParameterConstraint>>
-      constraint_futs_;
+  std::vector<FuturePtr<fuchsia::modular::FindModulesParameterConstraint>> constraint_futs_;
   fuchsia::modular::ExecuteResult result_;
   fuchsia::modular::FindModulesResponse response_;
   OperationCollection operations_;
@@ -163,15 +156,13 @@ class FindModulesCall
 void AddFindModulesOperation(
     OperationContainer* operation_container,
     fuchsia::modular::ModuleResolver* const module_resolver,
-    fuchsia::modular::EntityResolver* const entity_resolver,
-    fuchsia::modular::IntentPtr intent,
+    fuchsia::modular::EntityResolver* const entity_resolver, fuchsia::modular::IntentPtr intent,
     std::vector<std::string> requesting_module_path,
-    fit::function<void(fuchsia::modular::ExecuteResult,
-                       fuchsia::modular::FindModulesResponse)>
+    fit::function<void(fuchsia::modular::ExecuteResult, fuchsia::modular::FindModulesResponse)>
         result_call) {
-  operation_container->Add(std::make_unique<FindModulesCall>(
-      module_resolver, entity_resolver, std::move(intent),
-      std::move(requesting_module_path), std::move(result_call)));
+  operation_container->Add(
+      std::make_unique<FindModulesCall>(module_resolver, entity_resolver, std::move(intent),
+                                        std::move(requesting_module_path), std::move(result_call)));
 }
 
 }  // namespace modular

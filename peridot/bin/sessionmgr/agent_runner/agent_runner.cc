@@ -25,13 +25,11 @@ namespace modular {
 constexpr zx::duration kTeardownTimeout = zx::sec(3);
 
 AgentRunner::AgentRunner(
-    fuchsia::sys::Launcher* const launcher,
-    MessageQueueManager* const message_queue_manager,
+    fuchsia::sys::Launcher* const launcher, MessageQueueManager* const message_queue_manager,
     fuchsia::ledger::internal::LedgerRepository* const ledger_repository,
     AgentRunnerStorage* const agent_runner_storage,
     fuchsia::auth::TokenManager* const token_manager,
-    fuchsia::modular::UserIntelligenceProvider* const
-        user_intelligence_provider,
+    fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider,
     EntityProviderRunner* const entity_provider_runner,
     std::unique_ptr<AgentServiceIndex> agent_service_index)
     : launcher_(launcher),
@@ -52,8 +50,7 @@ void AgentRunner::Teardown(fit::function<void()> callback) {
   // No new agents will be scheduled to run.
   *terminating_ = true;
 
-  FXL_LOG(INFO) << "AgentRunner::Teardown() " << running_agents_.size()
-                << " agents";
+  FXL_LOG(INFO) << "AgentRunner::Teardown() " << running_agents_.size() << " agents";
 
   // No agents were running, we are good to go.
   if (running_agents_.empty()) {
@@ -64,8 +61,7 @@ void AgentRunner::Teardown(fit::function<void()> callback) {
   // This is called when agents are done being removed
   auto called = std::make_shared<bool>(false);
   fit::function<void(const bool)> termination_callback =
-      [called,
-       callback = std::move(callback)](const bool from_timeout) mutable {
+      [called, callback = std::move(callback)](const bool from_timeout) mutable {
         if (*called) {
           return;
         }
@@ -103,8 +99,7 @@ void AgentRunner::Teardown(fit::function<void()> callback) {
       kTeardownTimeout);
 }
 
-void AgentRunner::EnsureAgentIsRunning(const std::string& agent_url,
-                                       fit::function<void()> done) {
+void AgentRunner::EnsureAgentIsRunning(const std::string& agent_url, fit::function<void()> done) {
   auto agent_it = running_agents_.find(agent_url);
   if (agent_it != running_agents_.end()) {
     if (agent_it->second->state() == AgentContextImpl::State::TERMINATING) {
@@ -124,18 +119,16 @@ void AgentRunner::EnsureAgentIsRunning(const std::string& agent_url,
 
 void AgentRunner::RunAgent(const std::string& agent_url) {
   // Start the agent and issue all callbacks.
-  ComponentContextInfo component_info = {message_queue_manager_, this,
-                                         ledger_repository_,
+  ComponentContextInfo component_info = {message_queue_manager_, this, ledger_repository_,
                                          entity_provider_runner_};
-  AgentContextInfo info = {component_info, launcher_, token_manager_,
-                           user_intelligence_provider_};
+  AgentContextInfo info = {component_info, launcher_, token_manager_, user_intelligence_provider_};
   fuchsia::modular::AppConfig agent_config;
   agent_config.url = agent_url;
 
-  FXL_CHECK(running_agents_
-                .emplace(agent_url, std::make_unique<AgentContextImpl>(
-                                        info, std::move(agent_config)))
-                .second);
+  FXL_CHECK(
+      running_agents_
+          .emplace(agent_url, std::make_unique<AgentContextImpl>(info, std::move(agent_config)))
+          .second);
 
   auto run_callbacks_it = run_agent_callbacks_.find(agent_url);
   if (run_callbacks_it != run_agent_callbacks_.end()) {
@@ -148,18 +141,15 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
 
 void AgentRunner::ConnectToAgent(
     const std::string& requestor_url, const std::string& agent_url,
-    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
-        incoming_services_request,
-    fidl::InterfaceRequest<fuchsia::modular::AgentController>
-        agent_controller_request) {
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services_request,
+    fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request) {
   // Drop all new requests if AgentRunner is terminating.
   if (*terminating_) {
     return;
   }
 
   pending_agent_connections_[agent_url].push_back(
-      {requestor_url, std::move(incoming_services_request),
-       std::move(agent_controller_request)});
+      {requestor_url, std::move(incoming_services_request), std::move(agent_controller_request)});
 
   EnsureAgentIsRunning(agent_url, [this, agent_url] {
     // If the agent was terminating and has restarted, forwarding connections
@@ -168,22 +158,18 @@ void AgentRunner::ConnectToAgent(
   });
 }
 
-void AgentRunner::HandleAgentServiceNotFound(::zx::channel channel,
-                                             std::string service_name) {
-  FXL_LOG(ERROR) << "No agent found for requested service_name: "
-                 << service_name;
+void AgentRunner::HandleAgentServiceNotFound(::zx::channel channel, std::string service_name) {
+  FXL_LOG(ERROR) << "No agent found for requested service_name: " << service_name;
   zx_status_t status = fidl_epitaph_write(channel.get(), ZX_ERR_NOT_FOUND);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR)
-        << "Error writing epitaph ZX_ERR_NOT_FOUND to channel. Status: "
-        << zx_status_get_string(status);
+    FXL_LOG(ERROR) << "Error writing epitaph ZX_ERR_NOT_FOUND to channel. Status: "
+                   << zx_status_get_string(status);
   }
 }
 
 void AgentRunner::ConnectToService(
     std::string requestor_url, std::string agent_url,
-    fidl::InterfaceRequest<fuchsia::modular::AgentController>
-        agent_controller_request,
+    fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request,
     std::string service_name, ::zx::channel channel) {
   fuchsia::sys::ServiceProviderPtr agent_services;
   ConnectToAgent(requestor_url, agent_url, agent_services.NewRequest(),
@@ -191,9 +177,8 @@ void AgentRunner::ConnectToService(
   agent_services->ConnectToService(service_name, std::move(channel));
 }
 
-void AgentRunner::ConnectToAgentService(
-    const std::string& requestor_url,
-    fuchsia::modular::AgentServiceRequest request) {
+void AgentRunner::ConnectToAgentService(const std::string& requestor_url,
+                                        fuchsia::modular::AgentServiceRequest request) {
   // Drop all new requests if AgentRunner is terminating.
   if (*terminating_) {
     return;
@@ -210,8 +195,7 @@ void AgentRunner::ConnectToAgentService(
   }
 
   if (!request.has_agent_controller()) {
-    FXL_LOG(ERROR)
-        << "Missing required agent_controller in AgentServiceRequest";
+    FXL_LOG(ERROR) << "Missing required agent_controller in AgentServiceRequest";
     return;
   }
 
@@ -219,34 +203,29 @@ void AgentRunner::ConnectToAgentService(
   if (request.has_handler()) {
     agent_url = request.handler();
   } else {
-    if (auto optional =
-            agent_service_index_->FindAgentForService(request.service_name())) {
+    if (auto optional = agent_service_index_->FindAgentForService(request.service_name())) {
       agent_url = optional.value();
     } else {
-      HandleAgentServiceNotFound(std::move(*request.mutable_channel()),
-                                 request.service_name());
+      HandleAgentServiceNotFound(std::move(*request.mutable_channel()), request.service_name());
       return;
     }
   }
 
-  ConnectToService(
-      requestor_url, agent_url, std::move(*request.mutable_agent_controller()),
-      request.service_name(), std::move(*request.mutable_channel()));
+  ConnectToService(requestor_url, agent_url, std::move(*request.mutable_agent_controller()),
+                   request.service_name(), std::move(*request.mutable_channel()));
 }
 
 void AgentRunner::ConnectToEntityProvider(
     const std::string& agent_url,
-    fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
-        entity_provider_request,
-    fidl::InterfaceRequest<fuchsia::modular::AgentController>
-        agent_controller_request) {
+    fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request,
+    fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request) {
   // Drop all new requests if AgentRunner is terminating.
   if (*terminating_) {
     return;
   }
 
-  pending_entity_provider_connections_[agent_url] = {
-      std::move(entity_provider_request), std::move(agent_controller_request)};
+  pending_entity_provider_connections_[agent_url] = {std::move(entity_provider_request),
+                                                     std::move(agent_controller_request)};
 
   EnsureAgentIsRunning(agent_url, [this, agent_url] {
     auto it = pending_entity_provider_connections_.find(agent_url);
@@ -278,17 +257,15 @@ void AgentRunner::ForwardConnectionsToAgent(const std::string& agent_url) {
   if (found_it != pending_agent_connections_.end()) {
     AgentContextImpl* agent = running_agents_[agent_url].get();
     for (auto& pending_connection : found_it->second) {
-      agent->NewAgentConnection(
-          pending_connection.requestor_url,
-          std::move(pending_connection.incoming_services_request),
-          std::move(pending_connection.agent_controller_request));
+      agent->NewAgentConnection(pending_connection.requestor_url,
+                                std::move(pending_connection.incoming_services_request),
+                                std::move(pending_connection.agent_controller_request));
     }
     pending_agent_connections_.erase(found_it);
   }
 }
 
-void AgentRunner::ScheduleTask(const std::string& agent_url,
-                               fuchsia::modular::TaskInfo task_info,
+void AgentRunner::ScheduleTask(const std::string& agent_url, fuchsia::modular::TaskInfo task_info,
                                fit::function<void(bool)> done) {
   AgentRunnerStorage::TriggerInfo data;
   data.agent_url = agent_url;
@@ -319,20 +296,16 @@ void AgentRunner::ScheduleTask(const std::string& agent_url,
   }
 }
 
-void AgentRunner::AddedTask(const std::string& key,
-                            AgentRunnerStorage::TriggerInfo data) {
+void AgentRunner::AddedTask(const std::string& key, AgentRunnerStorage::TriggerInfo data) {
   switch (data.task_type) {
     case AgentRunnerStorage::TriggerInfo::TYPE_QUEUE_MESSAGE:
-      ScheduleMessageQueueNewMessageTask(data.agent_url, data.task_id,
-                                         data.queue_name);
+      ScheduleMessageQueueNewMessageTask(data.agent_url, data.task_id, data.queue_name);
       break;
     case AgentRunnerStorage::TriggerInfo::TYPE_QUEUE_DELETION:
-      ScheduleMessageQueueDeletionTask(data.agent_url, data.task_id,
-                                       data.queue_token);
+      ScheduleMessageQueueDeletionTask(data.agent_url, data.task_id, data.queue_token);
       break;
     case AgentRunnerStorage::TriggerInfo::TYPE_ALARM:
-      ScheduleAlarmTask(data.agent_url, data.task_id, data.alarm_in_seconds,
-                        true);
+      ScheduleAlarmTask(data.agent_url, data.task_id, data.alarm_in_seconds, true);
       break;
   }
 
@@ -352,8 +325,7 @@ void AgentRunner::DeletedTask(const std::string& key) {
   task_by_ledger_key_.erase(key);
 }
 
-void AgentRunner::DeleteMessageQueueTask(const std::string& agent_url,
-                                         const std::string& task_id) {
+void AgentRunner::DeleteMessageQueueTask(const std::string& agent_url, const std::string& task_id) {
   auto agent_it = watched_queues_.find(agent_url);
   if (agent_it == watched_queues_.end()) {
     return;
@@ -367,10 +339,10 @@ void AgentRunner::DeleteMessageQueueTask(const std::string& agent_url,
 
   // The specific type of message queue task identified by |task_id| is not
   // available, so explicitly clean up both types.
-  message_queue_manager_->DropMessageWatcher(kAgentComponentNamespace,
-                                             agent_url, task_id_it->second);
-  message_queue_manager_->DropDeletionWatcher(kAgentComponentNamespace,
-                                              agent_url, task_id_it->second);
+  message_queue_manager_->DropMessageWatcher(kAgentComponentNamespace, agent_url,
+                                             task_id_it->second);
+  message_queue_manager_->DropDeletionWatcher(kAgentComponentNamespace, agent_url,
+                                              task_id_it->second);
 
   watched_queues_[agent_url].erase(task_id);
   if (watched_queues_[agent_url].empty()) {
@@ -378,8 +350,7 @@ void AgentRunner::DeleteMessageQueueTask(const std::string& agent_url,
   }
 }
 
-void AgentRunner::DeleteAlarmTask(const std::string& agent_url,
-                                  const std::string& task_id) {
+void AgentRunner::DeleteAlarmTask(const std::string& agent_url, const std::string& task_id) {
   auto agent_it = running_alarms_.find(agent_url);
   if (agent_it == running_alarms_.end()) {
     return;
@@ -397,9 +368,9 @@ void AgentRunner::DeleteAlarmTask(const std::string& agent_url,
   }
 }
 
-void AgentRunner::ScheduleMessageQueueDeletionTask(
-    const std::string& agent_url, const std::string& task_id,
-    const std::string& queue_token) {
+void AgentRunner::ScheduleMessageQueueDeletionTask(const std::string& agent_url,
+                                                   const std::string& task_id,
+                                                   const std::string& queue_token) {
   auto found_it = watched_queues_.find(agent_url);
   if (found_it != watched_queues_.end()) {
     if (found_it->second.count(task_id) != 0) {
@@ -410,13 +381,13 @@ void AgentRunner::ScheduleMessageQueueDeletionTask(
       }
 
       // We were watching some other queue for this task_id. Stop watching.
-      message_queue_manager_->DropMessageWatcher(
-          kAgentComponentNamespace, agent_url, found_it->second[task_id]);
+      message_queue_manager_->DropMessageWatcher(kAgentComponentNamespace, agent_url,
+                                                 found_it->second[task_id]);
     }
   } else {
     bool inserted = false;
-    std::tie(found_it, inserted) = watched_queues_.emplace(
-        agent_url, std::map<std::string, std::string>());
+    std::tie(found_it, inserted) =
+        watched_queues_.emplace(agent_url, std::map<std::string, std::string>());
     FXL_DCHECK(inserted);
   }
 
@@ -436,9 +407,9 @@ void AgentRunner::ScheduleMessageQueueDeletionTask(
       });
 }
 
-void AgentRunner::ScheduleMessageQueueNewMessageTask(
-    const std::string& agent_url, const std::string& task_id,
-    const std::string& queue_name) {
+void AgentRunner::ScheduleMessageQueueNewMessageTask(const std::string& agent_url,
+                                                     const std::string& task_id,
+                                                     const std::string& queue_name) {
   auto found_it = watched_queues_.find(agent_url);
   if (found_it != watched_queues_.end()) {
     if (found_it->second.count(task_id) != 0) {
@@ -449,21 +420,20 @@ void AgentRunner::ScheduleMessageQueueNewMessageTask(
       }
 
       // We were watching some other queue for this task_id. Stop watching.
-      message_queue_manager_->DropMessageWatcher(
-          kAgentComponentNamespace, agent_url, found_it->second[task_id]);
+      message_queue_manager_->DropMessageWatcher(kAgentComponentNamespace, agent_url,
+                                                 found_it->second[task_id]);
     }
   } else {
     bool inserted = false;
-    std::tie(found_it, inserted) = watched_queues_.emplace(
-        agent_url, std::map<std::string, std::string>());
+    std::tie(found_it, inserted) =
+        watched_queues_.emplace(agent_url, std::map<std::string, std::string>());
     FXL_DCHECK(inserted);
   }
 
   found_it->second[task_id] = queue_name;
   auto terminating = terminating_;
   message_queue_manager_->RegisterMessageWatcher(
-      kAgentComponentNamespace, agent_url, queue_name,
-      [this, agent_url, task_id, terminating] {
+      kAgentComponentNamespace, agent_url, queue_name, [this, agent_url, task_id, terminating] {
         // If agent runner is terminating or has already terminated, do not
         // run any new tasks.
         if (*terminating) {
@@ -476,10 +446,8 @@ void AgentRunner::ScheduleMessageQueueNewMessageTask(
       });
 }
 
-void AgentRunner::ScheduleAlarmTask(const std::string& agent_url,
-                                    const std::string& task_id,
-                                    const uint32_t alarm_in_seconds,
-                                    const bool is_new_request) {
+void AgentRunner::ScheduleAlarmTask(const std::string& agent_url, const std::string& task_id,
+                                    const uint32_t alarm_in_seconds, const bool is_new_request) {
   auto found_it = running_alarms_.find(agent_url);
   if (found_it != running_alarms_.end()) {
     if (found_it->second.count(task_id) != 0 && is_new_request) {
@@ -516,15 +484,13 @@ void AgentRunner::ScheduleAlarmTask(const std::string& agent_url,
 
         EnsureAgentIsRunning(agent_url, [agent_url, task_id, found_it, this]() {
           running_agents_[agent_url]->NewTask(task_id);
-          ScheduleAlarmTask(agent_url, task_id, found_it->second[task_id],
-                            false);
+          ScheduleAlarmTask(agent_url, task_id, found_it->second[task_id], false);
         });
       },
       zx::sec(alarm_in_seconds));
 }
 
-void AgentRunner::DeleteTask(const std::string& agent_url,
-                             const std::string& task_id) {
+void AgentRunner::DeleteTask(const std::string& agent_url, const std::string& task_id) {
   // This works for non-persistent tasks too since
   // |AgentRunnerStorageImpl::DeleteTask| handles missing keys in ledger
   // gracefully.

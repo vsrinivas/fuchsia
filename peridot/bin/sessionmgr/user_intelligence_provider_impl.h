@@ -20,41 +20,32 @@
 
 namespace modular {
 
-class UserIntelligenceProviderImpl
-    : public fuchsia::modular::UserIntelligenceProvider {
+class UserIntelligenceProviderImpl : public fuchsia::modular::UserIntelligenceProvider {
  public:
   // |context| is not owned and must outlive this instance.
   UserIntelligenceProviderImpl(
       sys::ComponentContext* context,
-      fidl::InterfaceHandle<fuchsia::modular::ContextEngine>
-          context_engine_handle,
-      fit::function<
-          void(fidl::InterfaceRequest<fuchsia::modular::StoryProvider>)>
+      fidl::InterfaceHandle<fuchsia::modular::ContextEngine> context_engine_handle,
+      fit::function<void(fidl::InterfaceRequest<fuchsia::modular::StoryProvider>)>
           story_provider_connector,
-      fit::function<
-          void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>
+      fit::function<void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>
           focus_provider_connector,
-      fit::function<
-          void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
+      fit::function<void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
           puppet_master_connector);
 
   ~UserIntelligenceProviderImpl() override = default;
 
   void GetComponentIntelligenceServices(
       fuchsia::modular::ComponentScope scope,
-      fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request)
-      override;
+      fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request) override;
 
-  void GetSpeechToText(
-      fidl::InterfaceRequest<fuchsia::speech::SpeechToText> request) override;
+  void GetSpeechToText(fidl::InterfaceRequest<fuchsia::speech::SpeechToText> request) override;
 
-  void StartAgents(fidl::InterfaceHandle<fuchsia::modular::ComponentContext>
-                       component_context_handle,
-                   std::vector<std::string> session_agents,
-                   std::vector<std::string> startup_agents) override;
+  void StartAgents(
+      fidl::InterfaceHandle<fuchsia::modular::ComponentContext> component_context_handle,
+      std::vector<std::string> session_agents, std::vector<std::string> startup_agents) override;
 
-  void GetServicesForAgent(std::string url,
-                           GetServicesForAgentCallback callback) override;
+  void GetServicesForAgent(std::string url, GetServicesForAgentCallback callback) override;
 
  private:
   struct SessionAgentData {
@@ -69,8 +60,7 @@ class UserIntelligenceProviderImpl
     SessionAgentData();
 
     template <class Interface>
-    void ConnectOrQueueServiceRequest(
-        fidl::InterfaceRequest<Interface> request);
+    void ConnectOrQueueServiceRequest(fidl::InterfaceRequest<Interface> request);
 
     fuchsia::modular::AgentControllerPtr controller;
 
@@ -83,13 +73,13 @@ class UserIntelligenceProviderImpl
     modular::RateLimitedRetry restart;
   };
 
-  using ServiceProviderInitializer = fit::function<void(
-      const std::string& url, component::ServiceNamespace* agent_host)>;
+  using ServiceProviderInitializer =
+      fit::function<void(const std::string& url, component::ServiceNamespace* agent_host)>;
   // A ServiceProviderInitializer that adds standard agent services, including
   // attributed context entry point. Returns the names
   // of the services added.
-  std::vector<std::string> AddAgentServices(
-      const std::string& url, component::ServiceNamespace* agent_host);
+  std::vector<std::string> AddAgentServices(const std::string& url,
+                                            component::ServiceNamespace* agent_host);
 
   void StartAgent(const std::string& url);
 

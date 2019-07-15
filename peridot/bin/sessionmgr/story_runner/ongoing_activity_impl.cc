@@ -10,15 +10,12 @@ namespace modular {
 
 using fuchsia::modular::OngoingActivityType;
 
-OngoingActivityImpl::OngoingActivityImpl(
-    OngoingActivityType ongoing_activity_type, fit::closure on_destroy)
-    : ongoing_activity_type_(ongoing_activity_type),
-      on_destroy_(std::move(on_destroy)) {}
+OngoingActivityImpl::OngoingActivityImpl(OngoingActivityType ongoing_activity_type,
+                                         fit::closure on_destroy)
+    : ongoing_activity_type_(ongoing_activity_type), on_destroy_(std::move(on_destroy)) {}
 
 OngoingActivityImpl::~OngoingActivityImpl() { on_destroy_(); }
 
-OngoingActivityType OngoingActivityImpl::GetType() {
-  return ongoing_activity_type_;
-}
+OngoingActivityType OngoingActivityImpl::GetType() { return ongoing_activity_type_; }
 
 }  // namespace modular

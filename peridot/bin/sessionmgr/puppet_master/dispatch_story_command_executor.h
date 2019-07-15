@@ -19,30 +19,27 @@ class OperationContainer;
 // fuchsia::modular::StoryCommand.
 class DispatchStoryCommandExecutor : public StoryCommandExecutor {
  public:
-  DispatchStoryCommandExecutor(SessionStorage* session_storage,
-                               std::map<fuchsia::modular::StoryCommand::Tag,
-                                        std::unique_ptr<CommandRunner>>
-                                   command_runners);
+  DispatchStoryCommandExecutor(
+      SessionStorage* session_storage,
+      std::map<fuchsia::modular::StoryCommand::Tag, std::unique_ptr<CommandRunner>>
+          command_runners);
   ~DispatchStoryCommandExecutor() override;
 
  private:
   // |StoryCommandExecutor|
-  void ExecuteCommandsInternal(
-      fidl::StringPtr story_id,
-      std::vector<fuchsia::modular::StoryCommand> commands,
-      fit::function<void(fuchsia::modular::ExecuteResult)> done) override;
+  void ExecuteCommandsInternal(fidl::StringPtr story_id,
+                               std::vector<fuchsia::modular::StoryCommand> commands,
+                               fit::function<void(fuchsia::modular::ExecuteResult)> done) override;
 
   class ExecuteStoryCommandsCall;
 
   SessionStorage* const session_storage_;  // Not owned.
-  const std::map<fuchsia::modular::StoryCommand::Tag,
-                 std::unique_ptr<CommandRunner>>
+  const std::map<fuchsia::modular::StoryCommand::Tag, std::unique_ptr<CommandRunner>>
       command_runners_;
 
   // Lookup table from fuchsia::modular::StoryCommand union tag to a
   // human-readable string.
-  const std::map<fuchsia::modular::StoryCommand::Tag, const char*>
-      story_command_tag_strings_;
+  const std::map<fuchsia::modular::StoryCommand::Tag, const char*> story_command_tag_strings_;
 
   std::map<fidl::StringPtr, OperationQueue> operation_queues_;
 };

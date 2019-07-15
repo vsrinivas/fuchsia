@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "peridot/bin/sessionmgr/story/model/apply_mutations.h"
+
 #include <fuchsia/modular/storymodel/cpp/fidl.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/function.h>
 #include <lib/fit/single_threaded_executor.h>
 
 #include "gtest/gtest.h"
-#include "peridot/bin/sessionmgr/story/model/apply_mutations.h"
 
 using fuchsia::modular::StoryState;
 using fuchsia::modular::StoryVisibilityState;
@@ -45,8 +46,7 @@ TEST(ApplyMutationsTest, set_visibility_state) {
 // Test two StoryModelMutation.set_visibility_state commands to change
 // StoryModel.visibility_state to one value and back. Tests that multiple
 // commands in a list are applied in order.
-TEST(ApplyMutationsTest,
-     MultipleMutations_AppliedInOrder_set_visibility_state) {
+TEST(ApplyMutationsTest, MultipleMutations_AppliedInOrder_set_visibility_state) {
   StoryModel before;
 
   std::vector<StoryModelMutation> commands(2);

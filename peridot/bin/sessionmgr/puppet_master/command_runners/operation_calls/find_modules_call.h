@@ -11,13 +11,10 @@
 namespace modular {
 
 void AddFindModulesOperation(
-    OperationContainer* operation_container,
-    fuchsia::modular::ModuleResolver* module_resolver,
-    fuchsia::modular::EntityResolver* entity_resolver,
-    fuchsia::modular::IntentPtr intent,
+    OperationContainer* operation_container, fuchsia::modular::ModuleResolver* module_resolver,
+    fuchsia::modular::EntityResolver* entity_resolver, fuchsia::modular::IntentPtr intent,
     std::vector<std::string> requesting_module_path,
-    fit::function<void(fuchsia::modular::ExecuteResult,
-                       fuchsia::modular::FindModulesResponse)>
+    fit::function<void(fuchsia::modular::ExecuteResult, fuchsia::modular::FindModulesResponse)>
         result_call);
 
 }  // namespace modular

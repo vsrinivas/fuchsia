@@ -12,10 +12,9 @@ FocusModCommandRunner::FocusModCommandRunner(
 
 FocusModCommandRunner::~FocusModCommandRunner() = default;
 
-void FocusModCommandRunner::Execute(
-    fidl::StringPtr story_id, StoryStorage* const story_storage,
-    fuchsia::modular::StoryCommand command,
-    fit::function<void(fuchsia::modular::ExecuteResult)> done) {
+void FocusModCommandRunner::Execute(fidl::StringPtr story_id, StoryStorage* const story_storage,
+                                    fuchsia::modular::StoryCommand command,
+                                    fit::function<void(fuchsia::modular::ExecuteResult)> done) {
   fuchsia::modular::ExecuteResult result;
 
   auto focus_mod_command = command.focus_mod();

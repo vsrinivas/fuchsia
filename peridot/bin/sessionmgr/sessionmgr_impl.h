@@ -71,16 +71,14 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
  private:
   // |Sessionmgr|
-  void Initialize(
-      std::string session_id, fuchsia::modular::auth::AccountPtr account,
-      fuchsia::modular::AppConfig session_shell_config,
-      fuchsia::modular::AppConfig story_shell_config,
-      bool use_session_shell_for_story_shell_factory,
-      fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
-      fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
-      fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext>
-          session_context,
-      fuchsia::ui::views::ViewToken view_token) override;
+  void Initialize(std::string session_id, fuchsia::modular::auth::AccountPtr account,
+                  fuchsia::modular::AppConfig session_shell_config,
+                  fuchsia::modular::AppConfig story_shell_config,
+                  bool use_session_shell_for_story_shell_factory,
+                  fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
+                  fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
+                  fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
+                  fuchsia::ui::views::ViewToken view_token) override;
 
   // |Sessionmgr|
   void SwapSessionShell(fuchsia::modular::AppConfig session_shell_config,
@@ -90,19 +88,16 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // TODO(MF-279): Remove |account| and |agent_token_manager| once sessions
   // start receiving persona handles.
   void InitializeSessionEnvironment(std::string session_id);
-  void InitializeUser(
-      fuchsia::modular::auth::AccountPtr account,
-      fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager);
-  void InitializeLedger(
-      fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager);
+  void InitializeUser(fuchsia::modular::auth::AccountPtr account,
+                      fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager);
+  void InitializeLedger(fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager);
   void InitializeIntlPropertyProvider();
   void InitializeDeviceMap();
   void InitializeClipboard();
   void InitializeMessageQueueManager();
-  void InitializeMaxwellAndModular(
-      const fidl::StringPtr& session_shell_url,
-      fuchsia::modular::AppConfig story_shell_config,
-      bool use_session_shell_for_story_shell_factory);
+  void InitializeMaxwellAndModular(const fidl::StringPtr& session_shell_url,
+                                   fuchsia::modular::AppConfig story_shell_config,
+                                   bool use_session_shell_for_story_shell_factory);
   void InitializeDiscovermgr();
   void InitializeSessionShell(fuchsia::modular::AppConfig session_shell_config,
                               fuchsia::ui::views::ViewToken view_token);
@@ -118,46 +113,34 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   // |fuchsia::modular::SessionShellContext|
   void GetAccount(
-      fit::function<void(::std::unique_ptr<::fuchsia::modular::auth::Account>)>
-          callback) override;
+      fit::function<void(::std::unique_ptr<::fuchsia::modular::auth::Account>)> callback) override;
   void GetComponentContext(
-      fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request)
-      override;
+      fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) override;
   void GetDeviceName(fit::function<void(::std::string)> callback) override;
   void GetFocusController(
-      fidl::InterfaceRequest<fuchsia::modular::FocusController> request)
-      override;
-  void GetFocusProvider(
-      fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) override;
+      fidl::InterfaceRequest<fuchsia::modular::FocusController> request) override;
+  void GetFocusProvider(fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) override;
   void GetLink(fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
-  void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                           request) override;
-  void GetSpeechToText(
-      fidl::InterfaceRequest<fuchsia::speech::SpeechToText> request) override;
-  void GetStoryProvider(
-      fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) override;
+  void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
+  void GetSpeechToText(fidl::InterfaceRequest<fuchsia::speech::SpeechToText> request) override;
+  void GetStoryProvider(fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) override;
   void GetVisibleStoriesController(
-      fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesController>
-          request) override;
+      fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesController> request) override;
   void Logout() override;
   void Shutdown();
 
   // |EntityProviderLauncher|
   void ConnectToEntityProvider(
       const std::string& agent_url,
-      fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
-          entity_provider_request,
-      fidl::InterfaceRequest<fuchsia::modular::AgentController>
-          agent_controller_request) override;
+      fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request,
+      fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request) override;
 
   // |EntityProviderLauncher|
   void ConnectToStoryEntityProvider(
       const std::string& story_id,
-      fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
-          entity_provider_request) override;
+      fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request) override;
 
-  fuchsia::sys::ServiceProviderPtr GetServiceProvider(
-      fuchsia::modular::AppConfig config);
+  fuchsia::sys::ServiceProviderPtr GetServiceProvider(fuchsia::modular::AppConfig config);
   fuchsia::sys::ServiceProviderPtr GetServiceProvider(const std::string& url);
 
   fuchsia::ledger::cloud::CloudProviderPtr LaunchCloudProvider(
@@ -203,17 +186,14 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   fidl::BindingSet<fuchsia::modular::internal::Sessionmgr> bindings_;
   component::ServiceProviderImpl session_shell_services_;
 
-  fidl::BindingSet<fuchsia::modular::SessionShellContext>
-      session_shell_context_bindings_;
+  fidl::BindingSet<fuchsia::modular::SessionShellContext> session_shell_context_bindings_;
 
   fuchsia::auth::TokenManagerPtr agent_token_manager_;
   fuchsia::modular::internal::SessionContextPtr session_context_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> cloud_provider_app_;
   fuchsia::ledger::cloud::firestore::FactoryPtr cloud_provider_factory_;
-  std::unique_ptr<AppClient<fuchsia::ledger::internal::LedgerController>>
-      ledger_app_;
-  fuchsia::ledger::internal::LedgerRepositoryFactoryPtr
-      ledger_repository_factory_;
+  std::unique_ptr<AppClient<fuchsia::ledger::internal::LedgerController>> ledger_app_;
+  fuchsia::ledger::internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;
   fuchsia::ledger::internal::LedgerRepositoryPtr ledger_repository_;
   std::unique_ptr<LedgerClient> ledger_client_;
   // Provides services to the Ledger
@@ -252,12 +232,11 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   //   queues
   // - |context_engine_app_| so it can resolve entity references
   // - |modular resolver_service_| so it can resolve entity references
-  std::unique_ptr<fidl::BindingSet<fuchsia::modular::ComponentContext,
-                                   std::unique_ptr<ComponentContextImpl>>>
+  std::unique_ptr<
+      fidl::BindingSet<fuchsia::modular::ComponentContext, std::unique_ptr<ComponentContextImpl>>>
       maxwell_component_context_bindings_;
 
-  std::unique_ptr<UserIntelligenceProviderImpl>
-      user_intelligence_provider_impl_;
+  std::unique_ptr<UserIntelligenceProviderImpl> user_intelligence_provider_impl_;
 
   // Services we provide to the module resolver's namespace.
   component::ServiceProviderImpl module_resolver_ns_services_;
@@ -281,8 +260,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // shared between all session shells (so it's not private to the session shell
   // *app*).
   std::unique_ptr<StoryStorage> session_shell_storage_;
-  fidl::BindingSet<fuchsia::modular::Link, std::unique_ptr<LinkImpl>>
-      session_shell_link_bindings_;
+  fidl::BindingSet<fuchsia::modular::Link, std::unique_ptr<LinkImpl>> session_shell_link_bindings_;
 
   // Holds the actions scheduled by calls to the AtEnd() method.
   std::vector<fit::function<void(fit::function<void()>)>> at_end_;

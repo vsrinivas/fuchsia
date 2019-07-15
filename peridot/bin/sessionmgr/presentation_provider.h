@@ -25,8 +25,7 @@ class PresentationProvider {
 
   virtual void WatchVisualState(
       fidl::StringPtr story_id,
-      fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher>
-          watcher) = 0;
+      fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher) = 0;
 };
 
 }  // namespace modular

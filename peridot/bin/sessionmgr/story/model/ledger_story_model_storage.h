@@ -11,7 +11,6 @@
 #include <src/lib/fxl/macros.h>
 
 #include "peridot/bin/sessionmgr/story/model/story_model_storage.h"
-
 #include "peridot/lib/ledger_client/page_client.h"
 
 namespace modular {
@@ -31,15 +30,13 @@ class LedgerStoryModelStorage : public StoryModelStorage, PageClient {
   // Constructs a new instance which stores all data in |page_id| within
   // |ledger_client|'s Ledger. Scopes device-local state to a key namespace
   // therein with |device_id|.
-  LedgerStoryModelStorage(LedgerClient* ledger_client,
-                          fuchsia::ledger::PageId page_id,
+  LedgerStoryModelStorage(LedgerClient* ledger_client, fuchsia::ledger::PageId page_id,
                           std::string device_id);
   ~LedgerStoryModelStorage() override;
 
  private:
   // |PageWatcher|
-  void OnChange(fuchsia::ledger::PageChange page,
-                fuchsia::ledger::ResultState result_state,
+  void OnChange(fuchsia::ledger::PageChange page, fuchsia::ledger::ResultState result_state,
                 OnChangeCallback callback) override;
 
   // |PageClient|
@@ -53,8 +50,7 @@ class LedgerStoryModelStorage : public StoryModelStorage, PageClient {
 
   // |StoryModelStorage|
   fit::promise<> Execute(
-      std::vector<fuchsia::modular::storymodel::StoryModelMutation> commands)
-      override;
+      std::vector<fuchsia::modular::storymodel::StoryModelMutation> commands) override;
 
   // Called from OnChange().
   void ProcessCompletePageChange(fuchsia::ledger::PageChange page_change);

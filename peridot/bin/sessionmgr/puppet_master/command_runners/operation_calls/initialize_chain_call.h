@@ -7,6 +7,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
+
 #include "peridot/bin/sessionmgr/storage/story_storage.h"
 
 namespace modular {
@@ -15,8 +16,7 @@ void AddInitializeChainOperation(
     OperationContainer* operation_container, StoryStorage* story_storage,
     std::vector<std::string> module_path,
     fuchsia::modular::CreateModuleParameterMapInfoPtr create_parameter_map_info,
-    fit::function<void(fuchsia::modular::ExecuteResult,
-                       fuchsia::modular::ModuleParameterMapPtr)>
+    fit::function<void(fuchsia::modular::ExecuteResult, fuchsia::modular::ModuleParameterMapPtr)>
         result_call);
 
 }  // namespace modular

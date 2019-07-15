@@ -15,8 +15,7 @@ std::unique_ptr<StoryMutator> TestMutator::Create(TestMutator** ptr) {
 fit::consumer<> TestMutator::ExecuteInternal(
     std::vector<fuchsia::modular::storymodel::StoryModelMutation> commands) {
   fit::bridge<> bridge;
-  ExecuteCall call{.completer = std::move(bridge.completer),
-                   .commands = std::move(commands)};
+  ExecuteCall call{.completer = std::move(bridge.completer), .commands = std::move(commands)};
   execute_calls.push_back(std::move(call));
   return std::move(bridge.consumer);
 }

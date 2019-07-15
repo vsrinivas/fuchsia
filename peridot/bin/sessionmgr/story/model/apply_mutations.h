@@ -13,8 +13,7 @@ namespace modular {
 // |current_model|.
 fuchsia::modular::storymodel::StoryModel ApplyMutations(
     const fuchsia::modular::storymodel::StoryModel& current_model,
-    const std::vector<fuchsia::modular::storymodel::StoryModelMutation>&
-        commands);
+    const std::vector<fuchsia::modular::storymodel::StoryModelMutation>& commands);
 
 }  // namespace modular
 

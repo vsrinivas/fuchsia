@@ -7,7 +7,6 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fsl/types/type_converters.h>
 #include <lib/fsl/vmo/strings.h>
-
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "gtest/gtest.h"
@@ -20,8 +19,7 @@ namespace modular {
 namespace {
 
 fuchsia::modular::IntentFilter MakeIntentFilter(
-    std::string action,
-    std::vector<fuchsia::modular::ParameterConstraint> param_constraints) {
+    std::string action, std::vector<fuchsia::modular::ParameterConstraint> param_constraints) {
   fuchsia::modular::IntentFilter f;
   f.action = action;
   f.parameter_constraints = param_constraints;
@@ -53,16 +51,14 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
       return false;
     }
 
-    std::map<fidl::StringPtr, const fuchsia::modular::IntentParameterData*>
-        old_params;
+    std::map<fidl::StringPtr, const fuchsia::modular::IntentParameterData*> old_params;
     if (old_intent.parameters) {
       for (const auto& entry : *old_intent.parameters) {
         old_params[entry.name] = &entry.data;
       }
     }
 
-    std::map<fidl::StringPtr, const fuchsia::modular::IntentParameterData*>
-        new_params;
+    std::map<fidl::StringPtr, const fuchsia::modular::IntentParameterData*> new_params;
     if (new_intent.parameters) {
       for (const auto& entry : *new_intent.parameters) {
         new_params[entry.name] = &entry.data;
@@ -123,13 +119,13 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
   std::unique_ptr<AddModCommandRunner> MakeRunner(
       fuchsia::modular::ModuleResolver* const module_resolver,
       fuchsia::modular::EntityResolver* const entity_resolver) {
-    return std::make_unique<AddModCommandRunner>(module_resolver,
-                                                 entity_resolver);
+    return std::make_unique<AddModCommandRunner>(module_resolver, entity_resolver);
   }
 
-  fuchsia::modular::StoryCommand MakeAddModCommand(
-      const std::string& mod_name, const std::string& parent_mod_name,
-      float surface_emphasis, const fuchsia::modular::Intent& intent) {
+  fuchsia::modular::StoryCommand MakeAddModCommand(const std::string& mod_name,
+                                                   const std::string& parent_mod_name,
+                                                   float surface_emphasis,
+                                                   const fuchsia::modular::Intent& intent) {
     fuchsia::modular::AddMod add_mod;
     add_mod.mod_name_transitional = mod_name;
     if (!parent_mod_name.empty()) {
@@ -152,8 +148,7 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
     return intent;
   }
 
-  void AddEntityRefParameter(fuchsia::modular::Intent* intent,
-                             const std::string& name,
+  void AddEntityRefParameter(fuchsia::modular::Intent* intent, const std::string& name,
                              const std::string& reference) {
     fuchsia::modular::IntentParameter parameter;
     parameter.name = name;
@@ -161,8 +156,7 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
     intent->parameters.push_back(std::move(parameter));
   }
 
-  void AddEntityTypeParameter(fuchsia::modular::Intent* intent,
-                              const std::string& name,
+  void AddEntityTypeParameter(fuchsia::modular::Intent* intent, const std::string& name,
                               std::vector<std::string> types) {
     fuchsia::modular::IntentParameter parameter;
     parameter.name = name;
@@ -178,8 +172,8 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
     intent->parameters.push_back(std::move(parameter));
   }
 
-  void AddJsonParameter(fuchsia::modular::Intent* intent,
-                        const std::string& name, const std::string& json) {
+  void AddJsonParameter(fuchsia::modular::Intent* intent, const std::string& name,
+                        const std::string& json) {
     fuchsia::modular::IntentParameter parameter;
     parameter.name = name;
     fsl::SizedVmo vmo;
@@ -188,8 +182,7 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
     intent->parameters.push_back(std::move(parameter));
   }
 
-  void AddInvalidParameter(fuchsia::modular::Intent* intent,
-                           const std::string& name) {
+  void AddInvalidParameter(fuchsia::modular::Intent* intent, const std::string& name) {
     // This parameter has no data union field set, hence it's invalid.
     fuchsia::modular::IntentParameterData data;
     fuchsia::modular::IntentParameter parameter;
@@ -202,8 +195,7 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
   // this mod is to test parameters of type link_name and as the
   // surface_relation_parent_mod.
   void InitParentMod(const std::string& mod_name, const std::string& param_name,
-                     const std::string& param_value,
-                     const std::string& link_path_name) {
+                     const std::string& param_value, const std::string& link_path_name) {
     fuchsia::modular::ModuleData module_data;
     module_data.module_path.push_back(mod_name);
     module_data.intent = fuchsia::modular::Intent::New();
@@ -249,9 +241,7 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler) {
   fidl::Clone(manifest, &manifest_to_add);
   fake_module_resolver_->SetManifest(std::move(manifest_out));
   fake_module_resolver_->SetGetModuleManifestValidation(
-      [&](const fidl::StringPtr& module_id) {
-        EXPECT_EQ(intent.handler, module_id);
-      });
+      [&](const fidl::StringPtr& module_id) { EXPECT_EQ(intent.handler, module_id); });
 
   fuchsia::modular::FindModulesResult res;
   res.module_id = "mod_url";
@@ -262,8 +252,7 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler) {
   bool done = false;
   runner_->Execute(story_id_, story_storage_.get(), std::move(command),
                    [&](fuchsia::modular::ExecuteResult result) {
-                     ASSERT_EQ(fuchsia::modular::ExecuteStatus::OK,
-                               result.status);
+                     ASSERT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
                      done = true;
                    });
   RunLoopUntil([&] { return done; });
@@ -275,8 +264,7 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler) {
         EXPECT_EQ("mod_url", module_data->module_url);
         EXPECT_EQ(full_path, module_data->module_path);
         EXPECT_FALSE(module_data->module_deleted);
-        EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL,
-                  module_data->module_source);
+        EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL, module_data->module_source);
         EXPECT_EQ(0.5, module_data->surface_relation->emphasis);
         EXPECT_TRUE(AreIntentsEqual(intent, *module_data->intent));
         EXPECT_EQ(0u, module_data->parameter_map.entries.size());
@@ -292,8 +280,7 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler) {
 TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler_NoParent) {
   auto intent = CreateEmptyIntent("intent_action", "mod_url");
   intent.parameters.resize(0);
-  auto command =
-      MakeAddModCommand("mod", "" /* parent mod is null */, 0.5, intent);
+  auto command = MakeAddModCommand("mod", "" /* parent mod is null */, 0.5, intent);
 
   auto manifest = fuchsia::modular::ModuleManifest::New();
   manifest->intent_filters.push_back(MakeIntentFilter("intent_action", {}));
@@ -306,9 +293,7 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler_NoParent) {
   fidl::Clone(manifest, &manifest_to_add);
   fake_module_resolver_->SetManifest(std::move(manifest_out));
   fake_module_resolver_->SetGetModuleManifestValidation(
-      [&](const fidl::StringPtr& module_id) {
-        EXPECT_EQ(intent.handler, module_id);
-      });
+      [&](const fidl::StringPtr& module_id) { EXPECT_EQ(intent.handler, module_id); });
 
   fuchsia::modular::FindModulesResult res;
   res.module_id = "mod_url";
@@ -319,8 +304,7 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler_NoParent) {
   bool done = false;
   runner_->Execute(story_id_, story_storage_.get(), std::move(command),
                    [&](fuchsia::modular::ExecuteResult result) {
-                     ASSERT_EQ(fuchsia::modular::ExecuteStatus::OK,
-                               result.status);
+                     ASSERT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
                      done = true;
                    });
   RunLoopUntil([&] { return done; });
@@ -332,8 +316,7 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler_NoParent) {
         EXPECT_EQ("mod_url", module_data->module_url);
         EXPECT_EQ(full_path, module_data->module_path);
         EXPECT_FALSE(module_data->module_deleted);
-        EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL,
-                  module_data->module_source);
+        EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL, module_data->module_source);
         EXPECT_EQ(0.5, module_data->surface_relation->emphasis);
         EXPECT_TRUE(AreIntentsEqual(intent, *module_data->intent));
         EXPECT_EQ(0u, module_data->parameter_map.entries.size());
@@ -344,11 +327,9 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler_NoParent) {
 }
 
 TEST_F(AddModCommandRunnerTest, ExecuteIntentThatNeedsResolution) {
-  auto reference =
-      fake_entity_resolver_->AddEntity({{"entity_type1", "entity_data"}});
+  auto reference = fake_entity_resolver_->AddEntity({{"entity_type1", "entity_data"}});
 
-  InitParentMod("parent_mod", "param", R"({"@type": "baz"})",
-                "parent_link_name");
+  InitParentMod("parent_mod", "param", R"({"@type": "baz"})", "parent_link_name");
 
   // Set up command
   auto intent = CreateEmptyIntent("intent_action");
@@ -388,8 +369,7 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentThatNeedsResolution) {
   bool done{};
   runner_->Execute(story_id_, story_storage_.get(), std::move(command),
                    [&](fuchsia::modular::ExecuteResult result) {
-                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK,
-                               result.status);
+                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
                      done = true;
                    });
   RunLoopUntil([&] { return done; });
@@ -407,8 +387,7 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentThatNeedsResolution) {
   EXPECT_EQ("mod_url", module_data->module_url);
   EXPECT_EQ(full_path, module_data->module_path);
   EXPECT_FALSE(module_data->module_deleted);
-  EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL,
-            module_data->module_source);
+  EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL, module_data->module_source);
   EXPECT_EQ(0.5, module_data->surface_relation->emphasis);
   EXPECT_TRUE(AreIntentsEqual(intent, *module_data->intent));
   EXPECT_EQ(3u, module_data->parameter_map.entries.size());
@@ -418,8 +397,7 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentThatNeedsResolution) {
   EXPECT_EQ("param_json", module_data->parameter_map.entries.at(0).name);
   EXPECT_EQ(full_path, link_path1.module_path);
   EXPECT_EQ("param_json", link_path1.link_name);
-  EXPECT_EQ(R"({"@type": "foo"})",
-            GetLinkValue(story_storage_.get(), link_path1));
+  EXPECT_EQ(R"({"@type": "foo"})", GetLinkValue(story_storage_.get(), link_path1));
 
   auto& link_path2 = module_data->parameter_map.entries.at(1).link_path;
   EXPECT_EQ("param_ref", module_data->parameter_map.entries.at(1).name);
@@ -447,11 +425,8 @@ TEST_F(AddModCommandRunnerTest, ExecuteNoModulesFound) {
   bool done{};
   runner_->Execute(story_id_, story_storage_.get(), std::move(command),
                    [&](fuchsia::modular::ExecuteResult result) {
-                     EXPECT_EQ(
-                         fuchsia::modular::ExecuteStatus::NO_MODULES_FOUND,
-                         result.status);
-                     EXPECT_EQ("Resolution of intent gave zero results.",
-                               result.error_message);
+                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::NO_MODULES_FOUND, result.status);
+                     EXPECT_EQ("Resolution of intent gave zero results.", result.error_message);
                      done = true;
                    });
   RunLoopUntil([&] { return done; });
@@ -476,8 +451,7 @@ TEST_F(AddModCommandRunnerTest, ExecuteInvalidParameter) {
   bool done{};
   runner_->Execute(story_id_, story_storage_.get(), std::move(command),
                    [&](fuchsia::modular::ExecuteResult result) {
-                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_COMMAND,
-                               result.status);
+                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_COMMAND, result.status);
                      EXPECT_EQ(
                          "Invalid data for parameter with name: "
                          "invalid_param",
@@ -507,8 +481,7 @@ TEST_F(AddModCommandRunnerTest, ExecuteInvalidParameterWithResulution) {
   bool done{};
   runner_->Execute(story_id_, story_storage_.get(), std::move(command),
                    [&](fuchsia::modular::ExecuteResult result) {
-                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_COMMAND,
-                               result.status);
+                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_COMMAND, result.status);
                      EXPECT_EQ(
                          "Invalid data for parameter with name: "
                          "invalid_param",
@@ -528,8 +501,7 @@ TEST_F(AddModCommandRunnerTest, ExecuteNullHandlerAndParameter) {
   bool done{};
   runner_->Execute(story_id_, story_storage_.get(), std::move(command),
                    [&](fuchsia::modular::ExecuteResult result) {
-                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_COMMAND,
-                               result.status);
+                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_COMMAND, result.status);
                      EXPECT_EQ(
                          "A null-named module parameter is not allowed "
                          "when using fuchsia::modular::Intent.",
@@ -558,10 +530,8 @@ TEST_F(AddModCommandRunnerTest, ExecuteInvalidJsonParamResolution) {
   bool done{};
   runner_->Execute(story_id_, story_storage_.get(), std::move(command),
                    [&](fuchsia::modular::ExecuteResult result) {
-                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_COMMAND,
-                               result.status);
-                     EXPECT_EQ("Mal-formed JSON in parameter: invalid_param",
-                               result.error_message);
+                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_COMMAND, result.status);
+                     EXPECT_EQ("Mal-formed JSON in parameter: invalid_param", result.error_message);
                      done = true;
                    });
   RunLoopUntil([&] { return done; });
@@ -576,8 +546,7 @@ TEST_F(AddModCommandRunnerTest, UpdatesModIfItExists) {
   auto manifest = fuchsia::modular::ModuleManifest::New();
   manifest->binary = "mod_url";
   manifest->intent_filters.push_back(MakeIntentFilter(
-      "intent_action",
-      {fuchsia::modular::ParameterConstraint{"param_json", "foo"}}));
+      "intent_action", {fuchsia::modular::ParameterConstraint{"param_json", "foo"}}));
 
   // Set up fake module resolver, set validaiton of GetModuleManifest call, and
   // a dummy result.
@@ -596,8 +565,7 @@ TEST_F(AddModCommandRunnerTest, UpdatesModIfItExists) {
   bool done{};
   runner_->Execute(story_id_, story_storage_.get(), std::move(command),
                    [&](fuchsia::modular::ExecuteResult result) {
-                     ASSERT_EQ(fuchsia::modular::ExecuteStatus::OK,
-                               result.status);
+                     ASSERT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
                      done = true;
                    });
   RunLoopUntil([&] { return done; });
@@ -605,14 +573,13 @@ TEST_F(AddModCommandRunnerTest, UpdatesModIfItExists) {
   // Get the link path for the param of the mod we created.
   fuchsia::modular::LinkPath link_path;
   std::vector<std::string> full_path{"parent_mod", "mod"};
-  story_storage_->ReadModuleData(full_path)->Then(
-      [&](fuchsia::modular::ModuleDataPtr result) {
-        for (auto& entry : result->parameter_map.entries) {
-          if (entry.name == "param_json") {
-            fidl::Clone(entry.link_path, &link_path);
-          }
-        }
-      });
+  story_storage_->ReadModuleData(full_path)->Then([&](fuchsia::modular::ModuleDataPtr result) {
+    for (auto& entry : result->parameter_map.entries) {
+      if (entry.name == "param_json") {
+        fidl::Clone(entry.link_path, &link_path);
+      }
+    }
+  });
 
   // Create AddMod intent for a mod with the same name as the one we created
   // previously.
@@ -638,8 +605,7 @@ TEST_F(AddModCommandRunnerTest, UpdatesModIfItExists) {
   done = false;
   runner_->Execute(story_id_, story_storage_.get(), std::move(command2),
                    [&](fuchsia::modular::ExecuteResult result) {
-                     ASSERT_EQ(fuchsia::modular::ExecuteStatus::OK,
-                               result.status);
+                     ASSERT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
                      done = true;
                    });
   RunLoopUntil([&] { return done; });
@@ -666,8 +632,7 @@ TEST_F(AddModCommandRunnerTest, AcceptsModNameTransitional) {
   auto manifest = fuchsia::modular::ModuleManifest::New();
   manifest->binary = "mod_url";
   manifest->intent_filters.push_back(MakeIntentFilter(
-      "intent_action",
-      {fuchsia::modular::ParameterConstraint{"param_json", "foo"}}));
+      "intent_action", {fuchsia::modular::ParameterConstraint{"param_json", "foo"}}));
 
   // Set up fake module resolver, set validaiton of GetModuleManifest call, and
   // a dummy result.
@@ -686,8 +651,7 @@ TEST_F(AddModCommandRunnerTest, AcceptsModNameTransitional) {
   bool done{};
   runner_->Execute(story_id_, story_storage_.get(), std::move(command),
                    [&](fuchsia::modular::ExecuteResult result) {
-                     ASSERT_EQ(fuchsia::modular::ExecuteStatus::OK,
-                               result.status);
+                     ASSERT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
                      done = true;
                    });
   RunLoopUntil([&] { return done; });

@@ -17,8 +17,7 @@ using fuchsia::modular::StoryCommand;
 
 class TestStoryCommandExecutor : public StoryCommandExecutor {
  public:
-  void SetExecuteReturnResult(ExecuteStatus status,
-                              fidl::StringPtr error_message) {
+  void SetExecuteReturnResult(ExecuteStatus status, fidl::StringPtr error_message) {
     result_.status = status;
     result_.error_message = error_message;
   }
@@ -29,9 +28,8 @@ class TestStoryCommandExecutor : public StoryCommandExecutor {
 
  private:
   // |StoryCommandExecutor|
-  void ExecuteCommandsInternal(
-      fidl::StringPtr story_id, std::vector<StoryCommand> commands,
-      fit::function<void(ExecuteResult)> done) override {
+  void ExecuteCommandsInternal(fidl::StringPtr story_id, std::vector<StoryCommand> commands,
+                               fit::function<void(ExecuteResult)> done) override {
     ++execute_count;
     last_story_id = story_id;
     last_commands = std::move(commands);
@@ -56,8 +54,8 @@ TEST(StoryCommandExecutorTest, ListenerSeesCommands) {
   executor.SetExecuteReturnResult(ExecuteStatus::OK, "message");
 
   bool listener_called{false};
-  auto auto_cancel = executor.AddListener(
-      [&](const std::vector<StoryCommand>& commands, ExecuteResult result) {
+  auto auto_cancel =
+      executor.AddListener([&](const std::vector<StoryCommand>& commands, ExecuteResult result) {
         EXPECT_EQ(1lu, commands.size());
         EXPECT_EQ(ExecuteStatus::OK, result.status);
         EXPECT_EQ("message", result.error_message);
@@ -67,12 +65,11 @@ TEST(StoryCommandExecutorTest, ListenerSeesCommands) {
   bool execute_done{false};
   std::vector<StoryCommand> commands;
   commands.push_back(MakeRemoveModCommand("one"));
-  executor.ExecuteCommands("story id", std::move(commands),
-                           [&](ExecuteResult result) {
-                             execute_done = true;
-                             EXPECT_EQ(ExecuteStatus::OK, result.status);
-                             EXPECT_EQ("message", result.error_message);
-                           });
+  executor.ExecuteCommands("story id", std::move(commands), [&](ExecuteResult result) {
+    execute_done = true;
+    EXPECT_EQ(ExecuteStatus::OK, result.status);
+    EXPECT_EQ("message", result.error_message);
+  });
   EXPECT_TRUE(listener_called);
   EXPECT_TRUE(execute_done);
 

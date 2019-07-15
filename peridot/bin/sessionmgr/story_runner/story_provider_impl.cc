@@ -48,8 +48,7 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
 
   StopStoryCall(fidl::StringPtr story_id, const bool bulk,
                 StoryRuntimesMap* const story_runtime_containers,
-                MessageQueueManager* const message_queue_manager,
-                ResultCall result_call)
+                MessageQueueManager* const message_queue_manager, ResultCall result_call)
       : Operation("StoryProviderImpl::DeleteStoryCall", std::move(result_call)),
         story_id_(story_id),
         bulk_(bulk),
@@ -62,14 +61,12 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
 
     auto i = story_runtime_containers_->find(story_id_);
     if (i == story_runtime_containers_->end()) {
-      FXL_LOG(WARNING) << "I was told to teardown story " << story_id_
-                       << ", but I can't find it.";
+      FXL_LOG(WARNING) << "I was told to teardown story " << story_id_ << ", but I can't find it.";
       return;
     }
 
     FXL_DCHECK(i->second.controller_impl != nullptr);
-    i->second.controller_impl->StopBulk(bulk_,
-                                        [this, flow] { CleanupRuntime(flow); });
+    i->second.controller_impl->StopBulk(bulk_, [this, flow] { CleanupRuntime(flow); });
   }
 
   void CleanupRuntime(FlowToken flow) {
@@ -85,8 +82,7 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
     // TODO(thatguy); Understand the above comment, and rewrite it.
     async::PostTask(async_get_default_dispatcher(), [this, flow] {
       story_runtime_containers_->erase(story_id_);
-      message_queue_manager_->DeleteNamespace(
-          EncodeModuleComponentNamespace(story_id_), [flow] {});
+      message_queue_manager_->DeleteNamespace(EncodeModuleComponentNamespace(story_id_), [flow] {});
     });
   }
 
@@ -100,14 +96,12 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
 // Loads a StoryRuntimeContainer object and stores it in
 // |story_provider_impl.story_runtime_containers_| so that the story is ready
 // to be run.
-class StoryProviderImpl::LoadStoryRuntimeCall
-    : public Operation<StoryRuntimeContainer*> {
+class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeContainer*> {
  public:
   LoadStoryRuntimeCall(StoryProviderImpl* const story_provider_impl,
-                       SessionStorage* const session_storage,
-                       fidl::StringPtr story_id, ResultCall result_call)
-      : Operation("StoryProviderImpl::LoadStoryRuntimeCall",
-                  std::move(result_call)),
+                       SessionStorage* const session_storage, fidl::StringPtr story_id,
+                       ResultCall result_call)
+      : Operation("StoryProviderImpl::LoadStoryRuntimeCall", std::move(result_call)),
         story_provider_impl_(story_provider_impl),
         session_storage_(session_storage),
         story_id_(story_id) {}
@@ -126,8 +120,7 @@ class StoryProviderImpl::LoadStoryRuntimeCall
     }
 
     session_storage_->GetStoryData(story_id_)->WeakThen(
-        GetWeakPtr(),
-        [this, flow](fuchsia::modular::internal::StoryDataPtr story_data) {
+        GetWeakPtr(), [this, flow](fuchsia::modular::internal::StoryDataPtr story_data) {
           if (!story_data) {
             return;
             // Operation finishes since |flow| goes out of scope.
@@ -136,33 +129,27 @@ class StoryProviderImpl::LoadStoryRuntimeCall
         });
   }
 
-  void Cont(fuchsia::modular::internal::StoryDataPtr story_data,
-            FlowToken flow) {
+  void Cont(fuchsia::modular::internal::StoryDataPtr story_data, FlowToken flow) {
     session_storage_->GetStoryStorage(story_id_)->WeakThen(
-        GetWeakPtr(), [this, story_data = std::move(story_data), flow](
-                          std::unique_ptr<StoryStorage> story_storage) mutable {
+        GetWeakPtr(), [this, story_data = std::move(story_data),
+                       flow](std::unique_ptr<StoryStorage> story_storage) mutable {
           struct StoryRuntimeContainer container {
-            .executor = std::make_unique<async::Executor>(
-                async_get_default_dispatcher()),
-            .storage = std::move(story_storage),
-            .current_data = std::move(story_data),
+            .executor = std::make_unique<async::Executor>(async_get_default_dispatcher()),
+            .storage = std::move(story_storage), .current_data = std::move(story_data),
           };
 
           container.model_owner = std::make_unique<StoryModelOwner>(
-              story_id_, container.executor.get(),
-              std::make_unique<NoopStoryModelStorage>());
+              story_id_, container.executor.get(), std::make_unique<NoopStoryModelStorage>());
           container.model_observer = container.model_owner->NewObserver();
 
           // Create systems that are part of this story.
           auto story_visibility_system =
-              std::make_unique<StoryVisibilitySystem>(
-                  container.model_owner->NewMutator());
+              std::make_unique<StoryVisibilitySystem>(container.model_owner->NewMutator());
 
           container.controller_impl = std::make_unique<StoryControllerImpl>(
-              session_storage_, container.storage.get(),
-              container.model_owner->NewMutator(),
-              container.model_owner->NewObserver(),
-              story_visibility_system.get(), story_provider_impl_);
+              session_storage_, container.storage.get(), container.model_owner->NewMutator(),
+              container.model_owner->NewObserver(), story_visibility_system.get(),
+              story_provider_impl_);
           container.entity_provider =
               std::make_unique<StoryEntityProvider>(container.storage.get());
 
@@ -177,8 +164,8 @@ class StoryProviderImpl::LoadStoryRuntimeCall
                 story_provider->NotifyStoryStateChange(id);
               });
 
-          auto it = story_provider_impl_->story_runtime_containers_.emplace(
-              story_id_, std::move(container));
+          auto it = story_provider_impl_->story_runtime_containers_.emplace(story_id_,
+                                                                            std::move(container));
           story_runtime_container_ = &it.first->second;
         });
   }
@@ -196,10 +183,8 @@ class StoryProviderImpl::LoadStoryRuntimeCall
 
 class StoryProviderImpl::StopAllStoriesCall : public Operation<> {
  public:
-  StopAllStoriesCall(StoryProviderImpl* const story_provider_impl,
-                     ResultCall result_call)
-      : Operation("StoryProviderImpl::StopAllStoriesCall",
-                  std::move(result_call)),
+  StopAllStoriesCall(StoryProviderImpl* const story_provider_impl, ResultCall result_call)
+      : Operation("StoryProviderImpl::StopAllStoriesCall", std::move(result_call)),
         story_provider_impl_(story_provider_impl) {}
 
  private:
@@ -215,10 +200,8 @@ class StoryProviderImpl::StopAllStoriesCall : public Operation<> {
       // OperationQueue on which we're running will block.  Moving over to
       // fit::promise will allow us to observe cancellation.
       operations_.Add(std::make_unique<StopStoryCall>(
-          it.first, true /* bulk */,
-          &story_provider_impl_->story_runtime_containers_,
-          story_provider_impl_->component_context_info_.message_queue_manager,
-          [flow] {}));
+          it.first, true /* bulk */, &story_provider_impl_->story_runtime_containers_,
+          story_provider_impl_->component_context_info_.message_queue_manager, [flow] {}));
     }
   }
 
@@ -229,10 +212,8 @@ class StoryProviderImpl::StopAllStoriesCall : public Operation<> {
 
 class StoryProviderImpl::StopStoryShellCall : public Operation<> {
  public:
-  StopStoryShellCall(StoryProviderImpl* const story_provider_impl,
-                     ResultCall result_call)
-      : Operation("StoryProviderImpl::StopStoryShellCall",
-                  std::move(result_call)),
+  StopStoryShellCall(StoryProviderImpl* const story_provider_impl, ResultCall result_call)
+      : Operation("StoryProviderImpl::StopStoryShellCall", std::move(result_call)),
         story_provider_impl_(story_provider_impl) {}
 
  private:
@@ -244,22 +225,18 @@ class StoryProviderImpl::StopStoryShellCall : public Operation<> {
       // finishes.
       FlowTokenHolder branch{flow};
       story_provider_impl_->preloaded_story_shell_app_->Teardown(
-          kBasicTimeout,
-          [branch] { std::unique_ptr<FlowToken> flow = branch.Continue(); });
+          kBasicTimeout, [branch] { std::unique_ptr<FlowToken> flow = branch.Continue(); });
     }
   }
 
   StoryProviderImpl* const story_provider_impl_;  // not owned
 };
 
-class StoryProviderImpl::GetStoryEntityProviderCall
-    : public Operation<StoryEntityProvider*> {
+class StoryProviderImpl::GetStoryEntityProviderCall : public Operation<StoryEntityProvider*> {
  public:
   GetStoryEntityProviderCall(StoryProviderImpl* const story_provider_impl,
-                             const std::string& story_id,
-                             ResultCall result_call)
-      : Operation("StoryProviderImpl::GetStoryEntityProviderCall",
-                  std::move(result_call)),
+                             const std::string& story_id, ResultCall result_call)
+      : Operation("StoryProviderImpl::GetStoryEntityProviderCall", std::move(result_call)),
         story_provider_impl_(story_provider_impl),
         story_id_(story_id) {}
 
@@ -271,8 +248,7 @@ class StoryProviderImpl::GetStoryEntityProviderCall
         story_provider_impl_, story_provider_impl_->session_storage_, story_id_,
         [this, flow](StoryRuntimeContainer* story_controller_container) {
           if (story_controller_container) {
-            story_entity_provider_ =
-                story_controller_container->entity_provider.get();
+            story_entity_provider_ = story_controller_container->entity_provider.get();
           }
         }));
   }
@@ -291,20 +267,17 @@ class StoryProviderImpl::GetStoryEntityProviderCall
 
 StoryProviderImpl::StoryProviderImpl(
     Environment* const user_environment, std::string device_id,
-    SessionStorage* const session_storage,
-    fuchsia::modular::AppConfig story_shell_config,
+    SessionStorage* const session_storage, fuchsia::modular::AppConfig story_shell_config,
     fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
     const ComponentContextInfo& component_context_info,
     fuchsia::modular::FocusProviderPtr focus_provider,
-    fuchsia::modular::UserIntelligenceProvider* const
-        user_intelligence_provider,
+    fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider,
     fuchsia::app::discover::DiscoverRegistry* const discover_registry,
     fuchsia::modular::ModuleResolver* const module_resolver,
     EntityProviderRunner* const entity_provider_runner,
     modular::ModuleFacetReader* const module_facet_reader,
     PresentationProvider* const presentation_provider,
-    fuchsia::ui::viewsv1::ViewSnapshotPtr view_snapshot,
-    const bool enable_story_shell_preload)
+    fuchsia::ui::viewsv1::ViewSnapshotPtr view_snapshot, const bool enable_story_shell_preload)
     : user_environment_(user_environment),
       session_storage_(session_storage),
       device_id_(std::move(device_id)),
@@ -329,13 +302,11 @@ StoryProviderImpl::StoryProviderImpl(
         weak_ptr->OnStoryStorageDeleted(std::move(story_id));
       });
   session_storage_->set_on_story_updated(
-      [weak_ptr = weak_factory_.GetWeakPtr()](
-          fidl::StringPtr story_id,
-          fuchsia::modular::internal::StoryData story_data) {
+      [weak_ptr = weak_factory_.GetWeakPtr()](fidl::StringPtr story_id,
+                                              fuchsia::modular::internal::StoryData story_data) {
         if (!weak_ptr)
           return;
-        weak_ptr->OnStoryStorageUpdated(std::move(story_id),
-                                        std::move(story_data));
+        weak_ptr->OnStoryStorageUpdated(std::move(story_id), std::move(story_data));
       });
 
   focus_provider_->Watch(focus_watcher_binding_.NewBinding());
@@ -347,18 +318,15 @@ StoryProviderImpl::StoryProviderImpl(
 
 StoryProviderImpl::~StoryProviderImpl() = default;
 
-void StoryProviderImpl::Connect(
-    fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) {
+void StoryProviderImpl::Connect(fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
 void StoryProviderImpl::StopAllStories(fit::function<void()> callback) {
-  operation_queue_.Add(
-      std::make_unique<StopAllStoriesCall>(this, std::move(callback)));
+  operation_queue_.Add(std::make_unique<StopAllStoriesCall>(this, std::move(callback)));
 }
 
-void StoryProviderImpl::SetSessionShell(
-    fuchsia::modular::SessionShellPtr session_shell) {
+void StoryProviderImpl::SetSessionShell(fuchsia::modular::SessionShellPtr session_shell) {
   // Not on operation queue, because it's called only after all stories have
   // been stopped or none are running yet, i.e. when no Operations that would
   // call this interface are scheduled. If there is an operation pending here,
@@ -380,8 +348,7 @@ void StoryProviderImpl::Teardown(fit::function<void()> callback) {
   // after all pending messgages have been processed.
   bindings_.CloseAll();
   operation_queue_.Add(std::make_unique<StopAllStoriesCall>(this, [] {}));
-  operation_queue_.Add(
-      std::make_unique<StopStoryShellCall>(this, std::move(callback)));
+  operation_queue_.Add(std::make_unique<StopStoryShellCall>(this, std::move(callback)));
 }
 
 // |fuchsia::modular::StoryProvider|
@@ -404,9 +371,8 @@ void StoryProviderImpl::WatchActivity(
   auto watcher_ptr = watcher.Bind();
   for (const auto& item : story_runtime_containers_) {
     const auto& container = item.second;
-    watcher_ptr->OnStoryActivityChange(
-        container.model_observer->model().name(),
-        container.controller_impl->GetOngoingActivities());
+    watcher_ptr->OnStoryActivityChange(container.model_observer->model().name(),
+                                       container.controller_impl->GetOngoingActivities());
   }
   activity_watchers_.AddInterfacePtr(std::move(watcher_ptr));
 }
@@ -420,13 +386,11 @@ std::unique_ptr<AsyncHolderBase> StoryProviderImpl::StartStoryShell(
   if (story_shell_factory_) {
     story_shell_factory_->AttachStory(story_id, std::move(story_shell_request));
 
-    auto on_teardown =
-        [this, story_id = std::move(story_id)](fit::function<void()> done) {
-          story_shell_factory_->DetachStory(story_id, std::move(done));
-        };
+    auto on_teardown = [this, story_id = std::move(story_id)](fit::function<void()> done) {
+      story_shell_factory_->DetachStory(story_id, std::move(done));
+    };
 
-    return std::make_unique<ClosureAsyncHolder>(story_id /* name */,
-                                                std::move(on_teardown));
+    return std::make_unique<ClosureAsyncHolder>(story_id /* name */, std::move(on_teardown));
   }
 
   MaybeLoadStoryShell();
@@ -436,12 +400,10 @@ std::unique_ptr<AsyncHolderBase> StoryProviderImpl::StartStoryShell(
   view_endpoints_[story_id] = fsl::GetKoid(view_token.value.get());
 
   fuchsia::ui::app::ViewProviderPtr view_provider;
-  preloaded_story_shell_app_->services().ConnectToService(
-      view_provider.NewRequest());
+  preloaded_story_shell_app_->services().ConnectToService(view_provider.NewRequest());
   view_provider->CreateView(std::move(view_token.value), nullptr, nullptr);
 
-  preloaded_story_shell_app_->services().ConnectToService(
-      std::move(story_shell_request));
+  preloaded_story_shell_app_->services().ConnectToService(std::move(story_shell_request));
 
   auto story_shell_holder = std::move(preloaded_story_shell_app_);
 
@@ -468,12 +430,11 @@ void StoryProviderImpl::MaybeLoadStoryShellDelayed() {
       async_get_default_dispatcher(),
       [weak_this = weak_factory_.GetWeakPtr()] {
         if (weak_this) {
-          weak_this->operation_queue_.Add(
-              std::make_unique<SyncCall>([weak_this] {
-                if (weak_this) {
-                  weak_this->MaybeLoadStoryShell();
-                }
-              }));
+          weak_this->operation_queue_.Add(std::make_unique<SyncCall>([weak_this] {
+            if (weak_this) {
+              weak_this->MaybeLoadStoryShell();
+            }
+          }));
         }
       },
       zx::sec(5));
@@ -485,13 +446,11 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
     return;
   }
 
-  preloaded_story_shell_app_ =
-      std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-          user_environment_->GetLauncher(), CloneStruct(story_shell_config_));
+  preloaded_story_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
+      user_environment_->GetLauncher(), CloneStruct(story_shell_config_));
 }
 
-fuchsia::modular::StoryInfoPtr StoryProviderImpl::GetCachedStoryInfo(
-    std::string story_id) {
+fuchsia::modular::StoryInfoPtr StoryProviderImpl::GetCachedStoryInfo(std::string story_id) {
   auto it = story_runtime_containers_.find(story_id);
   if (it == story_runtime_containers_.end()) {
     return nullptr;
@@ -501,26 +460,22 @@ fuchsia::modular::StoryInfoPtr StoryProviderImpl::GetCachedStoryInfo(
 }
 
 // |fuchsia::modular::StoryProvider|
-void StoryProviderImpl::GetStoryInfo(std::string story_id,
-                                     GetStoryInfoCallback callback) {
+void StoryProviderImpl::GetStoryInfo(std::string story_id, GetStoryInfoCallback callback) {
   auto on_run = Future<>::Create("StoryProviderImpl.GetStoryInfo.on_run");
-  auto done = on_run
-                  ->AsyncMap([this, story_id] {
-                    return session_storage_->GetStoryData(story_id);
-                  })
-                  ->Map([](fuchsia::modular::internal::StoryDataPtr story_data)
-                            -> fuchsia::modular::StoryInfoPtr {
-                    if (!story_data) {
-                      return nullptr;
-                    }
-                    if (!story_data->has_story_info()) {
-                      return nullptr;
-                    }
-                    return fidl::MakeOptional(
-                        std::move(*story_data->mutable_story_info()));
-                  });
-  operation_queue_.Add(WrapFutureAsOperation(
-      "StoryProviderImpl::GetStoryInfo", on_run, done, std::move(callback)));
+  auto done =
+      on_run->AsyncMap([this, story_id] { return session_storage_->GetStoryData(story_id); })
+          ->Map([](fuchsia::modular::internal::StoryDataPtr story_data)
+                    -> fuchsia::modular::StoryInfoPtr {
+            if (!story_data) {
+              return nullptr;
+            }
+            if (!story_data->has_story_info()) {
+              return nullptr;
+            }
+            return fidl::MakeOptional(std::move(*story_data->mutable_story_info()));
+          });
+  operation_queue_.Add(
+      WrapFutureAsOperation("StoryProviderImpl::GetStoryInfo", on_run, done, std::move(callback)));
 }
 
 // Called by StoryControllerImpl on behalf of ModuleContextImpl
@@ -529,17 +484,15 @@ void StoryProviderImpl::RequestStoryFocus(fidl::StringPtr story_id) {
   focus_provider_->Request(story_id);
 }
 
-void StoryProviderImpl::AttachView(
-    fidl::StringPtr story_id,
-    fuchsia::ui::views::ViewHolderToken view_holder_token) {
+void StoryProviderImpl::AttachView(fidl::StringPtr story_id,
+                                   fuchsia::ui::views::ViewHolderToken view_holder_token) {
   FXL_CHECK(session_shell_);
   fuchsia::modular::ViewIdentifier view_id;
   view_id.story_id = std::move(story_id);
   session_shell_->AttachView2(std::move(view_id), std::move(view_holder_token));
 }
 
-void StoryProviderImpl::DetachView(fidl::StringPtr story_id,
-                                   fit::function<void()> done) {
+void StoryProviderImpl::DetachView(fidl::StringPtr story_id, fit::function<void()> done) {
   FXL_CHECK(session_shell_);
   fuchsia::modular::ViewIdentifier view_id;
   view_id.story_id = std::move(story_id);
@@ -569,15 +522,12 @@ void StoryProviderImpl::NotifyStoryActivityChange(
 
 // |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::GetController(
-    std::string story_id,
-    fidl::InterfaceRequest<fuchsia::modular::StoryController> request) {
+    std::string story_id, fidl::InterfaceRequest<fuchsia::modular::StoryController> request) {
   operation_queue_.Add(std::make_unique<LoadStoryRuntimeCall>(
       this, session_storage_, story_id,
-      [request = std::move(request)](
-          StoryRuntimeContainer* story_controller_container) mutable {
+      [request = std::move(request)](StoryRuntimeContainer* story_controller_container) mutable {
         if (story_controller_container) {
-          story_controller_container->controller_impl->Connect(
-              std::move(request));
+          story_controller_container->controller_impl->Connect(std::move(request));
         }
       }));
 }
@@ -591,8 +541,7 @@ void StoryProviderImpl::GetStories(
   auto done =
       on_run->AsyncMap([this] { return session_storage_->GetAllStoryData(); })
           ->Map([this, watcher_ptr = std::move(watcher_ptr)](
-                    std::vector<fuchsia::modular::internal::StoryData>
-                        all_story_data) mutable {
+                    std::vector<fuchsia::modular::internal::StoryData> all_story_data) mutable {
             std::vector<fuchsia::modular::StoryInfo> result;
 
             for (auto& story_data : all_story_data) {
@@ -610,43 +559,39 @@ void StoryProviderImpl::GetStories(
             return result;
           });
 
-  operation_queue_.Add(WrapFutureAsOperation(
-      "StoryProviderImpl::GetStories", on_run, done, std::move(callback)));
+  operation_queue_.Add(
+      WrapFutureAsOperation("StoryProviderImpl::GetStories", on_run, done, std::move(callback)));
 }
 
 // |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
   auto on_run = Future<>::Create("StoryProviderImpl.PreviousStories.on_run");
-  auto done =
-      on_run->AsyncMap([this] { return session_storage_->GetAllStoryData(); })
-          ->Map([](std::vector<fuchsia::modular::internal::StoryData>
-                       all_story_data) {
-            std::vector<fuchsia::modular::StoryInfo> result;
+  auto done = on_run->AsyncMap([this] { return session_storage_->GetAllStoryData(); })
+                  ->Map([](std::vector<fuchsia::modular::internal::StoryData> all_story_data) {
+                    std::vector<fuchsia::modular::StoryInfo> result;
 
-            for (auto& story_data : all_story_data) {
-              if (!story_data.story_options().kind_of_proto_story) {
-                if (!story_data.has_story_info()) {
-                  continue;
-                }
-                result.push_back(std::move(*story_data.mutable_story_info()));
-              }
-            }
-            return result;
-          });
-  operation_queue_.Add(WrapFutureAsOperation(
-      "StoryProviderImpl::PreviousStories", on_run, done, std::move(callback)));
+                    for (auto& story_data : all_story_data) {
+                      if (!story_data.story_options().kind_of_proto_story) {
+                        if (!story_data.has_story_info()) {
+                          continue;
+                        }
+                        result.push_back(std::move(*story_data.mutable_story_info()));
+                      }
+                    }
+                    return result;
+                  });
+  operation_queue_.Add(WrapFutureAsOperation("StoryProviderImpl::PreviousStories", on_run, done,
+                                             std::move(callback)));
 }
 
-void StoryProviderImpl::OnStoryStorageUpdated(
-    fidl::StringPtr story_id,
-    fuchsia::modular::internal::StoryData story_data) {
+void StoryProviderImpl::OnStoryStorageUpdated(fidl::StringPtr story_id,
+                                              fuchsia::modular::internal::StoryData story_data) {
   // If we have a StoryRuntimeContainer for this story id, update our cached
   // StoryData and get runtime state available from it.
   //
   // Otherwise, use defaults for an unloaded story and send a request for the
   // story to start running (stories should start running by default).
-  fuchsia::modular::StoryState runtime_state =
-      fuchsia::modular::StoryState::STOPPED;
+  fuchsia::modular::StoryState runtime_state = fuchsia::modular::StoryState::STOPPED;
   fuchsia::modular::StoryVisibilityState visibility_state =
       fuchsia::modular::StoryVisibilityState::DEFAULT;
   auto i = story_runtime_containers_.find(story_data.story_info().id);
@@ -674,8 +619,7 @@ void StoryProviderImpl::OnStoryStorageDeleted(fidl::StringPtr story_id) {
 
 // |fuchsia::modular::FocusWatcher|
 void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
-  operation_queue_.Add(std::make_unique<SyncCall>([this,
-                                                   info = std::move(info)]() {
+  operation_queue_.Add(std::make_unique<SyncCall>([this, info = std::move(info)]() {
     if (info->device_id != device_id_) {
       return;
     }
@@ -686,8 +630,7 @@ void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
 
     auto i = story_runtime_containers_.find(info->focused_story_id.get());
     if (i == story_runtime_containers_.end()) {
-      FXL_LOG(ERROR) << "Story controller not found for focused story "
-                     << info->focused_story_id;
+      FXL_LOG(ERROR) << "Story controller not found for focused story " << info->focused_story_id;
       return;
     }
 
@@ -700,8 +643,8 @@ void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
       return session_storage_->UpdateLastFocusedTimestamp(story_id, now);
     });
     fit::function<void()> callback = [] {};
-    operation_queue_.Add(WrapFutureAsOperation(
-        "StoryProviderImpl::OnFocusChange", on_run, done, std::move(callback)));
+    operation_queue_.Add(WrapFutureAsOperation("StoryProviderImpl::OnFocusChange", on_run, done,
+                                               std::move(callback)));
   }));
 }
 
@@ -716,29 +659,24 @@ void StoryProviderImpl::NotifyStoryWatchers(
     if (!story_data->has_story_info()) {
       continue;
     }
-    (*i)->OnChange(CloneStruct(story_data->story_info()), story_state,
-                   story_visibility_state);
+    (*i)->OnChange(CloneStruct(story_data->story_info()), story_state, story_visibility_state);
   }
 }
 
 void StoryProviderImpl::CreateEntity(
-    const std::string& story_id, fidl::StringPtr type,
-    fuchsia::mem::Buffer data,
+    const std::string& story_id, fidl::StringPtr type, fuchsia::mem::Buffer data,
     fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
     fit::function<void(std::string /* entity_reference */)> callback) {
   operation_queue_.Add(std::make_unique<GetStoryEntityProviderCall>(
       this, story_id,
-      [this, type, story_id, data = std::move(data),
-       callback = std::move(callback),
-       entity_request = std::move(entity_request)](
-          StoryEntityProvider* entity_provider) mutable {
+      [this, type, story_id, data = std::move(data), callback = std::move(callback),
+       entity_request = std::move(entity_request)](StoryEntityProvider* entity_provider) mutable {
         // Once the entity provider for the given story is available, create
         // the entity.
         entity_provider->CreateEntity(
             type, std::move(data),
             [this, story_id, callback = std::move(callback),
-             entity_request =
-                 std::move(entity_request)](std::string cookie) mutable {
+             entity_request = std::move(entity_request)](std::string cookie) mutable {
               if (cookie.empty()) {
                 // Return nullptr to indicate the entity creation failed.
                 callback(nullptr);
@@ -746,16 +684,13 @@ void StoryProviderImpl::CreateEntity(
               }
 
               std::string entity_reference =
-                  entity_provider_runner_->CreateStoryEntityReference(story_id,
-                                                                      cookie);
+                  entity_provider_runner_->CreateStoryEntityReference(story_id, cookie);
 
               // Once the entity reference has been created, it can be
               // used to connect the entity request.
               fuchsia::modular::EntityResolverPtr resolver;
-              entity_provider_runner_->ConnectEntityResolver(
-                  resolver.NewRequest());
-              resolver->ResolveEntity(entity_reference,
-                                      std::move(entity_request));
+              entity_provider_runner_->ConnectEntityResolver(resolver.NewRequest());
+              resolver->ResolveEntity(entity_reference, std::move(entity_request));
 
               callback(entity_reference);
             });
@@ -764,39 +699,34 @@ void StoryProviderImpl::CreateEntity(
 
 void StoryProviderImpl::ConnectToStoryEntityProvider(
     const std::string& story_id,
-    fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
-        entity_provider_request) {
+    fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request) {
   operation_queue_.Add(std::make_unique<GetStoryEntityProviderCall>(
       this, story_id,
-      [entity_provider_request = std::move(entity_provider_request)](
-          StoryEntityProvider* entity_provider) mutable {
+      [entity_provider_request =
+           std::move(entity_provider_request)](StoryEntityProvider* entity_provider) mutable {
         entity_provider->Connect(std::move(entity_provider_request));
       }));
 }
 
 void StoryProviderImpl::GetPresentation(
-    fidl::StringPtr story_id,
-    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
-  presentation_provider_->GetPresentation(std::move(story_id),
-                                          std::move(request));
+    fidl::StringPtr story_id, fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
+  presentation_provider_->GetPresentation(std::move(story_id), std::move(request));
 }
 
 void StoryProviderImpl::WatchVisualState(
     fidl::StringPtr story_id,
     fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher) {
-  presentation_provider_->WatchVisualState(std::move(story_id),
-                                           std::move(watcher));
+  presentation_provider_->WatchVisualState(std::move(story_id), std::move(watcher));
 }
 
-void StoryProviderImpl::TakeSnapshot(
-    fidl::StringPtr story_id,
-    fit::function<void(fuchsia::mem::Buffer)> callback) {
+void StoryProviderImpl::TakeSnapshot(fidl::StringPtr story_id,
+                                     fit::function<void(fuchsia::mem::Buffer)> callback) {
   auto it = view_endpoints_.find(story_id);
   if (it != view_endpoints_.end()) {
-    view_snapshot_->TakeSnapshot(it->second, [callback = std::move(callback)](
-                                                 fuchsia::mem::Buffer buffer) {
-      callback(std::move(buffer));
-    });
+    view_snapshot_->TakeSnapshot(it->second,
+                                 [callback = std::move(callback)](fuchsia::mem::Buffer buffer) {
+                                   callback(std::move(buffer));
+                                 });
   } else {
     callback(fuchsia::mem::Buffer{});
   }
@@ -809,17 +739,14 @@ void StoryProviderImpl::StartSnapshotLoader(
     fuchsia::modular::AppConfig snapshot_loader_config;
     snapshot_loader_config.url = kSnapshotLoaderUrl;
 
-    snapshot_loader_app_ =
-        std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-            user_environment_->GetLauncher(),
-            std::move(snapshot_loader_config));
+    snapshot_loader_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
+        user_environment_->GetLauncher(), std::move(snapshot_loader_config));
   }
 
   fuchsia::sys::ServiceProviderPtr service_provider;
   fuchsia::ui::app::ViewProviderPtr view_provider;
   snapshot_loader_app_->services().ConnectToService(view_provider.NewRequest());
-  view_provider->CreateView(std::move(view_token.value),
-                            service_provider.NewRequest(), nullptr);
+  view_provider->CreateView(std::move(view_token.value), service_provider.NewRequest(), nullptr);
 
   service_provider->ConnectToService(fuchsia::scenic::snapshot::Loader::Name_,
                                      loader_request.TakeChannel());

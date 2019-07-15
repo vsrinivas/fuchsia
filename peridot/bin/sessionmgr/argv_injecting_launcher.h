@@ -20,14 +20,13 @@ class ArgvInjectingLauncher : public fuchsia::sys::Launcher {
   // A map from Component URI -> vector of argv.
   using ArgvMap = std::map<std::string, std::vector<std::string>>;
 
-  ArgvInjectingLauncher(fuchsia::sys::LauncherPtr parent_launcher,
-                        ArgvMap per_component_argv);
+  ArgvInjectingLauncher(fuchsia::sys::LauncherPtr parent_launcher, ArgvMap per_component_argv);
   ~ArgvInjectingLauncher() override;
 
   // fuchsia::sys::Launcher
-  void CreateComponent(fuchsia::sys::LaunchInfo launch_info,
-                       fidl::InterfaceRequest<fuchsia::sys::ComponentController>
-                           controller) override;
+  void CreateComponent(
+      fuchsia::sys::LaunchInfo launch_info,
+      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) override;
 
  private:
   fuchsia::sys::LauncherPtr parent_launcher_;

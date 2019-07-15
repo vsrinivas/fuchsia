@@ -35,14 +35,11 @@ struct AddModParams {
   fuchsia::modular::ModuleSource module_source;
 };
 
-void AddAddModOperation(OperationContainer* container,
-                        StoryStorage* story_storage,
-                        fuchsia::modular::ModuleResolver* module_resolver,
-                        fuchsia::modular::EntityResolver* entity_resolver,
-                        AddModParams add_mod_params,
-                        fit::function<void(fuchsia::modular::ExecuteResult,
-                                           fuchsia::modular::ModuleData)>
-                            done);
+void AddAddModOperation(
+    OperationContainer* container, StoryStorage* story_storage,
+    fuchsia::modular::ModuleResolver* module_resolver,
+    fuchsia::modular::EntityResolver* entity_resolver, AddModParams add_mod_params,
+    fit::function<void(fuchsia::modular::ExecuteResult, fuchsia::modular::ModuleData)> done);
 
 }  // namespace modular
 

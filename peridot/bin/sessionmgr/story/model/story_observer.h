@@ -35,8 +35,7 @@ class StoryObserver {
   // Note that the received StoryModel is only valid for the lifetime
   // of the call to |listener|.
   virtual void RegisterListener(
-      fit::function<void(const fuchsia::modular::storymodel::StoryModel& model)>
-          listener) = 0;
+      fit::function<void(const fuchsia::modular::storymodel::StoryModel& model)> listener) = 0;
 
   // Returns the current state of the StoryModel.
   virtual const fuchsia::modular::storymodel::StoryModel& model() = 0;

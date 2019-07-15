@@ -22,10 +22,9 @@ class AddModCommandRunner : public CommandRunner {
                       fuchsia::modular::EntityResolver* const entity_resolver);
   ~AddModCommandRunner() override;
 
-  void Execute(
-      fidl::StringPtr story_id, StoryStorage* story_storage,
-      fuchsia::modular::StoryCommand command,
-      fit::function<void(fuchsia::modular::ExecuteResult)> done) override;
+  void Execute(fidl::StringPtr story_id, StoryStorage* story_storage,
+               fuchsia::modular::StoryCommand command,
+               fit::function<void(fuchsia::modular::ExecuteResult)> done) override;
 
  private:
   OperationQueue operation_queue_;

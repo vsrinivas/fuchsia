@@ -17,23 +17,19 @@
 namespace modular {
 
 ModuleContextImpl::ModuleContextImpl(
-    const ModuleContextInfo& info,
-    const fuchsia::modular::ModuleData* const module_data,
-    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
-        service_provider_request)
+    const ModuleContextInfo& info, const fuchsia::modular::ModuleData* const module_data,
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> service_provider_request)
     : module_data_(module_data),
       story_controller_impl_(info.story_controller_impl),
       story_visibility_system_(info.story_visibility_system),
-      component_context_impl_(info.component_context_info,
-                              EncodeModuleComponentNamespace(
-                                  info.story_controller_impl->GetStoryId()),
-                              EncodeModulePath(module_data_->module_path),
-                              module_data_->module_url),
+      component_context_impl_(
+          info.component_context_info,
+          EncodeModuleComponentNamespace(info.story_controller_impl->GetStoryId()),
+          EncodeModulePath(module_data_->module_path), module_data_->module_url),
       user_intelligence_provider_(info.user_intelligence_provider),
       discover_registry_(info.discover_registry) {
   service_provider_impl_.AddService<fuchsia::modular::ComponentContext>(
-      [this](
-          fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
+      [this](fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
         component_context_impl_.Connect(std::move(request));
       });
   service_provider_impl_.AddService<fuchsia::modular::ModuleContext>(
@@ -41,8 +37,7 @@ ModuleContextImpl::ModuleContextImpl(
         bindings_.AddBinding(this, std::move(request));
       });
   service_provider_impl_.AddService<fuchsia::modular::IntelligenceServices>(
-      [this](fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices>
-                 request) {
+      [this](fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request) {
         auto module_scope = fuchsia::modular::ModuleScope::New();
         module_scope->module_path = module_data_->module_path;
         module_scope->url = module_data_->module_url;
@@ -50,37 +45,32 @@ ModuleContextImpl::ModuleContextImpl(
 
         auto scope = fuchsia::modular::ComponentScope::New();
         scope->set_module_scope(std::move(*module_scope));
-        user_intelligence_provider_->GetComponentIntelligenceServices(
-            std::move(*scope), std::move(request));
+        user_intelligence_provider_->GetComponentIntelligenceServices(std::move(*scope),
+                                                                      std::move(request));
       });
   service_provider_impl_.AddService<fuchsia::app::discover::ModuleOutputWriter>(
       [this](auto request) {
         fuchsia::app::discover::ModuleIdentifier module_scope;
         module_scope.set_story_id(story_controller_impl_->GetStoryId());
         module_scope.set_module_path(module_data_->module_path);
-        discover_registry_->RegisterModuleOutputWriter(std::move(module_scope),
-                                                       std::move(request));
+        discover_registry_->RegisterModuleOutputWriter(std::move(module_scope), std::move(request));
       });
   service_provider_impl_.AddBinding(std::move(service_provider_request));
 }
 
 ModuleContextImpl::~ModuleContextImpl() {}
 
-void ModuleContextImpl::GetLink(
-    fidl::StringPtr name,
-    fidl::InterfaceRequest<fuchsia::modular::Link> request) {
+void ModuleContextImpl::GetLink(fidl::StringPtr name,
+                                fidl::InterfaceRequest<fuchsia::modular::Link> request) {
   fuchsia::modular::LinkPathPtr link_path;
   // See if there's a parameter mapping for this link.
-  link_path = story_controller_impl_->GetLinkPathForParameterName(
-      module_data_->module_path, name);
-  story_controller_impl_->ConnectLinkPath(std::move(link_path),
-                                          std::move(request));
+  link_path = story_controller_impl_->GetLinkPathForParameterName(module_data_->module_path, name);
+  story_controller_impl_->ConnectLinkPath(std::move(link_path), std::move(request));
 }
 
 void ModuleContextImpl::EmbedModule(
     std::string name, fuchsia::modular::Intent intent,
-    fidl::InterfaceRequest<fuchsia::modular::ModuleController>
-        module_controller,
+    fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller,
     fuchsia::ui::views::ViewToken view_token, EmbedModuleCallback callback) {
   AddModParams params;
   params.parent_mod_path = module_data_->module_path;
@@ -89,15 +79,13 @@ void ModuleContextImpl::EmbedModule(
   params.module_source = fuchsia::modular::ModuleSource::INTERNAL;
   params.surface_relation = nullptr;
   params.is_embedded = true;
-  story_controller_impl_->EmbedModule(
-      std::move(params), std::move(module_controller), std::move(view_token),
-      std::move(callback));
+  story_controller_impl_->EmbedModule(std::move(params), std::move(module_controller),
+                                      std::move(view_token), std::move(callback));
 }
 
 void ModuleContextImpl::EmbedModule2(
     std::string name, fuchsia::modular::Intent intent,
-    fidl::InterfaceRequest<fuchsia::modular::ModuleController>
-        module_controller,
+    fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller,
     fuchsia::ui::views::ViewToken view_token, EmbedModule2Callback callback) {
   EmbedModule(std::move(name), std::move(intent), std::move(module_controller),
               std::move(view_token), std::move(callback));
@@ -105,10 +93,8 @@ void ModuleContextImpl::EmbedModule2(
 
 void ModuleContextImpl::AddModuleToStory(
     std::string name, fuchsia::modular::Intent intent,
-    fidl::InterfaceRequest<fuchsia::modular::ModuleController>
-        module_controller,
-    fuchsia::modular::SurfaceRelationPtr surface_relation,
-    AddModuleToStoryCallback callback) {
+    fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller,
+    fuchsia::modular::SurfaceRelationPtr surface_relation, AddModuleToStoryCallback callback) {
   AddModParams params;
   params.parent_mod_path = module_data_->module_path;
   params.mod_name = name;
@@ -116,8 +102,8 @@ void ModuleContextImpl::AddModuleToStory(
   params.module_source = fuchsia::modular::ModuleSource::INTERNAL;
   params.surface_relation = std::move(surface_relation);
   params.is_embedded = false;
-  story_controller_impl_->AddModuleToStory(
-      std::move(params), std::move(module_controller), std::move(callback));
+  story_controller_impl_->AddModuleToStory(std::move(params), std::move(module_controller),
+                                           std::move(callback));
 }
 
 void ModuleContextImpl::StartContainerInShell(
@@ -129,8 +115,7 @@ void ModuleContextImpl::StartContainerInShell(
 }
 
 void ModuleContextImpl::GetComponentContext(
-    fidl::InterfaceRequest<fuchsia::modular::ComponentContext>
-        context_request) {
+    fidl::InterfaceRequest<fuchsia::modular::ComponentContext> context_request) {
   component_context_impl_.Connect(std::move(context_request));
 }
 
@@ -157,16 +142,15 @@ void ModuleContextImpl::RequestStoryVisibilityState(
 void ModuleContextImpl::StartOngoingActivity(
     fuchsia::modular::OngoingActivityType ongoing_activity_type,
     fidl::InterfaceRequest<fuchsia::modular::OngoingActivity> request) {
-  story_controller_impl_->StartOngoingActivity(ongoing_activity_type,
-                                               std::move(request));
+  story_controller_impl_->StartOngoingActivity(ongoing_activity_type, std::move(request));
 }
 
 void ModuleContextImpl::CreateEntity(
     std::string type, fuchsia::mem::Buffer data,
     fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
     CreateEntityCallback callback) {
-  story_controller_impl_->CreateEntity(
-      type, std::move(data), std::move(entity_request), std::move(callback));
+  story_controller_impl_->CreateEntity(type, std::move(data), std::move(entity_request),
+                                       std::move(callback));
 }
 
 }  // namespace modular

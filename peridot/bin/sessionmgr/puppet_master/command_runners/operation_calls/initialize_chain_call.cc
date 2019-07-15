@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/initialize_chain_call.h"
-#include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/set_link_value_call.h"
 
 #include <lib/fsl/vmo/strings.h>
+
+#include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/set_link_value_call.h"
 
 namespace modular {
 
@@ -15,13 +16,10 @@ namespace {
 // for any fuchsia::modular::CreateModuleParameterMapInfo.property_info if
 // property_info[i].is_create_link_info().
 class InitializeChainCall
-    : public Operation<fuchsia::modular::ExecuteResult,
-                       fuchsia::modular::ModuleParameterMapPtr> {
+    : public Operation<fuchsia::modular::ExecuteResult, fuchsia::modular::ModuleParameterMapPtr> {
  public:
-  InitializeChainCall(StoryStorage* const story_storage,
-                      std::vector<std::string> module_path,
-                      fuchsia::modular::CreateModuleParameterMapInfoPtr
-                          create_parameter_map_info,
+  InitializeChainCall(StoryStorage* const story_storage, std::vector<std::string> module_path,
+                      fuchsia::modular::CreateModuleParameterMapInfoPtr create_parameter_map_info,
                       ResultCall result_call)
       : Operation("InitializeChainCall", std::move(result_call)),
         story_storage_(story_storage),
@@ -63,8 +61,7 @@ class InitializeChainCall
         // destroyed, the InitializeChainCall will automatically finish.
         std::string initial_json;
         if (info.create_link().initial_data.size > 0) {
-          FXL_CHECK(fsl::StringFromVmo(info.create_link().initial_data,
-                                       &initial_json));
+          FXL_CHECK(fsl::StringFromVmo(info.create_link().initial_data, &initial_json));
         }
         fuchsia::modular::LinkPath out_path;
         mapping->link_path.Clone(&out_path);
@@ -84,8 +81,7 @@ class InitializeChainCall
 
   StoryStorage* const story_storage_;
   const std::vector<std::string> module_path_;
-  const fuchsia::modular::CreateModuleParameterMapInfoPtr
-      create_parameter_map_info_;
+  const fuchsia::modular::CreateModuleParameterMapInfoPtr create_parameter_map_info_;
   fuchsia::modular::ModuleParameterMapPtr parameter_map_;
   fuchsia::modular::ExecuteResult result_;
   OperationCollection operations_;
@@ -94,15 +90,14 @@ class InitializeChainCall
 }  // namespace
 
 void AddInitializeChainOperation(
-    OperationContainer* const operation_container,
-    StoryStorage* const story_storage, std::vector<std::string> module_path,
+    OperationContainer* const operation_container, StoryStorage* const story_storage,
+    std::vector<std::string> module_path,
     fuchsia::modular::CreateModuleParameterMapInfoPtr create_parameter_map_info,
-    fit::function<void(fuchsia::modular::ExecuteResult,
-                       fuchsia::modular::ModuleParameterMapPtr)>
+    fit::function<void(fuchsia::modular::ExecuteResult, fuchsia::modular::ModuleParameterMapPtr)>
         result_call) {
   operation_container->Add(std::make_unique<InitializeChainCall>(
-      story_storage, std::move(module_path),
-      std::move(create_parameter_map_info), std::move(result_call)));
+      story_storage, std::move(module_path), std::move(create_parameter_map_info),
+      std::move(result_call)));
 }
 
 }  // namespace modular

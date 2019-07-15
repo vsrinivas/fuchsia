@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <src/lib/fxl/logging.h>
-
 #include "peridot/bin/sessionmgr/story/model/apply_mutations.h"
+
+#include <src/lib/fxl/logging.h>
 
 #include "lib/fostr/fidl/fuchsia/modular/storymodel/formatting.h"
 
@@ -17,13 +17,11 @@ namespace modular {
 
 namespace {
 
-void ApplySetVisibilityState(const StoryVisibilityState visibility_state,
-                             StoryModel* story_model) {
+void ApplySetVisibilityState(const StoryVisibilityState visibility_state, StoryModel* story_model) {
   story_model->set_visibility_state(visibility_state);
 }
 
-void ApplySetRuntimeState(const StoryState story_state,
-                          StoryModel* story_model) {
+void ApplySetRuntimeState(const StoryState story_state, StoryModel* story_model) {
   story_model->set_runtime_state(story_state);
 }
 

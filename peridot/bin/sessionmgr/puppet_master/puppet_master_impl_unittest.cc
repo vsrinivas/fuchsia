@@ -30,8 +30,7 @@ class PuppetMasterTest : public testing::TestWithSessionStorage {
     impl_->Connect(ptr_.NewRequest());
   }
 
-  fuchsia::modular::StoryPuppetMasterPtr ControlStory(
-      fidl::StringPtr story_name) {
+  fuchsia::modular::StoryPuppetMasterPtr ControlStory(fidl::StringPtr story_name) {
     fuchsia::modular::StoryPuppetMasterPtr ptr;
     ptr_->ControlStory(story_name, ptr.NewRequest());
     return ptr;
@@ -64,8 +63,7 @@ TEST_F(PuppetMasterTest, CommandsAreSentToExecutor) {
   fuchsia::modular::ExecuteResult result;
   bool done{false};
   // Instruct our test executor to return an OK status.
-  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK,
-                                   nullptr);
+  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, nullptr);
   story->Execute([&](fuchsia::modular::ExecuteResult r) {
     result = std::move(r);
     done = true;
@@ -76,12 +74,9 @@ TEST_F(PuppetMasterTest, CommandsAreSentToExecutor) {
 
   EXPECT_EQ("foo", executor_.last_story_id());
   ASSERT_EQ(3u, executor_.last_commands().size());
-  EXPECT_EQ("one",
-            executor_.last_commands().at(0).remove_mod().mod_name_transitional);
-  EXPECT_EQ("two",
-            executor_.last_commands().at(1).remove_mod().mod_name_transitional);
-  EXPECT_EQ("three",
-            executor_.last_commands().at(2).remove_mod().mod_name_transitional);
+  EXPECT_EQ("one", executor_.last_commands().at(0).remove_mod().mod_name_transitional);
+  EXPECT_EQ("two", executor_.last_commands().at(1).remove_mod().mod_name_transitional);
+  EXPECT_EQ("three", executor_.last_commands().at(2).remove_mod().mod_name_transitional);
 }
 
 TEST_F(PuppetMasterTest, CommandsAreSentToExecutor_IfWeCloseStoryChannel) {
@@ -99,10 +94,8 @@ TEST_F(PuppetMasterTest, CommandsAreSentToExecutor_IfWeCloseStoryChannel) {
   fuchsia::modular::ExecuteResult result;
   bool callback_called{false};
   // Instruct our test executor to return an OK status.
-  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK,
-                                   nullptr);
-  story->Execute(
-      [&](fuchsia::modular::ExecuteResult r) { callback_called = true; });
+  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, nullptr);
+  story->Execute([&](fuchsia::modular::ExecuteResult r) { callback_called = true; });
   story.Unbind();
   RunLoopUntil([&]() { return executor_.execute_count() > 0; });
   EXPECT_FALSE(callback_called);
@@ -118,8 +111,7 @@ TEST_F(PuppetMasterTest, MultipleExecuteCalls) {
 
   std::vector<fuchsia::modular::StoryCommand> commands;
   commands.push_back(MakeRemoveModCommand("one"));
-  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK,
-                                   nullptr);
+  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, nullptr);
   bool done{false};
   story->Execute([&](fuchsia::modular::ExecuteResult r) { done = true; });
   RunLoopUntil([&]() { return done; });
@@ -151,8 +143,7 @@ TEST_F(PuppetMasterTest, NewStoriesAreKeptSeparate) {
   RunLoopUntilIdle();
 
   fuchsia::modular::ExecuteResult result;
-  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK,
-                                   nullptr);
+  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, nullptr);
   bool done{false};
   story1->Execute([&](fuchsia::modular::ExecuteResult r) {
     result = std::move(r);
@@ -162,11 +153,9 @@ TEST_F(PuppetMasterTest, NewStoriesAreKeptSeparate) {
   EXPECT_EQ(1, executor_.execute_count());
   auto story1_id = executor_.last_story_id();
   ASSERT_EQ(1u, executor_.last_commands().size());
-  EXPECT_EQ("one",
-            executor_.last_commands().at(0).remove_mod().mod_name_transitional);
+  EXPECT_EQ("one", executor_.last_commands().at(0).remove_mod().mod_name_transitional);
 
-  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK,
-                                   nullptr);
+  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, nullptr);
   done = false;
   story2->Execute([&](fuchsia::modular::ExecuteResult r) {
     result = std::move(r);
@@ -176,8 +165,7 @@ TEST_F(PuppetMasterTest, NewStoriesAreKeptSeparate) {
   EXPECT_EQ(2, executor_.execute_count());
   auto story2_id = executor_.last_story_id();
   ASSERT_EQ(1u, executor_.last_commands().size());
-  EXPECT_EQ("two",
-            executor_.last_commands().at(0).remove_mod().mod_name_transitional);
+  EXPECT_EQ("two", executor_.last_commands().at(0).remove_mod().mod_name_transitional);
 
   // The two IDs should be different, because we gave the two stories different
   // names.
@@ -202,8 +190,7 @@ TEST_F(PuppetMasterTest, ControlExistingStory) {
   RunLoopUntilIdle();
 
   fuchsia::modular::ExecuteResult result;
-  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK,
-                                   nullptr);
+  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, nullptr);
   bool done{false};
   story1->Execute([&](fuchsia::modular::ExecuteResult r) {
     result = std::move(r);
@@ -213,11 +200,9 @@ TEST_F(PuppetMasterTest, ControlExistingStory) {
   EXPECT_EQ(1, executor_.execute_count());
   auto story_id = executor_.last_story_id();
   ASSERT_EQ(1u, executor_.last_commands().size());
-  EXPECT_EQ("one",
-            executor_.last_commands().at(0).remove_mod().mod_name_transitional);
+  EXPECT_EQ("one", executor_.last_commands().at(0).remove_mod().mod_name_transitional);
 
-  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK,
-                                   nullptr);
+  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, nullptr);
   done = false;
   story2->Execute([&](fuchsia::modular::ExecuteResult r) {
     result = std::move(r);
@@ -227,8 +212,7 @@ TEST_F(PuppetMasterTest, ControlExistingStory) {
   EXPECT_EQ(2, executor_.execute_count());
   EXPECT_EQ(story_id, executor_.last_story_id());
   ASSERT_EQ(1u, executor_.last_commands().size());
-  EXPECT_EQ("two",
-            executor_.last_commands().at(0).remove_mod().mod_name_transitional);
+  EXPECT_EQ("two", executor_.last_commands().at(0).remove_mod().mod_name_transitional);
 }
 
 TEST_F(PuppetMasterTest, CreateStoryWithOptions) {
@@ -247,11 +231,10 @@ TEST_F(PuppetMasterTest, CreateStoryWithOptions) {
 
   // Options are not set until execute that triggers the creation of a story.
   bool done{};
-  storage_->GetStoryData("foo")->Then(
-      [&](fuchsia::modular::internal::StoryDataPtr data) {
-        EXPECT_EQ(nullptr, data);
-        done = true;
-      });
+  storage_->GetStoryData("foo")->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
+    EXPECT_EQ(nullptr, data);
+    done = true;
+  });
   RunLoopUntil([&] { return done; });
 
   done = false;
@@ -264,11 +247,10 @@ TEST_F(PuppetMasterTest, CreateStoryWithOptions) {
 
   // Options should have been set.
   done = false;
-  storage_->GetStoryData("foo")->Then(
-      [&](fuchsia::modular::internal::StoryDataPtr data) {
-        EXPECT_TRUE(data->story_options().kind_of_proto_story);
-        done = true;
-      });
+  storage_->GetStoryData("foo")->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
+    EXPECT_TRUE(data->story_options().kind_of_proto_story);
+    done = true;
+  });
   RunLoopUntil([&] { return done; });
 
   // Setting new options and executing again should have no effect.
@@ -292,11 +274,10 @@ TEST_F(PuppetMasterTest, CreateStoryWithOptions) {
 
   // Options should not have changed.
   done = false;
-  storage_->GetStoryData("foo")->Then(
-      [&](fuchsia::modular::internal::StoryDataPtr data) {
-        EXPECT_TRUE(data->story_options().kind_of_proto_story);
-        done = true;
-      });
+  storage_->GetStoryData("foo")->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
+    EXPECT_TRUE(data->story_options().kind_of_proto_story);
+    done = true;
+  });
 
   RunLoopUntil([&] { return done; });
 }
@@ -315,9 +296,8 @@ TEST_F(PuppetMasterTest, CreateStoryWithStoryInfoExtra) {
           .key = extra_entry_key,
           .value = extra_entry_value,
       }};
-  const auto extra_info_size =
-      extra_info.size();  // For convenience, to avoid a wordy cast to
-                          // size_type in ASSERT_EQ below.
+  const auto extra_info_size = extra_info.size();  // For convenience, to avoid a wordy cast to
+                                                   // size_type in ASSERT_EQ below.
 
   // Try to SetStoryInfoExtra. It should succeed because the story has not been
   // created yet.
@@ -338,11 +318,10 @@ TEST_F(PuppetMasterTest, CreateStoryWithStoryInfoExtra) {
   // The story, and its StoryData, does not exist until the story is created,
   // which is after the commands are executed.
   done = false;
-  storage_->GetStoryData(story_name)
-      ->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-        EXPECT_EQ(nullptr, data);
-        done = true;
-      });
+  storage_->GetStoryData(story_name)->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
+    EXPECT_EQ(nullptr, data);
+    done = true;
+  });
   RunLoopUntil([&] { return done; });
 
   // Execute the commands, implicitly creating the story.
@@ -355,16 +334,15 @@ TEST_F(PuppetMasterTest, CreateStoryWithStoryInfoExtra) {
 
   // StoryData should contain the StoryInfo extra value that was set previously
   done = false;
-  storage_->GetStoryData(story_name)
-      ->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-        ASSERT_NE(nullptr, data);
-        ASSERT_FALSE(data->story_info().extra.is_null());
-        auto extra_info = data->story_info().extra.get();
-        ASSERT_EQ(extra_info.size(), extra_info_size);
-        EXPECT_EQ(extra_info.at(0).key, extra_entry_key);
-        EXPECT_EQ(extra_info.at(0).value, extra_entry_value);
-        done = true;
-      });
+  storage_->GetStoryData(story_name)->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
+    ASSERT_NE(nullptr, data);
+    ASSERT_FALSE(data->story_info().extra.is_null());
+    auto extra_info = data->story_info().extra.get();
+    ASSERT_EQ(extra_info.size(), extra_info_size);
+    EXPECT_EQ(extra_info.at(0).key, extra_entry_key);
+    EXPECT_EQ(extra_info.at(0).value, extra_entry_value);
+    done = true;
+  });
   RunLoopUntil([&] { return done; });
 }
 
@@ -383,11 +361,10 @@ TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterCreateStory) {
   // The story, and its StoryData, does not exist until the story is created,
   // which is after the commands are executed.
   bool done{};
-  storage_->GetStoryData(story_name)
-      ->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-        EXPECT_EQ(nullptr, data);
-        done = true;
-      });
+  storage_->GetStoryData(story_name)->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
+    EXPECT_EQ(nullptr, data);
+    done = true;
+  });
   RunLoopUntil([&] { return done; });
 
   // Execute the commands, implicitly creating the story.
@@ -414,9 +391,7 @@ TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterCreateStory) {
       std::move(extra_info),
       [&](fuchsia::modular::StoryPuppetMaster_SetStoryInfoExtra_Result result) {
         EXPECT_TRUE(result.is_err());
-        EXPECT_EQ(
-            result.err(),
-            fuchsia::modular::ConfigureStoryError::ERR_STORY_ALREADY_CREATED);
+        EXPECT_EQ(result.err(), fuchsia::modular::ConfigureStoryError::ERR_STORY_ALREADY_CREATED);
         done = true;
       });
   RunLoopUntil([&] { return done; });
@@ -439,11 +414,10 @@ TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterCreateStory) {
   // StoryInfo extra should be null because it was not set prior
   // to creating the story.
   done = false;
-  storage_->GetStoryData(story_name)
-      ->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-        ASSERT_TRUE(data->story_info().extra.is_null());
-        done = true;
-      });
+  storage_->GetStoryData(story_name)->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
+    ASSERT_TRUE(data->story_info().extra.is_null());
+    done = true;
+  });
   RunLoopUntil([&] { return done; });
 }
 
@@ -453,11 +427,8 @@ TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterDeleteStory) {
 
   // Create the story.
   bool done{};
-  storage_
-      ->CreateStory(story_name, /* extra_info= */ {}, /* story_options= */ {})
-      ->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId page_id) {
-        done = true;
-      });
+  storage_->CreateStory(story_name, /* extra_info= */ {}, /* story_options= */ {})
+      ->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId page_id) { done = true; });
   RunLoopUntil([&] { return done; });
 
   auto story = ControlStory(story_name);
@@ -472,12 +443,9 @@ TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterDeleteStory) {
   // already been created.
   done = false;
   story->SetStoryInfoExtra(
-      extra_info,
-      [&](fuchsia::modular::StoryPuppetMaster_SetStoryInfoExtra_Result result) {
+      extra_info, [&](fuchsia::modular::StoryPuppetMaster_SetStoryInfoExtra_Result result) {
         EXPECT_TRUE(result.is_err());
-        EXPECT_EQ(
-            result.err(),
-            fuchsia::modular::ConfigureStoryError::ERR_STORY_ALREADY_CREATED);
+        EXPECT_EQ(result.err(), fuchsia::modular::ConfigureStoryError::ERR_STORY_ALREADY_CREATED);
         done = true;
       });
   RunLoopUntil([&] { return done; });
@@ -491,8 +459,7 @@ TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterDeleteStory) {
   // to has not been created yet.
   done = false;
   story->SetStoryInfoExtra(
-      extra_info,
-      [&](fuchsia::modular::StoryPuppetMaster_SetStoryInfoExtra_Result result) {
+      extra_info, [&](fuchsia::modular::StoryPuppetMaster_SetStoryInfoExtra_Result result) {
         EXPECT_FALSE(result.is_err());
         done = true;
       });
@@ -504,9 +471,7 @@ TEST_F(PuppetMasterTest, DeleteStory) {
 
   // Create a story.
   storage_->CreateStory("foo", {} /* extra_info */, {} /* story_options */)
-      ->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId page_id) {
-        story_id = id;
-      });
+      ->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId page_id) { story_id = id; });
 
   // Delete it
   bool done{};
@@ -514,11 +479,10 @@ TEST_F(PuppetMasterTest, DeleteStory) {
   RunLoopUntil([&] { return done; });
 
   done = false;
-  storage_->GetStoryData(story_id)->Then(
-      [&](fuchsia::modular::internal::StoryDataPtr story_data) {
-        EXPECT_EQ(story_data, nullptr);
-        done = true;
-      });
+  storage_->GetStoryData(story_id)->Then([&](fuchsia::modular::internal::StoryDataPtr story_data) {
+    EXPECT_EQ(story_data, nullptr);
+    done = true;
+  });
 
   RunLoopUntil([&] { return done; });
 }

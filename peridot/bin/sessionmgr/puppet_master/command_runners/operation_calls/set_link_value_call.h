@@ -7,15 +7,16 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
+
 #include "peridot/bin/sessionmgr/storage/story_storage.h"
 
 namespace modular {
 
-void AddSetLinkValueOperation(
-    OperationContainer* const operation_container,
-    StoryStorage* const story_storage, fuchsia::modular::LinkPath link_path,
-    fit::function<void(fidl::StringPtr*)> mutate_fn,
-    fit::function<void(fuchsia::modular::ExecuteResult)> done);
+void AddSetLinkValueOperation(OperationContainer* const operation_container,
+                              StoryStorage* const story_storage,
+                              fuchsia::modular::LinkPath link_path,
+                              fit::function<void(fidl::StringPtr*)> mutate_fn,
+                              fit::function<void(fuchsia::modular::ExecuteResult)> done);
 
 }  // namespace modular
 

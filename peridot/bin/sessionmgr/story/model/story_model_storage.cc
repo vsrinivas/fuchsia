@@ -12,9 +12,7 @@ StoryModelStorage::StoryModelStorage() = default;
 StoryModelStorage::~StoryModelStorage() = default;
 
 void StoryModelStorage::SetObserveCallback(
-    fit::function<
-        void(std::vector<fuchsia::modular::storymodel::StoryModelMutation>)>
-        callback) {
+    fit::function<void(std::vector<fuchsia::modular::storymodel::StoryModelMutation>)> callback) {
   observe_callback_ = std::move(callback);
 }
 

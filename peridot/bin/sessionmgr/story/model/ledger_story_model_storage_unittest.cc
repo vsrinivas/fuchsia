@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "peridot/bin/sessionmgr/story/model/ledger_story_model_storage.h"
+
 #include <fuchsia/modular/storymodel/cpp/fidl.h>
 #include <lib/async_promise/executor.h>
 #include <lib/fit/bridge.h>
@@ -10,7 +12,6 @@
 
 #include "gtest/gtest.h"
 #include "peridot/bin/sessionmgr/story/model/apply_mutations.h"
-#include "peridot/bin/sessionmgr/story/model/ledger_story_model_storage.h"
 #include "peridot/bin/sessionmgr/story/model/testing/mutation_matchers.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_id.h"
@@ -42,28 +43,24 @@ class LedgerStoryModelStorageTest : public testing::TestWithLedger {
   // 2) A ptr to a vector of lists of StoryModelMutations observed from that
   // instance.
   // 3) A ptr to a StoryModel updated with the observed commands.
-  std::tuple<std::unique_ptr<StoryModelStorage>,
-             std::vector<std::vector<StoryModelMutation>>*, StoryModel*>
-  Create(std::string page_id, std::string device_id,
-         LedgerClient* ledger_client = nullptr) {
-
+  std::tuple<std::unique_ptr<StoryModelStorage>, std::vector<std::vector<StoryModelMutation>>*,
+             StoryModel*>
+  Create(std::string page_id, std::string device_id, LedgerClient* ledger_client = nullptr) {
     // If not client is specified, use the default client.
     if (!ledger_client) {
       ledger_client = this->ledger_client();
     }
 
-    auto storage = std::make_unique<LedgerStoryModelStorage>(
-        ledger_client, MakePageId(page_id), device_id);
+    auto storage =
+        std::make_unique<LedgerStoryModelStorage>(ledger_client, MakePageId(page_id), device_id);
 
-    auto observed_commands =
-        observed_mutations_.emplace(observed_mutations_.end());
+    auto observed_commands = observed_mutations_.emplace(observed_mutations_.end());
     auto observed_model = observed_models_.emplace(observed_models_.end());
     storage->SetObserveCallback([=](std::vector<StoryModelMutation> commands) {
       *observed_model = ApplyMutations(*observed_model, commands);
       observed_commands->push_back(std::move(commands));
     });
-    return std::make_tuple(std::move(storage), &*observed_commands,
-                           &*observed_model);
+    return std::make_tuple(std::move(storage), &*observed_commands, &*observed_model);
   }
 
   // This is broken out into its own function because we use C++ structured
@@ -71,8 +68,7 @@ class LedgerStoryModelStorageTest : public testing::TestWithLedger {
   // implicitly captured in lambdas without more verbose syntax. This function
   // converts the binding into a real variable which is possible to capture.
   void RunLoopUntilNumMutationsObserved(
-      std::vector<std::vector<StoryModelMutation>>* observed_mutations,
-      uint32_t n) {
+      std::vector<std::vector<StoryModelMutation>>* observed_mutations, uint32_t n) {
     RunLoopUntil([&] { return observed_mutations->size() >= n; });
   }
 
@@ -86,8 +82,7 @@ class LedgerStoryModelStorageTest : public testing::TestWithLedger {
 // Store some device-local values (runtime state, visibility state), and
 // observe the values coming back to us.
 TEST_F(LedgerStoryModelStorageTest, DeviceLocal_RoundTrip) {
-  auto [storage, observed_mutations, observed_model] =
-      Create("page1", "device1");
+  auto [storage, observed_mutations, observed_model] = Create("page1", "device1");
 
   std::vector<StoryModelMutation> commands(2);
   commands[0].set_set_runtime_state(StoryState::RUNNING);
@@ -95,9 +90,7 @@ TEST_F(LedgerStoryModelStorageTest, DeviceLocal_RoundTrip) {
 
   fit::result<> result;
   executor.schedule_task(
-      storage->Execute(std::move(commands)).then([&](fit::result<>& r) {
-        result = std::move(r);
-      }));
+      storage->Execute(std::move(commands)).then([&](fit::result<>& r) { result = std::move(r); }));
   RunLoopUntil([&] { return !!result; });
   EXPECT_TRUE(result.is_ok());
 
@@ -106,9 +99,8 @@ TEST_F(LedgerStoryModelStorageTest, DeviceLocal_RoundTrip) {
   RunLoopUntilNumMutationsObserved(observed_mutations, 1);
   EXPECT_EQ(1lu, observed_mutations->size());
   EXPECT_THAT(observed_mutations->at(0),
-              ::testing::ElementsAre(
-                  IsSetRuntimeStateMutation(StoryState::RUNNING),
-                  IsSetVisibilityMutation(StoryVisibilityState::IMMERSIVE)));
+              ::testing::ElementsAre(IsSetRuntimeStateMutation(StoryState::RUNNING),
+                                     IsSetVisibilityMutation(StoryVisibilityState::IMMERSIVE)));
 
   // Now change only StoryState. We should see the result of our previous
   // change to StoryVisibilityState preserved.
@@ -117,25 +109,21 @@ TEST_F(LedgerStoryModelStorageTest, DeviceLocal_RoundTrip) {
 
   result = fit::result<>();
   executor.schedule_task(
-      storage->Execute(std::move(commands)).then([&](fit::result<>& r) {
-        result = std::move(r);
-      }));
+      storage->Execute(std::move(commands)).then([&](fit::result<>& r) { result = std::move(r); }));
   RunLoopUntil([&] { return !!result; });
   EXPECT_TRUE(result.is_ok());
 
   RunLoopUntilNumMutationsObserved(observed_mutations, 2);
   EXPECT_EQ(2lu, observed_mutations->size());
   EXPECT_THAT(observed_mutations->at(1),
-              ::testing::ElementsAre(
-                  IsSetRuntimeStateMutation(StoryState::STOPPED),
-                  IsSetVisibilityMutation(StoryVisibilityState::IMMERSIVE)));
+              ::testing::ElementsAre(IsSetRuntimeStateMutation(StoryState::STOPPED),
+                                     IsSetVisibilityMutation(StoryVisibilityState::IMMERSIVE)));
 }
 
 // Show that when we store values for two different device IDs in the same
 // Ledger page, they do not cause any conflicts.
 TEST_F(LedgerStoryModelStorageTest, DeviceLocal_DeviceIsolation) {
-  auto [storage1, observed_mutations1, observed_model1] =
-      Create("page1", "device1");
+  auto [storage1, observed_mutations1, observed_model1] = Create("page1", "device1");
   auto second_ledger_connection = NewLedgerClient();
   auto [storage2, observed_mutations2, observed_model2] =
       Create("page1", "device2", second_ledger_connection.get());
@@ -189,8 +177,7 @@ TEST_F(LedgerStoryModelStorageTest, UpdatesAreSequential) {
 TEST_F(LedgerStoryModelStorageTest, Load) {
   StoryModel expected_model;
   {
-    auto [storage, observed_mutations, observed_model] =
-        Create("page", "device");
+    auto [storage, observed_mutations, observed_model] = Create("page", "device");
 
     std::vector<StoryModelMutation> commands(2);
     commands[0].set_set_runtime_state(StoryState::RUNNING);
@@ -204,8 +191,7 @@ TEST_F(LedgerStoryModelStorageTest, Load) {
   auto [storage, observed_mutations, observed_model] = Create("page", "device");
 
   bool done{false};
-  executor.schedule_task(
-      storage->Load().then([&](fit::result<>&) { done = true; }));
+  executor.schedule_task(storage->Load().then([&](fit::result<>&) { done = true; }));
   RunLoopUntil([&] { return done; });
   EXPECT_TRUE(fidl::Equals(expected_model, *observed_model));
 }

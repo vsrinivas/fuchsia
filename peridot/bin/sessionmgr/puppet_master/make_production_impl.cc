@@ -19,38 +19,32 @@ namespace modular {
 class PuppetMasterImpl;
 
 using StoryControllerFactory =
-    fit::function<fuchsia::modular::StoryControllerPtr(
-        fidl::StringPtr story_id)>;
+    fit::function<fuchsia::modular::StoryControllerPtr(fidl::StringPtr story_id)>;
 
 std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
-    SessionStorage* const session_storage,
-    fuchsia::modular::FocusProviderPtr focus_provider,
+    SessionStorage* const session_storage, fuchsia::modular::FocusProviderPtr focus_provider,
     fuchsia::modular::ModuleResolver* const module_resolver,
     fuchsia::modular::EntityResolver* const entity_resolver,
     // TODO(miguelfrde): we shouldn't create this dependency here. Instead
     // an interface similar to StoryStorage should be created for Runtime
     // use cases.
     fit::function<void(std::string, std::vector<std::string>)> module_focuser) {
-  std::map<fuchsia::modular::StoryCommand::Tag, std::unique_ptr<CommandRunner>>
-      command_runners;
-  command_runners.emplace(
-      fuchsia::modular::StoryCommand::Tag::kSetFocusState,
-      new SetFocusStateCommandRunner(std::move(focus_provider)));
-  command_runners.emplace(
-      fuchsia::modular::StoryCommand::Tag::kAddMod,
-      new AddModCommandRunner(module_resolver, entity_resolver));
+  std::map<fuchsia::modular::StoryCommand::Tag, std::unique_ptr<CommandRunner>> command_runners;
+  command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kSetFocusState,
+                          new SetFocusStateCommandRunner(std::move(focus_provider)));
+  command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kAddMod,
+                          new AddModCommandRunner(module_resolver, entity_resolver));
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kFocusMod,
                           new FocusModCommandRunner(std::move(module_focuser)));
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kRemoveMod,
                           new RemoveModCommandRunner());
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kSetLinkValue,
                           new SetLinkValueCommandRunner());
-  command_runners.emplace(
-      fuchsia::modular::StoryCommand::Tag::kSetKindOfProtoStoryOption,
-      new SetKindOfProtoStoryOptionCommandRunner(session_storage));
+  command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kSetKindOfProtoStoryOption,
+                          new SetKindOfProtoStoryOptionCommandRunner(session_storage));
 
-  auto executor = std::make_unique<DispatchStoryCommandExecutor>(
-      session_storage, std::move(command_runners));
+  auto executor =
+      std::make_unique<DispatchStoryCommandExecutor>(session_storage, std::move(command_runners));
   return executor;
 }
 

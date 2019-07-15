@@ -33,8 +33,7 @@ namespace {
 
 class TestLinkWatcher : public LinkWatcher {
  public:
-  TestLinkWatcher(fit::function<void(fidl::StringPtr)> fn)
-      : fn_(std::move(fn)) {}
+  TestLinkWatcher(fit::function<void(fidl::StringPtr)> fn) : fn_(std::move(fn)) {}
 
  private:
   void Notify(fuchsia::mem::Buffer json) override {
@@ -77,8 +76,7 @@ class LinkImplTest : public testing::TestWithLedger {
     link->WatchAll(std::move(ptr));
   }
 
-  void SetLink(Link* link, std::vector<std::string> path,
-               const std::string& value) {
+  void SetLink(Link* link, std::vector<std::string> path, const std::string& value) {
     fsl::SizedVmo vmo;
     FXL_CHECK(fsl::VmoFromString(value, &vmo));
     link->Set(fidl::VectorPtr(std::move(path)), std::move(vmo).ToTransport());
@@ -93,13 +91,12 @@ TEST_F(LinkImplTest, GetNull) {
   auto link = MakeLink(storage.get(), "foo");
 
   bool get_done{};
-  link->Get(nullptr /* path */,
-            [&](std::unique_ptr<fuchsia::mem::Buffer> value) {
-              std::string content_string;
-              FXL_CHECK(fsl::StringFromVmo(*value, &content_string));
-              get_done = true;
-              EXPECT_EQ("null", content_string);
-            });
+  link->Get(nullptr /* path */, [&](std::unique_ptr<fuchsia::mem::Buffer> value) {
+    std::string content_string;
+    FXL_CHECK(fsl::StringFromVmo(*value, &content_string));
+    get_done = true;
+    EXPECT_EQ("null", content_string);
+  });
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return get_done; }));
 
   get_done = false;
@@ -143,8 +140,7 @@ TEST_F(LinkImplTest, DISABLED_SetAndWatch) {
 
   // Watch for our own changes, which we shouldn't see. The initial value
   // ("null"), is sent immediately, though.
-  Watch(link.get(),
-        [&](const fidl::StringPtr& value) { EXPECT_EQ("null", value); });
+  Watch(link.get(), [&](const fidl::StringPtr& value) { EXPECT_EQ("null", value); });
 
   // Also use WatchAll(), on which we should see our own changes.
   fidl::StringPtr notified_value;
@@ -196,13 +192,12 @@ TEST_F(LinkImplTest, SetAndWatchAndGet) {
   EXPECT_EQ(expected_value, notified_value);
 
   bool get_done{};
-  link->Get(nullptr /* path */,
-            [&](std::unique_ptr<fuchsia::mem::Buffer> value) {
-              std::string content_string;
-              FXL_CHECK(fsl::StringFromVmo(*value, &content_string));
-              get_done = true;
-              EXPECT_EQ(expected_value, content_string);
-            });
+  link->Get(nullptr /* path */, [&](std::unique_ptr<fuchsia::mem::Buffer> value) {
+    std::string content_string;
+    FXL_CHECK(fsl::StringFromVmo(*value, &content_string));
+    get_done = true;
+    EXPECT_EQ(expected_value, content_string);
+  });
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return get_done; }));
 }
 
@@ -245,13 +240,12 @@ TEST_F(LinkImplTest, Erase) {
 
   const std::string expected_value = R"({"one":1})";
   bool get_done{};
-  link->Get(nullptr /* path */,
-            [&](std::unique_ptr<fuchsia::mem::Buffer> value) {
-              std::string content_string;
-              FXL_CHECK(fsl::StringFromVmo(*value, &content_string));
-              get_done = true;
-              EXPECT_EQ(expected_value, content_string);
-            });
+  link->Get(nullptr /* path */, [&](std::unique_ptr<fuchsia::mem::Buffer> value) {
+    std::string content_string;
+    FXL_CHECK(fsl::StringFromVmo(*value, &content_string));
+    get_done = true;
+    EXPECT_EQ(expected_value, content_string);
+  });
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return get_done; }));
 }
 

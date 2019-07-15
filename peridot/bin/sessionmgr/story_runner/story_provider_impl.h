@@ -49,23 +49,20 @@ class SessionStorage;
 class StoryControllerImpl;
 class StoryStorage;
 
-class StoryProviderImpl : fuchsia::modular::StoryProvider,
-                          fuchsia::modular::FocusWatcher {
+class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::FocusWatcher {
  public:
-  StoryProviderImpl(
-      Environment* user_environment, std::string device_id,
-      SessionStorage* session_storage,
-      fuchsia::modular::AppConfig story_shell_config,
-      fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
-      const ComponentContextInfo& component_context_info,
-      fuchsia::modular::FocusProviderPtr focus_provider,
-      fuchsia::modular::UserIntelligenceProvider* user_intelligence_provider,
-      fuchsia::app::discover::DiscoverRegistry* discover_registry,
-      fuchsia::modular::ModuleResolver* module_resolver,
-      EntityProviderRunner* entity_provider_runner,
-      modular::ModuleFacetReader* module_facet_reader,
-      PresentationProvider* presentation_provider,
-      fuchsia::ui::viewsv1::ViewSnapshotPtr view_snapshot, bool test);
+  StoryProviderImpl(Environment* user_environment, std::string device_id,
+                    SessionStorage* session_storage, fuchsia::modular::AppConfig story_shell_config,
+                    fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
+                    const ComponentContextInfo& component_context_info,
+                    fuchsia::modular::FocusProviderPtr focus_provider,
+                    fuchsia::modular::UserIntelligenceProvider* user_intelligence_provider,
+                    fuchsia::app::discover::DiscoverRegistry* discover_registry,
+                    fuchsia::modular::ModuleResolver* module_resolver,
+                    EntityProviderRunner* entity_provider_runner,
+                    modular::ModuleFacetReader* module_facet_reader,
+                    PresentationProvider* presentation_provider,
+                    fuchsia::ui::viewsv1::ViewSnapshotPtr view_snapshot, bool test);
 
   ~StoryProviderImpl() override;
 
@@ -89,9 +86,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   const std::string device_id() const { return device_id_; }
 
   // Called by StoryControllerImpl.
-  const ComponentContextInfo& component_context_info() {
-    return component_context_info_;
-  }
+  const ComponentContextInfo& component_context_info() { return component_context_info_; }
 
   // Called by StoryControllerImpl.
   fuchsia::modular::UserIntelligenceProvider* user_intelligence_provider() {
@@ -99,27 +94,17 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   }
 
   // Called by StoryControllerImpl.
-  fuchsia::app::discover::DiscoverRegistry* discover_registry() {
-    return discover_registry_;
-  }
+  fuchsia::app::discover::DiscoverRegistry* discover_registry() { return discover_registry_; }
 
   // Called by StoryControllerImpl.
-  fuchsia::modular::ModuleResolver* module_resolver() {
-    return module_resolver_;
-  }
+  fuchsia::modular::ModuleResolver* module_resolver() { return module_resolver_; }
 
-  fuchsia::modular::EntityResolver* entity_resolver() {
-    return entity_provider_runner_;
-  }
+  fuchsia::modular::EntityResolver* entity_resolver() { return entity_provider_runner_; }
 
-  modular::ModuleFacetReader* module_facet_reader() {
-    return module_facet_reader_;
-  }
+  modular::ModuleFacetReader* module_facet_reader() { return module_facet_reader_; }
 
   // Called by StoryControllerImpl.
-  const fuchsia::modular::AppConfig& story_shell_config() const {
-    return story_shell_config_;
-  }
+  const fuchsia::modular::AppConfig& story_shell_config() const { return story_shell_config_; }
 
   // Called by StoryControllerImpl.
   std::unique_ptr<AsyncHolderBase> StartStoryShell(
@@ -132,8 +117,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   fuchsia::modular::StoryInfoPtr GetCachedStoryInfo(std::string story_id);
 
   // |fuchsia::modular::StoryProvider|.
-  void GetStoryInfo(std::string story_id,
-                    GetStoryInfoCallback callback) override;
+  void GetStoryInfo(std::string story_id, GetStoryInfoCallback callback) override;
 
   // Called by StoryControllerImpl. Sends request to
   // fuchsia::modular::FocusProvider
@@ -141,8 +125,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
 
   // Called by StoryControllerImpl. Sends, using AttachView(), a token for the
   // view of the story identified by |story_id| to the current session shell.
-  void AttachView(fidl::StringPtr story_id,
-                  fuchsia::ui::views::ViewHolderToken view_holder_token);
+  void AttachView(fidl::StringPtr story_id, fuchsia::ui::views::ViewHolderToken view_holder_token);
 
   // Called by StoryControllerImpl. Notifies, using DetachView(), the current
   // session shell that the view of the story identified by |story_id| is about
@@ -152,23 +135,19 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   // Called by StoryControllerImpl.
   void NotifyStoryActivityChange(
       fidl::StringPtr story_id,
-      fidl::VectorPtr<fuchsia::modular::OngoingActivityType>
-          ongoing_activities);
+      fidl::VectorPtr<fuchsia::modular::OngoingActivityType> ongoing_activities);
 
   // Called by StoryControllerImpl. Sends request to
   // fuchsia::modular::SessionShell through PresentationProvider.
-  void GetPresentation(
-      fidl::StringPtr story_id,
-      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request);
-  void WatchVisualState(
-      fidl::StringPtr story_id,
-      fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher);
+  void GetPresentation(fidl::StringPtr story_id,
+                       fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request);
+  void WatchVisualState(fidl::StringPtr story_id,
+                        fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher);
 
   // Called by StoryControllerImpl. Takes a snapshot of the story by the given
   // |story_id|. Callback is returned with the snapshot of the story, or an
   // empty buffer (size == 0) if the snapshot could not be taken.
-  void TakeSnapshot(fidl::StringPtr story_id,
-                    fit::function<void(fuchsia::mem::Buffer)> callback);
+  void TakeSnapshot(fidl::StringPtr story_id, fit::function<void(fuchsia::mem::Buffer)> callback);
 
   // Called by StoryControllerImpl. Creates a new view with the given
   // |view_token| and connects the snapshot loader with the given
@@ -182,11 +161,9 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   //
   // |callback| will be called with a reference to the created entity. If the
   // creation failed the |entity_request| is dropped.
-  void CreateEntity(
-      const std::string& story_id, fidl::StringPtr type,
-      fuchsia::mem::Buffer data,
-      fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
-      fit::function<void(std::string /* entity_reference */)> callback);
+  void CreateEntity(const std::string& story_id, fidl::StringPtr type, fuchsia::mem::Buffer data,
+                    fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
+                    fit::function<void(std::string /* entity_reference */)> callback);
 
   // Creates an entity with the specified |type| and |data| in the story with
   // |story_id|.
@@ -195,31 +172,26 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   // associated with any given story.
   void ConnectToStoryEntityProvider(
       const std::string& story_id,
-      fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
-          entity_provider_request);
+      fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request);
 
  private:
   // |fuchsia::modular::StoryProvider|
   void GetController(std::string story_id,
-                     fidl::InterfaceRequest<fuchsia::modular::StoryController>
-                         request) override;
+                     fidl::InterfaceRequest<fuchsia::modular::StoryController> request) override;
 
   // |fuchsia::modular::StoryProvider|
-  void GetStories(
-      fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher,
-      PreviousStoriesCallback callback) override;
+  void GetStories(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher,
+                  PreviousStoriesCallback callback) override;
 
   // |fuchsia::modular::StoryProvider|
   void PreviousStories(PreviousStoriesCallback callback) override;
 
   // |fuchsia::modular::StoryProvider|
-  void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher>
-                 watcher) override;
+  void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher) override;
 
   // |fuchsia::modular::StoryProvider|
   void WatchActivity(
-      fidl::InterfaceHandle<fuchsia::modular::StoryActivityWatcher> watcher)
-      override;
+      fidl::InterfaceHandle<fuchsia::modular::StoryActivityWatcher> watcher) override;
 
   // |fuchsia::modular::FocusWatcher|
   void OnFocusChange(fuchsia::modular::FocusInfoPtr info) override;
@@ -233,10 +205,9 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   // NotifyStoryWatchers().
   void NotifyStoryStateChange(fidl::StringPtr story_id);
 
-  void NotifyStoryWatchers(
-      const fuchsia::modular::internal::StoryData* story_data,
-      fuchsia::modular::StoryState story_state,
-      fuchsia::modular::StoryVisibilityState story_visibility_state);
+  void NotifyStoryWatchers(const fuchsia::modular::internal::StoryData* story_data,
+                           fuchsia::modular::StoryState story_state,
+                           fuchsia::modular::StoryVisibilityState story_visibility_state);
 
   void MaybeLoadStoryShell();
 
@@ -260,8 +231,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   fuchsia::modular::AppConfig story_shell_config_;
 
   // Used to preload story shell before it is requested.
-  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>>
-      preloaded_story_shell_app_;
+  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> preloaded_story_shell_app_;
 
   // Used to manufacture new StoryShells if not launching a new component for
   // every requested StoryShell instance.
@@ -273,8 +243,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   const bool enable_story_shell_preload_;
 
   fidl::InterfacePtrSet<fuchsia::modular::StoryProviderWatcher> watchers_;
-  fidl::InterfacePtrSet<fuchsia::modular::StoryActivityWatcher>
-      activity_watchers_;
+  fidl::InterfacePtrSet<fuchsia::modular::StoryActivityWatcher> activity_watchers_;
 
   // The story controllers of the currently active stories, indexed by their
   // story IDs.
@@ -316,14 +285,12 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
 
   const ComponentContextInfo component_context_info_;
 
-  fuchsia::modular::UserIntelligenceProvider* const
-      user_intelligence_provider_;  // Not owned.
-  fuchsia::app::discover::DiscoverRegistry* const
-      discover_registry_;                                    // Not owned.
-  fuchsia::modular::ModuleResolver* const module_resolver_;  // Not owned.
-  EntityProviderRunner* const entity_provider_runner_;       // Not owned.
-  modular::ModuleFacetReader* const module_facet_reader_;    // Not owned.
-  PresentationProvider* const presentation_provider_;        // Not owned.
+  fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider_;  // Not owned.
+  fuchsia::app::discover::DiscoverRegistry* const discover_registry_;             // Not owned.
+  fuchsia::modular::ModuleResolver* const module_resolver_;                       // Not owned.
+  EntityProviderRunner* const entity_provider_runner_;                            // Not owned.
+  modular::ModuleFacetReader* const module_facet_reader_;                         // Not owned.
+  PresentationProvider* const presentation_provider_;                             // Not owned.
 
   // When a story gets created, or when it gets focused on this device, we write
   // a record of the current context in the story page. So we need to watch the

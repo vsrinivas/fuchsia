@@ -30,32 +30,28 @@ namespace {
 // name is visually inspectable.
 std::string HashModuleUrl(const std::string& module_url) {
   std::size_t found = module_url.find_last_of('/');
-  auto last_part =
-      found == module_url.length() - 1 ? "" : module_url.substr(found + 1);
+  auto last_part = found == module_url.length() - 1 ? "" : module_url.substr(found + 1);
   return std::to_string(std::hash<std::string>{}(module_url)) + last_part;
 }
 
 };  // namespace
 
-ModuleControllerImpl::ModuleControllerImpl(
-    StoryControllerImpl* const story_controller_impl,
-    fuchsia::sys::Launcher* const launcher,
-    fuchsia::modular::AppConfig module_config,
-    const fuchsia::modular::ModuleData* const module_data,
-    fuchsia::sys::ServiceListPtr service_list,
-    fuchsia::ui::views::ViewToken view_token)
+ModuleControllerImpl::ModuleControllerImpl(StoryControllerImpl* const story_controller_impl,
+                                           fuchsia::sys::Launcher* const launcher,
+                                           fuchsia::modular::AppConfig module_config,
+                                           const fuchsia::modular::ModuleData* const module_data,
+                                           fuchsia::sys::ServiceListPtr service_list,
+                                           fuchsia::ui::views::ViewToken view_token)
     : story_controller_impl_(story_controller_impl),
-      app_client_(
-          launcher, CloneStruct(module_config),
-          std::string(kAppStoragePath) + HashModuleUrl(module_config.url),
-          std::move(service_list)),
+      app_client_(launcher, CloneStruct(module_config),
+                  std::string(kAppStoragePath) + HashModuleUrl(module_config.url),
+                  std::move(service_list)),
       module_data_(module_data) {
   app_client_.SetAppErrorHandler([this] { OnAppConnectionError(); });
 
   fuchsia::ui::app::ViewProviderPtr view_provider;
   app_client_.services().ConnectToService(view_provider.NewRequest());
-  view_provider->CreateView(std::move(view_token.value),
-                            nullptr /* incoming_services */,
+  view_provider->CreateView(std::move(view_token.value), nullptr /* incoming_services */,
                             nullptr /* outgoing_services */);
 }
 
@@ -74,8 +70,7 @@ void ModuleControllerImpl::OnAppConnectionError() {
   SetState(fuchsia::modular::ModuleState::ERROR);
 }
 
-void ModuleControllerImpl::SetState(
-    const fuchsia::modular::ModuleState new_state) {
+void ModuleControllerImpl::SetState(const fuchsia::modular::ModuleState new_state) {
   if (state_ == new_state) {
     return;
   }
@@ -139,8 +134,7 @@ void ModuleControllerImpl::Defocus() {
 }
 
 void ModuleControllerImpl::Stop(StopCallback done) {
-  story_controller_impl_->StopModule(module_data_->module_path,
-                                     std::move(done));
+  story_controller_impl_->StopModule(module_data_->module_path, std::move(done));
 }
 
 void ModuleControllerImpl::NotifyStateChange() {

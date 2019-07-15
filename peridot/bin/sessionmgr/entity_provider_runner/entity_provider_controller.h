@@ -5,13 +5,13 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_ENTITY_PROVIDER_RUNNER_ENTITY_PROVIDER_CONTROLLER_H_
 #define PERIDOT_BIN_SESSIONMGR_ENTITY_PROVIDER_RUNNER_ENTITY_PROVIDER_CONTROLLER_H_
 
-#include <map>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/string.h>
 #include <src/lib/fxl/macros.h>
+
+#include <map>
 
 namespace modular {
 
@@ -31,18 +31,16 @@ class EntityProviderController {
   //   acceptable.
   // |done| The callback which is called when the entity provider managed by
   //   this controller has finished running.
-  EntityProviderController(
-      fuchsia::modular::EntityProviderPtr entity_provider,
-      fuchsia::modular::AgentControllerPtr agent_controller,
-      fit::function<void()> done);
+  EntityProviderController(fuchsia::modular::EntityProviderPtr entity_provider,
+                           fuchsia::modular::AgentControllerPtr agent_controller,
+                           fit::function<void()> done);
 
   ~EntityProviderController();
 
   // Called by |EntityProviderRunner| when an |fuchsia::modular::Entity| needs
   // to be provided, usually when an entity reference is being resolved to an
   // |fuchsia::modular::Entity|.
-  void ProvideEntity(const std::string& cookie,
-                     const std::string& entity_reference,
+  void ProvideEntity(const std::string& cookie, const std::string& entity_reference,
                      fidl::InterfaceRequest<fuchsia::modular::Entity> request);
 
  private:

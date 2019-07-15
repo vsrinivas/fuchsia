@@ -17,9 +17,9 @@ constexpr char kStoryShellLinkName[] = "story-shell-link";
 
 };  // namespace
 
-StoryShellContextImpl::StoryShellContextImpl(
-    fidl::StringPtr story_id, StoryProviderImpl* const story_provider_impl,
-    StoryControllerImpl* const story_controller_impl)
+StoryShellContextImpl::StoryShellContextImpl(fidl::StringPtr story_id,
+                                             StoryProviderImpl* const story_provider_impl,
+                                             StoryControllerImpl* const story_controller_impl)
     : story_id_(story_id),
       story_provider_impl_(story_provider_impl),
       story_controller_impl_(story_controller_impl) {}
@@ -41,15 +41,13 @@ void StoryShellContextImpl::WatchVisualState(
   story_provider_impl_->WatchVisualState(story_id_, std::move(watcher));
 }
 
-void StoryShellContextImpl::GetLink(
-    fidl::InterfaceRequest<fuchsia::modular::Link> request) {
+void StoryShellContextImpl::GetLink(fidl::InterfaceRequest<fuchsia::modular::Link> request) {
   fuchsia::modular::LinkPathPtr link_path = fuchsia::modular::LinkPath::New();
   link_path->module_path.resize(0);
   // Note: This will never clash with link references for links owned by
   // modules, because those will have a non-empty module path.
   link_path->link_name = kStoryShellLinkName;
-  story_controller_impl_->ConnectLinkPath(std::move(link_path),
-                                          std::move(request));
+  story_controller_impl_->ConnectLinkPath(std::move(link_path), std::move(request));
 }
 
 void StoryShellContextImpl::RequestView(std::string surface_id) {}

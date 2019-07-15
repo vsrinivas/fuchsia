@@ -15,10 +15,8 @@ class IntelligenceServicesImpl : public fuchsia::modular::IntelligenceServices {
   IntelligenceServicesImpl(fuchsia::modular::ComponentScope scope,
                            fuchsia::modular::ContextEngine* context_engine);
 
-  void GetContextReader(
-      fidl::InterfaceRequest<fuchsia::modular::ContextReader> request) override;
-  void GetContextWriter(
-      fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) override;
+  void GetContextReader(fidl::InterfaceRequest<fuchsia::modular::ContextReader> request) override;
+  void GetContextWriter(fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) override;
 
  private:
   fuchsia::modular::ComponentScope CloneScope();

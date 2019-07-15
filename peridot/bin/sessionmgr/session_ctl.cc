@@ -16,18 +16,14 @@ namespace modular {
 // puppet_master       -   fuchsia::modular::PuppetMaster service
 SessionCtl::SessionCtl(vfs::PseudoDir* dir, const std::string& entry_name,
                        PuppetMasterImpl* const puppet_master_impl)
-    : dir_(dir),
-      entry_name_(entry_name),
-      puppet_master_impl_(puppet_master_impl) {
+    : dir_(dir), entry_name_(entry_name), puppet_master_impl_(puppet_master_impl) {
   auto ctl_dir = std::make_unique<vfs::PseudoDir>();
   ctl_dir->AddEntry(
       fuchsia::modular::PuppetMaster::Name_,
-      std::make_unique<vfs::Service>(
-          [this](zx::channel channel, async_dispatcher_t*) {
-            fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request(
-                std::move(channel));
-            puppet_master_impl_->Connect(std::move(request));
-          }));
+      std::make_unique<vfs::Service>([this](zx::channel channel, async_dispatcher_t*) {
+        fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request(std::move(channel));
+        puppet_master_impl_->Connect(std::move(request));
+      }));
 
   auto status = dir_->AddEntry(entry_name_, std::move(ctl_dir));
   FXL_DCHECK(status == ZX_OK);

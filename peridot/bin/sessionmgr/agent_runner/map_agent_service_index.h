@@ -28,8 +28,7 @@ class MapAgentServiceIndex : public AgentServiceIndex {
   ~MapAgentServiceIndex() = default;
 
   // Implementation for |AgentServiceIndex|.
-  fit::optional<std::string> FindAgentForService(
-      std::string service_name) override {
+  fit::optional<std::string> FindAgentForService(std::string service_name) override {
     auto it = service_to_agents_.find(service_name);
     if (it == service_to_agents_.end()) {
       return fit::nullopt;

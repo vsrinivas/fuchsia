@@ -5,12 +5,12 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_STORAGE_STORY_STORAGE_H_
 #define PERIDOT_BIN_SESSIONMGR_STORAGE_STORY_STORAGE_H_
 
-#include <map>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fit/defer.h>
+
+#include <map>
 
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
@@ -67,8 +67,7 @@ class StoryStorage : public PageClient {
 
   // Returns the current ModuleData for |module_path|. If not found, the
   // returned value is null.
-  FuturePtr<ModuleDataPtr> ReadModuleData(
-      const std::vector<std::string>& module_path);
+  FuturePtr<ModuleDataPtr> ReadModuleData(const std::vector<std::string>& module_path);
 
   // Writes |module_data| to storage. The returned future is completed
   // once |module_data| has been written and a notification confirming the
@@ -110,8 +109,7 @@ class StoryStorage : public PageClient {
   // |link_path| occurs. See documentation for LinkUpdatedCallback above. The
   // returned LinkWatcherAutoCancel must be kept alive as long as the callee
   // wishes to receive link updates on |callback|.
-  LinkWatcherAutoCancel WatchLink(const LinkPath& link_path,
-                                  LinkUpdatedCallback callback);
+  LinkWatcherAutoCancel WatchLink(const LinkPath& link_path, LinkUpdatedCallback callback);
 
   // Returns the value for |link_path|.
   //
@@ -132,18 +130,16 @@ class StoryStorage : public PageClient {
   // |context| is carried with the mutation operation and passed to any
   // notifications about this change on this instance of StoryStorage. A value
   // of nullptr for |context| is illegal.
-  FuturePtr<Status> UpdateLinkValue(
-      const LinkPath& link_path,
-      fit::function<void(fidl::StringPtr* value)> mutate_fn,
-      const void* context);
+  FuturePtr<Status> UpdateLinkValue(const LinkPath& link_path,
+                                    fit::function<void(fidl::StringPtr* value)> mutate_fn,
+                                    const void* context);
 
   // Sets the type and data for the Entity stored under |cookie|.
   //
   // |type| If Entity data has already been written, this type is expected to
   //        match the type which was previously written.
   // |data| The data to write to the Entity.
-  FuturePtr<Status> SetEntityData(const std::string& cookie,
-                                  const std::string& type,
+  FuturePtr<Status> SetEntityData(const std::string& cookie, const std::string& type,
                                   fuchsia::mem::Buffer data);
 
   // Returns the type for the Entity stored under the provided |cookie|.
@@ -158,8 +154,8 @@ class StoryStorage : public PageClient {
   //
   // If an error occurred the Status will indicate the error, and returned
   // fuchsia::mem::BufferPtr will be nullptr.
-  FuturePtr<Status, fuchsia::mem::BufferPtr> GetEntityData(
-      const std::string& cookie, const std::string& type);
+  FuturePtr<Status, fuchsia::mem::BufferPtr> GetEntityData(const std::string& cookie,
+                                                           const std::string& type);
 
   // Registers a watcher for an Entity. The EntityWatcher is notified of data
   // changes until it is closed.
@@ -175,20 +171,17 @@ class StoryStorage : public PageClient {
   //
   // Once an entity has been named, the associated |cookie| can be retrieved by
   // calling |GetEntityCookieForName|.
-  FuturePtr<Status> SetEntityName(const std::string& cookie,
-                                  const std::string& entity_name);
+  FuturePtr<Status> SetEntityName(const std::string& cookie, const std::string& entity_name);
 
   // Gets the Entity cookie associated with the specified name.
-  FuturePtr<Status, std::string> GetEntityCookieForName(
-      const std::string& entity_name);
+  FuturePtr<Status, std::string> GetEntityCookieForName(const std::string& entity_name);
 
   // Completes the returned future after all prior methods have completed.
   FuturePtr<> Sync();
 
  private:
   // |PageClient|
-  void OnPageChange(const std::string& key,
-                    fuchsia::mem::BufferPtr value) override;
+  void OnPageChange(const std::string& key, fuchsia::mem::BufferPtr value) override;
 
   // |PageClient|
   void OnPageDelete(const std::string& key) override;
@@ -200,14 +193,12 @@ class StoryStorage : public PageClient {
   //
   // |value| will never be a null StringPtr. |value| is always a JSON-encoded
   // string, so a null value will be presented as the string "null".
-  void NotifyLinkWatchers(const std::string& link_key, fidl::StringPtr value,
-                          const void* context);
+  void NotifyLinkWatchers(const std::string& link_key, fidl::StringPtr value, const void* context);
 
   // Notifies any watchers in |entity_watchers_[cookie]|.
   //
   // |value| is a valid fuchsia::mem::Buffer.
-  void NotifyEntityWatchers(const std::string& cookie,
-                            fuchsia::mem::Buffer value);
+  void NotifyEntityWatchers(const std::string& cookie, fuchsia::mem::Buffer value);
 
   // Completes the returned Future when the ledger notifies us (through
   // OnPageChange()) of a write for |key| with |value|.
@@ -231,8 +222,7 @@ class StoryStorage : public PageClient {
 
   // A map of Entity cookie (i.e. Ledger key) -> set of watchers. Multiple
   // watchers can watch the same entity.
-  std::map<std::string, fidl::InterfacePtrSet<fuchsia::modular::EntityWatcher>>
-      entity_watchers_;
+  std::map<std::string, fidl::InterfacePtrSet<fuchsia::modular::EntityWatcher>> entity_watchers_;
 
   // A map of ledger (key, value) to (vec of future). When we see a
   // notification in OnPageChange() for a matching (key, value), we complete
@@ -240,8 +230,7 @@ class StoryStorage : public PageClient {
   //
   // NOTE: we use a map<> of vector<> here instead of a multimap<> because we
   // complete all the Futures for a given key/value pair at once.
-  std::map<std::pair<std::string, std::string>, std::vector<FuturePtr<>>>
-      pending_writes_;
+  std::map<std::pair<std::string, std::string>, std::vector<FuturePtr<>>> pending_writes_;
 
   fxl::WeakPtrFactory<StoryStorage> weak_ptr_factory_;
 

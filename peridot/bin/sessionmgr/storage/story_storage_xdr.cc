@@ -3,22 +3,21 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/sessionmgr/storage/story_storage_xdr.h"
-#include "peridot/lib/module_manifest/module_manifest_xdr.h"
 
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fsl/vmo/strings.h>
 
+#include "peridot/lib/module_manifest/module_manifest_xdr.h"
+
 namespace modular {
 
-void XdrLinkPath(XdrContext* const xdr,
-                 fuchsia::modular::LinkPath* const data) {
+void XdrLinkPath(XdrContext* const xdr, fuchsia::modular::LinkPath* const data) {
   xdr->Field("module_path", &data->module_path);
   xdr->Field("link_name", &data->link_name);
 }
 
-void XdrModuleParameterMapEntry(
-    XdrContext* const xdr,
-    fuchsia::modular::ModuleParameterMapEntry* const data) {
+void XdrModuleParameterMapEntry(XdrContext* const xdr,
+                                fuchsia::modular::ModuleParameterMapEntry* const data) {
   // NOTE: the JSON field naming doesn't match the FIDL struct naming because
   // the field names in FIDL were changed.
   xdr->Field("key", &data->name);
@@ -32,8 +31,7 @@ void XdrModuleParameterMap(XdrContext* const xdr,
   xdr->Field("key_to_link_map", &data->entries, XdrModuleParameterMapEntry);
 }
 
-void XdrSurfaceRelation(XdrContext* const xdr,
-                        fuchsia::modular::SurfaceRelation* const data) {
+void XdrSurfaceRelation(XdrContext* const xdr, fuchsia::modular::SurfaceRelation* const data) {
   xdr->Field("arrangement", &data->arrangement);
   xdr->Field("dependency", &data->dependency);
   xdr->Field("emphasis", &data->emphasis);
@@ -66,8 +64,7 @@ void XdrIntentParameterData(XdrContext* const xdr,
         xdr->Field(kEntityType, &value);
         data->set_entity_type(std::move(value));
       } else {
-        FXL_LOG(ERROR) << "XdrIntentParameterData FROM_JSON unknown tag: "
-                       << tag;
+        FXL_LOG(ERROR) << "XdrIntentParameterData FROM_JSON unknown tag: " << tag;
       }
       break;
     }
@@ -108,8 +105,7 @@ void XdrIntentParameterData(XdrContext* const xdr,
   }
 }
 
-void XdrIntentParameter(XdrContext* const xdr,
-                        fuchsia::modular::IntentParameter* const data) {
+void XdrIntentParameter(XdrContext* const xdr, fuchsia::modular::IntentParameter* const data) {
   xdr->Field("name", &data->name);
   xdr->Field("data", &data->data, XdrIntentParameterData);
 }
@@ -120,8 +116,7 @@ void XdrIntent(XdrContext* const xdr, fuchsia::modular::Intent* const data) {
   xdr->Field("parameters", &data->parameters, XdrIntentParameter);
 }
 
-void XdrModuleData_v1(XdrContext* const xdr,
-                      fuchsia::modular::ModuleData* const data) {
+void XdrModuleData_v1(XdrContext* const xdr, fuchsia::modular::ModuleData* const data) {
   xdr->Field("url", &data->module_url);
   xdr->Field("module_path", &data->module_path);
   xdr->Field("module_source", &data->module_source);
@@ -133,8 +128,7 @@ void XdrModuleData_v1(XdrContext* const xdr,
   data->parameter_map.entries.resize(0);
 }
 
-void XdrModuleData_v2(XdrContext* const xdr,
-                      fuchsia::modular::ModuleData* const data) {
+void XdrModuleData_v2(XdrContext* const xdr, fuchsia::modular::ModuleData* const data) {
   xdr->Field("url", &data->module_url);
   xdr->Field("module_path", &data->module_path);
   xdr->Field("module_source", &data->module_source);
@@ -146,8 +140,7 @@ void XdrModuleData_v2(XdrContext* const xdr,
   xdr->Field("chain_data", &data->parameter_map, XdrModuleParameterMap);
 }
 
-void XdrModuleData_v3(XdrContext* const xdr,
-                      fuchsia::modular::ModuleData* const data) {
+void XdrModuleData_v3(XdrContext* const xdr, fuchsia::modular::ModuleData* const data) {
   xdr->Field("url", &data->module_url);
   xdr->Field("module_path", &data->module_path);
   xdr->Field("module_source", &data->module_source);
@@ -159,8 +152,7 @@ void XdrModuleData_v3(XdrContext* const xdr,
   xdr->Field("chain_data", &data->parameter_map, XdrModuleParameterMap);
 }
 
-void XdrModuleData_v4(XdrContext* const xdr,
-                      fuchsia::modular::ModuleData* const data) {
+void XdrModuleData_v4(XdrContext* const xdr, fuchsia::modular::ModuleData* const data) {
   if (!xdr->Version(4)) {
     return;
   }
@@ -175,8 +167,7 @@ void XdrModuleData_v4(XdrContext* const xdr,
   xdr->Field("chain_data", &data->parameter_map, XdrModuleParameterMap);
 }
 
-void XdrModuleData_v5(XdrContext* const xdr,
-                      fuchsia::modular::ModuleData* const data) {
+void XdrModuleData_v5(XdrContext* const xdr, fuchsia::modular::ModuleData* const data) {
   if (!xdr->Version(5)) {
     return;
   }
@@ -191,8 +182,7 @@ void XdrModuleData_v5(XdrContext* const xdr,
   xdr->Field("chain_data", &data->parameter_map, XdrModuleParameterMap);
 }
 
-void XdrModuleData_v6(XdrContext* const xdr,
-                      fuchsia::modular::ModuleData* const data) {
+void XdrModuleData_v6(XdrContext* const xdr, fuchsia::modular::ModuleData* const data) {
   if (!xdr->Version(6)) {
     return;
   }

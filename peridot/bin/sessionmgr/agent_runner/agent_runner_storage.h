@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_AGENT_RUNNER_AGENT_RUNNER_STORAGE_H_
 #define PERIDOT_BIN_SESSIONMGR_AGENT_RUNNER_AGENT_RUNNER_STORAGE_H_
 
-#include <functional>
-#include <string>
-
 #include <lib/fit/function.h>
 #include <src/lib/fxl/macros.h>
+
+#include <functional>
+#include <string>
 
 namespace modular {
 
@@ -58,8 +58,7 @@ class AgentRunnerStorage {
   class NotificationDelegate {
    public:
     virtual ~NotificationDelegate();
-    virtual void AddedTask(const std::string& key,
-                           TriggerInfo trigger_info) = 0;
+    virtual void AddedTask(const std::string& key, TriggerInfo trigger_info) = 0;
     virtual void DeletedTask(const std::string& key) = 0;
   };
 
@@ -68,8 +67,7 @@ class AgentRunnerStorage {
   // the future.
   //
   // Ownership of |delegate| is not taken and it must out-live *this.
-  virtual void Initialize(NotificationDelegate* delegate,
-                          fit::function<void()> done) = 0;
+  virtual void Initialize(NotificationDelegate* delegate, fit::function<void()> done) = 0;
 
   // Writes a new task to storage. |NotificationDelegate| will be notified of
   // the new task.
@@ -78,8 +76,7 @@ class AgentRunnerStorage {
 
   // Deletes existing task on the storage. |NotificationDelegate| will be
   // notified of the deleted task.
-  virtual void DeleteTask(const std::string& agent_url,
-                          const std::string& task_id,
+  virtual void DeleteTask(const std::string& agent_url, const std::string& task_id,
                           fit::function<void(bool)> done) = 0;
 
  private:

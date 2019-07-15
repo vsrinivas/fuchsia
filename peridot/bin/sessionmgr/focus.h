@@ -28,26 +28,21 @@ class FocusHandler : fuchsia::modular::FocusProvider,
                      fuchsia::modular::FocusController,
                      PageClient {
  public:
-  FocusHandler(fidl::StringPtr device_id, LedgerClient* ledger_client,
-               LedgerPageId page_id);
+  FocusHandler(fidl::StringPtr device_id, LedgerClient* ledger_client, LedgerPageId page_id);
   ~FocusHandler() override;
 
-  void AddProviderBinding(
-      fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request);
-  void AddControllerBinding(
-      fidl::InterfaceRequest<fuchsia::modular::FocusController> request);
+  void AddProviderBinding(fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request);
+  void AddControllerBinding(fidl::InterfaceRequest<fuchsia::modular::FocusController> request);
 
  private:
   // |fuchsia::modular::FocusProvider|
   void Query(QueryCallback callback) override;
-  void Watch(
-      fidl::InterfaceHandle<fuchsia::modular::FocusWatcher> watcher) override;
+  void Watch(fidl::InterfaceHandle<fuchsia::modular::FocusWatcher> watcher) override;
   void Request(fidl::StringPtr story_id) override;
 
   // |fuchsia::modular::FocusController|
   void Set(fidl::StringPtr story_id) override;
-  void WatchRequest(fidl::InterfaceHandle<fuchsia::modular::FocusRequestWatcher>
-                        watcher) override;
+  void WatchRequest(fidl::InterfaceHandle<fuchsia::modular::FocusRequestWatcher> watcher) override;
 
   // |PageClient|
   void OnPageChange(const std::string& key, const std::string& value) override;
@@ -74,15 +69,13 @@ class VisibleStoriesHandler : fuchsia::modular::VisibleStoriesController {
   ~VisibleStoriesHandler() override;
 
   void AddControllerBinding(
-      fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesController>
-          request);
+      fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesController> request);
 
  private:
   // |fuchsia::modular::VisibleStoriesController|
   void Set(fidl::VectorPtr<std::string> story_ids) override;
 
-  fidl::BindingSet<fuchsia::modular::VisibleStoriesController>
-      controller_bindings_;
+  fidl::BindingSet<fuchsia::modular::VisibleStoriesController> controller_bindings_;
 
   fidl::VectorPtr<std::string> visible_stories_;
 

@@ -43,14 +43,12 @@ class StoryMutator {
   fit::consumer<> set_runtime_state(fuchsia::modular::StoryState state);
 
   // Sets the value of |StoryModel.visibility_state|.
-  fit::consumer<> set_visibility_state(
-      fuchsia::modular::StoryVisibilityState state);
+  fit::consumer<> set_visibility_state(fuchsia::modular::StoryVisibilityState state);
 
  private:
   // Executes |commands| in order and in a single transaction.
   virtual fit::consumer<> ExecuteInternal(
-      std::vector<fuchsia::modular::storymodel::StoryModelMutation>
-          commands) = 0;
+      std::vector<fuchsia::modular::storymodel::StoryModelMutation> commands) = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryMutator);
 };

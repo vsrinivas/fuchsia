@@ -9,10 +9,8 @@ namespace {
 
 class SetLinkValueCall : public Operation<fuchsia::modular::ExecuteResult> {
  public:
-  SetLinkValueCall(StoryStorage* const story_storage,
-                   fuchsia::modular::LinkPath link_path,
-                   fit::function<void(fidl::StringPtr*)> mutate_fn,
-                   ResultCall done)
+  SetLinkValueCall(StoryStorage* const story_storage, fuchsia::modular::LinkPath link_path,
+                   fit::function<void(fidl::StringPtr*)> mutate_fn, ResultCall done)
       : Operation("SetLinkValueCall", std::move(done)),
         story_storage_(story_storage),
         link_path_(std::move(link_path)),
@@ -21,8 +19,8 @@ class SetLinkValueCall : public Operation<fuchsia::modular::ExecuteResult> {
  private:
   void Run() override {
     FlowToken flow{this, &result_};
-    auto did_update = story_storage_->UpdateLinkValue(
-        link_path_, std::move(mutate_fn_), this /* context */);
+    auto did_update =
+        story_storage_->UpdateLinkValue(link_path_, std::move(mutate_fn_), this /* context */);
     did_update->Then([this, flow](StoryStorage::Status status) {
       if (status == StoryStorage::Status::OK) {
         result_.status = fuchsia::modular::ExecuteStatus::OK;
@@ -44,14 +42,13 @@ class SetLinkValueCall : public Operation<fuchsia::modular::ExecuteResult> {
 
 }  // namespace
 
-void AddSetLinkValueOperation(
-    OperationContainer* const operation_container,
-    StoryStorage* const story_storage, fuchsia::modular::LinkPath link_path,
-    fit::function<void(fidl::StringPtr*)> mutate_fn,
-    fit::function<void(fuchsia::modular::ExecuteResult)> done) {
+void AddSetLinkValueOperation(OperationContainer* const operation_container,
+                              StoryStorage* const story_storage,
+                              fuchsia::modular::LinkPath link_path,
+                              fit::function<void(fidl::StringPtr*)> mutate_fn,
+                              fit::function<void(fuchsia::modular::ExecuteResult)> done) {
   operation_container->Add(std::make_unique<SetLinkValueCall>(
-      story_storage, std::move(link_path), std::move(mutate_fn),
-      std::move(done)));
+      story_storage, std::move(link_path), std::move(mutate_fn), std::move(done)));
 }
 
 }  // namespace modular

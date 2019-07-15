@@ -57,8 +57,7 @@ class StoryVisibilitySystem;
 // clients control over the story.
 class StoryControllerImpl : fuchsia::modular::StoryController {
  public:
-  StoryControllerImpl(SessionStorage* session_storage,
-                      StoryStorage* story_storage,
+  StoryControllerImpl(SessionStorage* session_storage, StoryStorage* story_storage,
                       std::unique_ptr<StoryMutator> story_mutator,
                       std::unique_ptr<StoryObserver> story_observer,
                       StoryVisibilitySystem* story_visibility_system,
@@ -66,8 +65,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   ~StoryControllerImpl() override;
 
   // Called by StoryProviderImpl.
-  void Connect(
-      fidl::InterfaceRequest<fuchsia::modular::StoryController> request);
+  void Connect(fidl::InterfaceRequest<fuchsia::modular::StoryController> request);
 
   // Called by StoryProviderImpl.
   bool IsRunning();
@@ -86,8 +84,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void DefocusModule(const std::vector<std::string>& module_path);
 
   // Called by ModuleControllerImpl.
-  void StopModule(const std::vector<std::string>& module_path,
-                  fit::function<void()> done);
+  void StopModule(const std::vector<std::string>& module_path, fit::function<void()> done);
 
   // Called by ModuleControllerImpl.
   //
@@ -112,16 +109,14 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // Called by ModuleContextImpl.
   void EmbedModule(
       AddModParams add_mod_params,
-      fidl::InterfaceRequest<fuchsia::modular::ModuleController>
-          module_controller_request,
+      fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller_request,
       fuchsia::ui::views::ViewToken view_token,
       fit::function<void(fuchsia::modular::StartModuleStatus)> callback);
 
   // Called by ModuleContextImpl.
   void AddModuleToStory(
       AddModParams add_mod_params,
-      fidl::InterfaceRequest<fuchsia::modular::ModuleController>
-          module_controller_request,
+      fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller_request,
       fit::function<void(fuchsia::modular::StartModuleStatus)> callback);
 
   // Stops the module at |module_path| in response to a call to
@@ -129,15 +124,13 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void RemoveModuleFromStory(const std::vector<std::string>& module_path);
 
   // Called by ModuleContextImpl.
-  void StartOngoingActivity(
-      const fuchsia::modular::OngoingActivityType ongoing_activity_type,
-      fidl::InterfaceRequest<fuchsia::modular::OngoingActivity> request);
+  void StartOngoingActivity(const fuchsia::modular::OngoingActivityType ongoing_activity_type,
+                            fidl::InterfaceRequest<fuchsia::modular::OngoingActivity> request);
 
   // Called by ModuleContextImpl.
-  void CreateEntity(
-      std::string type, fuchsia::mem::Buffer data,
-      fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
-      fit::function<void(std::string /* entity_reference */)> callback);
+  void CreateEntity(std::string type, fuchsia::mem::Buffer data,
+                    fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
+                    fit::function<void(std::string /* entity_reference */)> callback);
 
   // Stops the story as part of a story provider operation. The story provider
   // can indicate whether this is part of an operation where all stories are
@@ -202,14 +195,12 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void RequestStart() override;
   void TakeAndLoadSnapshot(fuchsia::ui::views::ViewToken view_token,
                            TakeAndLoadSnapshotCallback done) override;
-  void Watch(
-      fidl::InterfaceHandle<fuchsia::modular::StoryWatcher> watcher) override;
+  void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryWatcher> watcher) override;
   void GetActiveModules(GetActiveModulesCallback callback) override;
   void GetModules(GetModulesCallback callback) override;
   void GetModuleController(
       std::vector<std::string> module_path,
-      fidl::InterfaceRequest<fuchsia::modular::ModuleController> request)
-      override;
+      fidl::InterfaceRequest<fuchsia::modular::ModuleController> request) override;
   void GetLink(fuchsia::modular::LinkPath link_path,
                fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
 
@@ -223,11 +214,9 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   // Misc internal helpers.
   void SetRuntimeState(fuchsia::modular::StoryState new_state);
-  void NotifyStoryWatchers(
-      const fuchsia::modular::storymodel::StoryModel& model);
-  void NotifyOneStoryWatcher(
-      const fuchsia::modular::storymodel::StoryModel& model,
-      fuchsia::modular::StoryWatcher* watcher);
+  void NotifyStoryWatchers(const fuchsia::modular::storymodel::StoryModel& model);
+  void NotifyOneStoryWatcher(const fuchsia::modular::storymodel::StoryModel& model,
+                             fuchsia::modular::StoryWatcher* watcher);
   void ProcessPendingStoryShellViews();
   std::set<fuchsia::modular::LinkPath> GetActiveLinksInternal();
 
@@ -249,8 +238,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // Finds the active RunningModInfo for a module at the given module path. May
   // return nullptr if the module at the path is not running, regardless of
   // whether a module at that path is known to the story.
-  RunningModInfo* FindRunningModInfo(
-      const std::vector<std::string>& module_path);
+  RunningModInfo* FindRunningModInfo(const std::vector<std::string>& module_path);
 
   // Finds the active RunningModInfo for the story shell anchor of a module
   // with the given |running_mod_info|. The anchor is the closest ancestor
@@ -311,8 +299,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   // This is the source of truth on which activities are currently ongoing in
   // the story's modules.
-  fidl::BindingSet<fuchsia::modular::OngoingActivity,
-                   std::unique_ptr<OngoingActivityImpl>>
+  fidl::BindingSet<fuchsia::modular::OngoingActivity, std::unique_ptr<OngoingActivityImpl>>
       ongoing_activities_;
 
   // Used to load snapshots.
@@ -331,9 +318,8 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 };
 
 // NOTE: This is only exposed publicly for testing.
-bool ShouldRestartModuleForNewIntent(
-    const fuchsia::modular::Intent& old_intent,
-    const fuchsia::modular::Intent& new_intent);
+bool ShouldRestartModuleForNewIntent(const fuchsia::modular::Intent& old_intent,
+                                     const fuchsia::modular::Intent& new_intent);
 
 }  // namespace modular
 

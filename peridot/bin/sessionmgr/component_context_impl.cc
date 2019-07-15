@@ -43,43 +43,34 @@ fuchsia::modular::ComponentContextPtr ComponentContextImpl::NewBinding() {
   return ptr;
 }
 
-void ComponentContextImpl::GetLedger(
-    fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) {
+void ComponentContextImpl::GetLedger(fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) {
   ledger_repository_->GetLedger(to_array(component_url_), std::move(request));
 }
 
 void ComponentContextImpl::ConnectToAgent(
     std::string url,
-    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
-        incoming_services_request,
-    fidl::InterfaceRequest<fuchsia::modular::AgentController>
-        agent_controller_request) {
-  agent_runner_->ConnectToAgent(component_instance_id_, url,
-                                std::move(incoming_services_request),
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services_request,
+    fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request) {
+  agent_runner_->ConnectToAgent(component_instance_id_, url, std::move(incoming_services_request),
                                 std::move(agent_controller_request));
 }
 
-void ComponentContextImpl::ConnectToAgentService(
-    fuchsia::modular::AgentServiceRequest request) {
-  agent_runner_->ConnectToAgentService(component_instance_id_,
-                                       std::move(request));
+void ComponentContextImpl::ConnectToAgentService(fuchsia::modular::AgentServiceRequest request) {
+  agent_runner_->ConnectToAgentService(component_instance_id_, std::move(request));
 }
 
 void ComponentContextImpl::ObtainMessageQueue(
-    std::string name,
-    fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request) {
-  message_queue_manager_->ObtainMessageQueue(
-      component_namespace_, component_instance_id_, name, std::move(request));
+    std::string name, fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request) {
+  message_queue_manager_->ObtainMessageQueue(component_namespace_, component_instance_id_, name,
+                                             std::move(request));
 }
 
 void ComponentContextImpl::DeleteMessageQueue(std::string name) {
-  message_queue_manager_->DeleteMessageQueue(component_namespace_,
-                                             component_instance_id_, name);
+  message_queue_manager_->DeleteMessageQueue(component_namespace_, component_instance_id_, name);
 }
 
 void ComponentContextImpl::GetMessageSender(
-    std::string queue_token,
-    fidl::InterfaceRequest<fuchsia::modular::MessageSender> request) {
+    std::string queue_token, fidl::InterfaceRequest<fuchsia::modular::MessageSender> request) {
   message_queue_manager_->GetMessageSender(queue_token, std::move(request));
 }
 
@@ -98,8 +89,6 @@ void ComponentContextImpl::CreateEntityWithData(
   result(entity_provider_runner_->CreateReferenceFromData(std::move(copy)));
 }
 
-void ComponentContextImpl::GetPackageName(GetPackageNameCallback result) {
-  result(component_url_);
-}
+void ComponentContextImpl::GetPackageName(GetPackageNameCallback result) { result(component_url_); }
 
 }  // namespace modular

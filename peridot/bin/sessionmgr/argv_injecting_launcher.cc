@@ -6,8 +6,8 @@
 
 namespace modular {
 
-ArgvInjectingLauncher::ArgvInjectingLauncher(
-    fuchsia::sys::LauncherPtr parent_launcher, ArgvMap per_component_argv)
+ArgvInjectingLauncher::ArgvInjectingLauncher(fuchsia::sys::LauncherPtr parent_launcher,
+                                             ArgvMap per_component_argv)
     : parent_launcher_(std::move(parent_launcher)),
       per_component_argv_(std::move(per_component_argv)) {}
 
@@ -21,8 +21,7 @@ void ArgvInjectingLauncher::CreateComponent(
     launch_info.arguments.reset(it->second);
   }
 
-  parent_launcher_->CreateComponent(std::move(launch_info),
-                                    std::move(controller));
+  parent_launcher_->CreateComponent(std::move(launch_info), std::move(controller));
 }
 
 }  // namespace modular

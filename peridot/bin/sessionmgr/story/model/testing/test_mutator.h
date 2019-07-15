@@ -36,8 +36,7 @@ class TestMutator : public StoryMutator {
   static std::unique_ptr<StoryMutator> Create(TestMutator** ptr);
 
   fit::consumer<> ExecuteInternal(
-      std::vector<fuchsia::modular::storymodel::StoryModelMutation> commands)
-      override;
+      std::vector<fuchsia::modular::storymodel::StoryModelMutation> commands) override;
 
   struct ExecuteCall {
     fit::completer<> completer;

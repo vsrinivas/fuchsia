@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/modular/storymodel/cpp/fidl.h>
-
 #include "peridot/bin/sessionmgr/story/systems/story_visibility_system.h"
+
+#include <fuchsia/modular/storymodel/cpp/fidl.h>
 
 #include "peridot/bin/sessionmgr/story/model/story_mutator.h"
 
@@ -14,8 +14,7 @@ using fuchsia::modular::StoryVisibilityState;
 using fuchsia::modular::storymodel::StoryModel;
 using fuchsia::modular::storymodel::StoryModelMutation;
 
-StoryVisibilitySystem::StoryVisibilitySystem(
-    std::unique_ptr<StoryMutator> mutator)
+StoryVisibilitySystem::StoryVisibilitySystem(std::unique_ptr<StoryMutator> mutator)
     : mutator_(std::move(mutator)) {}
 
 StoryVisibilitySystem::~StoryVisibilitySystem() {}

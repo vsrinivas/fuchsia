@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_SESSIONMGR_STORY_SYSTEMS_STORY_VISIBILITY_SYSTEM_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
+
 #include <memory>
 
 #include "peridot/bin/sessionmgr/story/system.h"

@@ -5,9 +5,9 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_STORY_RUNNER_STORY_ENTITY_PROVIDER_H_
 #define PERIDOT_BIN_SESSIONMGR_STORY_RUNNER_STORY_ENTITY_PROVIDER_H_
 
-#include <map>
-
 #include <fuchsia/modular/cpp/fidl.h>
+
+#include <map>
 
 #include "peridot/bin/sessionmgr/storage/story_storage.h"
 
@@ -30,26 +30,22 @@ class StoryEntityProvider : public fuchsia::modular::EntityProvider {
   void CreateEntity(const std::string& type, fuchsia::mem::Buffer data,
                     fit::function<void(std::string /* cookie */)> callback);
 
-  void Connect(fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
-                   provider_request);
+  void Connect(fidl::InterfaceRequest<fuchsia::modular::EntityProvider> provider_request);
 
  private:
   // |fuchsia::modular::EntityProvider|
   void GetTypes(std::string cookie, GetTypesCallback callback) override;
 
   // |fuchsia::modular::EntityProvider|
-  void GetData(std::string cookie, std::string type,
-               GetDataCallback callback) override;
+  void GetData(std::string cookie, std::string type, GetDataCallback callback) override;
 
   // |fuchsia::modular::EntityProvider|
-  void WriteData(std::string cookie, std::string type,
-                 fuchsia::mem::Buffer data,
+  void WriteData(std::string cookie, std::string type, fuchsia::mem::Buffer data,
                  WriteDataCallback callback) override;
 
   // |fuchsia::modular::EntityProvider|
-  void Watch(
-      std::string cookie, std::string type,
-      fidl::InterfaceHandle<fuchsia::modular::EntityWatcher> watcher) override;
+  void Watch(std::string cookie, std::string type,
+             fidl::InterfaceHandle<fuchsia::modular::EntityWatcher> watcher) override;
 
   const std::string story_id_;
   StoryStorage* story_storage_;  // Not owned.

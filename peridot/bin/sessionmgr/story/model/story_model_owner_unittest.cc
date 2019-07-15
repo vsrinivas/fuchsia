@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "peridot/bin/sessionmgr/story/model/story_model_owner.h"
+
 #include <lib/fit/bridge.h>
 #include <lib/fit/function.h>
 #include <lib/fit/single_threaded_executor.h>
 
 #include "lib/gtest/test_loop_fixture.h"
-#include "peridot/bin/sessionmgr/story/model/story_model_owner.h"
 #include "peridot/bin/sessionmgr/story/model/story_model_storage.h"
 
 using fuchsia::modular::StoryVisibilityState;
@@ -38,8 +39,7 @@ class TestModelStorage : public StoryModelStorage {
     fit::bridge<> bridge;
 
     // Store the arguments we got.
-    ExecuteCall call{.commands = std::move(commands),
-                     .completer = std::move(bridge.completer)};
+    ExecuteCall call{.commands = std::move(commands), .completer = std::move(bridge.completer)};
     calls.push_back(std::move(call));
 
     return bridge.consumer.promise();
@@ -56,8 +56,8 @@ class StoryModelOwnerTest : public ::gtest::TestLoopFixture {
     auto model_storage = std::make_unique<TestModelStorage>();
     model_storage_ = model_storage.get();
 
-    auto owner = std::make_unique<StoryModelOwner>(story_name, executor_.get(),
-                                                   std::move(model_storage));
+    auto owner =
+        std::make_unique<StoryModelOwner>(story_name, executor_.get(), std::move(model_storage));
     return owner;
   }
 
@@ -77,11 +77,10 @@ TEST_F(StoryModelOwnerTest, SuccessfulMutate) {
 
   auto mutator = owner->NewMutator();
   bool done{false};
-  auto result_task =
-      mutator->set_visibility_state(StoryVisibilityState::IMMERSIVE)
-          .promise()
-          .and_then([&] { done = true; })
-          .or_else([] { FAIL(); });
+  auto result_task = mutator->set_visibility_state(StoryVisibilityState::IMMERSIVE)
+                         .promise()
+                         .and_then([&] { done = true; })
+                         .or_else([] { FAIL(); });
   RunLoopUntilIdle();
 
   // The persistence system should have been called.
@@ -101,8 +100,7 @@ TEST_F(StoryModelOwnerTest, SuccessfulMutate) {
   // has not heard back from its storage that the mutation occurred.
   auto observer = owner->NewObserver();
   EXPECT_EQ("test_name", observer->model().name());
-  EXPECT_EQ(StoryVisibilityState::DEFAULT,
-            observer->model().visibility_state());
+  EXPECT_EQ(StoryVisibilityState::DEFAULT, observer->model().visibility_state());
 
   // Now dispatch mutations from the persistence system, and we should observe
   // that ApplyMutations() is invoked.
@@ -110,8 +108,7 @@ TEST_F(StoryModelOwnerTest, SuccessfulMutate) {
 
   // And the new model value that ApplyMutations returned should be reflected in
   // the owner.
-  EXPECT_EQ(StoryVisibilityState::IMMERSIVE,
-            observer->model().visibility_state());
+  EXPECT_EQ(StoryVisibilityState::IMMERSIVE, observer->model().visibility_state());
 }
 
 TEST_F(StoryModelOwnerTest, FailedMutate) {
@@ -119,11 +116,10 @@ TEST_F(StoryModelOwnerTest, FailedMutate) {
   auto mutator = owner->NewMutator();
   bool task_executed{false};
   bool saw_error{false};
-  auto result_task =
-      mutator->set_visibility_state(StoryVisibilityState::IMMERSIVE)
-          .promise()
-          .and_then([&] { task_executed = true; })
-          .or_else([&] { saw_error = true; });
+  auto result_task = mutator->set_visibility_state(StoryVisibilityState::IMMERSIVE)
+                         .promise()
+                         .and_then([&] { task_executed = true; })
+                         .or_else([&] { saw_error = true; });
   RunLoopUntilIdle();
   model_storage()->calls[0].completer.complete_error();
   RunLoopUntilIdle();
@@ -139,11 +135,10 @@ TEST_F(StoryModelOwnerTest, AbandonedMutate) {
   auto mutator = owner->NewMutator();
   bool task_executed{false};
   bool saw_error{false};
-  auto result_task =
-      mutator->set_visibility_state(StoryVisibilityState::IMMERSIVE)
-          .promise_or(fit::error())  // turn abandonment into an error.
-          .and_then([&] { task_executed = true; })
-          .or_else([&] { saw_error = true; });
+  auto result_task = mutator->set_visibility_state(StoryVisibilityState::IMMERSIVE)
+                         .promise_or(fit::error())  // turn abandonment into an error.
+                         .and_then([&] { task_executed = true; })
+                         .or_else([&] { saw_error = true; });
   RunLoopUntilIdle();
   // Clearing the list of calls will destroy the completer, which has the
   // side-effect of abandoning the returned task.
@@ -162,11 +157,10 @@ TEST_F(StoryModelOwnerTest, MutatorLifecycle_OwnerDestroyed) {
   owner.reset();
   bool task_executed{false};
   bool saw_error{false};
-  auto result_task =
-      mutator->set_visibility_state(StoryVisibilityState::IMMERSIVE)
-          .promise()
-          .and_then([&] { task_executed = true; })
-          .or_else([&] { saw_error = true; });
+  auto result_task = mutator->set_visibility_state(StoryVisibilityState::IMMERSIVE)
+                         .promise()
+                         .and_then([&] { task_executed = true; })
+                         .or_else([&] { saw_error = true; });
   RunLoopUntilIdle();
   fit::run_single_threaded(std::move(result_task));
   EXPECT_FALSE(task_executed);
@@ -187,14 +181,12 @@ TEST_F(StoryModelOwnerTest, ObserversAreNotified) {
 
   // Another listener should also get the update!
   bool got_update2{false};
-  observer->RegisterListener(
-      [&](const StoryModel& model) { got_update2 = true; });
+  observer->RegisterListener([&](const StoryModel& model) { got_update2 = true; });
 
   // Also on another observer.
   auto observer2 = owner->NewObserver();
   bool got_update3{false};
-  observer2->RegisterListener(
-      [&](const StoryModel& model) { got_update3 = true; });
+  observer2->RegisterListener([&](const StoryModel& model) { got_update3 = true; });
 
   std::vector<StoryModelMutation> commands;
   commands.resize(1);
@@ -213,8 +205,7 @@ TEST_F(StoryModelOwnerTest, ObserversAreNotNotifiedOnNoChange) {
   auto observer = owner->NewObserver();
 
   bool got_update{false};
-  observer->RegisterListener(
-      [&](const StoryModel& model) { got_update = true; });
+  observer->RegisterListener([&](const StoryModel& model) { got_update = true; });
 
   std::vector<StoryModelMutation> commands;
   commands.resize(1);
@@ -232,8 +223,7 @@ TEST_F(StoryModelOwnerTest, ObserversLifecycle_ClientDestroyed) {
   auto observer = owner->NewObserver();
 
   bool got_update{false};
-  observer->RegisterListener(
-      [&](const StoryModel& model) { got_update = true; });
+  observer->RegisterListener([&](const StoryModel& model) { got_update = true; });
 
   std::vector<StoryModelMutation> commands;
   commands.resize(1);
@@ -253,8 +243,8 @@ TEST_F(StoryModelOwnerTest, ObserversLifecycle_OwnerDestroyed) {
   auto observer = owner->NewObserver();
 
   bool destroyed{false};
-  observer->RegisterListener([defer = fit::defer([&] { destroyed = true; })](
-                                 const StoryModel& model) {});
+  observer->RegisterListener(
+      [defer = fit::defer([&] { destroyed = true; })](const StoryModel& model) {});
 
   owner.reset();
   EXPECT_TRUE(destroyed);

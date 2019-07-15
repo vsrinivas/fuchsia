@@ -35,10 +35,9 @@ TEST_F(FocusModCommandRunnerTest, Focus) {
   command.set_focus_mod(std::move(focus_mod));
 
   fuchsia::modular::ExecuteResult result;
-  runner_->Execute("story1", nullptr /* story_storage */, std::move(command),
-                   [&](fuchsia::modular::ExecuteResult execute_result) {
-                     result = std::move(execute_result);
-                   });
+  runner_->Execute(
+      "story1", nullptr /* story_storage */, std::move(command),
+      [&](fuchsia::modular::ExecuteResult execute_result) { result = std::move(execute_result); });
 
   RunLoopUntilIdle();
   EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
@@ -53,10 +52,9 @@ TEST_F(FocusModCommandRunnerTest, FocusModNameTransitional) {
   command.set_focus_mod(std::move(focus_mod));
 
   fuchsia::modular::ExecuteResult result;
-  runner_->Execute("story1", nullptr /* story_storage */, std::move(command),
-                   [&](fuchsia::modular::ExecuteResult execute_result) {
-                     result = std::move(execute_result);
-                   });
+  runner_->Execute(
+      "story1", nullptr /* story_storage */, std::move(command),
+      [&](fuchsia::modular::ExecuteResult execute_result) { result = std::move(execute_result); });
 
   RunLoopUntilIdle();
   EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
@@ -72,10 +70,9 @@ TEST_F(FocusModCommandRunnerTest, FocusEmptyPath) {
   command.set_focus_mod(std::move(focus_mod));
 
   fuchsia::modular::ExecuteResult result;
-  runner_->Execute("story1", nullptr /* story_storage */, std::move(command),
-                   [&](fuchsia::modular::ExecuteResult execute_result) {
-                     result = std::move(execute_result);
-                   });
+  runner_->Execute(
+      "story1", nullptr /* story_storage */, std::move(command),
+      [&](fuchsia::modular::ExecuteResult execute_result) { result = std::move(execute_result); });
 
   RunLoopUntilIdle();
   EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_COMMAND, result.status);

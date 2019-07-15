@@ -7,6 +7,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
+
 #include "peridot/bin/sessionmgr/storage/story_storage.h"
 
 namespace modular {

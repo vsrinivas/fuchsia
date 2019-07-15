@@ -32,9 +32,7 @@ const char kStoryModelKeyPrefix[] = "storymodel/";
 const char kDeviceKeyPrefix[] = "storymodel/device/";
 // const char kSharedKeyPrefix[] = "shared/";
 
-std::string MakeDeviceKey(const std::string& device_id) {
-  return kDeviceKeyPrefix + device_id;
-}
+std::string MakeDeviceKey(const std::string& device_id) { return kDeviceKeyPrefix + device_id; }
 }  // namespace
 
 namespace {
@@ -45,8 +43,7 @@ std::vector<uint8_t> EncodeForStorage(T* table) {
   std::vector<uint8_t> encoded;
   // This can only fail if |table| contains handles. StoryModel and its fields
   // do not.
-  FXL_CHECK(fidl::EncodeObject(table, &encoded, nullptr /* error_msg_out */) ==
-            ZX_OK);
+  FXL_CHECK(fidl::EncodeObject(table, &encoded, nullptr /* error_msg_out */) == ZX_OK);
   return encoded;
 }
 
@@ -61,9 +58,9 @@ void DecodeFromStorage(std::vector<uint8_t> encoded, T* table) {
 }
 }  // namespace
 
-LedgerStoryModelStorage::LedgerStoryModelStorage(
-    LedgerClient* const ledger_client, fuchsia::ledger::PageId page_id,
-    std::string device_id)
+LedgerStoryModelStorage::LedgerStoryModelStorage(LedgerClient* const ledger_client,
+                                                 fuchsia::ledger::PageId page_id,
+                                                 std::string device_id)
     : PageClient("LedgerStoryModelStorage", ledger_client, std::move(page_id),
                  kStoryModelKeyPrefix),
       device_id_(std::move(device_id)) {}
@@ -74,9 +71,8 @@ LedgerStoryModelStorage::~LedgerStoryModelStorage() = default;
 namespace {
 // Appends to |commands| StoryModelMutation objects that, when applied to a
 // StoryModel, reflect the device state in |device_state_bytes|.
-void GenerateObservedMutationsForDeviceState(
-    std::vector<uint8_t> device_state_bytes,
-    std::vector<StoryModelMutation>* commands) {
+void GenerateObservedMutationsForDeviceState(std::vector<uint8_t> device_state_bytes,
+                                             std::vector<StoryModelMutation>* commands) {
   StoryModel model;
   DecodeFromStorage(std::move(device_state_bytes), &model);
 
@@ -90,18 +86,17 @@ void GenerateObservedMutationsForDeviceState(
   }
 }
 
-void GenerateObservedMutationsForDeviceState(
-    const fuchsia::mem::Buffer& buffer,
-    std::vector<StoryModelMutation>* commands) {
+void GenerateObservedMutationsForDeviceState(const fuchsia::mem::Buffer& buffer,
+                                             std::vector<StoryModelMutation>* commands) {
   std::vector<uint8_t> bytes;
   FXL_CHECK(fsl::VectorFromVmo(buffer, &bytes));
   GenerateObservedMutationsForDeviceState(std::move(bytes), commands);
 }
 }  // namespace
 
-void LedgerStoryModelStorage::OnChange(
-    fuchsia::ledger::PageChange page_change,
-    fuchsia::ledger::ResultState result_state, OnChangeCallback callback) {
+void LedgerStoryModelStorage::OnChange(fuchsia::ledger::PageChange page_change,
+                                       fuchsia::ledger::ResultState result_state,
+                                       OnChangeCallback callback) {
   switch (result_state) {
     case fuchsia::ledger::ResultState::COMPLETED:
       ProcessCompletePageChange(std::move(page_change));
@@ -129,18 +124,15 @@ void LedgerStoryModelStorage::OnChange(
   callback(nullptr /* snapshot request */);
 }
 
-void LedgerStoryModelStorage::ProcessCompletePageChange(
-    fuchsia::ledger::PageChange page_change) {
+void LedgerStoryModelStorage::ProcessCompletePageChange(fuchsia::ledger::PageChange page_change) {
   std::vector<StoryModelMutation> commands;
 
   for (auto& entry : page_change.changed_entries) {
     auto key = to_string(entry.key);
     if (key == MakeDeviceKey(device_id_)) {
-      FXL_CHECK(entry.value)
-          << key << ": This key should never be deleted. Something is wrong.";
+      FXL_CHECK(entry.value) << key << ": This key should never be deleted. Something is wrong.";
       // Read the value and generate equivalent StoryModelMutation commands.
-      GenerateObservedMutationsForDeviceState(std::move(*entry.value),
-                                              &commands);
+      GenerateObservedMutationsForDeviceState(std::move(*entry.value), &commands);
     } else if (key.find(kDeviceKeyPrefix) == 0) {
       // This is device data from another device!
       // TODO(thatguy): Store it in the local StoryModel when we care about
@@ -180,8 +172,7 @@ struct PartitionedCommands {
   // And these apply to shared (cross-device) state.
   std::vector<StoryModelMutation> shared_commands;
 };
-PartitionedCommands PartitionCommandsForDeviceAndShared(
-    std::vector<StoryModelMutation> commands) {
+PartitionedCommands PartitionCommandsForDeviceAndShared(std::vector<StoryModelMutation> commands) {
   PartitionedCommands partitioned_commands;
 
   for (auto& i : commands) {
@@ -204,8 +195,7 @@ PartitionedCommands PartitionCommandsForDeviceAndShared(
 // Reads the value in the given key and returns an object of type T. If |key|
 // does not have a value, returns a default-constructed T.
 template <class T>
-fit::promise<T> ReadObjectFromKey(fuchsia::ledger::PageSnapshot* snapshot,
-                                  const std::string& key) {
+fit::promise<T> ReadObjectFromKey(fuchsia::ledger::PageSnapshot* snapshot, const std::string& key) {
   return PageSnapshotPromise::GetInline(snapshot, key)
       .and_then([](const std::unique_ptr<std::vector<uint8_t>>& value) {
         if (!value) {
@@ -220,8 +210,7 @@ fit::promise<T> ReadObjectFromKey(fuchsia::ledger::PageSnapshot* snapshot,
 
 // Writes |value| to |key|.
 template <class T>
-void WriteObjectToKey(fuchsia::ledger::Page* page, const std::string& key,
-                      T value) {
+void WriteObjectToKey(fuchsia::ledger::Page* page, const std::string& key, T value) {
   auto bytes = EncodeForStorage(&value);
   // TODO(thatguy): Calculate if this value is too big for a FIDL message.  If
   // so, fall back on Page.CreateReferenceFromBuffer() and Page.PutReference().
@@ -247,8 +236,7 @@ fit::promise<> UpdateDeviceState(fuchsia::ledger::Page* page,
   // 3) Write the new contents back to |key|.
   auto key = MakeDeviceKey(device_id);
   return ReadObjectFromKey<StoryModel>(snapshot, key)
-      .and_then([page, key, commands = std::move(commands)](
-                    const StoryModel& current_value) {
+      .and_then([page, key, commands = std::move(commands)](const StoryModel& current_value) {
         auto new_value = ApplyMutations(current_value, commands);
         WriteObjectToKey(page, key, std::move(new_value));
         return fit::ok();
@@ -284,20 +272,18 @@ fit::promise<> LedgerStoryModelStorage::Load() {
   auto state = std::make_unique<State>();
 
   page()->GetSnapshot(state->page_snapshot.NewRequest(),
-                      fidl::VectorPtr<uint8_t>::New(0) /* key_prefix */,
-                      nullptr /* watcher */);
+                      fidl::VectorPtr<uint8_t>::New(0) /* key_prefix */, nullptr /* watcher */);
   auto key = MakeDeviceKey(device_id_);
   auto read_promise =
       PageSnapshotPromise::GetInline(state->page_snapshot.get(), key)
-          .and_then(
-              [state = state.get()](const std::unique_ptr<std::vector<uint8_t>>&
-                                        device_state_bytes) {
-                if (device_state_bytes) {
-                  GenerateObservedMutationsForDeviceState(
-                      std::move(*device_state_bytes), &state->commands);
-                }
-                return fit::ok();
-              });
+          .and_then([state = state.get()](
+                        const std::unique_ptr<std::vector<uint8_t>>& device_state_bytes) {
+            if (device_state_bytes) {
+              GenerateObservedMutationsForDeviceState(std::move(*device_state_bytes),
+                                                      &state->commands);
+            }
+            return fit::ok();
+          });
 
   return read_promise
       .and_then([this, state = state.get()]() -> fit::result<> {
@@ -316,8 +302,7 @@ fit::promise<> LedgerStoryModelStorage::Flush() {
   return fit::make_ok_promise().wrap_with(sequencer_);
 }
 
-fit::promise<> LedgerStoryModelStorage::Execute(
-    std::vector<StoryModelMutation> commands) {
+fit::promise<> LedgerStoryModelStorage::Execute(std::vector<StoryModelMutation> commands) {
   // Synopsis of the Execute() task:
   //
   // 1) Start a Page transaction.
@@ -340,13 +325,11 @@ fit::promise<> LedgerStoryModelStorage::Execute(
   auto state = std::make_unique<State>();
 
   return fit::make_promise([this, state = state.get(),
-                            commands = std::move(
-                                commands)]() mutable -> fit::promise<> {
+                            commands = std::move(commands)]() mutable -> fit::promise<> {
            page()->StartTransaction();
-           page()->GetSnapshot(
-               state->page_snapshot.NewRequest(),
-               fidl::VectorPtr<uint8_t>::New(0) /* key_prefix */,
-               nullptr /* watcher */);
+           page()->GetSnapshot(state->page_snapshot.NewRequest(),
+                               fidl::VectorPtr<uint8_t>::New(0) /* key_prefix */,
+                               nullptr /* watcher */);
 
            // Partition up the commands into those that affect device-only
            // state, and those that affect shared (among all devices) state.
@@ -354,18 +337,16 @@ fit::promise<> LedgerStoryModelStorage::Execute(
                PartitionCommandsForDeviceAndShared(std::move(commands));
 
            // Dispatch the update commands.
-           auto update_device_state_promise =
-               UpdateDeviceState(page(), state->page_snapshot.get(), device_id_,
-                                 std::move(device_commands));
-           auto update_shared_state_promise = UpdateSharedState(
-               page(), state->page_snapshot.get(), std::move(shared_commands));
+           auto update_device_state_promise = UpdateDeviceState(
+               page(), state->page_snapshot.get(), device_id_, std::move(device_commands));
+           auto update_shared_state_promise =
+               UpdateSharedState(page(), state->page_snapshot.get(), std::move(shared_commands));
 
            // Wait on all four pending promises. Fail if any one of them
            // result in an error.
            return fit::join_promises(std::move(update_device_state_promise),
                                      std::move(update_shared_state_promise))
-               .and_then([](std::tuple<fit::result<>, fit::result<>>& results)
-                             -> fit::result<> {
+               .and_then([](std::tuple<fit::result<>, fit::result<>>& results) -> fit::result<> {
                  auto [device_result, shared_result] = results;
                  if (device_result.is_error() || shared_result.is_error()) {
                    return fit::error();

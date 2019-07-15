@@ -23,8 +23,7 @@ class NoopStoryModelStorage : public StoryModelStorage {
   fit::promise<> Load() override;
   fit::promise<> Flush() override;
   fit::promise<> Execute(
-      std::vector<fuchsia::modular::storymodel::StoryModelMutation> commands)
-      override;
+      std::vector<fuchsia::modular::storymodel::StoryModelMutation> commands) override;
 
   // When |scope_| is destroyed (which is when |this| is destructed), all
   // fit::promises we created in Mutate() will be abandoned. This is important
