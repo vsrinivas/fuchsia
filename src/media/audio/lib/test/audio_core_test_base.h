@@ -8,6 +8,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 
 #include "src/media/audio/lib/test/audio_test_base.h"
+#include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 namespace media::audio::test {
 
@@ -21,6 +22,21 @@ constexpr float kTooHighGainDb = fuchsia::media::audio::MAX_GAIN_DB + 0.1f;
 //
 // This set of tests verifies asynchronous usage of audio_core protocols.
 class AudioCoreTestBase : public AudioTestBase {
+ protected:
+  void SetUp() override;
+  void TearDown() override;
+
+  void ExpectCallback() override;
+  void ExpectDisconnect() override;
+
+  fuchsia::media::AudioCorePtr audio_core_;
+};
+
+//
+// HermeticAudioCoreTestBase
+//
+// This set of tests verifies asynchronous usage of audio_core protocols.
+class HermeticAudioCoreTest : public HermeticAudioTest {
  protected:
   void SetUp() override;
   void TearDown() override;

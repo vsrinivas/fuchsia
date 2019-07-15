@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/audio_core"
+    },
+    "sandbox": {
+        "features": [
+            "config-data",
+            "isolated-persistent-storage",
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.scheduler.ProfileProvider"
+        ]
+    }
+}

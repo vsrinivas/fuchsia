@@ -30,6 +30,13 @@ package("virtual_audio_service") {
       path = rebase_path("meta/virtual_audio_service.cmx")
       dest = "virtual_audio_service.cmx"
     },
+    # The nodevfs cmx is used in some test environments where we would like to provide our own
+    # devfs for the test. At this time we need to remove any dev sandbox metadata as appmgr does
+    # not allow these namespaces to be overridden.
+    {
+      path = rebase_path("meta/virtual_audio_service_nodevfs.cmx")
+      dest = "virtual_audio_service_nodevfs.cmx"
+    },
   ]
 }
 

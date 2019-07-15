@@ -1,0 +1,40 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+
+devmgr_manifest("devmgr-manifest") {
+}
+
+package("audio_test_devmgr") {
+  testonly = true
+  deps = [
+    ":devmgr-manifest",
+    "//src/lib/isolated_devmgr",
+    "//src/media/audio/drivers/virtual_audio:virtual_audio_driver",
+  ]
+
+  extra = [ "$target_gen_dir/devmgr.manifest" ]
+
+  binaries = [
+    {
+      name = "isolated_devmgr"
+    },
+  ]
+
+  meta = [
+    {
+      dest = "audio_test_devmgr.cmx"
+      path = rebase_path("meta/audio_test_devmgr.cmx")
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("${root_build_dir}/virtual_audio_driver.so")
+      dest = "virtual_audio_driver.so"
+    },
+  ]
+}

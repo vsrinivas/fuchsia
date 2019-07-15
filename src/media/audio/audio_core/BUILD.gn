@@ -48,6 +48,13 @@ package("audio_core") {
       path = rebase_path("meta/audio_core.cmx")
       dest = "audio_core.cmx"
     },
+    # The nodevfs cmx is used in some test environments where we would like to provide our own
+    # devfs for the test. At this time we need to remove any dev sandbox metadata as appmgr does
+    # not allow these namespaces to be overridden.
+    {
+      path = rebase_path("meta/audio_core_nodevfs.cmx")
+      dest = "audio_core_nodevfs.cmx"
+    },
   ]
 }
 

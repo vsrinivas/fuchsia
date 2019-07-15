@@ -40,9 +40,8 @@ constexpr char kCallbackErr[] = "Unexpected callback received!\n";
 // TestFixture
 //
 class TestFixture : public ::gtest::RealLoopFixture {
- protected:
-  void SetUp() override;
-  void TearDown() override;
+ public:
+  bool error_occurred() const { return error_occurred_; }
 
   // Simple handler, when the only required response is to record the error.
   auto ErrorHandler() {
@@ -87,6 +86,10 @@ class TestFixture : public ::gtest::RealLoopFixture {
   // Wait for CompletionCallback or ErrorHandler, expecting the specified error.
   virtual void ExpectDisconnect() { ExpectError(ZX_ERR_PEER_CLOSED); }
   void ExpectError(zx_status_t expect_error);
+
+ protected:
+  void SetUp() override;
+  void TearDown() override;
 
   // Set expectations for negative test cases. Called by ExpectError/Disconnect.
   virtual void SetNegativeExpectations() { error_expected_ = true; }

@@ -10,6 +10,10 @@ source_set("test") {
     "audio_core_test_base.h",
     "audio_test_base.cc",
     "audio_test_base.h",
+    "hermetic_audio_environment.cc",
+    "hermetic_audio_environment.h",
+    "hermetic_audio_test.cc",
+    "hermetic_audio_test.h",
     "test_fixture.cc",
     "test_fixture.h",
   ]
@@ -18,9 +22,12 @@ source_set("test") {
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.virtualaudio",
+    "//zircon/public/fidl/fuchsia-scheduler",
     "//zircon/public/lib/fit",
   ]
 }

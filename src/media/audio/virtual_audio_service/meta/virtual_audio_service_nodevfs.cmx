@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "bin/virtual_audio_service"
+    }
+}
