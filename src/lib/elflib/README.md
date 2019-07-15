@@ -1,4 +1,4 @@
-# Interceptor
+# Elflib
 
-This directory contains a library for using the debug agent to intercept calls
-at the PLT entry and retrieve their arguments.
+This directory contains an application independent library for reading and
+processing ELF files in various way.
