@@ -1176,68 +1176,6 @@ __NO_SAFESTACK static struct dso* find_library(const char* name) {
 
 #define MAX_BUILDID_SIZE 64
 
-__NO_SAFESTACK static void read_buildid(struct dso* p,
-                                        char* buf, size_t buf_size) {
-    Phdr* ph = p->phdr;
-    size_t cnt;
-
-    for (cnt = p->phnum; cnt--; ph = (void*)((char*)ph + p->phentsize)) {
-        if (ph->p_type != PT_NOTE)
-            continue;
-
-        // Find the PT_LOAD segment we live in.
-        Phdr* ph2 = p->phdr;
-        Phdr* ph_load = NULL;
-        size_t cnt2;
-        for (cnt2 = p->phnum; cnt2--; ph2 = (void*)((char*)ph2 + p->phentsize)) {
-            if (ph2->p_type != PT_LOAD)
-                continue;
-            if (ph->p_vaddr >= ph2->p_vaddr &&
-                ph->p_vaddr < ph2->p_vaddr + ph2->p_filesz) {
-                ph_load = ph2;
-                break;
-            }
-        }
-        if (ph_load == NULL)
-            continue;
-
-        size_t off = ph_load->p_vaddr + (ph->p_offset - ph_load->p_offset);
-        size_t size = ph->p_filesz;
-
-        struct {
-            Elf32_Nhdr hdr;
-            char name[sizeof("GNU")];
-        } hdr;
-
-        while (size > sizeof(hdr)) {
-            memcpy(&hdr, (char*)p->l_map.l_addr + off, sizeof(hdr));
-            size_t header_size = sizeof(Elf32_Nhdr) + ((hdr.hdr.n_namesz + 3) & -4);
-            size_t payload_size = (hdr.hdr.n_descsz + 3) & -4;
-            off += header_size;
-            size -= header_size;
-            uint8_t* payload = (uint8_t*)p->l_map.l_addr + off;
-            off += payload_size;
-            size -= payload_size;
-            if (hdr.hdr.n_type != NT_GNU_BUILD_ID ||
-                hdr.hdr.n_namesz != sizeof("GNU") ||
-                memcmp(hdr.name, "GNU", sizeof("GNU")) != 0) {
-                continue;
-            }
-            if (hdr.hdr.n_descsz > MAX_BUILDID_SIZE) {
-                // TODO(dje): Revisit.
-                snprintf(buf, buf_size, "build_id_too_large_%u", hdr.hdr.n_descsz);
-            } else {
-                for (size_t i = 0; i < hdr.hdr.n_descsz; ++i) {
-                    snprintf(&buf[i * 2], 3, "%02x", payload[i]);
-                }
-            }
-            return;
-        }
-    }
-
-    strcpy(buf, "<none>");
-}
-
 __NO_SAFESTACK static void trace_load(struct dso* p) {
     static zx_koid_t pid = ZX_KOID_INVALID;
     if (pid == ZX_KOID_INVALID) {
@@ -1257,7 +1195,18 @@ __NO_SAFESTACK static void trace_load(struct dso* p) {
     // Compute extra values useful to tools.
     // This is done here so that it's only done when necessary.
     char buildid[MAX_BUILDID_SIZE * 2 + 1];
-    read_buildid(p, buildid, sizeof(buildid));
+    if (p->build_id_note) {
+      if (p->build_id_note->nhdr.n_descsz > MAX_BUILD_ID_SIZE) {
+        snprintf(buildid, sizeof(buildid), "build_id_too_large_%u",
+                 p->build_id_note->nhdr.n_descsz);
+      } else {
+        char* end = format_hex_string(buildid, p->build_id_note->desc,
+                                      p->build_id_note->nhdr.n_descsz);
+        *end = '\0';
+      }
+    } else {
+      strcpy(buildid, "<none>");
+    }
 
     const char* name = p->soname == NULL ? "<application>" : p->l_map.l_name;
     const char* soname = p->soname == NULL ? "<application>" : p->soname;
