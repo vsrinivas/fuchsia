@@ -9,9 +9,18 @@
         "system": {
           "type": "array",
           "items": {
-            "not": {
-              "pattern": "^/*deprecated-data"
-            }
+            "allOf": [
+              {
+                "not": {
+                  "pattern": "^/*deprecated-data$"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "^/*deprecated-data/"
+                }
+              }
+            ]
           }
         }
       }
