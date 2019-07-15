@@ -402,6 +402,7 @@ zx_status_t fumount(int mount_fd) {
 }
 
 zx_status_t umount(const char* mount_path) {
+    fprintf(stderr,"Unmounting %s\n", mount_path);
     unique_fd fd(open(mount_path, O_DIRECTORY | O_NOREMOTE | O_ADMIN));
     if (!fd) {
         fprintf(stderr, "Could not open directory: %s\n", strerror(errno));

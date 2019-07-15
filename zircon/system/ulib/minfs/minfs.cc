@@ -992,6 +992,7 @@ zx_status_t MountAndServe(const MountOptions& options, async_dispatcher_t* dispa
 
 void Minfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
     // On a read-write filesystem, set the kMinfsFlagClean on a clean unmount.
+    FS_TRACE_INFO("minfs: Shutting down\n");
     if (IsReadonly() == false) {
         fbl::unique_ptr<Transaction> transaction;
         zx_status_t status;
