@@ -1,0 +1,10 @@
+{
+    "story_name_ids" : {
+       "003" : "cities in germany",
+       "002" : "cities in france",
+       "004" : "show weather in spain",
+       "005" : "show weather in france",
+       "001" : "cities in spain",
+       "006" : "show weather in germany"
+    }
+ }
