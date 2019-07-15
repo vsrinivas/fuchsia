@@ -33,10 +33,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include "fw/api/commands.h"
-#include "iwl-drv.h"
-#include "runtime.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/commands.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/runtime.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
 
+#if 0   // NEEDS_PORTING
 void iwl_free_fw_paging(struct iwl_fw_runtime* fwrt) {
   int i;
 
@@ -262,13 +263,13 @@ static int iwl_send_paging_cmd(struct iwl_fw_runtime* fwrt, const struct fw_img*
 
   return iwl_trans_send_cmd(fwrt->trans, &hcmd);
 }
+#endif  // NEEDS_PORTING
 
-int iwl_init_paging(struct iwl_fw_runtime* fwrt, enum iwl_ucode_type type) {
+zx_status_t iwl_init_paging(struct iwl_fw_runtime* fwrt, enum iwl_ucode_type type) {
   const struct fw_img* fw = &fwrt->fw->img[type];
-  int ret;
 
   if (fwrt->trans->cfg->gen2) {
-    return 0;
+    return ZX_OK;
   }
 
   /*
@@ -277,22 +278,27 @@ int iwl_init_paging(struct iwl_fw_runtime* fwrt, enum iwl_ucode_type type) {
    * The CPU2 paging image is included in the IWL_UCODE_INIT image.
    */
   if (!fw->paging_mem_size) {
-    return 0;
+    return ZX_OK;
   }
 
-  ret = iwl_save_fw_paging(fwrt, fw);
-  if (ret) {
+  // The 7265D firmware doesn't need firmware paging.
+  IWL_ERR(fwrt, "%s():%d needs porting\n", __func__, __LINE__);
+  return ZX_ERR_NOT_SUPPORTED;
+
+#if 0   // NEEDS_PORTING
+  zx_status_t ret = iwl_save_fw_paging(fwrt, fw);
+  if (ret != ZX_OK) {
     IWL_ERR(fwrt, "failed to save the FW paging image\n");
     return ret;
   }
 
   ret = iwl_send_paging_cmd(fwrt, fw);
-  if (ret) {
+  if (ret != ZX_OK) {
     IWL_ERR(fwrt, "failed to send the paging cmd\n");
     iwl_free_fw_paging(fwrt);
     return ret;
   }
 
-  return 0;
+  return ZX_OK;
+#endif  // NEEDS_PORTING
 }
-IWL_EXPORT_SYMBOL(iwl_init_paging);

@@ -21,6 +21,7 @@ source_set("core") {
     "fuchsia_porting.h",
     "fw/init.c",
     "fw/notif-wait.c",
+    "fw/paging.c",
     "fw/smem.c",
     "ieee80211.h",
     "iwl-config.h",
