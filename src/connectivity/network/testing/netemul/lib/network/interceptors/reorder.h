@@ -28,8 +28,7 @@ inline void ReorderDefault(std::vector<InterceptPacket>* vec) {
 template <void REORD(std::vector<InterceptPacket>* vec) = ReorderDefault>
 class Reorder : public Interceptor {
  public:
-  Reorder(uint32_t max_length, zx::duration tick,
-          ForwardPacketCallback callback)
+  Reorder(uint32_t max_length, zx::duration tick, ForwardPacketCallback callback)
       : Interceptor(std::move(callback)),
         task_([this]() { ForwardPending(); }),
         max_length_(max_length),

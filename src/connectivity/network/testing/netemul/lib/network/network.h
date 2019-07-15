@@ -36,13 +36,10 @@ class Network : public fuchsia::netemul::network::Network {
   void GetName(GetNameCallback callback) override;
   void SetConfig(fuchsia::netemul::network::NetworkConfig config,
                  SetConfigCallback callback) override;
-  void AttachEndpoint(::std::string name,
-                      AttachEndpointCallback callback) override;
-  void RemoveEndpoint(::std::string name,
-                      RemoveEndpointCallback callback) override;
+  void AttachEndpoint(::std::string name, AttachEndpointCallback callback) override;
+  void RemoveEndpoint(::std::string name, RemoveEndpointCallback callback) override;
   void CreateFakeEndpoint(
-      fidl::InterfaceRequest<fuchsia::netemul::network::FakeEndpoint> ep)
-      override;
+      fidl::InterfaceRequest<fuchsia::netemul::network::FakeEndpoint> ep) override;
 
   // ClosedCallback is called when all bindings to the service are gone
   void SetClosedCallback(ClosedCallback cb);

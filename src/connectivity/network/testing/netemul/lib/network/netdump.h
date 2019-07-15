@@ -75,8 +75,7 @@ class NetWatcher {
   const D& dump() const { return dump_; }
 
  private:
-  std::vector<fidl::InterfacePtr<fuchsia::netemul::network::FakeEndpoint>>
-      fake_eps_;
+  std::vector<fidl::InterfacePtr<fuchsia::netemul::network::FakeEndpoint>> fake_eps_;
   D dump_;
   bool got_data_;
 

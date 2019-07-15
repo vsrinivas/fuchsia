@@ -29,8 +29,7 @@ class EthertapConfig {
     name = std::move(tap_name);
     RandomLocalUnicast(name);
   }
-  explicit EthertapConfig(const fuchsia::hardware::ethernet::MacAddress& mac)
-      : EthertapConfig() {
+  explicit EthertapConfig(const fuchsia::hardware::ethernet::MacAddress& mac) : EthertapConfig() {
     mac.Clone(&tap_cfg.mac);
   }
 
@@ -87,8 +86,8 @@ class EthertapClient {
 
   // Creates an EthertapClient with given configuration.
   // A null reference will be returned if the client can't be created.
-  static std::unique_ptr<EthertapClient> Create(
-      EthertapConfig config, async_dispatcher_t* dispatcher = nullptr);
+  static std::unique_ptr<EthertapClient> Create(EthertapConfig config,
+                                                async_dispatcher_t* dispatcher = nullptr);
 };
 
 }  // namespace netemul

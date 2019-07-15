@@ -25,8 +25,7 @@ class Config {
   Config(Config&& other) = default;
 
   static const char Facet[];
-  bool ParseFromJSON(const rapidjson::Value& value,
-                     json::JSONParser* json_parser);
+  bool ParseFromJSON(const rapidjson::Value& value, json::JSONParser* json_parser);
 
   const std::vector<Network>& networks() const;
   const Environment& environment() const;

@@ -15,15 +15,13 @@ class Runner : public fuchsia::sys::Runner {
   using FRunner = fuchsia::sys::Runner;
   explicit Runner(async_dispatcher_t* dispatcher = nullptr);
 
-  void StartComponent(fuchsia::sys::Package package,
-                      fuchsia::sys::StartupInfo startup_info,
-                      fidl::InterfaceRequest<fuchsia::sys::ComponentController>
-                          controller) override;
+  void StartComponent(
+      fuchsia::sys::Package package, fuchsia::sys::StartupInfo startup_info,
+      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) override;
 
  private:
-  void RunComponent(
-      fuchsia::sys::PackagePtr package, fuchsia::sys::StartupInfo startup_info,
-      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller);
+  void RunComponent(fuchsia::sys::PackagePtr package, fuchsia::sys::StartupInfo startup_info,
+                    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller);
 
   async_dispatcher_t* dispatcher_;
   std::unique_ptr<sys::ComponentContext> component_context_;

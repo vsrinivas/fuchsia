@@ -15,10 +15,9 @@ namespace internal {
 // LogListenerImpl that writes parsed logs to a std::ostream.
 class LogListenerOStreamImpl : public LogListenerImpl {
  public:
-  LogListenerOStreamImpl(
-      fidl::InterfaceRequest<fuchsia::logger::LogListener> request,
-      std::string prefix, std::ostream* stream,
-      async_dispatcher_t* dispatcher = nullptr);
+  LogListenerOStreamImpl(fidl::InterfaceRequest<fuchsia::logger::LogListener> request,
+                         std::string prefix, std::ostream* stream,
+                         async_dispatcher_t* dispatcher = nullptr);
 
  protected:
   virtual void LogImpl(fuchsia::logger::LogMessage m) override;

@@ -19,8 +19,7 @@ static const char* kUp = "up";
 static const bool kDefaultUp = true;
 static const uint16_t kDefaultMtu = 1500;
 
-bool Endpoint::ParseFromJSON(const rapidjson::Value& value,
-                             json::JSONParser* parser) {
+bool Endpoint::ParseFromJSON(const rapidjson::Value& value, json::JSONParser* parser) {
   if (!value.IsObject()) {
     parser->ReportError("endpoint must be object type");
     return false;
@@ -47,8 +46,7 @@ bool Endpoint::ParseFromJSON(const rapidjson::Value& value,
       }
       auto v = static_cast<uint16_t>(i->value.GetUint());
       if (v == 0) {
-        parser->ReportError(
-            "endpoint with zero mtu is invalid, omit to use default");
+        parser->ReportError("endpoint with zero mtu is invalid, omit to use default");
         return false;
       }
       mtu_ = v;
@@ -58,10 +56,9 @@ bool Endpoint::ParseFromJSON(const rapidjson::Value& value,
         return false;
       }
       auto macval = std::make_unique<Mac>();
-      if (std::sscanf(i->value.GetString(),
-                      "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx", macval->d,
-                      macval->d + 1, macval->d + 2, macval->d + 3,
-                      macval->d + 4, macval->d + 5) != 6) {
+      if (std::sscanf(i->value.GetString(), "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx", macval->d,
+                      macval->d + 1, macval->d + 2, macval->d + 3, macval->d + 4,
+                      macval->d + 5) != 6) {
         parser->ReportError("Can't parse supplied mac address");
         return false;
       }
@@ -73,16 +70,15 @@ bool Endpoint::ParseFromJSON(const rapidjson::Value& value,
       }
       up_ = i->value.GetBool();
     } else {
-      parser->ReportError(fxl::StringPrintf(
-          "Unrecognized endpoint member \"%s\"", i->name.GetString()));
+      parser->ReportError(
+          fxl::StringPrintf("Unrecognized endpoint member \"%s\"", i->name.GetString()));
       return false;
     }
   }
 
   // check that a non-empty name is provided:
   if (name_.empty()) {
-    parser->ReportError(
-        "endpoint name must be provided and can't be an empty string");
+    parser->ReportError("endpoint name must be provided and can't be an empty string");
     return false;
   }
 

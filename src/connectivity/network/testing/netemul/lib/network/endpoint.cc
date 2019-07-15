@@ -62,17 +62,14 @@ class EndpointImpl : public data::Consumer {
 
     // can't find mount path for ethernet!!
     if (ethernet_mount_path_.empty()) {
-      fprintf(
-          stderr,
-          "Failed to locate ethertap device %s %02X:%02X:%02X:%02X:%02X:%02X\n",
-          name.c_str(), mac.octets[0], mac.octets[1], mac.octets[2],
-          mac.octets[3], mac.octets[4], mac.octets[5]);
+      fprintf(stderr, "Failed to locate ethertap device %s %02X:%02X:%02X:%02X:%02X:%02X\n",
+              name.c_str(), mac.octets[0], mac.octets[1], mac.octets[2], mac.octets[3],
+              mac.octets[4], mac.octets[5]);
       return ZX_ERR_INTERNAL;
     }
 
-    ethertap_->SetPacketCallback([this](std::vector<uint8_t> data) {
-      ForwardData(&data[0], data.size());
-    });
+    ethertap_->SetPacketCallback(
+        [this](std::vector<uint8_t> data) { ForwardData(&data[0], data.size()); });
 
     ethertap_->SetPeerClosedCallback([this]() {
       if (closed_callback_) {
@@ -88,12 +85,10 @@ class EndpointImpl : public data::Consumer {
 
   void SetClosedCallback(fit::closure cb) { closed_callback_ = std::move(cb); }
 
-  fidl::InterfaceHandle<fuchsia::hardware::ethernet::Device>
-  GetEthernetDevice() {
+  fidl::InterfaceHandle<fuchsia::hardware::ethernet::Device> GetEthernetDevice() {
     fidl::InterfaceHandle<fuchsia::hardware::ethernet::Device> ret;
     if (ethernet_factory_) {
-      if (ethernet_factory_->Connect(ethernet_mount_path_, ret.NewRequest()) !=
-          ZX_OK) {
+      if (ethernet_factory_->Connect(ethernet_mount_path_, ret.NewRequest()) != ZX_OK) {
         // if it didn't succeed, release the request and reset:
         ret = nullptr;
       }
@@ -105,16 +100,14 @@ class EndpointImpl : public data::Consumer {
     if (ethernet_factory_) {
       ethernet_factory_->Connect(
           ethernet_mount_path_,
-          fidl::InterfaceRequest<fuchsia::hardware::ethernet::Device>(
-              std::move(channel)));
+          fidl::InterfaceRequest<fuchsia::hardware::ethernet::Device>(std::move(channel)));
     }
   }
 
   void Consume(const void* data, size_t len) override {
     auto status = ethertap_->Send(data, len);
     if (status != ZX_OK) {
-      fprintf(stderr, "ethertap couldn't push data: %s\n",
-              zx_status_get_string(status));
+      fprintf(stderr, "ethertap couldn't push data: %s\n", zx_status_get_string(status));
     }
   }
 
@@ -142,11 +135,8 @@ class EndpointImpl : public data::Consumer {
 };
 }  // namespace impl
 
-Endpoint::Endpoint(NetworkContext* context, std::string name,
-                   Endpoint::Config config)
-    : impl_(new impl::EndpointImpl(std::move(config))),
-      parent_(context),
-      name_(std::move(name)) {
+Endpoint::Endpoint(NetworkContext* context, std::string name, Endpoint::Config config)
+    : impl_(new impl::EndpointImpl(std::move(config))), parent_(context), name_(std::move(name)) {
   auto close_handler = [this]() {
     if (closed_callback_) {
       // bubble up the problem
@@ -158,9 +148,7 @@ Endpoint::Endpoint(NetworkContext* context, std::string name,
   bindings_.set_empty_set_handler(close_handler);
 }
 
-zx_status_t Endpoint::Startup(NetworkContext& context) {
-  return impl_->Setup(name_, context);
-}
+zx_status_t Endpoint::Startup(NetworkContext& context) { return impl_->Setup(name_, context); }
 
 Endpoint::~Endpoint() = default;
 
@@ -195,8 +183,7 @@ void Endpoint::Bind(fidl::InterfaceRequest<FEndpoint> req) {
   bindings_.AddBinding(this, std::move(req), parent_->dispatcher());
 }
 
-zx_status_t Endpoint::InstallSink(data::BusConsumer::Ptr sink,
-                                  data::Consumer::Ptr* src) {
+zx_status_t Endpoint::InstallSink(data::BusConsumer::Ptr sink, data::Consumer::Ptr* src) {
   // just forbid install if sink is already in our list:
   auto& sinks = impl_->sinks();
   for (auto& i : sinks) {
@@ -209,8 +196,7 @@ zx_status_t Endpoint::InstallSink(data::BusConsumer::Ptr sink,
   return ZX_OK;
 }
 
-zx_status_t Endpoint::RemoveSink(data::BusConsumer::Ptr sink,
-                                 data::Consumer::Ptr* src) {
+zx_status_t Endpoint::RemoveSink(data::BusConsumer::Ptr sink, data::Consumer::Ptr* src) {
   auto& sinks = impl_->sinks();
   for (auto i = sinks.begin(); i != sinks.end(); i++) {
     if (i->get() == sink.get()) {

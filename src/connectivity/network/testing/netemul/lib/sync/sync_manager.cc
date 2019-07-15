@@ -19,25 +19,22 @@ Bus& SyncManager::GetBus(const std::string& name) {
   }
   // bus doesn't exist yet, create it:
   auto bus = std::make_unique<Bus>(dispatcher_);
-  auto ret =
-      buses_.insert(std::pair<std::string, Bus::Ptr>(name, std::move(bus)));
+  auto ret = buses_.insert(std::pair<std::string, Bus::Ptr>(name, std::move(bus)));
   return *ret.first->second;
 }
 
-fidl::InterfaceRequestHandler<fuchsia::netemul::sync::SyncManager>
-SyncManager::GetHandler() {
+fidl::InterfaceRequestHandler<fuchsia::netemul::sync::SyncManager> SyncManager::GetHandler() {
   return bindings_.GetHandler(this, dispatcher_);
 }
 
-void SyncManager::WaitForBarrierThreshold(
-    ::std::string barrierName, uint32_t threshold, int64_t timeout,
-    WaitForBarrierThresholdCallback callback) {
+void SyncManager::WaitForBarrierThreshold(::std::string barrierName, uint32_t threshold,
+                                          int64_t timeout,
+                                          WaitForBarrierThresholdCallback callback) {
   auto barrier = counter_barriers_.find(barrierName);
   if (barrier == counter_barriers_.end()) {
     barrier =
         counter_barriers_
-            .insert(std::make_pair(
-                barrierName, std::make_unique<CounterBarrier>(dispatcher_)))
+            .insert(std::make_pair(barrierName, std::make_unique<CounterBarrier>(dispatcher_)))
             .first;
   }
 

@@ -19,8 +19,7 @@ namespace interceptor {
 // Default generator for random distributions.
 class RandomNormalDistribution {
  public:
-  RandomNormalDistribution(uint64_t mean, uint64_t stddev)
-      : dist_(mean, stddev) {}
+  RandomNormalDistribution(uint64_t mean, uint64_t stddev) : dist_(mean, stddev) {}
 
   int64_t Next() { return static_cast<int64_t>(dist_(dev_)); }
 
@@ -61,8 +60,8 @@ class Latency : public Interceptor {
       : Interceptor(std::move(callback)), random_dist_(mean, stddev) {}
 
   void Intercept(InterceptPacket packet) override {
-    pending_.push_back(std::make_unique<PendingPacket>(
-        this, std::move(packet), zx::msec(random_dist_.Next())));
+    pending_.push_back(
+        std::make_unique<PendingPacket>(this, std::move(packet), zx::msec(random_dist_.Next())));
   }
 
   std::vector<InterceptPacket> Flush() override {

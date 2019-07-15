@@ -15,9 +15,8 @@ void FormatTime(std::ostream* stream, const zx_time_t timestamp) {
     return;
   }
 
-  *stream << "[" << std::setfill('0') << std::setw(6) << timestamp / 1000000000
-          << "." << std::setfill('0') << std::setw(6)
-          << (timestamp / 1000) % 1000000 << "]";
+  *stream << "[" << std::setfill('0') << std::setw(6) << timestamp / 1000000000 << "."
+          << std::setfill('0') << std::setw(6) << (timestamp / 1000) % 1000000 << "]";
 }
 
 void FormatTags(std::ostream* stream, const std::vector<std::string>& tags) {

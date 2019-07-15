@@ -17,8 +17,7 @@
 #define ASSERT_NOK(st) ASSERT_NE(ZX_OK, (st))
 
 #define TEST_BUF_SIZE (512ul)
-#define WAIT_FOR_OK(ok) \
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&ok]() { return ok; }, zx::sec(2)))
+#define WAIT_FOR_OK(ok) ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&ok]() { return ok; }, zx::sec(2)))
 #define WAIT_FOR_OK_AND_RESET(ok) \
   WAIT_FOR_OK(ok);                \
   ok = false
@@ -50,18 +49,15 @@ class NetworkServiceTest : public TestWithEnvironment {
     fuchsia::sys::EnvironmentPtr parent_env;
     real_services()->Connect(parent_env.NewRequest());
 
-    svc_loop_ =
-        std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+    svc_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
     ASSERT_OK(svc_loop_->StartThread("testloop"));
     svc_ = std::make_unique<NetworkContext>(svc_loop_->dispatcher());
     svc_->SetDevfsHandler([this](zx::channel req) {
       real_services()->Connect(
-          fidl::InterfaceRequest<fuchsia::netemul::devmgr::IsolatedDevmgr>(
-              std::move(req)));
+          fidl::InterfaceRequest<fuchsia::netemul::devmgr::IsolatedDevmgr>(std::move(req)));
     });
 
-    auto services =
-        EnvironmentServices::Create(parent_env, svc_loop_->dispatcher());
+    auto services = EnvironmentServices::Create(parent_env, svc_loop_->dispatcher());
 
     services->AddService(svc_->GetHandler());
     test_env_ = CreateNewEnclosingEnvironment("env", std::move(services));
@@ -96,55 +92,46 @@ class NetworkServiceTest : public TestWithEnvironment {
     netc->GetEndpointManager(std::move(epm));
   }
 
-  void StartServices() {
-    GetServices(net_manager_.NewRequest(), endp_manager_.NewRequest());
-  }
+  void StartServices() { GetServices(net_manager_.NewRequest(), endp_manager_.NewRequest()); }
 
-  void GetNetworkContext(
-      fidl::InterfaceRequest<NetworkContext::FNetworkContext> req) {
+  void GetNetworkContext(fidl::InterfaceRequest<NetworkContext::FNetworkContext> req) {
     test_env_->ConnectToService(std::move(req));
   }
 
-  void CreateNetwork(const char* name,
-                     fidl::SynchronousInterfacePtr<FNetwork>* netout,
+  void CreateNetwork(const char* name, fidl::SynchronousInterfacePtr<FNetwork>* netout,
                      Network::Config config = Network::Config()) {
     ASSERT_TRUE(net_manager_.is_bound());
 
     zx_status_t status;
     fidl::InterfaceHandle<FNetwork> neth;
-    ASSERT_OK(
-        net_manager_->CreateNetwork(name, std::move(config), &status, &neth));
+    ASSERT_OK(net_manager_->CreateNetwork(name, std::move(config), &status, &neth));
     ASSERT_OK(status);
     ASSERT_TRUE(neth.is_valid());
 
     *netout = neth.BindSync();
   }
 
-  void CreateEndpoint(const char* name,
-                      fidl::SynchronousInterfacePtr<FEndpoint>* netout,
+  void CreateEndpoint(const char* name, fidl::SynchronousInterfacePtr<FEndpoint>* netout,
                       Endpoint::Config config) {
     ASSERT_TRUE(net_manager_.is_bound());
 
     zx_status_t status;
     fidl::InterfaceHandle<FEndpoint> eph;
-    ASSERT_OK(
-        endp_manager_->CreateEndpoint(name, std::move(config), &status, &eph));
+    ASSERT_OK(endp_manager_->CreateEndpoint(name, std::move(config), &status, &eph));
     ASSERT_OK(status);
     ASSERT_TRUE(eph.is_valid());
 
     *netout = eph.BindSync();
   }
 
-  void CreateEndpoint(const char* name,
-                      fidl::SynchronousInterfacePtr<FEndpoint>* netout) {
+  void CreateEndpoint(const char* name, fidl::SynchronousInterfacePtr<FEndpoint>* netout) {
     CreateEndpoint(name, netout, GetDefaultEndpointConfig());
   }
 
-  void CreateSimpleNetwork(
-      Network::Config config,
-      fidl::InterfaceHandle<NetworkContext::FSetupHandle>* setup_handle,
-      std::unique_ptr<EthernetClient>* eth1,
-      std::unique_ptr<EthernetClient>* eth2) {
+  void CreateSimpleNetwork(Network::Config config,
+                           fidl::InterfaceHandle<NetworkContext::FSetupHandle>* setup_handle,
+                           std::unique_ptr<EthernetClient>* eth1,
+                           std::unique_ptr<EthernetClient>* eth2) {
     fidl::SynchronousInterfacePtr<FNetworkContext> context;
     GetNetworkContext(context.NewRequest());
     zx_status_t status;
@@ -194,8 +181,7 @@ class NetworkServiceTest : public TestWithEnvironment {
     WAIT_FOR_OK_AND_RESET(eth_ready);
 
     ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-        [&eth1, &eth2]() { return (*eth1)->online() && (*eth2)->online(); },
-        zx::sec(2)));
+        [&eth1, &eth2]() { return (*eth1)->online() && (*eth2)->online(); }, zx::sec(2)));
   }
 
   void TearDown() override {
@@ -226,8 +212,7 @@ TEST_F(NetworkServiceTest, NetworkLifecycle) {
   zx_status_t status;
   fidl::InterfaceHandle<FNetwork> neth;
   // can create network ok
-  ASSERT_OK(netm->CreateNetwork(fidl::StringPtr(netname), std::move(config),
-                                &status, &neth));
+  ASSERT_OK(netm->CreateNetwork(fidl::StringPtr(netname), std::move(config), &status, &neth));
   auto net = neth.BindSync();
   ASSERT_OK(status);
   ASSERT_TRUE(net.is_bound());
@@ -277,8 +262,7 @@ TEST_F(NetworkServiceTest, EndpointLifecycle) {
   zx_status_t status;
   fidl::InterfaceHandle<FEndpoint> eph;
   // can create endpoint ok
-  ASSERT_OK(epm->CreateEndpoint(fidl::StringPtr(epname), std::move(config),
-                                &status, &eph));
+  ASSERT_OK(epm->CreateEndpoint(fidl::StringPtr(epname), std::move(config), &status, &eph));
   auto ep = eph.BindSync();
   ASSERT_OK(status);
   ASSERT_TRUE(ep.is_bound());
@@ -330,8 +314,7 @@ TEST_F(NetworkServiceTest, BadEndpointConfigurations) {
 
   // can't create endpoint with unexisting backing
   auto badBacking = GetDefaultEndpointConfig();
-  badBacking.backing =
-      static_cast<fuchsia::netemul::network::EndpointBacking>(-1);
+  badBacking.backing = static_cast<fuchsia::netemul::network::EndpointBacking>(-1);
   ASSERT_NOK(epm->CreateEndpoint(epname, std::move(badBacking), &status, &eph));
   ASSERT_FALSE(eph.is_valid());
 
@@ -344,13 +327,11 @@ TEST_F(NetworkServiceTest, BadEndpointConfigurations) {
 
   // create a good endpoint:
   fidl::InterfaceHandle<FEndpoint> good_eph;
-  ASSERT_OK(epm->CreateEndpoint(epname, GetDefaultEndpointConfig(), &status,
-                                &good_eph));
+  ASSERT_OK(epm->CreateEndpoint(epname, GetDefaultEndpointConfig(), &status, &good_eph));
   ASSERT_OK(status);
   ASSERT_TRUE(good_eph.is_valid());
   // can't create another endpoint with same name:
-  ASSERT_OK(
-      epm->CreateEndpoint(epname, GetDefaultEndpointConfig(), &status, &eph));
+  ASSERT_OK(epm->CreateEndpoint(epname, GetDefaultEndpointConfig(), &status, &eph));
   ASSERT_NOK(status);
   ASSERT_FALSE(eph.is_valid());
 }
@@ -370,8 +351,7 @@ TEST_F(NetworkServiceTest, BadNetworkConfigurations) {
 
   // create a good network
   fidl::InterfaceHandle<FNetwork> good_neth;
-  ASSERT_OK(
-      netm->CreateNetwork(netname, Network::Config(), &status, &good_neth));
+  ASSERT_OK(netm->CreateNetwork(netname, Network::Config(), &status, &good_neth));
   ASSERT_OK(status);
   ASSERT_TRUE(good_neth.is_valid());
 
@@ -432,8 +412,8 @@ TEST_F(NetworkServiceTest, TransitData) {
   });
   WAIT_FOR_OK_AND_RESET(ok);
   // wait for both ethernets to come online
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&eth1, &eth2]() { return eth1.online() && eth2.online(); }, zx::sec(2)));
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&eth1, &eth2]() { return eth1.online() && eth2.online(); },
+                                        zx::sec(2)));
 
   // create some test buffs
   uint8_t test_buff1[TEST_BUF_SIZE];
@@ -539,9 +519,7 @@ TEST_F(NetworkServiceTest, Flooding) {
   WAIT_FOR_OK_AND_RESET(ok);
   // Wait for all ethernets to come online
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&eth1, &eth2, &eth3]() {
-        return eth1.online() && eth2.online() && eth3.online();
-      },
+      [&eth1, &eth2, &eth3]() { return eth1.online() && eth2.online() && eth3.online(); },
       zx::sec(2)));
 
   // create a test buff
@@ -652,8 +630,7 @@ TEST_F(NetworkServiceTest, FakeEndpoints) {
   });
   WAIT_FOR_OK_AND_RESET(ok);
   // and wait for it to come online:
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&eth1]() { return eth1.online(); },
-                                        zx::sec(2)));
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&eth1]() { return eth1.online(); }, zx::sec(2)));
 
   // create some test buffs
   std::vector<uint8_t> test_buff1(TEST_BUF_SIZE);
@@ -755,8 +732,7 @@ TEST_F(NetworkServiceTest, NetworkContext) {
     WAIT_FOR_OK_AND_RESET(ok);
     // and wait for them to come online:
     ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-        [&eth1, &eth2]() { return eth1.online() && eth2.online(); },
-        zx::sec(2)));
+        [&eth1, &eth2]() { return eth1.online() && eth2.online(); }, zx::sec(2)));
 
     // create some test buffs
     uint8_t test_buff[TEST_BUF_SIZE];
@@ -779,8 +755,7 @@ TEST_F(NetworkServiceTest, NetworkContext) {
   fidl::InterfaceHandle<NetworkContext::FSetupHandle> dummy_handle;
   auto& repeated_cfg = repeated_net_name.emplace_back();
   repeated_cfg.name = "main_net";
-  ASSERT_OK(
-      context->Setup(std::move(repeated_net_name), &status, &dummy_handle));
+  ASSERT_OK(context->Setup(std::move(repeated_net_name), &status, &dummy_handle));
   ASSERT_NOK(status);
   ASSERT_FALSE(dummy_handle.is_valid());
 
@@ -792,8 +767,7 @@ TEST_F(NetworkServiceTest, NetworkContext) {
   auto& repeated_ep1_setup = good_net.endpoints.emplace_back();
   repeated_ep1_setup.name = "ep1";
 
-  ASSERT_OK(
-      context->Setup(std::move(repeated_ep_name), &status, &dummy_handle));
+  ASSERT_OK(context->Setup(std::move(repeated_ep_name), &status, &dummy_handle));
   ASSERT_NOK(status);
   ASSERT_FALSE(dummy_handle.is_valid());
   ASSERT_OK(net_manager_->GetNetwork("good_net", &network));
@@ -828,8 +802,7 @@ TEST_F(NetworkServiceTest, CreateNetworkWithInvalidConfig) {
   config.set_packet_loss(std::move(loss));
   zx_status_t status;
   fidl::InterfaceHandle<Network::FNetwork> net;
-  ASSERT_OK(
-      net_manager_->CreateNetwork("net", std::move(config), &status, &net));
+  ASSERT_OK(net_manager_->CreateNetwork("net", std::move(config), &status, &net));
   ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
   ASSERT_FALSE(net.is_valid());
 }
@@ -876,8 +849,8 @@ TEST_F(NetworkServiceTest, NetworkConfigChains) {
     ASSERT_OK(eth1->Send(&i, 1));
   }
 
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&received]() { return received.size() == packet_count; }, zx::sec(2)));
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&received]() { return received.size() == packet_count; },
+                                        zx::sec(2)));
   for (uint8_t i = 0; i < packet_count; i++) {
     EXPECT_TRUE(received.find(i) != received.end());
   }
@@ -885,9 +858,8 @@ TEST_F(NetworkServiceTest, NetworkConfigChains) {
   // Check that measured latency is at least greater than the configured
   // one.
   // We don't do upper bound checking because it's not very CQ friendly.
-  EXPECT_TRUE(diff >= 5)
-      << "Total latency should be greater than configured latency, but got "
-      << diff;
+  EXPECT_TRUE(diff >= 5) << "Total latency should be greater than configured latency, but got "
+                         << diff;
 }
 
 TEST_F(NetworkServiceTest, NetworkConfigChanges) {
@@ -917,8 +889,7 @@ TEST_F(NetworkServiceTest, NetworkConfigChanges) {
 
   // wait until |reorder_threshold| is hit
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&received]() { return received.size() == reorder_threshold; },
-      zx::sec(2)));
+      [&received]() { return received.size() == reorder_threshold; }, zx::sec(2)));
   for (uint8_t i = 0; i < reorder_threshold; i++) {
     EXPECT_TRUE(received.find(i) != received.end());
   }
@@ -938,10 +909,7 @@ TEST_F(NetworkServiceTest, NetworkConfigChanges) {
   // flushed check that by waiting for the remaining packets: wait until
   // |reorder_threshold| is hit
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&received]() {
-        return received.size() == packet_count - reorder_threshold;
-      },
-      zx::sec(2)));
+      [&received]() { return received.size() == packet_count - reorder_threshold; }, zx::sec(2)));
   for (uint8_t i = reorder_threshold; i < packet_count; i++) {
     EXPECT_TRUE(received.find(i) != received.end());
   }
@@ -953,8 +921,8 @@ TEST_F(NetworkServiceTest, NetworkConfigChanges) {
     ASSERT_OK(eth1->Send(&i, 1));
   }
   // wait until |packet_count| is hit
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&received]() { return received.size() == packet_count; }, zx::sec(2)));
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&received]() { return received.size() == packet_count; },
+                                        zx::sec(2)));
   for (uint8_t i = 0; i < packet_count; i++) {
     EXPECT_TRUE(received.find(i) != received.end());
   }
@@ -983,8 +951,7 @@ TEST_F(NetworkServiceTest, NetWatcher) {
   }
 
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&watcher]() { return watcher.dump().packet_count() == packet_count; },
-      zx::sec(5)));
+      [&watcher]() { return watcher.dump().packet_count() == packet_count; }, zx::sec(5)));
 
   // check that all the saved data is correct:
   NetDumpParser parser;

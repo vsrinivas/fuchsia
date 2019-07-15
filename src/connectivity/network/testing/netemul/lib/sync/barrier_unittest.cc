@@ -10,8 +10,7 @@
 #define ASSERT_OK(st) ASSERT_EQ(ZX_OK, (st))
 #define ASSERT_NOK(st) ASSERT_NE(ZX_OK, (st))
 
-#define WAIT_FOR_OK(ok) \
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&ok]() { return ok; }, zx::sec(2)))
+#define WAIT_FOR_OK(ok) ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&ok]() { return ok; }, zx::sec(2)))
 #define WAIT_FOR_OK_AND_RESET(ok) \
   WAIT_FOR_OK(ok);                \
   ok = false
@@ -35,13 +34,11 @@ class BarrierTest : public TestWithEnvironment {
     fuchsia::sys::EnvironmentPtr parent_env;
     real_services()->Connect(parent_env.NewRequest());
 
-    svc_loop_ =
-        std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+    svc_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
     ASSERT_OK(svc_loop_->StartThread("testloop"));
     svc_ = std::make_unique<SyncManager>(svc_loop_->dispatcher());
 
-    auto services =
-        EnvironmentServices::Create(parent_env, svc_loop_->dispatcher());
+    auto services = EnvironmentServices::Create(parent_env, svc_loop_->dispatcher());
 
     services->AddService(svc_->GetHandler());
     test_env_ = CreateNewEnclosingEnvironment("env", std::move(services));
@@ -57,8 +54,7 @@ class BarrierTest : public TestWithEnvironment {
     svc_loop_->JoinThreads();
   }
 
-  void GetSyncManager(
-      fidl::InterfaceRequest<SyncManager::FSyncManager> manager) {
+  void GetSyncManager(fidl::InterfaceRequest<SyncManager::FSyncManager> manager) {
     test_env_->ConnectToService(std::move(manager));
   }
 
@@ -97,9 +93,8 @@ TEST_F(BarrierTest, DestroyWithPending) {
   SyncManagerPtr sm;
   GetSyncManager(sm.NewRequest());
   // wait and timeout:
-  sm->WaitForBarrierThreshold(
-      kMainTestBarrier, 2, zx::msec(0).to_nsecs(),
-      [](bool result) { FAIL() << "Shouldn't call callback"; });
+  sm->WaitForBarrierThreshold(kMainTestBarrier, 2, zx::msec(0).to_nsecs(),
+                              [](bool result) { FAIL() << "Shouldn't call callback"; });
 }
 
 TEST_F(BarrierTest, ManyWaits) {
@@ -134,9 +129,7 @@ TEST_F(BarrierTest, ManyWaits) {
                               });
 
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&]() {
-        return got_callback1 && got_callback2 && got_callback3 && got_callback4;
-      },
+      [&]() { return got_callback1 && got_callback2 && got_callback3 && got_callback4; },
       zx::sec(2)));
 }
 
@@ -165,8 +158,7 @@ TEST_F(BarrierTest, DifferentBarriers) {
                               });
 
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&]() { return got_callback1 && got_callback2 && got_callback3; },
-      zx::sec(2)));
+      [&]() { return got_callback1 && got_callback2 && got_callback3; }, zx::sec(2)));
 }
 
 }  // namespace testing

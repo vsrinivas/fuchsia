@@ -24,9 +24,8 @@ static std::string ExtractLabel(const std::string& url) {
   return url.substr(last_slash + 1);
 }
 
-ManagedLogger::ManagedLogger(
-    std::string name, bool is_err,
-    std::shared_ptr<fuchsia::logger::LogListener> loglistener)
+ManagedLogger::ManagedLogger(std::string name, bool is_err,
+                             std::shared_ptr<fuchsia::logger::LogListener> loglistener)
     : dispatcher_(async_get_default_dispatcher()),
       name_(std::move(name)),
       is_err_(is_err),
@@ -40,11 +39,10 @@ zx::handle ManagedLogger::CreateHandle() {
   return zx::handle(ret.release());
 }
 
-void ManagedLogger::OnRx(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                         zx_status_t status, const zx_packet_signal_t* signal) {
+void ManagedLogger::OnRx(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                         const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Managed Logger wait failed: "
-                   << zx_status_get_string(status);
+    FXL_LOG(ERROR) << "Managed Logger wait failed: " << zx_status_get_string(status);
     closed_callback_(this);
     return;
   }
@@ -57,11 +55,9 @@ void ManagedLogger::OnRx(async_dispatcher_t* dispatcher, async::WaitBase* wait,
     }
 
     size_t actual;
-    status = out_.read(0, buffer_.get() + buffer_pos_,
-                       BufferSize - 1 - buffer_pos_, &actual);
+    status = out_.read(0, buffer_.get() + buffer_pos_, BufferSize - 1 - buffer_pos_, &actual);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Managed Logger read failed: "
-                     << zx_status_get_string(status);
+      FXL_LOG(ERROR) << "Managed Logger read failed: " << zx_status_get_string(status);
       closed_callback_(this);
       return;
     }
@@ -145,10 +141,10 @@ void ManagedLogger::Start(netemul::ManagedLogger::ClosedCallback callback) {
   wait_.Begin(dispatcher_);
 }
 
-fuchsia::sys::FileDescriptorPtr ManagedLoggerCollection::CreateLogger(
-    const std::string& url, bool err) {
-  auto& logger = loggers_.emplace_back(std::make_unique<ManagedLogger>(
-      ExtractLabel(url).c_str(), err, loglistener_));
+fuchsia::sys::FileDescriptorPtr ManagedLoggerCollection::CreateLogger(const std::string& url,
+                                                                      bool err) {
+  auto& logger = loggers_.emplace_back(
+      std::make_unique<ManagedLogger>(ExtractLabel(url).c_str(), err, loglistener_));
 
   auto handle = logger->CreateHandle();
   logger->Start([this](ManagedLogger* logger) {

@@ -21,8 +21,7 @@ static const char* kCaptureNo = "NO";
 
 const char Config::Facet[] = "fuchsia.netemul";
 
-bool Config::ParseFromJSON(const rapidjson::Value& value,
-                           json::JSONParser* json_parser) {
+bool Config::ParseFromJSON(const rapidjson::Value& value, json::JSONParser* json_parser) {
   // null value keeps config as it is
   if (value.IsNull()) {
     return true;
@@ -34,8 +33,7 @@ bool Config::ParseFromJSON(const rapidjson::Value& value,
   }
 
   // load all defaults:
-  if (!environment_.ParseFromJSON(rapidjson::Value(rapidjson::kObjectType),
-                                  json_parser)) {
+  if (!environment_.ParseFromJSON(rapidjson::Value(rapidjson::kObjectType), json_parser)) {
     return false;
   }
   default_url_ = "";
@@ -76,15 +74,13 @@ bool Config::ParseFromJSON(const rapidjson::Value& value,
       disabled_ = i->value.GetBool();
     } else if (i->name == kTimeout) {
       if (!i->value.IsUint64() || i->value.GetUint64() <= 0) {
-        json_parser->ReportError(
-            "\"timeout\" must be a positive integer Number value");
+        json_parser->ReportError("\"timeout\" must be a positive integer Number value");
         return false;
       }
       timeout_ = zx::sec(i->value.GetUint64());
     } else if (i->name == kCapture) {
       if (i->value.IsBool()) {
-        capture_mode_ =
-            i->value.GetBool() ? CaptureMode::ON_ERROR : CaptureMode::NONE;
+        capture_mode_ = i->value.GetBool() ? CaptureMode::ON_ERROR : CaptureMode::NONE;
       } else if (i->value.IsString()) {
         std::string val = i->value.GetString();
         if (val == kCaptureNo) {
@@ -98,13 +94,12 @@ bool Config::ParseFromJSON(const rapidjson::Value& value,
           return false;
         }
       } else {
-        json_parser->ReportError(
-            "\"capture\" must be a Boolean or String value");
+        json_parser->ReportError("\"capture\" must be a Boolean or String value");
         return false;
       }
     } else {
-      json_parser->ReportError(fxl::StringPrintf(
-          "Unrecognized config member \"%s\"", i->name.GetString()));
+      json_parser->ReportError(
+          fxl::StringPrintf("Unrecognized config member \"%s\"", i->name.GetString()));
       return false;
     }
   }

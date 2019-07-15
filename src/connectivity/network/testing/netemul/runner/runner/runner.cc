@@ -13,8 +13,7 @@
 #include "garnet/lib/cmx/cmx.h"
 
 namespace netemul {
-static const char* kSandbox =
-    "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/netemul_sandbox.cmx";
+static const char* kSandbox = "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/netemul_sandbox.cmx";
 static const char* kDefinitionArg = "--definition=";
 static const char* kDefinitionRoot = "/definition";
 
@@ -27,8 +26,7 @@ Runner::Runner(async_dispatcher_t* dispatcher) {
   component_context_ = sys::ComponentContext::Create();
   component_context_->svc()->Connect(launcher_.NewRequest(dispatcher_));
   component_context_->svc()->Connect(loader_.NewRequest(dispatcher_));
-  component_context_->outgoing()->AddPublicService(
-      bindings_.GetHandler(this, dispatcher_));
+  component_context_->outgoing()->AddPublicService(bindings_.GetHandler(this, dispatcher_));
 }
 
 struct RunnerArgs {
@@ -36,9 +34,8 @@ struct RunnerArgs {
   fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
 };
 
-void Runner::StartComponent(
-    fuchsia::sys::Package package, fuchsia::sys::StartupInfo startup_info,
-    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
+void Runner::StartComponent(fuchsia::sys::Package package, fuchsia::sys::StartupInfo startup_info,
+                            fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
   FXL_LOG(INFO) << "resolved URL: " << package.resolved_url;
 
   // args needs to be shared ptr 'cause Loader fidl
@@ -49,16 +46,13 @@ void Runner::StartComponent(
 
   // go through loader to get information, 'cause info is not complete
   // from caller (missing directory and other stuff)
-  loader_->LoadUrl(
-      package.resolved_url, [this, args](fuchsia::sys::PackagePtr package) {
-        RunComponent(std::move(package), std::move(args->startup_info),
-                     std::move(args->controller));
-      });
+  loader_->LoadUrl(package.resolved_url, [this, args](fuchsia::sys::PackagePtr package) {
+    RunComponent(std::move(package), std::move(args->startup_info), std::move(args->controller));
+  });
 }
 
-void Runner::RunComponent(
-    fuchsia::sys::PackagePtr package, fuchsia::sys::StartupInfo startup_info,
-    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
+void Runner::RunComponent(fuchsia::sys::PackagePtr package, fuchsia::sys::StartupInfo startup_info,
+                          fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
   if (!package) {
     FXL_LOG(ERROR) << "Can't load package";
     return;
@@ -79,9 +73,8 @@ void Runner::RunComponent(
   auto incoming_args = std::move(linfo.arguments);
   linfo.url = kSandbox;
   linfo.arguments->clear();
-  linfo.arguments->push_back(fxl::Concatenate({std::string(kDefinitionArg),
-                                               std::string(kDefinitionRoot),
-                                               "/", fp.resource_path()}));
+  linfo.arguments->push_back(fxl::Concatenate(
+      {std::string(kDefinitionArg), std::string(kDefinitionRoot), "/", fp.resource_path()}));
 
   if (!linfo.flat_namespace) {
     linfo.flat_namespace = fuchsia::sys::FlatNamespace::New();
@@ -91,8 +84,7 @@ void Runner::RunComponent(
 
   if (!incoming_args->empty()) {
     linfo.arguments->push_back("--");
-    linfo.arguments->insert(linfo.arguments->end(), incoming_args->begin(),
-                            incoming_args->end());
+    linfo.arguments->insert(linfo.arguments->end(), incoming_args->begin(), incoming_args->end());
   }
 
   launcher_->CreateComponent(std::move(linfo), std::move(controller));

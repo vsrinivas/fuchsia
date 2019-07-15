@@ -14,8 +14,7 @@
 namespace netemul {
 namespace testing {
 
-constexpr const char* kLoggerUrl =
-    "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx";
+constexpr const char* kLoggerUrl = "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx";
 constexpr const char* kLoggerDisableKlog = "--disable-klog";
 
 class LoggerTest : public sys::testing::TestWithEnvironment {
@@ -29,10 +28,8 @@ class LoggerTest : public sys::testing::TestWithEnvironment {
 
   void Init(std::string env_name) {
     auto services = CreateServices();
-    services->AddServiceWithLaunchInfo(MakeLoggerLaunchInfo(),
-                                       fuchsia::logger::LogSink::Name_);
-    services->AddServiceWithLaunchInfo(MakeLoggerLaunchInfo(),
-                                       fuchsia::logger::Log::Name_);
+    services->AddServiceWithLaunchInfo(MakeLoggerLaunchInfo(), fuchsia::logger::LogSink::Name_);
+    services->AddServiceWithLaunchInfo(MakeLoggerLaunchInfo(), fuchsia::logger::Log::Name_);
     env = CreateNewEnclosingEnvironment(
         "some_logger", std::move(services),
         fuchsia::sys::EnvironmentOptions{.allow_parent_runners = false,
@@ -47,25 +44,21 @@ class LoggerTest : public sys::testing::TestWithEnvironment {
     ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &mine, &remote));
     sink->Connect(std::move(remote));
     log_listener.reset(new internal::LogListenerLogSinkImpl(
-        proxy.NewRequest(dispatcher()), std::move(env_name), std::move(mine),
-        dispatcher()));
+        proxy.NewRequest(dispatcher()), std::move(env_name), std::move(mine), dispatcher()));
     fuchsia::logger::LogPtr syslog;
-    syslog.set_error_handler(
-        [](zx_status_t err) { FAIL() << "Lost connection to syslog"; });
+    syslog.set_error_handler([](zx_status_t err) { FAIL() << "Lost connection to syslog"; });
 
     env->ConnectToService(syslog.NewRequest(dispatcher()));
     fidl::InterfaceHandle<fuchsia::logger::LogListener> test_handle;
     test_listener = std::make_unique<TestListener>(test_handle.NewRequest());
     test_listener->SetObserver([](const fuchsia::logger::LogMessage& log) {
       // shouldn't receive any klog
-      ASSERT_EQ(std::find(log.tags.begin(), log.tags.end(), "klog"),
-                log.tags.end());
+      ASSERT_EQ(std::find(log.tags.begin(), log.tags.end(), "klog"), log.tags.end());
     });
     syslog->Listen(std::move(test_handle), nullptr);
   }
 
-  void ValidateMessage(const fuchsia::logger::LogMessage& msg,
-                       const std::vector<std::string>& tags,
+  void ValidateMessage(const fuchsia::logger::LogMessage& msg, const std::vector<std::string>& tags,
                        const std::string& message) {
     EXPECT_EQ(msg.severity, kDummySeverity);
     EXPECT_EQ(msg.time, kDummyTime);
@@ -76,8 +69,7 @@ class LoggerTest : public sys::testing::TestWithEnvironment {
     EXPECT_EQ(tags.size(), msg.tags.size());
     for (const auto& t : tags) {
       EXPECT_NE(std::find(msg.tags.begin(), msg.tags.end(), t), msg.tags.end())
-          << "Can't find tag " << t << " in "
-          << fxl::JoinStrings(msg.tags, ",");
+          << "Can't find tag " << t << " in " << fxl::JoinStrings(msg.tags, ",");
     }
   }
 
@@ -176,9 +168,9 @@ TEST_F(LoggerTest, LongMessageLongTags) {
   proxy->Log(CreateLogMessage(tags, msg));
 
   auto msgs = WaitForMessages();
-  ValidateMessage(msgs[0], tags,
-                  prefix + msg.substr(0, sizeof(fx_log_packet_t::data) -
-                                             tags_len - prefix.length() - 1));
+  ValidateMessage(
+      msgs[0], tags,
+      prefix + msg.substr(0, sizeof(fx_log_packet_t::data) - tags_len - prefix.length() - 1));
 }
 
 TEST_F(LoggerTest, LongMessage) {
@@ -217,8 +209,7 @@ TEST_F(LoggerTest, MultipleMessages) {
   while (consumed < messages) {
     auto msgs = WaitForMessages();
     for (const auto& msg : msgs) {
-      ValidateMessage(msg, {"tag", env_name},
-                      fxl::StringPrintf("Hello%d", consumed));
+      ValidateMessage(msg, {"tag", env_name}, fxl::StringPrintf("Hello%d", consumed));
       consumed++;
     }
   }

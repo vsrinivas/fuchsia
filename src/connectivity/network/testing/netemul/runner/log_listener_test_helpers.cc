@@ -7,8 +7,7 @@
 namespace netemul {
 namespace testing {
 
-fuchsia::logger::LogMessage CreateLogMessage(std::vector<std::string> tags,
-                                             std::string message) {
+fuchsia::logger::LogMessage CreateLogMessage(std::vector<std::string> tags, std::string message) {
   return fuchsia::logger::LogMessage{.severity = kDummySeverity,
                                      .time = kDummyTime,
                                      .pid = kDummyPid,

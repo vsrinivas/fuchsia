@@ -97,13 +97,11 @@ fn main() -> Result<(), Error> {
 
     let opt = Opt::from_args();
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
-    executor.run_singlethreaded(
-        async {
-            if opt.is_child {
-                await!(run_client())
-            } else {
-                await!(run_server())
-            }
-        },
-    )
+    executor.run_singlethreaded(async {
+        if opt.is_child {
+            await!(run_client())
+        } else {
+            await!(run_server())
+        }
+    })
 }

@@ -18,8 +18,7 @@ class Network {
   Network() = default;
   Network(Network&& other) = default;
 
-  bool ParseFromJSON(const rapidjson::Value& value,
-                     json::JSONParser* json_parser);
+  bool ParseFromJSON(const rapidjson::Value& value, json::JSONParser* json_parser);
 
   const std::string& name() const;
   const std::vector<Endpoint>& endpoints() const;

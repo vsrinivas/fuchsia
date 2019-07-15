@@ -26,8 +26,7 @@ namespace netemul {
 using ZDevice = fuchsia::hardware::ethernet::Device;
 using ZFifos = fuchsia::hardware::ethernet::Fifos;
 using ZFifoEntry = eth_fifo_entry_t;
-constexpr uint32_t ETH_SIGNAL_STATUS =
-    fuchsia::hardware::ethernet::SIGNAL_STATUS;
+constexpr uint32_t ETH_SIGNAL_STATUS = fuchsia::hardware::ethernet::SIGNAL_STATUS;
 
 // WatchCbArgs is intended to be used *only* to capture context for fdio dir
 // watching. Note that base_dir and search_mac are references, not copies. That
@@ -40,13 +39,11 @@ struct WatchCbArgs {
 
 class FifoHolder {
  public:
-  struct LLFifoEntry
-      : public fbl::SinglyLinkedListable<fbl::unique_ptr<LLFifoEntry>> {
+  struct LLFifoEntry : public fbl::SinglyLinkedListable<fbl::unique_ptr<LLFifoEntry>> {
     ZFifoEntry e;
   };
 
-  explicit FifoHolder(async_dispatcher_t* dispatcher,
-                      std::unique_ptr<ZFifos> fifos,
+  explicit FifoHolder(async_dispatcher_t* dispatcher, std::unique_ptr<ZFifos> fifos,
                       const EthernetConfig& config)
       : dispatcher_(dispatcher), buf_config_(config) {
     tx_.reset(fifos->tx.release());
@@ -59,21 +56,19 @@ class FifoHolder {
     }
   }
 
-  void Startup(fidl::InterfacePtr<ZDevice>& device,
-               fit::function<void(zx_status_t)> callback) {
+  void Startup(fidl::InterfacePtr<ZDevice>& device, fit::function<void(zx_status_t)> callback) {
     vmo_size_ = 2u * buf_config_.nbufs * buf_config_.buff_size;
 
-    zx_status_t status =
-        zx::vmo::create(vmo_size_, 0, &buf_);
+    zx_status_t status = zx::vmo::create(vmo_size_, 0, &buf_);
     if (status != ZX_OK) {
-      fprintf(stderr, "could not create a vmo of size %" PRIu64 ": %s\n",
-              vmo_size_, zx_status_get_string(status));
+      fprintf(stderr, "could not create a vmo of size %" PRIu64 ": %s\n", vmo_size_,
+              zx_status_get_string(status));
       callback(status);
       return;
     }
 
-    status = zx::vmar::root_self()->map(
-        0, buf_, 0, vmo_size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &mapped_);
+    status = zx::vmar::root_self()->map(0, buf_, 0, vmo_size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                        &mapped_);
     if (status != ZX_OK) {
       fprintf(stderr, "failed to map vmo: %s\n", zx_status_get_string(status));
       callback(status);
@@ -83,15 +78,13 @@ class FifoHolder {
     zx::vmo buf_copy;
     status = buf_.duplicate(ZX_RIGHT_SAME_RIGHTS, &buf_copy);
     if (status != ZX_OK) {
-      fprintf(stderr, "failed to duplicate vmo: %s\n",
-              zx_status_get_string(status));
+      fprintf(stderr, "failed to duplicate vmo: %s\n", zx_status_get_string(status));
       callback(status);
       return;
     }
 
     device->SetIOBuffer(
-        std::move(buf_copy),
-        [this, callback = std::move(callback)](zx_status_t status) {
+        std::move(buf_copy), [this, callback = std::move(callback)](zx_status_t status) {
           if (status != ZX_OK) {
             callback(status);
             return;
@@ -107,8 +100,7 @@ class FifoHolder {
             };
             status = rx_.write_one(entry);
             if (status != ZX_OK) {
-              fprintf(stderr, "failed call to write(): %s\n",
-                      zx_status_get_string(status));
+              fprintf(stderr, "failed call to write(): %s\n", zx_status_get_string(status));
               callback(status);
               return;
             }
@@ -119,15 +111,13 @@ class FifoHolder {
             entry->e.offset = idx * buf_config_.buff_size;
             entry->e.length = buf_config_.buff_size;
             entry->e.flags = 0;
-            entry->e.cookie =
-                reinterpret_cast<uintptr_t>(mapped_) + entry->e.offset;
+            entry->e.cookie = reinterpret_cast<uintptr_t>(mapped_) + entry->e.offset;
             tx_available_.push_front(std::move(entry));
           }
 
           // register waiter when rx fifo is hit
           fifo_data_wait_.set_object(rx_.get_handle());
-          fifo_data_wait_.set_trigger(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED |
-                                      ETH_SIGNAL_STATUS);
+          fifo_data_wait_.set_trigger(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED | ETH_SIGNAL_STATUS);
           WaitOnFifoData();
           callback(ZX_OK);
         });
@@ -147,14 +137,11 @@ class FifoHolder {
     return entry;
   }
 
-  uint8_t* GetRxBuffer(uint32_t offset) {
-    return reinterpret_cast<uint8_t*>(mapped_) + offset;
-  }
+  uint8_t* GetRxBuffer(uint32_t offset) { return reinterpret_cast<uint8_t*>(mapped_) + offset; }
 
   void ReturnTxBuffer(ZFifoEntry* entry) {
-    auto ptr = tx_pending_.erase_if([entry](const LLFifoEntry& tx_entry) {
-      return tx_entry.e.cookie == entry->cookie;
-    });
+    auto ptr = tx_pending_.erase_if(
+        [entry](const LLFifoEntry& tx_entry) { return tx_entry.e.cookie == entry->cookie; });
     if (ptr != nullptr) {
       tx_available_.push_front(std::move(ptr));
     }
@@ -180,16 +167,14 @@ class FifoHolder {
   void WaitOnFifoData() {
     zx_status_t status = fifo_data_wait_.Begin(dispatcher_);
     if (status != ZX_OK) {
-      fprintf(stderr, "EthernetClient can't wait on fifo data: %s\n",
-              zx_status_get_string(status));
+      fprintf(stderr, "EthernetClient can't wait on fifo data: %s\n", zx_status_get_string(status));
     }
   }
 
-  void OnRxData(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                zx_status_t status, const zx_packet_signal_t* signal) {
+  void OnRxData(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
-      fprintf(stderr, "EthernetClient fifo rx failed: %s\n",
-              zx_status_get_string(status));
+      fprintf(stderr, "EthernetClient fifo rx failed: %s\n", zx_status_get_string(status));
       return;
     }
 
@@ -201,8 +186,7 @@ class FifoHolder {
       ZFifoEntry entry;
       status = rx_.read_one(&entry);
       if (status != ZX_OK) {
-        fprintf(stderr, "Ethernet client fifo rx read failed: %s\n",
-                zx_status_get_string(status));
+        fprintf(stderr, "Ethernet client fifo rx read failed: %s\n", zx_status_get_string(status));
         return;
       }
 
@@ -230,17 +214,13 @@ class FifoHolder {
     }
   }
 
-  void SetDataCallback(EthernetClient::DataCallback cb) {
-    data_callback_ = std::move(cb);
-  }
+  void SetDataCallback(EthernetClient::DataCallback cb) { data_callback_ = std::move(cb); }
 
   void SetPeerClosedCallback(EthernetClient::PeerClosedCallback cb) {
     peer_closed_callback_ = std::move(cb);
   }
 
-  void SetLinkSignalCallback(fit::closure cb) {
-    link_signal_callback_ = std::move(cb);
-  }
+  void SetLinkSignalCallback(fit::closure cb) { link_signal_callback_ = std::move(cb); }
 
  private:
   async_dispatcher_t* dispatcher_;
@@ -274,8 +254,7 @@ static zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
       return ZX_OK;
     }
 
-    zx_status_t status =
-        fdio_get_service_handle(devfd, svc.reset_and_get_address());
+    zx_status_t status = fdio_get_service_handle(devfd, svc.reset_and_get_address());
     if (status != ZX_OK) {
       return status;
     }
@@ -290,8 +269,8 @@ static zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
   fuchsia::hardware::ethernet::Info info;
   zx_status_t status = iface->GetInfo(&info);
   if (status != ZX_OK) {
-    fprintf(stderr, "could not get ethernet info for %s/%s: %s\n",
-            args->base_dir.c_str(), fn, zx_status_get_string(status));
+    fprintf(stderr, "could not get ethernet info for %s/%s: %s\n", args->base_dir.c_str(), fn,
+            zx_status_get_string(status));
     // Return ZX_OK to keep watching for devices.
     return ZX_OK;
   }
@@ -315,14 +294,12 @@ void EthernetClient::Setup(const EthernetConfig& config,
                            fit::function<void(zx_status_t)> callback) {
   device_->SetClientName("EthernetClient", [](zx_status_t stat) {});
   device_->GetFifos([this, callback = std::move(callback), config](
-                        zx_status_t status,
-                        std::unique_ptr<ZFifos> fifos) mutable {
+                        zx_status_t status, std::unique_ptr<ZFifos> fifos) mutable {
     if (status != ZX_OK) {
       callback(status);
       return;
     }
-    fifos_ =
-        std::make_unique<FifoHolder>(dispatcher_, std::move(fifos), config);
+    fifos_ = std::make_unique<FifoHolder>(dispatcher_, std::move(fifos), config);
 
     fifos_->SetPeerClosedCallback([this]() {
       if (peer_closed_callback_) {
@@ -332,31 +309,28 @@ void EthernetClient::Setup(const EthernetConfig& config,
 
     fifos_->SetLinkSignalCallback([this]() {
       device_->GetStatus([this](int32_t status) {
-        set_online(
-            (status & fuchsia::hardware::ethernet::DEVICE_STATUS_ONLINE) != 0);
+        set_online((status & fuchsia::hardware::ethernet::DEVICE_STATUS_ONLINE) != 0);
       });
     });
 
-    fifos_->Startup(this->device_, [this, callback = std::move(callback)](
-                                       zx_status_t status) mutable {
-      if (status != ZX_OK) {
-        callback(status);
-        return;
-      }
+    fifos_->Startup(this->device_,
+                    [this, callback = std::move(callback)](zx_status_t status) mutable {
+                      if (status != ZX_OK) {
+                        callback(status);
+                        return;
+                      }
 
-      this->device_->Start(std::move(callback));
-    });
+                      this->device_->Start(std::move(callback));
+                    });
   });
 }
 
-EthernetClient::EthernetClient(
-    async_dispatcher_t* dispatcher,
+EthernetClient::EthernetClient(async_dispatcher_t* dispatcher,
 
-    fidl::InterfacePtr<fuchsia::hardware::ethernet::Device> ptr)
+                               fidl::InterfacePtr<fuchsia::hardware::ethernet::Device> ptr)
     : dispatcher_(dispatcher), online_(false), device_(std::move(ptr)) {
   device_.set_error_handler([this](zx_status_t status) {
-    fprintf(stderr, "EthernetClient error = %s\n",
-            zx_status_get_string(status));
+    fprintf(stderr, "EthernetClient error = %s\n", zx_status_get_string(status));
     if (peer_closed_callback_) {
       peer_closed_callback_();
     }
@@ -378,8 +352,7 @@ zx_status_t EthernetClient::Send(const void* data, uint16_t len) {
   });
 }
 
-zx_status_t EthernetClient::AcquireAndSend(
-    fit::function<void(void*, uint16_t*)> writer) {
+zx_status_t EthernetClient::AcquireAndSend(fit::function<void(void*, uint16_t*)> writer) {
   fifos_->ReturnSentTxBuffers();
   auto txBuffer = fifos_->GetTxBuffer();
   if (!txBuffer) {
@@ -401,8 +374,7 @@ void EthernetClient::SetPeerClosedCallback(PeerClosedCallback cb) {
   peer_closed_callback_ = std::move(cb);
 }
 
-void EthernetClient::SetLinkStatusChangedCallback(
-    LinkStatusChangedCallback cb) {
+void EthernetClient::SetLinkStatusChangedCallback(LinkStatusChangedCallback cb) {
   link_status_changed_callback_ = std::move(cb);
 }
 
@@ -417,22 +389,20 @@ void EthernetClient::set_online(bool online) {
   }
 }
 
-std::string EthernetClientFactory::MountPointWithMAC(
-    const EthernetClient::Mac& mac, unsigned int deadline_ms) {
+std::string EthernetClientFactory::MountPointWithMAC(const EthernetClient::Mac& mac,
+                                                     unsigned int deadline_ms) {
   WatchCbArgs args{.base_dir = base_dir_, .search_mac = mac};
 
   int ethdir = OpenDir();
 
   if (ethdir < 0) {
-    fprintf(stderr, "could not open %s: %s\n", base_dir_.c_str(),
-            strerror(errno));
+    fprintf(stderr, "could not open %s: %s\n", base_dir_.c_str(), strerror(errno));
     // empty string if not found
     return std::string();
   }
 
   zx_status_t status;
-  status = fdio_watch_directory(ethdir, WatchCb,
-                                zx_deadline_after(ZX_MSEC(deadline_ms)),
+  status = fdio_watch_directory(ethdir, WatchCb, zx_deadline_after(ZX_MSEC(deadline_ms)),
                                 reinterpret_cast<void*>(&args));
   close(ethdir);
   if (status == ZX_ERR_STOP) {
@@ -443,18 +413,16 @@ std::string EthernetClientFactory::MountPointWithMAC(
 }
 
 zx_status_t EthernetClientFactory::Connect(
-    const std::string& path,
-    fidl::InterfaceRequest<fuchsia::hardware::ethernet::Device> req) {
+    const std::string& path, fidl::InterfaceRequest<fuchsia::hardware::ethernet::Device> req) {
   if (devfs_root_.is_valid()) {
-    return fdio_service_connect_at(devfs_root_.get(), path.c_str(),
-                                   req.TakeChannel().release());
+    return fdio_service_connect_at(devfs_root_.get(), path.c_str(), req.TakeChannel().release());
   } else {
     return fdio_service_connect(path.c_str(), req.TakeChannel().release());
   }
 }
 
-EthernetClient::Ptr EthernetClientFactory::Create(
-    const std::string& path, async_dispatcher_t* dispatcher) {
+EthernetClient::Ptr EthernetClientFactory::Create(const std::string& path,
+                                                  async_dispatcher_t* dispatcher) {
   fidl::InterfaceHandle<ZDevice> handle;
 
   if (dispatcher == nullptr) {
@@ -463,17 +431,16 @@ EthernetClient::Ptr EthernetClientFactory::Create(
 
   auto status = Connect(path, handle.NewRequest());
   if (status != ZX_OK) {
-    fprintf(stderr, "could not open %s: %s\n", path.c_str(),
-            zx_status_get_string(status));
+    fprintf(stderr, "could not open %s: %s\n", path.c_str(), zx_status_get_string(status));
     return nullptr;
   }
 
   return std::make_unique<EthernetClient>(dispatcher, handle.Bind());
 }
 
-EthernetClient::Ptr EthernetClientFactory::RetrieveWithMAC(
-    const EthernetClient::Mac& mac, unsigned int deadline_ms,
-    async_dispatcher_t* dispatcher) {
+EthernetClient::Ptr EthernetClientFactory::RetrieveWithMAC(const EthernetClient::Mac& mac,
+                                                           unsigned int deadline_ms,
+                                                           async_dispatcher_t* dispatcher) {
   auto mount = MountPointWithMAC(mac, deadline_ms);
   if (mount.empty()) {
     return nullptr;
@@ -489,19 +456,16 @@ int EthernetClientFactory::OpenDir() {
       return -1;
     }
     auto status = fdio_open_at(devfs_root_.get(), base_dir_.c_str(),
-                               ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_READABLE,
-                               srv.release());
+                               ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_READABLE, srv.release());
     if (status != ZX_OK) {
       std::cerr << "Failed to open ethernet directory " << base_dir_ << ", "
-                << static_cast<bool>(devfs_root_) << " - "
-                << zx_status_get_string(status);
+                << static_cast<bool>(devfs_root_) << " - " << zx_status_get_string(status);
       return -1;
     }
     int ethdir;
     if (fdio_fd_create(eth.release(), &ethdir) != ZX_OK) {
       std::cerr << "Failed to create fdio fd directory " << base_dir_ << ", "
-                << static_cast<bool>(devfs_root_) << " - "
-                << zx_status_get_string(status);
+                << static_cast<bool>(devfs_root_) << " - " << zx_status_get_string(status);
       return -1;
     }
 

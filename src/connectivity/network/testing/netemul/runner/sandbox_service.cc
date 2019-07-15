@@ -20,8 +20,8 @@ class SandboxBinding : public fuchsia::netemul::sandbox::Sandbox {
 
   SandboxBinding(fidl::InterfaceRequest<FSandbox> req,
                  fuchsia::sys::EnvironmentControllerPtr env_controller,
-                 fuchsia::sys::EnvironmentPtr environment,
-                 std::unique_ptr<async::Loop> loop, SandboxService* parent)
+                 fuchsia::sys::EnvironmentPtr environment, std::unique_ptr<async::Loop> loop,
+                 SandboxService* parent)
       : loop_(std::move(loop)),
         binding_(this),
         parent_env_(std::move(environment)),
@@ -36,13 +36,11 @@ class SandboxBinding : public fuchsia::netemul::sandbox::Sandbox {
     });
 
     parent_env_.set_error_handler([this](zx_status_t err) {
-      FXL_LOG(ERROR) << "Lost connection to parent environment: "
-                     << zx_status_get_string(err);
+      FXL_LOG(ERROR) << "Lost connection to parent environment: " << zx_status_get_string(err);
       BindingClosed();
     });
 
-    parent_env_ctlr_.events().OnCreated = [this,
-                                           req = std::move(req)]() mutable {
+    parent_env_ctlr_.events().OnCreated = [this, req = std::move(req)]() mutable {
       binding_.Bind(std::move(req), loop_->dispatcher());
     };
 
@@ -59,30 +57,24 @@ class SandboxBinding : public fuchsia::netemul::sandbox::Sandbox {
     ZX_ASSERT(loop_->dispatcher() != async_get_default_dispatcher());
   }
 
-  void CreateEnvironment(
-      fidl::InterfaceRequest<ManagedEnvironment::FManagedEnvironment> req,
-      ManagedEnvironment::Options options) override {
-    auto root = ManagedEnvironment::CreateRoot(parent_env_, shared_env(),
-                                               std::move(options));
+  void CreateEnvironment(fidl::InterfaceRequest<ManagedEnvironment::FManagedEnvironment> req,
+                         ManagedEnvironment::Options options) override {
+    auto root = ManagedEnvironment::CreateRoot(parent_env_, shared_env(), std::move(options));
     root->SetRunningCallback(
-        [root = root.get(), req = std::move(req)]() mutable {
-          root->Bind(std::move(req));
-        });
+        [root = root.get(), req = std::move(req)]() mutable { root->Bind(std::move(req)); });
 
     environments_.push_back(std::move(root));
   }
 
   // Gets this sandbox's NetworkContext
-  void GetNetworkContext(
-      fidl::InterfaceRequest<::fuchsia::netemul::network::NetworkContext>
-          network_context) override {
+  void GetNetworkContext(fidl::InterfaceRequest<::fuchsia::netemul::network::NetworkContext>
+                             network_context) override {
     shared_env()->network_context().GetHandler()(std::move(network_context));
   };
 
   // Gets this sandbox's SyncManager
   void GetSyncManager(
-      fidl::InterfaceRequest<fuchsia::netemul::sync::SyncManager> sync_manager)
-      override {
+      fidl::InterfaceRequest<fuchsia::netemul::sync::SyncManager> sync_manager) override {
     shared_env()->sync_manager().GetHandler()(std::move(sync_manager));
   };
 
@@ -90,8 +82,7 @@ class SandboxBinding : public fuchsia::netemul::sandbox::Sandbox {
   std::shared_ptr<SandboxEnv>& shared_env() {
     ZX_ASSERT(async_get_default_dispatcher() == loop_->dispatcher());
     if (!shared_env_) {
-      shared_env_ = std::make_shared<SandboxEnv>(
-          sys::ServiceDirectory::CreateFromNamespace());
+      shared_env_ = std::make_shared<SandboxEnv>(sys::ServiceDirectory::CreateFromNamespace());
       shared_env_->set_devfs_enabled(true);
     }
     return shared_env_;
@@ -134,23 +125,19 @@ void SandboxService::BindingClosed(netemul::SandboxBinding* binding) {
   });
 }
 
-fidl::InterfaceRequestHandler<fuchsia::netemul::sandbox::Sandbox>
-SandboxService::GetHandler() {
-  return [this](
-             fidl::InterfaceRequest<fuchsia::netemul::sandbox::Sandbox> req) {
+fidl::InterfaceRequestHandler<fuchsia::netemul::sandbox::Sandbox> SandboxService::GetHandler() {
+  return [this](fidl::InterfaceRequest<fuchsia::netemul::sandbox::Sandbox> req) {
     // Create each SandboxBinding in its own thread.
     // A common usage pattern for SandboxService is to connect to the
     // service in each test in a rust create test suite. Rust crate tests
     // run in parallel, so enclosing each binding in its own thread will
     // makes a bit more sense to service everything independently.
-    auto loop =
-        std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+    auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
 
     fuchsia::sys::EnvironmentPtr env;
     fuchsia::sys::EnvironmentControllerPtr env_ctlr;
     parent_env_->CreateNestedEnvironment(
-        env.NewRequest(loop->dispatcher()),
-        env_ctlr.NewRequest(loop->dispatcher()),
+        env.NewRequest(loop->dispatcher()), env_ctlr.NewRequest(loop->dispatcher()),
         fxl::StringPrintf("netemul-%08X-%08X", random_, counter_++), nullptr,
         fuchsia::sys::EnvironmentOptions{
             .delete_storage_on_death = false,
@@ -159,9 +146,8 @@ SandboxService::GetHandler() {
             .allow_parent_runners = true,
         });
 
-    bindings_.push_back(std::make_unique<SandboxBinding>(
-        std::move(req), std::move(env_ctlr), std::move(env), std::move(loop),
-        this));
+    bindings_.push_back(std::make_unique<SandboxBinding>(std::move(req), std::move(env_ctlr),
+                                                         std::move(env), std::move(loop), this));
   };
 }
 

@@ -52,8 +52,7 @@ class Endpoint : public fuchsia::netemul::network::Endpoint,
   // Installs a data sink on endpoint.
   // Data sinks will be notified via ->Consume of any data that is sent to the
   // endpoint.
-  zx_status_t InstallSink(data::BusConsumer::Ptr sink,
-                          data::Consumer::Ptr* src);
+  zx_status_t InstallSink(data::BusConsumer::Ptr sink, data::Consumer::Ptr* src);
   // Removes a data sink, if installed.
   zx_status_t RemoveSink(data::BusConsumer::Ptr sink, data::Consumer::Ptr* src);
 

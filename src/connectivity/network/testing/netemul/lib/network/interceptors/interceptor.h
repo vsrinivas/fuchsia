@@ -41,8 +41,7 @@ class Interceptor {
  public:
   using ForwardPacketCallback = fit::function<void(InterceptPacket)>;
 
-  explicit Interceptor(ForwardPacketCallback forward)
-      : forward_(std::move(forward)) {}
+  explicit Interceptor(ForwardPacketCallback forward) : forward_(std::move(forward)) {}
 
   virtual ~Interceptor() = default;
   // Intercepts a packet

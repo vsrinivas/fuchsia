@@ -65,8 +65,7 @@ int main(int argc, const char** argv) {
 
     sandbox.Start(loop.dispatcher());
     loop.Run();
-  } else if ((!command_line.options().empty()) ||
-             (!command_line.positional_args().empty())) {
+  } else if ((!command_line.options().empty()) || (!command_line.positional_args().empty())) {
     PrintUsage();
     return 1;
   } else {

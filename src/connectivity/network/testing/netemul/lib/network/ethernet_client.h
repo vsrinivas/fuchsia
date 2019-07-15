@@ -30,20 +30,16 @@ class EthernetClient {
   using LinkStatusChangedCallback = fit::function<void(bool link_up)>;
   using Mac = fuchsia::hardware::ethernet::MacAddress;
 
-  explicit EthernetClient(
-      async_dispatcher_t* dispatcher,
-      fidl::InterfacePtr<fuchsia::hardware::ethernet::Device> ptr);
+  explicit EthernetClient(async_dispatcher_t* dispatcher,
+                          fidl::InterfacePtr<fuchsia::hardware::ethernet::Device> ptr);
   ~EthernetClient();
 
   // Configures the ethernet client with given configuration.
   // Clients need to call Setup before they're able to receive any data from
   // this client.
-  void Setup(const EthernetConfig& config,
-             fit::function<void(zx_status_t)> callback);
+  void Setup(const EthernetConfig& config, fit::function<void(zx_status_t)> callback);
 
-  fidl::InterfacePtr<fuchsia::hardware::ethernet::Device>& device() {
-    return device_;
-  }
+  fidl::InterfacePtr<fuchsia::hardware::ethernet::Device>& device() { return device_; }
 
   // DataCallback will be called for every ethernet packet received by the FIFO
   void SetDataCallback(DataCallback cb);
@@ -84,8 +80,7 @@ class EthernetClientFactory {
 
   // finds the mount point of an ethernet device with given Mac.
   // This is achieved based on directory watching and will only fail on timeout.
-  std::string MountPointWithMAC(const EthernetClient::Mac& mac,
-                                unsigned int deadline_ms = 2000);
+  std::string MountPointWithMAC(const EthernetClient::Mac& mac, unsigned int deadline_ms = 2000);
 
   // Same as MountPointWithMac, but returns an instance of EthernetClient
   // already bound to the found mount point.
@@ -93,11 +88,9 @@ class EthernetClientFactory {
                                       unsigned int deadline_ms = 2000,
                                       async_dispatcher_t* dispatcher = nullptr);
 
-  zx_status_t Connect(
-      const std::string& path,
-      fidl::InterfaceRequest<fuchsia::hardware::ethernet::Device> req);
-  EthernetClient::Ptr Create(const std::string& path,
-                             async_dispatcher_t* dispatcher = nullptr);
+  zx_status_t Connect(const std::string& path,
+                      fidl::InterfaceRequest<fuchsia::hardware::ethernet::Device> req);
+  EthernetClient::Ptr Create(const std::string& path, async_dispatcher_t* dispatcher = nullptr);
 
  private:
   int OpenDir();

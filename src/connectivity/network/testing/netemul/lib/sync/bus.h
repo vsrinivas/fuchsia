@@ -17,18 +17,15 @@ class WaitForClientsWatch;
 class Bus {
  public:
   using FBus = fuchsia::netemul::sync::Bus;
-  using WaitForClientsCallback =
-      fuchsia::netemul::sync::Bus::WaitForClientsCallback;
-  using WaitForEventCallback =
-      fuchsia::netemul::sync::Bus::WaitForEventCallback;
+  using WaitForClientsCallback = fuchsia::netemul::sync::Bus::WaitForClientsCallback;
+  using WaitForEventCallback = fuchsia::netemul::sync::Bus::WaitForEventCallback;
   using FEvent = fuchsia::netemul::sync::Event;
   using Ptr = std::unique_ptr<Bus>;
 
   explicit Bus(async_dispatcher_t* dispatcher);
   ~Bus();
 
-  void Subscribe(const std::string& clientName,
-                 fidl::InterfaceRequest<FBus> request);
+  void Subscribe(const std::string& clientName, fidl::InterfaceRequest<FBus> request);
 
  protected:
   using ClientBinding = std::unique_ptr<BusBinding>;

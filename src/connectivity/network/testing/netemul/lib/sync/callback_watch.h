@@ -14,13 +14,11 @@ namespace netemul {
 template <typename T>
 class CallbackWatch {
  public:
-  explicit CallbackWatch(T callback)
-      : callback_(std::move(callback)), timeout_(this) {}
+  explicit CallbackWatch(T callback) : callback_(std::move(callback)), timeout_(this) {}
 
   virtual ~CallbackWatch() = default;
 
-  void TaskTimeout(async_dispatcher_t* dispatcher, async::TaskBase* task,
-                   zx_status_t status) {
+  void TaskTimeout(async_dispatcher_t* dispatcher, async::TaskBase* task, zx_status_t status) {
     if (status == ZX_OK) {
       OnTimeout();
     }

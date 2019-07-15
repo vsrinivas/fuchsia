@@ -10,8 +10,7 @@ namespace netemul {
 
 NetworkManager::NetworkManager(NetworkContext* context) : parent_(context) {}
 
-void NetworkManager::ListNetworks(
-    NetworkManager::ListNetworksCallback callback) {
+void NetworkManager::ListNetworks(NetworkManager::ListNetworksCallback callback) {
   std::vector<std::string> rsp;
   rsp.reserve(nets_.size());
   for (auto& x : nets_) {
@@ -20,9 +19,8 @@ void NetworkManager::ListNetworks(
   callback(std::move(rsp));
 }
 
-zx_status_t NetworkManager::CreateNetwork(
-    std::string name, netemul::Network::Config config,
-    fidl::InterfaceRequest<netemul::Network::FNetwork> req) {
+zx_status_t NetworkManager::CreateNetwork(std::string name, netemul::Network::Config config,
+                                          fidl::InterfaceRequest<netemul::Network::FNetwork> req) {
   if (name.empty() || !Network::CheckConfig(config)) {
     // empty name not allowed
     // invalid config will cause invalid args.
@@ -37,8 +35,7 @@ zx_status_t NetworkManager::CreateNetwork(
       nets_.erase(net.name());
     });
 
-    nets_.insert(std::make_pair<std::string, Network::Ptr>(std::string(name),
-                                                           std::move(net)));
+    nets_.insert(std::make_pair<std::string, Network::Ptr>(std::string(name), std::move(net)));
 
     return ZX_OK;
   } else {
@@ -47,12 +44,10 @@ zx_status_t NetworkManager::CreateNetwork(
   }
 }
 
-void NetworkManager::CreateNetwork(
-    std::string name, Network::Config config,
-    NetworkManager::CreateNetworkCallback callback) {
+void NetworkManager::CreateNetwork(std::string name, Network::Config config,
+                                   NetworkManager::CreateNetworkCallback callback) {
   fidl::InterfaceHandle<Network::FNetwork> handle;
-  auto status =
-      CreateNetwork(std::move(name), std::move(config), handle.NewRequest());
+  auto status = CreateNetwork(std::move(name), std::move(config), handle.NewRequest());
   if (status != ZX_OK) {
     handle.TakeChannel();  // dispose of channel
   }
@@ -68,8 +63,7 @@ Network* NetworkManager::GetNetwork(const std::string& name) {
   }
 }
 
-void NetworkManager::GetNetwork(::std::string name,
-                                NetworkManager::GetNetworkCallback callback) {
+void NetworkManager::GetNetwork(::std::string name, NetworkManager::GetNetworkCallback callback) {
   auto neti = nets_.find(name);
   fidl::InterfaceHandle<Network::FNetwork> handle;
   if (neti == nets_.end()) {

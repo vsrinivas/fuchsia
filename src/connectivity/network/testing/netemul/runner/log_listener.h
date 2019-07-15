@@ -25,8 +25,8 @@ namespace internal {
 // used to handle the logs sent to the LogSink service
 class LogListenerImpl : public fuchsia::logger::LogListener {
  public:
-  LogListenerImpl(fidl::InterfaceRequest<fuchsia::logger::LogListener> request,
-                  std::string prefix, async_dispatcher_t* dispatcher = nullptr);
+  LogListenerImpl(fidl::InterfaceRequest<fuchsia::logger::LogListener> request, std::string prefix,
+                  async_dispatcher_t* dispatcher = nullptr);
 
   /* Actual implementation (overrides) of fuchsia::logger::LogListener stubs */
 
@@ -71,10 +71,9 @@ class LogListener final {
   // LogListener
   //
   // Constructs the LogListener object.
-  LogListener(
-      std::unique_ptr<fuchsia::logger::LogFilterOptions> log_filter_options,
-      fidl::InterfaceHandle<fuchsia::logger::LogListener> loglistener_handle,
-      std::shared_ptr<internal::LogListenerImpl> impl);
+  LogListener(std::unique_ptr<fuchsia::logger::LogFilterOptions> log_filter_options,
+              fidl::InterfaceHandle<fuchsia::logger::LogListener> loglistener_handle,
+              std::shared_ptr<internal::LogListenerImpl> impl);
 
   // Returns true if we can bind to a LogSink in a managed environment.
   bool Bindable() const;
@@ -91,15 +90,13 @@ class LogListener final {
   // from the ManagedEnvironment |env|. |prefix| will be prepended
   // before each and every log from the created log listener.
   static std::unique_ptr<LogListener> Create(
-      fuchsia::netemul::environment::LoggerOptions logger_options,
-      const std::string& prefix, async_dispatcher_t* dispatcher = nullptr);
+      fuchsia::netemul::environment::LoggerOptions logger_options, const std::string& prefix,
+      async_dispatcher_t* dispatcher = nullptr);
 
   /// Checks whether klogs is enabled based on environment options in
   /// |env_options|
-  static bool IsKlogsEnabled(
-      const fuchsia::netemul::environment::EnvironmentOptions& env_options) {
-    return env_options.has_logger_options() &&
-           env_options.logger_options().has_klogs_enabled() &&
+  static bool IsKlogsEnabled(const fuchsia::netemul::environment::EnvironmentOptions& env_options) {
+    return env_options.has_logger_options() && env_options.logger_options().has_klogs_enabled() &&
            env_options.logger_options().klogs_enabled();
   }
 

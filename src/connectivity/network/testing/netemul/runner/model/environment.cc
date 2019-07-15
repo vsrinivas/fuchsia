@@ -21,8 +21,7 @@ static const char* kSetup = "setup";
 static const char* kLoggerOptions = "logger_options";
 static const bool kDefaultInheritServices = true;
 
-bool Environment::ParseFromJSON(const rapidjson::Value& value,
-                                json::JSONParser* parser) {
+bool Environment::ParseFromJSON(const rapidjson::Value& value, json::JSONParser* parser) {
   if (!value.IsObject()) {
     parser->ReportError("environment must be object type");
     return false;
@@ -130,8 +129,8 @@ bool Environment::ParseFromJSON(const rapidjson::Value& value,
         return false;
       }
     } else {
-      parser->ReportError(fxl::StringPrintf(
-          "Unrecognized environment member \"%s\"", i->name.GetString()));
+      parser->ReportError(
+          fxl::StringPrintf("Unrecognized environment member \"%s\"", i->name.GetString()));
       return false;
     }
   }
@@ -141,17 +140,11 @@ bool Environment::ParseFromJSON(const rapidjson::Value& value,
 
 const std::string& Environment::name() const { return name_; }
 
-const std::vector<Environment>& Environment::children() const {
-  return children_;
-}
+const std::vector<Environment>& Environment::children() const { return children_; }
 
-const std::vector<std::string>& Environment::devices() const {
-  return devices_;
-}
+const std::vector<std::string>& Environment::devices() const { return devices_; }
 
-const std::vector<LaunchService>& Environment::services() const {
-  return services_;
-}
+const std::vector<LaunchService>& Environment::services() const { return services_; }
 
 const std::vector<LaunchApp>& Environment::test() const { return test_; }
 
@@ -161,9 +154,7 @@ const std::vector<LaunchApp>& Environment::apps() const { return apps_; }
 
 const std::vector<LaunchApp>& Environment::setup() const { return setup_; }
 
-const LoggerOptions& Environment::logger_options() const {
-  return logger_options_;
-}
+const LoggerOptions& Environment::logger_options() const { return logger_options_; }
 
 void Environment::DisableLogging(bool recursive) {
   logger_options_.set_enabled(false);

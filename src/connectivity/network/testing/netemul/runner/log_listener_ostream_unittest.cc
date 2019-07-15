@@ -18,8 +18,7 @@ class LogListenerOStreamImplTest : public gtest::RealLoopFixture {
     prefix = env_name;
 
     log_listener.reset(new internal::LogListenerOStreamImpl(
-        proxy.NewRequest(dispatcher()), std::move(env_name), &stream,
-        dispatcher()));
+        proxy.NewRequest(dispatcher()), std::move(env_name), &stream, dispatcher()));
   }
 
   // Generate expected parsed log message for a single log.
@@ -88,8 +87,7 @@ TEST_F(LogListenerOStreamImplTest, SimpleLogs) {
   proxy->Log(CreateLogMessage({"tag1"}, "Hello1"));
   proxy->Log(CreateLogMessage({"tag2.1", "tag2.2"}, "Hello2"));
 
-  EXPECT_EQ(WaitForMessage(), ExpectedLogs({{"tag1"}, {"tag2.1", "tag2.2"}},
-                                           {"Hello1", "Hello2"}));
+  EXPECT_EQ(WaitForMessage(), ExpectedLogs({{"tag1"}, {"tag2.1", "tag2.2"}}, {"Hello1", "Hello2"}));
 }
 
 }  // namespace testing

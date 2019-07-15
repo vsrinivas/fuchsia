@@ -22,8 +22,7 @@ class NetworkBus : public data::BusConsumer {
 
   decltype(auto) GetPointer() { return weak_ptr_factory_.GetWeakPtr(); }
 
-  void Consume(const void* data, size_t len,
-               const data::Consumer::Ptr& sender) override {
+  void Consume(const void* data, size_t len, const data::Consumer::Ptr& sender) override {
     if (interceptors_.empty()) {
       ForwardData(data, len, sender);
     } else {
@@ -39,8 +38,7 @@ class NetworkBus : public data::BusConsumer {
     for (auto& i : interceptors_) {
       auto packets = i->Flush();
       for (auto& packet : packets) {
-        ForwardData(packet.data().data(), packet.data().size(),
-                    packet.origin());
+        ForwardData(packet.data().data(), packet.data().size(), packet.origin());
       }
     }
     // clear all interceptors
@@ -51,20 +49,18 @@ class NetworkBus : public data::BusConsumer {
     // reordering interceptor:
     if (config.has_reorder()) {
       interceptors_.emplace_back(new interceptor::Reorder(
-          config.reorder().store_buff, zx::msec(config.reorder().tick),
-          MakeInterceptorCallback()));
+          config.reorder().store_buff, zx::msec(config.reorder().tick), MakeInterceptorCallback()));
     }
     // latency interceptor:
     if (config.has_latency()) {
       interceptors_.emplace_back(new interceptor::Latency(
-          config.latency().average, config.latency().std_dev,
-          MakeInterceptorCallback()));
+          config.latency().average, config.latency().std_dev, MakeInterceptorCallback()));
     }
     // packet loss interceptor:
     if (config.has_packet_loss()) {
       if (config.packet_loss().is_random_rate()) {
-        interceptors_.emplace_back(new interceptor::PacketLoss(
-            config.packet_loss().random_rate(), MakeInterceptorCallback()));
+        interceptors_.emplace_back(new interceptor::PacketLoss(config.packet_loss().random_rate(),
+                                                               MakeInterceptorCallback()));
       }
     }
   }
@@ -74,24 +70,19 @@ class NetworkBus : public data::BusConsumer {
     if (interceptors_.empty()) {
       // if no interceptors inside just forward packet
       return [this](InterceptPacket packet) {
-        ForwardData(packet.data().data(), packet.data().size(),
-                    packet.origin());
+        ForwardData(packet.data().data(), packet.data().size(), packet.origin());
       };
     } else {
       // if interceptors already have members, point onto the back for chaining
       auto* next = interceptors_.back().get();
-      return [next](InterceptPacket packet) {
-        next->Intercept(std::move(packet));
-      };
+      return [next](InterceptPacket packet) { next->Intercept(std::move(packet)); };
     }
   }
 
-  void ForwardData(const void* data, size_t len,
-                   const data::Consumer::Ptr& sender) {
+  void ForwardData(const void* data, size_t len, const data::Consumer::Ptr& sender) {
     for (auto i = sinks_.begin(); i != sinks_.end();) {
       if (*i) {
-        if (i->get() !=
-            sender.get()) {  // flood all sinks different than sender
+        if (i->get() != sender.get()) {  // flood all sinks different than sender
           (*i)->Consume(data, len);
         }
         ++i;
@@ -110,8 +101,7 @@ class NetworkBus : public data::BusConsumer {
 
 }  // namespace impl
 
-Network::Network(NetworkContext* context, std::string name,
-                 Network::Config config)
+Network::Network(NetworkContext* context, std::string name, Network::Config config)
     : bus_(new impl::NetworkBus()),
       parent_(context),
       name_(std::move(name)),
@@ -151,8 +141,7 @@ void Network::SetConfig(fuchsia::netemul::network::NetworkConfig config,
 
 zx_status_t Network::AttachEndpoint(std::string name) {
   data::Consumer::Ptr src;
-  auto status = parent_->endpoint_manager().InstallSink(
-      std::move(name), bus_->GetPointer(), &src);
+  auto status = parent_->endpoint_manager().InstallSink(std::move(name), bus_->GetPointer(), &src);
 
   if (status != ZX_OK) {
     return status;
@@ -164,16 +153,13 @@ zx_status_t Network::AttachEndpoint(std::string name) {
   return ZX_OK;
 }
 
-void Network::AttachEndpoint(::std::string name,
-                             Network::AttachEndpointCallback callback) {
+void Network::AttachEndpoint(::std::string name, Network::AttachEndpointCallback callback) {
   callback(AttachEndpoint(std::move(name)));
 }
 
-void Network::RemoveEndpoint(::std::string name,
-                             Network::RemoveEndpointCallback callback) {
+void Network::RemoveEndpoint(::std::string name, Network::RemoveEndpointCallback callback) {
   data::Consumer::Ptr src;
-  auto status =
-      parent_->endpoint_manager().RemoveSink(name, bus_->GetPointer(), &src);
+  auto status = parent_->endpoint_manager().RemoveSink(name, bus_->GetPointer(), &src);
   if (status == ZX_OK && src) {
     auto& sinks = bus_->sinks();
     for (auto i = sinks.begin(); i != sinks.end(); i++) {
@@ -188,8 +174,8 @@ void Network::RemoveEndpoint(::std::string name,
 
 void Network::CreateFakeEndpoint(
     fidl::InterfaceRequest<fuchsia::netemul::network::FakeEndpoint> ep) {
-  FakeEndpoint::Ptr fep = std::make_unique<FakeEndpoint>(
-      bus_->GetPointer(), std::move(ep), parent_->dispatcher());
+  FakeEndpoint::Ptr fep =
+      std::make_unique<FakeEndpoint>(bus_->GetPointer(), std::move(ep), parent_->dispatcher());
 
   fep->SetOnDisconnected([this](const FakeEndpoint* ep) {
     // when endpoint is disconnected for whatever reason
@@ -209,9 +195,7 @@ void Network::CreateFakeEndpoint(
   bus_->fake_endpoints().emplace_back(std::move(fep));
 }
 
-void Network::SetClosedCallback(Network::ClosedCallback cb) {
-  closed_callback_ = std::move(cb);
-}
+void Network::SetClosedCallback(Network::ClosedCallback cb) { closed_callback_ = std::move(cb); }
 
 bool Network::CheckConfig(const Config& config) {
   if (config.has_packet_loss()) {

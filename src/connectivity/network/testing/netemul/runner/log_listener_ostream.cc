@@ -16,10 +16,9 @@ namespace internal {
  */
 
 LogListenerOStreamImpl::LogListenerOStreamImpl(
-    fidl::InterfaceRequest<fuchsia::logger::LogListener> request,
-    std::string prefix, std::ostream* stream, async_dispatcher_t* dispatcher)
-    : LogListenerImpl(std::move(request), std::move(prefix), dispatcher),
-      stream_(stream) {
+    fidl::InterfaceRequest<fuchsia::logger::LogListener> request, std::string prefix,
+    std::ostream* stream, async_dispatcher_t* dispatcher)
+    : LogListenerImpl(std::move(request), std::move(prefix), dispatcher), stream_(stream) {
   assert(stream_);
 }
 

@@ -21,18 +21,17 @@ class ManagedLauncher : public fuchsia::sys::Launcher {
 
   ~ManagedLauncher();
 
-  void CreateComponent(fuchsia::sys::LaunchInfo launch_info,
-                       fidl::InterfaceRequest<fuchsia::sys::ComponentController>
-                           controller) override;
+  void CreateComponent(
+      fuchsia::sys::LaunchInfo launch_info,
+      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) override;
 
  protected:
   friend ManagedEnvironment;
   void Bind(fidl::InterfaceRequest<fuchsia::sys::Launcher> request);
 
  private:
-  void CreateComponent(
-      fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
-      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller);
+  void CreateComponent(fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
+                       fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller);
 
   // Pointer to parent environment. Not owned.
   ManagedEnvironment* env_;

@@ -29,9 +29,8 @@ bool NetDumpParser::Parse(const uint8_t* data, size_t len) {
   data += sizeof(shb);
   len -= sizeof(shb);
   // expect the first block to be a section block
-  if (shb.magic != kSectionHeaderByteOrderMagic ||
-      shb.blk_tot_len != sizeof(shb) || shb.blk_tot_len2 != sizeof(shb) ||
-      shb.type != kSectionHeaderBlockType) {
+  if (shb.magic != kSectionHeaderByteOrderMagic || shb.blk_tot_len != sizeof(shb) ||
+      shb.blk_tot_len2 != sizeof(shb) || shb.type != kSectionHeaderBlockType) {
     FXL_LOG(ERROR) << "Invalid section header block";
     return false;
   }
@@ -85,13 +84,11 @@ bool NetDumpParser::Parse(const uint8_t* data, size_t len) {
         INSUFF_LEN(options_len, padded_len);
 
         if (option_tlv.type == kOptionInterfaceName) {
-          interfaces_.emplace_back(
-              options + sizeof(option_tlv_t),
-              options + sizeof(option_tlv_t) + option_tlv.len);
+          interfaces_.emplace_back(options + sizeof(option_tlv_t),
+                                   options + sizeof(option_tlv_t) + option_tlv.len);
         } else {
           // we don't recognize any other types of options.
-          FXL_LOG(ERROR) << "Unrecognized interface definition option: "
-                         << option_tlv.type;
+          FXL_LOG(ERROR) << "Unrecognized interface definition option: " << option_tlv.type;
           return false;
         }
 
@@ -111,16 +108,13 @@ bool NetDumpParser::Parse(const uint8_t* data, size_t len) {
           pkt.captured_len != pkt.orig_len
           // check that the reported size matches the external block
           // information:
-          ||
-          PAD(pkt.captured_len) + sizeof(enhanced_pkt_t) + sizeof(uint32_t) !=
-              block_header.len
+          || PAD(pkt.captured_len) + sizeof(enhanced_pkt_t) + sizeof(uint32_t) != block_header.len
           // check that the interface is actually specified in interfaces:
           || pkt.interface_id >= interfaces_.size()) {
         FXL_LOG(ERROR) << "Invalid enhanced packet block";
         return false;
       }
-      packets_.push_back(
-          ParsedPacket{data + sizeof(pkt), pkt.captured_len, pkt.interface_id});
+      packets_.push_back(ParsedPacket{data + sizeof(pkt), pkt.captured_len, pkt.interface_id});
     } else {
       FXL_LOG(ERROR) << "Unrecognized block type: " << block_header.type;
       return false;

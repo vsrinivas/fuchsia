@@ -20,10 +20,8 @@ constexpr int32_t kDummySeverity = 3;
 
 class TestListener : public fuchsia::logger::LogListener {
  public:
-  using ObserverCallback =
-      fit::function<void(const fuchsia::logger::LogMessage&)>;
-  explicit TestListener(
-      fidl::InterfaceRequest<fuchsia::logger::LogListener> req)
+  using ObserverCallback = fit::function<void(const fuchsia::logger::LogMessage&)>;
+  explicit TestListener(fidl::InterfaceRequest<fuchsia::logger::LogListener> req)
       : binding_(this, std::move(req)) {
     binding_.set_error_handler(
         [](zx_status_t s) { FAIL() << "Connection to test listener closed"; });
@@ -48,9 +46,7 @@ class TestListener : public fuchsia::logger::LogListener {
 
   std::vector<fuchsia::logger::LogMessage>& messages() { return messages_; }
 
-  void SetObserver(ObserverCallback observer) {
-    observer_callback_ = std::move(observer);
-  }
+  void SetObserver(ObserverCallback observer) { observer_callback_ = std::move(observer); }
 
  private:
   fidl::Binding<fuchsia::logger::LogListener> binding_;
@@ -59,8 +55,7 @@ class TestListener : public fuchsia::logger::LogListener {
 };
 
 // Create a test log message.
-fuchsia::logger::LogMessage CreateLogMessage(std::vector<std::string> tags,
-                                             std::string message);
+fuchsia::logger::LogMessage CreateLogMessage(std::vector<std::string> tags, std::string message);
 
 }  // namespace testing
 }  // namespace netemul

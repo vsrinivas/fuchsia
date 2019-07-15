@@ -15,15 +15,13 @@
 
 namespace netemul {
 
-class FakeEndpoint : public fuchsia::netemul::network::FakeEndpoint,
-                     public data::Consumer {
+class FakeEndpoint : public fuchsia::netemul::network::FakeEndpoint, public data::Consumer {
  public:
   using FFakeEndpoint = fuchsia::netemul::network::FakeEndpoint;
   using Ptr = std::unique_ptr<FakeEndpoint>;
   using OnDisconnectedCallback = fit::function<void(const FakeEndpoint*)>;
 
-  explicit FakeEndpoint(data::BusConsumer::Ptr sink,
-                        fidl::InterfaceRequest<FFakeEndpoint> request,
+  explicit FakeEndpoint(data::BusConsumer::Ptr sink, fidl::InterfaceRequest<FFakeEndpoint> request,
                         async_dispatcher_t* dispatcher = nullptr);
 
   // Called when the FIDL binding is voided

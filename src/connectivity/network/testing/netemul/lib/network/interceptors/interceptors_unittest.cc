@@ -39,8 +39,7 @@ void ReverseOrder(std::vector<InterceptPacket>* packets) {
 class InterceptorsTest : public gtest::RealLoopFixture {
  public:
   InterceptPacket MakeSingleBytePacket(uint8_t value) {
-    return InterceptPacket(std::vector<uint8_t>({value}),
-                           data::Consumer::Ptr());
+    return InterceptPacket(std::vector<uint8_t>({value}), data::Consumer::Ptr());
   }
 };
 
@@ -52,8 +51,7 @@ TEST_F(InterceptorsTest, PacketLossRealRand) {
   interceptor::PacketLoss full_loss(
       100, [&full_loss_count](InterceptPacket packet) { full_loss_count++; });
   int no_loss_count = 0;
-  interceptor::PacketLoss no_loss(
-      0, [&no_loss_count](InterceptPacket packet) { no_loss_count++; });
+  interceptor::PacketLoss no_loss(0, [&no_loss_count](InterceptPacket packet) { no_loss_count++; });
 
   for (int i = 0; i < 500; i++) {
     half_loss.Intercept(MakeSingleBytePacket(static_cast<uint8_t>(i)));
@@ -74,8 +72,8 @@ TEST_F(InterceptorsTest, PacketLossRealRand) {
 
 TEST_F(InterceptorsTest, PacketLossControlledRand) {
   int pass_count = 0;
-  interceptor::PacketLoss<TestRNG> loss(
-      50, [&pass_count](InterceptPacket packet) { pass_count++; });
+  interceptor::PacketLoss<TestRNG> loss(50,
+                                        [&pass_count](InterceptPacket packet) { pass_count++; });
 
   gNextRandomNumber = 99;
   loss.Intercept(MakeSingleBytePacket(static_cast<uint8_t>(1)));
@@ -96,33 +94,29 @@ TEST_F(InterceptorsTest, PacketLossControlledRand) {
 
 TEST_F(InterceptorsTest, LatencyRealRand) {
   int pass_count = 0;
-  interceptor::Latency latency(
-      5, 1, [&pass_count](InterceptPacket packet) { pass_count++; });
+  interceptor::Latency latency(5, 1, [&pass_count](InterceptPacket packet) { pass_count++; });
 
   for (int i = 0; i < 5; i++) {
     latency.Intercept(MakeSingleBytePacket(static_cast<uint8_t>(i)));
   }
 
   EXPECT_EQ(pass_count, 0);
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&pass_count]() { return pass_count == 5; }, zx::sec(2)));
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&pass_count]() { return pass_count == 5; }, zx::sec(2)));
 }
 
 TEST_F(InterceptorsTest, LatencyControlledRand) {
   ControlledRand::NextRand = 10;
   int pass_count = 0;
   zx::time after;
-  interceptor::Latency<ControlledRand> latency(
-      0, 0, [&pass_count, &after](InterceptPacket packet) {
-        pass_count++;
-        after = zx::clock::get_monotonic();
-      });
+  interceptor::Latency<ControlledRand> latency(0, 0, [&pass_count, &after](InterceptPacket packet) {
+    pass_count++;
+    after = zx::clock::get_monotonic();
+  });
   auto bef = zx::clock::get_monotonic();
   latency.Intercept(MakeSingleBytePacket(static_cast<uint8_t>(0)));
 
   EXPECT_EQ(pass_count, 0);
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&pass_count]() { return pass_count == 1; }, zx::sec(2)));
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&pass_count]() { return pass_count == 1; }, zx::sec(2)));
 
   auto diff = (after - bef).to_msecs();
   std::cout << "measured latency = " << diff << "ms" << std::endl;
@@ -134,8 +128,7 @@ TEST_F(InterceptorsTest, LatencyControlledRand) {
 
 TEST_F(InterceptorsTest, LatencyFlush) {
   int pass_count = 0;
-  interceptor::Latency latency(
-      15, 0, [&pass_count](InterceptPacket packet) { pass_count++; });
+  interceptor::Latency latency(15, 0, [&pass_count](InterceptPacket packet) { pass_count++; });
 
   for (int i = 0; i < 5; i++) {
     latency.Intercept(MakeSingleBytePacket(static_cast<uint8_t>(i)));
@@ -180,16 +173,16 @@ TEST_F(InterceptorsTest, ReorderFakeRand) {
   constexpr int packet_count = 5;
   uint8_t no_reorder_count = 0;
   uint8_t reverse_count = packet_count;
-  interceptor::Reorder<NoReorder> no_reorder(
-      packet_count, zx::msec(0), [&no_reorder_count](InterceptPacket packet) {
-        EXPECT_EQ(packet.data()[0], no_reorder_count);
-        no_reorder_count++;
-      });
-  interceptor::Reorder<ReverseOrder> reverse(
-      packet_count, zx::msec(0), [&reverse_count](InterceptPacket packet) {
-        reverse_count--;
-        EXPECT_EQ(packet.data()[0], reverse_count);
-      });
+  interceptor::Reorder<NoReorder> no_reorder(packet_count, zx::msec(0),
+                                             [&no_reorder_count](InterceptPacket packet) {
+                                               EXPECT_EQ(packet.data()[0], no_reorder_count);
+                                               no_reorder_count++;
+                                             });
+  interceptor::Reorder<ReverseOrder> reverse(packet_count, zx::msec(0),
+                                             [&reverse_count](InterceptPacket packet) {
+                                               reverse_count--;
+                                               EXPECT_EQ(packet.data()[0], reverse_count);
+                                             });
 
   for (uint8_t i = 0; i < packet_count; i++) {
     EXPECT_EQ(no_reorder_count, 0);
@@ -220,12 +213,10 @@ TEST_F(InterceptorsTest, ReorderTick) {
 
   int tick_count = 0;
   interceptor::Reorder<NoReorder> reorder_with_tick(
-      threshold, zx::msec(1),
-      [&tick_count](InterceptPacket packet) { tick_count++; });
+      threshold, zx::msec(1), [&tick_count](InterceptPacket packet) { tick_count++; });
   interceptor::Reorder<NoReorder> reorder_no_tick(
-      threshold, zx::msec(0), [](InterceptPacket packet) {
-        FAIL() << "Should never pass through packets";
-      });
+      threshold, zx::msec(0),
+      [](InterceptPacket packet) { FAIL() << "Should never pass through packets"; });
 
   for (uint8_t i = 0; i < packet_count; i++) {
     EXPECT_EQ(tick_count, 0);
@@ -235,16 +226,15 @@ TEST_F(InterceptorsTest, ReorderTick) {
   // didn't hit threshold, so tick count should still be zero
   EXPECT_EQ(tick_count, 0);
 
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&tick_count]() { return tick_count == packet_count; }, zx::sec(2)));
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&tick_count]() { return tick_count == packet_count; },
+                                        zx::sec(2)));
 }
 
 TEST_F(InterceptorsTest, ReorderFlush) {
   // Verify that flushing pending packets gets us all the unused packets back:
   constexpr int threshold = 3;
   constexpr int packet_count = 5;
-  interceptor::Reorder<NoReorder> reorder(threshold, zx::msec(0),
-                                          [](InterceptPacket packet) {});
+  interceptor::Reorder<NoReorder> reorder(threshold, zx::msec(0), [](InterceptPacket packet) {});
   for (uint8_t i = 0; i < packet_count; i++) {
     reorder.Intercept(MakeSingleBytePacket(i));
   }

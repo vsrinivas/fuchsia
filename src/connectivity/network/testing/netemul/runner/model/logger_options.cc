@@ -24,8 +24,7 @@ static const bool kDefaultKlogsEnabled = false;
 
 LoggerOptions::LoggerOptions() { SetDefaults(); }
 
-bool LoggerOptions::ParseFromJSON(const rapidjson::Value& value,
-                                  json::JSONParser* parser) {
+bool LoggerOptions::ParseFromJSON(const rapidjson::Value& value, json::JSONParser* parser) {
   if (value.IsNull()) {
     SetDefaults();
     return true;
@@ -47,8 +46,7 @@ bool LoggerOptions::ParseFromJSON(const rapidjson::Value& value,
       enabled_ = i->value.GetBool();
     } else if (i->name == kKlogsEnabled) {
       if (!i->value.IsBool()) {
-        parser->ReportError(
-            "logger_options klogs_enabled must be boolean value");
+        parser->ReportError("logger_options klogs_enabled must be boolean value");
         return false;
       }
       klogs_enabled_ = i->value.GetBool();
@@ -57,8 +55,8 @@ bool LoggerOptions::ParseFromJSON(const rapidjson::Value& value,
         return false;
       }
     } else {
-      parser->ReportError(fxl::StringPrintf(
-          "Unrecognized logger_options member \"%s\"", i->name.GetString()));
+      parser->ReportError(
+          fxl::StringPrintf("Unrecognized logger_options member \"%s\"", i->name.GetString()));
       return false;
     }
   }

@@ -15,8 +15,7 @@ class SetupHandle : fuchsia::netemul::network::SetupHandle {
   using FSetupHandle = fuchsia::netemul::network::SetupHandle;
   using OnClosedCallback = fit::function<void(SetupHandle*)>;
 
-  SetupHandle(fidl::InterfaceRequest<FSetupHandle> req,
-              async_dispatcher_t* dispatcher)
+  SetupHandle(fidl::InterfaceRequest<FSetupHandle> req, async_dispatcher_t* dispatcher)
       : binding_(this, std::move(req), dispatcher) {
     binding_.set_error_handler([this](zx_status_t status) {
       channels_.clear();
@@ -34,13 +33,9 @@ class SetupHandle : fuchsia::netemul::network::SetupHandle {
     return ret;
   }
 
-  void AddChannel(zx::channel channel) {
-    channels_.push_back(std::move(channel));
-  }
+  void AddChannel(zx::channel channel) { channels_.push_back(std::move(channel)); }
 
-  void SetOnClosedCallback(OnClosedCallback callback) {
-    on_closed_callback_ = std::move(callback);
-  }
+  void SetOnClosedCallback(OnClosedCallback callback) { on_closed_callback_ = std::move(callback); }
 
  private:
   fidl::Binding<FSetupHandle> binding_;
@@ -72,8 +67,7 @@ void NetworkContext::GetEndpointManager(
 
 zx_status_t NetworkContext::Setup(std::vector<NetworkSetup> setup,
                                   fidl::InterfaceRequest<FSetupHandle> req) {
-  auto setup_handle =
-      std::make_unique<SetupHandle>(std::move(req), dispatcher_);
+  auto setup_handle = std::make_unique<SetupHandle>(std::move(req), dispatcher_);
 
   setup_handle->SetOnClosedCallback([this](SetupHandle* handle) {
     for (auto i = setup_handles_.begin(); i != setup_handles_.end(); i++) {
@@ -85,9 +79,8 @@ zx_status_t NetworkContext::Setup(std::vector<NetworkSetup> setup,
   });
 
   for (auto& net_setup : setup) {
-    auto status = network_manager_.CreateNetwork(
-        net_setup.name, std::move(net_setup.config),
-        setup_handle->CreateChannel<Network::FNetwork>());
+    auto status = network_manager_.CreateNetwork(net_setup.name, std::move(net_setup.config),
+                                                 setup_handle->CreateChannel<Network::FNetwork>());
     if (status != ZX_OK) {
       return status;
     }
@@ -101,12 +94,10 @@ zx_status_t NetworkContext::Setup(std::vector<NetworkSetup> setup,
         endp_setup.config = std::make_unique<Endpoint::Config>();
         endp_setup.config->mtu = kDefaultMtu;
         endp_setup.config->mac = nullptr;
-        endp_setup.config->backing =
-            fuchsia::netemul::network::EndpointBacking::ETHERTAP;
+        endp_setup.config->backing = fuchsia::netemul::network::EndpointBacking::ETHERTAP;
       }
-      status = endpoint_manager_.CreateEndpoint(
-          endp_setup.name, std::move(*endp_setup.config),
-          setup_handle->CreateChannel<Endpoint::FEndpoint>());
+      status = endpoint_manager_.CreateEndpoint(endp_setup.name, std::move(*endp_setup.config),
+                                                setup_handle->CreateChannel<Endpoint::FEndpoint>());
       if (status != ZX_OK) {
         return status;
       }
@@ -127,8 +118,7 @@ zx_status_t NetworkContext::Setup(std::vector<NetworkSetup> setup,
   return ZX_OK;
 }
 
-void NetworkContext::Setup(std::vector<NetworkSetup> setup,
-                           SetupCallback callback) {
+void NetworkContext::Setup(std::vector<NetworkSetup> setup, SetupCallback callback) {
   fidl::InterfaceHandle<SetupHandle::FSetupHandle> ifhandle;
   auto status = Setup(std::move(setup), ifhandle.NewRequest());
   if (status != ZX_OK) {

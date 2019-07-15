@@ -23,8 +23,7 @@ class SandboxArgs {
  public:
   bool ParseFromCmxFileAt(int dir, const std::string& path);
   bool ParseFromString(const std::string& config);
-  bool ParseFromJSON(const rapidjson::Value& facet,
-                     json::JSONParser* json_parser);
+  bool ParseFromJSON(const rapidjson::Value& facet, json::JSONParser* json_parser);
 
   config::Config config;
 };
@@ -57,8 +56,7 @@ class SandboxResult {
 
   const std::string& description() const { return description_; }
 
-  friend std::ostream& operator<<(std::ostream& os,
-                                  const SandboxResult& result);
+  friend std::ostream& operator<<(std::ostream& os, const SandboxResult& result);
 
  private:
   Status status_;
@@ -70,8 +68,7 @@ class Sandbox {
   using TerminationReason = fuchsia::sys::TerminationReason;
   using TerminationCallback = fit::function<void(SandboxResult)>;
   using ServicesCreatedCallback = fit::function<void()>;
-  using RootEnvironmentCreatedCallback =
-      fit::function<void(ManagedEnvironment*)>;
+  using RootEnvironmentCreatedCallback = fit::function<void(ManagedEnvironment*)>;
   explicit Sandbox(SandboxArgs args);
   ~Sandbox();
 
@@ -85,16 +82,15 @@ class Sandbox {
     services_created_callback_ = std::move(callback);
   }
 
-  void SetRootEnvironmentCreatedCallback(
-      RootEnvironmentCreatedCallback callback) {
+  void SetRootEnvironmentCreatedCallback(RootEnvironmentCreatedCallback callback) {
     root_environment_created_callback_ = std::move(callback);
   }
 
   const SandboxEnv::Ptr& sandbox_environment() { return sandbox_env_; }
 
  private:
-  using ConfiguringEnvironmentPtr = std::shared_ptr<
-      fidl::SynchronousInterfacePtr<ManagedEnvironment::FManagedEnvironment>>;
+  using ConfiguringEnvironmentPtr =
+      std::shared_ptr<fidl::SynchronousInterfacePtr<ManagedEnvironment::FManagedEnvironment>>;
   using ConfiguringEnvironmentLauncher =
       std::shared_ptr<fidl::SynchronousInterfacePtr<fuchsia::sys::Launcher>>;
   using Promise = fit::promise<void, SandboxResult>;
@@ -102,23 +98,19 @@ class Sandbox {
 
   void StartEnvironments();
   void Terminate(SandboxResult result);
-  void Terminate(SandboxResult::Status status,
-                 std::string description = std::string());
+  void Terminate(SandboxResult::Status status, std::string description = std::string());
   void PostTerminate(SandboxResult result);
-  void PostTerminate(SandboxResult::Status status,
-                     std::string description = std::string());
+  void PostTerminate(SandboxResult::Status status, std::string description = std::string());
 
   void EnableTestObservation();
   void RegisterTest(size_t ticket);
   void UnregisterTest(size_t ticket);
 
   template <typename T>
-  bool LaunchProcess(fuchsia::sys::LauncherSyncPtr* launcher,
-                     const std::string& url,
+  bool LaunchProcess(fuchsia::sys::LauncherSyncPtr* launcher, const std::string& url,
                      const std::vector<std::string>& arguments, bool is_test);
 
-  Promise LaunchSetup(fuchsia::sys::LauncherSyncPtr* launcher,
-                      const std::string& url,
+  Promise LaunchSetup(fuchsia::sys::LauncherSyncPtr* launcher, const std::string& url,
                       const std::vector<std::string>& arguments);
 
   Promise StartChildEnvironment(ConfiguringEnvironmentPtr parent,
@@ -133,8 +125,7 @@ class Sandbox {
   bool CreateEnvironmentOptions(const config::Environment& config,
                                 ManagedEnvironment::Options* options);
   void ConfigureRootEnvironment();
-  Promise ConfigureEnvironment(ConfiguringEnvironmentPtr env,
-                               const config::Environment* config,
+  Promise ConfigureEnvironment(ConfiguringEnvironmentPtr env, const config::Environment* config,
                                bool root = false);
   bool ConfigureNetworks();
 

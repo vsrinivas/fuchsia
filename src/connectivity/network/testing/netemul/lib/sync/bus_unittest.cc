@@ -10,8 +10,7 @@
 #define ASSERT_OK(st) ASSERT_EQ(ZX_OK, (st))
 #define ASSERT_NOK(st) ASSERT_NE(ZX_OK, (st))
 
-#define WAIT_FOR_OK(ok) \
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&ok]() { return ok; }, zx::sec(2)))
+#define WAIT_FOR_OK(ok) ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&ok]() { return ok; }, zx::sec(2)))
 #define WAIT_FOR_OK_AND_RESET(ok) \
   WAIT_FOR_OK(ok);                \
   ok = false
@@ -28,8 +27,7 @@ static const char* kAltTestBus = "alt-bus";
 
 class BusTest : public TestWithEnvironment {
  public:
-  using SyncManagerSync =
-      fidl::SynchronousInterfacePtr<SyncManager::FSyncManager>;
+  using SyncManagerSync = fidl::SynchronousInterfacePtr<SyncManager::FSyncManager>;
   using BusSync = fidl::SynchronousInterfacePtr<Bus::FBus>;
   using BusAsync = fidl::InterfacePtr<Bus::FBus>;
 
@@ -38,13 +36,11 @@ class BusTest : public TestWithEnvironment {
     fuchsia::sys::EnvironmentPtr parent_env;
     real_services()->Connect(parent_env.NewRequest());
 
-    svc_loop_ =
-        std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+    svc_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
     ASSERT_OK(svc_loop_->StartThread("testloop"));
     svc_ = std::make_unique<SyncManager>(svc_loop_->dispatcher());
 
-    auto services =
-        EnvironmentServices::Create(parent_env, svc_loop_->dispatcher());
+    auto services = EnvironmentServices::Create(parent_env, svc_loop_->dispatcher());
 
     services->AddService(svc_->GetHandler());
     test_env_ = CreateNewEnclosingEnvironment("env", std::move(services));
@@ -60,13 +56,11 @@ class BusTest : public TestWithEnvironment {
     svc_loop_->JoinThreads();
   }
 
-  void GetSyncManager(
-      fidl::InterfaceRequest<SyncManager::FSyncManager> manager) {
+  void GetSyncManager(fidl::InterfaceRequest<SyncManager::FSyncManager> manager) {
     test_env_->ConnectToService(std::move(manager));
   }
 
-  void FillEventData(Bus::FEvent* event, int32_t code = 0,
-                     const std::string& name = "",
+  void FillEventData(Bus::FEvent* event, int32_t code = 0, const std::string& name = "",
                      std::vector<uint8_t> args = {}) {
     if (code != 0) {
       event->set_code(code);
@@ -87,21 +81,18 @@ class BusTest : public TestWithEnvironment {
     }
   }
 
-  static bool EventEquals(const netemul::Bus::FEvent& e1,
-                          const netemul::Bus::FEvent& e2) {
-    return (e1.has_code() == e2.has_code() &&
-            (!e1.has_code() || e1.code() == e2.code())) &&
+  static bool EventEquals(const netemul::Bus::FEvent& e1, const netemul::Bus::FEvent& e2) {
+    return (e1.has_code() == e2.has_code() && (!e1.has_code() || e1.code() == e2.code())) &&
            (e1.has_message() == e2.has_message() &&
             (!e1.has_message() || e1.message() == e2.message())) &&
            (e1.has_arguments() == e2.has_arguments() &&
             (!e1.has_arguments() ||
              (e1.arguments().size() == e2.arguments().size() &&
-              memcmp(e1.arguments().data(), e2.arguments().data(),
-                     e1.arguments().size()) == 0)));
+              memcmp(e1.arguments().data(), e2.arguments().data(), e1.arguments().size()) == 0)));
   }
 
-  void DataExchangeTest(const Bus::FEvent& ref_event_1,
-                        const Bus::FEvent& ref_event_2, bool ensure = false) {
+  void DataExchangeTest(const Bus::FEvent& ref_event_1, const Bus::FEvent& ref_event_2,
+                        bool ensure = false) {
     SyncManagerSync bm;
     GetSyncManager(bm.NewRequest());
 
@@ -152,8 +143,7 @@ class BusTest : public TestWithEnvironment {
     ASSERT_FALSE(ok1);
   }
 
-  bool VectorSetEquals(const std::vector<std::string>& s1,
-                       const std::vector<std::string>& s2) {
+  bool VectorSetEquals(const std::vector<std::string>& s1, const std::vector<std::string>& s2) {
     if (s1.size() != s2.size()) {
       return false;
     }
@@ -174,17 +164,15 @@ class BusTest : public TestWithEnvironment {
     return true;
   }
 
-  void TestEventWaiting(BusSync* c1, BusAsync* c2, bool expect_result,
-                        Bus::FEvent wait, Bus::FEvent publish,
-                        const std::string& test_caller) {
+  void TestEventWaiting(BusSync* c1, BusAsync* c2, bool expect_result, Bus::FEvent wait,
+                        Bus::FEvent publish, const std::string& test_caller) {
     int64_t timeout = zx::msec(expect_result ? 0 : 15).to_nsecs();
     bool got_callback = false;
-    (*c2)->WaitForEvent(
-        std::move(wait), timeout,
-        [&got_callback, expect_result, test_caller](bool result) {
-          EXPECT_EQ(result, expect_result) << test_caller;
-          got_callback = true;
-        });
+    (*c2)->WaitForEvent(std::move(wait), timeout,
+                        [&got_callback, expect_result, test_caller](bool result) {
+                          EXPECT_EQ(result, expect_result) << test_caller;
+                          got_callback = true;
+                        });
     bool published = false;
     // send whatever on the bus to make sure wait is in effect.
     (*c2)->EnsurePublish(Bus::FEvent(), [&published]() { published = true; });
@@ -250,9 +238,7 @@ TEST_F(BusTest, CrossTalk) {
   BusAsync cli1;
   ASSERT_OK(bm->BusSubscribe(kAltTestBus, "cli1", cli1.NewRequest()));
   ASSERT_TRUE(cli1.is_bound());
-  cli1.events().OnBusData = [&received_data](Bus::FEvent event) {
-    received_data = true;
-  };
+  cli1.events().OnBusData = [&received_data](Bus::FEvent event) { received_data = true; };
 
   // run a regular data exchange test:
   Bus::FEvent ref_event_1, ref_event_2;
@@ -325,32 +311,29 @@ TEST_F(BusTest, WaitForClients) {
   ASSERT_OK(bm->BusSubscribe(kMainTestBus, "async", cli_async.NewRequest()));
 
   bool got_callback = false;
-  cli_async->WaitForClients(
-      {"c1"}, zx::msec(0).to_nsecs(),
-      [&got_callback](bool result, std::vector<std::string> absent) {
-        EXPECT_TRUE(result);
-        EXPECT_TRUE(absent.empty());
-        got_callback = true;
-      });
+  cli_async->WaitForClients({"c1"}, zx::msec(0).to_nsecs(),
+                            [&got_callback](bool result, std::vector<std::string> absent) {
+                              EXPECT_TRUE(result);
+                              EXPECT_TRUE(absent.empty());
+                              got_callback = true;
+                            });
   WAIT_FOR_OK_AND_RESET(got_callback);
 
-  cli_async->WaitForClients(
-      {"doesn't exist"}, zx::msec(10).to_nsecs(),
-      [&got_callback](bool result, std::vector<std::string> absent) {
-        EXPECT_FALSE(result);
-        ASSERT_EQ(absent.size(), 1ul);
-        EXPECT_EQ(absent[0], "doesn't exist");
-        got_callback = true;
-      });
+  cli_async->WaitForClients({"doesn't exist"}, zx::msec(10).to_nsecs(),
+                            [&got_callback](bool result, std::vector<std::string> absent) {
+                              EXPECT_FALSE(result);
+                              ASSERT_EQ(absent.size(), 1ul);
+                              EXPECT_EQ(absent[0], "doesn't exist");
+                              got_callback = true;
+                            });
   WAIT_FOR_OK_AND_RESET(got_callback);
 
-  cli_async->WaitForClients(
-      {"c1", "c2"}, zx::msec(1000).to_nsecs(),
-      [&got_callback](bool result, std::vector<std::string> absent) {
-        EXPECT_TRUE(result);
-        EXPECT_TRUE(absent.empty());
-        got_callback = true;
-      });
+  cli_async->WaitForClients({"c1", "c2"}, zx::msec(1000).to_nsecs(),
+                            [&got_callback](bool result, std::vector<std::string> absent) {
+                              EXPECT_TRUE(result);
+                              EXPECT_TRUE(absent.empty());
+                              got_callback = true;
+                            });
   RunLoopUntilIdle();
   EXPECT_FALSE(got_callback);
   BusSync cli2;
@@ -366,10 +349,9 @@ TEST_F(BusTest, DestroyWithClientWaiting) {
   BusAsync cli_async;
   ASSERT_OK(bm->BusSubscribe(kMainTestBus, "async", cli_async.NewRequest()));
 
-  cli_async->WaitForClients({"c1"}, zx::msec(0).to_nsecs(),
-                            [](bool result, std::vector<std::string> absent) {
-                              FAIL() << "Mustn't reach callback";
-                            });
+  cli_async->WaitForClients(
+      {"c1"}, zx::msec(0).to_nsecs(),
+      [](bool result, std::vector<std::string> absent) { FAIL() << "Mustn't reach callback"; });
 }
 
 TEST_F(BusTest, WaitForEvent) {
@@ -386,17 +368,14 @@ TEST_F(BusTest, WaitForEvent) {
   bool published = false;
   Bus::FEvent e1;
   // check that timeout fires
-  cli_async->WaitForEvent(std::move(e1), zx::msec(1).to_nsecs(),
-                          [&got_callback](bool result) {
-                            EXPECT_FALSE(result);
-                            got_callback = true;
-                          });
+  cli_async->WaitForEvent(std::move(e1), zx::msec(1).to_nsecs(), [&got_callback](bool result) {
+    EXPECT_FALSE(result);
+    got_callback = true;
+  });
   WAIT_FOR_OK_AND_RESET(got_callback);
 
   int evt_counter = 0;
-  cli_async.events().OnBusData = [&evt_counter](Bus::FEvent data) {
-    evt_counter++;
-  };
+  cli_async.events().OnBusData = [&evt_counter](Bus::FEvent data) { evt_counter++; };
 
   // check that callback fires with simple event with code
   Bus::FEvent evt_wait, evt_snd;
@@ -438,8 +417,7 @@ TEST_F(BusTest, WaitForEvent) {
                             EXPECT_FALSE(result);
                             got_callback = true;
                           });
-  cli_async->EnsurePublish(std::move(evt_snd),
-                           [&published]() { published = true; });
+  cli_async->EnsurePublish(std::move(evt_snd), [&published]() { published = true; });
   WAIT_FOR_OK_AND_RESET(published);
   WAIT_FOR_OK_AND_RESET(got_callback);
 
@@ -458,50 +436,42 @@ TEST_F(BusTest, EventWaitingEquality) {
   ASSERT_OK(bm->BusSubscribe(kMainTestBus, "async", cli_async.NewRequest()));
 
   int evt_counter = 0;
-  cli_async.events().OnBusData = [&evt_counter](Bus::FEvent data) {
-    evt_counter++;
-  };
+  cli_async.events().OnBusData = [&evt_counter](Bus::FEvent data) { evt_counter++; };
 
   Bus::FEvent wait, publish;
   FillEventData(&wait, 1);
   FillEventData(&publish, 1, "msg", {1, 2, 3});
-  TestEventWaiting(&cli1, &cli_async, true, std::move(wait), std::move(publish),
-                   "code match");
+  TestEventWaiting(&cli1, &cli_async, true, std::move(wait), std::move(publish), "code match");
 
   FillEventData(&wait, 0, "msg");
   FillEventData(&publish, 1, "msg", {1, 2, 3});
-  TestEventWaiting(&cli1, &cli_async, true, std::move(wait), std::move(publish),
-                   "message match");
+  TestEventWaiting(&cli1, &cli_async, true, std::move(wait), std::move(publish), "message match");
 
   FillEventData(&wait, 0, "", {1, 2, 3});
   FillEventData(&publish, 1, "msg", {1, 2, 3});
-  TestEventWaiting(&cli1, &cli_async, true, std::move(wait), std::move(publish),
-                   "arg match");
+  TestEventWaiting(&cli1, &cli_async, true, std::move(wait), std::move(publish), "arg match");
 
   FillEventData(&wait, 2);
   FillEventData(&publish, 1, "msg", {1, 2, 3});
-  TestEventWaiting(&cli1, &cli_async, false, std::move(wait),
-                   std::move(publish), "code mismatch");
+  TestEventWaiting(&cli1, &cli_async, false, std::move(wait), std::move(publish), "code mismatch");
 
   FillEventData(&wait, 0, "bla");
   FillEventData(&publish, 1, "msg", {1, 2, 3});
-  TestEventWaiting(&cli1, &cli_async, false, std::move(wait),
-                   std::move(publish), "message mismatch");
+  TestEventWaiting(&cli1, &cli_async, false, std::move(wait), std::move(publish),
+                   "message mismatch");
 
   FillEventData(&wait, 0, "", {4, 5, 6});
   FillEventData(&publish, 1, "msg", {1, 2, 3});
-  TestEventWaiting(&cli1, &cli_async, false, std::move(wait),
-                   std::move(publish), "arg mismatch");
+  TestEventWaiting(&cli1, &cli_async, false, std::move(wait), std::move(publish), "arg mismatch");
 
   FillEventData(&wait, 1, "msg", {4, 5, 6});
   FillEventData(&publish, 1, "msg", {1, 2, 3});
-  TestEventWaiting(&cli1, &cli_async, false, std::move(wait),
-                   std::move(publish), "all match/arg mismatch");
+  TestEventWaiting(&cli1, &cli_async, false, std::move(wait), std::move(publish),
+                   "all match/arg mismatch");
 
   FillEventData(&wait, 1, "msg", {1, 2, 3});
   FillEventData(&publish, 1, "msg", {1, 2, 3});
-  TestEventWaiting(&cli1, &cli_async, true, std::move(wait), std::move(publish),
-                   "all match");
+  TestEventWaiting(&cli1, &cli_async, true, std::move(wait), std::move(publish), "all match");
 
   EXPECT_EQ(evt_counter,
             8);  // check that all events actually made into the event callback

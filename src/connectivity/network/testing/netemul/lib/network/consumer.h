@@ -35,8 +35,7 @@ class BusConsumer {
  public:
   using Ptr = fxl::WeakPtr<BusConsumer>;
   virtual ~BusConsumer() = default;
-  virtual void Consume(const void* data, size_t len,
-                       const Consumer::Ptr& sender) = 0;
+  virtual void Consume(const void* data, size_t len, const Consumer::Ptr& sender) = 0;
 };
 
 }  // namespace data

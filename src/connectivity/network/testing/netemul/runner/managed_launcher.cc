@@ -26,15 +26,13 @@ static const char* kVDataRoot = "/vdata";
 
 // Helper function to respond with a failure termination reason
 // to component controller requests.
-void EmitComponentFailure(
-    fidl::InterfaceRequest<fuchsia::sys::ComponentController> req,
-    fuchsia::sys::TerminationReason reason) {
+void EmitComponentFailure(fidl::InterfaceRequest<fuchsia::sys::ComponentController> req,
+                          fuchsia::sys::TerminationReason reason) {
   // Internal helper class to be able to use fidl::Binding to emit the event:
   class ErrorComponentController : public fuchsia::sys::ComponentController {
    public:
-    ErrorComponentController(
-        fidl::InterfaceRequest<fuchsia::sys::ComponentController> req,
-        fuchsia::sys::TerminationReason reason)
+    ErrorComponentController(fidl::InterfaceRequest<fuchsia::sys::ComponentController> req,
+                             fuchsia::sys::TerminationReason reason)
         : binding_(this, std::move(req)) {
       binding_.events().OnTerminated(-1, reason);
     }
@@ -72,21 +70,17 @@ void ManagedLauncher::CreateComponent(
   args->controller = std::move(controller);
 
   // load package information
-  loader_->LoadUrl(
-      args->launch_info.url, [this, args](fuchsia::sys::PackagePtr package) {
-        CreateComponent(std::move(package), std::move(args->launch_info),
-                        std::move(args->controller));
-      });
+  loader_->LoadUrl(args->launch_info.url, [this, args](fuchsia::sys::PackagePtr package) {
+    CreateComponent(std::move(package), std::move(args->launch_info), std::move(args->controller));
+  });
 }
 
-ManagedLauncher::ManagedLauncher(ManagedEnvironment* environment)
-    : env_(environment) {
+ManagedLauncher::ManagedLauncher(ManagedEnvironment* environment) : env_(environment) {
   env_->environment().ConnectToService(real_launcher_.NewRequest());
   env_->environment().ConnectToService(loader_.NewRequest());
 }
 
-void ManagedLauncher::Bind(
-    fidl::InterfaceRequest<fuchsia::sys::Launcher> request) {
+void ManagedLauncher::Bind(fidl::InterfaceRequest<fuchsia::sys::Launcher> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
@@ -97,15 +91,13 @@ void ManagedLauncher::CreateComponent(
   // so we can inject virtual devices
   if (!package) {
     FXL_LOG(ERROR) << "Can't load package \"" << launch_info.url << "\"";
-    EmitComponentFailure(std::move(controller),
-                         fuchsia::sys::TerminationReason::PACKAGE_NOT_FOUND);
+    EmitComponentFailure(std::move(controller), fuchsia::sys::TerminationReason::PACKAGE_NOT_FOUND);
     return;
   }
 
   if (!package->directory.is_valid()) {
     FXL_LOG(ERROR) << "Package directory not provided";
-    EmitComponentFailure(std::move(controller),
-                         fuchsia::sys::TerminationReason::INTERNAL_ERROR);
+    EmitComponentFailure(std::move(controller), fuchsia::sys::TerminationReason::INTERNAL_ERROR);
     return;
   }
 
@@ -113,20 +105,17 @@ void ManagedLauncher::CreateComponent(
   component::FuchsiaPkgUrl fp;
   if (!fp.Parse(package->resolved_url)) {
     FXL_LOG(ERROR) << "Can't parse package url " << package->resolved_url;
-    EmitComponentFailure(std::move(controller),
-                         fuchsia::sys::TerminationReason::INTERNAL_ERROR);
+    EmitComponentFailure(std::move(controller), fuchsia::sys::TerminationReason::INTERNAL_ERROR);
     return;
   }
 
   component::CmxMetadata cmx;
-  fxl::UniqueFD fd =
-      fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
+  fxl::UniqueFD fd = fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
 
   json::JSONParser json_parser;
   if (!cmx.ParseFromFileAt(fd.get(), fp.resource_path(), &json_parser)) {
     FXL_LOG(ERROR) << "cmx file failed to parse: " << json_parser.error_str();
-    EmitComponentFailure(std::move(controller),
-                         fuchsia::sys::TerminationReason::INTERNAL_ERROR);
+    EmitComponentFailure(std::move(controller), fuchsia::sys::TerminationReason::INTERNAL_ERROR);
     return;
   }
 
@@ -139,21 +128,18 @@ void ManagedLauncher::CreateComponent(
     CreateFlatNamespace(&launch_info);
     // add all devices to flat namespace:
     launch_info.flat_namespace->paths.push_back(kVdevRoot);
-    launch_info.flat_namespace->directories.push_back(
-        env_->OpenVdevDirectory());
+    launch_info.flat_namespace->directories.push_back(env_->OpenVdevDirectory());
   }
 
   if (cmx.sandbox_meta().HasFeature("isolated-persistent-storage")) {
     CreateFlatNamespace(&launch_info);
     // add virtual data folder (in-memory fs) to namespace
     launch_info.flat_namespace->paths.push_back(kVDataRoot);
-    launch_info.flat_namespace->directories.push_back(
-        env_->OpenVdataDirectory());
+    launch_info.flat_namespace->directories.push_back(env_->OpenVdataDirectory());
   }
 
   if (!launch_info.out) {
-    launch_info.out =
-        env_->loggers().CreateLogger(package->resolved_url, false);
+    launch_info.out = env_->loggers().CreateLogger(package->resolved_url, false);
   }
   if (!launch_info.err) {
     launch_info.err = env_->loggers().CreateLogger(package->resolved_url, true);
@@ -161,8 +147,7 @@ void ManagedLauncher::CreateComponent(
 
   // increment counter
   env_->loggers().IncrementCounter();
-  real_launcher_->CreateComponent(std::move(launch_info),
-                                  std::move(controller));
+  real_launcher_->CreateComponent(std::move(launch_info), std::move(controller));
 }
 
 ManagedLauncher::~ManagedLauncher() = default;

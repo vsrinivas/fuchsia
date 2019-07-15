@@ -26,14 +26,12 @@ class SyncManager : public fuchsia::netemul::sync::SyncManager {
   SyncManager() : SyncManager(async_get_default_dispatcher()) {}
   ~SyncManager();
 
-  explicit SyncManager(async_dispatcher_t* dispatcher)
-      : dispatcher_(dispatcher) {}
+  explicit SyncManager(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
   void BusSubscribe(std::string busName, std::string clientName,
                     ::fidl::InterfaceRequest<Bus::FBus> bus) override;
-  void WaitForBarrierThreshold(
-      ::std::string barrierName, uint32_t threshold, int64_t timeout,
-      WaitForBarrierThresholdCallback callback) override;
+  void WaitForBarrierThreshold(::std::string barrierName, uint32_t threshold, int64_t timeout,
+                               WaitForBarrierThresholdCallback callback) override;
 
   fidl::InterfaceRequestHandler<FSyncManager> GetHandler();
 
@@ -43,8 +41,7 @@ class SyncManager : public fuchsia::netemul::sync::SyncManager {
   async_dispatcher_t* dispatcher_;
   std::unordered_map<std::string, Bus::Ptr> buses_;
   fidl::BindingSet<FSyncManager> bindings_;
-  std::unordered_map<std::string, std::unique_ptr<CounterBarrier>>
-      counter_barriers_;
+  std::unordered_map<std::string, std::unique_ptr<CounterBarrier>> counter_barriers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SyncManager);
 };

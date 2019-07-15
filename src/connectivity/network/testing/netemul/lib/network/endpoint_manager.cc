@@ -10,8 +10,7 @@ namespace netemul {
 
 EndpointManager::EndpointManager(NetworkContext* context) : parent_(context) {}
 
-void EndpointManager::ListEndpoints(
-    EndpointManager::ListEndpointsCallback callback) {
+void EndpointManager::ListEndpoints(EndpointManager::ListEndpointsCallback callback) {
   std::vector<std::string> rsp;
   rsp.reserve(endpoints_.size());
   for (const auto& x : endpoints_) {
@@ -20,9 +19,8 @@ void EndpointManager::ListEndpoints(
   callback(std::move(rsp));
 }
 
-zx_status_t EndpointManager::CreateEndpoint(
-    std::string name, Endpoint::Config config,
-    fidl::InterfaceRequest<Endpoint::FEndpoint> req) {
+zx_status_t EndpointManager::CreateEndpoint(std::string name, Endpoint::Config config,
+                                            fidl::InterfaceRequest<Endpoint::FEndpoint> req) {
   if (name.empty()) {
     // empty name not allowed
     return ZX_ERR_INVALID_ARGS;
@@ -30,10 +28,8 @@ zx_status_t EndpointManager::CreateEndpoint(
     return ZX_ERR_ALREADY_EXISTS;
   } else {
     // we only support ethertap backing for now
-    if (config.backing ==
-        fuchsia::netemul::network::EndpointBacking::ETHERTAP) {
-      auto ep = std::make_unique<Endpoint>(parent_, std::string(name),
-                                           std::move(config));
+    if (config.backing == fuchsia::netemul::network::EndpointBacking::ETHERTAP) {
+      auto ep = std::make_unique<Endpoint>(parent_, std::string(name), std::move(config));
       auto result = ep->Startup(*parent_);
       if (result != ZX_OK) {
         return result;
@@ -45,8 +41,8 @@ zx_status_t EndpointManager::CreateEndpoint(
       });
 
       ep->Bind(std::move(req));
-      endpoints_.insert(std::make_pair<std::string, Endpoint::Ptr>(
-          std::string(name), std::move(ep)));
+      endpoints_.insert(
+          std::make_pair<std::string, Endpoint::Ptr>(std::string(name), std::move(ep)));
     } else {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -55,12 +51,10 @@ zx_status_t EndpointManager::CreateEndpoint(
   return ZX_OK;
 }
 
-void EndpointManager::CreateEndpoint(
-    std::string name, Endpoint::Config config,
-    EndpointManager::CreateEndpointCallback callback) {
+void EndpointManager::CreateEndpoint(std::string name, Endpoint::Config config,
+                                     EndpointManager::CreateEndpointCallback callback) {
   fidl::InterfaceHandle<Endpoint::FEndpoint> handle;
-  auto status =
-      CreateEndpoint(std::move(name), std::move(config), handle.NewRequest());
+  auto status = CreateEndpoint(std::move(name), std::move(config), handle.NewRequest());
   if (status != ZX_OK) {
     handle.TakeChannel().reset();  // destroy underlying channel
   }
@@ -76,8 +70,8 @@ Endpoint* EndpointManager::GetEndpoint(const std::string& name) {
   }
 }
 
-void EndpointManager::GetEndpoint(
-    ::std::string name, EndpointManager::GetEndpointCallback callback) {
+void EndpointManager::GetEndpoint(::std::string name,
+                                  EndpointManager::GetEndpointCallback callback) {
   auto ep_it = endpoints_.find(name);
   fidl::InterfaceHandle<Endpoint::FEndpoint> handle;
   if (ep_it == endpoints_.end()) {
@@ -90,8 +84,7 @@ void EndpointManager::GetEndpoint(
   }
 }
 
-zx_status_t EndpointManager::InstallSink(std::string endpoint,
-                                         data::BusConsumer::Ptr sink,
+zx_status_t EndpointManager::InstallSink(std::string endpoint, data::BusConsumer::Ptr sink,
                                          data::Consumer::Ptr* src) {
   auto ep = endpoints_.find(endpoint);
   if (ep == endpoints_.end()) {
@@ -101,8 +94,7 @@ zx_status_t EndpointManager::InstallSink(std::string endpoint,
   }
 }
 
-zx_status_t EndpointManager::RemoveSink(std::string endpoint,
-                                        data::BusConsumer::Ptr sink,
+zx_status_t EndpointManager::RemoveSink(std::string endpoint, data::BusConsumer::Ptr sink,
                                         data::Consumer::Ptr* src) {
   auto ep = endpoints_.find(endpoint);
   if (ep == endpoints_.end()) {

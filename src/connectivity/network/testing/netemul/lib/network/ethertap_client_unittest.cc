@@ -17,16 +17,13 @@ namespace testing {
 #define TEST_FIFO_SIZE (2048)
 #define TEST_MTU_SIZE (1500)
 
-#define WAIT_FOR_ETH_ONLINE(ethnu)       \
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil( \
-      [this]() { return eth(ethnu)->online(); }, zx::sec(5)))
+#define WAIT_FOR_ETH_ONLINE(ethnu) \
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return eth(ethnu)->online(); }, zx::sec(5)))
 
 using sys::testing::TestWithEnvironment;
 class EthertapClientTest : public TestWithEnvironment {
  public:
-  EthertapClientTest() {
-    services_ = sys::ServiceDirectory::CreateFromNamespace();
-  }
+  EthertapClientTest() { services_ = sys::ServiceDirectory::CreateFromNamespace(); }
 
   fidl::InterfaceHandle<fuchsia::netemul::devmgr::IsolatedDevmgr> GetDevmgr() {
     fidl::InterfaceHandle<fuchsia::netemul::devmgr::IsolatedDevmgr> devmgr;
@@ -52,14 +49,13 @@ class EthertapClientTest : public TestWithEnvironment {
     config.tap_cfg.mac.Clone(&mac);
     auto tap = EthertapClient::Create(std::move(config));
     ASSERT_TRUE(tap);
-    auto eth = EthernetClientFactory(EthernetClientFactory::kDevfsEthernetRoot,
-                                     GetDevmgr().TakeChannel())
-                   .RetrieveWithMAC(mac);
+    auto eth =
+        EthernetClientFactory(EthernetClientFactory::kDevfsEthernetRoot, GetDevmgr().TakeChannel())
+            .RetrieveWithMAC(mac);
     ASSERT_TRUE(eth);
     bool ok = false;
 
-    EthernetConfig eth_config{.nbufs = TEST_N_FIFO_BUFS,
-                              .buff_size = TEST_FIFO_SIZE};
+    EthernetConfig eth_config{.nbufs = TEST_N_FIFO_BUFS, .buff_size = TEST_FIFO_SIZE};
     eth->Setup(eth_config, [&ok](zx_status_t status) {
       ASSERT_EQ(status, ZX_OK);
       ok = true;
@@ -72,13 +68,9 @@ class EthertapClientTest : public TestWithEnvironment {
     eths_.emplace_back(std::move(eth));
   }
 
-  const std::unique_ptr<EthertapClient>& tap(size_t index = 0) {
-    return taps_[index];
-  }
+  const std::unique_ptr<EthertapClient>& tap(size_t index = 0) { return taps_[index]; }
 
-  const std::unique_ptr<EthernetClient>& eth(size_t index = 0) {
-    return eths_[index];
-  }
+  const std::unique_ptr<EthernetClient>& eth(size_t index = 0) { return eths_[index]; }
 
  private:
   std::shared_ptr<sys::ServiceDirectory> services_;
@@ -114,12 +106,11 @@ TEST_F(EthertapClientTest, EthertapReceive) {
 
   for (int i = 0; i < 3; i++) {
     ok = false;
-    ASSERT_EQ(ZX_OK,
-              eth()->AcquireAndSend([&testSend](void* buff, uint16_t* len) {
-                ASSERT_TRUE(*len >= TEST_BUFF_SIZE);
-                *len = TEST_BUFF_SIZE;
-                memcpy(buff, testSend, TEST_BUFF_SIZE);
-              }));
+    ASSERT_EQ(ZX_OK, eth()->AcquireAndSend([&testSend](void* buff, uint16_t* len) {
+      ASSERT_TRUE(*len >= TEST_BUFF_SIZE);
+      *len = TEST_BUFF_SIZE;
+      memcpy(buff, testSend, TEST_BUFF_SIZE);
+    }));
 
     ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&ok]() { return ok; }, zx::sec(2)));
   }
@@ -175,34 +166,29 @@ TEST_F(EthertapClientTest, EthertapLink) {
   }
 
   // all data received on tap(0), push into tap(1)...
-  tap(0)->SetPacketCallback(
-      [this](std::vector<uint8_t> data) { tap(1)->Send(std::move(data)); });
+  tap(0)->SetPacketCallback([this](std::vector<uint8_t> data) { tap(1)->Send(std::move(data)); });
 
   // ... and vice-versa
-  tap(1)->SetPacketCallback(
-      [this](std::vector<uint8_t> data) { tap(0)->Send(std::move(data)); });
+  tap(1)->SetPacketCallback([this](std::vector<uint8_t> data) { tap(0)->Send(std::move(data)); });
 
   bool eth0Received = false;
   bool eth1Received = false;
   // observe data coming out of ethernet driver and assert test vectors match
-  eth(0)->SetDataCallback(
-      [&eth0Received, &testSendB](const void* data, size_t len) {
-        eth0Received = true;
-        ASSERT_EQ(0, memcmp(data, testSendB, len));
-      });
-  eth(1)->SetDataCallback(
-      [&eth1Received, &testSendA](const void* data, size_t len) {
-        eth1Received = true;
-        ASSERT_EQ(0, memcmp(data, testSendA, len));
-      });
+  eth(0)->SetDataCallback([&eth0Received, &testSendB](const void* data, size_t len) {
+    eth0Received = true;
+    ASSERT_EQ(0, memcmp(data, testSendB, len));
+  });
+  eth(1)->SetDataCallback([&eth1Received, &testSendA](const void* data, size_t len) {
+    eth1Received = true;
+    ASSERT_EQ(0, memcmp(data, testSendA, len));
+  });
 
   // send test vector data on both interfaces
   ASSERT_EQ(ZX_OK, eth(0)->Send(testSendA, TEST_BUFF_SIZE));
   ASSERT_EQ(ZX_OK, eth(1)->Send(testSendB, TEST_BUFF_SIZE));
 
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&eth0Received, &eth1Received]() { return eth0Received && eth1Received; },
-      zx::sec(2)));
+      [&eth0Received, &eth1Received]() { return eth0Received && eth1Received; }, zx::sec(2)));
 }
 
 TEST_F(EthertapClientTest, EthertapClose) {

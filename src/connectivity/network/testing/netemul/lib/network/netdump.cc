@@ -62,25 +62,22 @@ uint32_t NetworkDump::AddInterface(const std::string& name) {
   idb.snaplen = 0xFFFF;
   Write(&idb, sizeof(idb));
   // write interface name, option = 0x0002
-  WriteOption(kOptionInterfaceName, name.c_str(),
-              static_cast<uint16_t>(name.length()));
+  WriteOption(kOptionInterfaceName, name.c_str(), static_cast<uint16_t>(name.length()));
   Write(&idb.blk_tot_len, sizeof(idb.blk_tot_len));
   return interface_counter_++;
 }
 
-void NetworkDump::WritePacket(const void* data, size_t len,
-                              uint32_t interface) {
+void NetworkDump::WritePacket(const void* data, size_t len, uint32_t interface) {
   size_t padded_len = PAD(len);
-  auto ts_usec =
-      static_cast<uint64_t>(zx::clock::get_monotonic().get() / ZX_USEC(1));
+  auto ts_usec = static_cast<uint64_t>(zx::clock::get_monotonic().get() / ZX_USEC(1));
   ts_usec = ((ts_usec & 0xFFFFFFFF) << 32) | (ts_usec >> 32);
   enhanced_pkt_t pkt = {
       kEnhancedPacketBlockType,                                   // type
       static_cast<uint32_t>(ENHANCED_PKT_MIN_SIZE + padded_len),  // blk_tot_len
-      interface,                   // interface id
-      ts_usec,                     // timestamp
-      static_cast<uint32_t>(len),  // orig_len
-      static_cast<uint32_t>(len),  // captured_len
+      interface,                                                  // interface id
+      ts_usec,                                                    // timestamp
+      static_cast<uint32_t>(len),                                 // orig_len
+      static_cast<uint32_t>(len),                                 // captured_len
   };
 
   Write(&pkt, sizeof(pkt));

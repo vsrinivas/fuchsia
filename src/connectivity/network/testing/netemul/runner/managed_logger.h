@@ -30,8 +30,8 @@ class ManagedLogger {
 
   zx::handle CreateHandle();
 
-  void OnRx(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-            zx_status_t status, const zx_packet_signal_t* signal);
+  void OnRx(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+            const zx_packet_signal_t* signal);
 
   void Start(ClosedCallback callback);
 
@@ -55,16 +55,14 @@ class ManagedLogger {
 
 class ManagedLoggerCollection {
  public:
-  explicit ManagedLoggerCollection(
-      std::string environment_name,
-      std::shared_ptr<fuchsia::logger::LogListener> loglistener)
+  explicit ManagedLoggerCollection(std::string environment_name,
+                                   std::shared_ptr<fuchsia::logger::LogListener> loglistener)
       : environment_name_(std::move(environment_name)),
         counter_(0),
         loglistener_(std::move(loglistener)) {}
 
   void IncrementCounter() { counter_++; }
-  fuchsia::sys::FileDescriptorPtr CreateLogger(const std::string& url,
-                                               bool err);
+  fuchsia::sys::FileDescriptorPtr CreateLogger(const std::string& url, bool err);
 
  private:
   std::string environment_name_;

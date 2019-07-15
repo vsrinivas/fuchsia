@@ -28,8 +28,7 @@ class SandboxEnv {
     Events(Events&& other) = default;
 
    public:
-    fit::function<void(const std::string&, int64_t,
-                       fuchsia::sys::TerminationReason)>
+    fit::function<void(const std::string&, int64_t, fuchsia::sys::TerminationReason)>
         service_terminated;
 
     fit::function<void()> devfs_terminated;
@@ -38,14 +37,11 @@ class SandboxEnv {
   };
 
   // Creates a sandbox environment
-  SandboxEnv(std::shared_ptr<sys::ServiceDirectory> env_services,
-             Events events = Events());
+  SandboxEnv(std::shared_ptr<sys::ServiceDirectory> env_services, Events events = Events());
   ~SandboxEnv();
 
   const std::string& default_name() const { return default_name_; }
-  void set_default_name(std::string default_name) {
-    default_name_ = std::move(default_name);
-  }
+  void set_default_name(std::string default_name) { default_name_ = std::move(default_name); }
 
   void set_devfs_enabled(bool enabled);
 

@@ -11,8 +11,7 @@ namespace config {
 
 LaunchService::LaunchService(std::string name) : name_(std::move(name)) {}
 
-bool LaunchService::ParseFromJSON(const rapidjson::Value& value,
-                                  json::JSONParser* parser) {
+bool LaunchService::ParseFromJSON(const rapidjson::Value& value, json::JSONParser* parser) {
   return launch_.ParseFromJSON(value, parser);
 }
 

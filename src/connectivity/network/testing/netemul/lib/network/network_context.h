@@ -30,24 +30,19 @@ class NetworkContext : public fuchsia::netemul::network::NetworkContext {
 
   EndpointManager& endpoint_manager() { return endpoint_manager_; }
 
-  zx_status_t Setup(std::vector<NetworkSetup> setup,
-                    fidl::InterfaceRequest<FSetupHandle> req);
+  zx_status_t Setup(std::vector<NetworkSetup> setup, fidl::InterfaceRequest<FSetupHandle> req);
 
   void GetNetworkManager(
-      ::fidl::InterfaceRequest<NetworkManager::FNetworkManager> net_manager)
-      override;
+      ::fidl::InterfaceRequest<NetworkManager::FNetworkManager> net_manager) override;
   void GetEndpointManager(
-      fidl::InterfaceRequest<EndpointManager::FEndpointManager> endp_manager)
-      override;
+      fidl::InterfaceRequest<EndpointManager::FEndpointManager> endp_manager) override;
   void Setup(std::vector<NetworkSetup> setup, SetupCallback callback) override;
 
   fidl::InterfaceRequestHandler<FNetworkContext> GetHandler();
 
   zx::channel ConnectDevfs();
 
-  void SetDevfsHandler(DevfsHandler handler) {
-    devfs_handler_ = std::move(handler);
-  }
+  void SetDevfsHandler(DevfsHandler handler) { devfs_handler_ = std::move(handler); }
 
  private:
   async_dispatcher_t* dispatcher_;

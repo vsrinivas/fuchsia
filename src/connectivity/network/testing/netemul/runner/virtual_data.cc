@@ -13,16 +13,14 @@ namespace netemul {
 VirtualData::VirtualData() {
   auto status = memfs::Vfs::Create("<virtual-fs>", UINT64_MAX, &vfs_, &dir_);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Can't create virtual file system: "
-                   << zx_status_get_string(status);
+    FXL_LOG(ERROR) << "Can't create virtual file system: " << zx_status_get_string(status);
   }
   vfs_->SetDispatcher(async_get_default_dispatcher());
   // create a warning file at the root:
   fbl::RefPtr<fs::Vnode> file;
   status = dir_->Create(&file, ".THIS_IS_A_VIRTUAL_FS", 0);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Can't create warning file: "
-                   << zx_status_get_string(status);
+    FXL_LOG(ERROR) << "Can't create warning file: " << zx_status_get_string(status);
   }
 }
 

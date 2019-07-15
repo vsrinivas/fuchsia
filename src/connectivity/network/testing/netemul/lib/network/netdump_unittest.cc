@@ -10,8 +10,7 @@
 namespace netemul {
 namespace testing {
 
-const uint8_t kTestBytes[] = {0x00, 0x01, 0x02, 0x03, 0x04,
-                              0x05, 0x06, 0x07, 0x08, 0x09};
+const uint8_t kTestBytes[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09};
 
 class NetworkDumpTest : public ::testing::Test {};
 
@@ -40,12 +39,9 @@ TEST_F(NetworkDumpTest, ExpectedDump) {
   EXPECT_EQ(parser.packets()[1].len, sizeof(kTestBytes));
   EXPECT_EQ(parser.packets()[2].len, sizeof(kTestBytes) / 2);
 
-  EXPECT_EQ(
-      memcmp(parser.packets()[0].data, kTestBytes, parser.packets()[0].len), 0);
-  EXPECT_EQ(
-      memcmp(parser.packets()[1].data, kTestBytes, parser.packets()[1].len), 0);
-  EXPECT_EQ(
-      memcmp(parser.packets()[2].data, kTestBytes, parser.packets()[2].len), 0);
+  EXPECT_EQ(memcmp(parser.packets()[0].data, kTestBytes, parser.packets()[0].len), 0);
+  EXPECT_EQ(memcmp(parser.packets()[1].data, kTestBytes, parser.packets()[1].len), 0);
+  EXPECT_EQ(memcmp(parser.packets()[2].data, kTestBytes, parser.packets()[2].len), 0);
 }
 
 }  // namespace testing

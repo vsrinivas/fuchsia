@@ -23,8 +23,7 @@ static const uint8_t kDefaultVerbosity = 0;
 
 LoggerFilterOptions::LoggerFilterOptions() { SetDefaults(); }
 
-bool LoggerFilterOptions::ParseFromJSON(const rapidjson::Value& value,
-                                        json::JSONParser* parser) {
+bool LoggerFilterOptions::ParseFromJSON(const rapidjson::Value& value, json::JSONParser* parser) {
   if (value.IsNull()) {
     SetDefaults();
     return true;
@@ -40,8 +39,7 @@ bool LoggerFilterOptions::ParseFromJSON(const rapidjson::Value& value,
   for (auto i = value.MemberBegin(); i != value.MemberEnd(); i++) {
     if (i->name == kVerbosity) {
       if (!i->value.IsUint()) {
-        parser->ReportError(
-            "logger_options enabled must be a unsigned integer value");
+        parser->ReportError("logger_options enabled must be a unsigned integer value");
         return false;
       }
       verbosity_ = i->value.GetUint();
@@ -59,31 +57,28 @@ bool LoggerFilterOptions::ParseFromJSON(const rapidjson::Value& value,
 
       if (tags.Size() > fuchsia::logger::MAX_TAGS) {
         parser->ReportError(fxl::StringPrintf(
-            "logger_options tags cannot have more than %d elements",
-            fuchsia::logger::MAX_TAGS));
+            "logger_options tags cannot have more than %d elements", fuchsia::logger::MAX_TAGS));
         return false;
       }
 
       for (auto& t : tags) {
         if (!t.IsString()) {
-          parser->ReportError(
-              "logger_options tags must be an array of strings");
+          parser->ReportError("logger_options tags must be an array of strings");
           return false;
         }
 
         if (t.GetStringLength() > fuchsia::logger::MAX_TAG_LEN_BYTES) {
-          parser->ReportError(fxl::StringPrintf(
-              "logger_options tags cannot have more than %d bytes",
-              fuchsia::logger::MAX_TAG_LEN_BYTES));
+          parser->ReportError(
+              fxl::StringPrintf("logger_options tags cannot have more than %d bytes",
+                                fuchsia::logger::MAX_TAG_LEN_BYTES));
           return false;
         }
 
         tags_.emplace_back(t.GetString());
       }
     } else {
-      parser->ReportError(
-          fxl::StringPrintf("Unrecognized logger_filter_options member \"%s\"",
-                            i->name.GetString()));
+      parser->ReportError(fxl::StringPrintf("Unrecognized logger_filter_options member \"%s\"",
+                                            i->name.GetString()));
       return false;
     }
   }
@@ -98,9 +93,7 @@ void LoggerFilterOptions::SetDefaults() {
 
 uint8_t LoggerFilterOptions::verbosity() const { return verbosity_; }
 
-const std::vector<std::string>& LoggerFilterOptions::tags() const {
-  return tags_;
-}
+const std::vector<std::string>& LoggerFilterOptions::tags() const { return tags_; }
 
 }  // namespace config
 }  // namespace netemul

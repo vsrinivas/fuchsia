@@ -18,17 +18,13 @@ constexpr const char* kLoggerName = "my_logger";
 class ManagedLoggerTest : public gtest::RealLoopFixture {
  public:
   using LogLevel = fuchsia::logger::LogLevelFilter;
-  ManagedLoggerTest()
-      : gtest::RealLoopFixture(), listener_(new TestListener()) {}
+  ManagedLoggerTest() : gtest::RealLoopFixture(), listener_(new TestListener()) {}
 
  protected:
   void Startup(std::string name, bool is_err) {
-    logger_ =
-        std::make_unique<ManagedLogger>(std::move(name), is_err, listener_);
+    logger_ = std::make_unique<ManagedLogger>(std::move(name), is_err, listener_);
     sock_.reset(logger_->CreateHandle().release());
-    logger_->Start([](ManagedLogger* logger) {
-      FAIL() << "Managed logger shouldn't close";
-    });
+    logger_->Start([](ManagedLogger* logger) { FAIL() << "Managed logger shouldn't close"; });
   }
 
   void Write(const std::string& msg) {
@@ -37,17 +33,14 @@ class ManagedLoggerTest : public gtest::RealLoopFixture {
     EXPECT_EQ(actual, msg.length());
   }
 
-  std::vector<fuchsia::logger::LogMessage>& messages() {
-    return listener_->messages();
-  }
+  std::vector<fuchsia::logger::LogMessage>& messages() { return listener_->messages(); }
 
   void WaitForMessageCount(size_t len) {
     RunLoopUntil([this, len]() { return messages().size() >= len; });
   }
 
   void CheckMessage(const fuchsia::logger::LogMessage& msg, LogLevel severity,
-                    const std::string& str,
-                    const std::vector<std::string>& tags) {
+                    const std::string& str, const std::vector<std::string>& tags) {
     EXPECT_EQ(msg.dropped_logs, 0u);
     EXPECT_EQ(msg.pid, 0u);
     EXPECT_EQ(msg.tid, 0u);
@@ -57,8 +50,7 @@ class ManagedLoggerTest : public gtest::RealLoopFixture {
     EXPECT_EQ(msg.tags.size(), tags.size());
     for (const auto& t : tags) {
       EXPECT_NE(std::find(msg.tags.begin(), msg.tags.end(), t), msg.tags.end())
-          << "Tag " << t << "  in message, but got tags "
-          << fxl::JoinStrings(msg.tags, ",");
+          << "Tag " << t << "  in message, but got tags " << fxl::JoinStrings(msg.tags, ",");
     }
   }
 

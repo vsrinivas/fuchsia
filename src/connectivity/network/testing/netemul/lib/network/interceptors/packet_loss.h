@@ -42,9 +42,7 @@ class PacketLoss : public Interceptor {
     }
   }
 
-  std::vector<InterceptPacket> Flush() override {
-    return std::vector<InterceptPacket>();
-  }
+  std::vector<InterceptPacket> Flush() override { return std::vector<InterceptPacket>(); }
 
  private:
   uint8_t loss_rate_;

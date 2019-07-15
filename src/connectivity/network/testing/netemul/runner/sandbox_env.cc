@@ -15,15 +15,13 @@ constexpr const char* kDevmgrUrl =
 
 class DevfsHolder {
  public:
-  DevfsHolder(sys::ServiceDirectory& services,
-              fit::function<void(zx_status_t)> error_callback) {
+  DevfsHolder(sys::ServiceDirectory& services, fit::function<void(zx_status_t)> error_callback) {
     fidl::InterfacePtr<fuchsia::sys::Launcher> launcher;
     services.Connect(launcher.NewRequest());
     fuchsia::sys::LaunchInfo info{};
     info.url = kDevmgrUrl;
 
-    directory_ =
-        sys::ServiceDirectory::CreateWithRequest(&info.directory_request);
+    directory_ = sys::ServiceDirectory::CreateWithRequest(&info.directory_request);
 
     launcher->CreateComponent(std::move(info), ctlr_.NewRequest());
     ctlr_.set_error_handler(std::move(error_callback));
@@ -31,8 +29,7 @@ class DevfsHolder {
 
   void Connect(zx::channel req) {
     directory_->Connect(
-        fidl::InterfaceRequest<fuchsia::netemul::devmgr::IsolatedDevmgr>(
-            std::move(req)));
+        fidl::InterfaceRequest<fuchsia::netemul::devmgr::IsolatedDevmgr>(std::move(req)));
   }
 
  private:
@@ -61,8 +58,7 @@ SandboxEnv::SandboxEnv(std::shared_ptr<sys::ServiceDirectory> env_services,
 
 void SandboxEnv::set_devfs_enabled(bool enabled) {
   if (enabled) {
-    net_context_.SetDevfsHandler(
-        [this](zx::channel req) { ConnectDevfs(std::move(req)); });
+    net_context_.SetDevfsHandler([this](zx::channel req) { ConnectDevfs(std::move(req)); });
   } else {
     // prevent users from toggling enabling/disabling this if devfs
     // was already created. It'd make for very confusing use cases.

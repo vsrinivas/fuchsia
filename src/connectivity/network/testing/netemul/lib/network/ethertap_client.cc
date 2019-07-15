@@ -36,8 +36,7 @@ class EthertapClientImpl : public EthertapClient {
  public:
   using TapDevice = fuchsia::hardware::ethertap::TapDevice;
   using TapControl = fuchsia::hardware::ethertap::TapControl;
-  explicit EthertapClientImpl(fidl::InterfacePtr<TapDevice> device,
-                              EthertapConfig config)
+  explicit EthertapClientImpl(fidl::InterfacePtr<TapDevice> device, EthertapConfig config)
       : config_(std::move(config)), device_(std::move(device)) {
     device_.events().OnFrame = [this](std::vector<uint8_t> data) {
       if (packet_callback_) {
@@ -46,8 +45,7 @@ class EthertapClientImpl : public EthertapClient {
     };
 
     device_.set_error_handler([this](zx_status_t status) {
-      fprintf(stderr, "Ethertap device error: %s\n",
-              zx_status_get_string(status));
+      fprintf(stderr, "Ethertap device error: %s\n", zx_status_get_string(status));
       if (peer_closed_callback_) {
         peer_closed_callback_();
       }
@@ -61,16 +59,14 @@ class EthertapClientImpl : public EthertapClient {
     return ZX_OK;
   }
 
-  void SetPacketCallback(PacketCallback cb) override {
-    packet_callback_ = std::move(cb);
-  }
+  void SetPacketCallback(PacketCallback cb) override { packet_callback_ = std::move(cb); }
 
   void SetPeerClosedCallback(PeerClosedCallback cb) override {
     peer_closed_callback_ = std::move(cb);
   }
 
-  static std::unique_ptr<EthertapClientImpl> Create(
-      async_dispatcher_t* dispatcher, EthertapConfig config) {
+  static std::unique_ptr<EthertapClientImpl> Create(async_dispatcher_t* dispatcher,
+                                                    EthertapConfig config) {
     zx::socket sock;
 
     fidl::SynchronousInterfacePtr<TapControl> tapctl;
@@ -78,17 +74,14 @@ class EthertapClientImpl : public EthertapClient {
     zx_status_t status;
 
     if (config.devfs_root.is_valid()) {
-      status =
-          fdio_service_connect_at(config.devfs_root.get(), kTapctlRelative,
-                                  tapctl.NewRequest().TakeChannel().release());
+      status = fdio_service_connect_at(config.devfs_root.get(), kTapctlRelative,
+                                       tapctl.NewRequest().TakeChannel().release());
     } else {
-      status = fdio_service_connect(
-          kTapctl, tapctl.NewRequest().TakeChannel().release());
+      status = fdio_service_connect(kTapctl, tapctl.NewRequest().TakeChannel().release());
     }
 
     if (status != ZX_OK) {
-      fprintf(stderr, "could not open %s: %s\n", kTapctl,
-              zx_status_get_string(status));
+      fprintf(stderr, "could not open %s: %s\n", kTapctl, zx_status_get_string(status));
       return nullptr;
     }
 
@@ -96,20 +89,17 @@ class EthertapClientImpl : public EthertapClient {
 
     zx_status_t o_status = ZX_OK;
 
-    status = tapctl->OpenDevice(config.name, config.tap_cfg,
-                                tapdevice.NewRequest(dispatcher), &o_status);
+    status = tapctl->OpenDevice(config.name, config.tap_cfg, tapdevice.NewRequest(dispatcher),
+                                &o_status);
     if (status != ZX_OK) {
-      fprintf(stderr, "Could not open tap device: %s\n",
-              zx_status_get_string(status));
+      fprintf(stderr, "Could not open tap device: %s\n", zx_status_get_string(status));
       return nullptr;
     } else if (o_status != ZX_OK) {
-      fprintf(stderr, "Could not open tap device, tap error: %s\n",
-              zx_status_get_string(o_status));
+      fprintf(stderr, "Could not open tap device, tap error: %s\n", zx_status_get_string(o_status));
       return nullptr;
     }
 
-    return std::make_unique<EthertapClientImpl>(std::move(tapdevice),
-                                                std::move(config));
+    return std::make_unique<EthertapClientImpl>(std::move(tapdevice), std::move(config));
   }
 
   void Close() override { device_.Unbind(); }
@@ -122,8 +112,8 @@ class EthertapClientImpl : public EthertapClient {
   PeerClosedCallback peer_closed_callback_;
 };
 
-std::unique_ptr<EthertapClient> EthertapClient::Create(
-    EthertapConfig config, async_dispatcher_t* dispatcher) {
+std::unique_ptr<EthertapClient> EthertapClient::Create(EthertapConfig config,
+                                                       async_dispatcher_t* dispatcher) {
   if (dispatcher == nullptr) {
     dispatcher = async_get_default_dispatcher();
   }
@@ -143,25 +133,18 @@ void EthertapConfig::RandomLocalUnicast(const std::string& str_seed) {
   sseed.push_back(rd());
   sseed.push_back(rd());
   std::seed_seq seed(sseed.begin(), sseed.end());
-  std::independent_bits_engine<std::default_random_engine, CHAR_BIT, uint8_t>
-      rnd(seed);
+  std::independent_bits_engine<std::default_random_engine, CHAR_BIT, uint8_t> rnd(seed);
   std::generate(tap_cfg.mac.octets.begin(), tap_cfg.mac.octets.end(), rnd);
   // set unicast:
   SetMacUnicast();
   SetMacLocallyAdministered();
 }
 
-void EthertapConfig::SetMacUnicast() {
-  tap_cfg.mac.octets[0] &= ~(MAC_MULTICAST);
-}
+void EthertapConfig::SetMacUnicast() { tap_cfg.mac.octets[0] &= ~(MAC_MULTICAST); }
 
-void EthertapConfig::SetMacLocallyAdministered() {
-  tap_cfg.mac.octets[0] |= MAC_LOCAL;
-}
+void EthertapConfig::SetMacLocallyAdministered() { tap_cfg.mac.octets[0] |= MAC_LOCAL; }
 
-bool EthertapConfig::IsMacLocallyAdministered() {
-  return (tap_cfg.mac.octets[0] & MAC_LOCAL) != 0;
-}
+bool EthertapConfig::IsMacLocallyAdministered() { return (tap_cfg.mac.octets[0] & MAC_LOCAL) != 0; }
 
 EthertapConfig::EthertapConfig(EthertapConfig&& oth) {
   name = std::move(oth.name);

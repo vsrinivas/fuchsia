@@ -14,18 +14,16 @@ namespace netemul {
 
 // Start the Log and LogSink service (the same component publishses both
 // services))
-static const char* kLogSinkServiceURL =
-    "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx";
-static const char* kLogServiceURL =
-    "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx";
+static const char* kLogSinkServiceURL = "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx";
+static const char* kLogServiceURL = "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx";
 static const char* kLogServiceNoKLogOption = "--disable-klog";
 
 using sys::testing::EnclosingEnvironment;
 using sys::testing::EnvironmentServices;
 
-ManagedEnvironment::Ptr ManagedEnvironment::CreateRoot(
-    const fuchsia::sys::EnvironmentPtr& parent,
-    const SandboxEnv::Ptr& sandbox_env, Options options) {
+ManagedEnvironment::Ptr ManagedEnvironment::CreateRoot(const fuchsia::sys::EnvironmentPtr& parent,
+                                                       const SandboxEnv::Ptr& sandbox_env,
+                                                       Options options) {
   auto ret = ManagedEnvironment::Ptr(new ManagedEnvironment(sandbox_env));
   ret->Create(parent, std::move(options));
   return ret;
@@ -34,17 +32,14 @@ ManagedEnvironment::Ptr ManagedEnvironment::CreateRoot(
 ManagedEnvironment::ManagedEnvironment(const SandboxEnv::Ptr& sandbox_env)
     : sandbox_env_(sandbox_env), ready_(false) {}
 
-sys::testing::EnclosingEnvironment& ManagedEnvironment::environment() {
-  return *env_;
-}
+sys::testing::EnclosingEnvironment& ManagedEnvironment::environment() { return *env_; }
 
-void ManagedEnvironment::GetLauncher(
-    ::fidl::InterfaceRequest<::fuchsia::sys::Launcher> launcher) {
+void ManagedEnvironment::GetLauncher(::fidl::InterfaceRequest<::fuchsia::sys::Launcher> launcher) {
   launcher_->Bind(std::move(launcher));
 }
 
-void ManagedEnvironment::CreateChildEnvironment(
-    fidl::InterfaceRequest<FManagedEnvironment> me, Options options) {
+void ManagedEnvironment::CreateChildEnvironment(fidl::InterfaceRequest<FManagedEnvironment> me,
+                                                Options options) {
   ManagedEnvironment::Ptr np(new ManagedEnvironment(sandbox_env_));
   fuchsia::sys::EnvironmentPtr env;
   env_->ConnectToService(env.NewRequest());
@@ -67,29 +62,26 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
   }
 
   // Start LogListener for this environment
-  log_listener_ = LogListener::Create(
-      std::move(*options.mutable_logger_options()), options.name(), NULL);
+  log_listener_ =
+      LogListener::Create(std::move(*options.mutable_logger_options()), options.name(), NULL);
 
   auto services = EnvironmentServices::Create(parent);
 
-  services->SetServiceTerminatedCallback(
-      [this, name = options.name()](const std::string& service,
-                                    int64_t exit_code,
-                                    fuchsia::sys::TerminationReason reason) {
-        FXL_LOG(WARNING) << "Service " << service << " exitted on environment "
-                         << name << " with (" << exit_code << ") reason: "
-                         << sys::HumanReadableTerminationReason(reason);
-        if (sandbox_env_->events().service_terminated) {
-          sandbox_env_->events().service_terminated(service, exit_code, reason);
-        }
-      });
+  services->SetServiceTerminatedCallback([this, name = options.name()](
+                                             const std::string& service, int64_t exit_code,
+                                             fuchsia::sys::TerminationReason reason) {
+    FXL_LOG(WARNING) << "Service " << service << " exitted on environment " << name << " with ("
+                     << exit_code << ") reason: " << sys::HumanReadableTerminationReason(reason);
+    if (sandbox_env_->events().service_terminated) {
+      sandbox_env_->events().service_terminated(service, exit_code, reason);
+    }
+  });
 
   if (log_listener_) {
-    loggers_ = std::make_unique<ManagedLoggerCollection>(
-        options.name(), log_listener_->GetLogListenerImpl());
+    loggers_ = std::make_unique<ManagedLoggerCollection>(options.name(),
+                                                         log_listener_->GetLogListenerImpl());
   } else {
-    loggers_ =
-        std::make_unique<ManagedLoggerCollection>(options.name(), nullptr);
+    loggers_ = std::make_unique<ManagedLoggerCollection>(options.name(), nullptr);
   }
 
   // add network context service:
@@ -137,8 +129,8 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
 
   // prepare service configurations:
   service_config_.clear();
-  if (options.has_inherit_parent_launch_services() &&
-      options.inherit_parent_launch_services() && managed_parent != nullptr) {
+  if (options.has_inherit_parent_launch_services() && options.inherit_parent_launch_services() &&
+      managed_parent != nullptr) {
     for (const auto& a : managed_parent->service_config_) {
       LaunchService clone;
       a.Clone(&clone);
@@ -147,8 +139,7 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
   }
 
   if (options.has_services()) {
-    std::move(options.mutable_services()->begin(),
-              options.mutable_services()->end(),
+    std::move(options.mutable_services()->begin(), options.mutable_services()->end(),
               std::back_inserter(service_config_));
   }
 
@@ -161,8 +152,8 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
         [this, svc = std::move(copy)]() {
           fuchsia::sys::LaunchInfo linfo;
           linfo.url = svc.url;
-          linfo.arguments->insert(linfo.arguments->begin(),
-                                  svc.arguments->begin(), svc.arguments->end());
+          linfo.arguments->insert(linfo.arguments->begin(), svc.arguments->begin(),
+                                  svc.arguments->end());
           linfo.out = loggers_->CreateLogger(svc.url, false);
           linfo.err = loggers_->CreateLogger(svc.url, true);
           loggers_->IncrementCounter();
@@ -179,12 +170,9 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
   }
 
   fuchsia::sys::EnvironmentOptions sub_options = {
-      .kill_on_oom = true,
-      .allow_parent_runners = false,
-      .inherit_parent_services = false};
+      .kill_on_oom = true, .allow_parent_runners = false, .inherit_parent_services = false};
 
-  env_ = EnclosingEnvironment::Create(options.name(), parent,
-                                      std::move(services), sub_options);
+  env_ = EnclosingEnvironment::Create(options.name(), parent, std::move(services), sub_options);
 
   env_->SetRunningChangedCallback([this](bool running) {
     ready_ = true;
@@ -219,9 +207,7 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
   }
 }
 
-zx::channel ManagedEnvironment::OpenVdevDirectory() {
-  return virtual_devices_.OpenAsDirectory();
-}
+zx::channel ManagedEnvironment::OpenVdevDirectory() { return virtual_devices_.OpenAsDirectory(); }
 
 zx::channel ManagedEnvironment::OpenVdataDirectory() {
   if (!virtual_data_) {
@@ -230,8 +216,7 @@ zx::channel ManagedEnvironment::OpenVdataDirectory() {
   return virtual_data_->GetDirectory();
 }
 
-void ManagedEnvironment::Bind(
-    fidl::InterfaceRequest<ManagedEnvironment::FManagedEnvironment> req) {
+void ManagedEnvironment::Bind(fidl::InterfaceRequest<ManagedEnvironment::FManagedEnvironment> req) {
   if (ready_) {
     bindings_.AddBinding(this, std::move(req));
   } else if (env_) {
@@ -250,13 +235,10 @@ void ManagedEnvironment::ConnectToService(std::string name, zx::channel req) {
   env_->ConnectToService(name, std::move(req));
 }
 
-void ManagedEnvironment::AddDevice(
-    fuchsia::netemul::environment::VirtualDevice device) {
+void ManagedEnvironment::AddDevice(fuchsia::netemul::environment::VirtualDevice device) {
   virtual_devices_.AddEntry(device.path, device.device.Bind());
 }
 
-void ManagedEnvironment::RemoveDevice(::std::string path) {
-  virtual_devices_.RemoveEntry(path);
-}
+void ManagedEnvironment::RemoveDevice(::std::string path) { virtual_devices_.RemoveEntry(path); }
 
 }  // namespace netemul

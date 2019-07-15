@@ -18,8 +18,7 @@ class SandboxService {
   explicit SandboxService(async_dispatcher_t* dispatcher);
   ~SandboxService();
 
-  fidl::InterfaceRequestHandler<fuchsia::netemul::sandbox::Sandbox>
-  GetHandler();
+  fidl::InterfaceRequestHandler<fuchsia::netemul::sandbox::Sandbox> GetHandler();
 
  protected:
   friend SandboxBinding;

@@ -23,8 +23,7 @@ class ModelTest : public ::testing::Test {
 
     EXPECT_FALSE(config.ParseFromJSON(doc, &parser)) << msg;
     ASSERT_TRUE(parser.HasError());
-    std::cout << "Parse failed as expected: " << parser.error_str()
-              << std::endl;
+    std::cout << "Parse failed as expected: " << parser.error_str() << std::endl;
   }
 
   void ExpectSuccessfulParse(const char* json, Config* config) {
@@ -130,8 +129,7 @@ TEST_F(ModelTest, ParseTest) {
   auto doc = parser.ParseFromString(json, "ParseTest");
   EXPECT_FALSE(parser.HasError()) << "Parse error: " << parser.error_str();
 
-  EXPECT_TRUE(config.ParseFromJSON(doc, &parser))
-      << "Parse error: " << parser.error_str();
+  EXPECT_TRUE(config.ParseFromJSON(doc, &parser)) << "Parse error: " << parser.error_str();
 
   EXPECT_EQ(config.default_url(),
             "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/default.cmx");
@@ -198,9 +196,7 @@ TEST_F(ModelTest, ParseTest) {
   auto& t0 = c0.test()[0];
   auto& t1 = c0.test()[1];
   auto& t2 = c1.test()[0];
-  EXPECT_EQ(
-      t0.url(),
-      "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/env_build_run.cmx");
+  EXPECT_EQ(t0.url(), "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/env_build_run.cmx");
   EXPECT_EQ(t0.arguments().size(), 4ul);
 
   EXPECT_TRUE(t1.url().empty());
@@ -215,8 +211,7 @@ TEST_F(ModelTest, ParseTest) {
 
   // check setup:
   auto& setup = root_env.setup()[0];
-  EXPECT_EQ(setup.url(),
-            "fuchsia-pkg://fuchsia.com/some_setup#meta/some_setup.cmx");
+  EXPECT_EQ(setup.url(), "fuchsia-pkg://fuchsia.com/some_setup#meta/some_setup.cmx");
   EXPECT_EQ(setup.arguments().size(), 1ul);
   EXPECT_EQ(setup.arguments()[0], "-arg");
 
@@ -266,20 +261,17 @@ TEST_F(ModelTest, EndpointNoName) {
   const char* json = R"({"networks":[{"name":"net","endpoints":[{}]}]})";
   ExpectFailedParse(json, "endpoint without name accepted");
 
-  const char* json2 =
-      R"({"networks":[{"name":"net","endpoints":[{"name":""}]}]})";
+  const char* json2 = R"({"networks":[{"name":"net","endpoints":[{"name":""}]}]})";
   ExpectFailedParse(json2, "endpoint with empty name accepted");
 };
 
 TEST_F(ModelTest, EndpointBadMtu) {
-  const char* json =
-      R"({"networks":[{"name":"net","endpoints":[{"name":"a","mtu":0}]}]})";
+  const char* json = R"({"networks":[{"name":"net","endpoints":[{"name":"a","mtu":0}]}]})";
   ExpectFailedParse(json, "endpoint without 0 mtu accepted");
 }
 
 TEST_F(ModelTest, EndpointBadMac) {
-  const char* json =
-      R"({"networks":[{"name":"net","endpoints":[{"name":"a","mac":"xx:xx:xx"}]}]})";
+  const char* json = R"({"networks":[{"name":"net","endpoints":[{"name":"a","mac":"xx:xx:xx"}]}]})";
   ExpectFailedParse(json, "endpoint with invalid mac accepted");
 }
 
@@ -293,12 +285,10 @@ TEST_F(ModelTest, TestBadLoggerOptions) {
   ExpectFailedParse(json, "test with non object for logger_options accepted");
 
   json = R"({"environment":{ "logger_options": {"enabled": 0 } }})";
-  ExpectFailedParse(
-      json, "test with non boolean for logger_options.enabled accepted");
+  ExpectFailedParse(json, "test with non boolean for logger_options.enabled accepted");
 
   json = R"({"environment":{ "logger_options": {"klogs_enabled": 0 } }})";
-  ExpectFailedParse(
-      json, "test with non boolean for logger_options.klogs_enabled accepted");
+  ExpectFailedParse(json, "test with non boolean for logger_options.klogs_enabled accepted");
 }
 
 TEST_F(ModelTest, TestNullLoggerOptions) {
@@ -309,8 +299,7 @@ TEST_F(ModelTest, TestNullLoggerOptions) {
   auto doc = parser.ParseFromString(json, "ParseTest");
   EXPECT_FALSE(parser.HasError()) << "Parse error: " << parser.error_str();
 
-  EXPECT_TRUE(config.ParseFromJSON(doc, &parser))
-      << "Parse error: " << parser.error_str();
+  EXPECT_TRUE(config.ParseFromJSON(doc, &parser)) << "Parse error: " << parser.error_str();
 
   auto& root_env = config.environment();
 
@@ -321,40 +310,32 @@ TEST_F(ModelTest, TestNullLoggerOptions) {
 
 TEST_F(ModelTest, TestBadLoggerFilterOptions) {
   const char* json = R"({"environment": {"logger_options": {"filters": []}}})";
-  ExpectFailedParse(json,
-                    "test with non object for logger_options.filters accepted");
+  ExpectFailedParse(json, "test with non object for logger_options.filters accepted");
 
-  json =
-      R"({"environment": {"logger_options": {"filters": {"verbosity": true}}}})";
-  ExpectFailedParse(json,
-                    "test with non uint for logger_options.filters.verbosity");
+  json = R"({"environment": {"logger_options": {"filters": {"verbosity": true}}}})";
+  ExpectFailedParse(json, "test with non uint for logger_options.filters.verbosity");
 
   json = R"({"environment": {"logger_options": {"filters": {"tags": {}}}}})";
-  ExpectFailedParse(json,
-                    "test with non array for logger_options.filters.tags");
+  ExpectFailedParse(json, "test with non array for logger_options.filters.tags");
 
   json =
       R"({"environment": {"logger_options": {"filters": {"tags": ["a", "b", "c", "d", "e", "f"]}}}})";
-  ExpectFailedParse(json,
-                    "test with too many tags for logger_options.filters.tags");
+  ExpectFailedParse(json, "test with too many tags for logger_options.filters.tags");
 
   json =
       R"({"environment": {"logger_options": {"filters": {"tags": ["sdfkjaskhfgaskjfhASFSADFSAFSADFsdfkjaskhfgaskjfhASFSADFSAFSADFDD"]}}}})";
-  ExpectFailedParse(
-      json, "test with too long of a tag for logger_options.filters.tags");
+  ExpectFailedParse(json, "test with too long of a tag for logger_options.filters.tags");
 }
 
 TEST_F(ModelTest, TestNullLoggerFilterOptions) {
-  const char* json =
-      R"({"environment": {"logger_options": {"filters": null}}})";
+  const char* json = R"({"environment": {"logger_options": {"filters": null}}})";
 
   config::Config config;
   json::JSONParser parser;
   auto doc = parser.ParseFromString(json, "ParseTest");
   EXPECT_FALSE(parser.HasError()) << "Parse error: " << parser.error_str();
 
-  EXPECT_TRUE(config.ParseFromJSON(doc, &parser))
-      << "Parse error: " << parser.error_str();
+  EXPECT_TRUE(config.ParseFromJSON(doc, &parser)) << "Parse error: " << parser.error_str();
 
   auto& root_env = config.environment();
 
@@ -364,33 +345,28 @@ TEST_F(ModelTest, TestNullLoggerFilterOptions) {
 }
 
 TEST_F(ModelTest, ServiceBadUrl) {
-  const char* json =
-      R"({"environment":{"services":{"some.service":"blablabla"}}})";
+  const char* json = R"({"environment":{"services":{"some.service":"blablabla"}}})";
   ExpectFailedParse(json, "service with bad url accepted");
 }
 
 TEST_F(ModelTest, LaunchAppGetOrDefault) {
-  const char* json1 =
-      R"({"url":"fuchsia-pkg://fuchsia.com/some_url#meta/some_url.cmx"})";
+  const char* json1 = R"({"url":"fuchsia-pkg://fuchsia.com/some_url#meta/some_url.cmx"})";
   json::JSONParser parser;
   auto doc1 = parser.ParseFromString(json1, "LaunchApGetOrDefault");
   config::LaunchApp app1;
 
   EXPECT_FALSE(parser.HasError()) << "Parse error: " << parser.error_str();
-  EXPECT_TRUE(app1.ParseFromJSON(doc1, &parser))
-      << "Parse error: " << parser.error_str();
+  EXPECT_TRUE(app1.ParseFromJSON(doc1, &parser)) << "Parse error: " << parser.error_str();
 
   const char* json2 = R"({"url":""})";
   auto doc2 = parser.ParseFromString(json2, "LaunchApGetOrDefault");
 
   config::LaunchApp app2;
   EXPECT_FALSE(parser.HasError()) << "Parse error: " << parser.error_str();
-  EXPECT_TRUE(app2.ParseFromJSON(doc2, &parser))
-      << "Parse error: " << parser.error_str();
+  EXPECT_TRUE(app2.ParseFromJSON(doc2, &parser)) << "Parse error: " << parser.error_str();
 
   const char* fallback = "fuchsia-pkg://fuchsia.com/fallback#meta/fallback.cmx";
-  EXPECT_EQ(app1.GetUrlOrDefault(fallback),
-            "fuchsia-pkg://fuchsia.com/some_url#meta/some_url.cmx");
+  EXPECT_EQ(app1.GetUrlOrDefault(fallback), "fuchsia-pkg://fuchsia.com/some_url#meta/some_url.cmx");
   EXPECT_EQ(app2.GetUrlOrDefault(fallback), fallback);
 }
 
@@ -403,8 +379,7 @@ TEST_F(ModelTest, TimeoutParsing) {
   auto doc = parser.ParseFromString(jsongood, "Good timeout JSON");
   config::Config config;
   EXPECT_FALSE(parser.HasError()) << "Parse error: " << parser.error_str();
-  EXPECT_TRUE(config.ParseFromJSON(doc, &parser))
-      << "Parse error: " << parser.error_str();
+  EXPECT_TRUE(config.ParseFromJSON(doc, &parser)) << "Parse error: " << parser.error_str();
   EXPECT_EQ(config.timeout(), zx::sec(10));
 }
 
@@ -425,8 +400,7 @@ TEST_F(ModelTest, CaptureParsing) {
 
 TEST_F(ModelTest, InvalidKeys) {
   ExpectFailedParse(R"({ "foo" : "bar" })", "Bad config key accepted");
-  ExpectFailedParse(R"({ "environment" : {"foo" : "bar"} })",
-                    "Bad environment key accepted");
+  ExpectFailedParse(R"({ "environment" : {"foo" : "bar"} })", "Bad environment key accepted");
   ExpectFailedParse(R"({ "networks" : [{"name" : "net", "foo" : "bar"}] })",
                     "Bad network key accepted");
   ExpectFailedParse(R"({ "environment" : { "setup": [{"foo" : "bar"}] } })",

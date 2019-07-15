@@ -11,8 +11,7 @@ namespace netemul {
 
 class CounterBarrierWatch : public CallbackWatch<CounterBarrier::Callback> {
  public:
-  CounterBarrierWatch(CounterBarrier* parent, uint32_t count,
-                      CounterBarrier::Callback callback)
+  CounterBarrierWatch(CounterBarrier* parent, uint32_t count, CounterBarrier::Callback callback)
       : CallbackWatch(std::move(callback)), count_(count), parent_(parent) {}
 
   void OnTimeout() override {
@@ -28,10 +27,8 @@ class CounterBarrierWatch : public CallbackWatch<CounterBarrier::Callback> {
   CounterBarrier* parent_;
 };
 
-void CounterBarrier::AddWatch(uint32_t trigger_count, int64_t timeout,
-                              Callback callback) {
-  auto watch = std::make_unique<CounterBarrierWatch>(this, trigger_count,
-                                                     std::move(callback));
+void CounterBarrier::AddWatch(uint32_t trigger_count, int64_t timeout, Callback callback) {
+  auto watch = std::make_unique<CounterBarrierWatch>(this, trigger_count, std::move(callback));
   if (timeout > 0) {
     watch->PostTimeout(dispatcher_, timeout);
   }
@@ -61,8 +58,7 @@ void CounterBarrier::CleanWatches() {
 bool CounterBarrier::empty() const { return watches_.empty(); }
 size_t CounterBarrier::count() const { return watches_.size(); }
 
-CounterBarrier::CounterBarrier(async_dispatcher_t* dispatcher)
-    : dispatcher_(dispatcher) {}
+CounterBarrier::CounterBarrier(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
 CounterBarrier::~CounterBarrier() = default;
 

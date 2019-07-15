@@ -12,8 +12,7 @@ namespace config {
 static const char* kName = "name";
 static const char* kEndpoints = "endpoints";
 
-bool Network::ParseFromJSON(const rapidjson::Value& value,
-                            json::JSONParser* json_parser) {
+bool Network::ParseFromJSON(const rapidjson::Value& value, json::JSONParser* json_parser) {
   if (!value.IsObject()) {
     json_parser->ReportError("network entry must be an object");
     return false;
@@ -44,16 +43,15 @@ bool Network::ParseFromJSON(const rapidjson::Value& value,
         }
       }
     } else {
-      json_parser->ReportError(fxl::StringPrintf(
-          "Unrecognized network member \"%s\"", i->name.GetString()));
+      json_parser->ReportError(
+          fxl::StringPrintf("Unrecognized network member \"%s\"", i->name.GetString()));
       return false;
     }
   }
 
   // check that a non-empty name is provided:
   if (name_.empty()) {
-    json_parser->ReportError(
-        "network name must be provided and can't be an empty string");
+    json_parser->ReportError("network name must be provided and can't be an empty string");
     return false;
   }
 
