@@ -5,7 +5,7 @@
     "sandbox": {
         "services": [
             "fuchsia.media.Audio",
-            "fuchsia.mediasession.Publisher"
+            "fuchsia.media.sessions.Publisher"
         ]
     }
 }
