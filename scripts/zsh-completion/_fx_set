@@ -82,7 +82,9 @@ _fx_set__gn_arg_name() {
 
 # arguments to fx set
 _arguments '1:arch:{_fx_set__product_board}' \
+  '(:)--auto-dir[Act like `fx --dir out/PRODUCT.BOARD set ...`]' \
   '(:)--with[Packages to include in the universe]:packages:_fx_set__with' \
+  '(:)--with-base[Additional packages to include in the base]:packages:_fx_set__with' \
   '(:)*--variant[Pass a select_variant GN arg]: ' \
   '(:)*--fuzz-with[A sanitizer name to fuzz with]: ' \
   '(:)*--args[Arguments for GN gen]:args:{_fx_set___gn_arg_equals}' \

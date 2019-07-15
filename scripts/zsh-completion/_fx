@@ -59,7 +59,7 @@ _fx() {
   commands+=("ninja:invoke the ninja command")
 
   _arguments \
-    "--dir[build directory]:directory:_files -/" \
+    "--dir[build directory]:directory:__fx_build_dir" \
     "-d[target device]:device:__fx_nodename" \
     "-i[iterative mode]" \
     "-x[print commands]" \
