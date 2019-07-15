@@ -8,6 +8,7 @@
 #include <lib/mmio/mmio.h>
 #include <optional>
 #include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/port.h>
 
 namespace virtio {
 
@@ -20,12 +21,14 @@ public:
 
     zx_status_t InterruptValid() override;
     zx_status_t WaitForInterrupt() override;
+    void InterruptAck() override;
 
 protected:
     pci_protocol_t pci_ = {nullptr, nullptr};
     zx_pcie_device_info_t info_;
     fbl::Mutex lock_;
     char tag_[16]; // pci[XX:XX.X] + \0, aligned to 8
+    zx::port wait_port_;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(PciBackend);
 };

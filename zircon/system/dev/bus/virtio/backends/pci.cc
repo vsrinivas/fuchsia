@@ -9,6 +9,8 @@
 #include <fbl/mutex.h>
 #include <virtio/virtio.h>
 #include <lib/zx/handle.h>
+#include <lib/zx/port.h>
+#include <zircon/syscalls/port.h>
 
 #include "pci.h"
 
@@ -21,9 +23,15 @@ PciBackend::PciBackend(pci_protocol_t pci, zx_pcie_device_info_t info)
 
 zx_status_t PciBackend::Bind() {
     zx_handle_t tmp_handle;
+    zx_status_t st;
+
+    st = zx::port::create(/*options=*/ZX_PORT_BIND_TO_INTERRUPT, &wait_port_);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "%s: cannot create wait port: %d\n", tag(), st);
+        return st;
+    }
 
     // enable bus mastering
-    zx_status_t st;
     if ((st = pci_enable_bus_master(&pci_, true)) != ZX_OK) {
         zxlogf(ERROR, "%s: cannot enable bus master %d\n", tag(), st);
         return st;
@@ -51,6 +59,13 @@ zx_status_t PciBackend::Bind() {
         zxlogf(ERROR, "%s: failed to map irq %d\n", tag(), st);
         return st;
     }
+
+    st = zx_interrupt_bind(tmp_handle, wait_port_.get(), /*key=*/0, /*options=*/0);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "%s: failed to bind interrupt %d\n", tag(), st);
+        return st;
+    }
+
     irq_handle_.reset(tmp_handle);
     zxlogf(SPEW, "%s: irq handle %u\n", tag(), irq_handle_.get());
     return Init();
@@ -64,7 +79,12 @@ zx_status_t PciBackend::InterruptValid() {
 }
 
 zx_status_t PciBackend::WaitForInterrupt() {
-    return zx_interrupt_wait(irq_handle_.get(), nullptr);
+    zx_port_packet packet;
+    return wait_port_.wait(zx::deadline_after(zx::msec(100)), &packet);
+}
+
+void PciBackend::InterruptAck() {
+    zx_interrupt_ack(irq_handle_.get());
 }
 
 } // namespace virtio

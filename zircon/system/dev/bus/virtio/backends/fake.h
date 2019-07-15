@@ -88,6 +88,7 @@ class FakeBackend : public Backend {
     uint32_t IsrStatus() override { return registers8_.find(kISRStatus)->second; }
     zx_status_t InterruptValid() override { return ZX_OK; }
     zx_status_t WaitForInterrupt() override { return ZX_OK; }
+    void InterruptAck() override {}
 
   protected:
     // virtio header register offsets.

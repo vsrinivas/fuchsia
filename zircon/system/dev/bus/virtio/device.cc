@@ -47,11 +47,16 @@ void Device::IrqWorker() {
     zxlogf(TRACE, "%s: starting irq worker\n", tag());
 
     while (backend_->InterruptValid() == ZX_OK) {
-        if ((rc = backend_->WaitForInterrupt()) != ZX_OK) {
+        rc = backend_->WaitForInterrupt();
+        if (rc != ZX_OK && rc != ZX_ERR_TIMED_OUT) {
             zxlogf(SPEW, "%s: error while waiting for interrupt: %s\n",
                    tag(), zx_status_get_string(rc));
-            continue;
         }
+
+        // The hardware interrupt may be masked; unmask it or we will never receive another
+        // interrupt from the device. Note this mask is distinct from the isr_status virtio
+        // interrupt mask.
+        backend_->InterruptAck();
 
         // Read the status before completing the interrupt in case
         // another interrupt fires and changes the status.

@@ -58,7 +58,12 @@ public:
     // specified by the isr capability.
     virtual uint32_t IsrStatus() = 0;
     virtual zx_status_t InterruptValid() = 0;
+    // Wait for the device to raise an interrupt; may return early or may time out after an
+    // internal waiting period.
+    // Returns ZX_OK if woken by an interrupt
+    //         ZX_ERR_TIMED_OUT if an internal timeout expired; there may be work from the device
     virtual zx_status_t WaitForInterrupt() = 0;
+    virtual void InterruptAck() = 0;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(Backend);
 
