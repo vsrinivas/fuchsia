@@ -346,9 +346,51 @@ conditions is large and descriptive error messages are likely to be useful to
 clients.  However, including a string invites difficulties.  For example,
 clients might try to parse the string to understand what happened, which means
 the exact format of the string becomes part of the protocol, which is
-especially problematic when the strings are localized.  *Security note:*
+especially problematic when the strings are
+[localized](#localizing-strings-and-error-messages).
+
+*Security note:*
 Similarly, reporting stack traces or exception messages to the client can
 unintentionally leak privileged information.
+
+### Localizing strings and error messages
+
+If you are building a service that acts as a backend for a UI, use structured,
+typed messages, and leave the rendering to the UI layer.
+
+If all your messages are simple and unparameterized, use `enum`s for error
+reporting and general UI strings. For more detailed messages, with parameters
+such as names, numbers, and locations, use `table`s or `xunion`s, and pass
+the parameters as string or numeric fields.
+
+It may be tempting to generate messages (in English) in the service and provide
+them to the UI as strings—the UI just receives a string and pops up a
+notification or error dialog box.
+
+However, this simpler approach has some serious drawbacks:
+
+* Does your service know what locale (language and region) is being used in the
+  UI? You would either have to pass the locale with each request (see
+  [example][locale-passing-example]), or keep track of state for each connected
+  client, in order to provide messages in the right language.
+* Does your service's development environment have good support for
+  localization? If you're writing in C++, you have easy access to the
+  <abbr title="International Components for Unicode">ICU</abbr> library and
+  `MessageFormat`, but if you're using Rust, library support is currently much
+  more limited.
+* Do any of your error messages need to include parameters that are known to
+  the UI but not to the service?
+* Does your service only serve a single UI implementation? Does the service
+  know how much space the UI has to display a message?
+* Are errors only displayed as text? You might also need error-specific alert icons,
+  sound effects, or text-to-speech hints.
+* Could the user change the display locale while the UI is still running? If
+  this happens, pre-localized strings might be difficult to update to the new
+  locale, particularly if they were the result of some non-idempotent operation.
+
+Unless you are building a highly specialized service that is tightly coupled to
+a _single UI implementation_, you probably shouldn't expose user-visible UI
+strings in your FIDL service.
 
 ### Should I define a struct to encapsulate method parameters (or responses)?
 
@@ -1241,3 +1283,4 @@ protocol.
 
 <!-- xrefs -->
 [ftp-025]: /docs/development/languages/fidl/reference/ftp/ftp-025.md
+[locale-passing-example]: /garnet/examples/intl/wisdom/
