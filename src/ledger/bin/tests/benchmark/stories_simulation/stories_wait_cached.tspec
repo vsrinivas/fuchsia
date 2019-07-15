@@ -10,14 +10,14 @@
   "measure": [
     {
       "type": "duration",
-      "output_test_name": "stories_single_active/initialization",
+      "output_test_name": "stories_wait_cached/initialization",
       "event_name": "default_pages_initialization",
       "event_category": "benchmark",
       "expected_sample_count": 1
     },
     {
       "type": "duration",
-      "output_test_name": "stories_single_active/story_lifetime",
+      "output_test_name": "stories_wait_cached/story_lifetime",
       "event_name": "story_lifetime",
       "event_category": "benchmark",
       "expected_sample_count": 100,
@@ -25,7 +25,7 @@
     },
     {
       "type": "duration",
-      "output_test_name": "stories_single_active/story_cleanup",
+      "output_test_name": "stories_wait_cached/story_cleanup",
       "event_name": "story_cleanup",
       "event_category": "benchmark",
       "expected_sample_count": 100,
