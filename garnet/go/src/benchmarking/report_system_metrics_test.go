@@ -201,6 +201,67 @@ func TestReportMemoryMetrics(t *testing.T) {
 
 	ReportMemoryMetrics(model, "test suite", &file)
 	if !reflect.DeepEqual(expectedFile, file) {
-		t.Error("Kiki Expected and actual TestResultFile did not match\n")
+		t.Error("Expected and actual TestResultFile did not match\n")
+	}
+}
+
+func TestReportTemperatureMetrics(t *testing.T) {
+	var file TestResultsFile
+	results := &TestCaseResults{
+		Label:     "Device temperature",
+		TestSuite: "test suite",
+		Unit:      Unit(Count),
+		Values:    []float64{40, 50},
+	}
+	expectedFile := TestResultsFile{results}
+	model := Model{
+		Processes: []Process{
+			{
+				Name: "",
+				Pid:  4567,
+				Threads: []Thread{
+					{
+						Name: "",
+						Tid:  1239,
+						Events: []*Event{
+							{
+								Type:  4,
+								Cat:   "system_metrics",
+								Name:  "temperature",
+								Pid:   4567,
+								Tid:   1239,
+								Start: 5.5241122375e+07,
+								Dur:   0,
+								Id:    0,
+								Args: map[string]interface{}{
+									"temperature": 40,
+								},
+								Parent:   nil,
+								Children: make([]*Event, 0),
+							},
+							{
+								Type:  4,
+								Cat:   "system_metrics",
+								Name:  "temperature",
+								Pid:   4567,
+								Tid:   1239,
+								Start: 3.5241122375e+07,
+								Dur:   0,
+								Id:    0,
+								Args: map[string]interface{}{
+									"temperature": 50,
+								},
+								Parent:   nil,
+								Children: make([]*Event, 0),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	ReportTemperatureMetrics(model, "test suite", &file)
+	if !reflect.DeepEqual(expectedFile, file) {
+		t.Error("Expected and actual TestResultFile did not match\n")
 	}
 }

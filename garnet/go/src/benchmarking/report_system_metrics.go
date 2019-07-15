@@ -14,7 +14,7 @@ func ReportCpuMetrics(model Model, testSuite string, testResultsFile *TestResult
 	fmt.Printf("=== CPU ===\n")
 	cpuPercentages := extractCounterValues(
 		model, "system_metrics", "cpu_usage", []string{"average_cpu_percentage"})["average_cpu_percentage"]
-	fmt.Printf("Average CPU Load: %f\n", computeAverage(cpuPercentages))
+	fmt.Printf("Average CPU Load: %.4f\n", computeAverage(cpuPercentages))
 	testResultsFile.Add(&TestCaseResults{
 		Label:     "CPU Load",
 		TestSuite: testSuite,
@@ -48,7 +48,7 @@ func ReportMemoryMetrics(model Model, testSuite string, testResultsFile *TestRes
 		{"IPC Memory", allocatedMemoryValues["ipc"]},
 	}
 	for _, metric := range systemMetrics {
-		fmt.Printf("Average %s in bytes: %f\n", metric.Name, computeAverage(metric.Values))
+		fmt.Printf("Average %s in bytes: %.2f\n", metric.Name, computeAverage(metric.Values))
 		testResultsFile.Add(&TestCaseResults{
 			Label:     metric.Name,
 			TestSuite: testSuite,
@@ -56,6 +56,21 @@ func ReportMemoryMetrics(model Model, testSuite string, testResultsFile *TestRes
 			Values:    metric.Values,
 		})
 	}
+}
+
+// Extract the list of device temperature readings in Celsius from the trace model
+// under system_metrics category, and write it into testResultsFile.
+func ReportTemperatureMetrics(model Model, testSuite string, testResultsFile *TestResultsFile) {
+	fmt.Printf("=== Temperature ===\n")
+	temperatureReadings := extractCounterValues(
+		model, "system_metrics", "temperature", []string{"temperature"})["temperature"]
+	fmt.Printf("Average temperature reading: %.2f degrees Celsius\n", computeAverage(temperatureReadings))
+	testResultsFile.Add(&TestCaseResults{
+		Label:     "Device temperature",
+		TestSuite: testSuite,
+		Unit:      Unit(Count),
+		Values:    temperatureReadings,
+	})
 }
 
 // Helper function to extract int or float64 values for a particular category,
