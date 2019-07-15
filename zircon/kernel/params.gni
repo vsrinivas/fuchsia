@@ -31,13 +31,8 @@ declare_args() {
   # Enable kernel lock dependency tracking.
   enable_lock_dep = false
 
-  # Disable fair scheduler by default on all architectures.
-  # ZX-3964: Disable by default on arm64 until E2E tests stabilize.
-  if (current_cpu == "arm64") {
-    enable_fair_scheduler = false
-  } else if (current_cpu == "x64") {
-    enable_fair_scheduler = true
-  }
+  # Enable fair scheduler by default on all architectures.
+  enable_fair_scheduler = true
 
   # Enable detailed scheduler traces.
   detailed_scheduler_tracing = false
