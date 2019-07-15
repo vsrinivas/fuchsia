@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <zircon/features.h>
+#include <zircon/status.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 
@@ -39,13 +40,27 @@ constexpr size_t kMegabyte = 1024 * 1024;
 
 }  // namespace
 
-DebugAgent::DebugAgent(debug_ipc::StreamBuffer* stream,
-                       std::shared_ptr<sys::ServiceDirectory> services)
-    : stream_(stream), services_(services), weak_factory_(this) {}
+DebugAgent::DebugAgent(std::shared_ptr<sys::ServiceDirectory> services)
+    : services_(services), weak_factory_(this) {}
 
 DebugAgent::~DebugAgent() = default;
 
 fxl::WeakPtr<DebugAgent> DebugAgent::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
+
+void DebugAgent::Connect(debug_ipc::StreamBuffer* stream) {
+  FXL_DCHECK(!stream_) << "A debug agent should not be connected twice!";
+  stream_ = stream;
+}
+
+void DebugAgent::Disconnect() {
+  FXL_DCHECK(stream_);
+  stream_ = nullptr;
+}
+
+debug_ipc::StreamBuffer* DebugAgent::stream() {
+  FXL_DCHECK(stream_);
+  return stream_;
+}
 
 void DebugAgent::RemoveDebuggedProcess(zx_koid_t process_koid) {
   auto found = procs_.find(process_koid);
@@ -159,6 +174,8 @@ void DebugAgent::OnAttach(uint32_t transaction_id, const debug_ipc::AttachReques
     reply.koid = job_koid;
     reply.status = AddDebuggedJob(job_koid, std::move(job));
   }
+
+  DEBUG_LOG(Agent) << "Attaching to job " << job_koid << ": " << zx_status_get_string(reply.status);
 
   // Send the reply.
   debug_ipc::MessageWriter writer;

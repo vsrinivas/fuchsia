@@ -35,13 +35,18 @@ class DebugAgent : public RemoteAPI,
   // The stream must outlive this class. It will be used to send data to the
   // client. It will not be read (that's the job of the provider of the
   // RemoteAPI).
-  explicit DebugAgent(debug_ipc::StreamBuffer* stream,
-                      std::shared_ptr<sys::ServiceDirectory> services);
+  explicit DebugAgent(std::shared_ptr<sys::ServiceDirectory> services);
   ~DebugAgent();
 
   fxl::WeakPtr<DebugAgent> GetWeakPtr();
 
-  debug_ipc::StreamBuffer* stream() { return stream_; }
+  // Connects the debug agent to a stream buffer.
+  // The buffer can be disconnected and the debug agent will remain intact until the moment a new
+  // buffer is connected and messages start flowing through again.
+  void Connect(debug_ipc::StreamBuffer*);
+  void Disconnect();
+
+  debug_ipc::StreamBuffer* stream();
 
   void RemoveDebuggedProcess(zx_koid_t process_koid);
 
@@ -132,7 +137,7 @@ class DebugAgent : public RemoteAPI,
   void OnComponentTerminated(int64_t return_code, const ComponentDescription& description,
                              fuchsia::sys::TerminationReason reason);
 
-  debug_ipc::StreamBuffer* stream_;
+  debug_ipc::StreamBuffer* stream_ = nullptr;
 
   std::shared_ptr<sys::ServiceDirectory> services_;
 

@@ -10,6 +10,7 @@
 #include <memory>
 #include <thread>
 
+#include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/debug_agent/socket_connection.h"
 #include "src/developer/debug/debug_agent/unwind.h"
 #include "src/developer/debug/shared/logging/logging.h"
@@ -128,6 +129,11 @@ int main(int argc, const char* argv[]) {
         return 1;
       }
 
+      // The debug agent is independent on whether it's connected or not.
+      // The following loop will attempt to patch a stream to the debug agent in order to enable
+      // communication.
+      debug_agent::DebugAgent debug_agent(services);
+
       while (true) {
         // Start a new thread that will listen on a socket from an incoming connection from a
         // client. In the meantime, the main thread will block waiting for something to be posted
@@ -138,8 +144,11 @@ int main(int argc, const char* argv[]) {
         // the loop, the code will clean the connection thread and create another or exit the loop,
         // according to the current agent's configuration.
         {
-          std::thread conn_thread(&debug_agent::SocketServer::Run, &server, message_loop.get(),
-                                  options.port, services);
+          debug_agent::SocketServer::ConnectionConfig conn_config;
+          conn_config.message_loop = message_loop.get();
+          conn_config.debug_agent = &debug_agent;
+          conn_config.port = options.port;
+          std::thread conn_thread(&debug_agent::SocketServer::Run, &server, std::move(conn_config));
 
           message_loop->Run();
 
@@ -148,8 +157,7 @@ int main(int argc, const char* argv[]) {
         }
 
         // See if the debug agent was told to exit.
-        auto* agent = server.GetDebugAgent();
-        if (!agent || agent->should_quit())
+        if (debug_agent.should_quit())
           break;
 
         // Prepare for another connection.

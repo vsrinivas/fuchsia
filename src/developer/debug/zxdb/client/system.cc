@@ -63,7 +63,7 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
   schema->AddList(ClientSettings::System::kSymbolPaths, kSymbolPathsDescription, {});
   schema->AddBool(ClientSettings::System::kPauseOnLaunch, kPauseOnLaunchDescription, false);
   schema->AddBool(ClientSettings::System::kPauseOnAttach, kPauseOnAttachDescription, false);
-  schema->AddBool(ClientSettings::System::kQuitAgentOnExit, kQuitAgentOnExitDescription, false);
+  schema->AddBool(ClientSettings::System::kQuitAgentOnExit, kQuitAgentOnExitDescription, true);
   schema->AddBool(ClientSettings::System::kShowStdout, kShowStdoutDescription, true);
   schema->AddList(ClientSettings::System::kSymbolServers, kSymbolServersDescription, {});
   schema->AddString(ClientSettings::System::kSymbolCache, kSymbolCacheDescription, "");

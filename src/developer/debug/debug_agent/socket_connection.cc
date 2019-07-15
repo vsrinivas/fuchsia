@@ -8,17 +8,12 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/shared/logging/logging.h"
 
 namespace debug_agent {
 
 // Socket Server -----------------------------------------------------------------------------------
-
-const DebugAgent* SocketServer::GetDebugAgent() const {
-  if (!connected())
-    return nullptr;
-  return connection_->agent();
-}
 
 bool SocketServer::Init(uint16_t port) {
   server_socket_.reset(socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP));
@@ -44,21 +39,31 @@ bool SocketServer::Init(uint16_t port) {
   return true;
 }
 
-void SocketServer::Run(debug_ipc::MessageLoop* main_thread_loop, int port,
-                       std::shared_ptr<sys::ServiceDirectory> services) {
+void SocketServer::Run(ConnectionConfig config) {
   // Wait for one connection.
-  printf("Waiting on port %d for zxdb connection...\n", port);
+  printf("Waiting on port %d for zxdb connection...\n", config.port);
   fflush(stdout);
-  connection_ = std::make_unique<SocketConnection>(services);
-  if (!connection_->Accept(main_thread_loop, server_socket_.get()))
+  connection_ = std::make_unique<SocketConnection>(config.debug_agent);
+  if (!connection_->Accept(config.message_loop, server_socket_.get()))
     return;
 
   printf("Connection established.\n");
 }
 
-void SocketServer::Reset() { connection_.reset(); }
+void SocketServer::Reset() {
+  connection_.reset();
+}
 
 // SocketConnection --------------------------------------------------------------------------------
+
+SocketConnection::SocketConnection(debug_agent::DebugAgent* agent) : debug_agent_(agent) {}
+
+SocketConnection::~SocketConnection() {
+  if (!connected_)
+    return;
+  FXL_DCHECK(debug_agent_) << "A debug agent should be set when resetting the connection.";
+  debug_agent_->Disconnect();
+}
 
 bool SocketConnection::Accept(debug_ipc::MessageLoop* main_thread_loop, int server_fd) {
   sockaddr_in6 addr;
@@ -77,7 +82,8 @@ bool SocketConnection::Accept(debug_ipc::MessageLoop* main_thread_loop, int serv
   }
 
   // We need to post the agent initialization to the other thread.
-  main_thread_loop->PostTask(FROM_HERE, [this, client = std::move(client)]() mutable {
+  main_thread_loop->PostTask(FROM_HERE, [this, debug_agent = debug_agent_,
+                                         client = std::move(client)]() mutable {
     if (!buffer_.Init(std::move(client))) {
       FXL_LOG(ERROR) << "Error waiting for data.";
       debug_ipc::MessageLoop::Current()->QuitNow();
@@ -85,8 +91,7 @@ bool SocketConnection::Accept(debug_ipc::MessageLoop* main_thread_loop, int serv
     }
 
     // Route data from the router_buffer -> RemoteAPIAdapter -> DebugAgent.
-    agent_ = std::make_unique<debug_agent::DebugAgent>(&buffer_.stream(), services_);
-    adapter_ = std::make_unique<debug_agent::RemoteAPIAdapter>(agent_.get(), &buffer_.stream());
+    adapter_ = std::make_unique<debug_agent::RemoteAPIAdapter>(debug_agent, &buffer_.stream());
 
     buffer_.set_data_available_callback(
         [adapter = adapter_.get()]() { adapter->OnStreamReadable(); });
@@ -96,9 +101,13 @@ bool SocketConnection::Accept(debug_ipc::MessageLoop* main_thread_loop, int serv
       DEBUG_LOG(Agent) << "Connection lost.";
       debug_ipc::MessageLoop::Current()->QuitNow();
     });
+
+    // Connect the buffer into the agent.
+    debug_agent->Connect(&buffer_.stream());
   });
 
   printf("Accepted connection.\n");
+  connected_ = true;
   return true;
 }
 

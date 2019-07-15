@@ -16,7 +16,8 @@ MockStreamBackend::MockStreamBackend() {
   // think it's correctly connected to a client.
   stream_.set_writer(this);
   auto services = sys::ServiceDirectory::CreateFromNamespace();
-  agent_ = std::make_unique<DebugAgent>(&stream_, std::move(services));
+  agent_ = std::make_unique<DebugAgent>(std::move(services));
+  agent_->Connect(&stream_);
 }
 
 size_t MockStreamBackend::ConsumeStreamBufferData(const char* data, size_t len) {
