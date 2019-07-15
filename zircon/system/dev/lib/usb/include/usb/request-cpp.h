@@ -15,6 +15,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
+#include <lib/fit/function.h>
 #include <lib/operation/operation.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
@@ -44,6 +45,13 @@ namespace usb {
 //
 // A Request or UnownedRequest cannot be stored simultaneously in both a
 // usb::RequestQueue and usb::RequestList in the same driver layer.
+//
+// A CallbackRequest is a Request which maintains ownership of a request,
+// and contains a callback which will be invoked upon completion.
+// Since the parent request size is often not known at compile-time,
+// it is necessary for the device driver to implement its own wrapper
+// and call the Invoke function on the callback when a completion
+// is received. Invoke will then invoke the associated lambda function.
 //
 // Available methods for both Request and UnownedRequest include:
 //
@@ -132,6 +140,11 @@ namespace usb {
 //     <...>
 // }
 //
+///////////////////////////////////////////////////////////////////////////////
+// Example: Using CallbackRequest
+// using UsbRequest = CallbackRequest<32>;
+// ...
+// UsbRequest::Queue(std::move(request), [=](UsbRequest request) {...});
 
 class RequestBase {
 public:
@@ -373,10 +386,69 @@ public:
     using BaseClass::Release;
 };
 
+template <size_t callback_size, typename Request> class UsbCallback {
+private:
+    friend Request;
+    fit::inline_function<void(Request)> func_;
+    static void Invoke(usb_request_t* request, size_t parent_request_size) {
+        Request cb(request, parent_request_size);
+        cb.private_storage()->func_(std::move(cb));
+    }
+};
+
+// A special Request type which can contain a callback lambda to be executed
+// upon completion of a USB request. The callback_size parameter represents the
+// size of the callback, and must be at least sizeof(std::max_align_t) bytes.
+template <size_t callback_size = sizeof(std::max_align_t)>
+class CallbackRequest
+    : public usb::Request<UsbCallback<callback_size, CallbackRequest<callback_size>>> {
+public:
+    static_assert(callback_size >= sizeof(std::max_align_t),
+                  "Callback size must be at least sizeof(std::max_align_t bytes");
+    using Callback = UsbCallback<callback_size, CallbackRequest<callback_size>>;
+    using Request = usb::Request<Callback>;
+
+    CallbackRequest(usb_request_t* request, size_t parent_request_size)
+        : Request(request, parent_request_size), parent_request_size_(parent_request_size) {}
+    // It is NOT safe to call take() on a CallbackRequest.
+    // In order to ensure that each CallbackRequest is only
+    // ever invoked once, we make it an error to call take().
+    void take() { abort(); }
+    template <typename Lambda>
+    static zx_status_t Alloc(std::optional<CallbackRequest>* out, uint64_t data_size,
+                             uint8_t endpoint, size_t parent_req_size, Lambda callback) {
+        std::optional<Request> req;
+        zx_status_t status = Request::Alloc(&req, data_size, endpoint, parent_req_size);
+        if (status == ZX_OK) {
+            *out = CallbackRequest(req->take(), parent_req_size);
+            (*out)->private_storage()->func_ = std::move(callback);
+        }
+        return status;
+    }
+    template <typename ClientType> static void Queue(CallbackRequest request, ClientType& client) {
+        request.Queue(client);
+    }
+    auto private_storage() { return Request::private_storage(); }
+    template <typename ClientType> void Queue(ClientType& function) {
+        usb_request_complete_t completion;
+        completion.ctx = reinterpret_cast<void*>(parent_request_size_);
+        completion.callback = [](void* ctx, usb_request_t* request) {
+            Invoke(request, reinterpret_cast<size_t>(ctx));
+        };
+        function.RequestQueue(Request::take(), &completion);
+    }
+
+private:
+    static void Invoke(usb_request_t* request, size_t parent_request_size) {
+        Callback::Invoke(request, parent_request_size);
+    }
+    size_t parent_request_size_;
+};
+
 template <typename Storage = void>
-using UnownedRequestQueue = operation::UnownedOperationQueue<UnownedRequest<Storage>,
-                                                             OperationTraits,
-                                                             CallbackTraits, Storage>;
+using UnownedRequestQueue =
+    operation::UnownedOperationQueue<UnownedRequest<Storage>, OperationTraits, CallbackTraits,
+                                     Storage>;
 
 template <typename Storage = void>
 using RequestQueue = operation::OperationQueue<Request<Storage>, OperationTraits, Storage>;

@@ -18,6 +18,7 @@ test("usb-unittest") {
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.usb",
+    "$zx/system/banjo/ddk.protocol.usb.function",
     "$zx/system/banjo/ddk.protocol.usb.request",
     "$zx/system/dev/lib/fake-bti",
     "$zx/system/dev/lib/fake_ddk",

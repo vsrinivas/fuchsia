@@ -4,6 +4,7 @@
 
 #include "usb/request-cpp.h"
 
+#include <ddktl/protocol/usb/function.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <lib/fake-bti/bti.h>
@@ -349,6 +350,34 @@ bool AutoCallbackTest() {
     END_TEST;
 }
 
+bool CallbackRequestTest() {
+    BEGIN_TEST;
+    usb_function_protocol_t fake_function;
+    usb_function_protocol_ops_t fake_ops;
+    fake_ops.request_queue = [](void* ctx, usb_request_t* usb_request,
+                                const usb_request_complete_t* complete_cb) {
+        usb_request_complete(usb_request, ZX_OK, 0, complete_cb);
+    };
+    fake_function.ops = &fake_ops;
+    using Request = usb::CallbackRequest<sizeof(std::max_align_t)>;
+    std::optional<Request> req;
+    int invoked = 0;
+    ddk::UsbFunctionProtocolClient client(&fake_function);
+    ASSERT_EQ(Request::Alloc(&req, 0, 0, sizeof(usb_request_t),
+                             [&](Request request) {
+                                 invoked++;
+                                 if (invoked == 5) {
+                                     return;
+                                 }
+                                 Request::Queue(std::move(request), client);
+                             }),
+              ZX_OK);
+
+    Request::Queue(std::move(*req), client);
+    ASSERT_EQ(5, invoked);
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(UsbRequestTests)
@@ -369,4 +398,5 @@ RUN_TEST_SMALL(MultipleSectionTest)
 RUN_TEST_SMALL(PrivateStorageTest)
 RUN_TEST_SMALL(CallbackTest)
 RUN_TEST_SMALL(AutoCallbackTest)
+RUN_TEST_SMALL(CallbackRequestTest)
 END_TEST_CASE(UsbRequestTests)
