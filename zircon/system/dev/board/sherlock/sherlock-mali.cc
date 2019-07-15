@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sherlock.h"
-
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <hw/reg.h>
 #include <soc/aml-t931/t931-hw.h>
+
+#include "sherlock.h"
 
 namespace sherlock {
 static const pbus_mmio_t mali_mmios[] = {
@@ -48,27 +48,27 @@ static pbus_bti_t mali_btis[] = {
 };
 
 static pbus_dev_t mali_dev = []() {
-    pbus_dev_t dev = {};
-    dev.name = "mali";
-    dev.vid = PDEV_VID_AMLOGIC;
-    dev.pid = PDEV_PID_AMLOGIC_T931;
-    dev.did = PDEV_DID_AMLOGIC_MALI_INIT;
-    dev.mmio_list = mali_mmios;
-    dev.mmio_count = countof(mali_mmios);
-    dev.irq_list = mali_irqs;
-    dev.irq_count = countof(mali_irqs);
-    dev.bti_list = mali_btis;
-    dev.bti_count = countof(mali_btis);
-    return dev;
+  pbus_dev_t dev = {};
+  dev.name = "mali";
+  dev.vid = PDEV_VID_AMLOGIC;
+  dev.pid = PDEV_PID_AMLOGIC_T931;
+  dev.did = PDEV_DID_AMLOGIC_MALI_INIT;
+  dev.mmio_list = mali_mmios;
+  dev.mmio_count = countof(mali_mmios);
+  dev.irq_list = mali_irqs;
+  dev.irq_count = countof(mali_irqs);
+  dev.bti_list = mali_btis;
+  dev.bti_count = countof(mali_btis);
+  return dev;
 }();
 
 zx_status_t Sherlock::MaliInit() {
-    zx_status_t status = pbus_.DeviceAdd(&mali_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "Sherlock::MaliInit: pbus_device_add failed: %d\n", status);
-        return status;
-    }
+  zx_status_t status = pbus_.DeviceAdd(&mali_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Sherlock::MaliInit: pbus_device_add failed: %d\n", status);
     return status;
+  }
+  return status;
 }
 
 }  // namespace sherlock

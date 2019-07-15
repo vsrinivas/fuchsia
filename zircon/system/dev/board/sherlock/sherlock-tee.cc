@@ -41,27 +41,27 @@ static const pbus_smc_t sherlock_tee_smcs[] = {
 };
 
 static pbus_dev_t tee_dev = []() {
-    pbus_dev_t tee_dev = {};
-    tee_dev.name = "tee";
-    tee_dev.vid = PDEV_VID_GENERIC;
-    tee_dev.pid = PDEV_PID_GENERIC;
-    tee_dev.did = PDEV_DID_OPTEE;
-    tee_dev.mmio_list = sherlock_tee_mmios;
-    tee_dev.mmio_count = fbl::count_of(sherlock_tee_mmios);
-    tee_dev.bti_list = sherlock_tee_btis;
-    tee_dev.bti_count = fbl::count_of(sherlock_tee_btis);
-    tee_dev.smc_list = sherlock_tee_smcs;
-    tee_dev.smc_count = fbl::count_of(sherlock_tee_smcs);
-    return tee_dev;
+  pbus_dev_t tee_dev = {};
+  tee_dev.name = "tee";
+  tee_dev.vid = PDEV_VID_GENERIC;
+  tee_dev.pid = PDEV_PID_GENERIC;
+  tee_dev.did = PDEV_DID_OPTEE;
+  tee_dev.mmio_list = sherlock_tee_mmios;
+  tee_dev.mmio_count = fbl::count_of(sherlock_tee_mmios);
+  tee_dev.bti_list = sherlock_tee_btis;
+  tee_dev.bti_count = fbl::count_of(sherlock_tee_btis);
+  tee_dev.smc_list = sherlock_tee_smcs;
+  tee_dev.smc_count = fbl::count_of(sherlock_tee_smcs);
+  return tee_dev;
 }();
 
 zx_status_t Sherlock::TeeInit() {
-    zx_status_t status = pbus_.DeviceAdd(&tee_dev);
+  zx_status_t status = pbus_.DeviceAdd(&tee_dev);
 
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pbus_device_add tee failed: %d\n", __FUNCTION__, status);
-        return status;
-    }
-    return ZX_OK;
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: pbus_device_add tee failed: %d\n", __FUNCTION__, status);
+    return status;
+  }
+  return ZX_OK;
 }
-} // namespace sherlock
+}  // namespace sherlock

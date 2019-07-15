@@ -5,12 +5,13 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/platform-defs.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/display.h>
+#include <ddk/platform-defs.h>
 #include <soc/aml-t931/t931-gpio.h>
-#include "sherlock.h"
+
 #include "sherlock-gpios.h"
+#include "sherlock.h"
 
 namespace sherlock {
 
@@ -91,38 +92,38 @@ constexpr pbus_mmio_t dsi_mmios[] = {
 };
 
 static pbus_dev_t display_dev = []() {
-    pbus_dev_t dev = {};
-    dev.name = "display";
-    dev.vid = PDEV_VID_AMLOGIC;
-    dev.pid = PDEV_PID_AMLOGIC_S905D2;
-    dev.did = PDEV_DID_AMLOGIC_DISPLAY;
-    dev.mmio_list = display_mmios;
-    dev.mmio_count = countof(display_mmios);
-    dev.irq_list = display_irqs;
-    dev.irq_count = countof(display_irqs);
-    dev.bti_list = display_btis;
-    dev.bti_count = countof(display_btis);
-    return dev;
+  pbus_dev_t dev = {};
+  dev.name = "display";
+  dev.vid = PDEV_VID_AMLOGIC;
+  dev.pid = PDEV_PID_AMLOGIC_S905D2;
+  dev.did = PDEV_DID_AMLOGIC_DISPLAY;
+  dev.mmio_list = display_mmios;
+  dev.mmio_count = countof(display_mmios);
+  dev.irq_list = display_irqs;
+  dev.irq_count = countof(display_irqs);
+  dev.bti_list = display_btis;
+  dev.bti_count = countof(display_btis);
+  return dev;
 }();
 
 static pbus_dev_t dsi_dev = []() {
-    pbus_dev_t dev = {};
-    dev.name = "dw-dsi";
-    dev.vid = PDEV_VID_GENERIC;
-    dev.pid = PDEV_PID_GENERIC;
-    dev.did = PDEV_DID_DW_DSI;
-    dev.metadata_list = display_metadata;
-    dev.metadata_count = countof(display_metadata);
-    dev.mmio_list = dsi_mmios;
-    dev.mmio_count =countof(dsi_mmios);
-    return dev;
+  pbus_dev_t dev = {};
+  dev.name = "dw-dsi";
+  dev.vid = PDEV_VID_GENERIC;
+  dev.pid = PDEV_PID_GENERIC;
+  dev.did = PDEV_DID_DW_DSI;
+  dev.metadata_list = display_metadata;
+  dev.metadata_count = countof(display_metadata);
+  dev.mmio_list = dsi_mmios;
+  dev.mmio_count = countof(dsi_mmios);
+  return dev;
 }();
 
 // Composite binding rules for display driver.
 static const zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
-static const zx_bind_inst_t dsi_match[]  = {
+static const zx_bind_inst_t dsi_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_DSI_IMPL),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
@@ -143,50 +144,49 @@ static const zx_bind_inst_t canvas_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_AMLOGIC_CANVAS),
 };
 static const device_component_part_t dsi_component[] = {
-    { countof(root_match), root_match },
-    { countof(dsi_match), dsi_match },
+    {countof(root_match), root_match},
+    {countof(dsi_match), dsi_match},
 };
 static const device_component_part_t panel_gpio_component[] = {
-    { countof(root_match), root_match },
-    { countof(panel_gpio_match), panel_gpio_match },
+    {countof(root_match), root_match},
+    {countof(panel_gpio_match), panel_gpio_match},
 };
 static const device_component_part_t lcd_gpio_component[] = {
-    { countof(root_match), root_match },
-    { countof(lcd_gpio_match), lcd_gpio_match },
+    {countof(root_match), root_match},
+    {countof(lcd_gpio_match), lcd_gpio_match},
 };
 static const device_component_part_t sysmem_component[] = {
-    { countof(root_match), root_match },
-    { countof(sysmem_match), sysmem_match },
+    {countof(root_match), root_match},
+    {countof(sysmem_match), sysmem_match},
 };
 static const device_component_part_t canvas_component[] = {
-    { countof(root_match), root_match },
-    { countof(canvas_match), canvas_match },
+    {countof(root_match), root_match},
+    {countof(canvas_match), canvas_match},
 };
 static const device_component_t components[] = {
-    { countof(dsi_component), dsi_component },
-    { countof(panel_gpio_component), panel_gpio_component },
-    { countof(lcd_gpio_component), lcd_gpio_component },
-    { countof(sysmem_component), sysmem_component },
-    { countof(canvas_component), canvas_component },
+    {countof(dsi_component), dsi_component},
+    {countof(panel_gpio_component), panel_gpio_component},
+    {countof(lcd_gpio_component), lcd_gpio_component},
+    {countof(sysmem_component), sysmem_component},
+    {countof(canvas_component), canvas_component},
 };
 
-} // namespace
+}  // namespace
 
 zx_status_t Sherlock::DisplayInit() {
+  auto status = pbus_.DeviceAdd(&dsi_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
+    return status;
+  }
 
-    auto status = pbus_.DeviceAdd(&dsi_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
-        return status;
-    }
+  status = pbus_.CompositeDeviceAdd(&display_dev, components, countof(components), 1);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __FUNCTION__, status);
+    return status;
+  }
 
-    status = pbus_.CompositeDeviceAdd(&display_dev, components, countof(components), 1);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __FUNCTION__, status);
-        return status;
-    }
-
-    return ZX_OK;
+  return ZX_OK;
 }
 
-} // namespace sherlock
+}  // namespace sherlock

@@ -52,19 +52,19 @@ constexpr pbus_irq_t gdc_irqs[] = {
 };
 
 static pbus_dev_t gdc_dev = []() {
-    // GDC
-    pbus_dev_t dev = {};
-    dev.name = "gdc";
-    dev.vid = PDEV_VID_ARM;
-    dev.pid = PDEV_PID_GDC;
-    dev.did = PDEV_DID_ARM_MALI_IV010;
-    dev.mmio_list = gdc_mmios;
-    dev.mmio_count = countof(gdc_mmios);
-    dev.bti_list = gdc_btis;
-    dev.bti_count = countof(gdc_btis);
-    dev.irq_list = gdc_irqs;
-    dev.irq_count = countof(gdc_irqs);
-    return dev;
+  // GDC
+  pbus_dev_t dev = {};
+  dev.name = "gdc";
+  dev.vid = PDEV_VID_ARM;
+  dev.pid = PDEV_PID_GDC;
+  dev.did = PDEV_DID_ARM_MALI_IV010;
+  dev.mmio_list = gdc_mmios;
+  dev.mmio_count = countof(gdc_mmios);
+  dev.bti_list = gdc_btis;
+  dev.bti_count = countof(gdc_btis);
+  dev.irq_list = gdc_irqs;
+  dev.irq_count = countof(gdc_irqs);
+  return dev;
 }();
 
 constexpr pbus_bti_t isp_btis[] = {
@@ -111,19 +111,19 @@ static const pbus_irq_t isp_irqs[] = {
 };
 
 static pbus_dev_t isp_dev = []() {
-    // ISP
-    pbus_dev_t dev = {};
-    dev.name = "isp";
-    dev.vid = PDEV_VID_ARM;
-    dev.pid = PDEV_PID_ISP;
-    dev.did = PDEV_DID_ARM_MALI_IV009;
-    dev.mmio_list = isp_mmios;
-    dev.mmio_count = countof(isp_mmios);
-    dev.bti_list = isp_btis;
-    dev.bti_count = countof(isp_btis);
-    dev.irq_list = isp_irqs;
-    dev.irq_count = countof(isp_irqs);
-    return dev;
+  // ISP
+  pbus_dev_t dev = {};
+  dev.name = "isp";
+  dev.vid = PDEV_VID_ARM;
+  dev.pid = PDEV_PID_ISP;
+  dev.did = PDEV_DID_ARM_MALI_IV009;
+  dev.mmio_list = isp_mmios;
+  dev.mmio_count = countof(isp_mmios);
+  dev.bti_list = isp_btis;
+  dev.bti_count = countof(isp_btis);
+  dev.irq_list = isp_irqs;
+  dev.irq_count = countof(isp_irqs);
+  return dev;
 }();
 
 // Composite binding rules for ARM ISP
@@ -251,65 +251,64 @@ constexpr pbus_irq_t mipi_irqs[] = {
 
 // Binding rules for MIPI Driver
 static const pbus_dev_t mipi_dev = []() {
-    // MIPI CSI PHY ADAPTER
-    pbus_dev_t dev = {};
-    dev.name = "mipi-csi2";
-    dev.vid = PDEV_VID_AMLOGIC;
-    dev.pid = PDEV_PID_AMLOGIC_T931;
-    dev.did = PDEV_DID_AMLOGIC_MIPI_CSI;
-    dev.mmio_list = mipi_mmios;
-    dev.mmio_count = countof(mipi_mmios);
-    dev.bti_list = mipi_btis;
-    dev.bti_count = countof(mipi_btis);
-    dev.irq_list = mipi_irqs;
-    dev.irq_count = countof(mipi_irqs);
-    return dev;
+  // MIPI CSI PHY ADAPTER
+  pbus_dev_t dev = {};
+  dev.name = "mipi-csi2";
+  dev.vid = PDEV_VID_AMLOGIC;
+  dev.pid = PDEV_PID_AMLOGIC_T931;
+  dev.did = PDEV_DID_AMLOGIC_MIPI_CSI;
+  dev.mmio_list = mipi_mmios;
+  dev.mmio_count = countof(mipi_mmios);
+  dev.bti_list = mipi_btis;
+  dev.bti_count = countof(mipi_btis);
+  dev.irq_list = mipi_irqs;
+  dev.irq_count = countof(mipi_irqs);
+  return dev;
 }();
 
-} // namespace
+}  // namespace
 
 // Refer to camera design document for driver
 // design and layout details.
 zx_status_t Sherlock::CameraInit() {
-    // Set GPIO alternate functions.
-    gpio_impl_.SetAltFunction(T931_GPIOAO(10), kClk24MAltFunc);
-    gpio_impl_.SetDriveStrength(T931_GPIOAO(10), kClkGpioDriveStrength);
+  // Set GPIO alternate functions.
+  gpio_impl_.SetAltFunction(T931_GPIOAO(10), kClk24MAltFunc);
+  gpio_impl_.SetDriveStrength(T931_GPIOAO(10), kClkGpioDriveStrength);
 
-    zx_status_t status = pbus_.DeviceAdd(&mipi_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: Mipi_Device DeviceAdd failed %d\n", __func__, status);
-        return status;
-    }
-
-    constexpr zx_device_prop_t sensor_props[] = {
-        {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_SONY},
-        {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_SONY_IMX227},
-        {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_CAMERA_SENSOR},
-    };
-
-    status = DdkAddComposite("imx227-sensor", sensor_props, countof(sensor_props),
-                             imx227_sensor_components, countof(imx227_sensor_components),
-                             UINT32_MAX);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: IMX227 DeviceAdd failed %d\n", __func__, status);
-        return status;
-    }
-
-    // Add a composite device for GDC because we want to keep it in the same devhost
-    // as the ISP driver.
-    status =  pbus_.CompositeDeviceAdd(&gdc_dev, gdc_components, countof(gdc_components), 1);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: GDC DeviceAdd failed %d\n", __func__, status);
-        return status;
-    }
-
-    // Add a composite device for ARM ISP
-    status =  pbus_.CompositeDeviceAdd(&isp_dev, isp_components, countof(isp_components), 1);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ISP DeviceAdd failed %d\n", __func__, status);
-        return status;
-    }
+  zx_status_t status = pbus_.DeviceAdd(&mipi_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Mipi_Device DeviceAdd failed %d\n", __func__, status);
     return status;
+  }
+
+  constexpr zx_device_prop_t sensor_props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_SONY},
+      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_SONY_IMX227},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_CAMERA_SENSOR},
+  };
+
+  status = DdkAddComposite("imx227-sensor", sensor_props, countof(sensor_props),
+                           imx227_sensor_components, countof(imx227_sensor_components), UINT32_MAX);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: IMX227 DeviceAdd failed %d\n", __func__, status);
+    return status;
+  }
+
+  // Add a composite device for GDC because we want to keep it in the same devhost
+  // as the ISP driver.
+  status = pbus_.CompositeDeviceAdd(&gdc_dev, gdc_components, countof(gdc_components), 1);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: GDC DeviceAdd failed %d\n", __func__, status);
+    return status;
+  }
+
+  // Add a composite device for ARM ISP
+  status = pbus_.CompositeDeviceAdd(&isp_dev, isp_components, countof(isp_components), 1);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: ISP DeviceAdd failed %d\n", __func__, status);
+    return status;
+  }
+  return status;
 }
 
-} // namespace sherlock
+}  // namespace sherlock

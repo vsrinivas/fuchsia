@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sherlock.h"
-
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <soc/aml-t931/t931-hw.h>
 #include <zircon/syscalls/smc.h>
+
+#include "sherlock.h"
 
 namespace sherlock {
 
@@ -75,29 +75,29 @@ static const pbus_smc_t sherlock_video_smcs[] = {
 };
 
 static pbus_dev_t video_dev = []() {
-    pbus_dev_t dev = {};
-    dev.name = "aml-video";
-    dev.vid = PDEV_VID_AMLOGIC;
-    dev.pid = PDEV_PID_AMLOGIC_T931;
-    dev.did = PDEV_DID_AMLOGIC_VIDEO;
-    dev.mmio_list = sherlock_video_mmios;
-    dev.mmio_count = countof(sherlock_video_mmios);
-    dev.bti_list = sherlock_video_btis;
-    dev.bti_count = countof(sherlock_video_btis);
-    dev.irq_list = sherlock_video_irqs;
-    dev.irq_count = countof(sherlock_video_irqs);
-    dev.smc_list = sherlock_video_smcs;
-    dev.smc_count = countof(sherlock_video_smcs);
-    return dev;
+  pbus_dev_t dev = {};
+  dev.name = "aml-video";
+  dev.vid = PDEV_VID_AMLOGIC;
+  dev.pid = PDEV_PID_AMLOGIC_T931;
+  dev.did = PDEV_DID_AMLOGIC_VIDEO;
+  dev.mmio_list = sherlock_video_mmios;
+  dev.mmio_count = countof(sherlock_video_mmios);
+  dev.bti_list = sherlock_video_btis;
+  dev.bti_count = countof(sherlock_video_btis);
+  dev.irq_list = sherlock_video_irqs;
+  dev.irq_count = countof(sherlock_video_irqs);
+  dev.smc_list = sherlock_video_smcs;
+  dev.smc_count = countof(sherlock_video_smcs);
+  return dev;
 }();
 
 zx_status_t Sherlock::VideoInit() {
-    zx_status_t status = pbus_.DeviceAdd(&video_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "Sherlock::VideoInit: pbus_device_add() failed for video: %d\n", status);
-        return status;
-    }
-    return ZX_OK;
+  zx_status_t status = pbus_.DeviceAdd(&video_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Sherlock::VideoInit: pbus_device_add() failed for video: %d\n", status);
+    return status;
+  }
+  return ZX_OK;
 }
 
-} // namespace sherlock
+}  // namespace sherlock

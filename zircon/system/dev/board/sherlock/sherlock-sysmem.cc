@@ -6,10 +6,9 @@
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
-#include <zircon/device/sysmem.h>
-
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
+#include <zircon/device/sysmem.h>
 
 #include "sherlock.h"
 
@@ -34,29 +33,30 @@ static const pbus_metadata_t sysmem_metadata_list[] = {
         .type = SYSMEM_METADATA,
         .data_buffer = &sysmem_metadata,
         .data_size = sizeof(sysmem_metadata),
-    }};
+    },
+};
 
 static const pbus_dev_t sysmem_dev = [] {
-    pbus_dev_t ret = {};
-    ret.name = "sysmem";
-    ret.vid = PDEV_VID_GENERIC;
-    ret.pid = PDEV_PID_GENERIC;
-    ret.did = PDEV_DID_SYSMEM;
-    ret.bti_list = sysmem_btis;
-    ret.bti_count = countof(sysmem_btis);
-    ret.metadata_list = sysmem_metadata_list;
-    ret.metadata_count = countof(sysmem_metadata_list);
-    return ret;
+  pbus_dev_t ret = {};
+  ret.name = "sysmem";
+  ret.vid = PDEV_VID_GENERIC;
+  ret.pid = PDEV_PID_GENERIC;
+  ret.did = PDEV_DID_SYSMEM;
+  ret.bti_list = sysmem_btis;
+  ret.bti_count = countof(sysmem_btis);
+  ret.metadata_list = sysmem_metadata_list;
+  ret.metadata_count = countof(sysmem_metadata_list);
+  return ret;
 }();
 
 zx_status_t Sherlock::SysmemInit() {
-    zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_SYSMEM, &sysmem_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __func__, status);
-        return status;
-    }
+  zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_SYSMEM, &sysmem_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __func__, status);
+    return status;
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
-} // namespace sherlock
+}  // namespace sherlock
