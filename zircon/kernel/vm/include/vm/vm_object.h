@@ -52,7 +52,6 @@ enum class Resizability {
 enum class CloneType {
   Unidirectional,
   Bidirectional,
-  PrivatePagerCopy,
 };
 
 // The base vm object that holds a range of bytes of data

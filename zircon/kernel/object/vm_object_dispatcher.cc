@@ -239,9 +239,6 @@ zx_status_t VmObjectDispatcher::CreateChild(uint32_t options, uint64_t offset, u
   } else if (options & ZX_VMO_CHILD_COPY_ON_WRITE2) {
     options &= ~ZX_VMO_CHILD_COPY_ON_WRITE2;
     type = CloneType::Bidirectional;
-  } else if (options & ZX_VMO_CHILD_PRIVATE_PAGER_COPY) {
-    options &= ~ZX_VMO_CHILD_PRIVATE_PAGER_COPY;
-    type = CloneType::PrivatePagerCopy;
   } else {
     return ZX_ERR_INVALID_ARGS;
   }

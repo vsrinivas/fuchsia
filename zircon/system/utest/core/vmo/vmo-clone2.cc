@@ -1736,7 +1736,7 @@ TEST(VmoClone2TestCase, NoPager) {
     ASSERT_OK(pager.create_vmo(0, port, 0, ZX_PAGE_SIZE, &vmo));
 
     zx::vmo uni_clone;
-    ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, 0, ZX_PAGE_SIZE, &uni_clone));
+    ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, ZX_PAGE_SIZE, &uni_clone));
 
     zx::vmo clone;
     ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, ZX_PAGE_SIZE, &clone),

@@ -45,14 +45,6 @@ done on the parent. A slice differs from a duplicate handle to the parent by all
 access to only a subrange of the parent vmo, and allowing for the
 **ZX_VMO_ZERO_CHILDREN** signal to be used.
 
-- **ZX_VMO_CHILD_PRIVATE_PAGER_COPY** - Create a private copy of a pager vmo. The child
-vmo will behave the same way the parent does, except that any write operation on the
-child will bring in a copy of the page at the offset the write occurred into the child
-vmo. The new page in the child vmo is now a copy and may diverge from the parent. Any
-reads from ranges outside of the parent vmo's size will contain zeros, and writes will
-allocate new zero filled pages.  See the NOTES section below for details on VMO syscall
-interactions with child. This flag is only supported for vmos created with
-[`zx_pager_create_vmo()`] or descendants of such a vmo.
 
 In addition, *options* can contain zero or more of the following flags to
 further specify the child's behavior:
@@ -71,8 +63,7 @@ By default the rights of the child handled will be the same as the
 original with a few exceptions. See [`zx_vmo_create()`] for a
 discussion of the details of each right.
 
-If *options* is **ZX_VMO_CHILD_COPY_ON_WRITE** or **ZX_VMO_CHILD_PRIVATE_PAGER_COPY**,
-then following rights are added:
+If *options* is **ZX_VMO_CHILD_COPY_ON_WRITE** the following rights are added:
 
 - **ZX_RIGHT_WRITE**
 
