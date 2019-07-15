@@ -511,30 +511,44 @@ zx_status_t VmObjectPaged::CreateCowClone(Resizability resizable, CloneType type
   }
 
   fbl::RefPtr<VmObjectPaged> hidden_parent;
-  if (type == CloneType::Bidirectional) {
-    // To create a bidirectional clone, the kernel creates an artifical parent vmo
-    // called a 'hidden vmo'. The content of the original vmo is moved into the hidden
-    // vmo, and the original vmo becomes a child of the hidden vmo. Then a second child
-    // is created, which is the userspace visible clone.
-    //
-    // Hidden vmos are an implementation detail that are not exposed to userspace.
+  switch (type) {
+    case CloneType::Bidirectional: {
+      // To create a bidirectional clone, the kernel creates an artifical parent vmo
+      // called a 'hidden vmo'. The content of the original vmo is moved into the hidden
+      // vmo, and the original vmo becomes a child of the hidden vmo. Then a second child
+      // is created, which is the userspace visible clone.
+      //
+      // Hidden vmos are an implementation detail that are not exposed to userspace.
 
-    if (!IsBidirectionalClonable()) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
+      if (!IsBidirectionalClonable()) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
 
-    uint32_t options = kHidden;
-    if (is_contiguous()) {
-      options |= kContiguous;
-    }
+      uint32_t options = kHidden;
+      if (is_contiguous()) {
+        options |= kContiguous;
+      }
 
-    // The initial size is 0. It will be initialized as part of the atomic
-    // insertion into the child tree.
-    hidden_parent = fbl::AdoptRef<VmObjectPaged>(
-        new (&ac) VmObjectPaged(options, pmm_alloc_flags_, 0, lock_ptr_, nullptr));
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
+      // The initial size is 0. It will be initialized as part of the atomic
+      // insertion into the child tree.
+      hidden_parent = fbl::AdoptRef<VmObjectPaged>(
+          new (&ac) VmObjectPaged(options, pmm_alloc_flags_, 0, lock_ptr_, nullptr));
+      if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+      }
+      break;
     }
+    case CloneType::PrivatePagerCopy:
+      if (!GetRootPageSourceLocked()) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      break;
+    case CloneType::Unidirectional:
+      // Force these clients to use private pager copies
+      if (GetRootPageSourceLocked()) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      break;
   }
 
   bool notify_one_child;

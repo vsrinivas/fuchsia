@@ -88,7 +88,7 @@ void Vmo::GenerateBufferContents(void* dest_buffer, uint64_t len, uint64_t paged
 
 fbl::unique_ptr<Vmo> Vmo::Clone() {
     zx::vmo clone;
-    if (vmo_.create_child(ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_RESIZABLE,
+    if (vmo_.create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY | ZX_VMO_CHILD_RESIZABLE,
                           0, size_, &clone) != ZX_OK) {
         return nullptr;
     }

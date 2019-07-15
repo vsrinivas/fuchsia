@@ -7,6 +7,7 @@
 
 #include <fbl/algorithm.h>
 #include <lib/fzl/memory-probe.h>
+#include <lib/zx/vmo.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zxtest/zxtest.h>
@@ -688,6 +689,21 @@ TEST(VmoCloneTestCase, NoResize) {
 
 TEST(VmoCloneTestCase, LegacyNoResize) {
     ASSERT_NO_FATAL_FAILURES(NoResizeHelper(2));
+}
+
+
+TEST(VmoCloneTestCase, NoPagerClone) {
+    zx::vmo vmo;
+    ASSERT_EQ(zx::vmo::create(PAGE_SIZE, ZX_VMO_RESIZABLE, &vmo), ZX_OK);
+
+    zx::vmo clone;
+    ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, 0, PAGE_SIZE, &clone),
+                               ZX_ERR_NOT_SUPPORTED);
+
+    ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, PAGE_SIZE, &clone));
+
+    ASSERT_EQ(clone.create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, 0, PAGE_SIZE, &clone),
+                                 ZX_ERR_NOT_SUPPORTED);
 }
 
 } // namespace
