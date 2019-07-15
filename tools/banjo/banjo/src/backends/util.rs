@@ -5,21 +5,25 @@
 use {crate::ast, heck::SnakeCase, std::collections::HashMap, std::iter};
 
 pub fn to_c_name(name: &str) -> String {
-    // strip FQN
-    let name = name.split(".").last().unwrap();
-    // Force uppercase characters the follow one another to lowercase.
-    // e.g. GUIDType becomes Guidtype
-    let mut iter = name.chars();
-    let name = iter::once(iter.next().unwrap())
-        .chain(iter.zip(name.chars()).map(|(c1, c2)| {
-            if c2.is_ascii_uppercase() {
-                c1.to_ascii_lowercase()
-            } else {
-                c1
-            }
-        }))
-        .collect::<String>();
-    name.trim().to_snake_case()
+    if name.is_empty() {
+        name.to_string()
+    } else {
+        // strip FQN
+        let name = name.split(".").last().unwrap();
+        // Force uppercase characters the follow one another to lowercase.
+        // e.g. GUIDType becomes Guidtype
+        let mut iter = name.chars();
+        let name = iter::once(iter.next().unwrap())
+            .chain(iter.zip(name.chars()).map(|(c1, c2)| {
+                if c2.is_ascii_uppercase() {
+                    c1.to_ascii_lowercase()
+                } else {
+                    c1
+                }
+            }))
+            .collect::<String>();
+        name.trim().to_snake_case()
+    }
 }
 
 /// Represents attributes on a method of a particular type, where the attribute
@@ -31,6 +35,7 @@ pub fn to_c_name(name: &str) -> String {
 ///  other]
 /// ```
 /// a `ValuedAttributes` for attr_key="zippy", would be {p0: ABC, p1: XYZ}.
+#[derive(Default)]
 pub struct ValuedAttributes(HashMap<String, String>);
 
 impl ValuedAttributes {

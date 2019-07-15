@@ -448,4 +448,24 @@ mod syzkaller {
         "syzkaller/syzkaller-protocol-resource.txt"
     );
 
+    codegen_test!(
+        syzkaller_struct,
+        SyzkallerBackend,
+        ["../zx.banjo", "banjo/syzkaller-struct.test.banjo"],
+        "syzkaller/syzkaller-struct.txt"
+    );
+
+    codegen_test!(
+        syzkaller_union,
+        SyzkallerBackend,
+        ["../zx.banjo", "banjo/syzkaller-union.test.banjo"],
+        "syzkaller/syzkaller-union.txt"
+    );
+
+    codegen_test!(
+        syzkaller_flag,
+        SyzkallerBackend,
+        ["../zx.banjo", "banjo/syzkaller-flag.test.banjo"],
+        "syzkaller/syzkaller-flag.txt"
+    );
 }

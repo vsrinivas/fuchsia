@@ -1,0 +1,106 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library banjo.examples.syzkaller.union;
+
+//
+//
+// Using primitive types as a union field
+//
+//
+union primitive_types {
+    bool b;
+    int8 i8;
+    int16 i16;
+    int32 i32;
+    int64 i64;
+    uint8 u8;
+    uint16 u16;
+    uint32 u32;
+    uint64 u64;
+    handle h;
+};
+
+//
+//
+// Using different array types as a union field
+//
+//
+[argtype = "rd_vptr OUT",
+ argtype = "wr_vptr IN",
+ argtype = "rd_sz OUT",
+ argtype = "rd_sz IN"
+ argtype = "rd_b OUT",
+ argtype = "wr_b IN",
+ argtype = "rd_i8 OUT",
+ argtype = "wr_i8 IN",
+ argtype = "rd_i16 OUT",
+ argtype = "wr_i16 IN"
+ argtype = "rd_i32 OUT",
+ argtype = "wr_i32 IN"
+ argtype = "rd_i64 OUT",
+ argtype = "wr_i64 IN",
+ argtype = "rd_u8 OUT",
+ argtype = "wr_u8 IN",
+ argtype = "rd_u16 OUT",
+ argtype = "wr_u16 IN"
+ argtype = "rd_u32 OUT",
+ argtype = "wr_u32 IN"
+ argtype = "rd_u64 OUT",
+ argtype = "wr_u64 IN",
+ argtype = "rd_h OUT",
+ argtype = "wr_h IN"]
+union arrays {
+
+    array<voidptr>:1 rd_vptr;
+    array<voidptr>:1 wr_vptr;
+
+    array<usize>:1 rd_sz;
+    array<usize>:1 rd_sz;
+
+    array<bool>:1 rd_b;
+    array<bool>:1 wr_b;
+
+    array<int8>:1 rd_i8;
+    array<int8>:1 wr_i8;
+
+    array<int16>:1 rd_i16;
+    array<int16>:1 wr_i16;
+
+    array<int32>:1 rd_i32;
+    array<int32>:1 wr_i32;
+
+    array<int64>:1 rd_i64;
+    array<int64>:1 wr_i64;
+
+    array<uint8>:1 rd_u8;
+    array<uint8>:1 wr_u8;
+
+    array<uint16>:1 rd_u16;
+    array<uint16>:1 wr_u16;
+
+    array<uint32>:1 rd_u32;
+    array<uint32>:1 wr_u32;
+
+    array<uint64>:1 rd_u64;
+    array<uint64>:1 wr_u64;
+
+    array<handle>:1 rd_h;
+    array<handle>:1 wr_h;
+
+};
+
+//
+//
+// Using declared union as a method argument
+//
+//
+union Packet {
+    uint32 i32;
+    uint32 u32;
+};
+
+protocol Api {
+    Packet(handle h, Packet pkt) -> (zx.status st);
+};
