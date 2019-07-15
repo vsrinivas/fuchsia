@@ -7,11 +7,12 @@
             "fuchsia.amber.Control",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
-            "fuchsia.posix.socket.Provider",
             "fuchsia.net.SocketProvider",
             "fuchsia.pkg.PackageResolver",
             "fuchsia.pkg.RepositoryManager",
-            "fuchsia.pkg.rewrite.Engine"
+            "fuchsia.pkg.rewrite.Engine",
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.update.Manager"
         ]
     }
 }

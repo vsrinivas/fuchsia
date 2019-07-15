@@ -30,6 +30,7 @@ import (
 	fuchsiaio "fidl/fuchsia/io"
 	"fidl/fuchsia/pkg"
 	"fidl/fuchsia/pkg/rewrite"
+	"fidl/fuchsia/update"
 )
 
 const usage = `usage: %s <command> [opts]
@@ -112,6 +113,7 @@ type Services struct {
 	resolver      *pkg.PackageResolverInterface
 	repoMgr       *pkg.RepositoryManagerInterface
 	rewriteEngine *rewrite.EngineInterface
+	updateManager *update.ManagerInterface
 }
 
 func connectToAmber(ctx *context.Context) *amber.ControlInterface {
@@ -143,6 +145,15 @@ func connectToRepositoryManager(ctx *context.Context) *pkg.RepositoryManagerInte
 
 func connectToRewriteEngine(ctx *context.Context) *rewrite.EngineInterface {
 	req, pxy, err := rewrite.NewEngineInterfaceRequest()
+	if err != nil {
+		panic(err)
+	}
+	ctx.ConnectToEnvService(req)
+	return pxy
+}
+
+func connectToUpdateManager(ctx *context.Context) *update.ManagerInterface {
+	req, pxy, err := update.NewManagerInterfaceRequest()
 	if err != nil {
 		panic(err)
 	}
@@ -552,16 +563,25 @@ func do(services Services) int {
 			return 1
 		}
 	case "system_update":
-		configured, err := services.amber.CheckForSystemUpdate()
+		result, err := services.updateManager.CheckNow(
+			update.Options{
+				Initiator: update.InitiatorUser, InitiatorPresent: true},
+			update.MonitorInterfaceRequest{zx.Channel(zx.HandleInvalid)})
 		if err != nil {
 			log.Printf("error checking for system update: %s", err)
 			return 1
 		}
 
-		if configured {
+		switch result {
+		case update.CheckStartedResultStarted:
 			fmt.Printf("triggered a system update check\n")
-		} else {
-			fmt.Printf("system update is not configured\n")
+			return 0
+		case update.CheckStartedResultInProgress:
+			fmt.Printf("system update check already in progress\n")
+			return 0
+		default:
+			fmt.Printf("system update check failed: %s", result)
+			return 1
 		}
 	case "enable_src":
 		if *name == "" {
@@ -663,6 +683,9 @@ func Main() {
 
 	services.rewriteEngine = connectToRewriteEngine(ctx)
 	defer services.rewriteEngine.Close()
+
+	services.updateManager = connectToUpdateManager(ctx)
+	defer services.updateManager.Close()
 
 	os.Exit(do(services))
 }

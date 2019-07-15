@@ -24,6 +24,8 @@ use {
     fuchsia_url::pkg_url::RepoUrl,
     fuchsia_url_rewrite::Rule,
     futures::prelude::*,
+    parking_lot::Mutex,
+    std::sync::Arc,
     std::{convert::TryInto, fs::File},
 };
 
@@ -52,6 +54,40 @@ struct Proxies {
     amber: AmberProxy,
     repo_manager: RepositoryManagerProxy,
     rewrite_engine: RewriteEngineProxy,
+}
+
+struct MockUpdateManager {
+    called: Mutex<u32>,
+}
+impl MockUpdateManager {
+    fn new() -> Self {
+        Self { called: Mutex::new(0) }
+    }
+
+    async fn run(
+        self: Arc<Self>,
+        mut stream: fidl_fuchsia_update::ManagerRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(event) = await!(stream.try_next())? {
+            match event {
+                fidl_fuchsia_update::ManagerRequest::CheckNow { options, monitor, responder } => {
+                    eprintln!("TEST: Got update check request with options {:?}", options);
+                    assert_eq!(
+                        options,
+                        fidl_fuchsia_update::Options {
+                            initiator: Some(fidl_fuchsia_update::Initiator::User)
+                        }
+                    );
+                    assert_eq!(monitor, None);
+                    *self.called.lock() += 1;
+                    responder.send(fidl_fuchsia_update::CheckStartedResult::Started)?;
+                }
+                _ => panic!("unhandled method {:?}", event),
+            }
+        }
+
+        Ok(())
+    }
 }
 
 struct TestEnv {
@@ -559,4 +595,33 @@ async fn test_disable_src_disables_all_sources() {
     );
     // disabling any source clears all rewrite rules.
     assert_eq!(await!(env.rewrite_engine_list_rules()), vec![]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_system_update() {
+    // skip using TestEnv because we don't need to start pkg_resolver or amber here.
+    let mut fs = ServiceFs::new();
+
+    let update_manager = Arc::new(MockUpdateManager::new());
+    let update_manager_clone = update_manager.clone();
+    fs.add_fidl_service(move |stream| {
+        let update_manager_clone = update_manager_clone.clone();
+        fasync::spawn(
+            update_manager_clone
+                .run(stream)
+                .unwrap_or_else(|e| panic!("error running mock update manager: {:?}", e)),
+        )
+    });
+
+    let env = fs
+        .create_salted_nested_environment("amberctl_env")
+        .expect("nested environment to create successfully");
+    fasync::spawn(fs.collect());
+
+    await!(amberctl().arg("system_update").output(env.launcher()).expect("amberctl to launch"))
+        .expect("amberctl to run")
+        .ok()
+        .expect("amberctl to succeed");
+
+    assert_eq!(*update_manager.called.lock(), 1);
 }

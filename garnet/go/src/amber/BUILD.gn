@@ -40,6 +40,7 @@ go_library("lib") {
     "//sdk/fidl/fuchsia.pkg($go_toolchain)",
     "//sdk/fidl/fuchsia.pkg.rewrite($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
+    "//sdk/fidl/fuchsia.update($go_toolchain)",
     "//zircon/public/fidl/fuchsia-cobalt($go_toolchain)",
     "//zircon/public/fidl/fuchsia-mem($go_toolchain)",
   ]
