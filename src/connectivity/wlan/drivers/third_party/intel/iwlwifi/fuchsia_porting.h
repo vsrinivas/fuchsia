@@ -81,9 +81,9 @@ typedef char* acpi_string;
 #define WARN(x, y, z) \
   do {                \
   } while (0)
-#define WARN_ON(x) (false)
-#define WARN_ON_ONCE(x) (false)
-#define BUILD_BUG_ON(x) (false)
+#define WARN_ON(x) ((x) && false)
+#define WARN_ON_ONCE(x) ((x) && false)
+#define BUILD_BUG_ON(x) ((x) && false)
 
 #define offsetofend(type, member) (offsetof(type, member) + sizeof(((type*)NULL)->member))
 
@@ -100,6 +100,9 @@ typedef char* acpi_string;
    x >= 0x002 ? 0x004 :        \
    x >= 0x001 ? 0x002 : 1)
 // clang-format on
+#define __round_mask(x, y) ((__typeof__(x))((y)-1))
+#define round_up(x, y) ((((x)-1) | __round_mask(x, y)) + 1)
+#define round_down(x, y) ((x) & ~__round_mask(x, y))
 
 // NEEDS_PORTING: need protection while accessing the variable.
 #define rcu_dereference(p) (p)
@@ -260,5 +263,7 @@ static inline bool IS_ERR_OR_NULL(const void* ptr) {
 }
 
 static inline void* page_address(const struct page* page) { return page->virtual_addr; }
+
+#define min_t(type, a, b) ((type)(a) < (type)(b) ? (type)(a) : (type)(b))
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_

@@ -38,6 +38,7 @@
 
 #include <ddk/mmio-buffer.h>
 #include <ddk/protocol/pci.h>
+#include <lib/sync/completion.h>
 #include <threads.h>
 #include <zircon/listnode.h>
 
@@ -562,8 +563,8 @@ struct iwl_trans_pcie {
   mmio_buffer_t mmio;
 
   bool ucode_write_complete;
+  sync_completion_t ucode_write_waitq;
 #if 0   // NEEDS_PORTING
-    wait_queue_head_t ucode_write_waitq;
     wait_queue_head_t wait_command_queue;
     wait_queue_head_t d0i3_waitq;
 #endif  // NEEDS_PORTING
@@ -794,42 +795,40 @@ static inline void iwl_pcie_ctxt_info_free_fw_img(struct iwl_trans* trans) {
 #endif  // NEEDS_PORTING
 
 static inline void iwl_disable_interrupts(struct iwl_trans* trans) {
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-    mtx_lock(&trans_pcie->irq_lock);
-    _iwl_disable_interrupts(trans);
-    mtx_unlock(&trans_pcie->irq_lock);
+  mtx_lock(&trans_pcie->irq_lock);
+  _iwl_disable_interrupts(trans);
+  mtx_unlock(&trans_pcie->irq_lock);
 }
 
-#if 0   // NEEDS_PORTING
 static inline void _iwl_enable_interrupts(struct iwl_trans* trans) {
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-    IWL_DEBUG_ISR(trans, "Enabling interrupts\n");
-    set_bit(STATUS_INT_ENABLED, &trans->status);
-    if (!trans_pcie->msix_enabled) {
-        trans_pcie->inta_mask = CSR_INI_SET_MASK;
-        iwl_write32(trans, CSR_INT_MASK, trans_pcie->inta_mask);
-    } else {
-        /*
-         * fh/hw_mask keeps all the unmasked causes.
-         * Unlike msi, in msix cause is enabled when it is unset.
-         */
-        trans_pcie->hw_mask = trans_pcie->hw_init_mask;
-        trans_pcie->fh_mask = trans_pcie->fh_init_mask;
-        iwl_write32(trans, CSR_MSIX_FH_INT_MASK_AD, ~trans_pcie->fh_mask);
-        iwl_write32(trans, CSR_MSIX_HW_INT_MASK_AD, ~trans_pcie->hw_mask);
-    }
+  IWL_DEBUG_ISR(trans, "Enabling interrupts\n");
+  set_bit(STATUS_INT_ENABLED, &trans->status);
+  if (!trans_pcie->msix_enabled) {
+    trans_pcie->inta_mask = CSR_INI_SET_MASK;
+    iwl_write32(trans, CSR_INT_MASK, trans_pcie->inta_mask);
+  } else {
+    /*
+     * fh/hw_mask keeps all the unmasked causes.
+     * Unlike msi, in msix cause is enabled when it is unset.
+     */
+    trans_pcie->hw_mask = trans_pcie->hw_init_mask;
+    trans_pcie->fh_mask = trans_pcie->fh_init_mask;
+    iwl_write32(trans, CSR_MSIX_FH_INT_MASK_AD, ~trans_pcie->fh_mask);
+    iwl_write32(trans, CSR_MSIX_HW_INT_MASK_AD, ~trans_pcie->hw_mask);
+  }
 }
 
 static inline void iwl_enable_interrupts(struct iwl_trans* trans) {
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-    mtx_lock(&trans_pcie->irq_lock);
-    _iwl_enable_interrupts(trans);
-    mtx_unlock(&trans_pcie->irq_lock);
+  mtx_lock(&trans_pcie->irq_lock);
+  _iwl_enable_interrupts(trans);
+  mtx_unlock(&trans_pcie->irq_lock);
 }
-#endif  // NEEDS_PORTING
 
 static inline void iwl_enable_hw_int_msk_msix(struct iwl_trans* trans, uint32_t msk) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
@@ -838,27 +837,25 @@ static inline void iwl_enable_hw_int_msk_msix(struct iwl_trans* trans, uint32_t 
   trans_pcie->hw_mask = msk;
 }
 
-#if 0   // NEEDS_PORTING
 static inline void iwl_enable_fh_int_msk_msix(struct iwl_trans* trans, uint32_t msk) {
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-    iwl_write32(trans, CSR_MSIX_FH_INT_MASK_AD, ~msk);
-    trans_pcie->fh_mask = msk;
+  iwl_write32(trans, CSR_MSIX_FH_INT_MASK_AD, ~msk);
+  trans_pcie->fh_mask = msk;
 }
 
 static inline void iwl_enable_fw_load_int(struct iwl_trans* trans) {
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-    IWL_DEBUG_ISR(trans, "Enabling FW load interrupt\n");
-    if (!trans_pcie->msix_enabled) {
-        trans_pcie->inta_mask = CSR_INT_BIT_FH_TX;
-        iwl_write32(trans, CSR_INT_MASK, trans_pcie->inta_mask);
-    } else {
-        iwl_write32(trans, CSR_MSIX_HW_INT_MASK_AD, trans_pcie->hw_init_mask);
-        iwl_enable_fh_int_msk_msix(trans, MSIX_FH_INT_CAUSES_D2S_CH0_NUM);
-    }
+  IWL_DEBUG_ISR(trans, "Enabling FW load interrupt\n");
+  if (!trans_pcie->msix_enabled) {
+    trans_pcie->inta_mask = CSR_INT_BIT_FH_TX;
+    iwl_write32(trans, CSR_INT_MASK, trans_pcie->inta_mask);
+  } else {
+    iwl_write32(trans, CSR_MSIX_HW_INT_MASK_AD, trans_pcie->hw_init_mask);
+    iwl_enable_fh_int_msk_msix(trans, MSIX_FH_INT_CAUSES_D2S_CH0_NUM);
+  }
 }
-#endif  // NEEDS_PORTING
 
 static inline uint16_t iwl_pcie_get_cmd_index(const struct iwl_txq* q, uint32_t index) {
   return index & (q->n_window - 1);

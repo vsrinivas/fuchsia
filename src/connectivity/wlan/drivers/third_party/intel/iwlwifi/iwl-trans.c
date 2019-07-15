@@ -130,21 +130,25 @@ const char* iwl_get_cmd_string(struct iwl_trans* trans, uint32_t id) {
     return ret->cmd_name;
 }
 IWL_EXPORT_SYMBOL(iwl_get_cmd_string);
+#endif  // NEEDS_PORTING
 
 int iwl_cmd_groups_verify_sorted(const struct iwl_trans_config* trans) {
-    int i, j;
-    const struct iwl_hcmd_arr* arr;
+  int i, j;
+  const struct iwl_hcmd_arr* arr;
 
-    for (i = 0; i < trans->command_groups_size; i++) {
-        arr = &trans->command_groups[i];
-        if (!arr->arr) { continue; }
-        for (j = 0; j < arr->size - 1; j++)
-            if (arr->arr[j].cmd_id > arr->arr[j + 1].cmd_id) { return -1; }
+  for (i = 0; i < trans->command_groups_size; i++) {
+    arr = &trans->command_groups[i];
+    if (!arr->arr) {
+      continue;
     }
-    return 0;
+    for (j = 0; j < arr->size - 1; j++) {
+      if (arr->arr[j].cmd_id > arr->arr[j + 1].cmd_id) {
+        return -1;
+      }
+    }
+  }
+  return 0;
 }
-IWL_EXPORT_SYMBOL(iwl_cmd_groups_verify_sorted);
-#endif  // NEEDS_PORTING
 
 void iwl_trans_ref(struct iwl_trans* trans) {
   if (trans->ops->ref) {

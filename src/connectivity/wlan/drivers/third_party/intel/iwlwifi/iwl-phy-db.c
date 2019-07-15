@@ -167,8 +167,8 @@ void iwl_phy_db_free(struct iwl_phy_db* phy_db) {
   kfree(phy_db);
 }
 
-#if 0  // NEEDS_PORTING
 int iwl_phy_db_set_section(struct iwl_phy_db* phy_db, struct iwl_rx_packet* pkt) {
+#if 0  // NEEDS_PORTING
     struct iwl_calib_res_notif_phy_db* phy_db_notif = (struct iwl_calib_res_notif_phy_db*)pkt->data;
     enum iwl_phy_db_section_type type = le16_to_cpu(phy_db_notif->type);
     uint16_t size = le16_to_cpu(phy_db_notif->length);
@@ -218,10 +218,11 @@ int iwl_phy_db_set_section(struct iwl_phy_db* phy_db, struct iwl_rx_packet* pkt)
     IWL_DEBUG_INFO(phy_db->trans, "%s(%d): [PHYDB]SET: Type %d , Size: %d\n", __func__, __LINE__,
                    type, size);
 
-    return 0;
+#endif  // NEEDS_PORTING
+  return 0;
 }
-IWL_EXPORT_SYMBOL(iwl_phy_db_set_section);
 
+#if 0  // NEEDS_PORTING
 static int is_valid_channel(uint16_t ch_id) {
     if (ch_id <= 14 || (36 <= ch_id && ch_id <= 64 && ch_id % 4 == 0) ||
         (100 <= ch_id && ch_id <= 140 && ch_id % 4 == 0) ||

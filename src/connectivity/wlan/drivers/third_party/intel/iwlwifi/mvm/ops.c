@@ -880,10 +880,8 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
   trans->iml = mvm->fw->iml;
   trans->iml_len = mvm->fw->iml_len;
 
-#if 0   // NEEDS_PORTING
-    /* set up notification wait support */
-    iwl_notification_wait_init(&mvm->notif_wait);
-#endif  // NEEDS_PORTING
+  /* set up notification wait support */
+  iwl_notification_wait_init(&mvm->notif_wait);
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
   iwl_dnt_init(mvm->trans, dbgfs_dir);
