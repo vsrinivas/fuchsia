@@ -27,7 +27,6 @@
 #include <tuple>
 #include <unordered_set>
 
-#include "lib/svc/cpp/services.h"
 #include "minstrel.h"
 #include "proxy_helpers.h"
 

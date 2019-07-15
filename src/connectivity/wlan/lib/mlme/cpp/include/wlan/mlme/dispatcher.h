@@ -16,8 +16,6 @@
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
-#include "lib/svc/cpp/services.h"
-
 namespace wlan {
 
 // The Dispatcher converts Packets, forwarded by the Device, into concrete

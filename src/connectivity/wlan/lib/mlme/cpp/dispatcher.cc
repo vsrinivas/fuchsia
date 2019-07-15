@@ -29,8 +29,6 @@
 #include <cstring>
 #include <sstream>
 
-#include "lib/svc/cpp/services.h"
-
 namespace wlan {
 
 namespace wlan_common = ::fuchsia::wlan::common;

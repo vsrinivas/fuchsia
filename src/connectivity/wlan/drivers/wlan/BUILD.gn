@@ -25,8 +25,6 @@ driver_module("wlan_driver") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp:environment_services",
-    "//garnet/public/lib/svc/cpp",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//zircon/public/banjo/ddk.hw.wlan.wlaninfo",
     "//zircon/public/banjo/ddk.protocol.ethernet",
