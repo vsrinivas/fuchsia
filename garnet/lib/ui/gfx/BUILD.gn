@@ -11,7 +11,7 @@ declare_args() {
   scenic_display_frame_number = false
 
   # Turns on view bound clipping for all of Scenic.
-  scenic_enforce_view_bound_clipping = false
+  scenic_enforce_view_bound_clipping = true
 }
 
 config("common_include_dirs") {
