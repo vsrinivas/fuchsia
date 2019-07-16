@@ -9,6 +9,7 @@
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
+#include <kernel/event.h>
 #include <kernel/lockdep.h>
 #include <vm/pmm.h>
 
@@ -37,6 +38,17 @@ class PmmNode {
   void FreePage(vm_page* page);
   void FreeList(list_node* list);
 
+  // delayed allocator routines
+  void AllocPages(uint alloc_flags, page_request_t* req);
+  bool ClearRequest(page_request_t* req);
+  void SwapRequest(page_request_t* old, page_request_t* new_req);
+
+  zx_status_t InitReclamation(const uint64_t* watermarks, uint8_t watermark_count,
+                              uint64_t debounce, mem_avail_state_updated_callback_t callback);
+
+  int RequestThreadLoop();
+  void InitRequestThread();
+
   uint64_t CountFreePages() const;
   uint64_t CountTotalBytes() const;
 
@@ -45,6 +57,9 @@ class PmmNode {
   // though the data they return may be questionable
   void DumpFree() const TA_NO_THREAD_SAFETY_ANALYSIS;
   void Dump(bool is_panic) const TA_NO_THREAD_SAFETY_ANALYSIS;
+
+  void DumpMemAvailState() const;
+  bool DebugSetMemAvailState(uint64_t idx);
 
 #if PMM_ENABLE_FREE_FILL
   void EnforceFill() TA_NO_THREAD_SAFETY_ANALYSIS;
@@ -58,6 +73,29 @@ class PmmNode {
  private:
   void FreePageHelperLocked(vm_page* page) TA_REQ(lock_);
   void FreeListLocked(list_node* list) TA_REQ(lock_);
+
+  void ProcessPendingRequests();
+
+  void UpdateMemAvailStateLocked() TA_REQ(lock_);
+  void SetMemAvailStateLocked(uint8_t mem_avail_state) TA_REQ(lock_);
+
+  void IncrementFreeCountLocked(uint64_t amount) TA_REQ(lock_) {
+    free_count_ += amount;
+
+    if (unlikely(free_count_ >= mem_avail_state_upper_bound_)) {
+      UpdateMemAvailStateLocked();
+    }
+  }
+  void DecrementFreeCountLocked(uint64_t amount) TA_REQ(lock_) {
+    DEBUG_ASSERT(free_count_ >= amount);
+    free_count_ -= amount;
+
+    if (unlikely(free_count_ <= mem_avail_state_lower_bound_)) {
+      UpdateMemAvailStateLocked();
+    }
+  }
+
+  bool InOomStateLocked() TA_REQ(lock_);
 
   fbl::Canary<fbl::magic("PNOD")> canary_;
 
@@ -74,6 +112,26 @@ class PmmNode {
   list_node active_list_ TA_GUARDED(lock_) = LIST_INITIAL_VALUE(active_list_);
   list_node modified_list_ TA_GUARDED(lock_) = LIST_INITIAL_VALUE(modified_list_);
   list_node wired_list_ TA_GUARDED(lock_) = LIST_INITIAL_VALUE(wired_list_);
+
+  // List of pending requests.
+  list_node_t request_list_ TA_GUARDED(lock_) = LIST_INITIAL_VALUE(request_list_);
+  // Request currently being processed. This is tracked seperately from request_list_
+  // because ClearRequest() handles the two cases differently.
+  page_request_t* current_request_ TA_GUARDED(lock_) = nullptr;
+
+  Event free_pages_evt_;
+  Event request_evt_;
+
+  uint64_t mem_avail_state_watermarks_[MAX_WATERMARK_COUNT] TA_GUARDED(lock_);
+  uint8_t mem_avail_state_watermark_count_ TA_GUARDED(lock_);
+  uint8_t mem_avail_state_cur_index_ TA_GUARDED(lock_);
+  uint64_t mem_avail_state_debounce_ TA_GUARDED(lock_);
+  uint64_t mem_avail_state_upper_bound_ TA_GUARDED(lock_);
+  uint64_t mem_avail_state_lower_bound_ TA_GUARDED(lock_);
+  mem_avail_state_updated_callback_t mem_avail_state_callback_ TA_GUARDED(lock_);
+
+  thread_t* request_thread_ = nullptr;
+  ktl::atomic<bool> request_thread_live_ = true;
 
 #if PMM_ENABLE_FREE_FILL
   void FreeFill(vm_page_t* page);

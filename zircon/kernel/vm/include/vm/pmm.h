@@ -10,6 +10,7 @@
 
 #include <sys/types.h>
 #include <vm/page.h>
+#include <vm/page_request.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -32,8 +33,14 @@ typedef struct pmm_arena_info {
 zx_status_t pmm_add_arena(const pmm_arena_info_t* arena) __NONNULL((1));
 
 // flags for allocation routines below
-#define PMM_ALLOC_FLAG_ANY (0x0)     // no restrictions on which arena to allocate from
-#define PMM_ALLOC_FLAG_LO_MEM (0x1)  // allocate only from arenas marked LO_MEM
+#define PMM_ALLOC_FLAG_ANY (0 << 0)     // no restrictions on which arena to allocate from
+#define PMM_ALLOC_FLAG_LO_MEM (1 << 0)  // allocate only from arenas marked LO_MEM
+// the caller can handle allocation failures with a delayed page_request_t request.
+#define PMM_ALLOC_DELAY_OK (1 << 1)
+
+// Debugging flag that can be used to induce artifical delayed page allocation by randomly
+// rejecting some fraction of the synchronous allocations which have PMM_ALLOC_DELAY_OK set.
+#define RANDOM_DELAYED_ALLOC 0
 
 // Allocate count pages of physical memory, adding to the tail of the passed list.
 // The list must be initialized.
@@ -53,6 +60,21 @@ zx_status_t pmm_alloc_range(paddr_t address, size_t count, list_node* list) __NO
 zx_status_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t align_log2, paddr_t* pa,
                                  list_node* list) __NONNULL((4, 5));
 
+// Fallback delayed allocation function if regular synchronous allocation fails. See
+// the page_request_t struct documentation for more details.
+void pmm_alloc_pages(uint alloc_flags, page_request_t* req) __NONNULL((2));
+
+// Clears the request. Returns true if the pmm is temporarily retaining a reference
+// to the request's ctx, or false otherwise. Regardless of the return value, it is
+// safe to free |req| as soon as this function returns.
+bool pmm_clear_request(page_request_t* req) __NONNULL((1));
+
+// Swaps the memory used for tracking an outstanding request.
+//
+// The callbacks and request ctx must be identical for the two requests. As soon as
+// this function returns, it is safe to release the pointer |old|.
+void pmm_swap_request(page_request_t* old, page_request_t* new_req) __NONNULL((1, 2));
+
 // Free a list of physical pages.
 void pmm_free(list_node* list) __NONNULL((1));
 
@@ -70,5 +92,40 @@ paddr_t vaddr_to_paddr(const void* va);
 
 // paddr to vm_page_t
 vm_page_t* paddr_to_vm_page(paddr_t addr);
+
+#define MAX_WATERMARK_COUNT 8
+
+typedef void (*mem_avail_state_updated_callback_t)(uint8_t cur_state);
+
+// Function to initialize PMM memory reclamation.
+//
+// |watermarks| is an array of values that delineate the memory availability states. The values
+// should be monotonically increasing with intervals of at least PAGE_SIZE and its first entry must
+// be larger than |debounce|. Its length is given by |watermark_count|, with a maximum of
+// MAX_WATERMARK_COUNT. The pointer is not retained after this function returns.
+//
+// When the system has a given amount of free memory available, the memory availability state is
+// defined as the index of the smallest watermark which is greater than that amount of free
+// memory.  Whenever the amount of memory enters a new state, |mem_avail_state_updated_callback|
+// will be invoked with the index of the new state.
+//
+// Transitions are debounced by not leaving a state until the amount of memory is at least
+// |debounce| bytes outside of the state. Note that large |debounce| values can cause states
+// to be entirely skipped. Also note that this means that at least |debounce| bytes must be
+// reclaimed before the system can transition into a healthier memory availability state.
+//
+// To give an example of state transitions with the watermarks [20MB, 40MB, 45MB, 55MB] and
+// debounce 15MB.
+//   75MB:4 -> 41MB:4 -> 40MB:2 -> 26MB:2 -> 25MB:1 -> 6MB:1 ->
+//   5MB:0 -> 34MB:0 -> 35MB:1 -> 54MB:1 -> 55MB:4
+//
+// Invocations of |mem_avail_state_updated_callback| are fully serialized, but they occur on
+// arbitrary threads when pages are being freed. As this likely occurs under important locks, the
+// callback itself should not perform memory reclaimation; instead it should communicate the memory
+// level to a seperate thread that is responsible for reclaiming memory. Furthermore, the callback
+// is immediately invoked during the execution of this function with the index of the initial memory
+// state.
+zx_status_t pmm_init_reclamation(const uint64_t* watermarks, uint8_t watermark_count,
+                                 uint64_t debounce, mem_avail_state_updated_callback_t callback);
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_PMM_H_

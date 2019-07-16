@@ -40,14 +40,14 @@ func TestOOM(t *testing.T) {
 	}
 	defer i.Kill()
 
-	// Ensure the OOM thread was enabled in the kernel.
-	i.WaitForLogMessage("OOM: started thread")
+	// Ensure the kernel OOM system was properly initialized.
+	i.WaitForLogMessage("OOM: memory availability state 1")
 
 	// Make sure the shell is ready to accept commands over serial.
 	i.WaitForLogMessage("vc: Successfully attached")
 
 	// Trigger a simulated OOM.
-	i.RunCommand("k oom lowmem")
+	i.RunCommand("k pmm mem_avail_state set 0")
 
 	// Make sure the file system is notified and unmounts.
 	i.WaitForLogMessage("devcoordinator: Successfully waited for VFS exit completion")

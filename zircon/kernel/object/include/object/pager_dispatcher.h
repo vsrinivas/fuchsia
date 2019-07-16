@@ -79,9 +79,12 @@ class PagerSource : public PageSource,
 
   // page_request_t struct used for the complete message.
   page_request_t complete_request_ TA_GUARDED(mtx_) = {
-      .node = LIST_INITIAL_CLEARED_VALUE,
       .offset = 0,
       .length = 0,
+      .pages_available_cb = nullptr,
+      .drop_ref_cb = nullptr,
+      .cb_ctx = nullptr,
+      .provider_node = LIST_INITIAL_CLEARED_VALUE,
   };
 
   // Queues the page request, either sending it to the port or putting it in pending_requests_.

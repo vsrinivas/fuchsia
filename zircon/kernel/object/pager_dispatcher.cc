@@ -4,9 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "object/pager_dispatcher.h"
-
 #include <lib/counters.h>
+#include <object/pager_dispatcher.h>
 #include <object/thread_dispatcher.h>
 #include <trace.h>
 #include <vm/page_source.h>
@@ -92,7 +91,7 @@ void PagerSource::GetPageAsync(page_request_t* request) {
 
 void PagerSource::QueueMessageLocked(page_request_t* request) {
   if (packet_busy_) {
-    list_add_tail(&pending_requests_, &request->node);
+    list_add_tail(&pending_requests_, &request->provider_node);
     return;
   }
 
@@ -139,8 +138,8 @@ void PagerSource::ClearAsyncRequest(page_request_t* request) {
     if (port_->CancelQueued(&packet_)) {
       OnPacketFreedLocked();
     }
-  } else if (list_in_list(&request->node)) {
-    list_delete(&request->node);
+  } else if (list_in_list(&request->provider_node)) {
+    list_delete(&request->provider_node);
   }
 }
 
@@ -148,8 +147,8 @@ void PagerSource::SwapRequest(page_request_t* old, page_request_t* new_req) {
   Guard<fbl::Mutex> guard{&mtx_};
   ASSERT(!closed_);
 
-  if (list_in_list(&old->node)) {
-    list_replace_node(&old->node, &new_req->node);
+  if (list_in_list(&old->provider_node)) {
+    list_replace_node(&old->provider_node, &new_req->provider_node);
   } else if (old == active_request_) {
     active_request_ = new_req;
   }
@@ -225,7 +224,7 @@ void PagerSource::OnPacketFreedLocked() {
   packet_busy_ = false;
   active_request_ = nullptr;
   if (!list_is_empty(&pending_requests_)) {
-    QueueMessageLocked(list_remove_head_type(&pending_requests_, page_request, node));
+    QueueMessageLocked(list_remove_head_type(&pending_requests_, page_request, provider_node));
   }
 }
 

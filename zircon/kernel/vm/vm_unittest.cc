@@ -6,8 +6,10 @@
 
 #include <assert.h>
 #include <err.h>
+#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
+#include <kernel/semaphore.h>
 #include <ktl/move.h>
 #include <lib/unittest/unittest.h>
 #include <vm/physmap.h>
@@ -19,7 +21,150 @@
 #include <vm/vm_object_physical.h>
 #include <zircon/types.h>
 
+#include "pmm_node.h"
+
 static const uint kArchRwFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+
+namespace {
+
+// Helper class for managing a PmmNode with fake pages. AllocRange and AllocContiguous are not
+// supported by the managed PmmNode object. Only a single instance can exist at a time.
+class ManagedPmmNode {
+ public:
+  static constexpr size_t kNumPages = 64;
+  static constexpr size_t kDefaultWatermark = kNumPages / 2;
+  static constexpr size_t kDefaultDebounce = 2;
+
+  // Number of pages to alloc from the default config to put the node in a low mem state.
+  static constexpr size_t kDefaultLowMemAlloc = ManagedPmmNode::kNumPages -
+                                                ManagedPmmNode::kDefaultWatermark +
+                                                ManagedPmmNode::kDefaultDebounce;
+
+  explicit ManagedPmmNode(const uint64_t* watermarks = kDefaultArray, uint8_t watermark_count = 1,
+                          uint64_t debounce = kDefaultDebounce) {
+    list_node list = LIST_INITIAL_VALUE(list);
+    for (auto& p : pages_) {
+      list_add_tail(&list, &p.queue_node);
+    }
+    node_.AddFreePages(&list);
+
+    ASSERT(instance_ == nullptr);
+    instance_ = this;
+
+    ZX_ASSERT(node_.InitReclamation(watermarks, watermark_count, debounce * PAGE_SIZE,
+                                    StateCallback) == ZX_OK);
+    node_.InitRequestThread();
+  }
+
+  ~ManagedPmmNode() {
+    list_node list = LIST_INITIAL_VALUE(list);
+    zx_status_t status = node_.AllocPages(kNumPages, 0, &list);
+    ASSERT(status == ZX_OK);
+
+    ASSERT(instance_ == this);
+    instance_ = nullptr;
+  }
+
+  uint8_t cur_level() const { return cur_level_; }
+  PmmNode& node() { return node_; }
+
+ private:
+  PmmNode node_;
+  vm_page_t pages_[kNumPages] = {};
+  uint8_t cur_level_ = MAX_WATERMARK_COUNT + 1;
+
+  static void StateCallback(uint8_t level) { instance_->cur_level_ = level; }
+  static ManagedPmmNode* instance_;
+
+  static constexpr uint64_t kDefaultArray[1] = {kDefaultWatermark * PAGE_SIZE};
+};
+
+ManagedPmmNode* ManagedPmmNode::instance_ = nullptr;
+
+class TestPageRequest {
+ public:
+  TestPageRequest(PmmNode* node, uint64_t off, uint64_t len)
+      : node_(node), request_({off, len, pages_available_cb, drop_ref_cb, this, {}}) {}
+
+  ~TestPageRequest() {
+    ASSERT(drop_ref_evt_.Wait(Deadline::no_slack(ZX_TIME_INFINITE_PAST)) == ZX_OK);
+  }
+
+  void WaitForAvailable(uint64_t* expected_off, uint64_t* expected_len, uint64_t* actual_supplied) {
+    expected_off_ = expected_off;
+    expected_len_ = expected_len;
+    actual_supplied_ = actual_supplied;
+    avail_sem_.Post();
+
+    wait_for_avail_sem_.Wait(Deadline::infinite());
+  }
+
+  bool Cancel() {
+    bool res = node_->ClearRequest(&request_);
+    actual_supplied_ = nullptr;
+    avail_sem_.Post();
+    return res;
+  }
+
+  page_request_t* request() { return &request_; }
+  Event& drop_ref_evt() { return drop_ref_evt_; }
+  list_node* page_list() { return &page_list_; }
+  Event& on_pages_avail_evt() { return on_pages_avail_evt_; }
+
+ private:
+  void OnPagesAvailable(uint64_t offset, uint64_t count, uint64_t* actual_supplied) {
+    on_pages_avail_evt_.Signal();
+    avail_sem_.Wait(Deadline::infinite());
+
+    if (actual_supplied_) {
+      *expected_off_ = offset;
+      *expected_len_ = count;
+      *actual_supplied = 0;
+
+      while (count) {
+        vm_page_t* page;
+        zx_status_t status = node_->AllocPage(PMM_ALLOC_DELAY_OK, &page, nullptr);
+        if (status != ZX_OK) {
+          break;
+        }
+
+        count--;
+        *actual_supplied += 1;
+        list_add_tail(&page_list_, &page->queue_node);
+      }
+      *actual_supplied_ = *actual_supplied;
+    } else {
+      *actual_supplied = count;
+    }
+
+    wait_for_avail_sem_.Post();
+    on_pages_avail_evt_.Unsignal();
+  }
+
+  void OnDropRef() { drop_ref_evt_.Signal(); }
+
+  PmmNode* node_;
+  page_request_t request_;
+
+  list_node page_list_ = LIST_INITIAL_VALUE(page_list_);
+
+  Semaphore wait_for_avail_sem_;
+  Semaphore avail_sem_;
+  Event on_pages_avail_evt_;
+  uint64_t* expected_off_;
+  uint64_t* expected_len_;
+  uint64_t* actual_supplied_;
+
+  Event drop_ref_evt_;
+
+  static void pages_available_cb(void* ctx, uint64_t offset, uint64_t count,
+                                 uint64_t* actual_supplied) {
+    static_cast<TestPageRequest*>(ctx)->OnPagesAvailable(offset, count, actual_supplied);
+  }
+  static void drop_ref_cb(void* ctx) { static_cast<TestPageRequest*>(ctx)->OnDropRef(); }
+};
+
+}  // namespace
 
 // Allocates a single page, translates it to a vm_page_t and frees it.
 static bool pmm_smoke_test() {
@@ -39,53 +184,6 @@ static bool pmm_smoke_test() {
   END_TEST;
 }
 
-// Allocates more than one page and frees them.
-static bool pmm_multi_alloc_test() {
-  BEGIN_TEST;
-  list_node list = LIST_INITIAL_VALUE(list);
-
-  static const size_t alloc_count = 16;
-
-  zx_status_t status = pmm_alloc_pages(alloc_count, 0, &list);
-  EXPECT_EQ(ZX_OK, status, "pmm_alloc_pages a few pages");
-  EXPECT_EQ(alloc_count, list_length(&list), "pmm_alloc_pages a few pages list count");
-
-  status = pmm_alloc_pages(alloc_count, 0, &list);
-  EXPECT_EQ(ZX_OK, status, "pmm_alloc_pages a few pages");
-  EXPECT_EQ(2 * alloc_count, list_length(&list), "pmm_alloc_pages a few pages list count");
-
-  pmm_free(&list);
-  END_TEST;
-}
-
-// Allocates one page from the bulk allocation api.
-static bool pmm_singleton_list_test() {
-  BEGIN_TEST;
-  list_node list = LIST_INITIAL_VALUE(list);
-
-  zx_status_t status = pmm_alloc_pages(1, 0, &list);
-  EXPECT_EQ(ZX_OK, status, "pmm_alloc_pages a few pages");
-  EXPECT_EQ(1ul, list_length(&list), "pmm_alloc_pages a few pages list count");
-
-  pmm_free(&list);
-  END_TEST;
-}
-
-// Allocates too many pages and makes sure it fails nicely.
-static bool pmm_oversized_alloc_test() {
-  BEGIN_TEST;
-  list_node list = LIST_INITIAL_VALUE(list);
-
-  static const size_t alloc_count = (1024 * 1024 * 1024 * 1024ULL) / PAGE_SIZE;  // 1TB
-
-  zx_status_t status = pmm_alloc_pages(alloc_count, 0, &list);
-  EXPECT_EQ(ZX_ERR_NO_MEMORY, status, "pmm_alloc_pages failed to alloc");
-  EXPECT_TRUE(list_is_empty(&list), "pmm_alloc_pages list is empty");
-
-  pmm_free(&list);
-  END_TEST;
-}
-
 // Allocates one page and frees it.
 static bool pmm_alloc_contiguous_one_test() {
   BEGIN_TEST;
@@ -98,6 +196,381 @@ static bool pmm_alloc_contiguous_one_test() {
   ASSERT_NONNULL(paddr_to_physmap(pa), "");
   pmm_free(&list);
   END_TEST;
+}
+
+// Allocates more than one page and frees them.
+static bool pmm_node_multi_alloc_test() {
+  BEGIN_TEST;
+  ManagedPmmNode node;
+  static constexpr size_t alloc_count = ManagedPmmNode::kNumPages / 2;
+  list_node list = LIST_INITIAL_VALUE(list);
+
+  zx_status_t status = node.node().AllocPages(alloc_count, 0, &list);
+  EXPECT_EQ(ZX_OK, status, "pmm_alloc_pages a few pages");
+  EXPECT_EQ(alloc_count, list_length(&list), "pmm_alloc_pages a few pages list count");
+
+  status = node.node().AllocPages(alloc_count, 0, &list);
+  EXPECT_EQ(ZX_OK, status, "pmm_alloc_pages a few pages");
+  EXPECT_EQ(2 * alloc_count, list_length(&list), "pmm_alloc_pages a few pages list count");
+
+  node.node().FreeList(&list);
+  END_TEST;
+}
+
+// Allocates one page from the bulk allocation api.
+static bool pmm_node_singlton_list_test() {
+  BEGIN_TEST;
+  ManagedPmmNode node;
+  list_node list = LIST_INITIAL_VALUE(list);
+
+  zx_status_t status = node.node().AllocPages(1, 0, &list);
+  EXPECT_EQ(ZX_OK, status, "pmm_alloc_pages a few pages");
+  EXPECT_EQ(1ul, list_length(&list), "pmm_alloc_pages a few pages list count");
+
+  node.node().FreeList(&list);
+  END_TEST;
+}
+
+// Allocates too many pages and makes sure it fails nicely.
+static bool pmm_node_oversized_alloc_test() {
+  BEGIN_TEST;
+  ManagedPmmNode node;
+  list_node list = LIST_INITIAL_VALUE(list);
+
+  zx_status_t status = node.node().AllocPages(ManagedPmmNode::kNumPages + 1, 0, &list);
+  EXPECT_EQ(ZX_ERR_NO_MEMORY, status, "pmm_alloc_pages failed to alloc");
+  EXPECT_TRUE(list_is_empty(&list), "pmm_alloc_pages list is empty");
+
+  END_TEST;
+}
+
+// Checks the correctness of the reported watermark level.
+static bool pmm_node_watermark_level_test() {
+  BEGIN_TEST;
+  ManagedPmmNode node;
+  list_node list = LIST_INITIAL_VALUE(list);
+
+  EXPECT_EQ(node.cur_level(), 1, "");
+
+  while (node.node().CountFreePages() >
+         (ManagedPmmNode::kDefaultWatermark - ManagedPmmNode::kDefaultDebounce) + 1) {
+    vm_page_t* page;
+    zx_status_t status = node.node().AllocPage(0, &page, nullptr);
+    EXPECT_EQ(ZX_OK, status, "");
+    EXPECT_EQ(node.cur_level(), 1, "");
+    list_add_tail(&list, &page->queue_node);
+  }
+
+  vm_page_t* page;
+  zx_status_t status = node.node().AllocPage(0, &page, nullptr);
+
+  EXPECT_EQ(ZX_OK, status, "");
+  EXPECT_EQ(node.cur_level(), 0, "");
+  list_add_tail(&list, &page->queue_node);
+
+  while (!list_is_empty(&list)) {
+    node.node().FreePage(list_remove_head_type(&list, vm_page_t, queue_node));
+    uint8_t expected = node.node().CountFreePages() >=
+                       ManagedPmmNode::kDefaultWatermark + ManagedPmmNode::kDefaultDebounce;
+    EXPECT_EQ(node.cur_level(), expected, "");
+  }
+
+  END_TEST;
+}
+
+// Checks the multiple watermark case given in the documentation for |pmm_init_reclamation|.
+static bool pmm_node_multi_watermark_level_test() {
+  BEGIN_TEST;
+
+  uint64_t watermarks[4] = {20 * PAGE_SIZE, 40 * PAGE_SIZE, 45 * PAGE_SIZE, 55 * PAGE_SIZE};
+
+  ManagedPmmNode node(watermarks, 4, 15);
+  list_node list = LIST_INITIAL_VALUE(list);
+
+  EXPECT_EQ(node.cur_level(), 4, "");
+
+  auto consume_fn = [&](uint64_t level, uint64_t lower_limit) -> bool {
+    while (node.node().CountFreePages() > lower_limit) {
+      EXPECT_EQ(node.cur_level(), level, "");
+
+      vm_page_t* page;
+      zx_status_t status = node.node().AllocPage(0, &page, nullptr);
+      EXPECT_EQ(ZX_OK, status, "");
+      list_add_tail(&list, &page->queue_node);
+    }
+    return true;
+  };
+
+  EXPECT_TRUE(consume_fn(4, 40), "");
+  EXPECT_TRUE(consume_fn(2, 25), "");
+  EXPECT_TRUE(consume_fn(1, 5), "");
+
+  auto release_fn = [&](uint64_t level, uint64_t upper_limit) -> bool {
+    while (node.node().CountFreePages() < upper_limit) {
+      EXPECT_EQ(node.cur_level(), level, "");
+      node.node().FreePage(list_remove_head_type(&list, vm_page_t, queue_node));
+    }
+    return true;
+  };
+
+  EXPECT_TRUE(release_fn(0, 35), "");
+  EXPECT_TRUE(release_fn(1, 55), "");
+  EXPECT_TRUE(release_fn(4, node.kNumPages), "");
+
+  END_TEST;
+}
+
+// A more abstract test for multiple watermarks.
+static bool pmm_node_multi_watermark_level_test2() {
+  BEGIN_TEST;
+
+  static constexpr uint64_t kInterval = 7;
+  uint64_t watermarks[MAX_WATERMARK_COUNT];
+  for (unsigned i = 0; i < MAX_WATERMARK_COUNT; i++) {
+    watermarks[i] = (i + 1) * kInterval * PAGE_SIZE;
+  }
+  static_assert(kInterval * MAX_WATERMARK_COUNT < ManagedPmmNode::kNumPages);
+
+  ManagedPmmNode node(watermarks, MAX_WATERMARK_COUNT);
+  list_node list = LIST_INITIAL_VALUE(list);
+
+  EXPECT_EQ(node.cur_level(), MAX_WATERMARK_COUNT, "");
+
+  uint64_t count = ManagedPmmNode::kNumPages;
+  while (node.node().CountFreePages() > 0) {
+    vm_page_t* page;
+    zx_status_t status = node.node().AllocPage(0, &page, nullptr);
+    EXPECT_EQ(ZX_OK, status, "");
+    list_add_tail(&list, &page->queue_node);
+
+    count--;
+    uint64_t expected = fbl::min(static_cast<uint64_t>(MAX_WATERMARK_COUNT),
+                                 (count + ManagedPmmNode::kDefaultDebounce - 1) / kInterval);
+    EXPECT_EQ(node.cur_level(), expected, "");
+  }
+
+  vm_page_t* page;
+  zx_status_t status = node.node().AllocPage(0, &page, nullptr);
+  EXPECT_EQ(ZX_ERR_NO_MEMORY, status, "");
+  EXPECT_EQ(node.cur_level(), 0, "");
+
+  while (!list_is_empty(&list)) {
+    node.node().FreePage(list_remove_head_type(&list, vm_page_t, queue_node));
+    count++;
+    uint64_t expected = fbl::min(static_cast<uint64_t>(MAX_WATERMARK_COUNT),
+                                 count > ManagedPmmNode::kDefaultDebounce
+                                     ? (count - ManagedPmmNode::kDefaultDebounce) / kInterval
+                                     : 0);
+    EXPECT_EQ(node.cur_level(), expected, "");
+  }
+
+  END_TEST;
+}
+
+// Checks sync allocation failure when the node is in a low-memory state.
+static bool pmm_node_oom_sync_alloc_failure_test() {
+  BEGIN_TEST;
+  ManagedPmmNode node;
+  list_node list = LIST_INITIAL_VALUE(list);
+
+  // Put the node in an oom state and make sure allocation fails.
+  zx_status_t status = node.node().AllocPages(ManagedPmmNode::kDefaultLowMemAlloc, 0, &list);
+  EXPECT_EQ(ZX_OK, status, "");
+  EXPECT_EQ(node.cur_level(), 0, "");
+
+  vm_page_t* page;
+  status = node.node().AllocPage(PMM_ALLOC_DELAY_OK, &page, nullptr);
+  EXPECT_EQ(status, ZX_ERR_NO_MEMORY, "");
+
+  // Free the list and make sure allocations work again.
+  node.node().FreeList(&list);
+
+  status = node.node().AllocPage(PMM_ALLOC_DELAY_OK, &page, nullptr);
+  EXPECT_EQ(ZX_OK, status, "");
+
+  node.node().FreePage(page);
+
+  END_TEST;
+}
+
+// Checks async allocation queued while the node is in a low-memory state.
+static bool pmm_node_delayed_alloc_test() {
+  BEGIN_TEST;
+  ManagedPmmNode node;
+  list_node list = LIST_INITIAL_VALUE(list);
+
+  zx_status_t status = node.node().AllocPages(ManagedPmmNode::kDefaultLowMemAlloc, 0, &list);
+  EXPECT_EQ(ZX_OK, status, "");
+  EXPECT_EQ(node.cur_level(), 0, "");
+
+  vm_page_t* page;
+  status = node.node().AllocPage(PMM_ALLOC_DELAY_OK, &page, nullptr);
+  EXPECT_EQ(status, ZX_ERR_NO_MEMORY, "");
+
+  static constexpr uint64_t kOffset = 1;
+  static constexpr uint64_t kLen = 3 * ManagedPmmNode::kDefaultDebounce;
+  TestPageRequest request(&node.node(), kOffset, kLen);
+  node.node().AllocPages(0, request.request());
+
+  EXPECT_EQ(node.cur_level(), 0, "");
+  for (unsigned i = 0; i < 2 * ManagedPmmNode::kDefaultDebounce; i++) {
+    node.node().FreePage(list_remove_head_type(&list, vm_page, queue_node));
+  }
+  EXPECT_EQ(node.cur_level(), 1, "");
+
+  uint64_t expected_off, expected_len, actual_supplied;
+  request.WaitForAvailable(&expected_off, &expected_len, &actual_supplied);
+  EXPECT_EQ(expected_off, kOffset, "");
+  EXPECT_EQ(expected_len, kLen, "");
+  EXPECT_EQ(actual_supplied, 2 * ManagedPmmNode::kDefaultDebounce, "");
+  EXPECT_EQ(request.drop_ref_evt().Wait(Deadline::no_slack(ZX_TIME_INFINITE_PAST)),
+            ZX_ERR_TIMED_OUT, "");
+
+  node.node().FreeList(&list);
+
+  request.WaitForAvailable(&expected_off, &expected_len, &actual_supplied);
+  EXPECT_EQ(expected_off, kOffset + 2 * ManagedPmmNode::kDefaultDebounce, "");
+  EXPECT_EQ(expected_len, kLen - 2 * ManagedPmmNode::kDefaultDebounce, "");
+  EXPECT_EQ(actual_supplied, kLen - 2 * ManagedPmmNode::kDefaultDebounce, "");
+  EXPECT_EQ(request.drop_ref_evt().Wait(Deadline::no_slack(ZX_TIME_INFINITE)), ZX_OK, "");
+
+  EXPECT_EQ(list_length(request.page_list()), kLen, "");
+
+  node.node().FreeList(request.page_list());
+
+  END_TEST;
+}
+
+// Checks async allocation queued while the node is not in a low-memory state.
+static bool pmm_node_delayed_alloc_no_lowmem_test() {
+  BEGIN_TEST;
+  ManagedPmmNode node;
+
+  TestPageRequest request(&node.node(), 0, 1);
+  node.node().AllocPages(0, request.request());
+
+  uint64_t expected_off, expected_len, actual_supplied;
+  request.WaitForAvailable(&expected_off, &expected_len, &actual_supplied);
+  EXPECT_EQ(expected_off, 0ul, "");
+  EXPECT_EQ(expected_len, 1ul, "");
+  EXPECT_EQ(actual_supplied, 1ul, "");
+  EXPECT_EQ(request.drop_ref_evt().Wait(Deadline::no_slack(ZX_TIME_INFINITE)), ZX_OK, "");
+
+  EXPECT_EQ(list_length(request.page_list()), 1ul, "");
+
+  node.node().FreeList(request.page_list());
+
+  END_TEST;
+}
+
+// Checks swapping out the page_request_t backing a request, either before the request
+// starts being serviced or while the request is being serviced (depending on |early|).
+static bool pmm_node_delayed_alloc_swap_test_helper(bool early) {
+  BEGIN_TEST;
+  ManagedPmmNode node;
+  list_node list = LIST_INITIAL_VALUE(list);
+
+  zx_status_t status = node.node().AllocPages(ManagedPmmNode::kDefaultLowMemAlloc, 0, &list);
+  EXPECT_EQ(ZX_OK, status, "");
+  EXPECT_EQ(node.cur_level(), 0, "");
+
+  vm_page_t* page;
+  status = node.node().AllocPage(PMM_ALLOC_DELAY_OK, &page, nullptr);
+  EXPECT_EQ(status, ZX_ERR_NO_MEMORY, "");
+
+  TestPageRequest request(&node.node(), 0, 1);
+  node.node().AllocPages(0, request.request());
+
+  page_request_t new_mem = *request.request();
+
+  if (early) {
+    node.node().SwapRequest(request.request(), &new_mem);
+  }
+
+  EXPECT_EQ(node.cur_level(), 0, "");
+  for (unsigned i = 0; i < 2 * ManagedPmmNode::kDefaultDebounce; i++) {
+    node.node().FreePage(list_remove_head_type(&list, vm_page, queue_node));
+  }
+  EXPECT_EQ(node.cur_level(), 1, "");
+
+  if (!early) {
+    EXPECT_EQ(request.on_pages_avail_evt().Wait(Deadline::infinite()), ZX_OK, "");
+    node.node().SwapRequest(request.request(), &new_mem);
+  }
+
+  uint64_t expected_off, expected_len, actual_supplied;
+  request.WaitForAvailable(&expected_off, &expected_len, &actual_supplied);
+  EXPECT_EQ(expected_off, 0ul, "");
+  EXPECT_EQ(expected_len, 1ul, "");
+  EXPECT_EQ(actual_supplied, 1ul, "");
+  EXPECT_EQ(request.drop_ref_evt().Wait(Deadline::infinite()), ZX_OK, "");
+  EXPECT_EQ(list_length(request.page_list()), 1ul, "");
+
+  node.node().FreeList(&list);
+  node.node().FreeList(request.page_list());
+
+  END_TEST;
+}
+
+static bool pmm_node_delayed_alloc_swap_early_test() {
+  return pmm_node_delayed_alloc_swap_test_helper(true);
+}
+
+static bool pmm_node_delayed_alloc_swap_late_test() {
+  return pmm_node_delayed_alloc_swap_test_helper(false);
+}
+
+// Checks cancelling the page_request_t backing a request, either before the request
+// starts being serviced or while the request is being serviced (depending on |early|).
+static bool pmm_node_delayed_alloc_clear_test_helper(bool early) {
+  BEGIN_TEST;
+
+  ManagedPmmNode node;
+  list_node list = LIST_INITIAL_VALUE(list);
+
+  zx_status_t status = node.node().AllocPages(ManagedPmmNode::kDefaultLowMemAlloc, 0, &list);
+  EXPECT_EQ(ZX_OK, status, "");
+  EXPECT_EQ(node.cur_level(), 0, "");
+
+  vm_page_t* page;
+  status = node.node().AllocPage(PMM_ALLOC_DELAY_OK, &page, nullptr);
+  EXPECT_EQ(status, ZX_ERR_NO_MEMORY, "");
+
+  TestPageRequest request(&node.node(), 0, 1);
+  node.node().AllocPages(0, request.request());
+
+  if (early) {
+    EXPECT_TRUE(request.Cancel(), "");
+  }
+
+  EXPECT_EQ(node.cur_level(), 0, "");
+  for (unsigned i = 0; i < 2 * ManagedPmmNode::kDefaultDebounce; i++) {
+    node.node().FreePage(list_remove_head_type(&list, vm_page, queue_node));
+  }
+  EXPECT_EQ(node.cur_level(), 1, "");
+
+  if (!early) {
+    EXPECT_EQ(request.on_pages_avail_evt().Wait(Deadline::infinite()), ZX_OK, "");
+    EXPECT_FALSE(request.Cancel(), "");
+    EXPECT_EQ(request.drop_ref_evt().Wait(Deadline::infinite()), ZX_OK, "");
+  } else {
+    EXPECT_EQ(request.drop_ref_evt().Wait(Deadline::no_slack(ZX_TIME_INFINITE_PAST)),
+              ZX_ERR_TIMED_OUT, "");
+    request.drop_ref_evt().Signal();
+  }
+
+  EXPECT_EQ(list_length(request.page_list()), 0ul, "");
+  node.node().FreeList(&list);
+
+  END_TEST;
+}
+
+static bool pmm_node_delayed_alloc_clear_early_test() {
+  return pmm_node_delayed_alloc_clear_test_helper(true);
+}
+
+static bool pmm_node_delayed_alloc_clear_late_test() {
+  return pmm_node_delayed_alloc_clear_test_helper(false);
 }
 
 static uint32_t test_rand(uint32_t seed) { return (seed = seed * 1664525 + 1013904223); }
@@ -1683,9 +2156,19 @@ UNITTEST_END_TESTCASE(vm_tests, "vm", "Virtual memory tests");
 UNITTEST_START_TESTCASE(pmm_tests)
 VM_UNITTEST(pmm_smoke_test)
 VM_UNITTEST(pmm_alloc_contiguous_one_test)
-VM_UNITTEST(pmm_multi_alloc_test)
-VM_UNITTEST(pmm_singleton_list_test)
-VM_UNITTEST(pmm_oversized_alloc_test)
+VM_UNITTEST(pmm_node_multi_alloc_test)
+VM_UNITTEST(pmm_node_singlton_list_test)
+VM_UNITTEST(pmm_node_oversized_alloc_test)
+VM_UNITTEST(pmm_node_watermark_level_test)
+VM_UNITTEST(pmm_node_multi_watermark_level_test)
+VM_UNITTEST(pmm_node_multi_watermark_level_test2)
+VM_UNITTEST(pmm_node_oom_sync_alloc_failure_test)
+VM_UNITTEST(pmm_node_delayed_alloc_test)
+VM_UNITTEST(pmm_node_delayed_alloc_no_lowmem_test)
+VM_UNITTEST(pmm_node_delayed_alloc_swap_early_test)
+VM_UNITTEST(pmm_node_delayed_alloc_swap_late_test)
+VM_UNITTEST(pmm_node_delayed_alloc_clear_early_test)
+VM_UNITTEST(pmm_node_delayed_alloc_clear_late_test)
 UNITTEST_END_TESTCASE(pmm_tests, "pmm", "Physical memory manager tests");
 
 UNITTEST_START_TESTCASE(vm_page_list_tests)

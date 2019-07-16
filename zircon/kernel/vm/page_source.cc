@@ -3,13 +3,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
-#include "vm/page_source.h"
 
 #include <fbl/auto_lock.h>
 #include <kernel/lockdep.h>
 #include <ktl/move.h>
 #include <lib/console.h>
 #include <trace.h>
+#include <vm/page_source.h>
 
 #define LOCAL_TRACE 0
 
@@ -221,7 +221,7 @@ void PageSource::RaiseReadRequestLocked(PageRequest* request) {
   } else {
     request->pending_size_ = request->len_;
 
-    list_clear_node(&request->read_request_.node);
+    list_clear_node(&request->read_request_.provider_node);
     request->read_request_.offset = request->offset_;
     request->read_request_.length = request->len_;
 
@@ -273,7 +273,7 @@ void PageSource::CancelRequest(PageRequest* request) {
     new_node->len_ = request->len_;
     new_node->pending_size_ = request->pending_size_;
 
-    list_clear_node(&new_node->read_request_.node);
+    list_clear_node(&new_node->read_request_.provider_node);
     new_node->read_request_.offset = request->offset_;
     new_node->read_request_.length = request->len_;
 

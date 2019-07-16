@@ -4,7 +4,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
-#include "vm/pmm.h"
 
 #include <assert.h>
 #include <err.h>
@@ -15,7 +14,6 @@
 #include <kernel/mp.h>
 #include <kernel/timer.h>
 #include <lib/console.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <lk/init.h>
 #include <platform.h>
 #include <pow2.h>
@@ -24,6 +22,7 @@
 #include <trace.h>
 #include <vm/bootalloc.h>
 #include <vm/physmap.h>
+#include <vm/pmm.h>
 #include <vm/vm.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
@@ -84,6 +83,16 @@ zx_status_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t alignme
   return pmm_node.AllocContiguous(count, alloc_flags, alignment_log2, pa, list);
 }
 
+void pmm_alloc_pages(uint alloc_flags, page_request_t* req) {
+  pmm_node.AllocPages(alloc_flags, req);
+}
+
+bool pmm_clear_request(page_request_t* req) { return pmm_node.ClearRequest(req); }
+
+void pmm_swap_request(page_request_t* old, page_request_t* new_req) {
+  pmm_node.SwapRequest(old, new_req);
+}
+
 void pmm_free(list_node* list) { pmm_node.FreeList(list); }
 
 void pmm_free_page(vm_page* page) { pmm_node.FreePage(page); }
@@ -92,11 +101,20 @@ uint64_t pmm_count_free_pages() { return pmm_node.CountFreePages(); }
 
 uint64_t pmm_count_total_bytes() { return pmm_node.CountTotalBytes(); }
 
+zx_status_t pmm_init_reclamation(const uint64_t* watermarks, uint8_t watermark_count,
+                                 uint64_t debounce, mem_avail_state_updated_callback_t callback) {
+  return pmm_node.InitReclamation(watermarks, watermark_count, debounce, callback);
+}
+
 static void pmm_dump_timer(struct timer* t, zx_time_t now, void*) {
   zx_time_t deadline = zx_time_add_duration(now, ZX_SEC(1));
   timer_set_oneshot(t, deadline, &pmm_dump_timer, nullptr);
   pmm_node.DumpFree();
 }
+
+static void init_request_thread(unsigned int level) { pmm_node.InitRequestThread(); }
+
+LK_INIT_HOOK(pmm, init_request_thread, LK_INIT_LEVEL_THREADING)
 
 static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
   bool is_panic = flags & CMD_FLAG_PANIC;
@@ -105,9 +123,11 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     printf("not enough arguments\n");
   usage:
     printf("usage:\n");
-    printf("%s dump\n", argv[0].str);
+    printf("%s dump                 : dump pmm info \n", argv[0].str);
     if (!is_panic) {
-      printf("%s free\n", argv[0].str);
+      printf("%s free                 : periodically dump free mem count\n", argv[0].str);
+      printf("%s mem_avail_state info        : dump memstate info\n", argv[0].str);
+      printf("%s mem_avail_state set <index> : forcibly set the state (0 = oom)\n", argv[0].str);
     }
     return ZX_ERR_INTERNAL;
   }
@@ -133,6 +153,22 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     } else {
       timer_cancel(&timer);
       show_mem = false;
+    }
+  } else if (!strcmp(argv[1].str, "mem_avail_state")) {
+    if (argc < 3) {
+      goto usage;
+    }
+    if (!strcmp(argv[2].str, "info")) {
+      pmm_node.DumpMemAvailState();
+    } else if (!strcmp(argv[2].str, "set")) {
+      if (argc < 4) {
+        goto usage;
+      }
+      if (!pmm_node.DebugSetMemAvailState(argv[3].u)) {
+        printf("Setting debug mem_avail_state failed\n");
+      }
+    } else {
+      goto usage;
     }
   } else {
     printf("unknown command\n");

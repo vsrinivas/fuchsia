@@ -29,6 +29,7 @@ library("vm") {
     # TODO: testonly
     ":tests",
     "$zx/kernel/lib/console",
+    "$zx/kernel/lib/counters",
     "$zx/kernel/lib/fbl",
     "$zx/kernel/lib/user_copy",
     "$zx/kernel/lib/userabi",

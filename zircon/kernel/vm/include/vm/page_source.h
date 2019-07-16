@@ -16,6 +16,7 @@
 #include <kernel/lockdep.h>
 #include <kernel/mutex.h>
 #include <vm/page.h>
+#include <vm/page_request.h>
 #include <vm/vm.h>
 #include <zircon/types.h>
 
@@ -40,13 +41,6 @@
 //      point the request page will be present.
 
 class PageRequest;
-
-// A simple page_request struct for use by the PageSourceCallback implementation.
-typedef struct page_request {
-  list_node_t node;
-  uint64_t offset;
-  uint64_t length;
-} page_request_t;
 
 // Object which provides pages to a vm_object.
 class PageSource : public fbl::RefCounted<PageSource> {
