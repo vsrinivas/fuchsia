@@ -49,9 +49,16 @@ class ProcessSummary {
   friend class Summary;
 };
 
+typedef struct {
+  const std::string regex;
+  const std::string name;
+} NameMatch;
+
 class Summary {
  public:
-  Summary(const Capture& capture);
+  Summary(const Capture& capture,
+          const std::vector<const NameMatch>& name_matches = std::vector<const NameMatch>());
+  static const std::vector<const NameMatch> kNameMatches;
 
   void SortProcessSummaries();
   zx_time_t time() const { return time_; }

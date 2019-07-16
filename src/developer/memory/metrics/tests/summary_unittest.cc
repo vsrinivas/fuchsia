@@ -409,5 +409,47 @@ TEST_F(SummaryUnitTest, KernelVmo) {
   EXPECT_EQ(10U, sizes.total_bytes);
 }
 
+TEST_F(SummaryUnitTest, NameMatch) {
+  // One process, two vmos with same name.
+  Capture c;
+  TestUtils::CreateCapture(
+      c, {
+             .vmos =
+                 {
+                     {.koid = 1, .name = "blob-12a", .committed_bytes = 100},
+                     {.koid = 2, .name = "blob-de", .committed_bytes = 100},
+                     {.koid = 3, .name = "pthread_t:0x4ce78db2cb38", .committed_bytes = 100},
+                     {.koid = 4, .name = "pthread_t:0x3232fa07cb38", .committed_bytes = 100},
+                     {.koid = 5, .name = "data:libfoo.so", .committed_bytes = 100},
+                     {.koid = 6, .name = "", .committed_bytes = 100},
+                     {.koid = 7, .name = "scudo:primary", .committed_bytes = 100},
+                     {.koid = 8, .name = "scudo:secondary", .committed_bytes = 100},
+                     {.koid = 9, .name = "foo", .committed_bytes = 100},
+                 },
+             .processes =
+                 {
+                     {.koid = 2, .name = "p1", .vmos = {1, 2, 3, 4, 5, 6, 7, 8, 9}},
+                 },
+         });
+  Summary s(c, Summary::kNameMatches);
+  auto process_summaries = TestUtils::GetProcessSummaries(s);
+  ASSERT_EQ(2U, process_summaries.size());
+
+  // Skip kernel summary.
+  ProcessSummary ps = process_summaries.at(1);
+  EXPECT_EQ(2U, ps.koid());
+  EXPECT_STREQ("p1", ps.name().c_str());
+  Sizes sizes = ps.sizes();
+  EXPECT_EQ(900U, sizes.private_bytes);
+
+  EXPECT_EQ(6U, ps.name_to_sizes().size());
+  EXPECT_EQ(200U, ps.GetSizes("[blobs]").private_bytes);
+  EXPECT_EQ(200U, ps.GetSizes("[pthreads]").private_bytes);
+  EXPECT_EQ(100U, ps.GetSizes("[data]").private_bytes);
+  EXPECT_EQ(100U, ps.GetSizes("[unnamed]").private_bytes);
+  EXPECT_EQ(200U, ps.GetSizes("[scudo]").private_bytes);
+  EXPECT_EQ(100U, ps.GetSizes("foo").private_bytes);
+}
+
 }  // namespace test
 }  // namespace memory

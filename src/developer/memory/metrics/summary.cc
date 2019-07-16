@@ -4,15 +4,34 @@
 
 #include "src/developer/memory/metrics/summary.h"
 
+#include <regex>
+
 namespace memory {
 
-Summary::Summary(const Capture& capture) : time_(capture.time()), kstats_(capture.kmem()) {
+const std::vector<const NameMatch> Summary::kNameMatches = {
+    {"blob-[0-9a-f]{1,3}", "[blobs]"},
+    {"pthread_t:0x[0-9a-f]{1,12}", "[pthreads]"},
+    {"data:.*so.*", "[data]"},
+    {"", "[unnamed]"},
+    {"scudo:.*", "[scudo]"}};
+
+Summary::Summary(const Capture& capture, const std::vector<const NameMatch>& name_matches)
+    : time_(capture.time()), kstats_(capture.kmem()) {
   std::unordered_map<zx_koid_t, std::unordered_set<zx_koid_t>> vmo_to_processes;
   auto const& koid_to_vmo = capture.koid_to_vmo();
+
+  typedef struct {
+    std::regex regex;
+    std::string name;
+  } RegexMatch;
 
   ProcessSummary kernel_summary(kstats_, koid_to_vmo);
   process_summaries_.push_back(kernel_summary);
 
+  std::vector<RegexMatch> regex_matches(name_matches.size());
+  for (auto const& name_match : name_matches) {
+    regex_matches.push_back(RegexMatch{std::regex(name_match.regex), name_match.name});
+  }
   for (auto const& pair : capture.koid_to_process()) {
     auto process_koid = pair.first;
     auto& process = pair.second;
@@ -36,7 +55,13 @@ Summary::Summary(const Capture& capture) : time_(capture.time()), kstats_(captur
     for (auto const& v : s.vmos_) {
       auto const& vmo = capture.vmo_for_koid(v);
       auto share_count = vmo_to_processes[v].size();
-      auto& name_sizes = s.name_to_sizes_[vmo.name];
+      std::string name = vmo.name;
+      for (auto const& regex_match : regex_matches) {
+        if (std::regex_match(name, regex_match.regex)) {
+          name = regex_match.name;
+        }
+      }
+      auto& name_sizes = s.name_to_sizes_[name];
       name_sizes.total_bytes += vmo.committed_bytes;
       s.sizes_.total_bytes += vmo.committed_bytes;
       if (share_count == 1) {

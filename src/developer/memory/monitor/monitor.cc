@@ -177,7 +177,7 @@ zx_status_t Monitor::Inspect(std::vector<uint8_t>* output, size_t max_bytes) {
   auto& root = tree.GetRoot();
   Capture c;
   Capture::GetCapture(c, capture_state_, VMO);
-  Summary s(c);
+  Summary s(c, Summary::kNameMatches);
   std::ostringstream oss;
   Printer p(oss);
   p.PrintSummary(c, VMO, SORTED);

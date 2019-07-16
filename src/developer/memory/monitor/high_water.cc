@@ -30,7 +30,7 @@ HighWater::HighWater(const std::string& dir, zx::duration poll_frequency,
 }
 
 void HighWater::RecordHighWater(const Capture& capture) {
-  Summary s(capture);
+  Summary s(capture, Summary::kNameMatches);
   std::ofstream out;
   out.open(dir_ + "/latest.txt");
   Printer p(out);

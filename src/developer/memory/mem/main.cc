@@ -71,7 +71,7 @@ int main(int argc, const char** argv) {
         std::cerr << "Error getting capture: " << zx_status_get_string(s);
         return EXIT_FAILURE;
       }
-      Summary summary(capture);
+      Summary summary(capture, Summary::kNameMatches);
       printer.OutputSummary(summary, UNSORTED, pid);
       return EXIT_SUCCESS;
     }
@@ -92,7 +92,7 @@ int main(int argc, const char** argv) {
         std::cerr << "Error getting capture: " << zx_status_get_string(s);
         return EXIT_FAILURE;
       }
-      Summary summary(capture);
+      Summary summary(capture, Summary::kNameMatches);
       printer.OutputSummary(summary, UNSORTED, pid);
       zx::time next = start + (repeat_secs * i);
       if (next <= zx::clock::get_monotonic()) {
@@ -111,7 +111,7 @@ int main(int argc, const char** argv) {
     std::cerr << "Error getting capture: " << zx_status_get_string(s);
     return EXIT_FAILURE;
   }
-  Summary summary(capture);
+  Summary summary(capture, Summary::kNameMatches);
   printer.PrintSummary(summary, VMO, SORTED);
   return EXIT_SUCCESS;
 }
