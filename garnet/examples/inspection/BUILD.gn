@@ -15,7 +15,7 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/examples/fidl/services:echo",
-    "//garnet/public/lib/inspect:component",
+    "//garnet/public/lib/inspect_deprecated:component",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
   ]
@@ -83,8 +83,8 @@ executable("example_server_cpp_unittests") {
   deps = [
     ":lib",
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/inspect:reader",
-    "//garnet/public/lib/inspect/testing",
+    "//garnet/public/lib/inspect_deprecated:reader",
+    "//garnet/public/lib/inspect_deprecated/testing",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
   ]

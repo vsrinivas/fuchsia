@@ -6,7 +6,7 @@
 #define GARNET_EXAMPLES_INSPECTION_EXAMPLE_SERVER_APP_H_
 
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/inspect/component.h>
+#include <lib/inspect_deprecated/component.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include "echo_connection.h"
@@ -25,12 +25,11 @@ class ExampleServerApp {
   ExampleServerApp& operator=(const ExampleServerApp&) = delete;
 
   std::unique_ptr<sys::ComponentContext> context_;
-  std::shared_ptr<inspect::ComponentInspector> inspector_;
-  inspect::Node connections_node_;
+  std::shared_ptr<inspect_deprecated::ComponentInspector> inspector_;
+  inspect_deprecated::Node connections_node_;
   size_t connection_count_ = 0;
   std::shared_ptr<EchoConnectionStats> echo_stats_;
-  fidl::BindingSet<EchoConnection::Echo, std::unique_ptr<EchoConnection>>
-      bindings_;
+  fidl::BindingSet<EchoConnection::Echo, std::unique_ptr<EchoConnection>> bindings_;
 };
 
 }  // namespace example

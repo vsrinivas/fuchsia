@@ -8,15 +8,14 @@
 
 namespace example {
 
-EchoConnection::EchoConnection(inspect::Node node,
+EchoConnection::EchoConnection(inspect_deprecated::Node node,
                                std::weak_ptr<EchoConnectionStats> stats)
     : node_(std::move(node)), stats_(std::move(stats)) {
   bytes_processed_ = node_.CreateUIntMetric("bytes_processed", 0);
   requests_ = node_.CreateUIntMetric("requests", 0);
 }
 
-void EchoConnection::EchoString(fidl::StringPtr value,
-                                EchoStringCallback callback) {
+void EchoConnection::EchoString(fidl::StringPtr value, EchoStringCallback callback) {
   requests_.Add(1);
   bytes_processed_.Add(value->size());
   auto stats = stats_.lock();
