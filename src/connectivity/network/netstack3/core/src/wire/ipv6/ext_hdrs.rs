@@ -11,7 +11,9 @@ use byteorder::{ByteOrder, NetworkEndian};
 use packet::BufferView;
 
 use crate::ip::{IpProto, Ipv6ExtHdrType};
-use crate::wire::records::{Records, RecordsContext, RecordsImpl, RecordsImplLayout};
+use crate::wire::records::{
+    Records, RecordsContext, RecordsImpl, RecordsImplLayout, RecordsRawImpl,
+};
 
 /// The length of an IPv6 Fragment Extension Header.
 pub(crate) const IPV6_FRAGMENT_EXT_HDR_LEN: usize = 8;
@@ -373,6 +375,61 @@ impl<'a> RecordsImpl<'a> for Ipv6ExtensionHeaderImpl {
                     );
                 }
             }
+        }
+    }
+}
+
+impl<'a> RecordsRawImpl<'a> for Ipv6ExtensionHeaderImpl {
+    fn parse_raw_with_context<BV: BufferView<&'a [u8]>>(
+        data: &mut BV,
+        context: &mut Self::Context,
+    ) -> Result<bool, Self::Error> {
+        if is_valid_next_header_upper_layer(context.next_header) {
+            Ok(false)
+        } else {
+            let (next, skip) = match Ipv6ExtHdrType::from(context.next_header) {
+                Ipv6ExtHdrType::HopByHopOptions
+                | Ipv6ExtHdrType::Routing
+                | Ipv6ExtHdrType::DestinationOptions
+                | Ipv6ExtHdrType::Other(_) => {
+                    // take next header and header len, and skip the next 6
+                    // octets + the number of 64 bit words in header len.
+                    // NOTE: we can assume that Other will be parsed
+                    //  as such based on the extensibility note in
+                    //  RFC 8200 Section-4.8
+                    data.take_front(2)
+                        .map(|x| (x[0], (x[1] as usize) * 8 + 6))
+                        .ok_or(Ipv6ExtensionHeaderParsingError::BufferExhausted)?
+                }
+                Ipv6ExtHdrType::Fragment => {
+                    // take next header from first, then skip next 7
+                    (
+                        data.take_byte_front()
+                            .ok_or(Ipv6ExtensionHeaderParsingError::BufferExhausted)?,
+                        7,
+                    )
+                }
+                Ipv6ExtHdrType::EncapsulatingSecurityPayload => {
+                    // TODO(brunodalbo): We don't support ESP yet, so return
+                    //  an error instead of panicking "unimplemented" to avoid
+                    //  having a panic-path that can be remotely triggered.
+                    return debug_err!(
+                        Err(Ipv6ExtensionHeaderParsingError::MalformedData),
+                        "ESP extension header not supported"
+                    );
+                }
+                Ipv6ExtHdrType::Authentication => {
+                    // take next header and payload len, and skip the next
+                    // (payload_len + 2) 32 bit words, minus the 2 octets
+                    // already consumed.
+                    data.take_front(2)
+                        .map(|x| (x[0], (x[1] as usize + 2) * 4 - 2))
+                        .ok_or(Ipv6ExtensionHeaderParsingError::BufferExhausted)?
+                }
+            };
+            data.take_front(skip).ok_or(Ipv6ExtensionHeaderParsingError::BufferExhausted)?;
+            context.next_header = next;
+            Ok(true)
         }
     }
 }

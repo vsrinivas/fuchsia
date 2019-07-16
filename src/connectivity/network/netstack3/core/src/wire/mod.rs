@@ -222,13 +222,25 @@ impl<C, I> MaybeParsed<C, I> {
 
     /// Maps a [`MaybeParsed::Complete`] variant to another type. Otherwise
     /// returns the containing [`MaybeParsed::Incomplete`] value.
-    pub(crate) fn map<M, F>(self, func: F) -> MaybeParsed<M, I>
+    pub(crate) fn map<M, F>(self, f: F) -> MaybeParsed<M, I>
     where
         F: FnOnce(C) -> M,
     {
         match self {
             MaybeParsed::Incomplete(v) => MaybeParsed::Incomplete(v),
-            MaybeParsed::Complete(v) => MaybeParsed::Complete(func(v)),
+            MaybeParsed::Complete(v) => MaybeParsed::Complete(f(v)),
+        }
+    }
+
+    /// Maps a [`MaybeParsed::Incomplete`] variant to another type. Otherwise
+    /// returns the containing [`MaybeParsed::Complete`] value.
+    pub(crate) fn map_incomplete<M, F>(self, f: F) -> MaybeParsed<C, M>
+    where
+        F: FnOnce(I) -> M,
+    {
+        match self {
+            MaybeParsed::Incomplete(v) => MaybeParsed::Incomplete(f(v)),
+            MaybeParsed::Complete(v) => MaybeParsed::Complete(v),
         }
     }
 
