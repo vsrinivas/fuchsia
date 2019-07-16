@@ -468,4 +468,11 @@ mod syzkaller {
         ["../zx.banjo", "banjo/syzkaller-flag.test.banjo"],
         "syzkaller/syzkaller-flag.txt"
     );
+
+    codegen_test!(
+        syzkaller_syscalls,
+        SyzkallerBackend,
+        ["../zx.banjo", "banjo/syzkaller-syscalls.test.banjo"],
+        "syzkaller/syzkaller-syscalls.txt"
+    );
 }

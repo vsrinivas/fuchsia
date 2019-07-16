@@ -24,7 +24,7 @@ pub struct SyzkallerBackend<'a, W: io::Write> {
 /// e.g. HandleTy::Process will be translated to int32 instead of zx_process.
 fn ty_to_underlying_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
     match ty {
-        ast::Ty::Bool => Ok(String::from("bool")),
+        ast::Ty::Bool => Ok(String::from("bool8")), // type bool8 int8[0:1]
         ast::Ty::Int8 => Ok(String::from("int8")),
         ast::Ty::Int16 => Ok(String::from("int16")),
         ast::Ty::Int32 => Ok(String::from("int32")),
@@ -170,14 +170,20 @@ impl<'a, W: io::Write> SyzkallerBackend<'a, W> {
                         ),
                         // TODO(SEC-327): Add support for dynamic arrays
                         "N" => panic!("dynamic arrays not supported"),
-                        _ => {
-                            self.size_to_buffer.insert(size.to_string(), name.to_string());
-                            format!(
-                                "ptr[{}, array[{}]]",
-                                to_c_name(&direction),
-                                ty_to_syzkaller_str(ast, ty).unwrap()
-                            )
-                        }
+                        _ => match size.to_string().as_str().parse::<usize>() {
+                            // fixed/constant array length
+                            Ok(n) => {
+                                format!("array[{}, {}]", ty_to_syzkaller_str(ast, ty).unwrap(), n)
+                            }
+                            _ => {
+                                self.size_to_buffer.insert(size.to_string(), name.to_string());
+                                format!(
+                                    "ptr[{}, array[{}]]",
+                                    to_c_name(&direction),
+                                    ty_to_syzkaller_str(ast, ty).unwrap()
+                                )
+                            }
+                        },
                     };
                     Ok(format!("{}{}{}", to_c_name(name), sep, resolved_type))
                 } else {

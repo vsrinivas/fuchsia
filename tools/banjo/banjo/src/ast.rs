@@ -739,7 +739,7 @@ impl BanjoAst {
                         Rule::ident => {
                             name = String::from(inner_pair.as_str().trim());
                         }
-                        Rule::integer_type => {
+                        Rule::integer_type | Rule::identifier_type => {
                             ty = Ty::from_pair(ns, &inner_pair)?;
                         }
                         Rule::enum_field => variants.push(EnumVariant::from_pair(inner_pair)?),

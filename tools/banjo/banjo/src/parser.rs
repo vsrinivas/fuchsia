@@ -7,7 +7,7 @@ use pest_derive::Parser;
 #[derive(Parser)]
 #[grammar_inline = r#"
 COMMENT = _{ "//" ~ !("/") ~ (" " | SYMBOL | PUNCTUATION | ASCII_ALPHANUMERIC)* ~ "\n"}
-WHITESPACE = _{ " " | "\n" }
+WHITESPACE = _{ " " | "\n" | "\t" }
 file = { SOI ~ contents ~ EOI }
 
 contents = _{ library_header ~ (using_list)* ~ declaration_list }
@@ -38,7 +38,7 @@ struct_field  = { attributes? ~ type_ ~ ident ~ ("=" ~ constant)? }
 union_declaration = { attributes ~ "union" ~ ident ~ "{" ~ (union_field ~ ";")* ~ "}" }
 union_field  = { attributes? ~ type_ ~ ident }
 
-enum_declaration = { attributes ~ "enum" ~ ident ~ (":" ~ integer_type)? ~ "{" ~ (enum_field ~ ";")* ~ "}" }
+enum_declaration = { attributes ~ "enum" ~ ident ~ (":" ~ (integer_type | identifier_type))? ~ "{" ~ (enum_field ~ ";")* ~ "}" }
 enum_field  = { attributes? ~ ident ~ "=" ~ constant }
 
 protocol_method = { attributes ~ protocol_parameters }

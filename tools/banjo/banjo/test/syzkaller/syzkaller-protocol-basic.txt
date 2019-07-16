@@ -6,7 +6,7 @@
 # Generated from the banjo.examples.syzkaller.protocol.basic banjo file
 
 usize(sz intptr)
-bool(b bool)
+bool(b bool8)
 int8(i8 int8)
 int16(i16 int16)
 int32(i32 int32)

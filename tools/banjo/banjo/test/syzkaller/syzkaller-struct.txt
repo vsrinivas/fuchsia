@@ -11,7 +11,7 @@ point {
 }
 
 primitive_types {
-	b	bool
+	b	bool8
 	i8	int8
 	i16	int16
 	i32	int32
@@ -39,8 +39,8 @@ arrays {
 	rd_sz	ptr[in, array[intptr]]
 	rd_sz_len	len[rd_sz]
 	wr_sz_len	len[rd_sz]
-	rd_b	ptr[out, array[bool]]
-	wr_b	ptr[in, array[bool]]
+	rd_b	ptr[out, array[bool8]]
+	wr_b	ptr[in, array[bool8]]
 	rd_b_len	len[rd_b]
 	wr_b_len	len[wr_b]
 	rd_i8	ptr[out, array[int8]]
