@@ -11,7 +11,7 @@
 //!
 //! [`options`]: crate::wire::records::options
 
-use crate::wire::FromRaw;
+use crate::wire::{FromRaw, MaybeParsed};
 use packet::{BufferView, BufferViewMut, InnerPacketBuilder};
 use std::marker::PhantomData;
 use std::ops::Deref;
@@ -54,6 +54,78 @@ where
     /// Creates a new `RecordsRaw` with the data in `bytes`.
     pub(crate) fn new(bytes: B) -> Self {
         Self { bytes, context: () }
+    }
+}
+
+impl<B, R> RecordsRaw<B, R>
+where
+    R: for<'a> RecordsRawImpl<'a>,
+    B: ByteSlice,
+{
+    /// Raw parse a set of records with a context.
+    ///
+    /// See [`RecordsRaw::parse_raw_with_mut_context`] for details on `bytes`,
+    /// `context`, and return value. `parse_raw_with_context` just calls
+    /// `parse_raw_with_mut_context` with a mutable reference to the `context`
+    /// (which is owned).
+    pub(crate) fn parse_raw_with_context<BV: BufferView<B>>(
+        bytes: &mut BV,
+        mut context: R::Context,
+    ) -> MaybeParsed<Self, (B, R::Error)> {
+        Self::parse_raw_with_mut_context(bytes, &mut context)
+    }
+
+    /// Raw parse a set of records with a mutable context.
+    ///
+    /// `parse_raw_with_mut_context` shallowly parses `bytes` as a sequence of
+    /// records. `context` may be used by implementers to maintain state.
+    ///
+    /// `parse_raw_with_mut_context` performs a single pass over all of the
+    /// records to be able to find the end of the records list and update
+    /// `bytes` accordingly. Upon return, `bytes` is moved to the first byte
+    /// after the records list (If the return is a [`MaybeParsed::Complete`],
+    /// otherwise `bytes` will be at the point where raw parsing error was
+    /// found.
+    pub(crate) fn parse_raw_with_mut_context<BV: BufferView<B>>(
+        bytes: &mut BV,
+        context: &mut R::Context,
+    ) -> MaybeParsed<Self, (B, R::Error)> {
+        let mut c = context.clone();
+        let mut b = LongLivedBuff::new(bytes.as_ref());
+        let r = loop {
+            match R::parse_raw_with_context(&mut b, context) {
+                Ok(true) => {} // continue consuming from data
+                Ok(false) => {
+                    break None;
+                }
+                Err(e) => {
+                    break Some(e);
+                }
+            }
+        };
+
+        // When we get here, we know that whatever is left in `b` is not needed
+        // so we only take the amount of bytes we actually need from `bytes`,
+        // leaving the rest alone for the caller to continue parsing with.
+        let bytes_len = bytes.len();
+        let b_len = b.len();
+        let taken = bytes.take_front(bytes_len - b_len).unwrap();
+
+        match r {
+            Some(error) => MaybeParsed::Incomplete((taken, error)),
+            None => MaybeParsed::Complete(RecordsRaw { bytes: taken, context: c }),
+        }
+    }
+
+    /// Raw parses a set of records.
+    ///
+    /// Equivalent to calling [`RecordsRaw::parse_raw_with_context`] with
+    /// `context = ()`.
+    pub(crate) fn parse_raw<BV: BufferView<B>>(bytes: &mut BV) -> MaybeParsed<Self, (B, R::Error)>
+    where
+        R: RecordsImplLayout<Context = ()>,
+    {
+        Self::parse_raw_with_context(bytes, ())
     }
 }
 
@@ -151,6 +223,34 @@ pub(crate) trait RecordsImpl<'a>: RecordsImplLayout {
         data: &mut BV,
         context: &mut Self::Context,
     ) -> Result<Option<Option<Self::Record>>, Self::Error>;
+}
+
+/// An implementation of a raw records parser.
+///
+/// `RecordsRawImpl` provides functions to raw-parse sequential records. It is
+/// required to construct a partially parsed [`RecordsRaw`].
+///
+/// `RecordsRawImpl` is meant to perform very little to no validation on each
+/// record it consumes. It is primarily used to be able to walk record sets with
+/// unknown lengths.
+pub(crate) trait RecordsRawImpl<'a>: RecordsImplLayout {
+    /// Raw parses a single record with some context.
+    ///
+    /// `parse_raw_with_context` takes a variable length `data` and a `context`
+    /// to maintain state, and returns `Ok(true)` if a record is
+    /// successfully consumed, `Ok(false)` when it is unable to parse more
+    /// records, and `Err(err)` if the `data` was malformed in any way and the
+    /// parsing stopped short.
+    ///
+    /// `data` MAY be empty. It is up to the implementer to handle an exhausted
+    /// `data`.
+    ///
+    /// It's the implementer's responsibility to move the `BufferView` forward
+    /// whenever returning `Ok(_)`.
+    fn parse_raw_with_context<BV: BufferView<&'a [u8]>>(
+        data: &mut BV,
+        context: &mut Self::Context,
+    ) -> Result<bool, Self::Error>;
 }
 
 /// A limited parsed set of records.
@@ -807,6 +907,15 @@ mod test {
         }
     }
 
+    impl<'a> RecordsRawImpl<'a> for StatefulContextRecordImpl {
+        fn parse_raw_with_context<BV: BufferView<&'a [u8]>>(
+            data: &mut BV,
+            context: &mut Self::Context,
+        ) -> Result<bool, Self::Error> {
+            Self::parse_with_context(data, context).map(|p| p.is_some())
+        }
+    }
+
     fn parse_dummy_rec_with_context<'a, BV>(
         data: &mut BV,
         context: &mut StatefulContext,
@@ -1007,6 +1116,32 @@ mod test {
         .unwrap();
         assert_eq!(bv.len(), 0);
         validate_parsed_stateful_context_records(parsed, context);
+    }
+
+    #[test]
+    fn raw_parse_success() {
+        let mut context = StatefulContext::new();
+        let mut bv = &mut &DUMMY_BYTES[..];
+        let result = RecordsRaw::<_, StatefulContextRecordImpl>::parse_raw_with_mut_context(
+            &mut bv,
+            &mut context,
+        )
+        .unwrap();
+        assert_eq!(result.bytes.len(), DUMMY_BYTES.len());
+        let parsed = Records::try_from_raw(result).unwrap();
+        validate_parsed_stateful_context_records(parsed, context);
+    }
+
+    #[test]
+    fn raw_parse_failure() {
+        let mut context = StatefulContext::new();
+        let mut bv = &mut &DUMMY_BYTES[0..15];
+        let (result, _) = RecordsRaw::<_, StatefulContextRecordImpl>::parse_raw_with_mut_context(
+            &mut bv,
+            &mut context,
+        )
+        .unwrap_incomplete();
+        assert_eq!(result, &DUMMY_BYTES[0..12]);
     }
 }
 
