@@ -9,6 +9,7 @@
 #include <string>
 
 #include "src/developer/debug/zxdb/expr/eval_context.h"
+#include "src/developer/debug/zxdb/expr/pretty_type_manager.h"
 #include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
 
 namespace zxdb {
@@ -41,6 +42,7 @@ class MockEvalContext : public EvalContext {
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
   NameLookupCallback GetSymbolNameLookupCallback() override;
   Location GetLocationForAddress(uint64_t address) const override;
+  const PrettyTypeManager& GetPrettyTypeManager() const override { return pretty_type_manager_; }
 
  private:
   fxl::RefPtr<MockSymbolDataProvider> data_provider_;
@@ -48,6 +50,7 @@ class MockEvalContext : public EvalContext {
   std::map<std::string, fxl::RefPtr<Type>> types_;
   std::map<uint64_t, Location> locations_;
   ExprLanguage language_ = ExprLanguage::kC;
+  PrettyTypeManager pretty_type_manager_;
 };
 
 }  // namespace zxdb

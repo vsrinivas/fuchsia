@@ -17,6 +17,7 @@ namespace zxdb {
 
 class Err;
 class ExprValue;
+class PrettyTypeManager;
 class Symbol;
 class SymbolDataProvider;
 class Variable;
@@ -90,6 +91,8 @@ class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
 
   // Returns a symbolized (if possible) location for the given address.
   virtual Location GetLocationForAddress(uint64_t address) const = 0;
+
+  virtual const PrettyTypeManager& GetPrettyTypeManager() const = 0;
 };
 
 }  // namespace zxdb

@@ -10,6 +10,7 @@
 
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/found_name.h"
+#include "src/developer/debug/zxdb/expr/pretty_type_manager.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -66,6 +67,7 @@ class EvalContextImpl : public EvalContext {
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
   NameLookupCallback GetSymbolNameLookupCallback() override;
   Location GetLocationForAddress(uint64_t address) const override;
+  const PrettyTypeManager& GetPrettyTypeManager() const override { return pretty_type_manager_; }
 
  private:
   struct ResolutionState;
@@ -92,6 +94,8 @@ class EvalContextImpl : public EvalContext {
 
   // Language extracted from the code block.
   ExprLanguage language_ = ExprLanguage::kC;
+
+  PrettyTypeManager pretty_type_manager_;
 
   mutable fxl::WeakPtrFactory<EvalContextImpl> weak_factory_;
 };

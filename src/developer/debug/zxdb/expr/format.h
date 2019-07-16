@@ -46,6 +46,16 @@ void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
 void FillFormatNodeDescription(FormatNode* node, const FormatOptions& options,
                                fxl::RefPtr<EvalContext> context, fit::deferred_callback cb);
 
+// Formatters for strings. These are public so they can be shared by the pretty-printers.
+//
+// TODO(brettw) we probably want a more general way for pretty-printers to call into our default
+// code for handling certain types.
+void FormatCharArrayNode(FormatNode* node, fxl::RefPtr<Type> char_type, const uint8_t* data,
+                         size_t length, bool length_was_known, bool truncated);
+void FormatCharPointerNode(FormatNode* node, uint64_t ptr, const Type* char_type,
+                           const FormatOptions& options, fxl::RefPtr<EvalContext> eval_context,
+                           fit::deferred_callback cb);
+
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_FORMAT_H_
