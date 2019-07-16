@@ -28,6 +28,18 @@ impl Never {
     }
 }
 
+impl<T: ?Sized> AsRef<T> for Never {
+    fn as_ref(&self) -> &T {
+        match *self {}
+    }
+}
+
+impl<T: ?Sized> AsMut<T> for Never {
+    fn as_mut(&mut self) -> &mut T {
+        match *self {}
+    }
+}
+
 impl Display for Never {
     fn fmt(&self, _: &mut Formatter) -> fmt::Result {
         match *self {}
