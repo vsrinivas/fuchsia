@@ -5,7 +5,6 @@
 #ifndef SRC_DEVELOPER_DEBUG_SHARED_EVENT_HANDLERS_H_
 #define SRC_DEVELOPER_DEBUG_SHARED_EVENT_HANDLERS_H_
 
-#include <lib/async/cpp/exception.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
 
