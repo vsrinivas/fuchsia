@@ -78,6 +78,10 @@ class Function final : public CodeBlock {
   const std::vector<LazySymbol>& parameters() const { return parameters_; }
   void set_parameters(std::vector<LazySymbol> p) { parameters_ = std::move(p); }
 
+  // Template parameters if this function is a template instantiation.
+  const std::vector<LazySymbol>& template_params() const { return template_params_; }
+  void set_template_params(std::vector<LazySymbol> p) { template_params_ = std::move(p); }
+
   // The frame base is the location where "fbreg" expressions are evaluated relative to (this will
   // be most local variables in a function). This can be an empty location if there's no frame base
   // or it's not needed (e.g.  for inline functions).
@@ -141,6 +145,7 @@ class Function final : public CodeBlock {
   FileLine call_line_;
   LazySymbol return_type_;
   std::vector<LazySymbol> parameters_;
+  std::vector<LazySymbol> template_params_;
   VariableLocation frame_base_;
   LazySymbol object_pointer_;
 };

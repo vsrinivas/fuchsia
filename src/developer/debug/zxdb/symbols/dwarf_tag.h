@@ -11,8 +11,8 @@ enum class DwarfTag : int {
   // Not a DWARF tag, this is used to indicate "not present."
   kNone = 0x00,
 
-  // Type modifier for arrays ("foo[]") of an underlying type. May have a
-  // SubrangeType child that indicates the size of the array.
+  // Type modifier for arrays ("foo[]") of an underlying type. May have a SubrangeType child that
+  // indicates the size of the array.
   kArrayType = 0x01,
 
   // C++ class definition.
@@ -24,20 +24,19 @@ enum class DwarfTag : int {
   // C/C++ "enum" declaration. May have children of kEnumerator.
   kEnumerationType = 0x04,
 
-  // Normal function parameter, seen as a child of a "subprogram." It will
-  // normally have at least a name and a type.
+  // Normal function parameter, seen as a child of a "subprogram." It will normally have at least a
+  // name and a type.
   kFormalParameter = 0x05,
 
-  // Generated for "using" statements that bring a type into a namespace.
-  // Converted into a TypeModifier class.
+  // Generated for "using" statements that bring a type into a namespace. Converted into a
+  // TypeModifier class.
   kImportedDeclaration = 0x08,
 
   // Label (as used for "goto"). Probably don't need to handle.
   kLabel = 0x0a,
 
-  // A lexical block will typically have children of kVariable for
-  // everything declared in it. It will also often have ranges associated with
-  // it.
+  // A lexical block will typically have children of kVariable for everything declared in it. It
+  // will also often have ranges associated with it.
   kLexicalBlock = 0x0b,
 
   // Class member data.
@@ -60,8 +59,8 @@ enum class DwarfTag : int {
   // Type for a C/C++ pointer to member function. See kPtrToMemberType.
   kSubroutineType = 0x15,
 
-  // Typedef that provides a different name for an underlying type. Converted
-  // into a TypeModifier class.
+  // Typedef that provides a different name for an underlying type. Converted into a TypeModifier
+  // class.
   kTypedef = 0x16,
 
   kUnionType = 0x17,
@@ -91,8 +90,8 @@ enum class DwarfTag : int {
   // Used by Pascal. Can ignore.
   kSetType = 0x20,
 
-  // In C++ this can be generated as the child of an array entry with a "type"
-  // of "__ARRAY_SIZE_TYPE__" and a "count" indicating the size of the array.
+  // In C++ this can be generated as the child of an array entry with a "type" of
+  // "__ARRAY_SIZE_TYPE__" and a "count" indicating the size of the array.
   kSubrangeType = 0x21,
 
   // Pascal and Modula-2 "with" statement. Can ignore.
@@ -130,16 +129,19 @@ enum class DwarfTag : int {
 
   // A function. Represented by a zxdb::Function object.
   kSubprogram = 0x2e,
+
+  // Indicates the type (and possibly value) of a parameter in a template definition.
   kTemplateTypeParameter = 0x2f,
   kTemplateValueParameter = 0x30,
+
   kThrownType = 0x31,
   kTryBlock = 0x32,
 
   // Child of a structure that defines a Rust enum.
   kVariantPart = 0x33,
 
-  // Local variable declaration. It will normally have a name, type,
-  // declaration location, and location.
+  // Local variable declaration. It will normally have a name, type, declaration location, and
+  // location.
   kVariable = 0x34,
 
   // Type modifier that indicates adding "volatile" to an underlying type.
@@ -153,9 +155,8 @@ enum class DwarfTag : int {
   // Java interface. Can ignore.
   kInterfaceType = 0x38,
 
-  // C++ namespace. The declarations inside this will be the contents of the
-  // namespace. This will be around declarations but not necessarily the
-  // function implementations.
+  // C++ namespace. The declarations inside this will be the contents of the namespace. This will be
+  // around declarations but not necessarily the function implementations.
   kNamespace = 0x39,
 
   // Seems to be generated for "using namespace" statements.
@@ -188,8 +189,7 @@ enum class DwarfTag : int {
 // Returns true if the tag defines a type.
 bool DwarfTagIsType(DwarfTag tag);
 
-// Returns true if the tag is one of the type modified variants (pointers,
-// references, etc.).
+// Returns true if the tag is one of the type modified variants (pointers, references, etc.).
 bool DwarfTagIsTypeModifier(DwarfTag tag);
 
 // Returns true if the dwarf tag is a reference or rvalue reference.

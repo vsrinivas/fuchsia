@@ -71,6 +71,10 @@ class Collection final : public Type {
   const std::vector<LazySymbol>& inherited_from() const { return inherited_from_; }
   void set_inherited_from(std::vector<LazySymbol> f) { inherited_from_ = std::move(f); }
 
+  // Template parameters if this collection is a template instantiation.
+  const std::vector<LazySymbol>& template_params() const { return template_params_; }
+  void set_template_params(std::vector<LazySymbol> p) { template_params_ = std::move(p); }
+
   // Heuristic that attempts to determine whether this collection has special
   // meaning in the current programming language.
   SpecialType GetSpecialType() const;
@@ -98,6 +102,7 @@ class Collection final : public Type {
   std::vector<LazySymbol> data_members_;
   LazySymbol variant_part_;
   std::vector<LazySymbol> inherited_from_;
+  std::vector<LazySymbol> template_params_;
 
   // Lazily computed special type of this collection.
   mutable std::optional<SpecialType> special_type_;

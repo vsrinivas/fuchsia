@@ -31,6 +31,7 @@ class InheritedFrom;
 class MemberPtr;
 class ModifiedType;
 class Namespace;
+class TemplateParameter;
 class Type;
 class Value;
 class Variable;
@@ -128,6 +129,7 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   virtual const ArrayType* AsArrayType() const;
   virtual const BaseType* AsBaseType() const;
   virtual const CodeBlock* AsCodeBlock() const;
+  virtual const Collection* AsCollection() const;
   virtual const CompileUnit* AsCompileUnit() const;
   virtual const DataMember* AsDataMember() const;
   virtual const Enumeration* AsEnumeration() const;
@@ -137,7 +139,7 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   virtual const MemberPtr* AsMemberPtr() const;
   virtual const ModifiedType* AsModifiedType() const;
   virtual const Namespace* AsNamespace() const;
-  virtual const Collection* AsCollection() const;
+  virtual const TemplateParameter* AsTemplateParameter() const;
   virtual const Type* AsType() const;
   virtual const Value* AsValue() const;
   virtual const Variable* AsVariable() const;
@@ -153,6 +155,9 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   }
   CodeBlock* AsCodeBlock() {
     return const_cast<CodeBlock*>(const_cast<const Symbol*>(this)->AsCodeBlock());
+  }
+  Collection* AsCollection() {
+    return const_cast<Collection*>(const_cast<const Symbol*>(this)->AsCollection());
   }
   CompileUnit* AsCompileUnit() {
     return const_cast<CompileUnit*>(const_cast<const Symbol*>(this)->AsCompileUnit());
@@ -181,8 +186,8 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   Namespace* AsNamespace() {
     return const_cast<Namespace*>(const_cast<const Symbol*>(this)->AsNamespace());
   }
-  Collection* AsCollection() {
-    return const_cast<Collection*>(const_cast<const Symbol*>(this)->AsCollection());
+  TemplateParameter* AsTempalteParameter() {
+    return const_cast<TemplateParameter*>(const_cast<const Symbol*>(this)->AsTemplateParameter());
   }
   Type* AsType() { return const_cast<Type*>(const_cast<const Symbol*>(this)->AsType()); }
   Value* AsValue() { return const_cast<Value*>(const_cast<const Symbol*>(this)->AsValue()); }

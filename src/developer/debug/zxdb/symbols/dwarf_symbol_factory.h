@@ -60,6 +60,7 @@ class DwarfSymbolFactory : public SymbolFactory {
   fxl::RefPtr<Symbol> DecodeMemberPtr(const llvm::DWARFDie& die);
   fxl::RefPtr<Symbol> DecodeModifiedType(const llvm::DWARFDie& die);
   fxl::RefPtr<Symbol> DecodeNamespace(const llvm::DWARFDie& die);
+  fxl::RefPtr<Symbol> DecodeTemplateParameter(const llvm::DWARFDie& die, DwarfTag tag);
   fxl::RefPtr<Symbol> DecodeUnspecifiedType(const llvm::DWARFDie& die);
   fxl::RefPtr<Symbol> DecodeVariable(const llvm::DWARFDie& die, bool is_specification = false);
   fxl::RefPtr<Symbol> DecodeVariant(const llvm::DWARFDie& die);

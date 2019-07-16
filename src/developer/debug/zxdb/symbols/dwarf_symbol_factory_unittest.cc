@@ -18,6 +18,7 @@
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols_impl.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
+#include "src/developer/debug/zxdb/symbols/template_parameter.h"
 #include "src/developer/debug/zxdb/symbols/test_symbol_module.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
 
@@ -512,6 +513,45 @@ TEST(DwarfSymbolFactory, NullPtrTTypedef) {
 
   // The decoder should have forced the size to be the size of a pointer.
   EXPECT_EQ(8u, underlying->byte_size());
+}
+
+TEST(DwarfSymbolFactory, TemplateParams) {
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
+  Err err = module.Load();
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  // Find the GetTemplate() function.
+  const char kGetTemplate[] = "GetTemplate";
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kGetTemplate);
+  ASSERT_TRUE(function);
+
+  // The return type should be our collection
+  auto* my_template = function->return_type().Get()->AsCollection();
+  ASSERT_TRUE(my_template);
+  EXPECT_EQ("MyTemplate<my_ns::Struct, 42>", my_template->GetFullName());
+
+  // There should be two template parameters.
+  ASSERT_EQ(2u, my_template->template_params().size());
+
+  // The first one is "T = my_ns::Struct".
+  auto first_param = my_template->template_params()[0].Get()->AsTemplateParameter();
+  ASSERT_TRUE(first_param);
+  EXPECT_EQ("T", first_param->GetAssignedName());
+  EXPECT_EQ("T", first_param->GetFullName());
+
+  auto first_type = first_param->type().Get()->AsType();
+  ASSERT_TRUE(first_type);
+  EXPECT_EQ("my_ns::Struct", first_type->GetFullName());
+
+  // The second one is "i = int(42)".
+  auto second_param = my_template->template_params()[1].Get()->AsTemplateParameter();
+  ASSERT_TRUE(second_param);
+  EXPECT_EQ("i", second_param->GetAssignedName());
+  EXPECT_EQ("i", second_param->GetFullName());
+
+  auto second_type = second_param->type().Get()->AsType();
+  ASSERT_TRUE(second_type);
+  EXPECT_EQ("int", second_type->GetFullName());
 }
 
 // TODO(brettw) test using statements. See GetUsing() in type_test.cc

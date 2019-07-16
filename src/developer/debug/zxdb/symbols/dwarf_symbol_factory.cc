@@ -28,6 +28,7 @@
 #include "src/developer/debug/zxdb/symbols/module_symbols_impl.h"
 #include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
+#include "src/developer/debug/zxdb/symbols/template_parameter.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
 #include "src/developer/debug/zxdb/symbols/variant.h"
 #include "src/developer/debug/zxdb/symbols/variant_part.h"
@@ -228,6 +229,10 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeSymbol(const llvm::DWARFDie& die) 
     case DwarfTag::kUnionType:
       symbol = DecodeCollection(die);
       break;
+    case DwarfTag::kTemplateTypeParameter:
+    case DwarfTag::kTemplateValueParameter:
+      symbol = DecodeTemplateParameter(die, tag);
+      break;
     case DwarfTag::kVariantPart:
       symbol = DecodeVariantPart(die);
       break;
@@ -337,6 +342,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(const llvm::DWARFDie& die
   std::vector<LazySymbol> parameters;
   std::vector<LazySymbol> inner_blocks;
   std::vector<LazySymbol> variables;
+  std::vector<LazySymbol> template_params;
   for (const llvm::DWARFDie& child : die) {
     switch (child.getTag()) {
       case llvm::dwarf::DW_TAG_formal_parameter:
@@ -349,6 +355,10 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(const llvm::DWARFDie& die
       case llvm::dwarf::DW_TAG_lexical_block:
         inner_blocks.push_back(MakeLazy(child));
         break;
+      case llvm::dwarf::DW_TAG_template_type_parameter:
+      case llvm::dwarf::DW_TAG_template_value_parameter:
+        template_params.push_back(MakeLazy(child));
+        break;
       default:
         break;  // Skip everything else.
     }
@@ -356,6 +366,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(const llvm::DWARFDie& die
   function->set_parameters(std::move(parameters));
   function->set_inner_blocks(std::move(inner_blocks));
   function->set_variables(std::move(variables));
+  function->set_template_params(std::move(template_params));
 
   if (parent && !function->parent()) {
     // Set the parent symbol when it hasn't already been set. We always want the specification's
@@ -506,6 +517,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCollection(const llvm::DWARFDie& d
   // Handle sub-DIEs: data members and inheritance.
   std::vector<LazySymbol> data;
   std::vector<LazySymbol> inheritance;
+  std::vector<LazySymbol> template_params;
   LazySymbol variant_part;
   for (const llvm::DWARFDie& child : die) {
     switch (child.getTag()) {
@@ -520,12 +532,17 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCollection(const llvm::DWARFDie& d
         // if a compiler generates such a structure.
         variant_part = MakeLazy(child);
         break;
+      case llvm::dwarf::DW_TAG_template_type_parameter:
+      case llvm::dwarf::DW_TAG_template_value_parameter:
+        template_params.push_back(MakeLazy(child));
+        break;
       default:
         break;  // Skip everything else.
     }
   }
   result->set_data_members(std::move(data));
   result->set_inherited_from(std::move(inheritance));
+  result->set_template_params(std::move(template_params));
   result->set_variant_part(variant_part);
   if (is_declaration)
     result->set_is_declaration(*is_declaration);
@@ -839,6 +856,25 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeNamespace(const llvm::DWARFDie& di
   if (parent)
     result->set_parent(MakeLazy(parent));
   return result;
+}
+
+fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeTemplateParameter(const llvm::DWARFDie& die,
+                                                                DwarfTag tag) {
+  DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
+
+  llvm::Optional<const char*> name;
+  decoder.AddCString(llvm::dwarf::DW_AT_name, &name);
+
+  llvm::DWARFDie type;
+  decoder.AddReference(llvm::dwarf::DW_AT_type, &type);
+
+  // DW_TAG_template_value_parameter ones will also have a value if we need it in the future.
+
+  if (!decoder.Decode(die) || !name || !type)
+    return fxl::MakeRefCounted<Symbol>();
+
+  return fxl::MakeRefCounted<TemplateParameter>(*name, MakeLazy(type),
+                                                tag == DwarfTag::kTemplateValueParameter);
 }
 
 // Clang and GCC use "unspecified" types to encode "decltype(nullptr)". When used as a variable this

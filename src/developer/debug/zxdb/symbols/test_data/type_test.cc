@@ -81,6 +81,18 @@ struct ForInline {
   }
 };
 
+template<typename T, int i>
+struct MyTemplate {
+  T t;
+  int int_value = i;
+};
+
+EXPORT MyTemplate<my_ns::Struct, 42> GetTemplate() {
+  MyTemplate<my_ns::Struct, 42> mt;
+  mt.t.member_a = 1;
+  return mt;
+}
+
 // Call both inline member functions and an inlined function declared in
 // the same file.
 //
