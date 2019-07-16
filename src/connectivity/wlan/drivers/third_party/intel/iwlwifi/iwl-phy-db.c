@@ -219,186 +219,207 @@ int iwl_phy_db_set_section(struct iwl_phy_db* phy_db, struct iwl_rx_packet* pkt)
                    type, size);
 
 #endif  // NEEDS_PORTING
+  printf("%s():%d needs porting\n", __func__, __LINE__);
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static int is_valid_channel(uint16_t ch_id) {
+  if (ch_id <= 14 || (36 <= ch_id && ch_id <= 64 && ch_id % 4 == 0) ||
+      (100 <= ch_id && ch_id <= 140 && ch_id % 4 == 0) ||
+      (145 <= ch_id && ch_id <= 165 && ch_id % 4 == 1)) {
+    return 1;
+  }
   return 0;
 }
 
-#if 0  // NEEDS_PORTING
-static int is_valid_channel(uint16_t ch_id) {
-    if (ch_id <= 14 || (36 <= ch_id && ch_id <= 64 && ch_id % 4 == 0) ||
-        (100 <= ch_id && ch_id <= 140 && ch_id % 4 == 0) ||
-        (145 <= ch_id && ch_id <= 165 && ch_id % 4 == 1)) {
-        return 1;
-    }
-    return 0;
-}
-
 static uint8_t ch_id_to_ch_index(uint16_t ch_id) {
-    if (WARN_ON(!is_valid_channel(ch_id))) { return 0xff; }
+  if (WARN_ON(!is_valid_channel(ch_id))) {
+    return 0xff;
+  }
 
-    if (ch_id <= 14) { return ch_id - 1; }
-    if (ch_id <= 64) { return (ch_id + 20) / 4; }
-    if (ch_id <= 140) { return (ch_id - 12) / 4; }
-    return (ch_id - 13) / 4;
+  if (ch_id <= 14) {
+    return ch_id - 1;
+  }
+  if (ch_id <= 64) {
+    return (ch_id + 20) / 4;
+  }
+  if (ch_id <= 140) {
+    return (ch_id - 12) / 4;
+  }
+  return (ch_id - 13) / 4;
 }
 
 static uint16_t channel_id_to_papd(uint16_t ch_id) {
-    if (WARN_ON(!is_valid_channel(ch_id))) { return 0xff; }
+  if (WARN_ON(!is_valid_channel(ch_id))) {
+    return 0xff;
+  }
 
-    if (1 <= ch_id && ch_id <= 14) { return 0; }
-    if (36 <= ch_id && ch_id <= 64) { return 1; }
-    if (100 <= ch_id && ch_id <= 140) { return 2; }
-    return 3;
+  if (1 <= ch_id && ch_id <= 14) {
+    return 0;
+  }
+  if (36 <= ch_id && ch_id <= 64) {
+    return 1;
+  }
+  if (100 <= ch_id && ch_id <= 140) {
+    return 2;
+  }
+  return 3;
 }
 
 static uint16_t channel_id_to_txp(struct iwl_phy_db* phy_db, uint16_t ch_id) {
-    struct iwl_phy_db_chg_txp* txp_chg;
-    int i;
-    uint8_t ch_index = ch_id_to_ch_index(ch_id);
-    if (ch_index == 0xff) { return 0xff; }
-
-    for (i = 0; i < phy_db->n_group_txp; i++) {
-        txp_chg = (void*)phy_db->calib_ch_group_txp[i].data;
-        if (!txp_chg) { return 0xff; }
-        /*
-         * Looking for the first channel group that its max channel is
-         * higher then wanted channel.
-         */
-        if (le16_to_cpu(txp_chg->max_channel_idx) >= ch_index) { return i; }
-    }
+  struct iwl_phy_db_chg_txp* txp_chg;
+  int i;
+  uint8_t ch_index = ch_id_to_ch_index(ch_id);
+  if (ch_index == 0xff) {
     return 0xff;
-}
-#if !IS_ENABLED(CPTCFG_IWLXVT)
-static
-#endif
-    int
-    iwl_phy_db_get_section_data(struct iwl_phy_db* phy_db, uint32_t type, uint8_t** data,
-                                uint16_t* size, uint16_t ch_id) {
-    struct iwl_phy_db_entry* entry;
-    uint16_t ch_group_id = 0;
+  }
 
-    if (!phy_db) { return -EINVAL; }
-
-    /* find wanted channel group */
-    if (type == IWL_PHY_DB_CALIB_CHG_PAPD) {
-        ch_group_id = channel_id_to_papd(ch_id);
-    } else if (type == IWL_PHY_DB_CALIB_CHG_TXP) {
-        ch_group_id = channel_id_to_txp(phy_db, ch_id);
+  for (i = 0; i < phy_db->n_group_txp; i++) {
+    txp_chg = (void*)phy_db->calib_ch_group_txp[i].data;
+    if (!txp_chg) {
+      return 0xff;
     }
-
-    entry = iwl_phy_db_get_section(phy_db, type, ch_group_id);
-    if (!entry) { return -EINVAL; }
-
-    *data = entry->data;
-    *size = entry->size;
-
-    IWL_DEBUG_INFO(phy_db->trans, "%s(%d): [PHYDB] GET: Type %d , Size: %d\n", __func__, __LINE__,
-                   type, *size);
-
-    return 0;
-}
-#if IS_ENABLED(CPTCFG_IWLXVT)
-IWL_EXPORT_SYMBOL(iwl_phy_db_get_section_data);
-#endif
-
-static int iwl_send_phy_db_cmd(struct iwl_phy_db* phy_db, uint16_t type, uint16_t length,
-                               void* data) {
-    struct iwl_phy_db_cmd phy_db_cmd;
-    struct iwl_host_cmd cmd = {
-        .id = PHY_DB_CMD,
-    };
-
-    IWL_DEBUG_INFO(phy_db->trans, "Sending PHY-DB hcmd of type %d, of length %d\n", type, length);
-
-    /* Set phy db cmd variables */
-    phy_db_cmd.type = cpu_to_le16(type);
-    phy_db_cmd.length = cpu_to_le16(length);
-
-    /* Set hcmd variables */
-    cmd.data[0] = &phy_db_cmd;
-    cmd.len[0] = sizeof(struct iwl_phy_db_cmd);
-    cmd.data[1] = data;
-    cmd.len[1] = length;
-    cmd.dataflags[1] = IWL_HCMD_DFL_NOCOPY;
-
-    return iwl_trans_send_cmd(phy_db->trans, &cmd);
+    /*
+     * Looking for the first channel group that its max channel is
+     * higher then wanted channel.
+     */
+    if (le16_to_cpu(txp_chg->max_channel_idx) >= ch_index) {
+      return i;
+    }
+  }
+  return 0xff;
 }
 
-static int iwl_phy_db_send_all_channel_groups(struct iwl_phy_db* phy_db,
-                                              enum iwl_phy_db_section_type type,
-                                              uint8_t max_ch_groups) {
-    uint16_t i;
-    int err;
-    struct iwl_phy_db_entry* entry;
+static zx_status_t iwl_phy_db_get_section_data(struct iwl_phy_db* phy_db, uint32_t type,
+                                               uint8_t** data, uint16_t* size, uint16_t ch_id) {
+  struct iwl_phy_db_entry* entry;
+  uint16_t ch_group_id = 0;
 
-    /* Send all the  channel specific groups to operational fw */
-    for (i = 0; i < max_ch_groups; i++) {
-        entry = iwl_phy_db_get_section(phy_db, type, i);
-        if (!entry) { return -EINVAL; }
+  if (!phy_db) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-        if (!entry->size) { continue; }
+  /* find wanted channel group */
+  if (type == IWL_PHY_DB_CALIB_CHG_PAPD) {
+    ch_group_id = channel_id_to_papd(ch_id);
+  } else if (type == IWL_PHY_DB_CALIB_CHG_TXP) {
+    ch_group_id = channel_id_to_txp(phy_db, ch_id);
+  }
 
-        /* Send the requested PHY DB section */
-        err = iwl_send_phy_db_cmd(phy_db, type, entry->size, entry->data);
-        if (err) {
-            IWL_ERR(phy_db->trans, "Can't SEND phy_db section %d (%d), err %d\n", type, i, err);
-            return err;
-        }
+  entry = iwl_phy_db_get_section(phy_db, type, ch_group_id);
+  if (!entry) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-        IWL_DEBUG_INFO(phy_db->trans, "Sent PHY_DB HCMD, type = %d num = %d\n", type, i);
-    }
+  *data = entry->data;
+  *size = entry->size;
 
-    return 0;
+  IWL_DEBUG_INFO(phy_db->trans, "%s(%d): [PHYDB] GET: Type %d , Size: %d\n", __func__, __LINE__,
+                 type, *size);
+
+  return ZX_OK;
 }
 
-int iwl_send_phy_db_data(struct iwl_phy_db* phy_db) {
-    uint8_t* data = NULL;
-    uint16_t size = 0;
-    int err;
+static zx_status_t iwl_send_phy_db_cmd(struct iwl_phy_db* phy_db, uint16_t type, uint16_t length,
+                                       void* data) {
+  struct iwl_phy_db_cmd phy_db_cmd;
+  struct iwl_host_cmd cmd = {
+      .id = PHY_DB_CMD,
+  };
 
-    IWL_DEBUG_INFO(phy_db->trans, "Sending phy db data and configuration to runtime image\n");
+  IWL_DEBUG_INFO(phy_db->trans, "Sending PHY-DB hcmd of type %d, of length %d\n", type, length);
 
-    /* Send PHY DB CFG section */
-    err = iwl_phy_db_get_section_data(phy_db, IWL_PHY_DB_CFG, &data, &size, 0);
-    if (err) {
-        IWL_ERR(phy_db->trans, "Cannot get Phy DB cfg section\n");
-        return err;
-    }
+  /* Set phy db cmd variables */
+  phy_db_cmd.type = cpu_to_le16(type);
+  phy_db_cmd.length = cpu_to_le16(length);
 
-    err = iwl_send_phy_db_cmd(phy_db, IWL_PHY_DB_CFG, size, data);
-    if (err) {
-        IWL_ERR(phy_db->trans, "Cannot send HCMD of  Phy DB cfg section\n");
-        return err;
-    }
+  /* Set hcmd variables */
+  cmd.data[0] = &phy_db_cmd;
+  cmd.len[0] = sizeof(struct iwl_phy_db_cmd);
+  cmd.data[1] = data;
+  cmd.len[1] = length;
+  cmd.dataflags[1] = IWL_HCMD_DFL_NOCOPY;
 
-    err = iwl_phy_db_get_section_data(phy_db, IWL_PHY_DB_CALIB_NCH, &data, &size, 0);
-    if (err) {
-        IWL_ERR(phy_db->trans, "Cannot get Phy DB non specific channel section\n");
-        return err;
-    }
-
-    err = iwl_send_phy_db_cmd(phy_db, IWL_PHY_DB_CALIB_NCH, size, data);
-    if (err) {
-        IWL_ERR(phy_db->trans, "Cannot send HCMD of Phy DB non specific channel section\n");
-        return err;
-    }
-
-    /* Send all the TXP channel specific data */
-    err =
-        iwl_phy_db_send_all_channel_groups(phy_db, IWL_PHY_DB_CALIB_CHG_PAPD, phy_db->n_group_papd);
-    if (err) {
-        IWL_ERR(phy_db->trans, "Cannot send channel specific PAPD groups\n");
-        return err;
-    }
-
-    /* Send all the TXP channel specific data */
-    err = iwl_phy_db_send_all_channel_groups(phy_db, IWL_PHY_DB_CALIB_CHG_TXP, phy_db->n_group_txp);
-    if (err) {
-        IWL_ERR(phy_db->trans, "Cannot send channel specific TX power groups\n");
-        return err;
-    }
-
-    IWL_DEBUG_INFO(phy_db->trans, "Finished sending phy db non channel data\n");
-    return 0;
+  return iwl_trans_send_cmd(phy_db->trans, &cmd);
 }
-IWL_EXPORT_SYMBOL(iwl_send_phy_db_data);
-#endif  // NEEDS_PORTING
+
+static zx_status_t iwl_phy_db_send_all_channel_groups(struct iwl_phy_db* phy_db,
+                                                      enum iwl_phy_db_section_type type,
+                                                      uint8_t max_ch_groups) {
+  uint16_t i;
+  int err;
+  struct iwl_phy_db_entry* entry;
+
+  /* Send all the  channel specific groups to operational fw */
+  for (i = 0; i < max_ch_groups; i++) {
+    entry = iwl_phy_db_get_section(phy_db, type, i);
+    if (!entry) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (!entry->size) {
+      continue;
+    }
+
+    /* Send the requested PHY DB section */
+    err = iwl_send_phy_db_cmd(phy_db, type, entry->size, entry->data);
+    if (err) {
+      IWL_ERR(phy_db->trans, "Can't SEND phy_db section %d (%d), err %d\n", type, i, err);
+      return err;
+    }
+
+    IWL_DEBUG_INFO(phy_db->trans, "Sent PHY_DB HCMD, type = %d num = %d\n", type, i);
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t iwl_send_phy_db_data(struct iwl_phy_db* phy_db) {
+  uint8_t* data = NULL;
+  uint16_t size = 0;
+  zx_status_t err;
+
+  IWL_DEBUG_INFO(phy_db->trans, "Sending phy db data and configuration to runtime image\n");
+
+  /* Send PHY DB CFG section */
+  err = iwl_phy_db_get_section_data(phy_db, IWL_PHY_DB_CFG, &data, &size, 0);
+  if (err) {
+    IWL_ERR(phy_db->trans, "Cannot get Phy DB cfg section\n");
+    return err;
+  }
+
+  err = iwl_send_phy_db_cmd(phy_db, IWL_PHY_DB_CFG, size, data);
+  if (err) {
+    IWL_ERR(phy_db->trans, "Cannot send HCMD of  Phy DB cfg section\n");
+    return err;
+  }
+
+  err = iwl_phy_db_get_section_data(phy_db, IWL_PHY_DB_CALIB_NCH, &data, &size, 0);
+  if (err) {
+    IWL_ERR(phy_db->trans, "Cannot get Phy DB non specific channel section\n");
+    return err;
+  }
+
+  err = iwl_send_phy_db_cmd(phy_db, IWL_PHY_DB_CALIB_NCH, size, data);
+  if (err) {
+    IWL_ERR(phy_db->trans, "Cannot send HCMD of Phy DB non specific channel section\n");
+    return err;
+  }
+
+  /* Send all the TXP channel specific data */
+  err = iwl_phy_db_send_all_channel_groups(phy_db, IWL_PHY_DB_CALIB_CHG_PAPD, phy_db->n_group_papd);
+  if (err) {
+    IWL_ERR(phy_db->trans, "Cannot send channel specific PAPD groups\n");
+    return err;
+  }
+
+  /* Send all the TXP channel specific data */
+  err = iwl_phy_db_send_all_channel_groups(phy_db, IWL_PHY_DB_CALIB_CHG_TXP, phy_db->n_group_txp);
+  if (err) {
+    IWL_ERR(phy_db->trans, "Cannot send channel specific TX power groups\n");
+    return err;
+  }
+
+  IWL_DEBUG_INFO(phy_db->trans, "Finished sending phy db non channel data\n");
+  return ZX_OK;
+}

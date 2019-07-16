@@ -53,6 +53,6 @@ int iwl_phy_db_get_section_data(struct iwl_phy_db* phy_db, uint32_t type, uint8_
                                 uint16_t* size, uint16_t ch_id);
 #endif
 
-int iwl_send_phy_db_data(struct iwl_phy_db* phy_db);
+zx_status_t iwl_send_phy_db_data(struct iwl_phy_db* phy_db);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_PHY_DB_H_
