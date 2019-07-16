@@ -33,14 +33,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include "fw/api/commands.h"
-#include "iwl-drv.h"
-#include "runtime.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/commands.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/runtime.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
 
 static void iwl_parse_shared_mem_22000(struct iwl_fw_runtime* fwrt, struct iwl_rx_packet* pkt) {
   struct iwl_shared_mem_cfg* mem_cfg = (void*)pkt->data;
-  int i, lmac;
-  int lmac_num = le32_to_cpu(mem_cfg->lmac_num);
+  size_t i, lmac;
+  size_t lmac_num = le32_to_cpu(mem_cfg->lmac_num);
 
   if (WARN_ON(lmac_num > ARRAY_SIZE(mem_cfg->lmac_smem))) {
     return;
@@ -62,7 +62,7 @@ static void iwl_parse_shared_mem_22000(struct iwl_fw_runtime* fwrt, struct iwl_r
 
 static void iwl_parse_shared_mem(struct iwl_fw_runtime* fwrt, struct iwl_rx_packet* pkt) {
   struct iwl_shared_mem_cfg_v2* mem_cfg = (void*)pkt->data;
-  int i;
+  size_t i;
 
   fwrt->smem_cfg.num_lmacs = 1;
 
@@ -122,4 +122,3 @@ void iwl_get_shared_mem_conf(struct iwl_fw_runtime* fwrt) {
 
   iwl_free_resp(&cmd);
 }
-IWL_EXPORT_SYMBOL(iwl_get_shared_mem_conf);
