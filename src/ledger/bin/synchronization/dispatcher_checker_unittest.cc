@@ -25,8 +25,7 @@ TEST_F(DispatcherCheckerTest, MainLoopIsDefault) {
   RunLoopUntilIdle();
 }
 
-// TODO(kerneis): enable once https://fuchsia-review.googlesource.com/c/fuchsia/+/299828 has rolled.
-TEST_F(DispatcherCheckerTest, DISABLED_IoLoopIsNotDefault) {
+TEST_F(DispatcherCheckerTest, IoLoopIsNotDefault) {
   DispatcherChecker checker;
   async::PostTask(environment_.io_dispatcher(),
                   [&checker] { EXPECT_FALSE(checker.IsCreationDispatcherCurrent()); });

@@ -186,7 +186,6 @@ bool TestLoop::RunUntil(zx::time deadline) {
         auto& current_subloop = subloops_[current_index];
 
         did_work |= current_subloop.DispatchNextDueMessage();
-        async_set_default_dispatcher(default_dispatcher_);
     }
     is_running_ = false;
     has_quit_ = false;

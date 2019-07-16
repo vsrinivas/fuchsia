@@ -451,6 +451,39 @@ bool NestedTasksAndWaitsAreDispatched() {
     END_TEST;
 }
 
+bool DefaultDispatcherIsCurrentLoop() {
+    BEGIN_TEST;
+
+    async::TestLoop loop;
+    auto subloop = loop.StartNewLoop();
+    bool main_loop_task_run = false;
+    async_dispatcher_t* main_loop_task_dispatcher = nullptr;
+    bool sub_loop_task_run = false;
+    async_dispatcher_t* sub_loop_task_dispatcher = nullptr;
+
+    async::PostTask(
+        loop.dispatcher(),
+        [&] {
+            main_loop_task_run = true;
+            main_loop_task_dispatcher = async_get_default_dispatcher();
+        });
+
+    async::PostTask(
+        subloop->dispatcher(),
+        [&] {
+            sub_loop_task_run = true;
+            sub_loop_task_dispatcher = async_get_default_dispatcher();
+        });
+
+    loop.RunUntilIdle();
+    EXPECT_TRUE(main_loop_task_run);
+    EXPECT_EQ(main_loop_task_dispatcher, loop.dispatcher());
+    EXPECT_TRUE(sub_loop_task_run);
+    EXPECT_EQ(sub_loop_task_dispatcher, subloop->dispatcher());
+
+    END_TEST;
+}
+
 bool HugeAmountOfTaskAreDispatched() {
     BEGIN_TEST;
 
@@ -787,6 +820,7 @@ RUN_TEST(HugeAmountOfTaskAreDispatched)
 RUN_TEST(TasksAreDispatched)
 RUN_TEST(SameDeadlinesDispatchInPostingOrder)
 RUN_TEST(NestedTasksAreDispatched)
+RUN_TEST(DefaultDispatcherIsCurrentLoop)
 RUN_TEST(TimeIsCorrectWhileDispatching)
 RUN_TEST(TasksAreCanceled)
 RUN_TEST(TimeIsAdvanced)

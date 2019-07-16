@@ -13,6 +13,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/async/task.h>
 #include <lib/async/wait.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/port.h>
 #include <lib/zx/time.h>
 
@@ -271,6 +272,9 @@ bool TestLoopDispatcher::DispatchNextDueMessage() {
     if (activated_.empty()) {
         return false;
     }
+    async_dispatcher_t* previous_dispatcher = async_get_default_dispatcher();
+    async_set_default_dispatcher(this);
+    auto restore = fit::defer([=] { async_set_default_dispatcher(previous_dispatcher); });
 
     auto activated_element = std::move(activated_.front());
     activated_.erase(activated_.begin());
