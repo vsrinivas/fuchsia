@@ -7,7 +7,7 @@ run them on the device.
 
 ## Explore the hello_world example
 
-Go ahead and open the `examples/hello_world/BUILD.gn` file.
+Open the [`examples/hello_world/BUILD.gn`](/examples/hello_world/BUILD.gn) file.
 
 If you aren't familiar with GN, take a look at the
 [introductory presentation](https://docs.google.com/presentation/d/15Zwb53JcncHfEwHpnG_PoIbbzQ3GQi_cpujYwbpcbZo/view#slide=id.g119d702868_0_12)
@@ -29,10 +29,10 @@ group("hello_world") {
 }
 ```
 
-Note: You can look at the `build/package.gni` file to learn more about how
-Fuchsia packages are defined by GN.
+Note: You can look at the [`build/package.gni`](/build/package.gni) file to learn
+more about how Fuchsia packages are defined by GN.
 
-This sample outputs `Hello, world!` and is written in both C++ and Rust. Each
+This example outputs `Hello, world!` and is written in both C++ and Rust. Each
 language-dependent directory has its own `BUILD.gn` file that defines a package
 for the specific example, as well as a `meta` subdirectory with `.cmx` files.
 
@@ -51,7 +51,7 @@ examples:
     fx serve
     ```
 
-1.  In another shell tab, run:
+1.  In another terminal, run:
 
     ```sh
     fx shell run fuchsia-pkg://fuchsia.com/hello_world_cpp#meta/hello_world_cpp.cmx
@@ -99,7 +99,7 @@ You now have a build that includes the examples.
     fx serve
     ```
 
-1.  In another shell tab, run:
+1.  In another terminal, run:
 
     ```sh
     fx shell run fuchsia-pkg://fuchsia.com/hello_world_cpp#meta/hello_world_cpp.cmx
@@ -145,7 +145,7 @@ You can explore what components are in your product configuration using the
     fx shell locate hello_world_cpp
     ```
 
-*   Find all runnable components in your universe.
+*   Find all runnable components.
 
     ```
     fx shell locate --list cmx
