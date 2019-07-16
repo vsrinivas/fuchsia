@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_FX_LOADER_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_FX_LOADER_H_
+#ifndef SRC_MEDIA_AUDIO_LIB_EFFECTS_LOADER_EFFECTS_LOADER_H_
+#define SRC_MEDIA_AUDIO_LIB_EFFECTS_LOADER_EFFECTS_LOADER_H_
 
 #include <zircon/types.h>
 
@@ -22,10 +22,10 @@ namespace media::audio {
 //    ZX_ERR_INVALID_ARGS   - caller parameter was unexpectedly null
 //    ZX_ERR_OUT_OF_RANGE   - caller parameter was too high or too low
 //
-class FxLoader {
+class EffectsLoader {
  public:
-  FxLoader() = default;
-  ~FxLoader() { (void)UnloadLibrary(); }
+  EffectsLoader() = default;
+  ~EffectsLoader() { (void)UnloadLibrary(); }
 
   zx_status_t LoadLibrary();
   zx_status_t UnloadLibrary();
@@ -82,4 +82,4 @@ class FxLoader {
 
 }  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_FX_LOADER_H_
+#endif  // SRC_MEDIA_AUDIO_LIB_EFFECTS_LOADER_EFFECTS_LOADER_H_

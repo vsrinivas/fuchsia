@@ -18,7 +18,7 @@
 #include "src/media/audio/audio_core/audio_plug_detector.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
 #include "src/media/audio/audio_core/fwd_decls.h"
-#include "src/media/audio/audio_core/mixer/fx_loader.h"
+#include "src/media/audio/lib/effects_loader/effects_loader.h"
 
 namespace media::audio {
 
@@ -227,7 +227,7 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
   async::TaskMethod<AudioDeviceManager, &AudioDeviceManager::CommitDirtySettingsThunk>
       commit_settings_task_{this};
 
-  FxLoader fx_loader_;
+  EffectsLoader effects_loader_;
 };
 
 }  // namespace media::audio

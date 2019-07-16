@@ -12,7 +12,6 @@
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/audio_plug_detector.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
-#include "src/media/audio/audio_core/mixer/fx_loader.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/throttle_output.h"
 
@@ -52,7 +51,7 @@ zx_status_t AudioDeviceManager::Init() {
   }
 
   // Initialize the FxLoader and load the device effect library, if present.
-  res = fx_loader_.LoadLibrary();
+  res = effects_loader_.LoadLibrary();
   if (res == ZX_ERR_ALREADY_EXISTS) {
     FXL_LOG(ERROR) << "FxLoader already started!";
   } else if (res != ZX_OK) {
@@ -95,7 +94,7 @@ void AudioDeviceManager::Shutdown() {
   }
 
   // Step #6: Close and unload the device effect library SO.
-  fx_loader_.UnloadLibrary();
+  effects_loader_.UnloadLibrary();
 
   // Step #7: Shut down the throttle output.
   throttle_output_->Shutdown();

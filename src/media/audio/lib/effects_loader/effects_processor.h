@@ -2,31 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_FX_PROCESSOR_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_FX_PROCESSOR_H_
+#ifndef SRC_MEDIA_AUDIO_LIB_EFFECTS_LOADER_EFFECTS_PROCESSOR_H_
+#define SRC_MEDIA_AUDIO_LIB_EFFECTS_LOADER_EFFECTS_PROCESSOR_H_
 
+#include <lib/media/audio_dfx/cpp/audio_device_fx.h>
 #include <zircon/types.h>
 
 #include <vector>
 
-#include "lib/media/audio_dfx/cpp/audio_device_fx.h"
-#include "src/media/audio/audio_core/mixer/fx_loader.h"
+#include "src/media/audio/lib/effects_loader/effects_loader.h"
 
 namespace media::audio {
 
-// FxProcessor represents a chain of active effect instances, attached to a
+// EffectsProcessor represents a chain of active effect instances, attached to a
 // specific device instance. It manages creation and sequencing of instances and
 // allows callers to make a single Process or Flush call at media runtime.
 //
-// Internally, FxProcessor maintains a vector of effect instances. They all
-// originate from the same .SO library (hence share a single FxLoader) and run
+// Internally, EffectsProcessor maintains a vector of effect instances. They all
+// originate from the same .SO library (hence share a single EffectsLoader) and run
 // at the same frame rate. This class is designed to be used synchronously and
 // is not explicitly multi-thread-safe.
-class FxProcessor {
+class EffectsProcessor {
  public:
-  FxProcessor(FxLoader* loader, uint32_t frame_rate)
-      : fx_loader_(loader), frame_rate_(frame_rate) {}
-  ~FxProcessor();
+  EffectsProcessor(EffectsLoader* loader, uint32_t frame_rate)
+      : effects_loader_(loader), frame_rate_(frame_rate) {}
+  ~EffectsProcessor();
 
   // This maps to the corresponding Create ABI call, inserting it at [position].
   fx_token_t CreateFx(uint32_t effect_id, uint16_t channels_in, uint16_t channels_out,
@@ -75,7 +75,7 @@ class FxProcessor {
   // Used internally, this removes an already-created instance from the chain.
   zx_status_t RemoveFx(fx_token_t fx_token);
 
-  media::audio::FxLoader* fx_loader_;
+  media::audio::EffectsLoader* effects_loader_;
   uint32_t frame_rate_;
 
   std::vector<fx_token_t> fx_chain_;
@@ -83,4 +83,4 @@ class FxProcessor {
 
 }  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_FX_PROCESSOR_H_
+#endif  // SRC_MEDIA_AUDIO_LIB_EFFECTS_LOADER_EFFECTS_PROCESSOR_H_

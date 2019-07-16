@@ -9,3 +9,10 @@ group("lib") {
     "wav_writer",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    "effects_loader:tests",
+  ]
+}
