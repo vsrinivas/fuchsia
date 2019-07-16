@@ -91,21 +91,6 @@ Allowed operations: **get**
 
 The base address of the vDSO mapping, or zero.
 
-### ZX_PROP_JOB_IMPORTANCE
-
-*handle* type: **Job**
-
-*value* type: `zx_job_importance_t`
-
-Allowed operations: **get**, **set**
-
-A hint about how important a job is; used to rank jobs for the out-of-memory
-(OOM) killer.
-
-Additional errors:
-
-*   **ZX_ERR_OUT_OF_RANGE**: If the importance value is not valid
-
 ### ZX_PROP_SOCKET_RX_THRESHOLD
 
 *handle* type: **Socket**
