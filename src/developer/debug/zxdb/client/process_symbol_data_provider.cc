@@ -14,6 +14,7 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/common/function.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -43,7 +44,7 @@ debug_ipc::Arch ProcessSymbolDataProvider::GetArch() { return arch_; }
 void ProcessSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
                                                GetMemoryCallback callback) {
   if (!process_) {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(callback)]() {
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(callback)]() mutable {
       cb(ProcessDestroyedErr(), std::vector<uint8_t>());
     });
     return;
@@ -53,7 +54,7 @@ void ProcessSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
   // system. Prevent those.
   if (size > 1024 * 1024) {
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [address, size, cb = std::move(callback)]() {
+        FROM_HERE, [address, size, cb = std::move(callback)]() mutable {
           cb(Err(fxl::StringPrintf("Memory request for %u bytes at 0x%" PRIx64 " is too large.",
                                    size, address)),
              std::vector<uint8_t>());
@@ -62,7 +63,9 @@ void ProcessSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
   }
 
   process_->ReadMemory(
-      address, size, [address, size, cb = std::move(callback)](const Err& err, MemoryDump dump) {
+      address, size,
+      [address, size, cb = FitCallbackToStdFunction(std::move(callback))](const Err& err,
+                                                                          MemoryDump dump) {
         if (err.has_error()) {
           cb(err, std::vector<uint8_t>());
           return;
@@ -95,13 +98,13 @@ void ProcessSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
 }
 
 void ProcessSymbolDataProvider::WriteMemory(uint64_t address, std::vector<uint8_t> data,
-                                            std::function<void(const Err&)> cb) {
+                                            WriteMemoryCallback cb) {
   if (!process_) {
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb = std::move(cb)]() { cb(ProcessDestroyedErr()); });
+        FROM_HERE, [cb = std::move(cb)]() mutable { cb(ProcessDestroyedErr()); });
     return;
   }
-  process_->WriteMemory(address, std::move(data), std::move(cb));
+  process_->WriteMemory(address, std::move(data), FitCallbackToStdFunction(std::move(cb)));
 }
 
 }  // namespace zxdb

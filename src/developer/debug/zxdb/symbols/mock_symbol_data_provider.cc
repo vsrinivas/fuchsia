@@ -50,7 +50,8 @@ bool MockSymbolDataProvider::GetRegister(debug_ipc::RegisterID id, std::optional
 void MockSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
                                               GetRegisterCallback callback) {
   debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [callback, weak_provider = weak_factory_.GetWeakPtr(), id]() {
+      FROM_HERE,
+      [callback = std::move(callback), weak_provider = weak_factory_.GetWeakPtr(), id]() mutable {
         if (!weak_provider) {
           // Destroyed before callback ready.
           return;
@@ -67,7 +68,8 @@ std::optional<uint64_t> MockSymbolDataProvider::GetFrameBase() { return bp_; }
 
 void MockSymbolDataProvider::GetFrameBaseAsync(GetRegisterCallback callback) {
   debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [callback, weak_provider = weak_factory_.GetWeakPtr()]() {
+      FROM_HERE,
+      [callback = std::move(callback), weak_provider = weak_factory_.GetWeakPtr()]() mutable {
         if (!weak_provider) {
           // Destroyed before callback ready.
           return;
@@ -81,16 +83,17 @@ uint64_t MockSymbolDataProvider::GetCanonicalFrameAddress() const { return cfa_;
 void MockSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
                                             GetMemoryCallback callback) {
   std::vector<uint8_t> result = memory_.ReadMemory(address, size);
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
-                                              [callback, result]() { callback(Err(), result); });
+  debug_ipc::MessageLoop::Current()->PostTask(
+      FROM_HERE, [callback = std::move(callback), result]() mutable { callback(Err(), result); });
 }
 
 void MockSymbolDataProvider::WriteMemory(uint64_t address, std::vector<uint8_t> data,
-                                         std::function<void(const Err&)> cb) {
+                                         WriteMemoryCallback cb) {
   memory_writes_.emplace_back(address, std::move(data));
 
   // Declare success.
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb]() { cb(Err()); });
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
+                                              [cb = std::move(cb)]() mutable { cb(Err()); });
 }
 
 }  // namespace zxdb

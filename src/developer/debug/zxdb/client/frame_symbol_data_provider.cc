@@ -14,6 +14,7 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/common/function.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -71,7 +72,7 @@ void FrameSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
   if (!frame_) {
     // Frame deleted out from under us.
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [id, cb = std::move(callback)]() { cb(RegisterUnavailableErr(id), 0); });
+        FROM_HERE, [id, cb = std::move(callback)]() mutable { cb(RegisterUnavailableErr(id), 0); });
     return;
   }
 
@@ -82,12 +83,13 @@ void FrameSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
     std::optional<uint64_t> value;
     GetRegister(id, &value);
 
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [id, value, cb = std::move(callback)]() {
-      if (value)
-        cb(Err(), *value);
-      else
-        cb(RegisterUnavailableErr(id), 0);
-    });
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
+                                                [id, value, cb = std::move(callback)]() mutable {
+                                                  if (value)
+                                                    cb(Err(), *value);
+                                                  else
+                                                    cb(RegisterUnavailableErr(id), 0);
+                                                });
     return;
   }
 
@@ -96,7 +98,7 @@ void FrameSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
   //  and vector registers here.
   //}
 
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [id, cb = std::move(callback)]() {
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [id, cb = std::move(callback)]() mutable {
     cb(Err(fxl::StringPrintf("Register %s unavailable.", debug_ipc::RegisterIDToString(id))), 0);
   });
 }
@@ -110,11 +112,13 @@ std::optional<uint64_t> FrameSymbolDataProvider::GetFrameBase() {
 void FrameSymbolDataProvider::GetFrameBaseAsync(GetRegisterCallback cb) {
   if (!frame_) {
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb = std::move(cb)]() { cb(CallFrameDestroyedErr(), 0); });
+        FROM_HERE,
+        [cb = FitCallbackToStdFunction(std::move(cb))]() { cb(CallFrameDestroyedErr(), 0); });
     return;
   }
 
-  frame_->GetBasePointerAsync([cb = std::move(cb)](uint64_t value) { cb(Err(), value); });
+  frame_->GetBasePointerAsync(
+      [cb = FitCallbackToStdFunction(std::move(cb))](uint64_t value) { cb(Err(), value); });
 }
 
 uint64_t FrameSymbolDataProvider::GetCanonicalFrameAddress() const {

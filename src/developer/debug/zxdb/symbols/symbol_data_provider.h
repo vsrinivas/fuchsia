@@ -11,6 +11,7 @@
 #include <optional>
 #include <vector>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 
@@ -36,8 +37,9 @@ class Err;
 // asynchronous.
 class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> {
  public:
-  using GetMemoryCallback = std::function<void(const Err&, std::vector<uint8_t>)>;
-  using GetRegisterCallback = std::function<void(const Err&, uint64_t)>;
+  using GetMemoryCallback = fit::callback<void(const Err&, std::vector<uint8_t>)>;
+  using GetRegisterCallback = fit::callback<void(const Err&, uint64_t)>;
+  using WriteMemoryCallback = fit::callback<void(const Err&)>;
 
   virtual debug_ipc::Arch GetArch();
 
@@ -89,8 +91,7 @@ class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> 
 
   // Asynchronously writes to the given memory. The callback will be issued
   // when the write is complete.
-  virtual void WriteMemory(uint64_t address, std::vector<uint8_t> data,
-                           std::function<void(const Err&)> cb);
+  virtual void WriteMemory(uint64_t address, std::vector<uint8_t> data, WriteMemoryCallback cb);
 
  protected:
   FRIEND_MAKE_REF_COUNTED(SymbolDataProvider);

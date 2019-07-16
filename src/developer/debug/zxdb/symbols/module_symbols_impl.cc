@@ -50,20 +50,20 @@ class GlobalSymbolDataProvider : public SymbolDataProvider {
   debug_ipc::Arch GetArch() override { return debug_ipc::Arch::kUnknown; }
   void GetRegisterAsync(debug_ipc::RegisterID, GetRegisterCallback callback) override {
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb = std::move(callback)]() { cb(GetContextError(), 0); });
+        FROM_HERE, [cb = std::move(callback)]() mutable { cb(GetContextError(), 0); });
   }
   void GetFrameBaseAsync(GetRegisterCallback callback) override {
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb = std::move(callback)]() { cb(GetContextError(), 0); });
+        FROM_HERE, [cb = std::move(callback)]() mutable { cb(GetContextError(), 0); });
   }
   void GetMemoryAsync(uint64_t address, uint32_t size, GetMemoryCallback callback) override {
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb = std::move(callback)]() { cb(GetContextError(), std::vector<uint8_t>()); });
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(callback)]() mutable {
+      cb(GetContextError(), std::vector<uint8_t>());
+    });
   }
-  void WriteMemory(uint64_t address, std::vector<uint8_t> data,
-                   std::function<void(const Err&)> cb) override {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
-                                                [cb = std::move(cb)]() { cb(GetContextError()); });
+  void WriteMemory(uint64_t address, std::vector<uint8_t> data, WriteMemoryCallback cb) override {
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [cb = std::move(cb)]() mutable { cb(GetContextError()); });
   }
 };
 
