@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <blobfs/ring-buffer.h>
-#include <blobfs/unbuffered-operations-builder.h>
 
 #include <blobfs/format.h>
 #include <blobfs/unbuffered-operations-builder.h>

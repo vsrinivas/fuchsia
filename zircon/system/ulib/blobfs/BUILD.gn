@@ -55,6 +55,7 @@ library("blobfs") {
       "blob-cache.cc",
       "blob.cc",
       "blobfs.cc",
+      "blocking-ring-buffer.cc",
       "buffer.cc",
       "cache-node.cc",
       "compression/blob-compressor.cc",

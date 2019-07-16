@@ -68,6 +68,9 @@ public:
     VmoBuffer* buffer() {
         return &buffer_;
     }
+    const VmoBuffer* buffer() const {
+        return &buffer_;
+    }
 
     // Returns the vmoid of the underlying RingBuffer.
     //
@@ -122,11 +125,7 @@ public:
     RingBufferReservation& operator=(const RingBufferReservation&) = delete;
     RingBufferReservation(RingBufferReservation&& other);
     RingBufferReservation& operator=(RingBufferReservation&& other);
-    ~RingBufferReservation();
-
-    // Unreserves the reservation. This will cause |Reserved()| to return
-    // false for the duration of the |RingBufferReservation|'s lifetime.
-    void Reset();
+    virtual ~RingBufferReservation();
 
     // Copies from |in_requests|, at the provided |offset| into this reservation.
     //
@@ -162,12 +161,17 @@ public:
     void* Data(size_t index);
     const void* Data(size_t index) const;
 
-private:
+protected:
     // Returns true if the reservation holds blocks in a |RingBuffer|.
     bool Reserved() const {
         return buffer_ != nullptr;
     }
 
+    // Unreserves the reservation. This will cause |Reserved()| to return
+    // false for the duration of the |RingBufferReservation|'s lifetime.
+    void Reset();
+
+private:
     internal::RingBufferState* buffer_ = nullptr;
     VmoBufferView view_;
 };

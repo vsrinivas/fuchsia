@@ -123,6 +123,7 @@ void RingBufferReservation::Reset() {
     }
     buffer_ = nullptr;
     view_ = VmoBufferView();
+    ZX_DEBUG_ASSERT(!Reserved());
 }
 
 zx_status_t RingBufferReservation::CopyRequests(
@@ -229,7 +230,6 @@ zx_status_t RingBuffer::Create(VmoidRegistry* vmoid_registry, size_t blocks, con
     VmoBuffer buffer;
     zx_status_t status = buffer.Initialize(vmoid_registry, blocks, label);
     if (status != ZX_OK) {
-        FS_TRACE_ERROR("RingBuffer: Failed to create internal buffer\n");
         return status;
     }
 

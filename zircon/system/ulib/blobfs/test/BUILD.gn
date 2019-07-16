@@ -19,6 +19,7 @@ test("blobfs-unit") {
     "allocator-test.cc",
     "background-executor-test.cc",
     "blob-cache-test.cc",
+    "blocking-ring-buffer-test.cc",
     "compressor-test.cc",
     "create-tests.cc",
     "extent-reserver-test.cc",
