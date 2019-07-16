@@ -7,15 +7,15 @@
 #include <algorithm>
 
 #include <fbl/unique_ptr.h>
-#include <fuchsia/mem/c/fidl.h>
+#include <fuchsia/mem/llcpp/fidl.h>
 #include <lib/zx/vmo.h>
 
 namespace paver {
 
 class VmoReader {
 public:
-    VmoReader(const fuchsia_mem_Buffer& buffer)
-        : vmo_(buffer.vmo), size_(buffer.size) {}
+    VmoReader(::llcpp::fuchsia::mem::Buffer buffer)
+        : vmo_(std::move(buffer.vmo)), size_(buffer.size) {}
 
     zx_status_t Read(void* buf, size_t buf_size, size_t* size_actual) {
         if (offset_ >= size_) {

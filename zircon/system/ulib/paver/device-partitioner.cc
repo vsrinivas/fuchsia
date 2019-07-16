@@ -10,12 +10,15 @@
 #include <libgen.h>
 
 #include <chromeos-disk-setup/chromeos-disk-setup.h>
+#undef GUID_LEN
 #include <fbl/auto_call.h>
 #include <fbl/function.h>
+#include <fbl/string_buffer.h>
 #include <fs-management/fvm.h>
-#include <fuchsia/device/c/fidl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/skipblock/c/fidl.h>
+#include <fuchsia/device/llcpp/fidl.h>
+#include <fuchsia/hardware/block/llcpp/fidl.h>
+#include <fuchsia/hardware/block/partition/llcpp/fidl.h>
+#include <fuchsia/hardware/skipblock/llcpp/fidl.h>
 #include <gpt/cros.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -27,6 +30,7 @@
 #include <zxcrypt/volume.h>
 
 #include <utility>
+#include <string>
 
 #include "pave-logging.h"
 #include "pave-utils.h"
@@ -34,6 +38,10 @@
 namespace paver {
 
 namespace {
+
+namespace block = ::llcpp::fuchsia::hardware::block;
+namespace partition = ::llcpp::fuchsia::hardware::block::partition;
+namespace skipblock = ::llcpp::fuchsia::hardware::skipblock;
 
 constexpr char kEfiName[] = "EFI Gigaboot";
 constexpr char kGptDriverName[] = "/boot/driver/gpt.so";
@@ -136,22 +144,25 @@ zx_status_t OpenBlockPartition(const fbl::unique_fd& devfs_root, const uint8_t* 
 
     auto cb = [&](const fbl::unique_fd& fd) {
         fzl::UnownedFdioCaller caller(fd.get());
-        zx::unowned_channel channel(caller.borrow_channel());
-        fuchsia_hardware_block_partition_GUID guid;
-        zx_status_t io_status, status;
+        uint8_t out_buffer[std::max(
+            fidl::MaxSizeInChannel<partition::Partition::GetTypeGuidResponse>(),
+            fidl::MaxSizeInChannel<partition::Partition::GetInstanceGuidResponse>()
+        )];
+        partition::GUID* guid;
+        zx_status_t status;
         if (type_guid) {
-            io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(channel->get(),
-                                                                              &status, &guid);
-            if (io_status != ZX_OK || status != ZX_OK ||
-                memcmp(guid.value, type_guid, GUID_LEN) != 0) {
+            auto decoded = partition::Partition::Call::GetTypeGuid(
+                caller.channel(), fidl::BytePart::WrapEmpty(out_buffer), &status, &guid);
+            if (decoded.status != ZX_OK || status != ZX_OK ||
+                memcmp(guid->value.data(), type_guid, partition::GUID_LENGTH) != 0) {
                 return true;
             }
         }
         if (unique_guid) {
-            io_status = fuchsia_hardware_block_partition_PartitionGetInstanceGuid(channel->get(),
-                                                                                  &status, &guid);
-            if (io_status != ZX_OK || status != ZX_OK ||
-                memcmp(guid.value, unique_guid, GUID_LEN) != 0) {
+            auto decoded = partition::Partition::Call::GetInstanceGuid(
+                caller.channel(), fidl::BytePart::WrapEmpty(out_buffer), &status, &guid);
+            if (decoded.status != ZX_OK || status != ZX_OK ||
+                memcmp(guid->value.data(), unique_guid, partition::GUID_LENGTH) != 0) {
                 return true;
             }
         }
@@ -171,10 +182,12 @@ zx_status_t OpenSkipBlockPartition(const fbl::unique_fd& devfs_root, const uint8
         fzl::UnownedFdioCaller caller(fd.get());
 
         zx_status_t status;
-        fuchsia_hardware_skipblock_PartitionInfo info;
-        fuchsia_hardware_skipblock_SkipBlockGetPartitionInfo(caller.borrow_channel(), &status,
-                                                             &info);
-        if (status != ZX_OK || memcmp(info.partition_guid, type_guid, GUID_LEN) != 0) {
+        skipblock::PartitionInfo info;
+        auto io_status = skipblock::SkipBlock::Call::GetPartitionInfo(caller.channel(), &status,
+                                                                      &info);
+
+        if (io_status != ZX_OK || status != ZX_OK ||
+            memcmp(info.partition_guid.data(), type_guid, skipblock::GUID_LEN) != 0) {
             return true;
         }
         return false;
@@ -205,11 +218,12 @@ zx_status_t WipeBlockPartition(const fbl::unique_fd& devfs_root, const uint8_t* 
     }
 
     fzl::UnownedFdioCaller caller(fd.get());
-    fuchsia_hardware_block_BlockInfo info;
-    zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &status,
-                                                                &info);
-    if (io_status != ZX_OK) {
-        status = io_status;
+    uint8_t out_buffer[fidl::MaxSizeInChannel<block::Block::GetInfoResponse>()];
+    block::BlockInfo* info;
+    auto decoded = block::Block::Call::GetInfo(
+        caller.channel(), fidl::BytePart::WrapEmpty(out_buffer), &status, &info);
+    if (decoded.status != ZX_OK) {
+        status = decoded.status;
     }
     if (status != ZX_OK) {
         ERROR("Warning: Could not acquire block info: %s\n", zx_status_get_string(status));
@@ -218,10 +232,10 @@ zx_status_t WipeBlockPartition(const fbl::unique_fd& devfs_root, const uint8_t* 
 
     // Overwrite the first block to (hackily) ensure the destroyed partition
     // doesn't "reappear" in place.
-    char buf[info.block_size];
-    memset(buf, 0, info.block_size);
+    char buf[info->block_size];
+    memset(buf, 0, info->block_size);
 
-    if (pwrite(fd.get(), buf, info.block_size, 0) != info.block_size) {
+    if (pwrite(fd.get(), buf, info->block_size, 0) != info->block_size) {
         ERROR("Warning: Could not write to block device: %s\n", strerror(errno));
         return ZX_ERR_IO;
     }
@@ -279,7 +293,7 @@ fbl::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devf
  *                  GPT Common                        *
  *====================================================*/
 
-bool GptDevicePartitioner::FindTargetGptPath(const fbl::unique_fd& devfs_root, fbl::String* out) {
+bool GptDevicePartitioner::FindTargetGptPath(const fbl::unique_fd& devfs_root, std::string* out) {
     fbl::unique_fd d_fd(openat(devfs_root.get(), kBlockDevPath, O_RDONLY));
     if (!d_fd) {
         ERROR("Cannot inspect block devices\n");
@@ -298,33 +312,40 @@ bool GptDevicePartitioner::FindTargetGptPath(const fbl::unique_fd& devfs_root, f
         if (!fd) {
             continue;
         }
-        out->Set(PATH_MAX, '\0');
 
         zx::channel dev;
         zx_status_t status = fdio_get_service_handle(fd.release(), dev.reset_and_get_address());
 
-        fuchsia_hardware_block_BlockInfo info;
+        uint8_t out_buffer[std::max(
+            fidl::MaxSizeInChannel<block::Block::GetInfoResponse>(),
+            fidl::MaxSizeInChannel<::llcpp::fuchsia::device::Controller::GetTopologicalPathResponse>()
+        )];
+        block::BlockInfo* info;
 
-        zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(dev.get(),
-                                                                    &status, &info);
-        if (io_status != ZX_OK || status != ZX_OK) {
+        auto decoded = block::Block::Call::GetInfo(
+            zx::unowned(dev), fidl::BytePart::WrapEmpty(out_buffer), &status, &info);
+        if (decoded.status != ZX_OK || status != ZX_OK) {
             continue;
         }
-        size_t path_len;
-        char* data = const_cast<char*>(out->data());
-        io_status = fuchsia_device_ControllerGetTopologicalPath(dev.get(), &status, data,
-                                                                PATH_MAX - 1, &path_len);
-        if (io_status != ZX_OK || status != ZX_OK) {
+        if (info->flags & BLOCK_FLAG_REMOVABLE) {
             continue;
         }
-        data[path_len] = 0;
+        fidl::StringView path;
+        auto decoded2 = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
+            zx::unowned(dev), fidl::BytePart::WrapEmpty(out_buffer), &status, &path);
+        if (decoded2.status != ZX_OK || status != ZX_OK) {
+            continue;
+        }
+
+        std::string path_str(path.data(), static_cast<size_t>(path.size()));
 
         // TODO(ZX-1344): This is a hack, but practically, will work for our
         // usage.
         //
         // The GPT which will contain an FVM should be the first non-removable
         // block device that isn't a partition itself.
-        if (!(info.flags & BLOCK_FLAG_REMOVABLE) && strstr(out->c_str(), "part-") == nullptr) {
+        if (path_str.find("part-") == std::string::npos) {
+            *out = path_str;
             return true;
         }
     }
@@ -340,7 +361,7 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
         return ZX_ERR_NOT_FOUND;
     }
 
-    fbl::String gpt_path;
+    std::string gpt_path;
     if (!FindTargetGptPath(devfs_root, &gpt_path)) {
         ERROR("Failed to find GPT\n");
         return ZX_ERR_NOT_FOUND;
@@ -352,12 +373,13 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
     }
 
     fzl::UnownedFdioCaller caller(fd.get());
-    fuchsia_hardware_block_BlockInfo block_info;
+    uint8_t out_buffer[fidl::MaxSizeInChannel<block::Block::GetInfoResponse>()];
+    block::BlockInfo* block_info;
     zx_status_t status;
-    zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &status,
-                                                                &block_info);
-    if (io_status != ZX_OK) {
-        status = io_status;
+    auto decoded = block::Block::Call::GetInfo(
+        caller.channel(), fidl::BytePart::WrapEmpty(out_buffer), &status, &block_info);
+    if (decoded.status != ZX_OK) {
+        status = decoded.status;
     }
     if (status != ZX_OK) {
         ERROR("Warning: Could not acquire GPT block info: %s\n", zx_status_get_string(status));
@@ -365,7 +387,8 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
     }
 
     fbl::unique_ptr<GptDevice> gpt;
-    if (GptDevice::Create(fd.get(), block_info.block_size, block_info.block_count, &gpt) != ZX_OK) {
+    if (GptDevice::Create(fd.get(), block_info->block_size, block_info->block_count,
+                          &gpt) != ZX_OK) {
         ERROR("Failed to get GPT info\n");
         return ZX_ERR_BAD_STATE;
     }
@@ -382,7 +405,8 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
         }
         // Try to rebind the GPT, in case a prior GPT driver was actually
         // up and running.
-        io_status = fuchsia_hardware_block_BlockRebindDevice(caller.borrow_channel(), &status);
+        zx_status_t io_status =
+            block::Block::Call::RebindDevice(caller.channel(), &status);
         if (io_status != ZX_OK) {
             status = io_status;
         }
@@ -393,8 +417,8 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
 
         // Manually re-bind the GPT driver, since it is almost certainly
         // too late to be noticed by the block watcher.
-        io_status = fuchsia_device_ControllerBind(
-            caller.borrow_channel(), kGptDriverName, strlen(kGptDriverName),
+        io_status = ::llcpp::fuchsia::device::Controller::Call::Bind(
+            caller.channel(), fidl::StringView(strlen(kGptDriverName), kGptDriverName),
             &status);
         if (io_status != ZX_OK || status != ZX_OK) {
             ERROR("Failed to bind GPT\n");
@@ -403,7 +427,7 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
     }
 
     *gpt_out = WrapUnique(new GptDevicePartitioner(std::move(devfs_root), std::move(fd),
-                                                   std::move(gpt), block_info));
+                                                   std::move(gpt), *block_info));
     return ZX_OK;
 }
 
@@ -491,7 +515,7 @@ zx_status_t GptDevicePartitioner::CreateGptPartition(const char* name, uint8_t* 
         ERROR("Failed to clear first block of new partition\n");
         return status;
     }
-    zx_status_t io_status = fuchsia_hardware_block_BlockRebindDevice(Channel()->get(), &status);
+    zx_status_t io_status = block::Block::Call::RebindDevice(Channel(), &status);
     if (io_status != ZX_OK) {
         status = io_status;
     }
@@ -627,7 +651,7 @@ zx_status_t GptDevicePartitioner::WipeFvm() const {
         LOG("Immediate reboot strongly recommended\n");
     }
     zx_status_t status;
-    fuchsia_hardware_block_BlockRebindDevice(Channel()->get(), &status);
+    block::Block::Call::RebindDevice(Channel(), &status);
     return ZX_OK;
 }
 
@@ -747,7 +771,7 @@ zx_status_t EfiDevicePartitioner::WipeFvm() const {
 
 zx_status_t EfiDevicePartitioner::GetBlockSize(const fbl::unique_fd& device_fd,
                                                uint32_t* block_size) const {
-    fuchsia_hardware_block_BlockInfo info;
+    block::BlockInfo info;
     zx_status_t status = gpt_->GetBlockInfo(&info);
     if (status == ZX_OK) {
         *block_size = info.block_size;
@@ -773,11 +797,14 @@ zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch ar
         return ZX_ERR_NOT_FOUND;
     }
 
-    fuchsia_hardware_block_BlockInfo info;
+    block::BlockInfo info;
     gpt_partitioner->GetBlockInfo(&info);
 
-    if (!is_ready_to_pave(gpt, &info, SZ_ZX_PART)) {
-        if ((status = config_cros_for_fuchsia(gpt, &info, SZ_ZX_PART)) != ZX_OK) {
+    if (!is_ready_to_pave(gpt, reinterpret_cast<fuchsia_hardware_block_BlockInfo*>(&info),
+                          SZ_ZX_PART)) {
+        status = config_cros_for_fuchsia(
+            gpt, reinterpret_cast<fuchsia_hardware_block_BlockInfo*>(&info), SZ_ZX_PART);
+        if (status != ZX_OK) {
             ERROR("Failed to configure CrOS for Fuchsia.\n");
             return status;
         }
@@ -785,7 +812,7 @@ zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch ar
             ERROR("Failed to sync CrOS for Fuchsia.\n");
             return status;
         }
-        fuchsia_hardware_block_BlockRebindDevice(gpt_partitioner->Channel()->get(), &status);
+        block::Block::Call::RebindDevice(gpt_partitioner->Channel(), &status);
     }
 
     LOG("Successfully initialized CrOS Device Partitioner\n");
@@ -932,7 +959,7 @@ zx_status_t CrosDevicePartitioner::WipeFvm() const {
 
 zx_status_t CrosDevicePartitioner::GetBlockSize(const fbl::unique_fd& device_fd,
                                                 uint32_t* block_size) const {
-    fuchsia_hardware_block_BlockInfo info;
+    block::BlockInfo info;
     zx_status_t status = gpt_->GetBlockInfo(&info);
     if (status == ZX_OK) {
         *block_size = info.block_size;
@@ -1023,18 +1050,19 @@ zx_status_t FixedDevicePartitioner::WipeFvm() const {
 zx_status_t FixedDevicePartitioner::GetBlockSize(const fbl::unique_fd& device_fd,
                                                  uint32_t* block_size) const {
     fzl::UnownedFdioCaller caller(device_fd.get());
-    fuchsia_hardware_block_BlockInfo block_info;
+    uint8_t out_buffer[fidl::MaxSizeInChannel<block::Block::GetInfoResponse>()];
+    block::BlockInfo* block_info;
 
     zx_status_t status;
-    zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &status,
-                                                                &block_info);
-    if (io_status != ZX_OK) {
-        status = io_status;
+    auto decoded = block::Block::Call::GetInfo(
+        caller.channel(), fidl::BytePart::WrapEmpty(out_buffer), &status, &block_info);
+    if (decoded.status != ZX_OK) {
+        status = decoded.status;
     }
     if (status != ZX_OK) {
         return status;
     }
-    *block_size = block_info.block_size;
+    *block_size = block_info->block_size;
     return ZX_OK;
 }
 
@@ -1129,22 +1157,26 @@ zx_status_t SkipBlockDevicePartitioner::WipeFvm() const {
         ERROR("Warning: Could not get block service handle: %s\n", zx_status_get_string(status));
         return status;
     }
-    char name[PATH_MAX + 1];
-    size_t name_len;
-    zx_status_t call_status;
-    status = fuchsia_device_ControllerGetTopologicalPath(block_dev.get(), &call_status, name,
-                                                         sizeof(name) - 1, &name_len);
-    if (status == ZX_OK) {
-        status = call_status;
+    ::llcpp::fuchsia::device::Controller::SyncClient block_client(std::move(block_dev));
+
+    uint8_t out_buffer[
+        fidl::MaxSizeInChannel<::llcpp::fuchsia::device::Controller::GetTopologicalPathResponse>()];
+    fidl::StringView name;
+    auto decoded = block_client.GetTopologicalPath(fidl::BytePart::WrapEmpty(out_buffer), &status,
+                                                   &name);
+    if (decoded.status != ZX_OK) {
+        status = decoded.status;
     }
     if (status != ZX_OK) {
         ERROR("Warning: Could not get name for partition: %s\n",
               zx_status_get_string(status));
         return status;
     }
-    name[name_len] = 0;
 
-    const char* parent = dirname(name);
+    fbl::StringBuffer<PATH_MAX> name_buffer;
+    name_buffer.Append(name.data(), static_cast<size_t>(name.size()));
+
+    const char* parent = dirname(name_buffer.data());
 
     fbl::unique_fd parent_fd(open(parent, O_RDONLY));
     if (!parent_fd) {
@@ -1158,32 +1190,32 @@ zx_status_t SkipBlockDevicePartitioner::WipeFvm() const {
         ERROR("Warning: Could not get service handle: %s\n", zx_status_get_string(status));
         return status;
     }
-    zx_status_t status2;
-    status = fuchsia_hardware_block_FtlFormat(svc.get(), &status2);
+    block::Ftl::SyncClient client(std::move(svc));
+    auto io_status = client.Format(&status);
 
-    return status == ZX_OK ? status2 : status;
+    return io_status == ZX_OK ? status : io_status;
 }
 
 zx_status_t SkipBlockDevicePartitioner::GetBlockSize(const fbl::unique_fd& device_fd,
                                                      uint32_t* block_size) const {
     fzl::UnownedFdioCaller caller(device_fd.get());
-    fuchsia_hardware_block_BlockInfo block_info;
+    uint8_t out_buffer[fidl::MaxSizeInChannel<block::Block::GetInfoResponse>()];
+    block::BlockInfo* block_info;
 
     // Just in case we are trying to get info about a block-based device.
     //
     // Clone ahead of time; if it is NOT a block device, the connection will be terminated.
-    zx::channel maybe_block(fdio_service_clone(caller.borrow_channel()));
+    block::Block::SyncClient maybe_block(zx::channel(fdio_service_clone(caller.borrow_channel())));
     zx_status_t status;
-    zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(maybe_block.get(), &status,
-                                                                &block_info);
-    if (io_status == ZX_OK && status == ZX_OK) {
-        *block_size = block_info.block_size;
+    auto decoded = maybe_block.GetInfo(fidl::BytePart::WrapEmpty(out_buffer), &status, &block_info);
+    if (decoded.status == ZX_OK && status == ZX_OK) {
+        *block_size = block_info->block_size;
         return ZX_OK;
     }
 
-    fuchsia_hardware_skipblock_PartitionInfo part_info;
-    io_status = fuchsia_hardware_skipblock_SkipBlockGetPartitionInfo(caller.borrow_channel(),
-                                                                     &status, &part_info);
+    skipblock::PartitionInfo part_info;
+    zx_status_t io_status = skipblock::SkipBlock::Call::GetPartitionInfo(
+        caller.channel(), &status, &part_info);
     if (io_status != ZX_OK) {
         status = io_status;
     }

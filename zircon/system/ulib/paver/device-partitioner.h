@@ -11,7 +11,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <gpt/gpt.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
@@ -91,13 +91,13 @@ public:
                                      fbl::unique_ptr<GptDevicePartitioner>* gpt_out);
 
     // Returns block info for a specified block device.
-    zx_status_t GetBlockInfo(fuchsia_hardware_block_BlockInfo* block_info) const {
+    zx_status_t GetBlockInfo(::llcpp::fuchsia::hardware::block::BlockInfo* block_info) const {
         memcpy(block_info, &block_info_, sizeof(*block_info));
         return ZX_OK;
     }
 
     GptDevice* GetGpt() const { return gpt_.get(); }
-    zx::unowned_channel Channel() const { return zx::unowned_channel(caller_.borrow_channel()); }
+    zx::unowned_channel Channel() const { return caller_.channel(); }
 
     // Find the first spot that has at least |bytes_requested| of space.
     //
@@ -123,11 +123,11 @@ public:
 
 private:
     // Find and return the topological path of the GPT which we will pave.
-    static bool FindTargetGptPath(const fbl::unique_fd& devfs_root, fbl::String* out);
+    static bool FindTargetGptPath(const fbl::unique_fd& devfs_root, std::string* out);
 
     GptDevicePartitioner(fbl::unique_fd devfs_root, fbl::unique_fd fd,
                          fbl::unique_ptr<GptDevice> gpt,
-                         fuchsia_hardware_block_BlockInfo block_info)
+                         ::llcpp::fuchsia::hardware::block::BlockInfo block_info)
         : devfs_root_(std::move(devfs_root)), caller_(std::move(fd)), gpt_(std::move(gpt)),
           block_info_(block_info) {}
 
@@ -137,7 +137,7 @@ private:
     fbl::unique_fd devfs_root_;
     fzl::FdioCaller caller_;
     mutable fbl::unique_ptr<GptDevice> gpt_;
-    fuchsia_hardware_block_BlockInfo block_info_;
+    ::llcpp::fuchsia::hardware::block::BlockInfo block_info_;
 };
 
 // DevicePartitioner implementation for EFI based devices.

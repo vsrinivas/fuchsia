@@ -14,7 +14,7 @@
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 #include <lib/fdio/directory.h>
-#include <fuchsia/paver/c/fidl.h>
+#include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
@@ -61,8 +61,8 @@ enum class Command {
 
 struct Flags {
     Command cmd;
-    fuchsia_paver_Configuration configuration;
-    fuchsia_paver_Asset asset;
+    ::llcpp::fuchsia::paver::Configuration configuration;
+    ::llcpp::fuchsia::paver::Asset asset;
     fbl::unique_fd payload_fd;
     char* path = nullptr;
 };
@@ -87,32 +87,32 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
         flags->cmd = Command::kBootloader;
     } else if (!strcmp(argv[0], "install-kernc")) {
         flags->cmd = Command::kAsset;
-        flags->configuration = fuchsia_paver_Configuration_A;
-        flags->asset = fuchsia_paver_Asset_KERNEL;
+        flags->configuration = ::llcpp::fuchsia::paver::Configuration::A;
+        flags->asset = ::llcpp::fuchsia::paver::Asset::KERNEL;
     } else if (!strcmp(argv[0], "install-zircona")) {
         flags->cmd = Command::kAsset;
-        flags->configuration = fuchsia_paver_Configuration_A;
-        flags->asset = fuchsia_paver_Asset_KERNEL;
+        flags->configuration = ::llcpp::fuchsia::paver::Configuration::A;
+        flags->asset = ::llcpp::fuchsia::paver::Asset::KERNEL;
     } else if (!strcmp(argv[0], "install-zirconb")) {
         flags->cmd = Command::kAsset;
-        flags->configuration = fuchsia_paver_Configuration_B;
-        flags->asset = fuchsia_paver_Asset_KERNEL;
+        flags->configuration = ::llcpp::fuchsia::paver::Configuration::B;
+        flags->asset = ::llcpp::fuchsia::paver::Asset::KERNEL;
     } else if (!strcmp(argv[0], "install-zirconr")) {
         flags->cmd = Command::kAsset;
-        flags->configuration = fuchsia_paver_Configuration_RECOVERY;
-        flags->asset = fuchsia_paver_Asset_KERNEL;
+        flags->configuration = ::llcpp::fuchsia::paver::Configuration::RECOVERY;
+        flags->asset = ::llcpp::fuchsia::paver::Asset::KERNEL;
     } else if (!strcmp(argv[0], "install-vbmetaa")) {
         flags->cmd = Command::kAsset;
-        flags->configuration = fuchsia_paver_Configuration_A;
-        flags->asset = fuchsia_paver_Asset_VERIFIED_BOOT_METADATA;
+        flags->configuration = ::llcpp::fuchsia::paver::Configuration::A;
+        flags->asset = ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA;
     } else if (!strcmp(argv[0], "install-vbmetab")) {
         flags->cmd = Command::kAsset;
-        flags->configuration = fuchsia_paver_Configuration_B;
-        flags->asset = fuchsia_paver_Asset_VERIFIED_BOOT_METADATA;
+        flags->configuration = ::llcpp::fuchsia::paver::Configuration::B;
+        flags->asset = ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA;
     } else if (!strcmp(argv[0], "install-vbmetar")) {
         flags->cmd = Command::kAsset;
-        flags->configuration = fuchsia_paver_Configuration_RECOVERY;
-        flags->asset = fuchsia_paver_Asset_VERIFIED_BOOT_METADATA;
+        flags->configuration = ::llcpp::fuchsia::paver::Configuration::RECOVERY;
+        flags->asset = ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA;
     } else if (!strcmp(argv[0], "install-data-file")) {
         flags->cmd = Command::kDataFile;
     } else if (!strcmp(argv[0], "install-fvm")) {
@@ -157,7 +157,7 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
 #undef SHIFT_ARGS
 }
 
-zx_status_t ReadFileToVmo(fbl::unique_fd payload_fd, fuchsia_mem_Buffer* payload) {
+zx_status_t ReadFileToVmo(fbl::unique_fd payload_fd, ::llcpp::fuchsia::mem::Buffer* payload) {
     constexpr size_t VmoSize = fbl::round_up(1LU << 20, ZX_PAGE_SIZE);
     fzl::ResizeableVmoMapper mapper;
     zx_status_t status;
@@ -186,23 +186,24 @@ zx_status_t ReadFileToVmo(fbl::unique_fd payload_fd, fuchsia_mem_Buffer* payload
     }
 
     payload->size = vmo_offset;
-    payload->vmo = mapper.Release().release();
+    payload->vmo = mapper.Release();
     return ZX_OK;
 }
 
 zx_status_t RealMain(Flags flags) {
-    zx::channel paver, paver_svc;
-    auto status = zx::channel::create(0, &paver, &paver_svc);
+    zx::channel paver_remote, paver_svc;
+    auto status = zx::channel::create(0, &paver_svc, &paver_remote);
     if (status != ZX_OK) {
         ERROR("Unable to create channels.\n");
         return status;
     }
-    const auto path = fbl::StringPrintf("/svc/%s", fuchsia_paver_Paver_Name);
-    status = fdio_service_connect(path.c_str(), paver_svc.release());
+    const auto path = fbl::StringPrintf("/svc/%s", ::llcpp::fuchsia::paver::Paver::Name_);
+    status = fdio_service_connect(path.c_str(), paver_remote.release());
     if (status != ZX_OK) {
         ERROR("Unable to open /svc/fuchsia.paver.Paver.\n");
         return status;
     }
+    ::llcpp::fuchsia::paver::Paver::SyncClient paver_client(std::move(paver_svc));
 
     zx_status_t io_status = ZX_ERR_INTERNAL;
     switch (flags.cmd) {
@@ -218,17 +219,17 @@ zx_status_t RealMain(Flags flags) {
         disk_pave::PayloadStreamer streamer(std::move(server), std::move(flags.payload_fd));
         loop.StartThread("payload-stream");
 
-        io_status = fuchsia_paver_PaverWriteVolumes(paver.get(), client.release(), &status);
+        io_status = paver_client.WriteVolumes(std::move(client), &status);
         return io_status == ZX_OK ? status : io_status;
     }
     case Command::kWipe:
-        io_status = fuchsia_paver_PaverWipeVolumes(paver.get(), &status);
+        io_status = paver_client.WipeVolumes(&status);
         return io_status == ZX_OK ? status : io_status;
     default:
         break;
     }
 
-    fuchsia_mem_Buffer payload;
+    ::llcpp::fuchsia::mem::Buffer payload;
     status = ReadFileToVmo(std::move(flags.payload_fd), &payload);
     if (status != ZX_OK) {
         return status;
@@ -241,16 +242,16 @@ zx_status_t RealMain(Flags flags) {
             PrintUsage();
             return ZX_ERR_INVALID_ARGS;
         }
-        io_status = fuchsia_paver_PaverWriteDataFile(paver.get(), flags.path, strlen(flags.path),
-                                                     &payload, &status);
+        io_status = paver_client.WriteDataFile(fidl::StringView(strlen(flags.path), flags.path),
+                                               std::move(payload), &status);
         break;
     }
     case Command::kBootloader:
-        io_status = fuchsia_paver_PaverWriteBootloader(paver.get(), &payload, &status);
+        io_status = paver_client.WriteBootloader(std::move(payload), &status);
         break;
     case Command::kAsset:
-        io_status = fuchsia_paver_PaverWriteAsset(paver.get(), flags.configuration, flags.asset,
-                                                  &payload, &status);
+        io_status = paver_client.WriteAsset(flags.configuration, flags.asset, std::move(payload),
+                                            &status);
         break;
     default:
         return ZX_ERR_INTERNAL;

@@ -78,6 +78,12 @@ public:
         return fdio_unsafe_borrow_channel(io_);
     }
 
+    // Same as borrow_channel, but wrapped using libzx wrapper to signal
+    // ownership.
+    zx::unowned_channel channel() const {
+        return zx::unowned_channel(borrow_channel());
+    }
+
 private:
     fbl::unique_fd fd_;
     fdio_t* io_;
@@ -114,6 +120,12 @@ public:
     // it be kept alive after UnownedFdioCaller.reset() is called.
     zx_handle_t borrow_channel() const {
         return fdio_unsafe_borrow_channel(io_);
+    }
+
+    // Same as borrow_channel, but wrapped using libzx wrapper to signal
+    // ownership.
+    zx::unowned_channel channel() const {
+        return zx::unowned_channel(borrow_channel());
     }
 
     UnownedFdioCaller& operator=(UnownedFdioCaller&& o) = delete;

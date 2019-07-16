@@ -4,8 +4,6 @@
 
 #include "stream-reader.h"
 
-#include <fuchsia/paver/c/fidl.h>
-
 #include "pave-logging.h"
 
 namespace paver {
@@ -23,9 +21,9 @@ zx_status_t StreamReader::Create(zx::channel stream, fbl::unique_ptr<StreamReade
         ERROR("Unable to duplicate vmo.\n");
         return status;
     }
-    zx_status_t status2;
-    status = fuchsia_paver_PayloadStreamRegisterVmo(stream.get(), dup.release(), &status2);
-    status = status == ZX_OK ? status2 : status;
+    auto io_status = ::llcpp::fuchsia::paver::PayloadStream::Call::RegisterVmo(
+        zx::unowned(stream), std::move(dup), &status);
+    status = io_status == ZX_OK ? status : io_status;
     if (status != ZX_OK) {
         ERROR("Unable to register vmo: %d\n", status);
         return status;
@@ -36,20 +34,20 @@ zx_status_t StreamReader::Create(zx::channel stream, fbl::unique_ptr<StreamReade
 
 zx_status_t StreamReader::Read(void* buf, size_t buf_size, size_t* size_actual) {
     if (size_ == 0) {
-        fuchsia_paver_ReadResult result;
-        auto status = fuchsia_paver_PayloadStreamReadData(stream_.get(), &result);
+        ::llcpp::fuchsia::paver::ReadResult result;
+        auto status = stream_.ReadData(&result);
         if (status != ZX_OK) {
             return status;
         }
-        switch (result.tag) {
-        case fuchsia_paver_ReadResultTag_err:
-            return result.err;
-        case fuchsia_paver_ReadResultTag_eof:
+        switch (result.which()) {
+        case llcpp::fuchsia::paver::ReadResult::Tag::kErr:
+            return result.err();
+        case llcpp::fuchsia::paver::ReadResult::Tag::kEof:
             *size_actual = 0;
             return ZX_OK;
-        case fuchsia_paver_ReadResultTag_info:
-            offset_ = result.info.offset;
-            size_ = result.info.size;
+        case llcpp::fuchsia::paver::ReadResult::Tag::kInfo:
+            offset_ = result.info().offset;
+            size_ = result.info().size;
             break;
         default:
             return ZX_ERR_INTERNAL;

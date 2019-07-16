@@ -11,7 +11,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
-#include <fuchsia/paver/c/fidl.h>
+#include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
@@ -142,13 +142,16 @@ class PaverServiceTest : public zxtest::Test {
 public:
     PaverServiceTest()
         : loop_(&kAsyncLoopConfigAttachToThread) {
-        zx::channel server;
-        ASSERT_OK(zx::channel::create(0, &client_, &server));
+        zx::channel client, server;
+        ASSERT_OK(zx::channel::create(0, &client, &server));
+
+        client_.emplace(std::move(client));
 
         ASSERT_OK(paver_get_service_provider()->ops->init(&provider_ctx_));
 
         ASSERT_OK(paver_get_service_provider()->ops->connect(
-            provider_ctx_, loop_.dispatcher(), fuchsia_paver_Paver_Name, server.release()));
+            provider_ctx_, loop_.dispatcher(), ::llcpp::fuchsia::paver::Paver::Name_,
+            server.release()));
         loop_.StartThread("paver-svc-test-loop");
     }
 
@@ -164,13 +167,13 @@ protected:
         static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(device_->devfs_root());
     }
 
-    void CreatePayload(size_t num_blocks, fuchsia_mem_Buffer* out) {
+    void CreatePayload(size_t num_blocks, ::llcpp::fuchsia::mem::Buffer* out) {
         zx::vmo vmo;
         fzl::VmoMapper mapper;
         const size_t size = kPageSize * kPagesPerBlock * num_blocks;
         ASSERT_OK(mapper.CreateAndMap(size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo));
         memset(mapper.start(), 0x4a, mapper.size());
-        out->vmo = vmo.release();
+        out->vmo = std::move(vmo);
         out->size = size;
     }
 
@@ -192,44 +195,45 @@ protected:
 
     void* provider_ctx_ = nullptr;
     fbl::unique_ptr<SkipBlockDevice> device_;
-    zx::channel client_;
+    std::optional<::llcpp::fuchsia::paver::Paver::SyncClient> client_;
     async::Loop loop_;
 };
 
 
 TEST_F(PaverServiceTest, QueryActiveConfiguration) {
-    fuchsia_paver_Paver_QueryActiveConfiguration_Result result;
-    ASSERT_OK(fuchsia_paver_PaverQueryActiveConfiguration(client_.get(), &result));
-    ASSERT_EQ(result.tag, fuchsia_paver_Paver_QueryActiveConfiguration_ResultTag_err);
-    ASSERT_EQ(result.err, ZX_ERR_NOT_SUPPORTED);
+    ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result;
+    ASSERT_OK(client_->QueryActiveConfiguration(&result));
+    ASSERT_TRUE(result.is_err());
+    ASSERT_EQ(result.err(), ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(PaverServiceTest, SetActiveConfiguration) {
     zx_status_t status;
-    fuchsia_paver_Configuration configuration = fuchsia_paver_Configuration_A;
-    ASSERT_OK(fuchsia_paver_PaverSetActiveConfiguration(client_.get(), configuration, &status));
+    auto configuration = ::llcpp::fuchsia::paver::Configuration::A;
+    ASSERT_OK(client_->SetActiveConfiguration(configuration, &status));
     ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(PaverServiceTest, MarkActiveConfigurationSuccessful) {
     zx_status_t status;
-    ASSERT_OK(fuchsia_paver_PaverMarkActiveConfigurationSuccessful(client_.get(), &status));
+    ASSERT_OK(client_->MarkActiveConfigurationSuccessful(&status));
     ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(PaverServiceTest, ForceRecoveryConfiguration) {
     zx_status_t status;
-    ASSERT_OK(fuchsia_paver_PaverForceRecoveryConfiguration(client_.get(), &status));
+    ASSERT_OK(client_->ForceRecoveryConfiguration(&status));
     ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(PaverServiceTest, WriteAssetKernelConfigA) {
     SpawnIsolatedDevmgr();
-    fuchsia_mem_Buffer payload;
+    ::llcpp::fuchsia::mem::Buffer payload;
     CreatePayload(2, &payload);
     zx_status_t status;
-    ASSERT_OK(fuchsia_paver_PaverWriteAsset(client_.get(), fuchsia_paver_Configuration_A,
-                                            fuchsia_paver_Asset_KERNEL, &payload, &status));
+    ASSERT_OK(client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::A,
+                                  ::llcpp::fuchsia::paver::Asset::KERNEL, std::move(payload),
+                                  &status));
     ASSERT_OK(status);
     ValidateWritten(8, 2);
     ValidateUnwritten(10, 4);
@@ -237,11 +241,12 @@ TEST_F(PaverServiceTest, WriteAssetKernelConfigA) {
 
 TEST_F(PaverServiceTest, WriteAssetKernelConfigB) {
     SpawnIsolatedDevmgr();
-    fuchsia_mem_Buffer payload;
+    ::llcpp::fuchsia::mem::Buffer payload;
     CreatePayload(2, &payload);
     zx_status_t status;
-    ASSERT_OK(fuchsia_paver_PaverWriteAsset(client_.get(), fuchsia_paver_Configuration_B,
-                                            fuchsia_paver_Asset_KERNEL, &payload, &status));
+    ASSERT_OK(client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::B,
+                                  ::llcpp::fuchsia::paver::Asset::KERNEL, std::move(payload),
+                                  &status));
     ASSERT_OK(status);
     ValidateUnwritten(8, 2);
     ValidateWritten(10, 2);
@@ -250,11 +255,12 @@ TEST_F(PaverServiceTest, WriteAssetKernelConfigB) {
 
 TEST_F(PaverServiceTest, WriteAssetKernelConfigRecovery) {
     SpawnIsolatedDevmgr();
-    fuchsia_mem_Buffer payload;
+    ::llcpp::fuchsia::mem::Buffer payload;
     CreatePayload(2, &payload);
     zx_status_t status;
-    ASSERT_OK(fuchsia_paver_PaverWriteAsset(client_.get(), fuchsia_paver_Configuration_RECOVERY,
-                                            fuchsia_paver_Asset_KERNEL, &payload, &status));
+    ASSERT_OK(client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::RECOVERY,
+                                  ::llcpp::fuchsia::paver::Asset::KERNEL, std::move(payload),
+                                  &status));
     ASSERT_OK(status);
     ValidateUnwritten(8, 4);
     ValidateWritten(12, 2);
@@ -262,12 +268,12 @@ TEST_F(PaverServiceTest, WriteAssetKernelConfigRecovery) {
 
 TEST_F(PaverServiceTest, WriteAssetVbMetaConfigA) {
     SpawnIsolatedDevmgr();
-    fuchsia_mem_Buffer payload;
+    ::llcpp::fuchsia::mem::Buffer payload;
     CreatePayload(2, &payload);
     zx_status_t status;
-    ASSERT_OK(fuchsia_paver_PaverWriteAsset(client_.get(), fuchsia_paver_Configuration_A,
-                                            fuchsia_paver_Asset_VERIFIED_BOOT_METADATA, &payload,
-                                            &status));
+    ASSERT_OK(client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::A,
+                                  ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA,
+                                  std::move(payload), &status));
     ASSERT_OK(status);
     ValidateWritten(14, 2);
     ValidateUnwritten(16, 4);
@@ -275,12 +281,12 @@ TEST_F(PaverServiceTest, WriteAssetVbMetaConfigA) {
 
 TEST_F(PaverServiceTest, WriteAssetVbMetaConfigB) {
     SpawnIsolatedDevmgr();
-    fuchsia_mem_Buffer payload;
+    ::llcpp::fuchsia::mem::Buffer payload;
     CreatePayload(2, &payload);
     zx_status_t status;
-    ASSERT_OK(fuchsia_paver_PaverWriteAsset(client_.get(), fuchsia_paver_Configuration_B,
-                                            fuchsia_paver_Asset_VERIFIED_BOOT_METADATA, &payload,
-                                            &status));
+    ASSERT_OK(client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::B,
+                                  ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA,
+                                  std::move(payload), &status));
     ASSERT_OK(status);
     ValidateUnwritten(14, 2);
     ValidateWritten(16, 2);
@@ -289,12 +295,12 @@ TEST_F(PaverServiceTest, WriteAssetVbMetaConfigB) {
 
 TEST_F(PaverServiceTest, WriteAssetVbMetaConfigRecovery) {
     SpawnIsolatedDevmgr();
-    fuchsia_mem_Buffer payload;
+    ::llcpp::fuchsia::mem::Buffer payload;
     CreatePayload(2, &payload);
     zx_status_t status;
-    ASSERT_OK(fuchsia_paver_PaverWriteAsset(client_.get(), fuchsia_paver_Configuration_RECOVERY,
-                                            fuchsia_paver_Asset_VERIFIED_BOOT_METADATA, &payload,
-                                            &status));
+    ASSERT_OK(client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::RECOVERY,
+                                  ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA,
+                                  std::move(payload), &status));
     ASSERT_OK(status);
     ValidateUnwritten(14, 4);
     ValidateWritten(18, 2);
@@ -302,10 +308,10 @@ TEST_F(PaverServiceTest, WriteAssetVbMetaConfigRecovery) {
 
 TEST_F(PaverServiceTest, WriteBootloader) {
     SpawnIsolatedDevmgr();
-    fuchsia_mem_Buffer payload;
+    ::llcpp::fuchsia::mem::Buffer payload;
     CreatePayload(4, &payload);
     zx_status_t status;
-    ASSERT_OK(fuchsia_paver_PaverWriteBootloader(client_.get(), &payload, &status));
+    ASSERT_OK(client_->WriteBootloader(std::move(payload), &status));
     ASSERT_OK(status);
     ValidateWritten(4, 4);
 }
@@ -321,7 +327,7 @@ TEST_F(PaverServiceTest, WriteVolumes) {
 TEST_F(PaverServiceTest, WipeVolumes) {
     SpawnIsolatedDevmgr();
     zx_status_t status;
-    ASSERT_OK(fuchsia_paver_PaverWipeVolumes(client_.get(), &status));
+    ASSERT_OK(client_->WipeVolumes(&status));
     ASSERT_OK(status);
 }
 

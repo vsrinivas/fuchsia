@@ -5,14 +5,13 @@
 #include "payload-streamer.h"
 
 #include <lib/async/default.h>
+#include <lib/fidl-async/cpp/bind.h>
 
 namespace disk_pave {
 
 PayloadStreamer::PayloadStreamer(zx::channel chan, fbl::unique_fd payload)
     : payload_(std::move(payload)) {
-    fidl_bind(async_get_default_dispatcher(), chan.release(),
-              reinterpret_cast<fidl_dispatch_t*>(fuchsia_paver_PayloadStream_dispatch),
-              this, &ops_);
+      fidl::Bind(async_get_default_dispatcher(), std::move(chan), this);
 }
 
 PayloadStreamer::~PayloadStreamer() {
@@ -26,9 +25,7 @@ PayloadStreamer::~PayloadStreamer() {
     }
 }
 
-zx_status_t PayloadStreamer::RegisterVmo(zx_handle_t vmo_handle, fidl_txn_t* txn) {
-    zx::vmo vmo(vmo_handle);
-
+void PayloadStreamer::RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync completer) {
     if (vmo_) {
         vmo_.reset();
         mapper_.Unmap();
@@ -36,41 +33,39 @@ zx_status_t PayloadStreamer::RegisterVmo(zx_handle_t vmo_handle, fidl_txn_t* txn
 
     auto status = mapper_.Map(vmo, 0, 0, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
     if (status != ZX_OK) {
-        return fuchsia_paver_PayloadStreamRegisterVmo_reply(txn, status);
+        completer.Reply(status);
+        return;
     }
 
     vmo_ = std::move(vmo);
-    return fuchsia_paver_PayloadStreamRegisterVmo_reply(txn, ZX_OK);
+    completer.Reply(ZX_OK);
 }
 
-zx_status_t PayloadStreamer::ReadData(fidl_txn_t* txn) {
-    fuchsia_paver_ReadResult result = {};
+void PayloadStreamer::ReadData(ReadDataCompleter::Sync completer) {
+    ::llcpp::fuchsia::paver::ReadResult result = {};
     if (!vmo_) {
-        result.tag = fuchsia_paver_ReadResultTag_err;
-        result.err = ZX_ERR_BAD_STATE;
-        return fuchsia_paver_PayloadStreamReadData_reply(txn, &result);
+        result.set_err(ZX_ERR_BAD_STATE);
+        completer.Reply(std::move(result));
+        return;
     }
     if (eof_reached_) {
-        result.tag = fuchsia_paver_ReadResultTag_eof;
-        result.eof = true;
-        return fuchsia_paver_PayloadStreamReadData_reply(txn, &result);
+        result.set_eof(true);
+        completer.Reply(std::move(result));
+        return;
     }
 
     ssize_t n = read(payload_.get(), mapper_.start(), mapper_.size());
     if (n == 0) {
         eof_reached_ = true;
-        result.tag = fuchsia_paver_ReadResultTag_eof;
-        result.eof = true;
+        result.set_eof(true);
     } else if (n < 0) {
-        result.tag = fuchsia_paver_ReadResultTag_err;
-        result.err = ZX_ERR_IO;
+        result.set_err(ZX_ERR_IO);
     } else {
-        result.tag = fuchsia_paver_ReadResultTag_info;
-        result.info.offset = 0;
-        result.info.size = n;
+        result.mutable_info().offset = 0;
+        result.mutable_info().size = n;
     }
 
-    return fuchsia_paver_PayloadStreamReadData_reply(txn, &result);
+    completer.Reply(std::move(result));
 }
 
 } // namespace disk_pave

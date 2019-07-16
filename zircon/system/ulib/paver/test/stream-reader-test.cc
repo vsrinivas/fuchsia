@@ -6,9 +6,9 @@
 
 #include <fcntl.h>
 
-#include <fuchsia/paver/c/fidl.h>
+#include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fidl-utils/bind.h>
+#include <lib/fidl-async/cpp/bind.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -20,88 +20,92 @@ TEST(StreamReaderTest, InvalidChannel) {
     ASSERT_NE(paver::StreamReader::Create(zx::channel(), &reader), ZX_OK);
 }
 
-class StreamReaderTest : public zxtest::Test {
+class FakePayloadStream : public ::llcpp::fuchsia::paver::PayloadStream::Interface {
 public:
-    StreamReaderTest()
+    FakePayloadStream()
         : loop_(&kAsyncLoopConfigAttachToThread) {
         zx::channel server;
         ASSERT_OK(zx::channel::create(0, &client_, &server));
-        fidl_bind(loop_.dispatcher(), server.release(),
-                  reinterpret_cast<fidl_dispatch_t*>(fuchsia_paver_PayloadStream_dispatch),
-                  this, &ops_);
+        fidl::Bind(loop_.dispatcher(), std::move(server), this);
         loop_.StartThread("payload-stream-test-loop");
     }
 
-    zx_status_t ReadSuccess(fidl_txn_t* txn) {
-        fuchsia_paver_ReadResult result = {};
+    void ReadSuccess(ReadDataCompleter::Sync completer) {
         vmo_.write(kFileData, 0, sizeof(kFileData));
-        result.tag = fuchsia_paver_ReadResultTag_info;
-        result.info.offset = 0;
-        result.info.size = sizeof(kFileData);
 
-        return fuchsia_paver_PayloadStreamReadData_reply(txn, &result);
+        ::llcpp::fuchsia::paver::ReadResult result;
+        result.mutable_info().offset = 0;
+        result.mutable_info().size = sizeof(kFileData);
+
+        completer.Reply(std::move(result));
     }
 
-    zx_status_t ReadError(fidl_txn_t* txn) {
-        fuchsia_paver_ReadResult result = {};
-        result.tag = fuchsia_paver_ReadResultTag_err;
-        result.err = ZX_ERR_INTERNAL;
+    void ReadError(ReadDataCompleter::Sync completer) {
+        ::llcpp::fuchsia::paver::ReadResult result;
+        result.set_err(ZX_ERR_INTERNAL);
 
-        return fuchsia_paver_PayloadStreamReadData_reply(txn, &result);
+        completer.Reply(std::move(result));
     }
 
-    zx_status_t ReadEof(fidl_txn_t* txn) {
-        fuchsia_paver_ReadResult result = {};
-        result.tag = fuchsia_paver_ReadResultTag_eof;
-        result.eof = true;
+    void ReadEof(ReadDataCompleter::Sync completer) {
+        ::llcpp::fuchsia::paver::ReadResult result;
+        result.set_eof(true);
 
-        return fuchsia_paver_PayloadStreamReadData_reply(txn, &result);
+        completer.Reply(std::move(result));
     }
 
-    zx_status_t ReadData(fidl_txn_t* txn) {
+    void ReadData(ReadDataCompleter::Sync completer) {
         if (!vmo_) {
-            return ZX_ERR_BAD_STATE;
+            ::llcpp::fuchsia::paver::ReadResult result;
+            result.set_err(ZX_ERR_BAD_STATE);
+            completer.Reply(std::move(result));
+            return;
         }
 
         if (return_err_) {
-            return ReadError(txn);
+            ReadError(std::move(completer));
         } else if (return_eof_) {
-            return ReadEof(txn);
+            ReadEof(std::move(completer));
         } else {
-            return ReadSuccess(txn);
+            ReadSuccess(std::move(completer));
         }
     }
 
-    zx_status_t RegisterVmo(zx_handle_t vmo_handle, fidl_txn_t* txn) {
-        vmo_ = zx::vmo(vmo_handle);
-        return fuchsia_paver_PayloadStreamRegisterVmo_reply(txn, ZX_OK);
+    void RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync completer) {
+        vmo_ = std::move(vmo);
+        completer.Reply(ZX_OK);
     }
 
-protected:
-    using Binder = fidl::Binder<StreamReaderTest>;
+    zx::channel client() { return std::move(client_); }
 
+    void ReturnErr() { return_err_ = true; }
+    void ReturnEof() { return_eof_ = true; }
+
+private:
     zx::channel client_;
     async::Loop loop_;
-    static constexpr fuchsia_paver_PayloadStream_ops_t ops_ = {
-        .RegisterVmo = Binder::BindMember<&StreamReaderTest::RegisterVmo>,
-        .ReadData = Binder::BindMember<&StreamReaderTest::ReadData>,
-    };
     zx::vmo vmo_;
 
     bool return_err_ = false;
     bool return_eof_ = false;
 };
 
+class StreamReaderTest : public zxtest::Test {
+protected:
+    FakePayloadStream stream_;
+
+};
+
 TEST_F(StreamReaderTest, Create) {
     std::unique_ptr<paver::StreamReader> reader;
-    ASSERT_OK(paver::StreamReader::Create(std::move(client_), &reader));
+    ASSERT_OK(paver::StreamReader::Create(stream_.client(), &reader));
 }
 
 TEST_F(StreamReaderTest, ReadError) {
     std::unique_ptr<paver::StreamReader> reader;
-    ASSERT_OK(paver::StreamReader::Create(std::move(client_), &reader));
+    ASSERT_OK(paver::StreamReader::Create(stream_.client(), &reader));
 
-    return_err_ = true;
+    stream_.ReturnErr();
 
     char buffer[sizeof(kFileData)] = {};
     size_t actual;
@@ -110,9 +114,9 @@ TEST_F(StreamReaderTest, ReadError) {
 
 TEST_F(StreamReaderTest, ReadEof) {
     std::unique_ptr<paver::StreamReader> reader;
-    ASSERT_OK(paver::StreamReader::Create(std::move(client_), &reader));
+    ASSERT_OK(paver::StreamReader::Create(stream_.client(), &reader));
 
-    return_eof_ = true;
+    stream_.ReturnEof();
 
     char buffer[sizeof(kFileData)] = {};
     size_t actual;
@@ -122,7 +126,7 @@ TEST_F(StreamReaderTest, ReadEof) {
 
 TEST_F(StreamReaderTest, ReadSingle) {
     std::unique_ptr<paver::StreamReader> reader;
-    ASSERT_OK(paver::StreamReader::Create(std::move(client_), &reader));
+    ASSERT_OK(paver::StreamReader::Create(stream_.client(), &reader));
 
     char buffer[sizeof(kFileData)] = {};
     size_t actual;
@@ -130,7 +134,7 @@ TEST_F(StreamReaderTest, ReadSingle) {
     ASSERT_EQ(actual, sizeof(buffer));
     ASSERT_EQ(memcmp(buffer, kFileData, sizeof(buffer)), 0);
 
-    return_eof_ = true;
+    stream_.ReturnEof();
 
     ASSERT_OK(reader->Read(buffer, sizeof(buffer), &actual));
     ASSERT_EQ(actual, 0);
@@ -138,7 +142,7 @@ TEST_F(StreamReaderTest, ReadSingle) {
 
 TEST_F(StreamReaderTest, ReadMultiple) {
     std::unique_ptr<paver::StreamReader> reader;
-    ASSERT_OK(paver::StreamReader::Create(std::move(client_), &reader));
+    ASSERT_OK(paver::StreamReader::Create(stream_.client(), &reader));
 
     char buffer[sizeof(kFileData)] = {};
     size_t actual;
@@ -150,7 +154,7 @@ TEST_F(StreamReaderTest, ReadMultiple) {
     ASSERT_EQ(actual, sizeof(buffer));
     ASSERT_EQ(memcmp(buffer, kFileData, sizeof(buffer)), 0);
 
-    return_eof_ = true;
+    stream_.ReturnEof();
 
     ASSERT_OK(reader->Read(buffer, sizeof(buffer), &actual));
     ASSERT_EQ(actual, 0);
@@ -158,7 +162,7 @@ TEST_F(StreamReaderTest, ReadMultiple) {
 
 TEST_F(StreamReaderTest, ReadPartial) {
     std::unique_ptr<paver::StreamReader> reader;
-    ASSERT_OK(paver::StreamReader::Create(std::move(client_), &reader));
+    ASSERT_OK(paver::StreamReader::Create(stream_.client(), &reader));
 
     constexpr size_t kBufferSize = sizeof(kFileData) - 3;
     char buffer[kBufferSize] = {};
@@ -167,7 +171,7 @@ TEST_F(StreamReaderTest, ReadPartial) {
     ASSERT_EQ(actual, sizeof(buffer));
     ASSERT_EQ(memcmp(buffer, kFileData, sizeof(buffer)), 0);
 
-    return_eof_ = true;
+    stream_.ReturnEof();
 
     ASSERT_OK(reader->Read(buffer, sizeof(buffer), &actual));
     ASSERT_EQ(actual, 3);

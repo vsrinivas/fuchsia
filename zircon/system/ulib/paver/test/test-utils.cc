@@ -11,7 +11,6 @@
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
 #include <fbl/vector.h>
-#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fzl/fdio.h>

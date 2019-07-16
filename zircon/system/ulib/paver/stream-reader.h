@@ -5,6 +5,7 @@
 #pragma once
 
 #include <fbl/unique_ptr.h>
+#include <fuchsia/paver/llcpp/fidl.h>
 #include <fvm/sparse-reader.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
@@ -30,7 +31,7 @@ private:
     StreamReader(StreamReader&&) = delete;
     StreamReader& operator=(StreamReader&&) = delete;
 
-    zx::channel stream_;
+    ::llcpp::fuchsia::paver::PayloadStream::SyncClient stream_;
     zx::vmo vmo_;
     zx_off_t offset_ = 0;
     size_t size_ = 0;

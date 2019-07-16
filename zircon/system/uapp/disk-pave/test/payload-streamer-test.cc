@@ -29,9 +29,10 @@ public:
         ASSERT_EQ(write(src.get(), kFileData, sizeof(kFileData)), sizeof(kFileData));
         lseek(src.get(), 0, SEEK_SET);
 
-        zx::channel server;
-        ASSERT_OK(zx::channel::create(0, &client_, &server));
+        zx::channel client, server;
+        ASSERT_OK(zx::channel::create(0, &client, &server));
         streamer_.emplace(std::move(server), std::move(src));
+        client_.emplace(std::move(client));
         loop_.StartThread("payload-stream-test-loop");
     }
 
@@ -40,9 +41,9 @@ public:
     }
 
 protected:
-    zx::channel client_;
     async::Loop loop_;
     std::optional<disk_pave::PayloadStreamer> streamer_;
+    std::optional<::llcpp::fuchsia::paver::PayloadStream::SyncClient> client_;
 
 private:
     char tempfile_name_[20] = "/tmp/payload.XXXXXX";
@@ -52,21 +53,20 @@ TEST_F(PayloadStreamerTest, RegisterVmo) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
     zx_status_t status;
-    ASSERT_OK(fuchsia_paver_PayloadStreamRegisterVmo(client_.get(), vmo.release(), &status));
+    ASSERT_OK(client_->RegisterVmo(std::move(vmo), &status));
     EXPECT_OK(status);
 }
 
 TEST_F(PayloadStreamerTest, RegisterInvalidVmo) {
     zx_status_t status;
-   EXPECT_NE(fuchsia_paver_PayloadStreamRegisterVmo(client_.get(), ZX_HANDLE_INVALID, &status),
-             ZX_OK);
+    EXPECT_NE(client_->RegisterVmo(zx::vmo(), &status), ZX_OK);
 }
 
 TEST_F(PayloadStreamerTest, ReadNoVmoRegistered) {
-    fuchsia_paver_ReadResult result;
-    ASSERT_OK(fuchsia_paver_PayloadStreamReadData(client_.get(), &result));
-    ASSERT_EQ(result.tag, fuchsia_paver_ReadResultTag_err);
-    EXPECT_NE(result.err, ZX_OK);
+    ::llcpp::fuchsia::paver::ReadResult result;
+    ASSERT_OK(client_->ReadData(&result));
+    ASSERT_TRUE(result.is_err());
+    EXPECT_NE(result.err(), ZX_OK);
 }
 
 TEST_F(PayloadStreamerTest, ReadData) {
@@ -74,16 +74,16 @@ TEST_F(PayloadStreamerTest, ReadData) {
     ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
     ASSERT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
     zx_status_t status;
-    ASSERT_OK(fuchsia_paver_PayloadStreamRegisterVmo(client_.get(), dup.release(), &status));
+    ASSERT_OK(client_->RegisterVmo(std::move(dup), &status));
     EXPECT_OK(status);
 
-    fuchsia_paver_ReadResult result;
-    ASSERT_OK(fuchsia_paver_PayloadStreamReadData(client_.get(), &result));
-    ASSERT_EQ(result.tag, fuchsia_paver_ReadResultTag_info);
+    ::llcpp::fuchsia::paver::ReadResult result;
+    ASSERT_OK(client_->ReadData(&result));
+    ASSERT_TRUE(result.is_info());
 
     char buffer[sizeof(kFileData)] = {};
-    ASSERT_EQ(result.info.size, sizeof(buffer));
-    ASSERT_OK(vmo.read(buffer, result.info.offset, result.info.size));
+    ASSERT_EQ(result.info().size, sizeof(buffer));
+    ASSERT_OK(vmo.read(buffer, result.info().offset, result.info().size));
     ASSERT_EQ(memcmp(kFileData, buffer, sizeof(buffer)), 0);
 }
 
@@ -91,18 +91,18 @@ TEST_F(PayloadStreamerTest, ReadEof) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
     zx_status_t status;
-    ASSERT_OK(fuchsia_paver_PayloadStreamRegisterVmo(client_.get(), vmo.release(), &status));
+    ASSERT_OK(client_->RegisterVmo(std::move(vmo), &status));
     EXPECT_OK(status);
 
-    fuchsia_paver_ReadResult result;
-    ASSERT_OK(fuchsia_paver_PayloadStreamReadData(client_.get(), &result));
-    ASSERT_EQ(result.tag, fuchsia_paver_ReadResultTag_info);
+    ::llcpp::fuchsia::paver::ReadResult result;
+    ASSERT_OK(client_->ReadData(&result));
+    ASSERT_TRUE(result.is_info());
 
-    ASSERT_OK(fuchsia_paver_PayloadStreamReadData(client_.get(), &result));
-    ASSERT_EQ(result.tag, fuchsia_paver_ReadResultTag_eof);
+    ASSERT_OK(client_->ReadData(&result));
+    ASSERT_TRUE(result.is_eof());
 
-    ASSERT_OK(fuchsia_paver_PayloadStreamReadData(client_.get(), &result));
-    ASSERT_EQ(result.tag, fuchsia_paver_ReadResultTag_eof);
+    ASSERT_OK(client_->ReadData(&result));
+    ASSERT_TRUE(result.is_eof());
 }
 
 } // namespace
