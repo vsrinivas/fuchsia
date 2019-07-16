@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <sdk/lib/media/audio_dfx/cpp/audio_device_fx.h>
+#include <lib/media/audio_dfx/cpp/audio_device_fx.h>
 #include <string.h>
 
 //

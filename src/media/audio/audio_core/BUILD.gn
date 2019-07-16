@@ -27,7 +27,7 @@ action_foreach("generate_schemas") {
 package("audio_core") {
   deps = [
     "//src/media/audio/audio_core:audio_core_bin",
-    "//src/media/audio/audio_core/audiofx",
+    "//src/media/audio/effects/passthrough:audiofx",
   ]
 
   binaries = [

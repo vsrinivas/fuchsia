@@ -2,17 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test.gni")
-
+# audio_core currently only supports a single .so that must be called 'audiofx.so'.
 loadable_module("audiofx") {
   sources = [
-    "//sdk/lib/media/audio_dfx/cpp/audio_device_fx.h",
-    "audiofx.cc",
+    "passthrough.cc",
   ]
 
   deps = [
+    "//sdk/lib/media/audio_dfx/cpp",
     "//src/lib/fxl",
   ]
-
-  public_configs = [ "//garnet/public:config" ]
 }
