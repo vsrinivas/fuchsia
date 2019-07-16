@@ -13,7 +13,7 @@ source_set("lib") {
     "monitor.h",
   ]
   public_deps = [
-    "//garnet/public/lib/inspect",
+    "//garnet/public/lib/inspect_deprecated",
     "//sdk/fidl/fuchsia.memory",
     "//sdk/lib/sys/cpp",
     "//src/developer/memory/metrics",
