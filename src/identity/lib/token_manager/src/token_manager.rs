@@ -340,7 +340,8 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
             user_profile_id.clone(),
             &app_scopes,
         )
-        .map_err(|_| TokenManagerError::new(Status::InvalidRequest))?;
+        .token_manager_status(Status::InvalidRequest)?;
+
         // Attempt to read the token from cache.
         if let Some(cached_token) = self.token_cache.lock().get(&cache_key) {
             return Ok(cached_token);
@@ -480,7 +481,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
             user_profile_id.clone(),
             audience_str,
         )
-        .map_err(|_| TokenManagerError::new(Status::InvalidRequest))?;
+        .token_manager_status(Status::InvalidRequest)?;
 
         // Attempt to read the token from cache.
         if let Some(cached_token) = self.token_cache.lock().get(&cache_key) {
@@ -520,7 +521,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
             user_profile_id.clone(),
             api_key.clone(),
         )
-        .map_err(|_| TokenManagerError::new(Status::InvalidRequest))?;
+        .token_manager_status(Status::InvalidRequest)?;
 
         // Attempt to read the token from cache.
         if let Some(cached_token) = self.token_cache.lock().get(&cache_key) {
