@@ -92,6 +92,9 @@ class ChannelDispatcher final
     zx_status_t status_;
   };
 
+  uint64_t get_message_count() const TA_REQ(get_lock()) { return message_count_; }
+  uint64_t get_max_message_count() const TA_REQ(get_lock()) { return max_message_count_; }
+
   // PeeredDispatcher implementation.
   void on_zero_handles_locked() TA_REQ(get_lock());
   void OnPeerZeroHandlesLocked() TA_REQ(get_lock());

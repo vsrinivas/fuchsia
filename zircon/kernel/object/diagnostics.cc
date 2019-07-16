@@ -177,6 +177,44 @@ void DumpJobList() {
   });
 }
 
+void DumpProcessChannels(fbl::RefPtr<ProcessDispatcher> process) {
+  char pname[ZX_MAX_NAME_LEN];
+  process->get_name(pname);
+  printf("%7" PRIu64 " [%s]\n", process->get_koid(), pname);
+
+  process->ForEachHandle([&](zx_handle_t handle, zx_rights_t rights, const Dispatcher* disp) {
+    if (disp->get_type() == ZX_OBJ_TYPE_CHANNEL) {
+      auto chan = DownCastDispatcher<const ChannelDispatcher>(disp);
+      uint64_t koid, peer_koid, count, max_count;
+      {
+        Guard<fbl::Mutex> guard{chan->get_lock()};
+        koid = chan->get_koid();
+        peer_koid = chan->get_related_koid();
+        count = chan->get_message_count();
+        max_count = chan->get_max_message_count();
+      }
+      printf("    chan %7" PRIu64 " %7" PRIu64 " count %" PRIu64 " max %" PRIu64 "\n", koid,
+             peer_koid, count, max_count);
+    }
+    return ZX_OK;
+  });
+}
+
+void DumpProcessIdChannels(zx_koid_t id) {
+  auto pd = ProcessDispatcher::LookupProcessById(id);
+  if (!pd) {
+    printf("process %" PRIu64 " not found!\n", id);
+    return;
+  }
+  DumpProcessChannels(pd);
+}
+
+void DumpAllChannels() {
+  auto walker = MakeProcessWalker(
+      [](ProcessDispatcher* process) { DumpProcessChannels(fbl::RefPtr(process)); });
+  GetRootJobDispatcher()->EnumerateChildren(&walker, /* recurse */ true);
+}
+
 static const char kRightsHeader[] =
     "dup tr r w x map gpr spr enm des spo gpo sig sigp wt ins mj mp mt ap";
 static void DumpHandleRightsKeyMap() {
@@ -804,6 +842,8 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
     printf("%s jobs              : list jobs\n", argv[0].str);
     printf("%s mwd  <mb>         : memory watchdog\n", argv[0].str);
     printf("%s ht   <pid>        : dump process handles\n", argv[0].str);
+    printf("%s ch   <pid>        : dump process channels for pid or for all processes\n",
+           argv[0].str);
     printf("%s hwd  <count>      : handle watchdog\n", argv[0].str);
     printf("%s vmos <pid>|all|hidden [-u?]\n", argv[0].str);
     printf("                     : dump process/all/hidden VMOs\n");
@@ -851,6 +891,12 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
     if (argc < 3)
       goto usage;
     DumpProcessHandles(argv[2].u);
+  } else if (strcmp(argv[1].str, "ch") == 0) {
+    if (argc == 3) {
+      DumpProcessIdChannels(argv[2].u);
+    } else {
+      DumpAllChannels();
+    }
   } else if (strcmp(argv[1].str, "vmos") == 0) {
     if (argc < 3)
       goto usage;
