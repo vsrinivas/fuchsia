@@ -213,7 +213,7 @@ zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory& cat,
       if (res != ZX_OK)
         return res;
 
-      // Ovewrite the values.
+      // Overwrite the values.
       res = WriteGeneralRegisters(cat.registers, &regs);
       if (res != ZX_OK)
         return res;

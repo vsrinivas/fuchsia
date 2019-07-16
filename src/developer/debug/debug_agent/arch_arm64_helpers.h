@@ -19,7 +19,7 @@ namespace arch {
 // |    EC    |IL|             ISS                 |
 //
 // Where:
-// - EC: Exception class field (what exception ocurred).
+// - EC: Exception class field (what exception occurred).
 // - IL: Instruction length (whether the trap was 16-bit of 32-bit instruction).
 // - ISS: Instruction Specific Syndrome. The value is specific to each EC.
 inline uint32_t Arm64ExtractECFromESR(uint32_t esr) { return esr >> 26; }

@@ -37,7 +37,7 @@ zx_status_t SetupHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t*);
 // ZX_ERR_OUT_OF_RANGE will be returned.
 zx_status_t RemoveHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t*);
 
-// Returns the state the debug registers should be if we added a watchpoing.
+// Returns the state the debug registers should be if we added a watchpoint.
 // for |address|.
 // Returns ZX_ERR_ALREADY_BOUND if |address| is already installed.
 // Returns ZX_ERR_NO_RESOURCES if there are no registers left.

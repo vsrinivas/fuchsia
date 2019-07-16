@@ -85,7 +85,7 @@ class DebuggedThread {
   // made. Returns false if it was on a suspension condition (suspended or on an
   // exception).
   //
-  // A nullopt means an error ocurred while suspending.
+  // A nullopt means an error occurred while suspending.
   virtual bool Suspend(bool synchronous = false);
 
   // The typical suspend deadline users should use when suspending.

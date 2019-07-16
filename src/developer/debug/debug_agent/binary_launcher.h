@@ -58,7 +58,7 @@ class BinaryLauncher {
   process::ProcessBuilder builder_;
 
   // The stdout/stderr local socket endpoints.
-  // Will be valid if Setup successfully transfered them to the process.
+  // Will be valid if Setup successfully transferred them to the process.
   zx::socket out_;
   zx::socket err_;
 

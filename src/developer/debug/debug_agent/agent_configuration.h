@@ -10,7 +10,7 @@
 namespace debug_agent {
 
 // Meant to handle all the configurations values that can be changed
-// programatically by the client.
+// programmatically by the client.
 struct AgentConfiguration {
   bool quit_on_exit = false;
 };

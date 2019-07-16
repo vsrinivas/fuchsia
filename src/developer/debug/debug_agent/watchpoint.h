@@ -17,7 +17,7 @@ namespace debug_agent {
 
 class Watchpoint {
  public:
-  // In charge of knowing how to install a watchpoint into the correspoindant
+  // In charge of knowing how to install a watchpoint into the corresponding
   // processes. Having a delegate do it enables to easily mock that
   // functionality.
   //

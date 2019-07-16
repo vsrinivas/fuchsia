@@ -20,7 +20,7 @@ namespace {
 
 uint64_t kNextComponentId = 1;
 
-// Attemps to link a zircon socket into the new component's file descriptor
+// Attempts to link a zircon socket into the new component's file descriptor
 // number represented by |fd|. If successful, the socket will be connected and
 // a (one way) communication channel with that file descriptor will be made.
 zx::socket AddStdio(int fd, fuchsia::sys::LaunchInfo* launch_info) {

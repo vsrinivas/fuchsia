@@ -114,7 +114,7 @@ zx_status_t ProcessWatchpoint::UpdateWatchpoints(
                         << "uninstalls: " << KoidsToString(threads_to_remove);
 
   // We suspend the process synchronously.
-  // TODO(donosoc): If this prooves to be too intrusive, we could just stop
+  // TODO(donosoc): If this proves to be too intrusive, we could just stop
   //                the threads that will be changed.
   std::vector<uint64_t> suspended_koids;
   process()->SuspendAll(true, &suspended_koids);

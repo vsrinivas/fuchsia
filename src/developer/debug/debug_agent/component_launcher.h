@@ -29,7 +29,7 @@ struct ComponentHandles {
   zx::socket err;
 };
 
-// Class designed to help setup a component and then launch it. These setps are
+// Class designed to help setup a component and then launch it. These setups are
 // necessary because the agent needs some information about how the component
 // will be launch before it actually launches it. This is because the debugger
 // will set itself to "catch" the component when it starts as a process.

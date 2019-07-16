@@ -156,10 +156,10 @@ class DebugAgent : public RemoteAPI,
   //                so we can only filter on that.
   zx_koid_t attached_root_job_koid_ = 0;
 
-  // Each component launch is asigned an unique filter and id. This is because
+  // Each component launch is assigned an unique filter and id. This is because
   // new components are attached via the job filter mechanism. When a particular
   // filter attached, we use this id to know which component launch just
-  // happened and we can comunicate it to the client.
+  // happened and we can communicate it to the client.
   struct ExpectedComponent {
     ComponentDescription description;
     ComponentHandles handles;

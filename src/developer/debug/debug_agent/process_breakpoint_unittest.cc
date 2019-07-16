@@ -292,7 +292,7 @@ TEST(ProcessBreakpoint, StepMultiple) {
   EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
 
   // Now thread 3 stops stepping over.
-  // The breakpoint shoudl remain removed.
+  // The breakpoint should remain removed.
   bp.EndStepOver(kThread3Koid);
   EXPECT_TRUE(process_delegate.mem().IsOriginal());
 

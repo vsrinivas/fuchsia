@@ -36,7 +36,7 @@ class DebuggedJob : public debug_ipc::ZirconExceptionWatcher {
   struct FilterInfo {
     std::string filter;
     // Filter used to compare against this filter.
-    // We keep it around so we don't need to recompile it everytime we compare
+    // We keep it around so we don't need to recompile it every time we compare
     // against a new process.
     debug_ipc::Regex regex;
   };

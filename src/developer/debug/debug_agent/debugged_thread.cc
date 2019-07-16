@@ -143,7 +143,7 @@ void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
     // This means that we cannot resume from suspension here, as the breakpoint is owning the
     // thread "run-lifetime".
     //
-    // We can, though, resume from the exception, as effectivelly we already handled the single-step
+    // We can, though, resume from the exception, as effectively we already handled the single-step
     // exception, so there is no more need to keep the thread in an excepted state. The suspend
     // handle will take care of keeping the thread stopped.
     //
@@ -257,7 +257,7 @@ void DebuggedThread::ResumeException() {
 void DebuggedThread::ResumeSuspension() { suspend_token_.reset(); }
 
 bool DebuggedThread::Suspend(bool synchronous) {
-  // Subsequent suspend calls should return immediatelly. Note that this does
+  // Subsequent suspend calls should return immediately. Note that this does
   // not mean that the thread is in that state, but rather that that operation
   // was sent to the kernel.
   if (IsSuspended() || IsInException())
@@ -308,7 +308,7 @@ bool DebuggedThread::WaitForSuspension(zx::time deadline) {
   auto poll_time = zx::msec(10);
   zx_status_t status = ZX_OK;
   do {
-    // Always check the thread state from the kernel because of queue desribed
+    // Always check the thread state from the kernel because of queue described
     // above.
     if (IsBlockedOnException(thread_))
       return true;
@@ -634,7 +634,7 @@ void DebuggedThread::UpdateForWatchpointHit(
 
 void DebuggedThread::ResumeForRunMode() {
   // We check if we're set to currently step over a breakpoint. If so we need to do some special
-  // handling, as going over a breakpoint is always a single-step opearation.
+  // handling, as going over a breakpoint is always a single-step operation.
   // After that we can continue according to the set run-mode.
   if (IsInException() && current_breakpoint_) {
     DEBUG_LOG(Thread) << ThreadPreamble(this) << "Stepping over breakpoint: 0x" << std::hex

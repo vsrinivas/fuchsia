@@ -68,7 +68,7 @@ debug_ipc::NotifyException::Type DecodeESR(uint32_t esr) {
     case 0b111000: /* BRK from arm32 */
     case 0b111100: /* BRK from arm64 */
       return debug_ipc::NotifyException::Type::kSoftware;
-    case 0b110000: /* HW breakpoit from a lower level */
+    case 0b110000: /* HW breakpoint from a lower level */
     case 0b110001: /* HW breakpoint from same level */
       return debug_ipc::NotifyException::Type::kHardware;
     case 0b110010: /* software step from lower level */

@@ -80,7 +80,7 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
   // will be populated with the koids of all threads paused by this operation.
   //
   // If |synchronous| is false, this call will send the suspend commands to the
-  // kernel and return immediatelly. It will block on all the suspend signals
+  // kernel and return immediately. It will block on all the suspend signals
   // otherwise.
   void SuspendAll(bool synchronous = false, std::vector<zx_koid_t>* suspended_koids = nullptr);
 
