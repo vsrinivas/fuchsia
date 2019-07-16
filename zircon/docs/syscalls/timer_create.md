@@ -39,7 +39,8 @@ Passing 0 in options is equivalent to **ZX_TIMER_SLACK_CENTER**.
 See [timer slack](../timer_slack.md) for more information.
 
 The returned handle has the **ZX_RIGHT_DUPLICATE**, **ZX_RIGHT_TRANSFER**,
-**ZX_RIGHT_READ** and **ZX_RIGHT_WRITE** right.
+**ZX_RIGHT_WRITE**, **ZX_RIGHT_SIGNAL**, **ZX_RIGHT_WAIT**, and
+**ZX_RIGHT_INSPECT** rights.
 
 ## RIGHTS
 
