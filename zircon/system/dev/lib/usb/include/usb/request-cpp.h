@@ -389,7 +389,7 @@ public:
 template <size_t callback_size, typename Request> class UsbCallback {
 private:
     friend Request;
-    fit::inline_function<void(Request)> func_;
+    fit::inline_function<void(Request), callback_size> func_;
     static void Invoke(usb_request_t* request, size_t parent_request_size) {
         Request cb(request, parent_request_size);
         cb.private_storage()->func_(std::move(cb));
@@ -428,6 +428,10 @@ public:
     template <typename ClientType> static void Queue(CallbackRequest request, ClientType& client) {
         request.Queue(client);
     }
+    template <typename ClientType, typename Lambda>
+    static void Queue(CallbackRequest request, ClientType& client, Lambda callback) {
+        request.Queue(client, std::move(callback));
+    }
     auto private_storage() { return Request::private_storage(); }
     template <typename ClientType> void Queue(ClientType& function) {
         usb_request_complete_t completion;
@@ -435,6 +439,16 @@ public:
         completion.callback = [](void* ctx, usb_request_t* request) {
             Invoke(request, reinterpret_cast<size_t>(ctx));
         };
+        function.RequestQueue(Request::take(), &completion);
+    }
+    template <typename ClientType, typename Lambda>
+    void Queue(ClientType& function, Lambda callback) {
+        usb_request_complete_t completion;
+        completion.ctx = reinterpret_cast<void*>(parent_request_size_);
+        completion.callback = [](void* ctx, usb_request_t* request) {
+            Invoke(request, reinterpret_cast<size_t>(ctx));
+        };
+        private_storage()->func_ = std::move(callback);
         function.RequestQueue(Request::take(), &completion);
     }
 

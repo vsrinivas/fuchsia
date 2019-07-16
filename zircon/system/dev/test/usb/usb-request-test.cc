@@ -362,19 +362,23 @@ bool CallbackRequestTest() {
     using Request = usb::CallbackRequest<sizeof(std::max_align_t)>;
     std::optional<Request> req;
     int invoked = 0;
+    bool invoked_other = false;
     ddk::UsbFunctionProtocolClient client(&fake_function);
     ASSERT_EQ(Request::Alloc(&req, 0, 0, sizeof(usb_request_t),
                              [&](Request request) {
                                  invoked++;
                                  if (invoked == 5) {
-                                     return;
+                                     Request::Queue(std::move(request), client,
+                                                    [&](Request request) { invoked_other = true; });
+                                 } else {
+                                     Request::Queue(std::move(request), client);
                                  }
-                                 Request::Queue(std::move(request), client);
                              }),
               ZX_OK);
 
     Request::Queue(std::move(*req), client);
     ASSERT_EQ(5, invoked);
+    ASSERT_TRUE(invoked_other);
     END_TEST;
 }
 
