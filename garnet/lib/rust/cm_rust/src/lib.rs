@@ -260,6 +260,11 @@ impl ComponentDecl {
         self.storage.iter().find(|s| &s.name == storage_name)
     }
 
+    /// Returns the `CollectionDecl` corresponding to `collection_name`.
+    pub fn find_collection<'a>(&'a self, collection_name: &str) -> Option<&'a CollectionDecl> {
+        self.collections.iter().find(|c| c.name == collection_name)
+    }
+
     fn is_capability_match(
         child_name: &str,
         collection: Option<&str>,

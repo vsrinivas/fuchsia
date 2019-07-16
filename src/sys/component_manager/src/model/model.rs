@@ -62,9 +62,11 @@ pub struct ModelParams {
     /// In particular, it will be used to resolve the root component itself.
     pub root_resolver_registry: ResolverRegistry,
     /// The default runner used in the root realm (nominally runs ELF binaries).
-    pub root_default_runner: Box<dyn Runner + Send + Sync + 'static>,
+    pub root_default_runner: Arc<dyn Runner + Send + Sync + 'static>,
     /// A set of hooks into key events of the Model.
     pub hooks: Hooks,
+    /// Configuration options for the model.
+    pub config: ModelConfig,
 }
 
 /// The component model holds authoritative state about a tree of component instances, including
@@ -80,16 +82,37 @@ pub struct Model {
     pub root_realm: Arc<Realm>,
     pub framework_services: Arc<dyn FrameworkServiceHost>,
     pub hooks: Arc<Hooks>,
+    pub config: ModelConfig,
+}
+
+/// Holds configuration options for the model.
+#[derive(Clone)]
+pub struct ModelConfig {
+    /// How many children, maximum, are returned by a call to `ChildIterator.next()`.
+    pub list_children_batch_size: usize,
+}
+
+impl ModelConfig {
+    pub fn default() -> Self {
+        ModelConfig {
+            list_children_batch_size: 1000,
+        }
+    }
+
+    fn validate(&self)  {
+        assert!(self.list_children_batch_size > 0, "list_children_batch_size is 0");
+    }
 }
 
 impl Model {
     /// Creates a new component model and initializes its topology.
     pub fn new(params: ModelParams) -> Model {
+        params.config.validate();
         Model {
             framework_services: params.framework_services.into(),
             root_realm: Arc::new(Realm {
                 resolver_registry: Arc::new(params.root_resolver_registry),
-                default_runner: Arc::new(params.root_default_runner),
+                default_runner: params.root_default_runner,
                 abs_moniker: AbsoluteMoniker::root(),
                 component_url: params.root_component_url,
                 // Started by main().
@@ -102,6 +125,7 @@ impl Model {
                 }),
             }),
             hooks: Arc::new(params.hooks),
+            config: params.config,
         }
     }
 

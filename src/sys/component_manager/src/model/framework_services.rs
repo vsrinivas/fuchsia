@@ -75,6 +75,7 @@ impl FrameworkServiceHost {
                     realm,
                     stream
                 )) {
+                    // TODO: Set an epitaph to indicate this was an unexpected error.
                     warn!("serve_realm failed: {}", e);
                 }
             });

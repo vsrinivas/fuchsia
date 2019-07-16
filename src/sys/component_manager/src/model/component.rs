@@ -27,7 +27,7 @@ pub struct Realm {
     pub resolver_registry: Arc<ResolverRegistry>,
     /// The default runner (nominally runs ELF binaries) for executing components
     /// within the realm that do not explicitly specify a runner.
-    pub default_runner: Arc<Box<dyn Runner + Send + Sync + 'static>>,
+    pub default_runner: Arc<dyn Runner + Send + Sync + 'static>,
     /// The component's URL.
     pub component_url: String,
     /// The mode of startup (lazy or eager).
@@ -116,9 +116,7 @@ impl Realm {
             let mut state = await!(self.state.lock());
             let decl = state.decl.as_ref().unwrap();
             let collection_decl = decl
-                .collections
-                .iter()
-                .find(|c| c.name == collection_name)
+                .find_collection(&collection_name)
                 .ok_or_else(|| ModelError::collection_not_found(collection_name.clone()))?;
             match collection_decl.durability {
                 fsys::Durability::Transient => {}

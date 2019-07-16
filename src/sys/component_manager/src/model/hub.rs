@@ -535,8 +535,9 @@ mod tests {
             framework_services: Box::new(mocks::MockFrameworkServiceHost::new()),
             root_component_url,
             root_resolver_registry: resolver,
-            root_default_runner: Box::new(runner),
+            root_default_runner: Arc::new(runner),
             hooks,
+            config: model::ModelConfig::default(),
         }));
 
         let res = await!(model.look_up_and_bind_instance(model::AbsoluteMoniker::root()));

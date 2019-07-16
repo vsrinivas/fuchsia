@@ -9,7 +9,7 @@ use {
         elf_runner::{ElfRunner, ProcessLauncherConnector},
         framework_services::RealFrameworkServiceHost,
         klog,
-        model::{AbsoluteMoniker, Model, ModelParams},
+        model::{AbsoluteMoniker, Model, ModelConfig, ModelParams},
         startup,
     },
     failure::{self, Error, ResultExt},
@@ -42,8 +42,9 @@ fn main() -> Result<(), Error> {
         framework_services: Box::new(RealFrameworkServiceHost::new()),
         root_component_url: args.root_component_url,
         root_resolver_registry: resolver_registry,
-        root_default_runner: Box::new(ElfRunner::new(launcher_connector)),
+        root_default_runner: Arc::new(ElfRunner::new(launcher_connector)),
         hooks: Vec::new(),
+        config: ModelConfig::default(),
     };
     startup::install_hub_if_possible(&mut params)?;
 

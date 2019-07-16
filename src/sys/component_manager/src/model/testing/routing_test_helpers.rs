@@ -125,8 +125,9 @@ impl RoutingTest {
             framework_services,
             root_component_url: format!("test:///{}", root_component),
             root_resolver_registry: resolver,
-            root_default_runner: Box::new(runner),
+            root_default_runner: Arc::new(runner),
             hooks: Vec::new(),
+            config: ModelConfig::default(),
         });
         Self { components, model, namespaces, memfs }
     }

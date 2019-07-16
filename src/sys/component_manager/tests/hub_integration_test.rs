@@ -66,8 +66,9 @@ async fn main() -> Result<(), Error> {
         framework_services: Box::new(RealFrameworkServiceHost::new()),
         root_component_url: root_component_url,
         root_resolver_registry: resolver_registry,
-        root_default_runner: Box::new(runner),
+        root_default_runner: Arc::new(runner),
         hooks,
+        config: model::ModelConfig::default(),
     };
 
     let model = Arc::new(Model::new(params));

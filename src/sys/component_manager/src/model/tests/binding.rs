@@ -13,21 +13,30 @@ use {
     std::sync::Arc,
 };
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn bind_instance_root() {
+fn new_model(mock_resolver: MockResolver, mock_runner: MockRunner) -> Model {
+    new_model_with(mock_resolver, mock_runner, vec![])
+}
+
+fn new_model_with(mock_resolver: MockResolver, mock_runner: MockRunner, hooks: Hooks) -> Model {
     let mut resolver = ResolverRegistry::new();
-    let runner = MockRunner::new();
-    let urls_run = runner.urls_run.clone();
-    let mut mock_resolver = MockResolver::new();
-    mock_resolver.add_component("root", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
-    let model = Model::new(ModelParams {
+    Model::new(ModelParams {
         framework_services: Box::new(MockFrameworkServiceHost::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
-        root_default_runner: Box::new(runner),
-        hooks: Vec::new(),
-    });
+        root_default_runner: Arc::new(mock_runner),
+        hooks,
+        config: ModelConfig::default(),
+    })
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn bind_instance_root() {
+    let mock_runner = MockRunner::new();
+    let urls_run = mock_runner.urls_run.clone();
+    let mut mock_resolver = MockResolver::new();
+    mock_resolver.add_component("root", default_component_decl());
+    let model = new_model(mock_resolver, mock_runner);
     let res = await!(model.look_up_and_bind_instance(AbsoluteMoniker::root()));
     let expected_res: Result<(), ModelError> = Ok(());
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
@@ -40,19 +49,11 @@ async fn bind_instance_root() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn bind_instance_root_non_existent() {
-    let mut resolver = ResolverRegistry::new();
-    let runner = MockRunner::new();
-    let urls_run = runner.urls_run.clone();
+    let mock_runner = MockRunner::new();
+    let urls_run = mock_runner.urls_run.clone();
     let mut mock_resolver = MockResolver::new();
     mock_resolver.add_component("root", default_component_decl());
-    resolver.register("test".to_string(), Box::new(mock_resolver));
-    let model = Model::new(ModelParams {
-        framework_services: Box::new(MockFrameworkServiceHost::new()),
-        root_component_url: "test:///root".to_string(),
-        root_resolver_registry: resolver,
-        root_default_runner: Box::new(runner),
-        hooks: Vec::new(),
-    });
+    let model = new_model(mock_resolver, mock_runner);
     let res = await!(model.look_up_and_bind_instance(vec!["no-such-instance"].into()));
     let expected_res: Result<(), ModelError> =
         Err(ModelError::instance_not_found(vec!["no-such-instance"].into()));
@@ -64,9 +65,8 @@ async fn bind_instance_root_non_existent() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn bind_instance_child() {
-    let mut resolver = ResolverRegistry::new();
-    let runner = MockRunner::new();
-    let urls_run = runner.urls_run.clone();
+    let mock_runner = MockRunner::new();
+    let urls_run = mock_runner.urls_run.clone();
     let mut mock_resolver = MockResolver::new();
     mock_resolver.add_component(
         "root",
@@ -88,17 +88,9 @@ async fn bind_instance_child() {
     );
     mock_resolver.add_component("system", default_component_decl());
     mock_resolver.add_component("echo", default_component_decl());
-    resolver.register("test".to_string(), Box::new(mock_resolver));
     let hook = Arc::new(TestHook::new());
-    let mut hooks: Hooks = Vec::new();
-    hooks.push(hook.clone());
-    let model = Model::new(ModelParams {
-        framework_services: Box::new(MockFrameworkServiceHost::new()),
-        root_component_url: "test:///root".to_string(),
-        root_resolver_registry: resolver,
-        root_default_runner: Box::new(runner),
-        hooks,
-    });
+    let hooks: Hooks = vec![hook.clone()];
+    let model = new_model_with(mock_resolver, mock_runner, hooks);
     // bind to system
     assert!(await!(model.look_up_and_bind_instance(vec!["system"].into())).is_ok());
     let expected_urls = vec!["test:///system_resolved".to_string()];
@@ -133,9 +125,8 @@ async fn bind_instance_child() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn bind_instance_child_non_existent() {
-    let mut resolver = ResolverRegistry::new();
-    let runner = MockRunner::new();
-    let urls_run = runner.urls_run.clone();
+    let mock_runner = MockRunner::new();
+    let urls_run = mock_runner.urls_run.clone();
     let mut mock_resolver = MockResolver::new();
     mock_resolver.add_component(
         "root",
@@ -149,14 +140,7 @@ async fn bind_instance_child_non_existent() {
         },
     );
     mock_resolver.add_component("system", default_component_decl());
-    resolver.register("test".to_string(), Box::new(mock_resolver));
-    let model = Model::new(ModelParams {
-        framework_services: Box::new(MockFrameworkServiceHost::new()),
-        root_component_url: "test:///root".to_string(),
-        root_resolver_registry: resolver,
-        root_default_runner: Box::new(runner),
-        hooks: Vec::new(),
-    });
+    let model = new_model(mock_resolver, mock_runner);
     // bind to system
     assert!(await!(model.look_up_and_bind_instance(vec!["system"].into())).is_ok());
     let expected_urls = vec!["test:///system_resolved".to_string()];
@@ -185,9 +169,8 @@ async fn bind_instance_child_non_existent() {
 /// `b`, `c`, and `d` are started eagerly. `a` and `e` are lazy.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn bind_instance_eager_children() {
-    let mut resolver = ResolverRegistry::new();
-    let runner = MockRunner::new();
-    let urls_run = runner.urls_run.clone();
+    let mock_runner = MockRunner::new();
+    let urls_run = mock_runner.urls_run.clone();
     let mut mock_resolver = MockResolver::new();
     mock_resolver.add_component(
         "root",
@@ -242,17 +225,9 @@ async fn bind_instance_eager_children() {
         },
     );
     mock_resolver.add_component("e", default_component_decl());
-    resolver.register("test".to_string(), Box::new(mock_resolver));
     let hook = Arc::new(TestHook::new());
-    let mut hooks: Hooks = Vec::new();
-    hooks.push(hook.clone());
-    let model = Model::new(ModelParams {
-        framework_services: Box::new(MockFrameworkServiceHost::new()),
-        root_component_url: "test:///root".to_string(),
-        root_resolver_registry: resolver,
-        root_default_runner: Box::new(runner),
-        hooks,
-    });
+    let hooks: Hooks = vec![hook.clone()];
+    let model = new_model_with(mock_resolver, mock_runner, hooks);
 
     // Bind to the top component, and check that it and the eager components were started.
     {
@@ -286,9 +261,8 @@ async fn bind_instance_eager_children() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn bind_instance_no_execute() {
     // Create a non-executable component with an eagerly-started child.
-    let mut resolver = ResolverRegistry::new();
-    let runner = MockRunner::new();
-    let urls_run = runner.urls_run.clone();
+    let mock_runner = MockRunner::new();
+    let urls_run = mock_runner.urls_run.clone();
     let mut mock_resolver = MockResolver::new();
     mock_resolver.add_component(
         "root",
@@ -314,14 +288,7 @@ async fn bind_instance_no_execute() {
         },
     );
     mock_resolver.add_component("b", default_component_decl());
-    resolver.register("test".to_string(), Box::new(mock_resolver));
-    let model = Model::new(ModelParams {
-        framework_services: Box::new(MockFrameworkServiceHost::new()),
-        root_component_url: "test:///root".to_string(),
-        root_resolver_registry: resolver,
-        root_default_runner: Box::new(runner),
-        hooks: Vec::new(),
-    });
+    let model = new_model(mock_resolver, mock_runner);
 
     // Bind to the parent component. The child should be started. However, the parent component
     // is non-executable so it is not run.
@@ -333,9 +300,8 @@ async fn bind_instance_no_execute() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn bind_instance_recursive_child() {
-    let mut resolver = ResolverRegistry::new();
-    let runner = MockRunner::new();
-    let urls_run = runner.urls_run.clone();
+    let mock_runner = MockRunner::new();
+    let urls_run = mock_runner.urls_run.clone();
     let mut mock_resolver = MockResolver::new();
     mock_resolver.add_component(
         "root",
@@ -368,17 +334,9 @@ async fn bind_instance_recursive_child() {
     );
     mock_resolver.add_component("logger", default_component_decl());
     mock_resolver.add_component("netstack", default_component_decl());
-    resolver.register("test".to_string(), Box::new(mock_resolver));
     let hook = Arc::new(TestHook::new());
-    let mut hooks: Hooks = Vec::new();
-    hooks.push(hook.clone());
-    let model = Model::new(ModelParams {
-        framework_services: Box::new(MockFrameworkServiceHost::new()),
-        root_component_url: "test:///root".to_string(),
-        root_resolver_registry: resolver,
-        root_default_runner: Box::new(runner),
-        hooks,
-    });
+    let hooks: Hooks = vec![hook.clone()];
+    let model = new_model_with(mock_resolver, mock_runner, hooks);
 
     // bind to logger (before ever binding to system)
     assert!(await!(model.look_up_and_bind_instance(vec!["system", "logger"].into())).is_ok());
