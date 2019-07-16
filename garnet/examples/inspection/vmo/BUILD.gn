@@ -1,0 +1,57 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_binary("bin") {
+  name = "inspect_vmo_example"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-inspect",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:structopt",
+  ]
+}
+
+package("inspect_vmo_example") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "rust_crates/inspect_vmo_example"
+      dest = "inspect_vmo_example"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/inspect_vmo_example.cmx")
+      dest = "inspect_vmo_example.cmx"
+    },
+  ]
+}
+
+test_package("inspect_vmo_example_tests") {
+  deps = [
+    ":bin_test",
+  ]
+
+  tests = [
+    {
+      name = "inspect_vmo_example_bin_test"
+      dest = "inspect_vmo_example_tests"
+      environments = basic_envs
+    },
+  ]
+}
