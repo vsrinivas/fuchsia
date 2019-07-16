@@ -11,6 +11,7 @@
 #include "garnet/lib/ui/gfx/engine/engine.h"
 #include "garnet/lib/ui/gfx/engine/gfx_command_applier.h"
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"
+#include "garnet/lib/ui/scenic/scenic.h"
 #include "garnet/lib/ui/scenic/system.h"
 #include "src/ui/lib/escher/escher.h"
 
@@ -19,7 +20,7 @@ namespace gfx {
 
 class Compositor;
 
-class GfxSystem : public TempSystemDelegate, public SessionUpdater {
+class GfxSystem : public System, public TempScenicDelegate, public SessionUpdater {
  public:
   static constexpr TypeId kTypeId = kGfx;
   static const char* kName;

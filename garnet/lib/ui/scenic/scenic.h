@@ -20,6 +20,15 @@ namespace scenic_impl {
 
 class Clock;
 
+// TODO(SCN-452): Remove when we get rid of Scenic.GetDisplayInfo().
+class TempScenicDelegate {
+ public:
+  virtual void GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) = 0;
+  virtual void TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) = 0;
+  virtual void GetDisplayOwnershipEvent(
+      fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) = 0;
+};
+
 // A Scenic instance has two main areas of responsibility:
 //   - manage Session lifecycles
 //   - provide a host environment for Services
@@ -28,6 +37,13 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   explicit Scenic(sys::ComponentContext* app_context, inspect_deprecated::Node inspect_node,
                   fit::closure quit_callback);
   ~Scenic();
+
+  // Register a delegate class for implementing top-level Scenic operations (e.g., GetDisplayInfo).
+  // This delegate must outlive the Scenic instance.
+  void SetDelegate(TempScenicDelegate* delegate) {
+    FXL_DCHECK(!delegate_);
+    delegate_ = delegate;
+  }
 
   // Create and register a new system of the specified type.  At most one System
   // with a given TypeId may be registered.
@@ -96,6 +112,8 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> scenic_bindings_;
 
   size_t next_session_id_ = 1;
+
+  TempScenicDelegate* delegate_ = nullptr;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Scenic);
 };

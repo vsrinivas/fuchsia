@@ -90,25 +90,19 @@ void Scenic::CreateSessionImmediately(
 }
 
 void Scenic::GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) {
-  FXL_DCHECK(systems_[System::kGfx]);
-  TempSystemDelegate* delegate =
-      reinterpret_cast<TempSystemDelegate*>(systems_[System::kGfx].get());
-  delegate->GetDisplayInfo(std::move(callback));
+  FXL_DCHECK(delegate_);
+  delegate_->GetDisplayInfo(std::move(callback));
 }
 
 void Scenic::TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) {
-  FXL_DCHECK(systems_[System::kGfx]);
-  TempSystemDelegate* delegate =
-      reinterpret_cast<TempSystemDelegate*>(systems_[System::kGfx].get());
-  delegate->TakeScreenshot(std::move(callback));
+  FXL_DCHECK(delegate_);
+  delegate_->TakeScreenshot(std::move(callback));
 }
 
 void Scenic::GetDisplayOwnershipEvent(
     fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) {
-  FXL_DCHECK(systems_[System::kGfx]);
-  TempSystemDelegate* delegate =
-      reinterpret_cast<TempSystemDelegate*>(systems_[System::kGfx].get());
-  delegate->GetDisplayOwnershipEvent(std::move(callback));
+  FXL_DCHECK(delegate_);
+  delegate_->GetDisplayOwnershipEvent(std::move(callback));
 }
 
 }  // namespace scenic_impl

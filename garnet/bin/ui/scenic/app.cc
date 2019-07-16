@@ -50,6 +50,7 @@ App::App(sys::ComponentContext* app_context, inspect_deprecated::Node inspect_no
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
         auto gfx = scenic_->RegisterSystem<gfx::GfxSystem>(std::make_unique<gfx::DisplayManager>(),
                                                            escher_->GetWeakPtr());
+        scenic_->SetDelegate(gfx);
         FXL_DCHECK(gfx);
 #endif
 

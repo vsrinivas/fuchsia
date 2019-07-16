@@ -36,7 +36,4 @@ void System::SetToInitialized() {
 
 System::~System() = default;
 
-TempSystemDelegate::TempSystemDelegate(SystemContext context, bool initialized_after_construction)
-    : System(std::move(context), initialized_after_construction) {}
-
 }  // namespace scenic_impl

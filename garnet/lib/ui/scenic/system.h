@@ -97,16 +97,6 @@ class System {
   FXL_DISALLOW_COPY_AND_ASSIGN(System);
 };
 
-// TODO(SCN-452): Remove when we get rid of Scenic.GetDisplayInfo().
-class TempSystemDelegate : public System {
- public:
-  explicit TempSystemDelegate(SystemContext context, bool initialized_after_construction);
-  virtual void GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) = 0;
-  virtual void TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) = 0;
-  virtual void GetDisplayOwnershipEvent(
-      fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) = 0;
-};
-
 // Return the system type that knows how to handle the specified command.
 // Used by Session to choose a CommandDispatcher.
 inline System::TypeId SystemTypeForCmd(const fuchsia::ui::scenic::Command& command) {

@@ -28,7 +28,7 @@ const char* GfxSystem::kName = "GfxSystem";
 
 GfxSystem::GfxSystem(SystemContext context, std::unique_ptr<DisplayManager> display_manager,
                      escher::EscherWeakPtr escher)
-    : TempSystemDelegate(std::move(context), false),
+    : System(std::move(context), false),
       display_manager_(std::move(display_manager)),
       escher_(std::move(escher)),
       weak_factory_(this) {
