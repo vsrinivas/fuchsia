@@ -27,7 +27,7 @@ class MinidumpTest : public testing::Test {
   template <typename RequestType, typename ReplyType>
   void DoRequest(RequestType request, ReplyType& reply, Err& err,
                  void (RemoteAPI::*handler)(const RequestType&,
-                                            std::function<void(const Err&, ReplyType)>));
+                                            fit::callback<void(const Err&, ReplyType)>));
 
  private:
   debug_ipc::PlatformMessageLoop loop_;
@@ -60,7 +60,7 @@ Err MinidumpTest::TryOpen(const std::string& filename) {
 template <typename RequestType, typename ReplyType>
 void MinidumpTest::DoRequest(
     RequestType request, ReplyType& reply, Err& err,
-    void (RemoteAPI::*handler)(const RequestType&, std::function<void(const Err&, ReplyType)>)) {
+    void (RemoteAPI::*handler)(const RequestType&, fit::callback<void(const Err&, ReplyType)>)) {
   (session().remote_api()->*handler)(request, [&reply, &err](const Err& e, ReplyType r) {
     err = e;
     reply = r;

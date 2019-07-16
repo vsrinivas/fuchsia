@@ -19,9 +19,9 @@ class MemoryMockRemoteAPI : public MockRemoteAPI {
  public:
   // Return an empty AddressSpace reply.
   void AddressSpace(const debug_ipc::AddressSpaceRequest& request,
-                    std::function<void(const Err&, debug_ipc::AddressSpaceReply)> cb) {
-    MessageLoop::Current()->PostTask(FROM_HERE,
-                                     [cb]() { cb(Err(), debug_ipc::AddressSpaceReply()); });
+                    fit::callback<void(const Err&, debug_ipc::AddressSpaceReply)> cb) override {
+    MessageLoop::Current()->PostTask(
+        FROM_HERE, [cb = std::move(cb)]() mutable { cb(Err(), debug_ipc::AddressSpaceReply()); });
   }
 };
 

@@ -160,7 +160,7 @@ class Session : public SettingStoreObserver {
   // the type-specific parameter pre-bound). The uint32_t is the transaction
   // ID. If the error is set, the data will be invalid and the callback should
   // be issued with the error instead of trying to deserialize.
-  using Callback = fit::function<void(const Err&, std::vector<char>)>;
+  using Callback = fit::callback<void(const Err&, std::vector<char>)>;
 
   // Set the arch_ and arch_info_ fields.
   Err SetArch(debug_ipc::Arch arch);

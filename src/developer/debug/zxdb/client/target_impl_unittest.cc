@@ -29,26 +29,28 @@ class TargetSink : public RemoteAPI {
   void set_attach_reply(const debug_ipc::AttachReply& reply) { attach_reply_ = reply; }
 
   void Launch(const debug_ipc::LaunchRequest& request,
-              std::function<void(const Err&, debug_ipc::LaunchReply)> cb) override {
-    MessageLoop::Current()->PostTask(FROM_HERE, [this, cb]() { cb(launch_err_, launch_reply_); });
+              fit::callback<void(const Err&, debug_ipc::LaunchReply)> cb) override {
+    MessageLoop::Current()->PostTask(
+        FROM_HERE, [this, cb = std::move(cb)]() mutable { cb(launch_err_, launch_reply_); });
   }
 
   void Kill(const debug_ipc::KillRequest& request,
-            std::function<void(const Err&, debug_ipc::KillReply)> cb) override {
-    MessageLoop::Current()->PostTask(FROM_HERE, [cb]() {
+            fit::callback<void(const Err&, debug_ipc::KillReply)> cb) override {
+    MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
       // For now, always report success.
       cb(Err(), debug_ipc::KillReply());
     });
   }
 
   void Attach(const debug_ipc::AttachRequest& request,
-              std::function<void(const Err&, debug_ipc::AttachReply)> cb) override {
-    MessageLoop::Current()->PostTask(FROM_HERE, [this, cb]() { cb(attach_err_, attach_reply_); });
+              fit::callback<void(const Err&, debug_ipc::AttachReply)> cb) override {
+    MessageLoop::Current()->PostTask(
+        FROM_HERE, [this, cb = std::move(cb)]() mutable { cb(attach_err_, attach_reply_); });
   }
 
   void Detach(const debug_ipc::DetachRequest& request,
-              std::function<void(const Err&, debug_ipc::DetachReply)> cb) override {
-    MessageLoop::Current()->PostTask(FROM_HERE, [cb]() {
+              fit::callback<void(const Err&, debug_ipc::DetachReply)> cb) override {
+    MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
       // For now, always report success.
       cb(Err(), debug_ipc::DetachReply());
     });

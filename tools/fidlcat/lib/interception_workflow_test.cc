@@ -286,48 +286,48 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
 
   void AddOrChangeBreakpoint(
       const debug_ipc::AddOrChangeBreakpointRequest& request,
-      std::function<void(const zxdb::Err&, debug_ipc::AddOrChangeBreakpointReply)> cb) override {
+      fit::callback<void(const zxdb::Err&, debug_ipc::AddOrChangeBreakpointReply)> cb) override {
     breakpoints_[request.breakpoint.id] = request.breakpoint;
-    MockRemoteAPI::AddOrChangeBreakpoint(request, cb);
+    MockRemoteAPI::AddOrChangeBreakpoint(request, std::move(cb));
   }
 
   void Attach(const debug_ipc::AttachRequest& request,
-              std::function<void(const zxdb::Err&, debug_ipc::AttachReply)> cb) override {
+              fit::callback<void(const zxdb::Err&, debug_ipc::AttachReply)> cb) override {
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb]() { cb(zxdb::Err(), debug_ipc::AttachReply()); });
+        FROM_HERE, [cb = std::move(cb)]() mutable { cb(zxdb::Err(), debug_ipc::AttachReply()); });
   }
 
   void Modules(const debug_ipc::ModulesRequest& request,
-               std::function<void(const zxdb::Err&, debug_ipc::ModulesReply)> cb) override {
+               fit::callback<void(const zxdb::Err&, debug_ipc::ModulesReply)> cb) override {
     debug_ipc::ModulesReply reply;
     data_.PopulateModules(reply.modules);
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
-                                                [cb, reply]() { cb(zxdb::Err(), reply); });
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [cb = std::move(cb), reply]() mutable { cb(zxdb::Err(), reply); });
   }
 
   void ReadMemory(const debug_ipc::ReadMemoryRequest& request,
-                  std::function<void(const zxdb::Err&, debug_ipc::ReadMemoryReply)> cb) override {
+                  fit::callback<void(const zxdb::Err&, debug_ipc::ReadMemoryReply)> cb) override {
     debug_ipc::ReadMemoryReply reply;
     data_.PopulateMemoryBlockForAddress(request.address, request.size, reply.blocks.emplace_back());
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
-                                                [cb, reply]() { cb(zxdb::Err(), reply); });
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [cb = std::move(cb), reply]() mutable { cb(zxdb::Err(), reply); });
   }
 
   void ReadRegisters(
       const debug_ipc::ReadRegistersRequest& request,
-      std::function<void(const zxdb::Err&, debug_ipc::ReadRegistersReply)> cb) override {
+      fit::callback<void(const zxdb::Err&, debug_ipc::ReadRegistersReply)> cb) override {
     // TODO: Parameterize this so we can have more than one test.
     debug_ipc::ReadRegistersReply reply;
     data_.PopulateRegisters(request.process_koid, reply.categories.emplace_back());
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
-                                                [cb, reply]() { cb(zxdb::Err(), reply); });
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [cb = std::move(cb), reply]() mutable { cb(zxdb::Err(), reply); });
   }
 
   void Resume(const debug_ipc::ResumeRequest& request,
-              std::function<void(const zxdb::Err&, debug_ipc::ResumeReply)> cb) override {
+              fit::callback<void(const zxdb::Err&, debug_ipc::ResumeReply)> cb) override {
     debug_ipc::ResumeReply reply;
     data_.Step(request.process_koid);
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb, reply]() {
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb), reply]() mutable {
       cb(zxdb::Err(), reply);
       // This is so that the test can inject the next exception.
       debug_ipc::MessageLoop::Current()->QuitNow();

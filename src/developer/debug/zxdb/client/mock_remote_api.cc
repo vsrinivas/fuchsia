@@ -23,77 +23,83 @@ void MockRemoteAPI::AddMemory(uint64_t address, std::vector<uint8_t> data) {
 }
 
 void MockRemoteAPI::Attach(const debug_ipc::AttachRequest& request,
-                           std::function<void(const Err&, debug_ipc::AttachReply)> cb) {
+                           fit::callback<void(const Err&, debug_ipc::AttachReply)> cb) {
   debug_ipc::AttachReply reply;
   reply.koid = request.koid;
   reply.name = "<mock>";
 
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb, reply]() { cb(Err(), reply); });
+  debug_ipc::MessageLoop::Current()->PostTask(
+      FROM_HERE, [cb = std::move(cb), reply]() mutable { cb(Err(), reply); });
 }
 
 void MockRemoteAPI::AddOrChangeBreakpoint(
     const debug_ipc::AddOrChangeBreakpointRequest& request,
-    std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb) {
+    fit::callback<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb) {
   breakpoint_add_count_++;
   last_breakpoint_add_ = request;
-  debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [cb]() { cb(Err(), debug_ipc::AddOrChangeBreakpointReply()); });
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
+    cb(Err(), debug_ipc::AddOrChangeBreakpointReply());
+  });
 }
 
 void MockRemoteAPI::RemoveBreakpoint(
     const debug_ipc::RemoveBreakpointRequest& request,
-    std::function<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb) {
+    fit::callback<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb) {
   breakpoint_remove_count_++;
   debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [cb]() { cb(Err(), debug_ipc::RemoveBreakpointReply()); });
+      FROM_HERE, [cb = std::move(cb)]() mutable { cb(Err(), debug_ipc::RemoveBreakpointReply()); });
 }
 
 void MockRemoteAPI::ThreadStatus(const debug_ipc::ThreadStatusRequest& request,
-                                 std::function<void(const Err&, debug_ipc::ThreadStatusReply)> cb) {
+                                 fit::callback<void(const Err&, debug_ipc::ThreadStatusReply)> cb) {
   // Returns the canned response.
   debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [cb, response = thread_status_reply_]() { cb(Err(), std::move(response)); });
+      FROM_HERE, [cb = std::move(cb), response = thread_status_reply_]() mutable {
+        cb(Err(), std::move(response));
+      });
 }
 
 void MockRemoteAPI::Resume(const debug_ipc::ResumeRequest& request,
-                           std::function<void(const Err&, debug_ipc::ResumeReply)> cb) {
+                           fit::callback<void(const Err&, debug_ipc::ResumeReply)> cb) {
   // Always returns success.
   resume_count_++;
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
-                                              [cb, resume_quits_loop = resume_quits_loop_]() {
-                                                cb(Err(), debug_ipc::ResumeReply());
-                                                if (resume_quits_loop)
-                                                  debug_ipc::MessageLoop::Current()->QuitNow();
-                                              });
+  debug_ipc::MessageLoop::Current()->PostTask(
+      FROM_HERE, [cb = std::move(cb), resume_quits_loop = resume_quits_loop_]() mutable {
+        cb(Err(), debug_ipc::ResumeReply());
+        if (resume_quits_loop)
+          debug_ipc::MessageLoop::Current()->QuitNow();
+      });
 }
 
 void MockRemoteAPI::ReadMemory(const debug_ipc::ReadMemoryRequest& request,
-                               std::function<void(const Err&, debug_ipc::ReadMemoryReply)> cb) {
+                               fit::callback<void(const Err&, debug_ipc::ReadMemoryReply)> cb) {
   std::vector<uint8_t> result = memory_.ReadMemory(request.address, request.size);
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [request, result, cb]() {
-    debug_ipc::ReadMemoryReply reply;
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
+                                              [request, result, cb = std::move(cb)]() mutable {
+                                                debug_ipc::ReadMemoryReply reply;
 
-    // For now this is very simple and returns the result as one block. A
-    // more complete implementation would convert short reads into multiple
-    // blocks.
-    reply.blocks.resize(1);
-    auto& block = reply.blocks[0];
+                                                // For now this is very simple and returns the
+                                                // result as one block. A more complete
+                                                // implementation would convert short reads into
+                                                // multiple blocks.
+                                                reply.blocks.resize(1);
+                                                auto& block = reply.blocks[0];
 
-    block.address = request.address;
-    block.valid = request.size == result.size();
-    block.size = request.size;
-    if (block.valid)
-      block.data = std::move(result);
+                                                block.address = request.address;
+                                                block.valid = request.size == result.size();
+                                                block.size = request.size;
+                                                if (block.valid)
+                                                  block.data = std::move(result);
 
-    cb(Err(), std::move(reply));
-  });
+                                                cb(Err(), std::move(reply));
+                                              });
 }
 
 void MockRemoteAPI::WriteRegisters(
     const debug_ipc::WriteRegistersRequest& request,
-    std::function<void(const Err&, debug_ipc::WriteRegistersReply)> cb) {
+    fit::callback<void(const Err&, debug_ipc::WriteRegistersReply)> cb) {
   last_write_registers_ = request;
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb]() {
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
     debug_ipc::WriteRegistersReply reply;
     reply.status = 0;
     cb(Err(), reply);

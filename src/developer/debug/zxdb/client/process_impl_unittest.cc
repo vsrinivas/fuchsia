@@ -21,11 +21,11 @@ class ProcessSink : public RemoteAPI {
   int resume_count() const { return resume_count_; }
 
   void Resume(const debug_ipc::ResumeRequest& request,
-              std::function<void(const Err&, debug_ipc::ResumeReply)> cb) override {
+              fit::callback<void(const Err&, debug_ipc::ResumeReply)> cb) override {
     resume_count_++;
     resume_request_ = request;
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
-                                                [cb]() { cb(Err(), debug_ipc::ResumeReply()); });
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [cb = std::move(cb)]() mutable { cb(Err(), debug_ipc::ResumeReply()); });
   }
 
  private:

@@ -18,21 +18,22 @@ using debug_ipc::MessageLoop;
 class FilterSink : public RemoteAPI {
  public:
   void JobFilter(const debug_ipc::JobFilterRequest& request,
-                 std::function<void(const Err&, debug_ipc::JobFilterReply)> cb) override {
+                 fit::callback<void(const Err&, debug_ipc::JobFilterReply)> cb) override {
     filters[request.job_koid] = request.filters;
 
-    MessageLoop::Current()->PostTask(FROM_HERE, [cb]() {
+    MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
       cb(Err(), debug_ipc::JobFilterReply());
       MessageLoop::Current()->QuitNow();
     });
   }
 
   void Attach(const debug_ipc::AttachRequest& request,
-              std::function<void(const Err&, debug_ipc::AttachReply)> cb) override {
+              fit::callback<void(const Err&, debug_ipc::AttachReply)> cb) override {
     debug_ipc::AttachReply reply;
     reply.koid = request.koid;
     reply.name = "test";
-    MessageLoop::Current()->PostTask(FROM_HERE, [cb, reply]() { cb(Err(), reply); });
+    MessageLoop::Current()->PostTask(FROM_HERE,
+                                     [cb = std::move(cb), reply]() mutable { cb(Err(), reply); });
   }
 
   std::map<uint64_t, std::vector<std::string>> filters;

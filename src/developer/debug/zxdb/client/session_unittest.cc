@@ -51,26 +51,29 @@ class SessionSink : public RemoteAPI {
   }
 
   void Resume(const debug_ipc::ResumeRequest& request,
-              std::function<void(const Err&, debug_ipc::ResumeReply)> cb) override {
+              fit::callback<void(const Err&, debug_ipc::ResumeReply)> cb) override {
     resume_count_++;
     resume_request_ = request;
-    MessageLoop::Current()->PostTask(FROM_HERE, [cb]() { cb(Err(), debug_ipc::ResumeReply()); });
+    MessageLoop::Current()->PostTask(
+        FROM_HERE, [cb = std::move(cb)]() mutable { cb(Err(), debug_ipc::ResumeReply()); });
   }
 
   void AddOrChangeBreakpoint(
       const debug_ipc::AddOrChangeBreakpointRequest& request,
-      std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb) override {
+      fit::callback<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb) override {
     set_breakpoint_ids_.insert(request.breakpoint.id);
-    MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb]() { cb(Err(), debug_ipc::AddOrChangeBreakpointReply()); });
+    MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
+      cb(Err(), debug_ipc::AddOrChangeBreakpointReply());
+    });
   }
 
   void RemoveBreakpoint(
       const debug_ipc::RemoveBreakpointRequest& request,
-      std::function<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb) override {
+      fit::callback<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb) override {
     set_breakpoint_ids_.erase(request.breakpoint_id);
-    MessageLoop::Current()->PostTask(FROM_HERE,
-                                     [cb]() { cb(Err(), debug_ipc::RemoveBreakpointReply()); });
+    MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
+      cb(Err(), debug_ipc::RemoveBreakpointReply());
+    });
   }
 
  private:
