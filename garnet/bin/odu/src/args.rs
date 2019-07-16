@@ -4,8 +4,7 @@
 
 use {
     crate::common_operations::allowed_ops,
-    crate::operations::TargetOps,
-    crate::target::AvailableTargets,
+    crate::target::{AvailableTargets, TargetOps},
     clap::{App, Arg},
     log::error,
     std::io::{Error, ErrorKind},

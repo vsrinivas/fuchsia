@@ -4,9 +4,7 @@
 
 use {
     crate::file_target::FileBlockingTarget,
-    crate::operations::Target,
-    crate::operations::TargetOps,
-    crate::target::AvailableTargets,
+    crate::target::{AvailableTargets, Target, TargetOps},
     libc::c_void,
     log::debug,
     std::{

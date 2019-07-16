@@ -8,8 +8,8 @@
 use {
     crate::common_operations::pwrite,
     crate::io_packet::{IoPacket, IoPacketType, TimeInterval},
-    crate::operations::TargetType,
-    crate::operations::{OperationType, PipelineStages, Target, TargetOps},
+    crate::operations::{OperationType, PipelineStages},
+    crate::target::{Target, TargetOps, TargetType},
     log::debug,
     log::error,
     std::{
@@ -308,7 +308,7 @@ mod tests {
     use {
         crate::file_target::FileBlockingTarget,
         crate::operations::OperationType,
-        crate::operations::TargetType,
+        crate::target::TargetType,
         std::{fs, fs::File, time::Instant},
     };
 
