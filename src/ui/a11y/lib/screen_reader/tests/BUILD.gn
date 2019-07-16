@@ -1,0 +1,15 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("screen_reader_tests") {
+  testonly = true
+
+  sources = [
+    "screen_reader_unittest.cc",
+  ]
+
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
