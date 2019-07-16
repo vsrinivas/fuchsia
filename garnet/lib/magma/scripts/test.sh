@@ -17,9 +17,12 @@ intel)
 mali)
   fx-command-run cp "${script_dir}/autorun_mali" /tmp/magma_autorun
   ;;
+pvr)
+  fx-command-run cp "${script_dir}/autorun_pvr" /tmp/magma_autorun
+  ;;
 *)
   echo >&2 "unknown gpu: $1"
-  echo >&2 "usage: $0 [intel|mali]"
+  echo >&2 "usage: $0 [intel|mali|pvr]"
   exit 1
   ;;
 esac
