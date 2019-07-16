@@ -32,6 +32,7 @@ source_set("block-watcher") {
   sources = [
     "block-device.cc",
     "block-watcher.cc",
+    "encrypted-volume.cc",
     "filesystem-mounter.cc",
     "pkgfs-launcher.cc",
   ]

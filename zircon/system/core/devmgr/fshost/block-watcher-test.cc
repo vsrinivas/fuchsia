@@ -8,6 +8,7 @@
 #include <zxtest/zxtest.h>
 
 #include "block-device-interface.h"
+#include "encrypted-volume-interface.h"
 
 namespace {
 
@@ -392,6 +393,86 @@ TEST(AddDeviceTestCase, AddUnknownFormatBootPartitionDevice) {
     BootPartDevice device;
     EXPECT_EQ(ZX_OK, device.Add());
     EXPECT_FALSE(device.checked_unsealed_zxcrypt);
+}
+
+TEST(AddDeviceTestCase, AddPermanentlyMiskeyedZxcryptVolume) {
+    class ZxcryptVolume : public devmgr::EncryptedVolumeInterface {
+    public:
+        zx_status_t Unseal() final {
+            // Simulate a device where we've lost the key -- can't unlock until we
+            // format the device with a new key, but can afterwards.
+            if (formatted) {
+                postformat_unseal_attempt_count++;
+                return ZX_OK;
+            } else {
+                preformat_unseal_attempt_count++;
+                return ZX_ERR_ACCESS_DENIED;
+            }
+        }
+        zx_status_t Format() final {
+            formatted = true;
+            return ZX_OK;
+        }
+
+        int preformat_unseal_attempt_count = 0;
+        int postformat_unseal_attempt_count = 0;
+        bool formatted = false;
+    };
+    ZxcryptVolume volume;
+    EXPECT_EQ(ZX_OK, volume.EnsureUnsealedAndFormatIfNeeded());
+    EXPECT_TRUE(volume.preformat_unseal_attempt_count > 1);
+    EXPECT_TRUE(volume.formatted);
+    EXPECT_EQ(volume.postformat_unseal_attempt_count, 1);
+}
+
+TEST(AddDeviceTestCase, AddTransientlyMiskeyedZxcryptVolume) {
+    class ZxcryptVolume : public devmgr::EncryptedVolumeInterface {
+    public:
+        zx_status_t Unseal() final {
+            // Simulate a transient error -- fail the first time we try to unseal the
+            // volume, but succeed on a retry or any subsequent attempt.
+            unseal_attempt_count++;
+            if (unseal_attempt_count > 1) {
+                return ZX_OK;
+            } else {
+                return ZX_ERR_ACCESS_DENIED;
+            }
+        }
+
+        zx_status_t Format() final {
+            // We expect this to never be called.
+            formatted = true;
+            return ZX_OK;
+        }
+
+        int unseal_attempt_count = 0;
+        bool formatted = false;
+    };
+    ZxcryptVolume volume;
+    EXPECT_EQ(ZX_OK, volume.EnsureUnsealedAndFormatIfNeeded());
+    EXPECT_FALSE(volume.formatted);
+    EXPECT_EQ(volume.unseal_attempt_count, 2);
+}
+
+TEST(AddDeviceTestCase, AddFailingZxcryptVolumeShouldNotFormat) {
+    class ZxcryptVolume : public devmgr::EncryptedVolumeInterface {
+    public:
+        zx_status_t Unseal() final {
+            // Errors that are not ZX_ERR_ACCESS_DENIED should not trigger
+            // formatting.
+            return ZX_ERR_INTERNAL;
+        }
+        zx_status_t Format() final {
+            // Expect this to not be called.
+            formatted = true;
+            return ZX_OK;
+        }
+
+        bool formatted = false;
+    };
+    ZxcryptVolume volume;
+    EXPECT_EQ(ZX_ERR_INTERNAL, volume.EnsureUnsealedAndFormatIfNeeded());
+    EXPECT_FALSE(volume.formatted);
 }
 
 } // namespace

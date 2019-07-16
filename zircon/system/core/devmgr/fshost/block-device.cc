@@ -34,12 +34,12 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
-#include <zxcrypt/fdio-volume.h>
 
 #include <utility>
 
 #include "block-device.h"
 #include "block-watcher.h"
+#include "encrypted-volume.h"
 #include "pkgfs-launcher.h"
 
 namespace devmgr {
@@ -83,30 +83,8 @@ int UnsealZxcryptThread(void* arg) {
     std::unique_ptr<int> fd_ptr(static_cast<int*>(arg));
     fbl::unique_fd fd(*fd_ptr);
     fbl::unique_fd devfs_root(open("/dev", O_RDONLY));
-
-    zx_status_t rc;
-    std::unique_ptr<zxcrypt::FdioVolume> zxcrypt_volume;
-    if ((rc = zxcrypt::FdioVolume::Init(std::move(fd), std::move(devfs_root),
-                                        &zxcrypt_volume)) != ZX_OK) {
-        printf("fshost: couldn't open zxcrypt fdio volume\n");
-        return ZX_OK;
-    }
-
-    zx::channel zxcrypt_volume_manager_chan;
-    if ((rc = zxcrypt_volume->OpenManager(zx::sec(2),
-                                          zxcrypt_volume_manager_chan.reset_and_get_address())) !=
-        ZX_OK) {
-        printf("fshost: couldn't open zxcrypt manager device\n");
-        return 0;
-    }
-
-    zxcrypt::FdioVolumeManager zxcrypt_volume_manager(std::move(zxcrypt_volume_manager_chan));
-    uint8_t slot = 0;
-    if ((rc = zxcrypt_volume_manager.UnsealWithDeviceKey(slot)) != ZX_OK) {
-        printf("fshost: couldn't unseal zxcrypt manager device\n");
-        return 0;
-    }
-
+    EncryptedVolume volume(std::move(fd), std::move(devfs_root));
+    volume.EnsureUnsealedAndFormatIfNeeded();
     return 0;
 }
 
@@ -220,12 +198,12 @@ zx_status_t BlockDevice::IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) {
 }
 
 zx_status_t BlockDevice::FormatZxcrypt() {
-  fbl::unique_fd devfs_root_fd(open("/dev", O_RDONLY));
-  if (!devfs_root_fd) {
-      return ZX_ERR_NOT_FOUND;
-  }
-  return zxcrypt::FdioVolume::CreateWithDeviceKey(fd_.duplicate(), std::move(devfs_root_fd),
-                                                  nullptr);
+    fbl::unique_fd devfs_root_fd(open("/dev", O_RDONLY));
+    if (!devfs_root_fd) {
+        return ZX_ERR_NOT_FOUND;
+    }
+    EncryptedVolume volume(fd_.duplicate(), std::move(devfs_root_fd));
+    return volume.Format();
 }
 
 bool BlockDevice::ShouldCheckFilesystems() {
