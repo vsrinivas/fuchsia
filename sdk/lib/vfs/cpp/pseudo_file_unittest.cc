@@ -240,7 +240,8 @@ TEST_F(PseudoFileTest, ServeOnValidFlagsForReadWriteFile) {
   auto file_wrapper = FileWrapper::CreateReadWriteFile("test_str", 100, false);
   uint32_t allowed_flags[] = {fuchsia::io::OPEN_RIGHT_READABLE, fuchsia::io::OPEN_RIGHT_WRITABLE,
                               fuchsia::io::OPEN_FLAG_NODE_REFERENCE,
-                              fuchsia::io::OPEN_FLAG_TRUNCATE};
+                              fuchsia::io::OPEN_FLAG_TRUNCATE,
+                              fuchsia::io::OPEN_FLAG_NOT_DIRECTORY};
   for (auto allowed_flag : allowed_flags) {
     SCOPED_TRACE(std::to_string(allowed_flag));
     AssertOpen(file_wrapper.file(), dispatcher(), allowed_flag, ZX_OK);

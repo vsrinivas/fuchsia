@@ -33,9 +33,8 @@ constexpr std::tuple<NodeKind::Type, uint32_t> kKindFlagMap[] = {
 namespace internal {
 
 bool IsValidName(const std::string& name) {
-  return name.length() <= NAME_MAX &&
-         memchr(name.data(), '/', name.length()) == nullptr && name != "." &&
-         name != "..";
+  return name.length() <= NAME_MAX && memchr(name.data(), '/', name.length()) == nullptr &&
+         name != "." && name != "..";
 }
 
 Node::Node() = default;
@@ -44,9 +43,9 @@ Node::~Node() = default;
 std::unique_ptr<Connection> Node::Close(Connection* connection) {
   std::lock_guard<std::mutex> guard(mutex_);
 
-  auto connection_iterator = std::find_if(
-      connections_.begin(), connections_.end(),
-      [connection](const auto& entry) { return entry.get() == connection; });
+  auto connection_iterator =
+      std::find_if(connections_.begin(), connections_.end(),
+                   [connection](const auto& entry) { return entry.get() == connection; });
   auto ret = std::move(*connection_iterator);
   connections_.erase(connection_iterator);
   return ret;
@@ -101,6 +100,8 @@ zx_status_t Node::ValidateFlags(uint32_t flags) const {
   uint32_t allowed_flags = kCommonAllowedFlags | GetAllowedFlags();
   if (is_directory) {
     allowed_flags = allowed_flags | fuchsia::io::OPEN_FLAG_DIRECTORY;
+  } else {
+    allowed_flags = allowed_flags | fuchsia::io::OPEN_FLAG_NOT_DIRECTORY;
   }
 
   uint32_t prohibitive_flags = GetProhibitiveFlags();
@@ -147,15 +148,13 @@ uint32_t Node::GetAllowedFlags() const {
 uint32_t Node::GetProhibitiveFlags() const {
   NodeKind::Type kind = GetKind();
   if (NodeKind::IsDirectory(kind)) {
-    return fuchsia::io::OPEN_FLAG_CREATE |
-           fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT |
+    return fuchsia::io::OPEN_FLAG_CREATE | fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT |
            fuchsia::io::OPEN_FLAG_TRUNCATE | fuchsia::io::OPEN_FLAG_APPEND;
   }
   return 0;
 }
 
-zx_status_t Node::SetAttr(uint32_t flags,
-                          const fuchsia::io::NodeAttributes& attributes) {
+zx_status_t Node::SetAttr(uint32_t flags, const fuchsia::io::NodeAttributes& attributes) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -166,8 +165,7 @@ uint32_t Node::FilterRefFlags(uint32_t flags) {
   return flags;
 }
 
-zx_status_t Node::Serve(uint32_t flags, zx::channel request,
-                        async_dispatcher_t* dispatcher) {
+zx_status_t Node::Serve(uint32_t flags, zx::channel request, async_dispatcher_t* dispatcher) {
   flags = FilterRefFlags(flags);
   zx_status_t status = ValidateFlags(flags);
   if (status != ZX_OK) {
@@ -177,8 +175,7 @@ zx_status_t Node::Serve(uint32_t flags, zx::channel request,
   return Connect(flags, std::move(request), dispatcher);
 }
 
-zx_status_t Node::Connect(uint32_t flags, zx::channel request,
-                          async_dispatcher_t* dispatcher) {
+zx_status_t Node::Connect(uint32_t flags, zx::channel request, async_dispatcher_t* dispatcher) {
   zx_status_t status;
   std::unique_ptr<Connection> connection;
   if (Flags::IsNodeReference(flags)) {
@@ -197,8 +194,7 @@ zx_status_t Node::Connect(uint32_t flags, zx::channel request,
   return status;
 }
 
-zx_status_t Node::ServeWithMode(uint32_t flags, uint32_t mode,
-                                zx::channel request,
+zx_status_t Node::ServeWithMode(uint32_t flags, uint32_t mode, zx::channel request,
                                 async_dispatcher_t* dispatcher) {
   zx_status_t status = ValidateMode(mode);
   if (status != ZX_OK) {
@@ -208,8 +204,7 @@ zx_status_t Node::ServeWithMode(uint32_t flags, uint32_t mode,
   return Serve(flags, std::move(request), dispatcher);
 }
 
-void Node::SendOnOpenEventOnError(uint32_t flags, zx::channel request,
-                                  zx_status_t status) {
+void Node::SendOnOpenEventOnError(uint32_t flags, zx::channel request, zx_status_t status) {
   ZX_DEBUG_ASSERT(status != ZX_OK);
 
   if (!Flags::ShouldDescribe(flags)) {
@@ -230,8 +225,7 @@ void Node::AddConnection(std::unique_ptr<Connection> connection) {
   connections_.push_back(std::move(connection));
 }
 
-zx_status_t Node::CreateConnection(uint32_t flags,
-                                   std::unique_ptr<Connection>* connection) {
+zx_status_t Node::CreateConnection(uint32_t flags, std::unique_ptr<Connection>* connection) {
   *connection = std::make_unique<internal::NodeConnection>(flags, this);
   return ZX_OK;
 }
