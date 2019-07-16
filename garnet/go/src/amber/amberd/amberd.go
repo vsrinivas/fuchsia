@@ -21,7 +21,6 @@ import (
 	"amber/daemon"
 	"amber/metrics"
 	"amber/source"
-	"amber/sys_update"
 
 	"fidl/fuchsia/amber"
 
@@ -37,9 +36,9 @@ func Main() {
 
 	var (
 		// TODO(jmatt) replace hard-coded values with something better/more flexible
-		usage      = "usage: amber [-k=<path>] [-s=<path>] [-u=<url>]"
-		store      = flag.String("s", "/data/amber/store", "The path to the local file store")
-		autoUpdate = flag.Bool("a", false, "Automatically update and restart the system as updates become available")
+		usage = "usage: amber [-k=<path>] [-s=<path>] [-u=<url>]"
+		store = flag.String("s", "/data/amber/store", "The path to the local file store")
+		_     = flag.Bool("a", false, "Automatically update and restart the system as updates become available")
 	)
 
 	flag.CommandLine.Usage = func() {
@@ -101,8 +100,7 @@ func Main() {
 		}
 	}
 
-	supMon := sys_update.NewSystemUpdateMonitor(*autoUpdate, d)
-	ctlSvr := control_server.NewControlServer(d, supMon)
+	ctlSvr := control_server.NewControlServer(d)
 	ctx.OutgoingService.AddService(amber.ControlName, func(c zx.Channel) error {
 		_, err := ctlSvc.Add(ctlSvr, c, nil)
 		return err
@@ -111,8 +109,6 @@ func Main() {
 		_, err := evtSvc.Add(control_server.EventsImpl{}, c, nil)
 		return err
 	})
-
-	supMon.Start()
 
 	for i := 1; i < runtime.NumCPU(); i++ {
 		go fidl.Serve()

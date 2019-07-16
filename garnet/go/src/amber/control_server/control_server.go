@@ -15,9 +15,7 @@ import (
 	"syscall/zx/fidl"
 
 	"amber/daemon"
-	"amber/metrics"
 	"amber/source"
-	"amber/sys_update"
 
 	"fidl/fuchsia/amber"
 	"fidl/fuchsia/pkg"
@@ -26,7 +24,6 @@ import (
 type ControlServer struct {
 	*amber.ControlTransitionalBase
 	daemon    *daemon.Daemon
-	sysUpdate *sys_update.SystemUpdateMonitor
 	openRepos amber.OpenedRepositoryService
 }
 
@@ -38,10 +35,9 @@ var _ = amber.Events(EventsImpl{})
 
 var merklePat = regexp.MustCompile("^[0-9a-f]{64}$")
 
-func NewControlServer(d *daemon.Daemon, sum *sys_update.SystemUpdateMonitor) *ControlServer {
+func NewControlServer(d *daemon.Daemon) *ControlServer {
 	return &ControlServer{
-		daemon:    d,
-		sysUpdate: sum,
+		daemon: d,
 	}
 }
 
@@ -60,8 +56,9 @@ func (c *ControlServer) AddSrc(cfg amber.SourceConfig) (bool, error) {
 }
 
 func (c *ControlServer) CheckForSystemUpdate() (bool, error) {
-	go c.sysUpdate.Check(metrics.InitiatorManual)
-	return true, nil
+	msg := "CheckForSystemUpdate moved to fuchsia.update.Manager"
+	log.Printf(msg)
+	return false, fmt.Errorf(msg)
 }
 
 func (c *ControlServer) RemoveSrc(id string) (amber.Status, error) {
