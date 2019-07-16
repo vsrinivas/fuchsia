@@ -102,6 +102,66 @@ bool bti_pin_contig_flag_test() {
     END_TEST;
 }
 
+bool bti_resize_test() {
+    BEGIN_TEST;
+
+    zx::iommu iommu;
+    zx::bti bti;
+    zx::pmt pmt;
+    // Please do not use get_root_resource() in new code. See ZX-1467.
+    zx::unowned_resource root_res(get_root_resource());
+    zx_iommu_desc_dummy_t desc;
+    // Please do not use get_root_resource() in new code. See ZX-1467.
+    ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY,
+                              &desc, sizeof(desc), iommu.reset_and_get_address()), ZX_OK);
+    ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
+
+    zx::vmo vmo;
+    ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, ZX_VMO_RESIZABLE, &vmo), ZX_OK);
+
+    zx_paddr_t paddrs;
+    ASSERT_EQ(bti.pin(ZX_BTI_PERM_READ, vmo, 0, ZX_PAGE_SIZE, &paddrs, 1, &pmt), ZX_OK);
+
+    EXPECT_EQ(vmo.set_size(0), ZX_ERR_BAD_STATE);
+
+    pmt.unpin();
+
+    END_TEST;
+}
+
+bool bti_clone_test() {
+    BEGIN_TEST;
+
+    zx::iommu iommu;
+    zx::bti bti;
+    zx::pmt pmt;
+    // Please do not use get_root_resource() in new code. See ZX-1467.
+    zx::unowned_resource root_res(get_root_resource());
+    zx_iommu_desc_dummy_t desc;
+    // Please do not use get_root_resource() in new code. See ZX-1467.
+    ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY,
+                              &desc, sizeof(desc), iommu.reset_and_get_address()), ZX_OK);
+    ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
+
+    zx::vmo vmo, clone;
+    ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, ZX_VMO_RESIZABLE, &vmo), ZX_OK);
+    ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, ZX_PAGE_SIZE, &clone), ZX_OK);
+
+    zx_paddr_t paddrs;
+    ASSERT_EQ(bti.pin(ZX_BTI_PERM_READ, clone, 0, ZX_PAGE_SIZE, &paddrs, 1, &pmt), ZX_OK);
+
+    clone.reset();
+
+    zx_signals_t o;
+    EXPECT_EQ(vmo.wait_one(ZX_VMO_ZERO_CHILDREN, zx::time::infinite_past(), &o), ZX_ERR_TIMED_OUT);
+
+    pmt.unpin();
+
+    EXPECT_EQ(vmo.wait_one(ZX_VMO_ZERO_CHILDREN, zx::time::infinite_past(), &o), ZX_OK);
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(bti_tests)
@@ -109,4 +169,6 @@ RUN_TEST(bti_create_test);
 RUN_TEST(bti_pin_test);
 RUN_TEST(bti_pin_contiguous_test);
 RUN_TEST(bti_pin_contig_flag_test);
+RUN_TEST(bti_resize_test);
+RUN_TEST(bti_clone_test);
 END_TEST_CASE(bti_tests)

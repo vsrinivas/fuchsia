@@ -63,6 +63,12 @@ number of addresses returned depends on whether the **ZX_BTI_COMPRESS** or
 *addrs_count* is the number of entries in the *addrs* array.  It is an error for
 *addrs_count* to not match the value calculated above.
 
+The pmt retains a reference to the associated vmo, so the underlying vmo won't be
+destroyed until the pmt is unpinned.
+
+Resizable vmos can be pinned. If a call to [`zx_set_size()`] would discard pinned pages,
+that call will fail.
+
 ## OPTIONS
 
 - **ZX_BTI_PERM_READ**, **ZX_BTI_PERM_WRITE**, and **ZX_BTI_PERM_EXECUTE** define

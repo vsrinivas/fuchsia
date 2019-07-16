@@ -49,6 +49,8 @@ or **ZX_VMO_CHILD_RESIZABLE**.
 
 **ZX_ERR_NO_MEMORY**  Failure due to lack of system memory.
 
+**ZX_ERR_BAD_STATE**  Requested size would discard pinned pages.
+
 ## SEE ALSO
 
  - [`zx_vmo_create()`]
