@@ -107,6 +107,7 @@ executable("bin") {
   deps = [
     ":lib",
     "//sdk/lib/sys/cpp",
+    "//zircon/public/fidl/fuchsia-boot",
     "//zircon/public/fidl/fuchsia-device-manager",
     "//zircon/public/fidl/fuchsia-kernel",
     "//zircon/public/fidl/fuchsia-paver",
