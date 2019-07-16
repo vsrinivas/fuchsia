@@ -182,6 +182,38 @@ async fn connect<'a>(
     }
 }
 
+fn parse_disconnect<'a>(args: &'a [&'a str], state: &'a Mutex<State>) -> Result<String, String> {
+    if args.len() != 1 {
+        return Err(format!("usage: {}", Cmd::Disconnect.cmd_help()));
+    }
+    // `args[0]` is the identifier of the peer to connect to
+    let id = match to_identifier(state, args[0]) {
+        Some(id) => id,
+        None => return Err(format!("Unable to disconnect: Unknown address {}", args[0])),
+    };
+    Ok(id)
+}
+
+async fn handle_disconnect(id: String, control_svc: &ControlProxy) -> Result<String, Error> {
+    let response = await!(control_svc.disconnect(&id))?;
+    if response.error.is_some() {
+        Ok(Status::from(response).to_string())
+    } else {
+        Ok(String::new())
+    }
+}
+
+async fn disconnect<'a>(
+    args: &'a [&'a str],
+    state: &'a Mutex<State>,
+    control_svc: &'a ControlProxy,
+) -> Result<String, Error> {
+    match parse_disconnect(args, state) {
+        Ok(id) => await!(handle_disconnect(id, control_svc)),
+        Err(msg) => Ok(msg),
+    }
+}
+
 async fn set_discoverable(discoverable: bool, control_svc: &ControlProxy) -> Result<String, Error> {
     if discoverable {
         println!("Becoming discoverable..");
@@ -269,38 +301,72 @@ impl State {
     }
 }
 
+async fn parse_and_handle_cmd(
+    bt_svc: &ControlProxy,
+    state: Arc<Mutex<State>>,
+    line: String,
+) -> Result<ReplControl, Error> {
+    match parse_cmd(line) {
+        ParseResult::Valid((cmd, args)) => await!(handle_cmd(bt_svc, state, cmd, args)),
+        ParseResult::Empty => Ok(ReplControl::Continue),
+        ParseResult::Error(err) => {
+            println!("{}", err);
+            Ok(ReplControl::Continue)
+        }
+    }
+}
+
+enum ParseResult<T> {
+    Valid(T),
+    Empty,
+    Error(String),
+}
+
+/// Parse a single raw input command from a user into the command type and argument list
+fn parse_cmd(line: String) -> ParseResult<(Cmd, Vec<String>)> {
+    let components: Vec<_> = line.trim().split_whitespace().collect();
+    match components.split_first() {
+        Some((raw_cmd, args)) => match raw_cmd.parse() {
+            Ok(cmd) => {
+                let args = args.into_iter().map(|s| s.to_string()).collect();
+                ParseResult::Valid((cmd, args))
+            }
+            Err(_) => ParseResult::Error(format!("\"{}\" is not a valid command", raw_cmd)),
+        },
+        None => ParseResult::Empty,
+    }
+}
+
 /// Handle a single raw input command from a user and indicate whether the command should
 /// result in continuation or breaking of the read evaluate print loop.
 async fn handle_cmd(
     bt_svc: &ControlProxy,
     state: Arc<Mutex<State>>,
-    line: String,
+    cmd: Cmd,
+    args: Vec<String>,
 ) -> Result<ReplControl, Error> {
-    let components: Vec<_> = line.trim().split_whitespace().collect();
-    if let Some((raw_cmd, args)) = components.split_first() {
-        let cmd = raw_cmd.parse();
-        let res = match cmd {
-            Ok(Cmd::Connect) => await!(connect(args, &state, &bt_svc)),
-            Ok(Cmd::StartDiscovery) => await!(set_discovery(true, &bt_svc)),
-            Ok(Cmd::StopDiscovery) => await!(set_discovery(false, &bt_svc)),
-            Ok(Cmd::Discoverable) => await!(set_discoverable(true, &bt_svc)),
-            Ok(Cmd::NotDiscoverable) => await!(set_discoverable(false, &bt_svc)),
-            Ok(Cmd::GetPeers) => Ok(get_peers(&state)),
-            Ok(Cmd::GetPeer) => Ok(get_peer(args, &state)),
-            Ok(Cmd::GetAdapters) => await!(get_adapters(&bt_svc)),
-            Ok(Cmd::SetActiveAdapter) => await!(set_active_adapter(args, &bt_svc)),
-            Ok(Cmd::SetAdapterName) => await!(set_adapter_name(args, &bt_svc)),
-            Ok(Cmd::SetAdapterDeviceClass) => await!(set_adapter_device_class(args, &bt_svc)),
-            Ok(Cmd::ActiveAdapter) => await!(get_active_adapter(&bt_svc)),
-            Ok(Cmd::Help) => Ok(Cmd::help_msg().to_string()),
-            Ok(Cmd::Exit) | Ok(Cmd::Quit) => return Ok(ReplControl::Break),
-            Err(_) => Ok(format!("\"{}\" is not a valid command", raw_cmd)),
-        }?;
-        if res != "" {
-            println!("{}", res);
-        }
+    let args: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+    let args: &[&str] = &*args;
+    let res = match cmd {
+        Cmd::Connect => await!(connect(args, &state, &bt_svc)),
+        Cmd::Disconnect => await!(disconnect(args, &state, &bt_svc)),
+        Cmd::StartDiscovery => await!(set_discovery(true, &bt_svc)),
+        Cmd::StopDiscovery => await!(set_discovery(false, &bt_svc)),
+        Cmd::Discoverable => await!(set_discoverable(true, &bt_svc)),
+        Cmd::NotDiscoverable => await!(set_discoverable(false, &bt_svc)),
+        Cmd::GetPeers => Ok(get_peers(&state)),
+        Cmd::GetPeer => Ok(get_peer(args, &state)),
+        Cmd::GetAdapters => await!(get_adapters(&bt_svc)),
+        Cmd::SetActiveAdapter => await!(set_active_adapter(args, &bt_svc)),
+        Cmd::SetAdapterName => await!(set_adapter_name(args, &bt_svc)),
+        Cmd::SetAdapterDeviceClass => await!(set_adapter_device_class(args, &bt_svc)),
+        Cmd::ActiveAdapter => await!(get_active_adapter(&bt_svc)),
+        Cmd::Help => Ok(Cmd::help_msg().to_string()),
+        Cmd::Exit | Cmd::Quit => return Ok(ReplControl::Break),
+    }?;
+    if res != "" {
+        println!("{}", res);
     }
-
     Ok(ReplControl::Continue)
 }
 
@@ -363,19 +429,12 @@ async fn run_repl(bt_svc: ControlProxy, state: Arc<Mutex<State>>) -> Result<(), 
     // `cmd_stream` blocks on input in a separate thread and passes commands and acks back to
     // the main thread via async channels.
     let (mut commands, mut acks) = cmd_stream(state.clone());
-    loop {
-        if let Some(cmd) = await!(commands.next()) {
-            match await!(handle_cmd(&bt_svc, state.clone(), cmd)) {
-                Ok(ReplControl::Continue) => {}
-                Ok(ReplControl::Break) => {
-                    break;
-                }
-                Err(e) => {
-                    println!("Error handling command: {}", e);
-                }
-            }
-        } else {
-            break;
+
+    while let Some(cmd) = await!(commands.next()) {
+        match await!(parse_and_handle_cmd(&bt_svc, state.clone(), cmd)) {
+            Ok(ReplControl::Continue) => {} // continue silently
+            Ok(ReplControl::Break) => break,
+            Err(e) => println!("Error handling command: {}", e),
         }
         await!(acks.send(()))?;
     }
@@ -411,6 +470,7 @@ fn main() -> Result<(), Error> {
 mod tests {
     use super::*;
     use fidl_fuchsia_bluetooth_control as control;
+    use parking_lot::Mutex;
 
     fn peer(connected: bool, bonded: bool) -> Peer {
         control::RemoteDevice {
@@ -478,5 +538,38 @@ mod tests {
                 expected.map(|s| s.to_string())
             );
         }
+    }
+
+    // Test that command lines entered parse correctly to the expected disconnect calls
+    #[test]
+    fn test_disconnect() {
+        let state = Mutex::new(state_with(peer(true, false)));
+        let cases = vec![
+            // valid peer id
+            ("disconnect peer", Ok("peer".to_string())),
+            // unknown address
+            (
+                "disconnect 00:00:00:00:00:00",
+                Err("Unable to disconnect: Unknown address 00:00:00:00:00:00".to_string()),
+            ),
+            // known address
+            ("disconnect 00:00:00:00:00:01", Ok("peer".to_string())),
+            // no id param
+            ("disconnect", Err(format!("usage: {}", Cmd::Disconnect.cmd_help()))),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(parse_disconnect_id(line, &state), expected);
+        }
+    }
+
+    fn parse_disconnect_id(line: &str, state: &Mutex<State>) -> Result<String, String> {
+        let args = match parse_cmd(line.to_string()) {
+            ParseResult::Valid((Cmd::Disconnect, args)) => Ok(args),
+            ParseResult::Valid((_, _)) => Err("Command is not disconnect"),
+            _ => Err("failed"),
+        }?;
+        let args: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+        let args: &[&str] = &*args;
+        parse_disconnect(args, state)
     }
 }
