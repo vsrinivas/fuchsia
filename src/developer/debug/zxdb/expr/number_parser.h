@@ -17,7 +17,7 @@ class ExprValue;
 // (no floating point).
 //
 // It tries to compute a value of the correct type given the input, taking into
-// acount size suffixes and the magnitude of the number. The rules are somewhat
+// account size suffixes and the magnitude of the number. The rules are somewhat
 // simplified from C++ in that the base of the number is not considered and it
 // will pick the smallest type that will fit (C++ has different rules for
 // decimal numbers, see the .cc file).
@@ -65,7 +65,7 @@ struct IntegerSuffix {
 // Checks for a type suffix on a number in the given string view and fills the
 // given structure. It does not check for overall number validity.
 //
-// On success, tne number suffix ("u", "l", "ll") will be trimmed from the
+// On success, the number suffix ("u", "l", "ll") will be trimmed from the
 // given string view so it contains only the part of the number before the
 // suffix (if any).
 //

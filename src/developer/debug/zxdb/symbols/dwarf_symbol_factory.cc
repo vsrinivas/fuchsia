@@ -965,8 +965,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariantPart(const llvm::DWARFDie& 
   if (!decoder.Decode(die) || !discriminant)
     return fxl::MakeRefCounted<Symbol>();
 
-  // Look for variants in this variant_part. It will also have a data member for the disciminant but
-  // we will have already found that above via reference.
+  // Look for variants in this variant_part. It will also have a data member for the discriminant
+  // but we will have already found that above via reference.
   std::vector<LazySymbol> variants;
   for (const llvm::DWARFDie& child : die) {
     if (child.getTag() == llvm::dwarf::DW_TAG_variant)

@@ -299,7 +299,7 @@ TEST_F(FormatTest, Struct_Anon) {
       SyncTreeTypeDesc(anon_value, FormatOptions()));
 }
 
-// Structure members can be marked as "artifical" by the compiler. We shouldn't print these.
+// Structure members can be marked as "artificial" by the compiler. We shouldn't print these.
 TEST_F(FormatTest, Struct_Artificial) {
   auto int32_type = MakeInt32Type();
   auto foo_type = MakeCollectionType(DwarfTag::kStructureType, "Foo",
@@ -572,7 +572,7 @@ TEST_F(FormatTest, TruncatedString) {
 TEST_F(FormatTest, RustEnum) {
   auto rust_enum = MakeTestRustEnum();
 
-  // Since "none" is the default, random disciminant values (here, the 32-bit "100" value) will
+  // Since "none" is the default, random discriminant values (here, the 32-bit "100" value) will
   // match it. It has no value, so the expectation has an awkward ", " at the end.
   ExprValue none_value(rust_enum, {100, 0, 0, 0,              // Discriminant
                                    0, 0, 0, 0, 0, 0, 0, 0});  // Unused

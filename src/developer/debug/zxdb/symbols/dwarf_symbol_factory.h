@@ -44,7 +44,7 @@ class DwarfSymbolFactory : public SymbolFactory {
   //
   // The tag (DW_TAG_subprogram or DW_TAG_inlined_subroutine) is passed in because when recursively
   // looking up the definitions, we want the original DIE tag rather than the specification's tag
-  // (the origina could be an inlined function while the specification will never be).
+  // (the original could be an inlined function while the specification will never be).
   fxl::RefPtr<Symbol> DecodeFunction(const llvm::DWARFDie& die, DwarfTag tag,
                                      bool is_specification = false);
   fxl::RefPtr<Symbol> DecodeArrayType(const llvm::DWARFDie& die);

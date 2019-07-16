@@ -42,7 +42,7 @@ class Location {
     // Some global variables actually need to be evaluated asynchronously based on the current CPU
     // state. For example, TLS values are located relative to the CPU register that indicates the
     // TLS base. When resolving a symbolic name, we can encounter these which can't be evaluated in
-    // the global context of the synbol system.
+    // the global context of the symbol system.
     //
     // Currently these aren't handled in most places. But if a caller is in a position to evaluate
     // this it can fill out the address from the symbol.

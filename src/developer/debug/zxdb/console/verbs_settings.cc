@@ -239,7 +239,7 @@ Contexts, Schemas and Instance Overrides
   the highest level it can, in order to make it as general as possible.
 
   In most cases these higher level will be system-wide, to change behavior to
-  the whole system, that can be overriden per-process or per-thread. Sometimes
+  the whole system, that can be overridden per-process or per-thread. Sometimes
   though, the setting only makes sense on a per-object basis (eg. new process
   filters for jobs). In this case, the unqualified set will work on the current
   object in the context.
@@ -268,7 +268,7 @@ Setting Types
           showing the list value uses bullet points, setting it requires the
           colon-separated representation. Running "get <setting_name>" will give
           the current "list setting value" for a list setting, which can be
-          copy-pasted for easier editing. See example for a demostration.
+          copy-pasted for easier editing. See example for a demonstration.
 
 Examples
 

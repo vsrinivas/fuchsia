@@ -44,7 +44,7 @@ class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> 
   virtual debug_ipc::Arch GetArch();
 
   // Request for synchronous register data. If the value is not synchronously
-  // availble, the *value will always be a nullopt.
+  // available, the *value will always be a nullopt.
   //
   // A return value of false means that the value is not known synchronously.
   // In this case, GetRegisterAsync should be called to retrieve the value.

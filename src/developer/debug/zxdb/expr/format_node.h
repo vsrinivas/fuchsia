@@ -189,7 +189,7 @@ class FormatNode {
   const std::string& type() const { return type_; }
   void set_type(std::string t) { type_ = std::move(t); }
 
-  // The short descrition of this node's value. It is valid when State == kDescribed. For composite
+  // The short description of this node's value. It is valid when State == kDescribed. For composite
   // things like structs, the description might be an abbreviated version of the struct's members.
   const std::string& description() const { return description_; }
   void set_description(std::string d) { description_ = std::move(d); }

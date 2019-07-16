@@ -21,7 +21,7 @@ struct BuiltinTypeInfo {
 // TODO(brettw) this needs to handle compound types like "unsigned short"
 // and "signed int". Note that the modifiers can appear in different orders
 // like "signed short int" vs. "short signed int", and can also have
-// intersperced CV-modifiers like "short volatile signed const int".
+// interspersed CV-modifiers like "short volatile signed const int".
 const BuiltinTypeInfo kCBuiltinInfo[] = {
     // clang-format off
 

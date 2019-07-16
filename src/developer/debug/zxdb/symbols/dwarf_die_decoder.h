@@ -98,7 +98,7 @@ class DwarfDieDecoder {
   // A special handler to get the parent of the most deep abstract origin.
   //
   // Most DIEs can have an "abstract origin" which is another DIE that
-  // underlays values. Theroretically abstract origins can be linked into
+  // underlays values. Theoretically abstract origins can be linked into
   // arbitrarily long chains. In the current Clang this mostly happens for
   // inlined functions, where the inlined instance references the actual
   // function definition as its abstract origin. But abstract origins can

@@ -230,10 +230,10 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
 
   // The mode of the state machine.
   enum Mode {
-    kBegin,       // Inital state with no previous context.
+    kBegin,       // Initial state with no previous context.
     kColonColon,  // Just saw a "::", expecting a name next.
-    kType,        // Idenfitier is a type.
-    kTemplate,    // Idenfitier is a template, expecting "<" next.
+    kType,        // Identifier is a type.
+    kTemplate,    // Identifier is a template, expecting "<" next.
     kNamespace,   // Identifier is a namespace.
     kOtherName,   // Identifier is something other than the above (normally this
                   // means a variable).

@@ -53,7 +53,7 @@ DerivedClassTestSetup::DerivedClassTestSetup() {
   std::vector<uint8_t> base2_ptr_storage = {0x02, 0x30, 0, 0, 0, 0, 0, 0};
   base2_ptr_value = ExprValue(base2_ptr_type, base2_ptr_storage, ExprValueSource());
 
-  // Reference values (use the same addresse as the pointer variants).
+  // Reference values (use the same addresses as the pointer variants).
   derived_ref_value = ExprValue(derived_ref_type, derived_ptr_storage, ExprValueSource());
   base1_ref_value = ExprValue(base1_ref_type, base1_ptr_storage, ExprValueSource());
   base2_ref_value = ExprValue(base2_ref_type, base2_ptr_storage, ExprValueSource());

@@ -19,7 +19,7 @@ std::vector<uint8_t> CreateData(size_t length) {
   return data;
 }
 
-TEST(GetLittleEndianHexOutput, Lenghts) {
+TEST(GetLittleEndianHexOutput, Lengths) {
   Err err;
   std::string out;
   std::vector<uint8_t> data;

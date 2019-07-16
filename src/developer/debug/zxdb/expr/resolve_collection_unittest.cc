@@ -98,7 +98,7 @@ TEST_F(ResolveCollectionTest, GoodMemberAccess) {
   EXPECT_EQ(out, out_by_name);
 }
 
-// Tests that "a->b" can be resolved when the type of "a" is a foward definition. This requires
+// Tests that "a->b" can be resolved when the type of "a" is a forward definition. This requires
 // looking up the symbol in the index to find its definition.
 TEST_F(ResolveCollectionTest, ForwardDefinitionPtr) {
   // Need a bunch of symbol stuff to have the index.

@@ -38,7 +38,7 @@ static const char* kPauseOnAttachDescription =
 const char* ClientSettings::System::kShowStdout = "show-stdout";
 static const char* kShowStdoutDescription =
     R"(  Whether newly debugged process (either launched or attached) should
-  output it's stdout/stderr to zxdb. This setting is global but can be overriden
+  output it's stdout/stderr to zxdb. This setting is global but can be overridden
   by each individual process.)";
 
 const char* ClientSettings::System::kQuitAgentOnExit = "quit-agent-on-exit";

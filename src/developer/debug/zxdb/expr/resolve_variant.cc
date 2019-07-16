@@ -21,7 +21,7 @@ Err ResolveVariant(fxl::RefPtr<EvalContext> context, const ExprValue& value,
   // enclosing structure.
   const DataMember* discr_member = variant_part->discriminant().Get()->AsDataMember();
   if (!discr_member)
-    return Err("Missing disciminant for variant.");
+    return Err("Missing discriminant for variant.");
 
   ExprValue discr_value;
   Err err = ResolveMember(context, value, discr_member, &discr_value);

@@ -21,7 +21,7 @@ namespace zxdb {
 using TargetPointer = uint64_t;
 
 // Size of a pointer on the target system. Currently we only support 64-bit.
-// Use this constant isntead of sizeof(TargetPointer) so that in the future if
+// Use this constant instead of sizeof(TargetPointer) so that in the future if
 // we support non-64-bit target architectures we can search for this constant
 // and replace it with a more complex query that uses the computed pointer
 // size for the declared architecture.

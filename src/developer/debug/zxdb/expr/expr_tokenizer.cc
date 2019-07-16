@@ -151,7 +151,7 @@ bool ExprTokenizer::CurrentMatchesTokenRecord(const ExprTokenRecord& record) con
 
   const size_t size = record.static_value.size();
   if (!can_advance(size))
-    return false;  // Not enought room.
+    return false;  // Not enough room.
 
   if (!(record.languages & static_cast<unsigned>(language_)))
     return false;  // Doesn't apply to this language.

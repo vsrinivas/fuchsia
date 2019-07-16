@@ -58,10 +58,10 @@ fxl::RefPtr<CompileUnit> MakeRustUnit();
 // Makes a Rust variant that can be put into a VariantPart. Rust Variants have a single data member
 // that is a struct containing the members passed in which could be empty). So it's got 2 structs.
 //
-// The variant's single generated data member will be at offset 0 in the containing struct. Normally
-// the disciminant in the VariantPart and the data members of each Variant start at offset 0 so they
-// overlap! The passed-in members then go inside this struct, and should be arranged so they don't
-// overlap the data taken by the disciminant.
+// The variant's single generated data member will be at offset 0 in the containing struct.
+// Normally the discriminant in the VariantPart and the data members of each Variant start at
+// offset 0 so they overlap! The passed-in members then go inside this struct, and should be
+// arranged so they don't overlap the data taken by the discriminant.
 fxl::RefPtr<Variant> MakeRustVariant(const std::string& name, std::optional<uint64_t> discriminant,
                                      const std::vector<fxl::RefPtr<DataMember>>& members);
 
@@ -85,7 +85,7 @@ fxl::RefPtr<Collection> MakeRustEnum(const std::string& name, fxl::RefPtr<DataMe
 // discriminant value (should be padded to 12 total);
 //
 // Rust doesn't use the "default discriminant" feature of DWARF but we use that here to test our
-// interpretation of DWARF. The default disciminant matches any disciminant value that's not
+// interpretation of DWARF. The default discriminant matches any discriminant value that's not
 // otherwise explicitly encoded.
 fxl::RefPtr<Collection> MakeTestRustEnum();
 

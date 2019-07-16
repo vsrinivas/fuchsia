@@ -19,8 +19,8 @@ class Variant;
 //    tuple) associated with each enum value. In this case there will be no non-variant parts of the
 //    structure.
 //
-// VariantParts can have a "disciminant" which is a variable in the structure whose value indicates
-// which of the variants is currently active. DWARF does't require this discriminant but currently
+// VariantParts can have a "discriminant" which is a variable in the structure whose value indicates
+// which of the variants is currently active. DWARF doesn't require this discriminant but currently
 // we do since our only case (Rust) generates them.
 //
 // The discriminant is a DataMember that holds a value. This is one of the "discr_value" values from

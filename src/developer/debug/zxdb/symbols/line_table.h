@@ -22,7 +22,7 @@ class LineTable {
   virtual ~LineTable() = default;
 
   // Returns the number of file names referenced by this line table. The
-  // DWARFDebugLine::Row::File entriers are 1-based (!) indices into a table of
+  // DWARFDebugLine::Row::File entries are 1-based (!) indices into a table of
   // this size.
   virtual size_t GetNumFileNames() const = 0;
 

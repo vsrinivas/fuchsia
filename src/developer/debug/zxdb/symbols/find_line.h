@@ -56,7 +56,7 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(const LineTable& line_table,
 // smallest line number.
 //
 // The "one per function" rule is because a line can often get broken into
-// muliple line table entries (sometimes disjoint, sometimes not), and when
+// multiple line table entries (sometimes disjoint, sometimes not), and when
 // asking for a line we want the one with the lowest address.
 std::vector<LineMatch> GetBestLineMatches(const std::vector<LineMatch>& matches);
 

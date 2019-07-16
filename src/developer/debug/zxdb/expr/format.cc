@@ -810,7 +810,7 @@ void FillFormatNodeDescription(FormatNode* node, const FormatOptions& options,
 // length_was_known means. When unset we assume a guessed length (as in "char*"), stop at the first
 // null, and don't include it.
 //
-// TODO(brettw) currently this handles 8-bit chracters only.
+// TODO(brettw) currently this handles 8-bit characters only.
 void FormatCharArrayNode(FormatNode* node, fxl::RefPtr<Type> char_type, const uint8_t* data,
                          size_t length, bool length_was_known, bool truncated) {
   node->set_description_kind(FormatNode::kString);
@@ -824,7 +824,7 @@ void FormatCharArrayNode(FormatNode* node, fxl::RefPtr<Type> char_type, const ui
   if (output_len < length)
     truncated = false;
 
-  // Generate the string in the desciption. Stop at the first null (computed above) and don't
+  // Generate the string in the description. Stop at the first null (computed above) and don't
   // include it.
   std::string result("\"");
   for (size_t i = 0; i < output_len; i++)

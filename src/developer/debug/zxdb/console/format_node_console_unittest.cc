@@ -302,7 +302,7 @@ TEST_F(FormatValueConsoleTest, Collection) {
 
 // Tests that maximum recursion depth as well as the maximum pointer dereference depth.
 TEST_F(FormatValueConsoleTest, NestingLimits) {
-  // This creates the followint structure:
+  // This creates the following structure:
   //
   //   int final = 12;  // @ address kIntAddress.
   //
@@ -594,10 +594,10 @@ TEST_F(FormatValueConsoleTest, RustEnum) {
   // discriminant feature of DWARF.
   ExprValue none_value(enum_type, {0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
 
-  // Scalar(123): a single 32-bit value following the 32-bit disciminant of 0.
+  // Scalar(123): a single 32-bit value following the 32-bit discriminant of 0.
   ExprValue scalar_value(enum_type, {0, 0, 0, 0, 123, 0, 0, 0, 0, 0, 0, 0});
 
-  // Point{x:12, y:13}: two 32-bit values following the 32-bit disciminant of 1.
+  // Point{x:12, y:13}: two 32-bit values following the 32-bit discriminant of 1.
   ExprValue point_value(enum_type, {1, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0});
 
   // Minimal single-line formatting.

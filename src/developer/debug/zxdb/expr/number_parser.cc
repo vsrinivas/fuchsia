@@ -144,7 +144,7 @@ Err StringToNumber(std::string_view str, ExprValue* output) {
       if (cur.type_signed)
         continue;  // Unsigned suffix requires unsigned type.
     } else if (prefix.sign == IntegerPrefix::kNegative && !cur.type_signed) {
-      // Signed input requires a signed type unless the a suffix overrode it
+      // Signed input requires a signed type unless a suffix overrode it
       // which was checked above ("-1u" should be unsigned).
       continue;
     }

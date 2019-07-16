@@ -96,7 +96,7 @@ fxl::RefPtr<Variant> MakeRustVariant(const std::string& name, std::optional<uint
                                      const std::vector<fxl::RefPtr<DataMember>>& members) {
   // For Rust triggering to happen the compilation unit must be set. The easiest way to do this is
   // to set the compilation unit as the parent.  This doesn't produce a strictly valid structure
-  // since the parents won't be "right" when traversing the symbol hierarcy upward, but that's not
+  // since the parents won't be "right" when traversing the symbol hierarchy upward, but that's not
   // been necessary so far.
   //
   // TODO(brettw) have a better way to set the language for symbols.
@@ -189,7 +189,7 @@ fxl::RefPtr<Collection> MakeTestRustEnum() {
   auto scalar_variant = MakeRustVariant("Scalar", kScalarDiscriminant,
                                         std::vector<fxl::RefPtr<DataMember>>{scalar_data});
 
-  // Point variant. The two members start after the disciminant (4 bytes).
+  // Point variant. The two members start after the discriminant (4 bytes).
   auto x_data = fxl::MakeRefCounted<DataMember>("x", uint32_type, 4);
   auto y_data = fxl::MakeRefCounted<DataMember>("y", uint32_type, 8);
   auto point_variant = MakeRustVariant("Point", kPointDiscriminant,

@@ -16,7 +16,7 @@
 
 namespace zxdb {
 
-// Tests a variant with two possible values represented by disciminants 0 and
+// Tests a variant with two possible values represented by discriminants 0 and
 // 1.
 TEST(ResolveVariant, TwoValues) {
   auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
@@ -24,7 +24,7 @@ TEST(ResolveVariant, TwoValues) {
   auto a = fxl::MakeRefCounted<Variant>(0, std::vector<LazySymbol>{});
   auto b = fxl::MakeRefCounted<Variant>(1, std::vector<LazySymbol>{});
 
-  // 8-bit disciminant.
+  // 8-bit discriminant.
   auto u8_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "u8");
   auto discr = fxl::MakeRefCounted<DataMember>(std::string(), u8_type, 0);
 
@@ -58,7 +58,7 @@ TEST(ResolveVariant, DefaultValue) {
   auto a = fxl::MakeRefCounted<Variant>(0, std::vector<LazySymbol>{});
   auto b = fxl::MakeRefCounted<Variant>(std::nullopt, std::vector<LazySymbol>{});
 
-  // 8-bit disciminant.
+  // 8-bit discriminant.
   auto u8_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "u8");
   auto discr = fxl::MakeRefCounted<DataMember>(std::string(), u8_type, 0);
 

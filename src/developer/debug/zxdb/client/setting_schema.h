@@ -19,7 +19,7 @@ namespace zxdb {
 class SettingSchema : public fxl::RefCountedThreadSafe<SettingSchema> {
  public:
   // The SchemaSetting holds the actual setting (the value that is stored and
-  // overriden by SettingStore) + some metadata useful for implementing more
+  // overridden by SettingStore) + some metadata useful for implementing more
   // complex settings such as enums, by using the |options| field.
   struct SchemaSetting {
     Setting setting;
@@ -43,7 +43,7 @@ class SettingSchema : public fxl::RefCountedThreadSafe<SettingSchema> {
 
   // |valid_options| determines which options will be accepted when writing into
   // a setting. They will be stored as lowercase and comparison will be in
-  // lowercase for simplicty.
+  // lowercase for simplicity.
   // Will return false if the given list has a entry that is not within the
   // valid options.
   bool AddList(std::string name, std::string description, std::vector<std::string> list = {},

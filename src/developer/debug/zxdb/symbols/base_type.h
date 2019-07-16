@@ -29,7 +29,7 @@ class BaseType final : public Type {
   // Note on void types: DWARF encodes void* as a pointer to nothing and
   // normally when there's nothing returned, it just lists no return type.
   // But special-casing this in the expression evaluation code is awkward so
-  // we also treat "kBaseTypeNone" as refering to a void type.
+  // we also treat "kBaseTypeNone" as referring to a void type.
   static constexpr int kBaseTypeNone = 0x00;  // Means uninitialized or void.
   static constexpr int kBaseTypeAddress = 0x01;
   static constexpr int kBaseTypeBoolean = 0x02;

@@ -32,7 +32,7 @@ namespace zxdb {
 // NAMING: The "full name" (as returned by Symbol::GetFullName()) of a function is the qualified
 // name without any return types or parameters. Some callers may want parameters, we can add a
 // helper function in the future if necessary (for display we would often want to syntax highlight
-// these differently so this is often betetr done at a a different layer).
+// these differently so this is often better done at a different layer).
 class Function final : public CodeBlock {
  public:
   // Construct with fxl::MakeRefCounted().

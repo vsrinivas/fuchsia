@@ -25,7 +25,7 @@ class Variant final : public Symbol {
   // Symbol overrides.
   const Variant* AsVariant() const override { return this; }
 
-  // The disciminant value associated with this variant. See VariantPart.
+  // The discriminant value associated with this variant. See VariantPart.
   //
   // The discriminant value may be unset which indicates that this variant is the default one.
   //
@@ -34,11 +34,11 @@ class Variant final : public Symbol {
   // because the full type of the VariantPart needs to be understood just to properly parse the
   // Variant out of the file.
   //
-  // Since our only current use of these is Rust which always uses unsigned disciminants, we also
+  // Since our only current use of these is Rust which always uses unsigned discriminants, we also
   // assume unsigned here.
   //
-  // If in the future we need to support signed disciminants, we could sign-extend the values during
-  // decode so that internally we always deal with unsigned types.
+  // If in the future we need to support signed discriminants, we could sign-extend the values
+  // during decode so that internally we always deal with unsigned types.
   const std::optional<uint64_t>& discr_value() const { return discr_value_; }
 
   // Data members. These should be DataMember objects. The offsets of the data members will be from
