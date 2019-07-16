@@ -26,7 +26,7 @@ static const std::string kSimpleCameraServiceUrl =
     "fuchsia-pkg://fuchsia.com/simple_camera_server_cpp#meta/"
     "simple_camera_server_cpp.cmx";
 
-static const bool camera_id = 0;  // 0 -> real camera, 1 -> fake
+static const uint32_t camera_id = 0;  // 0 -> fake camera, 1 -> real camera
 
 SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
     : BaseView(std::move(view_context), "Video Display Example"),
