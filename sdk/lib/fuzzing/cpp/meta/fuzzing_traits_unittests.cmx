@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/fuzzing_traits_unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

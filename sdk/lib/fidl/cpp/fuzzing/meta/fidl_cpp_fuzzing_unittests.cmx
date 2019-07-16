@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/fidl_cpp_fuzzing_unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

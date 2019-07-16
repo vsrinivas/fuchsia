@@ -228,7 +228,9 @@ group("component_cpp") {
 group("fuzzing") {
   testonly = true
   public_deps = [
+    "//sdk/lib/fidl/cpp/fuzzing:fidl_cpp_fuzzing_tests",
     "//sdk/lib/fuzzing/cpp:fuzz_input_unittests($host_toolchain)",
+    "//sdk/lib/fuzzing/cpp:fuzzing_traits_tests",
   ]
 }
 

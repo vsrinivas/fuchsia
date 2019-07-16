@@ -16,6 +16,46 @@ source_set("cpp") {
   public_configs = [ "//sdk/config" ]
 }
 
+source_set("traits") {
+  testonly = true
+  sources = [
+    "traits.h",
+  ]
+  public_configs = [ "//sdk/config" ]
+  public_deps = [
+    ":cpp",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fuzzing_traits_unittests",
+  ]
+}
+
+test("fuzzing_traits_unittests") {
+  sources = [
+    "traits_unittest.cc",
+  ]
+  deps = [
+    ":traits",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+test_package("fuzzing_traits_tests") {
+  deps = [
+    ":fuzzing_traits_unittests",
+  ]
+  tests = [
+    {
+      name = "fuzzing_traits_unittests"
+    },
+  ]
+}
+
 test("fuzz_input_unittests") {
   sources = [
     "fuzz_input_unittest.cc",
