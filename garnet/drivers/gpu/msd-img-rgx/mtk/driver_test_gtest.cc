@@ -16,8 +16,7 @@ void magma_indriver_test(zx_device_t* device, void* driver_device_handle) {
   TestPlatformDevice::SetInstance(magma::PlatformDevice::Create(device));
   const int kArgc = 3;
   const char* argv[kArgc] = {"magma_indriver_test",
-                             "--gtest_filter=-PlatformPci*.*:MagmaSystem.Multithread:MsdBuffer.*:"
-                             "MsdContext.*:MsdSemaphore.*"};
+                             "--gtest_filter=-PlatformPci*.*:MagmaSystem.Multithread:MsdBuffer.*"};
   testing::InitGoogleTest(const_cast<int*>(&kArgc), const_cast<char**>(argv));
 
   printf("[DRV START=]\n");
