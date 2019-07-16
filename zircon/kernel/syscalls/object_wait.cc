@@ -74,6 +74,16 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value, zx_signals_t signals, 
 
   // Regardless of wait outcome, we must call End().
   auto signals_state = wait_state_observer.End();
+  // If the wait returned OK, we should observe at least one signal that we waited for.
+  if (result == ZX_OK) {
+    DEBUG_ASSERT_MSG((signals_state & signals) != 0, "observed signals %x waiting for signals %x",
+                     signals_state, signals);
+  }
+  // If the wait was canceled, we should observe the HANDLE_CLOSED signal.
+  if (result == ZX_ERR_CANCELED) {
+    DEBUG_ASSERT_MSG((signals_state & ZX_SIGNAL_HANDLE_CLOSED) != 0,
+                     "observed signals %x when waiting for canceled", signals_state);
+  }
 
   ktrace(TAG_WAIT_ONE_DONE, koid, signals_state, result, 0);
 

@@ -10,6 +10,7 @@
 #include <fbl/canary.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/event.h>
+#include <ktl/atomic.h>
 #include <object/dispatcher.h>
 #include <object/state_observer.h>
 #include <stdint.h>
@@ -45,7 +46,7 @@ class WaitStateObserver final : public StateObserver {
   const void* handle_ = nullptr;
   Event* event_ = nullptr;
   zx_signals_t watched_signals_ = 0u;
-  zx_signals_t wakeup_reasons_;
+  ktl::atomic<zx_signals_t> wakeup_reasons_;
   fbl::RefPtr<Dispatcher> dispatcher_;  // Non-null only between Begin() and End().
 };
 
