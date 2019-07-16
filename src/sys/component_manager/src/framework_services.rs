@@ -48,9 +48,9 @@ impl RealFrameworkServiceHost {
                         await!(Self::bind_child(model.clone(), realm.clone(), child, exposed_dir));
                     responder.send(&mut res)?;
                 }
-                fsys::RealmRequest::DestroyChild { responder, .. } => {
-                    info!("{} destroying child!", realm.abs_moniker);
-                    responder.send(&mut Ok(()))?;
+                fsys::RealmRequest::DestroyChild { responder, child } => {
+                    let mut res = await!(Self::destroy_child(model.clone(), realm.clone(), child));
+                    responder.send(&mut res)?;
                 }
                 fsys::RealmRequest::ListChildren { responder, collection, iter } => {
                     let mut res =
@@ -128,6 +128,25 @@ impl RealFrameworkServiceHost {
             return Err(fsys::Error::InstanceNotFound);
         }
         Ok(())
+    }
+
+    async fn destroy_child(
+        model: Model,
+        realm: Arc<Realm>,
+        child: fsys::ChildRef,
+    ) -> Result<(), fsys::Error> {
+        let child_name = child.name.ok_or(fsys::Error::InvalidArguments)?;
+        let collection = child.collection;
+        collection.as_ref().ok_or(fsys::Error::InvalidArguments)?;
+        let child_moniker = ChildMoniker::new(child_name, collection);
+        await!(realm.remove_dynamic_child(&child_moniker, &model.hooks)).map_err(|e| match e {
+            ModelError::InstanceNotFound { .. } => fsys::Error::InstanceNotFound,
+            ModelError::Unsupported { .. } => fsys::Error::Unsupported,
+            e => {
+                error!("remove_dynamic_child() failed: {}", e);
+                fsys::Error::Internal
+            }
+        })
     }
 
     async fn list_children(
@@ -420,6 +439,138 @@ mod tests {
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
             assert_eq!(err, fsys::Error::Unsupported);
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn destroy_dynamic_child() {
+        // Set up model and realm service.
+        let mut mock_resolver = MockResolver::new();
+        let mock_runner = MockRunner::new();
+        mock_resolver.add_component(
+            "root",
+            ComponentDecl {
+                children: vec![ChildDecl {
+                    name: "system".to_string(),
+                    url: "test:///system".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        );
+        mock_resolver.add_component(
+            "system",
+            ComponentDecl {
+                collections: vec![CollectionDecl {
+                    name: "coll".to_string(),
+                    durability: fsys::Durability::Transient,
+                }],
+                ..default_component_decl()
+            },
+        );
+        let test =
+            await!(FrameworkServiceTest::new(mock_resolver, mock_runner, vec!["system"].into()));
+
+        // Create children "a" and "b" in collection.
+        let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
+        let res = await!(test.realm_proxy.create_child(collection_ref, child_decl("a")));
+        let _ = res.expect("failed to create child a").expect("failed to create child a");
+
+        let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
+        let res = await!(test.realm_proxy.create_child(collection_ref, child_decl("b")));
+        let _ = res.expect("failed to create child b").expect("failed to create child b");
+
+        let child_realm = await!(get_child(&test.realm, "coll:a"));
+        let old_instance_id = child_realm.instance_id;
+        assert_eq!("(system(coll:a,coll:b))", test.hook.print());
+
+        // Destroy "a". "a" is gone from the topology.
+        let child_ref =
+            fsys::ChildRef { name: Some("a".to_string()), collection: Some("coll".to_string()) };
+        let res = await!(test.realm_proxy.destroy_child(child_ref));
+        let _ = res.expect("failed to destroy child a").expect("failed to destroy child a");
+
+        let actual_children = await!(get_children(&test.realm));
+        let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
+        expected_children.insert("coll:b".into());
+        assert_eq!(actual_children, expected_children);
+        assert_eq!("(system(coll:b))", test.hook.print());
+
+        // Recreate "a". Verify "a" is back (but it's a different "a").
+        let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
+        let child_decl = fsys::ChildDecl {
+            name: Some("a".to_string()),
+            url: Some("test:///a_alt".to_string()),
+            startup: Some(fsys::StartupMode::Lazy),
+        };
+        let res = await!(test.realm_proxy.create_child(collection_ref, child_decl));
+        let _ = res.expect("failed to recreate child a").expect("failed to recreate child a");
+
+        assert_eq!("(system(coll:a,coll:b))", test.hook.print());
+        let child_realm = await!(get_child(&test.realm, "coll:a"));
+        assert!(child_realm.instance_id > old_instance_id);
+        assert_eq!(child_realm.component_url, "test:///a_alt".to_string());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn destroy_dynamic_child_errors() {
+        let mut mock_resolver = MockResolver::new();
+        let mock_runner = MockRunner::new();
+        mock_resolver.add_component(
+            "root",
+            ComponentDecl {
+                children: vec![ChildDecl {
+                    name: "system".to_string(),
+                    url: "test:///system".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        );
+        mock_resolver.add_component(
+            "system",
+            ComponentDecl {
+                collections: vec![CollectionDecl {
+                    name: "coll".to_string(),
+                    durability: fsys::Durability::Transient,
+                }],
+                ..default_component_decl()
+            },
+        );
+        let test =
+            await!(FrameworkServiceTest::new(mock_resolver, mock_runner, vec!["system"].into()));
+
+        // Create child "a" in collection.
+        let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
+        let res = await!(test.realm_proxy.create_child(collection_ref, child_decl("a")));
+        let _ = res.expect("failed to create child a").expect("failed to create child a");
+
+        // Invalid arguments.
+        {
+            let child_ref = fsys::ChildRef { name: Some("a".to_string()), collection: None };
+            let err = await!(test.realm_proxy.destroy_child(child_ref))
+                .expect("fidl call failed")
+                .expect_err("unexpected success");
+            assert_eq!(err, fsys::Error::InvalidArguments);
+        }
+        {
+            let child_ref = fsys::ChildRef { name: None, collection: Some("coll".to_string()) };
+            let err = await!(test.realm_proxy.destroy_child(child_ref))
+                .expect("fidl call failed")
+                .expect_err("unexpected success");
+            assert_eq!(err, fsys::Error::InvalidArguments);
+        }
+
+        // Instance not found.
+        {
+            let child_ref = fsys::ChildRef {
+                name: Some("b".to_string()),
+                collection: Some("coll".to_string()),
+            };
+            let err = await!(test.realm_proxy.destroy_child(child_ref))
+                .expect("fidl call failed")
+                .expect_err("unexpected success");
+            assert_eq!(err, fsys::Error::InstanceNotFound);
         }
     }
 

@@ -36,6 +36,9 @@ pub trait Hook {
     // Called when a dynamic instance is added with `realm`.
     fn on_add_dynamic_child(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>>;
 
+    // Called when a dynamic instance is removed from `realm`.
+    fn on_remove_dynamic_child(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>>;
+
     // Called when the component specified by |abs_moniker| requests a capability provided
     // by the framework.
     fn on_route_framework_capability<'a>(
@@ -94,12 +97,10 @@ pub struct ModelConfig {
 
 impl ModelConfig {
     pub fn default() -> Self {
-        ModelConfig {
-            list_children_batch_size: 1000,
-        }
+        ModelConfig { list_children_batch_size: 1000 }
     }
 
-    fn validate(&self)  {
+    fn validate(&self) {
         assert!(self.list_children_batch_size > 0, "list_children_batch_size is 0");
     }
 }
@@ -117,12 +118,8 @@ impl Model {
                 component_url: params.root_component_url,
                 // Started by main().
                 startup: fsys::StartupMode::Lazy,
-                state: Mutex::new(RealmState {
-                    execution: None,
-                    child_realms: None,
-                    decl: None,
-                    meta_dir: None,
-                }),
+                state: Mutex::new(RealmState::new()),
+                instance_id: 0,
             }),
             hooks: Arc::new(params.hooks),
             config: params.config,
@@ -296,7 +293,7 @@ impl Model {
         } else {
             // Execution does not exist yet, create it.
             let component = await!(realm.resolver_registry.resolve(&realm.component_url))?;
-            state.populate_decl(component.decl, &*realm)?;
+            await!(state.populate_decl(component.decl, &*realm))?;
             let decl = state.decl.as_ref().expect("ComponentDecl unavailable.");
             let exposed_dir = ExposedDir::new(self, &realm.abs_moniker, state)?;
             let execution = if decl.program.is_some() {

@@ -36,6 +36,12 @@ use {
     },
 };
 
+/// Return the child of the given realm.
+pub async fn get_child<'a>(realm: &'a Realm, moniker: &'a str) -> Arc<Realm> {
+    let state = await!(realm.state.lock());
+    state.child_realms.as_ref().unwrap()[&moniker.into()].clone()
+}
+
 /// Return all monikers of the children of the given `realm`.
 pub async fn get_children(realm: &Realm) -> HashSet<ChildMoniker> {
     await!(realm.state.lock()).child_realms.as_ref().unwrap().keys().cloned().collect()

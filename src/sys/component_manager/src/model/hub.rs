@@ -384,6 +384,11 @@ impl model::Hook for Hub {
         Box::pin(async { Ok(()) })
     }
 
+    fn on_remove_dynamic_child(&self, _realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
+        // TODO: Update the hub with the deleted child
+        Box::pin(async { Ok(()) })
+    }
+
     fn on_route_framework_capability<'a>(
         &'a self,
         flags: u32,

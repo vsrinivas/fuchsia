@@ -146,6 +146,22 @@ impl TestHook {
         }
         Ok(())
     }
+
+    pub async fn remove_instance(&self, abs_moniker: AbsoluteMoniker) -> Result<(), ModelError> {
+        let mut instances = await!(self.instances.lock());
+        if let Some(parent_moniker) = abs_moniker.parent() {
+            instances.remove(&abs_moniker);
+            let parent_instance = instances
+                .get(&parent_moniker)
+                .expect(&format!("parent instance {} not found", parent_moniker));
+            let mut children = await!(parent_instance.children.lock());
+            let opt_index = children.iter().position(|c| c.abs_moniker == abs_moniker);
+            if let Some(index) = opt_index {
+                children.remove(index);
+            }
+        }
+        Ok(())
+    }
 }
 
 impl Hook for TestHook {
@@ -160,6 +176,10 @@ impl Hook for TestHook {
 
     fn on_add_dynamic_child(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(self.create_instance_if_necessary(realm.abs_moniker.clone()))
+    }
+
+    fn on_remove_dynamic_child(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(self.remove_instance(realm.abs_moniker.clone()))
     }
 
     fn on_route_framework_capability<'a>(
