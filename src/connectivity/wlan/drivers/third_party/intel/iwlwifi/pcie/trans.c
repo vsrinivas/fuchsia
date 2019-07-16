@@ -673,7 +673,7 @@ static zx_status_t iwl_pcie_load_firmware_chunk(struct iwl_trans* trans, uint32_
 
 static zx_status_t iwl_pcie_load_section(struct iwl_trans* trans, uint8_t section_num,
                                          const struct fw_desc* section) {
-  zx_handle_t bti;
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   zx_handle_t vmo;
   uint32_t offset, chunk_sz = min_t(uint32_t, FH_MEM_TB_MAX_LENGTH, section->len);
   zx_status_t ret = ZX_OK;
@@ -689,14 +689,8 @@ static zx_status_t iwl_pcie_load_section(struct iwl_trans* trans, uint8_t sectio
   //
 
   // Allocate a VMO space.
-  // TODO(WLAN-1194): rx and tx code also needs bti as well. Refactor this to used the saved one
-  //                  once the rx and tx code is merged.
   size_t vmo_size = ROUND_UP(chunk_sz, ZX_PAGE_SIZE);
-  ret = pci_get_bti(IWL_TRANS_GET_PCIE_TRANS(trans)->pci, /*index*/ 0, &bti);
-  if (ret != ZX_OK) {
-    return ret;
-  }
-  ret = zx_vmo_create_contiguous(bti, vmo_size, /*alignment_log2*/ 0, &vmo);
+  ret = zx_vmo_create_contiguous(trans_pcie->bti, vmo_size, /*alignment_log2*/ 0, &vmo);
   if (ret != ZX_OK) {
     goto out;
   }
@@ -704,8 +698,9 @@ static zx_status_t iwl_pcie_load_section(struct iwl_trans* trans, uint8_t sectio
   // Map the virtual address to physical address.
   zx_handle_t pmt;  // Pinned Memory Token -- for unpin.
   zx_paddr_t p_addr;
-  ret = zx_bti_pin(bti, ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS, vmo, /*offset*/ 0,
-                   vmo_size, &p_addr, /* addrs_count */ 1, &pmt);
+  ret = zx_bti_pin(trans_pcie->bti, ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS, vmo, /*offset*/ 0,
+                   vmo_size, &p_addr,
+                   /* addrs_count */ 1, &pmt);
   if (ret != ZX_OK) {
     goto out;
   }
@@ -755,7 +750,6 @@ static zx_status_t iwl_pcie_load_section(struct iwl_trans* trans, uint8_t sectio
   }
 
 out:
-  zx_handle_close(bti);
   zx_handle_close(vmo);
   return ret;
 }
