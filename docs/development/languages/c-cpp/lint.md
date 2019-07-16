@@ -76,6 +76,8 @@ This list tracks the reasons for which we disabled in particular [checks]:
     database contains the linker argument which ends up unused and triggers this
     warning for every file
  - `misc-noexcept*` - Fuchsia doesn't use C++ exceptions
+ - `misc-non-private-member-variables-in-classes` - We don't allow classes/structs
+   with a mix of private and public members, but all public is fine.
  - `modernize-deprecated-headers` - Fuchsia uses old-style C headers
  - `modernize-raw-string-literal` - the check was suggesting to convert `\xFF`
     literals, which we'd rather keep in the escaped form.
