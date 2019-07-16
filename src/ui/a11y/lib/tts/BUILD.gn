@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("tts") {
+  sources = [
+    "tts_manager_impl.cc",
+    "tts_manager_impl.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.accessibility.tts",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+  ]
+}

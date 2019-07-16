@@ -5,6 +5,7 @@
 group("tests") {
   testonly = true
   public_deps = [
+    "//src/ui/a11y/lib:tests",
     "//src/ui/a11y/tests",
   ]
 }
