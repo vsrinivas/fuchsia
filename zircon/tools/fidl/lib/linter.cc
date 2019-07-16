@@ -385,6 +385,7 @@ Linter::Linter()
           "test",
       }),
       kStopWords({
+          // clang-format off
           "a",
           "about",
           "above",
@@ -479,13 +480,16 @@ Linter::Linter()
           "why",
           "will",
           "with",
+          // clang-format on
       }) {
+  // clang-format off
   callbacks_.OnFile(
     [& linter = *this]
     //
     (const raw::File& element) {
       linter.NewFile(element);
     });
+  // clang-format on
 
   callbacks_.OnLineComment(
       [& linter = *this]
@@ -562,6 +566,7 @@ Linter::Linter()
 
   // TODO(fxb/FIDL-656): Remove this check after issues are resolved with
   // trailing comments in existing source and tools
+  // clang-format off
   callbacks_.OnLineComment(
       [& linter = *this,
        trailing_comment_check = DefineCheck("no-trailing-comment",
@@ -572,6 +577,7 @@ Linter::Linter()
           linter.AddFinding(location, trailing_comment_check);
         }
       });
+  // clang-format on
 
   callbacks_.OnUsing(
       [& linter = *this,
@@ -806,6 +812,7 @@ Linter::Linter()
         linter.CheckCase("xunion members", element.identifier, case_check, case_type);
         linter.CheckRepeatedName("xunion member", element.identifier);
       });
+  // clang-format off
   callbacks_.OnTypeConstructor(
       [& linter = *this,
        string_bounds_check = DefineCheck("string-bounds-not-specified",
@@ -825,6 +832,7 @@ Linter::Linter()
           linter.AddFinding(element.identifier, vector_bounds_check);
         }
       });
+  // clang-format on
 }
 
 }  // namespace linter
