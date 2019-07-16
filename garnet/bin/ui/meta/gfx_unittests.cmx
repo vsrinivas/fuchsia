@@ -5,10 +5,7 @@
                 "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx",
                 "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
                 "fuchsia.vulkan.loader.Loader": "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"
-            },
-            "system-services": [
-                "fuchsia.scheduler.ProfileProvider"
-            ]
+            }
         }
     },
     "program": {
@@ -20,7 +17,6 @@
         ],
         "services": [
             "fuchsia.process.Launcher",
-            "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.vulkan.loader.Loader"

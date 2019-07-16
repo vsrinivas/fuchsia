@@ -1,18 +1,10 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "system-services": [
-                "fuchsia.scheduler.ProfileProvider"
-            ]
-        }
-    },
     "program": {
         "binary": "test/gfx_viewstate_apptests"
     },
     "sandbox": {
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"
         ]

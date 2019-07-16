@@ -67,7 +67,7 @@ void SessionHandlerTest::InitializeEngine() {
       std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
                                        DefaultFrameScheduler::kInitialUpdateDuration));
   engine_ =
-      std::make_unique<Engine>(app_context_.get(), frame_scheduler_, display_manager_.get(),
+      std::make_unique<Engine>(frame_scheduler_, display_manager_.get(),
                                std::move(mock_release_fence_signaller), escher::EscherWeakPtr());
   frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());
   frame_scheduler_->AddSessionUpdater(weak_factory_.GetWeakPtr());

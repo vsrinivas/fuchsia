@@ -4,6 +4,7 @@
 
 #include "garnet/lib/ui/gfx/gfx_system.h"
 
+#include <lib/async/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/vfs/cpp/pseudo_file.h>
@@ -53,8 +54,7 @@ std::unique_ptr<SessionManager> GfxSystem::InitializeSessionManager() {
 }
 
 std::unique_ptr<Engine> GfxSystem::InitializeEngine() {
-  return std::make_unique<Engine>(context()->app_context(), frame_scheduler_,
-                                  display_manager_.get(), escher_->GetWeakPtr(),
+  return std::make_unique<Engine>(frame_scheduler_, display_manager_.get(), escher_->GetWeakPtr(),
                                   context()->inspect_node()->CreateChild("Engine"));
 }
 

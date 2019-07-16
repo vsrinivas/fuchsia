@@ -24,7 +24,6 @@ class CompositorTest : public SessionTest {
 
     view_linker_.reset();
     resource_linker_.reset();
-    time_stamper_.reset();
     scene_graph_.reset();
   }
 
@@ -32,7 +31,6 @@ class CompositorTest : public SessionTest {
     SessionContext session_context = SessionTest::CreateSessionContext();
 
     FXL_DCHECK(!scene_graph_);
-    FXL_DCHECK(!time_stamper_);
     FXL_DCHECK(!resource_linker_);
     FXL_DCHECK(!view_linker_);
 
@@ -41,13 +39,10 @@ class CompositorTest : public SessionTest {
 
     // Generate other parameters needed for session context.
     sys::testing::ComponentContextProvider context_provider_;
-    app_context_ = context_provider_.TakeContext();
-    time_stamper_ = std::make_unique<EventTimestamper>(app_context_.get());
     resource_linker_ = std::make_unique<ResourceLinker>();
     view_linker_ = std::make_unique<ViewLinker>();
 
     // Apply to the session context;
-    session_context.event_timestamper = time_stamper_.get();
     session_context.view_linker = view_linker_.get();
     session_context.resource_linker = resource_linker_.get();
 
@@ -61,9 +56,6 @@ class CompositorTest : public SessionTest {
  private:
   std::unique_ptr<SceneGraph> scene_graph_;
 
-  // This is saved because it needs to live longer than the EventTimestamper
-  std::unique_ptr<sys::ComponentContext> app_context_;
-  std::unique_ptr<EventTimestamper> time_stamper_;
   std::unique_ptr<ViewLinker> view_linker_;
   std::unique_ptr<ResourceLinker> resource_linker_;
 };

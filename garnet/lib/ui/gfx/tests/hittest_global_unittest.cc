@@ -7,7 +7,6 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
-#include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include <memory>
 #include <string>
@@ -101,9 +100,8 @@ TEST_F(SingleSessionHitTestTest, DISABLED_ViewClippingHitTest) {
   DisplayManager display_manager;
   display_manager.SetDefaultDisplayForTests(std::make_unique<Display>(
       /*id*/ 0, /*px-width*/ display_width, /*px-height*/ display_height));
-  sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<Engine> engine = std::make_unique<Engine>(
-      context_provider_.context(), /*frame_scheduler*/ nullptr, &display_manager,
+      /*frame_scheduler*/ nullptr, &display_manager,
       /*release fence signaller*/ nullptr, escher::EscherWeakPtr());
 
   // Create our tokens for View/ViewHolder creation.
@@ -227,9 +225,8 @@ TEST_F(MultiSessionHitTestTest, DISABLED_ChildBiggerThanParentTest) {
   DisplayManager display_manager;
   display_manager.SetDefaultDisplayForTests(std::make_unique<Display>(
       /*id*/ 0, /*px-width*/ display_width, /*px-height*/ display_height));
-  sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<Engine> engine = std::make_unique<Engine>(
-      context_provider_.context(), /*frame_scheduler*/ nullptr, &display_manager,
+      /*frame_scheduler*/ nullptr, &display_manager,
       /*release fence signaller*/ nullptr, escher::EscherWeakPtr());
 
   // Create our tokens for View/ViewHolder creation.
@@ -381,9 +378,8 @@ TEST_F(MultiSessionHitTestTest, DISABLED_ChildCompletelyClipped) {
   DisplayManager display_manager;
   display_manager.SetDefaultDisplayForTests(std::make_unique<Display>(
       /*id*/ 0, /*px-width*/ display_width, /*px-height*/ display_height));
-  sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<Engine> engine = std::make_unique<Engine>(
-      context_provider_.context(), /*frame_scheduler*/ nullptr, &display_manager,
+      /*frame_scheduler*/ nullptr, &display_manager,
       /*release fence signaller*/ nullptr, escher::EscherWeakPtr());
 
   // Create our tokens for View/ViewHolder creation.
@@ -517,9 +513,8 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   DisplayManager display_manager;
   display_manager.SetDefaultDisplayForTests(std::make_unique<Display>(
       /*id*/ 0, /*px-width*/ 9, /*px-height*/ 9));
-  sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<Engine> engine = std::make_unique<Engine>(
-      context_provider_.context(), /*frame_scheduler*/ nullptr, &display_manager,
+      /*frame_scheduler*/ nullptr, &display_manager,
       /*release fence signaller*/ nullptr, escher::EscherWeakPtr());
 
   // Create our tokens for View/ViewHolder creation.

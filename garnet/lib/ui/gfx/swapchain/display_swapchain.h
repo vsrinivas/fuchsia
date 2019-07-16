@@ -12,7 +12,6 @@
 #include <vulkan/vulkan.hpp>
 
 #include "garnet/lib/ui/gfx/swapchain/swapchain.h"
-#include "garnet/lib/ui/gfx/util/event_timestamper.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/lib/escher/flib/fence_listener.h"
 #include "src/ui/lib/escher/resources/resource_manager.h"
@@ -24,15 +23,13 @@ namespace gfx {
 
 class Display;
 class DisplayManager;
-class EventTimestamper;
 
 // DisplaySwapchain implements the Swapchain interface by using a Vulkan
 // swapchain to present images to a physical display using the Zircon
 // display controller API.
 class DisplaySwapchain : public Swapchain {
  public:
-  DisplaySwapchain(DisplayManager* display_manager, Display* display, EventTimestamper* timestamper,
-                   escher::Escher* escher);
+  DisplaySwapchain(DisplayManager* display_manager, Display* display, escher::Escher* escher);
   ~DisplaySwapchain() override;
 
   // Callback to call on every vsync. Arguments are:
@@ -70,7 +67,8 @@ class DisplaySwapchain : public Swapchain {
 
     escher::SemaphorePtr render_finished_escher_semaphore;
     uint64_t render_finished_event_id;
-    EventTimestamper::Watch render_finished_watch;
+    zx::event render_finished_event;
+    std::unique_ptr<async::Wait> render_finished_wait;
 
     // Event is signaled when the display is done using a frame.
     zx::event retired_event;
@@ -98,7 +96,6 @@ class DisplaySwapchain : public Swapchain {
   size_t next_frame_index_ = 0;
   size_t presented_frame_idx_ = 0;
   size_t outstanding_frame_count_ = 0;
-  EventTimestamper* const timestamper_;
 
   std::vector<Framebuffer> swapchain_buffers_;
 

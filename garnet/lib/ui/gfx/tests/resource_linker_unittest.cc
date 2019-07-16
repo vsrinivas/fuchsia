@@ -4,6 +4,7 @@
 
 #include "garnet/lib/ui/gfx/engine/resource_linker.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/zx/eventpair.h>
 
 #include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"

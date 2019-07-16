@@ -17,7 +17,6 @@ namespace gfx {
 class SessionManager;
 class FrameScheduler;
 class UpdateScheduler;
-class EventTimestamper;
 class DisplayManager;
 class SceneGraph;
 class ResourceLinker;
@@ -40,7 +39,6 @@ struct SessionContext {
   // TODO(SCN-1168): Remove |escher_rounded_rect_factory| from here.
   escher::RoundedRectFactory* escher_rounded_rect_factory = nullptr;
   escher::ReleaseFenceSignaller* release_fence_signaller = nullptr;
-  EventTimestamper* event_timestamper = nullptr;
   FrameScheduler* frame_scheduler = nullptr;
   DisplayManager* display_manager = nullptr;
   SceneGraphWeakPtr scene_graph;

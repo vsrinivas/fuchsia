@@ -8,7 +8,6 @@
 #include <fbl/ref_ptr.h>
 #include <lib/fit/function.h>
 #include <lib/inspect_deprecated/inspect.h>
-#include <lib/sys/cpp/component_context.h>
 
 #include <set>
 #include <vector>
@@ -24,7 +23,6 @@
 #include "garnet/lib/ui/gfx/id.h"
 #include "garnet/lib/ui/gfx/resources/import.h"
 #include "garnet/lib/ui/gfx/resources/nodes/scene.h"
-#include "garnet/lib/ui/gfx/util/event_timestamper.h"
 #include "garnet/lib/ui/scenic/event_reporter.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/flib/release_fence_signaller.h"
@@ -55,13 +53,11 @@ using OnPresentedCallback = fit::function<void(PresentationInfo)>;
 // producing output when prompted through the FrameRenderer interface.
 class Engine : public FrameRenderer {
  public:
-  Engine(sys::ComponentContext* component_context,
-         const std::shared_ptr<FrameScheduler>& frame_scheduler, DisplayManager* display_manager,
+  Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler, DisplayManager* display_manager,
          escher::EscherWeakPtr escher, inspect_deprecated::Node inspect_node);
 
   // Only used for testing.
-  Engine(sys::ComponentContext* component_context,
-         const std::shared_ptr<FrameScheduler>& frame_scheduler, DisplayManager* display_manager,
+  Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler, DisplayManager* display_manager,
          std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
          escher::EscherWeakPtr escher);
 
@@ -88,7 +84,6 @@ class Engine : public FrameRenderer {
                           escher_image_factory(),
                           escher_rounded_rect_factory(),
                           release_fence_signaller(),
-                          event_timestamper(),
                           frame_scheduler_.get(),
                           display_manager_,
                           scene_graph(),
@@ -116,8 +111,6 @@ class Engine : public FrameRenderer {
 
   // Takes care of cleanup between frames.
   void EndCurrentFrame(uint64_t frame_number);
-
-  EventTimestamper* event_timestamper() { return &event_timestamper_; }
 
   escher::ResourceRecycler* escher_resource_recycler() {
     return escher_ ? escher_->resource_recycler() : nullptr;
@@ -150,7 +143,6 @@ class Engine : public FrameRenderer {
   ResourceLinker resource_linker_;
   ViewLinker view_linker_;
 
-  EventTimestamper event_timestamper_;
   std::unique_ptr<escher::ImageFactoryAdapter> image_factory_;
   std::unique_ptr<escher::RoundedRectFactory> rounded_rect_factory_;
   std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller_;

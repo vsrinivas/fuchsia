@@ -1,11 +1,4 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "system-services": [
-                "fuchsia.scheduler.ProfileProvider"
-            ]
-        }
-    },
     "program": {
         "binary": "test/root_presenter_tests"
     },
@@ -17,7 +10,6 @@
             "fuchsia.logger.LogSink",
             "fuchsia.vulkan.loader.Loader",
             "fuchsia.recovery.FactoryReset",
-            "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"
         ]

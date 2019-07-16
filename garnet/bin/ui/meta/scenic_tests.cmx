@@ -1,11 +1,4 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "system-services": [
-                "fuchsia.scheduler.ProfileProvider"
-            ]
-        }
-    },
     "program": {
         "binary": "test/gfx_unittests"
     },
@@ -14,8 +7,7 @@
             "vulkan"
         ],
         "services": [
-            "fuchsia.vulkan.loader.Loader",
-            "fuchsia.scheduler.ProfileProvider"
+            "fuchsia.vulkan.loader.Loader"
         ]
     }
 }

@@ -44,8 +44,7 @@ std::unique_ptr<SessionManager> GfxSystemForTest::InitializeSessionManager() {
 }
 
 std::unique_ptr<gfx::Engine> GfxSystemForTest::InitializeEngine() {
-  return std::make_unique<Engine>(
-      context()->app_context(), frame_scheduler_, display_manager_.get(),
+  return std::make_unique<Engine>(frame_scheduler_, display_manager_.get(),
       std::make_unique<ReleaseFenceSignallerForTest>(command_buffer_sequencer_),
       escher::EscherWeakPtr());
 }

@@ -4,6 +4,7 @@
 
 #include "garnet/lib/ui/gfx/engine/gfx_command_applier.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <lib/zx/eventpair.h>
@@ -1462,7 +1463,6 @@ ResourcePtr GfxCommandApplier::CreateDisplayCompositor(
   return fxl::AdoptRef(new DisplayCompositor(
       session, id, session->session_context().scene_graph, display,
       SwapchainFactory::CreateDisplaySwapchain(display, session->session_context().display_manager,
-                                               session->session_context().event_timestamper,
                                                session->session_context().escher)));
 }
 

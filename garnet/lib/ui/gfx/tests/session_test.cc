@@ -43,7 +43,6 @@ SessionContext SessionTest::CreateSessionContext() {
       nullptr,                 // escher::ImageFactory*
       nullptr,                 // escher::RoundedRectFactory*
       nullptr,                 // escher::ReleaseFenceSignaller*
-      nullptr,                 // EventTimestamper*
       frame_scheduler_.get(),  // FrameScheduler*
       display_manager_.get(),  // DisplayManager*
       SceneGraphWeakPtr(),     // SceneGraphWeakPtr
