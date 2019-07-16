@@ -8,10 +8,11 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <gtest/gtest.h>
-#include <lib/async/cpp/exception.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fit/promise.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 
 #include "mock-device.h"
@@ -135,10 +136,11 @@ protected:
     fidl::InterfacePtr<fuchsia::io::Directory> devfs_;
 private:
     // Function that will be called whenever we see an exception from devmgr
-    void DevmgrException(async_dispatcher_t* dispatcher, async::ExceptionBase* exception,
-                         zx_status_t status, const zx_port_packet_t* report);
+    void DevmgrException(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                         zx_status_t status, const zx_packet_signal_t* signal);
 
-    async::ExceptionMethod<IntegrationTest, &IntegrationTest::DevmgrException> devmgr_exception_;
+    zx::channel devmgr_exception_channel_;
+    async::WaitMethod<IntegrationTest, &IntegrationTest::DevmgrException> devmgr_exception_;
 };
 
 } // namespace libdriver_integration_test

@@ -66,14 +66,19 @@ void IntegrationTest::TearDownTestCase() {
 }
 
 IntegrationTest::IntegrationTest()
-    : loop_(&kAsyncLoopConfigNoAttachToThread),
-      devmgr_exception_(this, devmgr_.containing_job().get(), 0) {
+    : loop_(&kAsyncLoopConfigNoAttachToThread), devmgr_exception_(this) {
 }
 
 void IntegrationTest::SetUp() {
-    // We do this in SetUp() rather than the ctor, since gtest cannot assert in
-    // ctors.
-    zx_status_t status = devmgr_exception_.Bind(loop_.dispatcher());
+  // We do this in SetUp() rather than the ctor, since gtest cannot assert in
+  // ctors.
+    zx_status_t status =
+        devmgr_.containing_job().create_exception_channel(0, &devmgr_exception_channel_);
+    ASSERT_EQ(status, ZX_OK) << "failed to create isolated devmgr exception channel";
+
+    devmgr_exception_.set_object(devmgr_exception_channel_.get());
+    devmgr_exception_.set_trigger(ZX_CHANNEL_READABLE);
+    status = devmgr_exception_.Begin(loop_.dispatcher());
     ASSERT_EQ(status, ZX_OK) << "failed to watch isolated devmgr for crashes: " <<
                zx_status_get_string(status);
 
@@ -86,12 +91,10 @@ void IntegrationTest::SetUp() {
 
 IntegrationTest::~IntegrationTest() = default;
 
-void IntegrationTest::DevmgrException(async_dispatcher_t* dispatcher,
-                                      async::ExceptionBase* exception, zx_status_t status,
-                                      const zx_port_packet_t* report) {
+void IntegrationTest::DevmgrException(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                      zx_status_t status, const zx_packet_signal_t* signal) {
     // Log an error in the currently running test
     ADD_FAILURE() << "Crash inside devmgr job";
-    exception->Unbind();
     loop_.Quit();
 }
 
