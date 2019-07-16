@@ -18,6 +18,6 @@ pub struct StubHttpRequest;
 
 impl HttpRequest for StubHttpRequest {
     fn request(&mut self, _req: Request<Body>) -> BoxFuture<Result<Response<Body>, hyper::Error>> {
-        future::ready(Ok(hyper::Response::new("".into()))).boxed()
+        future::ok(Response::new(Body::empty())).boxed()
     }
 }

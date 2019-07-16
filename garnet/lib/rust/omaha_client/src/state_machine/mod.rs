@@ -8,7 +8,7 @@ use crate::{
     configuration::Config,
     http_request::{HttpRequest, StubHttpRequest},
     installer::{stub::StubInstaller, Installer, Plan},
-    metrics::{Metrics, MetricsReporter, StubMetricsReporter},
+    metrics::{Metrics, MetricsReporter, StubMetricsReporter, UpdateCheckFailureReason},
     policy::{CheckDecision, PolicyEngine, StubPolicyEngine, UpdateDecision},
     protocol::{
         self,
@@ -305,13 +305,24 @@ where
                 // Update check failed, increment |consecutive_failed_update_checks|.
                 self.context.state.consecutive_failed_update_checks += 1;
 
-                match error {
+                let failure_reason = match error {
                     UpdateCheckError::ResponseParser(_) | UpdateCheckError::InstallPlan(_) => {
                         // We talked to Omaha, update |last_update_time|.
                         self.context.schedule.last_update_time = clock::now();
+
+                        UpdateCheckFailureReason::Omaha
                     }
-                    _ => {}
-                }
+                    UpdateCheckError::Policy(_) => UpdateCheckFailureReason::Internal,
+                    UpdateCheckError::OmahaRequest(request_error) => match request_error {
+                        OmahaRequestError::Json(_) | OmahaRequestError::HttpBuilder(_) => {
+                            UpdateCheckFailureReason::Internal
+                        }
+                        OmahaRequestError::Hyper(_) | OmahaRequestError::HttpStatus(_) => {
+                            UpdateCheckFailureReason::Network
+                        }
+                    },
+                };
+                self.report_metrics(Metrics::UpdateCheckFailureReason(failure_reason));
             }
         }
 
@@ -790,8 +801,7 @@ mod tests {
     fn test_report_parse_response_error() {
         block_on(async {
             let config = config_generator();
-            let mut http = MockHttpRequest::new(hyper::Response::new("invalid response".into()));
-            http.add_response(hyper::Response::new("".into()));
+            let http = MockHttpRequest::new(hyper::Response::new("invalid response".into()));
 
             let mut state_machine = StateMachine::new(
                 StubPolicyEngine,
@@ -837,8 +847,7 @@ mod tests {
               }],
             }});
             let response = serde_json::to_vec(&response).unwrap();
-            let mut http = MockHttpRequest::new(hyper::Response::new(response.into()));
-            http.add_response(hyper::Response::new("".into()));
+            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
 
             let mut state_machine = StateMachine::new(
                 StubPolicyEngine,
@@ -884,11 +893,7 @@ mod tests {
               }],
             }});
             let response = serde_json::to_vec(&response).unwrap();
-            let mut http = MockHttpRequest::new(hyper::Response::new(response.into()));
-            // For reporting UpdateDownloadStarted
-            http.add_response(hyper::Response::new("".into()));
-            // For reporting installation error
-            http.add_response(hyper::Response::new("".into()));
+            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
 
             let mut state_machine = StateMachine::new(
                 StubPolicyEngine,
@@ -930,8 +935,7 @@ mod tests {
               }],
             }});
             let response = serde_json::to_vec(&response).unwrap();
-            let mut http = MockHttpRequest::new(hyper::Response::new(response.into()));
-            http.add_response(hyper::Response::new("".into()));
+            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
 
             let policy_engine = MockPolicyEngine {
                 update_decision: UpdateDecision::DeferredByPolicy,
@@ -977,8 +981,7 @@ mod tests {
               }],
             }});
             let response = serde_json::to_vec(&response).unwrap();
-            let mut http = MockHttpRequest::new(hyper::Response::new(response.into()));
-            http.add_response(hyper::Response::new("".into()));
+            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
             let policy_engine = MockPolicyEngine {
                 update_decision: UpdateDecision::DeniedByPolicy,
                 ..MockPolicyEngine::default()
@@ -1200,4 +1203,49 @@ mod tests {
         });
     }
 
+    #[test]
+    fn test_metrics_report_update_check_failure_reason_omaha() {
+        block_on(async {
+            let config = config_generator();
+            let mut state_machine = StateMachine::new(
+                StubPolicyEngine,
+                StubHttpRequest,
+                StubInstaller::default(),
+                &config,
+                StubTimer,
+                MockMetricsReporter::new(false),
+            );
+            state_machine.add_apps(make_test_apps());
+            await!(state_machine.start_update_check(CheckOptions::default()));
+
+            assert!(state_machine.metrics_reporter.metrics.len() > 1);
+            assert_eq!(
+                state_machine.metrics_reporter.metrics[1],
+                Metrics::UpdateCheckFailureReason(UpdateCheckFailureReason::Omaha)
+            );
+        });
+    }
+
+    #[test]
+    fn test_metrics_report_update_check_failure_reason_network() {
+        block_on(async {
+            let config = config_generator();
+            let mut state_machine = StateMachine::new(
+                StubPolicyEngine,
+                MockHttpRequest::empty(),
+                StubInstaller::default(),
+                &config,
+                StubTimer,
+                MockMetricsReporter::new(false),
+            );
+            state_machine.add_apps(make_test_apps());
+            await!(state_machine.start_update_check(CheckOptions::default()));
+
+            assert!(!state_machine.metrics_reporter.metrics.is_empty());
+            assert_eq!(
+                state_machine.metrics_reporter.metrics[0],
+                Metrics::UpdateCheckFailureReason(UpdateCheckFailureReason::Network)
+            );
+        });
+    }
 }

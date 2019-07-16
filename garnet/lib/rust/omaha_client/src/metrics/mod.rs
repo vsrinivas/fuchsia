@@ -13,7 +13,7 @@ mod stub;
 pub use stub::StubMetricsReporter;
 
 /// The list of metrics that can be reported.
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Metrics {
     /// Elapsed time from sending an update check to getting a response from Omaha.
     UpdateCheckResponseTime(Duration),
@@ -39,7 +39,7 @@ pub enum Metrics {
     FailedBootAttempts(u64),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum UpdateCheckFailureReason {
     Omaha = 0,
     Network = 1,

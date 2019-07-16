@@ -23,14 +23,23 @@ impl HttpRequest for MockHttpRequest {
     fn request(&mut self, req: Request<Body>) -> BoxFuture<Result<Response<Body>, hyper::Error>> {
         self.request = req;
 
-        let resp = self.responses.pop_front().expect("no response to return");
-        return future::ready(Ok(resp)).boxed();
+        future::ok(if let Some(resp) = self.responses.pop_front() {
+            resp
+        } else {
+            // No response to return, generate a 500 internal server error
+            Response::builder().status(500).body(Body::empty()).unwrap()
+        })
+        .boxed()
     }
 }
 
 impl MockHttpRequest {
     pub fn new(res: Response<Body>) -> MockHttpRequest {
         MockHttpRequest { request: Request::default(), responses: vec![res].into() }
+    }
+
+    pub fn empty() -> MockHttpRequest {
+        MockHttpRequest { request: Request::default(), responses: vec![].into() }
     }
 
     pub fn add_response(&mut self, res: Response<Body>) {
@@ -87,7 +96,6 @@ fn test_mock() {
 }
 
 #[test]
-#[should_panic(expected = "no response to return")]
 fn test_missing_response() {
     let res_body = vec![1, 2, 3];
     let mut mock = MockHttpRequest::new(Response::new(res_body.clone().into()));
@@ -95,7 +103,8 @@ fn test_missing_response() {
         let response = await!(mock.request(Request::default())).unwrap();
         assert_eq!(res_body, await!(response_to_vec(response)));
 
-        let _response2 = await!(mock.request(Request::default()));
+        let response2 = await!(mock.request(Request::default())).unwrap();
+        assert_eq!(response2.status(), hyper::StatusCode::INTERNAL_SERVER_ERROR);
     });
 }
 
