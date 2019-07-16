@@ -16,10 +16,20 @@
 #include <fbl/vector.h>
 #include <fs/trace.h>
 
+#ifdef __Fuchsia__
+#include <block-client/cpp/block-device.h>
+#endif
+
 namespace minfs {
 
-// Validate header information about the filesystem backed by |bc|.
-zx_status_t CheckSuperblock(const Superblock* info, Bcache* bc);
+#ifdef __Fuchsia__
+// Validates header information.
+zx_status_t CheckSuperblock(const Superblock* info, block_client::BlockDevice* device,
+                            uint32_t max_blocks);
+#else
+// Validates header information.
+zx_status_t CheckSuperblock(const Superblock* info, uint32_t max_blocks);
+#endif
 
 // On success, returns ZX_OK and copies the number of bytes used by data
 // within the fs.

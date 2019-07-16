@@ -39,35 +39,237 @@
 namespace minfs {
 namespace {
 
-// Deletes all known slices from an MinFS Partition.
-void minfs_free_slices(Bcache* bc, const Superblock* info) {
+#ifdef __Fuchsia__
+// Deletes all known slices from a MinFS Partition.
+void FreeSlices(const Superblock* info, block_client::BlockDevice* device) {
     if ((info->flags & kMinfsFlagFVM) == 0) {
         return;
     }
-#ifdef __Fuchsia__
     extend_request_t request;
     const size_t kBlocksPerSlice = info->slice_size / kMinfsBlockSize;
     if (info->ibm_slices) {
         request.length = info->ibm_slices;
         request.offset = kFVMBlockInodeBmStart / kBlocksPerSlice;
-        bc->FVMShrink(&request);
+        device->VolumeShrink(request.offset, request.length);
     }
     if (info->abm_slices) {
         request.length = info->abm_slices;
         request.offset = kFVMBlockDataBmStart / kBlocksPerSlice;
-        bc->FVMShrink(&request);
+        device->VolumeShrink(request.offset, request.length);
     }
     if (info->ino_slices) {
         request.length = info->ino_slices;
         request.offset = kFVMBlockInodeStart / kBlocksPerSlice;
-        bc->FVMShrink(&request);
+        device->VolumeShrink(request.offset, request.length);
     }
     if (info->dat_slices) {
         request.length = info->dat_slices;
         request.offset = kFVMBlockDataStart / kBlocksPerSlice;
-        bc->FVMShrink(&request);
+        device->VolumeShrink(request.offset, request.length);
     }
+}
+
+// Checks all slices against the block device. May shrink the partition.
+zx_status_t CheckSlices(const Superblock* info, size_t blocks_per_slice,
+                        block_client::BlockDevice* device) {
+    fuchsia_hardware_block_volume_VolumeInfo fvm_info;
+    zx_status_t status = device->VolumeQuery(&fvm_info);
+    if (status != ZX_OK) {
+        FS_TRACE_ERROR("minfs: unable to query FVM :%d\n", status);
+        return ZX_ERR_UNAVAILABLE;
+    }
+
+    if (info->slice_size != fvm_info.slice_size) {
+        FS_TRACE_ERROR("minfs: slice size %lu did not match expected size %lu\n",
+                       info->slice_size, fvm_info.slice_size );
+        return ZX_ERR_BAD_STATE;
+    }
+
+    size_t expected_count[4];
+    expected_count[0] = info->ibm_slices;
+    expected_count[1] = info->abm_slices;
+    expected_count[2] = info->ino_slices;
+    expected_count[3] = info->dat_slices;
+
+    query_request_t request;
+    request.count = 4;
+    request.vslice_start[0] = kFVMBlockInodeBmStart / blocks_per_slice;
+    request.vslice_start[1] = kFVMBlockDataBmStart / blocks_per_slice;
+    request.vslice_start[2] = kFVMBlockInodeStart / blocks_per_slice;
+    request.vslice_start[3] = kFVMBlockDataStart / blocks_per_slice;
+
+    fuchsia_hardware_block_volume_VsliceRange
+            ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
+    size_t ranges_count;
+
+    status = device->VolumeQuerySlices(request.vslice_start, request.count, ranges,
+                                       &ranges_count);
+    if (status != ZX_OK) {
+        FS_TRACE_ERROR("minfs: unable to query FVM: %d\n", status);
+        return ZX_ERR_UNAVAILABLE;
+    }
+
+    if (ranges_count != request.count) {
+        FS_TRACE_ERROR("minfs: requested FVM range :%lu does not match received: %lu\n",
+                       request.count, ranges_count);
+        return ZX_ERR_BAD_STATE;
+    }
+
+    for (uint32_t i = 0; i < request.count; i++) {
+        size_t minfs_count = expected_count[i];
+        size_t fvm_count = ranges[i].count;
+
+        if (!ranges[i].allocated || fvm_count < minfs_count) {
+            // Currently, since Minfs can only grow new slices, it should not be possible for
+            // the FVM to report a slice size smaller than what is reported by Minfs. In this
+            // case, automatically fail without trying to resolve the situation, as it is
+            // possible that Minfs structures are allocated in the slices that have been lost.
+            FS_TRACE_ERROR("minfs: mismatched slice count\n");
+            return ZX_ERR_IO_DATA_INTEGRITY;
+        }
+
+        if (fvm_count > minfs_count) {
+            // If FVM reports more slices than we expect, try to free remainder.
+            extend_request_t shrink;
+            shrink.length = fvm_count - minfs_count;
+            shrink.offset = request.vslice_start[i] + minfs_count;
+            if ((status = device->VolumeShrink(shrink.offset, shrink.length)) != ZX_OK) {
+                FS_TRACE_ERROR("minfs: Unable to shrink to expected size, status: %d\n",
+                               status);
+                return ZX_ERR_IO_DATA_INTEGRITY;
+            }
+        }
+    }
+    return ZX_OK;
+}
+
+// Setups the superblock based on the mount options and the underlying device.
+// It can be called when not loaded on top of FVM, in which case this function
+// will do nothing.
+zx_status_t CreateFvmData(const MountOptions& options, Superblock* info,
+                          block_client::BlockDevice* device) {
+    fuchsia_hardware_block_volume_VolumeInfo fvm_info;
+    if (device->VolumeQuery(&fvm_info) != ZX_OK) {
+        return ZX_OK;
+    }
+
+    info->slice_size = fvm_info.slice_size;
+    SetMinfsFlagFvm(*info);
+
+    if (info->slice_size % kMinfsBlockSize) {
+        FS_TRACE_ERROR("minfs mkfs: Slice size not multiple of minfs block: %lu\n",
+                       info->slice_size);
+        return ZX_ERR_IO_INVALID;
+    }
+
+    const size_t kBlocksPerSlice = info->slice_size / kMinfsBlockSize;
+    extend_request_t request;
+    request.length = 1;
+    request.offset = kFVMBlockInodeBmStart / kBlocksPerSlice;
+    zx_status_t status = fvm::ResetAllSlices2(device);
+    if (status != ZX_OK) {
+        FS_TRACE_ERROR("minfs mkfs: Failed to reset FVM slices: %d\n", status);
+        return status;
+    }
+    if ((status = device->VolumeExtend(request.offset, request.length)) != ZX_OK) {
+        FS_TRACE_ERROR("minfs mkfs: Failed to allocate inode bitmap: %d\n", status);
+        return status;
+    }
+    info->ibm_slices = 1;
+    request.offset = kFVMBlockDataBmStart / kBlocksPerSlice;
+    if ((status = device->VolumeExtend(request.offset, request.length)) != ZX_OK) {
+        FS_TRACE_ERROR("minfs mkfs: Failed to allocate data bitmap: %d\n", status);
+        return status;
+    }
+    info->abm_slices = 1;
+    request.offset = kFVMBlockInodeStart / kBlocksPerSlice;
+    if ((status = device->VolumeExtend(request.offset, request.length)) != ZX_OK) {
+        FS_TRACE_ERROR("minfs mkfs: Failed to allocate inode table: %d\n", status);
+        return status;
+    }
+    info->ino_slices = 1;
+
+    TransactionLimits limits(*info);
+    blk_t journal_blocks = limits.GetRecommendedJournalBlocks();
+    request.length = fbl::round_up(journal_blocks, kBlocksPerSlice) / kBlocksPerSlice;
+    request.offset = kFVMBlockJournalStart / kBlocksPerSlice;
+    if ((status = device->VolumeExtend(request.offset, request.length)) != ZX_OK) {
+        FS_TRACE_ERROR("minfs mkfs: Failed to allocate journal blocks: %d\n", status);
+        return status;
+    }
+    info->journal_slices = static_cast<blk_t>(request.length);
+
+    ZX_ASSERT(options.fvm_data_slices > 0);
+    request.length = options.fvm_data_slices;
+    request.offset = kFVMBlockDataStart / kBlocksPerSlice;
+    if ((status = device->VolumeExtend(request.offset, request.length)) != ZX_OK) {
+        FS_TRACE_ERROR("minfs mkfs: Failed to allocate data blocks: %d\n", status);
+        return status;
+    }
+    info->dat_slices = options.fvm_data_slices;
+    return ZX_OK;
+}
 #endif
+
+// Verifies that the allocated slices are sufficient to hold the allocated data
+// structures of the filesystem.
+zx_status_t VerifySlicesSize(const Superblock* info, const TransactionLimits& limits,
+                             size_t blocks_per_slice) {
+    size_t ibm_blocks_needed = (info->inode_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
+    size_t ibm_blocks_allocated = info->ibm_slices * blocks_per_slice;
+    if (ibm_blocks_needed > ibm_blocks_allocated) {
+        FS_TRACE_ERROR("minfs: Not enough slices for inode bitmap\n");
+        return ZX_ERR_INVALID_ARGS;
+    } else if (ibm_blocks_allocated + info->ibm_block >= info->abm_block) {
+        FS_TRACE_ERROR("minfs: Inode bitmap collides into block bitmap\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    size_t abm_blocks_needed = (info->block_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
+    size_t abm_blocks_allocated = info->abm_slices * blocks_per_slice;
+    if (abm_blocks_needed > abm_blocks_allocated) {
+        FS_TRACE_ERROR("minfs: Not enough slices for block bitmap\n");
+        return ZX_ERR_INVALID_ARGS;
+    } else if (abm_blocks_allocated + info->abm_block >= info->ino_block) {
+        FS_TRACE_ERROR("minfs: Block bitmap collides with inode table\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    size_t ino_blocks_needed =
+        (info->inode_count + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
+    size_t ino_blocks_allocated = info->ino_slices * blocks_per_slice;
+    if (ino_blocks_needed > ino_blocks_allocated) {
+        FS_TRACE_ERROR("minfs: Not enough slices for inode table\n");
+        return ZX_ERR_INVALID_ARGS;
+    } else if (ino_blocks_allocated + info->ino_block >= info->journal_start_block) {
+        FS_TRACE_ERROR("minfs: Inode table collides with data blocks\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    size_t journal_blocks_needed = limits.GetMinimumJournalBlocks();
+    size_t journal_blocks_allocated = info->journal_slices * blocks_per_slice;
+    if (journal_blocks_needed > journal_blocks_allocated) {
+        FS_TRACE_ERROR("minfs: Not enough slices for journal\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (journal_blocks_allocated + info->journal_start_block > info->dat_block) {
+        FS_TRACE_ERROR("minfs: Journal collides with data blocks\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    size_t dat_blocks_needed = info->block_count;
+    size_t dat_blocks_allocated = info->dat_slices * blocks_per_slice;
+    if (dat_blocks_needed > dat_blocks_allocated) {
+        FS_TRACE_ERROR("minfs: Not enough slices for data blocks\n");
+        return ZX_ERR_INVALID_ARGS;
+    } else if (dat_blocks_allocated + info->dat_block > std::numeric_limits<blk_t>::max()) {
+        FS_TRACE_ERROR("minfs: Data blocks overflow blk_t\n");
+        return ZX_ERR_INVALID_ARGS;
+    } else if (dat_blocks_needed <= 1) {
+        FS_TRACE_ERROR("minfs: Not enough data blocks\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return ZX_OK;
 }
 
 } // namespace
@@ -98,8 +300,12 @@ void DumpInode(const Inode* inode, ino_t ino) {
     FS_TRACE_DEBUG("inode[%u]: links:  %10u\n", ino, inode->link_count);
 }
 
-zx_status_t CheckSuperblock(const Superblock* info, Bcache* bc) {
-    uint32_t max = bc->Maxblk();
+#ifdef __Fuchsia__
+zx_status_t CheckSuperblock(const Superblock* info, block_client::BlockDevice* device,
+                            uint32_t max_blocks) {
+#else
+zx_status_t CheckSuperblock(const Superblock* info, uint32_t max_blocks) {
+#endif
     DumpInfo(info);
 
     if ((info->magic0 != kMinfsMagic0) || (info->magic1 != kMinfsMagic1)) {
@@ -126,7 +332,7 @@ zx_status_t CheckSuperblock(const Superblock* info, Bcache* bc) {
 
     TransactionLimits limits(*info);
     if ((info->flags & kMinfsFlagFVM) == 0) {
-        if (info->dat_block + info->block_count != max) {
+        if (info->dat_block + info->block_count != max_blocks) {
             FS_TRACE_ERROR("minfs: too large for device\n");
             return ZX_ERR_INVALID_ARGS;
         }
@@ -137,129 +343,16 @@ zx_status_t CheckSuperblock(const Superblock* info, Bcache* bc) {
         }
     } else {
         const size_t kBlocksPerSlice = info->slice_size / kMinfsBlockSize;
+        zx_status_t status;
 #ifdef __Fuchsia__
-        fuchsia_hardware_block_volume_VolumeInfo fvm_info;
-        zx_status_t status = bc->FVMQuery(&fvm_info);
+        status = CheckSlices(info, kBlocksPerSlice, device);
         if (status != ZX_OK) {
-            FS_TRACE_ERROR("minfs: unable to query FVM :%d\n", status);
-            return ZX_ERR_UNAVAILABLE;
-        }
-
-        if (info->slice_size != fvm_info.slice_size) {
-            FS_TRACE_ERROR("minfs: slice size %lu did not match expected size %lu\n",
-                           info->slice_size, fvm_info.slice_size );
-            return ZX_ERR_BAD_STATE;
-        }
-
-        size_t expected_count[4];
-        expected_count[0] = info->ibm_slices;
-        expected_count[1] = info->abm_slices;
-        expected_count[2] = info->ino_slices;
-        expected_count[3] = info->dat_slices;
-
-        query_request_t request;
-        request.count = 4;
-        request.vslice_start[0] = kFVMBlockInodeBmStart / kBlocksPerSlice;
-        request.vslice_start[1] = kFVMBlockDataBmStart / kBlocksPerSlice;
-        request.vslice_start[2] = kFVMBlockInodeStart / kBlocksPerSlice;
-        request.vslice_start[3] = kFVMBlockDataStart / kBlocksPerSlice;
-
-        fuchsia_hardware_block_volume_VsliceRange
-                ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
-        size_t ranges_count;
-
-        if ((status = bc->FVMVsliceQuery(&request, ranges, &ranges_count)) != ZX_OK) {
-            FS_TRACE_ERROR("minfs: unable to query FVM: %d\n", status);
-            return ZX_ERR_UNAVAILABLE;
-        }
-
-        if (ranges_count != request.count) {
-            FS_TRACE_ERROR("minfs: requested FVM range :%lu does not match received: %lu\n",
-                           request.count, ranges_count);
-            return ZX_ERR_BAD_STATE;
-        }
-
-        for (unsigned i = 0; i < request.count; i++) {
-            size_t minfs_count = expected_count[i];
-            size_t fvm_count = ranges[i].count;
-
-            if (!ranges[i].allocated || fvm_count < minfs_count) {
-                // Currently, since Minfs can only grow new slices, it should not be possible for
-                // the FVM to report a slice size smaller than what is reported by Minfs. In this
-                // case, automatically fail without trying to resolve the situation, as it is
-                // possible that Minfs structures are allocated in the slices that have been lost.
-                FS_TRACE_ERROR("minfs: mismatched slice count\n");
-                return ZX_ERR_IO_DATA_INTEGRITY;
-            }
-
-            if (fvm_count > minfs_count) {
-                // If FVM reports more slices than we expect, try to free remainder.
-                extend_request_t shrink;
-                shrink.length = fvm_count - minfs_count;
-                shrink.offset = request.vslice_start[i] + minfs_count;
-                if ((status = bc->FVMShrink(&shrink)) != ZX_OK) {
-                    FS_TRACE_ERROR("minfs: Unable to shrink to expected size, status: %d\n",
-                                   status);
-                    return ZX_ERR_IO_DATA_INTEGRITY;
-                }
-            }
+            return status;
         }
 #endif
-        // Verify that the allocated slices are sufficient to hold
-        // the allocated data structures of the filesystem.
-        size_t ibm_blocks_needed = (info->inode_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
-        size_t ibm_blocks_allocated = info->ibm_slices * kBlocksPerSlice;
-        if (ibm_blocks_needed > ibm_blocks_allocated) {
-            FS_TRACE_ERROR("minfs: Not enough slices for inode bitmap\n");
-            return ZX_ERR_INVALID_ARGS;
-        } else if (ibm_blocks_allocated + info->ibm_block >= info->abm_block) {
-            FS_TRACE_ERROR("minfs: Inode bitmap collides into block bitmap\n");
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        size_t abm_blocks_needed = (info->block_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
-        size_t abm_blocks_allocated = info->abm_slices * kBlocksPerSlice;
-        if (abm_blocks_needed > abm_blocks_allocated) {
-            FS_TRACE_ERROR("minfs: Not enough slices for block bitmap\n");
-            return ZX_ERR_INVALID_ARGS;
-        } else if (abm_blocks_allocated + info->abm_block >= info->ino_block) {
-            FS_TRACE_ERROR("minfs: Block bitmap collides with inode table\n");
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        size_t ino_blocks_needed =
-            (info->inode_count + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
-        size_t ino_blocks_allocated = info->ino_slices * kBlocksPerSlice;
-        if (ino_blocks_needed > ino_blocks_allocated) {
-            FS_TRACE_ERROR("minfs: Not enough slices for inode table\n");
-            return ZX_ERR_INVALID_ARGS;
-        } else if (ino_blocks_allocated + info->ino_block >= info->journal_start_block) {
-            FS_TRACE_ERROR("minfs: Inode table collides with data blocks\n");
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        size_t journal_blocks_needed = limits.GetMinimumJournalBlocks();
-        size_t journal_blocks_allocated = info->journal_slices * kBlocksPerSlice;
-        if (journal_blocks_needed > journal_blocks_allocated) {
-            FS_TRACE_ERROR("minfs: Not enough slices for journal\n");
-            return ZX_ERR_INVALID_ARGS;
-        }
-        if (journal_blocks_allocated + info->journal_start_block > info->dat_block) {
-            FS_TRACE_ERROR("minfs: Journal collides with data blocks\n");
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        size_t dat_blocks_needed = info->block_count;
-        size_t dat_blocks_allocated = info->dat_slices * kBlocksPerSlice;
-        if (dat_blocks_needed > dat_blocks_allocated) {
-            FS_TRACE_ERROR("minfs: Not enough slices for data blocks\n");
-            return ZX_ERR_INVALID_ARGS;
-        } else if (dat_blocks_allocated + info->dat_block > std::numeric_limits<blk_t>::max()) {
-            FS_TRACE_ERROR("minfs: Data blocks overflow blk_t\n");
-            return ZX_ERR_INVALID_ARGS;
-        } else if (dat_blocks_needed <= 1) {
-            FS_TRACE_ERROR("minfs: Not enough data blocks\n");
-            return ZX_ERR_INVALID_ARGS;
+        status = VerifySlicesSize(info, limits, kBlocksPerSlice);
+        if (status != ZX_OK) {
+            return status;
         }
     }
     // TODO: validate layout
@@ -373,7 +466,7 @@ zx_status_t Minfs::FVMQuery(fuchsia_hardware_block_volume_VolumeInfo* info) cons
     if (!(Info().flags & kMinfsFlagFVM)) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    return bc_->FVMQuery(info);
+    return bc_->device()->VolumeQuery(info);
 }
 #endif
 
@@ -806,9 +899,13 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
 #endif
 
     fbl::unique_ptr<SuperblockManager> sb;
-    zx_status_t status;
+#ifdef __Fuchsia__
+    zx_status_t status = SuperblockManager::Create(bc->device(), info, bc->Maxblk(), checks, &sb);
+#else
+    zx_status_t status = SuperblockManager::Create(info, bc->Maxblk(), checks, &sb);
+#endif
 
-    if ((status = SuperblockManager::Create(bc.get(), info, &sb, checks)) != ZX_OK) {
+    if (status != ZX_OK) {
         FS_TRACE_ERROR("Minfs::Create failed to initialize superblock: %d\n", status);
         return status;
     }
@@ -835,8 +932,13 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
                           &sb->MutableInfo()->block_count);
 
     fbl::unique_ptr<PersistentStorage> storage(
-        new PersistentStorage(bc.get(), sb.get(), kMinfsBlockSize, nullptr,
+#ifdef __Fuchsia__
+        new PersistentStorage(bc->device(), sb.get(), kMinfsBlockSize, nullptr,
                               std::move(block_allocator_meta)));
+#else
+        new PersistentStorage(sb.get(), kMinfsBlockSize, nullptr,
+                              std::move(block_allocator_meta)));
+#endif
 
     fbl::unique_ptr<Allocator> block_allocator;
     if ((status = Allocator::Create(&transaction, std::move(storage), &block_allocator)) != ZX_OK) {
@@ -853,9 +955,16 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
                           &sb->MutableInfo()->inode_count);
 
     fbl::unique_ptr<InodeManager> inodes;
-    if ((status = InodeManager::Create(bc.get(), sb.get(), &transaction,
-                                       std::move(inode_allocator_meta),
-                                       ino_start_block, info->inode_count, &inodes)) != ZX_OK) {
+#ifdef __Fuchsia__
+    status = InodeManager::Create(bc->device(), sb.get(), &transaction,
+                                  std::move(inode_allocator_meta),
+                                  ino_start_block, info->inode_count, &inodes);
+#else
+    status = InodeManager::Create(bc.get(), sb.get(), &transaction,
+                                  std::move(inode_allocator_meta),
+                                  ino_start_block, info->inode_count, &inodes);
+#endif
+    if (status != ZX_OK) {
         FS_TRACE_ERROR("Minfs::Create failed to initialize inodes: %d\n", status);
         return status;
     }
@@ -1058,68 +1167,16 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
     uint32_t inodes = 0;
 
     zx_status_t status;
-    auto fvm_cleanup =
-        fbl::MakeAutoCall([bc = bc.get(), &info]() { minfs_free_slices(bc, &info); });
 #ifdef __Fuchsia__
-    fuchsia_hardware_block_volume_VolumeInfo fvm_info;
-    if (bc->FVMQuery(&fvm_info) == ZX_OK) {
-        info.slice_size = fvm_info.slice_size;
-        SetMinfsFlagFvm(info);
-
-        if (info.slice_size % kMinfsBlockSize) {
-            FS_TRACE_ERROR("minfs mkfs: Slice size not multiple of minfs block: %lu\n",
-                           info.slice_size);
-            return -1;
-        }
-
-        const size_t kBlocksPerSlice = info.slice_size / kMinfsBlockSize;
-        extend_request_t request;
-        request.length = 1;
-        request.offset = kFVMBlockInodeBmStart / kBlocksPerSlice;
-        if ((status = bc->FVMReset()) != ZX_OK) {
-            FS_TRACE_ERROR("minfs mkfs: Failed to reset FVM slices: %d\n", status);
-            return status;
-        }
-        if ((status = bc->FVMExtend(&request)) != ZX_OK) {
-            FS_TRACE_ERROR("minfs mkfs: Failed to allocate inode bitmap: %d\n", status);
-            return status;
-        }
-        info.ibm_slices = 1;
-        request.offset = kFVMBlockDataBmStart / kBlocksPerSlice;
-        if ((status = bc->FVMExtend(&request)) != ZX_OK) {
-            FS_TRACE_ERROR("minfs mkfs: Failed to allocate data bitmap: %d\n", status);
-            return status;
-        }
-        info.abm_slices = 1;
-        request.offset = kFVMBlockInodeStart / kBlocksPerSlice;
-        if ((status = bc->FVMExtend(&request)) != ZX_OK) {
-            FS_TRACE_ERROR("minfs mkfs: Failed to allocate inode table: %d\n", status);
-            return status;
-        }
-        info.ino_slices = 1;
-
-        TransactionLimits limits(info);
-        blk_t journal_blocks = limits.GetRecommendedJournalBlocks();
-        request.length = fbl::round_up(journal_blocks, kBlocksPerSlice) / kBlocksPerSlice;
-        request.offset = kFVMBlockJournalStart / kBlocksPerSlice;
-        if ((status = bc->FVMExtend(&request)) != ZX_OK) {
-            FS_TRACE_ERROR("minfs mkfs: Failed to allocate journal blocks: %d\n", status);
-            return status;
-        }
-        info.journal_slices = static_cast<blk_t>(request.length);
-
-        ZX_ASSERT(options.fvm_data_slices > 0);
-        request.length = options.fvm_data_slices;
-        request.offset = kFVMBlockDataStart / kBlocksPerSlice;
-        if ((status = bc->FVMExtend(&request)) != ZX_OK) {
-            FS_TRACE_ERROR("minfs mkfs: Failed to allocate data blocks: %d\n", status);
-            return status;
-        }
-        info.dat_slices = options.fvm_data_slices;
-
-        inodes = static_cast<uint32_t>(info.ino_slices * info.slice_size / kMinfsInodeSize);
-        blocks = static_cast<uint32_t>(info.dat_slices * info.slice_size / kMinfsBlockSize);
+    auto fvm_cleanup =
+        fbl::MakeAutoCall([device = bc->device(), &info]() { FreeSlices(&info, device); });
+    status = CreateFvmData(options, &info, bc->device());
+    if (status != ZX_OK) {
+        return status;
     }
+
+    inodes = static_cast<uint32_t>(info.ino_slices * info.slice_size / kMinfsInodeSize);
+    blocks = static_cast<uint32_t>(info.dat_slices * info.slice_size / kMinfsBlockSize);
 #endif
     if ((info.flags & kMinfsFlagFVM) == 0) {
         inodes = kMinfsDefaultInodeCount;
@@ -1286,7 +1343,9 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
     journal_info->magic = kJournalMagic;
     bc->Writeblk(info.journal_start_block, blk);
 
+#ifdef __Fuchsia__
     fvm_cleanup.cancel();
+#endif
     return ZX_OK;
 }
 

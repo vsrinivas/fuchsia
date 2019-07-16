@@ -7,16 +7,16 @@
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
 #include <fs/block-txn.h>
-
-#ifdef __Fuchsia__
-#include <lib/fzl/owned-vmo-mapper.h>
-#include <lib/zx/vmo.h>
-#endif
-
 #include <minfs/format.h>
 #include <minfs/fsck.h>
 #include <minfs/block-txn.h>
 #include <minfs/minfs.h>
+
+#ifdef __Fuchsia__
+#include <block-client/cpp/block-device.h>
+#include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/zx/vmo.h>
+#endif
 
 namespace minfs {
 
@@ -35,9 +35,14 @@ public:
     ~SuperblockManager();
     DISALLOW_COPY_ASSIGN_AND_MOVE(SuperblockManager);
 
-    static zx_status_t Create(Bcache* bc, const Superblock* info,
-                              fbl::unique_ptr<SuperblockManager>* out,
-                              IntegrityCheck checks);
+#ifdef __Fuchsia__
+    static zx_status_t Create(block_client::BlockDevice* device, const Superblock* info,
+                              uint32_t max_blocks, IntegrityCheck checks,
+                              fbl::unique_ptr<SuperblockManager>* out);
+#else
+    static zx_status_t Create(const Superblock* info, uint32_t max_blocks, IntegrityCheck checks,
+                              fbl::unique_ptr<SuperblockManager>* out);
+#endif
 
     const Superblock& Info() const {
 #ifdef __Fuchsia__

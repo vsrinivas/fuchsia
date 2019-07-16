@@ -33,12 +33,23 @@ SuperblockManager::SuperblockManager(const Superblock* info) {
 
 SuperblockManager::~SuperblockManager() = default;
 
-zx_status_t SuperblockManager::Create(Bcache* bc, const Superblock* info,
-                                      fbl::unique_ptr<SuperblockManager>* out,
-                                      IntegrityCheck checks) {
+#ifdef __Fuchsia__
+// Static.
+zx_status_t SuperblockManager::Create(block_client::BlockDevice* device, const Superblock* info,
+                                      uint32_t max_blocks, IntegrityCheck checks,
+                                      fbl::unique_ptr<SuperblockManager>* out) {
+#else
+// Static.
+zx_status_t SuperblockManager::Create(const Superblock* info, uint32_t max_blocks, IntegrityCheck checks,
+                                      fbl::unique_ptr<SuperblockManager>* out) {
+#endif
     zx_status_t status = ZX_OK;
     if (checks == IntegrityCheck::kAll) {
-        status = CheckSuperblock(info, bc);
+#ifdef __Fuchsia__
+        status = CheckSuperblock(info, device, max_blocks);
+#else
+        status = CheckSuperblock(info, max_blocks);
+#endif
         if (status != ZX_OK) {
             FS_TRACE_ERROR("SuperblockManager::Create failed to check info: %d\n", status);
             return status;
@@ -52,8 +63,13 @@ zx_status_t SuperblockManager::Create(Bcache* bc, const Superblock* info,
         return status;
     }
 
+    zx::vmo xfer_vmo;
+    status = mapper.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo);
+    if (status != ZX_OK) {
+        return status;
+    }
     fuchsia_hardware_block_VmoID info_vmoid;
-    if ((status = bc->AttachVmo(mapper.vmo(), &info_vmoid)) != ZX_OK) {
+    if ((status = device->BlockAttachVmo(std::move(xfer_vmo), &info_vmoid)) != ZX_OK) {
         return status;
     }
     memcpy(mapper.start(), info, sizeof(Superblock));

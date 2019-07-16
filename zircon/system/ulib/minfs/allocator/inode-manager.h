@@ -11,12 +11,13 @@
 #include <fbl/unique_ptr.h>
 #include <fs/block-txn.h>
 
-#ifdef __Fuchsia__
-#include <lib/fzl/resizeable-vmo-mapper.h>
-#endif
-
 #include <minfs/block-txn.h>
 #include <minfs/format.h>
+
+#ifdef __Fuchsia__
+#include <block-client/cpp/block-device.h>
+#include <lib/fzl/resizeable-vmo-mapper.h>
+#endif
 
 #include "allocator.h"
 
@@ -41,12 +42,17 @@ class InodeManager : public InspectableInodeManager {
 public:
     InodeManager() = delete;
     DISALLOW_COPY_ASSIGN_AND_MOVE(InodeManager);
-    ~InodeManager();
+    ~InodeManager() {}
 
+#ifdef __Fuchsia__
+    static zx_status_t Create(block_client::BlockDevice* device, SuperblockManager* sb,
+                              fs::ReadTxn* txn, AllocatorMetadata metadata, blk_t start_block,
+                              size_t inodes, std::unique_ptr<InodeManager>* out);
+#else
     static zx_status_t Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn* txn,
-                              AllocatorMetadata metadata,
-                              blk_t start_block, size_t inodes,
-                              fbl::unique_ptr<InodeManager>* out);
+                              AllocatorMetadata metadata, blk_t start_block, size_t inodes,
+                              std::unique_ptr<InodeManager>* out);
+#endif
 
     // Reserve |inodes| inodes in the allocator.
     zx_status_t Reserve(WriteTxn* txn, size_t inodes, AllocatorPromise* promise) {
@@ -73,14 +79,18 @@ public:
     zx_status_t Grow(size_t inodes);
 
 private:
+#ifdef __Fuchsia__
+    InodeManager(blk_t start_block);
+#else
     InodeManager(Bcache* bc, blk_t start_block);
-#ifndef __Fuchsia__
-    Bcache* bc_;
 #endif
+
     blk_t start_block_;
     fbl::unique_ptr<Allocator> inode_allocator_;
 #ifdef __Fuchsia__
     fzl::ResizeableVmoMapper inode_table_;
+#else
+    Bcache* bc_;
 #endif
 };
 

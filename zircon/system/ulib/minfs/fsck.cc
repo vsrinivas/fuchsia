@@ -646,7 +646,12 @@ zx_status_t LoadSuperblock(fbl::unique_ptr<Bcache>& bc, Superblock* out) {
     }
     const Superblock* info = reinterpret_cast<const Superblock*>(data);
     DumpInfo(info);
-    if ((status = CheckSuperblock(info, bc.get())) != ZX_OK) {
+#ifdef __Fuchsia__
+    status = CheckSuperblock(info, bc->device(), bc->Maxblk());
+#else
+    status = CheckSuperblock(info, bc->Maxblk());
+#endif
+    if (status != ZX_OK) {
         FS_TRACE_ERROR("Fsck: check_info failure: %d\n", status);
         return status;
     }

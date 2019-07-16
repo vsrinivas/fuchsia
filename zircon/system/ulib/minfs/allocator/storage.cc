@@ -24,16 +24,25 @@ uint32_t AllocatorStorage::PoolBlocks() const {
     return BitmapBlocksForSize(PoolTotal());
 }
 
-PersistentStorage::PersistentStorage(Bcache* bc, SuperblockManager* sb, size_t unit_size,
-                                     GrowHandler grow_cb, AllocatorMetadata metadata) :
 #ifdef __Fuchsia__
-      bc_(bc), unit_size_(unit_size),
+PersistentStorage::PersistentStorage(block_client::BlockDevice* device, SuperblockManager* sb,
+                                     size_t unit_size, GrowHandler grow_cb,
+                                     AllocatorMetadata metadata)
+        : device_(device), unit_size_(unit_size), sb_(sb),  grow_cb_(std::move(grow_cb)), metadata_(std::move(metadata)) {}
+#else
+PersistentStorage::PersistentStorage(SuperblockManager* sb, size_t unit_size,
+                                     GrowHandler grow_cb, AllocatorMetadata metadata)
+        : sb_(sb), grow_cb_(std::move(grow_cb)), metadata_(std::move(metadata)) {}
 #endif
-      sb_(sb),  grow_cb_(std::move(grow_cb)), metadata_(std::move(metadata)) {}
 
 #ifdef __Fuchsia__
 zx_status_t PersistentStorage::AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoID* vmoid) {
-    return bc_->AttachVmo(vmo, vmoid);
+    zx::vmo xfer_vmo;
+    zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo);
+    if (status != ZX_OK) {
+        return status;
+    }
+    return device_->BlockAttachVmo(std::move(xfer_vmo), vmoid);
 }
 #endif
 
@@ -79,8 +88,8 @@ zx_status_t PersistentStorage::Extend(WriteTxn* write_transaction, WriteData dat
     request.length = data_slices_diff;
     request.offset = metadata_.Fvm().BlocksToSlices(metadata_.DataStartBlock()) + data_slices;
 
-    zx_status_t status;
-    if ((status = bc_->FVMExtend(&request)) != ZX_OK) {
+    zx_status_t status = device_->VolumeExtend(request.offset, request.length);
+    if (status != ZX_OK) {
         FS_TRACE_ERROR("minfs::PersistentStorage::Extend failed to grow (on disk): %d\n", status);
         return status;
     }

@@ -11,21 +11,25 @@
 
 namespace minfs {
 
-InodeManager::InodeManager(Bcache* bc, blk_t start_block) :
-    start_block_(start_block) {
-#ifndef __Fuchsia__
-    bc_ = bc;
+#ifdef __Fuchsia__
+InodeManager::InodeManager(blk_t start_block)
+        : start_block_(start_block) {}
+#else
+InodeManager::InodeManager(Bcache* bc, blk_t start_block) : start_block_(start_block), bc_(bc) {}
 #endif
-}
 
-InodeManager::~InodeManager() = default;
 
+#ifdef __Fuchsia__
+zx_status_t InodeManager::Create(block_client::BlockDevice* device, SuperblockManager* sb,
+                                 fs::ReadTxn* txn, AllocatorMetadata metadata, blk_t start_block,
+                                 size_t inodes, std::unique_ptr<InodeManager>* out) {
+    auto mgr = std::unique_ptr<InodeManager>(new InodeManager(start_block));
+#else
 zx_status_t InodeManager::Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn* txn,
-                                 AllocatorMetadata metadata,
-                                 blk_t start_block, size_t inodes,
-                                 fbl::unique_ptr<InodeManager>* out) {
-
-    auto mgr = fbl::unique_ptr<InodeManager>(new InodeManager(bc, start_block));
+                                 AllocatorMetadata metadata, blk_t start_block, size_t inodes,
+                                 std::unique_ptr<InodeManager>* out) {
+    auto mgr = std::unique_ptr<InodeManager>(new InodeManager(bc, start_block));
+#endif
     InodeManager* mgr_raw = mgr.get();
 
     auto grow_cb = [mgr_raw](uint32_t pool_size) {
@@ -33,9 +37,15 @@ zx_status_t InodeManager::Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn*
     };
 
     zx_status_t status;
-    fbl::unique_ptr<PersistentStorage> storage(new PersistentStorage(bc, sb, kMinfsInodeSize,
+#ifdef __Fuchsia__
+    fbl::unique_ptr<PersistentStorage> storage(new PersistentStorage(device, sb, kMinfsInodeSize,
                                                                      std::move(grow_cb),
                                                                      std::move(metadata)));
+#else
+    fbl::unique_ptr<PersistentStorage> storage(new PersistentStorage(sb, kMinfsInodeSize,
+                                                                     std::move(grow_cb),
+                                                                     std::move(metadata)));
+#endif
     if ((status = Allocator::Create(txn, std::move(storage), &mgr->inode_allocator_)) != ZX_OK) {
         return status;
     }
@@ -48,8 +58,14 @@ zx_status_t InodeManager::Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn*
         return status;
     }
 
+    zx::vmo xfer_vmo;
+    status = mgr->inode_table_.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo);
+    if (status != ZX_OK) {
+        return status;
+    }
     fuchsia_hardware_block_VmoID vmoid;
-    if ((status = bc->AttachVmo(mgr->inode_table_.vmo(), &vmoid)) != ZX_OK) {
+    status = device->BlockAttachVmo(std::move(xfer_vmo), &vmoid);
+    if (status != ZX_OK) {
         return status;
     }
     txn->Enqueue(vmoid.id, 0, start_block, inoblks);

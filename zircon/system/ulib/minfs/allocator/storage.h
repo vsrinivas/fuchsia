@@ -12,6 +12,10 @@
 #include <fs/block-txn.h>
 #include <minfs/superblock.h>
 
+#ifdef __Fuchsia__
+#include <block-client/cpp/block-device.h>
+#endif
+
 #include "metadata.h"
 
 namespace minfs {
@@ -74,9 +78,15 @@ public:
     PersistentStorage(const PersistentStorage&) = delete;
     PersistentStorage& operator=(const PersistentStorage&) = delete;
 
+#ifdef __Fuchsia__
     // |grow_cb| is an optional callback to increase the size of the allocator.
-    PersistentStorage(Bcache* bc, SuperblockManager* sb, size_t unit_size, GrowHandler grow_cb,
+    PersistentStorage(block_client::BlockDevice* device, SuperblockManager* sb,
+                      size_t unit_size, GrowHandler grow_cb, AllocatorMetadata metadata);
+#else
+    // |grow_cb| is an optional callback to increase the size of the allocator.
+    PersistentStorage(SuperblockManager* sb, size_t unit_size, GrowHandler grow_cb,
                       AllocatorMetadata metadata);
+#endif
     ~PersistentStorage() {}
 
 #ifdef __Fuchsia__
@@ -98,7 +108,7 @@ public:
     void PersistRelease(WriteTxn* txn, size_t count) final;
 private:
 #ifdef __Fuchsia__
-    Bcache* bc_;
+    block_client::BlockDevice* device_;
     size_t unit_size_;
 #endif
     SuperblockManager* sb_;
