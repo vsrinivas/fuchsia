@@ -20,6 +20,15 @@ const uint32 SIGNAL_HANGUP = 0x04000000; // ZX_USER_SIGNAL_2
 
 [Layout = "Simple"]
 protocol Device {
+    /// Open pipe. A protocol request |pipe_request| provides an interface
+    /// to the pipe. Multiple pipes can be opened for a single device.
+    /// Closing the device connection will also close all pipe connections.
+    /// TODO(DX-1766): Unify `device` and `pipe`.
+    OpenPipe(request<Pipe> pipe_request);
+};
+
+[Layout = "Simple"]
+protocol Pipe {
     /// Request new IO buffer size. Can fail if out of memory. Discards
     /// contents of existing buffer on success. Leaves existing buffer
     /// intact on failure.
@@ -40,4 +49,11 @@ protocol Device {
     /// Writes up to count bytes from the IO buffer at specified offset.
     /// Returns ZX_ERR_SHOULD_WAIT if pipe device is not writable.
     Write(uint64 count, uint64 offset) -> (zx.status res, uint64 actual);
+
+    /// Writes count bytes from the IO buffer at specified write
+    /// offset. Blocks if pipe device is not writable. Subsequently reads
+    /// read_count bytes into the IO buffer at specified read offset.
+    /// Returns ZX_ERR_SHOULD_WAIT if pipe device is not readable.
+    Call(uint64 count, uint64 offset, uint64 read_count, uint64 read_offset)
+        -> (zx.status res, uint64 actual);
 };

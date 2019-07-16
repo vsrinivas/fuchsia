@@ -26,16 +26,22 @@ static bool GoldfishPipeTest() {
     EXPECT_EQ(fdio_get_service_handle(fd, channel.reset_and_get_address()),
               ZX_OK);
 
+    zx::channel pipe_client;
+    zx::channel pipe_server;
+    EXPECT_EQ(zx::channel::create(0, &pipe_client, &pipe_server), ZX_OK);
+    EXPECT_EQ(fuchsia_hardware_goldfish_pipe_DeviceOpenPipe(
+                  channel.get(), pipe_server.release()), ZX_OK);
+
     int32_t res;
     const size_t kSize = 3 * 4096;
-    EXPECT_EQ(fuchsia_hardware_goldfish_pipe_DeviceSetBufferSize(channel.get(),
-                                                                 kSize, &res),
+    EXPECT_EQ(fuchsia_hardware_goldfish_pipe_PipeSetBufferSize(pipe_client.get(),
+                                                               kSize, &res),
               ZX_OK);
     EXPECT_EQ(res, ZX_OK);
 
     zx::vmo vmo;
-    EXPECT_EQ(fuchsia_hardware_goldfish_pipe_DeviceGetBuffer(
-                  channel.get(), &res, vmo.reset_and_get_address()),
+    EXPECT_EQ(fuchsia_hardware_goldfish_pipe_PipeGetBuffer(
+                  pipe_client.get(), &res, vmo.reset_and_get_address()),
               ZX_OK);
     EXPECT_EQ(res, ZX_OK);
 
@@ -44,8 +50,8 @@ static bool GoldfishPipeTest() {
     size_t bytes = strlen(kPipeName) + 1;
     EXPECT_EQ(vmo.write(kPipeName, 0, bytes), ZX_OK);
     uint64_t actual;
-    EXPECT_EQ(fuchsia_hardware_goldfish_pipe_DeviceWrite(channel.get(), bytes,
-                                                         0, &res, &actual),
+    EXPECT_EQ(fuchsia_hardware_goldfish_pipe_PipeWrite(pipe_client.get(), bytes,
+                                                       0, &res, &actual),
               ZX_OK);
     EXPECT_EQ(res, ZX_OK);
     EXPECT_EQ(actual, bytes);
@@ -53,15 +59,15 @@ static bool GoldfishPipeTest() {
     // Write 1 byte.
     const uint8_t kSentinel = 0xaa;
     EXPECT_EQ(vmo.write(&kSentinel, 0, 1), ZX_OK);
-    EXPECT_EQ(fuchsia_hardware_goldfish_pipe_DeviceWrite(channel.get(), 1, 0,
-                                                         &res, &actual),
+    EXPECT_EQ(fuchsia_hardware_goldfish_pipe_PipeWrite(pipe_client.get(), 1, 0,
+                                                       &res, &actual),
               ZX_OK);
     EXPECT_EQ(res, ZX_OK);
     EXPECT_EQ(actual, 1);
 
     // Read 1 byte result.
-    EXPECT_EQ(fuchsia_hardware_goldfish_pipe_DeviceRead(channel.get(), 1, 0,
-                                                        &res, &actual),
+    EXPECT_EQ(fuchsia_hardware_goldfish_pipe_PipeRead(pipe_client.get(), 1, 0,
+                                                      &res, &actual),
               ZX_OK);
     EXPECT_EQ(res, ZX_OK);
     EXPECT_EQ(actual, 1);
@@ -75,15 +81,15 @@ static bool GoldfishPipeTest() {
     uint8_t send_buffer[kSize];
     memset(send_buffer, kSentinel, kSize);
     EXPECT_EQ(vmo.write(send_buffer, 0, kSize), ZX_OK);
-    EXPECT_EQ(fuchsia_hardware_goldfish_pipe_DeviceWrite(channel.get(), kSize,
-                                                         0, &res, &actual),
+    EXPECT_EQ(fuchsia_hardware_goldfish_pipe_PipeWrite(pipe_client.get(), kSize,
+                                                       0, &res, &actual),
               ZX_OK);
     EXPECT_EQ(res, ZX_OK);
     EXPECT_EQ(actual, kSize);
 
     // Read 3 * 4096 bytes.
-    EXPECT_EQ(fuchsia_hardware_goldfish_pipe_DeviceRead(channel.get(), kSize, 0,
-                                                        &res, &actual),
+    EXPECT_EQ(fuchsia_hardware_goldfish_pipe_PipeRead(pipe_client.get(), kSize, 0,
+                                                      &res, &actual),
               ZX_OK);
     EXPECT_EQ(res, ZX_OK);
     EXPECT_EQ(actual, kSize);
@@ -92,6 +98,23 @@ static bool GoldfishPipeTest() {
 
     // pingpong service should have returned the data received.
     EXPECT_EQ(memcmp(send_buffer, recv_buffer, kSize), 0);
+
+    // Write & Read 4096 bytes.
+    const size_t kSmallSize = kSize / 3;
+    const size_t kRecvOffset = kSmallSize;
+    memset(send_buffer, kSentinel, kSmallSize);
+    EXPECT_EQ(vmo.write(send_buffer, 0, kSmallSize), ZX_OK);
+    EXPECT_EQ(fuchsia_hardware_goldfish_pipe_PipeCall(
+                  pipe_client.get(), kSmallSize, 0, kSmallSize, kRecvOffset, &res,
+                  &actual),
+              ZX_OK);
+    EXPECT_EQ(res, ZX_OK);
+    EXPECT_EQ(actual, kSmallSize);
+
+    EXPECT_EQ(vmo.read(recv_buffer, kRecvOffset, kSmallSize), ZX_OK);
+
+    // pingpong service should have returned the data received.
+    EXPECT_EQ(memcmp(send_buffer, recv_buffer, kSmallSize), 0);
 
     END_TEST;
 }

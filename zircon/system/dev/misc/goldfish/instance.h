@@ -6,15 +6,18 @@
 #define ZIRCON_SYSTEM_DEV_MISC_GOLDFISH_INSTANCE_H_
 
 #include <ddk/device.h>
-#include <ddk/io-buffer.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/goldfish/pipe.h>
-#include <lib/zx/event.h>
-#include <lib/zx/pmt.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <threads.h>
 #include <zircon/types.h>
+
+#include <map>
+#include <memory>
 
 namespace goldfish {
 
+class Pipe;
 class Instance;
 using InstanceType = ddk::Device<Instance, ddk::Messageable, ddk::Closable>;
 
@@ -22,48 +25,31 @@ using InstanceType = ddk::Device<Instance, ddk::Messageable, ddk::Closable>;
 // an instance of this class will be created to service a new channel
 // to the virtual device.
 class Instance : public InstanceType {
-public:
-    explicit Instance(zx_device_t* parent);
-    ~Instance();
+ public:
+  explicit Instance(zx_device_t* parent);
+  ~Instance();
 
-    zx_status_t Bind();
+  zx_status_t Bind();
 
-    // FIDL interface
-    zx_status_t FidlSetBufferSize(uint64_t size, fidl_txn_t* txn);
-    zx_status_t FidlSetEvent(zx_handle_t event_handle);
-    zx_status_t FidlGetBuffer(fidl_txn_t* txn);
-    zx_status_t FidlRead(size_t count, zx_off_t offset, fidl_txn_t* txn);
-    zx_status_t FidlWrite(size_t count, zx_off_t offset, fidl_txn_t* txn);
+  // FIDL interface
+  zx_status_t FidlOpenPipe(zx_handle_t pipe_request_handle);
 
-    // Device protocol implementation.
-    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-    zx_status_t DdkClose(uint32_t flags);
-    void DdkRelease();
+  // Device protocol implementation.
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkClose(uint32_t flags);
+  void DdkRelease();
 
-private:
-    static void OnSignal(void* ctx, int32_t flags);
+ private:
+  int ClientThread();
 
-    zx_status_t SetBufferSize(size_t size);
-    zx_status_t Read(zx_paddr_t paddr, size_t count, size_t* actual);
-    zx_status_t Write(zx_paddr_t paddr, size_t count, size_t* actual);
-    zx_status_t Transfer(int32_t cmd, int32_t wake_cmd, zx_signals_t state_clr,
-                         zx_paddr_t paddr, size_t count, size_t* actual);
+  thrd_t client_thread_{};
+  async::Loop client_loop_;
+  using PipeMap = std::map<Pipe*, std::unique_ptr<Pipe>>;
+  PipeMap pipes_;
 
-    ddk::GoldfishPipeProtocolClient pipe_;
-    int32_t id_ = 0;
-    zx::bti bti_;
-    ddk::IoBuffer cmd_buffer_;
-    struct {
-        zx::vmo vmo;
-        zx::pmt pmt;
-        size_t size;
-        zx_paddr_t phys;
-        zx::event event;
-    } buffer_ = {};
-
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Instance);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(Instance);
 };
 
-} // namespace goldfish
+}  // namespace goldfish
 
-#endif // ZIRCON_SYSTEM_DEV_MISC_GOLDFISH_INSTANCE_H_
+#endif  // ZIRCON_SYSTEM_DEV_MISC_GOLDFISH_INSTANCE_H_

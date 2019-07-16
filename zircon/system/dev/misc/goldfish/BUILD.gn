@@ -6,21 +6,26 @@ driver("goldfish") {
   sources = [
     "instance.cc",
     "pipe-device.cc",
+    "pipe.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.acpi",
     "$zx/system/banjo/ddk.protocol.goldfish.pipe",
     "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-hardware-goldfish-pipe:c",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fidl",
-    "$zx/system/ulib/fidl-async",
+    "$zx/system/ulib/fidl-async-2",
     "$zx/system/ulib/fidl-utils",
     "$zx/system/ulib/trace:headers",
     "$zx/system/ulib/trace:trace-driver",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
+
+  # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
+  deprecated_inhibit_driver_shlib_allowlist = true
 }
