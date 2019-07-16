@@ -31,10 +31,10 @@ strings {
 }
 
 arrays {
-	rd_vptr	ptr[out, array[int64]]
-	wr_vptr	ptr[in, array[int64]]
-	rd_vptr_len	len[rd_vptr]
-	wr_vptr_len	len[wr_vptr]
+	rd_vptr	ptr[out, array[int8]]
+	wr_vptr	ptr[in, array[int8]]
+	rd_vptr_len	bytesize[rd_vptr]
+	wr_vptr_len	bytesize[wr_vptr]
 	rd_sz	ptr[in, array[intptr]]
 	rd_sz	ptr[in, array[intptr]]
 	rd_sz_len	len[rd_sz]
@@ -81,4 +81,4 @@ arrays {
 	wr_h_len	len[wr_h]
 }
 
-point(h int32, pt point)
+zx_point(h int32, pt point)

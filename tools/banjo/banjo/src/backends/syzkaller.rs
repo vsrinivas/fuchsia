@@ -14,8 +14,9 @@ use {
 pub struct SyzkallerBackend<'a, W: io::Write> {
     w: &'a mut W,
     // These store info about args for containers(methods, structs, unions).
-    size_to_buffer: HashMap<String, String>,
+    size_to_buffer: HashMap<String, (String, String)>,
     arg_types: ValuedAttributes,
+    array_sizes: ValuedAttributes,
     value_sets: ValuedAttributes,
     type_sets: ValuedAttributes,
 }
@@ -34,7 +35,7 @@ fn ty_to_underlying_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Err
         ast::Ty::UInt32 => Ok(String::from("int32")),
         ast::Ty::UInt64 => Ok(String::from("int64")),
         ast::Ty::USize => Ok(String::from("intptr")),
-        ast::Ty::Voidptr => Ok(String::from("int64")),
+        ast::Ty::Voidptr => Ok(String::from("int8")),
         ast::Ty::Handle { .. } => Ok(String::from("int32")),
         ast::Ty::Identifier { id, .. } => {
             if id.is_base_type() {
@@ -104,15 +105,54 @@ fn ty_to_syzkaller_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Erro
     }
 }
 
+/// Handles `dependency` attributes on a method, where the attribute values are
+//  formatted as pairs. For example, with an annotation like this on a menthod m:
+/// ```
+/// [dependency="p0 ABC",
+///  dependency="p0 XYZ"]
+/// ```
+/// where p0 is linked to an enum and ABC, XYZ are linked to unions,
+/// a call to get_dependent_arg_names(&m.attributes) would return {p0: [ABC, XYZ]}.
+fn get_dependent_arg_names(attrs: &ast::Attrs) -> (String, Vec<String>) {
+    let mut key_arg_name = String::default();
+    let mut value_arg_names: Vec<String> = Vec::default();
+    for attr in attrs.0.iter() {
+        if attr.key == "dependency" {
+            if let Some(ref val) = attr.val {
+                let parts: Vec<&str> = val.split(' ').collect();
+                if parts.len() != 2 {
+                    panic!("dependency annotation requires two arguments");
+                }
+                if !key_arg_name.is_empty() && key_arg_name.to_string() != parts[0].to_string() {
+                    panic!("`dependency` arg can only have 1 unique key");
+                }
+                key_arg_name = parts[0].to_string();
+                value_arg_names.push(parts[1].to_string());
+            }
+        }
+    }
+    (key_arg_name, value_arg_names)
+}
+
 impl<'a, W: io::Write> SyzkallerBackend<'a, W> {
     pub fn new(w: &'a mut W) -> Self {
         SyzkallerBackend {
             w: w,
             size_to_buffer: HashMap::new(),
             arg_types: ValuedAttributes::default(),
+            array_sizes: ValuedAttributes::default(),
             value_sets: ValuedAttributes::default(),
             type_sets: ValuedAttributes::default(),
         }
+    }
+
+    fn update_cache(&mut self, name: &str, ty: &ast::Ty, size: &ast::Constant) -> () {
+        match ty {
+            ast::Ty::Voidptr => self
+                .size_to_buffer
+                .insert(size.to_string(), (name.to_string(), String::from("voidptr"))),
+            _ => self.size_to_buffer.insert(size.to_string(), (name.to_string(), "".to_string())),
+        };
     }
 
     /// Translates an arg(name, type) to a Syzkaller-format string.
@@ -125,13 +165,31 @@ impl<'a, W: io::Write> SyzkallerBackend<'a, W> {
         let direction = self.arg_types.get_arg(name);
         let value_set = self.value_sets.get_arg(name);
         match ty {
-            ast::Ty::USize => {
-                match self.size_to_buffer.get(name) {
-                    // TODO(SEC-327): should be bytesize for voidptr array
-                    Some(assoc_buffer) => Ok(format!("{}{}len[{}]", name, sep, assoc_buffer)),
-                    None => Ok(format!("{}{}{}", to_c_name(name), sep, String::from("intptr"))),
+            ast::Ty::UInt32 => match self.size_to_buffer.get(name) {
+                Some((assoc_buffer, _)) => {
+                    // Rule: buffer array<voidptr>:count with type(count) = uint32 means:
+                    // count of elements in the buffer
+                    // Example: zx_job_set_policy()
+                    Ok(format!("{}{}len[{}]", name, sep, assoc_buffer))
                 }
-            }
+                None => {
+                    if !value_set.is_empty() {
+                        Ok(format!("{}{}flags[{}]", to_c_name(name), sep, to_c_name(&value_set)))
+                    } else {
+                        Ok(format!("{}{}{}", to_c_name(name), sep, String::from("int32")))
+                    }
+                }
+            },
+            ast::Ty::USize => match self.size_to_buffer.get(name) {
+                Some((assoc_buffer, ty)) => match ty.as_str() {
+                    // Rule: buffer array<voidptr>:buffer_size with type(buffer_size) = usize means:
+                    // bytesize of contents in the buffer
+                    // Example: object_get_info()
+                    "voidptr" => Ok(format!("{}{}bytesize[{}]", name, sep, assoc_buffer)),
+                    _ => Ok(format!("{}{}len[{}]", name, sep, assoc_buffer)),
+                },
+                None => Ok(format!("{}{}{}", to_c_name(name), sep, String::from("intptr"))),
+            },
             ast::Ty::Str { size, nullable } => {
                 if *nullable {
                     panic!("string cannot be nullable");
@@ -149,7 +207,8 @@ impl<'a, W: io::Write> SyzkallerBackend<'a, W> {
                                     direction = to_c_name(&direction)
                                 ),
                             };
-                            self.size_to_buffer.insert(size.to_string(), name.to_string());
+                            self.size_to_buffer
+                                .insert(size.to_string(), (name.to_string(), "".to_string()));
                             Ok(format!("{}{}{}", to_c_name(name), sep, resolved_type))
                         } else {
                             panic!(
@@ -168,15 +227,24 @@ impl<'a, W: io::Write> SyzkallerBackend<'a, W> {
                             to_c_name(&direction),
                             ty_to_syzkaller_str(ast, ty).unwrap()
                         ),
-                        // TODO(SEC-327): Add support for dynamic arrays
-                        "N" => panic!("dynamic arrays not supported"),
+                        "N" => {
+                            let val = self.array_sizes.get_arg(name); // count*elem_size
+                            let parts: Vec<&str> = val.split('*').collect();
+                            let count = parts[0];
+                            self.update_cache(name, ty, &ast::Constant::from_str(&count));
+                            format!(
+                                "ptr[{}, array[{}]]",
+                                to_c_name(&direction),
+                                ty_to_syzkaller_str(ast, ty).unwrap()
+                            )
+                        }
                         _ => match size.to_string().as_str().parse::<usize>() {
                             // fixed/constant array length
                             Ok(n) => {
                                 format!("array[{}, {}]", ty_to_syzkaller_str(ast, ty).unwrap(), n)
                             }
                             _ => {
-                                self.size_to_buffer.insert(size.to_string(), name.to_string());
+                                self.update_cache(name, ty, size);
                                 format!(
                                     "ptr[{}, array[{}]]",
                                     to_c_name(&direction),
@@ -273,61 +341,12 @@ impl<'a, W: io::Write> SyzkallerBackend<'a, W> {
                     .as_str(),
             );
         }
-        let mut accum = String::default();
-        match ty {
-            ast::Ty::Handle { .. } => {
-                let handle_types = vec![
-                    ast::HandleTy::Handle,
-                    ast::HandleTy::Process,
-                    ast::HandleTy::Thread,
-                    ast::HandleTy::Vmo,
-                    ast::HandleTy::Channel,
-                    ast::HandleTy::Event,
-                    ast::HandleTy::Port,
-                    ast::HandleTy::Interrupt,
-                    ast::HandleTy::Log,
-                    ast::HandleTy::Socket,
-                    ast::HandleTy::Resource,
-                    ast::HandleTy::EventPair,
-                    ast::HandleTy::Job,
-                    ast::HandleTy::Vmar,
-                    ast::HandleTy::Fifo,
-                    ast::HandleTy::Guest,
-                    ast::HandleTy::Timer,
-                    ast::HandleTy::Bti,
-                    ast::HandleTy::Profile,
-                    ast::HandleTy::DebugLog,
-                    ast::HandleTy::VCpu,
-                    ast::HandleTy::IoMmu,
-                    ast::HandleTy::Pager,
-                    ast::HandleTy::Pmt,
-                ];
-                let handle_resources = handle_types
-                    .into_iter()
-                    .map(|handle_type| {
-                        let ty = ast::Ty::Handle { ty: handle_type, reference: false };
-                        format!(
-                            "resource {identifier}[{underlying_type}]{values}",
-                            identifier = ty_to_syzkaller_str(ast, &ty).unwrap(),
-                            underlying_type = ty_to_underlying_str(ast, &ty).unwrap(),
-                            values = special_values
-                        )
-                    })
-                    .collect::<Vec<String>>()
-                    .join("\n");
-                accum.push_str(handle_resources.as_str());
-            }
-            _ => accum.push_str(
-                format!(
-                    "resource {identifier}[{underlying_type}]{values}",
-                    identifier = ty_to_syzkaller_str(ast, &ty).unwrap(),
-                    underlying_type = ty_to_underlying_str(ast, &ty).unwrap(),
-                    values = special_values
-                )
-                .as_str(),
-            ),
-        }
-        Ok(accum)
+        Ok(format!(
+            "resource {identifier}[{underlying_type}]{values}",
+            identifier = ty_to_syzkaller_str(ast, &ty).unwrap(),
+            underlying_type = ty_to_underlying_str(ast, &ty).unwrap(),
+            values = special_values
+        ))
     }
 
     fn codegen_struct_def(
@@ -339,6 +358,7 @@ impl<'a, W: io::Write> SyzkallerBackend<'a, W> {
     ) -> Result<String, Error> {
         self.size_to_buffer = HashMap::new();
         self.arg_types = ValuedAttributes::new(attributes, "argtype");
+        self.array_sizes = ValuedAttributes::new(attributes, "arraysize");
         self.value_sets = ValuedAttributes::new(attributes, "valueset");
         self.type_sets = ValuedAttributes::new(attributes, "typeset");
         let struct_fields = fields
@@ -368,6 +388,7 @@ impl<'a, W: io::Write> SyzkallerBackend<'a, W> {
     ) -> Result<String, Error> {
         self.size_to_buffer = HashMap::new();
         self.arg_types = ValuedAttributes::new(attributes, "argtype");
+        self.array_sizes = ValuedAttributes::new(attributes, "arraysize");
         self.value_sets = ValuedAttributes::new(attributes, "valueset");
         self.type_sets = ValuedAttributes::new(attributes, "typeset");
         let union_fields = fields
@@ -417,26 +438,150 @@ impl<'a, W: io::Write> SyzkallerBackend<'a, W> {
         methods
             .iter()
             .map(|m| {
-                let mut accum = String::new();
                 self.size_to_buffer = HashMap::new();
                 self.arg_types = ValuedAttributes::new(&m.attributes, "argtype");
+                self.array_sizes = ValuedAttributes::new(&m.attributes, "arraysize");
                 self.value_sets = ValuedAttributes::new(&m.attributes, "valueset");
                 self.type_sets = ValuedAttributes::new(&m.attributes, "typeset");
+
+                let mut accum = String::new();
                 let mut in_params = self.get_in_params(&m, ast)?;
                 let (out_params, return_param) = self.get_out_params(&m, ast)?;
                 in_params.extend(out_params);
                 let params = in_params.join(", ");
-                accum.push_str(
-                    format!(
-                        "{fn_name}({params})",
-                        fn_name = to_c_name(m.name.as_str()),
-                        params = params,
-                    )
-                    .as_str(),
-                );
-                if !return_param.is_empty() {
-                    accum
-                        .push_str(format!(" {return_param}", return_param = return_param).as_str());
+
+                // Generate specialized syscalls.
+                if m.attributes.has_attribute("dependency") {
+                    let (key_arg_name, value_arg_names) = get_dependent_arg_names(&m.attributes);
+
+                    // Get info about linked enum (enum variants).
+                    let enum_name = self.value_sets.get_arg(&key_arg_name);
+                    if enum_name.is_empty() {
+                        panic!(
+                            "Arg {:?} needs to be linked to an enum with `valueset` attribute",
+                            key_arg_name
+                        );
+                    }
+                    let mut enum_variants: Vec<ast::EnumVariant> = Vec::default();
+                    match ast.id_to_decl(&ast::Ident::new_raw(&enum_name)).unwrap() {
+                        ast::Decl::Enum { variants, .. } => {
+                            enum_variants = variants.to_vec();
+                        }
+                        _ => {}
+                    }
+
+                    // Get info about linked unions (union fields and attributes).
+                    let union_names: Vec<String> = value_arg_names
+                        .iter()
+                        .map(|name| {
+                            let union_name = self.type_sets.get_arg(&name);
+                            if union_name.is_empty() {
+                                panic!(
+                                    "Arg {:?} needs to be linked to a union with `typeset` attribute",
+                                    name
+                                );
+                            }
+                            union_name
+                        })
+                        .collect();
+                    let union_info: Vec<(Vec<ast::UnionField>, &ast::Attrs)> = union_names
+                        .iter()
+                        .filter_map(|union_name| {
+                            match ast.id_to_decl(&ast::Ident::new_raw(&union_name)).unwrap() {
+                                ast::Decl::Union { attributes, name: _, fields } => {
+                                    if fields.len() != enum_variants.len() {
+                                        panic!(
+                                            "Unequal length between {:?} and {:?}",
+                                            enum_name, union_name
+                                        );
+                                    }
+                                    Some((fields.to_vec(), attributes))
+                                }
+                                _ => None,
+                            }
+                        })
+                        .collect();
+
+                    // `enum_arg` and `union_args[]` are substrings in the syscall
+                    // which will be replaced
+                    let mut comb_idx = 0;
+                    let mut specialized_syscalls: Vec<String> = Vec::default();
+                    let enum_arg = self
+                        .arg_to_syzkaller_str(
+                            ast,
+                            (&key_arg_name, m.name_to_ty(&key_arg_name).unwrap()),
+                            " ",
+                        )
+                        .unwrap();
+                    let union_args: Vec<String> = value_arg_names
+                        .iter()
+                        .map(|arg_name| {
+                            self.arg_to_syzkaller_str(
+                                ast,
+                                (&arg_name, m.name_to_ty(&arg_name).unwrap()),
+                                " ",
+                            )
+                            .unwrap()
+                        })
+                        .collect();
+
+                    // Each iteration generates a specialized syscall by:
+                    // replacing enum_arg substring with variant_str from linked enum
+                    // replacing union_args[j] substring with field_str from linked unions
+                    while comb_idx < enum_variants.len() {
+                        let mut tmp_accum = String::default();
+                        let variant = &enum_variants[comb_idx];
+                        let variant_str = format!("{} const[{}]", key_arg_name, variant.name);
+                        let mod_params = params.replace(&enum_arg, &variant_str);
+                        let mod_params = union_info
+                            .iter()
+                            .enumerate()
+                            .fold(mod_params, |accum, (i, (union_fields, attributes))| {
+                                self.arg_types = ValuedAttributes::new(attributes, "argtype");
+                                let field = &union_fields[comb_idx];
+                                let field_str = self
+                                    .arg_to_syzkaller_str(ast, (&field.ident.name(), &field.ty), " ")
+                                    .unwrap()
+                                    .to_string()
+                                    .replace(&field.ident.name(), &value_arg_names[i]);
+                                accum.replace(&union_args[i], &field_str)
+                            });
+                        let mod_fn_name = format!(
+                            "{name}${variant}",
+                            name = to_c_name(m.name.as_str()),
+                            variant = variant.name
+                        );
+                        tmp_accum.push_str(
+                            format!(
+                                "{fn_name}({params})",
+                                fn_name = format!("zx_{}", mod_fn_name),
+                                params = mod_params,
+                            )
+                            .as_str(),
+                        );
+                        if !return_param.is_empty() {
+                            tmp_accum.push_str(
+                                format!(" {return_param}", return_param = return_param).as_str(),
+                            );
+                        }
+                        specialized_syscalls.push(tmp_accum);
+                        comb_idx += 1;
+                    }
+                    accum.push_str(&specialized_syscalls.join("\n"));
+                } else {
+                    accum.push_str(
+                        format!(
+                            "{fn_name}({params})",
+                            fn_name = format!("zx_{}", to_c_name(m.name.as_str())),
+                            params = params,
+                        )
+                        .as_str(),
+                    );
+                    if !return_param.is_empty() {
+                        accum.push_str(
+                            format!(" {return_param}", return_param = return_param).as_str(),
+                        );
+                    }
                 }
                 Ok(accum)
             })

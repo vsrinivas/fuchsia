@@ -19,6 +19,6 @@ enum Topic {
 };
 
 protocol Api {
-    [valueset = "topic Topic"]
-    Topic(handle h, int32 topic) -> (zx.status st);
+    [valueset = "t Topic"]
+    Topic(handle h, int32 t) -> (zx.status st);
 };

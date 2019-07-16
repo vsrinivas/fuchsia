@@ -5,5 +5,5 @@
 # WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
 # Generated from the banjo.examples.syzkaller.protocol.string banjo file
 
-string(str ptr[in, string], str_len len[str])
-string(str ptr[out, string], str_len len[str])
+zx_string(str ptr[in, string], str_len len[str])
+zx_string(str ptr[out, string], str_len len[str])

@@ -125,12 +125,10 @@ enum zx_object_info_topics : uint32 {
  argtype = "type19 OUT",
  argtype = "type20 OUT",
  argtype = "type21 OUT",
- argtype = "type22 OUT",
- const = "type1 0",
- const = "type2 0"]
+ argtype = "type22 OUT"]
 union zx_object_info_types {
-    array<int32>:1 type1;
-    array<int32>:1 type2;
+    array<bool>:1 type1;
+    array<bool>:1 type2;
     array<zx_info_handle_basic>:1 type3;
     array<zx_info_process>:1 type4;
     array<zx.koid>:unknown type5;
@@ -203,15 +201,14 @@ enum zx_obj_types : uint32 {
     ZX_OBJ_TYPE_EXCEPTION = 29;
 };
 
-// TODO: get rid of valueset
 [valueset = "props zx_obj_props",
  valueset = "type zx_obj_types"]
 struct zx_info_handle_basic {
     zx.koid koid;
     zx.rights rights;
-    zx_obj_types type;
+    uint32 type;
     zx.koid related_koid;
-    zx_obj_props props;
+    uint32 props;
 };
 
 struct zx_info_handle_count {
@@ -274,16 +271,15 @@ enum zx_exception_port_types : uint32 {
 };
 
 
-// TODO: get rid of valueset
 // TODO: anonymous union
 [valueset = "state zx_thread_state_values"]
 struct zx_info_thread {
-    zx_thread_state_values state;
+    uint32 state;
     //[valueset = "wait_exception_channel_type zx_exception_channel_types",
     //valueset = "wait_exception_port_type zx_exception_port_types"]
     //union {
-        //zx_exception_channel_types wait_exception_channel_type;
-        //zx_exception_port_types wait_exception_port_type;
+        //uint32 wait_exception_channel_type;
+        //uint32 wait_exception_port_type;
     //};
 };
 
@@ -310,7 +306,7 @@ struct zx_info_bti {
 
 [valueset = "options zx_socket_create_options"]
 struct zx_info_socket {
-    zx_socket_create_options options;
+    uint32 options;
     usize rx_buf_max;
     usize rx_buf_size;
     usize rx_buf_available;
@@ -332,7 +328,6 @@ enum zx_info_maps_type_vals : uint32 {
     ZX_INFO_MAPS_TYPE_MAPPING = 3;
 };
 
-// TODO: get rid of valueset
 // TODO: nested named union
 [valueset = "type zx_info_maps_type_vals",
  argtype = "name IN"]
@@ -342,13 +337,13 @@ struct zx_info_maps {
     zx.vaddr base;
     usize size;
     usize depth;
-    zx_info_maps_type_vals type;
+    uint32 type;
     //union {
         //zx_info_maps_mapping mapping;
     //} u;
 };
 
-enum zx_cache_policy_options {
+enum zx_cache_policy_options : uint32 {
     ZX_CACHE_POLICY_CACHED = 0;
     ZX_CACHE_POLICY_UNCACHED = 1;
     ZX_CACHE_POLICY_UNCACHED_DEVICE = 2;
@@ -368,7 +363,6 @@ enum zx_info_vmo_type_vals : uint32 {
     ZX_INFO_VMO_CONTIGUOUS = 64;    // 1u << 6
 };
 
-// TODO: get rid of valueset
 [valueset = "cache_policy zx_cache_policy_options",
  valueset = "flags zx_info_vmo_type_vals",
  argtype = "name IN"]
@@ -381,10 +375,10 @@ struct zx_info_vmo {
     usize num_children;
     usize num_mappings;
     usize share_count;
-    zx_info_vmo_type_vals flags;
+    uint32 flags;
     uint64 committed_bytes;
     zx.rights handle_rights;
-    zx_cache_policy_options cache_policy;
+    uint32 cache_policy;
 };
 
 struct zx_info_cpu_stats {
@@ -418,10 +412,10 @@ struct zx_info_kmem_stats {
     uint64 other_bytes;
 };
 
-[valuset = "kind zx_rsrc_kind_vals",
+[valueset = "kind zx_rsrc_kind_vals",
  argtype = "name IN"]
 struct zx_info_resource {
-    zx_rsrc_kind_vals kind;
+    uint32 kind;
     uint32 flags;
     uint64 base;
     usize size;
@@ -817,6 +811,7 @@ struct zx_packet_page_request {
 };
 
 // TODO: anonymous union
+[valueset = "type zx_port_packet"]
 struct zx_port_packet {
     uint64 key;
     uint32 type;
@@ -963,11 +958,10 @@ struct zx_profile_scheduler {
 };
 
 
-// TODO: get rid of valueset
 // TODO: anonymous union
-[valuetype = "type zx_profile_info_type"]
+[valueset = "type zx_profile_info_type"]
 struct zx_profile_info {
-    zx_profile_info_type type;
+    uint32 type;
     //union {
         //zx_profile_scheduler scheduler;
     //};

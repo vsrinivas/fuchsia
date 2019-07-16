@@ -185,12 +185,6 @@ zx_policy_timer_slack {
 	default_mode	int32
 }
 
-zx_port_packet {
-	key	int64
-	type	int32
-	status	int32
-}
-
 zx_profile_scheduler {
 	priority	int32
 	boost	int32
@@ -325,19 +319,6 @@ zx_thread_state_vector_regs {
 	mxcsr	int32
 }
 
-zx_exception_report {
-	header	zx_exception_header
-	context	zx_exception_context
-}
-
-zx_info_maps {
-	name	array[int8, 32]
-	base	int64
-	size	intptr
-	depth	intptr
-	type	flags[zx_info_maps_type_vals]
-}
-
 zx_info_vmo {
 	koid	int64
 	name	array[int8, 32]
@@ -352,20 +333,8 @@ zx_info_vmo {
 	cache_policy	flags[zx_cache_policy_options]
 }
 
-zx_info_handle_basic {
-	koid	int64
-	rights	int32
-	type	flags[zx_obj_types]
-	related_koid	int64
-	props	flags[zx_obj_props]
-}
-
-zx_profile_info {
-	type	zx_profile_info_type
-}
-
 zx_info_resource {
-	kind	zx_rsrc_kind_vals
+	kind	flags[zx_rsrc_kind_vals]
 	flags	int32
 	base	int64
 	size	intptr
@@ -381,8 +350,39 @@ zx_info_socket {
 	tx_buf_size	intptr
 }
 
+zx_info_handle_basic {
+	koid	int64
+	rights	int32
+	type	flags[zx_obj_types]
+	related_koid	int64
+	props	flags[zx_obj_props]
+}
+
 zx_info_thread {
 	state	flags[zx_thread_state_values]
+}
+
+zx_info_maps {
+	name	array[int8, 32]
+	base	int64
+	size	intptr
+	depth	intptr
+	type	flags[zx_info_maps_type_vals]
+}
+
+zx_port_packet {
+	key	int64
+	type	flags[zx_port_packet]
+	status	int32
+}
+
+zx_profile_info {
+	type	flags[zx_profile_info_type]
+}
+
+zx_exception_report {
+	header	zx_exception_header
+	context	zx_exception_context
 }
 
 zx_packet_user [
@@ -432,8 +432,8 @@ zx_thread_write_state_types [
 ]
 
 zx_object_info_types [
-	type1	ptr[out, int32]
-	type2	ptr[out, int32]
+	type1	ptr[out, bool8]
+	type2	ptr[out, bool8]
 	type3	ptr[out, zx_info_handle_basic]
 	type4	ptr[out, zx_info_process]
 	type5	ptr[out, array[int64]]

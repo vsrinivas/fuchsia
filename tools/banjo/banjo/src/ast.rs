@@ -5,7 +5,7 @@
 use {
     crate::fidl,
     crate::Rule,
-    failure::Fail,
+    failure::{format_err, Error, Fail},
     pest::iterators::{Pair, Pairs},
     serde_derive::Serialize,
     std::collections::{BTreeMap, HashSet, VecDeque},
@@ -438,7 +438,7 @@ impl StructField {
     }
 }
 
-#[derive(PartialEq, Eq, Serialize, Debug, Hash, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, Serialize, Debug, Hash, PartialOrd, Ord, Clone)]
 pub struct UnionField {
     pub attributes: Attrs,
     pub ty: Ty,
@@ -456,7 +456,7 @@ impl UnionField {
     }
 }
 
-#[derive(PartialEq, Eq, Serialize, Debug, Hash, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, Serialize, Debug, Hash, PartialOrd, Ord, Clone)]
 pub struct EnumVariant {
     pub attributes: Attrs,
     pub name: String,
@@ -482,6 +482,15 @@ pub struct Method {
 }
 
 impl Method {
+    pub fn name_to_ty(&self, arg_name: &str) -> Result<&Ty, Error> {
+        for (name, ty) in self.in_params.iter() {
+            if arg_name == name {
+                return Ok(ty);
+            }
+        }
+        Err(format_err!("`{:?}` arg not found in method `{:?}`", arg_name, self.name))
+    }
+
     pub fn from_pair(ns: &str, pair: Pair<'_, Rule>) -> Result<Self, ParseError> {
         let mut attributes = Attrs::default();
         let mut name = String::default();
@@ -836,7 +845,7 @@ impl BanjoAst {
     /// Finds the `Decl` in the AST for a `Ty` found inside of another `Decl`.
     /// If |ignore_ref| is true and |ty| is a reference to an identifier, `None`
     /// will be returned instead of the appropriate `Decl`.
-    fn type_to_decl(&self, ty: &Ty, ignore_ref: bool) -> Option<&Decl> {
+    pub fn type_to_decl(&self, ty: &Ty, ignore_ref: bool) -> Option<&Decl> {
         match ty {
             Ty::Array { ref ty, .. } => self.type_to_decl(ty, ignore_ref),
             Ty::Vector { ref ty, .. } => self.type_to_decl(ty, ignore_ref),
@@ -891,11 +900,16 @@ impl BanjoAst {
                 }
                 false
             }
-            Ty::Handle { .. } => {
+            Ty::Handle { ty, .. } => {
+                let handle_type = ty;
                 for decl in self.namespaces[&self.primary_namespace].iter() {
                     match decl {
                         Decl::Resource { ty, .. } => match ty {
-                            Ty::Handle { .. } => return true,
+                            Ty::Handle { ty, .. } => {
+                                if ty == handle_type {
+                                    return true;
+                                }
+                            }
                             _ => {}
                         },
                         _ => {}

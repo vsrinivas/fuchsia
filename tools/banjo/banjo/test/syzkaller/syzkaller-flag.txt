@@ -7,4 +7,4 @@
 
 topic = TOPIC0, TOPIC1, TOPIC2, TOPIC3, TOPIC4, TOPIC5
 
-topic(h int32, topic flags[topic])
+zx_topic(h int32, t flags[topic])

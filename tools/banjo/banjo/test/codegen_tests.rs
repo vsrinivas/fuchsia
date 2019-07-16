@@ -475,4 +475,11 @@ mod syzkaller {
         ["../zx.banjo", "banjo/syzkaller-syscalls.test.banjo"],
         "syzkaller/syzkaller-syscalls.txt"
     );
+
+    codegen_test!(
+        syzkaller_protocol_specialized_syscalls,
+        SyzkallerBackend,
+        ["../zx.banjo", "banjo/syzkaller-protocol-specialized-syscalls.test.banjo"],
+        "syzkaller/syzkaller-protocol-specialized-syscalls.txt"
+    );
 }

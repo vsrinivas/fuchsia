@@ -1,0 +1,28 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
+# Generated from the banjo.examples.syzkaller.protocol.specialized.syscalls banjo file
+
+resource zx_process[int32]: ZX_HANDLE_INVALID
+resource zx_thread[int32]: ZX_HANDLE_INVALID
+resource zx_job[int32]: ZX_HANDLE_INVALID
+
+zx_handle_types [
+	type0	zx_job
+	type1	zx_process
+	type2	zx_thread
+]
+
+zx_create_types [
+	type0	ptr[in, int8]
+	type1	ptr[in, int16]
+	type2	ptr[in, int32]
+]
+
+zx_create_options = VARIANT0, VARIANT1, VARIANT2
+
+zx_create$VARIANT0(handle zx_job, options const[VARIANT0], buffer ptr[in, int8], buffer_size bytesize[buffer])
+zx_create$VARIANT1(handle zx_process, options const[VARIANT1], buffer ptr[in, int16], buffer_size bytesize[buffer])
+zx_create$VARIANT2(handle zx_thread, options const[VARIANT2], buffer ptr[in, int32], buffer_size bytesize[buffer])

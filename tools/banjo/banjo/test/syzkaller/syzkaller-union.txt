@@ -24,8 +24,8 @@ primitive_types [
 ]
 
 arrays [
-	rd_vptr	ptr[out, int64]
-	wr_vptr	ptr[in, int64]
+	rd_vptr	ptr[out, int8]
+	wr_vptr	ptr[in, int8]
 	rd_sz	ptr[in, intptr]
 	rd_sz	ptr[in, intptr]
 	rd_b	ptr[out, bool8]
@@ -50,4 +50,4 @@ arrays [
 	wr_h	ptr[in, int32]
 ]
 
-packet(h int32, pkt packet)
+zx_packet(h int32, pkt packet)
