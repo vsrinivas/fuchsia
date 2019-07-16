@@ -8,6 +8,10 @@
 #![deny(missing_docs)]
 #![deny(unreachable_patterns)]
 
+// TODO(joshlf): Remove this once the old packet crate has been deleted and the
+// new one's name has been changed back to `packet`.
+extern crate packet_new as packet;
+
 mod devices;
 mod eventloop;
 mod fidl_worker;
