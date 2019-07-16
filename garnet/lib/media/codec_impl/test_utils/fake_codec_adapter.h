@@ -12,7 +12,7 @@ class FakeCodecAdapter : public CodecAdapter {
   explicit FakeCodecAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events);
   virtual ~FakeCodecAdapter();
 
-  // StreamProcessor interface:
+  // CodecAdapter interface:
   bool IsCoreCodecRequiringOutputConfigForFormatDetection() override;
   bool IsCoreCodecMappedBufferNeeded(CodecPort port) override;
   bool IsCoreCodecHwBased() override;
@@ -43,7 +43,13 @@ class FakeCodecAdapter : public CodecAdapter {
   void CoreCodecMidStreamOutputBufferReConfigPrepare() override;
   void CoreCodecMidStreamOutputBufferReConfigFinish() override;
 
+  // Test hooks
+  void SetBufferCollectionConstraints(CodecPort port,
+                                      fuchsia::sysmem::BufferCollectionConstraints constraints);
+
  private:
+  std::optional<fuchsia::sysmem::BufferCollectionConstraints>
+      buffer_collection_constraints_[kPortCount];
 };
 
 #endif  // GARNET_LIB_MEDIA_CODEC_IMPL_TEST_UTILS_FAKE_CODEC_ADAPTER_H_

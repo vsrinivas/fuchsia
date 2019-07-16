@@ -63,12 +63,15 @@ void FakeCodecAdapter::CoreCodecInit(
   // nothing to do here
 }
 
-// As of this writing, this doesn't get called yet, so this may hit some asserts
-// when/if we drive the fake this far for the first time.
 fuchsia::sysmem::BufferCollectionConstraints
 FakeCodecAdapter::CoreCodecGetBufferCollectionConstraints(
     CodecPort port, const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
     const fuchsia::media::StreamBufferPartialSettings& partial_settings) {
+  // If test harness has set an override, just return that.
+  if (buffer_collection_constraints_[port]) {
+    return fidl::Clone(*buffer_collection_constraints_[port]);
+  }
+
   ZX_DEBUG_ASSERT(false);
   fuchsia::sysmem::BufferCollectionConstraints result;
   ZX_DEBUG_ASSERT(result.usage.cpu == 0);
@@ -204,4 +207,9 @@ void FakeCodecAdapter::CoreCodecMidStreamOutputBufferReConfigPrepare() {
 
 void FakeCodecAdapter::CoreCodecMidStreamOutputBufferReConfigFinish() {
   // nothing to do here
+}
+
+void FakeCodecAdapter::SetBufferCollectionConstraints(
+    CodecPort port, fuchsia::sysmem::BufferCollectionConstraints constraints) {
+  buffer_collection_constraints_[port] = std::move(constraints);
 }

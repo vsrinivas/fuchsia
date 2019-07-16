@@ -1566,11 +1566,11 @@ void CodecImpl::SetBufferSettingsCommon(
         }();
     // The core codec doesn't fill out usage directly.  Instead we fill it out
     // here.
-    if (!FixupBufferCollectionConstraints(
+    if (!FixupBufferCollectionConstraintsLocked(
             port, port_settings_[port]->partial_settings(),
             &buffer_collection_constraints)) {
       // FixupBufferCollectionConstraints() already called Fail().
-      ZX_DEBUG_ASSERT(IsStopping());
+      ZX_DEBUG_ASSERT(IsStoppingLocked());
       return;
     }
     // For output, the only reason we re-post here is to share the lock
@@ -1660,10 +1660,10 @@ void CodecImpl::SetBufferSettingsCommon(
 
     // The core codec doesn't fill out usage directly.  Instead we fill it out
     // here.
-    if (!FixupBufferCollectionConstraints(port, fake_partial_settings,
+    if (!FixupBufferCollectionConstraintsLocked(port, fake_partial_settings,
                                           &buffer_collection_constraints)) {
       // FixupBufferCollectionConstraints() already called Fail().
-      ZX_DEBUG_ASSERT(IsStopping());
+      ZX_DEBUG_ASSERT(IsStoppingLocked());
       return;
     }
 
@@ -2775,7 +2775,7 @@ void CodecImpl::MidStreamOutputConstraintsChange(
   VLOGF("Done with mid-stream format change.\n");
 }
 
-bool CodecImpl::FixupBufferCollectionConstraints(
+bool CodecImpl::FixupBufferCollectionConstraintsLocked(
     CodecPort port,
     const fuchsia::media::StreamBufferPartialSettings& partial_settings,
     fuchsia::sysmem::BufferCollectionConstraints*
@@ -2788,7 +2788,7 @@ bool CodecImpl::FixupBufferCollectionConstraints(
     if (port == kInputPort) {
       if (usage.cpu & ~(fuchsia::sysmem::cpuUsageRead |
                         fuchsia::sysmem::cpuUsageReadOften)) {
-        Fail("Core codec set disallowed CPU usage bits (input port).");
+        FailLocked("Core codec set disallowed CPU usage bits (input port).");
         return false;
       }
       usage.cpu |=
@@ -2796,7 +2796,7 @@ bool CodecImpl::FixupBufferCollectionConstraints(
     } else {
       if (usage.cpu & ~(fuchsia::sysmem::cpuUsageWrite |
                         fuchsia::sysmem::cpuUsageWriteOften)) {
-        Fail("Core codec set disallowed CPU usage bit(s) (output port).");
+        FailLocked("Core codec set disallowed CPU usage bit(s) (output port).");
         return false;
       }
       usage.cpu |=
@@ -2804,19 +2804,19 @@ bool CodecImpl::FixupBufferCollectionConstraints(
     }
   } else {
     if (usage.cpu) {
-      Fail("Core codec set usage.cpu despite !IsCoreCodecMappedBufferNeeded()");
+      FailLocked("Core codec set usage.cpu despite !IsCoreCodecMappedBufferNeeded()");
       return false;
     }
     // The CPU won't touch the buffers at all.
     usage.cpu = 0;
   }
   if (usage.vulkan) {
-    Fail("Core codec set usage.vulkan bits");
+    FailLocked("Core codec set usage.vulkan bits");
     return false;
   }
   ZX_DEBUG_ASSERT(!usage.vulkan);
   if (usage.display) {
-    Fail("Core codec set usage.display bits");
+    FailLocked("Core codec set usage.display bits");
     return false;
   }
   ZX_DEBUG_ASSERT(!usage.display);
@@ -2824,14 +2824,14 @@ bool CodecImpl::FixupBufferCollectionConstraints(
     // Let's see if we can deprecate videoUsageHwProtected, since it's redundant
     // with secure_required.
     if (usage.video & fuchsia::sysmem::videoUsageHwProtected) {
-      Fail("Core codec set deprecated videoUsageHwProtected - disallow");
+      FailLocked("Core codec set deprecated videoUsageHwProtected - disallow");
       return false;
     }
     uint32_t allowed_video_usage_bits =
         IsDecoder() ? fuchsia::sysmem::videoUsageHwDecoder
                     : fuchsia::sysmem::videoUsageHwEncoder;
     if (usage.video & ~allowed_video_usage_bits) {
-      Fail(
+      FailLocked(
           "Core codec set disallowed video usage bit(s) - port: %d, usage: "
           "0x%08x, allowed: 0x%08x",
           port, usage.video, allowed_video_usage_bits);
@@ -2862,7 +2862,7 @@ bool CodecImpl::FixupBufferCollectionConstraints(
   }
   if (buffer_collection_constraints->min_buffer_count_for_camping <
       required_min_buffer_count_for_camping) {
-    Fail(
+    FailLocked(
         "Core codec set min_buffer_count_for_camping too low - "
         "min_buffer_count_for_camping: %lu "
         "required_min_buffer_count_for_camping: %lu",
@@ -2873,7 +2873,7 @@ bool CodecImpl::FixupBufferCollectionConstraints(
 
   if (is_single_buffer_mode) {
     if (buffer_collection_constraints->min_buffer_count_for_camping > 1) {
-      Fail(
+      FailLocked(
           "Core codec set min_buffer_count_for_camping too high for "
           "single_buffer_mode - min_buffer_count_for_camping: %lu",
           buffer_collection_constraints->min_buffer_count_for_camping);
@@ -2882,7 +2882,7 @@ bool CodecImpl::FixupBufferCollectionConstraints(
     if (buffer_collection_constraints->min_buffer_count_for_dedicated_slack !=
             0 ||
         buffer_collection_constraints->min_buffer_count_for_shared_slack != 0) {
-      Fail(
+      FailLocked(
           "Core codec set slack with single_buffer_mode - "
           "min_buffer_count_for_dedicated_slack: %lu "
           "min_buffer_count_for_shared_slack: %lu",
@@ -2891,7 +2891,7 @@ bool CodecImpl::FixupBufferCollectionConstraints(
       return false;
     }
     if (buffer_collection_constraints->max_buffer_count != 1) {
-      Fail("CoreCodec must specify max_buffer_count 1 when single_buffer_mode");
+      FailLocked("CoreCodec must specify max_buffer_count 1 when single_buffer_mode");
       return false;
     }
   }

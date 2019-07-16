@@ -43,6 +43,7 @@ source_set("codec_impl_tests") {
 
   sources = [
     "test_lifetime.cc",
+    "test_failures.cc",
   ]
 
   deps = [
