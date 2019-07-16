@@ -105,7 +105,7 @@ bool detach_self_test(void) {
     BEGIN_TEST;
 
     for (size_t i = 0; i < 1000; i++) {
-        thrd_t* thrd = calloc(sizeof(thrd_t), 1);
+        thrd_t* thrd = static_cast<thrd_t*>(calloc(sizeof(thrd_t), 1));
         ASSERT_NONNULL(thrd, "");
         ASSERT_EQ(thrd_create(thrd, detach_thrd, thrd), 0, "");
     }
