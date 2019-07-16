@@ -23,7 +23,7 @@ public:
     DispatcherStub& operator=(DispatcherStub&&) = delete;
 
     virtual zx::time Now();
-    virtual zx_status_t BeginWait(async_wait_t* wait);
+    virtual zx_status_t BeginWait(async_wait_t* wait, uint32_t options = 0u);
     virtual zx_status_t CancelWait(async_wait_t* wait);
     virtual zx_status_t PostTask(async_task_t* task);
     virtual zx_status_t CancelTask(async_task_t* task);

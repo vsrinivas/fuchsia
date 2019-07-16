@@ -72,9 +72,10 @@ typedef uint32_t async_ops_version_t;
 
 #define ASYNC_OPS_V1 ((async_ops_version_t) 1)
 #define ASYNC_OPS_V2 ((async_ops_version_t) 2)
+#define ASYNC_OPS_V3 ((async_ops_version_t) 3)
 
 typedef struct async_ops {
-    // The interface version number, e.g. |ASYNC_OPS_V2|.
+    // The interface version number, e.g. |ASYNC_OPS_V3|.
     async_ops_version_t version;
 
     // Reserved for future expansion, set to zero.
@@ -114,6 +115,14 @@ typedef struct async_ops {
                                              zx_handle_t task,
                                              uint32_t options);
     } v2;
+
+    // Operations supported by |ASYNC_OPS_V3|, in addition to those in V1 and V2.
+    struct v3 {
+      // See |async_begin_wait_with_options()| for details.
+      zx_status_t (*begin_wait_with_options)(async_dispatcher_t* dispatcher,
+                                             async_wait_t* wait,
+                                             uint32_t options);
+    } v3;
 } async_ops_t;
 
 struct async_dispatcher {

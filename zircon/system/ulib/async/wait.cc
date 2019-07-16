@@ -21,12 +21,12 @@ WaitBase::~WaitBase() {
     }
 }
 
-zx_status_t WaitBase::Begin(async_dispatcher_t* dispatcher) {
+zx_status_t WaitBase::Begin(async_dispatcher_t* dispatcher, uint32_t options) {
     if (dispatcher_)
         return ZX_ERR_ALREADY_EXISTS;
 
     dispatcher_ = dispatcher;
-    zx_status_t status = async_begin_wait(dispatcher, &wait_);
+    zx_status_t status = async_begin_wait_with_options(dispatcher, &wait_, options);
     if (status != ZX_OK) {
         dispatcher_ = nullptr;
     }

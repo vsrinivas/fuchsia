@@ -54,6 +54,28 @@ struct async_wait {
 // This operation is thread-safe.
 zx_status_t async_begin_wait(async_dispatcher_t* dispatcher, async_wait_t* wait);
 
+// Begins asynchronously waiting for an object to receive one or more signals
+// specified in |wait|.  Invokes the handler when the wait completes.
+// This wait will also capture the timestamp when the trigger signaled, which can
+// be read from the signal returned to the handler.
+//
+// The wait's handler will be invoked exactly once unless the wait is canceled.
+// When the dispatcher is shutting down (being destroyed), the handlers of
+// all remaining waits will be invoked with a status of |ZX_ERR_CANCELED|.
+//
+// For the |options| argument, see documentation for zx_object_wait_async().
+// For example, passing ZX_WAIT_ASYNC_TIMESTAMP will cause the system to capture
+// a timestamp when the wait triggered.
+//
+// Returns |ZX_OK| if the wait was successfully begun.
+// Returns |ZX_ERR_ACCESS_DENIED| if the object does not have |ZX_RIGHT_WAIT|.
+// Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
+// Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
+//
+// This operation is thread-safe.
+zx_status_t async_begin_wait_with_options(async_dispatcher_t* dispatcher, async_wait_t* wait,
+                                          uint32_t options);
+
 // Cancels the wait associated with |wait|.
 //
 // If successful, the wait's handler will not run.

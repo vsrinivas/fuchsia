@@ -56,11 +56,16 @@ public:
     // When the dispatcher is shutting down (being destroyed), the handlers of
     // all remaining waits will be invoked with a status of |ZX_ERR_CANCELED|.
     //
+    // For the |options| argument, see documentation for zx_object_wait_async().
+    // For example, passing ZX_WAIT_ASYNC_TIMESTAMP will cause the system to capture
+    // a timestamp when the wait triggered. The timestamp can be read by the handler
+    // from the signal (i.e. signal->timestamp).
+    //
     // Returns |ZX_OK| if the wait was successfully begun.
     // Returns |ZX_ERR_ACCESS_DENIED| if the object does not have |ZX_RIGHT_WAIT|.
     // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
     // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
-    zx_status_t Begin(async_dispatcher_t* dispatcher);
+    zx_status_t Begin(async_dispatcher_t* dispatcher, uint32_t options = 0u);
 
     // Cancels the wait.
     //

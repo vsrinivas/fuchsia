@@ -25,7 +25,7 @@ public:
         CANCEL_WAIT,
     };
 
-    zx_status_t BeginWait(async_wait_t* wait) override {
+    zx_status_t BeginWait(async_wait_t* wait, uint32_t options) override {
         last_op = Op::BEGIN_WAIT;
         last_wait = wait;
         return next_status;

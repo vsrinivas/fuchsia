@@ -60,3 +60,14 @@ zx_status_t async_resume_from_exception(async_dispatcher_t* dispatcher,
         return ZX_ERR_NOT_SUPPORTED;
     return dispatcher->ops->v2.resume_from_exception(dispatcher, exception, task, options);
 }
+
+zx_status_t async_begin_wait_with_options(async_dispatcher_t* dispatcher,
+                                          async_wait_t* wait,
+                                          uint32_t options) {
+    if (options == 0u) {
+        return dispatcher->ops->v1.begin_wait(dispatcher, wait);
+    }
+    if (dispatcher->ops->version < ASYNC_OPS_V3)
+        return ZX_ERR_NOT_SUPPORTED;
+    return dispatcher->ops->v3.begin_wait_with_options(dispatcher, wait, options);
+}

@@ -16,6 +16,11 @@ zx_status_t stub_begin_wait(async_dispatcher_t* dispatcher, async_wait_t* wait) 
     return static_cast<DispatcherStub*>(dispatcher)->BeginWait(wait);
 }
 
+zx_status_t stub_begin_wait_with_options(async_dispatcher_t* dispatcher, async_wait_t* wait,
+                                         uint32_t options) {
+  return static_cast<DispatcherStub*>(dispatcher)->BeginWait(wait, options);
+}
+
 zx_status_t stub_cancel_wait(async_dispatcher_t* dispatcher, async_wait_t* wait) {
     return static_cast<DispatcherStub*>(dispatcher)->CancelWait(wait);
 }
@@ -72,6 +77,9 @@ const async_ops_t g_stub_ops = {
         .unbind_exception_port = stub_unbind_exception_port,
         .resume_from_exception = stub_resume_from_exception,
     },
+    .v3 = {
+        .begin_wait_with_options = stub_begin_wait_with_options,
+    },
 };
 
 } // namespace
@@ -85,7 +93,7 @@ zx::time DispatcherStub::Now() {
     return zx::time(0);
 }
 
-zx_status_t DispatcherStub::BeginWait(async_wait_t* wait) {
+zx_status_t DispatcherStub::BeginWait(async_wait_t* wait, uint32_t options) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

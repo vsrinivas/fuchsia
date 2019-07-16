@@ -17,6 +17,7 @@
 #include <lib/async/task.h>
 #include <lib/async/time.h>
 #include <lib/async/wait.h>
+#include <lib/async/cpp/wait.h>
 
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
@@ -40,7 +41,7 @@ public:
     zx_status_t last_status = ZX_ERR_INTERNAL;
     const zx_packet_signal_t* last_signal = nullptr;
 
-    zx_status_t Begin(async_dispatcher_t* dispatcher) {
+    virtual zx_status_t Begin(async_dispatcher_t* dispatcher) {
         return async_begin_wait(dispatcher, this);
     }
 
@@ -68,6 +69,17 @@ private:
     }
 
     zx_packet_signal_t last_signal_storage_;
+};
+
+class TestWaitWithTimestamp : public TestWait {
+public:
+    TestWaitWithTimestamp(zx_handle_t object, zx_signals_t trigger)
+        : TestWait(object, trigger) {
+    }
+
+    zx_status_t Begin(async_dispatcher_t* dispatcher) override {
+        return async_begin_wait_with_options(dispatcher, this, ZX_WAIT_ASYNC_TIMESTAMP);
+    }
 };
 
 class CascadeWait : public TestWait {
@@ -597,6 +609,95 @@ bool wait_test() {
     EXPECT_EQ(3u, wait3.run_count, "run count 3");
 
     loop.Shutdown();
+
+    END_TEST;
+}
+
+bool wait_timestamp_test() {
+    BEGIN_TEST;
+
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+
+    // Verify that the timestamp is zero when ZX_WAIT_ASYNC_TIMESTAMP isn't used.
+    {
+        zx::event event1;
+        EXPECT_EQ(ZX_OK, zx::event::create(0u, &event1), "create event 1");
+
+        TestWait wait1(event1.get(), ZX_USER_SIGNAL_1);
+        EXPECT_EQ(nullptr, wait1.last_signal);
+        EXPECT_EQ(ZX_OK, wait1.Begin(loop.dispatcher()), "wait without options");
+        EXPECT_EQ(ZX_OK, event1.signal(0u, ZX_USER_SIGNAL_1), "signal event 1");
+        EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
+        EXPECT_NE(nullptr, wait1.last_signal);
+        EXPECT_EQ(0u, wait1.last_signal->timestamp);
+    }
+
+    // Verify that the timestamp is NOT zero when ZX_WAIT_ASYNC_TIMESTAMP is used.
+    {
+        zx::event event2;
+        EXPECT_EQ(ZX_OK, zx::event::create(0u, &event2), "create event 2");
+
+        TestWaitWithTimestamp wait2(event2.get(), ZX_USER_SIGNAL_1);
+        EXPECT_EQ(ZX_OK, wait2.Begin(loop.dispatcher()), "wait with capture timestamp option");
+
+        EXPECT_EQ(nullptr, wait2.last_signal);
+        zx::time before = zx::clock::get_monotonic();
+        EXPECT_EQ(ZX_OK, event2.signal(0u, ZX_USER_SIGNAL_1), "signal event 2");
+        zx::time after = zx::clock::get_monotonic();
+        EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
+        EXPECT_NE(nullptr, wait2.last_signal);
+        EXPECT_NE(0u, wait2.last_signal->timestamp);
+        EXPECT_TRUE(before <= zx::time(wait2.last_signal->timestamp));
+        EXPECT_TRUE(after >= zx::time(wait2.last_signal->timestamp));
+    }
+
+    END_TEST;
+}
+
+bool wait_timestamp_integration_test() {
+    BEGIN_TEST;
+
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+
+    // Verify that the timestamp is zero when ZX_WAIT_ASYNC_TIMESTAMP isn't used.
+    {
+        zx::event event1;
+        EXPECT_EQ(ZX_OK, zx::event::create(0u, &event1), "create event 1");
+
+        zx_packet_signal_t last_signal = {};
+        EXPECT_EQ(0u, last_signal.timestamp);
+        async::Wait wait1(event1.get(), ZX_USER_SIGNAL_1, [&last_signal](async_dispatcher_t* dispatcher,
+                                        async::Wait* wait,
+                                        zx_status_t status,
+                                        const zx_packet_signal_t* signal) { last_signal = *signal; });
+        EXPECT_EQ(ZX_OK, wait1.Begin(loop.dispatcher()), "wait without options");
+        EXPECT_EQ(ZX_OK, event1.signal(0u, ZX_USER_SIGNAL_1), "signal event 1");
+        EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
+        EXPECT_EQ(0u, last_signal.timestamp);
+    }
+
+    // Verify that the timestamp is NOT zero when ZX_WAIT_ASYNC_TIMESTAMP is used.
+    {
+        zx::event event2;
+        EXPECT_EQ(ZX_OK, zx::event::create(0u, &event2), "create event 1");
+
+        zx_packet_signal_t last_signal = {};
+        async::Wait wait2(event2.get(), ZX_USER_SIGNAL_1, [&last_signal](async_dispatcher_t* dispatcher,
+                                        async::Wait* wait,
+                                        zx_status_t status,
+                                        const zx_packet_signal_t* signal) { last_signal = *signal; });
+        EXPECT_EQ(ZX_OK, wait2.Begin(loop.dispatcher(), ZX_WAIT_ASYNC_TIMESTAMP),
+                "wait with capture timestamp option");
+
+        EXPECT_EQ(0u, last_signal.timestamp);
+        zx::time before = zx::clock::get_monotonic();
+        EXPECT_EQ(ZX_OK, event2.signal(0u, ZX_USER_SIGNAL_1), "signal event 2");
+        zx::time after = zx::clock::get_monotonic();
+        EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
+        EXPECT_NE(0u, last_signal.timestamp);
+        EXPECT_TRUE(before <= zx::time(last_signal.timestamp));
+        EXPECT_TRUE(after >= zx::time(last_signal.timestamp));
+    }
 
     END_TEST;
 }
@@ -1376,6 +1477,8 @@ RUN_TEST(make_default_true_test)
 RUN_TEST(quit_test)
 RUN_TEST(time_test)
 RUN_TEST(wait_test)
+RUN_TEST(wait_timestamp_test)
+RUN_TEST(wait_timestamp_integration_test)
 RUN_TEST(wait_unwaitable_handle_test)
 RUN_TEST(wait_shutdown_test)
 RUN_TEST(task_test)

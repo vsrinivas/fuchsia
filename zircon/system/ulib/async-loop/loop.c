@@ -28,6 +28,8 @@
 
 static zx_time_t async_loop_now(async_dispatcher_t* dispatcher);
 static zx_status_t async_loop_begin_wait(async_dispatcher_t* dispatcher, async_wait_t* wait);
+static zx_status_t async_loop_begin_wait_with_options(async_dispatcher_t* dispatcher,
+                                                      async_wait_t* wait, uint32_t wait_options);
 static zx_status_t async_loop_cancel_wait(async_dispatcher_t* dispatcher, async_wait_t* wait);
 static zx_status_t async_loop_post_task(async_dispatcher_t* dispatcher, async_task_t* task);
 static zx_status_t async_loop_cancel_task(async_dispatcher_t* dispatcher, async_task_t* task);
@@ -46,7 +48,7 @@ static zx_status_t async_loop_resume_from_exception(async_dispatcher_t* async,
                                                     uint32_t options);
 
 static const async_ops_t async_loop_ops = {
-    .version = ASYNC_OPS_V2,
+    .version = ASYNC_OPS_V3,
     .reserved = 0,
     .v1 = {
         .now = async_loop_now,
@@ -62,6 +64,9 @@ static const async_ops_t async_loop_ops = {
         .unbind_exception_port = async_loop_unbind_exception_port,
         .resume_from_exception = async_loop_resume_from_exception,
     },
+    .v3 = {
+        .begin_wait_with_options = async_loop_begin_wait_with_options,
+    }
 };
 
 typedef struct thread_record {
@@ -480,6 +485,11 @@ zx_time_t async_loop_now(async_dispatcher_t* dispatcher) {
 }
 
 static zx_status_t async_loop_begin_wait(async_dispatcher_t* async, async_wait_t* wait) {
+  return async_loop_begin_wait_with_options(async, wait, 0u);
+}
+
+static zx_status_t async_loop_begin_wait_with_options(async_dispatcher_t* async, async_wait_t* wait,
+                                                      uint32_t wait_options) {
     async_loop_t* loop = (async_loop_t*)async;
     ZX_DEBUG_ASSERT(loop);
     ZX_DEBUG_ASSERT(wait);
@@ -490,7 +500,7 @@ static zx_status_t async_loop_begin_wait(async_dispatcher_t* async, async_wait_t
     mtx_lock(&loop->lock);
 
     zx_status_t status = zx_object_wait_async(
-        wait->object, loop->port, (uintptr_t)wait, wait->trigger, ZX_WAIT_ASYNC_ONCE);
+        wait->object, loop->port, (uintptr_t)wait, wait->trigger, wait_options);
     if (status == ZX_OK) {
         list_add_head(&loop->wait_list, wait_to_node(wait));
     } else {

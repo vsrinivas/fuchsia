@@ -37,7 +37,7 @@ public:
 
     // async_dispatcher_t operation implementations.
     zx::time Now() override;
-    zx_status_t BeginWait(async_wait_t* wait) override;
+    zx_status_t BeginWait(async_wait_t* wait, uint32_t options = 0u) override;
     zx_status_t CancelWait(async_wait_t* wait) override;
     zx_status_t PostTask(async_task_t* task) override;
     zx_status_t CancelTask(async_task_t* task) override;
@@ -185,7 +185,7 @@ zx::time TestLoopDispatcher::Now() {
     return now_;
 }
 
-zx_status_t TestLoopDispatcher::BeginWait(async_wait_t* wait) {
+zx_status_t TestLoopDispatcher::BeginWait(async_wait_t* wait, uint32_t options) {
     ZX_DEBUG_ASSERT(wait);
 
     if (in_shutdown_) {
@@ -195,7 +195,7 @@ zx_status_t TestLoopDispatcher::BeginWait(async_wait_t* wait) {
     zx_status_t status = zx_object_wait_async(wait->object, port_.get(),
                                               reinterpret_cast<uintptr_t>(wait),
                                               wait->trigger,
-                                              ZX_WAIT_ASYNC_ONCE);
+                                              options);
     if (status != ZX_OK) {
         return status;
     }
