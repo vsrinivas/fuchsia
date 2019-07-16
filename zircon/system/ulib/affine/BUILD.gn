@@ -7,6 +7,8 @@ library("affine") {
   sdk_headers = [
     "lib/affine/ratio.h",
     "lib/affine/transform.h",
+    "lib/affine/assert.h",
+    "lib/affine/utils.h",
   ]
 
   host = true
@@ -18,7 +20,5 @@ library("affine") {
     "transform.cc",
   ]
 
-  public_deps = [
-    "$zx/third_party/ulib/safemath",
-  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden"]
 }

@@ -12,7 +12,7 @@ namespace {
 // Calculates the greatest common denominator (factor) of two values.
 template <typename T>
 T BinaryGcd(T a, T b) {
-    ZX_DEBUG_ASSERT(a && b);
+    internal::DebugAssert(a && b);
 
     // Remove and count the common factors of 2.
     uint8_t twos;
@@ -112,9 +112,9 @@ constexpr bool FitsIn32Bits(uint64_t numerator, uint64_t denominator) {
 
 template <typename T>
 void Ratio::Reduce(T* numerator, T* denominator) {
-    ZX_DEBUG_ASSERT(numerator != nullptr);
-    ZX_DEBUG_ASSERT(denominator != nullptr);
-    ZX_ASSERT(*denominator != 0);
+    internal::DebugAssert(numerator != nullptr);
+    internal::DebugAssert(denominator != nullptr);
+    internal::Assert(*denominator != 0);
 
     if (*numerator == 0) {
         *denominator = 1;
@@ -122,11 +122,7 @@ void Ratio::Reduce(T* numerator, T* denominator) {
     }
 
     T gcd = BinaryGcd(*numerator, *denominator);
-    if constexpr (std::is_same_v<uint32_t, T>) {
-        ZX_DEBUG_ASSERT_MSG(gcd != 0, "Bad GCD (N/D) == (%u/%u)\n", *numerator, *denominator);
-    } else {
-        ZX_DEBUG_ASSERT_MSG(gcd != 0, "Bad GCD (N/D) == (%lu/%lu)\n", *numerator, *denominator);
-    }
+    internal::DebugAssert(gcd != 0);
 
     if (gcd == 1) {
         return;
@@ -140,8 +136,8 @@ void Ratio::Product(uint32_t a_numerator, uint32_t a_denominator,
                     uint32_t b_numerator, uint32_t b_denominator,
                     uint32_t* product_numerator, uint32_t* product_denominator,
                     Exact exact) {
-    ZX_DEBUG_ASSERT(product_numerator != nullptr);
-    ZX_DEBUG_ASSERT(product_denominator != nullptr);
+    internal::DebugAssert(product_numerator != nullptr);
+    internal::DebugAssert(product_denominator != nullptr);
 
     uint64_t numerator = static_cast<uint64_t>(a_numerator) * b_numerator;
     uint64_t denominator = static_cast<uint64_t>(a_denominator) * b_denominator;
@@ -149,7 +145,7 @@ void Ratio::Product(uint32_t a_numerator, uint32_t a_denominator,
     Ratio::Reduce(&numerator, &denominator);
 
     if (!FitsIn32Bits(numerator, denominator)) {
-        ZX_ASSERT(exact == Exact::No);
+        internal::Assert(exact == Exact::No);
 
         // Try to find the best approximation of the ratio that we can.  Our
         // approach is as follows.  Figure out the number of bits to the right
@@ -203,7 +199,7 @@ void Ratio::Product(uint32_t a_numerator, uint32_t a_denominator,
 }
 
 int64_t Ratio::Scale(int64_t value, uint32_t numerator, uint32_t denominator) {
-    ZX_ASSERT(denominator != 0u);
+    internal::Assert(denominator != 0u);
 
     if (value >= 0) {
         // LIMIT == 0x7FFFFFFFFFFFFFFF

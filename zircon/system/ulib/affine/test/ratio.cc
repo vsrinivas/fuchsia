@@ -55,6 +55,29 @@ void ReductionHelper(const std::array<ReductionTestVector<T>, VECTOR_COUNT>& vec
                 affine::Ratio::Reduce<T>(&N, &D);
             });
         }
+
+        // If we are testing 32-bit vectors, also test in-place reduction.
+        if constexpr (std::is_same_v<T, uint32_t>) {
+            if (V.expect_fatal == Fatal::No) {
+                affine::Ratio R{V.initial_n, V.initial_d};
+                R.Reduce();
+
+                ASSERT_TRUE((R.numerator() == V.expected_n) && (R.denominator() == V.expected_d),
+                            "Expected %s %lu/%lu to reduce to %lu/%lu; got %lu/%lu instead.",
+                            tag,
+                            static_cast<uint64_t>(V.initial_n),
+                            static_cast<uint64_t>(V.initial_d),
+                            static_cast<uint64_t>(V.expected_n),
+                            static_cast<uint64_t>(V.expected_d),
+                            static_cast<uint64_t>(R.numerator()),
+                            static_cast<uint64_t>(R.denominator()));
+            } else {
+                ASSERT_DEATH([&V]() {
+                    affine::Ratio R(V.initial_n, V.initial_d);
+                    R.Reduce();
+                });
+            }
+        }
     }
 }
 }  // namespace
@@ -65,12 +88,14 @@ TEST(RatioTestCase, Construction) {
         Fatal expect_fatal;
     };
 
+    // clang-format off
     constexpr std::array TEST_VECTORS {
-        TestVector{ 0, 1, Fatal::No },
-        TestVector{ 1, 1, Fatal::No },
+        TestVector{ 0,   1, Fatal::No },
+        TestVector{ 1,   1, Fatal::No },
         TestVector{ 23, 41, Fatal::No },
-        TestVector{ 1, 0, Fatal::Yes },
+        TestVector{ 1,   0, Fatal::Yes },
     };
+    // clang-format on
 
     // Test that explicit construction and the numerator/denominator accessors
     // are working properly.
@@ -91,77 +116,48 @@ TEST(RatioTestCase, Construction) {
         ASSERT_EQ(R.denominator(), 1);
     }
 
-    // Test that reduction is automatically performed.  Note; this is a trivial
-    // test of reduction.  There are more thorough tests later on.
+    // Test that reduction is _not_ automatically performed.
     {
         affine::Ratio R{9, 21};
-        ASSERT_EQ(R.numerator(), 3);
-        ASSERT_EQ(R.denominator(), 7);
-    }
-}
-
-TEST(RatioTestCase, Equality) {
-    enum class Expected { Same = 0, Different };
-
-    struct TestVector {
-        affine::Ratio ratio;
-        Expected expected;
-    };
-
-    const std::array TEST_VECTORS {
-        TestVector{ {1, 4}, Expected::Same },
-        TestVector{ {1, 4}, Expected::Same },
-        TestVector{ {2, 8}, Expected::Same },
-        TestVector{ {1, 5}, Expected::Different },
-    };
-
-    for (const auto& a : TEST_VECTORS) {
-        for (const auto& b : TEST_VECTORS) {
-            // These test vectors should match if they are both in the "same"
-            // class, or if they are literally the same test vector.
-            if ((&a == &b) || ((a.expected == Expected::Same) && (b.expected == Expected::Same))) {
-                ASSERT_TRUE (a.ratio == b.ratio);
-                ASSERT_FALSE(a.ratio != b.ratio);
-            } else {
-                ASSERT_FALSE(a.ratio == b.ratio);
-                ASSERT_TRUE (a.ratio != b.ratio);
-            }
-        }
+        ASSERT_EQ(R.numerator(), 9);
+        ASSERT_EQ(R.denominator(), 21);
     }
 }
 
 TEST(RatioTestCase, Reduction) {
+    // clang-format off
     constexpr std::array Vectors32 {
-        ReductionTestVector<uint32_t>{ 1, 1, 1, 1, Fatal::No },
-        ReductionTestVector<uint32_t>{ 10, 10, 1, 1, Fatal::No },
-        ReductionTestVector<uint32_t>{ 10, 2, 5, 1, Fatal::No },
-        ReductionTestVector<uint32_t>{ 0, 1, 0, 1, Fatal::No },
-        ReductionTestVector<uint32_t>{ 0, 500, 0, 1, Fatal::No },
-        ReductionTestVector<uint32_t>{ 48000, 44100, 160, 147, Fatal::No },
-        ReductionTestVector<uint32_t>{ 44100, 48000, 147, 160, Fatal::No },
+        ReductionTestVector<uint32_t>{       1,       1,       1,       1, Fatal::No },
+        ReductionTestVector<uint32_t>{      10,      10,       1,       1, Fatal::No },
+        ReductionTestVector<uint32_t>{      10,       2,       5,       1, Fatal::No },
+        ReductionTestVector<uint32_t>{       0,       1,       0,       1, Fatal::No },
+        ReductionTestVector<uint32_t>{       0,     500,       0,       1, Fatal::No },
+        ReductionTestVector<uint32_t>{   48000,   44100,     160,     147, Fatal::No },
+        ReductionTestVector<uint32_t>{   44100,   48000,     147,     160, Fatal::No },
         ReductionTestVector<uint32_t>{ 1000007, 1000000, 1000007, 1000000, Fatal::No },
-        ReductionTestVector<uint32_t>{ 0, 0, 0, 0, Fatal::Yes },
-        ReductionTestVector<uint32_t>{ 1, 0, 0, 0, Fatal::Yes },
+        ReductionTestVector<uint32_t>{       0,       0,       0,       0, Fatal::Yes },
+        ReductionTestVector<uint32_t>{       1,       0,       0,       0, Fatal::Yes },
         ReductionTestVector<uint32_t>{ std::numeric_limits<uint32_t>::max(), 0, 0, 0, Fatal::Yes },
     };
 
     constexpr std::array Vectors64 {
-        ReductionTestVector<uint64_t>{ 1, 1, 1, 1, Fatal::No },
-        ReductionTestVector<uint64_t>{ 10, 10, 1, 1, Fatal::No },
-        ReductionTestVector<uint64_t>{ 10, 2, 5, 1, Fatal::No },
-        ReductionTestVector<uint64_t>{ 0, 1, 0, 1, Fatal::No },
-        ReductionTestVector<uint64_t>{ 0, 500, 0, 1, Fatal::No },
-        ReductionTestVector<uint64_t>{ 48000, 44100, 160, 147, Fatal::No },
-        ReductionTestVector<uint64_t>{ 44100, 48000, 147, 160, Fatal::No },
-        ReductionTestVector<uint64_t>{ 1000007, 1000000, 1000007, 1000000, Fatal::No },
-        ReductionTestVector<uint64_t>{ 48000336000, 44100000000, 1000007, 918750, Fatal::No },
-        ReductionTestVector<uint64_t>{ 0, 0, 0, 0, Fatal::Yes },
-        ReductionTestVector<uint64_t>{ 1, 0, 0, 0, Fatal::Yes },
+        ReductionTestVector<uint64_t>{           1,           1,       1,       1, Fatal::No },
+        ReductionTestVector<uint64_t>{          10,          10,       1,       1, Fatal::No },
+        ReductionTestVector<uint64_t>{          10,           2,       5,       1, Fatal::No },
+        ReductionTestVector<uint64_t>{           0,           1,       0,       1, Fatal::No },
+        ReductionTestVector<uint64_t>{           0,         500,       0,       1, Fatal::No },
+        ReductionTestVector<uint64_t>{       48000,       44100,     160,     147, Fatal::No },
+        ReductionTestVector<uint64_t>{       44100,       48000,     147,     160, Fatal::No },
+        ReductionTestVector<uint64_t>{     1000007,     1000000, 1000007, 1000000, Fatal::No },
+        ReductionTestVector<uint64_t>{ 48000336000, 44100000000, 1000007,  918750, Fatal::No },
+        ReductionTestVector<uint64_t>{           0,           0,       0,       0, Fatal::Yes },
+        ReductionTestVector<uint64_t>{           1,           0,       0,       0, Fatal::Yes },
         ReductionTestVector<uint64_t>{ std::numeric_limits<uint64_t>::max(), 0, 0, 0, Fatal::Yes },
     };
+    // clang-format on
 
-    ReductionHelper(Vectors32);
-    ReductionHelper(Vectors64);
+    ASSERT_NO_FAILURES(ReductionHelper(Vectors32));
+    ASSERT_NO_FAILURES(ReductionHelper(Vectors64));
 }
 
 TEST(RatioTestCase, Product) {
@@ -174,6 +170,7 @@ TEST(RatioTestCase, Product) {
         Fatal expect_fatal;
     };
 
+    // clang-format off
     constexpr std::array TEST_VECTORS {
         // Straight-forward cases with exact solutions.
         TestVector{    1,     1,       1,       1,       1,      1, Exact::Yes, Fatal::No },
@@ -218,6 +215,7 @@ TEST(RatioTestCase, Product) {
         TestVector{ 1, 0xFFFFFFFF, 1, 0xFFFFFFFF,          0, 0, Exact::Yes, Fatal::Yes },
         TestVector{ 1, 0xFFFFFFFF, 1, 0xFFFFFFFF,          0, 1, Exact::No,  Fatal::No  },
     };
+    // clang-format on
 
     for (const auto& V : TEST_VECTORS) {
         // Exercise the static Product method which takes just raw integers.
@@ -328,17 +326,18 @@ TEST(RatioTestCase, Scale) {
                         MulOperatorValRatio,
                         DivOperator };
 
+    // clang-format on
     constexpr std::array TEST_VECTORS {
-        TestVector{           0,     0,     1,          0, Fatal::No },
-        TestVector{  1234567890,     0,     1,          0, Fatal::No },
-        TestVector{           0,     1,     1,          0, Fatal::No },
-        TestVector{  1234567890,     1,     1, 1234567890, Fatal::No },
-        TestVector{           0,     1,     0,          0, Fatal::Yes },
-        TestVector{  1234567890,     1,     0,          0, Fatal::Yes },
-        TestVector{         198, 48000, 44100,        215, Fatal::No },
-        TestVector{        -198, 48000, 44100,       -216, Fatal::No },
-        TestVector{  (49 * 198), 48000, 44100,      10560, Fatal::No },
-        TestVector{ -(49 * 198), 48000, 44100,     -10560, Fatal::No },
+        TestVector{                0,         0,          1,               0, Fatal::No },
+        TestVector{       1234567890,         0,          1,               0, Fatal::No },
+        TestVector{                0,         1,          1,               0, Fatal::No },
+        TestVector{       1234567890,         1,          1,      1234567890, Fatal::No },
+        TestVector{                0,         1,          0,               0, Fatal::Yes },
+        TestVector{       1234567890,         1,          0,               0, Fatal::Yes },
+        TestVector{              198,     48000,      44100,             215, Fatal::No },
+        TestVector{             -198,     48000,      44100,            -216, Fatal::No },
+        TestVector{       (49 * 198),     48000,      44100,           10560, Fatal::No },
+        TestVector{      -(49 * 198),     48000,      44100,          -10560, Fatal::No },
         TestVector{  0x1517ffffeae80, 0xbebc200, 0x33333333,  0x4e94914f0000, Fatal::No },
         TestVector{ -0x1517ffffeae80, 0xbebc200, 0x33333333, -0x4e94914f0000, Fatal::No },
 
@@ -354,6 +353,7 @@ TEST(RatioTestCase, Scale) {
         // bits are zero.
         TestVector{ -0x2000000000000001, 4, 1, Ratio::kUnderflow, Fatal::No },
     };
+    // clang-format off
 
     constexpr std::array METHODS = { Method::Static,
                                      Method::MulOperatorRatioVal,
@@ -402,11 +402,13 @@ TEST(RatioTestCase, Scale) {
 
 TEST(RatioTestCase, Inverse) {
     struct TestVector { uint32_t N, D; };
+    // clang-format on
     constexpr std::array TEST_VECTORS {
-        TestVector{ 0, 1 },
-        TestVector{ 1, 1 },
+        TestVector{      0,      1 },
+        TestVector{      1,      1 },
         TestVector{ 123456, 987654 },
     };
+    // clang-format off
 
     for (const auto& V : TEST_VECTORS) {
         affine::Ratio R{ V.N, V.D };

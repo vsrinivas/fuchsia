@@ -6,13 +6,11 @@
 #define LIB_AFFINE_RATIO_H_
 
 #include <stdint.h>
+#include <lib/affine/assert.h>
 #include <limits>
 #include <type_traits>
-#include <zircon/assert.h>
 
 namespace affine {
-
-class Transform;    // fwd decl for friendship
 
 class Ratio {
 public:
@@ -26,7 +24,12 @@ public:
     //
     // Defined only for uint32_t and uint64_t
     template <typename T>
-        static void Reduce(T* numerator, T* denominator);
+    static void Reduce(T* numerator, T* denominator);
+
+    // Reduce the ratio instance, in-place.
+    void Reduce() {
+        Reduce(&numerator_, &denominator_);
+    }
 
     // Produces the product two 32 bit ratios. If exact is true, ASSERTs on loss
     // of precision.
@@ -51,13 +54,13 @@ public:
                 b.numerator(), b.denominator(),
                 &result_numerator, &result_denominator,
                 exact);
-        return Ratio(result_numerator, result_denominator, NoReduce::Tag);
+        return Ratio(result_numerator, result_denominator);
     }
 
     Ratio() = default;
     Ratio(uint32_t numerator, uint32_t denominator)
         : numerator_(numerator), denominator_(denominator) {
-        Reduce(&numerator_, &denominator_);
+        internal::DebugAssert(denominator_ != 0);
     }
 
     uint32_t numerator() const { return numerator_; }
@@ -65,8 +68,8 @@ public:
     bool invertible() const { return numerator_ != 0; }
 
     Ratio Inverse() const {
-        ZX_ASSERT(invertible());
-        return Ratio{denominator_, numerator_, NoReduce::Tag};
+        internal::DebugAssert(invertible());
+        return Ratio{denominator_, numerator_};
     }
 
     int64_t Scale(int64_t value) const {
@@ -74,24 +77,9 @@ public:
     }
 
 private:
-    friend class Transform;
-    enum class NoReduce { Tag };
-
-    Ratio(uint32_t numerator, uint32_t denominator, NoReduce)
-        : numerator_(numerator), denominator_(denominator) {}
-
     uint32_t numerator_ = 1;
     uint32_t denominator_ = 1;
 };
-
-// Tests two ratios for equality.
-inline bool operator==(Ratio a, Ratio b) {
-  return a.numerator() == b.numerator() &&
-         a.denominator() == b.denominator();
-}
-
-// Tests two ratios for inequality.
-inline bool operator!=(Ratio a, Ratio b) { return !(a == b); }
 
 // Returns the ratio of the two ratios.
 inline Ratio operator/(Ratio a, Ratio b) {

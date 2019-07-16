@@ -20,7 +20,6 @@ TEST(TransformTestCase, Construction) {
         ASSERT_EQ(transform.b_offset(), 0);
         ASSERT_EQ(transform.numerator(), 1);
         ASSERT_EQ(transform.denominator(), 1);
-        ASSERT_TRUE(transform.ratio() == affine::Ratio(1, 1));
     }
 
     struct TestVector {
@@ -29,6 +28,7 @@ TEST(TransformTestCase, Construction) {
         Fatal expect_fatal;
     };
 
+    // clang-format off
     constexpr std::array TEST_VECTORS {
         TestVector{  12345,  98764,       3,       2, Fatal::No  },
         TestVector{ -12345,  98764,     247,     931, Fatal::No  },
@@ -37,6 +37,7 @@ TEST(TransformTestCase, Construction) {
         TestVector{  12345,  98764,       0, 1000000, Fatal::No  },
         TestVector{  12345,  98764, 1000007,       0, Fatal::Yes },
     };
+    // clang-format on
 
     for (const auto& V : TEST_VECTORS) {
         // Check the linear form (no offsets)
@@ -48,7 +49,6 @@ TEST(TransformTestCase, Construction) {
             ASSERT_EQ(transform.b_offset(), 0);
             ASSERT_EQ(transform.numerator(), ratio.numerator());
             ASSERT_EQ(transform.denominator(), ratio.denominator());
-            ASSERT_TRUE(transform.ratio() == ratio);
         } else {
             ASSERT_DEATH(([&V]() { affine::Transform transform{ affine::Ratio{V.N, V.D} }; }));
         }
@@ -62,44 +62,11 @@ TEST(TransformTestCase, Construction) {
             ASSERT_EQ(transform.b_offset(), V.b_offset);
             ASSERT_EQ(transform.numerator(), ratio.numerator());
             ASSERT_EQ(transform.denominator(), ratio.denominator());
-            ASSERT_TRUE(transform.ratio() == ratio);
         } else {
             ASSERT_DEATH(([&V]() { affine::Transform transform{ V.a_offset,
                                                                 V.b_offset,
                                                                 affine::Ratio{V.N, V.D} };
                                  }));
-        }
-    }
-}
-
-TEST(TransformTestCase, Equality) {
-    enum class Expected { Same = 0, Different };
-
-    struct TestVector {
-        affine::Transform transform;
-        Expected expected;
-    };
-
-    const std::array TEST_VECTORS {
-        TestVector{ { 10, 20, {1, 4}}, Expected::Same },
-        TestVector{ { 10, 20, {1, 4}}, Expected::Same },
-        TestVector{ { 10, 20, {2, 8}}, Expected::Same },
-        TestVector{ { 10, 20, {1, 5}}, Expected::Different },
-        TestVector{ { 11, 20, {1, 4}}, Expected::Different },
-        TestVector{ { 10, 19, {1, 4}}, Expected::Different },
-    };
-
-    for (const auto& a : TEST_VECTORS) {
-        for (const auto& b : TEST_VECTORS) {
-            // These test vectors should match if they are both in the "same"
-            // class, or if they are literally the same test vector.
-            if ((&a == &b) || ((a.expected == Expected::Same) && (b.expected == Expected::Same))) {
-                ASSERT_TRUE (a.transform == b.transform);
-                ASSERT_FALSE(a.transform != b.transform);
-            } else {
-                ASSERT_FALSE(a.transform == b.transform);
-                ASSERT_TRUE (a.transform != b.transform);
-            }
         }
     }
 }
@@ -110,6 +77,7 @@ TEST(TransformTestCase, Inverse) {
         uint32_t N, D;
     };
 
+    // clang-format off
     constexpr std::array TEST_VECTORS {
         TestVector{  12345,  98764,       3,       2 },
         TestVector{ -12345,  98764,     247,     931 },
@@ -117,6 +85,7 @@ TEST(TransformTestCase, Inverse) {
         TestVector{  12345, -98764, 1000007, 1000000 },
         TestVector{  12345,  98764,       0, 1000000 },
     };
+    // clang-format on
 
     for (const auto& V : TEST_VECTORS) {
         affine::Ratio ratio{ V.N, V.D };
@@ -128,7 +97,8 @@ TEST(TransformTestCase, Inverse) {
             ASSERT_EQ(transform.b_offset(), res.a_offset());
             ASSERT_EQ(transform.numerator(), res.denominator());
             ASSERT_EQ(transform.denominator(), res.numerator());
-            ASSERT_TRUE(transform.ratio().Inverse() == res.ratio());
+            ASSERT_TRUE(transform.ratio().Inverse().numerator() == res.ratio().numerator());
+            ASSERT_TRUE(transform.ratio().Inverse().denominator() == res.ratio().denominator());
         } else {
             ASSERT_DEATH(([&transform]() { transform.Inverse(); }));
         }
@@ -152,6 +122,7 @@ TEST(TransformTestCase, Apply) {
 
     constexpr int64_t kMinI64 = std::numeric_limits<int64_t>::min();
     constexpr int64_t kMaxI64 = std::numeric_limits<int64_t>::max();
+    // clang-format off
     constexpr std::array TEST_VECTORS {
         TestVector{  0,   0,     1,     1, 12345, 12345, Ovfl::No },
         TestVector{ 50,   0,     1,     1, 12345, 12295, Ovfl::No },
@@ -177,6 +148,7 @@ TEST(TransformTestCase, Apply) {
         TestVector{ 0,  17, 1, 1, kMaxI64 - 10, kMaxI64, Ovfl::Yes },
         TestVector{ 0, -17, 1, 1, kMinI64 + 10, kMinI64, Ovfl::Yes },
     };
+    // clang-format on
 
     constexpr std::array METHODS {
         Method::Static,
@@ -340,7 +312,8 @@ TEST(TransformTestCase, Compose) {
 
     // TODO(johngro) : If we ever make the Ratio/Transform constructors
     // constexpr, then come back and make this constexpr.  Right now, they are
-    // not because of the automatic reduction behavior of the Ratio constructor.
+    // not because of the assert-checking behavior in the Ratio constructor.
+    // clang-format off
     const std::array TEST_VECTORS {
         // Identity(Identity(a)) == Identity(a)
         TestVector{
@@ -445,6 +418,7 @@ TEST(TransformTestCase, Compose) {
             Exact::No
         },
     };
+    // clang-format on
 
     constexpr std::array METHODS {
         Method::Static,
@@ -466,7 +440,11 @@ TEST(TransformTestCase, Compose) {
             }
 
             auto VerifyResult = [](const TestVector& V, const Transform& result, Method method) {
-                ASSERT_TRUE(result == V.ac,
+                bool match = (result.a_offset() == V.ac.a_offset()) &&
+                             (result.b_offset() == V.ac.b_offset()) &&
+                             (result.numerator() == V.ac.numerator()) &&
+                             (result.denominator() == V.ac.denominator());
+                ASSERT_TRUE(match,
                             "[ %ld : %u/%u : %ld ] <--> [ %ld : %u/%u : %ld ] should produce "
                             "[ %ld : %u/%u : %ld ] ; got [ %ld : %u/%u : %ld ] instead (method %u)",
                             V.ab.a_offset(), V.ab.numerator(), V.ab.denominator(), V.ab.b_offset(),

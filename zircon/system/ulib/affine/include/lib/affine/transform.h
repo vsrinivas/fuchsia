@@ -5,8 +5,9 @@
 #ifndef LIB_AFFINE_TRANSFORM_H_
 #define LIB_AFFINE_TRANSFORM_H_
 
+#include <lib/affine/assert.h>
 #include <lib/affine/ratio.h>
-#include <safemath/clamped_math.h>
+#include <lib/affine/utils.h>
 
 namespace affine {
 
@@ -60,7 +61,7 @@ public:
                          Ratio ratio,  // Ratio of B_scale:A_scale
                          int64_t val) {
         if constexpr (SATURATE == Saturate::Yes) {
-            return safemath::ClampAdd(ratio.Scale(safemath::ClampSub(val, a_offset)), b_offset);
+            return utils::ClampAdd(ratio.Scale(utils::ClampSub(val, a_offset)), b_offset);
         } else {
             // TODO(johngro) : the multiplication by the ratio operation here
             // actually implements saturation behavior.  If we want this
@@ -112,7 +113,7 @@ public:
     // Applies the inverse transformation
     template <Saturate SATURATE = Saturate::Yes>
     int64_t ApplyInverse(int64_t subject_input) const {
-        ZX_DEBUG_ASSERT(ratio_.denominator() != 0u);
+        internal::DebugAssert(ratio_.denominator() != 0);
         return ApplyInverse<SATURATE>(a_offset_, b_offset_, ratio_, subject_input);
     }
 
@@ -137,20 +138,8 @@ public:
 private:
     int64_t a_offset_ = 0;
     int64_t b_offset_ = 0;
-    Ratio ratio_{1, 1, Ratio::NoReduce::Tag};
+    Ratio ratio_{1, 1};
 };
-
-// Tests two transforms for equality.
-inline bool operator==(const Transform& a, const Transform& b) {
-    return (a.a_offset() == b.a_offset()) &&
-           (a.b_offset() == b.b_offset()) &&
-           (a.ratio() == b.ratio());
-}
-
-// Tests two transforms for inequality.
-inline bool operator!=(const Transform& a, const Transform& b) {
-    return !(a == b);
-}
 
 // Composes two timeline functions B->C and A->B producing A->C. DCHECKs on
 // loss of precision.

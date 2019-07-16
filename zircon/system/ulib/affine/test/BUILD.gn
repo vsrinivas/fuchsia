@@ -13,6 +13,7 @@ test("affine") {
   sources = [
     "ratio.cc",
     "transform.cc",
+    "utils.cc",
   ]
   deps = [
     "$zx/system/ulib/affine",
