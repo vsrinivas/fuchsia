@@ -11,6 +11,7 @@
 //!
 //! [`options`]: crate::wire::records::options
 
+use crate::wire::FromRaw;
 use packet::{BufferView, BufferViewMut, InnerPacketBuilder};
 use std::marker::PhantomData;
 use std::ops::Deref;
@@ -19,11 +20,53 @@ use zerocopy::ByteSlice;
 /// A parsed set of arbitrary sequential records.
 ///
 /// `Records` represents a pre-parsed set of records whose structure is enforced
-/// by the impl in `O`.
+/// by the impl in `R`.
 #[derive(Debug)]
 pub(crate) struct Records<B, R: RecordsImplLayout> {
     bytes: B,
     context: R::Context,
+}
+
+/// An unchecked set of arbitrary sequential records.
+///
+/// `RecordsRaw` represents a yet unparsed and not-validated set of
+/// records, whose structure is enforced by the impl in `R`.
+///
+/// [`Records`] provides an implementation of [`FromRaw`] that can be used
+/// to validate a `RecordsRaw`.
+pub(crate) struct RecordsRaw<B, R: RecordsImplLayout> {
+    bytes: B,
+    context: R::Context,
+}
+
+impl<B, R: RecordsImplLayout> RecordsRaw<B, R> {
+    /// Creates a new `RecordsRaw` with the data in `bytes` and a
+    /// `context`.
+    pub(crate) fn new_with_context(bytes: B, context: R::Context) -> Self {
+        Self { bytes, context }
+    }
+}
+
+impl<B, R> RecordsRaw<B, R>
+where
+    R: RecordsImplLayout<Context = ()>,
+{
+    /// Creates a new `RecordsRaw` with the data in `bytes`.
+    pub(crate) fn new(bytes: B) -> Self {
+        Self { bytes, context: () }
+    }
+}
+
+impl<B, R> Deref for RecordsRaw<B, R>
+where
+    B: ByteSlice,
+    R: RecordsImplLayout,
+{
+    type Target = [u8];
+
+    fn deref(&self) -> &[u8] {
+        self.bytes.deref()
+    }
 }
 
 /// An iterator over the records contained inside a `Records` instance.
@@ -398,6 +441,18 @@ where
     /// Equivalent to calling `parse_with_context` with `context = ()`.
     pub(crate) fn parse(bytes: B) -> Result<Records<B, R>, R::Error> {
         Self::parse_with_context(bytes, ())
+    }
+}
+
+impl<B, R> FromRaw<RecordsRaw<B, R>, ()> for Records<B, R>
+where
+    for<'a> R: RecordsImpl<'a>,
+    B: ByteSlice,
+{
+    type Error = R::Error;
+
+    fn try_from_raw_with(raw: RecordsRaw<B, R>, _args: ()) -> Result<Self, R::Error> {
+        Records::<B, R>::parse_with_context(raw.bytes, raw.context)
     }
 }
 
@@ -971,6 +1026,13 @@ pub(crate) mod options {
     ///
     /// [`Records`]: crate::wire::records::Records
     pub(crate) type Options<B, O> = Records<B, OptionsImplBridge<O>>;
+
+    /// A yet unparset set of header options.
+    ///
+    /// `OptionsRaw` represents a yet unparsed and not validated set of
+    /// options from an IPv4 or TCP header or an NDP packet. `OptionsRaw`
+    /// uses [`RecordsRaw`] below the surface.
+    pub(crate) type OptionsRaw<B, O> = RecordsRaw<B, OptionsImplBridge<O>>;
 
     /// An instance of options serialization.
     ///

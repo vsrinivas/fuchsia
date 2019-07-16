@@ -100,7 +100,7 @@ mod internal {
     use crate::device::DeviceId;
     use crate::error::IpParseError;
     use crate::types::{MulticastAddress, UnicastAddress};
-    use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
+    use crate::wire::ipv4::{Ipv4Header, Ipv4Packet, Ipv4PacketBuilder};
     use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 
     /// An IP protocol version.
@@ -1109,16 +1109,16 @@ mod internal {
         type Builder = Ipv4PacketBuilder;
 
         fn src_ip(&self) -> Ipv4Addr {
-            Ipv4Packet::src_ip(self)
+            Ipv4Header::src_ip(self)
         }
         fn dst_ip(&self) -> Ipv4Addr {
-            Ipv4Packet::dst_ip(self)
+            Ipv4Header::dst_ip(self)
         }
         fn proto(&self) -> IpProto {
-            Ipv4Packet::proto(self)
+            Ipv4Header::proto(self)
         }
         fn ttl(&self) -> u8 {
-            Ipv4Packet::ttl(self)
+            Ipv4Header::ttl(self)
         }
         fn set_ttl(&mut self, ttl: u8)
         where

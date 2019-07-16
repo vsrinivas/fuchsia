@@ -241,7 +241,7 @@ mod tests {
 
     use super::*;
     use crate::wire::icmp::{IcmpMessage, MessageBody};
-    use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
+    use crate::wire::ipv4::{Ipv4Header, Ipv4Packet, Ipv4PacketBuilder};
 
     fn serialize_to_bytes<B: ByteSlice + Debug, M: IcmpMessage<Ipv4, B> + Debug>(
         src_ip: Ipv4Addr,

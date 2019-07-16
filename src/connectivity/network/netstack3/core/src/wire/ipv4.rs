@@ -17,8 +17,9 @@ use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unal
 use crate::error::{IpParseError, IpParseResult, ParseError};
 use crate::ip::reassembly::FragmentablePacket;
 use crate::ip::{IpProto, Ipv4, Ipv4Addr, Ipv4Option};
-use crate::wire::records::options::Options;
+use crate::wire::records::options::{Options, OptionsRaw};
 use crate::wire::U16;
+use crate::wire::{FromRaw, MaybeParsed};
 
 use self::options::Ipv4OptionsImpl;
 
@@ -72,6 +73,75 @@ impl HeaderPrefix {
     pub(crate) fn ihl(&self) -> u8 {
         self.version_ihl & 0xF
     }
+
+    /// The More Fragments (MF) flag.
+    pub(crate) fn mf_flag(&self) -> bool {
+        // the flags are the top 3 bits, so we need to shift by an extra 5 bits
+        self.flags_frag_off[0] & (1 << (5 + MF_FLAG_OFFSET)) > 0
+    }
+}
+
+/// Provides common access to IPv4 header fields.
+///
+/// `Ipv4Header` provides access to IPv4 header fields as a common
+/// implementation for both [`Ipv4Packet`] and [`Ipv4PacketRaw`]
+pub(crate) trait Ipv4Header {
+    /// Gets a reference to the IPv4 [`HeaderPrefix`].
+    fn get_header_prefix(&self) -> &HeaderPrefix;
+
+    /// The Differentiated Services Code Point (DSCP).
+    fn dscp(&self) -> u8 {
+        self.get_header_prefix().dscp_ecn >> 2
+    }
+
+    /// The Explicit Congestion Notification (ECN).
+    fn ecn(&self) -> u8 {
+        self.get_header_prefix().dscp_ecn & 3
+    }
+
+    /// The identification.
+    fn id(&self) -> u16 {
+        self.get_header_prefix().id.get()
+    }
+
+    /// The Don't Fragment (DF) flag.
+    fn df_flag(&self) -> bool {
+        // the flags are the top 3 bits, so we need to shift by an extra 5 bits
+        self.get_header_prefix().flags_frag_off[0] & (1 << (5 + DF_FLAG_OFFSET)) > 0
+    }
+
+    /// The More Fragments (MF) flag.
+    fn mf_flag(&self) -> bool {
+        self.get_header_prefix().mf_flag()
+    }
+
+    /// The fragment offset.
+    fn fragment_offset(&self) -> u16 {
+        ((u16::from(self.get_header_prefix().flags_frag_off[0] & 0x1F)) << 8)
+            | u16::from(self.get_header_prefix().flags_frag_off[1])
+    }
+
+    /// The Time To Live (TTL).
+    fn ttl(&self) -> u8 {
+        self.get_header_prefix().ttl
+    }
+
+    /// The IP Protocol.
+    ///
+    /// `proto` returns the `IpProto` from the protocol field.
+    fn proto(&self) -> IpProto {
+        IpProto::from(self.get_header_prefix().proto)
+    }
+
+    /// The source IP address.
+    fn src_ip(&self) -> Ipv4Addr {
+        self.get_header_prefix().src_ip
+    }
+
+    /// The destination IP address.
+    fn dst_ip(&self) -> Ipv4Addr {
+        self.get_header_prefix().dst_ip
+    }
 }
 
 /// An IPv4 packet.
@@ -89,6 +159,12 @@ pub(crate) struct Ipv4Packet<B> {
     body: B,
 }
 
+impl<B: ByteSlice> Ipv4Header for Ipv4Packet<B> {
+    fn get_header_prefix(&self) -> &HeaderPrefix {
+        &self.hdr_prefix
+    }
+}
+
 impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4Packet<B> {
     type Error = IpParseError<Ipv4>;
 
@@ -98,23 +174,29 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4Packet<B> {
     }
 
     fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> IpParseResult<Ipv4, Self> {
-        // See for details: https://en.wikipedia.org/wiki/IPv4#Header
-        // TODO(ghanan): Return `IpParseError::ParameterProblem` error when we may be required to send
-        //               to the source of a packet, an ICMP Parameter Problem response on errors.
+        Ipv4PacketRaw::<B>::parse(buffer, args).and_then(|u| Ipv4Packet::try_from_raw(u))
+    }
+}
 
-        let total_len = buffer.len();
-        let hdr_prefix = buffer
-            .take_obj_front::<HeaderPrefix>()
-            .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
+impl<B: ByteSlice> FromRaw<Ipv4PacketRaw<B>, ()> for Ipv4Packet<B> {
+    type Error = IpParseError<Ipv4>;
+
+    fn try_from_raw_with(raw: Ipv4PacketRaw<B>, _args: ()) -> Result<Self, Self::Error> {
+        let hdr_prefix = raw.hdr_prefix;
         let hdr_bytes = (hdr_prefix.ihl() * 4) as usize;
+
         if hdr_bytes < HDR_PREFIX_LEN {
             return debug_err!(Err(ParseError::Format.into()), "invalid IHL: {}", hdr_prefix.ihl());
         }
-        let options = buffer
-            .take_front(hdr_bytes - HDR_PREFIX_LEN)
-            .ok_or_else(debug_err_fn!(ParseError::Format, "IHL larger than buffer"))?;
-        let options = Options::parse(options)
-            .map_err(|err| debug_err!(ParseError::Format, "malformed options: {:?}", err))?;
+
+        let options = match raw.options {
+            MaybeParsed::Incomplete(_) => {
+                return debug_err!(Err(ParseError::Format.into()), "Incomplete options");
+            }
+            MaybeParsed::Complete(unchecked) => Options::try_from_raw(unchecked)
+                .map_err(|e| debug_err!(ParseError::Format, "malformed options: {:?}", e))?,
+        };
+
         if hdr_prefix.version() != 4 {
             return debug_err!(
                 Err(ParseError::Format.into()),
@@ -122,16 +204,19 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4Packet<B> {
                 hdr_prefix.version()
             );
         }
-        let body = if (hdr_prefix.total_len.get() as usize) < total_len {
-            // Discard the padding left by the previous layer. This unwrap is
-            // safe because of the check against total_len.
-            buffer.take_back(total_len - (hdr_prefix.total_len.get() as usize)).unwrap();
-            buffer.into_rest()
-        } else if hdr_prefix.total_len.get() as usize == total_len {
-            buffer.into_rest()
-        } else {
-            // we don't yet support IPv4 fragmentation
-            return debug_err!(Err(ParseError::NotSupported.into()), "fragmentation not supported");
+
+        let body = match raw.body {
+            MaybeParsed::Incomplete(_) => {
+                if hdr_prefix.mf_flag() {
+                    return debug_err!(
+                        Err(ParseError::NotSupported.into()),
+                        "fragmentation not supported"
+                    );
+                } else {
+                    return debug_err!(Err(ParseError::Format.into()), "Incomplete body");
+                }
+            }
+            MaybeParsed::Complete(bytes) => bytes,
         };
 
         let packet = Ipv4Packet { hdr_prefix, options, body };
@@ -163,63 +248,8 @@ impl<B: ByteSlice> Ipv4Packet<B> {
         &self.body
     }
 
-    /// The Differentiated Services Code Point (DSCP).
-    pub(crate) fn dscp(&self) -> u8 {
-        self.hdr_prefix.dscp_ecn >> 2
-    }
-
-    /// The Explicit Congestion Notification (ECN).
-    pub(crate) fn ecn(&self) -> u8 {
-        self.hdr_prefix.dscp_ecn & 3
-    }
-
-    /// The identification.
-    pub(crate) fn id(&self) -> u16 {
-        self.hdr_prefix.id.get()
-    }
-
-    /// The Don't Fragment (DF) flag.
-    pub(crate) fn df_flag(&self) -> bool {
-        // the flags are the top 3 bits, so we need to shift by an extra 5 bits
-        self.hdr_prefix.flags_frag_off[0] & (1 << (5 + DF_FLAG_OFFSET)) > 0
-    }
-
-    /// The More Fragments (MF) flag.
-    pub(crate) fn mf_flag(&self) -> bool {
-        // the flags are the top 3 bits, so we need to shift by an extra 5 bits
-        self.hdr_prefix.flags_frag_off[0] & (1 << (5 + MF_FLAG_OFFSET)) > 0
-    }
-
-    /// The fragment offset.
-    pub(crate) fn fragment_offset(&self) -> u16 {
-        ((u16::from(self.hdr_prefix.flags_frag_off[0] & 0x1F)) << 8)
-            | u16::from(self.hdr_prefix.flags_frag_off[1])
-    }
-
-    /// The Time To Live (TTL).
-    pub(crate) fn ttl(&self) -> u8 {
-        self.hdr_prefix.ttl
-    }
-
-    /// The IP Protocol.
-    ///
-    /// `proto` returns the `IpProto` from the protocol field.
-    pub(crate) fn proto(&self) -> IpProto {
-        IpProto::from(self.hdr_prefix.proto)
-    }
-
-    /// The source IP address.
-    pub(crate) fn src_ip(&self) -> Ipv4Addr {
-        self.hdr_prefix.src_ip
-    }
-
-    /// The destination IP address.
-    pub(crate) fn dst_ip(&self) -> Ipv4Addr {
-        self.hdr_prefix.dst_ip
-    }
-
     /// The size of the header prefix and options.
-    pub(crate) fn header_len(&self) -> usize {
+    fn header_len(&self) -> usize {
         self.hdr_prefix.bytes().len() + self.options.bytes().len()
     }
 
@@ -314,6 +344,65 @@ where
             .field("df_flag", &self.df_flag())
             .field("body", &format!("<{} bytes>", self.body.len()))
             .finish()
+    }
+}
+
+/// A partially parsed and not yet validated IPv4 packet.
+///
+/// `Ipv4PacketRaw` provides minimal parsing of an IPv4 packet, namely
+/// it only requires that the fixed header part ([`HeaderPrefix`]) be retrieved,
+/// all the other parts of the packet may be missing when attempting to create
+/// it.
+///
+/// [`Ipv4Packet`] provides a [`FromRaw`] implementation that can be used to
+/// validate an `Ipv4PacketRaw`.
+pub(crate) struct Ipv4PacketRaw<B> {
+    hdr_prefix: LayoutVerified<B, HeaderPrefix>,
+    options: MaybeParsed<OptionsRaw<B, Ipv4OptionsImpl>, B>,
+    body: MaybeParsed<B, B>,
+}
+
+impl<B: ByteSlice> Ipv4Header for Ipv4PacketRaw<B> {
+    fn get_header_prefix(&self) -> &HeaderPrefix {
+        &self.hdr_prefix
+    }
+}
+
+impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4PacketRaw<B> {
+    type Error = IpParseError<Ipv4>;
+
+    fn parse_metadata(&self) -> ParseMetadata {
+        let header_len = self.hdr_prefix.bytes().len() + self.options.len();
+        ParseMetadata::from_packet(header_len, self.body.len(), 0)
+    }
+
+    fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> IpParseResult<Ipv4, Self> {
+        let hdr_prefix = buffer
+            .take_obj_front::<HeaderPrefix>()
+            .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
+        let hdr_bytes = (hdr_prefix.ihl() * 4) as usize;
+
+        let options = MaybeParsed::take_from_buffer_with(
+            &mut buffer,
+            // If the subtraction hdr_bytes - HDR_PREFIX_LEN would have been
+            // negative, that would imply that IHL has an invalid value. Even
+            // though this will end up being MaybeParsed::Complete, the IHL
+            // value is validated when transforming Ipv4PacketRaw to Ipv4Packet.
+            hdr_bytes.saturating_sub(HDR_PREFIX_LEN),
+            OptionsRaw::new,
+        );
+
+        let total_len: usize = hdr_prefix.total_len.get().into();
+        let body_len = total_len.saturating_sub(hdr_bytes);
+        if buffer.len() > body_len {
+            // Discard the padding left by the previous layer. This unwrap is
+            // safe because of the check against total_len.
+            buffer.take_back(buffer.len() - body_len).unwrap();
+        }
+
+        let body = MaybeParsed::new_with_min_len(buffer.into_rest(), body_len);
+
+        Ok(Self { hdr_prefix, options, body })
     }
 }
 
@@ -621,6 +710,7 @@ mod tests {
         assert_eq!(packet.body(), []);
     }
 
+    #[test]
     fn test_parse_padding() {
         // Test that we properly discard post-packet padding.
         let mut buffer = BufferSerializer::new_vec(Buf::new(vec![], ..))
@@ -749,5 +839,41 @@ mod tests {
         let copied_bytes = packet.copy_header_bytes_for_fragment();
         bytes[IPV4_FRAGMENT_DATA_BYTE_RANGE].copy_from_slice(&[0; 4][..]);
         assert_eq!(&copied_bytes[..], &bytes[..]);
+    }
+
+    #[test]
+    fn test_partial_parsing() {
+        // Try something with only the header, but that would have a larger
+        // body:
+        let mut hdr_prefix = new_hdr_prefix();
+        hdr_prefix.total_len = U16::new(256);
+        let mut bytes = hdr_prefix_to_bytes(hdr_prefix)[..].to_owned();
+        bytes.extend(&[1, 2, 3, 4, 5]);
+        let mut buf = &bytes[..];
+        let packet = buf.parse::<Ipv4PacketRaw<_>>().unwrap();
+        assert_eq!(packet.hdr_prefix.bytes(), &bytes[0..20]);
+        assert_eq!(packet.options.as_ref().unwrap().len(), 0);
+        // We must've captured the incomplete bytes in body:
+        assert_eq!(packet.body.as_ref().unwrap_incomplete().len(), 5);
+        // validation should fail:
+        assert!(Ipv4Packet::try_from_raw(packet).is_err());
+
+        // Try something with the header plus incomplete options:
+        let mut hdr_prefix = new_hdr_prefix();
+        hdr_prefix.version_ihl = (4 << 4) | 10;
+        let mut bytes = hdr_prefix_to_bytes(hdr_prefix);
+        let mut buf = &bytes[..];
+        let packet = buf.parse::<Ipv4PacketRaw<_>>().unwrap();
+        assert_eq!(packet.hdr_prefix.bytes(), bytes);
+        assert!(packet.options.is_incomplete());
+        assert!(packet.body.is_complete());
+        // validation should fail:
+        assert!(Ipv4Packet::try_from_raw(packet).is_err());
+
+        // Try an incomplete header:
+        let hdr_prefix = new_hdr_prefix();
+        let bytes = &hdr_prefix_to_bytes(hdr_prefix);
+        let mut buf = &bytes[0..10];
+        assert!(buf.parse::<Ipv4PacketRaw<_>>().is_err());
     }
 }

@@ -432,7 +432,7 @@ mod tests {
     use crate::device::ethernet::EtherType;
     use crate::ip::{IpProto, Ipv4Addr, Ipv6Addr};
     use crate::wire::ethernet::EthernetFrame;
-    use crate::wire::ipv4::Ipv4Packet;
+    use crate::wire::ipv4::{Ipv4Header, Ipv4Packet};
     use crate::wire::ipv6::Ipv6Packet;
 
     const TEST_SRC_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
