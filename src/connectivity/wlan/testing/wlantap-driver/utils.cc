@@ -17,8 +17,7 @@ namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_device = ::fuchsia::wlan::device;
 namespace wlan_tap = ::fuchsia::wlan::tap;
 
-uint16_t ConvertSupportedPhys(
-    const ::std::vector<wlan_device::SupportedPhy>& phys) {
+uint16_t ConvertSupportedPhys(const ::std::vector<wlan_device::SupportedPhy>& phys) {
   uint16_t ret = 0;
   for (auto sp : phys) {
     switch (sp) {
@@ -42,8 +41,7 @@ uint16_t ConvertSupportedPhys(
   return ret;
 }
 
-uint32_t ConvertDriverFeatures(
-    const ::std::vector<wlan_common::DriverFeature>& dfs) {
+uint32_t ConvertDriverFeatures(const ::std::vector<wlan_common::DriverFeature>& dfs) {
   uint32_t ret = 0;
   for (auto df : dfs) {
     switch (df) {
@@ -144,10 +142,10 @@ void ConvertBandInfo(const wlan_device::BandInfo& in, wlan_info_band_info_t* out
               out->basic_rates);
 
   out->supported_channels.base_freq = in.supported_channels.base_freq;
-  std::copy_n(in.supported_channels.channels.data(),
-              std::min<size_t>(in.supported_channels.channels.size(),
-                               WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS),
-              out->supported_channels.channels);
+  std::copy_n(
+      in.supported_channels.channels.data(),
+      std::min<size_t>(in.supported_channels.channels.size(), WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS),
+      out->supported_channels.channels);
 }
 
 zx_status_t ConvertPhyInfo(wlan_info_t* out, const wlan_device::PhyInfo& in) {
@@ -157,8 +155,7 @@ zx_status_t ConvertPhyInfo(wlan_info_t* out, const wlan_device::PhyInfo& in) {
   out->driver_features = ConvertDriverFeatures(in.driver_features);
   out->mac_role = ConvertMacRoles(in.mac_roles);
   out->caps = ConvertCaps(in.caps);
-  out->bands_count =
-      std::min(in.bands.size(), static_cast<size_t>(WLAN_INFO_MAX_BANDS));
+  out->bands_count = std::min(in.bands.size(), static_cast<size_t>(WLAN_INFO_MAX_BANDS));
   for (size_t i = 0; i < out->bands_count; ++i) {
     ConvertBandInfo((in.bands)[i], &out->bands[i]);
   }

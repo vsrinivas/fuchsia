@@ -78,8 +78,7 @@ class DevicePool {
 
 constexpr size_t kMaxMacDevices = 4;
 
-wlantap::SetKeyArgs ToSetKeyArgs(uint16_t wlanmac_id,
-                                 wlan_key_config_t* config) {
+wlantap::SetKeyArgs ToSetKeyArgs(uint16_t wlanmac_id, wlan_key_config_t* config) {
   auto set_key_args = wlantap::SetKeyArgs{
       .wlanmac_id = wlanmac_id,
       .config =
@@ -102,17 +101,15 @@ wlantap::SetKeyArgs ToSetKeyArgs(uint16_t wlanmac_id,
 wlantap::TxArgs ToTxArgs(uint16_t wlanmac_id, wlan_tx_packet_t* pkt) {
   auto tx_args = wlantap::TxArgs{
       .wlanmac_id = wlanmac_id,
-      .packet =
-          wlantap::WlanTxPacket{
-              .info =
-                  wlantap::WlanTxInfo{
-                      .tx_flags = pkt->info.tx_flags,
-                      .valid_fields = pkt->info.valid_fields,
-                      .phy = pkt->info.phy,
-                      .cbw = pkt->info.cbw,
-                      .mcs = pkt->info.mcs,
-                      .tx_vector_idx = pkt->info.tx_vector_idx,
-                  }},
+      .packet = wlantap::WlanTxPacket{.info =
+                                          wlantap::WlanTxInfo{
+                                              .tx_flags = pkt->info.tx_flags,
+                                              .valid_fields = pkt->info.valid_fields,
+                                              .phy = pkt->info.phy,
+                                              .cbw = pkt->info.cbw,
+                                              .mcs = pkt->info.mcs,
+                                              .tx_vector_idx = pkt->info.tx_vector_idx,
+                                          }},
   };
   auto& data = tx_args.packet.data;
   data.clear();
@@ -120,8 +117,7 @@ wlantap::TxArgs ToTxArgs(uint16_t wlanmac_id, wlan_tx_packet_t* pkt) {
   std::copy_n(head, pkt->packet_head.data_size, std::back_inserter(data));
   if (pkt->packet_tail != nullptr) {
     auto tail = static_cast<const uint8_t*>(pkt->packet_tail->data_buffer);
-    std::copy_n(tail + pkt->tail_offset,
-                pkt->packet_tail->data_size - pkt->tail_offset,
+    std::copy_n(tail + pkt->tail_offset, pkt->packet_tail->data_size - pkt->tail_offset,
                 std::back_inserter(data));
   }
   return tx_args;
@@ -129,14 +125,12 @@ wlantap::TxArgs ToTxArgs(uint16_t wlanmac_id, wlan_tx_packet_t* pkt) {
 
 struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
   WlantapPhy(zx_device_t* device, zx::channel user_channel,
-             std::unique_ptr<wlantap::WlantapPhyConfig> phy_config,
-             async_dispatcher_t* loop)
+             std::unique_ptr<wlantap::WlantapPhyConfig> phy_config, async_dispatcher_t* loop)
       : phy_config_(std::move(phy_config)),
         loop_(loop),
         user_binding_(this, std::move(user_channel), loop) {
     user_binding_.set_error_handler([this](zx_status_t status) {
-      zxlogf(INFO,
-             "wlantap phy: unbinding device because the channel was closed\n");
+      zxlogf(INFO, "wlantap phy: unbinding device because the channel was closed\n");
       if (report_tx_status_count_) {
         zxlogf(INFO, "Tx Status Reports sent druing device lifetime: %zu\n",
                report_tx_status_count_);
@@ -186,8 +180,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
 
   zx_status_t Query(wlanphy_impl_info_t* info) {
     zxlogf(INFO, "wlantap phy: received a 'Query' DDK request\n");
-    zx_status_t status =
-        ConvertPhyInfo(&info->wlan_info, phy_config_->phy_info);
+    zx_status_t status = ConvertPhyInfo(&info->wlan_info, phy_config_->phy_info);
     zxlogf(INFO, "wlantap phy: responded to 'Query' with status %s\n",
            zx_status_get_string(status));
     return status;
@@ -198,8 +191,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     return std::find(v.cbegin(), v.cend(), t) != v.cend();
   }
 
-  zx_status_t CreateIface(const wlanphy_impl_create_iface_req_t* req,
-                          uint16_t* out_iface_id) {
+  zx_status_t CreateIface(const wlanphy_impl_create_iface_req_t* req, uint16_t* out_iface_id) {
     zxlogf(INFO, "wlantap phy: received a 'CreateIface' DDK request\n");
     wlan_device::MacRole dev_role = ConvertMacRole(req->role);
     if (!contains(phy_config_->phy_info.mac_roles, dev_role)) {
@@ -209,8 +201,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     std::lock_guard<std::mutex> guard(wlanmac_lock_);
     zx_status_t status = wlanmac_devices_.TryCreateNew(
         [&](uint16_t id, WlantapMac** out_dev) {
-          return CreateWlantapMac(device_, dev_role, phy_config_.get(), id,
-                                  this, out_dev);
+          return CreateWlantapMac(device_, dev_role, phy_config_.get(), id, this, out_dev);
         },
         out_iface_id);
     if (status != ZX_OK) {
@@ -280,20 +271,17 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     zxlogf(INFO, "wlantap phy: Status done\n");
   }
 
-  virtual void ReportTxStatus(uint16_t wlanmac_id,
-                              wlantap::WlanTxStatus ts) override {
+  virtual void ReportTxStatus(uint16_t wlanmac_id, wlantap::WlanTxStatus ts) override {
     std::lock_guard<std::mutex> guard(wlanmac_lock_);
     if (!phy_config_->quiet || report_tx_status_count_ < 32) {
-      zxlogf(INFO, "wlantap phy: ReportTxStatus %zu\n",
-             report_tx_status_count_);
+      zxlogf(INFO, "wlantap phy: ReportTxStatus %zu\n", report_tx_status_count_);
     }
     if (WlantapMac* wlanmac = wlanmac_devices_.Get(wlanmac_id)) {
       ++report_tx_status_count_;
       wlanmac->ReportTxStatus(ts);
     }
     if (!phy_config_->quiet || report_tx_status_count_ <= 32) {
-      zxlogf(INFO, "wlantap phy: ReportTxStatus %zu done\n",
-             report_tx_status_count_);
+      zxlogf(INFO, "wlantap phy: ReportTxStatus %zu done\n", report_tx_status_count_);
     }
   }
 
@@ -313,12 +301,10 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     zxlogf(INFO, "wlantap phy: WlantapMacStop\n");
   }
 
-  virtual void WlantapMacQueueTx(uint16_t wlanmac_id,
-                                 wlan_tx_packet_t* pkt) override {
+  virtual void WlantapMacQueueTx(uint16_t wlanmac_id, wlan_tx_packet_t* pkt) override {
     if (!phy_config_->quiet || report_tx_status_count_ < 32) {
-      zxlogf(INFO,
-             "wlantap phy: WlantapMacQueueTx id=%u, tx_report_count=%zu\n",
-             wlanmac_id, report_tx_status_count_);
+      zxlogf(INFO, "wlantap phy: WlantapMacQueueTx id=%u, tx_report_count=%zu\n", wlanmac_id,
+             report_tx_status_count_);
     }
     std::lock_guard<std::mutex> guard(lock_);
     if (!user_binding_.is_bound()) {
@@ -331,8 +317,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     }
   }
 
-  virtual void WlantapMacSetChannel(uint16_t wlanmac_id,
-                                    wlan_channel_t* channel) override {
+  virtual void WlantapMacSetChannel(uint16_t wlanmac_id, wlan_channel_t* channel) override {
     if (!phy_config_->quiet) {
       zxlogf(INFO, "wlantap phy: WlantapMacSetChannel id=%u\n", wlanmac_id);
     }
@@ -340,33 +325,29 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     if (!user_binding_.is_bound()) {
       return;
     }
-    user_binding_.events().SetChannel(
-        {.wlanmac_id = wlanmac_id,
-         .chan = {.primary = channel->primary,
-                  .cbw = static_cast<wlan_common::CBW>(channel->cbw),
-                  .secondary80 = channel->secondary80}});
+    user_binding_.events().SetChannel({.wlanmac_id = wlanmac_id,
+                                       .chan = {.primary = channel->primary,
+                                                .cbw = static_cast<wlan_common::CBW>(channel->cbw),
+                                                .secondary80 = channel->secondary80}});
     if (!phy_config_->quiet) {
       zxlogf(INFO, "wlantap phy: WlantapMacSetChannel done\n");
     }
   }
 
-  virtual void WlantapMacConfigureBss(uint16_t wlanmac_id,
-                                      wlan_bss_config_t* config) override {
+  virtual void WlantapMacConfigureBss(uint16_t wlanmac_id, wlan_bss_config_t* config) override {
     zxlogf(INFO, "wlantap phy: WlantapMacConfigureBss id=%u\n", wlanmac_id);
     std::lock_guard<std::mutex> guard(lock_);
     if (!user_binding_.is_bound()) {
       return;
     }
-    user_binding_.events().ConfigureBss(
-        {.wlanmac_id = wlanmac_id,
-         .config = {.bss_type = config->bss_type,
-                    .bssid = ToFidlArray(config->bssid),
-                    .remote = config->remote}});
+    user_binding_.events().ConfigureBss({.wlanmac_id = wlanmac_id,
+                                         .config = {.bss_type = config->bss_type,
+                                                    .bssid = ToFidlArray(config->bssid),
+                                                    .remote = config->remote}});
     zxlogf(INFO, "wlantap phy: WlantapMacConfigureBss done\n");
   }
 
-  virtual void WlantapMacSetKey(uint16_t wlanmac_id,
-                                wlan_key_config_t* key_config) override {
+  virtual void WlantapMacSetKey(uint16_t wlanmac_id, wlan_key_config_t* key_config) override {
     zxlogf(INFO, "wlantap phy: WlantapMacSetKey id=%u\n", wlanmac_id);
     std::lock_guard<std::mutex> guard(lock_);
     if (!user_binding_.is_bound()) {
@@ -380,8 +361,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
   const std::unique_ptr<const wlantap::WlantapPhyConfig> phy_config_;
   async_dispatcher_t* loop_;
   std::mutex wlanmac_lock_;
-  DevicePool<WlantapMac, kMaxMacDevices> wlanmac_devices_
-      __TA_GUARDED(wlanmac_lock_);
+  DevicePool<WlantapMac, kMaxMacDevices> wlanmac_devices_ __TA_GUARDED(wlanmac_lock_);
   std::mutex lock_;
   fidl::Binding<wlantap::WlantapPhy> user_binding_ __TA_GUARDED(lock_);
   size_t report_tx_status_count_ = 0;
@@ -401,19 +381,18 @@ static wlanphy_impl_protocol_ops_t wlanphy_impl_ops = {
     .destroy_iface = [](void* ctx, uint16_t id) -> zx_status_t {
       return DEV(ctx)->DestroyIface(id);
     },
-    .set_country = [](void* ctx, const wlanphy_country_t* country)
-        -> zx_status_t { return DEV(ctx)->SetCountry(country); },
+    .set_country = [](void* ctx, const wlanphy_country_t* country) -> zx_status_t {
+      return DEV(ctx)->SetCountry(country);
+    },
 };
 #undef DEV
 
-zx_status_t CreatePhy(
-    zx_device_t* wlantapctl, zx::channel user_channel,
-    std::unique_ptr<wlantap::WlantapPhyConfig> phy_config_from_fidl,
-    async_dispatcher_t* loop) {
+zx_status_t CreatePhy(zx_device_t* wlantapctl, zx::channel user_channel,
+                      std::unique_ptr<wlantap::WlantapPhyConfig> phy_config_from_fidl,
+                      async_dispatcher_t* loop) {
   zxlogf(INFO, "wlantap: creating phy\n");
-  auto phy =
-      std::make_unique<WlantapPhy>(wlantapctl, std::move(user_channel),
-                                   std::move(phy_config_from_fidl), loop);
+  auto phy = std::make_unique<WlantapPhy>(wlantapctl, std::move(user_channel),
+                                          std::move(phy_config_from_fidl), loop);
   static zx_protocol_device_t device_ops = {.version = DEVICE_OPS_VERSION,
                                             .unbind = &WlantapPhy::DdkUnbind,
                                             .release = &WlantapPhy::DdkRelease};
