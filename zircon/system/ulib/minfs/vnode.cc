@@ -1127,7 +1127,7 @@ zx_status_t VnodeMinfs::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
 }
 
 zx_status_t VnodeMinfs::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) {
-    return fs_->bc_->GetDevicePath(buffer_len, out_name, out_len);
+    return fs_->bc_->device()->GetDevicePath(buffer_len, out_name, out_len);
 }
 
 zx_status_t VnodeMinfs::GetMetrics(fidl_txn_t* transaction) {

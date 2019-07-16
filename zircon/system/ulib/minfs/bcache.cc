@@ -127,10 +127,6 @@ uint32_t Bcache::DeviceBlockSize() const {
     return info_.block_size;
 }
 
-zx_status_t Bcache::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) {
-    return device_->GetDevicePath(buffer_len, out_name, out_len);
-}
-
 zx_status_t Bcache::AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoID* out) const {
     zx::vmo xfer_vmo;
     zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo);
@@ -138,25 +134,6 @@ zx_status_t Bcache::AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoID* 
         return status;
     }
     return device_->BlockAttachVmo(std::move(xfer_vmo), out);
-}
-
-zx_status_t Bcache::FVMQuery(fuchsia_hardware_block_volume_VolumeInfo* info) const {
-    return device_->VolumeQuery(info);
-}
-
-zx_status_t Bcache::FVMVsliceQuery(const query_request_t* request,
-                                   fuchsia_hardware_block_volume_VsliceRange out_response[16],
-                                   size_t* out_count) const {
-    return device_->VolumeQuerySlices(request->vslice_start, request->count,
-                                      out_response, out_count);
-}
-
-zx_status_t Bcache::FVMExtend(const extend_request_t* request) {
-    return device_->VolumeExtend(request->offset, request->length);
-}
-
-zx_status_t Bcache::FVMShrink(const extend_request_t* request) {
-    return device_->VolumeShrink(request->offset, request->length);
 }
 
 Bcache::Bcache(fbl::unique_fd fd, std::unique_ptr<block_client::BlockDevice> device, uint32_t max_blocks)
