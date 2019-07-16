@@ -22,8 +22,8 @@ TEST(LazyValueTest, SimpleGet) {
   size_t value;
   cache.Get(callback::Capture(callback::SetWhenCalled(&called), &status, &value));
   ASSERT_TRUE(called);
-  EXPECT_EQ(0u, status);
-  EXPECT_EQ(1u, value);
+  EXPECT_EQ(status, 0u);
+  EXPECT_EQ(value, 1u);
 }
 
 TEST(LazyValueTest, FailingGenerator) {
@@ -41,13 +41,13 @@ TEST(LazyValueTest, FailingGenerator) {
 
   cache.Get(callback::Capture(callback::SetWhenCalled(&called), &status, &value));
   ASSERT_TRUE(called);
-  EXPECT_EQ(1u, status);
-  EXPECT_EQ(1u, nb_called);
+  EXPECT_EQ(status, 1u);
+  EXPECT_EQ(nb_called, 1u);
 
   cache.Get(callback::Capture(callback::SetWhenCalled(&called), &status, &value));
   ASSERT_TRUE(called);
-  EXPECT_EQ(1u, status);
-  EXPECT_EQ(2u, nb_called);
+  EXPECT_EQ(status, 1u);
+  EXPECT_EQ(nb_called, 2u);
 }
 
 TEST(LazyValueTest, CacheCallback) {
@@ -67,22 +67,22 @@ TEST(LazyValueTest, CacheCallback) {
   cache.Get(callback::Capture(callback::SetWhenCalled(&called1), &status1, &value1));
 
   EXPECT_FALSE(called1);
-  EXPECT_EQ(1u, nb_called);
+  EXPECT_EQ(nb_called, 1u);
 
   cache.Get(callback::Capture(callback::SetWhenCalled(&called2), &status2, &value2));
 
   EXPECT_FALSE(called2);
-  EXPECT_EQ(1u, nb_called);
+  EXPECT_EQ(nb_called, 1u);
 
   generator_callback(0, 42);
 
   ASSERT_TRUE(called1);
   ASSERT_TRUE(called2);
-  EXPECT_EQ(1u, nb_called);
-  EXPECT_EQ(0u, status1);
-  EXPECT_EQ(42u, value1);
-  EXPECT_EQ(0u, status2);
-  EXPECT_EQ(42u, value2);
+  EXPECT_EQ(nb_called, 1u);
+  EXPECT_EQ(status1, 0u);
+  EXPECT_EQ(value1, 42u);
+  EXPECT_EQ(status2, 0u);
+  EXPECT_EQ(value2, 42u);
 }
 
 }  // namespace

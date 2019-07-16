@@ -4,11 +4,11 @@
 
 #include "src/ledger/bin/app/sync_watcher_set.h"
 
-#include <lib/fidl/cpp/binding.h>
-#include <lib/gtest/test_loop_fixture.h>
-
 #include <algorithm>
 #include <string>
+
+#include <lib/fidl/cpp/binding.h>
+#include <lib/gtest/test_loop_fixture.h>
 
 #include "gtest/gtest.h"
 #include "src/lib/fxl/macros.h"
@@ -60,19 +60,19 @@ TEST_F(SyncWatcherSetTest, OneWatcher) {
 
   RunLoopUntilIdle();
 
-  ASSERT_EQ(1u, impl.download_states.size());
-  EXPECT_EQ(SyncState::IN_PROGRESS, *impl.download_states.rbegin());
-  ASSERT_EQ(1u, impl.upload_states.size());
-  EXPECT_EQ(SyncState::PENDING, *impl.upload_states.rbegin());
+  ASSERT_EQ(impl.download_states.size(), 1u);
+  EXPECT_EQ(*impl.download_states.rbegin(), SyncState::IN_PROGRESS);
+  ASSERT_EQ(impl.upload_states.size(), 1u);
+  EXPECT_EQ(*impl.upload_states.rbegin(), SyncState::PENDING);
 
   watcher_set.Notify({sync_coordinator::DOWNLOAD_ERROR, sync_coordinator::UPLOAD_IDLE});
 
   RunLoopUntilIdle();
 
-  ASSERT_EQ(2u, impl.download_states.size());
-  EXPECT_EQ(SyncState::ERROR, *impl.download_states.rbegin());
-  ASSERT_EQ(2u, impl.upload_states.size());
-  EXPECT_EQ(SyncState::IDLE, *impl.upload_states.rbegin());
+  ASSERT_EQ(impl.download_states.size(), 2u);
+  EXPECT_EQ(*impl.download_states.rbegin(), SyncState::ERROR);
+  ASSERT_EQ(impl.upload_states.size(), 2u);
+  EXPECT_EQ(*impl.upload_states.rbegin(), SyncState::IDLE);
 }
 
 TEST_F(SyncWatcherSetTest, TwoWatchers) {
@@ -83,34 +83,34 @@ TEST_F(SyncWatcherSetTest, TwoWatchers) {
   watcher_set.AddSyncWatcher(std::move(watcher_ptr1));
 
   RunLoopUntilIdle();
-  EXPECT_EQ(1u, impl1.download_states.size());
-  EXPECT_EQ(SyncState::IDLE, *impl1.download_states.rbegin());
-  EXPECT_EQ(1u, impl1.upload_states.size());
-  EXPECT_EQ(SyncState::IDLE, *impl1.upload_states.rbegin());
+  EXPECT_EQ(impl1.download_states.size(), 1u);
+  EXPECT_EQ(*impl1.download_states.rbegin(), SyncState::IDLE);
+  EXPECT_EQ(impl1.upload_states.size(), 1u);
+  EXPECT_EQ(*impl1.upload_states.rbegin(), SyncState::IDLE);
 
   SyncWatcherPtr watcher_ptr2;
   SyncWatcherImpl impl2(watcher_ptr2.NewRequest());
   watcher_set.AddSyncWatcher(std::move(watcher_ptr2));
 
   RunLoopUntilIdle();
-  EXPECT_EQ(1u, impl2.download_states.size());
-  EXPECT_EQ(SyncState::IDLE, *impl2.download_states.rbegin());
-  EXPECT_EQ(1u, impl2.upload_states.size());
-  EXPECT_EQ(SyncState::IDLE, *impl2.upload_states.rbegin());
+  EXPECT_EQ(impl2.download_states.size(), 1u);
+  EXPECT_EQ(*impl2.download_states.rbegin(), SyncState::IDLE);
+  EXPECT_EQ(impl2.upload_states.size(), 1u);
+  EXPECT_EQ(*impl2.upload_states.rbegin(), SyncState::IDLE);
 
   watcher_set.Notify({sync_coordinator::DOWNLOAD_IN_PROGRESS, sync_coordinator::UPLOAD_PENDING});
 
   RunLoopUntilIdle();
 
-  ASSERT_EQ(2u, impl1.download_states.size());
-  EXPECT_EQ(SyncState::IN_PROGRESS, *impl1.download_states.rbegin());
-  ASSERT_EQ(2u, impl1.upload_states.size());
-  EXPECT_EQ(SyncState::PENDING, *impl1.upload_states.rbegin());
+  ASSERT_EQ(impl1.download_states.size(), 2u);
+  EXPECT_EQ(*impl1.download_states.rbegin(), SyncState::IN_PROGRESS);
+  ASSERT_EQ(impl1.upload_states.size(), 2u);
+  EXPECT_EQ(*impl1.upload_states.rbegin(), SyncState::PENDING);
 
-  ASSERT_EQ(2u, impl2.download_states.size());
-  EXPECT_EQ(SyncState::IN_PROGRESS, *impl2.download_states.rbegin());
-  ASSERT_EQ(2u, impl2.upload_states.size());
-  EXPECT_EQ(SyncState::PENDING, *impl2.upload_states.rbegin());
+  ASSERT_EQ(impl2.download_states.size(), 2u);
+  EXPECT_EQ(*impl2.download_states.rbegin(), SyncState::IN_PROGRESS);
+  ASSERT_EQ(impl2.upload_states.size(), 2u);
+  EXPECT_EQ(*impl2.upload_states.rbegin(), SyncState::PENDING);
 }
 
 }  // namespace

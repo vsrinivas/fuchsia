@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <string.h>
+
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/callback/capture.h>
@@ -13,7 +15,6 @@
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/component_context.h>
-#include <string.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -135,7 +136,7 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
                                             nullptr, "", ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
-  ASSERT_EQ(ZX_OK, ledger_repository->Sync());
+  ASSERT_EQ(ledger_repository->Sync(), ZX_OK);
 
   fidl::SynchronousInterfacePtr<ledger::Page> page;
   ledger_->GetRootPage(page.NewRequest());
@@ -143,7 +144,7 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
   fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
   page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
   fuchsia::ledger::PageSnapshot_Get_Result result;
-  EXPECT_EQ(ZX_OK, snapshot->Get(TestArray(), &result));
+  EXPECT_EQ(snapshot->Get(TestArray(), &result), ZX_OK);
   EXPECT_THAT(result, ledger::MatchesString(convert::ToString(TestArray())));
 }
 
@@ -167,7 +168,7 @@ TEST_F(LedgerEndToEndTest, ClearPage) {
                                             nullptr, "", ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
-  ASSERT_EQ(ZX_OK, ledger_repository->Sync());
+  ASSERT_EQ(ledger_repository->Sync(), ZX_OK);
 
   int page_count = 5;
 
@@ -178,7 +179,7 @@ TEST_F(LedgerEndToEndTest, ClearPage) {
   for (int i = 0; i < page_count; ++i) {
     fidl::SynchronousInterfacePtr<ledger::Page> page;
     ledger_->GetPage(nullptr, page.NewRequest());
-    ASSERT_EQ(ledger_->Sync(), ZX_OK);
+    ASSERT_EQ(ZX_OK, ledger_->Sync());
 
     // Check that the directory has been created.
     ledger::PageId page_id;
@@ -342,7 +343,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
                                             ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
-  ASSERT_EQ(ZX_OK, ledger_repository->Sync());
+  ASSERT_EQ(ledger_repository->Sync(), ZX_OK);
 
   // Close the cloud provider channel.
   cloud_provider_binding.Unbind();
@@ -355,7 +356,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
   page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
   fuchsia::mem::BufferPtr value;
   fuchsia::ledger::PageSnapshot_Get_Result result;
-  EXPECT_EQ(ZX_OK, snapshot->Get(TestArray(), &result));
+  EXPECT_EQ(snapshot->Get(TestArray(), &result), ZX_OK);
   EXPECT_THAT(result, ledger::MatchesString(convert::ToString(TestArray())));
 
   // Verify that the Ledger app didn't crash or shut down.
@@ -380,7 +381,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
                                             ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
-  ASSERT_EQ(ZX_OK, ledger_repository->Sync());
+  ASSERT_EQ(ledger_repository->Sync(), ZX_OK);
 
   // Write some data.
   fidl::SynchronousInterfacePtr<ledger::Page> page;
@@ -397,7 +398,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
   page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
   fuchsia::mem::BufferPtr value;
   fuchsia::ledger::PageSnapshot_Get_Result result;
-  EXPECT_EQ(ZX_OK, snapshot->Get(TestArray(), &result));
+  EXPECT_EQ(snapshot->Get(TestArray(), &result), ZX_OK);
   EXPECT_THAT(result, ledger::MatchesString(convert::ToString(TestArray())));
 
   // Verify that the Ledger app didn't crash or shut down.

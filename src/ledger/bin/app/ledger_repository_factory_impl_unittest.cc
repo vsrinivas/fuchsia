@@ -214,7 +214,7 @@ TEST_F(LedgerRepositoryFactoryImplTest, CloseOnFilesystemUnavailableNoCrash) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(get_repository_called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_FALSE(channel_closed);
 
   tmpfs.reset();
@@ -270,8 +270,8 @@ TEST_F(LedgerRepositoryFactoryImplTest, CloseLedgerRepository) {
   EXPECT_TRUE(ptr1_closed);
   EXPECT_TRUE(ptr2_closed);
 
-  EXPECT_EQ(ZX_OK, ptr1_closed_status);
-  EXPECT_EQ(ZX_OK, ptr2_closed_status);
+  EXPECT_EQ(ptr1_closed_status, ZX_OK);
+  EXPECT_EQ(ptr2_closed_status, ZX_OK);
 }
 
 }  // namespace

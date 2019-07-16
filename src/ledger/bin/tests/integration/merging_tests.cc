@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <map>
+#include <utility>
+#include <vector>
+
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/callback/capture.h>
@@ -10,10 +14,6 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/strings.h>
-
-#include <map>
-#include <utility>
-#include <vector>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
@@ -437,42 +437,42 @@ TEST_P(MergingIntegrationTest, Merging) {
   // Verify that each change is seen by the right watcher.
   page1->Commit();
   ASSERT_TRUE(watcher1_waiter->RunUntilCalled());
-  EXPECT_EQ(1u, watcher1.changes_seen);
+  EXPECT_EQ(watcher1.changes_seen, 1u);
   PageChange change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(2u, change.changed_entries.size());
-  EXPECT_EQ("city", convert::ToString(change.changed_entries.at(0).key));
-  EXPECT_EQ("Paris", ToString(change.changed_entries.at(0).value));
-  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(1).key));
-  EXPECT_EQ("Alice", ToString(change.changed_entries.at(1).value));
+  ASSERT_EQ(change.changed_entries.size(), 2u);
+  EXPECT_EQ(convert::ToString(change.changed_entries.at(0).key), "city");
+  EXPECT_EQ(ToString(change.changed_entries.at(0).value), "Paris");
+  EXPECT_EQ(convert::ToString(change.changed_entries.at(1).key), "name");
+  EXPECT_EQ(ToString(change.changed_entries.at(1).value), "Alice");
 
   page2->Commit();
   ASSERT_TRUE(watcher2_waiter->RunUntilCalled());
 
-  EXPECT_EQ(1u, watcher2.changes_seen);
+  EXPECT_EQ(watcher2.changes_seen, 1u);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(2u, change.changed_entries.size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
-  EXPECT_EQ("Bob", ToString(change.changed_entries.at(0).value));
-  EXPECT_EQ("phone", convert::ToString(change.changed_entries.at(1).key));
-  EXPECT_EQ("0123456789", ToString(change.changed_entries.at(1).value));
+  ASSERT_EQ(change.changed_entries.size(), 2u);
+  EXPECT_EQ(convert::ToString(change.changed_entries.at(0).key), "name");
+  EXPECT_EQ(ToString(change.changed_entries.at(0).value), "Bob");
+  EXPECT_EQ(convert::ToString(change.changed_entries.at(1).key), "phone");
+  EXPECT_EQ(ToString(change.changed_entries.at(1).value), "0123456789");
 
   ASSERT_TRUE(watcher1_waiter->RunUntilCalled());
   ASSERT_TRUE(watcher2_waiter->RunUntilCalled());
 
   // Each change is seen once, and by the correct watcher only.
-  EXPECT_EQ(2u, watcher1.changes_seen);
+  EXPECT_EQ(watcher1.changes_seen, 2u);
   change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(2u, change.changed_entries.size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
-  EXPECT_EQ("Bob", ToString(change.changed_entries.at(0).value));
-  EXPECT_EQ("phone", convert::ToString(change.changed_entries.at(1).key));
-  EXPECT_EQ("0123456789", ToString(change.changed_entries.at(1).value));
+  ASSERT_EQ(change.changed_entries.size(), 2u);
+  EXPECT_EQ(convert::ToString(change.changed_entries.at(0).key), "name");
+  EXPECT_EQ(ToString(change.changed_entries.at(0).value), "Bob");
+  EXPECT_EQ(convert::ToString(change.changed_entries.at(1).key), "phone");
+  EXPECT_EQ(ToString(change.changed_entries.at(1).value), "0123456789");
 
-  EXPECT_EQ(2u, watcher2.changes_seen);
+  EXPECT_EQ(watcher2.changes_seen, 2u);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(1u, change.changed_entries.size());
-  EXPECT_EQ("city", convert::ToString(change.changed_entries.at(0).key));
-  EXPECT_EQ("Paris", ToString(change.changed_entries.at(0).value));
+  ASSERT_EQ(change.changed_entries.size(), 1u);
+  EXPECT_EQ(convert::ToString(change.changed_entries.at(0).key), "city");
+  EXPECT_EQ(ToString(change.changed_entries.at(0).value), "Paris");
 }
 
 TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
@@ -531,29 +531,29 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   page1->Commit();
 
   ASSERT_TRUE(watcher1_waiter->RunUntilCalled());
-  EXPECT_EQ(1u, watcher1.changes_seen);
+  EXPECT_EQ(watcher1.changes_seen, 1u);
   PageChange change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(2u, change.changed_entries.size());
-  EXPECT_EQ("city", convert::ToString(change.changed_entries.at(0).key));
-  EXPECT_EQ("Paris", ToString(change.changed_entries.at(0).value));
-  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(1).key));
-  EXPECT_EQ("Alice", ToString(change.changed_entries.at(1).value));
+  ASSERT_EQ(change.changed_entries.size(), 2u);
+  EXPECT_EQ(convert::ToString(change.changed_entries.at(0).key), "city");
+  EXPECT_EQ(ToString(change.changed_entries.at(0).value), "Paris");
+  EXPECT_EQ(convert::ToString(change.changed_entries.at(1).key), "name");
+  EXPECT_EQ(ToString(change.changed_entries.at(1).value), "Alice");
 
   page2->Commit();
 
   ASSERT_TRUE(watcher2_waiter->RunUntilCalled());
-  EXPECT_EQ(1u, watcher2.changes_seen);
+  EXPECT_EQ(watcher2.changes_seen, 1u);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(2u, change.changed_entries.size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
-  EXPECT_EQ("Bob", ToString(change.changed_entries.at(0).value));
-  EXPECT_EQ("phone", convert::ToString(change.changed_entries.at(1).key));
-  EXPECT_EQ("0123456789", ToString(change.changed_entries.at(1).value));
+  ASSERT_EQ(change.changed_entries.size(), 2u);
+  EXPECT_EQ(convert::ToString(change.changed_entries.at(0).key), "name");
+  EXPECT_EQ(ToString(change.changed_entries.at(0).value), "Bob");
+  EXPECT_EQ(convert::ToString(change.changed_entries.at(1).key), "phone");
+  EXPECT_EQ(ToString(change.changed_entries.at(1).value), "0123456789");
 
   // Check that the resolver fectory GetPolicy method is not called.
   RunLoopFor(zx::sec(1));
   EXPECT_TRUE(resolver_factory_waiter->NotCalledYet());
-  EXPECT_EQ(1u, resolver_factory->get_policy_calls);
+  EXPECT_EQ(resolver_factory->get_policy_calls, 1u);
 
   // Change the merge strategy, triggering resolution of the conflicts.
   resolver_factory_ptr = nullptr;  // Suppress misc-use-after-move.
@@ -568,21 +568,21 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   ASSERT_TRUE(watcher2_waiter->RunUntilCalled());
 
   // Each change is seen once, and by the correct watcher only.
-  EXPECT_EQ(2u, watcher1.changes_seen);
+  EXPECT_EQ(watcher1.changes_seen, 2u);
   change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(2u, change.changed_entries.size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
-  EXPECT_EQ("Bob", ToString(change.changed_entries.at(0).value));
-  EXPECT_EQ("phone", convert::ToString(change.changed_entries.at(1).key));
-  EXPECT_EQ("0123456789", ToString(change.changed_entries.at(1).value));
+  ASSERT_EQ(change.changed_entries.size(), 2u);
+  EXPECT_EQ(convert::ToString(change.changed_entries.at(0).key), "name");
+  EXPECT_EQ(ToString(change.changed_entries.at(0).value), "Bob");
+  EXPECT_EQ(convert::ToString(change.changed_entries.at(1).key), "phone");
+  EXPECT_EQ(ToString(change.changed_entries.at(1).value), "0123456789");
 
-  EXPECT_EQ(2u, watcher2.changes_seen);
+  EXPECT_EQ(watcher2.changes_seen, 2u);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(1u, change.changed_entries.size());
-  EXPECT_EQ("city", convert::ToString(change.changed_entries.at(0).key));
-  EXPECT_EQ("Paris", ToString(change.changed_entries.at(0).value));
+  ASSERT_EQ(change.changed_entries.size(), 1u);
+  EXPECT_EQ(convert::ToString(change.changed_entries.at(0).key), "city");
+  EXPECT_EQ(ToString(change.changed_entries.at(0).value), "Paris");
 
-  EXPECT_EQ(1u, resolver_factory->get_policy_calls);
+  EXPECT_EQ(resolver_factory->get_policy_calls, 1u);
 }
 
 TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
@@ -621,18 +621,18 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   resolver_factory->RunUntilNewConflictResolverCalled();
 
   // We now have a conflict.
-  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_EQ(resolver_factory->resolvers.size(), 1u);
   EXPECT_NE(resolver_factory->resolvers.end(),
             resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
       &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl->RunUntilResolveCalled();
-  ASSERT_EQ(1u, resolver_impl->requests.size());
+  ASSERT_EQ(resolver_impl->requests.size(), 1u);
 
   std::vector<DiffEntry> changes;
   ASSERT_TRUE(resolver_impl->requests[0].GetFullDiff(&changes));
 
-  EXPECT_EQ(4u, changes.size());
+  EXPECT_EQ(changes.size(), 4u);
   EXPECT_TRUE(ChangeMatch("city", Optional<std::string>(), Optional<std::string>(),
                           Optional<std::string>("Paris"), changes[0]));
   EXPECT_TRUE(ChangeMatch("email", Optional<std::string>(),
@@ -646,7 +646,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   // Common ancestor is empty.
   PageSnapshotPtr snapshot = resolver_impl->requests[0].common_version.Bind();
   auto entries = SnapshotGetEntries(this, &snapshot);
-  EXPECT_EQ(0u, entries.size());
+  EXPECT_EQ(entries.size(), 0u);
 
   // Prepare the merged values
   std::vector<MergedValue> merged_values;
@@ -686,10 +686,10 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
 
   auto final_entries = SnapshotGetEntries(this, &watcher.last_snapshot_);
-  ASSERT_EQ(3u, final_entries.size());
-  EXPECT_EQ("name", convert::ExtendedStringView(final_entries[0].key));
-  EXPECT_EQ("pager", convert::ExtendedStringView(final_entries[1].key));
-  EXPECT_EQ("phone", convert::ExtendedStringView(final_entries[2].key));
+  ASSERT_EQ(final_entries.size(), 3u);
+  EXPECT_EQ(convert::ExtendedStringView(final_entries[0].key), "name");
+  EXPECT_EQ(convert::ExtendedStringView(final_entries[1].key), "pager");
+  EXPECT_EQ(convert::ExtendedStringView(final_entries[2].key), "phone");
 }
 
 TEST_P(MergingIntegrationTest, CustomConflictResolutionMergeValuesOrder) {
@@ -726,18 +726,18 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMergeValuesOrder) {
   resolver_factory->RunUntilNewConflictResolverCalled();
 
   // We now have a conflict.
-  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_EQ(resolver_factory->resolvers.size(), 1u);
   EXPECT_NE(resolver_factory->resolvers.end(),
             resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
       &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl->RunUntilResolveCalled();
-  ASSERT_EQ(1u, resolver_impl->requests.size());
+  ASSERT_EQ(resolver_impl->requests.size(), 1u);
 
   std::vector<DiffEntry> changes;
   ASSERT_TRUE(resolver_impl->requests[0].GetFullDiff(&changes));
 
-  EXPECT_EQ(2u, changes.size());
+  EXPECT_EQ(changes.size(), 2u);
   EXPECT_TRUE(ChangeMatch("email", Optional<std::string>(),
                           Optional<std::string>("alice@example.org"), Optional<std::string>(),
                           changes[0]));
@@ -747,7 +747,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMergeValuesOrder) {
   // Common ancestor is empty.
   PageSnapshotPtr snapshot = resolver_impl->requests[0].common_version.Bind();
   auto entries = SnapshotGetEntries(this, &snapshot);
-  EXPECT_EQ(0u, entries.size());
+  EXPECT_EQ(entries.size(), 0u);
 
   // Prepare the merged values: Initially add, but then delete the entry with
   // key "name".
@@ -779,8 +779,8 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMergeValuesOrder) {
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
 
   auto final_entries = SnapshotGetEntries(this, &watcher.last_snapshot_);
-  ASSERT_EQ(1u, final_entries.size());
-  EXPECT_EQ("email", convert::ExtendedStringView(final_entries[0].key));
+  ASSERT_EQ(final_entries.size(), 1u);
+  EXPECT_EQ(convert::ExtendedStringView(final_entries[0].key), "email");
 }
 
 TEST_P(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
@@ -825,18 +825,18 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
 
   // We now have a conflict, wait for the resolve to be called.
   resolver_factory->RunUntilNewConflictResolverCalled();
-  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_EQ(resolver_factory->resolvers.size(), 1u);
   EXPECT_NE(resolver_factory->resolvers.end(),
             resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
       &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl->RunUntilResolveCalled();
-  ASSERT_EQ(1u, resolver_impl->requests.size());
+  ASSERT_EQ(resolver_impl->requests.size(), 1u);
 
   std::vector<DiffEntry> changes;
   ASSERT_TRUE(resolver_impl->requests[0].GetFullDiff(&changes, 1));
 
-  EXPECT_EQ(2u * N, changes.size());
+  EXPECT_EQ(changes.size(), 2u * N);
   // Keys are in order, so we expect to have all the page1_key_* keys before the
   // page2_key_* keys.
   for (int i = 0; i < N; ++i) {
@@ -884,27 +884,27 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
   resolver_factory->RunUntilNewConflictResolverCalled();
 
   // We now have a conflict.
-  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_EQ(resolver_factory->resolvers.size(), 1u);
   EXPECT_NE(resolver_factory->resolvers.end(),
             resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
       &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl->RunUntilResolveCalled();
-  EXPECT_EQ(1u, resolver_impl->requests.size());
+  EXPECT_EQ(resolver_impl->requests.size(), 1u);
 
   // Kill the resolver
   resolver_factory->resolvers.clear();
-  EXPECT_EQ(0u, resolver_factory->resolvers.size());
+  EXPECT_EQ(resolver_factory->resolvers.size(), 0u);
 
   resolver_factory->RunUntilNewConflictResolverCalled();
 
   // We should ask again for a resolution.
-  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_EQ(resolver_factory->resolvers.size(), 1u);
   EXPECT_NE(resolver_factory->resolvers.end(),
             resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   resolver_impl = &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl->RunUntilResolveCalled();
-  ASSERT_EQ(1u, resolver_impl->requests.size());
+  ASSERT_EQ(resolver_impl->requests.size(), 1u);
 
   // Remove all references to a page:
   page1 = nullptr;
@@ -951,14 +951,14 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
   resolver_factory->RunUntilNewConflictResolverCalled();
 
   // We now have a conflict.
-  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_EQ(resolver_factory->resolvers.size(), 1u);
   EXPECT_NE(resolver_factory->resolvers.end(),
             resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
       &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   EXPECT_FALSE(resolver_impl->disconnected);
   resolver_impl->RunUntilResolveCalled();
-  EXPECT_EQ(1u, resolver_impl->requests.size());
+  EXPECT_EQ(resolver_impl->requests.size(), 1u);
 
   // Change the factory.
   ConflictResolverFactoryPtr resolver_factory_ptr2;
@@ -972,13 +972,13 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
   resolver_factory2->RunUntilNewConflictResolverCalled();
 
   // We should ask again for a resolution on a new resolver.
-  EXPECT_EQ(1u, resolver_factory2->resolvers.size());
+  EXPECT_EQ(resolver_factory2->resolvers.size(), 1u);
   ASSERT_NE(resolver_factory2->resolvers.end(),
             resolver_factory2->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl2 =
       &(resolver_factory2->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl2->RunUntilResolveCalled();
-  ASSERT_EQ(1u, resolver_impl2->requests.size());
+  ASSERT_EQ(resolver_impl2->requests.size(), 1u);
 
   // Remove all references to a page:
   page1 = nullptr;
@@ -1026,13 +1026,13 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
   resolver_factory->RunUntilNewConflictResolverCalled();
 
   // We now have a conflict.
-  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_EQ(resolver_factory->resolvers.size(), 1u);
   EXPECT_NE(resolver_factory->resolvers.end(),
             resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
       &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl->RunUntilResolveCalled();
-  ASSERT_EQ(1u, resolver_impl->requests.size());
+  ASSERT_EQ(resolver_impl->requests.size(), 1u);
 
   // Prepare the merged values
   std::vector<MergedValue> merged_values;
@@ -1072,9 +1072,9 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
 
   auto final_entries = SnapshotGetEntries(this, &watcher.last_snapshot_);
-  ASSERT_EQ(2u, final_entries.size());
-  EXPECT_EQ("name", convert::ExtendedStringView(final_entries[0].key));
-  EXPECT_EQ("pager", convert::ExtendedStringView(final_entries[1].key));
+  ASSERT_EQ(final_entries.size(), 2u);
+  EXPECT_EQ(convert::ExtendedStringView(final_entries[0].key), "name");
+  EXPECT_EQ(convert::ExtendedStringView(final_entries[1].key), "pager");
 }
 
 TEST_P(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
@@ -1118,14 +1118,14 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
   page1->Commit();
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   // We should have seen the first commit at this point.
-  EXPECT_EQ(1u, watcher.changes_seen);
+  EXPECT_EQ(watcher.changes_seen, 1u);
 
   page2->Commit();
 
   resolver_factory->RunUntilNewConflictResolverCalled();
 
   // We now have an automatically-resolved conflict.
-  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_EQ(resolver_factory->resolvers.size(), 1u);
   EXPECT_NE(resolver_factory->resolvers.end(),
             resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
@@ -1134,15 +1134,15 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
   // The waiter is notified of the second change while the resolver has not been
   // asked to resolve anything.
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
-  EXPECT_EQ(0u, resolver_impl->requests.size());
-  EXPECT_EQ(2u, watcher.changes_seen);
+  EXPECT_EQ(resolver_impl->requests.size(), 0u);
+  EXPECT_EQ(watcher.changes_seen, 2u);
 
   auto final_entries = SnapshotGetEntries(this, &watcher.last_snapshot_);
-  ASSERT_EQ(4u, final_entries.size());
-  EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0].key));
-  EXPECT_EQ("email", convert::ExtendedStringView(final_entries[1].key));
-  EXPECT_EQ("name", convert::ExtendedStringView(final_entries[2].key));
-  EXPECT_EQ("phone", convert::ExtendedStringView(final_entries[3].key));
+  ASSERT_EQ(final_entries.size(), 4u);
+  EXPECT_EQ(convert::ExtendedStringView(final_entries[0].key), "city");
+  EXPECT_EQ(convert::ExtendedStringView(final_entries[1].key), "email");
+  EXPECT_EQ(convert::ExtendedStringView(final_entries[2].key), "name");
+  EXPECT_EQ(convert::ExtendedStringView(final_entries[3].key), "phone");
 }
 
 TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
@@ -1181,18 +1181,18 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   resolver_factory->RunUntilNewConflictResolverCalled();
 
   // We now have a conflict.
-  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_EQ(resolver_factory->resolvers.size(), 1u);
   EXPECT_NE(resolver_factory->resolvers.end(),
             resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
       &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl->RunUntilResolveCalled();
-  ASSERT_EQ(1u, resolver_impl->requests.size());
+  ASSERT_EQ(resolver_impl->requests.size(), 1u);
 
   std::vector<DiffEntry> changes;
   ASSERT_TRUE(resolver_impl->requests[0].GetFullDiff(&changes));
 
-  EXPECT_EQ(2u, changes.size());
+  EXPECT_EQ(changes.size(), 2u);
   // Left change is the most recent, so the one made on |page2|.
   EXPECT_TRUE(ChangeMatch("city", Optional<std::string>(), Optional<std::string>("San Francisco"),
                           Optional<std::string>("Paris"), changes[0]));
@@ -1202,7 +1202,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   // Common ancestor is empty.
   PageSnapshotPtr snapshot = resolver_impl->requests[0].common_version.Bind();
   auto entries = SnapshotGetEntries(this, &snapshot);
-  EXPECT_EQ(0u, entries.size());
+  EXPECT_EQ(entries.size(), 0u);
 
   // Prepare the merged values
   std::vector<MergedValue> merged_values;
@@ -1227,9 +1227,9 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
 
   auto final_entries = SnapshotGetEntries(this, &watcher.last_snapshot_);
-  ASSERT_EQ(2u, final_entries.size());
-  EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0].key));
-  EXPECT_EQ("name", convert::ExtendedStringView(final_entries[1].key));
+  ASSERT_EQ(final_entries.size(), 2u);
+  EXPECT_EQ(convert::ExtendedStringView(final_entries[0].key), "city");
+  EXPECT_EQ(convert::ExtendedStringView(final_entries[1].key), "name");
 }
 
 TEST_P(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
@@ -1267,13 +1267,13 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
   resolver_factory->RunUntilNewConflictResolverCalled();
 
   // We now have a conflict.
-  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_EQ(resolver_factory->resolvers.size(), 1u);
   EXPECT_NE(resolver_factory->resolvers.end(),
             resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
       &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl->RunUntilResolveCalled();
-  ASSERT_EQ(1u, resolver_impl->requests.size());
+  ASSERT_EQ(resolver_impl->requests.size(), 1u);
 
   // Prepare the merged values
   std::vector<MergedValue> merged_values;
@@ -1306,10 +1306,10 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
 
   auto final_entries = SnapshotGetEntries(this, &watcher.last_snapshot_);
-  ASSERT_EQ(3u, final_entries.size());
-  EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0].key));
-  EXPECT_EQ("name", convert::ExtendedStringView(final_entries[1].key));
-  EXPECT_EQ("previous_city", convert::ExtendedStringView(final_entries[2].key));
+  ASSERT_EQ(final_entries.size(), 3u);
+  EXPECT_EQ(convert::ExtendedStringView(final_entries[0].key), "city");
+  EXPECT_EQ(convert::ExtendedStringView(final_entries[1].key), "name");
+  EXPECT_EQ(convert::ExtendedStringView(final_entries[2].key), "previous_city");
 }
 
 // Tests a merge in which the right side contains no change (e.g. a change was
@@ -1349,7 +1349,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
 
   // We should have seen the first commit of page 1.
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
-  EXPECT_EQ(1u, watcher.changes_seen);
+  EXPECT_EQ(watcher.changes_seen, 1u);
 
   page1->StartTransaction();
   page1->Delete(convert::ToArray("name"));
@@ -1357,7 +1357,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
 
   // We should have seen the second commit of page 1.
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
-  EXPECT_EQ(2u, watcher.changes_seen);
+  EXPECT_EQ(watcher.changes_seen, 2u);
 
   page2->Put(convert::ToArray("email"), convert::ToArray("alice@example.org"));
   page2->Commit();
@@ -1365,7 +1365,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
   resolver_factory->RunUntilNewConflictResolverCalled();
 
   // We now have an automatically-resolved conflict.
-  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_EQ(resolver_factory->resolvers.size(), 1u);
   ASSERT_NE(resolver_factory->resolvers.end(),
             resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
@@ -1374,12 +1374,12 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
   // The waiter is notified of the third change while the resolver has not been
   // asked to resolve anything.
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
-  EXPECT_EQ(0u, resolver_impl->requests.size());
-  EXPECT_EQ(3u, watcher.changes_seen);
+  EXPECT_EQ(resolver_impl->requests.size(), 0u);
+  EXPECT_EQ(watcher.changes_seen, 3u);
 
   auto final_entries = SnapshotGetEntries(this, &watcher.last_snapshot_);
-  ASSERT_EQ(1u, final_entries.size());
-  EXPECT_EQ("email", convert::ExtendedStringView(final_entries[0].key));
+  ASSERT_EQ(final_entries.size(), 1u);
+  EXPECT_EQ(convert::ExtendedStringView(final_entries[0].key), "email");
 }
 
 TEST_P(MergingIntegrationTest, WaitForCustomMerge) {
@@ -1418,13 +1418,13 @@ TEST_P(MergingIntegrationTest, WaitForCustomMerge) {
   resolver_factory->RunUntilNewConflictResolverCalled();
 
   // Check that we have a resolver and pending conflict resolution request.
-  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_EQ(resolver_factory->resolvers.size(), 1u);
   EXPECT_NE(resolver_factory->resolvers.end(),
             resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
       &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl->RunUntilResolveCalled();
-  ASSERT_EQ(1u, resolver_impl->requests.size());
+  ASSERT_EQ(resolver_impl->requests.size(), 1u);
 
   // Try to wait for conflicts resolution.
   auto conflicts_resolved_callback_waiter = NewWaiter();
@@ -1444,7 +1444,7 @@ TEST_P(MergingIntegrationTest, WaitForCustomMerge) {
 
   // Now conflict_resolved_callback can run.
   ASSERT_TRUE(conflicts_resolved_callback_waiter->RunUntilCalled());
-  EXPECT_EQ(ConflictResolutionWaitStatus::CONFLICTS_RESOLVED, wait_status);
+  EXPECT_EQ(wait_status, ConflictResolutionWaitStatus::CONFLICTS_RESOLVED);
 }
 
 TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
@@ -1483,18 +1483,18 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
   resolver_factory->RunUntilNewConflictResolverCalled();
 
   // We now have a conflict.
-  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_EQ(resolver_factory->resolvers.size(), 1u);
   EXPECT_NE(resolver_factory->resolvers.end(),
             resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
       &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl->RunUntilResolveCalled();
-  ASSERT_EQ(1u, resolver_impl->requests.size());
+  ASSERT_EQ(resolver_impl->requests.size(), 1u);
 
   std::vector<DiffEntry> changes;
   ASSERT_TRUE(resolver_impl->requests[0].GetConflictingDiff(&changes));
 
-  EXPECT_EQ(1u, changes.size());
+  EXPECT_EQ(changes.size(), 1u);
   EXPECT_TRUE(ChangeMatch("name", Optional<std::string>(), Optional<std::string>("Bob"),
                           Optional<std::string>("Alice"), changes[0]));
 
@@ -1522,13 +1522,13 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
 
   auto final_entries = SnapshotGetEntries(this, &watcher.last_snapshot_);
-  ASSERT_EQ(3u, final_entries.size());
-  EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0].key));
-  EXPECT_EQ("Paris", ToString(final_entries[0].value));
-  EXPECT_EQ("name", convert::ExtendedStringView(final_entries[1].key));
-  EXPECT_EQ("Alice", ToString(final_entries[1].value));
-  EXPECT_EQ("phone", convert::ExtendedStringView(final_entries[2].key));
-  EXPECT_EQ("0123456789", ToString(final_entries[2].value));
+  ASSERT_EQ(final_entries.size(), 3u);
+  EXPECT_EQ(convert::ExtendedStringView(final_entries[0].key), "city");
+  EXPECT_EQ(ToString(final_entries[0].value), "Paris");
+  EXPECT_EQ(convert::ExtendedStringView(final_entries[1].key), "name");
+  EXPECT_EQ(ToString(final_entries[1].value), "Alice");
+  EXPECT_EQ(convert::ExtendedStringView(final_entries[2].key), "phone");
+  EXPECT_EQ(ToString(final_entries[2].value), "0123456789");
 }
 
 // Test that multiple ConflictResolverFactories can be registered, and that
@@ -1555,19 +1555,19 @@ TEST_P(MergingIntegrationTest, ConflictResolverFactoryNotChanged) {
 
   // resolver_factory1 has received one request for page1
   ASSERT_TRUE(resolver_factory_waiter1->RunUntilCalled());
-  EXPECT_EQ(1u, resolver_factory1->get_policy_calls);
+  EXPECT_EQ(resolver_factory1->get_policy_calls, 1u);
 
   // Connect resolver_factory2 on ledger_ptr1. It does not receive requests
   ledger_ptr->SetConflictResolverFactory(std::move(resolver_factory_ptr2));
 
   RunLoopFor(zx::msec(250));
-  EXPECT_EQ(0u, resolver_factory2->get_policy_calls);
+  EXPECT_EQ(resolver_factory2->get_policy_calls, 0u);
 
   PagePtr page2 = instance->GetTestPage();
   // resolver_factory1 has received one request for page2
   ASSERT_TRUE(resolver_factory_waiter1->RunUntilCalled());
-  EXPECT_EQ(2u, resolver_factory1->get_policy_calls);
-  EXPECT_EQ(0u, resolver_factory2->get_policy_calls);
+  EXPECT_EQ(resolver_factory1->get_policy_calls, 2u);
+  EXPECT_EQ(resolver_factory2->get_policy_calls, 0u);
 }
 
 // Tests that when a conflict resolution factory disconnects:
@@ -1593,7 +1593,7 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryFailover) {
 
   // resolver_factory1 has received one request for page1
   ASSERT_TRUE(resolver_factory_waiter1->RunUntilCalled());
-  EXPECT_EQ(1u, resolver_factory1->get_policy_calls);
+  EXPECT_EQ(resolver_factory1->get_policy_calls, 1u);
 
   // Connect resolver_factory2 on ledger_ptr1. It does not receive requests
   ledger_ptr->SetConflictResolverFactory(std::move(resolver_factory_ptr2));
@@ -1601,12 +1601,12 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryFailover) {
   // Disconnect resolver_factory1
   resolver_factory1->Disconnect();
   ASSERT_TRUE(resolver_factory_waiter2->RunUntilCalled());
-  EXPECT_EQ(1u, resolver_factory2->get_policy_calls);
+  EXPECT_EQ(resolver_factory2->get_policy_calls, 1u);
 
   PagePtr page2 = instance->GetTestPage();
   // resolver_factory2 has received one request for page2
   ASSERT_TRUE(resolver_factory_waiter2->RunUntilCalled());
-  EXPECT_EQ(2u, resolver_factory2->get_policy_calls);
+  EXPECT_EQ(resolver_factory2->get_policy_calls, 2u);
 }
 
 // Tests that when a conflict resolution factory disconnects, already
@@ -1662,20 +1662,20 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryUnavailableMergingContin
   page_conn1->Commit();
 
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
-  EXPECT_EQ(1u, watcher1.changes_seen);
+  EXPECT_EQ(watcher1.changes_seen, 1u);
   PageChange change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(1u, change.changed_entries.size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
-  EXPECT_EQ("Alice", ToString(change.changed_entries.at(0).value));
+  ASSERT_EQ(change.changed_entries.size(), 1u);
+  EXPECT_EQ(convert::ToString(change.changed_entries.at(0).key), "name");
+  EXPECT_EQ(ToString(change.changed_entries.at(0).value), "Alice");
 
   page_conn2->Commit();
 
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
-  EXPECT_EQ(1u, watcher2.changes_seen);
+  EXPECT_EQ(watcher2.changes_seen, 1u);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(1u, change.changed_entries.size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
-  EXPECT_EQ("Bob", ToString(change.changed_entries.at(0).value));
+  ASSERT_EQ(change.changed_entries.size(), 1u);
+  EXPECT_EQ(convert::ToString(change.changed_entries.at(0).key), "name");
+  EXPECT_EQ(ToString(change.changed_entries.at(0).value), "Bob");
 
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   PageSnapshotPtr snapshot3;
@@ -1698,8 +1698,8 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryUnavailableMergingContin
 
   ASSERT_TRUE(result1.is_response());
   ASSERT_TRUE(result2.is_response());
-  EXPECT_EQ(convert::ToString(result1.response().value.value),
-            convert::ToString(result2.response().value.value));
+  EXPECT_EQ(convert::ToString(result2.response().value.value),
+            convert::ToString(result1.response().value.value));
 }
 
 // Tests that pages opened after disconnection of a conflict resolver
@@ -1757,20 +1757,20 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryUnavailableNewPagesMerge
   page_conn1->Commit();
 
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
-  EXPECT_EQ(1u, watcher1.changes_seen);
+  EXPECT_EQ(watcher1.changes_seen, 1u);
   PageChange change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(1u, change.changed_entries.size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
-  EXPECT_EQ("Alice", ToString(change.changed_entries.at(0).value));
+  ASSERT_EQ(change.changed_entries.size(), 1u);
+  EXPECT_EQ(convert::ToString(change.changed_entries.at(0).key), "name");
+  EXPECT_EQ(ToString(change.changed_entries.at(0).value), "Alice");
 
   page_conn2->Commit();
 
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
-  EXPECT_EQ(1u, watcher2.changes_seen);
+  EXPECT_EQ(watcher2.changes_seen, 1u);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(1u, change.changed_entries.size());
-  EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
-  EXPECT_EQ("Bob", ToString(change.changed_entries.at(0).value));
+  ASSERT_EQ(change.changed_entries.size(), 1u);
+  EXPECT_EQ(convert::ToString(change.changed_entries.at(0).key), "name");
+  EXPECT_EQ(ToString(change.changed_entries.at(0).value), "Bob");
 
   RunLoopFor(zx::sec(1));
   EXPECT_TRUE(watcher_waiter->NotCalledYet());
@@ -1804,8 +1804,8 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryUnavailableNewPagesMerge
 
   ASSERT_TRUE(result1.is_response());
   ASSERT_TRUE(result2.is_response());
-  EXPECT_EQ(convert::ToString(result1.response().value.value),
-            convert::ToString(result2.response().value.value));
+  EXPECT_EQ(convert::ToString(result2.response().value.value),
+            convert::ToString(result1.response().value.value));
 }
 
 INSTANTIATE_TEST_SUITE_P(MergingIntegrationTest, MergingIntegrationTest,

@@ -13,61 +13,61 @@ namespace {
 
 TEST(DetachedPathTest, Creation) {
   DetachedPath path1;
-  EXPECT_EQ(AT_FDCWD, path1.root_fd());
-  EXPECT_EQ(".", path1.path());
+  EXPECT_EQ(path1.root_fd(), AT_FDCWD);
+  EXPECT_EQ(path1.path(), ".");
 
   DetachedPath path2(1);
-  EXPECT_EQ(1, path2.root_fd());
-  EXPECT_EQ(".", path2.path());
+  EXPECT_EQ(path2.root_fd(), 1);
+  EXPECT_EQ(path2.path(), ".");
 
   DetachedPath path3(1, "foo");
-  EXPECT_EQ(1, path3.root_fd());
-  EXPECT_EQ("foo", path3.path());
+  EXPECT_EQ(path3.root_fd(), 1);
+  EXPECT_EQ(path3.path(), "foo");
 }
 
 TEST(DetachedPathTest, RelativeToDotSubPath) {
   DetachedPath path(1);
   DetachedPath subpath1 = path.SubPath("foo");
-  EXPECT_EQ(1, subpath1.root_fd());
-  EXPECT_EQ("./foo", subpath1.path());
+  EXPECT_EQ(subpath1.root_fd(), 1);
+  EXPECT_EQ(subpath1.path(), "./foo");
   DetachedPath subpath2 = path.SubPath({"foo", "bar"});
-  EXPECT_EQ(1, subpath2.root_fd());
-  EXPECT_EQ("./foo/bar", subpath2.path());
+  EXPECT_EQ(subpath2.root_fd(), 1);
+  EXPECT_EQ(subpath2.path(), "./foo/bar");
 }
 
 TEST(DetachedPathTest, RelativeToDirSubPath) {
   DetachedPath path(1, "base");
   DetachedPath subpath1 = path.SubPath("foo");
-  EXPECT_EQ(1, subpath1.root_fd());
-  EXPECT_EQ("base/foo", subpath1.path());
+  EXPECT_EQ(subpath1.root_fd(), 1);
+  EXPECT_EQ(subpath1.path(), "base/foo");
   DetachedPath subpath2 = path.SubPath({"foo", "bar"});
-  EXPECT_EQ(1, subpath2.root_fd());
-  EXPECT_EQ("base/foo/bar", subpath2.path());
+  EXPECT_EQ(subpath2.root_fd(), 1);
+  EXPECT_EQ(subpath2.path(), "base/foo/bar");
 }
 
 TEST(DetachedPathTest, AbsoluteSubPath) {
   DetachedPath path(1, "/base");
   DetachedPath subpath1 = path.SubPath("foo");
-  EXPECT_EQ(1, subpath1.root_fd());
-  EXPECT_EQ("/base/foo", subpath1.path());
+  EXPECT_EQ(subpath1.root_fd(), 1);
+  EXPECT_EQ(subpath1.path(), "/base/foo");
   DetachedPath subpath2 = path.SubPath({"foo", "bar"});
-  EXPECT_EQ(1, subpath2.root_fd());
-  EXPECT_EQ("/base/foo/bar", subpath2.path());
+  EXPECT_EQ(subpath2.root_fd(), 1);
+  EXPECT_EQ(subpath2.path(), "/base/foo/bar");
 }
 
 TEST(DetatchedPathTest, OpenFD) {
   scoped_tmpfs::ScopedTmpFS tmpfs;
   DetachedPath path(tmpfs.root_fd(), "base");
   DetachedPath subpath = path.SubPath("foo");
-  EXPECT_EQ(path.root_fd(), subpath.root_fd());
-  EXPECT_EQ("base/foo", subpath.path());
+  EXPECT_EQ(subpath.root_fd(), path.root_fd());
+  EXPECT_EQ(subpath.path(), "base/foo");
 
   DetachedPath new_subpath;
   ASSERT_TRUE(files::CreateDirectoryAt(subpath.root_fd(), subpath.path()));
   fxl::UniqueFD fd = path.OpenFD(&new_subpath);
   EXPECT_TRUE(fd.is_valid());
   EXPECT_NE(subpath.root_fd(), new_subpath.root_fd());
-  EXPECT_EQ(".", new_subpath.path());
+  EXPECT_EQ(new_subpath.path(), ".");
 }
 
 }  // namespace

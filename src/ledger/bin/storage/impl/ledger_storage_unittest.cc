@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
-#include <lib/gtest/test_loop_fixture.h>
-
 #include <algorithm>
 #include <memory>
 #include <set>
 #include <vector>
+
+#include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
+#include <lib/gtest/test_loop_fixture.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -42,7 +42,7 @@ class LedgerStorageTest : public ledger::TestWithEnvironment {
   void SetUp() override {
     ledger::TestWithEnvironment::SetUp();
 
-    ASSERT_EQ(Status::OK, storage_.Init());
+    ASSERT_EQ(storage_.Init(), Status::OK);
   }
 
  private:
@@ -65,23 +65,23 @@ TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
       page_id, callback::Capture(callback::SetWhenCalled(&called), &status, &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::PAGE_NOT_FOUND, status);
-  EXPECT_EQ(nullptr, page_storage);
+  EXPECT_EQ(status, Status::PAGE_NOT_FOUND);
+  EXPECT_EQ(page_storage, nullptr);
 
   storage_.CreatePageStorage(
       page_id, callback::Capture(callback::SetWhenCalled(&called), &status, &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(status, Status::OK);
   ASSERT_NE(nullptr, page_storage);
-  ASSERT_EQ(page_id, page_storage->GetId());
+  ASSERT_EQ(page_storage->GetId(), page_id);
 
   page_storage.reset();
   storage_.GetPageStorage(
       page_id, callback::Capture(callback::SetWhenCalled(&called), &status, &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_NE(nullptr, page_storage);
 }
 
@@ -94,29 +94,29 @@ TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
       page_id, callback::Capture(callback::SetWhenCalled(&called), &status, &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(status, Status::OK);
   ASSERT_NE(nullptr, page_storage);
-  ASSERT_EQ(page_id, page_storage->GetId());
+  ASSERT_EQ(page_storage->GetId(), page_id);
   page_storage.reset();
 
   storage_.GetPageStorage(
       page_id, callback::Capture(callback::SetWhenCalled(&called), &status, &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_NE(nullptr, page_storage);
 
   storage_.DeletePageStorage(page_id, callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
 
   storage_.GetPageStorage(
       page_id, callback::Capture(callback::SetWhenCalled(&called), &status, &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::PAGE_NOT_FOUND, status);
-  EXPECT_EQ(nullptr, page_storage);
+  EXPECT_EQ(status, Status::PAGE_NOT_FOUND);
+  EXPECT_EQ(page_storage, nullptr);
 }
 
 TEST_F(LedgerStorageTest, DeletePageStorageNotFound) {
@@ -127,7 +127,7 @@ TEST_F(LedgerStorageTest, DeletePageStorageNotFound) {
   storage_.DeletePageStorage(page_id, callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::PAGE_NOT_FOUND, status);
+  EXPECT_EQ(status, Status::PAGE_NOT_FOUND);
 }
 
 TEST_F(LedgerStorageTest, ListNoPages) {
@@ -139,7 +139,7 @@ TEST_F(LedgerStorageTest, ListNoPages) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &listed_page_ids));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_THAT(listed_page_ids, IsEmpty());
 }
 
@@ -156,7 +156,7 @@ TEST_F(LedgerStorageTest, ListPages) {
                                                                   &status, &page_storages[i]));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
-    ASSERT_EQ(Status::OK, status);
+    ASSERT_EQ(status, Status::OK);
     ASSERT_NE(nullptr, page_storages[i]);
 
     expected_page_ids.push_back(all_page_ids[i]);
@@ -165,7 +165,7 @@ TEST_F(LedgerStorageTest, ListPages) {
         callback::Capture(callback::SetWhenCalled(&called), &status, &listed_page_ids));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
-    ASSERT_EQ(Status::OK, status);
+    ASSERT_EQ(status, Status::OK);
     ASSERT_THAT(listed_page_ids, ElementsAreArray(expected_page_ids));
   }
 
@@ -178,7 +178,7 @@ TEST_F(LedgerStorageTest, ListPages) {
         callback::Capture(callback::SetWhenCalled(&called), &status, &listed_page_ids));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
-    ASSERT_EQ(Status::OK, status);
+    ASSERT_EQ(status, Status::OK);
     ASSERT_THAT(listed_page_ids, ElementsAreArray(all_page_ids));
   }
 
@@ -188,7 +188,7 @@ TEST_F(LedgerStorageTest, ListPages) {
                                callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
-    ASSERT_EQ(Status::OK, status);
+    ASSERT_EQ(status, Status::OK);
     expected_page_ids.erase(expected_page_ids.begin());
 
     std::set<PageId> listed_page_ids;
@@ -196,7 +196,7 @@ TEST_F(LedgerStorageTest, ListPages) {
         callback::Capture(callback::SetWhenCalled(&called), &status, &listed_page_ids));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
-    ASSERT_EQ(Status::OK, status);
+    ASSERT_EQ(status, Status::OK);
     ASSERT_THAT(listed_page_ids, ElementsAreArray(expected_page_ids));
   }
 }

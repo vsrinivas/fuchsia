@@ -4,10 +4,10 @@
 
 #include "src/ledger/bin/encryption/primitives/encrypt.h"
 
+#include <algorithm>
+
 #include <gtest/gtest.h>
 #include <zircon/syscalls.h>
-
-#include <algorithm>
 
 #include "peridot/lib/rng/test_random.h"
 
@@ -33,7 +33,7 @@ TEST_P(EncryptTest, Correctness) {
 
   // Check that decrypted is the original message.
   ASSERT_TRUE(AES128GCMSIVDecrypt(key, encrypted, &decrypted));
-  EXPECT_EQ(message, decrypted);
+  EXPECT_EQ(decrypted, message);
 
   // Check that changing any of the first 128 bytes breaks the encryption.
   for (size_t index = 0; index < std::min<size_t>(128u, encrypted.size()); ++index) {

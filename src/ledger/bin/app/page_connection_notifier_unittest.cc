@@ -4,11 +4,11 @@
 
 #include "src/ledger/bin/app/page_connection_notifier.h"
 
+#include <random>
+
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
-
-#include <random>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
@@ -37,7 +37,7 @@ class PageConnectionNotifierTest : public TestWithEnvironment {
 TEST_F(PageConnectionNotifierTest, SingleExternalRequest) {
   page_connection_notifier_.RegisterExternalRequest();
 
-  EXPECT_EQ(1, fake_disk_cleanup_manager_.page_opened_count);
+  EXPECT_EQ(fake_disk_cleanup_manager_.page_opened_count, 1);
   EXPECT_FALSE(page_connection_notifier_.IsEmpty());
 }
 
@@ -46,7 +46,7 @@ TEST_F(PageConnectionNotifierTest, MultipleExternalRequests) {
   page_connection_notifier_.RegisterExternalRequest();
   page_connection_notifier_.RegisterExternalRequest();
 
-  EXPECT_EQ(1, fake_disk_cleanup_manager_.page_opened_count);
+  EXPECT_EQ(fake_disk_cleanup_manager_.page_opened_count, 1);
   EXPECT_FALSE(page_connection_notifier_.IsEmpty());
 }
 
@@ -57,8 +57,8 @@ TEST_F(PageConnectionNotifierTest, UnregisteredExternalRequests) {
   page_connection_notifier_.RegisterExternalRequest();
   page_connection_notifier_.UnregisterExternalRequests();
 
-  EXPECT_EQ(1, fake_disk_cleanup_manager_.page_opened_count);
-  EXPECT_EQ(1, fake_disk_cleanup_manager_.page_closed_count);
+  EXPECT_EQ(fake_disk_cleanup_manager_.page_opened_count, 1);
+  EXPECT_EQ(fake_disk_cleanup_manager_.page_closed_count, 1);
   EXPECT_TRUE(page_connection_notifier_.IsEmpty());
   EXPECT_TRUE(on_empty_called);
 }

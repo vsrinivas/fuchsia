@@ -36,7 +36,7 @@ class CommitImplTest : public StorageTest {
     std::unique_ptr<const Commit> copy;
     Status status = CommitImpl::FromStorageBytes(&tracker_, commit->GetId(),
                                                  commit->GetStorageBytes().ToString(), &copy);
-    EXPECT_EQ(Status::OK, status);
+    EXPECT_EQ(status, Status::OK);
 
     return CheckCommitEquals(*commit, *copy);
   }
@@ -78,7 +78,7 @@ TEST_F(CommitImplTest, CloneCommit) {
   std::unique_ptr<const Commit> copy;
   Status status = CommitImpl::FromStorageBytes(&tracker_, commit->GetId(),
                                                commit->GetStorageBytes().ToString(), &copy);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(status, Status::OK);
   std::unique_ptr<const Commit> clone = commit->Clone();
   EXPECT_TRUE(CheckCommitEquals(*copy, *clone));
 }
@@ -94,7 +94,7 @@ TEST_F(CommitImplTest, MergeCommitTimestamp) {
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
       &tracker_, environment_.clock(), root_node_identifier, std::move(parents));
 
-  EXPECT_EQ(max_timestamp, commit->GetTimestamp());
+  EXPECT_EQ(commit->GetTimestamp(), max_timestamp);
 }
 
 }  // namespace

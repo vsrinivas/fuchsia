@@ -4,17 +4,17 @@
 
 #include "src/ledger/bin/p2p_sync/impl/page_communicator_impl.h"
 
-#include <lib/async/cpp/task.h>
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
-#include <lib/fit/function.h>
-#include <lib/gtest/test_loop_fixture.h>
-
 #include <algorithm>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
+
+#include <lib/async/cpp/task.h>
+#include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
+#include <lib/fit/function.h>
+#include <lib/gtest/test_loop_fixture.h>
 
 // gtest matchers are in gmock and we cannot include the specific header file
 // directly as it is private to the library.
@@ -335,8 +335,8 @@ TEST_F(PageCommunicatorImplTest, ConnectToExistingMesh) {
 
   page_communicator.Start();
 
-  ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
+  ASSERT_EQ(mesh.messages_.size(), 1u);
+  EXPECT_EQ(mesh.messages_[0].first, MakeP2PClientId(2u));
 
   flatbuffers::Verifier verifier(
       reinterpret_cast<const unsigned char*>(mesh.messages_[0].second.data()),
@@ -347,12 +347,12 @@ TEST_F(PageCommunicatorImplTest, ConnectToExistingMesh) {
     return;
   };
   const Message* message = GetMessage(mesh.messages_[0].second.data());
-  ASSERT_EQ(MessageUnion_Request, message->message_type());
+  ASSERT_EQ(message->message_type(), MessageUnion_Request);
   const Request* request = static_cast<const Request*>(message->message());
   const NamespacePageId* namespace_page_id = request->namespace_page();
-  EXPECT_EQ("ledger", convert::ExtendedStringView(namespace_page_id->namespace_id()));
-  EXPECT_EQ("page", convert::ExtendedStringView(namespace_page_id->page_id()));
-  EXPECT_EQ(RequestMessage_WatchStartRequest, request->request_type());
+  EXPECT_EQ(convert::ExtendedStringView(namespace_page_id->namespace_id()), "ledger");
+  EXPECT_EQ(convert::ExtendedStringView(namespace_page_id->page_id()), "page");
+  EXPECT_EQ(request->request_type(), RequestMessage_WatchStartRequest);
 }
 
 TEST_F(PageCommunicatorImplTest, ConnectToNewMeshParticipant) {
@@ -367,8 +367,8 @@ TEST_F(PageCommunicatorImplTest, ConnectToNewMeshParticipant) {
   mesh.devices_.emplace(MakeP2PClientId(2u));
   page_communicator.OnDeviceChange(MakeP2PClientId(2u), p2p_provider::DeviceChangeType::NEW);
 
-  ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
+  ASSERT_EQ(mesh.messages_.size(), 1u);
+  EXPECT_EQ(mesh.messages_[0].first, MakeP2PClientId(2u));
 
   flatbuffers::Verifier verifier(
       reinterpret_cast<const unsigned char*>(mesh.messages_[0].second.data()),
@@ -379,12 +379,12 @@ TEST_F(PageCommunicatorImplTest, ConnectToNewMeshParticipant) {
     return;
   };
   const Message* message = GetMessage(mesh.messages_[0].second.data());
-  ASSERT_EQ(MessageUnion_Request, message->message_type());
+  ASSERT_EQ(message->message_type(), MessageUnion_Request);
   const Request* request = static_cast<const Request*>(message->message());
   const NamespacePageId* namespace_page_id = request->namespace_page();
-  EXPECT_EQ("ledger", convert::ExtendedStringView(namespace_page_id->namespace_id()));
-  EXPECT_EQ("page", convert::ExtendedStringView(namespace_page_id->page_id()));
-  EXPECT_EQ(RequestMessage_WatchStartRequest, request->request_type());
+  EXPECT_EQ(convert::ExtendedStringView(namespace_page_id->namespace_id()), "ledger");
+  EXPECT_EQ(convert::ExtendedStringView(namespace_page_id->page_id()), "page");
+  EXPECT_EQ(request->request_type(), RequestMessage_WatchStartRequest);
 }
 
 TEST_F(PageCommunicatorImplTest, GetObject) {
@@ -407,8 +407,8 @@ TEST_F(PageCommunicatorImplTest, GetObject) {
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 
-  ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
+  ASSERT_EQ(mesh.messages_.size(), 1u);
+  EXPECT_EQ(mesh.messages_[0].first, MakeP2PClientId(2u));
 
   flatbuffers::Verifier verifier(
       reinterpret_cast<const unsigned char*>(mesh.messages_[0].second.data()),
@@ -417,17 +417,17 @@ TEST_F(PageCommunicatorImplTest, GetObject) {
 
   // Verify the message sent to request the object.
   const Message* message = GetMessage(mesh.messages_[0].second.data());
-  ASSERT_EQ(MessageUnion_Request, message->message_type());
+  ASSERT_EQ(message->message_type(), MessageUnion_Request);
   const Request* request = static_cast<const Request*>(message->message());
   const NamespacePageId* namespace_page_id = request->namespace_page();
-  EXPECT_EQ("ledger", convert::ExtendedStringView(namespace_page_id->namespace_id()));
-  EXPECT_EQ("page", convert::ExtendedStringView(namespace_page_id->page_id()));
-  EXPECT_EQ(RequestMessage_ObjectRequest, request->request_type());
+  EXPECT_EQ(convert::ExtendedStringView(namespace_page_id->namespace_id()), "ledger");
+  EXPECT_EQ(convert::ExtendedStringView(namespace_page_id->page_id()), "page");
+  EXPECT_EQ(request->request_type(), RequestMessage_ObjectRequest);
   const ObjectRequest* object_request = static_cast<const ObjectRequest*>(request->request());
-  EXPECT_EQ(1u, object_request->object_ids()->size());
-  EXPECT_EQ(0u, object_request->object_ids()->begin()->key_index());
-  EXPECT_EQ(0u, object_request->object_ids()->begin()->deletion_scope_id());
-  EXPECT_EQ("foo", convert::ExtendedStringView(object_request->object_ids()->begin()->digest()));
+  EXPECT_EQ(object_request->object_ids()->size(), 1u);
+  EXPECT_EQ(object_request->object_ids()->begin()->key_index(), 0u);
+  EXPECT_EQ(object_request->object_ids()->begin()->deletion_scope_id(), 0u);
+  EXPECT_EQ(convert::ExtendedStringView(object_request->object_ids()->begin()->digest()), "foo");
 }
 
 TEST_F(PageCommunicatorImplTest, DontGetObjectsIfMarkPageSyncedToPeerFailed) {
@@ -452,7 +452,7 @@ TEST_F(PageCommunicatorImplTest, DontGetObjectsIfMarkPageSyncedToPeerFailed) {
                                                 &is_object_synced, &data));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(ledger::Status::INTERNAL_NOT_FOUND, status);
+  EXPECT_EQ(status, ledger::Status::INTERNAL_NOT_FOUND);
   EXPECT_THAT(mesh.messages_, IsEmpty());
 }
 
@@ -481,8 +481,8 @@ TEST_F(PageCommunicatorImplTest, ObjectRequest) {
   RunLoopUntilIdle();
 
   // Verify the response.
-  ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
+  ASSERT_EQ(mesh.messages_.size(), 1u);
+  EXPECT_EQ(mesh.messages_[0].first, MakeP2PClientId(2u));
 
   flatbuffers::Verifier verifier(
       reinterpret_cast<const unsigned char*>(mesh.messages_[0].second.data()),
@@ -490,22 +490,22 @@ TEST_F(PageCommunicatorImplTest, ObjectRequest) {
   ASSERT_TRUE(VerifyMessageBuffer(verifier));
 
   const Message* reply_message = GetMessage(mesh.messages_[0].second.data());
-  ASSERT_EQ(MessageUnion_Response, reply_message->message_type());
+  ASSERT_EQ(reply_message->message_type(), MessageUnion_Response);
   const Response* response = static_cast<const Response*>(reply_message->message());
   const NamespacePageId* response_namespace_page_id = response->namespace_page();
-  EXPECT_EQ("ledger", convert::ExtendedStringView(response_namespace_page_id->namespace_id()));
-  EXPECT_EQ("page", convert::ExtendedStringView(response_namespace_page_id->page_id()));
-  EXPECT_EQ(ResponseMessage_ObjectResponse, response->response_type());
+  EXPECT_EQ(convert::ExtendedStringView(response_namespace_page_id->namespace_id()), "ledger");
+  EXPECT_EQ(convert::ExtendedStringView(response_namespace_page_id->page_id()), "page");
+  EXPECT_EQ(response->response_type(), ResponseMessage_ObjectResponse);
   const ObjectResponse* object_response = static_cast<const ObjectResponse*>(response->response());
-  ASSERT_EQ(2u, object_response->objects()->size());
+  ASSERT_EQ(object_response->objects()->size(), 2u);
   auto it = object_response->objects()->begin();
-  EXPECT_EQ("object_digest", convert::ExtendedStringView(it->id()->digest()));
-  EXPECT_EQ(ObjectStatus_OK, it->status());
-  EXPECT_EQ("some data", convert::ExtendedStringView(it->data()->bytes()));
-  EXPECT_EQ(ObjectSyncStatus_UNSYNCED, it->sync_status());
+  EXPECT_EQ(convert::ExtendedStringView(it->id()->digest()), "object_digest");
+  EXPECT_EQ(it->status(), ObjectStatus_OK);
+  EXPECT_EQ(convert::ExtendedStringView(it->data()->bytes()), "some data");
+  EXPECT_EQ(it->sync_status(), ObjectSyncStatus_UNSYNCED);
   it++;
-  EXPECT_EQ("object_digest2", convert::ExtendedStringView(it->id()->digest()));
-  EXPECT_EQ(ObjectStatus_UNKNOWN_OBJECT, it->status());
+  EXPECT_EQ(convert::ExtendedStringView(it->id()->digest()), "object_digest2");
+  EXPECT_EQ(it->status(), ObjectStatus_UNKNOWN_OBJECT);
 }
 
 TEST_F(PageCommunicatorImplTest, ObjectRequestSynced) {
@@ -532,8 +532,8 @@ TEST_F(PageCommunicatorImplTest, ObjectRequestSynced) {
   RunLoopUntilIdle();
 
   // Verify the response.
-  ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
+  ASSERT_EQ(mesh.messages_.size(), 1u);
+  EXPECT_EQ(mesh.messages_[0].first, MakeP2PClientId(2u));
 
   flatbuffers::Verifier verifier(
       reinterpret_cast<const unsigned char*>(mesh.messages_[0].second.data()),
@@ -541,19 +541,19 @@ TEST_F(PageCommunicatorImplTest, ObjectRequestSynced) {
   ASSERT_TRUE(VerifyMessageBuffer(verifier));
 
   const Message* reply_message = GetMessage(mesh.messages_[0].second.data());
-  ASSERT_EQ(MessageUnion_Response, reply_message->message_type());
+  ASSERT_EQ(reply_message->message_type(), MessageUnion_Response);
   const Response* response = static_cast<const Response*>(reply_message->message());
   const NamespacePageId* response_namespace_page_id = response->namespace_page();
-  EXPECT_EQ("ledger", convert::ExtendedStringView(response_namespace_page_id->namespace_id()));
-  EXPECT_EQ("page", convert::ExtendedStringView(response_namespace_page_id->page_id()));
-  EXPECT_EQ(ResponseMessage_ObjectResponse, response->response_type());
+  EXPECT_EQ(convert::ExtendedStringView(response_namespace_page_id->namespace_id()), "ledger");
+  EXPECT_EQ(convert::ExtendedStringView(response_namespace_page_id->page_id()), "page");
+  EXPECT_EQ(response->response_type(), ResponseMessage_ObjectResponse);
   const ObjectResponse* object_response = static_cast<const ObjectResponse*>(response->response());
-  ASSERT_EQ(1u, object_response->objects()->size());
+  ASSERT_EQ(object_response->objects()->size(), 1u);
   auto it = object_response->objects()->begin();
-  EXPECT_EQ("object_digest", convert::ExtendedStringView(it->id()->digest()));
-  EXPECT_EQ(ObjectStatus_OK, it->status());
-  EXPECT_EQ("some data", convert::ExtendedStringView(it->data()->bytes()));
-  EXPECT_EQ(ObjectSyncStatus_SYNCED_TO_CLOUD, it->sync_status());
+  EXPECT_EQ(convert::ExtendedStringView(it->id()->digest()), "object_digest");
+  EXPECT_EQ(it->status(), ObjectStatus_OK);
+  EXPECT_EQ(convert::ExtendedStringView(it->data()->bytes()), "some data");
+  EXPECT_EQ(it->sync_status(), ObjectSyncStatus_SYNCED_TO_CLOUD);
 }
 
 TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
@@ -576,8 +576,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 
-  ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
+  ASSERT_EQ(mesh.messages_.size(), 1u);
+  EXPECT_EQ(mesh.messages_[0].first, MakeP2PClientId(2u));
 
   flatbuffers::FlatBufferBuilder response_buffer;
   BuildObjectResponseBuffer(&response_buffer, "ledger", "page",
@@ -592,9 +592,9 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
       }));
 
   EXPECT_TRUE(called);
-  EXPECT_EQ(ledger::Status::OK, status);
-  EXPECT_EQ("foo_data", data->Get());
-  EXPECT_EQ(storage::IsObjectSynced::NO, is_object_synced);
+  EXPECT_EQ(status, ledger::Status::OK);
+  EXPECT_EQ(data->Get(), "foo_data");
+  EXPECT_EQ(is_object_synced, storage::IsObjectSynced::NO);
 }
 
 TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSynced) {
@@ -617,8 +617,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSynced) {
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 
-  ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
+  ASSERT_EQ(mesh.messages_.size(), 1u);
+  EXPECT_EQ(mesh.messages_[0].first, MakeP2PClientId(2u));
 
   flatbuffers::FlatBufferBuilder response_buffer;
   BuildObjectResponseBuffer(&response_buffer, "ledger", "page",
@@ -632,9 +632,9 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSynced) {
       }));
 
   EXPECT_TRUE(called);
-  EXPECT_EQ(ledger::Status::OK, status);
-  EXPECT_EQ("foo_data", data->Get());
-  EXPECT_EQ(storage::IsObjectSynced::YES, is_object_synced);
+  EXPECT_EQ(status, ledger::Status::OK);
+  EXPECT_EQ(data->Get(), "foo_data");
+  EXPECT_EQ(is_object_synced, storage::IsObjectSynced::YES);
 }
 
 TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
@@ -657,8 +657,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 
-  ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
+  ASSERT_EQ(mesh.messages_.size(), 1u);
+  EXPECT_EQ(mesh.messages_[0].first, MakeP2PClientId(2u));
 
   flatbuffers::FlatBufferBuilder response_buffer;
   BuildObjectResponseBuffer(&response_buffer, "ledger", "page",
@@ -672,7 +672,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
       }));
 
   EXPECT_TRUE(called);
-  EXPECT_EQ(ledger::Status::INTERNAL_NOT_FOUND, status);
+  EXPECT_EQ(status, ledger::Status::INTERNAL_NOT_FOUND);
   EXPECT_FALSE(data);
 }
 
@@ -696,7 +696,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
                                                 &is_object_synced, &data));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
-  EXPECT_EQ(2u, mesh.messages_.size());
+  EXPECT_EQ(mesh.messages_.size(), 2u);
 
   flatbuffers::FlatBufferBuilder response_buffer_1;
   BuildObjectResponseBuffer(&response_buffer_1, "ledger", "page",
@@ -720,10 +720,10 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
       }));
 
   EXPECT_TRUE(called);
-  EXPECT_EQ(ledger::Status::OK, status);
-  EXPECT_EQ("foo_data", data->Get());
-  EXPECT_EQ(storage::ChangeSource::P2P, source);
-  EXPECT_EQ(storage::IsObjectSynced::NO, is_object_synced);
+  EXPECT_EQ(status, ledger::Status::OK);
+  EXPECT_EQ(data->Get(), "foo_data");
+  EXPECT_EQ(source, storage::ChangeSource::P2P);
+  EXPECT_EQ(is_object_synced, storage::IsObjectSynced::NO);
 }
 
 TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
@@ -746,7 +746,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
                                                 &is_object_synced, &data));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
-  EXPECT_EQ(2u, mesh.messages_.size());
+  EXPECT_EQ(mesh.messages_.size(), 2u);
 
   flatbuffers::FlatBufferBuilder response_buffer_1;
   BuildObjectResponseBuffer(&response_buffer_1, "ledger", "page",
@@ -770,7 +770,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
       }));
 
   EXPECT_TRUE(called);
-  EXPECT_EQ(ledger::Status::INTERNAL_NOT_FOUND, status);
+  EXPECT_EQ(status, ledger::Status::INTERNAL_NOT_FOUND);
   EXPECT_FALSE(data);
 }
 
@@ -802,8 +802,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectMultipleCalls) {
   RunLoopUntilIdle();
   EXPECT_FALSE(called1);
 
-  ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
+  ASSERT_EQ(mesh.messages_.size(), 1u);
+  EXPECT_EQ(mesh.messages_[0].first, MakeP2PClientId(2u));
 
   page_communicator.GetObject(MakeObjectIdentifier("foo"),
                               callback::Capture(callback::SetWhenCalled(&called2), &status2,
@@ -824,12 +824,12 @@ TEST_F(PageCommunicatorImplTest, GetObjectMultipleCalls) {
 
   EXPECT_TRUE(called1);
   EXPECT_TRUE(called2);
-  EXPECT_EQ(storage::Status::OK, status1);
-  EXPECT_EQ(storage::Status::OK, status2);
-  EXPECT_EQ("foo_data", data1->Get());
-  EXPECT_EQ("foo_data", data2->Get());
-  EXPECT_EQ(storage::IsObjectSynced::YES, is_object_synced1);
-  EXPECT_EQ(storage::IsObjectSynced::YES, is_object_synced2);
+  EXPECT_EQ(status1, storage::Status::OK);
+  EXPECT_EQ(status2, storage::Status::OK);
+  EXPECT_EQ(data1->Get(), "foo_data");
+  EXPECT_EQ(data2->Get(), "foo_data");
+  EXPECT_EQ(is_object_synced1, storage::IsObjectSynced::YES);
+  EXPECT_EQ(is_object_synced2, storage::IsObjectSynced::YES);
 }
 
 TEST_F(PageCommunicatorImplTest, CommitUpdate) {
@@ -855,44 +855,44 @@ TEST_F(PageCommunicatorImplTest, CommitUpdate) {
 
   RunLoopUntilIdle();
   // No new message is sent on commits from CLOUD.
-  ASSERT_EQ(0u, mesh.messages_.size());
+  ASSERT_EQ(mesh.messages_.size(), 0u);
 
   storage_1.watcher_->OnNewCommits(commits, storage::ChangeSource::P2P);
 
   RunLoopUntilIdle();
   // No new message is sent on commits from P2P either.
-  ASSERT_EQ(0u, mesh.messages_.size());
+  ASSERT_EQ(mesh.messages_.size(), 0u);
 
   storage_1.watcher_->OnNewCommits(commits, storage::ChangeSource::LOCAL);
   RunLoopUntilIdle();
 
   // Local commit: a message is sent.
-  ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
+  ASSERT_EQ(mesh.messages_.size(), 1u);
+  EXPECT_EQ(mesh.messages_[0].first, MakeP2PClientId(2u));
 
   MessageHolder<Message> reply_message =
       *CreateMessageHolder<Message>(mesh.messages_[0].second, &ParseMessage);
-  ASSERT_EQ(MessageUnion_Response, reply_message->message_type());
+  ASSERT_EQ(reply_message->message_type(), MessageUnion_Response);
   MessageHolder<Response> response =
       std::move(reply_message).TakeAndMap<Response>([](const Message* message) {
         return static_cast<const Response*>(message->message());
       });
   const NamespacePageId* response_namespace_page_id = response->namespace_page();
-  EXPECT_EQ("ledger", convert::ExtendedStringView(response_namespace_page_id->namespace_id()));
-  EXPECT_EQ("page", convert::ExtendedStringView(response_namespace_page_id->page_id()));
-  EXPECT_EQ(ResponseMessage_CommitResponse, response->response_type());
+  EXPECT_EQ(convert::ExtendedStringView(response_namespace_page_id->namespace_id()), "ledger");
+  EXPECT_EQ(convert::ExtendedStringView(response_namespace_page_id->page_id()), "page");
+  EXPECT_EQ(response->response_type(), ResponseMessage_CommitResponse);
 
   // Send it to the other side.
   page_communicator_2.OnNewResponse(MakeP2PClientId(1u), std::move(response));
   RunLoopUntilIdle();
 
   // The other side's storage has the commit.
-  ASSERT_EQ(1u, storage_2.commits_from_sync_.size());
-  ASSERT_EQ(2u, storage_2.commits_from_sync_[0].first.size());
-  EXPECT_EQ("id 1", storage_2.commits_from_sync_[0].first[0].id);
-  EXPECT_EQ("data 1", storage_2.commits_from_sync_[0].first[0].bytes);
-  EXPECT_EQ("id 2", storage_2.commits_from_sync_[0].first[1].id);
-  EXPECT_EQ("data 2", storage_2.commits_from_sync_[0].first[1].bytes);
+  ASSERT_EQ(storage_2.commits_from_sync_.size(), 1u);
+  ASSERT_EQ(storage_2.commits_from_sync_[0].first.size(), 2u);
+  EXPECT_EQ(storage_2.commits_from_sync_[0].first[0].id, "id 1");
+  EXPECT_EQ(storage_2.commits_from_sync_[0].first[0].bytes, "data 1");
+  EXPECT_EQ(storage_2.commits_from_sync_[0].first[1].id, "id 2");
+  EXPECT_EQ(storage_2.commits_from_sync_[0].first[1].bytes, "data 2");
 
   // Verify we don't crash on response from storage
   storage_2.commits_from_sync_[0].second(ledger::Status::OK, {});
@@ -931,7 +931,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectDisconnect) {
   EXPECT_FALSE(called2);
   EXPECT_FALSE(called3);
   EXPECT_FALSE(called4);
-  EXPECT_EQ(4u, mesh.messages_.size());
+  EXPECT_EQ(mesh.messages_.size(), 4u);
 
   flatbuffers::FlatBufferBuilder stop_buffer;
   BuildWatchStopBuffer(&stop_buffer, "ledger", "page");
@@ -946,23 +946,23 @@ TEST_F(PageCommunicatorImplTest, GetObjectDisconnect) {
 
   // All requests are terminated with a not found status.
   EXPECT_TRUE(called1);
-  EXPECT_EQ(ledger::Status::INTERNAL_NOT_FOUND, status1);
-  EXPECT_EQ(storage::ChangeSource::P2P, source1);
+  EXPECT_EQ(status1, ledger::Status::INTERNAL_NOT_FOUND);
+  EXPECT_EQ(source1, storage::ChangeSource::P2P);
   EXPECT_FALSE(data1);
 
   EXPECT_TRUE(called2);
-  EXPECT_EQ(ledger::Status::INTERNAL_NOT_FOUND, status2);
-  EXPECT_EQ(storage::ChangeSource::P2P, source2);
+  EXPECT_EQ(status2, ledger::Status::INTERNAL_NOT_FOUND);
+  EXPECT_EQ(source2, storage::ChangeSource::P2P);
   EXPECT_FALSE(data2);
 
   EXPECT_TRUE(called3);
-  EXPECT_EQ(ledger::Status::INTERNAL_NOT_FOUND, status3);
-  EXPECT_EQ(storage::ChangeSource::P2P, source3);
+  EXPECT_EQ(status3, ledger::Status::INTERNAL_NOT_FOUND);
+  EXPECT_EQ(source3, storage::ChangeSource::P2P);
   EXPECT_FALSE(data3);
 
   EXPECT_TRUE(called4);
-  EXPECT_EQ(ledger::Status::INTERNAL_NOT_FOUND, status4);
-  EXPECT_EQ(storage::ChangeSource::P2P, source4);
+  EXPECT_EQ(status4, ledger::Status::INTERNAL_NOT_FOUND);
+  EXPECT_EQ(source4, storage::ChangeSource::P2P);
   EXPECT_FALSE(data4);
 }
 
@@ -992,8 +992,8 @@ TEST_F(PageCommunicatorImplTest, CommitRequest) {
   RunLoopUntilIdle();
 
   // Verify the response.
-  ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
+  ASSERT_EQ(mesh.messages_.size(), 1u);
+  EXPECT_EQ(mesh.messages_[0].first, MakeP2PClientId(2u));
 
   flatbuffers::Verifier verifier(
       reinterpret_cast<const unsigned char*>(mesh.messages_[0].second.data()),
@@ -1001,21 +1001,21 @@ TEST_F(PageCommunicatorImplTest, CommitRequest) {
   ASSERT_TRUE(VerifyMessageBuffer(verifier));
 
   const Message* reply_message = GetMessage(mesh.messages_[0].second.data());
-  ASSERT_EQ(MessageUnion_Response, reply_message->message_type());
+  ASSERT_EQ(reply_message->message_type(), MessageUnion_Response);
   const Response* response = static_cast<const Response*>(reply_message->message());
   const NamespacePageId* response_namespace_page_id = response->namespace_page();
-  EXPECT_EQ("ledger", convert::ExtendedStringView(response_namespace_page_id->namespace_id()));
-  EXPECT_EQ("page", convert::ExtendedStringView(response_namespace_page_id->page_id()));
-  EXPECT_EQ(ResponseMessage_CommitResponse, response->response_type());
+  EXPECT_EQ(convert::ExtendedStringView(response_namespace_page_id->namespace_id()), "ledger");
+  EXPECT_EQ(convert::ExtendedStringView(response_namespace_page_id->page_id()), "page");
+  EXPECT_EQ(response->response_type(), ResponseMessage_CommitResponse);
   const CommitResponse* commit_response = static_cast<const CommitResponse*>(response->response());
-  ASSERT_EQ(2u, commit_response->commits()->size());
+  ASSERT_EQ(commit_response->commits()->size(), 2u);
   auto it = commit_response->commits()->begin();
-  EXPECT_EQ("commit1", convert::ExtendedStringView(it->id()->id()));
-  EXPECT_EQ(CommitStatus_OK, it->status());
-  EXPECT_EQ("data1", convert::ExtendedStringView(it->commit()->bytes()));
+  EXPECT_EQ(convert::ExtendedStringView(it->id()->id()), "commit1");
+  EXPECT_EQ(it->status(), CommitStatus_OK);
+  EXPECT_EQ(convert::ExtendedStringView(it->commit()->bytes()), "data1");
   it++;
-  EXPECT_EQ("missing_commit", convert::ExtendedStringView(it->id()->id()));
-  EXPECT_EQ(CommitStatus_UNKNOWN_COMMIT, it->status());
+  EXPECT_EQ(convert::ExtendedStringView(it->id()->id()), "missing_commit");
+  EXPECT_EQ(it->status(), CommitStatus_UNKNOWN_COMMIT);
 }
 
 // Sends an update for new commits that triggers a backlog sync.
@@ -1045,21 +1045,21 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
   RunLoopUntilIdle();
 
   // Local commit: a message is sent.
-  ASSERT_EQ(1u, mesh.messages_.size());
-  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[0].first);
+  ASSERT_EQ(mesh.messages_.size(), 1u);
+  EXPECT_EQ(mesh.messages_[0].first, MakeP2PClientId(2u));
 
   {
     MessageHolder<Message> reply_message =
         *CreateMessageHolder<Message>(mesh.messages_[0].second, &ParseMessage);
-    ASSERT_EQ(MessageUnion_Response, reply_message->message_type());
+    ASSERT_EQ(reply_message->message_type(), MessageUnion_Response);
     MessageHolder<Response> response =
         std::move(reply_message).TakeAndMap<Response>([](const Message* message) {
           return static_cast<const Response*>(message->message());
         });
     const NamespacePageId* response_namespace_page_id = response->namespace_page();
-    EXPECT_EQ("ledger", convert::ExtendedStringView(response_namespace_page_id->namespace_id()));
-    EXPECT_EQ("page", convert::ExtendedStringView(response_namespace_page_id->page_id()));
-    EXPECT_EQ(ResponseMessage_CommitResponse, response->response_type());
+    EXPECT_EQ(convert::ExtendedStringView(response_namespace_page_id->namespace_id()), "ledger");
+    EXPECT_EQ(convert::ExtendedStringView(response_namespace_page_id->page_id()), "page");
+    EXPECT_EQ(response->response_type(), ResponseMessage_CommitResponse);
 
     // Send it to the other side.
     page_communicator_2.OnNewResponse(MakeP2PClientId(1u), std::move(response));
@@ -1067,27 +1067,27 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
   RunLoopUntilIdle();
 
   // PageCommunicator should have tried to add the commit.
-  ASSERT_EQ(1u, storage_2.commits_from_sync_.size());
-  EXPECT_EQ(2u, storage_2.commits_from_sync_[0].first.size());
+  ASSERT_EQ(storage_2.commits_from_sync_.size(), 1u);
+  EXPECT_EQ(storage_2.commits_from_sync_[0].first.size(), 2u);
   // Return that we miss one commit
   storage_2.commits_from_sync_[0].second(ledger::Status::INTERNAL_NOT_FOUND, {"id 0"});
 
   // |page_communicator_2| should ask for the base, "id 0" commit.
-  ASSERT_EQ(2u, mesh.messages_.size());
-  EXPECT_EQ(MakeP2PClientId(1u), mesh.messages_[1].first);
+  ASSERT_EQ(mesh.messages_.size(), 2u);
+  EXPECT_EQ(mesh.messages_[1].first, MakeP2PClientId(1u));
 
   {
     MessageHolder<Message> request_message =
         *CreateMessageHolder<Message>(mesh.messages_[1].second, &ParseMessage);
-    ASSERT_EQ(MessageUnion_Request, request_message->message_type());
+    ASSERT_EQ(request_message->message_type(), MessageUnion_Request);
     MessageHolder<Request> request =
         std::move(request_message).TakeAndMap<Request>([](const Message* message) {
           return static_cast<const Request*>(message->message());
         });
     const NamespacePageId* request_namespace_page_id = request->namespace_page();
-    EXPECT_EQ("ledger", convert::ExtendedStringView(request_namespace_page_id->namespace_id()));
-    EXPECT_EQ("page", convert::ExtendedStringView(request_namespace_page_id->page_id()));
-    EXPECT_EQ(RequestMessage_CommitRequest, request->request_type());
+    EXPECT_EQ(convert::ExtendedStringView(request_namespace_page_id->namespace_id()), "ledger");
+    EXPECT_EQ(convert::ExtendedStringView(request_namespace_page_id->page_id()), "page");
+    EXPECT_EQ(request->request_type(), RequestMessage_CommitRequest);
 
     // Send it to the other side.
     page_communicator_1.OnNewRequest(MakeP2PClientId(2u), std::move(request));
@@ -1095,21 +1095,21 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
   RunLoopUntilIdle();
 
   // |page_communicator_1| sends commit "id 0" to device 2.
-  ASSERT_EQ(3u, mesh.messages_.size());
-  EXPECT_EQ(MakeP2PClientId(2u), mesh.messages_[2].first);
+  ASSERT_EQ(mesh.messages_.size(), 3u);
+  EXPECT_EQ(mesh.messages_[2].first, MakeP2PClientId(2u));
 
   {
     MessageHolder<Message> reply_message =
         *CreateMessageHolder<Message>(mesh.messages_[2].second, &ParseMessage);
-    ASSERT_EQ(MessageUnion_Response, reply_message->message_type());
+    ASSERT_EQ(reply_message->message_type(), MessageUnion_Response);
     MessageHolder<Response> response =
         std::move(reply_message).TakeAndMap<Response>([](const Message* message) {
           return static_cast<const Response*>(message->message());
         });
     const NamespacePageId* response_namespace_page_id = response->namespace_page();
-    EXPECT_EQ("ledger", convert::ExtendedStringView(response_namespace_page_id->namespace_id()));
-    EXPECT_EQ("page", convert::ExtendedStringView(response_namespace_page_id->page_id()));
-    EXPECT_EQ(ResponseMessage_CommitResponse, response->response_type());
+    EXPECT_EQ(convert::ExtendedStringView(response_namespace_page_id->namespace_id()), "ledger");
+    EXPECT_EQ(convert::ExtendedStringView(response_namespace_page_id->page_id()), "page");
+    EXPECT_EQ(response->response_type(), ResponseMessage_CommitResponse);
 
     // Send it to the other side.
     page_communicator_2.OnNewResponse(MakeP2PClientId(1u), std::move(response));
@@ -1117,14 +1117,14 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
   RunLoopUntilIdle();
 
   // Verify that we are truely adding the whole commit batch.
-  ASSERT_EQ(2u, storage_2.commits_from_sync_.size());
-  EXPECT_EQ(3u, storage_2.commits_from_sync_[1].first.size());
-  EXPECT_EQ("id 0", storage_2.commits_from_sync_[1].first[0].id);
-  EXPECT_EQ("data 0", storage_2.commits_from_sync_[1].first[0].bytes);
-  EXPECT_EQ("id 1", storage_2.commits_from_sync_[1].first[1].id);
-  EXPECT_EQ("data 1", storage_2.commits_from_sync_[1].first[1].bytes);
-  EXPECT_EQ("id 2", storage_2.commits_from_sync_[1].first[2].id);
-  EXPECT_EQ("data 2", storage_2.commits_from_sync_[1].first[2].bytes);
+  ASSERT_EQ(storage_2.commits_from_sync_.size(), 2u);
+  EXPECT_EQ(storage_2.commits_from_sync_[1].first.size(), 3u);
+  EXPECT_EQ(storage_2.commits_from_sync_[1].first[0].id, "id 0");
+  EXPECT_EQ(storage_2.commits_from_sync_[1].first[0].bytes, "data 0");
+  EXPECT_EQ(storage_2.commits_from_sync_[1].first[1].id, "id 1");
+  EXPECT_EQ(storage_2.commits_from_sync_[1].first[1].bytes, "data 1");
+  EXPECT_EQ(storage_2.commits_from_sync_[1].first[2].id, "id 2");
+  EXPECT_EQ(storage_2.commits_from_sync_[1].first[2].bytes, "data 2");
 
   // Verify we don't crash on response from storage
   storage_2.commits_from_sync_[1].second(ledger::Status::OK, {});
@@ -1226,7 +1226,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectNoPeer) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
-  EXPECT_EQ(ledger::Status::INTERNAL_NOT_FOUND, status);
+  EXPECT_EQ(status, ledger::Status::INTERNAL_NOT_FOUND);
 
   // A second call for the same object also returns.
   page_communicator.GetObject(MakeObjectIdentifier("foo"),
@@ -1235,7 +1235,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectNoPeer) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
-  EXPECT_EQ(ledger::Status::INTERNAL_NOT_FOUND, status);
+  EXPECT_EQ(status, ledger::Status::INTERNAL_NOT_FOUND);
 }
 
 // When a device disconnects, its pending object requests should be abandonned.
@@ -1263,7 +1263,7 @@ TEST_F(PageCommunicatorImplTest, GetObject_Disconnect) {
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(ledger::Status::INTERNAL_NOT_FOUND, status);
+  EXPECT_EQ(status, ledger::Status::INTERNAL_NOT_FOUND);
 }
 
 }  // namespace

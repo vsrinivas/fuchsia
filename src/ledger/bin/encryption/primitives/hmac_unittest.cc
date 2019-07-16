@@ -18,8 +18,8 @@ TEST(HMAC, Correctness) {
   std::string message = "Sample message for keylen=blocklen";
   std::string expected =
       FromHex("8BB9A1DB9806F20DF7F77B82138C7914D174D59E13DC4D0169C9057B133E1D62");
-  EXPECT_EQ(32u, expected.size());
-  EXPECT_EQ(expected, SHA256HMAC(key, message));
+  EXPECT_EQ(expected.size(), 32u);
+  EXPECT_EQ(SHA256HMAC(key, message), expected);
 }
 }  // namespace
 }  // namespace encryption

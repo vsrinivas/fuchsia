@@ -85,7 +85,7 @@ TEST_F(PageEvictionManagerTest, NoEvictionWithoutPages) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
 
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 }
 
@@ -109,7 +109,7 @@ TEST_F(PageEvictionManagerTest, AtLeastOneEvictionWhenPossible) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
 
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_FALSE(delegate_.deleted_pages.empty());
 }
 
@@ -134,7 +134,7 @@ TEST_F(PageEvictionManagerTest, DontEvictUnsyncedNotEmptyPages) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
 
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 }
 
@@ -154,7 +154,7 @@ TEST_F(PageEvictionManagerTest, DontEvictOpenPages) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
 
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 
   // Close the page. It can now be evicted.
@@ -166,7 +166,7 @@ TEST_F(PageEvictionManagerTest, DontEvictOpenPages) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
 
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_THAT(delegate_.deleted_pages, ElementsAre(page));
 }
 
@@ -187,7 +187,7 @@ TEST_F(PageEvictionManagerTest, DontEvictAnEvictedPage) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
 
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_THAT(delegate_.deleted_pages, ElementsAre(page));
 
   delegate_.deleted_pages.clear();
@@ -196,7 +196,7 @@ TEST_F(PageEvictionManagerTest, DontEvictAnEvictedPage) {
       policy_.get(), callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 }
 
@@ -219,7 +219,7 @@ TEST_F(PageEvictionManagerTest, PageNotFoundIsNotAnError) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
 
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 }
 
@@ -244,7 +244,7 @@ TEST_F(PageEvictionManagerTest, EvictUnsyncedButEmptyPages) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
 
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_THAT(delegate_.deleted_pages, ElementsAre(page1));
 }
 
@@ -269,7 +269,7 @@ TEST_F(PageEvictionManagerTest, EvictSyncedAndNotEmptyPages) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
 
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_THAT(delegate_.deleted_pages, ElementsAre(page1));
 }
 
@@ -297,7 +297,7 @@ TEST_F(PageEvictionManagerTest, DontEvictIfPageWasOpenedDuringQuery) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
 
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
   delegate_.deleted_pages.clear();
 
@@ -315,7 +315,7 @@ TEST_F(PageEvictionManagerTest, DontEvictIfPageWasOpenedDuringQuery) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
 
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 }
 
@@ -356,7 +356,7 @@ TEST_F(PageEvictionManagerTest, IsEmpty) {
   EXPECT_FALSE(on_empty_called);
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_TRUE(page_eviction_manager_.IsEmpty());
   EXPECT_TRUE(on_empty_called);
 }
@@ -378,7 +378,7 @@ TEST_F(PageEvictionManagerTest, TryEvictPage) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &was_evicted));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_FALSE(was_evicted);
   EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 
@@ -391,7 +391,7 @@ TEST_F(PageEvictionManagerTest, TryEvictPage) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &was_evicted));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_FALSE(was_evicted);
   EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 
@@ -404,7 +404,7 @@ TEST_F(PageEvictionManagerTest, TryEvictPage) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &was_evicted));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_FALSE(was_evicted);
   EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 
@@ -417,7 +417,7 @@ TEST_F(PageEvictionManagerTest, TryEvictPage) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &was_evicted));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_TRUE(was_evicted);
   EXPECT_THAT(delegate_.deleted_pages, ElementsAre(page));
 
@@ -430,7 +430,7 @@ TEST_F(PageEvictionManagerTest, TryEvictPage) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &was_evicted));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_TRUE(was_evicted);
   EXPECT_THAT(delegate_.deleted_pages, ElementsAre(page));
 }
@@ -451,7 +451,7 @@ TEST_F(PageEvictionManagerTest, EvictEmptyPage) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &was_evicted));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_FALSE(was_evicted);
   EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 
@@ -463,7 +463,7 @@ TEST_F(PageEvictionManagerTest, EvictEmptyPage) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &was_evicted));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_FALSE(was_evicted);
   EXPECT_THAT(delegate_.deleted_pages, IsEmpty());
 
@@ -475,7 +475,7 @@ TEST_F(PageEvictionManagerTest, EvictEmptyPage) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &was_evicted));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_TRUE(was_evicted);
   EXPECT_THAT(delegate_.deleted_pages, ElementsAre(page));
 }

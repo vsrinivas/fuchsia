@@ -110,7 +110,7 @@ TEST_F(PageEvictionPoliciesTest, LeastRecentyUsed) {
   policy->SelectAndEvict(std::make_unique<VectorIterator<const PageInfo>>(pages),
                          callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_THAT(delegate.GetEvictedPages(), ElementsAre("page1"));
 }
 
@@ -134,7 +134,7 @@ TEST_F(PageEvictionPoliciesTest, LeastRecentyUsedWithOpenPages) {
   policy->SelectAndEvict(std::make_unique<VectorIterator<const PageInfo>>(pages),
                          callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_THAT(delegate.GetEvictedPages(), ElementsAre("page2"));
 }
 
@@ -160,7 +160,7 @@ TEST_F(PageEvictionPoliciesTest, LeastRecentyUsedNoPagesToEvict) {
   policy->SelectAndEvict(std::make_unique<VectorIterator<const PageInfo>>(pages),
                          callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_THAT(delegate.GetEvictedPages(), IsEmpty());
 }
 
@@ -184,7 +184,7 @@ TEST_F(PageEvictionPoliciesTest, LeastRecentyUsedErrorWhileEvicting) {
   policy->SelectAndEvict(std::make_unique<VectorIterator<const PageInfo>>(pages),
                          callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::INTERNAL_ERROR, status);
+  EXPECT_EQ(status, Status::INTERNAL_ERROR);
 }
 
 TEST_F(PageEvictionPoliciesTest, AgeBased) {
@@ -210,7 +210,7 @@ TEST_F(PageEvictionPoliciesTest, AgeBased) {
   policy->SelectAndEvict(std::make_unique<VectorIterator<const PageInfo>>(pages),
                          callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_THAT(delegate.GetEvictedPages(), ElementsAre("page1", "page2"));
 }
 
@@ -237,7 +237,7 @@ TEST_F(PageEvictionPoliciesTest, AgeBasedWithOpenPages) {
   policy->SelectAndEvict(std::make_unique<VectorIterator<const PageInfo>>(pages),
                          callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_THAT(delegate.GetEvictedPages(), ElementsAre("page2"));
 }
 
@@ -266,7 +266,7 @@ TEST_F(PageEvictionPoliciesTest, AgeBasedNoPagesToEvict) {
   policy->SelectAndEvict(std::make_unique<VectorIterator<const PageInfo>>(pages),
                          callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_THAT(delegate.GetEvictedPages(), IsEmpty());
 }
 
@@ -293,7 +293,7 @@ TEST_F(PageEvictionPoliciesTest, AgeBasedErrorWhileEvicting) {
   policy->SelectAndEvict(std::make_unique<VectorIterator<const PageInfo>>(pages),
                          callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::INTERNAL_ERROR, status);
+  EXPECT_EQ(status, Status::INTERNAL_ERROR);
 }
 
 TEST_F(PageEvictionPoliciesTest, AgeBasedWithCustomizedTimeLimit) {
@@ -318,7 +318,7 @@ TEST_F(PageEvictionPoliciesTest, AgeBasedWithCustomizedTimeLimit) {
   policy->SelectAndEvict(std::make_unique<VectorIterator<const PageInfo>>(pages),
                          callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_THAT(delegate.GetEvictedPages(), ElementsAre("page1"));
 }
 

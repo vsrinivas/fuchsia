@@ -95,14 +95,14 @@ TEST(SyncHelper, CallOperationTwice) {
   int called_count = 0;
   sync_helper.RegisterSynchronizationCallback([&] { ++called_count; });
 
-  EXPECT_EQ(0, operation_count);
-  EXPECT_EQ(0, called_count);
+  EXPECT_EQ(operation_count, 0);
+  EXPECT_EQ(called_count, 0);
   operation();
-  EXPECT_EQ(1, operation_count);
-  EXPECT_EQ(1, called_count);
+  EXPECT_EQ(operation_count, 1);
+  EXPECT_EQ(called_count, 1);
   operation();
-  EXPECT_EQ(2, operation_count);
-  EXPECT_EQ(1, called_count);
+  EXPECT_EQ(operation_count, 2);
+  EXPECT_EQ(called_count, 1);
 }
 
 TEST(SyncHelper, WrapMutableLambda) {

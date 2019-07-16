@@ -27,7 +27,7 @@ TEST(GetLedgerTest, CreateAndDeleteLedger) {
       DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); }, &ledger);
 
   // No need to |Sync| as |GetLedger| handles it.
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
 
   KillLedgerProcess(&controller);
 }
@@ -44,7 +44,7 @@ TEST(GetLedgerTest, GetPageEnsureInitialized) {
       component_context.get(), controller.NewRequest(), nullptr, "", "ledger_name",
       DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); }, &ledger);
 
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(status, Status::OK);
 
   status = Status::INTERNAL_ERROR;
   PagePtr page;
@@ -55,7 +55,7 @@ TEST(GetLedgerTest, GetPageEnsureInitialized) {
       callback::Capture([&] { loop.Quit(); }, &status, &page, &page_id));
   loop.Run();
 
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
 
   KillLedgerProcess(&controller);
 }

@@ -36,10 +36,10 @@ TEST(ObjectTest, GetVmo) {
   StringObject object(content);
 
   fsl::SizedVmo vmo;
-  ASSERT_EQ(Status::OK, object.GetVmo(&vmo));
+  ASSERT_EQ(object.GetVmo(&vmo), Status::OK);
   std::string vmo_content;
   ASSERT_TRUE(fsl::StringFromVmo(vmo, &vmo_content));
-  EXPECT_EQ(content, vmo_content);
+  EXPECT_EQ(vmo_content, content);
 }
 
 }  // namespace

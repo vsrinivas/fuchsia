@@ -4,13 +4,13 @@
 
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 
+#include <memory>
+
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
-
-#include <memory>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
@@ -41,8 +41,8 @@ std::string GetValue(size_t index, size_t min_value_size = 0u) {
            << "Channel read status = " << status << ", expected ZX_ERR_BUFFER_TOO_SMALL ("
            << ZX_ERR_BUFFER_TOO_SMALL << ").";
   }
-  EXPECT_EQ(expected_bytes, actual_bytes);
-  EXPECT_EQ(expected_handles, actual_handles);
+  EXPECT_EQ(actual_bytes, expected_bytes);
+  EXPECT_EQ(actual_handles, expected_handles);
   if ((expected_bytes != actual_bytes) || (expected_handles != actual_handles)) {
     return ::testing::AssertionFailure() << "Unexpected message size.";
   }
@@ -102,7 +102,7 @@ TEST_F(SerializationSizeTest, GetInline) {
   FakeSnapshotImpl snapshot_impl;
 
   zx::channel writer, reader;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &writer, &reader));
+  ASSERT_EQ(zx::channel::create(0, &writer, &reader), ZX_OK);
 
   snapshot_proxy.Bind(std::move(reader));
   fidl::Binding<PageSnapshot> binding(&snapshot_impl);
@@ -138,7 +138,7 @@ TEST_F(SerializationSizeTest, Get) {
   FakeSnapshotImpl snapshot_impl;
 
   zx::channel writer, reader;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &writer, &reader));
+  ASSERT_EQ(zx::channel::create(0, &writer, &reader), ZX_OK);
 
   snapshot_proxy.Bind(std::move(reader));
   fidl::Binding<PageSnapshot> binding(&snapshot_impl);
@@ -178,7 +178,7 @@ TEST_F(SerializationSizeTest, GetEntriesInline) {
   PageSnapshotPtr snapshot_proxy;
   FakeSnapshotImpl snapshot_impl;
   zx::channel writer, reader;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &writer, &reader));
+  ASSERT_EQ(zx::channel::create(0, &writer, &reader), ZX_OK);
 
   snapshot_proxy.Bind(std::move(reader));
   fidl::Binding<PageSnapshot> binding(&snapshot_impl);
@@ -236,7 +236,7 @@ TEST_F(SerializationSizeTest, GetEntries) {
   PageSnapshotPtr snapshot_proxy;
   FakeSnapshotImpl snapshot_impl;
   zx::channel writer, reader;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &writer, &reader));
+  ASSERT_EQ(zx::channel::create(0, &writer, &reader), ZX_OK);
 
   snapshot_proxy.Bind(std::move(reader));
   fidl::Binding<PageSnapshot> binding(&snapshot_impl);

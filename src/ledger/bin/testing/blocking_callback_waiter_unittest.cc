@@ -4,9 +4,9 @@
 
 #include "src/ledger/bin/testing/blocking_callback_waiter.h"
 
-#include <lib/fit/function.h>
-
 #include <memory>
+
+#include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
 
@@ -61,8 +61,8 @@ TEST(BlockingCallbackWaiterTest, PreCall) {
   callback();
   ASSERT_TRUE(waiter->RunUntilCalled());
 
-  EXPECT_EQ(0u, nb_run);
-  EXPECT_EQ(0u, nb_stop);
+  EXPECT_EQ(nb_run, 0u);
+  EXPECT_EQ(nb_stop, 0u);
 }
 
 TEST(BlockingCallbackWaiterTest, MultipleGetCallback) {
@@ -78,8 +78,8 @@ TEST(BlockingCallbackWaiterTest, MultipleGetCallback) {
   ASSERT_TRUE(waiter->RunUntilCalled());
   ASSERT_TRUE(waiter->RunUntilCalled());
 
-  EXPECT_EQ(0u, nb_run);
-  EXPECT_EQ(0u, nb_stop);
+  EXPECT_EQ(nb_run, 0u);
+  EXPECT_EQ(nb_stop, 0u);
 }
 
 TEST(BlockingCallbackWaiterTest, PostCall) {
@@ -99,8 +99,8 @@ TEST(BlockingCallbackWaiterTest, PostCall) {
   callback = std::make_unique<fit::closure>(waiter->GetCallback());
 
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(1u, nb_run);
-  EXPECT_EQ(1u, nb_stop);
+  EXPECT_EQ(nb_run, 1u);
+  EXPECT_EQ(nb_stop, 1u);
 
   // loop_controller must outlive the waiter.
   callback.reset();
@@ -124,8 +124,8 @@ TEST(BlockingCallbackWaiterTest, MultipleRunUntilCalled) {
 
   ASSERT_TRUE(waiter->RunUntilCalled());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(2u, nb_run);
-  EXPECT_EQ(2u, nb_stop);
+  EXPECT_EQ(nb_run, 2u);
+  EXPECT_EQ(nb_stop, 2u);
 
   // loop_controller must outlive the waiter.
   callback.reset();
@@ -148,13 +148,13 @@ TEST(BlockingCallbackWaiterTest, InterleaveRunUntilCalledAndCall) {
   callback = std::make_unique<fit::closure>(waiter->GetCallback());
 
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(1u, nb_run);
-  EXPECT_EQ(1u, nb_stop);
+  EXPECT_EQ(nb_run, 1u);
+  EXPECT_EQ(nb_stop, 1u);
 
   (*callback)();
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(1u, nb_run);
-  EXPECT_EQ(1u, nb_stop);
+  EXPECT_EQ(nb_run, 1u);
+  EXPECT_EQ(nb_stop, 1u);
 
   // loop_controller must outlive the waiter.
   callback.reset();

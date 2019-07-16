@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <utility>
+#include <vector>
+
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/callback/capture.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/optional.h>
-
-#include <utility>
-#include <vector>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
@@ -94,7 +94,7 @@ TEST_P(PageIntegrationTest, MultiplePageConnections) {
   // Connect to the same page again.
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(page_id_1));
   PageId page_id_2 = PageGetId(&page2);
-  EXPECT_EQ(page_id_1.id, page_id_2.id);
+  EXPECT_EQ(page_id_2.id, page_id_1.id);
 }
 
 INSTANTIATE_TEST_SUITE_P(PageIntegrationTest, PageIntegrationTest,

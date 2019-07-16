@@ -241,11 +241,11 @@ TEST_P(SyncIntegrationTest, PageChangeLazyEntry) {
   page1->PutReference(std::move(key), std::move(result.response().reference), Priority::LAZY);
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
 
-  EXPECT_EQ(1u, watcher.GetChangesSeen());
-  EXPECT_EQ(ResultState::COMPLETED, watcher.GetLastResultState());
+  EXPECT_EQ(watcher.GetChangesSeen(), 1u);
+  EXPECT_EQ(watcher.GetLastResultState(), ResultState::COMPLETED);
   auto change = &(watcher.GetLastPageChange());
-  EXPECT_EQ(1u, change->changed_entries.size());
-  EXPECT_EQ(nullptr, change->changed_entries[0].value);
+  EXPECT_EQ(change->changed_entries.size(), 1u);
+  EXPECT_EQ(change->changed_entries[0].value, nullptr);
 }
 
 INSTANTIATE_TEST_SUITE_P(

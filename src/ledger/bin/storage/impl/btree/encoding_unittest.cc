@@ -31,9 +31,9 @@ TEST(EncodingTest, EmptyData) {
   std::vector<Entry> res_entries;
   std::map<size_t, ObjectIdentifier> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
-  EXPECT_EQ(level, res_level);
-  EXPECT_EQ(entries, res_entries);
-  EXPECT_EQ(children, res_children);
+  EXPECT_EQ(res_level, level);
+  EXPECT_EQ(res_entries, entries);
+  EXPECT_EQ(res_children, children);
 }
 
 TEST(EncodingTest, SingleEntry) {
@@ -48,9 +48,9 @@ TEST(EncodingTest, SingleEntry) {
   std::vector<Entry> res_entries;
   std::map<size_t, ObjectIdentifier> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
-  EXPECT_EQ(level, res_level);
-  EXPECT_EQ(entries, res_entries);
-  EXPECT_EQ(children, res_children);
+  EXPECT_EQ(res_level, level);
+  EXPECT_EQ(res_entries, entries);
+  EXPECT_EQ(res_children, children);
 }
 
 TEST(EncodingTest, MoreEntries) {
@@ -71,9 +71,9 @@ TEST(EncodingTest, MoreEntries) {
   std::vector<Entry> res_entries;
   std::map<size_t, ObjectIdentifier> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
-  EXPECT_EQ(level, res_level);
-  EXPECT_EQ(entries, res_entries);
-  EXPECT_EQ(children, res_children);
+  EXPECT_EQ(res_level, level);
+  EXPECT_EQ(res_entries, entries);
+  EXPECT_EQ(res_children, children);
 }
 
 TEST(EncodingTest, SparsedEntriesWithBeginAndEnd) {
@@ -92,9 +92,9 @@ TEST(EncodingTest, SparsedEntriesWithBeginAndEnd) {
   std::vector<Entry> res_entries;
   std::map<size_t, ObjectIdentifier> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
-  EXPECT_EQ(level, res_level);
-  EXPECT_EQ(entries, res_entries);
-  EXPECT_EQ(children, res_children);
+  EXPECT_EQ(res_level, level);
+  EXPECT_EQ(res_entries, entries);
+  EXPECT_EQ(res_children, children);
 }
 
 TEST(EncodingTest, SparsedEntriesWithoutBeginAndEnd) {
@@ -112,9 +112,9 @@ TEST(EncodingTest, SparsedEntriesWithoutBeginAndEnd) {
   std::vector<Entry> res_entries;
   std::map<size_t, ObjectIdentifier> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
-  EXPECT_EQ(level, res_level);
-  EXPECT_EQ(entries, res_entries);
-  EXPECT_EQ(children, res_children);
+  EXPECT_EQ(res_level, level);
+  EXPECT_EQ(res_entries, entries);
+  EXPECT_EQ(res_children, children);
 }
 
 TEST(EncodingTest, ZeroByte) {
@@ -129,9 +129,9 @@ TEST(EncodingTest, ZeroByte) {
   std::vector<Entry> res_entries;
   std::map<size_t, ObjectIdentifier> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
-  EXPECT_EQ(level, res_level);
-  EXPECT_EQ(entries, res_entries);
-  EXPECT_EQ(children, res_children);
+  EXPECT_EQ(res_level, level);
+  EXPECT_EQ(res_entries, entries);
+  EXPECT_EQ(res_children, children);
 }
 
 std::string ToString(flatbuffers::FlatBufferBuilder* builder) {

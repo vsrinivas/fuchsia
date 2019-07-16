@@ -4,10 +4,10 @@
 
 #include "src/ledger/bin/storage/impl/object_impl.h"
 
+#include <memory>
+
 #include <lib/fsl/vmo/strings.h>
 #include <zircon/syscalls.h>
-
-#include <memory>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -176,7 +176,7 @@ TEST_F(ObjectImplTest, PieceReferences) {
 
   // Check that inline children are not included in the references.
   ObjectReferencesAndPriority references;
-  ASSERT_EQ(Status::OK, piece.AppendReferences(&references));
+  ASSERT_EQ(piece.AppendReferences(&references), Status::OK);
   EXPECT_THAT(references,
               UnorderedElementsAre(Pair(noinline_chunk.object_digest(), KeyPriority::EAGER),
                                    Pair(noinline_index.object_digest(), KeyPriority::EAGER)));
@@ -243,7 +243,7 @@ TEST_F(ObjectImplTest, ObjectReferences) {
 
   // Check that inline children are not included in the references.
   ObjectReferencesAndPriority references;
-  ASSERT_EQ(Status::OK, tree_object.AppendReferences(&references));
+  ASSERT_EQ(tree_object.AppendReferences(&references), Status::OK);
   EXPECT_THAT(references,
               UnorderedElementsAre(Pair(noinline_blob.object_digest(), KeyPriority::EAGER),
                                    Pair(noinline_blob.object_digest(), KeyPriority::LAZY),
@@ -255,14 +255,14 @@ TEST_F(ObjectImplTest, ObjectReferences) {
       CreateObjectIdentifier(ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data)),
       DataSource::DataChunk::Create(data)));
   references.clear();
-  ASSERT_EQ(Status::OK, blob_object.AppendReferences(&references));
+  ASSERT_EQ(blob_object.AppendReferences(&references), Status::OK);
   EXPECT_THAT(references, IsEmpty());
 
   // Create an invalid tree node object and check that we return an error.
   const ChunkObject invalid_object(std::make_unique<DataChunkPiece>(
       CreateObjectIdentifier(ComputeObjectDigest(PieceType::CHUNK, ObjectType::TREE_NODE, "")),
       DataSource::DataChunk::Create("")));
-  ASSERT_EQ(Status::DATA_INTEGRITY_ERROR, invalid_object.AppendReferences(&references));
+  ASSERT_EQ(invalid_object.AppendReferences(&references), Status::DATA_INTEGRITY_ERROR);
 }
 
 }  // namespace

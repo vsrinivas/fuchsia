@@ -54,8 +54,8 @@ TEST_F(ReadDataSourceTest, ReadDataSource) {
                  callback::Capture(callback::SetWhenCalled(&called), &status, &content));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(expected_content, content->Get());
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_EQ(content->Get(), expected_content);
 }
 
 TEST_F(ReadDataSourceTest, DeleteContainerWhileReading) {

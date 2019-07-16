@@ -93,24 +93,24 @@ TEST_F(SyncableTest, NoResponse) {
 
   ptr_->NoResponse();
   RunLoopUntilIdle();
-  EXPECT_EQ(1, impl_.no_reponse_count());
+  EXPECT_EQ(impl_.no_reponse_count(), 1);
   EXPECT_TRUE(ptr_);
   EXPECT_FALSE(error_called);
 
   impl_.status_to_return() = Status::IO_ERROR;
   ptr_->NoResponse();
   RunLoopUntilIdle();
-  EXPECT_EQ(2, impl_.no_reponse_count());
+  EXPECT_EQ(impl_.no_reponse_count(), 2);
   EXPECT_FALSE(ptr_);
   EXPECT_TRUE(error_called);
-  EXPECT_EQ(ZX_ERR_IO, status);
+  EXPECT_EQ(status, ZX_ERR_IO);
 }
 
 TEST_F(SyncableTest, NoResponseWithParameter) {
   ptr_->NoResponseWithParameter(42);
   RunLoopUntilIdle();
-  EXPECT_EQ(1, impl_.no_reponse_count());
-  EXPECT_EQ(42, impl_.parameter_received());
+  EXPECT_EQ(impl_.no_reponse_count(), 1);
+  EXPECT_EQ(impl_.parameter_received(), 42);
 }
 
 TEST_F(SyncableTest, NoResponseSync) {
@@ -137,7 +137,7 @@ TEST_F(SyncableTest, EmptyResponse) {
 
   ptr_->EmptyResponse(callback::SetWhenCalled(&callback_called));
   RunLoopUntilIdle();
-  EXPECT_EQ(1, impl_.empty_reponse_count());
+  EXPECT_EQ(impl_.empty_reponse_count(), 1);
   EXPECT_TRUE(callback_called);
   EXPECT_TRUE(ptr_);
   EXPECT_FALSE(error_called);
@@ -145,11 +145,11 @@ TEST_F(SyncableTest, EmptyResponse) {
   impl_.status_to_return() = Status::IO_ERROR;
   ptr_->EmptyResponse(callback::SetWhenCalled(&callback_called));
   RunLoopUntilIdle();
-  EXPECT_EQ(2, impl_.empty_reponse_count());
+  EXPECT_EQ(impl_.empty_reponse_count(), 2);
   EXPECT_FALSE(callback_called);
   EXPECT_FALSE(ptr_);
   EXPECT_TRUE(error_called);
-  EXPECT_EQ(ZX_ERR_IO, status);
+  EXPECT_EQ(status, ZX_ERR_IO);
 }
 
 TEST_F(SyncableTest, EmptyResponseWithParameter) {
@@ -157,8 +157,8 @@ TEST_F(SyncableTest, EmptyResponseWithParameter) {
 
   ptr_->EmptyResponseWithParameter(42, callback::SetWhenCalled(&callback_called));
   RunLoopUntilIdle();
-  EXPECT_EQ(1, impl_.empty_reponse_count());
-  EXPECT_EQ(42, impl_.parameter_received());
+  EXPECT_EQ(impl_.empty_reponse_count(), 1);
+  EXPECT_EQ(impl_.parameter_received(), 42);
   EXPECT_TRUE(callback_called);
 }
 
@@ -191,9 +191,9 @@ TEST_F(SyncableTest, NotEmptyResponse) {
   ptr_->NotEmptyResponse(
       callback::Capture(callback::SetWhenCalled(&callback_called), &callback_value));
   RunLoopUntilIdle();
-  EXPECT_EQ(1, impl_.not_empty_reponse_count());
+  EXPECT_EQ(impl_.not_empty_reponse_count(), 1);
   EXPECT_TRUE(callback_called);
-  EXPECT_EQ(1, callback_value);
+  EXPECT_EQ(callback_value, 1);
   EXPECT_TRUE(ptr_);
   EXPECT_FALSE(error_called);
 
@@ -201,11 +201,11 @@ TEST_F(SyncableTest, NotEmptyResponse) {
   ptr_->NotEmptyResponse(
       callback::Capture(callback::SetWhenCalled(&callback_called), &std::ignore));
   RunLoopUntilIdle();
-  EXPECT_EQ(2, impl_.not_empty_reponse_count());
+  EXPECT_EQ(impl_.not_empty_reponse_count(), 2);
   EXPECT_FALSE(callback_called);
   EXPECT_FALSE(ptr_);
   EXPECT_TRUE(error_called);
-  EXPECT_EQ(ZX_ERR_IO, status);
+  EXPECT_EQ(status, ZX_ERR_IO);
 }
 
 TEST_F(SyncableTest, NotEmptyResponseWithParameter) {
@@ -215,10 +215,10 @@ TEST_F(SyncableTest, NotEmptyResponseWithParameter) {
   ptr_->NotEmptyResponseWithParameter(
       42, callback::Capture(callback::SetWhenCalled(&callback_called), &callback_value));
   RunLoopUntilIdle();
-  EXPECT_EQ(1, impl_.not_empty_reponse_count());
-  EXPECT_EQ(42, impl_.parameter_received());
+  EXPECT_EQ(impl_.not_empty_reponse_count(), 1);
+  EXPECT_EQ(impl_.parameter_received(), 42);
   EXPECT_TRUE(callback_called);
-  EXPECT_EQ(1, callback_value);
+  EXPECT_EQ(callback_value, 1);
 }
 
 TEST_F(SyncableTest, NotEmptyResponseSync) {

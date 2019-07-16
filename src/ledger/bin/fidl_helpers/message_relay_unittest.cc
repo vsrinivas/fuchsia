@@ -4,11 +4,11 @@
 
 #include "src/ledger/bin/fidl_helpers/message_relay.h"
 
+#include <memory>
+
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/zx/channel.h>
-
-#include <memory>
 
 #include "garnet/public/lib/gtest/test_loop_fixture.h"
 #include "gtest/gtest.h"
@@ -24,7 +24,7 @@ TEST_F(MessageRelayTest, DestructionInCallback) {
   auto message_relay = std::make_unique<MessageRelay>();
 
   zx::channel c1, c2;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0u, &c1, &c2));
+  ASSERT_EQ(zx::channel::create(0u, &c1, &c2), ZX_OK);
 
   message_relay->SetChannel(std::move(c2));
   message_relay->SetMessageReceivedCallback(
@@ -39,7 +39,7 @@ TEST_F(MessageRelayTest, SendReceiveMessage) {
   auto message_relay_2 = std::make_unique<MessageRelay>();
 
   zx::channel c1, c2;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0u, &c1, &c2));
+  ASSERT_EQ(zx::channel::create(0u, &c1, &c2), ZX_OK);
 
   message_relay_1->SetChannel(std::move(c1));
   message_relay_2->SetChannel(std::move(c2));
@@ -52,7 +52,7 @@ TEST_F(MessageRelayTest, SendReceiveMessage) {
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ("some data", convert::ToString(data));
+  EXPECT_EQ(convert::ToString(data), "some data");
 }
 
 }  // namespace

@@ -92,10 +92,10 @@ TEST_F(EncryptionServiceTest, EncryptDecryptCommit) {
     Status status;
     std::string value;
     EncryptCommit(content, &status, &value);
-    ASSERT_EQ(Status::OK, status);
+    ASSERT_EQ(status, Status::OK);
     DecryptCommit(value, &status, &value);
-    ASSERT_EQ(Status::OK, status);
-    EXPECT_EQ(content, value);
+    ASSERT_EQ(status, Status::OK);
+    EXPECT_EQ(value, content);
   }
 }
 
@@ -104,7 +104,7 @@ TEST_F(EncryptionServiceTest, GetName) {
   Status status;
   std::string name;
   GetObjectName(identifier, &status, &name);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_FALSE(name.empty());
 }
 
@@ -114,18 +114,18 @@ TEST_F(EncryptionServiceTest, EncryptDecryptObject) {
   std::unique_ptr<storage::Object> object =
       std::make_unique<storage::fake::FakeObject>(identifier, content);
   fxl::StringView content_data;
-  ASSERT_EQ(ledger::Status::OK, object->GetData(&content_data));
+  ASSERT_EQ(object->GetData(&content_data), ledger::Status::OK);
 
   Status status;
   std::string encrypted_bytes;
   EncryptObject(object->GetIdentifier(), content_data, &status, &encrypted_bytes);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_FALSE(encrypted_bytes.empty());
 
   std::string decrypted_bytes;
   DecryptObject(identifier, encrypted_bytes, &status, &decrypted_bytes);
-  EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(content, decrypted_bytes);
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_EQ(decrypted_bytes, content);
 }
 
 TEST_F(EncryptionServiceTest, GetApplyChunkingPermutation) {
@@ -135,13 +135,13 @@ TEST_F(EncryptionServiceTest, GetApplyChunkingPermutation) {
   chunk_window_hash =
       std::uniform_int_distribution(0ul, std::numeric_limits<uint64_t>::max())(bit_generator);
   ApplyChunkingPermutation(chunk_window_hash, &status, &result);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_NE(chunk_window_hash, result);
   // Since we're using xor, applying the same permutation two times should yield
   // the initial input;
   ApplyChunkingPermutation(result, &status, &result);
-  EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(chunk_window_hash, result);
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_EQ(result, chunk_window_hash);
 }
 
 }  // namespace

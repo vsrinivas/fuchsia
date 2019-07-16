@@ -4,15 +4,15 @@
 
 #include "src/ledger/bin/storage/impl/page_db.h"
 
-#include <lib/async/cpp/task.h>
-#include <lib/callback/set_when_called.h>
-#include <lib/zx/time.h>
-
 #include <algorithm>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include <lib/async/cpp/task.h>
+#include <lib/callback/set_when_called.h>
+#include <lib/zx/time.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -41,7 +41,7 @@ using ::testing::UnorderedElementsAre;
 
 std::unique_ptr<LevelDb> GetLevelDb(async_dispatcher_t* dispatcher, ledger::DetachedPath db_path) {
   auto db = std::make_unique<LevelDb>(dispatcher, std::move(db_path));
-  EXPECT_EQ(Status::OK, db->Init());
+  EXPECT_EQ(db->Init(), Status::OK);
   return db;
 }
 
@@ -64,7 +64,7 @@ class PageDbTest : public ledger::TestWithEnvironment {
     page_storage_.Init(callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
-    ASSERT_EQ(Status::OK, status);
+    ASSERT_EQ(status, Status::OK);
   }
 
  protected:
@@ -80,18 +80,18 @@ class PageDbTest : public ledger::TestWithEnvironment {
 TEST_F(PageDbTest, HeadCommits) {
   RunInCoroutine([&](CoroutineHandler* handler) {
     std::vector<std::pair<zx::time_utc, CommitId>> heads;
-    EXPECT_EQ(Status::OK, page_db_.GetHeads(handler, &heads));
+    EXPECT_EQ(page_db_.GetHeads(handler, &heads), Status::OK);
     EXPECT_TRUE(heads.empty());
 
     CommitId cid = RandomCommitId(environment_.random());
-    EXPECT_EQ(Status::OK,
-              page_db_.AddHead(handler, cid, environment_.random()->Draw<zx::time_utc>()));
-    EXPECT_EQ(Status::OK, page_db_.GetHeads(handler, &heads));
-    EXPECT_EQ(1u, heads.size());
-    EXPECT_EQ(cid, heads[0].second);
+    EXPECT_EQ(page_db_.AddHead(handler, cid, environment_.random()->Draw<zx::time_utc>()),
+              Status::OK);
+    EXPECT_EQ(page_db_.GetHeads(handler, &heads), Status::OK);
+    EXPECT_EQ(heads.size(), 1u);
+    EXPECT_EQ(heads[0].second, cid);
 
-    EXPECT_EQ(Status::OK, page_db_.RemoveHead(handler, cid));
-    EXPECT_EQ(Status::OK, page_db_.GetHeads(handler, &heads));
+    EXPECT_EQ(page_db_.RemoveHead(handler, cid), Status::OK);
+    EXPECT_EQ(page_db_.GetHeads(handler, &heads), Status::OK);
     EXPECT_TRUE(heads.empty());
   });
 }
@@ -105,19 +105,19 @@ TEST_F(PageDbTest, MergeCommits) {
     std::vector<CommitId> merges;
 
     // There are no merges
-    EXPECT_EQ(Status::OK, page_db_.GetMerges(handler, parent1, parent2, &merges));
+    EXPECT_EQ(page_db_.GetMerges(handler, parent1, parent2, &merges), Status::OK);
     EXPECT_THAT(merges, IsEmpty());
 
     // Add two merges, check they are returned for both orders of the parents
     std::unique_ptr<PageDbImpl::Batch> batch;
-    EXPECT_EQ(Status::OK, page_db_.StartBatch(handler, &batch));
-    EXPECT_EQ(Status::OK, batch->AddMerge(handler, parent1, parent2, merge1));
-    EXPECT_EQ(Status::OK, batch->AddMerge(handler, parent2, parent1, merge2));
-    EXPECT_EQ(Status::OK, batch->Execute(handler));
+    EXPECT_EQ(page_db_.StartBatch(handler, &batch), Status::OK);
+    EXPECT_EQ(batch->AddMerge(handler, parent1, parent2, merge1), Status::OK);
+    EXPECT_EQ(batch->AddMerge(handler, parent2, parent1, merge2), Status::OK);
+    EXPECT_EQ(batch->Execute(handler), Status::OK);
 
-    EXPECT_EQ(Status::OK, page_db_.GetMerges(handler, parent1, parent2, &merges));
+    EXPECT_EQ(page_db_.GetMerges(handler, parent1, parent2, &merges), Status::OK);
     EXPECT_THAT(merges, UnorderedElementsAre(merge1, merge2));
-    EXPECT_EQ(Status::OK, page_db_.GetMerges(handler, parent2, parent1, &merges));
+    EXPECT_EQ(page_db_.GetMerges(handler, parent2, parent1, &merges), Status::OK);
     EXPECT_THAT(merges, UnorderedElementsAre(merge1, merge2));
   });
 }
@@ -144,15 +144,15 @@ TEST_F(PageDbTest, OrderHeadCommitsByTimestampThenId) {
     auto rng = environment_.random()->NewBitGenerator<uint64_t>();
     std::shuffle(commits.begin(), commits.end(), rng);
     for (auto [ts, id] : commits) {
-      EXPECT_EQ(Status::OK, page_db_.AddHead(handler, id, ts));
+      EXPECT_EQ(page_db_.AddHead(handler, id, ts), Status::OK);
     }
 
     // Check that GetHeads returns sorted commits.
     std::vector<std::pair<zx::time_utc, CommitId>> heads;
-    EXPECT_EQ(Status::OK, page_db_.GetHeads(handler, &heads));
+    EXPECT_EQ(page_db_.GetHeads(handler, &heads), Status::OK);
     std::sort(commits.begin(), commits.end());
     for (size_t i = 0; i < commits.size(); ++i) {
-      EXPECT_EQ(commits[i].second, heads[i].second);
+      EXPECT_EQ(heads[i].second, commits[i].second);
     }
   });
 }
@@ -168,18 +168,19 @@ TEST_F(PageDbTest, Commits) {
         std::move(parents));
 
     std::string storage_bytes;
-    EXPECT_EQ(Status::INTERNAL_NOT_FOUND,
-              page_db_.GetCommitStorageBytes(handler, commit->GetId(), &storage_bytes));
+    EXPECT_EQ(page_db_.GetCommitStorageBytes(handler, commit->GetId(), &storage_bytes),
+              Status::INTERNAL_NOT_FOUND);
 
-    EXPECT_EQ(Status::OK,
-              page_db_.AddCommitStorageBytes(handler, commit->GetId(), commit->GetRootIdentifier(),
-                                             commit->GetStorageBytes()));
-    EXPECT_EQ(Status::OK, page_db_.GetCommitStorageBytes(handler, commit->GetId(), &storage_bytes));
-    EXPECT_EQ(storage_bytes, commit->GetStorageBytes());
+    EXPECT_EQ(page_db_.AddCommitStorageBytes(handler, commit->GetId(), commit->GetRootIdentifier(),
+                                             commit->GetStorageBytes()),
+              Status::OK);
+    EXPECT_EQ(page_db_.GetCommitStorageBytes(handler, commit->GetId(), &storage_bytes), Status::OK);
+    EXPECT_EQ(commit->GetStorageBytes(), storage_bytes);
 
     std::vector<CommitId> references;
-    EXPECT_EQ(Status::OK, page_db_.GetInboundCommitReferences(handler, commit->GetRootIdentifier(),
-                                                              &references));
+    EXPECT_EQ(
+        page_db_.GetInboundCommitReferences(handler, commit->GetRootIdentifier(), &references),
+        Status::OK);
     EXPECT_THAT(references, ElementsAre(commit->GetId()));
   });
 }
@@ -192,36 +193,35 @@ TEST_F(PageDbTest, ObjectStorage) {
     std::unique_ptr<const Piece> piece;
     PageDbObjectStatus object_status;
 
-    EXPECT_EQ(Status::INTERNAL_NOT_FOUND, page_db_.ReadObject(handler, object_identifier, &piece));
+    EXPECT_EQ(page_db_.ReadObject(handler, object_identifier, &piece), Status::INTERNAL_NOT_FOUND);
     ASSERT_EQ(
-        Status::OK,
         page_db_.WriteObject(
             handler, DataChunkPiece(object_identifier, DataSource::DataChunk::Create(content)),
-            PageDbObjectStatus::TRANSIENT,
-            {{child_identifier.object_digest(), KeyPriority::LAZY}}));
-    ASSERT_EQ(Status::OK, page_db_.GetObjectStatus(handler, object_identifier, &object_status));
-    EXPECT_EQ(PageDbObjectStatus::TRANSIENT, object_status);
-    ASSERT_EQ(Status::OK, page_db_.ReadObject(handler, object_identifier, &piece));
-    EXPECT_EQ(content, piece->GetData());
+            PageDbObjectStatus::TRANSIENT, {{child_identifier.object_digest(), KeyPriority::LAZY}}),
+        Status::OK);
+    ASSERT_EQ(page_db_.GetObjectStatus(handler, object_identifier, &object_status), Status::OK);
+    EXPECT_EQ(object_status, PageDbObjectStatus::TRANSIENT);
+    ASSERT_EQ(page_db_.ReadObject(handler, object_identifier, &piece), Status::OK);
+    EXPECT_EQ(piece->GetData(), content);
     ObjectReferencesAndPriority references;
-    EXPECT_EQ(Status::OK,
-              page_db_.GetInboundObjectReferences(handler, child_identifier, &references));
+    EXPECT_EQ(page_db_.GetInboundObjectReferences(handler, child_identifier, &references),
+              Status::OK);
     EXPECT_THAT(references,
                 ElementsAre(Pair(object_identifier.object_digest(), KeyPriority::LAZY)));
     // Update the object to LOCAL. The new content and references should be
     // ignored.
     const std::string new_content = RandomString(environment_.random(), 32 * 1024);
     ASSERT_EQ(
-        Status::OK,
         page_db_.WriteObject(
             handler, DataChunkPiece(object_identifier, DataSource::DataChunk::Create(new_content)),
-            PageDbObjectStatus::LOCAL, {{child_identifier.object_digest(), KeyPriority::EAGER}}));
-    ASSERT_EQ(Status::OK, page_db_.GetObjectStatus(handler, object_identifier, &object_status));
-    EXPECT_EQ(PageDbObjectStatus::LOCAL, object_status);
-    EXPECT_EQ(content, piece->GetData());
+            PageDbObjectStatus::LOCAL, {{child_identifier.object_digest(), KeyPriority::EAGER}}),
+        Status::OK);
+    ASSERT_EQ(page_db_.GetObjectStatus(handler, object_identifier, &object_status), Status::OK);
+    EXPECT_EQ(object_status, PageDbObjectStatus::LOCAL);
+    EXPECT_EQ(piece->GetData(), content);
     EXPECT_NE(new_content, piece->GetData());
-    EXPECT_EQ(Status::OK,
-              page_db_.GetInboundObjectReferences(handler, child_identifier, &references));
+    EXPECT_EQ(page_db_.GetInboundObjectReferences(handler, child_identifier, &references),
+              Status::OK);
     EXPECT_THAT(references,
                 ElementsAre(Pair(object_identifier.object_digest(), KeyPriority::LAZY)));
   });
@@ -232,16 +232,16 @@ TEST_F(PageDbTest, LazyAndEagerReferences) {
     const auto object_identifier = RandomObjectIdentifier(environment_.random());
     const ObjectIdentifier child_identifier = RandomObjectIdentifier(environment_.random());
 
-    ASSERT_EQ(Status::OK,
-              page_db_.WriteObject(
+    ASSERT_EQ(page_db_.WriteObject(
                   handler, DataChunkPiece(object_identifier, DataSource::DataChunk::Create("")),
                   PageDbObjectStatus::LOCAL,
                   {{child_identifier.object_digest(), KeyPriority::LAZY},
-                   {child_identifier.object_digest(), KeyPriority::EAGER}}));
+                   {child_identifier.object_digest(), KeyPriority::EAGER}}),
+              Status::OK);
 
     ObjectReferencesAndPriority references;
-    EXPECT_EQ(Status::OK,
-              page_db_.GetInboundObjectReferences(handler, child_identifier, &references));
+    EXPECT_EQ(page_db_.GetInboundObjectReferences(handler, child_identifier, &references),
+              Status::OK);
     EXPECT_THAT(references,
                 UnorderedElementsAre(Pair(object_identifier.object_digest(), KeyPriority::LAZY),
                                      Pair(object_identifier.object_digest(), KeyPriority::EAGER)));
@@ -252,21 +252,21 @@ TEST_F(PageDbTest, UnsyncedCommits) {
   RunInCoroutine([&](CoroutineHandler* handler) {
     CommitId commit_id = RandomCommitId(environment_.random());
     std::vector<CommitId> commit_ids;
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedCommitIds(handler, &commit_ids));
+    EXPECT_EQ(page_db_.GetUnsyncedCommitIds(handler, &commit_ids), Status::OK);
     EXPECT_TRUE(commit_ids.empty());
 
-    EXPECT_EQ(Status::OK, page_db_.MarkCommitIdUnsynced(handler, commit_id, 0));
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedCommitIds(handler, &commit_ids));
-    EXPECT_EQ(1u, commit_ids.size());
-    EXPECT_EQ(commit_id, commit_ids[0]);
+    EXPECT_EQ(page_db_.MarkCommitIdUnsynced(handler, commit_id, 0), Status::OK);
+    EXPECT_EQ(page_db_.GetUnsyncedCommitIds(handler, &commit_ids), Status::OK);
+    EXPECT_EQ(commit_ids.size(), 1u);
+    EXPECT_EQ(commit_ids[0], commit_id);
     bool is_synced;
-    EXPECT_EQ(Status::OK, page_db_.IsCommitSynced(handler, commit_id, &is_synced));
+    EXPECT_EQ(page_db_.IsCommitSynced(handler, commit_id, &is_synced), Status::OK);
     EXPECT_FALSE(is_synced);
 
-    EXPECT_EQ(Status::OK, page_db_.MarkCommitIdSynced(handler, commit_id));
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedCommitIds(handler, &commit_ids));
+    EXPECT_EQ(page_db_.MarkCommitIdSynced(handler, commit_id), Status::OK);
+    EXPECT_EQ(page_db_.GetUnsyncedCommitIds(handler, &commit_ids), Status::OK);
     EXPECT_TRUE(commit_ids.empty());
-    EXPECT_EQ(Status::OK, page_db_.IsCommitSynced(handler, commit_id, &is_synced));
+    EXPECT_EQ(page_db_.IsCommitSynced(handler, commit_id, &is_synced), Status::OK);
     EXPECT_TRUE(is_synced);
   });
 }
@@ -277,17 +277,17 @@ TEST_F(PageDbTest, OrderUnsyncedCommitsByTimestamp) {
                              RandomCommitId(environment_.random()),
                              RandomCommitId(environment_.random())};
     // Add three unsynced commits with timestamps 200, 300 and 100.
-    EXPECT_EQ(Status::OK, page_db_.MarkCommitIdUnsynced(handler, commit_ids[0], 200));
-    EXPECT_EQ(Status::OK, page_db_.MarkCommitIdUnsynced(handler, commit_ids[1], 300));
-    EXPECT_EQ(Status::OK, page_db_.MarkCommitIdUnsynced(handler, commit_ids[2], 100));
+    EXPECT_EQ(page_db_.MarkCommitIdUnsynced(handler, commit_ids[0], 200), Status::OK);
+    EXPECT_EQ(page_db_.MarkCommitIdUnsynced(handler, commit_ids[1], 300), Status::OK);
+    EXPECT_EQ(page_db_.MarkCommitIdUnsynced(handler, commit_ids[2], 100), Status::OK);
 
     // The result should be ordered by the given timestamps.
     std::vector<CommitId> found_ids;
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedCommitIds(handler, &found_ids));
-    EXPECT_EQ(3u, found_ids.size());
-    EXPECT_EQ(found_ids[0], commit_ids[2]);
-    EXPECT_EQ(found_ids[1], commit_ids[0]);
-    EXPECT_EQ(found_ids[2], commit_ids[1]);
+    EXPECT_EQ(page_db_.GetUnsyncedCommitIds(handler, &found_ids), Status::OK);
+    EXPECT_EQ(found_ids.size(), 3u);
+    EXPECT_EQ(commit_ids[2], found_ids[0]);
+    EXPECT_EQ(commit_ids[0], found_ids[1]);
+    EXPECT_EQ(commit_ids[1], found_ids[2]);
   });
 }
 
@@ -295,74 +295,74 @@ TEST_F(PageDbTest, UnsyncedPieces) {
   RunInCoroutine([&](CoroutineHandler* handler) {
     auto object_identifier = RandomObjectIdentifier(environment_.random());
     std::vector<ObjectIdentifier> object_identifiers;
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_identifiers));
+    EXPECT_EQ(page_db_.GetUnsyncedPieces(handler, &object_identifiers), Status::OK);
     EXPECT_TRUE(object_identifiers.empty());
 
-    EXPECT_EQ(Status::OK,
-              page_db_.WriteObject(
+    EXPECT_EQ(page_db_.WriteObject(
                   handler, DataChunkPiece(object_identifier, DataSource::DataChunk::Create("")),
-                  PageDbObjectStatus::LOCAL, {}));
-    EXPECT_EQ(Status::OK,
-              page_db_.SetObjectStatus(handler, object_identifier, PageDbObjectStatus::LOCAL));
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_identifiers));
-    EXPECT_EQ(1u, object_identifiers.size());
-    EXPECT_EQ(object_identifier, object_identifiers[0]);
+                  PageDbObjectStatus::LOCAL, {}),
+              Status::OK);
+    EXPECT_EQ(page_db_.SetObjectStatus(handler, object_identifier, PageDbObjectStatus::LOCAL),
+              Status::OK);
+    EXPECT_EQ(page_db_.GetUnsyncedPieces(handler, &object_identifiers), Status::OK);
+    EXPECT_EQ(object_identifiers.size(), 1u);
+    EXPECT_EQ(object_identifiers[0], object_identifier);
     PageDbObjectStatus object_status;
-    EXPECT_EQ(Status::OK, page_db_.GetObjectStatus(handler, object_identifier, &object_status));
-    EXPECT_EQ(PageDbObjectStatus::LOCAL, object_status);
+    EXPECT_EQ(page_db_.GetObjectStatus(handler, object_identifier, &object_status), Status::OK);
+    EXPECT_EQ(object_status, PageDbObjectStatus::LOCAL);
 
-    EXPECT_EQ(Status::OK,
-              page_db_.SetObjectStatus(handler, object_identifier, PageDbObjectStatus::SYNCED));
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_identifiers));
+    EXPECT_EQ(page_db_.SetObjectStatus(handler, object_identifier, PageDbObjectStatus::SYNCED),
+              Status::OK);
+    EXPECT_EQ(page_db_.GetUnsyncedPieces(handler, &object_identifiers), Status::OK);
     EXPECT_TRUE(object_identifiers.empty());
-    EXPECT_EQ(Status::OK, page_db_.GetObjectStatus(handler, object_identifier, &object_status));
-    EXPECT_EQ(PageDbObjectStatus::SYNCED, object_status);
+    EXPECT_EQ(page_db_.GetObjectStatus(handler, object_identifier, &object_status), Status::OK);
+    EXPECT_EQ(object_status, PageDbObjectStatus::SYNCED);
   });
 }
 
 TEST_F(PageDbTest, Batch) {
   RunInCoroutine([&](CoroutineHandler* handler) {
     std::unique_ptr<PageDb::Batch> batch;
-    ASSERT_EQ(Status::OK, page_db_.StartBatch(handler, &batch));
+    ASSERT_EQ(page_db_.StartBatch(handler, &batch), Status::OK);
     ASSERT_TRUE(batch);
 
     auto object_identifier = RandomObjectIdentifier(environment_.random());
     auto eager_identifier = RandomObjectIdentifier(environment_.random());
     auto lazy_identifier = RandomObjectIdentifier(environment_.random());
-    EXPECT_EQ(Status::OK,
-              batch->WriteObject(
+    EXPECT_EQ(batch->WriteObject(
                   handler, DataChunkPiece(object_identifier, DataSource::DataChunk::Create("")),
                   PageDbObjectStatus::LOCAL,
                   {{eager_identifier.object_digest(), KeyPriority::EAGER},
-                   {lazy_identifier.object_digest(), KeyPriority::LAZY}}));
+                   {lazy_identifier.object_digest(), KeyPriority::LAZY}}),
+              Status::OK);
 
     // Check that we don't have any unsynced piece nor reference prior to
     // executing the batch.
     std::vector<ObjectIdentifier> object_identifiers;
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_identifiers));
+    EXPECT_EQ(page_db_.GetUnsyncedPieces(handler, &object_identifiers), Status::OK);
     EXPECT_THAT(object_identifiers, IsEmpty());
     ObjectReferencesAndPriority references;
-    EXPECT_EQ(Status::OK,
-              page_db_.GetInboundObjectReferences(handler, eager_identifier, &references));
+    EXPECT_EQ(page_db_.GetInboundObjectReferences(handler, eager_identifier, &references),
+              Status::OK);
     EXPECT_THAT(references, IsEmpty());
-    EXPECT_EQ(Status::OK,
-              page_db_.GetInboundObjectReferences(handler, lazy_identifier, &references));
+    EXPECT_EQ(page_db_.GetInboundObjectReferences(handler, lazy_identifier, &references),
+              Status::OK);
     EXPECT_THAT(references, IsEmpty());
 
     // Execute the batch write.
-    EXPECT_EQ(Status::OK, batch->Execute(handler));
+    EXPECT_EQ(batch->Execute(handler), Status::OK);
 
     // Check unsynced status of written pieces.
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_identifiers));
+    EXPECT_EQ(page_db_.GetUnsyncedPieces(handler, &object_identifiers), Status::OK);
     EXPECT_THAT(object_identifiers, ElementsAre(object_identifier));
     // Check the eager reference.
-    EXPECT_EQ(Status::OK,
-              page_db_.GetInboundObjectReferences(handler, eager_identifier, &references));
+    EXPECT_EQ(page_db_.GetInboundObjectReferences(handler, eager_identifier, &references),
+              Status::OK);
     EXPECT_THAT(references,
                 ElementsAre(Pair(object_identifier.object_digest(), KeyPriority::EAGER)));
     // Check the lazy reference.
-    EXPECT_EQ(Status::OK,
-              page_db_.GetInboundObjectReferences(handler, lazy_identifier, &references));
+    EXPECT_EQ(page_db_.GetInboundObjectReferences(handler, lazy_identifier, &references),
+              Status::OK);
     EXPECT_THAT(references,
                 ElementsAre(Pair(object_identifier.object_digest(), KeyPriority::LAZY)));
   });
@@ -377,19 +377,19 @@ TEST_F(PageDbTest, PageDbObjectStatus) {
       for (auto next_status : next_statuses) {
         auto object_identifier = RandomObjectIdentifier(environment_.random());
         PageDbObjectStatus object_status;
-        ASSERT_EQ(Status::OK, page_db_.GetObjectStatus(handler, object_identifier, &object_status));
-        EXPECT_EQ(PageDbObjectStatus::UNKNOWN, object_status);
-        ASSERT_EQ(Status::OK,
-                  page_db_.WriteObject(
+        ASSERT_EQ(page_db_.GetObjectStatus(handler, object_identifier, &object_status), Status::OK);
+        EXPECT_EQ(object_status, PageDbObjectStatus::UNKNOWN);
+        ASSERT_EQ(page_db_.WriteObject(
                       handler, DataChunkPiece(object_identifier, DataSource::DataChunk::Create("")),
-                      initial_status, {}));
-        ASSERT_EQ(Status::OK, page_db_.GetObjectStatus(handler, object_identifier, &object_status));
-        EXPECT_EQ(initial_status, object_status);
-        ASSERT_EQ(Status::OK, page_db_.SetObjectStatus(handler, object_identifier, next_status));
+                      initial_status, {}),
+                  Status::OK);
+        ASSERT_EQ(page_db_.GetObjectStatus(handler, object_identifier, &object_status), Status::OK);
+        EXPECT_EQ(object_status, initial_status);
+        ASSERT_EQ(page_db_.SetObjectStatus(handler, object_identifier, next_status), Status::OK);
 
         PageDbObjectStatus expected_status = std::max(initial_status, next_status);
-        ASSERT_EQ(Status::OK, page_db_.GetObjectStatus(handler, object_identifier, &object_status));
-        EXPECT_EQ(expected_status, object_status);
+        ASSERT_EQ(page_db_.GetObjectStatus(handler, object_identifier, &object_status), Status::OK);
+        EXPECT_EQ(object_status, expected_status);
       }
     }
   });
@@ -403,12 +403,12 @@ TEST_F(PageDbTest, SyncMetadata) {
       auto key = key_and_value.first;
       auto value = key_and_value.second;
       std::string returned_value;
-      EXPECT_EQ(Status::INTERNAL_NOT_FOUND,
-                page_db_.GetSyncMetadata(handler, key, &returned_value));
+      EXPECT_EQ(page_db_.GetSyncMetadata(handler, key, &returned_value),
+                Status::INTERNAL_NOT_FOUND);
 
-      EXPECT_EQ(Status::OK, page_db_.SetSyncMetadata(handler, key, value));
-      EXPECT_EQ(Status::OK, page_db_.GetSyncMetadata(handler, key, &returned_value));
-      EXPECT_EQ(value, returned_value);
+      EXPECT_EQ(page_db_.SetSyncMetadata(handler, key, value), Status::OK);
+      EXPECT_EQ(page_db_.GetSyncMetadata(handler, key, &returned_value), Status::OK);
+      EXPECT_EQ(returned_value, value);
     }
   });
 }
@@ -418,12 +418,12 @@ TEST_F(PageDbTest, PageIsOnline) {
     bool page_is_online;
 
     // Check that the initial state is not online.
-    ASSERT_EQ(Status::OK, page_db_.IsPageOnline(handler, &page_is_online));
+    ASSERT_EQ(page_db_.IsPageOnline(handler, &page_is_online), Status::OK);
     EXPECT_FALSE(page_is_online);
 
     // Mark page as online and check it was updated.
-    EXPECT_EQ(Status::OK, page_db_.MarkPageOnline(handler));
-    ASSERT_EQ(Status::OK, page_db_.IsPageOnline(handler, &page_is_online));
+    EXPECT_EQ(page_db_.MarkPageOnline(handler), Status::OK);
+    ASSERT_EQ(page_db_.IsPageOnline(handler, &page_is_online), Status::OK);
     EXPECT_TRUE(page_is_online);
   });
 }
@@ -433,32 +433,32 @@ TEST_F(PageDbTest, PageIsOnline) {
 TEST_F(PageDbTest, LE_451_ReproductionTest) {
   auto id = RandomObjectIdentifier(environment_.random());
   RunInCoroutine([&](CoroutineHandler* handler) {
-    EXPECT_EQ(Status::OK,
-              page_db_.WriteObject(handler, DataChunkPiece(id, DataSource::DataChunk::Create("")),
-                                   PageDbObjectStatus::LOCAL, {}));
+    EXPECT_EQ(page_db_.WriteObject(handler, DataChunkPiece(id, DataSource::DataChunk::Create("")),
+                                   PageDbObjectStatus::LOCAL, {}),
+              Status::OK);
   });
   CoroutineHandler* handler1 = nullptr;
   CoroutineHandler* handler2 = nullptr;
   environment_.coroutine_service()->StartCoroutine([&](CoroutineHandler* handler) {
     handler1 = handler;
     std::unique_ptr<PageDb::Batch> batch;
-    EXPECT_EQ(Status::OK, page_db_.StartBatch(handler, &batch));
-    EXPECT_EQ(Status::OK, batch->SetObjectStatus(handler, id, PageDbObjectStatus::SYNCED));
+    EXPECT_EQ(page_db_.StartBatch(handler, &batch), Status::OK);
+    EXPECT_EQ(batch->SetObjectStatus(handler, id, PageDbObjectStatus::SYNCED), Status::OK);
     if (handler->Yield() == coroutine::ContinuationStatus::INTERRUPTED) {
       return;
     }
-    EXPECT_EQ(Status::OK, batch->Execute(handler));
+    EXPECT_EQ(batch->Execute(handler), Status::OK);
     handler1 = nullptr;
   });
   environment_.coroutine_service()->StartCoroutine([&](CoroutineHandler* handler) {
     handler2 = handler;
     std::unique_ptr<PageDb::Batch> batch;
-    EXPECT_EQ(Status::OK, page_db_.StartBatch(handler, &batch));
+    EXPECT_EQ(page_db_.StartBatch(handler, &batch), Status::OK);
     if (handler->Yield() == coroutine::ContinuationStatus::INTERRUPTED) {
       return;
     }
-    EXPECT_EQ(Status::OK, batch->SetObjectStatus(handler, id, PageDbObjectStatus::LOCAL));
-    EXPECT_EQ(Status::OK, batch->Execute(handler));
+    EXPECT_EQ(batch->SetObjectStatus(handler, id, PageDbObjectStatus::LOCAL), Status::OK);
+    EXPECT_EQ(batch->Execute(handler), Status::OK);
     handler2 = nullptr;
   });
   ASSERT_TRUE(handler1);

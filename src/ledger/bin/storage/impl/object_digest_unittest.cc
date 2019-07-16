@@ -19,10 +19,10 @@ TEST_P(ObjectDigestSmallTest, Index) {
   ObjectDigest object_digest = ComputeObjectDigest(PieceType::INDEX, ObjectType::BLOB, GetParam());
   ASSERT_TRUE(IsDigestValid(object_digest));
   ObjectDigestInfo info = GetObjectDigestInfo(object_digest);
-  EXPECT_EQ(PieceType::INDEX, info.piece_type);
-  EXPECT_EQ(ObjectType::BLOB, info.object_type);
-  EXPECT_EQ(InlinedPiece::YES, info.inlined);
-  EXPECT_EQ(GetParam(), ExtractObjectDigestData(object_digest));
+  EXPECT_EQ(info.piece_type, PieceType::INDEX);
+  EXPECT_EQ(info.object_type, ObjectType::BLOB);
+  EXPECT_EQ(info.inlined, InlinedPiece::YES);
+  EXPECT_EQ(ExtractObjectDigestData(object_digest), GetParam());
 }
 
 TEST_P(ObjectDigestSmallTest, Value) {
@@ -30,10 +30,10 @@ TEST_P(ObjectDigestSmallTest, Value) {
       ComputeObjectDigest(PieceType::CHUNK, ObjectType::TREE_NODE, GetParam());
   ASSERT_TRUE(IsDigestValid(object_digest));
   ObjectDigestInfo info = GetObjectDigestInfo(object_digest);
-  EXPECT_EQ(PieceType::CHUNK, info.piece_type);
-  EXPECT_EQ(InlinedPiece::YES, info.inlined);
-  EXPECT_EQ(ObjectType::TREE_NODE, info.object_type);
-  EXPECT_EQ(GetParam(), ExtractObjectDigestData(object_digest));
+  EXPECT_EQ(info.piece_type, PieceType::CHUNK);
+  EXPECT_EQ(info.inlined, InlinedPiece::YES);
+  EXPECT_EQ(info.object_type, ObjectType::TREE_NODE);
+  EXPECT_EQ(ExtractObjectDigestData(object_digest), GetParam());
 }
 
 INSTANTIATE_TEST_SUITE_P(ObjectDigestTest, ObjectDigestSmallTest,
@@ -48,20 +48,20 @@ TEST_P(ObjectDigestBigTest, Index) {
       ComputeObjectDigest(PieceType::INDEX, ObjectType::TREE_NODE, GetParam());
   ASSERT_TRUE(IsDigestValid(object_digest));
   ObjectDigestInfo info = GetObjectDigestInfo(object_digest);
-  EXPECT_EQ(PieceType::INDEX, info.piece_type);
-  EXPECT_EQ(ObjectType::TREE_NODE, info.object_type);
-  EXPECT_EQ(InlinedPiece::NO, info.inlined);
-  EXPECT_EQ(encryption::SHA256WithLengthHash(GetParam()), ExtractObjectDigestData(object_digest));
+  EXPECT_EQ(info.piece_type, PieceType::INDEX);
+  EXPECT_EQ(info.object_type, ObjectType::TREE_NODE);
+  EXPECT_EQ(info.inlined, InlinedPiece::NO);
+  EXPECT_EQ(ExtractObjectDigestData(object_digest), encryption::SHA256WithLengthHash(GetParam()));
 }
 
 TEST_P(ObjectDigestBigTest, Value) {
   ObjectDigest object_digest = ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, GetParam());
   ASSERT_TRUE(IsDigestValid(object_digest));
   ObjectDigestInfo info = GetObjectDigestInfo(object_digest);
-  EXPECT_EQ(PieceType::CHUNK, info.piece_type);
-  EXPECT_EQ(ObjectType::BLOB, info.object_type);
-  EXPECT_EQ(InlinedPiece::NO, info.inlined);
-  EXPECT_EQ(encryption::SHA256WithLengthHash(GetParam()), ExtractObjectDigestData(object_digest));
+  EXPECT_EQ(info.piece_type, PieceType::CHUNK);
+  EXPECT_EQ(info.object_type, ObjectType::BLOB);
+  EXPECT_EQ(info.inlined, InlinedPiece::NO);
+  EXPECT_EQ(ExtractObjectDigestData(object_digest), encryption::SHA256WithLengthHash(GetParam()));
 }
 
 INSTANTIATE_TEST_SUITE_P(ObjectDigestTest, ObjectDigestBigTest,

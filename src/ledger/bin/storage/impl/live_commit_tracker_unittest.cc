@@ -4,10 +4,10 @@
 
 #include "src/ledger/bin/storage/impl/live_commit_tracker.h"
 
+#include <memory>
+
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
-
-#include <memory>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -62,8 +62,8 @@ class LiveCommitTrackerTest : public ledger::TestWithEnvironment {
     storage_->Init(callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
-    EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(id, storage_->GetId());
+    EXPECT_EQ(status, Status::OK);
+    EXPECT_EQ(storage_->GetId(), id);
   }
 
   // Returns the first head commit from PageStorage.
@@ -77,7 +77,7 @@ class LiveCommitTrackerTest : public ledger::TestWithEnvironment {
   std::vector<std::unique_ptr<const Commit>> GetHeads() {
     std::vector<std::unique_ptr<const Commit>> heads;
     Status status = storage_->GetHeadCommits(&heads);
-    EXPECT_EQ(Status::OK, status);
+    EXPECT_EQ(status, Status::OK);
     return heads;
   }
 
@@ -92,7 +92,7 @@ class LiveCommitTrackerTest : public ledger::TestWithEnvironment {
                             callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
-    EXPECT_EQ(Status::OK, status);
+    EXPECT_EQ(status, Status::OK);
     return commit;
   }
 

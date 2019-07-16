@@ -4,15 +4,15 @@
 
 #include "src/ledger/bin/cloud_sync/impl/batch_upload.h"
 
+#include <functional>
+#include <map>
+#include <utility>
+
 #include <lib/async/dispatcher.h>
 #include <lib/callback/capture.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
-
-#include <functional>
-#include <map>
-#include <utility>
 
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_cloud.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
@@ -196,20 +196,20 @@ TEST_F(BatchUploadTest, SingleCommit) {
 
   batch_upload->Start();
   RunLoopUntilIdle();
-  EXPECT_EQ(1u, done_calls_);
-  EXPECT_EQ(0u, error_calls_);
+  EXPECT_EQ(done_calls_, 1u);
+  EXPECT_EQ(error_calls_, 0u);
 
   // Verify the artifacts uploaded to cloud provider.
-  EXPECT_EQ(1u, page_cloud_.received_commits.size());
-  EXPECT_EQ("id", page_cloud_.received_commits.front().id);
-  EXPECT_EQ("content", encryption_service_.DecryptCommitSynchronous(
-                           page_cloud_.received_commits.front().data));
+  EXPECT_EQ(page_cloud_.received_commits.size(), 1u);
+  EXPECT_EQ(page_cloud_.received_commits.front().id, "id");
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits.front().data),
+            "content");
   EXPECT_TRUE(page_cloud_.received_objects.empty());
 
   // Verify the sync status in storage.
-  EXPECT_EQ(1u, storage_.commits_marked_as_synced.size());
-  EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id"));
-  EXPECT_EQ(0u, storage_.objects_marked_as_synced.size());
+  EXPECT_EQ(storage_.commits_marked_as_synced.size(), 1u);
+  EXPECT_EQ(storage_.commits_marked_as_synced.count("id"), 1u);
+  EXPECT_EQ(storage_.objects_marked_as_synced.size(), 0u);
 }
 
 // Test an upload of multiple commits with no unsynced objects.
@@ -221,24 +221,24 @@ TEST_F(BatchUploadTest, MultipleCommits) {
 
   batch_upload->Start();
   RunLoopUntilIdle();
-  EXPECT_EQ(1u, done_calls_);
-  EXPECT_EQ(0u, error_calls_);
+  EXPECT_EQ(done_calls_, 1u);
+  EXPECT_EQ(error_calls_, 0u);
 
   // Verify that the commits were uploaded correctly and in a single call.
-  EXPECT_EQ(1u, page_cloud_.add_commits_calls);
-  ASSERT_EQ(2u, page_cloud_.received_commits.size());
-  EXPECT_EQ("id0", page_cloud_.received_commits[0].id);
-  EXPECT_EQ("content0",
-            encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[0].data));
-  EXPECT_EQ("id1", page_cloud_.received_commits[1].id);
-  EXPECT_EQ("content1",
-            encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[1].data));
+  EXPECT_EQ(page_cloud_.add_commits_calls, 1u);
+  ASSERT_EQ(page_cloud_.received_commits.size(), 2u);
+  EXPECT_EQ(page_cloud_.received_commits[0].id, "id0");
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[0].data),
+            "content0");
+  EXPECT_EQ(page_cloud_.received_commits[1].id, "id1");
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[1].data),
+            "content1");
   EXPECT_TRUE(page_cloud_.received_objects.empty());
 
   // Verify the sync status in storage.
-  EXPECT_EQ(2u, storage_.commits_marked_as_synced.size());
-  EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id0"));
-  EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id1"));
+  EXPECT_EQ(storage_.commits_marked_as_synced.size(), 2u);
+  EXPECT_EQ(storage_.commits_marked_as_synced.count("id0"), 1u);
+  EXPECT_EQ(storage_.commits_marked_as_synced.count("id1"), 1u);
 }
 
 // Test an upload of a commit with a few unsynced objects.
@@ -255,28 +255,28 @@ TEST_F(BatchUploadTest, SingleCommitWithObjects) {
 
   batch_upload->Start();
   RunLoopUntilIdle();
-  EXPECT_EQ(1u, done_calls_);
-  EXPECT_EQ(0u, error_calls_);
+  EXPECT_EQ(done_calls_, 1u);
+  EXPECT_EQ(error_calls_, 0u);
 
   // Verify the artifacts uploaded to cloud provider.
-  EXPECT_EQ(1u, page_cloud_.received_commits.size());
-  EXPECT_EQ("id", page_cloud_.received_commits.front().id);
-  EXPECT_EQ("content", encryption_service_.DecryptCommitSynchronous(
-                           page_cloud_.received_commits.front().data));
-  EXPECT_EQ(2u, page_cloud_.received_objects.size());
-  EXPECT_EQ("obj_data1",
-            encryption_service_.DecryptObjectSynchronous(
-                page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id1)]));
-  EXPECT_EQ("obj_data2",
-            encryption_service_.DecryptObjectSynchronous(
-                page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id2)]));
+  EXPECT_EQ(page_cloud_.received_commits.size(), 1u);
+  EXPECT_EQ(page_cloud_.received_commits.front().id, "id");
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits.front().data),
+            "content");
+  EXPECT_EQ(page_cloud_.received_objects.size(), 2u);
+  EXPECT_EQ(encryption_service_.DecryptObjectSynchronous(
+                page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id1)]),
+            "obj_data1");
+  EXPECT_EQ(encryption_service_.DecryptObjectSynchronous(
+                page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id2)]),
+            "obj_data2");
 
   // Verify the sync status in storage.
-  EXPECT_EQ(1u, storage_.commits_marked_as_synced.size());
-  EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id"));
-  EXPECT_EQ(2u, storage_.objects_marked_as_synced.size());
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(id1));
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(id2));
+  EXPECT_EQ(storage_.commits_marked_as_synced.size(), 1u);
+  EXPECT_EQ(storage_.commits_marked_as_synced.count("id"), 1u);
+  EXPECT_EQ(storage_.objects_marked_as_synced.size(), 2u);
+  EXPECT_EQ(storage_.objects_marked_as_synced.count(id1), 1u);
+  EXPECT_EQ(storage_.objects_marked_as_synced.count(id2), 1u);
 }
 
 // Verifies that the number of concurrent object uploads is limited to
@@ -299,30 +299,30 @@ TEST_F(BatchUploadTest, ThrottleConcurrentUploads) {
   batch_upload->Start();
   RunLoopUntilIdle();
   // Verify that only two object uploads are in progress.
-  EXPECT_EQ(2u, page_cloud_.add_object_calls);
+  EXPECT_EQ(page_cloud_.add_object_calls, 2u);
 
   page_cloud_.delay_add_object_callbacks = false;
   page_cloud_.RunPendingCallbacks();
   RunLoopUntilIdle();
-  EXPECT_EQ(1u, done_calls_);
-  EXPECT_EQ(0u, error_calls_);
-  EXPECT_EQ(3u, page_cloud_.add_object_calls);
-  EXPECT_EQ(3u, page_cloud_.received_objects.size());
-  EXPECT_EQ("obj_data0",
-            encryption_service_.DecryptObjectSynchronous(
-                page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id0)]));
-  EXPECT_EQ("obj_data1",
-            encryption_service_.DecryptObjectSynchronous(
-                page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id1)]));
-  EXPECT_EQ("obj_data2",
-            encryption_service_.DecryptObjectSynchronous(
-                page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id2)]));
+  EXPECT_EQ(done_calls_, 1u);
+  EXPECT_EQ(error_calls_, 0u);
+  EXPECT_EQ(page_cloud_.add_object_calls, 3u);
+  EXPECT_EQ(page_cloud_.received_objects.size(), 3u);
+  EXPECT_EQ(encryption_service_.DecryptObjectSynchronous(
+                page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id0)]),
+            "obj_data0");
+  EXPECT_EQ(encryption_service_.DecryptObjectSynchronous(
+                page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id1)]),
+            "obj_data1");
+  EXPECT_EQ(encryption_service_.DecryptObjectSynchronous(
+                page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id2)]),
+            "obj_data2");
 
   // Verify the sync status in storage.
-  EXPECT_EQ(3u, storage_.objects_marked_as_synced.size());
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(id0));
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(id1));
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(id2));
+  EXPECT_EQ(storage_.objects_marked_as_synced.size(), 3u);
+  EXPECT_EQ(storage_.objects_marked_as_synced.count(id0), 1u);
+  EXPECT_EQ(storage_.objects_marked_as_synced.count(id1), 1u);
+  EXPECT_EQ(storage_.objects_marked_as_synced.count(id2), 1u);
 }
 
 // Test an upload that fails on uploading objects.
@@ -341,12 +341,12 @@ TEST_F(BatchUploadTest, FailedObjectUpload) {
   page_cloud_.object_status_to_return = cloud_provider::Status::NETWORK_ERROR;
   batch_upload->Start();
   RunLoopUntilIdle();
-  EXPECT_EQ(0u, done_calls_);
-  EXPECT_EQ(1u, error_calls_);
-  EXPECT_EQ(BatchUpload::ErrorType::TEMPORARY, last_error_type_);
+  EXPECT_EQ(done_calls_, 0u);
+  EXPECT_EQ(error_calls_, 1u);
+  EXPECT_EQ(last_error_type_, BatchUpload::ErrorType::TEMPORARY);
 
   // Verify that no commits were uploaded.
-  EXPECT_EQ(0u, page_cloud_.received_commits.size());
+  EXPECT_EQ(page_cloud_.received_commits.size(), 0u);
 
   // Verify that neither the objects nor the commit were marked as synced.
   EXPECT_TRUE(storage_.commits_marked_as_synced.empty());
@@ -369,22 +369,22 @@ TEST_F(BatchUploadTest, FailedCommitUpload) {
   page_cloud_.commit_status_to_return = cloud_provider::Status::NETWORK_ERROR;
   batch_upload->Start();
   RunLoopUntilIdle();
-  EXPECT_EQ(0u, done_calls_);
-  EXPECT_EQ(1u, error_calls_);
-  EXPECT_EQ(BatchUpload::ErrorType::TEMPORARY, last_error_type_);
+  EXPECT_EQ(done_calls_, 0u);
+  EXPECT_EQ(error_calls_, 1u);
+  EXPECT_EQ(last_error_type_, BatchUpload::ErrorType::TEMPORARY);
 
   // Verify that the objects were uploaded to cloud provider and marked as
   // synced.
-  EXPECT_EQ(2u, page_cloud_.received_objects.size());
-  EXPECT_EQ("obj_data1",
-            encryption_service_.DecryptObjectSynchronous(
-                page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id1)]));
-  EXPECT_EQ("obj_data2",
-            encryption_service_.DecryptObjectSynchronous(
-                page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id2)]));
-  EXPECT_EQ(2u, storage_.objects_marked_as_synced.size());
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(id1));
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(id2));
+  EXPECT_EQ(page_cloud_.received_objects.size(), 2u);
+  EXPECT_EQ(encryption_service_.DecryptObjectSynchronous(
+                page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id1)]),
+            "obj_data1");
+  EXPECT_EQ(encryption_service_.DecryptObjectSynchronous(
+                page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id2)]),
+            "obj_data2");
+  EXPECT_EQ(storage_.objects_marked_as_synced.size(), 2u);
+  EXPECT_EQ(storage_.objects_marked_as_synced.count(id1), 1u);
+  EXPECT_EQ(storage_.objects_marked_as_synced.count(id2), 1u);
 
   // Verify that neither the commit wasn't marked as synced.
   EXPECT_TRUE(storage_.commits_marked_as_synced.empty());
@@ -406,12 +406,12 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
   page_cloud_.object_status_to_return = cloud_provider::Status::NETWORK_ERROR;
   batch_upload->Start();
   RunLoopUntilIdle();
-  EXPECT_EQ(0u, done_calls_);
-  EXPECT_EQ(1u, error_calls_);
-  EXPECT_EQ(BatchUpload::ErrorType::TEMPORARY, last_error_type_);
+  EXPECT_EQ(done_calls_, 0u);
+  EXPECT_EQ(error_calls_, 1u);
+  EXPECT_EQ(last_error_type_, BatchUpload::ErrorType::TEMPORARY);
 
-  EXPECT_EQ(0u, storage_.commits_marked_as_synced.size());
-  EXPECT_EQ(0u, storage_.objects_marked_as_synced.size());
+  EXPECT_EQ(storage_.commits_marked_as_synced.size(), 0u);
+  EXPECT_EQ(storage_.objects_marked_as_synced.size(), 0u);
 
   // TestStorage moved the objects to be returned out, need to add them again
   // before retry.
@@ -422,24 +422,24 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
   RunLoopUntilIdle();
 
   // Verify the artifacts uploaded to cloud provider.
-  EXPECT_EQ(1u, page_cloud_.received_commits.size());
-  EXPECT_EQ("id", page_cloud_.received_commits.front().id);
-  EXPECT_EQ("content", encryption_service_.DecryptCommitSynchronous(
-                           page_cloud_.received_commits.front().data));
-  EXPECT_EQ(2u, page_cloud_.received_objects.size());
-  EXPECT_EQ("obj_data1",
-            encryption_service_.DecryptObjectSynchronous(
-                page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id1)]));
-  EXPECT_EQ("obj_data2",
-            encryption_service_.DecryptObjectSynchronous(
-                page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id2)]));
+  EXPECT_EQ(page_cloud_.received_commits.size(), 1u);
+  EXPECT_EQ(page_cloud_.received_commits.front().id, "id");
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits.front().data),
+            "content");
+  EXPECT_EQ(page_cloud_.received_objects.size(), 2u);
+  EXPECT_EQ(encryption_service_.DecryptObjectSynchronous(
+                page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id1)]),
+            "obj_data1");
+  EXPECT_EQ(encryption_service_.DecryptObjectSynchronous(
+                page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id2)]),
+            "obj_data2");
 
   // Verify the sync status in storage.
-  EXPECT_EQ(1u, storage_.commits_marked_as_synced.size());
-  EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id"));
-  EXPECT_EQ(2u, storage_.objects_marked_as_synced.size());
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(id1));
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(id2));
+  EXPECT_EQ(storage_.commits_marked_as_synced.size(), 1u);
+  EXPECT_EQ(storage_.commits_marked_as_synced.count("id"), 1u);
+  EXPECT_EQ(storage_.objects_marked_as_synced.size(), 2u);
+  EXPECT_EQ(storage_.objects_marked_as_synced.count(id1), 1u);
+  EXPECT_EQ(storage_.objects_marked_as_synced.count(id2), 1u);
 }
 
 // Test a commit upload that gets an error from storage.
@@ -452,12 +452,12 @@ TEST_F(BatchUploadTest, FailedCommitUploadWitStorageError) {
 
   batch_upload->Start();
   RunLoopUntilIdle();
-  EXPECT_EQ(0u, done_calls_);
-  EXPECT_EQ(1u, error_calls_);
-  EXPECT_EQ(BatchUpload::ErrorType::PERMANENT, last_error_type_);
+  EXPECT_EQ(done_calls_, 0u);
+  EXPECT_EQ(error_calls_, 1u);
+  EXPECT_EQ(last_error_type_, BatchUpload::ErrorType::PERMANENT);
 
   // Verify that no commits were uploaded.
-  EXPECT_EQ(0u, page_cloud_.received_commits.size());
+  EXPECT_EQ(page_cloud_.received_commits.size(), 0u);
 }
 
 // Test objects upload that get an error from storage.
@@ -476,13 +476,13 @@ TEST_F(BatchUploadTest, FailedObjectUploadWitStorageError) {
 
   batch_upload->Start();
   RunLoopUntilIdle();
-  EXPECT_EQ(0u, done_calls_);
-  EXPECT_EQ(1u, error_calls_);
-  EXPECT_EQ(BatchUpload::ErrorType::PERMANENT, last_error_type_);
+  EXPECT_EQ(done_calls_, 0u);
+  EXPECT_EQ(error_calls_, 1u);
+  EXPECT_EQ(last_error_type_, BatchUpload::ErrorType::PERMANENT);
 
   // Verify that no commit or objects were uploaded.
-  EXPECT_EQ(0u, storage_.commits_marked_as_synced.size());
-  EXPECT_EQ(0u, storage_.objects_marked_as_synced.size());
+  EXPECT_EQ(storage_.commits_marked_as_synced.size(), 0u);
+  EXPECT_EQ(storage_.objects_marked_as_synced.size(), 0u);
 }
 
 // Verifies that if only one of many uploads fails, we still stop and notify the
@@ -505,13 +505,13 @@ TEST_F(BatchUploadTest, ErrorOneOfMultipleObject) {
   page_cloud_.reset_object_status_after_call = true;
   batch_upload->Start();
   RunLoopUntilIdle();
-  EXPECT_EQ(0u, done_calls_);
-  EXPECT_EQ(1u, error_calls_);
+  EXPECT_EQ(done_calls_, 0u);
+  EXPECT_EQ(error_calls_, 1u);
 
   // Verify that two storage objects were correctly marked as synced.
-  EXPECT_EQ(0u, storage_.commits_marked_as_synced.size());
-  EXPECT_EQ(2u, storage_.objects_marked_as_synced.size());
-  EXPECT_EQ(0u, page_cloud_.received_commits.size());
+  EXPECT_EQ(storage_.commits_marked_as_synced.size(), 0u);
+  EXPECT_EQ(storage_.objects_marked_as_synced.size(), 2u);
+  EXPECT_EQ(page_cloud_.received_commits.size(), 0u);
 
   // TestStorage moved the objects to be returned out, need to add them again
   // before retry.
@@ -522,12 +522,12 @@ TEST_F(BatchUploadTest, ErrorOneOfMultipleObject) {
   // Try upload again.
   batch_upload->Retry();
   RunLoopUntilIdle();
-  EXPECT_EQ(1u, done_calls_);
-  EXPECT_EQ(1u, error_calls_);
+  EXPECT_EQ(done_calls_, 1u);
+  EXPECT_EQ(error_calls_, 1u);
 
   // Verify the sync status in storage.
-  EXPECT_EQ(1u, storage_.commits_marked_as_synced.size());
-  EXPECT_EQ(3u, storage_.objects_marked_as_synced.size());
+  EXPECT_EQ(storage_.commits_marked_as_synced.size(), 1u);
+  EXPECT_EQ(storage_.objects_marked_as_synced.size(), 3u);
 }
 
 // Verifies that we do not upload synced commits.
@@ -539,12 +539,12 @@ TEST_F(BatchUploadTest, DoNotUploadSyncedCommits) {
 
   batch_upload->Start();
   RunLoopUntilIdle();
-  EXPECT_EQ(1u, done_calls_);
-  EXPECT_EQ(0u, error_calls_);
+  EXPECT_EQ(done_calls_, 1u);
+  EXPECT_EQ(error_calls_, 0u);
 
   // Verify that the commit was not synced.
-  EXPECT_EQ(0u, storage_.commits_marked_as_synced.size());
-  EXPECT_EQ(0u, page_cloud_.received_commits.size());
+  EXPECT_EQ(storage_.commits_marked_as_synced.size(), 0u);
+  EXPECT_EQ(page_cloud_.received_commits.size(), 0u);
 }
 
 // Verifies that we do not upload synced commits on retries.
@@ -558,29 +558,29 @@ TEST_F(BatchUploadTest, DoNotUploadSyncedCommitsOnRetry) {
 
   batch_upload->Start();
   RunLoopUntilIdle();
-  EXPECT_EQ(0u, done_calls_);
-  EXPECT_EQ(1u, error_calls_);
+  EXPECT_EQ(done_calls_, 0u);
+  EXPECT_EQ(error_calls_, 1u);
 
   // Verify that the commit was not synced.
-  EXPECT_EQ(0u, storage_.commits_marked_as_synced.size());
+  EXPECT_EQ(storage_.commits_marked_as_synced.size(), 0u);
 
   // Mark commit as synced.
   ledger::Status status;
   storage_.MarkCommitSynced("id", callback::Capture(QuitLoopClosure(), &status));
   RunLoopUntilIdle();
-  EXPECT_EQ(ledger::Status::OK, status);
-  EXPECT_EQ(0u, storage_.unsynced_commits.size());
+  EXPECT_EQ(status, ledger::Status::OK);
+  EXPECT_EQ(storage_.unsynced_commits.size(), 0u);
 
   // Retry.
   page_cloud_.add_commits_calls = 0;
   page_cloud_.commit_status_to_return = cloud_provider::Status::OK;
   batch_upload->Retry();
   RunLoopUntilIdle();
-  EXPECT_EQ(1u, done_calls_);
-  EXPECT_EQ(1u, error_calls_);
+  EXPECT_EQ(done_calls_, 1u);
+  EXPECT_EQ(error_calls_, 1u);
 
   // Verify that no calls were made to attempt to upload the commit.
-  EXPECT_EQ(0u, page_cloud_.add_commits_calls);
+  EXPECT_EQ(page_cloud_.add_commits_calls, 0u);
 }
 
 class FailingEncryptCommitEncryptionService : public encryption::FakeEncryptionService {
@@ -638,11 +638,11 @@ TYPED_TEST(FailingBatchUploadTest, Fail) {
 
   batch_upload->Start();
   this->RunLoopUntilIdle();
-  EXPECT_EQ(0u, this->done_calls_);
+  EXPECT_EQ(this->done_calls_, 0u);
   EXPECT_GE(this->error_calls_, 1u);
 
   // Verify the artifacts uploaded to cloud provider.
-  EXPECT_EQ(0u, this->page_cloud_.received_commits.size());
+  EXPECT_EQ(this->page_cloud_.received_commits.size(), 0u);
 }
 
 }  // namespace

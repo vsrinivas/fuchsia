@@ -37,7 +37,7 @@ TEST(DirectoryReaderTest, GetDirectoryEntries) {
                                     expected_entries.erase(entry_iterator);
                                     return true;
                                   }));
-  EXPECT_EQ(expected_entries.size(), 0u);
+  EXPECT_TRUE(expected_entries.empty());
 }
 
 }  // namespace

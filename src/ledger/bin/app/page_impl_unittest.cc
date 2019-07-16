@@ -4,6 +4,10 @@
 
 #include "src/ledger/bin/app/page_impl.h"
 
+#include <algorithm>
+#include <map>
+#include <memory>
+
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/callback/capture.h>
@@ -14,10 +18,6 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <zircon/errors.h>
-
-#include <algorithm>
-#include <map>
-#include <memory>
 
 #include "fuchsia/ledger/cpp/fidl.h"
 #include "gmock/gmock.h"
@@ -82,7 +82,7 @@ class PageImplTest : public TestWithEnvironment {
     manager_->AddPageImpl(std::move(page_impl),
                           callback::Capture(callback::SetWhenCalled(&called), &status));
     EXPECT_TRUE(called);
-    EXPECT_EQ(Status::OK, status);
+    EXPECT_EQ(status, Status::OK);
     DrainLoop();
   }
 
@@ -109,7 +109,7 @@ class PageImplTest : public TestWithEnvironment {
         callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifier));
     DrainLoop();
     EXPECT_TRUE(called);
-    EXPECT_EQ(Status::OK, status);
+    EXPECT_EQ(status, Status::OK);
     return object_identifier;
   }
 
@@ -123,7 +123,7 @@ class PageImplTest : public TestWithEnvironment {
                              callback::Capture(callback::SetWhenCalled(&called), &status, &object));
     DrainLoop();
     EXPECT_TRUE(called);
-    EXPECT_EQ(Status::OK, status);
+    EXPECT_EQ(status, Status::OK);
     return object;
   }
 
@@ -173,7 +173,7 @@ TEST_F(PageImplTest, GetId) {
   page_ptr_->GetId(callback::Capture(callback::SetWhenCalled(&called), &page_id));
   DrainLoop();
   EXPECT_TRUE(called);
-  EXPECT_EQ(page_id1_, convert::ToString(page_id.id));
+  EXPECT_EQ(convert::ToString(page_id.id), page_id1_);
 }
 
 TEST_F(PageImplTest, PutNoTransaction) {
@@ -182,20 +182,20 @@ TEST_F(PageImplTest, PutNoTransaction) {
   page_ptr_->Put(convert::ToArray(key), convert::ToArray(value));
   DrainLoop();
   auto objects = fake_storage_->GetObjects();
-  EXPECT_EQ(1u, objects.size());
+  EXPECT_EQ(objects.size(), 1u);
   storage::ObjectIdentifier object_identifier = objects.begin()->first;
   std::string actual_value = objects.begin()->second;
-  EXPECT_EQ(value, actual_value);
+  EXPECT_EQ(actual_value, value);
 
   const std::map<std::string, std::unique_ptr<storage::fake::FakeJournalDelegate>>& journals =
       fake_storage_->GetJournals();
-  EXPECT_EQ(1u, journals.size());
+  EXPECT_EQ(journals.size(), 1u);
   auto it = journals.begin();
   EXPECT_TRUE(it->second->IsCommitted());
-  EXPECT_EQ(1u, it->second->GetData().size());
+  EXPECT_EQ(it->second->GetData().size(), 1u);
   storage::Entry entry = it->second->GetData().at(key);
-  EXPECT_EQ(object_identifier, entry.object_identifier);
-  EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
+  EXPECT_EQ(entry.object_identifier, object_identifier);
+  EXPECT_EQ(entry.priority, storage::KeyPriority::EAGER);
 }
 
 TEST_F(PageImplTest, PutReferenceNoTransaction) {
@@ -219,18 +219,18 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
   DrainLoop();
   auto objects = fake_storage_->GetObjects();
   // No object should have been added.
-  EXPECT_EQ(1u, objects.size());
+  EXPECT_EQ(objects.size(), 1u);
 
   const std::map<std::string, std::unique_ptr<storage::fake::FakeJournalDelegate>>& journals =
       fake_storage_->GetJournals();
-  EXPECT_EQ(1u, journals.size());
+  EXPECT_EQ(journals.size(), 1u);
   auto it = journals.begin();
   EXPECT_TRUE(it->second->IsCommitted());
-  EXPECT_EQ(1u, it->second->GetData().size());
+  EXPECT_EQ(it->second->GetData().size(), 1u);
   storage::Entry entry = it->second->GetData().at(key);
   std::unique_ptr<const storage::Object> object = AddObject(object_data);
-  EXPECT_EQ(object->GetIdentifier().object_digest(), entry.object_identifier.object_digest());
-  EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
+  EXPECT_EQ(entry.object_identifier.object_digest(), object->GetIdentifier().object_digest());
+  EXPECT_EQ(entry.priority, storage::KeyPriority::LAZY);
 }
 
 TEST_F(PageImplTest, PutUnknownReference) {
@@ -244,21 +244,21 @@ TEST_F(PageImplTest, PutUnknownReference) {
   page_ptr_->PutReference(convert::ToArray(key), std::move(reference), Priority::LAZY);
   DrainLoop();
   EXPECT_TRUE(called);
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+  EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   auto objects = fake_storage_->GetObjects();
   // No object should have been added.
-  EXPECT_EQ(0u, objects.size());
+  EXPECT_EQ(objects.size(), 0u);
 
   const std::map<std::string, std::unique_ptr<storage::fake::FakeJournalDelegate>>& journals =
       fake_storage_->GetJournals();
-  EXPECT_EQ(0u, journals.size());
+  EXPECT_EQ(journals.size(), 0u);
 }
 
 TEST_F(PageImplTest, PutKeyTooLarge) {
   std::string value("a small value");
 
   zx::channel writer, reader;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &writer, &reader));
+  ASSERT_EQ(zx::channel::create(0, &writer, &reader), ZX_OK);
   page_ptr_.Bind(std::move(writer));
 
   // Key too large; message doesn't go through, failing on validation.
@@ -267,14 +267,14 @@ TEST_F(PageImplTest, PutKeyTooLarge) {
   page_ptr_->Put(convert::ToArray(key), convert::ToArray(value));
   zx_status_t status = reader.read(0, nullptr, nullptr, 0, 0, nullptr, nullptr);
   DrainLoop();
-  EXPECT_EQ(ZX_ERR_SHOULD_WAIT, status);
+  EXPECT_EQ(status, ZX_ERR_SHOULD_WAIT);
 
   // With a smaller key, message goes through.
   key = GetKey(1, kMaxKeySize);
   page_ptr_->Put(convert::ToArray(key), convert::ToArray(value));
   status = reader.read(0, nullptr, nullptr, 0, 0, nullptr, nullptr);
   DrainLoop();
-  EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, status);
+  EXPECT_EQ(status, ZX_ERR_BUFFER_TOO_SMALL);
 }
 
 TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
@@ -290,7 +290,7 @@ TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
   ASSERT_TRUE(result.is_response());
 
   zx::channel writer, reader;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &writer, &reader));
+  ASSERT_EQ(zx::channel::create(0, &writer, &reader), ZX_OK);
   page_ptr_.Bind(std::move(writer));
 
   // Key too large; message doesn't go through, failing on validation.
@@ -300,7 +300,7 @@ TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
                           Priority::EAGER);
   zx_status_t status = reader.read(0, nullptr, nullptr, 0, 0, nullptr, nullptr);
   DrainLoop();
-  EXPECT_EQ(ZX_ERR_SHOULD_WAIT, status);
+  EXPECT_EQ(status, ZX_ERR_SHOULD_WAIT);
 
   // With a smaller key, message goes through.
   key = GetKey(1, kMaxKeySize);
@@ -308,7 +308,7 @@ TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
                           Priority::EAGER);
   status = reader.read(0, nullptr, nullptr, 0, 0, nullptr, nullptr);
   DrainLoop();
-  EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, status);
+  EXPECT_EQ(status, ZX_ERR_BUFFER_TOO_SMALL);
 }
 
 TEST_F(PageImplTest, DeleteNoTransaction) {
@@ -319,11 +319,11 @@ TEST_F(PageImplTest, DeleteNoTransaction) {
   DrainLoop();
   auto objects = fake_storage_->GetObjects();
   // No object should have been added.
-  EXPECT_EQ(0u, objects.size());
+  EXPECT_EQ(objects.size(), 0u);
 
   const std::map<std::string, std::unique_ptr<storage::fake::FakeJournalDelegate>>& journals =
       fake_storage_->GetJournals();
-  EXPECT_EQ(1u, journals.size());
+  EXPECT_EQ(journals.size(), 1u);
   auto it = journals.begin();
   EXPECT_TRUE(it->second->IsCommitted());
   EXPECT_THAT(it->second->GetData(), IsEmpty());
@@ -339,7 +339,7 @@ TEST_F(PageImplTest, ClearNoTransaction) {
 
   const std::map<std::string, std::unique_ptr<storage::fake::FakeJournalDelegate>>& journals =
       fake_storage_->GetJournals();
-  EXPECT_EQ(1u, journals.size());
+  EXPECT_EQ(journals.size(), 1u);
   auto it = journals.begin();
   EXPECT_TRUE(it->second->IsCommitted());
   EXPECT_THAT(it->second->GetData(), IsEmpty());
@@ -376,7 +376,7 @@ TEST_F(PageImplTest, TransactionCommit) {
   {
     DrainLoop();
     auto objects = fake_storage_->GetObjects();
-    EXPECT_EQ(2u, objects.size());
+    EXPECT_EQ(objects.size(), 2u);
     // Objects are ordered by a randomly assigned object id, so we can't know
     // the correct possition of the value in the map.
     bool object_found = false;
@@ -392,13 +392,13 @@ TEST_F(PageImplTest, TransactionCommit) {
     // No finished commit yet.
     const std::map<std::string, std::unique_ptr<storage::fake::FakeJournalDelegate>>& journals =
         fake_storage_->GetJournals();
-    EXPECT_EQ(1u, journals.size());
+    EXPECT_EQ(journals.size(), 1u);
     auto it = journals.begin();
     EXPECT_FALSE(it->second->IsCommitted());
-    EXPECT_EQ(1u, it->second->GetData().size());
+    EXPECT_EQ(it->second->GetData().size(), 1u);
     storage::Entry entry = it->second->GetData().at(key1);
-    EXPECT_EQ(object_digest1, entry.object_identifier.object_digest());
-    EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
+    EXPECT_EQ(entry.object_identifier.object_digest(), object_digest1);
+    EXPECT_EQ(entry.priority, storage::KeyPriority::EAGER);
   }
 
   page_ptr_->PutReference(convert::ToArray(key2), std::move(result.response().reference),
@@ -406,34 +406,34 @@ TEST_F(PageImplTest, TransactionCommit) {
 
   {
     DrainLoop();
-    EXPECT_EQ(2u, fake_storage_->GetObjects().size());
+    EXPECT_EQ(fake_storage_->GetObjects().size(), 2u);
 
     // No finished commit yet, with now two entries.
     const std::map<std::string, std::unique_ptr<storage::fake::FakeJournalDelegate>>& journals =
         fake_storage_->GetJournals();
-    EXPECT_EQ(1u, journals.size());
+    EXPECT_EQ(journals.size(), 1u);
     auto it = journals.begin();
     EXPECT_FALSE(it->second->IsCommitted());
-    EXPECT_EQ(2u, it->second->GetData().size());
+    EXPECT_EQ(it->second->GetData().size(), 2u);
     storage::Entry entry = it->second->GetData().at(key2);
-    EXPECT_EQ(AddObject(value2)->GetIdentifier().object_digest(),
-              entry.object_identifier.object_digest());
-    EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
+    EXPECT_EQ(entry.object_identifier.object_digest(),
+              AddObject(value2)->GetIdentifier().object_digest());
+    EXPECT_EQ(entry.priority, storage::KeyPriority::LAZY);
   }
 
   page_ptr_->Delete(convert::ToArray(key2));
 
   {
     DrainLoop();
-    EXPECT_EQ(2u, fake_storage_->GetObjects().size());
+    EXPECT_EQ(fake_storage_->GetObjects().size(), 2u);
 
     // No finished commit yet, with the second entry deleted.
     const std::map<std::string, std::unique_ptr<storage::fake::FakeJournalDelegate>>& journals =
         fake_storage_->GetJournals();
-    EXPECT_EQ(1u, journals.size());
+    EXPECT_EQ(journals.size(), 1u);
     auto it = journals.begin();
     EXPECT_FALSE(it->second->IsCommitted());
-    EXPECT_EQ(1u, it->second->GetData().size());
+    EXPECT_EQ(it->second->GetData().size(), 1u);
     EXPECT_THAT(it->second->GetData(), Not(Contains(Key(key2))));
   }
 
@@ -441,14 +441,14 @@ TEST_F(PageImplTest, TransactionCommit) {
 
   {
     DrainLoop();
-    EXPECT_EQ(2u, fake_storage_->GetObjects().size());
+    EXPECT_EQ(fake_storage_->GetObjects().size(), 2u);
 
     const std::map<std::string, std::unique_ptr<storage::fake::FakeJournalDelegate>>& journals =
         fake_storage_->GetJournals();
-    EXPECT_EQ(1u, journals.size());
+    EXPECT_EQ(journals.size(), 1u);
     auto it = journals.begin();
     EXPECT_TRUE(it->second->IsCommitted());
-    EXPECT_EQ(1u, it->second->GetData().size());
+    EXPECT_EQ(it->second->GetData().size(), 1u);
   }
 }
 
@@ -473,7 +473,7 @@ TEST_F(PageImplTest, TransactionClearCommit) {
   DrainLoop();
   const std::map<std::string, std::unique_ptr<storage::fake::FakeJournalDelegate>>& journals =
       fake_storage_->GetJournals();
-  EXPECT_EQ(2u, journals.size());
+  EXPECT_EQ(journals.size(), 2u);
   const auto& journal_it = std::find_if(journals.begin(), journals.end(), [](const auto& pair) {
     return !pair.second->IsCommitted();
   });
@@ -489,7 +489,7 @@ TEST_F(PageImplTest, TransactionClearCommit) {
 
   {
     DrainLoop();
-    EXPECT_EQ(1u, fake_storage_->GetObjects().size());
+    EXPECT_EQ(fake_storage_->GetObjects().size(), 1u);
 
     EXPECT_FALSE(journal->IsCommitted());
     EXPECT_THAT(journal->GetData(), IsEmpty());
@@ -500,7 +500,7 @@ TEST_F(PageImplTest, TransactionClearCommit) {
   {
     DrainLoop();
     auto objects = fake_storage_->GetObjects();
-    EXPECT_EQ(2u, objects.size());
+    EXPECT_EQ(objects.size(), 2u);
     bool object_found = false;
     for (const auto& object : objects) {
       if (object.second == value2) {
@@ -526,7 +526,7 @@ TEST_F(PageImplTest, TransactionClearCommit) {
 
   {
     DrainLoop();
-    EXPECT_EQ(2u, fake_storage_->GetObjects().size());
+    EXPECT_EQ(fake_storage_->GetObjects().size(), 2u);
 
     const std::map<std::string, std::unique_ptr<storage::fake::FakeJournalDelegate>>& journals =
         fake_storage_->GetJournals();
@@ -549,7 +549,7 @@ TEST_F(PageImplTest, TransactionRollback) {
   page_ptr_->Rollback();
 
   DrainLoop();
-  EXPECT_EQ(0u, fake_storage_->GetObjects().size());
+  EXPECT_EQ(fake_storage_->GetObjects().size(), 0u);
 
   // Starting another transaction should now succeed.
   bool called;
@@ -573,7 +573,7 @@ TEST_F(PageImplTest, NoTwoTransactions) {
 
   DrainLoop();
   EXPECT_TRUE(error_called);
-  EXPECT_EQ(ZX_ERR_BAD_STATE, error_status);
+  EXPECT_EQ(error_status, ZX_ERR_BAD_STATE);
 }
 
 TEST_F(PageImplTest, NoTransactionCommit) {
@@ -588,7 +588,7 @@ TEST_F(PageImplTest, NoTransactionCommit) {
 
   DrainLoop();
   EXPECT_TRUE(error_called);
-  EXPECT_EQ(ZX_ERR_BAD_STATE, error_status);
+  EXPECT_EQ(error_status, ZX_ERR_BAD_STATE);
 }
 
 TEST_F(PageImplTest, NoTransactionRollback) {
@@ -603,11 +603,11 @@ TEST_F(PageImplTest, NoTransactionRollback) {
 
   DrainLoop();
   EXPECT_TRUE(error_called);
-  EXPECT_EQ(ZX_ERR_BAD_STATE, error_status);
+  EXPECT_EQ(error_status, ZX_ERR_BAD_STATE);
 }
 
 TEST_F(PageImplTest, CreateReferenceFromSocket) {
-  ASSERT_EQ(0u, fake_storage_->GetObjects().size());
+  ASSERT_EQ(fake_storage_->GetObjects().size(), 0u);
 
   std::string value("a small value");
   bool called;
@@ -618,12 +618,12 @@ TEST_F(PageImplTest, CreateReferenceFromSocket) {
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_TRUE(result.is_response());
-  ASSERT_EQ(1u, fake_storage_->GetObjects().size());
-  ASSERT_EQ(value, fake_storage_->GetObjects().begin()->second);
+  ASSERT_EQ(fake_storage_->GetObjects().size(), 1u);
+  ASSERT_EQ(fake_storage_->GetObjects().begin()->second, value);
 }
 
 TEST_F(PageImplTest, CreateReferenceFromBuffer) {
-  ASSERT_EQ(0u, fake_storage_->GetObjects().size());
+  ASSERT_EQ(fake_storage_->GetObjects().size(), 0u);
 
   std::string value("a small value");
   fsl::SizedVmo vmo;
@@ -636,8 +636,8 @@ TEST_F(PageImplTest, CreateReferenceFromBuffer) {
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_TRUE(result.is_response());
-  ASSERT_EQ(1u, fake_storage_->GetObjects().size());
-  ASSERT_EQ(value, fake_storage_->GetObjects().begin()->second);
+  ASSERT_EQ(fake_storage_->GetObjects().size(), 1u);
+  ASSERT_EQ(fake_storage_->GetObjects().begin()->second, value);
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
@@ -661,14 +661,14 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_FALSE(next_token);
-  ASSERT_EQ(2u, actual_entries.size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries.at(0).key));
-  EXPECT_EQ(eager_value, ToString(actual_entries.at(0).value));
-  EXPECT_EQ(Priority::EAGER, actual_entries.at(0).priority);
+  ASSERT_EQ(actual_entries.size(), 2u);
+  EXPECT_EQ(convert::ExtendedStringView(actual_entries.at(0).key), eager_key);
+  EXPECT_EQ(ToString(actual_entries.at(0).value), eager_value);
+  EXPECT_EQ(actual_entries.at(0).priority, Priority::EAGER);
 
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries.at(1).key));
-  EXPECT_EQ(lazy_value, ToString(actual_entries.at(1).value));
-  EXPECT_EQ(Priority::LAZY, actual_entries.at(1).priority);
+  EXPECT_EQ(convert::ExtendedStringView(actual_entries.at(1).key), lazy_key);
+  EXPECT_EQ(ToString(actual_entries.at(1).value), lazy_value);
+  EXPECT_EQ(actual_entries.at(1).priority, Priority::LAZY);
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetEntriesInline) {
@@ -693,16 +693,16 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInline) {
   EXPECT_TRUE(called);
   EXPECT_FALSE(next_token);
 
-  ASSERT_EQ(2u, actual_entries.size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries.at(0).key));
+  ASSERT_EQ(actual_entries.size(), 2u);
+  EXPECT_EQ(convert::ExtendedStringView(actual_entries.at(0).key), eager_key);
   EXPECT_TRUE(actual_entries.at(0).inlined_value);
-  EXPECT_EQ(eager_value, convert::ToString(actual_entries.at(0).inlined_value->value));
-  EXPECT_EQ(Priority::EAGER, actual_entries.at(0).priority);
+  EXPECT_EQ(convert::ToString(actual_entries.at(0).inlined_value->value), eager_value);
+  EXPECT_EQ(actual_entries.at(0).priority, Priority::EAGER);
 
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries.at(1).key));
+  EXPECT_EQ(convert::ExtendedStringView(actual_entries.at(1).key), lazy_key);
   EXPECT_TRUE(actual_entries.at(1).inlined_value);
-  EXPECT_EQ(lazy_value, convert::ToString(actual_entries.at(1).inlined_value->value));
-  EXPECT_EQ(Priority::LAZY, actual_entries.at(1).priority);
+  EXPECT_EQ(convert::ToString(actual_entries.at(1).inlined_value->value), lazy_value);
+  EXPECT_EQ(actual_entries.at(1).priority, Priority::LAZY);
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
@@ -742,13 +742,13 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
   for (auto& entry : actual_next_entries) {
     actual_entries.push_back(std::move(entry));
   }
-  EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries.size());
+  EXPECT_EQ(actual_entries.size(), static_cast<size_t>(entry_count));
 
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
   for (int i = 0; i < static_cast<int>(actual_entries.size()); ++i) {
-    ASSERT_EQ(GetKey(i, min_key_size), convert::ToString(actual_entries.at(i).key));
-    ASSERT_EQ(GetValue(i, 0), ToString(actual_entries.at(i).value));
+    ASSERT_EQ(convert::ToString(actual_entries.at(i).key), GetKey(i, min_key_size));
+    ASSERT_EQ(ToString(actual_entries.at(i).value), GetValue(i, 0));
   }
 }
 
@@ -781,15 +781,15 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
   for (auto& entry : actual_entries2) {
     actual_entries.push_back(std::move(entry));
   }
-  EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries.size());
+  EXPECT_EQ(actual_entries.size(), static_cast<size_t>(entry_count));
 
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
   for (int i = 0; i < static_cast<int>(actual_entries.size()); ++i) {
-    ASSERT_EQ(GetKey(i, 0), convert::ToString(actual_entries.at(i).key));
+    ASSERT_EQ(convert::ToString(actual_entries.at(i).key), GetKey(i, 0));
     ASSERT_TRUE(actual_entries.at(i).inlined_value);
-    ASSERT_EQ(GetValue(i, min_value_size),
-              convert::ToString(actual_entries.at(i).inlined_value->value));
+    ASSERT_EQ(convert::ToString(actual_entries.at(i).inlined_value->value),
+              GetValue(i, min_value_size));
   }
 }
 
@@ -831,15 +831,15 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForEntryCount) {
   for (auto& entry : actual_entries2) {
     actual_entries.push_back(std::move(entry));
   }
-  EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries.size());
+  EXPECT_EQ(actual_entries.size(), static_cast<size_t>(entry_count));
 
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
   for (int i = 0; i < static_cast<int>(actual_entries.size()); ++i) {
-    ASSERT_EQ(GetKey(i, 0), convert::ToString(actual_entries.at(i).key));
+    ASSERT_EQ(convert::ToString(actual_entries.at(i).key), GetKey(i, 0));
     ASSERT_TRUE(actual_entries.at(i).inlined_value);
-    ASSERT_EQ(GetValue(i, min_value_size),
-              convert::ToString(actual_entries.at(i).inlined_value->value));
+    ASSERT_EQ(convert::ToString(actual_entries.at(i).inlined_value->value),
+              GetValue(i, min_value_size));
   }
 }
 
@@ -870,13 +870,13 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
   for (auto& entry : actual_next_entries) {
     actual_entries.push_back(std::move(entry));
   }
-  EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries.size());
+  EXPECT_EQ(actual_entries.size(), static_cast<size_t>(entry_count));
 
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
   for (int i = 0; i < static_cast<int>(actual_entries.size()); ++i) {
-    ASSERT_EQ(GetKey(i), convert::ToString(actual_entries.at(i).key));
-    ASSERT_EQ(GetValue(i, 0), ToString(actual_entries.at(i).value));
+    ASSERT_EQ(convert::ToString(actual_entries.at(i).key), GetKey(i));
+    ASSERT_EQ(ToString(actual_entries.at(i).value), GetValue(i, 0));
   }
 }
 
@@ -908,14 +908,14 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithFetch) {
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_FALSE(actual_next_token);
-  ASSERT_EQ(2u, actual_entries.size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries.at(0).key));
-  EXPECT_EQ(eager_value, ToString(actual_entries.at(0).value));
-  EXPECT_EQ(Priority::EAGER, actual_entries.at(0).priority);
+  ASSERT_EQ(actual_entries.size(), 2u);
+  EXPECT_EQ(convert::ExtendedStringView(actual_entries.at(0).key), eager_key);
+  EXPECT_EQ(ToString(actual_entries.at(0).value), eager_value);
+  EXPECT_EQ(actual_entries.at(0).priority, Priority::EAGER);
 
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries.at(1).key));
+  EXPECT_EQ(convert::ExtendedStringView(actual_entries.at(1).key), lazy_key);
   EXPECT_FALSE(actual_entries.at(1).value);
-  EXPECT_EQ(Priority::LAZY, actual_entries.at(1).priority);
+  EXPECT_EQ(actual_entries.at(1).priority, Priority::LAZY);
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithPrefix) {
@@ -938,8 +938,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithPrefix) {
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_FALSE(actual_next_token);
-  ASSERT_EQ(1u, actual_entries.size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries.at(0).key));
+  ASSERT_EQ(actual_entries.size(), 1u);
+  EXPECT_EQ(convert::ExtendedStringView(actual_entries.at(0).key), eager_key);
 
   snapshot = GetSnapshot(convert::ToArray("00"));
   snapshot->GetEntries(
@@ -947,9 +947,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithPrefix) {
       callback::Capture(callback::SetWhenCalled(&called), &actual_entries, &actual_next_token));
   DrainLoop();
   EXPECT_TRUE(called);
-  ASSERT_EQ(2u, actual_entries.size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries.at(0).key));
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries.at(1).key));
+  ASSERT_EQ(actual_entries.size(), 2u);
+  EXPECT_EQ(convert::ExtendedStringView(actual_entries.at(0).key), eager_key);
+  EXPECT_EQ(convert::ExtendedStringView(actual_entries.at(1).key), lazy_key);
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithStart) {
@@ -972,8 +972,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithStart) {
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_FALSE(actual_next_token);
-  ASSERT_EQ(1u, actual_entries.size());
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries.at(0).key));
+  ASSERT_EQ(actual_entries.size(), 1u);
+  EXPECT_EQ(convert::ExtendedStringView(actual_entries.at(0).key), lazy_key);
 
   snapshot->GetEntries(
       convert::ToArray("001"), nullptr,
@@ -981,9 +981,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithStart) {
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_FALSE(actual_next_token);
-  ASSERT_EQ(2u, actual_entries.size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries.at(0).key));
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries.at(1).key));
+  ASSERT_EQ(actual_entries.size(), 2u);
+  EXPECT_EQ(convert::ExtendedStringView(actual_entries.at(0).key), eager_key);
+  EXPECT_EQ(convert::ExtendedStringView(actual_entries.at(1).key), lazy_key);
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
@@ -1008,8 +1008,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_FALSE(actual_next_token);
-  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys.at(0)));
-  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys.at(1)));
+  EXPECT_EQ(convert::ExtendedStringView(actual_keys.at(0)), key1);
+  EXPECT_EQ(convert::ExtendedStringView(actual_keys.at(1)), key2);
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
@@ -1044,12 +1044,12 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
   for (auto& key : actual_next_keys) {
     actual_keys.push_back(std::move(key));
   }
-  EXPECT_EQ(static_cast<size_t>(key_count), actual_keys.size());
+  EXPECT_EQ(actual_keys.size(), static_cast<size_t>(key_count));
 
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
   for (size_t i = 0; i < actual_keys.size(); ++i) {
-    ASSERT_EQ(GetKey(i, min_key_size), convert::ToString(actual_keys.at(i)));
+    ASSERT_EQ(convert::ToString(actual_keys.at(i)), GetKey(i, min_key_size));
   }
 }
 
@@ -1076,8 +1076,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithPrefix) {
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_FALSE(actual_next_token);
-  EXPECT_EQ(1u, actual_keys.size());
-  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys.at(0)));
+  EXPECT_EQ(actual_keys.size(), 1u);
+  EXPECT_EQ(convert::ExtendedStringView(actual_keys.at(0)), key1);
 
   snapshot = GetSnapshot(convert::ToArray("00"));
   snapshot->GetKeys(
@@ -1086,9 +1086,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithPrefix) {
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_FALSE(actual_next_token);
-  EXPECT_EQ(2u, actual_keys.size());
-  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys.at(0)));
-  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys.at(1)));
+  EXPECT_EQ(actual_keys.size(), 2u);
+  EXPECT_EQ(convert::ExtendedStringView(actual_keys.at(0)), key1);
+  EXPECT_EQ(convert::ExtendedStringView(actual_keys.at(1)), key2);
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetKeysWithStart) {
@@ -1113,8 +1113,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithStart) {
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_FALSE(actual_next_token);
-  EXPECT_EQ(1u, actual_keys.size());
-  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys.at(0)));
+  EXPECT_EQ(actual_keys.size(), 1u);
+  EXPECT_EQ(convert::ExtendedStringView(actual_keys.at(0)), key2);
 
   snapshot = GetSnapshot();
   snapshot->GetKeys(
@@ -1123,9 +1123,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithStart) {
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_FALSE(actual_next_token);
-  EXPECT_EQ(2u, actual_keys.size());
-  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys.at(0)));
-  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys.at(1)));
+  EXPECT_EQ(actual_keys.size(), 2u);
+  EXPECT_EQ(convert::ExtendedStringView(actual_keys.at(0)), key1);
+  EXPECT_EQ(convert::ExtendedStringView(actual_keys.at(1)), key2);
 }
 
 TEST_F(PageImplTest, SnapshotGetSmall) {
@@ -1189,7 +1189,7 @@ TEST_F(PageImplTest, SnapshotGetLarge) {
   DrainLoop();
   EXPECT_FALSE(called);
   EXPECT_TRUE(error_hander_called);
-  EXPECT_EQ(ZX_ERR_BAD_STATE, zx_status);
+  EXPECT_EQ(zx_status, ZX_ERR_BAD_STATE);
 }
 
 TEST_F(PageImplTest, SnapshotGetNeedsFetch) {
@@ -1248,7 +1248,7 @@ TEST_F(PageImplTest, ParallelPut) {
                         callback::Capture(callback::SetWhenCalled(&called), &storage_status));
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, storage_status);
+  ASSERT_EQ(storage_status, Status::OK);
 
   std::string key("some_key");
   std::string value1("a small value");
@@ -1317,7 +1317,7 @@ TEST_F(PageImplTest, SerializedOperations) {
     EXPECT_FALSE(called[i]);
 
     // The commit queue contains the new commit.
-    ASSERT_EQ(i + 1, fake_storage_->GetJournals().size());
+    ASSERT_EQ(fake_storage_->GetJournals().size(), i + 1);
     CommitFirstPendingJournal(fake_storage_->GetJournals());
 
     // The operation can now succeed.
@@ -1349,7 +1349,7 @@ TEST_F(PageImplTest, WaitForConflictResolutionNoConflicts) {
       callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
   ASSERT_TRUE(called);
-  EXPECT_EQ(ConflictResolutionWaitStatus::NO_CONFLICTS, status);
+  EXPECT_EQ(status, ConflictResolutionWaitStatus::NO_CONFLICTS);
   EXPECT_TRUE(resolver_->IsEmpty());
 
   // Special case: no changes from the previous call; event OnEmpty is not
@@ -1359,7 +1359,7 @@ TEST_F(PageImplTest, WaitForConflictResolutionNoConflicts) {
       callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
   ASSERT_TRUE(called);
-  EXPECT_EQ(ConflictResolutionWaitStatus::NO_CONFLICTS, status);
+  EXPECT_EQ(status, ConflictResolutionWaitStatus::NO_CONFLICTS);
   EXPECT_TRUE(resolver_->IsEmpty());
 }
 

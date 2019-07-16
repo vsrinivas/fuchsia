@@ -10,12 +10,12 @@
 
 namespace ledger {
 namespace {
-TEST(StatusTest, StatusToString) { EXPECT_EQ("OK", StatusToString(Status::OK)); }
+TEST(StatusTest, StatusToString) { EXPECT_EQ(StatusToString(Status::OK), "OK"); }
 
 TEST(StatusTest, StatusToStream) {
   std::stringstream ss;
   ss << Status::OK;
-  EXPECT_EQ("OK", ss.str());
+  EXPECT_EQ(ss.str(), "OK");
 }
 
 }  // namespace

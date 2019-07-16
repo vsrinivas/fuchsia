@@ -4,6 +4,11 @@
 
 #include "src/ledger/bin/cloud_sync/impl/page_download.h"
 
+#include <memory>
+#include <sstream>
+#include <utility>
+#include <vector>
+
 #include <lib/async/dispatcher.h>
 #include <lib/backoff/testing/test_backoff.h>
 #include <lib/callback/capture.h>
@@ -12,11 +17,6 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
-
-#include <memory>
-#include <sstream>
-#include <utility>
-#include <vector>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/cloud_sync/impl/constants.h"
@@ -120,8 +120,8 @@ using PageDownloadTest = BasePageDownloadTest<encryption::FakeEncryptionService>
 // Verifies that the backlog of unsynced commits is retrieved from the cloud
 // provider and saved in storage.
 TEST_F(PageDownloadTest, DownloadBacklog) {
-  EXPECT_EQ(0u, storage_.received_commits.size());
-  EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
+  EXPECT_EQ(storage_.received_commits.size(), 0u);
+  EXPECT_EQ(storage_.sync_metadata.count(kTimestampKey.ToString()), 0u);
 
   page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id2", "content2"));
@@ -129,16 +129,16 @@ TEST_F(PageDownloadTest, DownloadBacklog) {
 
   ASSERT_TRUE(StartDownloadAndWaitForIdle());
 
-  EXPECT_EQ(2u, storage_.received_commits.size());
-  EXPECT_EQ("content1", storage_.received_commits["id1"]);
-  EXPECT_EQ("content2", storage_.received_commits["id2"]);
-  EXPECT_EQ("43", storage_.sync_metadata[kTimestampKey.ToString()]);
-  EXPECT_EQ(DOWNLOAD_IDLE, states_.back());
+  EXPECT_EQ(storage_.received_commits.size(), 2u);
+  EXPECT_EQ(storage_.received_commits["id1"], "content1");
+  EXPECT_EQ(storage_.received_commits["id2"], "content2");
+  EXPECT_EQ(storage_.sync_metadata[kTimestampKey.ToString()], "43");
+  EXPECT_EQ(states_.back(), DOWNLOAD_IDLE);
 }
 
 TEST_F(PageDownloadTest, DownloadLongBacklog) {
-  EXPECT_EQ(0u, storage_.received_commits.size());
-  EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
+  EXPECT_EQ(storage_.received_commits.size(), 0u);
+  EXPECT_EQ(storage_.sync_metadata.count(kTimestampKey.ToString()), 0u);
 
   const size_t commit_count = 100'000;
   for (size_t i = 0; i < commit_count; i++) {
@@ -149,9 +149,9 @@ TEST_F(PageDownloadTest, DownloadLongBacklog) {
 
   ASSERT_TRUE(StartDownloadAndWaitForIdle());
 
-  EXPECT_EQ(commit_count, storage_.received_commits.size());
-  EXPECT_EQ("43", storage_.sync_metadata[kTimestampKey.ToString()]);
-  EXPECT_EQ(DOWNLOAD_IDLE, states_.back());
+  EXPECT_EQ(storage_.received_commits.size(), commit_count);
+  EXPECT_EQ(storage_.sync_metadata[kTimestampKey.ToString()], "43");
+  EXPECT_EQ(states_.back(), DOWNLOAD_IDLE);
 }
 
 TEST_F(PageDownloadTest, DownloadEmptyBacklog) { ASSERT_TRUE(StartDownloadAndWaitForIdle()); }
@@ -165,8 +165,8 @@ TEST_F(PageDownloadTest, RegisterWatcher) {
 
   ASSERT_TRUE(StartDownloadAndWaitForIdle());
 
-  ASSERT_EQ(1u, page_cloud_.set_watcher_position_tokens.size());
-  EXPECT_EQ("43", convert::ToString(page_cloud_.set_watcher_position_tokens.front()->opaque_id));
+  ASSERT_EQ(page_cloud_.set_watcher_position_tokens.size(), 1u);
+  EXPECT_EQ(convert::ToString(page_cloud_.set_watcher_position_tokens.front()->opaque_id), "43");
 }
 
 // Verifies that commit notifications about new commits in cloud provider are
@@ -175,8 +175,8 @@ TEST_F(PageDownloadTest, ReceiveNotifications) {
   ASSERT_TRUE(StartDownloadAndWaitForIdle());
 
   // Deliver a remote notification.
-  EXPECT_EQ(0u, storage_.received_commits.size());
-  EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
+  EXPECT_EQ(storage_.received_commits.size(), 0u);
+  EXPECT_EQ(storage_.sync_metadata.count(kTimestampKey.ToString()), 0u);
   auto commit_pack =
       MakeTestCommitPack(&encryption_service_, {{"id1", "content1"}, {"id2", "content2"}});
   ASSERT_TRUE(commit_pack);
@@ -184,28 +184,28 @@ TEST_F(PageDownloadTest, ReceiveNotifications) {
   RunLoopUntilIdle();
 
   // Verify that the remote commits were added to storage.
-  EXPECT_EQ(2u, storage_.received_commits.size());
-  EXPECT_EQ("content1", storage_.received_commits["id1"]);
-  EXPECT_EQ("content2", storage_.received_commits["id2"]);
-  EXPECT_EQ("43", storage_.sync_metadata[kTimestampKey.ToString()]);
+  EXPECT_EQ(storage_.received_commits.size(), 2u);
+  EXPECT_EQ(storage_.received_commits["id1"], "content1");
+  EXPECT_EQ(storage_.received_commits["id2"], "content2");
+  EXPECT_EQ(storage_.sync_metadata[kTimestampKey.ToString()], "43");
 }
 
 // Verify that we retry setting the remote watcher on connection errors
 // and when the auth token expires.
 TEST_F(PageDownloadTest, RetryRemoteWatcher) {
   page_download_->StartDownload();
-  EXPECT_EQ(0u, storage_.received_commits.size());
+  EXPECT_EQ(storage_.received_commits.size(), 0u);
 
   RunLoopUntilIdle();
-  EXPECT_EQ(1u, page_cloud_.set_watcher_position_tokens.size());
+  EXPECT_EQ(page_cloud_.set_watcher_position_tokens.size(), 1u);
 
   page_cloud_.set_watcher->OnError(cloud_provider::Status::NETWORK_ERROR);
   RunLoopFor(kTestBackoffInterval);
-  EXPECT_EQ(2u, page_cloud_.set_watcher_position_tokens.size());
+  EXPECT_EQ(page_cloud_.set_watcher_position_tokens.size(), 2u);
 
   page_cloud_.set_watcher->OnError(cloud_provider::Status::AUTH_ERROR);
   RunLoopFor(kTestBackoffInterval);
-  EXPECT_EQ(3u, page_cloud_.set_watcher_position_tokens.size());
+  EXPECT_EQ(page_cloud_.set_watcher_position_tokens.size(), 3u);
 }
 
 // Verifies that if multiple remote commits are received while one batch is
@@ -218,13 +218,13 @@ TEST_F(PageDownloadTest, CoalesceMultipleNotifications) {
   storage_.should_delay_add_commit_confirmation = true;
 
   // Deliver a remote notification.
-  EXPECT_EQ(0u, storage_.received_commits.size());
-  EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
+  EXPECT_EQ(storage_.received_commits.size(), 0u);
+  EXPECT_EQ(storage_.sync_metadata.count(kTimestampKey.ToString()), 0u);
   auto commit_pack = MakeTestCommitPack(&encryption_service_, {{"id1", "content1"}});
   ASSERT_TRUE(commit_pack);
   page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack), MakeToken("42"), [] {});
   RunLoopUntilIdle();
-  EXPECT_EQ(1u, storage_.delayed_add_commit_confirmations.size());
+  EXPECT_EQ(storage_.delayed_add_commit_confirmations.size(), 1u);
 
   // Add two more remote commits, before storage confirms adding the first one.
   commit_pack =
@@ -235,16 +235,16 @@ TEST_F(PageDownloadTest, CoalesceMultipleNotifications) {
   storage_.should_delay_add_commit_confirmation = false;
   storage_.delayed_add_commit_confirmations.front()();
   RunLoopUntilIdle();
-  EXPECT_EQ(3u, storage_.received_commits.size());
+  EXPECT_EQ(storage_.received_commits.size(), 3u);
 
   // Verify that all three commits were delivered in total of two calls to
   // storage.
-  EXPECT_EQ(3u, storage_.received_commits.size());
-  EXPECT_EQ("content1", storage_.received_commits["id1"]);
-  EXPECT_EQ("content2", storage_.received_commits["id2"]);
-  EXPECT_EQ("content3", storage_.received_commits["id3"]);
-  EXPECT_EQ("44", storage_.sync_metadata[kTimestampKey.ToString()]);
-  EXPECT_EQ(2u, storage_.add_commits_from_sync_calls);
+  EXPECT_EQ(storage_.received_commits.size(), 3u);
+  EXPECT_EQ(storage_.received_commits["id1"], "content1");
+  EXPECT_EQ(storage_.received_commits["id2"], "content2");
+  EXPECT_EQ(storage_.received_commits["id3"], "content3");
+  EXPECT_EQ(storage_.sync_metadata[kTimestampKey.ToString()], "44");
+  EXPECT_EQ(storage_.add_commits_from_sync_calls, 2u);
 }
 
 // TODO(LE-497): The following should not pass. Investigate why.
@@ -262,7 +262,7 @@ TEST_F(PageDownloadTest, RetryDownloadBacklog) {
   });
   RunLoopUntilIdle();
   EXPECT_GE(5u, page_cloud_.get_commits_calls);
-  EXPECT_EQ(0u, storage_.received_commits.size());
+  EXPECT_EQ(storage_.received_commits.size(), 0u);
 
   SetOnNewStateCallback([] {});
   page_cloud_.status_to_return = cloud_provider::Status::OK;
@@ -271,9 +271,9 @@ TEST_F(PageDownloadTest, RetryDownloadBacklog) {
   RunLoopFor(kTestBackoffInterval);
   EXPECT_TRUE(page_download_->IsIdle());
 
-  EXPECT_EQ(1u, storage_.received_commits.size());
-  EXPECT_EQ("content1", storage_.received_commits["id1"]);
-  EXPECT_EQ("42", storage_.sync_metadata[kTimestampKey.ToString()]);
+  EXPECT_EQ(storage_.received_commits.size(), 1u);
+  EXPECT_EQ(storage_.received_commits["id1"], "content1");
+  EXPECT_EQ(storage_.sync_metadata[kTimestampKey.ToString()], "42");
 }
 
 // Verifies that a failure to persist the remote commit stops syncing remote
@@ -289,7 +289,7 @@ TEST_F(PageDownloadTest, FailToStoreRemoteCommit) {
 
   RunLoopUntilIdle();
   ASSERT_FALSE(states_.empty());
-  EXPECT_EQ(DOWNLOAD_PERMANENT_ERROR, states_.back());
+  EXPECT_EQ(states_.back(), DOWNLOAD_PERMANENT_ERROR);
   EXPECT_FALSE(page_cloud_.set_watcher.is_bound());
 }
 
@@ -307,13 +307,13 @@ TEST_F(PageDownloadTest, DownloadIdleCallback) {
     }
   });
   page_download_->StartDownload();
-  EXPECT_EQ(0, on_idle_calls);
+  EXPECT_EQ(on_idle_calls, 0);
   EXPECT_FALSE(page_download_->IsIdle());
 
   // Run the message loop and verify that the sync is idle after all remote
   // commits are added to storage.
   RunLoopUntilIdle();
-  EXPECT_EQ(1, on_idle_calls);
+  EXPECT_EQ(on_idle_calls, 1);
   EXPECT_TRUE(page_download_->IsIdle());
 
   // Notify about a new commit to download and verify that the idle callback was
@@ -322,8 +322,8 @@ TEST_F(PageDownloadTest, DownloadIdleCallback) {
   ASSERT_TRUE(commit_pack);
   page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack), MakeToken("44"), [] {});
   RunLoopUntilIdle();
-  EXPECT_EQ(3u, storage_.received_commits.size());
-  EXPECT_EQ(2, on_idle_calls);
+  EXPECT_EQ(storage_.received_commits.size(), 3u);
+  EXPECT_EQ(on_idle_calls, 2);
   EXPECT_TRUE(page_download_->IsIdle());
 }
 
@@ -348,13 +348,13 @@ TEST_F(PageDownloadTest, GetObject) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
-  EXPECT_EQ(ledger::Status::OK, status);
-  EXPECT_EQ(storage::ChangeSource::CLOUD, source);
-  EXPECT_EQ(storage::IsObjectSynced::YES, is_object_synced);
-  EXPECT_EQ("content", data_chunk->Get().ToString());
-  EXPECT_EQ(2u, states_.size());
-  EXPECT_EQ(DOWNLOAD_IN_PROGRESS, states_[0]);
-  EXPECT_EQ(DOWNLOAD_IDLE, states_[1]);
+  EXPECT_EQ(status, ledger::Status::OK);
+  EXPECT_EQ(source, storage::ChangeSource::CLOUD);
+  EXPECT_EQ(is_object_synced, storage::IsObjectSynced::YES);
+  EXPECT_EQ(data_chunk->Get().ToString(), "content");
+  EXPECT_EQ(states_.size(), 2u);
+  EXPECT_EQ(states_[0], DOWNLOAD_IN_PROGRESS);
+  EXPECT_EQ(states_[1], DOWNLOAD_IDLE);
 }
 
 // Verifies that sync retries GetObject() attempts upon connection error.
@@ -388,11 +388,11 @@ TEST_F(PageDownloadTest, RetryGetObject) {
   RunLoopFor(kTestBackoffInterval);
 
   ASSERT_TRUE(called);
-  EXPECT_EQ(6u, page_cloud_.get_object_calls);
-  EXPECT_EQ(ledger::Status::OK, status);
-  EXPECT_EQ(storage::ChangeSource::CLOUD, source);
-  EXPECT_EQ("content", data_chunk->Get().ToString());
-  EXPECT_EQ(storage::IsObjectSynced::YES, is_object_synced);
+  EXPECT_EQ(page_cloud_.get_object_calls, 6u);
+  EXPECT_EQ(status, ledger::Status::OK);
+  EXPECT_EQ(source, storage::ChangeSource::CLOUD);
+  EXPECT_EQ(data_chunk->Get().ToString(), "content");
+  EXPECT_EQ(is_object_synced, storage::IsObjectSynced::YES);
 }
 
 class FailingDecryptCommitEncryptionService : public encryption::FakeEncryptionService {
@@ -432,8 +432,8 @@ class FailingDecryptObjectEncryptionService : public encryption::FakeEncryptionS
 using FailingDecryptCommitPageDownloadTest =
     BasePageDownloadTest<FailingDecryptCommitEncryptionService>;
 TEST_F(FailingDecryptCommitPageDownloadTest, Fail) {
-  EXPECT_EQ(0u, storage_.received_commits.size());
-  EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
+  EXPECT_EQ(storage_.received_commits.size(), 0u);
+  EXPECT_EQ(storage_.sync_metadata.count(kTimestampKey.ToString()), 0u);
 
   page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id2", "content2"));
@@ -441,7 +441,7 @@ TEST_F(FailingDecryptCommitPageDownloadTest, Fail) {
 
   EXPECT_FALSE(StartDownloadAndWaitForIdle());
   ASSERT_FALSE(states_.empty());
-  EXPECT_EQ(DOWNLOAD_PERMANENT_ERROR, states_.back());
+  EXPECT_EQ(states_.back(), DOWNLOAD_PERMANENT_ERROR);
 }
 
 template <typename E>
@@ -470,8 +470,8 @@ TYPED_TEST(FailingPageDownloadTest, Fail) {
   this->RunLoopUntilIdle();
 
   ASSERT_TRUE(called);
-  EXPECT_EQ(ledger::Status::IO_ERROR, status);
-  EXPECT_EQ(storage::ChangeSource::CLOUD, source);
+  EXPECT_EQ(status, ledger::Status::IO_ERROR);
+  EXPECT_EQ(source, storage::ChangeSource::CLOUD);
 }
 
 }  // namespace

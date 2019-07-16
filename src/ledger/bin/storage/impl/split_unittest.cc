@@ -4,10 +4,11 @@
 
 #include "src/ledger/bin/storage/impl/split.h"
 
-#include <lib/fit/function.h>
 #include <string.h>
 
 #include <map>
+
+#include <lib/fit/function.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -114,7 +115,7 @@ void DoSplit(DataSource* source, ObjectType object_type, fit::function<void(Spli
           // Accumulate pieces in result, checking that they match if we have
           // already seen this digest.
           if (result->pieces.count(digest) != 0) {
-            EXPECT_EQ(result->pieces[digest]->GetData(), piece->GetData());
+            EXPECT_EQ(piece->GetData(), result->pieces[digest]->GetData());
           } else {
             result->pieces[digest] = std::move(piece);
           }
@@ -177,17 +178,17 @@ TEST_P(SplitSmallValueTest, SmallValue) {
   DoSplit(source.get(), object_type,
           [&split_result](SplitResult c) { split_result = std::move(c); });
 
-  ASSERT_EQ(1u, split_result.calls.size());
-  EXPECT_EQ(IterationStatus::DONE, split_result.calls[0].status);
-  ASSERT_EQ(1u, split_result.pieces.size());
-  EXPECT_EQ(content, split_result.pieces.begin()->second->GetData());
-  EXPECT_EQ(split_result.calls[0].digest,
-            ComputeObjectDigest(PieceType::CHUNK, object_type, content));
+  ASSERT_EQ(split_result.calls.size(), 1u);
+  EXPECT_EQ(split_result.calls[0].status, IterationStatus::DONE);
+  ASSERT_EQ(split_result.pieces.size(), 1u);
+  EXPECT_EQ(split_result.pieces.begin()->second->GetData(), content);
+  EXPECT_EQ(ComputeObjectDigest(PieceType::CHUNK, object_type, content),
+            split_result.calls[0].digest);
 
   std::string found_content;
   ASSERT_TRUE(ReadFile(split_result.calls.back().digest, split_result.pieces, &found_content,
                        content.size()));
-  EXPECT_EQ(content, found_content);
+  EXPECT_EQ(found_content, content);
 }
 
 TEST_P(SplitBigValueTest, BigValues) {
@@ -198,7 +199,7 @@ TEST_P(SplitBigValueTest, BigValues) {
   DoSplit(source.get(), object_type,
           [&split_result](SplitResult c) { split_result = std::move(c); });
 
-  EXPECT_EQ(IterationStatus::DONE, split_result.calls.back().status);
+  EXPECT_EQ(split_result.calls.back().status, IterationStatus::DONE);
   // There is at least 3 calls:
   // 1 index
   // 2 contents (including 1 termination)
@@ -208,27 +209,28 @@ TEST_P(SplitBigValueTest, BigValues) {
   for (const auto& call : split_result.calls) {
     if (call.status == IterationStatus::IN_PROGRESS &&
         GetObjectDigestInfo(call.digest).is_chunk()) {
-      EXPECT_EQ(current.substr(0, split_result.pieces[call.digest]->GetData().size()),
-                split_result.pieces[call.digest]->GetData());
+      EXPECT_EQ(split_result.pieces[call.digest]->GetData(),
+                current.substr(0, split_result.pieces[call.digest]->GetData().size()));
       // Check that object digest is always computed with object_type BLOB for
       // inner pieces (and in particular for chunks here). Only the root must
       // have it set to |object_type|.
-      EXPECT_EQ(call.digest, ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB,
-                                                 split_result.pieces[call.digest]->GetData()));
+      EXPECT_EQ(ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB,
+                                    split_result.pieces[call.digest]->GetData()),
+                call.digest);
       current = current.substr(split_result.pieces[call.digest]->GetData().size());
     }
     if (call.status == IterationStatus::DONE) {
-      EXPECT_EQ(GetObjectDigestInfo(call.digest).piece_type, PieceType::INDEX);
-      EXPECT_EQ(GetObjectDigestInfo(call.digest).object_type, object_type);
+      EXPECT_EQ(PieceType::INDEX, GetObjectDigestInfo(call.digest).piece_type);
+      EXPECT_EQ(object_type, GetObjectDigestInfo(call.digest).object_type);
     }
   }
 
-  EXPECT_EQ(0u, current.size());
+  EXPECT_EQ(current.size(), 0u);
 
   std::string found_content;
   ASSERT_TRUE(ReadFile(split_result.calls.back().digest, split_result.pieces, &found_content,
                        content.size()));
-  EXPECT_EQ(content, found_content);
+  EXPECT_EQ(found_content, content);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -250,18 +252,18 @@ TEST(SplitTest, PathologicalCase) {
   DoSplit(source.get(), ObjectType::TREE_NODE,
           [&split_result](SplitResult c) { split_result = std::move(c); });
 
-  ASSERT_EQ(IterationStatus::DONE, split_result.calls.back().status);
+  ASSERT_EQ(split_result.calls.back().status, IterationStatus::DONE);
 
   size_t total_size = 0u;
   for (const auto& call : split_result.calls) {
     if (call.status == IterationStatus::IN_PROGRESS &&
         GetObjectDigestInfo(call.digest).is_chunk()) {
       total_size += split_result.pieces[call.digest]->GetData().size();
-      EXPECT_EQ(std::string(split_result.pieces[call.digest]->GetData().size(), '\0'),
-                split_result.pieces[call.digest]->GetData());
+      EXPECT_EQ(split_result.pieces[call.digest]->GetData(),
+                std::string(split_result.pieces[call.digest]->GetData().size(), '\0'));
     }
   }
-  EXPECT_EQ(kDataSize, total_size);
+  EXPECT_EQ(total_size, kDataSize);
 }
 
 // A stream of 0s of the maximal size + 1 is yielding an INDEX piece pointing
@@ -273,22 +275,22 @@ TEST(SplitTest, IndexToInlinePiece) {
   DoSplit(source.get(), ObjectType::TREE_NODE,
           [&split_result](SplitResult c) { split_result = std::move(c); });
 
-  ASSERT_EQ(IterationStatus::DONE, split_result.calls.back().status);
+  ASSERT_EQ(split_result.calls.back().status, IterationStatus::DONE);
 
   // Two CHUNK pieces, one of kMaxChunkSize, another of size 1 (hence inline),
   // and one INDEX piece to bind them.
-  ASSERT_EQ(split_result.calls.size(), 3u);
+  ASSERT_EQ(3u, split_result.calls.size());
   // First chunk.
   EXPECT_TRUE(GetObjectDigestInfo(split_result.calls[0].digest).is_chunk());
   EXPECT_FALSE(GetObjectDigestInfo(split_result.calls[0].digest).is_inlined());
-  EXPECT_EQ(split_result.pieces[split_result.calls[0].digest]->GetData().size(), kMaxChunkSize);
+  EXPECT_EQ(kMaxChunkSize, split_result.pieces[split_result.calls[0].digest]->GetData().size());
   // Second chunk.
   EXPECT_TRUE(GetObjectDigestInfo(split_result.calls[1].digest).is_chunk());
   EXPECT_TRUE(GetObjectDigestInfo(split_result.calls[1].digest).is_inlined());
-  EXPECT_EQ(split_result.pieces[split_result.calls[1].digest]->GetData().size(), 1u);
+  EXPECT_EQ(1u, split_result.pieces[split_result.calls[1].digest]->GetData().size());
   // Index.
   EXPECT_FALSE(GetObjectDigestInfo(split_result.calls[2].digest).is_chunk());
-  EXPECT_EQ(GetObjectDigestInfo(split_result.calls[2].digest).object_type, ObjectType::TREE_NODE);
+  EXPECT_EQ(ObjectType::TREE_NODE, GetObjectDigestInfo(split_result.calls[2].digest).object_type);
 }
 
 TEST(SplitTest, Error) {
@@ -297,8 +299,8 @@ TEST(SplitTest, Error) {
   DoSplit(source.get(), ObjectType::TREE_NODE,
           [&split_result](SplitResult c) { split_result = std::move(c); });
 
-  ASSERT_EQ(1u, split_result.calls.size());
-  ASSERT_EQ(IterationStatus::ERROR, split_result.calls.back().status);
+  ASSERT_EQ(split_result.calls.size(), 1u);
+  ASSERT_EQ(split_result.calls.back().status, IterationStatus::ERROR);
 }
 
 ObjectIdentifier MakeIndexId(size_t i) {
@@ -361,10 +363,10 @@ TEST(SplitTest, CollectPieces) {
         return true;
       });
 
-  ASSERT_EQ(IterationStatus::DONE, status);
-  ASSERT_EQ(objects.size(), identifiers.size());
+  ASSERT_EQ(status, IterationStatus::DONE);
+  ASSERT_EQ(identifiers.size(), objects.size());
   for (const auto& identifier : identifiers) {
-    EXPECT_EQ(1u, objects.count(identifier)) << "Unknown id: " << identifier;
+    EXPECT_EQ(objects.count(identifier), 1u) << "Unknown id: " << identifier;
   }
 }
 
@@ -396,7 +398,7 @@ TEST(SplitTest, CollectPiecesError) {
         return true;
       });
   EXPECT_GE(called, nb_successfull_called);
-  ASSERT_EQ(IterationStatus::ERROR, status);
+  ASSERT_EQ(status, IterationStatus::ERROR);
 }
 
 using SplitTestWithEnvironment = ledger::TestWithEnvironment;
@@ -415,7 +417,7 @@ TEST_F(SplitTestWithEnvironment, DifferentPermutations) {
       source.get(), ObjectType::BLOB,
       [&split_result1](SplitResult c) { split_result1 = std::move(c); },
       [&d1](uint64_t chunk_window_hash) { return chunk_window_hash ^ d1; });
-  EXPECT_EQ(IterationStatus::DONE, split_result1.calls.back().status);
+  EXPECT_EQ(split_result1.calls.back().status, IterationStatus::DONE);
 
   source = DataSource::Create(content);
   SplitResult split_result2;
@@ -425,7 +427,7 @@ TEST_F(SplitTestWithEnvironment, DifferentPermutations) {
       source.get(), ObjectType::BLOB,
       [&split_result2](SplitResult c) { split_result2 = std::move(c); },
       [&d2](uint64_t chunk_window_hash) { return chunk_window_hash ^ d2; });
-  EXPECT_EQ(IterationStatus::DONE, split_result2.calls.back().status);
+  EXPECT_EQ(split_result2.calls.back().status, IterationStatus::DONE);
 
   EXPECT_NE(split_result1.calls, split_result2.calls);
 }

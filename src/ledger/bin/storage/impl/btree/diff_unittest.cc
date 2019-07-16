@@ -93,11 +93,11 @@ TEST_F(DiffTest, ForEachDiff) {
       environment_.coroutine_service(), &fake_storage_, base_root_identifier, other_root_identifier,
       "",
       [&other_changes, &current_change](EntryChange e) {
-        EXPECT_EQ(other_changes[current_change].deleted, e.deleted);
+        EXPECT_EQ(e.deleted, other_changes[current_change].deleted);
         if (e.deleted) {
-          EXPECT_EQ(other_changes[current_change].entry.key, e.entry.key);
+          EXPECT_EQ(e.entry.key, other_changes[current_change].entry.key);
         } else {
-          EXPECT_EQ(other_changes[current_change].entry, e.entry);
+          EXPECT_EQ(e.entry, other_changes[current_change].entry);
         }
         ++current_change;
         return true;
@@ -105,8 +105,8 @@ TEST_F(DiffTest, ForEachDiff) {
       callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
-  EXPECT_EQ(other_changes.size(), current_change);
+  ASSERT_EQ(status, Status::OK);
+  EXPECT_EQ(current_change, other_changes.size());
 }
 
 TEST_F(DiffTest, ForEachDiffWithMinKey) {
@@ -139,27 +139,27 @@ TEST_F(DiffTest, ForEachDiffWithMinKey) {
       environment_.coroutine_service(), &fake_storage_, base_root_identifier, other_root_identifier,
       "key0",
       [&changes, &current_change](EntryChange e) {
-        EXPECT_EQ(changes[current_change++].entry, e.entry);
+        EXPECT_EQ(e.entry, changes[current_change++].entry);
         return true;
       },
       callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
-  EXPECT_EQ(changes.size(), current_change);
+  ASSERT_EQ(status, Status::OK);
+  EXPECT_EQ(current_change, changes.size());
 
   // With "key60" as min_key, only key75 should be returned.
   ForEachDiff(
       environment_.coroutine_service(), &fake_storage_, base_root_identifier, other_root_identifier,
       "key60",
       [&changes](EntryChange e) {
-        EXPECT_EQ(changes[1].entry, e.entry);
+        EXPECT_EQ(e.entry, changes[1].entry);
         return true;
       },
       callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(status, Status::OK);
 }
 
 TEST_F(DiffTest, ForEachDiffWithMinKeySkipNodes) {
@@ -188,13 +188,13 @@ TEST_F(DiffTest, ForEachDiffWithMinKeySkipNodes) {
       environment_.coroutine_service(), &fake_storage_, base_root_identifier, other_root_identifier,
       "key01",
       [&changes](EntryChange e) {
-        EXPECT_EQ(changes[0].entry, e.entry);
+        EXPECT_EQ(e.entry, changes[0].entry);
         return true;
       },
       callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(status, Status::OK);
 }
 
 TEST_F(DiffTest, ForEachDiffPriorityChange) {
@@ -227,12 +227,12 @@ TEST_F(DiffTest, ForEachDiffPriorityChange) {
       callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
-  EXPECT_EQ(1u, change_count);
+  ASSERT_EQ(status, Status::OK);
+  EXPECT_EQ(change_count, 1u);
   EXPECT_FALSE(actual_change.deleted);
-  EXPECT_EQ(base_entry.key, actual_change.entry.key);
-  EXPECT_EQ(base_entry.object_identifier, actual_change.entry.object_identifier);
-  EXPECT_EQ(KeyPriority::LAZY, actual_change.entry.priority);
+  EXPECT_EQ(actual_change.entry.key, base_entry.key);
+  EXPECT_EQ(actual_change.entry.object_identifier, base_entry.object_identifier);
+  EXPECT_EQ(actual_change.entry.priority, KeyPriority::LAZY);
 }
 
 TEST_F(DiffTest, ForEachThreeWayDiff) {
@@ -307,15 +307,15 @@ TEST_F(DiffTest, ForEachThreeWayDiff) {
         if (current_change >= expected_three_way_changes.size()) {
           return false;
         }
-        EXPECT_EQ(expected_three_way_changes[current_change], e);
+        EXPECT_EQ(e, expected_three_way_changes[current_change]);
         current_change++;
         return true;
       },
       callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
-  EXPECT_EQ(current_change, expected_three_way_changes.size());
+  ASSERT_EQ(status, Status::OK);
+  EXPECT_EQ(expected_three_way_changes.size(), current_change);
 }
 
 TEST_F(DiffTest, ForEachThreeWayDiffMinKey) {
@@ -379,15 +379,15 @@ TEST_F(DiffTest, ForEachThreeWayDiffMinKey) {
         if (current_change >= expected_three_way_changes.size()) {
           return false;
         }
-        EXPECT_EQ(expected_three_way_changes[current_change], e);
+        EXPECT_EQ(e, expected_three_way_changes[current_change]);
         current_change++;
         return true;
       },
       callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
-  EXPECT_EQ(current_change, expected_three_way_changes.size());
+  ASSERT_EQ(status, Status::OK);
+  EXPECT_EQ(expected_three_way_changes.size(), current_change);
 }
 
 TEST_F(DiffTest, ForEachThreeWayDiffNoDiff) {
@@ -445,7 +445,7 @@ TEST_F(DiffTest, ForEachThreeWayDiffNoDiff) {
       callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(status, Status::OK);
 }
 
 TEST_F(DiffTest, ForEachThreeWayNoBaseChange) {
@@ -508,15 +508,15 @@ TEST_F(DiffTest, ForEachThreeWayNoBaseChange) {
         if (current_change >= expected_three_way_changes.size()) {
           return false;
         }
-        EXPECT_EQ(expected_three_way_changes[current_change], e);
+        EXPECT_EQ(e, expected_three_way_changes[current_change]);
         current_change++;
         return true;
       },
       callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
-  EXPECT_EQ(current_change, expected_three_way_changes.size());
+  ASSERT_EQ(status, Status::OK);
+  EXPECT_EQ(expected_three_way_changes.size(), current_change);
 }
 
 }  // namespace

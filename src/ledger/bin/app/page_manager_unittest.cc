@@ -4,6 +4,12 @@
 
 #include "src/ledger/bin/app/page_manager.h"
 
+#include <cstdint>
+#include <memory>
+#include <set>
+#include <utility>
+#include <vector>
+
 #include <lib/async/cpp/task.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
@@ -13,12 +19,6 @@
 #include <lib/inspect_deprecated/inspect.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
-
-#include <cstdint>
-#include <memory>
-#include <set>
-#include <utility>
-#include <vector>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
@@ -264,7 +264,7 @@ TEST_F(PageManagerTest, OnEmptyCalled) {
       callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
-  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_EQ(get_page_status, Status::OK);
   EXPECT_FALSE(on_empty_callback_called);
 
   fit::closure detacher = page_manager_->CreateDetacher();
@@ -291,7 +291,7 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedCheckNotFound) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &is_closed_and_synced));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::PAGE_NOT_FOUND, status);
+  EXPECT_EQ(status, Status::PAGE_NOT_FOUND);
 }
 
 // Check for a page that exists, is synced and open. PageIsClosedAndSynced
@@ -310,7 +310,7 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedCheckClosed) {
       callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
-  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_EQ(get_page_status, Status::OK);
 
   Status storage_status;
   storage_->set_page_storage_synced(storage_page_id, true);
@@ -318,8 +318,8 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedCheckClosed) {
       callback::Capture(callback::SetWhenCalled(&called), &storage_status, &is_closed_and_synced));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, storage_status);
-  EXPECT_EQ(PagePredicateResult::PAGE_OPENED, is_closed_and_synced);
+  EXPECT_EQ(storage_status, Status::OK);
+  EXPECT_EQ(is_closed_and_synced, PagePredicateResult::PAGE_OPENED);
 
   // Close the page. PageIsClosedAndSynced should now be true.
   page.Unbind();
@@ -329,8 +329,8 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedCheckClosed) {
       callback::Capture(callback::SetWhenCalled(&called), &storage_status, &is_closed_and_synced));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, storage_status);
-  EXPECT_EQ(PagePredicateResult::YES, is_closed_and_synced);
+  EXPECT_EQ(storage_status, Status::OK);
+  EXPECT_EQ(is_closed_and_synced, PagePredicateResult::YES);
 }
 
 // Check for a page that exists, is closed, but is not synced.
@@ -350,7 +350,7 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedCheckSynced) {
       callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
-  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_EQ(get_page_status, Status::OK);
 
   // Mark the page as unsynced and close it.
   storage_->set_page_storage_synced(storage_page_id, false);
@@ -362,8 +362,8 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedCheckSynced) {
       callback::Capture(callback::SetWhenCalled(&called), &storage_status, &is_closed_and_synced));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, storage_status);
-  EXPECT_EQ(PagePredicateResult::NO, is_closed_and_synced);
+  EXPECT_EQ(storage_status, Status::OK);
+  EXPECT_EQ(is_closed_and_synced, PagePredicateResult::NO);
 }
 
 // Check for a page that exists, is closed, and synced, but was opened during
@@ -382,7 +382,7 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedCheckPageOpened) {
       callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
-  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_EQ(get_page_status, Status::OK);
 
   // Mark the page as synced and close it.
   storage_->set_page_storage_synced(storage_page_id, true);
@@ -405,7 +405,7 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedCheckPageOpened) {
       callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
-  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_EQ(get_page_status, Status::OK);
   page.Unbind();
   RunLoopUntilIdle();
 
@@ -414,8 +414,8 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedCheckPageOpened) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(page_is_closed_and_synced_called);
-  EXPECT_EQ(Status::OK, storage_status);
-  EXPECT_EQ(PagePredicateResult::PAGE_OPENED, is_closed_and_synced);
+  EXPECT_EQ(storage_status, Status::OK);
+  EXPECT_EQ(is_closed_and_synced, PagePredicateResult::PAGE_OPENED);
 }
 
 // Check for a page that exists, is closed, and synced. Test two concurrent
@@ -433,7 +433,7 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedConcurrentCalls) {
       callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
-  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_EQ(get_page_status, Status::OK);
 
   // Mark the page as synced and close it.
   storage_->set_page_storage_synced(storage_page_id, true);
@@ -460,8 +460,8 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedConcurrentCalls) {
   RunLoopUntilIdle();
   EXPECT_FALSE(called1);
   EXPECT_TRUE(called2);
-  EXPECT_EQ(Status::OK, status2);
-  EXPECT_EQ(PagePredicateResult::YES, is_closed_and_synced2);
+  EXPECT_EQ(status2, Status::OK);
+  EXPECT_EQ(is_closed_and_synced2, PagePredicateResult::YES);
 
   // Open and close the page.
   page_manager_->GetPage(
@@ -469,7 +469,7 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedConcurrentCalls) {
       callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
-  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_EQ(get_page_status, Status::OK);
   page.Unbind();
   RunLoopUntilIdle();
 
@@ -479,8 +479,8 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedConcurrentCalls) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called1);
-  EXPECT_EQ(Status::OK, status1);
-  EXPECT_EQ(PagePredicateResult::PAGE_OPENED, is_closed_and_synced1);
+  EXPECT_EQ(status1, Status::OK);
+  EXPECT_EQ(is_closed_and_synced1, PagePredicateResult::PAGE_OPENED);
 }
 
 TEST_F(PageManagerTest, PageIsClosedOfflineAndEmptyCheckNotFound) {
@@ -494,7 +494,7 @@ TEST_F(PageManagerTest, PageIsClosedOfflineAndEmptyCheckNotFound) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &is_closed_offline_empty));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::PAGE_NOT_FOUND, status);
+  EXPECT_EQ(status, Status::PAGE_NOT_FOUND);
 }
 
 TEST_F(PageManagerTest, PageIsClosedOfflineAndEmptyCheckClosed) {
@@ -512,7 +512,7 @@ TEST_F(PageManagerTest, PageIsClosedOfflineAndEmptyCheckClosed) {
       callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
-  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_EQ(get_page_status, Status::OK);
 
   storage_->set_page_storage_offline_empty(storage_page_id, true);
   Status storage_status;
@@ -520,8 +520,8 @@ TEST_F(PageManagerTest, PageIsClosedOfflineAndEmptyCheckClosed) {
       callback::SetWhenCalled(&called), &storage_status, &is_closed_offline_empty));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, storage_status);
-  EXPECT_EQ(PagePredicateResult::PAGE_OPENED, is_closed_offline_empty);
+  EXPECT_EQ(storage_status, Status::OK);
+  EXPECT_EQ(is_closed_offline_empty, PagePredicateResult::PAGE_OPENED);
 
   // Close the page. PagePredicateResult should now be true.
   page.Unbind();
@@ -531,8 +531,8 @@ TEST_F(PageManagerTest, PageIsClosedOfflineAndEmptyCheckClosed) {
       callback::SetWhenCalled(&called), &storage_status, &is_closed_offline_empty));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, storage_status);
-  EXPECT_EQ(PagePredicateResult::YES, is_closed_offline_empty);
+  EXPECT_EQ(storage_status, Status::OK);
+  EXPECT_EQ(is_closed_offline_empty, PagePredicateResult::YES);
 }
 
 TEST_F(PageManagerTest, PageIsClosedOfflineAndEmptyCanDeletePageOnCallback) {
@@ -560,11 +560,11 @@ TEST_F(PageManagerTest, PageIsClosedOfflineAndEmptyCanDeletePageOnCallback) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(page_is_empty_called);
-  EXPECT_EQ(Status::OK, page_is_empty_status);
-  EXPECT_EQ(PagePredicateResult::YES, is_closed_offline_empty);
+  EXPECT_EQ(page_is_empty_status, Status::OK);
+  EXPECT_EQ(is_closed_offline_empty, PagePredicateResult::YES);
 
   EXPECT_TRUE(delete_page_called);
-  EXPECT_EQ(Status::OK, delete_page_status);
+  EXPECT_EQ(delete_page_status, Status::OK);
 }
 
 // Verifies that two successive calls to GetPage do not create 2 storages.
@@ -577,7 +577,7 @@ TEST_F(PageManagerTest, CallGetPageTwice) {
       callback::Capture(callback::SetWhenCalled(&get_page_callback_called1), &get_page_status1));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called1);
-  EXPECT_EQ(Status::OK, get_page_status1);
+  EXPECT_EQ(get_page_status1, Status::OK);
   PagePtr page2;
   bool get_page_callback_called2;
   Status get_page_status2;
@@ -586,10 +586,10 @@ TEST_F(PageManagerTest, CallGetPageTwice) {
       callback::Capture(callback::SetWhenCalled(&get_page_callback_called2), &get_page_status2));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called2);
-  EXPECT_EQ(Status::OK, get_page_status2);
-  EXPECT_EQ(0u, storage_->create_page_calls.size());
-  ASSERT_EQ(1u, storage_->get_page_calls.size());
-  EXPECT_EQ(convert::ToString(page_id_.id), storage_->get_page_calls[0]);
+  EXPECT_EQ(get_page_status2, Status::OK);
+  EXPECT_EQ(storage_->create_page_calls.size(), 0u);
+  ASSERT_EQ(storage_->get_page_calls.size(), 1u);
+  EXPECT_EQ(storage_->get_page_calls[0], convert::ToString(page_id_.id));
 }
 
 TEST_F(PageManagerTest, OnPageOpenedClosedCalls) {
@@ -600,9 +600,9 @@ TEST_F(PageManagerTest, OnPageOpenedClosedCalls) {
   bool get_page_callback_called2;
   Status get_page_status2;
 
-  EXPECT_EQ(0, disk_cleanup_manager_->page_opened_count);
-  EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
-  EXPECT_EQ(0, disk_cleanup_manager_->page_unused_count);
+  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 0);
 
   // Open a page and check that OnPageOpened was called once.
   page_manager_->GetPage(
@@ -610,10 +610,10 @@ TEST_F(PageManagerTest, OnPageOpenedClosedCalls) {
       callback::Capture(callback::SetWhenCalled(&get_page_callback_called1), &get_page_status1));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called1);
-  EXPECT_EQ(Status::OK, get_page_status1);
-  EXPECT_EQ(1, disk_cleanup_manager_->page_opened_count);
-  EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
-  EXPECT_EQ(0, disk_cleanup_manager_->page_unused_count);
+  EXPECT_EQ(get_page_status1, Status::OK);
+  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 0);
 
   // Open the page again and check that there is no new call to OnPageOpened.
   page_manager_->GetPage(
@@ -621,33 +621,33 @@ TEST_F(PageManagerTest, OnPageOpenedClosedCalls) {
       callback::Capture(callback::SetWhenCalled(&get_page_callback_called2), &get_page_status2));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called2);
-  EXPECT_EQ(Status::OK, get_page_status2);
-  EXPECT_EQ(1, disk_cleanup_manager_->page_opened_count);
-  EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
-  EXPECT_EQ(0, disk_cleanup_manager_->page_unused_count);
+  EXPECT_EQ(get_page_status2, Status::OK);
+  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 0);
 
   // Close one of the two connections and check that there is still no call to
   // OnPageClosed.
   page1.Unbind();
   RunLoopUntilIdle();
-  EXPECT_EQ(1, disk_cleanup_manager_->page_opened_count);
-  EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
-  EXPECT_EQ(0, disk_cleanup_manager_->page_unused_count);
+  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 0);
 
   // Close the second connection and check that OnPageClosed was called once.
   page2.Unbind();
   RunLoopUntilIdle();
-  EXPECT_EQ(1, disk_cleanup_manager_->page_opened_count);
-  EXPECT_EQ(1, disk_cleanup_manager_->page_closed_count);
-  EXPECT_EQ(1, disk_cleanup_manager_->page_unused_count);
+  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 1);
 }
 
 TEST_F(PageManagerTest, OnPageOpenedClosedCallInternalRequest) {
   PagePtr page;
 
-  EXPECT_EQ(0, disk_cleanup_manager_->page_opened_count);
-  EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
-  EXPECT_EQ(0, disk_cleanup_manager_->page_unused_count);
+  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 0);
 
   // Make an internal request by calling PageIsClosedAndSynced. No calls to page
   // opened/closed should be made.
@@ -658,11 +658,11 @@ TEST_F(PageManagerTest, OnPageOpenedClosedCallInternalRequest) {
       callback::Capture(callback::SetWhenCalled(&called), &storage_status, &page_state));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, storage_status);
-  EXPECT_EQ(PagePredicateResult::NO, page_state);
-  EXPECT_EQ(0, disk_cleanup_manager_->page_opened_count);
-  EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
-  EXPECT_EQ(0, disk_cleanup_manager_->page_unused_count);
+  EXPECT_EQ(storage_status, Status::OK);
+  EXPECT_EQ(page_state, PagePredicateResult::NO);
+  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 0);
 
   // Open the same page with an external request and check that OnPageOpened
   // was called once.
@@ -673,19 +673,19 @@ TEST_F(PageManagerTest, OnPageOpenedClosedCallInternalRequest) {
       callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
-  EXPECT_EQ(Status::OK, get_page_status);
-  EXPECT_EQ(1, disk_cleanup_manager_->page_opened_count);
-  EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
-  EXPECT_EQ(0, disk_cleanup_manager_->page_unused_count);
+  EXPECT_EQ(get_page_status, Status::OK);
+  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 0);
 }
 
 TEST_F(PageManagerTest, OnPageOpenedClosedUnused) {
   PagePtr page;
   storage::PageIdView storage_page_id = convert::ExtendedStringView(page_id_.id);
 
-  EXPECT_EQ(0, disk_cleanup_manager_->page_opened_count);
-  EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
-  EXPECT_EQ(0, disk_cleanup_manager_->page_unused_count);
+  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 0);
 
   // Open and close the page through an external request.
   bool get_page_callback_called;
@@ -695,14 +695,14 @@ TEST_F(PageManagerTest, OnPageOpenedClosedUnused) {
       callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
-  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_EQ(get_page_status, Status::OK);
   // Mark the page as synced and close it.
   storage_->set_page_storage_synced(storage_page_id, true);
   page.Unbind();
   RunLoopUntilIdle();
-  EXPECT_EQ(1, disk_cleanup_manager_->page_opened_count);
-  EXPECT_EQ(1, disk_cleanup_manager_->page_closed_count);
-  EXPECT_EQ(1, disk_cleanup_manager_->page_unused_count);
+  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 1);
 
   // Start an internal request but don't let it terminate. Nothing should have
   // changed in the notifications received.
@@ -714,9 +714,9 @@ TEST_F(PageManagerTest, OnPageOpenedClosedUnused) {
       callback::SetWhenCalled(&page_is_synced_called), &storage_status, &is_synced));
   RunLoopUntilIdle();
   EXPECT_FALSE(page_is_synced_called);
-  EXPECT_EQ(1, disk_cleanup_manager_->page_opened_count);
-  EXPECT_EQ(1, disk_cleanup_manager_->page_closed_count);
-  EXPECT_EQ(1, disk_cleanup_manager_->page_unused_count);
+  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 1);
 
   // Open the same page with an external request and check that OnPageOpened
   // was called once.
@@ -725,27 +725,27 @@ TEST_F(PageManagerTest, OnPageOpenedClosedUnused) {
       callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
-  EXPECT_EQ(Status::OK, get_page_status);
-  EXPECT_EQ(2, disk_cleanup_manager_->page_opened_count);
-  EXPECT_EQ(1, disk_cleanup_manager_->page_closed_count);
-  EXPECT_EQ(1, disk_cleanup_manager_->page_unused_count);
+  EXPECT_EQ(get_page_status, Status::OK);
+  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 2);
+  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 1);
 
   // Close the page. We should get the page closed notification, but not the
   // unused one: the internal request is still running.
   page.Unbind();
   RunLoopUntilIdle();
-  EXPECT_EQ(2, disk_cleanup_manager_->page_opened_count);
-  EXPECT_EQ(2, disk_cleanup_manager_->page_closed_count);
-  EXPECT_EQ(1, disk_cleanup_manager_->page_unused_count);
+  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 2);
+  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 2);
+  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 1);
 
   // Terminate the internal request. We should now see the unused page
   // notification.
   storage_->CallIsSyncedCallback(storage_page_id);
   RunLoopUntilIdle();
 
-  EXPECT_EQ(2, disk_cleanup_manager_->page_opened_count);
-  EXPECT_EQ(2, disk_cleanup_manager_->page_closed_count);
-  EXPECT_EQ(2, disk_cleanup_manager_->page_unused_count);
+  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 2);
+  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 2);
+  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 2);
 }
 
 TEST_F(PageManagerTest, DeletePageStorageWhenPageOpenFails) {
@@ -759,7 +759,7 @@ TEST_F(PageManagerTest, DeletePageStorageWhenPageOpenFails) {
       callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
-  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_EQ(get_page_status, Status::OK);
 
   // Try to delete the page while it is open. Expect to get an error.
   Status storage_status;
@@ -767,7 +767,7 @@ TEST_F(PageManagerTest, DeletePageStorageWhenPageOpenFails) {
       callback::Capture(callback::SetWhenCalled(&called), &storage_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::ILLEGAL_STATE, storage_status);
+  EXPECT_EQ(storage_status, Status::ILLEGAL_STATE);
 }
 
 // Verify that the PageManager opens a closed page and triggers the synchronization with the cloud
@@ -786,8 +786,8 @@ TEST_F(PageManagerTest, StartPageSyncCheckSyncCalled) {
       callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
-  EXPECT_EQ(Status::OK, get_page_status);
-  EXPECT_EQ(1, sync_->GetSyncCallsCount(storage_page_id));
+  EXPECT_EQ(get_page_status, Status::OK);
+  EXPECT_EQ(sync_->GetSyncCallsCount(storage_page_id), 1);
 
   page.Unbind();
   RunLoopUntilIdle();
@@ -796,7 +796,7 @@ TEST_F(PageManagerTest, StartPageSyncCheckSyncCalled) {
   page_manager_->StartPageSync();
   RunLoopUntilIdle();
 
-  EXPECT_EQ(2, sync_->GetSyncCallsCount(storage_page_id));
+  EXPECT_EQ(sync_->GetSyncCallsCount(storage_page_id), 2);
 }
 
 // Verify that the PageManager does not trigger the synchronization with the cloud for the currently
@@ -815,14 +815,14 @@ TEST_F(PageManagerTest, StartPageSyncCheckWithOpenedPage) {
       callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
-  EXPECT_EQ(Status::OK, get_page_status);
-  EXPECT_EQ(1, sync_->GetSyncCallsCount(storage_page_id));
+  EXPECT_EQ(get_page_status, Status::OK);
+  EXPECT_EQ(sync_->GetSyncCallsCount(storage_page_id), 1);
 
   // Tries to reopen the already-opened page to start the sync.
   page_manager_->StartPageSync();
   RunLoopUntilIdle();
 
-  EXPECT_EQ(1, sync_->GetSyncCallsCount(storage_page_id));
+  EXPECT_EQ(sync_->GetSyncCallsCount(storage_page_id), 1);
 }
 
 }  // namespace

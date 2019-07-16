@@ -134,13 +134,13 @@ class NonAssociativeConflictResolverImpl : public ConflictResolver {
                fidl::InterfaceHandle<PageSnapshot> /*common_version*/,
                fidl::InterfaceHandle<MergeResultProvider> result_provider) override {
     auto merge_result_provider = std::make_unique<MergeResultProviderPtr>(result_provider.Bind());
-    merge_result_provider->set_error_handler([](zx_status_t status) { EXPECT_EQ(ZX_OK, status); });
+    merge_result_provider->set_error_handler([](zx_status_t status) { EXPECT_EQ(status, ZX_OK); });
     MergeResultProvider* merge_result_provider_ptr = merge_result_provider->get();
     merge_result_provider_ptr->GetFullDiff(
         nullptr, [merge_result_provider = std::move(merge_result_provider)](
                      std::vector<DiffEntry> changes, std::unique_ptr<Token> next_token) mutable {
           ASSERT_FALSE(next_token);
-          ASSERT_EQ(1u, changes.size());
+          ASSERT_EQ(changes.size(), 1u);
 
           double d1, d2;
           EXPECT_TRUE(VmoToDouble(changes.at(0).left->value, &d1));
@@ -227,7 +227,7 @@ class ConvergenceTest : public BaseIntegrationTest,
           },
           callback::Capture(loop_waiter->GetCallback(), &status, &pages_[i], &page_id));
       ASSERT_TRUE(loop_waiter->RunUntilCalled());
-      ASSERT_EQ(Status::OK, status);
+      ASSERT_EQ(status, Status::OK);
     }
   }
 
@@ -402,8 +402,8 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
   // All synchronization must still be idle.
   for (int i = 0; i < num_ledgers_; i++) {
     EXPECT_FALSE(sync_watchers[i]->new_state);
-    EXPECT_EQ(SyncState::IDLE, sync_watchers[i]->download);
-    EXPECT_EQ(SyncState::IDLE, sync_watchers[i]->upload);
+    EXPECT_EQ(sync_watchers[i]->download, SyncState::IDLE);
+    EXPECT_EQ(sync_watchers[i]->upload, SyncState::IDLE);
   }
 
   EXPECT_TRUE(AreValuesIdentical(watchers, "value"));

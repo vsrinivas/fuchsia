@@ -55,7 +55,7 @@ class TreeNodeTest : public StorageTest {
 
   Entry GetEntry(const TreeNode* node, int index) {
     Entry found_entry;
-    EXPECT_EQ(Status::OK, node->GetEntry(index, &found_entry));
+    EXPECT_EQ(node->GetEntry(index, &found_entry), Status::OK);
     return found_entry;
   }
 
@@ -84,7 +84,7 @@ TEST_F(TreeNodeTest, CreateGetTreeNode) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &found_node));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_NE(nullptr, found_node);
 
   TreeNode::FromIdentifier(
@@ -92,7 +92,7 @@ TEST_F(TreeNodeTest, CreateGetTreeNode) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &found_node));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::INTERNAL_NOT_FOUND, status);
+  EXPECT_EQ(status, Status::INTERNAL_NOT_FOUND);
 }
 
 TEST_F(TreeNodeTest, GetEntry) {
@@ -101,9 +101,9 @@ TEST_F(TreeNodeTest, GetEntry) {
   ASSERT_TRUE(CreateEntries(size, &entries));
   std::unique_ptr<const TreeNode> node;
   ASSERT_TRUE(CreateNodeFromEntries(entries, {}, &node));
-  EXPECT_EQ(size, node->GetKeyCount());
+  EXPECT_EQ(node->GetKeyCount(), size);
   for (int i = 0; i < size; ++i) {
-    EXPECT_EQ(entries[i], GetEntry(node.get(), i));
+    EXPECT_EQ(GetEntry(node.get(), i), entries[i]);
   }
 }
 
@@ -115,26 +115,26 @@ TEST_F(TreeNodeTest, FindKeyOrChild) {
   ASSERT_TRUE(CreateNodeFromEntries(entries, {}, &node));
 
   int index;
-  EXPECT_EQ(Status::OK, node->FindKeyOrChild("key00", &index));
-  EXPECT_EQ(0, index);
+  EXPECT_EQ(node->FindKeyOrChild("key00", &index), Status::OK);
+  EXPECT_EQ(index, 0);
 
-  EXPECT_EQ(Status::OK, node->FindKeyOrChild("key02", &index));
-  EXPECT_EQ(2, index);
+  EXPECT_EQ(node->FindKeyOrChild("key02", &index), Status::OK);
+  EXPECT_EQ(index, 2);
 
-  EXPECT_EQ(Status::OK, node->FindKeyOrChild("key09", &index));
-  EXPECT_EQ(9, index);
+  EXPECT_EQ(node->FindKeyOrChild("key09", &index), Status::OK);
+  EXPECT_EQ(index, 9);
 
-  EXPECT_EQ(Status::KEY_NOT_FOUND, node->FindKeyOrChild("0", &index));
-  EXPECT_EQ(0, index);
+  EXPECT_EQ(node->FindKeyOrChild("0", &index), Status::KEY_NOT_FOUND);
+  EXPECT_EQ(index, 0);
 
-  EXPECT_EQ(Status::KEY_NOT_FOUND, node->FindKeyOrChild("key001", &index));
-  EXPECT_EQ(1, index);
+  EXPECT_EQ(node->FindKeyOrChild("key001", &index), Status::KEY_NOT_FOUND);
+  EXPECT_EQ(index, 1);
 
-  EXPECT_EQ(Status::KEY_NOT_FOUND, node->FindKeyOrChild("key020", &index));
-  EXPECT_EQ(3, index);
+  EXPECT_EQ(node->FindKeyOrChild("key020", &index), Status::KEY_NOT_FOUND);
+  EXPECT_EQ(index, 3);
 
-  EXPECT_EQ(Status::KEY_NOT_FOUND, node->FindKeyOrChild("key999", &index));
-  EXPECT_EQ(10, index);
+  EXPECT_EQ(node->FindKeyOrChild("key999", &index), Status::KEY_NOT_FOUND);
+  EXPECT_EQ(index, 10);
 }
 
 TEST_F(TreeNodeTest, Serialization) {
@@ -152,19 +152,19 @@ TEST_F(TreeNodeTest, Serialization) {
                           callback::Capture(callback::SetWhenCalled(&called), &status, &object));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   std::unique_ptr<const TreeNode> retrieved_node;
-  EXPECT_EQ(node->GetIdentifier(), object->GetIdentifier());
+  EXPECT_EQ(object->GetIdentifier(), node->GetIdentifier());
   ASSERT_TRUE(CreateNodeFromIdentifier(node->GetIdentifier(), &retrieved_node));
 
   fxl::StringView data;
-  EXPECT_EQ(Status::OK, object->GetData(&data));
+  EXPECT_EQ(object->GetData(&data), Status::OK);
   uint8_t level;
   std::vector<Entry> parsed_entries;
   std::map<size_t, ObjectIdentifier> parsed_children;
   EXPECT_TRUE(DecodeNode(data, &level, &parsed_entries, &parsed_children));
-  EXPECT_EQ(entries, parsed_entries);
-  EXPECT_EQ(children, parsed_children);
+  EXPECT_EQ(parsed_entries, entries);
+  EXPECT_EQ(parsed_children, children);
 }
 
 TEST_F(TreeNodeTest, References) {

@@ -33,7 +33,7 @@ fit::function<void(storage::Journal*)> TestWithPageStorage::AddKeyValueToJournal
         callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifier));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
-    EXPECT_EQ(Status::OK, status);
+    EXPECT_EQ(status, Status::OK);
 
     journal->Put(key, object_identifier, storage::KeyPriority::EAGER);
   };

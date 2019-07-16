@@ -4,6 +4,8 @@
 
 #include "src/ledger/bin/app/ledger_repository_impl.h"
 
+#include <vector>
+
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/async_promise/executor.h>
 #include <lib/callback/capture.h>
@@ -15,8 +17,6 @@
 #include <lib/inspect_deprecated/hierarchy.h>
 #include <lib/inspect_deprecated/inspect.h>
 #include <lib/inspect_deprecated/testing/inspect.h>
-
-#include <vector>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
@@ -126,8 +126,8 @@ TEST_F(LedgerRepositoryImplTest, ConcurrentCalls) {
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called1);
   EXPECT_TRUE(callback_called2);
-  EXPECT_EQ(Status::OK, status1);
-  EXPECT_EQ(Status::OK, status2);
+  EXPECT_EQ(status1, Status::OK);
+  EXPECT_EQ(status2, Status::OK);
 }
 
 TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
@@ -298,8 +298,8 @@ TEST_F(LedgerRepositoryImplTest, Close) {
   EXPECT_TRUE(ptr1_closed);
   EXPECT_TRUE(ptr2_closed);
 
-  EXPECT_EQ(ZX_OK, ptr1_closed_status);
-  EXPECT_EQ(ZX_OK, ptr2_closed_status);
+  EXPECT_EQ(ptr1_closed_status, ZX_OK);
+  EXPECT_EQ(ptr2_closed_status, ZX_OK);
 }
 
 }  // namespace

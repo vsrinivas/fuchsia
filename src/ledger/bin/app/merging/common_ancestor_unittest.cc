@@ -4,13 +4,13 @@
 
 #include "src/ledger/bin/app/merging/common_ancestor.h"
 
+#include <algorithm>
+#include <string>
+
 #include <lib/callback/cancellable_helper.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
-
-#include <algorithm>
-#include <string>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -49,7 +49,7 @@ class CommonAncestorTest : public TestWithPageStorage {
                         callback::Capture(callback::SetWhenCalled(&called), &status, &base));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
-    EXPECT_EQ(Status::OK, status);
+    EXPECT_EQ(status, Status::OK);
 
     std::unique_ptr<storage::Journal> journal = storage_->StartCommit(std::move(base));
 
@@ -59,7 +59,7 @@ class CommonAncestorTest : public TestWithPageStorage {
                             callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
-    EXPECT_EQ(Status::OK, status);
+    EXPECT_EQ(status, Status::OK);
 
     return commit;
   }
@@ -79,7 +79,7 @@ class CommonAncestorTest : public TestWithPageStorage {
                                                                   &actual_status, &actual_commit));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
-    EXPECT_EQ(Status::OK, actual_status);
+    EXPECT_EQ(actual_status, Status::OK);
     return actual_commit;
   }
 
@@ -91,7 +91,7 @@ class CommonAncestorTest : public TestWithPageStorage {
                         callback::Capture(callback::SetWhenCalled(&called), &status, &root));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
-    EXPECT_EQ(Status::OK, status);
+    EXPECT_EQ(status, Status::OK);
     return root;
   }
 
@@ -123,8 +123,8 @@ TEST_F(CommonAncestorTest, TwoChildrenOfRoot) {
     std::vector<std::unique_ptr<const storage::Commit>> result;
     status = FindCommonAncestors(handler, storage_.get(), std::move(commit_1), std::move(commit_2),
                                  &comparison, &result);
-    EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(CommitComparison::UNORDERED, comparison);
+    EXPECT_EQ(status, Status::OK);
+    EXPECT_EQ(comparison, CommitComparison::UNORDERED);
     EXPECT_THAT(GetCommitIds(result), ElementsAre(storage::kFirstPageCommitId.ToString()));
   });
 }
@@ -141,8 +141,8 @@ TEST_F(CommonAncestorTest, RootAndChild) {
     std::vector<std::unique_ptr<const storage::Commit>> result;
     status = FindCommonAncestors(handler, storage_.get(), std::move(root), std::move(child),
                                  &comparison, &result);
-    EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(CommitComparison::LEFT_SUBSET_OF_RIGHT, comparison);
+    EXPECT_EQ(status, Status::OK);
+    EXPECT_EQ(comparison, CommitComparison::LEFT_SUBSET_OF_RIGHT);
     EXPECT_THAT(result, IsEmpty());
   });
 }
@@ -160,8 +160,8 @@ TEST_F(CommonAncestorTest, ChildAndRoot) {
     status = FindCommonAncestors(handler, storage_.get(), std::move(child), std::move(root),
                                  &comparison, &result);
 
-    EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(CommitComparison::RIGHT_SUBSET_OF_LEFT, comparison);
+    EXPECT_EQ(status, Status::OK);
+    EXPECT_EQ(comparison, CommitComparison::RIGHT_SUBSET_OF_LEFT);
     EXPECT_THAT(result, IsEmpty());
   });
 }
@@ -193,16 +193,16 @@ TEST_F(CommonAncestorTest, MergeCommitAndSomeOthers) {
     std::vector<std::unique_ptr<const storage::Commit>> result;
     status = FindCommonAncestors(handler, storage_.get(), std::move(commit_1),
                                  std::move(commit_merge), &comparison, &result);
-    EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(CommitComparison::UNORDERED, comparison);
+    EXPECT_EQ(status, Status::OK);
+    EXPECT_EQ(comparison, CommitComparison::UNORDERED);
     EXPECT_THAT(GetCommitIds(result), ElementsAre(commit_a->GetId()));
 
     // LCA of (2) and (A) is (root).
     result.clear();
     status = FindCommonAncestors(handler, storage_.get(), std::move(commit_2), std::move(commit_a),
                                  &comparison, &result);
-    EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(CommitComparison::UNORDERED, comparison);
+    EXPECT_EQ(status, Status::OK);
+    EXPECT_EQ(comparison, CommitComparison::UNORDERED);
     EXPECT_THAT(GetCommitIds(result), ElementsAre(storage::kFirstPageCommitId.ToString()));
   });
 }
@@ -230,8 +230,8 @@ TEST_F(CommonAncestorTest, LongChain) {
     status = FindCommonAncestors(handler, storage_.get(), std::move(last_commit),
                                  std::move(commit_b), &comparison, &result);
     // This test lasts ~2.5s on x86+qemu+kvm.
-    EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(CommitComparison::UNORDERED, comparison);
+    EXPECT_EQ(status, Status::OK);
+    EXPECT_EQ(comparison, CommitComparison::UNORDERED);
     EXPECT_THAT(GetCommitIds(result), ElementsAre(storage::kFirstPageCommitId.ToString()));
   });
 }
@@ -263,8 +263,8 @@ TEST_F(CommonAncestorTest, EquivalentCommits) {
     std::vector<std::unique_ptr<const storage::Commit>> result;
     status = FindCommonAncestors(handler, storage_.get(), std::move(commit_m), std::move(commit_n),
                                  &comparison, &result);
-    EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(CommitComparison::EQUIVALENT, comparison);
+    EXPECT_EQ(status, Status::OK);
+    EXPECT_EQ(comparison, CommitComparison::EQUIVALENT);
     EXPECT_THAT(GetCommitIds(result), IsEmpty());
   });
 }
@@ -301,8 +301,8 @@ TEST_F(CommonAncestorTest, TwoBasesSameGeneration) {
     std::vector<std::unique_ptr<const storage::Commit>> result;
     status = FindCommonAncestors(handler, storage_.get(), std::move(commit_e), std::move(commit_f),
                                  &comparison, &result);
-    EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(CommitComparison::UNORDERED, comparison);
+    EXPECT_EQ(status, Status::OK);
+    EXPECT_EQ(comparison, CommitComparison::UNORDERED);
     EXPECT_THAT(GetCommitIds(result), UnorderedElementsAre(commit_a->GetId(), commit_b->GetId()));
   });
 }
@@ -343,8 +343,8 @@ TEST_F(CommonAncestorTest, TwoBasesDifferentGenerations) {
     std::vector<std::unique_ptr<const storage::Commit>> result;
     status = FindCommonAncestors(handler, storage_.get(), std::move(commit_e), std::move(commit_f),
                                  &comparison, &result);
-    EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(CommitComparison::UNORDERED, comparison);
+    EXPECT_EQ(status, Status::OK);
+    EXPECT_EQ(comparison, CommitComparison::UNORDERED);
     EXPECT_THAT(GetCommitIds(result), UnorderedElementsAre(commit_a->GetId(), commit_b->GetId()));
   });
 }

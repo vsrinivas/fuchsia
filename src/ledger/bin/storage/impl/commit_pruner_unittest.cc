@@ -90,7 +90,7 @@ TEST_F(CommitPrunerTest, NoPruningPolicy) {
   RunLoopUntilIdle();
 
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
 
   EXPECT_THAT(storage.delete_commit_calls_, IsEmpty());
 
@@ -188,7 +188,7 @@ TEST_F(CommitPrunerTest, PruneBeforeLucaNoPruning) {
   RunLoopUntilIdle();
 
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_THAT(storage.delete_commit_calls_, IsEmpty());
 
   tracker.UnregisterCommit(commit_0_ptr);
@@ -254,13 +254,13 @@ TEST_F(CommitPrunerTest, PruneBeforeLuca1) {
 
   EXPECT_THAT(storage.delete_commit_calls_, SizeIs(1));
   EXPECT_THAT(storage.delete_commit_calls_[0].first, SizeIs(1));
-  EXPECT_EQ(commit_id_0, storage.delete_commit_calls_[0].first[0]->GetId());
+  EXPECT_EQ(storage.delete_commit_calls_[0].first[0]->GetId(), commit_id_0);
 
   storage.delete_commit_calls_[0].second(Status::OK);
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
 
   tracker.UnregisterCommit(commit_2_ptr);
   tracker.UnregisterCommit(commit_3_ptr);
@@ -324,13 +324,13 @@ TEST_F(CommitPrunerTest, PruneBeforeLuca2) {
   for (const std::unique_ptr<const Commit>& commit : storage.delete_commit_calls_[0].first) {
     actual_commit_ids.insert(commit->GetId());
   }
-  EXPECT_EQ(golden_commit_ids, actual_commit_ids);
+  EXPECT_EQ(actual_commit_ids, golden_commit_ids);
 
   storage.delete_commit_calls_[0].second(Status::OK);
   RunLoopUntilIdle();
 
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
 
   tracker.UnregisterCommit(commit_4_ptr);
 }

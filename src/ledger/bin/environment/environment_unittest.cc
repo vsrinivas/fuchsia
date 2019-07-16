@@ -25,8 +25,8 @@ TEST_F(EnvironmentTest, InitializationOfAsyncAndIOAsync) {
                         .SetIOAsync(dispatcher())
                         .Build();
 
-  EXPECT_EQ(dispatcher(), env.dispatcher());
-  EXPECT_EQ(dispatcher(), env.io_dispatcher());
+  EXPECT_EQ(env.dispatcher(), dispatcher());
+  EXPECT_EQ(env.io_dispatcher(), dispatcher());
 }
 
 TEST_F(EnvironmentTest, InitializationClock) {
@@ -39,7 +39,7 @@ TEST_F(EnvironmentTest, InitializationClock) {
                         .SetClock(std::move(clock))
                         .Build();
 
-  EXPECT_EQ(clock_ptr, env.clock());
+  EXPECT_EQ(env.clock(), clock_ptr);
 }
 
 TEST_F(EnvironmentTest, InitializationRandom) {
@@ -52,7 +52,7 @@ TEST_F(EnvironmentTest, InitializationRandom) {
                         .SetRandom(std::move(random))
                         .Build();
 
-  EXPECT_EQ(random_ptr, env.random());
+  EXPECT_EQ(env.random(), random_ptr);
 }
 
 }  // namespace

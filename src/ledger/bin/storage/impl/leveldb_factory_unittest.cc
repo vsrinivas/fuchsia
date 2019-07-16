@@ -4,10 +4,10 @@
 
 #include "src/ledger/bin/storage/impl/leveldb_factory.h"
 
+#include <memory>
+
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
-
-#include <memory>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
@@ -63,14 +63,14 @@ TEST_F(LevelDbFactoryTest, GetOrCreateDb) {
                             callback::Capture(callback::SetWhenCalled(&called), &status, &db));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_NE(nullptr, db);
   // Write one key-value pair.
   RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     std::unique_ptr<Db::Batch> batch;
-    EXPECT_EQ(Status::OK, db->StartBatch(handler, &batch));
-    EXPECT_EQ(Status::OK, batch->Put(handler, "key", "value"));
-    EXPECT_EQ(Status::OK, batch->Execute(handler));
+    EXPECT_EQ(db->StartBatch(handler, &batch), Status::OK);
+    EXPECT_EQ(batch->Put(handler, "key", "value"), Status::OK);
+    EXPECT_EQ(batch->Execute(handler), Status::OK);
   });
 
   // Close the previous instance and open it again.
@@ -79,13 +79,13 @@ TEST_F(LevelDbFactoryTest, GetOrCreateDb) {
                             callback::Capture(callback::SetWhenCalled(&called), &status, &db));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(status, Status::OK);
   EXPECT_NE(nullptr, db);
   // Expect to find the previously written key-value pair.
   RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     std::string value;
-    EXPECT_EQ(Status::OK, db->Get(handler, "key", &value));
-    EXPECT_EQ("value", value);
+    EXPECT_EQ(db->Get(handler, "key", &value), Status::OK);
+    EXPECT_EQ(value, "value");
   });
 }
 
@@ -98,8 +98,8 @@ TEST_F(LevelDbFactoryTest, GetDbOnNotFound) {
                             callback::Capture(callback::SetWhenCalled(&called), &status, &db));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::PAGE_NOT_FOUND, status);
-  EXPECT_EQ(nullptr, db);
+  EXPECT_EQ(status, Status::PAGE_NOT_FOUND);
+  EXPECT_EQ(db, nullptr);
 }
 
 TEST_F(LevelDbFactoryTest, CreateMultipleDbs) {
@@ -118,7 +118,7 @@ TEST_F(LevelDbFactoryTest, CreateMultipleDbs) {
                               callback::Capture(callback::SetWhenCalled(&called), &status, &db));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
-    EXPECT_EQ(Status::OK, status);
+    EXPECT_EQ(status, Status::OK);
     EXPECT_NE(nullptr, db);
     // Check that the directory was created.
     EXPECT_TRUE(files::IsDirectoryAt(path.root_fd(), path.path()));
@@ -148,7 +148,7 @@ TEST_F(LevelDbFactoryTest, CreateMultipleDbsConcurrently) {
   for (int i = 0; i < N; ++i) {
     ledger::DetachedPath path = db_path_.SubPath(fxl::NumberToString(i));
     EXPECT_TRUE(called[i]);
-    EXPECT_EQ(Status::OK, statuses[i]);
+    EXPECT_EQ(statuses[i], Status::OK);
     EXPECT_NE(nullptr, dbs[i]);
     // Check that the directory was created.
     EXPECT_TRUE(files::IsDirectoryAt(path.root_fd(), path.path()));
@@ -167,7 +167,7 @@ TEST_F(LevelDbFactoryTest, GetOrCreateDbInCallback) {
   db_factory_.GetOrCreateDb(
       path1, DbFactory::OnDbNotFound::CREATE, [&](Status status1, std::unique_ptr<Db> db1) {
         called1 = true;
-        EXPECT_EQ(Status::OK, status1);
+        EXPECT_EQ(status1, Status::OK);
         EXPECT_NE(nullptr, db1);
         db_factory_.GetOrCreateDb(
             path2, DbFactory::OnDbNotFound::CREATE,
@@ -176,7 +176,7 @@ TEST_F(LevelDbFactoryTest, GetOrCreateDbInCallback) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called1);
   EXPECT_TRUE(called2);
-  EXPECT_EQ(Status::OK, status2);
+  EXPECT_EQ(status2, Status::OK);
   EXPECT_NE(nullptr, db2);
 
   // Check that the directories were created.
@@ -226,10 +226,9 @@ TEST_F(LevelDbFactoryTest, QuitWhenBusy) {
   bool called_0;
 
   // Post the initialization code to the I/O loop.
-  db_factory_ptr->GetOrCreateDb(db_path_.SubPath(fxl::NumberToString(0)),
-                                DbFactory::OnDbNotFound::CREATE,
-                                callback::Capture(callback::SetWhenCalled(&called_0),
-                                                  &status_0, &db_0));
+  db_factory_ptr->GetOrCreateDb(
+      db_path_.SubPath(fxl::NumberToString(0)), DbFactory::OnDbNotFound::CREATE,
+      callback::Capture(callback::SetWhenCalled(&called_0), &status_0, &db_0));
 
   // Delete the factory before any code is run on the I/O loop.
   db_factory_ptr.reset();

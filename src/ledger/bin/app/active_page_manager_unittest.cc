@@ -4,6 +4,8 @@
 
 #include "src/ledger/bin/app/active_page_manager.h"
 
+#include <memory>
+
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -14,8 +16,6 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
-
-#include <memory>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/app/constants.h"
@@ -105,14 +105,14 @@ TEST_F(ActivePageManagerTest, OnEmptyCallback) {
                                   callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(status, Status::OK);
 
   auto page_impl2 = std::make_unique<PageImpl>(page_id_, page2.NewRequest());
   active_page_manager.AddPageImpl(std::move(page_impl2),
                                   callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(status, Status::OK);
 
   page1.Unbind();
   page2.Unbind();
@@ -127,7 +127,7 @@ TEST_F(ActivePageManagerTest, OnEmptyCallback) {
                                   callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(status, Status::OK);
   EXPECT_FALSE(active_page_manager.IsEmpty());
 
   page3.Unbind();
@@ -161,7 +161,7 @@ TEST_F(ActivePageManagerTest, DeletingPageManagerClosesConnections) {
                                    callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(status, Status::OK);
   bool page_closed;
   page.set_error_handler(
       [callback = callback::SetWhenCalled(&page_closed)](zx_status_t status) { callback(); });
@@ -193,14 +193,14 @@ TEST_F(ActivePageManagerTest, OnEmptyCallbackWithWatcher) {
       std::move(page_impl1), callback::Capture(callback::SetWhenCalled(&called), &internal_status));
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, internal_status);
+  ASSERT_EQ(internal_status, Status::OK);
 
   auto page_impl2 = std::make_unique<PageImpl>(page_id_, page2.NewRequest());
   active_page_manager.AddPageImpl(
       std::move(page_impl2), callback::Capture(callback::SetWhenCalled(&called), &internal_status));
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, internal_status);
+  ASSERT_EQ(internal_status, Status::OK);
 
   page1->Put(convert::ToArray("key1"), convert::ToArray("value1"));
 
@@ -228,7 +228,7 @@ TEST_F(ActivePageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   auto storage = MakeStorage();
   auto merger = GetDummyResolver(&environment_, storage.get());
 
-  EXPECT_EQ(nullptr, fake_page_sync_ptr->watcher);
+  EXPECT_EQ(fake_page_sync_ptr->watcher, nullptr);
   EXPECT_FALSE(fake_page_sync_ptr->start_called);
   EXPECT_FALSE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
@@ -257,7 +257,7 @@ TEST_F(ActivePageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   EXPECT_TRUE(called);
   PageId expected_page_id;
   convert::ToArray(page_id_, &expected_page_id.id);
-  EXPECT_EQ(expected_page_id.id, found_page_id.id);
+  EXPECT_EQ(found_page_id.id, expected_page_id.id);
 
   // Clear should not be executed.
   page->Clear();
@@ -275,7 +275,7 @@ TEST_F(ActivePageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
       std::move(page_impl2), callback::Capture(callback::SetWhenCalled(&called), &internal_status));
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, internal_status);
+  ASSERT_EQ(internal_status, Status::OK);
 
   page->GetId(callback::Capture(callback::SetWhenCalled(&called), &std::ignore));
   DrainLoop();
@@ -288,7 +288,7 @@ TEST_F(ActivePageManagerTest, DelayBindingUntilSyncTimeout) {
   auto storage = MakeStorage();
   auto merger = GetDummyResolver(&environment_, storage.get());
 
-  EXPECT_EQ(nullptr, fake_page_sync_ptr->watcher);
+  EXPECT_EQ(fake_page_sync_ptr->watcher, nullptr);
   EXPECT_FALSE(fake_page_sync_ptr->start_called);
   EXPECT_FALSE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
@@ -308,7 +308,7 @@ TEST_F(ActivePageManagerTest, DelayBindingUntilSyncTimeout) {
                                   callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(status, Status::OK);
 
   page->GetId(callback::Capture(callback::SetWhenCalled(&called), &std::ignore));
   DrainLoop();
@@ -321,7 +321,7 @@ TEST_F(ActivePageManagerTest, ExitWhenSyncFinishes) {
   auto storage = MakeStorage();
   auto merger = GetDummyResolver(&environment_, storage.get());
 
-  EXPECT_EQ(nullptr, fake_page_sync_ptr->watcher);
+  EXPECT_EQ(fake_page_sync_ptr->watcher, nullptr);
   EXPECT_FALSE(fake_page_sync_ptr->start_called);
   EXPECT_FALSE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
@@ -347,7 +347,7 @@ TEST_F(ActivePageManagerTest, DontDelayBindingWithLocalPageStorage) {
   auto storage = MakeStorage();
   auto merger = GetDummyResolver(&environment_, storage.get());
 
-  EXPECT_EQ(nullptr, fake_page_sync_ptr->watcher);
+  EXPECT_EQ(fake_page_sync_ptr->watcher, nullptr);
   EXPECT_FALSE(fake_page_sync_ptr->start_called);
   EXPECT_FALSE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
@@ -370,7 +370,7 @@ TEST_F(ActivePageManagerTest, DontDelayBindingWithLocalPageStorage) {
   // The page should be bound immediately.
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(status, Status::OK);
 
   page->GetId(callback::Capture(callback::SetWhenCalled(&called), &std::ignore));
   DrainLoop();

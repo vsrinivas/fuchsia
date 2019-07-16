@@ -4,14 +4,14 @@
 
 #include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
 
+#include <algorithm>
+#include <ostream>
+#include <string>
+
 #include <fuchsia/overnet/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 #include <lib/gtest/test_loop_fixture.h>
-
-#include <algorithm>
-#include <ostream>
-#include <string>
 
 // gtest matchers are in gmock.
 #include "gmock/gmock.h"
@@ -239,7 +239,7 @@ TEST_F(P2PProviderImplTest, HostConnectionOrdering) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(1U, overnet_impl_0.device_names_callbacks.size());
+  EXPECT_EQ(overnet_impl_0.device_names_callbacks.size(), 1U);
 
   auto request1 = std::move(overnet_impl_0.device_names_callbacks[0]);
   fuchsia::overnet::protocol::NodeId node_0;
@@ -270,7 +270,7 @@ TEST_F(P2PProviderImplTest, HostConnectionOrdering) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(1U, overnet_impl_1.device_names_callbacks.size());
+  EXPECT_EQ(overnet_impl_1.device_names_callbacks.size(), 1U);
 
   auto request2 = std::move(overnet_impl_1.device_names_callbacks[0]);
   fuchsia::overnet::Peer peer_1_0;
@@ -288,7 +288,7 @@ TEST_F(P2PProviderImplTest, HostConnectionOrdering) {
 
   // Only one device should initiate the connection. We don't really care which
   // one, as long as it is reliably correct.
-  EXPECT_EQ(1U, overnet_impl_0.device_requests.size() + overnet_impl_1.device_requests.size());
+  EXPECT_EQ(overnet_impl_0.device_requests.size() + overnet_impl_1.device_requests.size(), 1U);
 }
 
 }  // namespace

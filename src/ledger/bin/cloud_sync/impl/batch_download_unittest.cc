@@ -4,12 +4,12 @@
 
 #include "src/ledger/bin/cloud_sync/impl/batch_download.h"
 
+#include <map>
+
 #include <lib/async/cpp/task.h>
 #include <lib/callback/capture.h>
 #include <lib/fit/function.h>
 #include <lib/gtest/test_loop_fixture.h>
-
-#include <map>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/cloud_sync/impl/constants.h"
@@ -41,7 +41,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
       std::vector<storage::PageStorage::CommitIdAndBytes> ids_and_bytes,
       storage::ChangeSource source,
       fit::function<void(ledger::Status, std::vector<storage::CommitId>)> callback) override {
-    ASSERT_EQ(storage::ChangeSource::CLOUD, source);
+    ASSERT_EQ(source, storage::ChangeSource::CLOUD);
     if (should_fail_add_commit_from_sync) {
       async::PostTask(dispatcher_, [callback = std::move(callback)]() {
         callback(ledger::Status::IO_ERROR, {});
@@ -96,11 +96,11 @@ TEST_F(BatchDownloadTest, AddCommit) {
   batch_download.Start();
 
   RunLoopUntilIdle();
-  EXPECT_EQ(1, done_calls);
-  EXPECT_EQ(0, error_calls);
-  EXPECT_EQ(1u, storage_.received_commits.size());
-  EXPECT_EQ("content1", storage_.received_commits["id1"]);
-  EXPECT_EQ("42", storage_.sync_metadata[kTimestampKey.ToString()]);
+  EXPECT_EQ(done_calls, 1);
+  EXPECT_EQ(error_calls, 0);
+  EXPECT_EQ(storage_.received_commits.size(), 1u);
+  EXPECT_EQ(storage_.received_commits["id1"], "content1");
+  EXPECT_EQ(storage_.sync_metadata[kTimestampKey.ToString()], "42");
 }
 
 TEST_F(BatchDownloadTest, AddMultipleCommits) {
@@ -115,12 +115,12 @@ TEST_F(BatchDownloadTest, AddMultipleCommits) {
   batch_download.Start();
 
   RunLoopUntilIdle();
-  EXPECT_EQ(1, done_calls);
-  EXPECT_EQ(0, error_calls);
-  EXPECT_EQ(2u, storage_.received_commits.size());
-  EXPECT_EQ("content1", storage_.received_commits["id1"]);
-  EXPECT_EQ("content2", storage_.received_commits["id2"]);
-  EXPECT_EQ("43", storage_.sync_metadata[kTimestampKey.ToString()]);
+  EXPECT_EQ(done_calls, 1);
+  EXPECT_EQ(error_calls, 0);
+  EXPECT_EQ(storage_.received_commits.size(), 2u);
+  EXPECT_EQ(storage_.received_commits["id1"], "content1");
+  EXPECT_EQ(storage_.received_commits["id2"], "content2");
+  EXPECT_EQ(storage_.sync_metadata[kTimestampKey.ToString()], "43");
 }
 
 TEST_F(BatchDownloadTest, FailToAddCommit) {
@@ -135,10 +135,10 @@ TEST_F(BatchDownloadTest, FailToAddCommit) {
   batch_download.Start();
 
   RunLoopUntilIdle();
-  EXPECT_EQ(0, done_calls);
-  EXPECT_EQ(1, error_calls);
+  EXPECT_EQ(done_calls, 0);
+  EXPECT_EQ(error_calls, 1);
   EXPECT_TRUE(storage_.received_commits.empty());
-  EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
+  EXPECT_EQ(storage_.sync_metadata.count(kTimestampKey.ToString()), 0u);
 }
 
 }  // namespace

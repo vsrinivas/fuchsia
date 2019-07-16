@@ -4,11 +4,11 @@
 
 #include "src/ledger/bin/cloud_sync/impl/user_sync_impl.h"
 
+#include <utility>
+
 #include <lib/backoff/backoff.h>
 #include <lib/backoff/testing/test_backoff.h>
 #include <lib/gtest/test_loop_fixture.h>
-
-#include <utility>
 
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/cloud_sync/impl/testing/test_cloud_provider.h"
@@ -76,10 +76,10 @@ class UserSyncImplTest : public ledger::TestWithEnvironment {
 TEST_F(UserSyncImplTest, CloudCheckErased) {
   ASSERT_TRUE(SetFingerprintFile("some-value"));
   cloud_provider_.device_set.status_to_return = cloud_provider::Status::NOT_FOUND;
-  EXPECT_EQ(0, on_version_mismatch_calls_);
+  EXPECT_EQ(on_version_mismatch_calls_, 0);
   user_sync_->Start();
   RunLoopUntilIdle();
-  EXPECT_EQ(1, on_version_mismatch_calls_);
+  EXPECT_EQ(on_version_mismatch_calls_, 1);
 }
 
 // Verifies that if the version checker reports that cloud is compatible, upload
@@ -87,7 +87,7 @@ TEST_F(UserSyncImplTest, CloudCheckErased) {
 TEST_F(UserSyncImplTest, CloudCheckOk) {
   ASSERT_TRUE(SetFingerprintFile("some-value"));
   cloud_provider_.device_set.status_to_return = cloud_provider::Status::OK;
-  EXPECT_EQ(0, on_version_mismatch_calls_);
+  EXPECT_EQ(on_version_mismatch_calls_, 0);
   user_sync_->Start();
 
   auto ledger_a = user_sync_->CreateLedgerSync("app-id", &encryption_service_);
@@ -95,8 +95,8 @@ TEST_F(UserSyncImplTest, CloudCheckOk) {
   EXPECT_FALSE(ledger_a_ptr->IsUploadEnabled());
   RunLoopUntilIdle();
   EXPECT_TRUE(ledger_a_ptr->IsUploadEnabled());
-  EXPECT_EQ(0, on_version_mismatch_calls_);
-  EXPECT_EQ("some-value", cloud_provider_.device_set.checked_fingerprint);
+  EXPECT_EQ(on_version_mismatch_calls_, 0);
+  EXPECT_EQ(cloud_provider_.device_set.checked_fingerprint, "some-value");
 
   // Verify that newly created LedgerSyncs also have the upload enabled.
   auto ledger_b = user_sync_->CreateLedgerSync("app-id", &encryption_service_);
@@ -110,7 +110,7 @@ TEST_F(UserSyncImplTest, CloudCheckSet) {
   auto fingerprint_path = user_sync_->GetFingerprintPath();
   EXPECT_FALSE(files::IsFileAt(fingerprint_path.root_fd(), fingerprint_path.path()));
   cloud_provider_.device_set.status_to_return = cloud_provider::Status::OK;
-  EXPECT_EQ(0, on_version_mismatch_calls_);
+  EXPECT_EQ(on_version_mismatch_calls_, 0);
   user_sync_->Start();
 
   auto ledger = user_sync_->CreateLedgerSync("app-id", &encryption_service_);
@@ -118,7 +118,7 @@ TEST_F(UserSyncImplTest, CloudCheckSet) {
   EXPECT_FALSE(ledger_ptr->IsUploadEnabled());
   RunLoopUntilIdle();
   EXPECT_TRUE(ledger_ptr->IsUploadEnabled());
-  EXPECT_EQ(0, on_version_mismatch_calls_);
+  EXPECT_EQ(on_version_mismatch_calls_, 0);
   EXPECT_FALSE(cloud_provider_.device_set.set_fingerprint.empty());
 
   // Verify that the fingerprint file was created.
@@ -134,12 +134,12 @@ TEST_F(UserSyncImplTest, WatchErase) {
 
   RunLoopUntilIdle();
   EXPECT_TRUE(cloud_provider_.device_set.set_watcher.is_bound());
-  EXPECT_EQ("some-value", cloud_provider_.device_set.watched_fingerprint);
-  EXPECT_EQ(0, on_version_mismatch_calls_);
+  EXPECT_EQ(cloud_provider_.device_set.watched_fingerprint, "some-value");
+  EXPECT_EQ(on_version_mismatch_calls_, 0);
 
   cloud_provider_.device_set.set_watcher->OnCloudErased();
   RunLoopUntilIdle();
-  EXPECT_EQ(1, on_version_mismatch_calls_);
+  EXPECT_EQ(on_version_mismatch_calls_, 1);
 }
 
 // Verifies that setting the cloud watcher for is retried on network errors.
@@ -149,7 +149,7 @@ TEST_F(UserSyncImplTest, WatchRetry) {
   user_sync_->Start();
 
   RunLoopUntilIdle();
-  EXPECT_EQ(1, cloud_provider_.device_set.set_watcher_calls);
+  EXPECT_EQ(cloud_provider_.device_set.set_watcher_calls, 1);
 }
 
 }  // namespace

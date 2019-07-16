@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <utility>
+#include <vector>
+
 #include <lib/callback/capture.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/strings.h>
 #include <zircon/errors.h>
-
-#include <utility>
-#include <vector>
 
 #include "fuchsia/ledger/cpp/fidl.h"
 #include "garnet/public/lib/callback/capture.h"
@@ -153,18 +153,18 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotFetchPartial) {
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"));
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
-  EXPECT_EQ("Alice", SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 0, -1));
-  EXPECT_EQ("e", SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 4, -1));
-  EXPECT_EQ("", SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 5, -1));
-  EXPECT_EQ("", SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 6, -1));
-  EXPECT_EQ("i", SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 2, 1));
-  EXPECT_EQ("", SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 2, 0));
+  EXPECT_EQ(SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 0, -1), "Alice");
+  EXPECT_EQ(SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 4, -1), "e");
+  EXPECT_EQ(SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 5, -1), "");
+  EXPECT_EQ(SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 6, -1), "");
+  EXPECT_EQ(SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 2, 1), "i");
+  EXPECT_EQ(SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 2, 0), "");
 
   // Negative offsets.
-  EXPECT_EQ("Alice", SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -5, -1));
-  EXPECT_EQ("e", SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -1, -1));
-  EXPECT_EQ("", SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -5, 0));
-  EXPECT_EQ("i", SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -3, 1));
+  EXPECT_EQ(SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -5, -1), "Alice");
+  EXPECT_EQ(SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -1, -1), "e");
+  EXPECT_EQ(SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -5, 0), "");
+  EXPECT_EQ(SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -3, 1), "i");
 
   // Attempt to get an entry that is not in the page.
   fuchsia::ledger::PageSnapshot_FetchPartial_Result result;
@@ -184,7 +184,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   // returns empty results.
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   std::vector<std::vector<uint8_t>> result = SnapshotGetKeys(&snapshot);
-  EXPECT_EQ(0u, result.size());
+  EXPECT_EQ(result.size(), 0u);
 
   // Add entries and grab a new snapshot.
   const size_t N = 4;
@@ -201,42 +201,42 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
 
   // Get all keys.
   result = SnapshotGetKeys(&snapshot);
-  EXPECT_EQ(N, result.size());
+  EXPECT_EQ(result.size(), N);
   for (size_t i = 0; i < N; ++i) {
-    EXPECT_EQ(keys[i], result.at(i));
+    EXPECT_EQ(result.at(i), keys[i]);
   }
 
   // Get keys matching the prefix "0".
   snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0}));
   result = SnapshotGetKeys(&snapshot);
-  EXPECT_EQ(N, result.size());
+  EXPECT_EQ(result.size(), N);
   for (size_t i = 0; i < N; ++i) {
-    EXPECT_EQ(keys[i], result.at(i));
+    EXPECT_EQ(result.at(i), keys[i]);
   }
 
   // Get keys matching the prefix "00".
   snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 0}));
   result = SnapshotGetKeys(&snapshot);
-  ASSERT_EQ(2u, result.size());
+  ASSERT_EQ(result.size(), 2u);
   for (size_t i = 0; i < 2u; ++i) {
-    EXPECT_EQ(keys[i], result.at(i));
+    EXPECT_EQ(result.at(i), keys[i]);
   }
 
   // Get keys matching the prefix "010".
   snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 1, 0}));
   result = SnapshotGetKeys(&snapshot);
-  ASSERT_EQ(1u, result.size());
-  EXPECT_EQ(keys[2], result.at(0));
+  ASSERT_EQ(result.size(), 1u);
+  EXPECT_EQ(result.at(0), keys[2]);
 
   // Get keys matching the prefix "5".
   snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{5}));
   result = SnapshotGetKeys(&snapshot);
-  EXPECT_EQ(0u, result.size());
+  EXPECT_EQ(result.size(), 0u);
 
   // Get keys matching the prefix "0" and starting with the key "010".
   snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0}));
   result = SnapshotGetKeys(&snapshot, std::vector<uint8_t>(std::vector<uint8_t>{0, 1, 0}));
-  EXPECT_EQ(2u, result.size());
+  EXPECT_EQ(result.size(), 2u);
 }
 
 TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
@@ -249,8 +249,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   int num_queries;
   std::vector<std::vector<uint8_t>> result =
       SnapshotGetKeys(&snapshot, std::vector<uint8_t>(), &num_queries);
-  EXPECT_EQ(0u, result.size());
-  EXPECT_EQ(1, num_queries);
+  EXPECT_EQ(result.size(), 0u);
+  EXPECT_EQ(num_queries, 1);
 
   // Add entries and grab a new snapshot.
   // Add enough keys so they don't all fit in memory and we will have to have
@@ -273,9 +273,9 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   // Get all keys.
   result = SnapshotGetKeys(&snapshot, fidl::VectorPtr<uint8_t>::New(0), &num_queries);
   EXPECT_TRUE(num_queries > 1);
-  ASSERT_EQ(N, result.size());
+  ASSERT_EQ(result.size(), N);
   for (size_t i = 0; i < N; ++i) {
-    EXPECT_EQ(keys[i], result.at(i));
+    EXPECT_EQ(result.at(i), keys[i]);
   }
 }
 
@@ -287,7 +287,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   // returns empty results.
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   auto entries = SnapshotGetEntries(this, &snapshot);
-  EXPECT_EQ(0u, entries.size());
+  EXPECT_EQ(entries.size(), 0u);
 
   // Add entries and grab a new snapshot.
   const size_t N = 4;
@@ -310,42 +310,42 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
 
   // Get all entries.
   entries = SnapshotGetEntries(this, &snapshot);
-  EXPECT_EQ(N, entries.size());
+  EXPECT_EQ(entries.size(), N);
   for (size_t i = 0; i < N; ++i) {
-    EXPECT_EQ(keys[i], entries.at(i).key);
-    EXPECT_EQ(values[i], ToArray(entries.at(i).value));
+    EXPECT_EQ(entries.at(i).key, keys[i]);
+    EXPECT_EQ(ToArray(entries.at(i).value), values[i]);
   }
 
   // Get entries matching the prefix "0".
   snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0}));
   entries = SnapshotGetEntries(this, &snapshot);
-  EXPECT_EQ(N, entries.size());
+  EXPECT_EQ(entries.size(), N);
   for (size_t i = 0; i < N; ++i) {
-    EXPECT_EQ(keys[i], entries.at(i).key);
-    EXPECT_EQ(values[i], ToArray(entries.at(i).value));
+    EXPECT_EQ(entries.at(i).key, keys[i]);
+    EXPECT_EQ(ToArray(entries.at(i).value), values[i]);
   }
 
   // Get entries matching the prefix "00".
   snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 0}));
   entries = SnapshotGetEntries(this, &snapshot);
-  ASSERT_EQ(2u, entries.size());
+  ASSERT_EQ(entries.size(), 2u);
   for (size_t i = 0; i < 2; ++i) {
-    EXPECT_EQ(keys[i], entries.at(i).key);
-    EXPECT_EQ(values[i], ToArray(entries.at(i).value));
+    EXPECT_EQ(entries.at(i).key, keys[i]);
+    EXPECT_EQ(ToArray(entries.at(i).value), values[i]);
   }
 
   // Get keys matching the prefix "010".
   snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 1, 0}));
   entries = SnapshotGetEntries(this, &snapshot);
-  ASSERT_EQ(1u, entries.size());
-  EXPECT_EQ(keys[2], entries.at(0).key);
-  EXPECT_EQ(values[2], ToArray(entries.at(0).value));
+  ASSERT_EQ(entries.size(), 1u);
+  EXPECT_EQ(entries.at(0).key, keys[2]);
+  EXPECT_EQ(ToArray(entries.at(0).value), values[2]);
 
   // Get keys matching the prefix "5".
   snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{5}));
 
   entries = SnapshotGetEntries(this, &snapshot);
-  EXPECT_EQ(0u, entries.size());
+  EXPECT_EQ(entries.size(), 0u);
 }
 
 TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
@@ -358,8 +358,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   int num_queries;
   auto entries =
       SnapshotGetEntries(this, &snapshot, fidl::VectorPtr<uint8_t>::New(0), &num_queries);
-  EXPECT_EQ(0u, entries.size());
-  EXPECT_EQ(1, num_queries);
+  EXPECT_EQ(entries.size(), 0u);
+  EXPECT_EQ(num_queries, 1);
 
   // Add entries and grab a new snapshot.
   // Add enough keys so they don't all fit in memory and we will have to have
@@ -385,10 +385,10 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   // Get all entries.
   entries = SnapshotGetEntries(this, &snapshot, fidl::VectorPtr<uint8_t>::New(0), &num_queries);
   EXPECT_TRUE(num_queries > 1);
-  ASSERT_EQ(N, entries.size());
+  ASSERT_EQ(entries.size(), N);
   for (size_t i = 0; i < N; ++i) {
-    EXPECT_EQ(keys[i], entries[i].key);
-    EXPECT_EQ(values[i], ToArray(entries[i].value));
+    EXPECT_EQ(entries[i].key, keys[i]);
+    EXPECT_EQ(ToArray(entries[i].value), values[i]);
   }
 }
 
@@ -402,8 +402,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
   int num_queries;
   auto entries =
       SnapshotGetEntries(this, &snapshot, fidl::VectorPtr<uint8_t>::New(0), &num_queries);
-  EXPECT_EQ(0u, entries.size());
-  EXPECT_EQ(1, num_queries);
+  EXPECT_EQ(entries.size(), 0u);
+  EXPECT_EQ(num_queries, 1);
 
   // Add entries and grab a new snapshot.
   const size_t N = 100;
@@ -425,10 +425,10 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
   // Get all entries.
   entries = SnapshotGetEntries(this, &snapshot, fidl::VectorPtr<uint8_t>::New(0), &num_queries);
   EXPECT_TRUE(num_queries > 1);
-  ASSERT_EQ(N, entries.size());
+  ASSERT_EQ(entries.size(), N);
   for (size_t i = 0; i < N; ++i) {
-    EXPECT_EQ(keys[i], entries[i].key);
-    EXPECT_EQ(values[i], ToArray(entries[i].value));
+    EXPECT_EQ(entries[i].key, keys[i]);
+    EXPECT_EQ(ToArray(entries[i].value), values[i]);
   }
 }
 
@@ -458,21 +458,21 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
 
   // Verify that GetKeys() results are sorted.
   std::vector<std::vector<uint8_t>> result = SnapshotGetKeys(&snapshot);
-  EXPECT_EQ(keys[3], result.at(0));
-  EXPECT_EQ(keys[0], result.at(1));
-  EXPECT_EQ(keys[2], result.at(2));
-  EXPECT_EQ(keys[1], result.at(3));
+  EXPECT_EQ(result.at(0), keys[3]);
+  EXPECT_EQ(result.at(1), keys[0]);
+  EXPECT_EQ(result.at(2), keys[2]);
+  EXPECT_EQ(result.at(3), keys[1]);
 
   // Verify that GetEntries() results are sorted.
   auto entries = SnapshotGetEntries(this, &snapshot);
-  EXPECT_EQ(keys[3], entries[0].key);
-  EXPECT_EQ(values[3], ToArray(entries[0].value));
-  EXPECT_EQ(keys[0], entries[1].key);
-  EXPECT_EQ(values[0], ToArray(entries[1].value));
-  EXPECT_EQ(keys[2], entries[2].key);
-  EXPECT_EQ(values[2], ToArray(entries[2].value));
-  EXPECT_EQ(keys[1], entries[3].key);
-  EXPECT_EQ(values[1], ToArray(entries[3].value));
+  EXPECT_EQ(entries[0].key, keys[3]);
+  EXPECT_EQ(ToArray(entries[0].value), values[3]);
+  EXPECT_EQ(entries[1].key, keys[0]);
+  EXPECT_EQ(ToArray(entries[1].value), values[0]);
+  EXPECT_EQ(entries[2].key, keys[2]);
+  EXPECT_EQ(ToArray(entries[2].value), values[2]);
+  EXPECT_EQ(entries[3].key, keys[1]);
+  EXPECT_EQ(ToArray(entries[3].value), values[1]);
 }
 
 TEST_P(PageSnapshotIntegrationTest, PageCreateReferenceFromSocketWrongSize) {
@@ -487,7 +487,7 @@ TEST_P(PageSnapshotIntegrationTest, PageCreateReferenceFromSocketWrongSize) {
                                   callback::Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   ASSERT_TRUE(result.is_err());
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.err());
+  EXPECT_EQ(result.err(), ZX_ERR_INVALID_ARGS);
 }
 
 TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
@@ -595,7 +595,7 @@ TEST_P(PageSnapshotIntegrationTest, PageGetById) {
   waiter = NewWaiter();
   page->GetId(callback::Capture(waiter->GetCallback(), &page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(test_page_id.id, page_id.id);
+  EXPECT_EQ(page_id.id, test_page_id.id);
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   fuchsia::ledger::PageSnapshot_Get_Result result;
