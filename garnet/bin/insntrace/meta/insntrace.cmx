@@ -6,7 +6,7 @@
         "dev": [ "sys/cpu-trace" ],
         "features": [
           "isolated-persistent-storage",
-          "system-temp"
+          "isolated-temp"
         ]
     }
 }

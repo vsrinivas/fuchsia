@@ -8,7 +8,7 @@
         ],
         "features": [
             "vulkan",
-            "system-temp"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.logger.LogSink",

@@ -4,6 +4,6 @@
     },
     "sandbox": {
         "dev": [ "sys/cpu-trace" ],
-        "features": [ "system-temp" ]
+        "features": [ "isolated-temp" ]
     }
 }

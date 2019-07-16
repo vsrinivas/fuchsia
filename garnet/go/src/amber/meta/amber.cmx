@@ -8,7 +8,7 @@
             "config-data",
             "deprecated-misc-storage",
             "deprecated-shell",
-            "system-temp"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.amber.Control",

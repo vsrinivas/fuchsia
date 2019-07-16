@@ -227,6 +227,10 @@ The set of currently known features are as follows:
   feature will be deleted by the system to reclaim space when disk usage is
   nearing capacity.
 
+- `isolated-temp`, which requests that a temp directory be installed into the
+  component's namespace at `/tmp`. This is isolated from the system temp and
+  the temp directories of other component instances.
+
 - `root-ssl-certificates`, which requests access to the root SSL certificates
   for the device. These certificates are provided in the `/config/ssl` directory
   in the package's namespace.

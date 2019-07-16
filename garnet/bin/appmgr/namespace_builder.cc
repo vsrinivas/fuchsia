@@ -69,13 +69,17 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
       [] {
         FXL_NOTREACHED() << "IsolatedCachePathFactory unexpectedly used";
         return "";
+      },
+      [] {
+        return "/tmp";
       });
 }
 
 void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
                                   const HubDirectoryFactory& hub_directory_factory,
                                   const IsolatedDataPathFactory& isolated_data_path_factory,
-                                  const IsolatedCachePathFactory& isolated_cache_path_factory) {
+                                  const IsolatedCachePathFactory& isolated_cache_path_factory,
+                                  const IsolatedTempPathFactory& isolated_temp_path_factory) {
   for (const auto& path : sandbox.dev()) {
     if (path == "class") {
       FXL_LOG(WARNING) << "Ignoring request for all device classes";
@@ -154,9 +158,10 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
       PushDirectoryFromPath("/dev/class/gpu");
       PushDirectoryFromPathAs("/pkgfs/packages/config-data/0/data/vulkan-icd/icd.d",
                               "/config/vulkan/icd.d");
+    } else if (feature == "isolated-temp") {
+      PushDirectoryFromPathAs(isolated_temp_path_factory(), "/tmp");
     }
   }
-
   for (const auto& path : sandbox.boot())
     PushDirectoryFromPath("/boot/" + path);
 }

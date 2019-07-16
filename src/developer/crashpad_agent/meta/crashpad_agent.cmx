@@ -10,7 +10,7 @@
             "build-info",
             "config-data",
             "root-ssl-certificates",
-            "system-temp"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.feedback.DataProvider",

@@ -208,13 +208,14 @@ std::string StableComponentID(const FuchsiaPkgUrl& fp) {
 // static
 RealmArgs RealmArgs::Make(
     Realm* parent, std::string label, std::string data_path,
-    std::string cache_path,
+    std::string cache_path, std::string temp_path,
     const std::shared_ptr<sys::ServiceDirectory>& env_services,
     bool run_virtual_console, fuchsia::sys::EnvironmentOptions options) {
   return {.parent = parent,
           .label = label,
           .data_path = data_path,
           .cache_path = cache_path,
+          .temp_path = temp_path,
           .environment_services = env_services,
           .run_virtual_console = run_virtual_console,
           .additional_services = nullptr,
@@ -223,7 +224,7 @@ RealmArgs RealmArgs::Make(
 
 RealmArgs RealmArgs::MakeWithAdditionalServices(
     Realm* parent, std::string label, std::string data_path,
-    std::string cache_path,
+    std::string cache_path, std::string temp_path,
     const std::shared_ptr<sys::ServiceDirectory>& env_services,
     bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
     fuchsia::sys::EnvironmentOptions options) {
@@ -231,6 +232,7 @@ RealmArgs RealmArgs::MakeWithAdditionalServices(
           .label = label,
           .data_path = data_path,
           .cache_path = cache_path,
+          .temp_path = temp_path,
           .environment_services = env_services,
           .run_virtual_console = run_virtual_console,
           .additional_services = std::move(additional_services),
@@ -267,6 +269,7 @@ Realm::Realm(RealmArgs args, zx::job job)
     : parent_(args.parent),
       data_path_(args.data_path),
       cache_path_(args.cache_path),
+      temp_path_(args.temp_path),
       run_virtual_console_(args.run_virtual_console),
       job_(std::move(job)),
       hub_(fbl::AdoptRef(new fs::PseudoDir())),
@@ -430,14 +433,16 @@ void Realm::CreateNestedEnvironment(
   RealmArgs args;
   std::string nested_data_path = files::JoinPath(data_path(), "r/" + label);
   std::string nested_cache_path = files::JoinPath(cache_path(), "r/" + label);
+  std::string nested_temp_path = files::JoinPath(temp_path(), "r/" + label);
   if (additional_services) {
     args = RealmArgs::MakeWithAdditionalServices(
-        this, label, nested_data_path, nested_cache_path, environment_services_,
+        this, label, nested_data_path, nested_cache_path, nested_temp_path,
+        environment_services_,
         /*run_virtual_console=*/false, std::move(additional_services),
         std::move(options));
   } else {
     args = RealmArgs::Make(this, label, nested_data_path, nested_cache_path,
-                           environment_services_,
+                           nested_temp_path, environment_services_,
                            /*run_virtual_console=*/false, std::move(options));
   }
 
@@ -871,7 +876,8 @@ void Realm::CreateComponentFromPackage(
         /*hub_directory_factory=*/[this] { return OpenInfoDir(); },
         /*isolated_data_path_factory=*/
         [&] { return IsolatedPathForPackage(data_path(), fp); },
-        [&] { return IsolatedPathForPackage(cache_path(), fp); });
+        [&] { return IsolatedPathForPackage(cache_path(), fp); },
+        [&] { return IsolatedPathForPackage(temp_path(), fp); });
   }
 
   fxl::RefPtr<Namespace> ns = fxl::MakeRefCounted<Namespace>(

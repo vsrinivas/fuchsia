@@ -6,7 +6,7 @@
         "features": [
             "deprecated-shell",
             "isolated-persistent-storage",
-            "system-temp"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.logger.LogSink",

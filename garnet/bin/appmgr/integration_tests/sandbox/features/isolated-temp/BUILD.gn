@@ -1,0 +1,38 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/environments.gni")
+import("//garnet/bin/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
+
+group("isolated-temp") {
+  testonly = true
+  deps = [
+    ":has_isolated_temp",
+    ":no_isolated_temp",
+  ]
+}
+
+sandbox_test_package("has_isolated_temp") {
+  sources = [
+    "has_isolated_temp.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+  environments = basic_envs
+}
+
+sandbox_test_package("no_isolated_temp") {
+  sources = [
+    "no_isolated_temp.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+  environments = basic_envs
+}

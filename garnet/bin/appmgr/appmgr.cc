@@ -31,7 +31,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
 
   // 1. Create root realm.
   RealmArgs realm_args = RealmArgs::MakeWithAdditionalServices(
-      nullptr, kRootLabel, "/data", "/data/cache",
+      nullptr, kRootLabel, "/data", "/data/cache", "/tmp",
       std::move(args.environment_services), args.run_virtual_console,
       std::move(args.root_realm_services), fuchsia::sys::EnvironmentOptions{});
   root_realm_ = Realm::Create(std::move(realm_args));

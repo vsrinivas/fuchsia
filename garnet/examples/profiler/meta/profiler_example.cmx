@@ -3,7 +3,7 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "system-temp" ],
+        "features": [ "isolated-temp" ],
         "services": [ "fuchsia.logger.Log" ]
     }
 }

@@ -39,13 +39,13 @@ namespace component {
 struct RealmArgs {
   static RealmArgs Make(
       Realm* parent, std::string label, std::string data_path,
-      std::string cache_path,
+      std::string cache_path, std::string temp_path,
       const std::shared_ptr<sys::ServiceDirectory>& env_services,
       bool run_virtual_console, fuchsia::sys::EnvironmentOptions options);
 
   static RealmArgs MakeWithAdditionalServices(
       Realm* parent, std::string label, std::string data_path,
-      std::string cache_path,
+      std::string cache_path, std::string temp_path,
       const std::shared_ptr<sys::ServiceDirectory>& env_services,
       bool run_virtual_console,
       fuchsia::sys::ServiceListPtr additional_services,
@@ -55,6 +55,7 @@ struct RealmArgs {
   std::string label;
   std::string data_path;
   std::string cache_path;
+  std::string temp_path;
   std::shared_ptr<sys::ServiceDirectory> environment_services;
   bool run_virtual_console;
   fuchsia::sys::ServiceListPtr additional_services;
@@ -74,6 +75,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   const std::string& label() const { return label_; }
   const std::string& data_path() const { return data_path_; }
   const std::string& cache_path() const { return cache_path_; }
+  const std::string& temp_path() const { return temp_path_; }
   const std::string& koid() const { return koid_; }
 
   const fbl::RefPtr<fs::PseudoDir>& hub_dir() const { return hub_.dir(); }
@@ -169,6 +171,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   std::string label_;
   std::string data_path_;
   std::string cache_path_;
+  std::string temp_path_;
   std::string koid_;
   const bool run_virtual_console_;
   std::unique_ptr<component::PackageLoader> package_loader_;
