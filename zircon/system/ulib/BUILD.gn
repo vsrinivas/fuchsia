@@ -81,6 +81,7 @@ group("ulib") {
     "hwreg",
     "image-format",
     "inet6",
+    "inspect",
     "inspect-vmo",
     "inspector",
     "intel-hda",

@@ -388,15 +388,11 @@ group("all") {
     ":httpdate_hyper",
     ":image_pipe_swapchain",
     ":insntrace",
-    ":inspect_health_unittests",
-    ":inspect_query_unittests",
-    ":inspect_unittests",
-    ":iquery_golden_test",
+    ":inspect_tests",
     ":json",
     ":kms",
     ":lib",
     ":libc",
-    ":libinspect_integration_tests",
     ":linux_runner",
     ":log_listener",
     ":logger",
@@ -512,6 +508,17 @@ group("libc") {
   testonly = true
   public_deps = [
     "//third_party/libc-tests",
+  ]
+}
+
+group("inspect_tests") {
+  testonly = true
+  public_deps = [
+    ":inspect_health_unittests",
+    ":inspect_query_unittests",
+    ":inspect_unittests",
+    ":iquery_golden_test",
+    ":libinspect_integration_tests",
   ]
 }
 
