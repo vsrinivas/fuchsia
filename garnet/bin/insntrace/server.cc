@@ -109,7 +109,7 @@ bool IptServer::StartInferior() {
   if (!AllocTrace(config_))
     return false;
 
-  if (config_.mode == IPT_MODE_CPUS) {
+  if (config_.mode == Mode::CPU) {
     if (!InitTrace(config_))
       goto Fail;
   }
@@ -140,7 +140,7 @@ bool IptServer::StartInferior() {
   // If tracing cpus, defer turning on tracing as long as possible so that we
   // don't include all the initialization. For threads it doesn't matter.
   // TODO(dje): Could even defer until the first thread is started.
-  if (config_.mode == IPT_MODE_CPUS) {
+  if (config_.mode == Mode::CPU) {
     if (!StartTrace(config_))
       goto Fail;
   }
@@ -148,7 +148,7 @@ bool IptServer::StartInferior() {
   FXL_DCHECK(!inferior->IsLive());
   if (!inferior->Start()) {
     FXL_LOG(ERROR) << "Unable to start process";
-    if (config_.mode == IPT_MODE_CPUS)
+    if (config_.mode == Mode::CPU)
       StopTrace(config_);
     goto Fail;
   }
@@ -162,13 +162,13 @@ Fail:
 }
 
 bool IptServer::DumpResults() {
-  if (config_.mode == IPT_MODE_CPUS)
+  if (config_.mode == Mode::CPU)
     StopTrace(config_);
   StopSidebandDataCollection(config_);
-  if (config_.mode == IPT_MODE_CPUS)
+  if (config_.mode == Mode::CPU)
     DumpTrace(config_);
   DumpSidebandData(config_);
-  if (config_.mode == IPT_MODE_CPUS)
+  if (config_.mode == Mode::CPU)
     ResetTrace(config_);
   FreeTrace(config_);
   return true;
@@ -216,7 +216,7 @@ void IptServer::OnThreadStarting(inferior_control::Process* process,
       FXL_DCHECK(false);
   }
 
-  if (config_.mode == IPT_MODE_THREADS) {
+  if (config_.mode == Mode::THREAD) {
     if (!InitThreadTrace(thread, config_))
       goto Fail;
     if (!StartThreadTrace(thread, config_)) {
@@ -237,7 +237,7 @@ void IptServer::OnThreadExiting(inferior_control::Process* process,
   FXL_DCHECK(thread);
 
   // Dump any collected trace.
-  if (config_.mode == IPT_MODE_THREADS) {
+  if (config_.mode == Mode::THREAD) {
     if (thread->ipt_buffer() >= 0) {
       StopThreadTrace(thread, config_);
       DumpThreadTrace(thread, config_);

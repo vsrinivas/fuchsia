@@ -12,6 +12,8 @@ executable("bin") {
     sources = [
       "control.cc",
       "control.h",
+      "ktrace_controller.cc",
+      "ktrace_controller.h",
       "main.cc",
       "server.cc",
       "server.h",
@@ -31,6 +33,8 @@ executable("bin") {
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/public/fidl/fuchsia-hardware-cpu-insntrace",
+    "//zircon/public/fidl/fuchsia-tracing-kernel:fuchsia-tracing-kernel",
   ]
 
   libs = [ "zircon" ]

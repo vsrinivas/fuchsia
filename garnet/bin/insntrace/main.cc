@@ -347,11 +347,11 @@ static insntrace::IptConfig GetIptConfig(const fxl::CommandLine& cl) {
   }
 
   if (cl.GetOptionValue("mode", &arg)) {
-    uint32_t mode;
+    insntrace::Mode mode;
     if (arg == "cpu") {
-      mode = IPT_MODE_CPUS;
+      mode = insntrace::Mode::CPU;
     } else if (arg == "thread") {
-      mode = IPT_MODE_THREADS;
+      mode = insntrace::Mode::THREAD;
     } else {
       FXL_LOG(ERROR) << "Not a valid mode value: " << arg;
       exit(EXIT_FAILURE);
@@ -391,7 +391,7 @@ static bool ControlIpt(const insntrace::IptConfig& config,
   // We only support the cpu mode here.
   // This isn't a full test as we only actually set the mode for "init".
   // But it catches obvious mistakes like passing --mode=thread.
-  if (config.mode != IPT_MODE_CPUS) {
+  if (config.mode != insntrace::Mode::CPU) {
     FXL_LOG(ERROR) << "--control requires cpu mode";
     return false;
   }

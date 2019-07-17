@@ -8,6 +8,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+
 #include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
 #include <lib/zircon-internal/mtrace.h>
 #include <object/process_dispatcher.h>
@@ -28,23 +29,22 @@ zx_status_t mtrace_insntrace_control(uint32_t action, uint32_t options, user_ino
     case MTRACE_INSNTRACE_ALLOC_TRACE: {
       if (options != 0)
         return ZX_ERR_INVALID_ARGS;
-      ioctl_insntrace_trace_config_t config;
+      zx_insntrace_trace_config_t config;
       if (size != sizeof(config))
         return ZX_ERR_INVALID_ARGS;
-      zx_status_t status =
-          arg.reinterpret<ioctl_insntrace_trace_config_t>().copy_from_user(&config);
+      zx_status_t status = arg.reinterpret<zx_insntrace_trace_config_t>().copy_from_user(&config);
       if (status != ZX_OK)
         return status;
       TRACEF("action %u, mode %u, num traces %u\n", action, config.mode, config.num_traces);
       if (config.num_traces > IPT_MAX_NUM_TRACES)
         return ZX_ERR_INVALID_ARGS;
       switch (config.mode) {
-        case IPT_MODE_CPUS:
+        case IPT_MODE_CPU:
           if (config.num_traces != arch_max_num_cpus())
             return ZX_ERR_INVALID_ARGS;
-          return x86_ipt_alloc_trace(IPT_TRACE_CPUS, config.num_traces);
-        case IPT_MODE_THREADS:
-          return x86_ipt_alloc_trace(IPT_TRACE_THREADS, config.num_traces);
+          return x86_ipt_alloc_trace(IPT_MODE_CPU, config.num_traces);
+        case IPT_MODE_THREAD:
+          return x86_ipt_alloc_trace(IPT_MODE_THREAD, config.num_traces);
         default:
           return ZX_ERR_INVALID_ARGS;
       }
@@ -62,7 +62,7 @@ zx_status_t mtrace_insntrace_control(uint32_t action, uint32_t options, user_ino
       zx_status_t status = arg.reinterpret<zx_x86_pt_regs_t>().copy_from_user(&regs);
       if (status != ZX_OK)
         return status;
-      zx_itrace_buffer_descriptor_t descriptor = options;
+      zx_insntrace_buffer_descriptor_t descriptor = options;
       TRACEF("action %u, descriptor %u, ctl 0x%" PRIx64 ", output_base 0x%" PRIx64 "\n", action,
              descriptor, regs.ctl, regs.output_base);
       return x86_ipt_stage_trace_data(descriptor, &regs);
@@ -72,7 +72,7 @@ zx_status_t mtrace_insntrace_control(uint32_t action, uint32_t options, user_ino
       zx_x86_pt_regs_t regs;
       if (size != sizeof(regs))
         return ZX_ERR_INVALID_ARGS;
-      zx_itrace_buffer_descriptor_t descriptor = options;
+      zx_insntrace_buffer_descriptor_t descriptor = options;
       auto status = x86_ipt_get_trace_data(descriptor, &regs);
       if (status != ZX_OK)
         return status;

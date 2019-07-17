@@ -1,0 +1,21 @@
+{
+    "program": {
+        "binary": "test/insntrace_integration_tests"
+    },
+    "sandbox": {
+        "dev": [
+          "misc",
+          "sys/cpu-trace"
+        ],
+        "features": [
+          "isolated-persistent-storage",
+          "shell-commands",
+          "system-temp"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

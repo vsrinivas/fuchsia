@@ -26,6 +26,7 @@
 
 #include <fbl/alloc_checker.h>
 
+#include <fuchsia/hardware/cpu/insntrace/c/fidl.h>
 #include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
 #include <lib/zircon-internal/mtrace.h>
 #include <lib/zx/bti.h>
@@ -36,11 +37,12 @@
 
 namespace insntrace {
 
-typedef enum {
-    // IPT_MODE_* are the public names, we don't assume the values identical
-    IPT_TRACE_CPUS,
-    IPT_TRACE_THREADS
-} ipt_trace_mode_t;
+// Shorten some long fidl names.
+using BufferConfig = fuchsia_hardware_cpu_insntrace_BufferConfig;
+using BufferState = fuchsia_hardware_cpu_insntrace_BufferState;
+
+// This is defined in insntrace.fidl but not emitted.
+using BufferDescriptor = uint32_t;
 
 typedef struct ipt_per_trace_state {
     // the cpu or thread this buffer is assigned to
@@ -86,7 +88,7 @@ class InsntraceDevice;
 using DeviceType = ddk::Device<InsntraceDevice,
                                ddk::Openable,
                                ddk::Closable,
-                               ddk::Ioctlable>;
+                               ddk::Messageable>;
 
 class InsntraceDevice : public DeviceType {
   public:
@@ -96,11 +98,26 @@ class InsntraceDevice : public DeviceType {
 
     void DdkRelease();
 
+    // Fidl handlers
+    zx_status_t IptInitialize(const fuchsia_hardware_cpu_insntrace_Allocation* allocation);
+    zx_status_t IptTerminate();
+    zx_status_t IptGetAllocation(fuchsia_hardware_cpu_insntrace_Allocation* config);
+    zx_status_t IptAllocateBuffer(const BufferConfig* config,
+                                  BufferDescriptor* out_descriptor);
+    zx_status_t IptAssignThreadBuffer(BufferDescriptor descriptor, zx_handle_t thread);
+    zx_status_t IptReleaseThreadBuffer(BufferDescriptor descriptor, zx_handle_t thread);
+    zx_status_t IptGetBufferConfig(BufferDescriptor descriptor, BufferConfig* out_config);
+    zx_status_t IptGetBufferState(BufferDescriptor descriptor, BufferState* out_state);
+    zx_status_t IptGetChunkHandle(BufferDescriptor descriptor, uint32_t chunk_num,
+                                  zx_handle_t* out_handle);
+    zx_status_t IptFreeBuffer(BufferDescriptor descriptor);
+    zx_status_t IptStart();
+    zx_status_t IptStop();
+
     // Device protocol implementation
     zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
     zx_status_t DdkClose(uint32_t flags);
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len, size_t* out_actual);
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
   private:
     // Low level routines
@@ -111,62 +128,36 @@ class InsntraceDevice : public DeviceType {
                                   uint32_t num, uint32_t order,
                                   bool is_circular);
     void X86PtFreeBuffer1(ipt_per_trace_state_t* per_trace);
-    zx_status_t X86PtAllocBuffer(const ioctl_insntrace_buffer_config_t* config,
-                                 zx_itrace_buffer_descriptor_t* out_descriptor);
-    zx_status_t X86PtAssignThreadBuffer(zx_itrace_buffer_descriptor_t descriptor,
+    zx_status_t X86PtAllocBuffer(const BufferConfig* config,
+                                 BufferDescriptor* out_descriptor);
+    zx_status_t X86PtAssignThreadBuffer(BufferDescriptor descriptor,
                                         zx_handle_t thread);
-    zx_status_t X86PtReleaseThreadBuffer(zx_itrace_buffer_descriptor_t descriptor,
+    zx_status_t X86PtReleaseThreadBuffer(BufferDescriptor descriptor,
                                          zx_handle_t thread);
-    zx_status_t X86PtFreeBuffer(zx_itrace_buffer_descriptor_t descriptor);
+    zx_status_t X86PtFreeBuffer(BufferDescriptor descriptor);
     zx_status_t X86PtStageTraceData(zx_handle_t resource,
-                                    zx_itrace_buffer_descriptor_t descriptor);
+                                    BufferDescriptor descriptor);
     zx_status_t X86PtGetTraceData(zx_handle_t resource,
-                                  zx_itrace_buffer_descriptor_t descriptor);
-
-    // Ioctl handlers
-    zx_status_t IptAllocTrace(const void* cmd, size_t cmdlen);
-    zx_status_t IptFreeTrace();
-    zx_status_t IptGetTraceConfig(void* reply, size_t replymax,
-                                  size_t* out_actual);
-    zx_status_t IptAllocBuffer(const void* cmd, size_t cmdlen,
-                               void* reply, size_t replymax,
-                               size_t* out_actual);
-    zx_status_t IptAssignThreadBuffer(const void* cmd, size_t cmdlen);
-    zx_status_t IptReleaseThreadBuffer(const void* cmd, size_t cmdlen);
-    zx_status_t IptGetBufferConfig(const void* cmd, size_t cmdlen,
-                                   void* reply, size_t replymax,
-                                   size_t* out_actual);
-    zx_status_t IptGetBufferInfo(const void* cmd, size_t cmdlen,
-                                 void* reply, size_t replymax,
-                                 size_t* out_actual);
-    zx_status_t IptGetChunkHandle(const void* cmd, size_t cmdlen,
-                                  void* reply, size_t replymax,
-                                  size_t* out_actual);
-    zx_status_t IptFreeBuffer(const void* cmd, size_t cmdlen);
-    zx_status_t IptStart();
-    zx_status_t IptStop();
-    zx_status_t IoctlWorker(uint32_t op, const void* cmd, size_t cmdlen,
-                            void* reply, size_t replymax,
-                            size_t* out_actual);
+                                  BufferDescriptor descriptor);
 
     mtx_t lock_{};
 
     // Only one open of this device is supported at a time. KISS for now.
     bool opened_ = false;
 
-    ipt_trace_mode_t mode_ = IPT_TRACE_CPUS;
+    // Once tracing has started various things are not allowed until it stops.
+    bool active_ = false;
+
+    zx_insntrace_trace_mode_t mode_ = IPT_MODE_CPU;
 
     // # of entries in |per_trace_state|.
     // When tracing by cpu, this is the max number of cpus.
     // When tracing by thread, this is the max number of threads.
     // TODO(dje): Add support for dynamically growing the vector.
-    uint32_t num_traces_ = 0;
+    uint16_t num_traces_ = 0;
 
     // one entry for each trace
     std::unique_ptr<ipt_per_trace_state_t[]> per_trace_state_;
-
-    // Once tracing has started various things are not allowed until it stops.
-    bool active_ = false;
 
     zx::bti bti_;
 };
@@ -511,8 +502,8 @@ void InsntraceDevice::X86PtFreeBuffer1(ipt_per_trace_state_t* per_trace) {
     per_trace->allocated = false;
 }
 
-zx_status_t InsntraceDevice::X86PtAllocBuffer(const ioctl_insntrace_buffer_config_t* config,
-                                              zx_itrace_buffer_descriptor_t* out_descriptor) {
+zx_status_t InsntraceDevice::X86PtAllocBuffer(const BufferConfig* config,
+                                              BufferDescriptor* out_descriptor) {
     zxlogf(DEBUG1, "%s: num_chunks %u, chunk_order %u\n",
            __func__, config->num_chunks, config->chunk_order);
 
@@ -581,7 +572,7 @@ zx_status_t InsntraceDevice::X86PtAllocBuffer(const ioctl_insntrace_buffer_confi
     }
 
     // Find an unallocated buffer entry.
-    zx_itrace_buffer_descriptor_t descriptor;
+    BufferDescriptor descriptor;
     for (descriptor = 0; descriptor < num_traces_; ++descriptor) {
         if (!per_trace_state_[descriptor].allocated)
             break;
@@ -601,30 +592,38 @@ zx_status_t InsntraceDevice::X86PtAllocBuffer(const ioctl_insntrace_buffer_confi
     per_trace->status = 0;
     per_trace->output_base = io_buffer_phys(&per_trace->topas[0]);
     per_trace->output_mask_ptrs = 0;
-    per_trace->cr3_match = config->cr3_match;
-    static_assert(sizeof(per_trace->addr_ranges) == sizeof(config->addr_ranges),
-                  "addr range size mismatch");
-    memcpy(per_trace->addr_ranges, config->addr_ranges, sizeof(config->addr_ranges));
+    per_trace->cr3_match = config->address_space_match;
+
+    // TODO(dje): insntrace.fidl can't use vectors (yet) so the address ranges
+    // are individually spelled out.
+    static_assert(fuchsia_hardware_cpu_insntrace_MAX_NUM_ADDR_RANGES == 2);
+    static_assert(fuchsia_hardware_cpu_insntrace_MAX_NUM_ADDR_RANGES ==
+                  IPT_MAX_NUM_ADDR_RANGES);
+    per_trace->addr_ranges[0].a = config->address_range_0.start;
+    per_trace->addr_ranges[0].b = config->address_range_0.end;
+    per_trace->addr_ranges[1].a = config->address_range_1.start;
+    per_trace->addr_ranges[1].b = config->address_range_1.end;
+
     per_trace->allocated = true;
     *out_descriptor = descriptor;
     return ZX_OK;
 }
 
-zx_status_t InsntraceDevice::X86PtAssignThreadBuffer(zx_itrace_buffer_descriptor_t descriptor,
+zx_status_t InsntraceDevice::X86PtAssignThreadBuffer(BufferDescriptor descriptor,
                                                      zx_handle_t thread) {
     zx_handle_close(thread);
     // TODO(dje): Thread support is still work-in-progress.
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t InsntraceDevice::X86PtReleaseThreadBuffer(zx_itrace_buffer_descriptor_t descriptor,
+zx_status_t InsntraceDevice::X86PtReleaseThreadBuffer(BufferDescriptor descriptor,
                                                       zx_handle_t thread) {
     zx_handle_close(thread);
     // TODO(dje): Thread support is still work-in-progress.
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t InsntraceDevice::X86PtFreeBuffer(zx_itrace_buffer_descriptor_t descriptor) {
+zx_status_t InsntraceDevice::X86PtFreeBuffer(BufferDescriptor descriptor) {
     if (active_)
         return ZX_ERR_BAD_STATE;
     if (descriptor >= num_traces_)
@@ -641,7 +640,7 @@ zx_status_t InsntraceDevice::X86PtFreeBuffer(zx_itrace_buffer_descriptor_t descr
 }
 
 zx_status_t InsntraceDevice::X86PtStageTraceData(zx_handle_t resource,
-                                                 zx_itrace_buffer_descriptor_t descriptor) {
+                                                 BufferDescriptor descriptor) {
     if (descriptor >= num_traces_)
         return ZX_ERR_INVALID_ARGS;
     assert(per_trace_state_);
@@ -664,7 +663,7 @@ zx_status_t InsntraceDevice::X86PtStageTraceData(zx_handle_t resource,
 }
 
 zx_status_t InsntraceDevice::X86PtGetTraceData(zx_handle_t resource,
-                                               zx_itrace_buffer_descriptor_t descriptor) {
+                                               BufferDescriptor descriptor) {
     if (descriptor >= num_traces_)
         return ZX_ERR_INVALID_ARGS;
     assert(per_trace_state_);
@@ -689,9 +688,10 @@ zx_status_t InsntraceDevice::X86PtGetTraceData(zx_handle_t resource,
 }
 
 
-// ioctl handlers
+// fidl message handlers
 
-zx_status_t InsntraceDevice::IptAllocTrace(const void* cmd, size_t cmdlen) {
+zx_status_t InsntraceDevice::IptInitialize(
+        const fuchsia_hardware_cpu_insntrace_Allocation* allocation) {
     if (!ipt_config_supported)
         return ZX_ERR_NOT_SUPPORTED;
     // For now we only support ToPA, though there are no current plans to
@@ -701,38 +701,32 @@ zx_status_t InsntraceDevice::IptAllocTrace(const void* cmd, size_t cmdlen) {
     if (per_trace_state_)
         return ZX_ERR_BAD_STATE;
 
-    ioctl_insntrace_trace_config_t config;
-    if (cmdlen != sizeof(config))
-        return ZX_ERR_INVALID_ARGS;
-    memcpy(&config, cmd, sizeof(config));
-
     // TODO(dje): Until thread tracing is supported.
-    if (config.mode == IPT_MODE_THREADS)
+    if (allocation->mode == fuchsia_hardware_cpu_insntrace_Mode_THREAD)
         return ZX_ERR_NOT_SUPPORTED;
 
-    ipt_trace_mode_t internal_mode;
-    switch (config.mode) {
-    case IPT_MODE_CPUS:
-        internal_mode = IPT_TRACE_CPUS;
+    zx_insntrace_trace_mode_t internal_mode;
+    switch (allocation->mode) {
+    case fuchsia_hardware_cpu_insntrace_Mode_CPU:
+        internal_mode = IPT_MODE_CPU;
         break;
-    case IPT_MODE_THREADS:
-        internal_mode = IPT_TRACE_THREADS;
+    case fuchsia_hardware_cpu_insntrace_Mode_THREAD:
+        internal_mode = IPT_MODE_THREAD;
         break;
     default:
         return ZX_ERR_INVALID_ARGS;
     }
 
-    if (config.num_traces > IPT_MAX_NUM_TRACES)
+    if (allocation->num_traces > fuchsia_hardware_cpu_insntrace_MAX_NUM_TRACES)
         return ZX_ERR_INVALID_ARGS;
-    if (config.mode == IPT_MODE_CPUS) {
+    if (internal_mode == IPT_MODE_CPU) {
         // TODO(dje): KISS. No point in allowing anything else for now.
-        if (config.num_traces != zx_system_get_num_cpus())
+        if (allocation->num_traces != zx_system_get_num_cpus())
             return ZX_ERR_INVALID_ARGS;
     }
 
-    num_traces_ = config.num_traces;
     fbl::AllocChecker ac;
-    auto per_trace_state = new (&ac) ipt_per_trace_state_t[num_traces_]{};
+    auto per_trace_state = new (&ac) ipt_per_trace_state_t[allocation->num_traces]{};
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -740,6 +734,9 @@ zx_status_t InsntraceDevice::IptAllocTrace(const void* cmd, size_t cmdlen) {
 
     // Please do not use get_root_resource() in new code. See ZX-1467.
     zx_handle_t resource = get_root_resource();
+    zx_insntrace_trace_config_t config{};
+    config.mode = internal_mode;
+    config.num_traces = allocation->num_traces;
     zx_status_t status =
         zx_mtrace_control(resource, MTRACE_KIND_INSNTRACE, MTRACE_INSNTRACE_ALLOC_TRACE, 0,
                           &config, sizeof(config));
@@ -749,10 +746,13 @@ zx_status_t InsntraceDevice::IptAllocTrace(const void* cmd, size_t cmdlen) {
     }
 
     mode_ = internal_mode;
+    num_traces_ = allocation->num_traces;
     return ZX_OK;
 }
 
-zx_status_t InsntraceDevice::IptFreeTrace() {
+zx_status_t InsntraceDevice::IptTerminate() {
+    if (!per_trace_state_)
+        return ZX_ERR_BAD_STATE;
     if (active_)
         return ZX_ERR_BAD_STATE;
 
@@ -782,111 +782,82 @@ zx_status_t InsntraceDevice::IptFreeTrace() {
     return ZX_OK;
 }
 
-zx_status_t InsntraceDevice::IptGetTraceConfig(void* reply, size_t replymax,
-                                               size_t* out_actual) {
-    ioctl_insntrace_trace_config_t config;
-    if (replymax < sizeof(config))
-        return ZX_ERR_BUFFER_TOO_SMALL;
-
+zx_status_t InsntraceDevice::IptGetAllocation(fuchsia_hardware_cpu_insntrace_Allocation* out_config) {
+    if (!per_trace_state_)
+        return ZX_ERR_BAD_STATE;
     switch (mode_) {
-        case IPT_TRACE_CPUS:
-            config.mode = IPT_MODE_CPUS;
-            break;
-        case IPT_TRACE_THREADS:
-            config.mode = IPT_MODE_THREADS;
-            break;
-        default:
-            __UNREACHABLE;
+    case IPT_MODE_CPU:
+        out_config->mode = fuchsia_hardware_cpu_insntrace_Mode_CPU;
+        break;
+    case IPT_MODE_THREAD:
+        out_config->mode = fuchsia_hardware_cpu_insntrace_Mode_THREAD;
+        break;
+    default:
+        __UNREACHABLE;
     }
-    memcpy(reply, &config, sizeof(config));
-    *out_actual = sizeof(config);
+    out_config->num_traces = num_traces_;
     return ZX_OK;
 }
 
-zx_status_t InsntraceDevice::IptAllocBuffer(const void* cmd, size_t cmdlen,
-                                            void* reply, size_t replymax,
-                                            size_t* out_actual) {
-    ioctl_insntrace_buffer_config_t config;
-    if (cmdlen != sizeof(config))
-        return ZX_ERR_INVALID_ARGS;
-    memcpy(&config, cmd, sizeof(config));
-    zx_itrace_buffer_descriptor_t descriptor;
-    if (replymax < sizeof(descriptor))
-        return ZX_ERR_BUFFER_TOO_SMALL;
-
-    zx_status_t status = X86PtAllocBuffer(&config, &descriptor);
-    if (status != ZX_OK)
-        return status;
-    memcpy(reply, &descriptor, sizeof(descriptor));
-    *out_actual = sizeof(descriptor);
-    return ZX_OK;
+zx_status_t InsntraceDevice::IptAllocateBuffer(const BufferConfig* config,
+                                               BufferDescriptor* out_descriptor) {
+    if (!per_trace_state_)
+        return ZX_ERR_BAD_STATE;
+    return X86PtAllocBuffer(config, out_descriptor);
 }
 
-zx_status_t InsntraceDevice::IptAssignThreadBuffer(const void* cmd, size_t cmdlen) {
-    ioctl_insntrace_assign_thread_buffer_t assign;
-    if (cmdlen != sizeof(assign))
-        return ZX_ERR_INVALID_ARGS;
-
-    memcpy(&assign, cmd, sizeof(assign));
-    return X86PtAssignThreadBuffer(assign.descriptor, assign.thread);
+zx_status_t InsntraceDevice::IptAssignThreadBuffer(BufferDescriptor descriptor,
+                                                   zx_handle_t thread) {
+    if (!per_trace_state_)
+        return ZX_ERR_BAD_STATE;
+    return X86PtAssignThreadBuffer(descriptor, thread);
 }
 
-zx_status_t InsntraceDevice::IptReleaseThreadBuffer(const void* cmd, size_t cmdlen) {
-    ioctl_insntrace_assign_thread_buffer_t assign;
-    if (cmdlen != sizeof(assign))
-        return ZX_ERR_INVALID_ARGS;
-
-    memcpy(&assign, cmd, sizeof(assign));
-    return X86PtReleaseThreadBuffer(assign.descriptor, assign.thread);
+zx_status_t InsntraceDevice::IptReleaseThreadBuffer(BufferDescriptor descriptor,
+                                                    zx_handle_t thread) {
+    if (!per_trace_state_)
+        return ZX_ERR_BAD_STATE;
+    return X86PtReleaseThreadBuffer(descriptor, thread);
 }
 
-zx_status_t InsntraceDevice::IptGetBufferConfig(const void* cmd, size_t cmdlen,
-                                                void* reply, size_t replymax,
-                                                size_t* out_actual) {
-    zx_itrace_buffer_descriptor_t descriptor;
-    ioctl_insntrace_buffer_config_t config;
-
-    if (cmdlen != sizeof(descriptor))
-        return ZX_ERR_INVALID_ARGS;
-    if (replymax < sizeof(config))
-        return ZX_ERR_BUFFER_TOO_SMALL;
-
-    memcpy(&descriptor, cmd, sizeof(descriptor));
+zx_status_t InsntraceDevice::IptGetBufferConfig(BufferDescriptor descriptor,
+                                                BufferConfig* out_config) {
+    if (!per_trace_state_)
+        return ZX_ERR_BAD_STATE;
     if (descriptor >= num_traces_)
         return ZX_ERR_INVALID_ARGS;
     const ipt_per_trace_state_t* per_trace = &per_trace_state_[descriptor];
     if (!per_trace->allocated)
         return ZX_ERR_INVALID_ARGS;
 
-    config.num_chunks = per_trace->num_chunks;
-    config.chunk_order = per_trace->chunk_order;
-    config.is_circular = per_trace->is_circular;
-    config.ctl = per_trace->ctl;
-    config.cr3_match = per_trace->cr3_match;
-    static_assert(sizeof(config.addr_ranges) == sizeof(per_trace->addr_ranges),
-                  "addr range size mismatch");
-    memcpy(config.addr_ranges, per_trace->addr_ranges, sizeof(per_trace->addr_ranges));
-    memcpy(reply, &config, sizeof(config));
-    *out_actual = sizeof(config);
+    memset(out_config, 0, sizeof(*out_config));
+    out_config->num_chunks = per_trace->num_chunks;
+    out_config->chunk_order = per_trace->chunk_order;
+    out_config->is_circular = per_trace->is_circular;
+    out_config->ctl = per_trace->ctl;
+    out_config->address_space_match = per_trace->cr3_match;
+    // TODO(dje): insntrace.fidl can't use vectors (yet) so the address ranges
+    // are individually spelled out.
+    static_assert(fuchsia_hardware_cpu_insntrace_MAX_NUM_ADDR_RANGES == 2);
+    static_assert(fuchsia_hardware_cpu_insntrace_MAX_NUM_ADDR_RANGES ==
+                  IPT_MAX_NUM_ADDR_RANGES);
+    out_config->address_range_0.start = per_trace->addr_ranges[0].a;
+    out_config->address_range_0.end = per_trace->addr_ranges[0].b;
+    out_config->address_range_1.start = per_trace->addr_ranges[1].a;
+    out_config->address_range_1.end = per_trace->addr_ranges[1].b;
+
     return ZX_OK;
 }
 
-zx_status_t InsntraceDevice::IptGetBufferInfo(const void* cmd, size_t cmdlen,
-                                              void* reply, size_t replymax,
-                                              size_t* out_actual) {
-    zx_itrace_buffer_descriptor_t descriptor;
-    ioctl_insntrace_buffer_info_t data;
-
-    if (cmdlen != sizeof(descriptor))
-        return ZX_ERR_INVALID_ARGS;
-    if (replymax < sizeof(data))
-        return ZX_ERR_BUFFER_TOO_SMALL;
-
-    // In thread-mode we need to get buffer info while tracing is active.
-    if (mode_ == IPT_TRACE_CPUS && active_)
+zx_status_t InsntraceDevice::IptGetBufferState(BufferDescriptor descriptor,
+                                               BufferState* out_state) {
+    if (!per_trace_state_)
         return ZX_ERR_BAD_STATE;
 
-    memcpy(&descriptor, cmd, sizeof(descriptor));
+    // In thread-mode we need to get buffer info while tracing is active.
+    if (mode_ == IPT_MODE_CPU && active_)
+        return ZX_ERR_BAD_STATE;
+
     if (descriptor >= num_traces_)
         return ZX_ERR_INVALID_ARGS;
     const ipt_per_trace_state_t* per_trace = &per_trace_state_[descriptor];
@@ -894,33 +865,26 @@ zx_status_t InsntraceDevice::IptGetBufferInfo(const void* cmd, size_t cmdlen,
         return ZX_ERR_INVALID_ARGS;
 
     // Note: If this is a circular buffer this is just where tracing stopped.
-    data.capture_end = ComputeCaptureSize(per_trace);
-    memcpy(reply, &data, sizeof(data));
-    *out_actual = sizeof(data);
+    memset(out_state, 0, sizeof(*out_state));
+    out_state->capture_end = ComputeCaptureSize(per_trace);
     return ZX_OK;
 }
 
-zx_status_t InsntraceDevice::IptGetChunkHandle(const void* cmd, size_t cmdlen,
-                                               void* reply, size_t replymax,
-                                               size_t* out_actual) {
-    ioctl_insntrace_chunk_handle_req_t req;
-    zx_handle_t h;
+zx_status_t InsntraceDevice::IptGetChunkHandle(BufferDescriptor descriptor,
+                                               uint32_t chunk_num,
+                                               zx_handle_t* out_handle) {
+    if (!per_trace_state_)
+        return ZX_ERR_BAD_STATE;
 
-    if (cmdlen != sizeof(req))
+    if (descriptor >= num_traces_)
         return ZX_ERR_INVALID_ARGS;
-    if (replymax < sizeof(h))
-        return ZX_ERR_BUFFER_TOO_SMALL;
-
-    memcpy(&req, cmd, sizeof(req));
-    if (req.descriptor >= num_traces_)
-        return ZX_ERR_INVALID_ARGS;
-    const ipt_per_trace_state_t* per_trace = &per_trace_state_[req.descriptor];
+    const ipt_per_trace_state_t* per_trace = &per_trace_state_[descriptor];
     if (!per_trace->allocated)
         return ZX_ERR_INVALID_ARGS;
-    if (req.chunk_num >= per_trace->num_chunks)
+    if (chunk_num >= per_trace->num_chunks)
         return ZX_ERR_INVALID_ARGS;
 
-    zx_handle_t vmo_handle = per_trace->chunks[req.chunk_num].vmo_handle;
+    zx_handle_t vmo_handle = per_trace->chunks[chunk_num].vmo_handle;
     zx_info_handle_basic_t handle_info;
     zx_status_t status = zx_object_get_info(vmo_handle, ZX_INFO_HANDLE_BASIC,
                                             &handle_info, sizeof(handle_info),
@@ -934,19 +898,12 @@ zx_status_t InsntraceDevice::IptGetChunkHandle(const void* cmd, size_t cmdlen,
     zx_rights_t allowed_rights =
         (ZX_RIGHT_TRANSFER | ZX_RIGHT_WAIT | ZX_RIGHT_INSPECT |
          ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_READ | ZX_RIGHT_MAP);
-    status = zx_handle_duplicate(vmo_handle, handle_info.rights & allowed_rights, &h);
-    if (status != ZX_OK)
-        return status;
-    memcpy(reply, &h, sizeof(h));
-    *out_actual = sizeof(h);
-    return ZX_OK;
+    return zx_handle_duplicate(vmo_handle, handle_info.rights & allowed_rights, out_handle);
 }
 
-zx_status_t InsntraceDevice::IptFreeBuffer(const void* cmd, size_t cmdlen) {
-    zx_itrace_buffer_descriptor_t descriptor;
-    if (cmdlen != sizeof(descriptor))
-        return ZX_ERR_INVALID_ARGS;
-    memcpy(&descriptor, cmd, sizeof(descriptor));
+zx_status_t InsntraceDevice::IptFreeBuffer(BufferDescriptor descriptor) {
+    if (!per_trace_state_)
+        return ZX_ERR_BAD_STATE;
 
     return X86PtFreeBuffer(descriptor);
 }
@@ -956,9 +913,11 @@ zx_status_t InsntraceDevice::IptFreeBuffer(const void* cmd, size_t cmdlen) {
 // for consistency and in case we some day need it to do something.
 
 zx_status_t InsntraceDevice::IptStart() {
+    if (!per_trace_state_)
+        return ZX_ERR_BAD_STATE;
     if (active_)
         return ZX_ERR_BAD_STATE;
-    if (mode_ != IPT_TRACE_CPUS)
+    if (mode_ != IPT_MODE_CPU)
         return ZX_ERR_BAD_STATE;
 
     // Please do not use get_root_resource() in new code. See ZX-1467.
@@ -967,7 +926,7 @@ zx_status_t InsntraceDevice::IptStart() {
 
     // In cpu-mode, until we support tracing particular cpus, auto-assign
     // buffers to each cpu.
-    if (mode_ == IPT_TRACE_CPUS) {
+    if (mode_ == IPT_MODE_CPU) {
         // First verify a buffer has been allocated for each cpu,
         // and not yet assigned.
         for (uint32_t cpu = 0; cpu < num_traces_; ++cpu) {
@@ -1005,6 +964,8 @@ zx_status_t InsntraceDevice::IptStart() {
 // this is basically a nop in thread-mode.
 
 zx_status_t InsntraceDevice::IptStop() {
+    if (!per_trace_state_)
+        return ZX_ERR_BAD_STATE;
     if (!active_)
         return ZX_ERR_BAD_STATE;
 
@@ -1020,7 +981,7 @@ zx_status_t InsntraceDevice::IptStop() {
 
     // Until we support tracing individual cpus, auto-unassign the buffers
     // in cpu-mode.
-    if (mode_ == IPT_TRACE_CPUS) {
+    if (mode_ == IPT_MODE_CPU) {
         for (uint32_t cpu = 0; cpu < num_traces_; ++cpu) {
             status = X86PtGetTraceData(resource, cpu);
             if (status != ZX_OK)
@@ -1038,75 +999,165 @@ zx_status_t InsntraceDevice::IptStop() {
 
     return ZX_OK;
 }
+
+// Fidl interface.
 
-zx_status_t InsntraceDevice::IoctlWorker(uint32_t op,
-                                         const void* cmd, size_t cmdlen,
-                                         void* reply, size_t replymax,
-                                         size_t* out_actual) {
-    assert(IOCTL_FAMILY(op) == IOCTL_FAMILY_INSNTRACE);
-
-    if (op != IOCTL_INSNTRACE_ALLOC_TRACE) {
-        if (!per_trace_state_)
-            return ZX_ERR_BAD_STATE;
+static zx_status_t fidl_Initialize(
+        void* ctx, const fuchsia_hardware_cpu_insntrace_Allocation* allocation,
+        fidl_txn_t* txn) {
+    auto dev = reinterpret_cast<InsntraceDevice*>(ctx);
+    zx_status_t status = dev->IptInitialize(allocation);
+    fuchsia_hardware_cpu_insntrace_Controller_Initialize_Result result{};
+    if (status == ZX_OK) {
+        result.tag = fuchsia_hardware_cpu_insntrace_Controller_Initialize_ResultTag_response;
+    } else {
+        result.tag = fuchsia_hardware_cpu_insntrace_Controller_Initialize_ResultTag_err;
+        result.err = status;
     }
-
-    switch (op) {
-    case IOCTL_INSNTRACE_ALLOC_TRACE:
-        if (replymax != 0)
-            return ZX_ERR_INVALID_ARGS;
-        return IptAllocTrace(cmd, cmdlen);
-
-    case IOCTL_INSNTRACE_FREE_TRACE:
-        if (cmdlen != 0 || replymax != 0)
-            return ZX_ERR_INVALID_ARGS;
-        return IptFreeTrace();
-
-    case IOCTL_INSNTRACE_GET_TRACE_CONFIG:
-        if (cmdlen != 0)
-            return ZX_ERR_INVALID_ARGS;
-        return IptGetTraceConfig(reply, replymax, out_actual);
-
-    case IOCTL_INSNTRACE_ALLOC_BUFFER:
-        return IptAllocBuffer(cmd, cmdlen, reply, replymax, out_actual);
-
-    case IOCTL_INSNTRACE_ASSIGN_THREAD_BUFFER:
-        if (replymax != 0)
-            return ZX_ERR_INVALID_ARGS;
-        return IptAssignThreadBuffer(cmd, cmdlen);
-
-    case IOCTL_INSNTRACE_RELEASE_THREAD_BUFFER:
-        if (replymax != 0)
-            return ZX_ERR_INVALID_ARGS;
-        return IptReleaseThreadBuffer(cmd, cmdlen);
-
-    case IOCTL_INSNTRACE_GET_BUFFER_CONFIG:
-        return IptGetBufferConfig(cmd, cmdlen, reply, replymax, out_actual);
-
-    case IOCTL_INSNTRACE_GET_BUFFER_INFO:
-        return IptGetBufferInfo(cmd, cmdlen, reply, replymax, out_actual);
-
-    case IOCTL_INSNTRACE_GET_CHUNK_HANDLE:
-        return IptGetChunkHandle(cmd, cmdlen, reply, replymax, out_actual);
-
-    case IOCTL_INSNTRACE_FREE_BUFFER:
-        if (replymax != 0)
-            return ZX_ERR_INVALID_ARGS;
-        return IptFreeBuffer(cmd, cmdlen);
-
-    case IOCTL_INSNTRACE_START:
-        if (cmdlen != 0 || replymax != 0)
-            return ZX_ERR_INVALID_ARGS;
-        return IptStart();
-
-    case IOCTL_INSNTRACE_STOP:
-        if (cmdlen != 0 || replymax != 0)
-            return ZX_ERR_INVALID_ARGS;
-        return IptStop();
-
-    default:
-        return ZX_ERR_INVALID_ARGS;
-    }
+    return fuchsia_hardware_cpu_insntrace_ControllerInitialize_reply(txn, &result);
 }
+
+static zx_status_t fidl_Terminate(void* ctx, fidl_txn_t* txn) {
+    auto dev = reinterpret_cast<InsntraceDevice*>(ctx);
+    zx_status_t status = dev->IptTerminate();
+    fuchsia_hardware_cpu_insntrace_Controller_Terminate_Result result{};
+    if (status == ZX_OK) {
+        result.tag = fuchsia_hardware_cpu_insntrace_Controller_Terminate_ResultTag_response;
+    } else {
+        result.tag = fuchsia_hardware_cpu_insntrace_Controller_Terminate_ResultTag_err;
+        result.err = status;
+    }
+    return fuchsia_hardware_cpu_insntrace_ControllerTerminate_reply(txn, &result);
+}
+
+static zx_status_t fidl_GetAllocation(void* ctx, fidl_txn_t* txn) {
+    auto dev = reinterpret_cast<InsntraceDevice*>(ctx);
+    fuchsia_hardware_cpu_insntrace_Allocation config{};
+    zx_status_t status = dev->IptGetAllocation(&config);
+    if (status != ZX_OK) {
+        return fuchsia_hardware_cpu_insntrace_ControllerGetAllocation_reply(txn, nullptr);
+    }
+    return fuchsia_hardware_cpu_insntrace_ControllerGetAllocation_reply(txn, &config);
+}
+
+static zx_status_t fidl_AllocateBuffer(
+        void* ctx, const BufferConfig* config, fidl_txn_t* txn) {
+    auto dev = reinterpret_cast<InsntraceDevice*>(ctx);
+    BufferDescriptor descriptor;
+    zx_status_t status = dev->IptAllocateBuffer(config, &descriptor);
+    fuchsia_hardware_cpu_insntrace_Controller_AllocateBuffer_Result result{};
+    if (status == ZX_OK) {
+        result.tag = fuchsia_hardware_cpu_insntrace_Controller_AllocateBuffer_ResultTag_response;
+        result.response.descriptor = descriptor;
+    } else {
+        result.tag = fuchsia_hardware_cpu_insntrace_Controller_AllocateBuffer_ResultTag_err;
+        result.err = status;
+    }
+    return fuchsia_hardware_cpu_insntrace_ControllerAllocateBuffer_reply(txn, &result);
+}
+
+static zx_status_t fidl_AssignThreadBuffer(
+        void* ctx, zx_handle_t thread, uint32_t descriptor, fidl_txn_t* txn) {
+    auto dev = reinterpret_cast<InsntraceDevice*>(ctx);
+    zx_status_t status = dev->IptAssignThreadBuffer(thread, descriptor);
+    fuchsia_hardware_cpu_insntrace_Controller_AssignThreadBuffer_Result result{};
+    if (status == ZX_OK) {
+        result.tag = fuchsia_hardware_cpu_insntrace_Controller_AssignThreadBuffer_ResultTag_response;
+    } else {
+        result.tag = fuchsia_hardware_cpu_insntrace_Controller_AssignThreadBuffer_ResultTag_err;
+        result.err = status;
+    }
+    return fuchsia_hardware_cpu_insntrace_ControllerAssignThreadBuffer_reply(txn, &result);
+}
+
+static zx_status_t fidl_ReleaseThreadBuffer(
+        void* ctx, zx_handle_t thread, uint32_t descriptor, fidl_txn_t* txn) {
+    auto dev = reinterpret_cast<InsntraceDevice*>(ctx);
+    zx_status_t status = dev->IptReleaseThreadBuffer(thread, descriptor);
+    fuchsia_hardware_cpu_insntrace_Controller_ReleaseThreadBuffer_Result result{};
+    if (status == ZX_OK) {
+        result.tag = fuchsia_hardware_cpu_insntrace_Controller_ReleaseThreadBuffer_ResultTag_response;
+    } else {
+        result.tag = fuchsia_hardware_cpu_insntrace_Controller_ReleaseThreadBuffer_ResultTag_err;
+        result.err = status;
+    }
+    return fuchsia_hardware_cpu_insntrace_ControllerReleaseThreadBuffer_reply(txn, &result);
+}
+
+static zx_status_t fidl_GetBufferConfig(
+        void* ctx, uint32_t descriptor, fidl_txn_t* txn) {
+    auto dev = reinterpret_cast<InsntraceDevice*>(ctx);
+    BufferConfig config;
+    zx_status_t status = dev->IptGetBufferConfig(descriptor, &config);
+    if (status != ZX_OK) {
+        return fuchsia_hardware_cpu_insntrace_ControllerGetBufferConfig_reply(txn, nullptr);
+    }
+    return fuchsia_hardware_cpu_insntrace_ControllerGetBufferConfig_reply(txn, &config);
+}
+
+static zx_status_t fidl_GetBufferState(
+        void* ctx, uint32_t descriptor, fidl_txn_t* txn) {
+    auto dev = reinterpret_cast<InsntraceDevice*>(ctx);
+    BufferState state;
+    zx_status_t status = dev->IptGetBufferState(descriptor, &state);
+    if (status != ZX_OK) {
+        return fuchsia_hardware_cpu_insntrace_ControllerGetBufferState_reply(txn, nullptr);
+    }
+    return fuchsia_hardware_cpu_insntrace_ControllerGetBufferState_reply(txn, &state);
+}
+
+static zx_status_t fidl_GetChunkHandle(
+        void* ctx, uint32_t descriptor, uint32_t chunk_num, fidl_txn_t* txn) {
+    auto dev = reinterpret_cast<InsntraceDevice*>(ctx);
+    zx_handle_t handle;
+    zx_status_t status = dev->IptGetChunkHandle(descriptor, chunk_num, &handle);
+    if (status != ZX_OK) {
+        return fuchsia_hardware_cpu_insntrace_ControllerGetBufferState_reply(txn, nullptr);
+    }
+    return fuchsia_hardware_cpu_insntrace_ControllerGetChunkHandle_reply(txn, handle);
+}
+
+static zx_status_t fidl_FreeBuffer(void* ctx, uint32_t descriptor, fidl_txn_t* txn) {
+    auto dev = reinterpret_cast<InsntraceDevice*>(ctx);
+    zx_status_t status = dev->IptFreeBuffer(descriptor);
+    if (status != ZX_OK) {
+        return status;
+    }
+    return fuchsia_hardware_cpu_insntrace_ControllerFreeBuffer_reply(txn);
+}
+
+static zx_status_t fidl_Start(void* ctx, fidl_txn_t* txn) {
+    auto dev = reinterpret_cast<InsntraceDevice*>(ctx);
+    zx_status_t status = dev->IptStart();
+    if (status != ZX_OK) {
+        return status;
+    }
+    return fuchsia_hardware_cpu_insntrace_ControllerStart_reply(txn);
+}
+
+static zx_status_t fidl_Stop(void* ctx, fidl_txn_t* txn) {
+    auto dev = reinterpret_cast<InsntraceDevice*>(ctx);
+    zx_status_t status = dev->IptStop();
+    if (status != ZX_OK) {
+        return status;
+    }
+    return fuchsia_hardware_cpu_insntrace_ControllerStop_reply(txn);
+}
+
+static const fuchsia_hardware_cpu_insntrace_Controller_ops_t fidl_ops = {
+    .Initialize = fidl_Initialize,
+    .Terminate = fidl_Terminate,
+    .GetAllocation = fidl_GetAllocation,
+    .AllocateBuffer = fidl_AllocateBuffer,
+    .AssignThreadBuffer = fidl_AssignThreadBuffer,
+    .ReleaseThreadBuffer = fidl_ReleaseThreadBuffer,
+    .GetBufferConfig = fidl_GetBufferConfig,
+    .GetBufferState = fidl_GetBufferState,
+    .GetChunkHandle = fidl_GetChunkHandle,
+    .FreeBuffer = fidl_FreeBuffer,
+    .Start = fidl_Start,
+    .Stop = fidl_Stop,
+};
 
 // Devhost interface.
 
@@ -1123,33 +1174,18 @@ zx_status_t InsntraceDevice::DdkClose(uint32_t flags) {
     return ZX_OK;
 }
 
-zx_status_t InsntraceDevice::DdkIoctl(uint32_t op,
-                                      const void* cmd, size_t cmdlen,
-                                      void* reply, size_t replymax,
-                                      size_t* out_actual) {
+zx_status_t InsntraceDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     mtx_lock(&lock_);
-
-    ssize_t result;
-    switch (IOCTL_FAMILY(op)) {
-        case IOCTL_FAMILY_INSNTRACE:
-            result = IoctlWorker(op, cmd, cmdlen,
-                                 reply, replymax, out_actual);
-            break;
-        default:
-            result = ZX_ERR_INVALID_ARGS;
-            break;
-    }
-
+    zx_status_t status =
+        fuchsia_hardware_cpu_insntrace_Controller_dispatch(this, txn, msg, &fidl_ops);
     mtx_unlock(&lock_);
 
-    return static_cast<zx_status_t>(result);
+    return status;
 }
 
 void InsntraceDevice::DdkRelease() {
-    // TODO(dje): None of these should fail. What to do?
-    // For now flag things as busted and prevent further use.
     IptStop();
-    IptFreeTrace();
+    IptTerminate();
 
     delete this;
 }

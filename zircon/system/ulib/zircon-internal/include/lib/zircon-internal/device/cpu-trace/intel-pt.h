@@ -20,8 +20,6 @@ __BEGIN_CDECLS
 #error "unsupported architecture"
 #endif
 
-#define IPT_API_VERSION 2
-
 #define IPT_MSR_BITS(len, shift) (((1ULL << (len)) - 1) << (shift))
 
 // Bits in the IA32_RTIT_CTL MSR.
@@ -169,7 +167,36 @@ __BEGIN_CDECLS
 // minimum can provide a capture buffer of just under 8MB.
 #define IPT_TOPA_MAX_TABLE_ENTRIES 2048
 
+// The maximum value for |zx_insntrace_trace_config_t.num_traces|.
+#define IPT_MAX_NUM_TRACES 64
+
+// Two "modes" of tracing are supported:
+typedef enum {
+    // trace each cpu, regardless of what's running on it
+    IPT_MODE_CPU,
+    // trace specific threads
+    IPT_MODE_THREAD
+} zx_insntrace_trace_mode_t;
+
+// A trace configuration.
+// This is used to pass data from the driver to the kernel.
+typedef struct {
+    // One of IPT_MODE_{CPUS,THREADS}.
+    uint32_t mode;
+    // The number of traces to create.
+    // In CPU mode this must be zx_system_get_num_cpus().
+    // In THREAD mode this is the maximum number of threads for which traces
+    // will be collected. Buffer space is allocated on demand, but the
+    // underlying data structure has a maximum. The value can be at most
+    // IPT_MAX_NUM_TRACES.
+    uint32_t num_traces;
+} zx_insntrace_trace_config_t;
+
+// An integer identifying a particular buffer.
+typedef uint32_t zx_insntrace_buffer_descriptor_t;
+
 // The PT register set.
+// This is used to pass data from the driver to the kernel.
 // This is accessed via mtrace, but basically it's a regset.
 typedef struct {
     uint64_t ctl;
@@ -181,155 +208,5 @@ typedef struct {
         uint64_t a,b;
     } addr_ranges[IPT_MAX_NUM_ADDR_RANGES];
 } zx_x86_pt_regs_t;
-
-// Two "modes" of tracing are supported:
-// trace each cpu, regardless of what's running on it
-#define IPT_MODE_CPUS 0
-// trace specific threads
-#define IPT_MODE_THREADS 1
-
-///////////////////////////////////////////////////////////////////////////////
-
-#ifdef __Fuchsia__
-
-// ioctls
-
-typedef uint32_t zx_itrace_buffer_descriptor_t;
-
-typedef struct {
-    // One of IPT_MODE_{CPUS,THREADS}.
-    uint32_t mode;
-    // The number of traces to create.
-    // In CPU mode this must be zx_system_get_num_cpus().
-    // In THREAD mode this is the maximum number of threads for which traces
-    // will be collected. Buffer space is allocated on demand, but the
-    // underlying data structure has a maximum. The value can be at most
-    // IPT_MAX_NUM_TRACES.
-    uint32_t num_traces;
-} ioctl_insntrace_trace_config_t;
-
-// The maximum value for |ioctl_ipt_trace_config_t.num_traces|.
-#define IPT_MAX_NUM_TRACES 64
-
-// must be called prior to START, allocate buffers of the specified size
-// Input: ioctl_insntrace_trace_config_t
-// TODO(dje): Later return a trace descriptor.
-#define IOCTL_INSNTRACE_ALLOC_TRACE \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 0)
-IOCTL_WRAPPER_IN(ioctl_insntrace_alloc_trace, IOCTL_INSNTRACE_ALLOC_TRACE, ioctl_insntrace_trace_config_t)
-
-// release resources allocated with IOCTL_INSNTRACE_ALLOC_TRACE
-// TODO(dje): Later allow allocating multiple traces.
-#define IOCTL_INSNTRACE_FREE_TRACE \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 1)
-IOCTL_WRAPPER(ioctl_insntrace_free_trace, IOCTL_INSNTRACE_FREE_TRACE)
-
-// fetch the config of a trace
-// Output: ioctl_insntrace_trace_config_t
-#define IOCTL_INSNTRACE_GET_TRACE_CONFIG \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 2)
-IOCTL_WRAPPER_OUT(ioctl_insntrace_get_trace_config, IOCTL_INSNTRACE_GET_TRACE_CONFIG, ioctl_insntrace_trace_config_t)
-
-typedef struct {
-    // A "buffer" is made up of |num_chunks| chunks with each chunk having size
-    // |1<<chunk_order| pages.
-    uint32_t num_chunks;
-    // #pages as a power of 2
-    uint32_t chunk_order;
-    bool is_circular;
-    uint64_t ctl;
-    uint64_t cr3_match;
-    struct {
-        uint64_t a,b;
-    } addr_ranges[IPT_MAX_NUM_ADDR_RANGES];
-} ioctl_insntrace_buffer_config_t;
-
-// allocate a trace buffer
-// Input: ioctl_insntrace_buffer_config_t
-// Output: trace buffer descriptor (think file descriptor for trace buffers)
-// When tracing cpus, buffers are auto-assigned to cpus: the resulting trace
-// buffer descriptor is the number of the cpu using the buffer.
-#define IOCTL_INSNTRACE_ALLOC_BUFFER \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 3)
-IOCTL_WRAPPER_INOUT(ioctl_insntrace_alloc_buffer, IOCTL_INSNTRACE_ALLOC_BUFFER, ioctl_insntrace_buffer_config_t, zx_itrace_buffer_descriptor_t)
-
-typedef struct {
-    // for IOCTL_KIND_SET_HANDLE first element must be the handle
-    zx_handle_t thread;
-    zx_itrace_buffer_descriptor_t descriptor;
-} ioctl_insntrace_assign_thread_buffer_t;
-
-// assign a buffer to a thread
-// Input: ioctl_insntrace_assign_thread_buffer_t
-#define IOCTL_INSNTRACE_ASSIGN_THREAD_BUFFER \
-    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_INSNTRACE, 4)
-IOCTL_WRAPPER_IN(ioctl_insntrace_assign_thread_buffer, IOCTL_INSNTRACE_ASSIGN_THREAD_BUFFER,
-                 ioctl_insntrace_assign_thread_buffer_t)
-
-// release a buffer from a thread
-// Input: ioctl_insntrace_assign_thread_buffer_t
-#define IOCTL_INSNTRACE_RELEASE_THREAD_BUFFER \
-    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_INSNTRACE, 5)
-IOCTL_WRAPPER_IN(ioctl_insntrace_release_thread_buffer, IOCTL_INSNTRACE_RELEASE_THREAD_BUFFER,
-                 ioctl_insntrace_assign_thread_buffer_t)
-
-// return config data for a trace buffer
-// Input: zx_itrace_buffer_descriptor_t
-// Output: ioctl_insntrace_trace_buffer_config_t
-#define IOCTL_INSNTRACE_GET_BUFFER_CONFIG \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 6)
-IOCTL_WRAPPER_INOUT(ioctl_insntrace_get_buffer_config, IOCTL_INSNTRACE_GET_BUFFER_CONFIG,
-                    zx_itrace_buffer_descriptor_t, ioctl_insntrace_buffer_config_t)
-
-// This contains the run-time produced data about the buffer.
-// Not the trace data itself, just info about the data.
-typedef struct {
-    // N.B. This is the offset in the buffer where tracing stopped (treating
-    // all buffers as one large one). If using a circular buffer then all of
-    // the buffer may contain data, there's no current way to know if tracing
-    // wrapped without scanning records.
-    uint64_t capture_end;
-} ioctl_insntrace_buffer_info_t;
-
-// get trace data associated with the buffer
-// Input: zx_itrace_buffer_descriptor_t
-// Output: ioctl_insntrace_buffer_info_t
-#define IOCTL_INSNTRACE_GET_BUFFER_INFO \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 7)
-IOCTL_WRAPPER_INOUT(ioctl_insntrace_get_buffer_info, IOCTL_INSNTRACE_GET_BUFFER_INFO,
-                    zx_itrace_buffer_descriptor_t, ioctl_insntrace_buffer_info_t)
-
-typedef struct {
-    zx_itrace_buffer_descriptor_t descriptor;
-    uint32_t chunk_num;
-} ioctl_insntrace_chunk_handle_req_t;
-
-// return a handle of a chunk of the trace buffer
-// There is no API to get N handles, we have to get them one at a time.
-// [There's no point in trying to micro-optimize this and, say, get 3 at
-// a time.]
-#define IOCTL_INSNTRACE_GET_CHUNK_HANDLE \
-    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_INSNTRACE, 8)
-IOCTL_WRAPPER_INOUT(ioctl_insntrace_get_chunk_handle, IOCTL_INSNTRACE_GET_CHUNK_HANDLE,
-                    ioctl_insntrace_chunk_handle_req_t, zx_handle_t)
-
-// free a trace buffer
-// Input: zx_itrace_buffer_descriptor_t
-#define IOCTL_INSNTRACE_FREE_BUFFER \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 9)
-IOCTL_WRAPPER_IN(ioctl_insntrace_free_buffer, IOCTL_INSNTRACE_FREE_BUFFER,
-                 zx_itrace_buffer_descriptor_t)
-
-// turn on processor tracing
-#define IOCTL_INSNTRACE_START \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 10)
-IOCTL_WRAPPER(ioctl_insntrace_start, IOCTL_INSNTRACE_START)
-
-// turn off processor tracing
-#define IOCTL_INSNTRACE_STOP \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 11)
-IOCTL_WRAPPER(ioctl_insntrace_stop, IOCTL_INSNTRACE_STOP)
-
-#endif // __Fuchsia__
 
 __END_CDECLS

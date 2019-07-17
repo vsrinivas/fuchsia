@@ -21,18 +21,22 @@
 // Tracing can only be done in one mode at a time. This is because saving/
 // restoring thread PT state via the xsaves/xrstors instructions is a global
 // flag in the XSS msr.
-// Plus once a trace has been done with IPT_TRACE_THREADS one cannot go back
-// to IPT_TRACE_CPUS: supporting this requires flushing trace state from all
+// Plus once a trace has been done with IPT_MODE_THREAD one cannot go back
+// to IPT_MODE_CPU: supporting this requires flushing trace state from all
 // threads which is a bit of work. For now it's easy enough to just require
 // the user to reboot. ZX-892
 #include "arch/x86/proc_trace.h"
+
+#include <err.h>
+#include <pow2.h>
+#include <string.h>
+#include <trace.h>
 
 #include <arch/arch_ops.h>
 #include <arch/mmu.h>
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mmu.h>
-#include <err.h>
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 #include <kernel/mp.h>
@@ -44,9 +48,6 @@
 #include <lib/zircon-internal/ktrace.h>
 #include <lib/zircon-internal/mtrace.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <pow2.h>
-#include <string.h>
-#include <trace.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 #include <zircon/types.h>
@@ -102,7 +103,7 @@ DECLARE_SINGLETON_MUTEX(IptLock);
 
 static ipt_trace_state_t* ipt_trace_state TA_GUARDED(IptLock::Get());
 static bool active TA_GUARDED(IptLock::Get()) = false;
-static ipt_trace_mode_t trace_mode TA_GUARDED(IptLock::Get()) = IPT_TRACE_CPUS;
+static zx_insntrace_trace_mode_t trace_mode TA_GUARDED(IptLock::Get()) = IPT_MODE_CPU;
 
 // In cpu mode this arch_max_num_cpus.
 // In thread mode this is provided by the user.
@@ -153,7 +154,7 @@ static void x86_ipt_set_mode_task(void* raw_context) TA_REQ(IptLock::Get()) {
   // We don't want a value to appear in the xsave buffer and have xrstors
   // #gp because XCOMP_BV has the PT bit set that's not set in XSS.
   // We still need to do this, even with ZX-892, when transitioning
-  // from IPT_TRACE_CPUS to IPT_TRACE_THREADS.
+  // from IPT_MODE_CPU to IPT_MODE_THREAD.
   write_msr(IA32_RTIT_CTL, 0);
   write_msr(IA32_RTIT_STATUS, 0);
   write_msr(IA32_RTIT_OUTPUT_BASE, 0);
@@ -162,19 +163,19 @@ static void x86_ipt_set_mode_task(void* raw_context) TA_REQ(IptLock::Get()) {
     write_msr(IA32_RTIT_CR3_MATCH, 0);
   // TODO(dje): addr range msrs
 
-  ipt_trace_mode_t new_mode =
-      static_cast<ipt_trace_mode_t>(reinterpret_cast<uintptr_t>(raw_context));
+  zx_insntrace_trace_mode_t new_mode =
+      static_cast<zx_insntrace_trace_mode_t>(reinterpret_cast<uintptr_t>(raw_context));
 
   // PT state saving, if supported, was enabled during boot so there's no
   // need to recalculate the xsave space needed.
-  x86_set_extended_register_pt_state(new_mode == IPT_TRACE_THREADS);
+  x86_set_extended_register_pt_state(new_mode == IPT_MODE_THREAD);
 }
 
-zx_status_t x86_ipt_alloc_trace(ipt_trace_mode_t mode, uint32_t num_traces) {
+zx_status_t x86_ipt_alloc_trace(zx_insntrace_trace_mode_t mode, uint32_t num_traces) {
   Guard<Mutex> guard(IptLock::Get());
 
-  DEBUG_ASSERT(mode == IPT_TRACE_CPUS || mode == IPT_TRACE_THREADS);
-  if (mode == IPT_TRACE_CPUS) {
+  DEBUG_ASSERT(mode == IPT_MODE_CPU || mode == IPT_MODE_THREAD);
+  if (mode == IPT_MODE_CPU) {
     if (num_traces != arch_max_num_cpus())
       return ZX_ERR_INVALID_ARGS;
   } else {
@@ -188,11 +189,11 @@ zx_status_t x86_ipt_alloc_trace(ipt_trace_mode_t mode, uint32_t num_traces) {
   if (ipt_trace_state)
     return ZX_ERR_BAD_STATE;
 
-  // ZX-892: We don't support changing the mode from IPT_TRACE_THREADS to
-  // IPT_TRACE_CPUS: We can't turn off XSS.PT until we're sure all threads
+  // ZX-892: We don't support changing the mode from IPT_MODE_THREAD to
+  // IPT_MODE_CPU: We can't turn off XSS.PT until we're sure all threads
   // have no PT state, and that's too tricky to do right now. Instead,
   // require the developer to reboot.
-  if (trace_mode == IPT_TRACE_THREADS && mode == IPT_TRACE_CPUS)
+  if (trace_mode == IPT_MODE_THREAD && mode == IPT_MODE_CPU)
     return ZX_ERR_NOT_SUPPORTED;
 
   ipt_trace_state =
@@ -215,12 +216,27 @@ zx_status_t x86_ipt_alloc_trace(ipt_trace_mode_t mode, uint32_t num_traces) {
 zx_status_t x86_ipt_free_trace() {
   Guard<Mutex> guard(IptLock::Get());
 
-  if (!supports_pt)
-    return ZX_ERR_NOT_SUPPORTED;
-  if (trace_mode == IPT_TRACE_THREADS)
+  // Terminating tracing in thread mode is done differently: Tracing state
+  // is recorded, in part, with traced threads.
+  // This is the only situation where this fails.
+  // TODO(ZX-892): We could take a more heavy-handed approach here and
+  // do the work necessary to clear out tracing on all threads. It's a bit
+  // of work, but the resulting functionality would simplify the u/i.
+  if (trace_mode == IPT_MODE_THREAD) {
     return ZX_ERR_BAD_STATE;
-  if (active)
-    return ZX_ERR_BAD_STATE;
+  }
+
+  if (!supports_pt) {
+    // If tracing is not supported we're already terminated.
+    return ZX_OK;
+  }
+  if (active) {
+    [[maybe_unused]] zx_status_t status = x86_ipt_stop();
+    // This should succeed. The only time it can fail is in thread-mode,
+    // but we've already checked for that.
+    DEBUG_ASSERT(status == ZX_OK);
+    DEBUG_ASSERT(!active);
+  }
 
   free(ipt_trace_state);
   ipt_trace_state = nullptr;
@@ -257,7 +273,7 @@ zx_status_t x86_ipt_start() {
 
   if (!supports_pt)
     return ZX_ERR_NOT_SUPPORTED;
-  if (trace_mode == IPT_TRACE_THREADS)
+  if (trace_mode == IPT_MODE_THREAD)
     return ZX_ERR_BAD_STATE;
   if (active)
     return ZX_ERR_BAD_STATE;
@@ -267,7 +283,7 @@ zx_status_t x86_ipt_start() {
   uint64_t kernel_cr3 = x86_kernel_cr3();
   TRACEF("Starting processor trace, kernel cr3: 0x%" PRIxPTR "\n", kernel_cr3);
 
-  if (LOCAL_TRACE && trace_mode == IPT_TRACE_CPUS) {
+  if (LOCAL_TRACE && trace_mode == IPT_MODE_CPU) {
     uint32_t num_cpus = ipt_num_traces;
     for (uint32_t cpu = 0; cpu < num_cpus; ++cpu) {
       TRACEF("Cpu %u: ctl 0x%" PRIx64 ", status 0x%" PRIx64 ", base 0x%" PRIx64 ", mask 0x%" PRIx64
@@ -287,7 +303,7 @@ zx_status_t x86_ipt_start() {
   ktrace(TAG_IPT_CPU_INFO, model_info->processor_type, model_info->display_family,
          model_info->display_model, model_info->stepping);
 
-  if (trace_mode == IPT_TRACE_CPUS) {
+  if (trace_mode == IPT_MODE_CPU) {
     mp_sync_exec(MP_IPI_TARGET_ALL, 0, x86_ipt_start_cpu_task, ipt_trace_state);
   }
 
@@ -331,23 +347,35 @@ static void x86_ipt_stop_cpu_task(void* raw_context) TA_REQ(IptLock::Get()) {
 zx_status_t x86_ipt_stop() {
   Guard<Mutex> guard(IptLock::Get());
 
-  if (!supports_pt)
-    return ZX_ERR_NOT_SUPPORTED;
-  if (trace_mode == IPT_TRACE_THREADS)
+  // Stopping tracing in thread mode is done differently: Tracing state
+  // is recorded, in part, with traced threads.
+  // This is the only situation where this fails.
+  // TODO(ZX-892): We could take a more heavy-handed approach here and
+  // do the work necessary to clear out tracing on all threads. It's a bit
+  // of work, but the resulting functionality would simplify the u/i.
+  if (trace_mode == IPT_MODE_THREAD) {
     return ZX_ERR_BAD_STATE;
-  if (!ipt_trace_state)
-    return ZX_ERR_BAD_STATE;
+  }
+
+  if (!supports_pt) {
+    // If tracing is not supported we're already stopped.
+    return ZX_OK;
+  }
+  if (!ipt_trace_state) {
+    // If tracing is not enabled we're already stopped.
+    return ZX_OK;
+  }
 
   TRACEF("Stopping processor trace\n");
 
-  if (trace_mode == IPT_TRACE_CPUS) {
+  if (trace_mode == IPT_MODE_CPU) {
     mp_sync_exec(MP_IPI_TARGET_ALL, 0, x86_ipt_stop_cpu_task, ipt_trace_state);
   }
 
   ktrace(TAG_IPT_STOP, 0, 0, 0, 0);
   active = false;
 
-  if (LOCAL_TRACE && trace_mode == IPT_TRACE_CPUS) {
+  if (LOCAL_TRACE && trace_mode == IPT_MODE_CPU) {
     uint32_t num_cpus = ipt_num_traces;
     for (uint32_t cpu = 0; cpu < num_cpus; ++cpu) {
       TRACEF("Cpu %u: ctl 0x%" PRIx64 ", status 0x%" PRIx64 ", base 0x%" PRIx64 ", mask 0x%" PRIx64
@@ -360,13 +388,13 @@ zx_status_t x86_ipt_stop() {
   return ZX_OK;
 }
 
-zx_status_t x86_ipt_stage_trace_data(zx_itrace_buffer_descriptor_t descriptor,
+zx_status_t x86_ipt_stage_trace_data(zx_insntrace_buffer_descriptor_t descriptor,
                                      const zx_x86_pt_regs_t* regs) {
   Guard<Mutex> guard(IptLock::Get());
 
   if (!supports_pt)
     return ZX_ERR_NOT_SUPPORTED;
-  if (trace_mode == IPT_TRACE_CPUS && active)
+  if (trace_mode == IPT_MODE_CPU && active)
     return ZX_ERR_BAD_STATE;
   if (!ipt_trace_state)
     return ZX_ERR_BAD_STATE;
@@ -385,13 +413,13 @@ zx_status_t x86_ipt_stage_trace_data(zx_itrace_buffer_descriptor_t descriptor,
   return ZX_OK;
 }
 
-zx_status_t x86_ipt_get_trace_data(zx_itrace_buffer_descriptor_t descriptor,
+zx_status_t x86_ipt_get_trace_data(zx_insntrace_buffer_descriptor_t descriptor,
                                    zx_x86_pt_regs_t* regs) {
   Guard<Mutex> guard(IptLock::Get());
 
   if (!supports_pt)
     return ZX_ERR_NOT_SUPPORTED;
-  if (trace_mode == IPT_TRACE_CPUS && active)
+  if (trace_mode == IPT_MODE_CPU && active)
     return ZX_ERR_BAD_STATE;
   if (!ipt_trace_state)
     return ZX_ERR_BAD_STATE;

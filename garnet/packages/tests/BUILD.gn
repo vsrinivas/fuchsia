@@ -149,6 +149,14 @@ group("network") {
   ]
 }
 
+group("insntrace") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/insntrace/tests",
+    "//garnet/packages/prod:insntrace",
+  ]
+}
+
 group("cpuperf") {
   testonly = true
   public_deps = [
@@ -379,6 +387,7 @@ group("all") {
     ":guest",
     ":httpdate_hyper",
     ":image_pipe_swapchain",
+    ":insntrace",
     ":inspect_health_unittests",
     ":inspect_query_unittests",
     ":inspect_unittests",

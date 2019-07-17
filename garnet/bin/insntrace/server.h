@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <string>
 
-#include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
+#include <fuchsia/hardware/cpu/insntrace/cpp/fidl.h>
 #include <zircon/syscalls.h>
 
 #include "src/lib/fxl/macros.h"
@@ -21,6 +21,8 @@
 
 namespace insntrace {
 
+using Mode = ::fuchsia::hardware::cpu::insntrace::Mode;
+
 // The parameters controlling data collection.
 
 struct IptConfig {
@@ -31,7 +33,7 @@ struct IptConfig {
     uint64_t begin, end;
   };
 
-  static constexpr uint32_t kDefaultMode = IPT_MODE_CPUS;
+  static constexpr Mode kDefaultMode = Mode::CPU;
   static constexpr uint32_t kDefaultMaxThreads = 16;
   static constexpr size_t kDefaultNumChunks = 16;
   static constexpr size_t kDefaultChunkOrder = 2;  // 16kb
@@ -47,8 +49,7 @@ struct IptConfig {
   uint64_t AddrBegin(unsigned index) const;
   uint64_t AddrEnd(unsigned index) const;
 
-  // One of IPT_MODE_CPUS, IPT_MODE_THREADS.
-  uint32_t mode;
+  Mode mode;
 
   // The number of cpus on this system, as reported by
   // zx_system_get_num_cpus().
