@@ -83,6 +83,11 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
     callback(std::vector<fuchsia::modular::StoryInfo>());
   }
 
+  // |fuchsia::modular::StoryProvider|
+  void PreviousStories2(PreviousStories2Callback callback) override {
+    callback(std::vector<fuchsia::modular::StoryInfo2>());
+  }
+
   std::string last_created_story_;
   std::string last_created_kind_of_proto_story_;
   std::string deleted_story_;

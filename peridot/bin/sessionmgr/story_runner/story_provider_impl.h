@@ -5,6 +5,10 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_STORY_RUNNER_STORY_PROVIDER_IMPL_H_
 #define PERIDOT_BIN_SESSIONMGR_STORY_RUNNER_STORY_PROVIDER_IMPL_H_
 
+#include <map>
+#include <memory>
+#include <set>
+
 #include <fuchsia/app/discover/cpp/fidl.h>
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
@@ -21,10 +25,6 @@
 #include <lib/fidl/cpp/string.h>
 #include <lib/fit/function.h>
 #include <src/lib/fxl/macros.h>
-
-#include <map>
-#include <memory>
-#include <set>
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "peridot/bin/sessionmgr/component_context_impl.h"
@@ -119,6 +119,9 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   // |fuchsia::modular::StoryProvider|.
   void GetStoryInfo(std::string story_id, GetStoryInfoCallback callback) override;
 
+  // |fuchsia::modular::StoryProvider|.
+  void GetStoryInfo2(std::string story_id, GetStoryInfo2Callback callback) override;
+
   // Called by StoryControllerImpl. Sends request to
   // fuchsia::modular::FocusProvider
   void RequestStoryFocus(fidl::StringPtr story_id);
@@ -174,6 +177,10 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
       const std::string& story_id,
       fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request);
 
+  // Converts a StoryInfo to StoryInfo2.
+  static fuchsia::modular::StoryInfo2 StoryInfoToStoryInfo2(
+      const fuchsia::modular::StoryInfo& story_info);
+
  private:
   // |fuchsia::modular::StoryProvider|
   void GetController(std::string story_id,
@@ -181,10 +188,17 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
 
   // |fuchsia::modular::StoryProvider|
   void GetStories(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher,
-                  PreviousStoriesCallback callback) override;
+                  GetStoriesCallback callback) override;
+
+  // |fuchsia::modular::StoryProvider|
+  void GetStories2(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher,
+                   GetStories2Callback callback) override;
 
   // |fuchsia::modular::StoryProvider|
   void PreviousStories(PreviousStoriesCallback callback) override;
+
+  // |fuchsia::modular::StoryProvider|
+  void PreviousStories2(PreviousStories2Callback callback) override;
 
   // |fuchsia::modular::StoryProvider|
   void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher) override;

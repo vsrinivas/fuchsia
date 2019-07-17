@@ -14,6 +14,7 @@
 using fuchsia::modular::AddMod;
 using fuchsia::modular::StoryCommand;
 using fuchsia::modular::StoryInfo;
+using fuchsia::modular::StoryInfo2;
 using fuchsia::modular::StoryState;
 using fuchsia::modular::StoryVisibilityState;
 using fuchsia::modular::ViewIdentifier;
@@ -411,4 +412,140 @@ TEST_F(SessionShellTest, StoryStopDoesntWaitOnDetachView) {
               testing::ElementsAre(StoryState::STOPPED, StoryState::RUNNING, StoryState::STOPPING,
                                    StoryState::STOPPED));
 }
+
+TEST_F(SessionShellTest, GetStoryInfo2HasId) {
+  RunHarnessAndInterceptSessionShell();
+
+  // Create a new story using PuppetMaster and launch a new story shell.
+  fuchsia::modular::PuppetMasterPtr puppet_master;
+  fuchsia::modular::StoryPuppetMasterPtr story_master;
+
+  fuchsia::modular::testing::ModularService svc;
+  svc.set_puppet_master(puppet_master.NewRequest());
+  test_harness()->ConnectToModularService(std::move(svc));
+
+  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_.story_provider();
+  ASSERT_TRUE(story_provider != nullptr);
+  const char kStoryId[] = "my_story";
+  puppet_master->ControlStory(kStoryId, story_master.NewRequest());
+
+  AddMod add_mod;
+  add_mod.mod_name_transitional = "mod1";
+  add_mod.intent.handler = kFakeModuleUrl;
+
+  StoryCommand command;
+  command.set_add_mod(std::move(add_mod));
+
+  std::vector<StoryCommand> commands;
+  commands.push_back(std::move(command));
+
+  story_master->Enqueue(std::move(commands));
+
+  bool execute_and_get_story_info_called = false;
+  story_master->Execute([&execute_and_get_story_info_called, kStoryId,
+                         story_provider](fuchsia::modular::ExecuteResult result) {
+    // Verify that the newly created story returns something for
+    // GetStoryInfo2().
+    story_provider->GetStoryInfo2(kStoryId, [&execute_and_get_story_info_called,
+                                             kStoryId](fuchsia::modular::StoryInfo2 story_info) {
+      EXPECT_FALSE(story_info.IsEmpty());
+      EXPECT_TRUE(story_info.has_id());
+      EXPECT_EQ(story_info.id(), kStoryId);
+      execute_and_get_story_info_called = true;
+    });
+  });
+  RunLoopUntil([&] { return execute_and_get_story_info_called; });
+}
+
+TEST_F(SessionShellTest, GetStories2ReturnsStoryInfo) {
+  RunHarnessAndInterceptSessionShell();
+
+  // Create a new story using PuppetMaster and launch a new story shell.
+  fuchsia::modular::PuppetMasterPtr puppet_master;
+  fuchsia::modular::StoryPuppetMasterPtr story_master;
+
+  fuchsia::modular::testing::ModularService svc;
+  svc.set_puppet_master(puppet_master.NewRequest());
+  test_harness()->ConnectToModularService(std::move(svc));
+
+  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_.story_provider();
+  ASSERT_TRUE(story_provider != nullptr);
+  const char kStoryId[] = "my_story";
+  puppet_master->ControlStory(kStoryId, story_master.NewRequest());
+
+  AddMod add_mod;
+  add_mod.mod_name_transitional = "mod1";
+  add_mod.intent.handler = kFakeModuleUrl;
+
+  StoryCommand command;
+  command.set_add_mod(std::move(add_mod));
+
+  std::vector<StoryCommand> commands;
+  commands.push_back(std::move(command));
+
+  story_master->Enqueue(std::move(commands));
+
+  bool execute_and_get_stories_called = false;
+  story_master->Execute([&execute_and_get_stories_called, kStoryId,
+                         story_provider](fuchsia::modular::ExecuteResult result) {
+    // Verify that GetStories2 returns the StoryInfo2 for the newly created story
+    story_provider->GetStories2(/*watcher=*/nullptr,
+                                [&execute_and_get_stories_called,
+                                 kStoryId](std::vector<fuchsia::modular::StoryInfo2> story_infos) {
+                                  EXPECT_FALSE(story_infos.empty());
+                                  const auto& story_info = story_infos.at(0);
+                                  EXPECT_FALSE(story_info.IsEmpty());
+                                  EXPECT_TRUE(story_info.has_id());
+                                  EXPECT_EQ(story_info.id(), kStoryId);
+                                  execute_and_get_stories_called = true;
+                                });
+  });
+  RunLoopUntil([&] { return execute_and_get_stories_called; });
+}
+
+TEST_F(SessionShellTest, OnChange2ReturnsStoryInfo2) {
+  RunHarnessAndInterceptSessionShell();
+
+  // Create a new story using PuppetMaster and start a new story shell.
+  fuchsia::modular::PuppetMasterPtr puppet_master;
+  fuchsia::modular::StoryPuppetMasterPtr story_master;
+
+  fuchsia::modular::testing::ModularService svc;
+  svc.set_puppet_master(puppet_master.NewRequest());
+  test_harness()->ConnectToModularService(std::move(svc));
+
+  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_.story_provider();
+  ASSERT_TRUE(story_provider != nullptr);
+
+  const char kStoryId[] = "my_story";
+
+  // Once the story is created, OnChange2 should be called with a StoryInfo2 that has the story ID.
+  bool called_on_change_2 = false;
+  modular::testing::SimpleStoryProviderWatcher watcher;
+  watcher.set_on_change_2([&called_on_change_2, kStoryId](StoryInfo2 story_info, StoryState _,
+                                                          StoryVisibilityState __) {
+    EXPECT_TRUE(story_info.has_id());
+    EXPECT_EQ(story_info.id(), kStoryId);
+    called_on_change_2 = true;
+  });
+  watcher.Watch(story_provider, /*on_get_stories=*/nullptr);
+
+  puppet_master->ControlStory(kStoryId, story_master.NewRequest());
+
+  AddMod add_mod;
+  add_mod.mod_name_transitional = "mod1";
+  add_mod.intent.handler = kFakeModuleUrl;
+
+  StoryCommand command;
+  command.set_add_mod(std::move(add_mod));
+
+  std::vector<StoryCommand> commands;
+  commands.push_back(std::move(command));
+
+  story_master->Enqueue(std::move(commands));
+  story_master->Execute([](fuchsia::modular::ExecuteResult result) {});
+
+  RunLoopUntil([&] { return called_on_change_2; });
+}
+
 }  // namespace

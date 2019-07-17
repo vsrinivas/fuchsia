@@ -1221,6 +1221,15 @@ void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
   }));
 }
 
+void StoryControllerImpl::GetInfo2(GetInfo2Callback callback) {
+  operation_queue_.Add(std::make_unique<SyncCall>([this, callback = std::move(callback)] {
+    auto story_info = story_provider_impl_->GetCachedStoryInfo(story_id_);
+    FXL_CHECK(story_info);
+    auto story_info_2 = story_provider_impl_->StoryInfoToStoryInfo2(*story_info);
+    callback(std::move(story_info_2), story_observer_->model().runtime_state());
+  }));
+}
+
 void StoryControllerImpl::RequestStart() {
   operation_queue_.Add(std::make_unique<StartCall>(this, story_storage_));
 }

@@ -4,6 +4,10 @@
 
 #include "peridot/bin/sessionmgr/story_runner/story_provider_impl.h"
 
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include <fuchsia/scenic/snapshot/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -14,10 +18,6 @@
 #include <lib/fsl/handles/object_info.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/zx/time.h>
-
-#include <memory>
-#include <utility>
-#include <vector>
 
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/sessionmgr/focus.h"
@@ -361,6 +361,9 @@ void StoryProviderImpl::Watch(
     watcher_ptr->OnChange(CloneStruct(container.current_data->story_info()),
                           container.model_observer->model().runtime_state(),
                           container.model_observer->model().visibility_state());
+    watcher_ptr->OnChange2(StoryInfoToStoryInfo2(container.current_data->story_info()),
+                           container.model_observer->model().runtime_state(),
+                           container.model_observer->model().visibility_state());
   }
   watchers_.AddInterfacePtr(std::move(watcher_ptr));
 }
@@ -478,6 +481,26 @@ void StoryProviderImpl::GetStoryInfo(std::string story_id, GetStoryInfoCallback 
       WrapFutureAsOperation("StoryProviderImpl::GetStoryInfo", on_run, done, std::move(callback)));
 }
 
+// |fuchsia::modular::StoryProvider|
+void StoryProviderImpl::GetStoryInfo2(std::string story_id, GetStoryInfo2Callback callback) {
+  auto on_run = Future<>::Create("StoryProviderImpl.GetStoryInfo2.on_run");
+  auto done =
+      on_run->AsyncMap([this, story_id] { return session_storage_->GetStoryData(story_id); })
+          ->Map([](fuchsia::modular::internal::StoryDataPtr story_data)
+                    -> fuchsia::modular::StoryInfo2 {
+            if (!story_data) {
+              return fuchsia::modular::StoryInfo2{};
+            }
+            if (!story_data->has_story_info()) {
+              return fuchsia::modular::StoryInfo2{};
+            }
+
+            return StoryInfoToStoryInfo2(story_data->story_info());
+          });
+  operation_queue_.Add(
+      WrapFutureAsOperation("StoryProviderImpl::GetStoryInfo2", on_run, done, std::move(callback)));
+}
+
 // Called by StoryControllerImpl on behalf of ModuleContextImpl
 void StoryProviderImpl::RequestStoryFocus(fidl::StringPtr story_id) {
   FXL_LOG(INFO) << "RequestStoryFocus() " << story_id;
@@ -535,7 +558,7 @@ void StoryProviderImpl::GetController(
 // |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::GetStories(
     fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher,
-    PreviousStoriesCallback callback) {
+    GetStoriesCallback callback) {
   auto watcher_ptr = watcher.Bind();
   auto on_run = Future<>::Create("StoryProviderImpl.GetStories.on_run");
   auto done =
@@ -564,6 +587,37 @@ void StoryProviderImpl::GetStories(
 }
 
 // |fuchsia::modular::StoryProvider|
+void StoryProviderImpl::GetStories2(
+    fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher,
+    GetStories2Callback callback) {
+  auto watcher_ptr = watcher.Bind();
+  auto on_run = Future<>::Create("StoryProviderImpl.GetStories2.on_run");
+  auto done =
+      on_run->AsyncMap([this] { return session_storage_->GetAllStoryData(); })
+          ->Map([this, watcher_ptr = std::move(watcher_ptr)](
+                    std::vector<fuchsia::modular::internal::StoryData> all_story_data) mutable {
+            std::vector<fuchsia::modular::StoryInfo2> result;
+
+            for (auto& story_data : all_story_data) {
+              if (!story_data.story_options().kind_of_proto_story) {
+                if (!story_data.has_story_info()) {
+                  continue;
+                }
+                result.push_back(StoryInfoToStoryInfo2(story_data.story_info()));
+              }
+            }
+
+            if (watcher_ptr) {
+              watchers_.AddInterfacePtr(std::move(watcher_ptr));
+            }
+            return result;
+          });
+
+  operation_queue_.Add(
+      WrapFutureAsOperation("StoryProviderImpl::GetStories2", on_run, done, std::move(callback)));
+}
+
+// |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
   auto on_run = Future<>::Create("StoryProviderImpl.PreviousStories.on_run");
   auto done = on_run->AsyncMap([this] { return session_storage_->GetAllStoryData(); })
@@ -581,6 +635,27 @@ void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
                     return result;
                   });
   operation_queue_.Add(WrapFutureAsOperation("StoryProviderImpl::PreviousStories", on_run, done,
+                                             std::move(callback)));
+}
+
+// |fuchsia::modular::StoryProvider|
+void StoryProviderImpl::PreviousStories2(PreviousStories2Callback callback) {
+  auto on_run = Future<>::Create("StoryProviderImpl.PreviousStories2.on_run");
+  auto done = on_run->AsyncMap([this] { return session_storage_->GetAllStoryData(); })
+                  ->Map([](std::vector<fuchsia::modular::internal::StoryData> all_story_data) {
+                    std::vector<fuchsia::modular::StoryInfo2> result;
+
+                    for (auto& story_data : all_story_data) {
+                      if (!story_data.story_options().kind_of_proto_story) {
+                        if (!story_data.has_story_info()) {
+                          continue;
+                        }
+                        result.push_back(StoryInfoToStoryInfo2(story_data.story_info()));
+                      }
+                    }
+                    return result;
+                  });
+  operation_queue_.Add(WrapFutureAsOperation("StoryProviderImpl::PreviousStories2", on_run, done,
                                              std::move(callback)));
 }
 
@@ -660,6 +735,8 @@ void StoryProviderImpl::NotifyStoryWatchers(
       continue;
     }
     (*i)->OnChange(CloneStruct(story_data->story_info()), story_state, story_visibility_state);
+    (*i)->OnChange2(StoryInfoToStoryInfo2(story_data->story_info()), story_state,
+                    story_visibility_state);
   }
 }
 
@@ -750,6 +827,16 @@ void StoryProviderImpl::StartSnapshotLoader(
 
   service_provider->ConnectToService(fuchsia::scenic::snapshot::Loader::Name_,
                                      loader_request.TakeChannel());
+}
+
+fuchsia::modular::StoryInfo2 StoryProviderImpl::StoryInfoToStoryInfo2(
+    const fuchsia::modular::StoryInfo& story_info) {
+  fuchsia::modular::StoryInfo2 story_info_2;
+
+  story_info_2.set_id(story_info.id);
+  story_info_2.set_last_focus_time(story_info.last_focus_time);
+
+  return story_info_2;
 }
 
 }  // namespace modular
