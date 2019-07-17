@@ -396,9 +396,7 @@ zx_status_t imx227_bind(void* ctx, zx_device_t* device) {
     return status;
   }
   zx_device_prop_t props[] = {
-      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_SONY},
-      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_SONY_IMX227},
-      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_CAMERA_SENSOR},
+      {BIND_PLATFORM_PROTO, 0, ZX_PROTOCOL_CAMERA_SENSOR},
   };
 
 // Run the unit tests for this device

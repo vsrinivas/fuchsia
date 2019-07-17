@@ -131,10 +131,7 @@ static const zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
 static const zx_bind_inst_t camera_sensor_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CAMERA_SENSOR),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SONY),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_SONY_IMX227),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_CAMERA_SENSOR),
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_CAMERA_SENSOR),
 };
 static const device_component_part_t camera_sensor_component[] = {
     {countof(root_match), root_match},
