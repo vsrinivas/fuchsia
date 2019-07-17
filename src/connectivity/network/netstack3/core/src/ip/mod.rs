@@ -18,21 +18,22 @@ mod types;
 // re-exported from the root.
 pub use self::types::*;
 
-use log::{debug, trace};
 use std::mem;
 
-use net_types::ip::{AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv6, Ipv6Addr, Subnet};
+use log::{debug, trace};
+use net_types::ip::{AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
 use net_types::MulticastAddr;
 use packet::{
     Buf, BufferMut, BufferSerializer, ParsablePacket, ParseBufferMut, ParseMetadata, Serializer,
 };
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
+use crate::data_structures::IdMap;
 use crate::device::{DeviceId, FrameDestination};
-use crate::error::ExistsError;
-use crate::error::{IpParseError, NotFoundError};
+use crate::error::{ExistsError, IpParseError, NotFoundError};
 use crate::ip::forwarding::{Destination, ForwardingTable};
 use crate::ip::icmp::IcmpState;
+use crate::ip::igmp::{IgmpInterface, IgmpTimerId};
 use crate::ip::ipv6::Ipv6PacketAction;
 use crate::ip::path_mtu::{handle_pmtu_timeout, IpLayerPathMtuCache};
 use crate::ip::reassembly::{
@@ -40,6 +41,7 @@ use crate::ip::reassembly::{
     FragmentProcessingState, IpLayerFragmentCache,
 };
 use crate::wire::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
+use crate::wire::ipv4::Ipv4PacketBuilder;
 use crate::{Context, EventDispatcher, TimerId, TimerIdInner};
 use icmp::{
     send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, should_send_icmpv4_error,
@@ -51,6 +53,9 @@ const DEFAULT_TTL: u8 = 64;
 
 // Minimum MTU required by all IPv6 devices.
 pub(crate) const IPV6_MIN_MTU: u32 = 1280;
+
+// The multicast address for all routers.
+const ALL_ROUTERS: Ipv4Addr = Ipv4Addr::new([224, 0, 0, 2]);
 
 /// A builder for IP layer state.
 pub struct IpStateBuilder {
@@ -96,6 +101,7 @@ impl IpStateBuilder {
                 path_mtu: IpLayerPathMtuCache::new(),
             },
             icmp: self.icmp.build(),
+            igmp: IdMap::default(),
         }
     }
 }
@@ -105,6 +111,20 @@ pub(crate) struct IpLayerState<D: EventDispatcher> {
     v4: IpLayerStateInner<Ipv4, D>,
     v6: IpLayerStateInner<Ipv6, D>,
     icmp: IcmpState<D>,
+    igmp: IdMap<IgmpInterface<D::Instant>>,
+}
+
+impl<D: EventDispatcher> IpLayerState<D> {
+    /// Get the IGMP state associated with the device.
+    pub(crate) fn get_igmp_state_mut(
+        &mut self,
+        device_id: usize,
+    ) -> &mut IgmpInterface<D::Instant> {
+        if let None = self.igmp.get(device_id) {
+            self.igmp.insert(device_id, IgmpInterface::default());
+        }
+        self.igmp.get_mut(device_id).unwrap()
+    }
 }
 
 struct IpLayerStateInner<I: Ip, D: EventDispatcher> {
@@ -125,6 +145,8 @@ pub(crate) enum IpLayerTimerId {
     /// A timer event for reassembly timeouts.
     ReassemblyTimeout(FragmentCacheKeyEither),
     PmtuTimeout(IpVersion),
+    /// Timer for IGMP protocol
+    IgmpTimer(IgmpTimerId),
 }
 
 impl IpLayerTimerId {
@@ -142,6 +164,7 @@ pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: IpLay
     match id {
         IpLayerTimerId::ReassemblyTimeout(key) => handle_reassembly_timeout(ctx, key),
         IpLayerTimerId::PmtuTimeout(ip) => handle_pmtu_timeout(ctx, ip),
+        IpLayerTimerId::IgmpTimer(timer) => crate::ip::igmp::handle_timeout(ctx, timer),
     }
 }
 
@@ -163,6 +186,8 @@ pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: IpLay
 ///
 /// `dispatch_receive_ip_packet` panics if the protocol is unrecognized and
 /// `parse_metadata` is `None`.
+/// If an IGMP message is received but it is not coming from a device, i.e.,
+/// `device` given is `None`, `dispatch_receive_ip_packet` will also panic.
 #[specialize_ip_address]
 fn dispatch_receive_ip_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
@@ -187,7 +212,13 @@ fn dispatch_receive_ip_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
         // IPv4-only.
         #[ipv4addr]
         IpProto::Igmp => {
-            igmp::receive_igmp_packet(ctx, src_ip, dst_ip, buffer);
+            igmp::receive_igmp_packet(
+                ctx,
+                device.expect("IGMP messages should come from a device"),
+                src_ip,
+                dst_ip,
+                buffer,
+            );
             Ok(())
         }
 
@@ -978,6 +1009,26 @@ where
         crate::device::send_ip_frame(ctx, device, next_hop, body)
             .map_err(|ser| ser.into_serializer())
     }
+}
+
+/// Send an IGMP packet
+///
+/// IGMP packet must have a TTL of 1 and have RouterAlert set.
+pub(crate) fn send_igmp_packet<D: EventDispatcher, S>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    src_ip: Ipv4Addr,
+    dst_ip: Ipv4Addr,
+    body: S,
+) -> Result<(), S>
+where
+    S: Serializer,
+{
+    let mut builder = Ipv4PacketBuilder::new(src_ip, dst_ip, 1, IpProto::Igmp);
+    // TODO: IGMP packets need RouterAlert option, we should add this
+    // option once we can serialize options in Ipv4 packets.
+    let body = body.encapsulate(builder);
+    crate::device::send_ip_frame(ctx, device, dst_ip, body).map_err(|ser| ser.into_serializer())
 }
 
 /// Send an ICMP response to a remote host.

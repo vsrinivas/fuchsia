@@ -6,7 +6,7 @@
 //!
 //! Wire serialization and deserialization functions.
 
-mod messages;
+pub(crate) mod messages;
 mod types;
 
 #[cfg(test)]
@@ -259,6 +259,12 @@ impl<B, M: MessageType<B>> IgmpMessage<B, M> {
         c.add_bytes(header);
         c.add_bytes(body);
         c.checksum()
+    }
+}
+
+impl<B: ByteSlice, M: MessageType<B, FixedHeader = Ipv4Addr>> IgmpMessage<B, M> {
+    pub(crate) fn group_addr(&self) -> Ipv4Addr {
+        *self.header
     }
 }
 

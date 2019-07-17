@@ -70,7 +70,7 @@ pub(crate) trait BroadcastAddress {
 /// unicast address. Note that this guarantee is contingent on a correct
 /// implementation of the [`UnicastAddress`]. Since that trait is not `unsafe`,
 /// `unsafe` code may NOT rely for its soundness on this guarantee.
-#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) struct UnicastAddr<A: UnicastAddress>(A);
 
 impl<A: UnicastAddress> UnicastAddr<A> {
@@ -88,7 +88,7 @@ impl<A: UnicastAddress> UnicastAddr<A> {
 
 impl<A: UnicastAddress + Clone> UnicastAddr<A> {
     /// Get a clone of the address.
-    fn get(&self) -> A {
+    pub(crate) fn get(&self) -> A {
         self.0.clone()
     }
 }
@@ -113,7 +113,7 @@ impl<A: UnicastAddress + Display> Display for UnicastAddr<A> {
 /// multicast address. Note that this guarantee is contingent on a correct
 /// implementation of the [`MulticastAddress`]. Since that trait is not
 /// `unsafe`, `unsafe` code may NOT rely for its soundness on this guarantee.
-#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) struct MulticastAddr<A: MulticastAddress>(A);
 
 impl<A: MulticastAddress> MulticastAddr<A> {
@@ -131,7 +131,7 @@ impl<A: MulticastAddress> MulticastAddr<A> {
 
 impl<A: MulticastAddress + Clone> MulticastAddr<A> {
     /// Get a clone of the address.
-    fn get(&self) -> A {
+    pub(crate) fn get(&self) -> A {
         self.0.clone()
     }
 }
