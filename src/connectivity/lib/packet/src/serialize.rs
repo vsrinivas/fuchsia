@@ -177,6 +177,7 @@ impl<A, B> AsMut<Either<A, B>> for Either<A, B> {
 /// `AsMut<[u8]>`) and implements `Buffer` and `BufferMut` by keeping track of
 /// prefix, body, and suffix offsets within the byte slice.
 #[derive(Clone, Debug)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct Buf<B> {
     buf: B,
     range: Range<usize>,
@@ -529,6 +530,266 @@ impl<E> From<E> for MtuError<E> {
     }
 }
 
+/// An object capable of providing buffers which satisfy certain constraints.
+///
+/// A `BufferProvider<Input, Output>` is an object which is capable of consuming
+/// a buffer of type `Input` and, either by reusing it or by allocating a new
+/// one and copying the input buffer's body into it, producing a buffer of type
+/// `Output` which meets certain prefix and suffix length constraints.
+///
+/// A `BufferProvider` must always be provided when serializing a
+/// [`Serializer`].
+///
+/// Implementors may find the helper function [`try_reuse_buffer`] useful.
+///
+/// For clients who don't need the full expressive power of this trait, the
+/// simpler [`BufferAlloc`] trait is provided. It only defines how to allocate
+/// new buffers, and two blanket impls of `BufferProvider` are provided for all
+/// `BufferAlloc` types.
+pub trait BufferProvider<Input, Output> {
+    /// The type of errors returned from [`reuse_or_realloc`].
+    ///
+    /// [`reuse_or_realloc`]: crate::serialize::BufferProvider::reuse_or_realloc
+    type Error;
+
+    /// Consume an input buffer and attempt to produce an output buffer with the
+    /// given constraints, either by reusing the input buffer or by allocating a
+    /// new one and copying the body into it.
+    ///
+    /// `reuse_or_realloc` consumes a buffer by value, and produces a new buffer
+    /// with the following invariants:
+    /// - The output buffer must have at least `prefix` bytes of prefix
+    /// - The output buffer must have at least `suffix` bytes of suffix
+    /// - The output buffer must have the same body as the input buffer
+    ///
+    /// If these requirements cannot be met, then an error is returned along
+    /// with the input buffer, which is unmodified.
+    fn reuse_or_realloc(
+        self,
+        buffer: Input,
+        prefix: usize,
+        suffix: usize,
+    ) -> Result<Output, (Self::Error, Input)>;
+}
+
+/// An object capable of allocating new buffers.
+///
+/// A `BufferAlloc<Output>` is an object which is capable of allocating new
+/// buffers of type `Output`.
+///
+/// [Two blanket implementations] of [`BufferProvider`] are given for any type
+/// which implements `BufferAlloc<O>`. One blanket implementation works for any
+/// input buffer type, `I`, and produces buffers of type `Either<I, O>` as
+/// output. One blanket implementation works only when the input and output
+/// buffer types are the same, and produces buffers of that type. See the
+/// documentation on those impls for more details.
+///
+/// The following implementations of `BufferAlloc` are provided:
+/// - Any `FnOnce(usize) -> Result<O, E>` implements `BufferAlloc<O, Error = E>`
+/// - `()` implements `BufferAlloc<Never, Error = ()>` (an allocator which
+///   always fails)
+/// - [`new_buf_vec`] implements `BufferAlloc<Buf<Vec<u8>>, Error = Never>` (an
+///   allocator which infallibly heap-allocates `Vec`s)
+///
+/// [Two blanket implementations]: trait.BufferProvider.html#implementors
+pub trait BufferAlloc<Output> {
+    type Error;
+
+    fn alloc(self, len: usize) -> Result<Output, Self::Error>;
+}
+
+impl<O, E, F: FnOnce(usize) -> Result<O, E>> BufferAlloc<O> for F {
+    type Error = E;
+
+    #[inline]
+    fn alloc(self, len: usize) -> Result<O, E> {
+        self(len)
+    }
+}
+
+impl BufferAlloc<Never> for () {
+    type Error = ();
+
+    #[inline]
+    fn alloc(self, _len: usize) -> Result<Never, ()> {
+        Err(())
+    }
+}
+
+/// Allocate a new `Buf<Vec<u8>>`.
+///
+/// `new_buf_vec(len)` is shorthand for `Ok(Buf::new(vec![0; len], ..))`. It
+/// implements [`BufferAlloc<Buf<Vec<u8>>, Error = Never>`], and, thanks to a
+/// blanket impl, [`BufferProvider<I, Either<I, Buf<Vec<u8>>>, Error = Never>`]
+/// for all `I: BufferMut`, and `BufferProvider<Buf<Vec<u8>>, Buf<Vec<u8>>,
+/// Error = Never>`.
+///
+/// [`BufferAlloc<Buf<Vec<u8>>, Error = Never>`]: crate::serialize::BufferAlloc
+/// [`BufferProvider<I, Either<I, Buf<Vec<u8>>>, Error = Never>`]: crate::serialize::BufferProvider
+pub fn new_buf_vec(len: usize) -> Result<Buf<Vec<u8>>, Never> {
+    Ok(Buf::new(vec![0; len], ..))
+}
+
+/// Attempt to reuse a buffer for the purposes of implementing
+/// [`BufferProvider::reuse_or_alloc`].
+///
+/// `try_reuse_buffer` attempts to reuse an existing buffer to satisfy the given
+/// prefix and suffix constraints. If it succeeds, it returns `Ok` containing a
+/// buffer with the same body as the input, and with at least `prefix` prefix
+/// bytes and at least `suffix` suffix bytes. Otherwise, it returns `Err`
+/// containing the original, unmodified input buffer.
+///
+/// Concretely, `try_reuse_buffer` has the following behavior:
+/// - If the prefix and suffix constraints are already met, it returns `Ok` with
+///   the input unmodified
+/// - If the prefix and suffix constraints are not yet met, then...
+///   - If there is enough capacity to meet the constraints and the body is not
+///     larger than `max_copy_bytes`, the body will be moved within the buffer
+///     in order to meet the constraints, and it will be returned
+///   - Otherwise, if there is not enough capacity or the body is larger than
+///     `max_copy_bytes`, it returns `Err` with the input unmodified
+///
+/// `max_copy_bytes` is meant to be an estimate of how many bytes can be copied
+/// before allocating a new buffer will be cheaper than copying.
+///
+/// [`BufferProvider::reuse_or_alloc`]: crate::serialize::BufferProvider::reuse_or_realloc
+pub fn try_reuse_buffer<B: BufferMut>(
+    mut buffer: B,
+    prefix: usize,
+    suffix: usize,
+    max_copy_bytes: usize,
+) -> Result<B, B> {
+    let need_prefix = prefix;
+    let need_suffix = suffix;
+    let have_prefix = buffer.prefix_len();
+    let have_body = buffer.len();
+    let have_suffix = buffer.suffix_len();
+    let need_capacity = need_prefix + have_body + need_suffix;
+
+    if have_prefix >= need_prefix && have_suffix >= need_suffix {
+        // We already satisfy the prefix and suffix requirements.
+        Ok(buffer)
+    } else if buffer.capacity() >= need_capacity && have_body <= max_copy_bytes {
+        // The buffer is large enough, but the body is currently too far
+        // forward or too far backwards to satisfy the prefix or suffix
+        // requirements, so we need to move the body within the buffer.
+        buffer.reset();
+
+        // Temporarily mock the `copy_within` method on slices until that method
+        // is stable.
+        trait CopyWithinExt {
+            // copy the range [src_start, src_end)
+            fn copy_within_tmp(&mut self, src_start: usize, src_end: usize, dest: usize);
+        }
+
+        impl<T: Copy> CopyWithinExt for [T] {
+            fn copy_within_tmp(&mut self, src_start: usize, src_end: usize, dest: usize) {
+                let len = src_end - src_start;
+                if src_start == dest {
+                    return;
+                } else if src_start > dest {
+                    // Move the range forward. Copy the bytes front-to-back in
+                    // order to avoid clobbering anything.
+                    for i in 0..len {
+                        self[dest + i] = self[src_start + i];
+                    }
+                } else {
+                    // Move the range backward. Copy the bytes back-to-front in
+                    // order to avoid clobbering anything.
+                    for i in 0..len {
+                        let i = len - 1 - i;
+                        self[dest + i] = self[src_start + i];
+                    }
+                }
+            }
+        }
+
+        // Copy the original body range to a point starting immediatley
+        // after `prefix`. This satisfies the `prefix` constraint by
+        // definition, and satisfies the `suffix` constraint since we know
+        // that the total buffer capacity is sufficient to hold the total
+        // length of the prefix, body, and suffix.
+        buffer.as_mut().copy_within_tmp(have_prefix, have_prefix + have_body, need_prefix);
+        buffer.shrink(need_prefix..(need_prefix + have_body));
+        debug_assert_eq!(buffer.prefix_len(), need_prefix);
+        debug_assert!(buffer.suffix_len() >= need_suffix);
+        debug_assert_eq!(buffer.len(), have_body);
+        Ok(buffer)
+    } else {
+        Err(buffer)
+    }
+}
+
+/// All types which implement `BufferAlloc<O>` also implement `BufferProvider<I,
+/// Either<I, O>>` for all `I` where `I` and `O` both implement [`BufferMut`].
+///
+/// Note that, if `I` and `O` are the same type, calling methods on `Either<I,
+/// O>` will often be just as fast as calling methods on `I`/`O` itself since
+/// Rust can optimize out branching on which enum variant is present. However,
+/// in this case, an impl of `BufferProvider<I, I>` is also provided.
+impl<I: BufferMut, O: BufferMut, A: BufferAlloc<O>> BufferProvider<I, Either<I, O>> for A {
+    type Error = A::Error;
+
+    /// If `buffer` has enough capacity to store `need_prefix + need_suffix +
+    /// buffer.len()` bytes, then reuse `buffer`. Otherwise, allocate a new
+    /// buffer using `A`'s [`BufferAlloc`] implementation.
+    ///
+    /// If there is enough capacity, but the body is too far forwards or
+    /// backwards in the buffer to satisfy the prefix and suffix constraints,
+    /// the body will be moved within the buffer in order to satisfy the
+    /// constraints. This operation is linear in the length of the body.
+    #[inline]
+    fn reuse_or_realloc(
+        self,
+        buffer: I,
+        need_prefix: usize,
+        need_suffix: usize,
+    ) -> Result<Either<I, O>, (A::Error, I)> {
+        // TODO(joshlf): Maybe it's worth coming up with a heuristic for when
+        // moving the body is likely to be more expensive than allocating
+        // (rather than just using `core::usize::MAX`)? This will be tough since
+        // we don't know anything about the performance of `A::alloc`.
+        match try_reuse_buffer(buffer, need_prefix, need_suffix, core::usize::MAX) {
+            Ok(buffer) => Ok(Either::A(buffer)),
+            Err(buffer) => {
+                let have_body = buffer.len();
+                let need_capacity = need_prefix + have_body + need_suffix;
+
+                let mut buf = match BufferAlloc::alloc(self, need_capacity) {
+                    Ok(buf) => buf,
+                    Err(err) => return Err((err, buffer)),
+                };
+                buf.shrink(need_prefix..(need_prefix + have_body));
+                buf.as_mut().copy_from_slice(buffer.as_ref());
+                debug_assert_eq!(buf.prefix_len(), need_prefix);
+                debug_assert!(buf.suffix_len() >= need_suffix);
+                debug_assert_eq!(buf.len(), have_body);
+                Ok(Either::B(buf))
+            }
+        }
+    }
+}
+
+/// All types which implement `BufferAlloc<B>` also implement `BufferProvider<B,
+/// B>` where `B` implements [`BufferMut`].
+impl<B: BufferMut, A: BufferAlloc<B>> BufferProvider<B, B> for A {
+    type Error = A::Error;
+
+    /// If `buffer` has enough capacity to store `need_prefix + need_suffix +
+    /// buffer.len()` bytes, then reuse `buffer`. Otherwise, allocate a new
+    /// buffer using `A`'s [`BufferAlloc`] implementation.
+    ///
+    /// If there is enough capacity, but the body is too far forwards or
+    /// backwards in the buffer to satisfy the prefix and suffix constraints,
+    /// the body will be moved within the buffer in order to satisfy the
+    /// constraints. This operation is linear in the length of the body.
+    #[inline]
+    fn reuse_or_realloc(self, buffer: B, prefix: usize, suffix: usize) -> Result<B, (A::Error, B)> {
+        BufferProvider::<B, Either<B, B>>::reuse_or_realloc(self, buffer, prefix, suffix)
+            .map(Either::into_inner)
+    }
+}
+
 /// Constraints passed to [`Serializer::serialize`].
 ///
 /// `SerializeConstraints` describes the prefix length, minimum body length, and
@@ -543,26 +804,7 @@ pub struct SerializeConstraints {
 pub trait Serializer: Sized {
     /// The type of buffers returned from serialization methods on this trait.
     type Buffer: BufferMut;
-
-    // TODO(joshlf): Once the generic_associated_types feature is stabilized,
-    // change this to:
-    //
-    // type Error where MtuError<Self::InnerError>: From<Self::Error>;
-
-    /// The type of errors returned from the `serialize` and `serialize_outer`
-    /// methods on this trait.
-    type Error: Into<MtuError<Self::InnerError>>;
-
-    /// The inner error type of `Self::Error`.
-    ///
-    /// If `Self::Error` is `MtuError<E>`, then `InnerError` is `E`. Otherwise,
-    /// `InnerError` is equal to `Self::Error`. `serialize_mtu` and
-    /// `serialize_mtu_outer` return an error type of `MtuError<InnerError>`. This
-    /// allows us to return `MtuError` errors from these methods while avoiding
-    /// unnecessarily nested error types like `MtuError<MtuError<MtuError<E>>>`, which
-    /// is what we'd get if we naively used a single associated error type and
-    /// had the MTU methods return `MtuError<Self::Error>`.
-    type InnerError;
+    type Error;
 
     /// Serialize this `Serializer`, producing a buffer.
     ///
@@ -572,7 +814,10 @@ pub trait Serializer: Sized {
     /// - Have at least `c.min_body_len` bytes of body, initialized to the
     ///   contents of the packet described by this `Serializer`
     /// - Have at least `c.suffix_len` bytes of suffix
-    fn serialize(self, c: SerializeConstraints) -> Result<Self::Buffer, (Self::Error, Self)>;
+    fn serialize(
+        self,
+        c: SerializeConstraints,
+    ) -> Result<Self::Buffer, (MtuError<Self::Error>, Self)>;
 
     /// Serialize this `Serializer` as the outermost packet.
     ///
@@ -580,7 +825,7 @@ pub trait Serializer: Sized {
     /// this `Serializer` describes the outermost packet, not encapsulated in
     /// any other packets. It is equivalent to calling `serialize` with a
     /// `SerializationConstraints` of all zeros.
-    fn serialize_outer(self) -> Result<Self::Buffer, (Self::Error, Self)> {
+    fn serialize_outer(self) -> Result<Self::Buffer, (MtuError<Self::Error>, Self)> {
         self.serialize(SerializeConstraints { prefix_len: 0, min_body_len: 0, suffix_len: 0 })
     }
 
@@ -595,7 +840,7 @@ pub trait Serializer: Sized {
         self,
         mtu: usize,
         c: SerializeConstraints,
-    ) -> Result<Self::Buffer, (MtuError<Self::InnerError>, Self)>;
+    ) -> Result<Self::Buffer, (MtuError<Self::Error>, Self)>;
 
     /// Serialize this `Serializer` with a maximum transmission unit (MTU)
     /// constraint as the outermost packet.
@@ -607,7 +852,7 @@ pub trait Serializer: Sized {
     fn serialize_mtu_outer(
         self,
         mtu: usize,
-    ) -> Result<Self::Buffer, (MtuError<Self::InnerError>, Self)> {
+    ) -> Result<Self::Buffer, (MtuError<Self::Error>, Self)> {
         self.serialize_mtu(
             mtu,
             SerializeConstraints { prefix_len: 0, min_body_len: 0, suffix_len: 0 },
@@ -658,7 +903,6 @@ fn inner_packet_builder_serializer_total_len_body_len_body_range<B: InnerPacketB
 impl<B: InnerPacketBuilder> Serializer for B {
     type Buffer = Buf<Vec<u8>>;
     type Error = Never;
-    type InnerError = Never;
 
     fn serialize_mtu(
         self,
@@ -677,7 +921,7 @@ impl<B: InnerPacketBuilder> Serializer for B {
         }
     }
 
-    fn serialize(self, c: SerializeConstraints) -> Result<Buf<Vec<u8>>, (Self::Error, B)> {
+    fn serialize(self, c: SerializeConstraints) -> Result<Buf<Vec<u8>>, (MtuError<Never>, B)> {
         let (total_len, _, body_range) =
             inner_packet_builder_serializer_total_len_body_len_body_range(&self, c);
 
@@ -789,7 +1033,6 @@ where
 {
     type Buffer = Either<Buf, O>;
     type Error = Never;
-    type InnerError = Never;
 
     fn serialize_mtu(
         self,
@@ -807,7 +1050,7 @@ where
         }
     }
 
-    fn serialize(self, c: SerializeConstraints) -> Result<Either<Buf, O>, (Never, Self)> {
+    fn serialize(self, c: SerializeConstraints) -> Result<Either<Buf, O>, (MtuError<Never>, Self)> {
         let InnerSerializer { builder, buf, get_buf } = self;
         let total_len = c.prefix_len + cmp::max(c.min_body_len, builder.bytes_len()) + c.suffix_len;
         Ok(Self::serialize_inner(builder, buf, get_buf, c.prefix_len, total_len))
@@ -843,6 +1086,8 @@ impl<B, F> FnSerializer<B, F> {
     ///
     /// When `serialize` is called, `get_buf` is called in order to produce a
     /// buffer, `builder` is serialized into the buffer, and it is returned.
+    ///
+    /// [`InnerPacketBuider`]: crate::serialize::InnerPacketBuilder
     pub fn new(builder: B, get_buf: F) -> FnSerializer<B, F> {
         FnSerializer { builder, get_buf }
     }
@@ -870,7 +1115,6 @@ where
 {
     type Buffer = O;
     type Error = Never;
-    type InnerError = Never;
 
     fn serialize_mtu(
         self,
@@ -891,7 +1135,7 @@ where
         }
     }
 
-    fn serialize(self, c: SerializeConstraints) -> Result<O, (Never, Self)> {
+    fn serialize(self, c: SerializeConstraints) -> Result<O, (MtuError<Never>, Self)> {
         let FnSerializer { builder, get_buf } = self;
         let total_len = c.prefix_len + cmp::max(c.min_body_len, builder.bytes_len()) + c.suffix_len;
 
@@ -1045,7 +1289,6 @@ impl<B: Debug, F> Debug for BufferSerializer<B, F> {
 impl<B: BufferMut, O: BufferMut, F: FnOnce(usize) -> O> Serializer for BufferSerializer<B, F> {
     type Buffer = Either<B, O>;
     type Error = Never;
-    type InnerError = Never;
 
     /// Attempt to serialize a buffer within some MTU constraint, `mtu`. If the buffer as
     /// is will not fit within the `mtu`, the buffer may be truncated from either the
@@ -1091,7 +1334,7 @@ impl<B: BufferMut, O: BufferMut, F: FnOnce(usize) -> O> Serializer for BufferSer
         Ok(Self::serialize_inner(buf, get_buf, c, body_and_padding, total_len))
     }
 
-    fn serialize(self, c: SerializeConstraints) -> Result<Either<B, O>, (Never, Self)> {
+    fn serialize(self, c: SerializeConstraints) -> Result<Either<B, O>, (MtuError<Never>, Self)> {
         let BufferSerializer { buf, get_buf, direction: _ } = self;
         let body_and_padding = cmp::max(c.min_body_len, buf.len());
         let total_len = c.prefix_len + body_and_padding + c.suffix_len;
@@ -1127,14 +1370,13 @@ impl<S: Serializer> MtuSerializer<S> {
 
 impl<S: Serializer> Serializer for MtuSerializer<S> {
     type Buffer = S::Buffer;
-    type Error = MtuError<S::InnerError>;
-    type InnerError = S::InnerError;
+    type Error = S::Error;
 
     fn serialize_mtu(
         self,
         mtu: usize,
         c: SerializeConstraints,
-    ) -> Result<Self::Buffer, (MtuError<S::InnerError>, Self)> {
+    ) -> Result<Self::Buffer, (MtuError<S::Error>, Self)> {
         let self_mtu = self.mtu;
         self.inner
             .serialize_mtu(cmp::min(mtu, self_mtu), c)
@@ -1144,7 +1386,7 @@ impl<S: Serializer> Serializer for MtuSerializer<S> {
     fn serialize(
         self,
         c: SerializeConstraints,
-    ) -> Result<Self::Buffer, (MtuError<S::InnerError>, Self)> {
+    ) -> Result<Self::Buffer, (MtuError<S::Error>, Self)> {
         self.serialize_mtu(std::usize::MAX, c)
     }
 }
@@ -1213,14 +1455,13 @@ impl<B: PacketBuilder, S: Serializer> EncapsulatingSerializer<B, S> {
 
 impl<B: PacketBuilder, S: Serializer> Serializer for EncapsulatingSerializer<B, S> {
     type Buffer = S::Buffer;
-    type Error = MtuError<S::InnerError>;
-    type InnerError = S::InnerError;
+    type Error = S::Error;
 
     fn serialize_mtu(
         self,
         mtu: usize,
         mut c: SerializeConstraints,
-    ) -> Result<Self::Buffer, (MtuError<S::InnerError>, Self)> {
+    ) -> Result<Self::Buffer, (MtuError<S::Error>, Self)> {
         c.prefix_len += self.builder.header_len();
         c.suffix_len += self.builder.footer_len();
         let (min_body_len, mtu) = if let Some(min_body_mtu) = self.min_body_mtu(c.min_body_len, mtu)
@@ -1244,7 +1485,7 @@ impl<B: PacketBuilder, S: Serializer> Serializer for EncapsulatingSerializer<B, 
     fn serialize(
         self,
         c: SerializeConstraints,
-    ) -> Result<Self::Buffer, (MtuError<S::InnerError>, Self)> {
+    ) -> Result<Self::Buffer, (MtuError<S::Error>, Self)> {
         self.serialize_mtu(std::usize::MAX, c)
     }
 }
@@ -1459,5 +1700,96 @@ mod tests {
         assert!(ser.serialize_mtu_outer(5).is_err());
         let ser = BufferSerializer::new_vec(Buf::new(body.clone(), ..));
         assert!(ser.serialize_mtu_outer(5).is_err());
+    }
+
+    #[test]
+    fn test_try_reuse_buffer() {
+        fn test_expect_success(
+            body_range: Range<usize>,
+            prefix: usize,
+            suffix: usize,
+            max_copy_bytes: usize,
+        ) {
+            let mut bytes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+            let buffer = Buf::new(&mut bytes[..], body_range);
+            let body = buffer.as_ref().to_vec();
+            let buffer = try_reuse_buffer(buffer, prefix, suffix, max_copy_bytes).unwrap();
+            assert_eq!(buffer.as_ref(), body.as_slice());
+            assert!(buffer.prefix_len() >= prefix);
+            assert!(buffer.suffix_len() >= suffix);
+        }
+
+        fn test_expect_failure(
+            body_range: Range<usize>,
+            prefix: usize,
+            suffix: usize,
+            max_copy_bytes: usize,
+        ) {
+            let mut bytes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+            let buffer = Buf::new(&mut bytes[..], body_range.clone());
+            let mut bytes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+            let orig = Buf::new(&mut bytes[..], body_range.clone());
+            let buffer = try_reuse_buffer(buffer, prefix, suffix, max_copy_bytes).unwrap_err();
+            assert_eq!(buffer, orig);
+        }
+
+        // No prefix or suffix trivially succeeds.
+        test_expect_success(0..10, 0, 0, 0);
+        // If we have enough prefix/suffix, it succeeds.
+        test_expect_success(1..9, 1, 1, 0);
+        // If we don't have enough prefix/suffix, but we have enough capacity to
+        // move the buffer within the body, it succeeds...
+        test_expect_success(0..9, 1, 0, 9);
+        test_expect_success(1..10, 0, 1, 9);
+        // ...but if we don't provide a large enough max_copy_bytes, it will fail.
+        test_expect_failure(0..9, 1, 0, 8);
+        test_expect_failure(1..10, 0, 1, 8);
+    }
+
+    #[test]
+    fn test_buffer_alloc_buffer_provider() {
+        // Test that the blanket impl of `BufferProvider` for `A: BufferAlloc`
+        // works as expected, returning Either::A when reusing is possible, and
+        // returning Either::B when realloc'ing is needed.
+
+        fn test_expect(body_range: Range<usize>, prefix: usize, suffix: usize, expect_a: bool) {
+            let mut bytes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+            let buffer = Buf::new(&mut bytes[..], body_range);
+            let body = buffer.as_ref().to_vec();
+            let buffer =
+                BufferProvider::reuse_or_realloc(new_buf_vec, buffer, prefix, suffix).unwrap();
+            match &buffer {
+                Either::A(_) if expect_a => {}
+                Either::B(_) if !expect_a => {}
+                Either::A(_) => panic!("expected Eitehr::B variant"),
+                Either::B(_) => panic!("expected Eitehr::A variant"),
+            }
+            let bytes: &[u8] = buffer.as_ref();
+            assert_eq!(bytes, body.as_slice());
+            assert!(buffer.prefix_len() >= prefix);
+            assert!(buffer.suffix_len() >= suffix);
+        }
+
+        // Expect that we'll be able to reuse the existing buffer.
+        fn test_expect_reuse(body_range: Range<usize>, prefix: usize, suffix: usize) {
+            test_expect(body_range, prefix, suffix, true);
+        }
+
+        // Expect that we'll need to allocate a new buffer.
+        fn test_expect_realloc(body_range: Range<usize>, prefix: usize, suffix: usize) {
+            test_expect(body_range, prefix, suffix, false);
+        }
+
+        // No prefix or suffix trivially succeeds.
+        test_expect_reuse(0..10, 0, 0);
+        // If we have enough prefix/suffix, it succeeds.
+        test_expect_reuse(1..9, 1, 1);
+        // If we don't have enough prefix/suffix, but we have enough capacity to
+        // move the buffer within the body, it succeeds.
+        test_expect_reuse(0..9, 1, 0);
+        test_expect_reuse(1..10, 0, 1);
+        // If we don't have enough capacity, it fails and must realloc.
+        test_expect_realloc(0..9, 1, 1);
+        test_expect_realloc(1..10, 1, 1);
     }
 }
