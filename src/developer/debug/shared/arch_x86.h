@@ -45,7 +45,7 @@ constexpr uint64_t kRflagsDFMask = 0x1;
 constexpr uint64_t kRflagsOFShift = 11;  // Overflow Flag.
 constexpr uint64_t kRflagsOFMask = 0x1;
 
-constexpr uint64_t kRflagsIOPLShift = 12;  // IO Priviledge Level.
+constexpr uint64_t kRflagsIOPLShift = 12;  // IO Privilege Level.
 constexpr uint64_t kRflagsIOPLMask = 0x3;
 constexpr uint64_t kRflagsNTShift = 14;  // Nested Task.
 constexpr uint64_t kRflagsNTMask = 0x1;

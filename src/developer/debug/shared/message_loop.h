@@ -98,11 +98,11 @@ class MessageLoop : public fit::executor, public fit::suspended_task::resolver {
   // asynchronously, otherwise it will complete synchronously. This can be used to start executing
   // a promise without putting it at the back of the message loop.
   //
-  // If the task complets asynchronously, it will be added to the queue when it signals a pending
+  // If the task complete asynchronously, it will be added to the queue when it signals a pending
   // completion.
   void RunTask(FileLineFunction file_line, fit::pending_task task);
 
-  // Set a task to run after a certain number of miliseconds have elapsed. Granularity is hard to
+  // Set a task to run after a certain number of milliseconds have elapsed. Granularity is hard to
   // guarantee but the timer shouldn't fire earlier than expected.
   void PostTimer(FileLineFunction file_line, uint64_t delta_ms, fit::function<void()> fn);
 

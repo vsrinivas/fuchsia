@@ -143,7 +143,7 @@ class MessageLoopTarget final : public MessageLoop {
   ChannelExceptionHandlerMap channel_exception_handlers_;
 
   // Listens to the exception channel. Will call |HandleChannelException| on this message loop.
-  // |options| are the options to be bassed to |zx_task_bind_exception_port|.
+  // |options| are the options to be passed to |zx_task_bind_exception_port|.
   zx_status_t AddChannelExceptionHandler(int id, zx_handle_t object, uint32_t options,
                                          WatchInfo* info);
   void RemoveChannelExceptionHandler(WatchInfo*);

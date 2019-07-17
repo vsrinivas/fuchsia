@@ -112,7 +112,7 @@ void MessageLoop::resolve_ticket(fit::suspended_task::ticket ticket, bool resume
   // non-promise-related tasks our message loop currently runs and how most promises are only
   // resolved in response to IPC messages, the alternative is more surprising. If everything was a
   // promise, we could post it to the back of the task_queue_ with no problem (other than a slight
-  // performance pentalty by going through the loop again).
+  // performance penalty by going through the loop again).
 
   Task task;  // The task (to run or delete outside of the lock).
   bool should_run = false;  // Whether to run the above task (otherwise just delete it).
