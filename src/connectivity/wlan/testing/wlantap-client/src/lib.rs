@@ -19,13 +19,14 @@ pub struct Wlantap {
 }
 
 impl Wlantap {
-    pub fn open() -> Result<Wlantap, Error> {
-        Ok(Wlantap {
-            file: OpenOptions::new()
-                .read(true)
-                .write(true)
-                .open(Path::new("/dev/test/wlantapctl"))?,
-        })
+    pub fn open() -> Result<Self, Error> {
+        const PATH_STR: &str = "/dev/test/wlantapctl";
+        Ok(Self { file: OpenOptions::new().read(true).write(true).open(Path::new(PATH_STR))? })
+    }
+
+    pub fn open_from_isolated_devmgr() -> Result<Self, Error> {
+        const PATH_STR: &str = "test/wlantapctl";
+        Ok(Self { file: wlan_dev::IsolatedDeviceEnv::open_file(PATH_STR)? })
     }
 
     pub fn create_phy(

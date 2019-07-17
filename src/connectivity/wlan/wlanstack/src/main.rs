@@ -54,14 +54,15 @@ pub struct ServiceCfg {
     /// |true| if legacy WPA1 should be supported by the service instance.
     #[structopt(long = "wpa1_supported")]
     pub wpa1_supported: bool,
+    /// |true| if devices are spawned in an isolated devmgr and device_watcher should watch devices
+    /// in the isolated devmgr (for wlan-hw-sim based tests)
+    #[structopt(long = "isolated_devmgr")]
+    pub isolated_devmgr: bool,
 }
 
 impl From<ServiceCfg> for wlan_sme::Config {
     fn from(cfg: ServiceCfg) -> Self {
-        Self {
-            wep_supported: cfg.wep_supported,
-            wpa1_supported: cfg.wpa1_supported,
-        }
+        Self { wep_supported: cfg.wep_supported, wpa1_supported: cfg.wpa1_supported }
     }
 }
 
@@ -82,7 +83,7 @@ async fn main() -> Result<(), Error> {
     let phys = Arc::new(phys);
     let ifaces = Arc::new(ifaces);
 
-    let phy_server = device::serve_phys(phys.clone()).map_ok(|x| match x {});
+    let phy_server = device::serve_phys(phys.clone(), cfg.isolated_devmgr).map_ok(|x| match x {});
     let (cobalt_sender, cobalt_reporter) = CobaltConnector::default()
         .serve(ConnectionType::project_name(wlan_metrics_registry::PROJECT_NAME));
     let telemetry_server =
@@ -93,6 +94,7 @@ async fn main() -> Result<(), Error> {
         ifaces.clone(),
         cobalt_sender.clone(),
         inspect_tree.clone(),
+        cfg.isolated_devmgr,
     )
     .map_ok(|x| match x {});
     let (watcher_service, watcher_fut) =

@@ -88,8 +88,12 @@ pub struct IfaceDevice {
 pub type PhyMap = WatchableMap<u16, PhyDevice>;
 pub type IfaceMap = WatchableMap<u16, IfaceDevice>;
 
-pub async fn serve_phys(phys: Arc<PhyMap>) -> Result<Void, Error> {
-    let mut new_phys = device_watch::watch_phy_devices()?;
+pub async fn serve_phys(phys: Arc<PhyMap>, isolated_devmgr: bool) -> Result<Void, Error> {
+    let mut new_phys = if isolated_devmgr {
+        device_watch::watch_phy_devices::<wlan_dev::IsolatedDeviceEnv>()?.left_stream()
+    } else {
+        device_watch::watch_phy_devices::<wlan_dev::RealDeviceEnv>()?.right_stream()
+    };
     let mut active_phys = FuturesUnordered::new();
     loop {
         select! {
@@ -126,9 +130,14 @@ pub async fn serve_ifaces(
     ifaces: Arc<IfaceMap>,
     cobalt_sender: CobaltSender,
     inspect_tree: Arc<inspect::WlanstackTree>,
+    isolated_devmgr: bool,
 ) -> Result<Void, Error> {
     #[allow(deprecated)]
-    let mut new_ifaces = device_watch::watch_iface_devices()?;
+    let mut new_ifaces = if isolated_devmgr {
+        device_watch::watch_iface_devices::<wlan_dev::IsolatedDeviceEnv>()?.left_stream()
+    } else {
+        device_watch::watch_iface_devices::<wlan_dev::RealDeviceEnv>()?.right_stream()
+    };
     let mut active_ifaces = FuturesUnordered::new();
     loop {
         select! {
