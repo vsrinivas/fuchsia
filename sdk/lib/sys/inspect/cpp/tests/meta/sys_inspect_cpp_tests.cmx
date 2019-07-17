@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "test/sys_inspect_cpp_tests"
+    },
+    "sandbox": {
+        "features": [
+            "deprecated-shell"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

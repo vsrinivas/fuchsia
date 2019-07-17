@@ -1,0 +1,72 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/package/component.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+executable("bin") {
+  output_name = "sys_inspect_cpp_bin"
+  sources = [
+    "program.cc",
+  ]
+  deps = [
+    "//sdk/lib/sys/inspect/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/inspect",
+  ]
+  libs = [ "zircon" ]
+}
+
+executable("test") {
+  testonly = true
+  output_name = "sys_inspect_cpp_tests"
+  sources = [
+    "test.cc",
+  ]
+  deps = [
+    "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//zircon/public/lib/inspect",
+  ]
+  public_deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+  ]
+  libs = [ "zircon" ]
+}
+
+test_package("sys_inspect_cpp_tests") {
+  deprecated_shell = "//build"
+
+  deps = [
+    ":bin",
+    ":test",
+  ]
+
+  binaries = [
+    {
+      name = "sys_inspect_cpp_bin"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/sys_inspect_cpp_bin.cmx")
+      dest = "sys_inspect_cpp_bin.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "sys_inspect_cpp_tests"
+      environments = basic_envs
+    },
+  ]
+}

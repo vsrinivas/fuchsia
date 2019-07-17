@@ -519,6 +519,7 @@ group("inspect_tests") {
     ":inspect_unittests",
     ":iquery_golden_test",
     ":libinspect_integration_tests",
+    ":sys_inspect_cpp_tests",
   ]
 }
 
@@ -526,6 +527,13 @@ group("inspect_unittests") {
   testonly = true
   public_deps = [
     "//garnet/public/lib/inspect_deprecated/tests:inspect_unittests",
+  ]
+}
+
+group("sys_inspect_cpp_tests") {
+  testonly = true
+  public_deps = [
+    "//sdk/lib/sys/inspect/cpp/tests:sys_inspect_cpp_tests",
   ]
 }
 

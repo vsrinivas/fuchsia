@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/sys_inspect_cpp_bin"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
