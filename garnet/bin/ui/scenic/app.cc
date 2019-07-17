@@ -13,7 +13,17 @@
 #endif
 
 namespace {
-static const std::string kGpuDir = "/dev/class/gpu";
+
+// Wait for /dev/class/display-controller on x86 as that's sufficient for
+// Intel GPU driver and supports AEMU and swiftshader, which don't depend
+// on devices in /dev/class/gpu.
+//
+// TODO(SCN-568): Scenic should not be aware of these type of dependencies.
+#if defined(__x86_64__)
+static const std::string kDependencyDir = "/dev/class/display-controller";
+#else
+static const std::string kDependencyDir = "/dev/class/gpu";
+#endif
 
 // A limited System used only to limit Scenic from fully initializing, without introducing a new
 // command dispatcher.
@@ -37,14 +47,14 @@ App::App(sys::ComponentContext* app_context, inspect_deprecated::Node inspect_no
                                        std::move(quit_callback))) {
   FXL_DCHECK(!device_watcher_);
 
-  std::unique_ptr<System> gpu_dependency = std::make_unique<Dependency>(
+  std::unique_ptr<System> dependency = std::make_unique<Dependency>(
       SystemContext(scenic_->app_context(), inspect_deprecated::Node(), /*quit_callback*/ nullptr),
       false);
-  scenic_->RegisterDependency(gpu_dependency.get());
+  scenic_->RegisterDependency(dependency.get());
 
   device_watcher_ = fsl::DeviceWatcher::Create(
-      kGpuDir,
-      [this, gpu_dependency = std::move(gpu_dependency)](int dir_fd, std::string filename) {
+      kDependencyDir,
+      [this, dependency = std::move(dependency)](int dir_fd, std::string filename) {
         escher_ = gfx::GfxSystem::CreateEscher(scenic_->app_context());
 
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
@@ -63,7 +73,7 @@ App::App(sys::ComponentContext* app_context, inspect_deprecated::Node inspect_no
 #endif
 #endif
 
-        gpu_dependency->SetToInitialized();
+        dependency->SetToInitialized();
       });
 }
 
