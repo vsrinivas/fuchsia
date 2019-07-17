@@ -911,5 +911,49 @@ TEST_F(SandboxTest, SyslogWithKlog) {
   ASSERT_NE(klog_count, 0);
 }
 
+TEST_F(SandboxTest, InvalidEnvironmentDevice) {
+  // Check that sandbox will fail with environment configuration failure
+  // if environment.devices contains an endpoint name that doesn't exist:
+  SetCmx(R"(
+{
+   "environment" : {
+      "test" : [ "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx" ],
+      "devices": ["bad-ep"]
+   },
+   "networks": [{
+       "name": "net",
+       "endpoints": [{"name":"ep"}]
+   }]
+})");
+  RunSandbox(SandboxResult::Status::ENVIRONMENT_CONFIG_FAILED);
+}
+
+TEST_F(SandboxTest, ServicesHaveVdev) {
+  // Check that /vdev is passed to services.
+  // We run one dummy_proc as a service fuchsia.dummy.service that will check for a path
+  // "/dev/class/ethernet/ep" and then publish event 1.
+  // The test will hit "fuchsia.dummy.service" (to make the service proc launch) and then
+  // publish event 1.
+  // Then we can check that the test suite runs to completion. (If /vdev was not
+  // available, we'd fail due to the dummy service "crashing")
+  SetCmx(R"(
+{
+   "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+   "environment": {
+      "test" : [{"arguments":["-s", "fuchsia.dummy.service", "-e", "1", "-n", "test"]}],
+      "services" : {
+        "fuchsia.dummy.service": {"arguments": ["-P", "/vdev/class/ethernet/ep", "-p", "1", "-n", "svc"]}
+      },
+      "devices": ["ep"]
+   },
+   "networks": [{
+       "name": "net",
+       "endpoints": [{"name":"ep"}]
+   }]
+}
+)");
+  RunSandboxSuccess();
+}
+
 }  // namespace testing
 }  // namespace netemul

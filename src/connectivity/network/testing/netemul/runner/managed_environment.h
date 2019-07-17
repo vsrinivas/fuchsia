@@ -48,6 +48,8 @@ class ManagedEnvironment : public fuchsia::netemul::environment::ManagedEnvironm
 
   void Bind(fidl::InterfaceRequest<FManagedEnvironment> req);
 
+  fuchsia::sys::FlatNamespacePtr CreateServiceFlatNamespace();
+
  protected:
   friend ManagedLauncher;
 

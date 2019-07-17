@@ -301,7 +301,8 @@ bool Sandbox::CreateEnvironmentOptions(const config::Environment& config,
       nd.path = fxl::Concatenate({std::string(kEndpointMountPath), device});
 
       fidl::InterfaceHandle<network::Endpoint> endp_h;
-      if (epm->GetEndpoint(device, &endp_h) != ZX_OK) {
+      auto status = epm->GetEndpoint(device, &endp_h);
+      if (status != ZX_OK || !endp_h.is_valid()) {
         FXL_LOG(ERROR) << "Can't find endpoint " << device << " on endpoint manager";
         return false;
       }

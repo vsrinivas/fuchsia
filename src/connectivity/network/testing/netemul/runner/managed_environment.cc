@@ -156,6 +156,7 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
                                   svc.arguments->end());
           linfo.out = loggers_->CreateLogger(svc.url, false);
           linfo.err = loggers_->CreateLogger(svc.url, true);
+          linfo.flat_namespace = CreateServiceFlatNamespace();
           loggers_->IncrementCounter();
           return linfo;
         },
@@ -240,5 +241,17 @@ void ManagedEnvironment::AddDevice(fuchsia::netemul::environment::VirtualDevice 
 }
 
 void ManagedEnvironment::RemoveDevice(::std::string path) { virtual_devices_.RemoveEntry(path); }
+
+fuchsia::sys::FlatNamespacePtr ManagedEnvironment::CreateServiceFlatNamespace() {
+  auto flat_ns = std::make_unique<fuchsia::sys::FlatNamespace>();
+  // We'll add /vdev to the namespace of all launched services.
+  // Unlike for components that are launched by the ManagedLauncher, we don't check if
+  // services have "dev" in their sandbox like ManagedLauncher does. It's just cheaper to
+  // expose /vdev to all services than to load the manifest for each service requested and
+  // attach /vdev only to those that have "dev" in their sandbox.
+  flat_ns->paths.emplace_back(ManagedLauncher::kVdevRoot);
+  flat_ns->directories.emplace_back(OpenVdevDirectory());
+  return flat_ns;
+}
 
 }  // namespace netemul

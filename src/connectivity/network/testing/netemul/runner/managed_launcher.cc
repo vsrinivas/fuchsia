@@ -21,9 +21,6 @@ namespace netemul {
 using fuchsia::sys::TerminationReason;
 using process::ProcessBuilder;
 
-static const char* kVdevRoot = "/vdev";
-static const char* kVDataRoot = "/vdata";
-
 // Helper function to respond with a failure termination reason
 // to component controller requests.
 void EmitComponentFailure(fidl::InterfaceRequest<fuchsia::sys::ComponentController> req,

@@ -30,6 +30,8 @@ struct Opt {
     event: Option<i32>,
     #[structopt(short = "d")]
     look_at_data: bool,
+    #[structopt(short = "P")]
+    check_path: Option<String>,
     #[structopt(short = "s")]
     service: Option<String>,
     #[structopt(short = "l")]
@@ -132,6 +134,13 @@ async fn main() -> Result<(), Error> {
     } else {
         None
     };
+
+    if let Some(path) = opt.check_path {
+        println!("Looking at path {}...", &path);
+        if !std::path::Path::new(&path).exists() {
+            return Err(format_err!("{} is not in namespace", &path));
+        }
+    }
 
     if opt.publish != None || opt.event != None {
         // Unwrap the `bus` which should be an error
