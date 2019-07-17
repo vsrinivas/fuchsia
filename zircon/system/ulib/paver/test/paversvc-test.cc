@@ -306,6 +306,26 @@ TEST_F(PaverServiceTest, WriteAssetVbMetaConfigRecovery) {
     ValidateWritten(18, 2);
 }
 
+TEST_F(PaverServiceTest, WriteAssetTwice) {
+    SpawnIsolatedDevmgr();
+    ::llcpp::fuchsia::mem::Buffer payload;
+    CreatePayload(2, &payload);
+    zx_status_t status;
+    ASSERT_OK(client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::A,
+                                  ::llcpp::fuchsia::paver::Asset::KERNEL, std::move(payload),
+                                  &status));
+    ASSERT_OK(status);
+    CreatePayload(2, &payload);
+    ValidateWritten(8, 2);
+    ValidateUnwritten(10, 4);
+    ASSERT_OK(client_->WriteAsset(::llcpp::fuchsia::paver::Configuration::A,
+                                  ::llcpp::fuchsia::paver::Asset::KERNEL, std::move(payload),
+                                  &status));
+    ASSERT_OK(status);
+    ValidateWritten(8, 2);
+    ValidateUnwritten(10, 4);
+}
+
 TEST_F(PaverServiceTest, WriteBootloader) {
     SpawnIsolatedDevmgr();
     ::llcpp::fuchsia::mem::Buffer payload;

@@ -269,10 +269,78 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
     return ZX_OK;
 }
 
+// Best effort attempt to see if payload contents match what is already inside
+// of the partition.
+bool CheckIfSame(fbl::Function<zx_status_t(const zx::vmo&)> read_to_vmo, const zx::vmo& vmo,
+                 size_t vmo_size) {
+    zx::vmo read_vmo;
+    auto status = zx::vmo::create(fbl::round_up(vmo_size, ZX_PAGE_SIZE), 0, &read_vmo);
+    if (status != ZX_OK) {
+        ERROR("Failed to create VMO: %s\n", zx_status_get_string(status));
+        return false;
+    }
+
+    if ((status = read_to_vmo(read_vmo)) != ZX_OK) {
+        return false;
+    }
+
+    fzl::VmoMapper first_mapper;
+    fzl::VmoMapper second_mapper;
+
+    status = first_mapper.Map(vmo, 0, 0, ZX_VM_PERM_READ);
+    if (status != ZX_OK) {
+        ERROR("Error mapping vmo: %s\n", zx_status_get_string(status));
+        return false;
+    }
+
+    status = second_mapper.Map(read_vmo, 0, 0, ZX_VM_PERM_READ);
+    if (status != ZX_OK) {
+        ERROR("Error mapping vmo: %s\n", zx_status_get_string(status));
+        return false;
+    }
+
+    return memcmp(first_mapper.start(), second_mapper.start(), vmo_size) == 0;
+}
+
 // Writes a raw (non-FVM) partition to a block device from a VMO.
 zx_status_t WriteVmoToBlock(const zx::vmo& vmo, size_t vmo_size, const fbl::unique_fd& partition_fd,
                             uint32_t block_size_bytes) {
     ZX_ASSERT(vmo_size % block_size_bytes == 0);
+
+    auto read_to_vmo = [&](const zx::vmo& vmo) -> zx_status_t {
+        vmoid_t vmoid;
+        block_client::Client client;
+        zx_status_t status = RegisterFastBlockIo(partition_fd, vmo, &vmoid, &client);
+        if (status != ZX_OK) {
+            ERROR("Cannot register fast block I/O\n");
+            return status;
+        }
+
+        block_fifo_request_t request;
+        request.group = 0;
+        request.vmoid = vmoid;
+        request.opcode = BLOCKIO_READ;
+
+        uint64_t length = vmo_size / block_size_bytes;
+        if (length > UINT32_MAX) {
+            ERROR("Error reading partition data: Too large\n");
+            return ZX_ERR_OUT_OF_RANGE;
+        }
+        request.length = static_cast<uint32_t>(length);
+        request.vmo_offset = 0;
+        request.dev_offset = 0;
+
+        if ((status = client.Transaction(&request, 1)) != ZX_OK) {
+            ERROR("Error reading partition data: %s\n", zx_status_get_string(status));
+            return status;
+        }
+        return ZX_OK;
+    };
+
+    if (CheckIfSame(read_to_vmo, vmo, vmo_size)) {
+        LOG("Skipping write as partition contents match payload.\n");
+        return ZX_OK;
+    }
 
     vmoid_t vmoid;
     block_client::Client client;
@@ -308,8 +376,38 @@ zx_status_t WriteVmoToSkipBlock(const zx::vmo& vmo, size_t vmo_size,
                                 const fzl::UnownedFdioCaller& caller, uint32_t block_size_bytes) {
     ZX_ASSERT(vmo_size % block_size_bytes == 0);
 
-    zx::vmo dup;
+    auto read_to_vmo = [&](const zx::vmo& vmo) -> zx_status_t {
+        zx_status_t status;
+        zx::vmo dup;
+        if ((status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup)) != ZX_OK) {
+            ERROR("Couldn't duplicate buffer vmo\n");
+            return status;
+        }
+
+        skipblock::ReadWriteOperation operation = {
+            .vmo = std::move(dup),
+            .vmo_offset = 0,
+            .block = 0,
+            .block_count = static_cast<uint32_t>(vmo_size / block_size_bytes),
+        };
+
+        auto io_status = skipblock::SkipBlock::Call::Read(caller.channel(), std::move(operation),
+                                                          &status);
+        status = io_status == ZX_OK ? status : io_status;
+        if (status != ZX_OK) {
+            ERROR("Error reading partition data: %s\n", zx_status_get_string(status));
+            return status;
+        }
+        return ZX_OK;
+    };
+
+    if (CheckIfSame(read_to_vmo, vmo, vmo_size)) {
+        LOG("Skipping write as partition contents match payload.\n");
+        return ZX_OK;
+    }
+
     zx_status_t status;
+    zx::vmo dup;
     if ((status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup)) != ZX_OK) {
         ERROR("Couldn't duplicate buffer vmo\n");
         return status;
@@ -323,8 +421,9 @@ zx_status_t WriteVmoToSkipBlock(const zx::vmo& vmo, size_t vmo_size,
     };
     bool bad_block_grown;
 
-    skipblock::SkipBlock::Call::Write(caller.channel(), std::move(operation), &status,
-                                      &bad_block_grown);
+    auto io_status = skipblock::SkipBlock::Call::Write(caller.channel(), std::move(operation),
+                                                       &status, &bad_block_grown);
+    status = io_status == ZX_OK ? status : io_status;
     if (status != ZX_OK) {
         ERROR("Error writing partition data: %s\n", zx_status_get_string(status));
         return status;
