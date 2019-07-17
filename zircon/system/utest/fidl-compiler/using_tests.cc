@@ -158,8 +158,7 @@ struct Foo {
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
-  ASSERT_STR_STR(errors[0].c_str(),
-                 "Unknown dependent library dependent. Did you require it with `using`?");
+  ASSERT_STR_STR(errors[0].c_str(), "unknown type dependent.Bar");
 
   END_TEST;
 }
@@ -300,9 +299,8 @@ struct B{dep.A a;}; // So the import is used.
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
   ASSERT_STR_STR(errors[0].c_str(),
-                 R"ERROR(lib.fidl:6:8: error: Declaration name 'dep' conflicts with a library import; consider using the 'as' keyword to import the library under a different name.
-struct dep{};
-       ^)ERROR");
+                 "Declaration name 'dep' conflicts with a library import; consider using the 'as' "
+                 "keyword to import the library under a different name.");
   END_TEST;
 }
 
@@ -336,9 +334,8 @@ struct B{dep.A a;}; // So the import is used.
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
   ASSERT_STR_STR(errors[0].c_str(),
-                 R"ERROR(lib.fidl:6:8: error: Declaration name 'x' conflicts with a library import; consider using the 'as' keyword to import the library under a different name.
-struct x{};
-       ^)ERROR");
+                 "Declaration name 'x' conflicts with a library import; consider using the 'as' "
+                 "keyword to import the library under a different name.");
   END_TEST;
 }
 
@@ -371,8 +368,9 @@ struct B{depnoconflict.A a;}; // So the import is used.
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
-  ASSERT_STR_STR(errors[0].c_str(),
-                 R"ERROR(lib.fidl:6:8: error: Declaration name 'x' conflicts with a library import; consider using the 'as' keyword to import the library under a different name.
+  ASSERT_STR_STR(
+      errors[0].c_str(),
+      R"ERROR(lib.fidl:6:8: error: Declaration name 'x' conflicts with a library import; consider using the 'as' keyword to import the library under a different name.
 struct x{};
        ^)ERROR");
   END_TEST;

@@ -55,12 +55,16 @@ std::string LibraryName(const Library* library, std::string_view separator);
 // struct name).
 struct Name final {
   Name(const Library* library, const SourceLocation name)
-      : library_(library), name_(name) {}
+     : library_(library), name_(name), member_name_(std::nullopt) {}
+
+  Name(const Library* library, const SourceLocation name, const std::string member)
+     : library_(library), name_(name), member_name_(member) {}
 
   Name(const Library* library, const std::string& name)
-      : library_(library), name_(name) {}
+     : library_(library), name_(name), member_name_(std::nullopt) {}
 
   Name(Name&&) = default;
+  Name(const Name &) = default;
   Name& operator=(Name&&) = default;
 
   const Library* library() const { return library_; }
@@ -77,14 +81,31 @@ struct Name final {
       return std::get<SourceLocation>(name_).data();
     }
   }
+  const std::string name_full() const {
+    auto name = std::string(name_part());
+    if (member_name_.has_value()) {
+      name.append(".");
+      name.append(member_name_.value());
+    }
+    return name;
+  }
+  const std::optional<std::string> member_name() const {
+    return member_name_;
+  }
+  const Name memberless_name() const {
+    if (!member_name_) {
+      return *this;
+    }
+    return Name(library_, name_, std::nullopt);
+  }
 
   bool operator==(const Name& other) const {
     // can't use the library name yet, not necesserily compiled!
     auto library_ptr = reinterpret_cast<uintptr_t>(library_);
     auto other_library_ptr = reinterpret_cast<uintptr_t>(other.library_);
-    if (library_ptr != other_library_ptr)
-      return false;
-    return name_part() == other.name_part();
+    return (library_ptr == other_library_ptr) &&
+      name_part() == other.name_part() &&
+      member_name_ == other.member_name_;
   }
   bool operator!=(const Name& other) const { return !operator==(other); }
 
@@ -94,14 +115,23 @@ struct Name final {
     auto other_library_ptr = reinterpret_cast<uintptr_t>(other.library_);
     if (library_ptr != other_library_ptr)
       return library_ptr < other_library_ptr;
-    return name_part() < other.name_part();
+    if (name_part() != other.name_part())
+      return name_part() < other.name_part();
+    return member_name_ < other.member_name_;
   }
 
  private:
   using AnonymousName = std::string;
 
+  Name(const Library* library,
+       const std::variant<SourceLocation, AnonymousName>& name,
+       std::optional<std::string> member_name)
+     : library_(library), name_(name), member_name_(member_name) {}
+
   const Library* library_ = nullptr;
   std::variant<SourceLocation, AnonymousName> name_;
+  // TODO(FIDL-705): Either a source location, or an anonymous member should be allowed.
+  std::optional<std::string> member_name_;
 };
 
 struct ConstantValue {
@@ -1212,7 +1242,7 @@ class Library {
   // Given a const declaration of the form
   //     const type foo = name;
   // return the declaration corresponding to name.
-  Decl* LookupConstant(const TypeConstructor* type_ctor, const Name& name);
+  Decl* LookupConstantLegacy(const Name& name);
 
   bool DeclDependencies(Decl* decl, std::set<Decl*>* out_edges);
 

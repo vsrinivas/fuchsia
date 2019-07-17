@@ -356,6 +356,114 @@ protocol EmptyProtocol {
   END_TEST;
 }
 
+// This targets a specific issue with identifier naming where the identifier
+// library is incorrectly the current library name rather than the name of the
+// identifiers own library.
+// TODO(FIDL-735) Update this test when the bug is fixed.
+bool json_generator_test_struct_default_value_enum_library_reference() {
+  BEGIN_TEST;
+
+  for (int i = 0; i < kRepeatTestCount; i++) {
+
+    SharedAmongstLibraries shared;
+    TestLibrary dependency("dependent.fidl", R"FIDL(
+  library dependent;
+
+  enum MyEnum : int32 {
+    A = 1;
+  };
+
+  )FIDL",
+                          &shared);
+    ASSERT_TRUE(dependency.Compile());
+
+    TestLibrary library("example.fidl", R"FIDL(
+  library example;
+
+  using dependent;
+
+  struct Foo {
+      dependent.MyEnum field = dependent.MyEnum.A;
+  };
+
+  )FIDL",
+                        &shared);
+    ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
+
+    EXPECT_TRUE(checkJSONGenerator(std::move(library),
+                                   R"JSON({
+  "version": "0.0.1",
+  "name": "example",
+  "library_dependencies": [
+    {
+      "name": "dependent",
+      "declarations": {
+        "dependent/MyEnum": "enum"
+      }
+    }
+  ],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [],
+  "service_declarations": [],
+  "struct_declarations": [
+    {
+      "name": "example/Foo",
+      "location": {
+        "filename": "example.fidl",
+        "line": 6,
+        "column": 10
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "dependent/MyEnum",
+            "nullable": false
+          },
+          "name": "field",
+          "location": {
+            "filename": "example.fidl",
+            "line": 7,
+            "column": 24
+          },
+          "maybe_default_value": {
+            "kind": "identifier",
+            "identifier": "example/A"
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0,
+          "max_handles": 0
+        }
+      ],
+      "size": 4,
+      "max_out_of_line": 0,
+      "alignment": 4,
+      "max_handles": 0,
+      "has_padding": false
+    }
+  ],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "example/Foo"
+  ],
+  "declarations": {
+    "example/Foo": "struct"
+  }
+}
+)JSON"));
+  }
+
+  END_TEST;
+}
+
 bool json_generator_test_table() {
   BEGIN_TEST;
 
@@ -3075,6 +3183,7 @@ service SomeService {
 
 BEGIN_TEST_CASE(json_generator_tests)
 RUN_TEST(json_generator_test_empty_struct)
+RUN_TEST(json_generator_test_struct_default_value_enum_library_reference)
 RUN_TEST(json_generator_test_struct)
 RUN_TEST(json_generator_test_table)
 RUN_TEST(json_generator_test_union)

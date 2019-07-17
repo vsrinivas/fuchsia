@@ -227,6 +227,18 @@ void JSONGenerator::Generate(const raw::Ordinal32& value) { EmitNumeric(value.va
 void JSONGenerator::Generate(const raw::Ordinal64& value) { EmitNumeric(value.value); }
 
 void JSONGenerator::Generate(const flat::Name& value) {
+    if (value.member_name().has_value()) {
+    // TODO(FIDL-735) Remove this after migrating.
+    // Previous JSON format: library/MEMBER
+    // New JSON format without this: library/EnumDecl
+    // Desired format longer-term: library/EnumDecl.MEMBER
+    std::string compiled_name("");
+    compiled_name += LibraryName(library_, ".");
+    compiled_name += "/";
+    compiled_name += value.member_name().value();
+    Generate(compiled_name);
+    return;
+  }
   // These look like (when there is a library)
   //     { "LIB.LIB.LIB", "ID" }
   // or (when there is not)

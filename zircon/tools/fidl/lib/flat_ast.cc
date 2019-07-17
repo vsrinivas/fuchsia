@@ -452,7 +452,7 @@ bool Typespace::CreateNotOwned(const flat::Name& name, const Type* arg_type,
   auto type_template = LookupTemplate(name);
   if (type_template == nullptr) {
     std::string message("unknown type ");
-    message.append(name.name_part());
+    message.append(name.name_full());
     error_reporter_->ReportError(maybe_location, message);
     return false;
   }
@@ -1390,6 +1390,7 @@ std::optional<Name> Library::CompileCompoundIdentifier(
 
   SourceLocation decl_name = components.back()->location();
 
+  // First try resolving the identifier in the library.
   if (components.size() == 1) {
     return Name(this, decl_name);
   }
@@ -1401,16 +1402,35 @@ std::optional<Name> Library::CompileCompoundIdentifier(
 
   auto filename = compound_identifier->location().source_file().filename();
   Library* dep_library = nullptr;
-  if (!dependencies_.LookupAndUse(filename, library_name, &dep_library)) {
-    std::string message("Unknown dependent library ");
-    message += NameLibrary(library_name);
-    message += ". Did you require it with `using`?";
-    const auto& location = components[0]->location();
-    Fail(location, message);
-    return std::nullopt;
+  if (dependencies_.LookupAndUse(filename, library_name, &dep_library)) {
+      return Name(dep_library, decl_name);
   }
 
-  return Name(dep_library, decl_name);
+  // If the identifier is not found in the library it might refer to a
+  // declaration with a member (e.g. library.EnumX.val or BitsY.val).
+  SourceLocation member_name = decl_name;
+  SourceLocation member_decl_name = components.rbegin()[1]->location();
+
+  if (components.size() == 2) {
+    return Name(this, member_decl_name, std::string(member_name.data()));
+  }
+
+  std::vector<std::string_view> member_library_name(library_name);
+  member_library_name.pop_back();
+
+  Library* member_dep_library = nullptr;
+  if (dependencies_.LookupAndUse(filename, member_library_name, &member_dep_library)) {
+      return Name(member_dep_library, member_decl_name, std::string(member_name.data()));
+  }
+
+  std::string message("Unknown dependent library ");
+  message += NameLibrary(library_name);
+  message += " or reference to member of library";
+  message += NameLibrary(member_library_name);
+  message += ". Did you require it with `using`?";
+  const auto& location = components[0]->location();
+  Fail(location, message);
+  return std::nullopt;
 }
 
 namespace {
@@ -1471,12 +1491,12 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
   }
   if (name->maybe_location()) {
     if (dependencies_.Contains(name->maybe_location()->source_file().filename(),
-                               {name->name_part()})) {
-      std::ostringstream out;
-      out << "Declaration name '" << name->name_part()
-          << "' conflicts with a library import; consider using the 'as' keyword to import the "
-             "library under a different name.";
-      return Fail(*name, out.str());
+                               {name->maybe_location()->data()})) {
+      std::string message = "Declaration name '";
+      message.append(name->name_full());
+      message.append("' conflicts with a library import; consider using the "
+                     "'as' keyword to import the library under a different name.");
+      return Fail(*name, message);
     }
   }
 
@@ -2081,24 +2101,55 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
   assert(TypeCanBeConst(type) &&
          "Compiler bug: resolving identifier constant to non-const-able type!");
 
-  auto decl = LookupDeclByName(identifier_constant->name);
-  if (!decl || decl->kind != Decl::Kind::kConst)
+  auto decl = LookupDeclByName(identifier_constant->name.memberless_name());
+  if (!decl)
     return false;
 
-  // Recursively resolve constants
-  auto const_decl = static_cast<Const*>(decl);
-  if (!CompileConst(const_decl))
+  if (!CompileDecl(decl)) {
     return false;
-  assert(const_decl->value->IsResolved());
+  }
 
-  const ConstantValue& const_val = const_decl->value->Value();
+  const TypeConstructor* const_type_ctor;
+  const ConstantValue* const_val;
+  switch (decl->kind) {
+     case Decl::Kind::kConst: {
+      auto const_decl = static_cast<Const*>(decl);
+      const_type_ctor = const_decl->type_ctor.get();
+      const_val = &const_decl->value->Value();
+      break;
+     }
+     case Decl::Kind::kEnum: {
+      auto enum_decl = static_cast<Enum*>(decl);
+      const_type_ctor = enum_decl->subtype_ctor.get();
+      for (auto& member : enum_decl->members) {
+        if (member.name.data() == identifier_constant->name.member_name()) {
+          const_val = &member.value->Value();
+        }
+      }
+      break;
+     }
+     case Decl::Kind::kBits:{
+      auto bits_decl = static_cast<Bits*>(decl);
+      const_type_ctor = bits_decl->subtype_ctor.get();
+      for (auto& member : bits_decl->members) {
+        if (member.name.data() == identifier_constant->name.member_name()) {
+          const_val = &member.value->Value();
+        }
+      }
+      break;
+     }
+     default: {
+      assert(false && "unexpected kind");
+     }
+  }
+
   std::unique_ptr<ConstantValue> resolved_val;
   switch (type->kind) {
     case Type::Kind::kString: {
-      if (!TypeIsConvertibleTo(const_decl->type_ctor->type, type))
+      if (!TypeIsConvertibleTo(const_type_ctor->type, type))
         goto fail_cannot_convert;
 
-      if (!const_val.Convert(ConstantValue::Kind::kString, &resolved_val))
+      if (!const_val->Convert(ConstantValue::Kind::kString, &resolved_val))
         goto fail_cannot_convert;
       break;
     }
@@ -2106,47 +2157,47 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
       auto primitive_type = static_cast<const PrimitiveType*>(type);
       switch (primitive_type->subtype) {
         case types::PrimitiveSubtype::kBool:
-          if (!const_val.Convert(ConstantValue::Kind::kBool, &resolved_val))
+          if (!const_val->Convert(ConstantValue::Kind::kBool, &resolved_val))
             goto fail_cannot_convert;
           break;
         case types::PrimitiveSubtype::kInt8:
-          if (!const_val.Convert(ConstantValue::Kind::kInt8, &resolved_val))
+          if (!const_val->Convert(ConstantValue::Kind::kInt8, &resolved_val))
             goto fail_cannot_convert;
           break;
         case types::PrimitiveSubtype::kInt16:
-          if (!const_val.Convert(ConstantValue::Kind::kInt16, &resolved_val))
+          if (!const_val->Convert(ConstantValue::Kind::kInt16, &resolved_val))
             goto fail_cannot_convert;
           break;
         case types::PrimitiveSubtype::kInt32:
-          if (!const_val.Convert(ConstantValue::Kind::kInt32, &resolved_val))
+          if (!const_val->Convert(ConstantValue::Kind::kInt32, &resolved_val))
             goto fail_cannot_convert;
           break;
         case types::PrimitiveSubtype::kInt64:
-          if (!const_val.Convert(ConstantValue::Kind::kInt64, &resolved_val))
+          if (!const_val->Convert(ConstantValue::Kind::kInt64, &resolved_val))
             goto fail_cannot_convert;
           break;
         case types::PrimitiveSubtype::kUint8:
-          if (!const_val.Convert(ConstantValue::Kind::kUint8, &resolved_val))
+          if (!const_val->Convert(ConstantValue::Kind::kUint8, &resolved_val))
             goto fail_cannot_convert;
           break;
         case types::PrimitiveSubtype::kUint16:
-          if (!const_val.Convert(ConstantValue::Kind::kUint16, &resolved_val))
+          if (!const_val->Convert(ConstantValue::Kind::kUint16, &resolved_val))
             goto fail_cannot_convert;
           break;
         case types::PrimitiveSubtype::kUint32:
-          if (!const_val.Convert(ConstantValue::Kind::kUint32, &resolved_val))
+          if (!const_val->Convert(ConstantValue::Kind::kUint32, &resolved_val))
             goto fail_cannot_convert;
           break;
         case types::PrimitiveSubtype::kUint64:
-          if (!const_val.Convert(ConstantValue::Kind::kUint64, &resolved_val))
+          if (!const_val->Convert(ConstantValue::Kind::kUint64, &resolved_val))
             goto fail_cannot_convert;
           break;
         case types::PrimitiveSubtype::kFloat32:
-          if (!const_val.Convert(ConstantValue::Kind::kFloat32, &resolved_val))
+          if (!const_val->Convert(ConstantValue::Kind::kFloat32, &resolved_val))
             goto fail_cannot_convert;
           break;
         case types::PrimitiveSubtype::kFloat64:
-          if (!const_val.Convert(ConstantValue::Kind::kFloat64, &resolved_val))
+          if (!const_val->Convert(ConstantValue::Kind::kFloat64, &resolved_val))
             goto fail_cannot_convert;
           break;
       }
@@ -2164,7 +2215,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
 fail_cannot_convert:
   std::ostringstream msg_stream;
   msg_stream << NameFlatConstant(identifier_constant) << ", of type ";
-  msg_stream << NameFlatTypeConstructor(const_decl->type_ctor.get());
+  msg_stream << NameFlatTypeConstructor(const_type_ctor);
   msg_stream << ", cannot be converted to type " << NameFlatType(type);
   return Fail(msg_stream.str());
 }
@@ -2362,32 +2413,6 @@ bool Library::TypeIsConvertibleTo(const Type* from_type, const Type* to_type) {
   }  // switch
 }
 
-Decl* Library::LookupConstant(const TypeConstructor* type_ctor, const Name& name) {
-  // TODO(FIDL-486): Improve handling to make it consistent (and spec'ed).
-  auto decl = LookupDeclByName(type_ctor->name);
-  if (!decl || decl->kind == Decl::Kind::kTypeAlias) {
-    // This wasn't a named type. Thus we are looking up a
-    // top-level constant, of string, primitive type, or alias thereof.
-    auto iter = constants_.find(&name);
-    if (iter == constants_.end()) {
-      return nullptr;
-    }
-    return iter->second;
-  }
-  // We must otherwise be looking for an enum member.
-  if (decl->kind != Decl::Kind::kEnum) {
-    return nullptr;
-  }
-  auto enum_decl = static_cast<Enum*>(decl);
-  for (auto& member : enum_decl->members) {
-    if (member.name.data() == name.name_part()) {
-      return enum_decl;
-    }
-  }
-  // The enum didn't have a member of that name!
-  return nullptr;
-}
-
 // Library resolution is concerned with resolving identifiers to their
 // declarations, and with computing type sizes and alignments.
 
@@ -2409,6 +2434,20 @@ bool Library::ParseNumericLiteral(const raw::NumericLiteral* literal,
   std::string string_data(data.data(), data.data() + data.size());
   auto result = utils::ParseNumeric(string_data, out_value);
   return result == utils::ParseNumericResult::kSuccess;
+}
+
+Decl* Library::LookupConstantLegacy(const Name& name) {
+  for (auto& decl : declarations_) {
+    if (decl.second->kind == Decl::Kind::kEnum) {
+      auto enum_decl = static_cast<Enum*>(decl.second);
+      for (auto& member : enum_decl->members) {
+        if (member.name.data() == name.name_part()) {
+          return enum_decl;
+        }
+      }
+    }
+  }
+  return nullptr;
 }
 
 // Calculating declaration dependencies is largely serving the C/C++ family of languages bindings.
@@ -2457,11 +2496,15 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
     switch (constant->kind) {
       case Constant::Kind::kIdentifier: {
         auto identifier = static_cast<const flat::IdentifierConstant*>(constant);
-        auto decl = LookupConstant(type_ctor, identifier->name);
+        auto decl = LookupDeclByName(identifier->name.memberless_name());
         if (decl == nullptr) {
-          std::string message("Unable to find the constant named: ");
-          message += identifier->name.name_part();
-          return Fail(identifier->name, message.data());
+          // TODO(FIDL-299) Remove this fallback lookup.
+          decl = LookupConstantLegacy(identifier->name);
+          if (decl == nullptr) {
+            std::string message("Unable to find the constant named: ");
+            message += identifier->name.name_full();
+            return Fail(identifier->name, message.data());
+          }
         }
         edges.insert(decl);
         break;
@@ -3013,7 +3056,7 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
       // protocols.
       if (!decl) {
         std::string message("unknown type ");
-        message.append(name.name_part());
+        message.append(name.name_full());
         return Fail(name, message);
       }
       if (decl->kind != Decl::Kind::kProtocol)

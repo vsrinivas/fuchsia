@@ -472,6 +472,34 @@ const handle<thread> c = -1;
   END_TEST;
 }
 
+bool GoodConstEnumMemberReference() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+enum MyEnum : int32 { A = 5; };
+const int32 c = MyEnum.A;
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  END_TEST;
+}
+
+bool GoodConstBitsMemberReference() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+bits MyBits : uint32 { A = 0x00000001; };
+const uint32 c = MyBits.A;
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(consts_tests)
@@ -512,5 +540,8 @@ RUN_TEST(BadConstTestEnum)
 RUN_TEST(BadConstTestArray)
 RUN_TEST(BadConstTestVector)
 RUN_TEST(BadConstTestHandleOfThread)
+
+RUN_TEST(GoodConstEnumMemberReference)
+RUN_TEST(GoodConstBitsMemberReference)
 
 END_TEST_CASE(consts_tests)

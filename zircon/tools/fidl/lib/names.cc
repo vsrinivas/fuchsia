@@ -171,7 +171,9 @@ std::string NameRawLiteralKind(raw::Literal::Kind kind) {
   }
 }
 
-std::string NameFlatName(const flat::Name& name) { return FormatName(name, ".", "/"); }
+std::string NameFlatName(const flat::Name& name) {
+  return FormatName(name, ".", "/");
+}
 
 void NameFlatTypeConstructorHelper(std::ostringstream& buf,
                                    const flat::TypeConstructor* type_ctor) {
