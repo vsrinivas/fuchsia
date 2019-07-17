@@ -5,8 +5,9 @@
 #ifndef SRC_LIB_ISOLATED_DEVMGR_ISOLATED_DEVMGR_H_
 #define SRC_LIB_ISOLATED_DEVMGR_ISOLATED_DEVMGR_H_
 
-#include <lib/async/cpp/exception.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/devmgr-integration-test/fixture.h>
+#include <lib/zx/channel.h>
 
 #include <memory>
 
@@ -16,9 +17,13 @@ class IsolatedDevmgr {
   using ExceptionCallback = fit::function<void()>;
   IsolatedDevmgr(async_dispatcher_t* dispatcher,
                  devmgr_integration_test::IsolatedDevmgr devmgr)
-      : devmgr_(std::move(devmgr)),
-        watcher_(this, devmgr_.containing_job().get(), 0) {
-    watcher_.Bind(dispatcher);
+      : devmgr_(std::move(devmgr)), watcher_(this) {
+    devmgr_.containing_job().create_exception_channel(
+        0, &devmgr_exception_channel_);
+
+    watcher_.set_object(devmgr_exception_channel_.get());
+    watcher_.set_trigger(ZX_CHANNEL_READABLE);
+    watcher_.Begin(dispatcher);
   }
 
   ~IsolatedDevmgr() = default;
@@ -36,13 +41,13 @@ class IsolatedDevmgr {
       devmgr_launcher::Args args, async_dispatcher_t* dispatcher = nullptr);
 
  private:
-  void DevmgrException(async_dispatcher_t* dispatcher,
-                       async::ExceptionBase* exception, zx_status_t status,
-                       const zx_port_packet_t* report);
+  void DevmgrException(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                       zx_status_t status, const zx_packet_signal_t* signal);
 
   ExceptionCallback exception_callback_;
   devmgr_integration_test::IsolatedDevmgr devmgr_;
-  async::ExceptionMethod<IsolatedDevmgr, &IsolatedDevmgr::DevmgrException>
+  zx::channel devmgr_exception_channel_;
+  async::WaitMethod<IsolatedDevmgr, &IsolatedDevmgr::DevmgrException>
       watcher_;
 };
 }  // namespace isolated_devmgr

@@ -26,11 +26,9 @@ void IsolatedDevmgr::Connect(zx::channel req) {
 }
 
 void IsolatedDevmgr::DevmgrException(async_dispatcher_t* dispatcher,
-                                     async::ExceptionBase* exception,
+                                     async::WaitBase* wait,
                                      zx_status_t status,
-                                     const zx_port_packet_t* report) {
-  exception->Unbind();
-
+                                     const zx_packet_signal_t* signal) {
   if (exception_callback_) {
     exception_callback_();
   }
