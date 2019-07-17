@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_COMPONENT_COMPONENT_H_
+#define ZIRCON_SYSTEM_CORE_DEVMGR_COMPONENT_COMPONENT_H_
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
@@ -28,95 +29,105 @@ class Component;
 using ComponentBase = ddk::Device<Component, ddk::Rxrpcable, ddk::Unbindable>;
 
 class Component : public ComponentBase {
-public:
-    explicit Component(zx_device_t* parent)
-        : ComponentBase(parent), canvas_(parent), clock_(parent),
-          eth_board_(parent), gpio_(parent), i2c_(parent),
-          mipicsi_(parent), codec_(parent), pdev_(parent), power_(parent),
-          sysmem_(parent), ums_(parent) {}
+ public:
+  explicit Component(zx_device_t* parent)
+      : ComponentBase(parent),
+        canvas_(parent),
+        clock_(parent),
+        eth_board_(parent),
+        gpio_(parent),
+        i2c_(parent),
+        mipicsi_(parent),
+        codec_(parent),
+        pdev_(parent),
+        power_(parent),
+        sysmem_(parent),
+        ums_(parent) {}
 
-    static zx_status_t Bind(void* ctx, zx_device_t* parent);
+  static zx_status_t Bind(void* ctx, zx_device_t* parent);
 
-    zx_status_t DdkRxrpc(zx_handle_t channel);
-    void DdkUnbind();
-    void DdkRelease();
+  zx_status_t DdkRxrpc(zx_handle_t channel);
+  void DdkUnbind();
+  void DdkRelease();
 
-private:
-    struct I2cTransactContext {
-        sync_completion_t completion;
-        void* read_buf;
-        size_t read_length;
-        zx_status_t result;
-    };
-    struct CodecTransactContext {
-        sync_completion_t completion;
-        zx_status_t status;
-        void* buffer;
-        size_t size;
-    };
+ private:
+  struct I2cTransactContext {
+    sync_completion_t completion;
+    void* read_buf;
+    size_t read_length;
+    zx_status_t result;
+  };
+  struct CodecTransactContext {
+    sync_completion_t completion;
+    zx_status_t status;
+    void* buffer;
+    size_t size;
+  };
 
-    zx_status_t RpcCanvas(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                          uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                          uint32_t req_handle_count, zx_handle_t* resp_handles,
-                          uint32_t* resp_handle_count);
-    zx_status_t RpcClock(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                         uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                         uint32_t req_handle_count, zx_handle_t* resp_handles,
-                         uint32_t* resp_handle_count);
-    zx_status_t RpcEthBoard(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                            uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                            uint32_t req_handle_count, zx_handle_t* resp_handles,
-                            uint32_t* resp_handle_count);
-    zx_status_t RpcGpio(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+  zx_status_t RpcCanvas(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                         uint32_t* out_resp_size, const zx_handle_t* req_handles,
                         uint32_t req_handle_count, zx_handle_t* resp_handles,
                         uint32_t* resp_handle_count);
-    zx_status_t RpcI2c(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+  zx_status_t RpcClock(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                        uint32_t* out_resp_size, const zx_handle_t* req_handles,
                        uint32_t req_handle_count, zx_handle_t* resp_handles,
                        uint32_t* resp_handle_count);
-    zx_status_t RpcPdev(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                        uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                        uint32_t req_handle_count, zx_handle_t* resp_handles,
-                        uint32_t* resp_handle_count);
-    zx_status_t RpcPower(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                         uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                         uint32_t req_handle_count, zx_handle_t* resp_handles,
-                         uint32_t* resp_handle_count);
-    zx_status_t RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+  zx_status_t RpcEthBoard(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                           uint32_t* out_resp_size, const zx_handle_t* req_handles,
                           uint32_t req_handle_count, zx_handle_t* resp_handles,
                           uint32_t* resp_handle_count);
-    zx_status_t RpcUms(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+  zx_status_t RpcGpio(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                      uint32_t* out_resp_size, const zx_handle_t* req_handles,
+                      uint32_t req_handle_count, zx_handle_t* resp_handles,
+                      uint32_t* resp_handle_count);
+  zx_status_t RpcI2c(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                     uint32_t* out_resp_size, const zx_handle_t* req_handles,
+                     uint32_t req_handle_count, zx_handle_t* resp_handles,
+                     uint32_t* resp_handle_count);
+  zx_status_t RpcPdev(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                      uint32_t* out_resp_size, const zx_handle_t* req_handles,
+                      uint32_t req_handle_count, zx_handle_t* resp_handles,
+                      uint32_t* resp_handle_count);
+  zx_status_t RpcPower(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                        uint32_t* out_resp_size, const zx_handle_t* req_handles,
                        uint32_t req_handle_count, zx_handle_t* resp_handles,
                        uint32_t* resp_handle_count);
-    zx_status_t RpcMipiCsi(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                           uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                           uint32_t req_handle_count, zx_handle_t* resp_handles,
-                           uint32_t* resp_handle_count);
-    zx_status_t RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+  zx_status_t RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                        uint32_t* out_resp_size, const zx_handle_t* req_handles,
+                        uint32_t req_handle_count, zx_handle_t* resp_handles,
+                        uint32_t* resp_handle_count);
+  zx_status_t RpcUms(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                     uint32_t* out_resp_size, const zx_handle_t* req_handles,
+                     uint32_t req_handle_count, zx_handle_t* resp_handles,
+                     uint32_t* resp_handle_count);
+  zx_status_t RpcMipiCsi(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                          uint32_t* out_resp_size, const zx_handle_t* req_handles,
                          uint32_t req_handle_count, zx_handle_t* resp_handles,
                          uint32_t* resp_handle_count);
+  zx_status_t RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                       uint32_t* out_resp_size, const zx_handle_t* req_handles,
+                       uint32_t req_handle_count, zx_handle_t* resp_handles,
+                       uint32_t* resp_handle_count);
 
-    static void I2cTransactCallback(void* cookie, zx_status_t status, const i2c_op_t* op_list,
-                                    size_t op_count);
+  static void I2cTransactCallback(void* cookie, zx_status_t status, const i2c_op_t* op_list,
+                                  size_t op_count);
 
-    static void CodecTransactCallback(void* cookie, zx_status_t status,
-                                      const dai_supported_formats_t* formats_list,
-                                      size_t formats_count);
-    ddk::AmlogicCanvasProtocolClient canvas_;
-    ddk::ClockProtocolClient clock_;
-    ddk::EthBoardProtocolClient eth_board_;
-    ddk::GpioProtocolClient gpio_;
-    ddk::I2cProtocolClient i2c_;
-    ddk::MipiCsiProtocolClient mipicsi_;
-    ddk::CodecProtocolClient codec_;
-    ddk::PDevProtocolClient pdev_;
-    ddk::PowerProtocolClient power_;
-    ddk::SysmemProtocolClient sysmem_;
-    ddk::UsbModeSwitchProtocolClient ums_;
+  static void CodecTransactCallback(void* cookie, zx_status_t status,
+                                    const dai_supported_formats_t* formats_list,
+                                    size_t formats_count);
+  ddk::AmlogicCanvasProtocolClient canvas_;
+  ddk::ClockProtocolClient clock_;
+  ddk::EthBoardProtocolClient eth_board_;
+  ddk::GpioProtocolClient gpio_;
+  ddk::I2cProtocolClient i2c_;
+  ddk::MipiCsiProtocolClient mipicsi_;
+  ddk::CodecProtocolClient codec_;
+  ddk::PDevProtocolClient pdev_;
+  ddk::PowerProtocolClient power_;
+  ddk::SysmemProtocolClient sysmem_;
+  ddk::UsbModeSwitchProtocolClient ums_;
 };
 
-} // namespace component
+}  // namespace component
+
+#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_COMPONENT_COMPONENT_H_
