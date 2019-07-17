@@ -417,7 +417,6 @@ mod tests {
     use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeMarker};
     use fidl_fuchsia_wlan_sme as fidl_sme;
     use fuchsia_async as fasync;
-    use fuchsia_wlan_dev as wlan_dev;
     use fuchsia_zircon as zx;
     use futures::channel::mpsc;
     use futures::task::Poll;

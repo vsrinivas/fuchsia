@@ -7,7 +7,6 @@ use {
     fidl_fuchsia_wlan_device as fidl_wlan_dev,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo},
     fuchsia_cobalt::CobaltSender,
-    fuchsia_wlan_dev as wlan_dev,
     futures::{
         channel::mpsc,
         future::{Future, FutureExt, FutureObj},

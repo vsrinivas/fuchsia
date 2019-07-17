@@ -6,7 +6,6 @@ use failure::format_err;
 use fidl_fuchsia_wlan_device as fidl_wlan_dev;
 use fidl_fuchsia_wlan_mlme as fidl_mlme;
 use fuchsia_vfs_watcher::{WatchEvent, Watcher};
-use fuchsia_wlan_dev as wlan_dev;
 use fuchsia_zircon::Status as zx_Status;
 use futures::prelude::*;
 use log::{error, info};

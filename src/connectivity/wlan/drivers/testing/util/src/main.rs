@@ -4,10 +4,9 @@
 
 #![deny(warnings)]
 
-use failure::{Error, ResultExt, format_err};
+use failure::{format_err, Error, ResultExt};
 use fidl_fuchsia_wlan_device as wlan;
 use fuchsia_async as fasync;
-use fuchsia_wlan_dev as wlan_dev;
 use futures::prelude::*;
 use std::convert::Into;
 use std::fs::{File, OpenOptions};
@@ -70,14 +69,13 @@ fn rm_wlanphy() -> Result<(), Error> {
     let path = Path::new(DEV_TEST).join(WLAN);
     let dev = open_rdwr(path.clone())?;
 
-    sys::destroy_test_device(&dev)
-        .map(|_| println!("{:?} destroyed", path))
+    sys::destroy_test_device(&dev).map(|_| println!("{:?} destroyed", path))
 }
 
 fn query_wlanphy() -> Result<(), Error> {
     let (mut executor, proxy) = get_proxy()?;
     let fut = proxy.query().map_ok(|resp| {
-       println!("query results: {:?}", resp.info);
+        println!("query results: {:?}", resp.info);
     });
     executor.run_singlethreaded(fut).map_err(Into::into)
 }
@@ -86,7 +84,7 @@ fn create_wlanintf() -> Result<(), Error> {
     let (mut executor, proxy) = get_proxy()?;
     let mut req = wlan::CreateIfaceRequest { role: wlan::MacRole::Client, sme_channel: None };
     let fut = proxy.create_iface(&mut req).map_ok(|resp| {
-       println!("create results: {:?}", resp);
+        println!("create results: {:?}", resp);
     });
     executor.run_singlethreaded(fut).map_err(Into::into)
 }
@@ -95,7 +93,7 @@ fn destroy_wlanintf(id: u16) -> Result<(), Error> {
     let (mut executor, proxy) = get_proxy()?;
     let mut req = wlan::DestroyIfaceRequest { id: id };
     let fut = proxy.destroy_iface(&mut req).map_ok(|resp| {
-       println!("destroyed intf {} resp: {:?}", id, resp);
+        println!("destroyed intf {} resp: {:?}", id, resp);
     });
     executor.run_singlethreaded(fut).map_err(Into::into)
 }
@@ -122,12 +120,10 @@ fn main() -> Result<(), Error> {
                 let id = u16::from_str_radix(&args[2], 10)?;
                 destroy_wlanintf(id)
             }
-        },
+        }
         _ => {
             usage(appname);
             Ok(())
         }
     }
 }
-
-
