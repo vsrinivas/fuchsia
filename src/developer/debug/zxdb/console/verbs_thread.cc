@@ -48,6 +48,7 @@ constexpr int kForceNumberSigned = 5;
 constexpr int kForceNumberUnsigned = 6;
 constexpr int kForceNumberHex = 7;
 constexpr int kMaxArraySize = 8;
+constexpr int kRawOutput = 9;
 
 // If the system has at least one running process, returns true. If not, returns false and sets the
 // err.
@@ -116,6 +117,10 @@ Err GetConsoleFormatOptions(const Command& cmd, ConsoleFormatOptions* options) {
     }
   }
 
+  // Disable pretty-printing.
+  if (cmd.HasSwitch(kRawOutput))
+    options->enable_pretty_printing = false;
+
   if (num_type_overrides > 1)
     return Err("More than one type override (-c, -d, -u, -x) specified.");
   return Err();
@@ -127,6 +132,10 @@ Err GetConsoleFormatOptions(const Command& cmd, ConsoleFormatOptions* options) {
   "      256. Specifying large values will slow things down and make the\n"   \
   "      output harder to read, but the default is sometimes insufficient.\n" \
   "      This also applies to strings.\n"                                     \
+  "\n"                                                                        \
+  "  -r\n"                                                                    \
+  "  --raw\n"                                                                 \
+  "      Bypass pretty-printers and show the raw type information.\n"         \
   "\n"                                                                        \
   "  -t\n"                                                                    \
   "  --types\n"                                                               \
@@ -1320,7 +1329,8 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
       SwitchRecord(kForceNumberSigned, false, "", 'd'),
       SwitchRecord(kForceNumberUnsigned, false, "", 'u'),
       SwitchRecord(kForceNumberHex, false, "", 'x'),
-      SwitchRecord(kMaxArraySize, true, "max-array")};
+      SwitchRecord(kMaxArraySize, true, "max-array"),
+      SwitchRecord(kRawOutput, false, "raw", 'r')};
 
   VerbRecord backtrace(&DoBacktrace, {"backtrace", "bt"}, kBacktraceShortHelp, kBacktraceHelp,
                        CommandGroup::kQuery);

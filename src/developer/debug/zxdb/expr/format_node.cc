@@ -58,4 +58,9 @@ void FormatNode::FillProgramaticValue(fxl::RefPtr<EvalContext> context, fit::def
 
 void FormatNode::SetValue(ExprValue v) { value_ = std::move(v); }
 
+void FormatNode::SetDescribedError(const Err& e) {
+  set_err(e);
+  set_state(kDescribed);
+}
+
 }  // namespace zxdb

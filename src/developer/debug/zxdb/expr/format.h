@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_FORMAT_H_
 
 #include <functional>
+#include <optional>
 
 #include "lib/fit/defer.h"
 #include "lib/fit/function.h"
@@ -48,13 +49,16 @@ void FillFormatNodeDescription(FormatNode* node, const FormatOptions& options,
 
 // Formatters for strings. These are public so they can be shared by the pretty-printers.
 //
+// The "char pointer" variant can take a known string length or not. If one is not given, the
+// function will look for a null-terminated string.
+//
 // TODO(brettw) we probably want a more general way for pretty-printers to call into our default
 // code for handling certain types.
 void FormatCharArrayNode(FormatNode* node, fxl::RefPtr<Type> char_type, const uint8_t* data,
                          size_t length, bool length_was_known, bool truncated);
 void FormatCharPointerNode(FormatNode* node, uint64_t ptr, const Type* char_type,
-                           const FormatOptions& options, fxl::RefPtr<EvalContext> eval_context,
-                           fit::deferred_callback cb);
+                           std::optional<uint32_t> length, const FormatOptions& options,
+                           fxl::RefPtr<EvalContext> eval_context, fit::deferred_callback cb);
 
 }  // namespace zxdb
 

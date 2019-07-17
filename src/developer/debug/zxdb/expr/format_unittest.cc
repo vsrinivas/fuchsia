@@ -528,7 +528,7 @@ TEST_F(FormatTest, BadStrings) {
   // Should report invalid pointer.
   auto ptr_type = MakeCharPointerType();
   ExprValue ptr_value(ptr_type, address_data);
-  EXPECT_EQ(" = Err: 0x1100 «invalid pointer»\n", SyncTreeTypeDesc(ptr_value, opts));
+  EXPECT_EQ(" = Err: 0x1100 invalid pointer\n", SyncTreeTypeDesc(ptr_value, opts));
 
   // A null string should print just the null and not say invalid.
   ExprValue null_value(ptr_type, std::vector<uint8_t>(sizeof(uint64_t)));

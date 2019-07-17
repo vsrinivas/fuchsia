@@ -210,6 +210,7 @@ class FormatNode {
   // from the error without the value changing.
   const Err& err() const { return err_; }
   void set_err(const Err& e) { err_ = e; }
+  void SetDescribedError(const Err& e);  // Sets the state to "kDescribed" and the error.
 
  private:
   // See the getters above for documentation.

@@ -24,6 +24,8 @@ struct FormatOptions {
 
   // Format to apply to numeric types.
   NumFormat num_format = NumFormat::kDefault;
+
+  bool enable_pretty_printing = true;
 };
 
 }  // namespace zxdb

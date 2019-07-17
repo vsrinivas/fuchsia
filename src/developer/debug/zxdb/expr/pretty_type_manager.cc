@@ -5,7 +5,7 @@
 #include "src/developer/debug/zxdb/expr/pretty_type_manager.h"
 
 #include "src/developer/debug/zxdb/expr/format_node.h"
-#include "src/developer/debug/zxdb/expr/pretty_std_string.h"
+#include "src/developer/debug/zxdb/expr/pretty_string.h"
 #include "src/developer/debug/zxdb/expr/pretty_type.h"
 
 namespace zxdb {
@@ -18,21 +18,36 @@ PrettyType* PrettyTypeManager::GetForType(const Type* type) const {
   // something that match type names to objects.
   const std::string& type_name = type->GetFullName();
 
-  // std::string.
-  const char kStdStringLongName[] =
-      "basic_string<char, std::__2::char_traits<char>, std::__2::allocator<char> >";
-  const char kStdStringShortName[] = "std::__2::string";
-  if (type_name == kStdStringLongName || type_name == kStdStringShortName) {
-    static PrettyStdString pretty_std_string;
-    return &pretty_std_string;
+  if (type->GetLanguage() == DwarfLang::kRust) {
+    if (type_name == "&str") {
+      static PrettyRustStr pretty_rust_str;
+      return &pretty_rust_str;
+    } else if (type_name == "alloc::string::String") {
+      static PrettyRustString pretty_rust_string;
+      return &pretty_rust_string;
+    }
+  } else {
+    // Assume C/C++ for everything else.
+
+    if (type_name ==
+            "std::basic_string<char, std::__2::char_traits<char>, std::__2::allocator<char> >" ||
+        type_name == "std::__2::string") {
+      // Because of the weirdness of std::string's definition, we need to check for both the typedef
+      // source and the resolved value. The typedef won't always map to something.
+      static PrettyStdString pretty_std_string;
+      return &pretty_std_string;
+    } else if (type_name == "std::__2::basic_string_view<char, std::__2::char_traits<char> >") {
+      static PrettyStdStringView pretty_std_string_view;
+      return &pretty_std_string_view;
+    }
   }
 
   return nullptr;
 }
 
-bool PrettyTypeManager::Format(FormatNode* node, const FormatOptions& options,
+bool PrettyTypeManager::Format(FormatNode* node, const Type* type, const FormatOptions& options,
                                fxl::RefPtr<EvalContext> context, fit::deferred_callback& cb) const {
-  if (PrettyType* pretty = GetForType(node->value().type())) {
+  if (PrettyType* pretty = GetForType(type)) {
     pretty->Format(node, options, context, std::move(cb));
     return true;
   }

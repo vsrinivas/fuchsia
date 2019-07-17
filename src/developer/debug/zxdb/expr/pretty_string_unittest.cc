@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/expr/pretty_std_string.h"
+#include "src/developer/debug/zxdb/expr/pretty_string.h"
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/message_loop.h"
@@ -11,16 +11,37 @@
 #include "src/developer/debug/zxdb/expr/format_node.h"
 #include "src/developer/debug/zxdb/expr/format_options.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
+#include "src/developer/debug/zxdb/symbols/type_test_support.h"
 
 namespace zxdb {
 
 namespace {
 
-class PrettyStdStringTest : public TestWithLoop {};
+// Memory address/length of the default string. This is relatively long so it's guaranteed to
+// exceed the C++ short string optimization length.
+constexpr uint64_t kStringAddress = 0x99887766;
+constexpr uint64_t kStringLen = 69;  // Not including null.
+
+class PrettyStringTest : public TestWithLoop {
+ public:
+  PrettyStringTest() {
+    context_ = fxl::MakeRefCounted<MockEvalContext>();
+
+    const char kStringData[] =
+        "Now is the time for all good men to come to the aid of their country.";
+    context_->data_provider()->AddMemory(
+        kStringAddress, std::vector<uint8_t>(std::begin(kStringData), std::end(kStringData)));
+  }
+
+  fxl::RefPtr<MockEvalContext> context() { return context_; }
+
+ private:
+  fxl::RefPtr<MockEvalContext> context_;
+};
 
 }  // namespace
 
-TEST_F(PrettyStdStringTest, Short) {
+TEST_F(PrettyStringTest, StdStringShort) {
   // Encodes 'a'-'m' in the "short" form of a std::string.
   uint8_t kShortMem[24] = {
       0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68,  // Inline bytes...
@@ -30,14 +51,13 @@ TEST_F(PrettyStdStringTest, Short) {
 
   ExprValue short_value(fxl::RefPtr<Type>(),
                         std::vector<uint8_t>(std::begin(kShortMem), std::end(kShortMem)));
-  auto context = fxl::MakeRefCounted<MockEvalContext>();
   FormatNode node("value", short_value);
 
   PrettyStdString pretty;
 
   // Expect synchronous completion for the inline value case.
   bool completed = false;
-  pretty.Format(&node, FormatOptions(), context,
+  pretty.Format(&node, FormatOptions(), context(),
                 fit::defer_callback([&completed]() { completed = true; }));
   EXPECT_TRUE(completed);
 
@@ -46,27 +66,17 @@ TEST_F(PrettyStdStringTest, Short) {
 
 // Tests a string with no bytes but a source location. This string data encodes the "long" format
 // which is in turn another pointer.
-TEST_F(PrettyStdStringTest, Long) {
-  auto context = fxl::MakeRefCounted<MockEvalContext>();
-
-  // The string that's pointed to.
-  constexpr uint64_t kStringAddress = 0x245260;
-  constexpr size_t kStringLength = 0x45;
-  const char kStringData[] =
-      "Now is the time for all good men to come to the aid of their country.";
-  context->data_provider()->AddMemory(
-      kStringAddress, std::vector<uint8_t>(std::begin(kStringData), std::end(kStringData)));
-
+TEST_F(PrettyStringTest, StdStringLong) {
   // The std::string object representation.
   constexpr uint64_t kObjectAddress = 0x12345678;
   uint8_t kLongMem[24] = {
       // clang-format off
-      0x60, 0x52, 0x24, 0x00, 0x00, 0x00, 0x00, 0x00,  // Address = kStringAddress.
-      kStringLength, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // Length = kStringLength
+      0x66, 0x77, 0x88, 0x99, 0x00, 0x00, 0x00, 0x00,  // Address = kStringAddress.
+      kStringLen, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // Length = kStringLen
       0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80,  // Capacity (last bit is "long" flag).
       // clang-format on
   };
-  context->data_provider()->AddMemory(
+  context()->data_provider()->AddMemory(
       kObjectAddress, std::vector<uint8_t>(std::begin(kLongMem), std::end(kLongMem)));
 
   // The std::string object. This has no data in it because the real type isn't known, but it does
@@ -78,7 +88,40 @@ TEST_F(PrettyStdStringTest, Long) {
   PrettyStdString pretty;
 
   bool completed = false;
-  pretty.Format(&node, FormatOptions(), context,
+  pretty.Format(&node, FormatOptions(), context(),
+                fit::defer_callback([&completed, loop = &loop()]() {
+                  completed = true;
+                  loop->QuitNow();
+                }));
+  EXPECT_FALSE(completed);  // Should be async.
+  loop().Run();
+  EXPECT_TRUE(completed);
+
+  EXPECT_EQ("\"Now is the time for all good men to come to the aid of their country.\"",
+            node.description());
+}
+
+TEST_F(PrettyStringTest, RustStrings) {
+  // The str object representation is just a pointer and a length.
+  uint8_t kRustObject[16] = {
+      0x66,       0x77, 0x88, 0x99, 0x00, 0x00, 0x00, 0x00,  // Address = kStringAddress.
+      kStringLen, 0,    0,    0,    0,    0,    0,    0      // Length = kStringLen.
+  };
+
+  // The types here aren't quite right but are simpler and close enough for the current
+  // implementation.
+  auto str_type =
+      MakeCollectionType(DwarfTag::kStructureType, "&str",
+                         {{"data_ptr", MakeUint64Type()}, {"length", MakeUint64Type()}});
+  str_type->set_parent(MakeRustUnit());
+
+  ExprValue value(str_type, std::vector<uint8_t>(std::begin(kRustObject), std::end(kRustObject)));
+  FormatNode node("value", value);
+
+  PrettyRustStr pretty;
+
+  bool completed = false;
+  pretty.Format(&node, FormatOptions(), context(),
                 fit::defer_callback([&completed, loop = &loop()]() {
                   completed = true;
                   loop->QuitNow();

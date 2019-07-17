@@ -562,8 +562,8 @@ void FormatCharPointer(FormatNode* node, const Type* char_type, const FormatOpti
     node->set_err(Err("Bad pointer data."));
     return;
   }
-  FormatCharPointerNode(node, node->value().GetAs<TargetPointer>(), char_type, options,
-                        eval_context, std::move(cb));
+  FormatCharPointerNode(node, node->value().GetAs<TargetPointer>(), char_type, std::nullopt,
+                        options, eval_context, std::move(cb));
 }
 
 // Formats an array with a known length. This is for non-char arrays (which are special-cased in
@@ -669,10 +669,6 @@ void FillFormatNodeDescriptionFromValue(FormatNode* node, const FormatOptions& o
     return;
   }
 
-  // Check for pretty-printers.
-  if (context->GetPrettyTypeManager().Format(node, options, context, cb))
-    return;
-
   // All code paths below convert to "described" state.
   node->set_state(FormatNode::kDescribed);
   node->set_description(std::string());
@@ -686,6 +682,11 @@ void FillFormatNodeDescriptionFromValue(FormatNode* node, const FormatOptions& o
     return;
   }
   node->set_type(node->value().type()->GetFullName());
+
+  // Check for pretty-printers. This also happens again below if the type changed.
+  if (options.enable_pretty_printing &&
+      context->GetPrettyTypeManager().Format(node, node->value().type(), options, context, cb))
+    return;
 
   // Special-case zx_status_t. Long-term this should be removed and replaced with a pretty-printing
   // system where this can be expressed generically.
@@ -702,6 +703,12 @@ void FillFormatNodeDescriptionFromValue(FormatNode* node, const FormatOptions& o
   //
   // Always use this variable below instead of value.type().
   fxl::RefPtr<Type> type = node->value().GetConcreteType(context.get());
+
+  // Check for pretty-printers again now that we've resolved concrete types. Either the source or
+  // the destination of a typedef could have a pretty-printer.
+  if (options.enable_pretty_printing && type.get() != node->value().type() &&
+      context->GetPrettyTypeManager().Format(node, type.get(), options, context, cb))
+    return;
 
   // Arrays and strings.
   if (TryFormatArrayOrString(node, type.get(), options, context, cb))
@@ -851,8 +858,8 @@ void FormatCharArrayNode(FormatNode* node, fxl::RefPtr<Type> char_type, const ui
 }
 
 void FormatCharPointerNode(FormatNode* node, uint64_t ptr, const Type* char_type,
-                           const FormatOptions& options, fxl::RefPtr<EvalContext> eval_context,
-                           fit::deferred_callback cb) {
+                           std::optional<uint32_t> length, const FormatOptions& options,
+                           fxl::RefPtr<EvalContext> eval_context, fit::deferred_callback cb) {
   node->set_description_kind(FormatNode::kString);
 
   if (!ptr) {
@@ -861,8 +868,33 @@ void FormatCharPointerNode(FormatNode* node, uint64_t ptr, const Type* char_type
     return;
   }
 
+  if (length && *length == 0) {
+    // Empty string.
+    node->set_description("\"\"");
+    return;
+  }
+
   // Speculatively request the max string size.
-  uint32_t bytes_to_fetch = options.max_array_size;
+  uint32_t bytes_to_fetch;
+  bool truncated = false;
+  if (length) {
+    if (*length > options.max_array_size) {
+      bytes_to_fetch = options.max_array_size;
+      truncated = true;
+    } else {
+      bytes_to_fetch = *length;
+    }
+  } else {
+    bytes_to_fetch = options.max_array_size;
+
+    // Report as truncated because if the string goes to the end of this array it will be.
+    // FormatCharArrayNode will clear this flag if it finds a null before the end of the buffer.
+    //
+    // Don't want to set truncated if the data ended before the requested size, this means it
+    // hit the end of valid memory, so we're not omitting data by only showing that part of it.
+    truncated = true;
+  }
+
   if (bytes_to_fetch == 0) {
     // No array data should be fetched. Indicate that the result was truncated.
     node->set_description("\"\"...");
@@ -871,30 +903,24 @@ void FormatCharPointerNode(FormatNode* node, uint64_t ptr, const Type* char_type
 
   fxl::RefPtr<SymbolDataProvider> data_provider = eval_context->GetDataProvider();
 
-  // TODO(brettw) When GetMemoryAsync takes a move-only fit::callback the cb can just be
-  // std::move-ed into the lambda.
-  auto shared_cb = std::make_shared<fit::deferred_callback>(std::move(cb));
-  data_provider->GetMemoryAsync(
-      ptr, bytes_to_fetch,
-      [ptr, bytes_to_fetch, char_type = RefPtrTo(char_type), weak_node = node->GetWeakPtr(),
-       shared_cb](const Err& err, std::vector<uint8_t> data) {
-        if (!weak_node)
-          return;
+  data_provider->GetMemoryAsync(ptr, bytes_to_fetch,
+                                [ptr, bytes_to_fetch, char_type = RefPtrTo(char_type), truncated,
+                                 weak_node = node->GetWeakPtr(), cb = std::move(cb)](
+                                    const Err& err, std::vector<uint8_t> data) mutable {
+                                  if (!weak_node)
+                                    return;
 
-        if (data.empty()) {
-          // Should not have requested 0 size, so it if came back empty the pointer was invalid.
-          weak_node->set_err(Err("0x%" PRIx64 " «invalid pointer»", ptr));
-          return;
-        }
+                                  if (data.empty()) {
+                                    // Should not have requested 0 size, so it if came back empty
+                                    // the pointer was invalid.
+                                    weak_node->set_err(Err("0x%" PRIx64 " invalid pointer", ptr));
+                                    return;
+                                  }
 
-        // Report as truncated because if the string goes to the end of this array it will be.
-        // FormatCharArrayNode will clear this flag if it finds a null before the end of the buffer.
-        //
-        // Don't want to set truncated if the data ended before the requested size, this means it
-        // hit the end of valid memory, so we're not omitting data by only showing that part of it.
-        bool truncated = data.size() == bytes_to_fetch;
-        FormatCharArrayNode(weak_node.get(), char_type, &data[0], data.size(), false, truncated);
-      });
+                                  bool new_truncated = truncated && data.size() == bytes_to_fetch;
+                                  FormatCharArrayNode(weak_node.get(), char_type, &data[0],
+                                                      data.size(), false, new_truncated);
+                                });
 }
 
 }  // namespace zxdb

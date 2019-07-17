@@ -7,7 +7,12 @@
 
 #include <initializer_list>
 
+#include "src/developer/debug/zxdb/symbols/base_type.h"
+#include "src/developer/debug/zxdb/symbols/collection.h"
+#include "src/developer/debug/zxdb/symbols/compile_unit.h"
+#include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
+#include "src/developer/debug/zxdb/symbols/variant.h"
 
 namespace zxdb {
 

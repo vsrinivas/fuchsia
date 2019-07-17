@@ -2,15 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/expr/pretty_std_string.h"
+#include "src/developer/debug/zxdb/expr/pretty_string.h"
 
 #include "src/developer/debug/zxdb/expr/format.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
 #include "src/developer/debug/zxdb/expr/format_options.h"
+#include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 
 namespace zxdb {
+
+namespace {
+
+constexpr uint32_t kStdStringSize = 24;
 
 // A hardcoded pretty-printer for our std::string implementation.
 //
@@ -68,20 +73,12 @@ namespace zxdb {
 //     // actually "__compressed_pair<__rep, allocator> __r_" but effectively:
 //     compressed_pair __r_;
 //   };
-
-namespace {
-
-constexpr uint32_t kStdStringSize = 24;
-
 void FormatStdStringMemory(const std::vector<uint8_t>& mem, FormatNode* node,
                            const FormatOptions& options, fxl::RefPtr<EvalContext> context,
                            fit::deferred_callback cb) {
   node->set_type("std::string");
-  if (mem.size() != kStdStringSize) {
-    node->set_err(Err("Invalid."));
-    node->set_state(FormatNode::kDescribed);
-    return;
-  }
+  if (mem.size() != kStdStringSize)
+    return node->SetDescribedError(Err("Invalid."));
 
   // Offset from beginning of the object to "__short.__size_" (last byte).
   constexpr size_t kShortSizeOffset = 23;
@@ -103,7 +100,8 @@ void FormatStdStringMemory(const std::vector<uint8_t>& mem, FormatNode* node,
     uint64_t string_size;
     memcpy(&string_size, &mem[kLongSizeOffset], sizeof(uint64_t));
 
-    FormatCharPointerNode(node, data_ptr, char_type.get(), options, context, std::move(cb));
+    FormatCharPointerNode(node, data_ptr, char_type.get(), string_size, options, context,
+                          std::move(cb));
   } else {
     // Using the short inline data representation.
     size_t string_size = mem[kShortSizeOffset];
@@ -111,7 +109,26 @@ void FormatStdStringMemory(const std::vector<uint8_t>& mem, FormatNode* node,
   }
 }
 
+// Extracts a 64-bit structure member with the given name(s). Pass one name to extract a single
+// member, pass a sequence of names to recursively extract values from nested structs.
+Err Extract64BitMember(fxl::RefPtr<EvalContext> context, const ExprValue& value,
+                       std::initializer_list<std::string> names, uint64_t* extracted) {
+  ExprValue cur = value;
+  for (const std::string& name : names) {
+    ParsedIdentifier id(IdentifierQualification::kRelative, ParsedIdentifierComponent(name));
+    ExprValue expr_value;
+    if (Err err = ResolveMember(context, cur, id, &expr_value); err.has_error())
+      return err;
+
+    cur = std::move(expr_value);
+  }
+
+  return cur.PromoteTo64(extracted);
+}
+
 }  // namespace
+
+// C++ std::string ---------------------------------------------------------------------------------
 
 void PrettyStdString::Format(FormatNode* node, const FormatOptions& options,
                              fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
@@ -137,10 +154,77 @@ void PrettyStdString::Format(FormatNode* node, const FormatOptions& options,
             }
           });
     } else {
-      node->set_err(Err("<Missing definition>"));
-      node->set_state(FormatNode::kDescribed);
+      node->SetDescribedError(Err("<Missing definition>"));
     }
   }
+}
+
+// C++ std::string_view ----------------------------------------------------------------------------
+
+// TODO(brettw) we should add a way to write expressions so this implementation could be something
+// like:
+//   FormatCharArray(node, "(char*)data_ptr", "length");
+//
+// std::string_view is a structure with a "__data" pointer and a "__size" length.
+void PrettyStdStringView::Format(FormatNode* node, const FormatOptions& options,
+                                 fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
+  node->set_type("std::string_view");
+
+  // datar
+  uint64_t data;
+  if (Err err = Extract64BitMember(context, node->value(), {"__data"}, &data); err.has_error())
+    return node->SetDescribedError(err);
+
+  // length
+  uint64_t size;
+  if (Err err = Extract64BitMember(context, node->value(), {"__size"}, &size); err.has_error())
+    return node->SetDescribedError(err);
+
+  auto char_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 1, "char");
+  FormatCharPointerNode(node, data, char_type.get(), size, options, context, std::move(cb));
+}
+
+// Rust &str ---------------------------------------------------------------------------------------
+
+// "&str" is a struct with two members, a "data_ptr" pointer, and a "length" character count.
+void PrettyRustStr::Format(FormatNode* node, const FormatOptions& options,
+                           fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
+  // data_ptr
+  uint64_t data_ptr;
+  if (Err err = Extract64BitMember(context, node->value(), {"data_ptr"}, &data_ptr);
+      err.has_error())
+    return node->SetDescribedError(err);
+
+  // length
+  uint64_t length;
+  if (Err err = Extract64BitMember(context, node->value(), {"length"}, &length); err.has_error())
+    return node->SetDescribedError(err);
+
+  auto char_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 4, "char");
+  FormatCharPointerNode(node, data_ptr, char_type.get(), length, options, context, std::move(cb));
+}
+
+// Rust string::String -----------------------------------------------------------------------------
+
+// See TODO above about expressions. This implementation is extracting
+//   pointer = (char*)vec.buf.ptr.pointer
+//   length = vec.len
+void PrettyRustString::Format(FormatNode* node, const FormatOptions& options,
+                              fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
+  // pointer
+  uint64_t pointer;
+  if (Err err =
+          Extract64BitMember(context, node->value(), {"vec", "buf", "ptr", "pointer"}, &pointer);
+      err.has_error())
+    return node->SetDescribedError(err);
+
+  // len
+  uint64_t len;
+  if (Err err = Extract64BitMember(context, node->value(), {"vec", "len"}, &len); err.has_error())
+    return node->SetDescribedError(err);
+
+  auto char_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 4, "char");
+  FormatCharPointerNode(node, pointer, char_type.get(), len, options, context, std::move(cb));
 }
 
 }  // namespace zxdb

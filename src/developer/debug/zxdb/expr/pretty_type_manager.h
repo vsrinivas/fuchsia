@@ -30,9 +30,11 @@ class PrettyTypeManager {
   // take ownership of the callback (and maybe issue it immediately if the formatting was
   // synchronous) and return true.
   //
+  // The concrete type is passed in.
+  //
   // If there is no pretty type registered, does nothing with the callback and returns false.
-  bool Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
-              fit::deferred_callback& cb) const;
+  bool Format(FormatNode* node, const Type* type, const FormatOptions& options,
+              fxl::RefPtr<EvalContext> context, fit::deferred_callback& cb) const;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PrettyTypeManager);
