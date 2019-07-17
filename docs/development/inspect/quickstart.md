@@ -4,15 +4,18 @@ Inspect Quick Start
 
 [TOC]
 
-This document is a guide on how to get started with [Component Inspection](README.md) depending on your needs:
+This document is a guide on how to get started with [Component
+Inspection](README.md) depending on your needs:
 
 **I want to learn more about Inspect concepts**
 
-Read [Getting Started with Inspect](gsw-inspect.md) and the [README](README.md).
+Read [Getting Started with Inspect](gsw-inspect.md) and the
+[README](README.md).
 
 **I want to know how to use the iquery tool**
 
-Read the [iquery manual](iquery.md). For detailed examples of usage, see [Getting Started with Inspect](gsw-inspect.md).
+Read the [iquery manual](iquery.md). For detailed examples of usage,
+see [Getting Started with Inspect](gsw-inspect.md).
 
 This document provides a simplified example of iquery below.
 
@@ -27,9 +30,11 @@ See below for the quick start guide in your language of choice.
 ## C++
 
 ### Setup
-Note: If you need to support dynamic values, see [Dynamic Value Support](#dynamic-value-support). If you are unsure, keep reading.
+Note: If you need to support dynamic values, see [Dynamic Value
+Support](#dynamic-value-support). If you are unsure, keep reading.
 
-This section assumes you are writing an asynchronous component and that some part of your component (typically `main.cc`) looks like this:
+This section assumes you are writing an asynchronous component and that
+some part of your component (typically `main.cc`) looks like this:
 
 ```
 async::Loop loop(&kAsyncLoopConfigAttachToThread);
@@ -38,7 +43,15 @@ auto component_context = sys::ComponentContext::Create();
 loop.Run();
 ```
 
-This sets up an async loop, creates a `ComponentContext` wrapping handles provided by the runtime, and then runs that loop following some other initialization work.
+This sets up an async loop, creates a `ComponentContext` wrapping handles
+provided by the runtime, and then runs that loop following some other
+initialization work.
+
+**Add the following include**
+
+```
+#include <lib/sys/inspect/cpp/component.h>
+```
 
 **Change your initialization code to look like the following:**
 
@@ -46,13 +59,11 @@ This sets up an async loop, creates a `ComponentContext` wrapping handles provid
 async::Loop loop(&kAsyncLoopConfigAttachToThread);
 auto component_context = sys::ComponentContext::Create();
 auto inspector =
-      inspect::ComponentInspector::Initialize(component_context.get());
-inspect::Node& root_node = inspector->root_tree()->GetRoot();
+      sys::ComponentInspector::Initialize(component_context.get());
+inspect::Node& root_node = inspector->root();
 // ...
 loop.Run();
 ```
-
-Note: You will need to `#include <lib/inspect/component.h>`
 
 You are now using Inspect! To add some data and see it in action, try adding the following:
 
@@ -65,17 +76,24 @@ See [Viewing Inspect Data](#viewing-inspect-data) below to view what you are now
 
 See [Supported Data Types](#supported-data-types) for a full list of data types you can try.
 
-Want to test your Inspect integration? Include [testing/inspect.h](/garnet/public/lib/inspect/testing/inspect.h)
-in your unit test for a full set of matchers. See [this example](/garnet/public/lib/inspect_deprecated/tests/inspect_vmo_unittest.cc)
-of how it is used.
+Want to test your Inspect integration? Include
+[lib/inspect/testing/cpp/inspect.h][testing-header]
+in your unit test for a full set of matchers. See [this example][vmo-example] of how it is used.
+
+[testing-header]: /sdk/lib/inspect/testing
+[vmo-example]: /garnet/bin/appmgr/integration_tests/inspect/test-vmo.cc
 
 Read on to learn how Inspect is meant to be used in C++.
 
 #### Dynamic Value Support
 
-Certain features, such as LazyProperty, LazyMetric, and ChildrenCallback are deprecated, but a replacement is on the way (CF-761). If you determine that you need one of these data types, you may use the deprecated API by replacing the setup code with the following:
+Certain features, such as LazyProperty, LazyMetric, and ChildrenCallback
+are deprecated, but a replacement is on the way (CF-761). If you determine
+that you need one of these data types, you may use the deprecated API
+by replacing the setup code with the following:
 
 ```
+#include <lib/inspect_deprecated/inspect.h>
 
 // Legacy work required to expose an inspect hierarchy over FIDL.
 auto root = component::ObjectDir::Make("root");
@@ -89,29 +107,45 @@ auto root_node = inspect::Node(root);
 
 ### C++ Library Concepts
 
-Now that you have a `root_node` you may start building your hierarchy. This section describes some important concepts and patterns to help you get started.
+Now that you have a `root_node` you may start building your
+hierarchy. This section describes some important concepts and patterns
+to help you get started.
 
-* A Node may have any number of key/value pairs called **Values**.
-* A numeric Value is called a **Metric** and a non-numeric Value is called a **Property**.
+* A Node may have any number of key/value pairs called **Properties**.
+* The key for a Value is always a UTF-8 string, the value may be one of the supported types below.
 * A Node may have any number of children, which are also Nodes.
 
-The code above gives you access to a single node named "root". `hello_world_property` is a Property that contains a string value (aptly called a **StringProperty**).
+The code above gives you access to a single node named
+"root". `hello_world_property` is a Property that contains a string value
+(aptly called a **StringProperty**).
 
 * Values and Nodes are created under a parent Node.
 
-Class `Node` has creator methods for every type of supported value. `hello_world_property` was created using `CreateStringProperty`. You could create a child under the root node by calling `root_node.CreateChild("child name")`. Note that names must always be UTF-8 strings.
+Class `Node` has creator methods for every type of
+supported value. `hello_world_property` was created using
+`CreateStringProperty`. You could create a child under the root node
+by calling `root_node.CreateChild("child name")`. Note that names must
+always be UTF-8 strings.
 
 * Values and Nodes have strict ownership semantics.
 
-`hello_world_property` owns the Property. When it is destroyed (goes out of scope) the underlying Property is deleted and no longer present in your component's Inspect output. This is true for Metrics and child Nodes as well.
+`hello_world_property` owns the Property. When it is destroyed (goes
+out of scope) the underlying Property is deleted and no longer present
+in your component's Inspect output. This is true for Metrics and child
+Nodes as well.
 
 * Inspection is best-effort.
 
-Due to space limitations, the Inspect library may be unable to satisfy a `Create` request. This error is not surfaced to your code: you will receive a Node/Metric/Property object for which the methods are no-ops.
+Due to space limitations, the Inspect library may be unable to satisfy
+a `Create` request. This error is not surfaced to your code: you will
+receive a Node/Metric/Property object for which the methods are no-ops.
 
 * Pattern: Pass in child Nodes to child objects.
 
-It is useful to add an `inspect::Node` argument to the constructors for your own classes. The parent object, which should own its own `inspect::Node`, may then pass in the result of `CreateChild(...)` to its children when they are constructed:
+It is useful to add an `inspect::Node` argument to the constructors
+for your own classes. The parent object, which should own its own
+`inspect::Node`, may then pass in the result of `CreateChild(...)`
+to its children when they are constructed:
 
 ```
 class Child {
@@ -343,8 +377,5 @@ Type | Description | Notes
   StringProperty | A property with a UTF-8 string value. | All Languages
   ByteVectorProperty | A property with an arbitrary byte value. | All Languages
   Node | A node under which metrics, properties, and more nodes may be nested. | All Languages
-  LazyMetric | A metric which dynamically sets its value as the result of a callback. | DEPRECATED: C++ Only
-  LazyProperty | A property which dynamically sets its value as the result of a callback. | DEPRECATED: C++ Only
-  ChildrenCallback | A callback that dynamically injects children into a Node on demand. | DEPRECATED: C++ Only
   Link | Instantiates a complete tree of Nodes dynamically. | IN PROGRESS(CF-761): This will replace Lazy metrics, properties, and children
 
