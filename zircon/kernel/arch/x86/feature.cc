@@ -530,10 +530,16 @@ static const x86_microarch_config_t kbl_config{
     .disable_c1e = true,
     .idle_states =
         {
-            .states = {{.name = "C6", .mwait_hint = 0x50, .exit_latency = 151, .flushes_tlb = true},
-                       {.name = "C3", .mwait_hint = 0x20, .exit_latency = 79, .flushes_tlb = true},
-                       {.name = "C1E", .mwait_hint = 0x01, .exit_latency = 1, .flushes_tlb = false},
-                       X86_BASE_CSTATE(0)},
+            .states = {
+                {.name = "C10", .mwait_hint = 0x60, .exit_latency = 890, .flushes_tlb = true},
+                {.name = "C9", .mwait_hint = 0x50, .exit_latency = 480, .flushes_tlb = true},
+                {.name = "C8", .mwait_hint = 0x40, .exit_latency = 200, .flushes_tlb = true},
+                {.name = "C7s", .mwait_hint = 0x33, .exit_latency = 124, .flushes_tlb = true},
+                {.name = "C6", .mwait_hint = 0x20, .exit_latency = 85, .flushes_tlb = true},
+                {.name = "C3", .mwait_hint = 0x10, .exit_latency = 70, .flushes_tlb = true},
+                {.name = "C1E", .mwait_hint = 0x01, .exit_latency = 10, .flushes_tlb = false},
+                X86_CSTATE_C1(0),
+            },
         },
 };
 static const x86_microarch_config_t skl_config{
@@ -543,7 +549,7 @@ static const x86_microarch_config_t skl_config{
     .disable_c1e = true,
     .idle_states =
         {
-            .states = {X86_BASE_CSTATE(0)},
+            .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t bdw_config{
@@ -553,7 +559,7 @@ static const x86_microarch_config_t bdw_config{
     .disable_c1e = true,
     .idle_states =
         {
-            .states = {X86_BASE_CSTATE(0)},
+            .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t hsw_config{
@@ -563,7 +569,7 @@ static const x86_microarch_config_t hsw_config{
     .disable_c1e = true,
     .idle_states =
         {
-            .states = {X86_BASE_CSTATE(0)},
+            .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t ivb_config{
@@ -573,7 +579,7 @@ static const x86_microarch_config_t ivb_config{
     .disable_c1e = true,
     .idle_states =
         {
-            .states = {X86_BASE_CSTATE(0)},
+            .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t snb_config{
@@ -583,7 +589,7 @@ static const x86_microarch_config_t snb_config{
     .disable_c1e = true,
     .idle_states =
         {
-            .states = {X86_BASE_CSTATE(0)},
+            .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t westmere_config{
@@ -593,7 +599,7 @@ static const x86_microarch_config_t westmere_config{
     .disable_c1e = true,
     .idle_states =
         {
-            .states = {X86_BASE_CSTATE(0)},
+            .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t nehalem_config{
@@ -603,7 +609,7 @@ static const x86_microarch_config_t nehalem_config{
     .disable_c1e = true,
     .idle_states =
         {
-            .states = {X86_BASE_CSTATE(0)},
+            .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t smt_config{
@@ -613,7 +619,7 @@ static const x86_microarch_config_t smt_config{
     .disable_c1e = false,
     .idle_states =
         {
-            .states = {X86_BASE_CSTATE(0)},
+            .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t intel_default_config{
@@ -623,7 +629,7 @@ static const x86_microarch_config_t intel_default_config{
     .disable_c1e = false,
     .idle_states =
         {
-            .states = {X86_BASE_CSTATE(0)},
+            .states = {X86_CSTATE_C1(0)},
         },
 };
 
@@ -635,7 +641,7 @@ static const x86_microarch_config_t zen_config{
     .disable_c1e = false,
     .idle_states =
         {
-            .states = {X86_BASE_CSTATE(0)},
+            .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t jaguar_config{
@@ -645,7 +651,7 @@ static const x86_microarch_config_t jaguar_config{
     .disable_c1e = false,
     .idle_states =
         {
-            .states = {X86_BASE_CSTATE(0)},
+            .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t bulldozer_config{
@@ -655,7 +661,7 @@ static const x86_microarch_config_t bulldozer_config{
     .disable_c1e = false,
     .idle_states =
         {
-            .states = {X86_BASE_CSTATE(0)},
+            .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t amd_default_config{
@@ -665,7 +671,7 @@ static const x86_microarch_config_t amd_default_config{
     .disable_c1e = false,
     .idle_states =
         {
-            .states = {X86_BASE_CSTATE(0)},
+            .states = {X86_CSTATE_C1(0)},
         },
 };
 
@@ -677,7 +683,7 @@ static const x86_microarch_config_t unknown_vendor_config{
     .disable_c1e = false,
     .idle_states =
         {
-            .states = {X86_BASE_CSTATE(0)},
+            .states = {X86_CSTATE_C1(0)},
         },
 };
 

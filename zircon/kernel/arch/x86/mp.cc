@@ -54,7 +54,7 @@ static uint8_t unsafe_kstack[PAGE_SIZE] __ALIGNED(16);
 volatile uint8_t fake_monitor;
 
 // Also set up a fake table of idle states.
-x86_idle_states_t fake_supported_idle_states = {.states = {X86_BASE_CSTATE(0)}};
+x86_idle_states_t fake_supported_idle_states = {.states = {X86_CSTATE_C1(0)}};
 X86IdleStates fake_idle_states = X86IdleStates(&fake_supported_idle_states);
 
 // Pre-initialize the per cpu structure for the boot cpu. Referenced by
@@ -118,7 +118,7 @@ zx_status_t x86_allocate_ap_structures(uint32_t* apic_ids, uint8_t cpu_count) {
         idle_states_size = MAX_CACHE_LINE;
       }
       X86IdleStates* idle_states =
-          (X86IdleStates*)memalign(idle_states_size, idle_states_size * cpu_count);
+          static_cast<X86IdleStates*>(memalign(idle_states_size, idle_states_size * cpu_count));
       if (idle_states == nullptr) {
         return ZX_ERR_NO_MEMORY;
       }
@@ -337,6 +337,7 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
           x86_mwait(next_state->MwaitHint());
           auto duration = zx_time_sub_time(current_time(), start);
 
+          percpu->idle_states->RecordDuration(duration);
           next_state->RecordDuration(duration);
           next_state->CountEntry();
         }
@@ -486,7 +487,7 @@ void arch_flush_state_and_halt(event_t* flush_done) {
 }
 
 static void reset_idle_counters(X86IdleStates* idle_states) {
-  for (int i = 0; i < idle_states->NumStates(); i++) {
+  for (unsigned i = 0; i < idle_states->NumStates(); ++i) {
     idle_states->States()[i].ResetCounters();
   }
 }
@@ -494,13 +495,12 @@ static void reset_idle_counters(X86IdleStates* idle_states) {
 static void report_idlestats(int cpu_num, const X86IdleStates& idle_states) {
   printf("CPU %d:\n", cpu_num);
   const X86IdleState* states = idle_states.ConstStates();
-  for (int i = 0; i < idle_states.NumStates(); i++) {
-    printf("\t%4s (MWAIT %02X): %lu entries, %lu ns avg duration (%ld ns total)\n",
-           states[i].Name(), states[i].MwaitHint(), states[i].TimesEntered(),
-           states[i].TimesEntered() > 0
-               ? states[i].CumulativeDuration() / (states[i].TimesEntered())
-               : 0l,
-           states[i].CumulativeDuration());
+  for (unsigned i = 0; i < idle_states.NumStates(); ++i) {
+    const auto& state = states[i];
+    printf("  %4s (MWAIT %02X): %lu entries, %lu ns avg duration (%ld ns total)\n", state.Name(),
+           state.MwaitHint(), state.TimesEntered(),
+           state.TimesEntered() > 0 ? state.CumulativeDuration() / (state.TimesEntered()) : 0l,
+           state.CumulativeDuration());
   }
 }
 
