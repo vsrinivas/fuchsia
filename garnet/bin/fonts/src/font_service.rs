@@ -26,6 +26,7 @@ use {
     std::{
         collections::BTreeMap,
         fs::File,
+        iter,
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -179,14 +180,13 @@ impl FontFamily {
     }
 
     /// Get owned copies of the family's typefaces as `TypefaceInfo`
-    fn extract_faces(&self) -> Vec<TypefaceInfoAndCharSet> {
+    fn extract_faces<'a>(&'a self) -> impl Iterator<Item = TypefaceInfoAndCharSet> + 'a {
         // Convert Vec<Arc<Typeface>> to Vec<TypefaceInfo>
         self.faces
             .faces
             .iter()
             // Copy most fields from `Typeface` and use the canonical family name
-            .map(|face| TypefaceInfoAndCharSet::from_typeface(face, self.name.clone()))
-            .collect()
+            .map(move |face| TypefaceInfoAndCharSet::from_typeface(face, self.name.clone()))
     }
 }
 
@@ -347,10 +347,10 @@ impl FontService {
     }
 
     /// Get all font families whose name contains the requested string
-    fn match_families_substr(&self, family_name: String) -> Vec<&FontFamily> {
+    fn match_families_substr(&self, family_name: String) -> impl Iterator<Item = &FontFamily> {
         self.families
             .iter()
-            .filter_map(|(key, value)| {
+            .filter_map(move |(key, value)| {
                 // Note: This might not work for some non-Latin strings
                 if key.as_ref().to_lowercase().contains(&family_name.to_lowercase()) {
                     return self.resolve_alias(value);
@@ -358,7 +358,6 @@ impl FontService {
                 None
             })
             .unique_by(|family| &family.name)
-            .collect()
     }
 
     fn match_request(
@@ -450,7 +449,7 @@ impl FontService {
         let family = self
             .match_family(&UniCase::new(family_name.name.clone()))
             .ok_or(fonts_exp::Error::NotFound)?;
-        let faces = family.extract_faces().into_iter().map(|f| f.into()).collect();
+        let faces = family.extract_faces().map(|f| f.into()).collect();
         let response = fonts_exp::TypefaceInfoResponse { results: Some(faces) };
         Ok(response)
     }
@@ -459,34 +458,27 @@ impl FontService {
     /// Returns a vector of all available font families whose name or alias contains (or exactly
     /// matches, if the `ExactFamily` flag is set) the name requested in `query`.
     /// If `query` or `query.family` is `None`, all families are matched.
-    fn list_typefaces_match_families(
-        &self,
+    fn list_typefaces_match_families<'a>(
+        &'a self,
         flags: fonts_exp::ListTypefacesRequestFlags,
         query: Option<&fonts_exp::ListTypefacesQuery>,
-    ) -> Vec<&FontFamily> {
-        let get_all_families = || -> Vec<&FontFamily> {
-            self.families
-                .iter()
-                .filter_map(|(_, value)| match value {
-                    FamilyOrAlias::Family(family) => Some(family),
-                    FamilyOrAlias::Alias(_) => None,
-                })
-                .collect()
-        };
-
-        let filter_families = |name: String| -> Vec<&FontFamily> {
-            if flags.contains(fonts_exp::ListTypefacesRequestFlags::ExactFamily) {
-                return match self.match_family(&UniCase::new(name)) {
-                    Some(matched) => vec![matched],
-                    None => vec![],
-                };
+    ) -> Box<Iterator<Item = &FontFamily> + 'a> {
+        match query.and_then(|q| q.family.as_ref()) {
+            Some(fonts::FamilyName { name }) => {
+                if flags.contains(fonts_exp::ListTypefacesRequestFlags::ExactFamily) {
+                    match self.match_family(&UniCase::new(name.clone())) {
+                        Some(matched) => Box::new(iter::once(matched)),
+                        None => Box::new(iter::empty()),
+                    }
+                } else {
+                    Box::new(self.match_families_substr(name.clone()))
+                }
             }
-            self.match_families_substr(name)
-        };
-
-        query
-            .and_then(|q| q.family.as_ref())
-            .map_or_else(|| get_all_families(), |f| filter_families(f.name.clone()))
+            None => Box::new(self.families.iter().filter_map(move |(_, value)| match value {
+                FamilyOrAlias::Family(family) => Some(family),
+                FamilyOrAlias::Alias(_) => None,
+            })),
+        }
     }
 
     fn list_typefaces_inner(
@@ -499,7 +491,7 @@ impl FontService {
         let matched_families = self.list_typefaces_match_families(flags, query);
 
         // Flatten matches into Iter<TypefaceInfoAndCharSet>
-        let matched_faces = matched_families.into_iter().flat_map(|family| family.extract_faces());
+        let matched_faces = matched_families.flat_map(|family| family.extract_faces());
 
         let styles_predicate = |face: &TypefaceInfoAndCharSet| -> bool {
             match query.and_then(|q| q.styles.as_ref()) {
