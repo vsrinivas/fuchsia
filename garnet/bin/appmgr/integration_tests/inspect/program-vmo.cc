@@ -3,55 +3,52 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/inspect_deprecated/component.h>
 #include <lib/sys/cpp/component_context.h>
-
-#include "fs/vmo-file.h"
+#include <lib/sys/inspect/cpp/component.h>
 
 class Item {
  public:
-  Item(inspect_deprecated::Node node) : node_(std::move(node)) {
-    value_ = node_.CreateIntMetric("value", 0);
+  explicit Item(inspect::Node node) : node_(std::move(node)) {
+    value_ = node_.CreateInt("value", 0);
   }
 
   void Add(int64_t value) { value_.Add(value); }
 
  private:
-  inspect_deprecated::Node node_;
-  inspect_deprecated::IntMetric value_;
+  inspect::Node node_;
+  inspect::IntProperty value_;
 };
 
 class Table {
  public:
-  Table(inspect_deprecated::Node node) : node_(std::move(node)) {
-    version_ = node_.CreateStringProperty("version", "1.0");
-    frame_ = node_.CreateByteVectorProperty("frame", std::vector<uint8_t>({0, 0, 0}));
-    metric_ = node_.CreateIntMetric("value", -10);
+  explicit Table(inspect::Node node) : node_(std::move(node)) {
+    version_ = node_.CreateString("version", "1.0");
+    frame_ = node_.CreateByteVector("frame", std::vector<uint8_t>({0, 0, 0}));
+    metric_ = node_.CreateInt("value", -10);
   }
 
   std::shared_ptr<Item> NewItem(int64_t value) {
-    auto ret = std::make_shared<Item>(node_.CreateChild(inspect_deprecated::UniqueName("item-")));
+    auto ret = std::make_shared<Item>(node_.CreateChild(inspect::UniqueName("item-")));
     items_.emplace_back(ret);
     ret->Add(value);
     return ret;
   }
 
  private:
-  inspect_deprecated::Node node_;
-  inspect_deprecated::StringProperty version_;
-  inspect_deprecated::ByteVectorProperty frame_;
-  inspect_deprecated::IntMetric metric_;
+  inspect::Node node_;
+  inspect::StringProperty version_;
+  inspect::ByteVectorProperty frame_;
+  inspect::IntProperty metric_;
   std::vector<std::shared_ptr<Item>> items_;
 };
 
-int main(int argc, const char** argv) {
+int main() {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = sys::ComponentContext::Create();
-  auto inspector = inspect_deprecated::ComponentInspector::Initialize(context.get());
-  auto& root = inspector->root_tree()->GetRoot();
+  auto inspector = sys::ComponentInspector::Initialize(context.get());
 
-  Table t1(root.CreateChild("t1"));
-  Table t2(root.CreateChild("t2"));
+  Table t1(inspector->root().CreateChild("t1"));
+  Table t2(inspector->root().CreateChild("t2"));
 
   t1.NewItem(10);
   t1.NewItem(90)->Add(10);

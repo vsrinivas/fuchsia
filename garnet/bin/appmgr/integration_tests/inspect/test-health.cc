@@ -7,9 +7,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/inspect_deprecated/deprecated/expose.h>
-#include <lib/inspect_deprecated/reader.h>
-#include <lib/inspect_deprecated/testing/inspect.h>
+#include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <src/lib/fxl/strings/substitute.h>
 #include <zircon/device/vfs.h>
@@ -24,7 +22,7 @@ using ::fxl::Substitute;
 using sys::testing::EnclosingEnvironment;
 using ::testing::ElementsAre;
 using ::testing::UnorderedElementsAre;
-using namespace inspect_deprecated::testing;
+using namespace inspect::testing;
 
 constexpr char kTestComponent[] =
     "fuchsia-pkg://fuchsia.com/inspect_vmo_integration_tests#meta/"
@@ -99,14 +97,15 @@ TEST_F(InspectHealthTest, ReadHierarchy) {
   zx::vmo vmo;
   ASSERT_EQ(ZX_OK, GetInspectVmo(&vmo));
 
-  auto hierarchy = inspect_deprecated::ReadFromVmo(std::move(vmo)).take_value();
+  auto hierarchy = inspect::ReadFromVmo(std::move(vmo)).take_value();
 
-  EXPECT_THAT(hierarchy, AllOf(NodeMatches(NameMatches("root")),
-                               ChildrenMatch(UnorderedElementsAre(AllOf(NodeMatches(AllOf(
-                                   NameMatches("fuchsia.inspect.Health"),
-                                   PropertyList(UnorderedElementsAre(
-                                       StringPropertyIs("status", "UNHEALTHY"),
-                                       StringPropertyIs("message", "Example failure"))))))))));
+  EXPECT_THAT(
+      hierarchy,
+      AllOf(NodeMatches(NameMatches("root")),
+            ChildrenMatch(UnorderedElementsAre(AllOf(NodeMatches(AllOf(
+                NameMatches("fuchsia.inspect.Health"),
+                PropertyList(UnorderedElementsAre(StringIs("status", "UNHEALTHY"),
+                                                  StringIs("message", "Example failure"))))))))));
 }
 
 }  // namespace

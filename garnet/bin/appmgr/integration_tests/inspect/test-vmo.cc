@@ -7,9 +7,8 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/inspect_deprecated/deprecated/expose.h>
-#include <lib/inspect_deprecated/reader.h>
-#include <lib/inspect_deprecated/testing/inspect.h>
+#include <lib/inspect/cpp/reader.h>
+#include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <src/lib/fxl/strings/substitute.h>
 #include <zircon/device/vfs.h>
@@ -22,9 +21,8 @@ namespace {
 
 using ::fxl::Substitute;
 using sys::testing::EnclosingEnvironment;
-using ::testing::ElementsAre;
 using ::testing::UnorderedElementsAre;
-using namespace inspect_deprecated::testing;
+using namespace inspect::testing;
 
 constexpr char kTestComponent[] =
     "fuchsia-pkg://fuchsia.com/inspect_vmo_integration_tests#meta/"
@@ -102,35 +100,33 @@ TEST_F(InspectTest, ReadHierarchy) {
   zx::vmo vmo;
   ASSERT_EQ(ZX_OK, GetInspectVmo(&vmo));
 
-  auto hierarchy = inspect_deprecated::ReadFromVmo(std::move(vmo)).take_value();
+  auto hierarchy = inspect::ReadFromVmo(std::move(vmo)).take_value();
 
   EXPECT_THAT(
       hierarchy,
       AllOf(
           NodeMatches(NameMatches("root")),
           ChildrenMatch(UnorderedElementsAre(
-              AllOf(NodeMatches(
-                        AllOf(NameMatches("t1"),
-                              PropertyList(UnorderedElementsAre(
-                                  StringPropertyIs("version", "1.0"),
-                                  ByteVectorPropertyIs("frame", std::vector<uint8_t>({0, 0, 0})))),
-                              MetricList(UnorderedElementsAre(IntMetricIs("value", -10))))),
+              AllOf(NodeMatches(AllOf(NameMatches("t1"),
+                                      PropertyList(UnorderedElementsAre(
+                                          StringIs("version", "1.0"),
+                                          ByteVectorIs("frame", std::vector<uint8_t>({0, 0, 0})),
+                                          IntIs("value", -10))))),
                     ChildrenMatch(UnorderedElementsAre(
-                        NodeMatches(AllOf(NameMatches("item-0x0"), MetricList(UnorderedElementsAre(
-                                                                       IntMetricIs("value", 10))))),
-                        NodeMatches(AllOf(NameMatches("item-0x1"), MetricList(UnorderedElementsAre(
-                                                                       IntMetricIs("value", 100)))))
+                        NodeMatches(AllOf(NameMatches("item-0x0"),
+                                          PropertyList(UnorderedElementsAre(IntIs("value", 10))))),
+                        NodeMatches(AllOf(NameMatches("item-0x1"),
+                                          PropertyList(UnorderedElementsAre(IntIs("value", 100)))))
 
                             ))),
-              AllOf(NodeMatches(
-                        AllOf(NameMatches("t2"),
-                              PropertyList(UnorderedElementsAre(
-                                  StringPropertyIs("version", "1.0"),
-                                  ByteVectorPropertyIs("frame", std::vector<uint8_t>({0, 0, 0})))),
-                              MetricList(UnorderedElementsAre(IntMetricIs("value", -10))))),
-                    ChildrenMatch(UnorderedElementsAre(NodeMatches(
-                        AllOf(NameMatches("item-0x2"),
-                              MetricList(UnorderedElementsAre(IntMetricIs("value", 4)))))))
+              AllOf(NodeMatches(AllOf(NameMatches("t2"),
+                                      PropertyList(UnorderedElementsAre(
+                                          StringIs("version", "1.0"),
+                                          ByteVectorIs("frame", std::vector<uint8_t>({0, 0, 0})),
+                                          IntIs("value", -10))))),
+                    ChildrenMatch(UnorderedElementsAre(
+                        NodeMatches(AllOf(NameMatches("item-0x2"),
+                                          PropertyList(UnorderedElementsAre(IntIs("value", 4)))))))
 
                         )))));
 }
