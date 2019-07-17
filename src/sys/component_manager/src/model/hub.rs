@@ -9,7 +9,7 @@ use {
         addable_directory::{AddableDirectory, AddableDirectoryWithResult},
         error::ModelError,
     },
-    cm_rust::Capability,
+    cm_rust::UseDecl,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS},
     fuchsia_async as fasync,
@@ -328,11 +328,11 @@ impl Hub {
         open_mode: u32,
         relative_path: String,
         abs_moniker: &'a model::AbsoluteMoniker,
-        capability: &'a Capability,
+        use_decl: &'a UseDecl,
         server_chan: &'a mut Option<zx::Channel>,
     ) -> Result<(), ModelError> {
-        let mut dir_path = match capability {
-            Capability::Directory(source_path) => source_path.split(),
+        let mut dir_path = match use_decl {
+            UseDecl::Directory(d) => d.source_path.split(),
             _ => return Ok(()),
         };
 
@@ -395,7 +395,7 @@ impl model::Hook for Hub {
         open_mode: u32,
         relative_path: String,
         abs_moniker: &'a model::AbsoluteMoniker,
-        capability: &'a Capability,
+        use_decl: &'a UseDecl,
         server_chan: &'a mut Option<zx::Channel>,
     ) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(self.on_route_framework_capability_async(
@@ -403,7 +403,7 @@ impl model::Hook for Hub {
             open_mode,
             relative_path,
             abs_moniker,
-            capability,
+            use_decl,
             server_chan,
         ))
     }
@@ -423,8 +423,8 @@ mod tests {
             },
         },
         cm_rust::{
-            self, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeServiceDecl,
-            ExposeDirectoryDecl, ExposeSource, UseDecl, UseDirectoryDecl,UseServiceDecl, UseSource,
+            self, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
+            ExposeServiceDecl, ExposeSource, UseDecl, UseDirectoryDecl, UseServiceDecl, UseSource,
         },
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_io::{
@@ -694,7 +694,10 @@ mod tests {
         )
         .expect("Failed to open directory");
         // There are no out or runtime directories because there is no program running.
-        assert_eq!(vec!["expose", "in", "resolved_url"], await!(list_directory(&scoped_hub_dir_proxy)));
+        assert_eq!(
+            vec!["expose", "in", "resolved_url"],
+            await!(list_directory(&scoped_hub_dir_proxy))
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -735,9 +738,6 @@ mod tests {
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
-        assert_eq!(
-            vec!["data/hippo", "svc/bar"],
-            await!(list_directory_recursive(&expose_dir))
-        );
+        assert_eq!(vec!["data/hippo", "svc/bar"], await!(list_directory_recursive(&expose_dir)));
     }
 }

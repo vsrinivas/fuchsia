@@ -6,7 +6,7 @@ use {
     crate::directory_broker::{DirectoryBroker, RoutingFn},
     crate::model::addable_directory::AddableDirectory,
     crate::model::*,
-    cm_rust::{Capability, CapabilityPath, ComponentDecl, ExposeDecl, UseDecl, UseStorageDecl},
+    cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl, UseStorageDecl},
     fuchsia_vfs_pseudo_fs::directory,
     std::collections::HashMap,
 };
@@ -37,19 +37,14 @@ impl DirTree {
     /// Builds a directory hierarchy from a component's `exposes` declarations.
     /// `routing_factory` is a closure that generates the routing function that will be called
     /// when a leaf node is opened.
-    // TODO: refactor to take ExposeDecl
     pub fn build_from_exposes(
-        routing_factory: impl Fn(AbsoluteMoniker, Capability) -> RoutingFn,
+        routing_factory: impl Fn(AbsoluteMoniker, ExposeDecl) -> RoutingFn,
         abs_moniker: &AbsoluteMoniker,
         decl: ComponentDecl,
     ) -> Self {
         let mut tree = DirTree { directory_nodes: HashMap::new(), broker_nodes: HashMap::new() };
         for expose in decl.exposes {
-            let capability = match expose {
-                ExposeDecl::Service(d) => Capability::Service(d.target_path),
-                ExposeDecl::Directory(d) => Capability::Directory(d.target_path),
-            };
-            tree.add_expose_capability(&routing_factory, abs_moniker, &capability);
+            tree.add_expose_capability(&routing_factory, abs_moniker, &expose);
         }
         tree
     }
@@ -79,8 +74,8 @@ impl DirTree {
         use_: &UseDecl,
     ) -> Result<(), ModelError> {
         let path = match use_ {
-            cm_rust::UseDecl::Directory(d) => &d.target_path,
             cm_rust::UseDecl::Service(d) => &d.target_path,
+            cm_rust::UseDecl::Directory(d) => &d.target_path,
             cm_rust::UseDecl::Storage(UseStorageDecl::Data(p)) => &p,
             cm_rust::UseDecl::Storage(UseStorageDecl::Cache(p)) => &p,
             cm_rust::UseDecl::Storage(UseStorageDecl::Meta) => {
@@ -96,13 +91,16 @@ impl DirTree {
 
     fn add_expose_capability(
         &mut self,
-        routing_factory: &impl Fn(AbsoluteMoniker, Capability) -> RoutingFn,
+        routing_factory: &impl Fn(AbsoluteMoniker, ExposeDecl) -> RoutingFn,
         abs_moniker: &AbsoluteMoniker,
-        capability: &Capability,
+        expose: &ExposeDecl,
     ) {
-        let path = capability.path().expect("missing path");
+        let path = match expose {
+            cm_rust::ExposeDecl::Service(d) => &d.target_path,
+            cm_rust::ExposeDecl::Directory(d) => &d.target_path,
+        };
         let tree = self.to_directory_node(path);
-        let routing_fn = routing_factory(abs_moniker.clone(), capability.clone());
+        let routing_fn = routing_factory(abs_moniker.clone(), expose.clone());
         tree.broker_nodes.insert(path.basename.to_string(), routing_fn);
     }
 
@@ -135,10 +133,7 @@ mod tests {
         fuchsia_async as fasync,
         fuchsia_vfs_pseudo_fs::directory::{self, entry::DirectoryEntry},
         fuchsia_zircon as zx,
-        std::{
-            convert::TryFrom,
-            iter,
-        },
+        std::{convert::TryFrom, iter},
     };
 
     #[fuchsia_async::run_singlethreaded(test)]

@@ -7,7 +7,7 @@ use {
     crate::model::testing::mocks::*,
     crate::model::testing::routing_test_helpers::*,
     cm_rust::{
-        self, Capability, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
+        self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
         ExposeDirectoryDecl, ExposeServiceDecl, ExposeSource, OfferDecl, OfferDirectoryDecl,
         OfferDirectorySource, OfferServiceDecl, OfferServiceSource, OfferTarget, UseDecl,
         UseDirectoryDecl, UseServiceDecl, UseSource,
@@ -1440,23 +1440,19 @@ async fn expose_from_self_and_child() {
     let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use_exposed_dir(
         vec!["b"].into(),
-        Capability::Directory("/data/bar/hippo".try_into().unwrap()),
-        true
+        CheckUse::Directory { path: "/data/bar/hippo".try_into().unwrap(), should_succeed: true },
     ));
     await!(test.check_use_exposed_dir(
         vec!["b"].into(),
-        Capability::Service("/svc/bar/hippo".try_into().unwrap()),
-        true
+        CheckUse::Service { path: "/svc/bar/hippo".try_into().unwrap(), should_succeed: true },
     ));
     await!(test.check_use_exposed_dir(
         vec!["b", "c"].into(),
-        Capability::Directory(default_directory_capability()),
-        true
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     ));
     await!(test.check_use_exposed_dir(
         vec!["b", "c"].into(),
-        Capability::Service(default_service_capability()),
-        true
+        CheckUse::Service { path: default_service_capability(), should_succeed: true },
     ));
 }
 
@@ -1509,22 +1505,18 @@ async fn use_not_exposed() {
     // Capability is only exposed from "c", so it only be usable from there.
     await!(test.check_use_exposed_dir(
         vec!["b"].into(),
-        Capability::Directory(default_directory_capability()),
-        false,
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
     ));
     await!(test.check_use_exposed_dir(
         vec!["b"].into(),
-        Capability::Service(default_service_capability()),
-        false,
+        CheckUse::Service { path: default_service_capability(), should_succeed: false },
     ));
     await!(test.check_use_exposed_dir(
         vec!["b", "c"].into(),
-        Capability::Directory(default_directory_capability()),
-        true
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     ));
     await!(test.check_use_exposed_dir(
         vec!["b", "c"].into(),
-        Capability::Service(default_service_capability()),
-        true
+        CheckUse::Service { path: default_service_capability(), should_succeed: true },
     ));
 }

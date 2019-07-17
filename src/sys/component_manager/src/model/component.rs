@@ -8,7 +8,6 @@ use {
     fidl::endpoints::Proxy,
     fidl_fuchsia_io::{DirectoryProxy, MODE_TYPE_DIRECTORY},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::future::BoxFuture,
     futures::lock::Mutex,
     log::*,
     std::convert::TryInto,
@@ -64,16 +63,13 @@ impl Realm {
         if state.meta_dir.is_some() {
             return Ok(Some(state.meta_dir.as_ref().unwrap().clone()));
         }
-        if state
-            .decl
-            .as_ref()
-            .map(|decl| {
-                decl.uses.iter().find(|u| u == &&UseDecl::Storage(UseStorageDecl::Meta)).is_none()
-            })
-            .unwrap_or(false)
-        {
+        let meta_use = state.decl.as_ref().and_then(|decl| {
+            decl.uses.iter().find(|u| u == &&UseDecl::Storage(UseStorageDecl::Meta))
+        });
+        if meta_use.is_none() {
             return Ok(None);
         }
+        let meta_use = meta_use.unwrap().clone();
 
         // Don't hold the state lock while performing routing for the meta storage capability, as
         // the routing logic may want to acquire the lock for this component's state.
@@ -81,8 +77,13 @@ impl Realm {
 
         let (meta_client_chan, server_chan) =
             zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
-        let res =
-            await!(route_and_open_meta_capability(model, self.abs_moniker.clone(), server_chan));
+        let res = await!(routing::route_and_open_storage_capability(
+            &model,
+            &meta_use,
+            MODE_TYPE_DIRECTORY,
+            self.abs_moniker.clone(),
+            server_chan
+        ));
 
         // All other capability types don't cause realm loading or binding to fail when they're set
         // up incorrectly, so storage capabilities shouldn't either. Log errors here and proceed if
@@ -169,25 +170,6 @@ impl Realm {
         }
         Ok(())
     }
-}
-
-/// Finds the backing directory for the meta capability used by the provided moniker, and binds
-/// to the providing component, connecting the provided channel to the appropriate meta
-/// directory. Moved into a separate function to break async cycles.
-fn route_and_open_meta_capability<'a>(
-    model: &'a Model,
-    moniker: AbsoluteMoniker,
-    server_chan: zx::Channel,
-) -> BoxFuture<'a, Result<(), ModelError>> {
-    Box::pin(async move {
-        await!(routing::route_and_open_storage_capability(
-            &model,
-            fsys::StorageType::Meta,
-            MODE_TYPE_DIRECTORY,
-            moniker,
-            server_chan
-        ))
-    })
 }
 
 impl RealmState {

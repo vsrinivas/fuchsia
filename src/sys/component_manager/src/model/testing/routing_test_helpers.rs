@@ -8,7 +8,7 @@ use {
         model::testing::memfs::Memfs, model::testing::mocks::*, model::*,
     },
     cm_rust::{
-        Capability, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeSource, OfferDecl,
+        CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeSource, OfferDecl,
         OfferDirectorySource, OfferServiceSource, UseDecl, UseStorageDecl,
     },
     fidl::endpoints::{self, create_proxy, ClientEnd, ServerEnd},
@@ -244,14 +244,9 @@ impl RoutingTest {
     }
 
     /// Checks using a capability from a component's exposed directory.
-    pub async fn check_use_exposed_dir(
-        &self,
-        moniker: AbsoluteMoniker,
-        capability: Capability,
-        should_succeed: bool,
-    ) {
-        match capability {
-            Capability::Service(path) => {
+    pub async fn check_use_exposed_dir(&self, moniker: AbsoluteMoniker, check: CheckUse) {
+        match check {
+            CheckUse::Service { path, should_succeed } => {
                 await!(capability_util::call_echo_svc_from_exposed_dir(
                     path,
                     &moniker,
@@ -259,7 +254,7 @@ impl RoutingTest {
                     should_succeed
                 ));
             }
-            Capability::Directory(path) => {
+            CheckUse::Directory { path, should_succeed } => {
                 await!(capability_util::read_data_from_exposed_dir(
                     path,
                     &moniker,
@@ -267,7 +262,9 @@ impl RoutingTest {
                     should_succeed
                 ));
             }
-            Capability::Storage(_, _) => panic!("storage capabilities cannot be exposed"),
+            CheckUse::Storage { .. } => {
+                panic!("storage capabilities can't be exposed");
+            }
         }
     }
 

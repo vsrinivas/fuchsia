@@ -7,7 +7,7 @@ use {
         directory_broker::RoutingFn,
         model::{moniker::AbsoluteMoniker, routing::*, Model},
     },
-    cm_rust::{Capability, UseDecl},
+    cm_rust::{ExposeDecl, UseDecl},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::NodeMarker,
     fuchsia_async as fasync,
@@ -35,11 +35,11 @@ impl RoutingFacade {
     }
 
     /// Returns a factory for functions that route an `expose` declaration to its source.
-    pub fn route_expose_fn_factory(&self) -> impl Fn(AbsoluteMoniker, Capability) -> RoutingFn {
+    pub fn route_expose_fn_factory(&self) -> impl Fn(AbsoluteMoniker, ExposeDecl) -> RoutingFn {
         let model = self.model.clone();
-        move |abs_moniker: AbsoluteMoniker, capability: Capability| {
+        move |abs_moniker: AbsoluteMoniker, expose: ExposeDecl| {
             let model = model.clone();
-            route_expose_fn(model, abs_moniker, capability)
+            route_expose_fn(model, abs_moniker, expose)
         }
     }
 }
@@ -68,26 +68,22 @@ fn route_use_fn(model: Model, abs_moniker: AbsoluteMoniker, use_: UseDecl) -> Ro
     )
 }
 
-fn route_expose_fn(
-    model: Model,
-    abs_moniker: AbsoluteMoniker,
-    capability: Capability,
-) -> RoutingFn {
+fn route_expose_fn(model: Model, abs_moniker: AbsoluteMoniker, expose: ExposeDecl) -> RoutingFn {
     Box::new(
         move |_flags: u32, mode: u32, _relative_path: String, server_end: ServerEnd<NodeMarker>| {
             let model = model.clone();
             let abs_moniker = abs_moniker.clone();
-            let capability = capability.clone();
+            let expose = expose.clone();
             fasync::spawn(async move {
                 let res = await!(route_expose_capability(
                     &model,
                     mode,
-                    &capability,
+                    &expose,
                     abs_moniker.clone(),
                     server_end.into_channel(),
                 ));
                 if let Err(e) = res {
-                    eprintln!("failed to route service for exposed dir {}: {:?}", abs_moniker, e);
+                    error!("failed to route service for exposed dir {}: {:?}", abs_moniker, e);
                 }
             });
         },

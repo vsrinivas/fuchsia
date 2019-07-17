@@ -4,7 +4,7 @@
 
 use {
     crate::model::*,
-    cm_rust::{Capability, CapabilityPath, data},
+    cm_rust::{data, CapabilityPath, UseDecl},
     failure::format_err,
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_io::{
@@ -47,7 +47,7 @@ pub trait Hook {
         open_mode: u32,
         relative_path: String,
         abs_moniker: &'a AbsoluteMoniker,
-        capability: &'a Capability,
+        use_decl: &'a UseDecl,
         server_chan: &'a mut Option<zx::Channel>,
     ) -> BoxFuture<Result<(), ModelError>>;
 }

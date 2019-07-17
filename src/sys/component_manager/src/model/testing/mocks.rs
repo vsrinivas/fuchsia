@@ -5,7 +5,7 @@
 use {
     crate::directory_broker::RoutingFn,
     crate::model::*,
-    cm_rust::{Capability, ComponentDecl, UseDecl},
+    cm_rust::{ComponentDecl, ExposeDecl, UseDecl},
     failure::{format_err, Error},
     fidl::endpoints::ServerEnd,
     fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream},
@@ -29,25 +29,48 @@ use {
 /// - Redirects all directory capabilities to a directory with the file "hello".
 /// - Redirects all service capabilities to the echo service.
 pub fn proxy_use_routing_factory() -> impl Fn(AbsoluteMoniker, UseDecl) -> RoutingFn {
-    move |_abs_moniker: AbsoluteMoniker, use_decl: UseDecl| {
-        new_proxy_routing_fn(use_decl.clone().into())
-    }
+    move |_abs_moniker: AbsoluteMoniker, use_decl: UseDecl| new_proxy_routing_fn(use_decl.into())
 }
 
 /// Creates a routing function factory for `ExposeDecl` that does the following:
 /// - Redirects all directory capabilities to a directory with the file "hello".
 /// - Redirects all service capabilities to the echo service.
-pub fn proxy_expose_routing_factory() -> impl Fn(AbsoluteMoniker, Capability) -> RoutingFn {
-    move |_abs_moniker: AbsoluteMoniker, capability: Capability| {
-        new_proxy_routing_fn(capability.clone())
+pub fn proxy_expose_routing_factory() -> impl Fn(AbsoluteMoniker, ExposeDecl) -> RoutingFn {
+    move |_abs_moniker: AbsoluteMoniker, expose_decl: ExposeDecl| {
+        new_proxy_routing_fn(expose_decl.into())
     }
 }
 
-fn new_proxy_routing_fn(capability: Capability) -> RoutingFn {
+enum CapabilityType {
+    Service,
+    Directory,
+    Storage,
+}
+
+impl From<UseDecl> for CapabilityType {
+    fn from(use_: UseDecl) -> Self {
+        match use_ {
+            UseDecl::Service(_) => CapabilityType::Service,
+            UseDecl::Directory(_) => CapabilityType::Directory,
+            UseDecl::Storage(_) => CapabilityType::Storage,
+        }
+    }
+}
+
+impl From<ExposeDecl> for CapabilityType {
+    fn from(expose: ExposeDecl) -> Self {
+        match expose {
+            ExposeDecl::Service(_) => CapabilityType::Service,
+            ExposeDecl::Directory(_) => CapabilityType::Directory,
+        }
+    }
+}
+
+fn new_proxy_routing_fn(ty: CapabilityType) -> RoutingFn {
     Box::new(
         move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
-            match capability {
-                Capability::Service(_) => {
+            match ty {
+                CapabilityType::Service => {
                     fasync::spawn(async move {
                         let server_end: ServerEnd<EchoMarker> =
                             ServerEnd::new(server_end.into_channel());
@@ -59,7 +82,7 @@ fn new_proxy_routing_fn(capability: Capability) -> RoutingFn {
                         }
                     });
                 }
-                Capability::Directory(_) | Capability::Storage(_, _) => {
+                CapabilityType::Directory | CapabilityType::Storage => {
                     let mut sub_dir = directory::simple::empty();
                     sub_dir
                         .add_entry("hello", { read_only(move || Ok(b"friend".to_vec())) })

@@ -7,7 +7,7 @@ use {
     failure::Fail,
     fidl_fuchsia_data as fdata, fidl_fuchsia_sys2 as fsys,
     std::collections::HashMap,
-    std::convert::{From, TryFrom, TryInto},
+    std::convert::{TryFrom, TryInto},
     std::fmt,
 };
 
@@ -215,47 +215,7 @@ impl Clone for ComponentDecl {
 }
 
 impl ComponentDecl {
-    /// Returns the `ExposeDecl` that exposes `capability`, if it exists.
-    pub fn find_expose_source<'a>(&'a self, capability: &Capability) -> Option<&'a ExposeDecl> {
-        self.exposes.iter().find(|&e| match (capability, e) {
-            (Capability::Service(p), ExposeDecl::Service(d)) => d.target_path == *p,
-            (Capability::Directory(p), ExposeDecl::Directory(d)) => d.target_path == *p,
-            _ => false,
-        })
-    }
-
-    /// Returns the `OfferDecl` that offers `capability` to `child_name`, if it exists.
-    // TODO: Expose the `moniker` module in its own crate. Then this function can take a
-    // `ChildMoniker`.
-    pub fn find_offer_source<'a>(
-        &'a self,
-        capability: &Capability,
-        child_name: &str,
-        collection: Option<&str>,
-    ) -> Option<&'a OfferDecl> {
-        self.offers.iter().find(|&offer| match (capability, offer) {
-            (Capability::Service(p), OfferDecl::Service(d)) => {
-                Self::is_capability_match(child_name, collection, p, &d.target, &d.target_path)
-            }
-            (Capability::Directory(p), OfferDecl::Directory(d)) => {
-                Self::is_capability_match(child_name, collection, p, &d.target, &d.target_path)
-            }
-            (Capability::Storage(type_, _), OfferDecl::Storage(s)) => {
-                // The types must match
-                &s.type_() == type_ &&
-                    // and the child/collection names must match
-                    match (s.target(),collection) {
-                        (OfferTarget::Child(target_child_name), None) =>
-                            target_child_name == child_name,
-                        (OfferTarget::Collection(target_collection_name), Some(collection)) =>
-                            target_collection_name == collection,
-                        _ => false
-                    }
-            }
-            _ => false,
-        })
-    }
-
+    /// Returns the `StorageDecl` corresponding to `storage_name`.
     pub fn find_storage_source<'a>(&'a self, storage_name: &str) -> Option<&'a StorageDecl> {
         self.storage.iter().find(|s| &s.name == storage_name)
     }
@@ -263,25 +223,6 @@ impl ComponentDecl {
     /// Returns the `CollectionDecl` corresponding to `collection_name`.
     pub fn find_collection<'a>(&'a self, collection_name: &str) -> Option<&'a CollectionDecl> {
         self.collections.iter().find(|c| c.name == collection_name)
-    }
-
-    fn is_capability_match(
-        child_name: &str,
-        collection: Option<&str>,
-        path: &CapabilityPath,
-        target: &OfferTarget,
-        target_path: &CapabilityPath,
-    ) -> bool {
-        match target {
-            OfferTarget::Child(target_child_name) => match collection {
-                Some(_) => false,
-                None => target_path == path && target_child_name == child_name,
-            },
-            OfferTarget::Collection(target_collection_name) => match collection {
-                Some(collection) => target_path == path && target_collection_name == collection,
-                None => false,
-            },
-        }
     }
 }
 
@@ -492,118 +433,6 @@ fn from_fidl_vec(vec: fdata::Vector) -> Vec<Value> {
 
 fn from_fidl_dict(dict: fdata::Dictionary) -> HashMap<String, Value> {
     dict.entries.into_iter().map(|e| (e.key, e.value.fidl_into_native())).collect()
-}
-
-/// Generic container for any capability type. Doesn't map onto any fidl declaration, but useful as
-/// an intermediate representation.
-// TODO: `Capability` tries to merge representations for `use`, `offer`, and `expose`, and as such
-// obscures the differences between them and loses information. Consider removing this type in
-// favor of using `UseDecl`, `ExposeDecl`, and `OfferDecl` directly.
-#[derive(Debug, Clone, PartialEq)]
-pub enum Capability {
-    Service(CapabilityPath),
-    Directory(CapabilityPath),
-    Storage(fsys::StorageType, Option<CapabilityPath>),
-}
-
-impl Capability {
-    pub fn path(&self) -> Option<&CapabilityPath> {
-        match self {
-            Capability::Service(s) => Some(s),
-            Capability::Directory(d) => Some(d),
-            Capability::Storage(_, p) => p.as_ref(),
-        }
-    }
-}
-
-impl fmt::Display for Capability {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Capability::Service(s) => write!(f, "service at {}", s),
-            Capability::Directory(d) => write!(f, "directory at {}", d),
-            Capability::Storage(fsys::StorageType::Data, p) => write!(f, "data storage at {:?}", p),
-            Capability::Storage(fsys::StorageType::Cache, p) => write!(f, "cache storage at {:?}", p),
-            Capability::Storage(fsys::StorageType::Meta, _) => write!(f, "meta storage"),
-        }
-    }
-}
-
-impl From<UseDecl> for Capability {
-    fn from(d: UseDecl) -> Self {
-        match d {
-            UseDecl::Service(d) => d.into(),
-            UseDecl::Directory(d) => d.into(),
-            UseDecl::Storage(s) => s.into(),
-        }
-    }
-}
-
-impl From<UseServiceDecl> for Capability {
-    fn from(d: UseServiceDecl) -> Self {
-        Capability::Service(d.source_path)
-    }
-}
-
-impl From<UseDirectoryDecl> for Capability {
-    fn from(d: UseDirectoryDecl) -> Self {
-        Capability::Directory(d.source_path)
-    }
-}
-
-impl From<UseStorageDecl> for Capability {
-    fn from(d: UseStorageDecl) -> Self {
-        Capability::Storage(d.type_(), d.path().cloned())
-    }
-}
-
-impl From<ExposeDecl> for Capability {
-    fn from(d: ExposeDecl) -> Self {
-        match d {
-            ExposeDecl::Service(d) => d.into(),
-            ExposeDecl::Directory(d) => d.into(),
-        }
-    }
-}
-
-impl From<ExposeServiceDecl> for Capability {
-    fn from(d: ExposeServiceDecl) -> Self {
-        Capability::Service(d.source_path)
-    }
-}
-
-impl From<ExposeDirectoryDecl> for Capability {
-    fn from(d: ExposeDirectoryDecl) -> Self {
-        Capability::Directory(d.source_path)
-    }
-}
-
-impl From<OfferDecl> for Capability {
-    fn from(d: OfferDecl) -> Self {
-        match d {
-            OfferDecl::Service(d) => d.into(),
-            OfferDecl::Directory(d) => d.into(),
-            OfferDecl::Storage(d) => d.into(),
-        }
-    }
-}
-
-impl From<OfferServiceDecl> for Capability {
-    fn from(d: OfferServiceDecl) -> Self {
-        Capability::Service(d.source_path)
-    }
-}
-
-impl From<OfferDirectoryDecl> for Capability {
-    fn from(d: OfferDirectoryDecl) -> Self {
-        Capability::Directory(d.source_path)
-    }
-}
-
-impl From<OfferStorageDecl> for Capability {
-    fn from(d: OfferStorageDecl) -> Self {
-        // Storage capabilities are not offered at a specific path
-        Capability::Storage(d.type_(), None)
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -952,32 +781,6 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    macro_rules! test_from {
-        (
-            $(
-                $test_name:ident => {
-                    input = $input:expr,
-                    result = $result:expr,
-                },
-            )+
-        ) => {
-            $(
-                #[test]
-                fn $test_name() {
-                    test_from_helper($input, $result);
-                }
-            )+
-        }
-    }
-
-    fn test_from_helper<T, U>(input: Vec<T>, result: Vec<U>)
-    where
-        U: From<T> + std::cmp::PartialEq + std::fmt::Debug,
-    {
-        let res: Vec<U> = input.into_iter().map(|e| e.into()).collect();
-        assert_eq!(res, result);
-    }
 
     macro_rules! test_try_from_decl {
         (
@@ -1352,74 +1155,6 @@ mod tests {
         capability_path_invalid_trailing => {
             input = "/foo/bar/",
             result = Err(Error::InvalidCapabilityPath{raw: "/foo/bar/".to_string()}),
-        },
-    }
-
-    test_from! {
-        from_use_capability => {
-            input = vec![
-                UseDecl::Service(UseServiceDecl {
-                    source: UseSource::Realm,
-                    source_path: CapabilityPath::try_from("/foo/bar").unwrap(),
-                    target_path: CapabilityPath::try_from("/blah").unwrap(),
-                }),
-                UseDecl::Directory(UseDirectoryDecl {
-                    source: UseSource::Realm,
-                    source_path: CapabilityPath::try_from("/foo/bar").unwrap(),
-                    target_path: CapabilityPath::try_from("/blah").unwrap(),
-                }),
-                UseDecl::Storage(UseStorageDecl::Cache(CapabilityPath::try_from("/blah").unwrap())),
-            ],
-            result = vec![
-                Capability::Service(CapabilityPath::try_from("/foo/bar").unwrap()),
-                Capability::Directory(CapabilityPath::try_from("/foo/bar").unwrap()),
-                Capability::Storage(fsys::StorageType::Cache, Some("/blah".try_into().unwrap())),
-            ],
-        },
-        from_expose_capability => {
-            input = vec![
-                ExposeDecl::Service(ExposeServiceDecl {
-                    source: ExposeSource::Self_,
-                    source_path: CapabilityPath::try_from("/foo/bar").unwrap(),
-                    target_path: CapabilityPath::try_from("/blah").unwrap(),
-                }),
-                ExposeDecl::Directory(ExposeDirectoryDecl {
-                    source: ExposeSource::Self_,
-                    source_path: CapabilityPath::try_from("/foo/bar").unwrap(),
-                    target_path: CapabilityPath::try_from("/blah").unwrap(),
-                }),
-            ],
-            result = vec![
-                Capability::Service(CapabilityPath::try_from("/foo/bar").unwrap()),
-                Capability::Directory(CapabilityPath::try_from("/foo/bar").unwrap()),
-            ],
-        },
-        from_offer_capability => {
-            input = vec![
-                OfferDecl::Service(OfferServiceDecl {
-                    source: OfferServiceSource::Self_,
-                    source_path: CapabilityPath::try_from("/foo/bar").unwrap(),
-                    target: OfferTarget::Child("child".to_string()),
-                    target_path: CapabilityPath::try_from("/blah").unwrap(),
-                }),
-                OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Self_,
-                    source_path: CapabilityPath::try_from("/foo/bar").unwrap(),
-                    target: OfferTarget::Child("child".to_string()),
-                    target_path: CapabilityPath::try_from("/blah").unwrap(),
-                }),
-                OfferDecl::Storage(OfferStorageDecl::Cache(
-                    OfferStorage {
-                        source: OfferStorageSource::Realm,
-                        target: OfferTarget::Child("child".to_string()),
-                    }
-                )),
-            ],
-            result = vec![
-                Capability::Service(CapabilityPath::try_from("/foo/bar").unwrap()),
-                Capability::Directory(CapabilityPath::try_from("/foo/bar").unwrap()),
-                Capability::Storage(fsys::StorageType::Cache, None),
-            ],
         },
     }
 

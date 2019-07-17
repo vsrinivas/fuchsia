@@ -4,7 +4,7 @@
 
 use {
     crate::model::*,
-    cm_rust::Capability,
+    cm_rust::UseDecl,
     fuchsia_zircon as zx,
     futures::{executor::block_on, future::BoxFuture, lock::Mutex, prelude::*},
     std::{cmp::Eq, collections::HashMap, fmt, ops::Deref, pin::Pin, sync::Arc},
@@ -188,7 +188,7 @@ impl Hook for TestHook {
         _open_mode: u32,
         _relative_path: String,
         _abs_moniker: &'a AbsoluteMoniker,
-        _capability: &'a Capability,
+        _use_decl: &'a UseDecl,
         _server_chan: &mut Option<zx::Channel>,
     ) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async { Ok(()) })

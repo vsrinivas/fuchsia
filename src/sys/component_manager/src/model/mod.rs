@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod addable_directory;
+mod capability;
 mod component;
 pub mod dir_tree;
 pub mod error;
@@ -21,6 +22,7 @@ pub mod testing;
 pub(crate) mod tests;
 
 pub use self::{
-    component::*, dir_tree::*, error::*, exposed_dir::*, framework_services::*, hub::*, model::*,
-    moniker::*, namespace::*, resolver::*, routing::*, routing_facade::*, runner::*,
+    capability::*, component::*, dir_tree::*, error::*, exposed_dir::*, framework_services::*,
+    hub::*, model::*, moniker::*, namespace::*, resolver::*, routing::*, routing_facade::*,
+    runner::*,
 };
