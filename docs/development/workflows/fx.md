@@ -38,7 +38,7 @@ supported methods:
   `$FUCHSIA_DIR/.jiri_root/bin` to your `$PATH` while working in a particular
   Fuchsia directory.
 
-It is NOT recommended (though presently works) to copy `fx` to other places,
+Caution: It is not recommended (though presently works) to copy `fx` to other places,
 such as `~/bin/fx` (as this could one day break), or to add
 `$FUCHSIA_DIR/scripts` to your `$PATH` (as reviewers of code in `//scripts`)
 do not block the addition of files in that directory which could lead to
@@ -61,7 +61,7 @@ with this:
 * `fx shell` [connect to a target shell](#connect-to-a-target-shell)
 * [and many other small tasks](#performing-other-common-tasks)
 
-## Configure a build
+## Configure a build <a name="configure-a-build"></a>
 
 First let's configure the build. To do this we need to make a few choices:
 
@@ -169,9 +169,10 @@ important to be familiar with:
   20GB of build artifacts and requires at least 2GB of storage on the target
   device (size estimates from Q1/2019).
 
-## Execute a build
+## Execute a build <a name="execute-a-build"></a>
 
-For most use cases, only `fx build` is needed. The build is optimized
+For most use cases, only `fx build` is needed. `fx build` builds both Zircon
+and the Fuchsia portions of the build. The build process is optimized
 for fast incremental rebuilds, as such, repeating this command does the
 minimal work required after code has been changed, and no work if the source
 files are unchanged.
@@ -179,9 +180,6 @@ files are unchanged.
 Additionally to `fx build`, a few other build related commands provide
 more granular control:
 
-* `fx build-zircon` builds only the Zircon portion of the build.
-* `fx build` builds only the Fuchsia portion (all above Zircon, but not Zircon
-  itself) of the build.
 * `fx clean` clear out all build artifacts.
 * `fx clean-build` perform a clean, then a build.
 * `fx gen` repeat the `gn gen` process that `fx set` performed. Users making
@@ -200,7 +198,10 @@ example, an executable target with the label
 `//foo/bar:blah(//build/toolchain:host_x64)` can be built with
 `fx build <output_dir>/host_x64/blah`.
 
-## Flash a board / Prepare Zedboot
+See the [build system overview][build-overview] for a more detailed discussion
+of build targets.
+
+## Flash a board and prepare Zedboot <a name="flash-a-board"></a>
 
 The exact preparation required to put Fuchsia onto a target device varies by
 specific device, but there are two general groups in common use today, made
@@ -230,8 +231,7 @@ To enter Zedboot on an x64 target, first produce a Zedboot USB key using
 system, execute `fx list-usb-disks`). Remove the USB key after completion,
 insert it to the target device, and reboot the target device, selecting "Boot
 from USB" from the boot options, or in the device BIOS. There are additional
-instructions for preparing a
-[Pixelbook](../hardware/pixelbook.md).
+instructions for preparing a [Pixelbook](/docs/development/hardware/pixelbook.md).
 
 ### What is Paving?
 
@@ -263,7 +263,7 @@ configuration always prepares `netboot` artifacts. For all other build
 configurations, a user can optionally build the netboot artifacts using
 `fx build netboot`.
 
-## Serve a build
+## Serve a build <a name="serve-a-build"></a>
 
 A lot of build configurations for Fuchsia include software that is not
 immediately included in the base images that a build produces, that are
@@ -283,7 +283,7 @@ configure, and upon discovery (which may be restricted/modulated with
 `fx set-device` or `fx -d`) the target device is configured to use the
 repository server as a source of dynamic packages and system updates.
 
-## Update a target device
+## Update a target device <a name="update-a-target-device"></a>
 
 As described in prior sections, there are different groups of software on a
 Fuchsia device:
@@ -292,7 +292,7 @@ Fuchsia device:
   single transaction.
 * Software that is part of Zedboot images other than base (cache)
   that can be updated ephemerally.
-* Software that is always ephemeral.
+* Software that is always ephemeral (universe).
 
 For new user development workflows, the most general command to assist with
 updating a target device is `fx update`. The `fx update` command first
@@ -340,7 +340,7 @@ components, e.g. if basemgr spawned things under a job or a component
 topology, a method to restart that topology (e.g. `killall basemgr.cmx`,
 however that's no good today).
 
-## Execute tests
+## Execute tests <a name="execute-tests"></a>
 
 The Fuchsia codebase contains many tests. Most of these tests are themselves
 Components, and can be launched on the target device in the same way as other
@@ -359,7 +359,7 @@ configuration, run `fx list-packages`.
 
 Some users find that an effective high focus workflow is to have the system
 build, push and execute tests whenever they save their source code. This can
-be achived with `fx` very easily, for example:
+be achieved with `fx` very easily, for example:
 
 ```shell
 $ fx -i run-test rolldice-tests
@@ -372,7 +372,10 @@ As the `fx run-test` command first performs a build, then executes a test on
 a target, this combination provides a convenient auto-test loop, great for
 high focus workflows like test driven development.
 
-## Connect to a target shell
+Note: Iterative mode (indicated by the *-i* option) requires the `inotify-tools`
+or `fswatch` package on the host system.
+
+## Connect to a target shell <a name="connect-to-a-target-shell"></a>
 
 Most [product configurations](#key-product-configurations) include an SSH
 server with a Fuchsia specific configuration. The command `fx shell` is a
@@ -393,7 +396,7 @@ the `tools` bundle is available in the build configuration, many tools common
 to unix shell environments have been ported and are available, such as `ps`,
 `ls`, `cat`, `curl`, `vim`, `fortune` and so on.
 
-## Performing other common tasks
+## Performing other common tasks <a name="performing-other-common-tasks"></a>
 
 ### Getting logs {:#getting_logs}
 
@@ -528,3 +531,5 @@ Users should always start with `fx help <command>`.
 
 `fx help` with no other arguments provides a list of all available commands
 in `fx`, as well as documentation for `fx` global flags.
+
+[build-overview]: /docs/development/build/overview.md
