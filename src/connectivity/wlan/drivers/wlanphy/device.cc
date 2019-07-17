@@ -11,6 +11,7 @@
 #include <fuchsia/wlan/device/c/fidl.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <wlan/common/arraysize.h>
 #include <wlan/common/band.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/element.h>
@@ -20,7 +21,6 @@
 #include <zircon/status.h>
 
 #include "driver.h"
-#include "src/lib/fxl/arraysize.h"
 
 namespace wlanphy {
 

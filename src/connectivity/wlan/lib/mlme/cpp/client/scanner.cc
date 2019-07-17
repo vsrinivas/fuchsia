@@ -9,7 +9,7 @@
 #include <fbl/unique_ptr.h>
 #include <fuchsia/wlan/mlme/c/fidl.h>
 #include <lib/zx/time.h>
-#include <src/lib/fxl/arraysize.h>
+#include <wlan/common/arraysize.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/logging.h>

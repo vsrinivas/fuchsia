@@ -14,6 +14,7 @@ source_set("common") {
     "element_splitter.cc",
     "energy.cc",
     "include/wlan/common/action_frame.h",
+    "include/wlan/common/arraysize.h",
     "include/wlan/common/band.h",
     "include/wlan/common/bitfield.h",
     "include/wlan/common/buffer_reader.h",
