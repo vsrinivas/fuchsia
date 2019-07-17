@@ -81,9 +81,8 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
           }
 
           auto codec_impl = std::make_unique<CodecImpl>(
-              std::move(sysmem_), std::move(codec_admission), fidl_dispatcher_,
-              thrd_current(), std::make_unique<Params>(std::move(params)),
-              std::move(codec_request));
+              std::move(sysmem_), std::move(codec_admission), fidl_dispatcher_, thrd_current(),
+              std::move(params), std::move(codec_request));
 
           codec_impl->SetCoreCodecAdapter(
               std::make_unique<Adapter>(codec_impl->lock(), codec_impl.get()));

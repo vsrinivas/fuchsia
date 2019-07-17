@@ -3,19 +3,40 @@
 // found in the LICENSE file.
 
 #include <fake_codec_adapter.h>
+
+#include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/media/drm/cpp/fidl.h>
+#include <fuchsia/mediacodec/cpp/fidl.h>
 #include <gtest/gtest.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/zx/time.h>
 
-#include "fuchsia/media/cpp/fidl.h"
 #include "lib/media/codec_impl/codec_impl.h"
 
 namespace {
 
 constexpr uint32_t kDeadlineSec = 15;
 constexpr uint32_t kRunLoopIterMs = 10;
+
+auto CreateDecoderParams() {
+  fuchsia::mediacodec::CreateDecoder_Params params;
+  params.mutable_input_details()->set_format_details_version_ordinal(0).set_mime_type("video/vp9");
+  return params;
+}
+
+auto CreateEncoderParams() {
+  fuchsia::mediacodec::CreateEncoder_Params params;
+  params.mutable_input_details()->set_format_details_version_ordinal(0).set_mime_type("audio/sbc");
+  return params;
+}
+
+auto CreateDecryptorParams() {
+  fuchsia::media::drm::DecryptorParams params;
+  params.mutable_input_details()->set_format_details_version_ordinal(0);
+  return params;
+}
 
 }  // namespace
 
@@ -28,10 +49,6 @@ class CodecImplLifetime : public gtest::RealLoopFixture {
   }
 
   void SetUp() override {
-    decoder_params_ = std::make_unique<fuchsia::mediacodec::CreateDecoder_Params>();
-    decoder_params_->mutable_input_details()->set_format_details_version_ordinal(0).set_mime_type(
-        "video/vp9");
-
     // Just hold onto the server end and never connect it to anything, for now.
     sysmem_request_ = sysmem_client_.NewRequest();
     codec_request_ = codec_client_handle_.NewRequest();
@@ -48,14 +65,16 @@ class CodecImplLifetime : public gtest::RealLoopFixture {
       std::move(condition), zx::sec(kDeadlineSec), zx::msec(kRunLoopIterMs));
   }
 
-  void Create(bool bind = true, bool delete_async = false) {
+  void Create(bool bind = true, bool delete_async = false,
+              CodecImpl::StreamProcessorParams params = CreateDecoderParams()) {
     ZX_DEBUG_ASSERT(!delete_async || bind);
     std::unique_ptr<CodecImpl> codec_impl;
-    admission_control_.TryAddCodec(true, [this, bind, delete_async, &codec_impl](
-                                             std::unique_ptr<CodecAdmission> codec_admission) {
+    admission_control_.TryAddCodec(true, [this, bind, delete_async, params = std::move(params),
+                                          &codec_impl](std::unique_ptr<CodecAdmission>
+                                                           codec_admission) mutable {
       codec_impl = std::make_unique<CodecImpl>(
           std::move(sysmem_client_), std::move(codec_admission), dispatcher(), thrd_current(),
-          std::move(decoder_params_), std::move(codec_request_));
+          std::move(params), std::move(codec_request_));
       auto fake_codec_adapter =
           std::make_unique<FakeCodecAdapter>(codec_impl->lock(), codec_impl.get());
       fake_codec_adapter_ = fake_codec_adapter.get();
@@ -94,8 +113,6 @@ class CodecImplLifetime : public gtest::RealLoopFixture {
 
   async::Loop loop_separate_thread_;
   CodecAdmissionControl admission_control_;
-
-  std::unique_ptr<fuchsia::mediacodec::CreateDecoder_Params> decoder_params_;
 
   // The server end isn't connected to anything, for now.
   fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem_client_;
@@ -176,4 +193,18 @@ TEST_F(CodecImplLifetime, CreateBindChannelCloseDeleteAsyncWithOngoingSyncs) {
 
   RunLoopUntilOrGiveUp([this] { return !codec_impl_; });
   EXPECT_TRUE(!codec_impl_);
+}
+
+TEST_F(CodecImplLifetime, CreateBindDeleteEncoder) {
+  Create(true, false, CreateEncoderParams());
+  codec_impl_.reset();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(error_handler_ran_);
+}
+
+TEST_F(CodecImplLifetime, CreateBindDeleteDecryptor) {
+  Create(true, false, CreateDecryptorParams());
+  codec_impl_.reset();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(error_handler_ran_);
 }

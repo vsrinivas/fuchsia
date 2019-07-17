@@ -16,9 +16,9 @@ namespace {
 constexpr uint32_t kInputMinBufferCountForCamping = 1;
 
 auto CreateDecoderParams() {
-  auto params = std::make_unique<fuchsia::mediacodec::CreateDecoder_Params>();
+  fuchsia::mediacodec::CreateDecoder_Params params;
 
-  params->mutable_input_details()->set_format_details_version_ordinal(0);
+  params.mutable_input_details()->set_format_details_version_ordinal(0);
   return params;
 }
 

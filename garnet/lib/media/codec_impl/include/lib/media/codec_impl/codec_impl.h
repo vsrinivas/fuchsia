@@ -6,10 +6,12 @@
 #define GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_IMPL_H_
 
 #include <fbl/macros.h>
+#include <fuchsia/media/drm/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
+#include <lib/fit/variant.h>
 #include <zircon/compiler.h>
 
 #include <list>
@@ -64,25 +66,18 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
                   public CodecAdapterEvents,
                   private CodecAdapter {
  public:
-  // The CodecImpl will take care of doing set_error_handler() on the sysmem
-  // connection.  The sysmem connection should be set up to use the
-  // shared_fidl_dispatcher.
-  CodecImpl(
-      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-      std::unique_ptr<CodecAdmission> codec_admission,
-      async_dispatcher_t* shared_fidl_dispatcher, thrd_t shared_fidl_thread,
-      std::unique_ptr<fuchsia::mediacodec::CreateDecoder_Params> decoder_params,
-      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request);
+  using StreamProcessorParams =
+      fit::variant<fuchsia::mediacodec::CreateDecoder_Params,
+                   fuchsia::mediacodec::CreateEncoder_Params, fuchsia::media::drm::DecryptorParams>;
 
   // The CodecImpl will take care of doing set_error_handler() on the sysmem
   // connection.  The sysmem connection should be set up to use the
   // shared_fidl_dispatcher.
-  CodecImpl(
-      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-      std::unique_ptr<CodecAdmission> codec_admission,
-      async_dispatcher_t* shared_fidl_dispatcher, thrd_t shared_fidl_thread,
-      std::unique_ptr<fuchsia::mediacodec::CreateEncoder_Params> encoder_params,
-      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request);
+  CodecImpl(fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
+            std::unique_ptr<CodecAdmission> codec_admission,
+            async_dispatcher_t* shared_fidl_dispatcher, thrd_t shared_fidl_thread,
+            StreamProcessorParams params,
+            fidl::InterfaceRequest<fuchsia::media::StreamProcessor> request);
 
   ~CodecImpl();
 
@@ -165,14 +160,6 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   void QueueInputEndOfStream(uint64_t stream_lifetime_ordinal) override;
 
  private:
-  CodecImpl(
-      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-      std::unique_ptr<CodecAdmission> codec_admission,
-      async_dispatcher_t* shared_fidl_dispatcher, thrd_t shared_fidl_thread,
-      std::unique_ptr<fuchsia::mediacodec::CreateDecoder_Params> decoder_params,
-      std::unique_ptr<fuchsia::mediacodec::CreateEncoder_Params> encoder_params,
-      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request);
-
   // For FailFatalLocked().
   //
   // Tradeoff: sharing more code vs. having a fatal error not depend on calling
@@ -464,11 +451,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // call for now.
   std::unique_ptr<CodecAdapter> codec_adapter_;
 
-  // Using unique_ptr<> for its optional-ness here.
-  const std::unique_ptr<const fuchsia::mediacodec::CreateDecoder_Params>
-      decoder_params_;
-  const std::unique_ptr<const fuchsia::mediacodec::CreateEncoder_Params>
-      encoder_params_;
+  const StreamProcessorParams params_;
 
   // Regardless of which type of codec was created, these track the input
   // FormatDetails.
@@ -908,8 +891,13 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   __WARN_UNUSED_RESULT bool IsStoppingLocked();
   __WARN_UNUSED_RESULT bool IsStopping();
 
-  __WARN_UNUSED_RESULT bool IsDecoder();
-  __WARN_UNUSED_RESULT bool IsEncoder();
+  __WARN_UNUSED_RESULT bool IsDecoder() const;
+  __WARN_UNUSED_RESULT bool IsEncoder() const;
+  __WARN_UNUSED_RESULT bool IsDecryptor() const;
+
+  __WARN_UNUSED_RESULT const fuchsia::mediacodec::CreateDecoder_Params& decoder_params() const;
+  __WARN_UNUSED_RESULT const fuchsia::mediacodec::CreateEncoder_Params& encoder_params() const;
+  __WARN_UNUSED_RESULT const fuchsia::media::drm::DecryptorParams& decryptor_params() const;
 
   //
   // Core codec interfacing.

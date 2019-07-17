@@ -75,47 +75,23 @@ class ScopedRelock {
 
 }  // namespace
 
-CodecImpl::CodecImpl(
-    fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-    std::unique_ptr<CodecAdmission> codec_admission,
-    async_dispatcher_t* shared_fidl_dispatcher, thrd_t shared_fidl_thread,
-    std::unique_ptr<fuchsia::mediacodec::CreateDecoder_Params> decoder_params,
-    fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request)
-    : CodecImpl(std::move(sysmem), std::move(codec_admission),
-                shared_fidl_dispatcher, shared_fidl_thread,
-                std::move(decoder_params), nullptr, std::move(codec_request)) {}
-
-CodecImpl::CodecImpl(
-    fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-    std::unique_ptr<CodecAdmission> codec_admission,
-    async_dispatcher_t* shared_fidl_dispatcher, thrd_t shared_fidl_thread,
-    std::unique_ptr<fuchsia::mediacodec::CreateEncoder_Params> encoder_params,
-    fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request)
-    : CodecImpl(std::move(sysmem), std::move(codec_admission),
-                shared_fidl_dispatcher, shared_fidl_thread, nullptr,
-                std::move(encoder_params), std::move(codec_request)) {}
-
-CodecImpl::CodecImpl(
-    fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-    std::unique_ptr<CodecAdmission> codec_admission,
-    async_dispatcher_t* shared_fidl_dispatcher, thrd_t shared_fidl_thread,
-    std::unique_ptr<fuchsia::mediacodec::CreateDecoder_Params> decoder_params,
-    std::unique_ptr<fuchsia::mediacodec::CreateEncoder_Params> encoder_params,
-    fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request)
+CodecImpl::CodecImpl(fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
+                     std::unique_ptr<CodecAdmission> codec_admission,
+                     async_dispatcher_t* shared_fidl_dispatcher, thrd_t shared_fidl_thread,
+                     StreamProcessorParams params,
+                     fidl::InterfaceRequest<fuchsia::media::StreamProcessor> request)
     // The parameters to CodecAdapter constructor here aren't important.
     : CodecAdapter(lock_, this),
       codec_admission_(std::move(codec_admission)),
       shared_fidl_dispatcher_(shared_fidl_dispatcher),
       shared_fidl_thread_(shared_fidl_thread),
       shared_fidl_queue_(shared_fidl_dispatcher, shared_fidl_thread),
-      decoder_params_(std::move(decoder_params)),
-      encoder_params_(std::move(encoder_params)),
+      params_(std::move(params)),
       tmp_sysmem_(std::move(sysmem)),
-      tmp_interface_request_(std::move(codec_request)),
+      tmp_interface_request_(std::move(request)),
       binding_(this),
       stream_control_loop_(&kAsyncLoopConfigNoAttachToThread) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
-  ZX_DEBUG_ASSERT(!!decoder_params_ ^ !!encoder_params_);
   ZX_DEBUG_ASSERT(tmp_sysmem_);
   ZX_DEBUG_ASSERT(tmp_interface_request_);
 
@@ -133,9 +109,10 @@ CodecImpl::CodecImpl(
     ZX_DEBUG_ASSERT(was_logically_bound_);
     this->Fail("CodecImpl binding_ channel failed");
   });
-  initial_input_format_details_ = decoder_params_
-                                      ? &decoder_params_->input_details()
-                                      : &encoder_params_->input_details();
+
+  initial_input_format_details_ = IsDecoder() ? &decoder_params().input_details()
+                                              : IsEncoder() ? &encoder_params().input_details()
+                                                            : &decryptor_params().input_details();
 }
 
 CodecImpl::~CodecImpl() {
@@ -2820,7 +2797,13 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
     return false;
   }
   ZX_DEBUG_ASSERT(!usage.display);
-  if (IsCoreCodecHwBased()) {
+  if (IsDecryptor()) {
+    // Decryptors should not be setting video usage bits.
+    if (usage.video) {
+      FailLocked("Core codec set disallowed video usage bits for decryptor");
+      return false;
+    }
+  } else if (IsCoreCodecHwBased()) {
     // Let's see if we can deprecate videoUsageHwProtected, since it's redundant
     // with secure_required.
     if (usage.video & fuchsia::sysmem::videoUsageHwProtected) {
@@ -2839,7 +2822,7 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
     }
     if (IsDecoder()) {
       usage.video |= fuchsia::sysmem::videoUsageHwDecoder;
-    } else {
+    } else if (IsEncoder()) {
       usage.video |= fuchsia::sysmem::videoUsageHwEncoder;
     }
   } else {
@@ -3097,14 +3080,31 @@ bool CodecImpl::IsStopping() {
   return IsStoppingLocked();
 }
 
-bool CodecImpl::IsDecoder() {
-  ZX_DEBUG_ASSERT(!!decoder_params_ ^ !!encoder_params_);
-  return !!decoder_params_;
+bool CodecImpl::IsDecoder() const {
+  return params_.index() == 0;
 }
 
-bool CodecImpl::IsEncoder() {
-  ZX_DEBUG_ASSERT(!!decoder_params_ ^ !!encoder_params_);
-  return !!encoder_params_;
+bool CodecImpl::IsEncoder() const {
+  return params_.index() == 1;
+}
+
+bool CodecImpl::IsDecryptor() const {
+  return params_.index() == 2;
+}
+
+const fuchsia::mediacodec::CreateDecoder_Params& CodecImpl::decoder_params() const {
+  ZX_DEBUG_ASSERT(IsDecoder());
+  return fit::get<fuchsia::mediacodec::CreateDecoder_Params>(params_);
+}
+
+const fuchsia::mediacodec::CreateEncoder_Params& CodecImpl::encoder_params() const {
+  ZX_DEBUG_ASSERT(IsEncoder());
+  return fit::get<fuchsia::mediacodec::CreateEncoder_Params>(params_);
+}
+
+const fuchsia::media::drm::DecryptorParams& CodecImpl::decryptor_params() const {
+  ZX_DEBUG_ASSERT(IsDecryptor());
+  return fit::get<fuchsia::media::drm::DecryptorParams>(params_);
 }
 
 // true - maybe it's the core codec thread.
@@ -3387,9 +3387,8 @@ void CodecImpl::onCoreCodecOutputPacket(CodecPacket* packet,
     // that the client gets no set timestamp_ish values if the client didn't
     // promise_separate_access_units_on_input.
     bool has_timestamp_ish =
-        (encoder_params_ ||
-         (decoder_params_->has_promise_separate_access_units_on_input() &&
-          decoder_params_->promise_separate_access_units_on_input())) &&
+        (!IsDecoder() || (decoder_params().has_promise_separate_access_units_on_input() &&
+                          decoder_params().promise_separate_access_units_on_input())) &&
         packet->has_timestamp_ish();
     fuchsia::media::Packet p;
     p.mutable_header()->set_buffer_lifetime_ordinal(

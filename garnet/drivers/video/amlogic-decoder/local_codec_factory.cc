@@ -237,13 +237,11 @@ void LocalCodecFactory::CreateDecoder(
           return;
         }
 
-        std::unique_ptr<CodecImpl> codec = std::make_unique<CodecImpl>(
-            std::move(sysmem), std::move(codec_admission),
-            device_->driver()->shared_fidl_loop()->dispatcher(),
-            device_->driver()->shared_fidl_thread(),
-            std::make_unique<fuchsia::mediacodec::CreateDecoder_Params>(
-                std::move(video_decoder_params)),
-            std::move(video_decoder));
+        std::unique_ptr<CodecImpl> codec =
+            std::make_unique<CodecImpl>(std::move(sysmem), std::move(codec_admission),
+                                        device_->driver()->shared_fidl_loop()->dispatcher(),
+                                        device_->driver()->shared_fidl_thread(),
+                                        std::move(video_decoder_params), std::move(video_decoder));
 
         codec->SetCoreCodecAdapter(
             factory->create(codec->lock(), codec.get(), device_));
