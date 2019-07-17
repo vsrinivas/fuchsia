@@ -4,6 +4,7 @@
 
 #include "src/virtualization/bin/vmm/linux.h"
 
+#include <endian.h>
 #include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <src/lib/fxl/strings/string_printf.h>
