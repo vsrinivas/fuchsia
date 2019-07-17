@@ -262,8 +262,10 @@ zx_status_t zx_bti_pin(zx_handle_t bti_handle, uint32_t options,
             return ZX_ERR_INVALID_ARGS;
         }
     }
-    // Fill |addrs| with zeroes
-    memset(addrs, 0, sizeof(addrs[0]) * addrs_count);
+    // Fill |addrs| with the fake physical address.
+    for (size_t i = 0; i != addrs_count; ++i) {
+        addrs[i] = FAKE_BTI_PHYS_ADDR;
+    }
 
     fbl::RefPtr<Object> new_pmt;
     status = Pmt::Create(std::move(vmo_clone), offset, size, &new_pmt);
