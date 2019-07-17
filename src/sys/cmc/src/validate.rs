@@ -2170,6 +2170,42 @@ mod tests {
             }),
             result = Ok(()),
         },
+        test_cmx_block_system_data => {
+            input = json!({
+                "program": { "binary": "bin/app" },
+                "sandbox": {
+                    "system": [ "data" ]
+                }
+            }),
+            result = Err(Error::validate_schema(CMX_SCHEMA, "Not condition is not met at /sandbox/system/0")),
+        },
+        test_cmx_block_system_data_stem => {
+            input = json!({
+                "program": { "binary": "bin/app" },
+                "sandbox": {
+                    "system": [ "data-should-pass" ]
+                }
+            }),
+            result = Ok(()),
+        },
+        test_cmx_block_system_data_leading_slash => {
+            input = json!({
+                "program": { "binary": "bin/app" },
+                "sandbox": {
+                    "system": [ "/data" ]
+                }
+            }),
+            result = Err(Error::validate_schema(CMX_SCHEMA, "Not condition is not met at /sandbox/system/0")),
+        },
+        test_cmx_block_system_data_subdir => {
+            input = json!({
+                "program": { "binary": "bin/app" },
+                "sandbox": {
+                    "system": [ "data/should-fail" ]
+                }
+            }),
+            result = Err(Error::validate_schema(CMX_SCHEMA, "Not condition is not met at /sandbox/system/0")),
+        },
     }
 
     // We can't simply using JsonSchema::new here and create a temp file with the schema content

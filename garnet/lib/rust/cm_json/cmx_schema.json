@@ -107,6 +107,18 @@
             "$id": "/properties/sandbox/properties/system/items",
             "type": "string",
             "title": "Paths within the system package provided to the component",
+            "allOf": [
+              {
+                "not": {
+                  "pattern": "^/*data/"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "^/*data$"
+                }
+              }
+            ],
             "examples": [
               "data/build"
             ]
