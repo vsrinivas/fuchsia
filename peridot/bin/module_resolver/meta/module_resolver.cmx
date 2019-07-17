@@ -10,9 +10,6 @@
             "fuchsia.modular.ComponentContext",
             "fuchsia.modular.IntelligenceServices",
             "fuchsia.net.oldhttp.HttpService"
-        ],
-        "system": [
-            "deprecated-data/initial_module_packages"
         ]
     }
 }
