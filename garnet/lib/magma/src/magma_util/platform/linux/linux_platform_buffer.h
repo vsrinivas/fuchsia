@@ -27,6 +27,8 @@ class LinuxPlatformBuffer : public PlatformBuffer {
   LinuxPlatformBuffer(int memfd, uint64_t id, uint64_t size)
       : memfd_(memfd), id_(id), size_(size) {}
 
+  int memfd() { return memfd_; }
+
   // PlatformBuffer implementation
   uint64_t size() const override { return size_; }
 

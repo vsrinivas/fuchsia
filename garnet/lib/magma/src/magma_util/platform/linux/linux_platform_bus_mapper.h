@@ -28,19 +28,24 @@ class LinuxPlatformBusMapper : public PlatformBusMapper {
 
   class BusMapping : public PlatformBusMapper::BusMapping {
    public:
-    BusMapping(uint64_t page_offset, std::vector<uint64_t> page_addr, int token)
-        : page_offset_(page_offset), page_addr_(std::move(page_addr)), token_(token) {}
-    ~BusMapping() { token_; }
+    BusMapping(uint64_t page_offset, std::vector<uint64_t> page_addr, LinuxPlatformHandle dma_buf,
+               uint64_t token)
+        : page_offset_(page_offset),
+          page_addr_(std::move(page_addr)),
+          dma_buf_(dma_buf.release()),
+          token_(token) {}
 
     uint64_t page_offset() override { return page_offset_; }
     uint64_t page_count() override { return page_addr_.size(); }
+    uint64_t token() { return token_; }
 
     std::vector<uint64_t>& Get() override { return page_addr_; }
 
    private:
     uint64_t page_offset_;
     std::vector<uint64_t> page_addr_;
-    int token_;
+    LinuxPlatformHandle dma_buf_;
+    uint64_t token_;
   };
 
  private:

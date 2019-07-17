@@ -12,19 +12,20 @@ namespace magma {
 
 class LinuxPlatformHandle : public PlatformHandle {
  public:
-  LinuxPlatformHandle(int file_descriptor) : fd_(file_descriptor) { DASSERT(fd_ > 0); }
+  LinuxPlatformHandle(int file_descriptor) : fd_(file_descriptor) { DASSERT(fd_ >= 0); }
 
   ~LinuxPlatformHandle() { close(fd_); }
 
   bool GetCount(uint32_t* count_out) override { return DRETF(false, "Not supported"); }
 
   uint32_t release() override {
+    DASSERT(fd_ >= 0);
     int fd = fd_;
     fd_ = -1;
     return fd;
   }
 
-  int get() { return fd_; }
+  int get() const { return fd_; }
 
  private:
   int fd_;

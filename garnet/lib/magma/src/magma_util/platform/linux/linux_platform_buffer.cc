@@ -5,6 +5,8 @@
 #include "linux_platform_buffer.h"
 
 #include <asm/unistd.h>
+#include <fcntl.h>
+#include <linux/memfd.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -14,6 +16,12 @@
 #include <mutex>
 
 namespace {
+
+// Defined in linux/fcntl.h, but conflicts with fcntl.h
+#define F_ADD_SEALS 1033
+
+#define F_SEAL_SEAL 0x0001
+#define F_SEAL_SHRINK 0x0002
 
 static int memfd_create(const char* name, unsigned int flags) {
   return syscall(__NR_memfd_create, name, flags);
@@ -128,8 +136,7 @@ std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size, const char
 
   size = magma::round_up(size, magma::page_size());
 
-  constexpr uint32_t kFlags = 0;
-  int memfd = memfd_create(name, kFlags);
+  int memfd = memfd_create(name, MFD_ALLOW_SEALING);
   if (memfd < 0)
     return DRETP(nullptr, "memfd_create failed: %d", errno);
 
@@ -137,6 +144,9 @@ std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size, const char
     close(memfd);
     return DRETP(nullptr, "ftruncate failed: %d", errno);
   }
+
+  if (fcntl(memfd, F_ADD_SEALS, F_SEAL_SHRINK | F_SEAL_SEAL) < 0)
+    return DRETP(nullptr, "fcntl failed: %d", errno);
 
   struct stat st;
   if (fstat(memfd, &st) < 0)

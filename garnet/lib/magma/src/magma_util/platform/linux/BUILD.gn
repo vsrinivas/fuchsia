@@ -22,9 +22,14 @@ source_set("bus_mapper") {
   configs += [ "..:platform_include_config" ]
 
   public_deps = [
+    ":handle",
     "$magma_build_root/src/magma_util",
     "..:buffer",
     "..:bus_mapper_header",
+  ]
+
+  deps = [
+    ":device",
   ]
 
   sources = [
@@ -36,8 +41,9 @@ source_set("device") {
   configs += [ "..:platform_include_config" ]
 
   public_deps = [
-    "$magma_build_root/src/magma_util",
+    ":handle",
     "..:device_header",
+    "$magma_build_root/src/magma_util",
   ]
 
   sources = [
@@ -56,6 +62,22 @@ source_set("firmware_loader") {
 
   deps = [
     "..:firmware_loader_header",
+  ]
+}
+
+source_set("handle") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "linux_platform_handle.h",
+  ]
+
+  public_deps = [
+    "//garnet/lib/magma/src/magma_util/platform:handle_header",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util",
   ]
 }
 
