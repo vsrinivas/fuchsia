@@ -228,10 +228,11 @@ zx_status_t sys_debuglog_read(zx_handle_t log_handle, uint32_t options, user_out
   if ((status = log->Read(options, buf, DLOG_MAX_RECORD, &actual)) < 0)
     return status;
 
-  if (ptr.copy_array_to_user(buf, actual) != ZX_OK)
+  const size_t to_copy = fbl::min(actual, len);
+  if (ptr.copy_array_to_user(buf, to_copy) != ZX_OK)
     return ZX_ERR_INVALID_ARGS;
 
-  return static_cast<zx_status_t>(actual);
+  return static_cast<zx_status_t>(to_copy);
 }
 
 // zx_status_t zx_cprng_draw_once

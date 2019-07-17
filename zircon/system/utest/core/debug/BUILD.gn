@@ -16,3 +16,17 @@ source_set("debug") {
     "$zx/system/ulib/zxtest",
   ]
 }
+
+# These tests only run in the unified core-test.
+# This test binary has get_root_resource() available.
+source_set("unified-only") {
+  testonly = true
+  sources = [
+    "debuglog.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
+  ]
+}

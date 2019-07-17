@@ -47,6 +47,7 @@ core_tests = [
 # unified core-tests binary.
 unified_only = [
   "bti",
+  "debug:unified-only",
   "interrupt",
   "profile",
   "resource",
