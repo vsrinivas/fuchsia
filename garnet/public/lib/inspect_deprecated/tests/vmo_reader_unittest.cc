@@ -3,50 +3,43 @@
 // found in the LICENSE file.
 
 #include <gtest/gtest.h>
-#include <lib/inspect-vmo/inspect.h>
-#include <lib/inspect-vmo/snapshot.h>
-#include <lib/inspect-vmo/state.h>
+#include <lib/inspect/cpp/inspect.h>
+#include <lib/inspect/cpp/reader.h>
 #include <lib/inspect_deprecated/reader.h>
 #include <lib/inspect_deprecated/testing/inspect.h>
 #include <zircon/types.h>
 
-using inspect::vmo::DoubleMetric;
-using inspect::vmo::Inspector;
-using inspect::vmo::IntMetric;
-using inspect::vmo::Object;
-using inspect::vmo::Property;
-using inspect::vmo::UintMetric;
+using inspect::Inspector;
 using testing::UnorderedElementsAre;
 using namespace inspect_deprecated::testing;
 
 namespace {
 
 TEST(VmoReader, CreateAndReadObjectHierarchy) {
-  auto inspector = std::make_unique<inspect::vmo::Inspector>();
+  auto inspector = std::make_unique<inspect::Inspector>("objects");
   ASSERT_TRUE(inspector);
 
-  Object object = inspector->CreateObject("objects");
+  auto& object = inspector->GetRoot();
   auto req = object.CreateChild("requests");
-  auto network = req.CreateUintMetric("network", 10);
-  auto wifi = req.CreateUintMetric("wifi", 5);
-  auto volume = object.CreateDoubleMetric("volume", 0.75);
-  auto assets = object.CreateIntMetric("assets", -100);
+  auto network = req.CreateUint("network", 10);
+  auto wifi = req.CreateUint("wifi", 5);
+  auto volume = object.CreateDouble("volume", 0.75);
+  auto assets = object.CreateInt("assets", -100);
 
-  auto version = object.CreateProperty("version", "1.0beta2", inspect::vmo::PropertyFormat::kUtf8);
+  auto version = object.CreateString("version", "1.0beta2");
 
-  char dump[4001];
+  char dump[4000];
   memset(dump, 'a', 5);
   memset(dump + 5, 'b', 4000 - 5);
-  auto dump_prop = req.CreateProperty("dump", "", inspect::vmo::PropertyFormat::kBinary);
-  dump_prop.Set({dump, 4000});
-  dump[4000] = '\0';
+  auto dump_prop = req.CreateByteVector("dump", std::vector<uint8_t>());
+  dump_prop.Set(std::vector<uint8_t>(dump, dump + 4000));
 
-  inspect::vmo::Snapshot snapshot;
-  ASSERT_EQ(ZX_OK, inspect::vmo::Snapshot::Create(inspector->GetVmo(), &snapshot));
+  inspect::Snapshot snapshot;
+  ASSERT_EQ(ZX_OK, inspect::Snapshot::Create(*inspector->GetVmo().value(), &snapshot));
 
   std::vector<fit::result<inspect_deprecated::ObjectHierarchy>> hierarchies;
   hierarchies.emplace_back(inspect_deprecated::ReadFromSnapshot(std::move(snapshot)));
-  hierarchies.emplace_back(inspect_deprecated::ReadFromVmo(inspector->GetVmo()));
+  hierarchies.emplace_back(inspect_deprecated::ReadFromVmo(*inspector->GetVmo().value()));
   for (auto& root : hierarchies) {
     ASSERT_TRUE(root.is_ok());
     EXPECT_THAT(

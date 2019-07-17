@@ -82,7 +82,6 @@ group("ulib") {
     "image-format",
     "inet6",
     "inspect",
-    "inspect-vmo",
     "inspector",
     "intel-hda",
     "kvstore",

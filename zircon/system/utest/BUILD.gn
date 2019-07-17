@@ -201,7 +201,6 @@ if (current_cpu != "") {
       "handle-alias",
       "hid",
       "hypervisor",
-      "inspect-vmo",
       "int-types",
       "kcounter",
       "kernel-unittests",

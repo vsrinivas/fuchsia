@@ -5,16 +5,15 @@
 #ifndef LIB_INSPECT_DEPRECATED_INSPECT_H_
 #define LIB_INSPECT_DEPRECATED_INSPECT_H_
 
+#include <string>
+
 #include <lib/fit/defer.h>
 #include <lib/fit/variant.h>
-#include <lib/inspect-vmo/inspect.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect_deprecated/deprecated/exposed_object.h>
 #include <zircon/types.h>
 
-#include <string>
-
-#include "lib/inspect-vmo/block.h"
-#include "lib/inspect-vmo/types.h"
+#include "lib/inspect/cpp/vmo/block.h"
 
 namespace inspect_deprecated {
 
@@ -196,22 +195,22 @@ class ArrayMetric final {
 };
 
 // Metric wrapping a signed integer.
-using IntMetric = StaticMetric<int64_t, ::inspect::vmo::IntMetric>;
+using IntMetric = StaticMetric<int64_t, ::inspect::IntProperty>;
 
 // Metric wrapping an unsigned integer.
-using UIntMetric = StaticMetric<uint64_t, ::inspect::vmo::UintMetric>;
+using UIntMetric = StaticMetric<uint64_t, ::inspect::UintProperty>;
 
 // Metric wrapping a double floating point number.
-using DoubleMetric = StaticMetric<double, ::inspect::vmo::DoubleMetric>;
+using DoubleMetric = StaticMetric<double, ::inspect::DoubleProperty>;
 
 // Array of signed integers.
-using IntArray = ArrayMetric<int64_t, ::inspect::vmo::IntArray>;
+using IntArray = ArrayMetric<int64_t, ::inspect::IntArray>;
 
 // Array of unsigned integers.
-using UIntArray = ArrayMetric<uint64_t, ::inspect::vmo::UintArray>;
+using UIntArray = ArrayMetric<uint64_t, ::inspect::UintArray>;
 
 // Array of double floating point numbers.
-using DoubleArray = ArrayMetric<double, ::inspect::vmo::DoubleArray>;
+using DoubleArray = ArrayMetric<double, ::inspect::DoubleArray>;
 
 template <typename T, typename VmoType>
 class HistogramMetric final {
@@ -244,25 +243,24 @@ class HistogramMetric final {
 };
 
 // Linear histogram of integers.
-using LinearIntHistogramMetric = HistogramMetric<int64_t, ::inspect::vmo::LinearIntHistogram>;
+using LinearIntHistogramMetric = HistogramMetric<int64_t, ::inspect::LinearIntHistogram>;
 
 // Linear histogram of unsigned integers.
-using LinearUIntHistogramMetric = HistogramMetric<uint64_t, ::inspect::vmo::LinearUintHistogram>;
+using LinearUIntHistogramMetric = HistogramMetric<uint64_t, ::inspect::LinearUintHistogram>;
 
 // Linear histogram of doubles.
-using LinearDoubleHistogramMetric = HistogramMetric<double, ::inspect::vmo::LinearDoubleHistogram>;
+using LinearDoubleHistogramMetric = HistogramMetric<double, ::inspect::LinearDoubleHistogram>;
 
 // Exponential histogram of integers.
-using ExponentialIntHistogramMetric =
-    HistogramMetric<int64_t, ::inspect::vmo::ExponentialIntHistogram>;
+using ExponentialIntHistogramMetric = HistogramMetric<int64_t, ::inspect::ExponentialIntHistogram>;
 
 // Exponential histogram of unsigned integers.
 using ExponentialUIntHistogramMetric =
-    HistogramMetric<uint64_t, ::inspect::vmo::ExponentialUintHistogram>;
+    HistogramMetric<uint64_t, ::inspect::ExponentialUintHistogram>;
 
 // Exponential histogram of doubles.
 using ExponentialDoubleHistogramMetric =
-    HistogramMetric<double, ::inspect::vmo::ExponentialDoubleHistogram>;
+    HistogramMetric<double, ::inspect::ExponentialDoubleHistogram>;
 
 // Metric with value determined by evaluating a callback.
 class LazyMetric final {
@@ -315,10 +313,10 @@ class StringProperty final {
   explicit StringProperty(internal::EntityWrapper<component::Property> entity);
 
   // Internal constructor wrapping a VMO entity.
-  explicit StringProperty(::inspect::vmo::Property entity);
+  explicit StringProperty(::inspect::StringProperty entity);
 
   fit::internal::variant<fit::internal::monostate, internal::EntityWrapper<component::Property>,
-                         ::inspect::vmo::Property>
+                         ::inspect::StringProperty>
       entity_;
 };
 
@@ -344,10 +342,10 @@ class ByteVectorProperty final {
   explicit ByteVectorProperty(internal::EntityWrapper<component::Property> entity);
 
   // Internal constructor wrapping a VMO entity.
-  explicit ByteVectorProperty(::inspect::vmo::Property entity);
+  explicit ByteVectorProperty(::inspect::ByteVectorProperty entity);
 
   fit::internal::variant<fit::internal::monostate, internal::EntityWrapper<component::Property>,
-                         ::inspect::vmo::Property>
+                         ::inspect::ByteVectorProperty>
       entity_;
 };
 
@@ -418,7 +416,7 @@ using ChildrenCallbackFunction = ::component::Object::ChildrenCallback;
 class ChildrenCallback final {
  public:
   // Construct a default children callback.
-  ChildrenCallback();
+  ChildrenCallback() = default;
   ~ChildrenCallback();
 
   // Set the callback function for the parent object to the given value.
@@ -456,7 +454,7 @@ class Node final {
   explicit Node(component::ObjectDir object_dir);
 
   // Construct a Node wrapping the given VMO Object.
-  explicit Node(::inspect::vmo::Object object);
+  explicit Node(::inspect::Node object);
 
   ~Node();
 
@@ -599,13 +597,13 @@ class Node final {
   explicit Node(component::ExposedObject object);
 
   [[nodiscard]] IntArray CreateIntArray(std::string name, size_t slots,
-                                        ::inspect::vmo::ArrayFormat format);
+                                        ::inspect::ArrayBlockFormat format);
   [[nodiscard]] UIntArray CreateUIntArray(std::string name, size_t slots,
-                                          ::inspect::vmo::ArrayFormat format);
+                                          ::inspect::ArrayBlockFormat format);
   [[nodiscard]] DoubleArray CreateDoubleArray(std::string name, size_t slots,
-                                              ::inspect::vmo::ArrayFormat format);
+                                              ::inspect::ArrayBlockFormat format);
 
-  fit::internal::variant<fit::internal::monostate, component::ExposedObject, ::inspect::vmo::Object>
+  fit::internal::variant<fit::internal::monostate, component::ExposedObject, ::inspect::Node>
       object_;
 };
 
@@ -620,8 +618,8 @@ struct TreeSettings {
 // A |Tree| of inspect objects available in a VMO.
 class Tree final {
  public:
-  Tree() = default;
-  ~Tree();
+  Tree();
+  ~Tree() = default;
 
   // Allow moving, disallow copying.
   Tree(Tree&& other) = default;
@@ -638,11 +636,13 @@ class Tree final {
  private:
   friend class Inspector;
 
-  // Construct a new Tree with the given state;
-  Tree(std::unique_ptr<internal::TreeState>);
+  Tree(::inspect::Inspector inspector);
 
-  // The state for the tree, shared between copies.
-  std::unique_ptr<internal::TreeState> state_;
+  // Internal inspector wrapped by this tree.
+  ::inspect::Inspector inspector_;
+
+  // Internal wrapped root from inspector.
+  std::unique_ptr<Node> root_;
 };
 
 // The entry point into the Inspection API.

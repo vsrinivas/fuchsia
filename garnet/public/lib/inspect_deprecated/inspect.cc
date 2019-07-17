@@ -6,8 +6,6 @@
 
 #include <lib/syslog/cpp/logger.h>
 
-#include "lib/inspect-vmo/block.h"
-
 using component::ObjectDir;
 
 namespace inspect_deprecated {
@@ -54,7 +52,7 @@ void LazyMetric::Set(MetricCallback callback) {
   CLASS::CLASS(internal::EntityWrapper<component::Property> entity) {                           \
     entity_.template emplace<kEntityWrapperVariant>(std::move(entity));                         \
   }                                                                                             \
-  CLASS::CLASS(::inspect::vmo::Property entity) {                                               \
+  CLASS::CLASS(::inspect::CLASS entity) {                                                       \
     entity_.template emplace<kVmoVariant>(std::move(entity));                                   \
   }                                                                                             \
   void CLASS::Set(TYPE value) {                                                                 \
@@ -62,7 +60,7 @@ void LazyMetric::Set(MetricCallback callback) {
       auto& entity = entity_.template get<kEntityWrapperVariant>();                             \
       entity.ParentObject()->SetProperty(entity.name(), component::Property(std::move(value))); \
     } else if (entity_.index() == kVmoVariant) {                                                \
-      entity_.template get<kVmoVariant>().Set({(const char*)value.data(), value.size()});       \
+      entity_.template get<kVmoVariant>().Set(value);                                           \
     }                                                                                           \
   }
 
@@ -81,8 +79,6 @@ DEFINE_PROPERTY_METHODS(StringProperty, std::string)
 DEFINE_PROPERTY_METHODS(ByteVectorProperty, VectorValue)
 DEFINE_LAZY_PROPERTY_METHODS(LazyStringProperty, StringValueCallback)
 DEFINE_LAZY_PROPERTY_METHODS(LazyByteVectorProperty, VectorValueCallback)
-
-ChildrenCallback::ChildrenCallback() {}
 
 ChildrenCallback::ChildrenCallback(std::shared_ptr<component::Object> object)
     : parent_obj_(std::move(object)) {}
@@ -113,9 +109,7 @@ Node::Node(std::string name) : Node(component::ExposedObject(std::move(name))) {
 
 Node::Node(ObjectDir object_dir) : Node(component::ExposedObject(std::move(object_dir))) {}
 
-Node::Node(::inspect::vmo::Object object) {
-  object_.template emplace<kVmoVariant>(std::move(object));
-}
+Node::Node(::inspect::Node object) { object_.template emplace<kVmoVariant>(std::move(object)); }
 
 Node::Node(component::ExposedObject object) {
   object_.template emplace<kComponentVariant>(std::move(object));
@@ -174,7 +168,7 @@ IntMetric Node::CreateIntMetric(std::string name, int64_t value) {
     object->SetMetric(name, component::IntMetric(value));
     return IntMetric(internal::EntityWrapper<component::Metric>(std::move(name), object));
   } else if (object_.index() == kVmoVariant) {
-    return IntMetric(object_.template get<kVmoVariant>().CreateIntMetric(std::move(name), value));
+    return IntMetric(object_.template get<kVmoVariant>().CreateInt(std::move(name), value));
   }
 
   return IntMetric();
@@ -186,7 +180,7 @@ UIntMetric Node::CreateUIntMetric(std::string name, uint64_t value) {
     object->SetMetric(name, component::UIntMetric(value));
     return UIntMetric(internal::EntityWrapper<component::Metric>(std::move(name), object));
   } else if (object_.index() == kVmoVariant) {
-    return UIntMetric(object_.template get<kVmoVariant>().CreateUintMetric(std::move(name), value));
+    return UIntMetric(object_.template get<kVmoVariant>().CreateUint(std::move(name), value));
   }
 
   return UIntMetric();
@@ -198,44 +192,29 @@ DoubleMetric Node::CreateDoubleMetric(std::string name, double value) {
     object->SetMetric(name, component::DoubleMetric(value));
     return DoubleMetric(internal::EntityWrapper<component::Metric>(std::move(name), object));
   } else if (object_.index() == kVmoVariant) {
-    return DoubleMetric(
-        object_.template get<kVmoVariant>().CreateDoubleMetric(std::move(name), value));
+    return DoubleMetric(object_.template get<kVmoVariant>().CreateDouble(std::move(name), value));
   }
 
   return DoubleMetric();
 }
 
 IntArray Node::CreateIntArray(std::string name, size_t slots) {
-  return CreateIntArray(std::move(name), slots, ::inspect::vmo::ArrayFormat::kDefault);
-}
-
-IntArray Node::CreateIntArray(std::string name, size_t slots, ::inspect::vmo::ArrayFormat format) {
   if (object_.index() == kVmoVariant) {
-    return IntArray(object_.template get<kVmoVariant>().CreateIntArray(name, slots, format));
+    return IntArray(object_.template get<kVmoVariant>().CreateIntArray(name, slots));
   }
   return IntArray();
 }
 
 UIntArray Node::CreateUIntArray(std::string name, size_t slots) {
-  return CreateUIntArray(std::move(name), slots, ::inspect::vmo::ArrayFormat::kDefault);
-}
-
-UIntArray Node::CreateUIntArray(std::string name, size_t slots,
-                                ::inspect::vmo::ArrayFormat format) {
   if (object_.index() == kVmoVariant) {
-    return UIntArray(object_.template get<kVmoVariant>().CreateUintArray(name, slots, format));
+    return UIntArray(object_.template get<kVmoVariant>().CreateUintArray(name, slots));
   }
   return UIntArray();
 }
 
 DoubleArray Node::CreateDoubleArray(std::string name, size_t slots) {
-  return CreateDoubleArray(std::move(name), slots, ::inspect::vmo::ArrayFormat::kDefault);
-}
-
-DoubleArray Node::CreateDoubleArray(std::string name, size_t slots,
-                                    ::inspect::vmo::ArrayFormat format) {
   if (object_.index() == kVmoVariant) {
-    return DoubleArray(object_.template get<kVmoVariant>().CreateDoubleArray(name, slots, format));
+    return DoubleArray(object_.template get<kVmoVariant>().CreateDoubleArray(name, slots));
   }
   return DoubleArray();
 }
@@ -321,8 +300,7 @@ StringProperty Node::CreateStringProperty(std::string name, std::string value) {
     object->SetProperty(name, component::Property(std::move(value)));
     return StringProperty(internal::EntityWrapper<component::Property>(std::move(name), object));
   } else if (object_.index() == kVmoVariant) {
-    return StringProperty(object_.template get<kVmoVariant>().CreateProperty(
-        std::move(name), {value.data(), value.size()}, ::inspect::vmo::PropertyFormat::kUtf8));
+    return StringProperty(object_.template get<kVmoVariant>().CreateString(std::move(name), value));
   }
 
   return StringProperty();
@@ -335,9 +313,8 @@ ByteVectorProperty Node::CreateByteVectorProperty(std::string name, VectorValue 
     return ByteVectorProperty(
         internal::EntityWrapper<component::Property>(std::move(name), object));
   } else if (object_.index() == kVmoVariant) {
-    return ByteVectorProperty(object_.template get<kVmoVariant>().CreateProperty(
-        std::move(name), {(const char*)value.data(), value.size()},
-        ::inspect::vmo::PropertyFormat::kBinary));
+    return ByteVectorProperty(
+        object_.template get<kVmoVariant>().CreateByteVector(std::move(name), value));
   }
 
   return ByteVectorProperty();
@@ -382,36 +359,28 @@ fit::deferred_callback Node::SetChildrenManager(ChildrenManager* children_manage
   return fit::defer_callback([object] { object->SetChildrenManager(nullptr); });
 }
 
-namespace internal {
-struct TreeState {
-  // The root of the tree.
-  Node root;
-
-  // The VMO inspector object for this tree.
-  ::inspect::vmo::Inspector inspector;
-};
-};  // namespace internal
-
 const TreeSettings kDefaultTreeSettings = {.initial_size = 4096, .maximum_size = 256 * 1024};
 
-Tree::Tree(std::unique_ptr<internal::TreeState> state) : state_(std::move(state)) {}
+Tree::Tree()
+    : inspector_(::inspect::Inspector("root")),
+      root_(std::make_unique<Node>(inspector_.TakeRoot())) {}
 
-Tree::~Tree() {}
+Tree::Tree(::inspect::Inspector inspector)
+    : inspector_(std::move(inspector)), root_(std::make_unique<Node>(inspector_.TakeRoot())) {}
 
-const zx::vmo& Tree::GetVmo() const { return state_->inspector.GetVmo(); }
+const zx::vmo& Tree::GetVmo() const { return *inspector_.GetVmo().value(); }
 
-Node& Tree::GetRoot() const { return state_->root; }
+Node& Tree::GetRoot() const { return *root_; }
 
 Tree Inspector::CreateTree(std::string name) {
   return CreateTree(std::move(name), kDefaultTreeSettings);
 }
 
 Tree Inspector::CreateTree(std::string name, TreeSettings settings) {
-  auto state = std::make_unique<internal::TreeState>();
-  state->inspector = ::inspect::vmo::Inspector(settings.initial_size, settings.maximum_size);
-  state->root = Node(state->inspector.CreateObject(name.c_str()));
+  auto inspector =
+      ::inspect::Inspector(name, ::inspect::InspectSettings{.maximum_size = settings.maximum_size});
 
-  return Tree(std::move(state));
+  return Tree(std::move(inspector));
 }
 
 std::string UniqueName(const std::string& prefix) {

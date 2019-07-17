@@ -5,9 +5,10 @@
 #ifndef LIB_INSPECT_DEPRECATED_READER_H_
 #define LIB_INSPECT_DEPRECATED_READER_H_
 
+#include <fbl/array.h>
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/fit/promise.h>
-#include <lib/inspect-vmo/snapshot.h>
+#include <lib/inspect/cpp/vmo/snapshot.h>
 
 #include "lib/inspect_deprecated/hierarchy.h"
 #include "lib/inspect_deprecated/inspect.h"
@@ -85,7 +86,7 @@ fit::result<ObjectHierarchy> ReadFromVmo(const zx::vmo& vmo);
 
 // Construct a new object hierarchy by synchronously reading objects out of the
 // given VMO Snapshot.
-fit::result<ObjectHierarchy> ReadFromSnapshot(::inspect::vmo::Snapshot snapshot);
+fit::result<ObjectHierarchy> ReadFromSnapshot(::inspect::Snapshot snapshot);
 
 // Construct a new object hierarchy by synchronously reading objects out of the
 // contents of the given immutable buffer.

@@ -24,7 +24,7 @@ executable("bin") {
     "//garnet/public/lib/callback",
     "//peridot/lib/rng:testing",
     "//src/lib/fxl",
-    "//zircon/public/lib/inspect-vmo",
+    "//zircon/public/lib/inspect",
   ]
   public_deps = [
     "//garnet/public/lib/gtest",

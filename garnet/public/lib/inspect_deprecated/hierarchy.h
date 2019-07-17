@@ -5,14 +5,13 @@
 #ifndef LIB_INSPECT_DEPRECATED_HIERARCHY_H_
 #define LIB_INSPECT_DEPRECATED_HIERARCHY_H_
 
-#include <fuchsia/inspect/cpp/fidl.h>
-#include <lib/fit/optional.h>
-#include <lib/fit/variant.h>
-#include <lib/inspect-vmo/block.h>
-
 #include <limits>
 #include <string>
 #include <vector>
+
+#include <fuchsia/inspect/cpp/fidl.h>
+#include <lib/fit/optional.h>
+#include <lib/fit/variant.h>
 
 namespace inspect_deprecated {
 
