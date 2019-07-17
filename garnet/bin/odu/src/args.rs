@@ -6,10 +6,16 @@ use {
     crate::common_operations::allowed_ops,
     crate::target::{AvailableTargets, TargetOps},
     clap::{App, Arg},
+    failure::Fail,
     log::error,
-    std::io::{Error, ErrorKind},
     std::ops::RangeInclusive,
 };
+
+#[derive(Debug, Fail, PartialEq)]
+pub enum Error {
+    #[fail(display = "Operation not supported for the target.")]
+    OperationNotSupported,
+}
 
 #[derive(Debug)]
 pub struct ParseArgs {
@@ -161,11 +167,11 @@ fn target_operations_validator(
                 AvailableTargets::value_to_friendly_name(target_type)
             );
             error!(
-                "For target: {}, suported operations are {:?}",
+                "For target: {}, supported operations are {:?}",
                 AvailableTargets::value_to_friendly_name(target_type),
                 allowed_ops.enabled_operation_names()
             );
-            return Err(Error::new(ErrorKind::InvalidInput, "Operation not allowed"));
+            return Err(Error::OperationNotSupported);
         } else {
             ops.enable(value, true).unwrap();
         }
@@ -416,8 +422,9 @@ mod tests {
 
     #[test]
     fn target_operations_validator_test_invalid_input_nonexistant_operation() {
-        assert!(args::target_operations_validator(AvailableTargets::FileTarget, &vec!["hello"])
-            .is_err());
+        let ret = args::target_operations_validator(AvailableTargets::FileTarget, &vec!["hello"]);
+        assert!(ret.is_err());
+        assert_eq!(ret.err(), Some(args::Error::OperationNotSupported));
     }
 
     #[test]

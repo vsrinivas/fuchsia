@@ -72,10 +72,11 @@ fn output_config(generator_args_vec: &Vec<GeneratorArgs>, output_config_file: &S
 }
 
 fn main() -> Result<(), Error> {
+    log_init()?;
+
     let args = args::parse()?;
 
     let start_instant: Instant = Instant::now();
-    log_init()?;
 
     let mut thread_handles = vec![];
     let mut generator_args_vec = vec![];

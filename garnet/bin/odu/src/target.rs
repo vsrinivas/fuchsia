@@ -5,9 +5,22 @@
 use {
     crate::io_packet::{IoPacket, IoPacketType},
     crate::operations::OperationType,
+    failure::Fail,
     serde_derive::{Deserialize, Serialize},
-    std::{io::Result, ops::Range, sync::Arc, time::Instant},
+    std::{io::ErrorKind, ops::Range, result::Result, sync::Arc, time::Instant},
 };
+
+#[derive(Debug, Clone, Fail, PartialEq)]
+pub enum Error {
+    #[fail(display = "Offset provided is out of range for the target.")]
+    OffsetOutOfRange,
+
+    #[fail(display = "Wrote less bytes than requested")]
+    ShortWrite,
+
+    #[fail(display = "System error while performing IO.")]
+    DoIoError(ErrorKind),
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(test, derive(Hash))]
@@ -47,7 +60,7 @@ pub type TargetType = Arc<Box<Target + Send + Sync>>;
 /// Currently only File blocking IO call are implemented. Some of these
 /// functions are no-ops as the work is still in progress.
 pub trait Target {
-    fn setup(&mut self, file_name: &String, range: Range<u64>) -> Result<()>;
+    fn setup(&mut self, file_name: &String, range: Range<u64>) -> Result<(), Error>;
 
     // TODO(auradkar): This function prototype is weird - it takes self (of type
     // Target) and it also takes TargetType (of type Arc<Box<Target>>). We don't

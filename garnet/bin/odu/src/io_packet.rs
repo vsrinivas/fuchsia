@@ -10,10 +10,11 @@
 
 use {
     crate::operations::{OperationType, PipelineStages},
+    crate::target::Error,
     std::{
-        io::{Error, Result},
         marker::{Send, Sync},
         ops::Range,
+        result::Result,
         time::Instant,
     },
 };
@@ -118,7 +119,7 @@ pub trait IoPacket: IoPacketClone {
     fn generate_verify_io(&mut self);
 
     /// Returns result of the IO command
-    fn get_error(&self) -> Result<()>;
+    fn get_error(&self) -> Result<(), Error>;
 
     /// Sets error on a IoPacket
     fn set_error(&mut self, error: Error);

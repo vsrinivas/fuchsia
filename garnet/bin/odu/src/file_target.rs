@@ -9,15 +9,15 @@ use {
     crate::common_operations::pwrite,
     crate::io_packet::{IoPacket, IoPacketType, TimeInterval},
     crate::operations::{OperationType, PipelineStages},
-    crate::target::{Target, TargetOps, TargetType},
+    crate::target::{Error, Target, TargetOps, TargetType},
     log::debug,
     log::error,
     std::{
         fs::{File, OpenOptions},
-        io::{Error, ErrorKind, Result},
         ops::Range,
         os::unix::io::AsRawFd,
         process,
+        result::Result,
         sync::Arc,
         time::Instant,
     },
@@ -45,7 +45,7 @@ pub struct FileIoPacket {
     offset_range: Range<u64>,
 
     // Result of the completed IO operation
-    io_result: Option<ErrorKind>,
+    io_result: Option<Error>,
 
     // The target(file) on which IO will be performed
     target: TargetType,
@@ -125,15 +125,15 @@ impl IoPacket for FileIoPacket {
         self.target.clone().verify(self, verify_packet)
     }
 
-    fn get_error(&self) -> Result<()> {
-        match self.io_result {
-            Some(error) => Err(Error::new(error.clone(), "something went wrong")),
+    fn get_error(&self) -> Result<(), Error> {
+        match &self.io_result {
+            Some(error) => Err(error.clone()),
             None => Ok(()),
         }
     }
 
     fn set_error(&mut self, io_error: Error) {
-        self.io_result = Some(io_error.kind());
+        self.io_result = Some(io_error);
     }
 
     fn buffer_mut(&mut self) -> &mut Vec<u8> {
@@ -188,7 +188,7 @@ impl FileBlockingTarget {
 
         if offset_range.start < self.offset_range.start || offset_range.end > self.offset_range.end
         {
-            io_packet.set_error(Error::new(ErrorKind::AddrInUse, "Offset out of range!"));
+            io_packet.set_error(Error::OffsetOutOfRange);
             return;
         }
 
@@ -212,7 +212,7 @@ impl FileBlockingTarget {
 }
 
 impl Target for FileBlockingTarget {
-    fn setup(&mut self, _file_name: &String, _range: Range<u64>) -> Result<()> {
+    fn setup(&mut self, _file_name: &String, _range: Range<u64>) -> Result<(), Error> {
         Ok(())
     }
 
@@ -305,10 +305,11 @@ impl Target for FileBlockingTarget {
 
 #[cfg(test)]
 mod tests {
+
     use {
         crate::file_target::FileBlockingTarget,
         crate::operations::OperationType,
-        crate::target::TargetType,
+        crate::target::{Error, TargetType},
         std::{fs, fs::File, time::Instant},
     };
 
@@ -357,6 +358,7 @@ mod tests {
         io_packet.do_io();
         assert_eq!(io_packet.is_complete(), true);
         assert_eq!(io_packet.get_error().is_err(), true);
+        assert_eq!(io_packet.get_error().err(), Some(Error::OffsetOutOfRange));
         teardown(&file_name);
     }
 }
