@@ -32,6 +32,40 @@ use crate::{handle_timeout, Context, EventDispatcher, Instant, StackStateBuilder
 
 use specialize_ip_macro::specialize_ip_address;
 
+/// A mock for the `test::Bencher` type.
+///
+/// `Bencher` provides a subset of the API of `test::Bencher`. It allows us to
+/// compile most benchmark code without using `test::Bencher`, which is
+/// unstable. This, in turn, allows us to compile most benchmark code without
+/// relying on an unstable feature that is disallowed in Fuchsia's build system.
+/// Only the top-level `#[bench]` functions need the actual `test::Bencher`
+/// type, and so only they need to be feature-gated.
+pub(crate) trait Bencher {
+    fn iter<T, F: FnMut() -> T>(&mut self, inner: F);
+}
+
+#[cfg(feature = "benchmark")]
+impl Bencher for test::Bencher {
+    fn iter<T, F: FnMut() -> T>(&mut self, inner: F) {
+        test::Bencher::iter(self, inner)
+    }
+}
+
+/// A mock for the `test::black_box` function.
+///
+/// `black_box` simply calls `test::black_box` when the `benchmark` feature is
+/// enabled, and is the identity function otherwise. This allows us to compile
+/// most benchmark code without relying on the `benchmark` feature, which in
+/// turn relies on the unstable `test` feature, which is disallowed in Fuchsia's
+/// build system.
+#[inline(always)]
+pub(crate) fn black_box<T>(dummy: T) -> T {
+    #[cfg(feature = "benchmark")]
+    return test::black_box(dummy);
+    #[cfg(not(feature = "benchmark"))]
+    return dummy;
+}
+
 /// Create a new deterministic RNG from a seed.
 pub(crate) fn new_rng(mut seed: u64) -> XorShiftRng {
     if seed == 0 {

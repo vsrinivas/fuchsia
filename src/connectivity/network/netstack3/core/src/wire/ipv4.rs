@@ -44,9 +44,9 @@ pub(crate) const IPV4_FRAGMENT_DATA_BYTE_RANGE: Range<usize> = 4..8;
 /// checksum field uses.
 pub(crate) const IPV4_CHECKSUM_BYTE_RANGE: Range<usize> = 10..12;
 
-#[cfg(all(test, feature = "benchmark"))]
+#[cfg(test)]
 pub(crate) const IPV4_TTL_OFFSET: usize = 8;
-#[cfg(all(test, feature = "benchmark"))]
+#[cfg(test)]
 pub(crate) const IPV4_CHECKSUM_OFFSET: usize = 10;
 
 #[allow(missing_docs)]

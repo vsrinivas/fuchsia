@@ -302,13 +302,13 @@ impl<B> Debug for UdpPacket<B> {
 
 #[cfg(test)]
 mod tests {
-    use std::num::NonZeroU16;
-
-    use net_types::ip::{Ipv4Addr, Ipv6Addr};
+    use net_types::ip::{Ipv4, Ipv4Addr, Ipv6Addr};
     use packet::{Buf, BufferSerializer, ParseBuffer, Serializer};
+    use std::num::NonZeroU16;
 
     use super::*;
     use crate::device::ethernet::EtherType;
+    use crate::testutil::{black_box, parse_ip_packet_in_ethernet_frame, Bencher};
     use crate::wire::ethernet::EthernetFrame;
     use crate::wire::ipv4::{Ipv4Header, Ipv4Packet};
     use crate::wire::ipv6::Ipv6Packet;
@@ -567,21 +567,12 @@ mod tests {
     //         .serialize_outer()
     //         .unwrap();
     // }
-}
 
-#[cfg(all(test, feature = "benchmark"))]
-mod benchmarks {
-    use std::num::NonZeroU16;
+    //
+    // Benchmarks
+    //
 
-    use packet::{ParseBuffer, Serializer};
-    use test::{black_box, Bencher};
-
-    use super::*;
-    use crate::ip::Ipv4;
-    use crate::testutil::parse_ip_packet_in_ethernet_frame;
-
-    #[bench]
-    fn bench_parse(b: &mut Bencher) {
+    fn bench_parse_inner<B: Bencher>(b: &mut B) {
         use crate::wire::testdata::dns_request_v4::*;
         let bytes = parse_ip_packet_in_ethernet_frame::<Ipv4>(ETHERNET_FRAME_BYTES).unwrap().0;
 
@@ -595,8 +586,13 @@ mod benchmarks {
         })
     }
 
+    #[cfg(feature = "benchmark")]
     #[bench]
-    fn bench_serialize(b: &mut Bencher) {
+    fn bench_parse(b: &mut test::Bencher) {
+        bench_parse_inner(b);
+    }
+
+    fn bench_serialize_inner<B: Bencher>(b: &mut B) {
         use crate::wire::testdata::dns_request_v4::*;
         let builder = UdpPacketBuilder::new(
             IP_SRC_IP,
@@ -610,5 +606,11 @@ mod benchmarks {
         b.iter(|| {
             black_box(black_box((&mut buf[..]).encapsulate(builder.clone())).serialize_outer());
         })
+    }
+
+    #[cfg(feature = "benchmark")]
+    #[bench]
+    fn bench_serialize(b: &mut test::Bencher) {
+        bench_serialize_inner(b);
     }
 }

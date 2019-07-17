@@ -29,7 +29,7 @@ extern crate packet_new as packet;
 #[macro_use]
 mod macros;
 
-#[cfg(all(test, feature = "benchmark"))]
+#[cfg(test)]
 mod benchmarks;
 mod data_structures;
 mod device;

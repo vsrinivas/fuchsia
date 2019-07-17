@@ -7,14 +7,14 @@
 //! This module contains end-to-end and other high-level benchmarks for the
 //! netstack.
 
-use packet::Serializer;
+use packet::{Buf, Serializer};
 use std::time::{Duration, Instant};
-use test::{black_box, Bencher};
 
 use crate::device::ethernet::EtherType;
 use crate::device::{receive_frame, DeviceId, DeviceLayerEventDispatcher};
+use crate::ip::icmp::IcmpEventDispatcher;
 use crate::ip::IpProto;
-use crate::testutil::{DummyEventDispatcherBuilder, DUMMY_CONFIG_V4};
+use crate::testutil::{black_box, Bencher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4};
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
 use crate::wire::ethernet::{
@@ -24,9 +24,7 @@ use crate::wire::ethernet::{
 use crate::wire::ipv4::{
     Ipv4PacketBuilder, IPV4_CHECKSUM_OFFSET, IPV4_MIN_HDR_LEN, IPV4_TTL_OFFSET,
 };
-use crate::{
-    EventDispatcher, IcmpEventDispatcher, IpLayerEventDispatcher, StackStateBuilder, TimerId,
-};
+use crate::{EventDispatcher, IpLayerEventDispatcher, StackStateBuilder, TimerId};
 
 #[derive(Default)]
 struct BenchmarkEventDispatcher;
@@ -39,9 +37,10 @@ impl UdpEventDispatcher for BenchmarkEventDispatcher {
 impl TransportLayerEventDispatcher for BenchmarkEventDispatcher {}
 
 impl DeviceLayerEventDispatcher for BenchmarkEventDispatcher {
-    // Override send_frame to have no code at all (rather than a
-    // log_unimplemented! call).
-    fn send_frame(&mut self, device: DeviceId, frame: &[u8]) {}
+    fn send_frame<S: Serializer>(&mut self, device: DeviceId, frame: S) -> Result<(), S> {
+        black_box(frame.serialize_outer()).map_err(|(_, ser)| ser)?;
+        Ok(())
+    }
 }
 
 impl IcmpEventDispatcher for BenchmarkEventDispatcher {
@@ -83,7 +82,7 @@ impl EventDispatcher for BenchmarkEventDispatcher {
 // As of Change-Id Iaa22ea23620405dadd0b4f58d112781b29890a46, on a 2018 MacBook
 // Pro, this benchmark takes in the neighborhood of 96ns - 100ns for all frame
 // sizes.
-fn bench_forward_minimum(b: &mut Bencher, frame_size: usize) {
+fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
     let mut state_builder = StackStateBuilder::default();
     state_builder.ip_builder().forward(true);
     let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
@@ -113,9 +112,14 @@ fn bench_forward_minimum(b: &mut Bencher, frame_size: usize) {
         .unwrap();
 
     let device = DeviceId::new_ethernet(0);
+    let mut buf = buf.as_mut();
+    let range = 0..buf.len();
     b.iter(|| {
-        let buf = buf.as_mut();
-        black_box(receive_frame(black_box(&mut ctx), black_box(device), black_box(buf)));
+        black_box(receive_frame(
+            black_box(&mut ctx),
+            black_box(device),
+            black_box(Buf::new(&mut buf[..], range.clone())),
+        ));
         // Since we modified the buffer in-place, it now has the wrong source
         // and destination MAC addresses and IP TTL. We reset them to their
         // original values as efficiently as we can to avoid affecting the
@@ -130,27 +134,32 @@ fn bench_forward_minimum(b: &mut Bencher, frame_size: usize) {
     });
 }
 
+#[cfg(feature = "benchmark")]
 #[bench]
-fn bench_forward_minimum_64(b: &mut Bencher) {
+fn bench_forward_minimum_64(b: &mut test::Bencher) {
     bench_forward_minimum(b, 64);
 }
 
+#[cfg(feature = "benchmark")]
 #[bench]
-fn bench_forward_minimum_128(b: &mut Bencher) {
+fn bench_forward_minimum_128(b: &mut test::Bencher) {
     bench_forward_minimum(b, 128);
 }
 
+#[cfg(feature = "benchmark")]
 #[bench]
-fn bench_forward_minimum_256(b: &mut Bencher) {
+fn bench_forward_minimum_256(b: &mut test::Bencher) {
     bench_forward_minimum(b, 256);
 }
 
+#[cfg(feature = "benchmark")]
 #[bench]
-fn bench_forward_minimum_512(b: &mut Bencher) {
+fn bench_forward_minimum_512(b: &mut test::Bencher) {
     bench_forward_minimum(b, 512);
 }
 
+#[cfg(feature = "benchmark")]
 #[bench]
-fn bench_forward_minimum_1024(b: &mut Bencher) {
+fn bench_forward_minimum_1024(b: &mut test::Bencher) {
     bench_forward_minimum(b, 1024);
 }
