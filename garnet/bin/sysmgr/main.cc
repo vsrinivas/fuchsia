@@ -12,7 +12,6 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 
-constexpr char kConfigDir[] = "/system/data/sysmgr/";
 constexpr char kConfigDataDir[] = "/config/data/";
 
 int main(int argc, const char** argv) {
@@ -26,7 +25,6 @@ int main(int argc, const char** argv) {
     command_line.GetOptionValue("config", &config_data);
     config.ParseFromString(config_data, "command line");
   } else {
-    config.ParseFromDirectory(kConfigDir);
     config.ParseFromDirectory(kConfigDataDir);
   }
 

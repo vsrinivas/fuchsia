@@ -16,9 +16,6 @@
         "services": [
             "fidl.examples.echo.Echo",
             "fuchsia.process.Launcher"
-        ],
-        "system": [
-            "data/appmgr"
         ]
     }
 }
