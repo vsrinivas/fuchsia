@@ -154,6 +154,7 @@ async fn pkgfs_gc(service_connector: &impl ServiceConnector) -> Result<(), Error
 mod test_apply_system_update_impl {
     use super::*;
     use fuchsia_async::futures::future;
+    use matches::assert_matches;
     use proptest::prelude::*;
     use std::fs;
 
@@ -244,8 +245,7 @@ mod test_apply_system_update_impl {
             &time_source,
         ));
 
-        assert!(result.is_err());
-        assert_eq!(result.err().unwrap().kind(), ErrorKind::SystemUpdaterFinished);
+        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::SystemUpdaterFinished));
         assert!(!service_connector.has_garbage_file());
     }
 
@@ -264,8 +264,7 @@ mod test_apply_system_update_impl {
             &time_source,
         ));
 
-        assert!(result.is_err());
-        assert_eq!(result.err().unwrap().kind(), ErrorKind::SystemUpdaterFinished);
+        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::SystemUpdaterFinished));
         assert!(component_runner.was_called);
     }
 
@@ -284,8 +283,7 @@ mod test_apply_system_update_impl {
             &time_source,
         ));
 
-        assert!(result.is_err());
-        assert_eq!(result.err().unwrap().kind(), ErrorKind::SystemUpdaterFinished);
+        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::SystemUpdaterFinished));
         assert!(component_runner.was_called);
     }
 
@@ -357,6 +355,7 @@ mod test_apply_system_update_impl {
 #[cfg(test)]
 mod test_real_service_connector {
     use super::*;
+    use matches::assert_matches;
     use std::fs;
 
     #[fasync::run_singlethreaded(test)]
@@ -404,11 +403,11 @@ mod test_real_service_connector {
             await!(dir_proxy
                 .read_dirents(1000 /*size shouldn't matter, as this should immediately fail*/));
 
-        match read_dirents_res.err().expect("read should fail") {
-            fidl::Error::ClientRead(zx_status) => assert_eq!(zx_status, zx::Status::PEER_CLOSED),
-            fidl::Error::ClientWrite(zx_status) => assert_eq!(zx_status, zx::Status::PEER_CLOSED),
-            err => panic!("unexpected error variant: {}", err),
-        }
+        assert_matches!(
+            read_dirents_res,
+            Err(fidl::Error::ClientRead(zx::Status::PEER_CLOSED))
+                | Err(fidl::Error::ClientWrite(zx::Status::PEER_CLOSED))
+        );
     }
 }
 

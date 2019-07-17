@@ -118,6 +118,7 @@ mod test_check_for_system_update_impl {
     use super::*;
     use fuchsia_async::{self as fasync, futures::future};
     use maplit::hashmap;
+    use matches::assert_matches;
     use std::collections::hash_map::HashMap;
     use std::fs;
     use std::io::Write;
@@ -216,8 +217,7 @@ mod test_check_for_system_update_impl {
 
         let result = await!(check_for_system_update_impl(&mut file_system, &package_resolver,));
 
-        assert!(result.is_err());
-        assert_eq!(result.err().unwrap().kind(), ErrorKind::ReadSystemMeta);
+        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::ReadSystemMeta));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -231,8 +231,7 @@ mod test_check_for_system_update_impl {
 
         let result = await!(check_for_system_update_impl(&mut file_system, &package_resolver,));
 
-        assert!(result.is_err());
-        assert_eq!(result.err().unwrap().kind(), ErrorKind::ParseSystemMeta);
+        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::ParseSystemMeta));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -256,8 +255,7 @@ mod test_check_for_system_update_impl {
 
         let result = await!(check_for_system_update_impl(&mut file_system, &package_resolver,));
 
-        assert!(result.is_err());
-        assert_eq!(result.err().unwrap().kind(), ErrorKind::ResolveUpdatePackageFidl);
+        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::ResolveUpdatePackageFidl));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -281,8 +279,7 @@ mod test_check_for_system_update_impl {
 
         let result = await!(check_for_system_update_impl(&mut file_system, &package_resolver,));
 
-        assert!(result.is_err());
-        assert_eq!(result.err().unwrap().kind(), ErrorKind::ResolveUpdatePackage);
+        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::ResolveUpdatePackage));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -292,8 +289,7 @@ mod test_check_for_system_update_impl {
 
         let result = await!(check_for_system_update_impl(&mut file_system, &package_resolver,));
 
-        assert!(result.is_err());
-        assert_eq!(result.err().unwrap().kind(), ErrorKind::CreatePackagesFd);
+        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::CreatePackagesFd));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -303,8 +299,10 @@ mod test_check_for_system_update_impl {
 
         let result = await!(check_for_system_update_impl(&mut file_system, &package_resolver,));
 
-        assert!(result.is_err());
-        assert_eq!(result.err().unwrap().kind(), ErrorKind::MissingLatestSystemImageMerkle);
+        assert_matches!(
+            result.map_err(|e| e.kind()),
+            Err(ErrorKind::MissingLatestSystemImageMerkle)
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -315,12 +313,12 @@ mod test_check_for_system_update_impl {
 
         let result = await!(check_for_system_update_impl(&mut file_system, &package_resolver,));
 
-        assert!(result.is_err());
-        assert_eq!(
-            result.err().unwrap().kind(),
-            ErrorKind::ParseLatestSystemImageMerkle {
-                packages_entry: "system_image/0=bad-merkle".to_string()
-            }
+        assert_matches!(
+            result.map_err(|e| e.kind()),
+            Err(ErrorKind::ParseLatestSystemImageMerkle {
+                ref packages_entry
+            })
+            if packages_entry == "system_image/0=bad-merkle"
         );
     }
 
@@ -333,14 +331,12 @@ mod test_check_for_system_update_impl {
 
         let result = await!(check_for_system_update_impl(&mut file_system, &package_resolver,));
 
-        assert!(result.is_ok());
-        assert_eq!(
-            result.ok().unwrap(),
-            SystemUpdateStatus::UpToDate {
-                system_image: ACTIVE_SYSTEM_IMAGE_MERKLE
-                    .parse()
-                    .expect("active system image string literal")
-            }
+        assert_matches!(
+            result,
+            Ok(SystemUpdateStatus::UpToDate { system_image })
+            if system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
+                .parse()
+                .expect("active system image string literal")
         );
     }
 
@@ -353,17 +349,16 @@ mod test_check_for_system_update_impl {
 
         let result = await!(check_for_system_update_impl(&mut file_system, &package_resolver,));
 
-        assert!(result.is_ok());
-        assert_eq!(
-            result.ok().unwrap(),
-            SystemUpdateStatus::UpdateAvailable {
-                current_system_image: ACTIVE_SYSTEM_IMAGE_MERKLE
+        assert_matches!(
+            result,
+            Ok(SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image })
+            if
+                current_system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
                     .parse()
-                    .expect("active system image string literal"),
-                latest_system_image: NEW_SYSTEM_IMAGE_MERKLE
+                    .expect("active system image string literal") &&
+                latest_system_image == NEW_SYSTEM_IMAGE_MERKLE
                     .parse()
                     .expect("new system image string literal")
-            }
         );
     }
 }
@@ -371,6 +366,7 @@ mod test_check_for_system_update_impl {
 #[cfg(test)]
 mod test_real_file_system {
     use super::*;
+    use matches::assert_matches;
     use proptest::prelude::*;
     use std::fs;
     use std::io::{self, Write};
@@ -381,7 +377,7 @@ mod test_real_file_system {
         let read_res = RealFileSystem.read_to_string(
             dir.path().join("this-file-does-not-exist").to_str().expect("paths are utf8"),
         );
-        assert_eq!(read_res.err().expect("read should fail").kind(), io::ErrorKind::NotFound);
+        assert_matches!(read_res.map_err(|e| e.kind()), Err(io::ErrorKind::NotFound));
     }
 
     proptest! {
