@@ -10,6 +10,7 @@
 #include <map>
 #include <memory>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/client/client_object.h"
 #include "src/developer/debug/zxdb/client/process_observer.h"
 #include "src/lib/containers/cpp/circular_deque.h"
@@ -69,14 +70,14 @@ class Process : public ClientObject {
 
   // Queries the process for the currently-loaded modules (this always
   // recomputes the list).
-  virtual void GetModules(std::function<void(const Err&, std::vector<debug_ipc::Module>)>) = 0;
+  virtual void GetModules(fit::callback<void(const Err&, std::vector<debug_ipc::Module>)>) = 0;
 
   // Queries the process for its address map if |address| is zero the entire
   // map is requested. If |address| is non-zero only the containing region
   // if exists will be retrieved.
   virtual void GetAspace(
       uint64_t address,
-      std::function<void(const Err&, std::vector<debug_ipc::AddressRegion>)>) const = 0;
+      fit::callback<void(const Err&, std::vector<debug_ipc::AddressRegion>)>) const = 0;
 
   // Returns all threads in the process. This is as of the last update from
   // the system. If the program is currently running, the actual threads may be
@@ -106,7 +107,7 @@ class Process : public ClientObject {
   // format error messages).
   //
   // To get the computed threads, call GetThreads() once the callback runs.
-  virtual void SyncThreads(std::function<void()> callback) = 0;
+  virtual void SyncThreads(fit::callback<void()> callback) = 0;
 
   // Pauses (suspends in Zircon terms) all threads in the process, it does not
   // affect other processes.
@@ -115,7 +116,7 @@ class Process : public ClientObject {
   // issuing the on_paused callback. But this is best effort and not
   // guaranteed: both because there's a timeout for the synchronous suspending
   // and because a different continue message could race with the reply.
-  virtual void Pause(std::function<void()> on_paused) = 0;
+  virtual void Pause(fit::callback<void()> on_paused) = 0;
 
   // Applies to all threads in the process.
   virtual void Continue() = 0;
@@ -123,7 +124,7 @@ class Process : public ClientObject {
   // The callback does NOT mean the step has completed, but rather the setup
   // for the function was successful. Symbols and breakpoint setup can cause
   // asynchronous failures.
-  virtual void ContinueUntil(const InputLocation& location, std::function<void(const Err&)> cb) = 0;
+  virtual void ContinueUntil(const InputLocation& location, fit::callback<void(const Err&)> cb) = 0;
 
   // Returns the SymbolDataProvider that can be used to evaluate symbols
   // in the context of this process. This will not have any frame information
@@ -135,11 +136,11 @@ class Process : public ClientObject {
 
   // Reads memory from the debugged process.
   virtual void ReadMemory(uint64_t address, uint32_t size,
-                          std::function<void(const Err&, MemoryDump)> callback) = 0;
+                          fit::callback<void(const Err&, MemoryDump)> callback) = 0;
 
   // Write memory to the debugged process.
   virtual void WriteMemory(uint64_t address, std::vector<uint8_t> data,
-                           std::function<void(const Err&)> callback) = 0;
+                           fit::callback<void(const Err&)> callback) = 0;
 
   StartType start_type() const { return start_type_; }
 

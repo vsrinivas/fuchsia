@@ -25,21 +25,21 @@ class MockProcess : public Process {
   uint64_t GetKoid() const override;
   const std::string& GetName() const override;
   ProcessSymbols* GetSymbols() override;
-  void GetModules(std::function<void(const Err&, std::vector<debug_ipc::Module>)>) override;
+  void GetModules(fit::callback<void(const Err&, std::vector<debug_ipc::Module>)>) override;
   void GetAspace(
       uint64_t address,
-      std::function<void(const Err&, std::vector<debug_ipc::AddressRegion>)>) const override;
+      fit::callback<void(const Err&, std::vector<debug_ipc::AddressRegion>)>) const override;
   std::vector<Thread*> GetThreads() const override;
   Thread* GetThreadFromKoid(uint64_t koid) override;
-  void SyncThreads(std::function<void()> callback) override;
-  void Pause(std::function<void()> on_paused) override;
+  void SyncThreads(fit::callback<void()> callback) override;
+  void Pause(fit::callback<void()> on_paused) override;
   void Continue() override;
-  void ContinueUntil(const InputLocation& location, std::function<void(const Err&)> cb) override;
+  void ContinueUntil(const InputLocation& location, fit::callback<void(const Err&)> cb) override;
   fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const override;
   void ReadMemory(uint64_t address, uint32_t size,
-                  std::function<void(const Err&, MemoryDump)> callback) override;
+                  fit::callback<void(const Err&, MemoryDump)> callback) override;
   void WriteMemory(uint64_t address, std::vector<uint8_t> data,
-                   std::function<void(const Err&)> callback) override;
+                   fit::callback<void(const Err&)> callback) override;
 
  private:
   ProcessSymbols* symbols_ = nullptr;

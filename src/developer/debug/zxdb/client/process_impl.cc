@@ -61,26 +61,28 @@ const std::string& ProcessImpl::GetName() const { return name_; }
 ProcessSymbols* ProcessImpl::GetSymbols() { return &symbols_; }
 
 void ProcessImpl::GetModules(
-    std::function<void(const Err&, std::vector<debug_ipc::Module>)> callback) {
+    fit::callback<void(const Err&, std::vector<debug_ipc::Module>)> callback) {
   debug_ipc::ModulesRequest request;
   request.process_koid = koid_;
-  session()->remote_api()->Modules(request, [process = weak_factory_.GetWeakPtr(), callback](
-                                                const Err& err, debug_ipc::ModulesReply reply) {
-    if (process)
-      process->symbols_.SetModules(reply.modules);
-    if (callback)
-      callback(err, std::move(reply.modules));
-  });
+  session()->remote_api()->Modules(
+      request, [process = weak_factory_.GetWeakPtr(), callback = std::move(callback)](
+                   const Err& err, debug_ipc::ModulesReply reply) mutable {
+        if (process)
+          process->symbols_.SetModules(reply.modules);
+        if (callback)
+          callback(err, std::move(reply.modules));
+      });
 }
 
 void ProcessImpl::GetAspace(
     uint64_t address,
-    std::function<void(const Err&, std::vector<debug_ipc::AddressRegion>)> callback) const {
+    fit::callback<void(const Err&, std::vector<debug_ipc::AddressRegion>)> callback) const {
   debug_ipc::AddressSpaceRequest request;
   request.process_koid = koid_;
   request.address = address;
   session()->remote_api()->AddressSpace(
-      request, [callback](const Err& err, debug_ipc::AddressSpaceReply reply) {
+      request,
+      [callback = std::move(callback)](const Err& err, debug_ipc::AddressSpaceReply reply) mutable {
         if (callback)
           callback(err, std::move(reply.map));
       });
@@ -96,25 +98,26 @@ std::vector<Thread*> ProcessImpl::GetThreads() const {
 
 Thread* ProcessImpl::GetThreadFromKoid(uint64_t koid) { return GetThreadImplFromKoid(koid); }
 
-void ProcessImpl::SyncThreads(std::function<void()> callback) {
+void ProcessImpl::SyncThreads(fit::callback<void()> callback) {
   debug_ipc::ThreadsRequest request;
   request.process_koid = koid_;
-  session()->remote_api()->Threads(request, [callback, process = weak_factory_.GetWeakPtr()](
-                                                const Err& err, debug_ipc::ThreadsReply reply) {
-    if (process) {
-      process->UpdateThreads(reply.threads);
-      if (callback)
-        callback();
-    }
-  });
+  session()->remote_api()->Threads(
+      request, [callback = std::move(callback), process = weak_factory_.GetWeakPtr()](
+                   const Err& err, debug_ipc::ThreadsReply reply) mutable {
+        if (process) {
+          process->UpdateThreads(reply.threads);
+          if (callback)
+            callback();
+        }
+      });
 }
 
-void ProcessImpl::Pause(std::function<void()> on_paused) {
+void ProcessImpl::Pause(fit::callback<void()> on_paused) {
   debug_ipc::PauseRequest request;
   request.process_koid = koid_;
   session()->remote_api()->Pause(
       request, [weak_process = weak_factory_.GetWeakPtr(), on_paused = std::move(on_paused)](
-                   const Err& err, debug_ipc::PauseReply reply) {
+                   const Err& err, debug_ipc::PauseReply reply) mutable {
         if (weak_process) {
           // Save any new thread metadata (will be empty for errors so don't
           // need to check explicitly for errors).
@@ -139,7 +142,7 @@ void ProcessImpl::Continue() {
     thread->Continue();
 }
 
-void ProcessImpl::ContinueUntil(const InputLocation& location, std::function<void(const Err&)> cb) {
+void ProcessImpl::ContinueUntil(const InputLocation& location, fit::callback<void(const Err&)> cb) {
   cb(
       Err("Process-wide 'Until' is temporarily closed for construction. "
           "Please try again in a few days."));
@@ -154,36 +157,37 @@ fxl::RefPtr<SymbolDataProvider> ProcessImpl::GetSymbolDataProvider() const {
 }
 
 void ProcessImpl::ReadMemory(uint64_t address, uint32_t size,
-                             std::function<void(const Err&, MemoryDump)> callback) {
+                             fit::callback<void(const Err&, MemoryDump)> callback) {
   debug_ipc::ReadMemoryRequest request;
   request.process_koid = koid_;
   request.address = address;
   request.size = size;
-  session()->remote_api()->ReadMemory(request,
-                                      [callback](const Err& err, debug_ipc::ReadMemoryReply reply) {
-                                        callback(err, MemoryDump(std::move(reply.blocks)));
-                                      });
+  session()->remote_api()->ReadMemory(
+      request,
+      [callback = std::move(callback)](const Err& err, debug_ipc::ReadMemoryReply reply) mutable {
+        callback(err, MemoryDump(std::move(reply.blocks)));
+      });
 }
 
 void ProcessImpl::WriteMemory(uint64_t address, std::vector<uint8_t> data,
-                              std::function<void(const Err&)> callback) {
+                              fit::callback<void(const Err&)> callback) {
   debug_ipc::WriteMemoryRequest request;
   request.process_koid = koid_;
   request.address = address;
   request.data = std::move(data);
-  session()->remote_api()->WriteMemory(
-      request, [address, callback](const Err& err, debug_ipc::WriteMemoryReply reply) {
-        if (err.has_error()) {
-          callback(err);
-        } else if (reply.status != 0) {
-          // Convert bad reply to error.
-          callback(
-              Err("Unable to write memory to 0x%" PRIx64 ", error %d.", address, reply.status));
-        } else {
-          // Success.
-          callback(Err());
-        }
-      });
+  session()->remote_api()->WriteMemory(request, [address, callback = std::move(callback)](
+                                                    const Err& err,
+                                                    debug_ipc::WriteMemoryReply reply) mutable {
+    if (err.has_error()) {
+      callback(err);
+    } else if (reply.status != 0) {
+      // Convert bad reply to error.
+      callback(Err("Unable to write memory to 0x%" PRIx64 ", error %d.", address, reply.status));
+    } else {
+      // Success.
+      callback(Err());
+    }
+  });
 }
 
 void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record, bool resume) {

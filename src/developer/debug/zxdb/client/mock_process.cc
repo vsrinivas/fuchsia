@@ -28,34 +28,36 @@ const std::string& MockProcess::GetName() const {
 
 ProcessSymbols* MockProcess::GetSymbols() { return symbols_; }
 
-void MockProcess::GetModules(std::function<void(const Err&, std::vector<debug_ipc::Module>)> cb) {
-  MessageLoop::Current()->PostTask(FROM_HERE,
-                                   [cb]() { cb(Err(), std::vector<debug_ipc::Module>()); });
+void MockProcess::GetModules(fit::callback<void(const Err&, std::vector<debug_ipc::Module>)> cb) {
+  MessageLoop::Current()->PostTask(
+      FROM_HERE, [cb = std::move(cb)]() mutable { cb(Err(), std::vector<debug_ipc::Module>()); });
 }
 
 void MockProcess::GetAspace(
     uint64_t address,
-    std::function<void(const Err&, std::vector<debug_ipc::AddressRegion>)> cb) const {
-  MessageLoop::Current()->PostTask(FROM_HERE,
-                                   [cb]() { cb(Err(), std::vector<debug_ipc::AddressRegion>()); });
+    fit::callback<void(const Err&, std::vector<debug_ipc::AddressRegion>)> cb) const {
+  MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
+    cb(Err(), std::vector<debug_ipc::AddressRegion>());
+  });
 }
 
 std::vector<Thread*> MockProcess::GetThreads() const { return std::vector<Thread*>(); }
 
 Thread* MockProcess::GetThreadFromKoid(uint64_t koid) { return nullptr; }
 
-void MockProcess::SyncThreads(std::function<void()> cb) {
-  MessageLoop::Current()->PostTask(FROM_HERE, [cb]() { cb(); });
+void MockProcess::SyncThreads(fit::callback<void()> cb) {
+  MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable { cb(); });
 }
 
-void MockProcess::Pause(std::function<void()> on_paused) {
-  MessageLoop::Current()->PostTask(FROM_HERE, [on_paused]() { on_paused(); });
+void MockProcess::Pause(fit::callback<void()> on_paused) {
+  MessageLoop::Current()->PostTask(FROM_HERE,
+                                   [on_paused = std::move(on_paused)]() mutable { on_paused(); });
 }
 
 void MockProcess::Continue() {}
 
-void MockProcess::ContinueUntil(const InputLocation& location, std::function<void(const Err&)> cb) {
-  MessageLoop::Current()->PostTask(FROM_HERE, [cb]() { cb(Err()); });
+void MockProcess::ContinueUntil(const InputLocation& location, fit::callback<void(const Err&)> cb) {
+  MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable { cb(Err()); });
 }
 
 fxl::RefPtr<SymbolDataProvider> MockProcess::GetSymbolDataProvider() const {
@@ -63,14 +65,15 @@ fxl::RefPtr<SymbolDataProvider> MockProcess::GetSymbolDataProvider() const {
 }
 
 void MockProcess::ReadMemory(uint64_t address, uint32_t size,
-                             std::function<void(const Err&, MemoryDump)> cb) {
-  MessageLoop::Current()->PostTask(FROM_HERE, [cb]() { cb(Err(), MemoryDump()); });
+                             fit::callback<void(const Err&, MemoryDump)> cb) {
+  MessageLoop::Current()->PostTask(FROM_HERE,
+                                   [cb = std::move(cb)]() mutable { cb(Err(), MemoryDump()); });
 }
 
 void MockProcess::WriteMemory(uint64_t address, std::vector<uint8_t> data,
-                              std::function<void(const Err&)> callback) {
+                              fit::callback<void(const Err&)> callback) {
   // Currently always just report success.
-  MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(callback)]() { cb(Err()); });
+  MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(callback)]() mutable { cb(Err()); });
 }
 
 }  // namespace zxdb
