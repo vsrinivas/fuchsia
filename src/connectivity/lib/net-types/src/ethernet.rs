@@ -1,0 +1,280 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+//! Ethernet protocol types.
+
+use core::fmt::{self, Debug, Display, Formatter};
+
+use zerocopy::{AsBytes, FromBytes, Unaligned};
+
+use crate::ip::{IpAddress, Ipv6Addr};
+use crate::{BroadcastAddress, MulticastAddr, MulticastAddress, UnicastAddress};
+
+/// A media access control (MAC) address.
+///
+/// MAC addresses are used to identify devices in the Ethernet protocol.
+///
+/// MAC addresses can be derived from multicast IP addresses; see the `From`
+/// implementation for more details..
+#[derive(Copy, Clone, Eq, PartialEq, Hash, FromBytes, AsBytes, Unaligned)]
+#[repr(transparent)]
+pub struct Mac([u8; 6]);
+
+impl Mac {
+    /// The broadcast MAC address.
+    ///
+    /// The broadcast MAC address, FF:FF:FF:FF:FF:FF, indicates that a frame
+    /// should be received by all receivers regardless of their local MAC
+    /// address.
+    pub const BROADCAST: Mac = Mac([0xFF; 6]);
+
+    /// The default [RFC 4291] EUI-64 magic value used by the [`to_eui64`]
+    /// method.
+    ///
+    /// [RFC 4291]: https://tools.ietf.org/html/rfc4291
+    /// [`to_eui64`]: crate::ethernet::Mac::to_eui64
+    pub const DEFAULT_EUI_MAGIC: [u8; 2] = [0xff, 0xfe];
+
+    /// Constructs a new MAC address.
+    #[inline]
+    pub const fn new(bytes: [u8; 6]) -> Mac {
+        Mac(bytes)
+    }
+
+    /// Gets the bytes of the MAC address.
+    #[inline]
+    pub const fn bytes(self) -> [u8; 6] {
+        self.0
+    }
+
+    /// Returns the [RFC 4291] EUI-64 interface identifier for this MAC address
+    /// with the default EUI magic value.
+    ///
+    /// `mac.to_eui64()` is equivalent to
+    /// `mac.to_eui64_with_magic(Mac::DEFAULT_EUI_MAGIC)`.
+    ///
+    /// [RFC 4291]: https://tools.ietf.org/html/rfc4291
+    #[inline]
+    pub fn to_eui64(self) -> [u8; 8] {
+        self.to_eui64_with_magic(Mac::DEFAULT_EUI_MAGIC)
+    }
+
+    /// Returns the [RFC 4291] EUI-64 interface identifier for this MAC address
+    /// with a custom EUI magic value.
+    ///
+    /// `eui_magic` is the two bytes that are inserted between the bytes of the
+    /// MAC address to form the identifier. Also see the [`to_eui64`] method,
+    /// which uses the default magic value of 0xFFFE.
+    ///
+    /// [RFC 4291]: https://tools.ietf.org/html/rfc4291
+    /// [`to_eui64`]: crate::ethernet::Mac::to_eui64
+    #[inline]
+    pub fn to_eui64_with_magic(self, eui_magic: [u8; 2]) -> [u8; 8] {
+        let mut eui = [0; 8];
+        eui[0..3].copy_from_slice(&self.0[0..3]);
+        eui[3..5].copy_from_slice(&eui_magic);
+        eui[5..8].copy_from_slice(&self.0[3..6]);
+        eui[0] ^= 0b0000_0010;
+        eui
+    }
+
+    /// Returns the link-local IPv6 address for this MAC address, as per [RFC
+    /// 4862], with the default EUI magic value.
+    ///
+    /// `mac.to_ipv6_link_local()` is equivalent to
+    /// `mac.to_ipv6_link_local_with_magic(Mac::DEFAULT_EUI_MAGIC)`.
+    ///
+    /// [RFC 4291]: https://tools.ietf.org/html/rfc4291
+    #[inline]
+    pub fn to_ipv6_link_local(self) -> Ipv6Addr {
+        self.to_ipv6_link_local_with_magic(Mac::DEFAULT_EUI_MAGIC)
+    }
+
+    /// Returns the link-local IPv6 address for this MAC address, as per [RFC
+    /// 4862].
+    ///
+    /// `eui_magic` is the two bytes that are inserted between the bytes of the
+    /// MAC address to form the identifier. Also see the [`to_ipv6_link_local`]
+    /// method, which uses the default magic value of 0xFFFE.
+    ///
+    /// [RFC 4291]: https://tools.ietf.org/html/rfc4291
+    /// [`to_ipv6_link_local`]: crate::ethernet::Mac::to_ipv6_link_local
+    #[inline]
+    pub fn to_ipv6_link_local_with_magic(self, eui_magic: [u8; 2]) -> Ipv6Addr {
+        let mut ipv6_addr = [0; 16];
+        ipv6_addr[0..2].copy_from_slice(&[0xfe, 0x80]);
+        ipv6_addr[8..16].copy_from_slice(&self.to_eui64_with_magic(eui_magic));
+        Ipv6Addr::new(ipv6_addr)
+    }
+}
+
+impl AsRef<[u8]> for Mac {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl AsMut<[u8]> for Mac {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.0
+    }
+}
+
+impl UnicastAddress for Mac {
+    /// Is this a unicast MAC address?
+    ///
+    /// Returns true if the least significant bit of the first byte of the
+    /// address is 0.
+    #[inline]
+    fn is_unicast(&self) -> bool {
+        // https://en.wikipedia.org/wiki/MAC_address#Unicast_vs._multicast
+        self.0[0] & 1 == 0
+    }
+}
+
+impl MulticastAddress for Mac {
+    /// Is this a multicast MAC address?
+    ///
+    /// Returns true if the least significant bit of the first byte of the
+    /// address is 1.
+    #[inline]
+    fn is_multicast(&self) -> bool {
+        // https://en.wikipedia.org/wiki/MAC_address#Unicast_vs._multicast
+        self.0[0] & 1 == 1
+    }
+}
+
+impl BroadcastAddress for Mac {
+    /// Is this the broadcast MAC address?
+    ///
+    /// Returns true if this is the broadcast MAC address, FF:FF:FF:FF:FF:FF.
+    /// Note that the broadcast address is also considered a multicast address,
+    /// so `addr.is_broadcast()` implies `addr.is_multicast()`.
+    #[inline]
+    fn is_broadcast(&self) -> bool {
+        // https://en.wikipedia.org/wiki/MAC_address#Unicast_vs._multicast
+        *self == Mac::BROADCAST
+    }
+}
+
+impl<'a, A: IpAddress> From<&'a MulticastAddr<A>> for Mac {
+    /// Convert a multicast IP address to a MAC address.
+    ///
+    /// When a multicast IP packet is sent over an Ethernet link, the frame's
+    /// destination MAC address is a multicast MAC address that is derived from
+    /// the destination IP address. This function performs that conversion.
+    ///
+    /// See [RFC 7042 Section 2.1.1] and [Section 2.3.1] for details on how IPv4
+    /// and IPv6 addresses are mapped, respectively.
+    ///
+    /// [RFC 7042 Section 2.1.1]: https://tools.ietf.org/html/rfc7042#section-2.1.1
+    /// [Section 2.3.1]: https://tools.ietf.org/html/rfc7042#section-2.3.1
+    #[inline]
+    fn from(addr: &'a MulticastAddr<A>) -> Mac {
+        Mac::new(addr.with(
+            |a| {
+                let ip_bytes = a.clone().ipv4_bytes();
+                let mut mac_bytes = [0; 6];
+                mac_bytes[0] = 0x01;
+                mac_bytes[1] = 0x00;
+                mac_bytes[2] = 0x5e;
+                mac_bytes[3] = ip_bytes[1] & 0x7f;
+                mac_bytes[4] = ip_bytes[2];
+                mac_bytes[5] = ip_bytes[3];
+                mac_bytes
+            },
+            |a| {
+                let ip_bytes = a.clone().ipv6_bytes();
+                let mut mac_bytes = [0; 6];
+                mac_bytes[0] = 0x33;
+                mac_bytes[1] = 0x33;
+                mac_bytes[2] = ip_bytes[12];
+                mac_bytes[3] = ip_bytes[13];
+                mac_bytes[4] = ip_bytes[14];
+                mac_bytes[5] = ip_bytes[15];
+                mac_bytes
+            },
+        ))
+    }
+}
+
+impl Display for Mac {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{:X}:{:X}:{:X}:{:X}:{:X}:{:X}",
+            self.0[0], self.0[1], self.0[2], self.0[3], self.0[4], self.0[5]
+        )
+    }
+}
+
+impl Debug for Mac {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        Display::fmt(self, f)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ip::Ipv4Addr;
+
+    #[test]
+    fn test_mac_to_eui() {
+        assert_eq!(
+            Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56]).to_eui64(),
+            [0x02, 0x1a, 0xaa, 0xff, 0xfe, 0x12, 0x34, 0x56]
+        );
+        assert_eq!(
+            Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56]).to_eui64_with_magic([0xfe, 0xfe]),
+            [0x02, 0x1a, 0xaa, 0xfe, 0xfe, 0x12, 0x34, 0x56]
+        );
+    }
+
+    #[test]
+    fn test_to_ipv6_link_local() {
+        assert_eq!(
+            Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56]).to_ipv6_link_local(),
+            Ipv6Addr::new([
+                0xfe, 0x80, // IPv6 link-local prefix
+                0, 0, 0, 0, 0, 0, // Padding zeroes
+                0x02, 0x1a, 0xaa, 0xff, 0xfe, 0x12, 0x34, 0x56, // EUI-64
+            ])
+        );
+        assert_eq!(
+            Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56])
+                .to_ipv6_link_local_with_magic([0xfe, 0xfe]),
+            Ipv6Addr::new([
+                0xfe, 0x80, // IPv6 link-local prefix
+                0, 0, 0, 0, 0, 0, // Padding zeroes
+                0x02, 0x1a, 0xaa, 0xfe, 0xfe, 0x12, 0x34, 0x56, // EUI-64
+            ])
+        );
+    }
+
+    #[test]
+    fn test_map_multicast_ip_to_ethernet_mac() {
+        let ipv4 = Ipv4Addr::new([224, 1, 1, 1]);
+        let mac = Mac::from(&MulticastAddr::new(ipv4).unwrap());
+        assert_eq!(mac, Mac::new([0x01, 0x00, 0x5e, 0x1, 0x1, 0x1]));
+        let ipv4 = Ipv4Addr::new([224, 129, 1, 1]);
+        let mac = Mac::from(&MulticastAddr::new(ipv4).unwrap());
+        assert_eq!(mac, Mac::new([0x01, 0x00, 0x5e, 0x1, 0x1, 0x1]));
+        let ipv4 = Ipv4Addr::new([225, 1, 1, 1]);
+        let mac = Mac::from(&MulticastAddr::new(ipv4).unwrap());
+        assert_eq!(mac, Mac::new([0x01, 0x00, 0x5e, 0x1, 0x1, 0x1]));
+
+        let ipv6 = Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3]);
+        let mac = Mac::from(&MulticastAddr::new(ipv6).unwrap());
+        assert_eq!(mac, Mac::new([0x33, 0x33, 0, 0, 0, 3]));
+        let ipv6 = Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 3]);
+        let mac = Mac::from(&MulticastAddr::new(ipv6).unwrap());
+        assert_eq!(mac, Mac::new([0x33, 0x33, 0, 0, 0, 3]));
+        let ipv6 = Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 3]);
+        let mac = Mac::from(&MulticastAddr::new(ipv6).unwrap());
+        assert_eq!(mac, Mac::new([0x33, 0x33, 1, 0, 0, 3]));
+    }
+}

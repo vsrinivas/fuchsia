@@ -1,0 +1,38 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("net-types") {
+  name = "net-types"
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/public/rust/zerocopy",
+    "//third_party/rust_crates:byteorder",
+  ]
+
+  features = [
+    "std",
+  ]
+}
+
+unittest_package("tests") {
+  package_name = "net-types-tests"
+
+  deps = [
+    ":net-types_test",
+  ]
+
+  tests = [
+    {
+      name = "net_types_lib_test"
+      environments = basic_envs
+    },
+  ]
+}
