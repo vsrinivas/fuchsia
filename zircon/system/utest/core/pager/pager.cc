@@ -1795,7 +1795,7 @@ bool decommit_test() {
     ASSERT_EQ(vmo.op_range(ZX_VMO_OP_DECOMMIT, 0, ZX_PAGE_SIZE, nullptr, 0), ZX_ERR_NOT_SUPPORTED);
 
     zx::vmo child;
-    ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, ZX_PAGE_SIZE, &child), ZX_OK);
+    ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, 0, ZX_PAGE_SIZE, &child), ZX_OK);
 
     ASSERT_EQ(child.op_range(ZX_VMO_OP_DECOMMIT, 0, ZX_PAGE_SIZE, nullptr, 0), ZX_ERR_NOT_SUPPORTED);
 
