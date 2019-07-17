@@ -23,8 +23,7 @@
 namespace component {
 
 constexpr char kDeprecatedDataName[] = "deprecated-data";
-
-NamespaceBuilder::NamespaceBuilder() = default;
+constexpr char kBlockedDataName[] = "data";
 
 NamespaceBuilder::~NamespaceBuilder() = default;
 
@@ -91,9 +90,14 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
   for (const auto& path : sandbox.system()) {
     // 'deprecated-data' is the value used to access /system/data
     // to request a directory inside /system/data 'deprecated-data/some/path' is supplied
-    if (path == kDeprecatedDataName || path.find(fxl::Concatenate({kDeprecatedDataName, "/"})) == 0) {
+    if (path == kDeprecatedDataName ||
+        path.find(fxl::Concatenate({kDeprecatedDataName, "/"})) == 0) {
       PushDirectoryFromPath("/system/data" +
                             path.substr(strlen(kDeprecatedDataName), std::string::npos));
+    } else if (path == kBlockedDataName ||
+               path.find(fxl::Concatenate({kBlockedDataName, "/"})) == 0) {
+      FXL_LOG(ERROR) << "Request for 'data' in namespace '" << ns_id
+                     << "' ignored, try 'deprecated-data'";
     } else {
       PushDirectoryFromPath("/system/" + path);
     }

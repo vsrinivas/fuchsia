@@ -14,6 +14,7 @@
 #include "garnet/bin/appmgr/realm.h"
 #include "garnet/lib/cmx/sandbox.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
 
@@ -21,7 +22,7 @@ namespace component {
 
 class NamespaceBuilder {
  public:
-  NamespaceBuilder();
+  NamespaceBuilder(const std::string namespace_id) { ns_id = namespace_id; }
   ~NamespaceBuilder();
 
   void AddFlatNamespace(fuchsia::sys::FlatNamespacePtr flat_namespace);
@@ -41,10 +42,8 @@ class NamespaceBuilder {
   // A factory function that returns a new path for /tmp to point to when it
   // should be isolated from other components and realms
   using IsolatedTempPathFactory = fit::function<std::string()>;
-  void AddSandbox(const SandboxMetadata& sandbox,
-                  const HubDirectoryFactory& hub_directory_factory);
-  void AddSandbox(const SandboxMetadata& sandbox,
-                  const HubDirectoryFactory& hub_directory_factory,
+  void AddSandbox(const SandboxMetadata& sandbox, const HubDirectoryFactory& hub_directory_factory);
+  void AddSandbox(const SandboxMetadata& sandbox, const HubDirectoryFactory& hub_directory_factory,
                   const IsolatedDataPathFactory& isolated_data_path_factory,
                   const IsolatedCachePathFactory& isolated_cache_path_factory,
                   const IsolatedTempPathFactory& isolated_temp_path_factory);
@@ -66,6 +65,7 @@ class NamespaceBuilder {
   fuchsia::sys::FlatNamespace BuildForRunner();
 
  private:
+  std::string ns_id;
   void PushDirectoryFromPath(std::string path);
   void PushDirectoryFromPathAs(std::string src_path, std::string dst_path);
   void PushDirectoryFromChannel(std::string path, zx::channel channel);

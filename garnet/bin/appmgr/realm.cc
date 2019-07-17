@@ -620,7 +620,7 @@ void Realm::CreateShell(const std::string& path, zx::channel svc) {
   SandboxMetadata sandbox;
   sandbox.AddFeature("deprecated-shell");
 
-  NamespaceBuilder builder;
+  NamespaceBuilder builder = NamespaceBuilder(path);
   builder.AddServices(std::move(svc));
   builder.AddSandbox(sandbox, [this] { return OpenInfoDir(); });
 
@@ -694,7 +694,7 @@ void Realm::CreateComponentWithRunnerForScheme(
 
   fuchsia::sys::StartupInfo startup_info;
   startup_info.launch_info = std::move(launch_info);
-  NamespaceBuilder builder;
+  NamespaceBuilder builder = NamespaceBuilder(startup_info.launch_info.url);
   startup_info.flat_namespace = builder.BuildForRunner();
 
   auto* runner = GetOrCreateRunner(runner_url);
@@ -860,7 +860,7 @@ void Realm::CreateComponentFromPackage(
 
   // Note that |builder| is only used in the else block below. It is left here
   // because we would like to use it everywhere once US-313 is fixed.
-  NamespaceBuilder builder;
+  NamespaceBuilder builder = NamespaceBuilder(fp.ToString());
   builder.AddPackage(std::move(pkg));
 
   // If meta/*.cmx exists, attempt to read sandbox data from it.

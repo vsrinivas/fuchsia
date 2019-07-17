@@ -35,7 +35,7 @@ TEST(NamespaceBuilder, Control) {
   json::JSONParser parser;
   EXPECT_TRUE(sandbox.Parse(document, &parser));
 
-  NamespaceBuilder builder;
+  NamespaceBuilder builder = NamespaceBuilder("test_namespace");
   builder.AddSandbox(sandbox, [] { return zx::channel(); });
 
   fdio_flat_namespace_t* flat = builder.Build();
@@ -83,7 +83,7 @@ TEST(NamespaceBuilder, Shell) {
   json::JSONParser parser;
   EXPECT_TRUE(sandbox.Parse(document, &parser));
 
-  NamespaceBuilder builder;
+  NamespaceBuilder builder = NamespaceBuilder("test_namespace");
   builder.AddSandbox(sandbox, [] { return zx::channel(); });
 
   fdio_flat_namespace_t* flat = builder.Build();
@@ -130,7 +130,7 @@ TEST(NamespaceBuilder, SystemDeprecatedData) {
   json::JSONParser parser;
   EXPECT_TRUE(sandbox.Parse(document, &parser));
 
-  NamespaceBuilder builder;
+  NamespaceBuilder builder = NamespaceBuilder("test_namespace");
   builder.AddSandbox(sandbox, [] { return zx::channel(); });
 
   fdio_flat_namespace_t* ns = builder.Build();
@@ -162,7 +162,7 @@ TEST(NamespaceBuilder, SystemDeprecatedDataAndData) {
   json::JSONParser parser;
   EXPECT_TRUE(sandbox.Parse(document, &parser));
 
-  NamespaceBuilder builder;
+  NamespaceBuilder builder = NamespaceBuilder("test_namespace");
   builder.AddSandbox(sandbox, [] { return zx::channel(); });
 
   fdio_flat_namespace_t* ns = builder.Build();
@@ -193,7 +193,7 @@ TEST(NamespaceBuilder, SystemDeprecatedDataSubDir) {
   json::JSONParser parser;
   EXPECT_TRUE(sandbox.Parse(document, &parser));
 
-  NamespaceBuilder builder;
+  NamespaceBuilder builder = NamespaceBuilder("test_namespace");
   builder.AddSandbox(sandbox, [] { return zx::channel(); });
 
   fdio_flat_namespace_t* ns = builder.Build();
@@ -224,7 +224,7 @@ TEST(NamespaceBuilder, SystemDeprecatedTrailingSlash) {
   json::JSONParser parser;
   EXPECT_TRUE(sandbox.Parse(document, &parser));
 
-  NamespaceBuilder builder;
+  NamespaceBuilder builder = NamespaceBuilder("test_namespace");
   builder.AddSandbox(sandbox, [] { return zx::channel(); });
 
   fdio_flat_namespace_t* ns = builder.Build();
@@ -236,6 +236,66 @@ TEST(NamespaceBuilder, SystemDeprecatedTrailingSlash) {
 
   EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/data/") != paths.end());
   EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/deprecated-data") == paths.end());
+
+  for (size_t i = 0; i < ns->count; ++i)
+    zx_handle_close(ns->handle[i]);
+}
+
+TEST(NamespaceBuilder, SystemDataNotAllowed) {
+  rapidjson::Document document;
+  document.SetObject();
+  rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+  rapidjson::Value system_array(rapidjson::kArrayType);
+  system_array.PushBack("data", allocator);
+  document.AddMember("system", system_array, allocator);
+  rapidjson::Value services_array(rapidjson::kArrayType);
+  document.AddMember("services", services_array, allocator);
+  SandboxMetadata sandbox;
+
+  json::JSONParser parser;
+  EXPECT_TRUE(sandbox.Parse(document, &parser));
+
+  NamespaceBuilder builder = NamespaceBuilder("test_namespace");
+  builder.AddSandbox(sandbox, [] { return zx::channel(); });
+
+  fdio_flat_namespace_t* ns = builder.Build();
+  EXPECT_EQ(0u, ns->count);
+
+  std::vector<std::string> paths;
+  for (size_t i = 0; i < ns->count; ++i)
+    paths.push_back(ns->path[i]);
+
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/data") == paths.end());
+
+  for (size_t i = 0; i < ns->count; ++i)
+    zx_handle_close(ns->handle[i]);
+}
+
+TEST(NamespaceBuilder, SystemDataExtraPathNotAllowed) {
+  rapidjson::Document document;
+  document.SetObject();
+  rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+  rapidjson::Value system_array(rapidjson::kArrayType);
+  system_array.PushBack("data/subdir", allocator);
+  document.AddMember("system", system_array, allocator);
+  rapidjson::Value services_array(rapidjson::kArrayType);
+  document.AddMember("services", services_array, allocator);
+  SandboxMetadata sandbox;
+
+  json::JSONParser parser;
+  EXPECT_TRUE(sandbox.Parse(document, &parser));
+
+  NamespaceBuilder builder = NamespaceBuilder("test_namespace");
+  builder.AddSandbox(sandbox, [] { return zx::channel(); });
+
+  fdio_flat_namespace_t* ns = builder.Build();
+  EXPECT_EQ(0u, ns->count);
+
+  std::vector<std::string> paths;
+  for (size_t i = 0; i < ns->count; ++i)
+    paths.push_back(ns->path[i]);
+
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/data/subdir") == paths.end());
 
   for (size_t i = 0; i < ns->count; ++i)
     zx_handle_close(ns->handle[i]);
