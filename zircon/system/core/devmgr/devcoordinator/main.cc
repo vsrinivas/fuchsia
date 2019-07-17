@@ -823,6 +823,7 @@ int service_starter(void* arg) {
   const char* epoch = coordinator->boot_args().Get("devmgr.epoch");
   if (epoch) {
     zx_time_t offset = ZX_SEC(atoi(epoch));
+    printf("Setting backstop UTC epoch: %ld\n", offset);
     zx_clock_adjust(coordinator->root_resource().get(), ZX_CLOCK_UTC, offset);
   }
 
