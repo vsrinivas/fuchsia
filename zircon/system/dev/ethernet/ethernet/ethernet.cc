@@ -1046,6 +1046,12 @@ zx_status_t EthDev0::AddDevice() {
                          ZX_PROTOCOL_ETHERNET)) < 0) {
         return status;
     }
+    // Make sure device starts with expected settings.
+    if ((status = mac_.SetParam(ETHERNET_SETPARAM_PROMISC, 0, nullptr, 0)) != ZX_OK) {
+        // Log the error, but continue, as this is not critical.
+        zxlogf(WARN, "eth: bind: device '%s': unable to disable promiscuous mode: %s\n",
+               device_get_name(parent_), zx_status_get_string(status));
+    }
 
     return ZX_OK;
 }

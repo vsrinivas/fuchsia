@@ -48,6 +48,9 @@ public:
         if (param == ETHERNET_SETPARAM_DUMP_REGS) {
             dump_called_ = true;
         }
+        if (param == ETHERNET_SETPARAM_PROMISC) {
+            promiscuous_ = value;
+        }
         return ZX_OK;
     }
     void EthernetImplGetBti(zx::bti* bti) { bti->reset(); }
@@ -60,6 +63,8 @@ public:
     }
 
     bool TestDump() { return dump_called_; }
+
+    int32_t TestPromiscuous() { return promiscuous_; }
 
     bool TestIfc() {
         if (!client_)
@@ -97,6 +102,7 @@ private:
     fbl::unique_ptr<ddk::EthernetIfcProtocolClient> client_;
 
     bool dump_called_ = false;
+    int32_t promiscuous_ = -1;
     bool queue_tx_called_ = false;
 };
 
@@ -228,6 +234,11 @@ TEST(EthernetTest, GetFifosTest) {
     EXPECT_TRUE(fifos.tx != ZX_HANDLE_INVALID);
 }
 
+TEST(EthernetTest, AddDeviceAsNotPromiscuous) {
+    EthernetDeviceTest test;
+    EXPECT_EQ(test.tester.ethmac().TestPromiscuous(), 0, "");
+}
+
 TEST(EthernetTest, SetPromiscuousModeTest) {
     EthernetDeviceTest test;
     zx_status_t out_status = ZX_ERR_INTERNAL;
@@ -235,11 +246,13 @@ TEST(EthernetTest, SetPromiscuousModeTest) {
     ASSERT_OK(fuchsia_hardware_ethernet_DeviceSetPromiscuousMode(test.FidlChannel(),
                                                                  true, &out_status));
     ASSERT_OK(out_status);
+    EXPECT_EQ(test.tester.ethmac().TestPromiscuous(), 1, "");
 
     out_status = ZX_ERR_INTERNAL;
     ASSERT_OK(fuchsia_hardware_ethernet_DeviceSetPromiscuousMode(test.FidlChannel(),
                                                                  false, &out_status));
     ASSERT_OK(out_status);
+    EXPECT_EQ(test.tester.ethmac().TestPromiscuous(), 0, "");
 }
 
 TEST(EthernetTest, ConfigMulticastAddMacTest) {
