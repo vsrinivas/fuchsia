@@ -83,6 +83,13 @@ Alternatively, you can launch a component directly using its URL:
 fx fidlcat run fuchsia-pkg://fuchsia.com/echo_client_rust#meta/echo_client_rust.cmx
 ```
 
+You can also specify the URL with a bash regex that matches a unique URL known to the build:
+
+```sh
+fx fidlcat run "echo_client_cpp_synchronous.*"
+fx fidlcat run echo_client_cpp.cmx
+```
+
 ### Attaching to a program on startup
 
 You can also attach to programs that have not started yet by passing a regex to
@@ -112,6 +119,9 @@ Note that fidlcat needs two sources of information to work:
    files, or an argument file containing explicit paths. This can be provided
    to fidlcat with the `--fidl-ir-path` flag. The argument files need to be
    prepended with a `@` character: `--fidl-ir-path @argfile`.
+
+ * Third, regex URL matching does not work outside of the fx tool. You must
+   specify the entire package URL.
 
 Finally, if you are running fidlcat without the fx tool, the debug agent needs
 to be running on the target. Connect to the target and run:

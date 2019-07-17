@@ -23,7 +23,7 @@
 ##   is in $PATH and that it works.
 ##
 ## Usage: fx fidlcat [--debug-mode] [(--port|-p) <PORT>] [--with-process-info]
-##                   [--remote-pid <pid>|--remote-name <names>|run <component URL>]
+##                   [--remote-pid <pid>|--remote-name <names>|run <component specification>]
 ##
 ##    --port               Port the debug agent will be listening on. Will use 2345
 ##                         by default.
@@ -35,8 +35,11 @@
 ##                         whose name matches one of the regexes starts, fidlcat
 ##                         will trace it.  Can be provided multiple times for
 ##                         multiple regexes.
-##    run                  a token indicating that you want to invoke and trace the
-##                         following component URL.
+##    run                  A token indicating that you want to invoke and trace
+##                         the following component. The component is specified
+##                         with either a bash regex that matches a component URL
+##                         known to the build, or a full component URL not known
+##                         to your build, but available to your target.
 ##
 ## Flags after -- are parsed by fidlcat.  Example usage:
 ##
@@ -46,6 +49,9 @@
 ## # Launches the echo client, and monitors its FIDL chatter:
 ## fx fidlcat run fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx
 ##
+## # Also launches the echo client, and monitors its FIDL chatter:
+## fx fidlcat run echo_client_cpp.cmx
+##
 ## # Will trace the next process that starts whose name contains "echo_client"
 ## fx fidlcat --remote-name echo_client
 
@@ -53,6 +59,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/va
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../contrib/lib/debug.sh || exit $?
 
 agent_out="/dev/null"
+action=
 debug_mode=
 with_process_info=
 
@@ -80,7 +87,9 @@ while [[ $# -gt 0 ]]; do
       break # Remaining flags are passed to fidlcat
       ;;
     run)
-      break # Remaining flags are passed to fidlcat
+      action="$1"
+      shift
+      break # Remaining flags are passed to fidlcat, with processing below
       ;;
     --)
       shift
@@ -94,6 +103,44 @@ while [[ $# -gt 0 ]]; do
 done
 
 target=$(get-fuchsia-device-addr)
+
+# Infer the package URL from a regex-specified name.
+package_file="${FUCHSIA_BUILD_DIR}/component_index_metadata"
+if [[ "${action}" == "run" ]]; then
+  component=$1
+  components=()
+  all_pkgs="$(cat "${package_file}")"
+  if [[ -n "${all_pkgs}" ]]; then
+    for pkg in ${all_pkgs}; do
+      if [[ "${pkg}" =~ ${component} ]]; then
+        components+=("${pkg}")
+      fi
+    done
+  else
+    # If there aren't any packages in the component_index_metadata file, then
+    # assume the users know what they are doing. fidlcat should complain.
+    components+=("${component}")
+  fi
+
+  if [[ ${#components[@]} = 0 ]]; then
+    fx-error "Package $component is not known to the current build configuration."
+    fx-error "Check \`fx list-packages\` for the correct name,"
+    fx-error "or adjust the build configuration with \`fx set\`."
+    exit 1
+  elif [[ ${#components[@]} -gt 1 ]]; then
+    fx-error "Ambiguous match: $component matches the following ${#components[@]} packages:"
+    for component in "${components[@]}"; do
+      fx-error "  $component"
+    done
+    exit 1
+  fi
+  component="${components[0]}"
+  shift
+  # We have now removed "run <partial component URL regex>" from the remaining
+  # positional parameters.  The following set command replaces them with "run
+  # <full component URL>".
+  set - "run" "${component}" "$@"
+fi
 
 if [[ -z "${port}" ]]; then
   port=2345

@@ -1219,6 +1219,7 @@ group("images") {
     ":package_lists",
     ":paver-script",
     ":record_filesystem_sizes",
+    ":root_component_index_metadata",
     "zedboot",
   ]
 }
@@ -1552,7 +1553,10 @@ package_metadata_list("all_package_manifests.list") {
 # The component index is the index of components in all universe packages.
 component_index_metadata = "$target_out_dir/component_index_metadata"
 component_index_metadata_list("component_index_metadata") {
-  visibility = [ "//src/sys/component_index:*" ]
+  visibility = [
+    "//build/images:*",
+    "//src/sys/component_index:*",
+  ]
 
   testonly = true
 
@@ -1562,6 +1566,21 @@ component_index_metadata_list("component_index_metadata") {
 
   deps = [
     ":universe_packages",
+  ]
+}
+
+# We copy the metatdata to the root dir so that it can easily be used by host
+# tools
+copy("root_component_index_metadata") {
+  testonly = true
+  sources = [
+    component_index_metadata,
+  ]
+  outputs = [
+    "$root_out_dir/component_index_metadata",
+  ]
+  deps = [
+    ":component_index_metadata",
   ]
 }
 
@@ -1692,6 +1711,7 @@ group("updates") {
     ":ids.txt",
     ":package_lists",
     ":publish",
+    ":root_component_index_metadata",
     ":system_snapshot",
   ]
 }
