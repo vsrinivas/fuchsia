@@ -42,7 +42,7 @@ class JobEnumerator {
 // Job and zero or more child Jobs and zero or more Child processes. This
 // creates a DAG (tree) that connects every living task in the system.
 // This is critically important because of the bottoms up refcount nature of
-// the system in which the scheduler keeps alive the thread and the thread keeeps
+// the system in which the scheduler keeps alive the thread and the thread keeps
 // alive the process, so without the Job it would not be possible to enumerate
 // or control the tasks in the system for which there are no outstanding handles.
 //

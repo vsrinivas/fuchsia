@@ -89,6 +89,7 @@ source_set("tests") {
     "exceptionate_tests.cc",
     "handle_tests.cc",
     "interrupt_event_dispatcher_tests.cc",
+    "job_dispatcher_tests.cc",
     "job_policy_tests.cc",
     "mbuf_tests.cc",
     "message_packet_tests.cc",
