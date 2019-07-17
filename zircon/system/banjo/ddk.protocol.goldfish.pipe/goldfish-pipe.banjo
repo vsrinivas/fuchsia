@@ -18,6 +18,7 @@ enum PipeCmdCode : int32 {
     WAKE_ON_WRITE = 5;
     READ = 6;
     WAKE_ON_READ = 7;
+    CALL = 11;
 };
 
 /// Wake flags received through signal callback.
@@ -43,6 +44,7 @@ struct PipeCmdReadWriteParams {
     int32 consumed_size;
     array<uint64>:MAX_BUFFERS_PER_COMMAND ptrs;
     array<uint32>:MAX_BUFFERS_PER_COMMAND sizes;
+    uint32 read_index;
 };
 
 /// Pipe command structure used for all commands.

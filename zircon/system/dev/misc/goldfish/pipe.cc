@@ -197,7 +197,7 @@ zx_status_t Pipe::Read(size_t count, zx_off_t offset, fidl_txn_t* txn) {
   size_t actual;
   zx_status_t status = TransferLocked(PIPE_CMD_CODE_READ, PIPE_CMD_CODE_WAKE_ON_READ,
                                       fuchsia_hardware_goldfish_pipe_SIGNAL_READABLE,
-                                      buffer_.phys + offset, count, &actual);
+                                      buffer_.phys + offset, count, 0, 0, &actual);
   return fuchsia_hardware_goldfish_pipe_PipeRead_reply(txn, status, actual);
 }
 
@@ -215,7 +215,7 @@ zx_status_t Pipe::Write(size_t count, zx_off_t offset, fidl_txn_t* txn) {
   size_t actual;
   zx_status_t status = TransferLocked(PIPE_CMD_CODE_WRITE, PIPE_CMD_CODE_WAKE_ON_WRITE,
                                       fuchsia_hardware_goldfish_pipe_SIGNAL_WRITABLE,
-                                      buffer_.phys + offset, count, &actual);
+                                      buffer_.phys + offset, count, 0, 0, &actual);
   return fuchsia_hardware_goldfish_pipe_PipeWrite_reply(txn, status, actual);
 }
 
@@ -234,16 +234,32 @@ zx_status_t Pipe::Call(size_t count, zx_off_t offset, size_t read_count, zx_off_
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // Blocking write. This should always make progress.
-  size_t left = count;
-  while (left) {
+  size_t remaining = count;
+  size_t remaining_read = read_count;
+
+  int32_t cmd = PIPE_CMD_CODE_WRITE;
+  zx_paddr_t read_paddr = 0;
+  if (read_count) {
+    cmd = PIPE_CMD_CODE_CALL;
+    read_paddr = buffer_.phys + read_offset;
+  }
+
+  // Blocking write. This should always make progress or fail.
+  while (remaining) {
     size_t actual;
-    zx_status_t status = TransferLocked(PIPE_CMD_CODE_WRITE, PIPE_CMD_CODE_WAKE_ON_WRITE,
-                                        fuchsia_hardware_goldfish_pipe_SIGNAL_WRITABLE,
-                                        buffer_.phys + offset, left, &actual);
+    zx_status_t status =
+        TransferLocked(cmd, PIPE_CMD_CODE_WAKE_ON_WRITE,
+                       fuchsia_hardware_goldfish_pipe_SIGNAL_WRITABLE,
+                       buffer_.phys + offset, remaining,
+                       read_paddr, read_count, &actual);
     if (status == ZX_OK) {
-      left -= actual;
-      offset += actual;
+      // Calculate bytes written and bytes read. Adjust counts and offsets accordingly.
+      size_t actual_write = std::min(actual, remaining);
+      size_t actual_read = actual - actual_write;
+      remaining -= actual_write;
+      offset += actual_write;
+      remaining_read -= actual_read;
+      read_offset += actual_read;
       continue;
     }
     if (status != ZX_ERR_SHOULD_WAIT) {
@@ -252,22 +268,29 @@ zx_status_t Pipe::Call(size_t count, zx_off_t offset, size_t read_count, zx_off_
     signal_cvar_.Wait(&lock_);
   }
 
-  // Non-blocking read.
-  size_t actual_read = 0;
+  // Non-blocking read if no data has been read yet.
   zx_status_t status = ZX_OK;
-  if (read_count) {
+  if (read_count && remaining_read == read_count) {
+    size_t actual = 0;
     status = TransferLocked(PIPE_CMD_CODE_READ, PIPE_CMD_CODE_WAKE_ON_READ,
                             fuchsia_hardware_goldfish_pipe_SIGNAL_READABLE,
-                            buffer_.phys + read_offset, read_count, &actual_read);
+                            buffer_.phys + read_offset, remaining_read, 0, 0,
+                            &actual);
+    if (status == ZX_OK) {
+      remaining_read -= actual;
+    }
   }
+  size_t actual_read = read_count - remaining_read;
   return fuchsia_hardware_goldfish_pipe_PipeCall_reply(txn, status, actual_read);
 }
 
 // This function can be trusted to complete fairly quickly. It will cause a
 // VM exit but that should never block for a significant amount of time.
 zx_status_t Pipe::TransferLocked(int32_t cmd, int32_t wake_cmd, zx_signals_t state_clr,
-                                 zx_paddr_t paddr, size_t count, size_t* actual) {
-  TRACE_DURATION("gfx", "Pipe::Transfer", "count", count);
+                                 zx_paddr_t paddr, size_t count,
+                                 zx_paddr_t read_paddr, size_t read_count,
+                                 size_t* actual) {
+  TRACE_DURATION("gfx", "Pipe::Transfer", "count", count, "read_count", read_count);
 
   auto buffer = static_cast<pipe_cmd_buffer_t*>(cmd_buffer_.virt());
   buffer->id = id_;
@@ -275,8 +298,11 @@ zx_status_t Pipe::TransferLocked(int32_t cmd, int32_t wake_cmd, zx_signals_t sta
   buffer->status = PIPE_ERROR_INVAL;
   buffer->rw_params.ptrs[0] = paddr;
   buffer->rw_params.sizes[0] = static_cast<uint32_t>(count);
-  buffer->rw_params.buffers_count = 1;
+  buffer->rw_params.ptrs[1] = read_paddr;
+  buffer->rw_params.sizes[1] = static_cast<uint32_t>(read_count);
+  buffer->rw_params.buffers_count = read_paddr ? 2 : 1;
   buffer->rw_params.consumed_size = 0;
+  buffer->rw_params.read_index = 1;  // Read buffer is always second.
   pipe_.Exec(id_);
 
   // Positive consumed size always indicate a successful transfer.
