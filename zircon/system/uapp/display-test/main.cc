@@ -277,8 +277,10 @@ zx_status_t wait_for_vsync(const fbl::Vector<fbl::unique_ptr<VirtualLayer>>& lay
             ((fuchsia_hardware_display_ControllerClientOwnershipChangeEvent*)msg.bytes().data())
                 ->has_ownership;
         return ZX_ERR_NEXT;
-    } else if (ordinal != fuchsia_hardware_display_ControllerVsyncOrdinal &&
-               ordinal != fuchsia_hardware_display_ControllerVsyncGenOrdinal) {
+    } else if (ordinal == fuchsia_hardware_display_ControllerVsyncOrdinal &&
+               ordinal == fuchsia_hardware_display_ControllerVsyncGenOrdinal) {
+        // Nothing.
+    } else {
         printf("Unknown ordinal %lu\n", ordinal);
         return ZX_ERR_STOP;
     }
