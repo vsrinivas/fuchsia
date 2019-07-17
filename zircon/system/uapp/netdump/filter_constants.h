@@ -42,6 +42,9 @@ constexpr uint16_t ETH_P_IPV6_NETWORK_BYTE_ORDER = 0xDD86;
 // Port ranges are specified as pairs of (begin, end) port numbers.
 using PortRange = std::pair<uint16_t, uint16_t>;
 
+// The minimum length of an Ethernet frame assuming check sequence and payload padding are removed.
+constexpr size_t MIN_ETHERNET_FRAME_LENGTH = ETH_ZLEN - ETH_HLEN;  // 46 octets.
+
 }  // namespace netdump
 
 #endif  // ZIRCON_SYSTEM_UAPP_NETDUMP_FILTER_CONSTANTS_H_

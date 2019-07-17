@@ -8,6 +8,48 @@
 
 namespace netdump {
 
+void Packet::populate(const void* buffer, uint16_t length) {
+  reset();
+  frame_length = length;
+  auto next = reinterpret_cast<const uint8_t*>(buffer);
+  auto end = next + length;  // Points to end of buffer.
+
+  if (length < ETH_HLEN) {
+    return;
+  }
+  frame = reinterpret_cast<const struct ethhdr*>(next);
+  // TODO(CONN-143): Handle VLAN encapsulation.
+  next += ETH_HLEN;
+
+  uint16_t ethtype = ntohs(frame->h_proto);
+  uint8_t transport_protocol = 0;
+  switch (ethtype) {
+    case ETH_P_IP:
+      if (next + sizeof(struct iphdr) > end) {
+        return;
+      }
+      ip = reinterpret_cast<const struct iphdr*>(next);
+      next += ip->ihl << 2;  // Skip IPv4 headers, whose length is `ip->ihl` in 32-bit words.
+      transport_protocol = ip->protocol;
+      break;
+    case ETH_P_IPV6:
+      if (next + sizeof(ip6_hdr_t) > end) {
+        return;
+      }
+      ipv6 = reinterpret_cast<const ip6_hdr_t*>(next);
+      next += sizeof(ip6_hdr_t);
+      transport_protocol = ipv6->next_header;
+      break;
+    default:
+      return;
+  }
+
+  if ((transport_protocol == IPPROTO_TCP && next + sizeof(struct tcphdr) <= end) ||
+      (transport_protocol == IPPROTO_UDP && next + sizeof(struct udphdr) <= end)) {
+    transport = next;
+  }
+}
+
 static inline bool match_port(PortFieldType type, uint16_t src, uint16_t dst, uint16_t spec) {
   if (type & SRC_PORT) {
     if (src == spec) {

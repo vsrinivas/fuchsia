@@ -388,4 +388,103 @@ TEST(NetdumpFilterTest, CompositionTest) {
                   CallConstructor<DisjFilter>());
 }
 
+// Tests for the `populate` method in the `Packet` class that finds the pointers to the headers.
+static constexpr uint16_t BUFFER_LENGTH = 256;
+static constexpr uint8_t IPV4_IHL = 12;  // 32-bit words
+
+inline struct ethhdr* SetupPopulateBuffer(uint16_t ethtype, uint8_t* buffer) {
+  auto frame = reinterpret_cast<struct ethhdr*>(buffer);
+  frame->h_proto = ethtype;
+  return frame;
+}
+
+TEST(NetdumpFilterTest, PopulatePacketEthernetTest) {
+  uint8_t buffer[BUFFER_LENGTH];
+  Packet packet;
+  auto frame = SetupPopulateBuffer(0, buffer);
+
+  // Unrecognized ethtype.
+  packet.populate(buffer, BUFFER_LENGTH);
+  EXPECT_EQ(BUFFER_LENGTH, packet.frame_length);
+  EXPECT_EQ(frame, packet.frame);
+  EXPECT_NULL(packet.ip);
+  EXPECT_NULL(packet.transport);
+
+  // Incomplete Ethernet headers.
+  SetupPopulateBuffer(ntohs(ETH_P_IP), buffer);
+  packet.populate(buffer, ETH_HLEN - 1);
+  EXPECT_EQ(ETH_HLEN - 1, packet.frame_length);
+  EXPECT_NULL(packet.frame);
+  EXPECT_NULL(packet.ip);
+  EXPECT_NULL(packet.transport);
+
+  // Incomplete L3 headers.
+  packet.populate(buffer, ETH_HLEN + 1);
+  EXPECT_EQ(ETH_HLEN + 1, packet.frame_length);
+  EXPECT_EQ(frame, packet.frame);
+  EXPECT_NULL(packet.ip);
+  EXPECT_NULL(packet.transport);
+}
+
+void PopulatePacketIPTest(size_t iphdr_len, uint8_t* transport_protocol, uint8_t* buffer) {
+  Packet packet;
+  auto frame = reinterpret_cast<struct ethhdr*>(buffer);
+  auto ip = reinterpret_cast<struct iphdr*>(buffer + ETH_HLEN);
+  void* transport = buffer + ETH_HLEN + iphdr_len;
+
+  // Unrecognized transport protocol.
+  *transport_protocol = 0;
+  packet.populate(buffer, BUFFER_LENGTH);
+  EXPECT_EQ(BUFFER_LENGTH, packet.frame_length);
+  EXPECT_EQ(frame, packet.frame);
+  EXPECT_EQ(ip, packet.ip);
+  EXPECT_NULL(packet.transport);
+
+  // UDP headers.
+  *transport_protocol = IPPROTO_UDP;
+  packet.populate(buffer, static_cast<uint16_t>(ETH_HLEN + iphdr_len + sizeof(udp_hdr_t)));
+  EXPECT_EQ(ETH_HLEN + iphdr_len + sizeof(udp_hdr_t), packet.frame_length);
+  EXPECT_EQ(frame, packet.frame);
+  EXPECT_EQ(ip, packet.ip);
+  EXPECT_EQ(transport, packet.transport);
+
+  // Incomplete UDP headers.
+  packet.populate(buffer, static_cast<uint16_t>(ETH_HLEN + iphdr_len + 1));
+  EXPECT_EQ(ETH_HLEN + iphdr_len + 1, packet.frame_length);
+  EXPECT_EQ(frame, packet.frame);
+  EXPECT_EQ(ip, packet.ip);
+  EXPECT_NULL(packet.transport);
+
+  // TCP headers.
+  *transport_protocol = IPPROTO_TCP;
+  packet.populate(buffer, BUFFER_LENGTH);
+  EXPECT_EQ(BUFFER_LENGTH, packet.frame_length);
+  EXPECT_EQ(frame, packet.frame);
+  EXPECT_EQ(ip, packet.ip);
+  EXPECT_EQ(transport, packet.transport);
+
+  // Incomplete TCP headers, length sufficient for UDP but not TCP.
+  packet.populate(buffer, static_cast<uint16_t>(ETH_HLEN + iphdr_len + sizeof(udp_hdr_t)));
+  EXPECT_EQ(ETH_HLEN + iphdr_len + sizeof(udp_hdr_t), packet.frame_length);
+  EXPECT_EQ(frame, packet.frame);
+  EXPECT_EQ(ip, packet.ip);
+  EXPECT_NULL(packet.transport);
+}
+
+TEST(NetdumpFilterTest, PopulatePacketIPv4Test) {
+  uint8_t buffer[BUFFER_LENGTH];
+  SetupPopulateBuffer(ntohs(ETH_P_IP), buffer);
+  auto ip = reinterpret_cast<struct iphdr*>(buffer + ETH_HLEN);
+  ip->ihl = IPV4_IHL;
+  size_t iphdr_len = IPV4_IHL << 2;
+  PopulatePacketIPTest(iphdr_len, &ip->protocol, buffer);
+}
+
+TEST(NetdumpFilterTest, PopulatePacketIPv6Test) {
+  uint8_t buffer[BUFFER_LENGTH];
+  SetupPopulateBuffer(ntohs(ETH_P_IPV6), buffer);
+  auto ipv6 = reinterpret_cast<ip6_hdr_t*>(buffer + ETH_HLEN);
+  PopulatePacketIPTest(sizeof(ip6_hdr_t), &ipv6->next_header, buffer);
+}
+
 }  // namespace netdump::test

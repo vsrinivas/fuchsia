@@ -40,6 +40,11 @@ class Packet {
     transport = nullptr;
   }
 
+  // Populate the header pointers with Ethernet frame header starting at `buffer`, with length
+  // checks to ensure the complete headers are present. If the headers are incomplete or
+  // unrecognized, the corresponding pointers are set to null.
+  void populate(const void* buffer, uint16_t length);
+
   // `frame_len` is supplied by the client user of filter, so it is expected in host byte order.
   uint16_t frame_length;
   const struct ethhdr* frame;
