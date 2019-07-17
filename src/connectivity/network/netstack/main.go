@@ -180,7 +180,8 @@ func Main() {
 		_, err := netSocketProviderService.Add(netSocketProvider, c, nil)
 		return err
 	})
-	posixSocketProvider := &providerImpl{socketProviderImpl: netSocketProvider}
+
+	posixSocketProvider := &providerImpl{ns: ns}
 	var posixSocketProviderService socket.ProviderService
 	ctx.OutgoingService.AddService(socket.ProviderName, func(c zx.Channel) error {
 		_, err := posixSocketProviderService.Add(posixSocketProvider, c, nil)

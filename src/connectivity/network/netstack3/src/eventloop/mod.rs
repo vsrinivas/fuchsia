@@ -91,7 +91,7 @@ use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fuchsia_hardware_ethernet as fidl_ethernet;
 use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetStatus, MacAddress};
 use fidl_fuchsia_net as fidl_net;
-use fidl_fuchsia_net::{SocketControlRequest, SocketProviderRequest};
+use fidl_fuchsia_net::SocketProviderRequest;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fidl_fuchsia_net_stack::{
     AdministrativeStatus, ForwardingEntry, InterfaceAddress, InterfaceInfo, InterfaceProperties,
@@ -227,8 +227,6 @@ pub enum Event {
     FidlStackEvent(StackRequest),
     /// A request from the fuchsia.net.SocketProvider FIDL interface.
     FidlSocketProviderEvent(SocketProviderRequest),
-    /// A request from the fuchsia.net.SocketControl FIDL interface.
-    FidlSocketControlEvent(SocketControlRequest),
     /// An event from an ethernet interface. Either a status change or a frame.
     EthEvent((BindingId, eth::Event)),
     /// An indication that an ethernet device is ready to be used.
@@ -303,9 +301,6 @@ impl EventLoop {
             Some(Event::FidlSocketProviderEvent(req)) => {
                 await!(self.handle_fidl_socket_provider_request(req));
             }
-            Some(Event::FidlSocketControlEvent(req)) => {
-                await!(self.handle_fidl_socket_control_request(req));
-            }
             Some(Event::EthEvent((id, eth::Event::StatusChanged))) => {
                 info!("device {:?} status changed signal", id);
                 // We need to call get_status even if we don't use the output, since calling it
@@ -370,31 +365,9 @@ impl EventLoop {
 
     async fn handle_fidl_socket_provider_request(&mut self, req: SocketProviderRequest) {
         match req {
-            SocketProviderRequest::Socket { domain, type_, protocol, responder } => {
-                match (domain as i32, type_ as i32) {
-                    _ => {
-                        responder.send(libc::ENOSYS as i16, None);
-                    }
-                }
-            }
             SocketProviderRequest::GetAddrInfo { node, service, hints, responder } => {
                 // TODO(wesleyac)
             }
-        }
-    }
-
-    async fn handle_fidl_socket_control_request(&mut self, req: SocketControlRequest) {
-        match req {
-            SocketControlRequest::Close { responder } => {}
-            SocketControlRequest::Ioctl { req, in_, responder } => {}
-            SocketControlRequest::Connect { addr, responder } => {}
-            SocketControlRequest::Accept { flags, responder } => {}
-            SocketControlRequest::Bind { addr, responder } => {}
-            SocketControlRequest::Listen { backlog, responder } => {}
-            SocketControlRequest::GetSockName { responder } => {}
-            SocketControlRequest::GetPeerName { responder } => {}
-            SocketControlRequest::SetSockOpt { level, optname, optval, responder } => {}
-            SocketControlRequest::GetSockOpt { level, optname, responder } => {}
         }
     }
 

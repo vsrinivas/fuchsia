@@ -514,7 +514,7 @@ func (msg *overnetInternalProtocolMutateSocketResponse) Marshaler() _bindings.Ma
 	return _movernetInternalProtocolMutateSocketResponse
 }
 
-type OvernetInternalProtocolInterface _bindings.ChannelProxy
+type OvernetInternalProtocolInterface _bindings.
 
 
 func (p *OvernetInternalProtocolInterface) MethodA(a int64,b int64) error {
@@ -522,13 +522,13 @@ func (p *OvernetInternalProtocolInterface) MethodA(a int64,b int64) error {
 		A: a,
 		B: b,
 	}
-	err := ((*_bindings.ChannelProxy)(p)).Send(OvernetInternalProtocolMethodAOrdinal, req_)
+	err := ((*_bindings.)(p)).Send(OvernetInternalProtocolMethodAOrdinal, req_)
 	return err
 }
 
 func (p *OvernetInternalProtocolInterface) ExpectEventA() (int64, int64, error) {
 	resp_ := &overnetInternalProtocolEventAResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Recv(OvernetInternalProtocolEventAOrdinal, resp_)
+	err := ((*_bindings.)(p)).Recv(OvernetInternalProtocolEventAOrdinal, resp_)
 	return resp_.A, resp_.B, err
 }
 
@@ -538,7 +538,7 @@ func (p *OvernetInternalProtocolInterface) MethodB(a int64,b int64) (int64, erro
 		B: b,
 	}
 	resp_ := &overnetInternalProtocolMethodBResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Call(OvernetInternalProtocolMethodBOrdinal, req_, resp_)
+	err := ((*_bindings.)(p)).Call(OvernetInternalProtocolMethodBOrdinal, req_, resp_)
 	return resp_.Result, err
 }
 
@@ -547,7 +547,7 @@ func (p *OvernetInternalProtocolInterface) MutateSocket(a _zx.Socket) (_zx.Socke
 		A: a,
 	}
 	resp_ := &overnetInternalProtocolMutateSocketResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Call(OvernetInternalProtocolMutateSocketOrdinal, req_, resp_)
+	err := ((*_bindings.)(p)).Call(OvernetInternalProtocolMutateSocketOrdinal, req_, resp_)
 	return resp_.B, err
 }
 
@@ -561,12 +561,6 @@ type OvernetInternalProtocol interface {
 type OvernetInternalProtocolTransitionalBase struct {}
 
 
-type OvernetInternalProtocolInterfaceRequest _bindings.InterfaceRequest
-
-func NewOvernetInternalProtocolInterfaceRequest() (OvernetInternalProtocolInterfaceRequest, *OvernetInternalProtocolInterface, error) {
-	req, cli, err := _bindings.NewInterfaceRequest()
-	return OvernetInternalProtocolInterfaceRequest(req), (*OvernetInternalProtocolInterface)(cli), err
-}
 
 type OvernetInternalProtocolStub struct {
 	Impl OvernetInternalProtocol
@@ -602,201 +596,15 @@ func (s_ *OvernetInternalProtocolStub) Dispatch(ordinal_ uint64, data_ []byte, h
 	}
 	return nil, _bindings.ErrUnknownOrdinal
 }
-type OvernetInternalProtocolService struct {
-	_bindings.BindingSet
-}
 
-func (s *OvernetInternalProtocolService) Add(impl OvernetInternalProtocol, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&OvernetInternalProtocolStub{Impl: impl}, c, onError)
-}
-
-func (s *OvernetInternalProtocolService) EventProxyFor(key _bindings.BindingKey) (*OvernetInternalProtocolEventProxy, bool) {
-	pxy, err := s.BindingSet.ProxyFor(key)
-	return (*OvernetInternalProtocolEventProxy)(pxy), err
-}
-
-type OvernetInternalProtocolEventProxy _bindings.ChannelProxy
+type OvernetInternalProtocolEventProxy _bindings.
 
 func (p *OvernetInternalProtocolEventProxy) EventA(a int64,b int64) error {
 	event_ := &overnetInternalProtocolEventAResponse{
 		A: a,
 		B: b,
 	}
-	return ((*_bindings.ChannelProxy)(p)).Send(OvernetInternalProtocolEventAOrdinal, event_)
-}
-
-
-const (
-	SocketControlProtocolMethodAOrdinal uint64 = 1007842318 << 32
-	SocketControlProtocolMethodAGenOrdinal uint64 = 1007842318 << 32
-	SocketControlProtocolEventAOrdinal uint64 = 955483393 << 32
-	SocketControlProtocolEventAGenOrdinal uint64 = 955483393 << 32
-	SocketControlProtocolMethodBOrdinal uint64 = 677342235 << 32
-	SocketControlProtocolMethodBGenOrdinal uint64 = 677342235 << 32
-	SocketControlProtocolMutateSocketOrdinal uint64 = 255772213 << 32
-	SocketControlProtocolMutateSocketGenOrdinal uint64 = 255772213 << 32
-)
-
-type socketControlProtocolMethodARequest struct {
-	_ struct{} `fidl2:"s,16,0"`
-	A int64
-	B int64
-}
-
-var _msocketControlProtocolMethodARequest = _bindings.CreateLazyMarshaler(socketControlProtocolMethodARequest{})
-
-func (msg *socketControlProtocolMethodARequest) Marshaler() _bindings.Marshaler {
-	return _msocketControlProtocolMethodARequest
-}
-
-type socketControlProtocolEventAResponse struct {
-	_ struct{} `fidl2:"s,16,0"`
-	A int64
-	B int64
-}
-
-var _msocketControlProtocolEventAResponse = _bindings.CreateLazyMarshaler(socketControlProtocolEventAResponse{})
-
-func (msg *socketControlProtocolEventAResponse) Marshaler() _bindings.Marshaler {
-	return _msocketControlProtocolEventAResponse
-}
-
-type socketControlProtocolMethodBRequest struct {
-	_ struct{} `fidl2:"s,16,0"`
-	A int64
-	B int64
-}
-
-var _msocketControlProtocolMethodBRequest = _bindings.CreateLazyMarshaler(socketControlProtocolMethodBRequest{})
-
-func (msg *socketControlProtocolMethodBRequest) Marshaler() _bindings.Marshaler {
-	return _msocketControlProtocolMethodBRequest
-}
-
-type socketControlProtocolMethodBResponse struct {
-	_ struct{} `fidl2:"s,8,0"`
-	Result int64
-}
-
-var _msocketControlProtocolMethodBResponse = _bindings.CreateLazyMarshaler(socketControlProtocolMethodBResponse{})
-
-func (msg *socketControlProtocolMethodBResponse) Marshaler() _bindings.Marshaler {
-	return _msocketControlProtocolMethodBResponse
-}
-
-type socketControlProtocolMutateSocketRequest struct {
-	_ struct{} `fidl2:"s,8,0"`
-	A _zx.Socket`fidl2:"0"`
-}
-
-var _msocketControlProtocolMutateSocketRequest = _bindings.CreateLazyMarshaler(socketControlProtocolMutateSocketRequest{})
-
-func (msg *socketControlProtocolMutateSocketRequest) Marshaler() _bindings.Marshaler {
-	return _msocketControlProtocolMutateSocketRequest
-}
-
-type socketControlProtocolMutateSocketResponse struct {
-	_ struct{} `fidl2:"s,8,0"`
-	B _zx.Socket`fidl2:"0"`
-}
-
-var _msocketControlProtocolMutateSocketResponse = _bindings.CreateLazyMarshaler(socketControlProtocolMutateSocketResponse{})
-
-func (msg *socketControlProtocolMutateSocketResponse) Marshaler() _bindings.Marshaler {
-	return _msocketControlProtocolMutateSocketResponse
-}
-
-type SocketControlProtocolInterface _bindings.SocketControlProxy
-
-
-func (p *SocketControlProtocolInterface) MethodA(a int64,b int64) error {
-	req_ := &socketControlProtocolMethodARequest{
-		A: a,
-		B: b,
-	}
-	err := ((*_bindings.SocketControlProxy)(p)).Send(SocketControlProtocolMethodAOrdinal, req_)
-	return err
-}
-
-func (p *SocketControlProtocolInterface) ExpectEventA() (int64, int64, error) {
-	resp_ := &socketControlProtocolEventAResponse{}
-	err := ((*_bindings.SocketControlProxy)(p)).Recv(SocketControlProtocolEventAOrdinal, resp_)
-	return resp_.A, resp_.B, err
-}
-
-func (p *SocketControlProtocolInterface) MethodB(a int64,b int64) (int64, error) {
-	req_ := &socketControlProtocolMethodBRequest{
-		A: a,
-		B: b,
-	}
-	resp_ := &socketControlProtocolMethodBResponse{}
-	err := ((*_bindings.SocketControlProxy)(p)).Call(SocketControlProtocolMethodBOrdinal, req_, resp_)
-	return resp_.Result, err
-}
-
-func (p *SocketControlProtocolInterface) MutateSocket(a _zx.Socket) (_zx.Socket, error) {
-	req_ := &socketControlProtocolMutateSocketRequest{
-		A: a,
-	}
-	resp_ := &socketControlProtocolMutateSocketResponse{}
-	err := ((*_bindings.SocketControlProxy)(p)).Call(SocketControlProtocolMutateSocketOrdinal, req_, resp_)
-	return resp_.B, err
-}
-
-
-type SocketControlProtocol interface {
-	MethodA(a int64,b int64) error
-	MethodB(a int64,b int64) (int64, error)
-	MutateSocket(a _zx.Socket) (_zx.Socket, error)
-}
-
-type SocketControlProtocolTransitionalBase struct {}
-
-
-
-type SocketControlProtocolStub struct {
-	Impl SocketControlProtocol
-}
-
-func (s_ *SocketControlProtocolStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
-	switch ordinal_ {
-	case SocketControlProtocolMethodAOrdinal:
-		in_ := socketControlProtocolMethodARequest{}
-		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
-			return nil, err_
-		}
-		err_ := s_.Impl.MethodA(in_.A,in_.B)
-		return nil, err_
-	case SocketControlProtocolMethodBOrdinal:
-		in_ := socketControlProtocolMethodBRequest{}
-		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
-			return nil, err_
-		}
-		result, err_ := s_.Impl.MethodB(in_.A,in_.B)
-		out_ := socketControlProtocolMethodBResponse{}
-		out_.Result = result
-		return &out_, err_
-	case SocketControlProtocolMutateSocketOrdinal:
-		in_ := socketControlProtocolMutateSocketRequest{}
-		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
-			return nil, err_
-		}
-		b, err_ := s_.Impl.MutateSocket(in_.A)
-		out_ := socketControlProtocolMutateSocketResponse{}
-		out_.B = b
-		return &out_, err_
-	}
-	return nil, _bindings.ErrUnknownOrdinal
-}
-
-type SocketControlProtocolEventProxy _bindings.SocketControlProxy
-
-func (p *SocketControlProtocolEventProxy) EventA(a int64,b int64) error {
-	event_ := &socketControlProtocolEventAResponse{
-		A: a,
-		B: b,
-	}
-	return ((*_bindings.SocketControlProxy)(p)).Send(SocketControlProtocolEventAOrdinal, event_)
+	return ((*_bindings.)(p)).Send(OvernetInternalProtocolEventAOrdinal, event_)
 }
 
 
@@ -1072,7 +880,7 @@ func (msg *kitchenSinkMutateSocketResponse) Marshaler() _bindings.Marshaler {
 	return _mkitchenSinkMutateSocketResponse
 }
 
-type KitchenSinkInterface _bindings.ChannelProxy
+type KitchenSinkInterface _bindings.
 
 
 func (p *KitchenSinkInterface) MethodA(a int64,b int64) error {
@@ -1080,13 +888,13 @@ func (p *KitchenSinkInterface) MethodA(a int64,b int64) error {
 		A: a,
 		B: b,
 	}
-	err := ((*_bindings.ChannelProxy)(p)).Send(KitchenSinkMethodAOrdinal, req_)
+	err := ((*_bindings.)(p)).Send(KitchenSinkMethodAOrdinal, req_)
 	return err
 }
 
 func (p *KitchenSinkInterface) ExpectEventA() (int64, int64, error) {
 	resp_ := &kitchenSinkEventAResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Recv(KitchenSinkEventAOrdinal, resp_)
+	err := ((*_bindings.)(p)).Recv(KitchenSinkEventAOrdinal, resp_)
 	return resp_.A, resp_.B, err
 }
 
@@ -1096,7 +904,7 @@ func (p *KitchenSinkInterface) MethodB(a int64,b int64) (int64, error) {
 		B: b,
 	}
 	resp_ := &kitchenSinkMethodBResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Call(KitchenSinkMethodBOrdinal, req_, resp_)
+	err := ((*_bindings.)(p)).Call(KitchenSinkMethodBOrdinal, req_, resp_)
 	return resp_.Result, err
 }
 
@@ -1105,7 +913,7 @@ func (p *KitchenSinkInterface) MutateSocket(a _zx.Socket) (_zx.Socket, error) {
 		A: a,
 	}
 	resp_ := &kitchenSinkMutateSocketResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Call(KitchenSinkMutateSocketOrdinal, req_, resp_)
+	err := ((*_bindings.)(p)).Call(KitchenSinkMutateSocketOrdinal, req_, resp_)
 	return resp_.B, err
 }
 
@@ -1119,12 +927,6 @@ type KitchenSink interface {
 type KitchenSinkTransitionalBase struct {}
 
 
-type KitchenSinkInterfaceRequest _bindings.InterfaceRequest
-
-func NewKitchenSinkInterfaceRequest() (KitchenSinkInterfaceRequest, *KitchenSinkInterface, error) {
-	req, cli, err := _bindings.NewInterfaceRequest()
-	return KitchenSinkInterfaceRequest(req), (*KitchenSinkInterface)(cli), err
-}
 
 type KitchenSinkStub struct {
 	Impl KitchenSink
@@ -1160,27 +962,15 @@ func (s_ *KitchenSinkStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_z
 	}
 	return nil, _bindings.ErrUnknownOrdinal
 }
-type KitchenSinkService struct {
-	_bindings.BindingSet
-}
 
-func (s *KitchenSinkService) Add(impl KitchenSink, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&KitchenSinkStub{Impl: impl}, c, onError)
-}
-
-func (s *KitchenSinkService) EventProxyFor(key _bindings.BindingKey) (*KitchenSinkEventProxy, bool) {
-	pxy, err := s.BindingSet.ProxyFor(key)
-	return (*KitchenSinkEventProxy)(pxy), err
-}
-
-type KitchenSinkEventProxy _bindings.ChannelProxy
+type KitchenSinkEventProxy _bindings.
 
 func (p *KitchenSinkEventProxy) EventA(a int64,b int64) error {
 	event_ := &kitchenSinkEventAResponse{
 		A: a,
 		B: b,
 	}
-	return ((*_bindings.ChannelProxy)(p)).Send(KitchenSinkEventAOrdinal, event_)
+	return ((*_bindings.)(p)).Send(KitchenSinkEventAOrdinal, event_)
 }
 
 

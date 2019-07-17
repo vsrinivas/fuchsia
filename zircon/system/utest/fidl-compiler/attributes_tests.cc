@@ -335,32 +335,13 @@ protocol A {
   END_TEST;
 }
 
-bool socket_control_transport() {
-  BEGIN_TEST;
-
-  TestLibrary library("transport_attribuets.fidl", R"FIDL(
-library fidl.test.transportattributes;
-
-[Transport = "SocketControl"]
-protocol A {
-    MethodA();
-};
-
-)FIDL");
-  EXPECT_TRUE(library.Compile());
-  ASSERT_EQ(library.errors().size(), 0);
-  ASSERT_EQ(library.warnings().size(), 0);
-
-  END_TEST;
-}
-
 bool multiple_transports() {
   BEGIN_TEST;
 
   TestLibrary library("transport_attribuets.fidl", R"FIDL(
 library fidl.test.transportattributes;
 
-[Transport = "SocketControl, OvernetInternal"]
+[Transport = "Channel, OvernetInternal"]
 protocol A {
     MethodA();
 };
@@ -379,7 +360,7 @@ bool multiple_transports_with_bogus() {
   TestLibrary library("transport_attribuets.fidl", R"FIDL(
 library fidl.test.transportattributes;
 
-[Transport = "SocketControl,Bogus, OvernetInternal"]
+[Transport = "Channel, Bogus, OvernetInternal"]
 protocol A {
     MethodA();
 };
@@ -626,7 +607,6 @@ RUN_TEST(warnings_as_errors_test)
 RUN_TEST(empty_transport)
 RUN_TEST(bogus_transport)
 RUN_TEST(channel_transport)
-RUN_TEST(socket_control_transport)
 RUN_TEST(multiple_transports)
 RUN_TEST(multiple_transports_with_bogus)
 RUN_TEST(incorrect_placement_layout)

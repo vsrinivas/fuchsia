@@ -37,7 +37,6 @@ class CGenerator {
 
   enum class Transport {
     Channel,
-    SocketControl,
   };
 
   struct Member {

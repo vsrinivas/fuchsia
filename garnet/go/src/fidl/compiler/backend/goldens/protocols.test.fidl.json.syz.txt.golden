@@ -240,63 +240,6 @@ zx_channel_call$test_name_OvernetInternalProtocolMethodB(handle zx_chan_test_nam
 zx_channel_call$test_name_OvernetInternalProtocolMutateSocket(handle zx_chan_test_name_OvernetInternalProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_name_OvernetInternalProtocolMutateSocketRequest, test_name_OvernetInternalProtocolMutateSocketRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_name_OvernetInternalProtocolMutateSocketResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 
 
-test_name_SocketControlProtocolMethodARequest {
-       hdr fidl_message_header[1007842318]
-       a int64
-       b int64
-} [packed]
-test_name_SocketControlProtocolMethodARequestHandles {
-       void void
-} [packed]
-test_name_SocketControlProtocolEventAEvent {
-       hdr fidl_message_header[955483393]
-       a int64
-       b int64
-} [packed]
-test_name_SocketControlProtocolEventAEventHandles {
-       void void
-} [packed]
-test_name_SocketControlProtocolMethodBRequest {
-       hdr fidl_message_header[677342235]
-       a int64
-       b int64
-} [packed]
-test_name_SocketControlProtocolMethodBRequestHandles {
-       void void
-} [packed]
-test_name_SocketControlProtocolMethodBResponse {
-       hdr fidl_message_header[677342235]
-       result int64
-} [packed]
-test_name_SocketControlProtocolMethodBResponseHandles {
-       void void
-} [packed]
-test_name_SocketControlProtocolMutateSocketRequest {
-       hdr fidl_message_header[255772213]
-       a flags[fidl_handle_presence, int32]
-} [packed]
-test_name_SocketControlProtocolMutateSocketRequestHandles {
-       a zx_socket
-} [packed]
-test_name_SocketControlProtocolMutateSocketResponse {
-       hdr fidl_message_header[255772213]
-       b flags[fidl_handle_presence, int32]
-} [packed]
-test_name_SocketControlProtocolMutateSocketResponseHandles {
-       b zx_socket
-} [packed]
-
-resource zx_chan_test_name_SocketControlProtocol_client[zx_chan]
-resource zx_chan_test_name_SocketControlProtocol_server[zx_chan]
-
-zx_channel_create$test_name_SocketControlProtocol(options const[0], out0 ptr[out, zx_chan_test_name_SocketControlProtocol_client], out1 ptr[out, zx_chan_test_name_SocketControlProtocol_server])
-fdio_service_connect$test_name_SocketControlProtocol(path ptr[in, string["/svc/"]], handle zx_chan_test_name_SocketControlProtocol_server)
-zx_channel_write$test_name_SocketControlProtocolMethodA(handle zx_chan_test_name_SocketControlProtocol_client, options const[0], bytes ptr[in, test_name_SocketControlProtocolMethodARequest], num_bytes bytesize[bytes], handles ptr[in, test_name_SocketControlProtocolMethodARequestHandles], num_handles bytesize[handles])
-zx_channel_read$test_name_SocketControlProtocolEventA(handle zx_chan_test_name_SocketControlProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_name_SocketControlProtocolEventAEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
-zx_channel_call$test_name_SocketControlProtocolMethodB(handle zx_chan_test_name_SocketControlProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_name_SocketControlProtocolMethodBRequest, test_name_SocketControlProtocolMethodBRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_name_SocketControlProtocolMethodBResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
-zx_channel_call$test_name_SocketControlProtocolMutateSocket(handle zx_chan_test_name_SocketControlProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_name_SocketControlProtocolMutateSocketRequest, test_name_SocketControlProtocolMutateSocketRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_name_SocketControlProtocolMutateSocketResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
-
-
 test_name_ChannelProtocolMethodARequest {
        hdr fidl_message_header[1432785874]
        a int64

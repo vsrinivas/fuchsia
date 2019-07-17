@@ -1056,7 +1056,6 @@ bool TransportConstraint(ErrorReporter* error_reporter, const raw::Attribute& at
   // is allowed by styleguide
   static const auto kValidTransports = new std::set<std::string>{
       "Channel",
-      "SocketControl",
       "OvernetEmbedded",
       "OvernetInternal",
   };

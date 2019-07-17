@@ -2,5 +2,5 @@
   "fidl/fuchsia.net/connectivity.fidl": "408019ff59037d21596d9e4010a2b6dc",
   "fidl/fuchsia.net/namelookup.fidl": "01cd384b678fe950842b386766a3087c",
   "fidl/fuchsia.net/net.fidl": "83dca0844390ba800b05287ebbebc99f",
-  "fidl/fuchsia.net/socket.fidl": "8b92a315dd2d3d6c3c4cf6d31a0a2371"
+  "fidl/fuchsia.net/socket.fidl": "efcb3a0a3987af51a02075d0a3d1898f"
 }

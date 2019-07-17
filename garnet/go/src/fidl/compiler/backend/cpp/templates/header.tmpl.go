@@ -61,19 +61,19 @@ namespace fidl {
 
 {{- define "DispatchInterfaceForwardDeclaration" -}}
 {{- range $transport, $_ := .Transports }}
-{{- if eq $transport "Channel" "SocketControl" -}}{{ template "InterfaceForwardDeclaration" $ }}{{- end }}
+{{- if eq $transport "Channel" -}}{{ template "InterfaceForwardDeclaration" $ }}{{- end }}
 {{- end }}
 {{- end -}}
 
 {{- define "DispatchInterfaceDeclaration" -}}
 {{- range $transport, $_ := .Transports }}
-{{- if eq $transport "Channel" "SocketControl" -}}{{ template "InterfaceDeclaration" $ }}{{- end }}
+{{- if eq $transport "Channel" -}}{{ template "InterfaceDeclaration" $ }}{{- end }}
 {{- end }}
 {{- end -}}
 
 {{- define "DispatchInterfaceTraits" -}}
 {{- range $transport, $_ := .Transports }}
-{{- if eq $transport "Channel" "SocketControl" -}}{{ template "InterfaceTraits" $ }}{{- end }}
+{{- if eq $transport "Channel" -}}{{ template "InterfaceTraits" $ }}{{- end }}
 {{- end }}
 {{- end -}}
 `
