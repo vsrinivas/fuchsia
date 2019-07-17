@@ -24,7 +24,6 @@ test("usb-virtual-bus-ums") {
     "$zx/system/ulib/async-loop",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/blktest",
-    "$zx/system/ulib/block-client",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/devmgr-integration-test",
     "$zx/system/ulib/devmgr-launcher",

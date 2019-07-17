@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <blktest/blktest.h>
-#include <block-client/client.h>
 #include <ddk/platform-defs.h>
 #include <dirent.h>
 #include <endian.h>
@@ -11,6 +10,7 @@
 #include <fbl/function.h>
 #include <fbl/unique_ptr.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/usb/peripheral/block/c/fidl.h>
 #include <fuchsia/hardware/usb/peripheral/c/fidl.h>
 #include <fuchsia/hardware/usb/virtual/bus/c/fidl.h>
@@ -220,8 +220,15 @@ TEST_F(UmsTest, CachedWriteWithNoFlushShouldBeDiscarded) {
   ASSERT_OK(controller.SetWritebackCacheReported(true));
   ASSERT_OK(controller.EnableWritebackCache());
   fbl::unique_fd fd(openat(bus_.GetRootFd(), GetTestdevPath().c_str(), O_RDWR));
-  block_info_t info;
-  __UNUSED ssize_t rc = ioctl_block_get_info(fd.get(), &info);
+
+  fuchsia_hardware_block_BlockInfo info;
+  {
+    fzl::UnownedFdioCaller caller(fd.get());
+    zx_status_t status;
+    ASSERT_OK(fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &status, &info));
+    ASSERT_OK(status);
+  }
+
   uint32_t blk_size = info.block_size;
   fbl::unique_ptr<uint8_t[]> write_buffer(new uint8_t[blk_size]);
   fbl::unique_ptr<uint8_t[]> read_buffer(new uint8_t[blk_size]);
@@ -254,8 +261,15 @@ TEST_F(UmsTest, UncachedWriteShouldBePersistedToBlockDevice) {
   ASSERT_OK(controller.SetWritebackCacheReported(false));
   ASSERT_OK(controller.DisableWritebackCache());
   fbl::unique_fd fd(openat(bus_.GetRootFd(), GetTestdevPath().c_str(), O_RDWR));
-  block_info_t info;
-  __UNUSED ssize_t rc = ioctl_block_get_info(fd.get(), &info);
+
+  fuchsia_hardware_block_BlockInfo info;
+  {
+    fzl::UnownedFdioCaller caller(fd.get());
+    zx_status_t status;
+    ASSERT_OK(fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &status, &info));
+    ASSERT_OK(status);
+  }
+
   uint32_t blk_size = info.block_size;
   // Allocate our buffer
   fbl::unique_ptr<uint8_t[]> write_buffer(new uint8_t[blk_size]);
