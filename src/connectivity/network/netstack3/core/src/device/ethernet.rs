@@ -9,7 +9,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use log::debug;
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-use net_types::{BroadcastAddress, MulticastAddr};
+use net_types::{BroadcastAddress, MulticastAddr, MulticastAddress, UnicastAddress};
 use packet::{Buf, BufferMut, BufferSerializer, EncapsulatingSerializer, Serializer};
 use specialize_ip_macro::specialize_ip_address;
 
@@ -21,6 +21,19 @@ use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
 use crate::{Context, EventDispatcher, StackState};
 
 const ETHERNET_MAX_PENDING_FRAMES: usize = 10;
+
+impl From<Mac> for FrameDestination {
+    fn from(mac: Mac) -> FrameDestination {
+        if mac.is_broadcast() {
+            FrameDestination::Broadcast
+        } else if mac.is_multicast() {
+            FrameDestination::Multicast
+        } else {
+            debug_assert!(mac.is_unicast());
+            FrameDestination::Unicast
+        }
+    }
+}
 
 impl ndp::LinkLayerAddress for Mac {
     const BYTES_LENGTH: usize = 6;
@@ -231,13 +244,11 @@ pub(crate) fn receive_frame<D: EventDispatcher, B: BufferMut>(
 
     let (src, dst) = (frame.src_mac(), frame.dst_mac());
     let device = DeviceId::new_ethernet(device_id);
-    let frame_dst = if dst == get_device_state(ctx.state(), device_id).mac {
-        FrameDestination::Unicast
-    } else if dst.is_broadcast() {
-        FrameDestination::Broadcast
-    } else {
+    if dst != get_device_state(ctx.state(), device_id).mac && !dst.is_broadcast() {
+        // TODO(joshlf): What about multicast MACs?
         return;
-    };
+    }
+    let frame_dst = FrameDestination::from(dst);
 
     match frame.ethertype() {
         Some(EtherType::Arp) => {

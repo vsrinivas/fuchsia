@@ -87,13 +87,30 @@ impl Display for DeviceProtocol {
 
 /// The type of address used as the source address in a device-layer frame:
 /// unicast or broadcast.
+///
+/// `FrameDestination` is used to implement RFC 1122 section 3.2.2 and RFC 4443
+/// section 2.4.e, which govern when to avoid sending an ICMP error message for
+/// ICMP and ICMPv6 respectively.
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub(crate) enum FrameDestination {
+    /// A unicast address - one which is neither multicast nor broadcast.
     Unicast,
+    /// A multicast address; if the addressing scheme supports overlap between
+    /// multicast and broadcast, then broadcast addresses should use the
+    /// `Broadcast` variant.
+    Multicast,
+    /// A broadcast address; if the addressing scheme supports overlap between
+    /// multicast and broadcast, then broadcast addresses should use the
+    /// `Broadcast` variant.
     Broadcast,
 }
 
 impl FrameDestination {
+    /// Is this `FrameDestination::Multicast`?
+    pub(crate) fn is_multicast(self) -> bool {
+        self == FrameDestination::Multicast
+    }
+
     /// Is this `FrameDestination::Broadcast`?
     pub(crate) fn is_broadcast(self) -> bool {
         self == FrameDestination::Broadcast

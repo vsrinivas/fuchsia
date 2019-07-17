@@ -799,6 +799,19 @@ pub(crate) fn should_send_icmpv4_error(
     // - a packet destined to a subnet broadcast address
     // - a non-initial fragment
     // - a packet whose source address is a subnet broadcast address
+
+    // NOTE: The FrameDestination type has variants for unicast, multicast, and
+    // broadcast. One implication of the fact that we only check for broadcast
+    // here (in compliance with the RFC) is that we could, in one very unlikely
+    // edge case, respond with an ICMP error message to an IP packet which was
+    // sent in a link-layer multicast frame. In particular, that can happen if
+    // we subscribe to a multicast IP group and, as a result, subscribe to the
+    // corresponding multicast MAC address, and we receive a unicast IP packet
+    // in a multicast link-layer frame destined to that MAC address.
+    //
+    // TODO(joshlf): Should we filter incoming multicast IP traffic to make sure
+    // that it matches the multicast MAC address of the frame it was
+    // encapsulated in?
     !(dst_ip.is_multicast()
         || dst_ip.is_global_broadcast()
         || frame_dst.is_broadcast()
@@ -841,7 +854,8 @@ pub(crate) fn should_send_icmpv6_error(
     dst_ip: Ipv6Addr,
     allow_dst_multicast: bool,
 ) -> bool {
-    !((!allow_dst_multicast && (dst_ip.is_multicast() || frame_dst.is_broadcast()))
+    !((!allow_dst_multicast
+        && (dst_ip.is_multicast() || frame_dst.is_multicast() || frame_dst.is_broadcast()))
         || src_ip.is_unspecified()
         || src_ip.is_loopback()
         || src_ip.is_multicast())
