@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_METRICS_INTERNAL_ATTRIBUTES_H_
+#define FS_METRICS_INTERNAL_ATTRIBUTES_H_
 
 #include <algorithm>
 #include <cstdint>
+#include <string>
 #include <type_traits>
 
 #include <fbl/algorithm.h>
@@ -35,11 +37,11 @@ namespace fs_metrics {
 
 // Attribute for values that can be true or false only.
 struct BinaryAttribute {
-    // {false, true}
-    static constexpr uint64_t kSize = 2;
+  // {false, true}
+  static constexpr uint64_t kSize = 2;
 
-    // For simplicity bucket 1 is true and bucket 0 is false.
-    static constexpr size_t OffsetOf(bool value) { return value ? 1 : 0; }
+  // For simplicity bucket 1 is true and bucket 0 is false.
+  static constexpr size_t OffsetOf(bool value) { return value ? 1 : 0; }
 };
 
 // Attribute for values that map to a range of numbers.
@@ -48,52 +50,51 @@ struct BinaryAttribute {
 // Attribute ranges do not include the upperbound => [a, b).
 template <typename T, typename U>
 struct NumericAttribute {
-    using Attribute = T;
-    using NumericType = U;
+  using Attribute = T;
+  using NumericType = U;
 
-    // Compile time check that we have a numeric type.
-    static_assert(std::is_integral<NumericType>::value ||
-                      std::is_floating_point<NumericType>::value,
-                  "Only numeric types are allowed for NumericAttribute.");
+  // Compile time check that we have a numeric type.
+  static_assert(std::is_integral<NumericType>::value || std::is_floating_point<NumericType>::value,
+                "Only numeric types are allowed for NumericAttribute.");
 
-    // The number of dimensions is defined by the list of upperbounds provided
-    // by the implementing class. An extra overflow bucket is added. The first bucket
-    // contains everything from [-inf, upperbound).
-    static constexpr uint64_t kSize = fbl::count_of(Attribute::kBuckets) + 1;
+  // The number of dimensions is defined by the list of upperbounds provided
+  // by the implementing class. An extra overflow bucket is added. The first bucket
+  // contains everything from [-inf, upperbound).
+  static constexpr uint64_t kSize = fbl::count_of(Attribute::kBuckets) + 1;
 
-    // Performs linear search over an array to find the |Attribute::kBuckets| bucket
-    // that is containing the smallest value bigger than |value|.
-    static constexpr size_t OffsetOf(NumericType value) {
-        static_assert(std::is_same<typename std::decay<decltype(Attribute::kBuckets[0])>::type,
-                                   NumericType>::value,
-                      "kBuckets type must match NumericType.");
-        for (size_t i = 0; i < kSize - 1; ++i) {
-            if (value < Attribute::kBuckets[i]) {
-                return i;
-            }
-        }
-
-        return Attribute::kSize - 1;
+  // Performs linear search over an array to find the |Attribute::kBuckets| bucket
+  // that is containing the smallest value bigger than |value|.
+  static constexpr size_t OffsetOf(NumericType value) {
+    static_assert(std::is_same<typename std::decay<decltype(Attribute::kBuckets[0])>::type,
+                               NumericType>::value,
+                  "kBuckets type must match NumericType.");
+    for (size_t i = 0; i < kSize - 1; ++i) {
+      if (value < Attribute::kBuckets[i]) {
+        return i;
+      }
     }
 
-    // By default numeric attribute are bucketed, and their human readable string is
-    // for a bucket = [a,b) => a_b.
-    // The first bucket is written as -inf_b and the last bucket(overflow bucket) is written as
-    // a_inf.
-    static std::string ToString(size_t index) {
+    return Attribute::kSize - 1;
+  }
 
-        if (index == kSize - 1) {
-            return fbl::StringPrintf("%ld_inf", Attribute::kBuckets[kSize - 2]).c_str();
-        } else if (index == 0) {
-            return fbl::StringPrintf("-inf_%ld", Attribute::kBuckets[0]).c_str();
-        }
-        return fbl::StringPrintf("%ld_%ld", Attribute::kBuckets[index - 1],
-                                 Attribute::kBuckets[index])
-            .c_str();
+  // By default numeric attribute are bucketed, and their human readable string is
+  // for a bucket = [a,b) => a_b.
+  // The first bucket is written as -inf_b and the last bucket(overflow bucket) is written as
+  // a_inf.
+  static std::string ToString(size_t index) {
+    if (index == kSize - 1) {
+      return fbl::StringPrintf("%ld_inf", Attribute::kBuckets[kSize - 2]).c_str();
+    } else if (index == 0) {
+      return fbl::StringPrintf("-inf_%ld", Attribute::kBuckets[0]).c_str();
     }
+    return fbl::StringPrintf("%ld_%ld", Attribute::kBuckets[index - 1], Attribute::kBuckets[index])
+        .c_str();
+  }
 };
 
 template <typename T>
 struct NumericAttribute<T, decltype(T::kBuckets[0])>;
 
-} // namespace fs_metrics
+}  // namespace fs_metrics
+
+#endif  // FS_METRICS_INTERNAL_ATTRIBUTES_H_

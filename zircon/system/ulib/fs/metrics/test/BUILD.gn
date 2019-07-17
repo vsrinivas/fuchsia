@@ -14,7 +14,7 @@ test("metrics-composite-latency-event") {
     "$zx/system/ulib/fs/metrics:metrics-cobalt",
     "$zx/system/ulib/fs/metrics:metrics-composite-latency-event",
     "$zx/system/ulib/fs/metrics:metrics-inspect",
-    "$zx/system/ulib/inspect-vmo",
+    "$zx/system/ulib/inspect",
     "$zx/system/ulib/zxtest",
   ]
 }
@@ -30,7 +30,7 @@ test("metrics-inspect") {
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fs/metrics:metrics-inspect",
-    "$zx/system/ulib/inspect-vmo",
+    "$zx/system/ulib/inspect",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]

@@ -26,13 +26,14 @@ library("metrics-inspect") {
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_deps = [
     "$zx/system/ulib/fbl:headers",
-    "$zx/system/ulib/inspect-vmo:headers",
+    "$zx/system/ulib/fzl:headers",
+    "$zx/system/ulib/inspect:headers",
     "$zx/system/ulib/zx:headers",
   ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fzl",
-    "$zx/system/ulib/inspect-vmo",
+    "$zx/system/ulib/inspect",
     "$zx/system/ulib/zx",
   ]
 }

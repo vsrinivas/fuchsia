@@ -9,8 +9,7 @@
 #include <vector>
 
 #include <fs/metrics/histograms.h>
-#include <lib/inspect-vmo/inspect.h>
-#include <lib/inspect-vmo/types.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/time.h>
 #include <zxtest/zxtest.h>
 
@@ -18,100 +17,95 @@ namespace fs_metrics {
 namespace {
 
 class HistogramsTest : public zxtest::Test {
-public:
-    void SetUp() final {
-        root_ = inspector_.CreateObject("root-test");
-        ASSERT_TRUE(static_cast<bool>(root_));
-    }
+ public:
+  HistogramsTest() : inspector_("root") {}
 
-protected:
-    inspect::vmo::Inspector inspector_;
-    inspect::vmo::Object root_;
+ protected:
+  inspect::Inspector inspector_;
 };
 
 constexpr zx::duration kDuration = zx::nsec(5);
 
 const std::vector<EventOptions>& GetOptionsSets() {
-    constexpr int64_t kBlockCounts[] = {std::numeric_limits<int64_t>::min(), 1, 5, 31, 32,
-                                        std::numeric_limits<int64_t>::max()};
-    constexpr int64_t kNodeDepths[] = {
-        std::numeric_limits<int64_t>::min(), 1, 2, 4, 8, 16, 32, 64, 128,
-        std::numeric_limits<int64_t>::max()};
-    constexpr int64_t kNodeDegrees[] = {
-        std::numeric_limits<int64_t>::min(), 1, 2, 4, 8, 16, 32, 64, 128, 1024, 1024 * 1024,
-        std::numeric_limits<int64_t>::max()};
-    constexpr bool kBuffered[] = {true, false};
-    constexpr bool kSuccess[] = {true, false};
+  constexpr int64_t kBlockCounts[] = {std::numeric_limits<int64_t>::min(), 1, 5, 31, 32,
+                                      std::numeric_limits<int64_t>::max()};
+  constexpr int64_t kNodeDepths[] = {
+      std::numeric_limits<int64_t>::min(), 1, 2, 4, 8, 16, 32, 64, 128,
+      std::numeric_limits<int64_t>::max()};
+  constexpr int64_t kNodeDegrees[] = {
+      std::numeric_limits<int64_t>::min(), 1, 2, 4, 8, 16, 32, 64, 128, 1024, 1024 * 1024,
+      std::numeric_limits<int64_t>::max()};
+  constexpr bool kBuffered[] = {true, false};
+  constexpr bool kSuccess[] = {true, false};
 
-    static std::vector<EventOptions> option_set;
-    option_set.reserve(fbl::count_of(kBlockCounts) * fbl::count_of(kNodeDepths) *
-                       fbl::count_of(kNodeDegrees) * fbl::count_of(kBuffered) *
-                       fbl::count_of(kSuccess));
+  static std::vector<EventOptions> option_set;
+  option_set.reserve(fbl::count_of(kBlockCounts) * fbl::count_of(kNodeDepths) *
+                     fbl::count_of(kNodeDegrees) * fbl::count_of(kBuffered) *
+                     fbl::count_of(kSuccess));
 
-    for (auto block_count : kBlockCounts) {
-        for (auto node_depth : kNodeDepths) {
-            for (auto node_degree : kNodeDegrees) {
-                for (auto buffered : kBuffered) {
-                    for (auto success : kSuccess) {
-                        EventOptions options;
-                        options.block_count = block_count;
-                        options.node_degree = node_degree;
-                        options.node_depth = node_depth;
-                        options.success = success;
-                        options.buffered = buffered;
-                        option_set.push_back(options);
-                    }
-                }
-            }
+  for (auto block_count : kBlockCounts) {
+    for (auto node_depth : kNodeDepths) {
+      for (auto node_degree : kNodeDegrees) {
+        for (auto buffered : kBuffered) {
+          for (auto success : kSuccess) {
+            EventOptions options;
+            options.block_count = block_count;
+            options.node_degree = node_degree;
+            options.node_depth = node_depth;
+            options.success = success;
+            options.buffered = buffered;
+            option_set.push_back(options);
+          }
         }
+      }
     }
+  }
 
-    return option_set;
+  return option_set;
 }
 
 TEST_F(HistogramsTest, AllOptionsAreValid) {
+  Histograms histograms = Histograms(&inspector_.GetRoot());
+  std::set<uint64_t> histogram_ids;
 
-    Histograms histograms = Histograms(&root_);
-    std::set<uint64_t> histogram_ids;
-
-    for (auto operation : kVnodeEvents) {
-        uint64_t prev_size = histogram_ids.size();
-        for (auto option_set : GetOptionsSets()) {
-            uint64_t histogram_id = histograms.GetHistogramId(operation, option_set);
-            ASSERT_GE(histogram_id, 0);
-            ASSERT_LT(histogram_id, histograms.GetHistogramCount());
-            histogram_ids.insert(histogram_id);
-            histograms.Record(histogram_id, kDuration);
-        }
-        ASSERT_EQ(histograms.GetHistogramCount(operation), histogram_ids.size() - prev_size,
-                  " Operation Histogram Count is wrong. %lu", static_cast<uint64_t>(operation));
+  for (auto operation : kVnodeEvents) {
+    uint64_t prev_size = histogram_ids.size();
+    for (auto option_set : GetOptionsSets()) {
+      uint64_t histogram_id = histograms.GetHistogramId(operation, option_set);
+      ASSERT_GE(histogram_id, 0);
+      ASSERT_LT(histogram_id, histograms.GetHistogramCount());
+      histogram_ids.insert(histogram_id);
+      histograms.Record(histogram_id, kDuration);
     }
+    ASSERT_EQ(histograms.GetHistogramCount(operation), histogram_ids.size() - prev_size,
+              " Operation Histogram Count is wrong. %lu", static_cast<uint64_t>(operation));
+  }
 
-    ASSERT_EQ(histogram_ids.size(), histograms.GetHistogramCount(),
-              "Failed to cover all histograms with all options set.");
+  ASSERT_EQ(histogram_ids.size(), histograms.GetHistogramCount(),
+            "Failed to cover all histograms with all options set.");
 }
 
 TEST_F(HistogramsTest, DefaultLatencyEventSmokeTest) {
-    Histograms histograms = Histograms(&root_);
-    std::set<uint64_t> histogram_ids;
+  Histograms histograms = Histograms(&inspector_.GetRoot());
+  std::set<uint64_t> histogram_ids;
 
-    // This is will log an event with default options for every operation, which would crash with
-    // unitialized memory.
-    for (auto operation : kVnodeEvents) {
-        histograms.NewLatencyEvent(operation);
-    }
+  // This is will log an event with default options for every operation, which would crash with
+  // unitialized memory.
+  for (auto operation : kVnodeEvents) {
+    histograms.NewLatencyEvent(operation);
+  }
 }
 
 TEST_F(HistogramsTest, InvalidOptionsReturnsHistogramCount) {
-    Histograms histograms = Histograms(&root_);
-    ASSERT_EQ(histograms.GetHistogramId(static_cast<Event>(kEventCount), EventOptions()),
-              histograms.GetHistogramCount());
+  Histograms histograms = Histograms(&inspector_.GetRoot());
+  ASSERT_EQ(histograms.GetHistogramId(static_cast<Event>(kEventCount), EventOptions()),
+            histograms.GetHistogramCount());
 }
 
 TEST_F(HistogramsTest, SizeIsMultipleOfPageSize) {
-    Histograms histograms = Histograms(&root_);
-    ASSERT_EQ(Histograms::Size() % PAGE_SIZE, 0);
+  Histograms histograms = Histograms(&inspector_.GetRoot());
+  ASSERT_EQ(Histograms::Size() % PAGE_SIZE, 0);
 }
 
-} // namespace
-} // namespace fs_metrics
+}  // namespace
+}  // namespace fs_metrics

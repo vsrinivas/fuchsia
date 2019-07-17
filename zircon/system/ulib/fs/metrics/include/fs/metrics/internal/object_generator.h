@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_METRICS_INTERNAL_OBJECT_GENERATOR_H_
+#define FS_METRICS_INTERNAL_OBJECT_GENERATOR_H_
 
 #include <vector>
 
 #include <fbl/string_buffer.h>
-#include <lib/inspect-vmo/types.h>
+#include <lib/inspect/cpp/inspect.h>
 
 namespace fs_metrics {
 // This library provides mechanisms for auto generating inspect::vmo::objects. In order to so,
@@ -41,45 +42,46 @@ constexpr uint64_t kNameMaxLength = 80;
 namespace internal {
 
 template <typename OperationInfo, typename ObjectType>
-void AddObjects(inspect::vmo::Object* root, std::vector<ObjectType>* object_collection,
+void AddObjects(inspect::Node* root, std::vector<ObjectType>* object_collection,
                 fbl::StringBuffer<kNameMaxLength>* name_buffer, size_t last_character) {
-    OperationInfo::CreateTracker(name_buffer->c_str(), root, object_collection);
+  OperationInfo::CreateTracker(name_buffer->c_str(), root, object_collection);
 }
 
 template <typename OperationInfo, typename ObjectType, typename Attribute,
           typename... RemainingAttributes>
-void AddObjects(inspect::vmo::Object* root, std::vector<ObjectType>* object_collection,
+void AddObjects(inspect::Node* root, std::vector<ObjectType>* object_collection,
                 fbl::StringBuffer<kNameMaxLength>* name_buffer, size_t last_character) {
-    // Skip if this is not an attribute being tracked for the given operation.
-    if constexpr (!std::is_base_of<Attribute, OperationInfo>::value) {
-        AddObjects<OperationInfo, ObjectType, RemainingAttributes...>(
-            root, object_collection, name_buffer, name_buffer->length());
-        return;
-    }
+  // Skip if this is not an attribute being tracked for the given operation.
+  if constexpr (!std::is_base_of<Attribute, OperationInfo>::value) {
+    AddObjects<OperationInfo, ObjectType, RemainingAttributes...>(
+        root, object_collection, name_buffer, name_buffer->length());
+    return;
+  }
 
-    // Clear any remainder from other invocations.
-    for (size_t i = 0; i < Attribute::kSize; ++i) {
-        name_buffer->Resize(last_character);
-        name_buffer->AppendPrintf("_%s", Attribute::ToString(i).c_str());
-        AddObjects<OperationInfo, ObjectType, RemainingAttributes...>(
-            root, object_collection, name_buffer, name_buffer->length());
-    }
+  // Clear any remainder from other invocations.
+  for (size_t i = 0; i < Attribute::kSize; ++i) {
+    name_buffer->Resize(last_character);
+    name_buffer->AppendPrintf("_%s", Attribute::ToString(i).c_str());
+    AddObjects<OperationInfo, ObjectType, RemainingAttributes...>(
+        root, object_collection, name_buffer, name_buffer->length());
+  }
 }
 
-} // namespace internal
+}  // namespace internal
 
 template <typename... Attributes>
 struct ObjectGenerator {
-
-    // Adds all tracking objects for the |OperationInfo|. The tracking objects can be counters,
-    // histograms, etc.
-    template <typename OperationInfo, typename ObjectType>
-    static void AddObjects(inspect::vmo::Object* root, std::vector<ObjectType>* object_collection) {
-        fbl::StringBuffer<kNameMaxLength> name_buffer;
-        name_buffer.AppendPrintf("%s", OperationInfo::kPrefix);
-        internal::AddObjects<OperationInfo, ObjectType, Attributes...>(
-            root, object_collection, &name_buffer, name_buffer.length());
-    }
+  // Adds all tracking objects for the |OperationInfo|. The tracking objects can be counters,
+  // histograms, etc.
+  template <typename OperationInfo, typename ObjectType>
+  static void AddObjects(inspect::Node* root, std::vector<ObjectType>* object_collection) {
+    fbl::StringBuffer<kNameMaxLength> name_buffer;
+    name_buffer.AppendPrintf("%s", OperationInfo::kPrefix);
+    internal::AddObjects<OperationInfo, ObjectType, Attributes...>(
+        root, object_collection, &name_buffer, name_buffer.length());
+  }
 };
 
-} // namespace fs_metrics
+}  // namespace fs_metrics
+
+#endif  // FS_METRICS_INTERNAL_OBJECT_GENERATOR_H_
