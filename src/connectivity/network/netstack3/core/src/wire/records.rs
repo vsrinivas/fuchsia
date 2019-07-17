@@ -141,6 +141,19 @@ where
     }
 }
 
+impl<B, R> RecordsRaw<B, R>
+where
+    B: ByteSlice,
+    R: RecordsImplLayout,
+{
+    /// Get the underlying bytes.
+    ///
+    /// `bytes` returns a reference to the byte slice backing this `RecordsRaw`.
+    pub(crate) fn bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+}
+
 /// An iterator over the records contained inside a `Records` instance.
 pub(crate) struct RecordsIter<'a, R: RecordsImpl<'a>> {
     bytes: &'a [u8],

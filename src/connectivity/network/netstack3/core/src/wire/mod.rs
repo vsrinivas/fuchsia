@@ -81,20 +81,14 @@ use crate::ip::IpProto;
 pub(crate) type U16 = zerocopy::U16<NetworkEndian>;
 pub(crate) type U32 = zerocopy::U32<NetworkEndian>;
 
-/// Compute the checksum used by TCP and UDP.
-///
-/// `compute_transport_checksum` computes the checksum used by TCP and UDP. For
-/// IPv4, the total packet length must fit in a `u16`, and for IPv6, a `u32`. If
-/// the provided packet is too big, `compute_transport_checksum` returns `None`.
 #[specialize_ip_address]
-pub(crate) fn compute_transport_checksum<A: IpAddress>(
+fn update_transport_checksum_pseudo_header<A: IpAddress>(
+    checksum: &mut Checksum,
     src_ip: A,
     dst_ip: A,
     proto: IpProto,
-    packet: &[u8],
-) -> Option<u16> {
-    // See for details:
-    // https://en.wikipedia.org/wiki/Transmission_Control_Protocol#Checksum_computation
+    transport_len: usize,
+) -> Result<(), std::num::TryFromIntError> {
     #[ipv4addr]
     let pseudo_header = {
         // 4 bytes for src_ip + 4 bytes for dst_ip + 1 byte of zeros + 1 byte
@@ -103,7 +97,7 @@ pub(crate) fn compute_transport_checksum<A: IpAddress>(
         (&mut pseudo_header[..4]).copy_from_slice(src_ip.bytes());
         (&mut pseudo_header[4..8]).copy_from_slice(dst_ip.bytes());
         pseudo_header[9] = proto.into();
-        NetworkEndian::write_u16(&mut pseudo_header[10..12], packet.len().try_into().ok()?);
+        NetworkEndian::write_u16(&mut pseudo_header[10..12], transport_len.try_into()?);
         pseudo_header
     };
     #[ipv6addr]
@@ -113,16 +107,57 @@ pub(crate) fn compute_transport_checksum<A: IpAddress>(
         let mut pseudo_header = [0u8; 40];
         (&mut pseudo_header[..16]).copy_from_slice(src_ip.bytes());
         (&mut pseudo_header[16..32]).copy_from_slice(dst_ip.bytes());
-        NetworkEndian::write_u32(&mut pseudo_header[32..36], packet.len().try_into().ok()?);
+        NetworkEndian::write_u32(&mut pseudo_header[32..36], transport_len.try_into()?);
         pseudo_header[39] = proto.into();
         pseudo_header
     };
-    let mut checksum = Checksum::new();
     // add_bytes contains some branching logic at the beginning which is a bit
     // more expensive than the main loop of the algorithm. In order to make sure
     // we go through that logic as few times as possible, we construct the
     // entire pseudo-header first, and then add it to the checksum all at once.
     checksum.add_bytes(&pseudo_header[..]);
+    Ok(())
+}
+
+/// Compute the checksum used by TCP and UDP.
+///
+/// `compute_transport_checksum` computes the checksum used by TCP and UDP. For
+/// IPv4, the total packet length `transport_len` must fit in a `u16`, and for
+/// IPv6, a `u32`. If the provided packet is too big,
+/// `compute_transport_checksum` returns `None`.
+pub(crate) fn compute_transport_checksum_parts<'a, A: IpAddress, I>(
+    src_ip: A,
+    dst_ip: A,
+    proto: IpProto,
+    parts: I,
+) -> Option<u16>
+where
+    I: Iterator<Item = &'a &'a [u8]> + Clone,
+{
+    // See for details:
+    // https://en.wikipedia.org/wiki/Transmission_Control_Protocol#Checksum_computation
+    let mut checksum = Checksum::new();
+    let transport_len = parts.clone().map(|b| b.len()).sum();
+    update_transport_checksum_pseudo_header(&mut checksum, src_ip, dst_ip, proto, transport_len)
+        .ok()?;
+    for p in parts {
+        checksum.add_bytes(p);
+    }
+    Some(checksum.checksum())
+}
+
+/// Compute the checksum used by TCP and UDP.
+///
+/// Same as [`compute_transport_checksum_parts`] but with a single part.
+pub(crate) fn compute_transport_checksum<A: IpAddress>(
+    src_ip: A,
+    dst_ip: A,
+    proto: IpProto,
+    packet: &[u8],
+) -> Option<u16> {
+    let mut checksum = Checksum::new();
+    update_transport_checksum_pseudo_header(&mut checksum, src_ip, dst_ip, proto, packet.len())
+        .ok()?;
     checksum.add_bytes(packet);
     Some(checksum.checksum())
 }
@@ -292,6 +327,19 @@ impl<C, I> MaybeParsed<C, I> {
         match self {
             MaybeParsed::Incomplete(v) => v,
             MaybeParsed::Complete(_) => panic!("Called unwrap_incomplete on complete MaybeParsed"),
+        }
+    }
+
+    /// Transforms this `MaybeIncomplete` into a `Result` where the `Complete`
+    /// variant becomes `Ok` and the `Incomplete` variant is passed through `f`
+    /// and mapped to `Err`.
+    pub(crate) fn ok_or_else<F, E>(self, f: F) -> Result<C, E>
+    where
+        F: FnOnce(I) -> E,
+    {
+        match self {
+            MaybeParsed::Complete(v) => Ok(v),
+            MaybeParsed::Incomplete(e) => Err(f(e)),
         }
     }
 }

@@ -18,9 +18,9 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 use crate::error::{ParseError, ParseResult};
 use crate::ip::IpProto;
 use crate::transport::tcp::TcpOption;
-use crate::wire::compute_transport_checksum;
-use crate::wire::records::options::Options;
-use crate::wire::{U16, U32};
+use crate::wire::records::options::{Options, OptionsRaw};
+use crate::wire::{compute_transport_checksum, compute_transport_checksum_parts};
+use crate::wire::{FromRaw, MaybeParsed, U16, U32};
 
 use self::options::TcpOptionsImpl;
 
@@ -46,6 +46,12 @@ struct HeaderPrefix {
 impl HeaderPrefix {
     fn data_offset(&self) -> u8 {
         (self.data_offset_reserved_flags.get() >> 12) as u8
+    }
+
+    fn set_data_offset(&mut self, offset: u8) {
+        debug_assert!(offset <= 15);
+        let v = self.data_offset_reserved_flags.get();
+        self.data_offset_reserved_flags.set((v & 0x0FFF) | (((offset & 0x0F) as u16) << 12));
     }
 }
 
@@ -86,37 +92,67 @@ impl<B: ByteSlice, A: IpAddress> ParsablePacket<B, TcpParseArgs<A>> for TcpSegme
     }
 
     fn parse<BV: BufferView<B>>(mut buffer: BV, args: TcpParseArgs<A>) -> ParseResult<Self> {
+        TcpSegmentRaw::<B>::parse(buffer, ()).and_then(|u| TcpSegment::try_from_raw_with(u, args))
+    }
+}
+
+impl<B: ByteSlice, A: IpAddress> FromRaw<TcpSegmentRaw<B>, TcpParseArgs<A>> for TcpSegment<B> {
+    type Error = ParseError;
+
+    fn try_from_raw_with(
+        raw: TcpSegmentRaw<B>,
+        args: TcpParseArgs<A>,
+    ) -> Result<Self, Self::Error> {
         // See for details: https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_segment_structure
 
-        let checksum =
-            compute_transport_checksum(args.src_ip, args.dst_ip, IpProto::Tcp, buffer.as_ref())
-                .ok_or_else(debug_err_fn!(ParseError::Format, "segment too large"))?;
+        let hdr_prefix = raw
+            .hdr_prefix
+            .ok_or_else(|_| debug_err!(ParseError::Format, "too few bytes for header"))?;
+        let options = raw
+            .options
+            .ok_or_else(|_| debug_err!(ParseError::Format, "Incomplete options"))
+            .and_then(|o| {
+                Options::try_from_raw(o)
+                    .map_err(|_| debug_err!(ParseError::Format, "Options validation failed"))
+            })?;
+        let body = raw.body;
+
+        let hdr_bytes = (hdr_prefix.data_offset() * 4) as usize;
+        if hdr_bytes != hdr_prefix.bytes().len() + options.bytes().len() {
+            return debug_err!(
+                Err(ParseError::Format),
+                "invalid data offset: {} for header={} + options={}",
+                hdr_prefix.data_offset(),
+                hdr_prefix.bytes().len(),
+                options.bytes().len()
+            );
+        }
+
+        let parts = [hdr_prefix.bytes(), options.bytes(), body.deref().as_ref()];
+        // We try to calculate the checksum using a "joined" view of the three
+        // components of the TCP segment: header, options, and body. Joining
+        // into a single byte slice gives us performance benefits when
+        // calculating checksum. If joining fails, we fall back to
+        // compute_transport_checksum_parts. In practice, a TcpSegmentRaw that
+        // was parsed from some buffer data will always succeed joining its
+        // part, so we won't be hitting the slow path unless the given
+        // TcpSegmentRaw was hand-crafted in some other way.
+        let checksum = if let Some(joined) = zerocopy::join_iter(parts.iter().map(|x| *x)) {
+            compute_transport_checksum(args.src_ip, args.dst_ip, IpProto::Tcp, joined)
+        } else {
+            compute_transport_checksum_parts(args.src_ip, args.dst_ip, IpProto::Tcp, parts.iter())
+        }
+        .ok_or_else(debug_err_fn!(ParseError::Format, "segment too large"))?;
+
         if checksum != 0 {
             return debug_err!(Err(ParseError::Checksum), "invalid checksum");
         }
 
-        let hdr_prefix = buffer
-            .take_obj_front::<HeaderPrefix>()
-            .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
-        let hdr_bytes = (hdr_prefix.data_offset() * 4) as usize;
-        if hdr_bytes < hdr_prefix.bytes().len() {
-            return debug_err!(
-                Err(ParseError::Format),
-                "invalid data offset: {}",
-                hdr_prefix.data_offset()
-            );
-        }
-        let options = buffer
-            .take_front(hdr_bytes - hdr_prefix.bytes().len())
-            .ok_or_else(debug_err_fn!(ParseError::Format, "data offset larger than buffer"))?;
-        let options = Options::parse(options).map_err(|_| ParseError::Format)?;
-        let segment = TcpSegment { hdr_prefix, options, body: buffer.into_rest() };
-
-        if segment.hdr_prefix.src_port == U16::ZERO || segment.hdr_prefix.dst_port == U16::ZERO {
+        if hdr_prefix.src_port == U16::ZERO || hdr_prefix.dst_port == U16::ZERO {
             return debug_err!(Err(ParseError::Format), "zero source or destination port");
         }
 
-        Ok(segment)
+        Ok(TcpSegment { hdr_prefix, options, body })
     }
 }
 
@@ -210,6 +246,89 @@ impl<B: ByteSlice> TcpSegment<B> {
         s.syn(self.syn());
         s.fin(self.fin());
         s
+    }
+}
+
+/// The minimal information required from a TCP segment header.
+///
+/// A `TcpFlowHeader` may be the result of a partially parsed TCP segment in
+/// [`TcpSegmentRaw`].
+#[derive(Default, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
+struct TcpFlowHeader {
+    src_port: U16,
+    dst_port: U16,
+}
+
+struct PartialHeaderPrefix<B> {
+    flow: LayoutVerified<B, TcpFlowHeader>,
+    rest: B,
+}
+
+/// A partially-parsed and not yet validated TCP segment.
+///
+/// A `TcpSegmentRaw` shares its underlying memory with the byte slice it was
+/// parsed from or serialized to, meaning that no copying or extra allocation is
+/// necessary.
+///
+/// Parsing a `TcpSegmentRaw` from raw data will succeed as long as at least 4
+/// bytes are available, which will be extracted as a [`TcpFlowHeader`] that
+/// contains the TCP source and destination ports. A `TcpSegmentRaw` is, then,
+/// guaranteed to always have at least that minimal information available.
+///
+/// [`TcpSegment`] provides a [`FromRaw`] implementation that can be used to
+/// validate a `TcpSegmentRaw`.
+pub(crate) struct TcpSegmentRaw<B> {
+    hdr_prefix: MaybeParsed<LayoutVerified<B, HeaderPrefix>, PartialHeaderPrefix<B>>,
+    options: MaybeParsed<OptionsRaw<B, TcpOptionsImpl>, B>,
+    body: B,
+}
+
+impl<B> ParsablePacket<B, ()> for TcpSegmentRaw<B>
+where
+    B: ByteSlice,
+{
+    type Error = ParseError;
+
+    fn parse_metadata(&self) -> ParseMetadata {
+        let header_len = self.options.len()
+            + match &self.hdr_prefix {
+                MaybeParsed::Complete(h) => h.bytes().len(),
+                MaybeParsed::Incomplete(h) => h.flow.bytes().len() + h.rest.len(),
+            };
+        ParseMetadata::from_packet(header_len, self.body.len(), 0)
+    }
+
+    fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> ParseResult<Self> {
+        // See for details: https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_segment_structure
+
+        let (hdr_prefix, options) = if let Some(pfx) = buffer.take_obj_front::<HeaderPrefix>() {
+            // If the subtraction data_offset*4 - HDR_PREFIX_LEN would have been
+            // negative, that would imply that data_offset has an invalid value.
+            // Even though this will end up being MaybeParsed::Complete, the
+            // data_offset value is validated when transforming TcpSegmentRaw to
+            // TcpSegment.
+            let option_bytes = ((pfx.data_offset() * 4) as usize).saturating_sub(HDR_PREFIX_LEN);
+            let options =
+                MaybeParsed::take_from_buffer_with(&mut buffer, option_bytes, OptionsRaw::new);
+            let hdr_prefix = MaybeParsed::Complete(pfx);
+            (hdr_prefix, options)
+        } else {
+            let flow = buffer
+                .take_obj_front::<TcpFlowHeader>()
+                .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for flow header"))?;
+            let rest = buffer.take_rest_front();
+            // if we can't take the entire header, the rest of options will be
+            // incomplete:
+            let hdr_prefix = MaybeParsed::Incomplete(PartialHeaderPrefix { flow, rest });
+            let options = MaybeParsed::Incomplete(buffer.take_rest_front());
+            (hdr_prefix, options)
+        };
+
+        // A TCP segment's body is always just the rest of the buffer:
+        let body = buffer.into_rest();
+
+        Ok(Self { hdr_prefix, options, body })
     }
 }
 
@@ -332,14 +451,19 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
         // NOTE: We stop using segment at this point so that it no longer
         // borrows the buffer, and we can use the buffer directly.
         let segment_len = buffer.as_ref().len();
-        let checksum =
-            compute_transport_checksum(self.src_ip, self.dst_ip, IpProto::Tcp, buffer.as_ref())
-                .unwrap_or_else(|| {
-                    panic!(
-                    "total TCP segment length of {} bytes overflows length field of pseudo-header",
-                    segment_len
-                )
-                });
+        #[rustfmt::skip]
+        let checksum = compute_transport_checksum(
+            self.src_ip,
+            self.dst_ip,
+            IpProto::Tcp,
+            buffer.as_ref(),
+        )
+        .unwrap_or_else(|| {
+            panic!(
+                "total TCP segment length of {} bytes overflows length field of pseudo-header",
+                segment_len
+            )
+        });
         NetworkEndian::write_u16(&mut buffer.as_mut()[CHECKSUM_OFFSET..], checksum);
     }
 }
@@ -688,6 +812,74 @@ mod tests {
             .encapsulate(new_builder(TEST_SRC_IPV6, TEST_DST_IPV6))
             .serialize_outer()
             .unwrap();
+    }
+
+    #[test]
+    fn test_partial_parse() {
+        /// Parse options partially:
+        let mut hdr_prefix = new_hdr_prefix();
+        hdr_prefix.set_data_offset(8);
+        let mut bytes = hdr_prefix_to_bytes(hdr_prefix)[..].to_owned();
+        bytes.extend(&[1, 2, 3, 4, 5]);
+        let mut buf = &bytes[..];
+        let packet = buf.parse::<TcpSegmentRaw<_>>().unwrap();
+        assert_eq!(packet.hdr_prefix.as_ref().unwrap().bytes(), &bytes[0..20]);
+        assert_eq!(packet.options.as_ref().unwrap_incomplete().len(), 5);
+        assert_eq!(packet.body.len(), 0);
+        // validation should fail:
+        assert!(TcpSegment::try_from_raw_with(
+            packet,
+            TcpParseArgs::new(TEST_SRC_IPV4, TEST_DST_IPV4),
+        )
+        .is_err());
+
+        /// Parse header partially:
+        let mut hdr_prefix = new_hdr_prefix();
+        let mut bytes = hdr_prefix_to_bytes(hdr_prefix);
+        let mut buf = &bytes[0..10];
+        let packet = buf.parse::<TcpSegmentRaw<_>>().unwrap();
+        let partial = packet.hdr_prefix.as_ref().unwrap_incomplete();
+        assert_eq!(partial.flow.src_port.get(), 1);
+        assert_eq!(partial.flow.dst_port.get(), 2);
+        assert_eq!(partial.rest.len(), 6);
+        assert!(packet.options.is_incomplete());
+        assert_eq!(packet.body.len(), 0);
+        // validation should fail:
+        assert!(TcpSegment::try_from_raw_with(
+            packet,
+            TcpParseArgs::new(TEST_SRC_IPV4, TEST_DST_IPV4),
+        )
+        .is_err());
+
+        let mut hdr_prefix = new_hdr_prefix();
+        let mut bytes = hdr_prefix_to_bytes(hdr_prefix);
+        /// If we don't even have enough header bytes, we should fail partial
+        /// parsing:
+        let mut buf = &bytes[0..3];
+        assert!(buf.parse::<TcpSegmentRaw<_>>().is_err());
+        /// If we don't even have exactly 4 header bytes, we should succeed
+        /// partial parsing:
+        let mut buf = &bytes[0..4];
+        assert!(buf.parse::<TcpSegmentRaw<_>>().is_ok());
+
+        // With a complete TCP segment, hdr_prefix, options and body should
+        // be joinable with zerocopy::join_iter:
+        let mut hdr_prefix = new_hdr_prefix();
+        hdr_prefix.set_data_offset(6);
+        let mut bytes = hdr_prefix_to_bytes(hdr_prefix)[..].to_owned();
+        bytes.extend(&[1, 2, 3, 4, 10, 20, 30, 40]);
+        let mut buf = &bytes[..];
+        let packet = buf.parse::<TcpSegmentRaw<_>>().unwrap();
+        let parts = [
+            packet.hdr_prefix.as_ref().unwrap().bytes(),
+            packet.options.as_ref().unwrap().bytes(),
+            packet.body,
+        ];
+        assert_eq!(parts[0], &bytes[0..20]);
+        assert_eq!(parts[1], &bytes[20..24]);
+        assert_eq!(parts[2], &bytes[24..]);
+        let joined = zerocopy::join_iter(parts.iter().map(|x| *x)).unwrap();
+        assert_eq!(joined, &bytes[..]);
     }
 
     //
