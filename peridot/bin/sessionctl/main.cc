@@ -125,8 +125,7 @@ void FindDebugServicesForPath(const char* glob_str, const char* regex_str,
       DebugService s;
       s.service_path = globbuf.gl_pathv[i];
       std::smatch match;
-      FXL_CHECK(std::regex_search(s.service_path, match, name_regex))
-          << s.service_path;
+      FXL_CHECK(std::regex_search(s.service_path, match, name_regex)) << s.service_path;
       s.name = match[1];
       services->push_back(std::move(s));
     }
@@ -140,13 +139,11 @@ std::vector<DebugService> FindAllSessions() {
   // See peridot/bin/sessionmgr/sessionmgr_impl.cc's definition of
   // kSessionCtlDir for "sessionctl". These must match.
   std::vector<DebugService> sessions;
-  FindDebugServicesForPath(modular::kSessionCtlServiceGlobPath, kRegex,
-                           &sessions);
+  FindDebugServicesForPath(modular::kSessionCtlServiceGlobPath, kRegex, &sessions);
 
   // Path to sessionctl service from a virtual console
-  FindDebugServicesForPath(
-      "/hub/r/sys/*/c/sessionmgr.cmx/*/out/debug/sessionctl", kRegex,
-      &sessions);
+  FindDebugServicesForPath("/hub/r/sys/*/c/sessionmgr.cmx/*/out/debug/sessionctl", kRegex,
+                           &sessions);
   return sessions;
 }
 
@@ -155,8 +152,7 @@ PuppetMasterPtr ConnectToPuppetMaster(const DebugService& session) {
   auto request = puppet_master.NewRequest().TakeChannel();
   std::string service_path = session.service_path + "/" + PuppetMaster::Name_;
   if (fdio_service_connect(service_path.c_str(), request.get()) != ZX_OK) {
-    FXL_LOG(FATAL) << "Could not connect to PuppetMaster service in "
-                   << session.service_path;
+    FXL_LOG(FATAL) << "Could not connect to PuppetMaster service in " << session.service_path;
   }
   return puppet_master;
 }
@@ -164,12 +160,10 @@ PuppetMasterPtr ConnectToPuppetMaster(const DebugService& session) {
 fuchsia::modular::internal::BasemgrDebugPtr ConnectToBasemgr() {
   const char kRegex[] = "/basemgr.cmx/(\\d+)";
   std::vector<DebugService> services;
-  FindDebugServicesForPath(modular::kBasemgrDebugServiceGlobPath, kRegex,
-                           &services);
+  FindDebugServicesForPath(modular::kBasemgrDebugServiceGlobPath, kRegex, &services);
 
   // Path to basemgr debug service from a virtual console
-  FindDebugServicesForPath("/hub/r/sys/*/c/basemgr.cmx/*/out/debug/basemgr",
-                           kRegex, &services);
+  FindDebugServicesForPath("/hub/r/sys/*/c/basemgr.cmx/*/out/debug/basemgr", kRegex, &services);
 
   if (services.empty()) {
     return nullptr;
@@ -180,16 +174,14 @@ fuchsia::modular::internal::BasemgrDebugPtr ConnectToBasemgr() {
   fuchsia::modular::internal::BasemgrDebugPtr basemgr;
   auto request = basemgr.NewRequest().TakeChannel();
   if (fdio_service_connect(service_path.c_str(), request.get()) != ZX_OK) {
-    FXL_LOG(FATAL) << "Could not connect to basemgr service in "
-                   << service_path;
+    FXL_LOG(FATAL) << "Could not connect to basemgr service in " << service_path;
   }
 
   return basemgr;
 }
 
 // Returns true if a guest user was logged in.
-bool LoginAsGuest(bool has_running_sessions,
-                  fuchsia::modular::internal::BasemgrDebug* basemgr,
+bool LoginAsGuest(bool has_running_sessions, fuchsia::modular::internal::BasemgrDebug* basemgr,
                   modular::Logger logger) {
   if (has_running_sessions) {
     logger.LogError(modular::kLoginGuestCommandString,
@@ -206,11 +198,9 @@ bool LoginAsGuest(bool has_running_sessions,
 
 // Returns true if a guest user was logged in.
 bool LoginDefaultGuestUser(fuchsia::modular::internal::BasemgrDebug* basemgr,
-                           modular::Logger logger,
-                           std::vector<DebugService>* sessions, std::string cmd,
-                           bool wait_for_session) {
-  std::cout << "Logging in as a guest user in the absence of running sessions."
-            << std::endl;
+                           modular::Logger logger, std::vector<DebugService>* sessions,
+                           std::string cmd, bool wait_for_session) {
+  std::cout << "Logging in as a guest user in the absence of running sessions." << std::endl;
   LoginAsGuest(/*has_running_sessions=*/false, basemgr, logger);
 
   do {
@@ -243,8 +233,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  const modular::Logger logger(
-      command_line.HasOption(modular::kJsonOutFlagString));
+  const modular::Logger logger(command_line.HasOption(modular::kJsonOutFlagString));
 
   auto basemgr = ConnectToBasemgr();
   if (!basemgr) {
@@ -256,8 +245,7 @@ int main(int argc, const char** argv) {
 
   // Continue with log in flow if user issued a login_guest command
   if (cmd == modular::kLoginGuestCommandString) {
-    if (LoginAsGuest(/*has_running_sessions=*/!sessions.empty(), basemgr.get(),
-                     logger)) {
+    if (LoginAsGuest(/*has_running_sessions=*/!sessions.empty(), basemgr.get(), logger)) {
       return 0;
     }
     return 1;
@@ -271,12 +259,10 @@ int main(int argc, const char** argv) {
       return 1;
     }
 
-    bool wait_for_session =
-        command_line.HasOption(modular::kWaitForSessionFlagString);
+    bool wait_for_session = command_line.HasOption(modular::kWaitForSessionFlagString);
 
     // Exit here if no sessions were found after logging in a guest user
-    if (!LoginDefaultGuestUser(basemgr.get(), logger, &sessions, cmd,
-                               wait_for_session)) {
+    if (!LoginDefaultGuestUser(basemgr.get(), logger, &sessions, cmd, wait_for_session)) {
       return 1;
     }
   }
@@ -284,8 +270,7 @@ int main(int argc, const char** argv) {
   if (!command_line.HasOption(modular::kJsonOutFlagString)) {
     std::cout << "Found the following sessions:\n\n";
     for (const auto& session : sessions) {
-      std::cout << "\t" << session.name << ": " << session.service_path
-                << std::endl;
+      std::cout << "\t" << session.name << ": " << session.service_path << std::endl;
     }
     std::cout << std::endl;
   }
@@ -293,19 +278,19 @@ int main(int argc, const char** argv) {
   // To get a PuppetMaster service for a session, use the following code:
   PuppetMasterPtr puppet_master = ConnectToPuppetMaster(sessions[0]);
 
-  modular::SessionCtlApp app(basemgr.get(), puppet_master.get(), logger,
-                             loop.dispatcher(), [&loop] { loop.Quit(); });
+  modular::SessionCtlApp app(basemgr.get(), puppet_master.get(), logger, loop.dispatcher());
 
-  std::string parsing_error = app.ExecuteCommand(cmd, command_line);
-  if (parsing_error == modular::kGetUsageErrorString) {
-    // Print help if command doesn't match a valid command.
-    std::cout << GetUsage() << std::endl;
-    return 1;
-  }
-
-  if (!parsing_error.empty()) {
-    return 1;
-  }
+  app.ExecuteCommand(cmd, command_line, [cmd, logger, &loop](std::string error) {
+    if (!error.empty()) {
+      if (error == modular::kGetUsageErrorString) {
+        // Print help if command doesn't match a valid command.
+        std::cout << GetUsage() << std::endl;
+      } else {
+        logger.LogError(cmd, error);
+      }
+    }
+    loop.Quit();
+  });
 
   loop.Run();
 

@@ -2,52 +2,47 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "peridot/bin/sessionctl/session_ctl_app.h"
+
 #include <regex>
 
-#include "peridot/bin/sessionctl/session_ctl_app.h"
 #include "peridot/bin/sessionctl/session_ctl_constants.h"
 
 namespace modular {
 
-SessionCtlApp::SessionCtlApp(
-    fuchsia::modular::internal::BasemgrDebug* const basemgr,
-    fuchsia::modular::PuppetMaster* const puppet_master,
-    const modular::Logger& logger, async_dispatcher_t* const dispatcher,
-    fit::function<void()> on_command_executed)
-    : basemgr_(basemgr),
-      puppet_master_(puppet_master),
-      logger_(logger),
-      dispatcher_(dispatcher),
-      on_command_executed_(std::move(on_command_executed)) {}
+SessionCtlApp::SessionCtlApp(fuchsia::modular::internal::BasemgrDebug* const basemgr,
+                             fuchsia::modular::PuppetMaster* const puppet_master,
+                             const modular::Logger& logger, async_dispatcher_t* const dispatcher)
+    : basemgr_(basemgr), puppet_master_(puppet_master), logger_(logger), dispatcher_(dispatcher) {}
 
-std::string SessionCtlApp::ExecuteCommand(
-    std::string cmd, const fxl::CommandLine& command_line) {
+void SessionCtlApp::ExecuteCommand(std::string cmd, const fxl::CommandLine& command_line,
+                                   fit::function<void(std::string error)> done) {
   if (cmd == kAddModCommandString) {
-    return ExecuteAddModCommand(command_line);
+    ExecuteAddModCommand(command_line, std::move(done));
   } else if (cmd == kRemoveModCommandString) {
-    return ExecuteRemoveModCommand(command_line);
+    ExecuteRemoveModCommand(command_line, std::move(done));
   } else if (cmd == kDeleteStoryCommandString) {
-    return ExecuteDeleteStoryCommand(command_line);
+    ExecuteDeleteStoryCommand(command_line, std::move(done));
   } else if (cmd == kDeleteAllStoriesCommandString) {
-    return ExecuteDeleteAllStoriesCommand();
+    ExecuteDeleteAllStoriesCommand(std::move(done));
   } else if (cmd == kListStoriesCommandString) {
-    return ExecuteListStoriesCommand();
+    ExecuteListStoriesCommand(std::move(done));
   } else if (cmd == kRestartSessionCommandString) {
-    return ExecuteRestartSessionCommand();
+    ExecuteRestartSessionCommand(std::move(done));
   } else if (cmd == kSelectNextSessionCommandString) {
-    return ExecuteSelectNextSessionShellCommand(command_line);
+    ExecuteSelectNextSessionShellCommand(command_line, std::move(done));
   } else {
-    return kGetUsageErrorString;
+    done(kGetUsageErrorString);
   }
 }
 
-std::string SessionCtlApp::ExecuteRemoveModCommand(
-    const fxl::CommandLine& command_line) {
+void SessionCtlApp::ExecuteRemoveModCommand(const fxl::CommandLine& command_line,
+                                            fit::function<void(std::string)> done) {
   if (command_line.positional_args().size() == 1) {
-    auto parsing_error =
-        "Missing MOD_NAME. Ex: sessionctl remove_mod slider_mod";
+    auto parsing_error = "Missing MOD_NAME. Ex: sessionctl remove_mod slider_mod";
     logger_.LogError(kRemoveModCommandString, parsing_error);
-    return parsing_error;
+    done(parsing_error);
+    return;
   }
 
   // Get the mod name and default the story name to the mod name
@@ -60,30 +55,28 @@ std::string SessionCtlApp::ExecuteRemoveModCommand(
 
   auto commands = MakeRemoveModCommands(mod_name);
 
-  std::map<std::string, std::string> params = {
-      {kModNameFlagString, mod_name}, {kStoryNameFlagString, story_name}};
+  std::map<std::string, std::string> params = {{kModNameFlagString, mod_name},
+                                               {kStoryNameFlagString, story_name}};
 
   puppet_master_->ControlStory(story_name, story_puppet_master_.NewRequest());
-  PostTaskExecuteStoryCommand(kRemoveModCommandString, std::move(commands),
-                              params);
-
-  return "";
+  PostTaskExecuteStoryCommand(kRemoveModCommandString, std::move(commands), params,
+                              std::move(done));
 }
 
-std::string SessionCtlApp::ExecuteAddModCommand(
-    const fxl::CommandLine& command_line) {
+void SessionCtlApp::ExecuteAddModCommand(const fxl::CommandLine& command_line,
+                                         fit::function<void(std::string)> done) {
   if (command_line.positional_args().size() == 1) {
     auto parsing_error = "Missing MOD_URL. Ex: sessionctl add_mod slider_mod";
     logger_.LogError(kAddModCommandString, parsing_error);
-    return parsing_error;
+    done(parsing_error);
+    return;
   }
 
   // Get the mod url and default the mod name and story name to the mod url
   std::string mod_url = command_line.positional_args().at(1);
   // If there's not a colon, resolve to the fuchsia package path
   if (mod_url.find(":") == std::string::npos) {
-    mod_url =
-        fxl::StringPrintf(kFuchsiaPkgPath, mod_url.c_str(), mod_url.c_str());
+    mod_url = fxl::StringPrintf(kFuchsiaPkgPath, mod_url.c_str(), mod_url.c_str());
   }
 
   std::string mod_name = mod_url;
@@ -97,17 +90,16 @@ std::string SessionCtlApp::ExecuteAddModCommand(
     if (!std::regex_search(story_name, story_name_match, story_name_regex)) {
       auto parsing_error = "Bad characters in story_name: " + story_name;
       logger_.LogError(kStoryNameFlagString, parsing_error);
-      return parsing_error;
+      done(parsing_error);
+      return;
     }
   } else {
-    std::cout << "Using auto-generated --story_name value of " << story_name
-              << std::endl;
+    std::cout << "Using auto-generated --story_name value of " << story_name << std::endl;
   }
 
   command_line.GetOptionValue(kModNameFlagString, &mod_name);
   if (!command_line.HasOption(kModNameFlagString)) {
-    std::cout << "Using auto-generated --mod_name value of " << mod_name
-              << std::endl;
+    std::cout << "Using auto-generated --mod_name value of " << mod_name << std::endl;
   }
 
   auto commands = MakeAddModCommands(mod_url, mod_name);
@@ -125,85 +117,79 @@ std::string SessionCtlApp::ExecuteAddModCommand(
     commands.push_back(MakeFocusStoryCommand());
   }
 
-  std::map<std::string, std::string> params = {
-      {kModUrlFlagString, mod_url},
-      {kModNameFlagString, mod_name},
-      {kStoryNameFlagString, story_name}};
+  std::map<std::string, std::string> params = {{kModUrlFlagString, mod_url},
+                                               {kModNameFlagString, mod_name},
+                                               {kStoryNameFlagString, story_name}};
 
   puppet_master_->ControlStory(story_name, story_puppet_master_.NewRequest());
-  PostTaskExecuteStoryCommand(kAddModCommandString, std::move(commands),
-                              params);
-
-  return "";
+  PostTaskExecuteStoryCommand(kAddModCommandString, std::move(commands), params, std::move(done));
 }
 
-std::string SessionCtlApp::ExecuteDeleteStoryCommand(
-    const fxl::CommandLine& command_line) {
+void SessionCtlApp::ExecuteDeleteStoryCommand(const fxl::CommandLine& command_line,
+                                              fit::function<void(std::string)> done) {
   if (command_line.positional_args().size() == 1) {
-    auto parsing_error =
-        "Missing STORY_NAME. Ex. sessionctl delete_story story";
+    auto parsing_error = "Missing STORY_NAME. Ex. sessionctl delete_story story";
     logger_.LogError(kStoryNameFlagString, parsing_error);
-    return parsing_error;
+    done(parsing_error);
+    return;
   }
 
   // Get the story name
   std::string story_name = command_line.positional_args().at(1);
 
-  std::map<std::string, std::string> params = {
-      {kStoryNameFlagString, story_name}};
-
-  async::PostTask(dispatcher_, [this, story_name, params]() mutable {
-    puppet_master_->DeleteStory(story_name, [this, params] {
-      logger_.Log(kDeleteStoryCommandString, params);
-      on_command_executed_();
-    });
-  });
-
-  return "";
-}
-
-std::string SessionCtlApp::ExecuteDeleteAllStoriesCommand() {
-  async::PostTask(dispatcher_, [this]() mutable {
-    puppet_master_->GetStories([this](std::vector<std::string> story_names) {
-      for (auto story : story_names) {
-        puppet_master_->DeleteStory(story, [] {});
+  std::map<std::string, std::string> params = {{kStoryNameFlagString, story_name}};
+  async::PostTask(dispatcher_, [this, story_name, params, done = std::move(done)]() mutable {
+    puppet_master_->GetStories([this, story_name, params, done = std::move(done)](
+                                   std::vector<std::string> story_names) mutable {
+      auto story_exists = std::find(story_names.begin(), story_names.end(), story_name);
+      if (story_exists != story_names.end()) {
+        puppet_master_->DeleteStory(story_name, [] {});
+        logger_.Log(kDeleteStoryCommandString, params);
+      } else {
+        done("Non-existent story_name " + story_name);
+        return;
       }
-      logger_.Log(kDeleteAllStoriesCommandString, std::move(story_names));
-      on_command_executed_();
+      done("");
     });
   });
-
-  return "";
 }
 
-std::string SessionCtlApp::ExecuteListStoriesCommand() {
-  async::PostTask(dispatcher_, [this]() mutable {
-    puppet_master_->GetStories([this](std::vector<std::string> story_names) {
-      logger_.Log(kListStoriesCommandString, std::move(story_names));
-      on_command_executed_();
-    });
+void SessionCtlApp::ExecuteDeleteAllStoriesCommand(fit::function<void(std::string)> done) {
+  async::PostTask(dispatcher_, [this, done = std::move(done)]() mutable {
+    puppet_master_->GetStories(
+        [this, done = std::move(done)](std::vector<std::string> story_names) {
+          for (auto story : story_names) {
+            puppet_master_->DeleteStory(story, [] {});
+          }
+          logger_.Log(kDeleteAllStoriesCommandString, std::move(story_names));
+          done("");
+        });
   });
-
-  return "";
 }
 
-std::string SessionCtlApp::ExecuteRestartSessionCommand() {
-  basemgr_->RestartSession([this]() {
+void SessionCtlApp::ExecuteListStoriesCommand(fit::function<void(std::string)> done) {
+  async::PostTask(dispatcher_, [this, done = std::move(done)]() mutable {
+    puppet_master_->GetStories(
+        [this, done = std::move(done)](std::vector<std::string> story_names) {
+          logger_.Log(kListStoriesCommandString, std::move(story_names));
+          done("");
+        });
+  });
+}
+
+void SessionCtlApp::ExecuteRestartSessionCommand(fit::function<void(std::string)> done) {
+  basemgr_->RestartSession([this, done = std::move(done)]() {
     logger_.Log(kRestartSessionCommandString, std::vector<std::string>());
-    on_command_executed_();
+    done("");
   });
-
-  return "";
 }
 
-std::string SessionCtlApp::ExecuteSelectNextSessionShellCommand(
-    const fxl::CommandLine& command_line) {
-  basemgr_->SelectNextSessionShell([this]() {
+void SessionCtlApp::ExecuteSelectNextSessionShellCommand(const fxl::CommandLine& command_line,
+                                                         fit::function<void(std::string)> done) {
+  basemgr_->SelectNextSessionShell([this, done = std::move(done)]() {
     logger_.Log(kSelectNextSessionCommandString, std::vector<std::string>());
-    on_command_executed_();
+    done("");
   });
-
-  return "";
 }
 
 fuchsia::modular::StoryCommand SessionCtlApp::MakeFocusStoryCommand() {
@@ -214,8 +200,7 @@ fuchsia::modular::StoryCommand SessionCtlApp::MakeFocusStoryCommand() {
   return command;
 }
 
-fuchsia::modular::StoryCommand SessionCtlApp::MakeFocusModCommand(
-    const std::string& mod_name) {
+fuchsia::modular::StoryCommand SessionCtlApp::MakeFocusModCommand(const std::string& mod_name) {
   fuchsia::modular::StoryCommand command;
   fuchsia::modular::FocusMod focus_mod;
   focus_mod.mod_name_transitional = mod_name;
@@ -244,8 +229,8 @@ std::vector<fuchsia::modular::StoryCommand> SessionCtlApp::MakeAddModCommands(
   return commands;
 }
 
-std::vector<fuchsia::modular::StoryCommand>
-SessionCtlApp::MakeRemoveModCommands(const std::string& mod_name) {
+std::vector<fuchsia::modular::StoryCommand> SessionCtlApp::MakeRemoveModCommands(
+    const std::string& mod_name) {
   std::vector<fuchsia::modular::StoryCommand> commands;
   fuchsia::modular::StoryCommand command;
 
@@ -257,48 +242,44 @@ SessionCtlApp::MakeRemoveModCommands(const std::string& mod_name) {
 }
 
 void SessionCtlApp::PostTaskExecuteStoryCommand(
-    const std::string command_name,
-    std::vector<fuchsia::modular::StoryCommand> commands,
-    std::map<std::string, std::string> params) {
-  async::PostTask(dispatcher_, [this, command_name,
-                                commands = std::move(commands),
-                                params]() mutable {
+    const std::string command_name, std::vector<fuchsia::modular::StoryCommand> commands,
+    std::map<std::string, std::string> params, fit::function<void(std::string)> done) {
+  async::PostTask(dispatcher_, [this, command_name, commands = std::move(commands), params,
+                                done = std::move(done)]() mutable {
     ExecuteStoryCommand(std::move(commands), params.at(kStoryNameFlagString))
-        ->Then(
-            [this, command_name, params](bool has_error, std::string result) {
-              if (has_error) {
-                logger_.LogError(command_name, result);
-              } else {
-                auto params_copy = params;
-                params_copy.emplace(kStoryIdFlagString, result);
-                logger_.Log(command_name, params_copy);
-              }
-              on_command_executed_();
-            });
+        ->Then([this, command_name, params, done = std::move(done)](bool has_error,
+                                                                    std::string result) {
+          std::string error = "";
+          if (has_error) {
+            error = result;
+            logger_.LogError(command_name, result);
+          } else {
+            auto params_copy = params;
+            params_copy.emplace(kStoryIdFlagString, result);
+            logger_.Log(command_name, params_copy);
+          }
+          done(error);
+        });
   });
 }
 
 modular::FuturePtr<bool, std::string> SessionCtlApp::ExecuteStoryCommand(
-    std::vector<fuchsia::modular::StoryCommand> commands,
-    const std::string& story_name) {
+    std::vector<fuchsia::modular::StoryCommand> commands, const std::string& story_name) {
   story_puppet_master_->Enqueue(std::move(commands));
 
-  auto fut = modular::Future<bool, std::string>::Create(
-      "Sessionctl StoryPuppetMaster::Execute");
+  auto fut = modular::Future<bool, std::string>::Create("Sessionctl StoryPuppetMaster::Execute");
 
-  story_puppet_master_->Execute(
-      [fut](fuchsia::modular::ExecuteResult result) mutable {
-        if (result.status == fuchsia::modular::ExecuteStatus::OK) {
-          fut->Complete(false, result.story_id->c_str());
-        } else {
-          std::string error = fxl::StringPrintf(
-              "Puppet master returned status: %d and error: %s",
-              (uint32_t)result.status, result.error_message->c_str());
+  story_puppet_master_->Execute([fut](fuchsia::modular::ExecuteResult result) mutable {
+    if (result.status == fuchsia::modular::ExecuteStatus::OK) {
+      fut->Complete(false, result.story_id->c_str());
+    } else {
+      std::string error = fxl::StringPrintf("Puppet master returned status: %d and error: %s",
+                                            (uint32_t)result.status, result.error_message->c_str());
 
-          FXL_LOG(WARNING) << error << std::endl;
-          fut->Complete(true, std::move(error));
-        }
-      });
+      FXL_LOG(WARNING) << error << std::endl;
+      fut->Complete(true, std::move(error));
+    }
+  });
 
   return fut;
 }
