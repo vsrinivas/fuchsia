@@ -16,6 +16,7 @@ group("board") {
       "astro",
       "gauss",
       "hikey960",
+      "msm8998",
       "msm8x53-som",
       "mt8167s_ref",
       "sherlock",

@@ -168,6 +168,9 @@ boot_shim("cleo") {
 boot_shim("msm8x53-som") {
 }
 
+boot_shim("msm8998") {
+}
+
 boot_shim("mt8167s_ref") {
 }
 
